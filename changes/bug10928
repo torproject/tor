@@ -1,0 +1,5 @@
+  o Minor bugfixes (unit tests); 
+    - Fix a small bug in the unit tests that might have made the tests
+      call 'chmod' with an uninitialized bitmask.
+      Fixes bug 10928; bugfix on 0.2.5.1-alpha. Patch from Dana Koch.
+
