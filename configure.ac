@@ -191,7 +191,7 @@ AC_CHECK_PROG([SED],[sed],[sed],[/bin/false])
 
 dnl check for asciidoc and a2x
 AC_PATH_PROG([ASCIIDOC], [asciidoc], none)
-AC_PATH_PROGS([A2X], [a2x, a2x.py], none)
+AC_PATH_PROGS([A2X], [a2x a2x.py], none)
 
 AM_CONDITIONAL(USE_ASCIIDOC, test x$asciidoc = xtrue)
 
