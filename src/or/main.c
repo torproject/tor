@@ -75,6 +75,10 @@
 #include <event2/bufferevent.h>
 #endif
 
+#ifdef HAVE_SYSTEMD
+#include <systemd/sd-daemon.h>
+#endif
+
 void evdns_shutdown(int);
 
 /********* PROTOTYPES **********/
@@ -2041,6 +2045,11 @@ do_main_loop(void)
                                       NULL);
     tor_assert(refill_timer);
   }
+#endif
+
+#ifdef HAVE_SYSTEMD
+  log_notice(LD_GENERAL, "Signaling readyness to systemd");
+  sd_notify(0, "READY=1");
 #endif
 
   for (;;) {
