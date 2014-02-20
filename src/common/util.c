@@ -3450,7 +3450,7 @@ format_number_sigsafe(unsigned long x, char *buf, int buf_len,
   cp = buf + len;
   *cp = '\0';
   do {
-    unsigned digit = x % radix;
+    unsigned digit = (unsigned) (x % radix);
     tor_assert(cp > buf);
     --cp;
     *cp = "0123456789ABCDEF"[digit];
