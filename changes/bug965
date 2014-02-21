@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+
+    - Non-exit servers no longer launch mock DNS requests to check for
+      DNS hijacking.  This has been unnecessary since 0.2.1.7-alpha,
+      when non-exit servers stopped servicing DNS requests. Fixes bug
+      965; bugfix on 0.2.1.7-alpha. Patch from Matt Pagan.
