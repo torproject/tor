@@ -2088,7 +2088,6 @@ connection_ap_handshake_socks_resolved_addr(entry_connection_t *conn,
   }
 }
 
-
 /** Send an answer to an AP connection that has requested a DNS lookup via
  * SOCKS.  The type should be one of RESOLVED_TYPE_(IPV4|IPV6|HOSTNAME) or -1
  * for unreachable; the answer should be in the format specified in the socks
@@ -2280,14 +2279,14 @@ connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
       buf[1] = (char)status;
       buf[2] = 0;
       buf[3] = 1; /* ipv4 addr */
-      /* 4 bytes for the header, 2 bytes for the port and 4 for the address. */
+      /* 4 bytes for the header, 2 bytes for the port, 4 for the address. */
       buf_len = 10;
     } else { /* AF_INET6. */
       buf[0] = 5; /* version 5 */
       buf[1] = (char)status;
       buf[2] = 0;
       buf[3] = 4; /* ipv6 addr */
-      /* 4 bytes for the header, 2 bytes for the port and 16 for the address. */
+      /* 4 bytes for the header, 2 bytes for the port, 16 for the address. */
       buf_len = 22;
     }
     connection_write_to_buf(buf,buf_len,ENTRY_TO_CONN(conn));
