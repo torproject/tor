@@ -2273,13 +2273,24 @@ connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
     /* leave version, destport, destip zero */
     connection_write_to_buf(buf, SOCKS4_NETWORK_LEN, ENTRY_TO_CONN(conn));
   } else if (conn->socks_request->socks_version == 5) {
-    buf[0] = 5; /* version 5 */
-    buf[1] = (char)status;
-    buf[2] = 0;
-    buf[3] = 1; /* ipv4 addr */
-    memset(buf+4,0,6); /* Set external addr/port to 0.
-                          The spec doesn't seem to say what to do here. -RD */
-    connection_write_to_buf(buf,10,ENTRY_TO_CONN(conn));
+    size_t buf_len;
+    memset(buf,0,sizeof(buf));
+    if (tor_addr_family(&conn->edge_.base_.addr) == AF_INET) {
+      buf[0] = 5; /* version 5 */
+      buf[1] = (char)status;
+      buf[2] = 0;
+      buf[3] = 1; /* ipv4 addr */
+      /* 4 bytes for the header, 2 bytes for the port and 4 for the address. */
+      buf_len = 10;
+    } else { /* AF_INET6. */
+      buf[0] = 5; /* version 5 */
+      buf[1] = (char)status;
+      buf[2] = 0;
+      buf[3] = 4; /* ipv6 addr */
+      /* 4 bytes for the header, 2 bytes for the port and 16 for the address. */
+      buf_len = 22;
+    }
+    connection_write_to_buf(buf,buf_len,ENTRY_TO_CONN(conn));
   }
   /* If socks_version isn't 4 or 5, don't send anything.
    * This can happen in the case of AP bridges. */
