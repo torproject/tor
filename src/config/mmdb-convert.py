@@ -416,6 +416,13 @@ def dump_tree(entries, node, dump_item, prefix=""):
     else:
         assert node == None
 
+GEOIP_FILE_HEADER = """\
+# Last updated based on %s Maxmind GeoLite2 Country
+# wget http://geolite.maxmind.com/download/geoip/database/GeoLite2-Country.mmdb.gz
+# gunzip GeoLite2-Country.mmdb.gz
+# python mmdb-convert.py GeoLite2-Country.mmdb
+"""
+
 def write_geoip_file(filename, metadata, the_tree, dump_item, fmt_item):
     """Write the entries in the_tree to filename."""
     entries = []
@@ -423,7 +430,7 @@ def write_geoip_file(filename, metadata, the_tree, dump_item, fmt_item):
     fobj = open(filename, 'w')
 
     build_epoch = metadata[0].map['build_epoch'].int_val()
-    fobj.write("# Last updated based on %s Maxmind GeoLite2 Country\n"%
+    fobj.write(GEOIP_FILE_HEADER %
                time.strftime('%B %-d %Y', time.gmtime(build_epoch)))
 
     unwritten = None
