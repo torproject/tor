@@ -649,6 +649,13 @@ CFLAGS="$saved_CFLAGS"
 AC_SUBST(F_OMIT_FRAME_POINTER)
 
 dnl ------------------------------------------------------
+dnl If we are adding -fomit-frame-pointer (or if the compiler's doing it
+dnl for us, as GCC 4.6 and later do at many optimization levels), then
+dnl we should try to add -fasynchronous-unwind-tables so that our backtrace
+dnl code will work.
+TOR_CHECK_CFLAGS(-fasynchronous-unwind-tables)
+
+dnl ------------------------------------------------------
 dnl Where do you live, libnatpmp?  And how do we call you?
 dnl There are no packages for Debian or Redhat as of this patch
 
