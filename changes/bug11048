@@ -1,0 +1,8 @@
+  o Minor bugfixes:
+
+    - Avoid strange behavior if two threads hit failed asswertions
+      at the same time and both try to log backtraces at
+      once. (Previously, if this had happened, both threads would
+      have stored their intermediate results in the same buffer, and
+      generated junk outputs.) Reported by "cypherpunks". Fixes bug
+      11048; bugfix on 0.2.5.2-alpha.
