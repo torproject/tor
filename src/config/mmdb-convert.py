@@ -418,7 +418,7 @@ def dump_tree(entries, node, dump_item, prefix=""):
 
 GEOIP_FILE_HEADER = """\
 # Last updated based on %s Maxmind GeoLite2 Country
-# wget http://geolite.maxmind.com/download/geoip/database/GeoLite2-Country.mmdb.gz
+# wget https://geolite.maxmind.com/download/geoip/database/GeoLite2-Country.mmdb.gz
 # gunzip GeoLite2-Country.mmdb.gz
 # python mmdb-convert.py GeoLite2-Country.mmdb
 """
