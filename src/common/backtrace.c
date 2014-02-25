@@ -49,6 +49,8 @@ static char *bt_version = NULL;
 /** Static allocation of stack to dump. This is static so we avoid stack
  * pressure. */
 static void *cb_buf[MAX_DEPTH];
+/** Protects cb_buf_mutex from concurrent access */
+static tor_mutex_t cb_buf_mutex;
 
 /** Change a stacktrace in <b>stack</b> of depth <b>depth</b> so that it will
  * log the correct function from which a signal was received with context
@@ -84,18 +86,27 @@ clean_backtrace(void **stack, int depth, const ucontext_t *ctx)
 void
 log_backtrace(int severity, int domain, const char *msg)
 {
-  int depth = backtrace(cb_buf, MAX_DEPTH);
-  char **symbols = backtrace_symbols(cb_buf, depth);
+  int depth;
+  char **symbols;
   int i;
+
+  tor_mutex_acquire(&cb_buf_mutex);
+
+  depth = backtrace(cb_buf, MAX_DEPTH);
+  symbols = backtrace_symbols(cb_buf, depth);
+
   tor_log(severity, domain, "%s. Stack trace:", msg);
   if (!symbols) {
     tor_log(severity, domain, "    Unable to generate backtrace.");
-    return;
+    goto done;
   }
   for (i=0; i < depth; ++i) {
     tor_log(severity, domain, "    %s", symbols[i]);
   }
   free(symbols);
+
+ done:
+  tor_mutex_release(&cb_buf_mutex);
 }
 
 static void crash_handler(int sig, siginfo_t *si, void *ctx_)
@@ -140,6 +151,9 @@ install_bt_handler(void)
   int i, rv=0;
 
   struct sigaction sa;
+
+  tor_mutex_init(&cb_buf_mutex);
+
   memset(&sa, 0, sizeof(sa));
   sa.sa_sigaction = crash_handler;
   sa.sa_flags = SA_SIGINFO;
@@ -158,7 +172,7 @@ install_bt_handler(void)
 static void
 remove_bt_handler(void)
 {
-  /* We don't need to actually free anything at exit here. */
+  tor_mutex_uninit(&cb_buf_mutex);
 }
 #endif
 
