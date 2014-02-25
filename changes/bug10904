@@ -1,0 +1,5 @@
+  o Minor bugfixes (compilation):
+    - Build without warnings under clang 3.4. (We have some macros that
+      define static functions only some of which will get used later in
+      the module. Starting with clang 3.4, these give a warning unless the
+      unused attribute is set on them.)

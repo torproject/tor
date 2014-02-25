@@ -1,0 +1,3 @@
+  o Minor features:
+    - Avoid using circuit paths if no node in the path supports the ntor
+      circuit extension handshake. Implements ticket 9777.
