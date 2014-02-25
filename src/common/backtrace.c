@@ -49,7 +49,7 @@ static char *bt_version = NULL;
 /** Static allocation of stack to dump. This is static so we avoid stack
  * pressure. */
 static void *cb_buf[MAX_DEPTH];
-/** Protects cb_buf_mutex from concurrent access */
+/** Protects cb_buf from concurrent access */
 static tor_mutex_t cb_buf_mutex;
 
 /** Change a stacktrace in <b>stack</b> of depth <b>depth</b> so that it will
