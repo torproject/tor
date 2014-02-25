@@ -339,9 +339,22 @@ def parse_mm_file(s):
 def format_datum(datum):
     """Given a Datum at a leaf of the tree, return the string that we should
        write as its value.
+
+       We first try country->iso_code which is the two-character ISO 3166-1
+       country code of the country where MaxMind believes the end user is
+       located.  If there's no such key, we try registered_country->iso_code
+       which is the country in which the ISP has registered the IP address.
+       Without falling back to registered_country, we'd leave out all ranges
+       that MaxMind thinks belong to anonymous proxies, because those ranges
+       don't contain country but only registered_country.  In short: let's
+       fill all A1 entries with what ARIN et. al think.
     """
     try:
         return bytesToStr(datum.map['country'].map['iso_code'].data)
+    except KeyError:
+        pass
+    try:
+        return bytesToStr(datum.map['registered_country'].map['iso_code'].data)
     except KeyError:
         pass
     return None
