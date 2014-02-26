@@ -691,13 +691,14 @@ router_initialize_tls_context(void)
 static int
 router_write_fingerprint(int hashed)
 {
-  char *keydir, *cp;
+  char *keydir = NULL, *cp = NULL;
   const char *fname = hashed ? "hashed-fingerprint" :
                                "fingerprint";
   char fingerprint[FINGERPRINT_LEN+1];
   const or_options_t *options = get_options();
-  /*nickname<space>fp\n\0 */
-  char fingerprint_line[MAX_NICKNAME_LEN+FINGERPRINT_LEN+3];
+  char *fingerprint_line = NULL;
+  int result = -1;
+
   keydir = get_datadir_fname(fname);
   log_info(LD_GENERAL,"Dumping %sfingerprint to \"%s\"...",
            hashed ? "hashed " : "", keydir);
@@ -705,45 +706,39 @@ router_write_fingerprint(int hashed)
     if (crypto_pk_get_fingerprint(get_server_identity_key(),
                                   fingerprint, 0) < 0) {
       log_err(LD_GENERAL,"Error computing fingerprint");
-      tor_free(keydir);
-      return -1;
+      goto done;
     }
   } else {
     if (crypto_pk_get_hashed_fingerprint(get_server_identity_key(),
                                          fingerprint) < 0) {
       log_err(LD_GENERAL,"Error computing hashed fingerprint");
-      tor_free(keydir);
-      return -1;
+      goto done;
     }
   }
-  tor_assert(strlen(options->Nickname) <= MAX_NICKNAME_LEN);
-  if (tor_snprintf(fingerprint_line, sizeof(fingerprint_line),
-                   "%s %s\n",options->Nickname, fingerprint) < 0) {
-    log_err(LD_GENERAL,"Error writing %sfingerprint line",
-            hashed ? "hashed " : "");
-    tor_free(keydir);
-    return -1;
-  }
+
+  tor_asprintf(&fingerprint_line, "%s %s\n", options->Nickname, fingerprint);
+
   /* Check whether we need to write the (hashed-)fingerprint file. */
-  cp = NULL;
-  if (file_status(keydir) == FN_FILE)
-    cp = read_file_to_str(keydir, 0, NULL);
+
+  cp = read_file_to_str(keydir, RFTS_IGNORE_MISSING, NULL);
   if (!cp || strcmp(cp, fingerprint_line)) {
     if (write_str_to_file(keydir, fingerprint_line, 0)) {
       log_err(LD_FS, "Error writing %sfingerprint line to file",
               hashed ? "hashed " : "");
-      tor_free(keydir);
-      tor_free(cp);
-      return -1;
+      goto done;
     }
   }
-  tor_free(cp);
-  tor_free(keydir);
 
   log_notice(LD_GENERAL, "Your Tor %s identity key fingerprint is '%s %s'",
              hashed ? "bridge's hashed" : "server's", options->Nickname,
              fingerprint);
-  return 0;
+
+  result = 0;
+ done:
+  tor_free(cp);
+  tor_free(keydir);
+  tor_free(fingerprint_line);
+  return result;
 }
 
 /** Initialize all OR private keys, and the TLS context, as necessary.
