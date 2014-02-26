@@ -509,6 +509,56 @@ test_crypto_pk(void)
   tor_free(encoded);
 }
 
+static void
+test_crypto_pk_fingerprints(void *arg)
+{
+  crypto_pk_t *pk = NULL;
+  char encoded[512];
+  char d[DIGEST_LEN], d2[DIGEST_LEN];
+  char fingerprint[FINGERPRINT_LEN+1];
+  int n;
+  unsigned i;
+  char *mem_op_hex_tmp=NULL;
+
+  (void)arg;
+
+  pk = pk_generate(1);
+  tt_assert(pk);
+  n = crypto_pk_asn1_encode(pk, encoded, sizeof(encoded));
+  tt_int_op(n, >, 0);
+  tt_int_op(n, >, 128);
+  tt_int_op(n, <, 256);
+
+  /* Is digest as expected? */
+  crypto_digest(d, encoded, n);
+  tt_int_op(0, ==, crypto_pk_get_digest(pk, d2));
+  test_memeq(d, d2, DIGEST_LEN);
+
+  /* Is fingerprint right? */
+  tt_int_op(0, ==, crypto_pk_get_fingerprint(pk, fingerprint, 0));
+  tt_int_op(strlen(fingerprint), ==, DIGEST_LEN * 2);
+  test_memeq_hex(d, fingerprint);
+
+  /* Are spaces right? */
+  tt_int_op(0, ==, crypto_pk_get_fingerprint(pk, fingerprint, 1));
+  for (i = 4; i < strlen(fingerprint); i += 5) {
+    tt_int_op(fingerprint[i], ==, ' ');
+  }
+  tor_strstrip(fingerprint, " ");
+  tt_int_op(strlen(fingerprint), ==, DIGEST_LEN * 2);
+  test_memeq_hex(d, fingerprint);
+
+  /* Now hash again and check crypto_pk_get_hashed_fingerprint. */
+  crypto_digest(d2, d, sizeof(d));
+  tt_int_op(0, ==, crypto_pk_get_hashed_fingerprint(pk, fingerprint));
+  tt_int_op(strlen(fingerprint), ==, DIGEST_LEN * 2);
+  test_memeq_hex(d2, fingerprint);
+
+ done:
+  crypto_pk_free(pk);
+  tor_free(mem_op_hex_tmp);
+}
+
 /** Sanity check for crypto pk digests  */
 static void
 test_crypto_digests(void)
@@ -1234,6 +1284,7 @@ struct testcase_t crypto_tests[] = {
   { "aes_EVP", test_crypto_aes, TT_FORK, &pass_data, (void*)"evp" },
   CRYPTO_LEGACY(sha),
   CRYPTO_LEGACY(pk),
+  { "pk_fingerprints", test_crypto_pk_fingerprints, TT_FORK, NULL, NULL },
   CRYPTO_LEGACY(digests),
   CRYPTO_LEGACY(dh),
   CRYPTO_LEGACY(s2k),
