@@ -684,6 +684,68 @@ router_initialize_tls_context(void)
                               (unsigned int)lifetime);
 }
 
+/** Compute fingerprint (or hashed fingerprint if hashed is 1) and write
+ * it to 'fingerprint' (or 'hashed-fingerprint'). Return 0 on success, or
+ * -1 if Tor should die,
+ */
+static int
+router_write_fingerprint(int hashed)
+{
+  char *keydir, *cp;
+  const char *fname = hashed ? "hashed-fingerprint" :
+                               "fingerprint";
+  char fingerprint[FINGERPRINT_LEN+1];
+  const or_options_t *options = get_options();
+  /*nickname<space>fp\n\0 */
+  char fingerprint_line[MAX_NICKNAME_LEN+FINGERPRINT_LEN+3];
+  keydir = get_datadir_fname(fname);
+  log_info(LD_GENERAL,"Dumping %sfingerprint to \"%s\"...",
+           hashed ? "hashed " : "", keydir);
+  if (!hashed) {
+    if (crypto_pk_get_fingerprint(get_server_identity_key(),
+                                  fingerprint, 0) < 0) {
+      log_err(LD_GENERAL,"Error computing fingerprint");
+      tor_free(keydir);
+      return -1;
+    }
+  } else {
+    if (crypto_pk_get_hashed_fingerprint(get_server_identity_key(),
+                                         fingerprint) < 0) {
+      log_err(LD_GENERAL,"Error computing hashed fingerprint");
+      tor_free(keydir);
+      return -1;
+    }
+  }
+  tor_assert(strlen(options->Nickname) <= MAX_NICKNAME_LEN);
+  if (tor_snprintf(fingerprint_line, sizeof(fingerprint_line),
+                   "%s %s\n",options->Nickname, fingerprint) < 0) {
+    log_err(LD_GENERAL,"Error writing %sfingerprint line",
+            hashed ? "hashed " : "");
+    tor_free(keydir);
+    return -1;
+  }
+  /* Check whether we need to write the (hashed-)fingerprint file. */
+  cp = NULL;
+  if (file_status(keydir) == FN_FILE)
+    cp = read_file_to_str(keydir, 0, NULL);
+  if (!cp || strcmp(cp, fingerprint_line)) {
+    if (write_str_to_file(keydir, fingerprint_line, 0)) {
+      log_err(LD_FS, "Error writing %sfingerprint line to file",
+              hashed ? "hashed " : "");
+      tor_free(keydir);
+      tor_free(cp);
+      return -1;
+    }
+  }
+  tor_free(cp);
+  tor_free(keydir);
+
+  log_notice(LD_GENERAL, "Your Tor %s identity key fingerprint is '%s %s'",
+             hashed ? "bridge's hashed" : "server's", options->Nickname,
+             fingerprint);
+  return 0;
+}
+
 /** Initialize all OR private keys, and the TLS context, as necessary.
  * On OPs, this only initializes the tls context. Return 0 on success,
  * or -1 if Tor should die.
@@ -692,14 +754,10 @@ int
 init_keys(void)
 {
   char *keydir;
-  char fingerprint[FINGERPRINT_LEN+1];
-  /*nickname<space>fp\n\0 */
-  char fingerprint_line[MAX_NICKNAME_LEN+FINGERPRINT_LEN+3];
   const char *mydesc;
   crypto_pk_t *prkey;
   char digest[DIGEST_LEN];
   char v3_digest[DIGEST_LEN];
-  char *cp;
   const or_options_t *options = get_options();
   dirinfo_type_t type;
   time_t now = time(NULL);
@@ -889,40 +947,16 @@ init_keys(void)
     }
   }
 
-  /* 5. Dump fingerprint to 'fingerprint' */
-  keydir = get_datadir_fname("fingerprint");
-  log_info(LD_GENERAL,"Dumping fingerprint to \"%s\"...",keydir);
-  if (crypto_pk_get_fingerprint(get_server_identity_key(),
-                                fingerprint, 0) < 0) {
-    log_err(LD_GENERAL,"Error computing fingerprint");
-    tor_free(keydir);
+  /* 5. Dump fingerprint and possibly hashed fingerprint to files. */
+  if (router_write_fingerprint(0)) {
+    log_err(LD_FS, "Error writing fingerprint to file");
     return -1;
   }
-  tor_assert(strlen(options->Nickname) <= MAX_NICKNAME_LEN);
-  if (tor_snprintf(fingerprint_line, sizeof(fingerprint_line),
-                   "%s %s\n",options->Nickname, fingerprint) < 0) {
-    log_err(LD_GENERAL,"Error writing fingerprint line");
-    tor_free(keydir);
+  if (!public_server_mode(options) && router_write_fingerprint(1)) {
+    log_err(LD_FS, "Error writing hashed fingerprint to file");
     return -1;
   }
-  /* Check whether we need to write the fingerprint file. */
-  cp = NULL;
-  if (file_status(keydir) == FN_FILE)
-    cp = read_file_to_str(keydir, 0, NULL);
-  if (!cp || strcmp(cp, fingerprint_line)) {
-    if (write_str_to_file(keydir, fingerprint_line, 0)) {
-      log_err(LD_FS, "Error writing fingerprint line to file");
-      tor_free(keydir);
-      tor_free(cp);
-      return -1;
-    }
-  }
-  tor_free(cp);
-  tor_free(keydir);
 
-  log_notice(LD_GENERAL,
-      "Your Tor server's identity key fingerprint is '%s %s'",
-      options->Nickname, fingerprint);
   if (!authdir_mode(options))
     return 0;
   /* 6. [authdirserver only] load approved-routers file */

@@ -2305,6 +2305,10 @@ __DataDirectory__**/keys/***::
 __DataDirectory__**/fingerprint**::
     Only used by servers. Holds the fingerprint of the server's identity key.
 
+__DataDirectory__**/hashed-fingerprint**::
+    Only used by bridges. Holds the hashed fingerprint of the bridge's
+    identity key. (That is, the hash of the hash of the identity key.)
+
 __DataDirectory__**/approved-routers**::
     Only for naming authoritative directory servers (see
     **NamingAuthoritativeDirectory**). This file lists nickname to identity

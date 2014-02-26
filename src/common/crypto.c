@@ -1374,6 +1374,28 @@ crypto_pk_get_fingerprint(crypto_pk_t *pk, char *fp_out, int add_space)
   return 0;
 }
 
+/** Given a private or public key <b>pk</b>, put a hashed fingerprint of
+ * the public key into <b>fp_out</b> (must have at least FINGERPRINT_LEN+1
+ * bytes of space).  Return 0 on success, -1 on failure.
+ *
+ * Hashed fingerprints are computed as the SHA1 digest of the SHA1 digest
+ * of the ASN.1 encoding of the public key, converted to hexadecimal, in
+ * upper case.
+ */
+int
+crypto_pk_get_hashed_fingerprint(crypto_pk_t *pk, char *fp_out)
+{
+  char digest[DIGEST_LEN], hashed_digest[DIGEST_LEN];
+  if (crypto_pk_get_digest(pk, digest)) {
+    return -1;
+  }
+  if (crypto_digest(hashed_digest, digest, DIGEST_LEN)) {
+    return -1;
+  }
+  base16_encode(fp_out, FINGERPRINT_LEN + 1, hashed_digest, DIGEST_LEN);
+  return 0;
+}
+
 /* symmetric crypto */
 
 /** Return a pointer to the key set for the cipher in <b>env</b>.
