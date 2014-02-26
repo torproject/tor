@@ -688,7 +688,7 @@ router_initialize_tls_context(void)
  * it to 'fingerprint' (or 'hashed-fingerprint'). Return 0 on success, or
  * -1 if Tor should die,
  */
-static int
+STATIC int
 router_write_fingerprint(int hashed)
 {
   char *keydir = NULL, *cp = NULL;
