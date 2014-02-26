@@ -1551,7 +1551,7 @@ circuits_handle_oom(size_t current_allocation)
     mem_to_recover = current_allocation - mem_target;
   }
 
-  tor_gettimeofday_cached(&now);
+  tor_gettimeofday_cached_monotonic(&now);
   now_ms = (uint32_t)tv_to_msec(&now);
 
   /* This algorithm itself assumes that you've got enough memory slack
