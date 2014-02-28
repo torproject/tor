@@ -3,6 +3,67 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.2.4.21 - 2014-02-28
+  Tor 0.2.4.21 further improves security against potential adversaries who
+  find breaking 1024-bit crypto doable, and backports several stability
+  and robustness patches from the 0.2.5 branch.
+
+  o Major features (client security):
+    - When we choose a path for a 3-hop circuit, make sure it contains
+      at least one relay that supports the NTor circuit extension
+      handshake. Otherwise, there is a chance that we're building
+      a circuit that's worth attacking by an adversary who finds
+      breaking 1024-bit crypto doable, and that chance changes the game
+      theory. Implements ticket 9777.
+
+  o Major bugfixes:
+    - Do not treat streams that fail with reason
+      END_STREAM_REASON_INTERNAL as indicating a definite circuit failure,
+      since it could also indicate an ENETUNREACH connection error. Fixes
+      part of bug 10777; bugfix on 0.2.4.8-alpha.
+
+  o Code simplification and refactoring:
+    - Remove data structures which were introduced to implement the
+      CellStatistics option: they are now redundant with the new timestamp
+      field in the regular packed_cell_t data structure, which we did
+      in 0.2.4.18-rc in order to resolve bug 9093. Resolves ticket 10870.
+
+  o Minor features:
+    - Always clear OpenSSL bignums before freeing them -- even bignums
+      that don't contain secrets. Resolves ticket 10793. Patch by
+      Florent Daigniere.
+    - Build without warnings under clang 3.4. (We have some macros that
+      define static functions only some of which will get used later in
+      the module. Starting with clang 3.4, these give a warning unless the
+      unused attribute is set on them.) Resolves ticket 10904.
+    - Update geoip and geoip6 files to the February 7 2014 Maxmind
+      GeoLite2 Country database.
+
+  o Minor bugfixes:
+    - Set the listen() backlog limit to the largest actually supported
+      on the system, not to the value in a header file. Fixes bug 9716;
+      bugfix on every released Tor.
+    - Treat ENETUNREACH, EACCES, and EPERM connection failures at an
+      exit node as a NOROUTE error, not an INTERNAL error, since they
+      can apparently happen when trying to connect to the wrong sort
+      of netblocks. Fixes part of bug 10777; bugfix on 0.1.0.1-rc.
+    - Fix build warnings about missing "a2x" comment when building the
+      manpages from scratch on OpenBSD; OpenBSD calls it "a2x.py".
+      Fixes bug 10929; bugfix on 0.2.2.9-alpha. Patch from Dana Koch.
+    - Avoid a segfault on SIGUSR1, where we had freed a connection but did
+      not entirely remove it from the connection lists. Fixes bug 9602;
+      bugfix on 0.2.4.4-alpha.
+    - Fix a segmentation fault in our benchmark code when running with
+      Fedora's OpenSSL package, or any other OpenSSL that provides
+      ECDH but not P224. Fixes bug 10835; bugfix on 0.2.4.8-alpha.
+    - Turn "circuit handshake stats since last time" log messages into a
+      heartbeat message. Fixes bug 10485; bugfix on 0.2.4.17-rc.
+
+  o Documentation fixes:
+    - Document that all but one DirPort entry must have the NoAdvertise
+      flag set. Fixes bug 10470; bugfix on 0.2.3.3-alpha / 0.2.3.16-alpha.
+
+
 Changes in version 0.2.4.20 - 2013-12-22
   Tor 0.2.4.20 fixes potentially poor random number generation for users
   who 1) use OpenSSL 1.0.0 or later, 2) set "HardwareAccel 1" in their

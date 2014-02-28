@@ -1,4 +1,8 @@
-Changes in version 0.2.4.21 - 2014-02-2?
+Changes in version 0.2.4.21 - 2014-02-28
+  Tor 0.2.4.21 further improves security against potential adversaries who
+  find breaking 1024-bit crypto doable, and backports several stability
+  and robustness patches from the 0.2.5 branch.
+
   o Major features (client security):
     - When we choose a path for a 3-hop circuit, make sure it contains
       at least one relay that supports the NTor circuit extension
