@@ -2280,7 +2280,6 @@ smartlist_choose_node_by_bandwidth(const smartlist_t *sl,
         bandwidths[i].dbl *= guard_weight;
       else if (is_exit)
         bandwidths[i].dbl *= exit_weight;
-
     }
   }
 
