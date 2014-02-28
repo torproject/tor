@@ -556,8 +556,9 @@ geoip_note_client_seen(geoip_client_action_t action,
         (!(options->BridgeRelay && options->BridgeRecordUsageByCountry)))
       return;
   } else {
-    if (options->BridgeRelay || options->BridgeAuthoritativeDir ||
-        !options->DirReqStatistics)
+    /* Only gather directory-request statistics if configured, and
+     * forcibly disable them on bridge authorities. */
+    if (!options->DirReqStatistics || options->BridgeAuthoritativeDir)
       return;
   }
 

@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Bridges now never collect statistics that were designed for relays.
+      Fix for bug 5824; bugfix on 0.2.3.8-alpha.
+
