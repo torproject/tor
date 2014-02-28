@@ -2764,6 +2764,8 @@ sandbox_init_filter(void)
         get_datadir_fname2("keys", "secret_id_key.tmp"), 1,
         get_datadir_fname("fingerprint"), 1,
         get_datadir_fname("fingerprint.tmp"), 1,
+        get_datadir_fname("hashed-fingerprint"), 1,
+        get_datadir_fname("hashed-fingerprint.tmp"), 1,
         get_datadir_fname("cached-consensus"), 1,
         get_datadir_fname("cached-consensus.tmp"), 1,
         "/etc/resolv.conf", 0,

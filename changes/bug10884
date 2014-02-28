@@ -1,0 +1,5 @@
+  o Minor features:
+    - Bridges write the SHA1 digest of their identity key fingerprint to
+      notice-level logs and to hashed-fingerprint, so that bridge
+      operators can look up their bridge in Globe and similar tools.
+
