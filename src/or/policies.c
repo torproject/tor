@@ -482,10 +482,12 @@ validate_addr_policies(const or_options_t *options, char **msg)
  * Ignore port specifiers.
  */
 static int
-load_policy_from_option(config_line_t *config, smartlist_t **policy,
+load_policy_from_option(config_line_t *config, const char *option_name,
+                        smartlist_t **policy,
                         int assume_action)
 {
   int r;
+  int killed_any_ports = 0;
   addr_policy_list_free(*policy);
   *policy = NULL;
   r = parse_addr_policy(config, policy, assume_action);
@@ -504,8 +506,12 @@ load_policy_from_option(config_line_t *config, smartlist_t **policy,
         c = addr_policy_get_canonical_entry(&newp);
         SMARTLIST_REPLACE_CURRENT(*policy, n, c);
         addr_policy_free(n);
+        killed_any_ports = 1;
       }
     } SMARTLIST_FOREACH_END(n);
+  }
+  if (killed_any_ports) {
+    log_warn(LD_CONFIG, "Ignoring ports in %s option.", option_name);
   }
   return 0;
 }
@@ -516,20 +522,22 @@ int
 policies_parse_from_options(const or_options_t *options)
 {
   int ret = 0;
-  if (load_policy_from_option(options->SocksPolicy, &socks_policy, -1) < 0)
+  if (load_policy_from_option(options->SocksPolicy, "SocksPolicy",
+                              &socks_policy, -1) < 0)
     ret = -1;
-  if (load_policy_from_option(options->DirPolicy, &dir_policy, -1) < 0)
+  if (load_policy_from_option(options->DirPolicy, "DirPolicy",
+                              &dir_policy, -1) < 0)
     ret = -1;
-  if (load_policy_from_option(options->AuthDirReject,
+  if (load_policy_from_option(options->AuthDirReject, "AuthDirReject",
                               &authdir_reject_policy, ADDR_POLICY_REJECT) < 0)
     ret = -1;
-  if (load_policy_from_option(options->AuthDirInvalid,
+  if (load_policy_from_option(options->AuthDirInvalid, "AuthDirInvalid",
                               &authdir_invalid_policy, ADDR_POLICY_REJECT) < 0)
     ret = -1;
-  if (load_policy_from_option(options->AuthDirBadDir,
+  if (load_policy_from_option(options->AuthDirBadDir, "AuthDirBadDir",
                               &authdir_baddir_policy, ADDR_POLICY_REJECT) < 0)
     ret = -1;
-  if (load_policy_from_option(options->AuthDirBadExit,
+  if (load_policy_from_option(options->AuthDirBadExit, "AuthDirBadExit",
                               &authdir_badexit_policy, ADDR_POLICY_REJECT) < 0)
     ret = -1;
   if (parse_reachable_addresses() < 0)
