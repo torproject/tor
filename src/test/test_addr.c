@@ -971,11 +971,13 @@ test_addr_is_loopback(void *data)
   ;
 }
 
-void
+static void
 test_addr_make_null(void *data)
 {
   tor_addr_t *addr = tor_malloc(sizeof(*addr));
-  tor_addr_t *zeros = tor_calloc(1, sizeof(*addr));
+  tor_addr_t *zeros = tor_malloc_zero(sizeof(*addr));
+  char buf[TOR_ADDR_BUF_LEN];
+  (void) data;
   /* Ensure that before tor_addr_make_null, addr != 0's */
   memset(addr, 1, sizeof(*addr));
   tt_int_op(memcmp(addr, zeros, sizeof(*addr)), !=, 0);
@@ -983,11 +985,13 @@ test_addr_make_null(void *data)
   zeros->family = AF_INET;
   tor_addr_make_null(addr, AF_INET);
   tt_int_op(memcmp(addr, zeros, sizeof(*addr)), ==, 0);
+  tt_str_op(tor_addr_to_str(buf, addr, sizeof(buf), 0), ==, "0.0.0.0");
   /* Test with AF == AF_INET6 */
   memset(addr, 1, sizeof(*addr));
   zeros->family = AF_INET6;
   tor_addr_make_null(addr, AF_INET6);
   tt_int_op(memcmp(addr, zeros, sizeof(*addr)), ==, 0);
+  tt_str_op(tor_addr_to_str(buf, addr, sizeof(buf), 0), ==, "::");
  done:
   tor_free(addr);
   tor_free(zeros);
