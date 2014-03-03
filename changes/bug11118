@@ -1,0 +1,3 @@
+  o Documentation:
+    - Fix max client name length in HiddenServiceAuthorizeClient description:
+      should have been 16 and not 19. Fix ticket 11118.

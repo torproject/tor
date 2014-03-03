@@ -2032,7 +2032,7 @@ The following options are used to configure a hidden service.
     authorization protocol or \'stealth' for a less scalable protocol that also
     hides service activity from unauthorized clients. Only clients that are
     listed here are authorized to access the hidden service. Valid client names
-    are 1 to 19 characters  long and only use characters in A-Za-z0-9+-_ (no
+    are 1 to 16 characters long and only use characters in A-Za-z0-9+-_ (no
     spaces). If this option is set, the hidden service is not accessible for
     clients without authorization any more. Generated authorization data can be
     found in the hostname file. Clients need to put this authorization data in
