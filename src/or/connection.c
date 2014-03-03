@@ -1008,9 +1008,9 @@ tor_listen(tor_socket_t fd)
  */
 static connection_t *
 connection_listener_new(const struct sockaddr *listensockaddr,
-                           socklen_t socklen,
-                           int type, const char *address,
-                           const port_cfg_t *port_cfg)
+                        socklen_t socklen,
+                        int type, const char *address,
+                        const port_cfg_t *port_cfg)
 {
   listener_connection_t *lis_conn;
   connection_t *conn = NULL;
@@ -2227,7 +2227,7 @@ retry_listener_ports(smartlist_t *old_conns,
 
     if (listensockaddr) {
       conn = connection_listener_new(listensockaddr, listensocklen,
-                                        port->type, address, port);
+                                     port->type, address, port);
       tor_free(listensockaddr);
       tor_free(address);
     } else {
