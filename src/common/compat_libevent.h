@@ -90,6 +90,7 @@ int tor_add_bufferevent_to_rate_limit_group(struct bufferevent *bev,
 
 void tor_gettimeofday_cached(struct timeval *tv);
 void tor_gettimeofday_cache_clear(void);
+void tor_gettimeofday_cached_monotonic(struct timeval *tv);
 
 #endif
 

@@ -2151,7 +2151,8 @@ cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell,
 {
   struct timeval now;
   packed_cell_t *copy = packed_cell_copy(cell, wide_circ_ids);
-  tor_gettimeofday_cached(&now);
+  tor_gettimeofday_cached_monotonic(&now);
+
   copy->inserted_time = (uint32_t)tv_to_msec(&now);
 
   /* Remember the time when this cell was put in the queue. */

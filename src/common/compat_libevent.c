@@ -653,3 +653,33 @@ tor_gettimeofday_cache_clear(void)
 }
 #endif
 
+/**
+ * As tor_gettimeofday_cached, but can never move backwards in time.
+ *
+ * The returned value may diverge from wall-clock time, since wall-clock time
+ * can trivially be adjusted backwards, and this can't.  Don't mix wall-clock
+ * time with these values in the same calculation.
+ *
+ * Depending on implementation, this function may or may not "smooth out" huge
+ * jumps forward in wall-clock time.  It may or may not keep its results
+ * advancing forward (as opposed to stalling) if the wall-clock time goes
+ * backwards.  The current implementation does neither of of these.
+ *
+ * This function is not thread-safe; do not call it outside the main thread.
+ *
+ * In future versions of Tor, this may return a time does not have its
+ * origin at the Unix epoch.
+ */
+void
+tor_gettimeofday_cached_monotonic(struct timeval *tv)
+{
+  struct timeval last_tv = { 0, 0 };
+
+  tor_gettimeofday_cached(tv);
+  if (timercmp(tv, &last_tv, <)) {
+    memcpy(tv, &last_tv, sizeof(struct timeval));
+  } else {
+    memcpy(&last_tv, tv, sizeof(struct timeval));
+  }
+}
+

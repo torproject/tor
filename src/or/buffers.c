@@ -631,7 +631,7 @@ buf_add_chunk_with_capacity(buf_t *buf, size_t capacity, int capped)
     chunk = chunk_new_with_alloc_size(preferred_chunk_size(capacity));
   }
 
-  tor_gettimeofday_cached(&now);
+  tor_gettimeofday_cached_monotonic(&now);
   chunk->inserted_time = (uint32_t)tv_to_msec(&now);
 
   if (buf->tail) {
