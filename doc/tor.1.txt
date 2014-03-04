@@ -143,7 +143,17 @@ GENERAL OPTIONS
     the specified number of bytes per second, and the average outgoing
     bandwidth usage to that same value.  If you want to run a relay in the
     public network, this needs to be _at the very least_ 30 KBytes (that is,
-    30720 bytes). (Default: 1 GByte)
+    30720 bytes). (Default: 1 GByte) +
+ +
+    With this option, and in other options that take arguments in bytes,
+    KBytes, and so on, other formats are also supported. Notably, "KBytes" can
+    also be written as "kilobytes" or "kb"; "MBytes" can be written as
+    "megabytes" or "MB"; "kbits" can be written as "kilobits"; and so forth.
+    Tor also accepts "byte" and "bit" in the singular.
+    The prefixes "tera" and "T" are also recognized.
+    If no units are given, we default to bytes.
+    To avoid confusion, we recommend writing "bytes" or "bits" explicitly,
+    since it's easy to forget that "B" means bytes, not bits.
 
 [[BandwidthBurst]] **BandwidthBurst** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**::
     Limit the maximum token bucket size (also known as the burst) to the given
