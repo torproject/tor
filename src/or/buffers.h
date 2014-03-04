@@ -16,16 +16,20 @@
 
 buf_t *buf_new(void);
 buf_t *buf_new_with_capacity(size_t size);
+size_t buf_get_default_chunk_size(const buf_t *buf);
 void buf_free(buf_t *buf);
 void buf_clear(buf_t *buf);
 buf_t *buf_copy(const buf_t *buf);
 void buf_shrink(buf_t *buf);
-void buf_shrink_freelists(int free_all);
+size_t buf_shrink_freelists(int free_all);
 void buf_dump_freelist_sizes(int severity);
 
 size_t buf_datalen(const buf_t *buf);
 size_t buf_allocation(const buf_t *buf);
 size_t buf_slack(const buf_t *buf);
+
+uint32_t buf_get_oldest_chunk_timestamp(const buf_t *buf, uint32_t now);
+size_t buf_get_total_allocation(void);
 
 int read_to_buf(tor_socket_t s, size_t at_most, buf_t *buf, int *reached_eof,
                 int *socket_error);
@@ -100,6 +104,8 @@ void assert_buf_ok(buf_t *buf);
 
 #ifdef BUFFERS_PRIVATE
 STATIC int buf_find_string_offset(const buf_t *buf, const char *s, size_t n);
+STATIC void buf_pullup(buf_t *buf, size_t bytes, int nulterminate);
+void buf_get_first_chunk_data(const buf_t *buf, const char **cp, size_t *sz);
 #endif
 
 #endif

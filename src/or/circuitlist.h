@@ -53,8 +53,8 @@ origin_circuit_t *circuit_find_to_cannibalize(uint8_t purpose,
                                               extend_info_t *info, int flags);
 void circuit_mark_all_unused_circs(void);
 void circuit_mark_all_dirty_circs_as_unusable(void);
-void circuit_mark_for_close_(circuit_t *circ, int reason,
-                             int line, const char *file);
+MOCK_DECL(void, circuit_mark_for_close_, (circuit_t *circ, int reason,
+                                          int line, const char *file));
 int circuit_get_cpath_len(origin_circuit_t *circ);
 void circuit_clear_cpath(origin_circuit_t *circ);
 crypt_path_t *circuit_get_cpath_hop(origin_circuit_t *circ, int hopnum);
@@ -76,6 +76,9 @@ void channel_note_destroy_not_pending(channel_t *chan, circid_t id);
 #ifdef CIRCUITLIST_PRIVATE
 STATIC void circuit_free(circuit_t *circ);
 STATIC size_t n_cells_in_circ_queues(const circuit_t *c);
+STATIC uint32_t circuit_max_queued_data_age(const circuit_t *c, uint32_t now);
+STATIC uint32_t circuit_max_queued_cell_age(const circuit_t *c, uint32_t now);
+STATIC uint32_t circuit_max_queued_item_age(const circuit_t *c, uint32_t now);
 #endif
 
 #endif

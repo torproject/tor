@@ -1,0 +1,4 @@
+  o Major features:
+    - Also consider stream buffer sizes when calculating OOM
+      conditions. Rename MaxMemInCellQueues to MaxMemInQueues. Fixes
+      bug 10169.

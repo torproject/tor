@@ -2153,7 +2153,8 @@ cell_queue_append_packed_copy(circuit_t *circ, cell_queue_t *queue,
   (void)circ;
   (void)exitward;
   (void)use_stats;
-  tor_gettimeofday_cached(&now);
+  tor_gettimeofday_cached_monotonic(&now);
+
   copy->inserted_time = (uint32_t)tv_to_msec(&now);
 
   cell_queue_append(queue, copy);
@@ -2201,13 +2202,21 @@ packed_cell_mem_cost(void)
   return sizeof(packed_cell_t) + MP_POOL_ITEM_OVERHEAD;
 }
 
+/** DOCDOC */
+STATIC size_t
+cell_queues_get_total_allocation(void)
+{
+  return total_cells_allocated * packed_cell_mem_cost();
+}
+
 /** Check whether we've got too much space used for cells.  If so,
  * call the OOM handler and return 1.  Otherwise, return 0. */
-static int
+STATIC int
 cell_queues_check_size(void)
 {
-  size_t alloc = total_cells_allocated * packed_cell_mem_cost();
-  if (alloc >= get_options()->MaxMemInCellQueues) {
+  size_t alloc = cell_queues_get_total_allocation();
+  alloc += buf_get_total_allocation();
+  if (alloc >= get_options()->MaxMemInQueues) {
     circuits_handle_oom(alloc);
     return 1;
   }

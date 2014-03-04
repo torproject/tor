@@ -1727,13 +1727,13 @@ is non-zero):
     localhost, RFC1918 addresses, and so on. This can create security issues;
     you should probably leave it off. (Default: 0)
 
-[[MaxMemInCellQueues]] **MaxMemInCellQueues**  __N__ **bytes**|**KB**|**MB**|**GB**::
+[[MaxMemInQueues]] **MaxMemInQueues**  __N__ **bytes**|**KB**|**MB**|**GB**::
     This option configures a threshold above which Tor will assume that it
-    needs to stop queueing cells because it's about to run out of memory.
-    If it hits this threshold, it will begin killing circuits until it
-    has recovered at least 10% of this memory.  Do not set this option too
+    needs to stop queueing or buffering data because it's about to run out of
+    memory.  If it hits this threshold, it will begin killing circuits until
+    it has recovered at least 10% of this memory.  Do not set this option too
     low, or your relay may be unreliable under load.  This option only
-    affects circuit queues, so the actual process size will be larger than
+    affects some queues, so the actual process size will be larger than
     this. (Default: 8GB)
 
 DIRECTORY SERVER OPTIONS

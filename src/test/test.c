@@ -1630,6 +1630,7 @@ extern struct testcase_t backtrace_tests[];
 extern struct testcase_t hs_tests[];
 extern struct testcase_t nodelist_tests[];
 extern struct testcase_t routerkeys_tests[];
+extern struct testcase_t oom_tests[];
 
 static struct testgroup_t testgroups[] = {
   { "", test_array },
@@ -1656,6 +1657,7 @@ static struct testgroup_t testgroups[] = {
   { "hs/", hs_tests },
   { "nodelist/", nodelist_tests },
   { "routerkeys/", routerkeys_tests },
+  { "oom/", oom_tests },
   END_OF_GROUPS
 };
 
