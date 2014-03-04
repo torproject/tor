@@ -2151,7 +2151,8 @@ cell_queue_append_packed_copy(circuit_t *circ, cell_queue_t *queue,
   (void)circ;
   (void)exitward;
   (void)use_stats;
-  tor_gettimeofday_cached(&now);
+  tor_gettimeofday_cached_monotonic(&now);
+
   copy->inserted_time = (uint32_t)tv_to_msec(&now);
 
   cell_queue_append(queue, copy);
