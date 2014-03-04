@@ -22,3 +22,6 @@ Frequently Asked Questions:
         https://www.torproject.org/faq.html
         https://wiki.torproject.org/noreply/TheOnionRouter/TorFAQ
 
+
+To get started working on Tor development:
+        See the doc/HACKING file.
