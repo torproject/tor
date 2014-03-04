@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Fix a comment about the rend_server_descriptor_t.protocols field
+      to more accurately describe its range. Also, make that
+      field unsigned, to more accurately reflect its usage.
+      Fixes bug 9099; bugfix on 0.2.1.5-alpha.

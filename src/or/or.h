@@ -4838,9 +4838,9 @@ typedef struct rend_service_descriptor_t {
   crypto_pk_t *pk; /**< This service's public key. */
   int version; /**< Version of the descriptor format: 0 or 2. */
   time_t timestamp; /**< Time when the descriptor was generated. */
-  /** Bitmask: which rendezvous protocols are supported?
-   * (We allow bits '0', '1', and '2' to be set.) */
-  int protocols : REND_PROTOCOL_VERSION_BITMASK_WIDTH;
+  /** Bitmask: which introduce/rendezvous protocols are supported?
+   * (We allow bits '0', '1', '2' and '3' to be set.) */
+  unsigned protocols : REND_PROTOCOL_VERSION_BITMASK_WIDTH;
   /** List of the service's introduction points.  Elements are removed if
    * introduction attempts fail. */
   smartlist_t *intro_nodes;
