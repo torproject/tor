@@ -3638,6 +3638,10 @@ typedef struct {
                          * a new one? */
   int MaxCircuitDirtiness; /**< Never use circs that were first used more than
                                 this interval ago. */
+  int PredictedCircsRelevanceTime; /** How long after we've requested a
+                                    * connection for a given port, do we want
+                                    * to continue to pick exits that support
+                                    * that port?  */
   uint64_t BandwidthRate; /**< How much bandwidth, on average, are we willing
                            * to use in a second? */
   uint64_t BandwidthBurst; /**< How much bandwidth, at maximum, are we willing

@@ -318,6 +318,7 @@ static config_var_t option_vars_[] = {
   V(NATDListenAddress,           LINELIST, NULL),
   VPORT(NATDPort,                    LINELIST, NULL),
   V(Nickname,                    STRING,   NULL),
+  V(PredictedCircsRelevanceTime,  INTERVAL, "1 hour"),
   V(WarnUnsafeSocks,              BOOL,     "1"),
   OBSOLETE("NoPublish"),
   VAR("NodeFamily",              LINELIST, NodeFamilies,         NULL),
@@ -2381,6 +2382,11 @@ compute_publishserverdescriptor(or_options_t *options)
  * services can overload the directory system. */
 #define MIN_REND_POST_PERIOD (10*60)
 
+/** Higest allowable value for PredictedCircsRelevanceTime; if this is
+ * too high, our selection of exits will decrease for an extended
+ * period of time to an uncomfortable level .*/
+#define MAX_PREDICTED_CIRCS_RELEVANCE (60*60)
+
 /** Highest allowable value for RendPostPeriod. */
 #define MAX_DIR_PERIOD (MIN_ONION_KEY_LIFETIME/2)
 
@@ -2839,6 +2845,13 @@ options_validate(or_options_t *old_options, or_options_t *options,
     log_warn(LD_CONFIG, "RendPostPeriod is too large; clipping to %ds.",
              MAX_DIR_PERIOD);
     options->RendPostPeriod = MAX_DIR_PERIOD;
+  }
+
+  if (options->PredictedCircsRelevanceTime >
+      MAX_PREDICTED_CIRCS_RELEVANCE) {
+    log_warn(LD_CONFIG, "PredictedCircsRelevanceTime is too large; "
+             "clipping to %ds.", MAX_PREDICTED_CIRCS_RELEVANCE);
+    options->PredictedCircsRelevanceTime = MAX_PREDICTED_CIRCS_RELEVANCE;
   }
 
   if (options->Tor2webMode && options->LearnCircuitBuildTimeout) {
