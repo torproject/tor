@@ -3638,7 +3638,7 @@ typedef struct {
                          * a new one? */
   int MaxCircuitDirtiness; /**< Never use circs that were first used more than
                                 this interval ago. */
-  int PredictedCircsRelevanceTime; /** How long after we've requested a
+  int PredictedPortsRelevanceTime; /** How long after we've requested a
                                     * connection for a given port, do we want
                                     * to continue to pick exits that support
                                     * that port?  */

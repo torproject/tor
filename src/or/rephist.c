@@ -1871,7 +1871,7 @@ rep_hist_get_predicted_ports(time_t now)
   int predicted_circs_relevance_time;
   smartlist_t *out = smartlist_new();
   tor_assert(predicted_ports_list);
-  predicted_circs_relevance_time = get_options()->PredictedCircsRelevanceTime;
+  predicted_circs_relevance_time = get_options()->PredictedPortsRelevanceTime;
 
   /* clean out obsolete entries */
   SMARTLIST_FOREACH_BEGIN(predicted_ports_list, predicted_port_t *, pp) {
@@ -1943,7 +1943,7 @@ rep_hist_get_predicted_internal(time_t now, int *need_uptime,
                                 int *need_capacity)
 {
   int predicted_circs_relevance_time;
-  predicted_circs_relevance_time = get_options()->PredictedCircsRelevanceTime;
+  predicted_circs_relevance_time = get_options()->PredictedPortsRelevanceTime;
 
   if (!predicted_internal_time) { /* initialize it */
     predicted_internal_time = now;
@@ -1965,7 +1965,7 @@ int
 any_predicted_circuits(time_t now)
 {
   int predicted_circs_relevance_time;
-  predicted_circs_relevance_time = get_options()->PredictedCircsRelevanceTime;
+  predicted_circs_relevance_time = get_options()->PredictedPortsRelevanceTime;
 
   return smartlist_len(predicted_ports_list) ||
          predicted_internal_time + predicted_circs_relevance_time >= now;
