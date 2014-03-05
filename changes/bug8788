@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Avoid crashing on a malformed resolv.conf file when running a
+      server using Libevent 1. Fixes bug 8788; bugfix on 0.1.1.23.
