@@ -492,7 +492,6 @@ test_buffer_allocation_tracking(void *arg)
   tt_int_op(buf_allocation(buf2), ==, 8192); /* another 4k chunk. */
   tt_int_op(buf_get_total_allocation(), ==, 5*4096); /* that chunk was new. */
 
-
   /* Make a really huge buffer */
   for (i = 0; i < 1000; ++i) {
     write_to_buf(junk, 4000, buf2);

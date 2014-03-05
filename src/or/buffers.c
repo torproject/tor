@@ -235,7 +235,8 @@ chunk_free_unchecked(chunk_t *chunk)
 #ifdef DEBUG_CHUNK_ALLOC
   tor_assert(CHUNK_ALLOC_SIZE(chunk->memlen) == chunk->DBG_alloc);
 #endif
-  tor_assert(total_bytes_allocated_in_chunks >= CHUNK_ALLOC_SIZE(chunk->memlen));
+  tor_assert(total_bytes_allocated_in_chunks >=
+             CHUNK_ALLOC_SIZE(chunk->memlen));
   total_bytes_allocated_in_chunks -= CHUNK_ALLOC_SIZE(chunk->memlen);
   tor_free(chunk);
 }
@@ -272,7 +273,8 @@ chunk_grow(chunk_t *chunk, size_t sz)
   tor_assert(chunk->DBG_alloc == CHUNK_ALLOC_SIZE(memlen_orig));
   chunk->DBG_alloc = CHUNK_ALLOC_SIZE(sz);
 #endif
-  total_bytes_allocated_in_chunks += CHUNK_ALLOC_SIZE(sz) - CHUNK_ALLOC_SIZE(memlen_orig);
+  total_bytes_allocated_in_chunks +=
+    CHUNK_ALLOC_SIZE(sz) - CHUNK_ALLOC_SIZE(memlen_orig);
   return chunk;
 }
 
@@ -339,7 +341,8 @@ buf_shrink_freelists(int free_all)
 #ifdef DEBUG_CHUNK_ALLOC
         tor_assert(chunk->DBG_alloc == CHUNK_ALLOC_SIZE(chunk->memlen));
 #endif
-        tor_assert(total_bytes_allocated_in_chunks >= CHUNK_ALLOC_SIZE(chunk->memlen));
+        tor_assert(total_bytes_allocated_in_chunks >=
+                   CHUNK_ALLOC_SIZE(chunk->memlen));
         total_bytes_allocated_in_chunks -= CHUNK_ALLOC_SIZE(chunk->memlen);
         total_freed += CHUNK_ALLOC_SIZE(chunk->memlen);
         tor_free(chunk);

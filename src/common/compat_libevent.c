@@ -626,7 +626,6 @@ tor_add_bufferevent_to_rate_limit_group(struct bufferevent *bev,
 }
 #endif
 
-
 #if defined(LIBEVENT_VERSION_NUMBER) && LIBEVENT_VERSION_NUMBER >= V(2,1,1) \
   && !defined(TOR_UNIT_TESTS)
 void
