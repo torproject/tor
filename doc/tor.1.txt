@@ -524,8 +524,10 @@ GENERAL OPTIONS
     \'info'. (Default: 0)
 
 **PredictedCircsRelevanceTime** __NUM__::
-    Set how long, after having requested a connection to a given port, we will
-    search for exits that support that port. (Default: 1 hour)
+    Set how long, after the client has mad an anonymized connection to a
+    given port, we will try to make sure that we build circuits to
+    exits that support that port. The maximum value for this option is 1
+    hour. (Default: 1 hour)
 
 **RunAsDaemon** **0**|**1**::
     If 1, Tor forks and daemonizes to the background. This option has no effect

@@ -2388,7 +2388,7 @@ compute_publishserverdescriptor(or_options_t *options)
 /** Higest allowable value for PredictedCircsRelevanceTime; if this is
  * too high, our selection of exits will decrease for an extended
  * period of time to an uncomfortable level .*/
-#define MAX_PREDICTED_CIRCS_RELEVANCE (24*60*60)
+#define MAX_PREDICTED_CIRCS_RELEVANCE (60*60)
 
 /** Highest allowable value for RendPostPeriod. */
 #define MAX_DIR_PERIOD (MIN_ONION_KEY_LIFETIME/2)
