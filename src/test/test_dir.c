@@ -97,7 +97,6 @@ test_dir_formats(void)
 
   get_platform_str(platform, sizeof(platform));
   r1 = tor_malloc_zero(sizeof(routerinfo_t));
-  r1->address = tor_strdup("18.244.0.1");
   r1->addr = 0xc0a80001u; /* 192.168.0.1 */
   r1->cache_info.published_on = 0;
   r1->or_port = 9000;
@@ -124,7 +123,6 @@ test_dir_formats(void)
   ex2->maskbits = 8;
   ex2->prt_min = ex2->prt_max = 24;
   r2 = tor_malloc_zero(sizeof(routerinfo_t));
-  r2->address = tor_strdup("1.1.1.1");
   r2->addr = 0x0a030201u; /* 10.3.2.1 */
   r2->platform = tor_strdup(platform);
   r2->cache_info.published_on = 5;
@@ -153,7 +151,7 @@ test_dir_formats(void)
   tor_free(options->ContactInfo);
   test_assert(buf);
 
-  strlcpy(buf2, "router Magri 18.244.0.1 9000 0 9003\n"
+  strlcpy(buf2, "router Magri 192.168.0.1 9000 0 9003\n"
           "or-address [1:2:3:4::]:9999\n"
           "platform Tor "VERSION" on ", sizeof(buf2));
   strlcat(buf2, get_uname(), sizeof(buf2));
@@ -187,7 +185,7 @@ test_dir_formats(void)
   cp = buf;
   rp1 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL);
   test_assert(rp1);
-  test_streq(rp1->address, r1->address);
+  test_eq(rp1->addr, r1->addr);
   test_eq(rp1->or_port, r1->or_port);
   //test_eq(rp1->dir_port, r1->dir_port);
   test_eq(rp1->bandwidthrate, r1->bandwidthrate);
@@ -198,7 +196,7 @@ test_dir_formats(void)
   //test_assert(rp1->exit_policy == NULL);
 
   strlcpy(buf2,
-          "router Fred 1.1.1.1 9005 0 0\n"
+          "router Fred 10.3.2.1 9005 0 0\n"
           "platform Tor "VERSION" on ", sizeof(buf2));
   strlcat(buf2, get_uname(), sizeof(buf2));
   strlcat(buf2, "\n"
@@ -231,7 +229,7 @@ test_dir_formats(void)
   cp = buf;
   rp2 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL);
   test_assert(rp2);
-  test_streq(rp2->address, r2->address);
+  test_eq(rp2->addr, r2->addr);
   test_eq(rp2->or_port, r2->or_port);
   test_eq(rp2->dir_port, r2->dir_port);
   test_eq(rp2->bandwidthrate, r2->bandwidthrate);

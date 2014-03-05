@@ -1177,7 +1177,7 @@ consider_testing_reachability(int test_or, int test_dir)
     /* XXX IPv6 self testing */
     log_info(LD_CIRC, "Testing %s of my ORPort: %s:%d.",
              !orport_reachable ? "reachability" : "bandwidth",
-             me->address, me->or_port);
+             fmt_addr32(me->addr), me->or_port);
     circuit_launch_by_extend_info(CIRCUIT_PURPOSE_TESTING, ei,
                             CIRCLAUNCH_NEED_CAPACITY|CIRCLAUNCH_IS_INTERNAL);
     extend_info_free(ei);
@@ -1189,7 +1189,7 @@ consider_testing_reachability(int test_or, int test_dir)
                 CONN_TYPE_DIR, &addr, me->dir_port,
                 DIR_PURPOSE_FETCH_SERVERDESC)) {
     /* ask myself, via tor, for my server descriptor. */
-    directory_initiate_command(me->address, &addr,
+    directory_initiate_command(&addr,
                                me->or_port, me->dir_port,
                                me->cache_info.identity_digest,
                                DIR_PURPOSE_FETCH_SERVERDESC,
@@ -1204,6 +1204,7 @@ router_orport_found_reachable(void)
 {
   const routerinfo_t *me = router_get_my_routerinfo();
   if (!can_reach_or_port && me) {
+    char *address = tor_dup_ip(me->addr);
     log_notice(LD_OR,"Self-testing indicates your ORPort is reachable from "
                "the outside. Excellent.%s",
                get_options()->PublishServerDescriptor_ != NO_DIRINFO ?
@@ -1212,7 +1213,8 @@ router_orport_found_reachable(void)
     mark_my_descriptor_dirty("ORPort found reachable");
     control_event_server_status(LOG_NOTICE,
                                 "REACHABILITY_SUCCEEDED ORADDRESS=%s:%d",
-                                me->address, me->or_port);
+                                address, me->or_port);
+    tor_free(address);
   }
 }
 
@@ -1222,6 +1224,7 @@ router_dirport_found_reachable(void)
 {
   const routerinfo_t *me = router_get_my_routerinfo();
   if (!can_reach_dir_port && me) {
+    char *address = tor_dup_ip(me->addr);
     log_notice(LD_DIRSERV,"Self-testing indicates your DirPort is reachable "
                "from the outside. Excellent.");
     can_reach_dir_port = 1;
@@ -1229,7 +1232,8 @@ router_dirport_found_reachable(void)
       mark_my_descriptor_dirty("DirPort found reachable");
     control_event_server_status(LOG_NOTICE,
                                 "REACHABILITY_SUCCEEDED DIRADDRESS=%s:%d",
-                                me->address, me->dir_port);
+                                address, me->dir_port);
+    tor_free(address);
   }
 }
 
@@ -1800,7 +1804,6 @@ router_rebuild_descriptor(int force)
 
   ri = tor_malloc_zero(sizeof(routerinfo_t));
   ri->cache_info.routerlist_index = -1;
-  ri->address = tor_dup_ip(addr);
   ri->nickname = tor_strdup(options->Nickname);
   ri->addr = addr;
   ri->or_port = router_get_advertised_or_port(options);
@@ -1865,7 +1868,7 @@ router_rebuild_descriptor(int force)
     policies_parse_exit_policy(options->ExitPolicy, &ri->exit_policy,
                                options->IPv6Exit,
                                options->ExitPolicyRejectPrivate,
-                               ri->address, !options->BridgeRelay);
+                               ri->addr, !options->BridgeRelay);
   }
   ri->policy_is_reject_star =
     policy_is_reject_star(ri->exit_policy, AF_INET) &&
@@ -2271,8 +2274,7 @@ char *
 router_dump_router_to_string(routerinfo_t *router,
                              crypto_pk_t *ident_key)
 {
-  /* XXXX025 Make this look entirely at its arguments, and not at globals.
-   */
+  char *address = NULL;
   char *onion_pkey = NULL; /* Onion key, PEM-encoded. */
   char *identity_pkey = NULL; /* Identity key, PEM-encoded. */
   char digest[DIGEST_LEN];
@@ -2346,7 +2348,9 @@ router_dump_router_to_string(routerinfo_t *router,
     }
   }
 
+  address = tor_dup_ip(router->addr);
   chunks = smartlist_new();
+
   /* Generate the easy portion of the router descriptor. */
   smartlist_add_asprintf(chunks,
                     "router %s %s %d 0 %d\n"
@@ -2362,7 +2366,7 @@ router_dump_router_to_string(routerinfo_t *router,
                     "signing-key\n%s"
                     "%s%s%s%s",
     router->nickname,
-    router->address,
+    address,
     router->or_port,
     decide_to_advertise_dirport(options, router->dir_port),
     extra_or_address ? extra_or_address : "",
@@ -2476,6 +2480,7 @@ router_dump_router_to_string(routerinfo_t *router,
     SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
     smartlist_free(chunks);
   }
+  tor_free(address);
   tor_free(family_line);
   tor_free(onion_pkey);
   tor_free(identity_pkey);

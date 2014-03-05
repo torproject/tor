@@ -2009,7 +2009,6 @@ typedef int16_t country_t;
 /** Information about another onion router in the network. */
 typedef struct {
   signed_descriptor_t cache_info;
-  char *address; /**< Location of OR: either a hostname or an IP address. */
   char *nickname; /**< Human-readable OR name. */
 
   uint32_t addr; /**< IPv4 address of OR, in host order. */

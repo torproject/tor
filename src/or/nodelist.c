@@ -785,7 +785,7 @@ void
 node_get_address_string(const node_t *node, char *buf, size_t len)
 {
   if (node->ri) {
-    strlcpy(buf, node->ri->address, len);
+    strlcpy(buf, fmt_addr32(node->ri->addr), len);
   } else if (node->rs) {
     tor_addr_t addr;
     tor_addr_from_ipv4h(&addr, node->rs->addr);

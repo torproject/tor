@@ -82,8 +82,7 @@ static void dir_microdesc_download_failed(smartlist_t *failed,
 static void note_client_request(int purpose, int compressed, size_t bytes);
 static int client_likes_consensus(networkstatus_t *v, const char *want_url);
 
-static void directory_initiate_command_rend(const char *address,
-                                            const tor_addr_t *addr,
+static void directory_initiate_command_rend(const tor_addr_t *addr,
                                             uint16_t or_port,
                                             uint16_t dir_port,
                                             const char *digest,
@@ -464,7 +463,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
         tor_addr_t addr;
         routerinfo_t *ri = node->ri;
         node_get_addr(node, &addr);
-        directory_initiate_command(ri->address, &addr,
+        directory_initiate_command(&addr,
                                    ri->or_port, 0/*no dirport*/,
                                    ri->cache_info.identity_digest,
                                    dir_purpose,
@@ -593,9 +592,6 @@ directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
 {
   const or_options_t *options = get_options();
   const node_t *node;
-  char address_buf[INET_NTOA_BUF_LEN+1];
-  struct in_addr in;
-  const char *address;
   tor_addr_t addr;
   const int anonymized_connection = dirind_is_anon(indirection);
   node = node_get_by_id(status->identity_digest);
@@ -605,13 +601,6 @@ directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
              "don't have its router descriptor.",
              routerstatus_describe(status));
     return;
-  } else if (node) {
-    node_get_address_string(node, address_buf, sizeof(address_buf));
-    address = address_buf;
-  } else {
-    in.s_addr = htonl(status->addr);
-    tor_inet_ntoa(&in, address_buf, sizeof(address_buf));
-    address = address_buf;
   }
   tor_addr_from_ipv4h(&addr, status->addr);
 
@@ -625,7 +614,7 @@ directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
     return;
   }
 
-  directory_initiate_command_rend(address, &addr,
+  directory_initiate_command_rend(&addr,
                              status->or_port, status->dir_port,
                              status->identity_digest,
                              dir_purpose, router_purpose,
@@ -867,7 +856,7 @@ directory_command_should_use_begindir(const or_options_t *options,
  * <b>supports_begindir</b>, and whose identity key digest is
  * <b>digest</b>. */
 void
-directory_initiate_command(const char *address, const tor_addr_t *_addr,
+directory_initiate_command(const tor_addr_t *_addr,
                            uint16_t or_port, uint16_t dir_port,
                            const char *digest,
                            uint8_t dir_purpose, uint8_t router_purpose,
@@ -875,7 +864,7 @@ directory_initiate_command(const char *address, const tor_addr_t *_addr,
                            const char *payload, size_t payload_len,
                            time_t if_modified_since)
 {
-  directory_initiate_command_rend(address, _addr, or_port, dir_port,
+  directory_initiate_command_rend(_addr, or_port, dir_port,
                              digest, dir_purpose,
                              router_purpose, indirection,
                              resource, payload, payload_len,
@@ -897,7 +886,7 @@ is_sensitive_dir_purpose(uint8_t dir_purpose)
 /** Same as directory_initiate_command(), but accepts rendezvous data to
  * fetch a hidden service descriptor. */
 static void
-directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
+directory_initiate_command_rend(const tor_addr_t *_addr,
                                 uint16_t or_port, uint16_t dir_port,
                                 const char *digest,
                                 uint8_t dir_purpose, uint8_t router_purpose,
@@ -915,7 +904,6 @@ directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
   const int anonymized_connection = dirind_is_anon(indirection);
   tor_addr_t addr;
 
-  tor_assert(address);
   tor_assert(_addr);
   tor_assert(or_port || dir_port);
   tor_assert(digest);
@@ -948,7 +936,7 @@ directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
   /* set up conn so it's got all the data we need to remember */
   tor_addr_copy(&conn->base_.addr, &addr);
   conn->base_.port = use_begindir ? or_port : dir_port;
-  conn->base_.address = tor_strdup(address);
+  conn->base_.address = tor_dup_addr(&addr);
   memcpy(conn->identity_digest, digest, DIGEST_LEN);
 
   conn->base_.purpose = dir_purpose;

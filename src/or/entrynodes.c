@@ -1967,7 +1967,6 @@ get_socks_args_by_bridge_addrport(const tor_addr_t *addr, uint16_t port)
 static void
 launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
 {
-  char *address;
   const or_options_t *options = get_options();
 
   if (connection_get_by_type_addr_port_purpose(
@@ -1982,15 +1981,12 @@ launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
     return;
   }
 
-  address = tor_dup_addr(&bridge->addr);
-
-  directory_initiate_command(address, &bridge->addr,
+  directory_initiate_command(&bridge->addr,
                              bridge->port, 0/*no dirport*/,
                              bridge->identity,
                              DIR_PURPOSE_FETCH_SERVERDESC,
                              ROUTER_PURPOSE_BRIDGE,
                              DIRIND_ONEHOP, "authority.z", NULL, 0, 0);
-  tor_free(address);
 }
 
 /** Fetching the bridge descriptor from the bridge authority returned a
@@ -2108,13 +2104,11 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
     } else {
       if (tor_addr_family(&bridge->addr) == AF_INET) {
         ri->addr = tor_addr_to_ipv4h(&bridge->addr);
-        tor_free(ri->address);
-        ri->address = tor_dup_ip(ri->addr);
         ri->or_port = bridge->port;
         log_info(LD_DIR,
                  "Adjusted bridge routerinfo for '%s' to match configured "
                  "address %s:%d.",
-                 ri->nickname, ri->address, ri->or_port);
+                 ri->nickname, fmt_addr32(ri->addr), ri->or_port);
       } else if (tor_addr_family(&bridge->addr) == AF_INET6) {
         tor_addr_copy(&ri->ipv6_addr, &bridge->addr);
         ri->ipv6_orport = bridge->port;

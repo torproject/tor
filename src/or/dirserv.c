@@ -79,7 +79,6 @@ static int add_fingerprint_to_dir(const char *nickname, const char *fp,
                                   struct authdir_config_t *list);
 static uint32_t
 dirserv_get_status_impl(const char *fp, const char *nickname,
-                        const char *address,
                         uint32_t addr, uint16_t or_port,
                         const char *platform, const char *contact,
                         const char **msg, int should_log);
@@ -327,7 +326,6 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg)
   }
 
   return dirserv_get_status_impl(d, router->nickname,
-                                 router->address,
                                  router->addr, router->or_port,
                                  router->platform, router->contact_info,
                                  msg, 1);
@@ -341,7 +339,6 @@ dirserv_would_reject_router(const routerstatus_t *rs)
   uint32_t res;
 
   res = dirserv_get_status_impl(rs->identity_digest, rs->nickname,
-                                "", /* address is only used in logs */
                                 rs->addr, rs->or_port,
                                 NULL, NULL,
                                 NULL, 0);
@@ -380,7 +377,6 @@ dirserv_get_name_status(const char *id_digest, const char *nickname)
  */
 static uint32_t
 dirserv_get_status_impl(const char *id_digest, const char *nickname,
-                        const char *address,
                         uint32_t addr, uint16_t or_port,
                         const char *platform, const char *contact,
                         const char **msg, int should_log)
@@ -452,14 +448,14 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
     if (should_log)
       log_info(LD_DIRSERV,
                "Marking '%s' as bad directory because of address '%s'",
-               nickname, address);
+               nickname, fmt_addr32(addr));
     result |= FP_BADDIR;
   }
 
   if (authdir_policy_badexit_address(addr, or_port)) {
     if (should_log)
       log_info(LD_DIRSERV, "Marking '%s' as bad exit because of address '%s'",
-               nickname, address);
+               nickname, fmt_addr32(addr));
     result |= FP_BADEXIT;
   }
 
@@ -467,7 +463,7 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
     if (!authdir_policy_permits_address(addr, or_port)) {
       if (should_log)
         log_info(LD_DIRSERV, "Rejecting '%s' because of address '%s'",
-                 nickname, address);
+                 nickname, fmt_addr32(addr));
       if (msg)
         *msg = "Authdir is rejecting routers in this range.";
       return FP_REJECT;
@@ -475,7 +471,7 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
     if (!authdir_policy_valid_address(addr, or_port)) {
       if (should_log)
         log_info(LD_DIRSERV, "Not marking '%s' valid because of address '%s'",
-                 nickname, address);
+                 nickname, fmt_addr32(addr));
       result |= FP_INVALID;
     }
     if (reject_unlisted) {
@@ -524,19 +520,12 @@ dirserv_free_fingerprint_list(void)
 static int
 dirserv_router_has_valid_address(routerinfo_t *ri)
 {
-  struct in_addr iaddr;
   if (get_options()->DirAllowPrivateAddresses)
     return 0; /* whatever it is, we're fine with it */
-  if (!tor_inet_aton(ri->address, &iaddr)) {
-    log_info(LD_DIRSERV,"Router %s published non-IP address '%s'. Refusing.",
-             router_describe(ri),
-             ri->address);
-    return -1;
-  }
-  if (is_internal_IP(ntohl(iaddr.s_addr), 0)) {
+  if (is_internal_IP(ri->addr, 0)) {
     log_info(LD_DIRSERV,
-             "Router %s published internal IP address '%s'. Refusing.",
-             router_describe(ri), ri->address);
+             "Router %s published internal IP address. Refusing.",
+             router_describe(ri));
     return -1; /* it's a private IP, we should reject it */
   }
   return 0;
@@ -588,12 +577,10 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
   }
   if (dirserv_router_has_valid_address(ri) < 0) {
     log_fn(severity, LD_DIRSERV,
-           "Router %s has invalid address '%s'. "
-           "Not adding (%s).",
+           "Router %s has invalid address. Not adding (%s).",
            router_describe(ri),
-           ri->address,
            esc_router_info(ri));
-    *msg = "Rejected: Address is not an IP, or IP is a private address.";
+    *msg = "Rejected: Address is a private address.";
     return -1;
   }
 
@@ -3279,7 +3266,7 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
 
   /* IPv4. */
   log_debug(LD_OR,"Testing reachability of %s at %s:%u.",
-            router->nickname, router->address, router->or_port);
+            router->nickname, fmt_addr32(router->addr), router->or_port);
   tor_addr_from_ipv4h(&router_addr, router->addr);
   chan = channel_tls_connect(&router_addr, router->or_port,
                              router->cache_info.identity_digest);

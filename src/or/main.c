@@ -1670,24 +1670,28 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
     /* every 20 minutes, check and complain if necessary */
     const routerinfo_t *me = router_get_my_routerinfo();
     if (me && !check_whether_orport_reachable()) {
+      char *address = tor_dup_ip(me->addr);
       log_warn(LD_CONFIG,"Your server (%s:%d) has not managed to confirm that "
                "its ORPort is reachable. Please check your firewalls, ports, "
                "address, /etc/hosts file, etc.",
-               me->address, me->or_port);
+               address, me->or_port);
       control_event_server_status(LOG_WARN,
                                   "REACHABILITY_FAILED ORADDRESS=%s:%d",
-                                  me->address, me->or_port);
+                                  address, me->or_port);
+      tor_free(address);
     }
 
     if (me && !check_whether_dirport_reachable()) {
+      char *address = tor_dup_ip(me->addr);
       log_warn(LD_CONFIG,
                "Your server (%s:%d) has not managed to confirm that its "
                "DirPort is reachable. Please check your firewalls, ports, "
                "address, /etc/hosts file, etc.",
-               me->address, me->dir_port);
+               address, me->dir_port);
       control_event_server_status(LOG_WARN,
                                   "REACHABILITY_FAILED DIRADDRESS=%s:%d",
-                                  me->address, me->dir_port);
+                                  address, me->dir_port);
+      tor_free(address);
     }
   }
 
