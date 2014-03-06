@@ -1,0 +1,6 @@
+  o Minor bugfixes (testing):
+    - Improve the tinytest implementation of string operation tests
+      so that comparisons NULL strings no longer crash the tests;
+      they now just fail, normally. Fixes bug 9004; bugfix on
+      0.2.2.4-alpha.
+
