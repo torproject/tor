@@ -393,13 +393,15 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
               strmap_size(fingerprint_list->fp_by_name),
               digestmap_size(fingerprint_list->status_by_digest));
 
-  /* Versions before Tor 0.2.2.35 have known security issues that
-   * make them unsuitable for the current network. */
-  if (platform && !tor_version_as_new_as(platform,"0.2.2.35")) {
+  /* Versions before Tor 0.2.3.25 are too old to support, and aren't
+   * getting any more security fixes. Disable them. */
+  if (platform && !tor_version_as_new_as(platform,"0.2.3.25")) {
     if (msg)
       *msg = "Tor version is insecure or unsupported. Please upgrade!";
     return FP_REJECT;
-  } else if (platform && tor_version_as_new_as(platform,"0.2.3.0-alpha")) {
+  }
+#if 0
+  else if (platform && tor_version_as_new_as(platform,"0.2.3.0-alpha")) {
     /* Versions from 0.2.3-alpha...0.2.3.9-alpha have known security
      * issues that make them unusable for the current network */
     if (!tor_version_as_new_as(platform, "0.2.3.10-alpha")) {
@@ -408,6 +410,7 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
       return FP_REJECT;
     }
   }
+#endif
 
   result = dirserv_get_name_status(id_digest, nickname);
   if (result & FP_NAMED) {
