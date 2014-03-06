@@ -1041,7 +1041,8 @@ The following options are useful only for clients (that is, if
 [[SocksPolicy]] **SocksPolicy** __policy__,__policy__,__...__::
     Set an entrance policy for this server, to limit who can connect to the
     SocksPort and DNSPort ports. The policies have the same form as exit
-    policies below.
+    policies below, except that port specifiers are ignored. Any address
+    not matched by some entry in the policy is accepted.
 
 [[SocksTimeout]] **SocksTimeout** __NUM__::
     Let a socks connection wait NUM seconds handshaking, and NUM seconds
@@ -1838,7 +1839,9 @@ if DirPort is non-zero):
 
 [[DirPolicy]] **DirPolicy** __policy__,__policy__,__...__::
     Set an entrance policy for this server, to limit who can connect to the
-    directory ports. The policies have the same form as exit policies above.
+    directory ports. The policies have the same form as exit policies above,
+    except that port specifiers are ignored. Any address not matched by
+    some entry in the policy is accepted.
 
 [[FetchV2Networkstatus]] **FetchV2Networkstatus** **0**|**1**::
     If set, we try to fetch the (obsolete, unused) version 2 network status
@@ -1882,7 +1885,11 @@ DIRECTORY AUTHORITY SERVER OPTIONS
 [[AuthDirBadDir]] **AuthDirBadDir** __AddressPattern...__::
     Authoritative directories only. A set of address patterns for servers that
     will be listed as bad directories in any network status document this
-    authority publishes, if **AuthDirListBadDirs** is set.
+    authority publishes, if **AuthDirListBadDirs** is set. +
+ +
+    (The address pattern syntax here and in the options below
+    is the same as for exit policies, except that you don't need to say
+    "accept" or "reject", and ports are not needed.)
 
 [[AuthDirBadExit]] **AuthDirBadExit** __AddressPattern...__::
     Authoritative directories only. A set of address patterns for servers that
