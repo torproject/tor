@@ -36,22 +36,7 @@
 #define test_strneq(expr1, expr2) tt_str_op((expr1), !=, (expr2))
 
 #define test_mem_op(expr1, op, expr2, len)                              \
-  tt_assert_test_fmt_type(expr1,expr2,#expr1" "#op" "#expr2,            \
-                          const char *,                                 \
-                          (val1_ && val2_ && memcmp(val1_, val2_, len) op 0), \
-                          char *, "%s",                                 \
-                          { size_t printlen = (len)*2+1;                \
-                            if (value_) {                               \
-                              print_ = tor_malloc(printlen);            \
-                              base16_encode(print_, printlen, value_,   \
-                                            (len));                     \
-                            } else {                                    \
-                              print_ = tor_strdup("null");              \
-                            }                                           \
-                          },                                            \
-                          { tor_free(print_); },                        \
-                          TT_EXIT_TEST_FUNCTION                         \
-                          );
+  tt_mem_op((expr1), op, (expr2), (len))
 
 #define test_memeq(expr1, expr2, len) test_mem_op((expr1), ==, (expr2), len)
 #define test_memneq(expr1, expr2, len) test_mem_op((expr1), !=, (expr2), len)

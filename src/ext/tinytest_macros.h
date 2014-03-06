@@ -171,6 +171,16 @@
 	    (val1_ && val2_ && strcmp(val1_,val2_) op 0),"<%s>",	\
 	    TT_EXIT_TEST_FUNCTION)
 
+#define tt_mem_op(expr1, op, expr2, len)                                \
+  tt_assert_test_fmt_type(expr1,expr2,#expr1" "#op" "#expr2,            \
+			  const char *,                                 \
+			  (val1_ && val2_ && memcmp(val1_, val2_, len) op 0), \
+			  char *, "%s",					\
+			  { print_ = tinytest_format_hex_(value_, (len)); }, \
+			  { if (print_) free(print_); },		\
+			  TT_EXIT_TEST_FUNCTION				\
+                          );
+
 #define tt_want_int_op(a,op,b)						\
 	tt_assert_test_type(a,b,#a" "#op" "#b,long,(val1_ op val2_),"%ld",(void)0)
 
