@@ -1025,7 +1025,8 @@ The following options are useful only for clients (that is, if
 [[SocksPolicy]] **SocksPolicy** __policy__,__policy__,__...__::
     Set an entrance policy for this server, to limit who can connect to the
     SocksPort and DNSPort ports. The policies have the same form as exit
-    policies below, except that port specifiers are ignored.
+    policies below, except that port specifiers are ignored. Any address
+    not matched by some entry in the policy is accepted.
 
 [[SocksTimeout]] **SocksTimeout** __NUM__::
     Let a socks connection wait NUM seconds handshaking, and NUM seconds
@@ -1823,7 +1824,8 @@ if DirPort is non-zero):
 [[DirPolicy]] **DirPolicy** __policy__,__policy__,__...__::
     Set an entrance policy for this server, to limit who can connect to the
     directory ports. The policies have the same form as exit policies above,
-    except that port specifiers are ignored.
+    except that port specifiers are ignored. Any address not matched by
+    some entry in the policy is accepted.
 
 [[FetchV2Networkstatus]] **FetchV2Networkstatus** **0**|**1**::
     If set, we try to fetch the (obsolete, unused) version 2 network status
