@@ -669,7 +669,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
   char id_digest_str[2*DIGEST_LEN+1];
   char sk_digest_str[2*DIGEST_LEN+1];
 
-  if (should_delay_dir_fetches(get_options()))
+  if (should_delay_dir_fetches(get_options(), NULL))
     return;
 
   pending_cert = fp_pair_map_new();
@@ -4593,7 +4593,7 @@ void
 update_router_descriptor_downloads(time_t now)
 {
   const or_options_t *options = get_options();
-  if (should_delay_dir_fetches(options))
+  if (should_delay_dir_fetches(options, NULL))
     return;
   if (!we_fetch_router_descriptors(options))
     return;
@@ -4614,7 +4614,7 @@ update_extrainfo_downloads(time_t now)
   int n_no_ei = 0, n_pending = 0, n_have = 0, n_delay = 0;
   if (! options->DownloadExtraInfo)
     return;
-  if (should_delay_dir_fetches(options))
+  if (should_delay_dir_fetches(options, NULL))
     return;
   if (!router_have_minimum_dir_info())
     return;

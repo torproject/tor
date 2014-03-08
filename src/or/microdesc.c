@@ -721,7 +721,7 @@ update_microdesc_downloads(time_t now)
   smartlist_t *missing;
   digestmap_t *pending;
 
-  if (should_delay_dir_fetches(options))
+  if (should_delay_dir_fetches(options, NULL))
     return;
   if (directory_too_idle_to_fetch_descriptors(options, now))
     return;
