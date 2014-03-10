@@ -2115,8 +2115,12 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
        * our entry node list */
       entry_guard_register_connect_status(ri->cache_info.identity_digest,
                                           1, 0, now);
-      if (first)
+      if (first) {
+        /* XXXX apparently, this is never called. See bug #9229. */
         routerlist_retry_directory_downloads(now);
+      }
+
+      update_networkstatus_downloads(now);
     }
   }
 }
