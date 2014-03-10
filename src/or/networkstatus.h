@@ -53,7 +53,7 @@ int networkstatus_nickname_is_unnamed(const char *nickname);
 void networkstatus_consensus_download_failed(int status_code,
                                              const char *flavname);
 void update_consensus_networkstatus_fetch_time(time_t now);
-int should_delay_dir_fetches(const or_options_t *options);
+int should_delay_dir_fetches(const or_options_t *options,const char **msg_out);
 void update_networkstatus_downloads(time_t now);
 void update_certificate_downloads(time_t now);
 int consensus_is_waiting_for_certs(void);

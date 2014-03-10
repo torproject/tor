@@ -1477,6 +1477,7 @@ update_router_have_minimum_dir_info(void)
   const networkstatus_t *consensus =
     networkstatus_get_reasonably_live_consensus(now,usable_consensus_flavor());
   int using_md;
+  const char *delay_fetches_msg = NULL;
 
   if (!consensus) {
     if (!networkstatus_get_latest_consensus())
@@ -1489,10 +1490,9 @@ update_router_have_minimum_dir_info(void)
     goto done;
   }
 
-  if (should_delay_dir_fetches(get_options())) {
-    log_notice(LD_DIR, "no known bridge descriptors running yet; stalling");
-    strlcpy(dir_info_status, "No live bridge descriptors.",
-            sizeof(dir_info_status));
+  if (should_delay_dir_fetches(get_options(), &delay_fetches_msg)) {
+    log_notice(LD_DIR, "Delaying dir fetches: %s", delay_fetches_msg);
+    strlcpy(dir_info_status, "%s",  sizeof(dir_info_status));
     res = 0;
     goto done;
   }
