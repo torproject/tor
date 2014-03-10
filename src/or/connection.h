@@ -187,6 +187,8 @@ connection_t *connection_get_by_type_state_rendquery(int type, int state,
 dir_connection_t *connection_dir_get_by_purpose_and_resource(
                                            int state, const char *resource);
 
+int any_other_active_or_conns(const or_connection_t *this_conn);
+
 #define connection_speaks_cells(conn) ((conn)->type == CONN_TYPE_OR)
 int connection_is_listener(connection_t *conn);
 int connection_state_is_open(connection_t *conn);

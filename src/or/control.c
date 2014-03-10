@@ -4873,10 +4873,12 @@ control_event_bootstrap(bootstrap_status_t status, int progress)
 
 /** Called when Tor has failed to make bootstrapping progress in a way
  * that indicates a problem. <b>warn</b> gives a hint as to why, and
- * <b>reason</b> provides an "or_conn_end_reason" tag.
+ * <b>reason</b> provides an "or_conn_end_reason" tag.  <b>or_conn</b>
+ * is the connection that caused this problem.
  */
 MOCK_IMPL(void,
-control_event_bootstrap_problem, (const char *warn, int reason))
+          control_event_bootstrap_problem, (const char *warn, int reason,
+                                            const or_connection_t *or_conn))
 {
   int status = bootstrap_percent;
   const char *tag, *summary;
@@ -4898,9 +4900,10 @@ control_event_bootstrap_problem, (const char *warn, int reason))
   if (reason == END_OR_CONN_REASON_NO_ROUTE)
     recommendation = "warn";
 
-  if (get_options()->UseBridges &&
-      !any_bridge_descriptors_known() &&
-      !any_pending_bridge_descriptor_fetches())
+  /* If we are using bridges and all our OR connections are now
+     closed, it means that we totally failed to connect to our
+     bridges. Throw a warning. */
+  if (get_options()->UseBridges && !any_other_active_or_conns(or_conn))
     recommendation = "warn";
 
   if (we_are_hibernating())

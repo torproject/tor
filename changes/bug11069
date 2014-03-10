@@ -1,0 +1,4 @@
+  o Minor bugfixes (clients):
+    - Fix tor so that it raises a control port warning when we fail to
+      connect to all of our bridges. Fixes bug 11069; bugfix on
+      tor-0.2.1.2-alpha.
