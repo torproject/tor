@@ -2207,27 +2207,6 @@ any_bridge_descriptors_known(void)
   return choose_random_entry(NULL) != NULL;
 }
 
-/** Return 1 if there are any directory conns fetching bridge descriptors
- * that aren't marked for close. We use this to guess if we should tell
- * the controller that we have a problem. */
-int
-any_pending_bridge_descriptor_fetches(void)
-{
-  smartlist_t *conns = get_connection_array();
-  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
-    if (conn->type == CONN_TYPE_DIR &&
-        conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC &&
-        TO_DIR_CONN(conn)->router_purpose == ROUTER_PURPOSE_BRIDGE &&
-        !conn->marked_for_close &&
-        conn->linked &&
-        conn->linked_conn && !conn->linked_conn->marked_for_close) {
-      log_debug(LD_DIR, "found one: %s", conn->address);
-      return 1;
-    }
-  } SMARTLIST_FOREACH_END(conn);
-  return 0;
-}
-
 /** Return 1 if we have at least one descriptor for an entry guard
  * (bridge or member of EntryNodes) and all descriptors we know are
  * down. Else return 0. If <b>act</b> is 1, then mark the down guards

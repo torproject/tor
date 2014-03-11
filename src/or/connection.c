@@ -4164,6 +4164,31 @@ connection_dir_get_by_purpose_and_resource(int purpose,
   return NULL;
 }
 
+/** Return 1 if there are any active OR connections apart from
+ * <b>this_conn</b>.
+ *
+ * We use this to guess if we should tell the controller that we
+ * didn't manage to connect to any of our bridges. */
+int
+any_other_active_or_conns(const or_connection_t *this_conn)
+{
+  smartlist_t *conns = get_connection_array();
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
+    if (conn == TO_CONN(this_conn)) { /* don't consider this conn */
+      continue;
+    }
+
+    if (conn->type == CONN_TYPE_OR &&
+        !conn->marked_for_close) {
+      log_debug(LD_DIR, "%s: Found an OR connection: %s",
+                __func__, conn->address);
+      return 1;
+    }
+  } SMARTLIST_FOREACH_END(conn);
+
+  return 0;
+}
+
 /** Return 1 if <b>conn</b> is a listener conn, else return 0. */
 int
 connection_is_listener(connection_t *conn)
