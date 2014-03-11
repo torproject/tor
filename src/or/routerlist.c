@@ -2591,19 +2591,6 @@ router_is_named(const routerinfo_t *router)
           tor_memeq(digest, router->cache_info.identity_digest, DIGEST_LEN));
 }
 
-/** Return true iff the digest of <b>router</b>'s identity key,
- * encoded in hexadecimal, matches <b>hexdigest</b> (which is
- * optionally prefixed with a single dollar sign).  Return false if
- * <b>hexdigest</b> is malformed, or it doesn't match.  */
-static INLINE int
-router_hex_digest_matches(const routerinfo_t *router, const char *hexdigest)
-{
-  return hex_digest_nickname_matches(hexdigest,
-                                     router->cache_info.identity_digest,
-                                     router->nickname,
-                                     router_is_named(router));
-}
-
 /** Return true iff <b>digest</b> is the digest of the identity key of a
  * trusted directory matching at least one bit of <b>type</b>.  If <b>type</b>
  * is zero, any authority is okay. */
