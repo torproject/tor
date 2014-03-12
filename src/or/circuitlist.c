@@ -1594,6 +1594,7 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
       channel_send_destroy(circ->n_circ_id, circ->n_chan, reason);
     }
     circuitmux_detach_circuit(circ->n_chan->cmux, circ);
+    circuit_set_n_circid_chan(circ, 0, NULL);
   }
 
   if (! CIRCUIT_IS_ORIGIN(circ)) {
@@ -1627,6 +1628,7 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
         channel_send_destroy(or_circ->p_circ_id, or_circ->p_chan, reason);
       }
       circuitmux_detach_circuit(or_circ->p_chan->cmux, circ);
+      circuit_set_p_circid_chan(or_circ, 0, NULL);
     }
   } else {
     origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
