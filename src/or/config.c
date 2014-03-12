@@ -4682,8 +4682,8 @@ parse_client_transport_line(const char *line, int validate_only)
 
   if (is_managed) { /* managed */
     if (!validate_only && is_useless_proxy) {
-      log_warn(LD_GENERAL, "Pluggable transport proxy (%s) does not provide "
-               "any needed transports and will not be launched.", line);
+      log_notice(LD_GENERAL, "Pluggable transport proxy (%s) does not provide "
+                 "any needed transports and will not be launched.", line);
     }
 
     /* If we are not just validating, use the rest of the line as the
