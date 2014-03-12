@@ -1,4 +1,5 @@
   o Minor features:
     - Don't log at warning severity when we refuse to launch a
       pluggable transport proxy that we don't need. Resolves ticket
-      5018.
+      5018; bugfix on 0.2.5.2-alpha.
+
