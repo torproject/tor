@@ -32,7 +32,7 @@ test_routerkeys_write_fingerprint(void *arg)
   set_server_identity_key(key);
   set_client_identity_key(crypto_pk_dup_key(key));
 
-  check_private_dir(ddir, CPD_CREATE, NULL);
+  tt_int_op(0, ==, check_private_dir(ddir, CPD_CREATE, NULL));
   tt_int_op(crypto_pk_cmp_keys(get_server_identity_key(),key),==,0);
 
   /* Write fingerprint file */

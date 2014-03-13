@@ -671,6 +671,7 @@ test_policies(void)
   config_line_t line;
   smartlist_t *sm = NULL;
   char *policy_str = NULL;
+  short_policy_t *short_parsed = NULL;
 
   policy = smartlist_new();
 
@@ -858,24 +859,28 @@ test_policies(void)
   test_short_policy_parse("reject ,1-10,,,,30-40", "reject 1-10,30-40");
 
   /* Try parsing various broken short policies */
-  tt_ptr_op(NULL, ==, parse_short_policy("accept 200-199"));
-  tt_ptr_op(NULL, ==, parse_short_policy(""));
-  tt_ptr_op(NULL, ==, parse_short_policy("rejekt 1,2,3"));
-  tt_ptr_op(NULL, ==, parse_short_policy("reject "));
-  tt_ptr_op(NULL, ==, parse_short_policy("reject"));
-  tt_ptr_op(NULL, ==, parse_short_policy("rej"));
-  tt_ptr_op(NULL, ==, parse_short_policy("accept 2,3,100000"));
-  tt_ptr_op(NULL, ==, parse_short_policy("accept 2,3x,4"));
-  tt_ptr_op(NULL, ==, parse_short_policy("accept 2,3x,4"));
-  tt_ptr_op(NULL, ==, parse_short_policy("accept 2-"));
-  tt_ptr_op(NULL, ==, parse_short_policy("accept 2-x"));
-  tt_ptr_op(NULL, ==, parse_short_policy("accept 1-,3"));
-  tt_ptr_op(NULL, ==, parse_short_policy("accept 1-,3"));
+#define TT_BAD_SHORT_POLICY(s)                                          \
+  do {                                                                  \
+    tt_ptr_op(NULL, ==, (short_parsed = parse_short_policy((s))));      \
+  } while (0)
+  TT_BAD_SHORT_POLICY("accept 200-199");
+  TT_BAD_SHORT_POLICY("");
+  TT_BAD_SHORT_POLICY("rejekt 1,2,3");
+  TT_BAD_SHORT_POLICY("reject ");
+  TT_BAD_SHORT_POLICY("reject");
+  TT_BAD_SHORT_POLICY("rej");
+  TT_BAD_SHORT_POLICY("accept 2,3,100000");
+  TT_BAD_SHORT_POLICY("accept 2,3x,4");
+  TT_BAD_SHORT_POLICY("accept 2,3x,4");
+  TT_BAD_SHORT_POLICY("accept 2-");
+  TT_BAD_SHORT_POLICY("accept 2-x");
+  TT_BAD_SHORT_POLICY("accept 1-,3");
+  TT_BAD_SHORT_POLICY("accept 1-,3");
+
   /* Test a too-long policy. */
   {
     int i;
     char *policy = NULL;
-    short_policy_t *parsed;
     smartlist_t *chunks = smartlist_new();
     smartlist_add(chunks, tor_strdup("accept "));
     for (i=1; i<10000; ++i)
@@ -884,9 +889,9 @@ test_policies(void)
     policy = smartlist_join_strings(chunks, "", 0, NULL);
     SMARTLIST_FOREACH(chunks, char *, ch, tor_free(ch));
     smartlist_free(chunks);
-    parsed = parse_short_policy(policy);/* shouldn't be accepted */
+    short_parsed = parse_short_policy(policy);/* shouldn't be accepted */
     tor_free(policy);
-    tt_ptr_op(NULL, ==, parsed);
+    tt_ptr_op(NULL, ==, short_parsed);
   }
 
   /* truncation ports */
@@ -927,6 +932,7 @@ test_policies(void)
     SMARTLIST_FOREACH(sm, char *, s, tor_free(s));
     smartlist_free(sm);
   }
+  short_policy_free(short_parsed);
 }
 
 /** Test encoding and parsing of rendezvous service descriptors. */

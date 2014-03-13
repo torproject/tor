@@ -1326,7 +1326,7 @@ sigsys_debugging(int nr, siginfo_t *info, void *void_context)
   if (!ctx)
     return;
 
-  syscall = ctx->uc_mcontext.gregs[REG_SYSCALL];
+  syscall = (int) ctx->uc_mcontext.gregs[REG_SYSCALL];
 
   format_dec_number_sigsafe(syscall, number, sizeof(number));
   tor_log_err_sigsafe("(Sandbox) Caught a bad syscall attempt (syscall ",
