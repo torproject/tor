@@ -1,5 +1,0 @@
-  o Documentation:
-
-    - Document in the manpage that "KBytes" may also be written as
-      "kilobytes" or "KB", that "Kbits" may also be written as
-      "kilobits", and so forth. Closes ticket #9222.

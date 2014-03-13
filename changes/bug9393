@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Give the correct URL in the warning message that we present
-      when the user is trying to run a Tor relay on an ancient version
-      of Windows. Fixes bug 9393.

@@ -1,5 +1,0 @@
-  o Minor features (log messages):
-    - Improve the message that gets displayed when Tor as a bridge is
-      using pluggable transports but doesn't have an Extended ORPort
-      listener. Furthermore, we now log the message in the log file
-      too. Resolves ticket 11043.

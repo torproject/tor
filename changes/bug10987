@@ -1,7 +1,0 @@
-  o Minor bugfixes
-
-    - Fix IPv6 support when using the SocksPort with SOCKS5. Using IPv6
-      through a SOCKS5 using the SocksPort option will now work with
-      this fix. This part of the code has never been updated to support
-      IPv6 thus this does not fix a previously introduced regression.
-      Fixes bug 10987; bugfix on 0.2.4.7-alpha.

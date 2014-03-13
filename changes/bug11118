@@ -1,4 +1,0 @@
-  o Documentation:
-    - Fix the max client name length in the manpage's description of
-      HiddenServiceAuthorizeClient description: it should have been
-      16, not 19. Fixes bug 11118; bugfix on 0.2.1.6-alpha.

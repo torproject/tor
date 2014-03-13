@@ -1,3 +1,0 @@
-  o Minor changes:
-    - Decrease the lower limit of MaxMemInQueues to 256 MBytes, to
-      appease raspberry pi users. Fixes bug 9686.

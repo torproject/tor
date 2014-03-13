@@ -1,4 +1,0 @@
-  o Minor bugfixes (compilation):
-    - Fix a 64-to-32-conversion warning in format_number_sigsafe().
-      Bugfix on 0.2.5.2-alpha; patch from Nick Hopper.
-

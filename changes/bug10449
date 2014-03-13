@@ -1,8 +1,0 @@
-  o Minor bugfixes:
-    - Exit immediately when exiting because of dropped connection from
-      a process-owning controller. Previously, if we were running in
-      server mode, we would wait for a little while as in the when we
-      got an INT signal--but this was problematic, since there was no
-      feedback for the user. Controllers that want to do a clean
-      shutdown should send an INT signal, and let the user know what's
-      going on. Fix for bug 10449; bugfix on 0.2.2.28-beta.

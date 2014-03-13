@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Bridges now report complete directory request statistics. Related to
-      bug 5824; bugfix on 0.2.2.1-alpha.
-

@@ -1,9 +1,0 @@
-  o Minor bugfixes:
-
-    - Build using the -fasynchronous-unwind-tables option so that more
-      platforms (in particular, ones like 32-bit Intel where the
-      -fomit-frame-pointer option is on by default and table
-      generation is not) will support generating backtraces. This
-      doesn't yet add Windows support yet; only Linux, OSX, and some BSD
-      are affected. Reported by 'cypherpunks'; fixes bug 11047; bugfix
-      on 0.2.5.2-alpha.

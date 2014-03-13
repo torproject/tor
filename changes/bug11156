@@ -1,5 +1,0 @@
-  o Minor bugfixes (clients):
-    - Fix a bug where we would attempt to connect to bridges before
-      our pluggable transports were configured, which resulted in some
-      erroneous log messages. Fixes bug 11156; bugfix on
-      0.2.3.2-alpha.

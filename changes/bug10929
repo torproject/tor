@@ -1,6 +1,0 @@
-  - Minor bugfixes:
-    - Fix build warnings about missing "a2x" comment when building the
-      manpages from scratch on OpenBSD; OpenBSD calls it "a2x.py".
-      Fixes bug 10929; bugfix on tor-0.2.2.9-alpha. Patch from
-      Dana Koch.
-

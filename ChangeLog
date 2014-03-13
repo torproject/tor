@@ -1,6 +1,6 @@
 Changes in version 0.2.5.3-alpha - 2014-03-??
 
-  o Major features (security, DoS-resistance):
+  o Major features (server security, DoS-resistance):
     - Also consider stream buffer sizes when calculating OOM
       conditions. Rename MaxMemInCellQueues to MaxMemInQueues. Fixes
       bug 10169.
@@ -14,8 +14,10 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
       from a randomized cryptographic key using SipHash-2-4, and an
       attacker cannot predict which entries will collide.
       Closes ticket 4900.
+    - Decrease the lower limit of MaxMemInQueues to 256 MBytes, to
+      appease raspberry pi users. Fixes bug 9686.
 
-  o Minor features:
+  o Minor features (bridges, pluggable transports):
     - Bridges write the SHA1 digest of their identity key fingerprint to
       notice-level logs and to hashed-fingerprint, so that bridge
       operators can look up their bridge in Globe and similar tools.
@@ -23,20 +25,19 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
       using pluggable transports but doesn't have an Extended ORPort
       listener. Furthermore, we now log the message in the log file
       too. Resolves ticket 11043.
-    - Warn the user if they put any ports in the SocksPolicy,
-      DirPolicy, AuthDirReject, AuthDirInvalid, AuthDirBadDir, or
-      AuthDirBadExit options. Fixes ticket #11108.
     - Don't log at warning severity when we refuse to launch a
       pluggable transport proxy that we don't need. Resolves ticket
       5018; bugfix on 0.2.5.2-alpha.
+
+  o Minor features (other):
+    - Warn the user if they put any ports in the SocksPolicy,
+      DirPolicy, AuthDirReject, AuthDirInvalid, AuthDirBadDir, or
+      AuthDirBadExit options. Fixes ticket #11108.
     - Update geoip and geoip6 to the February 7 2014 Maxmind GeoLite2 Country
       database.
-    - Decrease the lower limit of MaxMemInQueues to 256 MBytes, to
-      appease raspberry pi users. Fixes bug 9686.
     - Made PREDICTED_CIRCS_RELEVANCE_TIME configurable from config
       file with a new option, PredictedPortsRelevanceTime. Implements
       ticket #9176. Patch by unixninja92.
-    - Update to the latest version of tinytest.
 
   o Minor bugfixes (new since 0.2.5.2-alpha, also in 0.2.4.21):
     - Build without warnings under clang 3.4. (We have some macros that
@@ -47,7 +48,24 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
       manpages from scratch on OpenBSD; OpenBSD calls it "a2x.py".
       Fixes bug 10929; bugfix on 0.2.2.9-alpha. Patch from Dana Koch.
 
-  o Minor bugfixes:
+  o Minor bugfixes (unit tests)
+    - Fix a small bug in the unit tests that might have made the tests
+      call 'chmod' with an uninitialized bitmask.
+      Fixes bug 10928; bugfix on 0.2.5.1-alpha. Patch from Dana Koch.
+
+   o Minor bugfixes (client):
+    - Fix IPv6 support when using the SocksPort with SOCKS5. Using IPv6
+      through a SOCKS5 using the SocksPort option will now work with
+      this fix. This part of the code has never been updated to support
+      IPv6 thus this does not fix a previously introduced regression.
+      Fixes bug 10987; bugfix on 0.2.4.7-alpha.
+    - Fix tor so that it raises a control port warning when we fail to
+      connect to all of our bridges. Fixes bug 11069; bugfix on
+      tor-0.2.1.2-alpha.
+    - Fix a bug where we would attempt to connect to bridges before
+      our pluggable transports were configured, which resulted in some
+      erroneous log messages. Fixes bug 11156; bugfix on
+      0.2.3.2-alpha.
     - Exit immediately when exiting because of dropped connection from
       a process-owning controller. Previously, if we were running in
       server mode, we would wait for a little while as in the when we
@@ -59,14 +77,23 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
       nodes prevents a hidden service from working.
       Improves on our fix for bug #10722, which was a bugfix on
       0.2.0.10-alpha.
-    - Fix a small bug in the unit tests that might have made the tests
-      call 'chmod' with an uninitialized bitmask.
-      Fixes bug 10928; bugfix on 0.2.5.1-alpha. Patch from Dana Koch.
-    - Fix IPv6 support when using the SocksPort with SOCKS5. Using IPv6
-      through a SOCKS5 using the SocksPort option will now work with
-      this fix. This part of the code has never been updated to support
-      IPv6 thus this does not fix a previously introduced regression.
-      Fixes bug 10987; bugfix on 0.2.4.7-alpha.
+
+  o Minor bugfixes (servers):
+    - Non-exit servers no longer launch mock DNS requests to check for
+      DNS hijacking.  This has been unnecessary since 0.2.1.7-alpha,
+      when non-exit servers stopped servicing DNS requests. Fixes bug
+      965; bugfix on 0.2.1.7-alpha. Patch from Matt Pagan.
+    - Avoid crashing on a malformed resolv.conf file when running a
+      server using Libevent 1. Fixes bug 8788; bugfix on 0.1.1.23.
+    - Give the correct URL in the warning message that we present
+      when the user is trying to run a Tor relay on an ancient version
+      of Windows. Fixes bug 9393.
+    - Bridges now never collect statistics that were designed for relays.
+      Fix for bug 5824; bugfix on 0.2.3.8-alpha.
+    - Bridges now report complete directory request statistics. Related to
+      bug 5824; bugfix on 0.2.2.1-alpha.
+
+  o Minor bugfixes (backtrace support):
     - Build using the -fasynchronous-unwind-tables option so that more
       platforms (in particular, ones like 32-bit Intel where the
       -fomit-frame-pointer option is on by default and table
@@ -80,38 +107,10 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
       have stored their intermediate results in the same buffer, and
       generated junk outputs.) Reported by "cypherpunks". Fixes bug
       11048; bugfix on 0.2.5.2-alpha.
-    - Fix tor so that it raises a control port warning when we fail to
-      connect to all of our bridges. Fixes bug 11069; bugfix on
-      tor-0.2.1.2-alpha.
-    - Fix a bug where we would attempt to connect to bridges before
-      our pluggable transports were configured, which resulted in some
-      erroneous log messages. Fixes bug 11156; bugfix on
-      0.2.3.2-alpha.
-    - Bridges now never collect statistics that were designed for relays.
-      Fix for bug 5824; bugfix on 0.2.3.8-alpha.
-    - Bridges now report complete directory request statistics. Related to
-      bug 5824; bugfix on 0.2.2.1-alpha.
-    - Avoid crashing on a malformed resolv.conf file when running a
-      server using Libevent 1. Fixes bug 8788; bugfix on 0.1.1.23.
-    - Improve the tinytest implementation of string operation tests
-      so that comparisons NULL strings no longer crash the tests;
-      they now just fail, normally. Fixes bug 9004; bugfix on
-      0.2.2.4-alpha.
-    - Fix a comment about the rend_server_descriptor_t.protocols field
-      to more accurately describe its range. Also, make that
-      field unsigned, to more accurately reflect its usage.
-      Fixes bug 9099; bugfix on 0.2.1.5-alpha.
-    - Give the correct URL in the warning message that we present
-      when the user is trying to run a Tor relay on an ancient version
-      of Windows. Fixes bug 9393.
-    - Non-exit servers no longer launch mock DNS requests to check for
-      DNS hijacking.  This has been unnecessary since 0.2.1.7-alpha,
-      when non-exit servers stopped servicing DNS requests. Fixes bug
-      965; bugfix on 0.2.1.7-alpha. Patch from Matt Pagan.
     - Fix a 64-to-32-conversion warning in format_number_sigsafe().
       Bugfix on 0.2.5.2-alpha; patch from Nick Hopper.
 
-  o Removed code
+  o Removed code:
     - Remove all code for hidden service authorities to accept and serve
       version 0 descriptors and left-over code for hidden services and
       hidden service clients to upload and fetch version 0 descriptors.
@@ -127,11 +126,21 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
     - Document in the manpage that "KBytes" may also be written as
       "kilobytes" or "KB", that "Kbits" may also be written as
       "kilobits", and so forth. Closes ticket #9222.
+    - Fix a comment about the rend_server_descriptor_t.protocols field
+      to more accurately describe its range. Also, make that
+      field unsigned, to more accurately reflect its usage.
+      Fixes bug 9099; bugfix on 0.2.1.5-alpha.
 
   o Code simplifications and refactoring:
     - Get rid of router->address, since in all cases it was just the
       string representation of router->addr. Resolves ticket 5528.
 
+  o Test infrastructure:
+    - Update to the latest version of tinytest.
+    - Improve the tinytest implementation of string operation tests
+      so that comparisons NULL strings no longer crash the tests;
+      they now just fail, normally. Fixes bug 9004; bugfix on
+      0.2.2.4-alpha.
 
 
 Changes in version 0.2.4.21 - 2014-02-28

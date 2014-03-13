@@ -1,5 +1,0 @@
-  o Minor features:
-
-    - Made PREDICTED_CIRCS_RELEVANCE_TIME configurable from config
-      file with a new option, PredictedPortsRelevanceTime. Implements
-      ticket #9176. Patch by unixninja92.

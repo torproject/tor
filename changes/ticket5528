@@ -1,4 +1,0 @@
-  o Code simplifications and refactoring:
-    - Get rid of router->address, since in all cases it was just the
-      string representation of router->addr. Resolves ticket 5528.
-

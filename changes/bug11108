@@ -1,8 +1,0 @@
-  o Minor features:
-    - Warn the user if they put any ports in the SocksPolicy,
-      DirPolicy, AuthDirReject, AuthDirInvalid, AuthDirBadDir, or
-      AuthDirBadExit options. Fixes ticket #11108.
-
-  o Documentation:
-    - Explain that SocksPolicy, DirPolicy, and their allies don't take
-      port arguments. Fixes ticket #11108.
