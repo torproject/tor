@@ -36,7 +36,10 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
-#ifndef _WIN32
+
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <unistd.h>
 #endif
 
@@ -152,7 +155,8 @@ test_memcpy(void *ptr)
 	memcpy(db->buffer2, db->buffer1, sizeof(db->buffer1));
 	tt_str_op(db->buffer1, ==, db->buffer2);
 
-        /* This one works if there's an internal NUL. */
+        /* tt_mem_op() does a memcmp, as opposed to the strcmp in tt_str_op() */
+        db->buffer2[100] = 3; /* Make the buffers unequal */
         tt_mem_op(db->buffer1, <, db->buffer2, sizeof(db->buffer1));
 
 	/* Now we've allocated memory that's referenced by a local variable.
