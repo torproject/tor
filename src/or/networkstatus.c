@@ -898,6 +898,14 @@ should_delay_dir_fetches(const or_options_t *options, const char **msg_out)
     *msg_out = NULL;
   }
 
+  if (options->DisableNetwork) {
+    if (msg_out) {
+      *msg_out = "DisableNetwork is set.";
+    }
+    log_info(LD_DIR, "Delaying dir fetches (DisableNetwork is set)");
+    return 1;
+  }
+
   if (options->UseBridges) {
     if (!any_bridge_descriptors_known()) {
       if (msg_out) {
