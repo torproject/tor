@@ -1760,8 +1760,6 @@ connection_tls_finish_handshake(or_connection_t *conn)
             safe_str_client(conn->base_.address),
             tor_tls_get_ciphersuite_name(conn->tls));
 
-  directory_set_dirty();
-
   if (connection_or_check_valid_tls_handshake(conn, started_here,
                                               digest_rcvd) < 0)
     return -1;

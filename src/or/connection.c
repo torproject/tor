@@ -2513,9 +2513,8 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
  * shouldn't send <b>attempt</b> bytes of low-priority directory stuff
  * out to <b>conn</b>. Else return 0.
 
- * Priority is 1 for v1 requests (directories and running-routers),
- * and 2 for v2 requests (statuses and descriptors). But see FFFF in
- * directory_handle_command_get() for why we don't use priority 2 yet.
+ * Priority was 1 for v1 requests (directories and running-routers),
+ * and 2 for v2 requests and later (statuses and descriptors).
  *
  * There are a lot of parameters we could use here:
  * - global_relayed_write_bucket. Low is bad.

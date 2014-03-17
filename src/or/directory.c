@@ -148,8 +148,6 @@ authdir_type_to_string(dirinfo_type_t auth)
 {
   char *result;
   smartlist_t *lst = smartlist_new();
-  if (auth & V1_DIRINFO)
-    smartlist_add(lst, (void*)"V1");
   if (auth & V3_DIRINFO)
     smartlist_add(lst, (void*)"V3");
   if (auth & BRIDGE_DIRINFO)
@@ -247,7 +245,7 @@ directories_have_accepted_server_descriptor(void)
  * <b>router_purpose</b> describes the type of descriptor we're
  * publishing, if we're publishing a descriptor -- e.g. general or bridge.
  *
- * <b>type</b> specifies what sort of dir authorities (V1, V3,
+ * <b>type</b> specifies what sort of dir authorities (V3,
  * BRIDGE, etc) we should upload to.
  *
  * If <b>extrainfo_len</b> is nonzero, the first <b>payload_len</b> bytes of
@@ -1488,8 +1486,8 @@ parse_http_response(const char *headers, int *code, time_t *date,
 }
 
 /** Return true iff <b>body</b> doesn't start with a plausible router or
- * running-list or directory opening.  This is a sign of possible compression.
- **/
+ * network-status or microdescriptor opening.  This is a sign of possible
+ * compression. */
 static int
 body_is_plausible(const char *body, size_t len, int purpose)
 {
@@ -1503,9 +1501,7 @@ body_is_plausible(const char *body, size_t len, int purpose)
   }
   if (1) {
     if (!strcmpstart(body,"router") ||
-        !strcmpstart(body,"signed-directory") ||
-        !strcmpstart(body,"network-status") ||
-        !strcmpstart(body,"running-routers"))
+        !strcmpstart(body,"network-status"))
       return 1;
     for (i=0;i<32;++i) {
       if (!TOR_ISPRINT(body[i]) && !TOR_ISSPACE(body[i]))
@@ -2585,75 +2581,6 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     /* if no disclaimer file, fall through and continue */
   }
 
-  if (!strcmp(url,"/tor/") || !strcmp(url,"/tor/dir")) { /* v1 dir fetch */
-    cached_dir_t *d = dirserv_get_directory();
-
-    if (!d) {
-      log_info(LD_DIRSERV,"Client asked for the mirrored directory, but we "
-               "don't have a good one yet. Sending 503 Dir not available.");
-      write_http_status_line(conn, 503, "Directory unavailable");
-      goto done;
-    }
-    if (d->published < if_modified_since) {
-      write_http_status_line(conn, 304, "Not modified");
-      goto done;
-    }
-
-    dlen = compressed ? d->dir_z_len : d->dir_len;
-
-    if (global_write_bucket_low(TO_CONN(conn), dlen, 1)) {
-      log_debug(LD_DIRSERV,
-               "Client asked for the mirrored directory, but we've been "
-               "writing too many bytes lately. Sending 503 Dir busy.");
-      write_http_status_line(conn, 503, "Directory busy, try again later");
-      goto done;
-    }
-
-    note_request(url, dlen);
-
-    log_debug(LD_DIRSERV,"Dumping %sdirectory to client.",
-              compressed?"compressed ":"");
-    write_http_response_header(conn, dlen, compressed,
-                          FULL_DIR_CACHE_LIFETIME);
-    conn->cached_dir = d;
-    conn->cached_dir_offset = 0;
-    if (!compressed)
-      conn->zlib_state = tor_zlib_new(0, ZLIB_METHOD);
-    ++d->refcnt;
-
-    /* Prime the connection with some data. */
-    conn->dir_spool_src = DIR_SPOOL_CACHED_DIR;
-    connection_dirserv_flushed_some(conn);
-    goto done;
-  }
-
-  if (!strcmp(url,"/tor/running-routers")) { /* running-routers fetch */
-    cached_dir_t *d = dirserv_get_runningrouters();
-    if (!d) {
-      write_http_status_line(conn, 503, "Directory unavailable");
-      goto done;
-    }
-    if (d->published < if_modified_since) {
-      write_http_status_line(conn, 304, "Not modified");
-      goto done;
-    }
-    dlen = compressed ? d->dir_z_len : d->dir_len;
-
-    if (global_write_bucket_low(TO_CONN(conn), dlen, 1)) {
-      log_info(LD_DIRSERV,
-               "Client asked for running-routers, but we've been "
-               "writing too many bytes lately. Sending 503 Dir busy.");
-      write_http_status_line(conn, 503, "Directory busy, try again later");
-      goto done;
-    }
-    note_request(url, dlen);
-    write_http_response_header(conn, dlen, compressed,
-                 RUNNINGROUTERS_CACHE_LIFETIME);
-    connection_write_to_buf(compressed ? d->dir_z : d->dir, dlen,
-                            TO_CONN(conn));
-    goto done;
-  }
-
   if (!strcmpstart(url, "/tor/status-vote/current/consensus")) {
     /* v3 network status fetch. */
     smartlist_t *dir_fps = smartlist_new();
@@ -3268,8 +3195,6 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
     was_router_added_t r = dirserv_add_multiple_descriptors(body, purpose,
                                              conn->base_.address, &msg);
     tor_assert(msg);
-    if (WRA_WAS_ADDED(r))
-      dirserv_get_directory(); /* rebuild and write to disk */
 
     if (r == ROUTER_ADDED_NOTIFY_GENERATOR) {
       /* Accepted with a message. */

@@ -2586,9 +2586,6 @@ typedef struct authority_cert_t {
  */
 typedef enum {
   NO_DIRINFO      = 0,
-  /** Serves/signs v1 directory information: Big lists of routers, and short
-   * routerstatus documents. */
-  V1_DIRINFO      = 1 << 0,
   /** Serves/signs v3 directory information: votes, consensuses, certs */
   V3_DIRINFO      = 1 << 2,
   /** Serves bridge descriptors. */
@@ -3494,8 +3491,6 @@ typedef struct {
 
   int AssumeReachable; /**< Whether to publish our descriptor regardless. */
   int AuthoritativeDir; /**< Boolean: is this an authoritative directory? */
-  int V1AuthoritativeDir; /**< Boolean: is this an authoritative directory
-                           * for version 1 directories? */
   int V3AuthoritativeDir; /**< Boolean: is this an authoritative directory
                            * for version 3 directories? */
   int NamingAuthoritativeDir; /**< Boolean: is this an authoritative directory

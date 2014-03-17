@@ -420,7 +420,7 @@ static config_var_t option_vars_[] = {
   V(UseNTorHandshake,            AUTOBOOL, "1"),
   V(User,                        STRING,   NULL),
   V(UserspaceIOCPBuffers,        BOOL,     "0"),
-  VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
+  OBSOLETE("V1AuthoritativeDirectory"),
   OBSOLETE("V2AuthoritativeDirectory"),
   VAR("V3AuthoritativeDirectory",BOOL, V3AuthoritativeDir,   "0"),
   V(TestingV3AuthInitialVotingInterval, INTERVAL, "30 minutes"),
@@ -846,7 +846,7 @@ add_default_trusted_dir_authorities(dirinfo_type_t type)
     "moria1 orport=9101 "
       "v3ident=D586D18309DED4CD6D57C18FDB97EFA96D330566 "
       "128.31.0.39:9131 9695 DFC3 5FFE B861 329B 9F1A B04C 4639 7020 CE31",
-    "tor26 v1 orport=443 v3ident=14C131DFC5C6F93646BE72FA1401C02A8DF2E8B4 "
+    "tor26 orport=443 v3ident=14C131DFC5C6F93646BE72FA1401C02A8DF2E8B4 "
       "86.59.21.38:80 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D",
     "dizum orport=443 v3ident=E8A9C45EDE6D711294FADF8E7951F4DE6CA56B58 "
       "194.109.206.212:80 7EA6 EAD6 FD83 083C 538F 4403 8BBF A077 587D D755",
@@ -978,8 +978,7 @@ consider_adding_dir_servers(const or_options_t *options,
     if (!options->AlternateBridgeAuthority)
       type |= BRIDGE_DIRINFO;
     if (!options->AlternateDirAuthority)
-      type |= V1_DIRINFO | V3_DIRINFO | EXTRAINFO_DIRINFO |
-        MICRODESC_DIRINFO;
+      type |= V3_DIRINFO | EXTRAINFO_DIRINFO | MICRODESC_DIRINFO;
     add_default_trusted_dir_authorities(type);
   }
   if (!options->FallbackDir)
@@ -2368,14 +2367,16 @@ compute_publishserverdescriptor(or_options_t *options)
     return 0;
   SMARTLIST_FOREACH_BEGIN(list, const char *, string) {
     if (!strcasecmp(string, "v1"))
-      *auth |= V1_DIRINFO;
+      log_warn(LD_CONFIG, "PublishServerDescriptor v1 has no effect, because "
+                          "there are no v1 directory authorities anymore.");
     else if (!strcmp(string, "1"))
       if (options->BridgeRelay)
         *auth |= BRIDGE_DIRINFO;
       else
         *auth |= V3_DIRINFO;
     else if (!strcasecmp(string, "v2"))
-      /* obsolete */;
+      log_warn(LD_CONFIG, "PublishServerDescriptor v2 has no effect, because "
+                          "there are no v2 directory authorities anymore.");
     else if (!strcasecmp(string, "v3"))
       *auth |= V3_DIRINFO;
     else if (!strcasecmp(string, "bridge"))
@@ -2596,8 +2597,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->AuthoritativeDir) {
     if (!options->ContactInfo && !options->TestingTorNetwork)
       REJECT("Authoritative directory servers must set ContactInfo");
-    if (options->V1AuthoritativeDir && !options->RecommendedVersions)
-      REJECT("V1 authoritative dir servers must set RecommendedVersions.");
     if (!options->RecommendedClientVersions)
       options->RecommendedClientVersions =
         config_lines_dup(options->RecommendedVersions);
@@ -2620,10 +2619,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
       options->DownloadExtraInfo = 1;
     }
     if (!(options->BridgeAuthoritativeDir ||
-          options->V1AuthoritativeDir ||
           options->V3AuthoritativeDir))
       REJECT("AuthoritativeDir is set, but none of "
-             "(Bridge/V1/V3)AuthoritativeDir is set.");
+             "(Bridge/V3)AuthoritativeDir is set.");
     /* If we have a v3bandwidthsfile and it's broken, complain on startup */
     if (options->V3BandwidthsFile && !old_options) {
       dirserv_read_measured_bandwidths(options->V3BandwidthsFile, NULL);
@@ -2828,8 +2826,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if ((options->BridgeRelay
         || options->PublishServerDescriptor_ & BRIDGE_DIRINFO)
-      && (options->PublishServerDescriptor_
-          & (V1_DIRINFO|V3_DIRINFO))) {
+      && (options->PublishServerDescriptor_ & V3_DIRINFO)) {
     REJECT("Bridges are not supposed to publish router descriptors to the "
            "directory authorities. Please correct your "
            "PublishServerDescriptor line.");
@@ -5056,9 +5053,7 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
     char *flag = smartlist_get(items, 0);
     if (TOR_ISDIGIT(flag[0]))
       break;
-    if (!strcasecmp(flag, "v1")) {
-      type |= V1_DIRINFO;
-    } else if (!strcasecmp(flag, "hs") ||
+    if (!strcasecmp(flag, "hs") ||
                !strcasecmp(flag, "no-hs")) {
       log_warn(LD_CONFIG, "The DirAuthority options 'hs' and 'no-hs' are "
                "obsolete; you don't need them any more.");

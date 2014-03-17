@@ -603,17 +603,6 @@ router_get_router_hash(const char *s, size_t s_len, char *digest)
                               DIGEST_SHA1);
 }
 
-/** Set <b>digest</b> to the SHA-1 digest of the hash of the running-routers
- * string in <b>s</b>. Return 0 on success, -1 on failure.
- */
-int
-router_get_runningrouters_hash(const char *s, char *digest)
-{
-  return router_get_hash_impl(s, strlen(s), digest,
-                              "network-status","\ndirectory-signature", '\n',
-                              DIGEST_SHA1);
-}
-
 /** Set <b>digests</b> to all the digests of the consensus document in
  * <b>s</b> */
 int
