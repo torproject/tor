@@ -368,7 +368,9 @@ microdesc_cache_clean(microdesc_cache_t *cache, time_t cutoff, int force)
     cutoff = now - TOLERATE_MICRODESC_AGE;
 
   for (mdp = HT_START(microdesc_map, &cache->map); mdp != NULL; ) {
-    if ((*mdp)->last_listed < cutoff) {
+    const int is_old = (*mdp)->last_listed < cutoff;
+    const unsigned held_by_nodes = (*mdp)->held_by_nodes;
+    if (is_old && !held_by_nodes) {
       ++dropped;
       victim = *mdp;
       mdp = HT_NEXT_RMV(microdesc_map, &cache->map, mdp);
@@ -376,6 +378,54 @@ microdesc_cache_clean(microdesc_cache_t *cache, time_t cutoff, int force)
       bytes_dropped += victim->bodylen;
       microdesc_free(victim);
     } else {
+      if (is_old) {
+        /* It's old, but it has held_by_nodes set.  That's not okay. */
+        /* Let's try to diagnose and fix #7164 . */
+        smartlist_t *nodes = nodelist_find_nodes_with_microdesc(*mdp);
+        const networkstatus_t *ns = networkstatus_get_latest_consensus();
+        int networkstatus_age = -1;
+        if (ns) {
+          networkstatus_age = now - ns->valid_after;
+        }
+        log_warn(LD_BUG, "Microdescriptor seemed very old "
+                 "(last listed %d hours ago vs %d hour cutoff), but is still "
+                 "marked as being held by %d node(s). I found %d node(s) "
+                 "holding it. Current networkstatus is %d hours old.",
+                 (int)((now - (*mdp)->last_listed) / 3600),
+                 (int)((now - cutoff) / 3600),
+                 held_by_nodes,
+                 smartlist_len(nodes),
+                 (int)(networkstatus_age / 3600));
+
+        SMARTLIST_FOREACH_BEGIN(nodes, const node_t *, node) {
+          const char *rs_match = "No RS";
+          const char *rs_present = "";
+          if (node->rs) {
+            if (tor_memeq(node->rs->descriptor_digest,
+                          (*mdp)->digest, DIGEST256_LEN)) {
+              rs_match = "Microdesc digest in RS matches";
+            } else {
+              rs_match = "Microdesc digest in RS does match";
+            }
+            if (ns) {
+              /* This should be impossible, but let's see! */
+              rs_present = " RS not present in networkstatus.";
+              SMARTLIST_FOREACH(ns->routerstatus_list, routerstatus_t *,rs, {
+                if (rs == node->rs) {
+                  rs_present = " RS okay in networkstatus.";
+                }
+              });
+            }
+          }
+          log_warn(LD_BUG, "  [%d]: ID=%s. md=%p, rs=%p, ri=%p. %s.%s",
+                   node_sl_idx,
+                   hex_str(node->identity, DIGEST_LEN),
+                   node->md, node->rs, node->ri, rs_match, rs_present);
+        } SMARTLIST_FOREACH_END(node);
+        smartlist_free(nodes);
+        (*mdp)->last_listed = now;
+      }
+
       ++kept;
       mdp = HT_NEXT(microdesc_map, &cache->map, mdp);
     }
