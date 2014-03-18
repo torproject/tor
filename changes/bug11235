@@ -1,0 +1,3 @@
+  o Code style:
+    - Remove superfluous newline in src/or/config.c that make check-spaces
+      was complaining about.  Resolves bug 11235.
