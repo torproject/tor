@@ -1354,7 +1354,6 @@ options_act(const or_options_t *old_options)
                "to collect statistics about its clients that use pluggable "
                "transports. Please enable it using the ExtORPort torrc option "
                "(e.g. set 'ExtORPort auto').");
-
   }
 
   if (options->SafeLogging_ != SAFELOG_SCRUB_ALL &&
