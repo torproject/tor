@@ -1585,7 +1585,7 @@ addr_mask_get_bits(uint32_t mask)
     return 0;
   if (mask == 0xFFFFFFFFu)
     return 32;
-  for (i=0; i<=32; ++i) {
+  for (i=1; i<=32; ++i) {
     if (mask == (uint32_t) ~((1u<<(32-i))-1)) {
       return i;
     }
