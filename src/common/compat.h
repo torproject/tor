@@ -292,7 +292,7 @@ typedef struct tor_mmap_t {
 } tor_mmap_t;
 
 tor_mmap_t *tor_mmap_file(const char *filename) ATTR_NONNULL((1));
-void tor_munmap_file(tor_mmap_t *handle) ATTR_NONNULL((1));
+int tor_munmap_file(tor_mmap_t *handle) ATTR_NONNULL((1));
 
 int tor_snprintf(char *str, size_t size, const char *format, ...)
   CHECK_PRINTF(3,4) ATTR_NONNULL((1,3));
