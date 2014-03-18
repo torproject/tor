@@ -990,7 +990,6 @@ router_rebuild_store(int flags, desc_store_t *store)
   size_t total_expected_len = 0;
   int had_any;
   int force = flags & RRS_FORCE;
-  int res;
 
   if (!force && !router_should_rebuild_store(store)) {
     r = 0;
@@ -1065,10 +1064,9 @@ router_rebuild_store(int flags, desc_store_t *store)
 
   /* Our mmap is now invalid. */
   if (store->mmap) {
-    res = tor_munmap_file(store->mmap);
-    if (res == 0) {
-      store->mmap = NULL;
-    } else {
+    int res = tor_munmap_file(store->mmap);
+    store->mmap = NULL;
+    if (res != 0) {
       log_warn(LD_FS, "Unable to munmap route store in %s", fname);
     }
   }
@@ -1141,16 +1139,14 @@ router_reload_router_list_impl(desc_store_t *store)
   struct stat st;
   int extrainfo = (store->type == EXTRAINFO_STORE);
   store->journal_len = store->store_len = 0;
-  int res;
 
   fname = get_datadir_fname(store->fname_base);
 
   if (store->mmap) {
     /* get rid of it first */
-    res = tor_munmap_file(store->mmap);
-    if (res == 0) {
-      store->mmap = NULL;
-    } else {
+    int res = tor_munmap_file(store->mmap);
+    store->mmap = NULL;
+    if (res != 0) {
       log_warn(LD_FS, "Failed to munmap %s", fname);
       tor_free(fname);
       return -1;
@@ -2796,8 +2792,6 @@ extrainfo_free_(void *e)
 void
 routerlist_free(routerlist_t *rl)
 {
-  int res;
-
   if (!rl)
     return;
   rimap_free(rl->identity_map, NULL);
@@ -2811,13 +2805,13 @@ routerlist_free(routerlist_t *rl)
   smartlist_free(rl->routers);
   smartlist_free(rl->old_routers);
   if (routerlist->desc_store.mmap) {
-    res = tor_munmap_file(routerlist->desc_store.mmap);
+    int res = tor_munmap_file(routerlist->desc_store.mmap);
     if (res != 0) {
       log_warn(LD_FS, "Failed to munmap routerlist->desc_store.mmap");
     }
   }
   if (routerlist->extrainfo_store.mmap) {
-    res = tor_munmap_file(routerlist->extrainfo_store.mmap);
+    int res = tor_munmap_file(routerlist->extrainfo_store.mmap);
     if (res != 0) {
       log_warn(LD_FS, "Failed to munmap routerlist->extrainfo_store.mmap");
     }

@@ -275,6 +275,7 @@ void
 microdesc_cache_clear(microdesc_cache_t *cache)
 {
   microdesc_t **entry, **next;
+
   for (entry = HT_START(microdesc_map, &cache->map); entry; entry = next) {
     microdesc_t *md = *entry;
     next = HT_NEXT_RMV(microdesc_map, &cache->map, entry);
@@ -283,7 +284,13 @@ microdesc_cache_clear(microdesc_cache_t *cache)
   }
   HT_CLEAR(microdesc_map, &cache->map);
   if (cache->cache_content) {
-    tor_munmap_file(cache->cache_content);
+    int res = tor_munmap_file(cache->cache_content);
+    if (res != 0) {
+      log_warn(LD_FS,
+               "tor_munmap_file() failed clearing microdesc cache; "
+               "we are probably about to leak memory.");
+      /* TODO something smarter? */
+    }
     cache->cache_content = NULL;
   }
   cache->total_len_seen = 0;
@@ -429,7 +436,7 @@ int
 microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
 {
   open_file_t *open_file;
-  int fd = -1;
+  int fd = -1, res;
   microdesc_t **mdp;
   smartlist_t *wrote;
   ssize_t size;
@@ -496,8 +503,13 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
 
   /* We must do this unmap _before_ we call finish_writing_to_file(), or
    * windows will not actually replace the file. */
-  if (cache->cache_content)
-    tor_munmap_file(cache->cache_content);
+  if (cache->cache_content) {
+    res = tor_munmap_file(cache->cache_content);
+    if (res != 0) {
+      log_warn(LD_FS,
+               "Failed to unmap old microdescriptor cache while rebuilding");
+    }
+  }
 
   if (finish_writing_to_file(open_file) < 0) {
     log_warn(LD_DIR, "Error rebuilding microdescriptor cache: %s",
