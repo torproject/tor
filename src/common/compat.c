@@ -35,6 +35,12 @@
 #ifdef HAVE_UNAME
 #include <sys/utsname.h>
 #endif
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -178,9 +184,10 @@ tor_mmap_file(const char *filename)
 {
   int fd; /* router file */
   char *string;
-  int page_size;
+  int page_size, result;
   tor_mmap_t *res;
   size_t size, filesize;
+  struct stat st;
 
   tor_assert(filename);
 
@@ -194,9 +201,22 @@ tor_mmap_file(const char *filename)
     return NULL;
   }
 
-  /* XXXX why not just do fstat here? */
-  size = filesize = (size_t) lseek(fd, 0, SEEK_END);
-  lseek(fd, 0, SEEK_SET);
+  /* Get the size of the file */
+  result = fstat(fd, &st);
+  if (result != 0) {
+    int save_errno = errno;
+    log_warn(LD_FS,
+             "Couldn't fstat opened descriptor for \"%s\" during mmap: %s",
+             filename, strerror(errno));
+    close(fd);
+    errno = save_errno;
+    return NULL;
+  }
+  size = filesize = (size_t)(st.st_size);
+  /*
+   * Should we check for weird crap like mmapping a named pipe here,
+   * or just wait for if (!size) below to fail?
+   */
   /* ensure page alignment */
   page_size = getpagesize();
   size += (size%page_size) ? page_size-(size%page_size) : 0;
