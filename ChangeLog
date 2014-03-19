@@ -61,8 +61,8 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
   o Minor bugfixes (new since 0.2.5.2-alpha, also in 0.2.4.21):
     - Build without warnings under clang 3.4. (We have some macros that
       define static functions only some of which will get used later in
-      the module. Starting with clang 3.4, these give a warning unless
-      the unused attribute is set on them.) Resolves ticket 10904.
+      the module. Starting with clang 3.4, these give a warning unless the
+      unused attribute is set on them.) Resolves ticket 10904.
     - Fix build warnings about missing "a2x" comment when building the
       manpages from scratch on OpenBSD; OpenBSD calls it "a2x.py".
       Fixes bug 10929; bugfix on 0.2.2.9-alpha. Patch from Dana Koch.
