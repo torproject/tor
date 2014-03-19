@@ -67,7 +67,7 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
       manpages from scratch on OpenBSD; OpenBSD calls it "a2x.py".
       Fixes bug 10929; bugfix on 0.2.2.9-alpha. Patch from Dana Koch.
 
-  o Minor bugfixes (unit tests)
+  o Minor bugfixes (unit tests):
     - Fix a small bug in the unit tests that might have made the tests
       call 'chmod' with an uninitialized bitmask. Fixes bug 10928;
       bugfix on 0.2.5.1-alpha. Patch from Dana Koch.
