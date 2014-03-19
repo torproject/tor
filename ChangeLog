@@ -1,34 +1,33 @@
 Changes in version 0.2.5.3-alpha - 2014-03-??
   Tor 0.2.5.3-alpha includes all the fixes from 0.2.4.21. It contains
-  two new anti-DoS features for Tor nodes, resolves a bug that was
-  keeping SOCKS5 support for IPv6 from working, fixes several annoying
-  usability issues for bridge users, and removes more old
-  code for unused directory formats.
+  two new anti-DoS features for Tor nodes, resolves a bug that kept
+  SOCKS5 support for IPv6 from working, fixes several annoying usability
+  issues for bridge users, and removes more old code for unused
+  directory formats.
 
   The Tor 0.2.5.x release series is now in patch-freeze: no feature
   patches not already written will be considered for inclusion in
   0.2.5.x.
 
   o Major features (server security, DoS-resistance):
-    - When we run out of memory and we need to close circuits, also
-      consider how much memory is allocated in buffers for streams
-      attached to each circuit.
+    - When deciding whether we have run out of memory and we need to
+      close circuits, also consider memory allocated in buffers for
+      streams attached to each circuit.
 
       This change, which extends an anti-DoS feature introduced in
       0.2.4.13-alpha and improved in 0.2.4.14-alpha, lets Tor exit nodes
       better resist more memory-based DoS attacks than before. Since the
-      MaxMemInCellQueues option now applies to all queues, not only cell
-      queues, it is now renamed to MaxMemInQueues. This feature fixes
-      bug 10169.
+      MaxMemInCellQueues option now applies to all queues, it is renamed
+      to MaxMemInQueues. This feature fixes bug 10169.
     - Avoid hash-flooding denial-of-service attacks by using the secure
       SipHash-2-4 hash function for our hashtables. Without this
       feature, an attacker could degrade performance of a targeted
       client or server by flooding their data structures with a large
-      number of data entries all calculated to be stored at the same
-      hash table position, thereby slowing down hash table operations.
-      With this feature, hash table positions are derived from a
-      randomized cryptographic key, and an attacker cannot predict which
-      entries will collide. Closes ticket 4900.
+      number of entries to be stored at the same hash table position,
+      thereby slowing down the Tor instance. With this feature, hash
+      table positions are derived from a randomized cryptographic key,
+      and an attacker cannot predict which entries will collide. Closes
+      ticket 4900.
     - Decrease the lower limit of MaxMemInQueues to 256 MBytes, to
       better support Raspberry Pi users. Fixes bug 9686; bugfix on
       0.2.4.14-alpha.
@@ -36,11 +35,11 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
   o Minor features (bridges, pluggable transports):
     - Bridges now write the SHA1 digest of their identity key
       fingerprint (that is, a hash of a hash of their public key) to
-      notice-level logs and to a new hashed-fingerprint file. This will
-      help bridge operatorslook up their bridge in Globe and similar
-      tools. Resolves ticket 10884.
-    - Improve the message that gets displayed when Tor as a bridge is
-      using pluggable transports but doesn't have an Extended ORPort
+      notice-level logs, and to a new hashed-fingerprint file. This
+      information will help bridge operators look up their bridge in
+      Globe and similar tools. Resolves ticket 10884.
+    - Improve the message that Tor displays when running as a bridge
+      using pluggable transports without an Extended ORPort
       listener. Also, log the message in the log file too. Resolves
       ticket 11043.
     - Stop giving annoying warning messages when we decide not to launch
@@ -50,7 +49,7 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
   o Minor features (other):
     - Add a new option, PredictedPortsRelevanceTime, to control how long
       after having received a request to connect to a given port Tor
-      will try to keep circuits ready in anticipation of future request
+      will try to keep circuits ready in anticipation of future requests
       for that port. Patch from "unixninja92"; implements ticket 9176.
     - Generate a warning if any ports are listed in the SocksPolicy,
       DirPolicy, AuthDirReject, AuthDirInvalid, AuthDirBadDir, or
@@ -74,23 +73,22 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
       bugfix on 0.2.5.1-alpha. Patch from Dana Koch.
 
   o Minor bugfixes (client):
-    - Fix connections to IPv6 addresses over SOCKS5; previously, we were
+    - Fix connections to IPv6 addresses over SOCKS5. Previously, we were
       generating incorrect SOCKS5 responses, and confusing client
       applications. Fixes bug 10987; bugfix on 0.2.4.7-alpha.
-    - Raises a control port warning when we fail to connect to all of
-      our bridges. Previously, we didn't let the controller know, which
-      would make the bootstrap process stall. Fixes bug 11069; bugfix on
+    - Raise a control port warning when we fail to connect to all of
+      our bridges. Previously, we didn't inform the controller, and
+      the bootstrap process would stall. Fixes bug 11069; bugfix on
       tor-0.2.1.2-alpha.
     - Exit immediately when a process-owning controller exits.
       Previously, tor relays would wait for a little while after their
-      controller exited, as if they had gotten an INT signal-- but this
-      was problematic, since there was no feedback for the
-      user. Controllers that want to do a clean shutdown should send an
-      INT signal to let the user know what's going on. Fix for bug
-      10449; bugfix on 0.2.2.28-beta.
+      controller exited, as if they had gotten an INT signal--but this
+      was problematic, since there was no feedback for the user. To do a
+      clean shutdown, controllers should send an INT signal and give Tor
+      a chance to clean up. Fix for bug 10449; bugfix on 0.2.2.28-beta.
     - Improve the log message when we can't connect to a hidden service
-      because we have excluded all of the hidden service directory nodes
-      hosting its descriptor. Improves on our fix for bug 10722, which
+      because all of the hidden service directory nodes hosting its
+      descriptor are excluded. Improves on our fix for bug 10722, which
       was a bugfix on 0.2.0.10-alpha.
     - Fix a bug where we would attempt to connect to bridges before our
       pluggable transports were configured, which resulted in some
@@ -103,9 +101,8 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
       bugfix on 0.2.1.7-alpha. Patch from Matt Pagan.
     - Avoid crashing on a malformed resolv.conf file when running a
       server using Libevent 1. Fixes bug 8788; bugfix on 0.1.1.23.
-    - Give the correct URL in the warning message that we present when
-      trying to run a Tor relay on an ancient version of Windows. Fixes
-      bug 9393.
+    - Give the correct URL in the warning message when trying to run a
+      Tor relay on an ancient version of Windows. Fixes bug 9393.
     - Bridges now never collect statistics that were designed for
       relays. Fix for bug 5824; bugfix on 0.2.3.8-alpha.
     - Bridges now report complete directory request statistics. Related
@@ -116,7 +113,7 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
       -fasynchronous-unwind-tables compiler option. This option is
       needed for platforms like 32-bit Intel where -fomit-frame-pointer
       is on by default and table generation is not. This doesn't yet
-      add Windows support yet; only Linux, OSX, and some BSD are
+      add Windows support yet; only Linux, OSX, and some BSDs are
       affected. Reported by 'cypherpunks'; fixes bug 11047; bugfix on
       0.2.5.2-alpha.
     - Avoid strange behavior if two threads hit failed assertions at the
@@ -125,9 +122,8 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
       intermediate results in the same buffer, and generated junk
       outputs.) Reported by "cypherpunks". Fixes bug 11048; bugfix on
       0.2.5.2-alpha.
-    - Fix a 64-to-32-conversion compiler warning in
-      format_number_sigsafe(). Bugfix on 0.2.5.2-alpha; patch from Nick
-      Hopper.
+    - Fix a compiler warning in format_number_sigsafe(). Bugfix on
+      0.2.5.2-alpha; patch from Nick Hopper.
 
   o Removed code:
     - Remove all remaining code related to version-0 hidden service
@@ -135,18 +131,18 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
       the rest of bug 10841.
 
   o Documentation:
-    - Explain that SocksPolicy, DirPolicy, and their allies don't take
-      port arguments. Fixes ticket 11108.
-    - Fix the max client name length in the manpage's description of
-      HiddenServiceAuthorizeClient description: it should have been 16,
-      not 19. Fixes bug 11118; bugfix on 0.2.1.6-alpha.
-    - Document in the manpage that "KBytes" may also be written as
-      "kilobytes" or "KB", that "Kbits" may also be written as
-      "kilobits", and so forth. Closes ticket 9222.
+    - Explain that SocksPolicy, DirPolicy, and similar options don't
+      take port arguments. Fixes ticket 11108.
+    - Fix the manpage's description of HiddenServiceAuthorizeClient
+      description: it should have given the maximum client name length
+      as 16, not 19. Fixes bug 11118; bugfix on 0.2.1.6-alpha.
     - Fix a comment about the rend_server_descriptor_t.protocols field
       to more accurately describe its range. Also, make that field
       unsigned, to more accurately reflect its usage. Fixes bug 9099;
       bugfix on 0.2.1.5-alpha.
+    - Document in the manpage that "KBytes" may also be written as
+      "kilobytes" or "KB", that "Kbits" may also be written as
+      "kilobits", and so forth. Closes ticket 9222.
 
   o Code simplifications and refactoring:
     - Get rid of router->address, since in all cases it was just the
