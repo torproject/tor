@@ -38,13 +38,8 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
       information will help bridge operators look up their bridge in
       Globe and similar tools. Resolves ticket 10884.
     - Improve the message that Tor displays when running as a bridge
-      using pluggable transports without an Extended ORPort
-      listener. Also, log the message in the log file too. Resolves
-      ticket 11043.
-    - Stop giving annoying warning messages when we decide not to launch
-      a pluggable transport proxy that we don't need (because there are
-      no bridges configured to use it). Resolves ticket 5018; bugfix
-      on 0.2.5.2-alpha.
+      using pluggable transports without an Extended ORPort listener.
+      Also, log the message in the log file too. Resolves ticket 11043.
 
   o Minor features (other):
     - Add a new option, PredictedPortsRelevanceTime, to control how long
@@ -67,15 +62,11 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
       manpages from scratch on OpenBSD; OpenBSD calls it "a2x.py".
       Fixes bug 10929; bugfix on 0.2.2.9-alpha. Patch from Dana Koch.
 
-  o Minor bugfixes (unit tests):
-    - Fix a small bug in the unit tests that might have made the tests
-      call 'chmod' with an uninitialized bitmask. Fixes bug 10928;
-      bugfix on 0.2.5.1-alpha. Patch from Dana Koch.
-
   o Minor bugfixes (client):
-    - Fix connections to IPv6 addresses over SOCKS5. Previously, we were
-      generating incorrect SOCKS5 responses, and confusing client
-      applications. Fixes bug 10987; bugfix on 0.2.4.7-alpha.
+    - Improve the log message when we can't connect to a hidden service
+      because all of the hidden service directory nodes hosting its
+      descriptor are excluded. Improves on our fix for bug 10722, which
+      was a bugfix on 0.2.0.10-alpha.
     - Raise a control port warning when we fail to connect to all of
       our bridges. Previously, we didn't inform the controller, and
       the bootstrap process would stall. Fixes bug 11069; bugfix on
@@ -86,27 +77,30 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
       was problematic, since there was no feedback for the user. To do a
       clean shutdown, controllers should send an INT signal and give Tor
       a chance to clean up. Fixes bug 10449; bugfix on 0.2.2.28-beta.
-    - Improve the log message when we can't connect to a hidden service
-      because all of the hidden service directory nodes hosting its
-      descriptor are excluded. Improves on our fix for bug 10722, which
-      was a bugfix on 0.2.0.10-alpha.
     - Stop attempting to connect to bridges before our pluggable
       transports are configured (harmless but resulted in some erroneous
       log messages). Fixes bug 11156; bugfix on 0.2.3.2-alpha.
+    - Fix connections to IPv6 addresses over SOCKS5. Previously, we were
+      generating incorrect SOCKS5 responses, and confusing client
+      applications. Fixes bug 10987; bugfix on 0.2.4.7-alpha.
 
   o Minor bugfixes (relays and bridges):
+    - Avoid crashing on a malformed resolv.conf file when running a
+      relay using Libevent 1. Fixes bug 8788; bugfix on 0.1.1.23.
     - Non-exit relays no longer launch mock DNS requests to check for
       DNS hijacking. This has been unnecessary since 0.2.1.7-alpha, when
       non-exit relays stopped servicing DNS requests. Fixes bug 965;
       bugfix on 0.2.1.7-alpha. Patch from Matt Pagan.
-    - Avoid crashing on a malformed resolv.conf file when running a
-      relay using Libevent 1. Fixes bug 8788; bugfix on 0.1.1.23.
-    - Give the correct URL in the warning message when trying to run a
-      relay on an ancient version of Windows. Fixes bug 9393.
-    - Bridges now never collect statistics that were designed for
-      relays. Fixes bug 5824; bugfix on 0.2.3.8-alpha.
     - Bridges now report complete directory request statistics. Related
       to bug 5824; bugfix on 0.2.2.1-alpha.
+    - Bridges now never collect statistics that were designed for
+      relays. Fixes bug 5824; bugfix on 0.2.3.8-alpha.
+    - Stop giving annoying warning messages when we decide not to launch
+      a pluggable transport proxy that we don't need (because there are
+      no bridges configured to use it). Resolves ticket 5018; bugfix
+      on 0.2.5.2-alpha.
+    - Give the correct URL in the warning message when trying to run a
+      relay on an ancient version of Windows. Fixes bug 9393.
 
   o Minor bugfixes (backtrace support):
     - Support automatic backtraces on more platforms by using the
@@ -123,24 +117,29 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
     - Fix a compiler warning in format_number_sigsafe(). Bugfix on
       0.2.5.2-alpha; patch from Nick Hopper.
 
+  o Minor bugfixes (unit tests):
+    - Fix a small bug in the unit tests that might have made the tests
+      call 'chmod' with an uninitialized bitmask. Fixes bug 10928;
+      bugfix on 0.2.5.1-alpha. Patch from Dana Koch.
+
   o Removed code:
     - Remove all remaining code related to version-0 hidden service
       descriptors: they have not been in use since 0.2.2.1-alpha. Fixes
       the rest of bug 10841.
 
   o Documentation:
+    - Document in the manpage that "KBytes" may also be written as
+      "kilobytes" or "KB", that "Kbits" may also be written as
+      "kilobits", and so forth. Closes ticket 9222.
     - Explain that SocksPolicy, DirPolicy, and similar options don't
       take port arguments. Fixes the other part of ticket 11108.
-    - Fix the manpage's description of HiddenServiceAuthorizeClient:
-      the maximum client name length is 16, not 19. Fixes bug 11118;
-      bugfix on 0.2.1.6-alpha.
     - Fix a comment about the rend_server_descriptor_t.protocols field
       to more accurately describe its range. Also, make that field
       unsigned, to more accurately reflect its usage. Fixes bug 9099;
       bugfix on 0.2.1.5-alpha.
-    - Document in the manpage that "KBytes" may also be written as
-      "kilobytes" or "KB", that "Kbits" may also be written as
-      "kilobits", and so forth. Closes ticket 9222.
+    - Fix the manpage's description of HiddenServiceAuthorizeClient:
+      the maximum client name length is 16, not 19. Fixes bug 11118;
+      bugfix on 0.2.1.6-alpha.
 
   o Code simplifications and refactoring:
     - Get rid of router->address, since in all cases it was just the
