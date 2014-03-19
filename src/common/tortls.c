@@ -2311,6 +2311,7 @@ log_cert_lifetime(int severity, const X509 *cert, const char *problem)
   char mytime[33];
   time_t now = time(NULL);
   struct tm tm;
+  size_t n;
 
   if (problem)
     tor_log(severity, LD_GENERAL,
@@ -2336,11 +2337,17 @@ log_cert_lifetime(int severity, const X509 *cert, const char *problem)
   BIO_get_mem_ptr(bio, &buf);
   s2 = tor_strndup(buf->data, buf->length);
 
-  strftime(mytime, 32, "%b %d %H:%M:%S %Y UTC", tor_gmtime_r(&now, &tm));
-
-  tor_log(severity, LD_GENERAL,
-      "(certificate lifetime runs from %s through %s. Your time is %s.)",
-      s1,s2,mytime);
+  n = strftime(mytime, 32, "%b %d %H:%M:%S %Y UTC", tor_gmtime_r(&now, &tm));
+  if (n > 0) {
+    tor_log(severity, LD_GENERAL,
+        "(certificate lifetime runs from %s through %s. Your time is %s.)",
+        s1,s2,mytime);
+  } else {
+    tor_log(severity, LD_GENERAL,
+        "(certificate lifetime runs from %s through %s. "
+        "Couldn't get your time.)",
+        s1, s2);
+  }
 
  end:
   /* Not expected to get invoked */
