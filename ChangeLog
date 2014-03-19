@@ -1,21 +1,20 @@
 Changes in version 0.2.5.3-alpha - 2014-03-??
   Tor 0.2.5.3-alpha includes all the fixes from 0.2.4.21. It contains
-  two new anti-DoS features for Tor nodes, resolves a bug that kept
+  two new anti-DoS features for Tor relays, resolves a bug that kept
   SOCKS5 support for IPv6 from working, fixes several annoying usability
   issues for bridge users, and removes more old code for unused
   directory formats.
 
   The Tor 0.2.5.x release series is now in patch-freeze: no feature
-  patches not already written will be considered for inclusion in
-  0.2.5.x.
+  patches not already written will be considered for inclusion in 0.2.5.x.
 
-  o Major features (server security, DoS-resistance):
+  o Major features (relay security, DoS-resistance):
     - When deciding whether we have run out of memory and we need to
       close circuits, also consider memory allocated in buffers for
       streams attached to each circuit.
 
       This change, which extends an anti-DoS feature introduced in
-      0.2.4.13-alpha and improved in 0.2.4.14-alpha, lets Tor exit nodes
+      0.2.4.13-alpha and improved in 0.2.4.14-alpha, lets Tor exit relays
       better resist more memory-based DoS attacks than before. Since the
       MaxMemInCellQueues option now applies to all queues, it is renamed
       to MaxMemInQueues. This feature fixes bug 10169.
@@ -28,9 +27,9 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
       table positions are derived from a randomized cryptographic key,
       and an attacker cannot predict which entries will collide. Closes
       ticket 4900.
-    - Decrease the lower limit of MaxMemInQueues to 256 MBytes, to
-      better support Raspberry Pi users. Fixes bug 9686; bugfix on
-      0.2.4.14-alpha.
+    - Decrease the lower limit of MaxMemInQueues to 256 MBytes (but leave
+      the default at 8GBytes), to better support Raspberry Pi users. Fixes
+      bug 9686; bugfix on 0.2.4.14-alpha.
 
   o Minor features (bridges, pluggable transports):
     - Bridges now write the SHA1 digest of their identity key
@@ -43,8 +42,9 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
       listener. Also, log the message in the log file too. Resolves
       ticket 11043.
     - Stop giving annoying warning messages when we decide not to launch
-      a pluggable transport proxy that we don't need. Resolves ticket
-      5018; bugfix on 0.2.5.2-alpha.
+      a pluggable transport proxy that we don't need (because there are
+      no bridges configured to use it). Resolves ticket 5018; bugfix
+      on 0.2.5.2-alpha.
 
   o Minor features (other):
     - Add a new option, PredictedPortsRelevanceTime, to control how long
@@ -54,7 +54,7 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
     - Generate a warning if any ports are listed in the SocksPolicy,
       DirPolicy, AuthDirReject, AuthDirInvalid, AuthDirBadDir, or
       AuthDirBadExit options. (These options only support address
-      ranges.) Fixes ticket 11108.
+      ranges.) Fixes part of ticket 11108.
     - Update geoip and geoip6 to the February 7 2014 Maxmind GeoLite2
       Country database.
 
@@ -79,49 +79,47 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
     - Raise a control port warning when we fail to connect to all of
       our bridges. Previously, we didn't inform the controller, and
       the bootstrap process would stall. Fixes bug 11069; bugfix on
-      tor-0.2.1.2-alpha.
+      0.2.1.2-alpha.
     - Exit immediately when a process-owning controller exits.
       Previously, tor relays would wait for a little while after their
-      controller exited, as if they had gotten an INT signal--but this
+      controller exited, as if they had gotten an INT signal -- but this
       was problematic, since there was no feedback for the user. To do a
       clean shutdown, controllers should send an INT signal and give Tor
-      a chance to clean up. Fix for bug 10449; bugfix on 0.2.2.28-beta.
+      a chance to clean up. Fixes bug 10449; bugfix on 0.2.2.28-beta.
     - Improve the log message when we can't connect to a hidden service
       because all of the hidden service directory nodes hosting its
       descriptor are excluded. Improves on our fix for bug 10722, which
       was a bugfix on 0.2.0.10-alpha.
-    - Fix a bug where we would attempt to connect to bridges before our
-      pluggable transports were configured, which resulted in some
-      erroneous log messages. Fixes bug 11156; bugfix on 0.2.3.2-alpha.
+    - Stop attempting to connect to bridges before our pluggable
+      transports are configured (harmless but resulted in some erroneous
+      log messages). Fixes bug 11156; bugfix on 0.2.3.2-alpha.
 
-  o Minor bugfixes (servers):
-    - Non-exit servers no longer launch mock DNS requests to check for
+  o Minor bugfixes (relays and bridges):
+    - Non-exit relays no longer launch mock DNS requests to check for
       DNS hijacking. This has been unnecessary since 0.2.1.7-alpha, when
-      non-exit servers stopped servicing DNS requests. Fixes bug 965;
+      non-exit relays stopped servicing DNS requests. Fixes bug 965;
       bugfix on 0.2.1.7-alpha. Patch from Matt Pagan.
     - Avoid crashing on a malformed resolv.conf file when running a
-      server using Libevent 1. Fixes bug 8788; bugfix on 0.1.1.23.
+      relay using Libevent 1. Fixes bug 8788; bugfix on 0.1.1.23.
     - Give the correct URL in the warning message when trying to run a
-      Tor relay on an ancient version of Windows. Fixes bug 9393.
+      relay on an ancient version of Windows. Fixes bug 9393.
     - Bridges now never collect statistics that were designed for
-      relays. Fix for bug 5824; bugfix on 0.2.3.8-alpha.
+      relays. Fixes bug 5824; bugfix on 0.2.3.8-alpha.
     - Bridges now report complete directory request statistics. Related
       to bug 5824; bugfix on 0.2.2.1-alpha.
 
   o Minor bugfixes (backtrace support):
     - Support automatic backtraces on more platforms by using the
-      -fasynchronous-unwind-tables compiler option. This option is
-      needed for platforms like 32-bit Intel where -fomit-frame-pointer
+      "-fasynchronous-unwind-tables" compiler option. This option is
+      needed for platforms like 32-bit Intel where "-fomit-frame-pointer"
       is on by default and table generation is not. This doesn't yet
-      add Windows support yet; only Linux, OSX, and some BSDs are
-      affected. Reported by 'cypherpunks'; fixes bug 11047; bugfix on
-      0.2.5.2-alpha.
+      add Windows support; only Linux, OSX, and some BSDs are affected.
+      Reported by 'cypherpunks'; fixes bug 11047; bugfix on 0.2.5.2-alpha.
     - Avoid strange behavior if two threads hit failed assertions at the
       same time and both try to log backtraces at once. (Previously, if
-      this had happened, both threads would have stored their
-      intermediate results in the same buffer, and generated junk
-      outputs.) Reported by "cypherpunks". Fixes bug 11048; bugfix on
-      0.2.5.2-alpha.
+      this had happened, both threads would have stored their intermediate
+      results in the same buffer, and generated junk outputs.) Reported by
+      "cypherpunks". Fixes bug 11048; bugfix on 0.2.5.2-alpha.
     - Fix a compiler warning in format_number_sigsafe(). Bugfix on
       0.2.5.2-alpha; patch from Nick Hopper.
 
@@ -132,10 +130,10 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
 
   o Documentation:
     - Explain that SocksPolicy, DirPolicy, and similar options don't
-      take port arguments. Fixes ticket 11108.
-    - Fix the manpage's description of HiddenServiceAuthorizeClient
-      description: it should have given the maximum client name length
-      as 16, not 19. Fixes bug 11118; bugfix on 0.2.1.6-alpha.
+      take port arguments. Fixes the other part of ticket 11108.
+    - Fix the manpage's description of HiddenServiceAuthorizeClient:
+      the maximum client name length is 16, not 19. Fixes bug 11118;
+      bugfix on 0.2.1.6-alpha.
     - Fix a comment about the rend_server_descriptor_t.protocols field
       to more accurately describe its range. Also, make that field
       unsigned, to more accurately reflect its usage. Fixes bug 9099;
@@ -151,8 +149,8 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
   o Test infrastructure:
     - Update to the latest version of tinytest.
     - Improve the tinytest implementation of string operation tests so
-      that comparisons NULL strings no longer crash the tests; they now
-      just fail, normally. Fixes bug 9004; bugfix on 0.2.2.4-alpha.
+      that comparisons with NULL strings no longer crash the tests; they
+      now just fail, normally. Fixes bug 9004; bugfix on 0.2.2.4-alpha.
 
 
 Changes in version 0.2.4.21 - 2014-02-28
