@@ -1254,7 +1254,11 @@ networkstatus_set_current_consensus(const char *consensus,
         /* Even if we had enough signatures, we'd never use this as the
          * latest consensus. */
         if (was_waiting_for_certs && from_cache)
-          unlink(unverified_fname);
+          if (unlink(unverified_fname) != 0) {
+            log_warn(LD_FS,
+                     "Failed to unlink %s: %s",
+                     unverified_fname, strerror(errno));
+          }
       }
       goto done;
     } else {
@@ -1264,8 +1268,13 @@ networkstatus_set_current_consensus(const char *consensus,
                  "consensus");
         result = -2;
       }
-      if (was_waiting_for_certs && (r < -1) && from_cache)
-        unlink(unverified_fname);
+      if (was_waiting_for_certs && (r < -1) && from_cache) {
+        if (unlink(unverified_fname) != 0) {
+            log_warn(LD_FS,
+                     "Failed to unlink %s: %s",
+                     unverified_fname, strerror(errno));
+        }
+      }
       goto done;
     }
   }
@@ -1313,7 +1322,11 @@ networkstatus_set_current_consensus(const char *consensus,
       waiting->body = NULL;
     waiting->set_at = 0;
     waiting->dl_failed = 0;
-    unlink(unverified_fname);
+    if (unlink(unverified_fname) != 0) {
+      log_warn(LD_FS,
+               "Failed to unlink %s: %s",
+               unverified_fname, strerror(errno));
+    }
   }
 
   /* Reset the failure count only if this consensus is actually valid. */

@@ -6464,7 +6464,10 @@ remove_file_if_very_old(const char *fname, time_t now)
     format_local_iso_time(buf, st.st_mtime);
     log_notice(LD_GENERAL, "Obsolete file %s hasn't been modified since %s. "
                "Removing it.", fname, buf);
-    unlink(fname);
+    if (unlink(fname) != 0) {
+      log_warn(LD_FS, "Failed to unlink %s: %s",
+               fname, strerror(errno));
+    }
   }
 }
 

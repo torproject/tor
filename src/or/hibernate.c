@@ -648,7 +648,15 @@ read_bandwidth_usage(void)
 
   {
     char *fname = get_datadir_fname("bw_accounting");
-    unlink(fname);
+    int res;
+
+    res = unlink(fname);
+    if (res != 0) {
+      log_warn(LD_FS,
+               "Failed to unlink %s: %s",
+               fname, strerror(errno));
+    }
+
     tor_free(fname);
   }
 
