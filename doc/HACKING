@@ -474,6 +474,10 @@ interesting and understandable.
 
    Present and imperative tense: not past.
 
+   'Relays', not 'servers' or 'nodes' or 'Tor relays'.
+
+   "Stop FOOing", not "Fix a bug where we would FOO".
+
    Try not to let any given section be longer than about a page. Break up
    long sections into subsections by some sort of common subtopic. This
    guideline is especially important when organizing Release Notes for
