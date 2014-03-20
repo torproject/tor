@@ -1,3 +1,0 @@
-  o Documentation:
-    - Provide a more accurate description of the ClientOnly config
-      option on the man page. Resolves bug 9059.

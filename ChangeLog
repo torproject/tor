@@ -131,6 +131,9 @@ Changes in version 0.2.5.3-alpha - 2014-03-??
     - Document in the manpage that "KBytes" may also be written as
       "kilobytes" or "KB", that "Kbits" may also be written as
       "kilobits", and so forth. Closes ticket 9222.
+    - Document that the ClientOnly config option overrides ORPort.
+      Our old explanation made ClientOnly sound as though it did
+      nothing at all. Resolves bug 9059.
     - Explain that SocksPolicy, DirPolicy, and similar options don't
       take port arguments. Fixes the other part of ticket 11108.
     - Fix a comment about the rend_server_descriptor_t.protocols field
