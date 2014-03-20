@@ -1,0 +1,3 @@
+  o Minor bugfixes (compilation):
+    - Fix a compilation error when compiling with --disable-cuve25519.
+      Fixes bug 9700; bugfix on 0.2.4.17-rc.

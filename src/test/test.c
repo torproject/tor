@@ -56,12 +56,12 @@ double fabs(double x);
 #include "memarea.h"
 #include "onion.h"
 #include "onion_tap.h"
+#include "onion_ntor.h"
 #include "policies.h"
 #include "rephist.h"
 #include "routerparse.h"
 #ifdef CURVE25519_ENABLED
 #include "crypto_curve25519.h"
-#include "onion_ntor.h"
 #endif
 
 #ifdef USE_DMALLOC
