@@ -89,7 +89,7 @@ test_sigsafe_err(void *arg)
 
   init_logging();
   mark_logs_temp();
-  add_file_log(&include_bug, fn);
+  add_file_log(&include_bug, fn, 0);
   tor_log_update_sigsafe_err_fds();
   close_temp_logs();
 

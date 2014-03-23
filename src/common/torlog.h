@@ -130,7 +130,8 @@ void set_log_severity_config(int minSeverity, int maxSeverity,
                              log_severity_list_t *severity_out);
 void add_stream_log(const log_severity_list_t *severity, const char *name,
                     int fd);
-int add_file_log(const log_severity_list_t *severity, const char *filename);
+int add_file_log(const log_severity_list_t *severity, const char *filename,
+                 const int truncate);
 #ifdef HAVE_SYSLOG_H
 int add_syslog_log(const log_severity_list_t *severity);
 #endif
@@ -148,6 +149,7 @@ void change_callback_log_severity(int loglevelMin, int loglevelMax,
 void flush_pending_log_callbacks(void);
 void log_set_application_name(const char *name);
 void set_log_time_granularity(int granularity_msec);
+void truncate_logs(void);
 
 void tor_log(int severity, log_domain_mask_t domain, const char *format, ...)
   CHECK_PRINTF(3,4);

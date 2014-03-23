@@ -1861,6 +1861,10 @@ do_hup(void)
       return -1;
     }
     options = get_options(); /* they have changed now */
+    /* Logs are only truncated the first time they are opened, but were
+       probably intended to be cleaned up on signal. */
+    if (options->TruncateLogFile)
+      truncate_logs();
   } else {
     char *msg = NULL;
     log_notice(LD_GENERAL, "Not reloading config file: the controller told "

@@ -561,6 +561,9 @@ GENERAL OPTIONS
     messages to affect times logged by a controller, times attached to
     syslog messages, or the mtime fields on log files.  (Default: 1 second)
 
+[[TruncateLogFile]] **TruncateLogFile** **0**|**1**::
+    If 1, Tor will overwrite logs, instead of appending them. (Default: 0)
+
 [[SafeLogging]] **SafeLogging** **0**|**1**|**relay**::
     Tor can scrub potentially sensitive strings from log messages (e.g.
     addresses) by replacing them with the string [scrubbed]. This way logs can

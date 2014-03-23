@@ -302,6 +302,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("LogLevel"),
   OBSOLETE("LogFile"),
   V(LogTimeGranularity,          MSEC_INTERVAL, "1 second"),
+  V(TruncateLogFile,             BOOL,     "0"),
   V(LongLivedPorts,              CSV,
         "21,22,706,1863,5050,5190,5222,5223,6523,6667,6697,8300"),
   VAR("MapAddress",              LINELIST, AddressMap,           NULL),
@@ -557,7 +558,8 @@ static int check_server_ports(const smartlist_t *ports,
 static int validate_data_directory(or_options_t *options);
 static int write_configuration_file(const char *fname,
                                     const or_options_t *options);
-static int options_init_logs(or_options_t *options, int validate_only);
+static int options_init_logs(const or_options_t *old_options,
+                             or_options_t *options, int validate_only);
 
 static void init_libevent(const or_options_t *options);
 static int opt_streq(const char *s1, const char *s2);
@@ -1145,7 +1147,8 @@ options_act_reversible(const or_options_t *old_options, char **msg)
 
   mark_logs_temp(); /* Close current logs once new logs are open. */
   logs_marked = 1;
-  if (options_init_logs(options, 0)<0) { /* Configure the tor_log(s) */
+  /* Configure the tor_log(s) */
+  if (options_init_logs(old_options, options, 0)<0) {
     *msg = tor_strdup("Failed to init Log options. See logs for details.");
     goto rollback;
   }
@@ -2547,7 +2550,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
         config_line_append(&options->Logs, "Log", "warn stdout");
   }
 
-  if (options_init_logs(options, 1)<0) /* Validate the tor_log(s) */
+  /* Validate the tor_log(s) */
+  if (options_init_logs(old_options, options, 1)<0)
     REJECT("Failed to validate Log options. See logs for details.");
 
   if (authdir_mode(options)) {
@@ -4449,7 +4453,8 @@ addressmap_register_auto(const char *from, const char *to,
  * Initialize the logs based on the configuration file.
  */
 static int
-options_init_logs(or_options_t *options, int validate_only)
+options_init_logs(const or_options_t *old_options, or_options_t *options,
+                  int validate_only)
 {
   config_line_t *opt;
   int ok;
@@ -4542,7 +4547,21 @@ options_init_logs(or_options_t *options, int validate_only)
         !strcasecmp(smartlist_get(elts,0), "file")) {
       if (!validate_only) {
         char *fname = expand_filename(smartlist_get(elts, 1));
-        if (add_file_log(severity, fname) < 0) {
+        /* Truncate if TruncateLogFile is set and we haven't seen this option
+           line before. */
+        int truncate = 0;
+        if (options->TruncateLogFile) {
+          truncate = 1;
+          if (old_options) {
+            config_line_t *opt2;
+            for (opt2 = old_options->Logs; opt2; opt2 = opt2->next)
+              if (!strcmp(opt->value, opt2->value)) {
+                truncate = 0;
+                break;
+              }
+          }
+        }
+        if (add_file_log(severity, fname, truncate) < 0) {
           log_warn(LD_CONFIG, "Couldn't open file for 'Log %s': %s",
                    opt->value, strerror(errno));
           ok = 0;

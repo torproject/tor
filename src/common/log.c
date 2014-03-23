@@ -1010,12 +1010,16 @@ mark_logs_temp(void)
  * logfile fails, -1 is returned and errno is set appropriately (by open(2)).
  */
 int
-add_file_log(const log_severity_list_t *severity, const char *filename)
+add_file_log(const log_severity_list_t *severity, const char *filename,
+             const int truncate)
 {
   int fd;
   logfile_t *lf;
 
-  fd = tor_open_cloexec(filename, O_WRONLY|O_CREAT|O_APPEND, 0644);
+  int open_flags = O_WRONLY|O_CREAT;
+  open_flags |= truncate ? O_TRUNC : O_APPEND;
+
+  fd = tor_open_cloexec(filename, open_flags, 0644);
   if (fd<0)
     return -1;
   if (tor_fd_seekend(fd)<0) {
@@ -1297,3 +1301,10 @@ switch_logs_debug(void)
   UNLOCK_LOGS();
 }
 
+/** Truncate all the log files. */
+void
+truncate_logs(void)
+{
+  for (logfile_t *lf = logfiles; lf; lf = lf->next)
+    ftruncate(lf->fd, 0);
+}

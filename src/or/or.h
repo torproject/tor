@@ -3402,6 +3402,8 @@ typedef struct {
 
   int LogMessageDomains; /**< Boolean: Should we log the domain(s) in which
                           * each log message occurs? */
+  int TruncateLogFile; /**< Boolean: Should we truncate the log file
+                            before we start writing? */
 
   char *DebugLogFile; /**< Where to send verbose log messages. */
   char *DataDirectory; /**< OR only: where to store long-term data. */
