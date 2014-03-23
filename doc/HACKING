@@ -449,10 +449,11 @@ of them and reordering to focus on what users and funders would find
 interesting and understandable.
 
    2.1) Make sure that everything that wants a bug number has one.
+        Make sure that everything which is a bugfix says what version
+        it was a bugfix on.
    2.2) Concatenate them.
-   2.3) Sort them by section.  Within each section, try to make the
-      first entry or two and the last entry most interesting: they're
-      the ones that skimmers tend to read.
+   2.3) Sort them by section. Within each section, sort by "version it's
+        a bugfix on", else by numerical ticket order.
 
    2.4) Clean them up:
 
@@ -518,8 +519,7 @@ in their approved versions list.
 "include/versions.wmi" and "Makefile" to note the new version. From your
 website checkout, run ./publish to build and publish the website.
 
-9) Email Erinn and weasel (cc'ing tor-assistants) that a new tarball
-is up. This step should probably change to mailing more packagers.
+9) Email the packagers (cc'ing tor-assistants) that a new tarball is up.
 
 10) Add the version number to Trac.  To do this, go to Trac, log in,
 select "Admin" near the top of the screen, then select "Versions" from
