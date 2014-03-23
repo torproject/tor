@@ -99,7 +99,8 @@ void circuitmux_assert_okay(circuitmux_t *cmux);
 
 /* Create/destroy */
 circuitmux_t * circuitmux_alloc(void);
-void circuitmux_detach_all_circuits(circuitmux_t *cmux);
+void circuitmux_detach_all_circuits(circuitmux_t *cmux,
+                                    smartlist_t *detached_out);
 void circuitmux_free(circuitmux_t *cmux);
 
 /* Policy control */
