@@ -1,0 +1,3 @@
+ o Code simplifications and refactoring: 
+   - Remove unused function circuit_dump_by_chan from circuitlist.c. Closes
+     issue #9107; patch from "marek".
