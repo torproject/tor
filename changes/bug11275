@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Fix a minor memory leak that occurred when signing a directory
+      object. Fixes bug 11275; bugfix on 0.2.4.13-alpha.
