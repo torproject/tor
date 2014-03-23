@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Don't re-initialize a second set of openssl mutexes when starting
+      up. Fixes bug 11726; bugfix on 0.2.5.3-alpha.
