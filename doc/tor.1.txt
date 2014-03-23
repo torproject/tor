@@ -342,9 +342,7 @@ GENERAL OPTIONS
     many times, for multiple authoritative directory servers. Flags are
     separated by spaces, and determine what kind of an authority this directory
     is. By default, an authority is not authoritative for any directory style
-    or version unless an appropriate flag is given. If the "v1" flag is
-    provided, Tor will use this server as an authority for old-style (v1)
-    directories as well. (Only directory mirrors care about this.)
+    or version unless an appropriate flag is given.
     Tor will use this authority as a bridge authoritative directory if the
     "bridge" flag is set. If a flag "orport=**port**" is given, Tor will use the
     given port when opening encrypted tunnels to the dirserver. If a flag
@@ -1584,7 +1582,7 @@ is non-zero):
     If set to a path, only the specified path will be executed.
     (Default: tor-fw-helper)
 
-[[PublishServerDescriptor]] **PublishServerDescriptor** **0**|**1**|**v1**|**v2**|**v3**|**bridge**,**...**::
+[[PublishServerDescriptor]] **PublishServerDescriptor** **0**|**1**|**v3**|**bridge**,**...**::
     This option specifies which descriptors Tor will publish when acting as
     a relay. You can
     choose multiple arguments, separated by commas.
@@ -1773,17 +1771,6 @@ if DirPort is non-zero):
     the DirPort. Now relay operators can provide a disclaimer without needing
     to set up a separate webserver. There's a sample disclaimer in
     contrib/tor-exit-notice.html.
-
-[[V1AuthoritativeDirectory]] **V1AuthoritativeDirectory** **0**|**1**::
-    When this option is set in addition to **AuthoritativeDirectory**, Tor
-    generates version 1 directory and running-routers documents (for legacy
-    Tor clients up to 0.1.0.x).
-
-[[V2AuthoritativeDirectory]] **V2AuthoritativeDirectory** **0**|**1**::
-    When this option is set in addition to **AuthoritativeDirectory**, Tor
-    generates version 2 network statuses and serves descriptors, etc as
-    described in doc/spec/dir-spec-v2.txt (for Tor clients and servers running
-    0.1.1.x and 0.1.2.x).
 
 [[V3AuthoritativeDirectory]] **V3AuthoritativeDirectory** **0**|**1**::
     When this option is set in addition to **AuthoritativeDirectory**, Tor

@@ -3414,7 +3414,6 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
         signed_desc_append_to_journal(&router->cache_info,
                                       &routerlist->desc_store);
       }
-      directory_set_dirty();
       *msg = authdir_believes_valid ? "Valid server updated" :
         ("Invalid server updated. (This dirserver is marking your "
          "server as unapproved.)");
@@ -3436,7 +3435,6 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     signed_desc_append_to_journal(&router->cache_info,
                                   &routerlist->desc_store);
   }
-  directory_set_dirty();
   return ROUTER_ADDED_SUCCESSFULLY;
 }
 
