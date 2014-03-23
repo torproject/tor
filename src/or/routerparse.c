@@ -728,7 +728,7 @@ router_get_dirobj_signature(const char *digest,
 
 /** Helper: used to generate signatures for routers, directories and
  * network-status objects.  Given a digest in <b>digest</b> and a secret
- * <b>private_key</b>, generate an PKCS1-padded signature, BASE64-encode it,
+ * <b>private_key</b>, generate a PKCS1-padded signature, BASE64-encode it,
  * surround it with -----BEGIN/END----- pairs, and write it to the
  * <b>buf_len</b>-byte buffer at <b>buf</b>.  Return 0 on success, -1 on
  * failure.
@@ -751,6 +751,7 @@ router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
     return -1;
   }
   memcpy(buf+s_len, sig, sig_len+1);
+  tor_free(sig);
   return 0;
 }
 
