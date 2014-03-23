@@ -3100,7 +3100,7 @@ openssl_locking_cb_(int mode, int n, const char *file, int line)
   (void)file;
   (void)line;
   if (!openssl_mutexes_)
-    /* This is not a really good  fix for the
+    /* This is not a really good fix for the
      * "release-freed-lock-from-separate-thread-on-shutdown" problem, but
      * it can't hurt. */
     return;
