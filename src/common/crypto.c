@@ -282,6 +282,9 @@ int
 crypto_early_init(void)
 {
   if (!crypto_early_initialized_) {
+
+    crypto_early_initialized_ = 1;
+
     ERR_load_crypto_strings();
     OpenSSL_add_all_algorithms();
 
