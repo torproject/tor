@@ -1,4 +1,4 @@
-Changes in version 0.2.5.3-alpha - 2014-03-??
+Changes in version 0.2.5.3-alpha - 2014-03-23
   Tor 0.2.5.3-alpha includes all the fixes from 0.2.4.21. It contains
   two new anti-DoS features for Tor relays, resolves a bug that kept
   SOCKS5 support for IPv6 from working, fixes several annoying usability
