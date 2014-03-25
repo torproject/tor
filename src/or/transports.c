@@ -124,6 +124,8 @@ static INLINE void free_execve_args(char **arg);
 #define PROTO_SMETHOD_ERROR "SMETHOD-ERROR"
 #define PROTO_CMETHODS_DONE "CMETHODS DONE"
 #define PROTO_SMETHODS_DONE "SMETHODS DONE"
+#define PROTO_PROXY_DONE "PROXY DONE"
+#define PROTO_PROXY_ERROR "PROXY-ERROR"
 
 /** The first and only supported - at the moment - configuration
     protocol version. */
@@ -439,6 +441,17 @@ add_transport_to_proxy(const char *transport, managed_proxy_t *mp)
 static int
 proxy_needs_restart(const managed_proxy_t *mp)
 {
+  int ret = 1;
+  char* proxy_uri;
+
+  /* If the PT proxy config has changed, then all existing pluggable transports
+   * should be restarted.
+   */
+
+  proxy_uri = get_pt_proxy_uri();
+  if (strcmp_opt(proxy_uri, mp->proxy_uri) != 0)
+    goto needs_restart;
+
   /* mp->transport_to_launch is populated with the names of the
      transports that must be launched *after* the SIGHUP.
      mp->transports is populated with the transports that were
@@ -459,10 +472,10 @@ proxy_needs_restart(const managed_proxy_t *mp)
 
   } SMARTLIST_FOREACH_END(t);
 
-  return 0;
-
- needs_restart:
-  return 1;
+  ret = 0;
+needs_restart:
+  tor_free(proxy_uri);
+  return ret;
 }
 
 /** Managed proxy <b>mp</b> must be restarted. Do all the necessary
@@ -492,6 +505,11 @@ proxy_prepare_for_restart(managed_proxy_t *mp)
   /* free the transport in mp->transports */
   SMARTLIST_FOREACH(mp->transports, transport_t *, t, transport_free(t));
   smartlist_clear(mp->transports);
+
+  /* Reset the proxy's HTTPS/SOCKS proxy */
+  tor_free(mp->proxy_uri);
+  mp->proxy_uri = get_pt_proxy_uri();
+  mp->proxy_supported = 0;
 
   /* flag it as an infant proxy so that it gets launched on next tick */
   mp->conf_state = PT_PROTO_INFANT;
@@ -727,10 +745,50 @@ managed_proxy_destroy(managed_proxy_t *mp,
   /* free the argv */
   free_execve_args(mp->argv);
 
+  /* free the outgoing proxy URI */
+  tor_free(mp->proxy_uri);
+
   tor_process_handle_destroy(mp->process_handle, also_terminate_process);
   mp->process_handle = NULL;
 
   tor_free(mp);
+}
+
+/** Convert the tor proxy options to a URI suitable for TOR_PT_PROXY. */
+STATIC char *
+get_pt_proxy_uri(void)
+{
+  const or_options_t *options = get_options();
+  char *uri = NULL;
+
+  if (options->Socks4Proxy || options->Socks5Proxy || options->HTTPSProxy) {
+    char addr[TOR_ADDR_BUF_LEN+1];
+
+    if (options->Socks4Proxy) {
+      tor_addr_to_str(addr, &options->Socks4ProxyAddr, sizeof(addr), 1);
+      tor_asprintf(&uri, "socks4a://%s:%d", addr, options->Socks4ProxyPort);
+    } else if (options->Socks5Proxy) {
+      tor_addr_to_str(addr, &options->Socks5ProxyAddr, sizeof(addr), 1);
+      if (!options->Socks5ProxyUsername && !options->Socks5ProxyPassword) {
+        tor_asprintf(&uri, "socks5://%s:%d", addr, options->Socks5ProxyPort);
+      } else {
+        tor_asprintf(&uri, "socks5://%s:%s@%s:%d",
+                     options->Socks5ProxyUsername,
+                     options->Socks5ProxyPassword,
+                     addr, options->Socks5ProxyPort);
+      }
+    } else if (options->HTTPSProxy) {
+      tor_addr_to_str(addr, &options->HTTPSProxyAddr, sizeof(addr), 1);
+      if (!options->HTTPSProxyAuthenticator) {
+        tor_asprintf(&uri, "http://%s:%d", addr, options->HTTPSProxyPort);
+      } else {
+        tor_asprintf(&uri, "http://%s@%s:%d", options->HTTPSProxyAuthenticator,
+                     addr, options->HTTPSProxyPort);
+      }
+    }
+  }
+
+  return uri;
 }
 
 /** Handle a configured or broken managed proxy <b>mp</b>. */
@@ -745,6 +803,12 @@ handle_finished_proxy(managed_proxy_t *mp)
     managed_proxy_destroy(mp, 0); /* destroy it but don't terminate */
     break;
   case PT_PROTO_CONFIGURED: /* if configured correctly: */
+    if (mp->proxy_uri && !mp->proxy_supported) {
+      log_warn(LD_CONFIG, "Managed proxy '%s' did not configure the "
+               "specified outgoing proxy.", mp->argv[0]);
+      managed_proxy_destroy(mp, 1); /* annihilate it. */
+      break;
+    }
     register_proxy(mp); /* register its transports */
     mp->conf_state = PT_PROTO_COMPLETED; /* and mark it as completed. */
     break;
@@ -862,6 +926,22 @@ handle_proxy_line(const char *line, managed_proxy_t *mp)
       goto err;
 
     return;
+  } else if (!strcmpstart(line, PROTO_PROXY_DONE)) {
+    if (mp->conf_state != PT_PROTO_ACCEPTING_METHODS)
+      goto err;
+
+    if (mp->proxy_uri) {
+      mp->proxy_supported = 1;
+      return;
+    }
+
+    /* No proxy was configured, this should log */
+  } else if (!strcmpstart(line, PROTO_PROXY_ERROR)) {
+    if (mp->conf_state != PT_PROTO_ACCEPTING_METHODS)
+      goto err;
+
+    parse_proxy_error(line);
+    goto err;
   } else if (!strcmpstart(line, SPAWN_ERROR_MESSAGE)) {
     /* managed proxy launch failed: parse error message to learn why. */
     int retval, child_state, saved_errno;
@@ -1128,6 +1208,21 @@ parse_cmethod_line(const char *line, managed_proxy_t *mp)
   return r;
 }
 
+/** Parses an PROXY-ERROR <b>line</b> and warns the user accordingly. */
+STATIC void
+parse_proxy_error(const char *line)
+{
+  /* (Length of the protocol string) plus (a space) and (the first char of
+     the error message) */
+  if (strlen(line) < (strlen(PROTO_PROXY_ERROR) + 2))
+    log_notice(LD_CONFIG, "Managed proxy sent us an %s without an error "
+               "message.", PROTO_PROXY_ERROR);
+
+  log_warn(LD_CONFIG, "Managed proxy failed to configure the "
+           "pluggable transport's outgoing proxy. (%s)",
+           line+strlen(PROTO_PROXY_ERROR)+1);
+}
+
 /** Return a newly allocated string that tor should place in
  * TOR_PT_SERVER_TRANSPORT_OPTIONS while configuring the server
  * manged proxy in <b>mp</b>. Return NULL if no such options are found. */
@@ -1292,6 +1387,14 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
     } else {
       smartlist_add_asprintf(envs, "TOR_PT_EXTENDED_SERVER_PORT=");
     }
+  } else {
+    /* If ClientTransportPlugin has a HTTPS/SOCKS proxy configured, set the
+     * TOR_PT_PROXY line.
+     */
+
+    if (mp->proxy_uri) {
+      smartlist_add_asprintf(envs, "TOR_PT_PROXY=%s", mp->proxy_uri);
+    }
   }
 
   SMARTLIST_FOREACH_BEGIN(envs, const char *, env_var) {
@@ -1324,6 +1427,7 @@ managed_proxy_create(const smartlist_t *transport_list,
   mp->is_server = is_server;
   mp->argv = proxy_argv;
   mp->transports = smartlist_new();
+  mp->proxy_uri = get_pt_proxy_uri();
 
   mp->transports_to_launch = smartlist_new();
   SMARTLIST_FOREACH(transport_list, const char *, transport,

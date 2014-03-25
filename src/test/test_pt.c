@@ -450,6 +450,85 @@ test_pt_configure_proxy(void *arg)
   tor_free(mp);
 }
 
+/* Test the get_pt_proxy_uri() function. */
+static void
+test_get_pt_proxy_uri(void *arg)
+{
+  or_options_t *options = get_options_mutable();
+  char *uri = NULL;
+  int ret;
+  (void) arg;
+
+  /* Test with no proxy. */
+  uri = get_pt_proxy_uri();
+  tt_assert(uri == NULL);
+
+  /* Test with a SOCKS4 proxy. */
+  options->Socks4Proxy = "192.0.2.1:1080";
+  ret = tor_addr_port_lookup(options->Socks4Proxy,
+                             &options->Socks4ProxyAddr,
+                             &options->Socks4ProxyPort);
+  tt_assert(ret == 0);
+  uri = get_pt_proxy_uri();
+  tt_str_op(uri, ==, "socks4a://192.0.2.1:1080");
+  tor_free(uri);
+
+  options->Socks4Proxy = NULL;
+
+  /* Test with a SOCKS5 proxy, no username/password. */
+  options->Socks5Proxy = "192.0.2.1:1080";
+  ret = tor_addr_port_lookup(options->Socks5Proxy,
+                             &options->Socks5ProxyAddr,
+                             &options->Socks5ProxyPort);
+  tt_assert(ret == 0);
+  uri = get_pt_proxy_uri();
+  tt_str_op(uri, ==, "socks5://192.0.2.1:1080");
+  tor_free(uri);
+
+  /* Test with a SOCKS5 proxy, with username/password. */
+  options->Socks5ProxyUsername = "hwest";
+  options->Socks5ProxyPassword = "r34n1m470r";
+  uri = get_pt_proxy_uri();
+  tt_str_op(uri, ==, "socks5://hwest:r34n1m470r@192.0.2.1:1080");
+  tor_free(uri);
+
+  options->Socks5Proxy = NULL;
+
+  /* Test with a HTTPS proxy, no authenticator. */
+  options->HTTPSProxy = "192.0.2.1:80";
+  ret = tor_addr_port_lookup(options->HTTPSProxy,
+                             &options->HTTPSProxyAddr,
+                             &options->HTTPSProxyPort);
+  tt_assert(ret == 0);
+  uri = get_pt_proxy_uri();
+  tt_str_op(uri, ==, "http://192.0.2.1:80");
+  tor_free(uri);
+
+  /* Test with a HTTPS proxy, with authenticator. */
+  options->HTTPSProxyAuthenticator = "hwest:r34n1m470r";
+  uri = get_pt_proxy_uri();
+  tt_str_op(uri, ==, "http://hwest:r34n1m470r@192.0.2.1:80");
+  tor_free(uri);
+
+  options->HTTPSProxy = NULL;
+
+  /* Token nod to the fact that IPv6 exists. */
+  options->Socks4Proxy = "[2001:db8::1]:1080";
+  ret = tor_addr_port_lookup(options->Socks4Proxy,
+                             &options->Socks4ProxyAddr,
+                             &options->Socks4ProxyPort);
+  tt_assert(ret == 0);
+  uri = get_pt_proxy_uri();
+  tt_str_op(uri, ==, "socks4a://[2001:db8::1]:1080");
+  tor_free(uri);
+
+
+ done:
+  if (uri)
+    tor_free(uri);
+}
+
+
 #define PT_LEGACY(name)                                               \
   { #name, legacy_test_helper, 0, &legacy_setup, test_pt_ ## name }
 
@@ -461,6 +540,8 @@ struct testcase_t pt_tests[] = {
   { "get_extrainfo_string", test_pt_get_extrainfo_string, TT_FORK,
     NULL, NULL },
   { "configure_proxy",test_pt_configure_proxy, TT_FORK,
+    NULL, NULL },
+  { "get_pt_proxy_uri", test_get_pt_proxy_uri, TT_FORK,
     NULL, NULL },
   END_OF_TESTCASES
 };

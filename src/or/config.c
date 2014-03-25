@@ -3174,11 +3174,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
     }
   }
 
-  /* Check if more than one proxy type has been enabled. */
+  /* Check if more than one exclusive proxy type has been enabled. */
   if (!!options->Socks4Proxy + !!options->Socks5Proxy +
-      !!options->HTTPSProxy + !!options->ClientTransportPlugin > 1)
+      !!options->HTTPSProxy > 1)
     REJECT("You have configured more than one proxy type. "
-           "(Socks4Proxy|Socks5Proxy|HTTPSProxy|ClientTransportPlugin)");
+           "(Socks4Proxy|Socks5Proxy|HTTPSProxy)");
 
   /* Check if the proxies will give surprising behavior. */
   if (options->HTTPProxy && !(options->Socks4Proxy ||
@@ -4842,6 +4842,13 @@ parse_client_transport_line(const or_options_t *options,
       pt_kickstart_client_proxy(transport_list, proxy_argv);
     }
   } else { /* external */
+    /* ClientTransportPlugins connecting through a proxy is managed only. */
+    if (options->Socks4Proxy || options->Socks5Proxy || options->HTTPSProxy) {
+      log_warn(LD_CONFIG, "You have configured an external proxy with another "
+                          "proxy type. (Socks4Proxy|Socks5Proxy|HTTPSProxy)");
+      goto err;
+    }
+
     if (smartlist_len(transport_list) != 1) {
       log_warn(LD_CONFIG, "You can't have an external proxy with "
                "more than one transports.");

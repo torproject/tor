@@ -86,6 +86,8 @@ static int connection_read_https_proxy_response(connection_t *conn);
 static void connection_send_socks5_connect(connection_t *conn);
 static const char *proxy_type_to_string(int proxy_type);
 static int get_proxy_type(void);
+static int get_bridge_pt_addrport(tor_addr_t *addr, uint16_t *port,
+                                  int *proxy_type, const connection_t *conn);
 
 /** The last addresses that our network interface seemed to have been
  * binding to.  We use this as one way to detect when our IP changes.
@@ -1689,14 +1691,14 @@ get_proxy_type(void)
 {
   const or_options_t *options = get_options();
 
-  if (options->HTTPSProxy)
+  if (options->ClientTransportPlugin)
+    return PROXY_PLUGGABLE;
+  else if (options->HTTPSProxy)
     return PROXY_CONNECT;
   else if (options->Socks4Proxy)
     return PROXY_SOCKS4;
   else if (options->Socks5Proxy)
     return PROXY_SOCKS5;
-  else if (options->ClientTransportPlugin)
-    return PROXY_PLUGGABLE;
   else
     return PROXY_NONE;
 }
@@ -4771,6 +4773,35 @@ assert_connection_ok(connection_t *conn, time_t now)
 }
 
 /** Fills <b>addr</b> and <b>port</b> with the details of the global
+ *  pluggable transport or bridge we are using.
+ *  <b>conn</b> contains the connection we are using the PT/bridge for.
+ *
+ * Return 0 on success, -1 on failure.
+ */
+static int
+get_bridge_pt_addrport(tor_addr_t *addr, uint16_t *port, int *proxy_type,
+                       const connection_t *conn)
+{
+  const or_options_t *options = get_options();
+
+  if (options->ClientTransportPlugin || options->Bridges) {
+    const transport_t *transport = NULL;
+    int r;
+    r = get_transport_by_bridge_addrport(&conn->addr, conn->port, &transport);
+    if (r<0)
+      return -1;
+    if (transport) { /* transport found */
+      tor_addr_copy(addr, &transport->addr);
+      *port = transport->port;
+      *proxy_type = transport->socks_version;
+      return 0;
+    }
+  }
+
+  return -1;
+}
+
+/** Fills <b>addr</b> and <b>port</b> with the details of the global
  *  proxy server we are using.
  *  <b>conn</b> contains the connection we are using the proxy for.
  *
@@ -4781,6 +4812,16 @@ get_proxy_addrport(tor_addr_t *addr, uint16_t *port, int *proxy_type,
                    const connection_t *conn)
 {
   const or_options_t *options = get_options();
+
+  /* Client Transport Plugins can use another proxy, but that should be hidden
+   * from the rest of tor (as the plugin is responsible for dealing with the
+   * proxy), check it first, then check the rest of the proxy types to allow
+   * the config to have unused ClientTransportPlugin entries.
+   */
+  if (options->ClientTransportPlugin) {
+    if (get_bridge_pt_addrport(addr, port, proxy_type, conn) == 0)
+      return 0;
+  }
 
   if (options->HTTPSProxy) {
     tor_addr_copy(addr, &options->HTTPSProxyAddr);
@@ -4797,19 +4838,8 @@ get_proxy_addrport(tor_addr_t *addr, uint16_t *port, int *proxy_type,
     *port = options->Socks5ProxyPort;
     *proxy_type = PROXY_SOCKS5;
     return 0;
-  } else if (options->ClientTransportPlugin ||
-             options->Bridges) {
-    const transport_t *transport = NULL;
-    int r;
-    r = get_transport_by_bridge_addrport(&conn->addr, conn->port, &transport);
-    if (r<0)
-      return -1;
-    if (transport) { /* transport found */
-      tor_addr_copy(addr, &transport->addr);
-      *port = transport->port;
-      *proxy_type = transport->socks_version;
-      return 0;
-    }
+  } else if (options->Bridges) {
+    return get_bridge_pt_addrport(addr, port, proxy_type, conn);
   }
 
   tor_addr_make_unspec(addr);

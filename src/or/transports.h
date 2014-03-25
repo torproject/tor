@@ -81,6 +81,9 @@ typedef struct {
   char **argv; /* the cli arguments of this proxy */
   int conf_protocol; /* the configuration protocol version used */
 
+  char *proxy_uri;  /* the outgoing proxy in TOR_PT_PROXY URI format */
+  int proxy_supported : 1; /* the proxy claims to honor TOR_PT_PROXY */
+
   int is_server; /* is it a server proxy? */
 
   /* A pointer to the process handle of this managed proxy. */
@@ -112,6 +115,7 @@ STATIC int parse_smethod_line(const char *line, managed_proxy_t *mp);
 
 STATIC int parse_version(const char *line, managed_proxy_t *mp);
 STATIC void parse_env_error(const char *line);
+STATIC void parse_proxy_error(const char *line);
 STATIC void handle_proxy_line(const char *line, managed_proxy_t *mp);
 STATIC char *get_transport_options_for_server_proxy(const managed_proxy_t *mp);
 
@@ -122,6 +126,8 @@ STATIC managed_proxy_t *managed_proxy_create(const smartlist_t *transport_list,
                                              char **proxy_argv, int is_server);
 
 STATIC int configure_proxy(managed_proxy_t *mp);
+
+STATIC char* get_pt_proxy_uri(void);
 
 #endif
 
