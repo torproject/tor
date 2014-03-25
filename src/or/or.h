@@ -196,6 +196,7 @@ typedef enum {
    * and let it use any circuit ID it wants. */
   CIRC_ID_TYPE_NEITHER=2
 } circ_id_type_t;
+#define circ_id_type_bitfield_t ENUM_BF(circ_id_type_t)
 
 #define CONN_TYPE_MIN_ 3
 /** Type for sockets listening for OR connections. */
@@ -1683,6 +1684,7 @@ typedef enum {
     DIR_SPOOL_CACHED_DIR, DIR_SPOOL_NETWORKSTATUS,
     DIR_SPOOL_MICRODESC, /* NOTE: if we add another entry, add another bit. */
 } dir_spool_source_t;
+#define dir_spool_source_bitfield_t ENUM_BF(dir_spool_source_t)
 
 /** Subtype of connection_t for an "directory connection" -- that is, an HTTP
  * connection to retrieve or serve directory material. */
@@ -1702,7 +1704,7 @@ typedef struct dir_connection_t {
    * "spooling" of directory material to the outbuf.  Otherwise, we'd have
    * to append everything to the outbuf in one enormous chunk. */
   /** What exactly are we spooling right now? */
-  ENUM_BF(dir_spool_source_t)  dir_spool_src : 3;
+  dir_spool_source_bitfield_t  dir_spool_src : 3;
 
   /** If we're fetching descriptors, what router purpose shall we assign
    * to them? */
@@ -1875,12 +1877,13 @@ typedef enum {
   ADDR_POLICY_ACCEPT=1,
   ADDR_POLICY_REJECT=2,
 } addr_policy_action_t;
+#define addr_policy_action_bitfield_t ENUM_BF(addr_policy_action_t)
 
 /** A reference-counted address policy rule. */
 typedef struct addr_policy_t {
   int refcnt; /**< Reference count */
   /** What to do when the policy matches.*/
-  ENUM_BF(addr_policy_action_t) policy_type:2;
+  addr_policy_action_bitfield_t policy_type:2;
   unsigned int is_private:1; /**< True iff this is the pseudo-address,
                               * "private". */
   unsigned int is_canonical:1; /**< True iff this policy is the canonical
@@ -1932,6 +1935,7 @@ typedef enum {
    */
   SAVED_IN_JOURNAL
 } saved_location_t;
+#define saved_location_bitfield_t ENUM_BF(saved_location_t)
 
 /** Enumeration: what kind of download schedule are we using for a given
  * object? */
@@ -1940,6 +1944,7 @@ typedef enum {
   DL_SCHED_CONSENSUS = 1,
   DL_SCHED_BRIDGE = 2,
 } download_schedule_t;
+#define download_schedule_bitfield_t ENUM_BF(download_schedule_t)
 
 /** Information about our plans for retrying downloads for a downloadable
  * object. */
@@ -1948,7 +1953,7 @@ typedef struct download_status_t {
                            * again? */
   uint8_t n_download_failures; /**< Number of failures trying to download the
                                 * most recent descriptor. */
-  ENUM_BF(download_schedule_t) schedule : 8;
+  download_schedule_bitfield_t schedule : 8;
 } download_status_t;
 
 /** If n_download_failures is this high, the download can never happen. */
@@ -2203,7 +2208,7 @@ typedef struct microdesc_t {
    */
   time_t last_listed;
   /** Where is this microdescriptor currently stored? */
-  ENUM_BF(saved_location_t) saved_location : 3;
+  saved_location_bitfield_t saved_location : 3;
   /** If true, do not attempt to cache this microdescriptor on disk. */
   unsigned int no_save : 1;
   /** If true, this microdesc has an entry in the microdesc_map */
@@ -2413,8 +2418,8 @@ typedef enum {
 /** A common structure to hold a v3 network status vote, or a v3 network
  * status consensus. */
 typedef struct networkstatus_t {
-  ENUM_BF(networkstatus_type_t) type : 8; /**< Vote, consensus, or opinion? */
-  ENUM_BF(consensus_flavor_t) flavor : 8; /**< If a consensus, what kind? */
+  networkstatus_type_t type; /**< Vote, consensus, or opinion? */
+  consensus_flavor_t flavor; /**< If a consensus, what kind? */
   unsigned int has_measured_bws : 1;/**< True iff this networkstatus contains
                                      * measured= bandwidth values. */
 
@@ -2933,6 +2938,7 @@ typedef enum {
      */
     PATH_STATE_ALREADY_COUNTED = 6,
 } path_state_t;
+#define path_state_bitfield_t ENUM_BF(path_state_t)
 
 /** An origin_circuit_t holds data necessary to build and use a circuit.
  */
@@ -2983,7 +2989,7 @@ typedef struct origin_circuit_t {
    * circuit building and usage accounting. See path_state_t
    * for more details.
    */
-  ENUM_BF(path_state_t) path_state : 3;
+  path_state_bitfield_t path_state : 3;
 
   /* If this flag is set, we should not consider attaching any more
    * connections to this circuit. */
@@ -4478,6 +4484,7 @@ typedef enum {
    * did this remapping happen." */
   ADDRMAPSRC_NONE
 } addressmap_entry_source_t;
+#define addressmap_entry_source_bitfield_t ENUM_BF(addressmap_entry_source_t)
 
 /********************************* control.c ***************************/
 

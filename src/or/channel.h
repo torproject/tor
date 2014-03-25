@@ -21,7 +21,7 @@ struct cell_queue_entry_s;
 TOR_SIMPLEQ_HEAD(chan_cell_queue, cell_queue_entry_s) incoming_queue;
 typedef struct chan_cell_queue chan_cell_queue_t;
 
-/*
+/**
  * Channel struct; see the channel_t typedef in or.h.  A channel is an
  * abstract interface for the OR-to-OR connection, similar to connection_or_t,
  * but without the strong coupling to the underlying TLS implementation.  They
@@ -31,18 +31,18 @@ typedef struct chan_cell_queue chan_cell_queue_t;
  */
 
 struct channel_s {
-  /* Magic number for type-checking cast macros */
+  /** Magic number for type-checking cast macros */
   uint32_t magic;
 
-  /* Current channel state */
+  /** Current channel state */
   channel_state_t state;
 
-  /* Globally unique ID number for a channel over the lifetime of a Tor
+  /** Globally unique ID number for a channel over the lifetime of a Tor
    * process.
    */
   uint64_t global_identifier;
 
-  /* Should we expect to see this channel in the channel lists? */
+  /** Should we expect to see this channel in the channel lists? */
   unsigned char registered:1;
 
   /** has this channel ever been open? */
@@ -57,28 +57,28 @@ struct channel_s {
     CHANNEL_CLOSE_FOR_ERROR
   } reason_for_closing;
 
-  /* Timestamps for both cell channels and listeners */
+  /** Timestamps for both cell channels and listeners */
   time_t timestamp_created; /* Channel created */
   time_t timestamp_active; /* Any activity */
 
   /* Methods implemented by the lower layer */
 
-  /* Free a channel */
+  /** Free a channel */
   void (*free)(channel_t *);
-  /* Close an open channel */
+  /** Close an open channel */
   void (*close)(channel_t *);
-  /* Describe the transport subclass for this channel */
+  /** Describe the transport subclass for this channel */
   const char * (*describe_transport)(channel_t *);
-  /* Optional method to dump transport-specific statistics on the channel */
+  /** Optional method to dump transport-specific statistics on the channel */
   void (*dumpstats)(channel_t *, int);
 
-  /* Registered handlers for incoming cells */
+  /** Registered handlers for incoming cells */
   channel_cell_handler_fn_ptr cell_handler;
   channel_var_cell_handler_fn_ptr var_cell_handler;
 
   /* Methods implemented by the lower layer */
 
-  /*
+  /**
    * Ask the underlying transport what the remote endpoint address is, in
    * a tor_addr_t.  This is optional and subclasses may leave this NULL.
    * If they implement it, they should write the address out to the
@@ -90,75 +90,75 @@ struct channel_s {
 
 #define GRD_FLAG_ORIGINAL 1
 #define GRD_FLAG_ADDR_ONLY 2
-  /*
+  /**
    * Get a text description of the remote endpoint; canonicalized if the flag
    * GRD_FLAG_ORIGINAL is not set, or the one we originally connected
    * to/received from if it is.  If GRD_FLAG_ADDR_ONLY is set, we return only
    * the original address.
    */
   const char * (*get_remote_descr)(channel_t *, int);
-  /* Check if the lower layer has queued writes */
+  /** Check if the lower layer has queued writes */
   int (*has_queued_writes)(channel_t *);
-  /*
+  /**
    * If the second param is zero, ask the lower layer if this is
    * 'canonical', for a transport-specific definition of canonical; if
    * it is 1, ask if the answer to the preceding query is safe to rely
    * on.
    */
   int (*is_canonical)(channel_t *, int);
-  /* Check if this channel matches a specified extend_info_t */
+  /** Check if this channel matches a specified extend_info_t */
   int (*matches_extend_info)(channel_t *, extend_info_t *);
-  /* Check if this channel matches a target address when extending */
+  /** Check if this channel matches a target address when extending */
   int (*matches_target)(channel_t *, const tor_addr_t *);
-  /* Write a cell to an open channel */
+  /** Write a cell to an open channel */
   int (*write_cell)(channel_t *, cell_t *);
-   /* Write a packed cell to an open channel */
+  /** Write a packed cell to an open channel */
   int (*write_packed_cell)(channel_t *, packed_cell_t *);
-  /* Write a variable-length cell to an open channel */
+  /** Write a variable-length cell to an open channel */
   int (*write_var_cell)(channel_t *, var_cell_t *);
 
-  /*
+  /**
    * Hash of the public RSA key for the other side's identity key, or
    * zeroes if the other side hasn't shown us a valid identity key.
    */
   char identity_digest[DIGEST_LEN];
-  /* Nickname of the OR on the other side, or NULL if none. */
+  /** Nickname of the OR on the other side, or NULL if none. */
   char *nickname;
 
-  /*
+  /**
    * Linked list of channels with the same identity digest, for the
    * digest->channel map
    */
   TOR_LIST_ENTRY(channel_s) next_with_same_id;
 
-  /* List of incoming cells to handle */
+  /** List of incoming cells to handle */
   chan_cell_queue_t incoming_queue;
 
-  /* List of queued outgoing cells */
+  /** List of queued outgoing cells */
   chan_cell_queue_t outgoing_queue;
 
-  /* Circuit mux for circuits sending on this channel */
+  /** Circuit mux for circuits sending on this channel */
   circuitmux_t *cmux;
 
-  /* Circuit ID generation stuff for use by circuitbuild.c */
+  /** Circuit ID generation stuff for use by circuitbuild.c */
 
-  /*
+  /**
    * When we send CREATE cells along this connection, which half of the
    * space should we use?
    */
-  ENUM_BF(circ_id_type_t) circ_id_type:2;
+  circ_id_type_bitfield_t circ_id_type:2;
   /** DOCDOC*/
   unsigned wide_circ_ids:1;
-  /*
+  /**
    * Which circ_id do we try to use next on this connection?  This is
    * always in the range 0..1<<15-1.
    */
   circid_t next_circ_id;
 
-  /* For how many circuits are we n_chan?  What about p_chan? */
+  /** For how many circuits are we n_chan?  What about p_chan? */
   unsigned int num_n_circuits, num_p_circuits;
 
-  /*
+  /**
    * True iff this channel shouldn't get any new circs attached to it,
    * because the connection is too old, or because there's a better one.
    * More generally, this flag is used to note an unhealthy connection;
@@ -210,7 +210,7 @@ struct channel_listener_s {
    */
   uint64_t global_identifier;
 
-  /* Should we expect to see this channel in the channel lists? */
+  /** Should we expect to see this channel in the channel lists? */
   unsigned char registered:1;
 
   /** Why did we close?
@@ -222,31 +222,31 @@ struct channel_listener_s {
     CHANNEL_LISTENER_CLOSE_FOR_ERROR
   } reason_for_closing;
 
-  /* Timestamps for both cell channels and listeners */
+  /** Timestamps for both cell channels and listeners */
   time_t timestamp_created; /* Channel created */
   time_t timestamp_active; /* Any activity */
 
   /* Methods implemented by the lower layer */
 
-  /* Free a channel */
+  /** Free a channel */
   void (*free)(channel_listener_t *);
-  /* Close an open channel */
+  /** Close an open channel */
   void (*close)(channel_listener_t *);
-  /* Describe the transport subclass for this channel */
+  /** Describe the transport subclass for this channel */
   const char * (*describe_transport)(channel_listener_t *);
-  /* Optional method to dump transport-specific statistics on the channel */
+  /** Optional method to dump transport-specific statistics on the channel */
   void (*dumpstats)(channel_listener_t *, int);
 
-  /* Registered listen handler to call on incoming connection */
+  /** Registered listen handler to call on incoming connection */
   channel_listener_fn_ptr listener;
 
-  /* List of pending incoming connections */
+  /** List of pending incoming connections */
   smartlist_t *incoming_list;
 
-  /* Timestamps for listeners */
+  /** Timestamps for listeners */
   time_t timestamp_accepted;
 
-  /* Counters for listeners */
+  /** Counters for listeners */
   uint64_t n_accepted;
 };
 

@@ -898,8 +898,8 @@ tor_digest_is_zero(const char *digest)
   return tor_memeq(digest, ZERO_DIGEST, DIGEST_LEN);
 }
 
-/** Return true if <b>string</b> is a valid '<key>=[<value>]' string.
- *  <value> is optional, to indicate the empty string. Log at logging
+/** Return true if <b>string</b> is a valid 'key=[value]' string.
+ *  "value" is optional, to indicate the empty string. Log at logging
  *  <b>severity</b> if something ugly happens. */
 int
 string_is_key_value(int severity, const char *string)
@@ -3026,7 +3026,7 @@ tor_vsscanf(const char *buf, const char *pattern, va_list ap)
 /** Minimal sscanf replacement: parse <b>buf</b> according to <b>pattern</b>
  * and store the results in the corresponding argument fields.  Differs from
  * sscanf in that:
- * <ul><li>It only handles %u, %lu, %x, %lx, %<NUM>s, %d, %ld, %lf, and %c.
+ * <ul><li>It only handles %u, %lu, %x, %lx, %[NUM]s, %d, %ld, %lf, and %c.
  *     <li>It only handles decimal inputs for %lf. (12.3, not 1.23e1)
  *     <li>It does not handle arbitrarily long widths.
  *     <li>Numbers do not consume any space characters.

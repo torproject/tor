@@ -89,6 +89,7 @@ typedef enum {
   DIGEST_SHA256 = 1,
 } digest_algorithm_t;
 #define  N_DIGEST_ALGORITHMS (DIGEST_SHA256+1)
+#define digest_algorithm_bitfield_t ENUM_BF(digest_algorithm_t)
 
 /** A set of all the digests we know how to compute, taken on a single
  * string.  Any digests that are shorter than 256 bits are right-padded

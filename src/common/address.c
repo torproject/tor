@@ -182,7 +182,7 @@ tor_addr_make_unspec(tor_addr_t *a)
   a->family = AF_UNSPEC;
 }
 
-/** Set address <a>a</b> to the null address in address family <b>family</b>.
+/** Set address <b>a</b> to the null address in address family <b>family</b>.
  * The null address for AF_INET is 0.0.0.0.  The null address for AF_INET6 is
  * [::].  AF_UNSPEC is all null. */
 void
@@ -1463,8 +1463,8 @@ is_internal_IP(uint32_t ip, int for_listening)
  * allocated string holding the address portion and *<b>port_out</b>
  * to the port.
  *
- * Don't do DNS lookups and don't allow domain names in the <ip> field.
- * Don't accept <b>addrport</b> of the form "<ip>" or "<ip>:0".
+ * Don't do DNS lookups and don't allow domain names in the "ip" field.
+ * Don't accept <b>addrport</b> of the form "ip" or "ip:0".
  *
  * Return 0 on success, -1 on failure. */
 int

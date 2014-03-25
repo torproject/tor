@@ -149,6 +149,7 @@ typedef enum {
     TOR_TLS_ST_SENTCLOSE, TOR_TLS_ST_CLOSED, TOR_TLS_ST_RENEGOTIATE,
     TOR_TLS_ST_BUFFEREVENT
 } tor_tls_state_t;
+#define tor_tls_state_bitfield_t ENUM_BF(tor_tls_state_t)
 
 /** Holds a SSL object and its associated data.  Members are only
  * accessed from within tortls.c.
@@ -159,7 +160,7 @@ struct tor_tls_t {
   SSL *ssl; /**< An OpenSSL SSL object. */
   int socket; /**< The underlying file descriptor for this TLS connection. */
   char *address; /**< An address to log when describing this connection. */
-  ENUM_BF(tor_tls_state_t) state : 3; /**< The current SSL state,
+  tor_tls_state_bitfield_t state : 3; /**< The current SSL state,
                                        * depending on which operations
                                        * have completed successfully. */
   unsigned int isServer:1; /**< True iff this is a server-side connection */

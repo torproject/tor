@@ -215,7 +215,7 @@ connection_or_clear_ext_or_id_map(void)
   orconn_ext_or_id_map = NULL;
 }
 
-/** Creates an Extended ORPort identifier for <b>conn<b/> and deposits
+/** Creates an Extended ORPort identifier for <b>conn</b> and deposits
  *  it into the global list of identifiers. */
 void
 connection_or_set_ext_or_identifier(or_connection_t *conn)

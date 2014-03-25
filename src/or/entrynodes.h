@@ -5,7 +5,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file guardnodes.h
+ * \file entrynodes.h
  * \brief Header file for circuitbuild.c.
  **/
 

@@ -812,7 +812,7 @@ char *
 geoip_get_transport_history(void)
 {
   unsigned granularity = IP_GRANULARITY;
-  /** String hash table <name of transport> -> <number of users>. */
+  /** String hash table (name of transport) -> (number of users). */
   strmap_t *transport_counts = strmap_new();
 
   /** Smartlist that contains copies of the names of the transports

@@ -1196,7 +1196,7 @@ run_scheduled_events(time_t now)
   int i;
   int have_dir_info;
 
-  /** 0. See if we've been asked to shut down and our timeout has
+  /* 0. See if we've been asked to shut down and our timeout has
    * expired; or if our bandwidth limits are exhausted and we
    * should hibernate; or if it's time to wake up from hibernation.
    */
@@ -1213,7 +1213,7 @@ run_scheduled_events(time_t now)
   /* 0c. If we've deferred log messages for the controller, handle them now */
   flush_pending_log_callbacks();
 
-  /** 1a. Every MIN_ONION_KEY_LIFETIME seconds, rotate the onion keys,
+  /* 1a. Every MIN_ONION_KEY_LIFETIME seconds, rotate the onion keys,
    *  shut down and restart all cpuworkers, and update the directory if
    *  necessary.
    */
@@ -1247,7 +1247,7 @@ run_scheduled_events(time_t now)
   if (options->UseBridges)
     fetch_bridge_descriptors(options, now);
 
-  /** 1b. Every MAX_SSL_KEY_LIFETIME_INTERNAL seconds, we change our
+  /* 1b. Every MAX_SSL_KEY_LIFETIME_INTERNAL seconds, we change our
    * TLS context. */
   if (!last_rotated_x509_certificate)
     last_rotated_x509_certificate = now;
@@ -1273,7 +1273,7 @@ run_scheduled_events(time_t now)
     time_to_add_entropy = now + ENTROPY_INTERVAL;
   }
 
-  /** 1c. If we have to change the accounting interval or record
+  /* 1c. If we have to change the accounting interval or record
    * bandwidth used in this accounting interval, do so. */
   if (accounting_is_enabled(options))
     accounting_run_housekeeping(now);
@@ -1286,7 +1286,7 @@ run_scheduled_events(time_t now)
     dirserv_test_reachability(now);
   }
 
-  /** 1d. Periodically, we discount older stability information so that new
+  /* 1d. Periodically, we discount older stability information so that new
    * stability info counts more, and save the stability information to disk as
    * appropriate. */
   if (time_to_downrate_stability < now)
@@ -1405,7 +1405,7 @@ run_scheduled_events(time_t now)
       dns_init();
   }
 
-  /** 2. Periodically, we consider force-uploading our descriptor
+  /* 2. Periodically, we consider force-uploading our descriptor
    * (if we've passed our internal checks). */
 
 /** How often do we check whether part of our router info has changed in a
@@ -1465,11 +1465,11 @@ run_scheduled_events(time_t now)
     update_networkstatus_downloads(now);
   }
 
-  /** 2c. Let directory voting happen. */
+  /* 2c. Let directory voting happen. */
   if (authdir_mode_v3(options))
     dirvote_act(options, now);
 
-  /** 3a. Every second, we examine pending circuits and prune the
+  /* 3a. Every second, we examine pending circuits and prune the
    *    ones which have been pending for more than a few seconds.
    *    We do this before step 4, so it can try building more if
    *    it's not comfortable with the number of available circuits.
@@ -1478,24 +1478,24 @@ run_scheduled_events(time_t now)
    * it can't, currently), we should do this more often.) */
   circuit_expire_building();
 
-  /** 3b. Also look at pending streams and prune the ones that 'began'
+  /* 3b. Also look at pending streams and prune the ones that 'began'
    *     a long time ago but haven't gotten a 'connected' yet.
    *     Do this before step 4, so we can put them back into pending
    *     state to be picked up by the new circuit.
    */
   connection_ap_expire_beginning();
 
-  /** 3c. And expire connections that we've held open for too long.
+  /* 3c. And expire connections that we've held open for too long.
    */
   connection_expire_held_open();
 
-  /** 3d. And every 60 seconds, we relaunch listeners if any died. */
+  /* 3d. And every 60 seconds, we relaunch listeners if any died. */
   if (!net_is_disabled() && time_to_check_listeners < now) {
     retry_all_listeners(NULL, NULL, 0);
     time_to_check_listeners = now+60;
   }
 
-  /** 4. Every second, we try a new circuit if there are no valid
+  /* 4. Every second, we try a new circuit if there are no valid
    *    circuits. Every NewCircuitPeriod seconds, we expire circuits
    *    that became dirty more than MaxCircuitDirtiness seconds ago,
    *    and we make a new circ if there are no clean circuits.
@@ -1508,7 +1508,7 @@ run_scheduled_events(time_t now)
   if (now % 10 == 5)
     circuit_expire_old_circuits_serverside(now);
 
-  /** 5. We do housekeeping for each connection... */
+  /* 5. We do housekeeping for each connection... */
   connection_or_set_bad_connections(NULL, 0);
   for (i=0;i<smartlist_len(connection_array);i++) {
     run_connection_housekeeping(i, now);
@@ -1528,30 +1528,30 @@ run_scheduled_events(time_t now)
     time_to_shrink_memory = now + MEM_SHRINK_INTERVAL;
   }
 
-  /** 6. And remove any marked circuits... */
+  /* 6. And remove any marked circuits... */
   circuit_close_all_marked();
 
-  /** 7. And upload service descriptors if necessary. */
+  /* 7. And upload service descriptors if necessary. */
   if (can_complete_circuit && !net_is_disabled()) {
     rend_consider_services_upload(now);
     rend_consider_descriptor_republication();
   }
 
-  /** 8. and blow away any connections that need to die. have to do this now,
+  /* 8. and blow away any connections that need to die. have to do this now,
    * because if we marked a conn for close and left its socket -1, then
    * we'll pass it to poll/select and bad things will happen.
    */
   close_closeable_connections();
 
-  /** 8b. And if anything in our state is ready to get flushed to disk, we
+  /* 8b. And if anything in our state is ready to get flushed to disk, we
    * flush it. */
   or_state_save(now);
 
-  /** 8c. Do channel cleanup just like for connections */
+  /* 8c. Do channel cleanup just like for connections */
   channel_run_cleanup();
   channel_listener_run_cleanup();
 
-  /** 9. and if we're an exit node, check whether our DNS is telling stories
+  /* 9. and if we're an exit node, check whether our DNS is telling stories
    * to us. */
   if (!net_is_disabled() &&
       public_server_mode(options) &&
@@ -1566,7 +1566,7 @@ run_scheduled_events(time_t now)
     }
   }
 
-  /** 10. write bridge networkstatus file to disk */
+  /* 10. write bridge networkstatus file to disk */
   if (options->BridgeAuthoritativeDir &&
       time_to_write_bridge_status_file < now) {
     networkstatus_dump_bridge_status_to_file(now);
@@ -1574,7 +1574,7 @@ run_scheduled_events(time_t now)
     time_to_write_bridge_status_file = now+BRIDGE_STATUSFILE_INTERVAL;
   }
 
-  /** 11. check the port forwarding app */
+  /* 11. check the port forwarding app */
   if (!net_is_disabled() &&
       time_to_check_port_forwarding < now &&
       options->PortForwarding &&
@@ -1592,11 +1592,11 @@ run_scheduled_events(time_t now)
     time_to_check_port_forwarding = now+PORT_FORWARDING_CHECK_INTERVAL;
   }
 
-  /** 11b. check pending unconfigured managed proxies */
+  /* 11b. check pending unconfigured managed proxies */
   if (!net_is_disabled() && pt_proxies_configuration_pending())
     pt_configure_remaining_proxies();
 
-  /** 12. write the heartbeat message */
+  /* 12. write the heartbeat message */
   if (options->HeartbeatPeriod &&
       time_to_next_heartbeat <= now) {
     if (time_to_next_heartbeat) /* don't log the first heartbeat */
