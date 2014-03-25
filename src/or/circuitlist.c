@@ -833,6 +833,18 @@ circuit_free_all(void)
   smartlist_free(circuits_pending_chans);
   circuits_pending_chans = NULL;
 
+  {
+    chan_circid_circuit_map_t **elt, **next, *c;
+    for (elt = HT_START(chan_circid_map, &chan_circid_map);
+         elt;
+         elt = next) {
+      c = *elt;
+      next = HT_NEXT_RMV(chan_circid_map, &chan_circid_map, elt);
+
+      tor_assert(c->circuit == NULL);
+      tor_free(c);
+    }
+  }
   HT_CLEAR(chan_circid_map, &chan_circid_map);
 }
 

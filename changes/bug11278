@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Free placeholder entries in our circuit table at exit; fixes
+      a harmless memory leak. Fixes bug 11278; bugfix on 0.2.5.1-alpha.
