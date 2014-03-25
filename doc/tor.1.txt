@@ -928,9 +928,10 @@ The following options are useful only for clients (that is, if
         on this port to share circuits with streams from every other
         port with the same session group.  (By default, streams received
         on different SOCKSPorts, TransPorts, etc are always isolated from one
-        another. This option overrides that behavior.) +
-+
-    Other recognized _flags_ for a SOCKSPort are:
+        another. This option overrides that behavior.)
+
+[[OtherSOCKSPortFlags]]::
+    Other recognized __flags__ for a SOCKSPort are:
     **NoIPv4Traffic**;;
         Tell exits to not connect to IPv4 addresses in response to SOCKS
         requests on this connection.
@@ -941,13 +942,14 @@ The following options are useful only for clients (that is, if
     **PreferIPv6**;;
         Tells exits that, if a host has both an IPv4 and an IPv6 address,
         we would prefer to connect to it via IPv6. (IPv4 is the default.) +
-+
-       NOTE: Although this option allows you to specify an IP address
-       other than localhost, you should do so only with extreme caution.
-       The SOCKS protocol is unencrypted and (as we use it)
-       unauthenticated, so exposing it in this way could leak your
-       information to anybody watching your network, and allow anybody
-       to use your computer as an open proxy.
+ +
+        NOTE: Although this option allows you to specify an IP address
+        other than localhost, you should do so only with extreme caution.
+        The SOCKS protocol is unencrypted and (as we use it)
+        unauthenticated, so exposing it in this way could leak your
+        information to anybody watching your network, and allow anybody
+        to use your computer as an open proxy. +
+ +
     **CacheIPv4DNS**;;
         Tells the client to remember IPv4 DNS answers we receive from exit
         nodes via this connection. (On by default.)
