@@ -1,0 +1,3 @@
+  o Minor features:
+    - Warn less verbosely when receiving a misformed ESTABLISH_RENDEZVOUS
+      cell. Fixes ticket 11279.

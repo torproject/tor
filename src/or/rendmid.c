@@ -231,7 +231,8 @@ rend_mid_establish_rendezvous(or_circuit_t *circ, const uint8_t *request,
   }
 
   if (request_len != REND_COOKIE_LEN) {
-    log_warn(LD_PROTOCOL, "Invalid length on ESTABLISH_RENDEZVOUS.");
+    log_fn(LOG_PROTOCOL_WARN,
+           LD_PROTOCOL, "Invalid length on ESTABLISH_RENDEZVOUS.");
     goto err;
   }
 
