@@ -62,7 +62,7 @@ KINDS = [ "type", "field", "typedef", "define", "function", "variable",
 
 NODOC_LINE_RE = re.compile(r'^([^:]+):(\d+): (\w+): (.*) is not documented\.$')
 
-THING_RE = re.compile(r'^Member ([a-zA-Z0-9_]+).*\((typedef|define|function|variable|enumeration)\) of (file|class) ')
+THING_RE = re.compile(r'^Member ([a-zA-Z0-9_]+).*\((typedef|define|function|variable|enumeration|macro definition)\) of (file|class) ')
 
 SKIP_NAMES = [re.compile(s) for s in SKIP_NAME_PATTERNS]
 
@@ -105,9 +105,13 @@ def findline(lines, lineno, ident):
     """Given a list of all the lines in the file (adjusted so 1-indexing works),
        a line number that ident is alledgedly on, and ident, I figure out
        the line where ident was really declared."""
+    lno = lineno
     for lineno in xrange(lineno, 0, -1):
-        if ident in lines[lineno]:
-            return lineno
+        try:
+            if ident in lines[lineno]:
+                return lineno
+        except IndexError:
+            continue
 
     return None
 
@@ -126,8 +130,16 @@ def hascomment(lines, lineno, kind):
 def hasdocdoc(lines, lineno, kind):
     """I return true if it looks like there's already a docdoc comment about
        the thing on lineno of lines of type kind."""
-    if "DOCDOC" in lines[lineno] or "DOCDOC" in lines[lineno-1]:
-        return True
+    try:
+        if "DOCDOC" in lines[lineno]:
+            return True
+    except IndexError:
+        pass
+    try:
+        if "DOCDOC" in lines[lineno-1]:
+            return True
+    except IndexError:
+        pass
     if kind == 'function' and FUNC_PAT.match(lines[lineno]):
         if "DOCDOC" in lines[lineno-2]:
             return True
@@ -210,6 +222,7 @@ def applyComments(fn, entries):
 e = read()
 
 for fn, errs in e.iteritems():
+    print `(fn, errs)`
     comments = checkf(fn, errs)
     if comments:
         applyComments(fn, comments)
