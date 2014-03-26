@@ -1077,15 +1077,15 @@ circuit_get_by_edge_conn(edge_connection_t *conn)
 void
 circuit_unlink_all_from_channel(channel_t *chan, int reason)
 {
-  circuit_t *circ;
   smartlist_t *detached = smartlist_new();
 
-#define DEBUG_CIRCUIT_UNLINK_ALL
+/* #define DEBUG_CIRCUIT_UNLINK_ALL */
 
   channel_unlink_all_circuits(chan, detached);
 
 #ifdef DEBUG_CIRCUIT_UNLINK_ALL
   {
+    circuit_t *circ;
     smartlist_t *detached_2 = smartlist_new();
     int mismatch = 0, badlen = 0;
 
