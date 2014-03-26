@@ -33,4 +33,4 @@ endif
 
 src_tools_tor_fw_helper_tor_fw_helper_LDFLAGS = $(nat_pmp_ldflags) $(miniupnpc_ldflags)
 src_tools_tor_fw_helper_tor_fw_helper_LDADD = src/common/libor.a $(nat_pmp_ldadd) $(miniupnpc_ldadd) -lm @TOR_LIB_WS32@
-src_tools_tor_fw_helper_tor_fw_helper_CPPFLAGS = $(nat_pmp_cppflags) $(miniupnpc_cppflags)
+src_tools_tor_fw_helper_tor_fw_helper_CPPFLAGS = $(nat_pmp_cppflags) $(miniupnpc_cppflags) -I"$(top_srcdir)/src/ext"
