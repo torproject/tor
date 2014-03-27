@@ -332,6 +332,25 @@ nodelist_drop_node(node_t *node, int remove_from_ht)
   node->nodelist_idx = -1;
 }
 
+/** Return a newly allocated smartlist of the nodes that have <b>md</b> as
+ * their microdescriptor. */
+smartlist_t *
+nodelist_find_nodes_with_microdesc(const microdesc_t *md)
+{
+  smartlist_t *result = smartlist_new();
+
+  if (the_nodelist == NULL)
+    return result;
+
+  SMARTLIST_FOREACH_BEGIN(the_nodelist->nodes, node_t *, node) {
+    if (node->md == md) {
+      smartlist_add(result, node);
+    }
+  } SMARTLIST_FOREACH_END(node);
+
+  return result;
+}
+
 /** Release storage held by <b>node</b>  */
 static void
 node_free(node_t *node)
