@@ -2088,7 +2088,6 @@ connection_ap_handshake_socks_resolved_addr(entry_connection_t *conn,
   }
 }
 
-
 /** Send an answer to an AP connection that has requested a DNS lookup via
  * SOCKS.  The type should be one of RESOLVED_TYPE_(IPV4|IPV6|HOSTNAME) or -1
  * for unreachable; the answer should be in the format specified in the socks
