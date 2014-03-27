@@ -131,6 +131,16 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
   else
     entry_conn->socks_request->command = SOCKS_COMMAND_RESOLVE_PTR;
 
+  if (q->type == EVDNS_TYPE_A) {
+    entry_conn->ipv4_traffic_ok = 1;
+    entry_conn->ipv6_traffic_ok = 0;
+    entry_conn->prefer_ipv6_traffic = 0;
+  } else if (q->type == EVDNS_TYPE_AAAA) {
+    entry_conn->ipv4_traffic_ok = 0;
+    entry_conn->ipv6_traffic_ok = 1;
+    entry_conn->prefer_ipv6_traffic = 1;
+  }
+
   strlcpy(entry_conn->socks_request->address, q->name,
           sizeof(entry_conn->socks_request->address));
 
