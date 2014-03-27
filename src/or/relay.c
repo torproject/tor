@@ -1009,6 +1009,76 @@ connected_cell_parse(const relay_header_t *rh, const cell_t *cell,
   return 0;
 }
 
+/** DOCDOC */
+static void
+connection_edge_process_resolved_cell(edge_connection_t *conn,
+                                      const cell_t *cell,
+                                      const relay_header_t *rh)
+{
+  int ttl;
+  int answer_len;
+  uint8_t answer_type;
+  entry_connection_t *entry_conn = EDGE_TO_ENTRY_CONN(conn);
+  if (conn->base_.state != AP_CONN_STATE_RESOLVE_WAIT) {
+    log_fn(LOG_PROTOCOL_WARN, LD_APP, "Got a 'resolved' cell while "
+           "not in state resolve_wait. Dropping.");
+    return;
+  }
+  tor_assert(SOCKS_COMMAND_IS_RESOLVE(entry_conn->socks_request->command));
+  answer_len = cell->payload[RELAY_HEADER_SIZE+1];
+  if (rh->length < 2 || answer_len+2>rh->length) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Dropping malformed 'resolved' cell");
+    connection_mark_unattached_ap(entry_conn, END_STREAM_REASON_TORPROTOCOL);
+    return;
+  }
+
+  answer_type = cell->payload[RELAY_HEADER_SIZE];
+  if (rh->length >= answer_len+6)
+    ttl = (int)ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+
+                                2+answer_len));
+  else
+    ttl = -1;
+  if (answer_type == RESOLVED_TYPE_IPV4 ||
+      answer_type == RESOLVED_TYPE_IPV6) {
+    tor_addr_t addr;
+    if (decode_address_from_payload(&addr, cell->payload+RELAY_HEADER_SIZE,
+                                    rh->length) &&
+        tor_addr_is_internal(&addr, 0) &&
+        get_options()->ClientDNSRejectInternalAddresses) {
+      log_info(LD_APP,"Got a resolve with answer %s. Rejecting.",
+               fmt_addr(&addr));
+      connection_ap_handshake_socks_resolved(entry_conn,
+                                             RESOLVED_TYPE_ERROR_TRANSIENT,
+                                             0, NULL, 0, TIME_MAX);
+      connection_mark_unattached_ap(entry_conn,
+                                    END_STREAM_REASON_TORPROTOCOL);
+      return;
+    }
+  }
+  connection_ap_handshake_socks_resolved(entry_conn,
+                   answer_type,
+                   cell->payload[RELAY_HEADER_SIZE+1], /*answer_len*/
+                   cell->payload+RELAY_HEADER_SIZE+2, /*answer*/
+                   ttl,
+                   -1);
+  if (answer_type == RESOLVED_TYPE_IPV4 && answer_len == 4) {
+    tor_addr_t addr;
+    tor_addr_from_ipv4n(&addr,
+                        get_uint32(cell->payload+RELAY_HEADER_SIZE+2));
+    remap_event_helper(entry_conn, &addr);
+  } else if (answer_type == RESOLVED_TYPE_IPV6 && answer_len == 16) {
+    tor_addr_t addr;
+    tor_addr_from_ipv6_bytes(&addr,
+                             (char*)(cell->payload+RELAY_HEADER_SIZE+2));
+    remap_event_helper(entry_conn, &addr);
+  }
+  connection_mark_unattached_ap(entry_conn,
+                              END_STREAM_REASON_DONE |
+                              END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
+
+}
+
 /** An incoming relay cell has arrived from circuit <b>circ</b> to
  * stream <b>conn</b>.
  *
@@ -1133,66 +1203,7 @@ connection_edge_process_relay_cell_not_open(
   }
   if (conn->base_.type == CONN_TYPE_AP &&
       rh->command == RELAY_COMMAND_RESOLVED) {
-    int ttl;
-    int answer_len;
-    uint8_t answer_type;
-    entry_connection_t *entry_conn = EDGE_TO_ENTRY_CONN(conn);
-    if (conn->base_.state != AP_CONN_STATE_RESOLVE_WAIT) {
-      log_fn(LOG_PROTOCOL_WARN, LD_APP, "Got a 'resolved' cell while "
-             "not in state resolve_wait. Dropping.");
-      return 0;
-    }
-    tor_assert(SOCKS_COMMAND_IS_RESOLVE(entry_conn->socks_request->command));
-    answer_len = cell->payload[RELAY_HEADER_SIZE+1];
-    if (rh->length < 2 || answer_len+2>rh->length) {
-      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-             "Dropping malformed 'resolved' cell");
-      connection_mark_unattached_ap(entry_conn, END_STREAM_REASON_TORPROTOCOL);
-      return 0;
-    }
-    answer_type = cell->payload[RELAY_HEADER_SIZE];
-    if (rh->length >= answer_len+6)
-      ttl = (int)ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+
-                                  2+answer_len));
-    else
-      ttl = -1;
-    if (answer_type == RESOLVED_TYPE_IPV4 ||
-        answer_type == RESOLVED_TYPE_IPV6) {
-      tor_addr_t addr;
-      if (decode_address_from_payload(&addr, cell->payload+RELAY_HEADER_SIZE,
-                                      rh->length) &&
-          tor_addr_is_internal(&addr, 0) &&
-          get_options()->ClientDNSRejectInternalAddresses) {
-        log_info(LD_APP,"Got a resolve with answer %s. Rejecting.",
-                 fmt_addr(&addr));
-        connection_ap_handshake_socks_resolved(entry_conn,
-                                               RESOLVED_TYPE_ERROR_TRANSIENT,
-                                               0, NULL, 0, TIME_MAX);
-        connection_mark_unattached_ap(entry_conn,
-                                      END_STREAM_REASON_TORPROTOCOL);
-        return 0;
-      }
-    }
-    connection_ap_handshake_socks_resolved(entry_conn,
-                   answer_type,
-                   cell->payload[RELAY_HEADER_SIZE+1], /*answer_len*/
-                   cell->payload+RELAY_HEADER_SIZE+2, /*answer*/
-                   ttl,
-                   -1);
-    if (answer_type == RESOLVED_TYPE_IPV4 && answer_len == 4) {
-      tor_addr_t addr;
-      tor_addr_from_ipv4n(&addr,
-                          get_uint32(cell->payload+RELAY_HEADER_SIZE+2));
-      remap_event_helper(entry_conn, &addr);
-    } else if (answer_type == RESOLVED_TYPE_IPV6 && answer_len == 16) {
-      tor_addr_t addr;
-      tor_addr_from_ipv6_bytes(&addr,
-                               (char*)(cell->payload+RELAY_HEADER_SIZE+2));
-      remap_event_helper(entry_conn, &addr);
-    }
-    connection_mark_unattached_ap(entry_conn,
-                              END_STREAM_REASON_DONE |
-                              END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
+    connection_edge_process_resolved_cell(conn, cell, rh);
     return 0;
   }
 
