@@ -1,0 +1,5 @@
+  o Minor features:
+    - Don't log so many notice-level bootstrapping messages at startup about
+      downloading descriptors. Previously, we'd log a notice whenever we
+      learned about more routers. Now, we only log a notice at every 5% of
+      progress. Fixes bug 9963.
