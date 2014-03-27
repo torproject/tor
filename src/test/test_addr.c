@@ -735,7 +735,7 @@ test_addr_parse(void)
   /* Correct call. */
   r= tor_addr_port_parse(LOG_DEBUG,
                          "192.0.2.1:1234",
-                         &addr, &port);
+                         &addr, &port, -1);
   test_assert(r == 0);
   tor_addr_to_str(buf, &addr, sizeof(buf), 0);
   test_streq(buf, "192.0.2.1");
@@ -744,31 +744,45 @@ test_addr_parse(void)
   /* Domain name. */
   r= tor_addr_port_parse(LOG_DEBUG,
                          "torproject.org:1234",
-                         &addr, &port);
+                         &addr, &port, -1);
   test_assert(r == -1);
 
   /* Only IP. */
   r= tor_addr_port_parse(LOG_DEBUG,
                          "192.0.2.2",
-                         &addr, &port);
+                         &addr, &port, -1);
   test_assert(r == -1);
+
+  r= tor_addr_port_parse(LOG_DEBUG,
+                         "192.0.2.2",
+                         &addr, &port, 200);
+  test_assert(r == 0);
+  tt_int_op(port,==,200);
 
   /* Bad port. */
   r= tor_addr_port_parse(LOG_DEBUG,
                          "192.0.2.2:66666",
-                         &addr, &port);
+                         &addr, &port, -1);
+  test_assert(r == -1);
+  r= tor_addr_port_parse(LOG_DEBUG,
+                         "192.0.2.2:66666",
+                         &addr, &port, 200);
   test_assert(r == -1);
 
   /* Only domain name */
   r= tor_addr_port_parse(LOG_DEBUG,
                          "torproject.org",
-                         &addr, &port);
+                         &addr, &port, -1);
+  test_assert(r == -1);
+  r= tor_addr_port_parse(LOG_DEBUG,
+                         "torproject.org",
+                         &addr, &port, 200);
   test_assert(r == -1);
 
   /* Bad IP address */
   r= tor_addr_port_parse(LOG_DEBUG,
                          "192.0.2:1234",
-                         &addr, &port);
+                         &addr, &port, -1);
   test_assert(r == -1);
 
  done:

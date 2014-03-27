@@ -4169,15 +4169,9 @@ parse_bridge_line(const char *line, int validate_only)
     addrport = field1;
   }
 
-  if (tor_addr_port_lookup(addrport, &addr, &port)<0) {
+  if (tor_addr_port_parse(LOG_INFO, addrport, &addr, &port, 443)<0) {
     log_warn(LD_CONFIG, "Error parsing Bridge address '%s'", addrport);
     goto err;
-  }
-  if (!port) {
-    log_info(LD_CONFIG,
-             "Bridge address '%s' has no port; using default port 443.",
-             addrport);
-    port = 443;
   }
 
   if (smartlist_len(items)) {
@@ -4384,7 +4378,7 @@ get_bindaddr_from_transport_listen_line(const char *line,const char *transport)
     goto err;
 
   /* Validate addrport */
-  if (tor_addr_port_parse(LOG_WARN, addrport, &addr, &port)<0) {
+  if (tor_addr_port_parse(LOG_WARN, addrport, &addr, &port, -1)<0) {
     log_warn(LD_CONFIG, "Error parsing ServerTransportListenAddr "
              "address '%s'", addrport);
     goto err;
