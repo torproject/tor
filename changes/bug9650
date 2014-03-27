@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Avoid potential crashes or bad behavior when launching a
+      server-side managed proxy with ORPort or ExtORPort temporarily
+      disabled. Fixes bug 9650; bugfix on 0.2.3.16-alpha.
