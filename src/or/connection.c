@@ -958,8 +958,9 @@ check_location_for_unix_socket(const or_options_t *options, const char *path)
 #endif
 
 /** Tell the TCP stack that it shouldn't wait for a long time after
- * <b>sock</b> has closed before reusing its port. */
-static void
+ * <b>sock</b> has closed before reusing its port. Return 0 on success,
+ * -1 on failure. */
+static int
 make_socket_reuseable(tor_socket_t sock)
 {
 #ifdef _WIN32
@@ -973,9 +974,9 @@ make_socket_reuseable(tor_socket_t sock)
    * already has it bound_. So, don't do that on Win32. */
   if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (void*) &one,
              (socklen_t)sizeof(one)) == -1) {
-    log_warn(LD_NET, "Error setting SO_REUSEADDR flag: %s",
-             tor_socket_strerror(errno));
+    return -1;
   }
+  return 0;
 #endif
 }
 
@@ -1049,7 +1050,11 @@ connection_listener_new(const struct sockaddr *listensockaddr,
       goto err;
     }
 
-    make_socket_reuseable(s);
+    if (make_socket_reuseable(s) < 0) {
+      log_warn(LD_NET, "Error setting SO_REUSEADDR flag on %s: %s",
+               conn_type_to_string(type),
+               tor_socket_strerror(errno));
+    }
 
 #if defined USE_TRANSPARENT && defined(IP_TRANSPARENT)
     if (options->TransProxyType_parsed == TPT_TPROXY &&
@@ -1354,7 +1359,18 @@ connection_handle_listener_read(connection_t *conn, int new_type)
             "Connection accepted on socket %d (child of fd %d).",
             (int)news,(int)conn->s);
 
-  make_socket_reuseable(news);
+  if (make_socket_reuseable(news) < 0) {
+    if (tor_socket_errno(news) == EINVAL) {
+      /* This can happen on OSX if we get a badly timed shutdown. */
+      log_debug(LD_NET, "make_socket_reuseable returned EINVAL");
+    } else {
+      log_warn(LD_NET, "Error setting SO_REUSEADDR flag on %s: %s",
+               conn_type_to_string(new_type),
+               tor_socket_strerror(errno));
+    }
+    tor_close_socket(news);
+    return 0;
+  }
 
   if (options->ConstrainedSockets)
     set_constrained_socket_buffers(news, (int)options->ConstrainedSockSize);
@@ -1563,7 +1579,10 @@ connection_connect(connection_t *conn, const char *address,
     return -1;
   }
 
-  make_socket_reuseable(s);
+  if (make_socket_reuseable(s) < 0) {
+    log_warn(LD_NET, "Error setting SO_REUSEADDR flag on new connection: %s",
+             tor_socket_strerror(errno));
+  }
 
   if (!tor_addr_is_loopback(addr)) {
     const tor_addr_t *ext_addr = NULL;
