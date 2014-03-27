@@ -94,7 +94,7 @@ void monitor_owning_controller_process(const char *process_spec);
 void control_event_bootstrap(bootstrap_status_t status, int progress);
 MOCK_DECL(void, control_event_bootstrap_problem,(const char *warn,
                                                  int reason,
-                                              const or_connection_t *or_conn));
+                                                 or_connection_t *or_conn));
 
 void control_event_clients_seen(const char *controller_str);
 void control_event_transport_launched(const char *mode,

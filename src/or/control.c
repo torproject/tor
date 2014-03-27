@@ -4884,7 +4884,7 @@ control_event_bootstrap(bootstrap_status_t status, int progress)
  */
 MOCK_IMPL(void,
           control_event_bootstrap_problem, (const char *warn, int reason,
-                                            const or_connection_t *or_conn))
+                                            or_connection_t *or_conn))
 {
   int status = bootstrap_percent;
   const char *tag, *summary;
@@ -4894,6 +4894,11 @@ MOCK_IMPL(void,
 
   /* bootstrap_percent must not be in "undefined" state here. */
   tor_assert(status >= 0);
+
+  if (or_conn->have_noted_bootstrap_problem)
+    return;
+
+  or_conn->have_noted_bootstrap_problem = 1;
 
   if (bootstrap_percent == 100)
     return; /* already bootstrapped; nothing to be done here. */
