@@ -2002,7 +2002,8 @@ write_str_to_file(const char *fname, const char *str, int bin)
 #ifdef _WIN32
   if (!bin && strchr(str, '\r')) {
     log_warn(LD_BUG,
-             "We're writing a text string that already contains a CR.");
+             "We're writing a text string that already contains a CR to %s",
+             escaped(fname));
   }
 #endif
   return write_bytes_to_file(fname, str, strlen(str), bin);
