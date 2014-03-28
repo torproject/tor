@@ -124,6 +124,7 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(rename),
     SCMP_SYS(rt_sigreturn),
     SCMP_SYS(set_robust_list),
+    SCMP_SYS(_sysctl),
 #ifdef __NR_sigreturn
     SCMP_SYS(sigreturn),
 #endif
@@ -246,6 +247,11 @@ sb_accept4(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 
   rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(accept4), 1,
       SCMP_CMP(3, SCMP_CMP_EQ, SOCK_CLOEXEC));
+  if (rc) {
+    return rc;
+  }
+  rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(accept4), 1,
+      SCMP_CMP(3, SCMP_CMP_EQ, SOCK_CLOEXEC|SOCK_NONBLOCK));
   if (rc) {
     return rc;
   }
