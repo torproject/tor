@@ -598,7 +598,7 @@ dump_desc(const char *desc, const char *type)
     char *content = tor_malloc_zero(filelen);
     tor_snprintf(content, filelen, "Unable to parse descriptor of type "
                  "%s:\n%s", type, desc);
-    write_str_to_file(debugfile, content, 0);
+    write_str_to_file(debugfile, content, 1);
     log_info(LD_DIR, "Unable to parse descriptor of type %s. See file "
              "unparseable-desc in data directory for details.", type);
     tor_free(content);
