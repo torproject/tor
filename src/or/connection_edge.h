@@ -50,6 +50,10 @@ void connection_ap_handshake_socks_resolved(entry_connection_t *conn,
                                             const uint8_t *answer,
                                             int ttl,
                                             time_t expires);
+void connection_ap_handshake_socks_resolved_addr(entry_connection_t *conn,
+                                            const tor_addr_t *answer,
+                                            int ttl,
+                                            time_t expires);
 
 int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
 int connection_exit_begin_resolve(cell_t *cell, or_circuit_t *circ);

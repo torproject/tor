@@ -62,11 +62,6 @@ static int connection_ap_process_natd(entry_connection_t *conn);
 static int connection_exit_connect_dir(edge_connection_t *exitconn);
 static int consider_plaintext_ports(entry_connection_t *conn, uint16_t port);
 static int connection_ap_supports_optimistic_data(const entry_connection_t *);
-static void connection_ap_handshake_socks_resolved_addr(
-                                            entry_connection_t *conn,
-                                            const tor_addr_t *answer,
-                                            int ttl,
-                                            time_t expires);
 
 /** An AP stream has failed/finished. If it hasn't already sent back
  * a socks reply, send one now (based on endreason). Also set
@@ -2065,7 +2060,7 @@ tell_controller_about_resolved_result(entry_connection_t *conn,
  * As connection_ap_handshake_socks_resolved, but take a tor_addr_t to send
  * as the answer.
  */
-static void
+void
 connection_ap_handshake_socks_resolved_addr(entry_connection_t *conn,
                                             const tor_addr_t *answer,
                                             int ttl,

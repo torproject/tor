@@ -1009,74 +1009,252 @@ connected_cell_parse(const relay_header_t *rh, const cell_t *cell,
   return 0;
 }
 
-/** DOCDOC */
-static void
+/** Drop all storage held by <b>addr</b>. */
+STATIC void
+address_ttl_free(address_ttl_t *addr)
+{
+  if (!addr)
+    return;
+  tor_free(addr->hostname);
+  tor_free(addr);
+}
+
+/** Parse a resolved cell in <b>cell</b>, with parsed header in <b>rh</b>.
+ * Return -1 on parse error.  On success, add one or more newly allocated
+ * address_ttl_t to <b>addresses_out</b>; set *<b>errcode_out</b> to
+ * one of 0, RESOLVED_TYPE_ERROR, or RESOLVED_TYPE_ERROR_TRANSIENT, and
+ * return 0. */
+STATIC int
+resolved_cell_parse(const cell_t *cell, const relay_header_t *rh,
+                    smartlist_t *addresses_out, int *errcode_out)
+{
+  const uint8_t *cp;
+  uint8_t answer_type;
+  size_t answer_len;
+  address_ttl_t *addr;
+  size_t remaining;
+  int errcode = 0;
+  smartlist_t *addrs;
+
+  tor_assert(cell);
+  tor_assert(rh);
+  tor_assert(addresses_out);
+  tor_assert(errcode_out);
+
+  *errcode_out = 0;
+
+  if (rh->length > RELAY_PAYLOAD_SIZE)
+    return -1;
+
+  addrs = smartlist_new();
+
+  cp = cell->payload + RELAY_HEADER_SIZE;
+
+  remaining = rh->length;
+  while (remaining) {
+    const uint8_t *cp_orig = cp;
+    if (remaining < 2)
+      goto err;
+    answer_type = *cp++;
+    answer_len = *cp++;
+    if (remaining < 2 + answer_len + 4) {
+      goto err;
+    }
+    if (answer_type == RESOLVED_TYPE_IPV4) {
+      if (answer_len != 4) {
+        goto err;
+      }
+      addr = tor_malloc_zero(sizeof(*addr));
+      tor_addr_from_ipv4n(&addr->addr, get_uint32(cp));
+      cp += 4;
+      addr->ttl = ntohl(get_uint32(cp));
+      cp += 4;
+      smartlist_add(addrs, addr);
+    } else if (answer_type == RESOLVED_TYPE_IPV6) {
+      if (answer_len != 16)
+        goto err;
+      addr = tor_malloc_zero(sizeof(*addr));
+      tor_addr_from_ipv6_bytes(&addr->addr, (const char*) cp);
+      cp += 16;
+      addr->ttl = ntohl(get_uint32(cp));
+      cp += 4;
+      smartlist_add(addrs, addr);
+    } else if (answer_type == RESOLVED_TYPE_HOSTNAME) {
+      if (answer_len == 0) {
+        goto err;
+      }
+      addr = tor_malloc_zero(sizeof(*addr));
+      addr->hostname = tor_memdup_nulterm(cp, answer_len);
+      cp += answer_len;
+      addr->ttl = ntohl(get_uint32(cp));
+      cp += 4;
+      smartlist_add(addrs, addr);
+    } else if (answer_type == RESOLVED_TYPE_ERROR_TRANSIENT ||
+               answer_type == RESOLVED_TYPE_ERROR) {
+      errcode = answer_type;
+      /* Ignore the error contents */
+      cp += answer_len + 4;
+    } else {
+      cp += answer_len + 4;
+    }
+    tor_assert(((ssize_t)remaining) >= (cp - cp_orig));
+    remaining -= (cp - cp_orig);
+  }
+
+  if (errcode && smartlist_len(addrs) == 0) {
+    /* Report an error only if there were no results. */
+    *errcode_out = errcode;
+  }
+
+  smartlist_add_all(addresses_out, addrs);
+  smartlist_free(addrs);
+
+  return 0;
+
+ err:
+  /* On parse error, don't report any results */
+  SMARTLIST_FOREACH(addrs, address_ttl_t *, a, address_ttl_free(a));
+  smartlist_free(addrs);
+  return -1;
+}
+
+/** Helper for connection_edge_process_resolved_cell: given an error code,
+ * an entry_connection, and a list of address_ttl_t *, report the best answer
+ * to the entry_connection. */
+STATIC void
+connection_ap_handshake_socks_got_resolve_cell(entry_connection_t *conn,
+                                               int error_code,
+                                               smartlist_t *results)
+{
+  address_ttl_t *addr_ipv4 = NULL;
+  address_ttl_t *addr_ipv6 = NULL;
+  address_ttl_t *addr_hostname = NULL;
+  address_ttl_t *addr_best = NULL;
+
+  /* If it's an error code, that's easy. */
+  if (error_code) {
+    tor_assert(error_code == RESOLVED_TYPE_ERROR ||
+               error_code == RESOLVED_TYPE_ERROR_TRANSIENT);
+    connection_ap_handshake_socks_resolved(conn,
+                                           error_code,0,NULL,-1,-1);
+    return;
+  }
+
+  /* Get the first answer of each type. */
+  SMARTLIST_FOREACH_BEGIN(results, address_ttl_t *, addr) {
+    if (addr->hostname) {
+      if (!addr_hostname) {
+        addr_hostname = addr;
+      }
+    } else if (tor_addr_family(&addr->addr) == AF_INET) {
+      if (!addr_ipv4 && conn->ipv4_traffic_ok) {
+        addr_ipv4 = addr;
+      }
+    } else if (tor_addr_family(&addr->addr) == AF_INET6) {
+      if (!addr_ipv6 && conn->ipv6_traffic_ok) {
+        addr_ipv6 = addr;
+      }
+    }
+  } SMARTLIST_FOREACH_END(addr);
+
+  /* Now figure out which type we wanted to deliver. */
+  if (conn->socks_request->command == SOCKS_COMMAND_RESOLVE_PTR) {
+    if (addr_hostname) {
+      connection_ap_handshake_socks_resolved(conn,
+                                             RESOLVED_TYPE_HOSTNAME,
+                                             strlen(addr_hostname->hostname),
+                                             (uint8_t*)addr_hostname->hostname,
+                                             addr_hostname->ttl,-1);
+    } else {
+      connection_ap_handshake_socks_resolved(conn,
+                                             RESOLVED_TYPE_ERROR,0,NULL,-1,-1);
+    }
+    return;
+  }
+
+  if (conn->prefer_ipv6_traffic) {
+    addr_best = addr_ipv6 ? addr_ipv6 : addr_ipv4;
+  } else {
+    addr_best = addr_ipv4 ? addr_ipv4 : addr_ipv6;
+  }
+
+  /* Now convert it to the ugly old interface */
+  if (! addr_best) {
+    connection_ap_handshake_socks_resolved(conn,
+                                     RESOLVED_TYPE_ERROR,0,NULL,-1,-1);
+    return;
+  }
+
+  connection_ap_handshake_socks_resolved_addr(conn,
+                                              &addr_best->addr,
+                                              addr_best->ttl,
+                                              -1);
+
+  remap_event_helper(conn, &addr_best->addr);
+}
+
+/** Handle a RELAY_COMMAND_RESOLVED cell that we received on a non-open AP
+ * stream. */
+static int
 connection_edge_process_resolved_cell(edge_connection_t *conn,
                                       const cell_t *cell,
                                       const relay_header_t *rh)
 {
-  int ttl;
-  int answer_len;
-  uint8_t answer_type;
   entry_connection_t *entry_conn = EDGE_TO_ENTRY_CONN(conn);
+  smartlist_t *resolved_addresses = NULL;
+  int errcode = 0;
+
   if (conn->base_.state != AP_CONN_STATE_RESOLVE_WAIT) {
     log_fn(LOG_PROTOCOL_WARN, LD_APP, "Got a 'resolved' cell while "
            "not in state resolve_wait. Dropping.");
-    return;
+    return 0;
   }
   tor_assert(SOCKS_COMMAND_IS_RESOLVE(entry_conn->socks_request->command));
-  answer_len = cell->payload[RELAY_HEADER_SIZE+1];
-  if (rh->length < 2 || answer_len+2>rh->length) {
+
+  resolved_addresses = smartlist_new();
+  if (resolved_cell_parse(cell, rh, resolved_addresses, &errcode)) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Dropping malformed 'resolved' cell");
     connection_mark_unattached_ap(entry_conn, END_STREAM_REASON_TORPROTOCOL);
-    return;
+    goto done;
   }
 
-  answer_type = cell->payload[RELAY_HEADER_SIZE];
-  if (rh->length >= answer_len+6)
-    ttl = (int)ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+
-                                2+answer_len));
-  else
-    ttl = -1;
-  if (answer_type == RESOLVED_TYPE_IPV4 ||
-      answer_type == RESOLVED_TYPE_IPV6) {
-    tor_addr_t addr;
-    if (decode_address_from_payload(&addr, cell->payload+RELAY_HEADER_SIZE,
-                                    rh->length) &&
-        tor_addr_is_internal(&addr, 0) &&
-        get_options()->ClientDNSRejectInternalAddresses) {
-      log_info(LD_APP,"Got a resolve with answer %s. Rejecting.",
-               fmt_addr(&addr));
+  if (get_options()->ClientDNSRejectInternalAddresses) {
+    int orig_len = smartlist_len(resolved_addresses);
+    SMARTLIST_FOREACH_BEGIN(resolved_addresses, address_ttl_t *, addr) {
+      if (addr->hostname == NULL && tor_addr_is_internal(&addr->addr, 0)) {
+        log_info(LD_APP, "Got a resolved cell with answer %s; dropping that "
+                 "answer.",
+                 safe_str_client(fmt_addr(&addr->addr)));
+        address_ttl_free(addr);
+        SMARTLIST_DEL_CURRENT(resolved_addresses, addr);
+      }
+    } SMARTLIST_FOREACH_END(addr);
+    if (orig_len && smartlist_len(resolved_addresses) == 0) {
+        log_info(LD_APP, "Got a resolved cell with only private addresses; "
+                 "dropping it.");
       connection_ap_handshake_socks_resolved(entry_conn,
                                              RESOLVED_TYPE_ERROR_TRANSIENT,
                                              0, NULL, 0, TIME_MAX);
       connection_mark_unattached_ap(entry_conn,
                                     END_STREAM_REASON_TORPROTOCOL);
-      return;
+      goto done;
     }
   }
-  connection_ap_handshake_socks_resolved(entry_conn,
-                   answer_type,
-                   cell->payload[RELAY_HEADER_SIZE+1], /*answer_len*/
-                   cell->payload+RELAY_HEADER_SIZE+2, /*answer*/
-                   ttl,
-                   -1);
-  if (answer_type == RESOLVED_TYPE_IPV4 && answer_len == 4) {
-    tor_addr_t addr;
-    tor_addr_from_ipv4n(&addr,
-                        get_uint32(cell->payload+RELAY_HEADER_SIZE+2));
-    remap_event_helper(entry_conn, &addr);
-  } else if (answer_type == RESOLVED_TYPE_IPV6 && answer_len == 16) {
-    tor_addr_t addr;
-    tor_addr_from_ipv6_bytes(&addr,
-                             (char*)(cell->payload+RELAY_HEADER_SIZE+2));
-    remap_event_helper(entry_conn, &addr);
-  }
+
+  connection_ap_handshake_socks_got_resolve_cell(entry_conn,
+                                                 errcode,
+                                                 resolved_addresses);
+
   connection_mark_unattached_ap(entry_conn,
                               END_STREAM_REASON_DONE |
                               END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
 
+ done:
+  SMARTLIST_FOREACH(resolved_addresses, address_ttl_t *, addr,
+                    address_ttl_free(addr));
+  smartlist_free(resolved_addresses);
+  return 0;
 }
 
 /** An incoming relay cell has arrived from circuit <b>circ</b> to
@@ -1203,8 +1381,7 @@ connection_edge_process_relay_cell_not_open(
   }
   if (conn->base_.type == CONN_TYPE_AP &&
       rh->command == RELAY_COMMAND_RESOLVED) {
-    connection_edge_process_resolved_cell(conn, cell, rh);
-    return 0;
+    return connection_edge_process_resolved_cell(conn, cell, rh);
   }
 
   log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
