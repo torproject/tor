@@ -686,7 +686,7 @@ assign_onionskin_to_cpuworker(connection_t *cpuworker,
     }
 
     if (connection_or_digest_is_known_relay(circ->p_chan->identity_digest))
-      rep_hist_note_circuit_handshake_completed(onionskin->handshake_type);
+      rep_hist_note_circuit_handshake_assigned(onionskin->handshake_type);
 
     should_time = should_time_request(onionskin->handshake_type);
     memset(&req, 0, sizeof(req));

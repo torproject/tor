@@ -97,7 +97,7 @@ time_t rep_hist_conn_stats_write(time_t now);
 void rep_hist_conn_stats_term(void);
 
 void rep_hist_note_circuit_handshake_requested(uint16_t type);
-void rep_hist_note_circuit_handshake_completed(uint16_t type);
+void rep_hist_note_circuit_handshake_assigned(uint16_t type);
 void rep_hist_log_circuit_handshake_stats(time_t now);
 
 void rep_hist_free_all(void);

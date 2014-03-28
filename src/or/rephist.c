@@ -2992,11 +2992,11 @@ rep_hist_conn_stats_write(time_t now)
 }
 
 /** Internal statistics to track how many requests of each type of
- * handshake we've received, and how many we've completed. Useful for
- * seeing trends in cpu load.
+ * handshake we've received, and how many we've assigned to cpuworkers.
+ * Useful for seeing trends in cpu load.
  * @{ */
 static int onion_handshakes_requested[MAX_ONION_HANDSHAKE_TYPE+1] = {0};
-static int onion_handshakes_completed[MAX_ONION_HANDSHAKE_TYPE+1] = {0};
+static int onion_handshakes_assigned[MAX_ONION_HANDSHAKE_TYPE+1] = {0};
 /**@}*/
 
 /** A new onionskin (using the <b>type</b> handshake) has arrived. */
@@ -3010,10 +3010,10 @@ rep_hist_note_circuit_handshake_requested(uint16_t type)
 /** We've sent an onionskin (using the <b>type</b> handshake) to a
  * cpuworker. */
 void
-rep_hist_note_circuit_handshake_completed(uint16_t type)
+rep_hist_note_circuit_handshake_assigned(uint16_t type)
 {
   if (type <= MAX_ONION_HANDSHAKE_TYPE)
-    onion_handshakes_completed[type]++;
+    onion_handshakes_assigned[type]++;
 }
 
 /** Log our onionskin statistics since the last time we were called. */
@@ -3023,11 +3023,11 @@ rep_hist_log_circuit_handshake_stats(time_t now)
   (void)now;
   log_notice(LD_HEARTBEAT, "Circuit handshake stats since last time: "
              "%d/%d TAP, %d/%d NTor.",
-             onion_handshakes_completed[ONION_HANDSHAKE_TYPE_TAP],
+             onion_handshakes_assigned[ONION_HANDSHAKE_TYPE_TAP],
              onion_handshakes_requested[ONION_HANDSHAKE_TYPE_TAP],
-             onion_handshakes_completed[ONION_HANDSHAKE_TYPE_NTOR],
+             onion_handshakes_assigned[ONION_HANDSHAKE_TYPE_NTOR],
              onion_handshakes_requested[ONION_HANDSHAKE_TYPE_NTOR]);
-  memset(onion_handshakes_completed, 0, sizeof(onion_handshakes_completed));
+  memset(onion_handshakes_assigned, 0, sizeof(onion_handshakes_assigned));
   memset(onion_handshakes_requested, 0, sizeof(onion_handshakes_requested));
 }
 
