@@ -27,6 +27,7 @@
 #include <stdlib.h>
 
 #include "sandbox.h"
+#include "container.h"
 #include "torlog.h"
 #include "torint.h"
 #include "util.h"
@@ -859,8 +860,9 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
   size_t pr_mem_size = 0, pr_mem_left = 0;
   char *pr_mem_next = NULL, *pr_mem_base;
   sandbox_cfg_t *el = NULL;
+  strmap_t *locations = NULL;
 
-  // get total number of bytes required to mmap
+  // get total number of bytes required to mmap. (Overestimate.)
   for (el = cfg; el != NULL; el = el->next) {
     pr_mem_size += strlen((char*) ((smp_param_t*)el->param)->value) + 1;
   }
@@ -878,12 +880,24 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
   pr_mem_next = pr_mem_base + MALLOC_MP_LIM;
   pr_mem_left = pr_mem_size;
 
+  locations = strmap_new();
+
   // change el value pointer to protected
   for (el = cfg; el != NULL; el = el->next) {
     char *param_val = (char*)((smp_param_t *)el->param)->value;
     size_t param_size = strlen(param_val) + 1;
 
-    if (pr_mem_left >= param_size) {
+    void *location = strmap_get(locations, param_val);
+    if (location) {
+      // We already interned this string.
+      {
+        void *old_val = (void *) ((smp_param_t*)el->param)->value;
+        tor_free(old_val);
+      }
+      ((smp_param_t*)el->param)->value = (intptr_t) location;
+      ((smp_param_t*)el->param)->prot = 1;
+
+    } else if (pr_mem_left >= param_size) {
       // copy to protected
       memcpy(pr_mem_next, param_val, param_size);
 
@@ -894,6 +908,8 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
       }
       ((smp_param_t*)el->param)->value = (intptr_t) pr_mem_next;
       ((smp_param_t*)el->param)->prot = 1;
+
+      strmap_set(locations, pr_mem_next, pr_mem_next);
 
       // move next available protected memory
       pr_mem_next += param_size;
@@ -962,7 +978,8 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
   }
 
  out:
-   return ret;
+  strmap_free(locations, NULL);
+  return ret;
 }
 
 /**
