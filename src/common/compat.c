@@ -175,6 +175,14 @@ tor_fopen_cloexec(const char *path, const char *mode)
   return result;
 }
 
+/** As rename(), but work correctly with the sandbox. */
+int
+tor_rename(const char *path_old, const char *path_new)
+{
+  return rename(sandbox_intern_string(path_old),
+                sandbox_intern_string(path_new));
+}
+
 #if defined(HAVE_SYS_MMAN_H) || defined(RUNNING_DOXYGEN)
 /** Try to create a memory mapping for <b>filename</b> and return it.  On
  * failure, return NULL.  Sets errno properly, using ERANGE to mean
@@ -799,7 +807,7 @@ int
 replace_file(const char *from, const char *to)
 {
 #ifndef _WIN32
-  return rename(from,to);
+  return tor_rename(from, to);
 #else
   switch (file_status(to))
     {
@@ -814,7 +822,7 @@ replace_file(const char *from, const char *to)
       errno = EISDIR;
       return -1;
     }
-  return rename(from,to);
+  return tor_rename(from,to);
 #endif
 }
 

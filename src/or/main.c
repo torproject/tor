@@ -2743,7 +2743,6 @@ sandbox_init_filter(void)
       get_datadir_fname("cached-microdescs.tmp"), 1,
       get_datadir_fname("cached-microdescs.new"), 1,
       get_datadir_fname("cached-microdescs.new.tmp"), 1,
-      get_datadir_fname("unverified-microdesc-consensus"), 1,
       get_datadir_fname("cached-descriptors"), 1,
       get_datadir_fname("cached-descriptors.new"), 1,
       get_datadir_fname("cached-descriptors.tmp"), 1,
@@ -2764,6 +2763,34 @@ sandbox_init_filter(void)
       "/dev/random", 0,
       NULL, 0
   );
+
+#define RENAME_SUFFIX(name, suffix)        \
+  sandbox_cfg_allow_rename(&cfg,           \
+      get_datadir_fname(name suffix),      \
+      get_datadir_fname(name))
+
+#define RENAME_SUFFIX2(prefix, name, suffix) \
+  sandbox_cfg_allow_rename(&cfg,                                        \
+                           get_datadir_fname2(prefix, name suffix),     \
+                           get_datadir_fname2(prefix, name))
+
+  RENAME_SUFFIX("cached-certs", ".tmp");
+  RENAME_SUFFIX("cached-consensus", ".tmp");
+  RENAME_SUFFIX("unverified-consensus", ".tmp");
+  RENAME_SUFFIX("unverified-microdesc-consensus", ".tmp");
+  RENAME_SUFFIX("cached-microdesc-consensus", ".tmp");
+  RENAME_SUFFIX("cached-microdescs", ".tmp");
+  RENAME_SUFFIX("cached-microdescs", ".new");
+  RENAME_SUFFIX("cached-microdescs.new", ".tmp");
+  RENAME_SUFFIX("cached-descriptors", ".tmp");
+  RENAME_SUFFIX("cached-descriptors", ".new");
+  RENAME_SUFFIX("cached-descriptors.new", ".tmp");
+  RENAME_SUFFIX("cached-extrainfo", ".tmp");
+  RENAME_SUFFIX("cached-extrainfo", ".new");
+  RENAME_SUFFIX("cached-extrainfo.new", ".tmp");
+  RENAME_SUFFIX("state", ".tmp");
+  RENAME_SUFFIX("unparseable-desc", ".tmp");
+  RENAME_SUFFIX("v3-status-votes", ".tmp");
 
   sandbox_cfg_allow_stat_filename_array(&cfg,
       get_datadir_fname(NULL), 1,
@@ -2790,11 +2817,17 @@ sandbox_init_filter(void)
         get_datadir_fname("fingerprint.tmp"), 1,
         get_datadir_fname("hashed-fingerprint"), 1,
         get_datadir_fname("hashed-fingerprint.tmp"), 1,
-        get_datadir_fname("cached-consensus"), 1,
-        get_datadir_fname("cached-consensus.tmp"), 1,
         "/etc/resolv.conf", 0,
         NULL, 0
     );
+
+    RENAME_SUFFIX("fingerprint", ".tmp");
+    RENAME_SUFFIX2("keys", "secret_onion_key_ntor", ".tmp");
+    RENAME_SUFFIX2("keys", "secret_id_key", ".tmp");
+    RENAME_SUFFIX2("keys", "secret_id_key.old", ".tmp");
+    RENAME_SUFFIX2("keys", "secret_onion_key", ".tmp");
+    RENAME_SUFFIX2("keys", "secret_onion_key.old", ".tmp");
+    RENAME_SUFFIX("hashed-fingerprint", ".tmp");
 
     sandbox_cfg_allow_stat_filename_array(&cfg,
         get_datadir_fname("keys"), 1,

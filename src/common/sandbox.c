@@ -122,7 +122,6 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(mmap),
     SCMP_SYS(munmap),
     SCMP_SYS(read),
-    SCMP_SYS(rename),
     SCMP_SYS(rt_sigreturn),
     SCMP_SYS(set_robust_list),
     SCMP_SYS(_sysctl),
@@ -356,6 +355,41 @@ sb_open(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
     log_err(LD_BUG,"(Sandbox) failed to add open syscall, received libseccomp "
         "error %d", rc);
     return rc;
+  }
+
+  return 0;
+}
+
+/**
+ * Function responsible for setting up the rename syscall for
+ * the seccomp filter sandbox.
+ */
+static int
+sb_rename(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
+{
+  int rc;
+  sandbox_cfg_t *elem = NULL;
+
+  // for each dynamic parameter filters
+  for (elem = filter; elem != NULL; elem = elem->next) {
+    smp_param_t *param = elem->param;
+
+    if (param != NULL && param->prot == 1 &&
+        param->syscall == SCMP_SYS(rename)) {
+
+      intptr_t value2 = (intptr_t)(void*)sandbox_intern_string(
+                                              (char*)param->value2);
+
+      rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW,
+            SCMP_SYS(rename), 1,
+            SCMP_CMP(0, SCMP_CMP_EQ, param->value),
+            SCMP_CMP(1, SCMP_CMP_EQ, value2));
+      if (rc != 0) {
+        log_err(LD_BUG,"(Sandbox) failed to add rename syscall, received "
+            "libseccomp error %d", rc);
+        return rc;
+      }
+    }
   }
 
   return 0;
@@ -807,6 +841,7 @@ static sandbox_filter_func_t filter_func[] = {
 #endif
     sb_open,
     sb_openat,
+    sb_rename,
 #ifdef __NR_fcntl64
     sb_fcntl64,
 #endif
@@ -888,6 +923,7 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
     size_t param_size = strlen(param_val) + 1;
 
     void *location = strmap_get(locations, param_val);
+
     if (location) {
       // We already interned this string.
       {
@@ -989,20 +1025,28 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
  * point.
  */
 static sandbox_cfg_t*
-new_element(int syscall, int index, intptr_t value)
+new_element2(int syscall, int index, int index2, intptr_t value, intptr_t value2)
 {
   smp_param_t *param = NULL;
 
-  sandbox_cfg_t *elem = tor_malloc(sizeof(sandbox_cfg_t));
-  elem->param = tor_malloc(sizeof(smp_param_t));
+  sandbox_cfg_t *elem = tor_malloc_zero(sizeof(sandbox_cfg_t));
+  elem->param = tor_malloc_zero(sizeof(smp_param_t));
 
   param = elem->param;
   param->syscall = syscall;
   param->pindex = index;
+  param->pindex2 = index2;
   param->value = value;
+  param->value2 = value2;
   param->prot = 0;
 
   return elem;
+}
+
+static sandbox_cfg_t*
+new_element(int syscall, int index, intptr_t value)
+{
+  return new_element2(syscall, index, -1, value, 0);
 }
 
 #ifdef __NR_stat64
@@ -1069,6 +1113,37 @@ sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file, int fr)
 
   if (fr) tor_free(file);
 
+  return 0;
+}
+
+int
+sandbox_cfg_allow_rename(sandbox_cfg_t **cfg, char *file1, char *file2)
+{
+  sandbox_cfg_t *elem = NULL;
+
+  elem = new_element2(SCMP_SYS(rename), 0, 1,
+                      (intptr_t)(void *)tor_strdup(file1),
+                      (intptr_t)(void *)tor_strdup(file2));
+
+  if (!elem) {
+    log_err(LD_BUG,"(Sandbox) failed to register parameter!");
+    return -1;
+  }
+
+  elem->next = *cfg;
+  *cfg = elem;
+
+  /* For interning */
+  elem = new_element(-1, 0, (intptr_t)(void*)tor_strdup(file2));
+  if (!elem) {
+    log_err(LD_BUG,"(Sandbox) failed to register parameter!");
+    return -1;
+  }
+  elem->next = *cfg;
+  *cfg = elem;
+
+  tor_free(file1);
+  tor_free(file2);
   return 0;
 }
 

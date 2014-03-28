@@ -67,8 +67,12 @@ typedef struct smp_param {
 
   /** parameter index. */
   int pindex;
+  /** parameter index, second one. */
+  int pindex2;
   /** parameter value. */
   intptr_t value;
+  /** parameter value, second argument. */
+  intptr_t value2;
 
   /**  parameter flag (0 = not protected, 1 = protected). */
   int prot;
@@ -173,6 +177,9 @@ sandbox_cfg_t * sandbox_cfg_new(void);
  */
 int sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file,
     int fr);
+
+/**DOCDOC*/
+int sandbox_cfg_allow_rename(sandbox_cfg_t **cfg, char *file1, char *file2);
 
 /** Function used to add a series of open allowed filenames to a supplied
  * configuration.
