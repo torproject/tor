@@ -2804,13 +2804,13 @@ routerlist_free(routerlist_t *rl)
                     signed_descriptor_free(sd));
   smartlist_free(rl->routers);
   smartlist_free(rl->old_routers);
-  if (routerlist->desc_store.mmap) {
+  if (rl->desc_store.mmap) {
     int res = tor_munmap_file(routerlist->desc_store.mmap);
     if (res != 0) {
       log_warn(LD_FS, "Failed to munmap routerlist->desc_store.mmap");
     }
   }
-  if (routerlist->extrainfo_store.mmap) {
+  if (rl->extrainfo_store.mmap) {
     int res = tor_munmap_file(routerlist->extrainfo_store.mmap);
     if (res != 0) {
       log_warn(LD_FS, "Failed to munmap routerlist->extrainfo_store.mmap");
