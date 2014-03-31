@@ -509,6 +509,7 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
       log_warn(LD_FS,
                "Failed to unmap old microdescriptor cache while rebuilding");
     }
+    cache->cache_content = NULL;
   }
 
   if (finish_writing_to_file(open_file) < 0) {
