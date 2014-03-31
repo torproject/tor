@@ -2574,10 +2574,19 @@ tor_cleanup(void)
     time_t now = time(NULL);
     /* Remove our pid file. We don't care if there was an error when we
      * unlink, nothing we could do about it anyways. */
-    if (options->PidFile)
-      unlink(options->PidFile);
-    if (options->ControlPortWriteToFile)
-      unlink(options->ControlPortWriteToFile);
+    if (options->PidFile) {
+      if (unlink(options->PidFile) != 0) {
+        log_warn(LD_FS, "Couldn't unlink pid file %s: %s",
+                 options->PidFile, strerror(errno));
+      }
+    }
+    if (options->ControlPortWriteToFile) {
+      if (unlink(options->ControlPortWriteToFile) != 0) {
+        log_warn(LD_FS, "Couldn't unlink control port file %s: %s",
+                 options->ControlPortWriteToFile,
+                 strerror(errno));
+      }
+    }
     if (accounting_is_enabled(options))
       accounting_record_bandwidth_usage(now, get_or_state());
     or_state_mark_dirty(get_or_state(), 0); /* force an immediate save. */

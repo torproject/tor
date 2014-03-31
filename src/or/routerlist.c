@@ -1064,8 +1064,11 @@ router_rebuild_store(int flags, desc_store_t *store)
 
   /* Our mmap is now invalid. */
   if (store->mmap) {
-    tor_munmap_file(store->mmap);
+    int res = tor_munmap_file(store->mmap);
     store->mmap = NULL;
+    if (res != 0) {
+      log_warn(LD_FS, "Unable to munmap route store in %s", fname);
+    }
   }
 
   if (replace_file(fname_tmp, fname)<0) {
@@ -1139,9 +1142,16 @@ router_reload_router_list_impl(desc_store_t *store)
 
   fname = get_datadir_fname(store->fname_base);
 
-  if (store->mmap) /* get rid of it first */
-    tor_munmap_file(store->mmap);
-  store->mmap = NULL;
+  if (store->mmap) {
+    /* get rid of it first */
+    int res = tor_munmap_file(store->mmap);
+    store->mmap = NULL;
+    if (res != 0) {
+      log_warn(LD_FS, "Failed to munmap %s", fname);
+      tor_free(fname);
+      return -1;
+    }
+  }
 
   store->mmap = tor_mmap_file(fname);
   if (store->mmap) {
@@ -2794,10 +2804,18 @@ routerlist_free(routerlist_t *rl)
                     signed_descriptor_free(sd));
   smartlist_free(rl->routers);
   smartlist_free(rl->old_routers);
-  if (routerlist->desc_store.mmap)
-    tor_munmap_file(routerlist->desc_store.mmap);
-  if (routerlist->extrainfo_store.mmap)
-    tor_munmap_file(routerlist->extrainfo_store.mmap);
+  if (rl->desc_store.mmap) {
+    int res = tor_munmap_file(routerlist->desc_store.mmap);
+    if (res != 0) {
+      log_warn(LD_FS, "Failed to munmap routerlist->desc_store.mmap");
+    }
+  }
+  if (rl->extrainfo_store.mmap) {
+    int res = tor_munmap_file(routerlist->extrainfo_store.mmap);
+    if (res != 0) {
+      log_warn(LD_FS, "Failed to munmap routerlist->extrainfo_store.mmap");
+    }
+  }
   tor_free(rl);
 
   router_dir_info_changed();

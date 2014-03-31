@@ -1577,14 +1577,14 @@ test_util_mmap(void)
   test_eq(mapping->size, strlen("Short file."));
   test_streq(mapping->data, "Short file.");
 #ifdef _WIN32
-  tor_munmap_file(mapping);
+  tt_int_op(0, ==, tor_munmap_file(mapping));
   mapping = NULL;
   test_assert(unlink(fname1) == 0);
 #else
   /* make sure we can unlink. */
   test_assert(unlink(fname1) == 0);
   test_streq(mapping->data, "Short file.");
-  tor_munmap_file(mapping);
+  tt_int_op(0, ==, tor_munmap_file(mapping));
   mapping = NULL;
 #endif
 
@@ -1605,7 +1605,7 @@ test_util_mmap(void)
   test_assert(mapping);
   test_eq(mapping->size, buflen);
   test_memeq(mapping->data, buf, buflen);
-  tor_munmap_file(mapping);
+  tt_int_op(0, ==, tor_munmap_file(mapping));
   mapping = NULL;
 
   /* Now try a big aligned file. */
@@ -1614,7 +1614,7 @@ test_util_mmap(void)
   test_assert(mapping);
   test_eq(mapping->size, 16384);
   test_memeq(mapping->data, buf, 16384);
-  tor_munmap_file(mapping);
+  tt_int_op(0, ==, tor_munmap_file(mapping));
   mapping = NULL;
 
  done:
@@ -1627,8 +1627,7 @@ test_util_mmap(void)
   tor_free(fname3);
   tor_free(buf);
 
-  if (mapping)
-    tor_munmap_file(mapping);
+  tor_munmap_file(mapping);
 }
 
 /** Run unit tests for escaping/unescaping data for use by controllers. */

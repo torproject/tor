@@ -35,6 +35,12 @@
 #ifdef HAVE_UNAME
 #include <sys/utsname.h>
 #endif
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -178,9 +184,10 @@ tor_mmap_file(const char *filename)
 {
   int fd; /* router file */
   char *string;
-  int page_size;
+  int page_size, result;
   tor_mmap_t *res;
   size_t size, filesize;
+  struct stat st;
 
   tor_assert(filename);
 
@@ -194,9 +201,22 @@ tor_mmap_file(const char *filename)
     return NULL;
   }
 
-  /* XXXX why not just do fstat here? */
-  size = filesize = (size_t) lseek(fd, 0, SEEK_END);
-  lseek(fd, 0, SEEK_SET);
+  /* Get the size of the file */
+  result = fstat(fd, &st);
+  if (result != 0) {
+    int save_errno = errno;
+    log_warn(LD_FS,
+             "Couldn't fstat opened descriptor for \"%s\" during mmap: %s",
+             filename, strerror(errno));
+    close(fd);
+    errno = save_errno;
+    return NULL;
+  }
+  size = filesize = (size_t)(st.st_size);
+  /*
+   * Should we check for weird crap like mmapping a named pipe here,
+   * or just wait for if (!size) below to fail?
+   */
   /* ensure page alignment */
   page_size = getpagesize();
   size += (size%page_size) ? page_size-(size%page_size) : 0;
@@ -227,12 +247,27 @@ tor_mmap_file(const char *filename)
 
   return res;
 }
-/** Release storage held for a memory mapping. */
-void
+/** Release storage held for a memory mapping; returns 0 on success,
+ * or -1 on failure (and logs a warning). */
+int
 tor_munmap_file(tor_mmap_t *handle)
 {
-  munmap((char*)handle->data, handle->mapping_size);
-  tor_free(handle);
+  int res;
+
+  if (handle == NULL)
+    return 0;
+
+  res = munmap((char*)handle->data, handle->mapping_size);
+  if (res == 0) {
+    /* munmap() succeeded */
+    tor_free(handle);
+  } else {
+    log_warn(LD_FS, "Failed to munmap() in tor_munmap_file(): %s",
+             strerror(errno));
+    res = -1;
+  }
+
+  return res;
 }
 #elif defined(_WIN32)
 tor_mmap_t *
@@ -314,17 +349,29 @@ tor_mmap_file(const char *filename)
   tor_munmap_file(res);
   return NULL;
 }
-void
+
+/* Unmap the file, and return 0 for success or -1 for failure */
+int
 tor_munmap_file(tor_mmap_t *handle)
 {
-  if (handle->data)
+  if (handle == NULL)
+    return 0;
+
+  if (handle->data) {
     /* This is an ugly cast, but without it, "data" in struct tor_mmap_t would
        have to be redefined as non-const. */
-    UnmapViewOfFile( (LPVOID) handle->data);
+    BOOL ok = UnmapViewOfFile( (LPVOID) handle->data);
+    if (!ok) {
+      log_warn(LD_FS, "Failed to UnmapViewOfFile() in tor_munmap_file(): %d",
+               (int)GetLastError());
+    }
+  }
 
   if (handle->mmap_handle != NULL)
     CloseHandle(handle->mmap_handle);
   tor_free(handle);
+
+  return 0;
 }
 #else
 tor_mmap_t *
@@ -340,13 +387,25 @@ tor_mmap_file(const char *filename)
   handle->size = st.st_size;
   return handle;
 }
-void
+
+/** Unmap the file mapped with tor_mmap_file(), and return 0 for success
+ * or -1 for failure.
+ */
+
+int
 tor_munmap_file(tor_mmap_t *handle)
 {
-  char *d = (char*)handle->data;
+  char *d = NULL;
+  if (handle == NULL)
+    return 0;
+
+  d = (char*)handle->data;
   tor_free(d);
   memwipe(handle, 0, sizeof(tor_mmap_t));
   tor_free(handle);
+
+  /* Can't fail in this mmap()/munmap()-free case */
+  return 0;
 }
 #endif
 
