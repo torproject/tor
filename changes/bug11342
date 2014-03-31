@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - When dumping a malformed directory object to disk, save it in binary
+      mode on windows, not text mode. Fixes bug 11342; bugfix on
+      0.2.2.1-alpha.
