@@ -354,7 +354,9 @@ tor_mmap_file(const char *filename)
 int
 tor_munmap_file(tor_mmap_t *handle)
 {
-  tor_assert(handle != NULL);
+  if (handle == NULL)
+    return 0;
+
   if (handle->data) {
     /* This is an ugly cast, but without it, "data" in struct tor_mmap_t would
        have to be redefined as non-const. */
@@ -394,8 +396,9 @@ int
 tor_munmap_file(tor_mmap_t *handle)
 {
   char *d = NULL;
+  if (handle == NULL)
+    return 0;
 
-  tor_assert(handle != NULL);
   d = (char*)handle->data;
   tor_free(d);
   memwipe(handle, 0, sizeof(tor_mmap_t));
