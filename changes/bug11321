@@ -1,0 +1,5 @@
+  o Minor bugfixes (build):
+    - Build the torify.1 manpage again. Previously, we were only
+      trying to build it when also building tor-fw-helper. That's why
+      we didn't notice that we'd broken the ability to build it.
+      Fixes bug 11321; bugfix on 0.2.5.1-alpha.
