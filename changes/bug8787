@@ -1,0 +1,5 @@
+  o Minor features:
+    - Always check return values for unlink, munmap, UnmapViewOfFile;
+      check strftime return values more often. In some cases all we
+      can do is report a warning, but this may help prevent deeper
+      bugs from going unnoticed. Closes ticket 8787.
