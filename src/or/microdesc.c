@@ -378,19 +378,19 @@ microdesc_cache_clean(microdesc_cache_t *cache, time_t cutoff, int force)
         /* Let's try to diagnose and fix #7164 . */
         smartlist_t *nodes = nodelist_find_nodes_with_microdesc(*mdp);
         const networkstatus_t *ns = networkstatus_get_latest_consensus();
-        int networkstatus_age = -1;
+        long networkstatus_age = -1;
         if (ns) {
           networkstatus_age = now - ns->valid_after;
         }
         log_warn(LD_BUG, "Microdescriptor seemed very old "
                  "(last listed %d hours ago vs %d hour cutoff), but is still "
                  "marked as being held by %d node(s). I found %d node(s) "
-                 "holding it. Current networkstatus is %d hours old.",
+                 "holding it. Current networkstatus is %ld hours old.",
                  (int)((now - (*mdp)->last_listed) / 3600),
                  (int)((now - cutoff) / 3600),
                  held_by_nodes,
                  smartlist_len(nodes),
-                 (int)(networkstatus_age / 3600));
+                 networkstatus_age / 3600);
 
         SMARTLIST_FOREACH_BEGIN(nodes, const node_t *, node) {
           const char *rs_match = "No RS";
