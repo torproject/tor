@@ -81,10 +81,15 @@
 	HALF_ROUND(v0,v1,v2,v3,13,16);		\
 	HALF_ROUND(v2,v1,v0,v3,17,21);
 
+#if 0
+/* This does not seem to save very much runtime in the fast case, and it's
+ * potentially a big loss in the slow case where we're misaligned and we cross
+ * a cache line. */
 #if (defined(__i386) || defined(__i386__) || defined(_M_IX86) ||	\
      defined(__x86_64) || defined(__x86_64__) ||			\
      defined(_M_AMD64) || defined(_M_X64) || defined(__INTEL__))
 #   define UNALIGNED_OK 1
+#endif
 #endif
 
 uint64_t siphash24(const void *src, unsigned long src_sz, const struct sipkey *key) {

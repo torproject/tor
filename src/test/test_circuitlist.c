@@ -150,13 +150,13 @@ test_clist_maps(void *arg)
   tt_assert(! circuit_id_in_use_on_channel(100, ch1));
 
  done:
-  tor_free(ch1);
-  tor_free(ch2);
-  tor_free(ch3);
   if (or_c1)
     circuit_free(TO_CIRCUIT(or_c1));
   if (or_c2)
     circuit_free(TO_CIRCUIT(or_c2));
+  tor_free(ch1);
+  tor_free(ch2);
+  tor_free(ch3);
   UNMOCK(circuitmux_attach_circuit);
   UNMOCK(circuitmux_detach_circuit);
 }

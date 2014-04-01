@@ -321,7 +321,7 @@ tor_memstr(const void *haystack, size_t hlen, const char *needle)
   extern const uint32_t TOR_##name##_TABLE[];                           \
   static INLINE int TOR_##name(char c) {                                \
     uint8_t u = c;                                                      \
-    return !!(TOR_##name##_TABLE[(u >> 5) & 7] & (1 << (u & 31)));      \
+    return !!(TOR_##name##_TABLE[(u >> 5) & 7] & (1u << (u & 31)));     \
   }
 DECLARE_CTYPE_FN(ISALPHA)
 DECLARE_CTYPE_FN(ISALNUM)
