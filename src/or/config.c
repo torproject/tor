@@ -1149,12 +1149,31 @@ options_act_reversible(const or_options_t *old_options, char **msg)
     tor_free(severity);
     tor_log_update_sigsafe_err_fds();
   }
-  if (get_min_log_level() >= LOG_INFO &&
-      get_min_log_level() != old_min_log_level) {
-    log_warn(LD_GENERAL, "Your log may contain sensitive information: you're "
-             "logging more than \"notice\". Please log safely. Don't log "
-             "unless it serves an important reason, and overwrite the log "
-             "afterwards.");
+
+  {
+    const char *badness = NULL;
+    int bad_safelog = 0, bad_severity = 0, new_badness = 0;
+    if (options->SafeLogging_ != SAFELOG_SCRUB_ALL) {
+      bad_safelog = 1;
+      if (!old_options || old_options->SafeLogging_ != options->SafeLogging_)
+        new_badness = 1;
+    }
+    if (get_min_log_level() >= LOG_INFO) {
+      bad_severity = 1;
+      if (get_min_log_level() != old_min_log_level)
+        new_badness = 1;
+    }
+    if (bad_safelog && bad_severity)
+      badness = "you disabled SafeLogging, and "
+        "you're logging more than \"notice\"";
+    else if (bad_safelog)
+      badness = "you disabled SafeLogging";
+    else
+      badness = "you're logging more than \"notice\"";
+    if (new_badness)
+      log_warn(LD_GENERAL, "Your log may contain sensitive information - %s. "
+               "Don't log unless it serves an important reason. "
+               "Overwrite the log afterwards.", badness);
   }
 
   SMARTLIST_FOREACH(replaced_listeners, connection_t *, conn,
@@ -1353,13 +1372,6 @@ options_act(const or_options_t *old_options)
                "to collect statistics about its clients that use pluggable "
                "transports. Please enable it using the ExtORPort torrc option "
                "(e.g. set 'ExtORPort auto').");
-  }
-
-  if (options->SafeLogging_ != SAFELOG_SCRUB_ALL &&
-      (!old_options || old_options->SafeLogging_ != options->SafeLogging_)) {
-    log_warn(LD_GENERAL, "Your log may contain sensitive information - you "
-             "disabled SafeLogging. Please log safely. Don't log unless it "
-             "serves an important reason. Overwrite the log afterwards.");
   }
 
   if (options->Bridges) {
