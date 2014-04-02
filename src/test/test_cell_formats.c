@@ -872,6 +872,346 @@ test_cfmt_extended_cells(void *arg)
   tor_free(mem_op_hex_tmp);
 }
 
+static void
+test_cfmt_resolved_cells(void *arg)
+{
+  smartlist_t *addrs = smartlist_new();
+  relay_header_t rh;
+  cell_t cell;
+  int r, errcode;
+  address_ttl_t *a;
+
+  (void)arg;
+#define CLEAR_CELL() do {                       \
+    memset(&cell, 0, sizeof(cell));             \
+    memset(&rh, 0, sizeof(rh));                 \
+  } while (0)
+#define CLEAR_ADDRS() do {                              \
+    SMARTLIST_FOREACH(addrs, address_ttl_t *, a,        \
+                      address_ttl_free(a); );           \
+    smartlist_clear(addrs);                             \
+  } while (0)
+#define SET_CELL(s) do {                                                \
+    CLEAR_CELL();                                                       \
+    memcpy(cell.payload + RELAY_HEADER_SIZE, (s), sizeof((s))-1);       \
+    rh.length = sizeof((s))-1;                                          \
+    rh.command = RELAY_COMMAND_RESOLVED;                                \
+    errcode = -1;                                                       \
+  } while (0)
+
+  /* The cell format is one or more answers; each of the form
+   *  type [1 byte---0:hostname, 4:ipv4, 6:ipv6, f0:err-transient, f1:err]
+   *  length [1 byte]
+   *  body [length bytes]
+   *  ttl  [4 bytes]
+   */
+
+  /* Let's try an empty cell */
+  SET_CELL("");
+  r = resolved_cell_parse(&cell, &rh, addrs, &errcode);
+  tt_int_op(errcode, ==, 0);
+  tt_int_op(r, ==, 0);
+  tt_int_op(smartlist_len(addrs), ==, 0);
+  CLEAR_ADDRS(); /* redundant but let's be consistent */
+
+  /* Cell with one ipv4 addr */
+  SET_CELL("\x04\x04" "\x7f\x00\x02\x0a" "\x00\00\x01\x00");
+  tt_int_op(rh.length, ==, 10);
+  r = resolved_cell_parse(&cell, &rh, addrs, &errcode);
+  tt_int_op(errcode, ==, 0);
+  tt_int_op(r, ==, 0);
+  tt_int_op(smartlist_len(addrs), ==, 1);
+  a = smartlist_get(addrs, 0);
+  tt_str_op(fmt_addr(&a->addr), ==, "127.0.2.10");
+  tt_ptr_op(a->hostname, ==, NULL);
+  tt_int_op(a->ttl, ==, 256);
+  CLEAR_ADDRS();
+
+  /* Cell with one ipv6 addr */
+  SET_CELL("\x06\x10"
+           "\x20\x02\x90\x90\x00\x00\x00\x00"
+           "\x00\x00\x00\x00\xf0\xf0\xab\xcd"
+           "\x02\00\x00\x01");
+  tt_int_op(rh.length, ==, 22);
+  r = resolved_cell_parse(&cell, &rh, addrs, &errcode);
+  tt_int_op(errcode, ==, 0);
+  tt_int_op(r, ==, 0);
+  tt_int_op(smartlist_len(addrs), ==, 1);
+  a = smartlist_get(addrs, 0);
+  tt_str_op(fmt_addr(&a->addr), ==, "2002:9090::f0f0:abcd");
+  tt_ptr_op(a->hostname, ==, NULL);
+  tt_int_op(a->ttl, ==, 0x2000001);
+  CLEAR_ADDRS();
+
+  /* Cell with one hostname */
+  SET_CELL("\x00\x11"
+           "motherbrain.zebes"
+           "\x00\00\x00\x00");
+  tt_int_op(rh.length, ==, 23);
+  r = resolved_cell_parse(&cell, &rh, addrs, &errcode);
+  tt_int_op(errcode, ==, 0);
+  tt_int_op(r, ==, 0);
+  tt_int_op(smartlist_len(addrs), ==, 1);
+  a = smartlist_get(addrs, 0);
+  tt_assert(tor_addr_is_null(&a->addr));
+  tt_str_op(a->hostname, ==, "motherbrain.zebes");
+  tt_int_op(a->ttl, ==, 0);
+  CLEAR_ADDRS();
+
+#define LONG_NAME \
+  "this-hostname-has-255-characters.in-order-to-test-whether-very-long.ho" \
+  "stnames-are-accepted.i-am-putting-it-in-a-macro-because-although.this-" \
+  "function-is-already-very-full.of-copy-and-pasted-stuff.having-this-app" \
+  "ear-more-than-once-would-bother-me-somehow.is"
+
+  tt_int_op(strlen(LONG_NAME), ==, 255);
+  SET_CELL("\x00\xff"
+           LONG_NAME
+           "\x00\01\x00\x00");
+  tt_int_op(rh.length, ==, 261);
+  r = resolved_cell_parse(&cell, &rh, addrs, &errcode);
+  tt_int_op(errcode, ==, 0);
+  tt_int_op(r, ==, 0);
+  tt_int_op(smartlist_len(addrs), ==, 1);
+  a = smartlist_get(addrs, 0);
+  tt_assert(tor_addr_is_null(&a->addr));
+  tt_str_op(a->hostname, ==, LONG_NAME);
+  tt_int_op(a->ttl, ==, 65536);
+  CLEAR_ADDRS();
+
+  /* Cells with an error */
+  SET_CELL("\xf0\x2b"
+           "I'm sorry, Dave. I'm afraid I can't do that"
+           "\x00\x11\x22\x33");
+  tt_int_op(rh.length, ==, 49);
+  r = resolved_cell_parse(&cell, &rh, addrs, &errcode);
+  tt_int_op(errcode, ==, RESOLVED_TYPE_ERROR_TRANSIENT);
+  tt_int_op(r, ==, 0);
+  tt_int_op(smartlist_len(addrs), ==, 0);
+  CLEAR_ADDRS();
+
+  SET_CELL("\xf1\x40"
+           "This hostname is too important for me to allow you to resolve it"
+           "\x00\x00\x00\x00");
+  tt_int_op(rh.length, ==, 70);
+  r = resolved_cell_parse(&cell, &rh, addrs, &errcode);
+  tt_int_op(errcode, ==, RESOLVED_TYPE_ERROR);
+  tt_int_op(r, ==, 0);
+  tt_int_op(smartlist_len(addrs), ==, 0);
+  CLEAR_ADDRS();
+
+  /* Cell with an unrecognized type */
+  SET_CELL("\xee\x16"
+           "fault in the AE35 unit"
+           "\x09\x09\x01\x01");
+  tt_int_op(rh.length, ==, 28);
+  r = resolved_cell_parse(&cell, &rh, addrs, &errcode);
+  tt_int_op(errcode, ==, 0);
+  tt_int_op(r, ==, 0);
+  tt_int_op(smartlist_len(addrs), ==, 0);
+  CLEAR_ADDRS();
+
+  /* Cell with one of each */
+  SET_CELL(/* unrecognized: */
+           "\xee\x16"
+           "fault in the AE35 unit"
+           "\x09\x09\x01\x01"
+           /* error: */
+           "\xf0\x2b"
+           "I'm sorry, Dave. I'm afraid I can't do that"
+           "\x00\x11\x22\x33"
+           /* IPv6: */
+           "\x06\x10"
+           "\x20\x02\x90\x90\x00\x00\x00\x00"
+           "\x00\x00\x00\x00\xf0\xf0\xab\xcd"
+           "\x02\00\x00\x01"
+           /* IPv4: */
+           "\x04\x04" "\x7f\x00\x02\x0a" "\x00\00\x01\x00"
+           /* Hostname: */
+           "\x00\x11"
+           "motherbrain.zebes"
+           "\x00\00\x00\x00"
+           );
+  r = resolved_cell_parse(&cell, &rh, addrs, &errcode);
+  tt_int_op(errcode, ==, 0); /* no error reported; we got answers */
+  tt_int_op(r, ==, 0);
+  tt_int_op(smartlist_len(addrs), ==, 3);
+  a = smartlist_get(addrs, 0);
+  tt_str_op(fmt_addr(&a->addr), ==, "2002:9090::f0f0:abcd");
+  tt_ptr_op(a->hostname, ==, NULL);
+  tt_int_op(a->ttl, ==, 0x2000001);
+  a = smartlist_get(addrs, 1);
+  tt_str_op(fmt_addr(&a->addr), ==, "127.0.2.10");
+  tt_ptr_op(a->hostname, ==, NULL);
+  tt_int_op(a->ttl, ==, 256);
+  a = smartlist_get(addrs, 2);
+  tt_assert(tor_addr_is_null(&a->addr));
+  tt_str_op(a->hostname, ==, "motherbrain.zebes");
+  tt_int_op(a->ttl, ==, 0);
+  CLEAR_ADDRS();
+
+  /* Cell with several of similar type */
+  SET_CELL(/* IPv4 */
+           "\x04\x04" "\x7f\x00\x02\x0a" "\x00\00\x01\x00"
+           "\x04\x04" "\x08\x08\x08\x08" "\x00\00\x01\x05"
+           "\x04\x04" "\x7f\xb0\x02\xb0" "\x00\01\xff\xff"
+           /* IPv6 */
+           "\x06\x10"
+           "\x20\x02\x90\x00\x00\x00\x00\x00"
+           "\x00\x00\x00\x00\xca\xfe\xf0\x0d"
+           "\x00\00\x00\x01"
+           "\x06\x10"
+           "\x20\x02\x90\x01\x00\x00\x00\x00"
+           "\x00\x00\x00\x00\x00\xfa\xca\xde"
+           "\x00\00\x00\x03");
+  r = resolved_cell_parse(&cell, &rh, addrs, &errcode);
+  tt_int_op(errcode, ==, 0);
+  tt_int_op(r, ==, 0);
+  tt_int_op(smartlist_len(addrs), ==, 5);
+  a = smartlist_get(addrs, 0);
+  tt_str_op(fmt_addr(&a->addr), ==, "127.0.2.10");
+  tt_ptr_op(a->hostname, ==, NULL);
+  tt_int_op(a->ttl, ==, 256);
+  a = smartlist_get(addrs, 1);
+  tt_str_op(fmt_addr(&a->addr), ==, "8.8.8.8");
+  tt_ptr_op(a->hostname, ==, NULL);
+  tt_int_op(a->ttl, ==, 261);
+  a = smartlist_get(addrs, 2);
+  tt_str_op(fmt_addr(&a->addr), ==, "127.176.2.176");
+  tt_ptr_op(a->hostname, ==, NULL);
+  tt_int_op(a->ttl, ==, 131071);
+  a = smartlist_get(addrs, 3);
+  tt_str_op(fmt_addr(&a->addr), ==, "2002:9000::cafe:f00d");
+  tt_ptr_op(a->hostname, ==, NULL);
+  tt_int_op(a->ttl, ==, 1);
+  a = smartlist_get(addrs, 4);
+  tt_str_op(fmt_addr(&a->addr), ==, "2002:9001::fa:cade");
+  tt_ptr_op(a->hostname, ==, NULL);
+  tt_int_op(a->ttl, ==, 3);
+  CLEAR_ADDRS();
+
+  /* Full cell */
+#define LONG_NAME2 \
+  "this-name-has-231-characters.so-that-it-plus-LONG_NAME-can-completely-" \
+  "fill-up-the-payload-of-a-cell.its-important-to-check-for-the-full-thin" \
+  "g-case.to-avoid-off-by-one-errors.where-full-things-are-misreported-as" \
+  ".overflowing-by-one.z"
+
+  tt_int_op(strlen(LONG_NAME2), ==, 231);
+  SET_CELL("\x00\xff"
+           LONG_NAME
+           "\x00\01\x00\x00"
+           "\x00\xe7"
+           LONG_NAME2
+           "\x00\01\x00\x00");
+  tt_int_op(rh.length, ==, RELAY_PAYLOAD_SIZE);
+  r = resolved_cell_parse(&cell, &rh, addrs, &errcode);
+  tt_int_op(errcode, ==, 0);
+  tt_int_op(r, ==, 0);
+  tt_int_op(smartlist_len(addrs), ==, 2);
+  a = smartlist_get(addrs, 0);
+  tt_str_op(a->hostname, ==, LONG_NAME);
+  a = smartlist_get(addrs, 1);
+  tt_str_op(a->hostname, ==, LONG_NAME2);
+  CLEAR_ADDRS();
+
+  /* BAD CELLS */
+
+  /* Invalid length on an IPv4 */
+  SET_CELL("\x04\x03zzz1234");
+  r = resolved_cell_parse(&cell, &rh, addrs, &errcode);
+  tt_int_op(errcode, ==, 0);
+  tt_int_op(r, ==, -1);
+  tt_int_op(smartlist_len(addrs), ==, 0);
+  SET_CELL("\x04\x04" "\x7f\x00\x02\x0a" "\x00\00\x01\x00"
+           "\x04\x05zzzzz1234");
+  r = resolved_cell_parse(&cell, &rh, addrs, &errcode);
+  tt_int_op(errcode, ==, 0);
+  tt_int_op(r, ==, -1);
+  tt_int_op(smartlist_len(addrs), ==, 0);
+
+  /* Invalid length on an IPv6 */
+  SET_CELL("\x06\x03zzz1234");
+  r = resolved_cell_parse(&cell, &rh, addrs, &errcode);
+  tt_int_op(errcode, ==, 0);
+  tt_int_op(r, ==, -1);
+  tt_int_op(smartlist_len(addrs), ==, 0);
+  SET_CELL("\x04\x04" "\x7f\x00\x02\x0a" "\x00\00\x01\x00"
+           "\x06\x17wwwwwwwwwwwwwwwww1234");
+  r = resolved_cell_parse(&cell, &rh, addrs, &errcode);
+  tt_int_op(errcode, ==, 0);
+  tt_int_op(r, ==, -1);
+  tt_int_op(smartlist_len(addrs), ==, 0);
+  SET_CELL("\x04\x04" "\x7f\x00\x02\x0a" "\x00\00\x01\x00"
+           "\x06\x10xxxx");
+  r = resolved_cell_parse(&cell, &rh, addrs, &errcode);
+  tt_int_op(errcode, ==, 0);
+  tt_int_op(r, ==, -1);
+  tt_int_op(smartlist_len(addrs), ==, 0);
+
+  /* Empty hostname */
+  SET_CELL("\x00\x00xxxx");
+  r = resolved_cell_parse(&cell, &rh, addrs, &errcode);
+  tt_int_op(errcode, ==, 0);
+  tt_int_op(r, ==, -1);
+  tt_int_op(smartlist_len(addrs), ==, 0);
+
+  /* rh.length out of range */
+  CLEAR_CELL();
+  rh.length = 499;
+  r = resolved_cell_parse(&cell, &rh, addrs, &errcode);
+  tt_int_op(errcode, ==, 0);
+  tt_int_op(r, ==, -1);
+  tt_int_op(smartlist_len(addrs), ==, 0);
+
+  /* Item length extends beyond rh.length */
+  CLEAR_CELL();
+  SET_CELL("\x00\xff"
+           LONG_NAME
+           "\x00\01\x00\x00");
+  rh.length -= 1;
+  r = resolved_cell_parse(&cell, &rh, addrs, &errcode);
+  tt_int_op(r, ==, -1);
+  tt_int_op(smartlist_len(addrs), ==, 0);
+  rh.length -= 5;
+  r = resolved_cell_parse(&cell, &rh, addrs, &errcode);
+  tt_int_op(r, ==, -1);
+  tt_int_op(smartlist_len(addrs), ==, 0);
+
+  SET_CELL("\x04\x04" "\x7f\x00\x02\x0a" "\x00\00\x01\x00");
+  rh.length -= 1;
+  r = resolved_cell_parse(&cell, &rh, addrs, &errcode);
+  tt_int_op(r, ==, -1);
+  tt_int_op(smartlist_len(addrs), ==, 0);
+
+  SET_CELL("\xee\x10"
+           "\x20\x02\x90\x01\x00\x00\x00\x00"
+           "\x00\x00\x00\x00\x00\xfa\xca\xde"
+           "\x00\00\x00\x03");
+  rh.length -= 1;
+  r = resolved_cell_parse(&cell, &rh, addrs, &errcode);
+  tt_int_op(r, ==, -1);
+  tt_int_op(smartlist_len(addrs), ==, 0);
+
+  /* Truncated item after first character */
+  SET_CELL("\x04");
+  r = resolved_cell_parse(&cell, &rh, addrs, &errcode);
+  tt_int_op(r, ==, -1);
+  tt_int_op(smartlist_len(addrs), ==, 0);
+
+  SET_CELL("\xee");
+  r = resolved_cell_parse(&cell, &rh, addrs, &errcode);
+  tt_int_op(r, ==, -1);
+  tt_int_op(smartlist_len(addrs), ==, 0);
+
+ done:
+  CLEAR_ADDRS();
+  CLEAR_CELL();
+  smartlist_free(addrs);
+#undef CLEAR_ADDRS
+#undef CLEAR_CELL
+}
+
 #define TEST(name, flags)                                               \
   { #name, test_cfmt_ ## name, flags, 0, NULL }
 
@@ -883,6 +1223,7 @@ struct testcase_t cell_format_tests[] = {
   TEST(created_cells, 0),
   TEST(extend_cells, 0),
   TEST(extended_cells, 0),
+  TEST(resolved_cells, 0),
   END_OF_TESTCASES
 };
 
