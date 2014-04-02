@@ -1415,9 +1415,8 @@ http_set_address_origin(const char *headers, connection_t *conn)
     fwd = http_get_header(headers, "X-Forwarded-For: ");
   if (fwd) {
     tor_addr_t toraddr;
-    tor_addr_parse(&toraddr,fwd);
-
-    if (tor_addr_is_internal(&toraddr,0)) {
+    if (tor_addr_parse(&toraddr,fwd) == -1 ||
+        tor_addr_is_internal(&toraddr,0)) {
       log_debug(LD_DIR, "Ignoring local/internal IP %s", escaped(fwd));
       tor_free(fwd);
       return;
