@@ -2072,6 +2072,7 @@ resolve_my_address(int warn_severity, const or_options_t *options,
   int notice_severity = warn_severity <= LOG_NOTICE ?
                           LOG_NOTICE : warn_severity;
 
+  tor_addr_t myaddr;
   tor_assert(addr_out);
 
   /*
@@ -2122,24 +2123,26 @@ resolve_my_address(int warn_severity, const or_options_t *options,
              "local interface. Using that.", fmt_addr32(addr));
       strlcpy(hostname, "<guessed from interfaces>", sizeof(hostname));
     } else { /* resolved hostname into addr */
+      tor_addr_from_ipv4h(&myaddr, addr);
+
       if (!explicit_hostname &&
-          is_internal_IP(addr, 0)) {
-        uint32_t interface_ip;
+          tor_addr_is_internal(&myaddr, 0)) {
+        tor_addr_t interface_ip;
 
         log_fn(notice_severity, LD_CONFIG, "Guessed local hostname '%s' "
                "resolves to a private IP address (%s). Trying something "
                "else.", hostname, fmt_addr32(addr));
 
-        if (get_interface_address(warn_severity, &interface_ip)) {
+        if (get_interface_address6(warn_severity, AF_INET, &interface_ip)<0) {
           log_fn(warn_severity, LD_CONFIG,
                  "Could not get local interface IP address. Too bad.");
-        } else if (is_internal_IP(interface_ip, 0)) {
+        } else if (tor_addr_is_internal(&interface_ip, 0)) {
           log_fn(notice_severity, LD_CONFIG,
                  "Interface IP address '%s' is a private address too. "
-                 "Ignoring.", fmt_addr32(interface_ip));
+                 "Ignoring.", fmt_addr(&interface_ip));
         } else {
           from_interface = 1;
-          addr = interface_ip;
+          addr = tor_addr_to_ipv4h(&interface_ip);
           log_fn(notice_severity, LD_CONFIG,
                  "Learned IP address '%s' for local interface."
                  " Using that.", fmt_addr32(addr));
@@ -2157,8 +2160,10 @@ resolve_my_address(int warn_severity, const or_options_t *options,
    * out if it is and we don't want that.
    */
 
+  tor_addr_from_ipv4h(&myaddr,addr);
+
   addr_string = tor_dup_ip(addr);
-  if (is_internal_IP(addr, 0)) {
+  if (tor_addr_is_internal(&myaddr, 0)) {
     /* make sure we're ok with publishing an internal IP */
     if (!options->DirAuthorities && !options->AlternateDirAuthority) {
       /* if they are using the default authorities, disallow internal IPs
@@ -2264,7 +2269,7 @@ is_local_addr(const tor_addr_t *addr)
      * resolve_my_address will never be called at all).  In those cases,
      * last_resolved_addr will be 0, and so checking to see whether ip is on
      * the same /24 as last_resolved_addr will be the same as checking whether
-     * it was on net 0, which is already done by is_internal_IP.
+     * it was on net 0, which is already done by tor_addr_is_internal.
      */
     if ((last_resolved_addr & (uint32_t)0xffffff00ul)
         == (ip & (uint32_t)0xffffff00ul))

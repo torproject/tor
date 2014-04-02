@@ -1383,13 +1383,14 @@ http_set_address_origin(const char *headers, connection_t *conn)
   if (!fwd)
     fwd = http_get_header(headers, "X-Forwarded-For: ");
   if (fwd) {
-    struct in_addr in;
-    if (!tor_inet_aton(fwd, &in) || is_internal_IP(ntohl(in.s_addr), 0)) {
-      log_debug(LD_DIR, "Ignoring unrecognized or internal IP %s",
-                escaped(fwd));
+    tor_addr_t toraddr;
+    if (tor_addr_parse(&toraddr,fwd) == -1 ||
+        tor_addr_is_internal(&toraddr,0)) {
+      log_debug(LD_DIR, "Ignoring local/internal IP %s", escaped(fwd));
       tor_free(fwd);
       return;
     }
+
     tor_free(conn->address);
     conn->address = tor_strdup(fwd);
     tor_free(fwd);

@@ -402,7 +402,6 @@ test_addr_ip6_helpers(void)
   test_internal_ip("::ffff:169.254.0.0", 0);
   test_internal_ip("::ffff:169.254.255.255", 0);
   test_external_ip("::ffff:169.255.0.0", 0);
-  test_assert(is_internal_IP(0x7f000001, 0));
 
   /* tor_addr_compare(tor_addr_t x2) */
   test_addr_compare("ffff::", ==, "ffff::0");
