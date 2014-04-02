@@ -1,0 +1,5 @@
+  o Documentation:
+    - Correctly document that we search for a system torrc file before
+      looking in ~/.torrc. Fixes documentation side of 9213; bugfix
+      on 0.2.3.18-rc.
+
