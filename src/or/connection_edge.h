@@ -17,8 +17,9 @@
 #define connection_mark_unattached_ap(conn, endreason) \
   connection_mark_unattached_ap_((conn), (endreason), __LINE__, SHORT_FILE__)
 
-void connection_mark_unattached_ap_(entry_connection_t *conn, int endreason,
-                                    int line, const char *file);
+MOCK_DECL(void,connection_mark_unattached_ap_,
+          (entry_connection_t *conn, int endreason,
+           int line, const char *file));
 int connection_edge_reached_eof(edge_connection_t *conn);
 int connection_edge_process_inbuf(edge_connection_t *conn,
                                   int package_partial);
@@ -44,16 +45,17 @@ entry_connection_t  *connection_ap_make_link(connection_t *partner,
 void connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
                                          size_t replylen,
                                          int endreason);
-void connection_ap_handshake_socks_resolved(entry_connection_t *conn,
-                                            int answer_type,
-                                            size_t answer_len,
-                                            const uint8_t *answer,
-                                            int ttl,
-                                            time_t expires);
+MOCK_DECL(void,connection_ap_handshake_socks_resolved,
+          (entry_connection_t *conn,
+           int answer_type,
+           size_t answer_len,
+           const uint8_t *answer,
+           int ttl,
+           time_t expires));
 void connection_ap_handshake_socks_resolved_addr(entry_connection_t *conn,
-                                            const tor_addr_t *answer,
-                                            int ttl,
-                                            time_t expires);
+                                                 const tor_addr_t *answer,
+                                                 int ttl,
+                                                 time_t expires);
 
 int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
 int connection_exit_begin_resolve(cell_t *cell, or_circuit_t *circ);

@@ -92,10 +92,9 @@ typedef struct address_ttl_s {
 STATIC void address_ttl_free(address_ttl_t *addr);
 STATIC int resolved_cell_parse(const cell_t *cell, const relay_header_t *rh,
                                smartlist_t *addresses_out, int *errcode_out);
-STATIC void connection_ap_handshake_socks_got_resolve_cell(
-                                               entry_connection_t *conn,
-                                               int error_code,
-                                               smartlist_t *results);
+STATIC int connection_edge_process_resolved_cell(edge_connection_t *conn,
+                                                 const cell_t *cell,
+                                                 const relay_header_t *rh);
 STATIC packed_cell_t *packed_cell_new(void);
 STATIC packed_cell_t *cell_queue_pop(cell_queue_t *queue);
 STATIC size_t cell_queues_get_total_allocation(void);

@@ -1121,10 +1121,10 @@ resolved_cell_parse(const cell_t *cell, const relay_header_t *rh,
 /** Helper for connection_edge_process_resolved_cell: given an error code,
  * an entry_connection, and a list of address_ttl_t *, report the best answer
  * to the entry_connection. */
-STATIC void
-connection_ap_handshake_socks_got_resolve_cell(entry_connection_t *conn,
-                                               int error_code,
-                                               smartlist_t *results)
+static void
+connection_ap_handshake_socks_got_resolved_cell(entry_connection_t *conn,
+                                                int error_code,
+                                                smartlist_t *results)
 {
   address_ttl_t *addr_ipv4 = NULL;
   address_ttl_t *addr_ipv6 = NULL;
@@ -1195,7 +1195,7 @@ connection_ap_handshake_socks_got_resolve_cell(entry_connection_t *conn,
 
 /** Handle a RELAY_COMMAND_RESOLVED cell that we received on a non-open AP
  * stream. */
-static int
+STATIC int
 connection_edge_process_resolved_cell(edge_connection_t *conn,
                                       const cell_t *cell,
                                       const relay_header_t *rh)
@@ -1242,9 +1242,9 @@ connection_edge_process_resolved_cell(edge_connection_t *conn,
     }
   }
 
-  connection_ap_handshake_socks_got_resolve_cell(entry_conn,
-                                                 errcode,
-                                                 resolved_addresses);
+  connection_ap_handshake_socks_got_resolved_cell(entry_conn,
+                                                  errcode,
+                                                  resolved_addresses);
 
   connection_mark_unattached_ap(entry_conn,
                               END_STREAM_REASON_DONE |

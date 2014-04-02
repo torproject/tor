@@ -67,9 +67,9 @@ static int connection_ap_supports_optimistic_data(const entry_connection_t *);
  * a socks reply, send one now (based on endreason). Also set
  * has_sent_end to 1, and mark the conn.
  */
-void
-connection_mark_unattached_ap_(entry_connection_t *conn, int endreason,
-                               int line, const char *file)
+MOCK_IMPL(void,
+connection_mark_unattached_ap_,(entry_connection_t *conn, int endreason,
+                                int line, const char *file))
 {
   connection_t *base_conn = ENTRY_TO_CONN(conn);
   edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(conn);
@@ -2093,13 +2093,13 @@ connection_ap_handshake_socks_resolved_addr(entry_connection_t *conn,
  **/
 /* XXXX the use of the ttl and expires fields is nutty.  Let's make this
  * interface and those that use it less ugly. */
-void
-connection_ap_handshake_socks_resolved(entry_connection_t *conn,
+MOCK_IMPL(void,
+connection_ap_handshake_socks_resolved,(entry_connection_t *conn,
                                        int answer_type,
                                        size_t answer_len,
                                        const uint8_t *answer,
                                        int ttl,
-                                       time_t expires)
+                                       time_t expires))
 {
   char buf[384];
   size_t replylen;

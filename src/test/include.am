@@ -35,6 +35,7 @@ src_test_test_SOURCES = \
 	src/test/test_oom.c \
 	src/test/test_options.c \
 	src/test/test_pt.c \
+	src/test/test_relaycell.c \
 	src/test/test_replay.c \
 	src/test/test_routerkeys.c \
 	src/test/test_socks.c \
