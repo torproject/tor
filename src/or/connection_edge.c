@@ -1391,7 +1391,9 @@ get_pf_socket(void)
 }
 #endif
 
-static int 
+/** Try fill in the address of <b>req</b> from the socket configured
+ * with <b>conn</b>. */
+static int
 destination_from_socket(entry_connection_t *conn, socks_request_t *req)
 {
   struct sockaddr_storage orig_dst;
@@ -1505,7 +1507,6 @@ destination_from_pf(entry_connection_t *conn, socks_request_t *req)
 
   return 0;
 }
-
 
 /** Fetch the original destination address and port from a
  * system-specific interface and put them into a

@@ -1089,7 +1089,8 @@ options_act_reversible(const or_options_t *old_options, char **msg)
 
 #if defined(HAVE_NET_IF_H) && defined(HAVE_NET_PFVAR_H)
   /* Open /dev/pf before dropping privileges. */
-  if (options->TransPort_set && options->TransProxyType_parsed == TPT_DEFAULT) {
+  if (options->TransPort_set &&
+      options->TransProxyType_parsed == TPT_DEFAULT) {
     if (get_pf_socket() < 0) {
       *msg = tor_strdup("Unable to open /dev/pf for transparent proxy.");
       goto rollback;
