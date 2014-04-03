@@ -2555,8 +2555,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
     if (!strcasecmp(options->TransProxyType, "default")) {
       options->TransProxyType_parsed = TPT_DEFAULT;
     } else if (!strcasecmp(options->TransProxyType, "pf-divert")) {
-#ifdef __linux__
-      REJECT("pf is a BSD-specific feature.");
+#ifndef __OpenBSD__
+      REJECT("pf-divert is a OpenBSD-specific feature.");
 #else
       options->TransProxyType_parsed = TPT_PF_DIVERT;
 #endif
