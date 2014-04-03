@@ -1752,7 +1752,8 @@ is non-zero):
     it has recovered at least 10% of this memory.  Do not set this option too
     low, or your relay may be unreliable under load.  This option only
     affects some queues, so the actual process size will be larger than
-    this. (Default: 8GB)
+    this.  If this option is set to 0, Tor will try to pick a reasonable
+    default based on your system's physical memory.  (Default: 0)
 
 DIRECTORY SERVER OPTIONS
 ------------------------
