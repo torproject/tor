@@ -637,6 +637,8 @@ char *make_path_absolute(char *fname);
 
 char **get_environment(void);
 
+int get_total_system_memory(size_t *mem_out);
+
 int spawn_func(void (*func)(void *), void *data);
 void spawn_exit(void) ATTR_NORETURN;
 

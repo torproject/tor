@@ -38,6 +38,9 @@
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
+#ifdef HAVE_SYS_SYSCTL_H
+#include <sys/sysctl.h>
+#endif
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
@@ -3310,4 +3313,120 @@ format_win32_error(DWORD err)
   return result;
 }
 #endif
+
+#if defined(HW_PHYSMEM64)
+/* This appears to be an OpenBSD thing */
+#define INT64_HW_MEM HW_PHYSMEM64
+#elif defined(HW_MEMSIZE)
+/* OSX defines this one */
+#define INT64_HW_MEM HW_MEMSIZE
+#endif
+
+/**
+ * Helper: try to detect the total system memory, and return it. On failure,
+ * return 0.
+ */
+static uint64_t
+get_total_system_memory_impl(void)
+{
+#if defined(__linux__)
+  /* On linux, sysctl is deprecated. Because proc is so awesome that you
+   * shouldn't _want_ to write portable code, I guess? */
+  unsigned long long result=0;
+  int fd = -1;
+  char *s = NULL;
+  const char *cp;
+  size_t file_size=0;
+  if (-1 == (fd = tor_open_cloexec("/proc/meminfo",O_RDONLY,0)))
+    return 0;
+  s = read_file_to_str_until_eof(fd, 65536, &file_size);
+  if (!s)
+    goto err;
+  cp = strstr(s, "MemTotal:");
+  if (!cp)
+    goto err;
+  /* Use the system sscanf so that space will match a wider number of space */
+  if (sscanf(cp, "MemTotal: %llu kB\n", &result) != 1)
+    goto err;
+
+  close(fd);
+  tor_free(s);
+  return result * 1024;
+
+ err:
+  tor_free(s);
+  close(fd);
+  return 0;
+#elif defined (_WIN32)
+  /* Windows has MEMORYSTATUSEX; pretty straightforward. */
+  MEMORYSTATUSEX ms;
+  memset(&ms, 0, sizeof(ms));
+  ms.dwLength = sizeof(ms);
+  if (! GlobalMemoryStatusEx(&ms))
+    return 0;
+
+  return ms.ullTotalPhys;
+
+#elif defined(HAVE_SYSCTL) && defined(INT64_HW_MEM)
+  /* On many systems, HW_PYHSMEM is clipped to 32 bits; let's use a better
+   * variant if we know about it. */
+  uint64_t memsize = 0;
+  size_t len = sizeof(memsize);
+  int mib[2] = {CTL_HW, INT64_HW_MEM};
+  if (sysctl(mib,2,&memsize,&len,NULL,0))
+    return 0;
+
+  return memsize;
+
+#elif defined(HAVE_SYSCTL) && defined(HW_PHYSMEM)
+  /* On some systems (like FreeBSD I hope) you can use a size_t with
+   * HW_PHYSMEM. */
+  size_t memsize=0;
+  size_t len = sizeof(memsize);
+  int mib[2] = {CTL_HW, HW_USERMEM};
+  if (sysctl(mib,2,&memsize,&len,NULL,0))
+    return -1;
+
+  return memsize;
+
+#else
+  /* I have no clue. */
+  return 0;
+#endif
+}
+
+/**
+ * Try to find out how much physical memory the system has. On success,
+ * return 0 and set *<b>mem_out</b> to that value. On failure, return -1.
+ */
+int
+get_total_system_memory(size_t *mem_out)
+{
+  static size_t mem_cached=0;
+  uint64_t m = get_total_system_memory_impl();
+  if (0 == m) {
+    /* We couldn't find our memory total */
+    if (0 == mem_cached) {
+      /* We have no cached value either */
+      *mem_out = 0;
+      return -1;
+    }
+
+    *mem_out = mem_cached;
+    return 0;
+  }
+
+#if SIZE_T_MAX != UINT64_MAX
+  if (m > SIZE_T_MAX) {
+    /* I think this could happen if we're a 32-bit Tor running on a 64-bit
+     * system: we could have more system memory than would fit in a
+     * size_t. */
+    m = SIZE_T_MAX;
+  }
+#endif
+
+  *mem_out = mem_cached = (size_t) m;
+
+  return -1;
+}
 

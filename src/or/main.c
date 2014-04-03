@@ -2751,6 +2751,7 @@ sandbox_init_filter(void)
       "/dev/srandom", 0,
       "/dev/urandom", 0,
       "/dev/random", 0,
+      "/proc/meminfo", 0,
       NULL, 0
   );
 

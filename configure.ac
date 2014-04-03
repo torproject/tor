@@ -353,6 +353,7 @@ AC_CHECK_FUNCS(
         strtok_r \
         strtoull \
         sysconf \
+	sysctl \
         uname \
         vasprintf \
 	_vscprintf
@@ -877,6 +878,7 @@ AC_CHECK_HEADERS(
         sys/prctl.h \
         sys/resource.h \
         sys/socket.h \
+	sys/sysctl.h \
         sys/syslimits.h \
         sys/time.h \
         sys/types.h \
