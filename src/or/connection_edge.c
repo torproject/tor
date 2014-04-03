@@ -1391,6 +1391,7 @@ get_pf_socket(void)
 }
 #endif
 
+#if defined(TRANS_NETFILTER) || defined(TRANS_PF)
 /** Try fill in the address of <b>req</b> from the socket configured
  * with <b>conn</b>. */
 static int
@@ -1426,7 +1427,9 @@ destination_from_socket(entry_connection_t *conn, socks_request_t *req)
 
   return 0;
 }
+#endif
 
+#ifdef TRANS_PF
 static int
 destination_from_pf(entry_connection_t *conn, socks_request_t *req)
 {
@@ -1507,6 +1510,7 @@ destination_from_pf(entry_connection_t *conn, socks_request_t *req)
 
   return 0;
 }
+#endif
 
 /** Fetch the original destination address and port from a
  * system-specific interface and put them into a
