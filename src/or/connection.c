@@ -965,6 +965,7 @@ make_socket_reuseable(tor_socket_t sock)
 {
 #ifdef _WIN32
   (void) sock;
+  return 0;
 #else
   int one=1;
 
