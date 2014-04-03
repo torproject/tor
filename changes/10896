@@ -1,0 +1,8 @@
+  o Minor features:
+    - Support OpenBSD's divert-to rules with the pf firewall, when
+      "TransProxyType pf-divert" is specified. This allows Tor to run a
+      TransPort transparent proxy port on OpenBSD 4.4 or later without
+      root privileges. See the pf.conf(5) manual page for information on
+      configuring pf to use divert-to rules. Closes ticket 10896; patch
+      from Dana Koch.
+
