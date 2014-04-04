@@ -1233,6 +1233,11 @@ circuit_set_rend_token(or_circuit_t *circ, int is_rend_circ,
   if (circ->rendinfo)
     circuit_clear_rend_token(circ);
 
+  if (token == NULL) {
+    /* We were only trying to remove this token, not set a new one. */
+    return;
+  }
+
   found_circ = digestmap_get(map, (const char *)token);
   if (found_circ) {
     tor_assert(found_circ != circ);
