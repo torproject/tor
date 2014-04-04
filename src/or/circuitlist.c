@@ -1343,8 +1343,14 @@ circuit_set_rend_token(or_circuit_t *circ, int is_rend_circ,
   if (found_circ) {
     tor_assert(found_circ != circ);
     circuit_clear_rend_token(found_circ);
-    if (! found_circ->base_.marked_for_close)
+    if (! found_circ->base_.marked_for_close) {
       circuit_mark_for_close(TO_CIRCUIT(found_circ), END_CIRC_REASON_FINISHED);
+      if (is_rend_circ) {
+        log_fn(LOG_PROTOCOL_WARN, LD_REND,
+               "Duplicate rendezvous cookie (%s...) used on two circuits",
+               hex_str((const char*)token, 4)); /* only log first 4 chars */
+      }
+    }
   }
 
   /* Now set up the rendinfo */
