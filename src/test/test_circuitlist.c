@@ -238,6 +238,11 @@ test_rend_token_maps(void *arg)
   tt_ptr_op(c4->rendinfo, !=, NULL);
   test_mem_op(c4->rendinfo, ==, tok3, REND_TOKEN_LEN);
 
+  /* Now clear c4's cookie. */
+  circuit_set_intro_point_digest(c4, NULL);
+  tt_ptr_op(c4->rendinfo, ==, NULL);
+  tt_ptr_op(NULL, ==, circuit_get_intro_point(tok3));
+
  done:
   circuit_free(TO_CIRCUIT(c1));
   circuit_free(TO_CIRCUIT(c2));
