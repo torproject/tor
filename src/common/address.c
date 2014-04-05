@@ -1451,12 +1451,16 @@ get_interface_address6(int severity, sa_family_t family, tor_addr_t *addr)
  * to the port.
  *
  * Don't do DNS lookups and don't allow domain names in the "ip" field.
- * Don't accept <b>addrport</b> of the form "ip" or "ip:0".
+ *
+ * If <b>default_port</b> is less than 0, don't accept <b>addrport</b> of the
+ * form "ip" or "ip:0".  Otherwise, accept those forms, and set
+ * *<b>port_out</b> to <b>default_port</b>.
  *
  * Return 0 on success, -1 on failure. */
 int
 tor_addr_port_parse(int severity, const char *addrport,
-                    tor_addr_t *address_out, uint16_t *port_out)
+                    tor_addr_t *address_out, uint16_t *port_out,
+                    int default_port)
 {
   int retval = -1;
   int r;
@@ -1470,8 +1474,12 @@ tor_addr_port_parse(int severity, const char *addrport,
   if (r < 0)
     goto done;
 
-  if (!*port_out)
-    goto done;
+  if (!*port_out) {
+    if (default_port >= 0)
+      *port_out = default_port;
+    else
+      goto done;
+  }
 
   /* make sure that address_out is an IP address */
   if (tor_addr_parse(address_out, addr_tmp) < 0)
@@ -1492,9 +1500,18 @@ int
 tor_addr_port_split(int severity, const char *addrport,
                     char **address_out, uint16_t *port_out)
 {
+  tor_addr_t a_tmp;
   tor_assert(addrport);
   tor_assert(address_out);
   tor_assert(port_out);
+  /* We need to check for IPv6 manually because addr_port_lookup() doesn't
+   * do a good job on IPv6 addresses that lack a port. */
+  if (tor_addr_parse(&a_tmp, addrport) == AF_INET6) {
+    *port_out = 0;
+    *address_out = tor_strdup(addrport);
+    return 0;
+  }
+
   return addr_port_lookup(severity, addrport, address_out, NULL, port_out);
 }
 

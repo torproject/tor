@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Stop accepting bridge lines containing hostnames. Doing so allowed
+      clients to perform DNS requests on the hostnames, which was not
+      sensible behavior. Fixes bug 10801; bugfix on 0.2.0.1-alpha.

@@ -210,7 +210,8 @@ int tor_addr_port_split(int severity, const char *addrport,
                         char **address_out, uint16_t *port_out);
 
 int tor_addr_port_parse(int severity, const char *addrport,
-                        tor_addr_t *address_out, uint16_t *port_out);
+                        tor_addr_t *address_out, uint16_t *port_out,
+                        int default_port);
 
 int tor_addr_hostname_is_local(const char *name);
 

@@ -4535,17 +4535,10 @@ parse_bridge_line(const char *line)
     addrport = field;
   }
 
-  /* Parse addrport. */
-  if (tor_addr_port_lookup(addrport,
-                           &bridge_line->addr, &bridge_line->port)<0) {
+  if (tor_addr_port_parse(LOG_INFO, addrport,
+                          &bridge_line->addr, &bridge_line->port, 443)<0) {
     log_warn(LD_CONFIG, "Error parsing Bridge address '%s'", addrport);
     goto err;
-  }
-  if (!bridge_line->port) {
-    log_info(LD_CONFIG,
-             "Bridge address '%s' has no port; using default port 443.",
-             addrport);
-    bridge_line->port = 443;
   }
 
   /* If transports are enabled, next field could be a fingerprint or a
@@ -4797,7 +4790,7 @@ get_bindaddr_from_transport_listen_line(const char *line,const char *transport)
     goto err;
 
   /* Validate addrport */
-  if (tor_addr_port_parse(LOG_WARN, addrport, &addr, &port)<0) {
+  if (tor_addr_port_parse(LOG_WARN, addrport, &addr, &port, -1)<0) {
     log_warn(LD_CONFIG, "Error parsing ServerTransportListenAddr "
              "address '%s'", addrport);
     goto err;
