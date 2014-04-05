@@ -1243,8 +1243,10 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
     {
       char *orport_tmp =
         get_first_listener_addrport_string(CONN_TYPE_OR_LISTENER);
-      smartlist_add_asprintf(envs, "TOR_PT_ORPORT=%s", orport_tmp);
-      tor_free(orport_tmp);
+      if (orport_tmp) {
+        smartlist_add_asprintf(envs, "TOR_PT_ORPORT=%s", orport_tmp);
+        tor_free(orport_tmp);
+      }
     }
 
     {
@@ -1275,8 +1277,10 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
         get_first_listener_addrport_string(CONN_TYPE_EXT_OR_LISTENER);
       char *cookie_file_loc = get_ext_or_auth_cookie_file_name();
 
-      smartlist_add_asprintf(envs, "TOR_PT_EXTENDED_SERVER_PORT=%s",
-                             ext_or_addrport_tmp);
+      if (ext_or_addrport_tmp) {
+        smartlist_add_asprintf(envs, "TOR_PT_EXTENDED_SERVER_PORT=%s",
+                               ext_or_addrport_tmp);
+      }
       smartlist_add_asprintf(envs, "TOR_PT_AUTH_COOKIE_FILE=%s",
                              cookie_file_loc);
 
