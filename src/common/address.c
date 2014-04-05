@@ -1488,9 +1488,18 @@ int
 tor_addr_port_split(int severity, const char *addrport,
                     char **address_out, uint16_t *port_out)
 {
+  tor_addr_t a_tmp;
   tor_assert(addrport);
   tor_assert(address_out);
   tor_assert(port_out);
+  /* We need to check for IPv6 manually because addr_port_lookup() doesn't
+   * do a good job on IPv6 addresses that lack a port. */
+  if (tor_addr_parse(&a_tmp, addrport) == AF_INET6) {
+    *port_out = 0;
+    *address_out = tor_strdup(addrport);
+    return 0;
+  }
+
   return addr_port_lookup(severity, addrport, address_out, NULL, port_out);
 }
 
