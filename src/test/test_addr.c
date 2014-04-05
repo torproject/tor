@@ -785,6 +785,14 @@ test_addr_parse(void)
                          &addr, &port, -1);
   test_assert(r == -1);
 
+  /* Make sure that the default port has lower priority than the real
+     one */
+  r= tor_addr_port_parse(LOG_DEBUG,
+                         "192.0.2.2:1337",
+                         &addr, &port, 200);
+  test_assert(r == 0);
+  tt_int_op(port,==,1337);
+
  done:
   ;
 }
