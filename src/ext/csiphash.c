@@ -46,6 +46,10 @@
 #elif defined(__APPLE__)
 #  include <libkern/OSByteOrder.h>
 #  define _le64toh(x) OSSwapLittleToHostInt64(x)
+#elif defined(sun) || defined(__sun)
+#  include <sys/byteorder.h>
+#  define _le64toh(x) LE_64(x)
+
 #else
 
 /* See: http://sourceforge.net/p/predef/wiki/Endianness/ */
