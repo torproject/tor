@@ -1198,7 +1198,8 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
 
       control_event_bootstrap_problem(
                                 "Can't connect to bridge",
-                                END_OR_CONN_REASON_NO_ROUTE);
+                                END_OR_CONN_REASON_NO_ROUTE,
+                                conn);
 
     } else {
       log_warn(LD_GENERAL, "Tried to connect to '%s' through a proxy, but "
