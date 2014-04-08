@@ -1633,7 +1633,6 @@ extern struct testcase_t socks_tests[];
 extern struct testcase_t extorport_tests[];
 extern struct testcase_t controller_event_tests[];
 extern struct testcase_t logging_tests[];
-extern struct testcase_t backtrace_tests[];
 extern struct testcase_t hs_tests[];
 extern struct testcase_t nodelist_tests[];
 extern struct testcase_t routerkeys_tests[];
