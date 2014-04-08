@@ -3174,20 +3174,8 @@ typedef struct or_circuit_t {
    * is not marked for close. */
   struct or_circuit_t *rend_splice;
 
-#if REND_COOKIE_LEN >= DIGEST_LEN
-#define REND_TOKEN_LEN REND_COOKIE_LEN
-#else
-#define REND_TOKEN_LEN DIGEST_LEN
-#endif
+  struct or_circuit_rendinfo_s *rendinfo;
 
-  /** A hash of location-hidden service's PK if purpose is INTRO_POINT, or a
-   * rendezvous cookie if purpose is REND_POINT_WAITING. Filled with zeroes
-   * otherwise.
-   * ???? move to a subtype or adjunct structure? Wastes 20 bytes. -NM
-   */
-  char rend_token[REND_TOKEN_LEN];
-
-  /* ???? move to a subtype or adjunct structure? Wastes 20 bytes -NM */
   /** Stores KH for the handshake. */
   char rend_circ_nonce[DIGEST_LEN];/* KH in tor-spec.txt */
 
@@ -3213,6 +3201,25 @@ typedef struct or_circuit_t {
    */
   uint32_t max_middle_cells;
 } or_circuit_t;
+
+typedef struct or_circuit_rendinfo_s {
+
+#if REND_COOKIE_LEN != DIGEST_LEN
+#error "The REND_TOKEN_LEN macro assumes REND_COOKIE_LEN == DIGEST_LEN"
+#endif
+#define REND_TOKEN_LEN DIGEST_LEN
+
+  /** A hash of location-hidden service's PK if purpose is INTRO_POINT, or a
+   * rendezvous cookie if purpose is REND_POINT_WAITING. Filled with zeroes
+   * otherwise.
+   */
+  char rend_token[REND_TOKEN_LEN];
+
+  /** True if this is a rendezvous point circuit; false if this is an
+   * introduction point. */
+  unsigned is_rend_circ;
+
+} or_circuit_rendinfo_t;
 
 /** Convert a circuit subtype to a circuit_t. */
 #define TO_CIRCUIT(x)  (&((x)->base_))

@@ -94,7 +94,7 @@ rend_mid_establish_intro(or_circuit_t *circ, const uint8_t *request,
 
   /* Close any other intro circuits with the same pk. */
   c = NULL;
-  while ((c = circuit_get_intro_point(pk_digest))) {
+  while ((c = circuit_get_intro_point((const uint8_t *)pk_digest))) {
     log_info(LD_REND, "Replacing old circuit for service %s",
              safe_str(serviceid));
     circuit_mark_for_close(TO_CIRCUIT(c), END_CIRC_REASON_FINISHED);
@@ -111,7 +111,7 @@ rend_mid_establish_intro(or_circuit_t *circ, const uint8_t *request,
 
   /* Now, set up this circuit. */
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_INTRO_POINT);
-  memcpy(circ->rend_token, pk_digest, DIGEST_LEN);
+  circuit_set_intro_point_digest(circ, (uint8_t *)pk_digest);
 
   log_info(LD_REND,
            "Established introduction point on circuit %u for service %s",
@@ -165,7 +165,7 @@ rend_mid_introduce(or_circuit_t *circ, const uint8_t *request,
                 (char*)request, REND_SERVICE_ID_LEN);
 
   /* The first 20 bytes are all we look at: they have a hash of Bob's PK. */
-  intro_circ = circuit_get_intro_point((char*)request);
+  intro_circ = circuit_get_intro_point((const uint8_t*)request);
   if (!intro_circ) {
     log_info(LD_REND,
              "No intro circ found for INTRODUCE1 cell (%s) from circuit %u; "
@@ -236,7 +236,7 @@ rend_mid_establish_rendezvous(or_circuit_t *circ, const uint8_t *request,
     goto err;
   }
 
-  if (circuit_get_rendezvous((char*)request)) {
+  if (circuit_get_rendezvous(request)) {
     log_warn(LD_PROTOCOL,
              "Duplicate rendezvous cookie in ESTABLISH_RENDEZVOUS.");
     goto err;
@@ -252,7 +252,7 @@ rend_mid_establish_rendezvous(or_circuit_t *circ, const uint8_t *request,
   }
 
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_REND_POINT_WAITING);
-  memcpy(circ->rend_token, request, REND_COOKIE_LEN);
+  circuit_set_rendezvous_cookie(circ, request);
 
   base16_encode(hexid,9,(char*)request,4);
 
@@ -300,7 +300,7 @@ rend_mid_rendezvous(or_circuit_t *circ, const uint8_t *request,
            "Got request for rendezvous from circuit %u to cookie %s.",
            (unsigned)circ->p_circ_id, hexid);
 
-  rend_circ = circuit_get_rendezvous((char*)request);
+  rend_circ = circuit_get_rendezvous(request);
   if (!rend_circ) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
          "Rejecting RENDEZVOUS1 cell with unrecognized rendezvous cookie %s.",
@@ -328,7 +328,7 @@ rend_mid_rendezvous(or_circuit_t *circ, const uint8_t *request,
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_REND_ESTABLISHED);
   circuit_change_purpose(TO_CIRCUIT(rend_circ),
                          CIRCUIT_PURPOSE_REND_ESTABLISHED);
-  memset(circ->rend_token, 0, REND_COOKIE_LEN);
+  circuit_set_rendezvous_cookie(circ, NULL);
 
   rend_circ->rend_splice = circ;
   circ->rend_splice = rend_circ;
