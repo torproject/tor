@@ -231,6 +231,8 @@ orconn_end_reason_to_control_string(int r)
       return "RESOURCELIMIT";
     case END_OR_CONN_REASON_MISC:
       return "MISC";
+    case END_OR_CONN_REASON_PT_MISSING:
+      return "PT_MISSING";
     case 0:
       return "";
     default:
