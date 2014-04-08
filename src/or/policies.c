@@ -13,6 +13,7 @@
 #include "dirserv.h"
 #include "nodelist.h"
 #include "policies.h"
+#include "router.h"
 #include "routerparse.h"
 #include "geoip.h"
 #include "ht.h"
@@ -1692,6 +1693,28 @@ getinfo_helper_policies(control_connection_t *conn,
   (void) errmsg;
   if (!strcmp(question, "exit-policy/default")) {
     *answer = tor_strdup(DEFAULT_EXIT_POLICY);
+  } else if (!strcmpstart(question, "exit-policy/")) {
+    const routerinfo_t *me = router_get_my_routerinfo();
+
+    int include_ipv4 = 0;
+    int include_ipv6 = 0;
+
+    if (!strcmp(question, "exit-policy/ipv4")) {
+      include_ipv4 = 1;
+    } else if (!strcmp(question, "exit-policy/ipv6")) {
+      include_ipv6 = 1;
+    } else if (!strcmp(question, "exit-policy/full")) {
+      include_ipv4 = include_ipv6 = 1;
+    } else {
+      return 0; /* No such key. */
+    }
+
+    if (!me) {
+      *errmsg = "router_get_my_routerinfo returned NULL";
+      return -1;
+    }
+
+    *answer = router_dump_exit_policy_to_string(me,include_ipv4,include_ipv6);
   }
   return 0;
 }
