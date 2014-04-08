@@ -51,35 +51,37 @@
  * logic, because of race conditions that can cause dangling
  * pointers. ]
  *
- * <b>In even more detail, this is what happens when a SIGHUP
- * occurs:</b>
+ * <b>In even more detail, this is what happens when a config read
+ * (like a SIGHUP or a SETCONF) occurs:</b>
  *
  * We immediately destroy all unconfigured proxies (We shouldn't have
- * unconfigured proxies in the first place, except when SIGHUP rings
- * immediately after tor is launched.).
+ * unconfigured proxies in the first place, except when the config
+ * read happens immediately after tor is launched.).
  *
  * We mark all managed proxies and transports to signify that they
  * must be removed if they don't contribute by the new torrc
  * (we mark using the <b>marked_for_removal</b> element).
  * We also mark all managed proxies to signify that they might need to
  * be restarted so that they end up supporting all the transports the
- * new torrc wants them to support (using the <b>got_hup</b> element).
+ * new torrc wants them to support
+ * (we mark using the <b>was_around_before_config_read</b> element).
  * We also clear their <b>transports_to_launch</b> list so that we can
  * put there the transports we need to launch according to the new
  * torrc.
  *
  * We then start parsing torrc again.
  *
- * Everytime we encounter a transport line using a known pre-SIGHUP
- * managed proxy, we cleanse that proxy from the removal mark.
- * We also mark it as unconfigured so that on the next scheduled
- * events tick, we investigate whether we need to restart the proxy
- * so that it also spawns the new transports.
- * If the post-SIGHUP <b>transports_to_launch</b> list is identical to
- * the pre-SIGHUP one, it means that no changes were introduced to
- * this proxy during the SIGHUP and no restart has to take place.
+ * Everytime we encounter a transport line using a managed proxy that
+ * was around before the config read, we cleanse that proxy from the
+ * removal mark.  We also toggle the <b>check_if_restarts_needed</b>
+ * flag, so that on the next <b>pt_configure_remaining_proxies</b>
+ * tick, we investigate whether we need to restart the proxy so that
+ * it also spawns the new transports.  If the post-config-read
+ * <b>transports_to_launch</b> list is identical to the pre-config-read
+ * one, it means that no changes were introduced to this proxy during
+ * the config read and no restart has to take place.
  *
- * During the post-SIGHUP torrc parsing, we unmark all transports
+ * During the post-config-read torrc parsing, we unmark all transports
  * spawned by managed proxies that we find in our torrc.
  * We do that so that if we don't need to restart a managed proxy, we
  * can continue using its old transports normally.
@@ -1375,6 +1377,9 @@ pt_kickstart_proxy(const smartlist_t *transport_list,
         check_if_restarts_needed = 1;
       }
 
+      /* For each new transport, check if the managed proxy used to
+         support it before the SIGHUP. If that was the case, make sure
+         it doesn't get removed because we might reuse it. */
       SMARTLIST_FOREACH_BEGIN(transport_list, const char *, transport) {
         old_transport = transport_get_by_name(transport);
         if (old_transport)
