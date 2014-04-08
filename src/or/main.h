@@ -50,6 +50,7 @@ void directory_info_has_arrived(time_t now, int from_cache);
 
 void ip_address_changed(int at_interface);
 void dns_servers_relaunch_checks(void);
+void reschedule_descriptor_update_check(void);
 
 long get_uptime(void);
 unsigned get_signewnym_epoch(void);

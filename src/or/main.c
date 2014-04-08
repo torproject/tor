@@ -1162,6 +1162,18 @@ get_signewnym_epoch(void)
   return newnym_epoch;
 }
 
+static time_t time_to_check_descriptor = 0;
+/**
+ * Update our schedule so that we'll check whether we need to update our
+ * descriptor immediately, rather than after up to CHECK_DESCRIPTOR_INTERVAL
+ * seconds.
+ */
+void
+reschedule_descriptor_update_check(void)
+{
+  time_to_check_descriptor = 0;
+}
+
 /** Perform regular maintenance tasks.  This function gets run once per
  * second by second_elapsed_callback().
  */
@@ -1171,7 +1183,6 @@ run_scheduled_events(time_t now)
   static time_t last_rotated_x509_certificate = 0;
   static time_t time_to_check_v3_certificate = 0;
   static time_t time_to_check_listeners = 0;
-  static time_t time_to_check_descriptor = 0;
   static time_t time_to_download_networkstatus = 0;
   static time_t time_to_shrink_memory = 0;
   static time_t time_to_try_getting_descriptors = 0;

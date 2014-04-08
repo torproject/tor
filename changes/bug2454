@@ -1,0 +1,6 @@
+  o Enhancement:
+    - If a circuit timed out for at least 3 minutes check if we have a new
+      external IP address the next time we run our routine checks. If our
+      IP address has changed, then publish a new descriptor with the new
+      IP address. Resolves ticket 2454.
+

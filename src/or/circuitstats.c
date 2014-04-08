@@ -12,6 +12,7 @@
 #include "config.h"
 #include "confparse.h"
 #include "control.h"
+#include "main.h"
 #include "networkstatus.h"
 #include "statefile.h"
 
@@ -1185,6 +1186,12 @@ circuit_build_times_needs_circuits_now(const circuit_build_times_t *cbt)
 }
 
 /**
+ * How long should we be unreachable before we think we need to check if
+ * our published IP address has changed.
+ */
+#define CIRCUIT_TIMEOUT_BEFORE_RECHECK_IP (60*3)
+
+/**
  * Called to indicate that the network showed some signs of liveness,
  * i.e. we received a cell.
  *
@@ -1199,12 +1206,15 @@ circuit_build_times_network_is_live(circuit_build_times_t *cbt)
 {
   time_t now = approx_time();
   if (cbt->liveness.nonlive_timeouts > 0) {
+    time_t time_since_live = now - cbt->liveness.network_last_live;
     log_notice(LD_CIRC,
                "Tor now sees network activity. Restoring circuit build "
                "timeout recording. Network was down for %d seconds "
                "during %d circuit attempts.",
-               (int)(now - cbt->liveness.network_last_live),
+               (int)time_since_live,
                cbt->liveness.nonlive_timeouts);
+    if (time_since_live > CIRCUIT_TIMEOUT_BEFORE_RECHECK_IP)
+      reschedule_descriptor_update_check();
   }
   cbt->liveness.network_last_live = now;
   cbt->liveness.nonlive_timeouts = 0;
