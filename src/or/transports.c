@@ -554,11 +554,12 @@ pt_configure_remaining_proxies(void)
     tor_assert(mp->conf_state != PT_PROTO_BROKEN &&
                mp->conf_state != PT_PROTO_FAILED_LAUNCH);
 
-    if (mp->got_hup) {
-      mp->got_hup = 0;
+    if (mp->was_around_before_config_read) {
+      /* This proxy is marked by a config read. Check whether we need
+         to restart it. */
 
-      /* This proxy is marked by a SIGHUP. Check whether we need to
-         restart it. */
+      mp->was_around_before_config_read = 0;
+
       if (proxy_needs_restart(mp)) {
         log_info(LD_GENERAL, "Preparing managed proxy '%s' for restart.",
                  mp->argv[0]);
@@ -1363,14 +1364,12 @@ pt_kickstart_proxy(const smartlist_t *transport_list,
     managed_proxy_create(transport_list, proxy_argv, is_server);
 
   } else { /* known proxy. add its transport to its transport list */
-    if (mp->got_hup) {
-      /* If the managed proxy we found is marked by a SIGHUP, it means
-         that it's not useless and should be kept. If it's marked for
-         removal, unmark it and increase the unconfigured proxies so
-         that we try to restart it if we need to. Afterwards, check if
-         a transport_t for 'transport' used to exist before the SIGHUP
-         and make sure it doesn't get deleted because we might reuse
-         it. */
+    if (mp->was_around_before_config_read) {
+      /* If this managed proxy was around even before we read the
+         config this time, it means that it was already enabled before
+         and is not useless and should be kept. If it's marked for
+         removal, unmark it and make sure that we check whether it
+         needs to be restarted. */
       if (mp->marked_for_removal) {
         mp->marked_for_removal = 0;
         check_if_restarts_needed = 1;
@@ -1424,8 +1423,10 @@ pt_prepare_proxy_list_for_config_read(void)
 
     tor_assert(mp->conf_state == PT_PROTO_COMPLETED);
 
+    /* Mark all proxies for removal, and also note that they have been
+       here before the config read. */
     mp->marked_for_removal = 1;
-    mp->got_hup = 1;
+    mp->was_around_before_config_read = 1;
     SMARTLIST_FOREACH(mp->transports_to_launch, char *, t, tor_free(t));
     smartlist_clear(mp->transports_to_launch);
   } SMARTLIST_FOREACH_END(mp);
