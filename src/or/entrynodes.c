@@ -1013,7 +1013,7 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
   const int num_needed = decide_num_guards(options, for_directory);
 
   if (n_options_out)
-    n_options_out = 0;
+    *n_options_out = 0;
 
   if (chosen_exit) {
     nodelist_add_node_and_family(exit_family, chosen_exit);
@@ -2215,8 +2215,8 @@ any_bridge_descriptors_known(void)
   return choose_random_entry(NULL) != NULL;
 }
 
-/** Return the number of bridges that have descriptors that
- * are marked with purpose 'bridge' and are running.
+/** Return the number of bridges that have descriptors that are marked with
+ * purpose 'bridge' and are running.
  */
 static int
 num_bridges_usable(void)
@@ -2224,7 +2224,7 @@ num_bridges_usable(void)
   int n_options = 0;
   tor_assert(get_options()->UseBridges);
   (void) choose_random_entry_impl(NULL, 0, 0, &n_options);
-  return n_options == 1;
+  return n_options;
 }
 
 /** Return 1 if there are any directory conns fetching bridge descriptors
