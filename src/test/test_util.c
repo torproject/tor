@@ -1189,19 +1189,19 @@ test_util_strmisc(void)
   }
 
   /* Test str-foo functions */
-  cp = tor_strdup("abcdef");
-  test_assert(tor_strisnonupper(cp));
-  cp[3] = 'D';
-  test_assert(!tor_strisnonupper(cp));
-  tor_strupper(cp);
-  test_streq(cp, "ABCDEF");
-  tor_strlower(cp);
-  test_streq(cp, "abcdef");
-  test_assert(tor_strisnonupper(cp));
-  test_assert(tor_strisprint(cp));
-  cp[3] = 3;
-  test_assert(!tor_strisprint(cp));
-  tor_free(cp);
+  cp_tmp = tor_strdup("abcdef");
+  test_assert(tor_strisnonupper(cp_tmp));
+  cp_tmp[3] = 'D';
+  test_assert(!tor_strisnonupper(cp_tmp));
+  tor_strupper(cp_tmp);
+  test_streq(cp_tmp, "ABCDEF");
+  tor_strlower(cp_tmp);
+  test_streq(cp_tmp, "abcdef");
+  test_assert(tor_strisnonupper(cp_tmp));
+  test_assert(tor_strisprint(cp_tmp));
+  cp_tmp[3] = 3;
+  test_assert(!tor_strisprint(cp_tmp));
+  tor_free(cp_tmp);
 
   /* Test memmem and memstr */
   {
@@ -2325,6 +2325,8 @@ test_util_listdir(void *ptr)
  done:
   tor_free(fname1);
   tor_free(fname2);
+  tor_free(fname3);
+  tor_free(dir1);
   tor_free(dirname);
   if (dir_contents) {
     SMARTLIST_FOREACH(dir_contents, char *, cp, tor_free(cp));

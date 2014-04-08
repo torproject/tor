@@ -73,7 +73,7 @@ test_addr_basic(void)
   }
 
  done:
-  ;
+  tor_free(cp);
 }
 
 #define test_op_ip6_(a,op,b,e1,e2)                               \

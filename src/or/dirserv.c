@@ -2578,14 +2578,6 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   tor_assert(private_key);
   tor_assert(cert);
 
-  if (resolve_my_address(LOG_WARN, options, &addr, NULL, &hostname)<0) {
-    log_warn(LD_NET, "Couldn't resolve my hostname");
-    return NULL;
-  }
-  if (!hostname || !strchr(hostname, '.')) {
-    tor_free(hostname);
-    hostname = tor_dup_ip(addr);
-  }
   if (crypto_pk_get_digest(private_key, signing_key_digest)<0) {
     log_err(LD_BUG, "Error computing signing key digest");
     return NULL;
@@ -2593,6 +2585,14 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   if (crypto_pk_get_digest(cert->identity_key, identity_digest)<0) {
     log_err(LD_BUG, "Error computing identity key digest");
     return NULL;
+  }
+  if (resolve_my_address(LOG_WARN, options, &addr, NULL, &hostname)<0) {
+    log_warn(LD_NET, "Couldn't resolve my hostname");
+    return NULL;
+  }
+  if (!hostname || !strchr(hostname, '.')) {
+    tor_free(hostname);
+    hostname = tor_dup_ip(addr);
   }
 
   if (options->VersioningAuthoritativeDir) {

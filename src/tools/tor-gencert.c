@@ -547,6 +547,9 @@ main(int argc, char **argv)
   if (signing_key)
     EVP_PKEY_free(signing_key);
   tor_free(address);
+  tor_free(identity_key_file);
+  tor_free(signing_key_file);
+  tor_free(certificate_file);
 
   crypto_global_cleanup();
   return r;

@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - Resolve some memory leaks found by coverity in the unit tests,
+      on exit in tor-gencert, and on a failure to compute digests
+      for our own keys when generating a v3 networkstatus vote.
+      These leaks should never have affected anyone in practice.
+
