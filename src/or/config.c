@@ -1433,6 +1433,12 @@ options_act(const or_options_t *old_options)
   sweep_transport_list();
   sweep_proxy_list();
 
+  /* Start the PT proxy configuration. By doing this configuration
+     here, we also figure out which proxies need to be restarted and
+     which not. */
+  if (pt_proxies_configuration_pending() && !net_is_disabled())
+    pt_configure_remaining_proxies();
+
   /* Bail out at this point if we're not going to be a client or server:
    * we want to not fork, and to log stuff to stderr. */
   if (!running_tor)

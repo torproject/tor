@@ -534,8 +534,7 @@ launch_managed_proxy(managed_proxy_t *mp)
 }
 
 /** Check if any of the managed proxies we are currently trying to
- *  configure have anything new to say. This is called from
- *  run_scheduled_events(). */
+ *  configure has anything new to say. */
 void
 pt_configure_remaining_proxies(void)
 {
