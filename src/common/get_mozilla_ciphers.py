@@ -41,12 +41,12 @@ fileA = open(ff('security/manager/ssl/src/nsNSSComponent.cpp'),'r')
 inCipherSection = False
 cipherLines = []
 for line in fileA:
-    if line.startswith('static CipherPref CipherPrefs'):
+    if line.startswith('static const CipherPref sCipherPrefs[]'):
         # Get the starting boundary of the Cipher Preferences
         inCipherSection = True
     elif inCipherSection:
         line = line.strip()
-        if line.startswith('{NULL, 0}'):
+        if line.startswith('{ nullptr, 0}'):
             # At the ending boundary of the Cipher Prefs
             break
         else:
@@ -56,12 +56,30 @@ fileA.close()
 # Parse the lines and put them into a dict
 ciphers = {}
 cipher_pref = {}
+key_pending = None
 for line in cipherLines:
-    m = re.search(r'^{\s*\"([^\"]+)\",\s*(\S*)\s*}', line)
+    m = re.search(r'^{\s*\"([^\"]+)\",\s*(\S+)\s*(?:,\s*(true|false))?\s*}', line)
     if m:
-        key,value = m.groups()
-        ciphers[key] = value
-        cipher_pref[value] = key
+        assert not key_pending
+        key,value,enabled = m.groups()
+        if enabled == 'true':
+            ciphers[key] = value
+            cipher_pref[value] = key
+        continue
+    m = re.search(r'^{\s*\"([^\"]+)\",', line)
+    if m:
+        assert not key_pending
+        key_pending = m.group(1)
+        continue
+    m = re.search(r'^\s*(\S+)(?:,\s*(true|false))?\s*}', line)
+    if m:
+        assert key_pending
+        key = key_pending
+        value,enabled = m.groups()
+        key_pending = None
+        if enabled == 'true':
+            ciphers[key] = value
+            cipher_pref[value] = key
 
 ####
 # Now find the correct order for the ciphers
