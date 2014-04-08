@@ -643,7 +643,6 @@ test_entryconn_rewrite_mapaddress_automap_onion(void *arg)
   connection_free_(ENTRY_TO_CONN(ec4));
 }
 
-#if 0
 /* This fails because of #7555 */
 /* This time is the same, but we start with a mapping from a non-onion
  * address. */
@@ -654,6 +653,7 @@ test_entryconn_rewrite_mapaddress_automap_onion2(void *arg)
   entry_connection_t *ec2 = NULL;
   entry_connection_t *ec3 = NULL;
   rewrite_result_t rr;
+  char *msg = NULL;
 
   ec2 = entry_connection_new(CONN_TYPE_AP, AF_INET);
   ec3 = entry_connection_new(CONN_TYPE_AP, AF_INET);
@@ -662,6 +662,7 @@ test_entryconn_rewrite_mapaddress_automap_onion2(void *arg)
   get_options_mutable()->AllowDotExit = 1;
   smartlist_add(get_options_mutable()->AutomapHostsSuffixes,
                 tor_strdup(".onion"));
+  parse_virtual_addr_network("192.168.0.0/16", AF_INET, 0, &msg);
   config_line_append(&get_options_mutable()->AddressMap,
                      "MapAddress", "irc.example.com abcdefghijklmnop.onion");
   config_register_addressmaps(get_options());
@@ -708,7 +709,6 @@ test_entryconn_rewrite_mapaddress_automap_onion2(void *arg)
   connection_free_(ENTRY_TO_CONN(ec2));
   connection_free_(ENTRY_TO_CONN(ec3));
 }
-#endif
 
 #define REWRITE(name)                           \
   { #name, test_entryconn_##name, TT_FORK, &test_rewrite_setup, NULL }
@@ -727,10 +727,8 @@ struct testcase_t entryconn_tests[] = {
   REWRITE(rewrite_automap_exit),
   REWRITE(rewrite_mapaddress_exit),
   REWRITE(rewrite_mapaddress_automap_onion),
-  /*
-    This fails because of #7555
   REWRITE(rewrite_mapaddress_automap_onion2),
-  */
+
   END_OF_TESTCASES
 };
 

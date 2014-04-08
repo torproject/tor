@@ -1,0 +1,5 @@
+  o Major bugfixes (client):
+    - Allow MapAddress and AutomapHostsOnResolve to work together when an
+      address is mapped into another address type that must be
+      automapped at resolve time.  Fixes bug 7555; bugfix on
+      0.2.0.1-alpha.

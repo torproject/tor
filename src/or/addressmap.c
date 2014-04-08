@@ -390,13 +390,35 @@ addressmap_rewrite(char *address, size_t maxlen,
       goto done;
     }
 
-    if (ent && ent->source == ADDRMAPSRC_DNS) {
-      sa_family_t f;
-      tor_addr_t tmp;
-      f = tor_addr_parse(&tmp, ent->new_address);
-      if (f == AF_INET && !(flags & AMR_FLAG_USE_IPV4_DNS))
-        goto done;
-      else if (f == AF_INET6 && !(flags & AMR_FLAG_USE_IPV6_DNS))
+    switch (ent->source) {
+      case ADDRMAPSRC_DNS:
+        {
+          sa_family_t f;
+          tor_addr_t tmp;
+          f = tor_addr_parse(&tmp, ent->new_address);
+          if (f == AF_INET && !(flags & AMR_FLAG_USE_IPV4_DNS))
+            goto done;
+          else if (f == AF_INET6 && !(flags & AMR_FLAG_USE_IPV6_DNS))
+            goto done;
+        }
+        break;
+      case ADDRMAPSRC_CONTROLLER:
+      case ADDRMAPSRC_TORRC:
+        if (!(flags & AMR_FLAG_USE_MAPADDRESS))
+          goto done;
+        break;
+      case ADDRMAPSRC_AUTOMAP:
+        if (!(flags & AMR_FLAG_USE_AUTOMAP))
+          goto done;
+        break;
+      case ADDRMAPSRC_TRACKEXIT:
+        if (!(flags & AMR_FLAG_USE_TRACKEXIT))
+          goto done;
+        break;
+      case ADDRMAPSRC_NONE:
+      default:
+        log_warn(LD_BUG, "Unknown addrmap source value %d. Ignoring it.",
+                 (int) ent->source);
         goto done;
     }
 

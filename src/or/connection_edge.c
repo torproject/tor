@@ -946,6 +946,15 @@ connection_ap_handshake_rewrite(entry_connection_t *conn,
   if (! conn->original_dest_address)
     conn->original_dest_address = tor_strdup(conn->socks_request->address);
 
+  if (socks->command != SOCKS_COMMAND_RESOLVE_PTR) {
+    const unsigned rewrite_flags = AMR_FLAG_USE_MAPADDRESS;
+    if (addressmap_rewrite(socks->address, sizeof(socks->address),
+                       rewrite_flags, &out->map_expires, &out->exit_source)) {
+      control_event_stream_status(conn, STREAM_EVENT_REMAP,
+                                  REMAP_STREAM_SOURCE_CACHE);
+    }
+  }
+
   if (socks->command == SOCKS_COMMAND_RESOLVE &&
       tor_addr_parse(&addr_tmp, socks->address)<0 &&
       options->AutomapHostsOnResolve) {
@@ -1014,15 +1023,19 @@ connection_ap_handshake_rewrite(entry_connection_t *conn,
     }
   } else if (!out->automap) {
     /* For address map controls, remap the address. */
-    unsigned rewrite_flags = 0;
+    unsigned rewrite_flags = AMR_FLAG_USE_AUTOMAP | AMR_FLAG_USE_TRACKEXIT;
+    addressmap_entry_source_t exit_source2;
     if (conn->use_cached_ipv4_answers)
       rewrite_flags |= AMR_FLAG_USE_IPV4_DNS;
     if (conn->use_cached_ipv6_answers)
       rewrite_flags |= AMR_FLAG_USE_IPV6_DNS;
     if (addressmap_rewrite(socks->address, sizeof(socks->address),
-                           rewrite_flags, &out->map_expires, &out->exit_source)) {
+                        rewrite_flags, &out->map_expires, &exit_source2)) {
       control_event_stream_status(conn, STREAM_EVENT_REMAP,
                                   REMAP_STREAM_SOURCE_CACHE);
+    }
+    if (out->exit_source == ADDRMAPSRC_NONE) {
+      out->exit_source = exit_source2;
     }
   }
 
