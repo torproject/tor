@@ -560,21 +560,29 @@ tor_memmem(const void *_haystack, size_t hlen,
 #else
   /* This isn't as fast as the GLIBC implementation, but it doesn't need to
    * be. */
-  const char *p, *end;
+  const char *p, *last_possible_start;
   const char *haystack = (const char*)_haystack;
   const char *needle = (const char*)_needle;
   char first;
   tor_assert(nlen);
 
+  if (nlen > hlen)
+    return NULL;
+
   p = haystack;
-  end = haystack + hlen;
+  /* Last position at which the needle could start. */
+  last_possible_start = haystack + hlen - nlen;
   first = *(const char*)needle;
-  while ((p = memchr(p, first, end-p))) {
-    if (p+nlen > end)
-      return NULL;
+  while ((p = memchr(p, first, last_possible_start + 1 - p))) {
     if (fast_memeq(p, needle, nlen))
       return p;
-    ++p;
+    if (++p > last_possible_start) {
+      /* This comparison shouldn't be necessary, since if p was previously
+       * equal to last_possible_start, the next memchr call would be
+       * "memchr(p, first, 0)", which will return NULL. But it clarifies the
+       * logic. */
+      return NULL;
+    }
   }
   return NULL;
 #endif
