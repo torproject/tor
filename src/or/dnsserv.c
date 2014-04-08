@@ -35,7 +35,7 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
   entry_connection_t *entry_conn;
   edge_connection_t *conn;
   int i = 0;
-  struct evdns_server_question *q = NULL;
+  struct evdns_server_question *q = NULL, *supported_q = NULL;
   struct sockaddr_storage addr;
   struct sockaddr *sa;
   int addrlen;
@@ -87,31 +87,37 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
   for (i = 0; i < req->nquestions; ++i) {
     if (req->questions[i]->dns_question_class != EVDNS_CLASS_INET)
       continue;
+    if (! q)
+      q = req->questions[i];
     switch (req->questions[i]->type) {
       case EVDNS_TYPE_A:
       case EVDNS_TYPE_AAAA:
       case EVDNS_TYPE_PTR:
-        q = req->questions[i];
+        /* We always pick the first one of these questions, if there is
+           one. */
+        if (! supported_q)
+          supported_q = q;
+        break;
       default:
         break;
       }
   }
+  if (supported_q)
+    q = supported_q;
   if (!q) {
     log_info(LD_APP, "None of the questions we got were ones we're willing "
              "to support. Sending NOTIMPL.");
     evdns_server_request_respond(req, DNS_ERR_NOTIMPL);
     return;
   }
-  if (q->type != EVDNS_TYPE_A && q->type != EVDNS_TYPE_AAAA) {
-    tor_assert(q->type == EVDNS_TYPE_PTR);
-  }
 
   /* Make sure the name isn't too long: This should be impossible, I think. */
   if (err == DNS_ERR_NONE && strlen(q->name) > MAX_SOCKS_ADDR_LEN-1)
     err = DNS_ERR_FORMAT;
 
-  if (err != DNS_ERR_NONE) {
-    /* We got an error?  Then send back an answer immediately; we're done. */
+  if (err != DNS_ERR_NONE || !supported_q) {
+    /* We got an error?  There's no question we're willing to answer? Then
+     * send back an answer immediately; we're done. */
     evdns_server_request_respond(req, err);
     return;
   }
@@ -126,12 +132,15 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
   TO_CONN(conn)->port = port;
   TO_CONN(conn)->address = tor_dup_addr(&tor_addr);
 
-  if (q->type == EVDNS_TYPE_A || q->type == EVDNS_TYPE_AAAA)
+  if (q->type == EVDNS_TYPE_A || q->type == EVDNS_TYPE_AAAA ||
+      q->type == EVDNS_QTYPE_ALL) {
     entry_conn->socks_request->command = SOCKS_COMMAND_RESOLVE;
-  else
+  } else {
+    tor_assert(q->type == EVDNS_TYPE_PTR);
     entry_conn->socks_request->command = SOCKS_COMMAND_RESOLVE_PTR;
+  }
 
-  if (q->type == EVDNS_TYPE_A) {
+  if (q->type == EVDNS_TYPE_A || q->type == EVDNS_QTYPE_ALL) {
     entry_conn->ipv4_traffic_ok = 1;
     entry_conn->ipv6_traffic_ok = 0;
     entry_conn->prefer_ipv6_traffic = 0;

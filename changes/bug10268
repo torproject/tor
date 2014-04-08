@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - When receing a DNS query for an unsupported type, reply with
+      no answer rather than with a NOTIMPL error. This behavior isn't
+      correct either, but it will break fewer client programs, we hope.
+      Fixes bug 10268; bugfix on 0.2.0.1-alpha. Original patch
+      from "epoch".
