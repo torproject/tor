@@ -364,7 +364,7 @@ test_ext_or_cookie_auth_testvec(void *arg)
 
 static void
 ignore_bootstrap_problem(const char *warn, int reason,
-                       const or_connection_t *conn)
+                         or_connection_t *conn)
 {
   (void)warn;
   (void)reason;

@@ -1482,6 +1482,10 @@ typedef struct or_connection_t {
   unsigned int is_outgoing:1;
   unsigned int proxy_type:2; /**< One of PROXY_NONE...PROXY_SOCKS5 */
   unsigned int wide_circ_ids:1;
+  /** True iff this connection has had its bootstrap failure logged with
+   * control_event_bootstrap_problem. */
+  unsigned int have_noted_bootstrap_problem:1;
+
   uint16_t link_proto; /**< What protocol version are we using? 0 for
                         * "none negotiated yet." */
 

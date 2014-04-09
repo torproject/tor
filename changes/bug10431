@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Only report the first fatal boostrap error on a given OR
+      connection.  This prevents controllers from declaring that a
+      connection has failed because of "DONE" or other junk reasons.
+      Fixes bug 10431; bugfix on 0.2.1.1-alpha.
