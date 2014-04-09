@@ -1353,6 +1353,7 @@ inform_pending_connections(cached_resolve_t *resolve)
     }
     resolve->pending_connections = pend->next;
     tor_free(pend);
+    tor_free(hostname);
   }
 }
 
