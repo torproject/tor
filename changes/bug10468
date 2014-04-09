@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - When using DNSPort and AutomapHostsOnResolve, respond to AAAA
-      requests with AAAA automapped answers. Fixes bug 10468; bugfix
-      on 0.2.4.7-alpha.

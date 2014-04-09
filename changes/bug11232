@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Use AddressSanitizer and Ubsan sanitizers (in clang-3.4) to fix some
-      miscellaneous errors in our tests and codebase. Fix for bug 11232.
-      Bugfixes on versions back as far as 0.2.1.11-alpha.

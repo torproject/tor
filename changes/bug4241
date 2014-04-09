@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Only retry attempts to connect to a chosen rendezvous point 8 times,
-      not 30. Fixes bug #4241; bugfix on 0.1.0.1-rc.

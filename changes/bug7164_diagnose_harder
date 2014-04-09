@@ -1,6 +1,0 @@
-  o Minor features:
-    - Try harder to diagnose a possible cause of bug 7164, which causes
-      intermittent "microdesc_free() called but md was still referenced"
-      warnings. We now log more information about the likely error case,
-      to try to figure out why we might be cleaning a microdescriptor
-      as old if it's still referenced by a live node.

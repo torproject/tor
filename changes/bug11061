@@ -1,3 +1,0 @@
-  o Documentation fixes:
-    - Fix the layout of the SOCKSPort flags in the manpage. Fixes bug
-      11061; bugfix on 0.2.4.7-alpha.

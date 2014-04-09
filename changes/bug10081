@@ -1,5 +1,0 @@
-  o Minor features:
-    - When reporting a failure from make_socket_reuseable(), don't
-      report a warning when we get a failure from an incoming socket
-      on OSX. Fix for bug 10081.
-

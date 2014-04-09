@@ -1,3 +1,0 @@
-  o Code simplifications and refactoring:
-    - Removing is_internal_IP() function. Resolves ticket 4645.
-

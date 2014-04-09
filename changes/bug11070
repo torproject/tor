@@ -1,4 +1,0 @@
-  o Removed code:
-    - Remove all code for the long unused v1 directory protocol. Resolves
-      ticket 11070.
-

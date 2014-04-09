@@ -1,4 +1,0 @@
-  o Minor features:
-    - Report a failure to connect to a bridge because its transport
-      type has no configured pluggable transport as a new type of bootstrap
-      failure. Resolves ticket 9665. Patch from Fábio J. Bertinatto.

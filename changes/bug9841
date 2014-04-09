@@ -1,7 +1,0 @@
-  o Minor features (performance):
-
-    - Faster server-side lookups of rendezvous and introduction point
-      circuits by using hashtables instead of linear searches over all
-      the circuits. These functions previously accounted between 3 and
-      7% of CPU usage on some busy relays.
-

@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Allow tor-fw-helper to build again by adding src/ext to its
-      CPPFLAGS. Fixes bug 11296; bugfix on 0.2.5.3-alpha.

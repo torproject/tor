@@ -1,6 +1,0 @@
-  o Deprecated versions:
-    - Tor 0.2.2.x is no longer supported, and has not been for a while.
-      Directory authorities no longer accept descriptors from
-      Tor relays running any version of Tor prior to Tor 0.2.3.16-alpha.
-      Resolves ticket 11149.
-

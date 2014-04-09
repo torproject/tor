@@ -1,6 +1,0 @@
-  o Documentation:
-    - Resolve warnings from Doxygen.
-
-  o Code simplification and refactoring:
-    - Change our use of the ENUM_BF macro to avoid declarations that
-      confuse Doxygen.

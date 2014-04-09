@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Stop leaking memory when we successfully resolve a PTR record.
-      Fixes bug 11437; bugfix on 0.2.4.7-alpha.

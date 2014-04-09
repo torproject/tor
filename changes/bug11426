@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Fix compilation on Solaris, which does not have <endian.h>.
-      Fixes bug 11426; bugfix on 0.2.5.3-alpha.
