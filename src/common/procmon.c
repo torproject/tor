@@ -162,6 +162,7 @@ tor_validate_process_specifier(const char *process_spec,
   return parse_process_specifier(process_spec, &ppspec, msg);
 }
 
+/* XXXX we should use periodic_timer_new() for this stuff */
 #ifdef HAVE_EVENT2_EVENT_H
 #define PERIODIC_TIMER_FLAGS EV_PERSIST
 #else

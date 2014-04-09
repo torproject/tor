@@ -42,9 +42,6 @@
 #include <sys/param.h> /* FreeBSD needs this to know what version it is */
 #endif
 #include "torint.h"
-#ifdef HAVE_SYS_WAIT_H
-#include <sys/wait.h>
-#endif
 #ifdef HAVE_SYS_FCNTL_H
 #include <sys/fcntl.h>
 #endif

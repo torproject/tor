@@ -54,6 +54,7 @@
 #include "routerparse.h"
 #include "statefile.h"
 #include "status.h"
+#include "util_process.h"
 #include "ext_orport.h"
 #ifdef USE_DMALLOC
 #include <dmalloc.h>
@@ -2097,8 +2098,7 @@ process_signal(uintptr_t sig)
       break;
 #ifdef SIGCHLD
     case SIGCHLD:
-      while (waitpid(-1,NULL,WNOHANG) > 0) ; /* keep reaping until no more
-                                                zombies */
+      notify_pending_waitpid_callbacks();
       break;
 #endif
     case SIGNEWNYM: {

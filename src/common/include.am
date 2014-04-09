@@ -57,9 +57,9 @@ LIBOR_A_SOURCES = \
   src/common/log.c					\
   src/common/memarea.c					\
   src/common/mempool.c					\
-  src/common/procmon.c					\
   src/common/util.c					\
   src/common/util_codedigest.c				\
+  src/common/util_process.c				\
   src/common/sandbox.c					\
   src/ext/csiphash.c					\
   $(libor_extra_source)
@@ -72,7 +72,9 @@ LIBOR_CRYPTO_A_SOURCES = \
   src/common/tortls.c		\
   $(libcrypto_extra_source)
 
-LIBOR_EVENT_A_SOURCES = src/common/compat_libevent.c
+LIBOR_EVENT_A_SOURCES = \
+	src/common/compat_libevent.c \
+	src/common/procmon.c
 
 src_common_libor_a_SOURCES = $(LIBOR_A_SOURCES)
 src_common_libor_crypto_a_SOURCES = $(LIBOR_CRYPTO_A_SOURCES)
@@ -111,7 +113,8 @@ COMMONHEADERS = \
   src/common/torint.h				\
   src/common/torlog.h				\
   src/common/tortls.h				\
-  src/common/util.h
+  src/common/util.h				\
+  src/common/util_process.h
 
 noinst_HEADERS+= $(COMMONHEADERS)
 
