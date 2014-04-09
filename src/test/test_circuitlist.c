@@ -177,7 +177,10 @@ test_rend_token_maps(void *arg)
   c3 = or_circuit_new(0, NULL);
   c4 = or_circuit_new(0, NULL);
 
-  tt_int_op(strlen((char*)tok1), ==, REND_TOKEN_LEN);
+  /* Make sure we really filled up the tok* variables */
+  tt_int_op(tok1[REND_TOKEN_LEN-1], ==, 'y');
+  tt_int_op(tok2[REND_TOKEN_LEN-1], ==, ' ');
+  tt_int_op(tok3[REND_TOKEN_LEN-1], ==, '.');
 
   /* No maps; nothing there. */
   tt_ptr_op(NULL, ==, circuit_get_rendezvous(tok1));
