@@ -919,16 +919,7 @@ conn_close_if_marked(int i)
       return 0;
     }
     if (connection_wants_to_flush(conn)) {
-      int severity;
-      if (conn->type == CONN_TYPE_EXIT ||
-          (conn->type == CONN_TYPE_OR && server_mode(get_options())) ||
-          (conn->type == CONN_TYPE_DIR && conn->purpose == DIR_PURPOSE_SERVER))
-        severity = LOG_INFO;
-      else
-        severity = LOG_NOTICE;
-      /* XXXX Maybe allow this to happen a certain amount per hour; it usually
-       * is meaningless. */
-      log_fn(severity, LD_NET, "We stalled too much while trying to write %d "
+      log_fn(LOG_INFO, LD_NET, "We stalled too much while trying to write %d "
              "bytes to address %s.  If this happens a lot, either "
              "something is wrong with your network connection, or "
              "something is wrong with theirs. "
