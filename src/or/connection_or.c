@@ -756,6 +756,45 @@ connection_or_update_token_buckets(smartlist_t *conns,
   });
 }
 
+/** How long do we wait before killing non-canonical OR connections with no
+ * circuits?  In Tor versions up to 0.2.1.25 and 0.2.2.12-alpha, we waited 15
+ * minutes before cancelling these connections, which caused fast relays to
+ * accrue many many idle connections. Hopefully 3-4.5 minutes is low enough
+ * that it kills most idle connections, without being so low that we cause
+ * clients to bounce on and off.
+ *
+ * For canonical connections, the limit is higher, at 15-22.5 minutes.
+ *
+ * For each OR connection, we randomly add up to 50% extra to its idle_timeout
+ * field, to avoid exposing when exactly the last circuit closed.  Since we're
+ * storing idle_timeout in a uint16_t, don't let these values get higher than
+ * 12 hours or so without revising connection_or_set_canonical and/or expanding
+ * idle_timeout.
+ */
+#define IDLE_OR_CONN_TIMEOUT_NONCANONICAL 180
+#define IDLE_OR_CONN_TIMEOUT_CANONICAL 900
+
+/* Mark <b>or_conn</b> as canonical if <b>is_canonical</b> is set, and
+ * non-canonical otherwise. Adjust idle_timeout accordingly.
+ */
+void
+connection_or_set_canonical(or_connection_t *or_conn,
+                            int is_canonical)
+{
+  const unsigned int timeout_base = is_canonical ?
+    IDLE_OR_CONN_TIMEOUT_CANONICAL : IDLE_OR_CONN_TIMEOUT_NONCANONICAL;
+
+  if (bool_eq(is_canonical, or_conn->is_canonical) &&
+      or_conn->idle_timeout != 0) {
+    /* Don't recalculate an existing idle_timeout unless the canonical
+     * status changed. */
+    return;
+  }
+
+  or_conn->is_canonical = !! is_canonical; /* force to a 1-bit boolean */
+  or_conn->idle_timeout = timeout_base + crypto_rand_int(timeout_base / 2);
+}
+
 /** If we don't necessarily know the router we're connecting to, but we
  * have an addr/port/id_digest, then fill in as much as we can. Start
  * by checking to see if this describes a router we know.
@@ -780,7 +819,7 @@ connection_or_init_conn_from_address(or_connection_t *conn,
     /* XXXX proposal 186 is making this more complex.  For now, a conn
        is canonical when it uses the _preferred_ address. */
     if (tor_addr_eq(&conn->base_.addr, &node_ap.addr))
-      conn->is_canonical = 1;
+      connection_or_set_canonical(conn, 1);
     if (!started_here) {
       /* Override the addr/port, so our log messages will make sense.
        * This is dangerous, since if we ever try looking up a conn by

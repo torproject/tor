@@ -1424,7 +1424,10 @@ typedef struct or_connection_t {
   unsigned int wide_circ_ids:1;
   uint16_t link_proto; /**< What protocol version are we using? 0 for
                         * "none negotiated yet." */
-
+  uint16_t idle_timeout; /**< How long can this connection sit with no
+                          * circuits on it before we close it? Based on
+                          * IDLE_CIRCUIT_TIMEOUT_{NON,}CANONICAL and
+                          * on is_canonical, randomized. */
   or_handshake_state_t *handshake_state; /**< If we are setting this connection
                                           * up, state information to do so. */
 

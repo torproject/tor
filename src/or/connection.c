@@ -266,6 +266,8 @@ or_connection_new(int socket_family)
 
   or_conn->timestamp_last_added_nonpadding = time(NULL);
 
+  connection_or_set_canonical(or_conn, 0);
+
   return or_conn;
 }
 

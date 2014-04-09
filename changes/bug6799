@@ -1,0 +1,13 @@
+  o Major features:
+
+    - Increate the base amount of time that a canonical connection
+      (one that we have made to a known OR) is allowed to stay open
+      from a 3 minutes to 15 minutes.  This leaks less information
+      about when circuits have closed, and avoids unnecessary overhead
+      from renegotiating connections. Part of a fix for ticket 6799.
+
+    - Instead of closing connections at a fixed interval after their
+      last circuit closed, randomly add up to 50% to each connection's
+      maximum timout. This makes it harder to tell when the last
+      circuit closed by looking at when a connection closes. Part of a
+      fix for ticket 6799.

@@ -993,15 +993,6 @@ directory_info_has_arrived(time_t now, int from_cache)
     consider_testing_reachability(1, 1);
 }
 
-/** How long do we wait before killing OR connections with no circuits?
- * In Tor versions up to 0.2.1.25 and 0.2.2.12-alpha, we waited 15 minutes
- * before cancelling these connections, which caused fast relays to accrue
- * many many idle connections. Hopefully 3 minutes is low enough that
- * it kills most idle connections, without being so low that we cause
- * clients to bounce on and off.
- */
-#define IDLE_OR_CONN_TIMEOUT 180
-
 /** Perform regular maintenance tasks for a single connection.  This
  * function gets run once per second per connection by run_scheduled_events.
  */
@@ -1088,7 +1079,7 @@ run_connection_housekeeping(int i, time_t now)
     connection_or_close_normally(TO_OR_CONN(conn), 1);
   } else if (!connection_or_get_num_circuits(or_conn) &&
              now >= or_conn->timestamp_last_added_nonpadding +
-                                         IDLE_OR_CONN_TIMEOUT) {
+                             or_conn->idle_timeout) {
     log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
              "[idle %d].", (int)conn->s,conn->address, conn->port,
              (int)(now - or_conn->timestamp_last_added_nonpadding));

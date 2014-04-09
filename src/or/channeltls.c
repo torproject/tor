@@ -1514,7 +1514,7 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
       return;
     }
     if (tor_addr_eq(&addr, &(chan->conn->real_addr))) {
-      chan->conn->is_canonical = 1;
+      connection_or_set_canonical(chan->conn, 1);
       break;
     }
     cp = next;
