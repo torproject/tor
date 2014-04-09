@@ -1,3 +1,166 @@
+Changes in version 0.2.5.4-alpha - 2014-04-??
+
+  o Deprecated versions:
+    - Tor 0.2.2.x has reached end-of-life; it has received no patches or
+      attention for some while. Directory authorities no longer accept
+      descriptors from Tor relays running any version of Tor prior to Tor
+      0.2.3.16-alpha. Resolves ticket 11149.
+
+  o Minor features (relay):
+    - If a circuit timed out for at least 3 minutes check if we have a new
+      external IP address the next time we run our routine checks. If our
+      IP address has changed, then publish a new descriptor with the new
+      IP address. Resolves ticket 2454.
+
+  o Major bugfixes (undefined behavior):
+    - Fix two instances of possible undefined behavior in channeltls.c
+      that could, under unlucky circumstances, have led to a pointer
+      overflow. Fixes bug #10363; bugfixes on 0.2.0.10-alpha and
+      0.2.3.6-alpha. Reported by "bobnomnom".
+    - Fix another possibly undefined pointer operations in tor_memmem
+      fallback implementation. Another case of bug #10363; bugfix on
+      0.1.1.1-alpha.
+    - Fix another possibly undefined pointer operations in the eventdns
+      fallback implementation. Another case of bug #10363; bugfix on
+      0.1.2.1-alpha.
+
+  o Minor bugfixes (build):
+    - Build the torify.1 manpage again. Previously, we were only
+      trying to build it when also building tor-fw-helper. That's why
+      we didn't notice that we'd broken the ability to build it.
+      Fixes bug 11321; bugfix on 0.2.5.1-alpha.
+
+  o Minor bugfixes (logging):
+    - Log only one message when we start logging in an unsafe
+      way. Previously, we would log as many messages as we had
+      problems. Fix for #9870; bugfix on 0.2.5.1-alpha.
+
+  o Minor bugfixes (tor-fw-helper):
+    - Allow tor-fw-helper to build again by adding src/ext to its
+      CPPFLAGS. Fixes bug 11296; bugfix on 0.2.5.3-alpha.
+
+  o Minor bugfixes (bridges):
+    - Avoid potential crashes or bad behavior when launching a
+      server-side managed proxy with ORPort or ExtORPort temporarily
+      disabled. Fixes bug 9650; bugfix on 0.2.3.16-alpha.
+
+  o Minor bugfixes (misc):
+    - Don't re-initialize a second set of openssl mutexes when starting
+      up. Fixes bug 11726; bugfix on 0.2.5.3-alpha.
+
+  o Minor bugfixes (memory leaks):
+    - Fix a minor memory leak that occurred when signing a directory
+      object. Fixes bug 11275; bugfix on 0.2.4.13-alpha.
+
+  o Minor bugfixes (build):
+    - Fix compilation on Solaris, which does not have <endian.h>.
+      Fixes bug 11426; bugfix on 0.2.5.3-alpha.
+
+  o Minor bugfixes (misc):
+    - Free placeholder entries in our circuit table at exit; fixes
+      a harmless memory leak. Fixes bug 11278; bugfix on 0.2.5.1-alpha.
+
+  o Minor bugfixes (hidden service):
+    - Only retry attempts to connect to a chosen rendezvous point 8 times,
+      not 30. Fixes bug #4241; bugfix on 0.1.0.1-rc.
+
+  o Minor bugfixes (misc):
+    - Resolve some memory leaks found by coverity in the unit tests,
+      on exit in tor-gencert, and on a failure to compute digests
+      for our own keys when generating a v3 networkstatus vote.
+      These leaks should never have affected anyone in practice.
+
+  o Minor bugfixes (bridge client):
+    - Stop accepting bridge lines containing hostnames. Doing so allowed
+      clients to perform DNS requests on the hostnames, which was not
+      sensible behavior. Fixes bug 10801; bugfix on 0.2.0.1-alpha.
+
+  o Minor bugfixes (exit):
+    - Stop leaking memory when we successfully resolve a PTR record.
+      Fixes bug 11437; bugfix on 0.2.4.7-alpha.
+
+  o Minor bugfixes (undefined behavior):
+    - Use AddressSanitizer and Ubsan sanitizers (in clang-3.4) to fix some
+      miscellaneous errors in our tests and codebase. Fix for bug 11232.
+      Bugfixes on versions back as far as 0.2.1.11-alpha.
+
+  o Minor bugfixes (windows):
+    - When dumping a malformed directory object to disk, save it in binary
+      mode on windows, not text mode. Fixes bug 11342; bugfix on
+      0.2.2.1-alpha.
+
+  o Minor bugfixes (IPv6):
+    - When using DNSPort and AutomapHostsOnResolve, respond to AAAA
+      requests with AAAA automapped answers. Fixes bug 10468; bugfix
+      on 0.2.4.7-alpha.
+
+  o Minor features (controller):
+    - Make the entire exit policy available from the control port via
+      GETINFO exit-policy/*. Implements enhancement #7952. Patch from
+      "rl1987".
+
+  o Minor features (performance):
+    - Faster server-side lookups of rendezvous and introduction point
+      circuits by using hashtables instead of linear searches over all
+      the circuits. These functions previously accounted between 3 and
+      7% of CPU usage on some busy relays.
+
+  o Minor features (misc):
+    - Always check return values for unlink, munmap, UnmapViewOfFile;
+      check strftime return values more often. In some cases all we
+      can do is report a warning, but this may help prevent deeper
+      bugs from going unnoticed. Closes ticket 8787.
+
+  o Minor features (bridge client):
+    - Report a failure to connect to a bridge because its transport
+      type has no configured pluggable transport as a new type of bootstrap
+      failure. Resolves ticket 9665. Patch from Fábio J. Bertinatto.
+
+  o Minor features (diagnostic):
+    - Try harder to diagnose a possible cause of bug 7164, which causes
+      intermittent "microdesc_free() called but md was still referenced"
+      warnings. We now log more information about the likely error case,
+      to try to figure out why we might be cleaning a microdescriptor
+      as old if it's still referenced by a live node.
+
+  o Minor features (relay):
+    - Warn less verbosely when receiving a misformed ESTABLISH_RENDEZVOUS
+      cell. Fixes ticket 11279.
+
+  o Minor features (relay, OSX):
+    - When reporting a failure from make_socket_reuseable(), don't
+      report a warning when we get a failure from an incoming socket
+      on OSX. Fix for bug 10081.
+
+  o Documentation fixes:
+    - Fix the layout of the SOCKSPort flags in the manpage. Fixes bug
+      11061; bugfix on 0.2.4.7-alpha.
+
+  o Documentation:
+    - Correctly document that we search for a system torrc file before
+      looking in ~/.torrc. Fixes documentation side of 9213; bugfix
+      on 0.2.3.18-rc.
+
+  o Documentation:
+    - Resolve warnings from Doxygen.
+
+  o Code simplifications and refactoring:
+    - Removing is_internal_IP() function. Resolves ticket 4645.
+
+  o Code simplifications and refactoring:
+   - Remove unused function circuit_dump_by_chan from circuitlist.c. Closes
+     issue #9107; patch from "marek".
+
+  o Code simplification and refactoring:
+    - Change our use of the ENUM_BF macro to avoid declarations that
+      confuse Doxygen.
+
+  o Removed code:
+    - Remove all code for the long unused v1 directory protocol. Resolves
+      ticket 11070.
+
+
+
 Changes in version 0.2.5.3-alpha - 2014-03-22
   Tor 0.2.5.3-alpha includes all the fixes from 0.2.4.21. It contains
   two new anti-DoS features for Tor relays, resolves a bug that kept
