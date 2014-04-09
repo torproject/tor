@@ -98,7 +98,7 @@ static smartlist_t *trusted_dir_servers = NULL;
  * and all fallback directory servers. */
 static smartlist_t *fallback_dir_servers = NULL;
 
-/** List of for a given authority, and download status for latest certificate.
+/** List of [XXX what?] for a given authority, and download status for latest certificate.
  */
 struct cert_list_t {
   /*
