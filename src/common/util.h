@@ -446,6 +446,7 @@ void set_environment_variable_in_smartlist(struct smartlist_t *env_vars,
 #define PROCESS_STATUS_ERROR -1
 
 #ifdef UTIL_PRIVATE
+struct waitpid_callback_t;
 /** Structure to represent the state of a process with which Tor is
  * communicating. The contents of this structure are private to util.c */
 struct process_handle_t {
@@ -461,6 +462,12 @@ struct process_handle_t {
   FILE *stdout_handle;
   FILE *stderr_handle;
   pid_t pid;
+  /** If the process has not given us a SIGCHLD yet, this has the
+   * waitpid_callback_t that gets invoked once it has. Otherwise this
+   * contains NULL. */
+  struct waitpid_callback_t *waitpid_cb;
+  /** The exit status reported by waitpid. */
+  int waitpid_exit_status;
 #endif // _WIN32
 };
 #endif
@@ -469,7 +476,7 @@ struct process_handle_t {
 #define PROCESS_EXIT_RUNNING 1
 #define PROCESS_EXIT_EXITED 0
 #define PROCESS_EXIT_ERROR -1
-int tor_get_exit_code(const process_handle_t *process_handle,
+int tor_get_exit_code(process_handle_t *process_handle,
                       int block, int *exit_code);
 int tor_split_lines(struct smartlist_t *sl, char *buf, int len);
 #ifdef _WIN32
