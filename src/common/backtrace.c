@@ -5,7 +5,6 @@
 #define _GNU_SOURCE 1
 
 #include "orconfig.h"
-#include "backtrace.h"
 #include "compat.h"
 #include "util.h"
 #include "torlog.h"
@@ -30,6 +29,9 @@
 #elif defined(HAVE_UCONTEXT_H)
 #include <ucontext.h>
 #endif
+
+#define EXPOSE_CLEAN_BACKTRACE
+#include "backtrace.h"
 
 #if defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \
   defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION)
@@ -59,7 +61,7 @@ static tor_mutex_t cb_buf_mutex;
  * onto the stack.  Fortunately, we usually have the program counter in the
  * ucontext_t structure.
  */
-static void
+void
 clean_backtrace(void **stack, int depth, const ucontext_t *ctx)
 {
 #ifdef PC_FROM_UCONTEXT
@@ -165,6 +167,18 @@ install_bt_handler(void)
       rv = -1;
     }
   }
+
+  {
+    /* Now, generate (but do not log) a backtrace.  This ensures that
+     * libc has pre-loaded the symbols we need to dump things, so that later
+     * reads won't be denied by the sandbox code */
+    char **symbols;
+    int depth = backtrace(cb_buf, MAX_DEPTH);
+    symbols = backtrace_symbols(cb_buf, depth);
+    if (symbols)
+      free(symbols);
+  }
+
   return rv;
 }
 

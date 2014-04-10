@@ -56,6 +56,17 @@
 #include <time.h>
 #include <poll.h>
 
+#if defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \
+  defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION)
+#define USE_BACKTRACE
+#define EXPOSE_CLEAN_BACKTRACE
+#include "backtrace.h"
+#endif
+
+#ifdef USE_BACKTRACE
+#include <execinfo.h>
+#endif
+
 /**Determines if at least one sandbox is active.*/
 static int sandbox_active = 0;
 /** Holds the parameter list configuration for the sandbox.*/
@@ -1308,6 +1319,11 @@ install_syscall_filter(sandbox_cfg_t* cfg)
   return (rc < 0 ? -rc : rc);
 }
 
+#ifdef USE_BACKTRACE
+#define MAX_DEPTH 256
+static void *syscall_cb_buf[MAX_DEPTH];
+#endif
+
 /**
  * Function called when a SIGSYS is caught by the application. It notifies the
  * user that an error has occurred and either terminates or allows the
@@ -1319,6 +1335,12 @@ sigsys_debugging(int nr, siginfo_t *info, void *void_context)
   ucontext_t *ctx = (ucontext_t *) (void_context);
   char number[32];
   int syscall;
+#ifdef USE_BACKTRACE
+  int depth;
+  int n_fds, i;
+  const int *fds = NULL;
+#endif
+
   (void) nr;
 
   if (info->si_code != SYS_SECCOMP)
@@ -1329,11 +1351,24 @@ sigsys_debugging(int nr, siginfo_t *info, void *void_context)
 
   syscall = (int) ctx->uc_mcontext.gregs[REG_SYSCALL];
 
+#ifdef USE_BACKTRACE
+  depth = backtrace(syscall_cb_buf, MAX_DEPTH);
+  /* Clean up the top stack frame so we get the real function
+   * name for the most recently failing function. */
+  clean_backtrace(syscall_cb_buf, depth, ctx);
+#endif
+
   format_dec_number_sigsafe(syscall, number, sizeof(number));
   tor_log_err_sigsafe("(Sandbox) Caught a bad syscall attempt (syscall ",
                       number,
                       ")\n",
                       NULL);
+
+#ifdef USE_BACKTRACE
+  n_fds = tor_log_get_sigsafe_err_fds(&fds);
+  for (i=0; i < n_fds; ++i)
+    backtrace_symbols_fd(syscall_cb_buf, depth, fds[i]);
+#endif
 
 #if defined(DEBUGGING_CLOSE)
   _exit(1);
