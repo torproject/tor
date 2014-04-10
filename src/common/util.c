@@ -3629,13 +3629,7 @@ tor_terminate_process(process_handle_t *process_handle)
 {
 #ifdef _WIN32
   if (tor_get_exit_code(process_handle, 0, NULL) == PROCESS_EXIT_RUNNING) {
-    HANDLE handle;
-    /* If the signal is outside of what GenerateConsoleCtrlEvent can use,
-       attempt to open and terminate the process. */
-    handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE,
-                         process_handle->pid.dwProcessId);
-    if (!handle)
-      return -1;
+    HANDLE handle = process_handle->pid.hProcess;
 
     if (!TerminateProcess(handle, 0))
       return -1;
