@@ -458,6 +458,28 @@ authority_cert_dl_failed(const char *id_digest, int status)
   download_status_failed(&cl->dl_status, status);
 }
 
+static const char *BAD_SIGNING_KEYS[] = {
+  "----------------------------------------",
+  NULL,
+};
+
+/** DOCDOC */
+int
+authority_cert_is_blacklisted(const authority_cert_t *cert)
+{
+  char hex_digest[HEX_DIGEST_LEN+1];
+  int i;
+  base16_encode(hex_digest, sizeof(hex_digest),
+                cert->signing_key_digest, sizeof(cert->signing_key_digest));
+
+  for (i = 0; BAD_SIGNING_KEYS[i]; ++i) {
+    if (!strcasecmp(hex_digest, BAD_SIGNING_KEYS[i])) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
 /** Return true iff when we've been getting enough failures when trying to
  * download the certificate with ID digest <b>id_digest</b> that we're willing
  * to start bugging the user about it. */
