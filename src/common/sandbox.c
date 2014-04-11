@@ -1056,11 +1056,11 @@ new_element(int syscall, int index, intptr_t value)
 #endif
 
 int
-sandbox_cfg_allow_stat_filename(sandbox_cfg_t **cfg, char *file, int fr)
+sandbox_cfg_allow_stat_filename(sandbox_cfg_t **cfg, char *file)
 {
   sandbox_cfg_t *elem = NULL;
 
-  elem = new_element(SCMP_stat, 0, (intptr_t)(void*) tor_strdup(file));
+  elem = new_element(SCMP_stat, 0, (intptr_t)(void*) file);
   if (!elem) {
     log_err(LD_BUG,"(Sandbox) failed to register parameter!");
     return -1;
@@ -1069,7 +1069,6 @@ sandbox_cfg_allow_stat_filename(sandbox_cfg_t **cfg, char *file, int fr)
   elem->next = *cfg;
   *cfg = elem;
 
-  if (fr) tor_free(file);
   return 0;
 }
 
@@ -1083,9 +1082,7 @@ sandbox_cfg_allow_stat_filename_array(sandbox_cfg_t **cfg, ...)
   va_start(ap, cfg);
 
   while ((fn = va_arg(ap, char*)) != NULL) {
-    int fr = va_arg(ap, int);
-
-    rc = sandbox_cfg_allow_stat_filename(cfg, fn, fr);
+    rc = sandbox_cfg_allow_stat_filename(cfg, fn);
     if (rc) {
       log_err(LD_BUG,"(Sandbox) sandbox_cfg_allow_stat_filename_array fail");
       goto end;
@@ -1098,11 +1095,11 @@ sandbox_cfg_allow_stat_filename_array(sandbox_cfg_t **cfg, ...)
 }
 
 int
-sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file, int fr)
+sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file)
 {
   sandbox_cfg_t *elem = NULL;
 
-  elem = new_element(SCMP_SYS(open), 0, (intptr_t)(void *)tor_strdup(file));
+  elem = new_element(SCMP_SYS(open), 0, (intptr_t)(void *) file);
   if (!elem) {
     log_err(LD_BUG,"(Sandbox) failed to register parameter!");
     return -1;
@@ -1110,8 +1107,6 @@ sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file, int fr)
 
   elem->next = *cfg;
   *cfg = elem;
-
-  if (fr) tor_free(file);
 
   return 0;
 }
@@ -1122,8 +1117,8 @@ sandbox_cfg_allow_rename(sandbox_cfg_t **cfg, char *file1, char *file2)
   sandbox_cfg_t *elem = NULL;
 
   elem = new_element2(SCMP_SYS(rename), 0, 1,
-                      (intptr_t)(void *)tor_strdup(file1),
-                      (intptr_t)(void *)tor_strdup(file2));
+                      (intptr_t)(void *) file1,
+                      (intptr_t)(void *) file2);
 
   if (!elem) {
     log_err(LD_BUG,"(Sandbox) failed to register parameter!");
@@ -1142,8 +1137,6 @@ sandbox_cfg_allow_rename(sandbox_cfg_t **cfg, char *file1, char *file2)
   elem->next = *cfg;
   *cfg = elem;
 
-  tor_free(file1);
-  tor_free(file2);
   return 0;
 }
 
@@ -1157,9 +1150,7 @@ sandbox_cfg_allow_open_filename_array(sandbox_cfg_t **cfg, ...)
   va_start(ap, cfg);
 
   while ((fn = va_arg(ap, char*)) != NULL) {
-    int fr = va_arg(ap, int);
-
-    rc = sandbox_cfg_allow_open_filename(cfg, fn, fr);
+    rc = sandbox_cfg_allow_open_filename(cfg, fn);
     if (rc) {
       log_err(LD_BUG,"(Sandbox) sandbox_cfg_allow_open_filename_array fail");
       goto end;
@@ -1172,11 +1163,11 @@ sandbox_cfg_allow_open_filename_array(sandbox_cfg_t **cfg, ...)
 }
 
 int
-sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file, int fr)
+sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file)
 {
   sandbox_cfg_t *elem = NULL;
 
-  elem = new_element(SCMP_SYS(openat), 1, (intptr_t)(void *)tor_strdup(file));
+  elem = new_element(SCMP_SYS(openat), 1, (intptr_t)(void *) file);
   if (!elem) {
     log_err(LD_BUG,"(Sandbox) failed to register parameter!");
     return -1;
@@ -1184,8 +1175,6 @@ sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file, int fr)
 
   elem->next = *cfg;
   *cfg = elem;
-
-  if (fr) tor_free(file);
 
   return 0;
 }
@@ -1200,9 +1189,7 @@ sandbox_cfg_allow_openat_filename_array(sandbox_cfg_t **cfg, ...)
   va_start(ap, cfg);
 
   while ((fn = va_arg(ap, char*)) != NULL) {
-    int fr = va_arg(ap, int);
-
-    rc = sandbox_cfg_allow_openat_filename(cfg, fn, fr);
+    rc = sandbox_cfg_allow_openat_filename(cfg, fn);
     if (rc) {
       log_err(LD_BUG,"(Sandbox) sandbox_cfg_allow_openat_filename_array fail");
       goto end;
@@ -1219,7 +1206,7 @@ sandbox_cfg_allow_execve(sandbox_cfg_t **cfg, const char *com)
 {
   sandbox_cfg_t *elem = NULL;
 
-  elem = new_element(SCMP_SYS(execve), 1, (intptr_t)(void *)tor_strdup(com));
+  elem = new_element(SCMP_SYS(execve), 1, (intptr_t)(void *) com);
   if (!elem) {
     log_err(LD_BUG,"(Sandbox) failed to register parameter!");
     return -1;
@@ -1519,7 +1506,8 @@ register_cfg(sandbox_cfg_t* cfg)
     return 0;
   }
 
-  for (elem = filter_dynamic; elem->next != NULL; elem = elem->next);
+  for (elem = filter_dynamic; elem->next != NULL; elem = elem->next)
+    ;
 
   elem->next = cfg;
 
@@ -1583,10 +1571,9 @@ sandbox_init(sandbox_cfg_t *cfg)
 
 #ifndef USE_LIBSECCOMP
 int
-sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file,
-                                int fr)
+sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file)
 {
-  (void)cfg; (void)file; (void)fr;
+  (void)cfg; (void)file;
   return 0;
 }
 
@@ -1598,10 +1585,9 @@ sandbox_cfg_allow_open_filename_array(sandbox_cfg_t **cfg, ...)
 }
 
 int
-sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file,
-                                  int fr)
+sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file)
 {
-  (void)cfg; (void)file; (void)fr;
+  (void)cfg; (void)file;
   return 0;
 }
 
@@ -1627,10 +1613,9 @@ sandbox_cfg_allow_execve_array(sandbox_cfg_t **cfg, ...)
 }
 
 int
-sandbox_cfg_allow_stat_filename(sandbox_cfg_t **cfg, char *file,
-                                int fr)
+sandbox_cfg_allow_stat_filename(sandbox_cfg_t **cfg, char *file)
 {
-  (void)cfg; (void)file; (void)fr;
+  (void)cfg; (void)file;
   return 0;
 }
 
