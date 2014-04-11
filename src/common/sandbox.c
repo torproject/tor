@@ -1625,5 +1625,12 @@ sandbox_cfg_allow_stat_filename_array(sandbox_cfg_t **cfg, ...)
   (void)cfg;
   return 0;
 }
+
+int
+sandbox_cfg_allow_rename(sandbox_cfg_t **cfg, char *file1, char *file2)
+{
+  (void)cfg; (void)file1; (void)file2;
+  return 0;
+}
 #endif
 
