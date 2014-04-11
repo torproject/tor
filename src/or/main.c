@@ -2836,8 +2836,6 @@ sandbox_init_filter(void)
     );
   }
 
-  sandbox_cfg_allow_execve(&cfg, "/usr/local/bin/tor");
-
   init_addrinfo();
 
   return cfg;
