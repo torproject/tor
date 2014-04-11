@@ -421,6 +421,23 @@ test_config_parse_bridge_line(void *arg)
     smartlist_free(sl_tmp);
   }
 
+  {
+    smartlist_t *sl_tmp = smartlist_new();
+    smartlist_add_asprintf(sl_tmp, "dub=come");
+    smartlist_add_asprintf(sl_tmp, "save=me");
+
+    good_bridge_line_test("transport 192.0.2.1:12 "
+                          "4352e58420e68f5e40bf7c74faddccd9d1349666 "
+                          "dub=come save=me",
+
+                          "192.0.2.1:12",
+                          "4352e58420e68f5e40bf7c74faddccd9d1349666",
+                          "transport", sl_tmp);
+
+    SMARTLIST_FOREACH(sl_tmp, char *, s, tor_free(s));
+    smartlist_free(sl_tmp);
+  }
+
   good_bridge_line_test("192.0.2.1:1231 "
                         "4352e58420e68f5e40bf7c74faddccd9d1349413",
                         "192.0.2.1:1231",
