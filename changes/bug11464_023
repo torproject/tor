@@ -1,0 +1,5 @@
+  o Major features (security):
+    - Block authority signing keys that were used on an authorities
+      vulnerable to the "heartbleed" bug in openssl (CVE-2014-0160).
+      (We don't have any evidence that these keys _were_ compromised;
+      we're doing this to be prudent.) Resolves ticket 11464.
