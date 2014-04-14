@@ -1,0 +1,12 @@
+  o Major bugfixes:
+    - Generate the server's preference list for ciphersuites
+      automatically based on uniform criteria, and considering all
+      OpenSSL ciphersuites with acceptable strength and forward
+      secrecy. (The sort order is: prefer AES to 3DES; break ties by
+      preferring ECDHE to DHE; break ties by preferring GCM to CBC;
+      break ties by preferring SHA384 to SHA256 to SHA1; and finally,
+      break ties by preferring AES256 to AES128.) This resolves bugs
+      #11513, #11492, #11498, #11499. Bugs reported by 'cypherpunks'.
+      Bugfix on 0.2.4.8-alpha.
+
+
