@@ -85,8 +85,8 @@ node_get_mutable_by_id(const char *identity_digest)
 
 /** Return the node_t whose identity is <b>identity_digest</b>, or NULL
  * if no such node exists. */
-const node_t *
-node_get_by_id(const char *identity_digest)
+MOCK_IMPL(const node_t *,
+node_get_by_id,(const char *identity_digest))
 {
   return node_get_mutable_by_id(identity_digest);
 }

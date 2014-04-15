@@ -469,15 +469,15 @@ get_connection_array(void)
 
 /** Provides the traffic read and written over the life of the process. */
 
-uint64_t
-get_bytes_read(void)
+MOCK_IMPL(uint64_t,
+get_bytes_read,(void))
 {
   return stats_n_bytes_read;
 }
 
 /* DOCDOC get_bytes_written */
-uint64_t
-get_bytes_written(void)
+MOCK_IMPL(uint64_t,
+get_bytes_written,(void))
 {
   return stats_n_bytes_written;
 }
@@ -2121,8 +2121,8 @@ process_signal(uintptr_t sig)
 }
 
 /** Returns Tor's uptime. */
-long
-get_uptime(void)
+MOCK_IMPL(long,
+get_uptime,(void))
 {
   return stats_n_seconds_working;
 }

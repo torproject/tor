@@ -12,16 +12,18 @@
 #ifndef TOR_HIBERNATE_H
 #define TOR_HIBERNATE_H
 
+#include "testsupport.h"
+
 int accounting_parse_options(const or_options_t *options, int validate_only);
-int accounting_is_enabled(const or_options_t *options);
+MOCK_DECL(int, accounting_is_enabled, (const or_options_t *options));
 int accounting_get_interval_length(void);
-time_t accounting_get_end_time(void);
+MOCK_DECL(time_t, accounting_get_end_time, (void));
 void configure_accounting(time_t now);
 void accounting_run_housekeeping(time_t now);
 void accounting_add_bytes(size_t n_read, size_t n_written, int seconds);
 int accounting_record_bandwidth_usage(time_t now, or_state_t *state);
 void hibernate_begin_shutdown(void);
-int we_are_hibernating(void);
+MOCK_DECL(int, we_are_hibernating, (void));
 void consider_hibernation(time_t now);
 int getinfo_helper_accounting(control_connection_t *conn,
                               const char *question, char **answer,

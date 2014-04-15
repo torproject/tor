@@ -24,8 +24,8 @@ void add_connection_to_closeable_list(connection_t *conn);
 int connection_is_on_closeable_list(connection_t *conn);
 
 smartlist_t *get_connection_array(void);
-uint64_t get_bytes_read(void);
-uint64_t get_bytes_written(void);
+MOCK_DECL(uint64_t,get_bytes_read,(void));
+MOCK_DECL(uint64_t,get_bytes_written,(void));
 
 /** Bitmask for events that we can turn on and off with
  * connection_watch_events. */
@@ -52,7 +52,8 @@ void ip_address_changed(int at_interface);
 void dns_servers_relaunch_checks(void);
 void reschedule_descriptor_update_check(void);
 
-long get_uptime(void);
+MOCK_DECL(long,get_uptime,(void));
+
 unsigned get_signewnym_epoch(void);
 
 void handle_signals(int is_parent);

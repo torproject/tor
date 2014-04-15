@@ -2995,8 +2995,8 @@ rep_hist_conn_stats_write(time_t now)
  * handshake we've received, and how many we've assigned to cpuworkers.
  * Useful for seeing trends in cpu load.
  * @{ */
-static int onion_handshakes_requested[MAX_ONION_HANDSHAKE_TYPE+1] = {0};
-static int onion_handshakes_assigned[MAX_ONION_HANDSHAKE_TYPE+1] = {0};
+STATIC int onion_handshakes_requested[MAX_ONION_HANDSHAKE_TYPE+1] = {0};
+STATIC int onion_handshakes_assigned[MAX_ONION_HANDSHAKE_TYPE+1] = {0};
 /**@}*/
 
 /** A new onionskin (using the <b>type</b> handshake) has arrived. */

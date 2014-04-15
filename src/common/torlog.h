@@ -13,6 +13,7 @@
 #ifndef TOR_TORLOG_H
 
 #include "compat.h"
+#include "testsupport.h"
 
 #ifdef HAVE_SYSLOG_H
 #include <syslog.h>
@@ -227,6 +228,12 @@ extern const char *log_fn_function_name_;
 #endif
 
 #endif /* !GNUC */
+
+#ifdef LOG_PRIVATE
+MOCK_DECL(STATIC void, logv, (int severity, log_domain_mask_t domain,
+    const char *funcname, const char *suffix, const char *format,
+    va_list ap) CHECK_PRINTF(5,0));
+#endif
 
 # define TOR_TORLOG_H
 #endif

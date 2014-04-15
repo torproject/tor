@@ -438,8 +438,8 @@ circuit_close_all_marked(void)
 }
 
 /** Return the head of the global linked list of circuits. */
-struct global_circuitlist_s *
-circuit_get_global_list(void)
+MOCK_IMPL(struct global_circuitlist_s *,
+circuit_get_global_list,(void))
 {
   return &global_circuitlist;
 }

@@ -6,6 +6,8 @@
  * \brief Keep status information and log the heartbeat messages.
  **/
 
+#define STATUS_PRIVATE
+
 #include "or.h"
 #include "config.h"
 #include "status.h"
@@ -22,7 +24,7 @@
 static void log_accounting(const time_t now, const or_options_t *options);
 
 /** Return the total number of circuits. */
-static int
+STATIC int
 count_circuits(void)
 {
   circuit_t *circ;
@@ -36,7 +38,7 @@ count_circuits(void)
 
 /** Take seconds <b>secs</b> and return a newly allocated human-readable
  * uptime string */
-static char *
+STATIC char *
 secs_to_uptime(long secs)
 {
   long int days = secs / 86400;
@@ -63,7 +65,7 @@ secs_to_uptime(long secs)
 
 /** Take <b>bytes</b> and returns a newly allocated human-readable usage
  * string. */
-static char *
+STATIC char *
 bytes_to_usage(uint64_t bytes)
 {
   char *bw_string = NULL;

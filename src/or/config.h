@@ -12,8 +12,10 @@
 #ifndef TOR_CONFIG_H
 #define TOR_CONFIG_H
 
+#include "testsupport.h"
+
 const char *get_dirportfrontpage(void);
-const or_options_t *get_options(void);
+MOCK_DECL(const or_options_t *,get_options,(void));
 or_options_t *get_options_mutable(void);
 int set_options(or_options_t *new_val, char **msg);
 void config_free_all(void);

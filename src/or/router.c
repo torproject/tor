@@ -1348,8 +1348,8 @@ authdir_mode_bridge(const or_options_t *options)
 
 /** Return true iff we are trying to be a server.
  */
-int
-server_mode(const or_options_t *options)
+MOCK_IMPL(int,
+server_mode,(const or_options_t *options))
 {
   if (options->ClientOnly) return 0;
   /* XXXX024 I believe we can kill off ORListenAddress here.*/
@@ -1358,8 +1358,8 @@ server_mode(const or_options_t *options)
 
 /** Return true iff we are trying to be a non-bridge server.
  */
-int
-public_server_mode(const or_options_t *options)
+MOCK_IMPL(int,
+public_server_mode,(const or_options_t *options))
 {
   if (!server_mode(options)) return 0;
   return (!options->BridgeRelay);
@@ -1689,8 +1689,8 @@ router_is_me(const routerinfo_t *router)
 
 /** Return a routerinfo for this OR, rebuilding a fresh one if
  * necessary.  Return NULL on error, or if called on an OP. */
-const routerinfo_t *
-router_get_my_routerinfo(void)
+MOCK_IMPL(const routerinfo_t *,
+router_get_my_routerinfo,(void))
 {
   if (!server_mode(get_options()))
     return NULL;

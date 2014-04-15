@@ -2579,8 +2579,8 @@ tor_tls_get_n_raw_bytes(tor_tls_t *tls, size_t *n_read, size_t *n_written)
 
 /** Return a ratio of the bytes that TLS has sent to the bytes that we've told
  * it to send. Used to track whether our TLS records are getting too tiny. */
-double
-tls_get_write_overhead_ratio(void)
+MOCK_IMPL(double,
+tls_get_write_overhead_ratio,(void))
 {
   if (total_bytes_written_over_tls == 0)
     return 1.0;

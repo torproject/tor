@@ -147,9 +147,6 @@ static INLINE char *format_msg(char *buf, size_t buf_len,
            const char *suffix,
            const char *format, va_list ap, size_t *msg_len_out)
   CHECK_PRINTF(7,0);
-static void logv(int severity, log_domain_mask_t domain, const char *funcname,
-                 const char *suffix, const char *format, va_list ap)
-  CHECK_PRINTF(5,0);
 
 /** Name of the application: used to generate the message we write at the
  * start of each new log. */
@@ -336,9 +333,9 @@ format_msg(char *buf, size_t buf_len,
  * <b>severity</b>.  If provided, <b>funcname</b> is prepended to the
  * message.  The actual message is derived as from tor_snprintf(format,ap).
  */
-static void
-logv(int severity, log_domain_mask_t domain, const char *funcname,
-     const char *suffix, const char *format, va_list ap)
+MOCK_IMPL(STATIC void,
+logv,(int severity, log_domain_mask_t domain, const char *funcname,
+     const char *suffix, const char *format, va_list ap))
 {
   char buf[10024];
   size_t msg_len = 0;

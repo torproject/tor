@@ -620,8 +620,8 @@ get_options_mutable(void)
 }
 
 /** Returns the currently configured options */
-const or_options_t *
-get_options(void)
+MOCK_IMPL(const or_options_t *,
+get_options,(void))
 {
   return get_options_mutable();
 }
