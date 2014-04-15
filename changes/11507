@@ -1,0 +1,7 @@
+  o Testing support:
+    - New macros in test.h to simplify writting mock-functions for unit
+      tests. Part of ticket 11507. Patch from Dana Koch.
+
+  o Testing:
+    - Complete tests for the status.c module. Resolves ticket 11507.
+      Patch from Dana Koch.
