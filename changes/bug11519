@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Avoid sending an garbage value to the controller when a circuit is
+      cannibalized. Fixes bug 11519; bugfix on 0.2.3.11-alpha.
