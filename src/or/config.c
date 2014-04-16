@@ -1137,11 +1137,13 @@ options_act_reversible(const or_options_t *old_options, char **msg)
   if (!running_tor)
     goto commit;
 
-  mark_logs_temp(); /* Close current logs once new logs are open. */
-  logs_marked = 1;
-  if (options_init_logs(options, 0)<0) { /* Configure the tor_log(s) */
-    *msg = tor_strdup("Failed to init Log options. See logs for details.");
-    goto rollback;
+  if (!sandbox_is_active()) {
+    mark_logs_temp(); /* Close current logs once new logs are open. */
+    logs_marked = 1;
+    if (options_init_logs(options, 0)<0) { /* Configure the tor_log(s) */
+      *msg = tor_strdup("Failed to init Log options. See logs for details.");
+      goto rollback;
+    }
   }
 
  commit:
@@ -1488,8 +1490,9 @@ options_act(const or_options_t *old_options)
 
   /* Write our PID to the PID file. If we do not have write permissions we
    * will log a warning */
-  if (options->PidFile)
+  if (options->PidFile && !sandbox_is_active()) {
     write_pidfile(options->PidFile);
+  }
 
   /* Register addressmap directives */
   config_register_addressmaps(options);
