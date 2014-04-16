@@ -2728,6 +2728,7 @@ sandbox_init_filter(void)
 {
   const or_options_t *options = get_options();
   sandbox_cfg_t *cfg = sandbox_cfg_new();
+  int i;
 
   sandbox_cfg_allow_openat_filename(&cfg,
       get_datadir_fname("cached-status"));
@@ -2773,6 +2774,12 @@ sandbox_init_filter(void)
                                 tor_strdup(options->ServerDNSResolvConfFile));
   else
     sandbox_cfg_allow_open_filename(&cfg, tor_strdup("/etc/resolv.conf"));
+
+  for (i = 0; i < 2; ++i) {
+    if (get_torrc_fname(i)) {
+      sandbox_cfg_allow_open_filename(&cfg, tor_strdup(get_torrc_fname(i)));
+    }
+  }
 
 #define RENAME_SUFFIX(name, suffix)        \
   sandbox_cfg_allow_rename(&cfg,           \
@@ -2827,6 +2834,8 @@ sandbox_init_filter(void)
         get_datadir_fname("fingerprint.tmp"),
         get_datadir_fname("hashed-fingerprint"),
         get_datadir_fname("hashed-fingerprint.tmp"),
+        get_datadir_fname("router-stability"),
+        get_datadir_fname("router-stability.tmp"),
         tor_strdup("/etc/resolv.conf"),
         NULL, 0
     );
@@ -2838,6 +2847,7 @@ sandbox_init_filter(void)
     RENAME_SUFFIX2("keys", "secret_onion_key", ".tmp");
     RENAME_SUFFIX2("keys", "secret_onion_key.old", ".tmp");
     RENAME_SUFFIX("hashed-fingerprint", ".tmp");
+    RENAME_SUFFIX("router-stability", ".tmp");
 
     sandbox_cfg_allow_rename(&cfg,
              get_datadir_fname2("keys", "secret_onion_key"),
