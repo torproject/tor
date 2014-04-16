@@ -6462,6 +6462,7 @@ remove_file_if_very_old(const char *fname, time_t now)
 #define VERY_OLD_FILE_AGE (28*24*60*60)
   struct stat st;
 
+  log_debug(LD_FS, "stat()ing %s", fname);
   if (stat(sandbox_intern_string(fname), &st)==0 &&
       st.st_mtime < now-VERY_OLD_FILE_AGE) {
     char buf[ISO_TIME_LEN+1];

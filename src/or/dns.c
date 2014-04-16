@@ -1480,6 +1480,7 @@ configure_nameservers(int force)
 
   evdns_set_log_fn(evdns_log_cb);
   if (conf_fname) {
+    log_debug(LD_FS, "stat()ing %s", conf_fname);
     if (stat(sandbox_intern_string(conf_fname), &st)) {
       log_warn(LD_EXIT, "Unable to stat resolver configuration in '%s': %s",
                conf_fname, strerror(errno));
@@ -1497,6 +1498,7 @@ configure_nameservers(int force)
 #if defined(DNS_OPTION_HOSTSFILE) && defined(USE_LIBSECCOMP)
     if (flags & DNS_OPTION_HOSTSFILE) {
       flags ^= DNS_OPTION_HOSTSFILE;
+      log_debug(LD_FS, "Loading /etc/hosts");
       evdns_base_load_hosts(the_evdns_base,
           sandbox_intern_string("/etc/hosts"));
     }

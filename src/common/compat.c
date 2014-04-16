@@ -144,6 +144,7 @@ tor_open_cloexec(const char *path, int flags, unsigned mode)
     return -1;
 #endif
 
+  log_debug(LD_FS, "Opening %s with flags %x", path, flags);
   fd = open(path, flags, mode);
 #ifdef FD_CLOEXEC
   if (fd >= 0) {
@@ -179,6 +180,7 @@ tor_fopen_cloexec(const char *path, const char *mode)
 int
 tor_rename(const char *path_old, const char *path_new)
 {
+  log_debug(LD_FS, "Renaming %s to %s", path_old, path_new);
   return rename(sandbox_intern_string(path_old),
                 sandbox_intern_string(path_new));
 }
