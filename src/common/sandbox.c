@@ -377,13 +377,10 @@ sb_rename(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
     if (param != NULL && param->prot == 1 &&
         param->syscall == SCMP_SYS(rename)) {
 
-      intptr_t value2 = (intptr_t)(void*)sandbox_intern_string(
-                                              (char*)param->value2);
-
       rc = seccomp_rule_add(ctx, SCMP_ACT_ALLOW,
-            SCMP_SYS(rename), 1,
+            SCMP_SYS(rename), 2,
             SCMP_CMP(0, SCMP_CMP_EQ, param->value),
-            SCMP_CMP(1, SCMP_CMP_EQ, value2));
+            SCMP_CMP(1, SCMP_CMP_EQ, param->value2));
       if (rc != 0) {
         log_err(LD_BUG,"(Sandbox) failed to add rename syscall, received "
             "libseccomp error %d", rc);
@@ -1149,15 +1146,6 @@ sandbox_cfg_allow_rename(sandbox_cfg_t **cfg, char *file1, char *file2)
     return -1;
   }
 
-  elem->next = *cfg;
-  *cfg = elem;
-
-  /* For interning */
-  elem = new_element(-1, (intptr_t)(void*)tor_strdup(file2));
-  if (!elem) {
-    log_err(LD_BUG,"(Sandbox) failed to register parameter!");
-    return -1;
-  }
   elem->next = *cfg;
   *cfg = elem;
 
