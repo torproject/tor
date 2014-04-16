@@ -2839,6 +2839,13 @@ sandbox_init_filter(void)
     RENAME_SUFFIX2("keys", "secret_onion_key.old", ".tmp");
     RENAME_SUFFIX("hashed-fingerprint", ".tmp");
 
+    sandbox_cfg_allow_rename(&cfg,
+             get_datadir_fname2("keys", "secret_onion_key"),
+             get_datadir_fname2("keys", "secret_onion_key.old"));
+    sandbox_cfg_allow_rename(&cfg,
+             get_datadir_fname2("keys", "secret_onion_key_ntor"),
+             get_datadir_fname2("keys", "secret_onion_key_ntor.old"));
+
     sandbox_cfg_allow_stat_filename_array(&cfg,
         get_datadir_fname("keys"),
         get_datadir_fname("stats/dirreq-stats"),
