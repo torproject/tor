@@ -1178,10 +1178,13 @@ options_act_reversible(const or_options_t *old_options, char **msg)
 
   SMARTLIST_FOREACH(replaced_listeners, connection_t *, conn,
   {
+    int marked = conn->marked_for_close;
     log_notice(LD_NET, "Closing old %s on %s:%d",
                conn_type_to_string(conn->type), conn->address, conn->port);
     connection_close_immediate(conn);
-    connection_mark_for_close(conn);
+    if (!marked) {
+      connection_mark_for_close(conn);
+    }
   });
   goto done;
 
