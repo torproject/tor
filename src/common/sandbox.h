@@ -65,10 +65,6 @@ typedef struct smp_param {
   /** syscall associated with parameter. */
   int syscall;
 
-  /** parameter index. */
-  int pindex;
-  /** parameter index, second one. */
-  int pindex2;
   /** parameter value. */
   intptr_t value;
   /** parameter value, second argument. */
@@ -89,7 +85,7 @@ struct sandbox_cfg_elem {
   SB_IMPL implem;
 
   /** Configuration parameter. */
-  void *param;
+  smp_param_t *param;
 
   /** Next element of the configuration*/
   struct sandbox_cfg_elem *next;

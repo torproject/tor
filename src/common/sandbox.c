@@ -198,7 +198,7 @@ sb_execve(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 
   // for each dynamic parameter filters
   for (elem = filter; elem != NULL; elem = elem->next) {
-    smp_param_t *param = (smp_param_t*) elem->param;
+    smp_param_t *param = elem->param;
 
     if (param != NULL && param->prot == 1 && param->syscall
         == SCMP_SYS(execve)) {
@@ -899,7 +899,8 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
 
   // get total number of bytes required to mmap. (Overestimate.)
   for (el = cfg; el != NULL; el = el->next) {
-    pr_mem_size += strlen((char*) ((smp_param_t*)el->param)->value) + 1;
+    pr_mem_size += strlen((char*) el->param->value) + 1;
+
   }
 
   // allocate protected memory with MALLOC_MP_LIM canary
@@ -919,7 +920,7 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
 
   // change el value pointer to protected
   for (el = cfg; el != NULL; el = el->next) {
-    char *param_val = (char*)((smp_param_t *)el->param)->value;
+    char *param_val = (char*)(el->param)->value;
     size_t param_size = strlen(param_val) + 1;
 
     void *location = strmap_get(locations, param_val);
@@ -927,11 +928,11 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
     if (location) {
       // We already interned this string.
       {
-        void *old_val = (void *) ((smp_param_t*)el->param)->value;
+        void *old_val = (void *) el->param->value;
         tor_free(old_val);
       }
-      ((smp_param_t*)el->param)->value = (intptr_t) location;
-      ((smp_param_t*)el->param)->prot = 1;
+      el->param->value = (intptr_t) location;
+      el->param->prot = 1;
 
     } else if (pr_mem_left >= param_size) {
       // copy to protected
@@ -939,11 +940,11 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
 
       // re-point el parameter to protected
       {
-        void *old_val = (void *) ((smp_param_t*)el->param)->value;
+        void *old_val = (void *) el->param->value;
         tor_free(old_val);
       }
-      ((smp_param_t*)el->param)->value = (intptr_t) pr_mem_next;
-      ((smp_param_t*)el->param)->prot = 1;
+      el->param->value = (intptr_t) pr_mem_next;
+      el->param->prot = 1;
 
       strmap_set(locations, pr_mem_next, pr_mem_next);
 
@@ -1025,17 +1026,14 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
  * point.
  */
 static sandbox_cfg_t*
-new_element2(int syscall, int index, int index2, intptr_t value, intptr_t value2)
+new_element2(int syscall, intptr_t value, intptr_t value2)
 {
   smp_param_t *param = NULL;
 
   sandbox_cfg_t *elem = tor_malloc_zero(sizeof(sandbox_cfg_t));
-  elem->param = tor_malloc_zero(sizeof(smp_param_t));
+  param = elem->param = tor_malloc_zero(sizeof(smp_param_t));
 
-  param = elem->param;
   param->syscall = syscall;
-  param->pindex = index;
-  param->pindex2 = index2;
   param->value = value;
   param->value2 = value2;
   param->prot = 0;
@@ -1044,9 +1042,9 @@ new_element2(int syscall, int index, int index2, intptr_t value, intptr_t value2
 }
 
 static sandbox_cfg_t*
-new_element(int syscall, int index, intptr_t value)
+new_element(int syscall, intptr_t value)
 {
-  return new_element2(syscall, index, -1, value, 0);
+  return new_element2(syscall, value, 0);
 }
 
 #ifdef __NR_stat64
@@ -1060,7 +1058,7 @@ sandbox_cfg_allow_stat_filename(sandbox_cfg_t **cfg, char *file)
 {
   sandbox_cfg_t *elem = NULL;
 
-  elem = new_element(SCMP_stat, 0, (intptr_t)(void*) file);
+  elem = new_element(SCMP_stat, (intptr_t)(void*) file);
   if (!elem) {
     log_err(LD_BUG,"(Sandbox) failed to register parameter!");
     return -1;
@@ -1099,7 +1097,7 @@ sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file)
 {
   sandbox_cfg_t *elem = NULL;
 
-  elem = new_element(SCMP_SYS(open), 0, (intptr_t)(void *) file);
+  elem = new_element(SCMP_SYS(open), (intptr_t)(void *) file);
   if (!elem) {
     log_err(LD_BUG,"(Sandbox) failed to register parameter!");
     return -1;
@@ -1116,7 +1114,7 @@ sandbox_cfg_allow_rename(sandbox_cfg_t **cfg, char *file1, char *file2)
 {
   sandbox_cfg_t *elem = NULL;
 
-  elem = new_element2(SCMP_SYS(rename), 0, 1,
+  elem = new_element2(SCMP_SYS(rename),
                       (intptr_t)(void *) file1,
                       (intptr_t)(void *) file2);
 
@@ -1129,7 +1127,7 @@ sandbox_cfg_allow_rename(sandbox_cfg_t **cfg, char *file1, char *file2)
   *cfg = elem;
 
   /* For interning */
-  elem = new_element(-1, 0, (intptr_t)(void*)tor_strdup(file2));
+  elem = new_element(-1, (intptr_t)(void*)tor_strdup(file2));
   if (!elem) {
     log_err(LD_BUG,"(Sandbox) failed to register parameter!");
     return -1;
@@ -1167,7 +1165,7 @@ sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file)
 {
   sandbox_cfg_t *elem = NULL;
 
-  elem = new_element(SCMP_SYS(openat), 1, (intptr_t)(void *) file);
+  elem = new_element(SCMP_SYS(openat), (intptr_t)(void *) file);
   if (!elem) {
     log_err(LD_BUG,"(Sandbox) failed to register parameter!");
     return -1;
@@ -1206,7 +1204,7 @@ sandbox_cfg_allow_execve(sandbox_cfg_t **cfg, const char *com)
 {
   sandbox_cfg_t *elem = NULL;
 
-  elem = new_element(SCMP_SYS(execve), 1, (intptr_t)(void *) com);
+  elem = new_element(SCMP_SYS(execve), (intptr_t)(void *) com);
   if (!elem) {
     log_err(LD_BUG,"(Sandbox) failed to register parameter!");
     return -1;
