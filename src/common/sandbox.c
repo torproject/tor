@@ -883,7 +883,8 @@ sandbox_intern_string(const char *str)
     }
   }
 
-  log_info(LD_GENERAL, "(Sandbox) Parameter %s not found", str);
+  if (sandbox_active)
+    log_warn(LD_BUG, "No interned sandbox parameter found for %s", str);
   return str;
 }
 
