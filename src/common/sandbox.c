@@ -862,7 +862,7 @@ static sandbox_filter_func_t filter_func[] = {
     sb_socketpair
 };
 
-const char*
+const char *
 sandbox_intern_string(const char *str)
 {
   sandbox_cfg_t *elem;
@@ -873,13 +873,62 @@ sandbox_intern_string(const char *str)
   for (elem = filter_dynamic; elem != NULL; elem = elem->next) {
     smp_param_t *param = elem->param;
 
-    if (param->prot && !strcmp(str, (char*)(param->value))) {
-      return (char*)(param->value);
+    if (param->prot) {
+      if (!strcmp(str, (char*)(param->value))) {
+        return (char*)param->value;
+      }
+      if (param->value2 && !strcmp(str, (char*)param->value2)) {
+        return (char*)param->value2;
+      }
     }
   }
 
   log_info(LD_GENERAL, "(Sandbox) Parameter %s not found", str);
   return str;
+}
+
+/** DOCDOC */
+static int
+prot_strings_helper(strmap_t *locations,
+                    char **pr_mem_next_p,
+                    size_t *pr_mem_left_p,
+                    intptr_t *value_p)
+{
+  char *param_val;
+  size_t param_size;
+  void *location;
+
+  if (*value_p == 0)
+    return 0;
+
+  param_val = (char*) *value_p;
+  param_size = strlen(param_val) + 1;
+  location = strmap_get(locations, param_val);
+
+  if (location) {
+    // We already interned this string.
+    tor_free(param_val);
+    *value_p = (intptr_t) location;
+    return 0;
+  } else if (*pr_mem_left_p >= param_size) {
+    // copy to protected
+    location = *pr_mem_next_p;
+    memcpy(location, param_val, param_size);
+
+    // re-point el parameter to protected
+    tor_free(param_val);
+    *value_p = (intptr_t) location;
+
+    strmap_set(locations, location, location); /* good real estate advice */
+
+    // move next available protected memory
+    *pr_mem_next_p += param_size;
+    *pr_mem_left_p -= param_size;
+    return 0;
+  } else {
+    log_err(LD_BUG,"(Sandbox) insufficient protected memory!");
+    return -1;
+  }
 }
 
 /**
@@ -900,7 +949,8 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
   // get total number of bytes required to mmap. (Overestimate.)
   for (el = cfg; el != NULL; el = el->next) {
     pr_mem_size += strlen((char*) el->param->value) + 1;
-
+    if (el->param->value2)
+      pr_mem_size += strlen((char*) el->param->value2) + 1;
   }
 
   // allocate protected memory with MALLOC_MP_LIM canary
@@ -920,42 +970,17 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
 
   // change el value pointer to protected
   for (el = cfg; el != NULL; el = el->next) {
-    char *param_val = (char*)(el->param)->value;
-    size_t param_size = strlen(param_val) + 1;
-
-    void *location = strmap_get(locations, param_val);
-
-    if (location) {
-      // We already interned this string.
-      {
-        void *old_val = (void *) el->param->value;
-        tor_free(old_val);
-      }
-      el->param->value = (intptr_t) location;
-      el->param->prot = 1;
-
-    } else if (pr_mem_left >= param_size) {
-      // copy to protected
-      memcpy(pr_mem_next, param_val, param_size);
-
-      // re-point el parameter to protected
-      {
-        void *old_val = (void *) el->param->value;
-        tor_free(old_val);
-      }
-      el->param->value = (intptr_t) pr_mem_next;
-      el->param->prot = 1;
-
-      strmap_set(locations, pr_mem_next, pr_mem_next);
-
-      // move next available protected memory
-      pr_mem_next += param_size;
-      pr_mem_left -= param_size;
-    } else {
-      log_err(LD_BUG,"(Sandbox) insufficient protected memory!");
+    if (prot_strings_helper(locations, &pr_mem_next, &pr_mem_left,
+                            &el->param->value) < 0) {
       ret = -2;
       goto out;
     }
+    if (prot_strings_helper(locations, &pr_mem_next, &pr_mem_left,
+                            &el->param->value2) < 0) {
+      ret = -2;
+      goto out;
+    }
+    el->param->prot = 1;
   }
 
   // protecting from writes
@@ -995,7 +1020,7 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
    * There is a restriction on how much you can mprotect with R|W up to the
    * size of the canary.
    */
-  ret = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mprotect), 2,
+  ret = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mprotect), 3,
       SCMP_CMP(0, SCMP_CMP_LT, (intptr_t) pr_mem_base),
       SCMP_CMP(1, SCMP_CMP_LE, MALLOC_MP_LIM),
       SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ|PROT_WRITE));
@@ -1004,7 +1029,7 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
     return ret;
   }
 
-  ret = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mprotect), 2,
+  ret = seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mprotect), 3,
       SCMP_CMP(0, SCMP_CMP_GT, (intptr_t) pr_mem_base + pr_mem_size +
           MALLOC_MP_LIM),
       SCMP_CMP(1, SCMP_CMP_LE, MALLOC_MP_LIM),
