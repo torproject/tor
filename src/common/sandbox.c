@@ -77,6 +77,13 @@ static sb_addr_info_t *sb_addr_info = NULL;
 
 #undef SCMP_CMP
 #define SCMP_CMP(a,b,c) ((struct scmp_arg_cmp){(a),(b),(c),0})
+#define SCMP_CMP4(a,b,c,d) ((struct scmp_arg_cmp){(a),(b),(c),(d)})
+/* We use a wrapper here because these masked comparisons seem to be pretty
+ * verbose. Also, it's important to cast to scmp_datum_t before negating the
+ * mask, since otherwise the negation might get applied to a 32 bit value, and
+ * the high bits of the value might get masked out improperly. */
+#define SCMP_CMP_MASKED(a,b,c) \
+  SCMP_CMP4((a), SCMP_CMP_MASKED_EQ, ~(scmp_datum_t)(b), (c))
 
 /** Variable used for storing all syscall numbers that will be allowed with the
  * stage 1 general Tor sandbox.
@@ -258,12 +265,7 @@ sb_accept4(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 #endif
 
   rc = seccomp_rule_add_1(ctx, SCMP_ACT_ALLOW, SCMP_SYS(accept4),
-      SCMP_CMP(3, SCMP_CMP_EQ, SOCK_CLOEXEC));
-  if (rc) {
-    return rc;
-  }
-  rc = seccomp_rule_add_1(ctx, SCMP_ACT_ALLOW, SCMP_SYS(accept4),
-      SCMP_CMP(3, SCMP_CMP_EQ, SOCK_CLOEXEC|SOCK_NONBLOCK));
+                   SCMP_CMP_MASKED(3, SOCK_CLOEXEC|SOCK_NONBLOCK, 0));
   if (rc) {
     return rc;
   }
@@ -362,7 +364,7 @@ sb_open(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   }
 
   rc = seccomp_rule_add_1(ctx, SCMP_ACT_ERRNO(-1), SCMP_SYS(open),
-        SCMP_CMP(1, SCMP_CMP_EQ, O_RDONLY|O_CLOEXEC));
+                          SCMP_CMP_MASKED(1, O_CLOEXEC, O_RDONLY));
   if (rc != 0) {
     log_err(LD_BUG,"(Sandbox) failed to add open syscall, received libseccomp "
         "error %d", rc);
@@ -460,6 +462,7 @@ static int
 sb_socket(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc = 0;
+  int i;
   (void) filter;
 
 #ifdef __i386__
@@ -468,33 +471,29 @@ sb_socket(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
     return rc;
 #endif
 
-  rc = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket),
+  rc = seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket),
       SCMP_CMP(0, SCMP_CMP_EQ, PF_FILE),
-      SCMP_CMP(1, SCMP_CMP_EQ, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK),
-      SCMP_CMP(2, SCMP_CMP_EQ, IPPROTO_IP));
+      SCMP_CMP_MASKED(1, SOCK_CLOEXEC|SOCK_NONBLOCK, SOCK_STREAM));
   if (rc)
     return rc;
 
-  rc = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket),
-      SCMP_CMP(0, SCMP_CMP_EQ, PF_INET),
-      SCMP_CMP(1, SCMP_CMP_EQ, SOCK_STREAM|SOCK_CLOEXEC),
+  for (i = 0; i < 2; ++i) {
+    const int pf = i ? PF_INET : PF_INET6;
+
+    rc = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket),
+      SCMP_CMP(0, SCMP_CMP_EQ, pf),
+      SCMP_CMP_MASKED(1, SOCK_CLOEXEC|SOCK_NONBLOCK, SOCK_STREAM),
       SCMP_CMP(2, SCMP_CMP_EQ, IPPROTO_TCP));
-  if (rc)
-    return rc;
+    if (rc)
+      return rc;
 
-  rc = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket),
-      SCMP_CMP(0, SCMP_CMP_EQ, PF_INET),
-      SCMP_CMP(1, SCMP_CMP_EQ, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK),
-      SCMP_CMP(2, SCMP_CMP_EQ, IPPROTO_TCP));
-  if (rc)
-    return rc;
-
-  rc = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket),
-      SCMP_CMP(0, SCMP_CMP_EQ, PF_INET),
-      SCMP_CMP(1, SCMP_CMP_EQ, SOCK_DGRAM|SOCK_CLOEXEC|SOCK_NONBLOCK),
+    rc = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket),
+      SCMP_CMP(0, SCMP_CMP_EQ, pf),
+      SCMP_CMP_MASKED(1, SOCK_CLOEXEC|SOCK_NONBLOCK, SOCK_DGRAM),
       SCMP_CMP(2, SCMP_CMP_EQ, IPPROTO_IP));
-  if (rc)
-    return rc;
+    if (rc)
+      return rc;
+  }
 
   rc = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket),
       SCMP_CMP(0, SCMP_CMP_EQ, PF_NETLINK),
