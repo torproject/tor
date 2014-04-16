@@ -1,4 +1,4 @@
- /* Copyright (c) 2001 Matej Pfajfar.
+/* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2013, The Tor Project, Inc. */
@@ -1043,12 +1043,18 @@ options_act_reversible(const or_options_t *old_options, char **msg)
   if (running_tor) {
     int n_ports=0;
     /* We need to set the connection limit before we can open the listeners. */
-    if (set_max_file_descriptors((unsigned)options->ConnLimit,
-                                 &options->ConnLimit_) < 0) {
-      *msg = tor_strdup("Problem with ConnLimit value. See logs for details.");
-      goto rollback;
+    if (! sandbox_is_active()) {
+      if (set_max_file_descriptors((unsigned)options->ConnLimit,
+                                   &options->ConnLimit_) < 0) {
+        *msg = tor_strdup("Problem with ConnLimit value. "
+                          "See logs for details.");
+        goto rollback;
+      }
+      set_conn_limit = 1;
+    } else {
+      tor_assert(old_options);
+      options->ConnLimit_ = old_options->ConnLimit_;
     }
-    set_conn_limit = 1;
 
     /* Set up libevent.  (We need to do this before we can register the
      * listeners as listeners.) */

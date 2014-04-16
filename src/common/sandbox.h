@@ -229,5 +229,8 @@ int sandbox_cfg_allow_stat_filename_array(sandbox_cfg_t **cfg, ...);
 /** Function used to initialise a sandbox configuration.*/
 int sandbox_init(sandbox_cfg_t* cfg);
 
+/** Return true iff the sandbox is turned on. */
+int sandbox_is_active(void);
+
 #endif /* SANDBOX_H_ */
 

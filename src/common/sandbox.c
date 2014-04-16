@@ -1576,6 +1576,11 @@ initialise_libseccomp_sandbox(sandbox_cfg_t* cfg)
   return 0;
 }
 
+int
+sandbox_is_active(void)
+{
+  return sandbox_active != 0;
+}
 #endif // USE_LIBSECCOMP
 
 sandbox_cfg_t*
@@ -1670,6 +1675,12 @@ int
 sandbox_cfg_allow_rename(sandbox_cfg_t **cfg, char *file1, char *file2)
 {
   (void)cfg; (void)file1; (void)file2;
+  return 0;
+}
+
+int
+sandbox_is_active(void)
+{
   return 0;
 }
 #endif
