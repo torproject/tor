@@ -1,0 +1,9 @@
+  o Minor features:
+    - When the Linux syscall sandbox finds an illegal system call, it
+      now tries to log a stack trace before exiting. Resolves ticket
+      11465.
+
+  o Minor bugfixes:
+    - Using the Linux syscall sandbox no longer prevents stack-trace
+      logging on crashes or errors. Fixes part 11465; bugfix on
+      0.2.5.1-alpha.
