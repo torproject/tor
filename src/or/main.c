@@ -2432,6 +2432,9 @@ tor_init(int argc, char *argv[])
     return -1;
   }
   stream_choice_seed_weak_rng();
+  if (tor_init_libevent_rng() < 0) {
+    log_warn(LD_NET, "Problem initializing libevent RNG.");
+  }
 
   return 0;
 }
@@ -2723,6 +2726,7 @@ init_addrinfo(void)
 static sandbox_cfg_t*
 sandbox_init_filter(void)
 {
+  const or_options_t *options = get_options();
   sandbox_cfg_t *cfg = sandbox_cfg_new();
 
   sandbox_cfg_allow_openat_filename(&cfg,
@@ -2761,8 +2765,14 @@ sandbox_init_filter(void)
       tor_strdup("/dev/srandom"),
       tor_strdup("/dev/urandom"),
       tor_strdup("/dev/random"),
+      tor_strdup("/etc/hosts"),
       NULL, 0
   );
+  if (options->ServerDNSResolvConfFile)
+    sandbox_cfg_allow_open_filename(&cfg,
+                                tor_strdup(options->ServerDNSResolvConfFile));
+  else
+    sandbox_cfg_allow_open_filename(&cfg, tor_strdup("/etc/resolv.conf"));
 
 #define RENAME_SUFFIX(name, suffix)        \
   sandbox_cfg_allow_rename(&cfg,           \

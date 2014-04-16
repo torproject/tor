@@ -13,6 +13,8 @@
 #include "compat.h"
 #include "compat_libevent.h"
 
+#include "crypto.h"
+
 #include "util.h"
 #include "torlog.h"
 
@@ -625,6 +627,23 @@ tor_add_bufferevent_to_rate_limit_group(struct bufferevent *bev,
   return bufferevent_add_to_rate_limit_group(tor_get_root_bufferevent(bev), g);
 }
 #endif
+
+int
+tor_init_libevent_rng(void)
+{
+  int rv = 0;
+#ifdef HAVE_EVUTIL_SECURE_RNG_INIT
+  char buf[256];
+  if (evutil_secure_rng_init() < 0) {
+    rv = -1;
+  }
+  /* Older libevent -- manually initialize the RNG */
+  crypto_rand(buf, 32);
+  evutil_secure_rng_add_bytes(buf, 32);
+  evutil_secure_rng_get_bytes(buf, sizeof(buf));
+#endif
+  return rv;
+}
 
 #if defined(LIBEVENT_VERSION_NUMBER) && LIBEVENT_VERSION_NUMBER >= V(2,1,1) \
   && !defined(TOR_UNIT_TESTS)

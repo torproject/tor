@@ -124,7 +124,6 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(read),
     SCMP_SYS(rt_sigreturn),
     SCMP_SYS(set_robust_list),
-    SCMP_SYS(_sysctl),
 #ifdef __NR_sigreturn
     SCMP_SYS(sigreturn),
 #endif
@@ -367,6 +366,23 @@ sb_open(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   if (rc != 0) {
     log_err(LD_BUG,"(Sandbox) failed to add open syscall, received libseccomp "
         "error %d", rc);
+    return rc;
+  }
+
+  return 0;
+}
+
+static int
+sb__sysctl(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
+{
+  int rc;
+  (void) filter;
+  (void) ctx;
+
+  rc = seccomp_rule_add_0(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(_sysctl));
+  if (rc != 0) {
+    log_err(LD_BUG,"(Sandbox) failed to add _sysctl syscall, "
+        "received libseccomp error %d", rc);
     return rc;
   }
 
@@ -850,6 +866,7 @@ static sandbox_filter_func_t filter_func[] = {
 #endif
     sb_open,
     sb_openat,
+    sb__sysctl,
     sb_rename,
 #ifdef __NR_fcntl64
     sb_fcntl64,
