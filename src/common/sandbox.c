@@ -1444,6 +1444,24 @@ install_syscall_filter(sandbox_cfg_t* cfg)
   return (rc < 0 ? -rc : rc);
 }
 
+#include "linux_syscalls.inc"
+static const char *
+get_syscall_name(int syscall_num)
+{
+  int i;
+  for (i = 0; SYSCALLS_BY_NUMBER[i].syscall_name; ++i) {
+    if (SYSCALLS_BY_NUMBER[i].syscall_num == syscall_num)
+      return SYSCALLS_BY_NUMBER[i].syscall_name;
+  }
+
+  {
+     static char syscall_name_buf[64];
+     format_dec_number_sigsafe(syscall_num,
+                               syscall_name_buf, sizeof(syscall_name_buf));
+     return syscall_name_buf;
+  }
+}
+
 #ifdef USE_BACKTRACE
 #define MAX_DEPTH 256
 static void *syscall_cb_buf[MAX_DEPTH];
@@ -1458,7 +1476,7 @@ static void
 sigsys_debugging(int nr, siginfo_t *info, void *void_context)
 {
   ucontext_t *ctx = (ucontext_t *) (void_context);
-  char number[32];
+  const char *syscall_name;
   int syscall;
 #ifdef USE_BACKTRACE
   int depth;
@@ -1483,9 +1501,10 @@ sigsys_debugging(int nr, siginfo_t *info, void *void_context)
   clean_backtrace(syscall_cb_buf, depth, ctx);
 #endif
 
-  format_dec_number_sigsafe(syscall, number, sizeof(number));
+  syscall_name = get_syscall_name(syscall);
+
   tor_log_err_sigsafe("(Sandbox) Caught a bad syscall attempt (syscall ",
-                      number,
+                      syscall_name,
                       ")\n",
                       NULL);
 

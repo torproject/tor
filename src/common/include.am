@@ -103,6 +103,7 @@ COMMONHEADERS = \
   src/common/di_ops.h				\
   src/common/memarea.h				\
   src/common/mempool.h				\
+  src/common/linux_syscalls.inc			\
   src/common/procmon.h				\
   src/common/sandbox.h				\
   src/common/testsupport.h			\
