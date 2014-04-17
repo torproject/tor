@@ -1196,20 +1196,29 @@ The following options are useful only for clients (that is, if
     compatibility, TransListenAddress is only allowed when TransPort is just
     a port number.)
 
-[[TransProxyType]] **TransProxyTYpe** **default**|**TPROXY**::
+[[TransProxyType]] **TransProxyTYpe** **default**|**TPROXY**|**ipfw**|**pf-divert**::
     TransProxyType may only be enabled when there is transparent proxy listener
     enabled.
  +
-    Set this to TPROXY if you wish to be able to use the TPROXY Linux module to
-    transparently proxy connections that are configured using the TransPort
+    Set this to "TPROXY" if you wish to be able to use the TPROXY Linux module
+    to transparently proxy connections that are configured using the TransPort
     option. This setting lets the listener on the TransPort accept connections
     for all addresses, even when the TransListenAddress is configured for an
     internal address. Detailed information on how to configure the TPROXY
     feature can be found in the Linux kernel source tree in the file
     Documentation/networking/tproxy.txt.
  +
+    Set this option to "ipfw" to use the FreeBSD ipfw interface.
+ +
+    On *BSD operating systems when using pf, set this to "pf-divert" to take
+    advantage of +divert-to+ rules, which do not modify the packets like
+    +rdr-to+ rules do. Detailed information on how to configure pf to use
+    +divert-to+ rules can be found in the pf.conf(5) manual page. On OpenBSD,
+    +divert-to+ is available to use on versions greater than or equal to
+    OpenBSD 4.4.
+ +
     Set this to "default", or leave it unconfigured, to use regular IPTables
-    on Linux, or to use pf on the *BSD operating systems.
+    on Linux, or to use pf +rdr-to+ rules on *BSD systems.
  +
     (Default: "default".)
 
