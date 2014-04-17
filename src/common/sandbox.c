@@ -363,8 +363,8 @@ sb_open(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
     }
   }
 
-  rc = seccomp_rule_add_1(ctx, SCMP_ACT_ERRNO(-1), SCMP_SYS(open),
-                          SCMP_CMP_MASKED(1, O_CLOEXEC, O_RDONLY));
+  rc = seccomp_rule_add_1(ctx, SCMP_ACT_ERRNO(EACCES), SCMP_SYS(open),
+                SCMP_CMP_MASKED(1, O_CLOEXEC|O_NONBLOCK|O_NOCTTY, O_RDONLY));
   if (rc != 0) {
     log_err(LD_BUG,"(Sandbox) failed to add open syscall, received libseccomp "
         "error %d", rc);
