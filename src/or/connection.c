@@ -4023,6 +4023,12 @@ connection_write_to_buf_impl_,(const char *string, size_t len,
                "write_to_buf failed. Closing circuit (fd %d).", (int)conn->s);
       circuit_mark_for_close(circuit_get_by_edge_conn(TO_EDGE_CONN(conn)),
                              END_CIRC_REASON_INTERNAL);
+    } else if (conn->type == CONN_TYPE_OR) {
+      or_connection_t *orconn = TO_OR_CONN(conn);
+      log_warn(LD_NET,
+               "write_to_buf failed on an orconn; notifying of error "
+               "(fd %d)", (int)(conn->s));
+      connection_or_close_for_error(orconn, 0);
     } else {
       log_warn(LD_NET,
                "write_to_buf failed. Closing connection (fd %d).",
