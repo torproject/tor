@@ -2,4 +2,4 @@
     - If write_to_buf() in connection_write_to_buf_impl_() ever fails,
       check if it's an or_connection_t and correctly call
       connection_or_close_for_error() rather than connection_mark_for_close()
-      directly.  Fixes bug #11304.
+      directly.  Fixes bug #11304; bugfix on 0.2.4.4-alpha.

@@ -1,4 +1,4 @@
   o Bugfixes:
     - When closing all connections on setting DisableNetwork to 1, use
       connection_or_close_normally() rather than closing orconns out from
-      under the channel layer.  Fixes bug #11306.
+      under the channel layer.  Fixes bug #11306; bugfix on 0.2.4.4-alpha.
