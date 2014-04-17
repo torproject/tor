@@ -3584,6 +3584,12 @@ options_transition_allowed(const or_options_t *old,
     return -1;
   }
 
+  if (old->Sandbox != new_val->Sandbox) {
+    *msg = tor_strdup("While Tor is running, changing Sandbox "
+                      "is not allowed.");
+    return -1;
+  }
+
   if (strcmp(old->DataDirectory,new_val->DataDirectory)!=0) {
     tor_asprintf(msg,
                "While Tor is running, changing DataDirectory "
@@ -3634,6 +3640,32 @@ options_transition_allowed(const or_options_t *old,
     *msg = tor_strdup("While Tor is running, disabling "
                       "DisableDebuggerAttachment is not allowed.");
     return -1;
+  }
+
+  if (sandbox_is_active()) {
+    if (! opt_streq(old->PidFile, new_val->PidFile)) {
+      *msg = tor_strdup("Can't change PidFile while Sandbox is active");
+      return -1;
+    }
+    if (! config_lines_eq(old->Logs, new_val->Logs)) {
+      *msg = tor_strdup("Can't change Logs while Sandbox is active");
+      return -1;
+    }
+    if (old->ConnLimit != new_val->ConnLimit) {
+      *msg = tor_strdup("Can't change ConnLimit while Sandbox is active");
+      return -1;
+    }
+    if (! opt_streq(old->ServerDNSResolvConfFile,
+                    new_val->ServerDNSResolvConfFile)) {
+      *msg = tor_strdup("Can't change ServerDNSResolvConfFile"
+                        " while Sandbox is active");
+      return -1;
+    }
+    if (server_mode(old) != server_mode(new_val)) {
+      *msg = tor_strdup("Can't start/stop being a server while "
+                        "Sandbox is active");
+      return -1;
+    }
   }
 
   return 0;
