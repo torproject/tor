@@ -247,10 +247,14 @@ test_rend_token_maps(void *arg)
   tt_ptr_op(NULL, ==, circuit_get_intro_point(tok3));
 
  done:
-  circuit_free(TO_CIRCUIT(c1));
-  circuit_free(TO_CIRCUIT(c2));
-  circuit_free(TO_CIRCUIT(c3));
-  circuit_free(TO_CIRCUIT(c4));
+  if (c1)
+    circuit_free(TO_CIRCUIT(c1));
+  if (c2)
+    circuit_free(TO_CIRCUIT(c2));
+  if (c3)
+    circuit_free(TO_CIRCUIT(c3));
+  if (c4)
+    circuit_free(TO_CIRCUIT(c4));
 }
 
 struct testcase_t circuitlist_tests[] = {
