@@ -1,0 +1,13 @@
+  o Major features:
+    - Refinements and improvements to the Linux seccomp2 sandbox code:
+      the sandbox can now run a test network for multiple hours without
+      crashing. (Previous crash reasons included: reseeding the OpenSSL PRNG,
+      seeding the Libevent PRNG, using the wrong combination of CLOEXEC and
+      NONBLOCK at the same place and time, having server keys, being an
+      authority, receiving a HUP, or using IPv6.) The sandbox is still
+      experimental, and more bugs will probably turn up. To try it,
+      enable "Sandbox 1" on a Linux host.
+
+    - Strengthen the Linux seccomp2 sandbox code: the sandbox can now
+      test the arguments for rename(), and blocks _sysctl() entirely.
+
