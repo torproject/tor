@@ -2359,6 +2359,20 @@ connection_mark_all_noncontrol_connections(void)
         connection_mark_unattached_ap(TO_ENTRY_CONN(conn),
                                       END_STREAM_REASON_HIBERNATING);
         break;
+      case CONN_TYPE_OR:
+        {
+          or_connection_t *orconn = TO_OR_CONN(conn);
+          if (orconn->chan) {
+            connection_or_close_normally(orconn, 0);
+          } else {
+            /*
+             * There should have been one, but mark for close and hope
+             * for the best..
+             */
+            connection_mark_for_close(conn);
+          }
+        }
+        break;
       default:
         connection_mark_for_close(conn);
         break;
