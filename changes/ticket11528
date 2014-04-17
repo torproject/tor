@@ -1,0 +1,6 @@
+  o Minor features:
+    - Servers now trust themselves to have a better view than clients of
+      which TLS ciphersuites to choose. (Thanks to #11513, the server
+      list is now well-considered, whereas the client list has been
+      chosen mainly for anti-fingerprinting purposes.) Resolves ticket
+      11528.

@@ -1261,6 +1261,10 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
     goto error;
   SSL_CTX_set_options(result->ctx, SSL_OP_NO_SSLv2);
 
+  /* Prefer the server's ordering of ciphers: the client's ordering has
+  * historically been chosen for fingerprinting resistance. */
+  SSL_CTX_set_options(result->ctx, SSL_OP_CIPHER_SERVER_PREFERENCE);
+
   /* Disable TLS1.1 and TLS1.2 if they exist.  We need to do this to
    * workaround a bug present in all OpenSSL 1.0.1 versions (as of 1
    * June 2012), wherein renegotiating while using one of these TLS
