@@ -1,5 +1,11 @@
 Changes in version 0.2.5.4-alpha - 2014-04-??
 
+  o Major features (security):
+    - Block authority signing keys that were used on an authorities
+      vulnerable to the "heartbleed" bug in openssl (CVE-2014-0160).
+      (We don't have any evidence that these keys _were_ compromised;
+      we're doing this to be prudent.) Resolves ticket 11464.
+
   o Deprecated versions:
     - Tor 0.2.2.x has reached end-of-life; it has received no patches or
       attention for some while. Directory authorities no longer accept
@@ -11,6 +17,32 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       circuits by using hashtables instead of linear searches over all
       the circuits. These functions previously accounted between 3 and
       7% of CPU usage on some busy relays.
+
+  o Major features (seccomp2 sandbox):
+    - Refinements and improvements to the Linux seccomp2 sandbox code:
+      the sandbox can now run a test network for multiple hours without
+      crashing. (Previous crash reasons included: reseeding the OpenSSL PRNG,
+      seeding the Libevent PRNG, using the wrong combination of CLOEXEC and
+      NONBLOCK at the same place and time, having server keys, being an
+      authority, receiving a HUP, or using IPv6.) The sandbox is still
+      experimental, and more bugs will probably turn up. To try it,
+      enable "Sandbox 1" on a Linux host.
+    - Strengthen the Linux seccomp2 sandbox code: the sandbox can now
+      test the arguments for rename(), and blocks _sysctl() entirely.
+    - When the Linux syscall sandbox finds an illegal system call, it
+      now tries to log a stack trace before exiting. Resolves ticket
+      11465.
+
+  o Major bugfixes (TLS cipher selection):
+    - Generate the server's preference list for ciphersuites
+      automatically based on uniform criteria, and considering all
+      OpenSSL ciphersuites with acceptable strength and forward
+      secrecy. (The sort order is: prefer AES to 3DES; break ties by
+      preferring ECDHE to DHE; break ties by preferring GCM to CBC;
+      break ties by preferring SHA384 to SHA256 to SHA1; and finally,
+      break ties by preferring AES256 to AES128.) This resolves bugs
+      #11513, #11492, #11498, #11499. Bugs reported by 'cypherpunks'.
+      Bugfix on 0.2.4.8-alpha.
 
   o Major bugfixes (undefined behavior):
     - Fix two instances of possible undefined behavior in channeltls.c
@@ -31,6 +63,26 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
     - Log only one message when we start logging in an unsafe
       way. Previously, we would log as many messages as we had
       problems. Fix for #9870; bugfix on 0.2.5.1-alpha.
+    - Using the Linux syscall sandbox no longer prevents stack-trace
+      logging on crashes or errors. Fixes part 11465; bugfix on
+      0.2.5.1-alpha.
+    - Only report the first fatal boostrap error on a given OR
+      connection.  This prevents controllers from declaring that a
+      connection has failed because of "DONE" or other junk reasons.
+      Fixes bug 10431; bugfix on 0.2.1.1-alpha.
+
+  o Minor bugfixes (closing channels):
+    - If write_to_buf() in connection_write_to_buf_impl_() ever fails,
+      check if it's an or_connection_t and correctly call
+      connection_or_close_for_error() rather than connection_mark_for_close()
+      directly.  Fixes bug #11304; bugfix on 0.2.4.4-alpha.
+    - When closing all connections on setting DisableNetwork to 1, use
+      connection_or_close_normally() rather than closing orconns out from
+      under the channel layer.  Fixes bug #11306; bugfix on 0.2.4.4-alpha.
+
+  o Minor bugfixes (controller):
+    - Avoid sending an garbage value to the controller when a circuit is
+      cannibalized. Fixes bug 11519; bugfix on 0.2.3.11-alpha.
 
   o Minor bugfixes (tor-fw-helper):
     - Allow tor-fw-helper to build again by adding src/ext to its
@@ -80,7 +132,34 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
     - Stop leaking memory when we successfully resolve a PTR record.
       Fixes bug 11437; bugfix on 0.2.4.7-alpha.
 
-  o Minor bugfixes (windows):
+  o Minor features (Transparent proxy):
+    - Support the ipfw firewall interface for transparent proxy support on
+      FreeBSD. To enable it, set "TransProxyType ipfw" in your torrc.
+      Resolves ticket 10267; patch from "yurivict".
+    - Support OpenBSD's divert-to rules with the pf firewall, when
+      "TransProxyType pf-divert" is specified. This allows Tor to run a
+      TransPort transparent proxy port on OpenBSD 4.4 or later without
+      root privileges. See the pf.conf(5) manual page for information on
+      configuring pf to use divert-to rules. Closes ticket 10896; patch
+      from Dana Koch.
+
+  o Minor features (security):
+    - New --enable-expensive-hardening option to turn on security hardening
+      options that consume nontrivial amounts of CPU and memory. Right now,
+      this includes AddressSanitizer and UbSan. Closes ticket 11477.
+
+  o Minor features (usability):
+    - Demote the message that we give when a flushing connection times
+      out for too long from NOTICE to INFO. It was usually meaningless.
+      Resolves ticket 5286.
+
+  o Minor features (performance, compatibility):
+    - Update the list of TLS cipehrsuites that a client advertises
+      to match those advertised by Firefox 28. This enables selection of
+      (fast) GCM ciphersuites, disables some strange old ciphers, and
+      disables the ECDH (not to be confused with ECDHE) ciphersuites.
+      Resolves ticket 11438.
+
 
   o Minor bugfixes (IPv6):
     - When using DNSPort and AutomapHostsOnResolve, respond to AAAA
@@ -136,6 +215,12 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       issue #9107; patch from "marek".
     - Change our use of the ENUM_BF macro to avoid declarations that
       confuse Doxygen.
+
+  o Testing:
+    - New macros in test.h to simplify writting mock-functions for unit
+      tests. Part of ticket 11507. Patch from Dana Koch.
+    - Complete tests for the status.c module. Resolves ticket 11507.
+      Patch from Dana Koch.
 
   o Removed code:
     - Remove all code for the long unused v1 directory protocol. Resolves

@@ -1,4 +1,0 @@
-  o Minor features:
-    - Support the ipfw firewall interface for transparent proxy support on
-      FreeBSD. To enable it, set "TransProxyType ipfw" in your torrc.
-      Resolves ticket 10267; patch from "yurivict".

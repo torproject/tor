@@ -1,4 +1,0 @@
-  o Minor features:
-    - Demote the message that we give when a flushing connection times
-      out for too long from NOTICE to INFO. It was usually meaningless.
-      Resolves ticket 5286.

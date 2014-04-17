@@ -1,6 +1,0 @@
-  o Minor features (performance, compatibility):
-    - Update the list of TLS cipehrsuites that a client advertises
-      to match those advertised by Firefox 28. This enables selection of
-      (fast) GCM ciphersuites, disables some strange old ciphers, and
-      disables the ECDH (not to be confused with ECDHE) ciphersuites.
-      Resolves ticket 11438.

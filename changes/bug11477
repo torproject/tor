@@ -1,4 +1,0 @@
-  o Minor features:
-    - New --enable-expensive-hardening option to turn on security hardening
-      options that consume nontrivial amounts of CPU and memory. Right now,
-      this includes AddressSanitizer and UbSan. Closes ticket 11477.
