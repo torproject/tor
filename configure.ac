@@ -435,6 +435,7 @@ AC_CHECK_FUNCS([event_get_version \
                 event_set_log_callback \
                 evdns_set_outgoing_bind_address \
                 evutil_secure_rng_set_urandom_device_file \
+                evutil_secure_rng_init \
                 event_base_loopexit])
 AC_CHECK_MEMBERS([struct event.min_heap_idx], , ,
 [#include <event.h>

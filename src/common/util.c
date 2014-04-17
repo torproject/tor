@@ -1830,6 +1830,7 @@ file_status(const char *fname)
   int r;
   f = tor_strdup(fname);
   clean_name_for_stat(f);
+  log_debug(LD_FS, "stat()ing %s", f);
   r = stat(sandbox_intern_string(f), &st);
   tor_free(f);
   if (r) {
@@ -1880,6 +1881,7 @@ check_private_dir(const char *dirname, cpd_check_t check,
   tor_assert(dirname);
   f = tor_strdup(dirname);
   clean_name_for_stat(f);
+  log_debug(LD_FS, "stat()ing %s", f);
   r = stat(sandbox_intern_string(f), &st);
   tor_free(f);
   if (r) {

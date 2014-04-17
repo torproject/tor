@@ -1,4 +1,4 @@
- /* Copyright (c) 2001 Matej Pfajfar.
+/* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2013, The Tor Project, Inc. */
@@ -1043,12 +1043,18 @@ options_act_reversible(const or_options_t *old_options, char **msg)
   if (running_tor) {
     int n_ports=0;
     /* We need to set the connection limit before we can open the listeners. */
-    if (set_max_file_descriptors((unsigned)options->ConnLimit,
-                                 &options->ConnLimit_) < 0) {
-      *msg = tor_strdup("Problem with ConnLimit value. See logs for details.");
-      goto rollback;
+    if (! sandbox_is_active()) {
+      if (set_max_file_descriptors((unsigned)options->ConnLimit,
+                                   &options->ConnLimit_) < 0) {
+        *msg = tor_strdup("Problem with ConnLimit value. "
+                          "See logs for details.");
+        goto rollback;
+      }
+      set_conn_limit = 1;
+    } else {
+      tor_assert(old_options);
+      options->ConnLimit_ = old_options->ConnLimit_;
     }
-    set_conn_limit = 1;
 
     /* Set up libevent.  (We need to do this before we can register the
      * listeners as listeners.) */
@@ -1132,11 +1138,13 @@ options_act_reversible(const or_options_t *old_options, char **msg)
   if (!running_tor)
     goto commit;
 
-  mark_logs_temp(); /* Close current logs once new logs are open. */
-  logs_marked = 1;
-  if (options_init_logs(options, 0)<0) { /* Configure the tor_log(s) */
-    *msg = tor_strdup("Failed to init Log options. See logs for details.");
-    goto rollback;
+  if (!sandbox_is_active()) {
+    mark_logs_temp(); /* Close current logs once new logs are open. */
+    logs_marked = 1;
+    if (options_init_logs(options, 0)<0) { /* Configure the tor_log(s) */
+      *msg = tor_strdup("Failed to init Log options. See logs for details.");
+      goto rollback;
+    }
   }
 
  commit:
@@ -1486,8 +1494,9 @@ options_act(const or_options_t *old_options)
 
   /* Write our PID to the PID file. If we do not have write permissions we
    * will log a warning */
-  if (options->PidFile)
+  if (options->PidFile && !sandbox_is_active()) {
     write_pidfile(options->PidFile);
+  }
 
   /* Register addressmap directives */
   config_register_addressmaps(options);
@@ -3591,6 +3600,12 @@ options_transition_allowed(const or_options_t *old,
     return -1;
   }
 
+  if (old->Sandbox != new_val->Sandbox) {
+    *msg = tor_strdup("While Tor is running, changing Sandbox "
+                      "is not allowed.");
+    return -1;
+  }
+
   if (strcmp(old->DataDirectory,new_val->DataDirectory)!=0) {
     tor_asprintf(msg,
                "While Tor is running, changing DataDirectory "
@@ -3641,6 +3656,32 @@ options_transition_allowed(const or_options_t *old,
     *msg = tor_strdup("While Tor is running, disabling "
                       "DisableDebuggerAttachment is not allowed.");
     return -1;
+  }
+
+  if (sandbox_is_active()) {
+    if (! opt_streq(old->PidFile, new_val->PidFile)) {
+      *msg = tor_strdup("Can't change PidFile while Sandbox is active");
+      return -1;
+    }
+    if (! config_lines_eq(old->Logs, new_val->Logs)) {
+      *msg = tor_strdup("Can't change Logs while Sandbox is active");
+      return -1;
+    }
+    if (old->ConnLimit != new_val->ConnLimit) {
+      *msg = tor_strdup("Can't change ConnLimit while Sandbox is active");
+      return -1;
+    }
+    if (! opt_streq(old->ServerDNSResolvConfFile,
+                    new_val->ServerDNSResolvConfFile)) {
+      *msg = tor_strdup("Can't change ServerDNSResolvConfFile"
+                        " while Sandbox is active");
+      return -1;
+    }
+    if (server_mode(old) != server_mode(new_val)) {
+      *msg = tor_strdup("Can't start/stop being a server while "
+                        "Sandbox is active");
+      return -1;
+    }
   }
 
   return 0;
@@ -6292,7 +6333,7 @@ write_configuration_file(const char *fname, const or_options_t *options)
       ++i;
     }
     log_notice(LD_CONFIG, "Renaming old configuration file to \"%s\"", fn_tmp);
-    if (rename(fname, fn_tmp) < 0) {
+    if (tor_rename(fname, fn_tmp) < 0) {//XXXX sandbox doesn't allow
       log_warn(LD_FS,
                "Couldn't rename configuration file \"%s\" to \"%s\": %s",
                fname, fn_tmp, strerror(errno));
@@ -6478,6 +6519,7 @@ remove_file_if_very_old(const char *fname, time_t now)
 #define VERY_OLD_FILE_AGE (28*24*60*60)
   struct stat st;
 
+  log_debug(LD_FS, "stat()ing %s", fname);
   if (stat(sandbox_intern_string(fname), &st)==0 &&
       st.st_mtime < now-VERY_OLD_FILE_AGE) {
     char buf[ISO_TIME_LEN+1];

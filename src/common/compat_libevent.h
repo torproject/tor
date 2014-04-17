@@ -89,6 +89,8 @@ int tor_add_bufferevent_to_rate_limit_group(struct bufferevent *bev,
                                    struct bufferevent_rate_limit_group *g);
 #endif
 
+int tor_init_libevent_rng(void);
+
 void tor_gettimeofday_cached(struct timeval *tv);
 void tor_gettimeofday_cache_clear(void);
 #ifdef TOR_UNIT_TESTS

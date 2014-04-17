@@ -2432,6 +2432,9 @@ tor_init(int argc, char *argv[])
     return -1;
   }
   stream_choice_seed_weak_rng();
+  if (tor_init_libevent_rng() < 0) {
+    log_warn(LD_NET, "Problem initializing libevent RNG.");
+  }
 
   return 0;
 }
@@ -2723,78 +2726,142 @@ init_addrinfo(void)
 static sandbox_cfg_t*
 sandbox_init_filter(void)
 {
+  const or_options_t *options = get_options();
   sandbox_cfg_t *cfg = sandbox_cfg_new();
+  int i;
 
   sandbox_cfg_allow_openat_filename(&cfg,
-      get_datadir_fname("cached-status"), 1);
+      get_datadir_fname("cached-status"));
 
   sandbox_cfg_allow_open_filename_array(&cfg,
-      get_datadir_fname("cached-certs"), 1,
-      get_datadir_fname("cached-certs.tmp"), 1,
-      get_datadir_fname("cached-consensus"), 1,
-      get_datadir_fname("unverified-consensus"), 1,
-      get_datadir_fname("unverified-consensus.tmp"), 1,
-      get_datadir_fname("cached-microdesc-consensus"), 1,
-      get_datadir_fname("cached-microdesc-consensus.tmp"), 1,
-      get_datadir_fname("cached-microdescs"), 1,
-      get_datadir_fname("cached-microdescs.tmp"), 1,
-      get_datadir_fname("cached-microdescs.new"), 1,
-      get_datadir_fname("cached-microdescs.new.tmp"), 1,
-      get_datadir_fname("unverified-microdesc-consensus"), 1,
-      get_datadir_fname("cached-descriptors"), 1,
-      get_datadir_fname("cached-descriptors.new"), 1,
-      get_datadir_fname("cached-descriptors.tmp"), 1,
-      get_datadir_fname("cached-descriptors.new.tmp"), 1,
-      get_datadir_fname("cached-descriptors.tmp.tmp"), 1,
-      get_datadir_fname("cached-extrainfo"), 1,
-      get_datadir_fname("state.tmp"), 1,
-      get_datadir_fname("unparseable-desc.tmp"), 1,
-      get_datadir_fname("unparseable-desc"), 1,
-      "/dev/srandom", 0,
-      "/dev/urandom", 0,
-      "/dev/random", 0,
+      get_datadir_fname("cached-certs"),
+      get_datadir_fname("cached-certs.tmp"),
+      get_datadir_fname("cached-consensus"),
+      get_datadir_fname("cached-consensus.tmp"),
+      get_datadir_fname("unverified-consensus"),
+      get_datadir_fname("unverified-consensus.tmp"),
+      get_datadir_fname("unverified-microdesc-consensus"),
+      get_datadir_fname("unverified-microdesc-consensus.tmp"),
+      get_datadir_fname("cached-microdesc-consensus"),
+      get_datadir_fname("cached-microdesc-consensus.tmp"),
+      get_datadir_fname("cached-microdescs"),
+      get_datadir_fname("cached-microdescs.tmp"),
+      get_datadir_fname("cached-microdescs.new"),
+      get_datadir_fname("cached-microdescs.new.tmp"),
+      get_datadir_fname("cached-descriptors"),
+      get_datadir_fname("cached-descriptors.new"),
+      get_datadir_fname("cached-descriptors.tmp"),
+      get_datadir_fname("cached-descriptors.new.tmp"),
+      get_datadir_fname("cached-descriptors.tmp.tmp"),
+      get_datadir_fname("cached-extrainfo"),
+      get_datadir_fname("cached-extrainfo.new"),
+      get_datadir_fname("cached-extrainfo.tmp"),
+      get_datadir_fname("cached-extrainfo.new.tmp"),
+      get_datadir_fname("cached-extrainfo.tmp.tmp"),
+      get_datadir_fname("state.tmp"),
+      get_datadir_fname("unparseable-desc.tmp"),
+      get_datadir_fname("unparseable-desc"),
+      get_datadir_fname("v3-status-votes"),
+      get_datadir_fname("v3-status-votes.tmp"),
+      tor_strdup("/dev/srandom"),
+      tor_strdup("/dev/urandom"),
+      tor_strdup("/dev/random"),
+      tor_strdup("/etc/hosts"),
       NULL, 0
   );
+  if (options->ServerDNSResolvConfFile)
+    sandbox_cfg_allow_open_filename(&cfg,
+                                tor_strdup(options->ServerDNSResolvConfFile));
+  else
+    sandbox_cfg_allow_open_filename(&cfg, tor_strdup("/etc/resolv.conf"));
+
+  for (i = 0; i < 2; ++i) {
+    if (get_torrc_fname(i)) {
+      sandbox_cfg_allow_open_filename(&cfg, tor_strdup(get_torrc_fname(i)));
+    }
+  }
+
+#define RENAME_SUFFIX(name, suffix)        \
+  sandbox_cfg_allow_rename(&cfg,           \
+      get_datadir_fname(name suffix),      \
+      get_datadir_fname(name))
+
+#define RENAME_SUFFIX2(prefix, name, suffix) \
+  sandbox_cfg_allow_rename(&cfg,                                        \
+                           get_datadir_fname2(prefix, name suffix),     \
+                           get_datadir_fname2(prefix, name))
+
+  RENAME_SUFFIX("cached-certs", ".tmp");
+  RENAME_SUFFIX("cached-consensus", ".tmp");
+  RENAME_SUFFIX("unverified-consensus", ".tmp");
+  RENAME_SUFFIX("unverified-microdesc-consensus", ".tmp");
+  RENAME_SUFFIX("cached-microdesc-consensus", ".tmp");
+  RENAME_SUFFIX("cached-microdescs", ".tmp");
+  RENAME_SUFFIX("cached-microdescs", ".new");
+  RENAME_SUFFIX("cached-microdescs.new", ".tmp");
+  RENAME_SUFFIX("cached-descriptors", ".tmp");
+  RENAME_SUFFIX("cached-descriptors", ".new");
+  RENAME_SUFFIX("cached-descriptors.new", ".tmp");
+  RENAME_SUFFIX("cached-extrainfo", ".tmp");
+  RENAME_SUFFIX("cached-extrainfo", ".new");
+  RENAME_SUFFIX("cached-extrainfo.new", ".tmp");
+  RENAME_SUFFIX("state", ".tmp");
+  RENAME_SUFFIX("unparseable-desc", ".tmp");
+  RENAME_SUFFIX("v3-status-votes", ".tmp");
 
   sandbox_cfg_allow_stat_filename_array(&cfg,
-      get_datadir_fname(NULL), 1,
-      get_datadir_fname("lock"), 1,
-      get_datadir_fname("state"), 1,
-      get_datadir_fname("router-stability"), 1,
-      get_datadir_fname("cached-extrainfo.new"), 1,
+      get_datadir_fname(NULL),
+      get_datadir_fname("lock"),
+      get_datadir_fname("state"),
+      get_datadir_fname("router-stability"),
+      get_datadir_fname("cached-extrainfo.new"),
       NULL, 0
   );
 
   // orport
   if (server_mode(get_options())) {
     sandbox_cfg_allow_open_filename_array(&cfg,
-        get_datadir_fname2("keys", "secret_id_key"), 1,
-        get_datadir_fname2("keys", "secret_onion_key"), 1,
-        get_datadir_fname2("keys", "secret_onion_key_ntor"), 1,
-        get_datadir_fname2("keys", "secret_onion_key_ntor.tmp"), 1,
-        get_datadir_fname2("keys", "secret_id_key.old"), 1,
-        get_datadir_fname2("keys", "secret_onion_key.old"), 1,
-        get_datadir_fname2("keys", "secret_onion_key_ntor.old"), 1,
-        get_datadir_fname2("keys", "secret_onion_key.tmp"), 1,
-        get_datadir_fname2("keys", "secret_id_key.tmp"), 1,
-        get_datadir_fname("fingerprint"), 1,
-        get_datadir_fname("fingerprint.tmp"), 1,
-        get_datadir_fname("hashed-fingerprint"), 1,
-        get_datadir_fname("hashed-fingerprint.tmp"), 1,
-        get_datadir_fname("cached-consensus"), 1,
-        get_datadir_fname("cached-consensus.tmp"), 1,
-        "/etc/resolv.conf", 0,
+        get_datadir_fname2("keys", "secret_id_key"),
+        get_datadir_fname2("keys", "secret_onion_key"),
+        get_datadir_fname2("keys", "secret_onion_key_ntor"),
+        get_datadir_fname2("keys", "secret_onion_key_ntor.tmp"),
+        get_datadir_fname2("keys", "secret_id_key.old"),
+        get_datadir_fname2("keys", "secret_onion_key.old"),
+        get_datadir_fname2("keys", "secret_onion_key_ntor.old"),
+        get_datadir_fname2("keys", "secret_onion_key.tmp"),
+        get_datadir_fname2("keys", "secret_id_key.tmp"),
+        get_datadir_fname("fingerprint"),
+        get_datadir_fname("fingerprint.tmp"),
+        get_datadir_fname("hashed-fingerprint"),
+        get_datadir_fname("hashed-fingerprint.tmp"),
+        get_datadir_fname("router-stability"),
+        get_datadir_fname("router-stability.tmp"),
+        tor_strdup("/etc/resolv.conf"),
         NULL, 0
     );
 
+    RENAME_SUFFIX("fingerprint", ".tmp");
+    RENAME_SUFFIX2("keys", "secret_onion_key_ntor", ".tmp");
+    RENAME_SUFFIX2("keys", "secret_id_key", ".tmp");
+    RENAME_SUFFIX2("keys", "secret_id_key.old", ".tmp");
+    RENAME_SUFFIX2("keys", "secret_onion_key", ".tmp");
+    RENAME_SUFFIX2("keys", "secret_onion_key.old", ".tmp");
+    RENAME_SUFFIX("hashed-fingerprint", ".tmp");
+    RENAME_SUFFIX("router-stability", ".tmp");
+
+    sandbox_cfg_allow_rename(&cfg,
+             get_datadir_fname2("keys", "secret_onion_key"),
+             get_datadir_fname2("keys", "secret_onion_key.old"));
+    sandbox_cfg_allow_rename(&cfg,
+             get_datadir_fname2("keys", "secret_onion_key_ntor"),
+             get_datadir_fname2("keys", "secret_onion_key_ntor.old"));
+
     sandbox_cfg_allow_stat_filename_array(&cfg,
-        get_datadir_fname("keys"), 1,
-        get_datadir_fname("stats/dirreq-stats"), 1,
+        get_datadir_fname("keys"),
+        get_datadir_fname("stats/dirreq-stats"),
         NULL, 0
     );
   }
-
-  sandbox_cfg_allow_execve(&cfg, "/usr/local/bin/tor");
 
   init_addrinfo();
 

@@ -13,6 +13,7 @@
 #include "hibernate.h"
 #include "rephist.h"
 #include "router.h"
+#include "sandbox.h"
 #include "statefile.h"
 
 /** A list of state-file "abbreviations," for compatibility. */
@@ -285,7 +286,7 @@ or_state_save_broken(char *fname)
     log_warn(LD_BUG, "Unable to parse state in \"%s\". Moving it aside "
              "to \"%s\".  This could be a bug in Tor; please tell "
              "the developers.", fname, fname2);
-    if (rename(fname, fname2) < 0) {
+    if (tor_rename(fname, fname2) < 0) {//XXXX sandbox prohibits
       log_warn(LD_BUG, "Weirdly, I couldn't even move the state aside. The "
                "OS gave an error of %s", strerror(errno));
     }

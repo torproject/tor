@@ -65,10 +65,10 @@ typedef struct smp_param {
   /** syscall associated with parameter. */
   int syscall;
 
-  /** parameter index. */
-  int pindex;
   /** parameter value. */
   intptr_t value;
+  /** parameter value, second argument. */
+  intptr_t value2;
 
   /**  parameter flag (0 = not protected, 1 = protected). */
   int prot;
@@ -85,7 +85,7 @@ struct sandbox_cfg_elem {
   SB_IMPL implem;
 
   /** Configuration parameter. */
-  void *param;
+  smp_param_t *param;
 
   /** Next element of the configuration*/
   struct sandbox_cfg_elem *next;
@@ -167,81 +167,70 @@ sandbox_cfg_t * sandbox_cfg_new(void);
 
 /**
  * Function used to add a open allowed filename to a supplied configuration.
- * The (char*) specifies the path to the allowed file, fr = 1 tells the
- * function that the char* needs to be free-ed, 0 means the pointer does not
- * need to be free-ed.
+ * The (char*) specifies the path to the allowed file; we take ownership
+ * of the pointer.
  */
-int sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file,
-    int fr);
+int sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file);
+
+/**DOCDOC*/
+int sandbox_cfg_allow_rename(sandbox_cfg_t **cfg, char *file1, char *file2);
 
 /** Function used to add a series of open allowed filenames to a supplied
  * configuration.
  *  @param cfg  sandbox configuration.
- *  @param ... all future parameters are specified as pairs of <(char*), 1 / 0>
- *    the char* specifies the path to the allowed file, 1 tells the function
- *    that the char* needs to be free-ed, 0 means the pointer does not need to
- *    be free-ed; the final parameter needs to be <NULL, 0>.
- */
+ *  @param ... a list of stealable pointers to permitted files.  The last
+ *  one must be NULL.
+*/
 int sandbox_cfg_allow_open_filename_array(sandbox_cfg_t **cfg, ...);
 
 /**
  * Function used to add a openat allowed filename to a supplied configuration.
- * The (char*) specifies the path to the allowed file, fr = 1 tells the
- * function that the char* needs to be free-ed, 0 means the pointer does not
- * need to be free-ed.
+ * The (char*) specifies the path to the allowed file; we steal the pointer to
+ * that file.
  */
-int sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file,
-    int fr);
+int sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file);
 
 /** Function used to add a series of openat allowed filenames to a supplied
  * configuration.
  *  @param cfg  sandbox configuration.
- *  @param ... all future parameters are specified as pairs of <(char*), 1 / 0>
- *    the char* specifies the path to the allowed file, 1 tells the function
- *    that the char* needs to be free-ed, 0 means the pointer does not need to
- *    be free-ed; the final parameter needs to be <NULL, 0>.
+ *  @param ... a list of stealable pointers to permitted files.  The last
+ *  one must be NULL.
  */
 int sandbox_cfg_allow_openat_filename_array(sandbox_cfg_t **cfg, ...);
 
 /**
  * Function used to add a execve allowed filename to a supplied configuration.
- * The (char*) specifies the path to the allowed file, fr = 1 tells the
- * function that the char* needs to be free-ed, 0 means the pointer does not
- * need to be free-ed.
+ * The (char*) specifies the path to the allowed file; that pointer is stolen.
  */
 int sandbox_cfg_allow_execve(sandbox_cfg_t **cfg, const char *com);
 
 /** Function used to add a series of execve allowed filenames to a supplied
  * configuration.
  *  @param cfg  sandbox configuration.
- *  @param ... all future parameters are specified as pairs of <(char*), 1 / 0>
- *    the char* specifies the path to the allowed file, 1 tells the function
- *    that the char* needs to be free-ed, 0 means the pointer does not need to
- *    be free-ed; the final parameter needs to be <NULL, 0>.
+ *  @param ... an array of stealable pointers to permitted files.  The last
+ *  one must be NULL.
  */
 int sandbox_cfg_allow_execve_array(sandbox_cfg_t **cfg, ...);
 
 /**
  * Function used to add a stat/stat64 allowed filename to a configuration.
- * The (char*) specifies the path to the allowed file, fr = 1 tells the
- * function that the char* needs to be free-ed, 0 means the pointer does not
- * need to be free-ed.
+ * The (char*) specifies the path to the allowed file; that pointer is stolen.
  */
-int sandbox_cfg_allow_stat_filename(sandbox_cfg_t **cfg, char *file,
-    int fr);
+int sandbox_cfg_allow_stat_filename(sandbox_cfg_t **cfg, char *file);
 
 /** Function used to add a series of stat64 allowed filenames to a supplied
  * configuration.
  *  @param cfg  sandbox configuration.
- *  @param ... all future parameters are specified as pairs of <(char*), 1 / 0>
- *    the char* specifies the path to the allowed file, 1 tells the function
- *    that the char* needs to be free-ed, 0 means the pointer does not need to
- *    be free-ed; the final parameter needs to be <NULL, 0>.
+ *  @param ... an array of stealable pointers to permitted files.  The last
+ *  one must be NULL.
  */
 int sandbox_cfg_allow_stat_filename_array(sandbox_cfg_t **cfg, ...);
 
 /** Function used to initialise a sandbox configuration.*/
 int sandbox_init(sandbox_cfg_t* cfg);
+
+/** Return true iff the sandbox is turned on. */
+int sandbox_is_active(void);
 
 #endif /* SANDBOX_H_ */
 

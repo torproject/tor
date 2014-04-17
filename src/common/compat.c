@@ -144,6 +144,7 @@ tor_open_cloexec(const char *path, int flags, unsigned mode)
     return -1;
 #endif
 
+  log_debug(LD_FS, "Opening %s with flags %x", path, flags);
   fd = open(path, flags, mode);
 #ifdef FD_CLOEXEC
   if (fd >= 0) {
@@ -173,6 +174,15 @@ tor_fopen_cloexec(const char *path, const char *mode)
   }
 #endif
   return result;
+}
+
+/** As rename(), but work correctly with the sandbox. */
+int
+tor_rename(const char *path_old, const char *path_new)
+{
+  log_debug(LD_FS, "Renaming %s to %s", path_old, path_new);
+  return rename(sandbox_intern_string(path_old),
+                sandbox_intern_string(path_new));
 }
 
 #if defined(HAVE_SYS_MMAN_H) || defined(RUNNING_DOXYGEN)
@@ -799,7 +809,7 @@ int
 replace_file(const char *from, const char *to)
 {
 #ifndef _WIN32
-  return rename(from,to);
+  return tor_rename(from, to);
 #else
   switch (file_status(to))
     {
@@ -814,7 +824,7 @@ replace_file(const char *from, const char *to)
       errno = EISDIR;
       return -1;
     }
-  return rename(from,to);
+  return tor_rename(from,to);
 #endif
 }
 
