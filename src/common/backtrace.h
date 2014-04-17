@@ -11,7 +11,10 @@ int configure_backtrace_handler(const char *tor_version);
 void clean_up_backtrace_handler(void);
 
 #ifdef EXPOSE_CLEAN_BACKTRACE
+#if defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \
+  defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION)
 void clean_backtrace(void **stack, int depth, const ucontext_t *ctx);
+#endif
 #endif
 
 #endif
