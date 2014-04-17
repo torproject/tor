@@ -47,7 +47,6 @@
 #include <sys/prctl.h>
 #include <linux/futex.h>
 #include <bits/signum.h>
-#include <event2/event.h>
 
 #include <stdarg.h>
 #include <seccomp.h>
