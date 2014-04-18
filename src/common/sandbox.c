@@ -1613,21 +1613,19 @@ sandbox_init(sandbox_cfg_t *cfg)
 #if defined(USE_LIBSECCOMP)
   return initialise_libseccomp_sandbox(cfg);
 
-#elif defined(_WIN32)
+#elif defined(__linux__)
   (void)cfg;
-  log_warn(LD_BUG,"Windows sandboxing is not implemented. The feature is "
-      "currently disabled.");
+  log_warn(LD_GENERAL,
+           "This version of Tor was built without support for sanboxing. To "
+           "build with support for sandboxing on Linux, you must have "
+           "libseccomp and its necessary header files (e.g. seccomp.h).");
   return 0;
 
-#elif defined(TARGET_OS_MAC)
-  (void)cfg;
-  log_warn(LD_BUG,"Mac OSX sandboxing is not implemented. The feature is "
-      "currently disabled");
-  return 0;
 #else
   (void)cfg;
-  log_warn(LD_BUG,"Sandboxing is not implemented for your platform. The "
-      "feature is currently disabled");
+  log_warn(LD_GENERAL,
+           "Currently, sandboxing is only implemented on Linux. The feature "
+           "is disabled on your platform.");
   return 0;
 #endif
 }

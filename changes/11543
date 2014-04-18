@@ -1,0 +1,8 @@
+  o Minor bugfixes:
+
+    - Improve the warning message when trying to enable the Linux
+      sandbox code on a Tor built without libseccomp. Instead of
+      saying "Sandbox is not implemented on this platform", we now
+      explain that we to need be built with libseccomp. Fixes bug
+      11543; bugfix on 0.2.5.1-alpha.
+
