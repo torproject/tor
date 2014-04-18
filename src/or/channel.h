@@ -149,11 +149,8 @@ struct channel_s {
   circ_id_type_bitfield_t circ_id_type:2;
   /** DOCDOC*/
   unsigned wide_circ_ids:1;
-  /**
-   * Which circ_id do we try to use next on this connection?  This is
-   * always in the range 0..1<<15-1.
-   */
-  circid_t next_circ_id;
+  /** Have we logged a warning about circID exhaustion on this channel? */
+  unsigned warned_circ_ids_exhausted:1;
 
   /** For how many circuits are we n_chan?  What about p_chan? */
   unsigned int num_n_circuits, num_p_circuits;

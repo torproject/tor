@@ -728,9 +728,6 @@ channel_init(channel_t *chan)
   /* Init timestamp */
   chan->timestamp_last_added_nonpadding = time(NULL);
 
-  /* Init next_circ_id */
-  chan->next_circ_id = crypto_rand_int(1 << 15);
-
   /* Initialize queues. */
   TOR_SIMPLEQ_INIT(&chan->incoming_queue);
   TOR_SIMPLEQ_INIT(&chan->outgoing_queue);

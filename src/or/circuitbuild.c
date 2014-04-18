@@ -77,18 +77,21 @@ channel_connect_for_circuit(const tor_addr_t *addr, uint16_t port,
   return chan;
 }
 
-/** Iterate over values of circ_id, starting from conn-\>next_circ_id,
- * and with the high bit specified by conn-\>circ_id_type, until we get
- * a circ_id that is not in use by any other circuit on that conn.
+
+/** Search for a value for circ_id that we can use on <b>chan</b> for an
+ * outbound circuit, until we get a circ_id that is not in use by any other
+ * circuit on that conn.
  *
  * Return it, or 0 if can't get a unique circ_id.
  */
 static circid_t
 get_unique_circ_id_by_chan(channel_t *chan)
 {
+#define MAX_CIRCID_ATTEMPTS 64
+
   circid_t test_circ_id;
   circid_t attempts=0;
-  circid_t high_bit, max_range;
+  circid_t high_bit, max_range, mask;
 
   tor_assert(chan);
 
@@ -98,23 +101,40 @@ get_unique_circ_id_by_chan(channel_t *chan)
              "a client with no identity.");
     return 0;
   }
-  max_range =  (chan->wide_circ_ids) ? (1u<<31) : (1u<<15);
+  max_range = (chan->wide_circ_ids) ? (1u<<31) : (1u<<15);
+  mask = max_range - 1;
   high_bit = (chan->circ_id_type == CIRC_ID_TYPE_HIGHER) ? max_range : 0;
   do {
-    /* Sequentially iterate over test_circ_id=1...max_range until we find a
-     * circID such that (high_bit|test_circ_id) is not already used. */
-    test_circ_id = chan->next_circ_id++;
-    if (test_circ_id == 0 || test_circ_id >= max_range) {
-      test_circ_id = 1;
-      chan->next_circ_id = 2;
-    }
-    if (++attempts > max_range) {
-      /* Make sure we don't loop forever if all circ_id's are used. This
-       * matters because it's an external DoS opportunity.
+    if (++attempts > MAX_CIRCID_ATTEMPTS) {
+      /* Make sure we don't loop forever because all circuit IDs are used.
+       *
+       * Once, we would try until we had tried every possible circuit ID.  But
+       * that's quite expensive.  Instead, we try MAX_CIRCID_ATTEMPTS random
+       * circuit IDs, and then give up.
+       *
+       * This potentially causes us to give up early if our circuit ID space
+       * is nearly full.  If we have N circuit IDs in use, then we will reject
+       * a new circuit with probability (N / max_range) ^ MAX_CIRCID_ATTEMPTS.
+       * This means that in practice, a few percent of our circuit ID capacity
+       * will go unused.
+       *
+       * The alternative here, though, is to do a linear search over the
+       * whole circuit ID space every time we extend a circuit, which is
+       * not so great either.
        */
-      log_warn(LD_CIRC,"No unused circ IDs. Failing.");
+      if (! chan->warned_circ_ids_exhausted) {
+        chan->warned_circ_ids_exhausted = 1;
+        log_warn(LD_CIRC,"No unused circIDs found on channel %s wide "
+                 "circID support, with %u inbound and %u outbound circuits. "
+                 "Failing a circuit.",
+                 chan->wide_circ_ids ? "with" : "without",
+                 chan->num_p_circuits, chan->num_n_circuits);
+      }
       return 0;
     }
+
+    crypto_rand((char*) &test_circ_id, sizeof(test_circ_id));
+    test_circ_id &= mask;
     test_circ_id |= high_bit;
   } while (circuit_id_in_use_on_channel(test_circ_id, chan));
   return test_circ_id;
