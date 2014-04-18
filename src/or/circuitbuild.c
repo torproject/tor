@@ -591,7 +591,9 @@ circuit_deliver_create_cell(circuit_t *circ, const create_cell_t *create_cell,
 
   id = get_unique_circ_id_by_chan(circ->n_chan);
   if (!id) {
-    log_warn(LD_CIRC,"failed to get unique circID.");
+    static ratelim_t circid_warning_limit = RATELIM_INIT(9600);
+    log_fn_ratelim(&circid_warning_limit, LOG_WARN, LD_CIRC,
+                   "failed to get unique circID.");
     return -1;
   }
   log_debug(LD_CIRC,"Chosen circID %u.", (unsigned)id);
