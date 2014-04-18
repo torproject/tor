@@ -251,8 +251,6 @@ dir_connection_new(int socket_family)
  *
  * Set timestamp_last_added_nonpadding to now.
  *
- * Assign a pseudorandom next_circ_id between 0 and 2**15.
- *
  * Initialize active_circuit_pqueue.
  *
  * Set active_circuit_pqueue_last_recalibrated to current cell_ewma tick.

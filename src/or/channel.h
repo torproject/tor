@@ -150,11 +150,6 @@ struct channel_s {
   unsigned wide_circ_ids:1;
   /** Have we logged a warning about circID exhaustion on this channel? */
   unsigned warned_circ_ids_exhausted:1;
-  /*
-   * Which circ_id do we try to use next on this connection?  This is
-   * always in the range 0..1<<15-1.
-   */
-  circid_t next_circ_id;
 
   /* For how many circuits are we n_chan?  What about p_chan? */
   unsigned int num_n_circuits, num_p_circuits;
