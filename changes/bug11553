@@ -1,0 +1,5 @@
+  o Minor features:
+    - When we run out of usable circuit IDs on a channel, log only one
+      warning for the whole channel, and include a description of
+      how many circuits there were on the channel. Fix for part of ticket
+      #11553.
