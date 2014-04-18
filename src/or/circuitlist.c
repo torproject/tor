@@ -1065,13 +1065,21 @@ circuit_get_by_circid_channel_even_if_marked(circid_t circ_id,
 }
 
 /** Return true iff the circuit ID <b>circ_id</b> is currently used by a
- * circuit, marked or not, on <b>chan</b>. */
+ * circuit, marked or not, on <b>chan</b>, or if the circ ID is reserved until
+ * a queued destroy cell can be sent.
+ *
+ * (Return 1 if the circuit is present, marked or not; Return 2
+ * if the circuit ID is pending a destroy.)
+ **/
 int
 circuit_id_in_use_on_channel(circid_t circ_id, channel_t *chan)
 {
   int found = 0;
-  return circuit_get_by_circid_channel_impl(circ_id, chan, &found) != NULL
-    || found;
+  if (circuit_get_by_circid_channel_impl(circ_id, chan, &found) != NULL)
+    return 1;
+  if (found)
+    return 2;
+  return 0;
 }
 
 /** Return the circuit that a given edge connection is using. */

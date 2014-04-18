@@ -88,7 +88,8 @@ static circid_t
 get_unique_circ_id_by_chan(channel_t *chan)
 {
 #define MAX_CIRCID_ATTEMPTS 64
-
+  int in_use;
+  unsigned n_with_circ = 0, n_pending_destroy = 0;
   circid_t test_circ_id;
   circid_t attempts=0;
   circid_t high_bit, max_range, mask;
@@ -126,9 +127,12 @@ get_unique_circ_id_by_chan(channel_t *chan)
         chan->warned_circ_ids_exhausted = 1;
         log_warn(LD_CIRC,"No unused circIDs found on channel %s wide "
                  "circID support, with %u inbound and %u outbound circuits. "
+                 "Found %u circuit IDs in use by circuits, and %u with "
+                 "pending destroy cells."
                  "Failing a circuit.",
                  chan->wide_circ_ids ? "with" : "without",
-                 chan->num_p_circuits, chan->num_n_circuits);
+                 chan->num_p_circuits, chan->num_n_circuits,
+                 n_with_circ, n_pending_destroy);
       }
       return 0;
     }
@@ -136,7 +140,13 @@ get_unique_circ_id_by_chan(channel_t *chan)
     crypto_rand((char*) &test_circ_id, sizeof(test_circ_id));
     test_circ_id &= mask;
     test_circ_id |= high_bit;
-  } while (circuit_id_in_use_on_channel(test_circ_id, chan));
+
+    in_use = circuit_id_in_use_on_channel(test_circ_id, chan);
+    if (in_use == 1)
+      ++n_with_circ;
+    else if (in_use == 2)
+      ++n_pending_destroy;
+  } while (in_use);
   return test_circ_id;
 }
 
