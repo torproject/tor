@@ -82,8 +82,8 @@ add_bytes_to_buf(generic_buffer_t *buf, size_t n_bytes)
   char b[3000];
 
   while (n_bytes) {
-    size_t this_add = n_bytes > sizeof(buf) ? sizeof(buf) : n_bytes;
-    crypto_rand(b, sizeof(b));
+    size_t this_add = n_bytes > sizeof(b) ? sizeof(b) : n_bytes;
+    crypto_rand(b, this_add);
     generic_buffer_add(buf, b, this_add);
     n_bytes -= this_add;
   }
