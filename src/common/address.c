@@ -236,7 +236,9 @@ tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr)
     hints.ai_family = family;
     hints.ai_socktype = SOCK_STREAM;
     err = sandbox_getaddrinfo(name, NULL, &hints, &res);
-    if (!err) {
+    /* The check for 'res' here shouldn't be necessary, but it makes static
+     * analysis tools happy. */
+    if (!err && res) {
       best = NULL;
       for (res_p = res; res_p; res_p = res_p->ai_next) {
         if (family == AF_UNSPEC) {
