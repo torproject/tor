@@ -417,8 +417,10 @@ test_dump_exit_policy_to_string(void *arg)
 
  done:
 
- SMARTLIST_FOREACH(ri->exit_policy, addr_policy_t *,
-                   entry, addr_policy_free(entry));
+ if (ri->exit_policy) {
+   SMARTLIST_FOREACH(ri->exit_policy, addr_policy_t *,
+                     entry, addr_policy_free(entry));
+ }
  tor_free(ri);
  tor_free(ep);
 }
