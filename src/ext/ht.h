@@ -303,14 +303,16 @@ ht_string_hash(const char *s)
 
 #define HT_GENERATE(name, type, field, hashfn, eqfn, load, mallocfn,    \
                     reallocfn, freefn)                                  \
+  /* Primes that aren't too far from powers of two. We stop at */       \
+  /* P=402653189 because P*sizeof(void*) is less than SSIZE_MAX */      \
+  /* even on a 32-bit platform. */                                      \
   static unsigned name##_PRIMES[] = {                                   \
     53, 97, 193, 389,                                                   \
     769, 1543, 3079, 6151,                                              \
     12289, 24593, 49157, 98317,                                         \
     196613, 393241, 786433, 1572869,                                    \
     3145739, 6291469, 12582917, 25165843,                               \
-    50331653, 100663319, 201326611, 402653189,                          \
-    805306457, 1610612741                                               \
+    50331653, 100663319, 201326611, 402653189                           \
   };                                                                    \
   static unsigned name##_N_PRIMES =                                     \
     (unsigned)(sizeof(name##_PRIMES)/sizeof(name##_PRIMES[0]));         \
