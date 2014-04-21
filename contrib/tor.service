@@ -1,0 +1,21 @@
+[Unit]
+Description = Anonymizing overlay network for TCP
+After = syslog.target network.target nss-lookup.target
+
+[Service]
+Type = simple
+ExecStart = /usr/bin/tor -f /etc/tor/torrc
+ExecReload = /bin/kill -HUP ${MAINPID}
+KillSignal = SIGINT
+TimeoutSec = 30
+Restart = on-failure
+LimitNOFILE = 32768
+
+# Hardening
+PrivateTmp = yes
+DeviceAllow = /dev/null rw
+DeviceAllow = /dev/urandom r
+InaccessibleDirectories = /home
+
+[Install]
+WantedBy = multi-user.target
