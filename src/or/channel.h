@@ -149,8 +149,6 @@ struct channel_s {
   circ_id_type_bitfield_t circ_id_type:2;
   /** DOCDOC*/
   unsigned wide_circ_ids:1;
-  /** Have we logged a warning about circID exhaustion on this channel? */
-  unsigned warned_circ_ids_exhausted:1;
 
   /** For how many circuits are we n_chan?  What about p_chan? */
   unsigned int num_n_circuits, num_p_circuits;
@@ -178,6 +176,10 @@ struct channel_s {
    * this channel in circuitbuild.c
    */
   unsigned int is_local:1;
+
+  /** Have we logged a warning about circID exhaustion on this channel?
+   * If so, when? */
+  ratelim_t last_warned_circ_ids_exhausted;
 
   /** Channel timestamps for cell channels */
   time_t timestamp_client; /* Client used this, according to relay.c */

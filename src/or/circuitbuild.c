@@ -87,6 +87,12 @@ channel_connect_for_circuit(const tor_addr_t *addr, uint16_t port,
 static circid_t
 get_unique_circ_id_by_chan(channel_t *chan)
 {
+/* This number is chosen somewhat arbitrarily; see comment below for more
+ * info.  When the space is 80% full, it gives a one-in-a-million failure
+ * chance; when the space is 90% full, it gives a one-in-850 chance; and when
+ * the space is 95% full, it gives a one-in-26 failure chance.  That seems
+ * okay, though you could make a case IMO for anything between N=32 and
+ * N=256. */
 #define MAX_CIRCID_ATTEMPTS 64
   int in_use;
   unsigned n_with_circ = 0, n_pending_destroy = 0;
@@ -123,9 +129,8 @@ get_unique_circ_id_by_chan(channel_t *chan)
        * whole circuit ID space every time we extend a circuit, which is
        * not so great either.
        */
-      if (! chan->warned_circ_ids_exhausted) {
-        chan->warned_circ_ids_exhausted = 1;
-        log_warn(LD_CIRC,"No unused circIDs found on channel %s wide "
+      log_fn_ratelim(&chan->last_warned_circ_ids_exhausted, LOG_WARN,
+                 LD_CIRC,"No unused circIDs found on channel %s wide "
                  "circID support, with %u inbound and %u outbound circuits. "
                  "Found %u circuit IDs in use by circuits, and %u with "
                  "pending destroy cells."
@@ -133,12 +138,14 @@ get_unique_circ_id_by_chan(channel_t *chan)
                  chan->wide_circ_ids ? "with" : "without",
                  chan->num_p_circuits, chan->num_n_circuits,
                  n_with_circ, n_pending_destroy);
-      }
       return 0;
     }
 
-    crypto_rand((char*) &test_circ_id, sizeof(test_circ_id));
-    test_circ_id &= mask;
+    do {
+      crypto_rand((char*) &test_circ_id, sizeof(test_circ_id));
+      test_circ_id &= mask;
+    } while (test_circ_id == 0);
+
     test_circ_id |= high_bit;
 
     in_use = circuit_id_in_use_on_channel(test_circ_id, chan);
