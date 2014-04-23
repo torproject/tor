@@ -43,6 +43,11 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       break ties by preferring AES256 to AES128.) This resolves bugs
       #11513, #11492, #11498, #11499. Bugs reported by 'cypherpunks'.
       Bugfix on 0.2.4.8-alpha.
+    - Servers now trust themselves to have a better view than clients of
+      which TLS ciphersuites to choose. (Thanks to #11513, the server
+      list is now well-considered, whereas the client list has been
+      chosen mainly for anti-fingerprinting purposes.) Resolves ticket
+      11528.
 
   o Major bugfixes (undefined behavior):
     - Fix two instances of possible undefined behavior in channeltls.c
@@ -70,6 +75,14 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       connection.  This prevents controllers from declaring that a
       connection has failed because of "DONE" or other junk reasons.
       Fixes bug 10431; bugfix on 0.2.1.1-alpha.
+    - Improve the warning message when trying to enable the Linux
+      sandbox code on a Tor built without libseccomp. Instead of
+      saying "Sandbox is not implemented on this platform", we now
+      explain that we to need be built with libseccomp. Fixes bug
+      11543; bugfix on 0.2.5.1-alpha.
+    - Avoid generating spurious warnings and failure messages when
+      starting with DisableNetwork enabled. Fixes bug 11200 and bug
+      10405; bugfix on 0.2.3.9-alpha.
 
   o Minor bugfixes (closing channels):
     - If write_to_buf() in connection_write_to_buf_impl_() ever fails,
@@ -127,6 +140,20 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
     - Stop accepting bridge lines containing hostnames. Doing so allowed
       clients to perform DNS requests on the hostnames, which was not
       sensible behavior. Fixes bug 10801; bugfix on 0.2.0.1-alpha.
+    - Fix a bug where a client-side Tor with pluggable transports
+      would take 60 seconds to bootstrap if a config re-read was
+      triggered at just the right timing during bootstrap. Refixes bug
+      11156; bugfix on 0.2.5.3-alpha.
+    - Avoid 60-second delays in the bootstrapping process when Tor
+      is launching for a second time while using bridges. Fixes bug 9229;
+      bugfix on 0.2.0.3-alpha.
+
+  o Minor bugfixes (DNS):
+    - When receing a DNS query for an unsupported type, reply with
+      no answer rather than with a NOTIMPL error. This behavior isn't
+      correct either, but it will break fewer client programs, we hope.
+      Fixes bug 10268; bugfix on 0.2.0.1-alpha. Original patch
+      from "epoch".
 
   o Minor bugfixes (exit):
     - Stop leaking memory when we successfully resolve a PTR record.
@@ -152,6 +179,11 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
     - Demote the message that we give when a flushing connection times
       out for too long from NOTICE to INFO. It was usually meaningless.
       Resolves ticket 5286.
+    - Don't log so many notice-level bootstrapping messages at startup about
+      downloading descriptors. Previously, we'd log a notice whenever we
+      learned about more routers. Now, we only log a notice at every 5% of
+      progress. Fixes bug 9963.
+
 
   o Minor features (performance, compatibility):
     - Update the list of TLS cipehrsuites that a client advertises

@@ -1,5 +1,0 @@
-  o Minor bugfixes (clients):
-    - Fix a bug where a client-side Tor with pluggable transports
-      would take 60 seconds to bootstrap if a config re-read was
-      triggered at just the right timing during bootstrap. Refixes bug
-      11156; bugfix on 0.2.5.3-alpha.
