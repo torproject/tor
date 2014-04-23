@@ -37,7 +37,7 @@ COMMAND-LINE OPTIONS
 
 [[opt-f]] **-f** __FILE__::
     Specify a new configuration file to contain further Tor configuration
-    options. (Default: $HOME/.torrc, or @CONFDIR@/torrc if that file is not
+    options. (Default: @CONFDIR@/torrc, or $HOME/.torrc if that file is not
     found)
 
 [[opt-defaults-torrc]] **--defaults-torrc** __FILE__::
@@ -2102,6 +2102,9 @@ FILES
 
 **@CONFDIR@/torrc**::
     The configuration file, which contains "option value" pairs.
+
+**$HOME/.torrc**::
+    Fallback location for torrc, if @CONFDIR@/torrc is not found.
 
 **@LOCALSTATEDIR@/lib/tor/**::
     The tor process stores keys and other data here.

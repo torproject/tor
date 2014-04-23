@@ -41,6 +41,7 @@ int router_reload_router_list(void);
 int authority_cert_dl_looks_uncertain(const char *id_digest);
 const smartlist_t *router_get_trusted_dir_servers(void);
 const smartlist_t *router_get_fallback_dir_servers(void);
+int authority_cert_is_blacklisted(const authority_cert_t *cert);
 
 const routerstatus_t *router_pick_directory_server(dirinfo_type_t type,
                                                    int flags);

@@ -1518,7 +1518,7 @@ circuit_launch_by_extend_info(uint8_t purpose,
     circ = circuit_find_to_cannibalize(purpose, extend_info, flags);
     if (circ) {
       uint8_t old_purpose = circ->base_.purpose;
-      struct timeval old_timestamp_began;
+      struct timeval old_timestamp_began = circ->base_.timestamp_began;
 
       log_info(LD_CIRC,"Cannibalizing circ '%s' for purpose %d (%s)",
                build_state_get_exit_nickname(circ->build_state), purpose,
