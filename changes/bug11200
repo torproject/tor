@@ -1,0 +1,5 @@
+  - Minor bugfixes:
+
+    - Avoid generating spurious warnings and failure messages when
+      starting with DisableNetwork enabled. Fixes bug 11200 and bug
+      10405; bugfix on 0.2.3.9-alpha.
