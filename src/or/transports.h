@@ -97,7 +97,7 @@ typedef struct {
    * this flag to signify that this proxy might need to be restarted
    * so that it can listen for other transports according to the new
    * torrc. */
-  unsigned int got_hup : 1;
+  unsigned int was_around_before_config_read : 1;
 
   /* transports to-be-launched by this proxy */
   smartlist_t *transports_to_launch;
