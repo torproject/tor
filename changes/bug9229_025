@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Avoid 60-second delays in the bootstrapping process when Tor
+      is launching for a second time while using bridges. Fixes bug 9229;
+      bugfix on 0.2.0.3-alpha.
+
