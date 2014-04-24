@@ -1700,6 +1700,10 @@ Changes in version 0.2.4.11-alpha - 2013-03-11
     - Randomize the lifetime of our SSL link certificate, so censors can't
       use the static value for filtering Tor flows. Resolves ticket 8443;
       related to ticket 4014 which was included in 0.2.2.33.
+    - Support a new version of the link protocol that allows 4-byte circuit
+      IDs. Previously, circuit IDs were limited to 2 bytes, which presented
+      a possible resource exhaustion issue. Closes ticket 7351; implements
+      proposal 214.
 
   o Minor features (portability):
     - Tweak the curve25519-donna*.c implementations to tolerate systems
