@@ -17,6 +17,13 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       circuits by using hashtables instead of linear searches over all
       the circuits. These functions previously accounted between 3 and
       7% of CPU usage on some busy relays.
+    - Avoid wasting cycles looking for usable circuit IDs. Previously,
+      when allocating a new circuit ID, we would in the worst case do a
+      linear scan over the entire possible range of circuit IDs before
+      deciding that we had exhausted our possibilities. Now, we
+      try 64 circuit IDs at random before deciding that we probably
+      won't succeed. Fix for a possible root cause of ticket
+      #11553.
 
   o Major features (seccomp2 sandbox):
     - Refinements and improvements to the Linux seccomp2 sandbox code:
@@ -174,6 +181,11 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
     - New --enable-expensive-hardening option to turn on security hardening
       options that consume nontrivial amounts of CPU and memory. Right now,
       this includes AddressSanitizer and UbSan. Closes ticket 11477.
+    - If you don't specify MaxMemInQueues yourself, Tor now tries to
+      pick a good value based on your total system memory. Previously,
+      the default was always 8 GB. You can still override the default by
+      setting MaxMemInQueues yourself. Resolves ticket 11396.
+
 
   o Minor features (usability):
     - Demote the message that we give when a flushing connection times
@@ -205,11 +217,19 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       IP address. Resolves ticket 2454.
     - Warn less verbosely when receiving a misformed ESTABLISH_RENDEZVOUS
       cell. Fixes ticket 11279.
+    - When we run out of usable circuit IDs on a channel, log only one
+      warning for the whole channel, and include a description of
+      how many circuits there were on the channel. Fix for part of ticket
+      #11553.
+
 
   o Minor features (controller):
     - Make the entire exit policy available from the control port via
       GETINFO exit-policy/*. Implements enhancement #7952. Patch from
       "rl1987".
+    - Because of the fix for ticket 11396, the real limit for memory
+      usage may no longer match the configured MaxMemInQueues value.
+      The real limit is now exposed via GETINFO limits/max-mem-in-queues.
 
   o Minor features (misc):
     - Always check return values for unlink, munmap, UnmapViewOfFile;
