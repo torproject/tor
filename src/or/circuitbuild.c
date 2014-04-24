@@ -77,7 +77,6 @@ channel_connect_for_circuit(const tor_addr_t *addr, uint16_t port,
   return chan;
 }
 
-
 /** Search for a value for circ_id that we can use on <b>chan</b> for an
  * outbound circuit, until we get a circ_id that is not in use by any other
  * circuit on that conn.
