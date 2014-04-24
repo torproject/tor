@@ -28,7 +28,7 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       the sandbox can now run a test network for multiple hours without
       crashing. (Previous crash reasons included: reseeding the OpenSSL
       PRNG, seeding the Libevent PRNG, using the wrong combination of
-      CLOEXEC and NONBLOCK at the same place and time, having server
+      CLOEXEC and NONBLOCK at the same place and time, having onion
       keys, being an authority, receiving a HUP, or using IPv6.) The
       sandbox is still experimental, and more bugs will probably turn
       up. To try it, enable "Sandbox 1" on a Linux host.
@@ -39,7 +39,7 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       11465.
 
   o Major bugfixes (TLS cipher selection):
-    - Generate the server's preference list for ciphersuites
+    - Generate the relay's preference list for ciphersuites
       automatically based on uniform criteria, and considering all
       OpenSSL ciphersuites with acceptable strength and forward secrecy.
       (The sort order is: prefer AES to 3DES; break ties by preferring
@@ -48,12 +48,12 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       preferring AES256 to AES128.) This resolves bugs #11513, #11492,
       #11498, #11499. Bugs reported by 'cypherpunks'. Bugfix on
       0.2.4.8-alpha.
-    - Servers now trust themselves to have a better view than clients of
-      which TLS ciphersuites to choose. (Thanks to #11513, the server
+    - Relays now trust themselves to have a better view than clients of
+      which TLS ciphersuites to choose. (Thanks to #11513, the relay
       list is now well-considered, whereas the client list has been
       chosen mainly for anti-fingerprinting purposes.) Resolves ticket
       11528.
-    - Update the list of TLS cipehrsuites that a client advertises to
+    - Update the list of TLS ciphersuites that a client advertises to
       match those advertised by Firefox 28. This enables selection of
       (fast) GCM ciphersuites, disables some strange old ciphers, and
       disables the ECDH (not to be confused with ECDHE) ciphersuites.
@@ -109,7 +109,7 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       new external IP address the next time we run our routine checks.
       If our IP address has changed, then publish a new descriptor with
       the new IP address. Resolves ticket 2454.
-    - Warn less verbosely when receiving a misformed
+    - Warn less verbosely when receiving a malformed
       ESTABLISH_RENDEZVOUS cell. Fixes ticket 11279.
     - When we run out of usable circuit IDs on a channel, log only one
       warning for the whole channel, and include a description of how
@@ -140,7 +140,7 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       intermittent "microdesc_free() called but md was still referenced"
       warnings. We now log more information about the likely error case,
       to try to figure out why we might be cleaning a microdescriptor as
-      old if it's still referenced by a live node.
+      old if it's still referenced by a live node_t object.
 
   o Minor bugfixes (logging):
     - Log only one message when we start logging in an unsafe way.
@@ -149,7 +149,7 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
     - Using the Linux seccomp2 sandbox no longer prevents stack-trace
       logging on crashes or errors. Fixes part 11465; bugfix on
       0.2.5.1-alpha.
-    - Only report the first fatal boostrap error on a given OR
+    - Only report the first fatal bootstrap error on a given OR
       connection. This prevents controllers from declaring that a
       connection has failed because of "DONE" or other junk reasons.
       Fixes bug 10431; bugfix on 0.2.1.1-alpha.
@@ -169,7 +169,7 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       connection_mark_for_close() directly. Fixes bug #11304; bugfix on
       0.2.4.4-alpha.
     - When closing all connections on setting DisableNetwork to 1, use
-      connection_or_close_normally() rather than closing orconns out
+      connection_or_close_normally() rather than closing OR connections out
       from under the channel layer. Fixes bug #11306; bugfix on
       0.2.4.4-alpha.
 
@@ -222,14 +222,14 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       sensible behavior. Fixes bug 10801; bugfix on 0.2.0.1-alpha.
     - Fix a bug where a client-side Tor with pluggable transports would
       take 60 seconds to bootstrap if a config re-read was triggered at
-      just the right timing during bootstrap. Refixes bug 11156; bugfix
+      just the right timing during bootstrap. Re-fixes bug 11156; bugfix
       on 0.2.5.3-alpha.
     - Avoid 60-second delays in the bootstrapping process when Tor is
       launching for a second time while using bridges. Fixes bug 9229;
       bugfix on 0.2.0.3-alpha.
 
   o Minor bugfixes (DNS):
-    - When receing a DNS query for an unsupported type, reply with no
+    - When receiving a DNS query for an unsupported type, reply with no
       answer rather than with a NOTIMPL error. This behavior isn't
       correct either, but it will break fewer client programs, we hope.
       Fixes bug 10268; bugfix on 0.2.0.1-alpha. Original patch from
@@ -266,11 +266,11 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
   o Deprecated versions:
     - Tor 0.2.2.x has reached end-of-life; it has received no patches or
       attention for some while. Directory authorities no longer accept
-      descriptors from Tor relays running any version of Tor prior to
+      descriptors from relays running any version of Tor prior to
       Tor 0.2.3.16-alpha. Resolves ticket 11149.
 
   o Testing:
-    - New macros in test.h to simplify writting mock-functions for unit
+    - New macros in test.h to simplify writing mock-functions for unit
       tests. Part of ticket 11507. Patch from Dana Koch.
     - Complete tests for the status.c module. Resolves ticket 11507.
       Patch from Dana Koch.
