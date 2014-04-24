@@ -2767,6 +2767,7 @@ sandbox_init_filter(void)
       tor_strdup("/dev/urandom"),
       tor_strdup("/dev/random"),
       tor_strdup("/etc/hosts"),
+      tor_strdup("/proc/meminfo"),
       NULL, 0
   );
   if (options->ServerDNSResolvConfFile)

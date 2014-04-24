@@ -307,7 +307,7 @@ static config_var_t option_vars_[] = {
   V(MaxAdvertisedBandwidth,      MEMUNIT,  "1 GB"),
   V(MaxCircuitDirtiness,         INTERVAL, "10 minutes"),
   V(MaxClientCircuitsPending,    UINT,     "32"),
-  V(MaxMemInQueues,              MEMUNIT,  "8 GB"),
+  VAR("MaxMeminQueues",          MEMUNIT,   MaxMemInQueues_raw, "0"),
   OBSOLETE("MaxOnionsPending"),
   V(MaxOnionQueueDelay,          MSEC_INTERVAL, "1750 msec"),
   V(MinMeasuredBWsForAuthToIgnoreAdvertised, INT, "500"),
@@ -565,6 +565,8 @@ static void config_maybe_load_geoip_files_(const or_options_t *options,
 static int options_validate_cb(void *old_options, void *options,
                                void *default_options,
                                int from_setconf, char **msg);
+static uint64_t compute_real_max_mem_in_queues(const uint64_t val,
+                                               int log_guess);
 
 /** Magic value for or_options_t. */
 #define OR_OPTIONS_MAGIC 9090909
@@ -2824,11 +2826,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("If EntryNodes is set, UseEntryGuards must be enabled.");
   }
 
-  if (options->MaxMemInQueues < (256 << 20)) {
-    log_warn(LD_CONFIG, "MaxMemInQueues must be at least 256 MB for now. "
-             "Ideally, have it as large as you can afford.");
-    options->MaxMemInQueues = (256 << 20);
-  }
+  options->MaxMemInQueues =
+    compute_real_max_mem_in_queues(options->MaxMemInQueues_raw,
+                                   server_mode(options));
 
   options->AllowInvalid_ = 0;
 
@@ -3576,6 +3576,68 @@ options_validate(or_options_t *old_options, or_options_t *options,
   return 0;
 #undef REJECT
 #undef COMPLAIN
+}
+
+/* Given the value that the user has set for MaxMemInQueues, compute the
+ * actual maximum value.  We clip this value if it's too low, and autodetect
+ * it if it's set to 0. */
+static uint64_t
+compute_real_max_mem_in_queues(const uint64_t val, int log_guess)
+{
+  uint64_t result;
+
+  if (val == 0) {
+#define ONE_GIGABYTE (U64_LITERAL(1) << 30)
+#define ONE_MEGABYTE (U64_LITERAL(1) << 20)
+#if SIZEOF_VOID_P >= 8
+#define MAX_DEFAULT_MAXMEM (8*ONE_GIGABYTE)
+#else
+#define MAX_DEFAULT_MAXMEM (2*ONE_GIGABYTE)
+#endif
+    /* The user didn't pick a memory limit.  Choose a very large one
+     * that is still smaller than the system memory */
+    static int notice_sent = 0;
+    size_t ram = 0;
+    if (get_total_system_memory(&ram) < 0) {
+      /* We couldn't determine our total system memory!  */
+#if SIZEOF_VOID_P >= 8
+      /* 64-bit system.  Let's hope for 8 GB. */
+      result = 8 * ONE_GIGABYTE;
+#else
+      /* (presumably) 32-bit system. Let's hope for 1 GB. */
+      result = ONE_GIGABYTE;
+#endif
+    } else {
+      /* We detected it, so let's pick 3/4 of the total RAM as our limit. */
+      const uint64_t avail = (ram / 4) * 3;
+
+      /* Make sure it's in range from 0.25 GB to 8 GB. */
+      if (avail > MAX_DEFAULT_MAXMEM) {
+        /* If you want to use more than this much RAM, you need to configure
+           it yourself */
+        result = MAX_DEFAULT_MAXMEM;
+      } else if (avail < ONE_GIGABYTE / 4) {
+        result = ONE_GIGABYTE / 4;
+      } else {
+        result = avail;
+      }
+    }
+    if (log_guess && ! notice_sent) {
+      log_notice(LD_CONFIG, "%sMaxMemInQueues is set to "U64_FORMAT" MB. "
+                 "You can override this by setting MaxMemInQueues by hand.",
+                 ram ? "Based on detected system memory, " : "",
+                 U64_PRINTF_ARG(result / ONE_MEGABYTE));
+      notice_sent = 1;
+    }
+    return result;
+  } else if (val < ONE_GIGABYTE / 4) {
+    log_warn(LD_CONFIG, "MaxMemInQueues must be at least 256 MB for now. "
+             "Ideally, have it as large as you can afford.");
+    return ONE_GIGABYTE / 4;
+  } else {
+    /* The value was fine all along */
+    return val;
+  }
 }
 
 /** Helper: return true iff s1 and s2 are both NULL, or both non-NULL

@@ -3491,7 +3491,10 @@ typedef struct {
   config_line_t *DirPort_lines;
   config_line_t *DNSPort_lines; /**< Ports to listen on for DNS requests. */
 
-  uint64_t MaxMemInQueues; /**< If we have more memory than this allocated
+  /* MaxMemInQueues value as input by the user. We clean this up to be
+   * MaxMemInQueues. */
+  uint64_t MaxMemInQueues_raw;
+  uint64_t MaxMemInQueues;/**< If we have more memory than this allocated
                             * for queues and buffers, run the OOM handler */
 
   /** @name port booleans

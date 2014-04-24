@@ -1,0 +1,11 @@
+  o Minor features (security):
+
+    - If you don't specify MaxMemInQueues yourself, Tor now tries to
+      pick a good value based on your total system memory. Previously,
+      the default was always 8 GB. You can still override the default by
+      setting MaxMemInQueues yourself. Resolves ticket 11396.
+
+  o Minor features (controller):
+    - Because of the fix for ticket 11396, the real limit for memory
+      usage may no longer match the configured MaxMemInQueues value.
+      The real limit is now exposed via GETINFO limits/max-mem-in-queues.
