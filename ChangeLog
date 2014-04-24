@@ -1,16 +1,18 @@
 Changes in version 0.2.5.4-alpha - 2014-04-??
+  This release includes several security and performance improvements
+  for clients and relays, including XXX
 
   o Major features (security):
     - Block authority signing keys that were used on an authorities
-      vulnerable to the "heartbleed" bug in openssl (CVE-2014-0160).
-      (We don't have any evidence that these keys _were_ compromised;
-      we're doing this to be prudent.) Resolves ticket 11464.
+      vulnerable to the "heartbleed" bug in openssl (CVE-2014-0160). (We
+      don't have any evidence that these keys _were_ compromised; we're
+      doing this to be prudent.) Resolves ticket 11464.
 
   o Deprecated versions:
     - Tor 0.2.2.x has reached end-of-life; it has received no patches or
       attention for some while. Directory authorities no longer accept
-      descriptors from Tor relays running any version of Tor prior to Tor
-      0.2.3.16-alpha. Resolves ticket 11149.
+      descriptors from Tor relays running any version of Tor prior to
+      Tor 0.2.3.16-alpha. Resolves ticket 11149.
 
   o Major features (relay performance):
     - Faster server-side lookups of rendezvous and introduction point
@@ -20,20 +22,19 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
     - Avoid wasting cycles looking for usable circuit IDs. Previously,
       when allocating a new circuit ID, we would in the worst case do a
       linear scan over the entire possible range of circuit IDs before
-      deciding that we had exhausted our possibilities. Now, we
-      try 64 circuit IDs at random before deciding that we probably
-      won't succeed. Fix for a possible root cause of ticket
-      #11553.
+      deciding that we had exhausted our possibilities. Now, we try 64
+      circuit IDs at random before deciding that we probably won't
+      succeed. Fix for a possible root cause of ticket #11553.
 
   o Major features (seccomp2 sandbox):
     - Refinements and improvements to the Linux seccomp2 sandbox code:
       the sandbox can now run a test network for multiple hours without
-      crashing. (Previous crash reasons included: reseeding the OpenSSL PRNG,
-      seeding the Libevent PRNG, using the wrong combination of CLOEXEC and
-      NONBLOCK at the same place and time, having server keys, being an
-      authority, receiving a HUP, or using IPv6.) The sandbox is still
-      experimental, and more bugs will probably turn up. To try it,
-      enable "Sandbox 1" on a Linux host.
+      crashing. (Previous crash reasons included: reseeding the OpenSSL
+      PRNG, seeding the Libevent PRNG, using the wrong combination of
+      CLOEXEC and NONBLOCK at the same place and time, having server
+      keys, being an authority, receiving a HUP, or using IPv6.) The
+      sandbox is still experimental, and more bugs will probably turn
+      up. To try it, enable "Sandbox 1" on a Linux host.
     - Strengthen the Linux seccomp2 sandbox code: the sandbox can now
       test the arguments for rename(), and blocks _sysctl() entirely.
     - When the Linux syscall sandbox finds an illegal system call, it
@@ -43,13 +44,13 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
   o Major bugfixes (TLS cipher selection):
     - Generate the server's preference list for ciphersuites
       automatically based on uniform criteria, and considering all
-      OpenSSL ciphersuites with acceptable strength and forward
-      secrecy. (The sort order is: prefer AES to 3DES; break ties by
-      preferring ECDHE to DHE; break ties by preferring GCM to CBC;
-      break ties by preferring SHA384 to SHA256 to SHA1; and finally,
-      break ties by preferring AES256 to AES128.) This resolves bugs
-      #11513, #11492, #11498, #11499. Bugs reported by 'cypherpunks'.
-      Bugfix on 0.2.4.8-alpha.
+      OpenSSL ciphersuites with acceptable strength and forward secrecy.
+      (The sort order is: prefer AES to 3DES; break ties by preferring
+      ECDHE to DHE; break ties by preferring GCM to CBC; break ties by
+      preferring SHA384 to SHA256 to SHA1; and finally, break ties by
+      preferring AES256 to AES128.) This resolves bugs #11513, #11492,
+      #11498, #11499. Bugs reported by 'cypherpunks'. Bugfix on
+      0.2.4.8-alpha.
     - Servers now trust themselves to have a better view than clients of
       which TLS ciphersuites to choose. (Thanks to #11513, the server
       list is now well-considered, whereas the client list has been
@@ -67,26 +68,26 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
     - Fix another possibly undefined pointer operations in the eventdns
       fallback implementation. Another case of bug #10363; bugfix on
       0.1.2.1-alpha.
-    - Use AddressSanitizer and Ubsan sanitizers (in clang-3.4) to fix some
-      miscellaneous errors in our tests and codebase. Fix for bug 11232.
-      Bugfixes on versions back as far as 0.2.1.11-alpha.
+    - Use AddressSanitizer and Ubsan sanitizers (in clang-3.4) to fix
+      some miscellaneous errors in our tests and codebase. Fix for bug
+      11232. Bugfixes on versions back as far as 0.2.1.11-alpha.
 
   o Minor bugfixes (logging):
-    - Log only one message when we start logging in an unsafe
-      way. Previously, we would log as many messages as we had
-      problems. Fix for #9870; bugfix on 0.2.5.1-alpha.
+    - Log only one message when we start logging in an unsafe way.
+      Previously, we would log as many messages as we had problems. Fix
+      for #9870; bugfix on 0.2.5.1-alpha.
     - Using the Linux syscall sandbox no longer prevents stack-trace
       logging on crashes or errors. Fixes part 11465; bugfix on
       0.2.5.1-alpha.
     - Only report the first fatal boostrap error on a given OR
-      connection.  This prevents controllers from declaring that a
+      connection. This prevents controllers from declaring that a
       connection has failed because of "DONE" or other junk reasons.
       Fixes bug 10431; bugfix on 0.2.1.1-alpha.
     - Improve the warning message when trying to enable the Linux
-      sandbox code on a Tor built without libseccomp. Instead of
-      saying "Sandbox is not implemented on this platform", we now
-      explain that we to need be built with libseccomp. Fixes bug
-      11543; bugfix on 0.2.5.1-alpha.
+      sandbox code on a Tor built without libseccomp. Instead of saying
+      "Sandbox is not implemented on this platform", we now explain that
+      we to need be built with libseccomp. Fixes bug 11543; bugfix on
+      0.2.5.1-alpha.
     - Avoid generating spurious warnings and failure messages when
       starting with DisableNetwork enabled. Fixes bug 11200 and bug
       10405; bugfix on 0.2.3.9-alpha.
@@ -94,11 +95,13 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
   o Minor bugfixes (closing channels):
     - If write_to_buf() in connection_write_to_buf_impl_() ever fails,
       check if it's an or_connection_t and correctly call
-      connection_or_close_for_error() rather than connection_mark_for_close()
-      directly.  Fixes bug #11304; bugfix on 0.2.4.4-alpha.
+      connection_or_close_for_error() rather than
+      connection_mark_for_close() directly. Fixes bug #11304; bugfix on
+      0.2.4.4-alpha.
     - When closing all connections on setting DisableNetwork to 1, use
-      connection_or_close_normally() rather than closing orconns out from
-      under the channel layer.  Fixes bug #11306; bugfix on 0.2.4.4-alpha.
+      connection_or_close_normally() rather than closing orconns out
+      from under the channel layer. Fixes bug #11306; bugfix on
+      0.2.4.4-alpha.
 
   o Minor bugfixes (controller):
     - Avoid sending an garbage value to the controller when a circuit is
@@ -109,9 +112,9 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       CPPFLAGS. Fixes bug 11296; bugfix on 0.2.5.3-alpha.
 
   o Minor bugfixes (bridges):
-    - Avoid potential crashes or bad behavior when launching a
-      server-side managed proxy with ORPort or ExtORPort temporarily
-      disabled. Fixes bug 9650; bugfix on 0.2.3.16-alpha.
+    - Avoid potential crashes or bad behavior when launching a server-
+      side managed proxy with ORPort or ExtORPort temporarily disabled.
+      Fixes bug 9650; bugfix on 0.2.3.16-alpha.
 
   o Minor bugfixes (misc):
     - Don't re-initialize a second set of openssl mutexes when starting
@@ -122,53 +125,53 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       object. Fixes bug 11275; bugfix on 0.2.4.13-alpha.
 
   o Minor bugfixes (platform-specific):
-    - Fix compilation on Solaris, which does not have <endian.h>.
-      Fixes bug 11426; bugfix on 0.2.5.3-alpha.
-    - When dumping a malformed directory object to disk, save it in binary
-      mode on windows, not text mode. Fixes bug 11342; bugfix on
+    - Fix compilation on Solaris, which does not have <endian.h>. Fixes
+      bug 11426; bugfix on 0.2.5.3-alpha.
+    - When dumping a malformed directory object to disk, save it in
+      binary mode on windows, not text mode. Fixes bug 11342; bugfix on
       0.2.2.1-alpha.
     - When reporting a failure from make_socket_reuseable(), don't
-      report a warning when we get a failure from an incoming socket
-      on OSX. Fix for bug 10081.
+      report a warning when we get a failure from an incoming socket on
+      OSX. Fix for bug 10081.
 
   o Minor bugfixes (trivial memory leaks):
-    - Free placeholder entries in our circuit table at exit; fixes
-      a harmless memory leak. Fixes bug 11278; bugfix on 0.2.5.1-alpha.
-    - Resolve some memory leaks found by coverity in the unit tests,
-      on exit in tor-gencert, and on a failure to compute digests
-      for our own keys when generating a v3 networkstatus vote.
-      These leaks should never have affected anyone in practice.
+    - Free placeholder entries in our circuit table at exit; fixes a
+      harmless memory leak. Fixes bug 11278; bugfix on 0.2.5.1-alpha.
+    - Resolve some memory leaks found by coverity in the unit tests, on
+      exit in tor-gencert, and on a failure to compute digests for our
+      own keys when generating a v3 networkstatus vote. These leaks
+      should never have affected anyone in practice.
 
   o Minor bugfixes (hidden service):
-    - Only retry attempts to connect to a chosen rendezvous point 8 times,
-      not 30. Fixes bug #4241; bugfix on 0.1.0.1-rc.
+    - Only retry attempts to connect to a chosen rendezvous point 8
+      times, not 30. Fixes bug #4241; bugfix on 0.1.0.1-rc.
 
   o Minor bugfixes (bridge client):
     - Stop accepting bridge lines containing hostnames. Doing so allowed
       clients to perform DNS requests on the hostnames, which was not
       sensible behavior. Fixes bug 10801; bugfix on 0.2.0.1-alpha.
-    - Fix a bug where a client-side Tor with pluggable transports
-      would take 60 seconds to bootstrap if a config re-read was
-      triggered at just the right timing during bootstrap. Refixes bug
-      11156; bugfix on 0.2.5.3-alpha.
-    - Avoid 60-second delays in the bootstrapping process when Tor
-      is launching for a second time while using bridges. Fixes bug 9229;
+    - Fix a bug where a client-side Tor with pluggable transports would
+      take 60 seconds to bootstrap if a config re-read was triggered at
+      just the right timing during bootstrap. Refixes bug 11156; bugfix
+      on 0.2.5.3-alpha.
+    - Avoid 60-second delays in the bootstrapping process when Tor is
+      launching for a second time while using bridges. Fixes bug 9229;
       bugfix on 0.2.0.3-alpha.
 
   o Minor bugfixes (DNS):
-    - When receing a DNS query for an unsupported type, reply with
-      no answer rather than with a NOTIMPL error. This behavior isn't
+    - When receing a DNS query for an unsupported type, reply with no
+      answer rather than with a NOTIMPL error. This behavior isn't
       correct either, but it will break fewer client programs, we hope.
-      Fixes bug 10268; bugfix on 0.2.0.1-alpha. Original patch
-      from "epoch".
+      Fixes bug 10268; bugfix on 0.2.0.1-alpha. Original patch from
+      "epoch".
 
   o Minor bugfixes (exit):
     - Stop leaking memory when we successfully resolve a PTR record.
       Fixes bug 11437; bugfix on 0.2.4.7-alpha.
 
   o Minor features (Transparent proxy):
-    - Support the ipfw firewall interface for transparent proxy support on
-      FreeBSD. To enable it, set "TransProxyType ipfw" in your torrc.
+    - Support the ipfw firewall interface for transparent proxy support
+      on FreeBSD. To enable it, set "TransProxyType ipfw" in your torrc.
       Resolves ticket 10267; patch from "yurivict".
     - Support OpenBSD's divert-to rules with the pf firewall, when
       "TransProxyType pf-divert" is specified. This allows Tor to run a
@@ -178,93 +181,90 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       from Dana Koch.
 
   o Minor features (security):
-    - New --enable-expensive-hardening option to turn on security hardening
-      options that consume nontrivial amounts of CPU and memory. Right now,
-      this includes AddressSanitizer and UbSan. Closes ticket 11477.
+    - New --enable-expensive-hardening option to turn on security
+      hardening options that consume nontrivial amounts of CPU and
+      memory. Right now, this includes AddressSanitizer and UbSan.
+      Closes ticket 11477.
     - If you don't specify MaxMemInQueues yourself, Tor now tries to
       pick a good value based on your total system memory. Previously,
       the default was always 8 GB. You can still override the default by
       setting MaxMemInQueues yourself. Resolves ticket 11396.
 
-
   o Minor features (usability):
     - Demote the message that we give when a flushing connection times
       out for too long from NOTICE to INFO. It was usually meaningless.
       Resolves ticket 5286.
-    - Don't log so many notice-level bootstrapping messages at startup about
-      downloading descriptors. Previously, we'd log a notice whenever we
-      learned about more routers. Now, we only log a notice at every 5% of
-      progress. Fixes bug 9963.
-
+    - Don't log so many notice-level bootstrapping messages at startup
+      about downloading descriptors. Previously, we'd log a notice
+      whenever we learned about more routers. Now, we only log a notice
+      at every 5% of progress. Fixes bug 9963.
 
   o Minor features (performance, compatibility):
-    - Update the list of TLS cipehrsuites that a client advertises
-      to match those advertised by Firefox 28. This enables selection of
+    - Update the list of TLS cipehrsuites that a client advertises to
+      match those advertised by Firefox 28. This enables selection of
       (fast) GCM ciphersuites, disables some strange old ciphers, and
       disables the ECDH (not to be confused with ECDHE) ciphersuites.
       Resolves ticket 11438.
 
-
   o Minor bugfixes (IPv6):
     - When using DNSPort and AutomapHostsOnResolve, respond to AAAA
-      requests with AAAA automapped answers. Fixes bug 10468; bugfix
-      on 0.2.4.7-alpha.
+      requests with AAAA automapped answers. Fixes bug 10468; bugfix on
+      0.2.4.7-alpha.
 
   o Minor features (relay):
-    - If a circuit timed out for at least 3 minutes check if we have a new
-      external IP address the next time we run our routine checks. If our
-      IP address has changed, then publish a new descriptor with the new
-      IP address. Resolves ticket 2454.
-    - Warn less verbosely when receiving a misformed ESTABLISH_RENDEZVOUS
-      cell. Fixes ticket 11279.
+    - If a circuit timed out for at least 3 minutes check if we have a
+      new external IP address the next time we run our routine checks.
+      If our IP address has changed, then publish a new descriptor with
+      the new IP address. Resolves ticket 2454.
+    - Warn less verbosely when receiving a misformed
+      ESTABLISH_RENDEZVOUS cell. Fixes ticket 11279.
     - When we run out of usable circuit IDs on a channel, log only one
-      warning for the whole channel, and include a description of
-      how many circuits there were on the channel. Fix for part of ticket
+      warning for the whole channel, and include a description of how
+      many circuits there were on the channel. Fix for part of ticket
       #11553.
-
 
   o Minor features (controller):
     - Make the entire exit policy available from the control port via
       GETINFO exit-policy/*. Implements enhancement #7952. Patch from
       "rl1987".
     - Because of the fix for ticket 11396, the real limit for memory
-      usage may no longer match the configured MaxMemInQueues value.
-      The real limit is now exposed via GETINFO limits/max-mem-in-queues.
+      usage may no longer match the configured MaxMemInQueues value. The
+      real limit is now exposed via GETINFO limits/max-mem-in-queues.
 
   o Minor features (misc):
     - Always check return values for unlink, munmap, UnmapViewOfFile;
-      check strftime return values more often. In some cases all we
-      can do is report a warning, but this may help prevent deeper
-      bugs from going unnoticed. Closes ticket 8787.
+      check strftime return values more often. In some cases all we can
+      do is report a warning, but this may help prevent deeper bugs from
+      going unnoticed. Closes ticket 8787.
 
   o Minor features (bridge client):
-    - Report a failure to connect to a bridge because its transport
-      type has no configured pluggable transport as a new type of bootstrap
+    - Report a failure to connect to a bridge because its transport type
+      has no configured pluggable transport as a new type of bootstrap
       failure. Resolves ticket 9665. Patch from Fábio J. Bertinatto.
 
   o Minor features (diagnostic):
     - Try harder to diagnose a possible cause of bug 7164, which causes
       intermittent "microdesc_free() called but md was still referenced"
       warnings. We now log more information about the likely error case,
-      to try to figure out why we might be cleaning a microdescriptor
-      as old if it's still referenced by a live node.
+      to try to figure out why we might be cleaning a microdescriptor as
+      old if it's still referenced by a live node.
 
   o Documentation:
-    - Build the torify.1 manpage again. Previously, we were only
-      trying to build it when also building tor-fw-helper. That's why
-      we didn't notice that we'd broken the ability to build it.
-      Fixes bug 11321; bugfix on 0.2.5.1-alpha.
+    - Build the torify.1 manpage again. Previously, we were only trying
+      to build it when also building tor-fw-helper. That's why we didn't
+      notice that we'd broken the ability to build it. Fixes bug 11321;
+      bugfix on 0.2.5.1-alpha.
     - Fix the layout of the SOCKSPort flags in the manpage. Fixes bug
       11061; bugfix on 0.2.4.7-alpha.
     - Correctly document that we search for a system torrc file before
-      looking in ~/.torrc. Fixes documentation side of 9213; bugfix
-      on 0.2.3.18-rc.
+      looking in ~/.torrc. Fixes documentation side of 9213; bugfix on
+      0.2.3.18-rc.
     - Resolve warnings from Doxygen.
 
   o Code simplifications and refactoring:
     - Removing is_internal_IP() function. Resolves ticket 4645.
-    - Remove unused function circuit_dump_by_chan from circuitlist.c. Closes
-      issue #9107; patch from "marek".
+    - Remove unused function circuit_dump_by_chan from circuitlist.c.
+      Closes issue #9107; patch from "marek".
     - Change our use of the ENUM_BF macro to avoid declarations that
       confuse Doxygen.
 
@@ -275,8 +275,8 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       Patch from Dana Koch.
 
   o Removed code:
-    - Remove all code for the long unused v1 directory protocol. Resolves
-      ticket 11070.
+    - Remove all code for the long unused v1 directory protocol.
+      Resolves ticket 11070.
 
 
 
