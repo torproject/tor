@@ -2,17 +2,14 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
   This release includes several security and performance improvements
   for clients and relays, including XXX
 
+  This release marks end-of-line for Tor 0.2.2.x; those Tor versions have
+  accumulated many known flaws; everyone should upgrade.
+
   o Major features (security):
     - Block authority signing keys that were used on an authorities
       vulnerable to the "heartbleed" bug in openssl (CVE-2014-0160). (We
       don't have any evidence that these keys _were_ compromised; we're
       doing this to be prudent.) Resolves ticket 11464.
-
-  o Deprecated versions:
-    - Tor 0.2.2.x has reached end-of-life; it has received no patches or
-      attention for some while. Directory authorities no longer accept
-      descriptors from Tor relays running any version of Tor prior to
-      Tor 0.2.3.16-alpha. Resolves ticket 11149.
 
   o Major features (relay performance):
     - Faster server-side lookups of rendezvous and introduction point
@@ -56,6 +53,11 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       list is now well-considered, whereas the client list has been
       chosen mainly for anti-fingerprinting purposes.) Resolves ticket
       11528.
+    - Update the list of TLS cipehrsuites that a client advertises to
+      match those advertised by Firefox 28. This enables selection of
+      (fast) GCM ciphersuites, disables some strange old ciphers, and
+      disables the ECDH (not to be confused with ECDHE) ciphersuites.
+      Resolves ticket 11438.
 
   o Major bugfixes (undefined behavior):
     - Fix two instances of possible undefined behavior in channeltls.c
@@ -72,11 +74,79 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       some miscellaneous errors in our tests and codebase. Fix for bug
       11232. Bugfixes on versions back as far as 0.2.1.11-alpha.
 
+  o Minor features (Transparent proxy, *BSD):
+    - Support the ipfw firewall interface for transparent proxy support
+      on FreeBSD. To enable it, set "TransProxyType ipfw" in your torrc.
+      Resolves ticket 10267; patch from "yurivict".
+    - Support OpenBSD's divert-to rules with the pf firewall, when
+      "TransProxyType pf-divert" is specified. This allows Tor to run a
+      TransPort transparent proxy port on OpenBSD 4.4 or later without
+      root privileges. See the pf.conf(5) manual page for information on
+      configuring pf to use divert-to rules. Closes ticket 10896; patch
+      from Dana Koch.
+
+  o Minor features (security):
+    - New --enable-expensive-hardening option to turn on security
+      hardening options that consume nontrivial amounts of CPU and
+      memory. Right now, this includes AddressSanitizer and UbSan.
+      Closes ticket 11477.
+    - If you don't specify MaxMemInQueues yourself, Tor now tries to
+      pick a good value based on your total system memory. Previously,
+      the default was always 8 GB. You can still override the default by
+      setting MaxMemInQueues yourself. Resolves ticket 11396.
+
+  o Minor features (log verbosity):
+    - Demote the message that we give when a flushing connection times
+      out for too long from NOTICE to INFO. It was usually meaningless.
+      Resolves ticket 5286.
+    - Don't log so many notice-level bootstrapping messages at startup
+      about downloading descriptors. Previously, we'd log a notice
+      whenever we learned about more routers. Now, we only log a notice
+      at every 5% of progress. Fixes bug 9963.
+
+  o Minor features (relay):
+    - If a circuit timed out for at least 3 minutes check if we have a
+      new external IP address the next time we run our routine checks.
+      If our IP address has changed, then publish a new descriptor with
+      the new IP address. Resolves ticket 2454.
+    - Warn less verbosely when receiving a misformed
+      ESTABLISH_RENDEZVOUS cell. Fixes ticket 11279.
+    - When we run out of usable circuit IDs on a channel, log only one
+      warning for the whole channel, and include a description of how
+      many circuits there were on the channel. Fix for part of ticket
+      #11553.
+
+  o Minor features (controller):
+    - Make the entire exit policy available from the control port via
+      GETINFO exit-policy/*. Implements enhancement #7952. Patch from
+      "rl1987".
+    - Because of the fix for ticket 11396, the real limit for memory
+      usage may no longer match the configured MaxMemInQueues value. The
+      real limit is now exposed via GETINFO limits/max-mem-in-queues.
+
+  o Minor features (misc):
+    - Always check return values for unlink, munmap, UnmapViewOfFile;
+      check strftime return values more often. In some cases all we can
+      do is report a warning, but this may help prevent deeper bugs from
+      going unnoticed. Closes ticket 8787.
+
+  o Minor features (bridge client):
+    - Report a failure to connect to a bridge because its transport type
+      has no configured pluggable transport as a new type of bootstrap
+      failure. Resolves ticket 9665. Patch from Fábio J. Bertinatto.
+
+  o Minor features (diagnostic):
+    - Try harder to diagnose a possible cause of bug 7164, which causes
+      intermittent "microdesc_free() called but md was still referenced"
+      warnings. We now log more information about the likely error case,
+      to try to figure out why we might be cleaning a microdescriptor as
+      old if it's still referenced by a live node.
+
   o Minor bugfixes (logging):
     - Log only one message when we start logging in an unsafe way.
       Previously, we would log as many messages as we had problems. Fix
       for #9870; bugfix on 0.2.5.1-alpha.
-    - Using the Linux syscall sandbox no longer prevents stack-trace
+    - Using the Linux seccomp2 sandbox no longer prevents stack-trace
       logging on crashes or errors. Fixes part 11465; bugfix on
       0.2.5.1-alpha.
     - Only report the first fatal boostrap error on a given OR
@@ -169,85 +239,10 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
     - Stop leaking memory when we successfully resolve a PTR record.
       Fixes bug 11437; bugfix on 0.2.4.7-alpha.
 
-  o Minor features (Transparent proxy):
-    - Support the ipfw firewall interface for transparent proxy support
-      on FreeBSD. To enable it, set "TransProxyType ipfw" in your torrc.
-      Resolves ticket 10267; patch from "yurivict".
-    - Support OpenBSD's divert-to rules with the pf firewall, when
-      "TransProxyType pf-divert" is specified. This allows Tor to run a
-      TransPort transparent proxy port on OpenBSD 4.4 or later without
-      root privileges. See the pf.conf(5) manual page for information on
-      configuring pf to use divert-to rules. Closes ticket 10896; patch
-      from Dana Koch.
-
-  o Minor features (security):
-    - New --enable-expensive-hardening option to turn on security
-      hardening options that consume nontrivial amounts of CPU and
-      memory. Right now, this includes AddressSanitizer and UbSan.
-      Closes ticket 11477.
-    - If you don't specify MaxMemInQueues yourself, Tor now tries to
-      pick a good value based on your total system memory. Previously,
-      the default was always 8 GB. You can still override the default by
-      setting MaxMemInQueues yourself. Resolves ticket 11396.
-
-  o Minor features (usability):
-    - Demote the message that we give when a flushing connection times
-      out for too long from NOTICE to INFO. It was usually meaningless.
-      Resolves ticket 5286.
-    - Don't log so many notice-level bootstrapping messages at startup
-      about downloading descriptors. Previously, we'd log a notice
-      whenever we learned about more routers. Now, we only log a notice
-      at every 5% of progress. Fixes bug 9963.
-
-  o Minor features (performance, compatibility):
-    - Update the list of TLS cipehrsuites that a client advertises to
-      match those advertised by Firefox 28. This enables selection of
-      (fast) GCM ciphersuites, disables some strange old ciphers, and
-      disables the ECDH (not to be confused with ECDHE) ciphersuites.
-      Resolves ticket 11438.
-
   o Minor bugfixes (IPv6):
     - When using DNSPort and AutomapHostsOnResolve, respond to AAAA
       requests with AAAA automapped answers. Fixes bug 10468; bugfix on
       0.2.4.7-alpha.
-
-  o Minor features (relay):
-    - If a circuit timed out for at least 3 minutes check if we have a
-      new external IP address the next time we run our routine checks.
-      If our IP address has changed, then publish a new descriptor with
-      the new IP address. Resolves ticket 2454.
-    - Warn less verbosely when receiving a misformed
-      ESTABLISH_RENDEZVOUS cell. Fixes ticket 11279.
-    - When we run out of usable circuit IDs on a channel, log only one
-      warning for the whole channel, and include a description of how
-      many circuits there were on the channel. Fix for part of ticket
-      #11553.
-
-  o Minor features (controller):
-    - Make the entire exit policy available from the control port via
-      GETINFO exit-policy/*. Implements enhancement #7952. Patch from
-      "rl1987".
-    - Because of the fix for ticket 11396, the real limit for memory
-      usage may no longer match the configured MaxMemInQueues value. The
-      real limit is now exposed via GETINFO limits/max-mem-in-queues.
-
-  o Minor features (misc):
-    - Always check return values for unlink, munmap, UnmapViewOfFile;
-      check strftime return values more often. In some cases all we can
-      do is report a warning, but this may help prevent deeper bugs from
-      going unnoticed. Closes ticket 8787.
-
-  o Minor features (bridge client):
-    - Report a failure to connect to a bridge because its transport type
-      has no configured pluggable transport as a new type of bootstrap
-      failure. Resolves ticket 9665. Patch from Fábio J. Bertinatto.
-
-  o Minor features (diagnostic):
-    - Try harder to diagnose a possible cause of bug 7164, which causes
-      intermittent "microdesc_free() called but md was still referenced"
-      warnings. We now log more information about the likely error case,
-      to try to figure out why we might be cleaning a microdescriptor as
-      old if it's still referenced by a live node.
 
   o Documentation:
     - Build the torify.1 manpage again. Previously, we were only trying
@@ -267,6 +262,12 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       Closes issue #9107; patch from "marek".
     - Change our use of the ENUM_BF macro to avoid declarations that
       confuse Doxygen.
+
+  o Deprecated versions:
+    - Tor 0.2.2.x has reached end-of-life; it has received no patches or
+      attention for some while. Directory authorities no longer accept
+      descriptors from Tor relays running any version of Tor prior to
+      Tor 0.2.3.16-alpha. Resolves ticket 11149.
 
   o Testing:
     - New macros in test.h to simplify writting mock-functions for unit
