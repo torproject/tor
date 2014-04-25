@@ -404,6 +404,7 @@ test_dump_exit_policy_to_string(void *arg)
 
  test_streq("accept *:*\nreject *:25\nreject 8.8.8.8:*\n"
             "reject6 [fc00::]/7:*",ep);
+ tor_free(ep);
 
  policy_entry =
  router_parse_addr_policy_item_from_string("accept6 [c000::]/3:*",-1);
