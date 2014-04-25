@@ -4812,6 +4812,8 @@ get_proxy_addrport(tor_addr_t *addr, uint16_t *port, int *proxy_type,
     }
   }
 
+  tor_addr_make_unspec(addr);
+  *port = 0;
   *proxy_type = PROXY_NONE;
   return 0;
 }

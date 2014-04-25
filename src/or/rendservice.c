@@ -2041,7 +2041,7 @@ rend_service_decrypt_intro(
   if (err_msg_out && !err_msg) {
     tor_asprintf(&err_msg,
                  "unknown INTRODUCE%d error decrypting encrypted part",
-                 (int)(intro->type));
+                 intro ? (int)(intro->type) : -1);
   }
   if (status >= 0) status = -1;
 
@@ -2147,7 +2147,7 @@ rend_service_parse_intro_plaintext(
   if (err_msg_out && !err_msg) {
     tor_asprintf(&err_msg,
                  "unknown INTRODUCE%d error parsing encrypted part",
-                 (int)(intro->type));
+                 intro ? (int)(intro->type) : -1);
   }
   if (status >= 0) status = -1;
 

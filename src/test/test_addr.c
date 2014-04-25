@@ -346,6 +346,9 @@ test_addr_ip6_helpers(void)
   test_pton6_bad("a:::b:c");
   test_pton6_bad(":::a:b:c");
   test_pton6_bad("a:b:c:::");
+  test_pton6_bad("1.2.3.4");
+  test_pton6_bad(":1.2.3.4");
+  test_pton6_bad(".2.3.4");
 
   /* test internal checking */
   test_external_ip("fbff:ffff::2:7", 0);

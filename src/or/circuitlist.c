@@ -1269,8 +1269,16 @@ circuit_get_by_rend_token_and_purpose(uint8_t purpose, int is_rend_circ,
       circ->base_.marked_for_close)
     return NULL;
 
-  if (!circ->rendinfo ||
-      ! bool_eq(circ->rendinfo->is_rend_circ, is_rend_circ) ||
+  if (!circ->rendinfo) {
+    char *t = tor_strdup(hex_str(token, REND_TOKEN_LEN));
+    log_warn(LD_BUG, "Wanted a circuit with %s:%d, but lookup returned a "
+             "circuit with no rendinfo set.",
+             safe_str(t), is_rend_circ);
+    tor_free(t);
+    return NULL;
+  }
+
+  if (! bool_eq(circ->rendinfo->is_rend_circ, is_rend_circ) ||
       tor_memneq(circ->rendinfo->rend_token, token, REND_TOKEN_LEN)) {
     char *t = tor_strdup(hex_str(token, REND_TOKEN_LEN));
     log_warn(LD_BUG, "Wanted a circuit with %s:%d, but lookup returned %s:%d",

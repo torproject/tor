@@ -322,7 +322,7 @@ buf_shrink_freelists(int free_all)
       chunk_t **chp = &freelists[i].head;
       chunk_t *chunk;
       while (n_to_skip) {
-        if (! (*chp)->next) {
+        if (!(*chp) || ! (*chp)->next) {
           log_warn(LD_BUG, "I wanted to skip %d chunks in the freelist for "
                    "%d-byte chunks, but only found %d. (Length %d)",
                    orig_n_to_skip, (int)freelists[i].alloc_size,

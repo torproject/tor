@@ -2198,8 +2198,10 @@ tor_inet_pton(int af, const char *src, void *dst)
     else {
       unsigned byte1,byte2,byte3,byte4;
       char more;
-      for (eow = dot-1; eow >= src && TOR_ISDIGIT(*eow); --eow)
+      for (eow = dot-1; eow > src && TOR_ISDIGIT(*eow); --eow)
         ;
+      if (*eow != ':')
+        return 0;
       ++eow;
 
       /* We use "scanf" because some platform inet_aton()s are too lax

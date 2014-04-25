@@ -256,7 +256,7 @@ handle_client_auth_nonce(const char *client_nonce, size_t client_nonce_len,
     base16_encode(server_nonce_encoded, sizeof(server_nonce_encoded),
                   server_nonce, sizeof(server_nonce));
     base16_encode(client_nonce_encoded, sizeof(client_nonce_encoded),
-                  client_nonce, sizeof(client_nonce));
+                  client_nonce, EXT_OR_PORT_AUTH_NONCE_LEN);
 
     log_debug(LD_GENERAL,
               "server_hash: '%s'\nserver_nonce: '%s'\nclient_nonce: '%s'",

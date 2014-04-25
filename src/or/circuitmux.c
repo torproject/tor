@@ -412,7 +412,11 @@ circuitmux_detach_all_circuits(circuitmux_t *cmux, smartlist_t *detached_out)
   i = HT_START(chanid_circid_muxinfo_map, cmux->chanid_circid_map);
   while (i) {
     to_remove = *i;
-    if (to_remove) {
+
+    if (! to_remove) {
+      log_warn(LD_BUG, "Somehow, an HT iterator gave us a NULL pointer.");
+      break;
+    } else {
       /* Find a channel and circuit */
       chan = channel_find_by_global_id(to_remove->chan_id);
       if (chan) {

@@ -313,9 +313,9 @@ circuit_rep_hist_note_result(origin_circuit_t *circ)
 static int
 circuit_cpath_supports_ntor(const origin_circuit_t *circ)
 {
-  crypt_path_t *head = circ->cpath, *cpath = circ->cpath;
+  crypt_path_t *head, *cpath;
 
-  cpath = head;
+  cpath = head = circ->cpath;
   do {
     if (cpath->extend_info &&
         !tor_mem_is_zero(

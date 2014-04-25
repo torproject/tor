@@ -537,7 +537,9 @@ circuit_expire_building(void)
                  "%d guards are live.",
                  TO_ORIGIN_CIRCUIT(victim)->global_identifier,
                  circuit_purpose_to_string(victim->purpose),
-                 TO_ORIGIN_CIRCUIT(victim)->build_state->desired_path_len,
+                 TO_ORIGIN_CIRCUIT(victim)->build_state ?
+                   TO_ORIGIN_CIRCUIT(victim)->build_state->desired_path_len :
+                   -1,
                  circuit_state_to_string(victim->state),
                  channel_state_to_string(victim->n_chan->state),
                  num_live_entry_guards(0));
@@ -561,7 +563,9 @@ circuit_expire_building(void)
                  "anyway. %d guards are live.",
                  TO_ORIGIN_CIRCUIT(victim)->global_identifier,
                  circuit_purpose_to_string(victim->purpose),
-                 TO_ORIGIN_CIRCUIT(victim)->build_state->desired_path_len,
+                 TO_ORIGIN_CIRCUIT(victim)->build_state ?
+                   TO_ORIGIN_CIRCUIT(victim)->build_state->desired_path_len :
+                   -1,
                  circuit_state_to_string(victim->state),
                  channel_state_to_string(victim->n_chan->state),
                  (long)build_close_ms,
@@ -707,7 +711,8 @@ circuit_expire_building(void)
          * and we have tried to send an INTRODUCE1 cell specifying it.
          * Thus, if the pending_final_cpath field *is* NULL, then we
          * want to not spare it. */
-        if (TO_ORIGIN_CIRCUIT(victim)->build_state->pending_final_cpath ==
+        if (TO_ORIGIN_CIRCUIT(victim)->build_state &&
+            TO_ORIGIN_CIRCUIT(victim)->build_state->pending_final_cpath ==
             NULL)
           break;
         /* fallthrough! */
@@ -753,7 +758,9 @@ circuit_expire_building(void)
                TO_ORIGIN_CIRCUIT(victim)->has_opened,
                victim->state, circuit_state_to_string(victim->state),
                victim->purpose,
-               TO_ORIGIN_CIRCUIT(victim)->build_state->desired_path_len);
+               TO_ORIGIN_CIRCUIT(victim)->build_state ?
+                 TO_ORIGIN_CIRCUIT(victim)->build_state->desired_path_len :
+                 -1);
     else
       log_info(LD_CIRC,
                "Abandoning circ %u %u (state %d,%d:%s, purpose %d, len %d)",
@@ -762,7 +769,9 @@ circuit_expire_building(void)
                TO_ORIGIN_CIRCUIT(victim)->has_opened,
                victim->state,
                circuit_state_to_string(victim->state), victim->purpose,
-               TO_ORIGIN_CIRCUIT(victim)->build_state->desired_path_len);
+               TO_ORIGIN_CIRCUIT(victim)->build_state ?
+                 TO_ORIGIN_CIRCUIT(victim)->build_state->desired_path_len :
+                 -1);
 
     circuit_log_path(LOG_INFO,LD_CIRC,TO_ORIGIN_CIRCUIT(victim));
     if (victim->purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT)

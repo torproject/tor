@@ -329,12 +329,14 @@ onion_queue_entry_remove(onion_queue_t *victim)
 void
 clear_pending_onions(void)
 {
-  onion_queue_t *victim;
+  onion_queue_t *victim, *next;
   int i;
   for (i=0; i<=MAX_ONION_HANDSHAKE_TYPE; i++) {
-    while ((victim = TOR_TAILQ_FIRST(&ol_list[i]))) {
+    for (victim = TOR_TAILQ_FIRST(&ol_list[i]); victim; victim = next) {
+      next = TOR_TAILQ_NEXT(victim,next);
       onion_queue_entry_remove(victim);
     }
+    tor_assert(TOR_TAILQ_EMPTY(&ol_list[i]));
   }
   memset(ol_entries, 0, sizeof(ol_entries));
 }

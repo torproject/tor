@@ -291,14 +291,11 @@ memarea_strdup(memarea_t *area, const char *s)
 char *
 memarea_strndup(memarea_t *area, const char *s, size_t n)
 {
-  size_t ln;
+  size_t ln = 0;
   char *result;
-  const char *cp, *end = s+n;
   tor_assert(n < SIZE_T_CEILING);
-  for (cp = s; cp < end && *cp; ++cp)
+  for (ln = 0; ln < n && s[ln]; ++ln)
     ;
-  /* cp now points to s+n, or to the 0 in the string. */
-  ln = cp-s;
   result = memarea_alloc(area, ln+1);
   memcpy(result, s, ln);
   result[ln]='\0';
