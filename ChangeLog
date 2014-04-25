@@ -165,7 +165,7 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
       DisableNetwork enabled. Fixes bug 11200 and bug 10405; bugfix on
       0.2.3.9-alpha.
 
-  o Minor bugfixes (closing channels):
+  o Minor bugfixes (closing OR connections):
     - If write_to_buf() in connection_write_to_buf_impl_() ever fails,
       check if it's an or_connection_t and correctly call
       connection_or_close_for_error() rather than
@@ -237,10 +237,11 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
       Some of these are programming style issues; some of them are false
       positives that indicated awkward code; some are undefined behavior
       cases related to constructing (but not using) invalid pointers;
-      some are assumptions about API behavior; some are using
-      sizeof(ptr) when sizeof(*ptr) would be correct; and one or two are
-      genuine bugs that weren't reachable from the rest of the program.
-      Fixes bug 8793; bugfixes on many, many tor versions.
+      some are assumptions about API behavior; some are (harmlessly)
+      logging sizeof(ptr) bytes from a token when sizeof(*ptr) would be
+      correct; and one or two are genuine bugs that weren't reachable
+      from the rest of the program. Fixes bug 8793; bugfixes on many,
+      many tor versions.
 
   o Documentation:
     - Build the torify.1 manpage again. Previously, we were only trying
