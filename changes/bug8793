@@ -1,9 +1,0 @@
-  o Minor bugfixes:
-    - Fix numerous warnings from the clang "scan-build" static analyzer.
-      Some of these are programming style issues; some of them are false
-      positives that indicated awkward code; some are undefined behavior
-      cases related to constructing (but not using) invalid pointers;
-      some are assumptions about API behavior; some are using
-      sizeof(ptr) when sizeof(*ptr) would be correct; and one or two are
-      genuine bugs that weren't reachable from the rest of the
-      program. Fixes bug 8793; bugfixes on many, many tor versions.

@@ -1,6 +1,7 @@
-Changes in version 0.2.5.4-alpha - 2014-04-??
+Changes in version 0.2.5.4-alpha - 2014-04-25
   This release includes several security and performance improvements
-  for clients and relays, including XXX
+  for clients and relays, including blacklisting authority signing keys
+  that were used while susceptible to the OpenSSL "heartbleed" bug,
 
   This release marks end-of-line for Tor 0.2.2.x; those Tor versions
   have accumulated many known flaws; everyone should upgrade.
@@ -17,29 +18,30 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       functions previously accounted between 3 and 7% of CPU usage on
       some busy relays. Resolves ticket 9841.
     - Avoid wasting CPU when extending a circuit over a channel that is
-      nearly out of circuit IDs. Previously, we would in the worst case
-      do a linear scan over all possible circuit IDs before deciding
-      that we had exhausted our possibilities. Now, we try at most 64
-      random circuit IDs before deciding that we probably won't succeed.
-      Fix for a possible root cause of ticket #11553.
+      nearly out of circuit IDs. Previously, we would do a linear scan
+      over possible circuit IDs before finding one or deciding that we
+      had exhausted our possibilities. Now, we try at most 64 random
+      circuit IDs before deciding that we probably won't succeed. Fix
+      for a possible root cause of ticket #11553.
 
   o Major features (seccomp2 sandbox, Linux only):
     - The seccomp2 sandbox can now run a test network for multiple hours
       without crashing. The sandbox is still experimental, and more bugs
       will probably turn up. To try it, enable "Sandbox 1" on a Linux
-      host.
+      host. Resolves ticket 11351.
     - Strengthen sandbox code: the sandbox can now test the arguments
-      for rename(), and blocks _sysctl() entirely.
+      for rename(), and blocks _sysctl() entirely. Resolves part of
+      ticket 11351.
     - When the sandbox blocks a system call, it now tries to log a stack
       trace before exiting. Resolves ticket 11465.
 
   o Major bugfixes (TLS cipher selection):
     - The relay ciphersuite list is now generated automatically based on
       uniform criteria, and includes all OpenSSL ciphersuites with
-      acceptable strength and forward secrecy. Previously, we had
-      omitted some perfectly fine ciphersuites. Resolves bugs #11513,
-      #11492, #11498, #11499. Bugs reported by 'cypherpunks'. Bugfix on
-      0.2.4.8-alpha.
+      acceptable strength and forward secrecy. Previously, we had left
+      some perfectly fine ciphersuites unsupported due to omission or
+      typo. Resolves bugs #11513, #11492, #11498, #11499. Bugs reported
+      by 'cypherpunks'. Bugfix on 0.2.4.8-alpha.
     - Relays now trust themselves to have a better view than clients of
       which TLS ciphersuites are better than others. (Thanks to #11513,
       the relay list is now well-considered, whereas the client list has
@@ -49,9 +51,9 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       Resolves ticket 11528.
     - Clients now try to advertise the same list of ciphersuites as
       Firefox 28. This change enables selection of (fast) GCM
-      ciphersuites, disables some strange old ciphers, and disables the
-      ECDH (not to be confused with ECDHE) ciphersuites. Resolves ticket
-      11438.
+      ciphersuites, disables some strange old ciphers, and stops
+      advertising the ECDH (not to be confused with ECDHE) ciphersuites.
+      Resolves ticket 11438.
 
   o Major bugfixes (undefined behavior):
     - Fix various instances of undefined behavior in channeltls.c,
@@ -119,6 +121,14 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       check strftime return values more often. In some cases all we can
       do is report a warning, but this may help prevent deeper bugs from
       going unnoticed. Closes ticket 8787.
+    - Fix numerous warnings from the clang "scan-build" static analyzer.
+      Some of these are programming style issues; some of them are false
+      positives that indicated awkward code; some are undefined behavior
+      cases related to constructing (but not using) invalid pointers;
+      some are assumptions about API behavior; some are using
+      sizeof(ptr) when sizeof(*ptr) would be correct; and one or two are
+      genuine bugs that weren't reachable from the rest of the program.
+      Fixes bug 8793; bugfixes on many, many tor versions.
 
   o Minor features (bridge client):
     - Report a more useful failure message when we can't connect to a
@@ -227,8 +237,9 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       Fixes bug 11437; bugfix on 0.2.4.7-alpha.
 
   o Minor bugfixes (IPv6):
-    - When using DNSPort and AutomapHostsOnResolve, respond to AAAA
-      requests with AAAA automapped answers. Fixes bug 10468; bugfix on
+    - When using DNSPort, try to respond to AAAA requests with AAAA
+      answers. Previously, we hadn't looked at the request type when
+      deciding which answer type to prefer. Fixes bug 10468; bugfix on
       0.2.4.7-alpha.
 
   o Documentation:
