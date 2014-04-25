@@ -1,7 +1,15 @@
 Changes in version 0.2.5.4-alpha - 2014-04-25
-  This release includes several security and performance improvements
-  for clients and relays, including blacklisting authority signing keys
-  that were used while susceptible to the OpenSSL "heartbleed" bug,
+  Tor 0.2.5.4-alpha includes several security and performance
+  improvements for clients and relays, including blacklisting authority
+  signing keys that were used while susceptible to the OpenSSL
+  "heartbleed" bug, fixing two expensive functions on busy relays,
+  improved TLS ciphersuite preference lists, support run-time hardening
+  on compilers that support AddressSanitizer, and more work on the Linux
+  sandbox code.
+
+  There are also several usability fixes for clients (especially clients
+  that use bridges), two new TransPort protocols supported (one on
+  OpenBSD, one on FreeBSD), and various other bugfixes.
 
   This release marks end-of-line for Tor 0.2.2.x; those Tor versions
   have accumulated many known flaws; everyone should upgrade.
