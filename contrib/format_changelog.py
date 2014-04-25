@@ -9,6 +9,7 @@
 # To run it, pipe a section of the changelog (starting with "Changes
 # in Tor 0.x.y.z-alpha" through the script.)
 
+import os
 import re
 import sys
 import textwrap
@@ -19,6 +20,7 @@ TP_BLANK = 2
 TP_SECHEAD = 3
 TP_ITEMFIRST = 4
 TP_ITEMBODY = 5
+TP_END = 6
 
 def head_parser(line):
     if re.match(r'^[A-Z]', line):
@@ -39,6 +41,8 @@ def body_parser(line):
         return TP_ITEMBODY
     elif re.match(r'^\s*$', line):
         return TP_BLANK
+    elif re.match(r'^Changes in', line):
+        return TP_END
     else:
         print "Weird line %r"%line
 
@@ -129,13 +133,29 @@ class ChangeLog(object):
 CL = ChangeLog()
 parser = head_parser
 
+sys.stdin = open('ChangeLog', 'r')
+
 for line in sys.stdin:
     line = line.rstrip()
     tp = parser(line)
 
-    CL.addLine(tp,line)
     if tp == TP_SECHEAD:
         parser = body_parser
+    elif tp == TP_END:
+        nextline = line
+        break
+
+    CL.addLine(tp,line)
 
 CL.lint()
+
+sys.stdout = open('ChangeLog.new', 'w')
+
 CL.dump()
+
+print nextline
+
+for line in sys.stdin:
+    sys.stdout.write(line)
+
+os.rename('ChangeLog.new', 'ChangeLog')

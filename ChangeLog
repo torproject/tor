@@ -267,7 +267,6 @@ Changes in version 0.2.5.4-alpha - 2014-04-??
       Resolves ticket 11070.
 
 
-
 Changes in version 0.2.5.3-alpha - 2014-03-22
   Tor 0.2.5.3-alpha includes all the fixes from 0.2.4.21. It contains
   two new anti-DoS features for Tor relays, resolves a bug that kept
