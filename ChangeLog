@@ -77,9 +77,9 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
       FreeBSD. To enable it, set "TransProxyType ipfw". Resolves ticket
       10267; patch from "yurivict".
     - Support OpenBSD's divert-to rules with the pf firewall for
-      transparent proxy ports. To enable it, set "TransProxyType pf-
-      divert". This allows Tor to run a TransPort transparent proxy port
-      on OpenBSD 4.4 or later without root privileges. See the
+      transparent proxy ports. To enable it, set "TransProxyType
+      pf-divert". This allows Tor to run a TransPort transparent proxy
+      port on OpenBSD 4.4 or later without root privileges. See the
       pf.conf(5) manual page for information on configuring pf to use
       divert-to rules. Closes ticket 10896; patch from Dana Koch.
 
@@ -187,9 +187,9 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
       CPPFLAGS. Fixes bug 11296; bugfix on 0.2.5.3-alpha.
 
   o Minor bugfixes (bridges):
-    - Avoid potential crashes or bad behavior when launching a server-
-      side managed proxy with ORPort or ExtORPort temporarily disabled.
-      Fixes bug 9650; bugfix on 0.2.3.16-alpha.
+    - Avoid potential crashes or bad behavior when launching a
+      server-side managed proxy with ORPort or ExtORPort temporarily
+      disabled. Fixes bug 9650; bugfix on 0.2.3.16-alpha.
 
   o Minor bugfixes (platform-specific):
     - Fix compilation on Solaris, which does not have <endian.h>. Fixes

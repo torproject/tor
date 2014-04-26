@@ -110,7 +110,8 @@ class ChangeLog(object):
         text = " ".join(re.sub(r'\s+', ' ', line.strip()) for line in par)
         print textwrap.fill(text, width=72,
                             initial_indent=" "*indent1,
-                            subsequent_indent=" "*indent2)
+                            subsequent_indent=" "*indent2,
+                            break_on_hyphens=False)
 
     def dump(self):
         print self.mainhead
