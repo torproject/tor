@@ -6,6 +6,7 @@
 #define RELAY_PRIVATE
 #define BUFFERS_PRIVATE
 #define CIRCUITLIST_PRIVATE
+#define CONNECTION_PRIVATE
 #include "or.h"
 #include "buffers.h"
 #include "circuitlist.h"
@@ -216,6 +217,7 @@ test_oom_streambuf(void *arg)
   struct timeval tv = { 1389641159, 0 };
   uint32_t tvms;
   int i;
+  smartlist_t *edgeconns = smartlist_new();
 
   (void) arg;
 
@@ -257,17 +259,21 @@ test_oom_streambuf(void *arg)
     tor_gettimeofday_cache_set(&tv);
     ec = dummy_edge_conn_new(c1, CONN_TYPE_EXIT, 1000, 1000);
     tt_assert(ec);
+    smartlist_add(edgeconns, ec);
     tv.tv_usec += 10*1000;
     tor_gettimeofday_cache_set(&tv);
     ec = dummy_edge_conn_new(c2, CONN_TYPE_AP, 1000, 1000);
     tt_assert(ec);
+    smartlist_add(edgeconns, ec);
     tv.tv_usec += 10*1000;
     tor_gettimeofday_cache_set(&tv);
     ec = dummy_edge_conn_new(c4, CONN_TYPE_EXIT, 1000, 1000); /* Yes, 4 twice*/
     tt_assert(ec);
+    smartlist_add(edgeconns, ec);
     tv.tv_usec += 10*1000;
     tor_gettimeofday_cache_set(&tv);
     ec = dummy_edge_conn_new(c4, CONN_TYPE_EXIT, 1000, 1000);
+    smartlist_add(edgeconns, ec);
     tt_assert(ec);
   }
 
@@ -302,6 +308,7 @@ test_oom_streambuf(void *arg)
     tor_gettimeofday_cache_set(&tv);
     ec = dummy_edge_conn_new(c4, CONN_TYPE_EXIT, 1000, 1000);
     tt_assert(ec);
+    smartlist_add(edgeconns, ec);
   }
   tt_int_op(buf_get_total_allocation(), ==, 4096*17*2);
   tt_int_op(circuit_max_queued_item_age(c4, tvms), ==, 1000);
@@ -336,6 +343,10 @@ test_oom_streambuf(void *arg)
   circuit_free(c3);
   circuit_free(c4);
   circuit_free(c5);
+
+  SMARTLIST_FOREACH(edgeconns, edge_connection_t *, ec,
+                    connection_free_(TO_CONN(ec)));
+  smartlist_free(edgeconns);
 
   UNMOCK(circuit_mark_for_close_);
 }
