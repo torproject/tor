@@ -194,6 +194,7 @@ test_dir_formats(void)
   test_assert(crypto_pk_cmp_keys(rp1->onion_pkey, pk1) == 0);
   test_assert(crypto_pk_cmp_keys(rp1->identity_pkey, pk2) == 0);
   //test_assert(rp1->exit_policy == NULL);
+  tor_free(buf);
 
   strlcpy(buf2,
           "router Fred 10.3.2.1 9005 0 0\n"
@@ -277,6 +278,8 @@ test_dir_formats(void)
     routerinfo_free(r1);
   if (r2)
     routerinfo_free(r2);
+  if (rp2)
+    routerinfo_free(rp2);
 
   tor_free(buf);
   tor_free(pk1_str);
