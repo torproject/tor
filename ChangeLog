@@ -3,7 +3,7 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
   improvements for clients and relays, including blacklisting authority
   signing keys that were used while susceptible to the OpenSSL
   "heartbleed" bug, fixing two expensive functions on busy relays,
-  improved TLS ciphersuite preference lists, supporting run-time hardening
+  improved TLS ciphersuite preference lists, support for run-time hardening
   on compilers that support AddressSanitizer, and more work on the Linux
   sandbox code.
 
@@ -42,8 +42,8 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
       will probably turn up. To try it, enable "Sandbox 1" on a Linux
       host. Resolves ticket 11351.
     - Strengthen sandbox code: the sandbox can now test the arguments
-      for rename(), and blocks _sysctl() entirely. Resolves part of
-      ticket 11351.
+      for rename(), and blocks _sysctl() entirely. Resolves another part
+      of ticket 11351.
     - When the sandbox blocks a system call, it now tries to log a stack
       trace before exiting. Resolves ticket 11465.
 
@@ -72,7 +72,7 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
       launching for a second time while using bridges. Fixes bug 9229;
       bugfix on 0.2.0.3-alpha.
 
-  o Minor features (Transparent proxy, *BSD):
+  o Minor features (transparent proxy, *BSD):
     - Support FreeBSD's ipfw firewall interface for TransPort ports on
       FreeBSD. To enable it, set "TransProxyType ipfw". Resolves ticket
       10267; patch from "yurivict".
@@ -215,8 +215,8 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
       should never have affected anyone in practice.
 
   o Minor bugfixes (hidden service):
-    - Only retry attempts to connect to a chosen rendezvous point 8
-      times, not 30. Fixes bug 4241; bugfix on 0.1.0.1-rc.
+    - Only retry attempts to connect to a chosen rendezvous point 8 times,
+      not 30. Fixes bug 4241; bugfix on 0.1.0.1-rc.
 
   o Minor bugfixes (misc code correctness):
     - Fix various instances of undefined behavior in channeltls.c,
