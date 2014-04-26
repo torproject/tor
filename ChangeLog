@@ -3,9 +3,9 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
   improvements for clients and relays, including blacklisting authority
   signing keys that were used while susceptible to the OpenSSL
   "heartbleed" bug, fixing two expensive functions on busy relays,
-  improved TLS ciphersuite preference lists, support for run-time hardening
-  on compilers that support AddressSanitizer, and more work on the Linux
-  sandbox code.
+  improved TLS ciphersuite preference lists, support for run-time
+  hardening on compilers that support AddressSanitizer, and more work on
+  the Linux sandbox code.
 
   There are also several usability fixes for clients (especially clients
   that use bridges), two new TransPort protocols supported (one on
@@ -52,15 +52,15 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
       uniform criteria, and includes all OpenSSL ciphersuites with
       acceptable strength and forward secrecy. Previously, we had left
       some perfectly fine ciphersuites unsupported due to omission or
-      typo. Resolves bugs 11513, 11492, 11498, 11499. Bugs reported
-      by 'cypherpunks'. Bugfix on 0.2.4.8-alpha.
+      typo. Resolves bugs 11513, 11492, 11498, 11499. Bugs reported by
+      'cypherpunks'. Bugfix on 0.2.4.8-alpha.
     - Relays now trust themselves to have a better view than clients of
-      which TLS ciphersuites are better than others. (Thanks to bug 11513,
-      the relay list is now well-considered, whereas the client list has
-      been chosen mainly for anti-fingerprinting purposes.) Relays
-      prefer: AES over 3DES; then ECDHE over DHE; then GCM over CBC;
-      then SHA384 over SHA256 over SHA1; and last, AES256 over AES128.
-      Resolves ticket 11528.
+      which TLS ciphersuites are better than others. (Thanks to bug
+      11513, the relay list is now well-considered, whereas the client
+      list has been chosen mainly for anti-fingerprinting purposes.)
+      Relays prefer: AES over 3DES; then ECDHE over DHE; then GCM over
+      CBC; then SHA384 over SHA256 over SHA1; and last, AES256 over
+      AES128. Resolves ticket 11528.
     - Clients now try to advertise the same list of ciphersuites as
       Firefox 28. This change enables selection of (fast) GCM
       ciphersuites, disables some strange old ciphers, and stops
@@ -77,18 +77,18 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
       FreeBSD. To enable it, set "TransProxyType ipfw". Resolves ticket
       10267; patch from "yurivict".
     - Support OpenBSD's divert-to rules with the pf firewall for
-      transparent proxy ports. To enable it, set "TransProxyType
-      pf-divert". This allows Tor to run a TransPort transparent proxy
-      port on OpenBSD 4.4 or later without root privileges. See the
+      transparent proxy ports. To enable it, set "TransProxyType pf-
+      divert". This allows Tor to run a TransPort transparent proxy port
+      on OpenBSD 4.4 or later without root privileges. See the
       pf.conf(5) manual page for information on configuring pf to use
       divert-to rules. Closes ticket 10896; patch from Dana Koch.
 
   o Minor features (security):
     - New --enable-expensive-hardening option to enable security
       hardening options that consume nontrivial amounts of CPU and
-      memory. Right now, this includes AddressSanitizer and UbSan,
-      which are supported in newer versions of GCC and Clang. Closes
-      ticket 11477.
+      memory. Right now, this includes AddressSanitizer and UbSan, which
+      are supported in newer versions of GCC and Clang. Closes ticket
+      11477.
 
   o Minor features (log verbosity):
     - Demote the message that we give when a flushing connection times
@@ -98,8 +98,8 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
       about downloading descriptors. Previously, we'd log a notice
       whenever we learned about more routers. Now, we only log a notice
       at every 5% of progress. Fixes bug 9963.
-    - Warn less verbosely when receiving a malformed ESTABLISH_RENDEZVOUS
-      cell. Fixes ticket 11279.
+    - Warn less verbosely when receiving a malformed
+      ESTABLISH_RENDEZVOUS cell. Fixes ticket 11279.
     - When we run out of usable circuit IDs on a channel, log only one
       warning for the whole channel, and describe how many circuits
       there were on the channel. Fixes part of ticket 11553.
@@ -153,8 +153,8 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
       just the wrong time. Re-fixes bug 11156; bugfix on 0.2.5.3-alpha.
 
   o Minor bugfixes (client, logging during bootstrap):
-    - Warn only once if we start logging in an unsafe way. Previously, we
-      complain as many times as we had problems. Fixes bug 9870;
+    - Warn only once if we start logging in an unsafe way. Previously,
+      we complain as many times as we had problems. Fixes bug 9870;
       bugfix on 0.2.5.1-alpha.
     - Only report the first fatal bootstrap error on a given OR
       connection. This stops us from telling the controller bogus error
@@ -208,15 +208,16 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
       harmless memory leak. Fixes bug 11278; bugfix on 0.2.5.1-alpha.
     - Don't re-initialize a second set of OpenSSL mutexes when starting
       up. Previously, we'd make one set of mutexes, and then immediately
-      replace them with another. Fixes bug 11726; bugfix on 0.2.5.3-alpha.
+      replace them with another. Fixes bug 11726; bugfix on
+      0.2.5.3-alpha.
     - Resolve some memory leaks found by coverity in the unit tests, on
       exit in tor-gencert, and on a failure to compute digests for our
       own keys when generating a v3 networkstatus vote. These leaks
       should never have affected anyone in practice.
 
   o Minor bugfixes (hidden service):
-    - Only retry attempts to connect to a chosen rendezvous point 8 times,
-      not 30. Fixes bug 4241; bugfix on 0.1.0.1-rc.
+    - Only retry attempts to connect to a chosen rendezvous point 8
+      times, not 30. Fixes bug 4241; bugfix on 0.1.0.1-rc.
 
   o Minor bugfixes (misc code correctness):
     - Fix various instances of undefined behavior in channeltls.c,
@@ -226,8 +227,8 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
       exist.) Fixes bug 10363; bugfixes on 0.1.1.1-alpha, 0.1.2.1-alpha,
       0.2.0.10-alpha, and 0.2.3.6-alpha. Reported by "bobnomnom".
     - Use the AddressSanitizer and Ubsan sanitizers (in clang-3.4) to
-      fix some miscellaneous errors in our tests and codebase. Fixes
-      bug 11232. Bugfixes on versions back as far as 0.2.1.11-alpha.
+      fix some miscellaneous errors in our tests and codebase. Fixes bug
+      11232. Bugfixes on versions back as far as 0.2.1.11-alpha.
     - Always check return values for unlink, munmap, UnmapViewOfFile;
       check strftime return values more often. In some cases all we can
       do is report a warning, but this may help prevent deeper bugs from
