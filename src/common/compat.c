@@ -2061,8 +2061,8 @@ get_environment(void)
 #endif
 }
 
-/** Set *addr to the IP address (in dotted-quad notation) stored in c.
- * Return 1 on success, 0 if c is badly formatted.  (Like inet_aton(c,addr),
+/** Set *addr to the IP address (in dotted-quad notation) stored in *str.
+ * Return 1 on success, 0 if *str is badly formatted.  (Like inet_aton(str,addr),
  * but works on Windows and Solaris.)
  */
 int

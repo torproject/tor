@@ -20,8 +20,8 @@
  *
  * and implement it as:
  *
- *     MOCK_IMPL(void
- *     writebuf,(size_t n, char *buf)
+ *     MOCK_IMPL(void,
+ *     writebuf,(size_t n, char *buf))
  *     {
  *          ...
  *     }
