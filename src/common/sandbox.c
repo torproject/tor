@@ -1616,7 +1616,7 @@ sandbox_init(sandbox_cfg_t *cfg)
 #elif defined(__linux__)
   (void)cfg;
   log_warn(LD_GENERAL,
-           "This version of Tor was built without support for sanboxing. To "
+           "This version of Tor was built without support for sandboxing. To "
            "build with support for sandboxing on Linux, you must have "
            "libseccomp and its necessary header files (e.g. seccomp.h).");
   return 0;
