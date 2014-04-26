@@ -99,5 +99,9 @@ document_signature_t *document_signature_dup(const document_signature_t *sig);
 void networkstatus_free_all(void);
 int networkstatus_get_weight_scale_param(networkstatus_t *ns);
 
+#ifdef NETWORKSTATUS_PRIVATE
+STATIC void vote_routerstatus_free(vote_routerstatus_t *rs);
+#endif
+
 #endif
 
