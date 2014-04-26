@@ -3146,6 +3146,8 @@ smartlist_new_from_text_lines(const char *lines)
   last_line = smartlist_pop_last(sl);
   if (last_line != NULL && *last_line != '\0') {
     smartlist_add(sl, last_line);
+  } else {
+    tor_free(last_line);
   }
 
   return sl;
