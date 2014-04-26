@@ -15,6 +15,10 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
   have accumulated many known flaws; everyone should upgrade.
 
   o Major features (security):
+    - If you don't specify MaxMemInQueues yourself, Tor now tries to
+      pick a good value based on your total system memory. Previously,
+      the default was always 8 GB. You can still override the default by
+      setting MaxMemInQueues yourself. Resolves ticket 11396.
     - Block authority signing keys that were used on authorities
       vulnerable to the "heartbleed" bug in OpenSSL (CVE-2014-0160). (We
       don't have any evidence that these keys _were_ compromised; we're
@@ -63,6 +67,11 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
       advertising the ECDH (not to be confused with ECDHE) ciphersuites.
       Resolves ticket 11438.
 
+  o Major bugfixes (bridge client):
+    - Avoid 60-second delays in the bootstrapping process when Tor is
+      launching for a second time while using bridges. Fixes bug 9229;
+      bugfix on 0.2.0.3-alpha.
+
   o Minor features (Transparent proxy, *BSD):
     - Support FreeBSD's ipfw firewall interface for TransPort ports on
       FreeBSD. To enable it, set "TransProxyType ipfw". Resolves ticket
@@ -77,9 +86,9 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
   o Minor features (security):
     - New --enable-expensive-hardening option to enable security
       hardening options that consume nontrivial amounts of CPU and
-      memory. Right now, this includes AddressSanitizer and UbSan, which
-      are supported in newer versions of GCC and Clang. Closes ticket
-      11477.
+      memory. Right now, this includes AddressSanitizer and UbSan,
+      which are supported in newer versions of GCC and Clang. Closes
+      ticket 11477.
 
   o Minor features (log verbosity):
     - Demote the message that we give when a flushing connection times
@@ -89,20 +98,16 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
       about downloading descriptors. Previously, we'd log a notice
       whenever we learned about more routers. Now, we only log a notice
       at every 5% of progress. Fixes bug 9963.
-
-  o Minor features (relay):
-    - If you don't specify MaxMemInQueues yourself, Tor now tries to
-      pick a good value based on your total system memory. Previously,
-      the default was always 8 GB. You can still override the default by
-      setting MaxMemInQueues yourself. Resolves ticket 11396.
-    - If a circuit timed out for at least 3 minutes, check if we have a
-      new external IP address, and publish a new descriptor with the new
-      IP address if it changed. Resolves ticket 2454.
-    - Warn less verbosely when receiving a malformed
-      ESTABLISH_RENDEZVOUS cell. Fixes ticket 11279.
+    - Warn less verbosely when receiving a malformed ESTABLISH_RENDEZVOUS
+      cell. Fixes ticket 11279.
     - When we run out of usable circuit IDs on a channel, log only one
       warning for the whole channel, and describe how many circuits
       there were on the channel. Fixes part of ticket 11553.
+
+  o Minor features (relay):
+    - If a circuit timed out for at least 3 minutes, check if we have a
+      new external IP address, and publish a new descriptor with the new
+      IP address if it changed. Resolves ticket 2454.
 
   o Minor features (controller):
     - Make the entire exit policy available from the control port via
@@ -146,9 +151,6 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
     - Avoid a 60-second delay in the bootstrapping process when a Tor
       client with pluggable transports re-reads its configuration at
       just the wrong time. Re-fixes bug 11156; bugfix on 0.2.5.3-alpha.
-    - Avoid 60-second delays in the bootstrapping process when Tor is
-      launching for a second time while using bridges. Fixes bug 9229;
-      bugfix on 0.2.0.3-alpha.
 
   o Minor bugfixes (client, logging during bootstrap):
     - Warn only once if we start logging in an unsafe way. Previously, we
