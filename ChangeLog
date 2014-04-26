@@ -3,7 +3,7 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
   improvements for clients and relays, including blacklisting authority
   signing keys that were used while susceptible to the OpenSSL
   "heartbleed" bug, fixing two expensive functions on busy relays,
-  improved TLS ciphersuite preference lists, support run-time hardening
+  improved TLS ciphersuite preference lists, supporting run-time hardening
   on compilers that support AddressSanitizer, and more work on the Linux
   sandbox code.
 
@@ -11,7 +11,7 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
   that use bridges), two new TransPort protocols supported (one on
   OpenBSD, one on FreeBSD), and various other bugfixes.
 
-  This release marks end-of-line for Tor 0.2.2.x; those Tor versions
+  This release marks end-of-life for Tor 0.2.2.x; those Tor versions
   have accumulated many known flaws; everyone should upgrade.
 
   o Major features (security):
@@ -29,8 +29,8 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
       nearly out of circuit IDs. Previously, we would do a linear scan
       over possible circuit IDs before finding one or deciding that we
       had exhausted our possibilities. Now, we try at most 64 random
-      circuit IDs before deciding that we probably won't succeed. Fix
-      for a possible root cause of ticket #11553.
+      circuit IDs before deciding that we probably won't succeed. Fixes
+      a possible root cause of ticket 11553.
 
   o Major features (seccomp2 sandbox, Linux only):
     - The seccomp2 sandbox can now run a test network for multiple hours
@@ -48,10 +48,10 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
       uniform criteria, and includes all OpenSSL ciphersuites with
       acceptable strength and forward secrecy. Previously, we had left
       some perfectly fine ciphersuites unsupported due to omission or
-      typo. Resolves bugs #11513, #11492, #11498, #11499. Bugs reported
+      typo. Resolves bugs 11513, 11492, 11498, 11499. Bugs reported
       by 'cypherpunks'. Bugfix on 0.2.4.8-alpha.
     - Relays now trust themselves to have a better view than clients of
-      which TLS ciphersuites are better than others. (Thanks to #11513,
+      which TLS ciphersuites are better than others. (Thanks to bug 11513,
       the relay list is now well-considered, whereas the client list has
       been chosen mainly for anti-fingerprinting purposes.) Relays
       prefer: AES over 3DES; then ECDHE over DHE; then GCM over CBC;
@@ -64,13 +64,13 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
       Resolves ticket 11438.
 
   o Minor features (Transparent proxy, *BSD):
-    - Support FreeBSD's ipfw firewall interface for TransPort ports. on
+    - Support FreeBSD's ipfw firewall interface for TransPort ports on
       FreeBSD. To enable it, set "TransProxyType ipfw". Resolves ticket
       10267; patch from "yurivict".
     - Support OpenBSD's divert-to rules with the pf firewall for
-      transparent proxy ports. To enable it, set "TransProxyType pf-
-      divert". This allows Tor to run a TransPort transparent proxy port
-      on OpenBSD 4.4 or later without root privileges. See the
+      transparent proxy ports. To enable it, set "TransProxyType
+      pf-divert". This allows Tor to run a TransPort transparent proxy
+      port on OpenBSD 4.4 or later without root privileges. See the
       pf.conf(5) manual page for information on configuring pf to use
       divert-to rules. Closes ticket 10896; patch from Dana Koch.
 
@@ -102,11 +102,11 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
       ESTABLISH_RENDEZVOUS cell. Fixes ticket 11279.
     - When we run out of usable circuit IDs on a channel, log only one
       warning for the whole channel, and describe how many circuits
-      there were on the channel. Fix for part of ticket #11553.
+      there were on the channel. Fixes part of ticket 11553.
 
   o Minor features (controller):
     - Make the entire exit policy available from the control port via
-      GETINFO exit-policy/*. Implements enhancement #7952. Patch from
+      GETINFO exit-policy/*. Implements enhancement 7952. Patch from
       "rl1987".
     - Because of the fix for ticket 11396, the real limit for memory
       usage may no longer match the configured MaxMemInQueues value. The
@@ -135,7 +135,7 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
       hope. Fixes bug 10268; bugfix on 0.2.0.1-alpha. Original patch
       from "epoch".
 
-  o Minor bugfixes (exit):
+  o Minor bugfixes (exit relay):
     - Stop leaking memory when we successfully resolve a PTR record.
       Fixes bug 11437; bugfix on 0.2.4.7-alpha.
 
@@ -151,15 +151,15 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
       bugfix on 0.2.0.3-alpha.
 
   o Minor bugfixes (client, logging during bootstrap):
-    - Warn only once we start logging in an unsafe way. Previously, we
-      complain as many times we had problems. Fix for #9870; bugfix on
-      0.2.5.1-alpha.
+    - Warn only once if we start logging in an unsafe way. Previously, we
+      complain as many times as we had problems. Fixes bug 9870;
+      bugfix on 0.2.5.1-alpha.
     - Only report the first fatal bootstrap error on a given OR
       connection. This stops us from telling the controller bogus error
       messages like "DONE". Fixes bug 10431; bugfix on 0.2.1.1-alpha.
     - Be more helpful when trying to run sandboxed on Linux without
       libseccomp. Instead of saying "Sandbox is not implemented on this
-      platform", we now explain that we to need be built with
+      platform", we now explain that we need to be built with
       libseccomp. Fixes bug 11543; bugfix on 0.2.5.1-alpha.
     - Avoid generating spurious warnings when starting with
       DisableNetwork enabled. Fixes bug 11200 and bug 10405; bugfix on
@@ -169,11 +169,11 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
     - If write_to_buf() in connection_write_to_buf_impl_() ever fails,
       check if it's an or_connection_t and correctly call
       connection_or_close_for_error() rather than
-      connection_mark_for_close() directly. Fixes bug #11304; bugfix on
+      connection_mark_for_close() directly. Fixes bug 11304; bugfix on
       0.2.4.4-alpha.
     - When closing all connections on setting DisableNetwork to 1, use
       connection_or_close_normally() rather than closing OR connections
-      out from under the channel layer. Fixes bug #11306; bugfix on
+      out from under the channel layer. Fixes bug 11306; bugfix on
       0.2.4.4-alpha.
 
   o Minor bugfixes (controller):
@@ -197,7 +197,7 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
       0.2.2.1-alpha.
     - Don't report failures from make_socket_reuseable() on incoming
       sockets on OSX: this can happen when incoming connections close
-      early. Fix for bug 10081.
+      early. Fixes bug 10081.
 
   o Minor bugfixes (trivial memory leaks):
     - Fix a small memory leak when signing a directory object. Fixes bug
@@ -206,8 +206,7 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
       harmless memory leak. Fixes bug 11278; bugfix on 0.2.5.1-alpha.
     - Don't re-initialize a second set of OpenSSL mutexes when starting
       up. Previously, we'd make one set of mutexes, and then immediately
-      replace them with another. Fixes bug 11726; bugfix on
-      0.2.5.3-alpha.
+      replace them with another. Fixes bug 11726; bugfix on 0.2.5.3-alpha.
     - Resolve some memory leaks found by coverity in the unit tests, on
       exit in tor-gencert, and on a failure to compute digests for our
       own keys when generating a v3 networkstatus vote. These leaks
@@ -215,18 +214,17 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
 
   o Minor bugfixes (hidden service):
     - Only retry attempts to connect to a chosen rendezvous point 8
-      times, not 30. Fixes bug #4241; bugfix on 0.1.0.1-rc.
+      times, not 30. Fixes bug 4241; bugfix on 0.1.0.1-rc.
 
-  o Minor bugfixes (misc correctness):
+  o Minor bugfixes (misc code correctness):
     - Fix various instances of undefined behavior in channeltls.c,
-      tor_memmem(), and eventdns.c, that would cause us to construct
+      tor_memmem(), and eventdns.c that would cause us to construct
       pointers to memory outside an allocated object. (These invalid
       pointers were not accessed, but C does not even allow them to
-      exist.) Fixes bug #10363; bugfixes on 0.2.0.10-alpha,
-      0.2.3.6-alpha, 0.1.1.1-alpha, and 0.1.2.1-alpha. Reported by
-      "bobnomnom".
+      exist.) Fixes bug 10363; bugfixes on 0.1.1.1-alpha, 0.1.2.1-alpha,
+      0.2.0.10-alpha, and 0.2.3.6-alpha. Reported by "bobnomnom".
     - Use the AddressSanitizer and Ubsan sanitizers (in clang-3.4) to
-      fix some miscellaneous errors in our tests and codebase. Fix for
+      fix some miscellaneous errors in our tests and codebase. Fixes
       bug 11232. Bugfixes on versions back as far as 0.2.1.11-alpha.
     - Always check return values for unlink, munmap, UnmapViewOfFile;
       check strftime return values more often. In some cases all we can
@@ -256,9 +254,9 @@ Changes in version 0.2.5.4-alpha - 2014-04-25
     - Resolve warnings from Doxygen.
 
   o Code simplifications and refactoring:
-    - Removing is_internal_IP() function. Resolves ticket 4645.
+    - Remove is_internal_IP() function. Resolves ticket 4645.
     - Remove unused function circuit_dump_by_chan from circuitlist.c.
-      Closes issue #9107; patch from "marek".
+      Closes issue 9107; patch from "marek".
     - Change our use of the ENUM_BF macro to avoid declarations that
       confuse Doxygen.
 
