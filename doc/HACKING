@@ -530,8 +530,6 @@ the date in the ChangeLog.
 
 11) Forward-port the ChangeLog.
 
-12) Update the topic in #tor to reflect the new version.
-
 12) Wait up to a day or two (for a development release), or until most
 packages are up (for a stable release), and mail the release blurb and
 changelog to tor-talk or tor-announce.
