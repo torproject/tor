@@ -613,6 +613,9 @@ NS_DECL(or_state_t *, get_or_state, (void));
 NS_DECL(int, accounting_is_enabled, (const or_options_t *options));
 NS_DECL(time_t, accounting_get_end_time, (void));
 
+static or_state_t * NS(mock_state) = NULL;
+static or_options_t * NS(mock_options) = NULL;
+
 static void
 NS(test_main)(void *arg)
 {
@@ -652,6 +655,8 @@ NS(test_main)(void *arg)
     NS_UNMOCK(server_mode);
     NS_UNMOCK(accounting_is_enabled);
     NS_UNMOCK(accounting_get_end_time);
+    tor_free_(NS(mock_state));
+    tor_free_(NS(mock_options));
 }
 
 static double
@@ -669,10 +674,10 @@ NS(we_are_hibernating)(void)
 static const or_options_t *
 NS(get_options)(void)
 {
-  or_options_t *mock_options = tor_malloc_zero(sizeof(or_options_t));
-  mock_options->AccountingMax = 0;
+  NS(mock_options) = tor_malloc_zero(sizeof(or_options_t));
+  NS(mock_options)->AccountingMax = 0;
 
-  return mock_options;
+  return NS(mock_options);
 }
 
 static int
@@ -771,11 +776,11 @@ NS(accounting_get_end_time)(void)
 static or_state_t *
 NS(get_or_state)(void)
 {
-  or_state_t *mock_state = tor_malloc_zero(sizeof(or_state_t));
-  mock_state->AccountingBytesReadInInterval = 0;
-  mock_state->AccountingBytesWrittenInInterval = 0;
+  NS(mock_state) = tor_malloc_zero(sizeof(or_state_t));
+  NS(mock_state)->AccountingBytesReadInInterval = 0;
+  NS(mock_state)->AccountingBytesWrittenInInterval = 0;
 
-  return mock_state;
+  return NS(mock_state);
 }
 
 #undef NS_SUBMODULE
