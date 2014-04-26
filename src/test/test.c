@@ -32,6 +32,7 @@ const char tor_git_revision[] = "";
 #define ROUTER_PRIVATE
 #define CIRCUITSTATS_PRIVATE
 #define CIRCUITLIST_PRIVATE
+#define STATEFILE_PRIVATE
 
 /*
  * Linux doesn't provide lround in math.h by default, but mac os does...
@@ -59,6 +60,7 @@ double fabs(double x);
 #include "policies.h"
 #include "rephist.h"
 #include "routerparse.h"
+#include "statefile.h"
 #ifdef CURVE25519_ENABLED
 #include "crypto_curve25519.h"
 #include "onion_ntor.h"
@@ -466,14 +468,14 @@ test_circuit_timeout(void)
   circuit_build_times_t estimate;
   circuit_build_times_t final;
   double timeout1, timeout2;
-  or_state_t state;
+  or_state_t *state=NULL;
   int i, runs;
   double close_ms;
   circuit_build_times_init(&initial);
   circuit_build_times_init(&estimate);
   circuit_build_times_init(&final);
 
-  memset(&state, 0, sizeof(or_state_t));
+  state = or_state_new();
 
   circuitbuild_running_unit_tests();
 #define timeout0 (build_time_t)(30*1000.0)
@@ -505,8 +507,9 @@ test_circuit_timeout(void)
 
   test_assert(estimate.total_build_times <= CBT_NCIRCUITS_TO_OBSERVE);
 
-  circuit_build_times_update_state(&estimate, &state);
-  test_assert(circuit_build_times_parse_state(&final, &state) == 0);
+  circuit_build_times_update_state(&estimate, state);
+  circuit_build_times_free_timeouts(&final);
+  test_assert(circuit_build_times_parse_state(&final, state) == 0);
 
   circuit_build_times_update_alpha(&final);
   timeout2 = circuit_build_times_calculate_timeout(&final,
@@ -595,7 +598,10 @@ test_circuit_timeout(void)
   }
 
  done:
-  return;
+  circuit_build_times_free_timeouts(&initial);
+  circuit_build_times_free_timeouts(&estimate);
+  circuit_build_times_free_timeouts(&final);
+  or_state_free(state);
 }
 
 /** Test encoding and parsing of rendezvous service descriptors. */

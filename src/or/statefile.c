@@ -294,6 +294,16 @@ or_state_save_broken(char *fname)
   tor_free(fname2);
 }
 
+STATIC or_state_t *
+or_state_new(void)
+{
+  or_state_t *new_state = tor_malloc_zero(sizeof(or_state_t));
+  new_state->magic_ = OR_STATE_MAGIC;
+  config_init(&state_format, new_state);
+
+  return new_state;
+}
+
 /** Reload the persistent state from disk, generating a new state as needed.
  * Return 0 on success, less than 0 on failure.
  */
@@ -321,9 +331,7 @@ or_state_load(void)
       log_warn(LD_GENERAL,"State file \"%s\" is not a file? Failing.", fname);
       goto done;
   }
-  new_state = tor_malloc_zero(sizeof(or_state_t));
-  new_state->magic_ = OR_STATE_MAGIC;
-  config_init(&state_format, new_state);
+  new_state = or_state_new();
   if (contents) {
     config_line_t *lines=NULL;
     int assign_retval;
@@ -358,9 +366,7 @@ or_state_load(void)
     tor_free(contents);
     config_free(&state_format, new_state);
 
-    new_state = tor_malloc_zero(sizeof(or_state_t));
-    new_state->magic_ = OR_STATE_MAGIC;
-    config_init(&state_format, new_state);
+    new_state = or_state_new();
   } else if (contents) {
     log_info(LD_GENERAL, "Loaded state from \"%s\"", fname);
   } else {
@@ -625,10 +631,19 @@ save_transport_to_state(const char *transport,
   tor_free(transport_addrport);
 }
 
+STATIC void
+or_state_free(or_state_t *state)
+{
+  if (!state)
+    return;
+  
+  config_free(&state_format, state);
+}
+
 void
 or_state_free_all(void)
 {
-  config_free(&state_format, global_state);
+  or_state_free(global_state);
   global_state = NULL;
 }
 
