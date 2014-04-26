@@ -172,6 +172,7 @@ test_ext_or_init_auth(void *arg)
   (void)arg;
 
   /* Check default filename location */
+  tor_free(options->DataDirectory);
   options->DataDirectory = tor_strdup("foo");
   cp = get_ext_or_auth_cookie_file_name();
   tt_str_op(cp, ==, "foo"PATH_SEPARATOR"extended_orport_auth_cookie");

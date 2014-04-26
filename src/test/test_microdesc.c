@@ -261,6 +261,7 @@ test_md_cache_broken(void *data)
 
   options = get_options_mutable();
   tt_assert(options);
+  tor_free(options->DataDirectory);
   options->DataDirectory = tor_strdup(get_fname("md_datadir_test2"));
 
 #ifdef _WIN32
