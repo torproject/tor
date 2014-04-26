@@ -148,6 +148,7 @@ static void
 test_cntev_append_cell_stats(void *arg)
 {
   smartlist_t *event_parts;
+  char *cp = NULL;
   const char *key = "Z";
   uint64_t include_if_non_zero[CELL_COMMAND_MAX_ + 1],
            number_to_include[CELL_COMMAND_MAX_ + 1];
@@ -178,7 +179,9 @@ test_cntev_append_cell_stats(void *arg)
   append_cell_stats_by_command(event_parts, key,
                                include_if_non_zero,
                                number_to_include);
-  tt_str_op("Z=relay:1", ==, smartlist_pop_last(event_parts));
+  cp = smartlist_pop_last(event_parts);
+  tt_str_op("Z=relay:1", ==, cp);
+  tor_free(cp);
 
   /* Add four CREATE cells. */
   include_if_non_zero[CELL_CREATE] = 3;
@@ -186,10 +189,11 @@ test_cntev_append_cell_stats(void *arg)
   append_cell_stats_by_command(event_parts, key,
                                include_if_non_zero,
                                number_to_include);
-  tt_str_op("Z=create:4,relay:1", ==, smartlist_pop_last(event_parts));
+  cp = smartlist_pop_last(event_parts);
+  tt_str_op("Z=create:4,relay:1", ==, cp);
 
  done:
-  ;
+  tor_free(cp);
 }
 
 static void
