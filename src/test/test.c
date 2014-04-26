@@ -955,6 +955,7 @@ test_geoip(void)
   geoip_start_dirreq((uint64_t) 1, 1024, DIRREQ_TUNNELED);
   s = geoip_format_dirreq_stats(now + 86400);
   test_streq(dirreq_stats_4, s);
+  tor_free(s);
 
   /* Stop collecting directory request statistics and start gathering
    * entry stats. */
