@@ -1018,6 +1018,8 @@ test_geoip_with_pt(void)
   get_options_mutable()->BridgeRelay = 1;
   get_options_mutable()->BridgeRecordUsageByCountry = 1;
 
+  memset(&in6, 0, sizeof(in6));
+
   /* No clients seen yet. */
   s = geoip_get_transport_history();
   tor_assert(!s);
