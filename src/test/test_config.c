@@ -124,6 +124,7 @@ test_config_addressmap(void *arg)
   test_assert(!addressmap_rewrite(address, sizeof(address), &expires, NULL));
 
   /* Test top-level-domain matching a bit harder */
+  config_free_lines(get_options_mutable()->AddressMap);
   addressmap_clear_configured();
   strlcpy(buf, "MapAddress *.com *.torserver.exit\n"
           "MapAddress *.torproject.org 1.1.1.1\n"
@@ -153,6 +154,7 @@ test_config_addressmap(void *arg)
   test_streq(address, "2.2.2.2");
 
   /* We don't support '*' as a mapping directive */
+  config_free_lines(get_options_mutable()->AddressMap);
   addressmap_clear_configured();
   strlcpy(buf, "MapAddress * *.torserver.exit\n", sizeof(buf));
   config_get_lines(buf, &(get_options_mutable()->AddressMap), 0);
@@ -170,7 +172,8 @@ test_config_addressmap(void *arg)
 #undef addressmap_rewrite
 
  done:
-  ;
+  config_free_lines(get_options_mutable()->AddressMap);
+  get_options_mutable()->AddressMap = NULL;
 }
 
 static int
