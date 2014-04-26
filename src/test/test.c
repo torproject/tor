@@ -418,9 +418,10 @@ test_onion_queues(void)
   or_circuit_t *circ1 = or_circuit_new(0, NULL);
   or_circuit_t *circ2 = or_circuit_new(0, NULL);
 
-  create_cell_t *onionskin = NULL;
+  create_cell_t *onionskin = NULL, *create2_ptr;
   create_cell_t *create1 = tor_malloc_zero(sizeof(create_cell_t));
   create_cell_t *create2 = tor_malloc_zero(sizeof(create_cell_t));
+  create2_ptr = create2; /* remember, but do not free */
 
   create_cell_init(create1, CELL_CREATE, ONION_HANDSHAKE_TYPE_TAP,
                    TAP_ONIONSKIN_CHALLENGE_LEN, buf1);
@@ -440,6 +441,7 @@ test_onion_queues(void)
   test_eq_ptr(circ2, onion_next_task(&onionskin));
   test_eq(1, onion_num_pending(ONION_HANDSHAKE_TYPE_TAP));
   test_eq(0, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR));
+  tt_ptr_op(onionskin, ==, create2_ptr);
 
   clear_pending_onions();
   test_eq(0, onion_num_pending(ONION_HANDSHAKE_TYPE_TAP));
@@ -450,6 +452,7 @@ test_onion_queues(void)
   circuit_free(TO_CIRCUIT(circ2));
   tor_free(create1);
   tor_free(create2);
+  tor_free(onionskin);
 }
 
 static void
