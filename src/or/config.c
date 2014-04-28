@@ -237,6 +237,7 @@ static config_var_t option_vars_[] = {
   V(ExitPortStatistics,          BOOL,     "0"),
   V(ExtendAllowPrivateAddresses, BOOL,     "0"),
   VPORT(ExtORPort,               LINELIST, NULL),
+  V(ExtORPortCookieAuthFile,     STRING,   NULL),
   V(ExtraInfoStatistics,         BOOL,     "1"),
   V(FallbackDir,                 LINELIST, NULL),
 

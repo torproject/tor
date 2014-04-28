@@ -1,0 +1,6 @@
+  o Minor bugfixes (pluggable transports):
+    - Enable the ExtORPortCookieAuthFile option, to allow changing the
+      default location of the authentication token for the extended OR Port
+      as used by sever-side pluggable transports. We had implemented this
+      option before, but the code to make it settable had been omitted.
+      Fixes bug 11635; bugfix on 0.2.5.1-alpha.
