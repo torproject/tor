@@ -1843,11 +1843,6 @@ if DirPort is non-zero):
     except that port specifiers are ignored. Any address not matched by
     some entry in the policy is accepted.
 
-[[FetchV2Networkstatus]] **FetchV2Networkstatus** **0**|**1**::
-    If set, we try to fetch the (obsolete, unused) version 2 network status
-    consensus documents from the directory authorities. No currently
-    supported Tor version uses them.  (Default: 0)
-
 
 DIRECTORY AUTHORITY SERVER OPTIONS
 ----------------------------------
