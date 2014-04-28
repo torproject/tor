@@ -2,7 +2,7 @@
 
 $CONFIGURE_IN = './configure.ac';
 $ORCONFIG_H = './src/win32/orconfig.h';
-$TOR_NSI = './contrib/tor-mingw.nsi.in';
+$TOR_NSI = './contrib/win32build/tor-mingw.nsi.in';
 
 $quiet = 1;
 

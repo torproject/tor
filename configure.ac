@@ -1557,10 +1557,10 @@ CPPFLAGS="$CPPFLAGS $TOR_CPPFLAGS_libevent $TOR_CPPFLAGS_openssl $TOR_CPPFLAGS_z
 AC_CONFIG_FILES([
         Doxyfile
         Makefile
-        contrib/suse/tor.sh
-        contrib/tor.logrotate
-        contrib/tor.sh
-        contrib/torctl
+        contrib/dist/suse/tor.sh
+        contrib/operator-tools/tor.logrotate
+        contrib/dist/tor.sh
+        contrib/dist/torctl
         src/config/torrc.sample
 ])
 
@@ -1582,6 +1582,6 @@ fi
 
 AC_OUTPUT
 
-if test -x /usr/bin/perl && test -x ./contrib/updateVersions.pl ; then
-  ./contrib/updateVersions.pl
+if test -x /usr/bin/perl && test -x ./scripts/maint/updateVersions.pl ; then
+  ./scripts/maint/updateVersions.pl
 fi

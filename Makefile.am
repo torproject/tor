@@ -77,7 +77,7 @@ reset-gcov:
 # Avoid strlcpy.c, strlcat.c, aes.c, OpenBSD_malloc_Linux.c, sha256.c,
 # eventdns.[hc], tinytest*.[ch]
 check-spaces:
-	./contrib/checkSpace.pl -C                    \
+	./scripts/maint/checkSpace.pl -C              \
 		src/common/*.[ch]		      \
 		src/or/*.[ch]			      \
 		src/test/*.[ch]			      \
@@ -85,10 +85,10 @@ check-spaces:
 		src/tools/tor-fw-helper/*.[ch]
 
 check-docs:
-	./contrib/checkOptionDocs.pl
+	./scripts/maint/checkOptionDocs.pl
 
 check-logs:
-	./contrib/checkLogs.pl                        \
+	./scripts/maint/checkLogs.pl                  \
 		src/*/*.[ch] | sort -n
 
 version:

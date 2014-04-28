@@ -10,7 +10,7 @@
 #   to tell you where documentation should go!
 # To use me, edit the stuff below...
 #  ...and run 'make doxygen 2>doxygen.stderr' ...
-#  ...and run ./contrib/redox.py < doxygen.stderr !
+#  ...and run ./scripts/maint/redox.py < doxygen.stderr !
 # I'll make a bunch of new files by adding missing DOCDOC comments to your
 #    source.  Those files will have names like ./src/common/util.c.newdoc.
 # You will want to look over the changes by hand before checking them in.
@@ -21,7 +21,7 @@
 # 1. make doxygen 1>doxygen.stdout 2>doxygen.stderr.
 # 2. grep Warning doxygen.stderr | grep -v 'is not documented' | less
 #      [This will tell you about all the bogus doxygen output you have]
-# 3. python ./contrib/redox.py <doxygen.stderr
+# 3. python ./scripts/maint/redox.py <doxygen.stderr
 #      [This will make lots of .newdoc files with DOCDOC comments for
 #       whatever was missing documentation.]
 # 4. Look over those .newdoc files, and see which docdoc comments you

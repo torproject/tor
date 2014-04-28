@@ -1,18 +1,16 @@
-include contrib/suse/include.am
 
 EXTRA_DIST+= \
-	contrib/cross.sh			\
-	contrib/exitlist			\
-	contrib/linux-tor-prio.sh		\
-	contrib/package_nsis-mingw.sh		\
-	contrib/rc.subr				\
-	contrib/tor-ctrl.sh			\
-	contrib/tor-exit-notice.html		\
-	contrib/tor-mingw.nsi.in		\
-	contrib/tor.ico				\
-	contrib/tor.nsi.in			\
-	contrib/tor.sh				\
-	contrib/torify				\
-	contrib/torctl
+	contrib/client-tools/torify			\
+	contrib/dist/rc.subr				\
+	contrib/dist/suse/tor.sh.in			\
+	contrib/dist/tor.sh				\
+	contrib/dist/torctl				\
+	contrib/operator-tools/linux-tor-prio.sh	\
+	contrib/operator-tools/tor-exit-notice.html	\
+	contrib/or-tools/exitlist			\
+	contrib/win32build/package_nsis-mingw.sh	\
+	contrib/win32build/tor-mingw.nsi.in		\
+	contrib/win32build/tor.ico			\
+	contrib/win32build/tor.nsi.in
 
-bin_SCRIPTS+= contrib/torify
+bin_SCRIPTS+= contrib/client-tools/torify

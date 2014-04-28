@@ -40,7 +40,7 @@
 # you know what you are doing.
 
 # Start in the tor source directory after you've compiled tor.exe
-# This means start as ./contrib/package_nsis-mingw.sh
+# This means start as ./contrib/win32build/package_nsis-mingw.sh
 
 rm -rf win_tmp
 mkdir win_tmp
@@ -56,7 +56,7 @@ mkdir win_tmp/tmp
 
 cp src/or/tor.exe win_tmp/bin/
 cp src/tools/tor-resolve.exe win_tmp/bin/
-cp contrib/tor.ico win_tmp/bin/
+cp contrib/win32build/tor.ico win_tmp/bin/
 cp src/config/geoip win_tmp/bin/
 strip win_tmp/bin/*.exe
 
@@ -88,7 +88,7 @@ done
 
 clean_localstatedir src/config/torrc.sample.in win_tmp/src/config/torrc.sample
 
-cp contrib/tor-mingw.nsi.in win_tmp/contrib/
+cp contrib/win32build/tor-mingw.nsi.in win_tmp/contrib/
 
 cd win_tmp
 makensis.exe contrib/tor-mingw.nsi.in
