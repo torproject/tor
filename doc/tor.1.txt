@@ -2406,7 +2406,7 @@ __HiddenServiceDirectory__**/client_keys**::
 
 SEE ALSO
 --------
-**privoxy**(1), **torsocks**(1), **torify**(1) +
+**torsocks**(1), **torify**(1) +
 
 **https://www.torproject.org/**
 
