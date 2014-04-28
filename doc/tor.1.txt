@@ -1782,7 +1782,7 @@ if DirPort is non-zero):
     When this option is set, it takes an HTML file and publishes it as "/" on
     the DirPort. Now relay operators can provide a disclaimer without needing
     to set up a separate webserver. There's a sample disclaimer in
-    contrib/tor-exit-notice.html.
+    contrib/operator-tools/tor-exit-notice.html.
 
 [[V3AuthoritativeDirectory]] **V3AuthoritativeDirectory** **0**|**1**::
     When this option is set in addition to **AuthoritativeDirectory**, Tor

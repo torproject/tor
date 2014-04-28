@@ -1,6 +1,0 @@
-Tor directory authorities may maintain a binding of server identities
-(their long term identity key) and nicknames.
-
-The auto-naming scripts have been moved to svn in
-projects/tor-naming/auto-naming/trunk/
-

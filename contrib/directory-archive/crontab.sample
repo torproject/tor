@@ -1,3 +1,0 @@
-10 * * * * cd projects/tor-v2dir && ./fetch-all-v3
-40 * * * * cd projects/tor-v2dir && ./fetch-all
-15 3 6 * * cd projects/tor-v2dir && ./sort-into-month-folder > /dev/null && ./tar-them-up last > /dev/null

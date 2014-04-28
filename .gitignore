@@ -26,6 +26,7 @@
 *.bak
 # Python droppings
 *.pyc
+*.pyo
 
 # /
 /Makefile
@@ -60,20 +61,10 @@
 /tor-*-win32.exe
 
 # /contrib/
-/contrib/Makefile
-/contrib/Makefile.in
-/contrib/tor.sh
-/contrib/torctl
-/contrib/torify
-/contrib/*.pyc
-/contrib/*.pyo
-/contrib/tor.logrotate
-/contrib/tor.wxs
-
-# /contrib/suse/
-/contrib/suse/tor.sh
-/contrib/suse/Makefile.in
-/contrib/suse/Makefile
+/contrib/dist/tor.sh
+/contrib/dist/torctl
+/contrib/operator-tools/tor.logrotate
+/contrib/dist/suse/tor.sh
 
 # /debian/
 /debian/files

@@ -122,7 +122,7 @@ Running gcov for unit test coverage
    make
    make check
    mkdir coverage-output
-   ./contrib/coverage coverage-output
+   ./scripts/test/coverage coverage-output
 -----
 
 (On OSX, you'll need to start with "--enable-coverage CC=clang".)
@@ -142,7 +142,7 @@ If you have two different "coverage-output" directories, and you want to see
 a meaningful diff between them, you can run:
 
 -----
-   ./contrib/cov-diff coverage-output1 coverage-output2 | less
+   ./scripts/test/cov-diff coverage-output1 coverage-output2 | less
 -----
 
 In this diff, any lines that were visited at least once will have coverage
