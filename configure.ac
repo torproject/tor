@@ -161,6 +161,9 @@ AC_ARG_ENABLE(bufferevents,
 AC_ARG_ENABLE(tool-name-check,
      AS_HELP_STRING(--disable-tool-name-check, check for sanely named toolchain when cross-compiling))
 
+AC_ARG_ENABLE(seccomp,
+     AS_HELP_STRING(--disable-seccomp, do not attempt to use libseccomp))
+
 dnl check for the correct "ar" when cross-compiling
 AN_MAKEVAR([AR], [AC_PROG_AR])
 AN_PROGRAM([ar], [AC_PROG_AR])
@@ -726,8 +729,10 @@ fi
 dnl ============================================================
 dnl Check for libseccomp
 
-AC_CHECK_HEADERS([seccomp.h])
-AC_SEARCH_LIBS(seccomp_init, [seccomp])
+if test "x$enable_seccomp" != "xno"; then
+  AC_CHECK_HEADERS([seccomp.h])
+  AC_SEARCH_LIBS(seccomp_init, [seccomp])
+fi
 
 dnl ============================================================
 dnl We need an implementation of curve25519.
