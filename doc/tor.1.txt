@@ -2014,6 +2014,12 @@ DIRECTORY AUTHORITY SERVER OPTIONS
     When set to 1, IPv6 OR ports are being tested just like IPv4 OR
     ports. (Default: 0)
 
+[[MinMeasuredBWsForAuthToIgnoreAdvertised]] **MinMeasuredBWsForAuthToIgnoreAdvertised** __N__::
+    A total value, in abstract bandwidth units, describing how much
+    measured total bandwidth an authority should have observed on the network
+    before it will treat advertised bandwidths as wholly
+    unreliable. (Default: 500)
+
 HIDDEN SERVICE OPTIONS
 ----------------------
 
@@ -2216,6 +2222,10 @@ The following options are used for running a testing Tor network.
     events.  Changing this requires that **TestingTorNetwork** is set.
     (Default: 0)
 
+[[TestingMinExitFlagThreshold]] **TestingMinExitFlagThreshold**  __N__ **KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**::
+    Sets a lower-bound for assigning an exit flag when running as an
+    authority on a testing network. Overrides the usual default lower bound
+    of 4 KB. (Default: 0)
 
 SIGNALS
 -------
