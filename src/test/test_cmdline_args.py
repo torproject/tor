@@ -27,6 +27,21 @@ class UnexpectedSuccess(Exception):
 class UnexpectedFailure(Exception):
     pass
 
+if sys.version < '3':
+    def b2s(b):
+       return b
+    def s2b(s):
+       return s
+    def NamedTemporaryFile():
+       return tempfile.NamedTemporaryFile(delete=False)
+else:
+    def b2s(b):
+       return str(b, 'ascii')
+    def s2b(s):
+       return s.encode('ascii')
+    def NamedTemporaryFile():
+       return tempfile.NamedTemporaryFile(mode="w",delete=False,encoding="ascii")
+
 def contents(fn):
     f = open(fn)
     try:
@@ -42,10 +57,10 @@ def run_tor(args, failure=False):
         raise UnexpectedFailure()
     elif not result and failure:
         raise UnexpectedSuccess()
-    return output
+    return b2s(output)
 
 def spaceify_fp(fp):
-    for i in xrange(0, len(fp), 4):
+    for i in range(0, len(fp), 4):
         yield fp[i:i+4]
 
 def lines(s):
@@ -62,7 +77,7 @@ def strip_log_junk(line):
 
 def randstring(entropy_bytes):
     s = os.urandom(entropy_bytes)
-    return binascii.b2a_hex(s)
+    return b2s(binascii.b2a_hex(s))
 
 def findLineContaining(lines, s):
     for ln in lines:
@@ -74,59 +89,61 @@ class CmdlineTests(unittest.TestCase):
 
     def test_version(self):
         out = run_tor(["--version"])
-        self.failUnless(out.startswith("Tor version "))
-        self.assertEquals(len(lines(out)), 1)
+        self.assertTrue(out.startswith("Tor version "))
+        self.assertEqual(len(lines(out)), 1)
 
     def test_quiet(self):
         out = run_tor(["--quiet", "--quumblebluffin", "1"], failure=True)
-        self.assertEquals(out, "")
+        self.assertEqual(out, "")
 
     def test_help(self):
         out = run_tor(["--help"], failure=False)
         out2 = run_tor(["-h"], failure=False)
-        self.assert_(out.startswith("Copyright (c) 2001"))
-        self.assert_(out.endswith(
+        self.assertTrue(out.startswith("Copyright (c) 2001"))
+        self.assertTrue(out.endswith(
             "tor -f <torrc> [args]\n"
             "See man page for options, or https://www.torproject.org/ for documentation.\n"))
-        self.assert_(out == out2)
+        self.assertTrue(out == out2)
 
     def test_hush(self):
-        torrc = tempfile.NamedTemporaryFile(delete=False)
+        torrc = NamedTemporaryFile()
         torrc.close()
         try:
             out = run_tor(["--hush", "-f", torrc.name,
                            "--quumblebluffin", "1"], failure=True)
         finally:
             os.unlink(torrc.name)
-        self.assertEquals(len(lines(out)), 2)
+        self.assertEqual(len(lines(out)), 2)
         ln = [ strip_log_junk(l) for l in lines(out) ]
-        self.assertEquals(ln[0], "Failed to parse/validate config: Unknown option 'quumblebluffin'.  Failing.")
-        self.assertEquals(ln[1], "Reading config failed--see warnings above.")
+        self.assertEqual(ln[0], "Failed to parse/validate config: Unknown option 'quumblebluffin'.  Failing.")
+        self.assertEqual(ln[1], "Reading config failed--see warnings above.")
 
     def test_missing_argument(self):
         out = run_tor(["--hush", "--hash-password"], failure=True)
-        self.assertEquals(len(lines(out)), 2)
+        self.assertEqual(len(lines(out)), 2)
         ln = [ strip_log_junk(l) for l in lines(out) ]
-        self.assertEquals(ln[0], "Command-line option '--hash-password' with no value. Failing.")
+        self.assertEqual(ln[0], "Command-line option '--hash-password' with no value. Failing.")
 
     def test_hash_password(self):
         out = run_tor(["--hash-password", "woodwose"])
         result = lines(out)[-1]
-        self.assertEquals(result[:3], "16:")
-        self.assertEquals(len(result), 61)
+        self.assertEqual(result[:3], "16:")
+        self.assertEqual(len(result), 61)
         r = binascii.a2b_hex(result[3:])
-        self.assertEquals(len(r), 29)
+        self.assertEqual(len(r), 29)
 
         salt, how, hashed = r[:8], r[8], r[9:]
-        self.assertEquals(len(hashed), 20)
+        self.assertEqual(len(hashed), 20)
+        if type(how) == type("A"):
+          how = ord(how)
 
-        count = (16 + (ord(how) & 15)) << ((ord(how) >> 4) + 6)
-        stuff = salt + "woodwose"
+        count = (16 + (how & 15)) << ((how >> 4) + 6)
+        stuff = salt + s2b("woodwose")
         repetitions = count // len(stuff) + 1
         inp = stuff * repetitions
         inp = inp[:count]
 
-        self.assertEquals(hashlib.sha1(inp).digest(), hashed)
+        self.assertEqual(hashlib.sha1(inp).digest(), hashed)
 
     def test_digests(self):
         main_c = os.path.join(TOP_SRCDIR, "src", "or", "main.c")
@@ -136,12 +153,14 @@ class CmdlineTests(unittest.TestCase):
         out = run_tor(["--digests"])
         main_line = [ l for l in lines(out) if l.endswith("/main.c") ]
         digest, name = main_line[0].split()
-        actual = hashlib.sha1(open(main_c).read()).hexdigest()
-        self.assertEquals(digest, actual)
+        f = open(main_c, 'rb')
+        actual = hashlib.sha1(f.read()).hexdigest()
+        f.close()
+        self.assertEqual(digest, actual)
 
     def test_dump_options(self):
-        default_torrc = tempfile.NamedTemporaryFile(delete=False)
-        torrc = tempfile.NamedTemporaryFile(delete=False)
+        default_torrc = NamedTemporaryFile()
+        torrc = NamedTemporaryFile()
         torrc.write("SocksPort 9999")
         torrc.close()
         default_torrc.write("SafeLogging 0")
@@ -161,27 +180,27 @@ class CmdlineTests(unittest.TestCase):
             os.unlink(torrc.name)
             os.unlink(default_torrc.name)
 
-        self.assertEquals(len(lines(out_sh)), 2)
-        self.assert_(lines(out_sh)[0].startswith("DataDirectory "))
-        self.assertEquals(lines(out_sh)[1:],
+        self.assertEqual(len(lines(out_sh)), 2)
+        self.assertTrue(lines(out_sh)[0].startswith("DataDirectory "))
+        self.assertEqual(lines(out_sh)[1:],
             [ "SocksPort 9999" ])
 
-        self.assertEquals(len(lines(out_nb)), 2)
-        self.assertEquals(lines(out_nb),
+        self.assertEqual(len(lines(out_nb)), 2)
+        self.assertEqual(lines(out_nb),
             [ "SafeLogging 0",
               "SocksPort 9999" ])
 
         out_fl = lines(out_fl)
-        self.assert_(len(out_fl) > 100)
-        self.assert_("SocksPort 9999" in out_fl)
-        self.assert_("SafeLogging 0" in out_fl)
-        self.assert_("ClientOnly 0" in out_fl)
+        self.assertTrue(len(out_fl) > 100)
+        self.assertTrue("SocksPort 9999" in out_fl)
+        self.assertTrue("SafeLogging 0" in out_fl)
+        self.assertTrue("ClientOnly 0" in out_fl)
 
-        self.assert_(out_verif.endswith("Configuration was valid\n"))
+        self.assertTrue(out_verif.endswith("Configuration was valid\n"))
 
     def test_list_fingerprint(self):
         tmpdir = tempfile.mkdtemp(prefix='ttca_')
-        torrc = tempfile.NamedTemporaryFile(delete=False)
+        torrc = NamedTemporaryFile()
         torrc.write("ORPort 9999\n")
         torrc.write("DataDirectory %s\n"%tmpdir)
         torrc.write("Nickname tippi")
@@ -200,21 +219,21 @@ class CmdlineTests(unittest.TestCase):
         fp = fp.strip()
         nn_fp = fp.split()[0]
         space_fp = " ".join(spaceify_fp(fp.split()[1]))
-        self.assertEquals(lastlog,
+        self.assertEqual(lastlog,
               "Your Tor server's identity key fingerprint is '%s'"%fp)
-        self.assertEquals(lastline, "tippi %s"%space_fp)
-        self.assertEquals(nn_fp, "tippi")
+        self.assertEqual(lastline, "tippi %s"%space_fp)
+        self.assertEqual(nn_fp, "tippi")
 
     def test_list_options(self):
         out = lines(run_tor(["--list-torrc-options"]))
-        self.assert_(len(out)>100)
-        self.assert_(out[0] <= 'AccountingMax')
-        self.assert_("UseBridges" in out)
-        self.assert_("SocksPort" in out)
+        self.assertTrue(len(out)>100)
+        self.assertTrue(out[0] <= 'AccountingMax')
+        self.assertTrue("UseBridges" in out)
+        self.assertTrue("SocksPort" in out)
 
     def test_cmdline_args(self):
-        default_torrc = tempfile.NamedTemporaryFile(delete=False)
-        torrc = tempfile.NamedTemporaryFile(delete=False)
+        default_torrc = NamedTemporaryFile()
+        torrc = NamedTemporaryFile()
         torrc.write("SocksPort 9999\n")
         torrc.write("SocksPort 9998\n")
         torrc.write("ORPort 9000\n")
@@ -242,14 +261,14 @@ class CmdlineTests(unittest.TestCase):
         out_1 = [ l for l in lines(out_1) if not l.startswith("DataDir") ]
         out_2 = [ l for l in lines(out_2) if not l.startswith("DataDir") ]
 
-        self.assertEquals(out_1,
+        self.assertEqual(out_1,
                           ["ControlPort 9500",
                            "Nickname eleventeen",
                            "ORPort 9000",
                            "ORPort 9001",
                            "SocksPort 9999",
                            "SocksPort 9998"])
-        self.assertEquals(out_2,
+        self.assertEqual(out_2,
                           ["ExtORPort 9005",
                            "Nickname eleventeen",
                            "ORPort 9000",
@@ -261,13 +280,13 @@ class CmdlineTests(unittest.TestCase):
         fname = "nonexistent_file_"+randstring(8)
         out = run_tor(["-f", fname, "--verify-config"], failure=True)
         ln = [ strip_log_junk(l) for l in lines(out) ]
-        self.assert_("Unable to open configuration file" in ln[-2])
-        self.assert_("Reading config failed" in ln[-1])
+        self.assertTrue("Unable to open configuration file" in ln[-2])
+        self.assertTrue("Reading config failed" in ln[-1])
 
         out = run_tor(["-f", fname, "--verify-config", "--ignore-missing-torrc"])
         ln = [ strip_log_junk(l) for l in lines(out) ]
-        self.assert_(findLineContaining(ln, ", using reasonable defaults"))
-        self.assert_("Configuration was valid" in ln[-1])
+        self.assertTrue(findLineContaining(ln, ", using reasonable defaults"))
+        self.assertTrue("Configuration was valid" in ln[-1])
 
 if __name__ == '__main__':
     unittest.main()
