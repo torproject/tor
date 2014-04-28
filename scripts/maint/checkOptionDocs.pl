@@ -41,8 +41,9 @@ loadTorrc("./src/config/torrc.sample.in", \%torrcSampleOptions);
 my $considerNextLine = 0;
 open(F, "./doc/tor.1.txt") or die;
 while (<F>) {
-    if (m!^\*\*([A-Za-z0-9_]+)\*\*!) {
-        $manPageOptions{$1} = 1;
+    if (m!^(?:\[\[([A-za-z0-9_]+)\]\] *)?\*\*([A-Za-z0-9_]+)\*\*!) {
+        $manPageOptions{$2} = 1;
+	print "Missing an anchor: $2\n" unless (defined $1 or $2 eq 'tor');
     }
 }
 close F;

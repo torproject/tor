@@ -491,15 +491,15 @@ GENERAL OPTIONS
     attacker who obtains the logs. If only one severity level is given, all
     messages of that level or higher will be sent to the listed destination.
 
-**Log** __minSeverity__[-__maxSeverity__] **file** __FILENAME__::
+[[Log2]] **Log** __minSeverity__[-__maxSeverity__] **file** __FILENAME__::
     As above, but send log messages to the listed filename. The
     "Log" option may appear more than once in a configuration file.
     Messages are sent to all the logs that match their severity
     level.
 
-**Log** **[**__domain__,...**]**__minSeverity__[-__maxSeverity__] ... **file** __FILENAME__ +
+[[Log3]] **Log** **[**__domain__,...**]**__minSeverity__[-__maxSeverity__] ... **file** __FILENAME__ +
 
-**Log** **[**__domain__,...**]**__minSeverity__[-__maxSeverity__] ... **stderr**|**stdout**|**syslog**::
+[[Log4]] **Log** **[**__domain__,...**]**__minSeverity__[-__maxSeverity__] ... **stderr**|**stdout**|**syslog**::
     As above, but select messages by range of log severity __and__ by a
     set of "logging domains".  Each logging domain corresponds to an area of
     functionality inside Tor.  You can specify any number of severity ranges
@@ -2197,7 +2197,7 @@ The following options are used for running a testing Tor network.
     Try this often to download a v3 authority certificate before giving up.
     Changing this requires that **TestingTorNetwork** is set. (Default: 8)
 
-**TestingDirAuthVoteGuard** __node__,__node__,__...__::
+[[TestingDirAuthVoteGuard]] **TestingDirAuthVoteGuard** __node__,__node__,__...__::
     A list of identity fingerprints, nicknames, country codes and
     address patterns of nodes to vote Guard for regardless of their
     uptime and bandwidth. See the **ExcludeNodes** option for more
