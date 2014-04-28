@@ -1354,8 +1354,8 @@ tor_addr_is_multicast(const tor_addr_t *a)
  * connects to the Internet.  This address should only be used in checking
  * whether our address has changed.  Return 0 on success, -1 on failure.
  */
-int
-get_interface_address6(int severity, sa_family_t family, tor_addr_t *addr)
+MOCK_IMPL(int,
+get_interface_address6,(int severity, sa_family_t family, tor_addr_t *addr))
 {
   /* XXX really, this function should yield a smartlist of addresses. */
   smartlist_t *addrs;
@@ -1684,8 +1684,8 @@ tor_dup_ip(uint32_t addr)
  * checking whether our address has changed.  Return 0 on success, -1 on
  * failure.
  */
-int
-get_interface_address(int severity, uint32_t *addr)
+MOCK_IMPL(int,
+get_interface_address,(int severity, uint32_t *addr))
 {
   tor_addr_t local_addr;
   int r;

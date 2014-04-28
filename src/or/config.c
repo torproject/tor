@@ -11,6 +11,7 @@
 
 #define CONFIG_PRIVATE
 #include "or.h"
+#include "compat.h"
 #include "addressmap.h"
 #include "channel.h"
 #include "circuitbuild.h"
@@ -2051,7 +2052,33 @@ get_last_resolved_addr(void)
 }
 
 /**
- * Use <b>options-\>Address</b> to guess our public IP address.
+ * Attempt getting our non-local (as judged by tor_addr_is_internal()
+ * function) IP address using following techniques, listed in
+ * order from best (most desirable, try first) to worst (least
+ * desirable, try if everything else fails).
+ *
+ * First, attempt using <b>options-\>Address</b> to get our
+ * non-local IP address.
+ *
+ * If <b>options-\>Address</b> represents a non-local IP address,
+ * consider it ours.
+ *
+ * If <b>options-\>Address</b> is a DNS name that resolves to
+ * a non-local IP address, consider this IP address ours.
+ *
+ * If <b>options-\>Address</b> is NULL, fall back to getting local
+ * hostname and using it in above-described ways to try and
+ * get our IP address.
+ *
+ * In case local hostname cannot be resolved to a non-local IP
+ * address, try getting an IP address of network interface
+ * in hopes it will be non-local one.
+ *
+ * Fail if one or more of the following is true:
+ *   - DNS name in <b>options-\>Address</b> cannot be resolved.
+ *   - <b>options-\>Address</b> is a local host address.
+ *   - Attempt to getting local hostname fails.
+ *   - Attempt to getting network interface address fails.
  *
  * Return 0 if all is well, or -1 if we can't find a suitable
  * public IP address.
@@ -2060,6 +2087,11 @@ get_last_resolved_addr(void)
  *   - Put our public IP address (in host order) into *<b>addr_out</b>.
  *   - If <b>method_out</b> is non-NULL, set *<b>method_out</b> to a static
  *     string describing how we arrived at our answer.
+ *      - "CONFIGURED" - parsed from IP address string in
+ *        <b>options-\>Address</b>
+ *      - "RESOLVED" - resolved from DNS name in <b>options-\>Address</b>
+ *      - "GETHOSTNAME" - resolved from a local hostname.
+ *      - "INTERFACE" - retrieved from a network interface.
  *   - If <b>hostname_out</b> is non-NULL, and we resolved a hostname to
  *     get our address, set *<b>hostname_out</b> to a newly allocated string
  *     holding that hostname. (If we didn't get our address by resolving a
@@ -2098,7 +2130,7 @@ resolve_my_address(int warn_severity, const or_options_t *options,
     explicit_ip = 0; /* it's implicit */
     explicit_hostname = 0; /* it's implicit */
 
-    if (gethostname(hostname, sizeof(hostname)) < 0) {
+    if (tor_gethostname(hostname, sizeof(hostname)) < 0) {
       log_fn(warn_severity, LD_NET,"Error obtaining local hostname");
       return -1;
     }
