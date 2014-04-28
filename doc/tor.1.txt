@@ -626,7 +626,7 @@ GENERAL OPTIONS
     This feature is experimental; don't use it yet unless you're eager to
     help tracking down bugs. (Default: 0)
 
-[[_UseFilteringSSLBufferevents]] **_UseFilteringSSLBufferevents** **0**|**1**::
+[[UseFilteringSSLBufferevents]] **UseFilteringSSLBufferevents** **0**|**1**::
     Tells Tor to do its SSL communication using a chain of
     bufferevents: one for SSL and one for networking.  This option has no
     effect if bufferevents are disabled (in which case it can't turn on), or
@@ -1090,7 +1090,7 @@ The following options are useful only for clients (that is, if
     increases the odds that an adversary who owns some servers will observe a
     fraction of your paths. (Default: 1)
 
-[[UseEntryGuardsAsDirectoryGuards]] **UseEntryGuardsAsDirectoryGuards** **0**|**1**::
+[[UseEntryGuardsAsDirGuards]] **UseEntryGuardsAsDirGuards** **0**|**1**::
     If this option is set to 1, and UseEntryGuards is also set to 1,
     we try to use our entry guards as directory
     guards, and failing that, pick more nodes to act as our directory guards.
@@ -1196,7 +1196,7 @@ The following options are useful only for clients (that is, if
     compatibility, TransListenAddress is only allowed when TransPort is just
     a port number.)
 
-[[TransProxyType]] **TransProxyTYpe** **default**|**TPROXY**|**ipfw**|**pf-divert**::
+[[TransProxyType]] **TransProxyType** **default**|**TPROXY**|**ipfw**|**pf-divert**::
     TransProxyType may only be enabled when there is transparent proxy listener
     enabled.
  +
