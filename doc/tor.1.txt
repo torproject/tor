@@ -644,7 +644,7 @@ CLIENT OPTIONS
 --------------
 
 The following options are useful only for clients (that is, if
-[[SocksPort]] **SocksPort**, **TransPort**, **DNSPort**, or **NATDPort** is non-zero):
+**SocksPort**, **TransPort**, **DNSPort**, or **NATDPort** is non-zero):
 
 [[AllowInvalidNodes]] **AllowInvalidNodes** **entry**|**exit**|**middle**|**introduction**|**rendezvous**|**...**::
     If some Tor servers are obviously not working right, the directory
