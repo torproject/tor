@@ -5,6 +5,7 @@ EXTRA_DIST+= \
 	contrib/dist/suse/tor.sh.in			\
 	contrib/dist/tor.sh				\
 	contrib/dist/torctl				\
+	contrib/dist/tor.service.in			\
 	contrib/operator-tools/linux-tor-prio.sh	\
 	contrib/operator-tools/tor-exit-notice.html	\
 	contrib/or-tools/exitlist			\

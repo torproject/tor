@@ -1,0 +1,5 @@
+  o Distribution:
+    - Include a tor.service file in contrib.dist for use with
+      systemd. Some distributions will be able to use this file unmodified;
+      others will need to tweak it, or write their own. Patch from
+      Jamie Nguyen; resolves ticket 8368.
