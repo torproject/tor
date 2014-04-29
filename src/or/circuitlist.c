@@ -1821,7 +1821,7 @@ circuit_max_queued_cell_age(const circuit_t *c, uint32_t now)
     age = now - cell->inserted_time;
 
   if (! CIRCUIT_IS_ORIGIN(c)) {
-    const or_circuit_t *orcirc = TO_OR_CIRCUIT((circuit_t*)c);
+    const or_circuit_t *orcirc = CONST_TO_OR_CIRCUIT(c);
     if (NULL != (cell = TOR_SIMPLEQ_FIRST(&orcirc->p_chan_cells.head))) {
       uint32_t age2 = now - cell->inserted_time;
       if (age2 > age)
@@ -1863,10 +1863,10 @@ circuit_max_queued_data_age(const circuit_t *c, uint32_t now)
 {
   if (CIRCUIT_IS_ORIGIN(c)) {
     return circuit_get_streams_max_data_age(
-                           TO_ORIGIN_CIRCUIT((circuit_t*)c)->p_streams, now);
+        CONST_TO_ORIGIN_CIRCUIT(c)->p_streams, now);
   } else {
     return circuit_get_streams_max_data_age(
-                           TO_OR_CIRCUIT((circuit_t*)c)->n_streams, now);
+        CONST_TO_OR_CIRCUIT(c)->n_streams, now);
   }
 }
 
@@ -2057,15 +2057,10 @@ assert_circuit_ok(const circuit_t *c)
   tor_assert(c->purpose >= CIRCUIT_PURPOSE_MIN_ &&
              c->purpose <= CIRCUIT_PURPOSE_MAX_);
 
-  {
-    /* Having a separate variable for this pleases GCC 4.2 in ways I hope I
-     * never understand. -NM. */
-    circuit_t *nonconst_circ = (circuit_t*) c;
-    if (CIRCUIT_IS_ORIGIN(c))
-      origin_circ = TO_ORIGIN_CIRCUIT(nonconst_circ);
-    else
-      or_circ = TO_OR_CIRCUIT(nonconst_circ);
-  }
+  if (CIRCUIT_IS_ORIGIN(c))
+    origin_circ = CONST_TO_ORIGIN_CIRCUIT(c);
+  else
+    or_circ = CONST_TO_OR_CIRCUIT(c);
 
   if (c->n_chan) {
     tor_assert(!c->n_hop);

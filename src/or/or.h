@@ -3231,16 +3231,29 @@ typedef struct or_circuit_rendinfo_s {
 /** Convert a circuit_t* to a pointer to the enclosing or_circuit_t.  Assert
  * if the cast is impossible. */
 static or_circuit_t *TO_OR_CIRCUIT(circuit_t *);
+static const or_circuit_t *CONST_TO_OR_CIRCUIT(const circuit_t *);
 /** Convert a circuit_t* to a pointer to the enclosing origin_circuit_t.
  * Assert if the cast is impossible. */
 static origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *);
+static const origin_circuit_t *CONST_TO_ORIGIN_CIRCUIT(const circuit_t *);
 
 static INLINE or_circuit_t *TO_OR_CIRCUIT(circuit_t *x)
 {
   tor_assert(x->magic == OR_CIRCUIT_MAGIC);
   return DOWNCAST(or_circuit_t, x);
 }
+static INLINE const or_circuit_t *CONST_TO_OR_CIRCUIT(const circuit_t *x)
+{
+  tor_assert(x->magic == OR_CIRCUIT_MAGIC);
+  return DOWNCAST(or_circuit_t, x);
+}
 static INLINE origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *x)
+{
+  tor_assert(x->magic == ORIGIN_CIRCUIT_MAGIC);
+  return DOWNCAST(origin_circuit_t, x);
+}
+static INLINE const origin_circuit_t *CONST_TO_ORIGIN_CIRCUIT(
+    const circuit_t *x)
 {
   tor_assert(x->magic == ORIGIN_CIRCUIT_MAGIC);
   return DOWNCAST(origin_circuit_t, x);
