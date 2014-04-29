@@ -481,13 +481,22 @@ test_buffer_allocation_tracking(void *arg)
   fetch_from_buf(junk, 4096, buf1); /* drop a 1k chunk... */
   tt_int_op(buf_allocation(buf1), ==, 3*4096); /* now 3 4k chunks */
 
+#ifdef ENABLE_BUF_FREELISTS
   tt_int_op(buf_get_total_allocation(), ==, 16384); /* that chunk went onto
                                                        the freelist. */
+#else
+  tt_int_op(buf_get_total_allocation(), ==, 12288); /* that chunk was really
+                                                       freed. */
+#endif
 
   write_to_buf(junk, 4000, buf2);
   tt_int_op(buf_allocation(buf2), ==, 4096); /* another 4k chunk. */
-  tt_int_op(buf_get_total_allocation(), ==, 16384); /* that chunk came from
-                                                       the freelist. */
+  /*
+   * If we're using freelists, size stays at 16384 because we just pulled a
+   * chunk from the freelist.  If we aren't, we bounce back up to 16384 by
+   * allocating a new chunk.
+   */
+  tt_int_op(buf_get_total_allocation(), ==, 16384);
   write_to_buf(junk, 4000, buf2);
   tt_int_op(buf_allocation(buf2), ==, 8192); /* another 4k chunk. */
   tt_int_op(buf_get_total_allocation(), ==, 5*4096); /* that chunk was new. */

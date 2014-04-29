@@ -117,6 +117,9 @@ chunk_repack(chunk_t *chunk)
   chunk->data = &chunk->mem[0];
 }
 
+/** Keep track of total size of allocated chunks for consistency asserts */
+static size_t total_bytes_allocated_in_chunks = 0;
+
 #if defined(ENABLE_BUF_FREELISTS) || defined(RUNNING_DOXYGEN)
 /** A freelist of chunks. */
 typedef struct chunk_freelist_t {
@@ -147,9 +150,6 @@ static chunk_freelist_t freelists[] = {
 /** How many times have we looked for a chunk of a size that no freelist
  * could help with? */
 static uint64_t n_freelist_miss = 0;
-
-/** DOCDOC */
-static size_t total_bytes_allocated_in_chunks = 0;
 
 static void assert_freelist_ok(chunk_freelist_t *fl);
 
