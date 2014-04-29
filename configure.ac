@@ -201,7 +201,7 @@ AM_CONDITIONAL(MINIUPNPC, test x$upnp = xtrue)
 AM_PROG_CC_C_O
 
 AC_ARG_VAR(PYTHON)
-AC_CHECK_PROGS(PYTHON, [python python2 python3])
+AC_CHECK_PROGS(PYTHON, [python python2 python2.7 python3 python3.3])
 if test "x$PYTHON" = "x"; then
   AC_MSG_WARN([Python unavailable; some tests will not be run.])
 fi
