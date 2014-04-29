@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Fix all valgrind warnings produced by the unit tests. There were
+      over a thousand memory leak warnings previously, mostly produced
+      by forgetting to free things in the unit test code.  Fixes bug
+      11618, bugfixes on many versions of Tor.
