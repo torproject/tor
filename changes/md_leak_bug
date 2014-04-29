@@ -1,0 +1,5 @@
+  o Major bugfixes (security, OOM)
+    - Fix a memory leak that could occur if a microdescriptor parse
+      fails during the tokenizing step. This could enable a memory
+      exhaustion attack by directory servers. Fixes bug #11649; bugfix
+      on 0.2.2.6-alpha.
