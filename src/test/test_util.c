@@ -2530,8 +2530,17 @@ test_util_fgets_eagain(void *ptr)
 }
 #endif
 
+#ifndef BUILDDIR
+#define BUILDDIR "."
+#endif
+
 #ifdef _WIN32
 #define notify_pending_waitpid_callbacks() STMT_NIL
+#define TEST_CHILD "test-child.exe"
+#define EOL "\r\n"
+#else
+#define TEST_CHILD (BUILDDIR "/src/test/test-child")
+#define EOL "\n"
 #endif
 
 /** Helper function for testing tor_spawn_background */
@@ -2617,15 +2626,9 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
 static void
 test_util_spawn_background_ok(void *ptr)
 {
-#ifdef _WIN32
-  const char *argv[] = {"test-child.exe", "--test", NULL};
-  const char *expected_out = "OUT\r\n--test\r\nSLEEPING\r\nDONE\r\n";
-  const char *expected_err = "ERR\r\n";
-#else
-  const char *argv[] = {BUILDDIR "/src/test/test-child", "--test", NULL};
-  const char *expected_out = "OUT\n--test\nSLEEPING\nDONE\n";
-  const char *expected_err = "ERR\n";
-#endif
+  const char *argv[] = {TEST_CHILD, "--test", NULL};
+  const char *expected_out = "OUT"EOL "--test"EOL "SLEEPING"EOL "DONE" EOL;
+  const char *expected_err = "ERR"EOL;
 
   (void)ptr;
 
@@ -2637,9 +2640,6 @@ test_util_spawn_background_ok(void *ptr)
 static void
 test_util_spawn_background_fail(void *ptr)
 {
-#ifndef BUILDDIR
-#define BUILDDIR "."
-#endif
   const char *argv[] = {BUILDDIR "/src/test/no-such-file", "--test", NULL};
   const char *expected_err = "";
   char expected_out[1024];
@@ -2676,30 +2676,21 @@ test_util_spawn_background_partial_read_impl(int exit_early)
   process_handle_t *process_handle=NULL;
   int status;
   char stdout_buf[100], stderr_buf[100];
-#ifdef _WIN32
-  const char *argv[] = {"test-child.exe", "--test", NULL};
-  const char *expected_out[] = { "OUT\r\n--test\r\nSLEEPING\r\n",
-                                 "DONE\r\n",
+
+  const char *argv[] = {TEST_CHILD, "--test", NULL};
+  const char *expected_out[] = { "OUT" EOL "--test" EOL "SLEEPING" EOL,
+                                 "DONE" EOL,
                                  NULL };
-  const char *expected_err = "ERR\r\n";
-#else
-  const char *argv[] = {BUILDDIR "/src/test/test-child", "--test", NULL};
-  const char *expected_out[] = { "OUT\n--test\nSLEEPING\n",
-                                 "DONE\n",
-                                 NULL };
-  const char *expected_err = "ERR\n";
+  const char *expected_err = "ERR" EOL;
+
+#ifndef _WIN32
   int eof = 0;
 #endif
   int expected_out_ctr;
 
-
   if (exit_early) {
     argv[1] = "--hang";
-#ifdef _WIN32
-    expected_out[0] = "OUT\r\n--hang\r\nSLEEPING\r\n";
-#else
-    expected_out[0] = "OUT\n--hang\nSLEEPING\n";
-#endif
+    expected_out[0] = "OUT"EOL "--hang"EOL "SLEEPING" EOL;
   }
 
   /* Start the program */
@@ -2801,11 +2792,7 @@ test_util_spawn_background_waitpid_notify(void *arg)
   int status;
   int ms_timer;
 
-#ifdef _WIN32
-  const char *argv[] = {"test-child.exe", "--fast", NULL};
-#else
-  const char *argv[] = {BUILDDIR "/src/test/test-child", "--fast", NULL};
-#endif
+  const char *argv[] = {TEST_CHILD, "--fast", NULL};
 
   (void) arg;
 
@@ -2848,6 +2835,9 @@ test_util_spawn_background_waitpid_notify(void *arg)
  done:
   tor_process_handle_destroy(process_handle, 1);
 }
+
+#undef TEST_CHILD
+#undef EOL
 
 /**
  * Test for format_hex_number_sigsafe()
