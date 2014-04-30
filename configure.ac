@@ -355,6 +355,7 @@ AC_CHECK_FUNCS(
         sysconf \
 	sysctl \
         uname \
+        usleep \
         vasprintf \
 	_vscprintf
 )
@@ -885,6 +886,7 @@ AC_CHECK_HEADERS(
         sys/param.h \
         sys/prctl.h \
         sys/resource.h \
+        sys/select.h \
         sys/socket.h \
 	sys/sysctl.h \
         sys/syslimits.h \
