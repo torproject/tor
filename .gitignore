@@ -13,15 +13,11 @@
 *.gcno
 *.gcov
 *.gcda
-# latex stuff
-*.aux
-*.dvi
-*.blg
-*.bbl
-*.log
 # Autotools stuff
 .deps
 .dirstamp
+*.trs
+*.log
 # Stuff made by our makefiles
 *.bak
 # Python droppings
