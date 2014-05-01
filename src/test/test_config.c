@@ -277,11 +277,12 @@ test_config_write_to_data_subdir(void *arg)
       "accusam et justo duo dolores et\n"
       "ea rebum. Stet clita kasd gubergren, no sea takimata\n"
       "sanctus est Lorem ipsum dolor sit amet.";
-  char* filepath = get_datadir_fname2(subdir, fname);
+  char* filepath = NULL;
   (void)arg;
 
   tor_free(options->DataDirectory);
   datadir = options->DataDirectory = tor_strdup(get_fname("datadir-1"));
+  filepath = get_datadir_fname2(subdir, fname);
 
 #if defined (_WIN32) && !defined (WINCE)
   tt_int_op(mkdir(options->DataDirectory), ==, 0);
