@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Fix a broken log message about delayed directory fetches that
+      was caused by a misuse of strlcpy(). Fixes bug 11654; bugfix on
+      0.2.5.3-alpha.
