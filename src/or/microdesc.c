@@ -614,7 +614,7 @@ microdesc_free_(microdesc_t *md, const char *fname, int lineno)
         }
       });
     if (found) {
-      log_warn(LD_BUG, "microdesc_free() called from %s:%d, but md was still "
+      log_info(LD_BUG, "microdesc_free() called from %s:%d, but md was still "
                "referenced %d node(s); held_by_nodes == %u",
                fname, lineno, found, md->held_by_nodes);
     } else {
