@@ -338,8 +338,6 @@ should_use_directory_guards(const or_options_t *options)
   if (options->DownloadExtraInfo || options->FetchDirInfoEarly ||
       options->FetchDirInfoExtraEarly || options->FetchUselessDescriptors)
     return 0;
-  if (! options->PreferTunneledDirConns)
-    return 0;
   return 1;
 }
 
@@ -834,6 +832,7 @@ directory_command_should_use_begindir(const or_options_t *options,
                                       int or_port, uint8_t router_purpose,
                                       dir_indirection_t indirection)
 {
+  (void) router_purpose;
   if (!or_port)
     return 0; /* We don't know an ORPort -- no chance. */
   if (indirection == DIRIND_DIRECT_CONN || indirection == DIRIND_ANON_DIRPORT)
@@ -842,9 +841,6 @@ directory_command_should_use_begindir(const or_options_t *options,
     if (!fascist_firewall_allows_address_or(addr, or_port) ||
         directory_fetches_from_authorities(options))
       return 0; /* We're firewalled or are acting like a relay -- also no. */
-  if (!options->TunnelDirConns &&
-      router_purpose != ROUTER_PURPOSE_BRIDGE)
-    return 0; /* We prefer to avoid using begindir conns. Fine. */
   return 1;
 }
 

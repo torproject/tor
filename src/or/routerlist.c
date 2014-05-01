@@ -1282,8 +1282,6 @@ const routerstatus_t *
 router_pick_directory_server(dirinfo_type_t type, int flags)
 {
   const routerstatus_t *choice;
-  if (get_options()->PreferTunneledDirConns)
-    flags |= PDS_PREFER_TUNNELED_DIR_CONNS_;
 
   if (!routerlist)
     return NULL;
@@ -1385,8 +1383,6 @@ router_pick_dirserver_generic(smartlist_t *sourcelist,
 {
   const routerstatus_t *choice;
   int busy = 0;
-  if (get_options()->PreferTunneledDirConns)
-    flags |= PDS_PREFER_TUNNELED_DIR_CONNS_;
 
   choice = router_pick_trusteddirserver_impl(sourcelist, type, flags, &busy);
   if (choice || !(flags & PDS_RETRY_IF_NO_SERVERS))
@@ -1411,10 +1407,7 @@ router_pick_dirserver_generic(smartlist_t *sourcelist,
 
 /** Pick a random running valid directory server/mirror from our
  * routerlist.  Arguments are as for router_pick_directory_server(), except
- * that RETRY_IF_NO_SERVERS is ignored, and:
- *
- * If the PDS_PREFER_TUNNELED_DIR_CONNS_ flag is set, prefer directory servers
- * that we can use with BEGINDIR.
+ * that RETRY_IF_NO_SERVERS is ignored.
  */
 static const routerstatus_t *
 router_pick_directory_server_impl(dirinfo_type_t type, int flags)
@@ -1428,7 +1421,6 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags)
   const networkstatus_t *consensus = networkstatus_get_latest_consensus();
   int requireother = ! (flags & PDS_ALLOW_SELF);
   int fascistfirewall = ! (flags & PDS_IGNORE_FASCISTFIREWALL);
-  int prefer_tunnel = (flags & PDS_PREFER_TUNNELED_DIR_CONNS_);
   int for_guard = (flags & PDS_FOR_GUARD);
   int try_excluding = 1, n_excluded = 0;
 
@@ -1481,8 +1473,7 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags)
 
     is_overloaded = status->last_dir_503_at + DIR_503_TIMEOUT > now;
 
-    if (prefer_tunnel &&
-        (!fascistfirewall ||
+    if ((!fascistfirewall ||
          fascist_firewall_allows_address_or(&addr, status->or_port)))
       smartlist_add(is_trusted ? trusted_tunnel :
                     is_overloaded ? overloaded_tunnel : tunnel, (void*)node);
@@ -1569,7 +1560,6 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
   time_t now = time(NULL);
   const int requireother = ! (flags & PDS_ALLOW_SELF);
   const int fascistfirewall = ! (flags & PDS_IGNORE_FASCISTFIREWALL);
-  const int prefer_tunnel = (flags & PDS_PREFER_TUNNELED_DIR_CONNS_);
   const int no_serverdesc_fetching =(flags & PDS_NO_EXISTING_SERVERDESC_FETCH);
   const int no_microdesc_fetching =(flags & PDS_NO_EXISTING_MICRODESC_FETCH);
   const double auth_weight = (sourcelist == fallback_dir_servers) ?
@@ -1630,8 +1620,7 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
         }
       }
 
-      if (prefer_tunnel &&
-          d->or_port &&
+      if (d->or_port &&
           (!fascistfirewall ||
            fascist_firewall_allows_address_or(&addr, d->or_port)))
         smartlist_add(is_overloaded ? overloaded_tunnel : tunnel, (void*)d);
