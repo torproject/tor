@@ -636,7 +636,7 @@ or_state_free(or_state_t *state)
 {
   if (!state)
     return;
-  
+
   config_free(&state_format, state);
 }
 
