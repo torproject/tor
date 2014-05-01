@@ -561,7 +561,7 @@ microdesc_free(microdesc_t *md)
         }
       });
     if (found) {
-      log_warn(LD_BUG, "microdesc_free() called, but md was still referenced "
+      log_info(LD_BUG, "microdesc_free() called, but md was still referenced "
                "%d node(s); held_by_nodes == %u", found, md->held_by_nodes);
     } else {
       log_warn(LD_BUG, "microdesc_free() called with held_by_nodes set to %u, "
