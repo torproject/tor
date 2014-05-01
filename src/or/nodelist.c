@@ -1510,8 +1510,8 @@ update_router_have_minimum_dir_info(void)
   }
 
   if (should_delay_dir_fetches(get_options(), &delay_fetches_msg)) {
-    log_notice(LD_DIR, "Delaying dir fetches: %s", delay_fetches_msg);
-    strlcpy(dir_info_status, "%s",  sizeof(dir_info_status));
+    log_notice(LD_DIR, "Delaying directory fetches: %s", delay_fetches_msg);
+    strlcpy(dir_info_status, delay_fetches_msg,  sizeof(dir_info_status));
     res = 0;
     goto done;
   }
