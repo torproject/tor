@@ -1,0 +1,4 @@
+  o Minor features:
+    - When we encounter an unexpected CR in text that we're trying to
+      write to a file on Windows, log the name of the file.  Should help
+      diagnosing bug 11233.
