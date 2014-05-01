@@ -3062,6 +3062,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("If you set UseBridges, you must specify at least one bridge.");
   if (options->UseBridges && !options->TunnelDirConns)
     REJECT("If you set UseBridges, you must set TunnelDirConns.");
+  if (options->RendConfigLines &&
+      (!options->TunnelDirConns || !options->PreferTunneledDirConns))
+    REJECT("If you are running a hidden service, you must set TunnelDirConns "
+           "and PreferTunneledDirConns");
 
   for (cl = options->Bridges; cl; cl = cl->next) {
     if (parse_bridge_line(cl->value, 1)<0)
