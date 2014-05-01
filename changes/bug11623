@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Make Tor compile correctly with --disable-buf-freelists.
+      Fixes bug 11623; bugfix on 0.2.5.3-alpha.
