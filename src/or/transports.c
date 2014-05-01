@@ -805,7 +805,8 @@ handle_finished_proxy(managed_proxy_t *mp)
   case PT_PROTO_CONFIGURED: /* if configured correctly: */
     if (mp->proxy_uri && !mp->proxy_supported) {
       log_warn(LD_CONFIG, "Managed proxy '%s' did not configure the "
-               "specified outgoing proxy.", mp->argv[0]);
+               "specified outgoing proxy and will be terminated.",
+               mp->argv[0]);
       managed_proxy_destroy(mp, 1); /* annihilate it. */
       break;
     }
