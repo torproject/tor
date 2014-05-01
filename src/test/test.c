@@ -32,6 +32,7 @@ const char tor_git_revision[] = "";
 #define ROUTER_PRIVATE
 #define CIRCUITSTATS_PRIVATE
 #define CIRCUITLIST_PRIVATE
+#define STATEFILE_PRIVATE
 
 /*
  * Linux doesn't provide lround in math.h by default, but mac os does...
@@ -59,6 +60,7 @@ double fabs(double x);
 #include "policies.h"
 #include "rephist.h"
 #include "routerparse.h"
+#include "statefile.h"
 #ifdef CURVE25519_ENABLED
 #include "crypto_curve25519.h"
 #include "onion_ntor.h"
@@ -416,9 +418,10 @@ test_onion_queues(void)
   or_circuit_t *circ1 = or_circuit_new(0, NULL);
   or_circuit_t *circ2 = or_circuit_new(0, NULL);
 
-  create_cell_t *onionskin = NULL;
+  create_cell_t *onionskin = NULL, *create2_ptr;
   create_cell_t *create1 = tor_malloc_zero(sizeof(create_cell_t));
   create_cell_t *create2 = tor_malloc_zero(sizeof(create_cell_t));
+  create2_ptr = create2; /* remember, but do not free */
 
   create_cell_init(create1, CELL_CREATE, ONION_HANDSHAKE_TYPE_TAP,
                    TAP_ONIONSKIN_CHALLENGE_LEN, buf1);
@@ -438,6 +441,7 @@ test_onion_queues(void)
   test_eq_ptr(circ2, onion_next_task(&onionskin));
   test_eq(1, onion_num_pending(ONION_HANDSHAKE_TYPE_TAP));
   test_eq(0, onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR));
+  tt_ptr_op(onionskin, ==, create2_ptr);
 
   clear_pending_onions();
   test_eq(0, onion_num_pending(ONION_HANDSHAKE_TYPE_TAP));
@@ -448,6 +452,7 @@ test_onion_queues(void)
   circuit_free(TO_CIRCUIT(circ2));
   tor_free(create1);
   tor_free(create2);
+  tor_free(onionskin);
 }
 
 static void
@@ -466,14 +471,14 @@ test_circuit_timeout(void)
   circuit_build_times_t estimate;
   circuit_build_times_t final;
   double timeout1, timeout2;
-  or_state_t state;
+  or_state_t *state=NULL;
   int i, runs;
   double close_ms;
   circuit_build_times_init(&initial);
   circuit_build_times_init(&estimate);
   circuit_build_times_init(&final);
 
-  memset(&state, 0, sizeof(or_state_t));
+  state = or_state_new();
 
   circuitbuild_running_unit_tests();
 #define timeout0 (build_time_t)(30*1000.0)
@@ -505,8 +510,9 @@ test_circuit_timeout(void)
 
   test_assert(estimate.total_build_times <= CBT_NCIRCUITS_TO_OBSERVE);
 
-  circuit_build_times_update_state(&estimate, &state);
-  test_assert(circuit_build_times_parse_state(&final, &state) == 0);
+  circuit_build_times_update_state(&estimate, state);
+  circuit_build_times_free_timeouts(&final);
+  test_assert(circuit_build_times_parse_state(&final, state) == 0);
 
   circuit_build_times_update_alpha(&final);
   timeout2 = circuit_build_times_calculate_timeout(&final,
@@ -595,7 +601,10 @@ test_circuit_timeout(void)
   }
 
  done:
-  return;
+  circuit_build_times_free_timeouts(&initial);
+  circuit_build_times_free_timeouts(&estimate);
+  circuit_build_times_free_timeouts(&final);
+  or_state_free(state);
 }
 
 /** Test encoding and parsing of rendezvous service descriptors. */
@@ -946,6 +955,7 @@ test_geoip(void)
   geoip_start_dirreq((uint64_t) 1, 1024, DIRREQ_TUNNELED);
   s = geoip_format_dirreq_stats(now + 86400);
   test_streq(dirreq_stats_4, s);
+  tor_free(s);
 
   /* Stop collecting directory request statistics and start gathering
    * entry stats. */
@@ -1007,6 +1017,8 @@ test_geoip_with_pt(void)
 
   get_options_mutable()->BridgeRelay = 1;
   get_options_mutable()->BridgeRecordUsageByCountry = 1;
+
+  memset(&in6, 0, sizeof(in6));
 
   /* No clients seen yet. */
   s = geoip_get_transport_history();

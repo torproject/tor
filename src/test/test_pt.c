@@ -129,6 +129,8 @@ test_pt_parsing(void)
   test_assert(parse_version(line, mp) == 0);
 
  done:
+  reset_mp(mp);
+  smartlist_free(mp->transports);
   tor_free(mp);
 }
 
@@ -227,6 +229,10 @@ test_pt_protocol(void)
   test_assert(mp->conf_state == PT_PROTO_CONFIGURED);
 
  done:
+  reset_mp(mp);
+  smartlist_free(mp->transports);
+  tor_free(mp->argv[0]);
+  tor_free(mp->argv);
   tor_free(mp);
 }
 
@@ -423,7 +429,7 @@ test_pt_configure_proxy(void *arg)
   }
 
  done:
-  tor_free(dummy_state);
+  or_state_free(dummy_state);
   UNMOCK(tor_get_lines_from_handle);
   UNMOCK(tor_process_handle_destroy);
   UNMOCK(get_or_state);
@@ -433,6 +439,15 @@ test_pt_configure_proxy(void *arg)
     smartlist_free(controlevent_msgs);
     controlevent_msgs = NULL;
   }
+  if (mp->transports) {
+    SMARTLIST_FOREACH(mp->transports, transport_t *, t, transport_free(t));
+    smartlist_free(mp->transports);
+  }
+  smartlist_free(mp->transports_to_launch);
+  tor_free(mp->process_handle);
+  tor_free(mp->argv[0]);
+  tor_free(mp->argv);
+  tor_free(mp);
 }
 
 #define PT_LEGACY(name)                                               \

@@ -394,6 +394,7 @@ test_dump_exit_policy_to_string(void *arg)
  ep = router_dump_exit_policy_to_string(ri,1,1);
 
  test_streq("accept *:*\nreject *:25\nreject 8.8.8.8:*",ep);
+ tor_free(ep);
 
  policy_entry =
  router_parse_addr_policy_item_from_string("reject6 [FC00::]/7:*",-1);
@@ -421,6 +422,7 @@ test_dump_exit_policy_to_string(void *arg)
  if (ri->exit_policy) {
    SMARTLIST_FOREACH(ri->exit_policy, addr_policy_t *,
                      entry, addr_policy_free(entry));
+   smartlist_free(ri->exit_policy);
  }
  tor_free(ri);
  tor_free(ep);

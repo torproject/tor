@@ -124,6 +124,7 @@ test_config_addressmap(void *arg)
   test_assert(!addressmap_rewrite(address, sizeof(address), &expires, NULL));
 
   /* Test top-level-domain matching a bit harder */
+  config_free_lines(get_options_mutable()->AddressMap);
   addressmap_clear_configured();
   strlcpy(buf, "MapAddress *.com *.torserver.exit\n"
           "MapAddress *.torproject.org 1.1.1.1\n"
@@ -153,6 +154,7 @@ test_config_addressmap(void *arg)
   test_streq(address, "2.2.2.2");
 
   /* We don't support '*' as a mapping directive */
+  config_free_lines(get_options_mutable()->AddressMap);
   addressmap_clear_configured();
   strlcpy(buf, "MapAddress * *.torserver.exit\n", sizeof(buf));
   config_get_lines(buf, &(get_options_mutable()->AddressMap), 0);
@@ -170,7 +172,8 @@ test_config_addressmap(void *arg)
 #undef addressmap_rewrite
 
  done:
-  ;
+  config_free_lines(get_options_mutable()->AddressMap);
+  get_options_mutable()->AddressMap = NULL;
 }
 
 static int
@@ -193,15 +196,19 @@ static void
 test_config_check_or_create_data_subdir(void *arg)
 {
   or_options_t *options = get_options_mutable();
-  char *datadir = options->DataDirectory = tor_strdup(get_fname("datadir-0"));
+  char *datadir;
   const char *subdir = "test_stats";
-  char *subpath = get_datadir_fname(subdir);
+  char *subpath;
   struct stat st;
   int r;
 #if !defined (_WIN32) || defined (WINCE)
   unsigned group_permission;
 #endif
   (void)arg;
+
+  tor_free(options->DataDirectory);
+  datadir = options->DataDirectory = tor_strdup(get_fname("datadir-0"));
+  subpath = get_datadir_fname(subdir);
 
 #if defined (_WIN32) && !defined (WINCE)
   tt_int_op(mkdir(options->DataDirectory), ==, 0);
@@ -251,7 +258,7 @@ static void
 test_config_write_to_data_subdir(void *arg)
 {
   or_options_t* options = get_options_mutable();
-  char *datadir = options->DataDirectory = tor_strdup(get_fname("datadir-1"));
+  char *datadir;
   char *cp = NULL;
   const char* subdir = "test_stats";
   const char* fname = "test_file";
@@ -272,6 +279,9 @@ test_config_write_to_data_subdir(void *arg)
       "sanctus est Lorem ipsum dolor sit amet.";
   char* filepath = get_datadir_fname2(subdir, fname);
   (void)arg;
+
+  tor_free(options->DataDirectory);
+  datadir = options->DataDirectory = tor_strdup(get_fname("datadir-1"));
 
 #if defined (_WIN32) && !defined (WINCE)
   tt_int_op(mkdir(options->DataDirectory), ==, 0);

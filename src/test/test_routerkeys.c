@@ -27,6 +27,7 @@ test_routerkeys_write_fingerprint(void *arg)
   tt_assert(key);
 
   options->ORPort_set = 1; /* So that we can get the server ID key */
+  tor_free(options->DataDirectory);
   options->DataDirectory = tor_strdup(ddir);
   options->Nickname = tor_strdup("haflinger");
   set_server_identity_key(key);

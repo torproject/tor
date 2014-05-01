@@ -20,6 +20,8 @@ void or_state_free_all(void);
 
 #ifdef STATEFILE_PRIVATE
 STATIC config_line_t *get_transport_in_state_by_name(const char *transport);
+STATIC void or_state_free(or_state_t *state);
+STATIC or_state_t *or_state_new(void);
 #endif
 
 #endif

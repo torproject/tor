@@ -522,6 +522,7 @@ test_buffer_allocation_tracking(void *arg)
   buf_free(buf1);
   buf_free(buf2);
   buf_shrink_freelists(1);
+  tor_free(junk);
 }
 
 static void

@@ -2241,18 +2241,21 @@ test_util_asprintf(void *ptr)
   test_assert(cp);
   test_streq("simple string 100% safe", cp);
   test_eq(strlen(cp), r);
+  tor_free(cp);
 
   /* empty string */
   r = tor_asprintf(&cp, "%s", "");
   test_assert(cp);
   test_streq("", cp);
   test_eq(strlen(cp), r);
+  tor_free(cp);
 
   /* numbers (%i) */
   r = tor_asprintf(&cp, "I like numbers-%2i, %i, etc.", -1, 2);
   test_assert(cp);
   test_streq("I like numbers--1, 2, etc.", cp);
   test_eq(strlen(cp), r);
+  /* don't free cp; next test uses it. */
 
   /* numbers (%d) */
   r = tor_asprintf(&cp2, "First=%d, Second=%d", 101, 202);
@@ -3143,6 +3146,8 @@ smartlist_new_from_text_lines(const char *lines)
   last_line = smartlist_pop_last(sl);
   if (last_line != NULL && *last_line != '\0') {
     smartlist_add(sl, last_line);
+  } else {
+    tor_free(last_line);
   }
 
   return sl;

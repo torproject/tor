@@ -148,6 +148,7 @@ static void
 test_cntev_append_cell_stats(void *arg)
 {
   smartlist_t *event_parts;
+  char *cp = NULL;
   const char *key = "Z";
   uint64_t include_if_non_zero[CELL_COMMAND_MAX_ + 1],
            number_to_include[CELL_COMMAND_MAX_ + 1];
@@ -178,7 +179,9 @@ test_cntev_append_cell_stats(void *arg)
   append_cell_stats_by_command(event_parts, key,
                                include_if_non_zero,
                                number_to_include);
-  tt_str_op("Z=relay:1", ==, smartlist_pop_last(event_parts));
+  cp = smartlist_pop_last(event_parts);
+  tt_str_op("Z=relay:1", ==, cp);
+  tor_free(cp);
 
   /* Add four CREATE cells. */
   include_if_non_zero[CELL_CREATE] = 3;
@@ -186,20 +189,22 @@ test_cntev_append_cell_stats(void *arg)
   append_cell_stats_by_command(event_parts, key,
                                include_if_non_zero,
                                number_to_include);
-  tt_str_op("Z=create:4,relay:1", ==, smartlist_pop_last(event_parts));
+  cp = smartlist_pop_last(event_parts);
+  tt_str_op("Z=create:4,relay:1", ==, cp);
 
  done:
-  ;
+  tor_free(cp);
+  smartlist_free(event_parts);
 }
 
 static void
 test_cntev_format_cell_stats(void *arg)
 {
   char *event_string = NULL;
-  origin_circuit_t *ocirc;
-  or_circuit_t *or_circ;
+  origin_circuit_t *ocirc = NULL;
+  or_circuit_t *or_circ = NULL;
   cell_stats_t *cell_stats = NULL;
-  channel_tls_t *n_chan, *p_chan;
+  channel_tls_t *n_chan=NULL, *p_chan=NULL;
   (void)arg;
 
   n_chan = tor_malloc_zero(sizeof(channel_tls_t));
@@ -282,6 +287,10 @@ test_cntev_format_cell_stats(void *arg)
  done:
   tor_free(cell_stats);
   tor_free(event_string);
+  tor_free(or_circ);
+  tor_free(ocirc);
+  tor_free(p_chan);
+  tor_free(n_chan);
 }
 
 #define TEST(name, flags)                                               \
