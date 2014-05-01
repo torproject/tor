@@ -291,11 +291,8 @@ onion_skin_ntor_client_handshake(
 
   memwipe(&s, 0, sizeof(s));
 
-  if (bad & 4) {
-    log_warn(LD_PROTOCOL, "Incorrect digest from ntor circuit extension "
-             "request.");
-  } else if (bad) {
-    log_warn(LD_PROTOCOL, "Invalid result from curve25519 handshake");
+  if (bad) {
+    log_warn(LD_PROTOCOL, "Invalid result from curve25519 handshake: %d", bad);
   }
 
   return bad ? -1 : 0;
