@@ -1,0 +1,3 @@
+  o Minor features:
+    - Give more specific warnings when we notice at the client side that
+      an onion handshake has failed. Fixes ticket 9635.

@@ -194,8 +194,10 @@ onion_skin_TAP_client_handshake(crypto_dh_t *handshake_state,
   len = crypto_dh_compute_secret(LOG_PROTOCOL_WARN, handshake_state,
                                  handshake_reply, DH_KEY_LEN, key_material,
                                  key_material_len);
-  if (len < 0)
+  if (len < 0) {
+    log_warn(LD_PROTOCOL,"DH computation failed.");
     goto err;
+  }
 
   if (tor_memneq(key_material, handshake_reply+DH_KEY_LEN, DIGEST_LEN)) {
     /* H(K) does *not* match. Something fishy. */
