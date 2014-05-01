@@ -4841,7 +4841,7 @@ log_failed_proxy_connection(connection_t *conn)
   log_warn(LD_NET,
            "The connection to the %s proxy server at %s just failed. "
            "Make sure that the proxy server is up and running.",
-           proxy_type_to_string(get_proxy_type()),
+           proxy_type_to_string(proxy_type),
            fmt_addrport(&proxy_addr, proxy_port));
 }
 
