@@ -76,7 +76,14 @@ chan_circid_entries_eq_(chan_circid_circuit_map_t *a,
 static INLINE unsigned int
 chan_circid_entry_hash_(chan_circid_circuit_map_t *a)
 {
-  return ((unsigned)a->circ_id) ^ (unsigned)(uintptr_t)(a->chan);
+  struct {
+    void *chan;
+    circid_t circid;
+  } s;
+  memset(&s, 0, sizeof(s));
+  s.chan = a->chan;
+  s.circid = a->circ_id;
+  return (unsigned) siphash24g(&s, sizeof(s));
 }
 
 /** Map from [chan,circid] to circuit. */
