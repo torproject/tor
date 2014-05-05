@@ -47,7 +47,6 @@ double rep_hist_get_stability(const char *id, time_t when);
 double rep_hist_get_weighted_fractional_uptime(const char *id, time_t when);
 long rep_hist_get_weighted_time_known(const char *id, time_t when);
 int rep_hist_have_measured_enough_stability(void);
-const char *rep_hist_get_router_stability_doc(time_t now);
 
 void rep_hist_note_used_port(time_t now, uint16_t port);
 smartlist_t *rep_hist_get_predicted_ports(time_t now);

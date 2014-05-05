@@ -879,126 +879,6 @@ rep_hist_record_mtbf_data(time_t now, int missing_means_down)
   return -1;
 }
 
-/** Format the current tracked status of the router in <b>hist</b> at time
- * <b>now</b> for analysis; return it in a newly allocated string. */
-static char *
-rep_hist_format_router_status(or_history_t *hist, time_t now)
-{
-  char sor_buf[ISO_TIME_LEN+1];
-  char sod_buf[ISO_TIME_LEN+1];
-  double wfu;
-  double mtbf;
-  int up = 0, down = 0;
-  char *cp = NULL;
-
-  if (hist->start_of_run) {
-    format_iso_time(sor_buf, hist->start_of_run);
-    up = 1;
-  }
-  if (hist->start_of_downtime) {
-    format_iso_time(sod_buf, hist->start_of_downtime);
-    down = 1;
-  }
-
-  wfu = get_weighted_fractional_uptime(hist, now);
-  mtbf = get_stability(hist, now);
-  tor_asprintf(&cp,
-               "%s%s%s"
-               "%s%s%s"
-               "wfu %0.3f\n"
-               " weighted-time %lu\n"
-               " weighted-uptime %lu\n"
-               "mtbf %0.1f\n"
-               " weighted-run-length %lu\n"
-               " total-run-weights %f\n",
-               up?"uptime-started ":"", up?sor_buf:"", up?" UTC\n":"",
-               down?"downtime-started ":"", down?sod_buf:"", down?" UTC\n":"",
-               wfu,
-               hist->total_weighted_time,
-               hist->weighted_uptime,
-               mtbf,
-               hist->weighted_run_length,
-               hist->total_run_weights
-               );
-  return cp;
-}
-
-/** The last stability analysis document that we created, or NULL if we never
- * have created one. */
-static char *last_stability_doc = NULL;
-/** The last time we created a stability analysis document, or 0 if we never
- * have created one. */
-static time_t built_last_stability_doc_at = 0;
-/** Shortest allowable time between building two stability documents. */
-#define MAX_STABILITY_DOC_BUILD_RATE (3*60)
-
-/** Return a pointer to a NUL-terminated document describing our view of the
- * stability of the routers we've been tracking.  Return NULL on failure. */
-const char *
-rep_hist_get_router_stability_doc(time_t now)
-{
-  char *result;
-  smartlist_t *chunks;
-  if (built_last_stability_doc_at + MAX_STABILITY_DOC_BUILD_RATE > now)
-    return last_stability_doc;
-
-  if (!history_map)
-    return NULL;
-
-  tor_free(last_stability_doc);
-  chunks = smartlist_new();
-
-  if (rep_hist_have_measured_enough_stability()) {
-    smartlist_add(chunks, tor_strdup("we-have-enough-measurements\n"));
-  } else {
-    smartlist_add(chunks, tor_strdup("we-do-not-have-enough-measurements\n"));
-  }
-
-  DIGESTMAP_FOREACH(history_map, id, or_history_t *, hist) {
-    const node_t *node;
-    char dbuf[BASE64_DIGEST_LEN+1];
-    char *info;
-    digest_to_base64(dbuf, id);
-    node = node_get_by_id(id);
-    if (node) {
-      char ip[INET_NTOA_BUF_LEN+1];
-      char tbuf[ISO_TIME_LEN+1];
-      time_t published = node_get_published_on(node);
-      node_get_address_string(node,ip,sizeof(ip));
-      if (published > 0)
-        format_iso_time(tbuf, published);
-      else
-        strlcpy(tbuf, "???", sizeof(tbuf));
-      smartlist_add_asprintf(chunks,
-                   "router %s %s %s\n"
-                   "published %s\n"
-                   "relevant-flags %s%s%s\n"
-                   "declared-uptime %ld\n",
-                   dbuf, node_get_nickname(node), ip,
-                   tbuf,
-                   node->is_running ? "Running " : "",
-                   node->is_valid ? "Valid " : "",
-                   node->ri && node->ri->is_hibernating ? "Hibernating " : "",
-                   node_get_declared_uptime(node));
-    } else {
-      smartlist_add_asprintf(chunks,
-                   "router %s {no descriptor}\n", dbuf);
-    }
-    info = rep_hist_format_router_status(hist, now);
-    if (info)
-      smartlist_add(chunks, info);
-
-  } DIGESTMAP_FOREACH_END;
-
-  result = smartlist_join_strings(chunks, "", 0, NULL);
-  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
-  smartlist_free(chunks);
-
-  last_stability_doc = result;
-  built_last_stability_doc_at = time(NULL);
-  return result;
-}
-
 /** Helper: return the first j >= i such that !strcmpstart(sl[j], prefix) and
  * such that no line sl[k] with i <= k < j starts with "R ".  Return -1 if no
  * such line exists. */
@@ -3041,11 +2921,9 @@ rep_hist_free_all(void)
   tor_free(write_array);
   tor_free(dir_read_array);
   tor_free(dir_write_array);
-  tor_free(last_stability_doc);
   tor_free(exit_bytes_read);
   tor_free(exit_bytes_written);
   tor_free(exit_streams);
-  built_last_stability_doc_at = 0;
   predicted_ports_free();
   bidi_map_free();
 
