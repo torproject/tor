@@ -770,7 +770,7 @@ if test x$enable_curve25519 != xno; then
         ])],
 	[tor_cv_can_use_curve25519_donna_c64=yes],
         [tor_cv_can_use_curve25519_donna_c64=no],
-	[AC_COMPILE_IFELSE(
+	[AC_LINK_IFELSE(
           [AC_LANG_PROGRAM([dnl
         #include <stdint.h>
         typedef unsigned uint128_t __attribute__((mode(TI)));
