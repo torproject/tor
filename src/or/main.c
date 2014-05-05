@@ -2938,7 +2938,7 @@ tor_main(int argc, char *argv[])
   if (tor_init(argc, argv)<0)
     return -1;
 
-  if (get_options()->Sandbox) {
+  if (get_options()->Sandbox && get_options()->command == CMD_RUN_TOR) {
     sandbox_cfg_t* cfg = sandbox_init_filter();
 
     if (sandbox_init(cfg)) {
