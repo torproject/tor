@@ -3588,6 +3588,12 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
     tor_free(p6);
   }
 
+  if (consensus_method >= MIN_METHOD_FOR_ID_HASH_IN_MD) {
+    char idbuf[BASE64_DIGEST_LEN+1];
+    digest_to_base64(idbuf, ri->cache_info.identity_digest);
+    smartlist_add_asprintf(chunks, "id %s\n", idbuf);
+  }
+
   output = smartlist_join_strings(chunks, "", 0, NULL);
 
   {
@@ -3657,7 +3663,8 @@ static const struct consensus_method_range_t {
   {MIN_METHOD_FOR_MICRODESC, MIN_METHOD_FOR_A_LINES - 1},
   {MIN_METHOD_FOR_A_LINES, MIN_METHOD_FOR_P6_LINES - 1},
   {MIN_METHOD_FOR_P6_LINES, MIN_METHOD_FOR_NTOR_KEY - 1},
-  {MIN_METHOD_FOR_NTOR_KEY, MAX_SUPPORTED_CONSENSUS_METHOD},
+  {MIN_METHOD_FOR_NTOR_KEY, MIN_METHOD_FOR_ID_HASH_IN_MD - 1},
+  {MIN_METHOD_FOR_ID_HASH_IN_MD,  MAX_SUPPORTED_CONSENSUS_METHOD},
   {-1, -1}
 };
 
