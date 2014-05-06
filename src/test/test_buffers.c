@@ -597,6 +597,53 @@ test_buffer_time_tracking(void *arg)
   buf_free(buf2);
 }
 
+static void
+test_buffers_zlib(void *arg)
+{
+  char *msg = NULL;
+  char *contents = NULL;
+  char *expanded = NULL;
+  buf_t *buf = NULL;
+  tor_zlib_state_t *zlib_state = NULL;
+  size_t out_len, in_len;
+
+  (void) arg;
+
+  buf = buf_new_with_capacity(128); /* will round up */
+  zlib_state = tor_zlib_new(1, ZLIB_METHOD);
+
+  msg = tor_malloc(512);
+  crypto_rand(msg, 512);
+  tt_int_op(write_to_buf_zlib(buf, zlib_state, msg, 128, 0), ==, 0);
+  tt_int_op(write_to_buf_zlib(buf, zlib_state, msg+128, 128, 0), ==, 0);
+  tt_int_op(write_to_buf_zlib(buf, zlib_state, msg+256, 256, 0), ==, 0);
+  tt_int_op(write_to_buf_zlib(buf, zlib_state, "all done", 9, 1), ==, 0);
+
+  in_len = buf_datalen(buf);
+  contents = tor_malloc(in_len);
+
+  tt_int_op(fetch_from_buf(contents, in_len, buf), ==, 0);
+
+  tt_int_op(0, ==, tor_gzip_uncompress(&expanded, &out_len,
+                                       contents, in_len,
+                                       ZLIB_METHOD, 1,
+                                       LOG_WARN));
+
+  tt_int_op(out_len, >=, 128);
+  tt_mem_op(msg, ==, expanded, 128);
+  tt_int_op(out_len, >=, 512);
+  tt_mem_op(msg, ==, expanded, 512);
+  tt_int_op(out_len, ==, 512+9);
+  tt_mem_op("all done", ==, expanded+512, 9);
+
+ done:
+  buf_free(buf);
+  tor_zlib_free(zlib_state);
+  tor_free(contents);
+  tor_free(expanded);
+  tor_free(msg);
+}
+
 struct testcase_t buffer_tests[] = {
   { "basic", test_buffers_basic, TT_FORK, NULL, NULL },
   { "copy", test_buffer_copy, TT_FORK, NULL, NULL },
@@ -605,6 +652,7 @@ struct testcase_t buffer_tests[] = {
   { "allocation_tracking", test_buffer_allocation_tracking, TT_FORK,
     NULL, NULL },
   { "time_tracking", test_buffer_time_tracking, TT_FORK, NULL, NULL },
+  { "zlib", test_buffers_zlib, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
 
