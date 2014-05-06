@@ -76,14 +76,15 @@ chan_circid_entries_eq_(chan_circid_circuit_map_t *a,
 static INLINE unsigned int
 chan_circid_entry_hash_(chan_circid_circuit_map_t *a)
 {
-  struct {
-    void *chan;
-    circid_t circid;
-  } s;
-  memset(&s, 0, sizeof(s));
-  s.chan = a->chan;
-  s.circid = a->circ_id;
-  return (unsigned) siphash24g(&s, sizeof(s));
+  /* Try to squeze the siphash input into 8 bytes to save any extra siphash
+   * rounds.  This hash function is in the critical path. */
+  uintptr_t chan = (uintptr_t) (void*) a->chan;
+  uint32_t array[2];
+  array[0] = a->circ_id;
+  /* The low bits of the channel pointer are uninteresting, since the channel
+   * is a pretty big structure. */
+  array[1] = (uint32_t) (chan >> 6);
+  return (unsigned) siphash24g(array, sizeof(array));
 }
 
 /** Map from [chan,circid] to circuit. */
