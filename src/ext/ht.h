@@ -58,6 +58,7 @@
 #define HT_NEXT_RMV(name, head, elm) name##_HT_NEXT_RMV((head), (elm))
 #define HT_CLEAR(name, head)         name##_HT_CLEAR(head)
 #define HT_INIT(name, head)          name##_HT_INIT(head)
+#define HT_REP_IS_BAD_(name, head)    name##_HT_REP_IS_BAD_(head)
 /* Helper: */
 static INLINE unsigned
 ht_improve_hash(unsigned h)

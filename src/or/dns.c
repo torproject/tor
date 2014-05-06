@@ -2174,7 +2174,7 @@ static void
 assert_cache_ok_(void)
 {
   cached_resolve_t **resolve;
-  int bad_rep = _cache_map_HT_REP_IS_BAD(&cache_root);
+  int bad_rep = HT_REP_IS_BAD_(cache_map, &cache_root);
   if (bad_rep) {
     log_err(LD_BUG, "Bad rep type %d on dns cache hash table", bad_rep);
     tor_assert(!bad_rep);
