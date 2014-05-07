@@ -343,17 +343,15 @@ bench_siphash(void)
   char buf[128];
   int lens[] = { 7, 8, 15, 16, 20, 32, 111, 128, -1 };
   int i, j;
-  uint64_t total;
   uint64_t start, end;
   const int N = 300000;
   crypto_rand(buf, sizeof(buf));
 
   for (i = 0; lens[i] > 0; ++i) {
-    total = 0;
     reset_perftime();
     start = perftime();
     for (j = 0; j < N; ++j) {
-      total += siphash24g(buf, lens[i]);
+      siphash24g(buf, lens[i]);
     }
     end = perftime();
     printf("siphash24g(%d): %.2f ns per call\n",
