@@ -42,3 +42,10 @@ curve25519_donna/*.c
 
     A copy of Adam Langley's curve25519-donna mostly-portable
     implementations of curve25519.
+
+csiphash.c
+siphash.h
+
+    Marek Majkowski's implementation of siphash 2-4, a secure keyed
+    hash algorithm to avoid collision-based DoS attacks against hash
+    tables.
