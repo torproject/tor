@@ -279,26 +279,26 @@ test_pick_circid(void *arg)
   chan1->circ_id_type = CIRC_ID_TYPE_LOWER;
   for (i = 0; i < 50; ++i) {
     circid = get_unique_circ_id_by_chan(chan1);
-    tt_int_op(0, <, circid);
-    tt_int_op(circid, <, (1<<15));
+    tt_uint_op(0, <, circid);
+    tt_uint_op(circid, <, (1<<15));
   }
   chan1->circ_id_type = CIRC_ID_TYPE_HIGHER;
   for (i = 0; i < 50; ++i) {
     circid = get_unique_circ_id_by_chan(chan1);
-    tt_int_op((1<<15), <, circid);
-    tt_int_op(circid, <, (1<<16));
+    tt_uint_op((1<<15), <, circid);
+    tt_uint_op(circid, <, (1<<16));
   }
 
   chan2->circ_id_type = CIRC_ID_TYPE_LOWER;
   for (i = 0; i < 50; ++i) {
     circid = get_unique_circ_id_by_chan(chan2);
-    tt_int_op(0, <, circid);
-    tt_int_op(circid, <, (1u<<31));
+    tt_uint_op(0, <, circid);
+    tt_uint_op(circid, <, (1u<<31));
   }
   chan2->circ_id_type = CIRC_ID_TYPE_HIGHER;
   for (i = 0; i < 50; ++i) {
     circid = get_unique_circ_id_by_chan(chan2);
-    tt_int_op((1u<<31), <, circid);
+    tt_uint_op((1u<<31), <, circid);
   }
 
   /* Now make sure that we can behave well when we are full up on circuits */
@@ -312,7 +312,7 @@ test_pick_circid(void *arg)
       tt_int_op(i, >, (1<<14));
       break;
     }
-    tt_int_op(circid, <, (1<<15));
+    tt_uint_op(circid, <, (1<<15));
     tt_assert(! bitarray_is_set(ba, circid));
     bitarray_set(ba, circid);
     channel_mark_circid_unusable(chan1, circid);
@@ -321,8 +321,8 @@ test_pick_circid(void *arg)
   /* Make sure that being full on chan1 does not interfere with chan2 */
   for (i = 0; i < 100; ++i) {
     circid = get_unique_circ_id_by_chan(chan2);
-    tt_int_op(circid, >, 0);
-    tt_int_op(circid, <, (1<<15));
+    tt_uint_op(circid, >, 0);
+    tt_uint_op(circid, <, (1<<15));
     channel_mark_circid_unusable(chan2, circid);
   }
 
