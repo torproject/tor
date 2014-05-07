@@ -2,9 +2,11 @@
 /* See LICENSE for licensing information */
 
 #define TOR_CHANNEL_INTERNAL_
+#define CIRCUITBUILD_PRIVATE
 #define CIRCUITLIST_PRIVATE
 #include "or.h"
 #include "channel.h"
+#include "circuitbuild.h"
 #include "circuitlist.h"
 #include "test.h"
 
@@ -257,9 +259,84 @@ test_rend_token_maps(void *arg)
     circuit_free(TO_CIRCUIT(c4));
 }
 
+static void
+test_pick_circid(void *arg)
+{
+  bitarray_t *ba = NULL;
+  channel_t *chan1, *chan2;
+  circid_t circid;
+  int i;
+  (void) arg;
+
+  chan1 = tor_malloc_zero(sizeof(channel_t));
+  chan2 = tor_malloc_zero(sizeof(channel_t));
+  chan2->wide_circ_ids = 1;
+
+  chan1->circ_id_type = CIRC_ID_TYPE_NEITHER;
+  tt_int_op(0, ==, get_unique_circ_id_by_chan(chan1));
+
+  /* Basic tests, with no collisions */
+  chan1->circ_id_type = CIRC_ID_TYPE_LOWER;
+  for (i = 0; i < 50; ++i) {
+    circid = get_unique_circ_id_by_chan(chan1);
+    tt_int_op(0, <, circid);
+    tt_int_op(circid, <, (1<<15));
+  }
+  chan1->circ_id_type = CIRC_ID_TYPE_HIGHER;
+  for (i = 0; i < 50; ++i) {
+    circid = get_unique_circ_id_by_chan(chan1);
+    tt_int_op((1<<15), <, circid);
+    tt_int_op(circid, <, (1<<16));
+  }
+
+  chan2->circ_id_type = CIRC_ID_TYPE_LOWER;
+  for (i = 0; i < 50; ++i) {
+    circid = get_unique_circ_id_by_chan(chan2);
+    tt_int_op(0, <, circid);
+    tt_int_op(circid, <, (1u<<31));
+  }
+  chan2->circ_id_type = CIRC_ID_TYPE_HIGHER;
+  for (i = 0; i < 50; ++i) {
+    circid = get_unique_circ_id_by_chan(chan2);
+    tt_int_op((1u<<31), <, circid);
+  }
+
+  /* Now make sure that we can behave well when we are full up on circuits */
+  chan1->circ_id_type = CIRC_ID_TYPE_LOWER;
+  chan2->circ_id_type = CIRC_ID_TYPE_LOWER;
+  chan1->wide_circ_ids = chan2->wide_circ_ids = 0;
+  ba = bitarray_init_zero((1<<15));
+  for (i = 0; i < (1<<15); ++i) {
+    circid = get_unique_circ_id_by_chan(chan1);
+    if (circid == 0) {
+      tt_int_op(i, >, (1<<14));
+      break;
+    }
+    tt_int_op(circid, <, (1<<15));
+    tt_assert(! bitarray_is_set(ba, circid));
+    bitarray_set(ba, circid);
+    channel_mark_circid_unusable(chan1, circid);
+  }
+  tt_int_op(i, <, (1<<15));
+  /* Make sure that being full on chan1 does not interfere with chan2 */
+  for (i = 0; i < 100; ++i) {
+    circid = get_unique_circ_id_by_chan(chan2);
+    tt_int_op(circid, >, 0);
+    tt_int_op(circid, <, (1<<15));
+    channel_mark_circid_unusable(chan2, circid);
+  }
+
+ done:
+  tor_free(chan1);
+  tor_free(chan2);
+  bitarray_free(ba);
+  circuit_free_all();
+}
+
 struct testcase_t circuitlist_tests[] = {
   { "maps", test_clist_maps, TT_FORK, NULL, NULL },
   { "rend_token_maps", test_rend_token_maps, TT_FORK, NULL, NULL },
+  { "pick_circid", test_pick_circid, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
 
