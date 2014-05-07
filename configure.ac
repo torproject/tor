@@ -437,7 +437,6 @@ AC_CHECK_FUNCS([event_get_version \
                 event_get_version_number \
                 event_get_method \
                 event_set_log_callback \
-                evdns_set_outgoing_bind_address \
                 evutil_secure_rng_set_urandom_device_file \
                 evutil_secure_rng_init \
                 event_base_loopexit])
@@ -445,7 +444,7 @@ AC_CHECK_MEMBERS([struct event.min_heap_idx], , ,
 [#include <event.h>
 ])
 
-AC_CHECK_HEADERS(event2/event.h event2/dns.h event2/bufferevent_ssl.h)
+AC_CHECK_HEADERS(event2/event.h event2/dns.h)
 
 LIBS="$save_LIBS"
 LDFLAGS="$save_LDFLAGS"
@@ -1235,7 +1234,6 @@ if [[ $dmalloc -eq 1 ]]; then
   AC_CHECK_HEADERS(dmalloc.h, , AC_MSG_ERROR(dmalloc header file not found. Do you have the development files for dmalloc installed?))
   AC_SEARCH_LIBS(dmalloc_malloc, [dmallocth dmalloc], , AC_MSG_ERROR(Libdmalloc library not found. If you enable it you better have it installed.))
   AC_DEFINE(USE_DMALLOC, 1, [Debug memory allocation library])
-  AC_DEFINE(DMALLOC_FUNC_CHECK, 1, [Enable dmalloc's malloc function check])
   AC_CHECK_FUNCS(dmalloc_strdup dmalloc_strndup)
 fi
 

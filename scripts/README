@@ -6,6 +6,9 @@ Code maintenance scripts
 
 maint/checkLogs.pl -- Verify that Tor log statements are unique.
 
+maint/check_config_macros.pl -- Look for autoconf tests whose results are
+never used.
+
 maint/checkOptionDocs.pl -- Make sure that Tor options are documented in the
 manpage, and that the manpage only documents real Tor options.
 
