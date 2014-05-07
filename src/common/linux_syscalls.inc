@@ -1,5 +1,5 @@
 /* Automatically generated with
-        gen_sandbox_syscalls.pl /usr/include/asm/unistd*.h
+        gen_linux_syscalls.pl /usr/include/asm/unistd*.h
    Do not edit.
  */
 static const struct {

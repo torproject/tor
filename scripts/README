@@ -40,3 +40,16 @@ object files.
 test/scan-build.sh -- Example script for invoking clang's scan-build
 static analysis tools.
 
+
+Code generation scripts
+-----------------------
+
+codegen/gen_linux_syscalls.pl -- Generate a table mapping linux syscall
+numbers to their names.
+
+codegen/gen_server_ciphers.py -- Generate a sorted list of TLS ciphersuites
+for servers to choose from.
+
+codegen/get_mozilla_ciphers.py -- Generate a list of TLS ciphersuites for
+clients to use in order to look like Firefox.
+
