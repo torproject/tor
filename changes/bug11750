@@ -1,0 +1,5 @@
+  o Minor features (security):
+    - Apply the secure SipHash-2-4 function to the hash table mapping
+      circuit IDs and channels to circuits. We missed this one when we
+      were converting all the other hash functions to use SipHash back
+      in 0.2.5.3-alpha. Resolves ticket 11750.
