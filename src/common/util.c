@@ -4540,6 +4540,30 @@ stream_status_to_string(enum stream_status stream_status)
   }
 }
 
+/* DOCDOC */
+static void
+log_portfw_spawn_error_message(const char *buf,
+                               const char *executable, int *child_status)
+{
+  /* Parse error message */
+  int retval, child_state, saved_errno;
+  retval = tor_sscanf(buf, SPAWN_ERROR_MESSAGE "%x/%x",
+                      &child_state, &saved_errno);
+  if (retval == 2) {
+    log_warn(LD_GENERAL,
+             "Failed to start child process \"%s\" in state %d: %s",
+             executable, child_state, strerror(saved_errno));
+    if (child_status)
+      *child_status = 1;
+  } else {
+    /* Failed to parse message from child process, log it as a
+       warning */
+    log_warn(LD_GENERAL,
+             "Unexpected message from port forwarding helper \"%s\": %s",
+             executable, buf);
+  }
+}
+
 #ifdef _WIN32
 
 /** Return a smartlist containing lines outputted from
@@ -4687,23 +4711,7 @@ log_from_pipe(FILE *stream, int severity, const char *executable,
 
     /* Check if buf starts with SPAWN_ERROR_MESSAGE */
     if (strcmpstart(buf, SPAWN_ERROR_MESSAGE) == 0) {
-      /* Parse error message */
-      int retval, child_state, saved_errno;
-      retval = tor_sscanf(buf, SPAWN_ERROR_MESSAGE "%x/%x",
-                          &child_state, &saved_errno);
-      if (retval == 2) {
-        log_warn(LD_GENERAL,
-                 "Failed to start child process \"%s\" in state %d: %s",
-                 executable, child_state, strerror(saved_errno));
-        if (child_status)
-          *child_status = 1;
-      } else {
-        /* Failed to parse message from child process, log it as a
-           warning */
-        log_warn(LD_GENERAL,
-                 "Unexpected message from port forwarding helper \"%s\": %s",
-                 executable, buf);
-      }
+      log_portfw_spawn_error_message(buf, executable, child_status);
     } else {
       log_fn(severity, LD_GENERAL, "Port forwarding helper says: %s", buf);
     }
