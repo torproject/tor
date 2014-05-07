@@ -1,5 +1,6 @@
 
 EXTRA_DIST+= \
+	contrib/README					\
 	contrib/client-tools/torify			\
 	contrib/dist/rc.subr				\
 	contrib/dist/suse/tor.sh.in			\
