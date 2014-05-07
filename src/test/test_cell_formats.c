@@ -8,7 +8,9 @@
 #define CONNECTION_EDGE_PRIVATE
 #define RELAY_PRIVATE
 #include "or.h"
+#include "channel.h"
 #include "connection_edge.h"
+#include "connection_or.h"
 #include "onion.h"
 #include "onion_tap.h"
 #include "onion_fast.h"
@@ -1212,6 +1214,47 @@ test_cfmt_resolved_cells(void *arg)
 #undef CLEAR_CELL
 }
 
+static void
+test_cfmt_is_destroy(void *arg)
+{
+  cell_t cell;
+  packed_cell_t packed;
+  circid_t circid = 0;
+  channel_t *chan;
+  (void)arg;
+
+  chan = tor_malloc_zero(sizeof(channel_t));
+
+  memset(&cell, 0xff, sizeof(cell));
+  cell.circ_id = 3003;
+  cell.command = CELL_RELAY;
+
+  cell_pack(&packed, &cell, 0);
+  chan->wide_circ_ids = 0;
+  tt_assert(! packed_cell_is_destroy(chan, &packed, &circid));
+  tt_int_op(circid, ==, 0);
+
+  cell_pack(&packed, &cell, 1);
+  chan->wide_circ_ids = 1;
+  tt_assert(! packed_cell_is_destroy(chan, &packed, &circid));
+  tt_int_op(circid, ==, 0);
+
+  cell.command = CELL_DESTROY;
+
+  cell_pack(&packed, &cell, 0);
+  chan->wide_circ_ids = 0;
+  tt_assert(packed_cell_is_destroy(chan, &packed, &circid));
+  tt_int_op(circid, ==, 3003);
+
+  circid = 0;
+  cell_pack(&packed, &cell, 1);
+  chan->wide_circ_ids = 1;
+  tt_assert(packed_cell_is_destroy(chan, &packed, &circid));
+
+ done:
+  tor_free(chan);
+}
+
 #define TEST(name, flags)                                               \
   { #name, test_cfmt_ ## name, flags, 0, NULL }
 
@@ -1224,6 +1267,7 @@ struct testcase_t cell_format_tests[] = {
   TEST(extend_cells, 0),
   TEST(extended_cells, 0),
   TEST(resolved_cells, 0),
+  TEST(is_destroy, 0),
   END_OF_TESTCASES
 };
 
