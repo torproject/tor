@@ -4789,7 +4789,7 @@ get_string_from_pipe(FILE *stream, char *buf_out, size_t count)
 /** Parse a <b>line</b> from tor-fw-helper and issue an appropriate
  *  log message to our user. */
 static void
-handle_fw_helper_line(const char *line)
+handle_fw_helper_line(const char *executable, const char *line)
 {
   smartlist_t *tokens = smartlist_new();
   char *message = NULL;
@@ -4799,6 +4799,19 @@ handle_fw_helper_line(const char *line)
   const char *result = NULL;
   int port = 0;
   int success = 0;
+
+  if (strcmpstart(line, SPAWN_ERROR_MESSAGE) == 0) {
+    /* We need to check for SPAWN_ERROR_MESSAGE again here, since it's
+     * possible that it got sent after we tried to read it in log_from_pipe.
+     *
+     * XXX Ideally, we should be using one of stdout/stderr for the real
+     * output, and one for the output of the startup code.  We used to do that
+     * before cd05f35d2c.
+     */
+    int child_status;
+    log_portfw_spawn_error_message(line, executable, &child_status);
+    goto done;
+  }
 
   smartlist_split_string(tokens, line, NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
@@ -4879,7 +4892,7 @@ handle_fw_helper_line(const char *line)
 /** Read what tor-fw-helper has to say in its stdout and handle it
  *  appropriately */
 static int
-handle_fw_helper_output(process_handle_t *process_handle)
+handle_fw_helper_output(const char *executable, process_handle_t *process_handle)
 {
   smartlist_t *fw_helper_output = NULL;
   enum stream_status stream_status = 0;
@@ -4894,7 +4907,7 @@ handle_fw_helper_output(process_handle_t *process_handle)
 
   /* Handle the lines we got: */
   SMARTLIST_FOREACH_BEGIN(fw_helper_output, char *, line) {
-    handle_fw_helper_line(line);
+    handle_fw_helper_line(executable, line);
     tor_free(line);
   } SMARTLIST_FOREACH_END(line);
 
@@ -5009,7 +5022,7 @@ tor_check_port_forwarding(const char *filename,
     stderr_status = log_from_pipe(child_handle->stderr_handle,
                                   LOG_INFO, filename, &retval);
 #endif
-    if (handle_fw_helper_output(child_handle) < 0) {
+    if (handle_fw_helper_output(filename, child_handle) < 0) {
       log_warn(LD_GENERAL, "Failed to handle fw helper output.");
       stdout_status = -1;
       retval = -1;
