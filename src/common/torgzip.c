@@ -472,7 +472,7 @@ tor_zlib_process(tor_zlib_state_t *state,
   state->stream.avail_out = (unsigned int)*out_len;
 
   if (state->compress) {
-    err = deflate(&state->stream, finish ? Z_FINISH : Z_SYNC_FLUSH);
+    err = deflate(&state->stream, finish ? Z_FINISH : Z_NO_FLUSH);
   } else {
     err = inflate(&state->stream, finish ? Z_FINISH : Z_SYNC_FLUSH);
   }
