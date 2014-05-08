@@ -663,8 +663,6 @@ test_buffers_zlib_fin_with_nil(void *arg)
 static void
 test_buffers_zlib_fin_at_chunk_end(void *arg)
 {
-  (void) arg;
-
   char *msg = NULL;
   char *contents = NULL;
   char *expanded = NULL;
@@ -672,6 +670,7 @@ test_buffers_zlib_fin_at_chunk_end(void *arg)
   tor_zlib_state_t *zlib_state = NULL;
   size_t out_len, in_len;
   size_t sz, headerjunk;
+  (void) arg;
 
   buf = buf_new_with_capacity(128); /* will round up */
   sz = buf_get_default_chunk_size(buf);

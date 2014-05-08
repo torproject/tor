@@ -1291,10 +1291,10 @@ test_util_pow2(void)
   test_eq(round_to_power_of_2(120), 128);
   test_eq(round_to_power_of_2(128), 128);
   test_eq(round_to_power_of_2(130), 128);
-  test_eq(round_to_power_of_2(U64_LITERAL(40000000000000000)),
-          U64_LITERAL(1)<<55);
-  test_eq(round_to_power_of_2(U64_LITERAL(0xffffffffffffffff)),
-          U64_LITERAL(1)<<63);
+  test_assert(round_to_power_of_2(U64_LITERAL(40000000000000000)) ==
+              U64_LITERAL(1)<<55);
+  test_assert(round_to_power_of_2(U64_LITERAL(0xffffffffffffffff)) ==
+              U64_LITERAL(1)<<63);
   test_eq(round_to_power_of_2(0), 1);
   test_eq(round_to_power_of_2(1), 1);
   test_eq(round_to_power_of_2(2), 2);
