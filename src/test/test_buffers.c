@@ -598,7 +598,7 @@ test_buffer_time_tracking(void *arg)
 }
 
 static void
-test_buffers_zlib(void *arg)
+test_buffers_zlib_impl(int finalize_with_nil)
 {
   char *msg = NULL;
   char *contents = NULL;
@@ -606,8 +606,7 @@ test_buffers_zlib(void *arg)
   buf_t *buf = NULL;
   tor_zlib_state_t *zlib_state = NULL;
   size_t out_len, in_len;
-
-  (void) arg;
+  int done;
 
   buf = buf_new_with_capacity(128); /* will round up */
   zlib_state = tor_zlib_new(1, ZLIB_METHOD);
@@ -617,7 +616,11 @@ test_buffers_zlib(void *arg)
   tt_int_op(write_to_buf_zlib(buf, zlib_state, msg, 128, 0), ==, 0);
   tt_int_op(write_to_buf_zlib(buf, zlib_state, msg+128, 128, 0), ==, 0);
   tt_int_op(write_to_buf_zlib(buf, zlib_state, msg+256, 256, 0), ==, 0);
-  tt_int_op(write_to_buf_zlib(buf, zlib_state, "all done", 9, 1), ==, 0);
+  done = !finalize_with_nil;
+  tt_int_op(write_to_buf_zlib(buf, zlib_state, "all done", 9, done), ==, 0);
+  if (finalize_with_nil) {
+    tt_int_op(write_to_buf_zlib(buf, zlib_state, "", 0, 1), ==, 0);
+  }
 
   in_len = buf_datalen(buf);
   contents = tor_malloc(in_len);
@@ -644,6 +647,75 @@ test_buffers_zlib(void *arg)
   tor_free(msg);
 }
 
+static void
+test_buffers_zlib(void *arg)
+{
+  (void) arg;
+  test_buffers_zlib_impl(0);
+}
+static void
+test_buffers_zlib_fin_with_nil(void *arg)
+{
+  (void) arg;
+  test_buffers_zlib_impl(1);
+}
+
+static void
+test_buffers_zlib_fin_at_chunk_end(void *arg)
+{
+  (void) arg;
+
+  char *msg = NULL;
+  char *contents = NULL;
+  char *expanded = NULL;
+  buf_t *buf = NULL;
+  tor_zlib_state_t *zlib_state = NULL;
+  size_t out_len, in_len;
+  size_t sz, headerjunk;
+
+  buf = buf_new_with_capacity(128); /* will round up */
+  sz = buf_get_default_chunk_size(buf);
+  msg = tor_malloc_zero(sz);
+
+  write_to_buf(msg, 1, buf);
+  tt_assert(buf->head);
+
+  /* Fill up the chunk so the zlib stuff won't fit in one chunk. */
+  tt_uint_op(buf->head->memlen, <, sz);
+  headerjunk = buf->head->memlen - 7;
+  write_to_buf(msg, headerjunk-1, buf);
+  tt_uint_op(buf->head->datalen, ==, headerjunk);
+  printf("<%u>\n", (unsigned)buf_datalen(buf));
+  tt_uint_op(buf_datalen(buf), ==, headerjunk);
+  /* Write an empty string, with finalization on. */
+  zlib_state = tor_zlib_new(1, ZLIB_METHOD);
+  tt_int_op(write_to_buf_zlib(buf, zlib_state, "", 0, 1), ==, 0);
+
+  printf("<%u>\n", (unsigned)buf_datalen(buf));
+
+  in_len = buf_datalen(buf);
+  contents = tor_malloc(in_len);
+
+  tt_int_op(fetch_from_buf(contents, in_len, buf), ==, 0);
+
+  tt_uint_op(in_len, >, headerjunk);
+
+  tt_int_op(0, ==, tor_gzip_uncompress(&expanded, &out_len,
+                                  contents + headerjunk, in_len - headerjunk,
+                                  ZLIB_METHOD, 1,
+                                  LOG_WARN));
+
+  tt_int_op(out_len, ==, 0);
+  tt_assert(expanded);
+
+ done:
+  buf_free(buf);
+  tor_zlib_free(zlib_state);
+  tor_free(contents);
+  tor_free(expanded);
+  tor_free(msg);
+}
+
 struct testcase_t buffer_tests[] = {
   { "basic", test_buffers_basic, TT_FORK, NULL, NULL },
   { "copy", test_buffer_copy, TT_FORK, NULL, NULL },
@@ -653,6 +725,9 @@ struct testcase_t buffer_tests[] = {
     NULL, NULL },
   { "time_tracking", test_buffer_time_tracking, TT_FORK, NULL, NULL },
   { "zlib", test_buffers_zlib, TT_FORK, NULL, NULL },
+  { "zlib_fin_with_nil", test_buffers_zlib_fin_with_nil, TT_FORK, NULL, NULL },
+  { "zlib_fin_at_chunk_end", test_buffers_zlib_fin_at_chunk_end, TT_FORK,
+    NULL, NULL},
   END_OF_TESTCASES
 };
 
