@@ -1132,7 +1132,8 @@ test_crypto_curve25519_persist(void *arg)
   content = read_file_to_str(fname, RFTS_BIN, &st);
   tt_assert(content);
   taglen = strlen("== c25519v1: testing ==");
-  tt_int_op(st.st_size, ==, 32+CURVE25519_PUBKEY_LEN+CURVE25519_SECKEY_LEN);
+  tt_u64_op((uint64_t)st.st_size, ==,
+            32+CURVE25519_PUBKEY_LEN+CURVE25519_SECKEY_LEN);
   tt_assert(fast_memeq(content, "== c25519v1: testing ==", taglen));
   tt_assert(tor_mem_is_zero(content+taglen, 32-taglen));
   cp = content + 32;

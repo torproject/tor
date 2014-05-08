@@ -202,7 +202,7 @@ test_ext_or_init_auth(void *arg)
   tt_int_op(ext_or_auth_cookie_is_set, ==, 1);
   cp = read_file_to_str(fn, RFTS_BIN, &st);
   tt_ptr_op(cp, !=, NULL);
-  tt_int_op(st.st_size, ==, 64);
+  tt_u64_op((uint64_t)st.st_size, ==, 64);
   test_memeq(cp, "! Extended ORPort Auth Cookie !\x0a", 32);
   test_memeq(cp+32, ext_or_auth_cookie, 32);
   memcpy(cookie0, ext_or_auth_cookie, 32);

@@ -1066,7 +1066,7 @@ test_vrs_for_v3ns(vote_routerstatus_t *vrs, int voter, time_t now)
     test_eq(rs->or_port, 443);
     test_eq(rs->dir_port, 8000);
     /* no flags except "running" (16) and "v2dir" (64) */
-    test_eq(vrs->flags, U64_LITERAL(80));
+    tt_u64_op(vrs->flags, ==, U64_LITERAL(80));
   } else if (tor_memeq(rs->identity_digest,
                        "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
                        "\x5\x5\x5\x5",
@@ -1092,10 +1092,10 @@ test_vrs_for_v3ns(vote_routerstatus_t *vrs, int voter, time_t now)
     test_eq(rs->ipv6_orport, 4711);
     if (voter == 1) {
       /* all except "authority" (1) and "v2dir" (64) */
-      test_eq(vrs->flags, U64_LITERAL(190));
+      tt_u64_op(vrs->flags, ==, U64_LITERAL(190));
     } else {
       /* 1023 - authority(1) - madeofcheese(16) - madeoftin(32) - v2dir(256) */
-      test_eq(vrs->flags, U64_LITERAL(718));
+      tt_u64_op(vrs->flags, ==, U64_LITERAL(718));
     }
   } else if (tor_memeq(rs->identity_digest,
                        "\x33\x33\x33\x33\x33\x33\x33\x33\x33\x33"
@@ -1775,7 +1775,7 @@ test_dir_random_weighted(void *testdata)
     inp[i].u64 = vals[i];
     total += vals[i];
   }
-  tt_int_op(total, ==, 45);
+  tt_u64_op(total, ==, 45);
   for (i=0; i<n; ++i) {
     choice = choose_array_element_by_weight(inp, 10);
     tt_int_op(choice, >=, 0);

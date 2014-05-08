@@ -118,26 +118,26 @@ test_cntev_sum_up_cell_stats(void *arg)
   cell_stats = tor_malloc_zero(sizeof(cell_stats_t));
   add_testing_cell_stats_entry(circ, CELL_RELAY, 0, 0, 0);
   sum_up_cell_stats_by_command(circ, cell_stats);
-  tt_int_op(1, ==, cell_stats->added_cells_appward[CELL_RELAY]);
+  tt_u64_op(1, ==, cell_stats->added_cells_appward[CELL_RELAY]);
 
   /* A single RELAY cell was added to the exitward queue. */
   add_testing_cell_stats_entry(circ, CELL_RELAY, 0, 0, 1);
   sum_up_cell_stats_by_command(circ, cell_stats);
-  tt_int_op(1, ==, cell_stats->added_cells_exitward[CELL_RELAY]);
+  tt_u64_op(1, ==, cell_stats->added_cells_exitward[CELL_RELAY]);
 
   /* A single RELAY cell was removed from the appward queue where it spent
    * 20 msec. */
   add_testing_cell_stats_entry(circ, CELL_RELAY, 2, 1, 0);
   sum_up_cell_stats_by_command(circ, cell_stats);
-  tt_int_op(20, ==, cell_stats->total_time_appward[CELL_RELAY]);
-  tt_int_op(1, ==, cell_stats->removed_cells_appward[CELL_RELAY]);
+  tt_u64_op(20, ==, cell_stats->total_time_appward[CELL_RELAY]);
+  tt_u64_op(1, ==, cell_stats->removed_cells_appward[CELL_RELAY]);
 
   /* A single RELAY cell was removed from the exitward queue where it
    * spent 30 msec. */
   add_testing_cell_stats_entry(circ, CELL_RELAY, 3, 1, 1);
   sum_up_cell_stats_by_command(circ, cell_stats);
-  tt_int_op(30, ==, cell_stats->total_time_exitward[CELL_RELAY]);
-  tt_int_op(1, ==, cell_stats->removed_cells_exitward[CELL_RELAY]);
+  tt_u64_op(30, ==, cell_stats->total_time_exitward[CELL_RELAY]);
+  tt_u64_op(1, ==, cell_stats->removed_cells_exitward[CELL_RELAY]);
 
  done:
   tor_free(cell_stats);

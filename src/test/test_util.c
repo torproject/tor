@@ -151,7 +151,7 @@ test_util_write_chunks_to_file(void *arg)
   // assert the file has been written (expected size)
   str = read_file_to_str(fname, RFTS_BIN, &st);
   tt_assert(str != NULL);
-  tt_int_op(st.st_size, ==, data_str_len);
+  tt_u64_op((uint64_t)st.st_size, ==, data_str_len);
   test_mem_op(data_str, ==, str, data_str_len);
   tor_free(str);
 
@@ -182,14 +182,14 @@ test_util_write_chunks_to_file(void *arg)
   // assert the file has been written (expected size)
   str = read_file_to_str(fname, RFTS_BIN, &st);
   tt_assert(str != NULL);
-  tt_int_op(st.st_size, ==, data_str_len);
+  tt_u64_op((uint64_t)st.st_size, ==, data_str_len);
   test_mem_op(data_str, ==, str, data_str_len);
   tor_free(str);
 
   // assert the tempfile still contains the known string
   str = read_file_to_str(tempname, RFTS_BIN, &st);
   tt_assert(str != NULL);
-  tt_int_op(st.st_size, ==, temp_str_len);
+  tt_int_op((uint64_t)st.st_size, ==, temp_str_len);
   test_mem_op(temp_str, ==, str, temp_str_len);
 
  done:
@@ -1090,7 +1090,7 @@ test_util_strmisc(void)
     test_eq(i, 0);
     test_eq(0UL, tor_parse_ulong(TOOBIG, 10, 0, ULONG_MAX, &i, NULL));
     test_eq(i, 0);
-    test_eq(U64_LITERAL(0), tor_parse_uint64(TOOBIG, 10,
+    tt_u64_op(U64_LITERAL(0), ==, tor_parse_uint64(TOOBIG, 10,
                                              0, UINT64_MAX, &i, NULL));
     test_eq(i, 0);
   }
@@ -1288,21 +1288,21 @@ test_util_pow2(void)
   test_eq(tor_log2(UINT64_MAX), 63);
 
   /* Test round_to_power_of_2 */
-  test_eq(round_to_power_of_2(120), 128);
-  test_eq(round_to_power_of_2(128), 128);
-  test_eq(round_to_power_of_2(130), 128);
-  test_assert(round_to_power_of_2(U64_LITERAL(40000000000000000)) ==
-              U64_LITERAL(1)<<55);
-  test_assert(round_to_power_of_2(U64_LITERAL(0xffffffffffffffff)) ==
-              U64_LITERAL(1)<<63);
-  test_eq(round_to_power_of_2(0), 1);
-  test_eq(round_to_power_of_2(1), 1);
-  test_eq(round_to_power_of_2(2), 2);
-  test_eq(round_to_power_of_2(3), 2);
-  test_eq(round_to_power_of_2(4), 4);
-  test_eq(round_to_power_of_2(5), 4);
-  test_eq(round_to_power_of_2(6), 4);
-  test_eq(round_to_power_of_2(7), 8);
+  tt_u64_op(round_to_power_of_2(120), ==, 128);
+  tt_u64_op(round_to_power_of_2(128), ==, 128);
+  tt_u64_op(round_to_power_of_2(130), ==, 128);
+  tt_u64_op(round_to_power_of_2(U64_LITERAL(40000000000000000)), ==,
+            U64_LITERAL(1)<<55);
+  tt_u64_op(round_to_power_of_2(U64_LITERAL(0xffffffffffffffff)), ==,
+          U64_LITERAL(1)<<63);
+  tt_u64_op(round_to_power_of_2(0), ==, 1);
+  tt_u64_op(round_to_power_of_2(1), ==, 1);
+  tt_u64_op(round_to_power_of_2(2), ==, 2);
+  tt_u64_op(round_to_power_of_2(3), ==, 2);
+  tt_u64_op(round_to_power_of_2(4), ==, 4);
+  tt_u64_op(round_to_power_of_2(5), ==, 4);
+  tt_u64_op(round_to_power_of_2(6), ==, 4);
+  tt_u64_op(round_to_power_of_2(7), ==, 8);
 
  done:
   ;
