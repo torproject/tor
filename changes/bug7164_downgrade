@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - Downgrade the warning severity for the the "md was still referenced 1
+      node(s)" warning. Tor 0.2.5.4-alpha has better code for trying to
+      diagnose this bug, and the current warning in earlier versions of
+      tor achieves nothing useful. Addresses warning from bug 7164.
+

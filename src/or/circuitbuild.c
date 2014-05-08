@@ -127,7 +127,14 @@ get_unique_circ_id_by_chan(channel_t *chan)
       /* Make sure we don't loop forever if all circ_id's are used. This
        * matters because it's an external DoS opportunity.
        */
-      log_warn(LD_CIRC,"No unused circ IDs. Failing.");
+      if (! chan->warned_circ_ids_exhausted) {
+        chan->warned_circ_ids_exhausted = 1;
+        log_warn(LD_CIRC,"No unused circIDs found on channel %s wide "
+                 "circID support, with %u inbound and %u outbound circuits. "
+                 "Failing a circuit.",
+                 chan->wide_circ_ids ? "with" : "without",
+                 chan->num_p_circuits, chan->num_n_circuits);
+      }
       return 0;
     }
     test_circ_id |= high_bit;

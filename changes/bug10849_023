@@ -1,0 +1,6 @@
+  o Major bugfixes:
+    - When running a hidden service, do not allow TunneledDirConns 0;
+      this will keep the hidden service from running, and also
+      make it publish its descriptors directly over HTTP. Fixes bug 10849;
+      bugfix on 0.2.1.1-alpha.
+

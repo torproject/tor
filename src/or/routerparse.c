@@ -4374,11 +4374,13 @@ microdescs_parse_from_string(const char *s, const char *eos,
     microdesc_free(md);
     md = NULL;
 
+    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
     memarea_clear(area);
     smartlist_clear(tokens);
     s = start_of_next_microdesc;
   }
 
+  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
   memarea_drop_all(area);
   smartlist_free(tokens);
 
