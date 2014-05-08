@@ -3453,6 +3453,6 @@ get_total_system_memory(size_t *mem_out)
 
   *mem_out = mem_cached = (size_t) m;
 
-  return -1;
+  return 0;
 }
 
