@@ -53,7 +53,7 @@ circuitmux_detach_mock(circuitmux_t *cmux, circuit_t *circ)
     tt_int_op(cam.ncalls, ==, 1);                \
     tt_ptr_op(cam.cmux, ==, (mux_));             \
     tt_ptr_op(cam.circ, ==, (circ_));            \
-    tt_ptr_op(cam.dir, ==, (dir_));              \
+    tt_int_op(cam.dir, ==, (dir_));              \
     memset(&cam, 0, sizeof(cam));                \
   } while (0)
 

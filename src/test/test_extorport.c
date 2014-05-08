@@ -338,7 +338,7 @@ test_ext_or_cookie_auth_testvec(void *arg)
             handle_client_auth_nonce(client_nonce, 32, &client_hash, &reply,
                                      &reply_len));
   tt_ptr_op(reply, !=, NULL );
-  tt_ptr_op(reply_len, ==, 64);
+  tt_uint_op(reply_len, ==, 64);
   test_memeq(reply+32, "te road There is always another ", 32);
   /* HMACSHA256("Gliding wrapt in a brown mantle,"
    *     "ExtORPort authentication server-to-client hash"

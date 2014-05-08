@@ -222,7 +222,7 @@ test_buffer_pullup(void *arg)
   buf_pullup(buf, 16, 1);
   buf_get_first_chunk_data(buf, &cp, &sz);
   tt_ptr_op(cp, ==, NULL);
-  tt_ptr_op(sz, ==, 0);
+  tt_uint_op(sz, ==, 0);
 
   /* Let's make sure nothing got allocated */
   tt_int_op(buf_get_total_allocation(), ==, 0);
