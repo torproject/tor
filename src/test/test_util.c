@@ -189,7 +189,7 @@ test_util_write_chunks_to_file(void *arg)
   // assert the tempfile still contains the known string
   str = read_file_to_str(tempname, RFTS_BIN, &st);
   tt_assert(str != NULL);
-  tt_int_op((uint64_t)st.st_size, ==, temp_str_len);
+  tt_u64_op((uint64_t)st.st_size, ==, temp_str_len);
   test_mem_op(temp_str, ==, str, temp_str_len);
 
  done:
