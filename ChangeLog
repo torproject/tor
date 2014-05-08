@@ -7,36 +7,44 @@ Changes in version 0.2.4.22 - 2014-05-??
       make it publish its descriptors directly over HTTP. Fixes bug 10849;
       bugfix on 0.2.1.1-alpha.
 
-  o Minor bugfixes:
+  o Minor bugfixes (exit relay, backport from 0.2.5.4-alpha):
     - Stop leaking memory when we successfully resolve a PTR record.
       Fixes bug 11437; bugfix on 0.2.4.7-alpha.
 
-  o Major features (security):
-    - Block authority signing keys that were used on an authorities
-      vulnerable to the "heartbleed" bug in openssl (CVE-2014-0160).
-      (We don't have any evidence that these keys _were_ compromised;
-      we're doing this to be prudent.) Resolves ticket 11464.
+  o Major features (security, backport from 0.2.5.4-alpha):
+    - Block authority signing keys that were used on authorities
+      vulnerable to the "heartbleed" bug in OpenSSL (CVE-2014-0160). (We
+      don't have any evidence that these keys _were_ compromised; we're
+      doing this to be prudent.) Resolves ticket 11464.
 
-  o Major bugfixes:
-    - Generate the server's preference list for ciphersuites
-      automatically based on uniform criteria, and considering all
-      OpenSSL ciphersuites with acceptable strength and forward
-      secrecy. (The sort order is: prefer AES to 3DES; break ties by
-      preferring ECDHE to DHE; break ties by preferring GCM to CBC;
-      break ties by preferring SHA384 to SHA256 to SHA1; and finally,
-      break ties by preferring AES256 to AES128.) This resolves bugs
-      #11513, #11492, #11498, #11499. Bugs reported by 'cypherpunks'.
-      Bugfix on 0.2.4.8-alpha.
+  o Major bugfixes (TLS cipher selection, backport from 0.2.5.4-alpha):
+    - The relay ciphersuite list is now generated automatically based on
+      uniform criteria, and includes all OpenSSL ciphersuites with
+      acceptable strength and forward secrecy. Previously, we had left
+      some perfectly fine ciphersuites unsupported due to omission or
+      typo. Resolves bugs 11513, 11492, 11498, 11499. Bugs reported by
+      'cypherpunks'. Bugfix on 0.2.4.8-alpha.
+    - Relays now trust themselves to have a better view than clients of
+      which TLS ciphersuites are better than others. (Thanks to bug
+      11513, the relay list is now well-considered, whereas the client
+      list has been chosen mainly for anti-fingerprinting purposes.)
+      Relays prefer: AES over 3DES; then ECDHE over DHE; then GCM over
+      CBC; then SHA384 over SHA256 over SHA1; and last, AES256 over
+      AES128. Resolves ticket 11528.
+    - Clients now try to advertise the same list of ciphersuites as
+      Firefox 28. This change enables selection of (fast) GCM
+      ciphersuites, disables some strange old ciphers, and stops
+      advertising the ECDH (not to be confused with ECDHE) ciphersuites.
+      Resolves ticket 11438.
 
-  o Minor bugfixes:
+  o Minor bugfixes (controller, backport from 0.2.5.4-alpha):
     - Avoid sending an garbage value to the controller when a circuit is
       cannibalized. Fixes bug 11519; bugfix on 0.2.3.11-alpha.
 
-  o Minor features:
+  o Minor features (log verbosity, backport from 0.2.5.4-alpha):
     - When we run out of usable circuit IDs on a channel, log only one
-      warning for the whole channel, and include a description of
-      how many circuits there were on the channel. Fix for part of ticket
-      #11553.
+      warning for the whole channel, and describe how many circuits
+      there were on the channel. Fixes part of ticket 11553.
 
   o Minor bugfixes:
     - Downgrade the warning severity for the the "md was still referenced 1
@@ -44,22 +52,21 @@ Changes in version 0.2.4.22 - 2014-05-??
       diagnose this bug, and the current warning in earlier versions of
       tor achieves nothing useful. Addresses warning from bug 7164.
 
-  o Documentation:
+  o Documentation (backport from 0.2.5.4-alpha):
     - Correctly document that we search for a system torrc file before
-      looking in ~/.torrc. Fixes documentation side of 9213; bugfix
-      on 0.2.3.18-rc.
+      looking in ~/.torrc. Fixes documentation side of 9213; bugfix on
+      0.2.3.18-rc.
 
-  o Minor bugfixes:
-    - Avoid 60-second delays in the bootstrapping process when Tor
-      is launching for a second time while using bridges. Fixes bug 9229;
+  o Minor bugfixes (bridge client, backport from 0.2.5.4-alpha):
+    - Avoid 60-second delays in the bootstrapping process when Tor is
+      launching for a second time while using bridges. Fixes bug 9229;
       bugfix on 0.2.0.3-alpha.
 
-  o Minor bugfixes:
-    - Give the correct URL in the warning message that we present
-      when the user is trying to run a Tor relay on an ancient version
-      of Windows. Fixes bug 9393.
+  o Minor bugfixes (relays and bridges, backport from 0.2.5.4-alpha):
+    - Give the correct URL in the warning message when trying to run a
+      relay on an ancient version of Windows. Fixes bug 9393.
 
-  o Minor features (security):
+  o Minor features (security, backport from 0.2.5.4-alpha):
     - Decrease the lower limit of MaxMemInCellQueues to 256 MBytes (but leave
       the default at 8GBytes), to better support Raspberry Pi users. Fixes
       bug 9686; bugfix on 0.2.4.14-alpha.
@@ -68,25 +75,11 @@ Changes in version 0.2.4.22 - 2014-05-??
     - Fix a compilation error when compiling with --disable-cuve25519.
       Fixes bug 9700; bugfix on 0.2.4.17-rc.
 
-  o Minor features (performance, compatibility):
-    - Update the list of TLS cipehrsuites that a client advertises
-      to match those advertised by Firefox 28. This enables selection of
-      (fast) GCM ciphersuites, disables some strange old ciphers, and
-      disables the ECDH (not to be confused with ECDHE) ciphersuites.
-      Resolves ticket 11438.
-
   o Major bugfixes (security, OOM)
     - Fix a memory leak that could occur if a microdescriptor parse
       fails during the tokenizing step. This could enable a memory
       exhaustion attack by directory servers. Fixes bug #11649; bugfix
       on 0.2.2.6-alpha.
-
-  o Minor features:
-    - Servers now trust themselves to have a better view than clients of
-      which TLS ciphersuites to choose. (Thanks to #11513, the server
-      list is now well-considered, whereas the client list has been
-      chosen mainly for anti-fingerprinting purposes.) Resolves ticket
-      11528.
 
 
 
