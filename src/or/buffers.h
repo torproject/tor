@@ -106,6 +106,35 @@ void assert_buf_ok(buf_t *buf);
 STATIC int buf_find_string_offset(const buf_t *buf, const char *s, size_t n);
 STATIC void buf_pullup(buf_t *buf, size_t bytes, int nulterminate);
 void buf_get_first_chunk_data(const buf_t *buf, const char **cp, size_t *sz);
+
+#define DEBUG_CHUNK_ALLOC
+/** A single chunk on a buffer or in a freelist. */
+typedef struct chunk_t {
+  struct chunk_t *next; /**< The next chunk on the buffer or freelist. */
+  size_t datalen; /**< The number of bytes stored in this chunk */
+  size_t memlen; /**< The number of usable bytes of storage in <b>mem</b>. */
+#ifdef DEBUG_CHUNK_ALLOC
+  size_t DBG_alloc;
+#endif
+  char *data; /**< A pointer to the first byte of data stored in <b>mem</b>. */
+  uint32_t inserted_time; /**< Timestamp in truncated ms since epoch
+                           * when this chunk was inserted. */
+  char mem[FLEXIBLE_ARRAY_MEMBER]; /**< The actual memory used for storage in
+                * this chunk. */
+} chunk_t;
+
+/** Magic value for buf_t.magic, to catch pointer errors. */
+#define BUFFER_MAGIC 0xB0FFF312u
+/** A resizeable buffer, optimized for reading and writing. */
+struct buf_t {
+  uint32_t magic; /**< Magic cookie for debugging: Must be set to
+                   *   BUFFER_MAGIC. */
+  size_t datalen; /**< How many bytes is this buffer holding right now? */
+  size_t default_chunk_size; /**< Don't allocate any chunks smaller than
+                              * this for this buffer. */
+  chunk_t *head; /**< First chunk in the list, or NULL for none. */
+  chunk_t *tail; /**< Last chunk in the list, or NULL for none. */
+};
 #endif
 
 #endif

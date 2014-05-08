@@ -62,24 +62,7 @@ static int parse_socks_client(const uint8_t *data, size_t datalen,
                               int state, char **reason,
                               ssize_t *drain_out);
 
-#define DEBUG_CHUNK_ALLOC
-
 /* Chunk manipulation functions */
-
-/** A single chunk on a buffer or in a freelist. */
-typedef struct chunk_t {
-  struct chunk_t *next; /**< The next chunk on the buffer or freelist. */
-  size_t datalen; /**< The number of bytes stored in this chunk */
-  size_t memlen; /**< The number of usable bytes of storage in <b>mem</b>. */
-#ifdef DEBUG_CHUNK_ALLOC
-  size_t DBG_alloc;
-#endif
-  char *data; /**< A pointer to the first byte of data stored in <b>mem</b>. */
-  uint32_t inserted_time; /**< Timestamp in truncated ms since epoch
-                           * when this chunk was inserted. */
-  char mem[FLEXIBLE_ARRAY_MEMBER]; /**< The actual memory used for storage in
-                * this chunk. */
-} chunk_t;
 
 #define CHUNK_HEADER_LEN STRUCT_OFFSET(chunk_t, mem[0])
 
@@ -406,19 +389,6 @@ buf_dump_freelist_sizes(int severity)
   (void)severity;
 #endif
 }
-
-/** Magic value for buf_t.magic, to catch pointer errors. */
-#define BUFFER_MAGIC 0xB0FFF312u
-/** A resizeable buffer, optimized for reading and writing. */
-struct buf_t {
-  uint32_t magic; /**< Magic cookie for debugging: Must be set to
-                   *   BUFFER_MAGIC. */
-  size_t datalen; /**< How many bytes is this buffer holding right now? */
-  size_t default_chunk_size; /**< Don't allocate any chunks smaller than
-                              * this for this buffer. */
-  chunk_t *head; /**< First chunk in the list, or NULL for none. */
-  chunk_t *tail; /**< Last chunk in the list, or NULL for none. */
-};
 
 /** Collapse data from the first N chunks from <b>buf</b> into buf->head,
  * growing it as necessary, until buf->head has the first <b>bytes</b> bytes
@@ -2507,6 +2477,7 @@ write_to_buf_zlib(buf_t *buf, tor_zlib_state_t *state,
   char *next;
   size_t old_avail, avail;
   int over = 0;
+
   do {
     int need_new_chunk = 0;
     if (!buf->tail || ! CHUNK_REMAINING_CAPACITY(buf->tail)) {
