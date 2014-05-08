@@ -3627,17 +3627,17 @@ test_util_max_mem(void *arg)
   r = get_total_system_memory(&memory1);
   r2 = get_total_system_memory(&memory2);
   tt_int_op(r, ==, r2);
-  tt_int_op(memory2, ==, memory1);
+  tt_uint_op(memory2, ==, memory1);
 
   TT_BLATHER(("System memory: "U64_FORMAT, U64_PRINTF_ARG(memory1)));
 
   if (r==0) {
     /* You have at least a megabyte. */
-    tt_int_op(memory1, >, (1<<20));
+    tt_uint_op(memory1, >, (1<<20));
   } else {
     /* You do not have a petabyte. */
 #if SIZEOF_SIZE_T == SIZEOF_UINT64_T
-    tt_int_op(memory1, <, (U64_LITERAL(1)<<50));
+    tt_uint_op(memory1, <, (U64_LITERAL(1)<<50));
 #endif
   }
 
