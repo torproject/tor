@@ -3296,8 +3296,6 @@ connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
     }
     body = signed_descriptor_get_body(sd);
     if (conn->zlib_state) {
-      /* XXXX024 This 'last' business should actually happen on the last
-       * routerinfo, not on the last fingerprint. */
       int last = ! smartlist_len(conn->fingerprint_stack);
       connection_write_to_buf_zlib(body, sd->signed_descriptor_len, conn,
                                    last);
@@ -3314,6 +3312,11 @@ connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
 
   if (!smartlist_len(conn->fingerprint_stack)) {
     /* We just wrote the last one; finish up. */
+    if (conn->zlib_state) {
+      connection_write_to_buf_zlib("", 0, conn, 1);
+      tor_zlib_free(conn->zlib_state);
+      conn->zlib_state = NULL;
+    }
     conn->dir_spool_src = DIR_SPOOL_NONE;
     smartlist_free(conn->fingerprint_stack);
     conn->fingerprint_stack = NULL;
@@ -3339,8 +3342,6 @@ connection_dirserv_add_microdescs_to_outbuf(dir_connection_t *conn)
     if (!md || !md->body)
       continue;
     if (conn->zlib_state) {
-      /* XXXX024 This 'last' business should actually happen on the last
-       * routerinfo, not on the last fingerprint. */
       int last = !smartlist_len(conn->fingerprint_stack);
       connection_write_to_buf_zlib(md->body, md->bodylen, conn, last);
       if (last) {
@@ -3352,6 +3353,11 @@ connection_dirserv_add_microdescs_to_outbuf(dir_connection_t *conn)
     }
   }
   if (!smartlist_len(conn->fingerprint_stack)) {
+    if (conn->zlib_state) {
+      connection_write_to_buf_zlib("", 0, conn, 1);
+      tor_zlib_free(conn->zlib_state);
+      conn->zlib_state = NULL;
+    }
     conn->dir_spool_src = DIR_SPOOL_NONE;
     smartlist_free(conn->fingerprint_stack);
     conn->fingerprint_stack = NULL;
