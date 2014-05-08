@@ -386,18 +386,21 @@ microdesc_cache_clean(microdesc_cache_t *cache, time_t cutoff, int force)
         smartlist_t *nodes = nodelist_find_nodes_with_microdesc(*mdp);
         const networkstatus_t *ns = networkstatus_get_latest_consensus();
         long networkstatus_age = -1;
+        const int ht_badness = HT_REP_IS_BAD_(microdesc_map, &cache->map);
         if (ns) {
           networkstatus_age = now - ns->valid_after;
         }
         log_warn(LD_BUG, "Microdescriptor seemed very old "
                  "(last listed %d hours ago vs %d hour cutoff), but is still "
                  "marked as being held by %d node(s). I found %d node(s) "
-                 "holding it. Current networkstatus is %ld hours old.",
+                 "holding it. Current networkstatus is %ld hours old. "
+                 "Hashtable badness is %d.",
                  (int)((now - (*mdp)->last_listed) / 3600),
                  (int)((now - cutoff) / 3600),
                  held_by_nodes,
                  smartlist_len(nodes),
-                 networkstatus_age / 3600);
+                 networkstatus_age / 3600,
+                 ht_badness);
 
         SMARTLIST_FOREACH_BEGIN(nodes, const node_t *, node) {
           const char *rs_match = "No RS";
@@ -664,8 +667,10 @@ microdesc_free_(microdesc_t *md, const char *fname, int lineno)
     tor_fragile_assert();
   }
   if (md->held_by_nodes) {
+    microdesc_cache_t *cache = get_microdesc_cache();
     int found=0;
     const smartlist_t *nodes = nodelist_get_list();
+    const int ht_badness = HT_REP_IS_BAD_(microdesc_map, &cache->map);
     SMARTLIST_FOREACH(nodes, node_t *, node, {
         if (node->md == md) {
           ++found;
@@ -674,12 +679,13 @@ microdesc_free_(microdesc_t *md, const char *fname, int lineno)
       });
     if (found) {
       log_warn(LD_BUG, "microdesc_free() called from %s:%d, but md was still "
-               "referenced %d node(s); held_by_nodes == %u",
-               fname, lineno, found, md->held_by_nodes);
+               "referenced %d node(s); held_by_nodes == %u, ht_badness == %d",
+               fname, lineno, found, md->held_by_nodes, ht_badness);
     } else {
       log_warn(LD_BUG, "microdesc_free() called from %s:%d with held_by_nodes "
-               "set to %u, but md was not referenced by any nodes",
-               fname, lineno, md->held_by_nodes);
+               "set to %u, but md was not referenced by any nodes. "
+               "ht_badness == %d",
+               fname, lineno, md->held_by_nodes, ht_badness);
     }
     tor_fragile_assert();
   }
