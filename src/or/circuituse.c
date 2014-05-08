@@ -817,8 +817,8 @@ circuit_log_ancient_one_hop_circuits(int age)
     goto done;
 
   log_notice(LD_HEARTBEAT,
-             "Problem: Found %d one-hop circuits more than %d seconds old! "
-             "Logging %d...",
+             "Diagnostic for issue 8387: Found %d one-hop circuits more "
+             "than %d seconds old! Logging %d...",
              n_found, age, smartlist_len(log_these));
 
   SMARTLIST_FOREACH_BEGIN(log_these, const origin_circuit_t *, ocirc) {
