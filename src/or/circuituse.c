@@ -783,6 +783,64 @@ circuit_expire_building(void)
   }
 }
 
+/**
+ * As a diagnostic for bug 8387, log information about how many one-hop
+ * circuits we have around that have been there for at least <b>age</b>
+ * seconds. Log a few of them.
+ */
+void
+circuit_log_ancient_one_hop_circuits(int age)
+{
+#define MAX_ANCIENT_ONEHOP_CIRCUITS_TO_LOG 10
+  time_t cutoff = time(NULL) - age;
+  int n_found = 0;
+  smartlist_t *log_these = smartlist_new();
+  const circuit_t *circ;
+
+  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
+    const origin_circuit_t *ocirc;
+    if (! CIRCUIT_IS_ORIGIN(circ))
+      continue;
+    if (circ->timestamp_created.tv_sec >= cutoff)
+      continue;
+    ocirc = CONST_TO_ORIGIN_CIRCUIT(circ);
+
+    if (ocirc->build_state && ocirc->build_state->onehop_tunnel) {
+      ++n_found;
+
+      if (smartlist_len(log_these) < MAX_ANCIENT_ONEHOP_CIRCUITS_TO_LOG)
+        smartlist_add(log_these, (origin_circuit_t*) ocirc);
+    }
+  }
+
+  if (n_found == 0)
+    goto done;
+
+  log_notice(LD_HEARTBEAT,
+             "Diagnostic for issue 8387: Found %d one-hop circuits more "
+             "than %d seconds old! Logging %d...",
+             n_found, age, smartlist_len(log_these));
+
+  SMARTLIST_FOREACH_BEGIN(log_these, const origin_circuit_t *, ocirc) {
+    char created[ISO_TIME_LEN+1];
+    circ = TO_CIRCUIT(ocirc);
+    format_local_iso_time(created,
+                          circ->timestamp_created.tv_sec);
+
+    log_notice(LD_HEARTBEAT, "  #%d created at %s. %s, %s. %s for close. "
+               "%s for new conns.",
+               ocirc_sl_idx,
+               created,
+               circuit_state_to_string(circ->state),
+               circuit_purpose_to_string(circ->purpose),
+               circ->marked_for_close ? "Marked" : "Not marked",
+               ocirc->unusable_for_new_conns ? "Not usable" : "usable");
+  } SMARTLIST_FOREACH_END(ocirc);
+
+ done:
+  smartlist_free(log_these);
+}
+
 /** Remove any elements in <b>needed_ports</b> that are handled by an
  * open or in-progress circuit.
  */

@@ -9,6 +9,7 @@
 #define STATUS_PRIVATE
 
 #include "or.h"
+#include "circuituse.h"
 #include "config.h"
 #include "status.h"
 #include "nodelist.h"
@@ -134,6 +135,8 @@ log_heartbeat(time_t now)
 
   if (public_server_mode(options))
     rep_hist_log_circuit_handshake_stats(now);
+
+  circuit_log_ancient_one_hop_circuits(1800);
 
   tor_free(uptime);
   tor_free(bw_sent);
