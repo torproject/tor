@@ -931,7 +931,7 @@ correct_time(time_t t, time_t now, time_t stored_at, time_t started_measuring)
     return 0;
   else {
     long run_length = stored_at - t;
-    t = now - run_length;
+    t = (time_t)(now - run_length);
     if (t < started_measuring)
       t = started_measuring;
     return t;
@@ -1092,7 +1092,7 @@ rep_hist_load_mtbf_data(time_t now)
       hist->start_of_run = correct_time(start_of_run, now, stored_at,
                                         tracked_since);
       if (hist->start_of_run < latest_possible_start + wrl)
-        latest_possible_start = hist->start_of_run - wrl;
+        latest_possible_start = (time_t)(hist->start_of_run - wrl);
 
       hist->weighted_run_length = wrl;
       hist->total_run_weights = trw;
@@ -2311,7 +2311,7 @@ rep_hist_buffer_stats_add_circ(circuit_t *circ, time_t end_of_interval)
     return;
   start_of_interval = (circ->timestamp_created.tv_sec >
                        start_of_buffer_stats_interval) ?
-        circ->timestamp_created.tv_sec :
+        (time_t)circ->timestamp_created.tv_sec :
         start_of_buffer_stats_interval;
   interval_length = (int) (end_of_interval - start_of_interval);
   if (interval_length <= 0)

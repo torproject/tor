@@ -1755,7 +1755,7 @@ refill_callback(periodic_timer_t *timer, void *arg)
     accounting_add_bytes(bytes_read, bytes_written, seconds_rolled_over);
 
   if (milliseconds_elapsed > 0)
-    connection_bucket_refill(milliseconds_elapsed, now.tv_sec);
+    connection_bucket_refill(milliseconds_elapsed, (time_t)now.tv_sec);
 
   stats_prev_global_read_bucket = global_read_bucket;
   stats_prev_global_write_bucket = global_write_bucket;

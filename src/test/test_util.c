@@ -344,7 +344,7 @@ test_util_time(void)
 
   tv.tv_sec = (time_t)1326296338;
   tv.tv_usec = 3060;
-  format_iso_time(timestr, tv.tv_sec);
+  format_iso_time(timestr, (time_t)tv.tv_sec);
   test_streq("2012-01-11 15:38:58", timestr);
   /* The output of format_local_iso_time will vary by timezone, and setting
      our timezone for testing purposes would be a nontrivial flaky pain.
@@ -352,7 +352,7 @@ test_util_time(void)
   format_local_iso_time(timestr, tv.tv_sec);
   test_streq("2012-01-11 10:38:58", timestr);
   */
-  format_iso_time_nospace(timestr, tv.tv_sec);
+  format_iso_time_nospace(timestr, (time_t)tv.tv_sec);
   test_streq("2012-01-11T15:38:58", timestr);
   test_eq(strlen(timestr), ISO_TIME_LEN);
   format_iso_time_nospace_usec(timestr, &tv);

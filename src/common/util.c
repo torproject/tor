@@ -1516,7 +1516,7 @@ void
 format_iso_time_nospace_usec(char *buf, const struct timeval *tv)
 {
   tor_assert(tv);
-  format_iso_time_nospace(buf, tv->tv_sec);
+  format_iso_time_nospace(buf, (time_t)tv->tv_sec);
   tor_snprintf(buf+ISO_TIME_LEN, 8, ".%06d", (int)tv->tv_usec);
 }
 

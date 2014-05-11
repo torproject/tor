@@ -296,7 +296,7 @@ circuit_get_best(const entry_connection_t *conn,
     }
 
     if (!circuit_is_acceptable(origin_circ,conn,must_be_open,purpose,
-                               need_uptime,need_internal,now.tv_sec))
+                               need_uptime,need_internal, (time_t)now.tv_sec))
       continue;
 
     /* now this is an acceptable circ to hand back. but that doesn't
@@ -683,9 +683,9 @@ circuit_expire_building(void)
                      victim->purpose,
                      circuit_purpose_to_string(victim->purpose));
         } else if (circuit_build_times_count_close(
-                                         get_circuit_build_times_mutable(),
-                                         first_hop_succeeded,
-                                         victim->timestamp_created.tv_sec)) {
+            get_circuit_build_times_mutable(),
+            first_hop_succeeded,
+            (time_t)victim->timestamp_created.tv_sec)) {
           circuit_build_times_set_timeout(get_circuit_build_times_mutable());
         }
       }
@@ -825,7 +825,7 @@ circuit_log_ancient_one_hop_circuits(int age)
     char created[ISO_TIME_LEN+1];
     circ = TO_CIRCUIT(ocirc);
     format_local_iso_time(created,
-                          circ->timestamp_created.tv_sec);
+                          (time_t)circ->timestamp_created.tv_sec);
 
     log_notice(LD_HEARTBEAT, "  #%d created at %s. %s, %s. %s for close. "
                "%s for new conns.",

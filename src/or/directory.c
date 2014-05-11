@@ -2299,7 +2299,7 @@ write_http_response_header_impl(dir_connection_t *conn, ssize_t length,
   }
   if (cache_lifetime > 0) {
     char expbuf[RFC1123_TIME_LEN+1];
-    format_rfc1123_time(expbuf, now + cache_lifetime);
+    format_rfc1123_time(expbuf, (time_t)(now + cache_lifetime));
     /* We could say 'Cache-control: max-age=%d' here if we start doing
      * http/1.1 */
     tor_snprintf(cp, sizeof(tmp)-(cp-tmp),

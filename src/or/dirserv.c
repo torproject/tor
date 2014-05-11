@@ -2507,7 +2507,7 @@ dirserv_read_measured_bandwidths(const char *from_file,
   }
 
   line[strlen(line)-1] = '\0';
-  file_time = tor_parse_ulong(line, 10, 0, ULONG_MAX, &ok, NULL);
+  file_time = (time_t)tor_parse_ulong(line, 10, 0, ULONG_MAX, &ok, NULL);
   if (!ok) {
     log_warn(LD_DIRSERV, "Non-integer time in bandwidth file: %s",
              escaped(line));

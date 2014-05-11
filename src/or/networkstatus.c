@@ -830,7 +830,7 @@ update_consensus_networkstatus_fetch_time_impl(time_t now, int flav)
     if (directory_fetches_dir_info_early(options)) {
       /* We want to cache the next one at some point after this one
        * is no longer fresh... */
-      start = c->fresh_until + min_sec_before_caching;
+      start = (time_t)(c->fresh_until + min_sec_before_caching);
       /* Some clients may need the consensus sooner than others. */
       if (options->FetchDirInfoExtraEarly || authdir_mode_v3(options)) {
         dl_interval = 60;
@@ -843,7 +843,7 @@ update_consensus_networkstatus_fetch_time_impl(time_t now, int flav)
     } else {
       /* We're an ordinary client or a bridge. Give all the caches enough
        * time to download the consensus. */
-      start = c->fresh_until + (interval*3)/4;
+      start = (time_t)(c->fresh_until + (interval*3)/4);
       /* But download the next one well before this one is expired. */
       dl_interval = ((c->valid_until - start) * 7 )/ 8;
 
@@ -851,7 +851,7 @@ update_consensus_networkstatus_fetch_time_impl(time_t now, int flav)
        * to choose the rest of the interval *after* them. */
       if (directory_fetches_dir_info_later(options)) {
         /* Give all the *clients* enough time to download the consensus. */
-        start = start + dl_interval + min_sec_before_caching;
+        start = (time_t)(start + dl_interval + min_sec_before_caching);
         /* But try to get it before ours actually expires. */
         dl_interval = (c->valid_until - start) - min_sec_before_caching;
       }
