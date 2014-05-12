@@ -1,0 +1,3 @@
+  o Minor bugfixes (build):
+    - Fix compilation of test_status.c when building with MVSC.
+      Bugfix on 0.2.5.4-alpha. Patch from Gisle Vanem.
