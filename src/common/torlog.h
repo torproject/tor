@@ -156,9 +156,9 @@ void tor_log_err_sigsafe(const char *m, ...);
 int tor_log_get_sigsafe_err_fds(const int **out);
 void tor_log_update_sigsafe_err_fds(void);
 
-#if defined(__GNUC__) || defined(RUNNING_DOXYGEN)
 extern int log_global_min_severity_;
 
+#if defined(__GNUC__) || defined(RUNNING_DOXYGEN)
 void log_fn_(int severity, log_domain_mask_t domain,
              const char *funcname, const char *format, ...)
   CHECK_PRINTF(4,5);
