@@ -1522,7 +1522,9 @@ run_scheduled_events(time_t now)
         if (conn->inbuf)
           buf_shrink(conn->inbuf);
       });
+#ifdef ENABLE_MEMPOOL
     clean_cell_pool();
+#endif /* ENABLE_MEMPOOL */
     buf_shrink_freelists(0);
 /** How often do we check buffers and pools for empty space that can be
  * deallocated? */
@@ -1927,8 +1929,10 @@ do_main_loop(void)
     }
   }
 
+#ifdef ENABLE_MEMPOOLS
   /* Set up the packed_cell_t memory pool. */
   init_cell_pool();
+#endif /* ENABLE_MEMPOOLS */
 
   /* Set up our buckets */
   connection_bucket_init();
@@ -2545,7 +2549,9 @@ tor_free_all(int postfork)
     router_free_all();
     policies_free_all();
   }
+#ifdef ENABLE_MEMPOOLS
   free_cell_pool();
+#endif /* ENABLE_MEMPOOLS */
   if (!postfork) {
     tor_tls_free_all();
   }

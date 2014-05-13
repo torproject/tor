@@ -1975,7 +1975,9 @@ circuits_handle_oom(size_t current_allocation)
       break;
   } SMARTLIST_FOREACH_END(circ);
 
+#ifdef ENABLE_MEMPOOLS
   clean_cell_pool(); /* In case this helps. */
+#endif /* ENABLE_MEMPOOLS */
   buf_shrink_freelists(1); /* This is necessary to actually release buffer
                               chunks. */
 

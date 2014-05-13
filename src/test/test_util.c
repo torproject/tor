@@ -12,7 +12,9 @@
 #include "config.h"
 #include "control.h"
 #include "test.h"
+#ifdef ENABLE_MEMPOOLS
 #include "mempool.h"
+#endif /* ENABLE_MEMPOOLS */
 #include "memarea.h"
 
 #ifdef _WIN32
@@ -1899,6 +1901,8 @@ test_util_path_is_relative(void)
   ;
 }
 
+#ifdef ENABLE_MEMPOOLS
+
 /** Run unittests for memory pool allocator */
 static void
 test_util_mempool(void)
@@ -1956,6 +1960,8 @@ test_util_mempool(void)
   if (pool)
     mp_pool_destroy(pool);
 }
+
+#endif /* ENABLE_MEMPOOLS */
 
 /** Run unittests for memory area allocator */
 static void
@@ -3656,7 +3662,9 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(pow2),
   UTIL_LEGACY(gzip),
   UTIL_LEGACY(datadir),
+#ifdef ENABLE_MEMPOOLS
   UTIL_LEGACY(mempool),
+#endif
   UTIL_LEGACY(memarea),
   UTIL_LEGACY(control_formats),
   UTIL_LEGACY(mmap),

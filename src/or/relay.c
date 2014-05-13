@@ -26,7 +26,9 @@
 #include "control.h"
 #include "geoip.h"
 #include "main.h"
+#ifdef ENABLE_MEMPOOLS
 #include "mempool.h"
+#endif
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "onion.h"
@@ -2231,9 +2233,10 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
 #define assert_cmux_ok_paranoid(chan)
 #endif
 
-/** The total number of cells we have allocated from the memory pool. */
+/** The total number of cells we have allocated. */
 static size_t total_cells_allocated = 0;
 
+#ifdef ENABLE_MEMPOOLS
 /** A memory pool to allocate packed_cell_t objects. */
 static mp_pool_t *cell_pool = NULL;
 
@@ -2265,12 +2268,18 @@ clean_cell_pool(void)
   mp_pool_clean(cell_pool, 0, 1);
 }
 
+#endif /* ENABLE_MEMPOOLS */
+
 /** Release storage held by <b>cell</b>. */
 static INLINE void
 packed_cell_free_unchecked(packed_cell_t *cell)
 {
   --total_cells_allocated;
+#ifdef ENABLE_MEMPOOLS
   mp_pool_release(cell);
+#else
+  tor_free(cell);
+#endif /* ENABLE_MEMPOOLS */
 }
 
 /** Allocate and return a new packed_cell_t. */
@@ -2278,7 +2287,11 @@ STATIC packed_cell_t *
 packed_cell_new(void)
 {
   ++total_cells_allocated;
+#ifdef ENABLE_MEMPOOLS
   return mp_pool_get(cell_pool);
+#else
+  return tor_malloc(sizeof(packed_cell_t));
+#endif
 }
 
 /** Return a packed cell used outside by channel_t lower layer */
@@ -2307,7 +2320,9 @@ dump_cell_pool_usage(int severity)
   tor_log(severity, LD_MM,
           "%d cells allocated on %d circuits. %d cells leaked.",
           n_cells, n_circs, (int)total_cells_allocated - n_cells);
+#ifdef ENABLE_MEMPOOLS
   mp_pool_log_status(cell_pool, severity);
+#endif
 }
 
 /** Allocate a new copy of packed <b>cell</b>. */
@@ -2387,7 +2402,11 @@ cell_queue_pop(cell_queue_t *queue)
 size_t
 packed_cell_mem_cost(void)
 {
+#ifdef ENABLE_MEMPOOLS
   return sizeof(packed_cell_t) + MP_POOL_ITEM_OVERHEAD;
+#else
+  return sizeof(packed_cell_t);
+#endif /* ENABLE_MEMPOOLS */
 }
 
 /** DOCDOC */
