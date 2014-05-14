@@ -23,6 +23,8 @@ import sys
 #    100 * the fourth power of overflowed characters
 #  PLUS
 #    .1 * a bit more than the cube of ragged space on the last line.
+#  PLUS
+#    OPENPAREN_PENALTY for each line that starts with (
 #
 # We use an obvious dynamic programming algorithm to sorta approximate this.
 # It's not coded right or optimally, but it's fast enough for changelogs
@@ -44,6 +46,8 @@ OVERFLOW_PENALTY = 2000
 
 ORPHAN_PENALTY = 10000
 
+OPENPAREN_PENALTY = 200
+
 def generate_wrapping(words, divisions):
     lines = []
     last = 0
@@ -64,6 +68,9 @@ def wrapping_quality(words, divisions, width1, width2):
             width = width1
         else:
             width = width2
+
+        if line[0:1] == '(':
+            total += OPENPAREN_PENALTY
 
         if length > width:
             total += OVERFLOW_PENALTY * (
