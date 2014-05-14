@@ -2187,6 +2187,13 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
       node = node_get_mutable_by_id(ri->cache_info.identity_digest);
       tor_assert(node);
       rewrite_node_address_for_bridge(bridge, node);
+      if (tor_digest_is_zero(bridge->identity)) {
+        memcpy(bridge->identity,ri->cache_info.identity_digest, DIGEST_LEN);
+        log_notice(LD_DIR, "Learned identity %s for bridge at %s:%d",
+                   hex_str(bridge->identity, DIGEST_LEN),
+                   fmt_and_decorate_addr(&bridge->addr),
+                   (int) bridge->port);
+      }
       add_an_entry_guard(node, 1, 1, 0, 0);
 
       log_notice(LD_DIR, "new bridge descriptor '%s' (%s): %s", ri->nickname,
