@@ -1792,7 +1792,7 @@ int
 switch_id(const char *user)
 {
 #ifndef _WIN32
-  struct passwd *pw = NULL;
+  const struct passwd *pw = NULL;
   uid_t old_uid;
   gid_t old_gid;
   static int have_already_switched_id = 0;
@@ -1813,7 +1813,7 @@ switch_id(const char *user)
   old_gid = getgid();
 
   /* Lookup the user and group information, if we have a problem, bail out. */
-  pw = getpwnam(user);
+  pw = tor_getpwnam(user);
   if (pw == NULL) {
     log_warn(LD_CONFIG, "Error setting configured user: %s not found", user);
     return -1;
@@ -1984,10 +1984,10 @@ tor_disable_debugger_attach(void)
 char *
 get_user_homedir(const char *username)
 {
-  struct passwd *pw;
+  const struct passwd *pw;
   tor_assert(username);
 
-  if (!(pw = getpwnam(username))) {
+  if (!(pw = tor_getpwnam(username))) {
     log_err(LD_CONFIG,"User \"%s\" not found.", username);
     return NULL;
   }

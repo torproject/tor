@@ -1492,7 +1492,7 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
       *answer = tor_strdup("");
     #else
       int myUid = geteuid();
-      struct passwd *myPwEntry = getpwuid(myUid);
+      const struct passwd *myPwEntry = tor_getpwuid(myUid);
 
       if (myPwEntry) {
         *answer = tor_strdup(myPwEntry->pw_name);

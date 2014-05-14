@@ -1,0 +1,5 @@
+  o Minor bugfixes (sandbox):
+
+    - Handle failures in getpwnam()/getpwuid() when running with the
+      User option set and the Linux syscall sandbox enabled. Fixes bug
+      11946; bugfix on 0.2.5.1-alpha.
