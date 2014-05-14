@@ -1,11 +1,12 @@
 Changes in version 0.2.4.22 - 2014-05-1?
   Tor 0.2.4.22 backports numerous high-priority fixes from the Tor 0.2.5
-  alpha release series. These include blocking all authority signing keys
-  that may have been affected by the OpenSSL "heartbleed" bug, choosing
-  a far more secure set of TLS ciphersuites by default, closing a couple of
-  memory leaks that could be used to run a target relay out of RAM, and
+  alpha release series. These include blocking all authority signing
+  keys that may have been affected by the OpenSSL "heartbleed" bug,
+  choosing a far more secure set of TLS ciphersuites by default, closing
+  a couple of memory leaks that could be used to run a target relay out
+  of RAM, and several others.
 
-  o Major bugfixes (security, OOM)
+  o Major bugfixes (security, OOM):
     - Fix a memory leak that could occur if a microdescriptor parse
       fails during the tokenizing step. This bug could enable a memory
       exhaustion attack by directory servers. Fixes bug #11649; bugfix
@@ -14,8 +15,8 @@ Changes in version 0.2.4.22 - 2014-05-1?
   o Major bugfixes (configuration, security):
     - When running a hidden service, do not allow TunneledDirConns 0:
       trying to set that option together with a hidden service would
-      otherwise prevent the hidden service from running, and also
-      make it publish its descriptors directly over HTTP. Fixes bug 10849;
+      otherwise prevent the hidden service from running, and also make
+      it publish its descriptors directly over HTTP. Fixes bug 10849;
       bugfix on 0.2.1.1-alpha.
 
   o Major features (security, backport from 0.2.5.4-alpha):
@@ -59,8 +60,8 @@ Changes in version 0.2.4.22 - 2014-05-1?
 
   o Documentation (backport from 0.2.5.4-alpha):
     - Correctly document that we search for a system torrc file before
-      looking in ~/.torrc. Fixes documentation side of 9213; bugfix on
-      0.2.3.18-rc.
+      looking in ~/.torrc. Fixes documentation side of 9213; bugfix
+      on 0.2.3.18-rc.
 
   o Minor bugfixes (bridge client, backport from 0.2.5.4-alpha):
     - Avoid 60-second delays in the bootstrapping process when Tor is
@@ -72,19 +73,20 @@ Changes in version 0.2.4.22 - 2014-05-1?
       relay on an ancient version of Windows. Fixes bug 9393.
 
   o Minor features (security, backport from 0.2.5.4-alpha):
-    - Decrease the lower limit of MaxMemInCellQueues to 256 MBytes (but leave
-      the default at 8GBytes), to better support Raspberry Pi users. Fixes
-      bug 9686; bugfix on 0.2.4.14-alpha.
+    - Decrease the lower limit of MaxMemInCellQueues to 256 MBytes (but
+      leave the default at 8GBytes), to better support Raspberry Pi
+      users. Fixes bug 9686; bugfix on 0.2.4.14-alpha.
 
   o Minor bugfixes (compilation):
     - Fix a compilation error when compiling with --disable-cuve25519.
       Fixes bug 9700; bugfix on 0.2.4.17-rc.
 
   o Minor bugfixes:
-    - Downgrade the warning severity for the the "md was still referenced 1
-      node(s)" warning. Tor 0.2.5.4-alpha has better code for trying to
-      diagnose this bug, and the current warning in earlier versions of
-      tor achieves nothing useful. Addresses warning from bug 7164.
+    - Downgrade the warning severity for the the "md was still
+      referenced 1 node(s)" warning. Tor 0.2.5.4-alpha has better code
+      for trying to diagnose this bug, and the current warning in
+      earlier versions of tor achieves nothing useful. Addresses warning
+      from bug 7164.
 
 
 Changes in version 0.2.4.21 - 2014-02-28
