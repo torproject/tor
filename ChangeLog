@@ -9,15 +9,8 @@ Changes in version 0.2.4.22 - 2014-05-1?
   o Major bugfixes (security, OOM):
     - Fix a memory leak that could occur if a microdescriptor parse
       fails during the tokenizing step. This bug could enable a memory
-      exhaustion attack by directory servers. Fixes bug #11649; bugfix
+      exhaustion attack by directory servers. Fixes bug 11649; bugfix
       on 0.2.2.6-alpha.
-
-  o Major bugfixes (configuration, security):
-    - When running a hidden service, do not allow TunneledDirConns 0:
-      trying to set that option together with a hidden service would
-      otherwise prevent the hidden service from running, and also make
-      it publish its descriptors directly over HTTP. Fixes bug 10849;
-      bugfix on 0.2.1.1-alpha.
 
   o Major features (security, backport from 0.2.5.4-alpha):
     - Block authority signing keys that were used on authorities
@@ -44,6 +37,13 @@ Changes in version 0.2.4.22 - 2014-05-1?
       ciphersuites, disables some strange old ciphers, and stops
       advertising the ECDH (not to be confused with ECDHE) ciphersuites.
       Resolves ticket 11438.
+
+  o Minor bugfixes (configuration, security):
+    - When running a hidden service, do not allow TunneledDirConns 0:
+      trying to set that option together with a hidden service would
+      otherwise prevent the hidden service from running, and also make
+      it publish its descriptors directly over HTTP. Fixes bug 10849;
+      bugfix on 0.2.1.1-alpha.
 
   o Minor bugfixes (controller, backport from 0.2.5.4-alpha):
     - Avoid sending an garbage value to the controller when a circuit is
@@ -78,7 +78,7 @@ Changes in version 0.2.4.22 - 2014-05-1?
       users. Fixes bug 9686; bugfix on 0.2.4.14-alpha.
 
   o Minor bugfixes (compilation):
-    - Fix a compilation error when compiling with --disable-cuve25519.
+    - Fix a compilation error when compiling with --disable-curve25519.
       Fixes bug 9700; bugfix on 0.2.4.17-rc.
 
   o Minor bugfixes:
