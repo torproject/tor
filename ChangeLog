@@ -6,17 +6,17 @@ Changes in version 0.2.4.22 - 2014-05-1?
   a couple of memory leaks that could be used to run a target relay out
   of RAM, and several others.
 
-  o Major bugfixes (security, OOM):
-    - Fix a memory leak that could occur if a microdescriptor parse
-      fails during the tokenizing step. This bug could enable a memory
-      exhaustion attack by directory servers. Fixes bug 11649; bugfix
-      on 0.2.2.6-alpha.
-
   o Major features (security, backport from 0.2.5.4-alpha):
     - Block authority signing keys that were used on authorities
       vulnerable to the "heartbleed" bug in OpenSSL (CVE-2014-0160). (We
       don't have any evidence that these keys _were_ compromised; we're
       doing this to be prudent.) Resolves ticket 11464.
+
+  o Major bugfixes (security, OOM):
+    - Fix a memory leak that could occur if a microdescriptor parse
+      fails during the tokenizing step. This bug could enable a memory
+      exhaustion attack by directory servers. Fixes bug 11649; bugfix
+      on 0.2.2.6-alpha.
 
   o Major bugfixes (TLS cipher selection, backport from 0.2.5.4-alpha):
     - The relay ciphersuite list is now generated automatically based on
@@ -53,16 +53,6 @@ Changes in version 0.2.4.22 - 2014-05-1?
     - Stop leaking memory when we successfully resolve a PTR record.
       Fixes bug 11437; bugfix on 0.2.4.7-alpha.
 
-  o Minor features (log verbosity, backport from 0.2.5.4-alpha):
-    - When we run out of usable circuit IDs on a channel, log only one
-      warning for the whole channel, and describe how many circuits
-      there were on the channel. Fixes part of ticket 11553.
-
-  o Documentation (backport from 0.2.5.4-alpha):
-    - Correctly document that we search for a system torrc file before
-      looking in ~/.torrc. Fixes documentation side of 9213; bugfix
-      on 0.2.3.18-rc.
-
   o Minor bugfixes (bridge client, backport from 0.2.5.4-alpha):
     - Avoid 60-second delays in the bootstrapping process when Tor is
       launching for a second time while using bridges. Fixes bug 9229;
@@ -71,11 +61,6 @@ Changes in version 0.2.4.22 - 2014-05-1?
   o Minor bugfixes (relays and bridges, backport from 0.2.5.4-alpha):
     - Give the correct URL in the warning message when trying to run a
       relay on an ancient version of Windows. Fixes bug 9393.
-
-  o Minor features (security, backport from 0.2.5.4-alpha):
-    - Decrease the lower limit of MaxMemInCellQueues to 256 MBytes (but
-      leave the default at 8GBytes), to better support Raspberry Pi
-      users. Fixes bug 9686; bugfix on 0.2.4.14-alpha.
 
   o Minor bugfixes (compilation):
     - Fix a compilation error when compiling with --disable-curve25519.
@@ -87,6 +72,21 @@ Changes in version 0.2.4.22 - 2014-05-1?
       for trying to diagnose this bug, and the current warning in
       earlier versions of tor achieves nothing useful. Addresses warning
       from bug 7164.
+
+  o Minor features (log verbosity, backport from 0.2.5.4-alpha):
+    - When we run out of usable circuit IDs on a channel, log only one
+      warning for the whole channel, and describe how many circuits
+      there were on the channel. Fixes part of ticket 11553.
+
+  o Minor features (security, backport from 0.2.5.4-alpha):
+    - Decrease the lower limit of MaxMemInCellQueues to 256 MBytes (but
+      leave the default at 8GBytes), to better support Raspberry Pi
+      users. Fixes bug 9686; bugfix on 0.2.4.14-alpha.
+
+  o Documentation (backport from 0.2.5.4-alpha):
+    - Correctly document that we search for a system torrc file before
+      looking in ~/.torrc. Fixes documentation side of 9213; bugfix
+      on 0.2.3.18-rc.
 
 
 Changes in version 0.2.4.21 - 2014-02-28
