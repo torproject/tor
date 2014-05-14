@@ -46,7 +46,7 @@ Changes in version 0.2.4.22 - 2014-05-1?
       bugfix on 0.2.1.1-alpha.
 
   o Minor bugfixes (controller, backport from 0.2.5.4-alpha):
-    - Avoid sending an garbage value to the controller when a circuit is
+    - Avoid sending a garbage value to the controller when a circuit is
       cannibalized. Fixes bug 11519; bugfix on 0.2.3.11-alpha.
 
   o Minor bugfixes (exit relay, backport from 0.2.5.4-alpha):
@@ -85,8 +85,8 @@ Changes in version 0.2.4.22 - 2014-05-1?
 
   o Documentation (backport from 0.2.5.4-alpha):
     - Correctly document that we search for a system torrc file before
-      looking in ~/.torrc. Fixes documentation side of 9213; bugfix
-      on 0.2.3.18-rc.
+      looking in ~/.torrc. Fixes documentation side of 9213; bugfix on
+      0.2.3.18-rc.
 
 
 Changes in version 0.2.4.21 - 2014-02-28
