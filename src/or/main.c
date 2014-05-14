@@ -2548,6 +2548,9 @@ tor_free_all(int postfork)
   free_cell_pool();
   if (!postfork) {
     tor_tls_free_all();
+#ifndef _WIN32
+    tor_getpwnam(NULL);
+#endif
   }
   /* stuff in main.c */
 
