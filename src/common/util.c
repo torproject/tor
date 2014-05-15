@@ -1871,7 +1871,7 @@ check_private_dir(const char *dirname, cpd_check_t check,
   char *f;
 #ifndef _WIN32
   int mask;
-  struct passwd *pw = NULL;
+  const struct passwd *pw = NULL;
   uid_t running_uid;
   gid_t running_gid;
 #else
@@ -1918,7 +1918,7 @@ check_private_dir(const char *dirname, cpd_check_t check,
   if (effective_user) {
     /* Look up the user and group information.
      * If we have a problem, bail out. */
-    pw = getpwnam(effective_user);
+    pw = tor_getpwnam(effective_user);
     if (pw == NULL) {
       log_warn(LD_CONFIG, "Error setting configured user: %s not found",
                effective_user);
@@ -1932,13 +1932,13 @@ check_private_dir(const char *dirname, cpd_check_t check,
   }
 
   if (st.st_uid != running_uid) {
-    struct passwd *pw = NULL;
+    const struct passwd *pw = NULL;
     char *process_ownername = NULL;
 
-    pw = getpwuid(running_uid);
+    pw = tor_getpwuid(running_uid);
     process_ownername = pw ? tor_strdup(pw->pw_name) : tor_strdup("<unknown>");
 
-    pw = getpwuid(st.st_uid);
+    pw = tor_getpwuid(st.st_uid);
 
     log_warn(LD_FS, "%s is not owned by this user (%s, %d) but by "
         "%s (%d). Perhaps you are running Tor as the wrong user?",

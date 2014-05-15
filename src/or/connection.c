@@ -1017,7 +1017,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
   tor_socket_t s = TOR_INVALID_SOCKET;  /* the socket we're going to make */
   or_options_t const *options = get_options();
 #if defined(HAVE_PWD_H) && defined(HAVE_SYS_UN_H)
-  struct passwd *pw = NULL;
+  const struct passwd *pw = NULL;
 #endif
   uint16_t usePort = 0, gotPort = 0;
   int start_reading = 0;
@@ -1157,7 +1157,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     }
 #ifdef HAVE_PWD_H
     if (options->User) {
-      pw = getpwnam(options->User);
+      pw = tor_getpwnam(options->User);
       if (pw == NULL) {
         log_warn(LD_NET,"Unable to chown() %s socket: user %s not found.",
                  address, options->User);
