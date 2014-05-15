@@ -1703,8 +1703,14 @@ log_credential_status(void)
 #endif
 
 #ifndef _WIN32
+/** Cached struct from the last getpwname() call we did successfully. */
 static struct passwd *passwd_cached = NULL;
 
+/** Helper: copy a struct passwd object.
+ *
+ * We only copy the fields pw_uid, pw_gid, pw_name, pw_dir.  Tor doesn't use
+ * any others, and I don't want to run into incompatibilities.
+ */
 static struct passwd *
 tor_passwd_dup(const struct passwd *pw)
 {
@@ -1719,6 +1725,7 @@ tor_passwd_dup(const struct passwd *pw)
   return new_pw;
 }
 
+/** Helper: free one of our cached 'struct passwd' values. */
 static void
 tor_passwd_free(struct passwd *pw)
 {
@@ -1731,7 +1738,14 @@ tor_passwd_free(struct passwd *pw)
 }
 
 /** Wrapper around getpwnam() that caches result. Used so that we don't need
- * to give the sandbox access to /etc/passwd. */
+ * to give the sandbox access to /etc/passwd.
+ *
+ * The following fields alone will definitely be copied in the output: pw_uid,
+ * pw_gid, pw_name, pw_dir.  Other fields are not present in cached values.
+ *
+ * When called with a NULL argument, this function clears storage associated
+ * with static variables it uses.
+ **/
 const struct passwd *
 tor_getpwnam(const char *username)
 {
@@ -1763,7 +1777,11 @@ tor_getpwnam(const char *username)
 
 /** Wrapper around getpwnam() that can use cached result from
  * tor_getpwnam(). Used so that we don't need to give the sandbox access to
- * /etc/passwd. */
+ * /etc/passwd.
+ *
+ * The following fields alone will definitely be copied in the output: pw_uid,
+ * pw_gid, pw_name, pw_dir.  Other fields are not present in cached values.
+ */
 const struct passwd *
 tor_getpwuid(uid_t uid)
 {
