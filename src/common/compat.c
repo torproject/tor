@@ -1802,7 +1802,6 @@ tor_getpwuid(uid_t uid)
 }
 #endif
 
-
 /** Call setuid and setgid to run as <b>user</b> and switch to their
  * primary group.  Return 0 on success.  On failure, log and return -1.
  */
