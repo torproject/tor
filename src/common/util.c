@@ -4892,7 +4892,8 @@ handle_fw_helper_line(const char *executable, const char *line)
 /** Read what tor-fw-helper has to say in its stdout and handle it
  *  appropriately */
 static int
-handle_fw_helper_output(const char *executable, process_handle_t *process_handle)
+handle_fw_helper_output(const char *executable,
+                        process_handle_t *process_handle)
 {
   smartlist_t *fw_helper_output = NULL;
   enum stream_status stream_status = 0;
