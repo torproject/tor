@@ -279,7 +279,7 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
                              size_t payload_len, size_t extrainfo_len)
 {
   const or_options_t *options = get_options();
-  int post_via_tor;
+  dir_indirection_t indirection;
   const smartlist_t *dirservers = router_get_trusted_dir_servers();
   int found = 0;
   const int exclude_self = (dir_purpose == DIR_PURPOSE_UPLOAD_VOTE ||
@@ -319,11 +319,19 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
                  (int) extrainfo_len);
       }
       tor_addr_from_ipv4h(&ds_addr, ds->addr);
-      post_via_tor = purpose_needs_anonymity(dir_purpose, router_purpose) ||
-        !fascist_firewall_allows_address_dir(&ds_addr, ds->dir_port);
+      if (purpose_needs_anonymity(dir_purpose, router_purpose)) {
+        indirection = DIRIND_ANONYMOUS;
+      } else if (!fascist_firewall_allows_address_dir(&ds_addr,ds->dir_port)) {
+        if (fascist_firewall_allows_address_or(&ds_addr,ds->or_port))
+          indirection = DIRIND_ONEHOP;
+        else
+          indirection = DIRIND_ANONYMOUS;
+      } else {
+        indirection = DIRIND_DIRECT_CONN;
+      }
       directory_initiate_command_routerstatus(rs, dir_purpose,
                                               router_purpose,
-                                              post_via_tor,
+                                              indirection,
                                               NULL, payload, upload_len, 0);
   } SMARTLIST_FOREACH_END(ds);
   if (!found) {
