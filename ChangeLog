@@ -1,6 +1,97 @@
 Changes in version 0.2.5.5-alpha - 2014-05-??
 
 
+Changes in version 0.2.4.22 - 2014-05-16
+  Tor 0.2.4.22 backports numerous high-priority fixes from the Tor 0.2.5
+  alpha release series. These include blocking all authority signing
+  keys that may have been affected by the OpenSSL "heartbleed" bug,
+  choosing a far more secure set of TLS ciphersuites by default, closing
+  a couple of memory leaks that could be used to run a target relay out
+  of RAM, and several others.
+
+  o Major features (security, backport from 0.2.5.4-alpha):
+    - Block authority signing keys that were used on authorities
+      vulnerable to the "heartbleed" bug in OpenSSL (CVE-2014-0160). (We
+      don't have any evidence that these keys _were_ compromised; we're
+      doing this to be prudent.) Resolves ticket 11464.
+
+  o Major bugfixes (security, OOM):
+    - Fix a memory leak that could occur if a microdescriptor parse
+      fails during the tokenizing step. This bug could enable a memory
+      exhaustion attack by directory servers. Fixes bug 11649; bugfix
+      on 0.2.2.6-alpha.
+
+  o Major bugfixes (TLS cipher selection, backport from 0.2.5.4-alpha):
+    - The relay ciphersuite list is now generated automatically based on
+      uniform criteria, and includes all OpenSSL ciphersuites with
+      acceptable strength and forward secrecy. Previously, we had left
+      some perfectly fine ciphersuites unsupported due to omission or
+      typo. Resolves bugs 11513, 11492, 11498, 11499. Bugs reported by
+      'cypherpunks'. Bugfix on 0.2.4.8-alpha.
+    - Relays now trust themselves to have a better view than clients of
+      which TLS ciphersuites are better than others. (Thanks to bug
+      11513, the relay list is now well-considered, whereas the client
+      list has been chosen mainly for anti-fingerprinting purposes.)
+      Relays prefer: AES over 3DES; then ECDHE over DHE; then GCM over
+      CBC; then SHA384 over SHA256 over SHA1; and last, AES256 over
+      AES128. Resolves ticket 11528.
+    - Clients now try to advertise the same list of ciphersuites as
+      Firefox 28. This change enables selection of (fast) GCM
+      ciphersuites, disables some strange old ciphers, and stops
+      advertising the ECDH (not to be confused with ECDHE) ciphersuites.
+      Resolves ticket 11438.
+
+  o Minor bugfixes (configuration, security):
+    - When running a hidden service, do not allow TunneledDirConns 0:
+      trying to set that option together with a hidden service would
+      otherwise prevent the hidden service from running, and also make
+      it publish its descriptors directly over HTTP. Fixes bug 10849;
+      bugfix on 0.2.1.1-alpha.
+
+  o Minor bugfixes (controller, backport from 0.2.5.4-alpha):
+    - Avoid sending a garbage value to the controller when a circuit is
+      cannibalized. Fixes bug 11519; bugfix on 0.2.3.11-alpha.
+
+  o Minor bugfixes (exit relay, backport from 0.2.5.4-alpha):
+    - Stop leaking memory when we successfully resolve a PTR record.
+      Fixes bug 11437; bugfix on 0.2.4.7-alpha.
+
+  o Minor bugfixes (bridge client, backport from 0.2.5.4-alpha):
+    - Avoid 60-second delays in the bootstrapping process when Tor is
+      launching for a second time while using bridges. Fixes bug 9229;
+      bugfix on 0.2.0.3-alpha.
+
+  o Minor bugfixes (relays and bridges, backport from 0.2.5.4-alpha):
+    - Give the correct URL in the warning message when trying to run a
+      relay on an ancient version of Windows. Fixes bug 9393.
+
+  o Minor bugfixes (compilation):
+    - Fix a compilation error when compiling with --disable-curve25519.
+      Fixes bug 9700; bugfix on 0.2.4.17-rc.
+
+  o Minor bugfixes:
+    - Downgrade the warning severity for the the "md was still
+      referenced 1 node(s)" warning. Tor 0.2.5.4-alpha has better code
+      for trying to diagnose this bug, and the current warning in
+      earlier versions of tor achieves nothing useful. Addresses warning
+      from bug 7164.
+
+  o Minor features (log verbosity, backport from 0.2.5.4-alpha):
+    - When we run out of usable circuit IDs on a channel, log only one
+      warning for the whole channel, and describe how many circuits
+      there were on the channel. Fixes part of ticket 11553.
+
+  o Minor features (security, backport from 0.2.5.4-alpha):
+    - Decrease the lower limit of MaxMemInCellQueues to 256 MBytes (but
+      leave the default at 8GBytes), to better support Raspberry Pi
+      users. Fixes bug 9686; bugfix on 0.2.4.14-alpha.
+
+  o Documentation (backport from 0.2.5.4-alpha):
+    - Correctly document that we search for a system torrc file before
+      looking in ~/.torrc. Fixes documentation side of 9213; bugfix on
+      0.2.3.18-rc.
+
+
 Changes in version 0.2.5.4-alpha - 2014-04-25
   Tor 0.2.5.4-alpha includes several security and performance
   improvements for clients and relays, including blacklisting authority
