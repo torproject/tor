@@ -537,3 +537,7 @@ changelog to tor-talk or tor-announce.
   (We might be moving to faster announcements, but don't announce until
   the website is at least updated.)
 
+13) If it's a stable release, bump the version number in the maint-x.y.z
+    branch to "newversion-dev", and do a "merge -s ours" merge to avoid
+    taking that change into master.
+
