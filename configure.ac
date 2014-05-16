@@ -26,7 +26,7 @@ CPPFLAGS="$CPPFLAGS -I\${top_srcdir}/src/common"
 AC_ARG_ENABLE(buf-freelists,
    AS_HELP_STRING(--enable-buf-freelists, enable freelists for buffer RAM))
 AC_ARG_ENABLE(mempools,
-   AS_HELP_STRING(--disable-mempools, disable mempools for relay cells))
+   AS_HELP_STRING(--enable-mempools, enable mempools for relay cells))
 AC_ARG_ENABLE(openbsd-malloc,
    AS_HELP_STRING(--enable-openbsd-malloc, Use malloc code from openbsd.  Linux only))
 AC_ARG_ENABLE(instrument-downloads,
@@ -61,8 +61,8 @@ if test x$enable_buf_freelists = xyes; then
             [Defined if we try to use freelists for buffer RAM chunks])
 fi
 
-AM_CONDITIONAL(USE_MEMPOOLS, test x$enable_mempools != xno)
-if test x$enable_mempools != xno; then
+AM_CONDITIONAL(USE_MEMPOOLS, test x$enable_mempools = xyes)
+if test x$enable_mempools = xyes; then
   AC_DEFINE(ENABLE_MEMPOOLS, 1,
             [Defined if we try to use mempools for cells being relayed])
 fi
