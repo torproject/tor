@@ -1003,6 +1003,8 @@ run_connection_housekeeping(int i, time_t now)
   connection_t *conn = smartlist_get(connection_array, i);
   const or_options_t *options = get_options();
   or_connection_t *or_conn;
+  channel_t *chan = NULL;
+  int have_any_circuits;
   int past_keepalive =
     now >= conn->timestamp_lastwritten + options->KeepalivePeriod;
 
@@ -1050,8 +1052,19 @@ run_connection_housekeeping(int i, time_t now)
   tor_assert(conn->outbuf);
 #endif
 
+  chan = TLS_CHAN_TO_BASE(or_conn->chan);
+  tor_assert(chan);
+
+
+  if (channel_num_circuits(chan) != 0) {
+    have_any_circuits = 1;
+    chan->timestamp_last_had_circuits = now;
+  } else {
+    have_any_circuits = 0;
+  }
+
   if (channel_is_bad_for_new_circs(TLS_CHAN_TO_BASE(or_conn->chan)) &&
-      !connection_or_get_num_circuits(or_conn)) {
+      ! have_any_circuits) {
     /* It's bad for new circuits, and has no unmarked circuits on it:
      * mark it now. */
     log_info(LD_OR,
@@ -1070,19 +1083,21 @@ run_connection_housekeeping(int i, time_t now)
       connection_or_close_normally(TO_OR_CONN(conn), 0);
     }
   } else if (we_are_hibernating() &&
-             !connection_or_get_num_circuits(or_conn) &&
+             ! have_any_circuits &&
              !connection_get_outbuf_len(conn)) {
     /* We're hibernating, there's no circuits, and nothing to flush.*/
     log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
              "[Hibernating or exiting].",
              (int)conn->s,conn->address, conn->port);
     connection_or_close_normally(TO_OR_CONN(conn), 1);
-  } else if (!connection_or_get_num_circuits(or_conn) &&
-             now >= or_conn->timestamp_last_added_nonpadding +
-                             or_conn->idle_timeout) {
+  } else if (!have_any_circuits &&
+             now - or_conn->idle_timeout >= chan->timestamp_last_had_circuits) {
     log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
-             "[idle %d].", (int)conn->s,conn->address, conn->port,
-             (int)(now - or_conn->timestamp_last_added_nonpadding));
+             "[no circuits for %d; timeout %d; %scanonical].",
+             (int)conn->s, conn->address, conn->port,
+             (int)(now - chan->timestamp_last_had_circuits),
+             or_conn->idle_timeout,
+             or_conn->is_canonical ? "" : "non");
     connection_or_close_normally(TO_OR_CONN(conn), 0);
   } else if (
       now >= or_conn->timestamp_lastempty + options->KeepalivePeriod*10 &&

@@ -1929,9 +1929,6 @@ connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
 
   if (conn->base_.state == OR_CONN_STATE_OR_HANDSHAKING_V3)
     or_handshake_state_record_cell(conn, conn->handshake_state, cell, 0);
-
-  if (cell->command != CELL_PADDING)
-    conn->timestamp_last_added_nonpadding = approx_time();
 }
 
 /** Pack a variable-length <b>cell</b> into wire-format, and write it onto
@@ -1952,8 +1949,6 @@ connection_or_write_var_cell_to_buf(const var_cell_t *cell,
                           cell->payload_len, TO_CONN(conn));
   if (conn->base_.state == OR_CONN_STATE_OR_HANDSHAKING_V3)
     or_handshake_state_record_var_cell(conn, conn->handshake_state, cell, 0);
-  if (cell->command != CELL_PADDING)
-    conn->timestamp_last_added_nonpadding = approx_time();
 
   /* Touch the channel's active timestamp if there is one */
   if (conn->chan)

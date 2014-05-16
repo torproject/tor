@@ -249,8 +249,6 @@ dir_connection_new(int socket_family)
 /** Allocate and return a new or_connection_t, initialized as by
  * connection_init().
  *
- * Set timestamp_last_added_nonpadding to now.
- *
  * Assign a pseudorandom next_circ_id between 0 and 2**15.
  *
  * Initialize active_circuit_pqueue.
@@ -263,8 +261,6 @@ or_connection_new(int socket_family)
   or_connection_t *or_conn = tor_malloc_zero(sizeof(or_connection_t));
   time_t now = time(NULL);
   connection_init(now, TO_CONN(or_conn), CONN_TYPE_OR, socket_family);
-
-  or_conn->timestamp_last_added_nonpadding = time(NULL);
 
   connection_or_set_canonical(or_conn, 0);
 

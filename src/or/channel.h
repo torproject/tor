@@ -187,8 +187,10 @@ struct channel_s {
   time_t timestamp_recv; /* Cell received from lower layer */
   time_t timestamp_xmit; /* Cell sent to lower layer */
 
-  /* Timestamp for relay.c */
-  time_t timestamp_last_added_nonpadding;
+  /** Timestamp for run_connection_housekeeping(). We update this once a
+   * second when we run housekeeping and find a circuit on this channel, and
+   * whenever we add a circuit to the channel. */
+  time_t timestamp_last_had_circuits;
 
   /** Unique ID for measuring direct network status requests;vtunneled ones
    * come over a circuit_t, which has a dirreq_id field as well, but is a

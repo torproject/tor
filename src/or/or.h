@@ -1432,8 +1432,6 @@ typedef struct or_connection_t {
                                           * up, state information to do so. */
 
   time_t timestamp_lastempty; /**< When was the outbuf last completely empty?*/
-  time_t timestamp_last_added_nonpadding; /** When did we last add a
-                                           * non-padding cell to the outbuf? */
 
   /* bandwidth* and *_bucket only used by ORs in OPEN state: */
   int bandwidthrate; /**< Bytes/s added to the bucket. (OPEN ORs only.) */
