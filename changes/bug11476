@@ -1,0 +1,5 @@
+  o Bugfixes:
+    - Add configure options controlling allocator tricks like mempools and
+      freelists, and turn them off by default; on most platforms malloc is
+      reasonable enough for this not to be necessary, and a similar feature
+      in OpenSSL exacerbated Heartbleed.  Fixes bug #11476.
