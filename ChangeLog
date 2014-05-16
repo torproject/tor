@@ -1,4 +1,4 @@
-Changes in version 0.2.4.22 - 2014-05-1?
+Changes in version 0.2.4.22 - 2014-05-16
   Tor 0.2.4.22 backports numerous high-priority fixes from the Tor 0.2.5
   alpha release series. These include blocking all authority signing
   keys that may have been affected by the OpenSSL "heartbleed" bug,
