@@ -1267,7 +1267,7 @@ router_perform_bandwidth_test(int num_circs, time_t now)
 }
 
 /** Return true iff our network is in some sense disabled: either we're
- * hibernating, entering hibernation, or */
+ * hibernating, entering hibernation, or [XXX or what?] */
 int
 net_is_disabled(void)
 {
