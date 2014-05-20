@@ -1,0 +1,4 @@
+  o Minor bugfixes (linux syscall sandbox):
+    - Avoid crash when running with sandboxing enabled and
+      DirReqStatistics not disabled. Fixes bug 12035; bugfix on
+      0.2.5.1-alpha.
