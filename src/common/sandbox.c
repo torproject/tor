@@ -204,6 +204,7 @@ sb_rt_sigaction(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   return rc;
 }
 
+#if 0
 /**
  * Function responsible for setting up the execve syscall for
  * the seccomp filter sandbox.
@@ -232,6 +233,7 @@ sb_execve(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 
   return 0;
 }
+#endif
 
 /**
  * Function responsible for setting up the time syscall for
@@ -856,7 +858,9 @@ sb_stat64(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 static sandbox_filter_func_t filter_func[] = {
     sb_rt_sigaction,
     sb_rt_sigprocmask,
+#if 0
     sb_execve,
+#endif
     sb_time,
     sb_accept4,
 #ifdef __NR_mmap2
@@ -1240,6 +1244,7 @@ sandbox_cfg_allow_openat_filename_array(sandbox_cfg_t **cfg, ...)
   return 0;
 }
 
+#if 0
 int
 sandbox_cfg_allow_execve(sandbox_cfg_t **cfg, const char *com)
 {
@@ -1279,6 +1284,7 @@ sandbox_cfg_allow_execve_array(sandbox_cfg_t **cfg, ...)
   va_end(ap);
   return 0;
 }
+#endif
 
 int
 sandbox_getaddrinfo(const char *name, const char *servname,
@@ -1659,6 +1665,7 @@ sandbox_cfg_allow_openat_filename_array(sandbox_cfg_t **cfg, ...)
   return 0;
 }
 
+#if 0
 int
 sandbox_cfg_allow_execve(sandbox_cfg_t **cfg, const char *com)
 {
@@ -1672,6 +1679,7 @@ sandbox_cfg_allow_execve_array(sandbox_cfg_t **cfg, ...)
   (void)cfg;
   return 0;
 }
+#endif
 
 int
 sandbox_cfg_allow_stat_filename(sandbox_cfg_t **cfg, char *file)

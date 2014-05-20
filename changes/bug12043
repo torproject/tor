@@ -1,0 +1,4 @@
+  o Minor bugfixes (linux syscall sandboxing):
+    - Do not allow options which would require us to call exec to be
+      enabled along with the seccomp2 sandbox: they will inevitably
+      crash. Fix for bug 12043; bugfix on 0.2.5.1-alpha.

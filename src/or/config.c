@@ -536,9 +536,11 @@ static int options_transition_affects_descriptor(
       const or_options_t *old_options, const or_options_t *new_options);
 static int check_nickname_list(char **lst, const char *name, char **msg);
 
-static int parse_client_transport_line(const char *line, int validate_only);
+static int parse_client_transport_line(const or_options_t *options,
+                                       const char *line, int validate_only);
 
-static int parse_server_transport_line(const char *line, int validate_only);
+static int parse_server_transport_line(const or_options_t *options,
+                                       const char *line, int validate_only);
 static char *get_bindaddr_from_transport_listen_line(const char *line,
                                                      const char *transport);
 static int parse_dir_authority_line(const char *line,
@@ -1426,7 +1428,7 @@ options_act(const or_options_t *old_options)
   pt_prepare_proxy_list_for_config_read();
   if (options->ClientTransportPlugin) {
     for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
-      if (parse_client_transport_line(cl->value, 0)<0) {
+      if (parse_client_transport_line(options, cl->value, 0)<0) {
         log_warn(LD_BUG,
                  "Previously validated ClientTransportPlugin line "
                  "could not be added!");
@@ -1437,7 +1439,7 @@ options_act(const or_options_t *old_options)
 
   if (options->ServerTransportPlugin && server_mode(options)) {
     for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
-      if (parse_server_transport_line(cl->value, 0)<0) {
+      if (parse_server_transport_line(options, cl->value, 0)<0) {
         log_warn(LD_BUG,
                  "Previously validated ServerTransportPlugin line "
                  "could not be added!");
@@ -3029,6 +3031,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->KeepalivePeriod < 1)
     REJECT("KeepalivePeriod option must be positive.");
 
+  if (options->PortForwarding && options->Sandbox) {
+    REJECT("PortForwarding is not compatible with Sandbox; at most one can "
+           "be set");
+  }
+
   if (ensure_bandwidth_cap(&options->BandwidthRate,
                            "BandwidthRate", msg) < 0)
     return -1;
@@ -3284,13 +3291,13 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
-    if (parse_client_transport_line(cl->value, 1)<0)
-      REJECT("Transport line did not parse. See logs for details.");
+    if (parse_client_transport_line(options, cl->value, 1)<0)
+      REJECT("Invalid client transport line. See logs for details.");
   }
 
   for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
-    if (parse_server_transport_line(cl->value, 1)<0)
-      REJECT("Server transport line did not parse. See logs for details.");
+    if (parse_server_transport_line(options, cl->value, 1)<0)
+      REJECT("Invalid server transport line. See logs for details.");
   }
 
   if (options->ServerTransportPlugin && !server_mode(options)) {
@@ -4734,7 +4741,8 @@ parse_bridge_line(const char *line)
  * our internal transport list.
  * - If it's a managed proxy line, launch the managed proxy. */
 static int
-parse_client_transport_line(const char *line, int validate_only)
+parse_client_transport_line(const or_options_t *options,
+                            const char *line, int validate_only)
 {
   smartlist_t *items = NULL;
   int r;
@@ -4798,6 +4806,12 @@ parse_client_transport_line(const char *line, int validate_only)
   } else {
     log_warn(LD_CONFIG, "Strange ClientTransportPlugin field '%s'.",
              field2);
+    goto err;
+  }
+
+  if (is_managed && options->Sandbox) {
+    log_warn(LD_CONFIG, "Managed proxies are not compatible with Sandbox mode."
+             "(ClientTransportPlugin line was %s)", escaped(line));
     goto err;
   }
 
@@ -5027,7 +5041,8 @@ get_options_for_server_transport(const char *transport)
  * If <b>validate_only</b> is 0, the line is well-formed, and it's a
  * managed proxy line, launch the managed proxy. */
 static int
-parse_server_transport_line(const char *line, int validate_only)
+parse_server_transport_line(const or_options_t *options,
+                            const char *line, int validate_only)
 {
   smartlist_t *items = NULL;
   int r;
@@ -5079,6 +5094,12 @@ parse_server_transport_line(const char *line, int validate_only)
     is_managed=0;
   } else {
     log_warn(LD_CONFIG, "Strange ServerTransportPlugin type '%s'", type);
+    goto err;
+  }
+
+  if (is_managed && options->Sandbox) {
+    log_warn(LD_CONFIG, "Managed proxies are not compatible with Sandbox mode."
+             "(ServerTransportPlugin line was %s)", escaped(line));
     goto err;
   }
 
