@@ -3747,6 +3747,11 @@ options_transition_allowed(const or_options_t *old,
                         "Sandbox is active");
       return -1;
     }
+    if (! opt_streq(old->DirPortFrontPage, new_val->DirPortFrontPage)) {
+      *msg = tor_strdup("Can't change DirPortFrontPage"
+                        " while Sandbox is active");
+      return -1;
+    }
   }
 
   return 0;

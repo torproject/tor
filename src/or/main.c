@@ -2848,6 +2848,11 @@ sandbox_init_filter(void)
         NULL, 0
     );
 
+    if (options->DirPortFrontPage) {
+      sandbox_cfg_allow_open_filename(&cfg,
+                                      tor_strdup(options->DirPortFrontPage));
+    }
+
     RENAME_SUFFIX("fingerprint", ".tmp");
     RENAME_SUFFIX2("keys", "secret_onion_key_ntor", ".tmp");
     RENAME_SUFFIX2("keys", "secret_id_key", ".tmp");

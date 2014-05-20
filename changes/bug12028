@@ -1,0 +1,5 @@
+  o Minor bugfixes (linux syscall sandbox):
+    - When running with DirPortFrontPage and Sandbox both enabled, reload
+      the DirPortFrontPage correctly when restarting. Fixes bug 12028;
+      bugfix on 0.2.5.1-alpha.
+
