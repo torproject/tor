@@ -539,5 +539,7 @@ changelog to tor-talk or tor-announce.
 
 13) If it's a stable release, bump the version number in the maint-x.y.z
     branch to "newversion-dev", and do a "merge -s ours" merge to avoid
-    taking that change into master.
+    taking that change into master.  Do a similar 'merge -s theirs'
+    merge to get the change (and only that change) into release.  (Some
+    of the build scripts require that maint merge cleanly into release.)
 
