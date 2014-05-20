@@ -156,6 +156,9 @@ void tor_log_err_sigsafe(const char *m, ...);
 int tor_log_get_sigsafe_err_fds(const int **out);
 void tor_log_update_sigsafe_err_fds(void);
 
+struct smartlist_t;
+void tor_log_get_logfile_names(struct smartlist_t *out);
+
 extern int log_global_min_severity_;
 
 #if defined(__GNUC__) || defined(RUNNING_DOXYGEN)

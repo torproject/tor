@@ -2822,6 +2822,15 @@ sandbox_init_filter(void)
       NULL, 0
   );
 
+  {
+    smartlist_t *logfiles = smartlist_new();
+    tor_log_get_logfile_names(logfiles);
+    SMARTLIST_FOREACH(logfiles, char *, logfile_name, {
+      sandbox_cfg_allow_open_filename(&cfg, logfile_name); /* steals reference */
+    });
+    smartlist_free(logfiles);
+  }
+
   // orport
   if (server_mode(get_options())) {
     sandbox_cfg_allow_open_filename_array(&cfg,

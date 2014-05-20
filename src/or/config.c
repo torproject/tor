@@ -1143,13 +1143,11 @@ options_act_reversible(const or_options_t *old_options, char **msg)
   if (!running_tor)
     goto commit;
 
-  if (!sandbox_is_active()) {
-    mark_logs_temp(); /* Close current logs once new logs are open. */
-    logs_marked = 1;
-    if (options_init_logs(options, 0)<0) { /* Configure the tor_log(s) */
-      *msg = tor_strdup("Failed to init Log options. See logs for details.");
-      goto rollback;
-    }
+  mark_logs_temp(); /* Close current logs once new logs are open. */
+  logs_marked = 1;
+  if (options_init_logs(options, 0)<0) { /* Configure the tor_log(s) */
+    *msg = tor_strdup("Failed to init Log options. See logs for details.");
+    goto rollback;
   }
 
  commit:

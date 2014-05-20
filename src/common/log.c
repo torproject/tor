@@ -562,6 +562,27 @@ tor_log_update_sigsafe_err_fds(void)
   UNLOCK_LOGS();
 }
 
+/** Add to <b>out</b> a copy of every currently configured log file name. Used
+ * to enable access to these filenames with the sandbox code. */
+void
+tor_log_get_logfile_names(smartlist_t *out)
+{
+  logfile_t *lf;
+  tor_assert(out);
+
+  LOCK_LOGS();
+
+  for (lf = logfiles; lf; lf = lf->next) {
+    if (lf->is_temporary || lf->is_syslog || lf->callback)
+      continue;
+    if (lf->filename == NULL)
+      continue;
+    smartlist_add(out, tor_strdup(lf->filename));
+  }
+
+  UNLOCK_LOGS();
+}
+
 /** Output a message to the log, prefixed with a function name <b>fn</b>. */
 #ifdef __GNUC__
 /** GCC-based implementation of the log_fn backend, used when we have
