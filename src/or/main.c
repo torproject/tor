@@ -2834,6 +2834,8 @@ sandbox_init_filter(void)
         get_datadir_fname2("keys", "secret_onion_key_ntor.old"),
         get_datadir_fname2("keys", "secret_onion_key.tmp"),
         get_datadir_fname2("keys", "secret_id_key.tmp"),
+        get_datadir_fname2("stats", "bridge-stats"),
+        get_datadir_fname2("stats", "bridge-stats.tmp"),
         get_datadir_fname("fingerprint"),
         get_datadir_fname("fingerprint.tmp"),
         get_datadir_fname("hashed-fingerprint"),
@@ -2850,6 +2852,7 @@ sandbox_init_filter(void)
     RENAME_SUFFIX2("keys", "secret_id_key.old", ".tmp");
     RENAME_SUFFIX2("keys", "secret_onion_key", ".tmp");
     RENAME_SUFFIX2("keys", "secret_onion_key.old", ".tmp");
+    RENAME_SUFFIX2("stats", "bridge_stats", ".tmp");
     RENAME_SUFFIX("hashed-fingerprint", ".tmp");
     RENAME_SUFFIX("router-stability", ".tmp");
 
@@ -2862,7 +2865,7 @@ sandbox_init_filter(void)
 
     sandbox_cfg_allow_stat_filename_array(&cfg,
         get_datadir_fname("keys"),
-        get_datadir_fname("stats/dirreq-stats"),
+        get_datadir_fname2("stats", "dirreq-stats"),
         NULL, 0
     );
   }
