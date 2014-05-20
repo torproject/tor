@@ -1,0 +1,4 @@
+  o Minor bugfixes (linux syscall sandbox):
+    - Prevent the sandbox from crashing on startup when run with the
+      --enable-expensive-hardening configuration option. Fixes bug
+      11477; bugfix on 0.2.5.4-alpha.

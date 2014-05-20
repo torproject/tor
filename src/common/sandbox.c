@@ -115,6 +115,7 @@ static int filter_nopar_gen[] = {
 #endif
     SCMP_SYS(getrlimit),
     SCMP_SYS(gettimeofday),
+    SCMP_SYS(gettid),
     SCMP_SYS(getuid),
 #ifdef __NR_getuid32
     SCMP_SYS(getuid32),
@@ -129,6 +130,7 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(munmap),
     SCMP_SYS(read),
     SCMP_SYS(rt_sigreturn),
+    SCMP_SYS(sched_getaffinity),
     SCMP_SYS(set_robust_list),
 #ifdef __NR_sigreturn
     SCMP_SYS(sigreturn),
