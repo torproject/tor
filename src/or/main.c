@@ -1231,7 +1231,8 @@ run_scheduled_events(time_t now)
       router_upload_dir_desc_to_dirservers(0);
   }
 
-  if (!options->DisableNetwork && time_to_try_getting_descriptors < now) {
+  if (!should_delay_dir_fetches(options, NULL) &&
+      time_to_try_getting_descriptors < now) {
     update_all_descriptor_downloads(now);
     update_extrainfo_downloads(now);
     if (router_have_minimum_dir_info())
@@ -1461,7 +1462,8 @@ run_scheduled_events(time_t now)
  * documents? */
 #define networkstatus_dl_check_interval(o) ((o)->TestingTorNetwork ? 1 : 60)
 
-  if (time_to_download_networkstatus < now && !options->DisableNetwork) {
+  if (!should_delay_dir_fetches(options, NULL) &&
+      time_to_download_networkstatus < now) {
     time_to_download_networkstatus =
       now + networkstatus_dl_check_interval(options);
     update_networkstatus_downloads(now);

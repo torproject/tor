@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+
+    - Avoid another 60-second delay when starting Tor in a
+      pluggable-transport-using configuration when we already have
+      cached descriptors for our bridges. Fixes bug 11965; bugfix on
+      0.2.3.6-alpha.
