@@ -2852,7 +2852,7 @@ sandbox_init_filter(void)
     RENAME_SUFFIX2("keys", "secret_id_key.old", ".tmp");
     RENAME_SUFFIX2("keys", "secret_onion_key", ".tmp");
     RENAME_SUFFIX2("keys", "secret_onion_key.old", ".tmp");
-    RENAME_SUFFIX2("stats", "bridge_stats", ".tmp");
+    RENAME_SUFFIX2("stats", "bridge-stats", ".tmp");
     RENAME_SUFFIX("hashed-fingerprint", ".tmp");
     RENAME_SUFFIX("router-stability", ".tmp");
 
