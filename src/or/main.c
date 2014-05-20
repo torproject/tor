@@ -2826,7 +2826,8 @@ sandbox_init_filter(void)
     smartlist_t *logfiles = smartlist_new();
     tor_log_get_logfile_names(logfiles);
     SMARTLIST_FOREACH(logfiles, char *, logfile_name, {
-      sandbox_cfg_allow_open_filename(&cfg, logfile_name); /* steals reference */
+      /* steals reference */
+      sandbox_cfg_allow_open_filename(&cfg, logfile_name);
     });
     smartlist_free(logfiles);
   }
