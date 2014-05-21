@@ -2854,6 +2854,14 @@ sandbox_init_filter(void)
         get_datadir_fname2("stats", "bridge-stats.tmp"),
         get_datadir_fname2("stats", "dirreq-stats"),
         get_datadir_fname2("stats", "dirreq-stats.tmp"),
+        get_datadir_fname2("stats", "entry-stats"),
+        get_datadir_fname2("stats", "entry-stats.tmp"),
+        get_datadir_fname2("stats", "exit-stats"),
+        get_datadir_fname2("stats", "exit-stats.tmp"),
+        get_datadir_fname2("stats", "buffer-stats"),
+        get_datadir_fname2("stats", "buffer-stats.tmp"),
+        get_datadir_fname2("stats", "conn-stats"),
+        get_datadir_fname2("stats", "conn-stats.tmp"),
         get_datadir_fname("fingerprint"),
         get_datadir_fname("fingerprint.tmp"),
         get_datadir_fname("hashed-fingerprint"),
@@ -2877,6 +2885,10 @@ sandbox_init_filter(void)
     RENAME_SUFFIX2("keys", "secret_onion_key.old", ".tmp");
     RENAME_SUFFIX2("stats", "bridge-stats", ".tmp");
     RENAME_SUFFIX2("stats", "dirreq-stats", ".tmp");
+    RENAME_SUFFIX2("stats", "entry-stats", ".tmp");
+    RENAME_SUFFIX2("stats", "exit-stats", ".tmp");
+    RENAME_SUFFIX2("stats", "buffer-stats", ".tmp");
+    RENAME_SUFFIX2("stats", "conn-stats", ".tmp");
     RENAME_SUFFIX("hashed-fingerprint", ".tmp");
     RENAME_SUFFIX("router-stability", ".tmp");
 
