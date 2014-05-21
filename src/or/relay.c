@@ -2268,6 +2268,22 @@ clean_cell_pool(void)
   mp_pool_clean(cell_pool, 0, 1);
 }
 
+#define relay_alloc_cell() \
+  mp_pool_get(cell_pool)
+#define relay_free_cell(cell) \
+  mp_pool_release(cell)
+
+#define RELAY_CELL_MEM_COST (sizeof(packed_cell_t) + MP_POOL_ITEM_OVERHEAD)
+
+#else /* !ENABLE_MEMPOOLS case */
+
+#define relay_alloc_cell() \
+  tor_malloc_zero(sizeof(packed_cell_t))
+#define relay_free_cell(cell) \
+  tor_free(cell)
+
+#define RELAY_CELL_MEM_COST (sizeof(packed_cell_t))
+
 #endif /* ENABLE_MEMPOOLS */
 
 /** Release storage held by <b>cell</b>. */
@@ -2275,11 +2291,7 @@ static INLINE void
 packed_cell_free_unchecked(packed_cell_t *cell)
 {
   --total_cells_allocated;
-#ifdef ENABLE_MEMPOOLS
-  mp_pool_release(cell);
-#else
-  tor_free(cell);
-#endif /* ENABLE_MEMPOOLS */
+  relay_free_cell(cell);
 }
 
 /** Allocate and return a new packed_cell_t. */
@@ -2287,11 +2299,7 @@ STATIC packed_cell_t *
 packed_cell_new(void)
 {
   ++total_cells_allocated;
-#ifdef ENABLE_MEMPOOLS
-  return mp_pool_get(cell_pool);
-#else
-  return tor_malloc(sizeof(packed_cell_t));
-#endif
+  return relay_alloc_cell();
 }
 
 /** Return a packed cell used outside by channel_t lower layer */
@@ -2402,11 +2410,7 @@ cell_queue_pop(cell_queue_t *queue)
 size_t
 packed_cell_mem_cost(void)
 {
-#ifdef ENABLE_MEMPOOLS
-  return sizeof(packed_cell_t) + MP_POOL_ITEM_OVERHEAD;
-#else
-  return sizeof(packed_cell_t);
-#endif /* ENABLE_MEMPOOLS */
+  return RELAY_CELL_MEM_COST;
 }
 
 /** DOCDOC */
