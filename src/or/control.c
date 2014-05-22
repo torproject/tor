@@ -160,7 +160,6 @@ static int write_stream_target_to_buf(entry_connection_t *conn, char *buf,
                                       size_t len);
 static void orconn_target_get_name(char *buf, size_t len,
                                    or_connection_t *conn);
-static char *get_cookie_file(void);
 
 /** Given a control event code for a message event, return the corresponding
  * log severity. */
@@ -2944,7 +2943,7 @@ handle_control_protocolinfo(control_connection_t *conn, uint32_t len,
   } else {
     const or_options_t *options = get_options();
     int cookies = options->CookieAuthentication;
-    char *cfile = get_cookie_file();
+    char *cfile = get_controller_cookie_file_name();
     char *abs_cfile;
     char *esc_cfile;
     char *methods;
@@ -4639,8 +4638,8 @@ control_event_conf_changed(const smartlist_t *elements)
 
 /** Helper: Return a newly allocated string containing a path to the
  * file where we store our authentication cookie. */
-static char *
-get_cookie_file(void)
+char *
+get_controller_cookie_file_name(void)
 {
   const or_options_t *options = get_options();
   if (options->CookieAuthFile && strlen(options->CookieAuthFile)) {
@@ -4664,7 +4663,7 @@ init_control_cookie_authentication(int enabled)
     return 0;
   }
 
-  fname = get_cookie_file();
+  fname = get_controller_cookie_file_name();
   retval = init_cookie_authentication(fname, "", /* no header */
                                       AUTHENTICATION_COOKIE_LEN,
                                       &authentication_cookie,

@@ -2838,6 +2838,16 @@ sandbox_init_filter(void)
     smartlist_free(logfiles);
   }
 
+  {
+    char *fname;
+    if ((fname = get_controller_cookie_file_name())) {
+      sandbox_cfg_allow_open_filename(&cfg, fname);
+    }
+    if ((fname = get_ext_or_auth_cookie_file_name())) {
+      sandbox_cfg_allow_open_filename(&cfg, fname);
+    }
+  }
+
   // orport
   if (server_mode(get_options())) {
     sandbox_cfg_allow_open_filename_array(&cfg,
@@ -2862,6 +2872,7 @@ sandbox_init_filter(void)
         get_datadir_fname2("stats", "buffer-stats.tmp"),
         get_datadir_fname2("stats", "conn-stats"),
         get_datadir_fname2("stats", "conn-stats.tmp"),
+        get_datadir_fname("approved-routers"),
         get_datadir_fname("fingerprint"),
         get_datadir_fname("fingerprint.tmp"),
         get_datadir_fname("hashed-fingerprint"),

@@ -3750,6 +3750,16 @@ options_transition_allowed(const or_options_t *old,
                         " while Sandbox is active");
       return -1;
     }
+    if (! opt_streq(old->CookieAuthFile, new_val->CookieAuthFile)) {
+      *msg = tor_strdup("Can't change CookieAuthFile while Sandbox is active");
+      return -1;
+    }
+    if (! opt_streq(old->ExtORPortCookieAuthFile,
+                    new_val->ExtORPortCookieAuthFile)) {
+      *msg = tor_strdup("Can't change ExtORPortCookieAuthFile"
+                        " while Sandbox is active");
+      return -1;
+    }
   }
 
   return 0;
