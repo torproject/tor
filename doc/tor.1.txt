@@ -2364,27 +2364,27 @@ __DataDirectory__**/router-stability**::
     router mean-time-between-failures so that authorities have a good idea of
     how to set their Stable flags.
 
-__DataDirectory__**/status/dirreq-stats**::
+__DataDirectory__**/stats/dirreq-stats**::
     Only used by directory caches and authorities. This file is used to
     collect directory request statistics.
 
-__DataDirectory__**/status/entry-stats**::
+__DataDirectory__**/stats/entry-stats**::
     Only used by servers. This file is used to collect incoming connection
     statistics by Tor entry nodes.
 
-__DataDirectory__**/status/bridge-stats**::
+__DataDirectory__**/stats/bridge-stats**::
     Only used by servers. This file is used to collect incoming connection
     statistics by Tor bridges.
 
-__DataDirectory__**/status/exit-stats**::
+__DataDirectory__**/stats/exit-stats**::
     Only used by servers. This file is used to collect outgoing connection
     statistics by Tor exit routers.
 
-__DataDirectory__**/status/buffer-stats**::
+__DataDirectory__**/stats/buffer-stats**::
     Only used by servers. This file is used to collect buffer usage
     history.
 
-__DataDirectory__**/status/conn-stats**::
+__DataDirectory__**/stats/conn-stats**::
     Only used by servers. This file is used to collect approximate connection
     history (number of active connections over time).
 
