@@ -13,7 +13,9 @@
 #include "compat_libevent.h"
 #include "connection.h"
 #include "config.h"
+#ifdef ENABLE_MEMPOOLS
 #include "mempool.h"
+#endif
 #include "relay.h"
 #include "test.h"
 
@@ -131,7 +133,10 @@ test_oom_circbuf(void *arg)
   (void) arg;
 
   MOCK(circuit_mark_for_close_, circuit_mark_for_close_dummy_);
+
+#ifdef ENABLE_MEMPOOLS
   init_cell_pool();
+#endif /* ENABLE_MEMPOOLS */
 
   /* Far too low for real life. */
   options->MaxMemInQueues = 256*packed_cell_mem_cost();
@@ -150,8 +155,13 @@ test_oom_circbuf(void *arg)
   tor_gettimeofday_cache_set(&tv);
   c2 = dummy_or_circuit_new(20, 20);
 
+#ifdef ENABLE_MEMPOOLS
   tt_int_op(packed_cell_mem_cost(), ==,
             sizeof(packed_cell_t) + MP_POOL_ITEM_OVERHEAD);
+#else
+  tt_int_op(packed_cell_mem_cost(), ==,
+            sizeof(packed_cell_t));
+#endif /* ENABLE_MEMPOOLS */
   tt_int_op(cell_queues_get_total_allocation(), ==,
             packed_cell_mem_cost() * 70);
   tt_int_op(cell_queues_check_size(), ==, 0); /* We are still not OOM */
@@ -222,7 +232,10 @@ test_oom_streambuf(void *arg)
   (void) arg;
 
   MOCK(circuit_mark_for_close_, circuit_mark_for_close_dummy_);
+
+#ifdef ENABLE_MEMPOOLS
   init_cell_pool();
+#endif /* ENABLE_MEMPOOLS */
 
   /* Far too low for real life. */
   options->MaxMemInQueues = 81*packed_cell_mem_cost() + 4096 * 34;

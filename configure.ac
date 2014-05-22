@@ -24,7 +24,9 @@ CPPFLAGS="$CPPFLAGS -I\${top_srcdir}/src/common"
 
 #XXXX020 We should make these enabled or not, before 0.2.0.x-final
 AC_ARG_ENABLE(buf-freelists,
-   AS_HELP_STRING(--disable-buf-freelists, disable freelists for buffer RAM))
+   AS_HELP_STRING(--enable-buf-freelists, enable freelists for buffer RAM))
+AC_ARG_ENABLE(mempools,
+   AS_HELP_STRING(--enable-mempools, enable mempools for relay cells))
 AC_ARG_ENABLE(openbsd-malloc,
    AS_HELP_STRING(--enable-openbsd-malloc, Use malloc code from openbsd.  Linux only))
 AC_ARG_ENABLE(instrument-downloads,
@@ -54,10 +56,17 @@ if test "$enable_static_tor" = "yes"; then
   CFLAGS="$CFLAGS -static"
 fi
 
-if test x$enable_buf_freelists != xno; then
+if test x$enable_buf_freelists = xyes; then
   AC_DEFINE(ENABLE_BUF_FREELISTS, 1,
             [Defined if we try to use freelists for buffer RAM chunks])
 fi
+
+AM_CONDITIONAL(USE_MEMPOOLS, test x$enable_mempools = xyes)
+if test x$enable_mempools = xyes; then
+  AC_DEFINE(ENABLE_MEMPOOLS, 1,
+            [Defined if we try to use mempools for cells being relayed])
+fi
+
 AM_CONDITIONAL(USE_OPENBSD_MALLOC, test x$enable_openbsd_malloc = xyes)
 if test x$enable_instrument_downloads = xyes; then
   AC_DEFINE(INSTRUMENT_DOWNLOADS, 1,
