@@ -1,0 +1,4 @@
+  o Minor bugfixes (seccomp sandbox):
+    - Avoid warnings when running with sandboxing and node statistics
+      enabled at the same time.
+      Fixes part of 12064; bugfix on 0.2.5.1-alpha. Patch from Michael Wolf.
