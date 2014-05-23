@@ -71,6 +71,7 @@ struct rend_intro_cell_s {
 int num_rend_services(void);
 int rend_config_services(const or_options_t *options, int validate_only);
 int rend_service_load_all_keys(void);
+void rend_services_add_filenames_to_list(smartlist_t *lst);
 void rend_services_introduce(void);
 void rend_consider_services_upload(time_t now);
 void rend_hsdir_routers_changed(void);
