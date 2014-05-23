@@ -2833,12 +2833,31 @@ sandbox_init_filter(void)
   {
     smartlist_t *files = smartlist_new();
     tor_log_get_logfile_names(files);
-    rend_services_add_filenames_to_list(files);
     SMARTLIST_FOREACH(files, char *, file_name, {
       /* steals reference */
       sandbox_cfg_allow_open_filename(&cfg, file_name);
     });
     smartlist_free(files);
+  }
+
+  {
+    smartlist_t *files = smartlist_new();
+    smartlist_t *dirs = smartlist_new();
+    rend_services_add_filenames_to_lists(files, dirs);
+    SMARTLIST_FOREACH(files, char *, file_name, {
+      char *tmp_name = NULL;
+      tor_asprintf(&tmp_name, "%s.tmp", file_name);
+      sandbox_cfg_allow_rename(&cfg,
+                               tor_strdup(tmp_name), tor_strdup(file_name));
+      /* steals references */
+      sandbox_cfg_allow_open_filename_array(&cfg, file_name, tmp_name, NULL);
+    });
+    SMARTLIST_FOREACH(dirs, char *, dir, {
+      /* steals reference */
+      sandbox_cfg_allow_stat_filename(&cfg, dir);
+    });
+    smartlist_free(files);
+    smartlist_free(dirs);
   }
 
   {
