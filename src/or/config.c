@@ -3722,10 +3722,22 @@ options_transition_allowed(const or_options_t *old,
   }
 
   if (sandbox_is_active()) {
-    if (! opt_streq(old->PidFile, new_val->PidFile)) {
-      *msg = tor_strdup("Can't change PidFile while Sandbox is active");
-      return -1;
-    }
+#define SB_NOCHANGE_STR(opt)                                            \
+    do {                                                                \
+      if (! opt_streq(old->opt, new_val->opt)) {                        \
+        *msg = tor_strdup("Can't change " #opt " while Sandbox is active"); \
+        return -1;                                                      \
+      }                                                                 \
+    } while (0)
+
+    SB_NOCHANGE_STR(PidFile);
+    SB_NOCHANGE_STR(ServerDNSResolvConfFile);
+    SB_NOCHANGE_STR(DirPortFrontPage);
+    SB_NOCHANGE_STR(CookieAuthFile);
+    SB_NOCHANGE_STR(ExtORPortCookieAuthFile);
+
+#undef SB_NOCHANGE_STR
+
     if (! config_lines_eq(old->Logs, new_val->Logs)) {
       *msg = tor_strdup("Can't change Logs while Sandbox is active");
       return -1;
@@ -3734,30 +3746,9 @@ options_transition_allowed(const or_options_t *old,
       *msg = tor_strdup("Can't change ConnLimit while Sandbox is active");
       return -1;
     }
-    if (! opt_streq(old->ServerDNSResolvConfFile,
-                    new_val->ServerDNSResolvConfFile)) {
-      *msg = tor_strdup("Can't change ServerDNSResolvConfFile"
-                        " while Sandbox is active");
-      return -1;
-    }
     if (server_mode(old) != server_mode(new_val)) {
       *msg = tor_strdup("Can't start/stop being a server while "
                         "Sandbox is active");
-      return -1;
-    }
-    if (! opt_streq(old->DirPortFrontPage, new_val->DirPortFrontPage)) {
-      *msg = tor_strdup("Can't change DirPortFrontPage"
-                        " while Sandbox is active");
-      return -1;
-    }
-    if (! opt_streq(old->CookieAuthFile, new_val->CookieAuthFile)) {
-      *msg = tor_strdup("Can't change CookieAuthFile while Sandbox is active");
-      return -1;
-    }
-    if (! opt_streq(old->ExtORPortCookieAuthFile,
-                    new_val->ExtORPortCookieAuthFile)) {
-      *msg = tor_strdup("Can't change ExtORPortCookieAuthFile"
-                        " while Sandbox is active");
       return -1;
     }
   }
