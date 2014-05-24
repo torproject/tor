@@ -8,6 +8,18 @@
  * \brief Functions to use and manipulate the tor_addr_t structure.
  **/
 
+#define ADDRESS_PRIVATE
+
+#ifdef _WIN32
+/* For access to structs needed by GetAdaptersAddresses */
+#undef _WIN32_WINNT
+#define _WIN32_WINNT 0x0501
+#include <process.h>
+#include <winsock2.h>
+#include <windows.h>
+#include <iphlpapi.h>
+#endif
+
 #include "orconfig.h"
 #include "compat.h"
 #include "util.h"
@@ -15,16 +27,6 @@
 #include "torlog.h"
 #include "container.h"
 #include "sandbox.h"
-
-#ifdef _WIN32
-#include <process.h>
-#include <windows.h>
-#include <winsock2.h>
-/* For access to structs needed by GetAdaptersAddresses */
-#undef _WIN32_WINNT
-#define _WIN32_WINNT 0x0501
-#include <iphlpapi.h>
-#endif
 
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
@@ -122,7 +124,7 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
 }
 
 /** Set the tor_addr_t in <b>a</b> to contain the socket address contained in
- * <b>sa</b>. */
+ * <b>sa</b>. Return 0 on success and -1 on failure. */
 int
 tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa,
                        uint16_t *port_out)
@@ -1192,26 +1194,17 @@ typedef ULONG (WINAPI *GetAdaptersAddresses_fn_t)(
               ULONG, ULONG, PVOID, PIP_ADAPTER_ADDRESSES, PULONG);
 #endif
 
-/** Try to ask our network interfaces what addresses they are bound to.
- * Return a new smartlist of tor_addr_t on success, and NULL on failure.
- * (An empty smartlist indicates that we successfully learned that we have no
- * addresses.)  Log failure messages at <b>severity</b>. */
-static smartlist_t *
-get_interface_addresses_raw(int severity)
+#ifdef HAVE_IFADDRS_TO_SMARTLIST
+/*
+ * Convert a linked list consisting of <b>ifaddrs</b> structures
+ * into smartlist of <b>tor_addr_t</b> structures.
+ */
+STATIC smartlist_t *
+ifaddrs_to_smartlist(const struct ifaddrs *ifa)
 {
-#if defined(HAVE_GETIFADDRS)
-  /* Most free Unixy systems provide getifaddrs, which gives us a linked list
-   * of struct ifaddrs. */
-  struct ifaddrs *ifa = NULL;
+  smartlist_t *result = smartlist_new();
   const struct ifaddrs *i;
-  smartlist_t *result;
-  if (getifaddrs(&ifa) < 0) {
-    log_fn(severity, LD_NET, "Unable to call getifaddrs(): %s",
-           strerror(errno));
-    return NULL;
-  }
 
-  result = smartlist_new();
   for (i = ifa; i; i = i->ifa_next) {
     tor_addr_t tmp;
     if ((i->ifa_flags & (IFF_UP | IFF_RUNNING)) != (IFF_UP | IFF_RUNNING))
@@ -1226,9 +1219,72 @@ get_interface_addresses_raw(int severity)
     smartlist_add(result, tor_memdup(&tmp, sizeof(tmp)));
   }
 
-  freeifaddrs(ifa);
   return result;
-#elif defined(_WIN32)
+}
+
+/** Use getiffaddrs() function to get list of current machine
+ * network interface addresses. Represent the result by smartlist of
+ * <b>tor_addr_t</b> structures.
+ */
+STATIC smartlist_t *
+get_interface_addresses_ifaddrs(int severity)
+{
+
+  /* Most free Unixy systems provide getifaddrs, which gives us a linked list
+   * of struct ifaddrs. */
+  struct ifaddrs *ifa = NULL;
+  smartlist_t *result;
+  if (getifaddrs(&ifa) < 0) {
+    log_fn(severity, LD_NET, "Unable to call getifaddrs(): %s",
+           strerror(errno));
+    return NULL;
+  }
+
+  result = ifaddrs_to_smartlist(ifa);
+
+  freeifaddrs(ifa);
+
+  return result;
+}
+#endif
+
+#ifdef HAVE_IP_ADAPTER_TO_SMARTLIST
+
+/** Convert a Windows-specific <b>addresses</b> linked list into smartlist
+ * of <b>tor_addr_t</b> structures.
+ */
+
+STATIC smartlist_t *
+ip_adapter_addresses_to_smartlist(const IP_ADAPTER_ADDRESSES *addresses)
+{
+  smartlist_t *result = smartlist_new();
+  const IP_ADAPTER_ADDRESSES *address;
+
+  for (address = addresses; address; address = address->Next) {
+    const IP_ADAPTER_UNICAST_ADDRESS *a;
+    for (a = address->FirstUnicastAddress; a; a = a->Next) {
+      /* Yes, it's a linked list inside a linked list */
+      const struct sockaddr *sa = a->Address.lpSockaddr;
+      tor_addr_t tmp;
+      if (sa->sa_family != AF_INET && sa->sa_family != AF_INET6)
+        continue;
+      if (tor_addr_from_sockaddr(&tmp, sa, NULL) < 0)
+        continue;
+      smartlist_add(result, tor_memdup(&tmp, sizeof(tmp)));
+    }
+  }
+
+  return result;
+}
+
+/** Windows only: use GetAdaptersInfo() function to retrieve network interface
+ * addresses of current machine and return them to caller as smartlist of
+ * <b>tor_addr_t</b>  structures.
+ */
+STATIC smartlist_t *
+get_interface_addresses_win32(int severity)
+{
+
   /* Windows XP began to provide GetAdaptersAddresses. Windows 2000 had a
      "GetAdaptersInfo", but that's deprecated; let's just try
      GetAdaptersAddresses and fall back to connect+getsockname.
@@ -1237,7 +1293,7 @@ get_interface_addresses_raw(int severity)
   smartlist_t *result = NULL;
   GetAdaptersAddresses_fn_t fn;
   ULONG size, res;
-  IP_ADAPTER_ADDRESSES *addresses = NULL, *address;
+  IP_ADAPTER_ADDRESSES *addresses = NULL;
 
   (void) severity;
 
@@ -1272,63 +1328,106 @@ get_interface_addresses_raw(int severity)
     goto done;
   }
 
-  result = smartlist_new();
-  for (address = addresses; address; address = address->Next) {
-    IP_ADAPTER_UNICAST_ADDRESS *a;
-    for (a = address->FirstUnicastAddress; a; a = a->Next) {
-      /* Yes, it's a linked list inside a linked list */
-      struct sockaddr *sa = a->Address.lpSockaddr;
-      tor_addr_t tmp;
-      if (sa->sa_family != AF_INET && sa->sa_family != AF_INET6)
-        continue;
-      if (tor_addr_from_sockaddr(&tmp, sa, NULL) < 0)
-        continue;
-      smartlist_add(result, tor_memdup(&tmp, sizeof(tmp)));
-    }
-  }
+  result = ip_adapter_addresses_to_smartlist(addresses);
 
  done:
   if (lib)
     FreeLibrary(lib);
   tor_free(addresses);
   return result;
-#elif defined(SIOCGIFCONF) && defined(HAVE_IOCTL)
+}
+
+#endif
+
+#ifdef HAVE_IFCONF_TO_SMARTLIST
+
+/* This is defined on Mac OS X */
+#ifndef _SIZEOF_ADDR_IFREQ
+#define _SIZEOF_ADDR_IFREQ sizeof
+#endif
+
+/** Convert <b>*ifr</b>, an ifreq structure array of size <b>buflen</b>
+ * into smartlist of <b>tor_addr_t</b> structures.
+ */
+STATIC smartlist_t *
+ifreq_to_smartlist(const struct ifreq *ifr, size_t buflen)
+{
+  smartlist_t *result = smartlist_new();
+
+  struct ifreq *r = (struct ifreq *)ifr;
+
+  while ((char *)r < (char *)ifr+buflen) {
+    const struct sockaddr *sa = &r->ifr_addr;
+    tor_addr_t tmp;
+    int valid_sa_family = (sa->sa_family == AF_INET ||
+                           sa->sa_family == AF_INET6);
+
+    int conversion_success = (tor_addr_from_sockaddr(&tmp, sa, NULL) == 0);
+
+    if (valid_sa_family && conversion_success)
+      smartlist_add(result, tor_memdup(&tmp, sizeof(tmp)));
+
+    r = (struct ifreq *)((char *)r + _SIZEOF_ADDR_IFREQ(*r));
+  }
+
+  return result;
+}
+
+/** Use ioctl(.,SIOCGIFCONF,.) to get a list of current machine
+ * network interface addresses. Represent the result by smartlist of
+ * <b>tor_addr_t</b> structures.
+ */
+STATIC smartlist_t *
+get_interface_addresses_ioctl(int severity)
+{
   /* Some older unixy systems make us use ioctl(SIOCGIFCONF) */
   struct ifconf ifc;
-  int fd, i, sz, n;
+  int fd, sz;
+  void *databuf = NULL;
   smartlist_t *result = NULL;
+
   /* This interface, AFAICT, only supports AF_INET addresses */
   fd = socket(AF_INET, SOCK_DGRAM, 0);
   if (fd < 0) {
     tor_log(severity, LD_NET, "socket failed: %s", strerror(errno));
     goto done;
   }
+
   /* Guess how much space we need. */
-  ifc.ifc_len = sz = 15*1024;
-  ifc.ifc_ifcu.ifcu_req = tor_malloc(sz);
+  ifc.ifc_len = sz = 4096;
+  databuf = tor_malloc_zero(sz);
+  ifc.ifc_buf = databuf;
+
   if (ioctl(fd, SIOCGIFCONF, &ifc) < 0) {
     tor_log(severity, LD_NET, "ioctl failed: %s", strerror(errno));
     close(fd);
     goto done;
   }
-  close(fd);
-  result = smartlist_new();
-  if (ifc.ifc_len < sz)
-    sz = ifc.ifc_len;
-  n = sz / sizeof(struct ifreq);
-  for (i = 0; i < n ; ++i) {
-    struct ifreq *r = &ifc.ifc_ifcu.ifcu_req[i];
-    struct sockaddr *sa = &r->ifr_addr;
-    tor_addr_t tmp;
-    if (sa->sa_family != AF_INET && sa->sa_family != AF_INET6)
-      continue; /* should be impossible */
-    if (tor_addr_from_sockaddr(&tmp, sa, NULL) < 0)
-      continue;
-    smartlist_add(result, tor_memdup(&tmp, sizeof(tmp)));
-  }
+
+  result = ifreq_to_smartlist(databuf, ifc.ifc_len);
+
  done:
-  tor_free(ifc.ifc_ifcu.ifcu_req);
+  close(fd);
+  tor_free(databuf);
   return result;
+}
+#endif
+
+/** Try to ask our network interfaces what addresses they are bound to.
+ * Return a new smartlist of tor_addr_t on success, and NULL on failure.
+ * (An empty smartlist indicates that we successfully learned that we have no
+ * addresses.)  Log failure messages at <b>severity</b>. */
+STATIC smartlist_t *
+get_interface_addresses_raw(int severity)
+{
+#if defined(HAVE_IFADDRS_TO_SMARTLIST)
+  return get_interface_addresses_ifaddrs(severity);
+#endif
+#if defined(HAVE_IP_ADAPTER_TO_SMARTLIST)
+  return get_interface_addresses_win32(severity);
+#endif
+#if defined(HAVE_IFCONF_TO_SMARTLIST)
+  return get_interface_addresses_ioctl(severity);
 #else
   (void) severity;
   return NULL;

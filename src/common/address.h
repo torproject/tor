@@ -11,9 +11,40 @@
 #ifndef TOR_ADDRESS_H
 #define TOR_ADDRESS_H
 
+//#include <sys/sockio.h>
 #include "orconfig.h"
 #include "torint.h"
 #include "compat.h"
+
+#ifdef ADDRESS_PRIVATE
+
+#if defined(HAVE_SYS_IOCTL_H)
+#include <sys/ioctl.h>
+#endif
+
+#ifdef HAVE_GETIFADDRS
+#define HAVE_IFADDRS_TO_SMARTLIST
+#endif
+
+#ifdef _WIN32
+#define HAVE_IP_ADAPTER_TO_SMARTLIST
+#endif
+
+#if defined(SIOCGIFCONF) && defined(HAVE_IOCTL)
+#define HAVE_IFCONF_TO_SMARTLIST
+#endif
+
+#if defined(HAVE_NET_IF_H)
+#include <net/if.h> // for struct ifconf
+#endif
+
+#if defined(HAVE_IFADDRS_TO_SMARTLIST)
+#include <ifaddrs.h>
+#endif
+
+// TODO win32 specific includes
+#include "container.h"
+#endif // ADDRESS_PRIVATE
 
 /** The number of bits from an address to consider while doing a masked
  * comparison. */
@@ -228,6 +259,28 @@ char *tor_dup_ip(uint32_t addr) ATTR_MALLOC;
 int get_interface_address(int severity, uint32_t *addr);
 
 tor_addr_port_t *tor_addr_port_new(const tor_addr_t *addr, uint16_t port);
+
+#ifdef ADDRESS_PRIVATE
+STATIC smartlist_t *get_interface_addresses_raw(int severity);
+
+#ifdef HAVE_IFADDRS_TO_SMARTLIST
+STATIC smartlist_t *ifaddrs_to_smartlist(const struct ifaddrs *ifa);
+STATIC smartlist_t *get_interface_addresses_ifaddrs(int severity);
+#endif
+
+#ifdef HAVE_IP_ADAPTER_TO_SMARTLIST
+STATIC smartlist_t *ip_adapter_addresses_to_smartlist(
+                                        const IP_ADAPTER_ADDRESSES *addresses);
+STATIC smartlist_t *get_interface_addresses_win32(int severity);
+#endif
+
+#ifdef HAVE_IFCONF_TO_SMARTLIST
+STATIC smartlist_t *ifreq_to_smartlist(const struct ifreq *ifr,
+                                       size_t buflen);
+STATIC smartlist_t *get_interface_addresses_ioctl(int severity);
+#endif
+
+#endif // ADDRESS_PRIVATE
 
 #endif
 

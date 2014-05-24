@@ -1,0 +1,11 @@
+  o Major refactoring:
+    - Refactor the get_interface_addresses_raw() Doom-function into
+      multiple smaller and easier to understand subfunctions. Cover the
+      resulting subfunctions with unit-tests. Fixes a significant portion 
+      of issue 12376.
+
+  o Minor bugfixes:
+    - Fix the ioctl()-based network interface lookup code so that it will
+      work on systems that have variable-length struct ifreq, for example
+      Mac OS X.
+

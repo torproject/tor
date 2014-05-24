@@ -45,6 +45,7 @@ src_test_test_SOURCES = \
 	src/test/test_nodelist.c \
 	src/test/test_policy.c \
 	src/test/test_status.c \
+        src/test/test_address.c \
 	src/ext/tinytest.c
 
 src_test_test_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)

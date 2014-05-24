@@ -1287,6 +1287,7 @@ static struct testcase_t test_array[] = {
 };
 
 extern struct testcase_t addr_tests[];
+extern struct testcase_t address_tests[];
 extern struct testcase_t buffer_tests[];
 extern struct testcase_t crypto_tests[];
 extern struct testcase_t container_tests[];
@@ -1319,6 +1320,7 @@ static struct testgroup_t testgroups[] = {
   { "buffer/", buffer_tests },
   { "socks/", socks_tests },
   { "addr/", addr_tests },
+  { "address/", address_tests },
   { "crypto/", crypto_tests },
   { "container/", container_tests },
   { "util/", util_tests },
