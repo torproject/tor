@@ -119,22 +119,6 @@ typedef struct {
   sandbox_cfg_t *filter_dynamic;
 } sandbox_t;
 
-/**
- * Linux 32 bit definitions
- */
-#if defined(__i386__)
-
-#define REG_SYSCALL REG_EAX
-
-/**
- * Linux 64 bit definitions
- */
-#elif defined(__x86_64__)
-
-#define REG_SYSCALL REG_RAX
-
-#endif
-
 #endif // USE_LIBSECCOMP
 
 #ifdef USE_LIBSECCOMP

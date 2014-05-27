@@ -67,6 +67,28 @@
 #include <execinfo.h>
 #endif
 
+/**
+ * Linux 32 bit definitions
+ */
+#if defined(__i386__)
+
+#define REG_SYSCALL REG_EAX
+#define M_SYSCALL gregs[REG_SYSCALL]
+
+/**
+ * Linux 64 bit definitions
+ */
+#elif defined(__x86_64__)
+
+#define REG_SYSCALL REG_RAX
+#define M_SYSCALL gregs[REG_SYSCALL]
+
+#elif defined(__arm__)
+
+#define M_SYSCALL arm_r7
+
+#endif
+
 /**Determines if at least one sandbox is active.*/
 static int sandbox_active = 0;
 /** Holds the parameter list configuration for the sandbox.*/
@@ -113,7 +135,9 @@ static int filter_nopar_gen[] = {
 #ifdef __NR_getgid32
     SCMP_SYS(getgid32),
 #endif
+#ifdef __NR_getrlimt
     SCMP_SYS(getrlimit),
+#endif
     SCMP_SYS(gettimeofday),
     SCMP_SYS(gettid),
     SCMP_SYS(getuid),
@@ -126,7 +150,10 @@ static int filter_nopar_gen[] = {
 #endif
     SCMP_SYS(mkdir),
     SCMP_SYS(mlockall),
+#ifdef __NR_mmap
+    /* XXXX restrict this in the same ways as mmap2 */
     SCMP_SYS(mmap),
+#endif
     SCMP_SYS(munmap),
     SCMP_SYS(read),
     SCMP_SYS(rt_sigreturn),
@@ -245,8 +272,12 @@ static int
 sb_time(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   (void) filter;
+#ifdef __NR_time
   return seccomp_rule_add_1(ctx, SCMP_ACT_ALLOW, SCMP_SYS(time),
        SCMP_CMP(0, SCMP_CMP_EQ, 0));
+#else
+  return 0;
+#endif
 }
 
 /**
@@ -1439,7 +1470,8 @@ install_syscall_filter(sandbox_cfg_t* cfg)
 
   // loading the seccomp2 filter
   if ((rc = seccomp_load(ctx))) {
-    log_err(LD_BUG, "(Sandbox) failed to load!");
+    log_err(LD_BUG, "(Sandbox) failed to load: %d (%s)!", rc,
+            strerror(-rc));
     goto end;
   }
 
@@ -1499,7 +1531,7 @@ sigsys_debugging(int nr, siginfo_t *info, void *void_context)
   if (!ctx)
     return;
 
-  syscall = (int) ctx->uc_mcontext.gregs[REG_SYSCALL];
+  syscall = (int) ctx->uc_mcontext.M_SYSCALL;
 
 #ifdef USE_BACKTRACE
   depth = backtrace(syscall_cb_buf, MAX_DEPTH);
