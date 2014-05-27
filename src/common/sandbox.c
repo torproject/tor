@@ -186,6 +186,7 @@ static int filter_nopar_gen[] = {
 
     // socket syscalls
     SCMP_SYS(bind),
+    SCMP_SYS(listen),
     SCMP_SYS(connect),
     SCMP_SYS(getsockname),
     SCMP_SYS(recvmsg),
