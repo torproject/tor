@@ -1470,7 +1470,8 @@ install_syscall_filter(sandbox_cfg_t* cfg)
 
   // loading the seccomp2 filter
   if ((rc = seccomp_load(ctx))) {
-    log_err(LD_BUG, "(Sandbox) failed to load!");
+    log_err(LD_BUG, "(Sandbox) failed to load: %d (%s)!", rc,
+            strerror(-rc));
     goto end;
   }
 
