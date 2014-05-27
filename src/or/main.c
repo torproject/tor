@@ -2870,6 +2870,11 @@ sandbox_init_filter(void)
     }
   }
 
+  if (options->DirPortFrontPage) {
+    sandbox_cfg_allow_open_filename(&cfg,
+                                    tor_strdup(options->DirPortFrontPage));
+  }
+
   // orport
   if (server_mode(get_options())) {
     sandbox_cfg_allow_open_filename_array(&cfg,
@@ -2904,11 +2909,6 @@ sandbox_init_filter(void)
         tor_strdup("/etc/resolv.conf"),
         NULL, 0
     );
-
-    if (options->DirPortFrontPage) {
-      sandbox_cfg_allow_open_filename(&cfg,
-                                      tor_strdup(options->DirPortFrontPage));
-    }
 
     RENAME_SUFFIX("fingerprint", ".tmp");
     RENAME_SUFFIX2("keys", "secret_onion_key_ntor", ".tmp");
