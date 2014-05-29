@@ -9,34 +9,34 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
 
   o Major bugfixes (relay):
     - When uploading to the directory authorities, use a direct dirport
-      connection if we are a uploading an ordinary, non-anonymous directory
-      object. Previously, relays would used tunnel connections under a
-      fairly wide variety of circumstances. Fixes bug 11469; bugfix on
-      0.2.4.3-alpha.
+      connection if we are a uploading an ordinary, non-anonymous
+      directory object. Previously, relays would used tunnel connections
+      under a fairly wide variety of circumstances. Fixes bug 11469;
+      bugfix on 0.2.4.3-alpha.
 
   o Major security fixes (directory authorities):
     - Directory authorities now include a digest of each relay's
       identity key as a part of its microdescriptor.
 
       This is a workaround for bug #11743 (reported by "cypherpunks"),
-      where Tor clients do not
-      support receiving multiple microdescriptors with the same SHA256
-      digest in the same consensus. When clients receive a consensus
-      like this, they only use one of the relays. Without this fix, a
-      hostile relay could selectively disable some client use of target
-      relays by constucting a router descriptor with a different
-      identity and the same microdescriptor parameters and getting the
-      authorities to list it in a microdescriptor consensus. This fix
-      prevents an attacker from causing a microdescriptor collision,
-      because the router's identity is not forgeable.
+      where Tor clients do not support receiving multiple
+      microdescriptors with the same SHA256 digest in the same
+      consensus. When clients receive a consensus like this, they only
+      use one of the relays. Without this fix, a hostile relay could
+      selectively disable some client use of target relays by
+      constucting a router descriptor with a different identity and the
+      same microdescriptor parameters and getting the authorities to
+      list it in a microdescriptor consensus. This fix prevents an
+      attacker from causing a microdescriptor collision, because the
+      router's identity is not forgeable.
 
   o Minor features (diagnostic):
-    - When logging a warning because of bug #7164, additionally check the
-      hash table for consistency (as proposed on ticket #11737). This may
-      help diagnose bug #7164.
-    - When we log a heartbeat, log how many one-hop circuits we have that
-      are at least 30 minutes old, and log status information about a
-      few of them. This is an attempt to track down bug 8387.
+    - When logging a warning because of bug #7164, additionally check
+      the hash table for consistency (as proposed on ticket #11737).
+      This may help diagnose bug #7164.
+    - When we log a heartbeat, log how many one-hop circuits we have
+      that are at least 30 minutes old, and log status information about
+      a few of them. This is an attempt to track down bug 8387.
 
   o Minor features (security):
     - Apply the secure SipHash-2-4 function to the hash table mapping
@@ -60,7 +60,7 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
 
   o Minor features:
     - When we encounter an unexpected CR in text that we're trying to
-      write to a file on Windows, log the name of the file.  Should help
+      write to a file on Windows, log the name of the file. Should help
       diagnosing bug 11233.
 
   o Minor bugfixes (configuration, security, new since 0.2.5.4-alpha, also in 0.2.4.22):
@@ -70,20 +70,20 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
       bugfix on 0.2.1.1-alpha.
 
   o Minor bugfixes (compilation):
-    - Fix compilation of test_status.c when building with MVSC.
-      Bugfix on 0.2.5.4-alpha. Patch from Gisle Vanem.
+    - Fix compilation of test_status.c when building with MVSC. Bugfix
+      on 0.2.5.4-alpha. Patch from Gisle Vanem.
     - Resolve GCC complaints on OpenBSD about discarding constness in
-      TO_{ORIGIN,OR}_CIRCUIT functions. Fixes part of bug 11633; bugfix on
-      0.1.1.23. Patch from Dana Koch.
+      TO_{ORIGIN,OR}_CIRCUIT functions. Fixes part of bug 11633; bugfix
+      on 0.1.1.23. Patch from Dana Koch.
     - Resolve clang complaints on OpenBSD with -Wshorten-64-to-32 due to
-      treatment of long and time_t as comparable types. Fixes part of bug 11633.
-      Patch from Dana Koch.
+      treatment of long and time_t as comparable types. Fixes part of
+      bug 11633. Patch from Dana Koch.
 
   o Minor bugfixes (build):
-    - When deciding whether to build the 64-bit curve25519 implementation,
-      detect platforms where we can compile 128-bit arithmetic but cannot
-      link it. Fixes bug 11729; bugfix on 0.2.4.8-alpha. Patch
-      from "conradev".
+    - When deciding whether to build the 64-bit curve25519
+      implementation, detect platforms where we can compile 128-bit
+      arithmetic but cannot link it. Fixes bug 11729; bugfix on
+      0.2.4.8-alpha. Patch from "conradev".
 
   o Minor bugfixes (Directory server):
     - When sending a compressed set of descriptors or microdescriptors,
@@ -94,14 +94,15 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
       11648; bugfix on 0.1.1.23.
 
   o Minor bugfixes (dmalloc):
-    - Fix compilation with dmalloc. Fixes bug 11605; bugfix on 0.2.4.10-alpha.
+    - Fix compilation with dmalloc. Fixes bug 11605; bugfix
+      on 0.2.4.10-alpha.
 
   o Minor bugfixes (documentation):
     - Correct the documenation so that it lists the correct directories
-      for the stats files.  (They are in a subdirectory called "stats",
+      for the stats files. (They are in a subdirectory called "stats",
       not "status".)
 
-  o Minor bugfixes (linux seccomp sandbox)
+  o Minor bugfixes (linux seccomp sandbox):
     - Make the seccomp sandbox code compile with ARM linux. Fixes bug
       11622; bugfix on 0.2.5.1-alpha.
     - Avoid crashing when re-opening listener ports with the seccomp
@@ -109,30 +110,30 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
     - Avoid crashing with the seccomp sandbox enabled along with
       ConstrainedSockets. Fixes bug 12139; bugfix on 0.2.5.1-alpha.
     - When we receive a SIGHUP with the sandbox enabled, correctly
-      support rotating our log files. Fixes bug 12032; bugfix on
-      0.2.5.1-alpha.
+      support rotating our log files. Fixes bug 12032; bugfix
+      on 0.2.5.1-alpha.
     - Avoid crash when running with sandboxing enabled and
-      DirReqStatistics not disabled. Fixes bug 12035; bugfix on
-      0.2.5.1-alpha.
+      DirReqStatistics not disabled. Fixes bug 12035; bugfix
+      on 0.2.5.1-alpha.
     - Fix a "BUG" warning when trying to write bridge-stats files with
-      the Linux syscall sandbox filter enabled. Fixes bug 12041;
-      bugfix on 0.2.5.1-alpha.
+      the Linux syscall sandbox filter enabled. Fixes bug 12041; bugfix
+      on 0.2.5.1-alpha.
     - Prevent the sandbox from crashing on startup when run with the
       --enable-expensive-hardening configuration option. Fixes bug
       11477; bugfix on 0.2.5.4-alpha.
-    - When running with DirPortFrontPage and Sandbox both enabled, reload
-      the DirPortFrontPage correctly when restarting. Fixes bug 12028;
-      bugfix on 0.2.5.1-alpha.
-    - Don't try to enable the sandbox when using the Tor binary to
-      check its configuration, hash a passphrase, or so on. Doing
-      so was crashing on startup for some users. Fixes bug 11609;
-      bugfix on 0.2.5.1-alpha.
+    - When running with DirPortFrontPage and Sandbox both enabled,
+      reload the DirPortFrontPage correctly when restarting. Fixes bug
+      12028; bugfix on 0.2.5.1-alpha.
+    - Don't try to enable the sandbox when using the Tor binary to check
+      its configuration, hash a passphrase, or so on. Doing so was
+      crashing on startup for some users. Fixes bug 11609; bugfix
+      on 0.2.5.1-alpha.
     - Avoid warnings when running with sandboxing and node statistics
-      enabled at the same time.
-      Fixes part of 12064; bugfix on 0.2.5.1-alpha. Patch from Michael Wolf.
+      enabled at the same time. Fixes part of 12064; bugfix on
+      0.2.5.1-alpha. Patch from Michael Wolf.
     - Avoid warnings when running with sandboxing enabled at the same
       time as cookie authentication, hidden services or directory
-      authority voting.  Fixes part of 12064; bugfix on 0.2.5.1-alpha.
+      authority voting. Fixes part of 12064; bugfix on 0.2.5.1-alpha.
     - Do not allow options which would require us to call exec to be
       enabled along with the seccomp2 sandbox: they will inevitably
       crash. Fix for bug 12043; bugfix on 0.2.5.1-alpha.
@@ -142,16 +143,16 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
 
   o Minor bugfixes (pluggable transports):
     - Enable the ExtORPortCookieAuthFile option, to allow changing the
-      default location of the authentication token for the extended OR Port
-      as used by sever-side pluggable transports. We had implemented this
-      option before, but the code to make it settable had been omitted.
-      Fixes bug 11635; bugfix on 0.2.5.1-alpha.
+      default location of the authentication token for the extended OR
+      Port as used by sever-side pluggable transports. We had
+      implemented this option before, but the code to make it settable
+      had been omitted. Fixes bug 11635; bugfix on 0.2.5.1-alpha.
 
   o Minor bugfixes (testing):
     - The Python parts of the test scripts now work on Python 3 as well
       as Python 2, so systems where '/usr/bin/python' is Python 3 will
-      no longer have the tests break. Fixes bug 11608; bugfix on
-      0.2.5.2-alpha.
+      no longer have the tests break. Fixes bug 11608; bugfix
+      on 0.2.5.2-alpha.
     - When looking for versions of python that we could run the tests
       with, check for "python2.7" and "python3.3"; previously we were
       only looking for "python", "python2", and "python3". Patch from
@@ -160,39 +161,40 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
   o Minor bugfixes (tor-fw-helper):
     - Give a correct log message when tor-fw-helper fails to launch.
       (Previously, we would say something like "tor-fw-helper sent us a
-      string we could not parse".) Fixes bug 9781; bugfix on 0.2.4.2-alpha.
+      string we could not parse".) Fixes bug 9781; bugfix
+      on 0.2.4.2-alpha.
 
   o Minor bugfixes:
-    - Avoid another 60-second delay when starting Tor in a
-      pluggable-transport-using configuration when we already have
-      cached descriptors for our bridges. Fixes bug 11965; bugfix on
-      0.2.3.6-alpha.
+    - Avoid another 60-second delay when starting Tor in a pluggable-
+      transport-using configuration when we already have cached
+      descriptors for our bridges. Fixes bug 11965; bugfix
+      on 0.2.3.6-alpha.
 
   o Minor bugfixes:
-    - Check return code on spawn_func() in cpuworker code, so that we don't
-      think we've spawned a nonworking cpuworker and write junk to it
-      forever. Fix related to bug 4345; bugfix on all released Tor versions.
-      Found by "skruffy".
-    - Use a pthread_attr to make sure that spawn_func() cannot return
-      an error while at the same time launching a thread. Fix related
-      to bug 4345; bugfix on all released Tor versions. Reported by
-      "cypherpunks".
+    - Check return code on spawn_func() in cpuworker code, so that we
+      don't think we've spawned a nonworking cpuworker and write junk to
+      it forever. Fix related to bug 4345; bugfix on all released Tor
+      versions. Found by "skruffy".
+    - Use a pthread_attr to make sure that spawn_func() cannot return an
+      error while at the same time launching a thread. Fix related to
+      bug 4345; bugfix on all released Tor versions. Reported
+      by "cypherpunks".
 
   o Minor bugfixes:
-    - Correctly detect the total available system memory. We tried to do this
-      in 0.2.5.4-alpha, but the code was set up to always return an error
-      value, even on success.
-      Fixes bug 11805; bugfix on 0.2.5.4-alpha.
+    - Correctly detect the total available system memory. We tried to do
+      this in 0.2.5.4-alpha, but the code was set up to always return an
+      error value, even on success. Fixes bug 11805; bugfix
+      on 0.2.5.4-alpha.
 
   o Minor bugfixes:
-    - Fix a broken log message about delayed directory fetches that
-      was caused by a misuse of strlcpy(). Fixes bug 11654; bugfix on
-      0.2.5.3-alpha.
+    - Fix a broken log message about delayed directory fetches that was
+      caused by a misuse of strlcpy(). Fixes bug 11654; bugfix
+      on 0.2.5.3-alpha.
 
   o Minor bugfixes:
     - Fix all valgrind warnings produced by the unit tests. There were
       over a thousand memory leak warnings previously, mostly produced
-      by forgetting to free things in the unit test code.  Fixes bug
+      by forgetting to free things in the unit test code. Fixes bug
       11618, bugfixes on many versions of Tor.
 
   o Minor bugfixes:
@@ -200,20 +202,21 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
       bugfix on 0.2.3.13-alpha. Found by "cypherpunks".
 
   o Minor bugfixes:
-    - Make Tor compile correctly with --disable-buf-freelists.
-      Fixes bug 11623; bugfix on 0.2.5.3-alpha.
+    - Make Tor compile correctly with --disable-buf-freelists. Fixes bug
+      11623; bugfix on 0.2.5.3-alpha.
 
   o Bugfixes:
-    - Add configure options controlling allocator tricks like mempools and
-      freelists, and turn them off by default; on most platforms malloc is
-      reasonable enough for this not to be necessary, and a similar feature
-      in OpenSSL exacerbated Heartbleed.  Fixes bug #11476.
+    - Add configure options controlling allocator tricks like mempools
+      and freelists, and turn them off by default; on most platforms
+      malloc is reasonable enough for this not to be necessary, and a
+      similar feature in OpenSSL exacerbated Heartbleed. Fixes
+      bug #11476.
 
   o Distribution:
-    - Include a tor.service file in contrib.dist for use with
-      systemd. Some distributions will be able to use this file unmodified;
-      others will need to tweak it, or write their own. Patch from
-      Jamie Nguyen; resolves ticket 8368.
+    - Include a tor.service file in contrib.dist for use with systemd.
+      Some distributions will be able to use this file unmodified;
+      others will need to tweak it, or write their own. Patch from Jamie
+      Nguyen; resolves ticket 8368.
 
   o Documentation:
     - Clean up several option names in the manpage to match their real
@@ -237,7 +240,6 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
       0.1.2.5-alpha, and turning them off is not a good idea. This is a
       brute-force fix for 10849, where "TunnelDirConns 0" would break
       hidden services.
-
 
 
 Changes in version 0.2.4.22 - 2014-05-16
