@@ -208,9 +208,6 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
       Some distributions will be able to use this file unmodified;
       others will need to tweak it, or write their own. Patch from Jamie
       Nguyen; resolves ticket 8368.
-    - Add a systemd service file (tor.service) that can be installed by
-      Linux distributions that make use of the systemd init daemon.
-      Fixes bug 8368.
 
   o Documentation:
     - Clean up several option names in the manpage to match their real
