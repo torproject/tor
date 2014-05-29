@@ -14,7 +14,7 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
       under a fairly wide variety of circumstances. Fixes bug 11469;
       bugfix on 0.2.4.3-alpha.
 
-  o Major security fixes (directory authorities):
+  o Major bugfixes (security, directory authorities):
     - Directory authorities now include a digest of each relay's
       identity key as a part of its microdescriptor.
 
@@ -43,6 +43,13 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
     - Give more specific warnings when we notice at the client side that
       an onion handshake has failed. Fixes ticket 9635.
 
+  o Minor features (security, memory management)):
+    - Add configure options controlling allocator tricks like mempools
+      and freelists, and turn them off by default; on most platforms
+      malloc is reasonable enough for this not to be necessary, and a
+      similar feature in OpenSSL exacerbated Heartbleed. Fixes
+      bug #11476.
+
   o Minor features (security):
     - Apply the secure SipHash-2-4 function to the hash table mapping
       circuit IDs and channels to circuits. We missed this one when we
@@ -69,12 +76,14 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
     - Resolve clang complaints on OpenBSD with -Wshorten-64-to-32 due to
       treatment of long and time_t as comparable types. Fixes part of
       bug 11633. Patch from Dana Koch.
-
-  o Minor bugfixes (build):
+    - Make Tor compile correctly with --disable-buf-freelists. Fixes bug
+      11623; bugfix on 0.2.5.3-alpha.
     - When deciding whether to build the 64-bit curve25519
       implementation, detect platforms where we can compile 128-bit
       arithmetic but cannot link it. Fixes bug 11729; bugfix on
       0.2.4.8-alpha. Patch from "conradev".
+    - Fix compilation when DNS_CACHE_DEBUG is enabled. Fixes bug 11761;
+      bugfix on 0.2.3.13-alpha. Found by "cypherpunks".
 
   o Minor bugfixes (Directory server):
     - When sending a compressed set of descriptors or microdescriptors,
@@ -93,7 +102,7 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
       for the stats files. (They are in a subdirectory called "stats",
       not "status".)
 
-  o Minor bugfixes (linux seccomp sandbox):
+  o Minor bugfixes (Linux seccomp sandbox):
     - Make the seccomp sandbox code compile with ARM linux. Fixes bug
       11622; bugfix on 0.2.5.1-alpha.
     - Avoid crashing when re-opening listener ports with the seccomp
@@ -138,6 +147,10 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
       Port as used by sever-side pluggable transports. We had
       implemented this option before, but the code to make it settable
       had been omitted. Fixes bug 11635; bugfix on 0.2.5.1-alpha.
+    - Avoid another 60-second delay when starting Tor in a pluggable-
+      transport-using configuration when we already have cached
+      descriptors for our bridges. Fixes bug 11965; bugfix
+      on 0.2.3.6-alpha.
 
   o Minor bugfixes (testing):
     - The Python parts of the test scripts now work on Python 3 as well
@@ -148,6 +161,10 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
       with, check for "python2.7" and "python3.3"; previously we were
       only looking for "python", "python2", and "python3". Patch from
       Dana Koch. Fixes bug 11632; bugfix on 0.2.5.2-alpha.
+    - Fix all valgrind warnings produced by the unit tests. There were
+      over a thousand memory leak warnings previously, mostly produced
+      by forgetting to free things in the unit test code. Fixes bug
+      11618, bugfixes on many versions of Tor.
 
   o Minor bugfixes (tor-fw-helper):
     - Give a correct log message when tor-fw-helper fails to launch.
@@ -155,13 +172,7 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
       string we could not parse".) Fixes bug 9781; bugfix
       on 0.2.4.2-alpha.
 
-  o Minor bugfixes:
-    - Avoid another 60-second delay when starting Tor in a pluggable-
-      transport-using configuration when we already have cached
-      descriptors for our bridges. Fixes bug 11965; bugfix
-      on 0.2.3.6-alpha.
-
-  o Minor bugfixes:
+  o Minor bugfixes (relay, threading):
     - Check return code on spawn_func() in cpuworker code, so that we
       don't think we've spawned a nonworking cpuworker and write junk to
       it forever. Fix related to bug 4345; bugfix on all released Tor
@@ -171,37 +182,15 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
       bug 4345; bugfix on all released Tor versions. Reported
       by "cypherpunks".
 
-  o Minor bugfixes:
+  o Minor bugfixes (relay, oom prevention):
     - Correctly detect the total available system memory. We tried to do
       this in 0.2.5.4-alpha, but the code was set up to always return an
       error value, even on success. Fixes bug 11805; bugfix
       on 0.2.5.4-alpha.
 
-  o Minor bugfixes:
-    - Fix a broken log message about delayed directory fetches that was
-      caused by a misuse of strlcpy(). Fixes bug 11654; bugfix
-      on 0.2.5.3-alpha.
-
-  o Minor bugfixes:
-    - Fix all valgrind warnings produced by the unit tests. There were
-      over a thousand memory leak warnings previously, mostly produced
-      by forgetting to free things in the unit test code. Fixes bug
-      11618, bugfixes on many versions of Tor.
-
-  o Minor bugfixes:
-    - Fix compilation when DNS_CACHE_DEBUG is enabled. Fixes bug 11761;
-      bugfix on 0.2.3.13-alpha. Found by "cypherpunks".
-
-  o Minor bugfixes:
-    - Make Tor compile correctly with --disable-buf-freelists. Fixes bug
-      11623; bugfix on 0.2.5.3-alpha.
-
-  o Bugfixes:
-    - Add configure options controlling allocator tricks like mempools
-      and freelists, and turn them off by default; on most platforms
-      malloc is reasonable enough for this not to be necessary, and a
-      similar feature in OpenSSL exacerbated Heartbleed. Fixes
-      bug #11476.
+  o Minor bugfixes (logging):
+    - Fix a misformatted log message about delayed directory fetches.
+      Fixes bug 11654; bugfix on 0.2.5.3-alpha.
 
   o Distribution:
     - Include a tor.service file in contrib/dist for use with systemd.
