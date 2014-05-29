@@ -37,6 +37,11 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
     - When we log a heartbeat, log how many one-hop circuits we have
       that are at least 30 minutes old, and log status information about
       a few of them. This is an attempt to track down bug 8387.
+    - When we encounter an unexpected CR in text that we're trying to
+      write to a file on Windows, log the name of the file. Should help
+      diagnosing bug 11233.
+    - Give more specific warnings when we notice at the client side that
+      an onion handshake has failed. Fixes ticket 9635.
 
   o Minor features (security):
     - Apply the secure SipHash-2-4 function to the hash table mapping
@@ -44,24 +49,10 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
       were converting all the other hash functions to use SipHash back
       in 0.2.5.3-alpha. Resolves ticket 11750.
 
-  o Minor features:
-    - Add a systemd service file (tor.service) that can be installed by
-      Linux distributions that make use of the systemd init daemon.
-      Fixes bug 8368.
-
-  o Minor features:
-    - Give more specific warnings when we notice at the client side that
-      an onion handshake has failed. Fixes ticket 9635.
-
-  o Minor features:
+  o Minor features (build):
     - The configure script has a --disable-seccomp option to turn off
       support for libseccomp on systems that have it, in case it (or
       Tor's use of it) is broken. Resolves ticket 11628.
-
-  o Minor features:
-    - When we encounter an unexpected CR in text that we're trying to
-      write to a file on Windows, log the name of the file. Should help
-      diagnosing bug 11233.
 
   o Minor bugfixes (configuration, security, new since 0.2.5.4-alpha, also in 0.2.4.22):
     - When running a hidden service, do not allow TunneledDirConns 0;
@@ -213,10 +204,13 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
       bug #11476.
 
   o Distribution:
-    - Include a tor.service file in contrib.dist for use with systemd.
+    - Include a tor.service file in contrib/dist for use with systemd.
       Some distributions will be able to use this file unmodified;
       others will need to tweak it, or write their own. Patch from Jamie
       Nguyen; resolves ticket 8368.
+    - Add a systemd service file (tor.service) that can be installed by
+      Linux distributions that make use of the systemd init daemon.
+      Fixes bug 8368.
 
   o Documentation:
     - Clean up several option names in the manpage to match their real
