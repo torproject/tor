@@ -1,5 +1,0 @@
-  o Minor bugfixes (sandbox):
-    - Don't try to enable the sandbox when using the Tor binary to
-      check its configuration, hash a passphrase, or so on. Doing
-      so was crashing on startup for some users. Fixes bug 11609;
-      bugfix on 0.2.5.1-alpha.

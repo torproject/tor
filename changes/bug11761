@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Fix compilation when DNS_CACHE_DEBUG is enabled. Fixes bug 11761;
-      bugfix on 0.2.3.13-alpha. Found by "cypherpunks".
-

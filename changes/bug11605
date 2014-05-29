@@ -1,2 +1,0 @@
-  o Minor bugfixes (dmalloc):
-    - Fix compilation with dmalloc. Fixes bug 11605; bugfix on 0.2.4.10-alpha.

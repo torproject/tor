@@ -1,6 +1,0 @@
-  o Major bugfixes (relay):
-    - When uploading to the directory authorities, use a direct dirport
-      connection if we are a uploading an ordinary, non-anonymous directory
-      object. Previously, relays would used tunnel connections under a
-      fairly wide variety of circumstances. Fixes bug 11469; bugfix on
-      0.2.4.3-alpha.

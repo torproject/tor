@@ -1,8 +1,0 @@
-  o Minor bugfixes (Directory server):
-    - When sending a compressed set of descriptors or microdescriptors,
-      make sure to finalize the zlib stream. Previously, we would write
-      all the compressed data, but if the last descriptor we wanted to
-      send was missing or too old, we would not mark the stream as
-      finished. This caused problems for decompression tools. Fixes bug
-      11648; bugfix on 0.1.1.23.
-

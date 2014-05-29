@@ -1,4 +1,0 @@
-  o Minor bugfixes (build):
-    - Resolve clang complaints on OpenBSD with -Wshorten-64-to-32 due to
-      treatment of long and time_t as comparable types. Fixes part of bug 11633.
-      Patch from Dana Koch.

@@ -1,5 +1,0 @@
-  o Minor features (diagnostic):
-    - When logging a warning because of bug #7164, additionally check the
-      hash table for consistency (as proposed on ticket #11737). This may
-      help diagnose bug #7164.
-

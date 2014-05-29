@@ -1,4 +1,0 @@
-  o Minor features:
-    - The configure script has a --disable-seccomp option to turn off
-      support for libseccomp on systems that have it, in case it (or
-      Tor's use of it) is broken. Resolves ticket 11628.

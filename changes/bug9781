@@ -1,5 +1,0 @@
-  o Minor bugfixes (tor-fw-helper):
-
-    - Give a correct log message when tor-fw-helper fails to launch.
-      (Previously, we would say something like "tor-fw-helper sent us a
-      string we could not parse".) Fixes bug 9781; bugfix on 0.2.4.2-alpha.

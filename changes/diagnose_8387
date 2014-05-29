@@ -1,4 +1,0 @@
-  o Minor features (diagnostic):
-    - When we log a heartbeat, log how many one-hop circuits we have that
-      are at least 30 minutes old, and log status information about a
-      few of them. This is an attempt to track down bug 8387.

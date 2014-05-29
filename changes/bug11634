@@ -1,6 +1,0 @@
-  o Documentation:
-    - Clean up several option names in the manpage to match their real
-      names, add the missing documentation for a couple of testing and
-      directory authority options, remove the documentation for a
-      V2-directory fetching option that no longer exists. Resolves
-      ticket 11634.

@@ -1,5 +1,0 @@
-  o Minor bugfixes (testing):
-    - When looking for versions of python that we could run the tests
-      with, check for "python2.7" and "python3.3"; previously we were
-      only looking for "python", "python2", and "python3". Patch from
-      Dana Koch. Fixes bug 11632; bugfix on 0.2.5.2-alpha.

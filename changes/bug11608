@@ -1,5 +1,0 @@
-  o Minor bugfixes (testing):
-    - The Python parts of the test scripts now work on Python 3 as well
-      as Python 2, so systems where '/usr/bin/python' is Python 3 will
-      no longer have the tests break. Fixes bug 11608; bugfix on
-      0.2.5.2-alpha.

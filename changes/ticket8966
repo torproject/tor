@@ -1,7 +1,0 @@
-  o Package cleanup:
-    - The contrib directory has been sorted and tidy. Before, it was an
-      unsorted dumping ground for useful and not-so-useful things. Now,
-      it has been divided based on functionality, and the items which
-      seemed to be nonfunctional or useless have been removed. Resolves
-      ticket 8966; based on patches from "rl1987".
-

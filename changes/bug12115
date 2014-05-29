@@ -1,3 +1,0 @@
-  o Minor bugfixes (linux seccomp sandbox):
-    - Avoid crashing when re-opening listener ports with the seccomp
-      sandbox active. Fixes bug 12115; bugfix on 0.2.5.1-alpha.

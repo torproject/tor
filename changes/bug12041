@@ -1,5 +1,0 @@
-  o Minor bugfixes (linux syscall sandbox):
-    - Fix a "BUG" warning when trying to write bridge-stats files with
-      the Linux syscall sandbox filter enabled. Fixes bug 12041;
-      bugfix on 0.2.5.1-alpha.
-

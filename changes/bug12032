@@ -1,4 +1,0 @@
-  o Minor bugfixes (Linux syscall sandbox):
-    - When we receive a SIGHUP with the sandbox enabled, correctly
-      support rotating our log files. Fixes bug 12032; bugfix on
-      0.2.5.1-alpha.

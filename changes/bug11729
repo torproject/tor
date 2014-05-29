@@ -1,5 +1,0 @@
-  o Minor bugfixes (build):
-    - When deciding whether to build the 64-bit curve25519 implementation,
-      detect platforms where we can compile 128-bit arithmetic but cannot
-      link it. Fixes bug 11729; bugfix on 0.2.4.8-alpha. Patch
-      from "conradev".

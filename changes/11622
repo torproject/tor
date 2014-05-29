@@ -1,3 +1,0 @@
-  o Minor bugfixes (linux seccomp sandbox)
-    - Make the seccomp sandbox code compile with ARM linux. Fixes bug
-      11622; bugfix on 0.2.5.1-alpha.

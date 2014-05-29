@@ -1,4 +1,0 @@
-  o Removed code:
-    - Remove /tor/dbg-stability.txt URL that was meant to help debug WFU
-      and MTBF calculations, but that nobody was using. Fixes #11742.
-

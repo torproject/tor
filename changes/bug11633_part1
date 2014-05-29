@@ -1,4 +1,0 @@
-  o Minor bugfixes (build):
-    - Resolve GCC complaints on OpenBSD about discarding constness in
-      TO_{ORIGIN,OR}_CIRCUIT functions. Fixes part of bug 11633; bugfix on
-      0.1.1.23. Patch from Dana Koch.

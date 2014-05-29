@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Correctly detect the total available system memory. We tried to do this
-      in 0.2.5.4-alpha, but the code was set up to always return an error
-      value, even on success.
-      Fixes bug 11805; bugfix on 0.2.5.4-alpha. 

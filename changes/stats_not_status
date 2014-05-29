@@ -1,4 +1,0 @@
-  o Minor bugfixes (documentation):
-    - Correct the documenation so that it lists the correct directories
-      for the stats files.  (They are in a subdirectory called "stats",
-      not "status".)
