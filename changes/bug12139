@@ -1,0 +1,4 @@
+  o Minor bugfixes (linux seccomp sandbox):
+    - Avoid crashing with the seccomp sandbox enabled along with
+      ConstrainedSockets. Fixes bug 12139; bugfix on 0.2.5.1-alpha.
+
