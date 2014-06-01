@@ -1216,10 +1216,12 @@ router_set_status(const char *digest, int up)
     if (!up && node_is_me(node) && !net_is_disabled())
       log_warn(LD_NET, "We just marked ourself as down. Are your external "
                "addresses reachable?");
+
+    if (bool_neq(node->is_running, up))
+      router_dir_info_changed();
+
     node->is_running = up;
   }
-
-  router_dir_info_changed();
 }
 
 /** True iff, the last time we checked whether we had enough directory info
