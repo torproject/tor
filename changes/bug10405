@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Avoid "Tried to open a socket with DisableNetwork set" warnings
+      when starting a bridge client without bridge descriptors. Fixes
+      bug 10405; bugfix on 0.2.3.9-alpha.

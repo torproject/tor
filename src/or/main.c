@@ -1247,7 +1247,7 @@ run_scheduled_events(time_t now)
       now + DESCRIPTOR_FAILURE_RESET_INTERVAL;
   }
 
-  if (options->UseBridges)
+  if (options->UseBridges && !options->DisableNetwork)
     fetch_bridge_descriptors(options, now);
 
   /* 1b. Every MAX_SSL_KEY_LIFETIME_INTERNAL seconds, we change our
