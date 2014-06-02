@@ -115,7 +115,7 @@ if test -f /etc/fedora-release && test x"$tor_$1_$2_redhat" != x; then
   fi 
 else
   if test -f /etc/redhat-release && test x"$tor_$1_$2_redhat" != x; then
-    AC_WARN([On most Redhat-based systems, you can get$h $1 by installing the $tor_$1_$2_redhat" RPM package])
+    AC_WARN([On most Redhat-based systems, you can get$h $1 by installing the $tor_$1_$2_redhat RPM package])
     if test x"$tor_$1_$2_redhat" != x"$tor_$1_devpkg_redhat"; then 
       AC_WARN([   You will probably need to install $tor_$1_devpkg_redhat too.])
     fi 
