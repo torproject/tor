@@ -376,7 +376,7 @@ command_process_created_cell(cell_t *cell, channel_t *chan)
     return;
   }
 
-  if (circ->n_circ_id != cell->circ_id) {
+  if (circ->n_circ_id != cell->circ_id || circ->n_chan != chan) {
     log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,
            "got created cell from Tor client? Closing.");
     circuit_mark_for_close(circ, END_CIRC_REASON_TORPROTOCOL);
@@ -461,6 +461,7 @@ command_process_relay_cell(cell_t *cell, channel_t *chan)
   }
 
   if (!CIRCUIT_IS_ORIGIN(circ) &&
+      chan == TO_OR_CIRCUIT(circ)->p_chan &&
       cell->circ_id == TO_OR_CIRCUIT(circ)->p_circ_id)
     direction = CELL_DIRECTION_OUT;
   else
@@ -529,6 +530,7 @@ command_process_destroy_cell(cell_t *cell, channel_t *chan)
   circ->received_destroy = 1;
 
   if (!CIRCUIT_IS_ORIGIN(circ) &&
+      chan == TO_OR_CIRCUIT(circ)->p_chan &&
       cell->circ_id == TO_OR_CIRCUIT(circ)->p_circ_id) {
     /* the destroy came from behind */
     circuit_set_p_circid_chan(TO_OR_CIRCUIT(circ), 0, NULL);
