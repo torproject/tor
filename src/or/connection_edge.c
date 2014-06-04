@@ -2295,13 +2295,21 @@ connection_ap_handshake_socks_reply(entry_connection_t *conn, char *reply,
       endreason == END_STREAM_REASON_RESOURCELIMIT) {
     if (!conn->edge_.on_circuit ||
        !CIRCUIT_IS_ORIGIN(conn->edge_.on_circuit)) {
-      // DNS remaps can trigger this. So can failed hidden service
-      // lookups.
-      log_info(LD_BUG,
-               "No origin circuit for successful SOCKS stream "U64_FORMAT
-               ". Reason: %d",
-               U64_PRINTF_ARG(ENTRY_TO_CONN(conn)->global_identifier),
-               endreason);
+      if (endreason != END_STREAM_REASON_RESOLVEFAILED) {
+        log_info(LD_BUG,
+                 "No origin circuit for successful SOCKS stream "U64_FORMAT
+                 ". Reason: %d",
+                 U64_PRINTF_ARG(ENTRY_TO_CONN(conn)->global_identifier),
+                 endreason);
+      }
+      /*
+       * Else DNS remaps and failed hidden service lookups can send us
+       * here with END_STREAM_REASON_RESOLVEFAILED; ignore it
+       *
+       * Perhaps we could make the test more precise; we can tell hidden
+       * services by conn->edge_.renddata != NULL; anything analogous for
+       * the DNS remap case?
+       */
     } else {
       // XXX: Hrmm. It looks like optimistic data can't go through this
       // codepath, but someone should probably test it and make sure.
