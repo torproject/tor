@@ -1,5 +1,4 @@
   o Minor bugfixes:
     - When rejecting DATA cells for stream_id zero, still count them against
       the circuit's deliver window so that we don't get fail to send a
-      SENDME.  Fix related to but probably not the cause of bug 8093; bugfix
-      on 0.2.4.10-alpha.
+      SENDME.  Fix for bug 11246; bugfix on 0.2.4.10-alpha.
