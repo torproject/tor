@@ -1074,6 +1074,9 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
        * EXIT_CONN_STATE_CONNECTING or EXIT_CONN_STATE_RESOLVING.
        * This speeds up HTTP, for example. */
       optimistic_data = 1;
+    } else if (rh.stream_id == 0 && rh.command == RELAY_COMMAND_DATA) {
+      log_warn(LD_BUG, "Somehow I had a connection that matched a "
+               "data cell with stream ID 0.");
     } else {
       return connection_edge_process_relay_cell_not_open(
                &rh, cell, circ, conn, layer_hint);
