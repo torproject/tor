@@ -155,7 +155,7 @@ entry_guard_set_status(entry_guard_t *e, const node_t *node,
 /** Return true iff enough time has passed since we last tried to connect
  * to the unreachable guard <b>e</b> that we're willing to try again. */
 static int
-entry_is_time_to_retry(entry_guard_t *e, time_t now)
+entry_is_time_to_retry(const entry_guard_t *e, time_t now)
 {
   long diff;
   if (e->last_attempted < e->unreachable_since)
@@ -189,7 +189,7 @@ entry_is_time_to_retry(entry_guard_t *e, time_t now)
  * a descriptor (routerinfo or microdesc) for it.
  */
 static INLINE const node_t *
-entry_is_live(entry_guard_t *e, int need_uptime, int need_capacity,
+entry_is_live(const entry_guard_t *e, int need_uptime, int need_capacity,
               int assume_reachable, int need_descriptor, const char **msg)
 {
   const node_t *node;
@@ -1017,7 +1017,7 @@ populate_live_entry_guards(smartlist_t *live_entry_guards,
     nodelist_add_node_and_family(exit_family, chosen_exit);
   }
 
-  SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, entry) {
+  SMARTLIST_FOREACH_BEGIN(entry_guards, const entry_guard_t *, entry) {
       const char *msg;
       node = entry_is_live(entry, need_uptime, need_capacity, 0,
                            need_descriptor, &msg);
