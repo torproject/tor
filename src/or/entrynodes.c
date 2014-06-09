@@ -995,6 +995,16 @@ choose_random_dirguard(dirinfo_type_t type)
   return choose_random_entry_impl(NULL, 1, type, NULL);
 }
 
+static int
+populate_live_entry_guards(const smartlist_t *live_entry_guards,
+                           const node_t *chosen_exit,
+                           dirinfo_type_t dirinfo_type,
+                           int need_uptime,
+                           int need_capacity,
+                           int need_descriptor)
+{
+}
+
 /** Helper for choose_random{entry,dirguard}. */
 static const node_t *
 choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
