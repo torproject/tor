@@ -995,14 +995,24 @@ choose_random_dirguard(dirinfo_type_t type)
   return choose_random_entry_impl(NULL, 1, type, NULL);
 }
 
+/* DOCDOCODC
+   Return 1 if we should choose a guard right away. */
 static int
-populate_live_entry_guards(const smartlist_t *live_entry_guards,
+populate_live_entry_guards(smartlist_t *live_entry_guards,
                            const node_t *chosen_exit,
                            dirinfo_type_t dirinfo_type,
-                           int need_uptime,
-                           int need_capacity,
-                           int need_descriptor)
+                           int for_directory,
+                           int need_uptime, int need_capacity)
 {
+  const or_options_t *options = get_options();
+  const node_t *node = NULL;
+  const int num_needed = decide_num_guards(options, for_directory);
+  smartlist_t *exit_family = smartlist_new();
+  int retval = 0;
+  int need_descriptor = !for_directory;
+
+  tor_assert(entry_guards);
+
   if (chosen_exit) {
     nodelist_add_node_and_family(exit_family, chosen_exit);
   }
@@ -1030,11 +1040,19 @@ populate_live_entry_guards(const smartlist_t *live_entry_guards,
          * guard. Otherwise we might add several new ones, pick
          * the second new one, and now we've expanded our entry
          * guard list without needing to. */
-        goto choose_and_finish;
+        retval = 1;
+        goto done;
       }
-      if (smartlist_len(live_entry_guards) >= num_needed)
-        goto choose_and_finish; /* we have enough */
+      if (smartlist_len(live_entry_guards) >= num_needed) {
+        retval = 1;
+        goto done; /* We picked enough entry guards. Done! */
+      }
   } SMARTLIST_FOREACH_END(entry);
+
+ done:
+  smartlist_free(exit_family);
+
+  return retval;
 }
 
 /** Helper for choose_random{entry,dirguard}. */
@@ -1044,15 +1062,14 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
 {
   const or_options_t *options = get_options();
   smartlist_t *live_entry_guards = smartlist_new();
-  smartlist_t *exit_family = smartlist_new();
   const node_t *chosen_exit =
     state?build_state_get_exit_node(state) : NULL;
   const node_t *node = NULL;
   int need_uptime = state ? state->need_uptime : 0;
   int need_capacity = state ? state->need_capacity : 0;
   int preferred_min = 0;
-  int need_descriptor = !for_directory;
   const int num_needed = decide_num_guards(options, for_directory);
+  int retval = 0;
 
   if (n_options_out)
     *n_options_out = 0;
@@ -1069,6 +1086,18 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
 
  retry:
   smartlist_clear(live_entry_guards);
+
+  /* Populate the list of live entry guards so that we pick one of
+     them. */
+  retval = populate_live_entry_guards(live_entry_guards,
+                                      chosen_exit,
+                                      dirinfo_type,
+                                      for_directory,
+                                      need_uptime, need_capacity);
+
+  if (retval == 1) { /* We should choose a guard right now. */
+    goto choose_and_finish;
+  }
 
   if (entry_list_is_constrained(options)) {
     /* If we prefer the entry nodes we've got, and we have at least
@@ -1126,7 +1155,6 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
   if (n_options_out)
     *n_options_out = smartlist_len(live_entry_guards);
   smartlist_free(live_entry_guards);
-  smartlist_free(exit_family);
   return node;
 }
 
