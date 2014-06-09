@@ -1008,7 +1008,7 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
   const node_t *node = NULL;
   int need_uptime = state ? state->need_uptime : 0;
   int need_capacity = state ? state->need_capacity : 0;
-  int preferred_min, consider_exit_family = 0;
+  int preferred_min = 0;
   int need_descriptor = !for_directory;
   const int num_needed = decide_num_guards(options, for_directory);
 
@@ -1017,7 +1017,6 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
 
   if (chosen_exit) {
     nodelist_add_node_and_family(exit_family, chosen_exit);
-    consider_exit_family = 1;
   }
 
   if (!entry_guards)
@@ -1044,7 +1043,7 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
       }
       if (node == chosen_exit)
         continue; /* don't pick the same node for entry and exit */
-      if (consider_exit_family && smartlist_contains(exit_family, node))
+      if (smartlist_contains(exit_family, node))
         continue; /* avoid relays that are family members of our exit */
       if (dirinfo_type != NO_DIRINFO &&
           !node_can_handle_dirinfo(node, dirinfo_type))
@@ -1099,18 +1098,7 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
       need_capacity = 0;
       goto retry;
     }
-#if 0
-    /* Removing this retry logic: if we only allow one exit, and it is in the
-       same family as all our entries, then we are just plain not going to win
-       here. */
-    if (!node && entry_list_is_constrained(options) && consider_exit_family) {
-      /* still no? if we're using bridges or have strictentrynodes
-       * set, and our chosen exit is in the same family as all our
-       * bridges/entry guards, then be flexible about families. */
-      consider_exit_family = 0;
-      goto retry;
-    }
-#endif
+
     /* live_entry_guards may be empty below. Oh well, we tried. */
   }
 
