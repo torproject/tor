@@ -135,7 +135,7 @@ static int filter_nopar_gen[] = {
 #ifdef __NR_getgid32
     SCMP_SYS(getgid32),
 #endif
-#ifdef __NR_getrlimt
+#ifdef __NR_getrlimit
     SCMP_SYS(getrlimit),
 #endif
     SCMP_SYS(gettimeofday),
