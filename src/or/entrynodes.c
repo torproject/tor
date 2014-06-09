@@ -999,6 +999,7 @@ choose_random_dirguard(dirinfo_type_t type)
    Return 1 if we should choose a guard right away. */
 static int
 populate_live_entry_guards(smartlist_t *live_entry_guards,
+                           const smartlist_t *all_entry_guards,
                            const node_t *chosen_exit,
                            dirinfo_type_t dirinfo_type,
                            int for_directory,
@@ -1011,13 +1012,13 @@ populate_live_entry_guards(smartlist_t *live_entry_guards,
   int retval = 0;
   int need_descriptor = !for_directory;
 
-  tor_assert(entry_guards);
+  tor_assert(all_entry_guards);
 
   if (chosen_exit) {
     nodelist_add_node_and_family(exit_family, chosen_exit);
   }
 
-  SMARTLIST_FOREACH_BEGIN(entry_guards, const entry_guard_t *, entry) {
+  SMARTLIST_FOREACH_BEGIN(all_entry_guards, const entry_guard_t *, entry) {
       const char *msg;
       node = entry_is_live(entry, need_uptime, need_capacity, 0,
                            need_descriptor, &msg);
@@ -1090,6 +1091,7 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
   /* Populate the list of live entry guards so that we pick one of
      them. */
   retval = populate_live_entry_guards(live_entry_guards,
+                                      entry_guards,
                                       chosen_exit,
                                       dirinfo_type,
                                       for_directory,
