@@ -1003,44 +1003,10 @@ populate_live_entry_guards(const smartlist_t *live_entry_guards,
                            int need_capacity,
                            int need_descriptor)
 {
-}
-
-/** Helper for choose_random{entry,dirguard}. */
-static const node_t *
-choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
-                         dirinfo_type_t dirinfo_type, int *n_options_out)
-{
-  const or_options_t *options = get_options();
-  smartlist_t *live_entry_guards = smartlist_new();
-  smartlist_t *exit_family = smartlist_new();
-  const node_t *chosen_exit =
-    state?build_state_get_exit_node(state) : NULL;
-  const node_t *node = NULL;
-  int need_uptime = state ? state->need_uptime : 0;
-  int need_capacity = state ? state->need_capacity : 0;
-  int preferred_min = 0;
-  int need_descriptor = !for_directory;
-  const int num_needed = decide_num_guards(options, for_directory);
-
-  if (n_options_out)
-    *n_options_out = 0;
-
   if (chosen_exit) {
     nodelist_add_node_and_family(exit_family, chosen_exit);
   }
 
-  if (!entry_guards)
-    entry_guards = smartlist_new();
-
-  if (should_add_entry_nodes)
-    entry_guards_set_from_config(options);
-
-  if (!entry_list_is_constrained(options) &&
-      smartlist_len(entry_guards) < num_needed)
-    pick_entry_guards(options, for_directory);
-
- retry:
-  smartlist_clear(live_entry_guards);
   SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, entry) {
       const char *msg;
       node = entry_is_live(entry, need_uptime, need_capacity, 0,
@@ -1069,6 +1035,40 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
       if (smartlist_len(live_entry_guards) >= num_needed)
         goto choose_and_finish; /* we have enough */
   } SMARTLIST_FOREACH_END(entry);
+}
+
+/** Helper for choose_random{entry,dirguard}. */
+static const node_t *
+choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
+                         dirinfo_type_t dirinfo_type, int *n_options_out)
+{
+  const or_options_t *options = get_options();
+  smartlist_t *live_entry_guards = smartlist_new();
+  smartlist_t *exit_family = smartlist_new();
+  const node_t *chosen_exit =
+    state?build_state_get_exit_node(state) : NULL;
+  const node_t *node = NULL;
+  int need_uptime = state ? state->need_uptime : 0;
+  int need_capacity = state ? state->need_capacity : 0;
+  int preferred_min = 0;
+  int need_descriptor = !for_directory;
+  const int num_needed = decide_num_guards(options, for_directory);
+
+  if (n_options_out)
+    *n_options_out = 0;
+
+  if (!entry_guards)
+    entry_guards = smartlist_new();
+
+  if (should_add_entry_nodes)
+    entry_guards_set_from_config(options);
+
+  if (!entry_list_is_constrained(options) &&
+      smartlist_len(entry_guards) < num_needed)
+    pick_entry_guards(options, for_directory);
+
+ retry:
+  smartlist_clear(live_entry_guards);
 
   if (entry_list_is_constrained(options)) {
     /* If we prefer the entry nodes we've got, and we have at least
