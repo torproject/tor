@@ -1049,22 +1049,6 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
       if (dirinfo_type != NO_DIRINFO &&
           !node_can_handle_dirinfo(node, dirinfo_type))
         continue; /* this node won't be able to answer our dir questions */
-#if 0 /* since EntryNodes is always strict now, this clause is moot */
-      if (options->EntryNodes &&
-          !routerset_contains_node(options->EntryNodes, node)) {
-        /* We've come to the end of our preferred entry nodes. */
-        if (smartlist_len(live_entry_guards))
-          goto choose_and_finish; /* only choose from the ones we like */
-        if (options->StrictNodes) {
-          /* in theory this case should never happen, since
-           * entry_guards_set_from_config() drops unwanted relays */
-          tor_fragile_assert();
-        } else {
-          log_info(LD_CIRC,
-                   "No relays from EntryNodes available. Using others.");
-        }
-      }
-#endif
       smartlist_add(live_entry_guards, (void*)node);
       if (!entry->made_contact) {
         /* Always start with the first not-yet-contacted entry
