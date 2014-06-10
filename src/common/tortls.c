@@ -1477,10 +1477,13 @@ prune_v2_cipher_list(void)
 
   inp = outp = v2_cipher_list;
   while (*inp) {
-    unsigned char cipherid[2];
+    unsigned char cipherid[3];
     const SSL_CIPHER *cipher;
     /* Is there no better way to do this? */
     set_uint16(cipherid, htons(*inp));
+    cipherid[2] = 0; /* If ssl23_get_cipher_by_char finds no cipher starting
+                      * with a two-byte 'cipherid', it may look for a v2
+                      * cipher with the appropriate 3 bytes. */
     cipher = m->get_cipher_by_char(cipherid);
     if (cipher) {
       tor_assert((cipher->id & 0xffff) == *inp);
