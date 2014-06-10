@@ -28,6 +28,8 @@ void circuit_set_n_circid_chan(circuit_t *circ, circid_t id,
                                channel_t *chan);
 void channel_mark_circid_unusable(channel_t *chan, circid_t id);
 void channel_mark_circid_usable(channel_t *chan, circid_t id);
+time_t circuit_id_when_marked_unusable_on_channel(circid_t circ_id,
+                                                  channel_t *chan);
 void circuit_set_state(circuit_t *circ, uint8_t state);
 void circuit_close_all_marked(void);
 int32_t circuit_initial_package_window(void);

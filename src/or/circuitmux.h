@@ -121,6 +121,10 @@ unsigned int circuitmux_num_cells(circuitmux_t *cmux);
 unsigned int circuitmux_num_circuits(circuitmux_t *cmux);
 unsigned int circuitmux_num_active_circuits(circuitmux_t *cmux);
 
+/* Debuging interface - slow. */
+int64_t circuitmux_count_queued_destroy_cells(const channel_t *chan,
+                                              const circuitmux_t *cmux);
+
 /* Channel interface */
 circuit_t * circuitmux_get_first_active_circuit(circuitmux_t *cmux,
                                            cell_queue_t **destroy_queue_out);

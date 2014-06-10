@@ -96,10 +96,12 @@ get_unique_circ_id_by_chan(channel_t *chan)
  * N=256. */
 #define MAX_CIRCID_ATTEMPTS 64
   int in_use;
-  unsigned n_with_circ = 0, n_pending_destroy = 0;
+  unsigned n_with_circ = 0, n_pending_destroy = 0, n_weird_pending_destroy = 0;
   circid_t test_circ_id;
   circid_t attempts=0;
   circid_t high_bit, max_range, mask;
+  int64_t pending_destroy_time_total = 0;
+  int64_t pending_destroy_time_max = 0;
 
   tor_assert(chan);
 
@@ -130,15 +132,57 @@ get_unique_circ_id_by_chan(channel_t *chan)
        * whole circuit ID space every time we extend a circuit, which is
        * not so great either.
        */
-      log_fn_ratelim(&chan->last_warned_circ_ids_exhausted, LOG_WARN,
-                 LD_CIRC,"No unused circIDs found on channel %s wide "
+      int64_t queued_destroys;
+      char *m = rate_limit_log(&chan->last_warned_circ_ids_exhausted,
+                               approx_time());
+      if (m == NULL)
+        return 0; /* This message has been rate-limited away. */
+      if (n_pending_destroy)
+        pending_destroy_time_total /= n_pending_destroy;
+      log_warn(LD_CIRC,"No unused circIDs found on channel %s wide "
                  "circID support, with %u inbound and %u outbound circuits. "
                  "Found %u circuit IDs in use by circuits, and %u with "
-                 "pending destroy cells."
-                 "Failing a circuit.",
+                 "pending destroy cells. (%u of those were marked bogusly.) "
+                 "The ones with pending destroy cells "
+                 "have been marked unusable for an average of %ld seconds "
+                 "and a maximum of %ld seconds. This channel is %ld seconds "
+                 "old. Failing a circuit.%s",
                  chan->wide_circ_ids ? "with" : "without",
                  chan->num_p_circuits, chan->num_n_circuits,
-                 n_with_circ, n_pending_destroy);
+                 n_with_circ, n_pending_destroy, n_weird_pending_destroy,
+                 (long)pending_destroy_time_total,
+                 (long)pending_destroy_time_max,
+                 (long)(approx_time() - chan->timestamp_created),
+                 m);
+      tor_free(m);
+
+      if (!chan->cmux) {
+        /* This warning should be impossible. */
+        log_warn(LD_BUG, "  This channel somehow has no cmux on it!");
+        return 0;
+      }
+
+      /* analysis so far on 12184 suggests that we're running out of circuit
+         IDs because it looks like we have too many pending destroy
+         cells. Let's see how many we really have pending.
+      */
+      queued_destroys = circuitmux_count_queued_destroy_cells(chan,
+                                                              chan->cmux);
+
+      log_warn(LD_CIRC, "  Circuitmux on this channel has %u circuits, "
+               "of which %u are active. It says it has "I64_FORMAT
+               " destroy cells queued.",
+               circuitmux_num_circuits(chan->cmux),
+               circuitmux_num_active_circuits(chan->cmux),
+               I64_PRINTF_ARG(queued_destroys));
+
+      /* Change this into "if (1)" in order to get more information about
+       * possible failure modes here.  You'll need to know how to use gdb with
+       * Tor: this will make Tor exit with an assertion failure if the cmux is
+       * corrupt. */
+      if (0)
+        circuitmux_assert_okay(chan->cmux);
+
       return 0;
     }
 
@@ -152,8 +196,20 @@ get_unique_circ_id_by_chan(channel_t *chan)
     in_use = circuit_id_in_use_on_channel(test_circ_id, chan);
     if (in_use == 1)
       ++n_with_circ;
-    else if (in_use == 2)
+    else if (in_use == 2) {
+      time_t since_when;
       ++n_pending_destroy;
+      since_when =
+        circuit_id_when_marked_unusable_on_channel(test_circ_id, chan);
+      if (since_when) {
+        time_t waiting = approx_time() - since_when;
+        pending_destroy_time_total += waiting;
+        if (waiting > pending_destroy_time_max)
+          pending_destroy_time_max = waiting;
+      } else {
+        ++n_weird_pending_destroy;
+      }
+    }
   } while (in_use);
   return test_circ_id;
 }
