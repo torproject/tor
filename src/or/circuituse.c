@@ -792,7 +792,8 @@ void
 circuit_log_ancient_one_hop_circuits(int age)
 {
 #define MAX_ANCIENT_ONEHOP_CIRCUITS_TO_LOG 10
-  time_t cutoff = time(NULL) - age;
+  time_t now = time(NULL);
+  time_t cutoff = now - age;
   int n_found = 0;
   smartlist_t *log_these = smartlist_new();
   const circuit_t *circ;
@@ -823,18 +824,75 @@ circuit_log_ancient_one_hop_circuits(int age)
 
   SMARTLIST_FOREACH_BEGIN(log_these, const origin_circuit_t *, ocirc) {
     char created[ISO_TIME_LEN+1];
+    int stream_num;
+    const edge_connection_t *conn;
+    char *dirty = NULL;
     circ = TO_CIRCUIT(ocirc);
+
     format_local_iso_time(created,
                           (time_t)circ->timestamp_created.tv_sec);
 
+
+    if (circ->timestamp_dirty) {
+      char dirty_since[ISO_TIME_LEN+1];
+      format_local_iso_time(dirty_since, circ->timestamp_dirty);
+
+      tor_asprintf(&dirty, "Dirty since %s (%ld seconds vs %ld-second cutoff)",
+                   dirty_since, (long)(now - circ->timestamp_dirty),
+                   (long) get_options()->MaxCircuitDirtiness);
+    } else {
+      dirty = tor_strdup("Not marked dirty");
+    }
+
     log_notice(LD_HEARTBEAT, "  #%d created at %s. %s, %s. %s for close. "
-               "%s for new conns.",
+               "%s for new conns. %s.",
                ocirc_sl_idx,
                created,
                circuit_state_to_string(circ->state),
                circuit_purpose_to_string(circ->purpose),
                circ->marked_for_close ? "Marked" : "Not marked",
-               ocirc->unusable_for_new_conns ? "Not usable" : "usable");
+               ocirc->unusable_for_new_conns ? "Not usable" : "usable",
+               dirty);
+    tor_free(dirty);
+
+    stream_num = 0;
+    for (conn = ocirc->p_streams; conn; conn = conn->next_stream) {
+      const connection_t *c = TO_CONN(conn);
+      char stream_created[ISO_TIME_LEN+1];
+      if (++stream_num >= 5)
+        break;
+
+      format_local_iso_time(stream_created, c->timestamp_created);
+
+      log_notice(LD_HEARTBEAT, "     Stream#%d created at %s. "
+                 "%s conn in state %s. "
+                 "%s for close (%s:%d). Hold-open is %sset. "
+                 "Has %ssent RELAY_END. %s on circuit.",
+                 stream_num,
+                 stream_created,
+                 conn_type_to_string(c->type),
+                 conn_state_to_string(c->type, c->state),
+                 c->marked_for_close ? "Marked" : "Not marked",
+                 c->marked_for_close_file ? c->marked_for_close_file : "--",
+                 c->marked_for_close,
+                 c->hold_open_until_flushed ? "" : "not ",
+                 conn->edge_has_sent_end ? "" : "not ",
+                 conn->edge_blocked_on_circ ? "Blocked" : "Not blocked");
+      if (! c->linked_conn)
+        continue;
+
+      c = c->linked_conn;
+
+      log_notice(LD_HEARTBEAT, "        Linked to %s connection in state %s "
+                 "(Purpose %d). %s for close (%s:%d). Hold-open is %sset. ",
+                 conn_type_to_string(c->type),
+                 conn_state_to_string(c->type, c->state),
+                 c->purpose,
+                 c->marked_for_close ? "Marked" : "Not marked",
+                 c->marked_for_close_file ? c->marked_for_close_file : "--",
+                 c->marked_for_close,
+                 c->hold_open_until_flushed ? "" : "not ");
+    }
   } SMARTLIST_FOREACH_END(ocirc);
 
  done:

@@ -1,0 +1,4 @@
+  o Minor features (diagnostic):
+    - Improve the diagnostic log message for bug #8387 even further to
+      try to improve our odds of figuring out why one-hop directory
+      circuits sometimes do not get closed.
