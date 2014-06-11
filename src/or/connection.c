@@ -269,8 +269,6 @@ dir_connection_new(int socket_family)
 /** Allocate and return a new or_connection_t, initialized as by
  * connection_init().
  *
- * Set timestamp_last_added_nonpadding to now.
- *
  * Initialize active_circuit_pqueue.
  *
  * Set active_circuit_pqueue_last_recalibrated to current cell_ewma tick.
@@ -283,7 +281,7 @@ or_connection_new(int type, int socket_family)
   tor_assert(type == CONN_TYPE_OR || type == CONN_TYPE_EXT_OR);
   connection_init(now, TO_CONN(or_conn), type, socket_family);
 
-  or_conn->timestamp_last_added_nonpadding = time(NULL);
+  connection_or_set_canonical(or_conn, 0);
 
   if (type == CONN_TYPE_EXT_OR)
     connection_or_set_ext_or_identifier(or_conn);

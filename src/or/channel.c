@@ -112,7 +112,9 @@ HT_GENERATE(channel_idmap, channel_idmap_entry_s, node, channel_idmap_hash,
 
 static cell_queue_entry_t * cell_queue_entry_dup(cell_queue_entry_t *q);
 static void cell_queue_entry_free(cell_queue_entry_t *q, int handed_off);
+#if 0
 static int cell_queue_entry_is_padding(cell_queue_entry_t *q);
+#endif
 static cell_queue_entry_t *
 cell_queue_entry_new_fixed(cell_t *cell);
 static cell_queue_entry_t *
@@ -726,7 +728,7 @@ channel_init(channel_t *chan)
   chan->global_identifier = n_channels_allocated++;
 
   /* Init timestamp */
-  chan->timestamp_last_added_nonpadding = time(NULL);
+  chan->timestamp_last_had_circuits = time(NULL);
 
   /* Warn about exhausted circuit IDs no more than hourly. */
   chan->last_warned_circ_ids_exhausted.rate = 3600;
@@ -1595,6 +1597,7 @@ cell_queue_entry_free(cell_queue_entry_t *q, int handed_off)
   tor_free(q);
 }
 
+#if 0
 /**
  * Check whether a cell queue entry is padding; this is a helper function
  * for channel_write_cell_queue_entry()
@@ -1623,6 +1626,7 @@ cell_queue_entry_is_padding(cell_queue_entry_t *q)
 
   return 0;
 }
+#endif
 
 /**
  * Allocate a new cell queue entry for a fixed-size cell
@@ -1680,11 +1684,6 @@ channel_write_cell_queue_entry(channel_t *chan, cell_queue_entry_t *q)
   tor_assert(chan->state == CHANNEL_STATE_OPENING ||
              chan->state == CHANNEL_STATE_OPEN ||
              chan->state == CHANNEL_STATE_MAINT);
-
-  /* Increment the timestamp unless it's padding */
-  if (!cell_queue_entry_is_padding(q)) {
-    chan->timestamp_last_added_nonpadding = approx_time();
-  }
 
   {
     circid_t circ_id;

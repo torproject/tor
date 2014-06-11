@@ -328,9 +328,12 @@ circuit_set_p_circid_chan(or_circuit_t *or_circ, circid_t id,
 
   circuit_set_circid_chan_helper(circ, CELL_DIRECTION_IN, id, chan);
 
-  if (chan)
+  if (chan) {
     tor_assert(bool_eq(or_circ->p_chan_cells.n,
                        or_circ->next_active_on_p_chan));
+
+    chan->timestamp_last_had_circuits = approx_time();
+  }
 
   if (circ->p_delete_pending && old_chan) {
     channel_mark_circid_unusable(old_chan, old_id);
@@ -350,8 +353,11 @@ circuit_set_n_circid_chan(circuit_t *circ, circid_t id,
 
   circuit_set_circid_chan_helper(circ, CELL_DIRECTION_OUT, id, chan);
 
-  if (chan)
+  if (chan) {
     tor_assert(bool_eq(circ->n_chan_cells.n, circ->next_active_on_n_chan));
+
+    chan->timestamp_last_had_circuits = approx_time();
+  }
 
   if (circ->n_delete_pending && old_chan) {
     channel_mark_circid_unusable(old_chan, old_id);

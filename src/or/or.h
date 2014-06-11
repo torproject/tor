@@ -1488,13 +1488,14 @@ typedef struct or_connection_t {
 
   uint16_t link_proto; /**< What protocol version are we using? 0 for
                         * "none negotiated yet." */
-
+  uint16_t idle_timeout; /**< How long can this connection sit with no
+                          * circuits on it before we close it? Based on
+                          * IDLE_CIRCUIT_TIMEOUT_{NON,}CANONICAL and
+                          * on is_canonical, randomized. */
   or_handshake_state_t *handshake_state; /**< If we are setting this connection
                                           * up, state information to do so. */
 
   time_t timestamp_lastempty; /**< When was the outbuf last completely empty?*/
-  time_t timestamp_last_added_nonpadding; /** When did we last add a
-                                           * non-padding cell to the outbuf? */
 
   /* bandwidth* and *_bucket only used by ORs in OPEN state: */
   int bandwidthrate; /**< Bytes/s added to the bucket. (OPEN ORs only.) */
