@@ -1,0 +1,7 @@
+  o Minor bugfixes (linux seccomp sandbox):
+    - Refactor the getaddrinfo workaround that the seccomp sandbox
+      uses to avoid calling getaddrinfo() after installing the sandbox
+      filters. Previously, it preloaded a cache with the IPv4 address
+      for our hostname, and nothing else. Now, it loads the cache with
+      every address that it used to initialize the Tor process. Fixes
+      bug 11970; bugfix on 0.2.5.1-alpha.

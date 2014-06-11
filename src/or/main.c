@@ -2545,6 +2545,7 @@ tor_free_all(int postfork)
   microdesc_free_all();
   ext_orport_free_all();
   control_free_all();
+  sandbox_free_getaddrinfo_cache();
   if (!postfork) {
     config_free_all();
     or_state_free_all();

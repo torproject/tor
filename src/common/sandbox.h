@@ -91,21 +91,6 @@ struct sandbox_cfg_elem {
   struct sandbox_cfg_elem *next;
 };
 
-/**
- * Structure used for keeping a linked list of getaddrinfo pre-recorded
- * results.
- */
-struct sb_addr_info_el {
-  /** Name of the address info result. */
-  char *name;
-  /** Pre-recorded getaddrinfo result. */
-  struct addrinfo *info;
-  /** Next element in the list. */
-  struct sb_addr_info_el *next;
-};
-/** Typedef to structure used to manage an addrinfo list. */
-typedef struct sb_addr_info_el sb_addr_info_t;
-
 /** Function pointer defining the prototype of a filter function.*/
 typedef int (*sandbox_filter_func_t)(scmp_filter_ctx ctx,
     sandbox_cfg_t *filter);
@@ -130,11 +115,16 @@ struct addrinfo;
 int sandbox_getaddrinfo(const char *name, const char *servname,
                         const struct addrinfo *hints,
                         struct addrinfo **res);
+#define sandbox_freeaddrinfo(addrinfo) ((void)0)
+void sandbox_free_getaddrinfo_cache(void);
 #else
 #define sandbox_getaddrinfo(name, servname, hints, res)  \
   getaddrinfo((name),(servname), (hints),(res))
 #define sandbox_add_addrinfo(name) \
   ((void)(name))
+#define sandbox_freeaddrinfo(addrinfo) \
+  freeaddrinfo((addrinfo))
+#define sandbox_free_getaddrinfo_cache()
 #endif
 
 #ifdef USE_LIBSECCOMP

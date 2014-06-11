@@ -264,7 +264,7 @@ tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr)
                           &((struct sockaddr_in6*)best->ai_addr)->sin6_addr);
         result = 0;
       }
-      freeaddrinfo(res);
+      sandbox_freeaddrinfo(res);
       return result;
     }
     return (err == EAI_AGAIN) ? 1 : -1;
