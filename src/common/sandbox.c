@@ -1397,7 +1397,7 @@ sandbox_getaddrinfo(const char *name, const char *servname,
 
   /* getting here means something went wrong */
   log_err(LD_BUG,"(Sandbox) failed to get address %s!", name);
-  return -1;
+  return EAI_NONAME;
 }
 
 int
