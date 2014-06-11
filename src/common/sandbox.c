@@ -1352,7 +1352,7 @@ typedef struct cached_getaddrinfo_item_t {
 static unsigned
 cached_getaddrinfo_item_hash(const cached_getaddrinfo_item_t *item)
 {
-  return siphash24g(item->name, strlen(item->name)) + item->family;
+  return (unsigned)siphash24g(item->name, strlen(item->name)) + item->family;
 }
 
 static unsigned
