@@ -227,6 +227,23 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
             (unsigned)cell->circ_id,
             U64_PRINTF_ARG(chan->global_identifier), chan);
 
+  if (circuit_id_in_use_on_channel(cell->circ_id, chan)) {
+    const node_t *node = node_get_by_id(chan->identity_digest);
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Received CREATE cell (circID %u) for known circ. "
+           "Dropping (age %d).",
+           (unsigned)cell->circ_id,
+           (int)(time(NULL) - channel_when_created(chan)));
+    if (node) {
+      char *p = esc_for_log(node_get_platform(node));
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+             "Details: router %s, platform %s.",
+             node_describe(node), p);
+      tor_free(p);
+    }
+    return;
+  }
+
   if (we_are_hibernating()) {
     log_info(LD_OR,
              "Received create cell but we're shutting down. Sending back "
@@ -271,23 +288,6 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
            (unsigned)cell->circ_id);
     channel_send_destroy(cell->circ_id, chan,
                          END_CIRC_REASON_TORPROTOCOL);
-    return;
-  }
-
-  if (circuit_id_in_use_on_channel(cell->circ_id, chan)) {
-    const node_t *node = node_get_by_id(chan->identity_digest);
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Received CREATE cell (circID %u) for known circ. "
-           "Dropping (age %d).",
-           (unsigned)cell->circ_id,
-           (int)(time(NULL) - channel_when_created(chan)));
-    if (node) {
-      char *p = esc_for_log(node_get_platform(node));
-      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-             "Details: router %s, platform %s.",
-             node_describe(node), p);
-      tor_free(p);
-    }
     return;
   }
 
