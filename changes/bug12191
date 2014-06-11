@@ -1,6 +1,7 @@
   o Minor bugfixes:
 
-    - We now drop CREATE cells for already-existent circuit IDs, regardless
-      of other factors that might otherwise have called for DESTROY cells.
-      Fixes bug 12191; bugfix on 0.2.???
+    - We now drop CREATE cells for already-existent circuit IDs and
+      for zero-valued circuit IDs, regardless of other factors that
+      might otherwise have called for DESTROY cells.  Fixes bug 12191;
+      bugfix on 0.0.8pre1.
 

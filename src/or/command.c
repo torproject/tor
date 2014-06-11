@@ -227,6 +227,17 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
             (unsigned)cell->circ_id,
             U64_PRINTF_ARG(chan->global_identifier), chan);
 
+  /* We check for the conditions that would make us drop the cell before
+   * we check for the conditions that would make us send a DESTROY back,
+   * since those conditions would make a DESTROY nonsensical. */
+  if (cell->circ_id == 0) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Received a create cell (type %d) from %s with zero circID; "
+           " ignoring.", (int)cell->command,
+           channel_get_actual_remote_descr(chan));
+    return;
+  }
+
   if (circuit_id_in_use_on_channel(cell->circ_id, chan)) {
     const node_t *node = node_get_by_id(chan->identity_digest);
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
@@ -262,14 +273,6 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
            (int)cell->command, channel_get_canonical_remote_descr(chan));
     channel_send_destroy(cell->circ_id, chan,
                          END_CIRC_REASON_TORPROTOCOL);
-    return;
-  }
-
-  if (cell->circ_id == 0) {
-    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-           "Received a create cell (type %d) from %s with zero circID; "
-           " ignoring.", (int)cell->command,
-           channel_get_actual_remote_descr(chan));
     return;
   }
 
