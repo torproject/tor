@@ -832,7 +832,6 @@ circuit_log_ancient_one_hop_circuits(int age)
     format_local_iso_time(created,
                           (time_t)circ->timestamp_created.tv_sec);
 
-
     if (circ->timestamp_dirty) {
       char dirty_since[ISO_TIME_LEN+1];
       format_local_iso_time(dirty_since, circ->timestamp_dirty);

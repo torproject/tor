@@ -1065,7 +1065,6 @@ run_connection_housekeeping(int i, time_t now)
   chan = TLS_CHAN_TO_BASE(or_conn->chan);
   tor_assert(chan);
 
-
   if (channel_num_circuits(chan) != 0) {
     have_any_circuits = 1;
     chan->timestamp_last_had_circuits = now;
@@ -1101,7 +1100,8 @@ run_connection_housekeeping(int i, time_t now)
              (int)conn->s,conn->address, conn->port);
     connection_or_close_normally(TO_OR_CONN(conn), 1);
   } else if (!have_any_circuits &&
-             now - or_conn->idle_timeout >= chan->timestamp_last_had_circuits) {
+             now - or_conn->idle_timeout >=
+                                         chan->timestamp_last_had_circuits) {
     log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
              "[no circuits for %d; timeout %d; %scanonical].",
              (int)conn->s, conn->address, conn->port,
