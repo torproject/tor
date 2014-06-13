@@ -2941,6 +2941,7 @@ sandbox_init_filter(void)
 
     sandbox_cfg_allow_stat_filename_array(&cfg,
         get_datadir_fname("keys"),
+        get_datadir_fname("stats"),
         get_datadir_fname2("stats", "dirreq-stats"),
         NULL, 0
     );
