@@ -2569,6 +2569,17 @@ packed_cell_get_command(const packed_cell_t *cell, int wide_circ_ids)
   }
 }
 
+/** Extract the circuit ID from a packed cell. */
+circid_t
+packed_cell_get_circid(const packed_cell_t *cell, int wide_circ_ids)
+{
+  if (wide_circ_ids) {
+    return ntohl(get_uint32(cell->body));
+  } else {
+    return ntohs(get_uint16(cell->body));
+  }
+}
+
 /** Pull as many cells as possible (but no more than <b>max</b>) from the
  * queue of the first active circuit on <b>chan</b>, and write them to
  * <b>chan</b>-&gt;outbuf.  Return the number of cells written.  Advance

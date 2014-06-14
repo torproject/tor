@@ -1909,3 +1909,38 @@ circuitmux_append_destroy_cell(channel_t *chan,
   }
 }
 
+/*DOCDOC; for debugging 12184.  This runs slowly. */
+int64_t
+circuitmux_count_queued_destroy_cells(const channel_t *chan,
+                                      const circuitmux_t *cmux)
+{
+  int64_t n_destroy_cells = cmux->destroy_ctr;
+  int64_t destroy_queue_size = cmux->destroy_cell_queue.n;
+
+  int64_t manual_total = 0;
+  int64_t manual_total_in_map = 0;
+  packed_cell_t *cell;
+
+  TOR_SIMPLEQ_FOREACH(cell, &cmux->destroy_cell_queue.head, next) {
+    circid_t id;
+    ++manual_total;
+
+    id = packed_cell_get_circid(cell, chan->wide_circ_ids);
+    if (circuit_id_in_use_on_channel(id, (channel_t*)chan))
+      ++manual_total_in_map;
+  }
+
+  if (n_destroy_cells != destroy_queue_size ||
+      n_destroy_cells != manual_total ||
+      n_destroy_cells != manual_total_in_map) {
+    log_warn(LD_BUG, "  Discrepancy in counts for queued destroy cells on "
+             "circuitmux. n="I64_FORMAT". queue_size="I64_FORMAT". "
+             "manual_total="I64_FORMAT". manual_total_in_map="I64_FORMAT".",
+             I64_PRINTF_ARG(n_destroy_cells),
+             I64_PRINTF_ARG(destroy_queue_size),
+             I64_PRINTF_ARG(manual_total),
+             I64_PRINTF_ARG(manual_total_in_map));
+  }
+
+  return n_destroy_cells;
+}

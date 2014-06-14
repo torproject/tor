@@ -59,6 +59,8 @@ typedef struct chan_circid_circuit_map_t {
   channel_t *chan;
   circid_t circ_id;
   circuit_t *circuit;
+  /* For debugging 12184: when was this placeholder item added? */
+  time_t made_placeholder_at;
 } chan_circid_circuit_map_t;
 
 /** Helper for hash tables: compare the channel and circuit ID for a and
@@ -184,6 +186,7 @@ circuit_set_circid_chan_helper(circuit_t *circ, int direction,
   found = HT_FIND(chan_circid_map, &chan_circid_map, &search);
   if (found) {
     found->circuit = circ;
+    found->made_placeholder_at = 0;
   } else {
     found = tor_malloc_zero(sizeof(chan_circid_circuit_map_t));
     found->circ_id = id;
@@ -241,11 +244,14 @@ channel_mark_circid_unusable(channel_t *chan, circid_t id)
              "a circuit there.", (unsigned)id, chan);
   } else if (ent) {
     /* It's already marked. */
+    if (!ent->made_placeholder_at)
+      ent->made_placeholder_at = approx_time();
   } else {
     ent = tor_malloc_zero(sizeof(chan_circid_circuit_map_t));
     ent->chan = chan;
     ent->circ_id = id;
-    /* leave circuit at NULL */
+    /* leave circuit at NULL. */
+    ent->made_placeholder_at = approx_time();
     HT_INSERT(chan_circid_map, &chan_circid_map, ent);
   }
 }
@@ -1095,6 +1101,27 @@ circuit_id_in_use_on_channel(circid_t circ_id, channel_t *chan)
     return 2;
   return 0;
 }
+
+/** Helper for debugging 12184.  Returns the time since which 'circ_id' has
+ * been marked unusable on 'chan'. */
+time_t
+circuit_id_when_marked_unusable_on_channel(circid_t circ_id, channel_t *chan)
+{
+  chan_circid_circuit_map_t search;
+  chan_circid_circuit_map_t *found;
+
+  memset(&search, 0, sizeof(search));
+  search.circ_id = circ_id;
+  search.chan = chan;
+
+  found = HT_FIND(chan_circid_map, &chan_circid_map, &search);
+
+  if (! found || found->circuit)
+    return 0;
+
+  return found->made_placeholder_at;
+}
+
 
 /** Return the circuit that a given edge connection is using. */
 circuit_t *
