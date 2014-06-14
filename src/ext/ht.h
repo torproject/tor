@@ -160,7 +160,7 @@ ht_string_hash(const char *s)
   }                                                                     \
   /* Return a pointer to the element in the table 'head' matching 'elm', \
    * or NULL if no such element exists */                               \
-  static INLINE struct type *                                           \
+  ATTR_UNUSED static INLINE struct type *                               \
   name##_HT_FIND(const struct name *head, struct type *elm)             \
   {                                                                     \
     struct type **p;                                                    \
