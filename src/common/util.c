@@ -26,6 +26,7 @@
 #include "address.h"
 #include "sandbox.h"
 #include "backtrace.h"
+#include "util_process.h"
 
 #ifdef _WIN32
 #include <io.h>
@@ -3629,13 +3630,7 @@ tor_terminate_process(process_handle_t *process_handle)
 {
 #ifdef _WIN32
   if (tor_get_exit_code(process_handle, 0, NULL) == PROCESS_EXIT_RUNNING) {
-    HANDLE handle;
-    /* If the signal is outside of what GenerateConsoleCtrlEvent can use,
-       attempt to open and terminate the process. */
-    handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE,
-                         process_handle->pid.dwProcessId);
-    if (!handle)
-      return -1;
+    HANDLE handle = process_handle->pid.hProcess;
 
     if (!TerminateProcess(handle, 0))
       return -1;
@@ -3643,7 +3638,10 @@ tor_terminate_process(process_handle_t *process_handle)
       return 0;
   }
 #else /* Unix */
-  return kill(process_handle->pid, SIGTERM);
+  if (process_handle->waitpid_cb) {
+    /* We haven't got a waitpid yet, so we can just kill off the process. */
+    return kill(process_handle->pid, SIGTERM);
+  }
 #endif
 
   return -1;
@@ -3691,6 +3689,23 @@ process_handle_new(void)
 
   return out;
 }
+
+#ifndef _WIN32
+/** Invoked when a process that we've launched via tor_spawn_background() has
+ * been found to have terminated.
+ */
+static void
+process_handle_waitpid_cb(int status, void *arg)
+{
+  process_handle_t *process_handle = arg;
+
+  process_handle->waitpid_exit_status = status;
+  clear_waitpid_callback(process_handle->waitpid_cb);
+  if (process_handle->status == PROCESS_STATUS_RUNNING)
+    process_handle->status = PROCESS_STATUS_NOTRUNNING;
+  process_handle->waitpid_cb = 0;
+}
+#endif
 
 /**
  * @name child-process states
@@ -4008,6 +4023,10 @@ tor_spawn_background(const char *const filename, const char **argv,
             strerror(errno));
   }
 
+  process_handle->waitpid_cb = set_waitpid_callback(pid,
+                                                    process_handle_waitpid_cb,
+                                                    process_handle);
+
   process_handle->stderr_pipe = stderr_pipe[0];
   retval = close(stderr_pipe[1]);
 
@@ -4072,6 +4091,8 @@ tor_process_handle_destroy,(process_handle_t *process_handle,
 
   if (process_handle->stderr_handle)
     fclose(process_handle->stderr_handle);
+
+  clear_waitpid_callback(process_handle->waitpid_cb);
 #endif
 
   memset(process_handle, 0x0f, sizeof(process_handle_t));
@@ -4089,7 +4110,7 @@ tor_process_handle_destroy,(process_handle_t *process_handle,
  * probably not work in Tor, because waitpid() is called in main.c to reap any
  * terminated child processes.*/
 int
-tor_get_exit_code(const process_handle_t *process_handle,
+tor_get_exit_code(process_handle_t *process_handle,
                   int block, int *exit_code)
 {
 #ifdef _WIN32
@@ -4129,7 +4150,20 @@ tor_get_exit_code(const process_handle_t *process_handle,
   int stat_loc;
   int retval;
 
-  retval = waitpid(process_handle->pid, &stat_loc, block?0:WNOHANG);
+  if (process_handle->waitpid_cb) {
+    /* We haven't processed a SIGCHLD yet. */
+    retval = waitpid(process_handle->pid, &stat_loc, block?0:WNOHANG);
+    if (retval == process_handle->pid) {
+      clear_waitpid_callback(process_handle->waitpid_cb);
+      process_handle->waitpid_cb = NULL;
+      process_handle->waitpid_exit_status = stat_loc;
+    }
+  } else {
+    /* We already got a SIGCHLD for this process, and handled it. */
+    retval = process_handle->pid;
+    stat_loc = process_handle->waitpid_exit_status;
+  }
+
   if (!block && 0 == retval) {
     /* Process has not exited */
     return PROCESS_EXIT_RUNNING;

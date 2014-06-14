@@ -749,6 +749,10 @@ char *format_win32_error(DWORD err);
 
 #endif
 
+#ifdef TOR_UNIT_TESTS
+void tor_sleep_msec(int msec);
+#endif
+
 #ifdef COMPAT_PRIVATE
 #if !defined(HAVE_SOCKETPAIR) || defined(_WIN32) || defined(TOR_UNIT_TESTS)
 #define NEED_ERSATZ_SOCKETPAIR

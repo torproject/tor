@@ -114,6 +114,12 @@
 /* Only use the linux prctl;  the IRIX prctl is totally different */
 #include <sys/prctl.h>
 #endif
+#ifdef TOR_UNIT_TESTS
+#if !defined(HAVE_USLEEP) && defined(HAVE_SYS_SELECT_H)
+/* as fallback implementation for tor_sleep_msec */
+#include <sys/select.h>
+#endif
+#endif
 
 #include "torlog.h"
 #include "util.h"
@@ -3555,4 +3561,24 @@ get_total_system_memory(size_t *mem_out)
 
   return 0;
 }
+
+#ifdef TOR_UNIT_TESTS
+/** Delay for <b>msec</b> milliseconds.  Only used in tests. */
+void
+tor_sleep_msec(int msec)
+{
+#ifdef _WIN32
+  Sleep(msec);
+#elif defined(HAVE_USLEEP)
+  sleep(msec / 1000);
+  /* Some usleep()s hate sleeping more than 1 sec */
+  usleep((msec % 1000) * 1000);
+#elif defined(HAVE_SYS_SELECT_H)
+  struct timeval tv = { msec / 1000, (msec % 1000) * 1000};
+  select(0, NULL, NULL, NULL, &tv);
+#else
+  sleep(CEIL_DIV(msec, 1000));
+#endif
+}
+#endif
 

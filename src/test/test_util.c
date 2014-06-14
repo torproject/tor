@@ -16,6 +16,7 @@
 #include "mempool.h"
 #endif /* ENABLE_MEMPOOLS */
 #include "memarea.h"
+#include "util_process.h"
 
 #ifdef _WIN32
 #include <tchar.h>
@@ -2538,6 +2539,19 @@ test_util_fgets_eagain(void *ptr)
 }
 #endif
 
+#ifndef BUILDDIR
+#define BUILDDIR "."
+#endif
+
+#ifdef _WIN32
+#define notify_pending_waitpid_callbacks() STMT_NIL
+#define TEST_CHILD "test-child.exe"
+#define EOL "\r\n"
+#else
+#define TEST_CHILD (BUILDDIR "/src/test/test-child")
+#define EOL "\n"
+#endif
+
 /** Helper function for testing tor_spawn_background */
 static void
 run_util_spawn_background(const char *argv[], const char *expected_out,
@@ -2557,19 +2571,28 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
   status = tor_spawn_background(argv[0], argv, NULL, &process_handle);
 #endif
 
+  notify_pending_waitpid_callbacks();
+
   test_eq(expected_status, status);
-  if (status == PROCESS_STATUS_ERROR)
+  if (status == PROCESS_STATUS_ERROR) {
+    tt_ptr_op(process_handle, ==, NULL);
     return;
+  }
 
   test_assert(process_handle != NULL);
   test_eq(expected_status, process_handle->status);
+
+#ifndef _WIN32
+  notify_pending_waitpid_callbacks();
+  tt_ptr_op(process_handle->waitpid_cb, !=, NULL);
+#endif
 
 #ifdef _WIN32
   test_assert(process_handle->stdout_pipe != INVALID_HANDLE_VALUE);
   test_assert(process_handle->stderr_pipe != INVALID_HANDLE_VALUE);
 #else
-  test_assert(process_handle->stdout_pipe > 0);
-  test_assert(process_handle->stderr_pipe > 0);
+  test_assert(process_handle->stdout_pipe >= 0);
+  test_assert(process_handle->stderr_pipe >= 0);
 #endif
 
   /* Check stdout */
@@ -2580,11 +2603,18 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
   test_eq(strlen(expected_out), pos);
   test_streq(expected_out, stdout_buf);
 
+  notify_pending_waitpid_callbacks();
+
   /* Check it terminated correctly */
   retval = tor_get_exit_code(process_handle, 1, &exit_code);
   test_eq(PROCESS_EXIT_EXITED, retval);
   test_eq(expected_exit, exit_code);
   // TODO: Make test-child exit with something other than 0
+
+#ifndef _WIN32
+  notify_pending_waitpid_callbacks();
+  tt_ptr_op(process_handle->waitpid_cb, ==, NULL);
+#endif
 
   /* Check stderr */
   pos = tor_read_all_from_process_stderr(process_handle, stderr_buf,
@@ -2593,6 +2623,8 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
   stderr_buf[pos] = '\0';
   test_streq(expected_err, stderr_buf);
   test_eq(strlen(expected_err), pos);
+
+  notify_pending_waitpid_callbacks();
 
  done:
   if (process_handle)
@@ -2603,29 +2635,20 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
 static void
 test_util_spawn_background_ok(void *ptr)
 {
-#ifdef _WIN32
-  const char *argv[] = {"test-child.exe", "--test", NULL};
-  const char *expected_out = "OUT\r\n--test\r\nSLEEPING\r\nDONE\r\n";
-  const char *expected_err = "ERR\r\n";
-#else
-  const char *argv[] = {BUILDDIR "/src/test/test-child", "--test", NULL};
-  const char *expected_out = "OUT\n--test\nSLEEPING\nDONE\n";
-  const char *expected_err = "ERR\n";
-#endif
+  const char *argv[] = {TEST_CHILD, "--test", NULL};
+  const char *expected_out = "OUT"EOL "--test"EOL "SLEEPING"EOL "DONE" EOL;
+  const char *expected_err = "ERR"EOL;
 
   (void)ptr;
 
   run_util_spawn_background(argv, expected_out, expected_err, 0,
-                            PROCESS_STATUS_RUNNING);
+      PROCESS_STATUS_RUNNING);
 }
 
 /** Check that failing to find the executable works as expected */
 static void
 test_util_spawn_background_fail(void *ptr)
 {
-#ifndef BUILDDIR
-#define BUILDDIR "."
-#endif
   const char *argv[] = {BUILDDIR "/src/test/no-such-file", "--test", NULL};
   const char *expected_err = "";
   char expected_out[1024];
@@ -2646,13 +2669,13 @@ test_util_spawn_background_fail(void *ptr)
     "ERR: Failed to spawn background process - code %s\n", code);
 
   run_util_spawn_background(argv, expected_out, expected_err, 255,
-                            expected_status);
+      expected_status);
 }
 
 /** Test that reading from a handle returns a partial read rather than
  * blocking */
 static void
-test_util_spawn_background_partial_read(void *ptr)
+test_util_spawn_background_partial_read_impl(int exit_early)
 {
   const int expected_exit = 0;
   const int expected_status = PROCESS_STATUS_RUNNING;
@@ -2662,22 +2685,22 @@ test_util_spawn_background_partial_read(void *ptr)
   process_handle_t *process_handle=NULL;
   int status;
   char stdout_buf[100], stderr_buf[100];
-#ifdef _WIN32
-  const char *argv[] = {"test-child.exe", "--test", NULL};
-  const char *expected_out[] = { "OUT\r\n--test\r\nSLEEPING\r\n",
-                                 "DONE\r\n",
+
+  const char *argv[] = {TEST_CHILD, "--test", NULL};
+  const char *expected_out[] = { "OUT" EOL "--test" EOL "SLEEPING" EOL,
+                                 "DONE" EOL,
                                  NULL };
-  const char *expected_err = "ERR\r\n";
-#else
-  const char *argv[] = {BUILDDIR "/src/test/test-child", "--test", NULL};
-  const char *expected_out[] = { "OUT\n--test\nSLEEPING\n",
-                                 "DONE\n",
-                                 NULL };
-  const char *expected_err = "ERR\n";
+  const char *expected_err = "ERR" EOL;
+
+#ifndef _WIN32
   int eof = 0;
 #endif
   int expected_out_ctr;
-  (void)ptr;
+
+  if (exit_early) {
+    argv[1] = "--hang";
+    expected_out[0] = "OUT"EOL "--hang"EOL "SLEEPING" EOL;
+  }
 
   /* Start the program */
 #ifdef _WIN32
@@ -2711,6 +2734,12 @@ test_util_spawn_background_partial_read(void *ptr)
     test_streq(expected_out[expected_out_ctr], stdout_buf);
     test_eq(strlen(expected_out[expected_out_ctr]), pos);
     expected_out_ctr++;
+  }
+
+  if (exit_early) {
+    tor_process_handle_destroy(process_handle, 1);
+    process_handle = NULL;
+    goto done;
   }
 
   /* The process should have exited without writing more */
@@ -2749,6 +2778,75 @@ test_util_spawn_background_partial_read(void *ptr)
  done:
   tor_process_handle_destroy(process_handle, 1);
 }
+
+static void
+test_util_spawn_background_partial_read(void *arg)
+{
+  (void)arg;
+  test_util_spawn_background_partial_read_impl(0);
+}
+
+static void
+test_util_spawn_background_exit_early(void *arg)
+{
+  (void)arg;
+  test_util_spawn_background_partial_read_impl(1);
+}
+
+static void
+test_util_spawn_background_waitpid_notify(void *arg)
+{
+  int retval, exit_code;
+  process_handle_t *process_handle=NULL;
+  int status;
+  int ms_timer;
+
+  const char *argv[] = {TEST_CHILD, "--fast", NULL};
+
+  (void) arg;
+
+#ifdef _WIN32
+  status = tor_spawn_background(NULL, argv, NULL, &process_handle);
+#else
+  status = tor_spawn_background(argv[0], argv, NULL, &process_handle);
+#endif
+
+  tt_int_op(status, ==, PROCESS_STATUS_RUNNING);
+  tt_ptr_op(process_handle, !=, NULL);
+
+  /* We're not going to look at the stdout/stderr output this time. Instead,
+   * we're testing whether notify_pending_waitpid_calbacks() can report the
+   * process exit (on unix) and/or whether tor_get_exit_code() can notice it
+   * (on windows) */
+
+#ifndef _WIN32
+  ms_timer = 30*1000;
+  tt_ptr_op(process_handle->waitpid_cb, !=, NULL);
+  while (process_handle->waitpid_cb && ms_timer > 0) {
+    tor_sleep_msec(100);
+    ms_timer -= 100;
+    notify_pending_waitpid_callbacks();
+  }
+  tt_int_op(ms_timer, >, 0);
+  tt_ptr_op(process_handle->waitpid_cb, ==, NULL);
+#endif
+
+  ms_timer = 30*1000;
+  while (((retval = tor_get_exit_code(process_handle, 0, &exit_code))
+                == PROCESS_EXIT_RUNNING) && ms_timer > 0) {
+    tor_sleep_msec(100);
+    ms_timer -= 100;
+  }
+  tt_int_op(ms_timer, >, 0);
+
+  tt_int_op(retval, ==, PROCESS_EXIT_EXITED);
+
+ done:
+  tor_process_handle_destroy(process_handle, 1);
+}
+
+#undef TEST_CHILD
+#undef EOL
 
 /**
  * Test for format_hex_number_sigsafe()
@@ -3695,6 +3793,8 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(spawn_background_ok, 0),
   UTIL_TEST(spawn_background_fail, 0),
   UTIL_TEST(spawn_background_partial_read, 0),
+  UTIL_TEST(spawn_background_exit_early, 0),
+  UTIL_TEST(spawn_background_waitpid_notify, 0),
   UTIL_TEST(format_hex_number, 0),
   UTIL_TEST(format_dec_number, 0),
   UTIL_TEST(join_win_cmdline, 0),
