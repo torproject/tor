@@ -1,5 +1,0 @@
-  o Minor bugfixes (performance):
-    - Avoid using tor_memeq() for checking relay cell integrity.
-      This removes a possible performance bottleneck. Fixes part of bug
-      12169; bugfix on 0.2.1.31.
-

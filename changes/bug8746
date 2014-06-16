@@ -1,4 +1,0 @@
-  o Major bugfixes:
-    - When managing pluggable transports, use OS notification facilities to
-      learn if they have crashed, and do not attempt to kill any process
-      that has already exited. Fix for bug 8746; bugfix on 0.2.3.6-alpha.

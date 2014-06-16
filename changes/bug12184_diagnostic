@@ -1,4 +1,0 @@
-  o Minor features (diagnostic):
-    - Add significant new logging code to attempt to diagnose bug 12184,
-      where relays seem to run out of available circuit IDs.
-

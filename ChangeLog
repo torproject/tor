@@ -1,5 +1,23 @@
-Changes in version 0.2.5.5-alpha - 2014-06-??
+Changes in version 0.2.5.5-alpha - 2014-06-1?
   Write a blurb here.
+
+  o Major features (security, traffic analysis resistance):
+    - Increase the base amount of time that a canonical connection (one
+      that we have made to a known OR) is allowed to stay idle from 3
+      minutes to 15 minutes. This leaks less information about when
+      circuits have closed, and avoids unnecessary overhead from
+      renegotiating connections. Part of a fix for ticket 6799.
+    - Instead of closing connections after they have been idle for a
+      fixed interval, randomly add up to 50% to each connection's
+      maximum timeout. This makes it harder to tell when the last
+      circuit closed by looking at when a connection closes. Part of a
+      fix for ticket 6799.
+    - Base connection idleness tests on the actual time elapsed since
+      the connection last had circuits, not on the time when we last
+      added non-padding. This change also makes it harder for an
+      observer to tell when the last circuit closed by looking at when a
+      connection closes. Part of a fix for ticket 6799. Incidentally
+      fixes bug 12023; bugfix on 0.2.5.1-alpha.
 
   o Major bugfixes (security, OOM, new since 0.2.5.4-alpha, also in 0.2.4.22):
     - Fix a memory leak that could occur if a microdescriptor parse
@@ -13,6 +31,11 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
       directory object. Previously, relays would used tunnel connections
       under a fairly wide variety of circumstances. Fixes bug 11469;
       bugfix on 0.2.4.3-alpha.
+    - When a circuit accidentally has the same circuit ID for its
+      forward and reverse direction, correctly detect the direction of
+      cells using that circuit. Previously, this would have made roughly
+      one circuit in a million non-functional. Fixes bug 12195; this is
+      a bugfix on every version of Tor.
 
   o Major bugfixes (security, directory authorities):
     - Directory authorities now include a digest of each relay's
@@ -30,6 +53,12 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
       attacker from causing a microdescriptor collision, because the
       router's identity is not forgeable.
 
+  o Major bugfixes (client, pluggable transports):
+    - When managing pluggable transports, use OS notification facilities
+      to learn if they have crashed, and do not attempt to kill any
+      process that has already exited. Fix for bug 8746; bugfix
+      on 0.2.3.6-alpha.
+
   o Minor features (diagnostic):
     - When logging a warning because of bug #7164, additionally check
       the hash table for consistency (as proposed on ticket #11737).
@@ -42,8 +71,13 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
       diagnosing bug 11233.
     - Give more specific warnings when we notice at the client side that
       an onion handshake has failed. Fixes ticket 9635.
+    - Add significant new logging code to attempt to diagnose bug 12184,
+      where relays seem to run out of available circuit IDs.
+    - Improve the diagnostic log message for bug #8387 even further to
+      try to improve our odds of figuring out why one-hop directory
+      circuits sometimes do not get closed.
 
-  o Minor features (security, memory management)):
+  o Minor features (security, memory management):
     - Add configure options controlling allocator tricks like mempools
       and freelists, and turn them off by default; on most platforms
       malloc is reasonable enough for this not to be necessary, and a
@@ -61,11 +95,28 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
       support for libseccomp on systems that have it, in case it (or
       Tor's use of it) is broken. Resolves ticket 11628.
 
+  o Minor features (other):
+    - Update geoip and geoip6 to the June 4 2014 Maxmind GeoLite2
+      Country database.
+
   o Minor bugfixes (configuration, security, new since 0.2.5.4-alpha, also in 0.2.4.22):
     - When running a hidden service, do not allow TunneledDirConns 0;
       this will keep the hidden service from running, and also
       make it publish its descriptors directly over HTTP. Fixes bug 10849;
       bugfix on 0.2.1.1-alpha.
+
+  o Minor bugfixes (performance):
+    - Do not recompute whether we have sufficient information to build
+      circuits every time we make a successful connection. Previously,
+      we would forget our cached value for this flag every time we
+      successfully opened a channel (or marked a router as running or
+      not running for any other reason), regardless of whether we had
+      previously believed the router to be running. This forced us to
+      run a fairly expensive update operation with relatively high
+      frequency. Fixes bug 12170; bugfix on 0.1.2.1-alpha.
+    - Avoid using tor_memeq() for checking relay cell integrity. This
+      removes a possible performance bottleneck. Fixes part of bug
+      12169; bugfix on 0.2.1.31.
 
   o Minor bugfixes (compilation):
     - Fix compilation of test_status.c when building with MVSC. Bugfix
@@ -140,6 +191,12 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
     - Handle failures in getpwnam()/getpwuid() when running with the
       User option set and the Linux syscall sandbox enabled. Fixes bug
       11946; bugfix on 0.2.5.1-alpha.
+    - Refactor the getaddrinfo workaround that the seccomp sandbox uses
+      to avoid calling getaddrinfo() after installing the sandbox
+      filters. Previously, it preloaded a cache with the IPv4 address
+      for our hostname, and nothing else. Now, it loads the cache with
+      every address that it used to initialize the Tor process. Fixes
+      bug 11970; bugfix on 0.2.5.1-alpha.
 
   o Minor bugfixes (pluggable transports):
     - Enable the ExtORPortCookieAuthFile option, to allow changing the
@@ -151,6 +208,12 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
       transport-using configuration when we already have cached
       descriptors for our bridges. Fixes bug 11965; bugfix
       on 0.2.3.6-alpha.
+
+  o Minor bugfixes (client):
+    - Avoid "Tried to open a socket with DisableNetwork set" warnings
+      when starting a client with bridges configured and DisableNetwork
+      set. (Tor launcher starts Tor with DisableNetwork set the first
+      time.) Fixes bug 10405; bugfix on 0.2.3.9-alpha.
 
   o Minor bugfixes (testing):
     - The Python parts of the test scripts now work on Python 3 as well
@@ -188,9 +251,25 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
       error value, even on success. Fixes bug 11805; bugfix
       on 0.2.5.4-alpha.
 
+  o Minor bugfixes (relay, other):
+    - We now drop CREATE cells for already-existent circuit IDs and for
+      zero-valued circuit IDs, regardless of other factors that might
+      otherwise have called for DESTROY cells. Fixes bug 12191; bugfix
+      on 0.0.8pre1.
+    - Avoid an illegal read from stack when initializing the TLS module
+      using a version of OpenSSL without all of the ciphers used by the
+      v2 link handshake. Fixes bug 12227; bugfix on 0.2.4.8-alpha. Found
+      by "starlight".
+    - When rejecting DATA cells for stream_id zero, still count them
+      against the circuit's deliver window so that we don't get fail to
+      send a SENDME. Fix for bug 11246; bugfix on 0.2.4.10-alpha.
+
   o Minor bugfixes (logging):
     - Fix a misformatted log message about delayed directory fetches.
       Fixes bug 11654; bugfix on 0.2.5.3-alpha.
+    - Squelch a spurious LD_BUG message "No origin circuit for
+      successful SOCKS stream" in certain hidden service failure cases;
+      fixes bug #10616.
 
   o Distribution:
     - Include a tor.service file in contrib/dist for use with systemd.
@@ -204,6 +283,9 @@ Changes in version 0.2.5.5-alpha - 2014-06-??
       directory authority options, remove the documentation for a
       V2-directory fetching option that no longer exists. Resolves
       ticket 11634.
+    - In the manpage, move more authority-only options into the
+      directory authority section so that operators of regular directory
+      caches don't get confused.
 
   o Package cleanup:
     - The contrib directory has been sorted and tidy. Before, it was an

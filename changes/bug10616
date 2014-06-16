@@ -1,4 +1,0 @@
- o Bugfixes:
-   - Squelch a spurious LD_BUG message "No origin circuit for successful
-     SOCKS stream" in certain hidden service failure cases; fixes bug
-     #10616.

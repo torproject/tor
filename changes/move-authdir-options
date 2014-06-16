@@ -1,4 +1,0 @@
-   o Documentation:
-     - In the manpage, move more authority-only options into the
-       directory authority section so that operators of regular
-       directory caches don't get confused.

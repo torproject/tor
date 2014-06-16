@@ -1,7 +1,0 @@
-  o Major bugfixes:
-    - When a circuit accidentally has the same circuit ID for its
-      forward and reverse direction, correctly detect the direction of
-      cells using that circuit. Previously, this would have made
-      roughly one circuit in a million non-functional. Fixes bug
-      12195; this is a bugfix on every version of Tor.
-

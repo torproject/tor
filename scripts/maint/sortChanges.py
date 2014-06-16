@@ -1,4 +1,13 @@
 #!/usr/bin/python
+# Copyright (c) 2014, The Tor Project, Inc.
+# See LICENSE for licensing information
+
+"""This script sorts a bunch of changes files listed on its command
+   line into roughly the order in which they should appear in the
+   changelog.
+
+   TODO: collation support.
+"""
 
 import re
 import sys
