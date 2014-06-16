@@ -997,8 +997,25 @@ choose_random_dirguard(dirinfo_type_t type)
   return choose_random_entry_impl(NULL, 1, type, NULL);
 }
 
-/* DOCDOCODC
-   Return 1 if we should choose a guard right away. */
+/** Filter <b>all_entry_guards</b> for usable entry guards and put them
+ * in <b>live_entry_guards</b>. We filter based on whether the node is
+ * currently alive, and on whether it satisfies the restrictions
+ * imposed by the other arguments of this function.
+ *
+ * We don't place more guards than NumEntryGuards in <b>live_entry_guards</b>.
+ *
+ * If <b>chosen_exit</b> is set, it contains the exit node of this
+ * circuit. Make sure to not use it or its family as an entry guard.
+ *
+ * If <b>need_uptime</b> is set, we are looking for a stable entry guard.
+ * if <b>need_capacity</b> is set, we are looking for a fast entry guard.
+ *
+ * The rest of the arguments are the same as in choose_random_entry_impl().
+ *
+ * Return 1 if we should choose a guard right away. Return 0 if we
+ * should try to add more nodes to our list before deciding on a
+ * guard.
+ */
 STATIC int
 populate_live_entry_guards(smartlist_t *live_entry_guards,
                            const smartlist_t *all_entry_guards,
@@ -1058,7 +1075,24 @@ populate_live_entry_guards(smartlist_t *live_entry_guards,
   return retval;
 }
 
-/** Helper for choose_random{entry,dirguard}. */
+/** Pick a node to be used as the entry guard of a circuit.
+ *
+ * If <b>state</b> is set, it contains the information we know about
+ * the upcoming circuit.
+ *
+ * If <b>for_directory</b> is set, we are looking for a directory guard.
+ *
+ * <b>dirinfo_type</b> contains the kind of directory information we
+ * are looking for in our node.
+ *
+ * If <b>n_options_out</b> is set, we set it to the number of
+ * candidate guard nodes we had before picking a specific guard node.
+ *
+ * On success, return the node that should be used as the entry guard
+ * of the circuit.  Return NULL if no such node could be found.
+ *
+ * Helper for choose_random{entry,dirguard}.
+*/
 static const node_t *
 choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
                          dirinfo_type_t dirinfo_type, int *n_options_out)
