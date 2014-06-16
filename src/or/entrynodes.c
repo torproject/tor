@@ -12,6 +12,8 @@
  * circumvention).
  **/
 
+#define ENTRYNODES_PRIVATE
+
 #include "or.h"
 #include "circpathbias.h"
 #include "circuitbuild.h"
@@ -350,7 +352,7 @@ control_event_guard_deferred(void)
  * If <b>chosen</b> is defined, use that one, and if it's not
  * already in our entry_guards list, put it at the *beginning*.
  * Else, put the one we pick at the end of the list. */
-static const node_t *
+STATIC const node_t *
 add_an_entry_guard(const node_t *chosen, int reset_status, int prepend,
                    int for_discovery, int for_directory)
 {
@@ -437,7 +439,7 @@ add_an_entry_guard(const node_t *chosen, int reset_status, int prepend,
 /** Choose how many entry guards or directory guards we'll use. If
  * <b>for_directory</b> is true, we return how many directory guards to
  * use; else we return how many entry guards to use. */
-static int
+STATIC int
 decide_num_guards(const or_options_t *options, int for_directory)
 {
   if (for_directory && options->NumDirectoryGuards != 0)
@@ -836,7 +838,7 @@ update_node_guard_status(void)
 
 /** Adjust the entry guards list so that it only contains entries from
  * EntryNodes, adding new entries from EntryNodes to the list as needed. */
-static void
+STATIC void
 entry_guards_set_from_config(const or_options_t *options)
 {
   smartlist_t *entry_nodes, *worse_entry_nodes, *entry_fps;
@@ -997,7 +999,7 @@ choose_random_dirguard(dirinfo_type_t type)
 
 /* DOCDOCODC
    Return 1 if we should choose a guard right away. */
-static int
+STATIC int
 populate_live_entry_guards(smartlist_t *live_entry_guards,
                            const smartlist_t *all_entry_guards,
                            const node_t *chosen_exit,
