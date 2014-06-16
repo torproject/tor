@@ -1761,55 +1761,16 @@ DIRECTORY SERVER OPTIONS
 The following options are useful only for directory servers (that is,
 if DirPort is non-zero):
 
-[[AuthoritativeDirectory]] **AuthoritativeDirectory** **0**|**1**::
-    When this option is set to 1, Tor operates as an authoritative directory
-    server. Instead of caching the directory, it generates its own list of
-    good servers, signs it, and sends that to the clients. Unless the clients
-    already have you listed as a trusted directory, you probably do not want
-    to set this option. Please coordinate with the other admins at
-    tor-ops@torproject.org if you think you should be a directory.
-
 [[DirPortFrontPage]] **DirPortFrontPage** __FILENAME__::
     When this option is set, it takes an HTML file and publishes it as "/" on
     the DirPort. Now relay operators can provide a disclaimer without needing
     to set up a separate webserver. There's a sample disclaimer in
     contrib/operator-tools/tor-exit-notice.html.
 
-[[V3AuthoritativeDirectory]] **V3AuthoritativeDirectory** **0**|**1**::
-    When this option is set in addition to **AuthoritativeDirectory**, Tor
-    generates version 3 network statuses and serves descriptors, etc as
-    described in doc/spec/dir-spec.txt (for Tor clients and servers running at
-    least 0.2.0.x).
-
-[[VersioningAuthoritativeDirectory]] **VersioningAuthoritativeDirectory** **0**|**1**::
-    When this option is set to 1, Tor adds information on which versions of
-    Tor are still believed safe for use to the published directory. Each
-    version 1 authority is automatically a versioning authority; version 2
-    authorities provide this service optionally. See **RecommendedVersions**,
-    **RecommendedClientVersions**, and **RecommendedServerVersions**.
-
-[[NamingAuthoritativeDirectory]] **NamingAuthoritativeDirectory** **0**|**1**::
-    When this option is set to 1, then the server advertises that it has
-    opinions about nickname-to-fingerprint bindings. It will include these
-    opinions in its published network-status pages, by listing servers with
-    the flag "Named" if a correct binding between that nickname and fingerprint
-    has been registered with the dirserver. Naming dirservers will refuse to
-    accept or publish descriptors that contradict a registered binding. See
-    **approved-routers** in the **FILES** section below.
-
 [[HidServDirectoryV2]] **HidServDirectoryV2** **0**|**1**::
     When this option is set, Tor accepts and serves v2 hidden service
     descriptors. Setting DirPort is not required for this, because clients
     connect via the ORPort by default. (Default: 1)
-
-[[BridgeAuthoritativeDir]] **BridgeAuthoritativeDir** **0**|**1**::
-    When this option is set in addition to **AuthoritativeDirectory**, Tor
-    accepts and serves router descriptors, but it caches and serves the main
-    networkstatus documents rather than generating its own. (Default: 0)
-
-[[MinUptimeHidServDirectoryV2]] **MinUptimeHidServDirectoryV2** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
-    Minimum uptime of a v2 hidden service directory to be accepted as such by
-    authoritative directories. (Default: 25 hours)
 
 [[DirPort]] **DirPort** \['address':]__PORT__|**auto** [_flags_]::
     If this option is nonzero, advertise the directory service on this port.
@@ -1838,6 +1799,41 @@ if DirPort is non-zero):
 DIRECTORY AUTHORITY SERVER OPTIONS
 ----------------------------------
 
+The following options enable operation as a directory authority, and
+control how Tor behaves as a directory authority.  You should not need
+to adjust any of them if you're running a regular relay or exit server
+on the public Tor network.
+
+[[AuthoritativeDirectory]] **AuthoritativeDirectory** **0**|**1**::
+    When this option is set to 1, Tor operates as an authoritative directory
+    server. Instead of caching the directory, it generates its own list of
+    good servers, signs it, and sends that to the clients. Unless the clients
+    already have you listed as a trusted directory, you probably do not want
+    to set this option. Please coordinate with the other admins at
+    tor-ops@torproject.org if you think you should be a directory.
+
+[[V3AuthoritativeDirectory]] **V3AuthoritativeDirectory** **0**|**1**::
+    When this option is set in addition to **AuthoritativeDirectory**, Tor
+    generates version 3 network statuses and serves descriptors, etc as
+    described in doc/spec/dir-spec.txt (for Tor clients and servers running at
+    least 0.2.0.x).
+
+[[VersioningAuthoritativeDirectory]] **VersioningAuthoritativeDirectory** **0**|**1**::
+    When this option is set to 1, Tor adds information on which versions of
+    Tor are still believed safe for use to the published directory. Each
+    version 1 authority is automatically a versioning authority; version 2
+    authorities provide this service optionally. See **RecommendedVersions**,
+    **RecommendedClientVersions**, and **RecommendedServerVersions**.
+
+[[NamingAuthoritativeDirectory]] **NamingAuthoritativeDirectory** **0**|**1**::
+    When this option is set to 1, then the server advertises that it has
+    opinions about nickname-to-fingerprint bindings. It will include these
+    opinions in its published network-status pages, by listing servers with
+    the flag "Named" if a correct binding between that nickname and fingerprint
+    has been registered with the dirserver. Naming dirservers will refuse to
+    accept or publish descriptors that contradict a registered binding. See
+    **approved-routers** in the **FILES** section below.
+
 [[RecommendedVersions]] **RecommendedVersions** __STRING__::
     STRING is a comma-separated list of Tor versions currently believed to be
     safe. The list is included in each directory, and nodes which pull down the
@@ -1851,6 +1847,15 @@ DIRECTORY AUTHORITY SERVER OPTIONS
     directories. If this is not set then the value of **RecommendedVersions**
     is used. When this is set then **VersioningAuthoritativeDirectory** should
     be set too.
+
+[[BridgeAuthoritativeDir]] **BridgeAuthoritativeDir** **0**|**1**::
+    When this option is set in addition to **AuthoritativeDirectory**, Tor
+    accepts and serves router descriptors, but it caches and serves the main
+    networkstatus documents rather than generating its own. (Default: 0)
+
+[[MinUptimeHidServDirectoryV2]] **MinUptimeHidServDirectoryV2** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
+    Minimum uptime of a v2 hidden service directory to be accepted as such by
+    authoritative directories. (Default: 25 hours)
 
 [[RecommendedServerVersions]] **RecommendedServerVersions** __STRING__::
     STRING is a comma-separated list of Tor versions currently believed to be
