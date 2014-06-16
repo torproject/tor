@@ -52,7 +52,8 @@ process_map_entry_hash_(const waitpid_callback_t *ent)
 }
 
 static INLINE unsigned int
-process_map_entries_eq_(const waitpid_callback_t *a, const waitpid_callback_t *b)
+process_map_entries_eq_(const waitpid_callback_t *a,
+                        const waitpid_callback_t *b)
 {
   return a->pid == b->pid;
 }

@@ -1122,7 +1122,6 @@ circuit_id_when_marked_unusable_on_channel(circid_t circ_id, channel_t *chan)
   return found->made_placeholder_at;
 }
 
-
 /** Return the circuit that a given edge connection is using. */
 circuit_t *
 circuit_get_by_edge_conn(edge_connection_t *conn)

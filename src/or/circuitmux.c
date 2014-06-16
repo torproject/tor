@@ -1944,3 +1944,4 @@ circuitmux_count_queued_destroy_cells(const channel_t *chan,
 
   return n_destroy_cells;
 }
+
