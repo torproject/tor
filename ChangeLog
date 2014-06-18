@@ -1,8 +1,8 @@
 Changes in version 0.2.5.5-alpha - 2014-06-1?
   Tor 0.2.5.5-alpha fixes a wide variety of remaining issues in the Tor
   0.2.5.x release series, including a couple of DoS issues, some
-  performance regressions, a large number of bugs affecting the
-  Linux seccomp2 sandbox code, and various other bugfixes. It also adds
+  performance regressions, a large number of bugs affecting the Linux
+  seccomp2 sandbox code, and various other bugfixes. It also adds
   diagnostic bugfixes for a few tricky issues that we're trying to
   track down.
 
@@ -13,8 +13,8 @@ Changes in version 0.2.5.5-alpha - 2014-06-1?
       sent over the connection, regardless of the target of the
       connection. Now, we randomize the intervals by adding up to 50% of
       their base value, we measure the length of time since connection
-      last had at least one circuit, and we allow connections to
-      known ORs to remain open a little longer (15 minutes instead of 3
+      last had at least one circuit, and we allow connections to known
+      ORs to remain open a little longer (15 minutes instead of 3
       minutes minimum). These changes should improve Tor's resistance
       against some kinds of traffic analysis, and lower some overhead
       from needlessly closed connections. Fixes ticket 6799.
@@ -44,10 +44,9 @@ Changes in version 0.2.5.5-alpha - 2014-06-1?
 
   o Major bugfixes (relay):
     - Use a direct dirport connection when uploading non-anonymous
-      descriptors to the directory authorities. Previously,
-      relays would incorrectly use tunnel connections under a fairly
-      wide variety of circumstances. Fixes bug 11469; bugfix
-      on 0.2.4.3-alpha.
+      descriptors to the directory authorities. Previously, relays would
+      incorrectly use tunnel connections under a fairly wide variety of
+      circumstances. Fixes bug 11469; bugfix on 0.2.4.3-alpha.
     - When a circuit accidentally has the same circuit ID for its
       forward and reverse direction, correctly detect the direction of
       cells using that circuit. Previously, this bug made roughly one
@@ -110,12 +109,12 @@ Changes in version 0.2.5.5-alpha - 2014-06-1?
   o Minor bugfixes (performance):
     - Avoid a bug where every successful connection made us recompute
       the flag telling us whether we have sufficient information to
-      build circuits. Previously, we would forget our cached value whenever we
-      successfully opened a channel (or marked a router as running or
-      not running for any other reason), regardless of whether we had
-      previously believed the router to be running. This forced us to
-      run an expensive update operation far too often. Fixes bug 12170;
-      bugfix on 0.1.2.1-alpha.
+      build circuits. Previously, we would forget our cached value
+      whenever we successfully opened a channel (or marked a router as
+      running or not running for any other reason), regardless of
+      whether we had previously believed the router to be running. This
+      forced us to run an expensive update operation far too often.
+      Fixes bug 12170; bugfix on 0.1.2.1-alpha.
     - Avoid using tor_memeq() for checking relay cell integrity. This
       removes a possible performance bottleneck. Fixes part of bug
       12169; bugfix on 0.2.1.31.
