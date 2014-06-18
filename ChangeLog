@@ -1,7 +1,7 @@
 Changes in version 0.2.5.5-alpha - 2014-06-1?
   Tor 0.2.5.5-alpha fixes a wide variety of remaining issues in the Tor
   0.2.5.x release series, including a couple of DoS issues, some
-  performance regressions, and a large number of bugs affecting the
+  performance regressions, a large number of bugs affecting the
   Linux seccomp2 sandbox code, and various other bugfixes. It also adds
   diagnostic bugfixes for a few tricky issues that we're trying to
   track down.
@@ -13,7 +13,7 @@ Changes in version 0.2.5.5-alpha - 2014-06-1?
       sent over the connection, regardless of the target of the
       connection. Now, we randomize the intervals by adding up to 50% of
       their base value, we measure the length of time since connection
-      last had at least one circuit, and we we allow connections to
+      last had at least one circuit, and we allow connections to
       known ORs to remain open a little longer (15 minutes instead of 3
       minutes minimum). These changes should improve Tor's resistance
       against some kinds of traffic analysis, and lower some overhead
@@ -36,7 +36,7 @@ Changes in version 0.2.5.5-alpha - 2014-06-1?
       consensus. When clients receive a consensus like this, they only
       use one of the relays. Without this fix, a hostile relay could
       selectively disable some client use of target relays by
-      constucting a router descriptor with a different identity and the
+      constructing a router descriptor with a different identity and the
       same microdescriptor parameters and getting the authorities to
       list it in a microdescriptor consensus. This fix prevents an
       attacker from causing a microdescriptor collision, because the
@@ -44,7 +44,7 @@ Changes in version 0.2.5.5-alpha - 2014-06-1?
 
   o Major bugfixes (relay):
     - Use a direct dirport connection when uploading non-anonymous
-      descriptors to the directory authorities. object. Previously,
+      descriptors to the directory authorities. Previously,
       relays would incorrectly use tunnel connections under a fairly
       wide variety of circumstances. Fixes bug 11469; bugfix
       on 0.2.4.3-alpha.
@@ -110,7 +110,7 @@ Changes in version 0.2.5.5-alpha - 2014-06-1?
   o Minor bugfixes (performance):
     - Avoid a bug where every successful connection made us recompute
       the flag telling us whether we have sufficient information to
-      build circuits. Previously, we would forget our cached value
+      build circuits. Previously, we would forget our cached value whenever we
       successfully opened a channel (or marked a router as running or
       not running for any other reason), regardless of whether we had
       previously believed the router to be running. This forced us to
@@ -149,7 +149,7 @@ Changes in version 0.2.5.5-alpha - 2014-06-1?
       11648; bugfix on 0.1.1.23.
 
   o Minor bugfixes (Linux seccomp sandbox):
-    - Make the seccomp sandbox code compile under ARM linux. Fixes bug
+    - Make the seccomp sandbox code compile under ARM Linux. Fixes bug
       11622; bugfix on 0.2.5.1-alpha.
     - Avoid crashing when re-opening listener ports with the seccomp
       sandbox active. Fixes bug 12115; bugfix on 0.2.5.1-alpha.
@@ -167,7 +167,7 @@ Changes in version 0.2.5.5-alpha - 2014-06-1?
     - Prevent the sandbox from crashing on startup when run with the
       --enable-expensive-hardening configuration option. Fixes bug
       11477; bugfix on 0.2.5.4-alpha.
-    - When running with DirPortFrontPage and Sandbox both enabled,
+    - When running with DirPortFrontPage and sandboxing both enabled,
       reload the DirPortFrontPage correctly when restarting. Fixes bug
       12028; bugfix on 0.2.5.1-alpha.
     - Don't try to enable the sandbox when using the Tor binary to check
@@ -178,7 +178,7 @@ Changes in version 0.2.5.5-alpha - 2014-06-1?
       enabled at the same time. Fixes part of 12064; bugfix on
       0.2.5.1-alpha. Patch from Michael Wolf.
     - Avoid warnings when running with sandboxing enabled at the same
-      time as cookie authentication, hidden services or directory
+      time as cookie authentication, hidden services, or directory
       authority voting. Fixes part of 12064; bugfix on 0.2.5.1-alpha.
     - Do not allow options that require calls to exec to be enabled
       alongside the seccomp2 sandbox: they will inevitably crash. Fixes
