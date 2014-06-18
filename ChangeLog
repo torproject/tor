@@ -1,22 +1,24 @@
 Changes in version 0.2.5.5-alpha - 2014-06-1?
   Tor 0.2.5.5-alpha fixes a wide variety of remaining issues in the Tor
-  0.2.5.x release series, including a couple of DoS issues, some performance
-  regressions, and a large number of bugs affecting the Linux
-  seccomp2 sandbox code, and various other bugfixes. It also adds diagnostic
-  bugfixes for a few tricky issues that we're trying to track down.
+  0.2.5.x release series, including a couple of DoS issues, some
+  performance regressions, and a large number of bugs affecting the
+  Linux seccomp2 sandbox code, and various other bugfixes. It also adds
+  diagnostic bugfixes for a few tricky issues that we're trying to
+  track down.
 
   o Major features (security, traffic analysis resistance):
-    - Several major improvements to the algorithm used to decide
-      when to close TLS connections. Previous versions of Tor closed connections
-      at a fixed interval after the last time a non-padding cell was sent
-      over the connection, regardless of the target of the connection. Now,
-      we randomize the intervals by adding up to 50% of their base value,
-      we measure the length of time since connection last had at least one
-      circuit, and we we allow connections to known ORs to remain open a
-      little longer (15 minutes instead of 3 minutes minimum). These changes
-      should improve Tor's resistance against some kinds of traffic analysis,
-      and lower some overhead from needlessly closed connections. Fixes
-      ticket 6799. Incidentally fixes ticket 12023; bugfix on 0.2.5.1-alpha.
+    - Several major improvements to the algorithm used to decide when to
+      close TLS connections. Previous versions of Tor closed connections
+      at a fixed interval after the last time a non-padding cell was
+      sent over the connection, regardless of the target of the
+      connection. Now, we randomize the intervals by adding up to 50% of
+      their base value, we measure the length of time since connection
+      last had at least one circuit, and we we allow connections to
+      known ORs to remain open a little longer (15 minutes instead of 3
+      minutes minimum). These changes should improve Tor's resistance
+      against some kinds of traffic analysis, and lower some overhead
+      from needlessly closed connections. Fixes ticket 6799.
+      Incidentally fixes ticket 12023; bugfix on 0.2.5.1-alpha.
 
   o Major bugfixes (security, OOM, new since 0.2.5.4-alpha, also in 0.2.4.22):
     - Fix a memory leak that could occur if a microdescriptor parse
@@ -41,15 +43,16 @@ Changes in version 0.2.5.5-alpha - 2014-06-1?
       router's identity is not forgeable.
 
   o Major bugfixes (relay):
-    - Use a direct dirport connection when uploading non-anonymous descriptors to the directory authorities.
-      object. Previously, relays would incorrectly use tunnel connections
-      under a fairly wide variety of circumstances. Fixes bug 11469; bugfix
+    - Use a direct dirport connection when uploading non-anonymous
+      descriptors to the directory authorities. object. Previously,
+      relays would incorrectly use tunnel connections under a fairly
+      wide variety of circumstances. Fixes bug 11469; bugfix
       on 0.2.4.3-alpha.
     - When a circuit accidentally has the same circuit ID for its
       forward and reverse direction, correctly detect the direction of
-      cells using that circuit. Previously, this bug made roughly
-      one circuit in a million non-functional. Fixes bug 12195; this is
-      a bugfix on every version of Tor.
+      cells using that circuit. Previously, this bug made roughly one
+      circuit in a million non-functional. Fixes bug 12195; this is a
+      bugfix on every version of Tor.
 
   o Major bugfixes (client, pluggable transports):
     - When managing pluggable transports, use OS notification facilities
@@ -58,17 +61,17 @@ Changes in version 0.2.5.5-alpha - 2014-06-1?
       on 0.2.3.6-alpha.
 
   o Minor features (diagnostic):
-    - When logging a warning because of bug 7164, additionally check
-      the hash table for consistency (as proposed on ticket 11737).
-      This may help diagnose bug 7164.
+    - When logging a warning because of bug 7164, additionally check the
+      hash table for consistency (as proposed on ticket 11737). This may
+      help diagnose bug 7164.
     - When we log a heartbeat, log how many one-hop circuits we have
       that are at least 30 minutes old, and log status information about
       a few of them. This is an attempt to track down bug 8387.
-    - When encountering an unexpected CR while writing text to a
-      file on Windows, log the name of the file. Should help
-      diagnosing bug 11233.
-    - Give more specific warnings when a client notices that
-      an onion handshake has failed. Fixes ticket 9635.
+    - When encountering an unexpected CR while writing text to a file on
+      Windows, log the name of the file. Should help diagnosing
+      bug 11233.
+    - Give more specific warnings when a client notices that an onion
+      handshake has failed. Fixes ticket 9635.
     - Add significant new logging code to attempt to diagnose bug 12184,
       where relays seem to run out of available circuit IDs.
     - Improve the diagnostic log message for bug 8387 even further to
@@ -76,13 +79,12 @@ Changes in version 0.2.5.5-alpha - 2014-06-1?
       circuits sometimes do not get closed.
 
   o Minor features (security, memory management):
-    - Memory allocation tricks (mempools and buffer freelists)
-      are now disabled by default. You can turn them back on with
-      --enable-mempools and --enable-buf-freelists respectively.
-      We're disabling these features because malloc performance is good
-      enough on most platforms, and a
-      similar feature in OpenSSL exacerbated exploitation of the Heartbleed
-      attack. Resolves ticket 11476.
+    - Memory allocation tricks (mempools and buffer freelists) are now
+      disabled by default. You can turn them back on with
+      --enable-mempools and --enable-buf-freelists respectively. We're
+      disabling these features because malloc performance is good enough
+      on most platforms, and a similar feature in OpenSSL exacerbated
+      exploitation of the Heartbleed attack. Resolves ticket 11476.
 
   o Minor features (security):
     - Apply the secure SipHash-2-4 function to the hash table mapping
@@ -106,15 +108,14 @@ Changes in version 0.2.5.5-alpha - 2014-06-1?
       bugfix on 0.2.1.1-alpha.
 
   o Minor bugfixes (performance):
-    - Avoid a bug where every successful connection made us recompute the
-      flag telling us whether we have sufficient information to build
-      circuits. Previously,
-      we would forget our cached value
+    - Avoid a bug where every successful connection made us recompute
+      the flag telling us whether we have sufficient information to
+      build circuits. Previously, we would forget our cached value
       successfully opened a channel (or marked a router as running or
       not running for any other reason), regardless of whether we had
       previously believed the router to be running. This forced us to
-      run an expensive update operation far too often.
-      Fixes bug 12170; bugfix on 0.1.2.1-alpha.
+      run an expensive update operation far too often. Fixes bug 12170;
+      bugfix on 0.1.2.1-alpha.
     - Avoid using tor_memeq() for checking relay cell integrity. This
       removes a possible performance bottleneck. Fixes part of bug
       12169; bugfix on 0.2.1.31.
@@ -179,9 +180,9 @@ Changes in version 0.2.5.5-alpha - 2014-06-1?
     - Avoid warnings when running with sandboxing enabled at the same
       time as cookie authentication, hidden services or directory
       authority voting. Fixes part of 12064; bugfix on 0.2.5.1-alpha.
-    - Do not allow options that require calls to exec to be
-      enabled alongside the seccomp2 sandbox: they will inevitably
-      crash. Fixes bug 12043; bugfix on 0.2.5.1-alpha.
+    - Do not allow options that require calls to exec to be enabled
+      alongside the seccomp2 sandbox: they will inevitably crash. Fixes
+      bug 12043; bugfix on 0.2.5.1-alpha.
     - Handle failures in getpwnam()/getpwuid() when running with the
       User option set and the Linux syscall sandbox enabled. Fixes bug
       11946; bugfix on 0.2.5.1-alpha.
@@ -255,8 +256,8 @@ Changes in version 0.2.5.5-alpha - 2014-06-1?
       v2 link handshake. Fixes bug 12227; bugfix on 0.2.4.8-alpha. Found
       by "starlight".
     - When rejecting DATA cells for stream_id zero, still count them
-      against the circuit's deliver window so that we don't fail to
-      send a SENDME. Fixes bug 11246; bugfix on 0.2.4.10-alpha.
+      against the circuit's deliver window so that we don't fail to send
+      a SENDME. Fixes bug 11246; bugfix on 0.2.4.10-alpha.
 
   o Minor bugfixes (logging):
     - Fix a misformatted log message about delayed directory fetches.
@@ -285,9 +286,9 @@ Changes in version 0.2.5.5-alpha - 2014-06-1?
       caches don't get confused.
 
   o Package cleanup:
-    - The contrib directory has been sorted and tidied. Before, it was an
-      unsorted dumping ground for useful and not-so-useful things. Now,
-      it is divided based on functionality, and the items which
+    - The contrib directory has been sorted and tidied. Before, it was
+      an unsorted dumping ground for useful and not-so-useful things.
+      Now, it is divided based on functionality, and the items which
       seemed to be nonfunctional or useless have been removed. Resolves
       ticket 8966; based on patches from "rl1987".
 
