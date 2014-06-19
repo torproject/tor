@@ -1438,7 +1438,7 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags)
 
   /* Find all the running dirservers we know about. */
   SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), const node_t *, node) {
-    int is_trusted;
+    int is_trusted, is_trusted_extrainfo;
     int is_overloaded;
     tor_addr_t addr;
     const routerstatus_t *status = node->rs;
@@ -1453,8 +1453,10 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags)
     if (requireother && router_digest_is_me(node->identity))
       continue;
     is_trusted = router_digest_is_trusted_dir(node->identity);
+    is_trusted_extrainfo = router_digest_is_trusted_dir_type(
+                           node->identity, EXTRAINFO_DIRINFO);
     if ((type & EXTRAINFO_DIRINFO) &&
-        !router_supports_extrainfo(node->identity, 0))
+        !router_supports_extrainfo(node->identity, is_trusted_extrainfo))
       continue;
     if ((type & MICRODESC_DIRINFO) && !is_trusted &&
         !node->rs->version_supports_microdesc_cache)
