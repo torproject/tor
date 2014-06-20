@@ -56,21 +56,6 @@
 #include <stdio.h>
 #include <errno.h>
 
-#if defined (WINCE)
-#include <fcntl.h>
-#include <io.h>
-#include <math.h>
-#include <projects.h>
-/* this is not exported as W .... */
-#define SHGetPathFromIDListW SHGetPathFromIDList
-/* wcecompat has vasprintf */
-#define HAVE_VASPRINTF
-/* no service here */
-#ifdef NT_SERVICE
-#undef NT_SERVICE
-#endif
-#endif // WINCE
-
 #ifndef NULL_REP_IS_ZERO_BYTES
 #error "It seems your platform does not represent NULL as zero. We can't cope."
 #endif

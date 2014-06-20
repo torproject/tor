@@ -16,10 +16,6 @@
 
 #include "orconfig.h"
 
-#if defined (WINCE)
-#include <WinSock2.h>
-#endif
-
 #include <assert.h>
 #ifdef _WIN32 /*wrkard for dtls1.h >= 0.9.8m of "#include <winsock.h>"*/
  #ifndef _WIN32_WINNT

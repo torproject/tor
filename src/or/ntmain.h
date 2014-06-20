@@ -13,9 +13,7 @@
 #define TOR_NTMAIN_H
 
 #ifdef _WIN32
-#if !defined (WINCE)
 #define NT_SERVICE
-#endif
 #endif
 
 #ifdef NT_SERVICE

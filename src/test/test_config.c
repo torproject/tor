@@ -184,7 +184,7 @@ is_private_dir(const char* path)
   if (r) {
     return 0;
   }
-#if !defined (_WIN32) || defined (WINCE)
+#if !defined (_WIN32)
   if ((st.st_mode & (S_IFDIR | 0777)) != (S_IFDIR | 0700)) {
     return 0;
   }
@@ -201,7 +201,7 @@ test_config_check_or_create_data_subdir(void *arg)
   char *subpath;
   struct stat st;
   int r;
-#if !defined (_WIN32) || defined (WINCE)
+#if !defined (_WIN32)
   unsigned group_permission;
 #endif
   (void)arg;
@@ -210,7 +210,7 @@ test_config_check_or_create_data_subdir(void *arg)
   datadir = options->DataDirectory = tor_strdup(get_fname("datadir-0"));
   subpath = get_datadir_fname(subdir);
 
-#if defined (_WIN32) && !defined (WINCE)
+#if defined (_WIN32)
   tt_int_op(mkdir(options->DataDirectory), ==, 0);
 #else
   tt_int_op(mkdir(options->DataDirectory, 0700), ==, 0);
@@ -233,7 +233,7 @@ test_config_check_or_create_data_subdir(void *arg)
     tt_abort_perror("stat");
   }
 
-#if !defined (_WIN32) || defined (WINCE)
+#if !defined (_WIN32)
   group_permission = st.st_mode | 0070;
   r = chmod(subpath, group_permission);
 
@@ -284,7 +284,7 @@ test_config_write_to_data_subdir(void *arg)
   datadir = options->DataDirectory = tor_strdup(get_fname("datadir-1"));
   filepath = get_datadir_fname2(subdir, fname);
 
-#if defined (_WIN32) && !defined (WINCE)
+#if defined (_WIN32)
   tt_int_op(mkdir(options->DataDirectory), ==, 0);
 #else
   tt_int_op(mkdir(options->DataDirectory, 0700), ==, 0);

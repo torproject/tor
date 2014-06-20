@@ -2485,13 +2485,11 @@ get_uname(void)
                          "Unrecognized version of Windows [major=%d,minor=%d]",
                          (int)info.dwMajorVersion,(int)info.dwMinorVersion);
         }
-#if !defined (WINCE)
 #ifdef VER_NT_SERVER
       if (info.wProductType == VER_NT_SERVER ||
           info.wProductType == VER_NT_DOMAIN_CONTROLLER) {
         strlcat(uname_result, " [server]", sizeof(uname_result));
       }
-#endif
 #endif
 #else
         strlcpy(uname_result, "Unknown platform", sizeof(uname_result));
@@ -2697,15 +2695,8 @@ tor_gettimeofday(struct timeval *timeval)
     uint64_t ft_64;
     FILETIME ft_ft;
   } ft;
-#if defined (WINCE)
-  /* wince do not have GetSystemTimeAsFileTime */
-  SYSTEMTIME stime;
-  GetSystemTime(&stime);
-  SystemTimeToFileTime(&stime,&ft.ft_ft);
-#else
   /* number of 100-nsec units since Jan 1, 1601 */
   GetSystemTimeAsFileTime(&ft.ft_ft);
-#endif
   if (ft.ft_64 < EPOCH_BIAS) {
     log_err(LD_GENERAL,"System time is before 1970; failing.");
     exit(1);

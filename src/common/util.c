@@ -1893,7 +1893,7 @@ check_private_dir(const char *dirname, cpd_check_t check,
     }
     if (check & CPD_CREATE) {
       log_info(LD_GENERAL, "Creating directory %s", dirname);
-#if defined (_WIN32) && !defined (WINCE)
+#if defined (_WIN32)
       r = mkdir(dirname);
 #else
       r = mkdir(dirname, 0700);

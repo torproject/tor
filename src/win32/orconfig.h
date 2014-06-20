@@ -86,18 +86,11 @@
 #define HAVE_STRING_H
 
 /* Define to 1 if you have the `strlcat' function. */
-#if defined (WINCE)
-#define HAVE_STRLCAT
-#else
 #undef HAVE_STRLCAT
-#endif
 
 /* Define to 1 if you have the `strlcpy' function. */
-#if defined (WINCE)
-#define HAVE_STRLCPY
-#else
 #undef HAVE_STRLCPY
-#endif
+
 /* Define to 1 if you have the `strptime' function. */
 #undef HAVE_STRPTIME
 
