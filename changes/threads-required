@@ -1,0 +1,12 @@
+  o Removed features:
+    - Tor no longer supports systems without threading support.
+      When we began working on Tor, there were several systems that didn't
+      have threads, or where the thread support wasn't able to run the
+      threads of a single process on multiple CPUs. That no longer holds:
+      every system where Tor needs to run well now has threading support.
+      Resolves ticket 12439.
+
+  o Minor features:
+    - Threads are no longer disabled by default on Solaris; we believe that
+      the versions of Solaris with broken threading support are all obsolete
+      by now. Resolves ticket 9495.

@@ -75,12 +75,10 @@
 /** Macro: is k a valid RSA private key? */
 #define PRIVATE_KEY_OK(k) ((k) && (k)->key && (k)->key->p)
 
-#ifdef TOR_IS_MULTITHREADED
 /** A number of preallocated mutexes for use by OpenSSL. */
 static tor_mutex_t **openssl_mutexes_ = NULL;
 /** How many mutexes have we allocated for use by OpenSSL? */
 static int n_openssl_mutexes_ = 0;
-#endif
 
 /** A public key, or a public/private key-pair. */
 struct crypto_pk_t
@@ -3090,8 +3088,6 @@ memwipe(void *mem, uint8_t byte, size_t sz)
   memset(mem, byte, sz);
 }
 
-#ifdef TOR_IS_MULTITHREADED
-
 #ifndef OPENSSL_THREADS
 #error OpenSSL has been built without thread support. Tor requires an \
  OpenSSL library with thread support enabled.
@@ -3178,13 +3174,6 @@ setup_openssl_threading(void)
   CRYPTO_set_dynlock_destroy_callback(openssl_dynlock_destroy_cb_);
   return 0;
 }
-#else
-static int
-setup_openssl_threading(void)
-{
-  return 0;
-}
-#endif
 
 /** Uninitialize the crypto library. Return 0 on success, -1 on failure.
  */
@@ -3208,7 +3197,7 @@ crypto_global_cleanup(void)
 
   CONF_modules_unload(1);
   CRYPTO_cleanup_all_ex_data();
-#ifdef TOR_IS_MULTITHREADED
+
   if (n_openssl_mutexes_) {
     int n = n_openssl_mutexes_;
     tor_mutex_t **ms = openssl_mutexes_;
@@ -3220,7 +3209,7 @@ crypto_global_cleanup(void)
     }
     tor_free(ms);
   }
-#endif
+
   tor_free(crypto_openssl_version_str);
   tor_free(crypto_openssl_header_version_str);
   return 0;

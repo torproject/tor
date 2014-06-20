@@ -2722,7 +2722,7 @@ tor_gettimeofday(struct timeval *timeval)
   return;
 }
 
-#if defined(TOR_IS_MULTITHREADED) && !defined(_WIN32)
+#if !defined(_WIN32)
 /** Defined iff we need to add locks when defining fake versions of reentrant
  * versions of time-related functions. */
 #define TIME_FNS_NEED_LOCKS
@@ -2982,7 +2982,6 @@ tor_get_thread_id(void)
 }
 #endif
 
-#ifdef TOR_IS_MULTITHREADED
 /** Return a newly allocated, ready-for-use mutex. */
 tor_mutex_t *
 tor_mutex_new(void)
@@ -3000,7 +2999,6 @@ tor_mutex_free(tor_mutex_t *m)
   tor_mutex_uninit(m);
   tor_free(m);
 }
-#endif
 
 /* Conditions. */
 #ifdef USE_PTHREADS

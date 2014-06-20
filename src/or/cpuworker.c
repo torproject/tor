@@ -414,12 +414,6 @@ cpuworker_main(void *data)
   cpuworker_reply_t rpl;
 
   fd = fdarray[1]; /* this side is ours */
-#ifndef TOR_IS_MULTITHREADED
-  tor_close_socket(fdarray[0]); /* this is the side of the socketpair the
-                                 * parent uses */
-  tor_free_all(1); /* so the child doesn't hold the parent's fd's open */
-  handle_signals(0); /* ignore interrupts from the keyboard, etc */
-#endif
   tor_free(data);
 
   setup_server_onion_keys(&onion_keys);
@@ -535,10 +529,6 @@ spawn_cpuworker(void)
     return -1;
   }
   log_debug(LD_OR,"just spawned a cpu worker.");
-#ifndef TOR_IS_MULTITHREADED
-  tor_close_socket(fdarray[1]); /* don't need the worker's side of the pipe */
-  tor_free(fdarray);
-#endif
 
   conn = connection_new(CONN_TYPE_CPUWORKER, AF_UNIX);
 

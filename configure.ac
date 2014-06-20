@@ -107,26 +107,6 @@ AC_ARG_ENABLE(upnp,
         * ) AC_MSG_ERROR(bad value for --enable-upnp) ;;
       esac], [upnp=false])
 
-
-AC_ARG_ENABLE(threads,
-     AS_HELP_STRING(--disable-threads, disable multi-threading support))
-
-if test x$enable_threads = x; then
-   case $host in
-    *-*-solaris* )
-     # Don't try multithreading on solaris -- cpuworkers seem to lock.
-     AC_MSG_NOTICE([You are running Solaris; Sometimes threading makes
-cpu workers lock up here, so I will disable threads.])
-     enable_threads="no";;
-    *)
-     enable_threads="yes";;
-   esac
-fi
-
-if test "$enable_threads" = "yes"; then
-  AC_DEFINE(ENABLE_THREADS, 1, [Defined if we will try to use multithreading])
-fi
-
 case $host in
    *-*-solaris* )
      AC_DEFINE(_REENTRANT, 1, [Define on some platforms to activate x_r() functions in time.h])
@@ -326,10 +306,8 @@ if test "$LIBS" != "$saved_LIBS"; then
    have_rt=yes
 fi
 
-if test "$enable_threads" = "yes"; then
-  AC_SEARCH_LIBS(pthread_create, [pthread])
-  AC_SEARCH_LIBS(pthread_detach, [pthread])
-fi
+AC_SEARCH_LIBS(pthread_create, [pthread])
+AC_SEARCH_LIBS(pthread_detach, [pthread])
 
 dnl -------------------------------------------------------------------
 dnl Check for functions before libevent, since libevent-1.2 apparently
@@ -372,7 +350,7 @@ AC_CHECK_FUNCS(
 	_vscprintf
 )
 
-if test "$enable_threads" = "yes"; then
+if test "$bwin32" != true; then
   AC_CHECK_HEADERS(pthread.h)
   AC_CHECK_FUNCS(pthread_create)
 fi

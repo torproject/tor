@@ -1383,12 +1383,6 @@ test_util_threads(void)
   tv.tv_sec=0;
   tv.tv_usec=100*1000;
 #endif
-#ifndef TOR_IS_MULTITHREADED
-  /* Skip this test if we aren't threading. We should be threading most
-   * everywhere by now. */
-  if (1)
-    return;
-#endif
   thread_test_mutex_ = tor_mutex_new();
   thread_test_start1_ = tor_mutex_new();
   thread_test_start2_ = tor_mutex_new();
