@@ -448,9 +448,10 @@ trusted_dirs_flush_certs_to_disk(void)
   trusted_dir_servers_certs_changed = 0;
 }
 
-/** Remove all v3 authority certificates that have been superseded for more
- * than 48 hours.  (If the most recent cert was published more than 48 hours
- * ago, then we aren't going to get any consensuses signed with older
+/** Remove all expired v3 authority certificates that have been superseded for
+ * more than 48 hours or, if not expired, that were published more than 7 days
+ * before being superseded. (If the most recent cert was published more than 48
+ * hours ago, then we aren't going to get any consensuses signed with older
  * keys.) */
 static void
 trusted_dirs_remove_old_certs(void)
@@ -488,6 +489,7 @@ trusted_dirs_remove_old_certs(void)
       } SMARTLIST_FOREACH_END(cert);
     }
   } DIGESTMAP_FOREACH_END;
+#undef DEAD_CERT_LIFETIME
 #undef OLD_CERT_LIFETIME
 
   trusted_dirs_flush_certs_to_disk();
