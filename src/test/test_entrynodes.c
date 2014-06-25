@@ -580,20 +580,24 @@ test_entry_is_live(void *arg)
 
   /* Require the node to be stable, but it's not. Should fail.
      Also enable 'assume_reachable' because why not. */
-  test_node = entry_is_live(test_entry, 1, 0, 1, 0, &msg);
+  test_node = entry_is_live(test_entry,
+                            ENTRY_NEED_UPTIME | ENTRY_ASSUME_REACHABLE,
+                            &msg);
   test_assert(!test_node);
 
   /* Require the node to be fast, but it's not. Should fail. */
-  test_node = entry_is_live(test_entry, 0, 1, 1, 0, &msg);
+  test_node = entry_is_live(test_entry,
+                            ENTRY_NEED_CAPACITY | ENTRY_ASSUME_REACHABLE,
+                            &msg);
   test_assert(!test_node);
 
   /* Don't impose any restrictions on the node. Should succeed. */
-  test_node = entry_is_live(test_entry, 0, 0, 0, 0, &msg);
+  test_node = entry_is_live(test_entry, 0, &msg);
   test_assert(test_node);
   tt_ptr_op(test_node, ==, node_get_by_id(test_entry->identity));
 
   /* Require descriptor for this node. It has one so it should succeed. */
-  test_node = entry_is_live(test_entry, 0, 0, 0, 1, &msg);
+  test_node = entry_is_live(test_entry, ENTRY_NEED_DESCRIPTOR, &msg);
   test_assert(test_node);
   tt_ptr_op(test_node, ==, node_get_by_id(test_entry->identity));
 
