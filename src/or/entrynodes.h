@@ -91,6 +91,11 @@ STATIC int populate_live_entry_guards(smartlist_t *live_entry_guards,
 STATIC int decide_num_guards(const or_options_t *options, int for_directory);
 
 STATIC void entry_guards_set_from_config(const or_options_t *options);
+
+STATIC INLINE const node_t *entry_is_live(const entry_guard_t *e,
+                                          int need_uptime, int need_capacity,
+                                          int assume_reachable,
+                                          int need_descriptor,const char **msg);
 #endif
 
 void remove_all_entry_guards(void);
