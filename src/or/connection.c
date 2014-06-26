@@ -2650,14 +2650,6 @@ record_num_bytes_transferred(connection_t *conn,
 }
 #endif
 
-#ifndef USE_BUFFEREVENTS
-/** Last time at which the global or relay buckets were emptied in msec
- * since midnight. */
-static uint32_t global_relayed_read_emptied = 0,
-                global_relayed_write_emptied = 0,
-                global_read_emptied = 0,
-                global_write_emptied = 0;
-
 /** Helper: convert given <b>tvnow</b> time value to milliseconds since
  * midnight. */
 static uint32_t
@@ -2665,6 +2657,28 @@ msec_since_midnight(const struct timeval *tvnow)
 {
   return (uint32_t)(((tvnow->tv_sec % 86400L) * 1000L) +
          ((uint32_t)tvnow->tv_usec / (uint32_t)1000L));
+}
+
+/** Helper: return the time in milliseconds since <b>last_empty_time</b>
+ * when a bucket ran empty that previously had <b>tokens_before</b> tokens
+ * now has <b>tokens_after</b> tokens after refilling at timestamp
+ * <b>tvnow</b>, capped at <b>milliseconds_elapsed</b> milliseconds since
+ * last refilling that bucket.  Return 0 if the bucket has not been empty
+ * since the last refill or has not been refilled. */
+uint32_t
+bucket_millis_empty(int tokens_before, uint32_t last_empty_time,
+                    int tokens_after, int milliseconds_elapsed,
+                    const struct timeval *tvnow)
+{
+  uint32_t result = 0, refilled;
+  if (tokens_before <= 0 && tokens_after > tokens_before) {
+    refilled = msec_since_midnight(tvnow);
+    result = (uint32_t)((refilled + 86400L * 1000L - last_empty_time) %
+             (86400L * 1000L));
+    if (result > (uint32_t)milliseconds_elapsed)
+      result = (uint32_t)milliseconds_elapsed;
+  }
+  return result;
 }
 
 /** Check if a bucket which had <b>tokens_before</b> tokens and which got
@@ -2679,6 +2693,14 @@ connection_buckets_note_empty_ts(uint32_t *timestamp_var,
   if (tokens_before > 0 && (uint32_t)tokens_before <= tokens_removed)
     *timestamp_var = msec_since_midnight(tvnow);
 }
+
+#ifndef USE_BUFFEREVENTS
+/** Last time at which the global or relay buckets were emptied in msec
+ * since midnight. */
+static uint32_t global_relayed_read_emptied = 0,
+                global_relayed_write_emptied = 0,
+                global_read_emptied = 0,
+                global_write_emptied = 0;
 
 /** We just read <b>num_read</b> and wrote <b>num_written</b> bytes
  * onto <b>conn</b>. Decrement buckets appropriately. */
@@ -2836,28 +2858,6 @@ connection_bucket_refill_helper(int *bucket, int rate, int burst,
     }
     log_debug(LD_NET,"%s now %d.", name, *bucket);
   }
-}
-
-/** Helper: return the time in milliseconds since <b>last_empty_time</b>
- * when a bucket ran empty that previously had <b>tokens_before</b> tokens
- * now has <b>tokens_after</b> tokens after refilling at timestamp
- * <b>tvnow</b>, capped at <b>milliseconds_elapsed</b> milliseconds since
- * last refilling that bucket.  Return 0 if the bucket has not been empty
- * since the last refill or has not been refilled. */
-uint32_t
-bucket_millis_empty(int tokens_before, uint32_t last_empty_time,
-                    int tokens_after, int milliseconds_elapsed,
-                    const struct timeval *tvnow)
-{
-  uint32_t result = 0, refilled;
-  if (tokens_before <= 0 && tokens_after > tokens_before) {
-    refilled = msec_since_midnight(tvnow);
-    result = (uint32_t)((refilled + 86400L * 1000L - last_empty_time) %
-             (86400L * 1000L));
-    if (result > (uint32_t)milliseconds_elapsed)
-      result = (uint32_t)milliseconds_elapsed;
-  }
-  return result;
 }
 
 /** Time has passed; increment buckets appropriately. */
