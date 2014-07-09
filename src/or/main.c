@@ -1485,8 +1485,11 @@ run_scheduled_events(time_t now)
    *    and we make a new circ if there are no clean circuits.
    */
   have_dir_info = router_have_minimum_dir_info();
-  if (have_dir_info && !net_is_disabled())
+  if (have_dir_info && !net_is_disabled()) {
     circuit_build_needed_circs(now);
+  } else {
+    circuit_expire_old_circs_as_needed(now);
+  }
 
   /* every 10 seconds, but not at the same second as other such events */
   if (now % 10 == 5)

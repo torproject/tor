@@ -21,6 +21,7 @@ int circuit_conforms_to_options(const origin_circuit_t *circ,
                                 const or_options_t *options);
 #endif
 void circuit_build_needed_circs(time_t now);
+void circuit_expire_old_circs_as_needed(time_t now);
 void circuit_detach_stream(circuit_t *circ, edge_connection_t *conn);
 
 void circuit_expire_old_circuits_serverside(time_t now);
