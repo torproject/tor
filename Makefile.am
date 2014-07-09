@@ -74,6 +74,17 @@ test-network: all
 reset-gcov:
 	rm -f src/*/*.gcda
 
+HTML_COVER_DIR=./coverage_html
+coverage-html: all
+	test -d $(HTML_COVER_DIR) && rm -rf $(HTML_COVER_DIR) || true
+	test -e `which lcov` || (echo "lcov must be installed. See <http://ltp.sourceforge.net/coverage/lcov.php>." && false)
+	mkdir -p $(HTML_COVER_DIR)
+	lcov --rc lcov_branch_coverage=1 --directory ./src --zerocounters
+	./src/test/test
+	lcov --capture --rc lcov_branch_coverage=1 --no-external --directory . --output-file "$(HTML_COVER_DIR)/lcov.tmp"
+	lcov --remove "$(HTML_COVER_DIR)/lcov.tmp" --rc lcov_branch_coverage=1 'test/*' 'ext/tinytest*' '/usr/*' --output-file "$(HTML_COVER_DIR)/lcov.info"
+	genhtml --branch-coverage -o "$(HTML_COVER_DIR)" "$(HTML_COVER_DIR)/lcov.info"
+
 # Avoid strlcpy.c, strlcat.c, aes.c, OpenBSD_malloc_Linux.c, sha256.c,
 # eventdns.[hc], tinytest*.[ch]
 check-spaces:
