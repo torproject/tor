@@ -213,7 +213,8 @@ STATIC int choose_array_element_by_weight(const u64_dbl_t *entries,
 STATIC void scale_array_elements_to_u64(u64_dbl_t *entries, int n_entries,
                                         uint64_t *total_out);
 
-MOCK_DECL(int, router_descriptor_is_too_old, (const routerinfo_t *router));
+MOCK_DECL(int, router_descriptor_is_older_than, (const routerinfo_t *router,
+                                                 int seconds));
 #endif
 
 #endif

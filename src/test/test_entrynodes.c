@@ -35,11 +35,13 @@ get_or_state_replacement(void)
   return dummy_state;
 }
 
-/* NOP replacement for router_descriptor_is_too_old() */
+/* NOP replacement for router_descriptor_is_older_than() */
 static int
-router_descriptor_is_too_old_replacement(const routerinfo_t *router)
+router_descriptor_is_older_than_replacement(const routerinfo_t *router,
+                                            int seconds)
 {
   (void) router;
+  (void) seconds;
   return 0;
 }
 
@@ -65,8 +67,8 @@ setup_fake_routerlist(const char *fname)
 
   /* We need to mock this function otherwise the descriptors will not
      accepted as they are too old. */
-  MOCK(router_descriptor_is_too_old,
-       router_descriptor_is_too_old_replacement);
+  MOCK(router_descriptor_is_older_than,
+       router_descriptor_is_older_than_replacement);
 
   /* Load all the test descriptors to the routerlist. */
   retval = router_load_routers_from_string(contents, NULL, SAVED_IN_JOURNAL,
@@ -89,7 +91,7 @@ setup_fake_routerlist(const char *fname)
   } SMARTLIST_FOREACH_END(node);
 
  done:
-  UNMOCK(router_descriptor_is_too_old);
+  UNMOCK(router_descriptor_is_older_than);
   tor_free(contents);
 }
 
