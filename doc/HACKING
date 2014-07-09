@@ -114,6 +114,26 @@ valgrind --leak-check=yes --error-limit=no --show-reachable=yes src/or/tor
 pass --undef-value-errors=no to valgrind, or rebuild your openssl
 with -DPURIFY.)
 
+Running lcov for unit test coverage
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Lcov is a utility that generates pretty HTML reports of test code coverage.
+To generate such a report:
+
+-----
+   ./configure --enable-coverage
+   make
+   make coverage-html
+   $BROWSER ./coverage_html/index.html
+-----
+
+This will run the tor unit test suite `./src/test/test` and generate the HTML
+coverage code report under the directory ./coverage_html/. To change the
+output directory, use `make coverage-html HTML_COVER_DIR=./funky_new_cov_dir`.
+
+Coverage diffs using lcov are not currently implemented, but are being
+investigated (as of July 2014).
+
 Running gcov for unit test coverage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
