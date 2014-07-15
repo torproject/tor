@@ -271,6 +271,7 @@ div_by_2_25(const limb v)
   return (v + roundoff) >> 25;
 }
 
+#if 0
 /* return v / (2^25), using only shifts and adds.
  *
  * On entry: v can take any value. */
@@ -280,6 +281,7 @@ div_s32_by_2_25(const s32 v)
    const s32 roundoff = ((uint32_t)(v >> 31)) >> 7;
    return (v + roundoff) >> 25;
 }
+#endif
 
 /* Reduce all coefficients of the short form input so that |x| < 2^26.
  *
@@ -485,7 +487,7 @@ fcontract(u8 *output, limb *input_limbs) {
 
   /* |input_limbs[i]| < 2^26, so it's valid to convert to an s32. */
   for (i = 0; i < 10; i++) {
-    input[i] = input_limbs[i];
+    input[i] = (s32) input_limbs[i];
   }
 
   for (j = 0; j < 2; ++j) {
@@ -847,6 +849,8 @@ crecip(limb *out, const limb *z) {
   /* 2^255 - 2^5 */ fsquare(t1,t0);
   /* 2^255 - 21 */ fmul(out,t1,z11);
 }
+
+int curve25519_donna(u8 *mypublic, const u8 *secret, const u8 *basepoint);
 
 int
 curve25519_donna(u8 *mypublic, const u8 *secret, const u8 *basepoint) {
