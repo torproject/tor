@@ -1,0 +1,10 @@
+  o Major bugfixes:
+
+    - Fix a bug in the bounds-checking in the 32-bit curve25519-donna
+      implementation that caused incorrect results on 32-bit
+      implementations when certain malformed inputs were used along with
+      a small class of private ntor keys. This bug does not currently
+      appear to allow an attacker to learn private keys or impersonate a
+      Tor server, but it could provide a means to distinguish 32-bit Tor
+      implementations from 64-bit Tor implementations.
+
