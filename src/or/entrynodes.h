@@ -77,6 +77,22 @@ int num_live_entry_guards(int for_directory);
 
 #endif
 
+#ifdef ENTRYNODES_PRIVATE
+STATIC const node_t *add_an_entry_guard(const node_t *chosen,
+                                        int reset_status, int prepend,
+                                        int for_discovery, int for_directory);
+
+STATIC int populate_live_entry_guards(smartlist_t *live_entry_guards,
+                                      const smartlist_t *all_entry_guards,
+                                      const node_t *chosen_exit,
+                                      dirinfo_type_t dirinfo_type,
+                                      int for_directory,
+                                      int need_uptime, int need_capacity);
+STATIC int decide_num_guards(const or_options_t *options, int for_directory);
+
+STATIC void entry_guards_set_from_config(const or_options_t *options);
+#endif
+
 void remove_all_entry_guards(void);
 
 void entry_guards_compute_status(const or_options_t *options, time_t now);

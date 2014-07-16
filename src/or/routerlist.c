@@ -3296,6 +3296,14 @@ routerlist_reset_warnings(void)
   networkstatus_reset_warnings();
 }
 
+/** Return 1 if the signed descriptor of this router is older than
+ *  <b>seconds</b> seconds.  Otherwise return 0. */
+MOCK_IMPL(int,
+router_descriptor_is_older_than,(const routerinfo_t *router, int seconds))
+{
+  return router->cache_info.published_on < time(NULL) - seconds;
+}
+
 /** Add <b>router</b> to the routerlist, if we don't already have it.  Replace
  * older entries (if any) with the same key.  Note: Callers should not hold
  * their pointers to <b>router</b> if this function fails; <b>router</b>
@@ -3465,7 +3473,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   }
 
   if (!in_consensus && from_cache &&
-      router->cache_info.published_on < time(NULL) - OLD_ROUTER_DESC_MAX_AGE) {
+      router_descriptor_is_older_than(router, OLD_ROUTER_DESC_MAX_AGE)) {
     *msg = "Router descriptor was really old.";
     routerinfo_free(router);
     return ROUTER_WAS_NOT_NEW;

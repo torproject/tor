@@ -12,6 +12,8 @@
  * circumvention).
  **/
 
+#define ENTRYNODES_PRIVATE
+
 #include "or.h"
 #include "circpathbias.h"
 #include "circuitbuild.h"
@@ -155,7 +157,7 @@ entry_guard_set_status(entry_guard_t *e, const node_t *node,
 /** Return true iff enough time has passed since we last tried to connect
  * to the unreachable guard <b>e</b> that we're willing to try again. */
 static int
-entry_is_time_to_retry(entry_guard_t *e, time_t now)
+entry_is_time_to_retry(const entry_guard_t *e, time_t now)
 {
   long diff;
   if (e->last_attempted < e->unreachable_since)
@@ -189,7 +191,7 @@ entry_is_time_to_retry(entry_guard_t *e, time_t now)
  * a descriptor (routerinfo or microdesc) for it.
  */
 static INLINE const node_t *
-entry_is_live(entry_guard_t *e, int need_uptime, int need_capacity,
+entry_is_live(const entry_guard_t *e, int need_uptime, int need_capacity,
               int assume_reachable, int need_descriptor, const char **msg)
 {
   const node_t *node;
@@ -350,7 +352,7 @@ control_event_guard_deferred(void)
  * If <b>chosen</b> is defined, use that one, and if it's not
  * already in our entry_guards list, put it at the *beginning*.
  * Else, put the one we pick at the end of the list. */
-static const node_t *
+STATIC const node_t *
 add_an_entry_guard(const node_t *chosen, int reset_status, int prepend,
                    int for_discovery, int for_directory)
 {
@@ -437,7 +439,7 @@ add_an_entry_guard(const node_t *chosen, int reset_status, int prepend,
 /** Choose how many entry guards or directory guards we'll use. If
  * <b>for_directory</b> is true, we return how many directory guards to
  * use; else we return how many entry guards to use. */
-static int
+STATIC int
 decide_num_guards(const or_options_t *options, int for_directory)
 {
   if (for_directory && options->NumDirectoryGuards != 0)
@@ -836,7 +838,7 @@ update_node_guard_status(void)
 
 /** Adjust the entry guards list so that it only contains entries from
  * EntryNodes, adding new entries from EntryNodes to the list as needed. */
-static void
+STATIC void
 entry_guards_set_from_config(const or_options_t *options)
 {
   smartlist_t *entry_nodes, *worse_entry_nodes, *entry_fps;
@@ -995,30 +997,119 @@ choose_random_dirguard(dirinfo_type_t type)
   return choose_random_entry_impl(NULL, 1, type, NULL);
 }
 
-/** Helper for choose_random{entry,dirguard}. */
+/** Filter <b>all_entry_guards</b> for usable entry guards and put them
+ * in <b>live_entry_guards</b>. We filter based on whether the node is
+ * currently alive, and on whether it satisfies the restrictions
+ * imposed by the other arguments of this function.
+ *
+ * We don't place more guards than NumEntryGuards in <b>live_entry_guards</b>.
+ *
+ * If <b>chosen_exit</b> is set, it contains the exit node of this
+ * circuit. Make sure to not use it or its family as an entry guard.
+ *
+ * If <b>need_uptime</b> is set, we are looking for a stable entry guard.
+ * if <b>need_capacity</b> is set, we are looking for a fast entry guard.
+ *
+ * The rest of the arguments are the same as in choose_random_entry_impl().
+ *
+ * Return 1 if we should choose a guard right away. Return 0 if we
+ * should try to add more nodes to our list before deciding on a
+ * guard.
+ */
+STATIC int
+populate_live_entry_guards(smartlist_t *live_entry_guards,
+                           const smartlist_t *all_entry_guards,
+                           const node_t *chosen_exit,
+                           dirinfo_type_t dirinfo_type,
+                           int for_directory,
+                           int need_uptime, int need_capacity)
+{
+  const or_options_t *options = get_options();
+  const node_t *node = NULL;
+  const int num_needed = decide_num_guards(options, for_directory);
+  smartlist_t *exit_family = smartlist_new();
+  int retval = 0;
+  int need_descriptor = !for_directory;
+
+  tor_assert(all_entry_guards);
+
+  if (chosen_exit) {
+    nodelist_add_node_and_family(exit_family, chosen_exit);
+  }
+
+  SMARTLIST_FOREACH_BEGIN(all_entry_guards, const entry_guard_t *, entry) {
+      const char *msg;
+      node = entry_is_live(entry, need_uptime, need_capacity, 0,
+                           need_descriptor, &msg);
+      if (!node)
+        continue; /* down, no point */
+      if (for_directory) {
+        if (!entry->is_dir_cache)
+          continue; /* We need a directory and didn't get one. */
+      }
+      if (node == chosen_exit)
+        continue; /* don't pick the same node for entry and exit */
+      if (smartlist_contains(exit_family, node))
+        continue; /* avoid relays that are family members of our exit */
+      if (dirinfo_type != NO_DIRINFO &&
+          !node_can_handle_dirinfo(node, dirinfo_type))
+        continue; /* this node won't be able to answer our dir questions */
+      smartlist_add(live_entry_guards, (void*)node);
+      if (!entry->made_contact) {
+        /* Always start with the first not-yet-contacted entry
+         * guard. Otherwise we might add several new ones, pick
+         * the second new one, and now we've expanded our entry
+         * guard list without needing to. */
+        retval = 1;
+        goto done;
+      }
+      if (smartlist_len(live_entry_guards) >= num_needed) {
+        retval = 1;
+        goto done; /* We picked enough entry guards. Done! */
+      }
+  } SMARTLIST_FOREACH_END(entry);
+
+ done:
+  smartlist_free(exit_family);
+
+  return retval;
+}
+
+/** Pick a node to be used as the entry guard of a circuit.
+ *
+ * If <b>state</b> is set, it contains the information we know about
+ * the upcoming circuit.
+ *
+ * If <b>for_directory</b> is set, we are looking for a directory guard.
+ *
+ * <b>dirinfo_type</b> contains the kind of directory information we
+ * are looking for in our node.
+ *
+ * If <b>n_options_out</b> is set, we set it to the number of
+ * candidate guard nodes we had before picking a specific guard node.
+ *
+ * On success, return the node that should be used as the entry guard
+ * of the circuit.  Return NULL if no such node could be found.
+ *
+ * Helper for choose_random{entry,dirguard}.
+*/
 static const node_t *
 choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
                          dirinfo_type_t dirinfo_type, int *n_options_out)
 {
   const or_options_t *options = get_options();
   smartlist_t *live_entry_guards = smartlist_new();
-  smartlist_t *exit_family = smartlist_new();
   const node_t *chosen_exit =
     state?build_state_get_exit_node(state) : NULL;
   const node_t *node = NULL;
   int need_uptime = state ? state->need_uptime : 0;
   int need_capacity = state ? state->need_capacity : 0;
-  int preferred_min, consider_exit_family = 0;
-  int need_descriptor = !for_directory;
+  int preferred_min = 0;
   const int num_needed = decide_num_guards(options, for_directory);
+  int retval = 0;
 
   if (n_options_out)
     *n_options_out = 0;
-
-  if (chosen_exit) {
-    nodelist_add_node_and_family(exit_family, chosen_exit);
-    consider_exit_family = 1;
-  }
 
   if (!entry_guards)
     entry_guards = smartlist_new();
@@ -1032,50 +1123,19 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
 
  retry:
   smartlist_clear(live_entry_guards);
-  SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, entry) {
-      const char *msg;
-      node = entry_is_live(entry, need_uptime, need_capacity, 0,
-                           need_descriptor, &msg);
-      if (!node)
-        continue; /* down, no point */
-      if (for_directory) {
-        if (!entry->is_dir_cache)
-          continue; /* We need a directory and didn't get one. */
-      }
-      if (node == chosen_exit)
-        continue; /* don't pick the same node for entry and exit */
-      if (consider_exit_family && smartlist_contains(exit_family, node))
-        continue; /* avoid relays that are family members of our exit */
-      if (dirinfo_type != NO_DIRINFO &&
-          !node_can_handle_dirinfo(node, dirinfo_type))
-        continue; /* this node won't be able to answer our dir questions */
-#if 0 /* since EntryNodes is always strict now, this clause is moot */
-      if (options->EntryNodes &&
-          !routerset_contains_node(options->EntryNodes, node)) {
-        /* We've come to the end of our preferred entry nodes. */
-        if (smartlist_len(live_entry_guards))
-          goto choose_and_finish; /* only choose from the ones we like */
-        if (options->StrictNodes) {
-          /* in theory this case should never happen, since
-           * entry_guards_set_from_config() drops unwanted relays */
-          tor_fragile_assert();
-        } else {
-          log_info(LD_CIRC,
-                   "No relays from EntryNodes available. Using others.");
-        }
-      }
-#endif
-      smartlist_add(live_entry_guards, (void*)node);
-      if (!entry->made_contact) {
-        /* Always start with the first not-yet-contacted entry
-         * guard. Otherwise we might add several new ones, pick
-         * the second new one, and now we've expanded our entry
-         * guard list without needing to. */
-        goto choose_and_finish;
-      }
-      if (smartlist_len(live_entry_guards) >= num_needed)
-        goto choose_and_finish; /* we have enough */
-  } SMARTLIST_FOREACH_END(entry);
+
+  /* Populate the list of live entry guards so that we pick one of
+     them. */
+  retval = populate_live_entry_guards(live_entry_guards,
+                                      entry_guards,
+                                      chosen_exit,
+                                      dirinfo_type,
+                                      for_directory,
+                                      need_uptime, need_capacity);
+
+  if (retval == 1) { /* We should choose a guard right now. */
+    goto choose_and_finish;
+  }
 
   if (entry_list_is_constrained(options)) {
     /* If we prefer the entry nodes we've got, and we have at least
@@ -1115,18 +1175,7 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
       need_capacity = 0;
       goto retry;
     }
-#if 0
-    /* Removing this retry logic: if we only allow one exit, and it is in the
-       same family as all our entries, then we are just plain not going to win
-       here. */
-    if (!node && entry_list_is_constrained(options) && consider_exit_family) {
-      /* still no? if we're using bridges or have strictentrynodes
-       * set, and our chosen exit is in the same family as all our
-       * bridges/entry guards, then be flexible about families. */
-      consider_exit_family = 0;
-      goto retry;
-    }
-#endif
+
     /* live_entry_guards may be empty below. Oh well, we tried. */
   }
 
@@ -1144,7 +1193,6 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
   if (n_options_out)
     *n_options_out = smartlist_len(live_entry_guards);
   smartlist_free(live_entry_guards);
-  smartlist_free(exit_family);
   return node;
 }
 
