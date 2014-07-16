@@ -408,6 +408,7 @@ void tor_lockfile_unlock(tor_lockfile_t *lockfile);
 off_t tor_fd_getpos(int fd);
 int tor_fd_setpos(int fd, off_t pos);
 int tor_fd_seekend(int fd);
+int tor_ftruncate(int fd);
 
 #ifdef _WIN32
 #define PATH_SEPARATOR "\\"

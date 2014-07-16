@@ -2385,6 +2385,54 @@ test_util_parent_dir(void *ptr)
   tor_free(cp);
 }
 
+static void
+test_util_ftruncate(void *ptr)
+{
+  char *buf = NULL;
+  const char *fname;
+  int fd = -1;
+  const char *message = "Hello world";
+  const char *message2 = "Hola mundo";
+  struct stat st;
+
+  (void) ptr;
+
+  fname = get_fname("ftruncate");
+
+  fd = tor_open_cloexec(fname, O_WRONLY|O_CREAT, 0600);
+  tt_int_op(fd, >=, 0);
+
+  /* Make the file be there. */
+  tt_int_op(strlen(message), ==, write_all(fd, message, strlen(message), 0));
+  tt_int_op(tor_fd_getpos(fd), ==, strlen(message));
+  tt_int_op(0, ==, fstat(fd, &st));
+  tt_int_op(st.st_size, ==, strlen(message));
+
+  /* Truncate and see if it got truncated */
+  tt_int_op(0, ==, tor_ftruncate(fd));
+  tt_int_op(tor_fd_getpos(fd), ==, 0);
+  tt_int_op(0, ==, fstat(fd, &st));
+  tt_int_op(st.st_size, ==, 0);
+
+  /* Replace, and see if it got replaced */
+  tt_int_op(strlen(message2), ==,
+            write_all(fd, message2, strlen(message2), 0));
+  tt_int_op(tor_fd_getpos(fd), ==, strlen(message2));
+  tt_int_op(0, ==, fstat(fd, &st));
+  tt_int_op(st.st_size, ==, strlen(message2));
+
+  close(fd);
+  fd = -1;
+
+  buf = read_file_to_str(fname, 0, NULL);
+  tt_str_op(message2, ==, buf);
+
+ done:
+  if (fd >= 0)
+    close(fd);
+  tor_free(buf);
+}
+
 #ifdef _WIN32
 static void
 test_util_load_win_lib(void *ptr)
@@ -3798,6 +3846,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(asprintf, 0),
   UTIL_TEST(listdir, 0),
   UTIL_TEST(parent_dir, 0),
+  UTIL_TEST(ftruncate, 0),
 #ifdef _WIN32
   UTIL_TEST(load_win_lib, 0),
 #endif

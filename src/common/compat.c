@@ -1004,6 +1004,23 @@ tor_fd_setpos(int fd, off_t pos)
 #endif
 }
 
+/** Replacement for ftruncate(fd, 0): move to the front of the file and remove
+ * all the rest of the file. Return -1 on error, 0 on success. */
+int
+tor_ftruncate(int fd)
+{
+  /* Rumor has it that some versions of ftruncate do not move the file pointer.
+   */
+  if (tor_fd_setpos(fd, 0) < 0)
+    return -1;
+
+#ifdef _WIN32
+  return _chsize(fd, 0);
+#else
+  return ftruncate(fd, 0);
+#endif
+}
+
 #undef DEBUG_SOCKET_COUNTING
 #ifdef DEBUG_SOCKET_COUNTING
 /** A bitarray of all fds that should be passed to tor_socket_close(). Only

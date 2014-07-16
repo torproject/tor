@@ -1305,6 +1305,10 @@ switch_logs_debug(void)
 void
 truncate_logs(void)
 {
-  for (logfile_t *lf = logfiles; lf; lf = lf->next)
-    ftruncate(lf->fd, 0);
+  for (logfile_t *lf = logfiles; lf; lf = lf->next) {
+    if (lf->fd >= 0) {
+      tor_ftruncate(lf->fd);
+    }
+  }
 }
+
