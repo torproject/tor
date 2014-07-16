@@ -562,7 +562,8 @@ GENERAL OPTIONS
     syslog messages, or the mtime fields on log files.  (Default: 1 second)
 
 [[TruncateLogFile]] **TruncateLogFile** **0**|**1**::
-    If 1, Tor will overwrite logs, instead of appending them. (Default: 0)
+    If 1, Tor will overwrite logs at startup and in response to a HUP signal,
+    instead of appending to them. (Default: 0)
 
 [[SafeLogging]] **SafeLogging** **0**|**1**|**relay**::
     Tor can scrub potentially sensitive strings from log messages (e.g.
