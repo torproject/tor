@@ -1,0 +1,5 @@
+  o Major bugfixes:
+    - Relays should not be assigned the HSDir flag if they are
+      considered invalid. Also, do not assign the HSDir flag to relays
+      that are currently hibernating. Fixes #12573. Bugfix on
+      tor-0.2.0.10-alpha
