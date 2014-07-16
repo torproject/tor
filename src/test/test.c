@@ -106,11 +106,18 @@ setup_directory(void)
   {
     char buf[MAX_PATH];
     const char *tmp = buf;
+    const char *extra_backslash = "";
     /* If this fails, we're probably screwed anyway */
     if (!GetTempPathA(sizeof(buf),buf))
-      tmp = "c:\\windows\\temp";
+      tmp = "c:\\windows\\temp\\";
+    if (strcmpend(tmp, "\\")) {
+      /* According to MSDN, it should be impossible for GetTempPath to give us
+       * an answer that doesn't end with \.  But let's make sure. */
+      extra_backslash = "\\";
+    }
     tor_snprintf(temp_dir, sizeof(temp_dir),
-                 "%s\\tor_test_%d_%s", tmp, (int)getpid(), rnd32);
+                 "%s%stor_test_%d_%s", tmp, extra_backslash,
+                 (int)getpid(), rnd32);
     r = mkdir(temp_dir);
   }
 #else
