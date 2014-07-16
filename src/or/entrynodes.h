@@ -101,9 +101,9 @@ typedef enum {
   ENTRY_NEED_DESCRIPTOR = 1<<3,
 } entry_is_live_flags_t;
 
-STATIC INLINE const node_t *entry_is_live(const entry_guard_t *e,
-                                          entry_is_live_flags_t flags,
-                                          const char **msg);
+STATIC const node_t *entry_is_live(const entry_guard_t *e,
+                                   entry_is_live_flags_t flags,
+                                   const char **msg);
 #endif
 
 void remove_all_entry_guards(void);

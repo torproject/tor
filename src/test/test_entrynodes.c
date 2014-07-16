@@ -553,6 +553,7 @@ test_entry_is_live(void *arg)
   const node_t *test_node = NULL;
   const entry_guard_t *test_entry = NULL;
   const char *msg;
+  int which_node;
 
   (void) arg;
 
@@ -576,7 +577,8 @@ test_entry_is_live(void *arg)
   tt_int_op(smartlist_len(all_entry_guards), ==, NUMBER_OF_DESCRIPTORS);
 
   /* Now get a random test entry that we will use for this unit test. */
-  test_entry = smartlist_get(all_entry_guards, 3); /* chosen by fair dice roll */
+  which_node = 3;  /* (chosen by fair dice roll) */
+  test_entry = smartlist_get(all_entry_guards, which_node);
 
   /* Let's do some entry_is_live() tests! */
 

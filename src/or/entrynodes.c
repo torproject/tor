@@ -190,8 +190,9 @@ entry_is_time_to_retry(const entry_guard_t *e, time_t now)
  * If need_descriptor is true, only return the node if we currently have
  * a descriptor (routerinfo or microdesc) for it.
  */
-STATIC INLINE const node_t *
-entry_is_live(const entry_guard_t *e, entry_is_live_flags_t flags, const char **msg)
+STATIC const node_t *
+entry_is_live(const entry_guard_t *e, entry_is_live_flags_t flags,
+              const char **msg)
 {
   const node_t *node;
   const or_options_t *options = get_options();
