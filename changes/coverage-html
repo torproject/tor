@@ -1,0 +1,5 @@
+  o Minor features (testing):
+
+    - Add a "coverage-html" make target to generate HTML-visualized
+      coverage results when building with --enable-coverage. (Requires lcov.)
+      Patch from Kevin Murray.
