@@ -783,6 +783,10 @@ circuit_expire_building(void)
   }
 }
 
+/** For debugging #8387: track when we last called
+ * circuit_expire_old_circuits_clientside. */
+static time_t last_expired_clientside_circuits = 0;
+
 /**
  * As a diagnostic for bug 8387, log information about how many one-hop
  * circuits we have around that have been there for at least <b>age</b>
@@ -893,6 +897,10 @@ circuit_log_ancient_one_hop_circuits(int age)
                  c->hold_open_until_flushed ? "" : "not ");
     }
   } SMARTLIST_FOREACH_END(ocirc);
+
+  log_notice(LD_HEARTBEAT, "It has been %ld seconds since I last called "
+             "circuit_expire_old_circuits_clientside().",
+             (long)(now - last_expired_clientside_circuits));
 
  done:
   smartlist_free(log_these);
@@ -1220,6 +1228,7 @@ circuit_expire_old_circuits_clientside(void)
 
   tor_gettimeofday(&now);
   cutoff = now;
+  last_expired_clientside_circuits = now.tv_sec;
 
   if (! circuit_build_times_disabled() &&
       circuit_build_times_needs_circuits(get_circuit_build_times())) {
