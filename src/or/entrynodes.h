@@ -91,6 +91,19 @@ STATIC int populate_live_entry_guards(smartlist_t *live_entry_guards,
 STATIC int decide_num_guards(const or_options_t *options, int for_directory);
 
 STATIC void entry_guards_set_from_config(const or_options_t *options);
+
+/** Flags to be passed to entry_is_live() to indicate what kind of
+ * entry nodes we are looking for. */
+typedef enum {
+  ENTRY_NEED_UPTIME = 1<<0,
+  ENTRY_NEED_CAPACITY = 1<<1,
+  ENTRY_ASSUME_REACHABLE = 1<<2,
+  ENTRY_NEED_DESCRIPTOR = 1<<3,
+} entry_is_live_flags_t;
+
+STATIC INLINE const node_t *entry_is_live(const entry_guard_t *e,
+                                          entry_is_live_flags_t flags,
+                                          const char **msg);
 #endif
 
 void remove_all_entry_guards(void);

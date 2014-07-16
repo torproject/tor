@@ -544,6 +544,69 @@ test_entry_guards_set_from_config(void *arg)
   routerset_free(options->EntryNodes);
 }
 
+/** XXX Do some tests that entry_is_live() */
+static void
+test_entry_is_live(void *arg)
+{
+  smartlist_t *our_nodelist = NULL;
+  const smartlist_t *all_entry_guards = get_entry_guards();
+  const node_t *test_node = NULL;
+  const entry_guard_t *test_entry = NULL;
+  const char *msg;
+
+  (void) arg;
+
+  /* The global entry guards smartlist should be empty now. */
+  tt_int_op(smartlist_len(all_entry_guards), ==, 0);
+
+  /* Walk the nodelist and add all nodes as entry guards. */
+  our_nodelist = nodelist_get_list();
+  tt_int_op(smartlist_len(our_nodelist), ==, NUMBER_OF_DESCRIPTORS);
+
+  SMARTLIST_FOREACH_BEGIN(our_nodelist, const node_t *, node) {
+    const node_t *node_tmp;
+    node_tmp = add_an_entry_guard(node, 0, 1, 0, 0);
+    test_assert(node_tmp);
+
+    tt_int_op(node->is_stable, ==, 0);
+    tt_int_op(node->is_fast, ==, 0);
+  } SMARTLIST_FOREACH_END(node);
+
+  /* Make sure the nodes were added as entry guards. */
+  tt_int_op(smartlist_len(all_entry_guards), ==, NUMBER_OF_DESCRIPTORS);
+
+  /* Now get a random test entry that we will use for this unit test. */
+  test_entry = smartlist_get(all_entry_guards, 3); /* chosen by fair dice roll */
+
+  /* Let's do some entry_is_live() tests! */
+
+  /* Require the node to be stable, but it's not. Should fail.
+     Also enable 'assume_reachable' because why not. */
+  test_node = entry_is_live(test_entry,
+                            ENTRY_NEED_UPTIME | ENTRY_ASSUME_REACHABLE,
+                            &msg);
+  test_assert(!test_node);
+
+  /* Require the node to be fast, but it's not. Should fail. */
+  test_node = entry_is_live(test_entry,
+                            ENTRY_NEED_CAPACITY | ENTRY_ASSUME_REACHABLE,
+                            &msg);
+  test_assert(!test_node);
+
+  /* Don't impose any restrictions on the node. Should succeed. */
+  test_node = entry_is_live(test_entry, 0, &msg);
+  test_assert(test_node);
+  tt_ptr_op(test_node, ==, node_get_by_id(test_entry->identity));
+
+  /* Require descriptor for this node. It has one so it should succeed. */
+  test_node = entry_is_live(test_entry, ENTRY_NEED_DESCRIPTOR, &msg);
+  test_assert(test_node);
+  tt_ptr_op(test_node, ==, node_get_by_id(test_entry->identity));
+
+ done:
+  ; /* XXX */
+}
+
 static const struct testcase_setup_t fake_network = {
   fake_network_setup, fake_network_cleanup
 };
@@ -568,6 +631,9 @@ struct testcase_t entrynodes_tests[] = {
     TT_FORK, &fake_network, NULL },
   { "entry_guards_set_from_config",
     test_entry_guards_set_from_config,
+    TT_FORK, &fake_network, NULL },
+  { "entry_is_live",
+    test_entry_is_live,
     TT_FORK, &fake_network, NULL },
   END_OF_TESTCASES
 };

@@ -190,12 +190,16 @@ entry_is_time_to_retry(const entry_guard_t *e, time_t now)
  * If need_descriptor is true, only return the node if we currently have
  * a descriptor (routerinfo or microdesc) for it.
  */
-static INLINE const node_t *
-entry_is_live(const entry_guard_t *e, int need_uptime, int need_capacity,
-              int assume_reachable, int need_descriptor, const char **msg)
+STATIC INLINE const node_t *
+entry_is_live(const entry_guard_t *e, entry_is_live_flags_t flags, const char **msg)
 {
   const node_t *node;
   const or_options_t *options = get_options();
+  int need_uptime = (flags & ENTRY_NEED_UPTIME) != 0;
+  int need_capacity = (flags & ENTRY_NEED_CAPACITY) != 0;
+  const int assume_reachable = (flags & ENTRY_ASSUME_REACHABLE) != 0;
+  const int need_descriptor = (flags & ENTRY_NEED_DESCRIPTOR) != 0;
+
   tor_assert(msg);
 
   if (e->path_bias_disabled) {
@@ -257,12 +261,18 @@ num_live_entry_guards(int for_directory)
 {
   int n = 0;
   const char *msg;
+  /* Set the entry node attributes we are interested in. */
+  entry_is_live_flags_t entry_flags = ENTRY_NEED_CAPACITY;
+  if (!for_directory) {
+    entry_flags |= ENTRY_NEED_DESCRIPTOR;
+  }
+
   if (! entry_guards)
     return 0;
   SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, entry) {
       if (for_directory && !entry->is_dir_cache)
         continue;
-      if (entry_is_live(entry, 0, 1, 0, !for_directory, &msg))
+      if (entry_is_live(entry, entry_flags, &msg))
         ++n;
   } SMARTLIST_FOREACH_END(entry);
   return n;
@@ -291,7 +301,7 @@ log_entry_guards(int severity)
   SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, e)
     {
       const char *msg = NULL;
-      if (entry_is_live(e, 0, 1, 0, 0, &msg))
+      if (entry_is_live(e, ENTRY_NEED_CAPACITY, &msg))
         smartlist_add_asprintf(elements, "%s [%s] (up %s)",
                      e->nickname,
                      hex_str(e->identity, DIGEST_LEN),
@@ -667,7 +677,7 @@ entry_guards_compute_status(const or_options_t *options, time_t now)
     SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, entry) {
       const char *reason = digestmap_get(reasons, entry->identity);
       const char *live_msg = "";
-      const node_t *r = entry_is_live(entry, 0, 1, 0, 0, &live_msg);
+      const node_t *r = entry_is_live(entry, ENTRY_NEED_CAPACITY, &live_msg);
       log_info(LD_CIRC, "Summary: Entry %s [%s] is %s, %s%s%s, and %s%s.",
                entry->nickname,
                hex_str(entry->identity, DIGEST_LEN),
@@ -785,7 +795,9 @@ entry_guard_register_connect_status(const char *digest, int succeeded,
           break;
         if (e->made_contact) {
           const char *msg;
-          const node_t *r = entry_is_live(e, 0, 1, 1, 0, &msg);
+          const node_t *r = entry_is_live(e,
+                     ENTRY_NEED_CAPACITY | ENTRY_ASSUME_REACHABLE,
+                     &msg);
           if (r && e->unreachable_since) {
             refuse_conn = 1;
             e->can_retry = 1;
@@ -1029,7 +1041,19 @@ populate_live_entry_guards(smartlist_t *live_entry_guards,
   const int num_needed = decide_num_guards(options, for_directory);
   smartlist_t *exit_family = smartlist_new();
   int retval = 0;
-  int need_descriptor = !for_directory;
+  entry_is_live_flags_t entry_flags = 0;
+
+  { /* Set the flags we want our entry node to have */
+    if (need_uptime) {
+      entry_flags |= ENTRY_NEED_UPTIME;
+    }
+    if (need_capacity) {
+      entry_flags |= ENTRY_NEED_CAPACITY;
+    }
+    if (!for_directory) {
+      entry_flags |= ENTRY_NEED_DESCRIPTOR;
+    }
+  }
 
   tor_assert(all_entry_guards);
 
@@ -1039,8 +1063,7 @@ populate_live_entry_guards(smartlist_t *live_entry_guards,
 
   SMARTLIST_FOREACH_BEGIN(all_entry_guards, const entry_guard_t *, entry) {
       const char *msg;
-      node = entry_is_live(entry, need_uptime, need_capacity, 0,
-                           need_descriptor, &msg);
+      node = entry_is_live(entry, entry_flags, &msg);
       if (!node)
         continue; /* down, no point */
       if (for_directory) {
