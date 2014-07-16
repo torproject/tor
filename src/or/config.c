@@ -1592,6 +1592,20 @@ options_act(const or_options_t *old_options)
     return -1;
   }
 
+  config_maybe_load_geoip_files_(options, old_options);
+
+  if (geoip_is_loaded(AF_INET) && options->GeoIPExcludeUnknown) {
+    /* ExcludeUnknown is true or "auto" */
+    const int is_auto = options->GeoIPExcludeUnknown == -1;
+    int changed;
+
+    changed  = routerset_add_unknown_ccs(&options->ExcludeNodes, is_auto);
+    changed += routerset_add_unknown_ccs(&options->ExcludeExitNodes, is_auto);
+
+    if (changed)
+      routerset_add_unknown_ccs(&options->ExcludeExitNodesUnion_, is_auto);
+  }
+
   /* Check for transitions that need action. */
   if (old_options) {
     int revise_trackexithosts = 0;
@@ -1685,20 +1699,6 @@ options_act(const or_options_t *old_options)
     if (options->PerConnBWRate != old_options->PerConnBWRate ||
         options->PerConnBWBurst != old_options->PerConnBWBurst)
       connection_or_update_token_buckets(get_connection_array(), options);
-  }
-
-  config_maybe_load_geoip_files_(options, old_options);
-
-  if (geoip_is_loaded(AF_INET) && options->GeoIPExcludeUnknown) {
-    /* ExcludeUnknown is true or "auto" */
-    const int is_auto = options->GeoIPExcludeUnknown == -1;
-    int changed;
-
-    changed  = routerset_add_unknown_ccs(&options->ExcludeNodes, is_auto);
-    changed += routerset_add_unknown_ccs(&options->ExcludeExitNodes, is_auto);
-
-    if (changed)
-      routerset_add_unknown_ccs(&options->ExcludeExitNodesUnion_, is_auto);
   }
 
   if (options->CellStatistics || options->DirReqStatistics ||
