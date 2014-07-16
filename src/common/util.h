@@ -239,6 +239,7 @@ int tor_mem_is_zero(const char *mem, size_t len);
 int tor_digest_is_zero(const char *digest);
 int tor_digest256_is_zero(const char *digest);
 char *esc_for_log(const char *string) ATTR_MALLOC;
+char *esc_for_log_len(const char *chars, size_t n) ATTR_MALLOC;
 const char *escaped(const char *string);
 
 char *tor_escape_str_for_pt_args(const char *string,

@@ -1381,6 +1381,20 @@ esc_for_log(const char *s)
   return result;
 }
 
+/** Similar to esc_for_log. Allocate and return a new string representing
+ * the first n characters in <b>chars</b>, surround by quotes and using
+ * standard C escapes. If a NUL character is encountered in <b>chars</b>,
+ * the resulting string will be terminated there.
+ */
+char *
+esc_for_log_len(const char *chars, size_t n)
+{
+  char *string = tor_strndup(chars, n);
+  char *string_escaped = esc_for_log(string);
+  tor_free(string);
+  return string_escaped;
+}
+
 /** Allocate and return a new string representing the contents of <b>s</b>,
  * surrounded by quotes and using standard C escapes.
  *

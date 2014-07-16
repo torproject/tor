@@ -1882,6 +1882,20 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
     smartlist_add_asprintf(descparts, "TIME_CREATED=%s", tbuf);
   }
 
+  // Show username and/or password if available.
+  if (circ->socks_username_len > 0) {
+    char* socks_username_escaped = esc_for_log_len(circ->socks_username,
+                                     (size_t) circ->socks_username_len);
+    smartlist_add_asprintf(descparts, "SOCKS_USERNAME=%s", socks_username_escaped);
+    tor_free(socks_username_escaped);
+  }
+  if (circ->socks_password_len > 0) {
+    char* socks_password_escaped = esc_for_log_len(circ->socks_password,
+                                     (size_t) circ->socks_password_len);
+    smartlist_add_asprintf(descparts, "SOCKS_PASSWORD=%s", socks_password_escaped);
+    tor_free(socks_password_escaped);
+  }
+
   rv = smartlist_join_strings(descparts, " ", 0, NULL);
 
   SMARTLIST_FOREACH(descparts, char *, cp, tor_free(cp));
