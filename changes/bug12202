@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Change the entry_is_live() function to take named bitfield elements
+      instead of an unnamed list of booleans. Closes ticket 12202.
