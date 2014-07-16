@@ -1407,14 +1407,6 @@ AC_SUBST(BINDIR)
 LOCALSTATEDIR=`eval echo $localstatedir`
 AC_SUBST(LOCALSTATEDIR)
 
-case "$srcdir" in
-  /*) TOP_SRCDIR=$srcdir;;
-  *) TOP_SRCDIR=$PWD/$srcdir;;
-esac
-
-AH_TEMPLATE([TOP_SRCDIR],[source directory we're building from])
-AC_DEFINE_UNQUOTED(TOP_SRCDIR,"$TOP_SRCDIR")
-
 if test "$bwin32" = true; then
   # Test if the linker supports the --nxcompat and --dynamicbase options
   # for Windows

@@ -18,6 +18,8 @@
 #include "statefile.h"
 #include "config.h"
 
+#include "test_descriptors.inc"
+
 /* TODO:
  * choose_random_entry() test with state set.
  *
@@ -52,18 +54,13 @@ router_descriptor_is_older_than_replacement(const routerinfo_t *router,
     routerlist. This function is used to setup an artificial network
     so that we can conduct entry guard tests. */
 static void
-setup_fake_routerlist(const char *fname)
+setup_fake_routerlist(void)
 {
   int retval;
-  char *contents = NULL;
-  struct stat st;
   routerlist_t *our_routerlist = NULL;
   smartlist_t *our_nodelist = NULL;
 
   /* Read the file that contains our test descriptors. */
-  test_assert(file_status(fname) == FN_FILE);
-  contents = read_file_to_str(fname, RFTS_BIN|RFTS_IGNORE_MISSING, &st);
-  test_assert(contents);
 
   /* We need to mock this function otherwise the descriptors will not
      accepted as they are too old. */
@@ -71,7 +68,8 @@ setup_fake_routerlist(const char *fname)
        router_descriptor_is_older_than_replacement);
 
   /* Load all the test descriptors to the routerlist. */
-  retval = router_load_routers_from_string(contents, NULL, SAVED_IN_JOURNAL,
+  retval = router_load_routers_from_string(TEST_DESCRIPTORS,
+                                           NULL, SAVED_IN_JOURNAL,
                                            NULL, 0, NULL);
   tt_int_op(retval, ==, NUMBER_OF_DESCRIPTORS);
 
@@ -92,7 +90,6 @@ setup_fake_routerlist(const char *fname)
 
  done:
   UNMOCK(router_descriptor_is_older_than);
-  tor_free(contents);
 }
 
 /* Unittest cleanup function: Cleanup the fake network. */
@@ -114,9 +111,6 @@ fake_network_cleanup(const struct testcase_t *testcase, void *ptr)
 static void *
 fake_network_setup(const struct testcase_t *testcase)
 {
-  /* This is the file containing our test descriptors. */
-  const char *fname = TOP_SRCDIR "/src/test/test_descriptors.txt";
-
   (void) testcase;
 
   /* Setup fake state */
@@ -125,7 +119,7 @@ fake_network_setup(const struct testcase_t *testcase)
        get_or_state_replacement);
 
   /* Setup fake routerlist. */
-  setup_fake_routerlist(fname);
+  setup_fake_routerlist();
 
   /* Return anything but NULL (it's interpreted as test fail) */
   return dummy_state;

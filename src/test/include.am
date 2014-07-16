@@ -72,7 +72,8 @@ src_test_bench_LDADD = src/or/libtor.a src/common/libor.a \
 	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@
 
 noinst_HEADERS+= \
-	src/test/test.h
+	src/test/test.h \
+	src/test/test_descriptors.inc
 
 if CURVE25519_ENABLED
 noinst_PROGRAMS+= src/test/test-ntor-cl
