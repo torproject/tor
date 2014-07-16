@@ -1089,7 +1089,6 @@ circuit_predict_and_launch_new(void)
 void
 circuit_build_needed_circs(time_t now)
 {
-  static time_t time_to_new_circuit = 0;
   const or_options_t *options = get_options();
 
   /* launch a new circ for any pending streams that need one */
@@ -1098,14 +1097,34 @@ circuit_build_needed_circs(time_t now)
   /* make sure any hidden services have enough intro points */
   rend_services_introduce();
 
-  if (time_to_new_circuit < now) {
+  circuit_expire_old_circs_as_needed(now);
+
+  if (!options->DisablePredictedCircuits)
+    circuit_predict_and_launch_new();
+}
+
+/**
+ * Called once a second either directly or from
+ * circuit_build_needed_circs(). As appropriate (once per NewCircuitPeriod)
+ * resets failure counts and expires old circuits.
+ */
+void
+circuit_expire_old_circs_as_needed(time_t now)
+{
+  static time_t time_to_expire_and_reset = 0;
+
+  if (time_to_expire_and_reset < now) {
     circuit_reset_failure_count(1);
-    time_to_new_circuit = now + options->NewCircuitPeriod;
+    time_to_expire_and_reset = now + get_options()->NewCircuitPeriod;
     if (proxy_mode(get_options()))
       addressmap_clean(now);
     circuit_expire_old_circuits_clientside();
 
 #if 0 /* disable for now, until predict-and-launch-new can cull leftovers */
+
+    /* If we ever re-enable, this has to move into
+     * circuit_build_needed_circs */
+
     circ = circuit_get_youngest_clean_open(CIRCUIT_PURPOSE_C_GENERAL);
     if (get_options()->RunTesting &&
         circ &&
@@ -1115,8 +1134,6 @@ circuit_build_needed_circs(time_t now)
     }
 #endif
   }
-  if (!options->DisablePredictedCircuits)
-    circuit_predict_and_launch_new();
 }
 
 /** If the stream <b>conn</b> is a member of any of the linked
