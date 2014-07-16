@@ -183,6 +183,8 @@ get_unique_circ_id_by_chan(channel_t *chan)
       if (0)
         circuitmux_assert_okay(chan->cmux);
 
+      channel_dump_statistics(chan, LOG_WARN);
+
       return 0;
     }
 
