@@ -2447,8 +2447,9 @@ test_util_exit_status(void *ptr)
 #endif
 
 #ifndef _WIN32
-/** Check that fgets waits until a full line, and not return a partial line, on
- * a EAGAIN with a non-blocking pipe */
+/* Check that fgets with a non-blocking pipe returns partial lines and sets
+ * EAGAIN, returns full lines and sets no error, and returns NULL on EOF and
+ * sets no error */
 static void
 test_util_fgets_eagain(void *ptr)
 {
@@ -2457,17 +2458,19 @@ test_util_fgets_eagain(void *ptr)
   ssize_t retlen;
   char *retptr;
   FILE *test_stream = NULL;
-  char buf[10];
+  char buf[4] = { 0 };
 
   (void)ptr;
 
+  errno = 0;
+
   /* Set up a pipe to test on */
   retval = pipe(test_pipe);
-  tt_int_op(retval, >=, 0);
+  tt_int_op(retval, ==, 0);
 
   /* Set up the read-end to be non-blocking */
   retval = fcntl(test_pipe[0], F_SETFL, O_NONBLOCK);
-  tt_int_op(retval, >=, 0);
+  tt_int_op(retval, ==, 0);
 
   /* Open it as a stdio stream */
   test_stream = fdopen(test_pipe[0], "r");
@@ -2477,51 +2480,69 @@ test_util_fgets_eagain(void *ptr)
   retlen = write(test_pipe[1], "A", 1);
   tt_int_op(retlen, ==, 1);
   retptr = fgets(buf, sizeof(buf), test_stream);
-  tt_want(retptr == NULL);
   tt_int_op(errno, ==, EAGAIN);
+  tt_ptr_op(retptr, ==, buf);
+  tt_str_op(buf, ==, "A");
+  errno = 0;
 
   /* Send in the rest */
   retlen = write(test_pipe[1], "B\n", 2);
   tt_int_op(retlen, ==, 2);
   retptr = fgets(buf, sizeof(buf), test_stream);
+  tt_int_op(errno, ==, 0);
   tt_ptr_op(retptr, ==, buf);
-  tt_str_op(buf, ==, "AB\n");
+  tt_str_op(buf, ==, "B\n");
+  errno = 0;
 
   /* Send in a full line */
   retlen = write(test_pipe[1], "CD\n", 3);
   tt_int_op(retlen, ==, 3);
   retptr = fgets(buf, sizeof(buf), test_stream);
+  tt_int_op(errno, ==, 0);
   tt_ptr_op(retptr, ==, buf);
   tt_str_op(buf, ==, "CD\n");
+  errno = 0;
 
   /* Send in a partial line */
   retlen = write(test_pipe[1], "E", 1);
   tt_int_op(retlen, ==, 1);
   retptr = fgets(buf, sizeof(buf), test_stream);
-  tt_ptr_op(retptr, ==, NULL);
   tt_int_op(errno, ==, EAGAIN);
+  tt_ptr_op(retptr, ==, buf);
+  tt_str_op(buf, ==, "E");
+  errno = 0;
 
   /* Send in the rest */
   retlen = write(test_pipe[1], "F\n", 2);
   tt_int_op(retlen, ==, 2);
   retptr = fgets(buf, sizeof(buf), test_stream);
+  tt_int_op(errno, ==, 0);
   tt_ptr_op(retptr, ==, buf);
-  tt_str_op(buf, ==, "EF\n");
+  tt_str_op(buf, ==, "F\n");
+  errno = 0;
 
   /* Send in a full line and close */
   retlen = write(test_pipe[1], "GH", 2);
   tt_int_op(retlen, ==, 2);
   retval = close(test_pipe[1]);
-  test_pipe[1] = -1;
   tt_int_op(retval, ==, 0);
+  test_pipe[1] = -1;
   retptr = fgets(buf, sizeof(buf), test_stream);
+  tt_int_op(errno, ==, 0);
   tt_ptr_op(retptr, ==, buf);
   tt_str_op(buf, ==, "GH");
+  errno = 0;
 
   /* Check for EOF */
   retptr = fgets(buf, sizeof(buf), test_stream);
+  tt_int_op(errno, ==, 0);
   tt_ptr_op(retptr, ==, NULL);
-  tt_int_op(feof(test_stream), >, 0);
+  retval = feof(test_stream);
+  tt_int_op(retval, !=, 0);
+  errno = 0;
+
+  /* Check that buf is unchanged according to C99 and C11 */
+  tt_str_op(buf, ==, "GH");
 
  done:
   if (test_stream != NULL)
@@ -3782,7 +3803,7 @@ struct testcase_t util_tests[] = {
 #endif
 #ifndef _WIN32
   UTIL_TEST(exit_status, 0),
-  UTIL_TEST(fgets_eagain, TT_SKIP),
+  UTIL_TEST(fgets_eagain, 0),
 #endif
   UTIL_TEST(spawn_background_ok, 0),
   UTIL_TEST(spawn_background_fail, 0),
