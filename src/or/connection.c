@@ -3715,9 +3715,15 @@ connection_handle_write_impl(connection_t *conn, int force)
   if (connection_state_is_connecting(conn)) {
     if (getsockopt(conn->s, SOL_SOCKET, SO_ERROR, (void*)&e, &len) < 0) {
       log_warn(LD_BUG, "getsockopt() syscall failed");
-      if (CONN_IS_EDGE(conn))
-        connection_edge_end_errno(TO_EDGE_CONN(conn));
-      connection_mark_for_close(conn);
+      if (conn->type == CONN_TYPE_OR) {
+        or_connection_t *orconn = TO_OR_CONN(conn);
+        connection_or_close_for_error(orconn, 0);
+      } else {
+        if (CONN_IS_EDGE(conn)) {
+          connection_edge_end_errno(TO_EDGE_CONN(conn));
+        }
+        connection_mark_for_close(conn);
+      }
       return -1;
     }
     if (e) {
