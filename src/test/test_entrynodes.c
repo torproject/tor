@@ -115,7 +115,7 @@ static void *
 fake_network_setup(const struct testcase_t *testcase)
 {
   /* This is the file containing our test descriptors. */
-  const char *fname = BUILDDIR "/src/test/test_descriptors.txt";
+  const char *fname = TOP_SRCDIR "/src/test/test_descriptors.txt";
 
   (void) testcase;
 
