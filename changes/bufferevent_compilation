@@ -1,5 +1,6 @@
   o Minor bugfixes:
     - Fix compilation when building with bufferevents enabled. (This
       configuration is still not expected to work, however.)
-      Fixes bugs 12438, 12474; bugfixes on 0.2.5.1-alpha. Patches
-      from Anthony G. Basile.
+      Fixes bugs 12438, 12474, 11578; bugfixes on 0.2.5.1-alpha and
+      0.2.5.3-alpha. Patches from Anthony G. Basile and Sathyanarayanan
+      Gunasekaran.

@@ -97,16 +97,25 @@ dummy_edge_conn_new(circuit_t *circ,
                     int type, size_t in_bytes, size_t out_bytes)
 {
   edge_connection_t *conn;
+  generic_buffer_t *inbuf, *outbuf;
 
   if (type == CONN_TYPE_EXIT)
     conn = edge_connection_new(type, AF_INET);
   else
     conn = ENTRY_TO_EDGE_CONN(entry_connection_new(type, AF_INET));
 
+#ifdef USE_BUFFEREVENTS
+  inbuf = bufferevent_get_input(TO_CONN(conn)->bufev);
+  outbuf = bufferevent_get_output(TO_CONN(conn)->bufev);
+#else
+  inbuf = TO_CONN(conn)->inbuf;
+  outbuf = TO_CONN(conn)->outbuf;
+#endif
+
   /* We add these bytes directly to the buffers, to avoid all the
    * edge connection read/write machinery. */
-  add_bytes_to_buf(TO_CONN(conn)->inbuf, in_bytes);
-  add_bytes_to_buf(TO_CONN(conn)->outbuf, out_bytes);
+  add_bytes_to_buf(inbuf, in_bytes);
+  add_bytes_to_buf(outbuf, out_bytes);
 
   conn->on_circuit = circ;
   if (type == CONN_TYPE_EXIT) {
