@@ -2563,6 +2563,13 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("Can't use a relative path to torrc when RunAsDaemon is set.");
 #endif
 
+  if (server_mode(options) && options->RendConfigLines)
+    log_warn(LD_CONFIG,
+        "Tor is currently configured as a relay and a hidden service. "
+        "That's not very secure: you should probably run your hidden service "
+        "in a separate Tor process, at least -- see "
+        "https://trac.torproject.org/8742");
+
   /* XXXX require that the only port not be DirPort? */
   /* XXXX require that at least one port be listened-upon. */
   if (n_ports == 0 && !options->RendConfigLines)
