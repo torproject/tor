@@ -435,7 +435,10 @@ decide_num_guards(const or_options_t *options, int for_directory)
 {
   if (for_directory && options->NumDirectoryGuards != 0)
     return options->NumDirectoryGuards;
-  return options->NumEntryGuards;
+  if (options->NumEntryGuards)
+    return options->NumEntryGuards;
+  /* Use the value from the consensus, or 3 if no guidance. */
+  return networkstatus_get_param(NULL, "NumEntryGuards", 3, 1, 10);
 }
 
 /** If the use of entry guards is configured, choose more entry guards
@@ -815,6 +818,7 @@ entry_guards_set_from_config(const or_options_t *options)
 {
   smartlist_t *entry_nodes, *worse_entry_nodes, *entry_fps;
   smartlist_t *old_entry_guards_on_list, *old_entry_guards_not_on_list;
+  const int numentryguards = decide_num_guards(options, 0);
   tor_assert(entry_guards);
 
   should_add_entry_nodes = 0;
@@ -883,7 +887,7 @@ entry_guards_set_from_config(const or_options_t *options)
   /* Next, the rest of EntryNodes */
   SMARTLIST_FOREACH_BEGIN(entry_nodes, const node_t *, node) {
     add_an_entry_guard(node, 0, 0, 1, 0);
-    if (smartlist_len(entry_guards) > options->NumEntryGuards * 10)
+    if (smartlist_len(entry_guards) > numentryguards * 10)
       break;
   } SMARTLIST_FOREACH_END(node);
   log_notice(LD_GENERAL, "%d entries in guards", smartlist_len(entry_guards));

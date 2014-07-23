@@ -1,0 +1,5 @@
+  Major features:
+    - Make the number of entry guards (and thus, by default, directory
+      guards too) configurable via a new NumEntryGuards consensus
+      parameter. Implements ticket 12688.
+
