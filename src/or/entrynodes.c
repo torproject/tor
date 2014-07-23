@@ -433,10 +433,18 @@ add_an_entry_guard(const node_t *chosen, int reset_status, int prepend,
 static int
 decide_num_guards(const or_options_t *options, int for_directory)
 {
-  if (for_directory && options->NumDirectoryGuards != 0)
-    return options->NumDirectoryGuards;
+  if (for_directory) {
+    int answer;
+    if (options->NumDirectoryGuards != 0)
+      return options->NumDirectoryGuards;
+    answer = networkstatus_get_param(NULL, "NumDirectoryGuards", 0, 0, 10);
+    if (answer) /* non-zero means use the consensus value */
+      return answer;
+  }
+
   if (options->NumEntryGuards)
     return options->NumEntryGuards;
+
   /* Use the value from the consensus, or 3 if no guidance. */
   return networkstatus_get_param(NULL, "NumEntryGuards", 3, 1, 10);
 }
