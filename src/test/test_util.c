@@ -2404,22 +2404,22 @@ test_util_ftruncate(void *ptr)
 
   /* Make the file be there. */
   tt_int_op(strlen(message), ==, write_all(fd, message, strlen(message), 0));
-  tt_int_op(tor_fd_getpos(fd), ==, strlen(message));
+  tt_int_op((int)tor_fd_getpos(fd), ==, strlen(message));
   tt_int_op(0, ==, fstat(fd, &st));
-  tt_int_op(st.st_size, ==, strlen(message));
+  tt_int_op((int)st.st_size, ==, strlen(message));
 
   /* Truncate and see if it got truncated */
   tt_int_op(0, ==, tor_ftruncate(fd));
-  tt_int_op(tor_fd_getpos(fd), ==, 0);
+  tt_int_op((int)tor_fd_getpos(fd), ==, 0);
   tt_int_op(0, ==, fstat(fd, &st));
-  tt_int_op(st.st_size, ==, 0);
+  tt_int_op((int)st.st_size, ==, 0);
 
   /* Replace, and see if it got replaced */
   tt_int_op(strlen(message2), ==,
             write_all(fd, message2, strlen(message2), 0));
-  tt_int_op(tor_fd_getpos(fd), ==, strlen(message2));
+  tt_int_op((int)tor_fd_getpos(fd), ==, strlen(message2));
   tt_int_op(0, ==, fstat(fd, &st));
-  tt_int_op(st.st_size, ==, strlen(message2));
+  tt_int_op((int)st.st_size, ==, strlen(message2));
 
   close(fd);
   fd = -1;
