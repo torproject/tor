@@ -835,6 +835,7 @@ static void
 test_container_order_functions(void)
 {
   int lst[25], n = 0;
+  unsigned int lst2[25];
   //  int a=12,b=24,c=25,d=60,e=77;
 
 #define median() median_int(lst, n)
@@ -855,6 +856,28 @@ test_container_order_functions(void)
   //smartlist_shuffle(sl);
   test_eq(25, median()); /* 12,12,24,25,60,77,77 */
 #undef median
+
+#define third_quartile() third_quartile_uint32(lst2, n)
+
+  n = 0;
+  lst2[n++] = 1;
+  test_eq(1, third_quartile()); /* ~1~ */
+  lst2[n++] = 2;
+  test_eq(2, third_quartile()); /* 1, ~2~ */
+  lst2[n++] = 3;
+  lst2[n++] = 4;
+  lst2[n++] = 5;
+  test_eq(4, third_quartile()); /* 1, 2, 3, ~4~, 5 */
+  lst2[n++] = 6;
+  lst2[n++] = 7;
+  lst2[n++] = 8;
+  lst2[n++] = 9;
+  test_eq(7, third_quartile()); /* 1, 2, 3, 4, 5, 6, ~7~, 8, 9 */
+  lst2[n++] = 10;
+  lst2[n++] = 11;
+  test_eq(9, third_quartile()); /* 1, 2, 3, 4, 5, 6, 7, 8, ~9~, 10, 11 */
+
+#undef third_quartile
 
  done:
   ;

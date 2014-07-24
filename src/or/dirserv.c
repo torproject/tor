@@ -1420,7 +1420,8 @@ dirserv_compute_performance_thresholds(routerlist_t *rl,
     /* (Now bandwidths is sorted.) */
     if (fast_bandwidth_kb < ROUTER_REQUIRED_MIN_BANDWIDTH/(2 * 1000))
       fast_bandwidth_kb = bandwidths_kb[n_active/4];
-    guard_bandwidth_including_exits_kb = bandwidths_kb[n_active*3/4];
+    guard_bandwidth_including_exits_kb =
+      third_quartile_uint32(bandwidths_kb, n_active);
     guard_tk = find_nth_long(tks, n_active, n_active/8);
   }
 
