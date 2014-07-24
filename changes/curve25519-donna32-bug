@@ -6,5 +6,7 @@
       a small class of private ntor keys. This bug does not currently
       appear to allow an attacker to learn private keys or impersonate a
       Tor server, but it could provide a means to distinguish 32-bit Tor
-      implementations from 64-bit Tor implementations.
+      implementations from 64-bit Tor implementations. Fixes bug 12694;
+      bugfix on 0.2.4.8-alpha. Bug found by Robert Ransom; fix from
+      Adam Langley.
 
