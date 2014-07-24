@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Avoid an illegal read from stack when initializing the TLS
-      module using a version of OpenSSL without all of the ciphers
-      used by the v2 link handshake. Fixes bug 12227; bugfix on
-      0.2.4.8-alpha.  Found by "starlight".
