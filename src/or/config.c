@@ -147,7 +147,7 @@ static config_var_t option_vars_[] = {
   V(AuthDirInvalid,              LINELIST, NULL),
   V(AuthDirInvalidCCs,           CSV,      ""),
   V(AuthDirFastGuarantee,        MEMUNIT,  "100 KB"),
-  V(AuthDirGuardBWGuarantee,     MEMUNIT,  "250 KB"),
+  V(AuthDirGuardBWGuarantee,     MEMUNIT,  "2 MB"),
   V(AuthDirReject,               LINELIST, NULL),
   V(AuthDirRejectCCs,            CSV,      ""),
   V(AuthDirRejectUnlisted,       BOOL,     "0"),
