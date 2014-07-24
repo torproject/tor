@@ -325,7 +325,7 @@ static config_var_t option_vars_[] = {
   VAR("NodeFamily",              LINELIST, NodeFamilies,         NULL),
   V(NumCPUs,                     UINT,     "0"),
   V(NumDirectoryGuards,          UINT,     "0"),
-  V(NumEntryGuards,              UINT,     "3"),
+  V(NumEntryGuards,              UINT,     "0"),
   V(ORListenAddress,             LINELIST, NULL),
   VPORT(ORPort,                      LINELIST, NULL),
   V(OutboundBindAddress,         LINELIST,   NULL),
@@ -3250,9 +3250,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
              "no effect: you must specify an explicit CookieAuthFile to "
              "have it group-readable.");
   }
-
-  if (options->UseEntryGuards && ! options->NumEntryGuards)
-    REJECT("Cannot enable UseEntryGuards with NumEntryGuards set to 0");
 
   if (options->MyFamily && options->BridgeRelay) {
     log_warn(LD_CONFIG, "Listing a family for a bridge relay is not "

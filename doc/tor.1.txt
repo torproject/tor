@@ -1092,12 +1092,16 @@ The following options are useful only for clients (that is, if
 
 [[NumEntryGuards]] **NumEntryGuards** __NUM__::
     If UseEntryGuards is set to 1, we will try to pick a total of NUM routers
-    as long-term entries for our circuits. (Default: 3)
+    as long-term entries for our circuits. If NUM is 0, we try to learn
+    the number from the NumEntryGuards consensus parameter, and default
+    to 3 if the consensus parameter isn't set. (Default: 0)
 
 [[NumDirectoryGuards]] **NumDirectoryGuards** __NUM__::
     If UseEntryGuardsAsDirectoryGuards is enabled, we try to make sure we
     have at least NUM routers to use as directory guards. If this option
-    is set to 0, use the value from NumEntryGuards. (Default: 0)
+    is set to 0, use the value from the NumDirectoryGuards consensus
+    parameter, falling back to the value from NumEntryGuards if the
+    consensus parameter is 0 or isn't set. (Default: 0)
 
 [[GuardLifetime]] **GuardLifetime**  __N__ **days**|**weeks**|**months**::
     If nonzero, and UseEntryGuards is set, minimum time to keep a guard before
