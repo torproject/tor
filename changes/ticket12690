@@ -1,9 +1,0 @@
-  o Minor features:
-    - Authorities now assign the Guard flag to the fastest 25% of the
-      network (it used to be the fastest 50%). Also raise the consensus
-      weight that guarantees the Guard flag from 250 to 2000. For the
-      current network, this results in about 1100 guards, down from 2500.
-      This step paves the way for moving the number of entry guards
-      down to 1 (proposal 236) while still providing reasonable expected
-      performance for most users. Implements ticket 12690.
-
