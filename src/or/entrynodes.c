@@ -1884,8 +1884,8 @@ bridge_resolve_conflicts(const tor_addr_t *addr, uint16_t port,
 
 /** Return True if we have a bridge that uses a transport with name
  *  <b>transport_name</b>. */
-int
-transport_is_needed(const char *transport_name)
+MOCK_IMPL(int,
+transport_is_needed, (const char *transport_name))
 {
   if (!bridge_list)
     return 0;

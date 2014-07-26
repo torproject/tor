@@ -324,9 +324,9 @@ transport_add(transport_t *t)
 /** Remember a new pluggable transport proxy at <b>addr</b>:<b>port</b>.
  *  <b>name</b> is set to the name of the protocol this proxy uses.
  *  <b>socks_ver</b> is set to the SOCKS version of the proxy. */
-int
-transport_add_from_config(const tor_addr_t *addr, uint16_t port,
-                          const char *name, int socks_ver)
+MOCK_IMPL(int,
+transport_add_from_config, (const tor_addr_t *addr, uint16_t port,
+                            const char *name, int socks_ver))
 {
   transport_t *t = transport_new(addr, port, name, socks_ver, NULL);
 
@@ -1349,9 +1349,9 @@ managed_proxy_create(const smartlist_t *transport_list,
  * Requires that proxy_argv be a NULL-terminated array of command-line
  * elements, containing at least one element.
  **/
-void
-pt_kickstart_proxy(const smartlist_t *transport_list,
-                   char **proxy_argv, int is_server)
+MOCK_IMPL(void,
+pt_kickstart_proxy, (const smartlist_t *transport_list,
+                     char **proxy_argv, int is_server))
 {
   managed_proxy_t *mp=NULL;
   transport_t *old_transport = NULL;
