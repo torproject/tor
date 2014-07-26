@@ -536,12 +536,6 @@ static int options_transition_affects_workers(
 static int options_transition_affects_descriptor(
       const or_options_t *old_options, const or_options_t *new_options);
 static int check_nickname_list(char **lst, const char *name, char **msg);
-
-static int parse_client_transport_line(const or_options_t *options,
-                                       const char *line, int validate_only);
-
-static int parse_server_transport_line(const or_options_t *options,
-                                       const char *line, int validate_only);
 static char *get_bindaddr_from_transport_listen_line(const char *line,
                                                      const char *transport);
 static int parse_dir_authority_line(const char *line,
@@ -4763,7 +4757,7 @@ parse_bridge_line(const char *line)
  * - If it's an external proxy line, add the transport described in the line to
  * our internal transport list.
  * - If it's a managed proxy line, launch the managed proxy. */
-static int
+STATIC int
 parse_client_transport_line(const or_options_t *options,
                             const char *line, int validate_only)
 {
@@ -5063,7 +5057,7 @@ get_options_for_server_transport(const char *transport)
  * isn't.
  * If <b>validate_only</b> is 0, the line is well-formed, and it's a
  * managed proxy line, launch the managed proxy. */
-static int
+STATIC int
 parse_server_transport_line(const or_options_t *options,
                             const char *line, int validate_only)
 {
