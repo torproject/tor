@@ -14,6 +14,8 @@
 #include "test.h"
 #include "util.h"
 #include "address.h"
+#include "entrynodes.h"
+#include "transports.h"
 
 static void
 test_config_addressmap(void *arg)
@@ -552,6 +554,251 @@ test_config_parse_transport_options_line(void *arg)
   }
 }
 
+/* Mocks needed for the transport plugin line test */
+
+static void pt_kickstart_proxy_mock(const smartlist_t *transport_list,
+                                    char **proxy_argv, int is_server);
+static int transport_add_from_config_mock(const tor_addr_t *addr,
+                                          uint16_t port, const char *name,
+                                          int socks_ver);
+static int transport_is_needed_mock(const char *transport_name);
+
+static int pt_kickstart_proxy_mock_call_count = 0;
+static int transport_add_from_config_mock_call_count = 0;
+static int transport_is_needed_mock_call_count = 0;
+static int transport_is_needed_mock_return = 0;
+
+static void
+pt_kickstart_proxy_mock(const smartlist_t *transport_list,
+                        char **proxy_argv, int is_server)
+{
+  ++pt_kickstart_proxy_mock_call_count;
+}
+
+static int
+transport_add_from_config_mock(const tor_addr_t *addr,
+                               uint16_t port, const char *name,
+                               int socks_ver)
+{
+  ++transport_add_from_config_mock_call_count;
+
+  return 0;
+}
+
+static int
+transport_is_needed_mock(const char *transport_name)
+{
+  ++transport_is_needed_mock_call_count;
+
+  return transport_is_needed_mock_return;
+}
+
+/**
+ * Test parsing for the ClientTransportPlugin and ServerTransportPlugin config
+ * options.
+ */
+
+static void
+test_config_parse_transport_plugin_line(void *arg)
+{
+  or_options_t *options = get_options_mutable();
+  int r, tmp;
+  int old_pt_kickstart_proxy_mock_call_count;
+  int old_transport_add_from_config_mock_call_count;
+  int old_transport_is_needed_mock_call_count;
+
+  /* Bad transport lines - too short */
+  r = parse_client_transport_line(options, "bad", 1);
+  test_assert(r < 0);
+  r = parse_server_transport_line(options, "bad", 1);
+  test_assert(r < 0);
+  r = parse_client_transport_line(options, "bad bad", 1);
+  test_assert(r < 0);
+  r = parse_server_transport_line(options, "bad bad", 1);
+  test_assert(r < 0);
+
+  /* Test transport list parsing */
+  r = parse_client_transport_line(options,
+      "transport_1 exec /usr/bin/fake-transport", 1);
+  test_assert(r == 0);
+  r = parse_server_transport_line(options,
+   "transport_1 exec /usr/bin/fake-transport", 1);
+  test_assert(r == 0);
+  r = parse_client_transport_line(options,
+      "transport_1,transport_2 exec /usr/bin/fake-transport", 1);
+  test_assert(r == 0);
+  r = parse_server_transport_line(options,
+      "transport_1,transport_2 exec /usr/bin/fake-transport", 1);
+  test_assert(r == 0);
+  /* Bad transport identifiers */
+  r = parse_client_transport_line(options,
+      "transport_* exec /usr/bin/fake-transport", 1);
+  test_assert(r < 0);
+  r = parse_server_transport_line(options,
+      "transport_* exec /usr/bin/fake-transport", 1);
+  test_assert(r < 0);
+
+  /* Check SOCKS cases for client transport */
+  r = parse_client_transport_line(options,
+      "transport_1 socks4 1.2.3.4:567", 1);
+  test_assert(r == 0);
+  r = parse_client_transport_line(options,
+      "transport_1 socks5 1.2.3.4:567", 1);
+  test_assert(r == 0);
+  /* Proxy case for server transport */
+  r = parse_server_transport_line(options,
+      "transport_1 proxy 1.2.3.4:567", 1);
+  test_assert(r == 0);
+  /* Multiple-transport error exit */
+  r = parse_client_transport_line(options,
+      "transport_1,transport_2 socks5 1.2.3.4:567", 1);
+  test_assert(r < 0);
+  r = parse_server_transport_line(options,
+      "transport_1,transport_2 proxy 1.2.3.4:567", 1);
+  /* No port error exit */
+  r = parse_client_transport_line(options,
+      "transport_1 socks5 1.2.3.4", 1);
+  test_assert(r < 0);
+  r = parse_server_transport_line(options,
+     "transport_1 proxy 1.2.3.4", 1);
+  test_assert(r < 0);
+  /* Unparsable address error exit */
+  r = parse_client_transport_line(options,
+      "transport_1 socks5 1.2.3:6x7", 1);
+  test_assert(r < 0);
+  r = parse_server_transport_line(options,
+      "transport_1 proxy 1.2.3:6x7", 1);
+  test_assert(r < 0);
+
+  /* "Strange {Client|Server}TransportPlugin field" error exit */
+  r = parse_client_transport_line(options,
+      "transport_1 foo bar", 1);
+  test_assert(r < 0);
+  r = parse_server_transport_line(options,
+      "transport_1 foo bar", 1);
+  test_assert(r < 0);
+
+  /* No sandbox mode error exit */
+  tmp = options->Sandbox;
+  options->Sandbox = 1;
+  r = parse_client_transport_line(options,
+      "transport_1 exec /usr/bin/fake-transport", 1);
+  test_assert(r < 0);
+  r = parse_server_transport_line(options,
+      "transport_1 exec /usr/bin/fake-transport", 1);
+  test_assert(r < 0);
+  options->Sandbox = tmp;
+
+  /*
+   * These final test cases cover code paths that only activate without
+   * validate_only, so they need mocks in place.
+   */
+  MOCK(pt_kickstart_proxy, pt_kickstart_proxy_mock);
+  old_pt_kickstart_proxy_mock_call_count =
+    pt_kickstart_proxy_mock_call_count;
+  r = parse_server_transport_line(options,
+      "transport_1 exec /usr/bin/fake-transport", 0);
+  test_assert(r == 0);
+  test_assert(pt_kickstart_proxy_mock_call_count ==
+      old_pt_kickstart_proxy_mock_call_count + 1);
+  UNMOCK(pt_kickstart_proxy);
+
+  /* This one hits a log line in the !validate_only case only */
+  r = parse_server_transport_line(options,
+      "transport_1 proxy 1.2.3.4:567", 0);
+  test_assert(r == 0);
+
+  /* Check mocked client transport cases */
+  MOCK(pt_kickstart_proxy, pt_kickstart_proxy_mock);
+  MOCK(transport_add_from_config, transport_add_from_config_mock);
+  MOCK(transport_is_needed, transport_is_needed_mock);
+
+  /* Unnecessary transport case */
+  transport_is_needed_mock_return = 0;
+  old_pt_kickstart_proxy_mock_call_count =
+    pt_kickstart_proxy_mock_call_count;
+  old_transport_add_from_config_mock_call_count =
+    transport_add_from_config_mock_call_count;
+  old_transport_is_needed_mock_call_count =
+    transport_is_needed_mock_call_count;
+  r = parse_client_transport_line(options,
+      "transport_1 exec /usr/bin/fake-transport", 0);
+  /* Should have succeeded */
+  test_assert(r == 0);
+  /* transport_is_needed() should have been called */
+  test_assert(transport_is_needed_mock_call_count ==
+      old_transport_is_needed_mock_call_count + 1);
+  /*
+   * pt_kickstart_proxy() and transport_add_from_config() should
+   * not have been called.
+   */
+  test_assert(pt_kickstart_proxy_mock_call_count ==
+      old_pt_kickstart_proxy_mock_call_count);
+  test_assert(transport_add_from_config_mock_call_count ==
+      old_transport_add_from_config_mock_call_count);
+
+  /* Necessary transport case */
+  transport_is_needed_mock_return = 1;
+  old_pt_kickstart_proxy_mock_call_count =
+    pt_kickstart_proxy_mock_call_count;
+  old_transport_add_from_config_mock_call_count =
+    transport_add_from_config_mock_call_count;
+  old_transport_is_needed_mock_call_count =
+    transport_is_needed_mock_call_count;
+  r = parse_client_transport_line(options,
+      "transport_1 exec /usr/bin/fake-transport", 0);
+  /* Should have succeeded */
+  test_assert(r == 0);
+  /*
+   * transport_is_needed() and pt_kickstart_proxy() should have been
+   * called.
+   */
+  test_assert(pt_kickstart_proxy_mock_call_count ==
+      old_pt_kickstart_proxy_mock_call_count + 1);
+  test_assert(transport_is_needed_mock_call_count ==
+      old_transport_is_needed_mock_call_count + 1);
+  /* transport_add_from_config() should not have been called. */
+  test_assert(transport_add_from_config_mock_call_count ==
+      old_transport_add_from_config_mock_call_count);
+
+  /* proxy case */
+  transport_is_needed_mock_return = 1;
+  old_pt_kickstart_proxy_mock_call_count =
+    pt_kickstart_proxy_mock_call_count;
+  old_transport_add_from_config_mock_call_count =
+    transport_add_from_config_mock_call_count;
+  old_transport_is_needed_mock_call_count =
+    transport_is_needed_mock_call_count;
+  r = parse_client_transport_line(options,
+      "transport_1 socks5 1.2.3.4:567", 0);
+  /* Should have succeeded */
+  test_assert(r == 0);
+  /*
+   * transport_is_needed() and transport_add_from_config() should have
+   * been called.
+   */
+  test_assert(transport_add_from_config_mock_call_count ==
+      old_transport_add_from_config_mock_call_count + 1);
+  test_assert(transport_is_needed_mock_call_count ==
+      old_transport_is_needed_mock_call_count + 1);
+  /* pt_kickstart_proxy() should not have been called. */
+  test_assert(pt_kickstart_proxy_mock_call_count ==
+      old_pt_kickstart_proxy_mock_call_count);
+
+  /* Done with mocked client transport cases */
+  UNMOCK(transport_is_needed);
+  UNMOCK(transport_add_from_config);
+  UNMOCK(pt_kickstart_proxy);
+
+ done:
+  /* Make sure we undo all mocks */
+  UNMOCK(pt_kickstart_proxy);
+  UNMOCK(transport_add_from_config);
+  UNMOCK(transport_is_needed);
+
+  return;
+}
+
 // Tests if an options with MyFamily fingerprints missing '$' normalises
 // them correctly and also ensure it also works with multiple fingerprints
 static void
@@ -596,6 +843,7 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(addressmap, 0),
   CONFIG_TEST(parse_bridge_line, 0),
   CONFIG_TEST(parse_transport_options_line, 0),
+  CONFIG_TEST(parse_transport_plugin_line, TT_FORK),
   CONFIG_TEST(check_or_create_data_subdir, TT_FORK),
   CONFIG_TEST(write_to_data_subdir, TT_FORK),
   CONFIG_TEST(fix_my_family, 0),
