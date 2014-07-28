@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - Warn and drop the circuit if we receive an inbound 'relay early'
+      cell. Those used to be normal to receive on hidden service circuits
+      due to bug 1038, but the buggy Tor versions are long gone from
+      the network so we can afford to resume watching for them. Resolves
+      the rest of bug 1038; bugfix on 0.2.1.19.
