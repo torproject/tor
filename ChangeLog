@@ -1,5 +1,7 @@
-Changes in version 0.2.5.6-alpha - 2014-07-2?
-  Tor 0.2.5.6-alpha fixes [...]
+Changes in version 0.2.5.6-alpha - 2014-07-28
+  Tor 0.2.5.6-alpha brings us a big step closer to slowing down the
+  risk from guard rotation, and fixes a variety of other issues to get
+  us closer to a release candidate.
 
   o Major features (also in 0.2.4.23):
     - Make the number of entry guards configurable via a new
