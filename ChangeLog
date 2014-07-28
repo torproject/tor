@@ -1,4 +1,8 @@
 Changes in version 0.2.4.23 - 2014-07-28
+  Tor 0.2.4.23 brings us a big step closer to slowing down the risk from
+  guard rotation, and also backports several important fixes from the
+  Tor 0.2.5 alpha release series.
+
   o Major features:
     - Clients now look at the "usecreatefast" consensus parameter to
       decide whether to use CREATE_FAST or CREATE cells for the first hop
