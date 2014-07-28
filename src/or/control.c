@@ -2464,7 +2464,7 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
       goto done;
     }
     if (!node_has_descriptor(node)) {
-      connection_printf_to_buf(conn, "552 descriptor for \"%s\"\r\n", n);
+      connection_printf_to_buf(conn, "552 No descriptor for \"%s\"\r\n", n);
       goto done;
     }
     smartlist_add(nodes, (void*)node);

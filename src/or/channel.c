@@ -3352,7 +3352,7 @@ channel_dump_statistics(channel_t *chan, int severity)
       U64_PRINTF_ARG(chan->timestamp_recv),
       U64_PRINTF_ARG(now - chan->timestamp_recv));
   tor_log(severity, LD_GENERAL,
-      " * Channel " U64_FORMAT " last trasmitted a cell "
+      " * Channel " U64_FORMAT " last transmitted a cell "
       "at " U64_FORMAT " (" U64_FORMAT " seconds ago)",
       U64_PRINTF_ARG(chan->global_identifier),
       U64_PRINTF_ARG(chan->timestamp_xmit),
