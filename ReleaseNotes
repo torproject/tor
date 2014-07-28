@@ -3,6 +3,54 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.2.4.23 - 2014-07-28
+  Tor 0.2.4.23 brings us a big step closer to slowing down the risk from
+  guard rotation, and also backports several important fixes from the
+  Tor 0.2.5 alpha release series.
+
+  o Major features:
+    - Clients now look at the "usecreatefast" consensus parameter to
+      decide whether to use CREATE_FAST or CREATE cells for the first hop
+      of their circuit. This approach can improve security on connections
+      where Tor's circuit handshake is stronger than the available TLS
+      connection security levels, but the tradeoff is more computational
+      load on guard relays. Implements proposal 221. Resolves ticket 9386.
+    - Make the number of entry guards configurable via a new
+      NumEntryGuards consensus parameter, and the number of directory
+      guards configurable via a new NumDirectoryGuards consensus
+      parameter. Implements ticket 12688.
+
+  o Major bugfixes:
+    - Fix a bug in the bounds-checking in the 32-bit curve25519-donna
+      implementation that caused incorrect results on 32-bit
+      implementations when certain malformed inputs were used along with
+      a small class of private ntor keys. This bug does not currently
+      appear to allow an attacker to learn private keys or impersonate a
+      Tor server, but it could provide a means to distinguish 32-bit Tor
+      implementations from 64-bit Tor implementations. Fixes bug 12694;
+      bugfix on 0.2.4.8-alpha. Bug found by Robert Ransom; fix from
+      Adam Langley.
+
+  o Minor bugfixes:
+    - Warn and drop the circuit if we receive an inbound 'relay early'
+      cell. Those used to be normal to receive on hidden service circuits
+      due to bug 1038, but the buggy Tor versions are long gone from
+      the network so we can afford to resume watching for them. Resolves
+      the rest of bug 1038; bugfix on 0.2.1.19.
+    - Correct a confusing error message when trying to extend a circuit
+      via the control protocol but we don't know a descriptor or
+      microdescriptor for one of the specified relays. Fixes bug 12718;
+      bugfix on 0.2.3.1-alpha.
+    - Avoid an illegal read from stack when initializing the TLS
+      module using a version of OpenSSL without all of the ciphers
+      used by the v2 link handshake. Fixes bug 12227; bugfix on
+      0.2.4.8-alpha.  Found by "starlight".
+
+  o Minor features:
+    - Update geoip and geoip6 to the July 10 2014 Maxmind GeoLite2
+      Country database.
+
+
 Changes in version 0.2.4.22 - 2014-05-16
   Tor 0.2.4.22 backports numerous high-priority fixes from the Tor 0.2.5
   alpha release series. These include blocking all authority signing
