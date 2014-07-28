@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Correct a confusing error message when trying to extend a circuit
-      via the control protocol but we don't know a descriptor or
-      microdescriptor for one of the specified relays. Fixes bug 12718;
-      bugfix on 0.2.3.1-alpha.
