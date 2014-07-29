@@ -608,84 +608,84 @@ test_config_parse_transport_plugin_line(void *arg)
   int old_transport_is_needed_mock_call_count;
 
   /* Bad transport lines - too short */
-  r = parse_client_transport_line(options, "bad", 1);
+  r = parse_transport_line(options, "bad", 1, 0);
   test_assert(r < 0);
-  r = parse_server_transport_line(options, "bad", 1);
+  r = parse_transport_line(options, "bad", 1, 1);
   test_assert(r < 0);
-  r = parse_client_transport_line(options, "bad bad", 1);
+  r = parse_transport_line(options, "bad bad", 1, 0);
   test_assert(r < 0);
-  r = parse_server_transport_line(options, "bad bad", 1);
+  r = parse_transport_line(options, "bad bad", 1, 1);
   test_assert(r < 0);
 
   /* Test transport list parsing */
-  r = parse_client_transport_line(options,
-      "transport_1 exec /usr/bin/fake-transport", 1);
+  r = parse_transport_line(options,
+      "transport_1 exec /usr/bin/fake-transport", 1, 0);
   test_assert(r == 0);
-  r = parse_server_transport_line(options,
-   "transport_1 exec /usr/bin/fake-transport", 1);
+  r = parse_transport_line(options,
+   "transport_1 exec /usr/bin/fake-transport", 1, 1);
   test_assert(r == 0);
-  r = parse_client_transport_line(options,
-      "transport_1,transport_2 exec /usr/bin/fake-transport", 1);
+  r = parse_transport_line(options,
+      "transport_1,transport_2 exec /usr/bin/fake-transport", 1, 0);
   test_assert(r == 0);
-  r = parse_server_transport_line(options,
-      "transport_1,transport_2 exec /usr/bin/fake-transport", 1);
+  r = parse_transport_line(options,
+      "transport_1,transport_2 exec /usr/bin/fake-transport", 1, 1);
   test_assert(r == 0);
   /* Bad transport identifiers */
-  r = parse_client_transport_line(options,
-      "transport_* exec /usr/bin/fake-transport", 1);
+  r = parse_transport_line(options,
+      "transport_* exec /usr/bin/fake-transport", 1, 0);
   test_assert(r < 0);
-  r = parse_server_transport_line(options,
-      "transport_* exec /usr/bin/fake-transport", 1);
+  r = parse_transport_line(options,
+      "transport_* exec /usr/bin/fake-transport", 1, 1);
   test_assert(r < 0);
 
   /* Check SOCKS cases for client transport */
-  r = parse_client_transport_line(options,
-      "transport_1 socks4 1.2.3.4:567", 1);
+  r = parse_transport_line(options,
+      "transport_1 socks4 1.2.3.4:567", 1, 0);
   test_assert(r == 0);
-  r = parse_client_transport_line(options,
-      "transport_1 socks5 1.2.3.4:567", 1);
+  r = parse_transport_line(options,
+      "transport_1 socks5 1.2.3.4:567", 1, 0);
   test_assert(r == 0);
   /* Proxy case for server transport */
-  r = parse_server_transport_line(options,
-      "transport_1 proxy 1.2.3.4:567", 1);
+  r = parse_transport_line(options,
+      "transport_1 proxy 1.2.3.4:567", 1, 1);
   test_assert(r == 0);
   /* Multiple-transport error exit */
-  r = parse_client_transport_line(options,
-      "transport_1,transport_2 socks5 1.2.3.4:567", 1);
+  r = parse_transport_line(options,
+      "transport_1,transport_2 socks5 1.2.3.4:567", 1, 0);
   test_assert(r < 0);
-  r = parse_server_transport_line(options,
-      "transport_1,transport_2 proxy 1.2.3.4:567", 1);
+  r = parse_transport_line(options,
+      "transport_1,transport_2 proxy 1.2.3.4:567", 1, 1);
   /* No port error exit */
-  r = parse_client_transport_line(options,
-      "transport_1 socks5 1.2.3.4", 1);
+  r = parse_transport_line(options,
+      "transport_1 socks5 1.2.3.4", 1, 0);
   test_assert(r < 0);
-  r = parse_server_transport_line(options,
-     "transport_1 proxy 1.2.3.4", 1);
+  r = parse_transport_line(options,
+     "transport_1 proxy 1.2.3.4", 1, 1);
   test_assert(r < 0);
   /* Unparsable address error exit */
-  r = parse_client_transport_line(options,
-      "transport_1 socks5 1.2.3:6x7", 1);
+  r = parse_transport_line(options,
+      "transport_1 socks5 1.2.3:6x7", 1, 0);
   test_assert(r < 0);
-  r = parse_server_transport_line(options,
-      "transport_1 proxy 1.2.3:6x7", 1);
+  r = parse_transport_line(options,
+      "transport_1 proxy 1.2.3:6x7", 1, 1);
   test_assert(r < 0);
 
   /* "Strange {Client|Server}TransportPlugin field" error exit */
-  r = parse_client_transport_line(options,
-      "transport_1 foo bar", 1);
+  r = parse_transport_line(options,
+      "transport_1 foo bar", 1, 0);
   test_assert(r < 0);
-  r = parse_server_transport_line(options,
-      "transport_1 foo bar", 1);
+  r = parse_transport_line(options,
+      "transport_1 foo bar", 1, 1);
   test_assert(r < 0);
 
   /* No sandbox mode error exit */
   tmp = options->Sandbox;
   options->Sandbox = 1;
-  r = parse_client_transport_line(options,
-      "transport_1 exec /usr/bin/fake-transport", 1);
+  r = parse_transport_line(options,
+      "transport_1 exec /usr/bin/fake-transport", 1, 0);
   test_assert(r < 0);
-  r = parse_server_transport_line(options,
-      "transport_1 exec /usr/bin/fake-transport", 1);
+  r = parse_transport_line(options,
+      "transport_1 exec /usr/bin/fake-transport", 1, 1);
   test_assert(r < 0);
   options->Sandbox = tmp;
 
@@ -696,16 +696,16 @@ test_config_parse_transport_plugin_line(void *arg)
   MOCK(pt_kickstart_proxy, pt_kickstart_proxy_mock);
   old_pt_kickstart_proxy_mock_call_count =
     pt_kickstart_proxy_mock_call_count;
-  r = parse_server_transport_line(options,
-      "transport_1 exec /usr/bin/fake-transport", 0);
+  r = parse_transport_line(options,
+      "transport_1 exec /usr/bin/fake-transport", 0, 1);
   test_assert(r == 0);
   test_assert(pt_kickstart_proxy_mock_call_count ==
       old_pt_kickstart_proxy_mock_call_count + 1);
   UNMOCK(pt_kickstart_proxy);
 
   /* This one hits a log line in the !validate_only case only */
-  r = parse_server_transport_line(options,
-      "transport_1 proxy 1.2.3.4:567", 0);
+  r = parse_transport_line(options,
+      "transport_1 proxy 1.2.3.4:567", 0, 1);
   test_assert(r == 0);
 
   /* Check mocked client transport cases */
@@ -721,8 +721,8 @@ test_config_parse_transport_plugin_line(void *arg)
     transport_add_from_config_mock_call_count;
   old_transport_is_needed_mock_call_count =
     transport_is_needed_mock_call_count;
-  r = parse_client_transport_line(options,
-      "transport_1 exec /usr/bin/fake-transport", 0);
+  r = parse_transport_line(options,
+      "transport_1 exec /usr/bin/fake-transport", 0, 0);
   /* Should have succeeded */
   test_assert(r == 0);
   /* transport_is_needed() should have been called */
@@ -745,8 +745,8 @@ test_config_parse_transport_plugin_line(void *arg)
     transport_add_from_config_mock_call_count;
   old_transport_is_needed_mock_call_count =
     transport_is_needed_mock_call_count;
-  r = parse_client_transport_line(options,
-      "transport_1 exec /usr/bin/fake-transport", 0);
+  r = parse_transport_line(options,
+      "transport_1 exec /usr/bin/fake-transport", 0, 0);
   /* Should have succeeded */
   test_assert(r == 0);
   /*
@@ -769,8 +769,8 @@ test_config_parse_transport_plugin_line(void *arg)
     transport_add_from_config_mock_call_count;
   old_transport_is_needed_mock_call_count =
     transport_is_needed_mock_call_count;
-  r = parse_client_transport_line(options,
-      "transport_1 socks5 1.2.3.4:567", 0);
+  r = parse_transport_line(options,
+      "transport_1 socks5 1.2.3.4:567", 0, 0);
   /* Should have succeeded */
   test_assert(r == 0);
   /*
