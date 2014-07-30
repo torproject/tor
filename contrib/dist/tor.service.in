@@ -4,6 +4,7 @@ After = syslog.target network.target nss-lookup.target
 
 [Service]
 Type = simple
+ExecStartPre = @BINDIR@/tor -f @CONFDIR@/torrc --verify-config
 ExecStart = @BINDIR@/tor -f @CONFDIR@/torrc
 ExecReload = /bin/kill -HUP ${MAINPID}
 KillSignal = SIGINT
