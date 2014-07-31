@@ -538,10 +538,6 @@ static int options_transition_affects_descriptor(
 static int check_nickname_list(char **lst, const char *name, char **msg);
 static char *get_bindaddr_from_transport_listen_line(const char *line,
                                                      const char *transport);
-static int parse_client_transport_line(const or_options_t *options,
-                                       const char *line, int validate_only);
-static int parse_server_transport_line(const or_options_t *options,
-                                       const char *line, int validate_only);
 static int parse_dir_authority_line(const char *line,
                                  dirinfo_type_t required_type,
                                  int validate_only);
@@ -4768,53 +4764,36 @@ parse_transport_line(const or_options_t *options,
                      const char *line, int validate_only,
                      int server)
 {
-  if (server) {
-    return parse_server_transport_line(options, line, validate_only);
-  } else {
-    return parse_client_transport_line(options, line, validate_only);
-  }
-}
 
-/** Read the contents of a ClientTransportPlugin line from
- * <b>line</b>. Return 0 if the line is well-formed, and -1 if it
- * isn't.
- *
- * If <b>validate_only</b> is 0, the line is well-formed, and the
- * transport is needed by some bridge:
- * - If it's an external proxy line, add the transport described in the line to
- * our internal transport list.
- * - If it's a managed proxy line, launch the managed proxy. */
-static int
-parse_client_transport_line(const or_options_t *options,
-                            const char *line, int validate_only)
-{
   smartlist_t *items = NULL;
   int r;
-  char *field2=NULL;
-
-  const char *transports=NULL;
-  smartlist_t *transport_list=NULL;
-  char *addrport=NULL;
+  const char *transports = NULL;
+  smartlist_t *transport_list = NULL;
+  char *type = NULL;
+  char *addrport = NULL;
   tor_addr_t addr;
   uint16_t port = 0;
-  int socks_ver=PROXY_NONE;
+  int socks_ver = PROXY_NONE;
 
   /* managed proxy options */
-  int is_managed=0;
-  char **proxy_argv=NULL;
-  char **tmp=NULL;
+  int is_managed = 0;
+  char **proxy_argv = NULL;
+  char **tmp = NULL;
   int proxy_argc, i;
-  int is_useless_proxy=1;
+  int is_useless_proxy = 1;
 
   int line_length;
 
+  /* Split the line into space-separated tokens */
   items = smartlist_new();
   smartlist_split_string(items, line, NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
+  line_length = smartlist_len(items);
 
-  line_length =  smartlist_len(items);
   if (line_length < 3) {
-    log_warn(LD_CONFIG, "Too few arguments on ClientTransportPlugin line.");
+    log_warn(LD_CONFIG,
+             "Too few arguments on %sTransportPlugin line.",
+             server ? "Server" : "Client");
     goto err;
   }
 
@@ -4838,194 +4817,89 @@ parse_client_transport_line(const or_options_t *options,
       is_useless_proxy = 0;
   } SMARTLIST_FOREACH_END(transport_name);
 
-  /* field2 is either a SOCKS version or "exec" */
-  field2 = smartlist_get(items, 1);
-
-  if (!strcmp(field2,"socks4")) {
-    socks_ver = PROXY_SOCKS4;
-  } else if (!strcmp(field2,"socks5")) {
-    socks_ver = PROXY_SOCKS5;
-  } else if (!strcmp(field2,"exec")) {
-    is_managed=1;
-  } else {
-    log_warn(LD_CONFIG, "Strange ClientTransportPlugin field '%s'.",
-             field2);
-    goto err;
-  }
-
-  if (is_managed && options->Sandbox) {
-    log_warn(LD_CONFIG, "Managed proxies are not compatible with Sandbox mode."
-             "(ClientTransportPlugin line was %s)", escaped(line));
-    goto err;
-  }
-
-  if (is_managed) { /* managed */
-    if (!validate_only && is_useless_proxy) {
-      log_notice(LD_GENERAL, "Pluggable transport proxy (%s) does not provide "
-                 "any needed transports and will not be launched.", line);
-    }
-
-    /* If we are not just validating, use the rest of the line as the
-       argv of the proxy to be launched. Also, make sure that we are
-       only launching proxies that contribute useful transports.  */
-    if (!validate_only && !is_useless_proxy) {
-      proxy_argc = line_length-2;
-      tor_assert(proxy_argc > 0);
-      proxy_argv = tor_malloc_zero(sizeof(char*)*(proxy_argc+1));
-      tmp = proxy_argv;
-      for (i=0;i<proxy_argc;i++) { /* store arguments */
-        *tmp++ = smartlist_get(items, 2);
-        smartlist_del_keeporder(items, 2);
-      }
-      *tmp = NULL; /*terminated with NULL, just like execve() likes it*/
-
-      /* kickstart the thing */
-      pt_kickstart_client_proxy(transport_list, proxy_argv);
-    }
-  } else { /* external */
-    if (smartlist_len(transport_list) != 1) {
-      log_warn(LD_CONFIG, "You can't have an external proxy with "
-               "more than one transports.");
-      goto err;
-    }
-
-    addrport = smartlist_get(items, 2);
-
-    if (tor_addr_port_lookup(addrport, &addr, &port)<0) {
-      log_warn(LD_CONFIG, "Error parsing transport "
-               "address '%s'", addrport);
-      goto err;
-    }
-    if (!port) {
-      log_warn(LD_CONFIG,
-               "Transport address '%s' has no port.", addrport);
-      goto err;
-    }
-
-    if (!validate_only) {
-      transport_add_from_config(&addr, port, smartlist_get(transport_list, 0),
-                                socks_ver);
-
-      log_info(LD_DIR, "Transport '%s' found at %s",
-               transports, fmt_addrport(&addr, port));
-    }
-  }
-
-  r = 0;
-  goto done;
-
- err:
-  r = -1;
-
- done:
-  SMARTLIST_FOREACH(items, char*, s, tor_free(s));
-  smartlist_free(items);
-  if (transport_list) {
-    SMARTLIST_FOREACH(transport_list, char*, s, tor_free(s));
-    smartlist_free(transport_list);
-  }
-
-  return r;
-}
-
-/** Read the contents of a ServerTransportPlugin line from
- * <b>line</b>. Return 0 if the line is well-formed, and -1 if it
- * isn't.
- * If <b>validate_only</b> is 0, the line is well-formed, and it's a
- * managed proxy line, launch the managed proxy. */
-static int
-parse_server_transport_line(const or_options_t *options,
-                            const char *line, int validate_only)
-{
-  smartlist_t *items = NULL;
-  int r;
-  const char *transports=NULL;
-  smartlist_t *transport_list=NULL;
-  char *type=NULL;
-  char *addrport=NULL;
-  tor_addr_t addr;
-  uint16_t port = 0;
-
-  /* managed proxy options */
-  int is_managed=0;
-  char **proxy_argv=NULL;
-  char **tmp=NULL;
-  int proxy_argc,i;
-
-  int line_length;
-
-  items = smartlist_new();
-  smartlist_split_string(items, line, NULL,
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
-
-  line_length =  smartlist_len(items);
-  if (line_length < 3) {
-    log_warn(LD_CONFIG, "Too few arguments on ServerTransportPlugin line.");
-    goto err;
-  }
-
-  /* Get the first line element, split it to commas into
-     transport_list (in case it's multiple transports) and validate
-     the transport names. */
-  transports = smartlist_get(items, 0);
-  transport_list = smartlist_new();
-  smartlist_split_string(transport_list, transports, ",",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  SMARTLIST_FOREACH_BEGIN(transport_list, const char *, transport_name) {
-    if (!string_is_C_identifier(transport_name)) {
-      log_warn(LD_CONFIG, "Transport name is not a C identifier (%s).",
-               transport_name);
-      goto err;
-    }
-  } SMARTLIST_FOREACH_END(transport_name);
-
   type = smartlist_get(items, 1);
-
   if (!strcmp(type, "exec")) {
-    is_managed=1;
-  } else if (!strcmp(type, "proxy")) {
-    is_managed=0;
+    is_managed = 1;
+  } else if (server && !strcmp(type, "proxy")) {
+    /* 'proxy' syntax only with ServerTransportPlugin */
+    is_managed = 0;
+  } else if (!server && !strcmp(type, "socks4")) {
+    /* 'socks4' syntax only with ClientTransportPlugin */
+    is_managed = 0;
+    socks_ver = PROXY_SOCKS4;
+  } else if (!server && !strcmp(type, "socks5")) {
+    /* 'socks5' syntax only with ClientTransportPlugin */
+    is_managed = 0;
+    socks_ver = PROXY_SOCKS5;
   } else {
-    log_warn(LD_CONFIG, "Strange ServerTransportPlugin type '%s'", type);
+    log_warn(LD_CONFIG,
+             "Strange %sTransportPlugin type '%s'",
+             server ? "Server" : "Client", type);
     goto err;
   }
 
   if (is_managed && options->Sandbox) {
-    log_warn(LD_CONFIG, "Managed proxies are not compatible with Sandbox mode."
-             "(ServerTransportPlugin line was %s)", escaped(line));
+    log_warn(LD_CONFIG,
+             "Managed proxies are not compatible with Sandbox mode."
+             "(%sTransportPlugin line was %s)",
+             server ? "Server" : "Client", escaped(line));
     goto err;
   }
 
-  if (is_managed) { /* managed */
-    if (!validate_only) {
-      proxy_argc = line_length-2;
+  if (is_managed) {
+    /* managed */
+
+    if (!server && !validate_only && is_useless_proxy) {
+      log_notice(LD_GENERAL,
+                 "Pluggable transport proxy (%s) does not provide "
+                 "any needed transports and will not be launched.",
+                 line);
+    }
+
+    /*
+     * If we are not just validating, use the rest of the line as the
+     * argv of the proxy to be launched. Also, make sure that we are
+     * only launching proxies that contribute useful transports.
+     */
+
+    if (!validate_only && (server || !is_useless_proxy)) {
+      proxy_argc = line_length - 2;
       tor_assert(proxy_argc > 0);
-      proxy_argv = tor_malloc_zero(sizeof(char*)*(proxy_argc+1));
+      proxy_argv = tor_malloc_zero(sizeof(char *) * (proxy_argc + 1));
       tmp = proxy_argv;
 
-      for (i=0;i<proxy_argc;i++) { /* store arguments */
+      for (i = 0; i < proxy_argc; i++) {
+        /* store arguments */
         *tmp++ = smartlist_get(items, 2);
         smartlist_del_keeporder(items, 2);
       }
-      *tmp = NULL; /*terminated with NULL, just like execve() likes it*/
+      *tmp = NULL; /* terminated with NULL, just like execve() likes it */
 
       /* kickstart the thing */
-      pt_kickstart_server_proxy(transport_list, proxy_argv);
+      if (server) {
+        pt_kickstart_server_proxy(transport_list, proxy_argv);
+      } else {
+        pt_kickstart_client_proxy(transport_list, proxy_argv);
+      }
     }
-  } else { /* external */
+  } else {
+    /* external */
+
     if (smartlist_len(transport_list) != 1) {
-      log_warn(LD_CONFIG, "You can't have an external proxy with "
-               "more than one transports.");
+      log_warn(LD_CONFIG,
+               "You can't have an external proxy with more than "
+               "one transport.");
       goto err;
     }
 
     addrport = smartlist_get(items, 2);
 
-    if (tor_addr_port_lookup(addrport, &addr, &port)<0) {
-      log_warn(LD_CONFIG, "Error parsing transport "
-               "address '%s'", addrport);
+    if (tor_addr_port_lookup(addrport, &addr, &port) < 0) {
+      log_warn(LD_CONFIG,
+               "Error parsing transport address '%s'", addrport);
       goto err;
     }
+
     if (!port) {
       log_warn(LD_CONFIG,
                "Transport address '%s' has no port.", addrport);
@@ -5033,8 +4907,15 @@ parse_server_transport_line(const or_options_t *options,
     }
 
     if (!validate_only) {
-      log_info(LD_DIR, "Server transport '%s' at %s.",
+      log_info(LD_DIR, "%s '%s' at %s.",
+               server ? "Server transport" : "Transport",
                transports, fmt_addrport(&addr, port));
+
+      if (!server) {
+        transport_add_from_config(&addr, port,
+                                  smartlist_get(transport_list, 0),
+                                  socks_ver);
+      }
     }
   }
 
