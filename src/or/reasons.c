@@ -385,7 +385,7 @@ socks4_response_code_to_string(uint8_t code)
   }
 }
 
-/** Return a string corresponding to a SOCKS5 reponse code. */
+/** Return a string corresponding to a SOCKS5 response code. */
 const char *
 socks5_response_code_to_string(uint8_t code)
 {
