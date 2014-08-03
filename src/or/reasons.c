@@ -367,7 +367,7 @@ circuit_end_reason_to_control_string(int reason)
   }
 }
 
-/** Return a string corresponding to a SOCKS4 reponse code. */
+/** Return a string corresponding to a SOCKS4 response code. */
 const char *
 socks4_response_code_to_string(uint8_t code)
 {
