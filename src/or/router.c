@@ -1884,7 +1884,7 @@ router_rebuild_descriptor(int force)
     family = smartlist_new();
     ri->declared_family = smartlist_new();
     smartlist_split_string(family, options->MyFamily, ",",
-      SPLIT_SKIP_SPACE|SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+      SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK|SPLIT_STRIP_SPACE, 0);
     SMARTLIST_FOREACH_BEGIN(family, char *, name) {
        const node_t *member;
        if (!strcasecmp(name, options->Nickname))
