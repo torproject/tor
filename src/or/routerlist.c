@@ -1367,7 +1367,7 @@ router_pick_trusteddirserver(dirinfo_type_t type, int flags)
   return router_pick_dirserver_generic(trusted_dir_servers, type, flags);
 }
 
-/** Try to find a running fallback directory Flags are as for
+/** Try to find a running fallback directory. Flags are as for
  * router_pick_directory_server.
  */
 const routerstatus_t *
@@ -1376,7 +1376,7 @@ router_pick_fallback_dirserver(dirinfo_type_t type, int flags)
   return router_pick_dirserver_generic(fallback_dir_servers, type, flags);
 }
 
-/** Try to find a running fallback directory Flags are as for
+/** Try to find a running fallback directory. Flags are as for
  * router_pick_directory_server.
  */
 static const routerstatus_t *
