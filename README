@@ -10,17 +10,16 @@ Home page:
         https://www.torproject.org/
 
 Download new versions:
-        https://www.torproject.org/download.html
+        https://www.torproject.org/download/download.html
 
 Documentation, including links to installation and setup instructions:
-        https://www.torproject.org/documentation.html
+        https://www.torproject.org/docs/documentation.html
 
 Making applications work with Tor:
-        https://wiki.torproject.org/noreply/TheOnionRouter/TorifyHOWTO
+        https://wiki.torproject.org/projects/tor/wiki/doc/TorifyHOWTO
 
 Frequently Asked Questions:
-        https://www.torproject.org/faq.html
-        https://wiki.torproject.org/noreply/TheOnionRouter/TorFAQ
+        https://www.torproject.org/docs/faq.html
 
 
 To get started working on Tor development:
