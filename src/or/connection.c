@@ -308,6 +308,8 @@ entry_connection_new(int type, int socket_family)
     entry_conn->ipv4_traffic_ok = 1;
   else if (socket_family == AF_INET6)
     entry_conn->ipv6_traffic_ok = 1;
+  else if (socket_family == AF_UNIX)
+    entry_conn->is_socks_socket = 1;
   return entry_conn;
 }
 
@@ -516,9 +518,10 @@ connection_free_(connection_t *conn)
     buf_free(conn->outbuf);
   } else {
     if (conn->socket_family == AF_UNIX) {
-      /* For now only control ports can be Unix domain sockets
+      /* For now only control and SOCKS ports can be Unix domain sockets
        * and listeners at the same time */
-      tor_assert(conn->type == CONN_TYPE_CONTROL_LISTENER);
+      tor_assert(conn->type == CONN_TYPE_CONTROL_LISTENER ||
+                 conn->type == CONN_TYPE_AP_LISTENER);
 
       if (unlink(conn->address) < 0 && errno != ENOENT) {
         log_warn(LD_NET, "Could not unlink %s: %s", conn->address,
@@ -954,6 +957,47 @@ check_location_for_unix_socket(const or_options_t *options, const char *path)
 }
 #endif
 
+#ifdef HAVE_SYS_UN_H
+/** Check whether we should be willing to open an AF_UNIX socket in
+ * <b>path</b>.  Return 0 if we should go ahead and -1 if we shouldn't. */
+static int
+check_location_for_socks_unix_socket(const or_options_t *options,
+                                     const char *path)
+{
+  int r = -1;
+  char *p = tor_strdup(path);
+  cpd_check_t flags = CPD_CHECK_MODE_ONLY;
+  if (get_parent_directory(p)<0 || p[0] != '/') {
+    log_warn(LD_GENERAL, "Bad unix socket address '%s'.  Tor does not support "
+             "relative paths for unix sockets.", path);
+    goto done;
+  }
+
+  if (options->SocksSocketsGroupWritable)
+    flags |= CPD_GROUP_OK;
+
+  if (check_private_dir(p, flags, options->User) < 0) {
+    char *escpath, *escdir;
+    escpath = esc_for_log(path);
+    escdir = esc_for_log(p);
+    log_warn(LD_GENERAL, "Before Tor can create a SocksSocket in %s, the "
+             "directory %s needs to exist, and to be accessible only by the "
+             "user%s account that is running Tor.  (On some Unix systems, "
+             "anybody who can list a socket can connect to it, so Tor is "
+             "being careful.)", escpath, escdir,
+             options->SocksSocketsGroupWritable ? " and group" : "");
+    tor_free(escpath);
+    tor_free(escdir);
+    goto done;
+  }
+
+  r = 0;
+ done:
+  tor_free(p);
+  return r;
+}
+#endif
+
 /** Tell the TCP stack that it shouldn't wait for a long time after
  * <b>sock</b> has closed before reusing its port. Return 0 on success,
  * -1 on failure. */
@@ -1029,30 +1073,103 @@ connection_listener_new(const struct sockaddr *listensockaddr,
   }
 
   if (listensockaddr->sa_family == AF_INET ||
-      listensockaddr->sa_family == AF_INET6) {
+      listensockaddr->sa_family == AF_INET6 ||
+      (listensockaddr->sa_family == AF_UNIX &&
+       type != CONN_TYPE_CONTROL_LISTENER)) {
     int is_tcp = (type != CONN_TYPE_AP_DNS_LISTENER);
     if (is_tcp)
       start_reading = 1;
 
-    tor_addr_from_sockaddr(&addr, listensockaddr, &usePort);
+    if ( listensockaddr->sa_family == AF_INET ||
+         listensockaddr->sa_family == AF_INET6) {
 
-    log_notice(LD_NET, "Opening %s on %s",
-               conn_type_to_string(type), fmt_addrport(&addr, usePort));
+      tor_addr_from_sockaddr(&addr, listensockaddr, &usePort);
 
-    s = tor_open_socket_nonblocking(tor_addr_family(&addr),
-                        is_tcp ? SOCK_STREAM : SOCK_DGRAM,
-                        is_tcp ? IPPROTO_TCP: IPPROTO_UDP);
-    if (!SOCKET_OK(s)) {
-      log_warn(LD_NET,"Socket creation failed: %s",
-               tor_socket_strerror(tor_socket_errno(-1)));
-      goto err;
+      log_notice(LD_NET, "Opening %s on %s",
+                 conn_type_to_string(type), fmt_addrport(&addr, usePort));
+
+      s = tor_open_socket_nonblocking(tor_addr_family(&addr),
+        is_tcp ? SOCK_STREAM : SOCK_DGRAM,
+        is_tcp ? IPPROTO_TCP: IPPROTO_UDP);
+      if (!SOCKET_OK(s)) {
+        log_warn(LD_NET, "Socket creation failed: %s",
+                 tor_socket_strerror(tor_socket_errno(-1)));
+        goto err;
+      }
+
+      if (make_socket_reuseable(s) < 0) {
+        log_warn(LD_NET, "Error setting SO_REUSEADDR flag on %s: %s",
+                 conn_type_to_string(type),
+                 tor_socket_strerror(errno));
+      }
     }
 
-    if (make_socket_reuseable(s) < 0) {
-      log_warn(LD_NET, "Error setting SO_REUSEADDR flag on %s: %s",
-               conn_type_to_string(type),
-               tor_socket_strerror(errno));
+#ifdef HAVE_SYS_UN_H
+    if (listensockaddr->sa_family == AF_UNIX &&
+        type != CONN_TYPE_CONTROL_LISTENER) {
+      tor_assert(listensockaddr->sa_family == AF_UNIX);
+
+      if (check_location_for_socks_unix_socket(options, address) < 0)
+        goto err;
+
+      log_notice(LD_NET, "Opening SocksSocket %s on %s",
+                 conn_type_to_string(type), address);
+
+      tor_addr_make_unspec(&addr);
+
+      if (unlink(address) < 0 && errno != ENOENT) {
+        log_warn(LD_NET, "Could not unlink %s: %s", address,
+                strerror(errno));
+        goto err;
+      }
+
+      s = tor_open_socket_nonblocking(AF_UNIX, SOCK_STREAM, 0);
+      if (! SOCKET_OK(s)) {
+        log_warn(LD_NET, "SocksSocket socket creation failed: %s.",
+                 strerror(errno));
+        goto err;
+      }
+
+      if (bind(s, listensockaddr,
+               (socklen_t)sizeof(struct sockaddr_un)) == -1) {
+        log_warn(LD_NET, "Bind to %s failed: %s.", address,
+                tor_socket_strerror(tor_socket_errno(s)));
+        goto err;
+      }
+#ifdef HAVE_PWD_H
+      if (options->User) {
+        pw = getpwnam(options->User);
+        if (pw == NULL) {
+          log_warn(LD_NET,
+                   "Unable to chown() %s socket: user %s not found.",
+                   address, options->User);
+          goto err;
+        } else if (chown(address, pw->pw_uid, pw->pw_gid) < 0) {
+          log_warn(LD_NET, "Unable to chown() %s socket: %s.",
+                   address, strerror(errno));
+          goto err;
+        }
+      }
+#endif
+
+      if (options->SocksSocketsGroupWritable) {
+        /* We need to use chmod; fchmod doesn't work on sockets on all
+         * platforms. */
+        if (chmod(address, 0660) < 0) {
+          log_warn(LD_FS, "Unable to make %s group-writable.", address);
+          goto err;
+        }
+      }
+
+      if (listen(s, SOMAXCONN) < 0) {
+        log_warn(LD_NET, "Could not listen on %s: %s", address,
+                 tor_socket_strerror(tor_socket_errno(s)));
+        goto err;
+      }
     }
+#else
+    (void)options;
+#endif /* HAVE_SYS_UN_H */
 
 #if defined USE_TRANSPARENT && defined(IP_TRANSPARENT)
     if (options->TransProxyType_parsed == TPT_TPROXY &&
@@ -1090,48 +1207,53 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     }
 #endif
 
-    if (bind(s,listensockaddr,socklen) < 0) {
-      const char *helpfulhint = "";
-      int e = tor_socket_errno(s);
-      if (ERRNO_IS_EADDRINUSE(e))
-        helpfulhint = ". Is Tor already running?";
-      log_warn(LD_NET, "Could not bind to %s:%u: %s%s", address, usePort,
-               tor_socket_strerror(e), helpfulhint);
-      goto err;
-    }
-
-    if (is_tcp) {
-      if (tor_listen(s) < 0) {
-        log_warn(LD_NET, "Could not listen on %s:%u: %s", address, usePort,
-                 tor_socket_strerror(tor_socket_errno(s)));
+    if (listensockaddr->sa_family != AF_UNIX) {
+      if (bind(s,listensockaddr,socklen) < 0) {
+        const char *helpfulhint = "";
+        int e = tor_socket_errno(s);
+        if (ERRNO_IS_EADDRINUSE(e))
+          helpfulhint = ". Is Tor already running?";
+        log_warn(LD_NET, "Could not bind to %s:%u: %s%s", address, usePort,
+                 tor_socket_strerror(e), helpfulhint);
         goto err;
       }
-    }
 
-    if (usePort != 0) {
-      gotPort = usePort;
-    } else {
-      tor_addr_t addr2;
-      struct sockaddr_storage ss;
-      socklen_t ss_len=sizeof(ss);
-      if (getsockname(s, (struct sockaddr*)&ss, &ss_len)<0) {
-        log_warn(LD_NET, "getsockname() couldn't learn address for %s: %s",
-                 conn_type_to_string(type),
-                 tor_socket_strerror(tor_socket_errno(s)));
-        gotPort = 0;
+      if (is_tcp) {
+        if (tor_listen(s) < 0) {
+          log_warn(LD_NET, "Could not listen on %s:%u: %s", address, usePort,
+                   tor_socket_strerror(tor_socket_errno(s)));
+          goto err;
+        }
       }
-      tor_addr_from_sockaddr(&addr2, (struct sockaddr*)&ss, &gotPort);
+
+      if (usePort != 0) {
+        gotPort = usePort;
+      } else {
+        tor_addr_t addr2;
+        struct sockaddr_storage ss;
+        socklen_t ss_len=sizeof(ss);
+        if (getsockname(s, (struct sockaddr*)&ss, &ss_len)<0) {
+          log_warn(LD_NET, "getsockname() couldn't learn address for %s: %s",
+                   conn_type_to_string(type),
+                   tor_socket_strerror(tor_socket_errno(s)));
+          gotPort = 0;
+        }
+        tor_addr_from_sockaddr(&addr2, (struct sockaddr*)&ss, &gotPort);
+      }
     }
 #ifdef HAVE_SYS_UN_H
-  } else if (listensockaddr->sa_family == AF_UNIX) {
+  } else if (listensockaddr->sa_family == AF_UNIX &&
+             type != CONN_TYPE_AP_LISTENER) {
     start_reading = 1;
 
     /* For now only control ports can be Unix domain sockets
      * and listeners at the same time */
     tor_assert(type == CONN_TYPE_CONTROL_LISTENER);
 
-    if (check_location_for_unix_socket(options, address) < 0)
-      goto err;
+    if ( type == CONN_TYPE_CONTROL_LISTENER ) {
+      if (check_location_for_unix_socket(options, address) < 0)
+        goto err;
+    }
 
     log_notice(LD_NET, "Opening %s on %s",
                conn_type_to_string(type), address);
@@ -1169,6 +1291,15 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     }
 #endif
     if (options->ControlSocketsGroupWritable) {
+      /* We need to use chmod; fchmod doesn't work on sockets on all
+       * platforms. */
+      if (chmod(address, 0660) < 0) {
+        log_warn(LD_FS,"Unable to make %s group-writable.", address);
+        goto err;
+      }
+    }
+
+    if (options->SocksSocketsGroupWritable) {
       /* We need to use chmod; fchmod doesn't work on sockets on all
        * platforms. */
       if (chmod(address, 0660) < 0) {
@@ -1294,6 +1425,8 @@ check_sockaddr(const struct sockaddr *sa, int len, int level)
              "Address for new connection has address/port equal to zero.");
       ok = 0;
     }
+  } else if (sa->sa_family == AF_UNIX) {
+    ok = 1;
   } else {
     ok = 0;
   }
@@ -1378,7 +1511,8 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     return 0;
   }
 
-  if (conn->socket_family == AF_INET || conn->socket_family == AF_INET6) {
+  if (conn->socket_family == AF_INET || conn->socket_family == AF_INET6 ||
+     (conn->socket_family == AF_UNIX && new_type == CONN_TYPE_AP)) {
     tor_addr_t addr;
     uint16_t port;
     if (check_sockaddr(remote, remotelen, LOG_INFO)<0) {
@@ -1419,7 +1553,16 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     newconn->port = port;
     newconn->address = tor_dup_addr(&addr);
 
-    if (new_type == CONN_TYPE_AP) {
+    if (new_type == CONN_TYPE_AP && conn->socket_family != AF_UNIX) {
+      log_notice(LD_NET, "New SOCKS connection opened from %s.",
+                 fmt_and_decorate_addr(&addr));
+      TO_ENTRY_CONN(newconn)->socks_request->socks_prefer_no_auth =
+        TO_LISTENER_CONN(conn)->socks_prefer_no_auth;
+    }
+    if (new_type == CONN_TYPE_AP && conn->socket_family == AF_UNIX) {
+      newconn->port = 0;
+      newconn->address = tor_strdup(conn->address);
+      log_notice(LD_NET, "New SOCKS SocksSocket connection opened");
       TO_ENTRY_CONN(newconn)->socks_request->socks_prefer_no_auth =
         TO_LISTENER_CONN(conn)->socks_prefer_no_auth;
     }
@@ -1428,7 +1571,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
                  fmt_and_decorate_addr(&addr));
     }
 
-  } else if (conn->socket_family == AF_UNIX) {
+  } else if (conn->socket_family == AF_UNIX && conn->type != CONN_TYPE_AP) {
     /* For now only control ports can be Unix domain sockets
      * and listeners at the same time */
     tor_assert(conn->type == CONN_TYPE_CONTROL_LISTENER);
@@ -2392,6 +2535,7 @@ connection_is_rate_limited(connection_t *conn)
     return 0; /* Internal connection */
   else if (! options->CountPrivateBandwidth &&
            (tor_addr_family(&conn->addr) == AF_UNSPEC || /* no address */
+            tor_addr_family(&conn->addr) == AF_UNIX ||   /* no address */
             tor_addr_is_internal(&conn->addr, 0)))
     return 0; /* Internal address */
   else

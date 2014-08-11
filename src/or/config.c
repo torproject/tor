@@ -190,6 +190,8 @@ static config_var_t option_vars_[] = {
   V(ControlPortWriteToFile,      FILENAME, NULL),
   V(ControlSocket,               LINELIST, NULL),
   V(ControlSocketsGroupWritable, BOOL,     "0"),
+  V(SocksSocket,                 LINELIST, NULL),
+  V(SocksSocketsGroupWritable,   BOOL,     "0"),
   V(CookieAuthentication,        BOOL,     "0"),
   V(CookieAuthFileGroupReadable, BOOL,     "0"),
   V(CookieAuthFile,              STRING,   NULL),
@@ -1026,6 +1028,20 @@ options_act_reversible(const or_options_t *old_options, char **msg)
   if (options->ControlSocketsGroupWritable && !options->ControlSocket) {
     *msg = tor_strdup("Setting ControlSocketGroupWritable without setting"
                       "a ControlSocket makes no sense.");
+    goto rollback;
+  }
+#endif
+
+#ifndef HAVE_SYS_UN_H
+  if (options->SocksSocket || options->SocksSocketsGroupWritable) {
+    *msg = tor_strdup("Unix domain sockets (SocksSocket) not supported "
+                      "on this OS/with this build.");
+    goto rollback;
+  }
+#else
+  if (options->SocksSocketsGroupWritable && !options->SocksSocket) {
+    *msg = tor_strdup("Setting SocksSocketGroupWritable without setting"
+                      "a SocksSocket makes no sense.");
     goto rollback;
   }
 #endif
@@ -6120,6 +6136,12 @@ parse_ports(or_options_t *options, int validate_only,
       *msg = tor_strdup("Invalid ControlSocket configuration");
       goto err;
     }
+    if (parse_unix_socket_config(ports,
+                                 options->SocksSocket,
+                                 CONN_TYPE_AP_LISTENER) < 0) {
+      *msg = tor_strdup("Invalid SocksSocket configuration");
+      goto err;
+    }
   }
   if (! options->ClientOnly) {
     if (parse_port_config(ports,
@@ -6162,6 +6184,8 @@ parse_ports(or_options_t *options, int validate_only,
   options->ORPort_set =
     !! count_real_listeners(ports, CONN_TYPE_OR_LISTENER);
   options->SocksPort_set =
+    !! count_real_listeners(ports, CONN_TYPE_AP_LISTENER);
+  options->SocksSocket_set =
     !! count_real_listeners(ports, CONN_TYPE_AP_LISTENER);
   options->TransPort_set =
     !! count_real_listeners(ports, CONN_TYPE_AP_TRANS_LISTENER);

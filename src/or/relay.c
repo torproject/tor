@@ -1327,8 +1327,9 @@ connection_edge_process_relay_cell_not_open(
         return 0;
       }
 
-      if ((family == AF_INET && ! entry_conn->ipv4_traffic_ok) ||
-          (family == AF_INET6 && ! entry_conn->ipv6_traffic_ok)) {
+      if (((family == AF_INET && ! entry_conn->ipv4_traffic_ok) ||
+          (family == AF_INET6 && ! entry_conn->ipv6_traffic_ok)) &&
+          (!entry_conn->is_socks_socket)) {
         log_fn(LOG_PROTOCOL_WARN, LD_APP,
                "Got a connected cell to %s with unsupported address family."
                " Closing.", fmt_addr(&addr));

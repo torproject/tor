@@ -385,6 +385,10 @@ connection_remove(connection_t *conn)
             (int)conn->s, conn_type_to_string(conn->type),
             smartlist_len(connection_array));
 
+  if (conn->type == CONN_TYPE_AP && conn->socket_family == AF_UNIX) {
+    log_notice(LD_NET, "Closing SOCKS SocksSocket connection");
+  }
+
   control_event_conn_bandwidth(conn);
 
   tor_assert(conn->conn_array_index >= 0);

@@ -483,6 +483,15 @@ GENERAL OPTIONS
     in accordance to RFC 1929. Both username and password must be between 1 and
     255 characters.
 
+[[SocksSocket]] **SocksSocket** __Path__::
+    Like SocksPort, but listens on a Unix domain socket, rather than a TCP
+    socket. (Unix and Unix-like systems only.)
+
+[[SocksSocketsGroupWritable]] **SocksSocketsGroupWritable** **0**|**1**::
+    If this option is set to 0, don't allow the filesystem group to read and
+    write unix sockets (e.g. SocksSocket). If the option is set to 1, make
+    the SocksSocket socket readable and writable by the default GID. (Default: 0)
+
 [[KeepalivePeriod]] **KeepalivePeriod** __NUM__::
     To keep firewalls from expiring connections, send a padding keepalive cell
     every NUM seconds on open connections that are in use. If the connection
