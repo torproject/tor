@@ -475,6 +475,7 @@ circuit_handle_first_hop(origin_circuit_t *circ)
     log_debug(LD_CIRC,"Conn open. Delivering first onion skin.");
     if ((err_reason = circuit_send_next_onion_skin(circ)) < 0) {
       log_info(LD_CIRC,"circuit_send_next_onion_skin failed.");
+      circ->base_.n_chan = NULL;
       return err_reason;
     }
   }
