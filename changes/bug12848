@@ -1,0 +1,4 @@
+  o Major bugfixes (relay):
+    - Avoid queuing or sending destroy cells for circuit ID zero when
+      we fail to send a CREATE cell. Fixes bug 12848; bugfix on
+      0.0.8pre1. Found and fixed by "cypherpunks".

@@ -584,18 +584,18 @@ circuit_deliver_create_cell(circuit_t *circ, const create_cell_t *create_cell,
   id = get_unique_circ_id_by_chan(circ->n_chan);
   if (!id) {
     log_warn(LD_CIRC,"failed to get unique circID.");
-    return -1;
+    goto error;
   }
-  log_debug(LD_CIRC,"Chosen circID %u.", (unsigned)id);
-  circuit_set_n_circid_chan(circ, id, circ->n_chan);
 
   memset(&cell, 0, sizeof(cell_t));
   r = relayed ? create_cell_format_relayed(&cell, create_cell)
               : create_cell_format(&cell, create_cell);
   if (r < 0) {
     log_warn(LD_CIRC,"Couldn't format create cell");
-    return -1;
+    goto error;
   }
+  log_debug(LD_CIRC,"Chosen circID %u.", (unsigned)id);
+  circuit_set_n_circid_chan(circ, id, circ->n_chan);
   cell.circ_id = circ->n_circ_id;
 
   append_cell_to_circuit_queue(circ, circ->n_chan, &cell,
@@ -619,6 +619,9 @@ circuit_deliver_create_cell(circuit_t *circ, const create_cell_t *create_cell,
   }
 
   return 0;
+ error:
+  circ->n_chan = NULL;
+  return -1;
 }
 
 /** We've decided to start our reachability testing. If all
