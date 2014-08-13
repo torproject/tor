@@ -528,7 +528,7 @@ rend_encode_v2_descriptors(smartlist_t *descs_out,
         return -1;
     }
     /* Base64-encode introduction points. */
-    ipos_base64 = tor_malloc_zero(ipos_len * 2);
+    ipos_base64 = tor_calloc(ipos_len, 2);
     if (base64_encode(ipos_base64, ipos_len * 2, ipos, ipos_len)<0) {
       log_warn(LD_REND, "Could not encode introduction point string to "
                "base64. length=%d", (int)ipos_len);

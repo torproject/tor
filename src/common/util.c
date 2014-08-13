@@ -244,6 +244,20 @@ tor_realloc_(void *ptr, size_t size DMALLOC_PARAMS)
   return result;
 }
 
+/**
+ * Try to realloc <b>ptr</b> so that it takes up sz1 * sz2 bytes.  Check for
+ * overflow. Unlike other allocation functions, return NULL on overflow.
+ */
+void *
+tor_reallocarray_(void *ptr, size_t sz1, size_t sz2 DMALLOC_PARAMS)
+{
+  /* XXXX we can make this return 0, but we would need to check all the
+   * reallocarray users. */
+  tor_assert(sz2 == 0 || sz1 < SIZE_T_CEILING / sz2);
+
+  return tor_realloc(ptr, (sz1 * sz2) DMALLOC_FN_ARGS);
+}
+
 /** Return a newly allocated copy of the NUL-terminated string s. On
  * error, log and terminate.  (Like strdup(s), but never returns
  * NULL.)
@@ -3378,8 +3392,8 @@ format_win_cmdline_argument(const char *arg)
     smartlist_add(arg_chars, (void*)&backslash);
 
   /* Allocate space for argument, quotes (if needed), and terminator */
-  formatted_arg = tor_malloc(sizeof(char) *
-      (smartlist_len(arg_chars) + (need_quotes?2:0) + 1));
+  formatted_arg = tor_calloc(sizeof(char),
+                    (smartlist_len(arg_chars) + (need_quotes ? 2 : 0) + 1));
 
   /* Add leading quote */
   i=0;
@@ -5008,7 +5022,7 @@ tor_check_port_forwarding(const char *filename,
        for each smartlist element (one for "-p" and one for the
        ports), and one for the final NULL. */
     args_n = 1 + 2*smartlist_len(ports_to_forward) + 1;
-    argv = tor_malloc_zero(sizeof(char*)*args_n);
+    argv = tor_calloc(sizeof(char *), args_n);
 
     argv[argv_index++] = filename;
     SMARTLIST_FOREACH_BEGIN(ports_to_forward, const char *, port) {

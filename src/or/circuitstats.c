@@ -404,7 +404,7 @@ circuit_build_times_new_consensus_params(circuit_build_times_t *cbt,
          * distress anyway, so memory correctness here is paramount over
          * doing acrobatics to preserve the array.
          */
-        recent_circs = tor_malloc_zero(sizeof(int8_t)*num);
+        recent_circs = tor_calloc(sizeof(int8_t), num);
         if (cbt->liveness.timeouts_after_firsthop &&
             cbt->liveness.num_recent_circs > 0) {
           memcpy(recent_circs, cbt->liveness.timeouts_after_firsthop,
@@ -508,7 +508,7 @@ circuit_build_times_init(circuit_build_times_t *cbt)
     cbt->liveness.num_recent_circs =
       circuit_build_times_recent_circuit_count(NULL);
     cbt->liveness.timeouts_after_firsthop =
-      tor_malloc_zero(sizeof(int8_t)*cbt->liveness.num_recent_circs);
+      tor_calloc(sizeof(int8_t), cbt->liveness.num_recent_circs);
   } else {
     cbt->liveness.num_recent_circs = 0;
     cbt->liveness.timeouts_after_firsthop = NULL;
@@ -649,7 +649,7 @@ circuit_build_times_create_histogram(const circuit_build_times_t *cbt,
   int i, c;
 
   *nbins = 1 + (max_build_time / CBT_BIN_WIDTH);
-  histogram = tor_malloc_zero(*nbins * sizeof(build_time_t));
+  histogram = tor_calloc(*nbins, sizeof(build_time_t));
 
   // calculate histogram
   for (i = 0; i < CBT_NCIRCUITS_TO_OBSERVE; i++) {
@@ -691,7 +691,7 @@ circuit_build_times_get_xm(circuit_build_times_t *cbt)
   if (cbt->total_build_times < CBT_NCIRCUITS_TO_OBSERVE)
     num_modes = 1;
 
-  nth_max_bin = (build_time_t*)tor_malloc_zero(num_modes*sizeof(build_time_t));
+  nth_max_bin = (build_time_t*)tor_calloc(num_modes, sizeof(build_time_t));
 
   /* Determine the N most common build times */
   for (i = 0; i < nbins; i++) {
@@ -873,7 +873,7 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
   }
 
   /* build_time_t 0 means uninitialized */
-  loaded_times = tor_malloc_zero(sizeof(build_time_t)*state->TotalBuildTimes);
+  loaded_times = tor_calloc(sizeof(build_time_t), state->TotalBuildTimes);
 
   for (line = state->BuildtimeHistogram; line; line = line->next) {
     smartlist_t *args = smartlist_new();

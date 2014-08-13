@@ -194,7 +194,7 @@ test_pt_protocol(void)
   managed_proxy_t *mp = tor_malloc_zero(sizeof(managed_proxy_t));
   mp->conf_state = PT_PROTO_LAUNCHED;
   mp->transports = smartlist_new();
-  mp->argv = tor_malloc_zero(sizeof(char*)*2);
+  mp->argv = tor_calloc(sizeof(char *), 2);
   mp->argv[0] = tor_strdup("<testcase>");
 
   /* various wrong protocol runs: */

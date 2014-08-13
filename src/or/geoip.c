@@ -963,7 +963,7 @@ geoip_get_dirreq_history(dirreq_type_t type)
     /* We may have rounded 'completed' up.  Here we want to use the
      * real value. */
     complete = smartlist_len(dirreq_completed);
-    dltimes = tor_malloc_zero(sizeof(uint32_t) * complete);
+    dltimes = tor_calloc(sizeof(uint32_t), complete);
     SMARTLIST_FOREACH_BEGIN(dirreq_completed, dirreq_map_entry_t *, ent) {
       uint32_t bytes_per_second;
       uint32_t time_diff = (uint32_t) tv_mdiff(&ent->request_time,
@@ -1033,7 +1033,7 @@ geoip_get_client_history(geoip_client_action_t action,
   if (!geoip_is_loaded(AF_INET) && !geoip_is_loaded(AF_INET6))
     return -1;
 
-  counts = tor_malloc_zero(sizeof(unsigned)*n_countries);
+  counts = tor_calloc(sizeof(unsigned), n_countries);
   HT_FOREACH(ent, clientmap, &client_history) {
     int country;
     if ((*ent)->action != (int)action)

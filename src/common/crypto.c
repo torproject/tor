@@ -1838,7 +1838,7 @@ crypto_store_dynamic_dh_modulus(const char *fname)
     goto done;
   }
 
-  base64_encoded_dh = tor_malloc_zero(len * 2); /* should be enough */
+  base64_encoded_dh = tor_calloc(len, 2); /* should be enough */
   new_len = base64_encode(base64_encoded_dh, len * 2,
                           (char *)dh_string_repr, len);
   if (new_len < 0) {
@@ -3164,7 +3164,7 @@ setup_openssl_threading(void)
   int i;
   int n = CRYPTO_num_locks();
   n_openssl_mutexes_ = n;
-  openssl_mutexes_ = tor_malloc(n*sizeof(tor_mutex_t *));
+  openssl_mutexes_ = tor_calloc(n, sizeof(tor_mutex_t *));
   for (i=0; i < n; ++i)
     openssl_mutexes_[i] = tor_mutex_new();
   CRYPTO_set_locking_callback(openssl_locking_cb_);

@@ -1560,7 +1560,7 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
    * -1 means "Don't use this router at all."
    */
   the_nodes = nodelist_get_list();
-  n_supported = tor_malloc(sizeof(int)*smartlist_len(the_nodes));
+  n_supported = tor_calloc(sizeof(int), smartlist_len(the_nodes));
   SMARTLIST_FOREACH_BEGIN(the_nodes, const node_t *, node) {
     const int i = node_sl_idx;
     if (router_digest_is_me(node->identity)) {
