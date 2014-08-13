@@ -1698,7 +1698,7 @@ is non-zero):
 
 [[BridgeRecordUsageByCountry]] **BridgeRecordUsageByCountry** **0**|**1**::
     When this option is enabled and BridgeRelay is also enabled, and we have
-    GeoIP data, Tor keeps a keep a per-country count of how many client
+    GeoIP data, Tor keeps a per-country count of how many client
     addresses have contacted it so that it can help the bridge authority guess
     which countries have blocked access to it. (Default: 1)
 

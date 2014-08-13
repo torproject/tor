@@ -1,0 +1,4 @@
+  o Documentation:
+    - Adjust the URLs in the README to refer to the new locations of
+      several documents on the website. Patch from Matt Pagan. Fixes
+      bug 12830.
