@@ -34,7 +34,7 @@ smartlist_new(void)
   smartlist_t *sl = tor_malloc(sizeof(smartlist_t));
   sl->num_used = 0;
   sl->capacity = SMARTLIST_DEFAULT_CAPACITY;
-  sl->list = tor_malloc(sizeof(void *) * sl->capacity);
+  sl->list = tor_calloc(sizeof(void *), sl->capacity);
   return sl;
 }
 
@@ -77,7 +77,8 @@ smartlist_ensure_capacity(smartlist_t *sl, int size)
         higher *= 2;
     }
     sl->capacity = higher;
-    sl->list = tor_realloc(sl->list, sizeof(void*)*((size_t)sl->capacity));
+    sl->list = tor_reallocarray(sl->list, sizeof(void *),
+				((size_t)sl->capacity));
   }
 }
 

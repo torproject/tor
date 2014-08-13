@@ -510,7 +510,7 @@ spawn_cpuworker(void)
   connection_t *conn;
   int err;
 
-  fdarray = tor_malloc(sizeof(tor_socket_t)*2);
+  fdarray = tor_calloc(sizeof(tor_socket_t), 2);
   if ((err = tor_socketpair(AF_UNIX, SOCK_STREAM, 0, fdarray)) < 0) {
     log_warn(LD_NET, "Couldn't construct socketpair for cpuworker: %s",
              tor_socket_strerror(-err));

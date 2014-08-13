@@ -1687,12 +1687,12 @@ log_credential_status(void)
 
   /* log supplementary groups */
   sup_gids_size = 64;
-  sup_gids = tor_malloc(sizeof(gid_t) * 64);
+  sup_gids = tor_calloc(sizeof(gid_t), 64);
   while ((ngids = getgroups(sup_gids_size, sup_gids)) < 0 &&
          errno == EINVAL &&
          sup_gids_size < NGROUPS_MAX) {
     sup_gids_size *= 2;
-    sup_gids = tor_realloc(sup_gids, sizeof(gid_t) * sup_gids_size);
+    sup_gids = tor_reallocarray(sup_gids, sizeof(gid_t), sup_gids_size);
   }
 
   if (ngids < 0) {

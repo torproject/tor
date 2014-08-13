@@ -563,7 +563,7 @@ bitarray_init_zero(unsigned int n_bits)
 {
   /* round up to the next int. */
   size_t sz = (n_bits+BITARRAY_MASK) >> BITARRAY_SHIFT;
-  return tor_malloc_zero(sz*sizeof(unsigned int));
+  return tor_calloc(sz, sizeof(unsigned int));
 }
 /** Expand <b>ba</b> from holding <b>n_bits_old</b> to <b>n_bits_new</b>,
  * clearing all new bits.  Returns a possibly changed pointer to the
@@ -577,7 +577,7 @@ bitarray_expand(bitarray_t *ba,
   char *ptr;
   if (sz_new <= sz_old)
     return ba;
-  ptr = tor_realloc(ba, sz_new*sizeof(unsigned int));
+  ptr = tor_reallocarray(ba, sz_new, sizeof(unsigned int));
   /* This memset does nothing to the older excess bytes.  But they were
    * already set to 0 by bitarry_init_zero. */
   memset(ptr+sz_old*sizeof(unsigned int), 0,

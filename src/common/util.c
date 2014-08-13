@@ -3392,8 +3392,8 @@ format_win_cmdline_argument(const char *arg)
     smartlist_add(arg_chars, (void*)&backslash);
 
   /* Allocate space for argument, quotes (if needed), and terminator */
-  formatted_arg = tor_malloc(sizeof(char) *
-      (smartlist_len(arg_chars) + (need_quotes?2:0) + 1));
+  formatted_arg = tor_calloc(sizeof(char),
+                             (smartlist_len(arg_chars) + (need_quotes ? 2 : 0) + 1));
 
   /* Add leading quote */
   i=0;
@@ -5022,7 +5022,7 @@ tor_check_port_forwarding(const char *filename,
        for each smartlist element (one for "-p" and one for the
        ports), and one for the final NULL. */
     args_n = 1 + 2*smartlist_len(ports_to_forward) + 1;
-    argv = tor_malloc_zero(sizeof(char*)*args_n);
+    argv = tor_calloc(sizeof(char *), args_n);
 
     argv[argv_index++] = filename;
     SMARTLIST_FOREACH_BEGIN(ports_to_forward, const char *, port) {

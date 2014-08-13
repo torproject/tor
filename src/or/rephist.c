@@ -1998,12 +1998,9 @@ void
 rep_hist_exit_stats_init(time_t now)
 {
   start_of_exit_stats_interval = now;
-  exit_bytes_read = tor_malloc_zero(EXIT_STATS_NUM_PORTS *
-                                    sizeof(uint64_t));
-  exit_bytes_written = tor_malloc_zero(EXIT_STATS_NUM_PORTS *
-                                       sizeof(uint64_t));
-  exit_streams = tor_malloc_zero(EXIT_STATS_NUM_PORTS *
-                                 sizeof(uint32_t));
+  exit_bytes_read = tor_calloc(EXIT_STATS_NUM_PORTS, sizeof(uint64_t));
+  exit_bytes_written = tor_calloc(EXIT_STATS_NUM_PORTS, sizeof(uint64_t));
+  exit_streams = tor_calloc(EXIT_STATS_NUM_PORTS, sizeof(uint32_t));
 }
 
 /** Reset counters for exit port statistics. */
@@ -2572,7 +2569,7 @@ rep_hist_format_desc_stats(time_t now)
 
   size = digestmap_size(served_descs);
   if (size > 0) {
-    vals = tor_malloc(size * sizeof(int));
+    vals = tor_calloc(size, sizeof(int));
     for (iter = digestmap_iter_init(served_descs);
          !digestmap_iter_done(iter);
          iter = digestmap_iter_next(served_descs, iter)) {

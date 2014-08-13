@@ -1487,7 +1487,7 @@ test_util_gzip(void)
 
   /* Check whether we can uncompress concatenated, compressed strings. */
   tor_free(buf3);
-  buf2 = tor_realloc(buf2, len1*2);
+  buf2 = tor_reallocarray(buf2, len1, 2);
   memcpy(buf2+len1, buf2, len1);
   test_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1*2,
                                    ZLIB_METHOD, 1, LOG_INFO));
