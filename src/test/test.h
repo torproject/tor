@@ -61,7 +61,7 @@
 
 #ifdef _MSC_VER
 #define U64_PRINTF_TYPE uint64_t
-#define U64_PRINTF_TYPE int64_t
+#define I64_PRINTF_TYPE int64_t
 #else
 #define U64_PRINTF_TYPE unsigned long long
 #define I64_PRINTF_TYPE long long
