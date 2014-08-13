@@ -3393,7 +3393,7 @@ format_win_cmdline_argument(const char *arg)
 
   /* Allocate space for argument, quotes (if needed), and terminator */
   formatted_arg = tor_calloc(sizeof(char),
-                             (smartlist_len(arg_chars) + (need_quotes ? 2 : 0) + 1));
+                    (smartlist_len(arg_chars) + (need_quotes ? 2 : 0) + 1));
 
   /* Add leading quote */
   i=0;

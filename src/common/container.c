@@ -78,7 +78,7 @@ smartlist_ensure_capacity(smartlist_t *sl, int size)
     }
     sl->capacity = higher;
     sl->list = tor_reallocarray(sl->list, sizeof(void *),
-				((size_t)sl->capacity));
+                                ((size_t)sl->capacity));
   }
 }
 
