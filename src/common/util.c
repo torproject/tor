@@ -244,6 +244,20 @@ tor_realloc_(void *ptr, size_t size DMALLOC_PARAMS)
   return result;
 }
 
+/**
+ * Try to realloc <b>ptr</b> so that it takes up sz1 * sz2 bytes.  Check for
+ * overflow. Unlike other allocation functions, return NULL on overflow.
+ */
+void *
+tor_reallocarray_(void *ptr, size_t sz1, size_t sz2 DMALLOC_PARAMS)
+{
+  /* XXXX we can make this return 0, but we would need to check all the
+   * reallocarray users. */
+  tor_assert(sz2 == 0 || sz1 < SIZE_T_CEILING / sz2);
+
+  return tor_realloc(ptr, (sz1 * sz2) DMALLOC_FN_ARGS);
+}
+
 /** Return a newly allocated copy of the NUL-terminated string s. On
  * error, log and terminate.  (Like strdup(s), but never returns
  * NULL.)
