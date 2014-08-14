@@ -2682,6 +2682,14 @@ int
 channel_send_destroy(circid_t circ_id, channel_t *chan, int reason)
 {
   tor_assert(chan);
+  if (circ_id == 0) {
+    log_warn(LD_BUG, "Attempted to send a destroy cell for circID 0 "
+             "on a channel " U64_FORMAT " at %p in state %s (%d)",
+             U64_PRINTF_ARG(chan->global_identifier),
+             chan, channel_state_to_string(chan->state),
+             chan->state);
+    return 0;
+  }
 
   /* Check to make sure we can send on this channel first */
   if (!(chan->state == CHANNEL_STATE_CLOSING ||
