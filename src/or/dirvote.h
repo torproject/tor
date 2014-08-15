@@ -27,13 +27,6 @@
 /** The highest consensus method that we currently support. */
 #define MAX_SUPPORTED_CONSENSUS_METHOD 18
 
-/** Lowest consensus method that doesn't count bad exits as exits for weight */
-#define MIN_METHOD_TO_CUT_BADEXIT_WEIGHT 11
-
-/** Lowest consensus method that ensures a majority of authorities voted
-  * for a param. */
-#define MIN_METHOD_FOR_MAJORITY_PARAMS 12
-
 /** Lowest consensus method where microdesc consensuses omit any entry
  * with no microdesc. */
 #define MIN_METHOD_FOR_MANDATORY_MICRODESC 13

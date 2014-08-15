@@ -2047,6 +2047,7 @@ networkstatus_verify_bw_weights(networkstatus_t *ns, int consensus_method)
   double Gtotal=0, Mtotal=0, Etotal=0;
   const char *casename = NULL;
   int valid = 1;
+  (void) consensus_method;
 
   weight_scale = networkstatus_get_weight_scale_param(ns);
   Wgg = networkstatus_get_bw_weight(ns, "Wgg", -1);
@@ -2126,12 +2127,8 @@ networkstatus_verify_bw_weights(networkstatus_t *ns, int consensus_method)
   // Then, gather G, M, E, D, T to determine case
   SMARTLIST_FOREACH_BEGIN(ns->routerstatus_list, routerstatus_t *, rs) {
     int is_exit = 0;
-    if (consensus_method >= MIN_METHOD_TO_CUT_BADEXIT_WEIGHT) {
-      /* Bug #2203: Don't count bad exits as exits for balancing */
-      is_exit = rs->is_exit && !rs->is_bad_exit;
-    } else {
-      is_exit = rs->is_exit;
-    }
+    /* Bug #2203: Don't count bad exits as exits for balancing */
+    is_exit = rs->is_exit && !rs->is_bad_exit;
     if (rs->has_bandwidth) {
       T += rs->bandwidth_kb;
       if (is_exit && rs->is_possible_guard) {

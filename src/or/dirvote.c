@@ -602,6 +602,7 @@ dirvote_compute_params(smartlist_t *votes, int method, int total_authorities)
   const int n_votes = smartlist_len(votes);
   smartlist_t *output;
   smartlist_t *param_list = smartlist_new();
+  (void) method;
 
   /* We require that the parameter lists in the votes are well-formed: that
      is, that their keywords are unique and sorted, and that their values are
@@ -648,8 +649,7 @@ dirvote_compute_params(smartlist_t *votes, int method, int total_authorities)
       /* We've reached the end of a series. */
       /* Make sure enough authorities voted on this param, unless the
        * the consensus method we use is too old for that. */
-      if (method < MIN_METHOD_FOR_MAJORITY_PARAMS ||
-          i > total_authorities/2 ||
+      if (i > total_authorities/2 ||
           i >= MIN_VOTES_FOR_PARAM) {
         int32_t median = median_int32(vals, i);
         char *out_string = tor_malloc(64+cur_param_len);
@@ -1553,9 +1553,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       }
 
       /* Fix bug 2203: Do not count BadExit nodes as Exits for bw weights */
-      if (consensus_method >= MIN_METHOD_TO_CUT_BADEXIT_WEIGHT) {
-        is_exit = is_exit && !is_bad_exit;
-      }
+      is_exit = is_exit && !is_bad_exit;
 
       {
         if (rs_out.has_bandwidth) {
@@ -1659,7 +1657,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
       }
 
       if (flavor == FLAV_MICRODESC &&
-          consensus_method >= MIN_METHOD_FOR_MANDATORY_MICRODESC &&
           tor_digest256_is_zero(microdesc_digest)) {
         /* With no microdescriptor digest, we omit the entry entirely. */
         continue;
