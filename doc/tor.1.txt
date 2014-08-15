@@ -226,7 +226,7 @@ GENERAL OPTIONS
 
 [[ExtORPortCookieAuthFileGroupReadable]] **ExtORPortCookieAuthFileGroupReadable** **0**|**1**::
     If this option is set to 0, don't allow the filesystem group to read the
-    Extende OR Port cookie file. If the option is set to 1, make the cookie
+    Extended OR Port cookie file. If the option is set to 1, make the cookie
     file readable by the default GID. [Making the file readable by other
     groups is not yet implemented; let us know if you need this for some
     reason.] (Default: 0)

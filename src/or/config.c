@@ -6825,6 +6825,9 @@ config_maybe_load_geoip_files_(const or_options_t *options,
  *  in <b>cookie_out</b>.
  *  Then write it down to <b>fname</b> and prepend it with <b>header</b>.
  *
+ *  If <b>group_readable</b> is set, set <b>fname</b> to be readable
+ *  by the default GID.
+ *
  *  If the whole procedure was successful, set
  *  <b>cookie_is_set_out</b> to True. */
 int
