@@ -2864,8 +2864,8 @@ typedef struct circuit_t {
   /** Unique ID for measuring tunneled network status requests. */
   uint64_t dirreq_id;
 
-  /** Next circuit in linked list of all circuits (global_circuitlist). */
-  TOR_LIST_ENTRY(circuit_t) head;
+  /** Index in smartlist of all circuits (global_circuitlist). */
+  int global_circuitlist_idx;
 
   /** Next circuit in the doubly-linked ring of circuits waiting to add
    * cells to n_conn.  NULL if we have no cells pending, or if we're not

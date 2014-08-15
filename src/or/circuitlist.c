@@ -38,8 +38,7 @@
 /********* START VARIABLES **********/
 
 /** A global list of all circuits at this hop. */
-struct global_circuitlist_s global_circuitlist =
-  TOR_LIST_HEAD_INITIALIZER(global_circuitlist);
+static smartlist_t *global_circuitlist = NULL;
 
 /** A list of all the circuits in CIRCUIT_STATE_CHAN_WAIT. */
 static smartlist_t *circuits_pending_chans = NULL;
@@ -458,10 +457,12 @@ circuit_close_all_marked(void)
 }
 
 /** Return the head of the global linked list of circuits. */
-MOCK_IMPL(struct global_circuitlist_s *,
+MOCK_IMPL(smartlist_t *,
 circuit_get_global_list,(void))
 {
-  return &global_circuitlist;
+  if (NULL == global_circuitlist)
+    global_circuitlist = smartlist_new();
+  return global_circuitlist;
 }
 
 /** Function to make circ-\>state human-readable */
