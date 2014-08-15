@@ -110,7 +110,8 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     char *params;
     authority_cert_t *cert = v3_ns->cert;
     char *methods =
-      make_consensus_method_list(1, MAX_SUPPORTED_CONSENSUS_METHOD, " ");
+      make_consensus_method_list(MIN_SUPPORTED_CONSENSUS_METHOD,
+                                 MAX_SUPPORTED_CONSENSUS_METHOD, " ");
     format_iso_time(published, v3_ns->published);
     format_iso_time(va, v3_ns->valid_after);
     format_iso_time(fu, v3_ns->fresh_until);
@@ -537,7 +538,8 @@ compute_consensus_method(smartlist_t *votes)
 static int
 consensus_method_is_supported(int method)
 {
-  return (method >= 1) && (method <= MAX_SUPPORTED_CONSENSUS_METHOD);
+  return (method >= MIN_SUPPORTED_CONSENSUS_METHOD) &&
+    (method <= MAX_SUPPORTED_CONSENSUS_METHOD);
 }
 
 /** Return a newly allocated string holding the numbers between low and high
@@ -1346,7 +1348,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     log_warn(LD_DIR, "The other authorities will use consensus method %d, "
              "which I don't support.  Maybe I should upgrade!",
              consensus_method);
-    consensus_method = 1;
+    consensus_method = MAX_SUPPORTED_CONSENSUS_METHOD;
   }
 
   /* Compute medians of time-related things, and figure out how many

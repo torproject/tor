@@ -21,6 +21,9 @@
 /** Smallest allowable voting interval. */
 #define MIN_VOTE_INTERVAL 300
 
+/** The lowest consensus method that we currently support. */
+#define MIN_SUPPORTED_CONSENSUS_METHOD 13
+
 /** The highest consensus method that we currently support. */
 #define MAX_SUPPORTED_CONSENSUS_METHOD 18
 
