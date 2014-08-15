@@ -56,3 +56,8 @@ for servers to choose from.
 codegen/get_mozilla_ciphers.py -- Generate a list of TLS ciphersuites for
 clients to use in order to look like Firefox.
 
+Code transformation scripts
+---------------------------
+
+coccinelle/calloc.cocci -- Transform code to replace variants of
+malloc(a*b) with calloc(a,b)
