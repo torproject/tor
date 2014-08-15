@@ -27,18 +27,6 @@
 /** The highest consensus method that we currently support. */
 #define MAX_SUPPORTED_CONSENSUS_METHOD 18
 
-/** Lowest consensus method that contains a 'directory-footer' marker */
-#define MIN_METHOD_FOR_FOOTER 9
-
-/** Lowest consensus method that contains bandwidth weights */
-#define MIN_METHOD_FOR_BW_WEIGHTS 9
-
-/** Lowest consensus method that contains consensus params */
-#define MIN_METHOD_FOR_PARAMS 7
-
-/** Lowest consensus method that generates microdescriptors */
-#define MIN_METHOD_FOR_MICRODESC 8
-
 /** Lowest consensus method that doesn't count bad exits as exits for weight */
 #define MIN_METHOD_TO_CUT_BADEXIT_WEIGHT 11
 
