@@ -3801,6 +3801,8 @@ typedef struct {
   char *ExtORPortCookieAuthFile; /**< Filesystem location of Extended
                                  *   ORPort authentication cookie. */
   int CookieAuthFileGroupReadable; /**< Boolean: Is the CookieAuthFile g+r? */
+  int ExtORPortCookieAuthFileGroupReadable; /**< Boolean: Is the
+                                             * ExtORPortCookieAuthFile g+r? */
   int LeaveStreamsUnattached; /**< Boolean: Does Tor attach new streams to
                           * circuits itself (0), or does it expect a controller
                           * to cope? (1) */
