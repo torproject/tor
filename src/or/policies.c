@@ -1334,9 +1334,9 @@ policy_summary_add_item(smartlist_t *summary, addr_policy_t *p)
  * The summary will either be an "accept" plus a comma-separated list of port
  * ranges or a "reject" plus port-ranges, depending on which is shorter.
  *
- * If no exits are allowed at all then NULL is returned, if no ports
- * are blocked instead of "reject " we return "accept 1-65535" (this
- * is an exception to the shorter-representation-wins rule).
+ * If no exits are allowed at all then "reject 1-65535" is returned. If no
+ * ports are blocked instead of "reject " we return "accept 1-65535". (These
+ * are an exception to the shorter-representation-wins rule).
  */
 char *
 policy_summarize(smartlist_t *policy, sa_family_t family)
