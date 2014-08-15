@@ -238,6 +238,7 @@ static config_var_t option_vars_[] = {
   V(ExtendAllowPrivateAddresses, BOOL,     "0"),
   VPORT(ExtORPort,               LINELIST, NULL),
   V(ExtORPortCookieAuthFile,     STRING,   NULL),
+  V(ExtORPortCookieAuthFileGroupReadable, BOOL, "0"),
   V(ExtraInfoStatistics,         BOOL,     "1"),
   V(FallbackDir,                 LINELIST, NULL),
 
@@ -6828,7 +6829,7 @@ config_maybe_load_geoip_files_(const or_options_t *options,
  *  <b>cookie_is_set_out</b> to True. */
 int
 init_cookie_authentication(const char *fname, const char *header,
-                           int cookie_len,
+                           int cookie_len, int group_readable,
                            uint8_t **cookie_out, int *cookie_is_set_out)
 {
   char cookie_file_str_len = strlen(header) + cookie_len;
@@ -6860,6 +6861,14 @@ init_cookie_authentication(const char *fname, const char *header,
     log_warn(LD_FS,"Error writing auth cookie to %s.", escaped(fname));
     goto done;
   }
+
+#ifndef _WIN32
+  if (group_readable) {
+    if (chmod(fname, 0640)) {
+      log_warn(LD_FS,"Unable to make %s group-readable.", escaped(fname));
+    }
+  }
+#endif
 
   /* Success! */
   log_info(LD_GENERAL, "Generated auth cookie file in '%s'.", escaped(fname));

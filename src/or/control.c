@@ -4666,6 +4666,7 @@ init_control_cookie_authentication(int enabled)
   fname = get_controller_cookie_file_name();
   retval = init_cookie_authentication(fname, "", /* no header */
                                       AUTHENTICATION_COOKIE_LEN,
+                                   get_options()->CookieAuthFileGroupReadable,
                                       &authentication_cookie,
                                       &authentication_cookie_is_set);
   tor_free(fname);
