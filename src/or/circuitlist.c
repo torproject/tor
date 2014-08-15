@@ -933,10 +933,9 @@ circuit_dump_conn_details(int severity,
 void
 circuit_dump_by_conn(connection_t *conn, int severity)
 {
-  circuit_t *circ;
   edge_connection_t *tmpconn;
 
-  TOR_LIST_FOREACH(circ, &global_circuitlist, head) {
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     circid_t n_circ_id = circ->n_circ_id, p_circ_id = 0;
 
     if (circ->marked_for_close) {
@@ -967,6 +966,7 @@ circuit_dump_by_conn(connection_t *conn, int severity)
       }
     }
   }
+  SMARTLIST_FOREACH_END(circ);
 }
 
 /** Return the circuit whose global ID is <b>id</b>, or NULL if no
@@ -974,8 +974,7 @@ circuit_dump_by_conn(connection_t *conn, int severity)
 origin_circuit_t *
 circuit_get_by_global_id(uint32_t id)
 {
-  circuit_t *circ;
-  TOR_LIST_FOREACH(circ, &global_circuitlist, head) {
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     if (CIRCUIT_IS_ORIGIN(circ) &&
         TO_ORIGIN_CIRCUIT(circ)->global_identifier == id) {
       if (circ->marked_for_close)
@@ -984,6 +983,7 @@ circuit_get_by_global_id(uint32_t id)
         return TO_ORIGIN_CIRCUIT(circ);
     }
   }
+  SMARTLIST_FOREACH_END(circ);
   return NULL;
 }
 
@@ -1152,17 +1152,17 @@ circuit_unlink_all_from_channel(channel_t *chan, int reason)
 
 #ifdef DEBUG_CIRCUIT_UNLINK_ALL
   {
-    circuit_t *circ;
     smartlist_t *detached_2 = smartlist_new();
     int mismatch = 0, badlen = 0;
 
-    TOR_LIST_FOREACH(circ, &global_circuitlist, head) {
+    SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
       if (circ->n_chan == chan ||
           (!CIRCUIT_IS_ORIGIN(circ) &&
            TO_OR_CIRCUIT(circ)->p_chan == chan)) {
         smartlist_add(detached_2, circ);
       }
     }
+    SMARTLIST_FOREACH_END(circ);
 
     if (smartlist_len(detached) != smartlist_len(detached_2)) {
        log_warn(LD_BUG, "List of detached circuits had the wrong length! "
@@ -1236,8 +1236,7 @@ circuit_unlink_all_from_channel(channel_t *chan, int reason)
 origin_circuit_t *
 circuit_get_ready_rend_circ_by_rend_data(const rend_data_t *rend_data)
 {
-  circuit_t *circ;
-  TOR_LIST_FOREACH(circ, &global_circuitlist, head) {
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     if (!circ->marked_for_close &&
         circ->purpose == CIRCUIT_PURPOSE_C_REND_READY) {
       origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
@@ -1250,6 +1249,7 @@ circuit_get_ready_rend_circ_by_rend_data(const rend_data_t *rend_data)
         return ocirc;
     }
   }
+  SMARTLIST_FOREACH_END(circ);
   return NULL;
 }
 
@@ -1470,7 +1470,6 @@ origin_circuit_t *
 circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
                             int flags)
 {
-  circuit_t *circ_;
   origin_circuit_t *best=NULL;
   int need_uptime = (flags & CIRCLAUNCH_NEED_UPTIME) != 0;
   int need_capacity = (flags & CIRCLAUNCH_NEED_CAPACITY) != 0;
@@ -1486,7 +1485,7 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
             "capacity %d, internal %d",
             purpose, need_uptime, need_capacity, internal);
 
-  TOR_LIST_FOREACH(circ_, &global_circuitlist, head) {
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ_) {
     if (CIRCUIT_IS_ORIGIN(circ_) &&
         circ_->state == CIRCUIT_STATE_OPEN &&
         !circ_->marked_for_close &&
@@ -1536,6 +1535,7 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
       }
     }
   }
+  SMARTLIST_FOREACH_END(circ_);
   return best;
 }
 
@@ -1575,13 +1575,13 @@ circuit_get_cpath_hop(origin_circuit_t *circ, int hopnum)
 void
 circuit_mark_all_unused_circs(void)
 {
-  circuit_t *circ;
-  TOR_LIST_FOREACH(circ, &global_circuitlist, head) {
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     if (CIRCUIT_IS_ORIGIN(circ) &&
         !circ->marked_for_close &&
         !circ->timestamp_dirty)
       circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
   }
+  SMARTLIST_FOREACH_END(circ);
 }
 
 /** Go through the circuitlist; for each circuit that starts at us
@@ -1594,14 +1594,14 @@ circuit_mark_all_unused_circs(void)
 void
 circuit_mark_all_dirty_circs_as_unusable(void)
 {
-  circuit_t *circ;
-  TOR_LIST_FOREACH(circ, &global_circuitlist, head) {
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     if (CIRCUIT_IS_ORIGIN(circ) &&
         !circ->marked_for_close &&
         circ->timestamp_dirty) {
       mark_circuit_unusable_for_new_conns(TO_ORIGIN_CIRCUIT(circ));
     }
   }
+  SMARTLIST_FOREACH_END(circ);
 }
 
 /** Mark <b>circ</b> to be closed next time we call
@@ -1953,7 +1953,6 @@ circuits_handle_oom(size_t current_allocation)
 {
   /* Let's hope there's enough slack space for this allocation here... */
   smartlist_t *circlist = smartlist_new();
-  circuit_t *circ;
   size_t mem_to_recover;
   size_t mem_recovered=0;
   int n_circuits_killed=0;
@@ -1987,10 +1986,11 @@ circuits_handle_oom(size_t current_allocation)
 
   /* This algorithm itself assumes that you've got enough memory slack
    * to actually run it. */
-  TOR_LIST_FOREACH(circ, &global_circuitlist, head) {
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     circ->age_tmp = circuit_max_queued_item_age(circ, now_ms);
     smartlist_add(circlist, circ);
   }
+  SMARTLIST_FOREACH_END(circ);
 
   /* This is O(n log n); there are faster algorithms we could use instead.
    * Let's hope this doesn't happen enough to be in the critical path. */

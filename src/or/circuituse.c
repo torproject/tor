@@ -268,7 +268,6 @@ circuit_get_best(const entry_connection_t *conn,
                  int must_be_open, uint8_t purpose,
                  int need_uptime, int need_internal)
 {
-  circuit_t *circ;
   origin_circuit_t *best=NULL;
   struct timeval now;
   int intro_going_on_but_too_old = 0;
@@ -281,7 +280,7 @@ circuit_get_best(const entry_connection_t *conn,
 
   tor_gettimeofday(&now);
 
-  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     origin_circuit_t *origin_circ;
     if (!CIRCUIT_IS_ORIGIN(circ))
       continue;
@@ -305,6 +304,7 @@ circuit_get_best(const entry_connection_t *conn,
     if (!best || circuit_is_better(origin_circ,best,conn))
       best = origin_circ;
   }
+  SMARTLIST_FOREACH_END(circ);
 
   if (!best && intro_going_on_but_too_old)
     log_info(LD_REND|LD_CIRC, "There is an intro circuit being created "
@@ -318,11 +318,9 @@ circuit_get_best(const entry_connection_t *conn,
 static int
 count_pending_general_client_circuits(void)
 {
-  const circuit_t *circ;
-
   int count = 0;
 
-  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     if (circ->marked_for_close ||
         circ->state == CIRCUIT_STATE_OPEN ||
         circ->purpose != CIRCUIT_PURPOSE_C_GENERAL ||
@@ -331,6 +329,7 @@ count_pending_general_client_circuits(void)
 
     ++count;
   }
+  SMARTLIST_FOREACH_END(circ);
 
   return count;
 }
@@ -800,9 +799,8 @@ circuit_log_ancient_one_hop_circuits(int age)
   time_t cutoff = now - age;
   int n_found = 0;
   smartlist_t *log_these = smartlist_new();
-  const circuit_t *circ;
 
-  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     const origin_circuit_t *ocirc;
     if (! CIRCUIT_IS_ORIGIN(circ))
       continue;
@@ -817,6 +815,7 @@ circuit_log_ancient_one_hop_circuits(int age)
         smartlist_add(log_these, (origin_circuit_t*) ocirc);
     }
   }
+  SMARTLIST_FOREACH_END(circ);
 
   if (n_found == 0)
     goto done;
@@ -938,7 +937,6 @@ int
 circuit_stream_is_being_handled(entry_connection_t *conn,
                                 uint16_t port, int min)
 {
-  circuit_t *circ;
   const node_t *exitnode;
   int num=0;
   time_t now = time(NULL);
@@ -946,7 +944,7 @@ circuit_stream_is_being_handled(entry_connection_t *conn,
                                    get_options()->LongLivedPorts,
                                    conn ? conn->socks_request->port : port);
 
-  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     if (CIRCUIT_IS_ORIGIN(circ) &&
         !circ->marked_for_close &&
         circ->purpose == CIRCUIT_PURPOSE_C_GENERAL &&
@@ -976,6 +974,7 @@ circuit_stream_is_being_handled(entry_connection_t *conn,
       }
     }
   }
+  SMARTLIST_FOREACH_END(circ);
   return 0;
 }
 
@@ -989,7 +988,6 @@ circuit_stream_is_being_handled(entry_connection_t *conn,
 static void
 circuit_predict_and_launch_new(void)
 {
-  circuit_t *circ;
   int num=0, num_internal=0, num_uptime_internal=0;
   int hidserv_needs_uptime=0, hidserv_needs_capacity=1;
   int port_needs_uptime=0, port_needs_capacity=1;
@@ -997,7 +995,7 @@ circuit_predict_and_launch_new(void)
   int flags = 0;
 
   /* First, count how many of each type of circuit we have already. */
-  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     cpath_build_state_t *build_state;
     origin_circuit_t *origin_circ;
     if (!CIRCUIT_IS_ORIGIN(circ))
@@ -1020,6 +1018,7 @@ circuit_predict_and_launch_new(void)
     if (build_state->need_uptime && build_state->is_internal)
       num_uptime_internal++;
   }
+  SMARTLIST_FOREACH_END(circ);
 
   /* If that's enough, then stop now. */
   if (num >= MAX_UNUSED_OPEN_CIRCUITS)
@@ -1318,11 +1317,10 @@ circuit_expire_old_circuits_clientside(void)
 void
 circuit_expire_old_circuits_serverside(time_t now)
 {
-  circuit_t *circ;
   or_circuit_t *or_circ;
   time_t cutoff = now - IDLE_ONE_HOP_CIRC_TIMEOUT;
 
-  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     if (circ->marked_for_close || CIRCUIT_IS_ORIGIN(circ))
       continue;
     or_circ = TO_OR_CIRCUIT(circ);
@@ -1339,6 +1337,7 @@ circuit_expire_old_circuits_serverside(time_t now)
       circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
     }
   }
+  SMARTLIST_FOREACH_END(circ);
 }
 
 /** Number of testing circuits we want open before testing our bandwidth. */
@@ -1363,18 +1362,18 @@ reset_bandwidth_test(void)
 int
 circuit_enough_testing_circs(void)
 {
-  circuit_t *circ;
   int num = 0;
 
   if (have_performed_bandwidth_test)
     return 1;
 
-  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     if (!circ->marked_for_close && CIRCUIT_IS_ORIGIN(circ) &&
         circ->purpose == CIRCUIT_PURPOSE_TESTING &&
         circ->state == CIRCUIT_STATE_OPEN)
       num++;
   }
+  SMARTLIST_FOREACH_END(circ);
   return num >= NUM_PARALLEL_TESTING_CIRCS;
 }
 

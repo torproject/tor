@@ -376,9 +376,8 @@ rend_client_rendcirc_has_opened(origin_circuit_t *circ)
 static void
 rend_client_close_other_intros(const char *onion_address)
 {
-  circuit_t *c;
   /* abort parallel intro circs, if any */
-  TOR_LIST_FOREACH(c, circuit_get_global_list(), head) {
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, c) {
     if ((c->purpose == CIRCUIT_PURPOSE_C_INTRODUCING ||
         c->purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) &&
         !c->marked_for_close && CIRCUIT_IS_ORIGIN(c)) {
@@ -393,6 +392,7 @@ rend_client_close_other_intros(const char *onion_address)
       }
     }
   }
+  SMARTLIST_FOREACH_END(c);
 }
 
 /** Called when get an ACK or a NAK for a REND_INTRODUCE1 cell.
