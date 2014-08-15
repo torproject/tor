@@ -1,0 +1,4 @@
+  o Minor bugfixes (testing, Windows):
+    - Avoid passing an extra backslash when creating a temporary
+      directory for running the unit tests on Windows. Fixes bug 12392;
+      bugfix on 0.2.2.25-alpha. Patch from Gisle Vanem.
