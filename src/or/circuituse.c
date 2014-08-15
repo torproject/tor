@@ -369,7 +369,6 @@ circuit_conforms_to_options(const origin_circuit_t *circ,
 void
 circuit_expire_building(void)
 {
-  circuit_t *victim, *next_circ;
   /* circ_times.timeout_ms and circ_times.close_ms are from
    * circuit_build_times_get_initial_timeout() if we haven't computed
    * custom timeouts yet */
@@ -387,7 +386,7 @@ circuit_expire_building(void)
    * we want to be more lenient with timeouts, in case the
    * user has relocated and/or changed network connections.
    * See bug #3443. */
-  TOR_LIST_FOREACH(next_circ, circuit_get_global_list(), head) {
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, next_circ) {
     if (!CIRCUIT_IS_ORIGIN(next_circ) || /* didn't originate here */
         next_circ->marked_for_close) { /* don't mess with marked circs */
       continue;
@@ -401,7 +400,7 @@ circuit_expire_building(void)
       any_opened_circs = 1;
       break;
     }
-  }
+  } SMARTLIST_FOREACH_END(next_circ);
 
 #define SET_CUTOFF(target, msec) do {                       \
     long ms = tor_lround(msec);                             \
@@ -472,9 +471,8 @@ circuit_expire_building(void)
              MAX(get_circuit_build_close_time_ms()*2 + 1000,
                  options->SocksTimeout * 1000));
 
-  TOR_LIST_FOREACH(next_circ, circuit_get_global_list(), head) {
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *,victim) {
     struct timeval cutoff;
-    victim = next_circ;
     if (!CIRCUIT_IS_ORIGIN(victim) || /* didn't originate here */
         victim->marked_for_close)     /* don't mess with marked circs */
       continue;
@@ -779,7 +777,7 @@ circuit_expire_building(void)
       circuit_mark_for_close(victim, END_CIRC_REASON_TIMEOUT);
 
     pathbias_count_timeout(TO_ORIGIN_CIRCUIT(victim));
-  }
+  } SMARTLIST_FOREACH_END(victim);
 }
 
 /** For debugging #8387: track when we last called
@@ -830,7 +828,7 @@ circuit_log_ancient_one_hop_circuits(int age)
     int stream_num;
     const edge_connection_t *conn;
     char *dirty = NULL;
-    circ = TO_CIRCUIT(ocirc);
+    const circuit_t *circ = TO_CIRCUIT(ocirc);
 
     format_local_iso_time(created,
                           (time_t)circ->timestamp_created.tv_sec);
@@ -1222,7 +1220,6 @@ circuit_detach_stream(circuit_t *circ, edge_connection_t *conn)
 static void
 circuit_expire_old_circuits_clientside(void)
 {
-  circuit_t *circ;
   struct timeval cutoff, now;
 
   tor_gettimeofday(&now);
@@ -1238,7 +1235,7 @@ circuit_expire_old_circuits_clientside(void)
     cutoff.tv_sec -= get_options()->CircuitIdleTimeout;
   }
 
-  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     if (circ->marked_for_close || !CIRCUIT_IS_ORIGIN(circ))
       continue;
     /* If the circuit has been dirty for too long, and there are no streams
@@ -1290,7 +1287,7 @@ circuit_expire_old_circuits_clientside(void)
         }
       }
     }
-  }
+  } SMARTLIST_FOREACH_END(circ);
 }
 
 /** How long do we wait before killing circuits with the properties
