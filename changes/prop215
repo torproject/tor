@@ -1,0 +1,16 @@
+  o Removed features (directory authorities):
+
+    - Directory authorities no longer advertise or support consensus
+      methods 1 through 12 inclusive. These consensus methods were
+      obsolete and/or insecure: maintaining the ability to support them
+      served no good purpose. Implements part of proposal 215;
+      closes ticket 10163.
+
+  o Minor features (directory authorities)
+    - If a directory authority can't find a best consensus method in the
+      votes that it holds, it now falls back to its favorite consensus
+      method. Previously, it fell back to method 1.  Neither of these is
+      likely to get enough signatures, but "fall back to favorite"
+      doesn't require us to maintain support an obsolete consensus
+      method. Implements another part of proposal 215.
+
