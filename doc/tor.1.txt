@@ -224,6 +224,13 @@ GENERAL OPTIONS
     for the Extended ORPort's cookie file -- the cookie file is needed
     for pluggable transports to communicate through the Extended ORPort.
 
+[[ExtORPortCookieAuthFileGroupReadable]] **ExtORPortCookieAuthFileGroupReadable** **0**|**1**::
+    If this option is set to 0, don't allow the filesystem group to read the
+    Extended OR Port cookie file. If the option is set to 1, make the cookie
+    file readable by the default GID. [Making the file readable by other
+    groups is not yet implemented; let us know if you need this for some
+    reason.] (Default: 0)
+
 [[ConnLimit]] **ConnLimit** __NUM__::
     The minimum number of file descriptors that must be available to the Tor
     process before it will start. Tor will ask the OS for as many file
@@ -312,7 +319,7 @@ GENERAL OPTIONS
     If set, this option overrides the default location and file name
     for Tor's cookie file. (See CookieAuthentication above.)
 
-[[CookieAuthFileGroupReadable]] **CookieAuthFileGroupReadable** **0**|**1**|__Groupname__::
+[[CookieAuthFileGroupReadable]] **CookieAuthFileGroupReadable** **0**|**1**::
     If this option is set to 0, don't allow the filesystem group to read the
     cookie file. If the option is set to 1, make the cookie file readable by
     the default GID. [Making the file readable by other groups is not yet
