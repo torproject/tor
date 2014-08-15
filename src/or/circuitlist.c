@@ -1975,8 +1975,7 @@ circuits_compare_by_oldest_queued_item_(const void **a_, const void **b_)
 void
 circuits_handle_oom(size_t current_allocation)
 {
-  /* Let's hope there's enough slack space for this allocation here... */
-  smartlist_t *circlist = smartlist_new();
+  smartlist_t *circlist;
   size_t mem_to_recover;
   size_t mem_recovered=0;
   int n_circuits_killed=0;
@@ -2008,17 +2007,19 @@ circuits_handle_oom(size_t current_allocation)
   tor_gettimeofday_cached_monotonic(&now);
   now_ms = (uint32_t)tv_to_msec(&now);
 
-  /* This algorithm itself assumes that you've got enough memory slack
-   * to actually run it. */
-  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
+  circlist = circuit_get_global_list();
+  SMARTLIST_FOREACH_BEGIN(circlist, circuit_t *, circ) {
     circ->age_tmp = circuit_max_queued_item_age(circ, now_ms);
-    smartlist_add(circlist, circ);
-  }
-  SMARTLIST_FOREACH_END(circ);
+  } SMARTLIST_FOREACH_END(circ);
 
   /* This is O(n log n); there are faster algorithms we could use instead.
    * Let's hope this doesn't happen enough to be in the critical path. */
   smartlist_sort(circlist, circuits_compare_by_oldest_queued_item_);
+
+  /* Fix up the indices before we run into trouble */
+  SMARTLIST_FOREACH_BEGIN(circlist, circuit_t *, circ) {
+    circ->global_circuitlist_idx = circ_sl_idx;
+  } SMARTLIST_FOREACH_END(circ);
 
   /* Okay, now the worst circuits are at the front of the list. Let's mark
    * them, and reclaim their storage aggressively. */
@@ -2051,8 +2052,6 @@ circuits_handle_oom(size_t current_allocation)
              U64_PRINTF_ARG(mem_recovered),
              n_circuits_killed,
              smartlist_len(circlist) - n_circuits_killed);
-
-  smartlist_free(circlist);
 }
 
 /** Verify that cpath layer <b>cp</b> has all of its invariants
