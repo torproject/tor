@@ -1,0 +1,4 @@
+  o Removed features:
+    - The old "StrictEntryNodes" and "StrictExitNodes" options, which
+      used to be deprecated synonyms for "StrictNodes", are now marked
+      obsolete.  Resolves ticket 12226.
