@@ -6871,6 +6871,8 @@ init_cookie_authentication(const char *fname, const char *header,
       log_warn(LD_FS,"Unable to make %s group-readable.", escaped(fname));
     }
   }
+#else
+  (void) group_readable;
 #endif
 
   /* Success! */
