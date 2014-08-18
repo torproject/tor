@@ -97,7 +97,7 @@ uint32_t get_effective_bwburst(const or_options_t *options);
 char *get_transport_bindaddr_from_config(const char *transport);
 
 int init_cookie_authentication(const char *fname, const char *header,
-                               int cookie_len,
+                               int cookie_len, int group_readable,
                                uint8_t **cookie_out, int *cookie_is_set_out);
 
 or_options_t *options_new(void);

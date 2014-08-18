@@ -684,13 +684,10 @@ test_buffers_zlib_fin_at_chunk_end(void *arg)
   headerjunk = buf->head->memlen - 7;
   write_to_buf(msg, headerjunk-1, buf);
   tt_uint_op(buf->head->datalen, ==, headerjunk);
-  printf("<%u>\n", (unsigned)buf_datalen(buf));
   tt_uint_op(buf_datalen(buf), ==, headerjunk);
   /* Write an empty string, with finalization on. */
   zlib_state = tor_zlib_new(1, ZLIB_METHOD);
   tt_int_op(write_to_buf_zlib(buf, zlib_state, "", 0, 1), ==, 0);
-
-  printf("<%u>\n", (unsigned)buf_datalen(buf));
 
   in_len = buf_datalen(buf);
   contents = tor_malloc(in_len);

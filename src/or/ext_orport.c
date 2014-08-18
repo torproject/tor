@@ -143,6 +143,7 @@ init_ext_or_cookie_authentication(int is_enabled)
   fname = get_ext_or_auth_cookie_file_name();
   retval = init_cookie_authentication(fname, EXT_OR_PORT_AUTH_COOKIE_HEADER,
                                       EXT_OR_PORT_AUTH_COOKIE_HEADER_LEN,
+                           get_options()->ExtORPortCookieAuthFileGroupReadable,
                                       &ext_or_auth_cookie,
                                       &ext_or_auth_cookie_is_set);
   tor_free(fname);
