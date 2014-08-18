@@ -517,6 +517,7 @@ relay_header_unpack(relay_header_t *dest, const uint8_t *src)
 static const char *
 relay_command_to_string(uint8_t command)
 {
+  static char buf[64];
   switch (command) {
     case RELAY_COMMAND_BEGIN: return "BEGIN";
     case RELAY_COMMAND_DATA: return "DATA";
@@ -541,7 +542,12 @@ relay_command_to_string(uint8_t command)
     case RELAY_COMMAND_RENDEZVOUS_ESTABLISHED:
       return "RENDEZVOUS_ESTABLISHED";
     case RELAY_COMMAND_INTRODUCE_ACK: return "INTRODUCE_ACK";
-    default: return "(unrecognized)";
+    case RELAY_COMMAND_EXTEND2: return "EXTEND2";
+    case RELAY_COMMAND_EXTENDED2: return "EXTENDED2";
+    default:
+      tor_snprintf(buf, sizeof(buf), "Unrecognized relay command %u",
+                   (unsigned)command);
+      return buf;
   }
 }
 
