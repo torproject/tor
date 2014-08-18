@@ -1,0 +1,5 @@
+  o Minor features (security, OOM):
+    - When closing an edge connection because we've run out of memory,
+      also count the amount of memory that any tunnelled directory
+      connection attached to that connection had consumed. Part of
+      ticket 11792.

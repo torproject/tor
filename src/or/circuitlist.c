@@ -1799,6 +1799,21 @@ marked_circuit_free_cells(circuit_t *circ)
     cell_queue_clear(& TO_OR_CIRCUIT(circ)->p_chan_cells);
 }
 
+static size_t
+marked_circuit_single_conn_free_bytes(connection_t *conn)
+{
+  size_t result = 0;
+  if (conn->inbuf) {
+    result += buf_allocation(conn->inbuf);
+    buf_clear(conn->inbuf);
+  }
+  if (conn->outbuf) {
+    result += buf_allocation(conn->outbuf);
+    buf_clear(conn->outbuf);
+  }
+  return result;
+}
+
 /** Aggressively free buffer contents on all the buffers of all streams in the
  * list starting at <b>stream</b>. Return the number of bytes recovered. */
 static size_t
@@ -1807,13 +1822,9 @@ marked_circuit_streams_free_bytes(edge_connection_t *stream)
   size_t result = 0;
   for ( ; stream; stream = stream->next_stream) {
     connection_t *conn = TO_CONN(stream);
-    if (conn->inbuf) {
-      result += buf_allocation(conn->inbuf);
-      buf_clear(conn->inbuf);
-    }
-    if (conn->outbuf) {
-      result += buf_allocation(conn->outbuf);
-      buf_clear(conn->outbuf);
+    result += marked_circuit_single_conn_free_bytes(conn);
+    if (conn->linked_conn) {
+      result += marked_circuit_single_conn_free_bytes(conn->linked_conn);
     }
   }
   return result;
