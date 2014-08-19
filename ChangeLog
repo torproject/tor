@@ -7,20 +7,22 @@ Changes in version 0.2.5.7-beta - 2014-08-??
       fix for bug 11200; bugfix on 0.2.5.4-alpha.
 
   o Build fixes:
-    - Allow our autoconf to run correctly with autoconf 2.62
-      again. Fixes bug 12693; bugfix on 0.2.5.2-alpha.  o Distribution:
-    - Verify configuration file via ExecStartPre in the systemd unit file.
-      Patch from intrigeri; resolves ticket 12730.
+    - Allow our autoconf to run correctly with autoconf 2.62 again.
+      Fixes bug 12693; bugfix on 0.2.5.2-alpha.
 
   o Distribution:
-    - Explicitly disable RunAsDaemon in the systemd unit file.
-      Our current systemd unit uses "Type = simple", so systemd does
-      not expect tor to fork. If the user has "RunAsDaemon 1" in their
+    - Verify configuration file via ExecStartPre in the systemd unit
+      file. Patch from intrigeri; resolves ticket 12730.
+
+  o Distribution:
+    - Explicitly disable RunAsDaemon in the systemd unit file. Our
+      current systemd unit uses "Type = simple", so systemd does not
+      expect tor to fork. If the user has "RunAsDaemon 1" in their
       torrc, then things won't work as expected. This is e.g. the case
-      on Debian (and derivatives), since there we pass
-      "--defaults-torrc /usr/share/tor/tor-service-defaults-torrc"
-      (that contains "RunAsDaemon 1") by default.
-      Patch by intrigeri; resolves ticket 12731.
+      on Debian (and derivatives), since there we pass "--defaults-torrc
+      /usr/share/tor/tor-service-defaults-torrc" (that contains
+      "RunAsDaemon 1") by default. Patch by intrigeri; resolves
+      ticket 12731.
 
   o Documentation:
     - Adjust the URLs in the README to refer to the new locations of
@@ -28,23 +30,25 @@ Changes in version 0.2.5.7-beta - 2014-08-??
       bug 12830.
 
   o Major bugfixes (relay):
-    - Avoid queuing or sending destroy cells for circuit ID zero when
-      we fail to send a CREATE cell. Fixes bug 12848; bugfix on
-      0.0.8pre1. Found and fixed by "cypherpunks".
+    - Avoid queuing or sending destroy cells for circuit ID zero when we
+      fail to send a CREATE cell. Fixes bug 12848; bugfix on 0.0.8pre1.
+      Found and fixed by "cypherpunks".
 
   o Minor bugfixes:
-    - Restore the functionality of CookieAuthFileGroupReadable. Fixes bug
-      12864; bugfix on 0.2.5.1-alpha.
+    - Restore the functionality of CookieAuthFileGroupReadable. Fixes
+      bug 12864; bugfix on 0.2.5.1-alpha.
 
   o Minor features:
     - Add an ExtORPortCookieAuthFileGroupReadable option to make the
       cookie file for the ExtORPort g+r by default.
 
   o Minor features:
-    - Update geoip6 to the August 7 2014 Maxmind GeoLite2 Country database.
+    - Update geoip6 to the August 7 2014 Maxmind GeoLite2
+      Country database.
 
   o Minor features:
-    - Update geoip to the August 7 2014 Maxmind GeoLite2 Country database.
+    - Update geoip to the August 7 2014 Maxmind GeoLite2
+      Country database.
 
   o Minor bugfixes (compilation):
     - Fix compilation of test.h with MSVC. Patch from Gisle Vanem;
