@@ -159,18 +159,35 @@ entry_guard_set_status(entry_guard_t *e, const node_t *node,
 static int
 entry_is_time_to_retry(const entry_guard_t *e, time_t now)
 {
-  long diff;
+  struct guard_retry_period_s {
+    time_t period_duration;
+    time_t interval_during_period;
+  };
+
+  struct guard_retry_period_s periods[] = {
+     {    6*60*60,    60*60 },
+     { 3*24*60*60,  4*60*60 },
+     { 7*24*60*60, 18*60*60 },
+     {   TIME_MAX, 36*60*60 }
+  };
+
+  time_t ith_deadline_for_retry;
+  time_t unreachable_for;
+  int i;
+
   if (e->last_attempted < e->unreachable_since)
     return 1;
-  diff = now - e->unreachable_since;
-  if (diff < 6*60*60)
-    return now > (e->last_attempted + 60*60);
-  else if (diff < 3*24*60*60)
-    return now > (e->last_attempted + 4*60*60);
-  else if (diff < 7*24*60*60)
-    return now > (e->last_attempted + 18*60*60);
-  else
-    return now > (e->last_attempted + 36*60*60);
+
+  unreachable_for = now - e->unreachable_since;
+
+  for (i = 0; ; i++) {
+    if (unreachable_for <= periods[i].period_duration) {
+      ith_deadline_for_retry = e->last_attempted +
+                               periods[i].interval_during_period;
+
+      return (now > ith_deadline_for_retry);
+    }
+  }
 }
 
 /** Return the node corresponding to <b>e</b>, if <b>e</b> is
