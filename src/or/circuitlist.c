@@ -21,6 +21,7 @@
 #include "connection_edge.h"
 #include "connection_or.h"
 #include "control.h"
+#include "main.h"
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "onion.h"
@@ -1800,7 +1801,7 @@ marked_circuit_free_cells(circuit_t *circ)
 }
 
 static size_t
-marked_circuit_single_conn_free_bytes(connection_t *conn)
+single_conn_free_bytes(connection_t *conn)
 {
   size_t result = 0;
   if (conn->inbuf) {
@@ -1830,9 +1831,9 @@ marked_circuit_streams_free_bytes(edge_connection_t *stream)
   size_t result = 0;
   for ( ; stream; stream = stream->next_stream) {
     connection_t *conn = TO_CONN(stream);
-    result += marked_circuit_single_conn_free_bytes(conn);
+    result += single_conn_free_bytes(conn);
     if (conn->linked_conn) {
-      result += marked_circuit_single_conn_free_bytes(conn->linked_conn);
+      result += single_conn_free_bytes(conn->linked_conn);
     }
   }
   return result;
@@ -1890,6 +1891,28 @@ circuit_max_queued_cell_age(const circuit_t *c, uint32_t now)
   return age;
 }
 
+/** Return the age in milliseconds of the oldest buffer chunk on <b>conn</b>,
+ * where age is taken in milliseconds before the time <b>now</b> (in truncated
+ * milliseconds since the epoch).  If the connection has no data, treat
+ * it as having age zero.
+ **/
+static uint32_t
+conn_get_buffer_age(const connection_t *conn, uint32_t now)
+{
+  uint32_t age = 0, age2;
+  if (conn->outbuf) {
+    age2 = buf_get_oldest_chunk_timestamp(conn->outbuf, now);
+    if (age2 > age)
+      age = age2;
+  }
+  if (conn->inbuf) {
+    age2 = buf_get_oldest_chunk_timestamp(conn->inbuf, now);
+    if (age2 > age)
+      age = age2;
+  }
+  return age;
+}
+
 /** Return the age in milliseconds of the oldest buffer chunk on any stream in
  * the linked list <b>stream</b>, where age is taken in milliseconds before
  * the time <b>now</b> (in truncated milliseconds since the epoch). */
@@ -1899,18 +1922,10 @@ circuit_get_streams_max_data_age(const edge_connection_t *stream, uint32_t now)
   uint32_t age = 0, age2;
   for (; stream; stream = stream->next_stream) {
     const connection_t *conn = TO_CONN(stream);
-    if (conn->outbuf) {
-      age2 = buf_get_oldest_chunk_timestamp(conn->outbuf, now);
-      if (age2 > age)
-        age = age2;
-    }
-    if (conn->inbuf) {
-      age2 = buf_get_oldest_chunk_timestamp(conn->inbuf, now);
-      if (age2 > age)
-        age = age2;
-    }
+    age2 = conn_get_buffer_age(conn, now);
+    if (age2 > age)
+      age = age2;
   }
-
   return age;
 }
 
@@ -1961,6 +1976,26 @@ circuits_compare_by_oldest_queued_item_(const void **a_, const void **b_)
     return -1;
 }
 
+static uint32_t now_ms_for_buf_cmp;
+
+/** Helper to sort a list of circuit_t by age of oldest item, in descending
+ * order. */
+static int
+conns_compare_by_buffer_age_(const void **a_, const void **b_)
+{
+  const connection_t *a = *a_;
+  const connection_t *b = *b_;
+  time_t age_a = conn_get_buffer_age(a, now_ms_for_buf_cmp);
+  time_t age_b = conn_get_buffer_age(b, now_ms_for_buf_cmp);
+
+  if (age_a < age_b)
+    return 1;
+  else if (age_a == age_b)
+    return 0;
+  else
+    return -1;
+}
+
 #define FRACTION_OF_DATA_TO_RETAIN_ON_OOM 0.90
 
 /** We're out of memory for cells, having allocated <b>current_allocation</b>
@@ -1971,10 +2006,13 @@ circuits_handle_oom(size_t current_allocation)
 {
   /* Let's hope there's enough slack space for this allocation here... */
   smartlist_t *circlist = smartlist_new();
+  smartlist_t *connection_array = get_connection_array();
+  int conn_idx;
   circuit_t *circ;
   size_t mem_to_recover;
   size_t mem_recovered=0;
   int n_circuits_killed=0;
+  int n_dirconns_killed=0;
   struct timeval now;
   uint32_t now_ms;
   log_notice(LD_GENERAL, "We're low on memory.  Killing circuits with "
@@ -2013,12 +2051,46 @@ circuits_handle_oom(size_t current_allocation)
   /* This is O(n log n); there are faster algorithms we could use instead.
    * Let's hope this doesn't happen enough to be in the critical path. */
   smartlist_sort(circlist, circuits_compare_by_oldest_queued_item_);
+  now_ms_for_buf_cmp = now_ms;
+  smartlist_sort(connection_array, conns_compare_by_buffer_age_);
+  now_ms_for_buf_cmp = 0;
 
-  /* Okay, now the worst circuits are at the front of the list. Let's mark
-   * them, and reclaim their storage aggressively. */
+  /* Fix up the connection array to its new order. */
+  SMARTLIST_FOREACH_BEGIN(connection_array, connection_t *, conn) {
+    conn->conn_array_index = conn_sl_idx;
+  } SMARTLIST_FOREACH_END(conn);
+
+  /* Okay, now the worst circuits and connections are at the front of their
+   * respective lists. Let's mark them, and reclaim their storage
+   * aggressively. */
+  conn_idx = 0;
   SMARTLIST_FOREACH_BEGIN(circlist, circuit_t *, circ) {
-    size_t n = n_cells_in_circ_queues(circ);
+    size_t n;
     size_t freed;
+
+    /* Free storage in any non-linked directory connections that have buffered
+     * data older than this circuit. */
+    while (conn_idx < smartlist_len(connection_array)) {
+      connection_t *conn = smartlist_get(connection_array, conn_idx);
+      uint32_t conn_age = conn_get_buffer_age(conn, now_ms);
+      if (conn_age < circ->age_tmp) {
+        break;
+      }
+      if (conn->type == CONN_TYPE_DIR && conn->linked_conn == NULL) {
+        if (!conn->marked_for_close)
+          connection_mark_for_close(conn);
+        mem_recovered += single_conn_free_bytes(conn);
+
+        ++n_dirconns_killed;
+
+        if (mem_recovered >= mem_to_recover)
+          goto done_recovering_mem;
+      }
+      ++conn_idx;
+    }
+
+    /* Now, kill the circuit. */
+    n = n_cells_in_circ_queues(circ);
     if (! circ->marked_for_close) {
       circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
     }
@@ -2031,8 +2103,10 @@ circuits_handle_oom(size_t current_allocation)
     mem_recovered += freed;
 
     if (mem_recovered >= mem_to_recover)
-      break;
+      goto done_recovering_mem;
   } SMARTLIST_FOREACH_END(circ);
+
+ done_recovering_mem:
 
 #ifdef ENABLE_MEMPOOLS
   clean_cell_pool(); /* In case this helps. */
@@ -2041,10 +2115,12 @@ circuits_handle_oom(size_t current_allocation)
                               chunks. */
 
   log_notice(LD_GENERAL, "Removed "U64_FORMAT" bytes by killing %d circuits; "
-             "%d circuits remain alive.",
+             "%d circuits remain alive. Also killed %d non-linked directory "
+             "connections.",
              U64_PRINTF_ARG(mem_recovered),
              n_circuits_killed,
-             smartlist_len(circlist) - n_circuits_killed);
+             smartlist_len(circlist) - n_circuits_killed,
+             n_dirconns_killed);
 
   smartlist_free(circlist);
 }

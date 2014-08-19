@@ -9,3 +9,7 @@
       Count that memory as reclaimed by our OOM handler. Part of
       ticket 11792.
 
+    - When handling out-of-memory conditions, also look at
+      non-tunnneled directory connections, and kill the ones that have
+      had data sitting on them for the longest. Part of ticket 11792.
+
