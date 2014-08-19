@@ -3,3 +3,9 @@
       also count the amount of memory that any tunnelled directory
       connection attached to that connection had consumed. Part of
       ticket 11792.
+
+    - When considering whether we're running low on memory, consider
+      memory that was allocated as part of zlib buffers as well.
+      Count that memory as reclaimed by our OOM handler. Part of
+      ticket 11792.
+

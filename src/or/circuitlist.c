@@ -1811,6 +1811,14 @@ marked_circuit_single_conn_free_bytes(connection_t *conn)
     result += buf_allocation(conn->outbuf);
     buf_clear(conn->outbuf);
   }
+  if (conn->type == CONN_TYPE_DIR) {
+    dir_connection_t *dir_conn = TO_DIR_CONN(conn);
+    if (dir_conn->zlib_state) {
+      result += tor_zlib_state_size(dir_conn->zlib_state);
+      tor_zlib_free(dir_conn->zlib_state);
+      dir_conn->zlib_state = NULL;
+    }
+  }
   return result;
 }
 

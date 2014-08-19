@@ -2433,6 +2433,7 @@ cell_queues_check_size(void)
 {
   size_t alloc = cell_queues_get_total_allocation();
   alloc += buf_get_total_allocation();
+  alloc += tor_zlib_get_total_allocation();
   if (alloc >= get_options()->MaxMemInQueues) {
     circuits_handle_oom(alloc);
     return 1;
