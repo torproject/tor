@@ -165,10 +165,12 @@ entry_is_time_to_retry(const entry_guard_t *e, time_t now)
   };
 
   struct guard_retry_period_s periods[] = {
-     {    6*60*60,    60*60 },
-     { 3*24*60*60,  4*60*60 },
-     { 7*24*60*60, 18*60*60 },
-     {   TIME_MAX, 36*60*60 }
+     {    6*60*60,    60*60 }, /* For first 6 hrs., retry hourly; */
+     { 3*24*60*60,  4*60*60 }, /* Then retry every 4 hrs. until the
+                                  3-day mark; */
+     { 7*24*60*60, 18*60*60 }, /* After 3 days, retry every 18 hours until
+                                  1 week mark. */
+     {   TIME_MAX, 36*60*60 }  /* After 1 week, retry every 36 hours. */
   };
 
   time_t ith_deadline_for_retry;
