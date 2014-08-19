@@ -1,3 +1,0 @@
-  o Distribution:
-    - Verify configuration file via ExecStartPre in the systemd unit file.
-      Patch from intrigeri; resolves ticket 12730.

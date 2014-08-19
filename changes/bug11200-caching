@@ -1,7 +1,0 @@
-  o Major bugfixes:
-    - When Tor starts with DisabledNetwork set, it would correctly
-      conclude that it shouldn't try making circuits, but it would
-      mistakenly cache this conclusion and continue believing it even
-      when DisableNetwork is set to 0. Fixes the bug introduced by the
-      fix for bug 11200; bugfix on 0.2.5.4-alpha.
-

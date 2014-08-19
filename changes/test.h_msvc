@@ -1,3 +1,0 @@
-  o Minor bugfixes (compilation):
-    - Fix compilation of test.h with MSVC. Patch from Gisle Vanem;
-      bugfix on 0.2.5.5-alpha.

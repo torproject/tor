@@ -1,7 +1,0 @@
-  o Minor bugfixes:
-    - Restore the functionality of CookieAuthFileGroupReadable. Fixes bug
-      12864; bugfix on 0.2.5.1-alpha.
-
-  o Minor features:
-    - Add an ExtORPortCookieAuthFileGroupReadable option to make the
-      cookie file for the ExtORPort g+r by default.
