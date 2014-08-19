@@ -1925,6 +1925,11 @@ circuit_get_streams_max_data_age(const edge_connection_t *stream, uint32_t now)
     age2 = conn_get_buffer_age(conn, now);
     if (age2 > age)
       age = age2;
+    if (conn->linked_conn) {
+      age2 = conn_get_buffer_age(conn->linked_conn, now);
+      if (age2 > age)
+        age = age2;
+    }
   }
   return age;
 }
