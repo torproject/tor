@@ -156,7 +156,7 @@ entry_guard_set_status(entry_guard_t *e, const node_t *node,
 
 /** Return true iff enough time has passed since we last tried to connect
  * to the unreachable guard <b>e</b> that we're willing to try again. */
-static int
+STATIC int
 entry_is_time_to_retry(const entry_guard_t *e, time_t now)
 {
   struct guard_retry_period_s {
