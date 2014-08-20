@@ -990,14 +990,14 @@ tor_fd_seekend(int fd)
 #ifdef _WIN32
   return _lseek(fd, 0, SEEK_END) < 0 ? -1 : 0;
 #else
-  int rc = lseek(fd, 0, SEEK_END) < 0 ? -1 : 0;
+  off_t rc = lseek(fd, 0, SEEK_END) < 0 ? -1 : 0;
 #ifdef ESPIPE
   /* If we get an error and ESPIPE, then it's a pipe or a socket of a fifo:
    * no need to worry. */
   if (rc < 0 && errno == ESPIPE)
     rc = 0;
 #endif
-  return rc;
+  return (rc < 0) ? -1 : 0;
 #endif
 }
 
