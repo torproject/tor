@@ -1,0 +1,3 @@
+  o Minor features:
+    - When handling a low-memory situation, allocate less memory
+      for teporary data structures. Fixes issue 10115.

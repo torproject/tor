@@ -2471,7 +2471,6 @@ rep_hist_format_buffer_stats(time_t now)
 time_t
 rep_hist_buffer_stats_write(time_t now)
 {
-  circuit_t *circ;
   char *str = NULL;
 
   if (!start_of_buffer_stats_interval)
@@ -2480,9 +2479,10 @@ rep_hist_buffer_stats_write(time_t now)
     goto done; /* Not ready to write */
 
   /* Add open circuits to the history. */
-  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     rep_hist_buffer_stats_add_circ(circ, now);
   }
+  SMARTLIST_FOREACH_END(circ);
 
   /* Generate history string. */
   str = rep_hist_format_buffer_stats(now);

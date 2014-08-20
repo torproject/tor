@@ -2328,15 +2328,15 @@ packed_cell_free(packed_cell_t *cell)
 void
 dump_cell_pool_usage(int severity)
 {
-  circuit_t *c;
   int n_circs = 0;
   int n_cells = 0;
-  TOR_LIST_FOREACH(c, circuit_get_global_list(), head) {
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, c) {
     n_cells += c->n_chan_cells.n;
     if (!CIRCUIT_IS_ORIGIN(c))
       n_cells += TO_OR_CIRCUIT(c)->p_chan_cells.n;
     ++n_circs;
   }
+  SMARTLIST_FOREACH_END(c);
   tor_log(severity, LD_MM,
           "%d cells allocated on %d circuits. %d cells leaked.",
           n_cells, n_circs, (int)total_cells_allocated - n_cells);

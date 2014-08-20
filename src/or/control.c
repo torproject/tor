@@ -194,14 +194,14 @@ log_severity_to_event(int severity)
 static void
 clear_circ_bw_fields(void)
 {
-  circuit_t *circ;
   origin_circuit_t *ocirc;
-  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     if (!CIRCUIT_IS_ORIGIN(circ))
       continue;
     ocirc = TO_ORIGIN_CIRCUIT(circ);
     ocirc->n_written_circ_bw = ocirc->n_read_circ_bw = 0;
   }
+  SMARTLIST_FOREACH_END(circ);
 }
 
 /** Set <b>global_event_mask*</b> to the bitwise OR of each live control
@@ -1879,9 +1879,8 @@ getinfo_helper_events(control_connection_t *control_conn,
 {
   (void) control_conn;
   if (!strcmp(question, "circuit-status")) {
-    circuit_t *circ_;
     smartlist_t *status = smartlist_new();
-    TOR_LIST_FOREACH(circ_, circuit_get_global_list(), head) {
+    SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ_) {
       origin_circuit_t *circ;
       char *circdesc;
       const char *state;
@@ -1903,6 +1902,7 @@ getinfo_helper_events(control_connection_t *control_conn,
                    state, *circdesc ? " " : "", circdesc);
       tor_free(circdesc);
     }
+    SMARTLIST_FOREACH_END(circ_);
     *answer = smartlist_join_strings(status, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(status, char *, cp, tor_free(cp));
     smartlist_free(status);
@@ -3908,12 +3908,11 @@ control_event_stream_bandwidth_used(void)
 int
 control_event_circ_bandwidth_used(void)
 {
-  circuit_t *circ;
   origin_circuit_t *ocirc;
   if (!EVENT_IS_INTERESTING(EVENT_CIRC_BANDWIDTH_USED))
     return 0;
 
-  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     if (!CIRCUIT_IS_ORIGIN(circ))
       continue;
     ocirc = TO_ORIGIN_CIRCUIT(circ);
@@ -3926,6 +3925,7 @@ control_event_circ_bandwidth_used(void)
                        (unsigned long)ocirc->n_written_circ_bw);
     ocirc->n_written_circ_bw = ocirc->n_read_circ_bw = 0;
   }
+  SMARTLIST_FOREACH_END(circ);
 
   return 0;
 }
@@ -4090,14 +4090,13 @@ format_cell_stats(char **event_string, circuit_t *circ,
 int
 control_event_circuit_cell_stats(void)
 {
-  circuit_t *circ;
   cell_stats_t *cell_stats;
   char *event_string;
   if (!get_options()->TestingEnableCellStatsEvent ||
       !EVENT_IS_INTERESTING(EVENT_CELL_STATS))
     return 0;
   cell_stats = tor_malloc(sizeof(cell_stats_t));;
-  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     if (!circ->testing_cell_stats)
       continue;
     sum_up_cell_stats_by_command(circ, cell_stats);
@@ -4106,6 +4105,7 @@ control_event_circuit_cell_stats(void)
                        "650 CELL_STATS %s\r\n", event_string);
     tor_free(event_string);
   }
+  SMARTLIST_FOREACH_END(circ);
   tor_free(cell_stats);
   return 0;
 }

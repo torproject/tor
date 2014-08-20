@@ -524,7 +524,6 @@ rend_config_services(const or_options_t *options, int validate_only)
    * other ones. */
   if (old_service_list && !validate_only) {
     smartlist_t *surviving_services = smartlist_new();
-    circuit_t *circ;
 
     /* Copy introduction points to new services. */
     /* XXXX This is O(n^2), but it's only called on reconfigure, so it's
@@ -544,7 +543,7 @@ rend_config_services(const or_options_t *options, int validate_only)
     /* XXXX it would be nicer if we had a nicer abstraction to use here,
      * so we could just iterate over the list of services to close, but
      * once again, this isn't critical-path code. */
-    TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
+    SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
       if (!circ->marked_for_close &&
           circ->state == CIRCUIT_STATE_OPEN &&
           (circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
@@ -569,6 +568,7 @@ rend_config_services(const or_options_t *options, int validate_only)
         /* XXXX Is there another reason we should use here? */
       }
     }
+    SMARTLIST_FOREACH_END(circ);
     smartlist_free(surviving_services);
     SMARTLIST_FOREACH(old_service_list, rend_service_t *, ptr,
                       rend_service_free(ptr));
@@ -2384,8 +2384,7 @@ static int
 count_established_intro_points(const char *query)
 {
   int num_ipos = 0;
-  circuit_t *circ;
-  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head) {
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
     if (!circ->marked_for_close &&
         circ->state == CIRCUIT_STATE_OPEN &&
         (circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
@@ -2396,6 +2395,7 @@ count_established_intro_points(const char *query)
         num_ipos++;
     }
   }
+  SMARTLIST_FOREACH_END(circ);
   return num_ipos;
 }
 

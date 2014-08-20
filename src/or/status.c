@@ -28,13 +28,7 @@ static void log_accounting(const time_t now, const or_options_t *options);
 STATIC int
 count_circuits(void)
 {
-  circuit_t *circ;
-  int nr=0;
-
-  TOR_LIST_FOREACH(circ, circuit_get_global_list(), head)
-    nr++;
-
-  return nr;
+  return smartlist_len(circuit_get_global_list());
 }
 
 /** Take seconds <b>secs</b> and return a newly allocated human-readable

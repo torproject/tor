@@ -14,9 +14,7 @@
 
 #include "testsupport.h"
 
-TOR_LIST_HEAD(global_circuitlist_s, circuit_t);
-
-MOCK_DECL(struct global_circuitlist_s*, circuit_get_global_list, (void));
+MOCK_DECL(smartlist_t *, circuit_get_global_list, (void));
 const char *circuit_state_to_string(int state);
 const char *circuit_purpose_to_controller_string(uint8_t purpose);
 const char *circuit_purpose_to_controller_hs_state_string(uint8_t purpose);

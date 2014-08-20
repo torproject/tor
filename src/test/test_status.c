@@ -30,27 +30,24 @@
  * global circuits.
  */
 
-struct global_circuitlist_s mock_global_circuitlist =
-  TOR_LIST_HEAD_INITIALIZER(global_circuitlist);
+static smartlist_t * mock_global_circuitlist = NULL;
 
-NS_DECL(struct global_circuitlist_s *, circuit_get_global_list, (void));
+NS_DECL(smartlist_t *, circuit_get_global_list, (void));
 
 static void
 NS(test_main)(void *arg)
 {
   /* Choose origin_circuit_t wlog. */
   origin_circuit_t *mock_circuit1, *mock_circuit2;
-  circuit_t *circ, *tmp;
   int expected_circuits = 2, actual_circuits;
 
   (void)arg;
 
   mock_circuit1 = tor_malloc_zero(sizeof(origin_circuit_t));
   mock_circuit2 = tor_malloc_zero(sizeof(origin_circuit_t));
-  TOR_LIST_INSERT_HEAD(
-    &mock_global_circuitlist, TO_CIRCUIT(mock_circuit1), head);
-  TOR_LIST_INSERT_HEAD(
-    &mock_global_circuitlist, TO_CIRCUIT(mock_circuit2), head);
+  mock_global_circuitlist = smartlist_new();
+  smartlist_add(mock_global_circuitlist, TO_CIRCUIT(mock_circuit1));
+  smartlist_add(mock_global_circuitlist, TO_CIRCUIT(mock_circuit2));
 
   NS_MOCK(circuit_get_global_list);
 
@@ -58,17 +55,18 @@ NS(test_main)(void *arg)
 
   tt_assert(expected_circuits == actual_circuits);
 
-  done:
-    TOR_LIST_FOREACH_SAFE(
-        circ, NS(circuit_get_global_list)(), head, tmp);
-      tor_free(circ);
-    NS_UNMOCK(circuit_get_global_list);
+ done:
+  tor_free(mock_circuit1);
+  tor_free(mock_circuit2);
+  smartlist_free(mock_global_circuitlist);
+  mock_global_circuitlist = NULL;
+  NS_UNMOCK(circuit_get_global_list);
 }
 
-static struct global_circuitlist_s *
+static smartlist_t *
 NS(circuit_get_global_list)(void)
 {
-  return &mock_global_circuitlist;
+  return mock_global_circuitlist;
 }
 
 #undef NS_SUBMODULE
