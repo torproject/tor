@@ -561,18 +561,18 @@ test_entry_is_time_to_retry(void *arg)
 
   retval = entry_is_time_to_retry(test_guard,now);
   tt_int_op(retval,==,1);
-  
+
   test_guard->last_attempted = now - (60*60 - 1);
 
   retval = entry_is_time_to_retry(test_guard,now);
   tt_int_op(retval,==,0);
-  
+
   test_guard->unreachable_since = now - (6*60*60 + 1);
   test_guard->last_attempted = now - (4*60*60 + 1);
 
   retval = entry_is_time_to_retry(test_guard,now);
   tt_int_op(retval,==,1);
-  
+
   test_guard->unreachable_since = now - (3*24*60*60 - 1);
   test_guard->last_attempted = now - (4*60*60 + 1);
 
@@ -682,7 +682,7 @@ static const struct testcase_setup_t fake_network = {
 };
 
 struct testcase_t entrynodes_tests[] = {
-  { "entry_is_time_to_retry", test_entry_is_time_to_retry, 
+  { "entry_is_time_to_retry", test_entry_is_time_to_retry,
     TT_FORK, NULL, NULL },
   { "choose_random_entry_no_guards", test_choose_random_entry_no_guards,
     TT_FORK, &fake_network, NULL },
