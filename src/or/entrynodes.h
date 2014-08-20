@@ -104,6 +104,9 @@ typedef enum {
 STATIC const node_t *entry_is_live(const entry_guard_t *e,
                                    entry_is_live_flags_t flags,
                                    const char **msg);
+
+STATIC int entry_is_time_to_retry(const entry_guard_t *e, time_t now);
+
 #endif
 
 void remove_all_entry_guards(void);

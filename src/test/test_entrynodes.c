@@ -551,6 +551,80 @@ test_entry_guards_set_from_config(void *arg)
   routerset_free(options->EntryNodes);
 }
 
+static void
+test_entry_is_time_to_retry(void *arg)
+{
+  entry_guard_t *test_guard;
+  time_t now;
+  int retval;
+  (void)arg;
+
+  now = time(NULL);
+
+  test_guard = tor_malloc_zero(sizeof(entry_guard_t));
+
+  test_guard->last_attempted = now - 10;
+  test_guard->unreachable_since = now - 1;
+
+  retval = entry_is_time_to_retry(test_guard,now);
+  tt_int_op(retval,==,1);
+
+  test_guard->unreachable_since = now - (6*60*60 - 1);
+  test_guard->last_attempted = now - (60*60 + 1);
+
+  retval = entry_is_time_to_retry(test_guard,now);
+  tt_int_op(retval,==,1);
+
+  test_guard->last_attempted = now - (60*60 - 1);
+
+  retval = entry_is_time_to_retry(test_guard,now);
+  tt_int_op(retval,==,0);
+
+  test_guard->unreachable_since = now - (6*60*60 + 1);
+  test_guard->last_attempted = now - (4*60*60 + 1);
+
+  retval = entry_is_time_to_retry(test_guard,now);
+  tt_int_op(retval,==,1);
+
+  test_guard->unreachable_since = now - (3*24*60*60 - 1);
+  test_guard->last_attempted = now - (4*60*60 + 1);
+
+  retval = entry_is_time_to_retry(test_guard,now);
+  tt_int_op(retval,==,1);
+
+  test_guard->unreachable_since = now - (3*24*60*60 + 1);
+  test_guard->last_attempted = now - (18*60*60 + 1);
+
+  retval = entry_is_time_to_retry(test_guard,now);
+  tt_int_op(retval,==,1);
+
+  test_guard->unreachable_since = now - (7*24*60*60 - 1);
+  test_guard->last_attempted = now - (18*60*60 + 1);
+
+  retval = entry_is_time_to_retry(test_guard,now);
+  tt_int_op(retval,==,1);
+
+  test_guard->last_attempted = now - (18*60*60 - 1);
+
+  retval = entry_is_time_to_retry(test_guard,now);
+  tt_int_op(retval,==,0);
+
+  test_guard->unreachable_since = now - (7*24*60*60 + 1);
+  test_guard->last_attempted = now - (36*60*60 + 1);
+
+  retval = entry_is_time_to_retry(test_guard,now);
+  tt_int_op(retval,==,1);
+
+  test_guard->unreachable_since = now - (7*24*60*60 + 1);
+  test_guard->last_attempted = now - (36*60*60 + 1);
+
+  retval = entry_is_time_to_retry(test_guard,now);
+  tt_int_op(retval,==,1);
+
+ done:
+  tor_free(test_guard);
+}
+
 /** XXX Do some tests that entry_is_live() */
 static void
 test_entry_is_live(void *arg)
@@ -621,6 +695,8 @@ static const struct testcase_setup_t fake_network = {
 };
 
 struct testcase_t entrynodes_tests[] = {
+  { "entry_is_time_to_retry", test_entry_is_time_to_retry,
+    TT_FORK, NULL, NULL },
   { "choose_random_entry_no_guards", test_choose_random_entry_no_guards,
     TT_FORK, &fake_network, NULL },
   { "choose_random_entry_one_possibleguard",
