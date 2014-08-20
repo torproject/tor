@@ -1,0 +1,4 @@
+  o Minor features:
+    - On unix, you can now use named pipes as the target of the Log
+      option, and other options that try to append to files. Closes
+      ticket 12061. Patch from "carlo von lynX".

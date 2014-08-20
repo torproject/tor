@@ -981,14 +981,23 @@ tor_fd_getpos(int fd)
 #endif
 }
 
-/** Move <b>fd</b> to the end of the file. Return -1 on error, 0 on success. */
+/** Move <b>fd</b> to the end of the file. Return -1 on error, 0 on success.
+ * If the file is a pipe, do nothing and succeed.
+ **/
 int
 tor_fd_seekend(int fd)
 {
 #ifdef _WIN32
   return _lseek(fd, 0, SEEK_END) < 0 ? -1 : 0;
 #else
-  return lseek(fd, 0, SEEK_END) < 0 ? -1 : 0;
+  int rc = lseek(fd, 0, SEEK_END) < 0 ? -1 : 0;
+#ifdef ESPIPE
+  /* If we get an error and ESPIPE, then it's a pipe or a socket of a fifo:
+   * no need to worry. */
+  if (rc < 0 && errno == ESPIPE)
+    rc = 0;
+#endif
+  return rc;
 #endif
 }
 
