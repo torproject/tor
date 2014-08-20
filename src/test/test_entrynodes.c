@@ -325,6 +325,19 @@ state_lines_free(smartlist_t *entry_guard_lines)
   smartlist_free(entry_guard_lines);
 }
 
+/* Return a statically allocated string representing yesterday's date
+ * in ISO format. We use it so that state file items are not found to
+ * be outdated. */
+static const char *
+get_yesterday_date_str(void)
+{
+  static char buf[ISO_TIME_LEN+1];
+
+  time_t yesterday = time(NULL) - 24*60*60;
+  format_iso_time(buf, yesterday);
+  return buf;
+}
+
 /* Tests entry_guards_parse_state(). It creates a fake Tor state with
    a saved entry guard and makes sure that Tor can parse it and
    creates the right entry node out of it.
@@ -342,7 +355,7 @@ test_entry_guards_parse_state_simple(void *arg)
   const char *nickname = "hagbard";
   const char *fpr = "B29D536DD1752D542E1FBB3C9CE4449D51298212";
   const char *tor_version = "0.2.5.3-alpha-dev";
-  const char *added_at = "2014-05-22 02:40:47";
+  const char *added_at = get_yesterday_date_str();
   const char *unlisted_since = "2014-06-08 16:16:50";
 
   (void) arg;
@@ -457,7 +470,7 @@ test_entry_guards_parse_state_pathbias(void *arg)
     smartlist_add_asprintf(state_line, "EntryGuardAddedBy");
     smartlist_add_asprintf(state_line,
       "B29D536DD1752D542E1FBB3C9CE4449D51298212 0.2.5.3-alpha-dev "
-      "2014-05-22 02:40:47");
+                           "%s", get_yesterday_date_str());
     smartlist_add(entry_state_lines, state_line);
 
     state_line = smartlist_new();
