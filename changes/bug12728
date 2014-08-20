@@ -1,0 +1,4 @@
+
+  o Minor bugfixes:
+    - When generating our family list, remove spaces from around the
+      entries there.  Fixes bug 12728; bugfix on 0.2.1.7-alpha.
