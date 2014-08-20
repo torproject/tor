@@ -541,16 +541,14 @@ test_entry_guards_set_from_config(void *arg)
 static void
 test_entry_is_time_to_retry(void *arg)
 {
-  (void)arg;
-
   entry_guard_t *test_guard;
   time_t now;
   int retval;
+  (void)arg;
 
   now = time(NULL);
 
-  test_guard = tor_malloc(sizeof(entry_guard_t));
-  memset(test_guard,0,sizeof(entry_guard_t));
+  test_guard = tor_malloc_zero(sizeof(entry_guard_t));
 
   test_guard->last_attempted = now - 10;
   test_guard->unreachable_since = now - 1;
@@ -610,9 +608,8 @@ test_entry_is_time_to_retry(void *arg)
   retval = entry_is_time_to_retry(test_guard,now);
   tt_int_op(retval,==,1);
 
-  done:
+ done:
   tor_free(test_guard);
-  return;
 }
 
 /** XXX Do some tests that entry_is_live() */
