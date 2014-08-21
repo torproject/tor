@@ -2273,8 +2273,11 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
     if (!sig->good_signature && !sig->bad_signature) {
       cert = authority_cert_get_by_digests(sig->identity_digest,
                                            sig->signing_key_digest);
-      if (cert)
-        networkstatus_check_document_signature(target, sig, cert);
+      if (cert) {
+        /* Not checking the return value here, since we are going to look
+         * at the status of sig->good_signature in a moment. */
+        (void) networkstatus_check_document_signature(target, sig, cert);
+      }
     }
 
     /* If this signature is good, or we don't have any signature yet,
