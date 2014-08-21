@@ -431,6 +431,7 @@ test_entry_guards_parse_state_simple(void *arg)
  done:
   state_lines_free(entry_state_lines);
   or_state_free(state);
+  tor_free(msg);
 }
 
 /** Similar to test_entry_guards_parse_state_simple() but aims to test
@@ -515,6 +516,7 @@ test_entry_guards_parse_state_pathbias(void *arg)
  done:
   or_state_free(state);
   state_lines_free(entry_state_lines);
+  tor_free(msg);
 }
 
 /* Simple test of entry_guards_set_from_config() by specifying a

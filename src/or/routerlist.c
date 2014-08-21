@@ -1809,7 +1809,7 @@ scale_array_elements_to_u64(u64_dbl_t *entries, int n_entries,
   double scale_factor;
   int i;
   /* big, but far away from overflowing an int64_t */
-#define SCALE_TO_U64_MAX (INT64_MAX / 4)
+#define SCALE_TO_U64_MAX ((int64_t) (INT64_MAX / 4))
 
   for (i = 0; i < n_entries; ++i)
     total += entries[i].dbl;

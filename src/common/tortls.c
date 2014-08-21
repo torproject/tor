@@ -2611,16 +2611,20 @@ check_no_tls_errors_(const char *fname, int line)
 int
 tor_tls_used_v1_handshake(tor_tls_t *tls)
 {
+#if defined(V2_HANDSHAKE_SERVER) && defined(V2_HANDSHAKE_CLIENT)
+  return ! tls->wasV2Handshake;
+#else
   if (tls->isServer) {
-#ifdef V2_HANDSHAKE_SERVER
+# ifdef V2_HANDSHAKE_SERVER
     return ! tls->wasV2Handshake;
-#endif
+# endif
   } else {
-#ifdef V2_HANDSHAKE_CLIENT
+# ifdef V2_HANDSHAKE_CLIENT
     return ! tls->wasV2Handshake;
-#endif
+# endif
   }
   return 1;
+#endif
 }
 
 /** Return true iff <b>name</b> is a DN of a kind that could only

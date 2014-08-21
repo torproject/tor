@@ -66,9 +66,9 @@ typedef struct smp_param {
   int syscall;
 
   /** parameter value. */
-  intptr_t value;
+  char *value;
   /** parameter value, second argument. */
-  intptr_t value2;
+  char *value2;
 
   /**  parameter flag (0 = not protected, 1 = protected). */
   int prot;

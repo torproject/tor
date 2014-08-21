@@ -1446,10 +1446,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   memwipe(hexcookie, 0, sizeof(hexcookie));
 
   /* Free the parsed cell */
-  if (parsed_req) {
-    rend_service_free_intro(parsed_req);
-    parsed_req = NULL;
-  }
+  rend_service_free_intro(parsed_req);
 
   /* Free rp if we must */
   if (need_rp_free) extend_info_free(rp);
@@ -1539,7 +1536,6 @@ void
 rend_service_free_intro(rend_intro_cell_t *request)
 {
   if (!request) {
-    log_info(LD_BUG, "rend_service_free_intro() called with NULL request!");
     return;
   }
 
@@ -1648,7 +1644,7 @@ rend_service_begin_parse_intro(const uint8_t *request,
   goto done;
 
  err:
-  if (rv) rend_service_free_intro(rv);
+  rend_service_free_intro(rv);
   rv = NULL;
   if (err_msg_out && !err_msg) {
     tor_asprintf(&err_msg,

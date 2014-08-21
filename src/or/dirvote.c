@@ -64,7 +64,7 @@ STATIC char *
 format_networkstatus_vote(crypto_pk_t *private_signing_key,
                           networkstatus_t *v3_ns)
 {
-  smartlist_t *chunks;
+  smartlist_t *chunks = smartlist_new();
   const char *client_versions = NULL, *server_versions = NULL;
   char fingerprint[FINGERPRINT_LEN+1];
   char digest[DIGEST_LEN];
@@ -98,7 +98,6 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     server_versions_line = tor_strdup("");
   }
 
-  chunks = smartlist_new();
   {
     char published[ISO_TIME_LEN+1];
     char va[ISO_TIME_LEN+1];
@@ -230,10 +229,9 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
  done:
   tor_free(client_versions_line);
   tor_free(server_versions_line);
-  if (chunks) {
-    SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
-    smartlist_free(chunks);
-  }
+
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
+  smartlist_free(chunks);
   return status;
 }
 
@@ -2275,8 +2273,11 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
     if (!sig->good_signature && !sig->bad_signature) {
       cert = authority_cert_get_by_digests(sig->identity_digest,
                                            sig->signing_key_digest);
-      if (cert)
-        networkstatus_check_document_signature(target, sig, cert);
+      if (cert) {
+        /* Not checking the return value here, since we are going to look
+         * at the status of sig->good_signature in a moment. */
+        (void) networkstatus_check_document_signature(target, sig, cert);
+      }
     }
 
     /* If this signature is good, or we don't have any signature yet,

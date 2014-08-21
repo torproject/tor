@@ -1039,7 +1039,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
 {
   int used_quoted_string = 0;
   const or_options_t *options = get_options();
-  const char *errstr = NULL;
+  const char *errstr = "Unknown error";
   char *password;
   size_t password_len;
   const char *cp;
@@ -1160,9 +1160,10 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
     }
     if (bad) {
       if (!also_cookie) {
-        log_warn(LD_CONTROL,
+        log_warn(LD_BUG,
                  "Couldn't decode HashedControlPassword: invalid base16");
         errstr="Couldn't decode HashedControlPassword value in configuration.";
+        goto err;
       }
       bad_password = 1;
       SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
@@ -1198,8 +1199,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
 
  err:
   tor_free(password);
-  connection_printf_to_buf(conn, "515 Authentication failed: %s\r\n",
-                           errstr ? errstr : "Unknown reason.");
+  connection_printf_to_buf(conn, "515 Authentication failed: %s\r\n", errstr);
   connection_mark_for_close(TO_CONN(conn));
   return 0;
  ok:

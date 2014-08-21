@@ -1959,13 +1959,12 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
   char published[ISO_TIME_LEN+1];
   char identity64[BASE64_DIGEST_LEN+1];
   char digest64[BASE64_DIGEST_LEN+1];
-  smartlist_t *chunks = NULL;
+  smartlist_t *chunks = smartlist_new();
 
   format_iso_time(published, rs->published_on);
   digest_to_base64(identity64, rs->identity_digest);
   digest_to_base64(digest64, rs->descriptor_digest);
 
-  chunks = smartlist_new();
   smartlist_add_asprintf(chunks,
                    "r %s %s %s%s%s %s %d %d\n",
                    rs->nickname,
@@ -2090,10 +2089,8 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
   result = smartlist_join_strings(chunks, "", 0, NULL);
 
  err:
-  if (chunks) {
-    SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
-    smartlist_free(chunks);
-  }
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
+  smartlist_free(chunks);
 
   return result;
 }

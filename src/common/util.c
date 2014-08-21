@@ -4052,8 +4052,11 @@ tor_spawn_background(const char *const filename, const char **argv,
 
   status = process_handle->status = PROCESS_STATUS_RUNNING;
   /* Set stdout/stderr pipes to be non-blocking */
-  fcntl(process_handle->stdout_pipe, F_SETFL, O_NONBLOCK);
-  fcntl(process_handle->stderr_pipe, F_SETFL, O_NONBLOCK);
+  if (fcntl(process_handle->stdout_pipe, F_SETFL, O_NONBLOCK) < 0 ||
+      fcntl(process_handle->stderr_pipe, F_SETFL, O_NONBLOCK) < 0) {
+    log_warn(LD_GENERAL, "Failed to set stderror/stdout pipes nonblocking "
+             "in parent process: %s", strerror(errno));
+  }
   /* Open the buffered IO streams */
   process_handle->stdout_handle = fdopen(process_handle->stdout_pipe, "r");
   process_handle->stderr_handle = fdopen(process_handle->stderr_pipe, "r");
