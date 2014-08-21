@@ -1160,9 +1160,10 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
     }
     if (bad) {
       if (!also_cookie) {
-        log_warn(LD_CONTROL,
+        log_warn(LD_BUG,
                  "Couldn't decode HashedControlPassword: invalid base16");
         errstr="Couldn't decode HashedControlPassword value in configuration.";
+        goto err;
       }
       bad_password = 1;
       SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
