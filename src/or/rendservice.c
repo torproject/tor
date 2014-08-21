@@ -1646,6 +1646,7 @@ rend_service_begin_parse_intro(const uint8_t *request,
  err:
   rend_service_free_intro(rv);
   rv = NULL;
+
   if (err_msg_out && !err_msg) {
     tor_asprintf(&err_msg,
                  "unknown INTRODUCE%d error",
@@ -1981,7 +1982,7 @@ rend_service_decrypt_intro(
   char service_id[REND_SERVICE_ID_LEN_BASE32+1];
   ssize_t key_len;
   uint8_t buf[RELAY_PAYLOAD_SIZE];
-  int result, status = 0;
+  int result, status = -1;
 
   if (!intro || !key) {
     if (err_msg_out) {
@@ -2060,6 +2061,8 @@ rend_service_decrypt_intro(
   intro->plaintext = tor_malloc(intro->plaintext_len);
   memcpy(intro->plaintext, buf, intro->plaintext_len);
 
+  status = 0;
+
   goto done;
 
  err:
@@ -2068,7 +2071,6 @@ rend_service_decrypt_intro(
                  "unknown INTRODUCE%d error decrypting encrypted part",
                  intro ? (int)(intro->type) : -1);
   }
-  if (status >= 0) status = -1;
 
  done:
   if (err_msg_out) *err_msg_out = err_msg;
@@ -2095,7 +2097,7 @@ rend_service_parse_intro_plaintext(
   char *err_msg = NULL;
   ssize_t ver_specific_len, ver_invariant_len;
   uint8_t version;
-  int status = 0;
+  int status = -1;
 
   if (!intro) {
     if (err_msg_out) {
@@ -2154,6 +2156,7 @@ rend_service_parse_intro_plaintext(
         (int)(intro->type),
         (long)(intro->plaintext_len));
     status = -6;
+    goto err;
   } else {
     memcpy(intro->rc,
            intro->plaintext + ver_specific_len,
@@ -2166,6 +2169,7 @@ rend_service_parse_intro_plaintext(
   /* Flag it as being fully parsed */
   intro->parsed = 1;
 
+  status = 0;
   goto done;
 
  err:
@@ -2174,7 +2178,6 @@ rend_service_parse_intro_plaintext(
                  "unknown INTRODUCE%d error parsing encrypted part",
                  intro ? (int)(intro->type) : -1);
   }
-  if (status >= 0) status = -1;
 
  done:
   if (err_msg_out) *err_msg_out = err_msg;
