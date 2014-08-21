@@ -66,11 +66,17 @@ smartlist_ensure_capacity(smartlist_t *sl, int size)
 #define MAX_CAPACITY (INT_MAX)
 #else
 #define MAX_CAPACITY (int)((SIZE_MAX / (sizeof(void*))))
+#define ASSERT_CAPACITY
 #endif
   if (size > sl->capacity) {
     int higher = sl->capacity;
     if (PREDICT_UNLIKELY(size > MAX_CAPACITY/2)) {
+#ifdef ASSERT_CAPACITY
+      /* We don't include this assertion when MAX_CAPACITY == INT_MAX,
+       * since int size; (size <= INT_MAX) makes analysis tools think we're
+       * doing something stupid. */
       tor_assert(size <= MAX_CAPACITY);
+#endif
       higher = MAX_CAPACITY;
     } else {
       while (size > higher)
@@ -80,6 +86,8 @@ smartlist_ensure_capacity(smartlist_t *sl, int size)
     sl->list = tor_reallocarray(sl->list, sizeof(void *),
                                 ((size_t)sl->capacity));
   }
+#undef ASSERT_CAPACITY
+#undef MAX_CAPACITY
 }
 
 /** Append element to the end of the list. */
