@@ -218,6 +218,7 @@ safe_mem_is_zero(const void *mem, size_t sz)
     total |= *ptr++;
   }
 
+  /*coverity[overflow]*/
   return 1 & ((total - 1) >> 8);
 }
 
