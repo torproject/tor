@@ -1084,7 +1084,7 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
         SCMP_CMP(0, SCMP_CMP_EQ, (intptr_t) pr_mem_base));
   if (ret) {
     log_err(LD_BUG,"(Sandbox) munmap protected memory filter fail!");
-    return ret;
+    goto out;
   }
 
   /*
@@ -1103,7 +1103,7 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
       SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ|PROT_WRITE));
   if (ret) {
     log_err(LD_BUG,"(Sandbox) mprotect protected memory filter fail (LT)!");
-    return ret;
+    goto out;
   }
 
   ret = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mprotect),
@@ -1113,7 +1113,7 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
       SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ|PROT_WRITE));
   if (ret) {
     log_err(LD_BUG,"(Sandbox) mprotect protected memory filter fail (GT)!");
-    return ret;
+    goto out;
   }
 
  out:
