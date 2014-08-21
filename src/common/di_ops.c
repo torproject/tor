@@ -130,6 +130,7 @@ tor_memeq(const void *a, const void *b, size_t sz)
    *            1 & ((any_difference - 1) >> 8) == 0
    */
 
+  /*coverity[overflow]*/
   return 1 & ((any_difference - 1) >> 8);
 }
 
