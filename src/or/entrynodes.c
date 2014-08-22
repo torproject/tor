@@ -182,7 +182,7 @@ entry_is_time_to_retry(const entry_guard_t *e, time_t now)
 
   unreachable_for = now - e->unreachable_since;
 
-  for (i = 0; ; i++) {
+  for (i = 0; i < ARRAY_LENGTH(periods); i++) {
     if (unreachable_for <= periods[i].period_duration) {
       ith_deadline_for_retry = e->last_attempted +
                                periods[i].interval_during_period;
@@ -190,6 +190,7 @@ entry_is_time_to_retry(const entry_guard_t *e, time_t now)
       return (now > ith_deadline_for_retry);
     }
   }
+  return 0;
 }
 
 /** Return the node corresponding to <b>e</b>, if <b>e</b> is
