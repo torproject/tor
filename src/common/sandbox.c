@@ -1684,23 +1684,9 @@ sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file)
 }
 
 int
-sandbox_cfg_allow_open_filename_array(sandbox_cfg_t **cfg, ...)
-{
-  (void)cfg;
-  return 0;
-}
-
-int
 sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file)
 {
   (void)cfg; (void)file;
-  return 0;
-}
-
-int
-sandbox_cfg_allow_openat_filename_array(sandbox_cfg_t **cfg, ...)
-{
-  (void)cfg;
   return 0;
 }
 
@@ -1711,26 +1697,12 @@ sandbox_cfg_allow_execve(sandbox_cfg_t **cfg, const char *com)
   (void)cfg; (void)com;
   return 0;
 }
-
-int
-sandbox_cfg_allow_execve_array(sandbox_cfg_t **cfg, ...)
-{
-  (void)cfg;
-  return 0;
-}
 #endif
 
 int
 sandbox_cfg_allow_stat_filename(sandbox_cfg_t **cfg, char *file)
 {
   (void)cfg; (void)file;
-  return 0;
-}
-
-int
-sandbox_cfg_allow_stat_filename_array(sandbox_cfg_t **cfg, ...)
-{
-  (void)cfg;
   return 0;
 }
 
