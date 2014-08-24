@@ -191,7 +191,7 @@ remove_directory(void)
 #undef CACHE_GENERATED_KEYS
 
 static crypto_pk_t *pregen_keys[5] = {NULL, NULL, NULL, NULL, NULL};
-#define N_PREGEN_KEYS ((int)(sizeof(pregen_keys)/sizeof(pregen_keys[0])))
+#define N_PREGEN_KEYS ARRAY_LENGTH(pregen_keys)
 
 /** Generate and return a new keypair for use in unit tests.  If we're using
  * the key cache optimization, we might reuse keys: we only guarantee that

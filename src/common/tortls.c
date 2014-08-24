@@ -782,8 +782,7 @@ static const cipher_info_t CLIENT_CIPHER_INFO_LIST[] = {
 };
 
 /** The length of CLIENT_CIPHER_INFO_LIST and CLIENT_CIPHER_DUMMIES. */
-static const int N_CLIENT_CIPHERS =
-  sizeof(CLIENT_CIPHER_INFO_LIST)/sizeof(CLIENT_CIPHER_INFO_LIST[0]);
+static const int N_CLIENT_CIPHERS = ARRAY_LENGTH(CLIENT_CIPHER_INFO_LIST);
 #endif
 
 #ifndef V2_HANDSHAKE_CLIENT
