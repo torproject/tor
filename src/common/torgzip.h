@@ -55,5 +55,8 @@ tor_zlib_output_t tor_zlib_process(tor_zlib_state_t *state,
                                    int finish);
 void tor_zlib_free(tor_zlib_state_t *state);
 
+size_t tor_zlib_state_size(const tor_zlib_state_t *state);
+size_t tor_zlib_get_total_allocation(void);
+
 #endif
 
