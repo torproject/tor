@@ -2083,7 +2083,6 @@ circuits_handle_oom(size_t current_allocation)
     circ->global_circuitlist_idx = circ_sl_idx;
   } SMARTLIST_FOREACH_END(circ);
 
-
   /* Now sort the connection array ... */
   now_ms_for_buf_cmp = now_ms;
   smartlist_sort(connection_array, conns_compare_by_buffer_age_);

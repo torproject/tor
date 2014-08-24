@@ -99,7 +99,7 @@ static sandbox_cfg_t *filter_dynamic = NULL;
 #undef SCMP_CMP
 #define SCMP_CMP(a,b,c) ((struct scmp_arg_cmp){(a),(b),(c),0})
 #define SCMP_CMP_STR(a,b,c) \
-  ((struct scmp_arg_cmp){(a),(b),(intptr_t)(void*)(c),0})
+  ((struct scmp_arg_cmp) {(a),(b),(intptr_t)(void*)(c),0})
 #define SCMP_CMP4(a,b,c,d) ((struct scmp_arg_cmp){(a),(b),(c),(d)})
 /* We use a wrapper here because these masked comparisons seem to be pretty
  * verbose. Also, it's important to cast to scmp_datum_t before negating the
@@ -1173,28 +1173,6 @@ sandbox_cfg_allow_stat_filename(sandbox_cfg_t **cfg, char *file)
 }
 
 int
-sandbox_cfg_allow_stat_filename_array(sandbox_cfg_t **cfg, ...)
-{
-  int rc = 0;
-  char *fn = NULL;
-
-  va_list ap;
-  va_start(ap, cfg);
-
-  while ((fn = va_arg(ap, char*)) != NULL) {
-    rc = sandbox_cfg_allow_stat_filename(cfg, fn);
-    if (rc) {
-      log_err(LD_BUG,"(Sandbox) sandbox_cfg_allow_stat_filename_array fail");
-      goto end;
-    }
-  }
-
- end:
-  va_end(ap);
-  return 0;
-}
-
-int
 sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file)
 {
   sandbox_cfg_t *elem = NULL;
@@ -1230,28 +1208,6 @@ sandbox_cfg_allow_rename(sandbox_cfg_t **cfg, char *file1, char *file2)
 }
 
 int
-sandbox_cfg_allow_open_filename_array(sandbox_cfg_t **cfg, ...)
-{
-  int rc = 0;
-  char *fn = NULL;
-
-  va_list ap;
-  va_start(ap, cfg);
-
-  while ((fn = va_arg(ap, char*)) != NULL) {
-    rc = sandbox_cfg_allow_open_filename(cfg, fn);
-    if (rc) {
-      log_err(LD_BUG,"(Sandbox) sandbox_cfg_allow_open_filename_array fail");
-      goto end;
-    }
-  }
-
- end:
-  va_end(ap);
-  return 0;
-}
-
-int
 sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file)
 {
   sandbox_cfg_t *elem = NULL;
@@ -1265,28 +1221,6 @@ sandbox_cfg_allow_openat_filename(sandbox_cfg_t **cfg, char *file)
   elem->next = *cfg;
   *cfg = elem;
 
-  return 0;
-}
-
-int
-sandbox_cfg_allow_openat_filename_array(sandbox_cfg_t **cfg, ...)
-{
-  int rc = 0;
-  char *fn = NULL;
-
-  va_list ap;
-  va_start(ap, cfg);
-
-  while ((fn = va_arg(ap, char*)) != NULL) {
-    rc = sandbox_cfg_allow_openat_filename(cfg, fn);
-    if (rc) {
-      log_err(LD_BUG,"(Sandbox) sandbox_cfg_allow_openat_filename_array fail");
-      goto end;
-    }
-  }
-
- end:
-  va_end(ap);
   return 0;
 }
 
@@ -1308,28 +1242,6 @@ sandbox_cfg_allow_execve(sandbox_cfg_t **cfg, const char *com)
   return 0;
 }
 
-int
-sandbox_cfg_allow_execve_array(sandbox_cfg_t **cfg, ...)
-{
-  int rc = 0;
-  char *fn = NULL;
-
-  va_list ap;
-  va_start(ap, cfg);
-
-  while ((fn = va_arg(ap, char*)) != NULL) {
-
-    rc = sandbox_cfg_allow_execve(cfg, fn);
-    if (rc) {
-      log_err(LD_BUG,"(Sandbox) sandbox_cfg_allow_execve_array failed");
-      goto end;
-    }
-  }
-
- end:
-  va_end(ap);
-  return 0;
-}
 #endif
 
 /** Cache entry for getaddrinfo results; used when sandboxing is implemented

@@ -586,3 +586,4 @@ tor_zlib_get_total_allocation(void)
 {
   return total_zlib_allocation;
 }
+
