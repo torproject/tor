@@ -1076,7 +1076,7 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
       SCMP_CMP(0, SCMP_CMP_EQ, (intptr_t) pr_mem_base));
   if (ret) {
     log_err(LD_BUG,"(Sandbox) mremap protected memory filter fail!");
-    return ret;
+    goto out;
   }
 
   // no munmap of the protected base address
