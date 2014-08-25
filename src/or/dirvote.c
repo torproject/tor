@@ -1269,7 +1269,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
                      * is the same flag as votes[j]->known_flags[b]. */
     int *named_flag; /* Index of the flag "Named" for votes[j] */
     int *unnamed_flag; /* Index of the flag "Unnamed" for votes[j] */
-    int chosen_named_idx;
     int n_authorities_measuring_bandwidth;
 
     strmap_t *name_to_id_map = strmap_new();
@@ -1287,7 +1286,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
     unnamed_flag = tor_calloc(sizeof(int), smartlist_len(votes));
     for (i = 0; i < smartlist_len(votes); ++i)
       unnamed_flag[i] = named_flag[i] = -1;
-    chosen_named_idx = smartlist_string_pos(flags, "Named");
 
     /* Build the flag indexes. Note that no vote can have more than 64 members
      * for known_flags, so no value will be greater than 63, so it's safe to
