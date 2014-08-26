@@ -59,28 +59,12 @@ ed25519_sign(ed25519_signature_t *signature_out,
              const uint8_t *msg, size_t len,
              const ed25519_keypair_t *keypair)
 {
-  uint8_t keys[64];
-  uint8_t *tmp;
-  uint64_t tmplen;
 
-  /* XXXX Make crypto_sign in ref10 friendlier so we don't need this stupid
-   * copying. */
-  tor_assert(len < SIZE_T_CEILING - 64);
-  tmplen = ((uint64_t)len) + 64;
-  tmp = tor_malloc(tmplen);
-
-  memcpy(keys, keypair->seckey.seckey, 32);
-  memcpy(keys+32, keypair->pubkey.pubkey, 32);
-
-  if (ed25519_ref10_sign(tmp, &tmplen, msg, len, keys) < 0) {
-    tor_free(tmp);
+  if (ed25519_ref10_sign(signature_out->sig, msg, len,
+                         keypair->seckey.seckey,
+                         keypair->pubkey.pubkey) < 0) {
     return -1;
   }
-
-  memcpy(signature_out->sig, tmp, 64);
-  memwipe(keys, 0, sizeof(keys));
-
-  tor_free(tmp);
 
   return 0;
 }

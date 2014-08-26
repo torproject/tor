@@ -11,8 +11,8 @@ int ed25519_ref10_open(
   const unsigned char *sm,uint64_t smlen,
   const unsigned char *pk);
 int ed25519_ref10_sign(
-  unsigned char *sm,uint64_t *smlen,
+  unsigned char *sig,
   const unsigned char *m,uint64_t mlen,
-  const unsigned char *sk);
+  const unsigned char *sk, const unsigned char *pk);
 
 #endif
