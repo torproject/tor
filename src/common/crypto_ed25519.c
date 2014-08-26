@@ -80,24 +80,8 @@ ed25519_checksig(const ed25519_signature_t *signature,
                  const uint8_t *msg, size_t len,
                  const ed25519_public_key_t *pubkey)
 {
-  uint8_t *smtmp;
-  uint8_t *tmp;
-  uint64_t tmplen;
-  int r;
-
-  tor_assert(len < SIZE_T_CEILING - 64);
-  tmplen = len + 64;
-  tmp = tor_malloc(tmplen);
-  smtmp = tor_malloc(tmplen);
-  memcpy(smtmp, signature->sig, 64);
-  memcpy(smtmp+64, msg, len);
-
-  r = ed25519_ref10_open(tmp, &tmplen, smtmp, tmplen, pubkey->pubkey);
-
-  tor_free(tmp);
-  tor_free(smtmp);
-
-  return r;
+  return
+    ed25519_ref10_open(signature->sig, msg, len, pubkey->pubkey) < 0 ? -1 : 0;
 }
 
 /** Validate every signature among those in <b>checkable</b>, which contains

@@ -7,8 +7,8 @@ int ed25519_ref10_seckey(unsigned char *sk);
 int ed25519_ref10_pubkey(unsigned char *pk,const unsigned char *sk);
 int ed25519_ref10_keygen(unsigned char *pk,unsigned char *sk);
 int ed25519_ref10_open(
-  unsigned char *m,uint64_t *mlen,
-  const unsigned char *sm,uint64_t smlen,
+  const unsigned char *signature,
+  const unsigned char *m,uint64_t mlen,
   const unsigned char *pk);
 int ed25519_ref10_sign(
   unsigned char *sig,

@@ -6,8 +6,8 @@
 #include "sc.h"
 
 int crypto_sign_open(
-  unsigned char *m,uint64_t *mlen,
-  const unsigned char *sm,uint64_t smlen,
+  const unsigned char *signature,
+  const unsigned char *m,uint64_t mlen,
   const unsigned char *pk
 )
 {
@@ -19,30 +19,22 @@ int crypto_sign_open(
   ge_p3 A;
   ge_p2 R;
 
-  if (smlen < 64) goto badsig;
-  if (sm[63] & 224) goto badsig;
+  if (signature[63] & 224) goto badsig;
   if (ge_frombytes_negate_vartime(&A,pk) != 0) goto badsig;
 
   memmove(pkcopy,pk,32);
-  memmove(rcopy,sm,32);
-  memmove(scopy,sm + 32,32);
+  memmove(rcopy,signature,32);
+  memmove(scopy,signature + 32,32);
 
-  memmove(m,sm,smlen);
-  memmove(m + 32,pkcopy,32);
-  crypto_hash_sha512(h,m,smlen);
+  crypto_hash_sha512_3(h, rcopy, 32, pkcopy, 32, m, mlen);
   sc_reduce(h);
 
   ge_double_scalarmult_vartime(&R,h,&A,scopy);
   ge_tobytes(rcheck,&R);
   if (crypto_verify_32(rcheck,rcopy) == 0) {
-    memmove(m,m + 64,smlen - 64);
-    memset(m + smlen - 64,0,64);
-    *mlen = smlen - 64;
     return 0;
   }
 
 badsig:
-  *mlen = -1;
-  memset(m,0,smlen);
   return -1;
 }
