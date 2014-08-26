@@ -3,6 +3,8 @@
 #define SRC_EXT_ED25519_REF10_H_INCLUDED_
 #include <torint.h>
 
+int ed25519_ref10_seckey(unsigned char *sk);
+int ed25519_ref10_pubkey(unsigned char *pk,const unsigned char *sk);
 int ed25519_ref10_keygen(unsigned char *pk,unsigned char *sk);
 int ed25519_ref10_open(
   unsigned char *m,uint64_t *mlen,
