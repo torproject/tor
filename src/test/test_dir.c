@@ -736,10 +736,6 @@ test_dir_param_voting(void)
   /* Do the first tests without adding all the other votes, for
    * networks without many dirauths. */
 
-  res = dirvote_compute_params(votes, 11, 6);
-  test_streq(res, "ab=90 abcd=20 cw=50 x-yz=-99");
-  tor_free(res);
-
   res = dirvote_compute_params(votes, 12, 2);
   test_streq(res, "");
   tor_free(res);
@@ -749,10 +745,6 @@ test_dir_param_voting(void)
   tor_free(res);
 
   smartlist_add(votes, &vote2);
-
-  res = dirvote_compute_params(votes, 11, 2);
-  test_streq(res, "ab=27 abcd=20 cw=5 x-yz=-99");
-  tor_free(res);
 
   res = dirvote_compute_params(votes, 12, 2);
   test_streq(res, "ab=27 cw=5 x-yz=-99");
@@ -768,10 +760,6 @@ test_dir_param_voting(void)
 
   smartlist_add(votes, &vote3);
 
-  res = dirvote_compute_params(votes, 11, 3);
-  test_streq(res, "ab=27 abcd=20 c=60 cw=50 x-yz=-9 zzzzz=101");
-  tor_free(res);
-
   res = dirvote_compute_params(votes, 12, 3);
   test_streq(res, "ab=27 abcd=20 cw=50 x-yz=-9");
   tor_free(res);
@@ -785,10 +773,6 @@ test_dir_param_voting(void)
   tor_free(res);
 
   smartlist_add(votes, &vote4);
-
-  res = dirvote_compute_params(votes, 11, 4);
-  test_streq(res, "ab=90 abcd=20 c=1 cw=50 x-yz=-9 zzzzz=101");
-  tor_free(res);
 
   res = dirvote_compute_params(votes, 12, 4);
   test_streq(res, "ab=90 abcd=20 cw=50 x-yz=-9");
