@@ -6,8 +6,8 @@
 #include "sc.h"
 
 int crypto_sign_open(
-  unsigned char *m,unsigned long long *mlen,
-  const unsigned char *sm,unsigned long long smlen,
+  unsigned char *m,uint64_t *mlen,
+  const unsigned char *sm,uint64_t smlen,
   const unsigned char *pk
 )
 {
