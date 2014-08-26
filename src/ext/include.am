@@ -15,4 +15,67 @@ EXTHEADERS = \
 
 noinst_HEADERS+= $(EXTHEADERS)
 
+src_ext_ed25519_ref10_libed25519_ref10_a_CFLAGS=
+
+src_ext_ed25519_ref10_libed25519_ref10_a_SOURCES= \
+	src/ext/ed25519/ref10/fe_0.c \
+	src/ext/ed25519/ref10/fe_1.c \
+	src/ext/ed25519/ref10/fe_add.c \
+	src/ext/ed25519/ref10/fe_cmov.c \
+	src/ext/ed25519/ref10/fe_copy.c \
+	src/ext/ed25519/ref10/fe_frombytes.c \
+	src/ext/ed25519/ref10/fe_invert.c \
+	src/ext/ed25519/ref10/fe_isnegative.c \
+	src/ext/ed25519/ref10/fe_isnonzero.c \
+	src/ext/ed25519/ref10/fe_mul.c \
+	src/ext/ed25519/ref10/fe_neg.c \
+	src/ext/ed25519/ref10/fe_pow22523.c \
+	src/ext/ed25519/ref10/fe_sq.c \
+	src/ext/ed25519/ref10/fe_sq2.c \
+	src/ext/ed25519/ref10/fe_sub.c \
+	src/ext/ed25519/ref10/fe_tobytes.c \
+	src/ext/ed25519/ref10/ge_add.c \
+	src/ext/ed25519/ref10/ge_double_scalarmult.c \
+	src/ext/ed25519/ref10/ge_frombytes.c \
+	src/ext/ed25519/ref10/ge_madd.c \
+	src/ext/ed25519/ref10/ge_msub.c \
+	src/ext/ed25519/ref10/ge_p1p1_to_p2.c \
+	src/ext/ed25519/ref10/ge_p1p1_to_p3.c \
+	src/ext/ed25519/ref10/ge_p2_0.c \
+	src/ext/ed25519/ref10/ge_p2_dbl.c \
+	src/ext/ed25519/ref10/ge_p3_0.c \
+	src/ext/ed25519/ref10/ge_p3_dbl.c \
+	src/ext/ed25519/ref10/ge_p3_to_cached.c \
+	src/ext/ed25519/ref10/ge_p3_to_p2.c \
+	src/ext/ed25519/ref10/ge_p3_tobytes.c \
+	src/ext/ed25519/ref10/ge_precomp_0.c \
+	src/ext/ed25519/ref10/ge_scalarmult_base.c \
+	src/ext/ed25519/ref10/ge_sub.c \
+	src/ext/ed25519/ref10/ge_tobytes.c \
+	src/ext/ed25519/ref10/keypair.c \
+	src/ext/ed25519/ref10/open.c \
+	src/ext/ed25519/ref10/sc_muladd.c \
+	src/ext/ed25519/ref10/sc_reduce.c \
+	src/ext/ed25519/ref10/sign.c
+
+ED25519_REF10_HDRS = \
+	src/ext/ed25519/ref10/api.h \
+	src/ext/ed25519/ref10/base.h \
+	src/ext/ed25519/ref10/base2.h \
+	src/ext/ed25519/ref10/d.h \
+	src/ext/ed25519/ref10/d2.h \
+	src/ext/ed25519/ref10/fe.h \
+	src/ext/ed25519/ref10/ge.h \
+	src/ext/ed25519/ref10/ge_add.h \
+	src/ext/ed25519/ref10/ge_madd.h \
+	src/ext/ed25519/ref10/ge_msub.h \
+	src/ext/ed25519/ref10/ge_p2_dbl.h \
+	src/ext/ed25519/ref10/ge_sub.h \
+	src/ext/ed25519/ref10/pow22523.h \
+	src/ext/ed25519/ref10/pow225521.h \
+	src/ext/ed25519/ref10/sc.h \
+	src/ext/ed25519/ref10/sqrtm1.h
+
+noinst_HEADERS += $(ED25519_REF10_HDRS)
+noinst_LIBRARIES += src/ext/ed25519/ref10/libed25519_ref10.a
 

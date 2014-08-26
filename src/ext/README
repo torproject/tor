@@ -49,3 +49,9 @@ siphash.h
     Marek Majkowski's implementation of siphash 2-4, a secure keyed
     hash algorithm to avoid collision-based DoS attacks against hash
     tables.
+
+ed25519/ref10/*
+
+    Daniel Bernsten's portable ref10 implementation of ed25519.
+    Public domain.
+
