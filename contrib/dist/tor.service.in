@@ -19,6 +19,9 @@ PrivateTmp = yes
 DeviceAllow = /dev/null rw
 DeviceAllow = /dev/urandom r
 InaccessibleDirectories = /home
+ReadOnlyDirectories = /
+ReadWriteDirectories = @LOCALSTATEDIR@/lib/tor
+ReadWriteDirectories = @LOCALSTATEDIR@/log/tor
 
 [Install]
 WantedBy = multi-user.target
