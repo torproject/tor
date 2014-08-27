@@ -1,0 +1,8 @@
+  o Major bugfixes:
+    - Resume expanding abbreviations for command-line options. The fix
+      for bug 4647 accidentally removed our hack from bug 586 that rewrote
+      HashedControlPassword to __HashedControlSessionPassword when it
+      appears on the commandline (which allowed the user to set her
+      own HashedControlPassword in the torrc file while the controller
+      generates a fresh session password for each run). Fixes bug 12948;
+      bugfix on 0.2.5.1-alpha.
