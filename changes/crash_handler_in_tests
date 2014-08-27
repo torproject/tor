@@ -1,0 +1,3 @@
+  o Minor features:
+    - Enable the backtrace handler (where supported) when running the
+      unit tests.

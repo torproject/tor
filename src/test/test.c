@@ -43,6 +43,7 @@ long int lround(double x);
 double fabs(double x);
 
 #include "or.h"
+#include "backtrace.h"
 #include "buffers.h"
 #include "circuitlist.h"
 #include "circuitstats.h"
@@ -1379,6 +1380,7 @@ main(int c, const char **v)
   options = options_new();
   tor_threads_init();
   init_logging();
+  configure_backtrace_handler(get_version());
 
   for (i_out = i = 1; i < c; ++i) {
     if (!strcmp(v[i], "--warn")) {
