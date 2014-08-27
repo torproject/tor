@@ -58,8 +58,8 @@ static char geoip6_digest[DIGEST_LEN];
 /** Return the index of the <b>country</b>'s entry in the GeoIP
  * country list if it is a valid 2-letter country code, otherwise
  * return -1. */
-country_t
-geoip_get_country(const char *country)
+MOCK_IMPL(country_t,
+geoip_get_country,(const char *country))
 {
   void *idxplus1_;
   intptr_t idx;
@@ -396,8 +396,8 @@ geoip_get_country_by_ipv6(const struct in6_addr *addr)
  * the 'unknown country'.  The return value will always be less than
  * geoip_get_n_countries().  To decode it, call geoip_get_country_name().
  */
-int
-geoip_get_country_by_addr(const tor_addr_t *addr)
+MOCK_IMPL(int,
+geoip_get_country_by_addr,(const tor_addr_t *addr))
 {
   if (tor_addr_family(addr) == AF_INET) {
     return geoip_get_country_by_ipv4(tor_addr_to_ipv4h(addr));
@@ -409,8 +409,8 @@ geoip_get_country_by_addr(const tor_addr_t *addr)
 }
 
 /** Return the number of countries recognized by the GeoIP country list. */
-int
-geoip_get_n_countries(void)
+MOCK_IMPL(int,
+geoip_get_n_countries,(void))
 {
   if (!geoip_countries)
     init_geoip_countries();
@@ -430,8 +430,8 @@ geoip_get_country_name(country_t num)
 }
 
 /** Return true iff we have loaded a GeoIP database.*/
-int
-geoip_is_loaded(sa_family_t family)
+MOCK_IMPL(int,
+geoip_is_loaded,(sa_family_t family))
 {
   tor_assert(family == AF_INET || family == AF_INET6);
   if (geoip_countries == NULL)

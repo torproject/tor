@@ -21,12 +21,12 @@ STATIC int geoip_get_country_by_ipv6(const struct in6_addr *addr);
 #endif
 int should_record_bridge_info(const or_options_t *options);
 int geoip_load_file(sa_family_t family, const char *filename);
-int geoip_get_country_by_addr(const tor_addr_t *addr);
-int geoip_get_n_countries(void);
+MOCK_DECL(int, geoip_get_country_by_addr, (const tor_addr_t *addr));
+MOCK_DECL(int, geoip_get_n_countries, (void));
 const char *geoip_get_country_name(country_t num);
-int geoip_is_loaded(sa_family_t family);
+MOCK_DECL(int, geoip_is_loaded, (sa_family_t family));
 const char *geoip_db_digest(sa_family_t family);
-country_t geoip_get_country(const char *countrycode);
+MOCK_DECL(country_t, geoip_get_country, (const char *countrycode));
 
 void geoip_note_client_seen(geoip_client_action_t action,
                             const tor_addr_t *addr, const char *transport_name,

@@ -37,8 +37,8 @@ routerinfo_t *router_parse_entry_from_string(const char *s, const char *end,
                                              const char *prepend_annotations);
 extrainfo_t *extrainfo_parse_entry_from_string(const char *s, const char *end,
                          int cache_copy, struct digest_ri_map_t *routermap);
-addr_policy_t *router_parse_addr_policy_item_from_string(const char *s,
-                                                  int assume_action);
+MOCK_DECL(addr_policy_t *, router_parse_addr_policy_item_from_string,
+    (const char *s, int assume_action));
 version_status_t tor_version_is_obsolete(const char *myversion,
                                          const char *versionlist);
 int tor_version_supports_microdescriptors(const char *platform);

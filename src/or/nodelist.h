@@ -31,7 +31,8 @@ smartlist_t *nodelist_find_nodes_with_microdesc(const microdesc_t *md);
 void nodelist_free_all(void);
 void nodelist_assert_ok(void);
 
-const node_t *node_get_by_nickname(const char *nickname, int warn_if_unnamed);
+MOCK_DECL(const node_t *, node_get_by_nickname,
+    (const char *nickname, int warn_if_unnamed));
 void node_get_verbose_nickname(const node_t *node,
                                char *verbose_name_out);
 void node_get_verbose_nickname_by_id(const char *id_digest,
@@ -60,7 +61,7 @@ void node_get_pref_orport(const node_t *node, tor_addr_port_t *ap_out);
 void node_get_pref_ipv6_orport(const node_t *node, tor_addr_port_t *ap_out);
 int node_has_curve25519_onion_key(const node_t *node);
 
-smartlist_t *nodelist_get_list(void);
+MOCK_DECL(smartlist_t *, nodelist_get_list, (void));
 
 /* Temporary during transition to multiple addresses.  */
 void node_get_addr(const node_t *node, tor_addr_t *addr_out);

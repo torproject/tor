@@ -3243,8 +3243,8 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
  * AF_UNSPEC for '*'.  Use policy_expand_unspec() to turn this into a pair
  * of AF_INET and AF_INET6 items.
  */
-addr_policy_t *
-router_parse_addr_policy_item_from_string(const char *s, int assume_action)
+MOCK_IMPL(addr_policy_t *,
+router_parse_addr_policy_item_from_string,(const char *s, int assume_action))
 {
   directory_token_t *tok = NULL;
   const char *cp, *eos;

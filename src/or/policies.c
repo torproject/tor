@@ -769,9 +769,9 @@ compare_unknown_tor_addr_to_addr_policy(uint16_t port,
  * We could do better by assuming that some ranges never match typical
  * addresses (127.0.0.1, and so on).  But we'll try this for now.
  */
-addr_policy_result_t
-compare_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port,
-                                const smartlist_t *policy)
+MOCK_IMPL(addr_policy_result_t,
+compare_tor_addr_to_addr_policy,(const tor_addr_t *addr, uint16_t port,
+                                 const smartlist_t *policy))
 {
   if (!policy) {
     /* no policy? accept all. */

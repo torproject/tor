@@ -27,8 +27,8 @@ typedef struct smartlist_t {
   /** @} */
 } smartlist_t;
 
-smartlist_t *smartlist_new(void);
-void smartlist_free(smartlist_t *sl);
+MOCK_DECL(smartlist_t *, smartlist_new, (void));
+MOCK_DECL(void, smartlist_free, (smartlist_t *sl));
 void smartlist_clear(smartlist_t *sl);
 void smartlist_add(smartlist_t *sl, void *element);
 void smartlist_add_all(smartlist_t *sl, const smartlist_t *s2);
@@ -328,11 +328,11 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
 #define DECLARE_MAP_FNS(maptype, keytype, prefix)                       \
   typedef struct maptype maptype;                                       \
   typedef struct prefix##entry_t *prefix##iter_t;                       \
-  maptype* prefix##new(void);                                           \
+  MOCK_DECL(maptype*, prefix##new, (void));                             \
   void* prefix##set(maptype *map, keytype key, void *val);              \
   void* prefix##get(const maptype *map, keytype key);                   \
   void* prefix##remove(maptype *map, keytype key);                      \
-  void prefix##free(maptype *map, void (*free_val)(void*));             \
+  MOCK_DECL(void, prefix##free, (maptype *map, void (*free_val)(void*))); \
   int prefix##isempty(const maptype *map);                              \
   int prefix##size(const maptype *map);                                 \
   prefix##iter_t *prefix##iter_init(maptype *map);                      \

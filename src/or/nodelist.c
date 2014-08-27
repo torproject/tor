@@ -474,8 +474,8 @@ nodelist_assert_ok(void)
 /** Return a list of a node_t * for every node we know about.  The caller
  * MUST NOT modify the list. (You can set and clear flags in the nodes if
  * you must, but you must not add or remove nodes.) */
-smartlist_t *
-nodelist_get_list(void)
+MOCK_IMPL(smartlist_t *,
+nodelist_get_list,(void))
 {
   init_nodelist();
   return the_nodelist->nodes;
@@ -517,8 +517,8 @@ node_get_by_hex_id(const char *hex_id)
  * the corresponding node_t, or NULL if none exists.  Warn the user if
  * <b>warn_if_unnamed</b> is set, and they have specified a router by
  * nickname, but the Named flag isn't set for that router. */
-const node_t *
-node_get_by_nickname(const char *nickname, int warn_if_unnamed)
+MOCK_IMPL(const node_t *,
+node_get_by_nickname,(const char *nickname, int warn_if_unnamed))
 {
   const node_t *node;
   if (!the_nodelist)

@@ -28,8 +28,8 @@
 
 /** Allocate and return an empty smartlist.
  */
-smartlist_t *
-smartlist_new(void)
+MOCK_IMPL(smartlist_t *,
+smartlist_new,(void))
 {
   smartlist_t *sl = tor_malloc(sizeof(smartlist_t));
   sl->num_used = 0;
@@ -41,8 +41,8 @@ smartlist_new(void)
 /** Deallocate a smartlist.  Does not release storage associated with the
  * list's elements.
  */
-void
-smartlist_free(smartlist_t *sl)
+MOCK_IMPL(void,
+smartlist_free,(smartlist_t *sl))
 {
   if (!sl)
     return;
@@ -1062,8 +1062,8 @@ HT_GENERATE(digestmap_impl, digestmap_entry_t, node, digestmap_entry_hash,
 
 /** Constructor to create a new empty map from strings to void*'s.
  */
-strmap_t *
-strmap_new(void)
+MOCK_IMPL(strmap_t *,
+strmap_new,(void))
 {
   strmap_t *result;
   result = tor_malloc(sizeof(strmap_t));
@@ -1073,8 +1073,8 @@ strmap_new(void)
 
 /** Constructor to create a new empty map from digests to void*'s.
  */
-digestmap_t *
-digestmap_new(void)
+MOCK_IMPL(digestmap_t *,
+digestmap_new,(void))
 {
   digestmap_t *result;
   result = tor_malloc(sizeof(digestmap_t));
@@ -1427,8 +1427,8 @@ digestmap_iter_done(digestmap_iter_t *iter)
  * entries.  If free_val is provided, it is invoked on every value in
  * <b>map</b>.
  */
-void
-strmap_free(strmap_t *map, void (*free_val)(void*))
+MOCK_IMPL(void,
+strmap_free,(strmap_t *map, void (*free_val)(void*)))
 {
   strmap_entry_t **ent, **next, *this;
   if (!map)
@@ -1451,8 +1451,8 @@ strmap_free(strmap_t *map, void (*free_val)(void*))
  * entries.  If free_val is provided, it is invoked on every value in
  * <b>map</b>.
  */
-void
-digestmap_free(digestmap_t *map, void (*free_val)(void*))
+MOCK_IMPL(void,
+digestmap_free, (digestmap_t *map, void (*free_val)(void*)))
 {
   digestmap_entry_t **ent, **next, *this;
   if (!map)

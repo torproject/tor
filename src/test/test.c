@@ -1324,6 +1324,7 @@ extern struct testcase_t routerkeys_tests[];
 extern struct testcase_t oom_tests[];
 extern struct testcase_t policy_tests[];
 extern struct testcase_t status_tests[];
+extern struct testcase_t routerset_tests[];
 
 static struct testgroup_t testgroups[] = {
   { "", test_array },
@@ -1355,6 +1356,7 @@ static struct testgroup_t testgroups[] = {
   { "oom/", oom_tests },
   { "policy/" , policy_tests },
   { "status/" , status_tests },
+  { "routerset/" , routerset_tests },
   END_OF_GROUPS
 };
 
