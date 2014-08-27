@@ -19,6 +19,7 @@ PrivateTmp = yes
 DeviceAllow = /dev/null rw
 DeviceAllow = /dev/urandom r
 InaccessibleDirectories = /home
+NoNewPrivileges = yes
 
 [Install]
 WantedBy = multi-user.target
