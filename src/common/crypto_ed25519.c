@@ -219,6 +219,41 @@ ed25519_public_key_from_curve25519_public_key(ed25519_public_key_t *pubkey,
                                                      signbit);
 }
 
+/**
+ * Given an ed25519 keypair in <b>inp</b>, generate a corresponding
+ * ed25519 keypair in <b>out</b>, blinded by the corresponding 32-byte input
+ * in 'param'.
+ *
+ */
+int
+ed25519_keypair_blind(ed25519_keypair_t *out,
+                      const ed25519_keypair_t *inp,
+                      const uint8_t *param)
+{
+  ed25519_public_key_t pubkey_check;
+
+  ed25519_ref10_derive_secret_key(out->seckey.seckey,
+                                  inp->seckey.seckey, param);
+
+  ed25519_public_blind(&pubkey_check, &inp->pubkey, param);
+  ed25519_public_key_generate(&out->pubkey, &out->seckey);
+
+  tor_assert(fast_memeq(pubkey_check.pubkey, out->pubkey.pubkey, 32));
+
+  memwipe(&pubkey_check, 0, sizeof(pubkey_check));
+
+  return 0;
+}
+
+int
+ed25519_public_blind(ed25519_public_key_t *out,
+                     const ed25519_public_key_t *inp,
+                     const uint8_t *param)
+{
+  ed25519_ref10_derive_public_key(out->pubkey, inp->pubkey, param);
+  return 0;
+}
+
 /** DOCDOC */
 int
 ed25519_seckey_write_to_file(const ed25519_secret_key_t *seckey,

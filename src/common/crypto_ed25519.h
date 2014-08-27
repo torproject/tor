@@ -75,6 +75,12 @@ int ed25519_keypair_from_curve25519_keypair(ed25519_keypair_t *out,
 int ed25519_public_key_from_curve25519_public_key(ed25519_public_key_t *pubkey,
                                      const curve25519_public_key_t *pubkey_in,
                                      int signbit);
+int ed25519_keypair_blind(ed25519_keypair_t *out,
+                          const ed25519_keypair_t *inp,
+                          const uint8_t *param);
+int ed25519_public_blind(ed25519_public_key_t *out,
+                         const ed25519_public_key_t *inp,
+                         const uint8_t *param);
 
 #endif
 
@@ -99,7 +105,6 @@ int ed25519_pubkey_write_to_file(const ed25519_public_key_t *pubkey,
 int ed25519_pubkey_read_from_file(ed25519_public_key_t *pubkey_out,
                                   char **tag_out,
                                   const char *filename);
-
 
 #endif
 

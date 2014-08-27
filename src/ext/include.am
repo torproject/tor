@@ -57,7 +57,8 @@ src_ext_ed25519_ref10_libed25519_ref10_a_SOURCES= \
 	src/ext/ed25519/ref10/sc_muladd.c \
 	src/ext/ed25519/ref10/sc_reduce.c \
 	src/ext/ed25519/ref10/sign.c \
-	src/ext/ed25519/ref10/keyconv.c
+	src/ext/ed25519/ref10/keyconv.c \
+	src/ext/ed25519/ref10/blinding.c
 
 ED25519_REF10_HDRS = \
 	src/ext/ed25519/ref10/api.h \

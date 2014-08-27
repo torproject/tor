@@ -1409,6 +1409,53 @@ test_crypto_ed25519_convert(void *arg)
 }
 
 static void
+test_crypto_ed25519_blinding(void *arg)
+{
+  const uint8_t msg[] =
+    "Eyes I dare not meet in dreams / In death's dream kingdom";
+
+  const int N = 30;
+  int i;
+  (void)arg;
+
+  for (i = 0; i < N; ++i) {
+    uint8_t blinding[32];
+    ed25519_keypair_t ed25519_keypair;
+    ed25519_keypair_t ed25519_keypair_blinded;
+    ed25519_public_key_t ed25519_pubkey_blinded;
+
+    ed25519_signature_t sig;
+
+    crypto_rand((char*) blinding, sizeof(blinding));
+
+    tt_int_op(0,==,ed25519_keypair_generate(&ed25519_keypair, 0));
+    tt_int_op(0,==,ed25519_keypair_blind(&ed25519_keypair_blinded,
+                                         &ed25519_keypair, blinding));
+
+    tt_int_op(0,==,ed25519_public_blind(&ed25519_pubkey_blinded,
+                                        &ed25519_keypair.pubkey, blinding));
+
+    tt_mem_op(ed25519_pubkey_blinded.pubkey, ==,
+              ed25519_keypair_blinded.pubkey.pubkey, 32);
+
+    tt_int_op(0,==,ed25519_sign(&sig, msg, sizeof(msg),
+                                &ed25519_keypair_blinded));
+
+    tt_int_op(0,==,ed25519_checksig(&sig, msg, sizeof(msg),
+                                    &ed25519_pubkey_blinded));
+
+    tt_int_op(-1,==,ed25519_checksig(&sig, msg, sizeof(msg)-1,
+                                     &ed25519_pubkey_blinded));
+    sig.sig[0] ^= 15;
+    tt_int_op(-1,==,ed25519_checksig(&sig, msg, sizeof(msg),
+                                     &ed25519_pubkey_blinded));
+  }
+
+ done:
+  ;
+}
+
+static void
 test_crypto_siphash(void *arg)
 {
   /* From the reference implementation, taking
@@ -1549,6 +1596,7 @@ struct testcase_t crypto_tests[] = {
   { "ed25519_test_vectors", test_crypto_ed25519_test_vectors, 0, NULL, NULL },
   { "ed25519_encode", test_crypto_ed25519_encode, 0, NULL, NULL },
   { "ed25519_convert", test_crypto_ed25519_convert, 0, NULL, NULL },
+  { "ed25519_blinding", test_crypto_ed25519_blinding, 0, NULL, NULL },
 #endif
   { "siphash", test_crypto_siphash, 0, NULL, NULL },
   END_OF_TESTCASES

@@ -20,5 +20,11 @@ int ed25519_ref10_sign(
 int ed25519_ref10_pubkey_from_curve25519_pubkey(unsigned char *out,
                                                 const unsigned char *inp,
                                                 int signbit);
+int ed25519_ref10_derive_secret_key(unsigned char *out,
+                              const unsigned char *inp,
+                              const unsigned char *param);
+int ed25519_ref10_derive_public_key(unsigned char *out,
+                              const unsigned char *inp,
+                              const unsigned char *param);
 
 #endif
