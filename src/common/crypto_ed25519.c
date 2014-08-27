@@ -21,10 +21,15 @@ int
 ed25519_secret_key_generate(ed25519_secret_key_t *seckey_out,
                         int extra_strong)
 {
-  (void) extra_strong;
-  if (ed25519_ref10_seckey(seckey_out->seckey) < 0)
-    return -1;
-  return 0;
+  int r;
+  uint8_t seed[32];
+  if (! extra_strong || crypto_strongest_rand(seed, sizeof(seed)) < 0)
+    crypto_rand((char*)seed, sizeof(seed));
+
+  r = ed25519_ref10_seckey_expand(seckey_out->seckey, seed);
+  memwipe(seed, 0, sizeof(seed));
+
+  return r < 0 ? -1 : 0;
 }
 
 int
@@ -51,10 +56,10 @@ ed25519_public_key_generate(ed25519_public_key_t *pubkey_out,
 int
 ed25519_keypair_generate(ed25519_keypair_t *keypair_out, int extra_strong)
 {
-  (void) extra_strong;
-
-  if (ed25519_ref10_keygen(keypair_out->pubkey.pubkey,
-                           keypair_out->seckey.seckey)<0)
+  if (ed25519_secret_key_generate(&keypair_out->seckey, extra_strong) < 0)
+    return -1;
+  if (ed25519_public_key_generate(&keypair_out->pubkey,
+                                  &keypair_out->seckey)<0)
     return -1;
   return 0;
 }
