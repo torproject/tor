@@ -1370,6 +1370,45 @@ test_crypto_ed25519_encode(void *arg)
 }
 
 static void
+test_crypto_ed25519_convert(void *arg)
+{
+  const uint8_t msg[] =
+    "The eyes are not here / There are no eyes here.";
+  const int N = 30;
+  int i;
+  (void)arg;
+
+  for (i = 0; i < N; ++i) {
+    curve25519_keypair_t curve25519_keypair;
+    ed25519_keypair_t ed25519_keypair;
+    ed25519_public_key_t ed25519_pubkey;
+
+    int bit=0;
+    ed25519_signature_t sig;
+
+    tt_int_op(0,==,curve25519_keypair_generate(&curve25519_keypair, i&1));
+    tt_int_op(0,==,ed25519_keypair_from_curve25519_keypair(
+                              &ed25519_keypair, &bit, &curve25519_keypair));
+    tt_int_op(0,==,ed25519_public_key_from_curve25519_public_key(
+                        &ed25519_pubkey, &curve25519_keypair.pubkey, bit));
+    tt_mem_op(ed25519_pubkey.pubkey, ==, ed25519_keypair.pubkey.pubkey, 32);
+
+    tt_int_op(0,==,ed25519_sign(&sig, msg, sizeof(msg), &ed25519_keypair));
+    tt_int_op(0,==,ed25519_checksig(&sig, msg, sizeof(msg),
+                                    &ed25519_pubkey));
+
+    tt_int_op(-1,==,ed25519_checksig(&sig, msg, sizeof(msg)-1,
+                                     &ed25519_pubkey));
+    sig.sig[0] ^= 15;
+    tt_int_op(-1,==,ed25519_checksig(&sig, msg, sizeof(msg),
+                                     &ed25519_pubkey));
+  }
+
+ done:
+  ;
+}
+
+static void
 test_crypto_siphash(void *arg)
 {
   /* From the reference implementation, taking
@@ -1509,6 +1548,7 @@ struct testcase_t crypto_tests[] = {
   { "ed25519_simple", test_crypto_ed25519_simple, 0, NULL, NULL },
   { "ed25519_test_vectors", test_crypto_ed25519_test_vectors, 0, NULL, NULL },
   { "ed25519_encode", test_crypto_ed25519_encode, 0, NULL, NULL },
+  { "ed25519_convert", test_crypto_ed25519_convert, 0, NULL, NULL },
 #endif
   { "siphash", test_crypto_siphash, 0, NULL, NULL },
   END_OF_TESTCASES

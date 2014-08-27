@@ -17,6 +17,8 @@
 
 #include "ed25519/ref10/ed25519_ref10.h"
 
+#include <openssl/sha.h>
+
 int
 ed25519_secret_key_generate(ed25519_secret_key_t *seckey_out,
                         int extra_strong)
@@ -159,6 +161,62 @@ ed25519_checksig_batch(int *okay_out,
 #endif
 
   return res;
+}
+
+/**
+ * Given a curve25519 keypair in <b>inp</b>, generate a corresponding
+ * ed25519 keypair in <b>out</b>, and set <b>signbit_out</b> to the
+ * sign bit of the X coordinate of the ed25519 key.
+ *
+ * NOTE THAT IT IS PROBABLY NOT SAFE TO USE THE GENERATED KEY FOR ANYTHING
+ * OUTSIDE OF WHAT'S PRESENTED IN PROPOSAL 228.  In particular, it's probably
+ * not a great idea to use it to sign attacker-supplied anything.
+ */
+int
+ed25519_keypair_from_curve25519_keypair(ed25519_keypair_t *out,
+                                        int *signbit_out,
+                                        const curve25519_keypair_t *inp)
+{
+  const char string[] = "Derive high part of ed25519 key from curve25519 key";
+  ed25519_public_key_t pubkey_check;
+  SHA512_CTX ctx;
+  uint8_t sha512_output[64];
+
+  memcpy(out->seckey.seckey, inp->seckey.secret_key, 32);
+  SHA512_Init(&ctx);
+  SHA512_Update(&ctx, out->seckey.seckey, 32);
+  SHA512_Update(&ctx, string, sizeof(string));
+  SHA512_Final(sha512_output, &ctx);
+  memcpy(out->seckey.seckey + 32, sha512_output, 32);
+
+  ed25519_public_key_generate(&out->pubkey, &out->seckey);
+
+  *signbit_out = out->pubkey.pubkey[31] >> 7;
+
+  ed25519_public_key_from_curve25519_public_key(&pubkey_check, &inp->pubkey,
+                                                *signbit_out);
+
+  tor_assert(fast_memeq(pubkey_check.pubkey, out->pubkey.pubkey, 32));
+
+  memwipe(&pubkey_check, 0, sizeof(pubkey_check));
+  memwipe(&ctx, 0, sizeof(ctx));
+  memwipe(sha512_output, 0, sizeof(sha512_output));
+
+  return 0;
+}
+
+/**
+ * Given a curve25519 public key and sign bit of X coordinate of the ed25519
+ * public key, generate the corresponding ed25519 public key.
+ */
+int
+ed25519_public_key_from_curve25519_public_key(ed25519_public_key_t *pubkey,
+                                     const curve25519_public_key_t *pubkey_in,
+                                     int signbit)
+{
+  return ed25519_ref10_pubkey_from_curve25519_pubkey(pubkey->pubkey,
+                                                     pubkey_in->public_key,
+                                                     signbit);
 }
 
 /** DOCDOC */

@@ -16,4 +16,9 @@ int ed25519_ref10_sign(
   const unsigned char *m,uint64_t mlen,
   const unsigned char *sk, const unsigned char *pk);
 
+/* Added in Tor */
+int ed25519_ref10_pubkey_from_curve25519_pubkey(unsigned char *out,
+                                                const unsigned char *inp,
+                                                int signbit);
+
 #endif

@@ -67,6 +67,15 @@ typedef struct {
 int ed25519_checksig_batch(int *okay_out,
                            const ed25519_checkable_t *checkable,
                            int n_checkable);
+
+int ed25519_keypair_from_curve25519_keypair(ed25519_keypair_t *out,
+                                            int *signbit_out,
+                                            const curve25519_keypair_t *inp);
+
+int ed25519_public_key_from_curve25519_public_key(ed25519_public_key_t *pubkey,
+                                     const curve25519_public_key_t *pubkey_in,
+                                     int signbit);
+
 #endif
 
 #define ED25519_BASE64_LEN 43
