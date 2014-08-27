@@ -28,6 +28,15 @@ ed25519_secret_key_generate(ed25519_secret_key_t *seckey_out,
 }
 
 int
+ed25519_secret_key_from_seed(ed25519_secret_key_t *seckey_out,
+                             const uint8_t *seed)
+{
+  if (ed25519_ref10_seckey_expand(seckey_out->seckey, seed) < 0)
+    return -1;
+  return 0;
+}
+
+int
 ed25519_public_key_generate(ed25519_public_key_t *pubkey_out,
                         const ed25519_secret_key_t *seckey)
 {

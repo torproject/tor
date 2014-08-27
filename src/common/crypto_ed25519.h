@@ -8,7 +8,8 @@
 #include "torint.h"
 
 #define ED25519_PUBKEY_LEN 32
-#define ED25519_SECKEY_LEN 32
+#define ED25519_SECKEY_LEN 64
+#define ED25519_SECKEY_SEED_LEN 32
 #define ED25519_SIG_LEN 64
 
 /** An Ed25519 signature. */
@@ -35,6 +36,9 @@ typedef struct {
 #ifdef CURVE25519_ENABLED
 int ed25519_secret_key_generate(ed25519_secret_key_t *seckey_out,
                             int extra_strong);
+int ed25519_secret_key_from_seed(ed25519_secret_key_t *seckey_out,
+                                 const uint8_t *seed);
+
 int ed25519_public_key_generate(ed25519_public_key_t *pubkey_out,
                             const ed25519_secret_key_t *seckey);
 int ed25519_keypair_generate(ed25519_keypair_t *keypair_out, int extra_strong);

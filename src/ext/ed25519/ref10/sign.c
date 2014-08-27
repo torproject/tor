@@ -10,17 +10,11 @@ int crypto_sign(
   const unsigned char *sk,const unsigned char *pk
 )
 {
-  unsigned char az[64];
   unsigned char nonce[64];
   unsigned char hram[64];
   ge_p3 R;
 
-  crypto_hash_sha512(az,sk,32);
-  az[0] &= 248;
-  az[31] &= 63;
-  az[31] |= 64;
-
-  crypto_hash_sha512_2(nonce, az+32, 32, m, mlen);
+  crypto_hash_sha512_2(nonce, sk+32, 32, m, mlen);
 
   sc_reduce(nonce);
   ge_scalarmult_base(&R,nonce);
@@ -28,7 +22,7 @@ int crypto_sign(
 
   crypto_hash_sha512_3(hram, sig, 32, pk, 32, m, mlen);
   sc_reduce(hram);
-  sc_muladd(sig + 32,hram,az,nonce);
+  sc_muladd(sig + 32,hram,sk,nonce);
 
   return 0;
 }

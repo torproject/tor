@@ -1318,10 +1318,12 @@ test_crypto_ed25519_test_vectors(void *arg)
   for (i = 0; items[i].pk; ++i) {
     ed25519_keypair_t kp;
     ed25519_signature_t sig;
+    uint8_t sk_seed[32];
     uint8_t *msg;
     size_t msg_len;
-    base16_decode((char*)kp.seckey.seckey, sizeof(kp.seckey.seckey),
+    base16_decode((char*)sk_seed, sizeof(sk_seed),
                   items[i].sk, 64);
+    ed25519_secret_key_from_seed(&kp.seckey, sk_seed);
     tt_int_op(0, ==, ed25519_public_key_generate(&kp.pubkey, &kp.seckey));
     test_memeq_hex(kp.pubkey.pubkey, items[i].pk);
 
