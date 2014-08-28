@@ -368,10 +368,12 @@ rend_config_services(const or_options_t *options, int validate_only)
   for (line = options->RendConfigLines; line; line = line->next) {
     if (!strcasecmp(line->key, "HiddenServiceDir")) {
       if (service) { /* register the one we just finished parsing */
-        if (validate_only)
+        if (validate_only) {
           rend_service_free(service);
-        else
+        }
+        else {
           rend_add_service(service);
+        }
       }
       service = tor_malloc_zero(sizeof(rend_service_t));
       service->directory = tor_strdup(line->value);
@@ -513,10 +515,12 @@ rend_config_services(const or_options_t *options, int validate_only)
     }
   }
   if (service) {
-    if (validate_only)
+    if (validate_only) {
       rend_service_free(service);
-    else
+    }
+    else {
       rend_add_service(service);
+    }
   }
 
   /* If this is a reload and there were hidden services configured before,
@@ -693,10 +697,23 @@ rend_service_load_keys(rend_service_t *s)
 {
   char fname[512];
   char buf[128];
+  cpd_check_t  check_opts = CPD_CREATE;
 
+  if (get_options()->HiddenServiceGroupReadable) {
+    check_opts |= CPD_GROUP_READ;
+  }
   /* Check/create directory */
-  if (check_private_dir(s->directory, CPD_CREATE, get_options()->User) < 0)
+  if (check_private_dir(s->directory, check_opts, get_options()->User) < 0) {
     return -1;
+  }
+#ifndef _WIN32
+  if (get_options()->HiddenServiceGroupReadable) {
+    /** Only new dirs created get new opts, also enforce group read. */
+    if (chmod(s->directory, STAT_RWXU|STAT_RGRP|STAT_XGRP)) {
+      log_warn(LD_FS,"Unable to make %s group-readable.", s->directory);
+    }
+  }
+#endif
 
   /* Load key */
   if (strlcpy(fname,s->directory,sizeof(fname)) >= sizeof(fname) ||
@@ -733,6 +750,15 @@ rend_service_load_keys(rend_service_t *s)
     memwipe(buf, 0, sizeof(buf));
     return -1;
   }
+#ifndef _WIN32
+  if (get_options()->HiddenServiceGroupReadable) {
+    /** Also verify hostname file created with group read. */
+    if (chmod(fname, STAT_RUSR|STAT_WUSR|STAT_RGRP)) {
+      log_warn(LD_FS,"Unable to make hidden hostname file %s group-readable.", fname);
+    }
+  }
+#endif
+
   memwipe(buf, 0, sizeof(buf));
 
   /* If client authorization is configured, load or generate keys. */

@@ -1872,6 +1872,9 @@ file_status(const char *fname)
  * <b>check</b>&CPD_CHECK, and we think we can create it, return 0.  Else
  * return -1.  If CPD_GROUP_OK is set, then it's okay if the directory
  * is group-readable, but in all cases we create the directory mode 0700.
+ * If CPD_GROUP_READ is set, existing directory behaves as CPD_GROUP_OK and
+ * if the directory is created it will use mode 0750 with group read permission.
+ * Group read privileges also assume execute permission as norm for directories.
  * If CPD_CHECK_MODE_ONLY is set, then we don't alter the directory permissions
  * if they are too permissive: we just return -1.
  * When effective_user is not NULL, check permissions against the given user
@@ -1910,7 +1913,12 @@ check_private_dir(const char *dirname, cpd_check_t check,
 #if defined (_WIN32)
       r = mkdir(dirname);
 #else
-      r = mkdir(dirname, 0700);
+      if (check & CPD_GROUP_READ) {
+        r = mkdir(dirname, STAT_RWXU|STAT_RGRP|STAT_XGRP);
+      }
+      else {
+        r = mkdir(dirname, STAT_RWXU);
+      }
 #endif
       if (r) {
         log_warn(LD_FS, "Error creating directory %s: %s", dirname,
@@ -1963,7 +1971,8 @@ check_private_dir(const char *dirname, cpd_check_t check,
     tor_free(process_ownername);
     return -1;
   }
-  if ((check & CPD_GROUP_OK) && st.st_gid != running_gid) {
+  if ( (check & (CPD_GROUP_OK|CPD_GROUP_READ))
+       && (st.st_gid != running_gid) ) {
     struct group *gr;
     char *process_groupname = NULL;
     gr = getgrgid(running_gid);
@@ -1978,7 +1987,7 @@ check_private_dir(const char *dirname, cpd_check_t check,
     tor_free(process_groupname);
     return -1;
   }
-  if (check & CPD_GROUP_OK) {
+  if (check & (CPD_GROUP_OK|CPD_GROUP_READ)) {
     mask = 0027;
   } else {
     mask = 0077;

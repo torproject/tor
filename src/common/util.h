@@ -344,9 +344,34 @@ typedef unsigned int cpd_check_t;
 #define CPD_CREATE 1
 #define CPD_CHECK 2
 #define CPD_GROUP_OK 4
-#define CPD_CHECK_MODE_ONLY 8
+#define CPD_GROUP_READ 8
+#define CPD_CHECK_MODE_ONLY 16 
 int check_private_dir(const char *dirname, cpd_check_t check,
                       const char *effective_user);
+
+#if !defined(_WIN32) && !defined (WINCE)
+/** Unix like (non win32) group and world permission constants.
+ * These constants are directly compatible with *nix ABI, e.g. S_IRWXU,*
+ * NOTE: these are distinct from the private directory flags CPD_*
+ *        which are a portable way for storing private data cross platform.
+ */
+#define STAT_RWXU 00700
+#define STAT_RUSR 00400
+#define STAT_WUSR 00200
+#define STAT_XUSR 00100
+
+#define STAT_RWXG 00070
+#define STAT_RGRP 00040
+#define STAT_WGRP 00020
+#define STAT_XGRP 00010
+
+#define STAT_RWXO 00007
+#define STAT_ROTH 00004
+#define STAT_WOTH 00002
+#define STAT_XOTH 00001
+#endif
+ 
+/** File open and create options */
 #define OPEN_FLAGS_REPLACE (O_WRONLY|O_CREAT|O_TRUNC)
 #define OPEN_FLAGS_APPEND (O_WRONLY|O_CREAT|O_APPEND)
 #define OPEN_FLAGS_DONT_REPLACE (O_CREAT|O_EXCL|O_APPEND|O_WRONLY)

@@ -271,6 +271,7 @@ static config_var_t option_vars_[] = {
   V(AccelDir,                    FILENAME, NULL),
   V(HashedControlPassword,       LINELIST, NULL),
   V(HidServDirectoryV2,          BOOL,     "1"),
+  V(HiddenServiceGroupReadable,  BOOL,     "0"),
   VAR("HiddenServiceDir",    LINELIST_S, RendConfigLines,    NULL),
   OBSOLETE("HiddenServiceExcludeNodes"),
   OBSOLETE("HiddenServiceNodes"),
