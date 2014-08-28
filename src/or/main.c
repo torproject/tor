@@ -28,6 +28,7 @@
 #include "connection_or.h"
 #include "control.h"
 #include "cpuworker.h"
+#include "crypto_s2k.h"
 #include "directory.h"
 #include "dirserv.h"
 #include "dirvote.h"

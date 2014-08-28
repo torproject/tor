@@ -153,6 +153,9 @@ AC_ARG_ENABLE(tool-name-check,
 AC_ARG_ENABLE(seccomp,
      AS_HELP_STRING(--disable-seccomp, do not attempt to use libseccomp))
 
+AC_ARG_ENABLE(libscrypt,
+     AS_HELP_STRING(--disable-libscrypt, do not attempt to use libscrypt))
+
 dnl check for the correct "ar" when cross-compiling
 AN_MAKEVAR([AR], [AC_PROG_AR])
 AN_PROGRAM([ar], [AC_PROG_AR])
@@ -719,6 +722,14 @@ dnl Check for libseccomp
 if test "x$enable_seccomp" != "xno"; then
   AC_CHECK_HEADERS([seccomp.h])
   AC_SEARCH_LIBS(seccomp_init, [seccomp])
+fi
+
+dnl ============================================================
+dnl Check for libscrypt
+
+if test "x$enable_libscrypt" != "xno"; then
+  AC_CHECK_HEADERS([libscrypt.h])
+  AC_SEARCH_LIBS(libscrypt_scrypt, [scrypt])
 fi
 
 dnl ============================================================

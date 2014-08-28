@@ -13,6 +13,7 @@
 #ifdef CURVE25519_ENABLED
 #include "crypto_curve25519.h"
 #endif
+#include "crypto_s2k.h"
 
 extern const char AUTHORITY_SIGNKEY_3[];
 extern const char AUTHORITY_SIGNKEY_A_DIGEST[];
@@ -696,7 +697,7 @@ test_crypto_formats(void)
 
 /** Run unit tests for our secret-to-key passphrase hashing functionality. */
 static void
-test_crypto_s2k(void)
+test_crypto_s2k_rfc2440(void)
 {
   char buf[29];
   char buf2[29];
@@ -725,6 +726,165 @@ test_crypto_s2k(void)
 
  done:
   tor_free(buf3);
+}
+
+static void
+run_s2k_tests(const unsigned flags, const unsigned type,
+              int speclen, const int keylen, int legacy)
+{
+  uint8_t buf[S2K_MAXLEN], buf2[S2K_MAXLEN], buf3[S2K_MAXLEN];
+  int r;
+  size_t sz;
+  const char pw1[] = "You can't come in here unless you say swordfish!";
+  const char pw2[] = "Now, I give you one more guess.";
+
+  r = secret_to_key_new(buf, sizeof(buf), &sz,
+                        pw1, strlen(pw1), flags);
+  tt_int_op(r, ==, S2K_OKAY);
+  tt_int_op(buf[0], ==, type);
+
+  tt_int_op(sz, ==, keylen + speclen);
+
+  if (legacy) {
+    memmove(buf, buf+1, sz-1);
+    --sz;
+    --speclen;
+  }
+
+  tt_int_op(S2K_OKAY, ==,
+            secret_to_key_check(buf, sz, pw1, strlen(pw1)));
+
+  tt_int_op(S2K_BAD_SECRET, ==,
+            secret_to_key_check(buf, sz, pw2, strlen(pw2)));
+
+  /* Move key to buf2, and clear it. */
+  memset(buf3, 0, sizeof(buf3));
+  memcpy(buf2, buf+speclen, keylen);
+  memset(buf+speclen, 0, sz - speclen);
+
+  /* Derivekey should produce the same results. */
+  tt_int_op(S2K_OKAY, ==,
+      secret_to_key_derivekey(buf3, keylen, buf, speclen, pw1, strlen(pw1)));
+
+  tt_mem_op(buf2, ==, buf3, keylen);
+
+  /* Derivekey with a longer output should fill the output. */
+  memset(buf2, 0, sizeof(buf2));
+  tt_int_op(S2K_OKAY, ==,
+   secret_to_key_derivekey(buf2, sizeof(buf2), buf, speclen,
+                           pw1, strlen(pw1)));
+
+  tt_mem_op(buf2, !=, buf3, keylen);
+
+  memset(buf3, 0, sizeof(buf3));
+  tt_int_op(S2K_OKAY, ==,
+            secret_to_key_derivekey(buf3, sizeof(buf3), buf, speclen,
+                                    pw1, strlen(pw1)));
+  tt_mem_op(buf2, ==, buf3, sizeof(buf3));
+  tt_assert(!tor_mem_is_zero((char*)buf2+keylen, sizeof(buf2)-keylen));
+
+ done:
+  ;
+}
+
+static void
+test_crypto_s2k_general(void *arg)
+{
+  const char *which = arg;
+
+  if (!strcmp(which, "scrypt")) {
+    run_s2k_tests(0, 2, 19, 32, 0);
+  } else if (!strcmp(which, "scrypt-low")) {
+    run_s2k_tests(S2K_FLAG_LOW_MEM, 2, 19, 32, 0);
+  } else if (!strcmp(which, "pbkdf2")) {
+    run_s2k_tests(S2K_FLAG_USE_PBKDF2, 1, 18, 20, 0);
+  } else if (!strcmp(which, "rfc2440")) {
+    run_s2k_tests(S2K_FLAG_NO_SCRYPT, 0, 10, 20, 0);
+  } else if (!strcmp(which, "rfc2440-legacy")) {
+    run_s2k_tests(S2K_FLAG_NO_SCRYPT, 0, 10, 20, 1);
+  } else {
+    tt_fail();
+  }
+}
+
+static void
+test_crypto_s2k_errors(void *arg)
+{
+  uint8_t buf[S2K_MAXLEN], buf2[S2K_MAXLEN];
+  size_t sz;
+
+  (void)arg;
+
+  /* Bogus specifiers: simple */
+  tt_int_op(S2K_BAD_LEN, ==,
+            secret_to_key_derivekey(buf, sizeof(buf),
+                                    (const uint8_t*)"", 0, "ABC", 3));
+  tt_int_op(S2K_BAD_ALGORITHM, ==,
+            secret_to_key_derivekey(buf, sizeof(buf),
+                                    (const uint8_t*)"\x10", 1, "ABC", 3));
+  tt_int_op(S2K_BAD_LEN, ==,
+            secret_to_key_derivekey(buf, sizeof(buf),
+                                    (const uint8_t*)"\x01\x02", 2, "ABC", 3));
+
+  tt_int_op(S2K_BAD_LEN, ==,
+            secret_to_key_check((const uint8_t*)"", 0, "ABC", 3));
+  tt_int_op(S2K_BAD_ALGORITHM, ==,
+            secret_to_key_check((const uint8_t*)"\x10", 1, "ABC", 3));
+  tt_int_op(S2K_BAD_LEN, ==,
+            secret_to_key_check((const uint8_t*)"\x01\x02", 2, "ABC", 3));
+
+  /* too long gets "BAD_LEN" too */
+  memset(buf, 0, sizeof(buf));
+  buf[0] = 2;
+  tt_int_op(S2K_BAD_LEN, ==,
+            secret_to_key_derivekey(buf2, sizeof(buf2),
+                                    buf, sizeof(buf), "ABC", 3));
+
+  /* Truncated output */
+#ifdef HAVE_LIBSCRYPT_H
+  tt_int_op(S2K_TRUNCATED, ==, secret_to_key_new(buf, 50, &sz,
+                                                 "ABC", 3, 0));
+  tt_int_op(S2K_TRUNCATED, ==, secret_to_key_new(buf, 50, &sz,
+                                                 "ABC", 3, S2K_FLAG_LOW_MEM));
+#endif
+  tt_int_op(S2K_TRUNCATED, ==, secret_to_key_new(buf, 37, &sz,
+                                              "ABC", 3, S2K_FLAG_USE_PBKDF2));
+  tt_int_op(S2K_TRUNCATED, ==, secret_to_key_new(buf, 29, &sz,
+                                              "ABC", 3, S2K_FLAG_NO_SCRYPT));
+
+#ifdef HAVE_LIBSCRYPT_H
+  tt_int_op(S2K_TRUNCATED, ==, secret_to_key_make_specifier(buf, 18, 0));
+  tt_int_op(S2K_TRUNCATED, ==, secret_to_key_make_specifier(buf, 18,
+                                                 S2K_FLAG_LOW_MEM));
+#endif
+  tt_int_op(S2K_TRUNCATED, ==, secret_to_key_make_specifier(buf, 17,
+                                                 S2K_FLAG_USE_PBKDF2));
+  tt_int_op(S2K_TRUNCATED, ==, secret_to_key_make_specifier(buf, 9,
+                                                 S2K_FLAG_NO_SCRYPT));
+
+  /* Now try using type-specific bogus specifiers. */
+
+  /* It's a bad pbkdf2 buffer if it has an iteration count that would overflow
+   * int32_t. */
+  memset(buf, 0, sizeof(buf));
+  buf[0] = 1; /* pbkdf2 */
+  buf[17] = 100; /* 1<<100 is much bigger than INT32_MAX */
+  tt_int_op(S2K_BAD_PARAMS, ==,
+            secret_to_key_derivekey(buf2, sizeof(buf2),
+                                    buf, 18, "ABC", 3));
+
+#ifdef HAVE_LIBSCRYPT_H
+  /* It's a bad scrypt buffer if N would overflow uint64 */
+  memset(buf, 0, sizeof(buf));
+  buf[0] = 2; /* scrypt */
+  buf[17] = 100; /* 1<<100 is much bigger than UINT64_MAX */
+  tt_int_op(S2K_BAD_PARAMS, ==,
+            secret_to_key_derivekey(buf2, sizeof(buf2),
+                                    buf, 19, "ABC", 3));
+#endif
+
+ done:
+  ;
 }
 
 /** Test AES-CTR encryption and decryption with IV. */
@@ -1288,7 +1448,20 @@ struct testcase_t crypto_tests[] = {
   { "pk_fingerprints", test_crypto_pk_fingerprints, TT_FORK, NULL, NULL },
   CRYPTO_LEGACY(digests),
   CRYPTO_LEGACY(dh),
-  CRYPTO_LEGACY(s2k),
+  CRYPTO_LEGACY(s2k_rfc2440),
+#ifdef HAVE_LIBSCRYPT_H
+  { "s2k_scrypt", test_crypto_s2k_general, 0, &pass_data,
+    (void*)"scrypt" },
+  { "s2k_scrypt_low", test_crypto_s2k_general, 0, &pass_data,
+    (void*)"scrypt-low" },
+#endif
+  { "s2k_pbkdf2", test_crypto_s2k_general, 0, &pass_data,
+    (void*)"pbkdf2" },
+  { "s2k_rfc2440_general", test_crypto_s2k_general, 0, &pass_data,
+    (void*)"rfc2440" },
+  { "s2k_rfc2440_legacy", test_crypto_s2k_general, 0, &pass_data,
+    (void*)"rfc2440-legacy" },
+  { "s2k_errors", test_crypto_s2k_errors, 0, NULL, NULL },
   { "aes_iv_AES", test_crypto_aes_iv, TT_FORK, &pass_data, (void*)"aes" },
   { "aes_iv_EVP", test_crypto_aes_iv, TT_FORK, &pass_data, (void*)"evp" },
   CRYPTO_LEGACY(base32_decode),

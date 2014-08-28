@@ -47,6 +47,7 @@
 #include <sys/resource.h>
 #endif
 
+#include "crypto_s2k.h"
 #include "procmon.h"
 
 /** Yield true iff <b>s</b> is the state of a control_connection_t that has

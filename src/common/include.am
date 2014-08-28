@@ -111,6 +111,7 @@ COMMONHEADERS = \
   src/common/container.h			\
   src/common/crypto.h				\
   src/common/crypto_curve25519.h		\
+  src/common/crypto_s2k.h			\
   src/common/di_ops.h				\
   src/common/memarea.h				\
   src/common/linux_syscalls.inc			\
