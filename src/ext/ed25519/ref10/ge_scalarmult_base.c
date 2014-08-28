@@ -1,6 +1,10 @@
 #include "ge.h"
 #include "crypto_uint32.h"
 
+/* Rename this so as not to interfere with select() which torint.h apparently
+ * grabs. :p */
+#define select ed25519_ref10_select
+
 static unsigned char equal(signed char b,signed char c)
 {
   unsigned char ub = b;
