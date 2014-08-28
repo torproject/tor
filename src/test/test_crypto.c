@@ -14,6 +14,7 @@
 #include "crypto_curve25519.h"
 #endif
 #include "crypto_s2k.h"
+#include "crypto_pwbox.h"
 
 extern const char AUTHORITY_SIGNKEY_3[];
 extern const char AUTHORITY_SIGNKEY_A_DIGEST[];
@@ -887,6 +888,37 @@ test_crypto_s2k_errors(void *arg)
   ;
 }
 
+static void
+test_crypto_pwbox(void *arg)
+{
+  uint8_t *boxed=NULL, *decoded=NULL;
+  size_t len, dlen;
+  const char msg[] = "This bunny reminds you that you still have a "
+    "salamander in your sylladex. She is holding the bunny Dave got you. "
+    "It’s sort of uncanny how similar they are, aside from the knitted "
+    "enhancements. Seriously, what are the odds?? So weird.";
+  const char pw[] = "I'm a night owl and a wise bird too";
+
+  (void)arg;
+
+  tt_int_op(0, ==, crypto_pwbox(&boxed, &len, (const uint8_t*)msg, strlen(msg),
+                                pw, strlen(pw), 0));
+  tt_assert(boxed);
+  tt_assert(len > 128+32);
+
+  tt_int_op(0, ==, crypto_unpwbox(&decoded, &dlen, boxed, len,
+                                  pw, strlen(pw)));
+
+  tt_assert(decoded);
+  tt_uint_op(dlen, ==, strlen(msg));
+  tt_mem_op(decoded, ==, msg, dlen);
+
+ done:
+  tor_free(boxed);
+  tor_free(decoded);
+
+}
+
 /** Test AES-CTR encryption and decryption with IV. */
 static void
 test_crypto_aes_iv(void *arg)
@@ -1462,6 +1494,7 @@ struct testcase_t crypto_tests[] = {
   { "s2k_rfc2440_legacy", test_crypto_s2k_general, 0, &pass_data,
     (void*)"rfc2440-legacy" },
   { "s2k_errors", test_crypto_s2k_errors, 0, NULL, NULL },
+  { "pwbox", test_crypto_pwbox, 0, NULL, NULL },
   { "aes_iv_AES", test_crypto_aes_iv, TT_FORK, &pass_data, (void*)"aes" },
   { "aes_iv_EVP", test_crypto_aes_iv, TT_FORK, &pass_data, (void*)"evp" },
   CRYPTO_LEGACY(base32_decode),

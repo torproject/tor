@@ -75,6 +75,7 @@ LIBOR_A_SOURCES = \
 LIBOR_CRYPTO_A_SOURCES = \
   src/common/aes.c		\
   src/common/crypto.c		\
+  src/common/crypto_pwbox.c     \
   src/common/crypto_s2k.c	\
   src/common/crypto_format.c	\
   src/common/torgzip.c		\
@@ -111,6 +112,7 @@ COMMONHEADERS = \
   src/common/container.h			\
   src/common/crypto.h				\
   src/common/crypto_curve25519.h		\
+  src/common/crypto_pwbox.h			\
   src/common/crypto_s2k.h			\
   src/common/di_ops.h				\
   src/common/memarea.h				\
