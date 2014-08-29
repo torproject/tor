@@ -368,12 +368,10 @@ rend_config_services(const or_options_t *options, int validate_only)
   for (line = options->RendConfigLines; line; line = line->next) {
     if (!strcasecmp(line->key, "HiddenServiceDir")) {
       if (service) { /* register the one we just finished parsing */
-        if (validate_only) {
+        if (validate_only)
           rend_service_free(service);
-        }
-        else {
+        else
           rend_add_service(service);
-        }
       }
       service = tor_malloc_zero(sizeof(rend_service_t));
       service->directory = tor_strdup(line->value);
@@ -517,8 +515,7 @@ rend_config_services(const or_options_t *options, int validate_only)
   if (service) {
     if (validate_only) {
       rend_service_free(service);
-    }
-    else {
+    } else {
       rend_add_service(service);
     }
   }
@@ -699,7 +696,7 @@ rend_service_load_keys(rend_service_t *s)
   char buf[128];
   cpd_check_t  check_opts = CPD_CREATE;
 
-  if (get_options()->HiddenServiceGroupReadable) {
+  if (get_options()->HiddenServiceDirGroupReadable) {
     check_opts |= CPD_GROUP_READ;
   }
   /* Check/create directory */
@@ -707,9 +704,9 @@ rend_service_load_keys(rend_service_t *s)
     return -1;
   }
 #ifndef _WIN32
-  if (get_options()->HiddenServiceGroupReadable) {
-    /** Only new dirs created get new opts, also enforce group read. */
-    if (chmod(s->directory, STAT_RWXU|STAT_RGRP|STAT_XGRP)) {
+  if (get_options()->HiddenServiceDirGroupReadable) {
+    /* Only new dirs created get new opts, also enforce group read. */
+    if (chmod(s->directory, 0750)) {
       log_warn(LD_FS,"Unable to make %s group-readable.", s->directory);
     }
   }
@@ -751,9 +748,9 @@ rend_service_load_keys(rend_service_t *s)
     return -1;
   }
 #ifndef _WIN32
-  if (get_options()->HiddenServiceGroupReadable) {
-    /** Also verify hostname file created with group read. */
-    if (chmod(fname, STAT_RUSR|STAT_WUSR|STAT_RGRP)) {
+  if (get_options()->HiddenServiceDirGroupReadable) {
+    /* Also verify hostname file created with group read. */
+    if (chmod(fname, 0640)) {
       log_warn(LD_FS,"Unable to make hidden hostname file %s group-readable.", fname);
     }
   }

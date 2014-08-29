@@ -4225,7 +4225,7 @@ typedef struct {
   int Support022HiddenServices;
 
   /** Create the Hidden Service directories and hostname files group readable. */
-  int HiddenServiceGroupReadable;
+  int HiddenServiceDirGroupReadable;
 
 } or_options_t;
 

@@ -1914,10 +1914,9 @@ check_private_dir(const char *dirname, cpd_check_t check,
       r = mkdir(dirname);
 #else
       if (check & CPD_GROUP_READ) {
-        r = mkdir(dirname, STAT_RWXU|STAT_RGRP|STAT_XGRP);
-      }
-      else {
-        r = mkdir(dirname, STAT_RWXU);
+        r = mkdir(dirname, 0750);
+      } else {
+        r = mkdir(dirname, 0700);
       }
 #endif
       if (r) {
