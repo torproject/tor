@@ -224,9 +224,16 @@ rend_mid_establish_rendezvous(or_circuit_t *circ, const uint8_t *request,
   log_info(LD_REND, "Received an ESTABLISH_RENDEZVOUS request on circuit %u",
            (unsigned)circ->p_circ_id);
 
-  if (circ->base_.purpose != CIRCUIT_PURPOSE_OR || circ->base_.n_chan) {
+  if (circ->base_.purpose != CIRCUIT_PURPOSE_OR) {
     log_warn(LD_PROTOCOL,
-             "Tried to establish rendezvous on non-OR or non-edge circuit.");
+             "Tried to establish rendezvous on non-OR circuit with purpose %s",
+             circuit_purpose_to_string(circ->base_.purpose));
+    goto err;
+  }
+
+  if (circ->base_.n_chan) {
+    log_warn(LD_PROTOCOL,
+             "Tried to establish rendezvous on non-edge circuit");
     goto err;
   }
 
