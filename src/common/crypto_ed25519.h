@@ -24,6 +24,12 @@ typedef struct {
 
 /** An Ed25519 secret key */
 typedef struct {
+  /** Note that we store secret keys in an expanded format that doesn't match
+   * the format from standard ed25519.  Ed25519 stores a 32-byte value k and
+   * expands it into a 64-byte H(k), using the first 32 bytes for a multiplier
+   * of the base point, and second 32 bytes as an input to a hash function
+   * for deriving r.  But because we implement key blinding, we need to store
+   * keys in the 64-byte expanded form. */
   uint8_t seckey[ED25519_SECKEY_LEN];
 } ed25519_secret_key_t;
 

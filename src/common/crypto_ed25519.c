@@ -19,6 +19,11 @@
 
 #include <openssl/sha.h>
 
+/**
+ * Initialize a new ed25519 secret key in <b>seckey_out</b>.  If
+ * <b>extra_strong</b>, take the RNG inputs directly from the operating
+ * system.  Return 0 on success, -1 on failure.
+ */
 int
 ed25519_secret_key_generate(ed25519_secret_key_t *seckey_out,
                         int extra_strong)
@@ -34,6 +39,10 @@ ed25519_secret_key_generate(ed25519_secret_key_t *seckey_out,
   return r < 0 ? -1 : 0;
 }
 
+/**
+ * Given a 32-byte random seed in <b>seed</b>, expand it into an ed25519
+ * secret key in <b>seckey_out</b>.  Return 0 on success, -1 on failure.
+ */
 int
 ed25519_secret_key_from_seed(ed25519_secret_key_t *seckey_out,
                              const uint8_t *seed)
@@ -43,6 +52,10 @@ ed25519_secret_key_from_seed(ed25519_secret_key_t *seckey_out,
   return 0;
 }
 
+/**
+ * Given a secret key in <b>seckey</b>, expand it into an
+ * ed25519 public key.  Return 0 on success, -1 on failure.
+ */
 int
 ed25519_public_key_generate(ed25519_public_key_t *pubkey_out,
                         const ed25519_secret_key_t *seckey)
@@ -224,6 +237,10 @@ ed25519_public_key_from_curve25519_public_key(ed25519_public_key_t *pubkey,
  * ed25519 keypair in <b>out</b>, blinded by the corresponding 32-byte input
  * in 'param'.
  *
+ * Tor uses key blinding for the "next-generation" hidden services design:
+ * service descriptors are encrypted with a key derived from the service's
+ * long-term public key, and then signed with (and stored at a position
+ * indexed by) a short-term key derived by blinding the long-term keys.
  */
 int
 ed25519_keypair_blind(ed25519_keypair_t *out,
@@ -245,6 +262,11 @@ ed25519_keypair_blind(ed25519_keypair_t *out,
   return 0;
 }
 
+/**
+ * Given an ed25519 public key in <b>inp</b>, generate a corresponding blinded
+ * public key in <b>out</b>, blinded with the 32-byte parameter in
+ * <b>param</b>.  Return 0 on sucess, -1 on railure.
+ */
 int
 ed25519_public_blind(ed25519_public_key_t *out,
                      const ed25519_public_key_t *inp,
@@ -254,7 +276,10 @@ ed25519_public_blind(ed25519_public_key_t *out,
   return 0;
 }
 
-/** DOCDOC */
+/**
+ * Store seckey unencrypted to <b>filename</b>, marking it with <b>tag</b>.
+ * Return 0 on success, -1 on failure.
+ */
 int
 ed25519_seckey_write_to_file(const ed25519_secret_key_t *seckey,
                              const char *filename,
@@ -267,7 +292,11 @@ ed25519_seckey_write_to_file(const ed25519_secret_key_t *seckey,
                                               sizeof(seckey->seckey));
 }
 
-/** DOCDOC */
+/**
+ * Read seckey unencrypted from <b>filename</b>, storing it into
+ * <b>seckey_out</b>.  Set *<b>tag_out</> to the tag it was marked with.
+ * Return 0 on success, -1 on failure.
+ */
 int
 ed25519_seckey_read_from_file(ed25519_secret_key_t *seckey_out,
                               char **tag_out,
@@ -284,7 +313,10 @@ ed25519_seckey_read_from_file(ed25519_secret_key_t *seckey_out,
   return 0;
 }
 
-/** DOCDOC */
+/**
+ * Store pubkey unencrypted to <b>filename</b>, marking it with <b>tag</b>.
+ * Return 0 on success, -1 on failure.
+ */
 int
 ed25519_pubkey_write_to_file(const ed25519_public_key_t *pubkey,
                              const char *filename,
@@ -297,7 +329,10 @@ ed25519_pubkey_write_to_file(const ed25519_public_key_t *pubkey,
                                               sizeof(pubkey->pubkey));
 }
 
-/** DOCDOC */
+/**
+ * Store pubkey unencrypted to <b>filename</b>, marking it with <b>tag</b>.
+ * Return 0 on success, -1 on failure.
+ */
 int
 ed25519_pubkey_read_from_file(ed25519_public_key_t *pubkey_out,
                               char **tag_out,
