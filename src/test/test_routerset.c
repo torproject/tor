@@ -443,7 +443,7 @@ NS(test_main)(void *arg)
   (void)arg;
 
   NS_MOCK(router_parse_addr_policy_item_from_string);
-  NS(mock_addr_policy) = tor_malloc_zero(sizeof(NS(mock_addr_policy)));
+  NS(mock_addr_policy) = tor_malloc_zero(sizeof(addr_policy_t));
 
   set = routerset_new();
   s = "*";
@@ -1302,6 +1302,7 @@ NS(test_main)(void *arg)
   const char *nickname = "foo";
   (void)arg;
 
+  memset(&ei, 0, sizeof(ei));
   strmap_set_lc(set->names, nickname, (void *)1);
   strncpy(ei.nickname, nickname, sizeof(ei.nickname) - 1);
   ei.nickname[sizeof(ei.nickname) - 1] = '\0';
@@ -1330,6 +1331,7 @@ NS(test_main)(void *arg)
   const char *nickname = "foo";
   (void)arg;
 
+  memset(&ri, 0, sizeof(ri));
   strmap_set_lc(set->names, nickname, (void *)1);
   ri.nickname = (char *)nickname;
 
@@ -1361,6 +1363,7 @@ NS(test_main)(void *arg)
   const char *nickname = "foo";
   (void)arg;
 
+  memset(&rs, 0, sizeof(rs));
   strmap_set_lc(set->names, nickname, (void *)1);
   strncpy(rs.nickname, nickname, sizeof(rs.nickname) - 1);
   rs.nickname[sizeof(rs.nickname) - 1] = '\0';
