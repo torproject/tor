@@ -1,0 +1,3 @@
+  o Minor features:
+    - Log more specific warnings when we get an ESTABLISH_RENDEZVOUS cell
+      on a cannibalized or non-OR circuit. Resolves ticket 12997.

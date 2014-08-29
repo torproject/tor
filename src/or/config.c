@@ -1932,7 +1932,8 @@ config_parse_commandline(int argc, char **argv, int ignore_errors,
     }
 
     param = tor_malloc_zero(sizeof(config_line_t));
-    param->key = is_cmdline ? tor_strdup(argv[i]) : tor_strdup(s);
+    param->key = is_cmdline ? tor_strdup(argv[i]) :
+                   tor_strdup(config_expand_abbrev(&options_format, s, 1, 1));
     param->value = arg;
     param->command = command;
     param->next = NULL;
