@@ -575,17 +575,10 @@ connection_free_(connection_t *conn)
     tor_free(control_conn->incoming_cmd);
   }
 
-#ifdef TOR_IS_MULTITHREADED
   /* Probably already freed by connection_free. */
-  /* We don't do these frees on the multiprocess case, since in that case we
-   * don't want to call event_del() postfork or it's likely to mess up.
-   * Multiprocess builds are deprecated, so let's just have a one-time memory
-   * leak here.
-   */
   tor_event_free(conn->read_event);
   tor_event_free(conn->write_event);
   conn->read_event = conn->write_event = NULL;
-#endif
   IF_HAS_BUFFEREVENT(conn, {
       /* This was a workaround to handle bugs in some old versions of libevent
        * where callbacks can occur after calling bufferevent_free().  Setting
