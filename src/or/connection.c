@@ -553,8 +553,10 @@ connection_free_(connection_t *conn)
     tor_free(control_conn->incoming_cmd);
   }
 
-  tor_free(conn->read_event); /* Probably already freed by connection_free. */
-  tor_free(conn->write_event); /* Probably already freed by connection_free. */
+  /* Probably already freed by connection_free. */
+  tor_event_free(conn->read_event);
+  tor_event_free(conn->write_event);
+  conn->read_event = conn->write_event = NULL;
   IF_HAS_BUFFEREVENT(conn, {
       /* This was a workaround to handle bugs in some old versions of libevent
        * where callbacks can occur after calling bufferevent_free().  Setting
