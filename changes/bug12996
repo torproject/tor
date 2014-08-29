@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Downgrade "Unexpected onionskin length after decryption" warning
+      to a protocol-warn, since there's nothing relay operators can do
+      about a client that sends them a malformed create cell. Resolves
+      bug 12996; bugfix on 0.0.6rc1.

@@ -122,8 +122,9 @@ onion_skin_TAP_server_handshake(
              "Couldn't decrypt onionskin: client may be using old onion key");
     goto err;
   } else if (len != DH_KEY_LEN) {
-    log_warn(LD_PROTOCOL, "Unexpected onionskin length after decryption: %ld",
-             (long)len);
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Unexpected onionskin length after decryption: %ld",
+           (long)len);
     goto err;
   }
 
