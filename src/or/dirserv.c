@@ -1051,7 +1051,8 @@ format_versions_list(config_line_t *ln)
 }
 
 /** Return 1 if <b>ri</b>'s descriptor is "active" -- running, valid,
- * not hibernating, and not too old. Else return 0.
+ * not hibernating, having observed bw greater 0, and not too old. Else
+ * return 0.
  */
 static int
 router_is_active(const routerinfo_t *ri, const node_t *node, time_t now)
@@ -1061,6 +1062,8 @@ router_is_active(const routerinfo_t *ri, const node_t *node, time_t now)
     return 0;
   if (!node->is_running || !node->is_valid || ri->is_hibernating)
     return 0;
+  if (!ri->bandwidthcapacity)
+      return 0;
   return 1;
 }
 

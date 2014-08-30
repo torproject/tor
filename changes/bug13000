@@ -2,4 +2,6 @@
     - If our previous bandwidth estimate was 0 bytes, allow publishing a
       new relay descriptor immediately. Fixes bug 13000; bugfix on
       0.1.1.6-alpha.
-
+  o Minor features:
+    - Don't list relays with a bandwidth estimate of 0 in the consensus.
+      Implements a feature proposed during discussion of bug 13000.
