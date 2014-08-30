@@ -4,6 +4,8 @@
  * Copyright (c) 2007-2013, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+#define CRYPTO_S2K_PRIVATE
+
 #include "crypto.h"
 #include "util.h"
 #include "compat.h"
@@ -219,8 +221,9 @@ secret_to_key_rfc2440(char *key_out, size_t key_out_len, const char *secret,
  * bytes.  Return the number of bytes written on success and an error code
  * on failure.
  */
-static int
-secret_to_key_compute_key(uint8_t *key_out, const uint8_t *spec,
+STATIC int
+secret_to_key_compute_key(uint8_t *key_out, size_t key_out_len,
+                          const uint8_t *spec, size_t spec_len,
                           const char *secret, size_t secret_len,
                           int type)
 {
@@ -233,36 +236,44 @@ secret_to_key_compute_key(uint8_t *key_out, const uint8_t *spec,
       return DIGEST_LEN;
 
     case S2K_TYPE_PBKDF2: {
-      int iters;
-      if (spec[16] > 31)
-        return S2K_BAD_PARAMS;
-      if (secret_len > INT_MAX)
+      uint8_t log_iters;
+      if (spec_len < 1 || secret_len > INT_MAX || spec_len > INT_MAX ||
+          key_out_len > INT_MAX)
         return S2K_BAD_LEN;
-      iters = 1 << spec[16];
+      log_iters = spec[spec_len-1];
+      if (log_iters > 31)
+        return S2K_BAD_PARAMS;
       rv = PKCS5_PBKDF2_HMAC_SHA1(secret, (int)secret_len,
-                                 spec, 16,
-                                 1<<spec[16],
-                                 DIGEST_LEN, key_out);
-
+                                  spec, (int)spec_len-1,
+                                  (1<<log_iters),
+                                  (int)key_out_len, key_out);
       if (rv < 0)
         return S2K_FAILED;
-      return DIGEST_LEN;
+      return (int)key_out_len;
     }
 
     case S2K_TYPE_SCRYPT: {
 #ifdef HAVE_SCRYPT
+      uint8_t log_N, log_r, log_p;
       uint64_t N;
       uint32_t r, p;
-      if (spec[16] > 63)
+      if (key_out_len > INT_MAX)
+        return S2K_BAD_LEN;
+      if (spec_len < 2)
+        return S2K_BAD_LEN;
+      log_N = spec[spec_len-2];
+      log_r = (spec[spec_len-1]) >> 4;
+      log_p = (spec[spec_len-1]) & 15;
+      if (log_N > 63)
         return S2K_BAD_PARAMS;
-      N = ((uint64_t)1) << spec[16];
-      r = 1u << (spec[17] >> 4);
-      p = 1u << (spec[17] & 15);
+      N = ((uint64_t)1) << log_N;
+      r = 1u << log_r;
+      p = 1u << log_p;
       rv = libscrypt_scrypt((const uint8_t*)secret, secret_len,
-                            spec, 16, N, r, p, key_out, 32);
-      if (rv < 0)
+                            spec, spec_len-2, N, r, p, key_out, key_out_len);
+      if (rv != 0)
         return S2K_FAILED;
-      return DIGEST256_LEN;
+      return (int)key_out_len;
 #else
       return S2K_NO_SCRYPT_SUPPORT;
 #endif
@@ -307,7 +318,8 @@ secret_to_key_derivekey(uint8_t *key_out, size_t key_out_len,
   tor_assert(keylen > 0);
   tor_assert(keylen <= (int)sizeof(buf));
 
-  r = secret_to_key_compute_key(buf, spec, secret, secret_len, type);
+  r = secret_to_key_compute_key(buf, keylen, spec, spec_len,
+                                secret, secret_len, type);
   if (r < 0)
     return r;
 
@@ -397,7 +409,8 @@ secret_to_key_new(uint8_t *buf,
   if ((int)buf_len < key_len + spec_len)
     return S2K_TRUNCATED;
 
-  rv = secret_to_key_compute_key(buf + spec_len, buf + 1,
+  rv = secret_to_key_compute_key(buf + spec_len, key_len,
+                                 buf + 1, spec_len-1,
                                  secret, secret_len, type);
   if (rv < 0)
     return rv;
@@ -440,8 +453,8 @@ secret_to_key_check(const uint8_t *spec_and_key, size_t spec_and_key_len,
   tor_assert(key_len > 0);
   tor_assert(key_len <= (int) sizeof(buf));
   tor_assert((int)spec_and_key_len == spec_len + key_len);
-  rv = secret_to_key_compute_key(buf,
-                                 spec_and_key,
+  rv = secret_to_key_compute_key(buf, key_len,
+                                 spec_and_key, spec_len,
                                  secret, secret_len, type);
   if (rv < 0)
     goto done;
