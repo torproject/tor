@@ -173,7 +173,7 @@ make_specifier(uint8_t *spec_out, uint8_t type, unsigned flags)
  * <b>secret_len</b>-byte <b>secret</b> into a <b>key_out_len</b> byte
  * <b>key_out</b>.  As in RFC2440, the first 8 bytes of s2k_specifier
  * are a salt; the 9th byte describes how much iteration to do.
- * Does not support <b>key_out_len</b> &gt; DIGEST_LEN.
+ * If <b>key_out_len</b> &gt; DIGEST_LEN, use HDKF to expand the result.
  */
 void
 secret_to_key_rfc2440(char *key_out, size_t key_out_len, const char *secret,
@@ -183,14 +183,13 @@ secret_to_key_rfc2440(char *key_out, size_t key_out_len, const char *secret,
   uint8_t c;
   size_t count, tmplen;
   char *tmp;
+  uint8_t buf[DIGEST_LEN];
   tor_assert(key_out_len < SIZE_T_CEILING);
 
 #define EXPBIAS 6
   c = s2k_specifier[8];
   count = ((uint32_t)16 + (c & 15)) << ((c >> 4) + EXPBIAS);
 #undef EXPBIAS
-
-  tor_assert(key_out_len <= DIGEST_LEN);
 
   d = crypto_digest_new();
   tmplen = 8+secret_len;
@@ -207,8 +206,18 @@ secret_to_key_rfc2440(char *key_out, size_t key_out_len, const char *secret,
       count = 0;
     }
   }
-  crypto_digest_get_digest(d, key_out, key_out_len);
+  crypto_digest_get_digest(d, (char*)buf, sizeof(buf));
+
+  if (key_out_len <= sizeof(buf)) {
+    memcpy(key_out, buf, key_out_len);
+  } else {
+    crypto_expand_key_material_rfc5869_sha256(buf, DIGEST_LEN,
+                                           (const uint8_t*)s2k_specifier, 8,
+                                           (const uint8_t*)"EXPAND", 6,
+                                           (uint8_t*)key_out, key_out_len);
+  }
   memwipe(tmp, 0, tmplen);
+  memwipe(buf, 0, sizeof(buf));
   tor_free(tmp);
   crypto_digest_free(d);
 }
@@ -228,17 +237,18 @@ secret_to_key_compute_key(uint8_t *key_out, size_t key_out_len,
                           int type)
 {
   int rv;
+  if (key_out_len > INT_MAX)
+    return S2K_BAD_LEN;
 
   switch (type) {
     case S2K_TYPE_RFC2440:
-      secret_to_key_rfc2440((char*)key_out, DIGEST_LEN, secret, secret_len,
+      secret_to_key_rfc2440((char*)key_out, key_out_len, secret, secret_len,
                             (const char*)spec);
-      return DIGEST_LEN;
+      return (int)key_out_len;
 
     case S2K_TYPE_PBKDF2: {
       uint8_t log_iters;
-      if (spec_len < 1 || secret_len > INT_MAX || spec_len > INT_MAX ||
-          key_out_len > INT_MAX)
+      if (spec_len < 1 || secret_len > INT_MAX || spec_len > INT_MAX)
         return S2K_BAD_LEN;
       log_iters = spec[spec_len-1];
       if (log_iters > 31)
@@ -257,8 +267,6 @@ secret_to_key_compute_key(uint8_t *key_out, size_t key_out_len,
       uint8_t log_N, log_r, log_p;
       uint64_t N;
       uint32_t r, p;
-      if (key_out_len > INT_MAX)
-        return S2K_BAD_LEN;
       if (spec_len < 2)
         return S2K_BAD_LEN;
       log_N = spec[spec_len-2];
@@ -299,8 +307,7 @@ secret_to_key_derivekey(uint8_t *key_out, size_t key_out_len,
 {
   int legacy_format = 0;
   int type = secret_to_key_get_type(spec, spec_len, 0, &legacy_format);
-  int keylen, r;
-  uint8_t buf[32];
+  int r;
 
   if (type < 0)
     return type;
@@ -314,33 +321,12 @@ secret_to_key_derivekey(uint8_t *key_out, size_t key_out_len,
     --spec_len;
   }
 
-  keylen = secret_to_key_key_len(type);
-  tor_assert(keylen > 0);
-  tor_assert(keylen <= (int)sizeof(buf));
-
-  r = secret_to_key_compute_key(buf, keylen, spec, spec_len,
+  r = secret_to_key_compute_key(key_out, key_out_len, spec, spec_len,
                                 secret, secret_len, type);
   if (r < 0)
     return r;
-
-  tor_assert(r == keylen);
-  if (key_out_len <= sizeof(buf)) {
-    memcpy(key_out, buf, key_out_len);
-    r = S2K_OKAY;
-  } else {
-    r = crypto_expand_key_material_rfc5869_sha256(buf, keylen,
-                                                spec, spec_len,
-                                                (const uint8_t*)"EXPAND", 6,
-                                                key_out, key_out_len);
-    if (r < 0)
-      r = S2K_FAILED;
-    else
-      r = S2K_OKAY;
-  }
-
-  memwipe(buf, 0, sizeof(buf));
-
-  return r;
+  else
+    return S2K_OKAY;
 }
 
 /**

@@ -776,7 +776,7 @@ run_s2k_tests(const unsigned flags, const unsigned type,
    secret_to_key_derivekey(buf2, sizeof(buf2), buf, speclen,
                            pw1, strlen(pw1)));
 
-  tt_mem_op(buf2, !=, buf3, keylen);
+  tt_mem_op(buf2, !=, buf3, sizeof(buf2));
 
   memset(buf3, 0, sizeof(buf3));
   tt_int_op(S2K_OKAY, ==,
