@@ -2063,7 +2063,8 @@ mark_my_descriptor_dirty(const char *reason)
 }
 
 /** How frequently will we republish our descriptor because of large (factor
- * of 2) shifts in estimated bandwidth? */
+ * of 2) shifts in estimated bandwidth? Note: We don't use this constant
+ * if our previous bandwidth estimate was exactly 0. */
 #define MAX_BANDWIDTH_CHANGE_FREQ (20*60)
 
 /** Check whether bandwidth has changed a lot since the last time we announced
@@ -2081,7 +2082,7 @@ check_descriptor_bandwidth_changed(time_t now)
   if ((prev != cur && (!prev || !cur)) ||
       cur > prev*2 ||
       cur < prev/2) {
-    if (last_changed+MAX_BANDWIDTH_CHANGE_FREQ < now) {
+    if (last_changed+MAX_BANDWIDTH_CHANGE_FREQ < now || !prev) {
       log_info(LD_GENERAL,
                "Measured bandwidth has changed; rebuilding descriptor.");
       mark_my_descriptor_dirty("bandwidth has changed");

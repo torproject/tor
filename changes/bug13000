@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - If our previous bandwidth estimate was 0 bytes, allow publishing a
+      new relay descriptor immediately. Fixes bug 13000; bugfix on
+      0.1.1.6-alpha.
+
