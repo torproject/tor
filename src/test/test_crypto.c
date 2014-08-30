@@ -5,6 +5,7 @@
 
 #include "orconfig.h"
 #define CRYPTO_CURVE25519_PRIVATE
+#define CRYPTO_S2K_PRIVATE
 #include "or.h"
 #include "test.h"
 #include "aes.h"
@@ -889,6 +890,75 @@ test_crypto_s2k_errors(void *arg)
 }
 
 static void
+test_crypto_scrypt_vectors(void *arg)
+{
+  char *mem_op_hex_tmp = NULL;
+  uint8_t spec[128], out[64];
+
+  (void)arg;
+#ifndef HAVE_LIBSCRYPT_H
+  if (1)
+    tt_skip();
+#endif
+
+  /* Test vectors from
+     http://tools.ietf.org/html/draft-josefsson-scrypt-kdf-00 section 11.
+
+     Note that the names of 'r' and 'N' are switched in that section. Or
+     possibly in libscrypt.
+  */
+
+  base16_decode((char*)spec, sizeof(spec),
+                "0400", 4);
+  memset(out, 0x00, sizeof(out));
+  tt_int_op(64, ==,
+            secret_to_key_compute_key(out, 64, spec, 2, "", 0, 2));
+  test_memeq_hex(out,
+                 "77d6576238657b203b19ca42c18a0497"
+                 "f16b4844e3074ae8dfdffa3fede21442"
+                 "fcd0069ded0948f8326a753a0fc81f17"
+                 "e8d3e0fb2e0d3628cf35e20c38d18906");
+
+  base16_decode((char*)spec, sizeof(spec),
+                "4e61436c" "0A34", 12);
+  memset(out, 0x00, sizeof(out));
+  tt_int_op(64, ==,
+            secret_to_key_compute_key(out, 64, spec, 6, "password", 8, 2));
+  test_memeq_hex(out,
+                 "fdbabe1c9d3472007856e7190d01e9fe"
+                 "7c6ad7cbc8237830e77376634b373162"
+                 "2eaf30d92e22a3886ff109279d9830da"
+                 "c727afb94a83ee6d8360cbdfa2cc0640");
+
+  base16_decode((char*)spec, sizeof(spec),
+                "536f6469756d43686c6f72696465" "0e30", 32);
+  memset(out, 0x00, sizeof(out));
+  tt_int_op(64, ==,
+            secret_to_key_compute_key(out, 64, spec, 16,
+                                      "pleaseletmein", 13, 2));
+  test_memeq_hex(out,
+                 "7023bdcb3afd7348461c06cd81fd38eb"
+                 "fda8fbba904f8e3ea9b543f6545da1f2"
+                 "d5432955613f0fcf62d49705242a9af9"
+                 "e61e85dc0d651e40dfcf017b45575887");
+
+  base16_decode((char*)spec, sizeof(spec),
+                "536f6469756d43686c6f72696465" "1430", 32);
+  memset(out, 0x00, sizeof(out));
+  tt_int_op(64, ==,
+            secret_to_key_compute_key(out, 64, spec, 16,
+                                      "pleaseletmein", 13, 2));
+  test_memeq_hex(out,
+                 "2101cb9b6a511aaeaddbbe09cf70f881"
+                 "ec568d574a2ffd4dabe5ee9820adaa47"
+                 "8e56fd8f4ba5d09ffa1c6d927c40f4c3"
+                 "37304049e8a952fbcbf45c6fa77a41a4");
+
+ done:
+  tor_free(mem_op_hex_tmp);
+}
+
+static void
 test_crypto_pwbox(void *arg)
 {
   uint8_t *boxed=NULL, *decoded=NULL;
@@ -1494,6 +1564,7 @@ struct testcase_t crypto_tests[] = {
   { "s2k_rfc2440_legacy", test_crypto_s2k_general, 0, &pass_data,
     (void*)"rfc2440-legacy" },
   { "s2k_errors", test_crypto_s2k_errors, 0, NULL, NULL },
+  { "scrypt_vectors", test_crypto_scrypt_vectors, 0, NULL, NULL },
   { "pwbox", test_crypto_pwbox, 0, NULL, NULL },
   { "aes_iv_AES", test_crypto_aes_iv, TT_FORK, &pass_data, (void*)"aes" },
   { "aes_iv_EVP", test_crypto_aes_iv, TT_FORK, &pass_data, (void*)"evp" },
