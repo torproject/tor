@@ -23,7 +23,7 @@ test_checkdir_perms(void *testdata)
   /* setup data directory before tests. */
   tor_free(options->DataDirectory);
   options->DataDirectory = tor_strdup(get_fname(subdir));
-  tt_int_op(mkdir(options->DataDirectory, STAT_RWXU), ==, 0);
+  tt_int_op(mkdir(options->DataDirectory, 0750), ==, 0);
 
   /* test: create new dir, no flags. */
   testdir = get_datadir_fname("checkdir_new_none");
