@@ -893,7 +893,7 @@ static void
 test_crypto_scrypt_vectors(void *arg)
 {
   char *mem_op_hex_tmp = NULL;
-  uint8_t spec[128], out[64];
+  uint8_t spec[64], out[64];
 
   (void)arg;
 #ifndef HAVE_LIBSCRYPT_H
@@ -953,6 +953,62 @@ test_crypto_scrypt_vectors(void *arg)
                  "ec568d574a2ffd4dabe5ee9820adaa47"
                  "8e56fd8f4ba5d09ffa1c6d927c40f4c3"
                  "37304049e8a952fbcbf45c6fa77a41a4");
+
+ done:
+  tor_free(mem_op_hex_tmp);
+}
+
+static void
+test_crypto_pbkdf2_vectors(void *arg)
+{
+  char *mem_op_hex_tmp = NULL;
+  uint8_t spec[64], out[64];
+  (void)arg;
+
+  /* Test vectors from RFC6070, section 2 */
+  base16_decode((char*)spec, sizeof(spec),
+                "73616c74" "00" , 10);
+  memset(out, 0x00, sizeof(out));
+  tt_int_op(20, ==,
+            secret_to_key_compute_key(out, 20, spec, 5, "password", 8, 1));
+  test_memeq_hex(out, "0c60c80f961f0e71f3a9b524af6012062fe037a6");
+
+  base16_decode((char*)spec, sizeof(spec),
+                "73616c74" "01" , 10);
+  memset(out, 0x00, sizeof(out));
+  tt_int_op(20, ==,
+            secret_to_key_compute_key(out, 20, spec, 5, "password", 8, 1));
+  test_memeq_hex(out, "ea6c014dc72d6f8ccd1ed92ace1d41f0d8de8957");
+
+  base16_decode((char*)spec, sizeof(spec),
+                "73616c74" "0C" , 10);
+  memset(out, 0x00, sizeof(out));
+  tt_int_op(20, ==,
+            secret_to_key_compute_key(out, 20, spec, 5, "password", 8, 1));
+  test_memeq_hex(out, "4b007901b765489abead49d926f721d065a429c1");
+
+  base16_decode((char*)spec, sizeof(spec),
+                "73616c74" "18" , 10);
+  memset(out, 0x00, sizeof(out));
+  tt_int_op(20, ==,
+            secret_to_key_compute_key(out, 20, spec, 5, "password", 8, 1));
+  test_memeq_hex(out, "eefe3d61cd4da4e4e9945b3d6ba2158c2634e984");
+
+  base16_decode((char*)spec, sizeof(spec),
+                "73616c7453414c5473616c7453414c5473616c745"
+                "3414c5473616c7453414c5473616c74" "0C" , 74);
+  memset(out, 0x00, sizeof(out));
+  tt_int_op(25, ==,
+            secret_to_key_compute_key(out, 25, spec, 37,
+                                      "passwordPASSWORDpassword", 24, 1));
+  test_memeq_hex(out, "3d2eec4fe41c849b80c8d83662c0e44a8b291a964cf2f07038");
+
+  base16_decode((char*)spec, sizeof(spec),
+                "7361006c74" "0c" , 12);
+  memset(out, 0x00, sizeof(out));
+  tt_int_op(16, ==,
+            secret_to_key_compute_key(out, 16, spec, 6, "pass\0word", 9, 1));
+  test_memeq_hex(out, "56fa6aa75548099dcc37d7f03425e0c3");
 
  done:
   tor_free(mem_op_hex_tmp);
@@ -1565,6 +1621,7 @@ struct testcase_t crypto_tests[] = {
     (void*)"rfc2440-legacy" },
   { "s2k_errors", test_crypto_s2k_errors, 0, NULL, NULL },
   { "scrypt_vectors", test_crypto_scrypt_vectors, 0, NULL, NULL },
+  { "pbkdf2_vectors", test_crypto_pbkdf2_vectors, 0, NULL, NULL },
   { "pwbox", test_crypto_pwbox, 0, NULL, NULL },
   { "aes_iv_AES", test_crypto_aes_iv, TT_FORK, &pass_data, (void*)"aes" },
   { "aes_iv_EVP", test_crypto_aes_iv, TT_FORK, &pass_data, (void*)"evp" },
