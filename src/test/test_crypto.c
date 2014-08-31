@@ -13,6 +13,7 @@
 #ifdef CURVE25519_ENABLED
 #include "crypto_curve25519.h"
 #include "crypto_ed25519.h"
+#include "ed25519_vectors.inc"
 #endif
 
 extern const char AUTHORITY_SIGNKEY_3[];
@@ -1456,6 +1457,71 @@ test_crypto_ed25519_blinding(void *arg)
 }
 
 static void
+test_crypto_ed25519_testvectors(void *arg)
+{
+  unsigned i;
+  char *mem_op_hex_tmp = NULL;
+  (void)arg;
+
+  for (i = 0; i < ARRAY_LENGTH(ED25519_SECRET_KEYS); ++i) {
+    uint8_t sk[32];
+    ed25519_secret_key_t esk;
+    ed25519_public_key_t pk, blind_pk, pkfromcurve;
+    ed25519_keypair_t keypair, blind_keypair;
+    curve25519_keypair_t curvekp;
+    uint8_t blinding_param[32];
+    ed25519_signature_t sig;
+    int sign;
+
+#define DECODE(p,s) base16_decode((char*)(p),sizeof(p),(s),strlen(s))
+#define EQ(a,h) test_memeq_hex((const char*)(a), (h))
+
+    tt_int_op(0, ==, DECODE(sk, ED25519_SECRET_KEYS[i]));
+    tt_int_op(0, ==, DECODE(blinding_param, ED25519_BLINDING_PARAMS[i]));
+
+    tt_int_op(0, ==, ed25519_secret_key_from_seed(&esk, sk));
+    EQ(esk.seckey, ED25519_EXPANDED_SECRET_KEYS[i]);
+
+    tt_int_op(0, ==, ed25519_public_key_generate(&pk, &esk));
+    EQ(pk.pubkey, ED25519_PUBLIC_KEYS[i]);
+
+    memcpy(&curvekp.seckey.secret_key, esk.seckey, 32);
+    curve25519_public_key_generate(&curvekp.pubkey, &curvekp.seckey);
+
+    tt_int_op(0, ==,
+          ed25519_keypair_from_curve25519_keypair(&keypair, &sign, &curvekp));
+    tt_int_op(0, ==, ed25519_public_key_from_curve25519_public_key(
+                                        &pkfromcurve, &curvekp.pubkey, sign));
+    tt_mem_op(keypair.pubkey.pubkey, ==, pkfromcurve.pubkey, 32);
+    EQ(curvekp.pubkey.public_key, ED25519_CURVE25519_PUBLIC_KEYS[i]);
+
+    /* Self-signing */
+    memcpy(&keypair.seckey, &esk, sizeof(esk));
+    memcpy(&keypair.pubkey, &pk, sizeof(pk));
+
+    tt_int_op(0, ==, ed25519_sign(&sig, pk.pubkey, 32, &keypair));
+
+    EQ(sig.sig, ED25519_SELF_SIGNATURES[i]);
+
+    /* Blinding */
+    tt_int_op(0, ==,
+            ed25519_keypair_blind(&blind_keypair, &keypair, blinding_param));
+    tt_int_op(0, ==,
+            ed25519_public_blind(&blind_pk, &pk, blinding_param));
+
+    EQ(blind_keypair.seckey.seckey, ED25519_BLINDED_SECRET_KEYS[i]);
+    EQ(blind_pk.pubkey, ED25519_BLINDED_PUBLIC_KEYS[i]);
+
+    tt_mem_op(blind_pk.pubkey, ==, blind_keypair.pubkey.pubkey, 32);
+
+#undef DECODE
+#undef EQ
+  }
+ done:
+  tor_free(mem_op_hex_tmp);
+}
+
+static void
 test_crypto_siphash(void *arg)
 {
   /* From the reference implementation, taking
@@ -1597,6 +1663,7 @@ struct testcase_t crypto_tests[] = {
   { "ed25519_encode", test_crypto_ed25519_encode, 0, NULL, NULL },
   { "ed25519_convert", test_crypto_ed25519_convert, 0, NULL, NULL },
   { "ed25519_blinding", test_crypto_ed25519_blinding, 0, NULL, NULL },
+  { "ed25519_testvectors", test_crypto_ed25519_testvectors, 0, NULL, NULL },
 #endif
   { "siphash", test_crypto_siphash, 0, NULL, NULL },
   END_OF_TESTCASES
