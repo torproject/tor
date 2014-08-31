@@ -8,6 +8,7 @@
    Includes self-tester and test vector generator.
 """
 
+import slow_ed25519
 from slow_ed25519 import *
 
 import os
@@ -20,8 +21,7 @@ import binascii
 ell = l
 
 # This replaces expmod above and makes it go a lot faster.
-def expmod(b,e,m):
-    return pow(b,e,m)
+slow_ed25519.expmod = pow
 
 def curve25519ToEd25519(c, sign):
     u = decodeint(c)
