@@ -175,7 +175,7 @@ entry_is_time_to_retry(const entry_guard_t *e, time_t now)
 
   time_t ith_deadline_for_retry;
   time_t unreachable_for;
-  int i;
+  unsigned i;
 
   if (e->last_attempted < e->unreachable_since)
     return 1;
