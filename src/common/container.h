@@ -473,7 +473,7 @@ void* strmap_remove_lc(strmap_t *map, const char *key);
 
 #define DECLARE_TYPED_DIGESTMAP_FNS(prefix, maptype, valtype)           \
   typedef struct maptype maptype;                                       \
-  typedef struct prefix##iter_t prefix##iter_t;                         \
+  typedef struct prefix##iter_t *prefix##iter_t;                        \
   ATTR_UNUSED static INLINE maptype*                                    \
   prefix##new(void)                                                     \
   {                                                                     \
