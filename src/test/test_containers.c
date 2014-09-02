@@ -717,36 +717,44 @@ test_container_strmap(void)
   void *v;
   char *visited = NULL;
   smartlist_t *found_keys = NULL;
+  char *v1 = tor_strdup("v1");
+  char *v99 = tor_strdup("v99");
+  char *v100 = tor_strdup("v100");
+  char *v101 = tor_strdup("v101");
+  char *v102 = tor_strdup("v102");
+  char *v103 = tor_strdup("v103");
+  char *v104 = tor_strdup("v104");
+  char *v105 = tor_strdup("v105");
 
   map = strmap_new();
   test_assert(map);
   test_eq(strmap_size(map), 0);
   test_assert(strmap_isempty(map));
-  v = strmap_set(map, "K1", (void*)99);
+  v = strmap_set(map, "K1", v99);
   test_eq_ptr(v, NULL);
   test_assert(!strmap_isempty(map));
-  v = strmap_set(map, "K2", (void*)101);
+  v = strmap_set(map, "K2", v101);
   test_eq_ptr(v, NULL);
-  v = strmap_set(map, "K1", (void*)100);
-  test_eq_ptr(v, (void*)99);
-  test_eq_ptr(strmap_get(map,"K1"), (void*)100);
-  test_eq_ptr(strmap_get(map,"K2"), (void*)101);
+  v = strmap_set(map, "K1", v100);
+  test_eq_ptr(v, v99);
+  test_eq_ptr(strmap_get(map,"K1"), v100);
+  test_eq_ptr(strmap_get(map,"K2"), v101);
   test_eq_ptr(strmap_get(map,"K-not-there"), NULL);
   strmap_assert_ok(map);
 
   v = strmap_remove(map,"K2");
   strmap_assert_ok(map);
-  test_eq_ptr(v, (void*)101);
+  test_eq_ptr(v, v101);
   test_eq_ptr(strmap_get(map,"K2"), NULL);
   test_eq_ptr(strmap_remove(map,"K2"), NULL);
 
-  strmap_set(map, "K2", (void*)101);
-  strmap_set(map, "K3", (void*)102);
-  strmap_set(map, "K4", (void*)103);
+  strmap_set(map, "K2", v101);
+  strmap_set(map, "K3", v102);
+  strmap_set(map, "K4", v103);
   test_eq(strmap_size(map), 4);
   strmap_assert_ok(map);
-  strmap_set(map, "K5", (void*)104);
-  strmap_set(map, "K6", (void*)105);
+  strmap_set(map, "K5", v104);
+  strmap_set(map, "K6", v105);
   strmap_assert_ok(map);
 
   /* Test iterator. */
@@ -766,7 +774,7 @@ test_container_strmap(void)
 
   /* Make sure we removed K2, but not the others. */
   test_eq_ptr(strmap_get(map, "K2"), NULL);
-  test_eq_ptr(strmap_get(map, "K5"), (void*)104);
+  test_eq_ptr(strmap_get(map, "K5"), v104);
   /* Make sure we visited everyone once */
   smartlist_sort_strings(found_keys);
   visited = smartlist_join_strings(found_keys, ":", 0, NULL);
@@ -779,12 +787,12 @@ test_container_strmap(void)
 
   /* Now try some lc functions. */
   map = strmap_new();
-  strmap_set_lc(map,"Ab.C", (void*)1);
-  test_eq_ptr(strmap_get(map,"ab.c"), (void*)1);
+  strmap_set_lc(map,"Ab.C", v1);
+  test_eq_ptr(strmap_get(map,"ab.c"), v1);
   strmap_assert_ok(map);
-  test_eq_ptr(strmap_get_lc(map,"AB.C"), (void*)1);
+  test_eq_ptr(strmap_get_lc(map,"AB.C"), v1);
   test_eq_ptr(strmap_get(map,"AB.C"), NULL);
-  test_eq_ptr(strmap_remove_lc(map,"aB.C"), (void*)1);
+  test_eq_ptr(strmap_remove_lc(map,"aB.C"), v1);
   strmap_assert_ok(map);
   test_eq_ptr(strmap_get_lc(map,"AB.C"), NULL);
 
@@ -796,6 +804,14 @@ test_container_strmap(void)
     smartlist_free(found_keys);
   }
   tor_free(visited);
+  tor_free(v1);
+  tor_free(v99);
+  tor_free(v100);
+  tor_free(v101);
+  tor_free(v102);
+  tor_free(v103);
+  tor_free(v104);
+  tor_free(v105);
 }
 
 /** Run unit tests for getting the median of a list. */
@@ -881,6 +897,13 @@ test_container_fp_pair_map(void)
   void *v;
   fp_pair_map_iter_t *iter;
   fp_pair_t k;
+  char *v99 = tor_strdup("99");
+  char *v100 = tor_strdup("v100");
+  char *v101 = tor_strdup("v101");
+  char *v102 = tor_strdup("v102");
+  char *v103 = tor_strdup("v103");
+  char *v104 = tor_strdup("v104");
+  char *v105 = tor_strdup("v105");
 
   map = fp_pair_map_new();
   test_assert(map);
@@ -900,31 +923,31 @@ test_container_fp_pair_map(void)
   memset(fp6.first, 0x61, DIGEST_LEN);
   memset(fp6.second, 0x62, DIGEST_LEN);
 
-  v = fp_pair_map_set(map, &fp1, (void*)99);
+  v = fp_pair_map_set(map, &fp1, v99);
   tt_ptr_op(v, ==, NULL);
   test_assert(!fp_pair_map_isempty(map));
-  v = fp_pair_map_set(map, &fp2, (void*)101);
+  v = fp_pair_map_set(map, &fp2, v101);
   tt_ptr_op(v, ==, NULL);
-  v = fp_pair_map_set(map, &fp1, (void*)100);
-  tt_ptr_op(v, ==, (void*)99);
-  test_eq_ptr(fp_pair_map_get(map, &fp1), (void*)100);
-  test_eq_ptr(fp_pair_map_get(map, &fp2), (void*)101);
+  v = fp_pair_map_set(map, &fp1, v100);
+  tt_ptr_op(v, ==, v99);
+  test_eq_ptr(fp_pair_map_get(map, &fp1), v100);
+  test_eq_ptr(fp_pair_map_get(map, &fp2), v101);
   test_eq_ptr(fp_pair_map_get(map, &fp3), NULL);
   fp_pair_map_assert_ok(map);
 
   v = fp_pair_map_remove(map, &fp2);
   fp_pair_map_assert_ok(map);
-  test_eq_ptr(v, (void*)101);
+  test_eq_ptr(v, v101);
   test_eq_ptr(fp_pair_map_get(map, &fp2), NULL);
   test_eq_ptr(fp_pair_map_remove(map, &fp2), NULL);
 
-  fp_pair_map_set(map, &fp2, (void*)101);
-  fp_pair_map_set(map, &fp3, (void*)102);
-  fp_pair_map_set(map, &fp4, (void*)103);
+  fp_pair_map_set(map, &fp2, v101);
+  fp_pair_map_set(map, &fp3, v102);
+  fp_pair_map_set(map, &fp4, v103);
   test_eq(fp_pair_map_size(map), 4);
   fp_pair_map_assert_ok(map);
-  fp_pair_map_set(map, &fp5, (void*)104);
-  fp_pair_map_set(map, &fp6, (void*)105);
+  fp_pair_map_set(map, &fp5, v104);
+  fp_pair_map_set(map, &fp6, v105);
   fp_pair_map_assert_ok(map);
 
   /* Test iterator. */
@@ -942,7 +965,7 @@ test_container_fp_pair_map(void)
 
   /* Make sure we removed fp2, but not the others. */
   test_eq_ptr(fp_pair_map_get(map, &fp2), NULL);
-  test_eq_ptr(fp_pair_map_get(map, &fp5), (void*)104);
+  test_eq_ptr(fp_pair_map_get(map, &fp5), v104);
 
   fp_pair_map_assert_ok(map);
   /* Clean up after ourselves. */
@@ -952,6 +975,13 @@ test_container_fp_pair_map(void)
  done:
   if (map)
     fp_pair_map_free(map, NULL);
+  tor_free(v99);
+  tor_free(v100);
+  tor_free(v101);
+  tor_free(v102);
+  tor_free(v103);
+  tor_free(v104);
+  tor_free(v105);
 }
 
 #define CONTAINER_LEGACY(name)                                          \

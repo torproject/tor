@@ -845,7 +845,8 @@ NS(test_main)(void *arg)
 NS_DECL(addr_policy_result_t, compare_tor_addr_to_addr_policy,
     (const tor_addr_t *addr, uint16_t port, const smartlist_t *policy));
 
-#define MOCK_TOR_ADDR_PTR (tor_addr_t *)0xdeafbead
+static tor_addr_t MOCK_TOR_ADDR;
+#define MOCK_TOR_ADDR_PTR (&MOCK_TOR_ADDR)
 
 static void
 NS(test_main)(void *arg)
@@ -891,8 +892,6 @@ NS(compare_tor_addr_to_addr_policy)(const tor_addr_t *addr, uint16_t port,
 
 NS_DECL(addr_policy_result_t, compare_tor_addr_to_addr_policy,
     (const tor_addr_t *addr, uint16_t port, const smartlist_t *policy));
-
-#define MOCK_TOR_ADDR_PTR (tor_addr_t *)0xdeafbead
 
 static void
 NS(test_main)(void *arg)
@@ -940,8 +939,6 @@ NS(compare_tor_addr_to_addr_policy)(const tor_addr_t *addr, uint16_t port,
 NS_DECL(addr_policy_result_t, compare_tor_addr_to_addr_policy,
     (const tor_addr_t *addr, uint16_t port, const smartlist_t *policy));
 
-#define MOCK_TOR_ADDR_PTR (tor_addr_t *)0xdeafbead
-
 static void
 NS(test_main)(void *arg)
 {
@@ -986,8 +983,6 @@ NS(compare_tor_addr_to_addr_policy)(const tor_addr_t *addr, uint16_t port,
 NS_DECL(addr_policy_result_t, compare_tor_addr_to_addr_policy,
     (const tor_addr_t *addr, uint16_t port, const smartlist_t *policy));
 NS_DECL(int, geoip_get_country_by_addr, (const tor_addr_t *addr));
-
-#define MOCK_TOR_ADDR_PTR (tor_addr_t *)0xdeafbead
 
 static void
 NS(test_main)(void *arg)
@@ -1046,8 +1041,6 @@ NS(geoip_get_country_by_addr)(const tor_addr_t *addr)
 NS_DECL(addr_policy_result_t, compare_tor_addr_to_addr_policy,
     (const tor_addr_t *addr, uint16_t port, const smartlist_t *policy));
 NS_DECL(int, geoip_get_country_by_addr, (const tor_addr_t *addr));
-
-#define MOCK_TOR_ADDR_PTR (tor_addr_t *)0xdeafbead
 
 static void
 NS(test_main)(void *arg)
