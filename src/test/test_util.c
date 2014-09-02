@@ -87,6 +87,20 @@ test_util_read_file_eof_tiny_limit(void *arg)
 }
 
 static void
+test_util_read_file_eof_one_loop_a(void *arg)
+{
+  (void)arg;
+  test_util_read_until_eof_impl("tor_test_fifo_1ka", 1024, 1023);
+}
+
+static void
+test_util_read_file_eof_one_loop_b(void *arg)
+{
+  (void)arg;
+  test_util_read_until_eof_impl("tor_test_fifo_1kb", 1024, 1024);
+}
+
+static void
 test_util_read_file_eof_two_loops(void *arg)
 {
   (void)arg;
@@ -95,6 +109,14 @@ test_util_read_file_eof_two_loops(void *arg)
   // should be updated as well.
 
   test_util_read_until_eof_impl("tor_test_fifo_2k", 2048, 10000);
+}
+
+static void
+test_util_read_file_eof_two_loops_b(void *arg)
+{
+  (void)arg;
+
+  test_util_read_until_eof_impl("tor_test_fifo_2kb", 2048, 2048);
 }
 
 static void
@@ -3870,7 +3892,10 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(make_environment, 0),
   UTIL_TEST(set_env_var_in_sl, 0),
   UTIL_TEST(read_file_eof_tiny_limit, 0),
+  UTIL_TEST(read_file_eof_one_loop_a, 0),
+  UTIL_TEST(read_file_eof_one_loop_b, 0),
   UTIL_TEST(read_file_eof_two_loops, 0),
+  UTIL_TEST(read_file_eof_two_loops_b, 0),
   UTIL_TEST(read_file_eof_zero_bytes, 0),
   UTIL_TEST(write_chunks_to_file, 0),
   UTIL_TEST(mathlog, 0),

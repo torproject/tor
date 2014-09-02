@@ -2357,6 +2357,7 @@ read_file_to_str_until_eof(int fd, size_t max_bytes_to_read, size_t *sz_out)
     pos += r;
   } while (r > 0 && pos < max_bytes_to_read);
 
+  tor_assert(pos < string_max);
   *sz_out = pos;
   string[pos] = '\0';
   return string;
