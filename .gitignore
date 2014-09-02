@@ -133,6 +133,7 @@
 /src/config/sample-server-torrc
 /src/config/torrc
 /src/config/torrc.sample
+/src/config/torrc.minimal
 
 # /src/or/
 /src/or/Makefile

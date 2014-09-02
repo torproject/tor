@@ -1,0 +1,8 @@
+  o New features (sample torrc):
+    - Add a new, infrequently-changed "torrc.minimal".  This file's
+      purpose is similar to torrc.sample, but it is meant to be small
+      and change as infrequently as possible, for the benefit of
+      users whose systems prompt them for intervention whenever a
+      default configuration file is changed. Making this change
+      allows us to update torrc.sample to be a more generally useful
+      "sample torrc".

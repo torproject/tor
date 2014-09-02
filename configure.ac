@@ -1555,6 +1555,7 @@ AC_CONFIG_FILES([
         contrib/dist/torctl
         contrib/dist/tor.service
         src/config/torrc.sample
+        src/config/torrc.minimal
 ])
 
 if test x$asciidoc = xtrue && test "$ASCIIDOC" = "none" ; then

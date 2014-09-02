@@ -2,7 +2,7 @@ confdir = $(sysconfdir)/tor
 
 tordatadir = $(datadir)/tor
 
-EXTRA_DIST+= src/config/geoip src/config/geoip6
+EXTRA_DIST+= src/config/geoip src/config/geoip6 src/config/torrc.minimal.in
 # fallback-consensus
 
 conf_DATA = src/config/torrc.sample
