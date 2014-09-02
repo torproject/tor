@@ -94,9 +94,9 @@ static HT_HEAD(chan_circid_map, chan_circid_circuit_map_t)
      chan_circid_map = HT_INITIALIZER();
 HT_PROTOTYPE(chan_circid_map, chan_circid_circuit_map_t, node,
              chan_circid_entry_hash_, chan_circid_entries_eq_)
-HT_GENERATE(chan_circid_map, chan_circid_circuit_map_t, node,
-            chan_circid_entry_hash_, chan_circid_entries_eq_, 0.6,
-            malloc, realloc, free)
+HT_GENERATE2(chan_circid_map, chan_circid_circuit_map_t, node,
+             chan_circid_entry_hash_, chan_circid_entries_eq_, 0.6,
+             tor_reallocarray_, tor_free_)
 
 /** The most recently returned entry from circuit_get_by_circid_chan;
  * used to improve performance when many cells arrive in a row from the

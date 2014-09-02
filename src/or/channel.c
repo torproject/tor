@@ -108,8 +108,8 @@ channel_idmap_eq(const channel_idmap_entry_t *a,
 
 HT_PROTOTYPE(channel_idmap, channel_idmap_entry_s, node, channel_idmap_hash,
              channel_idmap_eq);
-HT_GENERATE(channel_idmap, channel_idmap_entry_s, node, channel_idmap_hash,
-            channel_idmap_eq, 0.5, tor_malloc, tor_realloc, tor_free_);
+HT_GENERATE2(channel_idmap, channel_idmap_entry_s, node, channel_idmap_hash,
+             channel_idmap_eq, 0.5,  tor_reallocarray_, tor_free_);
 
 static cell_queue_entry_t * cell_queue_entry_dup(cell_queue_entry_t *q);
 static void cell_queue_entry_free(cell_queue_entry_t *q, int handed_off);

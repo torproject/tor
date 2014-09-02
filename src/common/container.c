@@ -1052,13 +1052,13 @@ digestmap_entry_hash(const digestmap_entry_t *a)
 
 HT_PROTOTYPE(strmap_impl, strmap_entry_t, node, strmap_entry_hash,
              strmap_entries_eq)
-HT_GENERATE(strmap_impl, strmap_entry_t, node, strmap_entry_hash,
-            strmap_entries_eq, 0.6, malloc, realloc, free)
+HT_GENERATE2(strmap_impl, strmap_entry_t, node, strmap_entry_hash,
+             strmap_entries_eq, 0.6, tor_reallocarray_, tor_free_)
 
 HT_PROTOTYPE(digestmap_impl, digestmap_entry_t, node, digestmap_entry_hash,
              digestmap_entries_eq)
-HT_GENERATE(digestmap_impl, digestmap_entry_t, node, digestmap_entry_hash,
-            digestmap_entries_eq, 0.6, malloc, realloc, free)
+HT_GENERATE2(digestmap_impl, digestmap_entry_t, node, digestmap_entry_hash,
+             digestmap_entries_eq, 0.6, tor_reallocarray_, tor_free_)
 
 /** Constructor to create a new empty map from strings to void*'s.
  */

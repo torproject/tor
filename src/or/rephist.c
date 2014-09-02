@@ -2724,8 +2724,8 @@ bidi_map_ent_hash(const bidi_map_entry_t *entry)
 
 HT_PROTOTYPE(bidimap, bidi_map_entry_t, node, bidi_map_ent_hash,
              bidi_map_ent_eq);
-HT_GENERATE(bidimap, bidi_map_entry_t, node, bidi_map_ent_hash,
-            bidi_map_ent_eq, 0.6, malloc, realloc, free);
+HT_GENERATE2(bidimap, bidi_map_entry_t, node, bidi_map_ent_hash,
+             bidi_map_ent_eq, 0.6, tor_reallocarray_, tor_free_)
 
 /* DOCDOC bidi_map_free */
 static void

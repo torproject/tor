@@ -57,9 +57,9 @@ microdesc_eq_(microdesc_t *a, microdesc_t *b)
 
 HT_PROTOTYPE(microdesc_map, microdesc_t, node,
              microdesc_hash_, microdesc_eq_);
-HT_GENERATE(microdesc_map, microdesc_t, node,
+HT_GENERATE2(microdesc_map, microdesc_t, node,
              microdesc_hash_, microdesc_eq_, 0.6,
-             malloc, realloc, free);
+             tor_reallocarray_, tor_free_)
 
 /** Write the body of <b>md</b> into <b>f</b>, with appropriate annotations.
  * On success, return the total number of bytes written, and set

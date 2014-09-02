@@ -53,8 +53,8 @@ node_id_eq(const node_t *node1, const node_t *node2)
 }
 
 HT_PROTOTYPE(nodelist_map, node_t, ht_ent, node_id_hash, node_id_eq);
-HT_GENERATE(nodelist_map, node_t, ht_ent, node_id_hash, node_id_eq,
-            0.6, malloc, realloc, free);
+HT_GENERATE2(nodelist_map, node_t, ht_ent, node_id_hash, node_id_eq,
+             0.6, tor_reallocarray_, tor_free_)
 
 /** The global nodelist. */
 static nodelist_t *the_nodelist=NULL;
