@@ -1,5 +1,5 @@
 ## Configuration file for a typical Tor user
-## Last updated 9 October 2013 for Tor 0.2.5.2-alpha.
+## Last updated 2 September 2014 for Tor 0.2.6.1-alpha.
 ## (may or may not work for much older or much newer versions of Tor.)
 ##
 ## Lines that begin with "## " try to explain what's going on. Lines
@@ -151,7 +151,7 @@
 ## using more than one of your relays in a single circuit. See
 ## https://www.torproject.org/docs/faq#MultipleRelays
 ## However, you should never include a bridge's fingerprint here, as it would
-## break its concealability and potentionally reveal its IP/TCP address.
+## break its concealability and potentially reveal its IP/TCP address.
 #MyFamily $keyid,$keyid,...
 
 ## A comma-separated list of exit policies. They're considered first
