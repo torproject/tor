@@ -79,9 +79,9 @@ test_clist_maps(void *arg)
   memset(&cam, 0, sizeof(cam));
   memset(&cdm, 0, sizeof(cdm));
 
-  ch1->cmux = (void*)0x1001;
-  ch2->cmux = (void*)0x1002;
-  ch3->cmux = (void*)0x1003;
+  ch1->cmux = tor_malloc(1);
+  ch2->cmux = tor_malloc(1);
+  ch3->cmux = tor_malloc(1);
 
   or_c1 = or_circuit_new(100, ch2);
   tt_assert(or_c1);
@@ -156,6 +156,12 @@ test_clist_maps(void *arg)
     circuit_free(TO_CIRCUIT(or_c1));
   if (or_c2)
     circuit_free(TO_CIRCUIT(or_c2));
+  if (ch1)
+    tor_free(ch1->cmux);
+  if (ch2)
+    tor_free(ch2->cmux);
+  if (ch3)
+  tor_free(ch3->cmux);
   tor_free(ch1);
   tor_free(ch2);
   tor_free(ch3);

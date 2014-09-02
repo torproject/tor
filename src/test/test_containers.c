@@ -40,38 +40,54 @@ static void
 test_container_smartlist_basic(void)
 {
   smartlist_t *sl;
+  char *v0 = tor_strdup("v0");
+  char *v1 = tor_strdup("v1");
+  char *v2 = tor_strdup("v2");
+  char *v3 = tor_strdup("v3");
+  char *v4 = tor_strdup("v4");
+  char *v22 = tor_strdup("v22");
+  char *v99 = tor_strdup("v99");
+  char *v555 = tor_strdup("v555");
 
   /* XXXX test sort_digests, uniq_strings, uniq_digests */
 
   /* Test smartlist add, del_keeporder, insert, get. */
   sl = smartlist_new();
-  smartlist_add(sl, (void*)1);
-  smartlist_add(sl, (void*)2);
-  smartlist_add(sl, (void*)3);
-  smartlist_add(sl, (void*)4);
+  smartlist_add(sl, v1);
+  smartlist_add(sl, v2);
+  smartlist_add(sl, v3);
+  smartlist_add(sl, v4);
   smartlist_del_keeporder(sl, 1);
-  smartlist_insert(sl, 1, (void*)22);
-  smartlist_insert(sl, 0, (void*)0);
-  smartlist_insert(sl, 5, (void*)555);
-  test_eq_ptr((void*)0,   smartlist_get(sl,0));
-  test_eq_ptr((void*)1,   smartlist_get(sl,1));
-  test_eq_ptr((void*)22,  smartlist_get(sl,2));
-  test_eq_ptr((void*)3,   smartlist_get(sl,3));
-  test_eq_ptr((void*)4,   smartlist_get(sl,4));
-  test_eq_ptr((void*)555, smartlist_get(sl,5));
+  smartlist_insert(sl, 1, v22);
+  smartlist_insert(sl, 0, v0);
+  smartlist_insert(sl, 5, v555);
+  test_eq_ptr(v0,   smartlist_get(sl,0));
+  test_eq_ptr(v1,   smartlist_get(sl,1));
+  test_eq_ptr(v22,  smartlist_get(sl,2));
+  test_eq_ptr(v3,   smartlist_get(sl,3));
+  test_eq_ptr(v4,   smartlist_get(sl,4));
+  test_eq_ptr(v555, smartlist_get(sl,5));
   /* Try deleting in the middle. */
   smartlist_del(sl, 1);
-  test_eq_ptr((void*)555, smartlist_get(sl, 1));
+  test_eq_ptr(v555, smartlist_get(sl, 1));
   /* Try deleting at the end. */
   smartlist_del(sl, 4);
   test_eq(4, smartlist_len(sl));
 
   /* test isin. */
-  test_assert(smartlist_contains(sl, (void*)3));
-  test_assert(!smartlist_contains(sl, (void*)99));
+  test_assert(smartlist_contains(sl, v3));
+  test_assert(!smartlist_contains(sl, v99));
 
  done:
   smartlist_free(sl);
+  tor_free(v0);
+  tor_free(v1);
+  tor_free(v2);
+  tor_free(v3);
+  tor_free(v4);
+  tor_free(v22);
+  tor_free(v99);
+  tor_free(v555);
 }
 
 /** Run unit tests for smartlist-of-strings functionality. */
