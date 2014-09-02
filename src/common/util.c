@@ -96,6 +96,10 @@
 #include <sys/wait.h>
 #endif
 
+#ifdef __clang_analyzer__
+#undef MALLOC_ZERO_WORKS
+#endif
+
 /* =====
  * Assertion helper.
  * ===== */
@@ -230,6 +234,13 @@ tor_realloc_(void *ptr, size_t size DMALLOC_PARAMS)
   void *result;
 
   tor_assert(size < SIZE_T_CEILING);
+
+#ifndef MALLOC_ZERO_WORKS
+  /* Some libc mallocs don't work when size==0. Override them. */
+  if (size==0) {
+    size=1;
+  }
+#endif
 
 #ifdef USE_DMALLOC
   result = dmalloc_realloc(file, line, ptr, size, DMALLOC_FUNC_REALLOC, 0);
