@@ -334,6 +334,9 @@ static int
 compare_vote_rs(const vote_routerstatus_t *a, const vote_routerstatus_t *b)
 {
   int r;
+  tor_assert(a);
+  tor_assert(b);
+
   if ((r = fast_memcmp(a->status.identity_digest, b->status.identity_digest,
                   DIGEST_LEN)))
     return r;
@@ -431,6 +434,7 @@ compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
     const tor_addr_port_t *most_alt_orport = NULL;
 
     SMARTLIST_FOREACH_BEGIN(votes, vote_routerstatus_t *, rs) {
+      tor_assert(rs);
       if (compare_vote_rs(most, rs) == 0 &&
           !tor_addr_is_null(&rs->status.ipv6_addr)
           && rs->status.ipv6_orport) {

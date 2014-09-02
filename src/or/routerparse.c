@@ -923,7 +923,7 @@ router_parse_list_from_string(const char **s, const char *eos,
 {
   routerinfo_t *router;
   extrainfo_t *extrainfo;
-  signed_descriptor_t *signed_desc;
+  signed_descriptor_t *signed_desc = NULL;
   void *elt;
   const char *end, *start;
   int have_extrainfo;
@@ -980,6 +980,7 @@ router_parse_list_from_string(const char **s, const char *eos,
       continue;
     }
     if (saved_location != SAVED_NOWHERE) {
+      tor_assert(signed_desc);
       signed_desc->saved_location = saved_location;
       signed_desc->saved_offset = *s - start;
     }

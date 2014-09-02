@@ -2639,7 +2639,7 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
   /* Is this a single hop circuit? */
   if (circ && (circuit_get_cpath_len(circ)<2 || hop==1)) {
     const node_t *node = NULL;
-    char *exit_digest;
+    char *exit_digest = NULL;
     if (circ->build_state &&
         circ->build_state->chosen_exit &&
         !tor_digest_is_zero(circ->build_state->chosen_exit->identity_digest)) {
@@ -2654,6 +2654,7 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
       "551 Can't attach stream to this one-hop circuit.\r\n", conn);
       return 0;
     }
+    tor_assert(exit_digest);
     ap_conn->chosen_exit_name = tor_strdup(hex_str(exit_digest, DIGEST_LEN));
   }
 
@@ -4921,7 +4922,7 @@ MOCK_IMPL(void,
                                             or_connection_t *or_conn))
 {
   int status = bootstrap_percent;
-  const char *tag, *summary;
+  const char *tag = "", *summary = "";
   char buf[BOOTSTRAP_MSG_LEN];
   const char *recommendation = "ignore";
   int severity;

@@ -1613,6 +1613,7 @@ connection_connect(connection_t *conn, const char *address,
     }
   }
 
+  tor_assert(options);
   if (options->ConstrainedSockets)
     set_constrained_socket_buffers(s, (int)options->ConstrainedSockSize);
 
