@@ -1435,6 +1435,9 @@ tor_ersatz_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
     socklen_t size;
     int saved_errno = -1;
 
+    memset(&connect_addr, 0, sizeof(connect_addr));
+    memset(&listen_addr, 0, sizeof(listen_addr));
+
     if (protocol
 #ifdef AF_UNIX
         || family != AF_UNIX
