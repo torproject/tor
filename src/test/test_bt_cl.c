@@ -30,7 +30,12 @@ int
 crash(int x)
 {
   if (crashtype == 0) {
+#if defined(__clang_analyzer__) || defined(__COVERITY__)
+    tor_assert(1 == 0); /* Avert your eyes, clangalyzer and coverity!  You
+                         * don't need to see us dereference NULL. */
+#else
     *(volatile int *)0 = 0;
+#endif
   } else if (crashtype == 1) {
     tor_assert(1 == 0);
   } else if (crashtype == -1) {
