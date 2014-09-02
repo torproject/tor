@@ -345,7 +345,7 @@ typedef unsigned int cpd_check_t;
 #define CPD_CHECK 2
 #define CPD_GROUP_OK 4
 #define CPD_GROUP_READ 8
-#define CPD_CHECK_MODE_ONLY 16 
+#define CPD_CHECK_MODE_ONLY 16
 int check_private_dir(const char *dirname, cpd_check_t check,
                       const char *effective_user);
 

@@ -1873,10 +1873,11 @@ file_status(const char *fname)
  * return -1.  If CPD_GROUP_OK is set, then it's okay if the directory
  * is group-readable, but in all cases we create the directory mode 0700.
  * If CPD_GROUP_READ is set, existing directory behaves as CPD_GROUP_OK and
- * if the directory is created it will use mode 0750 with group read permission.
- * Group read privileges also assume execute permission as norm for directories.
- * If CPD_CHECK_MODE_ONLY is set, then we don't alter the directory permissions
- * if they are too permissive: we just return -1.
+ * if the directory is created it will use mode 0750 with group read
+ * permission. Group read privileges also assume execute permission
+ * as norm for directories. If CPD_CHECK_MODE_ONLY is set, then we don't
+ * alter the directory permissions if they are too permissive:
+ * we just return -1.
  * When effective_user is not NULL, check permissions against the given user
  * and its primary group.
  */

@@ -95,7 +95,8 @@ typedef struct rend_service_port_config_t {
 typedef struct rend_service_t {
   /* Fields specified in config file */
   char *directory; /**< where in the filesystem it stores it */
-  int dir_group_readable; /**< if 1, allow group read permissions on directory */
+  int dir_group_readable; /**< if 1, allow group read
+                             permissions on directory */
   smartlist_t *ports; /**< List of rend_service_port_config_t */
   rend_auth_type_t auth_type; /**< Client authorization type or 0 if no client
                                * authorization is performed. */
@@ -395,15 +396,20 @@ rend_config_services(const or_options_t *options, int validate_only)
         return -1;
       }
       smartlist_add(service->ports, portcfg);
-    } else if (!strcasecmp(line->key, "HiddenServiceDirGroupReadable")) {
-        service->dir_group_readable = (int)tor_parse_long(line->value, 10, 0, 1, &ok, NULL);
+    } else if (!strcasecmp(line->key,
+                           "HiddenServiceDirGroupReadable")) {
+        service->dir_group_readable = (int)tor_parse_long(line->value,
+                                                          10, 0, 1, &ok, NULL);
         if (!ok) {
-            log_warn(LD_CONFIG, "HiddenServiceDirGroupReadable should be 0 or 1, not %s",
+            log_warn(LD_CONFIG,
+                     "HiddenServiceDirGroupReadable should be 0 or 1, not %s",
                      line->value);
             rend_service_free(service);
             return -1;
         }
-        log_info(LD_CONFIG, "HiddenServiceDirGroupReadable=%d for %s", service->dir_group_readable, service->directory);
+        log_info(LD_CONFIG,
+                 "HiddenServiceDirGroupReadable=%d for %s",
+                 service->dir_group_readable, service->directory);
     } else if (!strcasecmp(line->key, "HiddenServiceAuthorizeClient")) {
       /* Parse auth type and comma-separated list of client names and add a
        * rend_authorized_client_t for each client to the service's list
@@ -761,9 +767,9 @@ rend_service_load_keys(rend_service_t *s)
 #ifndef _WIN32
   if (s->dir_group_readable) {
     /* Also verify hostname file created with group read. */
-    if (chmod(fname, 0640)) {
-      log_warn(LD_FS,"Unable to make hidden hostname file %s group-readable.", fname);
-    }
+    if (chmod(fname, 0640))
+      log_warn(LD_FS,"Unable to make hidden hostname file %s group-readable.",
+               fname);
   }
 #endif
 

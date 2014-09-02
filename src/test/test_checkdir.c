@@ -43,7 +43,6 @@ test_checkdir_perms(void *testdata)
   tt_int_op(0, ==, (st.st_mode & unix_verify_optsmask));
   tor_free(testdir);
 
-
   /* test: create new dir, CPD_GROUP_READ option set. */
   testdir = get_datadir_fname("checkdir_new_groupread");
   cpd_chkopts = CPD_CREATE|CPD_GROUP_READ;
@@ -52,7 +51,6 @@ test_checkdir_perms(void *testdata)
   tt_int_op(0, ==, stat(testdir, &st));
   tt_int_op(0, ==, (st.st_mode & unix_verify_optsmask));
   tor_free(testdir);
-
 
   /* test: check existing dir created with defaults,
             and verify with CPD_CREATE only. */
@@ -66,7 +64,6 @@ test_checkdir_perms(void *testdata)
   tt_int_op(0, ==, (st.st_mode & unix_verify_optsmask));
   tor_free(testdir);
 
-
   /* test: check existing dir created with defaults,
             and verify with CPD_GROUP_OK option set. */
   testdir = get_datadir_fname("checkdir_exists_groupok");
@@ -78,7 +75,6 @@ test_checkdir_perms(void *testdata)
   tt_int_op(0, ==, stat(testdir, &st));
   tt_int_op(0, ==, (st.st_mode & unix_verify_optsmask));
   tor_free(testdir);
-
 
   /* test: check existing dir created with defaults,
             and verify with CPD_GROUP_READ option set. */
@@ -92,7 +88,6 @@ test_checkdir_perms(void *testdata)
   tt_int_op(0, ==, (st.st_mode & unix_verify_optsmask));
   tor_free(testdir);
 
-
   /* test: check existing dir created with CPD_GROUP_READ,
             and verify with CPD_GROUP_OK option set. */
   testdir = get_datadir_fname("checkdir_existsread_groupok");
@@ -104,7 +99,6 @@ test_checkdir_perms(void *testdata)
   tt_int_op(0, ==, stat(testdir, &st));
   tt_int_op(0, ==, (st.st_mode & unix_verify_optsmask));
   tor_free(testdir);
-
 
   /* test: check existing dir created with CPD_GROUP_READ,
             and verify with CPD_GROUP_READ option set. */
