@@ -1092,8 +1092,11 @@ circuitmux_detach_circuit,(circuitmux_t *cmux, circuit_t *circ))
   /*
    * Use this to keep track of whether we found it for n_chan or
    * p_chan for consistency checking.
+   *
+   * The 0 initializer is not a valid cell_direction_t value.
+   * We assert that it has been replaced with a valid value before it is used.
    */
-  cell_direction_t last_searched_direction;
+  cell_direction_t last_searched_direction = 0;
 
   tor_assert(cmux);
   tor_assert(cmux->chanid_circid_map);
@@ -1122,6 +1125,9 @@ circuitmux_detach_circuit,(circuitmux_t *cmux, circuit_t *circ))
       }
     }
   }
+
+  tor_assert(last_searched_direction == CELL_DIRECTION_OUT
+             || last_searched_direction == CELL_DIRECTION_IN);
 
   /*
    * If hashent isn't NULL, we have a circuit to detach; don't remove it from

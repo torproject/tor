@@ -1570,7 +1570,7 @@ rep_hist_load_bwhist_state_section(bw_array_t *b,
   time_t start;
 
   uint64_t v, mv;
-  int i,ok,ok_m;
+  int i,ok,ok_m = 0;
   int have_maxima = s_maxima && s_values &&
     (smartlist_len(s_values) == smartlist_len(s_maxima));
 
