@@ -576,6 +576,7 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
         microdesc_wipe_body(md);
       }
     }
+    smartlist_free(wrote);
     return -1;
   }
 

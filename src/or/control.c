@@ -1201,6 +1201,10 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
   tor_free(password);
   connection_printf_to_buf(conn, "515 Authentication failed: %s\r\n", errstr);
   connection_mark_for_close(TO_CONN(conn));
+  if (sl) { /* clean up */
+    SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+    smartlist_free(sl);
+  }
   return 0;
  ok:
   log_info(LD_CONTROL, "Authenticated control connection ("TOR_SOCKET_T_FORMAT
