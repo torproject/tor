@@ -1,3 +1,0 @@
-  o Documentation:
-    - Document 'reject6' and 'accept6' ExitPolicy entries. Resolves 
-      ticket 12878.
