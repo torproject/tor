@@ -1,0 +1,5 @@
+  o Distribution:
+    - systemd unit file: only allow tor to write to /var/lib/tor
+      and /var/log/tor. The rest of the filesystem is accessible
+      for reading only.
+      Patch by intrigeri; resolves ticket 12751.
