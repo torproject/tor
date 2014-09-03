@@ -17,12 +17,6 @@ Changes in version 0.2.5.7-beta - 2014-09-??
     - Avoid queuing or sending destroy cells for circuit ID zero when we
       fail to send a CREATE cell. Fixes bug 12848; bugfix on 0.0.8pre1.
       Found and fixed by "cypherpunks".
-    - Downgrade "Unexpected onionskin length after decryption" warning
-      to a protocol-warn, since there's nothing relay operators can do
-      about a client that sends them a malformed create cell. Resolves
-      bug 12996; bugfix on 0.0.6rc1.
-    - Log more specific warnings when we get an ESTABLISH_RENDEZVOUS
-      cell on a cannibalized or non-OR circuit. Resolves ticket 12997.
 
   o Minor features (bridge):
     - Add an ExtORPortCookieAuthFileGroupReadable option to make the
@@ -31,6 +25,14 @@ Changes in version 0.2.5.7-beta - 2014-09-??
   o Minor features (geoip):
     - Update geoip and geoip6 to the August 7 2014 Maxmind GeoLite2
       Country database.
+
+  o Minor bugfixes (relay):
+    - Downgrade "Unexpected onionskin length after decryption" warning
+      to a protocol-warn, since there's nothing relay operators can do
+      about a client that sends them a malformed create cell. Resolves
+      bug 12996; bugfix on 0.0.6rc1.
+    - Log more specific warnings when we get an ESTABLISH_RENDEZVOUS
+      cell on a cannibalized or non-OR circuit. Resolves ticket 12997.
 
   o Minor bugfixes (controller):
     - Restore the functionality of CookieAuthFileGroupReadable. Fixes
