@@ -6,12 +6,12 @@ Changes in version 0.2.5.7-beta - 2014-09-??
       when DisableNetwork is set to 0. Fixes the bug introduced by the
       fix for bug 11200; bugfix on 0.2.5.4-alpha.
     - Resume expanding abbreviations for command-line options. The fix
-      for bug 4647 accidentally removed our hack from bug 586 that rewrote
-      HashedControlPassword to __HashedControlSessionPassword when it
-      appears on the commandline (which allowed the user to set her
-      own HashedControlPassword in the torrc file while the controller
-      generates a fresh session password for each run). Fixes bug 12948;
-      bugfix on 0.2.5.1-alpha.
+      for bug 4647 accidentally removed our hack from bug 586 that
+      rewrote HashedControlPassword to __HashedControlSessionPassword
+      when it appears on the commandline (which allowed the user to set
+      her own HashedControlPassword in the torrc file while the
+      controller generates a fresh session password for each run). Fixes
+      bug 12948; bugfix on 0.2.5.1-alpha.
 
   o Major bugfixes (relay):
     - Avoid queuing or sending destroy cells for circuit ID zero when we
@@ -21,8 +21,8 @@ Changes in version 0.2.5.7-beta - 2014-09-??
       to a protocol-warn, since there's nothing relay operators can do
       about a client that sends them a malformed create cell. Resolves
       bug 12996; bugfix on 0.0.6rc1.
-    - Log more specific warnings when we get an ESTABLISH_RENDEZVOUS cell
-      on a cannibalized or non-OR circuit. Resolves ticket 12997.
+    - Log more specific warnings when we get an ESTABLISH_RENDEZVOUS
+      cell on a cannibalized or non-OR circuit. Resolves ticket 12997.
 
   o Minor features (bridge):
     - Add an ExtORPortCookieAuthFileGroupReadable option to make the
