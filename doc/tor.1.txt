@@ -1493,6 +1493,11 @@ is non-zero):
     public (external) IP address. See RFC 1918 and RFC 3330 for more details
     about internal and reserved IP address space. +
  +
+    Tor also allow IPv6 exit policy entries. For instance, "reject6 [FC00::]/7:*"
+    rejects all destinations that share 7 most significant bit prefix with 
+    address FC00::. Respectively, "accept6 [C000::]/3:*" accepts all destinations
+    that share 3 most significant bit prefix with address C000::. +
+ +
     This directive can be specified multiple times so you don't have to put it
     all on one line. +
  +
