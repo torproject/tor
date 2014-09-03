@@ -4224,10 +4224,6 @@ typedef struct {
   /** Should we send the timestamps that pre-023 hidden services want? */
   int Support022HiddenServices;
 
-  /** Create the Hidden Service directories
-      and hostname files group readable. */
-  int HiddenServiceDirGroupReadable;
-
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

@@ -1988,8 +1988,8 @@ check_private_dir(const char *dirname, cpd_check_t check,
     tor_free(process_groupname);
     return -1;
   }
-  if(check & CPD_CHECK_MODE_ONLY) {
-    if(check & CPD_GROUP_OK || check & CPD_GROUP_READ) {
+  if (check & CPD_CHECK_MODE_ONLY) {
+    if (check & CPD_GROUP_OK || check & CPD_GROUP_READ) {
       if (!st.st_mode & 0027) {
         log_warn(LD_FS, "Incorrect permissions on directory %s a.", dirname);
         return -1;
