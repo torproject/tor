@@ -241,7 +241,6 @@ nodelist_set_consensus(networkstatus_t *ns)
       node->is_stable = rs->is_stable;
       node->is_possible_guard = rs->is_possible_guard;
       node->is_exit = rs->is_exit;
-      node->is_bad_directory = rs->is_bad_directory;
       node->is_bad_exit = rs->is_bad_exit;
       node->is_hs_dir = rs->is_hs_dir;
       node->ipv6_preferred = 0;
@@ -267,8 +266,7 @@ nodelist_set_consensus(networkstatus_t *ns)
           node->is_valid = node->is_running = node->is_hs_dir =
             node->is_fast = node->is_stable =
             node->is_possible_guard = node->is_exit =
-            node->is_bad_exit = node->is_bad_directory =
-            node->ipv6_preferred = 0;
+            node->is_bad_exit = node->ipv6_preferred = 0;
         }
       }
     } SMARTLIST_FOREACH_END(node);

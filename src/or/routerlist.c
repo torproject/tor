@@ -1450,8 +1450,6 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags)
 
     if (!node->is_running || !status->dir_port || !node->is_valid)
       continue;
-    if (node->is_bad_directory)
-      continue;
     if (requireother && router_digest_is_me(node->identity))
       continue;
     is_trusted = router_digest_is_trusted_dir(node->identity);
