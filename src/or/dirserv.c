@@ -56,7 +56,7 @@ static int routers_with_measured_bw = 0;
 static void directory_remove_invalid(void);
 static char *format_versions_list(config_line_t *ln);
 struct authdir_config_t;
-static int add_fingerprint_to_dir(const char *nickname, const char *fp,
+static void add_fingerprint_to_dir(const char *nickname, const char *fp,
                                   struct authdir_config_t *list);
 static uint32_t
 dirserv_get_status_impl(const char *fp, const char *nickname,
@@ -110,10 +110,9 @@ authdir_config_new(void)
 }
 
 /** Add the fingerprint <b>fp</b> for <b>nickname</b> to
- * the smartlist of fingerprint_entry_t's <b>list</b>. Return 0 if it's
- * new, or 1 if we replaced the old value.
+ * the smartlist of fingerprint_entry_t's <b>list</b>.
  */
-/* static */ int
+/* static */ void
 add_fingerprint_to_dir(const char *nickname, const char *fp,
                        authdir_config_t *list)
 {
@@ -130,14 +129,14 @@ add_fingerprint_to_dir(const char *nickname, const char *fp,
     log_warn(LD_DIRSERV, "Couldn't decode fingerprint \"%s\"",
              escaped(fp));
     tor_free(fingerprint);
-    return 0;
+    return;
   }
 
   if (!strcasecmp(nickname, UNNAMED_ROUTER_NICKNAME)) {
     log_warn(LD_DIRSERV, "Tried to add a mapping for reserved nickname %s",
              UNNAMED_ROUTER_NICKNAME);
     tor_free(fingerprint);
-    return 0;
+    return;
   }
 
   status = digestmap_get(list->status_by_digest, d);
@@ -168,7 +167,7 @@ add_fingerprint_to_dir(const char *nickname, const char *fp,
       status->status |= FP_BADEXIT;
     }
   }
-  return 0;
+  return;
 }
 
 /** Add the nickname and fingerprint for this OR to the
@@ -275,9 +274,7 @@ dirserv_load_fingerprint_file(void)
                  UNNAMED_ROUTER_NICKNAME);
       continue;
     }
-    if (add_fingerprint_to_dir(nickname, fingerprint, fingerprint_list_new)
-        != 0)
-      log_notice(LD_CONFIG, "Duplicate nickname '%s'.", nickname);
+    add_fingerprint_to_dir(nickname, fingerprint, fingerprint_list_new);
   }
 
   config_free_lines(front);
