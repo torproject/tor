@@ -266,9 +266,9 @@ test_dir_formats(void)
   {
     fingerprint_list = smartlist_new();
     crypto_pk_get_fingerprint(pk2, buf, 1);
-    add_fingerprint_to_dir("Magri", buf, fingerprint_list);
+    add_fingerprint_to_dir(buf, fingerprint_list, 0);
     crypto_pk_get_fingerprint(pk1, buf, 1);
-    add_fingerprint_to_dir("Fred", buf, fingerprint_list);
+    add_fingerprint_to_dir(buf, fingerprint_list, 0);
   }
 
 #endif

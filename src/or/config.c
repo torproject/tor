@@ -317,7 +317,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("MonthlyAccountingStart"),
   V(MyFamily,                    STRING,   NULL),
   V(NewCircuitPeriod,            INTERVAL, "30 seconds"),
-  VAR("NamingAuthoritativeDirectory",BOOL, NamingAuthoritativeDir, "0"),
+  OBSOLETE("NamingAuthoritativeDirectory"),
   V(NATDListenAddress,           LINELIST, NULL),
   VPORT(NATDPort,                    LINELIST, NULL),
   V(Nickname,                    STRING,   NULL),
