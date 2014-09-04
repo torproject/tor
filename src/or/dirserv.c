@@ -362,7 +362,6 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
                         const char *platform, const char *contact,
                         const char **msg, int should_log)
 {
-  int reject_unlisted = get_options()->AuthDirRejectUnlisted;
   uint32_t result;
   router_status_t *status_by_digest;
 
@@ -457,11 +456,6 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
         log_info(LD_DIRSERV, "Not marking '%s' valid because of address '%s'",
                  nickname, fmt_addr32(addr));
       result |= FP_INVALID;
-    }
-    if (reject_unlisted) {
-      if (msg)
-        *msg = "Authdir rejects unknown routers.";
-      return FP_REJECT;
     }
   }
 

@@ -1943,12 +1943,6 @@ on the public Tor network.
     1 unless you plan to list non-functioning exits as bad; otherwise, you are
     effectively voting in favor of every declared exit as an exit.)
 
-[[AuthDirRejectUnlisted]] **AuthDirRejectUnlisted** **0**|**1**::
-    Authoritative directories only. If set to 1, the directory server rejects
-    all uploaded server descriptors that aren't explicitly listed in the
-    fingerprints file. This acts as a "panic button" if we get hit with a Sybil
-    attack. (Default: 0)
-
 [[AuthDirMaxServersPerAddr]] **AuthDirMaxServersPerAddr** __NUM__::
     Authoritative directories only. The maximum number of servers that we will
     list as acceptable on a single IP address. Set this to "0" for "no limit".

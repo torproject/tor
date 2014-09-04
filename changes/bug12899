@@ -1,0 +1,4 @@
+  o Removed features:
+    - The "AuthDirRejectUnlisted" option no longer has any effect, as
+      the fingerprints file (approved-routers) has been deprecated.
+

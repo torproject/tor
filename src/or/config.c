@@ -150,7 +150,7 @@ static config_var_t option_vars_[] = {
   V(AuthDirGuardBWGuarantee,     MEMUNIT,  "2 MB"),
   V(AuthDirReject,               LINELIST, NULL),
   V(AuthDirRejectCCs,            CSV,      ""),
-  V(AuthDirRejectUnlisted,       BOOL,     "0"),
+  OBSOLETE("AuthDirRejectUnlisted"),
   V(AuthDirListBadDirs,          BOOL,     "0"),
   V(AuthDirListBadExits,         BOOL,     "0"),
   V(AuthDirMaxServersPerAddr,    UINT,     "2"),
