@@ -3742,8 +3742,6 @@ typedef struct {
   config_line_t *NodeFamilies; /**< List of config lines for
                                 * node families */
   smartlist_t *NodeFamilySets; /**< List of parsed NodeFamilies values. */
-  config_line_t *AuthDirBadDir; /**< Address policy for descriptors to
-                                 * mark as bad dir mirrors. */
   config_line_t *AuthDirBadExit; /**< Address policy for descriptors to
                                   * mark as bad exits. */
   config_line_t *AuthDirReject; /**< Address policy for descriptors to
@@ -3752,19 +3750,16 @@ typedef struct {
                                   * never mark as valid. */
   /** @name AuthDir...CC
    *
-   * Lists of country codes to mark as BadDir, BadExit, or Invalid, or to
+   * Lists of country codes to mark as BadExit, or Invalid, or to
    * reject entirely.
    *
    * @{
    */
-  smartlist_t *AuthDirBadDirCCs;
   smartlist_t *AuthDirBadExitCCs;
   smartlist_t *AuthDirInvalidCCs;
   smartlist_t *AuthDirRejectCCs;
   /**@}*/
 
-  int AuthDirListBadDirs; /**< True iff we should list bad dirs,
-                           * and vote for all other dir mirrors as good. */
   int AuthDirListBadExits; /**< True iff we should list bad exits,
                             * and vote for all other exits as good. */
   int AuthDirMaxServersPerAddr; /**< Do not permit more than this

@@ -1884,19 +1884,14 @@ on the public Tor network.
     elements. Otherwise, if the address is not an IP address or is a private IP
     address, it will reject the router descriptor. (Default: 0)
 
-[[AuthDirBadDir]] **AuthDirBadDir** __AddressPattern...__::
-    Authoritative directories only. A set of address patterns for servers that
-    will be listed as bad directories in any network status document this
-    authority publishes, if **AuthDirListBadDirs** is set. +
- +
-    (The address pattern syntax here and in the options below
-    is the same as for exit policies, except that you don't need to say
-    "accept" or "reject", and ports are not needed.)
-
 [[AuthDirBadExit]] **AuthDirBadExit** __AddressPattern...__::
     Authoritative directories only. A set of address patterns for servers that
     will be listed as bad exits in any network status document this authority
     publishes, if **AuthDirListBadExits** is set.
+ +
+    (The address pattern syntax here and in the options below
+    is the same as for exit policies, except that you don't need to say
+    "accept" or "reject", and ports are not needed.)
 
 [[AuthDirInvalid]] **AuthDirInvalid** __AddressPattern...__::
     Authoritative directories only. A set of address patterns for servers that
@@ -1909,8 +1904,6 @@ on the public Tor network.
     authority publishes, or accepted as an OR address in any descriptor
     submitted for publication by this authority.
 
-[[AuthDirBadDirCCs]] **AuthDirBadDirCCs** __CC__,... +
-
 [[AuthDirBadExitCCs]] **AuthDirBadExitCCs** __CC__,... +
 
 [[AuthDirInvalidCCs]] **AuthDirInvalidCCs** __CC__,... +
@@ -1918,15 +1911,8 @@ on the public Tor network.
 [[AuthDirRejectCCs]] **AuthDirRejectCCs** __CC__,...::
     Authoritative directories only. These options contain a comma-separated
     list of country codes such that any server in one of those country codes
-    will be marked as a bad directory/bad exit/invalid for use, or rejected
+    will be marked as a bad exit/invalid for use, or rejected
     entirely.
-
-[[AuthDirListBadDirs]] **AuthDirListBadDirs** **0**|**1**::
-    Authoritative directories only. If set to 1, this directory has some
-    opinion about which nodes are unsuitable as directory caches. (Do not set
-    this to 1 unless you plan to list non-functioning directories as bad;
-    otherwise, you are effectively voting in favor  of every declared
-    directory.)
 
 [[AuthDirListBadExits]] **AuthDirListBadExits** **0**|**1**::
     Authoritative directories only. If set to 1, this directory has some

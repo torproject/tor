@@ -29,9 +29,6 @@ static smartlist_t *authdir_reject_policy = NULL;
  * to be marked as valid in our networkstatus. */
 static smartlist_t *authdir_invalid_policy = NULL;
 /** Policy that addresses for incoming router descriptors must <b>not</b>
- * match in order to not be marked as BadDirectory. */
-static smartlist_t *authdir_baddir_policy = NULL;
-/** Policy that addresses for incoming router descriptors must <b>not</b>
  * match in order to not be marked as BadExit. */
 static smartlist_t *authdir_badexit_policy = NULL;
 
@@ -400,17 +397,6 @@ authdir_policy_valid_address(uint32_t addr, uint16_t port)
   return !addr_is_in_cc_list(addr, get_options()->AuthDirInvalidCCs);
 }
 
-/** Return 1 if <b>addr</b>:<b>port</b> should be marked as a bad dir,
- * based on <b>authdir_baddir_policy</b>. Else return 0.
- */
-int
-authdir_policy_baddir_address(uint32_t addr, uint16_t port)
-{
-  if (! addr_policy_permits_address(addr, port, authdir_baddir_policy))
-    return 1;
-  return addr_is_in_cc_list(addr, get_options()->AuthDirBadDirCCs);
-}
-
 /** Return 1 if <b>addr</b>:<b>port</b> should be marked as a bad exit,
  * based on <b>authdir_badexit_policy</b>. Else return 0.
  */
@@ -455,9 +441,6 @@ validate_addr_policies(const or_options_t *options, char **msg)
   if (parse_addr_policy(options->AuthDirInvalid, &addr_policy,
                         ADDR_POLICY_REJECT))
     REJECT("Error in AuthDirInvalid entry.");
-  if (parse_addr_policy(options->AuthDirBadDir, &addr_policy,
-                        ADDR_POLICY_REJECT))
-    REJECT("Error in AuthDirBadDir entry.");
   if (parse_addr_policy(options->AuthDirBadExit, &addr_policy,
                         ADDR_POLICY_REJECT))
     REJECT("Error in AuthDirBadExit entry.");
@@ -534,9 +517,6 @@ policies_parse_from_options(const or_options_t *options)
     ret = -1;
   if (load_policy_from_option(options->AuthDirInvalid, "AuthDirInvalid",
                               &authdir_invalid_policy, ADDR_POLICY_REJECT) < 0)
-    ret = -1;
-  if (load_policy_from_option(options->AuthDirBadDir, "AuthDirBadDir",
-                              &authdir_baddir_policy, ADDR_POLICY_REJECT) < 0)
     ret = -1;
   if (load_policy_from_option(options->AuthDirBadExit, "AuthDirBadExit",
                               &authdir_badexit_policy, ADDR_POLICY_REJECT) < 0)
@@ -1766,8 +1746,6 @@ policies_free_all(void)
   authdir_reject_policy = NULL;
   addr_policy_list_free(authdir_invalid_policy);
   authdir_invalid_policy = NULL;
-  addr_policy_list_free(authdir_baddir_policy);
-  authdir_baddir_policy = NULL;
   addr_policy_list_free(authdir_badexit_policy);
   authdir_badexit_policy = NULL;
 

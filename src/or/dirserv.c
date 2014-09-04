@@ -76,7 +76,7 @@ static uint32_t dirserv_get_credible_bandwidth_kb(const routerinfo_t *ri);
 /*                 1  Historically used to indicate Named */
 #define FP_INVALID 2  /**< Believed invalid. */
 #define FP_REJECT  4  /**< We will not publish this router. */
-#define FP_BADDIR  8  /**< We'll tell clients to avoid using this as a dir. */
+/*                 8  Historically used to avoid using this as a dir. */
 #define FP_BADEXIT 16 /**< We'll tell clients not to use this as an exit. */
 /*                 32 Historically used to indicade Unnamed */
 
@@ -209,8 +209,6 @@ dirserv_load_fingerprint_file(void)
     }
     if (!strcasecmp(nickname, "!reject")) {
         add_status = FP_REJECT;
-    } else if (!strcasecmp(nickname, "!baddir")) {
-        add_status = FP_BADDIR;
     } else if (!strcasecmp(nickname, "!badexit")) {
         add_status = FP_BADEXIT;
     } else if (!strcasecmp(nickname, "!invalid")) {
@@ -307,14 +305,6 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
   } else if (result & FP_INVALID) {
     if (msg)
       *msg = "Fingerprint is marked invalid";
-  }
-
-  if (authdir_policy_baddir_address(addr, or_port)) {
-    if (should_log)
-      log_info(LD_DIRSERV,
-               "Marking '%s' as bad directory because of address '%s'",
-               nickname, fmt_addr32(addr));
-    result |= FP_BADDIR;
   }
 
   if (authdir_policy_badexit_address(addr, or_port)) {
@@ -443,7 +433,6 @@ dirserv_set_node_flags_from_authoritative_status(node_t *node,
                                                  uint32_t authstatus)
 {
   node->is_valid = (authstatus & FP_INVALID) ? 0 : 1;
-  node->is_bad_directory = (authstatus & FP_BADDIR) ? 1 : 0;
   node->is_bad_exit = (authstatus & FP_BADEXIT) ? 1 : 0;
 }
 
@@ -693,11 +682,6 @@ directory_remove_invalid(void)
       log_info(LD_DIRSERV, "Router '%s' is now %svalid.", description,
                (r&FP_INVALID) ? "in" : "");
       node->is_valid = (r&FP_INVALID)?0:1;
-    }
-    if (bool_neq((r & FP_BADDIR), node->is_bad_directory)) {
-      log_info(LD_DIRSERV, "Router '%s' is now a %s directory", description,
-               (r & FP_BADDIR) ? "bad" : "good");
-      node->is_bad_directory = (r&FP_BADDIR) ? 1: 0;
     }
     if (bool_neq((r & FP_BADEXIT), node->is_bad_exit)) {
       log_info(LD_DIRSERV, "Router '%s' is now a %s exit", description,
@@ -1843,10 +1827,9 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
     goto done;
 
   smartlist_add_asprintf(chunks,
-                   "s%s%s%s%s%s%s%s%s%s%s%s\n",
+                   "s%s%s%s%s%s%s%s%s%s%s\n",
                   /* These must stay in alphabetical order. */
                    rs->is_authority?" Authority":"",
-                   rs->is_bad_directory?" BadDirectory":"",
                    rs->is_bad_exit?" BadExit":"",
                    rs->is_exit?" Exit":"",
                    rs->is_fast?" Fast":"",
@@ -2123,7 +2106,7 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
                                  routerinfo_t *ri,
                                  time_t now,
                                  int listbadexits,
-                                 int listbaddirs, int vote_on_hsdirs)
+                                 int vote_on_hsdirs)
 {
   const or_options_t *options = get_options();
   uint32_t routerbw_kb = dirserv_get_credible_bandwidth_kb(ri);
@@ -2165,7 +2148,6 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
     rs->is_possible_guard = 1;
   }
 
-  rs->is_bad_directory = listbaddirs && node->is_bad_directory;
   rs->is_bad_exit = listbadexits && node->is_bad_exit;
   node->is_hs_dir = dirserv_thinks_router_is_hs_dir(ri, node, now);
   rs->is_hs_dir = vote_on_hsdirs && node->is_hs_dir;
@@ -2399,7 +2381,6 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   char identity_digest[DIGEST_LEN];
   char signing_key_digest[DIGEST_LEN];
   int listbadexits = options->AuthDirListBadExits;
-  int listbaddirs = options->AuthDirListBadDirs;
   int vote_on_hsdirs = options->VoteOnHidServDirectoriesV2;
   routerlist_t *rl = router_get_routerlist();
   time_t now = time(NULL);
@@ -2491,7 +2472,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
       vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
       rs = &vrs->status;
       set_routerstatus_from_routerinfo(rs, node, ri, now,
-                                       listbadexits, listbaddirs,
+                                       listbadexits,
                                        vote_on_hsdirs);
 
       if (digestmap_get(omit_as_sybil, ri->cache_info.identity_digest))
@@ -2573,8 +2554,6 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
                 0, SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   if (vote_on_reachability)
     smartlist_add(v3_out->known_flags, tor_strdup("Running"));
-  if (listbaddirs)
-    smartlist_add(v3_out->known_flags, tor_strdup("BadDirectory"));
   if (listbadexits)
     smartlist_add(v3_out->known_flags, tor_strdup("BadExit"));
   if (vote_on_hsdirs)
