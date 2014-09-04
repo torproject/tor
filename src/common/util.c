@@ -1988,23 +1988,25 @@ check_private_dir(const char *dirname, cpd_check_t check,
     tor_free(process_groupname);
     return -1;
   }
-  if (check & CPD_CHECK_MODE_ONLY) {
-    if (check & CPD_GROUP_OK || check & CPD_GROUP_READ) {
-      if (!st.st_mode & 0027) {
-        log_warn(LD_FS, "Incorrect permissions on directory %s a.", dirname);
-        return -1;
-      }
-    }
+  if (check & (CPD_GROUP_OK|CPD_GROUP_READ)) {
+    mask = 0027;
   } else {
-    log_warn(LD_FS, "Fixing permissions on directory %s", dirname);
+    mask = 0077;
+  }
+  if (st.st_mode & mask) {
     unsigned new_mode;
-    new_mode = 0700;
-    if (check & CPD_GROUP_OK) {
-      new_mode = 0700;
+    if (check & CPD_CHECK_MODE_ONLY) {
+      log_warn(LD_FS, "Permissions on directory %s are too permissive.",
+               dirname);
+      return -1;
     }
+    log_warn(LD_FS, "Fixing permissions on directory %s", dirname);
+    new_mode = st.st_mode;
+    new_mode |= 0700; /* Owner should have rwx */
     if (check & CPD_GROUP_READ) {
-      new_mode = 0750;
+      new_mode |= 0050; /* Group should have rx */
     }
+    new_mode &= ~mask; /* Clear the other bits that we didn't want set...*/
     if (chmod(dirname, new_mode)) {
       log_warn(LD_FS, "Could not chmod directory %s: %s", dirname,
                strerror(errno));
