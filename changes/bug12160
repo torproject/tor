@@ -1,0 +1,4 @@
+ o Bugfixes
+   - Correctly update the local mark on the controlling channel when changing
+     the address of an or_connection_t after the handshake.  Fixes bug #12160;
+     bugfix on 0.2.4.4-alpha.
