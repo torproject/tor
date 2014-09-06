@@ -2320,11 +2320,6 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   } else {
     rs->is_possible_guard = 0;
   }
-  if (options->TestingTorNetwork &&
-      routerset_contains_routerstatus(options->TestingDirAuthVoteGuard,
-                                      rs, 0)) {
-    rs->is_possible_guard = 1;
-  }
 
   rs->is_bad_directory = listbaddirs && node->is_bad_directory;
   rs->is_bad_exit = listbadexits && node->is_bad_exit;
@@ -2349,6 +2344,14 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
        OR port and it's reachable so copy it to the routerstatus.  */
     tor_addr_copy(&rs->ipv6_addr, &ri->ipv6_addr);
     rs->ipv6_orport = ri->ipv6_orport;
+  }
+
+  /* Iff we are in a testing network, use TestingDirAuthVoteGuard to
+     give out Guard flags. */
+  if (options->TestingTorNetwork &&
+      routerset_contains_routerstatus(options->TestingDirAuthVoteGuard,
+                                      rs, 0)) {
+    rs->is_possible_guard = 1;
   }
 }
 
