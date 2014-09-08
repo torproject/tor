@@ -156,8 +156,8 @@ void control_free_all(void);
 #define EVENT_TRANSPORT_LAUNCHED      0x0020
 #define EVENT_HS_DESC                 0x0021
 #define EVENT_MAX_                    0x0021
-/* If EVENT_MAX_ ever hits 0x0040, we need to make the mask into a
- * different structure. */
+/* If EVENT_MAX_ ever hits 0x003F, we need to make the mask into a
+ * different structure, as it can only handle a maximum left shift of 1<<63. */
 
 /* Used only by control.c and test.c */
 STATIC size_t write_escaped_data(const char *data, size_t len, char **out);
