@@ -1737,8 +1737,9 @@ typedef struct dir_connection_t {
 typedef struct control_connection_t {
   connection_t base_;
 
-  uint32_t event_mask; /**< Bitfield: which events does this controller
-                        * care about? */
+  uint64_t event_mask; /**< Bitfield: which events does this controller
+                        * care about?
+                        * EVENT_MAX_ is >31, so we need a 64 bit mask */
 
   /** True if we have sent a protocolinfo reply on this connection. */
   unsigned int have_sent_protocolinfo:1;
