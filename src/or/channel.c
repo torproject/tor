@@ -3760,6 +3760,23 @@ channel_mark_local(channel_t *chan)
 }
 
 /**
+ * Mark a channel as remote
+ *
+ * This internal-only function should be called by the lower layer if the
+ * channel is not to a local address but has previously been marked local.
+ * See channel_is_local() above or the description of the is_local bit in
+ * channel.h
+ */
+
+void
+channel_mark_remote(channel_t *chan)
+{
+  tor_assert(chan);
+
+  chan->is_local = 0;
+}
+
+/**
  * Test outgoing flag
  *
  * This function gets the outgoing flag; this is the inverse of the incoming
