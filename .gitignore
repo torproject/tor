@@ -23,6 +23,8 @@
 # Python droppings
 *.pyc
 *.pyo
+# Cscope
+cscope.*
 
 # /
 /Makefile
