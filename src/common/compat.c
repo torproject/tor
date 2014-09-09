@@ -3566,12 +3566,12 @@ get_total_system_memory(size_t *mem_out)
     return 0;
   }
 
-#if SIZE_T_MAX != UINT64_MAX
-  if (m > SIZE_T_MAX) {
+#if SIZE_MAX != UINT64_MAX
+  if (m > SIZE_MAX) {
     /* I think this could happen if we're a 32-bit Tor running on a 64-bit
      * system: we could have more system memory than would fit in a
      * size_t. */
-    m = SIZE_T_MAX;
+    m = SIZE_MAX;
   }
 #endif
 

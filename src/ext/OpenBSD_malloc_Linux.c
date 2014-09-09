@@ -58,7 +58,7 @@
 #include <limits.h>
 #include <errno.h>
 #include <err.h>
-/* For SIZE_T_MAX */
+/* For SIZE_MAX */
 #include "torint.h"
 
 //#include "thread_private.h"
@@ -1968,7 +1968,7 @@ realloc(void *ptr, size_t size)
 //#if defined(__x86_64__)
 //#define SIZE_MAX 0xffffffffffffffff
 //#endif
-#define SIZE_MAX SIZE_T_MAX
+#define SIZE_MAX SIZE_MAX
 #endif
 
 void *

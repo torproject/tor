@@ -1786,7 +1786,7 @@ write_all(tor_socket_t fd, const char *buf, size_t count, int isSocket)
 {
   size_t written = 0;
   ssize_t result;
-  tor_assert(count < SSIZE_T_MAX);
+  tor_assert(count < SSIZE_MAX);
 
   while (written != count) {
     if (isSocket)
@@ -1811,7 +1811,7 @@ read_all(tor_socket_t fd, char *buf, size_t count, int isSocket)
   size_t numread = 0;
   ssize_t result;
 
-  if (count > SIZE_T_CEILING || count > SSIZE_T_MAX)
+  if (count > SIZE_T_CEILING || count > SSIZE_MAX)
     return -1;
 
   while (numread != count) {
@@ -4409,7 +4409,7 @@ tor_read_all_handle(HANDLE h, char *buf, size_t count,
   DWORD byte_count;
   BOOL process_exited = FALSE;
 
-  if (count > SIZE_T_CEILING || count > SSIZE_T_MAX)
+  if (count > SIZE_T_CEILING || count > SSIZE_MAX)
     return -1;
 
   while (numread != count) {
@@ -4475,7 +4475,7 @@ tor_read_all_handle(FILE *h, char *buf, size_t count,
   if (eof)
     *eof = 0;
 
-  if (count > SIZE_T_CEILING || count > SSIZE_T_MAX)
+  if (count > SIZE_T_CEILING || count > SSIZE_MAX)
     return -1;
 
   while (numread != count) {
