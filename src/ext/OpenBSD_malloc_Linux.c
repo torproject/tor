@@ -1961,16 +1961,6 @@ realloc(void *ptr, size_t size)
 	return (r);
 }
 
-#ifndef SIZE_MAX
-//#if defined(__i386__)||defined(__arm__)||defined(__powerpc__)
-//#define SIZE_MAX 0xffffffff
-//#endif
-//#if defined(__x86_64__)
-//#define SIZE_MAX 0xffffffffffffffff
-//#endif
-#define SIZE_MAX SIZE_MAX
-#endif
-
 void *
 calloc(size_t num, size_t size)
 {
