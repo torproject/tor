@@ -1,4 +1,4 @@
-Changes in version 0.2.5.7-beta - 2014-09-??
+Changes in version 0.2.5.7-rc - 2014-09-1x
   o Major bugfixes (client, startup):
     - When Tor starts with DisabledNetwork set, it would correctly
       conclude that it shouldn't try making circuits, but it would
@@ -33,16 +33,29 @@ Changes in version 0.2.5.7-beta - 2014-09-??
       bug 12996; bugfix on 0.0.6rc1.
     - Log more specific warnings when we get an ESTABLISH_RENDEZVOUS
       cell on a cannibalized or non-OR circuit. Resolves ticket 12997.
+    - When logging information about an EXTEND2 or EXTENDED2 cell, log
+      their names correctly. Fixes part of bug 12700; bugfix
+      on 0.2.4.8-alpha.
+    - When logging information about a relay cell whose command we don't
+      recognize, log its command as an integer. Fixes part of bug 12700;
+      bugfix on 0.2.1.10-alpha.
+    - Escape all strings from the directory connection before logging
+      them. Fixes bug 13071; bugfix on 0.1.1.15. Patch from "teor".
 
   o Minor bugfixes (controller):
     - Restore the functionality of CookieAuthFileGroupReadable. Fixes
       bug 12864; bugfix on 0.2.5.1-alpha.
+    - Actually send TRANSPORT_LAUNCHED and HS_DESC events to
+      controllers. Fixes bug 13085; bugfix on 0.2.5.1-alpha. Patch
+      by "teor".
 
   o Minor bugfixes (compilation):
     - Allow our autoconf to run correctly with autoconf 2.62 again.
       Fixes bug 12693; bugfix on 0.2.5.2-alpha.
     - Fix compilation of test.h with MSVC. Patch from Gisle Vanem;
       bugfix on 0.2.5.5-alpha.
+    - Make the nmake make files work again. Fixes bug 13081. Bugfix on
+      0.2.5.1-alpha. Patch from "NewEraCracker".
     - Fix a large number of false positive warnings from the clang
       analyzer static analysis tool. This should make real warnings
       easier for clang analyzer to find. Patch from "teor". Closes

@@ -1,3 +1,0 @@
-  o Minor bugfixes (controller):
-    - Actually send TRANSPORT_LAUNCHED and HS_DESC events to controllers.
-      Fixes bug 13085; bugfix on 0.2.5.1-alpha. Patch by "teor".
