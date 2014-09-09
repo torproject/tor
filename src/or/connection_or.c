@@ -923,6 +923,15 @@ connection_or_init_conn_from_address(or_connection_t *conn,
     tor_free(conn->base_.address);
     conn->base_.address = tor_dup_addr(addr);
   }
+
+  /*
+   * We have to tell channeltls.c to update the channel marks (local, in
+   * particular), since we may have changed the address.
+   */
+
+  if (conn->chan) {
+    channel_tls_update_marks(conn);
+  }
 }
 
 /** These just pass all the is_bad_for_new_circs manipulation on to
