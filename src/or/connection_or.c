@@ -908,18 +908,11 @@ connection_or_init_conn_from_address(or_connection_t *conn,
     tor_free(conn->base_.address);
     conn->base_.address = tor_dup_addr(&node_ap.addr);
   } else {
-    const char *n;
-    /* If we're an authoritative directory server, we may know a
-     * nickname for this router. */
-    n = dirserv_get_nickname_by_digest(id_digest);
-    if (n) {
-      conn->nickname = tor_strdup(n);
-    } else {
-      conn->nickname = tor_malloc(HEX_DIGEST_LEN+2);
-      conn->nickname[0] = '$';
-      base16_encode(conn->nickname+1, HEX_DIGEST_LEN+1,
-                    conn->identity_digest, DIGEST_LEN);
-    }
+    conn->nickname = tor_malloc(HEX_DIGEST_LEN+2);
+    conn->nickname[0] = '$';
+    base16_encode(conn->nickname+1, HEX_DIGEST_LEN+1,
+                  conn->identity_digest, DIGEST_LEN);
+
     tor_free(conn->base_.address);
     conn->base_.address = tor_dup_addr(addr);
   }

@@ -3533,8 +3533,6 @@ typedef struct {
   int AuthoritativeDir; /**< Boolean: is this an authoritative directory? */
   int V3AuthoritativeDir; /**< Boolean: is this an authoritative directory
                            * for version 3 directories? */
-  int NamingAuthoritativeDir; /**< Boolean: is this an authoritative directory
-                               * that's willing to bind names? */
   int VersioningAuthoritativeDir; /**< Boolean: is this an authoritative
                                    * directory that's willing to recommend
                                    * versions? */
@@ -3769,8 +3767,6 @@ typedef struct {
                            * and vote for all other dir mirrors as good. */
   int AuthDirListBadExits; /**< True iff we should list bad exits,
                             * and vote for all other exits as good. */
-  int AuthDirRejectUnlisted; /**< Boolean: do we reject all routers that
-                              * aren't named in our fingerprint file? */
   int AuthDirMaxServersPerAddr; /**< Do not permit more than this
                                  * number of servers per IP address. */
   int AuthDirMaxServersPerAuthAddr; /**< Do not permit more than this

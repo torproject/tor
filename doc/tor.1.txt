@@ -1845,15 +1845,6 @@ on the public Tor network.
     authorities provide this service optionally. See **RecommendedVersions**,
     **RecommendedClientVersions**, and **RecommendedServerVersions**.
 
-[[NamingAuthoritativeDirectory]] **NamingAuthoritativeDirectory** **0**|**1**::
-    When this option is set to 1, then the server advertises that it has
-    opinions about nickname-to-fingerprint bindings. It will include these
-    opinions in its published network-status pages, by listing servers with
-    the flag "Named" if a correct binding between that nickname and fingerprint
-    has been registered with the dirserver. Naming dirservers will refuse to
-    accept or publish descriptors that contradict a registered binding. See
-    **approved-routers** in the **FILES** section below.
-
 [[RecommendedVersions]] **RecommendedVersions** __STRING__::
     STRING is a comma-separated list of Tor versions currently believed to be
     safe. The list is included in each directory, and nodes which pull down the
@@ -1942,12 +1933,6 @@ on the public Tor network.
     opinion about which nodes are unsuitable as exit nodes. (Do not set this to
     1 unless you plan to list non-functioning exits as bad; otherwise, you are
     effectively voting in favor of every declared exit as an exit.)
-
-[[AuthDirRejectUnlisted]] **AuthDirRejectUnlisted** **0**|**1**::
-    Authoritative directories only. If set to 1, the directory server rejects
-    all uploaded server descriptors that aren't explicitly listed in the
-    fingerprints file. This acts as a "panic button" if we get hit with a Sybil
-    attack. (Default: 0)
 
 [[AuthDirMaxServersPerAddr]] **AuthDirMaxServersPerAddr** __NUM__::
     Authoritative directories only. The maximum number of servers that we will
@@ -2355,16 +2340,6 @@ __DataDirectory__**/fingerprint**::
 __DataDirectory__**/hashed-fingerprint**::
     Only used by bridges. Holds the hashed fingerprint of the bridge's
     identity key. (That is, the hash of the hash of the identity key.)
-
-__DataDirectory__**/approved-routers**::
-    Only for naming authoritative directory servers (see
-    **NamingAuthoritativeDirectory**). This file lists nickname to identity
-    bindings. Each line lists a nickname and a fingerprint separated by
-    whitespace. See your **fingerprint** file in the __DataDirectory__ for an
-    example line. If the nickname is **!reject** then descriptors from the
-    given identity (fingerprint) are rejected by this server. If it is
-    **!invalid** then descriptors are accepted but marked in the directory as
-    not valid, that is, not recommended.
 
 __DataDirectory__**/v3-status-votes**::
     Only for authoritative directory servers. This file contains status votes

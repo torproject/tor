@@ -911,9 +911,8 @@ init_keys(void)
     const char *m = NULL;
     routerinfo_t *ri;
     /* We need to add our own fingerprint so it gets recognized. */
-    if (dirserv_add_own_fingerprint(options->Nickname,
-                                    get_server_identity_key())) {
-      log_err(LD_GENERAL,"Error adding own fingerprint to approved set");
+    if (dirserv_add_own_fingerprint(get_server_identity_key())) {
+      log_err(LD_GENERAL,"Error adding own fingerprint to set of relays");
       return -1;
     }
     if (mydesc) {

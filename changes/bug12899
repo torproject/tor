@@ -1,0 +1,7 @@
+  o Removed features:
+    - The "AuthDirRejectUnlisted" option no longer has any effect, as
+      the fingerprints file (approved-routers) has been deprecated.
+    - Directory authorities do not support being Naming dirauths
+      anymore. The "NamingAuthoritativeDir" config option has been
+      obsoleted.
+

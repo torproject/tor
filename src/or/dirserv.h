@@ -34,10 +34,9 @@
 
 int connection_dirserv_flushed_some(dir_connection_t *conn);
 
-int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_t *pk);
+int dirserv_add_own_fingerprint(crypto_pk_t *pk);
 int dirserv_load_fingerprint_file(void);
 void dirserv_free_fingerprint_list(void);
-const char *dirserv_get_nickname_by_digest(const char *digest);
 enum was_router_added_t dirserv_add_multiple_descriptors(
                                      const char *desc, uint8_t purpose,
                                      const char *source,
