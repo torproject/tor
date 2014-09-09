@@ -2497,7 +2497,7 @@ client_likes_consensus(networkstatus_t *v, const char *want_url)
 
     if (base16_decode(want_digest, DIGEST_LEN, d, want_len*2) < 0) {
       log_fn(LOG_PROTOCOL_WARN, LD_DIR,
-             "Failed to decode requested authority digest %s.", d);
+             "Failed to decode requested authority digest %s.", escaped(d));
       continue;
     };
 
@@ -2557,7 +2557,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
      * act as if no If-Modified-Since header had been given. */
     tor_free(header);
   }
-  log_debug(LD_DIRSERV,"rewritten url as '%s'.", url);
+  log_debug(LD_DIRSERV,"rewritten url as '%s'.", escaped(url));
 
   url_mem = url;
   url_len = strlen(url);
@@ -3006,7 +3006,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     const char *query = url + strlen("/tor/rendezvous2/");
     if (strlen(query) == REND_DESC_ID_V2_LEN_BASE32) {
       log_info(LD_REND, "Got a v2 rendezvous descriptor request for ID '%s'",
-               safe_str(query));
+               safe_str(escaped(query)));
       switch (rend_cache_lookup_v2_desc_as_dir(query, &descp)) {
         case 1: /* valid */
           write_http_response_header(conn, strlen(descp), 0, 0);
@@ -3140,7 +3140,7 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
     write_http_status_line(conn, 400, "Bad request");
     return 0;
   }
-  log_debug(LD_DIRSERV,"rewritten url as '%s'.", url);
+  log_debug(LD_DIRSERV,"rewritten url as '%s'.", escaped(url));
 
   /* Handle v2 rendezvous service publish request. */
   if (options->HidServDirectoryV2 &&
@@ -3273,7 +3273,9 @@ directory_handle_command(dir_connection_t *conn)
   }
 
   http_set_address_origin(headers, TO_CONN(conn));
-  //log_debug(LD_DIRSERV,"headers %s, body %s.", headers, body);
+  // we should escape headers here as well,
+  // but we can't call escaped() twice, as it uses the same buffer
+  //log_debug(LD_DIRSERV,"headers %s, body %s.", headers, escaped(body));
 
   if (!strncasecmp(headers,"GET",3))
     r = directory_handle_command_get(conn, headers, body, body_len);
