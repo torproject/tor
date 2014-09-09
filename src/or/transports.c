@@ -754,7 +754,9 @@ managed_proxy_destroy(managed_proxy_t *mp,
   tor_free(mp);
 }
 
-/** Convert the tor proxy options to a URI suitable for TOR_PT_PROXY. */
+/** Convert the tor proxy options to a URI suitable for TOR_PT_PROXY.
+ * Return a newly allocated string containing the URI, or NULL if no
+ * proxy is set. */
 STATIC char *
 get_pt_proxy_uri(void)
 {
