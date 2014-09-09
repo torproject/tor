@@ -18,12 +18,12 @@ Requirements:
     http://www.activestate.com/activeperl/downloads
  * Latest stable OpenSSL tarball
     https://www.openssl.org/source/
- * Zlib 1.2.8 tarball
+ * Latest stable zlib tarball
     http://zlib.net/
- * Libevent 2.1 tarball
+ * Latest stable libevent Libevent tarball
     https://github.com/libevent/libevent/releases
 
-Make sure you check signatures on all these packages!
+Make sure you check signatures for all these packages.
 
 Steps:
 ------
@@ -40,7 +40,8 @@ Building OpenSSL from source as a shared library:
 
 Making OpenSSL final package:
 
- Create <openssl final package dir>, I'd recommend using a name like <openssl source dir>-vc10.
+ Create <openssl final package dir>, I'd recommend using a name like <openssl
+ source dir>-vc10.
 
  Copy the following directories and files to their respective locations
   <openssl source dir>\inc32\openssl => <openssl final package dir>\include\openssl
@@ -65,7 +66,8 @@ Building libevent:
 
 Building Tor:
 
- Create a dir above tor source dir named build-alpha and two subdirs include and lib.
+ Create a dir above tor source dir named build-alpha and two subdirs include
+ and lib.
 
  Your build tree should now be similar to this one:
   * build-alpha
@@ -99,7 +101,8 @@ Building Tor:
   <libevent source dir>\WIN32-Code\nmake\event2 => build-alpha\include\event2
   <zlib source dir>\z*.h => build-alpha\include\z*.h
 
- Now copy the following files to the followin locations:
+ Now copy the following files to the following locations and rename them
+ according new names:
 
   <libevent source dir>\build\lib\event.lib => build-alpha\lib\libevent.lib
   <openssl final package dir>\lib\libeay32.lib => build-alpha\lib\libcrypto.lib
@@ -111,6 +114,9 @@ Building Tor:
   cd <tor source dir>
   nmake -f Makefile.nmake
 
- After the above process is completed there should be a tor.exe in <tor source dir>\src\or
+ After the above process is completed there should be a tor.exe in <tor
+ source dir>\src\or
 
- Copy tor.exe to desired location and also copy zlib1.dll, libeay32.dll and ssleay32.dll from built zlib and openssl packages
+ Copy tor.exe to desired location and also copy zlib1.dll, libeay32.dll and
+ ssleay32.dll from built zlib and openssl packages
+
