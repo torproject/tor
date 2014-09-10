@@ -101,11 +101,12 @@
 
 ## Define these to limit how much relayed traffic you will allow. Your
 ## own traffic is still unthrottled. Note that RelayBandwidthRate must
-## be at least 20 KB.
-## Note that units for these config options are bytes per second, not bits
-## per second, and that prefixes are binary prefixes, i.e. 2^10, 2^20, etc.
+## be at least 20 kilobytes per second.
+## Note that units for these config options are bytes (per second), not
+## bits (per second), and that prefixes are binary prefixes, i.e. 2^10,
+## 2^20, etc.
 #RelayBandwidthRate 100 KBytes  # Throttle traffic to 100KB/s (800Kbps)
-#RelayBandwidthBurst 200 KBytes # But allow bursts up to 200KB/s (1600Kbps)
+#RelayBandwidthBurst 200 KBytes # But allow bursts up to 200KB (1600Kb)
 
 ## Use these to restrict the maximum traffic per day, week, or month.
 ## Note that this threshold applies separately to sent and received bytes,
