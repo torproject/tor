@@ -57,6 +57,7 @@ cscope.*
 /mkinstalldirs
 /Tor*Bundle.dmg
 /tor-*-win32.exe
+/coverage_html/
 
 # /contrib/
 /contrib/dist/tor.sh
