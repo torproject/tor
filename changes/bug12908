@@ -1,0 +1,4 @@
+  o Minor features:
+    - Warn about attempts to run hidden services and relays in the
+      same process: that's probably not a good idea. Closes ticket
+      12908.
