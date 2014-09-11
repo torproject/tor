@@ -374,6 +374,58 @@ logfile_wants_message(const logfile_t *lf, int severity,
   return 1;
 }
 
+/** Send a message to <b>lf</b>.  The full message, with time prefix and
+ * severity, is in <b>buf</b>.  The message itself is in
+ * <b>msg_after_prefix</b>.  If <b>callbacks_deferred</b> points to true, then
+ * we already deferred this message for pending callbacks and don't need to do
+ * it again.  Otherwise, if we need to do it, do it, and set
+ * <b>callbacks_deferred</b> to 1. */
+static INLINE void
+logfile_deliver(logfile_t *lf, const char *buf, size_t msg_len,
+                const char *msg_after_prefix, log_domain_mask_t domain,
+                int severity, int *callbacks_deferred)
+{
+
+  if (lf->is_syslog) {
+#ifdef HAVE_SYSLOG_H
+#ifdef MAXLINE
+    /* Some syslog implementations have limits on the length of what you can
+     * pass them, and some very old ones do not detect overflow so well.
+     * Regrettably, they call their maximum line length MAXLINE. */
+#if MAXLINE < 64
+#warn "MAXLINE is a very low number; it might not be from syslog.h after all"
+#endif
+    char *m = msg_after_prefix;
+    if (msg_len >= MAXLINE)
+      m = tor_strndup(msg_after_prefix, MAXLINE-1);
+    syslog(severity, "%s", m);
+    if (m != msg_after_prefix) {
+      tor_free(m);
+    }
+#else
+    /* We have syslog but not MAXLINE.  That's promising! */
+    syslog(severity, "%s", msg_after_prefix);
+#endif
+#endif
+  } else if (lf->callback) {
+    if (domain & LD_NOCB) {
+      if (!*callbacks_deferred && pending_cb_messages) {
+        smartlist_add(pending_cb_messages,
+                  pending_log_message_new(severity,domain,msg_after_prefix));
+        *callbacks_deferred = 1;
+      }
+    } else {
+      lf->callback(severity, domain, msg_after_prefix);
+    }
+  } else {
+    if (write_all(lf->fd, buf, msg_len, 0) < 0) { /* error */
+      /* don't log the error! mark this log entry to be blown away, and
+       * continue. */
+      lf->seems_dead = 1;
+    }
+  }
+}
+
 /** Helper: sends a message to the appropriate logfiles, at loglevel
  * <b>severity</b>.  If provided, <b>funcname</b> is prepended to the
  * message.  The actual message is derived as from tor_snprintf(format,ap).
@@ -410,44 +462,8 @@ logv,(int severity, log_domain_mask_t domain, const char *funcname,
       formatted = 1;
     }
 
-    if (lf->is_syslog) {
-#ifdef HAVE_SYSLOG_H
-      char *m = end_of_prefix;
-#ifdef MAXLINE
-      /* Some syslog implementations have limits on the length of what you can
-       * pass them, and some very old ones do not detect overflow so well.
-       * Regrettably, they call their maximum line length MAXLINE. */
-#if MAXLINE < 64
-#warn "MAXLINE is a very low number; it might not be from syslog.h after all"
-#endif
-      if (msg_len >= MAXLINE)
-        m = tor_strndup(end_of_prefix, MAXLINE-1);
-#endif
-      syslog(severity, "%s", m);
-#ifdef MAXLINE
-      if (m != end_of_prefix) {
-        tor_free(m);
-      }
-#endif
-#endif
-      continue;
-    } else if (lf->callback) {
-      if (domain & LD_NOCB) {
-        if (!callbacks_deferred && pending_cb_messages) {
-          smartlist_add(pending_cb_messages,
-                      pending_log_message_new(severity,domain,end_of_prefix));
-          callbacks_deferred = 1;
-        }
-      } else {
-        lf->callback(severity, domain, end_of_prefix);
-      }
-      continue;
-    }
-    if (write_all(lf->fd, buf, msg_len, 0) < 0) { /* error */
-      /* don't log the error! mark this log entry to be blown away, and
-       * continue. */
-      lf->seems_dead = 1;
-    }
+    logfile_deliver(lf, buf, msg_len, end_of_prefix, domain, severity,
+      &callbacks_deferred);
   }
   UNLOCK_LOGS();
 }
