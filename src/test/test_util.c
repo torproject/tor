@@ -4097,3 +4097,4 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(max_mem, 0),
   END_OF_TESTCASES
 };
+
