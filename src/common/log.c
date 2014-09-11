@@ -117,14 +117,18 @@ static int syslog_count = 0;
 
 /** Represents a log message that we are going to send to callback-driven
  * loggers once we can do so in a non-reentrant way. */
-typedef struct pending_cb_message_t {
+typedef struct pending_log_message_t {
   int severity; /**< The severity of the message */
   log_domain_mask_t domain; /**< The domain of the message */
   char *msg; /**< The content of the message */
-} pending_cb_message_t;
+} pending_log_message_t;
 
 /** Log messages waiting to be replayed onto callback-based logs */
 static smartlist_t *pending_cb_messages = NULL;
+
+/** Log messages waiting to be replayed once the logging system is initialized.
+ */
+static smartlist_t *pending_startup_messages = NULL;
 
 /** Lock the log_mutex to prevent others from changing the logfile_t list */
 #define LOCK_LOGS() STMT_BEGIN                                          \
@@ -329,6 +333,27 @@ format_msg(char *buf, size_t buf_len,
   return end_of_prefix;
 }
 
+/* Create a new pending_log_message_t with appropriate values */
+static pending_log_message_t *
+pending_log_message_new(int severity, log_domain_mask_t domain, const char *msg)
+{
+  pending_log_message_t *m = tor_malloc(sizeof(pending_log_message_t));
+  m->severity = severity;
+  m->domain = domain;
+  m->msg = tor_strdup(msg);
+  return m;
+}
+
+/** Release all storage held by <b>msg</b>. */
+static void
+pending_log_message_free(pending_log_message_t *msg)
+{
+  if (!msg)
+    return;
+  tor_free(msg->msg);
+  tor_free(msg);
+}
+
 /** Helper: sends a message to the appropriate logfiles, at loglevel
  * <b>severity</b>.  If provided, <b>funcname</b> is prepended to the
  * message.  The actual message is derived as from tor_snprintf(format,ap).
@@ -401,12 +426,8 @@ logv,(int severity, log_domain_mask_t domain, const char *funcname,
     } else if (lf->callback) {
       if (domain & LD_NOCB) {
         if (!callbacks_deferred && pending_cb_messages) {
-          pending_cb_message_t *msg = tor_malloc(sizeof(pending_cb_message_t));
-          msg->severity = severity;
-          msg->domain = domain;
-          msg->msg = tor_strdup(end_of_prefix);
-          smartlist_add(pending_cb_messages, msg);
-
+          smartlist_add(pending_cb_messages,
+                      pending_log_message_new(severity,domain,end_of_prefix));
           callbacks_deferred = 1;
         }
       } else {
@@ -739,9 +760,8 @@ logs_free_all(void)
   }
   tor_free(appname);
 
-  SMARTLIST_FOREACH(messages, pending_cb_message_t *, msg, {
-      tor_free(msg->msg);
-      tor_free(msg);
+  SMARTLIST_FOREACH(messages, pending_log_message_t *, msg, {
+      pending_log_message_free(msg);
     });
   smartlist_free(messages);
 
@@ -847,6 +867,8 @@ init_logging(void)
   }
   if (pending_cb_messages == NULL)
     pending_cb_messages = smartlist_new();
+  if (pending_startup_messages == NULL)
+    pending_startup_messages = smartlist_new();
 }
 
 /** Set whether we report logging domains as a part of our log messages.
@@ -932,7 +954,7 @@ flush_pending_log_callbacks(void)
   messages = pending_cb_messages;
   pending_cb_messages = smartlist_new();
   do {
-    SMARTLIST_FOREACH_BEGIN(messages, pending_cb_message_t *, msg) {
+    SMARTLIST_FOREACH_BEGIN(messages, pending_log_message_t *, msg) {
       const int severity = msg->severity;
       const int domain = msg->domain;
       for (lf = logfiles; lf; lf = lf->next) {
@@ -942,8 +964,7 @@ flush_pending_log_callbacks(void)
         }
         lf->callback(severity, domain, msg->msg);
       }
-      tor_free(msg->msg);
-      tor_free(msg);
+      pending_log_message_free(msg);
     } SMARTLIST_FOREACH_END(msg);
     smartlist_clear(messages);
 
