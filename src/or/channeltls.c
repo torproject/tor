@@ -156,7 +156,18 @@ channel_tls_connect(const tor_addr_t *addr, uint16_t port,
             tlschan,
             U64_PRINTF_ARG(chan->global_identifier));
 
-  if (is_local_addr(addr)) channel_mark_local(chan);
+  if (is_local_addr(addr)) {
+    log_debug(LD_CHANNEL,
+              "Marking new outgoing channel " U64_FORMAT " at %p as local",
+              U64_PRINTF_ARG(chan->global_identifier), chan);
+    channel_mark_local(chan);
+  } else {
+    log_debug(LD_CHANNEL,
+              "Marking new outgoing channel " U64_FORMAT " at %p as remote",
+              U64_PRINTF_ARG(chan->global_identifier), chan);
+    channel_mark_remote(chan);
+  }
+
   channel_mark_outgoing(chan);
 
   /* Set up or_connection stuff */
@@ -286,7 +297,18 @@ channel_tls_handle_incoming(or_connection_t *orconn)
   tlschan->conn = orconn;
   orconn->chan = tlschan;
 
-  if (is_local_addr(&(TO_CONN(orconn)->addr))) channel_mark_local(chan);
+  if (is_local_addr(&(TO_CONN(orconn)->addr))) {
+    log_debug(LD_CHANNEL,
+              "Marking new incoming channel " U64_FORMAT " at %p as local",
+              U64_PRINTF_ARG(chan->global_identifier), chan);
+    channel_mark_local(chan);
+  } else {
+    log_debug(LD_CHANNEL,
+              "Marking new incoming channel " U64_FORMAT " at %p as remote",
+              U64_PRINTF_ARG(chan->global_identifier), chan);
+    channel_mark_remote(chan);
+  }
+
   channel_mark_incoming(chan);
 
   /* Register it */
@@ -1205,6 +1227,44 @@ channel_tls_handle_var_cell(var_cell_t *var_cell, or_connection_t *conn)
              "Variable-length cell of unknown type (%d) received.",
              (int)(var_cell->command));
       break;
+  }
+}
+
+/**
+ * Update channel marks after connection_or.c has changed an address
+ *
+ * This is called from connection_or_init_conn_from_address() after the
+ * connection's _base.addr or real_addr fields have potentially been changed
+ * so we can recalculate the local mark.  Notably, this happens when incoming
+ * connections are reverse-proxied and we only learn the real address of the
+ * remote router by looking it up in the consensus after we finish the
+ * handshake and know an authenticated identity digest.
+ */
+
+void
+channel_tls_update_marks(or_connection_t *conn)
+{
+  channel_t *chan = NULL;
+
+  tor_assert(conn);
+  tor_assert(conn->chan);
+
+  chan = TLS_CHAN_TO_BASE(conn->chan);
+
+  if (is_local_addr(&(TO_CONN(conn)->addr))) {
+    if (!channel_is_local(chan)) {
+      log_debug(LD_CHANNEL,
+                "Marking channel " U64_FORMAT " at %p as local",
+                U64_PRINTF_ARG(chan->global_identifier), chan);
+      channel_mark_local(chan);
+    }
+  } else {
+    if (channel_is_local(chan)) {
+      log_debug(LD_CHANNEL,
+                "Marking channel " U64_FORMAT " at %p as remote",
+                U64_PRINTF_ARG(chan->global_identifier), chan);
+      channel_mark_remote(chan);
+    }
   }
 }
 
