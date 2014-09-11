@@ -512,7 +512,7 @@ interesting and understandable.
 
    2.6) Clean everything one last time.
 
-   2.7) Run it through fmt to make it pretty.
+   2.7) Run ./scripts/maint/format_changelog.py to make it prettier.
 
 3) Compose a short release blurb to highlight the user-facing
 changes. Insert said release blurb into the ChangeLog stanza. If it's
