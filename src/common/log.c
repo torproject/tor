@@ -354,6 +354,26 @@ pending_log_message_free(pending_log_message_t *msg)
   tor_free(msg);
 }
 
+/** Return true iff <b>lf</b> would like to receive a message with the specified
+ * <b>severity</b> in the specified <b>domain</b>.
+ */
+static INLINE int
+logfile_wants_message(const logfile_t *lf, int severity,
+                      log_domain_mask_t domain)
+{
+  if (! (lf->severities->masks[SEVERITY_MASK_IDX(severity)] & domain)) {
+    return 0;
+  }
+  if (! (lf->fd >= 0 || lf->is_syslog || lf->callback)) {
+    return 0;
+  }
+  if (lf->seems_dead) {
+    return 0;
+  }
+
+  return 1;
+}
+
 /** Helper: sends a message to the appropriate logfiles, at loglevel
  * <b>severity</b>.  If provided, <b>funcname</b> is prepended to the
  * message.  The actual message is derived as from tor_snprintf(format,ap).
@@ -379,20 +399,9 @@ logv,(int severity, log_domain_mask_t domain, const char *funcname,
   if ((! (domain & LD_NOCB)) && smartlist_len(pending_cb_messages))
     flush_pending_log_callbacks();
 
-  lf = logfiles;
-  while (lf) {
-    if (! (lf->severities->masks[SEVERITY_MASK_IDX(severity)] & domain)) {
-      lf = lf->next;
+  for (lf = logfiles; lf; lf = lf->next) {
+    if (! logfile_wants_message(lf, severity, domain))
       continue;
-    }
-    if (! (lf->fd >= 0 || lf->is_syslog || lf->callback)) {
-      lf = lf->next;
-      continue;
-    }
-    if (lf->seems_dead) {
-      lf = lf->next;
-      continue;
-    }
 
     if (!formatted) {
       end_of_prefix =
@@ -421,7 +430,6 @@ logv,(int severity, log_domain_mask_t domain, const char *funcname,
       }
 #endif
 #endif
-      lf = lf->next;
       continue;
     } else if (lf->callback) {
       if (domain & LD_NOCB) {
@@ -433,7 +441,6 @@ logv,(int severity, log_domain_mask_t domain, const char *funcname,
       } else {
         lf->callback(severity, domain, end_of_prefix);
       }
-      lf = lf->next;
       continue;
     }
     if (write_all(lf->fd, buf, msg_len, 0) < 0) { /* error */
@@ -441,7 +448,6 @@ logv,(int severity, log_domain_mask_t domain, const char *funcname,
        * continue. */
       lf->seems_dead = 1;
     }
-    lf = lf->next;
   }
   UNLOCK_LOGS();
 }
