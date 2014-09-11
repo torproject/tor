@@ -12,11 +12,17 @@ Changes in version 0.2.5.7-rc - 2014-09-1x
       her own HashedControlPassword in the torrc file while the
       controller generates a fresh session password for each run). Fixes
       bug 12948; bugfix on 0.2.5.1-alpha.
+    - Warn about attempts to run hidden services and relays in the same
+      process: that's probably not a good idea. Closes ticket 12908.
 
   o Major bugfixes (relay):
     - Avoid queuing or sending destroy cells for circuit ID zero when we
       fail to send a CREATE cell. Fixes bug 12848; bugfix on 0.0.8pre1.
       Found and fixed by "cypherpunks".
+    - Correctly update the "local" mark on the controlling channel when
+      changing the address of an or_connection_t after the handshake.
+      Before this fix, ORPort reachability detection would sometimes
+      fail. Fixes bug #12160; bugfix on 0.2.4.4-alpha.
 
   o Minor features (bridge):
     - Add an ExtORPortCookieAuthFileGroupReadable option to make the
@@ -25,6 +31,14 @@ Changes in version 0.2.5.7-rc - 2014-09-1x
   o Minor features (geoip):
     - Update geoip and geoip6 to the August 7 2014 Maxmind GeoLite2
       Country database.
+
+  o Minor bugfixes (client):
+    - Reduce the log severity of the "Pluggable transport proxy does not
+      provide any needed transports and will not be launched." message,
+      since Tor Browser includes several ClientTransportPlugin lines in
+      its torrc-defaults file, leading every Tor Browser user who looks
+      at her logs to see these notices and wonder if they're dangerous.
+      Resolves bug 13124; bugfix on 0.2.5.3-alpha.
 
   o Minor bugfixes (relay):
     - Downgrade "Unexpected onionskin length after decryption" warning
@@ -56,6 +70,9 @@ Changes in version 0.2.5.7-rc - 2014-09-1x
       bugfix on 0.2.5.5-alpha.
     - Make the nmake make files work again. Fixes bug 13081. Bugfix on
       0.2.5.1-alpha. Patch from "NewEraCracker".
+    - In routerlist_assert_ok(), don't take the address of a
+      routerinfo's cache_info member unless that routerinfo is non-NULL.
+      Fixes bug 13096; bugfix on 0.1.1.9-alpha. Patch by "teor".
     - Fix a large number of false positive warnings from the clang
       analyzer static analysis tool. This should make real warnings
       easier for clang analyzer to find. Patch from "teor". Closes
