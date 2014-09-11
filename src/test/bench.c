@@ -569,7 +569,7 @@ main(int argc, const char **argv)
   crypto_seed_rng(1);
   crypto_init_siphash_key();
   options = options_new();
-  init_logging();
+  init_logging(1);
   options->command = CMD_RUN_UNITTESTS;
   options->DataDirectory = tor_strdup("");
   options_init(options);

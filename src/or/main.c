@@ -2954,7 +2954,7 @@ tor_main(int argc, char *argv[])
 
   update_approx_time(time(NULL));
   tor_threads_init();
-  init_logging();
+  init_logging(0);
 #ifdef USE_DMALLOC
   {
     /* Instruct OpenSSL to use our internal wrappers for malloc,

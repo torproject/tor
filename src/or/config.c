@@ -1023,7 +1023,7 @@ options_act_reversible(const or_options_t *old_options, char **msg)
   int running_tor = options->command == CMD_RUN_TOR;
   int set_conn_limit = 0;
   int r = -1;
-  int logs_marked = 0;
+  int logs_marked = 0, logs_initialized = 0;
   int old_min_log_level = get_min_log_level();
 
   /* Daemonize _first_, since we only want to open most of this stuff in
@@ -1153,6 +1153,7 @@ options_act_reversible(const or_options_t *old_options, char **msg)
     *msg = tor_strdup("Failed to init Log options. See logs for details.");
     goto rollback;
   }
+  logs_initialized = 1;
 
  commit:
   r = 0;
@@ -1164,6 +1165,9 @@ options_act_reversible(const or_options_t *old_options, char **msg)
     control_adjust_event_log_severity();
     tor_free(severity);
     tor_log_update_sigsafe_err_fds();
+  }
+  if (logs_initialized) {
+    flush_log_messages_from_startup();
   }
 
   {

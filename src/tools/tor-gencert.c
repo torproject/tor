@@ -525,7 +525,7 @@ int
 main(int argc, char **argv)
 {
   int r = 1;
-  init_logging();
+  init_logging(1);
 
   /* Don't bother using acceleration. */
   if (crypto_global_init(0, NULL, NULL)) {

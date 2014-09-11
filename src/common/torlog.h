@@ -121,7 +121,7 @@ typedef struct log_severity_list_t {
 /** Callback type used for add_callback_log. */
 typedef void (*log_callback)(int severity, uint32_t domain, const char *msg);
 
-void init_logging(void);
+void init_logging(int disable_startup_queue);
 int parse_log_level(const char *level);
 const char *log_level_to_string(int level);
 int parse_log_severity_config(const char **cfg,
@@ -147,6 +147,7 @@ void mark_logs_temp(void);
 void change_callback_log_severity(int loglevelMin, int loglevelMax,
                                   log_callback cb);
 void flush_pending_log_callbacks(void);
+void flush_log_messages_from_startup(void);
 void log_set_application_name(const char *name);
 void set_log_time_granularity(int granularity_msec);
 void truncate_logs(void);
