@@ -63,8 +63,6 @@ Changes in version 0.2.5.7-rc - 2014-09-1x
       by "teor".
 
   o Minor bugfixes (compilation):
-    - Allow our autoconf to run correctly with autoconf 2.62 again.
-      Fixes bug 12693; bugfix on 0.2.5.2-alpha.
     - Fix compilation of test.h with MSVC. Patch from Gisle Vanem;
       bugfix on 0.2.5.5-alpha.
     - Make the nmake make files work again. Fixes bug 13081. Bugfix on
