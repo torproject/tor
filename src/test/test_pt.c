@@ -33,7 +33,7 @@ test_pt_parsing(void)
   transport_t *transport = NULL;
   tor_addr_t test_addr;
 
-  managed_proxy_t *mp = tor_malloc(sizeof(managed_proxy_t));
+  managed_proxy_t *mp = tor_malloc_zero(sizeof(managed_proxy_t));
   mp->conf_state = PT_PROTO_INFANT;
   mp->transports = smartlist_new();
 
@@ -363,7 +363,7 @@ test_pt_configure_proxy(void *arg)
 
   control_testing_set_global_event_mask(EVENT_TRANSPORT_LAUNCHED);
 
-  mp = tor_malloc(sizeof(managed_proxy_t));
+  mp = tor_malloc_zero(sizeof(managed_proxy_t));
   mp->conf_state = PT_PROTO_ACCEPTING_METHODS;
   mp->transports = smartlist_new();
   mp->transports_to_launch = smartlist_new();
