@@ -528,7 +528,6 @@ test_get_pt_proxy_uri(void *arg)
     tor_free(uri);
 }
 
-
 #define PT_LEGACY(name)                                               \
   { #name, legacy_test_helper, 0, &legacy_setup, test_pt_ ## name }
 

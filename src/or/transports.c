@@ -473,7 +473,7 @@ proxy_needs_restart(const managed_proxy_t *mp)
   } SMARTLIST_FOREACH_END(t);
 
   ret = 0;
-needs_restart:
+ needs_restart:
   tor_free(proxy_uri);
   return ret;
 }
