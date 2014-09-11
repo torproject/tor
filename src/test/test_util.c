@@ -3251,6 +3251,25 @@ test_util_di_ops(void)
     test_eq(neq1, !eq1);
   }
 
+  /* exhaustively white-box test tor_memeq
+   * against each possible (single-byte) bit difference
+   * some arithmetic bugs only appear with certain bit patterns */
+  const uint8_t z = 0;
+  uint8_t ii = 0;
+  for (i = 0; i < 256; i++) {
+    ii = (uint8_t)i;
+    test_eq(tor_memeq(&z, &ii, 1), z == ii);
+  }
+
+  /* exhaustively white-box test tor_memcmp
+   * against each possible single-byte numeric difference
+   * some arithmetic bugs only appear with certain bit patterns */
+  for (i = 0; i < 256; i++) {
+    ii = (uint8_t)i;
+    test_eq(tor_memcmp(&z, &ii, 1) > 0 ? GT : EQ, z > ii ? GT : EQ);
+    test_eq(tor_memcmp(&ii, &z, 1) < 0 ? LT : EQ, ii < z ? LT : EQ);
+  }
+
   tt_int_op(1, ==, safe_mem_is_zero("", 0));
   tt_int_op(1, ==, safe_mem_is_zero("", 1));
   tt_int_op(0, ==, safe_mem_is_zero("a", 1));
