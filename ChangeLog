@@ -1,4 +1,9 @@
-Changes in version 0.2.5.7-rc - 2014-09-1x
+Changes in version 0.2.5.7-rc - 2014-09-11
+  Tor 0.2.5.7-rc fixes several regressions from earlier in the 0.2.5.x
+  release series, and some long-standing bugs related to ORPort reachability
+  testing and failure to send CREATE cells.  It is the first release
+  candidate for 0.2.5.7-rc.
+
   o Major bugfixes (client, startup):
     - Start making circuits as soon as DisabledNetwork is turned off.
       When Tor started with DisabledNetwork set, it would correctly
