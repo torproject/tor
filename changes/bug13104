@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Fix several instances of possible integer overflow/underflow/NaN.
+      Fixes bug 13104; bugfix on 0.2.3.1-alpha and later. Patches from
+      "teor".
