@@ -1688,14 +1688,14 @@ get_proxy_type(void)
 {
   const or_options_t *options = get_options();
 
-  if (options->HTTPSProxy)
+  if (options->ClientTransportPlugin)
+    return PROXY_PLUGGABLE;
+  else if (options->HTTPSProxy)
     return PROXY_CONNECT;
   else if (options->Socks4Proxy)
     return PROXY_SOCKS4;
   else if (options->Socks5Proxy)
     return PROXY_SOCKS5;
-  else if (options->ClientTransportPlugin)
-    return PROXY_PLUGGABLE;
   else
     return PROXY_NONE;
 }
@@ -4787,6 +4787,27 @@ get_proxy_addrport(tor_addr_t *addr, uint16_t *port, int *proxy_type,
 {
   const or_options_t *options = get_options();
 
+  /* Client Transport Plugins can use another proxy, but that should be hidden
+   * from the rest of tor (as the plugin is responsible for dealing with the
+   * proxy), check it first, then check the rest of the proxy types to allow
+   * the config to have unused ClientTransportPlugin entries.
+   */
+  if (options->ClientTransportPlugin) {
+    const transport_t *transport = NULL;
+    int r;
+    r = get_transport_by_bridge_addrport(&conn->addr, conn->port, &transport);
+    if (r<0)
+      return -1;
+    if (transport) { /* transport found */
+      tor_addr_copy(addr, &transport->addr);
+      *port = transport->port;
+      *proxy_type = transport->socks_version;
+      return 0;
+    }
+
+    /* Unused ClientTransportPlugin. */
+  }
+
   if (options->HTTPSProxy) {
     tor_addr_copy(addr, &options->HTTPSProxyAddr);
     *port = options->HTTPSProxyPort;
@@ -4802,19 +4823,6 @@ get_proxy_addrport(tor_addr_t *addr, uint16_t *port, int *proxy_type,
     *port = options->Socks5ProxyPort;
     *proxy_type = PROXY_SOCKS5;
     return 0;
-  } else if (options->ClientTransportPlugin ||
-             options->Bridges) {
-    const transport_t *transport = NULL;
-    int r;
-    r = get_transport_by_bridge_addrport(&conn->addr, conn->port, &transport);
-    if (r<0)
-      return -1;
-    if (transport) { /* transport found */
-      tor_addr_copy(addr, &transport->addr);
-      *port = transport->port;
-      *proxy_type = transport->socks_version;
-      return 0;
-    }
   }
 
   tor_addr_make_unspec(addr);
@@ -4838,7 +4846,7 @@ log_failed_proxy_connection(connection_t *conn)
   log_warn(LD_NET,
            "The connection to the %s proxy server at %s just failed. "
            "Make sure that the proxy server is up and running.",
-           proxy_type_to_string(get_proxy_type()),
+           proxy_type_to_string(proxy_type),
            fmt_addrport(&proxy_addr, proxy_port));
 }
 

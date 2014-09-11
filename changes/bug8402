@@ -1,0 +1,5 @@
+  o Major features (bridges):
+    - Expose the outgoing upstream HTTP/SOCKS proxy to pluggable
+      transports if they are configured via the "TOR_PT_PROXY"
+      enviorment variable.  Implements proposal 232. Resolves
+      ticket 8402.
