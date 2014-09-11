@@ -1804,7 +1804,7 @@ scale_array_elements_to_u64(u64_dbl_t *entries, int n_entries,
                             uint64_t *total_out)
 {
   double total = 0.0;
-  double scale_factor;
+  double scale_factor = 0.0;
   int i;
   /* big, but far away from overflowing an int64_t */
 #define SCALE_TO_U64_MAX ((int64_t) (INT64_MAX / 4))
@@ -1812,7 +1812,8 @@ scale_array_elements_to_u64(u64_dbl_t *entries, int n_entries,
   for (i = 0; i < n_entries; ++i)
     total += entries[i].dbl;
 
-  scale_factor = SCALE_TO_U64_MAX / total;
+  if (total > 0.0)
+    scale_factor = SCALE_TO_U64_MAX / total;
 
   for (i = 0; i < n_entries; ++i)
     entries[i].u64 = tor_llround(entries[i].dbl * scale_factor);

@@ -1733,9 +1733,36 @@ test_dir_scale_bw(void *testdata)
   tt_assert(total <= (U64_LITERAL(1)<<62));
 
   for (i=0; i<8; ++i) {
+    /* vals[2].u64 is the scaled value of 1.0 */
     double ratio = ((double)vals[i].u64) / vals[2].u64;
     tt_double_op(fabs(ratio - v[i]), <, .00001);
   }
+
+  /* test handling of no entries */
+  total = 1;
+  scale_array_elements_to_u64(vals, 0, &total);
+  tt_assert(total == 0);
+
+  /* make sure we don't read the array when we have no entries
+   * may require compiler flags to catch NULL dereferences */
+  total = 1;
+  scale_array_elements_to_u64(NULL, 0, &total);
+  tt_assert(total == 0);
+
+  scale_array_elements_to_u64(NULL, 0, NULL);
+
+  /* test handling of zero totals */
+  total = 1;
+  vals[0].dbl = 0.0;
+  scale_array_elements_to_u64(vals, 1, &total);
+  tt_assert(total == 0);
+  tt_assert(vals[0].u64 == 0);
+
+  vals[0].dbl = 0.0;
+  vals[1].dbl = 0.0;
+  scale_array_elements_to_u64(vals, 2, NULL);
+  tt_assert(vals[0].u64 == 0);
+  tt_assert(vals[1].u64 == 0);
 
  done:
   ;

@@ -1688,6 +1688,7 @@ static void
 test_util_sscanf(void)
 {
   unsigned u1, u2, u3;
+  unsigned long ulng;
   char s1[20], s2[10], s3[10], ch;
   int r;
   long lng1,lng2;
@@ -1729,11 +1730,6 @@ test_util_sscanf(void)
   test_eq(0, tor_sscanf("", "%u", &u1)); /* absent number */
   test_eq(0, tor_sscanf("A", "%u", &u1)); /* bogus number */
   test_eq(0, tor_sscanf("-1", "%u", &u1)); /* negative number */
-  test_eq(1, tor_sscanf("4294967295", "%u", &u1)); /* UINT32_MAX should work */
-  test_eq(4294967295u, u1);
-  test_eq(0, tor_sscanf("4294967296", "%u", &u1)); /* But not at 32 bits */
-  test_eq(1, tor_sscanf("4294967296", "%9u", &u1)); /* but parsing only 9... */
-  test_eq(429496729u, u1);
 
   /* Numbers with size (eg. %2u) */
   test_eq(0, tor_sscanf("-1", "%2u", &u1));
@@ -1828,46 +1824,191 @@ test_util_sscanf(void)
   test_eq(int2, -1);
 
 #if SIZEOF_INT == 4
+  /* %u */
+  /* UINT32_MAX should work */
+  test_eq(1, tor_sscanf("4294967295", "%u", &u1));
+  test_eq(4294967295U, u1);
+
+  /* But UINT32_MAX + 1 shouldn't work */
+  test_eq(0, tor_sscanf("4294967296", "%u", &u1));
+  /* but parsing only 9... */
+  test_eq(1, tor_sscanf("4294967296", "%9u", &u1));
+  test_eq(429496729U, u1);
+
+  /* %x */
+  /* UINT32_MAX should work */
+  test_eq(1, tor_sscanf("FFFFFFFF", "%x", &u1));
+  test_eq(0xFFFFFFFF, u1);
+
+  /* But UINT32_MAX + 1 shouldn't work */
+  test_eq(0, tor_sscanf("100000000", "%x", &u1));
+
+  /* %d */
+  /* INT32_MIN and INT32_MAX should work */
   r = tor_sscanf("-2147483648. 2147483647.", "%d. %d.", &int1, &int2);
   test_eq(r,2);
-  test_eq(int1, -2147483647-1);
+  test_eq(int1, -2147483647 - 1);
   test_eq(int2, 2147483647);
 
-  r = tor_sscanf("-2147483679.", "%d.", &int1);
+  /* But INT32_MIN - 1 and INT32_MAX + 1 shouldn't work */
+  r = tor_sscanf("-2147483649.", "%d.", &int1);
   test_eq(r,0);
 
-  r = tor_sscanf("2147483678.", "%d.", &int1);
+  r = tor_sscanf("2147483648.", "%d.", &int1);
+  test_eq(r,0);
+
+  /* and the first failure stops further processing */
+  r = tor_sscanf("-2147483648. 2147483648.",
+                 "%d. %d.", &int1, &int2);
+  test_eq(r,1);
+
+  r = tor_sscanf("-2147483649. 2147483647.",
+                 "%d. %d.", &int1, &int2);
+  test_eq(r,0);
+
+  r = tor_sscanf("2147483648. -2147483649.",
+                 "%d. %d.", &int1, &int2);
   test_eq(r,0);
 #elif SIZEOF_INT == 8
+  /* %u */
+  /* UINT64_MAX should work */
+  test_eq(1, tor_sscanf("18446744073709551615", "%u", &u1));
+  test_eq(18446744073709551615U, u1);
+
+  /* But UINT64_MAX + 1 shouldn't work */
+  test_eq(0, tor_sscanf("18446744073709551616", "%u", &u1));
+  /* but parsing only 19... */
+  test_eq(1, tor_sscanf("18446744073709551616", "%19u", &u1));
+  test_eq(1844674407370955161U, u1);
+
+  /* %x */
+  /* UINT64_MAX should work */
+  test_eq(1, tor_sscanf("FFFFFFFFFFFFFFFF", "%x", &u1));
+  test_eq(0xFFFFFFFFFFFFFFFF, u1);
+
+  /* But UINT64_MAX + 1 shouldn't work */
+  test_eq(0, tor_sscanf("10000000000000000", "%x", &u1));
+
+  /* %d */
+  /* INT64_MIN and INT64_MAX should work */
   r = tor_sscanf("-9223372036854775808. 9223372036854775807.",
                  "%d. %d.", &int1, &int2);
   test_eq(r,2);
-  test_eq(int1, -9223372036854775807-1);
+  test_eq(int1, -9223372036854775807 - 1);
   test_eq(int2, 9223372036854775807);
 
+  /* But INT64_MIN - 1 and INT64_MAX + 1 shouldn't work */
   r = tor_sscanf("-9223372036854775809.", "%d.", &int1);
   test_eq(r,0);
 
   r = tor_sscanf("9223372036854775808.", "%d.", &int1);
   test_eq(r,0);
+
+  /* and the first failure stops further processing */
+  r = tor_sscanf("-9223372036854775808. 9223372036854775808.",
+                 "%d. %d.", &int1, &int2);
+  test_eq(r,1);
+
+  r = tor_sscanf("-9223372036854775809. 9223372036854775807.",
+                 "%d. %d.", &int1, &int2);
+  test_eq(r,0);
+
+  r = tor_sscanf("9223372036854775808. -9223372036854775809.",
+                 "%d. %d.", &int1, &int2);
+  test_eq(r,0);
 #endif
 
 #if SIZEOF_LONG == 4
+  /* %lu */
+  /* UINT32_MAX should work */
+  test_eq(1, tor_sscanf("4294967295", "%lu", &ulng));
+  test_eq(4294967295UL, ulng);
+
+  /* But UINT32_MAX + 1 shouldn't work */
+  test_eq(0, tor_sscanf("4294967296", "%lu", &ulng));
+  /* but parsing only 9... */
+  test_eq(1, tor_sscanf("4294967296", "%9lu", &ulng));
+  test_eq(429496729UL, ulng);
+
+  /* %lx */
+  /* UINT32_MAX should work */
+  test_eq(1, tor_sscanf("FFFFFFFF", "%lx", &ulng));
+  test_eq(0xFFFFFFFFUL, ulng);
+
+  /* But UINT32_MAX + 1 shouldn't work */
+  test_eq(0, tor_sscanf("100000000", "%lx", &ulng));
+
+  /* %ld */
+  /* INT32_MIN and INT32_MAX should work */
   r = tor_sscanf("-2147483648. 2147483647.", "%ld. %ld.", &lng1, &lng2);
   test_eq(r,2);
-  test_eq(lng1, -2147483647 - 1);
-  test_eq(lng2, 2147483647);
+  test_eq(lng1, -2147483647L - 1L);
+  test_eq(lng2, 2147483647L);
+
+  /* But INT32_MIN - 1 and INT32_MAX + 1 shouldn't work */
+  r = tor_sscanf("-2147483649.", "%ld.", &lng1);
+  test_eq(r,0);
+
+  r = tor_sscanf("2147483648.", "%ld.", &lng1);
+  test_eq(r,0);
+
+  /* and the first failure stops further processing */
+  r = tor_sscanf("-2147483648. 2147483648.",
+                 "%ld. %ld.", &lng1, &lng2);
+  test_eq(r,1);
+
+  r = tor_sscanf("-2147483649. 2147483647.",
+                 "%ld. %ld.", &lng1, &lng2);
+  test_eq(r,0);
+
+  r = tor_sscanf("2147483648. -2147483649.",
+                 "%ld. %ld.", &lng1, &lng2);
+  test_eq(r,0);
 #elif SIZEOF_LONG == 8
+  /* %lu */
+  /* UINT64_MAX should work */
+  test_eq(1, tor_sscanf("18446744073709551615", "%lu", &ulng));
+  test_eq(18446744073709551615UL, ulng);
+
+  /* But UINT64_MAX + 1 shouldn't work */
+  test_eq(0, tor_sscanf("18446744073709551616", "%lu", &ulng));
+  /* but parsing only 19... */
+  test_eq(1, tor_sscanf("18446744073709551616", "%19lu", &ulng));
+  test_eq(1844674407370955161UL, ulng);
+
+  /* %lx */
+  /* UINT64_MAX should work */
+  test_eq(1, tor_sscanf("FFFFFFFFFFFFFFFF", "%lx", &ulng));
+  test_eq(0xFFFFFFFFFFFFFFFFUL, ulng);
+
+  /* But UINT64_MAX + 1 shouldn't work */
+  test_eq(0, tor_sscanf("10000000000000000", "%lx", &ulng));
+
+  /* %ld */
+  /* INT64_MIN and INT64_MAX should work */
   r = tor_sscanf("-9223372036854775808. 9223372036854775807.",
                  "%ld. %ld.", &lng1, &lng2);
   test_eq(r,2);
-  test_eq(lng1, -9223372036854775807L - 1);
+  test_eq(lng1, -9223372036854775807L - 1L);
   test_eq(lng2, 9223372036854775807L);
 
+  /* But INT64_MIN - 1 and INT64_MAX + 1 shouldn't work */
+  r = tor_sscanf("-9223372036854775809.", "%ld.", &lng1);
+  test_eq(r,0);
+
+  r = tor_sscanf("9223372036854775808.", "%ld.", &lng1);
+  test_eq(r,0);
+
+  /* and the first failure stops further processing */
   r = tor_sscanf("-9223372036854775808. 9223372036854775808.",
                  "%ld. %ld.", &lng1, &lng2);
   test_eq(r,1);
-  r = tor_sscanf("-9223372036854775809. 9223372036854775808.",
+
+  r = tor_sscanf("-9223372036854775809. 9223372036854775807.",
+                 "%ld. %ld.", &lng1, &lng2);
+  test_eq(r,0);
+
+  r = tor_sscanf("9223372036854775808. -9223372036854775809.",
                  "%ld. %ld.", &lng1, &lng2);
   test_eq(r,0);
 #endif
@@ -2484,12 +2625,17 @@ test_util_exit_status(void *ptr)
   int n;
 
   (void)ptr;
+  
+  clear_hex_errno(hex_errno);
+  test_streq("", hex_errno);
 
   clear_hex_errno(hex_errno);
   n = format_helper_exit_status(0, 0, hex_errno);
   test_streq("0/0\n", hex_errno);
   test_eq(n, strlen(hex_errno));
 
+#if SIZEOF_INT == 4
+  
   clear_hex_errno(hex_errno);
   n = format_helper_exit_status(0, 0x7FFFFFFF, hex_errno);
   test_streq("0/7FFFFFFF\n", hex_errno);
@@ -2500,6 +2646,21 @@ test_util_exit_status(void *ptr)
   test_streq("FF/-80000000\n", hex_errno);
   test_eq(n, strlen(hex_errno));
   test_eq(n, HEX_ERRNO_SIZE);
+  
+#elif SIZEOF_INT == 8
+  
+  clear_hex_errno(hex_errno);
+  n = format_helper_exit_status(0, 0x7FFFFFFFFFFFFFFF, hex_errno);
+  test_streq("0/7FFFFFFFFFFFFFFF\n", hex_errno);
+  test_eq(n, strlen(hex_errno));
+  
+  clear_hex_errno(hex_errno);
+  n = format_helper_exit_status(0xFF, -0x8000000000000000, hex_errno);
+  test_streq("FF/-8000000000000000\n", hex_errno);
+  test_eq(n, strlen(hex_errno));
+  test_eq(n, HEX_ERRNO_SIZE);
+  
+#endif
 
   clear_hex_errno(hex_errno);
   n = format_helper_exit_status(0x7F, 0, hex_errno);
@@ -2510,6 +2671,9 @@ test_util_exit_status(void *ptr)
   n = format_helper_exit_status(0x08, -0x242, hex_errno);
   test_streq("8/-242\n", hex_errno);
   test_eq(n, strlen(hex_errno));
+  
+  clear_hex_errno(hex_errno);
+  test_streq("", hex_errno);
 
  done:
   ;
@@ -3193,6 +3357,27 @@ test_util_di_ops(void)
     test_eq(cmp1, -cmp2);
     test_eq(eq1, cmp1 == 0);
     test_eq(neq1, !eq1);
+  }
+
+  /* exhaustively white-box test tor_memeq
+   * against each possible (single-byte) bit difference
+   * some arithmetic bugs only appear with certain bit patterns */
+  {
+  const uint8_t z = 0;
+  uint8_t ii = 0;
+  for (i = 0; i < 256; i++) {
+    ii = (uint8_t)i;
+    test_eq(tor_memeq(&z, &ii, 1), z == ii);
+  }
+
+  /* exhaustively white-box test tor_memcmp
+   * against each possible single-byte numeric difference
+   * some arithmetic bugs only appear with certain bit patterns */
+  for (i = 0; i < 256; i++) {
+    ii = (uint8_t)i;
+    test_eq(tor_memcmp(&z, &ii, 1) > 0 ? GT : EQ, z > ii ? GT : EQ);
+    test_eq(tor_memcmp(&ii, &z, 1) < 0 ? LT : EQ, ii < z ? LT : EQ);
+  }
   }
 
   tt_int_op(1, ==, safe_mem_is_zero("", 0));
