@@ -2625,7 +2625,7 @@ test_util_exit_status(void *ptr)
   int n;
 
   (void)ptr;
-  
+
   clear_hex_errno(hex_errno);
   test_streq("", hex_errno);
 
@@ -2635,7 +2635,7 @@ test_util_exit_status(void *ptr)
   test_eq(n, strlen(hex_errno));
 
 #if SIZEOF_INT == 4
-  
+
   clear_hex_errno(hex_errno);
   n = format_helper_exit_status(0, 0x7FFFFFFF, hex_errno);
   test_streq("0/7FFFFFFF\n", hex_errno);
@@ -2646,20 +2646,20 @@ test_util_exit_status(void *ptr)
   test_streq("FF/-80000000\n", hex_errno);
   test_eq(n, strlen(hex_errno));
   test_eq(n, HEX_ERRNO_SIZE);
-  
+
 #elif SIZEOF_INT == 8
-  
+
   clear_hex_errno(hex_errno);
   n = format_helper_exit_status(0, 0x7FFFFFFFFFFFFFFF, hex_errno);
   test_streq("0/7FFFFFFFFFFFFFFF\n", hex_errno);
   test_eq(n, strlen(hex_errno));
-  
+
   clear_hex_errno(hex_errno);
   n = format_helper_exit_status(0xFF, -0x8000000000000000, hex_errno);
   test_streq("FF/-8000000000000000\n", hex_errno);
   test_eq(n, strlen(hex_errno));
   test_eq(n, HEX_ERRNO_SIZE);
-  
+
 #endif
 
   clear_hex_errno(hex_errno);
@@ -2671,7 +2671,7 @@ test_util_exit_status(void *ptr)
   n = format_helper_exit_status(0x08, -0x242, hex_errno);
   test_streq("8/-242\n", hex_errno);
   test_eq(n, strlen(hex_errno));
-  
+
   clear_hex_errno(hex_errno);
   test_streq("", hex_errno);
 
@@ -4097,4 +4097,3 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(max_mem, 0),
   END_OF_TESTCASES
 };
-
