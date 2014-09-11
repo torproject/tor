@@ -101,7 +101,7 @@
 
 ## Define these to limit how much relayed traffic you will allow. Your
 ## own traffic is still unthrottled. Note that RelayBandwidthRate must
-## be at least 20 KB.
+## be at least 20 kilobytes
 ## Note that units for these config options are bytes per second, not bits
 ## per second, and that prefixes are binary prefixes, i.e. 2^10, 2^20, etc.
 #RelayBandwidthRate 100 KBytes  # Throttle traffic to 100KB/s (800Kbps)

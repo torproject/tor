@@ -1,5 +1,5 @@
 ## Configuration file for a typical Tor user
-## Last updated 2 September 2014 for Tor 0.2.6.1-alpha.
+## Last updated 9 October 2013 for Tor 0.2.5.2-alpha.
 ## (may or may not work for much older or much newer versions of Tor.)
 ##
 ## Lines that begin with "## " try to explain what's going on. Lines
@@ -104,8 +104,8 @@
 ## be at least 20 KB.
 ## Note that units for these config options are bytes per second, not bits
 ## per second, and that prefixes are binary prefixes, i.e. 2^10, 2^20, etc.
-#RelayBandwidthRate 100 KBytes  # Throttle traffic to 100KB/s (800Kbps)
-#RelayBandwidthBurst 200 KBytes # But allow bursts up to 200KB/s (1600Kbps)
+#RelayBandwidthRate 100 KB  # Throttle traffic to 100KB/s (800Kbps)
+#RelayBandwidthBurst 200 KB # But allow bursts up to 200KB/s (1600Kbps)
 
 ## Use these to restrict the maximum traffic per day, week, or month.
 ## Note that this threshold applies separately to sent and received bytes,
@@ -113,7 +113,7 @@
 ## hibernating.
 ##
 ## Set a maximum of 4 gigabytes each way per period.
-#AccountingMax 4 GBytes
+#AccountingMax 4 GB
 ## Each period starts daily at midnight (AccountingMax is per day)
 #AccountingStart day 00:00
 ## Each period starts on the 3rd of the month at 15:00 (AccountingMax
@@ -151,7 +151,7 @@
 ## using more than one of your relays in a single circuit. See
 ## https://www.torproject.org/docs/faq#MultipleRelays
 ## However, you should never include a bridge's fingerprint here, as it would
-## break its concealability and potentially reveal its IP/TCP address.
+## break its concealability and potentionally reveal its IP/TCP address.
 #MyFamily $keyid,$keyid,...
 
 ## A comma-separated list of exit policies. They're considered first
