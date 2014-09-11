@@ -3555,7 +3555,13 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
 
   /* Convert errno to be unsigned for hex conversion */
   if (saved_errno < 0) {
-    unsigned_errno = (unsigned int) -saved_errno;
+    // Avoid overflow on the cast to unsigned int when result is INT_MIN
+    // by adding 1 to the signed int negative value,
+    // then, after it has been negated and cast to unsigned,
+    // adding the original 1 back (the double-addition is intentional).
+    // Otherwise, the cast to signed could cause a temporary int
+    // to equal INT_MAX + 1, which is undefined.
+    unsigned_errno = ((unsigned int) -(saved_errno + 1)) + 1;
   } else {
     unsigned_errno = (unsigned int) saved_errno;
   }
