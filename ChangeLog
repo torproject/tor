@@ -1,8 +1,8 @@
 Changes in version 0.2.5.7-rc - 2014-09-11
   Tor 0.2.5.7-rc fixes several regressions from earlier in the 0.2.5.x
   release series, and some long-standing bugs related to ORPort reachability
-  testing and failure to send CREATE cells.  It is the first release
-  candidate for 0.2.5.7-rc.
+  testing and failure to send CREATE cells. It is the first release
+  candidate for the Tor 0.2.5.x series.
 
   o Major bugfixes (client, startup):
     - Start making circuits as soon as DisabledNetwork is turned off.
@@ -28,7 +28,7 @@ Changes in version 0.2.5.7-rc - 2014-09-11
     - Fix ORPort reachability detection on relays running behind a
       proxy, by correctly updating the "local" mark on the controlling
       channel when changing the address of an or_connection_t after the
-      handshake. Fixes bug #12160; bugfix on 0.2.4.4-alpha.
+      handshake. Fixes bug 12160; bugfix on 0.2.4.4-alpha.
 
   o Minor features (bridge):
     - Add an ExtORPortCookieAuthFileGroupReadable option to make the
