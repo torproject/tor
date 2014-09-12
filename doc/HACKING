@@ -134,6 +134,22 @@ output directory, use `make coverage-html HTML_COVER_DIR=./funky_new_cov_dir`.
 Coverage diffs using lcov are not currently implemented, but are being
 investigated (as of July 2014).
 
+Running the unit tests
+~~~~~~~~~~~~~~~~~~~~~~
+
+To quickly run all tests:
+-----
+   make test
+-----
+
+To selectively run just some tests (the following can be combined
+arbitrarily):
+-----
+   ./src/test/test <name_of_test> [<name of test 2>] ...
+   ./src/test/test <prefix_of_name_of_test>.. [<prefix_of_name_of_test2>..] ...
+   ./src/test/test :<name_of_excluded_test> [:<name_of_excluded_test2]...
+-----
+
 Running gcov for unit test coverage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
