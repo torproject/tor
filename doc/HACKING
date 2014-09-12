@@ -139,6 +139,11 @@ Running the unit tests
 
 To quickly run all tests:
 -----
+   make check
+-----
+
+To run unit tests only:
+-----
    make test
 -----
 
