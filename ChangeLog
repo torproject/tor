@@ -1,6 +1,108 @@
 Changes in version 0.2.6.1-alpha - 2014-??-??
 
 
+Changes in version 0.2.5.7-rc - 2014-09-11
+  Tor 0.2.5.7-rc fixes several regressions from earlier in the 0.2.5.x
+  release series, and some long-standing bugs related to ORPort reachability
+  testing and failure to send CREATE cells. It is the first release
+  candidate for the Tor 0.2.5.x series.
+
+  o Major bugfixes (client, startup):
+    - Start making circuits as soon as DisabledNetwork is turned off.
+      When Tor started with DisabledNetwork set, it would correctly
+      conclude that it shouldn't build circuits, but it would mistakenly
+      cache this conclusion, and continue believing it even when
+      DisableNetwork is set to 0. Fixes the bug introduced by the fix
+      for bug 11200; bugfix on 0.2.5.4-alpha.
+    - Resume expanding abbreviations for command-line options. The fix
+      for bug 4647 accidentally removed our hack from bug 586 that
+      rewrote HashedControlPassword to __HashedControlSessionPassword
+      when it appears on the commandline (which allowed the user to set
+      her own HashedControlPassword in the torrc file while the
+      controller generates a fresh session password for each run). Fixes
+      bug 12948; bugfix on 0.2.5.1-alpha.
+    - Warn about attempts to run hidden services and relays in the same
+      process: that's probably not a good idea. Closes ticket 12908.
+
+  o Major bugfixes (relay):
+    - Avoid queuing or sending destroy cells for circuit ID zero when we
+      fail to send a CREATE cell. Fixes bug 12848; bugfix on 0.0.8pre1.
+      Found and fixed by "cypherpunks".
+    - Fix ORPort reachability detection on relays running behind a
+      proxy, by correctly updating the "local" mark on the controlling
+      channel when changing the address of an or_connection_t after the
+      handshake. Fixes bug 12160; bugfix on 0.2.4.4-alpha.
+
+  o Minor features (bridge):
+    - Add an ExtORPortCookieAuthFileGroupReadable option to make the
+      cookie file for the ExtORPort g+r by default.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the August 7 2014 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfixes (logging):
+    - Reduce the log severity of the "Pluggable transport proxy does not
+      provide any needed transports and will not be launched." message,
+      since Tor Browser includes several ClientTransportPlugin lines in
+      its torrc-defaults file, leading every Tor Browser user who looks
+      at her logs to see these notices and wonder if they're dangerous.
+      Resolves bug 13124; bugfix on 0.2.5.3-alpha.
+    - Downgrade "Unexpected onionskin length after decryption" warning
+      to a protocol-warn, since there's nothing relay operators can do
+      about a client that sends them a malformed create cell. Resolves
+      bug 12996; bugfix on 0.0.6rc1.
+    - Log more specific warnings when we get an ESTABLISH_RENDEZVOUS
+      cell on a cannibalized or non-OR circuit. Resolves ticket 12997.
+    - When logging information about an EXTEND2 or EXTENDED2 cell, log
+      their names correctly. Fixes part of bug 12700; bugfix
+      on 0.2.4.8-alpha.
+    - When logging information about a relay cell whose command we don't
+      recognize, log its command as an integer. Fixes part of bug 12700;
+      bugfix on 0.2.1.10-alpha.
+    - Escape all strings from the directory connection before logging
+      them. Fixes bug 13071; bugfix on 0.1.1.15. Patch from "teor".
+
+  o Minor bugfixes (controller):
+    - Restore the functionality of CookieAuthFileGroupReadable. Fixes
+      bug 12864; bugfix on 0.2.5.1-alpha.
+    - Actually send TRANSPORT_LAUNCHED and HS_DESC events to
+      controllers. Fixes bug 13085; bugfix on 0.2.5.1-alpha. Patch
+      by "teor".
+
+  o Minor bugfixes (compilation):
+    - Fix compilation of test.h with MSVC. Patch from Gisle Vanem;
+      bugfix on 0.2.5.5-alpha.
+    - Make the nmake make files work again. Fixes bug 13081. Bugfix on
+      0.2.5.1-alpha. Patch from "NewEraCracker".
+    - In routerlist_assert_ok(), don't take the address of a
+      routerinfo's cache_info member unless that routerinfo is non-NULL.
+      Fixes bug 13096; bugfix on 0.1.1.9-alpha. Patch by "teor".
+    - Fix a large number of false positive warnings from the clang
+      analyzer static analysis tool. This should make real warnings
+      easier for clang analyzer to find. Patch from "teor". Closes
+      ticket 13036.
+
+  o Distribution (systemd):
+    - Verify configuration file via ExecStartPre in the systemd unit
+      file. Patch from intrigeri; resolves ticket 12730.
+    - Explicitly disable RunAsDaemon in the systemd unit file. Our
+      current systemd unit uses "Type = simple", so systemd does not
+      expect tor to fork. If the user has "RunAsDaemon 1" in their
+      torrc, then things won't work as expected. This is e.g. the case
+      on Debian (and derivatives), since there we pass "--defaults-torrc
+      /usr/share/tor/tor-service-defaults-torrc" (that contains
+      "RunAsDaemon 1") by default. Patch by intrigeri; resolves
+      ticket 12731.
+
+  o Documentation:
+    - Adjust the URLs in the README to refer to the new locations of
+      several documents on the website. Fixes bug 12830. Patch from
+      Matt Pagan.
+    - Document 'reject6' and 'accept6' ExitPolicy entries. Resolves
+      ticket 12878.
+
+
 Changes in version 0.2.5.6-alpha - 2014-07-28
   Tor 0.2.5.6-alpha brings us a big step closer to slowing down the
   risk from guard rotation, and fixes a variety of other issues to get
