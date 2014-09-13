@@ -1754,7 +1754,7 @@ rend_service_parse_intro_for_v2(
 
   /*
    * We accept version 3 too so that the v3 parser can call this with
-   * and adjusted buffer for the latter part of a v3 cell, which is
+   * an adjusted buffer for the latter part of a v3 cell, which is
    * identical to a v2 cell.
    */
   if (!(intro->version == 2 ||
