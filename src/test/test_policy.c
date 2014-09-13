@@ -47,7 +47,9 @@ test_policy_summary_helper(const char *policy_str,
   line.value = (char *)policy_str;
   line.next = NULL;
 
-  r = policies_parse_exit_policy(&line, &policy, 1, 0, 0, 1);
+  r = policies_parse_exit_policy(&line, &policy, 
+                                 EXIT_POLICY_IPV6_ENABLED | 
+                                 EXIT_POLICY_ADD_DEFAULT ,0);
   test_eq(r, 0);
   summary = policy_summarize(policy, AF_INET);
 
@@ -106,7 +108,11 @@ test_policies_general(void *arg)
   test_assert(ADDR_POLICY_REJECTED ==
           compare_tor_addr_to_addr_policy(&tar, 2, policy));
 
-  test_assert(0 == policies_parse_exit_policy(NULL, &policy2, 1, 1, 0, 1));
+  test_assert(0 == policies_parse_exit_policy(NULL, &policy2,
+                                              EXIT_POLICY_IPV6_ENABLED |
+                                              EXIT_POLICY_REJECT_PRIVATE |
+                                              EXIT_POLICY_ADD_DEFAULT, 0));
+
   test_assert(policy2);
 
   policy3 = smartlist_new();
@@ -193,7 +199,10 @@ test_policies_general(void *arg)
   line.key = (char*)"foo";
   line.value = (char*)"accept *:80,reject private:*,reject *:*";
   line.next = NULL;
-  test_assert(0 == policies_parse_exit_policy(&line, &policy, 1, 0, 0, 1));
+  
+  test_assert(0 == policies_parse_exit_policy(&line,&policy,
+                                              EXIT_POLICY_IPV6_ENABLED |
+                                              EXIT_POLICY_ADD_DEFAULT,0)); 
   test_assert(policy);
   //test_streq(policy->string, "accept *:80");
   //test_streq(policy->next->string, "reject *:*");
