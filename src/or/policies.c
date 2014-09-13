@@ -62,6 +62,14 @@ static const char *private_nets[] = {
   NULL
 };
 
+
+static int policies_parse_exit_policy_internal(config_line_t *cfg, 
+                                               smartlist_t **dest,
+                                               int ipv6_exit,
+                                               int rejectprivate, 
+                                               uint32_t local_address,
+                                               int add_default_policy);
+
 /** Replace all "private" entries in *<b>policy</b> with their expanded
  * equivalents. */
 void
@@ -423,11 +431,9 @@ validate_addr_policies(const or_options_t *options, char **msg)
   smartlist_t *addr_policy=NULL;
   *msg = NULL;
 
-  if (policies_parse_exit_policy(options->ExitPolicy, &addr_policy,
-                                 options->IPv6Exit,
-                                 options->ExitPolicyRejectPrivate, 0,
-                                 !options->BridgeRelay))
+  if (policies_parse_exit_policy_from_options(options,0,&addr_policy)) {
     REJECT("Error in ExitPolicy entry.");
+  }
 
   /* The rest of these calls *append* to addr_policy. So don't actually
    * use the results for anything other than checking if they parse! */
@@ -948,11 +954,12 @@ exit_policy_remove_redundancies(smartlist_t *dest)
  * the functions used to parse the exit policy from a router descriptor,
  * see router_add_exit_policy.
  */
-int
-policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
-                           int ipv6_exit,
-                           int rejectprivate, uint32_t local_address,
-                           int add_default_policy)
+static int
+policies_parse_exit_policy_internal(config_line_t *cfg, smartlist_t **dest,
+                                    int ipv6_exit,
+                                    int rejectprivate, 
+                                    uint32_t local_address,
+                                    int add_default_policy)
 {
   if (!ipv6_exit) {
     append_exit_policy_string(dest, "reject *6:*");
@@ -976,6 +983,44 @@ policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
   exit_policy_remove_redundancies(*dest);
 
   return 0;
+}
+
+int 
+policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
+                           exit_policy_parser_cfg_t options,
+                           uint32_t local_address)
+{
+  int ipv6_enabled = (options & EXIT_POLICY_IPV6_ENABLED) ? 1 : 0;
+  int reject_private = (options & EXIT_POLICY_REJECT_PRIVATE) ? 1 : 0;
+  int add_default = (options & EXIT_POLICY_ADD_DEFAULT) ? 1 : 0;
+
+  return policies_parse_exit_policy_internal(cfg,dest,ipv6_enabled,
+                                             reject_private,
+                                             local_address,
+                                             add_default);
+}
+
+int
+policies_parse_exit_policy_from_options(const or_options_t *or_options,
+                                        uint32_t local_address,
+                                        smartlist_t **result)
+{
+  exit_policy_parser_cfg_t parser_cfg = 0;
+
+  if (or_options->IPv6Exit) {
+    parser_cfg |= EXIT_POLICY_IPV6_ENABLED;
+  }
+
+  if (or_options->ExitPolicyRejectPrivate) {
+    parser_cfg |= EXIT_POLICY_REJECT_PRIVATE;
+  }
+
+  if (!or_options->BridgeRelay) {
+    parser_cfg |= EXIT_POLICY_ADD_DEFAULT;
+  }
+
+  return policies_parse_exit_policy(or_options->ExitPolicy,result,
+                                    parser_cfg,local_address);
 }
 
 /** Add "reject *:*" to the end of the policy in *<b>dest</b>, allocating
