@@ -47,8 +47,8 @@ test_policy_summary_helper(const char *policy_str,
   line.value = (char *)policy_str;
   line.next = NULL;
 
-  r = policies_parse_exit_policy(&line, &policy, 
-                                 EXIT_POLICY_IPV6_ENABLED | 
+  r = policies_parse_exit_policy(&line, &policy,
+                                 EXIT_POLICY_IPV6_ENABLED |
                                  EXIT_POLICY_ADD_DEFAULT ,0);
   test_eq(r, 0);
   summary = policy_summarize(policy, AF_INET);
@@ -199,10 +199,10 @@ test_policies_general(void *arg)
   line.key = (char*)"foo";
   line.value = (char*)"accept *:80,reject private:*,reject *:*";
   line.next = NULL;
-  
+
   test_assert(0 == policies_parse_exit_policy(&line,&policy,
                                               EXIT_POLICY_IPV6_ENABLED |
-                                              EXIT_POLICY_ADD_DEFAULT,0)); 
+                                              EXIT_POLICY_ADD_DEFAULT,0));
   test_assert(policy);
   //test_streq(policy->string, "accept *:80");
   //test_streq(policy->next->string, "reject *:*");

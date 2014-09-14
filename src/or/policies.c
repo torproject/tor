@@ -62,11 +62,10 @@ static const char *private_nets[] = {
   NULL
 };
 
-
-static int policies_parse_exit_policy_internal(config_line_t *cfg, 
+static int policies_parse_exit_policy_internal(config_line_t *cfg,
                                                smartlist_t **dest,
                                                int ipv6_exit,
-                                               int rejectprivate, 
+                                               int rejectprivate,
                                                uint32_t local_address,
                                                int add_default_policy);
 
@@ -957,7 +956,7 @@ exit_policy_remove_redundancies(smartlist_t *dest)
 static int
 policies_parse_exit_policy_internal(config_line_t *cfg, smartlist_t **dest,
                                     int ipv6_exit,
-                                    int rejectprivate, 
+                                    int rejectprivate,
                                     uint32_t local_address,
                                     int add_default_policy)
 {
@@ -985,7 +984,7 @@ policies_parse_exit_policy_internal(config_line_t *cfg, smartlist_t **dest,
   return 0;
 }
 
-int 
+int
 policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
                            exit_policy_parser_cfg_t options,
                            uint32_t local_address)
