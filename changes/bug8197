@@ -1,0 +1,6 @@
+  o Minor refactoring:
+    - Reworking API of policies_parse_exit_policy() function to use a 
+      bitmask to represent parsing options instead of a confusing mess 
+      of booleans. Resolves ticket 8197.
+    - Introducing helper function to parse ExitPolicy in or_options_t
+      structure.
