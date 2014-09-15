@@ -1732,7 +1732,7 @@ routerlist_add_node_and_family(smartlist_t *sl, const routerinfo_t *router)
 /** Add every suitable node from our nodelist to <b>sl</b>, so that
  * we can pick a node for a circuit.
  */
-static void
+void
 router_add_running_nodes_to_smartlist(smartlist_t *sl, int allow_invalid,
                                       int need_uptime, int need_capacity,
                                       int need_guard, int need_desc)
