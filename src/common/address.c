@@ -332,8 +332,15 @@ tor_addr_is_internal_(const tor_addr_t *addr, int for_listening,
     iph4 = tor_addr_to_ipv4h(addr);
   } else if (v_family == AF_INET6) {
     if (tor_addr_is_v4(addr)) { /* v4-mapped */
+      uint32_t *addr32 = NULL;
       v_family = AF_INET;
-      iph4 = ntohl(tor_addr_to_in6_addr32(addr)[3]);
+      // Work around an incorrect NULL pointer dereference warning in
+      // "clang --analyze" due to limited analysis depth
+      addr32 = tor_addr_to_in6_addr32(addr);
+      // To improve performance, wrap this assertion in:
+      // #if !defined(__clang_analyzer__) || PARANOIA
+      tor_assert(addr32);
+      iph4 = ntohl(addr32[3]);
     }
   }
 

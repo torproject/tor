@@ -2910,6 +2910,9 @@ test_util_spawn_background_fail(void *ptr)
   const int expected_status = PROCESS_STATUS_RUNNING;
 #endif
 
+  memset(expected_out, 0xf0, sizeof(expected_out));
+  memset(code, 0xf0, sizeof(code));
+
   (void)ptr;
 
   tor_snprintf(code, sizeof(code), "%x/%x",

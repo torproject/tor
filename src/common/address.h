@@ -103,7 +103,18 @@ tor_addr_to_ipv4h(const tor_addr_t *a)
 static INLINE uint32_t
 tor_addr_to_mapped_ipv4h(const tor_addr_t *a)
 {
-  return a->family == AF_INET6 ? ntohl(tor_addr_to_in6_addr32(a)[3]) : 0;
+  if (a->family == AF_INET6) {
+    uint32_t *addr32 = NULL;
+    // Work around an incorrect NULL pointer dereference warning in
+    // "clang --analyze" due to limited analysis depth
+    addr32 = tor_addr_to_in6_addr32(a);
+    // To improve performance, wrap this assertion in:
+    // #if !defined(__clang_analyzer__) || PARANOIA
+    tor_assert(addr32);
+    return ntohl(addr32[3]);
+  } else {
+    return 0;
+  }
 }
 /** Return the address family of <b>a</b>.  Possible values are:
  * AF_INET6, AF_INET, AF_UNSPEC. */
