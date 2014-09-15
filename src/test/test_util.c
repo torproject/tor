@@ -3362,29 +3362,23 @@ test_util_di_ops(void)
     test_eq(neq1, !eq1);
   }
 
-  /* exhaustively white-box test tor_memeq
-   * against each possible (single-byte) bit difference
-   * some arithmetic bugs only appear with certain bit patterns */
   {
-  uint8_t zz = 0;
-  uint8_t ii = 0;
-  int z;
-  for (i = 0; i < 256; i++) {
-    ii = (uint8_t)i;
-    test_eq(tor_memeq(&zz, &ii, 1), zz == ii);
-  }
+    uint8_t zz = 0;
+    uint8_t ii = 0;
+    int z;
 
-  /* exhaustively white-box test tor_memcmp
-   * against each possible single-byte numeric difference
-   * some arithmetic bugs only appear with certain bit patterns */
-  for (z = 0; z < 256; z++) {
-    for (i = 0; i < 256; i++) {
-      ii = (uint8_t)i;
-      zz = (uint8_t)z;
-      test_eq(tor_memcmp(&zz, &ii, 1) > 0 ? GT : EQ, zz > ii ? GT : EQ);
-      test_eq(tor_memcmp(&ii, &zz, 1) < 0 ? LT : EQ, ii < zz ? LT : EQ);
+    /* exhaustively test tor_memeq and tor_memcmp
+     * against each possible single-byte numeric difference
+     * some arithmetic bugs only appear with certain bit patterns */
+    for (z = 0; z < 256; z++) {
+      for (i = 0; i < 256; i++) {
+        ii = (uint8_t)i;
+        zz = (uint8_t)z;
+        test_eq(tor_memeq(&zz, &ii, 1), zz == ii);
+        test_eq(tor_memcmp(&zz, &ii, 1) > 0 ? GT : EQ, zz > ii ? GT : EQ);
+        test_eq(tor_memcmp(&ii, &zz, 1) < 0 ? LT : EQ, ii < zz ? LT : EQ);
+      }
     }
-  }
   }
 
   tt_int_op(1, ==, safe_mem_is_zero("", 0));

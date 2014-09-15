@@ -775,10 +775,11 @@ NS(test_main)(void *arg)
 {
   routerset_t *set = routerset_new();
   int contains;
+  uint8_t foo[20] = { 2, 3, 4 };
   (void)arg;
 
-  digestmap_set(set->digests, "foo", (void *)1);
-  contains = routerset_contains(set, NULL, 0, NULL, "foo", 0);
+  digestmap_set(set->digests, (const char*)foo, (void *)1);
+  contains = routerset_contains(set, NULL, 0, NULL, (const char*)foo, 0);
   routerset_free(set);
 
   tt_int_op(contains, ==, 4);
@@ -799,10 +800,12 @@ NS(test_main)(void *arg)
 {
   routerset_t *set = routerset_new();
   int contains;
+  uint8_t bar[20] = { 9, 10, 11, 55 };
+  uint8_t foo[20] = { 1, 2, 3, 4};
   (void)arg;
 
-  digestmap_set(set->digests, "bar", (void *)1);
-  contains = routerset_contains(set, NULL, 0, NULL, "foo", 0);
+  digestmap_set(set->digests, (const char*)bar, (void *)1);
+  contains = routerset_contains(set, NULL, 0, NULL, (const char*)foo, 0);
   routerset_free(set);
 
   tt_int_op(contains, ==, 0);
@@ -823,9 +826,10 @@ NS(test_main)(void *arg)
 {
   routerset_t *set = routerset_new();
   int contains;
+  uint8_t bar[20] = { 9, 10, 11, 55 };
   (void)arg;
 
-  digestmap_set(set->digests, "bar", (void *)1);
+  digestmap_set(set->digests, (const char*)bar, (void *)1);
   contains = routerset_contains(set, NULL, 0, NULL, NULL, 0);
   routerset_free(set);
 
