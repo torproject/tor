@@ -1322,6 +1322,22 @@ The following options are useful only for clients (that is, if
     To enable this option the compile time flag --enable-tor2webmode must be
     specified. (Default: 0)
 
+[[Tor2webRendezvousPoints]] **Tor2webRendezvousPoints** __node__,__node__,__...__::
+    A list of identity fingerprints, nicknames, country codes and
+    address patterns of nodes that are allowed to be used as RPs
+    in HS circuits; any other nodes will not be used as RPs.
+    (Example:
+    Tor2webRendezvousPoints Fastyfasty, ABCD1234CDEF5678ABCD1234CDEF5678ABCD1234, \{cc}, 255.254.0.0/8) +
+ +
+    This feature can only be used if Tor2webMode is also enabled.
+ +
+    ExcludeNodes have higher priority than Tor2webRendezvousPoints,
+    which means that nodes specified in ExcludeNodes will not be
+    picked as RPs.
+ +
+    If no nodes in Tor2webRendezvousPoints are currently available for
+    use, Tor will choose a random node when building HS circuits.
+
 [[UseMicrodescriptors]] **UseMicrodescriptors** **0**|**1**|**auto**::
     Microdescriptors are a smaller version of the information that Tor needs
     in order to build its circuits.  Using microdescriptors makes Tor clients
