@@ -18,7 +18,7 @@
 #include "statefile.h"
 #include "config.h"
 
-#include "test_descriptors.inc"
+#include "testhelper.h"
 
 /* TODO:
  * choose_random_entry() test with state set.
@@ -64,7 +64,7 @@ fake_network_setup(const struct testcase_t *testcase)
        get_or_state_replacement);
 
   /* Setup fake routerlist. */
-  setup_fake_routerlist();
+  helper_setup_fake_routerlist();
 
   /* Return anything but NULL (it's interpreted as test fail) */
   return dummy_state;
@@ -141,7 +141,7 @@ populate_live_entry_guards_test_helper(int num_needed)
 
   /* Walk the nodelist and add all nodes as entry guards. */
   our_nodelist = nodelist_get_list();
-  tt_int_op(smartlist_len(our_nodelist), ==, NUMBER_OF_DESCRIPTORS);
+  tt_int_op(smartlist_len(our_nodelist), ==, HELPER_NUMBER_OF_DESCRIPTORS);
 
   SMARTLIST_FOREACH_BEGIN(our_nodelist, const node_t *, node) {
     const node_t *node_tmp;
@@ -150,7 +150,7 @@ populate_live_entry_guards_test_helper(int num_needed)
   } SMARTLIST_FOREACH_END(node);
 
   /* Make sure the nodes were added as entry guards. */
-  tt_int_op(smartlist_len(all_entry_guards), ==, NUMBER_OF_DESCRIPTORS);
+  tt_int_op(smartlist_len(all_entry_guards), ==, HELPER_NUMBER_OF_DESCRIPTORS);
 
   /* Ensure that all the possible entry guards are enough to satisfy us. */
   tt_int_op(smartlist_len(all_entry_guards), >=, num_needed);
@@ -590,7 +590,7 @@ test_entry_is_live(void *arg)
 
   /* Walk the nodelist and add all nodes as entry guards. */
   our_nodelist = nodelist_get_list();
-  tt_int_op(smartlist_len(our_nodelist), ==, NUMBER_OF_DESCRIPTORS);
+  tt_int_op(smartlist_len(our_nodelist), ==, HELPER_NUMBER_OF_DESCRIPTORS);
 
   SMARTLIST_FOREACH_BEGIN(our_nodelist, const node_t *, node) {
     const node_t *node_tmp;
@@ -602,7 +602,7 @@ test_entry_is_live(void *arg)
   } SMARTLIST_FOREACH_END(node);
 
   /* Make sure the nodes were added as entry guards. */
-  tt_int_op(smartlist_len(all_entry_guards), ==, NUMBER_OF_DESCRIPTORS);
+  tt_int_op(smartlist_len(all_entry_guards), ==, HELPER_NUMBER_OF_DESCRIPTORS);
 
   /* Now get a random test entry that we will use for this unit test. */
   which_node = 3;  /* (chosen by fair dice roll) */

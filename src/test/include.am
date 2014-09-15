@@ -47,6 +47,7 @@ src_test_test_SOURCES = \
 	src/test/test_policy.c \
 	src/test/test_status.c \
 	src/test/test_routerset.c \
+	src/test/testhelper.c \
 	src/ext/tinytest.c
 
 src_test_test_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
@@ -74,6 +75,7 @@ src_test_bench_LDADD = src/or/libtor.a src/common/libor.a \
 
 noinst_HEADERS+= \
 	src/test/test.h \
+	src/test/testhelper.h \
 	src/test/test_descriptors.inc
 
 if CURVE25519_ENABLED
