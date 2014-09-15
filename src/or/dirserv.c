@@ -664,7 +664,7 @@ directory_remove_invalid(void)
   smartlist_add_all(nodes, nodelist_get_list());
 
   SMARTLIST_FOREACH_BEGIN(nodes, node_t *, node) {
-    const char *msg;
+    const char *msg = NULL;
     routerinfo_t *ent = node->ri;
     char description[NODE_DESC_BUF_LEN];
     uint32_t r;
