@@ -25,9 +25,7 @@
 #define test_assert(expr) tt_assert(expr)
 
 #define test_eq(expr1, expr2) tt_int_op((expr1), ==, (expr2))
-#define test_neq(expr1, expr2) tt_int_op((expr1), !=, (expr2))
 #define test_streq(expr1, expr2) tt_str_op((expr1), ==, (expr2))
-#define test_strneq(expr1, expr2) tt_str_op((expr1), !=, (expr2))
 
 /* As test_mem_op, but decodes 'hex' before comparing.  There must be a
  * local char* variable called mem_op_hex_tmp for this to work. */
