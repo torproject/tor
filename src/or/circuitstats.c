@@ -691,7 +691,7 @@ circuit_build_times_get_xm(circuit_build_times_t *cbt)
   if (cbt->total_build_times < CBT_NCIRCUITS_TO_OBSERVE)
     num_modes = 1;
 
-  nth_max_bin = (build_time_t*)tor_calloc(num_modes, sizeof(build_time_t));
+  nth_max_bin = tor_calloc(num_modes, sizeof(build_time_t));
 
   /* Determine the N most common build times */
   for (i = 0; i < nbins; i++) {
