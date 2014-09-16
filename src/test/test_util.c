@@ -306,14 +306,22 @@ test_util_time(void *arg)
   t_res = 0;
   tt_int_op(0,==, parse_rfc1123_time("Wed, 04 Aug 2004 00:48:22 ZUL", &t_res));
   tt_int_op(t_res,==, (time_t)1091580502UL);
-  tt_int_op(-1,==, parse_rfc1123_time("Wed, zz Aug 2004 99-99x99 GMT", &t_res));
-  tt_int_op(-1,==, parse_rfc1123_time("Wed, 32 Mar 2011 00:00:00 GMT", &t_res));
-  tt_int_op(-1,==, parse_rfc1123_time("Wed, 30 Mar 2011 24:00:00 GMT", &t_res));
-  tt_int_op(-1,==, parse_rfc1123_time("Wed, 30 Mar 2011 23:60:00 GMT", &t_res));
-  tt_int_op(-1,==, parse_rfc1123_time("Wed, 30 Mar 2011 23:59:62 GMT", &t_res));
-  tt_int_op(-1,==, parse_rfc1123_time("Wed, 30 Mar 1969 23:59:59 GMT", &t_res));
-  tt_int_op(-1,==, parse_rfc1123_time("Wed, 30 Ene 2011 23:59:59 GMT", &t_res));
-  tt_int_op(-1,==, parse_rfc1123_time("Wed, 30 Mar 2011 23:59:59 GM", &t_res));
+  tt_int_op(-1,==,
+            parse_rfc1123_time("Wed, zz Aug 2004 99-99x99 GMT", &t_res));
+  tt_int_op(-1,==,
+            parse_rfc1123_time("Wed, 32 Mar 2011 00:00:00 GMT", &t_res));
+  tt_int_op(-1,==,
+            parse_rfc1123_time("Wed, 30 Mar 2011 24:00:00 GMT", &t_res));
+  tt_int_op(-1,==,
+            parse_rfc1123_time("Wed, 30 Mar 2011 23:60:00 GMT", &t_res));
+  tt_int_op(-1,==,
+            parse_rfc1123_time("Wed, 30 Mar 2011 23:59:62 GMT", &t_res));
+  tt_int_op(-1,==,
+            parse_rfc1123_time("Wed, 30 Mar 1969 23:59:59 GMT", &t_res));
+  tt_int_op(-1,==,
+            parse_rfc1123_time("Wed, 30 Ene 2011 23:59:59 GMT", &t_res));
+  tt_int_op(-1,==,
+            parse_rfc1123_time("Wed, 30 Mar 2011 23:59:59 GM", &t_res));
 
 #if 0
   /* This fails, I imagine it's important and should be fixed? */
@@ -404,24 +412,35 @@ test_util_parse_http_time(void *arg)
 
   /* Test parse_http_time */
 
-  tt_int_op(-1,==, parse_http_time("", &a_time));
-  tt_int_op(-1,==, parse_http_time("Sunday, 32 Aug 2004 00:48:22 GMT", &a_time));
-  tt_int_op(-1,==, parse_http_time("Sunday, 3 Aug 1869 00:48:22 GMT", &a_time));
-  tt_int_op(-1,==, parse_http_time("Sunday, 32-Aug-94 00:48:22 GMT", &a_time));
-  tt_int_op(-1,==, parse_http_time("Sunday, 3-Ago-04 00:48:22", &a_time));
-  tt_int_op(-1,==, parse_http_time("Sunday, August the third", &a_time));
-  tt_int_op(-1,==, parse_http_time("Wednesday,,04 Aug 1994 00:48:22 GMT", &a_time));
+  tt_int_op(-1,==,
+            parse_http_time("", &a_time));
+  tt_int_op(-1,==,
+            parse_http_time("Sunday, 32 Aug 2004 00:48:22 GMT", &a_time));
+  tt_int_op(-1,==,
+            parse_http_time("Sunday, 3 Aug 1869 00:48:22 GMT", &a_time));
+  tt_int_op(-1,==,
+            parse_http_time("Sunday, 32-Aug-94 00:48:22 GMT", &a_time));
+  tt_int_op(-1,==,
+            parse_http_time("Sunday, 3-Ago-04 00:48:22", &a_time));
+  tt_int_op(-1,==,
+            parse_http_time("Sunday, August the third", &a_time));
+  tt_int_op(-1,==,
+            parse_http_time("Wednesday,,04 Aug 1994 00:48:22 GMT", &a_time));
 
-  tt_int_op(0,==, parse_http_time("Wednesday, 04 Aug 1994 00:48:22 GMT", &a_time));
+  tt_int_op(0,==,
+            parse_http_time("Wednesday, 04 Aug 1994 00:48:22 GMT", &a_time));
   tt_int_op((time_t)775961302UL,==, tor_timegm(&a_time));
   T("1994-08-04 00:48:22");
-  tt_int_op(0,==, parse_http_time("Wednesday, 4 Aug 1994 0:48:22 GMT", &a_time));
+  tt_int_op(0,==,
+            parse_http_time("Wednesday, 4 Aug 1994 0:48:22 GMT", &a_time));
   tt_int_op((time_t)775961302UL,==, tor_timegm(&a_time));
   T("1994-08-04 00:48:22");
-  tt_int_op(0,==, parse_http_time("Miercoles, 4 Aug 1994 0:48:22 GMT", &a_time));
+  tt_int_op(0,==,
+            parse_http_time("Miercoles, 4 Aug 1994 0:48:22 GMT", &a_time));
   tt_int_op((time_t)775961302UL,==, tor_timegm(&a_time));
   T("1994-08-04 00:48:22");
-  tt_int_op(0,==, parse_http_time("Wednesday, 04-Aug-94 00:48:22 GMT", &a_time));
+  tt_int_op(0,==,
+            parse_http_time("Wednesday, 04-Aug-94 00:48:22 GMT", &a_time));
   tt_int_op((time_t)775961302UL,==, tor_timegm(&a_time));
   T("1994-08-04 00:48:22");
   tt_int_op(0,==, parse_http_time("Wednesday, 4-Aug-94 0:48:22 GMT", &a_time));
@@ -1119,7 +1138,8 @@ test_util_strmisc(void *arg)
 #define TOOBIG "100000000000000000000000000"
     tt_int_op(0L,==, tor_parse_long(TOOBIG, 10, LONG_MIN, LONG_MAX, &i, NULL));
     tt_int_op(i,==, 0);
-    tt_int_op(0L,==, tor_parse_long("-"TOOBIG, 10, LONG_MIN, LONG_MAX, &i, NULL));
+    tt_int_op(0L,==,
+              tor_parse_long("-"TOOBIG, 10, LONG_MIN, LONG_MAX, &i, NULL));
     tt_int_op(i,==, 0);
     tt_int_op(0UL,==, tor_parse_ulong(TOOBIG, 10, 0, ULONG_MAX, &i, NULL));
     tt_int_op(i,==, 0);
@@ -1266,7 +1286,8 @@ test_util_strmisc(void *arg)
       binary_data[i] = i;
     tt_str_op(hex_str(binary_data, 0),==, "");
     tt_str_op(hex_str(binary_data, 1),==, "00");
-    tt_str_op(hex_str(binary_data, 17),==, "000102030405060708090A0B0C0D0E0F10");
+    tt_str_op(hex_str(binary_data, 17),==,
+              "000102030405060708090A0B0C0D0E0F10");
     tt_str_op(hex_str(binary_data, 32),==,
                "000102030405060708090A0B0C0D0E0F"
                "101112131415161718191A1B1C1D1E1F");
@@ -1312,7 +1333,7 @@ test_util_pow2(void *arg)
   tt_int_op(tor_log2(64),==, 6);
   tt_int_op(tor_log2(65),==, 6);
   tt_int_op(tor_log2(63),==, 5);
-  tt_int_op(tor_log2(0),==, 0); /* incorrect mathematically, but as specified */
+  tt_int_op(tor_log2(0),==, 0);/* incorrect mathematically, but as specified */
   tt_int_op(tor_log2(1),==, 0);
   tt_int_op(tor_log2(2),==, 1);
   tt_int_op(tor_log2(3),==, 1);
@@ -1577,7 +1598,7 @@ test_util_gzip(void *arg)
 
   tt_assert(!tor_gzip_uncompress(&buf3, &len2, buf1, 1024-len1,
                                   ZLIB_METHOD, 1, LOG_WARN));
-  tt_str_op(buf3,==, "ABCDEFGHIJABCDEFGHIJ"); /*Make sure it compressed right.*/
+  tt_str_op(buf3,==,"ABCDEFGHIJABCDEFGHIJ"); /*Make sure it compressed right.*/
   tt_int_op(21,==, len2);
 
  done:
@@ -1711,7 +1732,8 @@ test_util_sscanf(void *arg)
   /* Simple tests (malformed patterns, literal matching, ...) */
   (void)arg;
   tt_int_op(-1,==, tor_sscanf("123", "%i", &r)); /* %i is not supported */
-  tt_int_op(-1,==, tor_sscanf("wrong", "%5c", s1)); /* %c cannot have a number. */
+  tt_int_op(-1,==,
+            tor_sscanf("wrong", "%5c", s1)); /* %c cannot have a number. */
   tt_int_op(-1,==, tor_sscanf("hello", "%s", s1)); /* %s needs a number. */
   tt_int_op(-1,==, tor_sscanf("prettylongstring", "%999999s", s1));
 #if 0
@@ -1723,13 +1745,17 @@ test_util_sscanf(void *arg)
   tt_int_op(0,==, tor_sscanf("hello world", "hello world"));
   tt_int_op(0,==, tor_sscanf("hello world", "good bye"));
   /* Excess data */
-  tt_int_op(0,==, tor_sscanf("hello 3", "%u", &u1));  /* have to match the start */
+  tt_int_op(0,==,
+            tor_sscanf("hello 3", "%u", &u1));  /* have to match the start */
   tt_int_op(0,==, tor_sscanf(" 3 hello", "%u", &u1));
-  tt_int_op(0,==, tor_sscanf(" 3 hello", "%2u", &u1)); /* not even in this case */
-  tt_int_op(1,==, tor_sscanf("3 hello", "%u", &u1));  /* but trailing is alright */
+  tt_int_op(0,==,
+            tor_sscanf(" 3 hello", "%2u", &u1)); /* not even in this case */
+  tt_int_op(1,==,
+            tor_sscanf("3 hello", "%u", &u1));  /* but trailing is alright */
 
   /* Numbers (ie. %u) */
-  tt_int_op(0,==, tor_sscanf("hello world 3", "hello worlb %u", &u1)); /* d vs b */
+  tt_int_op(0,==,
+            tor_sscanf("hello world 3", "hello worlb %u", &u1)); /* d vs b */
   tt_int_op(1,==, tor_sscanf("12345", "%u", &u1));
   tt_int_op(12345u,==, u1);
   tt_int_op(1,==, tor_sscanf("12346 ", "%u", &u1));
@@ -1759,7 +1785,8 @@ test_util_sscanf(void *arg)
   tt_int_op(12u,==, u1);
   tt_int_op(3u,==, u2);
   tt_int_op(456u,==, u3);
-  tt_int_op(3,==, tor_sscanf("67:8:099", "%2u:%2u:%3u", &u1, &u2, &u3)); /* 0s */
+  tt_int_op(3,==,
+            tor_sscanf("67:8:099", "%2u:%2u:%3u", &u1, &u2, &u3)); /* 0s */
   tt_int_op(67u,==, u1);
   tt_int_op(8u,==, u2);
   tt_int_op(99u,==, u3);
@@ -1822,13 +1849,15 @@ test_util_sscanf(void *arg)
   tt_int_op(2,==, tor_sscanf("bye   world?", "%9s %9s", s1, s2));
   tt_str_op(s1,==, "bye");
   tt_str_op(s2,==, "");
-  tt_int_op(3,==, tor_sscanf("hi", "%9s%9s%3s", s1, s2, s3)); /* %s can be empty. */
+  tt_int_op(3,==,
+            tor_sscanf("hi", "%9s%9s%3s", s1, s2, s3)); /* %s can be empty. */
   tt_str_op(s1,==, "hi");
   tt_str_op(s2,==, "");
   tt_str_op(s3,==, "");
 
   tt_int_op(3,==, tor_sscanf("1.2.3", "%u.%u.%u%c", &u1, &u2, &u3, &ch));
-  tt_int_op(4,==, tor_sscanf("1.2.3 foobar", "%u.%u.%u%c", &u1, &u2, &u3, &ch));
+  tt_int_op(4,==,
+            tor_sscanf("1.2.3 foobar", "%u.%u.%u%c", &u1, &u2, &u3, &ch));
   tt_int_op(' ',==, ch);
 
   r = tor_sscanf("12345 -67890 -1", "%d %ld %d", &int1, &lng1, &int2);
@@ -2371,7 +2400,8 @@ test_util_find_str_at_start_of_line(void *ptr)
   tt_ptr_op(line2,==, find_str_at_start_of_line(long_string, "hell"));
   tt_ptr_op(line2,==, find_str_at_start_of_line(long_string, "hello k"));
   tt_ptr_op(line2,==, find_str_at_start_of_line(long_string, "hello kitty\n"));
-  tt_ptr_op(line2,==, find_str_at_start_of_line(long_string, "hello kitty\nt"));
+  tt_ptr_op(line2,==,
+            find_str_at_start_of_line(long_string, "hello kitty\nt"));
   tt_ptr_op(line3,==, find_str_at_start_of_line(long_string, "third"));
   tt_ptr_op(line3,==, find_str_at_start_of_line(long_string, "third line"));
   tt_ptr_op(NULL,==,  find_str_at_start_of_line(long_string, "third line\n"));

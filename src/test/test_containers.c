@@ -29,7 +29,7 @@ compare_strs_for_bsearch_(const void *a, const void **b)
 /** Helper: return a tristate based on comparing the strings in *<b>a</b> and
  * *<b>b</b>, excluding a's first character, and ignoring case. */
 static int
-compare_without_first_ch_(const void *a, const void **b)
+cmp_without_first_(const void *a, const void **b)
 {
   const char *s1 = a, *s2 = *b;
   return strcasecmp(s1+1, s2);
@@ -225,26 +225,27 @@ test_container_smartlist_strings(void *arg)
   /* Test bsearch. */
   smartlist_sort(sl, compare_strs_);
   tt_str_op("nickm",==, smartlist_bsearch(sl, "zNicKM",
-                                        compare_without_first_ch_));
-  tt_str_op("and",==, smartlist_bsearch(sl, " AND", compare_without_first_ch_));
-  tt_ptr_op(NULL,==, smartlist_bsearch(sl, " ANz", compare_without_first_ch_));
+                                        cmp_without_first_));
+  tt_str_op("and",==,
+            smartlist_bsearch(sl, " AND", cmp_without_first_));
+  tt_ptr_op(NULL,==, smartlist_bsearch(sl, " ANz", cmp_without_first_));
 
   /* Test bsearch_idx */
   {
     int f;
     smartlist_t *tmp = NULL;
 
-    tt_int_op(0,==, smartlist_bsearch_idx(sl," aaa",compare_without_first_ch_,&f));
+    tt_int_op(0,==,smartlist_bsearch_idx(sl," aaa",cmp_without_first_,&f));
     tt_int_op(f,==, 0);
-    tt_int_op(0,==, smartlist_bsearch_idx(sl," and",compare_without_first_ch_,&f));
+    tt_int_op(0,==, smartlist_bsearch_idx(sl," and",cmp_without_first_,&f));
     tt_int_op(f,==, 1);
-    tt_int_op(1,==, smartlist_bsearch_idx(sl," arm",compare_without_first_ch_,&f));
+    tt_int_op(1,==, smartlist_bsearch_idx(sl," arm",cmp_without_first_,&f));
     tt_int_op(f,==, 0);
-    tt_int_op(1,==, smartlist_bsearch_idx(sl," arma",compare_without_first_ch_,&f));
+    tt_int_op(1,==, smartlist_bsearch_idx(sl," arma",cmp_without_first_,&f));
     tt_int_op(f,==, 1);
-    tt_int_op(2,==, smartlist_bsearch_idx(sl," armb",compare_without_first_ch_,&f));
+    tt_int_op(2,==, smartlist_bsearch_idx(sl," armb",cmp_without_first_,&f));
     tt_int_op(f,==, 0);
-    tt_int_op(7,==, smartlist_bsearch_idx(sl," zzzz",compare_without_first_ch_,&f));
+    tt_int_op(7,==, smartlist_bsearch_idx(sl," zzzz",cmp_without_first_,&f));
     tt_int_op(f,==, 0);
 
     /* Test trivial cases for list of length 0 or 1 */

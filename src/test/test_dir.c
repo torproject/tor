@@ -1602,7 +1602,8 @@ test_a_networkstatus(
     tt_int_op(1,==, networkstatus_add_detached_signatures(con2, dsig1, "test",
                                                      LOG_INFO, &msg));
     tor_free(detached_text2);
-    tt_int_op(1,==, networkstatus_add_detached_signatures(con_md2, dsig1, "test",
+    tt_int_op(1,==,
+              networkstatus_add_detached_signatures(con_md2, dsig1, "test",
                                                      LOG_INFO, &msg));
     tor_free(detached_text2);
     detached_text2 = get_detached_sigs(con2,con_md2);

@@ -693,7 +693,8 @@ test_rend_fns(void *arg)
   tt_assert(rend_compute_v2_desc_id(computed_desc_id, service_id_base32,
                                       NULL, now, 0) == 0);
   tt_mem_op(((rend_encoded_v2_service_descriptor_t *)
-             smartlist_get(descs, 0))->desc_id,==, computed_desc_id, DIGEST_LEN);
+             smartlist_get(descs, 0))->desc_id, ==,
+            computed_desc_id, DIGEST_LEN);
   tt_assert(rend_parse_v2_service_descriptor(&parsed, parsed_desc_id,
                                                &intro_points_encrypted,
                                                &intro_points_size,

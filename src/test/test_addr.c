@@ -157,7 +157,8 @@ test_addr_basic(void *arg)
     t1.family = t2.family = AF_INET6;                             \
     r = tor_addr_compare_masked(&t1,&t2,m,CMP_SEMANTIC);          \
     if (!(r op 0))                                                \
-      TT_DIE(("Failed: tor_addr_compare_masked(%s,%s,%d) %s 0", a, b, m, #op)); \
+      TT_DIE(("Failed: tor_addr_compare_masked(%s,%s,%d) %s 0", \
+              a, b, m, #op));                                   \
   STMT_END
 
 /** Helper: assert that <b>xx</b> is parseable as a masked IPv6 address with

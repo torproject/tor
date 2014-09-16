@@ -430,19 +430,23 @@ test_crypto_pk(void *arg)
                                         PK_PKCS1_OAEP_PADDING));
   /* oaep padding should make encryption not match */
   tt_mem_op(data1,!=, data2, 128);
-  tt_int_op(15,==, crypto_pk_private_decrypt(pk1, data3, sizeof(data3), data1, 128,
+  tt_int_op(15,==,
+            crypto_pk_private_decrypt(pk1, data3, sizeof(data3), data1, 128,
                                         PK_PKCS1_OAEP_PADDING,1));
   tt_str_op(data3,==, "Hello whirled.");
   memset(data3, 0, 1024);
-  tt_int_op(15,==, crypto_pk_private_decrypt(pk1, data3, sizeof(data3), data2, 128,
+  tt_int_op(15,==,
+            crypto_pk_private_decrypt(pk1, data3, sizeof(data3), data2, 128,
                                         PK_PKCS1_OAEP_PADDING,1));
   tt_str_op(data3,==, "Hello whirled.");
   /* Can't decrypt with public key. */
-  tt_int_op(-1,==, crypto_pk_private_decrypt(pk2, data3, sizeof(data3), data2, 128,
+  tt_int_op(-1,==,
+            crypto_pk_private_decrypt(pk2, data3, sizeof(data3), data2, 128,
                                         PK_PKCS1_OAEP_PADDING,1));
   /* Try again with bad padding */
   memcpy(data2+1, "XYZZY", 5);  /* This has fails ~ once-in-2^40 */
-  tt_int_op(-1,==, crypto_pk_private_decrypt(pk1, data3, sizeof(data3), data2, 128,
+  tt_int_op(-1,==,
+            crypto_pk_private_decrypt(pk1, data3, sizeof(data3), data2, 128,
                                         PK_PKCS1_OAEP_PADDING,1));
 
   /* File operations: save and load private key */
@@ -457,12 +461,14 @@ test_crypto_pk(void *arg)
                                                    get_fname("xyzzy")) < 0);
   tt_assert(! crypto_pk_read_private_key_from_filename(pk2,
                                                          get_fname("pkey1")));
-  tt_int_op(15,==, crypto_pk_private_decrypt(pk2, data3, sizeof(data3), data1, 128,
+  tt_int_op(15,==,
+            crypto_pk_private_decrypt(pk2, data3, sizeof(data3), data1, 128,
                                         PK_PKCS1_OAEP_PADDING,1));
 
   /* Now try signing. */
   strlcpy(data1, "Ossifrage", 1024);
-  tt_int_op(128,==, crypto_pk_private_sign(pk1, data2, sizeof(data2), data1, 10));
+  tt_int_op(128,==,
+            crypto_pk_private_sign(pk1, data2, sizeof(data2), data1, 10));
   tt_int_op(10,==,
           crypto_pk_public_checksig(pk1, data3, sizeof(data3), data2, 128));
   tt_str_op(data3,==, "Ossifrage");
@@ -471,8 +477,10 @@ test_crypto_pk(void *arg)
                                              data1, 10));
   tt_int_op(20,==,
           crypto_pk_public_checksig(pk1, data3, sizeof(data3), data2, 128));
-  tt_int_op(0,==, crypto_pk_public_checksig_digest(pk1, data1, 10, data2, 128));
-  tt_int_op(-1,==, crypto_pk_public_checksig_digest(pk1, data1, 11, data2, 128));
+  tt_int_op(0,==,
+            crypto_pk_public_checksig_digest(pk1, data1, 10, data2, 128));
+  tt_int_op(-1,==,
+            crypto_pk_public_checksig_digest(pk1, data1, 11, data2, 128));
 
   /*XXXX test failed signing*/
 
