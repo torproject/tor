@@ -22,10 +22,6 @@
 #define PRETTY_FUNCTION ""
 #endif
 
-#define test_fail_msg(msg) TT_DIE((msg))
-
-#define test_fail() test_fail_msg("Assertion failed.")
-
 #define test_assert(expr) tt_assert(expr)
 
 #define test_eq(expr1, expr2) tt_int_op((expr1), ==, (expr2))

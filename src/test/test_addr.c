@@ -123,7 +123,7 @@ test_addr_basic(void)
     test_eq(tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr), 1); \
     t1.family = AF_INET6;                                      \
     if (!tor_addr_is_internal(&t1, for_listening))             \
-      test_fail_msg( a "was not internal.");                   \
+      TT_DIE(("%s was not internal", a));                      \
   STMT_END
 
 /** Helper: assert that <b>a</b> parses by tor_inet_pton() into a address that
@@ -132,7 +132,7 @@ test_addr_basic(void)
     test_eq(tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr), 1); \
     t1.family = AF_INET6;                                      \
     if (tor_addr_is_internal(&t1, for_listening))              \
-      test_fail_msg(a  "was not external.");                   \
+      TT_DIE(("%s was not internal", a));                      \
   STMT_END
 
 /** Helper: Assert that <b>a</b> and <b>b</b>, when parsed by
@@ -144,7 +144,7 @@ test_addr_basic(void)
     t1.family = t2.family = AF_INET6;                             \
     r = tor_addr_compare(&t1,&t2,CMP_SEMANTIC);                   \
     if (!(r op 0))                                                \
-      test_fail_msg("failed: tor_addr_compare("a","b") "#op" 0"); \
+      TT_DIE(("Failed: tor_addr_compare(%s,%s) %s 0", a, b, #op));\
   STMT_END
 
 /** Helper: Assert that <b>a</b> and <b>b</b>, when parsed by
@@ -156,7 +156,7 @@ test_addr_basic(void)
     t1.family = t2.family = AF_INET6;                             \
     r = tor_addr_compare_masked(&t1,&t2,m,CMP_SEMANTIC);          \
     if (!(r op 0))                                                \
-      test_fail_msg("failed: tor_addr_compare_masked("a","b","#m") "#op" 0"); \
+      TT_DIE(("Failed: tor_addr_compare_masked(%s,%s,%d) %s 0", a, b, m, #op)); \
   STMT_END
 
 /** Helper: assert that <b>xx</b> is parseable as a masked IPv6 address with
