@@ -810,7 +810,7 @@ test_util_config_line_escaped_content(void)
   str = buf5;
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_eq_ptr(str, NULL);
+  tt_ptr_op(str, ==, NULL);
   tor_free(k); tor_free(v);
 #endif
 
@@ -1199,7 +1199,7 @@ test_util_strmisc(void)
     const char *s = "abcdefghijklmnopqrstuvwxyz";
     cp_tmp = tor_strndup(s, 30);
     tt_str_op(cp_tmp,==, s); /* same string, */
-    test_neq_ptr(cp_tmp, s); /* but different pointers. */
+    tt_ptr_op(cp_tmp,!=,s); /* but different pointers. */
     tor_free(cp_tmp);
 
     cp_tmp = tor_strndup(s, 5);
@@ -1209,7 +1209,7 @@ test_util_strmisc(void)
     s = "a\0b\0c\0d\0e\0";
     cp_tmp = tor_memdup(s,10);
     tt_mem_op(cp_tmp,==, s, 10); /* same ram, */
-    test_neq_ptr(cp_tmp, s); /* but different pointers. */
+    tt_ptr_op(cp_tmp,!=,s); /* but different pointers. */
     tor_free(cp_tmp);
   }
 

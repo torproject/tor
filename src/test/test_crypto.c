@@ -128,9 +128,9 @@ test_crypto_aes(void *arg)
   memset(data2, 0, 1024);
   memset(data3, 0, 1024);
   env1 = crypto_cipher_new(NULL);
-  test_neq_ptr(env1, 0);
+  tt_ptr_op(env1, !=, NULL);
   env2 = crypto_cipher_new(crypto_cipher_get_key(env1));
-  test_neq_ptr(env2, 0);
+  tt_ptr_op(env2, !=, NULL);
 
   /* Try encrypting 512 chars. */
   crypto_cipher_encrypt(env1, data2, data1, 512);
@@ -161,7 +161,7 @@ test_crypto_aes(void *arg)
 
   memset(data3, 0, 1024);
   env2 = crypto_cipher_new(crypto_cipher_get_key(env1));
-  test_neq_ptr(env2, NULL);
+  tt_ptr_op(env2, !=, NULL);
   for (j = 0; j < 1024-16; j += 17) {
     crypto_cipher_encrypt(env2, data3+j, data1+j, 17);
   }
@@ -498,7 +498,7 @@ test_crypto_pk(void)
   crypto_pk_free(pk2);
   pk2 = crypto_pk_copy_full(pk1);
   tt_assert(pk2 != NULL);
-  test_neq_ptr(pk1, pk2);
+  tt_ptr_op(pk1, !=, pk2);
   tt_assert(crypto_pk_cmp_keys(pk1,pk2) == 0);
 
  done:
