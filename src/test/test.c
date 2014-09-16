@@ -761,11 +761,11 @@ test_rend_fns(void)
   } while (0)
 #define CHECK_COUNTRY(country, val) do {                                \
     /* test ipv4 country lookup */                                      \
-    test_streq(country,                                                 \
+    tt_str_op(country, ==,                                              \
                geoip_get_country_name(geoip_get_country_by_ipv4(val))); \
     /* test ipv6 country lookup */                                      \
     SET_TEST_IPV6(val);                                                 \
-    test_streq(country,                                                 \
+    tt_str_op(country, ==,                                              \
                geoip_get_country_name(geoip_get_country_by_ipv6(&in6))); \
   } while (0)
 

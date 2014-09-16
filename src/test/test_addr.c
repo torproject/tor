@@ -96,31 +96,31 @@ test_addr_basic(void)
 
 /** Helper: Assert that two strings both decode as IPv6 addresses with
  * tor_inet_pton(), and both decode to the same address. */
-#define test_pton6_same(a,b) STMT_BEGIN                \
-     test_eq(tor_inet_pton(AF_INET6, a, &a1), 1);      \
-     test_eq(tor_inet_pton(AF_INET6, b, &a2), 1);      \
-     test_op_ip6_(&a1,==,&a2,#a,#b);                   \
+#define test_pton6_same(a,b) STMT_BEGIN                 \
+     tt_int_op(tor_inet_pton(AF_INET6, a, &a1), ==, 1); \
+     tt_int_op(tor_inet_pton(AF_INET6, b, &a2), ==, 1); \
+     test_op_ip6_(&a1,==,&a2,#a,#b);                    \
   STMT_END
 
 /** Helper: Assert that <b>a</b> is recognized as a bad IPv6 address by
  * tor_inet_pton(). */
 #define test_pton6_bad(a)                       \
-  test_eq(0, tor_inet_pton(AF_INET6, a, &a1))
+  tt_int_op(0, ==, tor_inet_pton(AF_INET6, a, &a1))
 
 /** Helper: assert that <b>a</b>, when parsed by tor_inet_pton() and displayed
  * with tor_inet_ntop(), yields <b>b</b>. Also assert that <b>b</b> parses to
  * the same value as <b>a</b>. */
-#define test_ntop6_reduces(a,b) STMT_BEGIN                              \
-    test_eq(tor_inet_pton(AF_INET6, a, &a1), 1);                        \
-    test_streq(tor_inet_ntop(AF_INET6, &a1, buf, sizeof(buf)), b);      \
-    test_eq(tor_inet_pton(AF_INET6, b, &a2), 1);                        \
-    test_op_ip6_(&a1, ==, &a2, a, b);                                   \
+#define test_ntop6_reduces(a,b) STMT_BEGIN                          \
+  tt_int_op(tor_inet_pton(AF_INET6, a, &a1), ==, 1);                \
+  tt_str_op(tor_inet_ntop(AF_INET6, &a1, buf, sizeof(buf)), ==, b); \
+  tt_int_op(tor_inet_pton(AF_INET6, b, &a2), ==, 1);     \
+  test_op_ip6_(&a1, ==, &a2, a, b);                      \
   STMT_END
 
 /** Helper: assert that <b>a</b> parses by tor_inet_pton() into a address that
  * passes tor_addr_is_internal() with <b>for_listening</b>. */
 #define test_internal_ip(a,for_listening) STMT_BEGIN           \
-    test_eq(tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr), 1); \
+    tt_int_op(tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr), ==, 1); \
     t1.family = AF_INET6;                                      \
     if (!tor_addr_is_internal(&t1, for_listening))             \
       TT_DIE(("%s was not internal", a));                      \
@@ -129,7 +129,7 @@ test_addr_basic(void)
 /** Helper: assert that <b>a</b> parses by tor_inet_pton() into a address that
  * does not pass tor_addr_is_internal() with <b>for_listening</b>. */
 #define test_external_ip(a,for_listening) STMT_BEGIN           \
-    test_eq(tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr), 1); \
+    tt_int_op(tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr), ==, 1); \
     t1.family = AF_INET6;                                      \
     if (tor_addr_is_internal(&t1, for_listening))              \
       TT_DIE(("%s was not internal", a));                      \
@@ -139,8 +139,8 @@ test_addr_basic(void)
  * tor_inet_pton(), give addresses that compare in the order defined by
  * <b>op</b> with tor_addr_compare(). */
 #define test_addr_compare(a, op, b) STMT_BEGIN                    \
-    test_eq(tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr), 1);    \
-    test_eq(tor_inet_pton(AF_INET6, b, &t2.addr.in6_addr), 1);    \
+    tt_int_op(tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr), ==, 1); \
+    tt_int_op(tor_inet_pton(AF_INET6, b, &t2.addr.in6_addr), ==, 1); \
     t1.family = t2.family = AF_INET6;                             \
     r = tor_addr_compare(&t1,&t2,CMP_SEMANTIC);                   \
     if (!(r op 0))                                                \
@@ -151,8 +151,8 @@ test_addr_basic(void)
  * tor_inet_pton(), give addresses that compare in the order defined by
  * <b>op</b> with tor_addr_compare_masked() with <b>m</b> masked. */
 #define test_addr_compare_masked(a, op, b, m) STMT_BEGIN          \
-    test_eq(tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr), 1);    \
-    test_eq(tor_inet_pton(AF_INET6, b, &t2.addr.in6_addr), 1);    \
+    tt_int_op(tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr), ==, 1);    \
+    tt_int_op(tor_inet_pton(AF_INET6, b, &t2.addr.in6_addr), ==, 1);    \
     t1.family = t2.family = AF_INET6;                             \
     r = tor_addr_compare_masked(&t1,&t2,m,CMP_SEMANTIC);          \
     if (!(r op 0))                                                \
@@ -165,16 +165,16 @@ test_addr_basic(void)
  * as <b>pt1..pt2</b>. */
 #define test_addr_mask_ports_parse(xx, f, ip1, ip2, ip3, ip4, mm, pt1, pt2) \
   STMT_BEGIN                                                                \
-    test_eq(tor_addr_parse_mask_ports(xx, 0, &t1, &mask, &port1, &port2),   \
-            f);                                                             \
+    tt_int_op(tor_addr_parse_mask_ports(xx, 0, &t1, &mask, &port1, &port2),   \
+              ==, f);                                                   \
     p1=tor_inet_ntop(AF_INET6, &t1.addr.in6_addr, bug, sizeof(bug));        \
-    test_eq(htonl(ip1), tor_addr_to_in6_addr32(&t1)[0]);            \
-    test_eq(htonl(ip2), tor_addr_to_in6_addr32(&t1)[1]);            \
-    test_eq(htonl(ip3), tor_addr_to_in6_addr32(&t1)[2]);            \
-    test_eq(htonl(ip4), tor_addr_to_in6_addr32(&t1)[3]);            \
-    test_eq(mask, mm);                                     \
-    test_eq(port1, pt1);                                   \
-    test_eq(port2, pt2);                                   \
+    tt_int_op(htonl(ip1), ==, tor_addr_to_in6_addr32(&t1)[0]);            \
+    tt_int_op(htonl(ip2), ==, tor_addr_to_in6_addr32(&t1)[1]);            \
+    tt_int_op(htonl(ip3), ==, tor_addr_to_in6_addr32(&t1)[2]);            \
+    tt_int_op(htonl(ip4), ==, tor_addr_to_in6_addr32(&t1)[3]);            \
+    tt_int_op(mask, ==, mm);                     \
+    tt_uint_op(port1, ==, pt1);                  \
+    tt_uint_op(port2, ==, pt2);                  \
   STMT_END
 
 /** Run unit tests for IPv6 encoding/decoding/manipulation functions. */
