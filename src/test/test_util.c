@@ -229,7 +229,7 @@ test_util_write_chunks_to_file(void *arg)
 }
 
 static void
-test_util_time(void)
+test_util_time(void *arg)
 {
   struct timeval start, end;
   struct tm a_time;
@@ -240,6 +240,7 @@ test_util_time(void)
 
   /* Test tv_udiff */
 
+  (void)arg;
   start.tv_sec = 5;
   start.tv_usec = 5000;
 
@@ -459,13 +460,14 @@ test_util_parse_http_time(void *arg)
 }
 
 static void
-test_util_config_line(void)
+test_util_config_line(void *arg)
 {
   char buf[1024];
   char *k=NULL, *v=NULL;
   const char *str;
 
   /* Test parse_config_line_from_str */
+  (void)arg;
   strlcpy(buf, "k v\n" " key    value with spaces   \n" "keykey val\n"
           "k2\n"
           "k3 \n" "\n" "   \n" "#comment\n"
@@ -596,7 +598,7 @@ test_util_config_line(void)
 }
 
 static void
-test_util_config_line_quotes(void)
+test_util_config_line_quotes(void *arg)
 {
   char buf1[1024];
   char buf2[128];
@@ -606,6 +608,7 @@ test_util_config_line_quotes(void)
   const char *str;
 
   /* Test parse_config_line_from_str */
+  (void)arg;
   strlcpy(buf1, "kTrailingSpace \"quoted value\"   \n"
           "kTrailingGarbage \"quoted value\"trailing garbage\n"
           , sizeof(buf1));
@@ -650,13 +653,14 @@ test_util_config_line_quotes(void)
 }
 
 static void
-test_util_config_line_comment_character(void)
+test_util_config_line_comment_character(void *arg)
 {
   char buf[1024];
   char *k=NULL, *v=NULL;
   const char *str;
 
   /* Test parse_config_line_from_str */
+  (void)arg;
   strlcpy(buf, "k1 \"# in quotes\"\n"
           "k2 some value    # some comment\n"
           "k3 /home/user/myTorNetwork#2\n"    /* Testcase for #1323 */
@@ -690,7 +694,7 @@ test_util_config_line_comment_character(void)
 }
 
 static void
-test_util_config_line_escaped_content(void)
+test_util_config_line_escaped_content(void *arg)
 {
   char buf1[1024];
   char buf2[128];
@@ -702,6 +706,7 @@ test_util_config_line_escaped_content(void)
   const char *str;
 
   /* Test parse_config_line_from_str */
+  (void)arg;
   strlcpy(buf1, "HexadecimalLower \"\\x2a\"\n"
           "HexadecimalUpper \"\\x2A\"\n"
           "HexadecimalUpperX \"\\X2A\"\n"
@@ -827,10 +832,11 @@ test_util_config_line_escaped_content(void)
 
 #ifndef _WIN32
 static void
-test_util_expand_filename(void)
+test_util_expand_filename(void *arg)
 {
   char *str;
 
+  (void)arg;
   setenv("HOME", "/home/itv", 1); /* For "internal test value" */
 
   str = expand_filename("");
@@ -925,11 +931,12 @@ test_util_expand_filename(void)
 
 /** Test tor_escape_str_for_pt_args(). */
 static void
-test_util_escape_string_socks(void)
+test_util_escape_string_socks(void *arg)
 {
   char *escaped_string = NULL;
 
   /** Simple backslash escape. */
+  (void)arg;
   escaped_string = tor_escape_str_for_pt_args("This is a backslash: \\",";\\");
   tt_assert(escaped_string);
   tt_str_op(escaped_string,==, "This is a backslash: \\\\");
@@ -983,13 +990,14 @@ test_util_string_is_key_value(void *ptr)
 
 /** Test basic string functionality. */
 static void
-test_util_strmisc(void)
+test_util_strmisc(void *arg)
 {
   char buf[1024];
   int i;
   char *cp, *cp_tmp = NULL;
 
   /* Test strl operations */
+  (void)arg;
   tt_int_op(5,==, strlcpy(buf, "Hello", 0));
   tt_int_op(5,==, strlcpy(buf, "Hello", 10));
   tt_str_op(buf,==, "Hello");
@@ -1297,9 +1305,10 @@ test_util_strmisc(void)
 }
 
 static void
-test_util_pow2(void)
+test_util_pow2(void *arg)
 {
   /* Test tor_log2(). */
+  (void)arg;
   tt_int_op(tor_log2(64),==, 6);
   tt_int_op(tor_log2(65),==, 6);
   tt_int_op(tor_log2(63),==, 5);
@@ -1395,13 +1404,14 @@ thread_test_func_(void* _s)
 
 /** Run unit tests for threading logic. */
 static void
-test_util_threads(void)
+test_util_threads(void *arg)
 {
   char *s1 = NULL, *s2 = NULL;
   int done = 0, timedout = 0;
   time_t started;
 #ifndef _WIN32
   struct timeval tv;
+  (void)arg;
   tv.tv_sec=0;
   tv.tv_usec=100*1000;
 #endif
@@ -1470,13 +1480,14 @@ test_util_threads(void)
 
 /** Run unit tests for compression functions */
 static void
-test_util_gzip(void)
+test_util_gzip(void *arg)
 {
   char *buf1=NULL, *buf2=NULL, *buf3=NULL, *cp1, *cp2;
   const char *ccp2;
   size_t len1, len2;
   tor_zlib_state_t *state = NULL;
 
+  (void)arg;
   buf1 = tor_strdup("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ");
   tt_assert(detect_compression_method(buf1, strlen(buf1)) == UNKNOWN_METHOD);
   if (is_gzip_supported()) {
@@ -1579,7 +1590,7 @@ test_util_gzip(void)
 
 /** Run unit tests for mmap() wrapper functionality. */
 static void
-test_util_mmap(void)
+test_util_mmap(void *arg)
 {
   char *fname1 = tor_strdup(get_fname("mapped_1"));
   char *fname2 = tor_strdup(get_fname("mapped_2"));
@@ -1588,6 +1599,7 @@ test_util_mmap(void)
   char *buf = tor_malloc(17000);
   tor_mmap_t *mapping = NULL;
 
+  (void)arg;
   crypto_rand(buf, buflen);
 
   mapping = tor_mmap_file(fname1);
@@ -1655,13 +1667,14 @@ test_util_mmap(void)
 
 /** Run unit tests for escaping/unescaping data for use by controllers. */
 static void
-test_util_control_formats(void)
+test_util_control_formats(void *arg)
 {
   char *out = NULL;
   const char *inp =
     "..This is a test\r\n.of the emergency \n..system.\r\n\rZ.\r\n";
   size_t sz;
 
+  (void)arg;
   sz = read_escaped_data(inp, strlen(inp), &out);
   tt_str_op(out,==,
              ".This is a test\nof the emergency \n.system.\n\rZ.\n");
@@ -1685,7 +1698,7 @@ test_util_control_formats(void)
   } while (0)
 
 static void
-test_util_sscanf(void)
+test_util_sscanf(void *arg)
 {
   unsigned u1, u2, u3;
   unsigned long ulng;
@@ -1696,6 +1709,7 @@ test_util_sscanf(void)
   double d1,d2,d3,d4;
 
   /* Simple tests (malformed patterns, literal matching, ...) */
+  (void)arg;
   tt_int_op(-1,==, tor_sscanf("123", "%i", &r)); /* %i is not supported */
   tt_int_op(-1,==, tor_sscanf("wrong", "%5c", s1)); /* %c cannot have a number. */
   tt_int_op(-1,==, tor_sscanf("hello", "%s", s1)); /* %s needs a number. */
@@ -2026,9 +2040,10 @@ test_util_sscanf(void)
 }
 
 static void
-test_util_path_is_relative(void)
+test_util_path_is_relative(void *arg)
 {
   /* OS-independent tests */
+  (void)arg;
   tt_int_op(1,==, path_is_relative(""));
   tt_int_op(1,==, path_is_relative("dir"));
   tt_int_op(1,==, path_is_relative("dir/"));
@@ -2063,12 +2078,13 @@ test_util_path_is_relative(void)
 
 /** Run unittests for memory pool allocator */
 static void
-test_util_mempool(void)
+test_util_mempool(void *arg)
 {
   mp_pool_t *pool = NULL;
   smartlist_t *allocated = NULL;
   int i;
 
+  (void)arg;
   pool = mp_pool_new(1, 100);
   tt_assert(pool);
   tt_assert(pool->new_chunk_capacity >= 100);
@@ -2123,13 +2139,14 @@ test_util_mempool(void)
 
 /** Run unittests for memory area allocator */
 static void
-test_util_memarea(void)
+test_util_memarea(void *arg)
 {
   memarea_t *area = memarea_new();
   char *p1, *p2, *p3, *p1_orig;
   void *malloced_ptr = NULL;
   int i;
 
+  (void)arg;
   tt_assert(area);
 
   p1_orig = p1 = memarea_alloc(area,64);
@@ -2220,12 +2237,13 @@ test_util_memarea(void)
 /** Run unit tests for utility functions to get file names relative to
  * the data directory. */
 static void
-test_util_datadir(void)
+test_util_datadir(void *arg)
 {
   char buf[1024];
   char *f = NULL;
   char *temp_dir = NULL;
 
+  (void)arg;
   temp_dir = get_datadir_fname(NULL);
   f = get_datadir_fname("state");
   tor_snprintf(buf, sizeof(buf), "%s"PATH_SEPARATOR"state", temp_dir);
@@ -2252,13 +2270,14 @@ test_util_datadir(void)
 }
 
 static void
-test_util_strtok(void)
+test_util_strtok(void *arg)
 {
   char buf[128];
   char buf2[128];
   int i;
   char *cp1, *cp2;
 
+  (void)arg;
   for (i = 0; i < 3; i++) {
     const char *pad1="", *pad2="";
     switch (i) {
@@ -3314,7 +3333,7 @@ test_util_split_lines(void *ptr)
 }
 
 static void
-test_util_di_ops(void)
+test_util_di_ops(void *arg)
 {
 #define LT -1
 #define GT 1
@@ -3334,6 +3353,7 @@ test_util_di_ops(void)
 
   int i;
 
+  (void)arg;
   for (i = 0; examples[i].a; ++i) {
     size_t len = strlen(examples[i].a);
     int eq1, eq2, neq1, neq2, cmp1, cmp2;
@@ -3859,7 +3879,7 @@ test_util_strclear(void *arg)
 }
 
 #define UTIL_LEGACY(name)                                               \
-  { #name, legacy_test_helper, 0, &legacy_setup, test_util_ ## name }
+  { #name, test_util_ ## name , 0, NULL, NULL }
 
 #define UTIL_TEST(name, flags)                          \
   { #name, test_util_ ## name, flags, NULL, NULL }

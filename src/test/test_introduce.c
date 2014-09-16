@@ -394,8 +394,9 @@ make_intro_from_plaintext(
  */
 
 static void
-test_introduce_decrypt_v0(void)
+test_introduce_decrypt_v0(void *arg)
 {
+  (void)arg;
   do_decrypt_test(v0_test_plaintext, sizeof(v0_test_plaintext));
 }
 
@@ -403,8 +404,9 @@ test_introduce_decrypt_v0(void)
  */
 
 static void
-test_introduce_decrypt_v1(void)
+test_introduce_decrypt_v1(void *arg)
 {
+  (void)arg;
   do_decrypt_test(v1_test_plaintext, sizeof(v1_test_plaintext));
 }
 
@@ -412,8 +414,9 @@ test_introduce_decrypt_v1(void)
  */
 
 static void
-test_introduce_decrypt_v2(void)
+test_introduce_decrypt_v2(void *arg)
 {
+  (void)arg;
   do_decrypt_test(v2_test_plaintext, sizeof(v2_test_plaintext));
 }
 
@@ -421,8 +424,9 @@ test_introduce_decrypt_v2(void)
  */
 
 static void
-test_introduce_decrypt_v3(void)
+test_introduce_decrypt_v3(void *arg)
 {
+  (void)arg;
   do_decrypt_test(
       v3_no_auth_test_plaintext, sizeof(v3_no_auth_test_plaintext));
   do_decrypt_test(
@@ -433,8 +437,9 @@ test_introduce_decrypt_v3(void)
  */
 
 static void
-test_introduce_early_parse_v0(void)
+test_introduce_early_parse_v0(void *arg)
 {
+  (void)arg;
   do_early_parse_test(v0_test_plaintext, sizeof(v0_test_plaintext));
 }
 
@@ -442,8 +447,9 @@ test_introduce_early_parse_v0(void)
  */
 
 static void
-test_introduce_early_parse_v1(void)
+test_introduce_early_parse_v1(void *arg)
 {
+  (void)arg;
   do_early_parse_test(v1_test_plaintext, sizeof(v1_test_plaintext));
 }
 
@@ -451,8 +457,9 @@ test_introduce_early_parse_v1(void)
  */
 
 static void
-test_introduce_early_parse_v2(void)
+test_introduce_early_parse_v2(void *arg)
 {
+  (void)arg;
   do_early_parse_test(v2_test_plaintext, sizeof(v2_test_plaintext));
 }
 
@@ -460,8 +467,9 @@ test_introduce_early_parse_v2(void)
  */
 
 static void
-test_introduce_early_parse_v3(void)
+test_introduce_early_parse_v3(void *arg)
 {
+  (void)arg;
   do_early_parse_test(
       v3_no_auth_test_plaintext, sizeof(v3_no_auth_test_plaintext));
   do_early_parse_test(
@@ -472,8 +480,9 @@ test_introduce_early_parse_v3(void)
  */
 
 static void
-test_introduce_late_parse_v0(void)
+test_introduce_late_parse_v0(void *arg)
 {
+  (void)arg;
   do_late_parse_test(v0_test_plaintext, sizeof(v0_test_plaintext));
 }
 
@@ -481,8 +490,9 @@ test_introduce_late_parse_v0(void)
  */
 
 static void
-test_introduce_late_parse_v1(void)
+test_introduce_late_parse_v1(void *arg)
 {
+  (void)arg;
   do_late_parse_test(v1_test_plaintext, sizeof(v1_test_plaintext));
 }
 
@@ -490,8 +500,9 @@ test_introduce_late_parse_v1(void)
  */
 
 static void
-test_introduce_late_parse_v2(void)
+test_introduce_late_parse_v2(void *arg)
 {
+  (void)arg;
   do_late_parse_test(v2_test_plaintext, sizeof(v2_test_plaintext));
 }
 
@@ -499,8 +510,9 @@ test_introduce_late_parse_v2(void)
  */
 
 static void
-test_introduce_late_parse_v3(void)
+test_introduce_late_parse_v3(void *arg)
 {
+  (void)arg;
   do_late_parse_test(
       v3_no_auth_test_plaintext, sizeof(v3_no_auth_test_plaintext));
   do_late_parse_test(
@@ -508,7 +520,7 @@ test_introduce_late_parse_v3(void)
 }
 
 #define INTRODUCE_LEGACY(name) \
-  { #name, legacy_test_helper, 0, &legacy_setup, test_introduce_ ## name }
+  { #name, test_introduce_ ## name , 0, NULL, NULL }
 
 struct testcase_t introduce_tests[] = {
   INTRODUCE_LEGACY(early_parse_v0),

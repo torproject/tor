@@ -66,9 +66,6 @@
 const char *get_fname(const char *name);
 crypto_pk_t *pk_generate(int idx);
 
-void legacy_test_helper(void *data);
-extern const struct testcase_setup_t legacy_setup;
-
 #define US2_CONCAT_2__(a, b) a ## __ ## b
 #define US_CONCAT_2__(a, b) a ## _ ## b
 #define US_CONCAT_3__(a, b, c) a ## _ ## b ## _ ## c

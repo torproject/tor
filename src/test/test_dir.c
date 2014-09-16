@@ -25,8 +25,9 @@
 #include "test.h"
 
 static void
-test_dir_nicknames(void)
+test_dir_nicknames(void *arg)
 {
+  (void)arg;
   tt_assert( is_legal_nickname("a"));
   tt_assert(!is_legal_nickname(""));
   tt_assert(!is_legal_nickname("abcdefghijklmnopqrst")); /* 20 chars */
@@ -73,7 +74,7 @@ test_dir_nicknames(void)
 
 /** Run unit tests for router descriptor generation logic. */
 static void
-test_dir_formats(void)
+test_dir_formats(void *arg)
 {
   char *buf = NULL;
   char buf2[8192];
@@ -89,6 +90,7 @@ test_dir_formats(void)
   or_options_t *options = get_options_mutable();
   const addr_policy_t *p;
 
+  (void)arg;
   pk1 = pk_generate(0);
   pk2 = pk_generate(1);
 
@@ -293,11 +295,12 @@ test_dir_formats(void)
 }
 
 static void
-test_dir_versions(void)
+test_dir_versions(void *arg)
 {
   tor_version_t ver1;
 
   /* Try out version parsing functionality */
+  (void)arg;
   tt_int_op(0,==, tor_version_parse("0.3.4pre2-cvs", &ver1));
   tt_int_op(0,==, ver1.major);
   tt_int_op(3,==, ver1.minor);
@@ -410,11 +413,12 @@ test_dir_versions(void)
 
 /** Run unit tests for directory fp_pair functions. */
 static void
-test_dir_fp_pairs(void)
+test_dir_fp_pairs(void *arg)
 {
   smartlist_t *sl = smartlist_new();
   fp_pair_t *pair;
 
+  (void)arg;
   dir_split_resource_into_fingerprint_pairs(
        /* Two pairs, out of order, with one duplicate. */
        "73656372657420646174612E0000000000FFFFFF-"
@@ -557,7 +561,7 @@ test_dir_split_fps(void *testdata)
 }
 
 static void
-test_dir_measured_bw_kb(void)
+test_dir_measured_bw_kb(void *arg)
 {
   measured_bw_line_t mbwl;
   int i;
@@ -605,6 +609,7 @@ test_dir_measured_bw_kb(void)
     "end"
   };
 
+  (void)arg;
   for (i = 0; strcmp(lines_fail[i], "end"); i++) {
     //fprintf(stderr, "Testing: %s\n", lines_fail[i]);
     tt_assert(measured_bw_line_parse(&mbwl, lines_fail[i]) == -1);
@@ -626,7 +631,7 @@ test_dir_measured_bw_kb(void)
 
 /** Do the measured bandwidth cache unit test */
 static void
-test_dir_measured_bw_kb_cache(void)
+test_dir_measured_bw_kb_cache(void *arg)
 {
   /* Initial fake time_t for testing */
   time_t curr = MBWC_INIT_TIME;
@@ -637,6 +642,7 @@ test_dir_measured_bw_kb_cache(void)
   time_t as_of;
 
   /* First, clear the cache and assert that it's empty */
+  (void)arg;
   dirserv_clear_measured_bw_cache();
   tt_int_op(dirserv_get_measured_bw_cache_size(),==, 0);
   /*
@@ -700,7 +706,7 @@ test_dir_measured_bw_kb_cache(void)
 }
 
 static void
-test_dir_param_voting(void)
+test_dir_param_voting(void *arg)
 {
   networkstatus_t vote1, vote2, vote3, vote4;
   smartlist_t *votes = smartlist_new();
@@ -709,6 +715,7 @@ test_dir_param_voting(void)
   /* dirvote_compute_params only looks at the net_params field of the votes,
      so that's all we need to set.
    */
+  (void)arg;
   memset(&vote1, 0, sizeof(vote1));
   memset(&vote2, 0, sizeof(vote2));
   memset(&vote3, 0, sizeof(vote3));
@@ -1693,8 +1700,9 @@ test_a_networkstatus(
 /** Run unit tests for generating and parsing V3 consensus networkstatus
  * documents. */
 static void
-test_dir_v3_networkstatus(void)
+test_dir_v3_networkstatus(void *arg)
 {
+  (void)arg;
   test_a_networkstatus(gen_routerstatus_for_v3ns,
                        vote_tweaks_for_v3ns,
                        test_vrs_for_v3ns,
@@ -2238,9 +2246,10 @@ test_routerstatus_for_umbw(routerstatus_t *rs, time_t now)
  */
 
 static void
-test_dir_clip_unmeasured_bw_kb(void)
+test_dir_clip_unmeasured_bw_kb(void *arg)
 {
   /* Run the test with the default clip bandwidth */
+  (void)arg;
   alternate_clip_bw = 0;
   test_a_networkstatus(gen_routerstatus_for_umbw,
                        vote_tweaks_for_umbw,
@@ -2255,7 +2264,7 @@ test_dir_clip_unmeasured_bw_kb(void)
  */
 
 static void
-test_dir_clip_unmeasured_bw_kb_alt(void)
+test_dir_clip_unmeasured_bw_kb_alt(void *arg)
 {
   /*
    * Try a different one; this value is chosen so that the below-the-cutoff
@@ -2263,6 +2272,7 @@ test_dir_clip_unmeasured_bw_kb_alt(void)
    * DEFAULT_MAX_UNMEASURED_BW_KB and if the consensus incorrectly uses that
    * cutoff it will fail the test.
    */
+  (void)arg;
   alternate_clip_bw = 3 * DEFAULT_MAX_UNMEASURED_BW_KB;
   test_a_networkstatus(gen_routerstatus_for_umbw,
                        vote_tweaks_for_umbw,
@@ -2374,7 +2384,7 @@ test_dir_http_handling(void *args)
 }
 
 #define DIR_LEGACY(name)                                                   \
-  { #name, legacy_test_helper, TT_FORK, &legacy_setup, test_dir_ ## name }
+  { #name, test_dir_ ## name , TT_FORK, NULL, NULL }
 
 #define DIR(name,flags)                              \
   { #name, test_dir_##name, (flags), NULL, NULL }

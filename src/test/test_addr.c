@@ -10,13 +10,14 @@
 #include "addressmap.h"
 
 static void
-test_addr_basic(void)
+test_addr_basic(void *arg)
 {
   uint32_t u32;
   uint16_t u16;
   char *cp;
 
   /* Test addr_port_lookup */
+  (void)arg;
   cp = NULL; u32 = 3; u16 = 3;
   tt_assert(!addr_port_lookup(LOG_WARN, "1.2.3.4", &cp, &u32, &u16));
   tt_str_op(cp,==, "1.2.3.4");
@@ -179,7 +180,7 @@ test_addr_basic(void)
 
 /** Run unit tests for IPv6 encoding/decoding/manipulation functions. */
 static void
-test_addr_ip6_helpers(void)
+test_addr_ip6_helpers(void *arg)
 {
   char buf[TOR_ADDR_BUF_LEN], bug[TOR_ADDR_BUF_LEN];
   char rbuf[REVERSE_LOOKUP_NAME_BUF_LEN];
@@ -194,6 +195,7 @@ test_addr_ip6_helpers(void)
   struct sockaddr_in6 *sin6;
 
   /* Test tor_inet_ntop and tor_inet_pton: IPv6 */
+  (void)arg;
   {
     const char *ip = "2001::1234";
     const char *ip_ffff = "::ffff:192.168.1.2";
@@ -736,7 +738,7 @@ test_addr_ip6_helpers(void)
 
 /** Test tor_addr_port_parse(). */
 static void
-test_addr_parse(void)
+test_addr_parse(void *arg)
 {
   int r;
   tor_addr_t addr;
@@ -744,6 +746,7 @@ test_addr_parse(void)
   uint16_t port = 0;
 
   /* Correct call. */
+  (void)arg;
   r= tor_addr_port_parse(LOG_DEBUG,
                          "192.0.2.1:1234",
                          &addr, &port, -1);
@@ -1047,7 +1050,7 @@ test_addr_make_null(void *data)
 }
 
 #define ADDR_LEGACY(name)                                               \
-  { #name, legacy_test_helper, 0, &legacy_setup, test_addr_ ## name }
+  { #name, test_addr_ ## name , 0, NULL, NULL }
 
 struct testcase_t addr_tests[] = {
   ADDR_LEGACY(basic),

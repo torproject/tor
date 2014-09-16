@@ -27,13 +27,14 @@ reset_mp(managed_proxy_t *mp)
 }
 
 static void
-test_pt_parsing(void)
+test_pt_parsing(void *arg)
 {
   char line[200];
   transport_t *transport = NULL;
   tor_addr_t test_addr;
 
   managed_proxy_t *mp = tor_malloc_zero(sizeof(managed_proxy_t));
+  (void)arg;
   mp->conf_state = PT_PROTO_INFANT;
   mp->transports = smartlist_new();
 
@@ -187,11 +188,12 @@ test_pt_get_transport_options(void *arg)
 }
 
 static void
-test_pt_protocol(void)
+test_pt_protocol(void *arg)
 {
   char line[200];
 
   managed_proxy_t *mp = tor_malloc_zero(sizeof(managed_proxy_t));
+  (void)arg;
   mp->conf_state = PT_PROTO_LAUNCHED;
   mp->transports = smartlist_new();
   mp->argv = tor_calloc(sizeof(char *), 2);
@@ -529,7 +531,7 @@ test_get_pt_proxy_uri(void *arg)
 }
 
 #define PT_LEGACY(name)                                               \
-  { #name, legacy_test_helper, 0, &legacy_setup, test_pt_ ## name }
+  { #name, test_pt_ ## name , 0, NULL, NULL }
 
 struct testcase_t pt_tests[] = {
   PT_LEGACY(parsing),

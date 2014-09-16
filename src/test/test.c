@@ -232,7 +232,7 @@ free_pregenerated_keys(void)
 
 /** Run unit tests for the onion handshake code. */
 static void
-test_onion_handshake(void)
+test_onion_handshake(void *arg)
 {
   /* client-side */
   crypto_dh_t *c_dh = NULL;
@@ -245,6 +245,7 @@ test_onion_handshake(void)
   /* shared */
   crypto_pk_t *pk = NULL, *pk2 = NULL;
 
+  (void)arg;
   pk = pk_generate(0);
   pk2 = pk_generate(1);
 
@@ -420,7 +421,7 @@ test_ntor_handshake(void *arg)
 
 /** Run unit tests for the onion queues. */
 static void
-test_onion_queues(void)
+test_onion_queues(void *arg)
 {
   uint8_t buf1[TAP_ONIONSKIN_CHALLENGE_LEN] = {0};
   uint8_t buf2[NTOR_ONIONSKIN_LEN] = {0};
@@ -431,6 +432,7 @@ test_onion_queues(void)
   create_cell_t *onionskin = NULL, *create2_ptr;
   create_cell_t *create1 = tor_malloc_zero(sizeof(create_cell_t));
   create_cell_t *create2 = tor_malloc_zero(sizeof(create_cell_t));
+  (void)arg;
   create2_ptr = create2; /* remember, but do not free */
 
   create_cell_init(create1, CELL_CREATE, ONION_HANDSHAKE_TYPE_TAP,
@@ -466,7 +468,7 @@ test_onion_queues(void)
 }
 
 static void
-test_circuit_timeout(void)
+test_circuit_timeout(void *arg)
 {
   /* Plan:
    *  1. Generate 1000 samples
@@ -484,6 +486,7 @@ test_circuit_timeout(void)
   or_state_t *state=NULL;
   int i, runs;
   double close_ms;
+  (void)arg;
   circuit_build_times_init(&initial);
   circuit_build_times_init(&estimate);
   circuit_build_times_init(&final);
@@ -619,7 +622,7 @@ test_circuit_timeout(void)
 
 /** Test encoding and parsing of rendezvous service descriptors. */
 static void
-test_rend_fns(void)
+test_rend_fns(void *arg)
 {
   rend_service_descriptor_t *generated = NULL, *parsed = NULL;
   char service_id[DIGEST_LEN];
@@ -642,6 +645,7 @@ test_rend_fns(void)
   char address6[] = "foo.bar.abcdefghijklmnop.onion";
   char address7[] = ".abcdefghijklmnop.onion";
 
+  (void)arg;
   tt_assert(BAD_HOSTNAME == parse_extended_hostname(address1));
   tt_assert(ONION_HOSTNAME == parse_extended_hostname(address2));
   tt_str_op(address2,==, "aaaaaaaaaaaaaaaa");
@@ -771,7 +775,7 @@ test_rend_fns(void)
 
 /** Run unit tests for GeoIP code. */
 static void
-test_geoip(void)
+test_geoip(void *arg)
 {
   int i, j;
   time_t now = 1281533250; /* 2010-08-11 13:27:30 UTC */
@@ -825,6 +829,7 @@ test_geoip(void)
   /* Populate the DB a bit.  Add these in order, since we can't do the final
    * 'sort' step.  These aren't very good IP addresses, but they're perfectly
    * fine uint32_t values. */
+  (void)arg;
   tt_int_op(0,==, geoip_parse_entry("10,50,AB", AF_INET));
   tt_int_op(0,==, geoip_parse_entry("52,90,XY", AF_INET));
   tt_int_op(0,==, geoip_parse_entry("95,100,AB", AF_INET));
@@ -1017,7 +1022,7 @@ test_geoip(void)
 }
 
 static void
-test_geoip_with_pt(void)
+test_geoip_with_pt(void *arg)
 {
   time_t now = 1281533250; /* 2010-08-11 13:27:30 UTC */
   char *s = NULL;
@@ -1025,6 +1030,7 @@ test_geoip_with_pt(void)
   tor_addr_t addr;
   struct in6_addr in6;
 
+  (void)arg;
   get_options_mutable()->BridgeRelay = 1;
   get_options_mutable()->BridgeRecordUsageByCountry = 1;
 
@@ -1093,7 +1099,7 @@ test_geoip_with_pt(void)
 
 /** Run unit tests for stats code. */
 static void
-test_stats(void)
+test_stats(void *arg)
 {
   time_t now = 1281533250; /* 2010-08-11 13:27:30 UTC */
   char *s = NULL;
@@ -1101,6 +1107,7 @@ test_stats(void)
 
   /* Start with testing exit port statistics; we shouldn't collect exit
    * stats without initializing them. */
+  (void)arg;
   rep_hist_note_exit_stream_opened(80);
   rep_hist_note_exit_bytes(80, 100, 10000);
   s = rep_hist_format_exit_stats(now + 86400);
@@ -1250,35 +1257,10 @@ test_stats(void)
   tor_free(s);
 }
 
-static void *
-legacy_test_setup(const struct testcase_t *testcase)
-{
-  return testcase->setup_data;
-}
-
-void
-legacy_test_helper(void *data)
-{
-  void (*fn)(void) = data;
-  fn();
-}
-
-static int
-legacy_test_cleanup(const struct testcase_t *testcase, void *ptr)
-{
-  (void)ptr;
-  (void)testcase;
-  return 1;
-}
-
-const struct testcase_setup_t legacy_setup = {
-  legacy_test_setup, legacy_test_cleanup
-};
-
 #define ENT(name)                                                       \
-  { #name, legacy_test_helper, 0, &legacy_setup, test_ ## name }
+  { #name, test_ ## name , 0, NULL, NULL }
 #define FORK(name)                                                      \
-  { #name, legacy_test_helper, TT_FORK, &legacy_setup, test_ ## name }
+  { #name, test_ ## name , TT_FORK, NULL, NULL }
 
 static struct testcase_t test_array[] = {
   ENT(onion_handshake),

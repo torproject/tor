@@ -18,10 +18,11 @@ static const char *test_buffer =
   " mollit anim id est laborum.";
 
 static void
-test_replaycache_alloc(void)
+test_replaycache_alloc(void *arg)
 {
   replaycache_t *r = NULL;
 
+  (void)arg;
   r = replaycache_new(600, 300);
   tt_assert(r != NULL);
 
@@ -32,11 +33,12 @@ test_replaycache_alloc(void)
 }
 
 static void
-test_replaycache_badalloc(void)
+test_replaycache_badalloc(void *arg)
 {
   replaycache_t *r = NULL;
 
   /* Negative horizon should fail */
+  (void)arg;
   r = replaycache_new(-600, 300);
   tt_assert(r == NULL);
   /* Negative interval should get adjusted to zero */
@@ -55,8 +57,9 @@ test_replaycache_badalloc(void)
 }
 
 static void
-test_replaycache_free_null(void)
+test_replaycache_free_null(void *arg)
 {
+  (void)arg;
   replaycache_free(NULL);
   /* Assert that we're here without horrible death */
   tt_assert(1);
@@ -66,11 +69,12 @@ test_replaycache_free_null(void)
 }
 
 static void
-test_replaycache_miss(void)
+test_replaycache_miss(void *arg)
 {
   replaycache_t *r = NULL;
   int result;
 
+  (void)arg;
   r = replaycache_new(600, 300);
   tt_assert(r != NULL);
 
@@ -92,11 +96,12 @@ test_replaycache_miss(void)
 }
 
 static void
-test_replaycache_hit(void)
+test_replaycache_hit(void *arg)
 {
   replaycache_t *r = NULL;
   int result;
 
+  (void)arg;
   r = replaycache_new(600, 300);
   tt_assert(r != NULL);
 
@@ -117,11 +122,12 @@ test_replaycache_hit(void)
 }
 
 static void
-test_replaycache_age(void)
+test_replaycache_age(void *arg)
 {
   replaycache_t *r = NULL;
   int result;
 
+  (void)arg;
   r = replaycache_new(600, 300);
   tt_assert(r != NULL);
 
@@ -147,12 +153,13 @@ test_replaycache_age(void)
 }
 
 static void
-test_replaycache_elapsed(void)
+test_replaycache_elapsed(void *arg)
 {
   replaycache_t *r = NULL;
   int result;
   time_t elapsed;
 
+  (void)arg;
   r = replaycache_new(600, 300);
   tt_assert(r != NULL);
 
@@ -174,11 +181,12 @@ test_replaycache_elapsed(void)
 }
 
 static void
-test_replaycache_noexpire(void)
+test_replaycache_noexpire(void *arg)
 {
   replaycache_t *r = NULL;
   int result;
 
+  (void)arg;
   r = replaycache_new(0, 0);
   tt_assert(r != NULL);
 
@@ -204,11 +212,12 @@ test_replaycache_noexpire(void)
 }
 
 static void
-test_replaycache_scrub(void)
+test_replaycache_scrub(void *arg)
 {
   replaycache_t *r = NULL;
   int result;
 
+  (void)arg;
   r = replaycache_new(600, 300);
   tt_assert(r != NULL);
 
@@ -245,12 +254,13 @@ test_replaycache_scrub(void)
 }
 
 static void
-test_replaycache_future(void)
+test_replaycache_future(void *arg)
 {
   replaycache_t *r = NULL;
   int result;
   time_t elapsed = 0;
 
+  (void)arg;
   r = replaycache_new(600, 300);
   tt_assert(r != NULL);
 
@@ -288,7 +298,7 @@ test_replaycache_future(void)
 }
 
 static void
-test_replaycache_realtime(void)
+test_replaycache_realtime(void *arg)
 {
   replaycache_t *r = NULL;
   /*
@@ -299,6 +309,7 @@ test_replaycache_realtime(void)
   int result;
 
   /* Test the realtime as well as *_internal() entry points */
+  (void)arg;
   r = replaycache_new(600, 300);
   tt_assert(r != NULL);
 
@@ -329,7 +340,7 @@ test_replaycache_realtime(void)
 }
 
 #define REPLAYCACHE_LEGACY(name) \
-  { #name, legacy_test_helper, 0, &legacy_setup, test_replaycache_ ## name }
+  { #name, test_replaycache_ ## name , 0, NULL, NULL }
 
 struct testcase_t replaycache_tests[] = {
   REPLAYCACHE_LEGACY(alloc),

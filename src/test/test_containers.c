@@ -37,7 +37,7 @@ compare_without_first_ch_(const void *a, const void **b)
 
 /** Run unit tests for basic dynamic-sized array functionality. */
 static void
-test_container_smartlist_basic(void)
+test_container_smartlist_basic(void *arg)
 {
   smartlist_t *sl;
   char *v0 = tor_strdup("v0");
@@ -52,6 +52,7 @@ test_container_smartlist_basic(void)
   /* XXXX test sort_digests, uniq_strings, uniq_digests */
 
   /* Test smartlist add, del_keeporder, insert, get. */
+  (void)arg;
   sl = smartlist_new();
   smartlist_add(sl, v1);
   smartlist_add(sl, v2);
@@ -92,13 +93,14 @@ test_container_smartlist_basic(void)
 
 /** Run unit tests for smartlist-of-strings functionality. */
 static void
-test_container_smartlist_strings(void)
+test_container_smartlist_strings(void *arg)
 {
   smartlist_t *sl = smartlist_new();
   char *cp=NULL, *cp_alloc=NULL;
   size_t sz;
 
   /* Test split and join */
+  (void)arg;
   tt_int_op(0,==, smartlist_len(sl));
   smartlist_split_string(sl, "abc", ":", 0, 0);
   tt_int_op(1,==, smartlist_len(sl));
@@ -349,7 +351,7 @@ test_container_smartlist_strings(void)
 
 /** Run unit tests for smartlist set manipulation functions. */
 static void
-test_container_smartlist_overlap(void)
+test_container_smartlist_overlap(void *arg)
 {
   smartlist_t *sl = smartlist_new();
   smartlist_t *ints = smartlist_new();
@@ -357,6 +359,7 @@ test_container_smartlist_overlap(void)
   smartlist_t *evens = smartlist_new();
   smartlist_t *primes = smartlist_new();
   int i;
+  (void)arg;
   for (i=1; i < 10; i += 2)
     smartlist_add(odds, (void*)(uintptr_t)i);
   for (i=0; i < 10; i += 2)
@@ -402,11 +405,12 @@ test_container_smartlist_overlap(void)
 
 /** Run unit tests for smartlist-of-digests functions. */
 static void
-test_container_smartlist_digests(void)
+test_container_smartlist_digests(void *arg)
 {
   smartlist_t *sl = smartlist_new();
 
   /* contains_digest */
+  (void)arg;
   smartlist_add(sl, tor_memdup("AAAAAAAAAAAAAAAAAAAA", DIGEST_LEN));
   smartlist_add(sl, tor_memdup("\00090AAB2AAAAaasdAAAAA", DIGEST_LEN));
   smartlist_add(sl, tor_memdup("\00090AAB2AAAAaasdAAAAA", DIGEST_LEN));
@@ -435,13 +439,14 @@ test_container_smartlist_digests(void)
 
 /** Run unit tests for concatenate-a-smartlist-of-strings functions. */
 static void
-test_container_smartlist_join(void)
+test_container_smartlist_join(void *arg)
 {
   smartlist_t *sl = smartlist_new();
   smartlist_t *sl2 = smartlist_new(), *sl3 = smartlist_new(),
     *sl4 = smartlist_new();
   char *joined=NULL;
   /* unique, sorted. */
+  (void)arg;
   smartlist_split_string(sl,
                          "Abashments Ambush Anchorman Bacon Banks Borscht "
                          "Bunks Inhumane Insurance Knish Know Manners "
@@ -532,11 +537,12 @@ test_container_smartlist_ints_eq(void *arg)
 
 /** Run unit tests for bitarray code */
 static void
-test_container_bitarray(void)
+test_container_bitarray(void *arg)
 {
   bitarray_t *ba = NULL;
   int i, j, ok=1;
 
+  (void)arg;
   ba = bitarray_init_zero(1);
   tt_assert(ba);
   tt_assert(! bitarray_is_set(ba, 0));
@@ -575,7 +581,7 @@ test_container_bitarray(void)
 /** Run unit tests for digest set code (implemented as a hashtable or as a
  * bloom filter) */
 static void
-test_container_digestset(void)
+test_container_digestset(void *arg)
 {
   smartlist_t *included = smartlist_new();
   char d[DIGEST_LEN];
@@ -584,6 +590,7 @@ test_container_digestset(void)
   int false_positives = 0;
   digestset_t *set = NULL;
 
+  (void)arg;
   for (i = 0; i < 1000; ++i) {
     crypto_rand(d, DIGEST_LEN);
     smartlist_add(included, tor_memdup(d, DIGEST_LEN));
@@ -628,7 +635,7 @@ compare_strings_for_pqueue_(const void *p1, const void *p2)
 
 /** Run unit tests for heap-based priority queue functions. */
 static void
-test_container_pqueue(void)
+test_container_pqueue(void *arg)
 {
   smartlist_t *sl = smartlist_new();
   int (*cmp)(const void *, const void*);
@@ -649,6 +656,8 @@ test_container_pqueue(void)
   ENTRY(fireflies);
 
 #define OK() smartlist_pqueue_assert_ok(sl, cmp, offset)
+
+  (void)arg;
 
   cmp = compare_strings_for_pqueue_;
   smartlist_pqueue_add(sl, cmp, offset, &cows);
@@ -725,7 +734,7 @@ test_container_pqueue(void)
 
 /** Run unit tests for string-to-void* map functions */
 static void
-test_container_strmap(void)
+test_container_strmap(void *arg)
 {
   strmap_t *map;
   strmap_iter_t *iter;
@@ -742,6 +751,7 @@ test_container_strmap(void)
   char *v104 = tor_strdup("v104");
   char *v105 = tor_strdup("v105");
 
+  (void)arg;
   map = strmap_new();
   tt_assert(map);
   tt_int_op(strmap_size(map),==, 0);
@@ -832,7 +842,7 @@ test_container_strmap(void)
 
 /** Run unit tests for getting the median of a list. */
 static void
-test_container_order_functions(void)
+test_container_order_functions(void *arg)
 {
   int lst[25], n = 0;
   unsigned int lst2[25];
@@ -840,6 +850,7 @@ test_container_order_functions(void)
 
 #define median() median_int(lst, n)
 
+  (void)arg;
   lst[n++] = 12;
   tt_int_op(12,==, median()); /* 12 */
   lst[n++] = 77;
@@ -929,7 +940,7 @@ test_container_di_map(void *arg)
 
 /** Run unit tests for fp_pair-to-void* map functions */
 static void
-test_container_fp_pair_map(void)
+test_container_fp_pair_map(void *arg)
 {
   fp_pair_map_t *map;
   fp_pair_t fp1, fp2, fp3, fp4, fp5, fp6;
@@ -944,6 +955,7 @@ test_container_fp_pair_map(void)
   char *v104 = tor_strdup("v104");
   char *v105 = tor_strdup("v105");
 
+  (void)arg;
   map = fp_pair_map_new();
   tt_assert(map);
   tt_int_op(fp_pair_map_size(map),==, 0);
@@ -1024,7 +1036,7 @@ test_container_fp_pair_map(void)
 }
 
 #define CONTAINER_LEGACY(name)                                          \
-  { #name, legacy_test_helper, 0, &legacy_setup, test_container_ ## name }
+  { #name, test_container_ ## name , 0, NULL, NULL }
 
 #define CONTAINER(name, flags)                                          \
   { #name, test_container_ ## name, (flags), NULL, NULL }

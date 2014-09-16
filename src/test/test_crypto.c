@@ -20,7 +20,7 @@ extern const char AUTHORITY_SIGNKEY_A_DIGEST256[];
 
 /** Run unit tests for Diffie-Hellman functionality. */
 static void
-test_crypto_dh(void)
+test_crypto_dh(void *arg)
 {
   crypto_dh_t *dh1 = crypto_dh_new(DH_TYPE_CIRCUIT);
   crypto_dh_t *dh2 = crypto_dh_new(DH_TYPE_CIRCUIT);
@@ -30,6 +30,7 @@ test_crypto_dh(void)
   char s2[DH_BYTES];
   ssize_t s1len, s2len;
 
+  (void)arg;
   tt_int_op(crypto_dh_get_bytes(dh1),==, DH_BYTES);
   tt_int_op(crypto_dh_get_bytes(dh2),==, DH_BYTES);
 
@@ -63,13 +64,14 @@ test_crypto_dh(void)
 /** Run unit tests for our random number generation function and its wrappers.
  */
 static void
-test_crypto_rng(void)
+test_crypto_rng(void *arg)
 {
   int i, j, allok;
   char data1[100], data2[100];
   double d;
 
   /* Try out RNG. */
+  (void)arg;
   tt_assert(! crypto_seed_rng(0));
   crypto_rand(data1, 100);
   crypto_rand(data2, 100);
@@ -252,7 +254,7 @@ test_crypto_aes(void *arg)
 
 /** Run unit tests for our SHA-1 functionality */
 static void
-test_crypto_sha(void)
+test_crypto_sha(void *arg)
 {
   crypto_digest_t *d1 = NULL, *d2 = NULL;
   int i;
@@ -263,6 +265,7 @@ test_crypto_sha(void)
   char *mem_op_hex_tmp=NULL;
 
   /* Test SHA-1 with a test vector from the specification. */
+  (void)arg;
   i = crypto_digest(data, "abc", 3);
   test_memeq_hex(data, "A9993E364706816ABA3E25717850C26C9CD0D89D");
   tt_int_op(i, ==, 0);
@@ -392,7 +395,7 @@ test_crypto_sha(void)
 
 /** Run unit tests for our public key crypto functions */
 static void
-test_crypto_pk(void)
+test_crypto_pk(void *arg)
 {
   crypto_pk_t *pk1 = NULL, *pk2 = NULL;
   char *encoded = NULL;
@@ -401,6 +404,7 @@ test_crypto_pk(void)
   int i, len;
 
   /* Public-key ciphers */
+  (void)arg;
   pk1 = pk_generate(0);
   pk2 = crypto_pk_new();
   tt_assert(pk1 && pk2);
@@ -561,13 +565,14 @@ test_crypto_pk_fingerprints(void *arg)
 
 /** Sanity check for crypto pk digests  */
 static void
-test_crypto_digests(void)
+test_crypto_digests(void *arg)
 {
   crypto_pk_t *k = NULL;
   ssize_t r;
   digests_t pkey_digests;
   char digest[DIGEST_LEN];
 
+  (void)arg;
   k = crypto_pk_new();
   tt_assert(k);
   r = crypto_pk_read_private_key_from_string(k, AUTHORITY_SIGNKEY_3, -1);
@@ -591,11 +596,12 @@ test_crypto_digests(void)
 /** Run unit tests for misc crypto formatting functionality (base64, base32,
  * fingerprints, etc) */
 static void
-test_crypto_formats(void)
+test_crypto_formats(void *arg)
 {
   char *data1 = NULL, *data2 = NULL, *data3 = NULL;
   int i, j, idx;
 
+  (void)arg;
   data1 = tor_malloc(1024);
   data2 = tor_malloc(1024);
   data3 = tor_malloc(1024);
@@ -696,13 +702,14 @@ test_crypto_formats(void)
 
 /** Run unit tests for our secret-to-key passphrase hashing functionality. */
 static void
-test_crypto_s2k(void)
+test_crypto_s2k(void *arg)
 {
   char buf[29];
   char buf2[29];
   char *buf3 = NULL;
   int i;
 
+  (void)arg;
   memset(buf, 0, sizeof(buf));
   memset(buf2, 0, sizeof(buf2));
   buf3 = tor_malloc(65536);
@@ -842,10 +849,11 @@ test_crypto_aes_iv(void *arg)
 
 /** Test base32 decoding. */
 static void
-test_crypto_base32_decode(void)
+test_crypto_base32_decode(void *arg)
 {
   char plain[60], encoded[96 + 1], decoded[60];
   int res;
+  (void)arg;
   crypto_rand(plain, 60);
   /* Encode and decode a random string. */
   base32_encode(encoded, 96 + 1, plain, 60);
@@ -1276,7 +1284,7 @@ static const struct testcase_setup_t pass_data = {
 };
 
 #define CRYPTO_LEGACY(name)                                            \
-  { #name, legacy_test_helper, 0, &legacy_setup, test_crypto_ ## name }
+  { #name, test_crypto_ ## name , 0, NULL, NULL }
 
 struct testcase_t crypto_tests[] = {
   CRYPTO_LEGACY(formats),
