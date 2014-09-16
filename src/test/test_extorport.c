@@ -406,7 +406,7 @@ handshake_start(or_connection_t *conn, int receiving)
     tt_int_op(buf_datalen(TO_CONN(conn)->outbuf), ==, (n));     \
     if ((n)) {                                                  \
       fetch_from_buf(b, (n), TO_CONN(conn)->outbuf);            \
-      test_memeq(b, (s), (n));                                  \
+      tt_mem_op(b, ==, (s), (n));                               \
     }                                                           \
   } while (0)
 
