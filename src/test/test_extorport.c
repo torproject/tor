@@ -42,7 +42,7 @@ test_ext_or_id_map(void *arg)
 
   /* Give c2 a new ID. */
   connection_or_set_ext_or_identifier(c2);
-  test_mem_op(idp, !=, c2->ext_or_conn_id, EXT_OR_CONN_ID_LEN);
+  tt_mem_op(idp, !=, c2->ext_or_conn_id, EXT_OR_CONN_ID_LEN);
   idp2 = tor_memdup(c2->ext_or_conn_id, EXT_OR_CONN_ID_LEN);
   tt_assert(!tor_digest_is_zero(idp2));
 
@@ -119,7 +119,7 @@ test_ext_or_write_command(void *arg)
             ==, 0);
   cp = buf_get_contents(TO_CONN(c1)->outbuf, &sz);
   tt_int_op(sz, ==, 4);
-  test_mem_op(cp, ==, "\x00\x99\x00\x00", 4);
+  tt_mem_op(cp, ==, "\x00\x99\x00\x00", 4);
   tor_free(cp);
 
   /* Medium command. */
@@ -127,7 +127,7 @@ test_ext_or_write_command(void *arg)
                                             "Wai\0Hello", 9), ==, 0);
   cp = buf_get_contents(TO_CONN(c1)->outbuf, &sz);
   tt_int_op(sz, ==, 13);
-  test_mem_op(cp, ==, "\x00\x99\x00\x09Wai\x00Hello", 13);
+  tt_mem_op(cp, ==, "\x00\x99\x00\x09Wai\x00Hello", 13);
   tor_free(cp);
 
   /* Long command */
@@ -137,8 +137,8 @@ test_ext_or_write_command(void *arg)
                                             buf, 65535), ==, 0);
   cp = buf_get_contents(TO_CONN(c1)->outbuf, &sz);
   tt_int_op(sz, ==, 65539);
-  test_mem_op(cp, ==, "\xf0\x0d\xff\xff", 4);
-  test_mem_op(cp+4, ==, buf, 65535);
+  tt_mem_op(cp, ==, "\xf0\x0d\xff\xff", 4);
+  tt_mem_op(cp+4, ==, buf, 65535);
   tor_free(cp);
 
  done:
@@ -181,7 +181,7 @@ test_ext_or_init_auth(void *arg)
   /* Shouldn't be initialized already, or our tests will be a bit
    * meaningless */
   ext_or_auth_cookie = tor_malloc_zero(32);
-  test_assert(tor_mem_is_zero((char*)ext_or_auth_cookie, 32));
+  tt_assert(tor_mem_is_zero((char*)ext_or_auth_cookie, 32));
 
   /* Now make sure we use a temporary file */
   fn = get_fname("ext_cookie_file");
@@ -203,14 +203,14 @@ test_ext_or_init_auth(void *arg)
   cp = read_file_to_str(fn, RFTS_BIN, &st);
   tt_ptr_op(cp, !=, NULL);
   tt_u64_op((uint64_t)st.st_size, ==, 64);
-  test_memeq(cp, "! Extended ORPort Auth Cookie !\x0a", 32);
-  test_memeq(cp+32, ext_or_auth_cookie, 32);
+  tt_mem_op(cp,==, "! Extended ORPort Auth Cookie !\x0a", 32);
+  tt_mem_op(cp+32,==, ext_or_auth_cookie, 32);
   memcpy(cookie0, ext_or_auth_cookie, 32);
-  test_assert(!tor_mem_is_zero((char*)ext_or_auth_cookie, 32));
+  tt_assert(!tor_mem_is_zero((char*)ext_or_auth_cookie, 32));
 
   /* Operation should be idempotent. */
   tt_int_op(0, ==, init_ext_or_cookie_authentication(1));
-  test_memeq(cookie0, ext_or_auth_cookie, 32);
+  tt_mem_op(cookie0,==, ext_or_auth_cookie, 32);
 
  done:
   tor_free(cp);
@@ -280,15 +280,15 @@ test_ext_or_cookie_auth(void *arg)
                      46+32+32);
   crypto_hmac_sha256(hmac2, (char*)ext_or_auth_cookie, 32, client_hash_input,
                      46+32+32);
-  test_memeq(hmac1, reply, 32);
-  test_memeq(hmac2, client_hash, 32);
+  tt_mem_op(hmac1,==, reply, 32);
+  tt_mem_op(hmac2,==, client_hash, 32);
 
   /* Now do it again and make sure that the results are *different* */
   tt_int_op(0, ==,
             handle_client_auth_nonce(client_nonce, 32, &client_hash2, &reply2,
                                      &reply_len));
-  test_memneq(reply2, reply, reply_len);
-  test_memneq(client_hash2, client_hash, 32);
+  tt_mem_op(reply2,!=, reply, reply_len);
+  tt_mem_op(client_hash2,!=, client_hash, 32);
   /* But that this one checks out too. */
   memcpy(server_hash_input+46+32, reply2+32, 32);
   memcpy(client_hash_input+46+32, reply2+32, 32);
@@ -297,8 +297,8 @@ test_ext_or_cookie_auth(void *arg)
                      46+32+32);
   crypto_hmac_sha256(hmac2, (char*)ext_or_auth_cookie, 32, client_hash_input,
                      46+32+32);
-  test_memeq(hmac1, reply2, 32);
-  test_memeq(hmac2, client_hash2, 32);
+  tt_mem_op(hmac1,==, reply2, 32);
+  tt_mem_op(hmac2,==, client_hash2, 32);
 
  done:
   tor_free(reply);
@@ -339,7 +339,7 @@ test_ext_or_cookie_auth_testvec(void *arg)
                                      &reply_len));
   tt_ptr_op(reply, !=, NULL );
   tt_uint_op(reply_len, ==, 64);
-  test_memeq(reply+32, "te road There is always another ", 32);
+  tt_mem_op(reply+32,==, "te road There is always another ", 32);
   /* HMACSHA256("Gliding wrapt in a brown mantle,"
    *     "ExtORPort authentication server-to-client hash"
    *     "But when I look ahead up the write road There is always another ");

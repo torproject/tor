@@ -290,48 +290,48 @@ do_parse_test(uint8_t *plaintext, size_t plaintext_len, int phase)
 
   /* Get a key */
   k = crypto_pk_new();
-  test_assert(k);
+  tt_assert(k);
   r = crypto_pk_read_private_key_from_string(k, AUTHORITY_SIGNKEY_1, -1);
-  test_assert(!r);
+  tt_assert(!r);
 
   /* Get digest for future comparison */
   r = crypto_pk_get_digest(k, digest);
-  test_assert(r >= 0);
+  tt_assert(r >= 0);
 
   /* Make a cell out of it */
   r = make_intro_from_plaintext(
       plaintext, plaintext_len,
       k, (void **)(&cell));
-  test_assert(r > 0);
-  test_assert(cell);
+  tt_assert(r > 0);
+  tt_assert(cell);
   cell_len = r;
 
   /* Do early parsing */
   parsed_req = rend_service_begin_parse_intro(cell, cell_len, 2, &err_msg);
-  test_assert(parsed_req);
-  test_assert(!err_msg);
-  test_memeq(parsed_req->pk, digest, DIGEST_LEN);
-  test_assert(parsed_req->ciphertext);
-  test_assert(parsed_req->ciphertext_len > 0);
+  tt_assert(parsed_req);
+  tt_assert(!err_msg);
+  tt_mem_op(parsed_req->pk,==, digest, DIGEST_LEN);
+  tt_assert(parsed_req->ciphertext);
+  tt_assert(parsed_req->ciphertext_len > 0);
 
   if (phase == EARLY_PARSE_ONLY)
     goto done;
 
   /* Do decryption */
   r = rend_service_decrypt_intro(parsed_req, k, &err_msg);
-  test_assert(!r);
-  test_assert(!err_msg);
-  test_assert(parsed_req->plaintext);
-  test_assert(parsed_req->plaintext_len > 0);
+  tt_assert(!r);
+  tt_assert(!err_msg);
+  tt_assert(parsed_req->plaintext);
+  tt_assert(parsed_req->plaintext_len > 0);
 
   if (phase == DECRYPT_ONLY)
     goto done;
 
   /* Do late parsing */
   r = rend_service_parse_intro_plaintext(parsed_req, &err_msg);
-  test_assert(!r);
-  test_assert(!err_msg);
-  test_assert(parsed_req->parsed);
+  tt_assert(!r);
+  tt_assert(!err_msg);
+  tt_assert(parsed_req->parsed);
 
  done:
   tor_free(cell);
@@ -371,14 +371,14 @@ make_intro_from_plaintext(
 
   /* Compute key digest (will be first DIGEST_LEN octets of cell) */
   r = crypto_pk_get_digest(key, cell);
-  test_assert(r >= 0);
+  tt_assert(r >= 0);
 
   /* Do encryption */
   r = crypto_pk_public_hybrid_encrypt(
       key, cell + DIGEST_LEN, ciphertext_size,
       buf, len,
       PK_PKCS1_OAEP_PADDING, 0);
-  test_assert(r >= 0);
+  tt_assert(r >= 0);
 
   /* Figure out cell length */
   cell_len = DIGEST_LEN + r;
