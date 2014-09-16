@@ -976,7 +976,7 @@ test_util_string_is_key_value(void *ptr)
   tt_assert(!string_is_key_value(LOG_WARN, "="));
 
   /* ??? */
-  /* test_assert(!string_is_key_value(LOG_WARN, "===")); */
+  /* tt_assert(!string_is_key_value(LOG_WARN, "===")); */
  done:
   ;
 }

@@ -651,13 +651,13 @@ test_addr_ip6_helpers(void)
 #if 0
   /* Try a mask with a wildcard. */
   r=tor_addr_parse_mask_ports("*/16",0,&t1, &mask, NULL, NULL);
-  test_assert(r == -1);
+  tt_assert(r == -1);
   r=tor_addr_parse_mask_ports("*4/16",TAPMP_EXTENDED_STAR,
                               &t1, &mask, NULL, NULL);
-  test_assert(r == -1);
+  tt_assert(r == -1);
   r=tor_addr_parse_mask_ports("*6/30",TAPMP_EXTENDED_STAR,
                               &t1, &mask, NULL, NULL);
-  test_assert(r == -1);
+  tt_assert(r == -1);
 #endif
   /* Basic mask tests*/
   r=tor_addr_parse_mask_ports("1.1.2.2/31",0,&t1, &mask, NULL, NULL);

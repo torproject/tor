@@ -194,7 +194,7 @@ test_dir_formats(void)
   tt_int_op(rp1->bandwidthcapacity,==, r1->bandwidthcapacity);
   tt_assert(crypto_pk_cmp_keys(rp1->onion_pkey, pk1) == 0);
   tt_assert(crypto_pk_cmp_keys(rp1->identity_pkey, pk2) == 0);
-  //test_assert(rp1->exit_policy == NULL);
+  //tt_assert(rp1->exit_policy == NULL);
   tor_free(buf);
 
   strlcpy(buf2,
@@ -1094,7 +1094,7 @@ test_vrs_for_v3ns(vote_routerstatus_t *vrs, int voter, time_t now)
      * Didn't expect this, but the old unit test only checked some of them,
      * so don't assert.
      */
-    /* test_assert(0); */
+    /* tt_assert(0); */
   }
 
  done:
@@ -2126,7 +2126,7 @@ test_consensus_for_umbw(networkstatus_t *con, time_t now)
 
   tt_assert(con);
   tt_assert(!con->cert);
-  // test_assert(con->consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW_KB);
+  // tt_assert(con->consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW_KB);
   tt_assert(con->consensus_method >= 16);
   tt_int_op(4,==, smartlist_len(con->routerstatus_list));
   /* There should be four listed routers; all voters saw the same in this */

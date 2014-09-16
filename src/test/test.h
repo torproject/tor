@@ -22,8 +22,6 @@
 #define PRETTY_FUNCTION ""
 #endif
 
-#define test_assert(expr) tt_assert(expr)
-
 #define test_eq(expr1, expr2) tt_int_op((expr1), ==, (expr2))
 #define test_streq(expr1, expr2) tt_str_op((expr1), ==, (expr2))
 
