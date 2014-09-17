@@ -1432,10 +1432,10 @@ test_util_threads(void *arg)
   time_t started;
 #ifndef _WIN32
   struct timeval tv;
-  (void)arg;
   tv.tv_sec=0;
   tv.tv_usec=100*1000;
 #endif
+  (void)arg;
   thread_test_mutex_ = tor_mutex_new();
   thread_test_start1_ = tor_mutex_new();
   thread_test_start2_ = tor_mutex_new();
