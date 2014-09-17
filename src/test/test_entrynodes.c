@@ -139,7 +139,7 @@ test_choose_random_entry_no_guards(void *arg)
   /* Unintuitively, we actually pick a random node as our entry,
      because router_choose_random_node() relaxes its constraints if it
      can't find a proper entry guard. */
-  test_assert(chosen_entry);
+  tt_assert(chosen_entry);
 
  done:
   ;
@@ -201,7 +201,7 @@ populate_live_entry_guards_test_helper(int num_needed)
   SMARTLIST_FOREACH_BEGIN(our_nodelist, const node_t *, node) {
     const node_t *node_tmp;
     node_tmp = add_an_entry_guard(node, 0, 1, 0, 0);
-    test_assert(node_tmp);
+    tt_assert(node_tmp);
   } SMARTLIST_FOREACH_END(node);
 
   /* Make sure the nodes were added as entry guards. */
@@ -650,7 +650,7 @@ test_entry_is_live(void *arg)
   SMARTLIST_FOREACH_BEGIN(our_nodelist, const node_t *, node) {
     const node_t *node_tmp;
     node_tmp = add_an_entry_guard(node, 0, 1, 0, 0);
-    test_assert(node_tmp);
+    tt_assert(node_tmp);
 
     tt_int_op(node->is_stable, ==, 0);
     tt_int_op(node->is_fast, ==, 0);
@@ -670,22 +670,22 @@ test_entry_is_live(void *arg)
   test_node = entry_is_live(test_entry,
                             ENTRY_NEED_UPTIME | ENTRY_ASSUME_REACHABLE,
                             &msg);
-  test_assert(!test_node);
+  tt_assert(!test_node);
 
   /* Require the node to be fast, but it's not. Should fail. */
   test_node = entry_is_live(test_entry,
                             ENTRY_NEED_CAPACITY | ENTRY_ASSUME_REACHABLE,
                             &msg);
-  test_assert(!test_node);
+  tt_assert(!test_node);
 
   /* Don't impose any restrictions on the node. Should succeed. */
   test_node = entry_is_live(test_entry, 0, &msg);
-  test_assert(test_node);
+  tt_assert(test_node);
   tt_ptr_op(test_node, ==, node_get_by_id(test_entry->identity));
 
   /* Require descriptor for this node. It has one so it should succeed. */
   test_node = entry_is_live(test_entry, ENTRY_NEED_DESCRIPTOR, &msg);
-  test_assert(test_node);
+  tt_assert(test_node);
   tt_ptr_op(test_node, ==, node_get_by_id(test_entry->identity));
 
  done:

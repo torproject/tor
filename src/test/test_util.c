@@ -64,8 +64,8 @@ test_util_read_until_eof_impl(const char *fname, size_t file_len,
   else
     tt_int_op(sz, ==, file_len);
 
-  test_mem_op(test_str, ==, str, sz);
-  test_assert(str[sz] == '\0');
+  tt_mem_op(test_str, ==, str, sz);
+  tt_int_op(str[sz], ==, '\0');
 
  done:
   unlink(fifo_name);
@@ -177,7 +177,7 @@ test_util_write_chunks_to_file(void *arg)
   str = read_file_to_str(fname, RFTS_BIN, &st);
   tt_assert(str != NULL);
   tt_u64_op((uint64_t)st.st_size, ==, data_str_len);
-  test_mem_op(data_str, ==, str, data_str_len);
+  tt_mem_op(data_str, ==, str, data_str_len);
   tor_free(str);
 
   // assert that the tempfile is removed (should not leave artifacts)
@@ -208,14 +208,14 @@ test_util_write_chunks_to_file(void *arg)
   str = read_file_to_str(fname, RFTS_BIN, &st);
   tt_assert(str != NULL);
   tt_u64_op((uint64_t)st.st_size, ==, data_str_len);
-  test_mem_op(data_str, ==, str, data_str_len);
+  tt_mem_op(data_str, ==, str, data_str_len);
   tor_free(str);
 
   // assert the tempfile still contains the known string
   str = read_file_to_str(tempname, RFTS_BIN, &st);
   tt_assert(str != NULL);
   tt_u64_op((uint64_t)st.st_size, ==, temp_str_len);
-  test_mem_op(temp_str, ==, str, temp_str_len);
+  tt_mem_op(temp_str, ==, str, temp_str_len);
 
  done:
   unlink(fname);
@@ -229,7 +229,7 @@ test_util_write_chunks_to_file(void *arg)
 }
 
 static void
-test_util_time(void)
+test_util_time(void *arg)
 {
   struct timeval start, end;
   struct tm a_time;
@@ -240,29 +240,30 @@ test_util_time(void)
 
   /* Test tv_udiff */
 
+  (void)arg;
   start.tv_sec = 5;
   start.tv_usec = 5000;
 
   end.tv_sec = 5;
   end.tv_usec = 5000;
 
-  test_eq(0L, tv_udiff(&start, &end));
+  tt_int_op(0L,==, tv_udiff(&start, &end));
 
   end.tv_usec = 7000;
 
-  test_eq(2000L, tv_udiff(&start, &end));
+  tt_int_op(2000L,==, tv_udiff(&start, &end));
 
   end.tv_sec = 6;
 
-  test_eq(1002000L, tv_udiff(&start, &end));
+  tt_int_op(1002000L,==, tv_udiff(&start, &end));
 
   end.tv_usec = 0;
 
-  test_eq(995000L, tv_udiff(&start, &end));
+  tt_int_op(995000L,==, tv_udiff(&start, &end));
 
   end.tv_sec = 4;
 
-  test_eq(-1005000L, tv_udiff(&start, &end));
+  tt_int_op(-1005000L,==, tv_udiff(&start, &end));
 
   /* Test tor_timegm */
 
@@ -274,45 +275,53 @@ test_util_time(void)
   a_time.tm_hour = 6;
   a_time.tm_min = 14;
   a_time.tm_sec = 55;
-  test_eq((time_t) 1062224095UL, tor_timegm(&a_time));
+  tt_int_op((time_t) 1062224095UL,==, tor_timegm(&a_time));
   a_time.tm_year = 2004-1900; /* Try a leap year, after feb. */
-  test_eq((time_t) 1093846495UL, tor_timegm(&a_time));
+  tt_int_op((time_t) 1093846495UL,==, tor_timegm(&a_time));
   a_time.tm_mon = 1;          /* Try a leap year, in feb. */
   a_time.tm_mday = 10;
-  test_eq((time_t) 1076393695UL, tor_timegm(&a_time));
+  tt_int_op((time_t) 1076393695UL,==, tor_timegm(&a_time));
   a_time.tm_mon = 0;
   a_time.tm_mday = 10;
-  test_eq((time_t) 1073715295UL, tor_timegm(&a_time));
+  tt_int_op((time_t) 1073715295UL,==, tor_timegm(&a_time));
   a_time.tm_mon = 12;          /* Wrong month, it's 0-based */
   a_time.tm_mday = 10;
-  test_eq((time_t) -1, tor_timegm(&a_time));
+  tt_int_op((time_t) -1,==, tor_timegm(&a_time));
   a_time.tm_mon = -1;          /* Wrong month */
   a_time.tm_mday = 10;
-  test_eq((time_t) -1, tor_timegm(&a_time));
+  tt_int_op((time_t) -1,==, tor_timegm(&a_time));
 
   /* Test {format,parse}_rfc1123_time */
 
   format_rfc1123_time(timestr, 0);
-  test_streq("Thu, 01 Jan 1970 00:00:00 GMT", timestr);
+  tt_str_op("Thu, 01 Jan 1970 00:00:00 GMT",==, timestr);
   format_rfc1123_time(timestr, (time_t)1091580502UL);
-  test_streq("Wed, 04 Aug 2004 00:48:22 GMT", timestr);
+  tt_str_op("Wed, 04 Aug 2004 00:48:22 GMT",==, timestr);
 
   t_res = 0;
   i = parse_rfc1123_time(timestr, &t_res);
-  test_eq(0,i);
-  test_eq(t_res, (time_t)1091580502UL);
+  tt_int_op(0,==, i);
+  tt_int_op(t_res,==, (time_t)1091580502UL);
   /* The timezone doesn't matter */
   t_res = 0;
-  test_eq(0, parse_rfc1123_time("Wed, 04 Aug 2004 00:48:22 ZUL", &t_res));
-  test_eq(t_res, (time_t)1091580502UL);
-  test_eq(-1, parse_rfc1123_time("Wed, zz Aug 2004 99-99x99 GMT", &t_res));
-  test_eq(-1, parse_rfc1123_time("Wed, 32 Mar 2011 00:00:00 GMT", &t_res));
-  test_eq(-1, parse_rfc1123_time("Wed, 30 Mar 2011 24:00:00 GMT", &t_res));
-  test_eq(-1, parse_rfc1123_time("Wed, 30 Mar 2011 23:60:00 GMT", &t_res));
-  test_eq(-1, parse_rfc1123_time("Wed, 30 Mar 2011 23:59:62 GMT", &t_res));
-  test_eq(-1, parse_rfc1123_time("Wed, 30 Mar 1969 23:59:59 GMT", &t_res));
-  test_eq(-1, parse_rfc1123_time("Wed, 30 Ene 2011 23:59:59 GMT", &t_res));
-  test_eq(-1, parse_rfc1123_time("Wed, 30 Mar 2011 23:59:59 GM", &t_res));
+  tt_int_op(0,==, parse_rfc1123_time("Wed, 04 Aug 2004 00:48:22 ZUL", &t_res));
+  tt_int_op(t_res,==, (time_t)1091580502UL);
+  tt_int_op(-1,==,
+            parse_rfc1123_time("Wed, zz Aug 2004 99-99x99 GMT", &t_res));
+  tt_int_op(-1,==,
+            parse_rfc1123_time("Wed, 32 Mar 2011 00:00:00 GMT", &t_res));
+  tt_int_op(-1,==,
+            parse_rfc1123_time("Wed, 30 Mar 2011 24:00:00 GMT", &t_res));
+  tt_int_op(-1,==,
+            parse_rfc1123_time("Wed, 30 Mar 2011 23:60:00 GMT", &t_res));
+  tt_int_op(-1,==,
+            parse_rfc1123_time("Wed, 30 Mar 2011 23:59:62 GMT", &t_res));
+  tt_int_op(-1,==,
+            parse_rfc1123_time("Wed, 30 Mar 1969 23:59:59 GMT", &t_res));
+  tt_int_op(-1,==,
+            parse_rfc1123_time("Wed, 30 Ene 2011 23:59:59 GMT", &t_res));
+  tt_int_op(-1,==,
+            parse_rfc1123_time("Wed, 30 Mar 2011 23:59:59 GM", &t_res));
 
 #if 0
   /* This fails, I imagine it's important and should be fixed? */
@@ -326,31 +335,31 @@ test_util_time(void)
 
   t_res = 0;
   i = parse_iso_time("", &t_res);
-  test_eq(-1, i);
+  tt_int_op(-1,==, i);
   t_res = 0;
   i = parse_iso_time("2004-08-32 00:48:22", &t_res);
-  test_eq(-1, i);
+  tt_int_op(-1,==, i);
   t_res = 0;
   i = parse_iso_time("1969-08-03 00:48:22", &t_res);
-  test_eq(-1, i);
+  tt_int_op(-1,==, i);
 
   t_res = 0;
   i = parse_iso_time("2004-08-04 00:48:22", &t_res);
-  test_eq(0,i);
-  test_eq(t_res, (time_t)1091580502UL);
+  tt_int_op(0,==, i);
+  tt_int_op(t_res,==, (time_t)1091580502UL);
   t_res = 0;
   i = parse_iso_time("2004-8-4 0:48:22", &t_res);
-  test_eq(0, i);
-  test_eq(t_res, (time_t)1091580502UL);
-  test_eq(-1, parse_iso_time("2004-08-zz 99-99x99 GMT", &t_res));
-  test_eq(-1, parse_iso_time("2011-03-32 00:00:00 GMT", &t_res));
-  test_eq(-1, parse_iso_time("2011-03-30 24:00:00 GMT", &t_res));
-  test_eq(-1, parse_iso_time("2011-03-30 23:60:00 GMT", &t_res));
-  test_eq(-1, parse_iso_time("2011-03-30 23:59:62 GMT", &t_res));
-  test_eq(-1, parse_iso_time("1969-03-30 23:59:59 GMT", &t_res));
-  test_eq(-1, parse_iso_time("2011-00-30 23:59:59 GMT", &t_res));
-  test_eq(-1, parse_iso_time("2147483647-08-29 14:00:00", &t_res));
-  test_eq(-1, parse_iso_time("2011-03-30 23:59", &t_res));
+  tt_int_op(0,==, i);
+  tt_int_op(t_res,==, (time_t)1091580502UL);
+  tt_int_op(-1,==, parse_iso_time("2004-08-zz 99-99x99 GMT", &t_res));
+  tt_int_op(-1,==, parse_iso_time("2011-03-32 00:00:00 GMT", &t_res));
+  tt_int_op(-1,==, parse_iso_time("2011-03-30 24:00:00 GMT", &t_res));
+  tt_int_op(-1,==, parse_iso_time("2011-03-30 23:60:00 GMT", &t_res));
+  tt_int_op(-1,==, parse_iso_time("2011-03-30 23:59:62 GMT", &t_res));
+  tt_int_op(-1,==, parse_iso_time("1969-03-30 23:59:59 GMT", &t_res));
+  tt_int_op(-1,==, parse_iso_time("2011-00-30 23:59:59 GMT", &t_res));
+  tt_int_op(-1,==, parse_iso_time("2147483647-08-29 14:00:00", &t_res));
+  tt_int_op(-1,==, parse_iso_time("2011-03-30 23:59", &t_res));
 
   /* Test tor_gettimeofday */
 
@@ -370,7 +379,7 @@ test_util_time(void)
   tv.tv_sec = (time_t)1326296338;
   tv.tv_usec = 3060;
   format_iso_time(timestr, (time_t)tv.tv_sec);
-  test_streq("2012-01-11 15:38:58", timestr);
+  tt_str_op("2012-01-11 15:38:58",==, timestr);
   /* The output of format_local_iso_time will vary by timezone, and setting
      our timezone for testing purposes would be a nontrivial flaky pain.
      Skip this test for now.
@@ -378,11 +387,11 @@ test_util_time(void)
   test_streq("2012-01-11 10:38:58", timestr);
   */
   format_iso_time_nospace(timestr, (time_t)tv.tv_sec);
-  test_streq("2012-01-11T15:38:58", timestr);
-  test_eq(strlen(timestr), ISO_TIME_LEN);
+  tt_str_op("2012-01-11T15:38:58",==, timestr);
+  tt_int_op(strlen(timestr),==, ISO_TIME_LEN);
   format_iso_time_nospace_usec(timestr, &tv);
-  test_streq("2012-01-11T15:38:58.003060", timestr);
-  test_eq(strlen(timestr), ISO_TIME_USEC_LEN);
+  tt_str_op("2012-01-11T15:38:58.003060",==, timestr);
+  tt_int_op(strlen(timestr),==, ISO_TIME_USEC_LEN);
 
  done:
   ;
@@ -403,55 +412,66 @@ test_util_parse_http_time(void *arg)
 
   /* Test parse_http_time */
 
-  test_eq(-1, parse_http_time("", &a_time));
-  test_eq(-1, parse_http_time("Sunday, 32 Aug 2004 00:48:22 GMT", &a_time));
-  test_eq(-1, parse_http_time("Sunday, 3 Aug 1869 00:48:22 GMT", &a_time));
-  test_eq(-1, parse_http_time("Sunday, 32-Aug-94 00:48:22 GMT", &a_time));
-  test_eq(-1, parse_http_time("Sunday, 3-Ago-04 00:48:22", &a_time));
-  test_eq(-1, parse_http_time("Sunday, August the third", &a_time));
-  test_eq(-1, parse_http_time("Wednesday,,04 Aug 1994 00:48:22 GMT", &a_time));
+  tt_int_op(-1,==,
+            parse_http_time("", &a_time));
+  tt_int_op(-1,==,
+            parse_http_time("Sunday, 32 Aug 2004 00:48:22 GMT", &a_time));
+  tt_int_op(-1,==,
+            parse_http_time("Sunday, 3 Aug 1869 00:48:22 GMT", &a_time));
+  tt_int_op(-1,==,
+            parse_http_time("Sunday, 32-Aug-94 00:48:22 GMT", &a_time));
+  tt_int_op(-1,==,
+            parse_http_time("Sunday, 3-Ago-04 00:48:22", &a_time));
+  tt_int_op(-1,==,
+            parse_http_time("Sunday, August the third", &a_time));
+  tt_int_op(-1,==,
+            parse_http_time("Wednesday,,04 Aug 1994 00:48:22 GMT", &a_time));
 
-  test_eq(0, parse_http_time("Wednesday, 04 Aug 1994 00:48:22 GMT", &a_time));
-  test_eq((time_t)775961302UL, tor_timegm(&a_time));
+  tt_int_op(0,==,
+            parse_http_time("Wednesday, 04 Aug 1994 00:48:22 GMT", &a_time));
+  tt_int_op((time_t)775961302UL,==, tor_timegm(&a_time));
   T("1994-08-04 00:48:22");
-  test_eq(0, parse_http_time("Wednesday, 4 Aug 1994 0:48:22 GMT", &a_time));
-  test_eq((time_t)775961302UL, tor_timegm(&a_time));
+  tt_int_op(0,==,
+            parse_http_time("Wednesday, 4 Aug 1994 0:48:22 GMT", &a_time));
+  tt_int_op((time_t)775961302UL,==, tor_timegm(&a_time));
   T("1994-08-04 00:48:22");
-  test_eq(0, parse_http_time("Miercoles, 4 Aug 1994 0:48:22 GMT", &a_time));
-  test_eq((time_t)775961302UL, tor_timegm(&a_time));
+  tt_int_op(0,==,
+            parse_http_time("Miercoles, 4 Aug 1994 0:48:22 GMT", &a_time));
+  tt_int_op((time_t)775961302UL,==, tor_timegm(&a_time));
   T("1994-08-04 00:48:22");
-  test_eq(0, parse_http_time("Wednesday, 04-Aug-94 00:48:22 GMT", &a_time));
-  test_eq((time_t)775961302UL, tor_timegm(&a_time));
+  tt_int_op(0,==,
+            parse_http_time("Wednesday, 04-Aug-94 00:48:22 GMT", &a_time));
+  tt_int_op((time_t)775961302UL,==, tor_timegm(&a_time));
   T("1994-08-04 00:48:22");
-  test_eq(0, parse_http_time("Wednesday, 4-Aug-94 0:48:22 GMT", &a_time));
-  test_eq((time_t)775961302UL, tor_timegm(&a_time));
+  tt_int_op(0,==, parse_http_time("Wednesday, 4-Aug-94 0:48:22 GMT", &a_time));
+  tt_int_op((time_t)775961302UL,==, tor_timegm(&a_time));
   T("1994-08-04 00:48:22");
-  test_eq(0, parse_http_time("Miercoles, 4-Aug-94 0:48:22 GMT", &a_time));
-  test_eq((time_t)775961302UL, tor_timegm(&a_time));
+  tt_int_op(0,==, parse_http_time("Miercoles, 4-Aug-94 0:48:22 GMT", &a_time));
+  tt_int_op((time_t)775961302UL,==, tor_timegm(&a_time));
   T("1994-08-04 00:48:22");
-  test_eq(0, parse_http_time("Wed Aug 04 00:48:22 1994", &a_time));
-  test_eq((time_t)775961302UL, tor_timegm(&a_time));
+  tt_int_op(0,==, parse_http_time("Wed Aug 04 00:48:22 1994", &a_time));
+  tt_int_op((time_t)775961302UL,==, tor_timegm(&a_time));
   T("1994-08-04 00:48:22");
-  test_eq(0, parse_http_time("Wed Aug 4 0:48:22 1994", &a_time));
-  test_eq((time_t)775961302UL, tor_timegm(&a_time));
+  tt_int_op(0,==, parse_http_time("Wed Aug 4 0:48:22 1994", &a_time));
+  tt_int_op((time_t)775961302UL,==, tor_timegm(&a_time));
   T("1994-08-04 00:48:22");
-  test_eq(0, parse_http_time("Mie Aug 4 0:48:22 1994", &a_time));
-  test_eq((time_t)775961302UL, tor_timegm(&a_time));
+  tt_int_op(0,==, parse_http_time("Mie Aug 4 0:48:22 1994", &a_time));
+  tt_int_op((time_t)775961302UL,==, tor_timegm(&a_time));
   T("1994-08-04 00:48:22");
-  test_eq(0, parse_http_time("Sun, 1 Jan 2012 00:00:00 GMT", &a_time));
-  test_eq((time_t)1325376000UL, tor_timegm(&a_time));
+  tt_int_op(0,==, parse_http_time("Sun, 1 Jan 2012 00:00:00 GMT", &a_time));
+  tt_int_op((time_t)1325376000UL,==, tor_timegm(&a_time));
   T("2012-01-01 00:00:00");
-  test_eq(0, parse_http_time("Mon, 31 Dec 2012 00:00:00 GMT", &a_time));
-  test_eq((time_t)1356912000UL, tor_timegm(&a_time));
+  tt_int_op(0,==, parse_http_time("Mon, 31 Dec 2012 00:00:00 GMT", &a_time));
+  tt_int_op((time_t)1356912000UL,==, tor_timegm(&a_time));
   T("2012-12-31 00:00:00");
-  test_eq(-1, parse_http_time("2004-08-zz 99-99x99 GMT", &a_time));
-  test_eq(-1, parse_http_time("2011-03-32 00:00:00 GMT", &a_time));
-  test_eq(-1, parse_http_time("2011-03-30 24:00:00 GMT", &a_time));
-  test_eq(-1, parse_http_time("2011-03-30 23:60:00 GMT", &a_time));
-  test_eq(-1, parse_http_time("2011-03-30 23:59:62 GMT", &a_time));
-  test_eq(-1, parse_http_time("1969-03-30 23:59:59 GMT", &a_time));
-  test_eq(-1, parse_http_time("2011-00-30 23:59:59 GMT", &a_time));
-  test_eq(-1, parse_http_time("2011-03-30 23:59", &a_time));
+  tt_int_op(-1,==, parse_http_time("2004-08-zz 99-99x99 GMT", &a_time));
+  tt_int_op(-1,==, parse_http_time("2011-03-32 00:00:00 GMT", &a_time));
+  tt_int_op(-1,==, parse_http_time("2011-03-30 24:00:00 GMT", &a_time));
+  tt_int_op(-1,==, parse_http_time("2011-03-30 23:60:00 GMT", &a_time));
+  tt_int_op(-1,==, parse_http_time("2011-03-30 23:59:62 GMT", &a_time));
+  tt_int_op(-1,==, parse_http_time("1969-03-30 23:59:59 GMT", &a_time));
+  tt_int_op(-1,==, parse_http_time("2011-00-30 23:59:59 GMT", &a_time));
+  tt_int_op(-1,==, parse_http_time("2011-03-30 23:59", &a_time));
 
 #undef T
  done:
@@ -459,13 +479,14 @@ test_util_parse_http_time(void *arg)
 }
 
 static void
-test_util_config_line(void)
+test_util_config_line(void *arg)
 {
   char buf[1024];
   char *k=NULL, *v=NULL;
   const char *str;
 
   /* Test parse_config_line_from_str */
+  (void)arg;
   strlcpy(buf, "k v\n" " key    value with spaces   \n" "keykey val\n"
           "k2\n"
           "k3 \n" "\n" "   \n" "#comment\n"
@@ -485,110 +506,110 @@ test_util_config_line(void)
   str = buf;
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "k");
-  test_streq(v, "v");
+  tt_str_op(k,==, "k");
+  tt_str_op(v,==, "v");
   tor_free(k); tor_free(v);
-  test_assert(!strcmpstart(str, "key    value with"));
+  tt_assert(!strcmpstart(str, "key    value with"));
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "key");
-  test_streq(v, "value with spaces");
+  tt_str_op(k,==, "key");
+  tt_str_op(v,==, "value with spaces");
   tor_free(k); tor_free(v);
-  test_assert(!strcmpstart(str, "keykey"));
+  tt_assert(!strcmpstart(str, "keykey"));
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "keykey");
-  test_streq(v, "val");
+  tt_str_op(k,==, "keykey");
+  tt_str_op(v,==, "val");
   tor_free(k); tor_free(v);
-  test_assert(!strcmpstart(str, "k2\n"));
+  tt_assert(!strcmpstart(str, "k2\n"));
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "k2");
-  test_streq(v, "");
+  tt_str_op(k,==, "k2");
+  tt_str_op(v,==, "");
   tor_free(k); tor_free(v);
-  test_assert(!strcmpstart(str, "k3 \n"));
+  tt_assert(!strcmpstart(str, "k3 \n"));
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "k3");
-  test_streq(v, "");
+  tt_str_op(k,==, "k3");
+  tt_str_op(v,==, "");
   tor_free(k); tor_free(v);
-  test_assert(!strcmpstart(str, "#comment"));
+  tt_assert(!strcmpstart(str, "#comment"));
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "k4");
-  test_streq(v, "");
+  tt_str_op(k,==, "k4");
+  tt_str_op(v,==, "");
   tor_free(k); tor_free(v);
-  test_assert(!strcmpstart(str, "k5#abc"));
+  tt_assert(!strcmpstart(str, "k5#abc"));
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "k5");
-  test_streq(v, "");
+  tt_str_op(k,==, "k5");
+  tt_str_op(v,==, "");
   tor_free(k); tor_free(v);
-  test_assert(!strcmpstart(str, "k6"));
+  tt_assert(!strcmpstart(str, "k6"));
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "k6");
-  test_streq(v, "val");
+  tt_str_op(k,==, "k6");
+  tt_str_op(v,==, "val");
   tor_free(k); tor_free(v);
-  test_assert(!strcmpstart(str, "kseven"));
+  tt_assert(!strcmpstart(str, "kseven"));
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "kseven");
-  test_streq(v, "a quoted \'string");
+  tt_str_op(k,==, "kseven");
+  tt_str_op(v,==, "a quoted \'string");
   tor_free(k); tor_free(v);
-  test_assert(!strcmpstart(str, "k8 "));
+  tt_assert(!strcmpstart(str, "k8 "));
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "k8");
-  test_streq(v, "a quoted\n\"str\\ing\t\x01\x01\x01\"");
-  tor_free(k); tor_free(v);
-
-  str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "k9");
-  test_streq(v, "a line that spans two lines.");
+  tt_str_op(k,==, "k8");
+  tt_str_op(v,==, "a quoted\n\"str\\ing\t\x01\x01\x01\"");
   tor_free(k); tor_free(v);
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "k10");
-  test_streq(v, "more than one continuation");
+  tt_str_op(k,==, "k9");
+  tt_str_op(v,==, "a line that spans two lines.");
   tor_free(k); tor_free(v);
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "k11");
-  test_streq(v, "continuation at the start");
+  tt_str_op(k,==, "k10");
+  tt_str_op(v,==, "more than one continuation");
   tor_free(k); tor_free(v);
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "k12");
-  test_streq(v, "line with a embedded");
+  tt_str_op(k,==, "k11");
+  tt_str_op(v,==, "continuation at the start");
   tor_free(k); tor_free(v);
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "k13");
-  test_streq(v, "continuation at the very start");
+  tt_str_op(k,==, "k12");
+  tt_str_op(v,==, "line with a embedded");
   tor_free(k); tor_free(v);
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "k14");
-  test_streq(v, "a line that has a comment and" );
+  tt_str_op(k,==, "k13");
+  tt_str_op(v,==, "continuation at the very start");
   tor_free(k); tor_free(v);
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "k15");
-  test_streq(v, "this should be the next new line");
+  tt_str_op(k,==, "k14");
+  tt_str_op(v,==, "a line that has a comment and" );
   tor_free(k); tor_free(v);
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "k16");
-  test_streq(v, "a line that has a comment and" );
+  tt_str_op(k,==, "k15");
+  tt_str_op(v,==, "this should be the next new line");
   tor_free(k); tor_free(v);
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "k17");
-  test_streq(v, "this should be the next new line");
+  tt_str_op(k,==, "k16");
+  tt_str_op(v,==, "a line that has a comment and" );
   tor_free(k); tor_free(v);
 
-  test_streq(str, "");
+  str = parse_config_line_from_str(str, &k, &v);
+  tt_str_op(k,==, "k17");
+  tt_str_op(v,==, "this should be the next new line");
+  tor_free(k); tor_free(v);
+
+  tt_str_op(str,==, "");
 
  done:
   tor_free(k);
@@ -596,7 +617,7 @@ test_util_config_line(void)
 }
 
 static void
-test_util_config_line_quotes(void)
+test_util_config_line_quotes(void *arg)
 {
   char buf1[1024];
   char buf2[128];
@@ -606,6 +627,7 @@ test_util_config_line_quotes(void)
   const char *str;
 
   /* Test parse_config_line_from_str */
+  (void)arg;
   strlcpy(buf1, "kTrailingSpace \"quoted value\"   \n"
           "kTrailingGarbage \"quoted value\"trailing garbage\n"
           , sizeof(buf1));
@@ -618,30 +640,30 @@ test_util_config_line_quotes(void)
   str = buf1;
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "kTrailingSpace");
-  test_streq(v, "quoted value");
+  tt_str_op(k,==, "kTrailingSpace");
+  tt_str_op(v,==, "quoted value");
   tor_free(k); tor_free(v);
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_eq_ptr(str, NULL);
+  tt_ptr_op(str,==, NULL);
   tor_free(k); tor_free(v);
 
   str = buf2;
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_eq_ptr(str, NULL);
+  tt_ptr_op(str,==, NULL);
   tor_free(k); tor_free(v);
 
   str = buf3;
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_eq_ptr(str, NULL);
+  tt_ptr_op(str,==, NULL);
   tor_free(k); tor_free(v);
 
   str = buf4;
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_eq_ptr(str, NULL);
+  tt_ptr_op(str,==, NULL);
   tor_free(k); tor_free(v);
 
  done:
@@ -650,13 +672,14 @@ test_util_config_line_quotes(void)
 }
 
 static void
-test_util_config_line_comment_character(void)
+test_util_config_line_comment_character(void *arg)
 {
   char buf[1024];
   char *k=NULL, *v=NULL;
   const char *str;
 
   /* Test parse_config_line_from_str */
+  (void)arg;
   strlcpy(buf, "k1 \"# in quotes\"\n"
           "k2 some value    # some comment\n"
           "k3 /home/user/myTorNetwork#2\n"    /* Testcase for #1323 */
@@ -664,16 +687,16 @@ test_util_config_line_comment_character(void)
   str = buf;
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "k1");
-  test_streq(v, "# in quotes");
+  tt_str_op(k,==, "k1");
+  tt_str_op(v,==, "# in quotes");
   tor_free(k); tor_free(v);
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "k2");
-  test_streq(v, "some value");
+  tt_str_op(k,==, "k2");
+  tt_str_op(v,==, "some value");
   tor_free(k); tor_free(v);
 
-  test_streq(str, "k3 /home/user/myTorNetwork#2\n");
+  tt_str_op(str,==, "k3 /home/user/myTorNetwork#2\n");
 
 #if 0
   str = parse_config_line_from_str(str, &k, &v);
@@ -690,7 +713,7 @@ test_util_config_line_comment_character(void)
 }
 
 static void
-test_util_config_line_escaped_content(void)
+test_util_config_line_escaped_content(void *arg)
 {
   char buf1[1024];
   char buf2[128];
@@ -702,6 +725,7 @@ test_util_config_line_escaped_content(void)
   const char *str;
 
   /* Test parse_config_line_from_str */
+  (void)arg;
   strlcpy(buf1, "HexadecimalLower \"\\x2a\"\n"
           "HexadecimalUpper \"\\x2A\"\n"
           "HexadecimalUpperX \"\\X2A\"\n"
@@ -733,91 +757,91 @@ test_util_config_line_escaped_content(void)
   str = buf1;
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "HexadecimalLower");
-  test_streq(v, "*");
+  tt_str_op(k,==, "HexadecimalLower");
+  tt_str_op(v,==, "*");
   tor_free(k); tor_free(v);
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "HexadecimalUpper");
-  test_streq(v, "*");
+  tt_str_op(k,==, "HexadecimalUpper");
+  tt_str_op(v,==, "*");
   tor_free(k); tor_free(v);
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "HexadecimalUpperX");
-  test_streq(v, "*");
+  tt_str_op(k,==, "HexadecimalUpperX");
+  tt_str_op(v,==, "*");
   tor_free(k); tor_free(v);
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "Octal");
-  test_streq(v, "*");
+  tt_str_op(k,==, "Octal");
+  tt_str_op(v,==, "*");
   tor_free(k); tor_free(v);
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "Newline");
-  test_streq(v, "\n");
+  tt_str_op(k,==, "Newline");
+  tt_str_op(v,==, "\n");
   tor_free(k); tor_free(v);
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "Tab");
-  test_streq(v, "\t");
+  tt_str_op(k,==, "Tab");
+  tt_str_op(v,==, "\t");
   tor_free(k); tor_free(v);
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "CarriageReturn");
-  test_streq(v, "\r");
+  tt_str_op(k,==, "CarriageReturn");
+  tt_str_op(v,==, "\r");
   tor_free(k); tor_free(v);
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "DoubleQuote");
-  test_streq(v, "\"");
+  tt_str_op(k,==, "DoubleQuote");
+  tt_str_op(v,==, "\"");
   tor_free(k); tor_free(v);
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "SimpleQuote");
-  test_streq(v, "'");
+  tt_str_op(k,==, "SimpleQuote");
+  tt_str_op(v,==, "'");
   tor_free(k); tor_free(v);
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "Backslash");
-  test_streq(v, "\\");
+  tt_str_op(k,==, "Backslash");
+  tt_str_op(v,==, "\\");
   tor_free(k); tor_free(v);
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_streq(k, "Mix");
-  test_streq(v, "This is a \"star\":\t'*'\nAnd second line");
+  tt_str_op(k,==, "Mix");
+  tt_str_op(v,==, "This is a \"star\":\t'*'\nAnd second line");
   tor_free(k); tor_free(v);
-  test_streq(str, "");
+  tt_str_op(str,==, "");
 
   str = buf2;
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_eq_ptr(str, NULL);
+  tt_ptr_op(str,==, NULL);
   tor_free(k); tor_free(v);
 
   str = buf3;
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_eq_ptr(str, NULL);
+  tt_ptr_op(str,==, NULL);
   tor_free(k); tor_free(v);
 
   str = buf4;
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_eq_ptr(str, NULL);
+  tt_ptr_op(str,==, NULL);
   tor_free(k); tor_free(v);
 
 #if 0
   str = buf5;
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_eq_ptr(str, NULL);
+  tt_ptr_op(str, ==, NULL);
   tor_free(k); tor_free(v);
 #endif
 
   str = buf6;
 
   str = parse_config_line_from_str(str, &k, &v);
-  test_eq_ptr(str, NULL);
+  tt_ptr_op(str,==, NULL);
   tor_free(k); tor_free(v);
 
  done:
@@ -827,46 +851,47 @@ test_util_config_line_escaped_content(void)
 
 #ifndef _WIN32
 static void
-test_util_expand_filename(void)
+test_util_expand_filename(void *arg)
 {
   char *str;
 
+  (void)arg;
   setenv("HOME", "/home/itv", 1); /* For "internal test value" */
 
   str = expand_filename("");
-  test_streq("", str);
+  tt_str_op("",==, str);
   tor_free(str);
 
   str = expand_filename("/normal/path");
-  test_streq("/normal/path", str);
+  tt_str_op("/normal/path",==, str);
   tor_free(str);
 
   str = expand_filename("/normal/trailing/path/");
-  test_streq("/normal/trailing/path/", str);
+  tt_str_op("/normal/trailing/path/",==, str);
   tor_free(str);
 
   str = expand_filename("~");
-  test_streq("/home/itv/", str);
+  tt_str_op("/home/itv/",==, str);
   tor_free(str);
 
   str = expand_filename("$HOME/nodice");
-  test_streq("$HOME/nodice", str);
+  tt_str_op("$HOME/nodice",==, str);
   tor_free(str);
 
   str = expand_filename("~/");
-  test_streq("/home/itv/", str);
+  tt_str_op("/home/itv/",==, str);
   tor_free(str);
 
   str = expand_filename("~/foobarqux");
-  test_streq("/home/itv/foobarqux", str);
+  tt_str_op("/home/itv/foobarqux",==, str);
   tor_free(str);
 
   str = expand_filename("~/../../etc/passwd");
-  test_streq("/home/itv/../../etc/passwd", str);
+  tt_str_op("/home/itv/../../etc/passwd",==, str);
   tor_free(str);
 
   str = expand_filename("~/trailing/");
-  test_streq("/home/itv/trailing/", str);
+  tt_str_op("/home/itv/trailing/",==, str);
   tor_free(str);
   /* Ideally we'd test ~anotheruser, but that's shady to test (we'd
      have to somehow inject/fake the get_user_homedir call) */
@@ -875,15 +900,15 @@ test_util_expand_filename(void)
   setenv("HOME", "/home/itv/", 1);
 
   str = expand_filename("~");
-  test_streq("/home/itv/", str);
+  tt_str_op("/home/itv/",==, str);
   tor_free(str);
 
   str = expand_filename("~/");
-  test_streq("/home/itv/", str);
+  tt_str_op("/home/itv/",==, str);
   tor_free(str);
 
   str = expand_filename("~/foo");
-  test_streq("/home/itv/foo", str);
+  tt_str_op("/home/itv/foo",==, str);
   tor_free(str);
 
   /* Try with empty $HOME */
@@ -891,15 +916,15 @@ test_util_expand_filename(void)
   setenv("HOME", "", 1);
 
   str = expand_filename("~");
-  test_streq("/", str);
+  tt_str_op("/",==, str);
   tor_free(str);
 
   str = expand_filename("~/");
-  test_streq("/", str);
+  tt_str_op("/",==, str);
   tor_free(str);
 
   str = expand_filename("~/foobar");
-  test_streq("/foobar", str);
+  tt_str_op("/foobar",==, str);
   tor_free(str);
 
   /* Try with $HOME unset */
@@ -907,15 +932,15 @@ test_util_expand_filename(void)
   unsetenv("HOME");
 
   str = expand_filename("~");
-  test_streq("/", str);
+  tt_str_op("/",==, str);
   tor_free(str);
 
   str = expand_filename("~/");
-  test_streq("/", str);
+  tt_str_op("/",==, str);
   tor_free(str);
 
   str = expand_filename("~/foobar");
-  test_streq("/foobar", str);
+  tt_str_op("/foobar",==, str);
   tor_free(str);
 
  done:
@@ -925,37 +950,38 @@ test_util_expand_filename(void)
 
 /** Test tor_escape_str_for_pt_args(). */
 static void
-test_util_escape_string_socks(void)
+test_util_escape_string_socks(void *arg)
 {
   char *escaped_string = NULL;
 
   /** Simple backslash escape. */
+  (void)arg;
   escaped_string = tor_escape_str_for_pt_args("This is a backslash: \\",";\\");
-  test_assert(escaped_string);
-  test_streq(escaped_string, "This is a backslash: \\\\");
+  tt_assert(escaped_string);
+  tt_str_op(escaped_string,==, "This is a backslash: \\\\");
   tor_free(escaped_string);
 
   /** Simple semicolon escape. */
   escaped_string = tor_escape_str_for_pt_args("First rule:Do not use ;",";\\");
-  test_assert(escaped_string);
-  test_streq(escaped_string, "First rule:Do not use \\;");
+  tt_assert(escaped_string);
+  tt_str_op(escaped_string,==, "First rule:Do not use \\;");
   tor_free(escaped_string);
 
   /** Empty string. */
   escaped_string = tor_escape_str_for_pt_args("", ";\\");
-  test_assert(escaped_string);
-  test_streq(escaped_string, "");
+  tt_assert(escaped_string);
+  tt_str_op(escaped_string,==, "");
   tor_free(escaped_string);
 
   /** Escape all characters. */
   escaped_string = tor_escape_str_for_pt_args(";\\;\\", ";\\");
-  test_assert(escaped_string);
-  test_streq(escaped_string, "\\;\\\\\\;\\\\");
+  tt_assert(escaped_string);
+  tt_str_op(escaped_string,==, "\\;\\\\\\;\\\\");
   tor_free(escaped_string);
 
   escaped_string = tor_escape_str_for_pt_args(";", ";\\");
-  test_assert(escaped_string);
-  test_streq(escaped_string, "\\;");
+  tt_assert(escaped_string);
+  tt_str_op(escaped_string,==, "\\;");
   tor_free(escaped_string);
 
  done:
@@ -966,288 +992,290 @@ static void
 test_util_string_is_key_value(void *ptr)
 {
   (void)ptr;
-  test_assert(string_is_key_value(LOG_WARN, "key=value"));
-  test_assert(string_is_key_value(LOG_WARN, "k=v"));
-  test_assert(string_is_key_value(LOG_WARN, "key="));
-  test_assert(string_is_key_value(LOG_WARN, "x="));
-  test_assert(string_is_key_value(LOG_WARN, "xx="));
-  test_assert(!string_is_key_value(LOG_WARN, "=value"));
-  test_assert(!string_is_key_value(LOG_WARN, "=x"));
-  test_assert(!string_is_key_value(LOG_WARN, "="));
+  tt_assert(string_is_key_value(LOG_WARN, "key=value"));
+  tt_assert(string_is_key_value(LOG_WARN, "k=v"));
+  tt_assert(string_is_key_value(LOG_WARN, "key="));
+  tt_assert(string_is_key_value(LOG_WARN, "x="));
+  tt_assert(string_is_key_value(LOG_WARN, "xx="));
+  tt_assert(!string_is_key_value(LOG_WARN, "=value"));
+  tt_assert(!string_is_key_value(LOG_WARN, "=x"));
+  tt_assert(!string_is_key_value(LOG_WARN, "="));
 
   /* ??? */
-  /* test_assert(!string_is_key_value(LOG_WARN, "===")); */
+  /* tt_assert(!string_is_key_value(LOG_WARN, "===")); */
  done:
   ;
 }
 
 /** Test basic string functionality. */
 static void
-test_util_strmisc(void)
+test_util_strmisc(void *arg)
 {
   char buf[1024];
   int i;
   char *cp, *cp_tmp = NULL;
 
   /* Test strl operations */
-  test_eq(5, strlcpy(buf, "Hello", 0));
-  test_eq(5, strlcpy(buf, "Hello", 10));
-  test_streq(buf, "Hello");
-  test_eq(5, strlcpy(buf, "Hello", 6));
-  test_streq(buf, "Hello");
-  test_eq(5, strlcpy(buf, "Hello", 5));
-  test_streq(buf, "Hell");
+  (void)arg;
+  tt_int_op(5,==, strlcpy(buf, "Hello", 0));
+  tt_int_op(5,==, strlcpy(buf, "Hello", 10));
+  tt_str_op(buf,==, "Hello");
+  tt_int_op(5,==, strlcpy(buf, "Hello", 6));
+  tt_str_op(buf,==, "Hello");
+  tt_int_op(5,==, strlcpy(buf, "Hello", 5));
+  tt_str_op(buf,==, "Hell");
   strlcpy(buf, "Hello", sizeof(buf));
-  test_eq(10, strlcat(buf, "Hello", 5));
+  tt_int_op(10,==, strlcat(buf, "Hello", 5));
 
   /* Test strstrip() */
   strlcpy(buf, "Testing 1 2 3", sizeof(buf));
   tor_strstrip(buf, ",!");
-  test_streq(buf, "Testing 1 2 3");
+  tt_str_op(buf,==, "Testing 1 2 3");
   strlcpy(buf, "!Testing 1 2 3?", sizeof(buf));
   tor_strstrip(buf, "!? ");
-  test_streq(buf, "Testing123");
+  tt_str_op(buf,==, "Testing123");
   strlcpy(buf, "!!!Testing 1 2 3??", sizeof(buf));
   tor_strstrip(buf, "!? ");
-  test_streq(buf, "Testing123");
+  tt_str_op(buf,==, "Testing123");
 
   /* Test parse_long */
   /* Empty/zero input */
-  test_eq(0L, tor_parse_long("",10,0,100,&i,NULL));
-  test_eq(0, i);
-  test_eq(0L, tor_parse_long("0",10,0,100,&i,NULL));
-  test_eq(1, i);
+  tt_int_op(0L,==, tor_parse_long("",10,0,100,&i,NULL));
+  tt_int_op(0,==, i);
+  tt_int_op(0L,==, tor_parse_long("0",10,0,100,&i,NULL));
+  tt_int_op(1,==, i);
   /* Normal cases */
-  test_eq(10L, tor_parse_long("10",10,0,100,&i,NULL));
-  test_eq(1, i);
-  test_eq(10L, tor_parse_long("10",10,0,10,&i,NULL));
-  test_eq(1, i);
-  test_eq(10L, tor_parse_long("10",10,10,100,&i,NULL));
-  test_eq(1, i);
-  test_eq(-50L, tor_parse_long("-50",10,-100,100,&i,NULL));
-  test_eq(1, i);
-  test_eq(-50L, tor_parse_long("-50",10,-100,0,&i,NULL));
-  test_eq(1, i);
-  test_eq(-50L, tor_parse_long("-50",10,-50,0,&i,NULL));
-  test_eq(1, i);
+  tt_int_op(10L,==, tor_parse_long("10",10,0,100,&i,NULL));
+  tt_int_op(1,==, i);
+  tt_int_op(10L,==, tor_parse_long("10",10,0,10,&i,NULL));
+  tt_int_op(1,==, i);
+  tt_int_op(10L,==, tor_parse_long("10",10,10,100,&i,NULL));
+  tt_int_op(1,==, i);
+  tt_int_op(-50L,==, tor_parse_long("-50",10,-100,100,&i,NULL));
+  tt_int_op(1,==, i);
+  tt_int_op(-50L,==, tor_parse_long("-50",10,-100,0,&i,NULL));
+  tt_int_op(1,==, i);
+  tt_int_op(-50L,==, tor_parse_long("-50",10,-50,0,&i,NULL));
+  tt_int_op(1,==, i);
   /* Extra garbage */
-  test_eq(0L, tor_parse_long("10m",10,0,100,&i,NULL));
-  test_eq(0, i);
-  test_eq(0L, tor_parse_long("-50 plus garbage",10,-100,100,&i,NULL));
-  test_eq(0, i);
-  test_eq(10L, tor_parse_long("10m",10,0,100,&i,&cp));
-  test_eq(1, i);
-  test_streq(cp, "m");
-  test_eq(-50L, tor_parse_long("-50 plus garbage",10,-100,100,&i,&cp));
-  test_eq(1, i);
-  test_streq(cp, " plus garbage");
+  tt_int_op(0L,==, tor_parse_long("10m",10,0,100,&i,NULL));
+  tt_int_op(0,==, i);
+  tt_int_op(0L,==, tor_parse_long("-50 plus garbage",10,-100,100,&i,NULL));
+  tt_int_op(0,==, i);
+  tt_int_op(10L,==, tor_parse_long("10m",10,0,100,&i,&cp));
+  tt_int_op(1,==, i);
+  tt_str_op(cp,==, "m");
+  tt_int_op(-50L,==, tor_parse_long("-50 plus garbage",10,-100,100,&i,&cp));
+  tt_int_op(1,==, i);
+  tt_str_op(cp,==, " plus garbage");
   /* Out of bounds */
-  test_eq(0L,  tor_parse_long("10",10,50,100,&i,NULL));
-  test_eq(0, i);
-  test_eq(0L,   tor_parse_long("-50",10,0,100,&i,NULL));
-  test_eq(0, i);
+  tt_int_op(0L,==,  tor_parse_long("10",10,50,100,&i,NULL));
+  tt_int_op(0,==, i);
+  tt_int_op(0L,==,   tor_parse_long("-50",10,0,100,&i,NULL));
+  tt_int_op(0,==, i);
   /* Base different than 10 */
-  test_eq(2L,   tor_parse_long("10",2,0,100,NULL,NULL));
-  test_eq(0L,   tor_parse_long("2",2,0,100,NULL,NULL));
-  test_eq(0L,   tor_parse_long("10",-2,0,100,NULL,NULL));
-  test_eq(68284L, tor_parse_long("10abc",16,0,70000,NULL,NULL));
-  test_eq(68284L, tor_parse_long("10ABC",16,0,70000,NULL,NULL));
-  test_eq(0, tor_parse_long("10ABC",-1,0,70000,&i,NULL));
-  test_eq(i, 0);
+  tt_int_op(2L,==,   tor_parse_long("10",2,0,100,NULL,NULL));
+  tt_int_op(0L,==,   tor_parse_long("2",2,0,100,NULL,NULL));
+  tt_int_op(0L,==,   tor_parse_long("10",-2,0,100,NULL,NULL));
+  tt_int_op(68284L,==, tor_parse_long("10abc",16,0,70000,NULL,NULL));
+  tt_int_op(68284L,==, tor_parse_long("10ABC",16,0,70000,NULL,NULL));
+  tt_int_op(0,==, tor_parse_long("10ABC",-1,0,70000,&i,NULL));
+  tt_int_op(i,==, 0);
 
   /* Test parse_ulong */
-  test_eq(0UL, tor_parse_ulong("",10,0,100,NULL,NULL));
-  test_eq(0UL, tor_parse_ulong("0",10,0,100,NULL,NULL));
-  test_eq(10UL, tor_parse_ulong("10",10,0,100,NULL,NULL));
-  test_eq(0UL, tor_parse_ulong("10",10,50,100,NULL,NULL));
-  test_eq(10UL, tor_parse_ulong("10",10,0,10,NULL,NULL));
-  test_eq(10UL, tor_parse_ulong("10",10,10,100,NULL,NULL));
-  test_eq(0UL, tor_parse_ulong("8",8,0,100,NULL,NULL));
-  test_eq(50UL, tor_parse_ulong("50",10,50,100,NULL,NULL));
-  test_eq(0UL, tor_parse_ulong("-50",10,-100,100,NULL,NULL));
-  test_eq(0UL, tor_parse_ulong("50",-1,50,100,&i,NULL));
-  test_eq(0, i);
+  tt_int_op(0UL,==, tor_parse_ulong("",10,0,100,NULL,NULL));
+  tt_int_op(0UL,==, tor_parse_ulong("0",10,0,100,NULL,NULL));
+  tt_int_op(10UL,==, tor_parse_ulong("10",10,0,100,NULL,NULL));
+  tt_int_op(0UL,==, tor_parse_ulong("10",10,50,100,NULL,NULL));
+  tt_int_op(10UL,==, tor_parse_ulong("10",10,0,10,NULL,NULL));
+  tt_int_op(10UL,==, tor_parse_ulong("10",10,10,100,NULL,NULL));
+  tt_int_op(0UL,==, tor_parse_ulong("8",8,0,100,NULL,NULL));
+  tt_int_op(50UL,==, tor_parse_ulong("50",10,50,100,NULL,NULL));
+  tt_int_op(0UL,==, tor_parse_ulong("-50",10,-100,100,NULL,NULL));
+  tt_int_op(0UL,==, tor_parse_ulong("50",-1,50,100,&i,NULL));
+  tt_int_op(0,==, i);
 
   /* Test parse_uint64 */
-  test_assert(U64_LITERAL(10) == tor_parse_uint64("10 x",10,0,100, &i, &cp));
-  test_eq(1, i);
-  test_streq(cp, " x");
-  test_assert(U64_LITERAL(12345678901) ==
+  tt_assert(U64_LITERAL(10) == tor_parse_uint64("10 x",10,0,100, &i, &cp));
+  tt_int_op(1,==, i);
+  tt_str_op(cp,==, " x");
+  tt_assert(U64_LITERAL(12345678901) ==
               tor_parse_uint64("12345678901",10,0,UINT64_MAX, &i, &cp));
-  test_eq(1, i);
-  test_streq(cp, "");
-  test_assert(U64_LITERAL(0) ==
+  tt_int_op(1,==, i);
+  tt_str_op(cp,==, "");
+  tt_assert(U64_LITERAL(0) ==
               tor_parse_uint64("12345678901",10,500,INT32_MAX, &i, &cp));
-  test_eq(0, i);
-  test_assert(U64_LITERAL(0) ==
+  tt_int_op(0,==, i);
+  tt_assert(U64_LITERAL(0) ==
               tor_parse_uint64("123",-1,0,INT32_MAX, &i, &cp));
-  test_eq(0, i);
+  tt_int_op(0,==, i);
 
   {
   /* Test parse_double */
   double d = tor_parse_double("10", 0, UINT64_MAX,&i,NULL);
-  test_eq(1, i);
-  test_assert(DBL_TO_U64(d) == 10);
+  tt_int_op(1,==, i);
+  tt_assert(DBL_TO_U64(d) == 10);
   d = tor_parse_double("0", 0, UINT64_MAX,&i,NULL);
-  test_eq(1, i);
-  test_assert(DBL_TO_U64(d) == 0);
+  tt_int_op(1,==, i);
+  tt_assert(DBL_TO_U64(d) == 0);
   d = tor_parse_double(" ", 0, UINT64_MAX,&i,NULL);
-  test_eq(0, i);
+  tt_int_op(0,==, i);
   d = tor_parse_double(".0a", 0, UINT64_MAX,&i,NULL);
-  test_eq(0, i);
+  tt_int_op(0,==, i);
   d = tor_parse_double(".0a", 0, UINT64_MAX,&i,&cp);
-  test_eq(1, i);
+  tt_int_op(1,==, i);
   d = tor_parse_double("-.0", 0, UINT64_MAX,&i,NULL);
-  test_eq(1, i);
-  test_assert(DBL_TO_U64(d) == 0);
+  tt_int_op(1,==, i);
+  tt_assert(DBL_TO_U64(d) == 0);
   d = tor_parse_double("-10", -100.0, 100.0,&i,NULL);
-  test_eq(1, i);
-  test_eq(-10.0, d);
+  tt_int_op(1,==, i);
+  tt_int_op(-10.0,==, d);
   }
 
   {
     /* Test tor_parse_* where we overflow/underflow the underlying type. */
     /* This string should overflow 64-bit ints. */
 #define TOOBIG "100000000000000000000000000"
-    test_eq(0L, tor_parse_long(TOOBIG, 10, LONG_MIN, LONG_MAX, &i, NULL));
-    test_eq(i, 0);
-    test_eq(0L, tor_parse_long("-"TOOBIG, 10, LONG_MIN, LONG_MAX, &i, NULL));
-    test_eq(i, 0);
-    test_eq(0UL, tor_parse_ulong(TOOBIG, 10, 0, ULONG_MAX, &i, NULL));
-    test_eq(i, 0);
+    tt_int_op(0L,==, tor_parse_long(TOOBIG, 10, LONG_MIN, LONG_MAX, &i, NULL));
+    tt_int_op(i,==, 0);
+    tt_int_op(0L,==,
+              tor_parse_long("-"TOOBIG, 10, LONG_MIN, LONG_MAX, &i, NULL));
+    tt_int_op(i,==, 0);
+    tt_int_op(0UL,==, tor_parse_ulong(TOOBIG, 10, 0, ULONG_MAX, &i, NULL));
+    tt_int_op(i,==, 0);
     tt_u64_op(U64_LITERAL(0), ==, tor_parse_uint64(TOOBIG, 10,
                                              0, UINT64_MAX, &i, NULL));
-    test_eq(i, 0);
+    tt_int_op(i,==, 0);
   }
 
   /* Test snprintf */
   /* Returning -1 when there's not enough room in the output buffer */
-  test_eq(-1, tor_snprintf(buf, 0, "Foo"));
-  test_eq(-1, tor_snprintf(buf, 2, "Foo"));
-  test_eq(-1, tor_snprintf(buf, 3, "Foo"));
-  test_neq(-1, tor_snprintf(buf, 4, "Foo"));
+  tt_int_op(-1,==, tor_snprintf(buf, 0, "Foo"));
+  tt_int_op(-1,==, tor_snprintf(buf, 2, "Foo"));
+  tt_int_op(-1,==, tor_snprintf(buf, 3, "Foo"));
+  tt_int_op(-1,!=, tor_snprintf(buf, 4, "Foo"));
   /* Always NUL-terminate the output */
   tor_snprintf(buf, 5, "abcdef");
-  test_eq(0, buf[4]);
+  tt_int_op(0,==, buf[4]);
   tor_snprintf(buf, 10, "abcdef");
-  test_eq(0, buf[6]);
+  tt_int_op(0,==, buf[6]);
   /* uint64 */
   tor_snprintf(buf, sizeof(buf), "x!"U64_FORMAT"!x",
                U64_PRINTF_ARG(U64_LITERAL(12345678901)));
-  test_streq("x!12345678901!x", buf);
+  tt_str_op("x!12345678901!x",==, buf);
 
   /* Test str{,case}cmpstart */
-  test_assert(strcmpstart("abcdef", "abcdef")==0);
-  test_assert(strcmpstart("abcdef", "abc")==0);
-  test_assert(strcmpstart("abcdef", "abd")<0);
-  test_assert(strcmpstart("abcdef", "abb")>0);
-  test_assert(strcmpstart("ab", "abb")<0);
-  test_assert(strcmpstart("ab", "")==0);
-  test_assert(strcmpstart("ab", "ab ")<0);
-  test_assert(strcasecmpstart("abcdef", "abCdEF")==0);
-  test_assert(strcasecmpstart("abcDeF", "abc")==0);
-  test_assert(strcasecmpstart("abcdef", "Abd")<0);
-  test_assert(strcasecmpstart("Abcdef", "abb")>0);
-  test_assert(strcasecmpstart("ab", "Abb")<0);
-  test_assert(strcasecmpstart("ab", "")==0);
-  test_assert(strcasecmpstart("ab", "ab ")<0);
+  tt_assert(strcmpstart("abcdef", "abcdef")==0);
+  tt_assert(strcmpstart("abcdef", "abc")==0);
+  tt_assert(strcmpstart("abcdef", "abd")<0);
+  tt_assert(strcmpstart("abcdef", "abb")>0);
+  tt_assert(strcmpstart("ab", "abb")<0);
+  tt_assert(strcmpstart("ab", "")==0);
+  tt_assert(strcmpstart("ab", "ab ")<0);
+  tt_assert(strcasecmpstart("abcdef", "abCdEF")==0);
+  tt_assert(strcasecmpstart("abcDeF", "abc")==0);
+  tt_assert(strcasecmpstart("abcdef", "Abd")<0);
+  tt_assert(strcasecmpstart("Abcdef", "abb")>0);
+  tt_assert(strcasecmpstart("ab", "Abb")<0);
+  tt_assert(strcasecmpstart("ab", "")==0);
+  tt_assert(strcasecmpstart("ab", "ab ")<0);
 
   /* Test str{,case}cmpend */
-  test_assert(strcmpend("abcdef", "abcdef")==0);
-  test_assert(strcmpend("abcdef", "def")==0);
-  test_assert(strcmpend("abcdef", "deg")<0);
-  test_assert(strcmpend("abcdef", "dee")>0);
-  test_assert(strcmpend("ab", "aab")>0);
-  test_assert(strcasecmpend("AbcDEF", "abcdef")==0);
-  test_assert(strcasecmpend("abcdef", "dEF")==0);
-  test_assert(strcasecmpend("abcdef", "Deg")<0);
-  test_assert(strcasecmpend("abcDef", "dee")>0);
-  test_assert(strcasecmpend("AB", "abb")<0);
+  tt_assert(strcmpend("abcdef", "abcdef")==0);
+  tt_assert(strcmpend("abcdef", "def")==0);
+  tt_assert(strcmpend("abcdef", "deg")<0);
+  tt_assert(strcmpend("abcdef", "dee")>0);
+  tt_assert(strcmpend("ab", "aab")>0);
+  tt_assert(strcasecmpend("AbcDEF", "abcdef")==0);
+  tt_assert(strcasecmpend("abcdef", "dEF")==0);
+  tt_assert(strcasecmpend("abcdef", "Deg")<0);
+  tt_assert(strcasecmpend("abcDef", "dee")>0);
+  tt_assert(strcasecmpend("AB", "abb")<0);
 
   /* Test digest_is_zero */
   memset(buf,0,20);
   buf[20] = 'x';
-  test_assert(tor_digest_is_zero(buf));
+  tt_assert(tor_digest_is_zero(buf));
   buf[19] = 'x';
-  test_assert(!tor_digest_is_zero(buf));
+  tt_assert(!tor_digest_is_zero(buf));
 
   /* Test mem_is_zero */
   memset(buf,0,128);
   buf[128] = 'x';
-  test_assert(tor_mem_is_zero(buf, 10));
-  test_assert(tor_mem_is_zero(buf, 20));
-  test_assert(tor_mem_is_zero(buf, 128));
-  test_assert(!tor_mem_is_zero(buf, 129));
+  tt_assert(tor_mem_is_zero(buf, 10));
+  tt_assert(tor_mem_is_zero(buf, 20));
+  tt_assert(tor_mem_is_zero(buf, 128));
+  tt_assert(!tor_mem_is_zero(buf, 129));
   buf[60] = (char)255;
-  test_assert(!tor_mem_is_zero(buf, 128));
+  tt_assert(!tor_mem_is_zero(buf, 128));
   buf[0] = (char)1;
-  test_assert(!tor_mem_is_zero(buf, 10));
+  tt_assert(!tor_mem_is_zero(buf, 10));
 
   /* Test 'escaped' */
-  test_assert(NULL == escaped(NULL));
-  test_streq("\"\"", escaped(""));
-  test_streq("\"abcd\"", escaped("abcd"));
-  test_streq("\"\\\\ \\n\\r\\t\\\"\\'\"", escaped("\\ \n\r\t\"'"));
-  test_streq("\"unnecessary \\'backslashes\\'\"",
+  tt_assert(NULL == escaped(NULL));
+  tt_str_op("\"\"",==, escaped(""));
+  tt_str_op("\"abcd\"",==, escaped("abcd"));
+  tt_str_op("\"\\\\ \\n\\r\\t\\\"\\'\"",==, escaped("\\ \n\r\t\"'"));
+  tt_str_op("\"unnecessary \\'backslashes\\'\"",==,
              escaped("unnecessary \'backslashes\'"));
   /* Non-printable characters appear as octal */
-  test_streq("\"z\\001abc\\277d\"",  escaped("z\001abc\277d"));
-  test_streq("\"z\\336\\255 ;foo\"", escaped("z\xde\xad\x20;foo"));
+  tt_str_op("\"z\\001abc\\277d\"",==,  escaped("z\001abc\277d"));
+  tt_str_op("\"z\\336\\255 ;foo\"",==, escaped("z\xde\xad\x20;foo"));
 
   /* Test strndup and memdup */
   {
     const char *s = "abcdefghijklmnopqrstuvwxyz";
     cp_tmp = tor_strndup(s, 30);
-    test_streq(cp_tmp, s); /* same string, */
-    test_neq_ptr(cp_tmp, s); /* but different pointers. */
+    tt_str_op(cp_tmp,==, s); /* same string, */
+    tt_ptr_op(cp_tmp,!=,s); /* but different pointers. */
     tor_free(cp_tmp);
 
     cp_tmp = tor_strndup(s, 5);
-    test_streq(cp_tmp, "abcde");
+    tt_str_op(cp_tmp,==, "abcde");
     tor_free(cp_tmp);
 
     s = "a\0b\0c\0d\0e\0";
     cp_tmp = tor_memdup(s,10);
-    test_memeq(cp_tmp, s, 10); /* same ram, */
-    test_neq_ptr(cp_tmp, s); /* but different pointers. */
+    tt_mem_op(cp_tmp,==, s, 10); /* same ram, */
+    tt_ptr_op(cp_tmp,!=,s); /* but different pointers. */
     tor_free(cp_tmp);
   }
 
   /* Test str-foo functions */
   cp_tmp = tor_strdup("abcdef");
-  test_assert(tor_strisnonupper(cp_tmp));
+  tt_assert(tor_strisnonupper(cp_tmp));
   cp_tmp[3] = 'D';
-  test_assert(!tor_strisnonupper(cp_tmp));
+  tt_assert(!tor_strisnonupper(cp_tmp));
   tor_strupper(cp_tmp);
-  test_streq(cp_tmp, "ABCDEF");
+  tt_str_op(cp_tmp,==, "ABCDEF");
   tor_strlower(cp_tmp);
-  test_streq(cp_tmp, "abcdef");
-  test_assert(tor_strisnonupper(cp_tmp));
-  test_assert(tor_strisprint(cp_tmp));
+  tt_str_op(cp_tmp,==, "abcdef");
+  tt_assert(tor_strisnonupper(cp_tmp));
+  tt_assert(tor_strisprint(cp_tmp));
   cp_tmp[3] = 3;
-  test_assert(!tor_strisprint(cp_tmp));
+  tt_assert(!tor_strisprint(cp_tmp));
   tor_free(cp_tmp);
 
   /* Test memmem and memstr */
   {
     const char *haystack = "abcde";
-    test_assert(!tor_memmem(haystack, 5, "ef", 2));
-    test_eq_ptr(tor_memmem(haystack, 5, "cd", 2), haystack + 2);
-    test_eq_ptr(tor_memmem(haystack, 5, "cde", 3), haystack + 2);
-    test_assert(!tor_memmem(haystack, 4, "cde", 3));
+    tt_assert(!tor_memmem(haystack, 5, "ef", 2));
+    tt_ptr_op(tor_memmem(haystack, 5, "cd", 2),==, haystack + 2);
+    tt_ptr_op(tor_memmem(haystack, 5, "cde", 3),==, haystack + 2);
+    tt_assert(!tor_memmem(haystack, 4, "cde", 3));
     haystack = "ababcad";
-    test_eq_ptr(tor_memmem(haystack, 7, "abc", 3), haystack + 2);
-    test_eq_ptr(tor_memmem(haystack, 7, "ad", 2), haystack + 5);
-    test_eq_ptr(tor_memmem(haystack, 7, "cad", 3), haystack + 4);
-    test_assert(!tor_memmem(haystack, 7, "dadad", 5));
-    test_assert(!tor_memmem(haystack, 7, "abcdefghij", 10));
+    tt_ptr_op(tor_memmem(haystack, 7, "abc", 3),==, haystack + 2);
+    tt_ptr_op(tor_memmem(haystack, 7, "ad", 2),==, haystack + 5);
+    tt_ptr_op(tor_memmem(haystack, 7, "cad", 3),==, haystack + 4);
+    tt_assert(!tor_memmem(haystack, 7, "dadad", 5));
+    tt_assert(!tor_memmem(haystack, 7, "abcdefghij", 10));
     /* memstr */
-    test_eq_ptr(tor_memstr(haystack, 7, "abc"), haystack + 2);
-    test_eq_ptr(tor_memstr(haystack, 7, "cad"), haystack + 4);
-    test_assert(!tor_memstr(haystack, 6, "cad"));
-    test_assert(!tor_memstr(haystack, 7, "cadd"));
-    test_assert(!tor_memstr(haystack, 7, "fe"));
-    test_assert(!tor_memstr(haystack, 7, "ababcade"));
+    tt_ptr_op(tor_memstr(haystack, 7, "abc"),==, haystack + 2);
+    tt_ptr_op(tor_memstr(haystack, 7, "cad"),==, haystack + 4);
+    tt_assert(!tor_memstr(haystack, 6, "cad"));
+    tt_assert(!tor_memstr(haystack, 7, "cadd"));
+    tt_assert(!tor_memstr(haystack, 7, "fe"));
+    tt_assert(!tor_memstr(haystack, 7, "ababcade"));
   }
 
   /* Test hex_str */
@@ -1256,19 +1284,20 @@ test_util_strmisc(void)
     size_t i;
     for (i = 0; i < sizeof(binary_data); ++i)
       binary_data[i] = i;
-    test_streq(hex_str(binary_data, 0), "");
-    test_streq(hex_str(binary_data, 1), "00");
-    test_streq(hex_str(binary_data, 17), "000102030405060708090A0B0C0D0E0F10");
-    test_streq(hex_str(binary_data, 32),
+    tt_str_op(hex_str(binary_data, 0),==, "");
+    tt_str_op(hex_str(binary_data, 1),==, "00");
+    tt_str_op(hex_str(binary_data, 17),==,
+              "000102030405060708090A0B0C0D0E0F10");
+    tt_str_op(hex_str(binary_data, 32),==,
                "000102030405060708090A0B0C0D0E0F"
                "101112131415161718191A1B1C1D1E1F");
-    test_streq(hex_str(binary_data, 34),
+    tt_str_op(hex_str(binary_data, 34),==,
                "000102030405060708090A0B0C0D0E0F"
                "101112131415161718191A1B1C1D1E1F");
     /* Repeat these tests for shorter strings after longer strings
        have been tried, to make sure we're correctly terminating strings */
-    test_streq(hex_str(binary_data, 1), "00");
-    test_streq(hex_str(binary_data, 0), "");
+    tt_str_op(hex_str(binary_data, 1),==, "00");
+    tt_str_op(hex_str(binary_data, 0),==, "");
   }
 
   /* Test strcmp_opt */
@@ -1297,20 +1326,21 @@ test_util_strmisc(void)
 }
 
 static void
-test_util_pow2(void)
+test_util_pow2(void *arg)
 {
   /* Test tor_log2(). */
-  test_eq(tor_log2(64), 6);
-  test_eq(tor_log2(65), 6);
-  test_eq(tor_log2(63), 5);
-  test_eq(tor_log2(0), 0); /* incorrect mathematically, but as specified */
-  test_eq(tor_log2(1), 0);
-  test_eq(tor_log2(2), 1);
-  test_eq(tor_log2(3), 1);
-  test_eq(tor_log2(4), 2);
-  test_eq(tor_log2(5), 2);
-  test_eq(tor_log2(U64_LITERAL(40000000000000000)), 55);
-  test_eq(tor_log2(UINT64_MAX), 63);
+  (void)arg;
+  tt_int_op(tor_log2(64),==, 6);
+  tt_int_op(tor_log2(65),==, 6);
+  tt_int_op(tor_log2(63),==, 5);
+  tt_int_op(tor_log2(0),==, 0);/* incorrect mathematically, but as specified */
+  tt_int_op(tor_log2(1),==, 0);
+  tt_int_op(tor_log2(2),==, 1);
+  tt_int_op(tor_log2(3),==, 1);
+  tt_int_op(tor_log2(4),==, 2);
+  tt_int_op(tor_log2(5),==, 2);
+  tt_int_op(tor_log2(U64_LITERAL(40000000000000000)),==, 55);
+  tt_int_op(tor_log2(UINT64_MAX),==, 63);
 
   /* Test round_to_power_of_2 */
   tt_u64_op(round_to_power_of_2(120), ==, 128);
@@ -1395,13 +1425,14 @@ thread_test_func_(void* _s)
 
 /** Run unit tests for threading logic. */
 static void
-test_util_threads(void)
+test_util_threads(void *arg)
 {
   char *s1 = NULL, *s2 = NULL;
   int done = 0, timedout = 0;
   time_t started;
 #ifndef _WIN32
   struct timeval tv;
+  (void)arg;
   tv.tv_sec=0;
   tv.tv_usec=100*1000;
 #endif
@@ -1442,15 +1473,15 @@ test_util_threads(void)
 
   if (timedout) {
     printf("\nTimed out: %d %d", t1_count, t2_count);
-    test_assert(strmap_get(thread_test_strmap_, "thread 1"));
-    test_assert(strmap_get(thread_test_strmap_, "thread 2"));
-    test_assert(!timedout);
+    tt_assert(strmap_get(thread_test_strmap_, "thread 1"));
+    tt_assert(strmap_get(thread_test_strmap_, "thread 2"));
+    tt_assert(!timedout);
   }
 
   /* different thread IDs. */
-  test_assert(strcmp(strmap_get(thread_test_strmap_, "thread 1"),
+  tt_assert(strcmp(strmap_get(thread_test_strmap_, "thread 1"),
                      strmap_get(thread_test_strmap_, "thread 2")));
-  test_assert(!strcmp(strmap_get(thread_test_strmap_, "thread 1"),
+  tt_assert(!strcmp(strmap_get(thread_test_strmap_, "thread 1"),
                       strmap_get(thread_test_strmap_, "last to run")) ||
               !strcmp(strmap_get(thread_test_strmap_, "thread 2"),
                       strmap_get(thread_test_strmap_, "last to run")));
@@ -1470,51 +1501,52 @@ test_util_threads(void)
 
 /** Run unit tests for compression functions */
 static void
-test_util_gzip(void)
+test_util_gzip(void *arg)
 {
   char *buf1=NULL, *buf2=NULL, *buf3=NULL, *cp1, *cp2;
   const char *ccp2;
   size_t len1, len2;
   tor_zlib_state_t *state = NULL;
 
+  (void)arg;
   buf1 = tor_strdup("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ");
-  test_assert(detect_compression_method(buf1, strlen(buf1)) == UNKNOWN_METHOD);
+  tt_assert(detect_compression_method(buf1, strlen(buf1)) == UNKNOWN_METHOD);
   if (is_gzip_supported()) {
-    test_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
+    tt_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
                                    GZIP_METHOD));
-    test_assert(buf2);
-    test_assert(len1 < strlen(buf1));
-    test_assert(detect_compression_method(buf2, len1) == GZIP_METHOD);
+    tt_assert(buf2);
+    tt_assert(len1 < strlen(buf1));
+    tt_assert(detect_compression_method(buf2, len1) == GZIP_METHOD);
 
-    test_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1,
+    tt_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1,
                                      GZIP_METHOD, 1, LOG_INFO));
-    test_assert(buf3);
-    test_eq(strlen(buf1) + 1, len2);
-    test_streq(buf1, buf3);
+    tt_assert(buf3);
+    tt_int_op(strlen(buf1) + 1,==, len2);
+    tt_str_op(buf1,==, buf3);
 
     tor_free(buf2);
     tor_free(buf3);
   }
 
-  test_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
+  tt_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
                                  ZLIB_METHOD));
-  test_assert(buf2);
-  test_assert(detect_compression_method(buf2, len1) == ZLIB_METHOD);
+  tt_assert(buf2);
+  tt_assert(detect_compression_method(buf2, len1) == ZLIB_METHOD);
 
-  test_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1,
+  tt_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1,
                                    ZLIB_METHOD, 1, LOG_INFO));
-  test_assert(buf3);
-  test_eq(strlen(buf1) + 1, len2);
-  test_streq(buf1, buf3);
+  tt_assert(buf3);
+  tt_int_op(strlen(buf1) + 1,==, len2);
+  tt_str_op(buf1,==, buf3);
 
   /* Check whether we can uncompress concatenated, compressed strings. */
   tor_free(buf3);
   buf2 = tor_reallocarray(buf2, len1, 2);
   memcpy(buf2+len1, buf2, len1);
-  test_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1*2,
+  tt_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1*2,
                                    ZLIB_METHOD, 1, LOG_INFO));
-  test_eq((strlen(buf1)+1)*2, len2);
-  test_memeq(buf3,
+  tt_int_op((strlen(buf1)+1)*2,==, len2);
+  tt_mem_op(buf3,==,
              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ\0"
              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ\0",
              (strlen(buf1)+1)*2);
@@ -1526,7 +1558,7 @@ test_util_gzip(void)
   /* Check whether we can uncompress partial strings. */
   buf1 =
     tor_strdup("String with low redundancy that won't be compressed much.");
-  test_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
+  tt_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
                                  ZLIB_METHOD));
   tt_assert(len1>16);
   /* when we allow an incomplete string, we should succeed.*/
@@ -1552,22 +1584,22 @@ test_util_gzip(void)
   len1 = 1024;
   ccp2 = "ABCDEFGHIJABCDEFGHIJ";
   len2 = 21;
-  test_assert(tor_zlib_process(state, &cp1, &len1, &ccp2, &len2, 0)
+  tt_assert(tor_zlib_process(state, &cp1, &len1, &ccp2, &len2, 0)
               == TOR_ZLIB_OK);
-  test_eq(0, len2); /* Make sure we compressed it all. */
-  test_assert(cp1 > buf1);
+  tt_int_op(0,==, len2); /* Make sure we compressed it all. */
+  tt_assert(cp1 > buf1);
 
   len2 = 0;
   cp2 = cp1;
-  test_assert(tor_zlib_process(state, &cp1, &len1, &ccp2, &len2, 1)
+  tt_assert(tor_zlib_process(state, &cp1, &len1, &ccp2, &len2, 1)
               == TOR_ZLIB_DONE);
-  test_eq(0, len2);
-  test_assert(cp1 > cp2); /* Make sure we really added something. */
+  tt_int_op(0,==, len2);
+  tt_assert(cp1 > cp2); /* Make sure we really added something. */
 
   tt_assert(!tor_gzip_uncompress(&buf3, &len2, buf1, 1024-len1,
                                   ZLIB_METHOD, 1, LOG_WARN));
-  test_streq(buf3, "ABCDEFGHIJABCDEFGHIJ"); /*Make sure it compressed right.*/
-  test_eq(21, len2);
+  tt_str_op(buf3,==,"ABCDEFGHIJABCDEFGHIJ"); /*Make sure it compressed right.*/
+  tt_int_op(21,==, len2);
 
  done:
   if (state)
@@ -1579,7 +1611,7 @@ test_util_gzip(void)
 
 /** Run unit tests for mmap() wrapper functionality. */
 static void
-test_util_mmap(void)
+test_util_mmap(void *arg)
 {
   char *fname1 = tor_strdup(get_fname("mapped_1"));
   char *fname2 = tor_strdup(get_fname("mapped_2"));
@@ -1588,25 +1620,26 @@ test_util_mmap(void)
   char *buf = tor_malloc(17000);
   tor_mmap_t *mapping = NULL;
 
+  (void)arg;
   crypto_rand(buf, buflen);
 
   mapping = tor_mmap_file(fname1);
-  test_assert(! mapping);
+  tt_assert(! mapping);
 
   write_str_to_file(fname1, "Short file.", 1);
 
   mapping = tor_mmap_file(fname1);
-  test_assert(mapping);
-  test_eq(mapping->size, strlen("Short file."));
-  test_streq(mapping->data, "Short file.");
+  tt_assert(mapping);
+  tt_int_op(mapping->size,==, strlen("Short file."));
+  tt_str_op(mapping->data,==, "Short file.");
 #ifdef _WIN32
   tt_int_op(0, ==, tor_munmap_file(mapping));
   mapping = NULL;
-  test_assert(unlink(fname1) == 0);
+  tt_assert(unlink(fname1) == 0);
 #else
   /* make sure we can unlink. */
-  test_assert(unlink(fname1) == 0);
-  test_streq(mapping->data, "Short file.");
+  tt_assert(unlink(fname1) == 0);
+  tt_str_op(mapping->data,==, "Short file.");
   tt_int_op(0, ==, tor_munmap_file(mapping));
   mapping = NULL;
 #endif
@@ -1614,29 +1647,29 @@ test_util_mmap(void)
   /* Now a zero-length file. */
   write_str_to_file(fname1, "", 1);
   mapping = tor_mmap_file(fname1);
-  test_eq_ptr(mapping, NULL);
-  test_eq(ERANGE, errno);
+  tt_ptr_op(mapping,==, NULL);
+  tt_int_op(ERANGE,==, errno);
   unlink(fname1);
 
   /* Make sure that we fail to map a no-longer-existent file. */
   mapping = tor_mmap_file(fname1);
-  test_assert(! mapping);
+  tt_assert(! mapping);
 
   /* Now try a big file that stretches across a few pages and isn't aligned */
   write_bytes_to_file(fname2, buf, buflen, 1);
   mapping = tor_mmap_file(fname2);
-  test_assert(mapping);
-  test_eq(mapping->size, buflen);
-  test_memeq(mapping->data, buf, buflen);
+  tt_assert(mapping);
+  tt_int_op(mapping->size,==, buflen);
+  tt_mem_op(mapping->data,==, buf, buflen);
   tt_int_op(0, ==, tor_munmap_file(mapping));
   mapping = NULL;
 
   /* Now try a big aligned file. */
   write_bytes_to_file(fname3, buf, 16384, 1);
   mapping = tor_mmap_file(fname3);
-  test_assert(mapping);
-  test_eq(mapping->size, 16384);
-  test_memeq(mapping->data, buf, 16384);
+  tt_assert(mapping);
+  tt_int_op(mapping->size,==, 16384);
+  tt_mem_op(mapping->data,==, buf, 16384);
   tt_int_op(0, ==, tor_munmap_file(mapping));
   mapping = NULL;
 
@@ -1655,17 +1688,18 @@ test_util_mmap(void)
 
 /** Run unit tests for escaping/unescaping data for use by controllers. */
 static void
-test_util_control_formats(void)
+test_util_control_formats(void *arg)
 {
   char *out = NULL;
   const char *inp =
     "..This is a test\r\n.of the emergency \n..system.\r\n\rZ.\r\n";
   size_t sz;
 
+  (void)arg;
   sz = read_escaped_data(inp, strlen(inp), &out);
-  test_streq(out,
+  tt_str_op(out,==,
              ".This is a test\nof the emergency \n.system.\n\rZ.\n");
-  test_eq(sz, strlen(out));
+  tt_int_op(sz,==, strlen(out));
 
  done:
   tor_free(out);
@@ -1685,7 +1719,7 @@ test_util_control_formats(void)
   } while (0)
 
 static void
-test_util_sscanf(void)
+test_util_sscanf(void *arg)
 {
   unsigned u1, u2, u3;
   unsigned long ulng;
@@ -1696,326 +1730,335 @@ test_util_sscanf(void)
   double d1,d2,d3,d4;
 
   /* Simple tests (malformed patterns, literal matching, ...) */
-  test_eq(-1, tor_sscanf("123", "%i", &r)); /* %i is not supported */
-  test_eq(-1, tor_sscanf("wrong", "%5c", s1)); /* %c cannot have a number. */
-  test_eq(-1, tor_sscanf("hello", "%s", s1)); /* %s needs a number. */
-  test_eq(-1, tor_sscanf("prettylongstring", "%999999s", s1));
+  (void)arg;
+  tt_int_op(-1,==, tor_sscanf("123", "%i", &r)); /* %i is not supported */
+  tt_int_op(-1,==,
+            tor_sscanf("wrong", "%5c", s1)); /* %c cannot have a number. */
+  tt_int_op(-1,==, tor_sscanf("hello", "%s", s1)); /* %s needs a number. */
+  tt_int_op(-1,==, tor_sscanf("prettylongstring", "%999999s", s1));
 #if 0
   /* GCC thinks these two are illegal. */
   test_eq(-1, tor_sscanf("prettylongstring", "%0s", s1));
   test_eq(0, tor_sscanf("prettylongstring", "%10s", NULL));
 #endif
   /* No '%'-strings: always "success" */
-  test_eq(0, tor_sscanf("hello world", "hello world"));
-  test_eq(0, tor_sscanf("hello world", "good bye"));
+  tt_int_op(0,==, tor_sscanf("hello world", "hello world"));
+  tt_int_op(0,==, tor_sscanf("hello world", "good bye"));
   /* Excess data */
-  test_eq(0, tor_sscanf("hello 3", "%u", &u1));  /* have to match the start */
-  test_eq(0, tor_sscanf(" 3 hello", "%u", &u1));
-  test_eq(0, tor_sscanf(" 3 hello", "%2u", &u1)); /* not even in this case */
-  test_eq(1, tor_sscanf("3 hello", "%u", &u1));  /* but trailing is alright */
+  tt_int_op(0,==,
+            tor_sscanf("hello 3", "%u", &u1));  /* have to match the start */
+  tt_int_op(0,==, tor_sscanf(" 3 hello", "%u", &u1));
+  tt_int_op(0,==,
+            tor_sscanf(" 3 hello", "%2u", &u1)); /* not even in this case */
+  tt_int_op(1,==,
+            tor_sscanf("3 hello", "%u", &u1));  /* but trailing is alright */
 
   /* Numbers (ie. %u) */
-  test_eq(0, tor_sscanf("hello world 3", "hello worlb %u", &u1)); /* d vs b */
-  test_eq(1, tor_sscanf("12345", "%u", &u1));
-  test_eq(12345u, u1);
-  test_eq(1, tor_sscanf("12346 ", "%u", &u1));
-  test_eq(12346u, u1);
-  test_eq(0, tor_sscanf(" 12347", "%u", &u1));
-  test_eq(1, tor_sscanf(" 12348", " %u", &u1));
-  test_eq(12348u, u1);
-  test_eq(1, tor_sscanf("0", "%u", &u1));
-  test_eq(0u, u1);
-  test_eq(1, tor_sscanf("0000", "%u", &u2));
-  test_eq(0u, u2);
-  test_eq(0, tor_sscanf("", "%u", &u1)); /* absent number */
-  test_eq(0, tor_sscanf("A", "%u", &u1)); /* bogus number */
-  test_eq(0, tor_sscanf("-1", "%u", &u1)); /* negative number */
+  tt_int_op(0,==,
+            tor_sscanf("hello world 3", "hello worlb %u", &u1)); /* d vs b */
+  tt_int_op(1,==, tor_sscanf("12345", "%u", &u1));
+  tt_int_op(12345u,==, u1);
+  tt_int_op(1,==, tor_sscanf("12346 ", "%u", &u1));
+  tt_int_op(12346u,==, u1);
+  tt_int_op(0,==, tor_sscanf(" 12347", "%u", &u1));
+  tt_int_op(1,==, tor_sscanf(" 12348", " %u", &u1));
+  tt_int_op(12348u,==, u1);
+  tt_int_op(1,==, tor_sscanf("0", "%u", &u1));
+  tt_int_op(0u,==, u1);
+  tt_int_op(1,==, tor_sscanf("0000", "%u", &u2));
+  tt_int_op(0u,==, u2);
+  tt_int_op(0,==, tor_sscanf("", "%u", &u1)); /* absent number */
+  tt_int_op(0,==, tor_sscanf("A", "%u", &u1)); /* bogus number */
+  tt_int_op(0,==, tor_sscanf("-1", "%u", &u1)); /* negative number */
 
   /* Numbers with size (eg. %2u) */
-  test_eq(0, tor_sscanf("-1", "%2u", &u1));
-  test_eq(2, tor_sscanf("123456", "%2u%u", &u1, &u2));
-  test_eq(12u, u1);
-  test_eq(3456u, u2);
-  test_eq(1, tor_sscanf("123456", "%8u", &u1));
-  test_eq(123456u, u1);
-  test_eq(1, tor_sscanf("123457  ", "%8u", &u1));
-  test_eq(123457u, u1);
-  test_eq(0, tor_sscanf("  123456", "%8u", &u1));
-  test_eq(3, tor_sscanf("!12:3:456", "!%2u:%2u:%3u", &u1, &u2, &u3));
-  test_eq(12u, u1);
-  test_eq(3u, u2);
-  test_eq(456u, u3);
-  test_eq(3, tor_sscanf("67:8:099", "%2u:%2u:%3u", &u1, &u2, &u3)); /* 0s */
-  test_eq(67u, u1);
-  test_eq(8u, u2);
-  test_eq(99u, u3);
+  tt_int_op(0,==, tor_sscanf("-1", "%2u", &u1));
+  tt_int_op(2,==, tor_sscanf("123456", "%2u%u", &u1, &u2));
+  tt_int_op(12u,==, u1);
+  tt_int_op(3456u,==, u2);
+  tt_int_op(1,==, tor_sscanf("123456", "%8u", &u1));
+  tt_int_op(123456u,==, u1);
+  tt_int_op(1,==, tor_sscanf("123457  ", "%8u", &u1));
+  tt_int_op(123457u,==, u1);
+  tt_int_op(0,==, tor_sscanf("  123456", "%8u", &u1));
+  tt_int_op(3,==, tor_sscanf("!12:3:456", "!%2u:%2u:%3u", &u1, &u2, &u3));
+  tt_int_op(12u,==, u1);
+  tt_int_op(3u,==, u2);
+  tt_int_op(456u,==, u3);
+  tt_int_op(3,==,
+            tor_sscanf("67:8:099", "%2u:%2u:%3u", &u1, &u2, &u3)); /* 0s */
+  tt_int_op(67u,==, u1);
+  tt_int_op(8u,==, u2);
+  tt_int_op(99u,==, u3);
   /* %u does not match space.*/
-  test_eq(2, tor_sscanf("12:3: 45", "%2u:%2u:%3u", &u1, &u2, &u3));
-  test_eq(12u, u1);
-  test_eq(3u, u2);
+  tt_int_op(2,==, tor_sscanf("12:3: 45", "%2u:%2u:%3u", &u1, &u2, &u3));
+  tt_int_op(12u,==, u1);
+  tt_int_op(3u,==, u2);
   /* %u does not match negative numbers. */
-  test_eq(2, tor_sscanf("67:8:-9", "%2u:%2u:%3u", &u1, &u2, &u3));
-  test_eq(67u, u1);
-  test_eq(8u, u2);
+  tt_int_op(2,==, tor_sscanf("67:8:-9", "%2u:%2u:%3u", &u1, &u2, &u3));
+  tt_int_op(67u,==, u1);
+  tt_int_op(8u,==, u2);
   /* Arbitrary amounts of 0-padding are okay */
-  test_eq(3, tor_sscanf("12:03:000000000000000099", "%2u:%2u:%u",
+  tt_int_op(3,==, tor_sscanf("12:03:000000000000000099", "%2u:%2u:%u",
                         &u1, &u2, &u3));
-  test_eq(12u, u1);
-  test_eq(3u, u2);
-  test_eq(99u, u3);
+  tt_int_op(12u,==, u1);
+  tt_int_op(3u,==, u2);
+  tt_int_op(99u,==, u3);
 
   /* Hex (ie. %x) */
-  test_eq(3, tor_sscanf("1234 02aBcdEf ff", "%x %x %x", &u1, &u2, &u3));
-  test_eq(0x1234, u1);
-  test_eq(0x2ABCDEF, u2);
-  test_eq(0xFF, u3);
+  tt_int_op(3,==, tor_sscanf("1234 02aBcdEf ff", "%x %x %x", &u1, &u2, &u3));
+  tt_int_op(0x1234,==, u1);
+  tt_int_op(0x2ABCDEF,==, u2);
+  tt_int_op(0xFF,==, u3);
   /* Width works on %x */
-  test_eq(3, tor_sscanf("f00dcafe444", "%4x%4x%u", &u1, &u2, &u3));
-  test_eq(0xf00d, u1);
-  test_eq(0xcafe, u2);
-  test_eq(444, u3);
+  tt_int_op(3,==, tor_sscanf("f00dcafe444", "%4x%4x%u", &u1, &u2, &u3));
+  tt_int_op(0xf00d,==, u1);
+  tt_int_op(0xcafe,==, u2);
+  tt_int_op(444,==, u3);
 
   /* Literal '%' (ie. '%%') */
-  test_eq(1, tor_sscanf("99% fresh", "%3u%% fresh", &u1));
-  test_eq(99, u1);
-  test_eq(0, tor_sscanf("99 fresh", "%% %3u %s", &u1, s1));
-  test_eq(1, tor_sscanf("99 fresh", "%3u%% %s", &u1, s1));
-  test_eq(2, tor_sscanf("99 fresh", "%3u %5s %%", &u1, s1));
-  test_eq(99, u1);
-  test_streq(s1, "fresh");
-  test_eq(1, tor_sscanf("% boo", "%% %3s", s1));
-  test_streq("boo", s1);
+  tt_int_op(1,==, tor_sscanf("99% fresh", "%3u%% fresh", &u1));
+  tt_int_op(99,==, u1);
+  tt_int_op(0,==, tor_sscanf("99 fresh", "%% %3u %s", &u1, s1));
+  tt_int_op(1,==, tor_sscanf("99 fresh", "%3u%% %s", &u1, s1));
+  tt_int_op(2,==, tor_sscanf("99 fresh", "%3u %5s %%", &u1, s1));
+  tt_int_op(99,==, u1);
+  tt_str_op(s1,==, "fresh");
+  tt_int_op(1,==, tor_sscanf("% boo", "%% %3s", s1));
+  tt_str_op("boo",==, s1);
 
   /* Strings (ie. %s) */
-  test_eq(2, tor_sscanf("hello", "%3s%7s", s1, s2));
-  test_streq(s1, "hel");
-  test_streq(s2, "lo");
-  test_eq(2, tor_sscanf("WD40", "%2s%u", s3, &u1)); /* %s%u */
-  test_streq(s3, "WD");
-  test_eq(40, u1);
-  test_eq(2, tor_sscanf("WD40", "%3s%u", s3, &u1)); /* %s%u */
-  test_streq(s3, "WD4");
-  test_eq(0, u1);
-  test_eq(2, tor_sscanf("76trombones", "%6u%9s", &u1, s1)); /* %u%s */
-  test_eq(76, u1);
-  test_streq(s1, "trombones");
-  test_eq(1, tor_sscanf("prettylongstring", "%999s", s1));
-  test_streq(s1, "prettylongstring");
+  tt_int_op(2,==, tor_sscanf("hello", "%3s%7s", s1, s2));
+  tt_str_op(s1,==, "hel");
+  tt_str_op(s2,==, "lo");
+  tt_int_op(2,==, tor_sscanf("WD40", "%2s%u", s3, &u1)); /* %s%u */
+  tt_str_op(s3,==, "WD");
+  tt_int_op(40,==, u1);
+  tt_int_op(2,==, tor_sscanf("WD40", "%3s%u", s3, &u1)); /* %s%u */
+  tt_str_op(s3,==, "WD4");
+  tt_int_op(0,==, u1);
+  tt_int_op(2,==, tor_sscanf("76trombones", "%6u%9s", &u1, s1)); /* %u%s */
+  tt_int_op(76,==, u1);
+  tt_str_op(s1,==, "trombones");
+  tt_int_op(1,==, tor_sscanf("prettylongstring", "%999s", s1));
+  tt_str_op(s1,==, "prettylongstring");
   /* %s doesn't eat spaces */
-  test_eq(2, tor_sscanf("hello world", "%9s %9s", s1, s2));
-  test_streq(s1, "hello");
-  test_streq(s2, "world");
-  test_eq(2, tor_sscanf("bye   world?", "%9s %9s", s1, s2));
-  test_streq(s1, "bye");
-  test_streq(s2, "");
-  test_eq(3, tor_sscanf("hi", "%9s%9s%3s", s1, s2, s3)); /* %s can be empty. */
-  test_streq(s1, "hi");
-  test_streq(s2, "");
-  test_streq(s3, "");
+  tt_int_op(2,==, tor_sscanf("hello world", "%9s %9s", s1, s2));
+  tt_str_op(s1,==, "hello");
+  tt_str_op(s2,==, "world");
+  tt_int_op(2,==, tor_sscanf("bye   world?", "%9s %9s", s1, s2));
+  tt_str_op(s1,==, "bye");
+  tt_str_op(s2,==, "");
+  tt_int_op(3,==,
+            tor_sscanf("hi", "%9s%9s%3s", s1, s2, s3)); /* %s can be empty. */
+  tt_str_op(s1,==, "hi");
+  tt_str_op(s2,==, "");
+  tt_str_op(s3,==, "");
 
-  test_eq(3, tor_sscanf("1.2.3", "%u.%u.%u%c", &u1, &u2, &u3, &ch));
-  test_eq(4, tor_sscanf("1.2.3 foobar", "%u.%u.%u%c", &u1, &u2, &u3, &ch));
-  test_eq(' ', ch);
+  tt_int_op(3,==, tor_sscanf("1.2.3", "%u.%u.%u%c", &u1, &u2, &u3, &ch));
+  tt_int_op(4,==,
+            tor_sscanf("1.2.3 foobar", "%u.%u.%u%c", &u1, &u2, &u3, &ch));
+  tt_int_op(' ',==, ch);
 
   r = tor_sscanf("12345 -67890 -1", "%d %ld %d", &int1, &lng1, &int2);
-  test_eq(r,3);
-  test_eq(int1, 12345);
-  test_eq(lng1, -67890);
-  test_eq(int2, -1);
+  tt_int_op(r,==, 3);
+  tt_int_op(int1,==, 12345);
+  tt_int_op(lng1,==, -67890);
+  tt_int_op(int2,==, -1);
 
 #if SIZEOF_INT == 4
   /* %u */
   /* UINT32_MAX should work */
-  test_eq(1, tor_sscanf("4294967295", "%u", &u1));
-  test_eq(4294967295U, u1);
+  tt_int_op(1,==, tor_sscanf("4294967295", "%u", &u1));
+  tt_int_op(4294967295U,==, u1);
 
   /* But UINT32_MAX + 1 shouldn't work */
-  test_eq(0, tor_sscanf("4294967296", "%u", &u1));
+  tt_int_op(0,==, tor_sscanf("4294967296", "%u", &u1));
   /* but parsing only 9... */
-  test_eq(1, tor_sscanf("4294967296", "%9u", &u1));
-  test_eq(429496729U, u1);
+  tt_int_op(1,==, tor_sscanf("4294967296", "%9u", &u1));
+  tt_int_op(429496729U,==, u1);
 
   /* %x */
   /* UINT32_MAX should work */
-  test_eq(1, tor_sscanf("FFFFFFFF", "%x", &u1));
-  test_eq(0xFFFFFFFF, u1);
+  tt_int_op(1,==, tor_sscanf("FFFFFFFF", "%x", &u1));
+  tt_int_op(0xFFFFFFFF,==, u1);
 
   /* But UINT32_MAX + 1 shouldn't work */
-  test_eq(0, tor_sscanf("100000000", "%x", &u1));
+  tt_int_op(0,==, tor_sscanf("100000000", "%x", &u1));
 
   /* %d */
   /* INT32_MIN and INT32_MAX should work */
   r = tor_sscanf("-2147483648. 2147483647.", "%d. %d.", &int1, &int2);
-  test_eq(r,2);
-  test_eq(int1, -2147483647 - 1);
-  test_eq(int2, 2147483647);
+  tt_int_op(r,==, 2);
+  tt_int_op(int1,==, -2147483647 - 1);
+  tt_int_op(int2,==, 2147483647);
 
   /* But INT32_MIN - 1 and INT32_MAX + 1 shouldn't work */
   r = tor_sscanf("-2147483649.", "%d.", &int1);
-  test_eq(r,0);
+  tt_int_op(r,==, 0);
 
   r = tor_sscanf("2147483648.", "%d.", &int1);
-  test_eq(r,0);
+  tt_int_op(r,==, 0);
 
   /* and the first failure stops further processing */
   r = tor_sscanf("-2147483648. 2147483648.",
                  "%d. %d.", &int1, &int2);
-  test_eq(r,1);
+  tt_int_op(r,==, 1);
 
   r = tor_sscanf("-2147483649. 2147483647.",
                  "%d. %d.", &int1, &int2);
-  test_eq(r,0);
+  tt_int_op(r,==, 0);
 
   r = tor_sscanf("2147483648. -2147483649.",
                  "%d. %d.", &int1, &int2);
-  test_eq(r,0);
+  tt_int_op(r,==, 0);
 #elif SIZEOF_INT == 8
   /* %u */
   /* UINT64_MAX should work */
-  test_eq(1, tor_sscanf("18446744073709551615", "%u", &u1));
-  test_eq(18446744073709551615U, u1);
+  tt_int_op(1,==, tor_sscanf("18446744073709551615", "%u", &u1));
+  tt_int_op(18446744073709551615U,==, u1);
 
   /* But UINT64_MAX + 1 shouldn't work */
-  test_eq(0, tor_sscanf("18446744073709551616", "%u", &u1));
+  tt_int_op(0,==, tor_sscanf("18446744073709551616", "%u", &u1));
   /* but parsing only 19... */
-  test_eq(1, tor_sscanf("18446744073709551616", "%19u", &u1));
-  test_eq(1844674407370955161U, u1);
+  tt_int_op(1,==, tor_sscanf("18446744073709551616", "%19u", &u1));
+  tt_int_op(1844674407370955161U,==, u1);
 
   /* %x */
   /* UINT64_MAX should work */
-  test_eq(1, tor_sscanf("FFFFFFFFFFFFFFFF", "%x", &u1));
-  test_eq(0xFFFFFFFFFFFFFFFF, u1);
+  tt_int_op(1,==, tor_sscanf("FFFFFFFFFFFFFFFF", "%x", &u1));
+  tt_int_op(0xFFFFFFFFFFFFFFFF,==, u1);
 
   /* But UINT64_MAX + 1 shouldn't work */
-  test_eq(0, tor_sscanf("10000000000000000", "%x", &u1));
+  tt_int_op(0,==, tor_sscanf("10000000000000000", "%x", &u1));
 
   /* %d */
   /* INT64_MIN and INT64_MAX should work */
   r = tor_sscanf("-9223372036854775808. 9223372036854775807.",
                  "%d. %d.", &int1, &int2);
-  test_eq(r,2);
-  test_eq(int1, -9223372036854775807 - 1);
-  test_eq(int2, 9223372036854775807);
+  tt_int_op(r,==, 2);
+  tt_int_op(int1,==, -9223372036854775807 - 1);
+  tt_int_op(int2,==, 9223372036854775807);
 
   /* But INT64_MIN - 1 and INT64_MAX + 1 shouldn't work */
   r = tor_sscanf("-9223372036854775809.", "%d.", &int1);
-  test_eq(r,0);
+  tt_int_op(r,==, 0);
 
   r = tor_sscanf("9223372036854775808.", "%d.", &int1);
-  test_eq(r,0);
+  tt_int_op(r,==, 0);
 
   /* and the first failure stops further processing */
   r = tor_sscanf("-9223372036854775808. 9223372036854775808.",
                  "%d. %d.", &int1, &int2);
-  test_eq(r,1);
+  tt_int_op(r,==, 1);
 
   r = tor_sscanf("-9223372036854775809. 9223372036854775807.",
                  "%d. %d.", &int1, &int2);
-  test_eq(r,0);
+  tt_int_op(r,==, 0);
 
   r = tor_sscanf("9223372036854775808. -9223372036854775809.",
                  "%d. %d.", &int1, &int2);
-  test_eq(r,0);
+  tt_int_op(r,==, 0);
 #endif
 
 #if SIZEOF_LONG == 4
   /* %lu */
   /* UINT32_MAX should work */
-  test_eq(1, tor_sscanf("4294967295", "%lu", &ulng));
-  test_eq(4294967295UL, ulng);
+  tt_int_op(1,==, tor_sscanf("4294967295", "%lu", &ulng));
+  tt_int_op(4294967295UL,==, ulng);
 
   /* But UINT32_MAX + 1 shouldn't work */
-  test_eq(0, tor_sscanf("4294967296", "%lu", &ulng));
+  tt_int_op(0,==, tor_sscanf("4294967296", "%lu", &ulng));
   /* but parsing only 9... */
-  test_eq(1, tor_sscanf("4294967296", "%9lu", &ulng));
-  test_eq(429496729UL, ulng);
+  tt_int_op(1,==, tor_sscanf("4294967296", "%9lu", &ulng));
+  tt_int_op(429496729UL,==, ulng);
 
   /* %lx */
   /* UINT32_MAX should work */
-  test_eq(1, tor_sscanf("FFFFFFFF", "%lx", &ulng));
-  test_eq(0xFFFFFFFFUL, ulng);
+  tt_int_op(1,==, tor_sscanf("FFFFFFFF", "%lx", &ulng));
+  tt_int_op(0xFFFFFFFFUL,==, ulng);
 
   /* But UINT32_MAX + 1 shouldn't work */
-  test_eq(0, tor_sscanf("100000000", "%lx", &ulng));
+  tt_int_op(0,==, tor_sscanf("100000000", "%lx", &ulng));
 
   /* %ld */
   /* INT32_MIN and INT32_MAX should work */
   r = tor_sscanf("-2147483648. 2147483647.", "%ld. %ld.", &lng1, &lng2);
-  test_eq(r,2);
-  test_eq(lng1, -2147483647L - 1L);
-  test_eq(lng2, 2147483647L);
+  tt_int_op(r,==, 2);
+  tt_int_op(lng1,==, -2147483647L - 1L);
+  tt_int_op(lng2,==, 2147483647L);
 
   /* But INT32_MIN - 1 and INT32_MAX + 1 shouldn't work */
   r = tor_sscanf("-2147483649.", "%ld.", &lng1);
-  test_eq(r,0);
+  tt_int_op(r,==, 0);
 
   r = tor_sscanf("2147483648.", "%ld.", &lng1);
-  test_eq(r,0);
+  tt_int_op(r,==, 0);
 
   /* and the first failure stops further processing */
   r = tor_sscanf("-2147483648. 2147483648.",
                  "%ld. %ld.", &lng1, &lng2);
-  test_eq(r,1);
+  tt_int_op(r,==, 1);
 
   r = tor_sscanf("-2147483649. 2147483647.",
                  "%ld. %ld.", &lng1, &lng2);
-  test_eq(r,0);
+  tt_int_op(r,==, 0);
 
   r = tor_sscanf("2147483648. -2147483649.",
                  "%ld. %ld.", &lng1, &lng2);
-  test_eq(r,0);
+  tt_int_op(r,==, 0);
 #elif SIZEOF_LONG == 8
   /* %lu */
   /* UINT64_MAX should work */
-  test_eq(1, tor_sscanf("18446744073709551615", "%lu", &ulng));
-  test_eq(18446744073709551615UL, ulng);
+  tt_int_op(1,==, tor_sscanf("18446744073709551615", "%lu", &ulng));
+  tt_int_op(18446744073709551615UL,==, ulng);
 
   /* But UINT64_MAX + 1 shouldn't work */
-  test_eq(0, tor_sscanf("18446744073709551616", "%lu", &ulng));
+  tt_int_op(0,==, tor_sscanf("18446744073709551616", "%lu", &ulng));
   /* but parsing only 19... */
-  test_eq(1, tor_sscanf("18446744073709551616", "%19lu", &ulng));
-  test_eq(1844674407370955161UL, ulng);
+  tt_int_op(1,==, tor_sscanf("18446744073709551616", "%19lu", &ulng));
+  tt_int_op(1844674407370955161UL,==, ulng);
 
   /* %lx */
   /* UINT64_MAX should work */
-  test_eq(1, tor_sscanf("FFFFFFFFFFFFFFFF", "%lx", &ulng));
-  test_eq(0xFFFFFFFFFFFFFFFFUL, ulng);
+  tt_int_op(1,==, tor_sscanf("FFFFFFFFFFFFFFFF", "%lx", &ulng));
+  tt_int_op(0xFFFFFFFFFFFFFFFFUL,==, ulng);
 
   /* But UINT64_MAX + 1 shouldn't work */
-  test_eq(0, tor_sscanf("10000000000000000", "%lx", &ulng));
+  tt_int_op(0,==, tor_sscanf("10000000000000000", "%lx", &ulng));
 
   /* %ld */
   /* INT64_MIN and INT64_MAX should work */
   r = tor_sscanf("-9223372036854775808. 9223372036854775807.",
                  "%ld. %ld.", &lng1, &lng2);
-  test_eq(r,2);
-  test_eq(lng1, -9223372036854775807L - 1L);
-  test_eq(lng2, 9223372036854775807L);
+  tt_int_op(r,==, 2);
+  tt_int_op(lng1,==, -9223372036854775807L - 1L);
+  tt_int_op(lng2,==, 9223372036854775807L);
 
   /* But INT64_MIN - 1 and INT64_MAX + 1 shouldn't work */
   r = tor_sscanf("-9223372036854775809.", "%ld.", &lng1);
-  test_eq(r,0);
+  tt_int_op(r,==, 0);
 
   r = tor_sscanf("9223372036854775808.", "%ld.", &lng1);
-  test_eq(r,0);
+  tt_int_op(r,==, 0);
 
   /* and the first failure stops further processing */
   r = tor_sscanf("-9223372036854775808. 9223372036854775808.",
                  "%ld. %ld.", &lng1, &lng2);
-  test_eq(r,1);
+  tt_int_op(r,==, 1);
 
   r = tor_sscanf("-9223372036854775809. 9223372036854775807.",
                  "%ld. %ld.", &lng1, &lng2);
-  test_eq(r,0);
+  tt_int_op(r,==, 0);
 
   r = tor_sscanf("9223372036854775808. -9223372036854775809.",
                  "%ld. %ld.", &lng1, &lng2);
-  test_eq(r,0);
+  tt_int_op(r,==, 0);
 #endif
 
   r = tor_sscanf("123.456 .000007 -900123123.2000787 00003.2",
                  "%lf %lf %lf %lf", &d1,&d2,&d3,&d4);
-  test_eq(r,4);
+  tt_int_op(r,==, 4);
   test_feq(d1, 123.456);
   test_feq(d2, .000007);
   test_feq(d3, -900123123.2000787);
@@ -2026,33 +2069,34 @@ test_util_sscanf(void)
 }
 
 static void
-test_util_path_is_relative(void)
+test_util_path_is_relative(void *arg)
 {
   /* OS-independent tests */
-  test_eq(1, path_is_relative(""));
-  test_eq(1, path_is_relative("dir"));
-  test_eq(1, path_is_relative("dir/"));
-  test_eq(1, path_is_relative("./dir"));
-  test_eq(1, path_is_relative("../dir"));
+  (void)arg;
+  tt_int_op(1,==, path_is_relative(""));
+  tt_int_op(1,==, path_is_relative("dir"));
+  tt_int_op(1,==, path_is_relative("dir/"));
+  tt_int_op(1,==, path_is_relative("./dir"));
+  tt_int_op(1,==, path_is_relative("../dir"));
 
-  test_eq(0, path_is_relative("/"));
-  test_eq(0, path_is_relative("/dir"));
-  test_eq(0, path_is_relative("/dir/"));
+  tt_int_op(0,==, path_is_relative("/"));
+  tt_int_op(0,==, path_is_relative("/dir"));
+  tt_int_op(0,==, path_is_relative("/dir/"));
 
   /* Windows */
 #ifdef _WIN32
   /* I don't have Windows so I can't test this, hence the "#ifdef
      0". These are tests that look useful, so please try to get them
      running and uncomment if it all works as it should */
-  test_eq(1, path_is_relative("dir"));
-  test_eq(1, path_is_relative("dir\\"));
-  test_eq(1, path_is_relative("dir\\a:"));
-  test_eq(1, path_is_relative("dir\\a:\\"));
-  test_eq(1, path_is_relative("http:\\dir"));
+  tt_int_op(1,==, path_is_relative("dir"));
+  tt_int_op(1,==, path_is_relative("dir\\"));
+  tt_int_op(1,==, path_is_relative("dir\\a:"));
+  tt_int_op(1,==, path_is_relative("dir\\a:\\"));
+  tt_int_op(1,==, path_is_relative("http:\\dir"));
 
-  test_eq(0, path_is_relative("\\dir"));
-  test_eq(0, path_is_relative("a:\\dir"));
-  test_eq(0, path_is_relative("z:\\dir"));
+  tt_int_op(0,==, path_is_relative("\\dir"));
+  tt_int_op(0,==, path_is_relative("a:\\dir"));
+  tt_int_op(0,==, path_is_relative("z:\\dir"));
 #endif
 
  done:
@@ -2063,25 +2107,26 @@ test_util_path_is_relative(void)
 
 /** Run unittests for memory pool allocator */
 static void
-test_util_mempool(void)
+test_util_mempool(void *arg)
 {
   mp_pool_t *pool = NULL;
   smartlist_t *allocated = NULL;
   int i;
 
+  (void)arg;
   pool = mp_pool_new(1, 100);
-  test_assert(pool);
-  test_assert(pool->new_chunk_capacity >= 100);
-  test_assert(pool->item_alloc_size >= sizeof(void*)+1);
+  tt_assert(pool);
+  tt_assert(pool->new_chunk_capacity >= 100);
+  tt_assert(pool->item_alloc_size >= sizeof(void*)+1);
   mp_pool_destroy(pool);
   pool = NULL;
 
   pool = mp_pool_new(241, 2500);
-  test_assert(pool);
-  test_assert(pool->new_chunk_capacity >= 10);
-  test_assert(pool->item_alloc_size >= sizeof(void*)+241);
-  test_eq(pool->item_alloc_size & 0x03, 0);
-  test_assert(pool->new_chunk_capacity < 60);
+  tt_assert(pool);
+  tt_assert(pool->new_chunk_capacity >= 10);
+  tt_assert(pool->item_alloc_size >= sizeof(void*)+241);
+  tt_int_op(pool->item_alloc_size & 0x03,==, 0);
+  tt_assert(pool->new_chunk_capacity < 60);
 
   allocated = smartlist_new();
   for (i = 0; i < 20000; ++i) {
@@ -2123,39 +2168,40 @@ test_util_mempool(void)
 
 /** Run unittests for memory area allocator */
 static void
-test_util_memarea(void)
+test_util_memarea(void *arg)
 {
   memarea_t *area = memarea_new();
   char *p1, *p2, *p3, *p1_orig;
   void *malloced_ptr = NULL;
   int i;
 
-  test_assert(area);
+  (void)arg;
+  tt_assert(area);
 
   p1_orig = p1 = memarea_alloc(area,64);
   p2 = memarea_alloc_zero(area,52);
   p3 = memarea_alloc(area,11);
 
-  test_assert(memarea_owns_ptr(area, p1));
-  test_assert(memarea_owns_ptr(area, p2));
-  test_assert(memarea_owns_ptr(area, p3));
+  tt_assert(memarea_owns_ptr(area, p1));
+  tt_assert(memarea_owns_ptr(area, p2));
+  tt_assert(memarea_owns_ptr(area, p3));
   /* Make sure we left enough space. */
-  test_assert(p1+64 <= p2);
-  test_assert(p2+52 <= p3);
+  tt_assert(p1+64 <= p2);
+  tt_assert(p2+52 <= p3);
   /* Make sure we aligned. */
-  test_eq(((uintptr_t)p1) % sizeof(void*), 0);
-  test_eq(((uintptr_t)p2) % sizeof(void*), 0);
-  test_eq(((uintptr_t)p3) % sizeof(void*), 0);
-  test_assert(!memarea_owns_ptr(area, p3+8192));
-  test_assert(!memarea_owns_ptr(area, p3+30));
-  test_assert(tor_mem_is_zero(p2, 52));
+  tt_int_op(((uintptr_t)p1) % sizeof(void*),==, 0);
+  tt_int_op(((uintptr_t)p2) % sizeof(void*),==, 0);
+  tt_int_op(((uintptr_t)p3) % sizeof(void*),==, 0);
+  tt_assert(!memarea_owns_ptr(area, p3+8192));
+  tt_assert(!memarea_owns_ptr(area, p3+30));
+  tt_assert(tor_mem_is_zero(p2, 52));
   /* Make sure we don't overalign. */
   p1 = memarea_alloc(area, 1);
   p2 = memarea_alloc(area, 1);
-  test_eq_ptr(p1+sizeof(void*), p2);
+  tt_ptr_op(p1+sizeof(void*),==, p2);
   {
     malloced_ptr = tor_malloc(64);
-    test_assert(!memarea_owns_ptr(area, malloced_ptr));
+    tt_assert(!memarea_owns_ptr(area, malloced_ptr));
     tor_free(malloced_ptr);
   }
 
@@ -2164,18 +2210,18 @@ test_util_memarea(void)
     malloced_ptr = tor_malloc(64);
     crypto_rand((char*)malloced_ptr, 64);
     p1 = memarea_memdup(area, malloced_ptr, 64);
-    test_assert(p1 != malloced_ptr);
-    test_memeq(p1, malloced_ptr, 64);
+    tt_assert(p1 != malloced_ptr);
+    tt_mem_op(p1,==, malloced_ptr, 64);
     tor_free(malloced_ptr);
   }
 
   /* memarea_strdup. */
   p1 = memarea_strdup(area,"");
   p2 = memarea_strdup(area, "abcd");
-  test_assert(p1);
-  test_assert(p2);
-  test_streq(p1, "");
-  test_streq(p2, "abcd");
+  tt_assert(p1);
+  tt_assert(p2);
+  tt_str_op(p1,==, "");
+  tt_str_op(p2,==, "abcd");
 
   /* memarea_strndup. */
   {
@@ -2184,33 +2230,33 @@ test_util_memarea(void)
     size_t len = strlen(s);
     p1 = memarea_strndup(area, s, 1000);
     p2 = memarea_strndup(area, s, 10);
-    test_streq(p1, s);
-    test_assert(p2 >= p1 + len + 1);
-    test_memeq(s, p2, 10);
-    test_eq(p2[10], '\0');
+    tt_str_op(p1,==, s);
+    tt_assert(p2 >= p1 + len + 1);
+    tt_mem_op(s,==, p2, 10);
+    tt_int_op(p2[10],==, '\0');
     p3 = memarea_strndup(area, s, len);
-    test_streq(p3, s);
+    tt_str_op(p3,==, s);
     p3 = memarea_strndup(area, s, len-1);
-    test_memeq(s, p3, len-1);
-    test_eq(p3[len-1], '\0');
+    tt_mem_op(s,==, p3, len-1);
+    tt_int_op(p3[len-1],==, '\0');
   }
 
   memarea_clear(area);
   p1 = memarea_alloc(area, 1);
-  test_eq_ptr(p1, p1_orig);
+  tt_ptr_op(p1,==, p1_orig);
   memarea_clear(area);
 
   /* Check for running over an area's size. */
   for (i = 0; i < 512; ++i) {
     p1 = memarea_alloc(area, crypto_rand_int(5)+1);
-    test_assert(memarea_owns_ptr(area, p1));
+    tt_assert(memarea_owns_ptr(area, p1));
   }
   memarea_assert_ok(area);
   /* Make sure we can allocate a too-big object. */
   p1 = memarea_alloc_zero(area, 9000);
   p2 = memarea_alloc_zero(area, 16);
-  test_assert(memarea_owns_ptr(area, p1));
-  test_assert(memarea_owns_ptr(area, p2));
+  tt_assert(memarea_owns_ptr(area, p1));
+  tt_assert(memarea_owns_ptr(area, p2));
 
  done:
   memarea_drop_all(area);
@@ -2220,31 +2266,32 @@ test_util_memarea(void)
 /** Run unit tests for utility functions to get file names relative to
  * the data directory. */
 static void
-test_util_datadir(void)
+test_util_datadir(void *arg)
 {
   char buf[1024];
   char *f = NULL;
   char *temp_dir = NULL;
 
+  (void)arg;
   temp_dir = get_datadir_fname(NULL);
   f = get_datadir_fname("state");
   tor_snprintf(buf, sizeof(buf), "%s"PATH_SEPARATOR"state", temp_dir);
-  test_streq(f, buf);
+  tt_str_op(f,==, buf);
   tor_free(f);
   f = get_datadir_fname2("cache", "thingy");
   tor_snprintf(buf, sizeof(buf),
                "%s"PATH_SEPARATOR"cache"PATH_SEPARATOR"thingy", temp_dir);
-  test_streq(f, buf);
+  tt_str_op(f,==, buf);
   tor_free(f);
   f = get_datadir_fname2_suffix("cache", "thingy", ".foo");
   tor_snprintf(buf, sizeof(buf),
                "%s"PATH_SEPARATOR"cache"PATH_SEPARATOR"thingy.foo", temp_dir);
-  test_streq(f, buf);
+  tt_str_op(f,==, buf);
   tor_free(f);
   f = get_datadir_fname_suffix("cache", ".foo");
   tor_snprintf(buf, sizeof(buf), "%s"PATH_SEPARATOR"cache.foo",
                temp_dir);
-  test_streq(f, buf);
+  tt_str_op(f,==, buf);
 
  done:
   tor_free(f);
@@ -2252,13 +2299,14 @@ test_util_datadir(void)
 }
 
 static void
-test_util_strtok(void)
+test_util_strtok(void *arg)
 {
   char buf[128];
   char buf2[128];
   int i;
   char *cp1, *cp2;
 
+  (void)arg;
   for (i = 0; i < 3; i++) {
     const char *pad1="", *pad2="";
     switch (i) {
@@ -2275,8 +2323,8 @@ test_util_strtok(void)
     }
     tor_snprintf(buf, sizeof(buf), "%s", pad1);
     tor_snprintf(buf2, sizeof(buf2), "%s", pad2);
-    test_assert(NULL == tor_strtok_r_impl(buf, " ", &cp1));
-    test_assert(NULL == tor_strtok_r_impl(buf2, ".!..;!", &cp2));
+    tt_assert(NULL == tor_strtok_r_impl(buf, " ", &cp1));
+    tt_assert(NULL == tor_strtok_r_impl(buf2, ".!..;!", &cp2));
 
     tor_snprintf(buf, sizeof(buf),
                  "%sGraved on the dark  in gestures of descent%s", pad1, pad1);
@@ -2284,43 +2332,43 @@ test_util_strtok(void)
                 "%sthey.seemed;;their!.own;most.perfect;monument%s",pad2,pad2);
     /*  -- "Year's End", Richard Wilbur */
 
-    test_streq("Graved", tor_strtok_r_impl(buf, " ", &cp1));
-    test_streq("they", tor_strtok_r_impl(buf2, ".!..;!", &cp2));
+    tt_str_op("Graved",==, tor_strtok_r_impl(buf, " ", &cp1));
+    tt_str_op("they",==, tor_strtok_r_impl(buf2, ".!..;!", &cp2));
 #define S1() tor_strtok_r_impl(NULL, " ", &cp1)
 #define S2() tor_strtok_r_impl(NULL, ".!..;!", &cp2)
-    test_streq("on", S1());
-    test_streq("the", S1());
-    test_streq("dark", S1());
-    test_streq("seemed", S2());
-    test_streq("their", S2());
-    test_streq("own", S2());
-    test_streq("in", S1());
-    test_streq("gestures", S1());
-    test_streq("of", S1());
-    test_streq("most", S2());
-    test_streq("perfect", S2());
-    test_streq("descent", S1());
-    test_streq("monument", S2());
-    test_eq_ptr(NULL, S1());
-    test_eq_ptr(NULL, S2());
+    tt_str_op("on",==, S1());
+    tt_str_op("the",==, S1());
+    tt_str_op("dark",==, S1());
+    tt_str_op("seemed",==, S2());
+    tt_str_op("their",==, S2());
+    tt_str_op("own",==, S2());
+    tt_str_op("in",==, S1());
+    tt_str_op("gestures",==, S1());
+    tt_str_op("of",==, S1());
+    tt_str_op("most",==, S2());
+    tt_str_op("perfect",==, S2());
+    tt_str_op("descent",==, S1());
+    tt_str_op("monument",==, S2());
+    tt_ptr_op(NULL,==, S1());
+    tt_ptr_op(NULL,==, S2());
   }
 
   buf[0] = 0;
-  test_eq_ptr(NULL, tor_strtok_r_impl(buf, " ", &cp1));
-  test_eq_ptr(NULL, tor_strtok_r_impl(buf, "!", &cp1));
+  tt_ptr_op(NULL,==, tor_strtok_r_impl(buf, " ", &cp1));
+  tt_ptr_op(NULL,==, tor_strtok_r_impl(buf, "!", &cp1));
 
   strlcpy(buf, "Howdy!", sizeof(buf));
-  test_streq("Howdy", tor_strtok_r_impl(buf, "!", &cp1));
-  test_eq_ptr(NULL, tor_strtok_r_impl(NULL, "!", &cp1));
+  tt_str_op("Howdy",==, tor_strtok_r_impl(buf, "!", &cp1));
+  tt_ptr_op(NULL,==, tor_strtok_r_impl(NULL, "!", &cp1));
 
   strlcpy(buf, " ", sizeof(buf));
-  test_eq_ptr(NULL, tor_strtok_r_impl(buf, " ", &cp1));
+  tt_ptr_op(NULL,==, tor_strtok_r_impl(buf, " ", &cp1));
   strlcpy(buf, "  ", sizeof(buf));
-  test_eq_ptr(NULL, tor_strtok_r_impl(buf, " ", &cp1));
+  tt_ptr_op(NULL,==, tor_strtok_r_impl(buf, " ", &cp1));
 
   strlcpy(buf, "something  ", sizeof(buf));
-  test_streq("something", tor_strtok_r_impl(buf, " ", &cp1));
-  test_eq_ptr(NULL, tor_strtok_r_impl(NULL, ";", &cp1));
+  tt_str_op("something",==, tor_strtok_r_impl(buf, " ", &cp1));
+  tt_ptr_op(NULL,==, tor_strtok_r_impl(NULL, ";", &cp1));
  done:
   ;
 }
@@ -2340,23 +2388,24 @@ test_util_find_str_at_start_of_line(void *ptr)
 
   (void)ptr;
 
-  test_eq_ptr(long_string, find_str_at_start_of_line(long_string, ""));
-  test_eq_ptr(NULL, find_str_at_start_of_line(short_string, "nonsense"));
-  test_eq_ptr(NULL, find_str_at_start_of_line(long_string, "nonsense"));
-  test_eq_ptr(NULL, find_str_at_start_of_line(long_string, "\n"));
-  test_eq_ptr(NULL, find_str_at_start_of_line(long_string, "how "));
-  test_eq_ptr(NULL, find_str_at_start_of_line(long_string, "kitty"));
-  test_eq_ptr(long_string, find_str_at_start_of_line(long_string, "h"));
-  test_eq_ptr(long_string, find_str_at_start_of_line(long_string, "how"));
-  test_eq_ptr(line2, find_str_at_start_of_line(long_string, "he"));
-  test_eq_ptr(line2, find_str_at_start_of_line(long_string, "hell"));
-  test_eq_ptr(line2, find_str_at_start_of_line(long_string, "hello k"));
-  test_eq_ptr(line2, find_str_at_start_of_line(long_string, "hello kitty\n"));
-  test_eq_ptr(line2, find_str_at_start_of_line(long_string, "hello kitty\nt"));
-  test_eq_ptr(line3, find_str_at_start_of_line(long_string, "third"));
-  test_eq_ptr(line3, find_str_at_start_of_line(long_string, "third line"));
-  test_eq_ptr(NULL,  find_str_at_start_of_line(long_string, "third line\n"));
-  test_eq_ptr(short_line2, find_str_at_start_of_line(short_string,
+  tt_ptr_op(long_string,==, find_str_at_start_of_line(long_string, ""));
+  tt_ptr_op(NULL,==, find_str_at_start_of_line(short_string, "nonsense"));
+  tt_ptr_op(NULL,==, find_str_at_start_of_line(long_string, "nonsense"));
+  tt_ptr_op(NULL,==, find_str_at_start_of_line(long_string, "\n"));
+  tt_ptr_op(NULL,==, find_str_at_start_of_line(long_string, "how "));
+  tt_ptr_op(NULL,==, find_str_at_start_of_line(long_string, "kitty"));
+  tt_ptr_op(long_string,==, find_str_at_start_of_line(long_string, "h"));
+  tt_ptr_op(long_string,==, find_str_at_start_of_line(long_string, "how"));
+  tt_ptr_op(line2,==, find_str_at_start_of_line(long_string, "he"));
+  tt_ptr_op(line2,==, find_str_at_start_of_line(long_string, "hell"));
+  tt_ptr_op(line2,==, find_str_at_start_of_line(long_string, "hello k"));
+  tt_ptr_op(line2,==, find_str_at_start_of_line(long_string, "hello kitty\n"));
+  tt_ptr_op(line2,==,
+            find_str_at_start_of_line(long_string, "hello kitty\nt"));
+  tt_ptr_op(line3,==, find_str_at_start_of_line(long_string, "third"));
+  tt_ptr_op(line3,==, find_str_at_start_of_line(long_string, "third line"));
+  tt_ptr_op(NULL,==,  find_str_at_start_of_line(long_string, "third line\n"));
+  tt_ptr_op(short_line2,==, find_str_at_start_of_line(short_string,
                                                      "second line\n"));
  done:
   ;
@@ -2367,25 +2416,25 @@ test_util_string_is_C_identifier(void *ptr)
 {
   (void)ptr;
 
-  test_eq(1, string_is_C_identifier("string_is_C_identifier"));
-  test_eq(1, string_is_C_identifier("_string_is_C_identifier"));
-  test_eq(1, string_is_C_identifier("_"));
-  test_eq(1, string_is_C_identifier("i"));
-  test_eq(1, string_is_C_identifier("_____"));
-  test_eq(1, string_is_C_identifier("__00__"));
-  test_eq(1, string_is_C_identifier("__init__"));
-  test_eq(1, string_is_C_identifier("_0"));
-  test_eq(1, string_is_C_identifier("_0string_is_C_identifier"));
-  test_eq(1, string_is_C_identifier("_0"));
+  tt_int_op(1,==, string_is_C_identifier("string_is_C_identifier"));
+  tt_int_op(1,==, string_is_C_identifier("_string_is_C_identifier"));
+  tt_int_op(1,==, string_is_C_identifier("_"));
+  tt_int_op(1,==, string_is_C_identifier("i"));
+  tt_int_op(1,==, string_is_C_identifier("_____"));
+  tt_int_op(1,==, string_is_C_identifier("__00__"));
+  tt_int_op(1,==, string_is_C_identifier("__init__"));
+  tt_int_op(1,==, string_is_C_identifier("_0"));
+  tt_int_op(1,==, string_is_C_identifier("_0string_is_C_identifier"));
+  tt_int_op(1,==, string_is_C_identifier("_0"));
 
-  test_eq(0, string_is_C_identifier("0_string_is_C_identifier"));
-  test_eq(0, string_is_C_identifier("0"));
-  test_eq(0, string_is_C_identifier(""));
-  test_eq(0, string_is_C_identifier(";"));
-  test_eq(0, string_is_C_identifier("i;"));
-  test_eq(0, string_is_C_identifier("_;"));
-  test_eq(0, string_is_C_identifier("í"));
-  test_eq(0, string_is_C_identifier("ñ"));
+  tt_int_op(0,==, string_is_C_identifier("0_string_is_C_identifier"));
+  tt_int_op(0,==, string_is_C_identifier("0"));
+  tt_int_op(0,==, string_is_C_identifier(""));
+  tt_int_op(0,==, string_is_C_identifier(";"));
+  tt_int_op(0,==, string_is_C_identifier("i;"));
+  tt_int_op(0,==, string_is_C_identifier("_;"));
+  tt_int_op(0,==, string_is_C_identifier("í"));
+  tt_int_op(0,==, string_is_C_identifier("ñ"));
 
  done:
   ;
@@ -2402,48 +2451,48 @@ test_util_asprintf(void *ptr)
 
   /* simple string */
   r = tor_asprintf(&cp, "simple string 100%% safe");
-  test_assert(cp);
-  test_streq("simple string 100% safe", cp);
-  test_eq(strlen(cp), r);
+  tt_assert(cp);
+  tt_str_op("simple string 100% safe",==, cp);
+  tt_int_op(strlen(cp),==, r);
   tor_free(cp);
 
   /* empty string */
   r = tor_asprintf(&cp, "%s", "");
-  test_assert(cp);
-  test_streq("", cp);
-  test_eq(strlen(cp), r);
+  tt_assert(cp);
+  tt_str_op("",==, cp);
+  tt_int_op(strlen(cp),==, r);
   tor_free(cp);
 
   /* numbers (%i) */
   r = tor_asprintf(&cp, "I like numbers-%2i, %i, etc.", -1, 2);
-  test_assert(cp);
-  test_streq("I like numbers--1, 2, etc.", cp);
-  test_eq(strlen(cp), r);
+  tt_assert(cp);
+  tt_str_op("I like numbers--1, 2, etc.",==, cp);
+  tt_int_op(strlen(cp),==, r);
   /* don't free cp; next test uses it. */
 
   /* numbers (%d) */
   r = tor_asprintf(&cp2, "First=%d, Second=%d", 101, 202);
-  test_assert(cp2);
-  test_eq(strlen(cp2), r);
-  test_streq("First=101, Second=202", cp2);
-  test_assert(cp != cp2);
+  tt_assert(cp2);
+  tt_int_op(strlen(cp2),==, r);
+  tt_str_op("First=101, Second=202",==, cp2);
+  tt_assert(cp != cp2);
   tor_free(cp);
   tor_free(cp2);
 
   /* Glass-box test: a string exactly 128 characters long. */
   r = tor_asprintf(&cp, "Lorem1: %sLorem2: %s", LOREMIPSUM, LOREMIPSUM);
-  test_assert(cp);
-  test_eq(128, r);
-  test_assert(cp[128] == '\0');
-  test_streq("Lorem1: "LOREMIPSUM"Lorem2: "LOREMIPSUM, cp);
+  tt_assert(cp);
+  tt_int_op(128,==, r);
+  tt_int_op(cp[128], ==, '\0');
+  tt_str_op("Lorem1: "LOREMIPSUM"Lorem2: "LOREMIPSUM,==, cp);
   tor_free(cp);
 
   /* String longer than 128 characters */
   r = tor_asprintf(&cp, "1: %s 2: %s 3: %s",
                    LOREMIPSUM, LOREMIPSUM, LOREMIPSUM);
-  test_assert(cp);
-  test_eq(strlen(cp), r);
-  test_streq("1: "LOREMIPSUM" 2: "LOREMIPSUM" 3: "LOREMIPSUM, cp);
+  tt_assert(cp);
+  tt_int_op(strlen(cp),==, r);
+  tt_str_op("1: "LOREMIPSUM" 2: "LOREMIPSUM" 3: "LOREMIPSUM,==, cp);
 
  done:
   tor_free(cp);
@@ -2464,9 +2513,9 @@ test_util_listdir(void *ptr)
   dir1   = tor_strdup(get_fname("some-directory"));
   dirname = tor_strdup(get_fname(NULL));
 
-  test_eq(0, write_str_to_file(fname1, "X\n", 0));
-  test_eq(0, write_str_to_file(fname2, "Y\n", 0));
-  test_eq(0, write_str_to_file(fname3, "Z\n", 0));
+  tt_int_op(0,==, write_str_to_file(fname1, "X\n", 0));
+  tt_int_op(0,==, write_str_to_file(fname2, "Y\n", 0));
+  tt_int_op(0,==, write_str_to_file(fname3, "Z\n", 0));
 #ifdef _WIN32
   r = mkdir(dir1);
 #else
@@ -2479,15 +2528,15 @@ test_util_listdir(void *ptr)
   }
 
   dir_contents = tor_listdir(dirname);
-  test_assert(dir_contents);
+  tt_assert(dir_contents);
   /* make sure that each filename is listed. */
-  test_assert(smartlist_contains_string_case(dir_contents, "hopscotch"));
-  test_assert(smartlist_contains_string_case(dir_contents, "mumblety-peg"));
-  test_assert(smartlist_contains_string_case(dir_contents, ".hidden-file"));
-  test_assert(smartlist_contains_string_case(dir_contents, "some-directory"));
+  tt_assert(smartlist_contains_string_case(dir_contents, "hopscotch"));
+  tt_assert(smartlist_contains_string_case(dir_contents, "mumblety-peg"));
+  tt_assert(smartlist_contains_string_case(dir_contents, ".hidden-file"));
+  tt_assert(smartlist_contains_string_case(dir_contents, "some-directory"));
 
-  test_assert(!smartlist_contains_string(dir_contents, "."));
-  test_assert(!smartlist_contains_string(dir_contents, ".."));
+  tt_assert(!smartlist_contains_string(dir_contents, "."));
+  tt_assert(!smartlist_contains_string(dir_contents, ".."));
 
  done:
   tor_free(fname1);
@@ -2627,53 +2676,53 @@ test_util_exit_status(void *ptr)
   (void)ptr;
 
   clear_hex_errno(hex_errno);
-  test_streq("", hex_errno);
+  tt_str_op("",==, hex_errno);
 
   clear_hex_errno(hex_errno);
   n = format_helper_exit_status(0, 0, hex_errno);
-  test_streq("0/0\n", hex_errno);
-  test_eq(n, strlen(hex_errno));
+  tt_str_op("0/0\n",==, hex_errno);
+  tt_int_op(n,==, strlen(hex_errno));
 
 #if SIZEOF_INT == 4
 
   clear_hex_errno(hex_errno);
   n = format_helper_exit_status(0, 0x7FFFFFFF, hex_errno);
-  test_streq("0/7FFFFFFF\n", hex_errno);
-  test_eq(n, strlen(hex_errno));
+  tt_str_op("0/7FFFFFFF\n",==, hex_errno);
+  tt_int_op(n,==, strlen(hex_errno));
 
   clear_hex_errno(hex_errno);
   n = format_helper_exit_status(0xFF, -0x80000000, hex_errno);
-  test_streq("FF/-80000000\n", hex_errno);
-  test_eq(n, strlen(hex_errno));
-  test_eq(n, HEX_ERRNO_SIZE);
+  tt_str_op("FF/-80000000\n",==, hex_errno);
+  tt_int_op(n,==, strlen(hex_errno));
+  tt_int_op(n,==, HEX_ERRNO_SIZE);
 
 #elif SIZEOF_INT == 8
 
   clear_hex_errno(hex_errno);
   n = format_helper_exit_status(0, 0x7FFFFFFFFFFFFFFF, hex_errno);
-  test_streq("0/7FFFFFFFFFFFFFFF\n", hex_errno);
-  test_eq(n, strlen(hex_errno));
+  tt_str_op("0/7FFFFFFFFFFFFFFF\n",==, hex_errno);
+  tt_int_op(n,==, strlen(hex_errno));
 
   clear_hex_errno(hex_errno);
   n = format_helper_exit_status(0xFF, -0x8000000000000000, hex_errno);
-  test_streq("FF/-8000000000000000\n", hex_errno);
-  test_eq(n, strlen(hex_errno));
-  test_eq(n, HEX_ERRNO_SIZE);
+  tt_str_op("FF/-8000000000000000\n",==, hex_errno);
+  tt_int_op(n,==, strlen(hex_errno));
+  tt_int_op(n,==, HEX_ERRNO_SIZE);
 
 #endif
 
   clear_hex_errno(hex_errno);
   n = format_helper_exit_status(0x7F, 0, hex_errno);
-  test_streq("7F/0\n", hex_errno);
-  test_eq(n, strlen(hex_errno));
+  tt_str_op("7F/0\n",==, hex_errno);
+  tt_int_op(n,==, strlen(hex_errno));
 
   clear_hex_errno(hex_errno);
   n = format_helper_exit_status(0x08, -0x242, hex_errno);
-  test_streq("8/-242\n", hex_errno);
-  test_eq(n, strlen(hex_errno));
+  tt_str_op("8/-242\n",==, hex_errno);
+  tt_int_op(n,==, strlen(hex_errno));
 
   clear_hex_errno(hex_errno);
-  test_streq("", hex_errno);
+  tt_str_op("",==, hex_errno);
 
  done:
   ;
@@ -2822,14 +2871,14 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
 
   notify_pending_waitpid_callbacks();
 
-  test_eq(expected_status, status);
+  tt_int_op(expected_status,==, status);
   if (status == PROCESS_STATUS_ERROR) {
     tt_ptr_op(process_handle, ==, NULL);
     return;
   }
 
-  test_assert(process_handle != NULL);
-  test_eq(expected_status, process_handle->status);
+  tt_assert(process_handle != NULL);
+  tt_int_op(expected_status,==, process_handle->status);
 
 #ifndef _WIN32
   notify_pending_waitpid_callbacks();
@@ -2837,11 +2886,11 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
 #endif
 
 #ifdef _WIN32
-  test_assert(process_handle->stdout_pipe != INVALID_HANDLE_VALUE);
-  test_assert(process_handle->stderr_pipe != INVALID_HANDLE_VALUE);
+  tt_assert(process_handle->stdout_pipe != INVALID_HANDLE_VALUE);
+  tt_assert(process_handle->stderr_pipe != INVALID_HANDLE_VALUE);
 #else
-  test_assert(process_handle->stdout_pipe >= 0);
-  test_assert(process_handle->stderr_pipe >= 0);
+  tt_assert(process_handle->stdout_pipe >= 0);
+  tt_assert(process_handle->stderr_pipe >= 0);
 #endif
 
   /* Check stdout */
@@ -2849,15 +2898,15 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
                                          sizeof(stdout_buf) - 1);
   tt_assert(pos >= 0);
   stdout_buf[pos] = '\0';
-  test_eq(strlen(expected_out), pos);
-  test_streq(expected_out, stdout_buf);
+  tt_int_op(strlen(expected_out),==, pos);
+  tt_str_op(expected_out,==, stdout_buf);
 
   notify_pending_waitpid_callbacks();
 
   /* Check it terminated correctly */
   retval = tor_get_exit_code(process_handle, 1, &exit_code);
-  test_eq(PROCESS_EXIT_EXITED, retval);
-  test_eq(expected_exit, exit_code);
+  tt_int_op(PROCESS_EXIT_EXITED,==, retval);
+  tt_int_op(expected_exit,==, exit_code);
   // TODO: Make test-child exit with something other than 0
 
 #ifndef _WIN32
@@ -2868,10 +2917,10 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
   /* Check stderr */
   pos = tor_read_all_from_process_stderr(process_handle, stderr_buf,
                                          sizeof(stderr_buf) - 1);
-  test_assert(pos >= 0);
+  tt_assert(pos >= 0);
   stderr_buf[pos] = '\0';
-  test_streq(expected_err, stderr_buf);
-  test_eq(strlen(expected_err), pos);
+  tt_str_op(expected_err,==, stderr_buf);
+  tt_int_op(strlen(expected_err),==, pos);
 
   notify_pending_waitpid_callbacks();
 
@@ -2960,9 +3009,9 @@ test_util_spawn_background_partial_read_impl(int exit_early)
 #else
   status = tor_spawn_background(argv[0], argv, NULL, &process_handle);
 #endif
-  test_eq(expected_status, status);
-  test_assert(process_handle);
-  test_eq(expected_status, process_handle->status);
+  tt_int_op(expected_status,==, status);
+  tt_assert(process_handle);
+  tt_int_op(expected_status,==, process_handle->status);
 
   /* Check stdout */
   for (expected_out_ctr = 0; expected_out[expected_out_ctr] != NULL;) {
@@ -2971,7 +3020,7 @@ test_util_spawn_background_partial_read_impl(int exit_early)
                               sizeof(stdout_buf) - 1, NULL);
 #else
     /* Check that we didn't read the end of file last time */
-    test_assert(!eof);
+    tt_assert(!eof);
     pos = tor_read_all_handle(process_handle->stdout_handle, stdout_buf,
                               sizeof(stdout_buf) - 1, NULL, &eof);
 #endif
@@ -2981,10 +3030,10 @@ test_util_spawn_background_partial_read_impl(int exit_early)
     if (0 == pos)
       continue;
 
-    test_assert(pos > 0);
+    tt_assert(pos > 0);
     stdout_buf[pos] = '\0';
-    test_streq(expected_out[expected_out_ctr], stdout_buf);
-    test_eq(strlen(expected_out[expected_out_ctr]), pos);
+    tt_str_op(expected_out[expected_out_ctr],==, stdout_buf);
+    tt_int_op(strlen(expected_out[expected_out_ctr]),==, pos);
     expected_out_ctr++;
   }
 
@@ -2999,33 +3048,33 @@ test_util_spawn_background_partial_read_impl(int exit_early)
   pos = tor_read_all_handle(process_handle->stdout_pipe, stdout_buf,
                             sizeof(stdout_buf) - 1,
                             process_handle);
-  test_eq(0, pos);
+  tt_int_op(0,==, pos);
 #else
   if (!eof) {
     /* We should have got all the data, but maybe not the EOF flag */
     pos = tor_read_all_handle(process_handle->stdout_handle, stdout_buf,
                               sizeof(stdout_buf) - 1,
                               process_handle, &eof);
-    test_eq(0, pos);
-    test_assert(eof);
+    tt_int_op(0,==, pos);
+    tt_assert(eof);
   }
   /* Otherwise, we got the EOF on the last read */
 #endif
 
   /* Check it terminated correctly */
   retval = tor_get_exit_code(process_handle, 1, &exit_code);
-  test_eq(PROCESS_EXIT_EXITED, retval);
-  test_eq(expected_exit, exit_code);
+  tt_int_op(PROCESS_EXIT_EXITED,==, retval);
+  tt_int_op(expected_exit,==, exit_code);
 
   // TODO: Make test-child exit with something other than 0
 
   /* Check stderr */
   pos = tor_read_all_from_process_stderr(process_handle, stderr_buf,
                                          sizeof(stderr_buf) - 1);
-  test_assert(pos >= 0);
+  tt_assert(pos >= 0);
   stderr_buf[pos] = '\0';
-  test_streq(expected_err, stderr_buf);
-  test_eq(strlen(expected_err), pos);
+  tt_str_op(expected_err,==, stderr_buf);
+  tt_int_op(strlen(expected_err),==, pos);
 
  done:
   tor_process_handle_destroy(process_handle, 1);
@@ -3130,15 +3179,15 @@ test_util_format_hex_number(void *ptr)
 
   for (i = 0; test_data[i].str != NULL; ++i) {
     len = format_hex_number_sigsafe(test_data[i].x, buf, sizeof(buf));
-    test_neq(len, 0);
-    test_eq(len, strlen(buf));
-    test_streq(buf, test_data[i].str);
+    tt_int_op(len,!=, 0);
+    tt_int_op(len,==, strlen(buf));
+    tt_str_op(buf,==, test_data[i].str);
   }
 
-  test_eq(4, format_hex_number_sigsafe(0xffff, buf, 5));
-  test_streq(buf, "FFFF");
-  test_eq(0, format_hex_number_sigsafe(0xffff, buf, 4));
-  test_eq(0, format_hex_number_sigsafe(0, buf, 1));
+  tt_int_op(4,==, format_hex_number_sigsafe(0xffff, buf, 5));
+  tt_str_op(buf,==, "FFFF");
+  tt_int_op(0,==, format_hex_number_sigsafe(0xffff, buf, 4));
+  tt_int_op(0,==, format_hex_number_sigsafe(0, buf, 1));
 
  done:
   return;
@@ -3174,21 +3223,21 @@ test_util_format_dec_number(void *ptr)
 
   for (i = 0; test_data[i].str != NULL; ++i) {
     len = format_dec_number_sigsafe(test_data[i].x, buf, sizeof(buf));
-    test_neq(len, 0);
-    test_eq(len, strlen(buf));
-    test_streq(buf, test_data[i].str);
+    tt_int_op(len,!=, 0);
+    tt_int_op(len,==, strlen(buf));
+    tt_str_op(buf,==, test_data[i].str);
 
     len = format_dec_number_sigsafe(test_data[i].x, buf,
                                     (int)(strlen(test_data[i].str) + 1));
-    test_eq(len, strlen(buf));
-    test_streq(buf, test_data[i].str);
+    tt_int_op(len,==, strlen(buf));
+    tt_str_op(buf,==, test_data[i].str);
   }
 
-  test_eq(4, format_dec_number_sigsafe(7331, buf, 5));
-  test_streq(buf, "7331");
-  test_eq(0, format_dec_number_sigsafe(7331, buf, 4));
-  test_eq(1, format_dec_number_sigsafe(0, buf, 2));
-  test_eq(0, format_dec_number_sigsafe(0, buf, 1));
+  tt_int_op(4,==, format_dec_number_sigsafe(7331, buf, 5));
+  tt_str_op(buf,==, "7331");
+  tt_int_op(0,==, format_dec_number_sigsafe(7331, buf, 4));
+  tt_int_op(1,==, format_dec_number_sigsafe(0, buf, 2));
+  tt_int_op(0,==, format_dec_number_sigsafe(0, buf, 1));
 
  done:
   return;
@@ -3237,7 +3286,7 @@ test_util_join_win_cmdline(void *ptr)
   for (i=0; cmdlines[i]!=NULL; i++) {
     log_info(LD_GENERAL, "Joining argvs[%d], expecting <%s>", i, cmdlines[i]);
     joined_argv = tor_join_win_cmdline(argvs[i]);
-    test_streq(cmdlines[i], joined_argv);
+    tt_str_op(cmdlines[i],==, joined_argv);
     tor_free(joined_argv);
   }
 
@@ -3292,17 +3341,17 @@ test_util_split_lines(void *ptr)
              i, tests[i].orig_length);
     SMARTLIST_FOREACH_BEGIN(sl, const char *, line) {
       /* Check we have not got too many lines */
-      test_assert(j < MAX_SPLIT_LINE_COUNT);
+      tt_int_op(MAX_SPLIT_LINE_COUNT, >, j);
       /* Check that there actually should be a line here */
-      test_assert(tests[i].split_line[j] != NULL);
+      tt_assert(tests[i].split_line[j] != NULL);
       log_info(LD_GENERAL, "Line %d of test %d, should be <%s>",
                j, i, tests[i].split_line[j]);
       /* Check that the line is as expected */
-      test_streq(line, tests[i].split_line[j]);
+      tt_str_op(line,==, tests[i].split_line[j]);
       j++;
     } SMARTLIST_FOREACH_END(line);
     /* Check that we didn't miss some lines */
-    test_eq_ptr(NULL, tests[i].split_line[j]);
+    tt_ptr_op(NULL,==, tests[i].split_line[j]);
     tor_free(orig_line);
     smartlist_free(sl);
     sl = NULL;
@@ -3314,7 +3363,7 @@ test_util_split_lines(void *ptr)
 }
 
 static void
-test_util_di_ops(void)
+test_util_di_ops(void *arg)
 {
 #define LT -1
 #define GT 1
@@ -3334,10 +3383,11 @@ test_util_di_ops(void)
 
   int i;
 
+  (void)arg;
   for (i = 0; examples[i].a; ++i) {
     size_t len = strlen(examples[i].a);
     int eq1, eq2, neq1, neq2, cmp1, cmp2;
-    test_eq(len, strlen(examples[i].b));
+    tt_int_op(len,==, strlen(examples[i].b));
     /* We do all of the operations, with operands in both orders. */
     eq1 = tor_memeq(examples[i].a, examples[i].b, len);
     eq2 = tor_memeq(examples[i].b, examples[i].a, len);
@@ -3348,18 +3398,18 @@ test_util_di_ops(void)
 
     /* Check for correctness of cmp1 */
     if (cmp1 < 0 && examples[i].want_sign != LT)
-      test_fail();
+      TT_DIE(("Assertion failed."));
     else if (cmp1 > 0 && examples[i].want_sign != GT)
-      test_fail();
+      TT_DIE(("Assertion failed."));
     else if (cmp1 == 0 && examples[i].want_sign != EQ)
-      test_fail();
+      TT_DIE(("Assertion failed."));
 
     /* Check for consistency of everything else with cmp1 */
-    test_eq(eq1, eq2);
-    test_eq(neq1, neq2);
-    test_eq(cmp1, -cmp2);
-    test_eq(eq1, cmp1 == 0);
-    test_eq(neq1, !eq1);
+    tt_int_op(eq1,==, eq2);
+    tt_int_op(neq1,==, neq2);
+    tt_int_op(cmp1,==, -cmp2);
+    tt_int_op(eq1,==, cmp1 == 0);
+    tt_int_op(neq1,==, !eq1);
   }
 
   {
@@ -3374,9 +3424,9 @@ test_util_di_ops(void)
       for (i = 0; i < 256; i++) {
         ii = (uint8_t)i;
         zz = (uint8_t)z;
-        test_eq(tor_memeq(&zz, &ii, 1), zz == ii);
-        test_eq(tor_memcmp(&zz, &ii, 1) > 0 ? GT : EQ, zz > ii ? GT : EQ);
-        test_eq(tor_memcmp(&ii, &zz, 1) < 0 ? LT : EQ, ii < zz ? LT : EQ);
+        tt_int_op(tor_memeq(&zz, &ii, 1),==, zz == ii);
+        tt_int_op(tor_memcmp(&zz, &ii, 1) > 0 ? GT : EQ,==, zz > ii ? GT : EQ);
+        tt_int_op(tor_memcmp(&ii, &zz, 1) < 0 ? LT : EQ,==, ii < zz ? LT : EQ);
       }
     }
   }
@@ -3402,12 +3452,12 @@ static void
 test_util_n_bits_set(void *ptr)
 {
   (void)ptr;
-  test_eq(0, n_bits_set_u8(0));
-  test_eq(1, n_bits_set_u8(1));
-  test_eq(3, n_bits_set_u8(7));
-  test_eq(1, n_bits_set_u8(8));
-  test_eq(2, n_bits_set_u8(129));
-  test_eq(8, n_bits_set_u8(255));
+  tt_int_op(0,==, n_bits_set_u8(0));
+  tt_int_op(1,==, n_bits_set_u8(1));
+  tt_int_op(3,==, n_bits_set_u8(7));
+  tt_int_op(1,==, n_bits_set_u8(8));
+  tt_int_op(2,==, n_bits_set_u8(129));
+  tt_int_op(8,==, n_bits_set_u8(255));
  done:
   ;
 }
@@ -3428,78 +3478,78 @@ test_util_eat_whitespace(void *ptr)
   strlcpy(str, "fuubaar", sizeof(str));
   for (i = 0; i < sizeof(ws); ++i) {
     str[0] = ws[i];
-    test_eq_ptr(str + 1, eat_whitespace(str));
-    test_eq_ptr(str + 1, eat_whitespace_eos(str, str + strlen(str)));
-    test_eq_ptr(str + 1, eat_whitespace_no_nl(str));
-    test_eq_ptr(str + 1, eat_whitespace_eos_no_nl(str, str + strlen(str)));
+    tt_ptr_op(str + 1,==, eat_whitespace(str));
+    tt_ptr_op(str + 1,==, eat_whitespace_eos(str, str + strlen(str)));
+    tt_ptr_op(str + 1,==, eat_whitespace_no_nl(str));
+    tt_ptr_op(str + 1,==, eat_whitespace_eos_no_nl(str, str + strlen(str)));
   }
   str[0] = '\n';
-  test_eq_ptr(str + 1, eat_whitespace(str));
-  test_eq_ptr(str + 1, eat_whitespace_eos(str, str + strlen(str)));
-  test_eq_ptr(str,     eat_whitespace_no_nl(str));
-  test_eq_ptr(str,     eat_whitespace_eos_no_nl(str, str + strlen(str)));
+  tt_ptr_op(str + 1,==, eat_whitespace(str));
+  tt_ptr_op(str + 1,==, eat_whitespace_eos(str, str + strlen(str)));
+  tt_ptr_op(str,==,     eat_whitespace_no_nl(str));
+  tt_ptr_op(str,==,     eat_whitespace_eos_no_nl(str, str + strlen(str)));
 
   /* Empty string */
   strlcpy(str, "", sizeof(str));
-  test_eq_ptr(str, eat_whitespace(str));
-  test_eq_ptr(str, eat_whitespace_eos(str, str));
-  test_eq_ptr(str, eat_whitespace_no_nl(str));
-  test_eq_ptr(str, eat_whitespace_eos_no_nl(str, str));
+  tt_ptr_op(str,==, eat_whitespace(str));
+  tt_ptr_op(str,==, eat_whitespace_eos(str, str));
+  tt_ptr_op(str,==, eat_whitespace_no_nl(str));
+  tt_ptr_op(str,==, eat_whitespace_eos_no_nl(str, str));
 
   /* Only ws */
   strlcpy(str, " \t\r\n", sizeof(str));
-  test_eq_ptr(str + strlen(str), eat_whitespace(str));
-  test_eq_ptr(str + strlen(str), eat_whitespace_eos(str, str + strlen(str)));
-  test_eq_ptr(str + strlen(str) - 1,
+  tt_ptr_op(str + strlen(str),==, eat_whitespace(str));
+  tt_ptr_op(str + strlen(str),==, eat_whitespace_eos(str, str + strlen(str)));
+  tt_ptr_op(str + strlen(str) - 1,==,
               eat_whitespace_no_nl(str));
-  test_eq_ptr(str + strlen(str) - 1,
+  tt_ptr_op(str + strlen(str) - 1,==,
               eat_whitespace_eos_no_nl(str, str + strlen(str)));
 
   strlcpy(str, " \t\r ", sizeof(str));
-  test_eq_ptr(str + strlen(str), eat_whitespace(str));
-  test_eq_ptr(str + strlen(str),
+  tt_ptr_op(str + strlen(str),==, eat_whitespace(str));
+  tt_ptr_op(str + strlen(str),==,
               eat_whitespace_eos(str, str + strlen(str)));
-  test_eq_ptr(str + strlen(str), eat_whitespace_no_nl(str));
-  test_eq_ptr(str + strlen(str),
+  tt_ptr_op(str + strlen(str),==, eat_whitespace_no_nl(str));
+  tt_ptr_op(str + strlen(str),==,
               eat_whitespace_eos_no_nl(str, str + strlen(str)));
 
   /* Multiple ws */
   strlcpy(str, "fuubaar", sizeof(str));
   for (i = 0; i < sizeof(ws); ++i)
     str[i] = ws[i];
-  test_eq_ptr(str + sizeof(ws), eat_whitespace(str));
-  test_eq_ptr(str + sizeof(ws), eat_whitespace_eos(str, str + strlen(str)));
-  test_eq_ptr(str + sizeof(ws), eat_whitespace_no_nl(str));
-  test_eq_ptr(str + sizeof(ws),
+  tt_ptr_op(str + sizeof(ws),==, eat_whitespace(str));
+  tt_ptr_op(str + sizeof(ws),==, eat_whitespace_eos(str, str + strlen(str)));
+  tt_ptr_op(str + sizeof(ws),==, eat_whitespace_no_nl(str));
+  tt_ptr_op(str + sizeof(ws),==,
               eat_whitespace_eos_no_nl(str, str + strlen(str)));
 
   /* Eat comment */
   strlcpy(str, "# Comment \n No Comment", sizeof(str));
-  test_streq("No Comment", eat_whitespace(str));
-  test_streq("No Comment", eat_whitespace_eos(str, str + strlen(str)));
-  test_eq_ptr(str, eat_whitespace_no_nl(str));
-  test_eq_ptr(str, eat_whitespace_eos_no_nl(str, str + strlen(str)));
+  tt_str_op("No Comment",==, eat_whitespace(str));
+  tt_str_op("No Comment",==, eat_whitespace_eos(str, str + strlen(str)));
+  tt_ptr_op(str,==, eat_whitespace_no_nl(str));
+  tt_ptr_op(str,==, eat_whitespace_eos_no_nl(str, str + strlen(str)));
 
   /* Eat comment & ws mix */
   strlcpy(str, " # \t Comment \n\t\nNo Comment", sizeof(str));
-  test_streq("No Comment", eat_whitespace(str));
-  test_streq("No Comment", eat_whitespace_eos(str, str + strlen(str)));
-  test_eq_ptr(str + 1, eat_whitespace_no_nl(str));
-  test_eq_ptr(str + 1, eat_whitespace_eos_no_nl(str, str + strlen(str)));
+  tt_str_op("No Comment",==, eat_whitespace(str));
+  tt_str_op("No Comment",==, eat_whitespace_eos(str, str + strlen(str)));
+  tt_ptr_op(str + 1,==, eat_whitespace_no_nl(str));
+  tt_ptr_op(str + 1,==, eat_whitespace_eos_no_nl(str, str + strlen(str)));
 
   /* Eat entire comment */
   strlcpy(str, "#Comment", sizeof(str));
-  test_eq_ptr(str + strlen(str), eat_whitespace(str));
-  test_eq_ptr(str + strlen(str), eat_whitespace_eos(str, str + strlen(str)));
-  test_eq_ptr(str, eat_whitespace_no_nl(str));
-  test_eq_ptr(str, eat_whitespace_eos_no_nl(str, str + strlen(str)));
+  tt_ptr_op(str + strlen(str),==, eat_whitespace(str));
+  tt_ptr_op(str + strlen(str),==, eat_whitespace_eos(str, str + strlen(str)));
+  tt_ptr_op(str,==, eat_whitespace_no_nl(str));
+  tt_ptr_op(str,==, eat_whitespace_eos_no_nl(str, str + strlen(str)));
 
   /* Blank line, then comment */
   strlcpy(str, " \t\n # Comment", sizeof(str));
-  test_eq_ptr(str + strlen(str), eat_whitespace(str));
-  test_eq_ptr(str + strlen(str), eat_whitespace_eos(str, str + strlen(str)));
-  test_eq_ptr(str + 2, eat_whitespace_no_nl(str));
-  test_eq_ptr(str + 2, eat_whitespace_eos_no_nl(str, str + strlen(str)));
+  tt_ptr_op(str + strlen(str),==, eat_whitespace(str));
+  tt_ptr_op(str + strlen(str),==, eat_whitespace_eos(str, str + strlen(str)));
+  tt_ptr_op(str + 2,==, eat_whitespace_no_nl(str));
+  tt_ptr_op(str + 2,==, eat_whitespace_eos_no_nl(str, str + strlen(str)));
 
  done:
   ;
@@ -3827,12 +3877,12 @@ test_util_round_to_next_multiple_of(void *arg)
 {
   (void)arg;
 
-  test_assert(round_uint64_to_next_multiple_of(0,1) == 0);
-  test_assert(round_uint64_to_next_multiple_of(0,7) == 0);
+  tt_assert(round_uint64_to_next_multiple_of(0,1) == 0);
+  tt_assert(round_uint64_to_next_multiple_of(0,7) == 0);
 
-  test_assert(round_uint64_to_next_multiple_of(99,1) == 99);
-  test_assert(round_uint64_to_next_multiple_of(99,7) == 105);
-  test_assert(round_uint64_to_next_multiple_of(99,9) == 99);
+  tt_assert(round_uint64_to_next_multiple_of(99,1) == 99);
+  tt_assert(round_uint64_to_next_multiple_of(99,7) == 105);
+  tt_assert(round_uint64_to_next_multiple_of(99,9) == 99);
 
  done:
   ;
@@ -3859,7 +3909,7 @@ test_util_strclear(void *arg)
 }
 
 #define UTIL_LEGACY(name)                                               \
-  { #name, legacy_test_helper, 0, &legacy_setup, test_util_ ## name }
+  { #name, test_util_ ## name , 0, NULL, NULL }
 
 #define UTIL_TEST(name, flags)                          \
   { #name, test_util_ ## name, flags, NULL, NULL }

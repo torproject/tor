@@ -108,7 +108,7 @@ test_md_cache(void *data)
   md2 = smartlist_get(added, 0);
   /* And it should have gotten removed from 'wanted' */
   tt_int_op(smartlist_len(wanted), ==, 1);
-  test_mem_op(smartlist_get(wanted, 0), ==, d3, DIGEST256_LEN);
+  tt_mem_op(smartlist_get(wanted, 0), ==, d3, DIGEST256_LEN);
   smartlist_free(added);
   added = NULL;
 
@@ -144,18 +144,18 @@ test_md_cache(void *data)
   tt_int_op(md1->bodylen, ==, strlen(test_md1));
   tt_int_op(md2->bodylen, ==, strlen(test_md2));
   tt_int_op(md3->bodylen, ==, strlen(test_md3_noannotation));
-  test_mem_op(md1->body, ==, test_md1, strlen(test_md1));
-  test_mem_op(md2->body, ==, test_md2, strlen(test_md2));
-  test_mem_op(md3->body, ==, test_md3_noannotation,
+  tt_mem_op(md1->body, ==, test_md1, strlen(test_md1));
+  tt_mem_op(md2->body, ==, test_md2, strlen(test_md2));
+  tt_mem_op(md3->body, ==, test_md3_noannotation,
               strlen(test_md3_noannotation));
 
   tor_asprintf(&fn, "%s"PATH_SEPARATOR"cached-microdescs.new",
                options->DataDirectory);
   s = read_file_to_str(fn, RFTS_BIN, NULL);
   tt_assert(s);
-  test_mem_op(md1->body, ==, s + md1->off, md1->bodylen);
-  test_mem_op(md2->body, ==, s + md2->off, md2->bodylen);
-  test_mem_op(md3->body, ==, s + md3->off, md3->bodylen);
+  tt_mem_op(md1->body, ==, s + md1->off, md1->bodylen);
+  tt_mem_op(md2->body, ==, s + md2->off, md2->bodylen);
+  tt_mem_op(md3->body, ==, s + md3->off, md3->bodylen);
 
   tt_ptr_op(md1->family, ==, NULL);
   tt_ptr_op(md3->family, !=, NULL);
@@ -180,9 +180,9 @@ test_md_cache(void *data)
   tor_asprintf(&fn, "%s"PATH_SEPARATOR"cached-microdescs",
                options->DataDirectory);
   s = read_file_to_str(fn, RFTS_BIN, NULL);
-  test_mem_op(md1->body, ==, s + md1->off, strlen(test_md1));
-  test_mem_op(md2->body, ==, s + md2->off, strlen(test_md2));
-  test_mem_op(md3->body, ==, s + md3->off, strlen(test_md3_noannotation));
+  tt_mem_op(md1->body, ==, s + md1->off, strlen(test_md1));
+  tt_mem_op(md2->body, ==, s + md2->off, strlen(test_md2));
+  tt_mem_op(md3->body, ==, s + md3->off, strlen(test_md3_noannotation));
 
   /* Okay, now we are going to forget about the cache entirely, and reload it
    * from the disk. */
@@ -191,12 +191,12 @@ test_md_cache(void *data)
   md1 = microdesc_cache_lookup_by_digest256(mc, d1);
   md2 = microdesc_cache_lookup_by_digest256(mc, d2);
   md3 = microdesc_cache_lookup_by_digest256(mc, d3);
-  test_assert(md1);
-  test_assert(md2);
-  test_assert(md3);
-  test_mem_op(md1->body, ==, s + md1->off, strlen(test_md1));
-  test_mem_op(md2->body, ==, s + md2->off, strlen(test_md2));
-  test_mem_op(md3->body, ==, s + md3->off, strlen(test_md3_noannotation));
+  tt_assert(md1);
+  tt_assert(md2);
+  tt_assert(md3);
+  tt_mem_op(md1->body, ==, s + md1->off, strlen(test_md1));
+  tt_mem_op(md2->body, ==, s + md2->off, strlen(test_md2));
+  tt_mem_op(md3->body, ==, s + md3->off, strlen(test_md3_noannotation));
 
   tt_int_op(md1->last_listed, ==, time1);
   tt_int_op(md2->last_listed, ==, time2);

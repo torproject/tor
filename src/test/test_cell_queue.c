@@ -69,15 +69,15 @@ test_cq_manip(void *arg)
   pc_tmp = cell_queue_pop(&cq);
   tt_int_op(cq.n, ==, 1);
   tt_ptr_op(pc_tmp, !=, NULL);
-  test_mem_op(pc_tmp->body, ==, "\x12\x34\x56\x78\x0a", 5);
-  test_mem_op(pc_tmp->body+5, ==, cell.payload, sizeof(cell.payload));
+  tt_mem_op(pc_tmp->body, ==, "\x12\x34\x56\x78\x0a", 5);
+  tt_mem_op(pc_tmp->body+5, ==, cell.payload, sizeof(cell.payload));
   packed_cell_free(pc_tmp);
 
   pc_tmp = cell_queue_pop(&cq);
   tt_int_op(cq.n, ==, 0);
   tt_ptr_op(pc_tmp, !=, NULL);
-  test_mem_op(pc_tmp->body, ==, "\x20\x13\x0a", 3);
-  test_mem_op(pc_tmp->body+3, ==, cell.payload, sizeof(cell.payload));
+  tt_mem_op(pc_tmp->body, ==, "\x20\x13\x0a", 3);
+  tt_mem_op(pc_tmp->body+3, ==, cell.payload, sizeof(cell.payload));
   packed_cell_free(pc_tmp);
   pc_tmp = NULL;
 

@@ -65,7 +65,7 @@ test_cmux_destroy_cell_queue(void *arg)
 
   pc = cell_queue_pop(cq);
   tt_assert(pc);
-  test_mem_op(pc->body, ==, "\x00\x00\x00\x64\x04\x0a\x00\x00\x00", 9);
+  tt_mem_op(pc->body, ==, "\x00\x00\x00\x64\x04\x0a\x00\x00\x00", 9);
   packed_cell_free(pc);
   pc = NULL;
 

@@ -1,0 +1,6 @@
+  o Code refactoring:
+    - Revise all unit tests that used the legacy test_* macros to
+      instead use the recommended tt_* macros. This patch was
+      generated with coccinelle, to avoid manual errors. Closes
+      ticket 13119.
+
