@@ -208,7 +208,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("DirRecordUsageGranularity"),
   OBSOLETE("DirRecordUsageRetainIPs"),
   OBSOLETE("DirRecordUsageSaveInterval"),
-  V(DirReqStatistics,            BOOL,     "1"),
+  VAR("DirReqStatistics",        BOOL,     DirReqStatistics_option, "1"),
   VAR("DirAuthority",            LINELIST, DirAuthorities, NULL),
   V(DirAuthorityFallbackRate,    DOUBLE,   "1.0"),
   V(DisableAllSwap,              BOOL,     "0"),
@@ -1705,17 +1705,17 @@ options_act(const or_options_t *old_options)
       connection_or_update_token_buckets(get_connection_array(), options);
   }
 
+
+  /* Only collect directory-request statistics on relays and bridges. */
+  options->DirReqStatistics = options->DirReqStatistics_option &&
+    server_mode(options);
+
   if (options->CellStatistics || options->DirReqStatistics ||
       options->EntryStatistics || options->ExitPortStatistics ||
       options->ConnDirectionStatistics ||
       options->BridgeAuthoritativeDir) {
     time_t now = time(NULL);
     int print_notice = 0;
-
-    /* Only collect directory-request statistics on relays and bridges. */
-    if (!server_mode(options)) {
-      options->DirReqStatistics = 0;
-    }
 
     /* Only collect other relay-only statistics on relays. */
     if (!public_server_mode(options)) {
@@ -1735,8 +1735,8 @@ options_act(const or_options_t *old_options)
         geoip_dirreq_stats_init(now);
         print_notice = 1;
       } else {
+        /* disable statistics collection since we have no geoip file */
         options->DirReqStatistics = 0;
-        /* Don't warn Tor clients, they don't use statistics */
         if (options->ORPort_set)
           log_notice(LD_CONFIG, "Configured to measure directory request "
                                 "statistics, but no GeoIP database found. "

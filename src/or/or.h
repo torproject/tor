@@ -3910,8 +3910,11 @@ typedef struct {
    * instead of a hostname. */
   int WarnUnsafeSocks;
 
-  /** If true, the user wants us to collect statistics on clients
+  /** If true, we're configured to collect statistics on clients
    * requesting network statuses from us as directory. */
+  int DirReqStatistics_option;
+  /** Internal variable to remember whether we're actually acting on
+   * DirReqStatistics_option -- yes if it's set and we're a server, else no. */
   int DirReqStatistics;
 
   /** If true, the user wants us to collect statistics on port usage. */
