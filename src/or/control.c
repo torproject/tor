@@ -1177,6 +1177,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
       });
       SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
       smartlist_free(sl);
+      sl = NULL;
 
       if (used_quoted_string)
         errstr = "Password did not match HashedControlPassword value from "
