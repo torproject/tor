@@ -83,7 +83,11 @@ static consensus_waiting_for_certs_t
  * before the current consensus becomes invalid. */
 static time_t time_to_download_next_consensus[N_CONSENSUS_FLAVORS];
 /** Download status for the current consensus networkstatus. */
-static download_status_t consensus_dl_status[N_CONSENSUS_FLAVORS];
+static download_status_t consensus_dl_status[N_CONSENSUS_FLAVORS] =
+  {
+    { 0, 0, DL_SCHED_CONSENSUS },
+    { 0, 0, DL_SCHED_CONSENSUS },
+  };
 
 /** True iff we have logged a warning about this OR's version being older than
  * listed by the authorities. */
@@ -753,6 +757,9 @@ update_consensus_networkstatus_downloads(time_t now)
       continue; /* Wait until the current consensus is older. */
 
     resource = networkstatus_get_flavor_name(i);
+
+    /* Let's make sure we remembered to update consensus_dl_status */
+    tor_assert(consensus_dl_status[i].schedule == DL_SCHED_CONSENSUS);
 
     if (!download_status_is_ready(&consensus_dl_status[i], now,
                              options->TestingConsensusMaxDownloadTries))
