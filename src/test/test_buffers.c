@@ -714,6 +714,59 @@ test_buffers_zlib_fin_at_chunk_end(void *arg)
   tor_free(msg);
 }
 
+const uint8_t *tls_read_ptr;
+int n_remaining;
+int next_reply_val[16];
+
+static int
+mock_tls_read(tor_tls_t *tls, char *cp, size_t len)
+{
+  (void)tls;
+  int rv = next_reply_val[0];
+  if (rv > 0) {
+    int max = rv > (int)len ? (int)len : rv;
+    if (max > n_remaining)
+      max = n_remaining;
+    memcpy(cp, tls_read_ptr, max);
+    rv = max;
+    n_remaining -= max;
+    tls_read_ptr += max;
+  }
+
+  memmove(next_reply_val, next_reply_val + 1, 15*sizeof(int));
+  return rv;
+}
+
+static void
+test_buffers_tls_read_mocked(void *arg)
+{
+  uint8_t *mem;
+  buf_t *buf;
+  (void)arg;
+
+  mem = tor_malloc(64*1024);
+  crypto_rand((char*)mem, 64*1024);
+  tls_read_ptr = mem;
+  n_remaining = 64*1024;
+
+  MOCK(tor_tls_read, mock_tls_read);
+
+  buf = buf_new();
+
+  next_reply_val[0] = 1024;
+  tt_int_op(128, ==, read_to_buf_tls(NULL, 128, buf));
+
+  next_reply_val[0] = 5000;
+  next_reply_val[1] = 5000;
+  tt_int_op(6000, ==, read_to_buf_tls(NULL, 6000, buf));
+
+
+ done:
+  UNMOCK(tor_tls_read);
+  tor_free(mem);
+  buf_free(buf);
+}
+
 struct testcase_t buffer_tests[] = {
   { "basic", test_buffers_basic, TT_FORK, NULL, NULL },
   { "copy", test_buffer_copy, TT_FORK, NULL, NULL },
@@ -726,6 +779,8 @@ struct testcase_t buffer_tests[] = {
   { "zlib_fin_with_nil", test_buffers_zlib_fin_with_nil, TT_FORK, NULL, NULL },
   { "zlib_fin_at_chunk_end", test_buffers_zlib_fin_at_chunk_end, TT_FORK,
     NULL, NULL},
+  { "tls_read_mocked", test_buffers_tls_read_mocked, 0,
+    NULL, NULL },
   END_OF_TESTCASES
 };
 

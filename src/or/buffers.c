@@ -842,7 +842,7 @@ read_to_buf_tls(tor_tls_t *tls, size_t at_most, buf_t *buf)
     if (r < 0)
       return r; /* Error */
     tor_assert(total_read+r < INT_MAX);
-     total_read += r;
+    total_read += r;
     if ((size_t)r < readlen) /* eof, block, or no more to read. */
       break;
   }

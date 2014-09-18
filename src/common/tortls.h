@@ -77,7 +77,7 @@ int tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_t **identity);
 int tor_tls_check_lifetime(int severity,
                            tor_tls_t *tls, int past_tolerance,
                            int future_tolerance);
-int tor_tls_read(tor_tls_t *tls, char *cp, size_t len);
+MOCK_DECL(int, tor_tls_read, (tor_tls_t *tls, char *cp, size_t len));
 int tor_tls_write(tor_tls_t *tls, const char *cp, size_t n);
 int tor_tls_handshake(tor_tls_t *tls);
 int tor_tls_finish_handshake(tor_tls_t *tls);

@@ -2068,8 +2068,8 @@ tor_tls_free(tor_tls_t *tls)
  * number of characters read.  On failure, returns TOR_TLS_ERROR,
  * TOR_TLS_CLOSE, TOR_TLS_WANTREAD, or TOR_TLS_WANTWRITE.
  */
-int
-tor_tls_read(tor_tls_t *tls, char *cp, size_t len)
+MOCK_IMPL(int,
+tor_tls_read,(tor_tls_t *tls, char *cp, size_t len))
 {
   int r, err;
   tor_assert(tls);

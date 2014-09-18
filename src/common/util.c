@@ -3538,7 +3538,7 @@ finish_daemon(const char *cp)
 /** Write the current process ID, followed by NL, into <b>filename</b>.
  */
 void
-write_pidfile(char *filename)
+write_pidfile(const char *filename)
 {
   FILE *pidfile;
 
