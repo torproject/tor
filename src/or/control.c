@@ -1173,6 +1173,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
       bad_password = 1;
       SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
       smartlist_free(sl);
+      sl = NULL;
     } else {
       SMARTLIST_FOREACH(sl, char *, expected,
       {
