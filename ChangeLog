@@ -1,4 +1,9 @@
 Changes in version 0.2.5.8-rc - 2014-09-2?
+  Tor 0.2.5.8-rc is the second release candidate for the Tor 0.2.5.x
+  series. It fixes a bug that affects consistency and speed when
+  connecting to hidden services, and it updates the location of one of
+  the directory authorities.
+
   o Major bugfixes:
     - Clients now send the correct address for their chosen rendezvous
       point when trying to access a hidden service. They used to send
@@ -12,6 +17,9 @@ Changes in version 0.2.5.8-rc - 2014-09-2?
       on a little-endian (common) or big-endian (rare) system, which for
       some users might have reduced their anonymity. Fixes bug 13151;
       bugfix on 0.2.1.5-alpha.
+
+  o Directory authority changes:
+    - Change IP address for gabelmoo (v3 directory authority).
 
 
 Changes in version 0.2.5.7-rc - 2014-09-11
