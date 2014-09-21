@@ -984,6 +984,18 @@ policies_parse_exit_policy_internal(config_line_t *cfg, smartlist_t **dest,
   return 0;
 }
 
+/** Parse exit policy in <b>cfg</b> into <b>dest</b> smartlist.
+ *
+ * Add entry that rejects all IPv6 destinations unless
+ * <b>EXIT_POLICY_IPV6_ENABLED</b> bit is set in <b>options</b> bitmask.
+ *
+ * If <b>EXIT_POLICY_REJECT_PRIVATE</b> bit is set in <b>options</b>,
+ * do add entry that rejects all destinations in private subnetwork
+ * Tor is running in.
+ *
+ * Respectively, if <b>EXIT_POLICY_ADD_DEFAULT</b> bit is set, add
+ * default exit policy entries to <b>result</b> smartlist.
+ */
 int
 policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
                            exit_policy_parser_cfg_t options,
@@ -999,6 +1011,18 @@ policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
                                              add_default);
 }
 
+/** Parse <b>ExitPolicy</b> member of <b>or_options</b> into <b>result</b>
+ * smartlist.
+ * If <b>or_options->IPv6Exit</b> is false, add an entry that
+ * rejects all IPv6 destinations.
+ *
+ * If <b>or_options->ExitPolicyRejectPrivate</b> is true, add entry that
+ * rejects all destinations in the private subnetwork of machine Tor
+ * instance is running in.
+ *
+ * If <b>or_options->BridgeRelay</b> is false, add entries of default
+ * Tor exit policy into <b>result</b> smartlist.
+ */
 int
 policies_parse_exit_policy_from_options(const or_options_t *or_options,
                                         uint32_t local_address,
