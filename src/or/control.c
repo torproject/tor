@@ -949,7 +949,7 @@ static int
 handle_control_setevents(control_connection_t *conn, uint32_t len,
                          const char *body)
 {
-  int event_code = -1;
+  int event_code;
   event_mask_t event_mask = 0;
   smartlist_t *events = smartlist_new();
 
@@ -963,6 +963,8 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
         continue;
       } else {
         int i;
+        event_code = -1;
+
         for (i = 0; control_event_table[i].event_name != NULL; ++i) {
           if (!strcasecmp(ev, control_event_table[i].event_name)) {
             event_code = control_event_table[i].event_code;

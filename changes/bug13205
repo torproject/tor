@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Return an error when the second or later arguments of the
+      "setevents" controller command are invalid events. Previously we
+      would return success while silently skipping invalid events. Fixes
+      bug 13205; bugfix on 0.2.3.2-alpha. Reported by "fpxnns".
