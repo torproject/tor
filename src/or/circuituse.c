@@ -2110,8 +2110,7 @@ link_apconn_to_circ(entry_connection_t *apconn, origin_circuit_t *circ,
       exitnode->rs) {
     /* Okay; we know what exit node this is. */
     if (optimistic_data_enabled() &&
-        circ->base_.purpose == CIRCUIT_PURPOSE_C_GENERAL &&
-        exitnode->rs->version_supports_optimistic_data)
+        circ->base_.purpose == CIRCUIT_PURPOSE_C_GENERAL)
       apconn->may_use_optimistic_data = 1;
     else
       apconn->may_use_optimistic_data = 0;

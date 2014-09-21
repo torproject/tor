@@ -1916,12 +1916,9 @@ routerstatus_parse_entry_from_string(memarea_t *area,
     rs->version_known = 1;
     if (strcmpstart(tok->args[0], "Tor ")) {
       rs->version_supports_microdesc_cache = 1;
-      rs->version_supports_optimistic_data = 1;
     } else {
       rs->version_supports_microdesc_cache =
         tor_version_supports_microdescriptors(tok->args[0]);
-      rs->version_supports_optimistic_data =
-        tor_version_as_new_as(tok->args[0], "0.2.3.1-alpha");
       rs->version_supports_extend2_cells =
         tor_version_as_new_as(tok->args[0], "0.2.4.8-alpha");
     }

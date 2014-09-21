@@ -1,0 +1,5 @@
+  o Code simplication:
+    - Clients are now willing to send optimistic circuit data (before they
+      receive a 'connected' cell) to relays of any version. We used to
+      only do it for relays running 0.2.3.1-alpha or later, but now all
+      relays are new enough. Resolves ticket 13153.

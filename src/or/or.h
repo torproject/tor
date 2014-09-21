@@ -2149,9 +2149,6 @@ typedef struct routerstatus_t {
   /** True iff this router is a version that, if it caches directory info,
    * we can get microdescriptors from. */
   unsigned int version_supports_microdesc_cache:1;
-  /** True iff this router is a version that allows DATA cells to arrive on
-   * a stream before it has sent a CONNECTED cell. */
-  unsigned int version_supports_optimistic_data:1;
   /** True iff this router has a version that allows it to accept EXTEND2
    * cells */
   unsigned int version_supports_extend2_cells:1;
