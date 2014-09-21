@@ -143,23 +143,33 @@ test_socks_5_unsupported_commands(void *ptr)
   ADD_DATA(buf, "\x05\x02\x00\x01\x02\x02\x02\x01\x01\x01");
   tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
                                get_options()->SafeSocks),==, -1);
-  /* XXX: shouldn't tor reply 'command not supported' [07]? */
+
+  tt_int_op(5,==,socks->socks_version);
+  tt_int_op(10,==,socks->replylen);
+  tt_int_op(5,==,socks->reply[0]);
+  tt_int_op(SOCKS5_COMMAND_NOT_SUPPORTED,==,socks->reply[1]);
+  tt_int_op(1,==,socks->reply[3]);
 
   buf_clear(buf);
   socks_request_clear(socks);
 
   /* SOCKS 5 Send unsupported UDP_ASSOCIATE [03] command */
-  ADD_DATA(buf, "\x05\x03\x00\x01\x02");
+  ADD_DATA(buf, "\x05\x02\x00\x01");
   tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
                                get_options()->SafeSocks),==, 0);
   tt_int_op(5,==, socks->socks_version);
   tt_int_op(2,==, socks->replylen);
   tt_int_op(5,==, socks->reply[0]);
-  tt_int_op(2,==, socks->reply[1]);
+  tt_int_op(0,==, socks->reply[1]);
   ADD_DATA(buf, "\x05\x03\x00\x01\x02\x02\x02\x01\x01\x01");
   tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
                                get_options()->SafeSocks),==, -1);
-  /* XXX: shouldn't tor reply 'command not supported' [07]? */
+
+  tt_int_op(5,==,socks->socks_version);
+  tt_int_op(10,==,socks->replylen);
+  tt_int_op(5,==,socks->reply[0]);
+  tt_int_op(SOCKS5_COMMAND_NOT_SUPPORTED,==,socks->reply[1]);
+  tt_int_op(1,==,socks->reply[3]);
 
  done:
   ;
