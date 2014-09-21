@@ -2764,7 +2764,6 @@ connection_exit_connect(edge_connection_t *edge_conn)
 
   /* also, deliver a 'connected' cell back through the circuit. */
   if (connection_edge_is_rendezvous_stream(edge_conn)) {
-    /* rendezvous stream */
     /* don't send an address back! */
     connection_edge_send_command(edge_conn,
                                  RELAY_COMMAND_CONNECTED,
