@@ -2110,14 +2110,17 @@ link_apconn_to_circ(entry_connection_t *apconn, origin_circuit_t *circ,
 
   /* See if we can use optimistic data on this circuit */
   if (optimistic_data_enabled() &&
-      circ->base_.purpose == CIRCUIT_PURPOSE_C_GENERAL)
+      (circ->base_.purpose == CIRCUIT_PURPOSE_C_GENERAL ||
+       circ->base_.purpose == CIRCUIT_PURPOSE_C_REND_JOINED))
     apconn->may_use_optimistic_data = 1;
   else
     apconn->may_use_optimistic_data = 0;
   log_info(LD_APP, "Looks like completed circuit to %s %s allow "
            "optimistic data for connection to %s",
-           /* node_describe() does the right thing if exitnode is NULL */
-           safe_str_client(node_describe(exitnode)),
+           circ->base_.purpose == CIRCUIT_PURPOSE_C_GENERAL ?
+             /* node_describe() does the right thing if exitnode is NULL */
+             safe_str_client(node_describe(exitnode)) :
+             "hidden service",
            apconn->may_use_optimistic_data ? "does" : "doesn't",
            safe_str_client(apconn->socks_request->address));
 }
