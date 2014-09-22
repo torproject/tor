@@ -1,0 +1,6 @@
+  o Major features (performance):
+    - Allow clients to use optimistic data when connecting to a hidden
+      service, which should cut out the initial round-trip for client-side
+      programs including Tor Browser. (Now that Tor 0.2.2.x is obsolete,
+      all hidden services should support server-side optimistic
+      data.) See proposal 181 for details. Implements ticket 13211.
