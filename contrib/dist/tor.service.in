@@ -22,6 +22,7 @@ InaccessibleDirectories = /home
 ReadOnlyDirectories = /
 ReadWriteDirectories = @LOCALSTATEDIR@/lib/tor
 ReadWriteDirectories = @LOCALSTATEDIR@/log/tor
+ReadWriteDirectories = @LOCALSTATEDIR@/run/tor
 NoNewPrivileges = yes
 
 [Install]
