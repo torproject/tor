@@ -2070,7 +2070,7 @@ static void
 link_apconn_to_circ(entry_connection_t *apconn, origin_circuit_t *circ,
                     crypt_path_t *cpath)
 {
-  const node_t *exitnode;
+  const node_t *exitnode = NULL;
 
   /* add it into the linked list of streams on this circuit */
   log_debug(LD_APP|LD_CIRC, "attaching new conn to circ. n_circ_id %u.",
@@ -2104,23 +2104,22 @@ link_apconn_to_circ(entry_connection_t *apconn, origin_circuit_t *circ,
   circ->isolation_any_streams_attached = 1;
   connection_edge_update_circuit_isolation(apconn, circ, 0);
 
+  /* Compute the exitnode if possible, for logging below */
+  if (cpath->extend_info)
+    exitnode = node_get_by_id(cpath->extend_info->identity_digest);
+
   /* See if we can use optimistic data on this circuit */
-  if (cpath->extend_info &&
-      (exitnode = node_get_by_id(cpath->extend_info->identity_digest)) &&
-      exitnode->rs) {
-    /* Okay; we know what exit node this is. */
-    if (optimistic_data_enabled() &&
-        circ->base_.purpose == CIRCUIT_PURPOSE_C_GENERAL &&
-        exitnode->rs->version_supports_optimistic_data)
-      apconn->may_use_optimistic_data = 1;
-    else
-      apconn->may_use_optimistic_data = 0;
-    log_info(LD_APP, "Looks like completed circuit to %s %s allow "
-             "optimistic data for connection to %s",
-             safe_str_client(node_describe(exitnode)),
-             apconn->may_use_optimistic_data ? "does" : "doesn't",
-             safe_str_client(apconn->socks_request->address));
-  }
+  if (optimistic_data_enabled() &&
+      circ->base_.purpose == CIRCUIT_PURPOSE_C_GENERAL)
+    apconn->may_use_optimistic_data = 1;
+  else
+    apconn->may_use_optimistic_data = 0;
+  log_info(LD_APP, "Looks like completed circuit to %s %s allow "
+           "optimistic data for connection to %s",
+           /* node_describe() does the right thing if exitnode is NULL */
+           safe_str_client(node_describe(exitnode)),
+           apconn->may_use_optimistic_data ? "does" : "doesn't",
+           safe_str_client(apconn->socks_request->address));
 }
 
 /** Return true iff <b>address</b> is matched by one of the entries in
