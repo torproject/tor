@@ -1,4 +1,4 @@
-Changes in version 0.2.5.8-rc - 2014-09-2?
+Changes in version 0.2.5.8-rc - 2014-09-22
   Tor 0.2.5.8-rc is the second release candidate for the Tor 0.2.5.x
   series. It fixes a bug that affects consistency and speed when
   connecting to hidden services, and it updates the location of one of
