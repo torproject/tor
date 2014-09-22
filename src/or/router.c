@@ -1855,10 +1855,8 @@ router_rebuild_descriptor(int force)
     /* DNS is screwed up; don't claim to be an exit. */
     policies_exit_policy_append_reject_star(&ri->exit_policy);
   } else {
-    policies_parse_exit_policy(options->ExitPolicy, &ri->exit_policy,
-                               options->IPv6Exit,
-                               options->ExitPolicyRejectPrivate,
-                               ri->addr, !options->BridgeRelay);
+    policies_parse_exit_policy_from_options(options,ri->addr,
+                                            &ri->exit_policy);
   }
   ri->policy_is_reject_star =
     policy_is_reject_star(ri->exit_policy, AF_INET) &&
