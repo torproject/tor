@@ -1841,7 +1841,8 @@ choose_good_exit_server(uint8_t purpose,
       {
         /* Pick a new RP */
         const node_t *rendezvous_node = pick_rendezvous_node(flags);
-        log_info(LD_REND, "Picked new RP: %s", node_describe(rendezvous_node));
+        log_info(LD_REND, "Picked new RP: %s",
+                 safe_str_client(node_describe(rendezvous_node)));
         return rendezvous_node;
       }
   }
