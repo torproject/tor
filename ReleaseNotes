@@ -3,6 +3,33 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.2.4.24 - 2014-09-22
+  Tor 0.2.4.24 fixes a bug that affects consistency and speed when
+  connecting to hidden services, and it updates the location of one of
+  the directory authorities.
+
+  o Major bugfixes:
+    - Clients now send the correct address for their chosen rendezvous
+      point when trying to access a hidden service. They used to send
+      the wrong address, which would still work some of the time because
+      they also sent the identity digest of the rendezvous point, and if
+      the hidden service happened to try connecting to the rendezvous
+      point from a relay that already had a connection open to it,
+      the relay would reuse that connection. Now connections to hidden
+      services should be more robust and faster. Also, this bug meant
+      that clients were leaking to the hidden service whether they were
+      on a little-endian (common) or big-endian (rare) system, which for
+      some users might have reduced their anonymity. Fixes bug 13151;
+      bugfix on 0.2.1.5-alpha.
+
+  o Directory authority changes:
+    - Change IP address for gabelmoo (v3 directory authority).
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the August 7 2014 Maxmind GeoLite2
+      Country database.
+
+
 Changes in version 0.2.4.23 - 2014-07-28
   Tor 0.2.4.23 brings us a big step closer to slowing down the risk from
   guard rotation, and also backports several important fixes from the
