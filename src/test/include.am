@@ -22,6 +22,7 @@ src_test_test_SOURCES = \
 	src/test/test_cell_formats.c \
 	src/test/test_circuitlist.c \
 	src/test/test_circuitmux.c \
+	src/test/test_config.c \
 	src/test/test_containers.c \
 	src/test/test_controller_events.c \
 	src/test/test_crypto.c \
@@ -29,19 +30,19 @@ src_test_test_SOURCES = \
 	src/test/test_data.c \
 	src/test/test_dir.c \
 	src/test/test_extorport.c \
+	src/test/test_hs.c \
 	src/test/test_introduce.c \
 	src/test/test_logging.c \
 	src/test/test_microdesc.c \
+	src/test/test_nodelist.c \
 	src/test/test_oom.c \
 	src/test/test_options.c \
 	src/test/test_pt.c \
 	src/test/test_replay.c \
 	src/test/test_routerkeys.c \
+	src/test/test_routerlist.c \
 	src/test/test_socks.c \
 	src/test/test_util.c \
-	src/test/test_config.c \
-	src/test/test_hs.c \
-	src/test/test_nodelist.c \
 	src/ext/tinytest.c
 
 src_test_test_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)

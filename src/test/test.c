@@ -1637,33 +1637,35 @@ extern struct testcase_t hs_tests[];
 extern struct testcase_t nodelist_tests[];
 extern struct testcase_t routerkeys_tests[];
 extern struct testcase_t oom_tests[];
+extern struct testcase_t routerlist_tests[];
 
 static struct testgroup_t testgroups[] = {
   { "", test_array },
-  { "buffer/", buffer_tests },
-  { "socks/", socks_tests },
   { "addr/", addr_tests },
-  { "crypto/", crypto_tests },
-  { "container/", container_tests },
-  { "util/", util_tests },
-  { "util/logging/", logging_tests },
+  { "buffer/", buffer_tests },
   { "cellfmt/", cell_format_tests },
   { "cellqueue/", cell_queue_tests },
-  { "dir/", dir_tests },
-  { "dir/md/", microdesc_tests },
-  { "pt/", pt_tests },
-  { "config/", config_tests },
-  { "replaycache/", replaycache_tests },
-  { "introduce/", introduce_tests },
   { "circuitlist/", circuitlist_tests },
   { "circuitmux/", circuitmux_tests },
-  { "options/", options_tests },
-  { "extorport/", extorport_tests },
+  { "config/", config_tests },
+  { "container/", container_tests },
   { "control/", controller_event_tests },
+  { "crypto/", crypto_tests },
+  { "dir/", dir_tests },
+  { "dir/md/", microdesc_tests },
+  { "extorport/", extorport_tests },
   { "hs/", hs_tests },
+  { "introduce/", introduce_tests },
   { "nodelist/", nodelist_tests },
-  { "routerkeys/", routerkeys_tests },
   { "oom/", oom_tests },
+  { "options/", options_tests },
+  { "pt/", pt_tests },
+  { "routerkeys/", routerkeys_tests },
+  { "routerlist/", routerlist_tests },
+  { "replaycache/", replaycache_tests },
+  { "socks/", socks_tests },
+  { "util/", util_tests },
+  { "util/logging/", logging_tests },
   END_OF_GROUPS
 };
 
