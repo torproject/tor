@@ -2372,12 +2372,12 @@ static void
 test_dir_fetch_type(void *arg)
 {
   (void)arg;
-  test_eq(dir_fetch_type(DIR_PURPOSE_FETCH_MICRODESC, ROUTER_PURPOSE_GENERAL,
-                         NULL), MICRODESC_DIRINFO);
-  test_eq(dir_fetch_type(DIR_PURPOSE_FETCH_SERVERDESC, ROUTER_PURPOSE_BRIDGE,
-                         NULL), BRIDGE_DIRINFO);
-  test_eq(dir_fetch_type(DIR_PURPOSE_FETCH_CONSENSUS, ROUTER_PURPOSE_GENERAL,
-                         "microdesc"), V3_DIRINFO | MICRODESC_DIRINFO);
+  tt_assert(dir_fetch_type(DIR_PURPOSE_FETCH_MICRODESC, ROUTER_PURPOSE_GENERAL,
+                           NULL) == MICRODESC_DIRINFO);
+  tt_assert(dir_fetch_type(DIR_PURPOSE_FETCH_SERVERDESC, ROUTER_PURPOSE_BRIDGE,
+                           NULL) == BRIDGE_DIRINFO);
+  tt_assert(dir_fetch_type(DIR_PURPOSE_FETCH_CONSENSUS, ROUTER_PURPOSE_GENERAL,
+                           "microdesc") == (V3_DIRINFO | MICRODESC_DIRINFO));
  done: ;
 }
 
