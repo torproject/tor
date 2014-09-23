@@ -4289,18 +4289,13 @@ list_pending_fpsk_downloads(fp_pair_map_t *result)
  * range.)  If <b>source</b> is given, download from <b>source</b>;
  * otherwise, download from an appropriate random directory server.
  */
-static void
-initiate_descriptor_downloads(const routerstatus_t *source,
-                              int purpose,
-                              smartlist_t *digests,
-                              int lo, int hi, int pds_flags)
+MOCK_IMPL(STATIC void, initiate_descriptor_downloads,
+          (const routerstatus_t *source, int purpose, smartlist_t *digests,
+           int lo, int hi, int pds_flags))
 {
-  int i, n = hi-lo;
   char *resource, *cp;
-  size_t r_len;
-
   int digest_len = DIGEST_LEN, enc_digest_len = HEX_DIGEST_LEN;
-  char sep = '+';
+  char *sep = "+";
   int b64_256 = 0;
 
   if (purpose == DIR_PURPOSE_FETCH_MICRODESC) {
@@ -4308,32 +4303,37 @@ initiate_descriptor_downloads(const routerstatus_t *source,
      * 256-bit digests. */
     digest_len = DIGEST256_LEN;
     enc_digest_len = BASE64_DIGEST256_LEN;
-    sep = '-';
+    sep = "-";
     b64_256 = 1;
   }
 
-  if (n <= 0)
-    return;
   if (lo < 0)
     lo = 0;
   if (hi > smartlist_len(digests))
     hi = smartlist_len(digests);
 
-  r_len = 8 + (enc_digest_len+1)*n;
-  cp = resource = tor_malloc(r_len);
-  memcpy(cp, "d/", 2);
-  cp += 2;
-  for (i = lo; i < hi; ++i) {
+  if (hi-lo <= 0)
+    return;
+
+  digest_len += 1;  // for the NULL
+  smartlist_t *tmp = smartlist_new();
+
+  for (; lo < hi; ++lo) {
+    cp = tor_malloc(enc_digest_len);
     if (b64_256) {
-      digest256_to_base64(cp, smartlist_get(digests, i));
+      digest256_to_base64(cp, smartlist_get(digests, lo));
     } else {
-      base16_encode(cp, r_len-(cp-resource),
-                    smartlist_get(digests,i), digest_len);
+      base16_encode(cp, enc_digest_len, smartlist_get(digests, lo), digest_len);
     }
-    cp += enc_digest_len;
-    *cp++ = sep;
+    smartlist_add(tmp, cp);
   }
-  memcpy(cp-1, ".z", 3);
+
+  cp = smartlist_join_strings(tmp, sep, 0, NULL);
+  tor_asprintf(&resource, "d/%s.z", cp);
+
+  SMARTLIST_FOREACH(tmp, char *, cp1, tor_free(cp1));
+  smartlist_free(tmp);
+  tor_free(cp);
 
   if (source) {
     /* We know which authority we want. */

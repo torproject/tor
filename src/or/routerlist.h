@@ -211,6 +211,10 @@ STATIC int choose_array_element_by_weight(const u64_dbl_t *entries,
                                           int n_entries);
 STATIC void scale_array_elements_to_u64(u64_dbl_t *entries, int n_entries,
                                         uint64_t *total_out);
+MOCK_DECL(STATIC void, initiate_descriptor_downloads,
+          (const routerstatus_t *source, int purpose, smartlist_t *digests,
+           int lo, int hi, int pds_flags));
+
 #endif
 
 #endif
