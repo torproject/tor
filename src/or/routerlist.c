@@ -4355,7 +4355,7 @@ MOCK_IMPL(STATIC void, initiate_descriptor_downloads,
  *   4058/41 (40 for the hash and 1 for the + that separates them) => 98
  *   So use 96 because it's a nice number.
  */
-int
+static int
 max_dl_per_request(const or_options_t *options, int purpose)
 {
   int max = 96;
@@ -4389,11 +4389,15 @@ launch_descriptor_downloads(int purpose,
   const or_options_t *options = get_options();
   const char *descname;
   const int fetch_microdesc = (purpose == DIR_PURPOSE_FETCH_MICRODESC);
+  int n_downloadable = smartlist_len(downloadable);
+
+  int i, n_per_request, max_dl_per_req;
+  const char *req_plural = "", *rtr_plural = "";
+  int pds_flags = PDS_RETRY_IF_NO_SERVERS;
 
   tor_assert(fetch_microdesc || purpose == DIR_PURPOSE_FETCH_SERVERDESC);
   descname = fetch_microdesc ? "microdesc" : "routerdesc";
 
-  int n_downloadable = smartlist_len(downloadable);
   if (!n_downloadable)
     return;
 
@@ -4425,9 +4429,6 @@ launch_descriptor_downloads(int purpose,
     }
   }
 
-  int i, n_per_request, max_dl_per_req;
-  const char *req_plural = "", *rtr_plural = "";
-  int pds_flags = PDS_RETRY_IF_NO_SERVERS;
   if (!authdir_mode_any_nonhidserv(options) || fetch_microdesc) {
     /* If we wind up going to the authorities, we want to only open one
      * connection to each authority at a time, so that we don't overload
@@ -4648,7 +4649,7 @@ update_extrainfo_downloads(time_t now)
   routerlist_t *rl;
   smartlist_t *wanted;
   digestmap_t *pending;
-  int old_routers, i;
+  int old_routers, i, max_dl_per_req;
   int n_no_ei = 0, n_pending = 0, n_have = 0, n_delay = 0;
   if (! options->DownloadExtraInfo)
     return;
@@ -4704,7 +4705,8 @@ update_extrainfo_downloads(time_t now)
            n_no_ei, n_have, n_delay, n_pending, smartlist_len(wanted));
 
   smartlist_shuffle(wanted);
-  int max_dl_per_req = max_dl_per_request(options, DIR_PURPOSE_FETCH_EXTRAINFO);
+
+  max_dl_per_req = max_dl_per_request(options, DIR_PURPOSE_FETCH_EXTRAINFO);
   for (i = 0; i < smartlist_len(wanted); i += max_dl_per_req) {
     initiate_descriptor_downloads(NULL, DIR_PURPOSE_FETCH_EXTRAINFO,
                                   wanted, i, i+max_dl_per_req,
