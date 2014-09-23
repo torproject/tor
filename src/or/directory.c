@@ -527,14 +527,11 @@ MOCK_IMPL(void, directory_get_from_dirserver, (uint8_t dir_purpose,
     }
   } else { /* get_via_tor */
     /* Never use fascistfirewall; we're going via Tor. */
-    if (1) {
-      /* anybody with a non-zero dirport will do. Disregard firewalls. */
-      pds_flags |= PDS_IGNORE_FASCISTFIREWALL;
-      rs = router_pick_directory_server(type, pds_flags);
-      /* If we have any hope of building an indirect conn, we know some router
-       * descriptors.  If (rs==NULL), we can't build circuits anyway, so
-       * there's no point in falling back to the authorities in this case. */
-    }
+    pds_flags |= PDS_IGNORE_FASCISTFIREWALL;
+    rs = router_pick_directory_server(type, pds_flags);
+    /* If we have any hope of building an indirect conn, we know some router
+     * descriptors.  If (rs==NULL), we can't build circuits anyway, so
+     * there's no point in falling back to the authorities in this case. */
   }
 
   if (rs) {
