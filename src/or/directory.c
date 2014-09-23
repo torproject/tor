@@ -1261,7 +1261,8 @@ directory_send_command(dir_connection_t *conn,
       return;
   }
 
-  if (strlen(proxystring) + strlen(url) >= 4096) {
+  /* warn in the non-tunneled case */
+  if (direct && (strlen(proxystring) + strlen(url) >= 4096)) {
     log_warn(LD_BUG,
              "Squid does not like URLs longer than 4095 bytes, and this "
              "one is %d bytes long: %s%s",

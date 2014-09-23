@@ -4354,8 +4354,16 @@ MOCK_IMPL(STATIC void, initiate_descriptor_downloads,
  *   4058/41 (40 for the hash and 1 for the + that separates them) => 98
  *   So use 96 because it's a nice number.
  */
-#define MAX_DL_PER_REQUEST 96
-#define MAX_MICRODESC_DL_PER_REQUEST 92
+int
+max_dl_per_request(const or_options_t *options, int purpose)
+{
+  int max = 96;
+  if (purpose == DIR_PURPOSE_FETCH_MICRODESC) {
+    max = options->TunnelDirConns ? 1000 : 92;
+  }
+  return max;
+}
+
 /** Don't split our requests so finely that we are requesting fewer than
  * this number per server. */
 #define MIN_DL_PER_REQUEST 4
@@ -4377,92 +4385,89 @@ launch_descriptor_downloads(int purpose,
                             smartlist_t *downloadable,
                             const routerstatus_t *source, time_t now)
 {
-  int should_delay = 0, n_downloadable;
   const or_options_t *options = get_options();
   const char *descname;
+  const int fetch_microdesc = (purpose == DIR_PURPOSE_FETCH_MICRODESC);
 
-  tor_assert(purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
-             purpose == DIR_PURPOSE_FETCH_MICRODESC);
+  tor_assert(fetch_microdesc || purpose == DIR_PURPOSE_FETCH_SERVERDESC);
+  descname = fetch_microdesc ? "microdesc" : "routerdesc";
 
-  descname = (purpose == DIR_PURPOSE_FETCH_SERVERDESC) ?
-    "routerdesc" : "microdesc";
+  int n_downloadable = smartlist_len(downloadable);
+  if (!n_downloadable)
+    return;
 
-  n_downloadable = smartlist_len(downloadable);
   if (!directory_fetches_dir_info_early(options)) {
     if (n_downloadable >= MAX_DL_TO_DELAY) {
       log_debug(LD_DIR,
                 "There are enough downloadable %ss to launch requests.",
                 descname);
-      should_delay = 0;
     } else {
-      should_delay = (last_descriptor_download_attempted +
-                      options->TestingClientMaxIntervalWithoutRequest) > now;
-      if (!should_delay && n_downloadable) {
-        if (last_descriptor_download_attempted) {
-          log_info(LD_DIR,
-                   "There are not many downloadable %ss, but we've "
-                   "been waiting long enough (%d seconds). Downloading.",
-                   descname,
-                   (int)(now-last_descriptor_download_attempted));
-        } else {
-          log_info(LD_DIR,
-                   "There are not many downloadable %ss, but we haven't "
-                   "tried downloading descriptors recently. Downloading.",
-                   descname);
-        }
+
+      /* should delay */
+      if ((last_descriptor_download_attempted +
+          options->TestingClientMaxIntervalWithoutRequest) > now)
+        return;
+
+      if (last_descriptor_download_attempted) {
+        log_info(LD_DIR,
+                 "There are not many downloadable %ss, but we've "
+                 "been waiting long enough (%d seconds). Downloading.",
+                 descname,
+                 (int)(now-last_descriptor_download_attempted));
+      } else {
+        log_info(LD_DIR,
+                 "There are not many downloadable %ss, but we haven't "
+                 "tried downloading descriptors recently. Downloading.",
+                 descname);
       }
+
     }
   }
 
-  if (! should_delay && n_downloadable) {
-    int i, n_per_request;
-    const char *req_plural = "", *rtr_plural = "";
-    int pds_flags = PDS_RETRY_IF_NO_SERVERS;
-    if (! authdir_mode_any_nonhidserv(options)) {
-      /* If we wind up going to the authorities, we want to only open one
-       * connection to each authority at a time, so that we don't overload
-       * them.  We do this by setting PDS_NO_EXISTING_SERVERDESC_FETCH
-       * regardless of whether we're a cache or not; it gets ignored if we're
-       * not calling router_pick_trusteddirserver.
-       *
-       * Setting this flag can make initiate_descriptor_downloads() ignore
-       * requests.  We need to make sure that we do in fact call
-       * update_router_descriptor_downloads() later on, once the connections
-       * have succeeded or failed.
-       */
-      pds_flags |= (purpose == DIR_PURPOSE_FETCH_MICRODESC) ?
-        PDS_NO_EXISTING_MICRODESC_FETCH :
-        PDS_NO_EXISTING_SERVERDESC_FETCH;
-    }
-
-    n_per_request = CEIL_DIV(n_downloadable, MIN_REQUESTS);
-    if (purpose == DIR_PURPOSE_FETCH_MICRODESC) {
-      if (n_per_request > MAX_MICRODESC_DL_PER_REQUEST)
-        n_per_request = MAX_MICRODESC_DL_PER_REQUEST;
-    } else {
-      if (n_per_request > MAX_DL_PER_REQUEST)
-        n_per_request = MAX_DL_PER_REQUEST;
-    }
-    if (n_per_request < MIN_DL_PER_REQUEST)
-      n_per_request = MIN_DL_PER_REQUEST;
-
-    if (n_downloadable > n_per_request)
-      req_plural = rtr_plural = "s";
-    else if (n_downloadable > 1)
-      rtr_plural = "s";
-
-    log_info(LD_DIR,
-             "Launching %d request%s for %d %s%s, %d at a time",
-             CEIL_DIV(n_downloadable, n_per_request), req_plural,
-             n_downloadable, descname, rtr_plural, n_per_request);
-    smartlist_sort_digests(downloadable);
-    for (i=0; i < n_downloadable; i += n_per_request) {
-      initiate_descriptor_downloads(source, purpose,
-                                    downloadable, i, i+n_per_request,
-                                    pds_flags);
-    }
-    last_descriptor_download_attempted = now;
+  int i, n_per_request, max_dl_per_req;
+  const char *req_plural = "", *rtr_plural = "";
+  int pds_flags = PDS_RETRY_IF_NO_SERVERS;
+  if (!authdir_mode_any_nonhidserv(options) || fetch_microdesc) {
+    /* If we wind up going to the authorities, we want to only open one
+     * connection to each authority at a time, so that we don't overload
+     * them.  We do this by setting PDS_NO_EXISTING_SERVERDESC_FETCH
+     * regardless of whether we're a cache or not.
+     *
+     * Setting this flag can make initiate_descriptor_downloads() ignore
+     * requests.  We need to make sure that we do in fact call
+     * update_router_descriptor_downloads() later on, once the connections
+     * have succeeded or failed.
+     */
+    pds_flags |= fetch_microdesc ?
+      PDS_NO_EXISTING_MICRODESC_FETCH :
+      PDS_NO_EXISTING_SERVERDESC_FETCH;
   }
+
+  n_per_request = CEIL_DIV(n_downloadable, MIN_REQUESTS);
+  max_dl_per_req = max_dl_per_request(options, purpose);
+
+  if (n_per_request > max_dl_per_req)
+    n_per_request = max_dl_per_req;
+
+  if (n_per_request < MIN_DL_PER_REQUEST)
+    n_per_request = MIN_DL_PER_REQUEST;
+
+  if (n_downloadable > n_per_request)
+    req_plural = rtr_plural = "s";
+  else if (n_downloadable > 1)
+    rtr_plural = "s";
+
+  log_info(LD_DIR,
+           "Launching %d request%s for %d %s%s, %d at a time",
+           CEIL_DIV(n_downloadable, n_per_request), req_plural,
+           n_downloadable, descname, rtr_plural, n_per_request);
+  smartlist_sort_digests(downloadable);
+  for (i=0; i < n_downloadable; i += n_per_request) {
+    initiate_descriptor_downloads(source, purpose,
+                                  downloadable, i, i+n_per_request,
+                                  pds_flags);
+  }
+  last_descriptor_download_attempted = now;
 }
 
 /** For any descriptor that we want that's currently listed in
@@ -4698,9 +4703,10 @@ update_extrainfo_downloads(time_t now)
            n_no_ei, n_have, n_delay, n_pending, smartlist_len(wanted));
 
   smartlist_shuffle(wanted);
-  for (i = 0; i < smartlist_len(wanted); i += MAX_DL_PER_REQUEST) {
+  int max_dl_per_req = max_dl_per_request(options, DIR_PURPOSE_FETCH_EXTRAINFO);
+  for (i = 0; i < smartlist_len(wanted); i += max_dl_per_req) {
     initiate_descriptor_downloads(NULL, DIR_PURPOSE_FETCH_EXTRAINFO,
-                                  wanted, i, i + MAX_DL_PER_REQUEST,
+                                  wanted, i, i+max_dl_per_req,
                 PDS_RETRY_IF_NO_SERVERS|PDS_NO_EXISTING_SERVERDESC_FETCH);
   }
 
