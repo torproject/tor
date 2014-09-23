@@ -1019,25 +1019,35 @@ test_crypto_pwbox(void *arg)
 {
   uint8_t *boxed=NULL, *decoded=NULL;
   size_t len, dlen;
+  unsigned i;
   const char msg[] = "This bunny reminds you that you still have a "
     "salamander in your sylladex. She is holding the bunny Dave got you. "
     "It’s sort of uncanny how similar they are, aside from the knitted "
     "enhancements. Seriously, what are the odds?? So weird.";
   const char pw[] = "I'm a night owl and a wise bird too";
 
+  const unsigned flags[] = { 0,
+                             S2K_FLAG_NO_SCRYPT,
+                             S2K_FLAG_LOW_MEM,
+                             S2K_FLAG_NO_SCRYPT|S2K_FLAG_LOW_MEM,
+                             S2K_FLAG_USE_PBKDF2 };
   (void)arg;
 
-  tt_int_op(0, ==, crypto_pwbox(&boxed, &len, (const uint8_t*)msg, strlen(msg),
-                                pw, strlen(pw), 0));
-  tt_assert(boxed);
-  tt_assert(len > 128+32);
+  for (i = 0; i < ARRAY_LENGTH(flags); ++i) {
+    tt_int_op(0, ==, crypto_pwbox(&boxed, &len, (const uint8_t*)msg, strlen(msg),
+                                  pw, strlen(pw), flags[i]));
+    tt_assert(boxed);
+    tt_assert(len > 128+32);
 
-  tt_int_op(0, ==, crypto_unpwbox(&decoded, &dlen, boxed, len,
-                                  pw, strlen(pw)));
+    tt_int_op(0, ==, crypto_unpwbox(&decoded, &dlen, boxed, len,
+                                    pw, strlen(pw)));
 
-  tt_assert(decoded);
-  tt_uint_op(dlen, ==, strlen(msg));
-  tt_mem_op(decoded, ==, msg, dlen);
+    tt_assert(decoded);
+    tt_uint_op(dlen, ==, strlen(msg));
+    tt_mem_op(decoded, ==, msg, dlen);
+    tor_free(boxed);
+    tor_free(decoded);
+  }
 
  done:
   tor_free(boxed);
