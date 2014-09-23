@@ -1093,7 +1093,7 @@ decide_to_advertise_dirport(const or_options_t *options, uint16_t dir_port)
                          interval_length);
 
     acc_bytes = options->AccountingMax;
-    if (strcmp(options->AccountingRule, "sum") == 0)
+    if (get_options()->AccountingRule == ACCT_SUM)
       acc_bytes /= 2;
     if (effective_bw >=
         acc_bytes / interval_length) {

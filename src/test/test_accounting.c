@@ -34,7 +34,7 @@ test_accounting_limits(void *arg)
   or_state = or_state_new();
 
   options->AccountingMax = 100;
-  options->AccountingRule = tor_strdup("max");
+  options->AccountingRule = ACCT_MAX;
 
   tor_assert(accounting_is_enabled(options));
   configure_accounting(fake_time);
@@ -50,7 +50,7 @@ test_accounting_limits(void *arg)
   tor_assert(we_are_hibernating() == 1);
 
   options->AccountingMax = 200;
-  options->AccountingRule = tor_strdup("sum");
+  options->AccountingRule = ACCT_SUM;
 
   accounting_add_bytes(0, 10, 1);
   fake_time += 1;

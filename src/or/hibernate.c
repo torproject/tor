@@ -415,9 +415,10 @@ configure_accounting(time_t now)
 static uint64_t
 get_accounting_bytes(void)
 {
-  if (strcmp(get_options()->AccountingRule, "sum") == 0)
+  if (get_options()->AccountingRule == ACCT_SUM)
     return n_bytes_read_in_interval+n_bytes_written_in_interval;
-  return MAX(n_bytes_read_in_interval, n_bytes_written_in_interval);
+  else
+    return MAX(n_bytes_read_in_interval, n_bytes_written_in_interval);
 }
 
 /** Set expected_bandwidth_usage based on how much we sent/received
@@ -434,7 +435,7 @@ update_expected_bandwidth(void)
   /* max_configured is the larger of bytes read and bytes written
    * If we are accounting based on sum, worst case is both are
    * at max, doubling the expected sum of bandwidth */
-  if (strcmp(get_options()->AccountingRule, "sum") == 0)
+  if (get_options()->AccountingRule == ACCT_SUM)
     max_configured *= 2;
 
 #define MIN_TIME_FOR_MEASUREMENT (1800)
@@ -1014,7 +1015,7 @@ getinfo_helper_accounting(control_connection_t *conn,
                  U64_PRINTF_ARG(n_bytes_written_in_interval));
   } else if (!strcmp(question, "accounting/bytes-left")) {
     uint64_t limit = get_options()->AccountingMax;
-    if (strcmp(get_options()->AccountingRule, "sum") == 0) {
+    if (get_options()->AccountingRule == ACCT_SUM) {
       uint64_t total_left = 0;
       uint64_t total_bytes = get_accounting_bytes();
       if (total_bytes < limit)
