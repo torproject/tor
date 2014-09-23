@@ -1383,6 +1383,10 @@ router_pick_dirserver_generic(smartlist_t *sourcelist,
  *
  * If the PDS_PREFER_TUNNELED_DIR_CONNS_ flag is set, prefer directory servers
  * that we can use with BEGINDIR.
+ *
+ * If <b>n_busy_out</b> is provided, set *<b>n_busy_out</b> to the number of
+ * directories that we excluded for no other reason than
+ * PDS_NO_EXISTING_SERVERDESC_FETCH or PDS_NO_EXISTING_MICRODESC_FETCH.
  */
 static const routerstatus_t *
 router_pick_directory_server_impl(dirinfo_type_t type, int flags,
@@ -1506,16 +1510,17 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
   smartlist_free(overloaded_direct);
   smartlist_free(overloaded_tunnel);
 
-  if (n_busy_out)
-    *n_busy_out = n_busy;
-
   if (result == NULL && try_excluding && !options->StrictNodes && n_excluded) {
     /* If we got no result, and we are excluding nodes, and StrictNodes is
      * not set, try again without excluding nodes. */
     try_excluding = 0;
     n_excluded = 0;
+    n_busy = 0;
     goto retry_without_exclude;
   }
+
+  if (n_busy_out)
+    *n_busy_out = n_busy;
 
   return result ? result->rs : NULL;
 }
