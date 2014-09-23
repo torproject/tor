@@ -518,14 +518,13 @@ MOCK_IMPL(void, directory_get_from_dirserver, (uint8_t dir_purpose,
         /* */
         rs = directory_pick_generic_dirserver(type, pds_flags,
                                               dir_purpose);
-        if (!rs) {
-          /*XXXX024 I'm pretty sure this can never do any good, since
-           * rs isn't set. */
+        if (!rs)
           get_via_tor = 1; /* last resort: try routing it via Tor */
-        }
       }
     }
-  } else { /* get_via_tor */
+  }
+
+  if (get_via_tor) {
     /* Never use fascistfirewall; we're going via Tor. */
     pds_flags |= PDS_IGNORE_FASCISTFIREWALL;
     rs = router_pick_directory_server(type, pds_flags);
