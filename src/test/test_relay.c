@@ -61,14 +61,16 @@ test_relay_append_cell_to_circuit_queue(void *arg)
   (void)arg;
 
   /* We'll need the cell pool for append_cell_to_circuit_queue() to work */
+#ifdef ENABLE_MEMPOOLS
   init_cell_pool();
+#endif /* ENABLE_MEMPOOLS */
 
   /* Make fake channels to be nchan and pchan for the circuit */
   nchan = new_fake_channel();
-  test_assert(nchan);
+  tt_assert(nchan);
 
   pchan = new_fake_channel();
-  test_assert(pchan);
+  tt_assert(pchan);
 
   /* We'll need chans with working cmuxes */
   nchan->cmux = circuitmux_alloc();
@@ -76,7 +78,7 @@ test_relay_append_cell_to_circuit_queue(void *arg)
 
   /* Make a fake orcirc */
   orcirc = new_fake_orcirc(nchan, pchan);
-  test_assert(orcirc);
+  tt_assert(orcirc);
 
   /* Make a cell */
   cell = tor_malloc_zero(sizeof(cell_t));
@@ -90,14 +92,14 @@ test_relay_append_cell_to_circuit_queue(void *arg)
   append_cell_to_circuit_queue(TO_CIRCUIT(orcirc), nchan, cell,
                                CELL_DIRECTION_OUT, 0);
   new_count = get_mock_scheduler_has_waiting_cells_count();
-  test_eq(new_count, old_count + 1);
+  tt_int_op(new_count, ==, old_count + 1);
 
   /* Now try the reverse direction */
   old_count = get_mock_scheduler_has_waiting_cells_count();
   append_cell_to_circuit_queue(TO_CIRCUIT(orcirc), pchan, cell,
                                CELL_DIRECTION_IN, 0);
   new_count = get_mock_scheduler_has_waiting_cells_count();
-  test_eq(new_count, old_count + 1);
+  tt_int_op(new_count, ==, old_count + 1);
 
   UNMOCK(scheduler_channel_has_waiting_cells);
 
@@ -117,7 +119,9 @@ test_relay_append_cell_to_circuit_queue(void *arg)
   tor_free(nchan);
   if (pchan && pchan->cmux) circuitmux_free(pchan->cmux);
   tor_free(pchan);
+#ifdef ENABLE_MEMPOOLS
   free_cell_pool();
+#endif /* ENABLE_MEMPOOLS */
 
   return;
 }
