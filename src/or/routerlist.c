@@ -4369,7 +4369,10 @@ max_dl_per_request(const or_options_t *options, int purpose)
 {
   int max = 96;
   if (purpose == DIR_PURPOSE_FETCH_MICRODESC) {
-    max = options->TunnelDirConns ? 1000 : 92;
+    max = 92;
+  }
+  if (options->TunnelDirConns) {
+    max = 1000;
   }
   return max;
 }
