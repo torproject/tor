@@ -8,6 +8,7 @@
 /* 7 bytes "TORBOX0"
    1 byte: header len (H)
    H bytes: header, denoting secret key algorithm.
+   16 bytes: IV
    Round up to multiple of 128 bytes, then encrypt:
       4 bytes: data len
       data
@@ -15,7 +16,7 @@
    32 bytes: HMAC-SHA256 of all previous bytes.
 */
 
-#define MAX_OVERHEAD (S2K_MAXLEN + 8 + 32)
+#define MAX_OVERHEAD (S2K_MAXLEN + 8 + 32 + CIPHER_IV_LEN)
 
 /**
  * Make an authenticated passphrase-encrypted blob to encode the
@@ -31,7 +32,7 @@ crypto_pwbox(uint8_t **out, size_t *outlen_out,
              const char *secret, size_t secret_len,
              unsigned s2k_flags)
 {
-  uint8_t *result, *encrypted_portion, *hmac;
+  uint8_t *result, *encrypted_portion, *hmac, *iv;
   size_t encrypted_len = 128 * CEIL_DIV(input_len+4, 128);
   size_t result_len = encrypted_len + MAX_OVERHEAD;
   int spec_len;
@@ -51,9 +52,10 @@ crypto_pwbox(uint8_t **out, size_t *outlen_out,
     goto err;
   result[7] = (uint8_t) spec_len;
 
-  tor_assert(8 + spec_len + encrypted_len <= result_len);
+  tor_assert(8 + spec_len + CIPHER_IV_LEN + encrypted_len <= result_len);
 
-  encrypted_portion = result + 8 + spec_len;
+  iv = result + 8 + spec_len;
+  encrypted_portion = result + 8 + spec_len + CIPHER_IV_LEN;
   hmac = encrypted_portion + encrypted_len;
 
   set_uint32(encrypted_portion, htonl(input_len));
@@ -66,17 +68,20 @@ crypto_pwbox(uint8_t **out, size_t *outlen_out,
                               secret, secret_len) < 0)
     goto err;
 
-  cipher = crypto_cipher_new((char*)keys);
+  crypto_rand((char*)iv, CIPHER_IV_LEN);
+
+  cipher = crypto_cipher_new_with_iv((char*)keys, (char*)iv);
   crypto_cipher_crypt_inplace(cipher, (char*)encrypted_portion, encrypted_len);
   crypto_cipher_free(cipher);
 
   crypto_hmac_sha256((char*)hmac,
                      (const char*)keys + CIPHER_KEY_LEN,
                                              sizeof(keys)-CIPHER_KEY_LEN,
-                     (const char*)result, 8 + spec_len + encrypted_len);
+                     (const char*)result,
+                     8 + CIPHER_IV_LEN + spec_len + encrypted_len);
 
   *out = result;
-  *outlen_out = 8 + spec_len + encrypted_len + DIGEST256_LEN;
+  *outlen_out = 8 + CIPHER_IV_LEN + spec_len + encrypted_len + DIGEST256_LEN;
   rv = 0;
   goto out;
 
@@ -104,7 +109,7 @@ crypto_unpwbox(uint8_t **out, size_t *outlen_out,
                const char *secret, size_t secret_len)
 {
   uint8_t *result = NULL;
-  const uint8_t *encrypted;
+  const uint8_t *encrypted, *iv;
   uint8_t keys[CIPHER_KEY_LEN + DIGEST256_LEN];
   size_t spec_bytes;
   uint8_t hmac[DIGEST256_LEN];
@@ -137,10 +142,11 @@ crypto_unpwbox(uint8_t **out, size_t *outlen_out,
     goto err;
   }
 
-  encrypted = inp + 8 + spec_bytes;
+  iv = inp + 8 + spec_bytes;
+  encrypted = inp + 8 + spec_bytes + CIPHER_IV_LEN;
 
   /* How long is the plaintext? */
-  cipher = crypto_cipher_new((char*)keys);
+  cipher = crypto_cipher_new_with_iv((char*)keys, (char*)iv);
   crypto_cipher_decrypt(cipher, (char*)&result_len, (char*)encrypted, 4);
   result_len = ntohl(result_len);
   if (input_len < 8 + spec_bytes + 4 + result_len + 32)
