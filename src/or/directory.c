@@ -345,7 +345,7 @@ should_use_directory_guards(const or_options_t *options)
   return 1;
 }
 
-/** Pick an unconsetrained directory server from among our guards, the latest
+/** Pick an unconstrained directory server from among our guards, the latest
  * networkstatus, or the fallback dirservers, for use in downloading
  * information of type <b>type</b>, and return its routerstatus. */
 static const routerstatus_t *
