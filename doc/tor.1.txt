@@ -1635,19 +1635,31 @@ is non-zero):
     to 0 will disable the heartbeat. (Default: 6 hours)
 
 [[AccountingMax]] **AccountingMax** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**|**TBytes**::
-    Never send more than the specified number of bytes in a given accounting
-    period, or receive more than that number in the period. For example, with
-    AccountingMax set to 1 GByte, a server could send 900 MBytes and
-    receive 800 MBytes and continue running. It will only hibernate once
-    one of the two reaches 1 GByte. When the number of bytes gets low,
-    Tor will stop accepting new connections and circuits.  When the
-    number of bytes is exhausted, Tor will hibernate until some
-    time in the next accounting period. To prevent all servers from waking at
-    the same time, Tor will also wait until a random point in each period
-    before waking up. If you have bandwidth cost issues, enabling hibernation
-    is preferable to setting a low bandwidth, since it provides users with a
-    collection of fast servers that are up some of the time, which is more
-    useful than a set of slow servers that are always "available".
+    Limits the max number of bytes sent and received within a set time period
+    using a given calculation rule (see: AccountingStart, AccountingRule).
+    Useful if you need to stay under a specific bandwidth. By default, the
+    number used for calculation is the max of either the bytes sent or 
+    received. For example, with AccountingMax set to 1 GByte, a server
+    could send 900 MBytes and receive 800 MBytes and continue running.
+    It will only hibernate once one of the two reaches 1 GByte. This can
+    be changed to use the sum of the both bytes received and sent by setting
+    the AccountingRule option to "sum" (total bandwidth in/out). When the
+    number of bytes remaining gets low, Tor will stop accepting new connections
+    and circuits. When the number of bytes is exhausted, Tor will hibernate
+    until some time in the next accounting period. To prevent all servers
+    from waking at the same time, Tor will also wait until a random point
+    in each period before waking up. If you have bandwidth cost issues,
+    enabling hibernation is preferable to setting a low bandwidth, since
+    it provides users with a collection of fast servers that are up some
+    of the time, which is more useful than a set of slow servers that are
+    always "available".
+
+[[AccountingRule]] **AccountingRule** **sum**|**max**::
+    How we determine when our AccountingMax has been reached (when we
+    should hibernate) during a time interval. Set to "max" to calculate
+    using the higher of either the sent or received bytes (this is the
+    default functionality). Set to "sum" to calculate using the sent
+    plus received bytes.
 
 [[AccountingStart]] **AccountingStart** **day**|**week**|**month** [__day__] __HH:MM__::
     Specify how long accounting periods last. If **month** is given, each

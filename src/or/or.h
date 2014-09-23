@@ -3775,6 +3775,10 @@ typedef struct {
   uint64_t AccountingMax; /**< How many bytes do we allow per accounting
                            * interval before hibernation?  0 for "never
                            * hibernate." */
+  char *AccountingRule; /**< How do we determine when our AccountingMax
+                         * has been reached?
+                         * "max" for when in or out reaches AccountingMax
+                         * "sum for when in plus out reaches AccountingMax */
 
   /** Base64-encoded hash of accepted passwords for the control system. */
   config_line_t *HashedControlPassword;

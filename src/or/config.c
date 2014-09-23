@@ -126,6 +126,7 @@ static config_abbrev_t option_abbrevs_[] = {
  */
 static config_var_t option_vars_[] = {
   V(AccountingMax,               MEMUNIT,  "0 bytes"),
+  V(AccountingRule,              STRING,  "max"),
   V(AccountingStart,             STRING,   NULL),
   V(Address,                     STRING,   NULL),
   V(AllowDotExit,                BOOL,     "0"),
@@ -3108,6 +3109,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
                "risky: they will all turn off at the same time, which may "
                "alert observers that they are being run by the same party.");
     }
+    if (options->AccountingRule &&
+      strcmp(options->AccountingRule, "sum") != 0 &&
+      strcmp(options->AccountingRule, "max") != 0)
+      REJECT("AccountingRule must be 'sum' or 'max'");
   }
 
   if (options->HTTPProxy) { /* parse it now */

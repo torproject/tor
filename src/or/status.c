@@ -145,10 +145,15 @@ log_accounting(const time_t now, const or_options_t *options)
   or_state_t *state = get_or_state();
   char *acc_rcvd = bytes_to_usage(state->AccountingBytesReadInInterval);
   char *acc_sent = bytes_to_usage(state->AccountingBytesWrittenInInterval);
-  char *acc_max = bytes_to_usage(options->AccountingMax);
+  const char *acc_rule = options->AccountingRule;
+  uint64_t acc_bytes = options->AccountingMax;
+  char *acc_max;
   time_t interval_end = accounting_get_end_time();
   char end_buf[ISO_TIME_LEN + 1];
   char *remaining = NULL;
+  if (strcmp(acc_rule, "sum") == 0)
+    acc_bytes *= 2;
+  acc_max = bytes_to_usage(acc_bytes);
   format_local_iso_time(end_buf, interval_end);
   remaining = secs_to_uptime(interval_end - now);
 
