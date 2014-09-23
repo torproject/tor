@@ -4299,18 +4299,23 @@ MOCK_IMPL(STATIC void, initiate_descriptor_downloads,
            int lo, int hi, int pds_flags))
 {
   char *resource, *cp;
-  int digest_len = DIGEST_LEN, enc_digest_len = HEX_DIGEST_LEN;
-  const char *sep = "+";
-  int b64_256 = 0;
+  int digest_len, enc_digest_len;
+  const char *sep;
+  int b64_256;
   smartlist_t *tmp;
 
   if (purpose == DIR_PURPOSE_FETCH_MICRODESC) {
     /* Microdescriptors are downloaded by "-"-separated base64-encoded
      * 256-bit digests. */
     digest_len = DIGEST256_LEN;
-    enc_digest_len = BASE64_DIGEST256_LEN;
+    enc_digest_len = BASE64_DIGEST256_LEN + 1;
     sep = "-";
     b64_256 = 1;
+  } else {
+    digest_len = DIGEST_LEN;
+    enc_digest_len = HEX_DIGEST_LEN + 1;
+    sep = "+";
+    b64_256 = 0;
   }
 
   if (lo < 0)
@@ -4321,7 +4326,6 @@ MOCK_IMPL(STATIC void, initiate_descriptor_downloads,
   if (hi-lo <= 0)
     return;
 
-  digest_len += 1;  // for the NULL
   tmp = smartlist_new();
 
   for (; lo < hi; ++lo) {
