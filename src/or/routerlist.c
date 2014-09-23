@@ -65,7 +65,7 @@ static int compute_weighted_bandwidths(const smartlist_t *sl,
                                        bandwidth_weight_rule_t rule,
                                        u64_dbl_t **bandwidths_out);
 static const routerstatus_t *router_pick_directory_server_impl(
-                                           dirinfo_type_t auth, int flags);
+                              dirinfo_type_t auth, int flags, int *n_busy_out);
 static const routerstatus_t *router_pick_trusteddirserver_impl(
                 const smartlist_t *sourcelist, dirinfo_type_t auth,
                 int flags, int *n_busy_out);
@@ -1239,6 +1239,7 @@ router_get_fallback_dir_servers(void)
 const routerstatus_t *
 router_pick_directory_server(dirinfo_type_t type, int flags)
 {
+  int busy = 0;
   const routerstatus_t *choice;
   if (get_options()->PreferTunneledDirConns)
     flags |= PDS_PREFER_TUNNELED_DIR_CONNS_;
@@ -1246,9 +1247,18 @@ router_pick_directory_server(dirinfo_type_t type, int flags)
   if (!routerlist)
     return NULL;
 
-  choice = router_pick_directory_server_impl(type, flags);
+  choice = router_pick_directory_server_impl(type, flags, &busy);
   if (choice || !(flags & PDS_RETRY_IF_NO_SERVERS))
     return choice;
+
+  if (busy) {
+    /* If the reason that we got no server is that servers are "busy",
+     * we must be excluding good servers because we already have serverdesc
+     * fetches with them.  Do not mark down servers up because of this. */
+    tor_assert((flags & (PDS_NO_EXISTING_SERVERDESC_FETCH|
+                         PDS_NO_EXISTING_MICRODESC_FETCH)));
+    return NULL;
+  }
 
   log_info(LD_DIR,
            "No reachable router entries for dirservers. "
@@ -1256,7 +1266,7 @@ router_pick_directory_server(dirinfo_type_t type, int flags)
   /* mark all authdirservers as up again */
   mark_all_dirservers_up(fallback_dir_servers);
   /* try again */
-  choice = router_pick_directory_server_impl(type, flags);
+  choice = router_pick_directory_server_impl(type, flags, NULL);
   return choice;
 }
 
@@ -1375,7 +1385,8 @@ router_pick_dirserver_generic(smartlist_t *sourcelist,
  * that we can use with BEGINDIR.
  */
 static const routerstatus_t *
-router_pick_directory_server_impl(dirinfo_type_t type, int flags)
+router_pick_directory_server_impl(dirinfo_type_t type, int flags,
+                                  int *n_busy_out)
 {
   const or_options_t *options = get_options();
   const node_t *result;
@@ -1384,11 +1395,13 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags)
   smartlist_t *overloaded_direct, *overloaded_tunnel;
   time_t now = time(NULL);
   const networkstatus_t *consensus = networkstatus_get_latest_consensus();
-  int requireother = ! (flags & PDS_ALLOW_SELF);
-  int fascistfirewall = ! (flags & PDS_IGNORE_FASCISTFIREWALL);
-  int prefer_tunnel = (flags & PDS_PREFER_TUNNELED_DIR_CONNS_);
-  int for_guard = (flags & PDS_FOR_GUARD);
-  int try_excluding = 1, n_excluded = 0;
+  const int requireother = ! (flags & PDS_ALLOW_SELF);
+  const int fascistfirewall = ! (flags & PDS_IGNORE_FASCISTFIREWALL);
+  const int prefer_tunnel = (flags & PDS_PREFER_TUNNELED_DIR_CONNS_);
+  const int no_serverdesc_fetching = (flags & PDS_NO_EXISTING_SERVERDESC_FETCH);
+  const int no_microdesc_fetching = (flags & PDS_NO_EXISTING_MICRODESC_FETCH);
+  const int for_guard = (flags & PDS_FOR_GUARD);
+  int try_excluding = 1, n_excluded = 0, n_busy = 0;
 
   if (!consensus)
     return NULL;
@@ -1435,7 +1448,24 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags)
     }
 
     /* XXXX IP6 proposal 118 */
-    tor_addr_from_ipv4h(&addr, node->rs->addr);
+    tor_addr_from_ipv4h(&addr, status->addr);
+
+    if (no_serverdesc_fetching && (
+       connection_get_by_type_addr_port_purpose(
+         CONN_TYPE_DIR, &addr, status->dir_port, DIR_PURPOSE_FETCH_SERVERDESC)
+    || connection_get_by_type_addr_port_purpose(
+         CONN_TYPE_DIR, &addr, status->dir_port, DIR_PURPOSE_FETCH_EXTRAINFO)
+    )) {
+      ++n_busy;
+      continue;
+    }
+
+    if (no_microdesc_fetching && connection_get_by_type_addr_port_purpose(
+      CONN_TYPE_DIR, &addr, status->dir_port, DIR_PURPOSE_FETCH_MICRODESC)
+    ) {
+      ++n_busy;
+      continue;
+    }
 
     is_overloaded = status->last_dir_503_at + DIR_503_TIMEOUT > now;
 
@@ -1475,6 +1505,9 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags)
   smartlist_free(trusted_tunnel);
   smartlist_free(overloaded_direct);
   smartlist_free(overloaded_tunnel);
+
+  if (n_busy_out)
+    *n_busy_out = n_busy;
 
   if (result == NULL && try_excluding && !options->StrictNodes && n_excluded) {
     /* If we got no result, and we are excluding nodes, and StrictNodes is
