@@ -4295,8 +4295,9 @@ MOCK_IMPL(STATIC void, initiate_descriptor_downloads,
 {
   char *resource, *cp;
   int digest_len = DIGEST_LEN, enc_digest_len = HEX_DIGEST_LEN;
-  char *sep = "+";
+  const char *sep = "+";
   int b64_256 = 0;
+  smartlist_t *tmp;
 
   if (purpose == DIR_PURPOSE_FETCH_MICRODESC) {
     /* Microdescriptors are downloaded by "-"-separated base64-encoded
@@ -4316,7 +4317,7 @@ MOCK_IMPL(STATIC void, initiate_descriptor_downloads,
     return;
 
   digest_len += 1;  // for the NULL
-  smartlist_t *tmp = smartlist_new();
+  tmp = smartlist_new();
 
   for (; lo < hi; ++lo) {
     cp = tor_malloc(enc_digest_len);
