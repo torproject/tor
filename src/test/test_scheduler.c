@@ -80,14 +80,14 @@ static void test_scheduler_queue_heuristic(void *arg);
 static void
 mock_event_free_all(void)
 {
-  test_assert(mock_event_base != NULL);
+  tt_assert(mock_event_base != NULL);
 
   if (mock_event_base) {
     event_base_free(mock_event_base);
     mock_event_base = NULL;
   }
 
-  test_eq(mock_event_base, NULL);
+  tt_ptr_op(mock_event_base, ==, NULL);
 
  done:
   return;
@@ -100,7 +100,7 @@ mock_event_init(void)
   struct event_config *cfg = NULL;
 #endif
 
-  test_eq(mock_event_base, NULL);
+  tt_ptr_op(mock_event_base, ==, NULL);
 
   /*
    * Really cut down from tor_libevent_initialize of
@@ -122,7 +122,7 @@ mock_event_init(void)
 #endif
   }
 
-  test_assert(mock_event_base != NULL);
+  tt_assert(mock_event_base != NULL);
 
  done:
   return;
@@ -197,7 +197,7 @@ channel_flush_some_cells_mock(channel_t *chan, ssize_t num_cells)
   char unlimited = 0;
   flush_mock_channel_t *found = NULL;
 
-  test_assert(chan != NULL);
+  tt_assert(chan != NULL);
   if (chan) {
     if (num_cells < 0) {
       num_cells = 0;
@@ -250,8 +250,8 @@ circuitmux_compare_muxes_mock(circuitmux_t *cmux_1,
 {
   int result = 0;
 
-  test_assert(cmux_1 != NULL);
-  test_assert(cmux_2 != NULL);
+  tt_assert(cmux_1 != NULL);
+  tt_assert(cmux_2 != NULL);
 
   if (cmux_1 != cmux_2) {
     if (cmux_1 == mock_ccm_tgt_1 && cmux_2 == mock_ccm_tgt_2) result = -1;
@@ -277,7 +277,7 @@ circuitmux_get_policy_mock(circuitmux_t *cmux)
 {
   const circuitmux_policy_t *result = NULL;
 
-  test_assert(cmux != NULL);
+  tt_assert(cmux != NULL);
   if (cmux) {
     if (cmux == mock_cgp_tgt_1) result = mock_cgp_val_1;
     else if (cmux == mock_cgp_tgt_2) result = mock_cgp_val_2;
@@ -342,11 +342,11 @@ test_scheduler_channel_states(void *arg)
    */
   MOCK(scheduler_run, scheduler_run_noop_mock);
 
-  test_eq(smartlist_len(channels_pending), 0);
+  tt_int_op(smartlist_len(channels_pending), ==, 0);
 
   /* Set up a fake channel */
   ch1 = new_fake_channel();
-  test_assert(ch1);
+  tt_assert(ch1);
 
   /* Start it off in OPENING */
   ch1->state = CHANNEL_STATE_OPENING;
@@ -354,70 +354,70 @@ test_scheduler_channel_states(void *arg)
   ch1->cmux = circuitmux_alloc();
   /* Try to register it */
   channel_register(ch1);
-  test_assert(ch1->registered);
+  tt_assert(ch1->registered);
 
   /* It should start off in SCHED_CHAN_IDLE */
-  test_eq(ch1->scheduler_state,  SCHED_CHAN_IDLE);
+  tt_int_op(ch1->scheduler_state, ==, SCHED_CHAN_IDLE);
 
   /* Now get another one */
   ch2 = new_fake_channel();
-  test_assert(ch2);
+  tt_assert(ch2);
   ch2->state = CHANNEL_STATE_OPENING;
   ch2->cmux = circuitmux_alloc();
   channel_register(ch2);
-  test_assert(ch2->registered);
+  tt_assert(ch2->registered);
 
   /* Send it to SCHED_CHAN_WAITING_TO_WRITE */
   scheduler_channel_has_waiting_cells(ch1);
-  test_eq(ch1->scheduler_state, SCHED_CHAN_WAITING_TO_WRITE);
+  tt_int_op(ch1->scheduler_state, ==, SCHED_CHAN_WAITING_TO_WRITE);
 
   /* This should send it to SCHED_CHAN_PENDING */
   scheduler_channel_wants_writes(ch1);
-  test_eq(ch1->scheduler_state, SCHED_CHAN_PENDING);
-  test_eq(smartlist_len(channels_pending), 1);
+  tt_int_op(ch1->scheduler_state, ==, SCHED_CHAN_PENDING);
+  tt_int_op(smartlist_len(channels_pending), ==, 1);
 
   /* Now send ch2 to SCHED_CHAN_WAITING_FOR_CELLS */
   scheduler_channel_wants_writes(ch2);
-  test_eq(ch2->scheduler_state, SCHED_CHAN_WAITING_FOR_CELLS);
+  tt_int_op(ch2->scheduler_state, ==, SCHED_CHAN_WAITING_FOR_CELLS);
 
   /* Drop ch2 back to idle */
   scheduler_channel_doesnt_want_writes(ch2);
-  test_eq(ch2->scheduler_state, SCHED_CHAN_IDLE);
+  tt_int_op(ch2->scheduler_state, ==, SCHED_CHAN_IDLE);
 
   /* ...and back to SCHED_CHAN_WAITING_FOR_CELLS */
   scheduler_channel_wants_writes(ch2);
-  test_eq(ch2->scheduler_state, SCHED_CHAN_WAITING_FOR_CELLS);
+  tt_int_op(ch2->scheduler_state, ==, SCHED_CHAN_WAITING_FOR_CELLS);
 
   /* ...and this should kick ch2 into SCHED_CHAN_PENDING */
   scheduler_channel_has_waiting_cells(ch2);
-  test_eq(ch2->scheduler_state, SCHED_CHAN_PENDING);
-  test_eq(smartlist_len(channels_pending), 2);
+  tt_int_op(ch2->scheduler_state, ==, SCHED_CHAN_PENDING);
+  tt_int_op(smartlist_len(channels_pending), ==, 2);
 
   /* This should send ch2 to SCHED_CHAN_WAITING_TO_WRITE */
   scheduler_channel_doesnt_want_writes(ch2);
-  test_eq(ch2->scheduler_state, SCHED_CHAN_WAITING_TO_WRITE);
-  test_eq(smartlist_len(channels_pending), 1);
+  tt_int_op(ch2->scheduler_state, ==, SCHED_CHAN_WAITING_TO_WRITE);
+  tt_int_op(smartlist_len(channels_pending), ==, 1);
 
   /* ...and back to SCHED_CHAN_PENDING */
   scheduler_channel_wants_writes(ch2);
-  test_eq(ch2->scheduler_state, SCHED_CHAN_PENDING);
-  test_eq(smartlist_len(channels_pending), 2);
+  tt_int_op(ch2->scheduler_state, ==, SCHED_CHAN_PENDING);
+  tt_int_op(smartlist_len(channels_pending), ==, 2);
 
   /* Now we exercise scheduler_touch_channel */
   old_count = scheduler_compare_channels_mock_ctr;
   scheduler_touch_channel(ch1);
-  test_assert(scheduler_compare_channels_mock_ctr > old_count);
+  tt_assert(scheduler_compare_channels_mock_ctr > old_count);
 
   /* Close */
   channel_mark_for_close(ch1);
-  test_eq(ch1->state, CHANNEL_STATE_CLOSING);
+  tt_int_op(ch1->state, ==, CHANNEL_STATE_CLOSING);
   channel_mark_for_close(ch2);
-  test_eq(ch2->state, CHANNEL_STATE_CLOSING);
+  tt_int_op(ch2->state, ==, CHANNEL_STATE_CLOSING);
   channel_closed(ch1);
-  test_eq(ch1->state, CHANNEL_STATE_CLOSED);
+  tt_int_op(ch1->state, ==, CHANNEL_STATE_CLOSED);
   ch1 = NULL;
   channel_closed(ch2);
-  test_eq(ch2->state, CHANNEL_STATE_CLOSED);
+  tt_int_op(ch2->state, ==, CHANNEL_STATE_CLOSED);
   ch2 = NULL;
 
   /* Shut things down */
@@ -474,20 +474,20 @@ test_scheduler_compare_channels(void *arg)
 
   /* Equal-channel case */
   result = scheduler_compare_channels(&c1, &c1);
-  test_eq(result, 0);
+  tt_int_op(result, ==, 0);
 
   /* Distinct channels, distinct policies */
   result = scheduler_compare_channels(&c1, &c2);
-  test_eq(result, -1);
+  tt_int_op(result, ==, -1);
   result = scheduler_compare_channels(&c2, &c1);
-  test_eq(result, 1);
+  tt_int_op(result, ==, 1);
 
   /* Distinct channels, same policy */
   mock_cgp_val_2 = mock_cgp_val_1;
   result = scheduler_compare_channels(&c1, &c2);
-  test_eq(result, -1);
+  tt_int_op(result, ==, -1);
   result = scheduler_compare_channels(&c2, &c1);
-  test_eq(result, 1);
+  tt_int_op(result, ==, 1);
 
  done:
 
@@ -512,24 +512,24 @@ test_scheduler_initfree(void *arg)
 {
   (void)arg;
 
-  test_eq(channels_pending, NULL);
-  test_eq(run_sched_ev, NULL);
+  tt_ptr_op(channels_pending, ==, NULL);
+  tt_ptr_op(run_sched_ev, ==, NULL);
 
   mock_event_init();
   MOCK(tor_libevent_get_base, tor_libevent_get_base_mock);
 
   scheduler_init();
 
-  test_assert(channels_pending != NULL);
-  test_assert(run_sched_ev != NULL);
+  tt_assert(channels_pending != NULL);
+  tt_assert(run_sched_ev != NULL);
 
   scheduler_free_all();
 
   UNMOCK(tor_libevent_get_base);
   mock_event_free_all();
 
-  test_eq(channels_pending, NULL);
-  test_eq(run_sched_ev, NULL);
+  tt_ptr_op(channels_pending, ==, NULL);
+  tt_ptr_op(run_sched_ev, ==, NULL);
 
  done:
   return;
@@ -558,11 +558,11 @@ test_scheduler_loop(void *arg)
    */
   MOCK(scheduler_run, scheduler_run_noop_mock);
 
-  test_eq(smartlist_len(channels_pending), 0);
+  tt_int_op(smartlist_len(channels_pending), ==, 0);
 
   /* Set up a fake channel */
   ch1 = new_fake_channel();
-  test_assert(ch1);
+  tt_assert(ch1);
 
   /* Start it off in OPENING */
   ch1->state = CHANNEL_STATE_OPENING;
@@ -570,53 +570,53 @@ test_scheduler_loop(void *arg)
   ch1->cmux = circuitmux_alloc();
   /* Try to register it */
   channel_register(ch1);
-  test_assert(ch1->registered);
+  tt_assert(ch1->registered);
   /* Finish opening it */
   channel_change_state(ch1, CHANNEL_STATE_OPEN);
 
   /* It should start off in SCHED_CHAN_IDLE */
-  test_eq(ch1->scheduler_state,  SCHED_CHAN_IDLE);
+  tt_int_op(ch1->scheduler_state, ==, SCHED_CHAN_IDLE);
 
   /* Now get another one */
   ch2 = new_fake_channel();
-  test_assert(ch2);
+  tt_assert(ch2);
   ch2->state = CHANNEL_STATE_OPENING;
   ch2->cmux = circuitmux_alloc();
   channel_register(ch2);
-  test_assert(ch2->registered);
+  tt_assert(ch2->registered);
   /*
    * Don't open ch2; then channel_num_cells_writeable() will return
    * zero and we'll get coverage of that exception case in scheduler_run()
    */
 
-  test_eq(ch1->state, CHANNEL_STATE_OPEN);
-  test_eq(ch2->state, CHANNEL_STATE_OPENING);
+  tt_int_op(ch1->state, ==, CHANNEL_STATE_OPEN);
+  tt_int_op(ch2->state, ==, CHANNEL_STATE_OPENING);
 
   /* Send it to SCHED_CHAN_WAITING_TO_WRITE */
   scheduler_channel_has_waiting_cells(ch1);
-  test_eq(ch1->scheduler_state, SCHED_CHAN_WAITING_TO_WRITE);
+  tt_int_op(ch1->scheduler_state, ==, SCHED_CHAN_WAITING_TO_WRITE);
 
   /* This should send it to SCHED_CHAN_PENDING */
   scheduler_channel_wants_writes(ch1);
-  test_eq(ch1->scheduler_state, SCHED_CHAN_PENDING);
-  test_eq(smartlist_len(channels_pending), 1);
+  tt_int_op(ch1->scheduler_state, ==, SCHED_CHAN_PENDING);
+  tt_int_op(smartlist_len(channels_pending), ==, 1);
 
   /* Now send ch2 to SCHED_CHAN_WAITING_FOR_CELLS */
   scheduler_channel_wants_writes(ch2);
-  test_eq(ch2->scheduler_state, SCHED_CHAN_WAITING_FOR_CELLS);
+  tt_int_op(ch2->scheduler_state, ==, SCHED_CHAN_WAITING_FOR_CELLS);
 
   /* Drop ch2 back to idle */
   scheduler_channel_doesnt_want_writes(ch2);
-  test_eq(ch2->scheduler_state, SCHED_CHAN_IDLE);
+  tt_int_op(ch2->scheduler_state, ==, SCHED_CHAN_IDLE);
 
   /* ...and back to SCHED_CHAN_WAITING_FOR_CELLS */
   scheduler_channel_wants_writes(ch2);
-  test_eq(ch2->scheduler_state, SCHED_CHAN_WAITING_FOR_CELLS);
+  tt_int_op(ch2->scheduler_state, ==, SCHED_CHAN_WAITING_FOR_CELLS);
 
   /* ...and this should kick ch2 into SCHED_CHAN_PENDING */
   scheduler_channel_has_waiting_cells(ch2);
-  test_eq(ch2->scheduler_state, SCHED_CHAN_PENDING);
-  test_eq(smartlist_len(channels_pending), 2);
+  tt_int_op(ch2->scheduler_state, ==, SCHED_CHAN_PENDING);
+  tt_int_op(smartlist_len(channels_pending), ==, 2);
 
   /*
    * Now we've got two pending channels and need to fire off
@@ -634,11 +634,11 @@ test_scheduler_loop(void *arg)
    * Assert that they're still in the states we left and aren't still
    * pending
    */
-  test_eq(ch1->state, CHANNEL_STATE_OPEN);
-  test_eq(ch2->state, CHANNEL_STATE_OPENING);
-  test_assert(ch1->scheduler_state != SCHED_CHAN_PENDING);
-  test_assert(ch2->scheduler_state != SCHED_CHAN_PENDING);
-  test_eq(smartlist_len(channels_pending), 0);
+  tt_int_op(ch1->state, ==, CHANNEL_STATE_OPEN);
+  tt_int_op(ch2->state, ==, CHANNEL_STATE_OPENING);
+  tt_assert(ch1->scheduler_state != SCHED_CHAN_PENDING);
+  tt_assert(ch2->scheduler_state != SCHED_CHAN_PENDING);
+  tt_int_op(smartlist_len(channels_pending), ==, 0);
 
   /* Now, finish opening ch2, and get both back to pending */
   channel_change_state(ch2, CHANNEL_STATE_OPEN);
@@ -646,11 +646,11 @@ test_scheduler_loop(void *arg)
   scheduler_channel_wants_writes(ch2);
   scheduler_channel_has_waiting_cells(ch1);
   scheduler_channel_has_waiting_cells(ch2);
-  test_eq(ch1->state, CHANNEL_STATE_OPEN);
-  test_eq(ch2->state, CHANNEL_STATE_OPEN);
-  test_eq(ch1->scheduler_state, SCHED_CHAN_PENDING);
-  test_eq(ch2->scheduler_state, SCHED_CHAN_PENDING);
-  test_eq(smartlist_len(channels_pending), 2);
+  tt_int_op(ch1->state, ==, CHANNEL_STATE_OPEN);
+  tt_int_op(ch2->state, ==, CHANNEL_STATE_OPEN);
+  tt_int_op(ch1->scheduler_state, ==, SCHED_CHAN_PENDING);
+  tt_int_op(ch2->scheduler_state, ==, SCHED_CHAN_PENDING);
+  tt_int_op(smartlist_len(channels_pending), ==, 2);
 
   /* Now, set up the channel_flush_some_cells() mock */
   MOCK(channel_flush_some_cells, channel_flush_some_cells_mock);
@@ -680,24 +680,24 @@ test_scheduler_loop(void *arg)
    * ch1 should have gone to SCHED_CHAN_WAITING_FOR_CELLS, with 16 flushed
    * and 32 writeable.
    */
-  test_eq(ch1->scheduler_state, SCHED_CHAN_WAITING_FOR_CELLS);
+  tt_int_op(ch1->scheduler_state, ==, SCHED_CHAN_WAITING_FOR_CELLS);
   /*
    * ...ch2 should also have gone to SCHED_CHAN_WAITING_FOR_CELLS, with
    * channel_more_to_flush() returning false and channel_num_cells_writeable()
    * > 0/
    */
-  test_eq(ch2->scheduler_state, SCHED_CHAN_WAITING_FOR_CELLS);
+  tt_int_op(ch2->scheduler_state, ==, SCHED_CHAN_WAITING_FOR_CELLS);
 
   /* Close */
   channel_mark_for_close(ch1);
-  test_eq(ch1->state, CHANNEL_STATE_CLOSING);
+  tt_int_op(ch1->state, ==, CHANNEL_STATE_CLOSING);
   channel_mark_for_close(ch2);
-  test_eq(ch2->state, CHANNEL_STATE_CLOSING);
+  tt_int_op(ch2->state, ==, CHANNEL_STATE_CLOSING);
   channel_closed(ch1);
-  test_eq(ch1->state, CHANNEL_STATE_CLOSED);
+  tt_int_op(ch1->state, ==, CHANNEL_STATE_CLOSED);
   ch1 = NULL;
   channel_closed(ch2);
-  test_eq(ch2->state, CHANNEL_STATE_CLOSED);
+  tt_int_op(ch2->state, ==, CHANNEL_STATE_CLOSED);
   ch2 = NULL;
 
   /* Shut things down */
@@ -729,22 +729,22 @@ test_scheduler_queue_heuristic(void *arg)
 
   /* Not yet inited case */
   scheduler_update_queue_heuristic(now - 180);
-  test_eq(queue_heuristic, 0);
-  test_eq(queue_heuristic_timestamp, now - 180);
+  tt_int_op(queue_heuristic, ==, 0);
+  tt_int_op(queue_heuristic_timestamp, ==, now - 180);
 
   queue_heuristic = 1000000000L;
   queue_heuristic_timestamp = now - 120;
 
   scheduler_update_queue_heuristic(now - 119);
-  test_eq(queue_heuristic, 500000000L);
-  test_eq(queue_heuristic_timestamp, now - 119);
+  tt_int_op(queue_heuristic, ==, 500000000L);
+  tt_int_op(queue_heuristic_timestamp, ==, now - 119);
 
   scheduler_update_queue_heuristic(now - 116);
-  test_eq(queue_heuristic, 62500000L);
-  test_eq(queue_heuristic_timestamp, now - 116);
+  tt_int_op(queue_heuristic, ==, 62500000L);
+  tt_int_op(queue_heuristic_timestamp, ==, now - 116);
 
   qh = scheduler_get_queue_heuristic();
-  test_eq(qh, 0);
+  tt_int_op(qh, ==, 0);
 
  done:
   return;
