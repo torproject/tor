@@ -4,8 +4,9 @@
 #include "crypto_pwbox.h"
 #include "di_ops.h"
 #include "util.h"
+#include "pwbox.h"
 
-/* 7 bytes "TORBOX0"
+/* 8 bytes "TORBOX00"
    1 byte: header len (H)
    H bytes: header, denoting secret key algorithm.
    16 bytes: IV
@@ -16,7 +17,7 @@
    32 bytes: HMAC-SHA256 of all previous bytes.
 */
 
-#define MAX_OVERHEAD (S2K_MAXLEN + 8 + 32 + CIPHER_IV_LEN)
+#define MAX_OVERHEAD (S2K_MAXLEN + 8 + 1 + 32 + CIPHER_IV_LEN)
 
 /**
  * Make an authenticated passphrase-encrypted blob to encode the
@@ -32,31 +33,34 @@ crypto_pwbox(uint8_t **out, size_t *outlen_out,
              const char *secret, size_t secret_len,
              unsigned s2k_flags)
 {
-  uint8_t *result, *encrypted_portion, *hmac, *iv;
+  uint8_t *result = NULL, *encrypted_portion;
   size_t encrypted_len = 128 * CEIL_DIV(input_len+4, 128);
-  size_t result_len = encrypted_len + MAX_OVERHEAD;
+  ssize_t result_len;
   int spec_len;
   uint8_t keys[CIPHER_KEY_LEN + DIGEST256_LEN];
+  pwbox_encoded_t *enc = NULL;
+  ssize_t enc_len;
 
   crypto_cipher_t *cipher;
   int rv;
 
-  /* Allocate a buffer and put things in the right place. */
-  result = tor_malloc_zero(result_len);
-  memcpy(result, "TORBOX0", 7);
+  enc = pwbox_encoded_new();
 
-  spec_len = secret_to_key_make_specifier(result + 8,
-                                          result_len - 8,
-                                          s2k_flags);
-  if (spec_len < 0 || spec_len > 255)
+  pwbox_encoded_setlen_skey_header(enc, S2K_MAXLEN);
+
+  spec_len = secret_to_key_make_specifier(
+                                      pwbox_encoded_getarray_skey_header(enc),
+                                      S2K_MAXLEN,
+                                      s2k_flags);
+  if (spec_len < 0 || spec_len > S2K_MAXLEN)
     goto err;
-  result[7] = (uint8_t) spec_len;
+  pwbox_encoded_setlen_skey_header(enc, spec_len);
+  enc->header_len = spec_len;
 
-  tor_assert(8 + spec_len + CIPHER_IV_LEN + encrypted_len <= result_len);
+  crypto_rand((char*)enc->iv, sizeof(enc->iv));
 
-  iv = result + 8 + spec_len;
-  encrypted_portion = result + 8 + spec_len + CIPHER_IV_LEN;
-  hmac = encrypted_portion + encrypted_len;
+  pwbox_encoded_setlen_data(enc, encrypted_len);
+  encrypted_portion = pwbox_encoded_getarray_data(enc);
 
   set_uint32(encrypted_portion, htonl(input_len));
   memcpy(encrypted_portion+4, input, input_len);
@@ -64,24 +68,32 @@ crypto_pwbox(uint8_t **out, size_t *outlen_out,
   /* Now that all the data is in position, derive some keys, encrypt, and
    * digest */
   if (secret_to_key_derivekey(keys, sizeof(keys),
-                              result+8, spec_len,
+                              pwbox_encoded_getarray_skey_header(enc),
+                              spec_len,
                               secret, secret_len) < 0)
     goto err;
 
-  crypto_rand((char*)iv, CIPHER_IV_LEN);
-
-  cipher = crypto_cipher_new_with_iv((char*)keys, (char*)iv);
+  cipher = crypto_cipher_new_with_iv((char*)keys, (char*)enc->iv);
   crypto_cipher_crypt_inplace(cipher, (char*)encrypted_portion, encrypted_len);
   crypto_cipher_free(cipher);
 
-  crypto_hmac_sha256((char*)hmac,
+  result_len = pwbox_encoded_encoded_len(enc);
+  if (result_len < 0)
+    goto err;
+  result = tor_malloc(result_len);
+  enc_len = pwbox_encoded_encode(result, result_len, enc);
+  if (enc_len < 0)
+    goto err;
+  tor_assert(enc_len == result_len);
+
+  crypto_hmac_sha256((char*) result + result_len - 32,
                      (const char*)keys + CIPHER_KEY_LEN,
-                                             sizeof(keys)-CIPHER_KEY_LEN,
+                     DIGEST256_LEN,
                      (const char*)result,
-                     8 + CIPHER_IV_LEN + spec_len + encrypted_len);
+                     result_len - 32);
 
   *out = result;
-  *outlen_out = 8 + CIPHER_IV_LEN + spec_len + encrypted_len + DIGEST256_LEN;
+  *outlen_out = result_len;
   rv = 0;
   goto out;
 
@@ -90,6 +102,7 @@ crypto_pwbox(uint8_t **out, size_t *outlen_out,
   rv = -1;
 
  out:
+  pwbox_encoded_free(enc);
   memwipe(keys, 0, sizeof(keys));
   return rv;
 }
@@ -109,47 +122,47 @@ crypto_unpwbox(uint8_t **out, size_t *outlen_out,
                const char *secret, size_t secret_len)
 {
   uint8_t *result = NULL;
-  const uint8_t *encrypted, *iv;
+  const uint8_t *encrypted;
   uint8_t keys[CIPHER_KEY_LEN + DIGEST256_LEN];
-  size_t spec_bytes;
   uint8_t hmac[DIGEST256_LEN];
   uint32_t result_len;
+  size_t encrypted_len;
   crypto_cipher_t *cipher = NULL;
   int rv = UNPWBOX_CORRUPTED;
+  ssize_t got_len;
 
-  if (input_len < 32)
-    goto err;
+  pwbox_encoded_t *enc = NULL;
 
-  if (tor_memneq(inp, "TORBOX0", 7))
-    goto err;
-
-  spec_bytes = inp[7];
-  if (input_len < 8 + spec_bytes)
+  got_len = pwbox_encoded_parse(&enc, inp, input_len);
+  if (got_len < 0 || (size_t)got_len != input_len)
     goto err;
 
   /* Now derive the keys and check the hmac. */
   if (secret_to_key_derivekey(keys, sizeof(keys),
-                              inp+8, spec_bytes,
+                              pwbox_encoded_getarray_skey_header(enc),
+                              pwbox_encoded_getlen_skey_header(enc),
                               secret, secret_len) < 0)
     goto err;
 
   crypto_hmac_sha256((char *)hmac,
-               (const char*)keys + CIPHER_KEY_LEN, sizeof(keys)-CIPHER_KEY_LEN,
-               (const char*)inp, input_len - DIGEST256_LEN);
+                     (const char*)keys + CIPHER_KEY_LEN, DIGEST256_LEN,
+                     (const char*)inp, input_len - DIGEST256_LEN);
 
-  if (tor_memneq(hmac, inp + input_len - DIGEST256_LEN, DIGEST256_LEN)) {
+  if (tor_memneq(hmac, enc->hmac, DIGEST256_LEN)) {
     rv = UNPWBOX_BAD_SECRET;
     goto err;
   }
 
-  iv = inp + 8 + spec_bytes;
-  encrypted = inp + 8 + spec_bytes + CIPHER_IV_LEN;
-
   /* How long is the plaintext? */
-  cipher = crypto_cipher_new_with_iv((char*)keys, (char*)iv);
+  encrypted = pwbox_encoded_getarray_data(enc);
+  encrypted_len = pwbox_encoded_getlen_data(enc);
+  if (encrypted_len < 4)
+    goto err;
+
+  cipher = crypto_cipher_new_with_iv((char*)keys, (char*)enc->iv);
   crypto_cipher_decrypt(cipher, (char*)&result_len, (char*)encrypted, 4);
   result_len = ntohl(result_len);
-  if (input_len < 8 + spec_bytes + 4 + result_len + 32)
+  if (encrypted_len < result_len + 4)
     goto err;
 
   /* Allocate a buffer and decrypt */
@@ -167,6 +180,7 @@ crypto_unpwbox(uint8_t **out, size_t *outlen_out,
 
  out:
   crypto_cipher_free(cipher);
+  pwbox_encoded_free(enc);
   memwipe(keys, 0, sizeof(keys));
   return rv;
 }

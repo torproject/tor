@@ -170,6 +170,10 @@
 /src/tools/Makefile
 /src/tools/Makefile.in
 
+# /src/trunnel/
+/src/trunnel/libor-trunnel-testing.a
+/src/trunnel/libor-trunnel.a
+
 # /src/tools/tor-fw-helper/
 /src/tools/tor-fw-helper/tor-fw-helper
 /src/tools/tor-fw-helper/tor-fw-helper.exe

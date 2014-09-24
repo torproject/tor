@@ -1,0 +1,14 @@
+
+const PWBOX0_CONST0 = 0x544f5242; // TORB
+const PWBOX0_CONST1 = 0x4f583030; // OX00
+
+struct pwbox_encoded {
+  u32 fixedbytes0 IN [PWBOX0_CONST0];
+  u32 fixedbytes1 IN [PWBOX0_CONST1];
+  u8 header_len;
+  u8 skey_header[header_len];
+  u8 iv[16];
+  u8 data[..-32];
+  u8 hmac[32];
+};
+
