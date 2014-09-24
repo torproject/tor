@@ -1045,8 +1045,19 @@ test_crypto_pwbox(void *arg)
     tt_assert(decoded);
     tt_uint_op(dlen, ==, strlen(msg));
     tt_mem_op(decoded, ==, msg, dlen);
-    tor_free(boxed);
+
     tor_free(decoded);
+
+    tt_int_op(UNPWBOX_BAD_SECRET, ==, crypto_unpwbox(&decoded, &dlen, boxed, len,
+                                                     pw, strlen(pw)-1));
+    boxed[len-1] ^= 1;
+    tt_int_op(UNPWBOX_BAD_SECRET, ==, crypto_unpwbox(&decoded, &dlen, boxed, len,
+                                                     pw, strlen(pw)));
+    boxed[0] = 255;
+    tt_int_op(UNPWBOX_CORRUPTED, ==, crypto_unpwbox(&decoded, &dlen, boxed, len,
+                                                    pw, strlen(pw)));
+
+    tor_free(boxed);
   }
 
  done:
