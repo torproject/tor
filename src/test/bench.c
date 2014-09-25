@@ -30,6 +30,7 @@ const char tor_git_revision[] = "";
 #include "crypto_curve25519.h"
 #include "onion_ntor.h"
 #endif
+#include "crypto_ed25519.h"
 
 #if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_PROCESS_CPUTIME_ID)
 static uint64_t nanostart;
@@ -78,6 +79,9 @@ perftime(void)
 
 #define NANOCOUNT(start,end,iters) \
   ( ((double)((end)-(start))) / (iters) )
+
+#define MICROCOUNT(start,end,iters) \
+  ( NANOCOUNT((start), (end), (iters)) / 1000.0 )
 
 /** Run AES performance benchmarks. */
 static void
@@ -233,6 +237,63 @@ bench_onion_ntor(void)
   dimap_free(keymap, NULL);
 }
 #endif
+
+static void
+bench_ed25519(void)
+{
+  uint64_t start, end;
+  const int iters = 1<<12;
+  int i;
+  const uint8_t msg[] = "but leaving, could not tell what they had heard";
+  ed25519_signature_t sig;
+  ed25519_keypair_t kp;
+  curve25519_keypair_t curve_kp;
+  ed25519_public_key_t pubkey_tmp;
+
+  ed25519_secret_key_generate(&kp.seckey, 0);
+  start = perftime();
+  for (i = 0; i < iters; ++i) {
+    ed25519_public_key_generate(&kp.pubkey, &kp.seckey);
+  }
+  end = perftime();
+  printf("Generate public key: %.2f usec\n",
+         MICROCOUNT(start, end, iters));
+
+  start = perftime();
+  for (i = 0; i < iters; ++i) {
+    ed25519_sign(&sig, msg, sizeof(msg), &kp);
+  }
+  end = perftime();
+  printf("Sign a short message: %.2f usec\n",
+         MICROCOUNT(start, end, iters));
+
+  start = perftime();
+  for (i = 0; i < iters; ++i) {
+    ed25519_checksig(&sig, msg, sizeof(msg), &kp.pubkey);
+  }
+  end = perftime();
+  printf("Verify signature: %.2f usec\n",
+         MICROCOUNT(start, end, iters));
+
+  curve25519_keypair_generate(&curve_kp, 0);
+  start = perftime();
+  for (i = 0; i < iters; ++i) {
+    ed25519_public_key_from_curve25519_public_key(&pubkey_tmp,
+                                                  &curve_kp.pubkey, 1);
+  }
+  end = perftime();
+  printf("Convert public point from curve25519: %.2f usec\n",
+         MICROCOUNT(start, end, iters));
+
+  curve25519_keypair_generate(&curve_kp, 0);
+  start = perftime();
+  for (i = 0; i < iters; ++i) {
+    ed25519_public_blind(&pubkey_tmp, &kp.pubkey, msg);
+  }
+  end = perftime();
+  printf("Blind a public key: %.2f usec\n",
+         MICROCOUNT(start, end, iters));
+}
 
 static void
 bench_cell_aes(void)
@@ -515,6 +576,7 @@ static struct benchmark_t benchmarks[] = {
 #ifdef CURVE25519_ENABLED
   ENT(onion_ntor),
 #endif
+  ENT(ed25519),
   ENT(cell_aes),
   ENT(cell_ops),
   ENT(dh),
