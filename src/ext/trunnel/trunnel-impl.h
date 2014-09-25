@@ -1,3 +1,7 @@
+/* trunnel-impl.h -- copied from Trunnel v1.2
+ * https://gitweb.torproject.org/trunnel.git
+ * You probably shouldn't edit this file.
+ */
 /* trunnel-impl.h -- Implementation helpers for trunnel, included by
  * generated trunnel files
  *

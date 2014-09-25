@@ -1,3 +1,7 @@
+/* trunnel.h -- copied from Trunnel v1.2
+ * https://gitweb.torproject.org/trunnel.git
+ * You probably shouldn't edit this file.
+ */
 /* trunnel.h -- Public declarations for trunnel, to be included
  * in trunnel header files.
 

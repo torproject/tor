@@ -5,7 +5,7 @@ if test "x$TRUNNEL_PATH" != "x"; then
   export PYTHONPATH
 fi
 
-python -m trunnel ./src/trunnel/*.trunnel
+python -m trunnel --require-version=1.2 ./src/trunnel/*.trunnel
 
-python -m trunnel --write-c-files --target-dir=./src/ext/trunnel/
+python -m trunnel --require-version=1.2 --write-c-files --target-dir=./src/ext/trunnel/
 

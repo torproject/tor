@@ -1,3 +1,7 @@
+/* trunnel.c -- copied from Trunnel v1.2
+ * https://gitweb.torproject.org/trunnel.git
+ * You probably shouldn't edit this file.
+ */
 /* trunnel.c -- Helper functions to implement trunnel.
  *
  * Copyright 2014, The Tor Project, Inc.
