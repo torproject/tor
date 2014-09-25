@@ -23,7 +23,6 @@ include src/include.am
 include doc/include.am
 include contrib/include.am
 
-
 EXTRA_DIST+= \
 	ChangeLog					\
 	INSTALL						\
