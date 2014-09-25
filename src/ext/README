@@ -49,3 +49,8 @@ siphash.h
     Marek Majkowski's implementation of siphash 2-4, a secure keyed
     hash algorithm to avoid collision-based DoS attacks against hash
     tables.
+
+trunnel/*.[ch]
+
+    Headers and runtime code for Trunnel, a system for generating
+    code to encode and decode binary formats.
