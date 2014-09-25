@@ -323,10 +323,9 @@ tor_addr_is_internal_(const tor_addr_t *addr, int for_listening,
 {
   uint32_t iph4 = 0;
   uint32_t iph6[4];
-  sa_family_t v_family;
 
   tor_assert(addr);
-  v_family = tor_addr_family(addr);
+  sa_family_t v_family = tor_addr_family(addr);
 
   if (v_family == AF_INET) {
     iph4 = tor_addr_to_ipv4h(addr);
@@ -605,7 +604,7 @@ tor_addr_parse_mask_ports(const char *s,
   int any_flag=0, v4map=0;
   sa_family_t family;
   struct in6_addr in6_tmp;
-  struct in_addr in_tmp;
+  struct in_addr in_tmp = { .s_addr = 0 };
 
   tor_assert(s);
   tor_assert(addr_out);
@@ -666,7 +665,7 @@ tor_addr_parse_mask_ports(const char *s,
     tor_addr_from_ipv4h(addr_out, 0);
     any_flag = 1;
   } else if (!strcmp(address, "*6") && (flags & TAPMP_EXTENDED_STAR)) {
-    static char nil_bytes[16] = { 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0 };
+    static char nil_bytes[16] = { [0]=0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0 };
     family = AF_INET6;
     tor_addr_from_ipv6_bytes(addr_out, nil_bytes);
     any_flag = 1;
