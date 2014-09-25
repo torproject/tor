@@ -138,6 +138,8 @@ ed25519_checksig_batch(int *okay_out,
   }
 
 #if 0
+  /* This is how we'd do it if we were using ed25519_donna.  I'll keep this
+   * code around here in case we ever do that. */
   const uint8_t **ms;
   size_t *lens;
   const uint8_t **pks;
@@ -249,7 +251,7 @@ ed25519_keypair_blind(ed25519_keypair_t *out,
 {
   ed25519_public_key_t pubkey_check;
 
-  ed25519_ref10_derive_secret_key(out->seckey.seckey,
+  ed25519_ref10_blind_secret_key(out->seckey.seckey,
                                   inp->seckey.seckey, param);
 
   ed25519_public_blind(&pubkey_check, &inp->pubkey, param);
@@ -272,7 +274,7 @@ ed25519_public_blind(ed25519_public_key_t *out,
                      const ed25519_public_key_t *inp,
                      const uint8_t *param)
 {
-  ed25519_ref10_derive_public_key(out->pubkey, inp->pubkey, param);
+  ed25519_ref10_blind_public_key(out->pubkey, inp->pubkey, param);
   return 0;
 }
 

@@ -1,4 +1,4 @@
-/* Modified for Tor: new API, 32-byte secret keys. */
+/* Modified for Tor: new API, 64-byte secret keys. */
 #include <string.h>
 #include "randombytes.h"
 #include "crypto_sign.h"
@@ -10,7 +10,8 @@ crypto_sign_seckey(unsigned char *sk)
 {
   unsigned char seed[32];
 
-  randombytes(seed,32);
+  if (randombytes(seed,32) < 0)
+    return -1;
 
   crypto_sign_seckey_expand(sk, seed);
 

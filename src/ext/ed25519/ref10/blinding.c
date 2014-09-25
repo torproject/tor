@@ -19,7 +19,7 @@ gettweak(unsigned char *out, const unsigned char *param)
   out[31] |= 64;
 }
 
-int ed25519_ref10_derive_secret_key(unsigned char *out,
+int ed25519_ref10_blind_secret_key(unsigned char *out,
                               const unsigned char *inp,
                               const unsigned char *param)
 {
@@ -40,7 +40,7 @@ int ed25519_ref10_derive_secret_key(unsigned char *out,
   return 0;
 }
 
-int ed25519_ref10_derive_public_key(unsigned char *out,
+int ed25519_ref10_blind_public_key(unsigned char *out,
                               const unsigned char *inp,
                               const unsigned char *param)
 {
@@ -58,7 +58,8 @@ int ed25519_ref10_derive_public_key(unsigned char *out,
    * strongly that I'm about to code my own ge_scalarmult_vartime). */
 
   /* We negate the public key first, so that we can pass it to
-   * frombytes_negate_vartime, which negates it again. */
+   * frombytes_negate_vartime, which negates it again. If there were a
+   * "ge_frombytes", we'd use that, but there isn't. */
   memcpy(pkcopy, inp, 32);
   pkcopy[31] ^= (1<<7);
   ge_frombytes_negate_vartime(&A, pkcopy);
@@ -69,7 +70,7 @@ int ed25519_ref10_derive_public_key(unsigned char *out,
   memwipe(tweak, 0, sizeof(tweak));
   memwipe(&A, 0, sizeof(A));
   memwipe(&Aprime, 0, sizeof(Aprime));
-  memwipe(&pkcopy, 0, sizeof(pkcopy));
+  memwipe(pkcopy, 0, sizeof(pkcopy));
 
   return 0;
 }

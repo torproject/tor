@@ -128,7 +128,13 @@ curve25519_keypair_generate(curve25519_keypair_t *keypair_out,
   return 0;
 }
 
-/** DOCDOC */
+/** Write the <b>datalen</b> bytes from <b>data</b> to the file named
+ * <b>fname</b> in the tagged-data format.  This format contains a
+ * 32-byte header, followed by the data itself.  The header is the
+ * NUL-padded string "== <b>typestring</b>: <b>tag</b> ==".  The length
+ * of <b>typestring</b> and <b>tag</b> must therefore be no more than
+ * 24.
+ **/
 int
 crypto_write_tagged_contents_to_file(const char *fname,
                                      const char *typestring,
@@ -159,7 +165,11 @@ crypto_write_tagged_contents_to_file(const char *fname,
   return r;
 }
 
-/** DOCDOC */
+/** Read a tagged-data file from <b>fname</b> into the
+ * <b>data_out_len</b>-byte buffer in <b>data_out</b>. Check that the
+ * typestring matches <b>typestring</b>; store the tag into a newly allocated
+ * string in <b>tag_out</b>. Return -1 on failure, and the number of bytes of
+ * data on success. */
 ssize_t
 crypto_read_tagged_contents_from_file(const char *fname,
                                       const char *typestring,
