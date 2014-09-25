@@ -7,3 +7,5 @@ fi
 
 python -m trunnel ./src/trunnel/*.trunnel
 
+python -m trunnel --write-c-files --target-dir=./src/ext/trunnel/
+
