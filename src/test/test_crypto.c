@@ -13,6 +13,8 @@
 #include "siphash.h"
 #ifdef CURVE25519_ENABLED
 #include "crypto_curve25519.h"
+#include "crypto_ed25519.h"
+#include "ed25519_vectors.inc"
 #endif
 #include "crypto_s2k.h"
 #include "crypto_pwbox.h"
@@ -1516,7 +1518,363 @@ test_crypto_curve25519_persist(void *arg)
   tor_free(tag);
 }
 
+static void
+test_crypto_ed25519_simple(void *arg)
+{
+  ed25519_keypair_t kp1, kp2;
+  ed25519_public_key_t pub1, pub2;
+  ed25519_secret_key_t sec1, sec2;
+  ed25519_signature_t sig1, sig2;
+  const uint8_t msg[] =
+    "GNU will be able to run Unix programs, "
+    "but will not be identical to Unix.";
+  const uint8_t msg2[] =
+    "Microsoft Windows extends the features of the DOS operating system, "
+    "yet is compatible with most existing applications that run under DOS.";
+  size_t msg_len = strlen((const char*)msg);
+  size_t msg2_len = strlen((const char*)msg2);
+
+  (void)arg;
+
+  tt_int_op(0, ==, ed25519_secret_key_generate(&sec1, 0));
+  tt_int_op(0, ==, ed25519_secret_key_generate(&sec2, 1));
+
+  tt_int_op(0, ==, ed25519_public_key_generate(&pub1, &sec1));
+  tt_int_op(0, ==, ed25519_public_key_generate(&pub2, &sec1));
+
+  tt_mem_op(pub1.pubkey, ==, pub2.pubkey, sizeof(pub1.pubkey));
+
+  memcpy(&kp1.pubkey, &pub1, sizeof(pub1));
+  memcpy(&kp1.seckey, &sec1, sizeof(sec1));
+  tt_int_op(0, ==, ed25519_sign(&sig1, msg, msg_len, &kp1));
+  tt_int_op(0, ==, ed25519_sign(&sig2, msg, msg_len, &kp1));
+
+  /* Ed25519 signatures are deterministic */
+  tt_mem_op(sig1.sig, ==, sig2.sig, sizeof(sig1.sig));
+
+  /* Basic signature is valid. */
+  tt_int_op(0, ==, ed25519_checksig(&sig1, msg, msg_len, &pub1));
+
+  /* Altered signature doesn't work. */
+  sig1.sig[0] ^= 3;
+  tt_int_op(-1, ==, ed25519_checksig(&sig1, msg, msg_len, &pub1));
+
+  /* Wrong public key doesn't work. */
+  tt_int_op(0, ==, ed25519_public_key_generate(&pub2, &sec2));
+  tt_int_op(-1, ==, ed25519_checksig(&sig2, msg, msg_len, &pub2));
+
+  /* Wrong message doesn't work. */
+  tt_int_op(0, ==, ed25519_checksig(&sig2, msg, msg_len, &pub1));
+  tt_int_op(-1, ==, ed25519_checksig(&sig2, msg, msg_len-1, &pub1));
+  tt_int_op(-1, ==, ed25519_checksig(&sig2, msg2, msg2_len, &pub1));
+
+  /* Batch signature checking works with some bad. */
+  tt_int_op(0, ==, ed25519_keypair_generate(&kp2, 0));
+  tt_int_op(0, ==, ed25519_sign(&sig1, msg, msg_len, &kp2));
+  {
+    ed25519_checkable_t ch[] = {
+      { &pub1, sig2, msg, msg_len }, /*ok*/
+      { &pub1, sig2, msg, msg_len-1 }, /*bad*/
+      { &kp2.pubkey, sig2, msg2, msg2_len }, /*bad*/
+      { &kp2.pubkey, sig1, msg, msg_len }, /*ok*/
+    };
+    int okay[4];
+    tt_int_op(-2, ==, ed25519_checksig_batch(okay, ch, 4));
+    tt_int_op(okay[0], ==, 1);
+    tt_int_op(okay[1], ==, 0);
+    tt_int_op(okay[2], ==, 0);
+    tt_int_op(okay[3], ==, 1);
+    tt_int_op(-2, ==, ed25519_checksig_batch(NULL, ch, 4));
+  }
+
+  /* Batch signature checking works with all good. */
+  {
+    ed25519_checkable_t ch[] = {
+      { &pub1, sig2, msg, msg_len }, /*ok*/
+      { &kp2.pubkey, sig1, msg, msg_len }, /*ok*/
+    };
+    int okay[2];
+    tt_int_op(0, ==, ed25519_checksig_batch(okay, ch, 2));
+    tt_int_op(okay[0], ==, 1);
+    tt_int_op(okay[1], ==, 1);
+    tt_int_op(0, ==, ed25519_checksig_batch(NULL, ch, 2));
+  }
+
+ done:
+  ;
+}
+
+static void
+test_crypto_ed25519_test_vectors(void *arg)
+{
+  char *mem_op_hex_tmp=NULL;
+  int i;
+  struct {
+    const char *sk;
+    const char *pk;
+    const char *sig;
+    const char *msg;
+  } items[] = {
+    /* These test vectors were generated with the "ref" implementation of
+     * ed25519 from SUPERCOP-20130419 */
+    { "4c6574277320686f706520746865726520617265206e6f206275677320696e20",
+      "f3e0e493b30f56e501aeb868fc912fe0c8b76621efca47a78f6d75875193dd87",
+      "b5d7fd6fd3adf643647ce1fe87a2931dedd1a4e38e6c662bedd35cdd80bfac51"
+        "1b2c7d1ee6bd929ac213014e1a8dc5373854c7b25dbe15ec96bf6c94196fae06",
+      "506c6561736520657863757365206d7920667269656e642e2048652069736e2774"
+      "204e554c2d7465726d696e617465642e"
+    },
+
+    { "74686520696d706c656d656e746174696f6e20776869636820617265206e6f74",
+      "407f0025a1e1351a4cb68e92f5c0ebaf66e7aaf93a4006a4d1a66e3ede1cfeac",
+      "02884fde1c3c5944d0ecf2d133726fc820c303aae695adceabf3a1e01e95bf28"
+        "da88c0966f5265e9c6f8edc77b3b96b5c91baec3ca993ccd21a3f64203600601",
+      "506c6561736520657863757365206d7920667269656e642e2048652069736e2774"
+      "204e554c2d7465726d696e617465642e"
+    },
+    { "6578706f73656420627920456e676c697368207465787420617320696e707574",
+      "61681cb5fbd69f9bc5a462a21a7ab319011237b940bc781cdc47fcbe327e7706",
+      "6a127d0414de7510125d4bc214994ffb9b8857a46330832d05d1355e882344ad"
+        "f4137e3ca1f13eb9cc75c887ef2309b98c57528b4acd9f6376c6898889603209",
+      "506c6561736520657863757365206d7920667269656e642e2048652069736e2774"
+      "204e554c2d7465726d696e617465642e"
+    },
+
+    /* These come from "sign.input" in ed25519's page */
+    { "5b5a619f8ce1c66d7ce26e5a2ae7b0c04febcd346d286c929e19d0d5973bfef9",
+      "6fe83693d011d111131c4f3fbaaa40a9d3d76b30012ff73bb0e39ec27ab18257",
+      "0f9ad9793033a2fa06614b277d37381e6d94f65ac2a5a94558d09ed6ce922258"
+        "c1a567952e863ac94297aec3c0d0c8ddf71084e504860bb6ba27449b55adc40e",
+      "5a8d9d0a22357e6655f9c785"
+    },
+    { "940c89fe40a81dafbdb2416d14ae469119869744410c3303bfaa0241dac57800",
+      "a2eb8c0501e30bae0cf842d2bde8dec7386f6b7fc3981b8c57c9792bb94cf2dd",
+      "d8bb64aad8c9955a115a793addd24f7f2b077648714f49c4694ec995b330d09d"
+        "640df310f447fd7b6cb5c14f9fe9f490bcf8cfadbfd2169c8ac20d3b8af49a0c",
+      "b87d3813e03f58cf19fd0b6395"
+    },
+    { "9acad959d216212d789a119252ebfe0c96512a23c73bd9f3b202292d6916a738",
+      "cf3af898467a5b7a52d33d53bc037e2642a8da996903fc252217e9c033e2f291",
+      "6ee3fe81e23c60eb2312b2006b3b25e6838e02106623f844c44edb8dafd66ab0"
+        "671087fd195df5b8f58a1d6e52af42908053d55c7321010092748795ef94cf06",
+      "55c7fa434f5ed8cdec2b7aeac173",
+    },
+    { "d5aeee41eeb0e9d1bf8337f939587ebe296161e6bf5209f591ec939e1440c300",
+      "fd2a565723163e29f53c9de3d5e8fbe36a7ab66e1439ec4eae9c0a604af291a5",
+      "f68d04847e5b249737899c014d31c805c5007a62c0a10d50bb1538c5f3550395"
+        "1fbc1e08682f2cc0c92efe8f4985dec61dcbd54d4b94a22547d24451271c8b00",
+      "0a688e79be24f866286d4646b5d81c"
+    },
+
+    { NULL, NULL, NULL, NULL}
+  };
+
+  (void)arg;
+
+  for (i = 0; items[i].pk; ++i) {
+    ed25519_keypair_t kp;
+    ed25519_signature_t sig;
+    uint8_t sk_seed[32];
+    uint8_t *msg;
+    size_t msg_len;
+    base16_decode((char*)sk_seed, sizeof(sk_seed),
+                  items[i].sk, 64);
+    ed25519_secret_key_from_seed(&kp.seckey, sk_seed);
+    tt_int_op(0, ==, ed25519_public_key_generate(&kp.pubkey, &kp.seckey));
+    test_memeq_hex(kp.pubkey.pubkey, items[i].pk);
+
+    msg_len = strlen(items[i].msg) / 2;
+    msg = tor_malloc(msg_len);
+    base16_decode((char*)msg, msg_len, items[i].msg, strlen(items[i].msg));
+
+    tt_int_op(0, ==, ed25519_sign(&sig, msg, msg_len, &kp));
+    test_memeq_hex(sig.sig, items[i].sig);
+
+    tor_free(msg);
+  }
+
+ done:
+  tor_free(mem_op_hex_tmp);
+}
+
 #endif
+
+static void
+test_crypto_ed25519_encode(void *arg)
+{
+  char buf[ED25519_BASE64_LEN+1];
+  ed25519_keypair_t kp;
+  ed25519_public_key_t pk;
+  char *mem_op_hex_tmp = NULL;
+  (void) arg;
+
+  /* Test roundtrip. */
+  tt_int_op(0, ==, ed25519_keypair_generate(&kp, 0));
+  tt_int_op(0, ==, ed25519_public_to_base64(buf, &kp.pubkey));
+  tt_int_op(ED25519_BASE64_LEN, ==, strlen(buf));
+  tt_int_op(0, ==, ed25519_public_from_base64(&pk, buf));
+  tt_mem_op(kp.pubkey.pubkey, ==, pk.pubkey, ED25519_PUBKEY_LEN);
+
+  /* Test known value. */
+  tt_int_op(0, ==, ed25519_public_from_base64(&pk,
+                             "lVIuIctLjbGZGU5wKMNXxXlSE3cW4kaqkqm04u6pxvM"));
+  test_memeq_hex(pk.pubkey,
+         "95522e21cb4b8db199194e7028c357c57952137716e246aa92a9b4e2eea9c6f3");
+
+ done:
+  tor_free(mem_op_hex_tmp);
+}
+
+static void
+test_crypto_ed25519_convert(void *arg)
+{
+  const uint8_t msg[] =
+    "The eyes are not here / There are no eyes here.";
+  const int N = 30;
+  int i;
+  (void)arg;
+
+  for (i = 0; i < N; ++i) {
+    curve25519_keypair_t curve25519_keypair;
+    ed25519_keypair_t ed25519_keypair;
+    ed25519_public_key_t ed25519_pubkey;
+
+    int bit=0;
+    ed25519_signature_t sig;
+
+    tt_int_op(0,==,curve25519_keypair_generate(&curve25519_keypair, i&1));
+    tt_int_op(0,==,ed25519_keypair_from_curve25519_keypair(
+                              &ed25519_keypair, &bit, &curve25519_keypair));
+    tt_int_op(0,==,ed25519_public_key_from_curve25519_public_key(
+                        &ed25519_pubkey, &curve25519_keypair.pubkey, bit));
+    tt_mem_op(ed25519_pubkey.pubkey, ==, ed25519_keypair.pubkey.pubkey, 32);
+
+    tt_int_op(0,==,ed25519_sign(&sig, msg, sizeof(msg), &ed25519_keypair));
+    tt_int_op(0,==,ed25519_checksig(&sig, msg, sizeof(msg),
+                                    &ed25519_pubkey));
+
+    tt_int_op(-1,==,ed25519_checksig(&sig, msg, sizeof(msg)-1,
+                                     &ed25519_pubkey));
+    sig.sig[0] ^= 15;
+    tt_int_op(-1,==,ed25519_checksig(&sig, msg, sizeof(msg),
+                                     &ed25519_pubkey));
+  }
+
+ done:
+  ;
+}
+
+static void
+test_crypto_ed25519_blinding(void *arg)
+{
+  const uint8_t msg[] =
+    "Eyes I dare not meet in dreams / In death's dream kingdom";
+
+  const int N = 30;
+  int i;
+  (void)arg;
+
+  for (i = 0; i < N; ++i) {
+    uint8_t blinding[32];
+    ed25519_keypair_t ed25519_keypair;
+    ed25519_keypair_t ed25519_keypair_blinded;
+    ed25519_public_key_t ed25519_pubkey_blinded;
+
+    ed25519_signature_t sig;
+
+    crypto_rand((char*) blinding, sizeof(blinding));
+
+    tt_int_op(0,==,ed25519_keypair_generate(&ed25519_keypair, 0));
+    tt_int_op(0,==,ed25519_keypair_blind(&ed25519_keypair_blinded,
+                                         &ed25519_keypair, blinding));
+
+    tt_int_op(0,==,ed25519_public_blind(&ed25519_pubkey_blinded,
+                                        &ed25519_keypair.pubkey, blinding));
+
+    tt_mem_op(ed25519_pubkey_blinded.pubkey, ==,
+              ed25519_keypair_blinded.pubkey.pubkey, 32);
+
+    tt_int_op(0,==,ed25519_sign(&sig, msg, sizeof(msg),
+                                &ed25519_keypair_blinded));
+
+    tt_int_op(0,==,ed25519_checksig(&sig, msg, sizeof(msg),
+                                    &ed25519_pubkey_blinded));
+
+    tt_int_op(-1,==,ed25519_checksig(&sig, msg, sizeof(msg)-1,
+                                     &ed25519_pubkey_blinded));
+    sig.sig[0] ^= 15;
+    tt_int_op(-1,==,ed25519_checksig(&sig, msg, sizeof(msg),
+                                     &ed25519_pubkey_blinded));
+  }
+
+ done:
+  ;
+}
+
+static void
+test_crypto_ed25519_testvectors(void *arg)
+{
+  unsigned i;
+  char *mem_op_hex_tmp = NULL;
+  (void)arg;
+
+  for (i = 0; i < ARRAY_LENGTH(ED25519_SECRET_KEYS); ++i) {
+    uint8_t sk[32];
+    ed25519_secret_key_t esk;
+    ed25519_public_key_t pk, blind_pk, pkfromcurve;
+    ed25519_keypair_t keypair, blind_keypair;
+    curve25519_keypair_t curvekp;
+    uint8_t blinding_param[32];
+    ed25519_signature_t sig;
+    int sign;
+
+#define DECODE(p,s) base16_decode((char*)(p),sizeof(p),(s),strlen(s))
+#define EQ(a,h) test_memeq_hex((const char*)(a), (h))
+
+    tt_int_op(0, ==, DECODE(sk, ED25519_SECRET_KEYS[i]));
+    tt_int_op(0, ==, DECODE(blinding_param, ED25519_BLINDING_PARAMS[i]));
+
+    tt_int_op(0, ==, ed25519_secret_key_from_seed(&esk, sk));
+    EQ(esk.seckey, ED25519_EXPANDED_SECRET_KEYS[i]);
+
+    tt_int_op(0, ==, ed25519_public_key_generate(&pk, &esk));
+    EQ(pk.pubkey, ED25519_PUBLIC_KEYS[i]);
+
+    memcpy(&curvekp.seckey.secret_key, esk.seckey, 32);
+    curve25519_public_key_generate(&curvekp.pubkey, &curvekp.seckey);
+
+    tt_int_op(0, ==,
+          ed25519_keypair_from_curve25519_keypair(&keypair, &sign, &curvekp));
+    tt_int_op(0, ==, ed25519_public_key_from_curve25519_public_key(
+                                        &pkfromcurve, &curvekp.pubkey, sign));
+    tt_mem_op(keypair.pubkey.pubkey, ==, pkfromcurve.pubkey, 32);
+    EQ(curvekp.pubkey.public_key, ED25519_CURVE25519_PUBLIC_KEYS[i]);
+
+    /* Self-signing */
+    memcpy(&keypair.seckey, &esk, sizeof(esk));
+    memcpy(&keypair.pubkey, &pk, sizeof(pk));
+
+    tt_int_op(0, ==, ed25519_sign(&sig, pk.pubkey, 32, &keypair));
+
+    EQ(sig.sig, ED25519_SELF_SIGNATURES[i]);
+
+    /* Blinding */
+    tt_int_op(0, ==,
+            ed25519_keypair_blind(&blind_keypair, &keypair, blinding_param));
+    tt_int_op(0, ==,
+            ed25519_public_blind(&blind_pk, &pk, blinding_param));
+
+    EQ(blind_keypair.seckey.seckey, ED25519_BLINDED_SECRET_KEYS[i]);
+    EQ(blind_pk.pubkey, ED25519_BLINDED_PUBLIC_KEYS[i]);
+
+    tt_mem_op(blind_pk.pubkey, ==, blind_keypair.pubkey.pubkey, 32);
+
+#undef DECODE
+#undef EQ
+  }
+ done:
+  tor_free(mem_op_hex_tmp);
+}
 
 static void
 test_crypto_siphash(void *arg)
@@ -1671,6 +2029,12 @@ struct testcase_t crypto_tests[] = {
   { "curve25519_wrappers", test_crypto_curve25519_wrappers, 0, NULL, NULL },
   { "curve25519_encode", test_crypto_curve25519_encode, 0, NULL, NULL },
   { "curve25519_persist", test_crypto_curve25519_persist, 0, NULL, NULL },
+  { "ed25519_simple", test_crypto_ed25519_simple, 0, NULL, NULL },
+  { "ed25519_test_vectors", test_crypto_ed25519_test_vectors, 0, NULL, NULL },
+  { "ed25519_encode", test_crypto_ed25519_encode, 0, NULL, NULL },
+  { "ed25519_convert", test_crypto_ed25519_convert, 0, NULL, NULL },
+  { "ed25519_blinding", test_crypto_ed25519_blinding, 0, NULL, NULL },
+  { "ed25519_testvectors", test_crypto_ed25519_testvectors, 0, NULL, NULL },
 #endif
   { "siphash", test_crypto_siphash, 0, NULL, NULL },
   END_OF_TESTCASES

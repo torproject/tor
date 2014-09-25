@@ -138,6 +138,10 @@ cscope.*
 /src/config/torrc.sample
 /src/config/torrc.minimal
 
+# /src/ext/
+/src/ext/ed25519/ref10/libed25519_ref10.a
+/src/ext/ed25519/ref10/libed25519_ref10.lib
+
 # /src/or/
 /src/or/Makefile
 /src/or/Makefile.in

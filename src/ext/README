@@ -54,3 +54,10 @@ trunnel/*.[ch]
 
     Headers and runtime code for Trunnel, a system for generating
     code to encode and decode binary formats.
+
+ed25519/ref10/*
+
+    Daniel Bernsten's portable ref10 implementation of ed25519.
+    Public domain.
+
+
