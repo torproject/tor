@@ -181,7 +181,7 @@ crypto_read_tagged_contents_from_file(const char *fname,
   char *content = NULL;
   struct stat st;
   ssize_t r = -1;
-  size_t st_size;
+  size_t st_size = 0;
 
   *tag_out = NULL;
   st.st_size = 0;
