@@ -471,7 +471,6 @@ tor_addr_parse_PTR_name(tor_addr_t *result, const char *address,
 
   if (!strcasecmpend(address, ".ip6.arpa")) {
     const char *cp;
-    int i;
     int n0, n1;
     struct in6_addr in6;
 
@@ -479,7 +478,7 @@ tor_addr_parse_PTR_name(tor_addr_t *result, const char *address,
       return -1;
 
     cp = address;
-    for (i = 0; i < 16; ++i) {
+    for (int i = 0; i < 16; ++i) {
       n0 = hex_decode_digit(*cp++); /* The low-order nybble appears first. */
       if (*cp++ != '.') return -1;  /* Then a dot. */
       n1 = hex_decode_digit(*cp++); /* The high-order nybble appears first. */

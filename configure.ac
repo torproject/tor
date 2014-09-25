@@ -191,6 +191,7 @@ AM_CONDITIONAL(USE_FW_HELPER, test x$natpmp = xtrue || test x$upnp = xtrue)
 AM_CONDITIONAL(NAT_PMP, test x$natpmp = xtrue)
 AM_CONDITIONAL(MINIUPNPC, test x$upnp = xtrue)
 AM_PROG_CC_C_O
+AC_PROG_CC_C99
 
 AC_ARG_VAR(PYTHON)
 AC_CHECK_PROGS(PYTHON, [python python2 python2.7 python3 python3.3])
