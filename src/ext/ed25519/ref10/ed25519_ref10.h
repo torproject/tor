@@ -9,11 +9,11 @@ int ed25519_ref10_pubkey(unsigned char *pk,const unsigned char *sk);
 int ed25519_ref10_keygen(unsigned char *pk,unsigned char *sk);
 int ed25519_ref10_open(
   const unsigned char *signature,
-  const unsigned char *m,uint64_t mlen,
+  const unsigned char *m, size_t mlen,
   const unsigned char *pk);
 int ed25519_ref10_sign(
   unsigned char *sig,
-  const unsigned char *m,uint64_t mlen,
+  const unsigned char *m, size_t mlen,
   const unsigned char *sk, const unsigned char *pk);
 
 /* Added in Tor */

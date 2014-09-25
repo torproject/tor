@@ -9,7 +9,7 @@
 /* 'signature' must be 64-bytes long. */
 int crypto_sign_open(
   const unsigned char *signature,
-  const unsigned char *m,uint64_t mlen,
+  const unsigned char *m, size_t mlen,
   const unsigned char *pk
 )
 {

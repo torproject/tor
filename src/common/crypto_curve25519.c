@@ -181,6 +181,7 @@ crypto_read_tagged_contents_from_file(const char *fname,
   char *content = NULL;
   struct stat st;
   ssize_t r = -1;
+  size_t st_size;
 
   *tag_out = NULL;
   st.st_size = 0;
@@ -189,6 +190,7 @@ crypto_read_tagged_contents_from_file(const char *fname,
     goto end;
   if (st.st_size < 32 || st.st_size > 32 + data_out_len)
     goto end;
+  st_size = (size_t)st.st_size;
 
   memcpy(prefix, content, 32);
   prefix[32] = 0;
@@ -205,12 +207,12 @@ crypto_read_tagged_contents_from_file(const char *fname,
   *tag_out = tor_strndup(prefix+5+strlen(typestring),
                          strlen(prefix)-8-strlen(typestring));
 
-  memcpy(data_out, content+32, st.st_size-32);
-  r = st.st_size - 32;
+  memcpy(data_out, content+32, st_size-32);
+  r = st_size - 32;
 
  end:
   if (content)
-    memwipe(content, 0, st.st_size);
+    memwipe(content, 0, st_size);
   tor_free(content);
   return r;
 }

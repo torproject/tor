@@ -7,7 +7,7 @@
 
 int crypto_sign(
   unsigned char *sig,
-  const unsigned char *m,uint64_t mlen,
+  const unsigned char *m, size_t mlen,
   const unsigned char *sk,const unsigned char *pk
 )
 {
