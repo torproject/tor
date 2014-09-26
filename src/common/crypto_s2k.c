@@ -392,6 +392,9 @@ secret_to_key_new(uint8_t *buf,
   type = buf[0];
   key_len = secret_to_key_key_len(type);
 
+  if (key_len < 0)
+    return key_len;
+
   if ((int)buf_len < key_len + spec_len)
     return S2K_TRUNCATED;
 
