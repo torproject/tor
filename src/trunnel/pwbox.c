@@ -12,6 +12,22 @@
     (obj)->trunnel_error_code_ = 1; \
   } while (0)
 
+#if defined(__COVERITY__) || defined(__clang_analyzer__)
+/* If we're runnning a static analysis tool, we don't want it to complain
+ * that some of our remaining-bytes checks are dead-code. */
+int pwbox_deadcode_dummy__ = 0;
+#define OR_DEADCODE_DUMMY || pwbox_deadcode_dummy__
+#else
+#define OR_DEADCODE_DUMMY
+#endif
+
+#define CHECK_REMAINING(nbytes, label)                           \
+  do {                                                           \
+    if (remaining < (nbytes) OR_DEADCODE_DUMMY) {                \
+      goto label;                                                \
+    }                                                            \
+  } while (0)
+
 pwbox_encoded_t *
 pwbox_encoded_new(void)
 {
@@ -422,49 +438,38 @@ pwbox_encoded_parse_into(pwbox_encoded_t *obj, const uint8_t *input, const size_
   (void)result;
 
   /* Parse u32 fixedbytes0 IN [PWBOX0_CONST0] */
-  if (remaining < 4)
-    goto truncated;
+  CHECK_REMAINING(4, truncated);
   obj->fixedbytes0 = trunnel_ntohl(trunnel_get_uint32(ptr));
   remaining -= 4; ptr += 4;
   if (! (obj->fixedbytes0 == PWBOX0_CONST0))
     goto fail;
 
   /* Parse u32 fixedbytes1 IN [PWBOX0_CONST1] */
-  if (remaining < 4)
-    goto truncated;
+  CHECK_REMAINING(4, truncated);
   obj->fixedbytes1 = trunnel_ntohl(trunnel_get_uint32(ptr));
   remaining -= 4; ptr += 4;
   if (! (obj->fixedbytes1 == PWBOX0_CONST1))
     goto fail;
 
   /* Parse u8 header_len */
-  if (remaining < 1)
-    goto truncated;
+  CHECK_REMAINING(1, truncated);
   obj->header_len = (trunnel_get_uint8(ptr));
   remaining -= 1; ptr += 1;
 
   /* Parse u8 skey_header[header_len] */
-  if (remaining < obj->header_len)
-    goto truncated;
+  CHECK_REMAINING(obj->header_len, truncated);
   TRUNNEL_DYNARRAY_EXPAND(uint8_t, &obj->skey_header, obj->header_len, {});
   obj->skey_header.n_ = obj->header_len;
   memcpy(obj->skey_header.elts_, ptr, obj->header_len);
   ptr += obj->header_len; remaining -= obj->header_len;
 
   /* Parse u8 iv[16] */
-  if (remaining < (16))
-    goto truncated;
+  CHECK_REMAINING(16, truncated);
   memcpy(obj->iv, ptr, 16);
-  {
-    unsigned idx;
-    for (idx = 0; idx < 16; ++idx)
-      obj->iv[idx] = (obj->iv[idx]);
-  }
   remaining -= 16; ptr += 16;
   {
     size_t remaining_after;
-    if (remaining < 32)
-       goto truncated;
+    CHECK_REMAINING(32, truncated);
     remaining_after = 32;
     remaining = remaining - 32;
 
@@ -479,14 +484,8 @@ pwbox_encoded_parse_into(pwbox_encoded_t *obj, const uint8_t *input, const size_
   }
 
   /* Parse u8 hmac[32] */
-  if (remaining < (32))
-    goto truncated;
+  CHECK_REMAINING(32, truncated);
   memcpy(obj->hmac, ptr, 32);
-  {
-    unsigned idx;
-    for (idx = 0; idx < 32; ++idx)
-      obj->hmac[idx] = (obj->hmac[idx]);
-  }
   remaining -= 32; ptr += 32;
   trunnel_assert(ptr + remaining == input + len_in);
   return len_in - remaining;
