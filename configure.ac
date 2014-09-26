@@ -194,6 +194,7 @@ AM_CONDITIONAL(USE_FW_HELPER, test x$natpmp = xtrue || test x$upnp = xtrue)
 AM_CONDITIONAL(NAT_PMP, test x$natpmp = xtrue)
 AM_CONDITIONAL(MINIUPNPC, test x$upnp = xtrue)
 AM_PROG_CC_C_O
+AC_PROG_CC_C99
 
 AC_ARG_VAR(PYTHON)
 AC_CHECK_PROGS(PYTHON, [python python2 python2.7 python3 python3.3])
@@ -223,6 +224,28 @@ AC_C_FLEXIBLE_ARRAY_MEMBER
    AC_DEFINE([FLEXIBLE_ARRAY_MEMBER], [1], [Define to nothing if C supports flexible array members, and to 1 if it does not.])
  fi
 ])
+
+AC_CACHE_CHECK([for working C99 mid-block declaration syntax],
+      tor_cv_c_c99_decl,
+      [AC_COMPILE_IFELSE(
+         [AC_LANG_PROGRAM([], [int x; x = 3; int y; y = 4 + x;])],
+	 [tor_cv_c_c99_decl=yes],
+	 [tor_cv_c_c99_decl=no] )])
+if test "$tor_cv_c_c99_decl" != "yes"; then
+  AC_MSG_ERROR([Your compiler doesn't support c99 mid-block declarations. This is required as of Tor 0.2.6.x])
+fi
+
+AC_CACHE_CHECK([for working C99 designated initializers],
+      tor_cv_c_c99_designated_init,
+      [AC_COMPILE_IFELSE(
+         [AC_LANG_PROGRAM([struct s { int a; int b; };],
+  	       [[ struct s ss = { .b = 5, .a = 6 }; ]])],
+	 [tor_cv_c_c99_designated_init=yes],
+	 [tor_cv_c_c99_designated_init=no] )])
+
+if test "$tor_cv_c_c99_designated_init" != "yes"; then
+  AC_MSG_ERROR([Your compiler doesn't support c99 designated initializers. This is required as of Tor 0.2.6.x])
+fi
 
 AC_PATH_PROG([SHA1SUM], [sha1sum], none)
 AC_PATH_PROG([OPENSSL], [openssl], none)
@@ -1511,7 +1534,7 @@ if test x$enable_gcc_warnings = xyes || test x$enable_gcc_warnings_advisory = xy
 
   if test x$have_gcc4 = xyes ; then
     # These warnings break gcc 3.3.5 and work on gcc 4.0.2
-    CFLAGS="$CFLAGS -Winit-self -Wmissing-field-initializers -Wdeclaration-after-statement -Wold-style-definition"
+    CFLAGS="$CFLAGS -Winit-self -Wmissing-field-initializers -Wold-style-definition"
   fi
 
   if test x$have_gcc42 = xyes ; then
