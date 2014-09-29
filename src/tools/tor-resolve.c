@@ -8,6 +8,7 @@
 #include "../common/util.h"
 #include "address.h"
 #include "../common/torlog.h"
+#include "sandbox.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -344,6 +345,7 @@ main(int argc, char **argv)
   log_severity_list_t *s = tor_malloc_zero(sizeof(log_severity_list_t));
 
   init_logging();
+  sandbox_disable_getaddrinfo_cache();
 
   arg = &argv[1];
   n_args = argc-1;
