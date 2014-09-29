@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Disable sandbox name resolver cache when running tor-resolve:
+      tor-resolve doesn't use the sandbox code, and turning it on was
+      breaking attempts to do tor-resolve on a non-default server on
+      Linux. Fixes bug 13295; bugfix on 0.2.5.3-alpha.

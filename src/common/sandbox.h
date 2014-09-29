@@ -176,5 +176,7 @@ int sandbox_init(sandbox_cfg_t* cfg);
 /** Return true iff the sandbox is turned on. */
 int sandbox_is_active(void);
 
+void sandbox_disable_getaddrinfo_cache(void);
+
 #endif /* SANDBOX_H_ */
 
