@@ -1051,7 +1051,8 @@ test_crypto_pwbox(void *arg)
   (void)arg;
 
   for (i = 0; i < ARRAY_LENGTH(flags); ++i) {
-    tt_int_op(0, ==, crypto_pwbox(&boxed, &len, (const uint8_t*)msg, strlen(msg),
+    tt_int_op(0, ==, crypto_pwbox(&boxed, &len,
+                                  (const uint8_t*)msg, strlen(msg),
                                   pw, strlen(pw), flags[i]));
     tt_assert(boxed);
     tt_assert(len > 128+32);
@@ -1065,13 +1066,16 @@ test_crypto_pwbox(void *arg)
 
     tor_free(decoded);
 
-    tt_int_op(UNPWBOX_BAD_SECRET, ==, crypto_unpwbox(&decoded, &dlen, boxed, len,
+    tt_int_op(UNPWBOX_BAD_SECRET, ==, crypto_unpwbox(&decoded, &dlen,
+                                                     boxed, len,
                                                      pw, strlen(pw)-1));
     boxed[len-1] ^= 1;
-    tt_int_op(UNPWBOX_BAD_SECRET, ==, crypto_unpwbox(&decoded, &dlen, boxed, len,
+    tt_int_op(UNPWBOX_BAD_SECRET, ==, crypto_unpwbox(&decoded, &dlen,
+                                                     boxed, len,
                                                      pw, strlen(pw)));
     boxed[0] = 255;
-    tt_int_op(UNPWBOX_CORRUPTED, ==, crypto_unpwbox(&decoded, &dlen, boxed, len,
+    tt_int_op(UNPWBOX_CORRUPTED, ==, crypto_unpwbox(&decoded, &dlen,
+                                                    boxed, len,
                                                     pw, strlen(pw)));
 
     tor_free(boxed);
@@ -1080,7 +1084,6 @@ test_crypto_pwbox(void *arg)
  done:
   tor_free(boxed);
   tor_free(decoded);
-
 }
 
 /** Test AES-CTR encryption and decryption with IV. */

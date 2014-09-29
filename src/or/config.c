@@ -1676,7 +1676,6 @@ options_act(const or_options_t *old_options)
       connection_or_update_token_buckets(get_connection_array(), options);
   }
 
-
   /* Only collect directory-request statistics on relays and bridges. */
   options->DirReqStatistics = options->DirReqStatistics_option &&
     server_mode(options);
