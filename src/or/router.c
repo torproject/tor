@@ -1080,6 +1080,7 @@ decide_to_advertise_dirport(const or_options_t *options, uint16_t dir_port)
      * they're confused or to get statistics. */
     int interval_length = accounting_get_interval_length();
     uint32_t effective_bw = get_effective_bwrate(options);
+    uint64_t acc_bytes;
     if (!interval_length) {
       log_warn(LD_BUG, "An accounting interval is not allowed to be zero "
                        "seconds long. Raising to 1.");
@@ -1090,8 +1091,12 @@ decide_to_advertise_dirport(const or_options_t *options, uint16_t dir_port)
                          "accounting interval length %d", effective_bw,
                          U64_PRINTF_ARG(options->AccountingMax),
                          interval_length);
+
+    acc_bytes = options->AccountingMax;
+    if (get_options()->AccountingRule == ACCT_SUM)
+      acc_bytes /= 2;
     if (effective_bw >=
-        options->AccountingMax / interval_length) {
+        acc_bytes / interval_length) {
       new_choice = 0;
       reason = "AccountingMax enabled";
     }
