@@ -2037,6 +2037,13 @@ get_last_resolved_addr(void)
   return last_resolved_addr;
 }
 
+/** Reset last_resolved_addr from outside this file. */
+void
+reset_last_resolved_addr(void)
+{
+  last_resolved_addr = 0;
+}
+
 /**
  * Use <b>options-\>Address</b> to guess our public IP address.
  *

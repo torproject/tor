@@ -4386,6 +4386,8 @@ client_check_address_changed(tor_socket_t sock)
     SMARTLIST_FOREACH(outgoing_addrs, tor_addr_t*, a_ptr, tor_free(a_ptr));
     smartlist_clear(outgoing_addrs);
     smartlist_add(outgoing_addrs, tor_memdup(&out_addr, sizeof(tor_addr_t)));
+    /* We'll need to resolve ourselves again. */
+    reset_last_resolved_addr();
     /* Okay, now change our keys. */
     ip_address_changed(1);
   }
