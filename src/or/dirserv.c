@@ -1395,6 +1395,8 @@ dirserv_compute_performance_thresholds(routerlist_t *rl,
       routerinfo_t *ri = node->ri;
       const char *id = node->identity;
       uint32_t bw_kb;
+      /* resolve spurious clang shallow analysis null pointer errors */
+      tor_assert(ri);
       node->is_exit = (!router_exit_policy_rejects_all(ri) &&
                        exit_policy_is_general_exit(ri->exit_policy));
       uptimes[n_active] = (uint32_t)real_uptime(ri, now);

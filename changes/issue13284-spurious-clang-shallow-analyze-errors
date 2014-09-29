@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Avoid 4 null pointer errors under clang shallow analysis by using
+      tor_assert() to prove that the pointers aren't null. Fixes bug 13284.

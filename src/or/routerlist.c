@@ -475,6 +475,8 @@ trusted_dirs_remove_old_certs(void)
         time_t cert_published;
         if (newest == cert)
           continue;
+        /* resolve spurious clang shallow analysis null pointer errors */
+        tor_assert(cert);
         expired = now > cert->expires;
         cert_published = cert->cache_info.published_on;
         /* Store expired certs for 48 hours after a newer arrives;
