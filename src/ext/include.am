@@ -64,8 +64,16 @@ ED25519_REF10_HDRS = \
 	src/ext/ed25519/ref10/api.h \
 	src/ext/ed25519/ref10/base.h \
 	src/ext/ed25519/ref10/base2.h \
+	src/ext/ed25519/ref10/crypto_hash_sha512.h \
+	src/ext/ed25519/ref10/crypto_int32.h \
+	src/ext/ed25519/ref10/crypto_int64.h \
+	src/ext/ed25519/ref10/crypto_sign.h \
+	src/ext/ed25519/ref10/crypto_uint32.h \
+	src/ext/ed25519/ref10/crypto_uint64.h \
+	src/ext/ed25519/ref10/crypto_verify_32.h \
 	src/ext/ed25519/ref10/d.h \
 	src/ext/ed25519/ref10/d2.h \
+	src/ext/ed25519/ref10/ed25519_ref10.h \
 	src/ext/ed25519/ref10/fe.h \
 	src/ext/ed25519/ref10/ge.h \
 	src/ext/ed25519/ref10/ge_add.h \
@@ -75,8 +83,9 @@ ED25519_REF10_HDRS = \
 	src/ext/ed25519/ref10/ge_sub.h \
 	src/ext/ed25519/ref10/pow22523.h \
 	src/ext/ed25519/ref10/pow225521.h \
+	src/ext/ed25519/ref10/randombytes.h \
 	src/ext/ed25519/ref10/sc.h \
-	src/ext/ed25519/ref10/sqrtm1.h
+	src/ext/ed25519/ref10/sqrtm1.h \
 
 noinst_HEADERS += $(ED25519_REF10_HDRS)
 
