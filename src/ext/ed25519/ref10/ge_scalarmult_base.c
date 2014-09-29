@@ -86,7 +86,7 @@ void ge_scalarmult_base(ge_p3 *h,const unsigned char *a)
     e[i] += carry;
     carry = e[i] + 8;
     carry >>= 4;
-    e[i] -= carry << 4;
+    e[i] -= SHL8(carry,4);
   }
   e[63] += carry;
   /* each e[i] is between -8 and 8 */
