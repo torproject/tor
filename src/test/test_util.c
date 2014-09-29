@@ -2853,7 +2853,7 @@ test_util_fgets_eagain(void *ptr)
 #ifdef _WIN32
 /* I've assumed Windows doesn't have the gap between fork and exec
  * that causes the race condition on unix-like platforms */
-#define MATCH_PROCESS_STATUS(s1,s2)         (s1 == s2)
+#define MATCH_PROCESS_STATUS(s1,s2)         ((s1) == (s2))
 
 #else
 /* work around a race condition of the timing of SIGCHLD handler updates 
@@ -2863,14 +2863,14 @@ test_util_fgets_eagain(void *ptr)
  * PROCESS_STATUS_ERROR (and similarly with *_OR_NOTRUNNING) */
 #define PROCESS_STATUS_RUNNING_OR_NOTRUNNING  (PROCESS_STATUS_RUNNING+1)
 #define IS_RUNNING_OR_NOTRUNNING(s)           \
-            (s == PROCESS_STATUS_RUNNING || s == PROCESS_STATUS_NOTRUNNING)
+  ((s) == PROCESS_STATUS_RUNNING || (s) == PROCESS_STATUS_NOTRUNNING)
 /* well, this is ugly */
 #define MATCH_PROCESS_STATUS(s1,s2)           \
-            (  s1 == s2 \
-            ||(s1 == PROCESS_STATUS_RUNNING_OR_NOTRUNNING \
-               && IS_RUNNING_OR_NOTRUNNING(s2)) \
-            ||(s2 == PROCESS_STATUS_RUNNING_OR_NOTRUNNING \
-               && IS_RUNNING_OR_NOTRUNNING(s1)))
+  (  (s1) == (s2)                                         \
+     ||((s1) == PROCESS_STATUS_RUNNING_OR_NOTRUNNING      \
+        && IS_RUNNING_OR_NOTRUNNING(s2))                  \
+     ||((s2) == PROCESS_STATUS_RUNNING_OR_NOTRUNNING      \
+        && IS_RUNNING_OR_NOTRUNNING(s1)))
 
 #endif // _WIN32
 
