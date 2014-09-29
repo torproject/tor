@@ -85,7 +85,7 @@ ED25519_REF10_HDRS = \
 	src/ext/ed25519/ref10/pow225521.h \
 	src/ext/ed25519/ref10/randombytes.h \
 	src/ext/ed25519/ref10/sc.h \
-	src/ext/ed25519/ref10/sqrtm1.h \
+	src/ext/ed25519/ref10/sqrtm1.h
 
 noinst_HEADERS += $(ED25519_REF10_HDRS)
 
