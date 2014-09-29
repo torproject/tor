@@ -4358,21 +4358,25 @@ MOCK_IMPL(STATIC void, initiate_descriptor_downloads,
   tor_free(resource);
 }
 
-/** Max amount of hashes to download per request.
- * Since squid does not like URLs >= 4096 bytes we limit it to 96.
- *   4096 - strlen(http://255.255.255.255/tor/server/d/.z) == 4058
- *   4058/41 (40 for the hash and 1 for the + that separates them) => 98
- *   So use 96 because it's a nice number.
+/** Return the max number of hashes to put in a URL for a given request.
  */
 static int
 max_dl_per_request(const or_options_t *options, int purpose)
 {
+  /* Since squid does not like URLs >= 4096 bytes we limit it to 96.
+   *   4096 - strlen(http://255.255.255.255/tor/server/d/.z) == 4058
+   *   4058/41 (40 for the hash and 1 for the + that separates them) => 98
+   *   So use 96 because it's a nice number.
+   */
   int max = 96;
   if (purpose == DIR_PURPOSE_FETCH_MICRODESC) {
     max = 92;
   }
-  if (options->TunnelDirConns) {
-    max = 1000;
+  /* If we're going to tunnel our connections, we can ask for a lot more
+   * in a request. */
+  if (options->TunnelDirConns &&
+      !directory_fetches_from_authorities(options)) {
+    max = 500;
   }
   return max;
 }
