@@ -39,7 +39,7 @@ static void select(ge_precomp *t,int pos,signed char b)
 {
   ge_precomp minust;
   unsigned char bnegative = negative(b);
-  unsigned char babs = b - (((-bnegative) & b) << 1);
+  unsigned char babs = b - SHL8( (-bnegative) & (unsigned char)b, 1);
 
   ge_precomp_0(t);
   cmov(t,&base[pos][0],equal(babs,1));
