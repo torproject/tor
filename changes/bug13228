@@ -1,0 +1,5 @@
+  o Build fixes:
+    - Improve configure script error message to make it clear
+      that compilation has failed and that user has to either 
+      add --disable-asciidoc argument or install asciidoc.
+      Resolves ticket 13228.

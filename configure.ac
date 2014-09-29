@@ -1599,7 +1599,9 @@ if test x$asciidoc = xtrue && test "$ASCIIDOC" = "none" ; then
     if ! [[ -f "$srcdir/$file.1.in" ]] || ! [[ -f "$srcdir/$file.html.in" ]] ; then
       echo "==================================";
       echo;
-      echo "You need asciidoc installed to be able to build the manpage.";
+      echo "Building Tor has failed since manpages cannot be built.";
+      echo;
+      echo "You need asciidoc installed to be able to build the manpages.";
       echo "To build without manpages, use the --disable-asciidoc argument";
       echo "when calling configure.";
       echo;
