@@ -1659,7 +1659,7 @@ is non-zero):
     should hibernate) during a time interval. Set to "max" to calculate
     using the higher of either the sent or received bytes (this is the
     default functionality). Set to "sum" to calculate using the sent
-    plus received bytes.
+    plus received bytes. (Default: max)
 
 [[AccountingStart]] **AccountingStart** **day**|**week**|**month** [__day__] __HH:MM__::
     Specify how long accounting periods last. If **month** is given, each
