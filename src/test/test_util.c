@@ -2850,6 +2850,30 @@ test_util_fgets_eagain(void *ptr)
 #define EOL "\n"
 #endif
 
+#ifdef _WIN32
+/* I've assumed Windows doesn't have the gap between fork and exec
+ * that causes the race condition on unix-like platforms */
+#define MATCH_PROCESS_STATUS(s1,s2)         (s1 == s2)
+
+#else
+/* work around a race condition of the timing of SIGCHLD handler updates 
+ * to the process_handle's fields, and checks of those fields
+ *
+ * TODO: Once we can signal failure to exec, change PROCESS_STATUS_RUNNING to
+ * PROCESS_STATUS_ERROR (and similarly with *_OR_NOTRUNNING) */
+#define PROCESS_STATUS_RUNNING_OR_NOTRUNNING  (PROCESS_STATUS_RUNNING+1)
+#define IS_RUNNING_OR_NOTRUNNING(s)           \
+            (s == PROCESS_STATUS_RUNNING || s == PROCESS_STATUS_NOTRUNNING)
+/* well, this is ugly */
+#define MATCH_PROCESS_STATUS(s1,s2)           \
+            (  s1 == s2 \
+            ||(s1 == PROCESS_STATUS_RUNNING_OR_NOTRUNNING \
+               && IS_RUNNING_OR_NOTRUNNING(s2)) \
+            ||(s2 == PROCESS_STATUS_RUNNING_OR_NOTRUNNING \
+               && IS_RUNNING_OR_NOTRUNNING(s1)))
+
+#endif // _WIN32
+
 /** Helper function for testing tor_spawn_background */
 static void
 run_util_spawn_background(const char *argv[], const char *expected_out,
@@ -2871,18 +2895,39 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
 
   notify_pending_waitpid_callbacks();
 
-  tt_int_op(expected_status,==, status);
+  /* the race condition doesn't affect status,
+   * because status isn't updated by the SIGCHLD handler,
+   * but we still need to handle PROCESS_STATUS_RUNNING_OR_NOTRUNNING */
+  tt_assert(MATCH_PROCESS_STATUS(expected_status, status));
   if (status == PROCESS_STATUS_ERROR) {
     tt_ptr_op(process_handle, ==, NULL);
     return;
   }
 
   tt_assert(process_handle != NULL);
-  tt_int_op(expected_status,==, process_handle->status);
+
+  /* When a spawned process forks, fails, then exits very quickly,
+   * (this typically occurs when exec fails)
+   * there is a race condition between the SIGCHLD handler
+   * updating the process_handle's fields, and this test 
+   * checking the process status in those fields.
+   * The SIGCHLD update can occur before or after the code below executes.
+   * This causes intermittent failures in spawn_background_fail(),
+   * typically when the machine is under load. 
+   * We use PROCESS_STATUS_RUNNING_OR_NOTRUNNING to avoid this issue. */
+
+  /* the race condition affects the change in
+   * process_handle->status from RUNNING to NOTRUNNING */
+  tt_assert(MATCH_PROCESS_STATUS(expected_status, process_handle->status));
 
 #ifndef _WIN32
   notify_pending_waitpid_callbacks();
-  tt_ptr_op(process_handle->waitpid_cb, !=, NULL);
+  /* the race condition affects the change in
+   * process_handle->waitpid_cb to NULL,
+   * so we skip the check if expected_status is ambiguous, 
+   * that is, PROCESS_STATUS_RUNNING_OR_NOTRUNNING */
+  tt_assert(process_handle->waitpid_cb != NULL
+              || expected_status == PROCESS_STATUS_RUNNING_OR_NOTRUNNING);
 #endif
 
 #ifdef _WIN32
@@ -2955,8 +3000,8 @@ test_util_spawn_background_fail(void *ptr)
   const int expected_status = PROCESS_STATUS_ERROR;
 #else
   /* TODO: Once we can signal failure to exec, set this to be
-   * PROCESS_STATUS_ERROR */
-  const int expected_status = PROCESS_STATUS_RUNNING;
+   * PROCESS_STATUS_RUNNING_OR_ERROR */
+  const int expected_status = PROCESS_STATUS_RUNNING_OR_NOTRUNNING;
 #endif
 
   memset(expected_out, 0xf0, sizeof(expected_out));
@@ -3148,6 +3193,13 @@ test_util_spawn_background_waitpid_notify(void *arg)
 
 #undef TEST_CHILD
 #undef EOL
+
+#undef MATCH_PROCESS_STATUS
+
+#ifndef _WIN32
+#undef PROCESS_STATUS_RUNNING_OR_NOTRUNNING
+#undef IS_RUNNING_OR_NOTRUNNING
+#endif
 
 /**
  * Test for format_hex_number_sigsafe()
