@@ -13,9 +13,9 @@
 #include "siphash.h"
 #ifdef CURVE25519_ENABLED
 #include "crypto_curve25519.h"
+#endif
 #include "crypto_ed25519.h"
 #include "ed25519_vectors.inc"
-#endif
 #include "crypto_s2k.h"
 #include "crypto_pwbox.h"
 
@@ -1697,8 +1697,6 @@ test_crypto_ed25519_test_vectors(void *arg)
   tor_free(mem_op_hex_tmp);
 }
 
-#endif
-
 static void
 test_crypto_ed25519_encode(void *arg)
 {
@@ -1875,6 +1873,7 @@ test_crypto_ed25519_testvectors(void *arg)
  done:
   tor_free(mem_op_hex_tmp);
 }
+#endif /* CURVE25519_ENABLED */
 
 static void
 test_crypto_siphash(void *arg)

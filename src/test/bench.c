@@ -236,7 +236,6 @@ bench_onion_ntor(void)
   ntor_handshake_state_free(state);
   dimap_free(keymap, NULL);
 }
-#endif
 
 static void
 bench_ed25519(void)
@@ -294,6 +293,7 @@ bench_ed25519(void)
   printf("Blind a public key: %.2f usec\n",
          MICROCOUNT(start, end, iters));
 }
+#endif
 
 static void
 bench_cell_aes(void)
@@ -575,8 +575,8 @@ static struct benchmark_t benchmarks[] = {
   ENT(onion_TAP),
 #ifdef CURVE25519_ENABLED
   ENT(onion_ntor),
-#endif
   ENT(ed25519),
+#endif
   ENT(cell_aes),
   ENT(cell_ops),
   ENT(dh),
