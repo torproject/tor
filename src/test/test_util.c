@@ -2856,7 +2856,7 @@ test_util_fgets_eagain(void *ptr)
 #define MATCH_PROCESS_STATUS(s1,s2)         ((s1) == (s2))
 
 #else
-/* work around a race condition of the timing of SIGCHLD handler updates 
+/* work around a race condition of the timing of SIGCHLD handler updates
  * to the process_handle's fields, and checks of those fields
  *
  * TODO: Once we can signal failure to exec, change PROCESS_STATUS_RUNNING to
@@ -2909,11 +2909,11 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
   /* When a spawned process forks, fails, then exits very quickly,
    * (this typically occurs when exec fails)
    * there is a race condition between the SIGCHLD handler
-   * updating the process_handle's fields, and this test 
+   * updating the process_handle's fields, and this test
    * checking the process status in those fields.
    * The SIGCHLD update can occur before or after the code below executes.
    * This causes intermittent failures in spawn_background_fail(),
-   * typically when the machine is under load. 
+   * typically when the machine is under load.
    * We use PROCESS_STATUS_RUNNING_OR_NOTRUNNING to avoid this issue. */
 
   /* the race condition affects the change in
@@ -2924,7 +2924,7 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
   notify_pending_waitpid_callbacks();
   /* the race condition affects the change in
    * process_handle->waitpid_cb to NULL,
-   * so we skip the check if expected_status is ambiguous, 
+   * so we skip the check if expected_status is ambiguous,
    * that is, PROCESS_STATUS_RUNNING_OR_NOTRUNNING */
   tt_assert(process_handle->waitpid_cb != NULL
               || expected_status == PROCESS_STATUS_RUNNING_OR_NOTRUNNING);
