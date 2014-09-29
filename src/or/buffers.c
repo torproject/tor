@@ -55,7 +55,7 @@
  * forever.
  */
 
-static void send_socks5_error(socks_request_t *req,
+static void socks_request_set_socks5_error(socks_request_t *req,
                               socks5_reply_status_t reason);
 
 static int parse_socks(const char *data, size_t datalen, socks_request_t *req,
@@ -1838,7 +1838,7 @@ fetch_ext_or_command_from_evbuffer(struct evbuffer *buf, ext_or_cmd_t **out)
  * have Tor send it as error response to <b>req</b>.
  */
 static void
-send_socks5_error(socks_request_t *req,
+socks_request_set_socks5_error(socks_request_t *req,
                   socks5_reply_status_t reason)
 {
    req->replylen = 10;
@@ -1984,7 +1984,7 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
           req->command != SOCKS_COMMAND_RESOLVE &&
           req->command != SOCKS_COMMAND_RESOLVE_PTR) {
         /* not a connect or resolve or a resolve_ptr? we don't support it. */
-        send_socks5_error(req,SOCKS5_COMMAND_NOT_SUPPORTED);
+        socks_request_set_socks5_error(req,SOCKS5_COMMAND_NOT_SUPPORTED);
 
         log_warn(LD_APP,"socks5: command %d not recognized. Rejecting.",
                  req->command);
