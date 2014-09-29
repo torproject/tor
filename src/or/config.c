@@ -1399,24 +1399,26 @@ options_act(const or_options_t *old_options)
 
   mark_transport_list();
   pt_prepare_proxy_list_for_config_read();
-  if (options->ClientTransportPlugin) {
-    for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
-      if (parse_client_transport_line(options, cl->value, 0)<0) {
-        log_warn(LD_BUG,
-                 "Previously validated ClientTransportPlugin line "
-                 "could not be added!");
-        return -1;
+  if (!options->DisableNetwork) {
+    if (options->ClientTransportPlugin) {
+      for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
+        if (parse_client_transport_line(options, cl->value, 0)<0) {
+          log_warn(LD_BUG,
+                   "Previously validated ClientTransportPlugin line "
+                   "could not be added!");
+          return -1;
+        }
       }
     }
-  }
 
-  if (options->ServerTransportPlugin && server_mode(options)) {
-    for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
-      if (parse_server_transport_line(options, cl->value, 0)<0) {
-        log_warn(LD_BUG,
-                 "Previously validated ServerTransportPlugin line "
-                 "could not be added!");
-        return -1;
+    if (options->ServerTransportPlugin && server_mode(options)) {
+      for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
+        if (parse_server_transport_line(options, cl->value, 0)<0) {
+          log_warn(LD_BUG,
+                   "Previously validated ServerTransportPlugin line "
+                   "could not be added!");
+          return -1;
+        }
       }
     }
   }

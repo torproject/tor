@@ -1,0 +1,4 @@
+  o Minor bugfixes (Bridges):
+    - When DisableNetwork is set, do not launch pluggable transport
+      plugins, and if any are running already, terminate the existing
+      instances.  Resolves ticket 13213.
