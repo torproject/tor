@@ -55,6 +55,9 @@
  * forever.
  */
 
+static void socks_request_set_socks5_error(socks_request_t *req,
+                              socks5_reply_status_t reason);
+
 static int parse_socks(const char *data, size_t datalen, socks_request_t *req,
                        int log_sockstype, int safe_socks, ssize_t *drain_out,
                        size_t *want_length_out);
@@ -1831,6 +1834,21 @@ fetch_ext_or_command_from_evbuffer(struct evbuffer *buf, ext_or_cmd_t **out)
 }
 #endif
 
+/** Create a SOCKS5 reply message with <b>reason</b> in its REP field and
+ * have Tor send it as error response to <b>req</b>.
+ */
+static void
+socks_request_set_socks5_error(socks_request_t *req,
+                  socks5_reply_status_t reason)
+{
+   req->replylen = 10;
+   memset(req->reply,0,10);
+
+   req->reply[0] = 0x05;   // VER field.
+   req->reply[1] = reason; // REP field.
+   req->reply[3] = 0x01;   // ATYP field.
+}
+
 /** Implementation helper to implement fetch_from_*_socks.  Instead of looking
  * at a buffer's contents, we look at the <b>datalen</b> bytes of data in
  * <b>data</b>. Instead of removing data from the buffer, we set
@@ -1966,6 +1984,8 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
           req->command != SOCKS_COMMAND_RESOLVE &&
           req->command != SOCKS_COMMAND_RESOLVE_PTR) {
         /* not a connect or resolve or a resolve_ptr? we don't support it. */
+        socks_request_set_socks5_error(req,SOCKS5_COMMAND_NOT_SUPPORTED);
+
         log_warn(LD_APP,"socks5: command %d not recognized. Rejecting.",
                  req->command);
         return -1;
