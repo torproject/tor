@@ -1085,7 +1085,21 @@ circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
   tor_assert(1.0-quantile > 0);
   tor_assert(cbt->Xm > 0);
 
-  ret = cbt->Xm/pow(1.0-quantile,1.0/cbt->alpha);
+  /* If either alpha or p are 0, we would divide by zero, yielding an
+   * infinite (double) result; which would be clamped to INT32_MAX.
+   * Instead, initialise ret to INT32_MAX, and skip over these
+   * potentially illegal/trapping divides by zero.
+   */
+  ret = INT32_MAX;
+
+  if (cbt->alpha > 0) {
+    double p;
+    p = pow(1.0-quantile,1.0/cbt->alpha);
+    if (p > 0) {
+      ret = cbt->Xm/p;
+    }
+  }
+
   if (ret > INT32_MAX) {
     ret = INT32_MAX;
   }

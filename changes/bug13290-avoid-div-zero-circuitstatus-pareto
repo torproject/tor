@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - In circuit_build_times_calculate_timeout() in circuitstats.c, avoid
+      dividing by zero in the pareto calculations. This traps under
+      clang -fsanitize=undefined-trap -fsanitize-undefined-trap-on-error.
+      Fixes bug 13290.
