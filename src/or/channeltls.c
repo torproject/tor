@@ -1747,9 +1747,9 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
 static void
 channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
 {
-  tor_cert_t *link_cert = NULL;
-  tor_cert_t *id_cert = NULL;
-  tor_cert_t *auth_cert = NULL;
+  tor_x509_cert_t *link_cert = NULL;
+  tor_x509_cert_t *id_cert = NULL;
+  tor_x509_cert_t *auth_cert = NULL;
   uint8_t *ptr;
   int n_certs, i;
   int send_netinfo = 0;
@@ -1803,7 +1803,7 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
     if (cert_type == OR_CERT_TYPE_TLS_LINK ||
         cert_type == OR_CERT_TYPE_ID_1024 ||
         cert_type == OR_CERT_TYPE_AUTH_1024) {
-      tor_cert_t *cert = tor_cert_decode(ptr + 3, cert_len);
+      tor_x509_cert_t *cert = tor_x509_cert_decode(ptr + 3, cert_len);
       if (!cert) {
         log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
                "Received undecodable certificate in CERTS cell from %s:%d",
@@ -1812,24 +1812,24 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
       } else {
         if (cert_type == OR_CERT_TYPE_TLS_LINK) {
           if (link_cert) {
-            tor_cert_free(cert);
+            tor_x509_cert_free(cert);
             ERR("Too many TLS_LINK certificates");
           }
           link_cert = cert;
         } else if (cert_type == OR_CERT_TYPE_ID_1024) {
           if (id_cert) {
-            tor_cert_free(cert);
+            tor_x509_cert_free(cert);
             ERR("Too many ID_1024 certificates");
           }
           id_cert = cert;
         } else if (cert_type == OR_CERT_TYPE_AUTH_1024) {
           if (auth_cert) {
-            tor_cert_free(cert);
+            tor_x509_cert_free(cert);
             ERR("Too many AUTH_1024 certificates");
           }
           auth_cert = cert;
         } else {
-          tor_cert_free(cert);
+          tor_x509_cert_free(cert);
         }
       }
     }
@@ -1864,7 +1864,7 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
 
     chan->conn->handshake_state->authenticated = 1;
     {
-      const digests_t *id_digests = tor_cert_get_id_digests(id_cert);
+      const digests_t *id_digests = tor_x509_cert_get_id_digests(id_cert);
       crypto_pk_t *identity_rcvd;
       if (!id_digests)
         ERR("Couldn't compute digests for key in ID cert");
@@ -1929,9 +1929,9 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
   }
 
  err:
-  tor_cert_free(id_cert);
-  tor_cert_free(link_cert);
-  tor_cert_free(auth_cert);
+  tor_x509_cert_free(id_cert);
+  tor_x509_cert_free(link_cert);
+  tor_x509_cert_free(auth_cert);
 #undef ERR
 }
 
@@ -2151,7 +2151,7 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
     crypto_pk_t *identity_rcvd =
       tor_tls_cert_get_key(chan->conn->handshake_state->id_cert);
     const digests_t *id_digests =
-      tor_cert_get_id_digests(chan->conn->handshake_state->id_cert);
+      tor_x509_cert_get_id_digests(chan->conn->handshake_state->id_cert);
 
     /* This must exist; we checked key type when reading the cert. */
     tor_assert(id_digests);

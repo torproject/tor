@@ -122,7 +122,7 @@ static int use_unsafe_renegotiation_op = 0;
 static int use_unsafe_renegotiation_flag = 0;
 
 /** Structure that we use for a single certificate. */
-struct tor_cert_t {
+struct tor_x509_cert_t {
   X509 *cert;
   uint8_t *encoded;
   size_t encoded_len;
@@ -137,9 +137,9 @@ struct tor_cert_t {
 typedef struct tor_tls_context_t {
   int refcnt;
   SSL_CTX *ctx;
-  tor_cert_t *my_link_cert;
-  tor_cert_t *my_id_cert;
-  tor_cert_t *my_auth_cert;
+  tor_x509_cert_t *my_link_cert;
+  tor_x509_cert_t *my_id_cert;
+  tor_x509_cert_t *my_auth_cert;
   crypto_pk_t *link_key;
   crypto_pk_t *auth_key;
 } tor_tls_context_t;
@@ -821,7 +821,7 @@ static const int N_CLIENT_CIPHERS = ARRAY_LENGTH(CLIENT_CIPHER_INFO_LIST);
 
 /** Free all storage held in <b>cert</b> */
 void
-tor_cert_free(tor_cert_t *cert)
+tor_x509_cert_free(tor_x509_cert_t *cert)
 {
   if (! cert)
     return;
@@ -833,14 +833,14 @@ tor_cert_free(tor_cert_t *cert)
 }
 
 /**
- * Allocate a new tor_cert_t to hold the certificate "x509_cert".
+ * Allocate a new tor_x509_cert_t to hold the certificate "x509_cert".
  *
  * Steals a reference to x509_cert.
  */
-static tor_cert_t *
-tor_cert_new(X509 *x509_cert)
+static tor_x509_cert_t *
+tor_x509_cert_new(X509 *x509_cert)
 {
-  tor_cert_t *cert;
+  tor_x509_cert_t *cert;
   EVP_PKEY *pkey;
   RSA *rsa;
   int length;
@@ -850,7 +850,7 @@ tor_cert_new(X509 *x509_cert)
     return NULL;
 
   length = i2d_X509(x509_cert, &buf);
-  cert = tor_malloc_zero(sizeof(tor_cert_t));
+  cert = tor_malloc_zero(sizeof(tor_x509_cert_t));
   if (length <= 0 || buf == NULL) {
     tor_free(cert);
     log_err(LD_CRYPTO, "Couldn't get length of encoded x509 certificate");
@@ -880,14 +880,14 @@ tor_cert_new(X509 *x509_cert)
 }
 
 /** Read a DER-encoded X509 cert, of length exactly <b>certificate_len</b>,
- * from a <b>certificate</b>.  Return a newly allocated tor_cert_t on success
+ * from a <b>certificate</b>.  Return a newly allocated tor_x509_cert_t on success
  * and NULL on failure. */
-tor_cert_t *
-tor_cert_decode(const uint8_t *certificate, size_t certificate_len)
+tor_x509_cert_t *
+tor_x509_cert_decode(const uint8_t *certificate, size_t certificate_len)
 {
   X509 *x509;
   const unsigned char *cp = (const unsigned char *)certificate;
-  tor_cert_t *newcert;
+  tor_x509_cert_t *newcert;
   tor_assert(certificate);
   check_no_tls_errors();
 
@@ -902,14 +902,14 @@ tor_cert_decode(const uint8_t *certificate, size_t certificate_len)
     X509_free(x509);
     goto err; /* Didn't use all the bytes */
   }
-  newcert = tor_cert_new(x509);
+  newcert = tor_x509_cert_new(x509);
   if (!newcert) {
     goto err;
   }
   if (newcert->encoded_len != certificate_len ||
       fast_memneq(newcert->encoded, certificate, certificate_len)) {
     /* Cert wasn't in DER */
-    tor_cert_free(newcert);
+    tor_x509_cert_free(newcert);
     goto err;
   }
   return newcert;
@@ -921,7 +921,7 @@ tor_cert_decode(const uint8_t *certificate, size_t certificate_len)
 /** Set *<b>encoded_out</b> and *<b>size_out</b> to <b>cert</b>'s encoded DER
  * representation and length, respectively. */
 void
-tor_cert_get_der(const tor_cert_t *cert,
+tor_x509_cert_get_der(const tor_x509_cert_t *cert,
                  const uint8_t **encoded_out, size_t *size_out)
 {
   tor_assert(cert);
@@ -934,7 +934,7 @@ tor_cert_get_der(const tor_cert_t *cert,
 /** Return a set of digests for the public key in <b>cert</b>, or NULL if this
  * cert's public key is not one we know how to take the digest of. */
 const digests_t *
-tor_cert_get_id_digests(const tor_cert_t *cert)
+tor_x509_cert_get_id_digests(const tor_x509_cert_t *cert)
 {
   if (cert->pkey_digests_set)
     return &cert->pkey_digests;
@@ -944,7 +944,7 @@ tor_cert_get_id_digests(const tor_cert_t *cert)
 
 /** Return a set of digests for the public key in <b>cert</b>. */
 const digests_t *
-tor_cert_get_cert_digests(const tor_cert_t *cert)
+tor_x509_cert_get_cert_digests(const tor_x509_cert_t *cert)
 {
   return &cert->cert_digests;
 }
@@ -957,9 +957,9 @@ tor_tls_context_decref(tor_tls_context_t *ctx)
   tor_assert(ctx);
   if (--ctx->refcnt == 0) {
     SSL_CTX_free(ctx->ctx);
-    tor_cert_free(ctx->my_link_cert);
-    tor_cert_free(ctx->my_id_cert);
-    tor_cert_free(ctx->my_auth_cert);
+    tor_x509_cert_free(ctx->my_link_cert);
+    tor_x509_cert_free(ctx->my_id_cert);
+    tor_x509_cert_free(ctx->my_auth_cert);
     crypto_pk_free(ctx->link_key);
     crypto_pk_free(ctx->auth_key);
     tor_free(ctx);
@@ -973,8 +973,8 @@ tor_tls_context_decref(tor_tls_context_t *ctx)
  * client mode. */
 int
 tor_tls_get_my_certs(int server,
-                     const tor_cert_t **link_cert_out,
-                     const tor_cert_t **id_cert_out)
+                     const tor_x509_cert_t **link_cert_out,
+                     const tor_x509_cert_t **id_cert_out)
 {
   tor_tls_context_t *ctx = server ? server_tls_context : client_tls_context;
   if (! ctx)
@@ -1003,7 +1003,7 @@ tor_tls_get_my_client_auth_key(void)
  * certifies.  Return NULL if the cert's key is not RSA.
  */
 crypto_pk_t *
-tor_tls_cert_get_key(tor_cert_t *cert)
+tor_tls_cert_get_key(tor_x509_cert_t *cert)
 {
   crypto_pk_t *result = NULL;
   EVP_PKEY *pkey = X509_get_pubkey(cert->cert);
@@ -1024,7 +1024,7 @@ tor_tls_cert_get_key(tor_cert_t *cert)
  * the key certified in <b>cert</b> is the same as the key they used to do it.
  */
 int
-tor_tls_cert_matches_key(const tor_tls_t *tls, const tor_cert_t *cert)
+tor_tls_cert_matches_key(const tor_tls_t *tls, const tor_x509_cert_t *cert)
 {
   X509 *peercert = SSL_get_peer_certificate(tls->ssl);
   EVP_PKEY *link_key = NULL, *cert_key = NULL;
@@ -1053,8 +1053,8 @@ tor_tls_cert_matches_key(const tor_tls_t *tls, const tor_cert_t *cert)
  * we couldn't check it. */
 int
 tor_tls_cert_is_valid(int severity,
-                      const tor_cert_t *cert,
-                      const tor_cert_t *signing_cert,
+                      const tor_x509_cert_t *cert,
+                      const tor_x509_cert_t *signing_cert,
                       int check_rsa_1024)
 {
   check_no_tls_errors();
@@ -1265,9 +1265,9 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
   result = tor_malloc_zero(sizeof(tor_tls_context_t));
   result->refcnt = 1;
   if (!is_client) {
-    result->my_link_cert = tor_cert_new(X509_dup(cert));
-    result->my_id_cert = tor_cert_new(X509_dup(idcert));
-    result->my_auth_cert = tor_cert_new(X509_dup(authcert));
+    result->my_link_cert = tor_x509_cert_new(X509_dup(cert));
+    result->my_id_cert = tor_x509_cert_new(X509_dup(idcert));
+    result->my_auth_cert = tor_x509_cert_new(X509_dup(authcert));
     if (!result->my_link_cert || !result->my_id_cert || !result->my_auth_cert)
       goto error;
     result->link_key = crypto_pk_dup_key(rsa);
@@ -2394,7 +2394,7 @@ tor_tls_peer_has_cert(tor_tls_t *tls)
 }
 
 /** Return the peer certificate, or NULL if there isn't one. */
-tor_cert_t *
+tor_x509_cert_t *
 tor_tls_get_peer_cert(tor_tls_t *tls)
 {
   X509 *cert;
@@ -2402,7 +2402,7 @@ tor_tls_get_peer_cert(tor_tls_t *tls)
   tls_log_errors(tls, LOG_WARN, LD_HANDSHAKE, "getting peer certificate");
   if (!cert)
     return NULL;
-  return tor_cert_new(cert);
+  return tor_x509_cert_new(cert);
 }
 
 /** Warn that a certificate lifetime extends through a certain range. */

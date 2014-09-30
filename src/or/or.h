@@ -1411,9 +1411,9 @@ typedef struct or_handshake_state_t {
    * @{
    */
   /** The cert for the key that's supposed to sign the AUTHENTICATE cell */
-  tor_cert_t *auth_cert;
+  tor_x509_cert_t *auth_cert;
   /** A self-signed identity certificate */
-  tor_cert_t *id_cert;
+  tor_x509_cert_t *id_cert;
   /**@}*/
 } or_handshake_state_t;
 

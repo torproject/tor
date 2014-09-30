@@ -19,7 +19,7 @@
 typedef struct tor_tls_t tor_tls_t;
 
 /* Opaque structure to hold an X509 certificate. */
-typedef struct tor_cert_t tor_cert_t;
+typedef struct tor_x509_cert_t tor_x509_cert_t;
 
 /* Possible return values for most tor_tls_* functions. */
 #define MIN_TOR_TLS_ERROR_VAL_     -9
@@ -72,7 +72,7 @@ void tor_tls_set_renegotiate_callback(tor_tls_t *tls,
 int tor_tls_is_server(tor_tls_t *tls);
 void tor_tls_free(tor_tls_t *tls);
 int tor_tls_peer_has_cert(tor_tls_t *tls);
-tor_cert_t *tor_tls_get_peer_cert(tor_tls_t *tls);
+tor_x509_cert_t *tor_tls_get_peer_cert(tor_tls_t *tls);
 int tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_t **identity);
 int tor_tls_check_lifetime(int severity,
                            tor_tls_t *tls, int past_tolerance,
@@ -120,22 +120,22 @@ struct bufferevent *tor_tls_init_bufferevent(tor_tls_t *tls,
                                      int filter);
 #endif
 
-void tor_cert_free(tor_cert_t *cert);
-tor_cert_t *tor_cert_decode(const uint8_t *certificate,
+void tor_x509_cert_free(tor_x509_cert_t *cert);
+tor_x509_cert_t *tor_x509_cert_decode(const uint8_t *certificate,
                             size_t certificate_len);
-void tor_cert_get_der(const tor_cert_t *cert,
+void tor_x509_cert_get_der(const tor_x509_cert_t *cert,
                       const uint8_t **encoded_out, size_t *size_out);
-const digests_t *tor_cert_get_id_digests(const tor_cert_t *cert);
-const digests_t *tor_cert_get_cert_digests(const tor_cert_t *cert);
+const digests_t *tor_x509_cert_get_id_digests(const tor_x509_cert_t *cert);
+const digests_t *tor_x509_cert_get_cert_digests(const tor_x509_cert_t *cert);
 int tor_tls_get_my_certs(int server,
-                         const tor_cert_t **link_cert_out,
-                         const tor_cert_t **id_cert_out);
+                         const tor_x509_cert_t **link_cert_out,
+                         const tor_x509_cert_t **id_cert_out);
 crypto_pk_t *tor_tls_get_my_client_auth_key(void);
-crypto_pk_t *tor_tls_cert_get_key(tor_cert_t *cert);
-int tor_tls_cert_matches_key(const tor_tls_t *tls, const tor_cert_t *cert);
+crypto_pk_t *tor_tls_cert_get_key(tor_x509_cert_t *cert);
+int tor_tls_cert_matches_key(const tor_tls_t *tls, const tor_x509_cert_t *cert);
 int tor_tls_cert_is_valid(int severity,
-                          const tor_cert_t *cert,
-                          const tor_cert_t *signing_cert,
+                          const tor_x509_cert_t *cert,
+                          const tor_x509_cert_t *signing_cert,
                           int check_rsa_1024);
 const char *tor_tls_get_ciphersuite_name(tor_tls_t *tls);
 

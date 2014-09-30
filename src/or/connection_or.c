@@ -1878,8 +1878,8 @@ or_handshake_state_free(or_handshake_state_t *state)
     return;
   crypto_digest_free(state->digest_sent);
   crypto_digest_free(state->digest_received);
-  tor_cert_free(state->auth_cert);
-  tor_cert_free(state->id_cert);
+  tor_x509_cert_free(state->auth_cert);
+  tor_x509_cert_free(state->id_cert);
   memwipe(state, 0xBE, sizeof(or_handshake_state_t));
   tor_free(state);
 }
@@ -2227,7 +2227,7 @@ connection_or_send_netinfo(or_connection_t *conn)
 int
 connection_or_send_certs_cell(or_connection_t *conn)
 {
-  const tor_cert_t *link_cert = NULL, *id_cert = NULL;
+  const tor_x509_cert_t *link_cert = NULL, *id_cert = NULL;
   const uint8_t *link_encoded = NULL, *id_encoded = NULL;
   size_t link_len, id_len;
   var_cell_t *cell;
@@ -2242,8 +2242,8 @@ connection_or_send_certs_cell(or_connection_t *conn)
   server_mode = ! conn->handshake_state->started_here;
   if (tor_tls_get_my_certs(server_mode, &link_cert, &id_cert) < 0)
     return -1;
-  tor_cert_get_der(link_cert, &link_encoded, &link_len);
-  tor_cert_get_der(id_cert, &id_encoded, &id_len);
+  tor_x509_cert_get_der(link_cert, &link_encoded, &link_len);
+  tor_x509_cert_get_der(id_cert, &id_encoded, &id_len);
 
   cell_len = 1 /* 1 byte: num certs in cell */ +
              2 * ( 1 + 2 ) /* For each cert: 1 byte for type, 2 for length */ +
@@ -2342,13 +2342,13 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
   ptr += 8;
 
   {
-    const tor_cert_t *id_cert=NULL, *link_cert=NULL;
+    const tor_x509_cert_t *id_cert=NULL, *link_cert=NULL;
     const digests_t *my_digests, *their_digests;
     const uint8_t *my_id, *their_id, *client_id, *server_id;
     if (tor_tls_get_my_certs(server, &link_cert, &id_cert))
       return -1;
-    my_digests = tor_cert_get_id_digests(id_cert);
-    their_digests = tor_cert_get_id_digests(conn->handshake_state->id_cert);
+    my_digests = tor_x509_cert_get_id_digests(id_cert);
+    their_digests = tor_x509_cert_get_id_digests(conn->handshake_state->id_cert);
     tor_assert(my_digests);
     tor_assert(their_digests);
     my_id = (uint8_t*)my_digests->d[DIGEST_SHA256];
@@ -2387,8 +2387,8 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
 
   {
     /* Digest of cert used on TLS link : 32 octets. */
-    const tor_cert_t *cert = NULL;
-    tor_cert_t *freecert = NULL;
+    const tor_x509_cert_t *cert = NULL;
+    tor_x509_cert_t *freecert = NULL;
     if (server) {
       tor_tls_get_my_certs(1, &cert, NULL);
     } else {
@@ -2397,10 +2397,10 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
     }
     if (!cert)
       return -1;
-    memcpy(ptr, tor_cert_get_cert_digests(cert)->d[DIGEST_SHA256], 32);
+    memcpy(ptr, tor_x509_cert_get_cert_digests(cert)->d[DIGEST_SHA256], 32);
 
     if (freecert)
-      tor_cert_free(freecert);
+      tor_x509_cert_free(freecert);
     ptr += 32;
   }
 
