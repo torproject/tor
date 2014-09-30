@@ -61,6 +61,10 @@ char *options_get_datadir_fname2_suffix(const or_options_t *options,
  * get_datadir_fname2_suffix.  */
 #define get_datadir_fname2(sub1,sub2) \
   get_datadir_fname2_suffix((sub1), (sub2), NULL)
+/** Return a newly allocated string containing datadir/sub1/sub2 relative to
+ * opts.  See get_datadir_fname2_suffix.  */
+#define options_get_datadir_fname2(opts,sub1,sub2)                      \
+  options_get_datadir_fname2_suffix((opts),(sub1), (sub2), NULL)
 /** Return a newly allocated string containing datadir/sub1suffix.  See
  * get_datadir_fname2_suffix. */
 #define get_datadir_fname_suffix(sub1, suffix) \

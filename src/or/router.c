@@ -26,6 +26,7 @@
 #include "relay.h"
 #include "rephist.h"
 #include "router.h"
+#include "routerkeys.h"
 #include "routerlist.h"
 #include "routerparse.h"
 #include "statefile.h"
@@ -860,6 +861,10 @@ init_keys(void)
     }
     set_client_identity_key(prkey);
   }
+
+  /* 1d. Load all ed25519 keys */
+  if (load_ed_keys(options,now) < 0)
+    return -1;
 
   /* 2. Read onion key.  Make it if none is found. */
   keydir = get_datadir_fname2("keys", "secret_onion_key");

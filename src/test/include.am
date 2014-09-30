@@ -104,7 +104,7 @@ src_test_bench_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
         @TOR_LDFLAGS_libevent@
 src_test_bench_LDADD = src/or/libtor.a src/common/libor.a \
 	src/common/libor-crypto.a $(LIBDONNA) \
-	src/common/libor-event.a \
+	src/common/libor-event.a src/trunnel/libor-trunnel.a \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
 	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@ \
 	@TOR_SYSTEMD_LIBS@

@@ -51,6 +51,7 @@
 #include "rendservice.h"
 #include "rephist.h"
 #include "router.h"
+#include "routerkeys.h"
 #include "routerlist.h"
 #include "routerparse.h"
 #include "scheduler.h"
@@ -2648,6 +2649,7 @@ tor_free_all(int postfork)
     config_free_all();
     or_state_free_all();
     router_free_all();
+    routerkeys_free_all();
     policies_free_all();
   }
   if (!postfork) {

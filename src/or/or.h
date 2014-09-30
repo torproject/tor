@@ -96,6 +96,7 @@
 #include "ht.h"
 #include "replaycache.h"
 #include "crypto_curve25519.h"
+#include "crypto_ed25519.h"
 #include "tor_queue.h"
 
 /* These signals are defined to help handle_control_signal work.
