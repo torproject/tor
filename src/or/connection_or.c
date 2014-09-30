@@ -2348,7 +2348,8 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
     if (tor_tls_get_my_certs(server, &link_cert, &id_cert))
       return -1;
     my_digests = tor_x509_cert_get_id_digests(id_cert);
-    their_digests = tor_x509_cert_get_id_digests(conn->handshake_state->id_cert);
+    their_digests =
+      tor_x509_cert_get_id_digests(conn->handshake_state->id_cert);
     tor_assert(my_digests);
     tor_assert(their_digests);
     my_id = (uint8_t*)my_digests->d[DIGEST_SHA256];

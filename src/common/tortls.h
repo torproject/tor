@@ -132,7 +132,8 @@ int tor_tls_get_my_certs(int server,
                          const tor_x509_cert_t **id_cert_out);
 crypto_pk_t *tor_tls_get_my_client_auth_key(void);
 crypto_pk_t *tor_tls_cert_get_key(tor_x509_cert_t *cert);
-int tor_tls_cert_matches_key(const tor_tls_t *tls, const tor_x509_cert_t *cert);
+int tor_tls_cert_matches_key(const tor_tls_t *tls,
+                             const tor_x509_cert_t *cert);
 int tor_tls_cert_is_valid(int severity,
                           const tor_x509_cert_t *cert,
                           const tor_x509_cert_t *signing_cert,

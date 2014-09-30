@@ -880,8 +880,8 @@ tor_x509_cert_new(X509 *x509_cert)
 }
 
 /** Read a DER-encoded X509 cert, of length exactly <b>certificate_len</b>,
- * from a <b>certificate</b>.  Return a newly allocated tor_x509_cert_t on success
- * and NULL on failure. */
+ * from a <b>certificate</b>.  Return a newly allocated tor_x509_cert_t on
+ * success and NULL on failure. */
 tor_x509_cert_t *
 tor_x509_cert_decode(const uint8_t *certificate, size_t certificate_len)
 {
