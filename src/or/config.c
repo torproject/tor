@@ -959,7 +959,10 @@ consider_adding_dir_servers(const or_options_t *options,
       type |= BRIDGE_DIRINFO;
     if (!options->AlternateDirAuthority)
       type |= V3_DIRINFO | EXTRAINFO_DIRINFO | MICRODESC_DIRINFO;
-    add_default_trusted_dir_authorities(type);
+    /* if type == NO_DIRINFO, we don't want to add any of the
+     * default authorities, because we've replaced them all */
+    if (type != NO_DIRINFO)
+      add_default_trusted_dir_authorities(type);
   }
   if (!options->FallbackDir)
     add_default_fallback_dir_servers();
