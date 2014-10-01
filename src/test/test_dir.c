@@ -14,6 +14,7 @@
 #define NETWORKSTATUS_PRIVATE
 #include "or.h"
 #include "config.h"
+#include "crypto_ed25519.h"
 #include "directory.h"
 #include "dirserv.h"
 #include "dirvote.h"
@@ -23,6 +24,7 @@
 #include "routerlist.h"
 #include "routerparse.h"
 #include "test.h"
+#include "torcert.h"
 
 static void
 test_dir_nicknames(void *arg)
@@ -89,6 +91,7 @@ test_dir_formats(void *arg)
   routerlist_t *dir1 = NULL, *dir2 = NULL;
   or_options_t *options = get_options_mutable();
   const addr_policy_t *p;
+  time_t now = time(NULL);
 
   (void)arg;
   pk1 = pk_generate(0);
@@ -127,6 +130,22 @@ test_dir_formats(void *arg)
   ex2->prt_min = ex2->prt_max = 24;
   r2 = tor_malloc_zero(sizeof(routerinfo_t));
   r2->addr = 0x0a030201u; /* 10.3.2.1 */
+  ed25519_keypair_t kp1, kp2;
+  ed25519_secret_key_from_seed(&kp1.seckey,
+                          (const uint8_t*)"YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY");
+  ed25519_public_key_generate(&kp1.pubkey, &kp1.seckey);
+  ed25519_secret_key_from_seed(&kp2.seckey,
+                          (const uint8_t*)"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+  ed25519_public_key_generate(&kp2.pubkey, &kp2.seckey);
+  r2->signing_key_cert = tor_cert_create(&kp1,
+                                         CERT_TYPE_ID_SIGNING,
+                                         &kp2.pubkey,
+                                         now, 86400,
+                                         CERT_FLAG_INCLUDE_SIGNING_KEY);
+  char cert_buf[256];
+  base64_encode(cert_buf, sizeof(cert_buf),
+                (const char*)r2->signing_key_cert->encoded,
+                r2->signing_key_cert->encoded_len);
   r2->platform = tor_strdup(platform);
   r2->cache_info.published_on = 5;
   r2->or_port = 9005;
@@ -150,7 +169,7 @@ test_dir_formats(void *arg)
   /* XXXX025 router_dump_to_string should really take this from ri.*/
   options->ContactInfo = tor_strdup("Magri White "
                                     "<magri@elsewhere.example.com>");
-  buf = router_dump_router_to_string(r1, pk2);
+  buf = router_dump_router_to_string(r1, pk2, NULL);
   tor_free(options->ContactInfo);
   tt_assert(buf);
 
@@ -183,7 +202,7 @@ test_dir_formats(void *arg)
   tt_str_op(buf,OP_EQ, buf2);
   tor_free(buf);
 
-  buf = router_dump_router_to_string(r1, pk2);
+  buf = router_dump_router_to_string(r1, pk2, NULL);
   tt_assert(buf);
   cp = buf;
   rp1 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL,NULL);
@@ -201,6 +220,10 @@ test_dir_formats(void *arg)
 
   strlcpy(buf2,
           "router Fred 10.3.2.1 9005 0 0\n"
+          "identity-ed25519\n"
+          "-----BEGIN ED25519 CERT-----\n", sizeof(buf2));
+  strlcat(buf2, cert_buf, sizeof(buf2));
+  strlcat(buf2, "-----END ED25519 CERT-----\n"
           "platform Tor "VERSION" on ", sizeof(buf2));
   strlcat(buf2, get_uname(), sizeof(buf2));
   strlcat(buf2, "\n"
@@ -219,15 +242,16 @@ test_dir_formats(void *arg)
   strlcat(buf2, "ntor-onion-key "
           "skyinAnvardNostarsNomoonNowindormistsorsnow=\n", sizeof(buf2));
   strlcat(buf2, "accept *:80\nreject 18.0.0.0/8:24\n", sizeof(buf2));
-  strlcat(buf2, "router-signature\n", sizeof(buf2));
+  strlcat(buf2, "router-sig-ed25519 ", sizeof(buf2));
 
-  buf = router_dump_router_to_string(r2, pk1);
+  buf = router_dump_router_to_string(r2, pk1, &kp2);
+  tt_assert(buf);
   buf[strlen(buf2)] = '\0'; /* Don't compare the sig; it's never the same
                              * twice */
   tt_str_op(buf,OP_EQ, buf2);
   tor_free(buf);
 
-  buf = router_dump_router_to_string(r2, pk1);
+  buf = router_dump_router_to_string(r2, pk1, NULL);
   cp = buf;
   rp2 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL,NULL);
   tt_assert(rp2);

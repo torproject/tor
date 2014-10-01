@@ -90,6 +90,7 @@ test_routerkeys_ed_certs(void *args)
   tor_cert_t *parsed_cert[2] = {NULL, NULL};
   time_t now = 1412094534;
   uint8_t *junk = NULL;
+  char *base64 = NULL;
 
   tt_int_op(0,==,ed25519_keypair_generate(&kp1, 0));
   tt_int_op(0,==,ed25519_keypair_generate(&kp2, 0));
@@ -186,6 +187,7 @@ test_routerkeys_ed_certs(void *args)
   tor_cert_free(parsed_cert[0]);
   tor_cert_free(parsed_cert[1]);
   tor_free(junk);
+  tor_free(base64);
 }
 
 static void

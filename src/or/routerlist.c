@@ -13,6 +13,7 @@
 
 #define ROUTERLIST_PRIVATE
 #include "or.h"
+#include "crypto_ed25519.h"
 #include "circuitstats.h"
 #include "config.h"
 #include "connection.h"
@@ -38,6 +39,7 @@
 #include "routerparse.h"
 #include "routerset.h"
 #include "../common/sandbox.h"
+#include "torcert.h"
 // #define DEBUG_ROUTERLIST
 
 /****************************************************************************/
@@ -2663,6 +2665,7 @@ routerinfo_free(routerinfo_t *router)
   tor_free(router->onion_curve25519_pkey);
   if (router->identity_pkey)
     crypto_pk_free(router->identity_pkey);
+  tor_cert_free(router->signing_key_cert);
   if (router->declared_family) {
     SMARTLIST_FOREACH(router->declared_family, char *, s, tor_free(s));
     smartlist_free(router->declared_family);

@@ -207,6 +207,11 @@ int crypto_digest256(char *digest, const char *m, size_t len,
                      digest_algorithm_t algorithm);
 int crypto_digest_all(digests_t *ds_out, const char *m, size_t len);
 struct smartlist_t;
+void crypto_digest_smartlist_prefix(char *digest_out, size_t len_out,
+                                    const char *prepend,
+                                    const struct smartlist_t *lst,
+                                    const char *append,
+                                    digest_algorithm_t alg);
 void crypto_digest_smartlist(char *digest_out, size_t len_out,
                              const struct smartlist_t *lst, const char *append,
                              digest_algorithm_t alg);
@@ -270,6 +275,11 @@ void smartlist_shuffle(struct smartlist_t *sl);
 
 int base64_encode(char *dest, size_t destlen, const char *src, size_t srclen);
 int base64_decode(char *dest, size_t destlen, const char *src, size_t srclen);
+int base64_encode_nopad(char *dest, size_t destlen,
+                        const uint8_t *src, size_t srclen);
+int base64_decode_nopad(uint8_t *dest, size_t destlen,
+                        const char *src, size_t srclen);
+
 /** Characters that can appear (case-insensitively) in a base32 encoding. */
 #define BASE32_CHARS "abcdefghijklmnopqrstuvwxyz234567"
 void base32_encode(char *dest, size_t destlen, const char *src, size_t srclen);

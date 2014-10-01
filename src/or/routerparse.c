@@ -26,6 +26,8 @@
 #include "rephist.h"
 #include "routerparse.h"
 #include "entrynodes.h"
+#include "torcert.h"
+
 #undef log
 #include <math.h>
 
@@ -83,6 +85,8 @@ typedef enum {
   K_HIDDEN_SERVICE_DIR,
   K_ALLOW_SINGLE_HOP_EXITS,
   K_IPV6_POLICY,
+  K_ROUTER_SIG_ED25519,
+  K_IDENTITY_ED25519,
 
   K_DIRREQ_END,
   K_DIRREQ_V2_IPS,
@@ -293,6 +297,9 @@ static token_rule_t routerdesc_token_table[] = {
   T01("write-history",       K_WRITE_HISTORY,       ARGS,    NO_OBJ ),
   T01("extra-info-digest",   K_EXTRA_INFO_DIGEST,   GE(1),   NO_OBJ ),
   T01("hidden-service-dir",  K_HIDDEN_SERVICE_DIR,  NO_ARGS, NO_OBJ ),
+  T01("identity-ed25519",    K_IDENTITY_ED25519,    NO_ARGS, NEED_OBJ ),
+  T01("router-sig-ed25519",  K_ROUTER_SIG_ED25519,  GE(1),   NO_OBJ ),
+
   T01("allow-single-hop-exits",K_ALLOW_SINGLE_HOP_EXITS,    NO_ARGS, NO_OBJ ),
 
   T01("family",              K_FAMILY,              ARGS,    NO_OBJ ),
@@ -506,6 +513,10 @@ static addr_policy_t *router_parse_addr_policy(directory_token_t *tok,
                                                unsigned fmt_flags);
 static addr_policy_t *router_parse_addr_policy_private(directory_token_t *tok);
 
+static int router_get_hash_impl_helper(const char *s, size_t s_len,
+                            const char *start_str,
+                            const char *end_str, char end_c,
+                            const char **start_out, const char **end_out);
 static int router_get_hash_impl(const char *s, size_t s_len, char *digest,
                                 const char *start_str, const char *end_str,
                                 char end_char,
@@ -1300,6 +1311,86 @@ router_parse_entry_from_string(const char *s, const char *end,
     }
     router->onion_curve25519_pkey =
       tor_memdup(&k, sizeof(curve25519_public_key_t));
+  }
+
+  {
+    directory_token_t *ed_sig_tok, *ed_cert_tok;
+    ed_sig_tok = find_opt_by_keyword(tokens, K_ROUTER_SIG_ED25519);
+    ed_cert_tok = find_opt_by_keyword(tokens, K_IDENTITY_ED25519);
+    if (!ed_sig_tok != !ed_cert_tok) {
+      log_warn(LD_DIR, "Router descriptor with only partial ed25519 support");
+      goto err;
+    }
+    if (ed_sig_tok) {
+      tor_assert(ed_cert_tok);
+      if (ed_cert_tok != smartlist_get(tokens, 0) &&
+          ed_cert_tok != smartlist_get(tokens, 1)) {
+        log_warn(LD_DIR, "Ed25519 certificate in wrong position");
+        goto err;
+      }
+      if (ed_sig_tok != smartlist_get(tokens, smartlist_len(tokens)-2)) {
+        log_warn(LD_DIR, "Ed25519 signature in wrong position");
+        goto err;
+      }
+      if (strcmp(ed_cert_tok->object_type, "ED25519 CERT")) {
+        log_warn(LD_DIR, "Wrong object type on identity-ed25519 in decriptor");
+        goto err;
+      }
+
+      uint8_t d256[DIGEST256_LEN];
+      const char *signed_start, *signed_end;
+
+      tor_cert_t *cert = tor_cert_parse(
+                       (const uint8_t*)ed_cert_tok->object_body,
+                       ed_cert_tok->object_size);
+      if (! cert) {
+        log_warn(LD_DIR, "Couldn't parse ed25519 cert");
+        goto err;
+      }
+      router->signing_key_cert = cert;
+      if (cert->cert_type != CERT_TYPE_ID_SIGNING ||
+          ! cert->signing_key_included) {
+        log_warn(LD_DIR, "Invalid form for ed25519 cert");
+        goto err;
+      }
+
+      if (router_get_hash_impl_helper(s, end-s, "router ",
+                                      "\nrouter-sig-ed25519",
+                                      ' ', &signed_start, &signed_end) < 0) {
+        log_warn(LD_DIR, "Can't find ed25519-signed portion of descriptor");
+        goto err;
+      }
+      crypto_digest_t *d = crypto_digest256_new(DIGEST_SHA256);
+      crypto_digest_add_bytes(d, ED_DESC_SIGNATURE_PREFIX,
+        strlen(ED_DESC_SIGNATURE_PREFIX));
+      crypto_digest_add_bytes(d, signed_start, signed_end-signed_start);
+      crypto_digest_get_digest(d, (char*)d256, sizeof(d256));
+      crypto_digest_free(d);
+
+      ed25519_checkable_t check[2];
+      int check_ok[2];
+      if (tor_cert_get_checkable_sig(&check[0], cert, NULL) < 0) {
+        log_err(LD_BUG, "Couldn't create 'checkable' for cert.");
+        goto err;
+      }
+      if (ed25519_signature_from_base64(&check[1].signature,
+                                        ed_sig_tok->args[0])<0) {
+        log_warn(LD_DIR, "Couldn't decode ed25519 signature");
+        goto err;
+      }
+      check[1].pubkey = &cert->signed_key;
+      check[1].msg = d256;
+      check[1].len = DIGEST256_LEN;
+
+      if (ed25519_checksig_batch(check_ok, check, 2) < 0) {
+        log_warn(LD_DIR, "Incorrect ed25519 signatures");
+        goto err;
+      }
+      if (cert->valid_until < time(NULL)) {
+        log_warn(LD_DIR, "Expired ed25519 certificate in router descriptor");
+        goto err;
+      }
+    }
   }
 
   tok = find_by_keyword(tokens, K_SIGNING_KEY);

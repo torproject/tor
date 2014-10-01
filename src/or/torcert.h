@@ -62,5 +62,7 @@ int tor_cert_get_checkable_sig(ed25519_checkable_t *checkable_out,
 int tor_cert_checksig(tor_cert_t *cert,
                       const ed25519_public_key_t *pubkey, time_t now);
 
+tor_cert_t *tor_cert_dup(const tor_cert_t *cert);
+
 #endif
 

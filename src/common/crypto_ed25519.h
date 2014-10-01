@@ -95,6 +95,13 @@ int ed25519_public_from_base64(ed25519_public_key_t *pkey,
 int ed25519_public_to_base64(char *output,
                              const ed25519_public_key_t *pkey);
 
+#define ED25519_SIG_BASE64_LEN 86
+
+int ed25519_signature_from_base64(ed25519_signature_t *sig,
+                                  const char *input);
+int ed25519_signature_to_base64(char *output,
+                                const ed25519_signature_t *sig);
+
 /* XXXX read encrypted, write encrypted. */
 
 int ed25519_seckey_write_to_file(const ed25519_secret_key_t *seckey,
@@ -111,6 +118,9 @@ int ed25519_pubkey_read_from_file(ed25519_public_key_t *pubkey_out,
                                   const char *filename);
 
 void ed25519_keypair_free(ed25519_keypair_t *kp);
+
+int ed25519_pubkey_eq(const ed25519_public_key_t *key1,
+                      const ed25519_public_key_t *key2);
 
 #endif
 

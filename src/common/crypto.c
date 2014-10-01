@@ -1724,7 +1724,24 @@ crypto_digest_assign(crypto_digest_t *into,
  * <b>out_len</b> must be \<= DIGEST256_LEN. */
 void
 crypto_digest_smartlist(char *digest_out, size_t len_out,
-                        const smartlist_t *lst, const char *append,
+                        const smartlist_t *lst,
+                        const char *append,
+                        digest_algorithm_t alg)
+{
+  crypto_digest_smartlist_prefix(digest_out, len_out, NULL, lst, append, alg);
+}
+
+/** Given a list of strings in <b>lst</b>, set the <b>len_out</b>-byte digest
+ * at <b>digest_out</b> to the hash of the concatenation of: the
+ * optional string <b>prepend</b>, those strings,
+ * and the optional string <b>append</b>, computed with the algorithm
+ * <b>alg</b>.
+ * <b>out_len</b> must be \<= DIGEST256_LEN. */
+void
+crypto_digest_smartlist_prefix(char *digest_out, size_t len_out,
+                        const char *prepend,
+                        const smartlist_t *lst,
+                        const char *append,
                         digest_algorithm_t alg)
 {
   crypto_digest_t *d;
@@ -1732,6 +1749,8 @@ crypto_digest_smartlist(char *digest_out, size_t len_out,
     d = crypto_digest_new();
   else
     d = crypto_digest256_new(alg);
+  if (prepend)
+    crypto_digest_add_bytes(d, prepend, strlen(prepend));
   SMARTLIST_FOREACH(lst, const char *, cp,
                     crypto_digest_add_bytes(d, cp, strlen(cp)));
   if (append)
@@ -2692,6 +2711,8 @@ base64_encode(char *dest, size_t destlen, const char *src, size_t srclen)
     return -1;
   if (destlen > SIZE_T_CEILING)
     return -1;
+  if (destlen)
+    *dest = 0; /* Ensure we always initialize the buffer */
 
   EVP_EncodeInit(&ctx);
   EVP_EncodeUpdate(&ctx, (unsigned char*)dest, &len,
@@ -2699,6 +2720,65 @@ base64_encode(char *dest, size_t destlen, const char *src, size_t srclen)
   EVP_EncodeFinal(&ctx, (unsigned char*)(dest+len), &ret);
   ret += len;
   return ret;
+}
+
+/** As base64_encode, but do not add any internal spaces or external padding
+ * to the output stream. */
+int
+base64_encode_nopad(char *dest, size_t destlen,
+                    const uint8_t *src, size_t srclen)
+{
+  int n = base64_encode(dest, destlen, (const char*) src, srclen);
+  if (n <= 0)
+    return n;
+  tor_assert((size_t)n < destlen && dest[n] == 0);
+  char *in, *out;
+  in = out = dest;
+  while (*in) {
+    if (*in == '=' || *in == '\n') {
+      ++in;
+    } else {
+      *out++ = *in++;
+    }
+  }
+  *out = 0;
+
+  tor_assert(out - dest <= INT_MAX);
+
+  return (int)(out - dest);
+}
+
+/** As base64_decode, but do not require any padding on the input */
+int
+base64_decode_nopad(uint8_t *dest, size_t destlen,
+                    const char *src, size_t srclen)
+{
+  if (srclen > SIZE_T_CEILING - 4)
+    return -1;
+  char *buf = tor_malloc(srclen + 4);
+  memcpy(buf, src, srclen+1);
+  size_t buflen;
+  switch (srclen % 4)
+    {
+    case 0:
+    default:
+      buflen = srclen;
+      break;
+    case 1:
+      tor_free(buf);
+      return -1;
+    case 2:
+      memcpy(buf+srclen, "==", 3);
+      buflen = srclen + 2;
+      break;
+    case 3:
+      memcpy(buf+srclen, "=", 2);
+      buflen = srclen + 1;
+      break;
+  }
+  int n = base64_decode((char*)dest, destlen, buf, buflen);
+  tor_free(buf);
+  return n;
 }
 
 /** @{ */

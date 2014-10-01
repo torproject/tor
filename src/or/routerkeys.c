@@ -300,7 +300,7 @@ load_ed_keys(const or_options_t *options, time_t now)
   (void) options;
 
   id = ed_key_init_from_file(
-               options_get_datadir_fname2(options, "keys", "ed25519_master_id"),
+             options_get_datadir_fname2(options, "keys", "ed25519_master_id"),
                              (INIT_ED_KEY_CREATE|INIT_ED_KEY_SPLIT|
                               INIT_ED_KEY_MISSING_SECRET_OK|
                               INIT_ED_KEY_EXTRA_STRONG),

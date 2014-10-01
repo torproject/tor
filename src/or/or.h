@@ -2021,6 +2021,8 @@ typedef struct {
   crypto_pk_t *identity_pkey;  /**< Public RSA key for signing. */
   /** Public curve25519 key for onions */
   curve25519_public_key_t *onion_curve25519_pkey;
+  /** Certificate for ed25519 signing key */
+  struct tor_cert_st *signing_key_cert;
 
   char *platform; /**< What software/operating system is this OR using? */
 

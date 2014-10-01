@@ -65,3 +65,42 @@ ed25519_public_to_base64(char *output,
   return digest256_to_base64(output, (const char *)pkey->pubkey);
 }
 
+/** Encode the signature <b>sig</b> into the buffer at <b>output</b>,
+ * which must have space for ED25519_SIG_BASE64_LEN bytes of encoded signature,
+ * plus one byte for a terminating NUL.  Return 0 on success, -1 on failure.
+ */
+int
+ed25519_signature_to_base64(char *output,
+                            const ed25519_signature_t *sig)
+{
+  char buf[256];
+  int n = base64_encode_nopad(buf, sizeof(buf), sig->sig, ED25519_SIG_LEN);
+  tor_assert(n == ED25519_SIG_BASE64_LEN);
+  memcpy(output, buf, ED25519_SIG_BASE64_LEN+1);
+  return 0;
+}
+
+/** Try to decode the string <b>input</b> into an ed25519 signature. On
+ * success, store the value in <b>sig</b> and return 0. Otherwise return
+ * -1. */
+int
+ed25519_signature_from_base64(ed25519_signature_t *sig,
+                              const char *input)
+{
+
+  if (strlen(input) != ED25519_SIG_BASE64_LEN)
+    return -1;
+  char buf[ED25519_SIG_BASE64_LEN+3];
+  memcpy(buf, input, ED25519_SIG_BASE64_LEN);
+  buf[ED25519_SIG_BASE64_LEN+0] = '=';
+  buf[ED25519_SIG_BASE64_LEN+1] = '=';
+  buf[ED25519_SIG_BASE64_LEN+2] = 0;
+  char decoded[128];
+  int n = base64_decode(decoded, sizeof(decoded), buf, strlen(buf));
+  if (n < 0 || n != ED25519_SIG_LEN)
+    return -1;
+  memcpy(sig->sig, decoded, ED25519_SIG_LEN);
+
+  return 0;
+}
+

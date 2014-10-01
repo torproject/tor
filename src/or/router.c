@@ -30,6 +30,7 @@
 #include "routerlist.h"
 #include "routerparse.h"
 #include "statefile.h"
+#include "torcert.h"
 #include "transports.h"
 #include "routerset.h"
 
@@ -1881,6 +1882,8 @@ router_rebuild_descriptor(int force)
     routerinfo_free(ri);
     return -1;
   }
+  ri->signing_key_cert = tor_cert_dup(get_master_signing_key_cert());
+
   get_platform_str(platform, sizeof(platform));
   ri->platform = tor_strdup(platform);
 
@@ -1995,8 +1998,9 @@ router_rebuild_descriptor(int force)
     /* ri was allocated with tor_malloc_zero, so there is no need to
      * zero ri->cache_info.extra_info_digest here. */
   }
-  if (! (ri->cache_info.signed_descriptor_body = router_dump_router_to_string(
-                                           ri, get_server_identity_key()))) {
+  if (! (ri->cache_info.signed_descriptor_body =
+          router_dump_router_to_string(ri, get_server_identity_key(),
+                                       get_master_signing_keypair())) ) {
     log_warn(LD_BUG, "Couldn't generate router descriptor.");
     routerinfo_free(ri);
     extrainfo_free(ei);
@@ -2302,12 +2306,13 @@ get_platform_str(char *platform, size_t len)
  */
 char *
 router_dump_router_to_string(routerinfo_t *router,
-                             crypto_pk_t *ident_key)
+                             crypto_pk_t *ident_key,
+                             const ed25519_keypair_t *signing_keypair)
 {
   char *address = NULL;
   char *onion_pkey = NULL; /* Onion key, PEM-encoded. */
   char *identity_pkey = NULL; /* Identity key, PEM-encoded. */
-  char digest[DIGEST_LEN];
+  char digest[DIGEST256_LEN];
   char published[ISO_TIME_LEN+1];
   char fingerprint[FINGERPRINT_LEN+1];
   int has_extra_info_digest;
@@ -2318,6 +2323,8 @@ router_dump_router_to_string(routerinfo_t *router,
   const or_options_t *options = get_options();
   smartlist_t *chunks = NULL;
   char *output = NULL;
+  const int emit_ed_sigs = signing_keypair && router->signing_key_cert;
+  char *ed_cert_line = NULL;
 
   /* Make sure the identity key matches the one in the routerinfo. */
   if (!crypto_pk_eq_keys(ident_key, router->identity_pkey)) {
@@ -2325,11 +2332,35 @@ router_dump_router_to_string(routerinfo_t *router,
              "match router's public key!");
     goto err;
   }
+  if (emit_ed_sigs) {
+    if (!router->signing_key_cert->signing_key_included ||
+        !ed25519_pubkey_eq(&router->signing_key_cert->signed_key,
+                           &signing_keypair->pubkey)) {
+      log_warn(LD_BUG, "Tried to sign a router descriptor with a mismatched "
+               "ed25519 key chain");
+      goto err;
+    }
+  }
 
   /* record our fingerprint, so we can include it in the descriptor */
   if (crypto_pk_get_fingerprint(router->identity_pkey, fingerprint, 1)<0) {
     log_err(LD_BUG,"Error computing fingerprint");
     goto err;
+  }
+
+  if (emit_ed_sigs) {
+    /* Encode ed25519 signing cert */
+    char ed_cert_base64[256];
+    if (base64_encode(ed_cert_base64, sizeof(ed_cert_base64),
+                      (const char*)router->signing_key_cert->encoded,
+                      router->signing_key_cert->encoded_len) < 0) {
+      log_err(LD_BUG,"Couldn't base64-encode signing key certificate!");
+      goto err;
+    }
+    tor_asprintf(&ed_cert_line, "identity-ed25519\n"
+                 "-----BEGIN ED25519 CERT-----\n"
+                 "%s"
+                 "-----END ED25519 CERT-----\n", ed_cert_base64);
   }
 
   /* PEM-encode the onion key */
@@ -2385,6 +2416,7 @@ router_dump_router_to_string(routerinfo_t *router,
   smartlist_add_asprintf(chunks,
                     "router %s %s %d 0 %d\n"
                     "%s"
+                    "%s"
                     "platform %s\n"
                     "protocols Link 1 2 Circuit 1\n"
                     "published %s\n"
@@ -2399,6 +2431,7 @@ router_dump_router_to_string(routerinfo_t *router,
     address,
     router->or_port,
     decide_to_advertise_dirport(options, router->dir_port),
+    ed_cert_line ? ed_cert_line : "",
     extra_or_address ? extra_or_address : "",
     router->platform,
     published,
@@ -2455,7 +2488,24 @@ router_dump_router_to_string(routerinfo_t *router,
     tor_free(p6);
   }
 
-  /* Sign the descriptor */
+  /* Sign the descriptor with Ed25519 */
+  if (emit_ed_sigs)  {
+    smartlist_add(chunks, tor_strdup("router-sig-ed25519 "));
+    crypto_digest_smartlist_prefix(digest, DIGEST256_LEN,
+                                   ED_DESC_SIGNATURE_PREFIX,
+                                   chunks, "", DIGEST_SHA256);
+    ed25519_signature_t sig;
+    char buf[ED25519_SIG_BASE64_LEN+1];
+    if (ed25519_sign(&sig, (const uint8_t*)digest, DIGEST256_LEN,
+                     signing_keypair) < 0)
+      goto err;
+    if (ed25519_signature_to_base64(buf, &sig) < 0)
+      goto err;
+
+    smartlist_add_asprintf(chunks, "%s\n", buf);
+  }
+
+  /* Sign the descriptor with RSA */
   smartlist_add(chunks, tor_strdup("router-signature\n"));
 
   crypto_digest_smartlist(digest, DIGEST_LEN, chunks, "", DIGEST_SHA1);
@@ -2507,6 +2557,7 @@ router_dump_router_to_string(routerinfo_t *router,
   tor_free(onion_pkey);
   tor_free(identity_pkey);
   tor_free(extra_or_address);
+  tor_free(ed_cert_line);
 
   return output;
 }

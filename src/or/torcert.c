@@ -206,3 +206,13 @@ tor_cert_checksig(tor_cert_t *cert,
   }
 }
 
+/** Return a new copy of <b>cert</b> */
+tor_cert_t *
+tor_cert_dup(const tor_cert_t *cert)
+{
+  tor_cert_t *newcert = tor_memdup(cert, sizeof(tor_cert_t));
+  if (cert->encoded)
+    newcert->encoded = tor_memdup(cert->encoded, cert->encoded_len);
+  return newcert;
+}
+
