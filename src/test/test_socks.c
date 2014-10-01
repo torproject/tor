@@ -384,6 +384,77 @@ test_socks_5_auth_before_negotiation(void *ptr)
   ;
 }
 
+/** Perform malformed SOCKS 5 commands */
+static void
+test_socks_5_malformed_commands(void *ptr)
+{
+  SOCKS_TEST_INIT();
+
+  /* XXX: Stringified address length > MAX_SOCKS_ADDR_LEN will never happen */
+
+  /* SOCKS 5 Send CONNECT [01] to IP address 2.2.2.2:4369, with SafeSocks set */
+  ADD_DATA(buf, "\x05\x01\x00");
+  ADD_DATA(buf, "\x05\x01\x00\x01\x02\x02\x02\x02\x11\x11");
+  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks, 1),==,
+                                 -1);
+
+  tt_int_op(5,==,socks->socks_version);
+  tt_int_op(10,==,socks->replylen);
+  tt_int_op(5,==,socks->reply[0]);
+  tt_int_op(SOCKS5_NOT_ALLOWED,==,socks->reply[1]);
+  tt_int_op(1,==,socks->reply[3]);
+
+  buf_clear(buf);
+  socks_request_clear(socks);
+
+  /* SOCKS 5 Send RESOLVE_PTR [F1] for FQDN torproject.org */
+  ADD_DATA(buf, "\x05\x01\x00");
+  ADD_DATA(buf, "\x05\xF1\x00\x03\x0Etorproject.org\x11\x11");
+  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                   get_options()->SafeSocks),==, -1);
+
+  tt_int_op(5,==,socks->socks_version);
+  tt_int_op(10,==,socks->replylen);
+  tt_int_op(5,==,socks->reply[0]);
+  tt_int_op(SOCKS5_ADDRESS_TYPE_NOT_SUPPORTED,==,socks->reply[1]);
+  tt_int_op(1,==,socks->reply[3]);
+
+  buf_clear(buf);
+  socks_request_clear(socks);
+
+  /* XXX: len + 1 > MAX_SOCKS_ADDR_LEN (FQDN request) will never happen */
+
+  /* SOCKS 5 Send CONNECT [01] to FQDN """"".com */
+  ADD_DATA(buf, "\x05\x01\x00");
+  ADD_DATA(buf, "\x05\x01\x00\x03\x09\"\"\"\"\".com\x11\x11");
+  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                   get_options()->SafeSocks),==, -1);
+
+  tt_int_op(5,==,socks->socks_version);
+  tt_int_op(10,==,socks->replylen);
+  tt_int_op(5,==,socks->reply[0]);
+  tt_int_op(SOCKS5_GENERAL_ERROR,==,socks->reply[1]);
+  tt_int_op(1,==,socks->reply[3]);
+
+  buf_clear(buf);
+  socks_request_clear(socks);
+
+  /* SOCKS 5 Send CONNECT [01] to address type 0x23 */
+  ADD_DATA(buf, "\x05\x01\x00");
+  ADD_DATA(buf, "\x05\x01\x00\x23\x02\x02\x02\x02\x11\x11");
+  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                   get_options()->SafeSocks),==, -1);
+
+  tt_int_op(5,==,socks->socks_version);
+  tt_int_op(10,==,socks->replylen);
+  tt_int_op(5,==,socks->reply[0]);
+  tt_int_op(SOCKS5_ADDRESS_TYPE_NOT_SUPPORTED,==,socks->reply[1]);
+  tt_int_op(1,==,socks->reply[3]);
+
+ done:
+  ;
+}
+
 #define SOCKSENT(name)                                  \
   { #name, test_socks_##name, TT_FORK, &socks_setup, NULL }
 
@@ -397,6 +468,7 @@ struct testcase_t socks_tests[] = {
   SOCKSENT(5_auth_before_negotiation),
   SOCKSENT(5_authenticate),
   SOCKSENT(5_authenticate_with_data),
+  SOCKSENT(5_malformed_commands),
 
   END_OF_TESTCASES
 };
