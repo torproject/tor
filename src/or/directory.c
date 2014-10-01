@@ -523,12 +523,12 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
       /* anybody with a non-zero dirport will do. Disregard firewalls. */
       pds_flags |= PDS_IGNORE_FASCISTFIREWALL;
       rs = router_pick_directory_server(type, pds_flags);
-      /* If we have any hope of building an indirect conn, we know some router
-       * descriptors.  If (rs==NULL), we can't build circuits anyway, so
-       * there's no point in falling back to the authorities in this case. */
     }
   }
 
+  /* If we have any hope of building an indirect conn, we know some router
+   * descriptors.  If (rs==NULL), we can't build circuits anyway, so
+   * there's no point in falling back to the authorities in this case. */
   if (rs) {
     const dir_indirection_t indirection =
       get_via_tor ? DIRIND_ANONYMOUS : DIRIND_ONEHOP;

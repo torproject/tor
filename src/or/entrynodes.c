@@ -1003,7 +1003,8 @@ node_understands_microdescriptors(const node_t *node)
 }
 
 /** Return true iff <b>node</b> is able to answer directory questions
- * of type <b>dirinfo</b>. */
+ * of type <b>dirinfo</b>. Always returns true if <b>dirinfo</b> is
+ * NO_DIRINFO (zero). */
 static int
 node_can_handle_dirinfo(const node_t *node, dirinfo_type_t dirinfo)
 {
@@ -1025,13 +1026,13 @@ node_can_handle_dirinfo(const node_t *node, dirinfo_type_t dirinfo)
  * <b>state</b> is non-NULL, this is for a specific circuit --
  * make sure not to pick this circuit's exit or any node in the
  * exit's family. If <b>state</b> is NULL, we're looking for a random
- * guard (likely a bridge).  If <b>dirinfo</b> is not NO_DIRINFO, then
- * only select from nodes that know how to answer directory questions
+ * guard (likely a bridge).  If <b>dirinfo</b> is not NO_DIRINFO (zero),
+ * then only select from nodes that know how to answer directory questions
  * of that type. */
 const node_t *
 choose_random_entry(cpath_build_state_t *state)
 {
-  return choose_random_entry_impl(state, 0, 0, NULL);
+  return choose_random_entry_impl(state, 0, NO_DIRINFO, NULL);
 }
 
 /** Pick a live (up and listed) directory guard from entry_guards for
@@ -1139,7 +1140,9 @@ populate_live_entry_guards(smartlist_t *live_entry_guards,
  * If <b>for_directory</b> is set, we are looking for a directory guard.
  *
  * <b>dirinfo_type</b> contains the kind of directory information we
- * are looking for in our node.
+ * are looking for in our node, or NO_DIRINFO (zero) if we are not
+ * looking for any particular directory information (when set to
+ * NO_DIRINFO, the <b>dirinfo_type</b> filter is ignored).
  *
  * If <b>n_options_out</b> is set, we set it to the number of
  * candidate guard nodes we had before picking a specific guard node.

@@ -817,7 +817,9 @@ escaped_safe_str(const char *address)
 }
 
 /** Add the default directory authorities directly into the trusted dir list,
- * but only add them insofar as they share bits with <b>type</b>. */
+ * but only add them insofar as they share bits with <b>type</b>.
+ * Each authority's bits are restricted to the bits shared with <b>type</b>.
+ * If <b>type</b> is ALL_DIRINFO or NO_DIRINFO (zero), add all authorities. */
 static void
 add_default_trusted_dir_authorities(dirinfo_type_t type)
 {
@@ -5194,8 +5196,9 @@ parse_server_transport_line(const or_options_t *options,
 /** Read the contents of a DirAuthority line from <b>line</b>. If
  * <b>validate_only</b> is 0, and the line is well-formed, and it
  * shares any bits with <b>required_type</b> or <b>required_type</b>
- * is 0, then add the dirserver described in the line (minus whatever
- * bits it's missing) as a valid authority. Return 0 on success,
+ * is NO_DIRINFO (zero), then add the dirserver described in the line
+ * (minus whatever bits it's missing) as a valid authority.
+ * Return 0 on success or filtering out by type,
  * or -1 if the line isn't well-formed or if we can't add it. */
 static int
 parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
