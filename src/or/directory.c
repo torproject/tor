@@ -452,7 +452,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
     return;
 
   if (!get_via_tor) {
-    if (options->UseBridges && type != BRIDGE_DIRINFO) {
+    if (options->UseBridges && !(type & BRIDGE_DIRINFO)) {
       /* We want to ask a running bridge for which we have a descriptor.
        *
        * When we ask choose_random_entry() for a bridge, we specify what
@@ -479,7 +479,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
                            "nodes are available yet.");
       return;
     } else {
-      if (prefer_authority || type == BRIDGE_DIRINFO) {
+      if (prefer_authority || (type & BRIDGE_DIRINFO)) {
         /* only ask authdirservers, and don't ask myself */
         rs = router_pick_trusteddirserver(type, pds_flags);
         if (rs == NULL && (pds_flags & (PDS_NO_EXISTING_SERVERDESC_FETCH|
@@ -506,7 +506,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
           return;
         }
       }
-      if (!rs && type != BRIDGE_DIRINFO) {
+      if (!rs && !(type & BRIDGE_DIRINFO)) {
         /* */
         rs = directory_pick_generic_dirserver(type, pds_flags,
                                               dir_purpose);
