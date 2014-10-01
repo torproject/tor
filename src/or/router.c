@@ -2000,6 +2000,8 @@ router_rebuild_descriptor(int force)
   }
   if (! (ri->cache_info.signed_descriptor_body =
           router_dump_router_to_string(ri, get_server_identity_key(),
+                                       get_onion_key(),
+                                       get_current_curve25519_keypair(),
                                        get_master_signing_keypair())) ) {
     log_warn(LD_BUG, "Couldn't generate router descriptor.");
     routerinfo_free(ri);
@@ -2306,7 +2308,9 @@ get_platform_str(char *platform, size_t len)
  */
 char *
 router_dump_router_to_string(routerinfo_t *router,
-                             crypto_pk_t *ident_key,
+                             const crypto_pk_t *ident_key,
+                             const crypto_pk_t *tap_key,
+                             const curve25519_keypair_t *ntor_keypair,
                              const ed25519_keypair_t *signing_keypair)
 {
   char *address = NULL;
@@ -2325,6 +2329,8 @@ router_dump_router_to_string(routerinfo_t *router,
   char *output = NULL;
   const int emit_ed_sigs = signing_keypair && router->signing_key_cert;
   char *ed_cert_line = NULL;
+  char *rsa_tap_cc_line = NULL;
+  char *ntor_cc_line = NULL;
 
   /* Make sure the identity key matches the one in the routerinfo. */
   if (!crypto_pk_eq_keys(ident_key, router->identity_pkey)) {
@@ -2377,6 +2383,67 @@ router_dump_router_to_string(routerinfo_t *router,
     goto err;
   }
 
+  /* Cross-certify with RSA key */
+  if (tap_key && router->signing_key_cert &&
+      router->signing_key_cert->signing_key_included) {
+    char buf[256];
+    int tap_cc_len = 0;
+    uint8_t *tap_cc =
+      make_tap_onion_key_crosscert(tap_key,
+                                   &router->signing_key_cert->signing_key,
+                                   router->identity_pkey,
+                                   &tap_cc_len);
+    if (!tap_cc) {
+      log_warn(LD_BUG,"make_tap_onion_key_crosscert failed!");
+      goto err;
+    }
+
+    if (base64_encode(buf, sizeof(buf), (const char*)tap_cc, tap_cc_len) < 0) {
+      log_warn(LD_BUG,"base64_encode(rsa_crosscert) failed!");
+      tor_free(tap_cc);
+      goto err;
+    }
+    tor_free(tap_cc);
+
+    tor_asprintf(&rsa_tap_cc_line,
+                 "onion-key-crosscert\n"
+                 "-----BEGIN CROSSCERT-----\n"
+                 "%s"
+                 "-----END CROSSCERT-----\n", buf);
+  }
+
+  /* Cross-certify with onion keys */
+  if (ntor_keypair && router->signing_key_cert &&
+      router->signing_key_cert->signing_key_included) {
+    int sign = 0;
+    char buf[256];
+    /* XXXX Base the expiration date on the actual onion key expiration time?*/
+    tor_cert_t *cert =
+      make_ntor_onion_key_crosscert(ntor_keypair,
+                                &router->signing_key_cert->signing_key,
+                                router->cache_info.published_on,
+                                MIN_ONION_KEY_LIFETIME, &sign);
+    if (!cert) {
+      log_warn(LD_BUG,"make_ntor_onion_key_crosscert failed!");
+      goto err;
+    }
+    tor_assert(sign == 0 || sign == 1);
+
+    if (base64_encode(buf, sizeof(buf),
+                      (const char*)cert->encoded, cert->encoded_len)<0) {
+      log_warn(LD_BUG,"base64_encode(ntor_crosscert) failed!");
+      tor_cert_free(cert);
+      goto err;
+    }
+    tor_cert_free(cert);
+
+    tor_asprintf(&ntor_cc_line,
+                 "ntor-onion-key-crosscert %d\n"
+                 "-----BEGIN ED25519 CERT-----\n"
+                 "%s"
+                 "-----END ED25519 CERT-----\n", sign, buf);
+  }
+
   /* Encode the publication time. */
   format_iso_time(published, router->cache_info.published_on);
 
@@ -2426,6 +2493,7 @@ router_dump_router_to_string(routerinfo_t *router,
                     "%s%s%s%s"
                     "onion-key\n%s"
                     "signing-key\n%s"
+                    "%s%s"
                     "%s%s%s%s",
     router->nickname,
     address,
@@ -2446,6 +2514,8 @@ router_dump_router_to_string(routerinfo_t *router,
     (options->DownloadExtraInfo || options->V3AuthoritativeDir) ?
                          "caches-extra-info\n" : "",
     onion_pkey, identity_pkey,
+    rsa_tap_cc_line ? rsa_tap_cc_line : "",
+    ntor_cc_line ? ntor_cc_line : "",
     family_line,
     we_are_hibernating() ? "hibernating 1\n" : "",
     options->HidServDirectoryV2 ? "hidden-service-dir\n" : "",

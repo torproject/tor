@@ -21,6 +21,7 @@
 #include "hibernate.h"
 #include "networkstatus.h"
 #include "router.h"
+#include "routerkeys.h"
 #include "routerlist.h"
 #include "routerparse.h"
 #include "test.h"
@@ -89,6 +90,8 @@ test_dir_formats(void *arg)
   routerinfo_t *rp1 = NULL, *rp2 = NULL;
   addr_policy_t *ex1, *ex2;
   routerlist_t *dir1 = NULL, *dir2 = NULL;
+  uint8_t *rsa_cc = NULL;
+  tor_cert_t *ntor_cc = NULL;
   or_options_t *options = get_options_mutable();
   const addr_policy_t *p;
   time_t now = time(NULL);
@@ -152,8 +155,10 @@ test_dir_formats(void *arg)
   r2->dir_port = 0;
   r2->onion_pkey = crypto_pk_dup_key(pk2);
   r2->onion_curve25519_pkey = tor_malloc_zero(sizeof(curve25519_public_key_t));
-  curve25519_public_from_base64(r2->onion_curve25519_pkey,
-                                "skyinAnvardNostarsNomoonNowindormistsorsnow");
+  curve25519_keypair_t r2_onion_keypair;
+  curve25519_keypair_generate(&r2_onion_keypair, 0);
+  r2->onion_curve25519_pkey = tor_memdup(&r2_onion_keypair.pubkey,
+                                         sizeof(curve25519_public_key_t));
   r2->identity_pkey = crypto_pk_dup_key(pk1);
   r2->bandwidthrate = r2->bandwidthburst = r2->bandwidthcapacity = 3000;
   r2->exit_policy = smartlist_new();
@@ -169,7 +174,7 @@ test_dir_formats(void *arg)
   /* XXXX025 router_dump_to_string should really take this from ri.*/
   options->ContactInfo = tor_strdup("Magri White "
                                     "<magri@elsewhere.example.com>");
-  buf = router_dump_router_to_string(r1, pk2, NULL);
+  buf = router_dump_router_to_string(r1, pk2, NULL, NULL, NULL);
   tor_free(options->ContactInfo);
   tt_assert(buf);
 
@@ -202,7 +207,7 @@ test_dir_formats(void *arg)
   tt_str_op(buf,OP_EQ, buf2);
   tor_free(buf);
 
-  buf = router_dump_router_to_string(r1, pk2, NULL);
+  buf = router_dump_router_to_string(r1, pk2, NULL, NULL, NULL);
   tt_assert(buf);
   cp = buf;
   rp1 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL,NULL);
@@ -238,20 +243,49 @@ test_dir_formats(void *arg)
   strlcat(buf2, pk2_str, sizeof(buf2));
   strlcat(buf2, "signing-key\n", sizeof(buf2));
   strlcat(buf2, pk1_str, sizeof(buf2));
+  int rsa_cc_len;
+  rsa_cc = make_tap_onion_key_crosscert(pk2,
+                                        &kp1.pubkey,
+                                        pk1,
+                                        &rsa_cc_len);
+  tt_assert(rsa_cc);
+  base64_encode(cert_buf, sizeof(cert_buf), (char*)rsa_cc, rsa_cc_len);
+  strlcat(buf2, "onion-key-crosscert\n"
+          "-----BEGIN CROSSCERT-----\n", sizeof(buf2));
+  strlcat(buf2, cert_buf, sizeof(buf2));
+  strlcat(buf2, "-----END CROSSCERT-----\n", sizeof(buf2));
+  int ntor_cc_sign;
+  ntor_cc = make_ntor_onion_key_crosscert(&r2_onion_keypair,
+                                          &kp1.pubkey,
+                                          r2->cache_info.published_on,
+                                          MIN_ONION_KEY_LIFETIME,
+                                          &ntor_cc_sign);
+  tt_assert(ntor_cc);
+  base64_encode(cert_buf, sizeof(cert_buf),
+                (char*)ntor_cc->encoded, ntor_cc->encoded_len);
+  tor_snprintf(buf2+strlen(buf2), sizeof(buf2)-strlen(buf2),
+               "ntor-onion-key-crosscert %d\n"
+               "-----BEGIN ED25519 CERT-----\n"
+               "%s"
+               "-----END ED25519 CERT-----\n", ntor_cc_sign, cert_buf);
+
   strlcat(buf2, "hidden-service-dir\n", sizeof(buf2));
-  strlcat(buf2, "ntor-onion-key "
-          "skyinAnvardNostarsNomoonNowindormistsorsnow=\n", sizeof(buf2));
+  strlcat(buf2, "ntor-onion-key ", sizeof(buf2));
+  base64_encode(cert_buf, sizeof(cert_buf),
+                (const char*)r2_onion_keypair.pubkey.public_key, 32);
+  strlcat(buf2, cert_buf, sizeof(buf2));
   strlcat(buf2, "accept *:80\nreject 18.0.0.0/8:24\n", sizeof(buf2));
   strlcat(buf2, "router-sig-ed25519 ", sizeof(buf2));
 
-  buf = router_dump_router_to_string(r2, pk1, &kp2);
+  buf = router_dump_router_to_string(r2, pk1, pk2, &r2_onion_keypair, &kp2);
   tt_assert(buf);
   buf[strlen(buf2)] = '\0'; /* Don't compare the sig; it's never the same
                              * twice */
-  tt_str_op(buf,OP_EQ, buf2);
+
+  tt_str_op(buf, OP_EQ, buf2);
   tor_free(buf);
 
-  buf = router_dump_router_to_string(r2, pk1, NULL);
+  buf = router_dump_router_to_string(r2, pk1, NULL, NULL, NULL);
   cp = buf;
   rp2 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL,NULL);
   tt_assert(rp2);
@@ -304,6 +338,7 @@ test_dir_formats(void *arg)
   if (rp2)
     routerinfo_free(rp2);
 
+  tor_free(rsa_cc);
   tor_free(buf);
   tor_free(pk1_str);
   tor_free(pk2_str);
@@ -1418,6 +1453,7 @@ generate_ri_from_rs(const vote_routerstatus_t *vrs)
   static time_t published = 0;
 
   r = tor_malloc_zero(sizeof(routerinfo_t));
+  r->cert_expiration_time = TIME_MAX;
   memcpy(r->cache_info.identity_digest, rs->identity_digest, DIGEST_LEN);
   memcpy(r->cache_info.signed_descriptor_digest, rs->descriptor_digest,
          DIGEST_LEN);

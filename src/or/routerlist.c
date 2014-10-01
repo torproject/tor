@@ -3294,6 +3294,11 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
 
   old_router = router_get_mutable_by_digest(id_digest);
 
+  /* Make sure that it isn't expired. */
+  if (router->cert_expiration_time < approx_time()) {
+    return ROUTER_CERTS_EXPIRED;
+  }
+
   /* Make sure that we haven't already got this exact descriptor. */
   if (sdmap_get(routerlist->desc_digest_map,
                 router->cache_info.signed_descriptor_digest)) {

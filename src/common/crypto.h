@@ -147,9 +147,9 @@ int crypto_pk_write_private_key_to_filename(crypto_pk_t *env,
                                             const char *fname);
 
 int crypto_pk_check_key(crypto_pk_t *env);
-int crypto_pk_cmp_keys(crypto_pk_t *a, crypto_pk_t *b);
-int crypto_pk_eq_keys(crypto_pk_t *a, crypto_pk_t *b);
-size_t crypto_pk_keysize(crypto_pk_t *env);
+int crypto_pk_cmp_keys(const crypto_pk_t *a, const crypto_pk_t *b);
+int crypto_pk_eq_keys(const crypto_pk_t *a, const crypto_pk_t *b);
+size_t crypto_pk_keysize(const crypto_pk_t *env);
 int crypto_pk_num_bits(crypto_pk_t *env);
 crypto_pk_t *crypto_pk_dup_key(crypto_pk_t *orig);
 crypto_pk_t *crypto_pk_copy_full(crypto_pk_t *orig);
@@ -161,11 +161,11 @@ int crypto_pk_public_encrypt(crypto_pk_t *env, char *to, size_t tolen,
 int crypto_pk_private_decrypt(crypto_pk_t *env, char *to, size_t tolen,
                               const char *from, size_t fromlen,
                               int padding, int warnOnFailure);
-int crypto_pk_public_checksig(crypto_pk_t *env, char *to, size_t tolen,
+int crypto_pk_public_checksig(const crypto_pk_t *env, char *to, size_t tolen,
                               const char *from, size_t fromlen);
 int crypto_pk_public_checksig_digest(crypto_pk_t *env, const char *data,
                                size_t datalen, const char *sig, size_t siglen);
-int crypto_pk_private_sign(crypto_pk_t *env, char *to, size_t tolen,
+int crypto_pk_private_sign(const crypto_pk_t *env, char *to, size_t tolen,
                            const char *from, size_t fromlen);
 int crypto_pk_private_sign_digest(crypto_pk_t *env, char *to, size_t tolen,
                                   const char *from, size_t fromlen);

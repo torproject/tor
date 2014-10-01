@@ -830,7 +830,7 @@ crypto_pk_public_exponent_ok(crypto_pk_t *env)
  * Note that this may leak information about the keys through timing.
  */
 int
-crypto_pk_cmp_keys(crypto_pk_t *a, crypto_pk_t *b)
+crypto_pk_cmp_keys(const crypto_pk_t *a, const crypto_pk_t *b)
 {
   int result;
   char a_is_non_null = (a != NULL) && (a->key != NULL);
@@ -856,19 +856,19 @@ crypto_pk_cmp_keys(crypto_pk_t *a, crypto_pk_t *b)
  *  Note that this may leak information about the keys through timing.
  */
 int
-crypto_pk_eq_keys(crypto_pk_t *a, crypto_pk_t *b)
+crypto_pk_eq_keys(const crypto_pk_t *a, const crypto_pk_t *b)
 {
   return (crypto_pk_cmp_keys(a, b) == 0);
 }
 
 /** Return the size of the public key modulus in <b>env</b>, in bytes. */
 size_t
-crypto_pk_keysize(crypto_pk_t *env)
+crypto_pk_keysize(const crypto_pk_t *env)
 {
   tor_assert(env);
   tor_assert(env->key);
 
-  return (size_t) RSA_size(env->key);
+  return (size_t) RSA_size((RSA*)env->key);
 }
 
 /** Return the size of the public key modulus of <b>env</b>, in bits. */
@@ -997,7 +997,7 @@ crypto_pk_private_decrypt(crypto_pk_t *env, char *to,
  * at least the length of the modulus of <b>env</b>.
  */
 int
-crypto_pk_public_checksig(crypto_pk_t *env, char *to,
+crypto_pk_public_checksig(const crypto_pk_t *env, char *to,
                           size_t tolen,
                           const char *from, size_t fromlen)
 {
@@ -1069,7 +1069,7 @@ crypto_pk_public_checksig_digest(crypto_pk_t *env, const char *data,
  * at least the length of the modulus of <b>env</b>.
  */
 int
-crypto_pk_private_sign(crypto_pk_t *env, char *to, size_t tolen,
+crypto_pk_private_sign(const crypto_pk_t *env, char *to, size_t tolen,
                        const char *from, size_t fromlen)
 {
   int r;
@@ -1084,7 +1084,7 @@ crypto_pk_private_sign(crypto_pk_t *env, char *to, size_t tolen,
 
   r = RSA_private_encrypt((int)fromlen,
                           (unsigned char*)from, (unsigned char*)to,
-                          env->key, RSA_PKCS1_PADDING);
+                          (RSA*)env->key, RSA_PKCS1_PADDING);
   if (r<0) {
     crypto_log_errors(LOG_WARN, "generating RSA signature");
     return -1;
@@ -1298,7 +1298,7 @@ crypto_pk_get_digest(const crypto_pk_t *pk, char *digest_out)
   unsigned char *buf = NULL;
   int len;
 
-  len = i2d_RSAPublicKey(pk->key, &buf);
+  len = i2d_RSAPublicKey((RSA*)pk->key, &buf);
   if (len < 0 || buf == NULL)
     return -1;
   if (crypto_digest(digest_out, (char*)buf, len) < 0) {

@@ -24,6 +24,7 @@
 #include "microdesc.h"
 #include "networkstatus.h"
 #include "rephist.h"
+#include "routerkeys.h"
 #include "routerparse.h"
 #include "entrynodes.h"
 #include "torcert.h"
@@ -87,6 +88,8 @@ typedef enum {
   K_IPV6_POLICY,
   K_ROUTER_SIG_ED25519,
   K_IDENTITY_ED25519,
+  K_ONION_KEY_CROSSCERT,
+  K_NTOR_ONION_KEY_CROSSCERT,
 
   K_DIRREQ_END,
   K_DIRREQ_V2_IPS,
@@ -299,6 +302,9 @@ static token_rule_t routerdesc_token_table[] = {
   T01("hidden-service-dir",  K_HIDDEN_SERVICE_DIR,  NO_ARGS, NO_OBJ ),
   T01("identity-ed25519",    K_IDENTITY_ED25519,    NO_ARGS, NEED_OBJ ),
   T01("router-sig-ed25519",  K_ROUTER_SIG_ED25519,  GE(1),   NO_OBJ ),
+  T01("onion-key-crosscert", K_ONION_KEY_CROSSCERT, NO_ARGS, NEED_OBJ ),
+  T01("ntor-onion-key-crosscert", K_NTOR_ONION_KEY_CROSSCERT,
+                                                    EQ(1),   NEED_OBJ ),
 
   T01("allow-single-hop-exits",K_ALLOW_SINGLE_HOP_EXITS,    NO_ARGS, NO_OBJ ),
 
@@ -648,7 +654,7 @@ router_get_extrainfo_hash(const char *s, size_t s_len, char *digest)
 char *
 router_get_dirobj_signature(const char *digest,
                             size_t digest_len,
-                            crypto_pk_t *private_key)
+                            const crypto_pk_t *private_key)
 {
   char *signature;
   size_t i, keysize;
@@ -868,8 +874,8 @@ check_signature_token(const char *digest,
     tor_free(signed_digest);
     return -1;
   }
-//  log_debug(LD_DIR,"Signed %s hash starts %s", doctype,
-//            hex_str(signed_digest,4));
+  //  log_debug(LD_DIR,"Signed %s hash starts %s", doctype,
+  //            hex_str(signed_digest,4));
   if (tor_memneq(digest, signed_digest, digest_len)) {
     log_warn(LD_DIR, "Error reading %s: signature does not match.", doctype);
     tor_free(signed_digest);
@@ -1116,6 +1122,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   size_t prepend_len = prepend_annotations ? strlen(prepend_annotations) : 0;
   int ok = 1;
   memarea_t *area = NULL;
+  tor_cert_t *ntor_cc_cert = NULL;
   /* Do not set this to '1' until we have parsed everything that we intend to
    * parse that's covered by the hash. */
   int can_dl_again = 0;
@@ -1191,6 +1198,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   tor_assert(tok->n_args >= 5);
 
   router = tor_malloc_zero(sizeof(routerinfo_t));
+  router->cert_expiration_time = TIME_MAX;
   router->cache_info.routerlist_index = -1;
   router->cache_info.annotations_len = s-start_of_annotations + prepend_len;
   router->cache_info.signed_descriptor_len = end-s;
@@ -1313,16 +1321,30 @@ router_parse_entry_from_string(const char *s, const char *end,
       tor_memdup(&k, sizeof(curve25519_public_key_t));
   }
 
+  tok = find_by_keyword(tokens, K_SIGNING_KEY);
+  router->identity_pkey = tok->key;
+  tok->key = NULL; /* Prevent free */
+  if (crypto_pk_get_digest(router->identity_pkey,
+                           router->cache_info.identity_digest)) {
+    log_warn(LD_DIR, "Couldn't calculate key digest"); goto err;
+  }
+
   {
-    directory_token_t *ed_sig_tok, *ed_cert_tok;
+    directory_token_t *ed_sig_tok, *ed_cert_tok, *cc_tap_tok, *cc_ntor_tok;
     ed_sig_tok = find_opt_by_keyword(tokens, K_ROUTER_SIG_ED25519);
     ed_cert_tok = find_opt_by_keyword(tokens, K_IDENTITY_ED25519);
-    if (!ed_sig_tok != !ed_cert_tok) {
-      log_warn(LD_DIR, "Router descriptor with only partial ed25519 support");
+    cc_tap_tok = find_opt_by_keyword(tokens, K_ONION_KEY_CROSSCERT);
+    cc_ntor_tok = find_opt_by_keyword(tokens, K_NTOR_ONION_KEY_CROSSCERT);
+    int n_ed_toks = !!ed_sig_tok + !!ed_cert_tok +
+      !!cc_tap_tok + !!cc_ntor_tok;
+    if ((n_ed_toks != 0 && n_ed_toks != 4) ||
+        (n_ed_toks == 4 && !router->onion_curve25519_pkey)) {
+      log_warn(LD_DIR, "Router descriptor with only partial ed25519/"
+               "cross-certification support");
       goto err;
     }
     if (ed_sig_tok) {
-      tor_assert(ed_cert_tok);
+      tor_assert(ed_cert_tok && cc_tap_tok && cc_ntor_tok);
       if (ed_cert_tok != smartlist_get(tokens, 0) &&
           ed_cert_tok != smartlist_get(tokens, 1)) {
         log_warn(LD_DIR, "Ed25519 certificate in wrong position");
@@ -1336,10 +1358,25 @@ router_parse_entry_from_string(const char *s, const char *end,
         log_warn(LD_DIR, "Wrong object type on identity-ed25519 in decriptor");
         goto err;
       }
+      if (strcmp(cc_ntor_tok->object_type, "ED25519 CERT")) {
+        log_warn(LD_DIR, "Wrong object type on ntor-onion-key-crosscert "
+                 "in decriptor");
+        goto err;
+      }
+      if (strcmp(cc_tap_tok->object_type, "CROSSCERT")) {
+        log_warn(LD_DIR, "Wrong object type on onion-key-crosscert "
+                 "in decriptor");
+        goto err;
+      }
+      if (strcmp(cc_ntor_tok->args[0], "0") &&
+          strcmp(cc_ntor_tok->args[0], "1")) {
+        log_warn(LD_DIR, "Bad sign bit on ntor-onion-key-crosscert");
+        goto err;
+      }
+      int ntor_cc_sign_bit = !strcmp(cc_ntor_tok->args[0], "1");
 
       uint8_t d256[DIGEST256_LEN];
       const char *signed_start, *signed_end;
-
       tor_cert_t *cert = tor_cert_parse(
                        (const uint8_t*)ed_cert_tok->object_body,
                        ed_cert_tok->object_size);
@@ -1347,10 +1384,30 @@ router_parse_entry_from_string(const char *s, const char *end,
         log_warn(LD_DIR, "Couldn't parse ed25519 cert");
         goto err;
       }
-      router->signing_key_cert = cert;
+      router->signing_key_cert = cert; /* makes sure it gets freed. */
       if (cert->cert_type != CERT_TYPE_ID_SIGNING ||
           ! cert->signing_key_included) {
         log_warn(LD_DIR, "Invalid form for ed25519 cert");
+        goto err;
+      }
+
+      ntor_cc_cert = tor_cert_parse((const uint8_t*)cc_ntor_tok->object_body,
+                                    cc_ntor_tok->object_size);
+      if (!cc_ntor_tok) {
+        log_warn(LD_DIR, "Couldn't parse ntor-onion-key-crosscert cert");
+        goto err;
+      }
+      if (ntor_cc_cert->cert_type != CERT_TYPE_ONION_ID ||
+          ! ed25519_pubkey_eq(&ntor_cc_cert->signed_key, &cert->signing_key)) {
+        log_warn(LD_DIR, "Invalid contents for ntor-onion-key-crosscert cert");
+        goto err;
+      }
+
+      ed25519_public_key_t ntor_cc_pk;
+      if (ed25519_public_key_from_curve25519_public_key(&ntor_cc_pk,
+                                            router->onion_curve25519_pkey,
+                                            ntor_cc_sign_bit)<0) {
+        log_warn(LD_DIR, "Error converting onion key to ed25519");
         goto err;
       }
 
@@ -1367,38 +1424,48 @@ router_parse_entry_from_string(const char *s, const char *end,
       crypto_digest_get_digest(d, (char*)d256, sizeof(d256));
       crypto_digest_free(d);
 
-      ed25519_checkable_t check[2];
-      int check_ok[2];
+      ed25519_checkable_t check[3];
+      int check_ok[3];
       if (tor_cert_get_checkable_sig(&check[0], cert, NULL) < 0) {
         log_err(LD_BUG, "Couldn't create 'checkable' for cert.");
         goto err;
       }
-      if (ed25519_signature_from_base64(&check[1].signature,
+      if (tor_cert_get_checkable_sig(&check[1],
+                                     ntor_cc_cert, &ntor_cc_pk) < 0) {
+        log_err(LD_BUG, "Couldn't create 'checkable' for ntor_cc_cert.");
+        goto err;
+      }
+
+      if (ed25519_signature_from_base64(&check[2].signature,
                                         ed_sig_tok->args[0])<0) {
         log_warn(LD_DIR, "Couldn't decode ed25519 signature");
         goto err;
       }
-      check[1].pubkey = &cert->signed_key;
-      check[1].msg = d256;
-      check[1].len = DIGEST256_LEN;
+      check[2].pubkey = &cert->signed_key;
+      check[2].msg = d256;
+      check[2].len = DIGEST256_LEN;
 
-      if (ed25519_checksig_batch(check_ok, check, 2) < 0) {
-        log_warn(LD_DIR, "Incorrect ed25519 signatures");
+      if (ed25519_checksig_batch(check_ok, check, 3) < 0) {
+        log_warn(LD_DIR, "Incorrect ed25519 signature(s)");
         goto err;
       }
-      if (cert->valid_until < time(NULL)) {
-        log_warn(LD_DIR, "Expired ed25519 certificate in router descriptor");
+
+      if (check_tap_onion_key_crosscert(
+                      (const uint8_t*)cc_tap_tok->object_body,
+                      (int)cc_tap_tok->object_size,
+                      router->onion_pkey,
+                      &cert->signing_key,
+                      (const uint8_t*)router->cache_info.identity_digest)<0) {
+        log_warn(LD_DIR, "Incorrect TAP cross-verification");
         goto err;
       }
+
+      /* We check this before adding it to the routerlist. */
+      if (cert->valid_until < ntor_cc_cert->valid_until)
+        router->cert_expiration_time = cert->valid_until;
+      else
+        router->cert_expiration_time = ntor_cc_cert->valid_until;
     }
-  }
-
-  tok = find_by_keyword(tokens, K_SIGNING_KEY);
-  router->identity_pkey = tok->key;
-  tok->key = NULL; /* Prevent free */
-  if (crypto_pk_get_digest(router->identity_pkey,
-                           router->cache_info.identity_digest)) {
-    log_warn(LD_DIR, "Couldn't calculate key digest"); goto err;
   }
 
   if ((tok = find_opt_by_keyword(tokens, K_FINGERPRINT))) {
@@ -1527,6 +1594,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   routerinfo_free(router);
   router = NULL;
  done:
+  tor_cert_free(ntor_cc_cert);
   if (tokens) {
     SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
     smartlist_free(tokens);

@@ -514,6 +514,74 @@ test_routerkeys_ed_keys_init_all(void *arg)
   routerkeys_free_all();
 }
 
+static void
+test_routerkeys_cross_certify_ntor(void *args)
+{
+  (void) args;
+
+  tor_cert_t *cert = NULL;
+  curve25519_keypair_t onion_keys;
+  ed25519_public_key_t master_key;
+  ed25519_public_key_t onion_check_key;
+  time_t now = time(NULL);
+  int sign;
+
+  tt_int_op(0, ==, ed25519_public_from_base64(&master_key,
+                               "IamwritingthesetestsOnARainyAfternoonin2014"));
+  tt_int_op(0, ==, curve25519_keypair_generate(&onion_keys, 0));
+  cert = make_ntor_onion_key_crosscert(&onion_keys,
+                                       &master_key,
+                                       now, 10000,
+                                       &sign);
+  tt_assert(cert);
+  tt_assert(sign == 0 || sign == 1);
+  tt_int_op(cert->cert_type, ==, CERT_TYPE_ONION_ID);
+  tt_int_op(1, ==, ed25519_pubkey_eq(&cert->signed_key, &master_key));
+  tt_int_op(0, ==, ed25519_public_key_from_curve25519_public_key(
+                               &onion_check_key, &onion_keys.pubkey, sign));
+  tt_int_op(0, ==, tor_cert_checksig(cert, &onion_check_key, now));
+
+ done:
+  tor_cert_free(cert);
+}
+
+static void
+test_routerkeys_cross_certify_tap(void *args)
+{
+  (void)args;
+  uint8_t *cc = NULL;
+  int cc_len;
+  ed25519_public_key_t master_key;
+  crypto_pk_t *onion_key = pk_generate(2), *id_key = pk_generate(1);
+  char digest[20];
+  char buf[128];
+  int n;
+
+  tt_int_op(0, ==, ed25519_public_from_base64(&master_key,
+                               "IAlreadyWroteTestsForRouterdescsUsingTheseX"));
+
+  cc = make_tap_onion_key_crosscert(onion_key,
+                                    &master_key,
+                                    id_key, &cc_len);
+  tt_assert(cc);
+  tt_assert(cc_len);
+
+  n = crypto_pk_public_checksig(onion_key, buf, sizeof(buf),
+                                (char*)cc, cc_len);
+  tt_int_op(n,>,0);
+  tt_int_op(n,==,52);
+
+  crypto_pk_get_digest(id_key, digest);
+  tt_mem_op(buf,==,digest,20);
+  tt_mem_op(buf+20,==,master_key.pubkey,32);
+
+  tt_int_op(0, ==, check_tap_onion_key_crosscert(cc, cc_len,
+                                    onion_key, &master_key, (uint8_t*)digest));
+
+ done:
+  tor_free(cc);
+}
+
 #define TEST(name, flags)                                       \
   { #name , test_routerkeys_ ## name, (flags), NULL, NULL }
 
@@ -524,6 +592,8 @@ struct testcase_t routerkeys_tests[] = {
   TEST(ed_key_init_basic, TT_FORK),
   TEST(ed_key_init_split, TT_FORK),
   TEST(ed_keys_init_all, TT_FORK),
+  TEST(cross_certify_ntor, 0),
+  TEST(cross_certify_tap, 0),
   END_OF_TESTCASES
 };
 

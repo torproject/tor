@@ -435,6 +435,93 @@ get_current_auth_key_cert(void)
   return auth_key_cert;
 }
 
+/** Construct cross-certification for the master identity key with
+ * the ntor onion key. Store the sign of the corresponding ed25519 public key
+ * in *<b>sign_out</b>. */
+tor_cert_t *
+make_ntor_onion_key_crosscert(const curve25519_keypair_t *onion_key,
+      const ed25519_public_key_t *master_id_key, time_t now, time_t lifetime,
+      int *sign_out)
+{
+  tor_cert_t *cert = NULL;
+  ed25519_keypair_t ed_onion_key;
+
+  if (ed25519_keypair_from_curve25519_keypair(&ed_onion_key, sign_out,
+                                              onion_key) < 0)
+    goto end;
+
+  cert = tor_cert_create(&ed_onion_key, CERT_TYPE_ONION_ID, master_id_key,
+      now, lifetime, 0);
+
+ end:
+  memwipe(&ed_onion_key, 0, sizeof(ed_onion_key));
+  return cert;
+}
+
+/** Construct and return an RSA signature for the TAP onion key to
+ * cross-certify the RSA and Ed25519 identity keys. Set <b>len_out</b> to its
+ * length. */
+uint8_t *
+make_tap_onion_key_crosscert(const crypto_pk_t *onion_key,
+                             const ed25519_public_key_t *master_id_key,
+                             const crypto_pk_t *rsa_id_key,
+                             int *len_out)
+{
+  uint8_t signature[PK_BYTES];
+  uint8_t signed_data[DIGEST_LEN + ED25519_PUBKEY_LEN];
+
+  *len_out = 0;
+  crypto_pk_get_digest(rsa_id_key, (char*)signed_data);
+  memcpy(signed_data + DIGEST_LEN, master_id_key->pubkey, ED25519_PUBKEY_LEN);
+
+  int r = crypto_pk_private_sign(onion_key,
+                               (char*)signature, sizeof(signature),
+                               (const char*)signed_data, sizeof(signed_data));
+  if (r < 0)
+    return NULL;
+
+  *len_out = r;
+
+  return tor_memdup(signature, r);
+}
+
+/** Check whether an RSA-TAP cross-certification is correct. Return 0 if it
+ * is, -1 if it isn't. */
+int
+check_tap_onion_key_crosscert(const uint8_t *crosscert,
+                              int crosscert_len,
+                              const crypto_pk_t *onion_pkey,
+                              const ed25519_public_key_t *master_id_pkey,
+                              const uint8_t *rsa_id_digest)
+{
+  uint8_t *cc = tor_malloc(crypto_pk_keysize(onion_pkey));
+  int cc_len =
+    crypto_pk_public_checksig(onion_pkey,
+                              (char*)cc,
+                              crypto_pk_keysize(onion_pkey),
+                              (const char*)crosscert,
+                              crosscert_len);
+  if (cc_len < 0) {
+    goto err;
+  }
+  if (cc_len < DIGEST_LEN + ED25519_PUBKEY_LEN) {
+    log_warn(LD_DIR, "Short signature on cross-certification with TAP key");
+    goto err;
+  }
+  if (tor_memneq(cc, rsa_id_digest, DIGEST_LEN) ||
+      tor_memneq(cc + DIGEST_LEN, master_id_pkey->pubkey,
+                 ED25519_PUBKEY_LEN)) {
+    log_warn(LD_DIR, "Incorrect cross-certification with TAP key");
+    goto err;
+  }
+
+  tor_free(cc);
+  return 0;
+ err:
+  tor_free(cc);
+  return -1;
+}
+
 void
 routerkeys_free_all(void)
 {

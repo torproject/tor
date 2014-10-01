@@ -91,7 +91,9 @@ int router_is_me(const routerinfo_t *router);
 int router_pick_published_address(const or_options_t *options, uint32_t *addr);
 int router_rebuild_descriptor(int force);
 char *router_dump_router_to_string(routerinfo_t *router,
-                                   crypto_pk_t *ident_key,
+                                   const crypto_pk_t *ident_key,
+                                   const crypto_pk_t *tap_key,
+                                   const curve25519_keypair_t *ntor_keypair,
                                    const ed25519_keypair_t *signing_keypair);
 char *router_dump_exit_policy_to_string(const routerinfo_t *router,
                                          int include_ipv4,

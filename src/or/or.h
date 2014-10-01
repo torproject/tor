@@ -2023,6 +2023,9 @@ typedef struct {
   curve25519_public_key_t *onion_curve25519_pkey;
   /** Certificate for ed25519 signing key */
   struct tor_cert_st *signing_key_cert;
+  /** What's the earliest expiration time on all the certs in this
+   * routerinfo? */
+  time_t cert_expiration_time;
 
   char *platform; /**< What software/operating system is this OR using? */
 
@@ -5043,6 +5046,8 @@ typedef enum was_router_added_t {
   /* Router descriptor was rejected because it was older than
    * OLD_ROUTER_DESC_MAX_AGE. */
   ROUTER_WAS_TOO_OLD = -7, /* note contrast with 'NOT_NEW' */
+  /* DOCDOC */
+  ROUTER_CERTS_EXPIRED = -8
 } was_router_added_t;
 
 /********************************* routerparse.c ************************/

@@ -19,7 +19,7 @@ int router_get_extrainfo_hash(const char *s, size_t s_len, char *digest);
 #define DIROBJ_MAX_SIG_LEN 256
 char *router_get_dirobj_signature(const char *digest,
                                   size_t digest_len,
-                                  crypto_pk_t *private_key);
+                                  const crypto_pk_t *private_key);
 int router_append_dirobj_signature(char *buf, size_t buf_len,
                                    const char *digest,
                                    size_t digest_len,

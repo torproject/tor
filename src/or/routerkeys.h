@@ -37,6 +37,22 @@ const ed25519_keypair_t *get_current_auth_keypair(void);
 const struct tor_cert_st *get_current_link_key_cert(void);
 const struct tor_cert_st *get_current_auth_key_cert(void);
 
+struct tor_cert_st *make_ntor_onion_key_crosscert(
+                                  const curve25519_keypair_t *onion_key,
+                                  const ed25519_public_key_t *master_id_key,
+                                  time_t now, time_t lifetime,
+                                  int *sign_out);
+uint8_t *make_tap_onion_key_crosscert(const crypto_pk_t *onion_key,
+                                  const ed25519_public_key_t *master_id_key,
+                                  const crypto_pk_t *rsa_id_key,
+                                  int *len_out);
+
+int check_tap_onion_key_crosscert(const uint8_t *crosscert,
+                                  int crosscert_len,
+                                  const crypto_pk_t *onion_pkey,
+                                  const ed25519_public_key_t *master_id_pkey,
+                                  const uint8_t *rsa_id_digest);
+
 int load_ed_keys(const or_options_t *options, time_t now);
 void routerkeys_free_all(void);
 
