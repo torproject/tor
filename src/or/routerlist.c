@@ -3251,7 +3251,7 @@ routerlist_reparse_old(routerlist_t *rl, signed_descriptor_t *sd)
 
   ri = router_parse_entry_from_string(body,
                          body+sd->signed_descriptor_len+sd->annotations_len,
-                         0, 1, NULL);
+                         0, 1, NULL, NULL);
   if (!ri)
     return NULL;
   memcpy(&ri->cache_info, sd, sizeof(signed_descriptor_t));
@@ -3807,7 +3807,8 @@ router_load_single_router(const char *s, uint8_t purpose, int cache,
                "@source controller\n"
                "@purpose %s\n", router_purpose_to_string(purpose));
 
-  if (!(ri = router_parse_entry_from_string(s, NULL, 1, 0, annotation_buf))) {
+  if (!(ri = router_parse_entry_from_string(s, NULL, 1, 0,
+                                            annotation_buf, NULL))) {
     log_warn(LD_DIR, "Error parsing router descriptor; dropping.");
     *msg = "Couldn't parse router descriptor.";
     return -1;
@@ -3871,9 +3872,11 @@ router_load_routers_from_string(const char *s, const char *eos,
   int from_cache = (saved_location != SAVED_NOWHERE);
   int allow_annotations = (saved_location != SAVED_NOWHERE);
   int any_changed = 0;
+  smartlist_t *invalid_digests = smartlist_new();
 
   router_parse_list_from_string(&s, eos, routers, saved_location, 0,
-                                allow_annotations, prepend_annotations);
+                                allow_annotations, prepend_annotations,
+                                invalid_digests);
 
   routers_update_status_from_consensus_networkstatus(routers, !from_cache);
 
@@ -3920,6 +3923,27 @@ router_load_routers_from_string(const char *s, const char *eos,
     }
   } SMARTLIST_FOREACH_END(ri);
 
+  SMARTLIST_FOREACH_BEGIN(invalid_digests, const uint8_t *, bad_digest) {
+    /* This digest is never going to be parseable. */
+    base16_encode(fp, sizeof(fp), (char*)bad_digest, DIGEST_LEN);
+    if (requested_fingerprints && descriptor_digests) {
+      if (! smartlist_contains_string(requested_fingerprints, fp)) {
+        /* But we didn't ask for it, so we should assume shennanegans. */
+        continue;
+      }
+      smartlist_string_remove(requested_fingerprints, fp);
+    }
+    download_status_t *dls;
+    dls = router_get_dl_status_by_descriptor_digest((char*)bad_digest);
+    if (dls) {
+      log_info(LD_GENERAL, "Marking router with descriptor %s as unparseable, "
+               "and therefore undownloadable", fp);
+      download_status_mark_impossible(dls);
+    }
+  } SMARTLIST_FOREACH_END(bad_digest);
+  SMARTLIST_FOREACH(invalid_digests, uint8_t *, d, tor_free(d));
+  smartlist_free(invalid_digests);
+
   routerlist_assert_ok(routerlist);
 
   if (any_changed)
@@ -3943,9 +3967,10 @@ router_load_extrainfo_from_string(const char *s, const char *eos,
   smartlist_t *extrainfo_list = smartlist_new();
   const char *msg;
   int from_cache = (saved_location != SAVED_NOWHERE);
+  smartlist_t *invalid_digests = smartlist_new();
 
   router_parse_list_from_string(&s, eos, extrainfo_list, saved_location, 1, 0,
-                                NULL);
+                                NULL, invalid_digests);
 
   log_info(LD_DIR, "%d elements to add", smartlist_len(extrainfo_list));
 
@@ -3965,6 +3990,28 @@ router_load_extrainfo_from_string(const char *s, const char *eos,
          * inside Tor, this should be harmless. */
       }
   } SMARTLIST_FOREACH_END(ei);
+
+  SMARTLIST_FOREACH_BEGIN(invalid_digests, const uint8_t *, bad_digest) {
+    /* This digest is never going to be parseable. */
+    char fp[HEX_DIGEST_LEN+1];
+    base16_encode(fp, sizeof(fp), (char*)bad_digest, DIGEST_LEN);
+    if (requested_fingerprints) {
+      if (! smartlist_contains_string(requested_fingerprints, fp)) {
+        /* But we didn't ask for it, so we should assume shennanegans. */
+        continue;
+      }
+      smartlist_string_remove(requested_fingerprints, fp);
+    }
+    signed_descriptor_t *sd =
+      router_get_by_extrainfo_digest((char*)bad_digest);
+    if (sd) {
+      log_info(LD_GENERAL, "Marking extrainfo with descriptor %s as "
+               "unparseable, and therefore undownloadable", fp);
+      download_status_mark_impossible(&sd->ei_dl_status);
+    }
+  } SMARTLIST_FOREACH_END(bad_digest);
+  SMARTLIST_FOREACH(invalid_digests, uint8_t *, d, tor_free(d));
+  smartlist_free(invalid_digests);
 
   routerlist_assert_ok(routerlist);
   router_rebuild_store(0, &router_get_routerlist()->extrainfo_store);

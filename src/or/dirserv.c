@@ -478,7 +478,7 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
   s = desc;
   list = smartlist_new();
   if (!router_parse_list_from_string(&s, NULL, list, SAVED_NOWHERE, 0, 0,
-                                     annotation_buf)) {
+                                     annotation_buf, NULL)) {
     SMARTLIST_FOREACH(list, routerinfo_t *, ri, {
         msg_out = NULL;
         tor_assert(ri->purpose == purpose);
@@ -494,7 +494,7 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
 
   s = desc;
   if (!router_parse_list_from_string(&s, NULL, list, SAVED_NOWHERE, 1, 0,
-                                     NULL)) {
+                                     NULL, NULL)) {
     SMARTLIST_FOREACH(list, extrainfo_t *, ei, {
         msg_out = NULL;
 

@@ -917,7 +917,7 @@ init_keys(void)
     }
     if (mydesc) {
       was_router_added_t added;
-      ri = router_parse_entry_from_string(mydesc, NULL, 1, 0, NULL);
+      ri = router_parse_entry_from_string(mydesc, NULL, 1, 0, NULL, NULL);
       if (!ri) {
         log_err(LD_GENERAL,"Generated a routerinfo we couldn't parse.");
         return -1;
@@ -2447,7 +2447,7 @@ router_dump_router_to_string(routerinfo_t *router,
     const char *cp;
     routerinfo_t *ri_tmp;
     cp = s_dup = tor_strdup(output);
-    ri_tmp = router_parse_entry_from_string(cp, NULL, 1, 0, NULL);
+    ri_tmp = router_parse_entry_from_string(cp, NULL, 1, 0, NULL, NULL);
     if (!ri_tmp) {
       log_err(LD_BUG,
               "We just generated a router descriptor we can't parse.");
@@ -2729,7 +2729,7 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   s = smartlist_join_strings(chunks, "", 0, NULL);
 
   cp = s_dup = tor_strdup(s);
-  ei_tmp = extrainfo_parse_entry_from_string(cp, NULL, 1, NULL);
+  ei_tmp = extrainfo_parse_entry_from_string(cp, NULL, 1, NULL, NULL);
   if (!ei_tmp) {
     if (write_stats_to_extrainfo) {
       log_warn(LD_GENERAL, "We just generated an extra-info descriptor "

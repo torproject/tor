@@ -1958,6 +1958,7 @@ typedef struct download_status_t {
   uint8_t n_download_failures; /**< Number of failures trying to download the
                                 * most recent descriptor. */
   download_schedule_bitfield_t schedule : 8;
+
 } download_status_t;
 
 /** If n_download_failures is this high, the download can never happen. */

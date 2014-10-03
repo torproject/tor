@@ -1123,7 +1123,7 @@ networkstatus_copy_old_consensus_info(networkstatus_t *new_c,
     rs_new->last_dir_503_at = rs_old->last_dir_503_at;
 
     if (tor_memeq(rs_old->descriptor_digest, rs_new->descriptor_digest,
-                DIGEST_LEN)) {
+                  DIGEST_LEN)) { /* XXXX Change this to digest256_len */
       /* And the same descriptor too! */
       memcpy(&rs_new->dl_status, &rs_old->dl_status,sizeof(download_status_t));
     }

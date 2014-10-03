@@ -186,7 +186,7 @@ test_dir_formats(void *arg)
   buf = router_dump_router_to_string(r1, pk2);
   tt_assert(buf);
   cp = buf;
-  rp1 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL);
+  rp1 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL,NULL);
   tt_assert(rp1);
   tt_int_op(rp1->addr,==, r1->addr);
   tt_int_op(rp1->or_port,==, r1->or_port);
@@ -231,7 +231,7 @@ test_dir_formats(void *arg)
 
   buf = router_dump_router_to_string(r2, pk1);
   cp = buf;
-  rp2 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL);
+  rp2 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL,NULL);
   tt_assert(rp2);
   tt_int_op(rp2->addr,==, r2->addr);
   tt_int_op(rp2->or_port,==, r2->or_port);

@@ -367,7 +367,7 @@ test_md_generate(void *arg)
   microdesc_t *md = NULL;
   (void)arg;
 
-  ri = router_parse_entry_from_string(test_ri, NULL, 0, 0, NULL);
+  ri = router_parse_entry_from_string(test_ri, NULL, 0, 0, NULL, NULL);
   tt_assert(ri);
   md = dirvote_create_microdescriptor(ri, 8);
   tt_str_op(md->body, ==, test_md_8);
