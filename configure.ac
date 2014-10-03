@@ -582,6 +582,10 @@ else
 fi
 AC_SUBST(TOR_OPENSSL_LIBS)
 
+AC_CHECK_MEMBERS([struct ssl_method_st.get_cipher_by_char], , ,
+[#include <openssl/ssl.h>
+])
+
 dnl ------------------------------------------------------
 dnl Where do you live, zlib?  And how do we call you?
 
