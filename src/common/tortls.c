@@ -1478,6 +1478,43 @@ static uint16_t v2_cipher_list[] = {
 /** Have we removed the unrecognized ciphers from v2_cipher_list yet? */
 static int v2_cipher_list_pruned = 0;
 
+/** Return 0 if <b>m</b> does not support the cipher with ID <b>cipher</b>;
+ * return 1 if it does support it, or if we have no way to tell. */
+static int
+find_cipher_by_id(const SSL_METHOD *m, uint16_t cipher)
+{
+  const SSL_CIPHER *c;
+#ifdef HAVE_STRUCT_SSL_METHOD_ST_GET_CIPHER_BY_CHAR
+  if (m && m->get_cipher_by_char) {
+    unsigned char cipherid[3];
+    set_uint16(cipherid, htons(cipher));
+    cipherid[2] = 0; /* If ssl23_get_cipher_by_char finds no cipher starting
+                      * with a two-byte 'cipherid', it may look for a v2
+                      * cipher with the appropriate 3 bytes. */
+    c = m->get_cipher_by_char(cipherid);
+    if (c)
+      tor_assert((c->id & 0xffff) == cipher);
+    return c != NULL;
+  } else
+#endif
+  if (m && m->get_cipher && m->num_ciphers) {
+    /* It would seem that some of the "let's-clean-up-openssl" forks have
+     * removed the get_cipher_by_char function.  Okay, so now you get a
+     * quadratic search.
+     */
+    int i;
+    for (i = 0; i < m->num_ciphers(); ++i) {
+      c = m->get_cipher(i);
+      if (c && (c->id & 0xffff) == cipher) {
+        return 1;
+      }
+    }
+    return 0;
+  } else {
+    return 1; /* No way to search */
+  }
+}
+
 /** Remove from v2_cipher_list every cipher that we don't support, so that
  * comparing v2_cipher_list to a client's cipher list will give a sensible
  * result. */
@@ -1489,16 +1526,7 @@ prune_v2_cipher_list(void)
 
   inp = outp = v2_cipher_list;
   while (*inp) {
-    unsigned char cipherid[3];
-    const SSL_CIPHER *cipher;
-    /* Is there no better way to do this? */
-    set_uint16(cipherid, htons(*inp));
-    cipherid[2] = 0; /* If ssl23_get_cipher_by_char finds no cipher starting
-                      * with a two-byte 'cipherid', it may look for a v2
-                      * cipher with the appropriate 3 bytes. */
-    cipher = m->get_cipher_by_char(cipherid);
-    if (cipher) {
-      tor_assert((cipher->id & 0xffff) == *inp);
+    if (find_cipher_by_id(m, *inp)) {
       *outp++ = *inp++;
     } else {
       inp++;

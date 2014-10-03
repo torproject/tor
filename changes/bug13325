@@ -1,0 +1,4 @@
+  o Compilation fixes:
+    - Build and run correctly on systems like OpenBSD-current that
+      have patched OpenSSL to remove get_cipher_by_char and/or its
+      implementations. Fixes issue 13325.
