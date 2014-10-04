@@ -45,3 +45,6 @@ n=$BOOTSTRAP_TIME; while [ $n -gt 0 ]; do
     sleep 1; n=$(expr $n - 1); echo -n .
 done; echo ""
 ./chutney verify $CHUTNEY_NETWORK
+# work around a bug/feature in make -j2 (or more)
+# where make hangs if any child processes are still alive
+./chutney stop $CHUTNEY_NETWORK
