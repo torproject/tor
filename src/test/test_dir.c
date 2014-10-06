@@ -294,6 +294,279 @@ test_dir_formats(void *arg)
   tor_free(dir2); /* And more !*/
 }
 
+#include "failing_routerdescs.inc"
+
+static void
+test_dir_routerparse_bad(void *arg)
+{
+  (void) arg;
+
+  int again;
+  routerinfo_t *ri = NULL;
+
+#define CHECK_OK(s)                                                     \
+  do {                                                                  \
+    routerinfo_free(ri);                                                \
+    ri = router_parse_entry_from_string((s), NULL, 0, 0, NULL, NULL);   \
+    tt_assert(ri);                                                      \
+  } while (0)
+#define CHECK_FAIL(s, againval)                                         \
+  do {                                                                  \
+    routerinfo_free(ri);                                                \
+    again = 999;                                                        \
+    ri = router_parse_entry_from_string((s), NULL, 0, 0, NULL, &again); \
+    tt_assert(ri == NULL);                                              \
+    tt_int_op(again, ==, (againval));                                   \
+  } while (0)
+
+  CHECK_OK(EX_RI_MINIMAL);
+  CHECK_OK(EX_RI_MAXIMAL);
+
+  /* good annotations prepended */
+  routerinfo_free(ri);
+  ri = router_parse_entry_from_string(EX_RI_MINIMAL, NULL, 0, 0,
+                                      "@purpose bridge\n", NULL);
+  tt_assert(ri != NULL);
+  tt_assert(ri->purpose == ROUTER_PURPOSE_BRIDGE);
+  routerinfo_free(ri);
+
+  /* bad annotations prepended. */
+  ri = router_parse_entry_from_string(EX_RI_MINIMAL,
+                                      NULL, 0, 0, "@purpose\n", NULL);
+  tt_assert(ri == NULL);
+
+  /* bad annotations on router. */
+  ri = router_parse_entry_from_string("@purpose\nrouter x\n", NULL, 0, 1,
+                                      NULL, NULL);
+  tt_assert(ri == NULL);
+
+  /* unwanted annotations on router. */
+  ri = router_parse_entry_from_string("@purpose foo\nrouter x\n", NULL, 0, 0,
+                                      NULL, NULL);
+  tt_assert(ri == NULL);
+
+  /* No signature. */
+  ri = router_parse_entry_from_string("router x\n", NULL, 0, 0,
+                                      NULL, NULL);
+  tt_assert(ri == NULL);
+
+  /* Not a router */
+  routerinfo_free(ri);
+  ri = router_parse_entry_from_string("hello\n", NULL, 0, 0, NULL, NULL);
+  tt_assert(ri == NULL);
+
+  CHECK_FAIL(EX_RI_BAD_SIG1, 1);
+  CHECK_FAIL(EX_RI_BAD_SIG2, 1);
+  CHECK_FAIL(EX_RI_BAD_TOKENS, 0);
+  CHECK_FAIL(EX_RI_BAD_PUBLISHED, 0);
+  CHECK_FAIL(EX_RI_NEG_BANDWIDTH, 0);
+  CHECK_FAIL(EX_RI_BAD_BANDWIDTH, 0);
+  CHECK_FAIL(EX_RI_BAD_BANDWIDTH2, 0);
+  CHECK_FAIL(EX_RI_BAD_ONIONKEY1, 0);
+  CHECK_FAIL(EX_RI_BAD_ONIONKEY2, 0);
+  CHECK_FAIL(EX_RI_BAD_PORTS, 0);
+  CHECK_FAIL(EX_RI_BAD_IP, 0);
+  CHECK_FAIL(EX_RI_BAD_DIRPORT, 0);
+  CHECK_FAIL(EX_RI_BAD_NAME2, 0);
+  CHECK_FAIL(EX_RI_BAD_UPTIME, 0);
+
+  CHECK_FAIL(EX_RI_BAD_BANDWIDTH3, 0);
+  CHECK_FAIL(EX_RI_BAD_NTOR_KEY, 0);
+  CHECK_FAIL(EX_RI_BAD_FINGERPRINT, 0);
+  CHECK_FAIL(EX_RI_MISMATCHED_FINGERPRINT, 0);
+  CHECK_FAIL(EX_RI_BAD_HAS_ACCEPT6, 0);
+  CHECK_FAIL(EX_RI_BAD_NO_EXIT_POLICY, 0);
+  CHECK_FAIL(EX_RI_BAD_IPV6_EXIT_POLICY, 0);
+  CHECK_FAIL(EX_RI_BAD_FAMILY, 0);
+  CHECK_FAIL(EX_RI_ZERO_ORPORT, 0);
+
+  /* This is allowed; we just ignore it. */
+  CHECK_OK(EX_RI_BAD_EI_DIGEST);
+
+#undef CHECK_FAIL
+#undef CHECK_OK
+ done:
+  routerinfo_free(ri);
+}
+
+#include "example_extrainfo.inc"
+
+static void
+test_dir_extrainfo_parsing(void *arg)
+{
+  (void) arg;
+
+#define CHECK_OK(s)                                                     \
+  do {                                                                  \
+    extrainfo_free(ei);                                                 \
+    ei = extrainfo_parse_entry_from_string((s), NULL, 0, map, NULL);    \
+    tt_assert(ei);                                                      \
+  } while (0)
+#define CHECK_FAIL(s, againval)                                         \
+  do {                                                                  \
+    extrainfo_free(ei);                                                 \
+    again = 999;                                                        \
+    ei = extrainfo_parse_entry_from_string((s), NULL, 0, map, &again);  \
+    tt_assert(ei == NULL);                                              \
+    tt_int_op(again, ==, (againval));                                   \
+  } while (0)
+#define ADD(name)                                                       \
+  do {                                                                  \
+    ri = tor_malloc_zero(sizeof(routerinfo_t));                         \
+    crypto_pk_t *pk = ri->identity_pkey = crypto_pk_new();              \
+    tt_assert(! crypto_pk_read_public_key_from_string(pk,               \
+                                      name##_KEY, strlen(name##_KEY))); \
+    tt_int_op(0,==,base16_decode(d, 20, name##_FP, strlen(name##_FP))); \
+    digestmap_set((digestmap_t*)map, d, ri);                            \
+    ri = NULL;                                                          \
+  } while (0)
+
+  routerinfo_t *ri = NULL;
+  char d[20];
+  struct digest_ri_map_t *map = NULL;
+  extrainfo_t *ei = NULL;
+  int again;
+
+  CHECK_OK(EX_EI_MINIMAL);
+  tt_assert(ei->pending_sig);
+  CHECK_OK(EX_EI_MAXIMAL);
+  tt_assert(ei->pending_sig);
+
+  map = (struct digest_ri_map_t *)digestmap_new();
+  ADD(EX_EI_MINIMAL);
+  ADD(EX_EI_MAXIMAL);
+  ADD(EX_EI_BAD_FP);
+  ADD(EX_EI_BAD_NICKNAME);
+  ADD(EX_EI_BAD_TOKENS);
+  ADD(EX_EI_BAD_START);
+  ADD(EX_EI_BAD_PUBLISHED);
+
+  CHECK_OK(EX_EI_MINIMAL);
+  tt_assert(!ei->pending_sig);
+  CHECK_OK(EX_EI_MAXIMAL);
+  tt_assert(!ei->pending_sig);
+
+  CHECK_FAIL(EX_EI_BAD_SIG1,1);
+  CHECK_FAIL(EX_EI_BAD_SIG2,1);
+  CHECK_FAIL(EX_EI_BAD_SIG3,1);
+  CHECK_FAIL(EX_EI_BAD_FP,0);
+  CHECK_FAIL(EX_EI_BAD_NICKNAME,0);
+  CHECK_FAIL(EX_EI_BAD_TOKENS,0);
+  CHECK_FAIL(EX_EI_BAD_START,0);
+  CHECK_FAIL(EX_EI_BAD_PUBLISHED,0);
+
+#undef CHECK_OK
+#undef CHECK_FAIL
+
+ done:
+  routerinfo_free(ri);
+  /* XXXX elements should get freed too */
+  digestmap_free((digestmap_t*)map, NULL);
+}
+
+static void
+test_dir_parse_router_list(void *arg)
+{
+  (void) arg;
+  smartlist_t *invalid = smartlist_new();
+  smartlist_t *dest = smartlist_new();
+  smartlist_t *chunks = smartlist_new();
+  int dest_has_ri = 1;
+  char *list = NULL;
+  const char *cp;
+  digestmap_t *map = NULL;
+  char *mem_op_hex_tmp = NULL;
+  routerinfo_t *ri = NULL;
+  char d[DIGEST_LEN];
+
+  smartlist_add(chunks, tor_strdup(EX_RI_MINIMAL));     // ri 0
+  smartlist_add(chunks, tor_strdup(EX_RI_BAD_PORTS));   // bad ri 0
+  smartlist_add(chunks, tor_strdup(EX_EI_MAXIMAL));     // ei 0
+  smartlist_add(chunks, tor_strdup(EX_EI_BAD_SIG2));    // bad ei --
+  smartlist_add(chunks, tor_strdup(EX_EI_BAD_NICKNAME));// bad ei 0
+  smartlist_add(chunks, tor_strdup(EX_RI_BAD_SIG1));    // bad ri --
+  smartlist_add(chunks, tor_strdup(EX_EI_BAD_PUBLISHED));  // bad ei 1
+  smartlist_add(chunks, tor_strdup(EX_RI_MAXIMAL));     // ri 1
+  smartlist_add(chunks, tor_strdup(EX_RI_BAD_FAMILY));  // bad ri 1
+  smartlist_add(chunks, tor_strdup(EX_EI_MINIMAL));     // ei 1
+
+  list = smartlist_join_strings(chunks, "", 0, NULL);
+
+  /* First, parse the routers. */
+  cp = list;
+  tt_int_op(0,==,
+            router_parse_list_from_string(&cp, NULL, dest, SAVED_NOWHERE,
+                                          0, 0, NULL, invalid));
+  tt_int_op(2, ==, smartlist_len(dest));
+  tt_ptr_op(cp, ==, list + strlen(list));
+
+  routerinfo_t *r = smartlist_get(dest, 0);
+  tt_mem_op(r->cache_info.signed_descriptor_body, ==,
+            EX_RI_MINIMAL, strlen(EX_RI_MINIMAL));
+  r = smartlist_get(dest, 1);
+  tt_mem_op(r->cache_info.signed_descriptor_body, ==,
+            EX_RI_MAXIMAL, strlen(EX_RI_MAXIMAL));
+
+  tt_int_op(2, ==, smartlist_len(invalid));
+  test_memeq_hex(smartlist_get(invalid, 0),
+                 "ab9eeaa95e7d45740185b4e519c76ead756277a9");
+  test_memeq_hex(smartlist_get(invalid, 1),
+                 "9a651ee03b64325959e8f1b46f2b689b30750b4c");
+
+  /* Now tidy up */
+  SMARTLIST_FOREACH(dest, routerinfo_t *, ri, routerinfo_free(ri));
+  SMARTLIST_FOREACH(invalid, uint8_t *, d, tor_free(d));
+  smartlist_clear(dest);
+  smartlist_clear(invalid);
+
+  /* And check extrainfos. */
+  dest_has_ri = 0;
+  map = (digestmap_t*)router_get_routerlist()->identity_map;
+  ADD(EX_EI_MINIMAL);
+  ADD(EX_EI_MAXIMAL);
+  ADD(EX_EI_BAD_NICKNAME);
+  ADD(EX_EI_BAD_PUBLISHED);
+  cp = list;
+  tt_int_op(0,==,
+            router_parse_list_from_string(&cp, NULL, dest, SAVED_NOWHERE,
+                                          1, 0, NULL, invalid));
+  tt_int_op(2, ==, smartlist_len(dest));
+  extrainfo_t *e = smartlist_get(dest, 0);
+  tt_mem_op(e->cache_info.signed_descriptor_body, ==,
+            EX_EI_MAXIMAL, strlen(EX_EI_MAXIMAL));
+  e = smartlist_get(dest, 1);
+  tt_mem_op(e->cache_info.signed_descriptor_body, ==,
+            EX_EI_MINIMAL, strlen(EX_EI_MINIMAL));
+
+  tt_int_op(2, ==, smartlist_len(invalid));
+  test_memeq_hex(smartlist_get(invalid, 0),
+                 "d5df4aa62ee9ffc9543d41150c9864908e0390af");
+  test_memeq_hex(smartlist_get(invalid, 1),
+                 "f61efd2a7f4531f3687a9043e0de90a862ec64ba");
+
+ done:
+  tor_free(list);
+  if (dest_has_ri)
+    SMARTLIST_FOREACH(dest, routerinfo_t *, rt, routerinfo_free(rt));
+  else
+    SMARTLIST_FOREACH(dest, extrainfo_t *, ei, extrainfo_free(ei));
+  smartlist_free(dest);
+  SMARTLIST_FOREACH(invalid, uint8_t *, d, tor_free(d));
+  smartlist_free(invalid);
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
+  smartlist_free(chunks);
+  routerinfo_free(ri);
+  /* XXXX this leaks: */
+  if (map) {
+    digestmap_free((digestmap_t*)map, NULL);
+    router_get_routerlist()->identity_map =
+      (struct digest_ri_map_t*)digestmap_new();
+  }
+  tor_free(mem_op_hex_tmp);
+
+#undef ADD
+}
+
 static void
 test_dir_versions(void *arg)
 {
@@ -2393,6 +2666,9 @@ test_dir_http_handling(void *args)
 struct testcase_t dir_tests[] = {
   DIR_LEGACY(nicknames),
   DIR_LEGACY(formats),
+  DIR(routerparse_bad, 0),
+  DIR(extrainfo_parsing, 0),
+  DIR(parse_router_list, TT_FORK),
   DIR_LEGACY(versions),
   DIR_LEGACY(fp_pairs),
   DIR(split_fps, 0),
