@@ -3442,6 +3442,9 @@ download_status_increment_failure(download_status_t *dls, int status_code,
 void
 download_status_reset(download_status_t *dls)
 {
+  if (dls->n_download_failures == IMPOSSIBLE_TO_DOWNLOAD)
+    return; /* Don't reset this. */
+
   const smartlist_t *schedule = find_dl_schedule_and_len(
                           dls, get_options()->DirPort_set);
 
