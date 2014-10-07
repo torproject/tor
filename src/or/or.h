@@ -4229,6 +4229,19 @@ typedef struct {
 
   /** Should we send the timestamps that pre-023 hidden services want? */
   int Support022HiddenServices;
+
+  /** Low-water mark for global scheduler - start sending when estimated
+   * queued size falls below this threshold.
+   */
+  uint32_t SchedulerLowWaterMark;
+  /** High-water mark for global scheduler - stop sending when estimated
+   * queued size exceeds this threshold.
+   */
+  uint32_t SchedulerHighWaterMark;
+  /** Flush size for global scheduler - flush this many cells at a time
+   * when sending.
+   */
+  unsigned int SchedulerMaxFlushCells;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

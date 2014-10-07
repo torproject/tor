@@ -367,6 +367,9 @@ static config_var_t option_vars_[] = {
   V(ServerDNSSearchDomains,      BOOL,     "0"),
   V(ServerDNSTestAddresses,      CSV,
       "www.google.com,www.mit.edu,www.yahoo.com,www.slashdot.org"),
+  V(SchedulerLowWaterMark,       MEMUNIT,  "16 kB"),
+  V(SchedulerHighWaterMark,      MEMUNIT,  "32 kB"),
+  V(SchedulerMaxFlushCells,      UINT,     "16"),
   V(ShutdownWaitLength,          INTERVAL, "30 seconds"),
   V(SocksListenAddress,          LINELIST, NULL),
   V(SocksPolicy,                 LINELIST, NULL),
@@ -1519,6 +1522,25 @@ options_act(const or_options_t *old_options)
   /* reload keys as needed for rendezvous services. */
   if (rend_service_load_all_keys()<0) {
     log_warn(LD_GENERAL,"Error loading rendezvous service keys");
+    return -1;
+  }
+
+  /* Set up scheduler thresholds */
+  if (options->SchedulerLowWaterMark > 0 &&
+      options->SchedulerHighWaterMark > options->SchedulerLowWaterMark) {
+    scheduler_set_watermarks(options->SchedulerLowWaterMark,
+                             options->SchedulerHighWaterMark,
+                             (options->SchedulerMaxFlushCells > 0) ?
+                              options->SchedulerMaxFlushCells : 16);
+  } else {
+    if (options->SchedulerLowWaterMark == 0) {
+      log_warn(LD_GENERAL, "Bad SchedulerLowWaterMark option");
+    }
+
+    if (options->SchedulerHighWaterMark <= options->SchedulerLowWaterMark) {
+      log_warn(LD_GENERAL, "Bad SchedulerHighWaterMark option");
+    }
+
     return -1;
   }
 

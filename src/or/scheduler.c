@@ -21,16 +21,20 @@
 #include <event.h>
 #endif
 
-#define SCHED_Q_LOW_WATER 16384
-#define SCHED_Q_HIGH_WATER (2 * SCHED_Q_LOW_WATER)
+/*
+ * Scheduler high/low watermarks
+ */
+
+static uint32_t sched_q_low_water = 16384;
+static uint32_t sched_q_high_water = 32768;
 
 /*
  * Maximum cells to flush in a single call to channel_flush_some_cells();
  * setting this low means more calls, but too high and we could overshoot
- * SCHED_Q_HIGH_WATER.
+ * sched_q_high_water.
  */
 
-#define SCHED_MAX_FLUSH_CELLS 16
+static uint32_t sched_max_flush_cells = 16;
 
 /*
  * Write scheduling works by keeping track of which channels can
@@ -343,7 +347,7 @@ scheduler_more_work(void)
 {
   tor_assert(channels_pending);
 
-  return ((scheduler_get_queue_heuristic() < SCHED_Q_LOW_WATER) &&
+  return ((scheduler_get_queue_heuristic() < sched_q_low_water) &&
           ((smartlist_len(channels_pending) > 0))) ? 1 : 0;
 }
 
@@ -387,12 +391,12 @@ scheduler_run, (void))
 
   log_debug(LD_SCHED, "We have a chance to run the scheduler");
 
-  if (scheduler_get_queue_heuristic() < SCHED_Q_LOW_WATER) {
+  if (scheduler_get_queue_heuristic() < sched_q_low_water) {
     n_chans_before = smartlist_len(channels_pending);
     q_len_before = channel_get_global_queue_estimate();
     q_heur_before = scheduler_get_queue_heuristic();
 
-    while (scheduler_get_queue_heuristic() <= SCHED_Q_HIGH_WATER &&
+    while (scheduler_get_queue_heuristic() <= sched_q_high_water &&
            smartlist_len(channels_pending) > 0) {
       /* Pop off a channel */
       chan = smartlist_pqueue_pop(channels_pending,
@@ -410,10 +414,10 @@ scheduler_run, (void))
 
         flushed = 0;
         while (flushed < n_cells &&
-               scheduler_get_queue_heuristic() <= SCHED_Q_HIGH_WATER) {
+               scheduler_get_queue_heuristic() <= sched_q_high_water) {
           flushed_this_time =
             channel_flush_some_cells(chan,
-                                     MIN(SCHED_MAX_FLUSH_CELLS,
+                                     MIN(sched_max_flush_cells,
                                          n_cells - flushed));
           if (flushed_this_time <= 0) break;
           flushed += flushed_this_time;
@@ -686,3 +690,19 @@ scheduler_update_queue_heuristic(time_t now)
   /* else no update needed, or time went backward */
 }
 
+/**
+ * Set scheduler watermarks and flush size
+ */
+
+void
+scheduler_set_watermarks(uint32_t lo, uint32_t hi, uint32_t max_flush)
+{
+  /* Sanity assertions - caller should ensure these are true */
+  tor_assert(lo > 0);
+  tor_assert(hi > lo);
+  tor_assert(max_flush > 0);
+
+  sched_q_low_water = lo;
+  sched_q_high_water = hi;
+  sched_max_flush_cells = max_flush;
+}

@@ -34,6 +34,9 @@ void scheduler_adjust_queue_size(channel_t *chan, char dir, uint64_t adj);
 /* Notify scheduler that a channel's queue position may have changed */
 void scheduler_touch_channel(channel_t *chan);
 
+/* Adjust the watermarks from config file*/
+void scheduler_set_watermarks(uint32_t lo, uint32_t hi, uint32_t max_flush);
+
 /* Things only scheduler.c and its test suite should see */
 
 #ifdef SCHEDULER_PRIVATE_
