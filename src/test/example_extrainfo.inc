@@ -133,23 +133,24 @@ static const char EX_EI_BAD_NICKNAME_KEY[] =
   "/UBWNSyXCFDMqnddb/LZ8+VgttmxfYkpeRzSSmDijN3RbOvYJhhBAgMBAAE=\n"
   "-----END RSA PUBLIC KEY-----\n";
 
-static const char EX_EI_BAD_TOKENS[] =
-  "extra-info\n"
+const char EX_EI_BAD_TOKENS[] =
+  "extra-info bob 6F314FB01A31162BD5E473D4977AC570DC5B86BB\n"
+  "published 2014-10-05 20:07:00\n"
   "published 2014-10-05 20:07:00\n"
   "router-signature\n"
   "-----BEGIN SIGNATURE-----\n"
-  "e0b8fW9SkB81WwpkqR+/oLvVnNMpW4VwBKlNAnsPdInnNYySFCeILyOmb8A5j/D3\n"
-  "ZRbfKFgXrApya4ViGeh+1QHz+FM8nWaK0+5JE6cNw+DNiQWsUjrvq2bHoZi/Lv+k\n"
-  "RFkpbb0+IPdub9Jj3qn6cZBVSChD1aeCO9RkchV0744=\n"
+  "lhRIafrkKoQmnUoBLiq4XC8XKXrleGJZ5vefkLcgjOJ5IffsvVdIA7Vqq/ISbPrG\n"
+  "b/Zs0sJNL6naHPxJBglgHJqksSyiYHaeOetXg2Rb+vZ1v2S5BrVgk1nPMDhyIzqc\n"
+  "zU7eCxFf/1sXKtWlEKxGdX4LmVfnIln5aI31Bc4xRrE=\n"
   "-----END SIGNATURE-----\n"
   ;
 
-static const char EX_EI_BAD_TOKENS_FP[] = "1CE7F867C744F0CE635146D82C0A0CC4B3408E0A";
-static const char EX_EI_BAD_TOKENS_KEY[] =
+const char EX_EI_BAD_TOKENS_FP[] = "6F314FB01A31162BD5E473D4977AC570DC5B86BB";
+const char EX_EI_BAD_TOKENS_KEY[] =
   "-----BEGIN RSA PUBLIC KEY-----\n"
-  "MIGJAoGBALfrYfnIA7gTGwEC5tPqqTuSnMiINq/hPyMWXOFUEKEBRmctxba9fjiy\n"
-  "JDstxC4ZBpdHc3+uuFn6krGgBVzFCKvBkBHUQXgFmjlANzdcLrG7J78K6gXuPeeq\n"
-  "MbptD7thkuIdkPdVWMko7BrmBEr30EphgrKQqTWjrtBQj+CZ8Sr1AgMBAAE=\n"
+  "MIGJAoGBAL7Z8tz45Tb4tnEFS2sAyjubBV/giSfZdmXRkDV8Jo4xqWqhWFJn7+zN\n"
+  "AXBWBThGeVH2WXrpz5seNJXgZJPxMTMsrnSCGcRXZw0Npti2MkLuQ6+prZa+OPwE\n"
+  "OyC6jivtAaY/o9iYQjDC2avLXD3N4LvoygyF418KnNcjbzuFygffAgMBAAE=\n"
   "-----END RSA PUBLIC KEY-----\n";
 
 static const char EX_EI_BAD_START[] =

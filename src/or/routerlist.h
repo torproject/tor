@@ -82,7 +82,8 @@ int hexdigest_to_digest(const char *hexdigest, char *digest);
 const routerinfo_t *router_get_by_id_digest(const char *digest);
 routerinfo_t *router_get_mutable_by_digest(const char *digest);
 signed_descriptor_t *router_get_by_descriptor_digest(const char *digest);
-signed_descriptor_t *router_get_by_extrainfo_digest(const char *digest);
+MOCK_DECL(signed_descriptor_t *,router_get_by_extrainfo_digest,
+          (const char *digest));
 signed_descriptor_t *extrainfo_get_by_descriptor_digest(const char *digest);
 const char *signed_descriptor_get_body(const signed_descriptor_t *desc);
 const char *signed_descriptor_get_annotations(const signed_descriptor_t *desc);
@@ -215,6 +216,8 @@ STATIC void scale_array_elements_to_u64(u64_dbl_t *entries, int n_entries,
 
 MOCK_DECL(int, router_descriptor_is_older_than, (const routerinfo_t *router,
                                                  int seconds));
+MOCK_DECL(STATIC int, extrainfo_insert,(routerlist_t *rl, extrainfo_t *ei));
+
 #endif
 
 #endif

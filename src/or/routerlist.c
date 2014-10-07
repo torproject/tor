@@ -2615,8 +2615,8 @@ router_get_by_descriptor_digest(const char *digest)
 /** Return the signed descriptor for the router in our routerlist whose
  * 20-byte extra-info digest is <b>digest</b>.  Return NULL if no such router
  * is known. */
-signed_descriptor_t *
-router_get_by_extrainfo_digest(const char *digest)
+MOCK_IMPL(signed_descriptor_t *,
+router_get_by_extrainfo_digest,(const char *digest))
 {
   tor_assert(digest);
 
@@ -2939,8 +2939,8 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
 /** Adds the extrainfo_t <b>ei</b> to the routerlist <b>rl</b>, if there is a
  * corresponding router in rl-\>routers or rl-\>old_routers.  Return true iff
  * we actually inserted <b>ei</b>.  Free <b>ei</b> if it isn't inserted. */
-static int
-extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
+MOCK_IMPL(STATIC int,
+extrainfo_insert,(routerlist_t *rl, extrainfo_t *ei))
 {
   int r = 0;
   routerinfo_t *ri = rimap_get(rl->identity_map,

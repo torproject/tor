@@ -595,10 +595,10 @@ networkstatus_vote_find_entry_idx(networkstatus_t *ns,
 
 /** As router_get_consensus_status_by_descriptor_digest, but does not return
  * a const pointer. */
-routerstatus_t *
-router_get_mutable_consensus_status_by_descriptor_digest(
+MOCK_IMPL(routerstatus_t *,
+router_get_mutable_consensus_status_by_descriptor_digest,(
                                                  networkstatus_t *consensus,
-                                                 const char *digest)
+                                                 const char *digest))
 {
   if (!consensus)
     consensus = current_consensus;
@@ -628,8 +628,8 @@ router_get_consensus_status_by_descriptor_digest(networkstatus_t *consensus,
 
 /** Given the digest of a router descriptor, return its current download
  * status, or NULL if the digest is unrecognized. */
-download_status_t *
-router_get_dl_status_by_descriptor_digest(const char *d)
+MOCK_IMPL(download_status_t *,
+router_get_dl_status_by_descriptor_digest,(const char *d))
 {
   routerstatus_t *rs;
   if (!current_ns_consensus)
@@ -995,8 +995,8 @@ networkstatus_get_latest_consensus(void)
 
 /** Return the latest consensus we have whose flavor matches <b>f</b>, or NULL
  * if we don't have one. */
-networkstatus_t *
-networkstatus_get_latest_consensus_by_flavor(consensus_flavor_t f)
+MOCK_IMPL(networkstatus_t *,
+networkstatus_get_latest_consensus_by_flavor,(consensus_flavor_t f))
 {
   if (f == FLAV_NS)
     return current_ns_consensus;

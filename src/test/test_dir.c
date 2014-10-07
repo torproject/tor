@@ -567,6 +567,231 @@ test_dir_parse_router_list(void *arg)
 #undef ADD
 }
 
+static download_status_t dls_minimal;
+static download_status_t dls_maximal;
+static download_status_t dls_bad_fingerprint;
+static download_status_t dls_bad_sig2;
+static download_status_t dls_bad_ports;
+static download_status_t dls_bad_tokens;
+
+static int mock_router_get_dl_status_unrecognized = 0;
+static int mock_router_get_dl_status_calls = 0;
+
+static download_status_t *
+mock_router_get_dl_status(const char *d)
+{
+  ++mock_router_get_dl_status_calls;
+  char hex[HEX_DIGEST_LEN+1];
+  base16_encode(hex, sizeof(hex), d, DIGEST_LEN);
+  if (!strcmp(hex, "3E31D19A69EB719C00B02EC60D13356E3F7A3452")) {
+    return &dls_minimal;
+  } else if (!strcmp(hex, "581D8A368A0FA854ECDBFAB841D88B3F1B004038")) {
+    return &dls_maximal;
+  } else if (!strcmp(hex, "2578AE227C6116CDE29B3F0E95709B9872DEE5F1")) {
+    return &dls_bad_fingerprint;
+  } else if (!strcmp(hex, "16D387D3A58F7DB3CF46638F8D0B90C45C7D769C")) {
+    return &dls_bad_sig2;
+  } else if (!strcmp(hex, "AB9EEAA95E7D45740185B4E519C76EAD756277A9")) {
+    return &dls_bad_ports;
+  } else if (!strcmp(hex, "A0CC2CEFAD59DBF19F468BFEE60E0868C804B422")) {
+    return &dls_bad_tokens;
+  } else {
+    ++mock_router_get_dl_status_unrecognized;
+    return NULL;
+  }
+}
+
+static void
+test_dir_load_routers(void *arg)
+{
+  (void) arg;
+  smartlist_t *chunks = smartlist_new();
+  smartlist_t *wanted = smartlist_new();
+  char buf[DIGEST_LEN];
+  char *mem_op_hex_tmp = NULL;
+
+#define ADD(str)                                                        \
+  do {                                                                  \
+    tt_int_op(0,==,router_get_router_hash(str, strlen(str), buf));      \
+    smartlist_add(wanted, tor_strdup(hex_str(buf, DIGEST_LEN)));        \
+  } while (0)
+
+  MOCK(router_get_dl_status_by_descriptor_digest, mock_router_get_dl_status);
+
+  smartlist_add(chunks, tor_strdup(EX_RI_MINIMAL));
+  smartlist_add(chunks, tor_strdup(EX_RI_BAD_FINGERPRINT));
+  smartlist_add(chunks, tor_strdup(EX_RI_BAD_SIG2));
+  smartlist_add(chunks, tor_strdup(EX_RI_MAXIMAL));
+  smartlist_add(chunks, tor_strdup(EX_RI_BAD_PORTS));
+  smartlist_add(chunks, tor_strdup(EX_RI_BAD_TOKENS));
+
+  /* not ADDing MINIMIAL */
+  ADD(EX_RI_MAXIMAL);
+  ADD(EX_RI_BAD_FINGERPRINT);
+  ADD(EX_RI_BAD_SIG2);
+  /* Not ADDing BAD_PORTS */
+  ADD(EX_RI_BAD_TOKENS);
+
+  char *list = smartlist_join_strings(chunks, "", 0, NULL);
+  tt_int_op(1, ==,
+            router_load_routers_from_string(list, NULL, SAVED_IN_JOURNAL,
+                                            wanted, 1, NULL));
+
+  /* The "maximal" router was added. */
+  /* "minimal" was not. */
+  tt_int_op(smartlist_len(router_get_routerlist()->routers),==,1);
+  routerinfo_t *r = smartlist_get(router_get_routerlist()->routers, 0);
+  test_memeq_hex(r->cache_info.signed_descriptor_digest,
+                 "581D8A368A0FA854ECDBFAB841D88B3F1B004038");
+  tt_int_op(dls_minimal.n_download_failures, ==, 0);
+  tt_int_op(dls_maximal.n_download_failures, ==, 0);
+
+  /* "Bad fingerprint" and "Bad tokens" should have gotten marked
+   * non-retriable. */
+  tt_want_int_op(mock_router_get_dl_status_calls, ==, 2);
+  tt_want_int_op(mock_router_get_dl_status_unrecognized, ==, 0);
+  tt_int_op(dls_bad_fingerprint.n_download_failures, ==, 255);
+  tt_int_op(dls_bad_tokens.n_download_failures, ==, 255);
+
+  /* bad_sig2 and bad ports" are retriable -- one since only the signature
+   * was bad, and one because we didn't ask for it. */
+  tt_int_op(dls_bad_sig2.n_download_failures, ==, 0);
+  tt_int_op(dls_bad_ports.n_download_failures, ==, 0);
+
+  /* Wanted still contains "BAD_SIG2" */
+  tt_int_op(smartlist_len(wanted), ==, 1);
+  tt_str_op(smartlist_get(wanted, 0), ==,
+            "E0A3753CEFD54128EAB239F294954121DB23D2EF");
+
+#undef ADD
+
+ done:
+  tor_free(mem_op_hex_tmp);
+  UNMOCK(router_get_dl_status_by_descriptor_digest);
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
+  smartlist_free(chunks);
+  SMARTLIST_FOREACH(wanted, char *, cp, tor_free(cp));
+  smartlist_free(wanted);
+}
+
+static int mock_get_by_ei_dd_calls = 0;
+static int mock_get_by_ei_dd_unrecognized = 0;
+
+static signed_descriptor_t sd_ei_minimal;
+static signed_descriptor_t sd_ei_bad_nickname;
+static signed_descriptor_t sd_ei_maximal;
+static signed_descriptor_t sd_ei_bad_tokens;
+static signed_descriptor_t sd_ei_bad_sig2;
+
+static signed_descriptor_t *
+mock_get_by_ei_desc_digest(const char *d)
+{
+
+  ++mock_get_by_ei_dd_calls;
+  char hex[HEX_DIGEST_LEN+1];
+  base16_encode(hex, sizeof(hex), d, DIGEST_LEN);
+
+  if (!strcmp(hex, "11E0EDF526950739F7769810FCACAB8C882FAEEE")) {
+    return &sd_ei_minimal;
+  } else if (!strcmp(hex, "47803B02A0E70E9E8BDA226CB1D74DE354D67DFF")) {
+    return &sd_ei_maximal;
+  } else if (!strcmp(hex, "D5DF4AA62EE9FFC9543D41150C9864908E0390AF")) {
+    return &sd_ei_bad_nickname;
+  } else if (!strcmp(hex, "16D387D3A58F7DB3CF46638F8D0B90C45C7D769C")) {
+    return &sd_ei_bad_sig2;
+  } else if (!strcmp(hex, "9D90F8C42955BBC57D54FB05E54A3F083AF42E8B")) {
+    return &sd_ei_bad_tokens;
+  } else {
+    ++mock_get_by_ei_dd_unrecognized;
+    return NULL;
+  }
+}
+
+static smartlist_t *mock_ei_insert_list = NULL;
+static int
+mock_ei_insert(routerlist_t *rl, extrainfo_t *ei)
+{
+  (void) rl;
+  smartlist_add(mock_ei_insert_list, ei);
+  return 1;
+}
+
+static void
+test_dir_load_extrainfo(void *arg)
+{
+  (void) arg;
+  smartlist_t *chunks = smartlist_new();
+  smartlist_t *wanted = smartlist_new();
+  char buf[DIGEST_LEN];
+  char *mem_op_hex_tmp = NULL;
+
+#define ADD(str)                                                        \
+  do {                                                                  \
+    tt_int_op(0,==,router_get_extrainfo_hash(str, strlen(str), buf));   \
+    smartlist_add(wanted, tor_strdup(hex_str(buf, DIGEST_LEN)));        \
+  } while (0)
+
+  mock_ei_insert_list = smartlist_new();
+  MOCK(router_get_by_extrainfo_digest, mock_get_by_ei_desc_digest);
+  MOCK(extrainfo_insert, mock_ei_insert);
+
+  smartlist_add(chunks, tor_strdup(EX_EI_MINIMAL));
+  smartlist_add(chunks, tor_strdup(EX_EI_BAD_NICKNAME));
+  smartlist_add(chunks, tor_strdup(EX_EI_MAXIMAL));
+  smartlist_add(chunks, tor_strdup(EX_EI_BAD_PUBLISHED));
+  smartlist_add(chunks, tor_strdup(EX_EI_BAD_TOKENS));
+
+  /* not ADDing MINIMIAL */
+  ADD(EX_EI_MAXIMAL);
+  ADD(EX_EI_BAD_NICKNAME);
+  /* Not ADDing BAD_PUBLISHED */
+  ADD(EX_EI_BAD_TOKENS);
+  ADD(EX_EI_BAD_SIG2);
+
+  char *list = smartlist_join_strings(chunks, "", 0, NULL);
+  router_load_extrainfo_from_string(list, NULL, SAVED_IN_JOURNAL, wanted, 1);
+
+  /* The "maximal" router was added. */
+  /* "minimal" was also added, even though we didn't ask for it, since
+   * that's what we do with extrainfos. */
+  tt_int_op(smartlist_len(mock_ei_insert_list),==,2);
+
+  extrainfo_t *e = smartlist_get(mock_ei_insert_list, 0);
+  test_memeq_hex(e->cache_info.signed_descriptor_digest,
+                 "11E0EDF526950739F7769810FCACAB8C882FAEEE");
+
+  e = smartlist_get(mock_ei_insert_list, 1);
+  test_memeq_hex(e->cache_info.signed_descriptor_digest,
+                 "47803B02A0E70E9E8BDA226CB1D74DE354D67DFF");
+  tt_int_op(dls_minimal.n_download_failures, ==, 0);
+  tt_int_op(dls_maximal.n_download_failures, ==, 0);
+
+  /* "Bad nickname" and "Bad tokens" should have gotten marked
+   * non-retriable. */
+  tt_want_int_op(mock_get_by_ei_dd_calls, ==, 2);
+  tt_want_int_op(mock_get_by_ei_dd_unrecognized, ==, 0);
+  tt_int_op(sd_ei_bad_nickname.ei_dl_status.n_download_failures, ==, 255);
+  tt_int_op(sd_ei_bad_tokens.ei_dl_status.n_download_failures, ==, 255);
+
+  /* bad_ports is retriable -- because we didn't ask for it. */
+  tt_int_op(dls_bad_ports.n_download_failures, ==, 0);
+
+  /* Wanted still contains "BAD_SIG2" */
+  tt_int_op(smartlist_len(wanted), ==, 1);
+  tt_str_op(smartlist_get(wanted, 0), ==,
+            "16D387D3A58F7DB3CF46638F8D0B90C45C7D769C");
+
+#undef ADD
+
+ done:
+  tor_free(mem_op_hex_tmp);
+  UNMOCK(router_get_by_extrainfo_digest);
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
+  smartlist_free(chunks);
+  SMARTLIST_FOREACH(wanted, char *, cp, tor_free(cp));
+  smartlist_free(wanted);
+}
+
 static void
 test_dir_versions(void *arg)
 {
@@ -2669,6 +2894,8 @@ struct testcase_t dir_tests[] = {
   DIR(routerparse_bad, 0),
   DIR(extrainfo_parsing, 0),
   DIR(parse_router_list, TT_FORK),
+  DIR(load_routers, TT_FORK),
+  DIR(load_extrainfo, TT_FORK),
   DIR_LEGACY(versions),
   DIR_LEGACY(fp_pairs),
   DIR(split_fps, 0),
