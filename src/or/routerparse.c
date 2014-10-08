@@ -72,6 +72,7 @@ typedef enum {
   K_CLIENT_VERSIONS,
   K_SERVER_VERSIONS,
   K_OR_ADDRESS,
+  K_ID,
   K_P,
   K_P6,
   K_R,
@@ -503,6 +504,7 @@ static token_rule_t networkstatus_detached_signature_token_table[] = {
 static token_rule_t microdesc_token_table[] = {
   T1_START("onion-key",        K_ONION_KEY,        NO_ARGS,     NEED_KEY_1024),
   T01("ntor-onion-key",        K_ONION_KEY_NTOR,   GE(1),       NO_OBJ ),
+  T0N("id",                    K_ID,               GE(2),       NO_OBJ ),
   T0N("a",                     K_A,                GE(1),       NO_OBJ ),
   T01("family",                K_FAMILY,           ARGS,        NO_OBJ ),
   T01("p",                     K_P,                CONCAT_ARGS, NO_OBJ ),
@@ -4370,6 +4372,26 @@ microdescs_parse_from_string(const char *s, const char *eos,
       }
       md->onion_curve25519_pkey =
         tor_memdup(&k, sizeof(curve25519_public_key_t));
+    }
+
+    smartlist_t *id_lines = find_all_by_keyword(tokens, K_ID);
+    if (id_lines) {
+      SMARTLIST_FOREACH_BEGIN(id_lines, directory_token_t *, t) {
+        tor_assert(t->n_args >= 2);
+        if (!strcmp(t->args[0], "ed25519")) {
+          if (md->ed25519_identity_pkey) {
+            log_warn(LD_DIR, "Extra ed25519 key in microdesc");
+            goto next;
+          }
+          ed25519_public_key_t k;
+          if (ed25519_public_from_base64(&k, t->args[1])<0) {
+            log_warn(LD_DIR, "Bogus ed25519 key in microdesc");
+            goto next;
+          }
+          md->ed25519_identity_pkey = tor_memdup(&k, sizeof(k));
+        }
+      } SMARTLIST_FOREACH_END(t);
+      smartlist_free(id_lines);
     }
 
     {

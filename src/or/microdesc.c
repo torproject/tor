@@ -738,6 +738,7 @@ microdesc_free_(microdesc_t *md, const char *fname, int lineno)
   if (md->onion_pkey)
     crypto_pk_free(md->onion_pkey);
   tor_free(md->onion_curve25519_pkey);
+  tor_free(md->ed25519_identity_pkey);
   if (md->body && md->saved_location != SAVED_IN_CACHE)
     tor_free(md->body);
 

@@ -10,6 +10,7 @@
 #include "networkstatus.h"
 #include "routerlist.h"
 #include "routerparse.h"
+#include "torcert.h"
 
 #include "test.h"
 
@@ -335,6 +336,59 @@ static const char test_ri[] =
   "t0xkIE39ss/EwmQr7iIgkdVH4oRIMsjYnFFJBG26nYY=\n"
   "-----END SIGNATURE-----\n";
 
+static const char test_ri2[] =
+  "router test001a 127.0.0.1 5001 0 7001\n"
+  "identity-ed25519\n"
+  "-----BEGIN ED25519 CERT-----\n"
+  "AQQABf/FAf5iDuKCZP2VxnAaQWdklilAh6kaEeFX4z8261Yx2T1/AQAgBADCp8vO\n"
+  "B8K1F9g2DzwuwvVCnPFLSK1qknVqPpNucHLH9DY7fuIYogBAdz4zHv1qC7RKaMNG\n"
+  "Jux/tMO2tzPcm62Ky5PjClMQplKUOnZNQ+RIpA3wYCIfUDy/cQnY7XWgNQ0=\n"
+  "-----END ED25519 CERT-----\n"
+  "platform Tor 0.2.6.0-alpha-dev on Darwin\n"
+  "protocols Link 1 2 Circuit 1\n"
+  "published 2014-10-08 12:58:04\n"
+  "fingerprint B7E2 7F10 4213 C36F 13E7 E982 9182 845E 4959 97A0\n"
+  "uptime 0\n"
+  "bandwidth 1073741824 1073741824 0\n"
+  "extra-info-digest 568F27331B6D8C73E7024F1EF5D097B90DFC7CDB\n"
+  "caches-extra-info\n"
+  "onion-key\n"
+  "-----BEGIN RSA PUBLIC KEY-----\n"
+  "MIGJAoGBAL2R8EfubUcahxha4u02P4VAR0llQIMwFAmrHPjzcK7apcQgDOf2ovOA\n"
+  "+YQnJFxlpBmCoCZC6ssCi+9G0mqo650lFuTMP5I90BdtjotfzESfTykHLiChyvhd\n"
+  "l0dlqclb2SU/GKem/fLRXH16aNi72CdSUu/1slKs/70ILi34QixRAgMBAAE=\n"
+  "-----END RSA PUBLIC KEY-----\n"
+  "signing-key\n"
+  "-----BEGIN RSA PUBLIC KEY-----\n"
+  "MIGJAoGBAN8+78KUVlgHXdMMkYJxcwh1Zv2y+Gb5eWUyltUaQRajhrT9ij2T5JZs\n"
+  "M0g85xTcuM3jNVVpV79+33hiTohdC6UZ+Bk4USQ7WBFzRbVFSXoVKLBJFkCOIexg\n"
+  "SMGNd5WEDtHWrXl58mizmPFu1eG6ZxHzt7RuLSol5cwBvawXPNkFAgMBAAE=\n"
+  "-----END RSA PUBLIC KEY-----\n"
+  "onion-key-crosscert\n"
+  "-----BEGIN CROSSCERT-----\n"
+  "ETFDzU49bvNfoZnKK1j6JeBP2gDirgj6bBCgWpUYs663OO9ypbZRO0JwWANssKl6\n"
+  "oaq9vKTsKGRsaNnqnz/JGMhehymakjjNtqg7crWwsahe8+7Pw9GKmW+YjFtcOkUf\n"
+  "KfOn2bmKBa1FoJb4yW3oXzHcdlLSRuCciKqPn+Hky5o=\n"
+  "-----END CROSSCERT-----\n"
+  "ntor-onion-key-crosscert 0\n"
+  "-----BEGIN ED25519 CERT-----\n"
+  "AQoABf2dAcKny84HwrUX2DYPPC7C9UKc8UtIrWqSdWo+k25wcsf0AFohutG+xI06\n"
+  "Ef21c5Zl1j8Hw6DzHDjYyJevXLFuOneaL3zcH2Ldn4sjrG3kc5UuVvRfTvV120UO\n"
+  "xk4f5s5LGwY=\n"
+  "-----END ED25519 CERT-----\n"
+  "hidden-service-dir\n"
+  "contact auth1@test.test\n"
+  "ntor-onion-key hbxdRnfVUJJY7+KcT4E3Rs7/zuClbN3hJrjSBiEGMgI=\n"
+  "reject *:*\n"
+  "router-sig-ed25519 5aQXyTif7PExIuL2di37UvktmJECKnils2OWz2vDi"
+                     "hFxi+5TTAAPxYkS5clhc/Pjvw34itfjGmTKFic/8httAQ\n"
+  "router-signature\n"
+  "-----BEGIN SIGNATURE-----\n"
+  "BaUB+aFPQbb3BwtdzKsKqV3+6cRlSqJF5bI3UTmwRoJk+Z5Pz+W5NWokNI0xArHM\n"
+  "T4T5FZCCP9350jXsUCIvzyIyktU6aVRCGFt76rFlo1OETpN8GWkMnQU0w18cxvgS\n"
+  "cf34GXHv61XReJF3AlzNHFpbrPOYmowmhrTULKyMqow=\n"
+  "-----END SIGNATURE-----\n";
+
 static const char test_md_8[] =
   "onion-key\n"
   "-----BEGIN RSA PUBLIC KEY-----\n"
@@ -365,6 +419,26 @@ static const char test_md_18[] =
   "p reject 25,119,135-139,445,563,1214,4661-4666,6346-6429,6699,6881-6999\n"
   "id rsa1024 Cd47okjCHD83YGzThGBDptXs9Z4\n";
 
+static const char test_md2_18[] =
+  "onion-key\n"
+  "-----BEGIN RSA PUBLIC KEY-----\n"
+  "MIGJAoGBAL2R8EfubUcahxha4u02P4VAR0llQIMwFAmrHPjzcK7apcQgDOf2ovOA\n"
+  "+YQnJFxlpBmCoCZC6ssCi+9G0mqo650lFuTMP5I90BdtjotfzESfTykHLiChyvhd\n"
+  "l0dlqclb2SU/GKem/fLRXH16aNi72CdSUu/1slKs/70ILi34QixRAgMBAAE=\n"
+  "-----END RSA PUBLIC KEY-----\n"
+  "ntor-onion-key hbxdRnfVUJJY7+KcT4E3Rs7/zuClbN3hJrjSBiEGMgI=\n"
+  "id rsa1024 t+J/EEITw28T5+mCkYKEXklZl6A\n";
+
+static const char test_md2_21[] =
+  "onion-key\n"
+  "-----BEGIN RSA PUBLIC KEY-----\n"
+  "MIGJAoGBAL2R8EfubUcahxha4u02P4VAR0llQIMwFAmrHPjzcK7apcQgDOf2ovOA\n"
+  "+YQnJFxlpBmCoCZC6ssCi+9G0mqo650lFuTMP5I90BdtjotfzESfTykHLiChyvhd\n"
+  "l0dlqclb2SU/GKem/fLRXH16aNi72CdSUu/1slKs/70ILi34QixRAgMBAAE=\n"
+  "-----END RSA PUBLIC KEY-----\n"
+  "ntor-onion-key hbxdRnfVUJJY7+KcT4E3Rs7/zuClbN3hJrjSBiEGMgI=\n"
+  "id ed25519 wqfLzgfCtRfYNg88LsL1QpzxS0itapJ1aj6TbnByx/Q\n";
+
 static void
 test_md_generate(void *arg)
 {
@@ -390,6 +464,25 @@ test_md_generate(void *arg)
   md = NULL;
   md = dirvote_create_microdescriptor(ri, 18);
   tt_str_op(md->body, OP_EQ, test_md_18);
+
+  microdesc_free(md);
+  md = NULL;
+  md = dirvote_create_microdescriptor(ri, 21);
+  tt_str_op(md->body, ==, test_md_18);
+
+  ri = router_parse_entry_from_string(test_ri2, NULL, 0, 0, NULL, NULL);
+
+  microdesc_free(md);
+  md = NULL;
+  md = dirvote_create_microdescriptor(ri, 18);
+  tt_str_op(md->body, ==, test_md2_18);
+
+  microdesc_free(md);
+  md = NULL;
+  md = dirvote_create_microdescriptor(ri, 21);
+  tt_str_op(md->body, ==, test_md2_21);
+  tt_assert(ed25519_pubkey_eq(md->ed25519_identity_pkey,
+                              &ri->signing_key_cert->signing_key));
 
  done:
   microdesc_free(md);

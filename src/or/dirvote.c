@@ -17,6 +17,7 @@
 #include "routerlist.h"
 #include "routerparse.h"
 #include "entrynodes.h" /* needed for guardfraction methods */
+#include "torcert.h"
 
 /**
  * \file dirvote.c
@@ -3486,9 +3487,18 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
   }
 
   if (consensus_method >= MIN_METHOD_FOR_ID_HASH_IN_MD) {
-    char idbuf[BASE64_DIGEST_LEN+1];
-    digest_to_base64(idbuf, ri->cache_info.identity_digest);
-    smartlist_add_asprintf(chunks, "id rsa1024 %s\n", idbuf);
+    char idbuf[ED25519_BASE64_LEN+1];
+    const char *keytype;
+    if (consensus_method >= MIN_METHOD_FOR_ED25519_ID_IN_MD &&
+        ri->signing_key_cert &&
+        ri->signing_key_cert->signing_key_included) {
+      keytype = "ed25519";
+      ed25519_public_to_base64(idbuf, &ri->signing_key_cert->signing_key);
+    } else {
+      keytype = "rsa1024";
+      digest_to_base64(idbuf, ri->cache_info.identity_digest);
+    }
+    smartlist_add_asprintf(chunks, "id %s %s\n", keytype, idbuf);
   }
 
   output = smartlist_join_strings(chunks, "", 0, NULL);
@@ -3561,7 +3571,8 @@ static const struct consensus_method_range_t {
   {MIN_METHOD_FOR_A_LINES, MIN_METHOD_FOR_P6_LINES - 1},
   {MIN_METHOD_FOR_P6_LINES, MIN_METHOD_FOR_NTOR_KEY - 1},
   {MIN_METHOD_FOR_NTOR_KEY, MIN_METHOD_FOR_ID_HASH_IN_MD - 1},
-  {MIN_METHOD_FOR_ID_HASH_IN_MD,  MAX_SUPPORTED_CONSENSUS_METHOD},
+  {MIN_METHOD_FOR_ID_HASH_IN_MD, MIN_METHOD_FOR_ED25519_ID_IN_MD - 1},
+  {MIN_METHOD_FOR_ED25519_ID_IN_MD, MAX_SUPPORTED_CONSENSUS_METHOD},
   {-1, -1}
 };
 

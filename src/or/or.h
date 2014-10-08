@@ -2234,6 +2234,8 @@ typedef struct microdesc_t {
   crypto_pk_t *onion_pkey;
   /** As routerinfo_t.onion_curve25519_pkey */
   curve25519_public_key_t *onion_curve25519_pkey;
+  /** Ed25519 identity key, if included. */
+  ed25519_public_key_t *ed25519_identity_pkey;
   /** As routerinfo_t.ipv6_add */
   tor_addr_t ipv6_addr;
   /** As routerinfo_t.ipv6_orport */
