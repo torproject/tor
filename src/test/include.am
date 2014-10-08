@@ -13,6 +13,8 @@ src_test_AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
         -DLOCALSTATEDIR="\"$(localstatedir)\"" \
         -DBINDIR="\"$(bindir)\""	       \
 	-I"$(top_srcdir)/src/or" -I"$(top_srcdir)/src/ext" \
+	-I"$(top_srcdir)/src/trunnel" \
+	-I"$(top_srcdir)/src/ext/trunnel" \
 	-DTOR_UNIT_TESTS
 
 # -L flags need to go in LDFLAGS. -l flags need to go in LDADD.
@@ -45,6 +47,7 @@ src_test_test_SOURCES = \
 	src/test/test_hs.c \
 	src/test/test_introduce.c \
 	src/test/test_keypin.c \
+	src/test/test_link_handshake.c \
 	src/test/test_logging.c \
 	src/test/test_microdesc.c \
 	src/test/test_nodelist.c \

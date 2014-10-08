@@ -1318,8 +1318,8 @@ connection_or_close_normally(or_connection_t *orconn, int flush)
  * the error state.
  */
 
-void
-connection_or_close_for_error(or_connection_t *orconn, int flush)
+MOCK_IMPL(void,
+connection_or_close_for_error,(or_connection_t *orconn, int flush))
 {
   channel_t *chan = NULL;
 
@@ -2012,9 +2012,9 @@ connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
  * <b>conn</b>'s outbuf.  Right now, this <em>DOES NOT</em> support cells that
  * affect a circuit.
  */
-void
-connection_or_write_var_cell_to_buf(const var_cell_t *cell,
-                                    or_connection_t *conn)
+MOCK_IMPL(void,
+connection_or_write_var_cell_to_buf,(const var_cell_t *cell,
+                                     or_connection_t *conn))
 {
   int n;
   char hdr[VAR_CELL_MAX_HEADER_SIZE];
@@ -2157,8 +2157,8 @@ connection_or_send_versions(or_connection_t *conn, int v3_plus)
 
 /** Send a NETINFO cell on <b>conn</b>, telling the other server what we know
  * about their address, our address, and the current time. */
-int
-connection_or_send_netinfo(or_connection_t *conn)
+MOCK_IMPL(int,
+connection_or_send_netinfo,(or_connection_t *conn))
 {
   cell_t cell;
   time_t now = time(NULL);
@@ -2443,8 +2443,8 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
 
 /** Send an AUTHENTICATE cell on the connection <b>conn</b>.  Return 0 on
  * success, -1 on failure */
-int
-connection_or_send_authenticate_cell(or_connection_t *conn, int authtype)
+MOCK_IMPL(int,
+connection_or_send_authenticate_cell,(or_connection_t *conn, int authtype))
 {
   var_cell_t *cell;
   crypto_pk_t *pk = tor_tls_get_my_client_auth_key();

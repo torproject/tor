@@ -1023,8 +1023,8 @@ tor_tls_cert_get_key(tor_x509_cert_t *cert)
 /** Return true iff the other side of <b>tls</b> has authenticated to us, and
  * the key certified in <b>cert</b> is the same as the key they used to do it.
  */
-int
-tor_tls_cert_matches_key(const tor_tls_t *tls, const tor_x509_cert_t *cert)
+MOCK_IMPL(int,
+tor_tls_cert_matches_key,(const tor_tls_t *tls, const tor_x509_cert_t *cert))
 {
   X509 *peercert = SSL_get_peer_certificate(tls->ssl);
   EVP_PKEY *link_key = NULL, *cert_key = NULL;

@@ -13,6 +13,8 @@
 
 #define TOR_CHANNEL_INTERNAL_
 
+#define CHANNELTLS_PRIVATE
+
 #include "or.h"
 #include "channel.h"
 #include "channeltls.h"
@@ -46,9 +48,6 @@ uint64_t stats_n_authorize_cells_processed = 0;
 
 /** Active listener, if any */
 channel_listener_t *channel_tls_listener = NULL;
-
-/* Utility function declarations */
-static void channel_tls_common_init(channel_tls_t *tlschan);
 
 /* channel_tls_t method declarations */
 
@@ -91,10 +90,6 @@ static void channel_tls_process_versions_cell(var_cell_t *cell,
                                               channel_tls_t *tlschan);
 static void channel_tls_process_netinfo_cell(cell_t *cell,
                                              channel_tls_t *tlschan);
-static void channel_tls_process_certs_cell(var_cell_t *cell,
-                                           channel_tls_t *tlschan);
-static void channel_tls_process_auth_challenge_cell(var_cell_t *cell,
-                                                    channel_tls_t *tlschan);
 static void channel_tls_process_authenticate_cell(var_cell_t *cell,
                                                   channel_tls_t *tlschan);
 static int command_allowed_before_handshake(uint8_t command);
@@ -106,7 +101,7 @@ static int enter_v3_handshake_with_cell(var_cell_t *cell,
  * and channel_tls_handle_incoming().
  */
 
-static void
+STATIC void
 channel_tls_common_init(channel_tls_t *tlschan)
 {
   channel_t *chan;
@@ -1744,7 +1739,7 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
  * If it's the server side, wait for an AUTHENTICATE cell.
  */
 
-static void
+STATIC void
 channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
 {
   tor_x509_cert_t *link_cert = NULL;
@@ -1946,7 +1941,7 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
  * want to authenticate, send an AUTHENTICATE cell and then a NETINFO cell.
  */
 
-static void
+STATIC void
 channel_tls_process_auth_challenge_cell(var_cell_t *cell, channel_tls_t *chan)
 {
   int n_types, i, use_type = -1;
