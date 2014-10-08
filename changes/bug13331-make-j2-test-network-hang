@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Stop an apparent test-network hang when used with make -j2.
+      Fixes bug 13331.
