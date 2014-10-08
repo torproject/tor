@@ -2343,7 +2343,8 @@ router_dump_router_to_string(routerinfo_t *router,
         !ed25519_pubkey_eq(&router->signing_key_cert->signed_key,
                            &signing_keypair->pubkey)) {
       log_warn(LD_BUG, "Tried to sign a router descriptor with a mismatched "
-               "ed25519 key chain");
+               "ed25519 key chain %d",
+               router->signing_key_cert->signing_key_included);
       goto err;
     }
   }

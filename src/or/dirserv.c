@@ -18,6 +18,7 @@
 #include "dirserv.h"
 #include "dirvote.h"
 #include "hibernate.h"
+#include "keypin.h"
 #include "microdesc.h"
 #include "networkstatus.h"
 #include "nodelist.h"
@@ -27,6 +28,7 @@
 #include "routerlist.h"
 #include "routerparse.h"
 #include "routerset.h"
+#include "torcert.h"
 
 /**
  * \file dirserv.c
@@ -225,6 +227,16 @@ dirserv_load_fingerprint_file(void)
   return 0;
 }
 
+/* If this is set, then we don't allow routers that have advertised an Ed25519
+ * identity to stop doing so.  This is going to be essential for good identity
+ * security: otherwise anybody who can attack RSA-1024 but not Ed25519 could
+ * just sign fake descriptors missing the Ed25519 key.  But we won't actually
+ * be able to prevent that kind of thing until we're confident that there
+ * isn't actually a legit reason to downgrade to 0.2.5.  So for now, we have
+ * to leave this #undef.
+ */
+#undef DISABLE_DISABLING_ED25519
+
 /** Check whether <b>router</b> has a nickname/identity key combination that
  * we recognize from the fingerprint list, or an IP we automatically act on
  * according to our configuration.  Return the appropriate router status.
@@ -241,6 +253,36 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg)
     if (msg)
       *msg = "Bug: Error computing fingerprint";
     return FP_REJECT;
+  }
+
+  if (router->signing_key_cert) {
+    /* This has an ed25519 identity key. */
+    if (KEYPIN_MISMATCH ==
+        keypin_check((const uint8_t*)router->cache_info.identity_digest,
+                     router->signing_key_cert->signing_key.pubkey)) {
+      if (msg) {
+        *msg = "Ed25519 identity key or RSA identity key has changed.";
+      }
+      log_warn(LD_DIR, "Router %s uploaded a descriptor with a Ed25519 key "
+               "but the <rsa,ed25519> keys don't match what they were before.",
+               router_describe(router));
+      return FP_REJECT;
+    }
+  } else {
+    /* No ed25519 key */
+    if (KEYPIN_MISMATCH == keypin_check_lone_rsa(
+                        (const uint8_t*)router->cache_info.identity_digest)) {
+      log_warn(LD_DIR, "Router %s uploaded a descriptor with no Ed25519 key, "
+               "when we previously knew an Ed25519 for it. Ignoring for now, "
+               "since Tor 0.2.6 is under development.",
+               router_describe(router));
+#ifdef DISABLE_DISABLING_ED25519
+      if (msg) {
+        *msg = "Ed25519 identity key has disappeared.";
+      }
+      return FP_REJECT;
+#endif
+    }
   }
 
   return dirserv_get_status_impl(d, router->nickname,
@@ -576,6 +618,28 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
                                             desclen, *msg);
     routerinfo_free(ri);
     return ROUTER_IS_ALREADY_KNOWN;
+  }
+
+  /* Do keypinning again ... this time, to add the pin if appropriate */
+  int keypin_status;
+  if (ri->signing_key_cert) {
+    keypin_status = keypin_check_and_add(
+      (const uint8_t*)ri->cache_info.identity_digest,
+      ri->signing_key_cert->signing_key.pubkey);
+  } else {
+    keypin_status = keypin_check_lone_rsa(
+      (const uint8_t*)ri->cache_info.identity_digest);
+#ifndef DISABLE_DISABLING_ED25519
+    if (keypin_status == KEYPIN_MISMATCH)
+      keypin_status = KEYPIN_NOT_FOUND;
+#endif
+  }
+  if (keypin_status == KEYPIN_MISMATCH) {
+    log_info(LD_DIRSERV, "Dropping descriptor from %s (source: %s) because "
+             "its key did not match an older RSA/Ed25519 keypair",
+             router_describe(ri), source);
+    *msg = "Looks like your keypair does not match its older value.";
+    return ROUTER_AUTHDIR_REJECTS;
   }
 
   /* Make a copy of desc, since router_add_to_routerlist might free

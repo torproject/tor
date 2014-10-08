@@ -44,6 +44,9 @@
 
 static int keypin_journal_append_entry(const uint8_t *rsa_id_digest,
                                        const uint8_t *ed25519_id_key);
+static int keypin_check_and_add_impl(const uint8_t *rsa_id_digest,
+                                     const uint8_t *ed25519_id_key,
+                                     int do_not_add);
 
 static HT_HEAD(rsamap, keypin_ent_st) the_rsa_map = HT_INITIALIZER();
 static HT_HEAD(edmap, keypin_ent_st) the_ed_map = HT_INITIALIZER();
@@ -100,6 +103,28 @@ int
 keypin_check_and_add(const uint8_t *rsa_id_digest,
                      const uint8_t *ed25519_id_key)
 {
+  return keypin_check_and_add_impl(rsa_id_digest, ed25519_id_key, 0);
+}
+
+/**
+ * As keypin_check_and_add, but do not add.  Return KEYPIN_NOT_FOUND if
+ * we would add.
+ */
+int
+keypin_check(const uint8_t *rsa_id_digest,
+             const uint8_t *ed25519_id_key)
+{
+  return keypin_check_and_add_impl(rsa_id_digest, ed25519_id_key, 1);
+}
+
+/**
+ * Helper: implements keypin_check and keypin_check_and_add.
+ */
+static int
+keypin_check_and_add_impl(const uint8_t *rsa_id_digest,
+                          const uint8_t *ed25519_id_key,
+                          int do_not_add)
+{
   keypin_ent_t search, *ent;
   memset(&search, 0, sizeof(search));
   memcpy(search.rsa_id, rsa_id_digest, sizeof(search.rsa_id));
@@ -127,6 +152,9 @@ keypin_check_and_add(const uint8_t *rsa_id_digest,
   }
 
   /* Okay, this one is new to us. */
+  if (do_not_add)
+    return KEYPIN_NOT_FOUND;
+
   ent = tor_memdup(&search, sizeof(search));
   keypin_add_entry_to_map(ent);
   keypin_journal_append_entry(rsa_id_digest, ed25519_id_key);

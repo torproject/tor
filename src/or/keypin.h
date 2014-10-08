@@ -8,6 +8,8 @@
 
 int keypin_check_and_add(const uint8_t *rsa_id_digest,
                          const uint8_t *ed25519_id_key);
+int keypin_check(const uint8_t *rsa_id_digest,
+                 const uint8_t *ed25519_id_key);
 
 int keypin_open_journal(const char *fname);
 int keypin_close_journal(void);

@@ -37,6 +37,7 @@
 #include "entrynodes.h"
 #include "geoip.h"
 #include "hibernate.h"
+#include "keypin.h"
 #include "main.h"
 #include "microdesc.h"
 #include "networkstatus.h"
@@ -1998,6 +1999,23 @@ do_main_loop(void)
   /* initialize the bootstrap status events to know we're starting up */
   control_event_bootstrap(BOOTSTRAP_STATUS_STARTING, 0);
 
+  /* Initialize the keypinning log. */
+  if (authdir_mode_v3(get_options())) {
+    char *fname = get_datadir_fname("key-pinning-entries");
+    int r = 0;
+    if (keypin_load_journal(fname)<0) {
+      log_err(LD_DIR, "Error loading key-pinning journal: %s",strerror(errno));
+      r = -1;
+    }
+    if (keypin_open_journal(fname)<0) {
+      log_err(LD_DIR, "Error opening key-pinning journal: %s",strerror(errno));
+      r = -1;
+    }
+    tor_free(fname);
+    if (r)
+      return r;
+  }
+
   if (trusted_dirs_reload_certs()) {
     log_warn(LD_DIR,
              "Couldn't load all cached v3 certificates. Starting anyway.");
@@ -2707,6 +2725,7 @@ tor_cleanup(void)
     or_state_save(now);
     if (authdir_mode_tests_reachability(options))
       rep_hist_record_mtbf_data(now, 0);
+    keypin_close_journal();
   }
 #ifdef USE_DMALLOC
   dmalloc_log_stats();
