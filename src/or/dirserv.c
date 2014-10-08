@@ -2169,12 +2169,19 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
     rs->ipv6_orport = ri->ipv6_orport;
   }
 
-  /* Iff we are in a testing network, use TestingDirAuthVoteGuard to
+  /* Iff we are in a testing network, use TestingDirAuthVoteExit to
+     give out Exit flags, and TestingDirAuthVoteGuard to
      give out Guard flags. */
-  if (options->TestingTorNetwork &&
-      routerset_contains_routerstatus(options->TestingDirAuthVoteGuard,
+  if (options->TestingTorNetwork) {
+    if (routerset_contains_routerstatus(options->TestingDirAuthVoteExit,
+                                        rs, 0)) {
+      rs->is_exit = 1;
+    }
+
+    if (routerset_contains_routerstatus(options->TestingDirAuthVoteGuard,
                                       rs, 0)) {
-    rs->is_possible_guard = 1;
+      rs->is_possible_guard = 1;
+    }
   }
 }
 

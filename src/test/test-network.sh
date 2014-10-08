@@ -1,5 +1,7 @@
 #! /bin/sh
 
+ECHO_N="/bin/echo -n"
+
 until [ -z $1 ]
 do
   case $1 in
@@ -13,6 +15,10 @@ do
     ;;
     --flavo?r|--network-flavo?r)
       export NETWORK_FLAVOUR="$2"
+      shift
+    ;;
+    --delay|--sleep|--bootstrap-time|--time)
+      export BOOTSTRAP_TIME="$2"
       shift
     ;;
     *)
@@ -39,10 +45,10 @@ PATH="$TOR_DIR/src/or:$TOR_DIR/src/tools:$PATH"
 
 # Sleep some, waiting for the network to bootstrap.
 # TODO: Add chutney command 'bootstrap-status' and use that instead.
-BOOTSTRAP_TIME=18
-echo -n "$myname: sleeping for $BOOTSTRAP_TIME seconds"
+BOOTSTRAP_TIME=${BOOTSTRAP_TIME:-18}
+$ECHO_N "$myname: sleeping for $BOOTSTRAP_TIME seconds"
 n=$BOOTSTRAP_TIME; while [ $n -gt 0 ]; do
-    sleep 1; n=$(expr $n - 1); echo -n .
+    sleep 1; n=$(expr $n - 1); $ECHO_N .
 done; echo ""
 ./chutney verify $CHUTNEY_NETWORK
 VERIFY_EXIT_STATUS=$?

@@ -1,0 +1,4 @@
+  o Minor features (testing):
+    - Add a --delay option to test-network.sh, which configures the delay
+      before the chutney network tests for data transmission.
+      Partially implements ticket 13161.

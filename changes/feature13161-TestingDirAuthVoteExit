@@ -1,0 +1,7 @@
+  o Minor features (testing):
+    - Add the TestingDirAuthVoteExit option, a list of nodes to vote
+      Exit for regardless of their uptime, bandwidth, or exit policy.
+      TestingTorNetwork must be set for this option to have any effect.
+      Works around an issue where authorities would take up to 35 minutes
+      to give nodes the Exit flag in a test network, despite short
+      consensus intervals. Partially implements ticket 13161.

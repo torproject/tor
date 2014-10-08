@@ -4056,6 +4056,10 @@ typedef struct {
   /** Minimum value for the Fast flag threshold on testing networks. */
   uint64_t TestingMinFastFlagThreshold;
 
+  /** Relays in a testing network which should be voted Exit
+   * regardless of exit policy. */
+  routerset_t *TestingDirAuthVoteExit;
+
   /** Relays in a testing network which should be voted Guard
    * regardless of uptime and bandwidth. */
   routerset_t *TestingDirAuthVoteGuard;
