@@ -496,6 +496,43 @@ test_container_smartlist_join(void *arg)
 }
 
 static void
+test_container_smartlist_pos(void *arg)
+{
+  (void) arg;
+  smartlist_t *sl = smartlist_new();
+
+  smartlist_add(sl, tor_strdup("This"));
+  smartlist_add(sl, tor_strdup("is"));
+  smartlist_add(sl, tor_strdup("a"));
+  smartlist_add(sl, tor_strdup("test"));
+  smartlist_add(sl, tor_strdup("for"));
+  smartlist_add(sl, tor_strdup("a"));
+  smartlist_add(sl, tor_strdup("function"));
+
+  /* Test string_pos */
+  tt_int_op(smartlist_string_pos(NULL, "Fred"), ==, -1);
+  tt_int_op(smartlist_string_pos(sl, "Fred"), ==, -1);
+  tt_int_op(smartlist_string_pos(sl, "This"), ==, 0);
+  tt_int_op(smartlist_string_pos(sl, "a"), ==, 2);
+  tt_int_op(smartlist_string_pos(sl, "function"), ==, 6);
+
+  /* Test pos */
+  tt_int_op(smartlist_pos(NULL, "Fred"), ==, -1);
+  tt_int_op(smartlist_pos(sl, "Fred"), ==, -1);
+  tt_int_op(smartlist_pos(sl, "This"), ==, -1);
+  tt_int_op(smartlist_pos(sl, "a"), ==, -1);
+  tt_int_op(smartlist_pos(sl, "function"), ==, -1);
+  tt_int_op(smartlist_pos(sl, smartlist_get(sl,0)), ==, 0);
+  tt_int_op(smartlist_pos(sl, smartlist_get(sl,2)), ==, 2);
+  tt_int_op(smartlist_pos(sl, smartlist_get(sl,5)), ==, 5);
+  tt_int_op(smartlist_pos(sl, smartlist_get(sl,6)), ==, 6);
+
+ done:
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_free(sl);
+}
+
+static void
 test_container_smartlist_ints_eq(void *arg)
 {
   smartlist_t *sl1 = NULL, *sl2 = NULL;
@@ -1053,6 +1090,7 @@ struct testcase_t container_tests[] = {
   CONTAINER_LEGACY(smartlist_overlap),
   CONTAINER_LEGACY(smartlist_digests),
   CONTAINER_LEGACY(smartlist_join),
+  CONTAINER_LEGACY(smartlist_pos),
   CONTAINER(smartlist_ints_eq, 0),
   CONTAINER_LEGACY(bitarray),
   CONTAINER_LEGACY(digestset),

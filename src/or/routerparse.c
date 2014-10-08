@@ -1195,6 +1195,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   }
 
   tok = find_by_keyword(tokens, K_ROUTER);
+  const int router_token_pos = smartlist_pos(tokens, tok);
   tor_assert(tok->n_args >= 5);
 
   router = tor_malloc_zero(sizeof(routerinfo_t));
@@ -1345,8 +1346,10 @@ router_parse_entry_from_string(const char *s, const char *end,
     }
     if (ed_sig_tok) {
       tor_assert(ed_cert_tok && cc_tap_tok && cc_ntor_tok);
-      if (ed_cert_tok != smartlist_get(tokens, 0) &&
-          ed_cert_tok != smartlist_get(tokens, 1)) {
+      const int ed_cert_token_pos = smartlist_pos(tokens, ed_cert_tok);
+      if (ed_cert_token_pos == -1 || router_token_pos == -1 ||
+          (ed_cert_token_pos != router_token_pos + 1 &&
+           ed_cert_token_pos != router_token_pos - 1)) {
         log_warn(LD_DIR, "Ed25519 certificate in wrong position");
         goto err;
       }
