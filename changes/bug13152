@@ -1,0 +1,5 @@
+  o Removed features (directory authority):
+    - Remove code that prevented authorities from listing Tor servers
+      affected by CVE-2011-2769 as guards. These servers are already
+      rejected altogether due to the minimum version requirement of
+      0.2.3.16-alpha. Closes ticket 13152.
