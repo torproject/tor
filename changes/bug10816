@@ -1,0 +1,6 @@
+  o Minor bugfixes (windows):
+    - Remove code to special-case handling of NTE_BAD_KEYSET when
+      acquiring windows CryptoAPI context.  This error can't actually
+      occur for the parameters we're providing.  Fixes bug 10816;
+      bugfix on 0.0.2pre26.
+

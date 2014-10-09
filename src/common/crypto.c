@@ -2454,10 +2454,8 @@ crypto_strongest_rand(uint8_t *out, size_t out_len)
   if (!provider_set) {
     if (!CryptAcquireContext(&provider, NULL, NULL, PROV_RSA_FULL,
                              CRYPT_VERIFYCONTEXT)) {
-      if ((unsigned long)GetLastError() != (unsigned long)NTE_BAD_KEYSET) {
-        log_warn(LD_CRYPTO, "Can't get CryptoAPI provider [1]");
-        return -1;
-      }
+      log_warn(LD_CRYPTO, "Can't get CryptoAPI provider [1]");
+      return -1;
     }
     provider_set = 1;
   }
