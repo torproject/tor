@@ -2534,7 +2534,7 @@ router_is_named(const routerinfo_t *router)
 
 /** Return true iff <b>digest</b> is the digest of the identity key of a
  * trusted directory matching at least one bit of <b>type</b>.  If <b>type</b>
- * is zero, any authority is okay. */
+ * is zero (NO_DIRINFO), or ALL_DIRINFO, any authority is okay. */
 int
 router_digest_is_trusted_dir_type(const char *digest, dirinfo_type_t type)
 {
