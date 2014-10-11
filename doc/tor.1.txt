@@ -72,7 +72,7 @@ COMMAND-LINE OPTIONS
 [[opt-serviceinstall]] **--service install** [**--options** __command-line options__]::
     Install an instance of Tor as a Windows service, with the provided
     command-line options. Current instructions can be found at
-    https://trac.torproject.org/projects/tor/wiki/doc/TorFAQ#HowdoIrunmyTorrelayasanNTservice
+    https://www.torproject.org/docs/faq#NTService
 
 [[opt-service]] **--service** **remove**|**start**|**stop**::
     Remove, start, or stop a configured Tor Windows service.
