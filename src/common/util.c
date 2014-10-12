@@ -957,8 +957,19 @@ string_is_key_value(int severity, const char *string)
   return 1;
 }
 
-/** Return true iff <b>string</b> is valid DNS name, as defined in
- * RFC 1035 Section 2.3.1.
+/** Return true if <b>string</b> represents a valid IPv4 adddress in
+ * 'a.b.c.d' form.
+ */
+int
+string_is_valid_ipv4_address(const char *string)
+{
+   struct sockaddr_in sockaddr;
+
+   return (tor_inet_pton(AF_INET,string,&sockaddr) == 1);
+}
+
+/** Return true iff <b>string</b> matches a pattern of DNS names
+ * that we allow Tor clients to connect to.
  */
 int
 string_is_valid_hostname(const char *string)
@@ -986,6 +997,10 @@ string_is_valid_hostname(const char *string)
          result = 0;
      } while (result && *c);
 
+   } SMARTLIST_FOREACH_END(c);
+
+   SMARTLIST_FOREACH_BEGIN(components, char *, c) {
+     tor_free(c);
    } SMARTLIST_FOREACH_END(c);
 
    smartlist_free(components);
