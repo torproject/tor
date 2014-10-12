@@ -957,6 +957,42 @@ string_is_key_value(int severity, const char *string)
   return 1;
 }
 
+/** Return true iff <b>string</b> is valid DNS name, as defined in
+ * RFC 1035 Section 2.3.1.
+ */
+int
+string_is_valid_hostname(const char *string)
+{
+   int result = 1;
+   smartlist_t *components;
+
+   components = smartlist_new();
+
+   smartlist_split_string(components,string,".",0,0);
+
+   SMARTLIST_FOREACH_BEGIN(components, char *, c) {
+     if (c[0] == '-') {
+       result = 0;
+       break;
+     }
+
+     do {
+       if ((*c >= 'a' && *c <= 'z') ||
+           (*c >= 'A' && *c <= 'Z') ||
+           (*c >= '0' && *c <= '9') ||
+           (*c == '-'))
+         c++;
+       else
+         result = 0;
+     } while (result && *c);
+
+   } SMARTLIST_FOREACH_END(c);
+
+   smartlist_free(components);
+
+   return result;
+}
+
 /** Return true iff the DIGEST256_LEN bytes in digest are all zero. */
 int
 tor_digest256_is_zero(const char *digest)
