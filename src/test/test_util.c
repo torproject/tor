@@ -22,6 +22,7 @@
 #include <tchar.h>
 #endif
 #include <math.h>
+#include <ctype.h>
 
 /* XXXX this is a minimal wrapper to make the unit tests compile with the
  * changed tor_timegm interface. */
@@ -2067,6 +2068,427 @@ test_util_sscanf(void *arg)
  done:
   ;
 }
+
+#define tt_char_op(a,op,b) tt_assert_op_type(a,op,b,char,"%c")
+#define tt_ci_char_op(a,op,b) tt_char_op(tolower(a),op,tolower(b))
+
+static void
+test_util_format_time_interval(void *arg)
+{
+  /* use the same sized buffer and integers as tor uses */
+#define DBUF_SIZE 64
+  char dbuf[DBUF_SIZE];
+#define T_        "%ld"
+  long sec, min, hour, day;
+  
+  /* we don't care about the exact spelling of the
+   * second(s), minute(s), hour(s), day(s) labels */
+#define LABEL_SIZE 21
+#define L_        "%20s"
+  char label_s[LABEL_SIZE];
+  char label_m[LABEL_SIZE];
+  char label_h[LABEL_SIZE];
+  char label_d[LABEL_SIZE];
+
+#define TL_       T_ " " L_
+  
+  int r;
+  
+  (void)arg;
+  
+  /* In these tests, we're not picky about
+   * spelling or abbreviations */
+  
+  /* seconds: 0, 1, 9, 10, 59 */
+  
+  /* ignore exact spelling of "second(s)"*/
+  format_time_interval(dbuf, sizeof(dbuf), 0);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_, &sec, label_s);
+  tt_int_op(r,==, 2);
+  tt_ci_char_op(label_s[0],==, 's');
+  tt_int_op(sec,==, 0);
+  
+  format_time_interval(dbuf, sizeof(dbuf), 1);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_, &sec, label_s);
+  tt_int_op(r,==, 2);
+  tt_ci_char_op(label_s[0],==, 's');
+  tt_int_op(sec,==, 1);
+  
+  format_time_interval(dbuf, sizeof(dbuf), 10);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_, &sec, label_s);
+  tt_int_op(r,==, 2);
+  tt_ci_char_op(label_s[0],==, 's');
+  tt_int_op(sec,==, 10);
+  
+  format_time_interval(dbuf, sizeof(dbuf), 59);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_, &sec, label_s);
+  tt_int_op(r,==, 2);
+  tt_ci_char_op(label_s[0],==, 's');
+  tt_int_op(sec,==, 59);
+  
+  /* negative seconds are reported as their absolute value */
+  
+  format_time_interval(dbuf, sizeof(dbuf), -4);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_, &sec, label_s);
+  tt_int_op(r,==, 2);
+  tt_ci_char_op(label_s[0],==, 's');
+  tt_int_op(sec,==, 4);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  
+  format_time_interval(dbuf, sizeof(dbuf), -32);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_, &sec, label_s);
+  tt_int_op(r,==, 2);
+  tt_ci_char_op(label_s[0],==, 's');
+  tt_int_op(sec,==, 32);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  
+  /* minutes: 1:00, 1:01, 1:59, 2:00, 2:01, 59:59 */
+  
+  /* ignore trailing "0 second(s)", if present */
+  format_time_interval(dbuf, sizeof(dbuf), 60);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_, &min, label_m);
+  tt_int_op(r,==, 2);
+  tt_ci_char_op(label_m[0],==, 'm');
+  tt_int_op(min,==, 1);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+
+  /* ignore exact spelling of "minute(s)," and "second(s)" */
+  format_time_interval(dbuf, sizeof(dbuf), 60 + 1);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_ " " TL_,
+                 &min, label_m, &sec, label_s);
+  tt_int_op(r,==, 4);
+  tt_int_op(min,==, 1);
+  tt_ci_char_op(label_m[0],==, 'm');
+  tt_int_op(sec,==, 1);
+  tt_ci_char_op(label_s[0],==, 's');
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  
+  format_time_interval(dbuf, sizeof(dbuf), 60*2 - 1);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_ " " TL_,
+                 &min, label_m, &sec, label_s);
+  tt_int_op(r,==, 4);
+  tt_int_op(min,==, 1);
+  tt_ci_char_op(label_m[0],==, 'm');
+  tt_int_op(sec,==, 59);
+  tt_ci_char_op(label_s[0],==, 's');
+  
+  /* ignore trailing "0 second(s)", if present */
+  format_time_interval(dbuf, sizeof(dbuf), 60*2);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_, &min, label_m);
+  tt_int_op(r,==, 2);
+  tt_int_op(min,==, 2);
+  tt_ci_char_op(label_m[0],==, 'm');
+  
+  /* ignore exact spelling of "minute(s)," and "second(s)" */
+  format_time_interval(dbuf, sizeof(dbuf), 60*2 + 1);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_ " " TL_,
+                 &min, label_m, &sec, label_s);
+  tt_int_op(r,==, 4);
+  tt_int_op(min,==, 2);
+  tt_ci_char_op(label_m[0],==, 'm');
+  tt_int_op(sec,==, 1);
+  tt_ci_char_op(label_s[0],==, 's');
+  
+  format_time_interval(dbuf, sizeof(dbuf), 60*60 - 1);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_ " " TL_,
+                 &min, label_m, &sec, label_s);
+  tt_int_op(r,==, 4);
+  tt_int_op(min,==, 59);
+  tt_ci_char_op(label_m[0],==, 'm');
+  tt_int_op(sec,==, 59);
+  tt_ci_char_op(label_s[0],==, 's');
+  
+  /* negative minutes are reported as their absolute value */
+  
+  /* ignore trailing "0 second(s)", if present */
+  format_time_interval(dbuf, sizeof(dbuf), -3*60);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_, &min, label_m);
+  tt_int_op(r,==, 2);
+  tt_int_op(min,==, 3);
+  tt_ci_char_op(label_m[0],==, 'm');
+  
+  /* ignore exact spelling of "minute(s)," and "second(s)" */
+  format_time_interval(dbuf, sizeof(dbuf), -96);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_ " " TL_,
+                 &min, label_m, &sec, label_s);
+  tt_int_op(r,==, 4);
+  tt_int_op(min,==, 1);
+  tt_ci_char_op(label_m[0],==, 'm');
+  tt_int_op(sec,==, 36);
+  tt_ci_char_op(label_s[0],==, 's');
+  
+  format_time_interval(dbuf, sizeof(dbuf), -2815);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_ " " TL_,
+                 &min, label_m, &sec, label_s);
+  tt_int_op(r,==, 4);
+  tt_int_op(min,==, 46);
+  tt_ci_char_op(label_m[0],==, 'm');
+  tt_int_op(sec,==, 55);
+  tt_ci_char_op(label_s[0],==, 's');
+  
+  /* hours: 1:00, 1:00:01, 1:01, 23:59, 23:59:59 */
+  /* always ignore trailing seconds, if present */
+  
+  /* ignore trailing "0 minute(s)" etc., if present */
+  format_time_interval(dbuf, sizeof(dbuf), 60*60);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_, &hour, label_h);
+  tt_int_op(r,==, 2);
+  tt_int_op(hour,==, 1);
+  tt_ci_char_op(label_h[0],==, 'h');
+  
+  format_time_interval(dbuf, sizeof(dbuf), 60*60 + 1);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_, &hour, label_h);
+  tt_int_op(r,==, 2);
+  tt_int_op(hour,==, 1);
+  tt_ci_char_op(label_h[0],==, 'h');
+  
+  /* ignore exact spelling of "hour(s)," etc. */
+  format_time_interval(dbuf, sizeof(dbuf), 60*60 + 60);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_ " " TL_,
+                 &hour, label_h, &min, label_m);
+  tt_int_op(r,==, 4);
+  tt_int_op(hour,==, 1);
+  tt_ci_char_op(label_h[0],==, 'h');
+  tt_int_op(min,==, 1);
+  tt_ci_char_op(label_m[0],==, 'm');
+  
+  format_time_interval(dbuf, sizeof(dbuf), 24*60*60 - 60);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_ " " TL_,
+                 &hour, label_h, &min, label_m);
+  tt_int_op(r,==, 4);
+  tt_int_op(hour,==, 23);
+  tt_ci_char_op(label_h[0],==, 'h');
+  tt_int_op(min,==, 59);
+  tt_ci_char_op(label_m[0],==, 'm');
+  
+  format_time_interval(dbuf, sizeof(dbuf), 24*60*60 - 1);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_ " " TL_,
+                 &hour, label_h, &min, label_m);
+  tt_int_op(r,==, 4);
+  tt_int_op(hour,==, 23);
+  tt_ci_char_op(label_h[0],==, 'h');
+  tt_int_op(min,==, 59);
+  tt_ci_char_op(label_m[0],==, 'm');
+  
+  /* negative hours are reported as their absolute value */
+  
+  /* ignore exact spelling of "hour(s)," etc., if present */
+  format_time_interval(dbuf, sizeof(dbuf), -2*60*60);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_, &hour, label_h);
+  tt_int_op(r,==, 2);
+  tt_int_op(hour,==, 2);
+  tt_ci_char_op(label_h[0],==, 'h');
+  
+  format_time_interval(dbuf, sizeof(dbuf), -75804);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_ " " TL_,
+                 &hour, label_h, &min, label_m);
+  tt_int_op(r,==, 4);
+  tt_int_op(hour,==, 21);
+  tt_ci_char_op(label_h[0],==, 'h');
+  tt_int_op(min,==, 3);
+  tt_ci_char_op(label_m[0],==, 'm');
+  
+  /* days: 1:00, 1:00:00:01, 1:00:01, 1:01 */
+  /* always ignore trailing seconds, if present */
+  
+  /* ignore trailing "0 hours(s)" etc., if present */
+  format_time_interval(dbuf, sizeof(dbuf), 24*60*60);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_, &day, label_d);
+  tt_int_op(r,==, 2);
+  tt_int_op(day,==, 1);
+  tt_ci_char_op(label_d[0],==, 'd');
+  
+  format_time_interval(dbuf, sizeof(dbuf), 24*60*60 + 1);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_, &day, label_d);
+  tt_int_op(r,==, 2);
+  tt_int_op(day,==, 1);
+  tt_ci_char_op(label_d[0],==, 'd');
+  
+  /* ignore exact spelling of "days(s)," etc. */
+  format_time_interval(dbuf, sizeof(dbuf), 24*60*60 + 60);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_ " " TL_ " " TL_,
+                 &day, label_d, &hour, label_h, &min, label_m);
+  if (r == -1) {
+    /* ignore 0 hours(s), if present */
+    r = tor_sscanf(dbuf, TL_ " " TL_,
+                   &day, label_d, &min, label_m);
+  }
+  tt_assert(r == 4 || r == 6);
+  tt_int_op(day,==, 1);
+  tt_ci_char_op(label_d[0],==, 'd');
+  if (r == 6) {
+    tt_int_op(hour,==, 0);
+    tt_ci_char_op(label_h[0],==, 'h');
+  }
+  tt_int_op(min,==, 1);
+  tt_ci_char_op(label_m[0],==, 'm');
+  
+  /* ignore trailing "0 minutes(s)" etc., if present */
+  format_time_interval(dbuf, sizeof(dbuf), 24*60*60 + 60*60);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_ " " TL_,
+                 &day, label_d, &hour, label_h);
+  tt_int_op(r,==, 4);
+  tt_int_op(day,==, 1);
+  tt_ci_char_op(label_d[0],==, 'd');
+  tt_int_op(hour,==, 1);
+  tt_ci_char_op(label_h[0],==, 'h');
+  
+  /* negative days are reported as their absolute value */
+  
+  format_time_interval(dbuf, sizeof(dbuf), -21936184);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_ " " TL_ " " TL_,
+                 &day, label_d, &hour, label_h, &min, label_m);
+  tt_int_op(r,==, 6);
+  tt_int_op(day,==, 253);
+  tt_ci_char_op(label_d[0],==, 'd');
+  tt_int_op(hour,==, 21);
+  tt_ci_char_op(label_h[0],==, 'h');
+  tt_int_op(min,==, 23);
+  tt_ci_char_op(label_m[0],==, 'm');
+  
+  /* periods > 1 year are reported in days (warn?) */
+  
+  /* ignore exact spelling of "days(s)," etc., if present */
+  format_time_interval(dbuf, sizeof(dbuf), 758635154);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_ " " TL_ " " TL_,
+                 &day, label_d, &hour, label_h, &min, label_m);
+  tt_int_op(r,==, 6);
+  tt_int_op(day,==, 8780);
+  tt_ci_char_op(label_d[0],==, 'd');
+  tt_int_op(hour,==, 11);
+  tt_ci_char_op(label_h[0],==, 'h');
+  tt_int_op(min,==, 59);
+  tt_ci_char_op(label_m[0],==, 'm');
+  
+  /* negative periods > 1 year are reported in days (warn?) */
+  
+  format_time_interval(dbuf, sizeof(dbuf), -1427014922);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_ " " TL_ " " TL_,
+                 &day, label_d, &hour, label_h, &min, label_m);
+  tt_int_op(r,==, 6);
+  tt_int_op(day,==, 16516);
+  tt_ci_char_op(label_d[0],==, 'd');
+  tt_int_op(hour,==, 9);
+  tt_ci_char_op(label_h[0],==, 'h');
+  tt_int_op(min,==, 2);
+  tt_ci_char_op(label_m[0],==, 'm');
+  
+#if SIZEOF_LONG == 4 || SIZEOF_LONG == 8
+
+  /* We can try INT32_MIN/MAX */
+  /* Always ignore second(s) */
+  
+  /* INT32_MAX */
+  format_time_interval(dbuf, sizeof(dbuf), 2147483647);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_ " " TL_ " " TL_,
+                 &day, label_d, &hour, label_h, &min, label_m);
+  tt_int_op(r,==, 6);
+  tt_int_op(day,==, 24855);
+  tt_ci_char_op(label_d[0],==, 'd');
+  tt_int_op(hour,==, 3);
+  tt_ci_char_op(label_h[0],==, 'h');
+  tt_int_op(min,==, 14);
+  tt_ci_char_op(label_m[0],==, 'm');
+  /* and 7 seconds - ignored */
+  
+  /* INT32_MIN: check that we get the absolute value of interval,
+   * which doesn't actually fit in int32_t.
+   * We expect INT32_MAX or INT32_MAX + 1 with 64 bit longs */
+  format_time_interval(dbuf, sizeof(dbuf), -2147483647L - 1L);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_ " " TL_ " " TL_,
+                 &day, label_d, &hour, label_h, &min, label_m);
+  tt_int_op(r,==, 6);
+  tt_int_op(day,==, 24855);
+  tt_ci_char_op(label_d[0],==, 'd');
+  tt_int_op(hour,==, 3);
+  tt_ci_char_op(label_h[0],==, 'h');
+  tt_int_op(min,==, 14);
+  tt_ci_char_op(label_m[0],==, 'm');
+  /* and 7 or 8 seconds - ignored */
+
+#endif
+
+#if SIZEOF_LONG == 8
+
+  /* We can try INT64_MIN/MAX */
+  /* Always ignore second(s) */
+  
+  /* INT64_MAX */
+  format_time_interval(dbuf, sizeof(dbuf), 9223372036854775807L);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_ " " TL_ " " TL_,
+                 &day, label_d, &hour, label_h, &min, label_m);
+  tt_int_op(r,==, 6);
+  tt_int_op(day,==, 106751991167300L);
+  tt_ci_char_op(label_d[0],==, 'd');
+  tt_int_op(hour,==, 15);
+  tt_ci_char_op(label_h[0],==, 'h');
+  tt_int_op(min,==, 30);
+  tt_ci_char_op(label_m[0],==, 'm');
+  /* and 7 seconds - ignored */
+  
+  /* INT64_MIN: check that we get the absolute value of interval,
+   * which doesn't actually fit in int64_t.
+   * We expect INT64_MAX */
+  format_time_interval(dbuf, sizeof(dbuf),
+                       -9223372036854775807L - 1L);
+  tt_int_op(strnlen(dbuf, DBUF_SIZE),<=, DBUF_SIZE - 1);
+  r = tor_sscanf(dbuf, TL_ " " TL_ " " TL_,
+                 &day, label_d, &hour, label_h, &min, label_m);
+  tt_int_op(r,==, 6);
+  tt_int_op(day,==, 106751991167300L);
+  tt_ci_char_op(label_d[0],==, 'd');
+  tt_int_op(hour,==, 15);
+  tt_ci_char_op(label_h[0],==, 'h');
+  tt_int_op(min,==, 30);
+  tt_ci_char_op(label_m[0],==, 'm');
+  /* and 7 or 8 seconds - ignored */
+  
+#endif
+
+  
+done:
+  ;
+}
+
+#undef tt_char_op
+#undef tt_ci_char_op
+#undef DBUF_SIZE
+#undef T_
+#undef LABEL_SIZE
+#undef L_
+#undef TL_
 
 static void
 test_util_path_is_relative(void *arg)
@@ -4146,6 +4568,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(mmap),
   UTIL_LEGACY(threads),
   UTIL_LEGACY(sscanf),
+  UTIL_LEGACY(format_time_interval),
   UTIL_LEGACY(path_is_relative),
   UTIL_LEGACY(strtok),
   UTIL_LEGACY(di_ops),
