@@ -2048,7 +2048,15 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
           req->address[len] = 0;
           req->port = ntohs(get_uint16(data+5+len));
           *drain_out = 5+len+2;
-          if (!tor_strisprint(req->address) || strchr(req->address,'\"')) {
+
+          if (string_is_valid_ipv4_address(req->address)) {
+            log_unsafe_socks_warning(5,req->address,req->port,safe_socks);
+
+            if (safe_socks)
+              return -1;
+          }
+
+          if (!string_is_valid_hostname(req->address)) {
             log_warn(LD_PROTOCOL,
                      "Your application (using socks5 to port %d) gave Tor "
                      "a malformed hostname: %s. Rejecting the connection.",

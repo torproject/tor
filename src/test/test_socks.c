@@ -229,6 +229,17 @@ test_socks_5_supported_commands(void *ptr)
   tt_int_op(0,==, buf_datalen(buf));
   socks_request_clear(socks);
 
+  /* SOCKS 5 Should reject RESOLVE [F0] request for IPv4 address
+   * string if SafeSocks is enabled. */
+
+  ADD_DATA(buf, "\x05\x01\x00");
+  ADD_DATA(buf, "\x05\xF0\x00\x03\x07");
+  ADD_DATA(buf, "8.8.8.8");
+  ADD_DATA(buf, "\x01\x02");
+  tt_assert(fetch_from_buf_socks(buf,socks,get_options()->TestSocks,1)
+            == -1);
+  socks_request_clear(socks);
+
   /* SOCKS 5 Send RESOLVE_PTR [F1] for IP address 2.2.2.5 */
   ADD_DATA(buf, "\x05\x01\x00");
   ADD_DATA(buf, "\x05\xF1\x00\x01\x02\x02\x02\x05\x01\x03");
