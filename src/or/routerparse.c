@@ -912,7 +912,8 @@ find_start_of_next_router_or_extrainfo(const char **s_ptr,
  * isn't SAVED_NOWHERE, remember the offset of each descriptor.
  *
  * Returns 0 on success and -1 on failure.  Adds a digest to
- * <b>invalid_digests_out</b> for every entry that was unparseable or invalid.
+ * <b>invalid_digests_out</b> for every entry that was unparseable or
+ * invalid. (This may cause duplicate entries.)
  */
 int
 router_parse_list_from_string(const char **s, const char *eos,
@@ -4040,7 +4041,7 @@ find_start_of_next_microdesc(const char *s, const char *eos)
  * Return all newly parsed microdescriptors in a newly allocated
  * smartlist_t. If <b>invalid_disgests_out</b> is provided, add a SHA256
  * microdesc digest to it for every microdesc that we found to be badly
- * formed. */
+ * formed. (This may cause duplicates) */
 smartlist_t *
 microdescs_parse_from_string(const char *s, const char *eos,
                              int allow_annotations,
