@@ -911,7 +911,9 @@ find_start_of_next_router_or_extrainfo(const char **s_ptr,
  * descriptor in the signed_descriptor_body field of each routerinfo_t.  If it
  * isn't SAVED_NOWHERE, remember the offset of each descriptor.
  *
- * Returns 0 on success and -1 on failure.
+ * Returns 0 on success and -1 on failure.  Adds a digest to
+ * <b>invalid_digests_out</b> for every entry that was unparseable or
+ * invalid. (This may cause duplicate entries.)
  */
 int
 router_parse_list_from_string(const char **s, const char *eos,
@@ -919,7 +921,8 @@ router_parse_list_from_string(const char **s, const char *eos,
                               saved_location_t saved_location,
                               int want_extrainfo,
                               int allow_annotations,
-                              const char *prepend_annotations)
+                              const char *prepend_annotations,
+                              smartlist_t *invalid_digests_out)
 {
   routerinfo_t *router;
   extrainfo_t *extrainfo;
@@ -939,6 +942,9 @@ router_parse_list_from_string(const char **s, const char *eos,
   tor_assert(eos >= *s);
 
   while (1) {
+    char raw_digest[DIGEST_LEN];
+    int have_raw_digest = 0;
+    int dl_again = 0;
     if (find_start_of_next_router_or_extrainfo(s, eos, &have_extrainfo) < 0)
       break;
 
@@ -955,18 +961,20 @@ router_parse_list_from_string(const char **s, const char *eos,
 
     if (have_extrainfo && want_extrainfo) {
       routerlist_t *rl = router_get_routerlist();
+      have_raw_digest = router_get_extrainfo_hash(*s, end-*s, raw_digest) == 0;
       extrainfo = extrainfo_parse_entry_from_string(*s, end,
                                        saved_location != SAVED_IN_CACHE,
-                                       rl->identity_map);
+                                       rl->identity_map, &dl_again);
       if (extrainfo) {
         signed_desc = &extrainfo->cache_info;
         elt = extrainfo;
       }
     } else if (!have_extrainfo && !want_extrainfo) {
+      have_raw_digest = router_get_router_hash(*s, end-*s, raw_digest) == 0;
       router = router_parse_entry_from_string(*s, end,
                                               saved_location != SAVED_IN_CACHE,
                                               allow_annotations,
-                                              prepend_annotations);
+                                              prepend_annotations, &dl_again);
       if (router) {
         log_debug(LD_DIR, "Read router '%s', purpose '%s'",
                   router_describe(router),
@@ -974,6 +982,9 @@ router_parse_list_from_string(const char **s, const char *eos,
         signed_desc = &router->cache_info;
         elt = router;
       }
+    }
+    if (! elt && ! dl_again && have_raw_digest && invalid_digests_out) {
+      smartlist_add(invalid_digests_out, tor_memdup(raw_digest, DIGEST_LEN));
     }
     if (!elt) {
       *s = end;
@@ -1068,11 +1079,17 @@ find_single_ipv6_orport(const smartlist_t *list,
  * around when caching the router.
  *
  * Only one of allow_annotations and prepend_annotations may be set.
+ *
+ * If <b>can_dl_again_out</b> is provided, set *<b>can_dl_again_out</b> to 1
+ * if it's okay to try to download a descriptor with this same digest again,
+ * and 0 if it isn't.  (It might not be okay to download it again if part of
+ * the part covered by the digest is invalid.)
  */
 routerinfo_t *
 router_parse_entry_from_string(const char *s, const char *end,
                                int cache_copy, int allow_annotations,
-                               const char *prepend_annotations)
+                               const char *prepend_annotations,
+                               int *can_dl_again_out)
 {
   routerinfo_t *router = NULL;
   char digest[128];
@@ -1083,6 +1100,9 @@ router_parse_entry_from_string(const char *s, const char *end,
   size_t prepend_len = prepend_annotations ? strlen(prepend_annotations) : 0;
   int ok = 1;
   memarea_t *area = NULL;
+  /* Do not set this to '1' until we have parsed everything that we intend to
+   * parse that's covered by the hash. */
+  int can_dl_again = 0;
 
   tor_assert(!allow_annotations || !prepend_annotations);
 
@@ -1389,19 +1409,21 @@ router_parse_entry_from_string(const char *s, const char *end,
     verified_digests = digestmap_new();
   digestmap_set(verified_digests, signed_digest, (void*)(uintptr_t)1);
 #endif
-  if (check_signature_token(digest, DIGEST_LEN, tok, router->identity_pkey, 0,
-                            "router descriptor") < 0)
-    goto err;
 
   if (!router->or_port) {
     log_warn(LD_DIR,"or_port unreadable or 0. Failing.");
     goto err;
   }
 
+  /* We've checked everything that's covered by the hash. */
+  can_dl_again = 1;
+  if (check_signature_token(digest, DIGEST_LEN, tok, router->identity_pkey, 0,
+                            "router descriptor") < 0)
+    goto err;
+
   if (!router->platform) {
     router->platform = tor_strdup("<unknown>");
   }
-
   goto done;
 
  err:
@@ -1418,6 +1440,8 @@ router_parse_entry_from_string(const char *s, const char *end,
     DUMP_AREA(area, "routerinfo");
     memarea_drop_all(area);
   }
+  if (can_dl_again_out)
+    *can_dl_again_out = can_dl_again;
   return router;
 }
 
@@ -1426,10 +1450,16 @@ router_parse_entry_from_string(const char *s, const char *end,
  * <b>cache_copy</b> is true, make a copy of the extra-info document in the
  * cache_info fields of the result.  If <b>routermap</b> is provided, use it
  * as a map from router identity to routerinfo_t when looking up signing keys.
+ *
+ * If <b>can_dl_again_out</b> is provided, set *<b>can_dl_again_out</b> to 1
+ * if it's okay to try to download an extrainfo with this same digest again,
+ * and 0 if it isn't.  (It might not be okay to download it again if part of
+ * the part covered by the digest is invalid.)
  */
 extrainfo_t *
 extrainfo_parse_entry_from_string(const char *s, const char *end,
-                           int cache_copy, struct digest_ri_map_t *routermap)
+                            int cache_copy, struct digest_ri_map_t *routermap,
+                            int *can_dl_again_out)
 {
   extrainfo_t *extrainfo = NULL;
   char digest[128];
@@ -1439,6 +1469,9 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
   routerinfo_t *router = NULL;
   memarea_t *area = NULL;
   const char *s_dup = s;
+  /* Do not set this to '1' until we have parsed everything that we intend to
+   * parse that's covered by the hash. */
+  int can_dl_again = 0;
 
   if (!end) {
     end = s + strlen(s);
@@ -1498,6 +1531,9 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
     goto err;
   }
 
+  /* We've checked everything that's covered by the hash. */
+  can_dl_again = 1;
+
   if (routermap &&
       (router = digestmap_get((digestmap_t*)routermap,
                               extrainfo->cache_info.identity_digest))) {
@@ -1540,6 +1576,8 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
     DUMP_AREA(area, "extrainfo");
     memarea_drop_all(area);
   }
+  if (can_dl_again_out)
+    *can_dl_again_out = can_dl_again;
   return extrainfo;
 }
 
@@ -4006,12 +4044,15 @@ find_start_of_next_microdesc(const char *s, const char *eos)
  * If <b>saved_location</b> isn't SAVED_IN_CACHE, make a local copy of each
  * descriptor in the body field of each microdesc_t.
  *
- * Return all newly
- * parsed microdescriptors in a newly allocated smartlist_t. */
+ * Return all newly parsed microdescriptors in a newly allocated
+ * smartlist_t. If <b>invalid_disgests_out</b> is provided, add a SHA256
+ * microdesc digest to it for every microdesc that we found to be badly
+ * formed. (This may cause duplicates) */
 smartlist_t *
 microdescs_parse_from_string(const char *s, const char *eos,
                              int allow_annotations,
-                             saved_location_t where)
+                             saved_location_t where,
+                             smartlist_t *invalid_digests_out)
 {
   smartlist_t *tokens;
   smartlist_t *result;
@@ -4033,15 +4074,11 @@ microdescs_parse_from_string(const char *s, const char *eos,
   tokens = smartlist_new();
 
   while (s < eos) {
+    int okay = 0;
+
     start_of_next_microdesc = find_start_of_next_microdesc(s, eos);
     if (!start_of_next_microdesc)
       start_of_next_microdesc = eos;
-
-    if (tokenize_string(area, s, start_of_next_microdesc, tokens,
-                        microdesc_token_table, flags)) {
-      log_warn(LD_DIR, "Unparseable microdescriptor");
-      goto next;
-    }
 
     md = tor_malloc_zero(sizeof(microdesc_t));
     {
@@ -4056,6 +4093,13 @@ microdescs_parse_from_string(const char *s, const char *eos,
       else
         md->body = (char*)cp;
       md->off = cp - start;
+    }
+    crypto_digest256(md->digest, md->body, md->bodylen, DIGEST_SHA256);
+
+    if (tokenize_string(area, s, start_of_next_microdesc, tokens,
+                        microdesc_token_table, flags)) {
+      log_warn(LD_DIR, "Unparseable microdescriptor");
+      goto next;
     }
 
     if ((tok = find_opt_by_keyword(tokens, A_LAST_LISTED))) {
@@ -4113,12 +4157,15 @@ microdescs_parse_from_string(const char *s, const char *eos,
       md->ipv6_exit_policy = parse_short_policy(tok->args[0]);
     }
 
-    crypto_digest256(md->digest, md->body, md->bodylen, DIGEST_SHA256);
-
     smartlist_add(result, md);
+    okay = 1;
 
     md = NULL;
   next:
+    if (! okay && invalid_digests_out) {
+      smartlist_add(invalid_digests_out,
+                    tor_memdup(md->digest, DIGEST256_LEN));
+    }
     microdesc_free(md);
     md = NULL;
 

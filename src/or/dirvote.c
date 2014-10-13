@@ -3288,8 +3288,8 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
 
   {
     smartlist_t *lst = microdescs_parse_from_string(output,
-                                                 output+strlen(output), 0,
-                                                    SAVED_NOWHERE);
+                                                    output+strlen(output), 0,
+                                                    SAVED_NOWHERE, NULL);
     if (smartlist_len(lst) != 1) {
       log_warn(LD_DIR, "We generated a microdescriptor we couldn't parse.");
       SMARTLIST_FOREACH(lst, microdesc_t *, md, microdesc_free(md));

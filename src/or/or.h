@@ -1958,6 +1958,7 @@ typedef struct download_status_t {
   uint8_t n_download_failures; /**< Number of failures trying to download the
                                 * most recent descriptor. */
   download_schedule_bitfield_t schedule : 8;
+
 } download_status_t;
 
 /** If n_download_failures is this high, the download can never happen. */
@@ -4997,7 +4998,8 @@ typedef enum was_router_added_t {
   ROUTER_NOT_IN_CONSENSUS = -3,
   ROUTER_NOT_IN_CONSENSUS_OR_NETWORKSTATUS = -4,
   ROUTER_AUTHDIR_REJECTS = -5,
-  ROUTER_WAS_NOT_WANTED = -6
+  ROUTER_WAS_NOT_WANTED = -6,
+  ROUTER_WAS_TOO_OLD = -7,
 } was_router_added_t;
 
 /********************************* routerparse.c ************************/

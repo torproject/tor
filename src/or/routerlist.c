@@ -2615,8 +2615,8 @@ router_get_by_descriptor_digest(const char *digest)
 /** Return the signed descriptor for the router in our routerlist whose
  * 20-byte extra-info digest is <b>digest</b>.  Return NULL if no such router
  * is known. */
-signed_descriptor_t *
-router_get_by_extrainfo_digest(const char *digest)
+MOCK_IMPL(signed_descriptor_t *,
+router_get_by_extrainfo_digest,(const char *digest))
 {
   tor_assert(digest);
 
@@ -2937,12 +2937,12 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
 }
 
 /** Adds the extrainfo_t <b>ei</b> to the routerlist <b>rl</b>, if there is a
- * corresponding router in rl-\>routers or rl-\>old_routers.  Return true iff
- * we actually inserted <b>ei</b>.  Free <b>ei</b> if it isn't inserted. */
-static int
-extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
+ * corresponding router in rl-\>routers or rl-\>old_routers.  Return the status
+ * of inserting <b>ei</b>.  Free <b>ei</b> if it isn't inserted. */
+MOCK_IMPL(STATIC was_router_added_t,
+extrainfo_insert,(routerlist_t *rl, extrainfo_t *ei))
 {
-  int r = 0;
+  was_router_added_t r;
   routerinfo_t *ri = rimap_get(rl->identity_map,
                                ei->cache_info.identity_digest);
   signed_descriptor_t *sd =
@@ -2956,9 +2956,11 @@ extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
 
   if (!ri) {
     /* This router is unknown; we can't even verify the signature. Give up.*/
+    r = ROUTER_NOT_IN_CONSENSUS;
     goto done;
   }
   if (routerinfo_incompatible_with_extrainfo(ri, ei, sd, NULL)) {
+    r = (sd->extrainfo_is_bogus) ? ROUTER_BAD_EI : ROUTER_NOT_IN_CONSENSUS;
     goto done;
   }
 
@@ -2968,7 +2970,7 @@ extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
   ei_tmp = eimap_set(rl->extra_info_map,
                      ei->cache_info.signed_descriptor_digest,
                      ei);
-  r = 1;
+  r = ROUTER_ADDED_SUCCESSFULLY;
   if (ei_tmp) {
     rl->extrainfo_store.bytes_dropped +=
       ei_tmp->cache_info.signed_descriptor_len;
@@ -2976,7 +2978,7 @@ extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
   }
 
  done:
-  if (r == 0)
+  if (r != ROUTER_ADDED_SUCCESSFULLY)
     extrainfo_free(ei);
 
 #ifdef DEBUG_ROUTERLIST
@@ -3251,7 +3253,7 @@ routerlist_reparse_old(routerlist_t *rl, signed_descriptor_t *sd)
 
   ri = router_parse_entry_from_string(body,
                          body+sd->signed_descriptor_len+sd->annotations_len,
-                         0, 1, NULL);
+                         0, 1, NULL, NULL);
   if (!ri)
     return NULL;
   memcpy(&ri->cache_info, sd, sizeof(signed_descriptor_t));
@@ -3302,7 +3304,7 @@ routerlist_reset_warnings(void)
 MOCK_IMPL(int,
 router_descriptor_is_older_than,(const routerinfo_t *router, int seconds))
 {
-  return router->cache_info.published_on < time(NULL) - seconds;
+  return router->cache_info.published_on < approx_time() - seconds;
 }
 
 /** Add <b>router</b> to the routerlist, if we don't already have it.  Replace
@@ -3477,7 +3479,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       router_descriptor_is_older_than(router, OLD_ROUTER_DESC_MAX_AGE)) {
     *msg = "Router descriptor was really old.";
     routerinfo_free(router);
-    return ROUTER_WAS_NOT_NEW;
+    return ROUTER_WAS_TOO_OLD;
   }
 
   /* We haven't seen a router with this identity before. Add it to the end of
@@ -3498,21 +3500,18 @@ was_router_added_t
 router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
                                    int from_cache, int from_fetch)
 {
-  int inserted;
+  was_router_added_t inserted;
   (void)from_fetch;
   if (msg) *msg = NULL;
   /*XXXX023 Do something with msg */
 
   inserted = extrainfo_insert(router_get_routerlist(), ei);
 
-  if (inserted && !from_cache)
+  if (WRA_WAS_ADDED(inserted) && !from_cache)
     signed_desc_append_to_journal(&ei->cache_info,
                                   &routerlist->extrainfo_store);
 
-  if (inserted)
-    return ROUTER_ADDED_SUCCESSFULLY;
-  else
-    return ROUTER_BAD_EI;
+  return inserted;
 }
 
 /** Sorting helper: return &lt;0, 0, or &gt;0 depending on whether the
@@ -3807,7 +3806,8 @@ router_load_single_router(const char *s, uint8_t purpose, int cache,
                "@source controller\n"
                "@purpose %s\n", router_purpose_to_string(purpose));
 
-  if (!(ri = router_parse_entry_from_string(s, NULL, 1, 0, annotation_buf))) {
+  if (!(ri = router_parse_entry_from_string(s, NULL, 1, 0,
+                                            annotation_buf, NULL))) {
     log_warn(LD_DIR, "Error parsing router descriptor; dropping.");
     *msg = "Couldn't parse router descriptor.";
     return -1;
@@ -3871,9 +3871,11 @@ router_load_routers_from_string(const char *s, const char *eos,
   int from_cache = (saved_location != SAVED_NOWHERE);
   int allow_annotations = (saved_location != SAVED_NOWHERE);
   int any_changed = 0;
+  smartlist_t *invalid_digests = smartlist_new();
 
   router_parse_list_from_string(&s, eos, routers, saved_location, 0,
-                                allow_annotations, prepend_annotations);
+                                allow_annotations, prepend_annotations,
+                                invalid_digests);
 
   routers_update_status_from_consensus_networkstatus(routers, !from_cache);
 
@@ -3909,7 +3911,7 @@ router_load_routers_from_string(const char *s, const char *eos,
       smartlist_add(changed, ri);
       routerlist_descriptors_added(changed, from_cache);
       smartlist_clear(changed);
-    } else if (WRA_WAS_REJECTED(r)) {
+    } else if (WRA_NEVER_DOWNLOADABLE(r)) {
       download_status_t *dl_status;
       dl_status = router_get_dl_status_by_descriptor_digest(d);
       if (dl_status) {
@@ -3919,6 +3921,27 @@ router_load_routers_from_string(const char *s, const char *eos,
       }
     }
   } SMARTLIST_FOREACH_END(ri);
+
+  SMARTLIST_FOREACH_BEGIN(invalid_digests, const uint8_t *, bad_digest) {
+    /* This digest is never going to be parseable. */
+    base16_encode(fp, sizeof(fp), (char*)bad_digest, DIGEST_LEN);
+    if (requested_fingerprints && descriptor_digests) {
+      if (! smartlist_contains_string(requested_fingerprints, fp)) {
+        /* But we didn't ask for it, so we should assume shennanegans. */
+        continue;
+      }
+      smartlist_string_remove(requested_fingerprints, fp);
+    }
+    download_status_t *dls;
+    dls = router_get_dl_status_by_descriptor_digest((char*)bad_digest);
+    if (dls) {
+      log_info(LD_GENERAL, "Marking router with descriptor %s as unparseable, "
+               "and therefore undownloadable", fp);
+      download_status_mark_impossible(dls);
+    }
+  } SMARTLIST_FOREACH_END(bad_digest);
+  SMARTLIST_FOREACH(invalid_digests, uint8_t *, d, tor_free(d));
+  smartlist_free(invalid_digests);
 
   routerlist_assert_ok(routerlist);
 
@@ -3943,15 +3966,18 @@ router_load_extrainfo_from_string(const char *s, const char *eos,
   smartlist_t *extrainfo_list = smartlist_new();
   const char *msg;
   int from_cache = (saved_location != SAVED_NOWHERE);
+  smartlist_t *invalid_digests = smartlist_new();
 
   router_parse_list_from_string(&s, eos, extrainfo_list, saved_location, 1, 0,
-                                NULL);
+                                NULL, invalid_digests);
 
   log_info(LD_DIR, "%d elements to add", smartlist_len(extrainfo_list));
 
   SMARTLIST_FOREACH_BEGIN(extrainfo_list, extrainfo_t *, ei) {
       was_router_added_t added =
         router_add_extrainfo_to_routerlist(ei, &msg, from_cache, !from_cache);
+      uint8_t d[DIGEST_LEN];
+      memcpy(d, ei->cache_info.signed_descriptor_digest, DIGEST_LEN);
       if (WRA_WAS_ADDED(added) && requested_fingerprints) {
         char fp[HEX_DIGEST_LEN+1];
         base16_encode(fp, sizeof(fp), descriptor_digests ?
@@ -3963,8 +3989,38 @@ router_load_extrainfo_from_string(const char *s, const char *eos,
          * so long as we would have wanted them anyway.  Since we always fetch
          * all the extrainfos we want, and we never actually act on them
          * inside Tor, this should be harmless. */
+      } else if (WRA_NEVER_DOWNLOADABLE(added)) {
+        signed_descriptor_t *sd = router_get_by_extrainfo_digest((char*)d);
+        if (sd) {
+          log_info(LD_GENERAL, "Marking extrainfo with descriptor %s as "
+                   "unparseable, and therefore undownloadable",
+                   hex_str((char*)d,DIGEST_LEN));
+          download_status_mark_impossible(&sd->ei_dl_status);
+        }
       }
   } SMARTLIST_FOREACH_END(ei);
+
+  SMARTLIST_FOREACH_BEGIN(invalid_digests, const uint8_t *, bad_digest) {
+    /* This digest is never going to be parseable. */
+    char fp[HEX_DIGEST_LEN+1];
+    base16_encode(fp, sizeof(fp), (char*)bad_digest, DIGEST_LEN);
+    if (requested_fingerprints) {
+      if (! smartlist_contains_string(requested_fingerprints, fp)) {
+        /* But we didn't ask for it, so we should assume shennanegans. */
+        continue;
+      }
+      smartlist_string_remove(requested_fingerprints, fp);
+    }
+    signed_descriptor_t *sd =
+      router_get_by_extrainfo_digest((char*)bad_digest);
+    if (sd) {
+      log_info(LD_GENERAL, "Marking extrainfo with descriptor %s as "
+               "unparseable, and therefore undownloadable", fp);
+      download_status_mark_impossible(&sd->ei_dl_status);
+    }
+  } SMARTLIST_FOREACH_END(bad_digest);
+  SMARTLIST_FOREACH(invalid_digests, uint8_t *, d, tor_free(d));
+  smartlist_free(invalid_digests);
 
   routerlist_assert_ok(routerlist);
   router_rebuild_store(0, &router_get_routerlist()->extrainfo_store);
