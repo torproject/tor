@@ -147,6 +147,10 @@ microdescs_add_to_cache(microdesc_cache_t *cache,
                         int no_save, time_t listed_at,
                         smartlist_t *requested_digests256)
 {
+  void * const DIGEST_REQUESTED = (void*)1;
+  void * const DIGEST_RECEIVED = (void*)2;
+  void * const DIGEST_INVALID = (void*)3;
+
   smartlist_t *descriptors, *added;
   const int allow_annotations = (where != SAVED_NOWHERE);
   smartlist_t *invalid_digests = smartlist_new();
@@ -162,15 +166,16 @@ microdescs_add_to_cache(microdesc_cache_t *cache,
     digestmap_t *requested; /* XXXX actually we should just use a
                                digest256map */
     requested = digestmap_new();
-    /* Set requested[d] to 1 for every md we requested. */
+    /* Set requested[d] to DIGEST_REQUESTED for every md we requested. */
     SMARTLIST_FOREACH(requested_digests256, const char *, cp,
-      digestmap_set(requested, cp, (void*)1));
-    /* Set requested[d] to 3 for every md we requested which we will never be
-     * able to parse.  Remove the ones we didn't request from invalid_digests.
+      digestmap_set(requested, cp, DIGEST_REQUESTED));
+    /* Set requested[d] to DIGEST_INVALID for every md we requested which we
+     * will never be able to parse.  Remove the ones we didn't request from
+     * invalid_digests.
      */
     SMARTLIST_FOREACH_BEGIN(invalid_digests, char *, cp) {
       if (digestmap_get(requested, cp)) {
-        digestmap_set(requested, cp, (void*)3);
+        digestmap_set(requested, cp, DIGEST_INVALID);
       } else {
         tor_free(cp);
         SMARTLIST_DEL_CURRENT(invalid_digests, cp);
@@ -181,7 +186,7 @@ microdescs_add_to_cache(microdesc_cache_t *cache,
      */
     SMARTLIST_FOREACH_BEGIN(descriptors, microdesc_t *, md) {
       if (digestmap_get(requested, md->digest)) {
-        digestmap_set(requested, md->digest, (void*)2);
+        digestmap_set(requested, md->digest, DIGEST_RECEIVED);
       } else {
         log_fn(LOG_PROTOCOL_WARN, LD_DIR, "Received non-requested microdesc");
         microdesc_free(md);
@@ -192,7 +197,7 @@ microdescs_add_to_cache(microdesc_cache_t *cache,
      */
     SMARTLIST_FOREACH_BEGIN(requested_digests256, char *, cp) {
       void *status = digestmap_get(requested, cp);
-      if (status == (void*)2 || status == (void*)3) {
+      if (status == DIGEST_RECEIVED || status == DIGEST_INVALID) {
         tor_free(cp);
         SMARTLIST_DEL_CURRENT(requested_digests256, cp);
       }
