@@ -1670,7 +1670,7 @@ format_time_interval(char *out, size_t out_len, long interval)
 {
   /* We only report seconds if there's no hours. */
   long sec = 0, min = 0, hour = 0, day = 0;
-  
+
   /* -LONG_MIN is LONG_MAX + 1, which causes signed overflow */
   if (interval < -LONG_MAX)
     interval = LONG_MAX;
