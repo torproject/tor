@@ -2072,6 +2072,17 @@ test_util_sscanf(void *arg)
 #define tt_char_op(a,op,b) tt_assert_op_type(a,op,b,char,"%c")
 #define tt_ci_char_op(a,op,b) tt_char_op(tolower(a),op,tolower(b))
 
+#ifndef HAVE_STRNLEN
+static size_t
+strnlen(const char *s, size_t len)
+{
+  const char *p = memchr(s, 0, len);
+  if (!p)
+    return len;
+  return p - s;
+}
+#endif
+
 static void
 test_util_format_time_interval(void *arg)
 {

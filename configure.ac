@@ -365,6 +365,7 @@ AC_CHECK_FUNCS(
         socketpair \
         strlcat \
         strlcpy \
+	strnlen \
         strptime \
         strtok_r \
         strtoull \
