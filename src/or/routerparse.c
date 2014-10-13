@@ -1100,6 +1100,8 @@ router_parse_entry_from_string(const char *s, const char *end,
   size_t prepend_len = prepend_annotations ? strlen(prepend_annotations) : 0;
   int ok = 1;
   memarea_t *area = NULL;
+  /* Do not set this to '1' until we have parsed everything that we intend to
+   * parse that's covered by the hash. */
   int can_dl_again = 0;
 
   tor_assert(!allow_annotations || !prepend_annotations);
@@ -1413,6 +1415,7 @@ router_parse_entry_from_string(const char *s, const char *end,
     goto err;
   }
 
+  /* We've checked everything that's covered by the hash. */
   can_dl_again = 1;
   if (check_signature_token(digest, DIGEST_LEN, tok, router->identity_pkey, 0,
                             "router descriptor") < 0)
@@ -1466,6 +1469,8 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
   routerinfo_t *router = NULL;
   memarea_t *area = NULL;
   const char *s_dup = s;
+  /* Do not set this to '1' until we have parsed everything that we intend to
+   * parse that's covered by the hash. */
   int can_dl_again = 0;
 
   if (!end) {
@@ -1526,6 +1531,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
     goto err;
   }
 
+  /* We've checked everything that's covered by the hash. */
   can_dl_again = 1;
 
   if (routermap &&
