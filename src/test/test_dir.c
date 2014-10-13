@@ -618,6 +618,8 @@ test_dir_load_routers(void *arg)
 
   MOCK(router_get_dl_status_by_descriptor_digest, mock_router_get_dl_status);
 
+  update_approx_time(1412510400);
+
   smartlist_add(chunks, tor_strdup(EX_RI_MINIMAL));
   smartlist_add(chunks, tor_strdup(EX_RI_BAD_FINGERPRINT));
   smartlist_add(chunks, tor_strdup(EX_RI_BAD_SIG2));
@@ -708,12 +710,12 @@ mock_get_by_ei_desc_digest(const char *d)
 }
 
 static smartlist_t *mock_ei_insert_list = NULL;
-static int
+static was_router_added_t
 mock_ei_insert(routerlist_t *rl, extrainfo_t *ei)
 {
   (void) rl;
   smartlist_add(mock_ei_insert_list, ei);
-  return 1;
+  return ROUTER_ADDED_SUCCESSFULLY;
 }
 
 static void

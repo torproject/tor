@@ -2937,12 +2937,12 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
 }
 
 /** Adds the extrainfo_t <b>ei</b> to the routerlist <b>rl</b>, if there is a
- * corresponding router in rl-\>routers or rl-\>old_routers.  Return true iff
- * we actually inserted <b>ei</b>.  Free <b>ei</b> if it isn't inserted. */
-MOCK_IMPL(STATIC int,
+ * corresponding router in rl-\>routers or rl-\>old_routers.  Return the status
+ * of inserting <b>ei</b>.  Free <b>ei</b> if it isn't inserted. */
+MOCK_IMPL(STATIC was_router_added_t,
 extrainfo_insert,(routerlist_t *rl, extrainfo_t *ei))
 {
-  int r = 0;
+  was_router_added_t r;
   routerinfo_t *ri = rimap_get(rl->identity_map,
                                ei->cache_info.identity_digest);
   signed_descriptor_t *sd =
@@ -2956,9 +2956,11 @@ extrainfo_insert,(routerlist_t *rl, extrainfo_t *ei))
 
   if (!ri) {
     /* This router is unknown; we can't even verify the signature. Give up.*/
+    r = ROUTER_NOT_IN_CONSENSUS;
     goto done;
   }
   if (routerinfo_incompatible_with_extrainfo(ri, ei, sd, NULL)) {
+    r = (sd->extrainfo_is_bogus) ? ROUTER_BAD_EI : ROUTER_NOT_IN_CONSENSUS;
     goto done;
   }
 
@@ -2968,7 +2970,7 @@ extrainfo_insert,(routerlist_t *rl, extrainfo_t *ei))
   ei_tmp = eimap_set(rl->extra_info_map,
                      ei->cache_info.signed_descriptor_digest,
                      ei);
-  r = 1;
+  r = ROUTER_ADDED_SUCCESSFULLY;
   if (ei_tmp) {
     rl->extrainfo_store.bytes_dropped +=
       ei_tmp->cache_info.signed_descriptor_len;
@@ -2976,7 +2978,7 @@ extrainfo_insert,(routerlist_t *rl, extrainfo_t *ei))
   }
 
  done:
-  if (r == 0)
+  if (r != ROUTER_ADDED_SUCCESSFULLY)
     extrainfo_free(ei);
 
 #ifdef DEBUG_ROUTERLIST
@@ -3302,7 +3304,7 @@ routerlist_reset_warnings(void)
 MOCK_IMPL(int,
 router_descriptor_is_older_than,(const routerinfo_t *router, int seconds))
 {
-  return router->cache_info.published_on < time(NULL) - seconds;
+  return router->cache_info.published_on < approx_time() - seconds;
 }
 
 /** Add <b>router</b> to the routerlist, if we don't already have it.  Replace
@@ -3477,7 +3479,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       router_descriptor_is_older_than(router, OLD_ROUTER_DESC_MAX_AGE)) {
     *msg = "Router descriptor was really old.";
     routerinfo_free(router);
-    return ROUTER_WAS_NOT_NEW;
+    return ROUTER_WAS_TOO_OLD;
   }
 
   /* We haven't seen a router with this identity before. Add it to the end of
@@ -3498,21 +3500,18 @@ was_router_added_t
 router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
                                    int from_cache, int from_fetch)
 {
-  int inserted;
+  was_router_added_t inserted;
   (void)from_fetch;
   if (msg) *msg = NULL;
   /*XXXX023 Do something with msg */
 
   inserted = extrainfo_insert(router_get_routerlist(), ei);
 
-  if (inserted && !from_cache)
+  if (WRA_WAS_ADDED(inserted) && !from_cache)
     signed_desc_append_to_journal(&ei->cache_info,
                                   &routerlist->extrainfo_store);
 
-  if (inserted)
-    return ROUTER_ADDED_SUCCESSFULLY;
-  else
-    return ROUTER_BAD_EI;
+  return inserted;
 }
 
 /** Sorting helper: return &lt;0, 0, or &gt;0 depending on whether the
@@ -3912,7 +3911,7 @@ router_load_routers_from_string(const char *s, const char *eos,
       smartlist_add(changed, ri);
       routerlist_descriptors_added(changed, from_cache);
       smartlist_clear(changed);
-    } else if (WRA_WAS_REJECTED(r)) {
+    } else if (WRA_NEVER_DOWNLOADABLE(r)) {
       download_status_t *dl_status;
       dl_status = router_get_dl_status_by_descriptor_digest(d);
       if (dl_status) {
@@ -3977,6 +3976,8 @@ router_load_extrainfo_from_string(const char *s, const char *eos,
   SMARTLIST_FOREACH_BEGIN(extrainfo_list, extrainfo_t *, ei) {
       was_router_added_t added =
         router_add_extrainfo_to_routerlist(ei, &msg, from_cache, !from_cache);
+      uint8_t d[DIGEST_LEN];
+      memcpy(d, ei->cache_info.signed_descriptor_digest, DIGEST_LEN);
       if (WRA_WAS_ADDED(added) && requested_fingerprints) {
         char fp[HEX_DIGEST_LEN+1];
         base16_encode(fp, sizeof(fp), descriptor_digests ?
@@ -3988,6 +3989,14 @@ router_load_extrainfo_from_string(const char *s, const char *eos,
          * so long as we would have wanted them anyway.  Since we always fetch
          * all the extrainfos we want, and we never actually act on them
          * inside Tor, this should be harmless. */
+      } else if (WRA_NEVER_DOWNLOADABLE(added)) {
+        signed_descriptor_t *sd = router_get_by_extrainfo_digest((char*)d);
+        if (sd) {
+          log_info(LD_GENERAL, "Marking extrainfo with descriptor %s as "
+                   "unparseable, and therefore undownloadable",
+                   hex_str((char*)d,DIGEST_LEN));
+          download_status_mark_impossible(&sd->ei_dl_status);
+        }
       }
   } SMARTLIST_FOREACH_END(ei);
 

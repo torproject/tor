@@ -100,6 +100,7 @@ void routerlist_reset_warnings(void);
 static int WRA_WAS_ADDED(was_router_added_t s);
 static int WRA_WAS_OUTDATED(was_router_added_t s);
 static int WRA_WAS_REJECTED(was_router_added_t s);
+static int WRA_NEVER_DOWNLOADABLE(was_router_added_t s);
 /** Return true iff the outcome code in <b>s</b> indicates that the descriptor
  * was added. It might still be necessary to check whether the descriptor
  * generator should be notified.
@@ -116,7 +117,8 @@ WRA_WAS_ADDED(was_router_added_t s) {
  */
 static INLINE int WRA_WAS_OUTDATED(was_router_added_t s)
 {
-  return (s == ROUTER_WAS_NOT_NEW ||
+  return (s == ROUTER_WAS_TOO_OLD ||
+          s == ROUTER_WAS_NOT_NEW ||
           s == ROUTER_NOT_IN_CONSENSUS ||
           s == ROUTER_NOT_IN_CONSENSUS_OR_NETWORKSTATUS);
 }
@@ -125,6 +127,14 @@ static INLINE int WRA_WAS_OUTDATED(was_router_added_t s)
 static INLINE int WRA_WAS_REJECTED(was_router_added_t s)
 {
   return (s == ROUTER_AUTHDIR_REJECTS);
+}
+/** Return true iff the outcome code in <b>s</b> indicates that the descriptor
+ * was flat-out rejected. */
+static INLINE int WRA_NEVER_DOWNLOADABLE(was_router_added_t s)
+{
+  return (s == ROUTER_AUTHDIR_REJECTS ||
+          s == ROUTER_BAD_EI ||
+          s == ROUTER_WAS_TOO_OLD);
 }
 was_router_added_t router_add_to_routerlist(routerinfo_t *router,
                                             const char **msg,
@@ -216,7 +226,8 @@ STATIC void scale_array_elements_to_u64(u64_dbl_t *entries, int n_entries,
 
 MOCK_DECL(int, router_descriptor_is_older_than, (const routerinfo_t *router,
                                                  int seconds));
-MOCK_DECL(STATIC int, extrainfo_insert,(routerlist_t *rl, extrainfo_t *ei));
+MOCK_DECL(STATIC was_router_added_t, extrainfo_insert,
+          (routerlist_t *rl, extrainfo_t *ei));
 
 #endif
 
