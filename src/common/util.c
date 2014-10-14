@@ -976,7 +976,7 @@ string_is_valid_ipv6_address(const char *string)
 {
    struct sockaddr_in sockaddr_dummy;
 
-   return (inet_pton(AF_INET6,string,&sockaddr_dummy) == 1);
+   return (tor_inet_pton(AF_INET6,string,&sockaddr_dummy) == 1);
 }
 
 /** Return true iff <b>string</b> matches a pattern of DNS names

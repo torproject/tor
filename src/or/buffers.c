@@ -2049,7 +2049,8 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
           req->port = ntohs(get_uint16(data+5+len));
           *drain_out = 5+len+2;
 
-          if (string_is_valid_ipv4_address(req->address)) {
+          if (string_is_valid_ipv4_address(req->address) ||
+              string_is_valid_ipv6_address(req->address)) {
             log_unsafe_socks_warning(5,req->address,req->port,safe_socks);
 
             if (safe_socks)
