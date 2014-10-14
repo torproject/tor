@@ -9,8 +9,8 @@ DIRB="$2"
 
 for A in $DIRA/*; do
   B=$DIRB/`basename $A`
-  perl -pe 's/^\s*\d+:/        1:/; s/^([^:]+:)[\d\s]+:/$1/;' "$A" > "$A.tmp"
-  perl -pe 's/^\s*\d+:/        1:/; s/^([^:]+:)[\d\s]+:/$1/;' "$B" > "$B.tmp"
+  perl -pe 's/^\s*\d+:/        1:/; s/^([^:]+:)[\d\s]+:/$1/; s/^ *-:(Runs|Programs):.*//;' "$A" > "$A.tmp"
+  perl -pe 's/^\s*\d+:/        1:/; s/^([^:]+:)[\d\s]+:/$1/; s/^ *-:(Runs|Programs):.*//;' "$B" > "$B.tmp"
   diff -u "$A.tmp" "$B.tmp"
   rm "$A.tmp" "$B.tmp"
 done
