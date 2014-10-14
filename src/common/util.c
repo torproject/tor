@@ -968,6 +968,17 @@ string_is_valid_ipv4_address(const char *string)
    return (tor_inet_pton(AF_INET,string,&sockaddr) == 1);
 }
 
+/** Return true if <b>string</b> represents a valid IPv6 address in
+ * a form that inet_pton() can parse.
+ */
+int
+string_is_valid_ipv6_address(const char *string)
+{
+   struct sockaddr_in sockaddr_dummy;
+
+   return (inet_pton(AF_INET6,string,&sockaddr_dummy) == 1);
+}
+
 /** Return true iff <b>string</b> matches a pattern of DNS names
  * that we allow Tor clients to connect to.
  */
