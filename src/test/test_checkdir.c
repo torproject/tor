@@ -43,6 +43,14 @@ test_checkdir_perms(void *testdata)
   tt_int_op(0, ==, (st.st_mode & unix_verify_optsmask));
   tor_free(testdir);
 
+  /* test: should get an error on existing dir with
+           wrong perms */
+  testdir = get_datadir_fname("checkdir_new_groupok_err");
+  tt_int_op(0, ==, mkdir(testdir, 027));
+  cpd_chkopts = CPD_CHECK_MODE_ONLY|CPD_CREATE|CPD_GROUP_OK;
+  tt_int_op(-1, ==, check_private_dir(testdir, cpd_chkopts, NULL));
+  tor_free(testdir);
+
   /* test: create new dir, CPD_GROUP_READ option set. */
   testdir = get_datadir_fname("checkdir_new_groupread");
   cpd_chkopts = CPD_CREATE|CPD_GROUP_READ;
