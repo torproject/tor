@@ -1718,7 +1718,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
           if (circ->package_window + CIRCWINDOW_INCREMENT >
                 CIRCWINDOW_START_MAX) {
             static struct ratelim_t client_warn_ratelim = RATELIM_INIT(600);
-            log_fn_ratelim(&client_warn_ratelim, LOG_WARN, LD_PROTOCOL,
+            log_fn_ratelim(&client_warn_ratelim,LOG_PROTOCOL_WARN, LD_PROTOCOL,
                    "Unexpected sendme cell from client. "
                    "Closing circ (window %d).",
                    circ->package_window);
