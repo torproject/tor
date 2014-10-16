@@ -31,7 +31,8 @@ int onion_skin_TAP_server_handshake(const char *onion_skin,
 int onion_skin_TAP_client_handshake(crypto_dh_t *handshake_state,
                                 const char *handshake_reply,
                                 char *key_out,
-                                size_t key_out_len);
+                                size_t key_out_len,
+                                const char **msg_out);
 
 #endif
 

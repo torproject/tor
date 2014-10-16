@@ -51,7 +51,8 @@ int onion_skin_client_handshake(int type,
                       const onion_handshake_state_t *handshake_state,
                       const uint8_t *reply, size_t reply_len,
                       uint8_t *keys_out, size_t key_out_len,
-                      uint8_t *rend_authenticator_out);
+                      uint8_t *rend_authenticator_out,
+                      const char **msg_out);
 
 /** A parsed CREATE, CREATE_FAST, or CREATE2 cell. */
 typedef struct create_cell_t {

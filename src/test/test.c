@@ -264,7 +264,8 @@ test_onion_handshake(void)
 
     /* client handshake 2 */
     memset(c_keys, 0, 40);
-    test_assert(! onion_skin_TAP_client_handshake(c_dh, s_buf, c_keys, 40));
+    test_assert(! onion_skin_TAP_client_handshake(c_dh, s_buf, c_keys, 40,
+                                                  NULL));
 
     test_memeq(c_keys, s_keys, 40);
     memset(s_buf, 0, 40);
@@ -337,18 +338,18 @@ test_bad_onion_handshake(void *arg)
   /* Client: Case 1: The server sent back junk. */
   s_buf[64] ^= 33;
   tt_int_op(-1, ==,
-            onion_skin_TAP_client_handshake(c_dh, s_buf, c_keys, 40));
+            onion_skin_TAP_client_handshake(c_dh, s_buf, c_keys, 40, NULL));
   s_buf[64] ^= 33;
 
   /* Let the client finish; make sure it can. */
   tt_int_op(0, ==,
-            onion_skin_TAP_client_handshake(c_dh, s_buf, c_keys, 40));
+            onion_skin_TAP_client_handshake(c_dh, s_buf, c_keys, 40, NULL));
   test_memeq(s_keys, c_keys, 40);
 
   /* Client: Case 2: The server sent back a degenerate DH. */
   memset(s_buf, 0, sizeof(s_buf));
   tt_int_op(-1, ==,
-            onion_skin_TAP_client_handshake(c_dh, s_buf, c_keys, 40));
+            onion_skin_TAP_client_handshake(c_dh, s_buf, c_keys, 40, NULL));
 
  done:
   crypto_dh_free(c_dh);
@@ -398,7 +399,7 @@ test_ntor_handshake(void *arg)
   /* client handshake 2 */
   memset(c_keys, 0, 40);
   tt_int_op(0, ==, onion_skin_ntor_client_handshake(c_state, s_buf,
-                                                    c_keys, 400));
+                                                    c_keys, 400, NULL));
 
   test_memeq(c_keys, s_keys, 400);
   memset(s_buf, 0, 40);

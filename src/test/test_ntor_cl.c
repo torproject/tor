@@ -130,7 +130,7 @@ client2(int argc, char **argv)
 
   keys = tor_malloc(keybytes);
   hexkeys = tor_malloc(keybytes*2+1);
-  if (onion_skin_ntor_client_handshake(&state, msg, keys, keybytes)<0) {
+  if (onion_skin_ntor_client_handshake(&state, msg, keys, keybytes, NULL)<0) {
     fprintf(stderr, "handshake failed");
     result = 2;
     goto done;

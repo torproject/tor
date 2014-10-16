@@ -1256,8 +1256,10 @@ circuit_finish_handshake(origin_circuit_t *circ,
   crypt_path_t *hop;
   int rv;
 
-  if ((rv = pathbias_count_build_attempt(circ)) < 0)
+  if ((rv = pathbias_count_build_attempt(circ)) < 0) {
+    log_warn(LD_CIRC, "pathbias_count_build_attempt failed: %d", rv);
     return rv;
+  }
 
   if (circ->cpath->state == CPATH_STATE_AWAITING_KEYS) {
     hop = circ->cpath;
@@ -1271,12 +1273,15 @@ circuit_finish_handshake(origin_circuit_t *circ,
   tor_assert(hop->state == CPATH_STATE_AWAITING_KEYS);
 
   {
+    const char *msg = NULL;
     if (onion_skin_client_handshake(hop->handshake_state.tag,
                                     &hop->handshake_state,
                                     reply->reply, reply->handshake_len,
                                     (uint8_t*)keys, sizeof(keys),
-                                    (uint8_t*)hop->rend_circ_nonce) < 0) {
-      log_warn(LD_CIRC,"onion_skin_client_handshake failed.");
+                                    (uint8_t*)hop->rend_circ_nonce,
+                                    &msg) < 0) {
+      if (msg)
+        log_warn(LD_CIRC,"onion_skin_client_handshake failed: %s", msg);
       return -END_CIRC_REASON_TORPROTOCOL;
     }
   }
@@ -1284,6 +1289,7 @@ circuit_finish_handshake(origin_circuit_t *circ,
   onion_handshake_state_release(&hop->handshake_state);
 
   if (circuit_init_cpath_crypto(hop, keys, 0)<0) {
+    log_warn(LD_BUG, "Couldn't initialize cpath crypto");
     return -END_CIRC_REASON_TORPROTOCOL;
   }
 

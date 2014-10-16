@@ -1,0 +1,3 @@
+  o Downgraded warnings:
+    - Don't warn when we've attempted to contact a relay using the wrong
+      ntor onion key. Closes ticket 9635.
