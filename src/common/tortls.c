@@ -1176,10 +1176,11 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
     goto error;
 #endif
 
-  /* Tell OpenSSL to use SSL3 or TLS1 but not SSL2. */
+  /* Tell OpenSSL to use TLS 1.0 or later but not SSL2 or SSL3. */
   if (!(result->ctx = SSL_CTX_new(SSLv23_method())))
     goto error;
   SSL_CTX_set_options(result->ctx, SSL_OP_NO_SSLv2);
+  SSL_CTX_set_options(result->ctx, SSL_OP_NO_SSLv3);
 
   /* Disable TLS1.1 and TLS1.2 if they exist.  We need to do this to
    * workaround a bug present in all OpenSSL 1.0.1 versions (as of 1
@@ -1204,6 +1205,7 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
   SSL_CTX_set_options(result->ctx, SSL_OP_NO_TICKET);
 #endif
 
+  /* XXX This block is now obsolete. */
   if (
 #ifdef DISABLE_SSL3_HANDSHAKE
       1 ||
