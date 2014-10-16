@@ -1,0 +1,4 @@
+  o Bugfixes:
+    - Handle malformed SOCKS5 requests properly by responding with an
+      appropriate error message before closing a TCP connection to the
+      user. Fixes bug 13314.
