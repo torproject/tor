@@ -12,6 +12,7 @@
 #include "connection_or.h"
 #include "channeltls.h"
 #include "link_handshake.h"
+#include "scheduler.h"
 
 #include "test.h"
 
@@ -582,6 +583,243 @@ AUTHCHALLENGE_FAIL(truncated,
 AUTHCHALLENGE_FAIL(nonzero_circid,
                    d->cell->circ_id = 1337)
 
+
+static tor_x509_cert_t *mock_peer_cert = NULL;
+static tor_x509_cert_t *
+mock_get_peer_cert(tor_tls_t *tls)
+{
+  (void)tls;
+  return mock_peer_cert;
+}
+
+static int
+mock_get_tlssecrets(tor_tls_t *tls, uint8_t *secrets_out)
+{
+  (void)tls;
+  memcpy(secrets_out, "int getRandomNumber(){return 4;}", 32);
+  return 0;
+}
+
+static void
+mock_set_circid_type(channel_t *chan,
+                     crypto_pk_t *identity_rcvd,
+                     int consider_identity)
+{
+  (void) chan;
+  (void) identity_rcvd;
+  (void) consider_identity;
+}
+
+typedef struct authenticate_data_s {
+  or_connection_t *c1, *c2;
+  channel_tls_t *chan2;
+  var_cell_t *cell;
+} authenticate_data_t;
+
+static int
+authenticate_data_cleanup(const struct testcase_t *test, void *arg)
+{
+  (void) test;
+  UNMOCK(connection_or_write_var_cell_to_buf);
+  UNMOCK(tor_tls_get_peer_cert);
+  UNMOCK(tor_tls_get_tlssecrets);
+  UNMOCK(connection_or_close_for_error);
+  UNMOCK(channel_set_circid_type);
+  authenticate_data_t *d = arg;
+  if (d) {
+    tor_free(d->cell);
+    connection_free_(TO_CONN(d->c1));
+    connection_free_(TO_CONN(d->c2));
+    tor_free(d->chan2);
+  }
+  mock_peer_cert = NULL;
+
+  return 1;
+}
+
+static void *
+authenticate_data_setup(const struct testcase_t *test)
+{
+  authenticate_data_t *d = tor_malloc_zero(sizeof(*d));
+
+  scheduler_init();
+
+  MOCK(connection_or_write_var_cell_to_buf, mock_write_var_cell);
+  MOCK(tor_tls_get_peer_cert, mock_get_peer_cert);
+  MOCK(tor_tls_get_tlssecrets, mock_get_tlssecrets);
+  MOCK(connection_or_close_for_error, mock_close_for_err);
+  MOCK(channel_set_circid_type, mock_set_circid_type);
+  d->c1 = or_connection_new(CONN_TYPE_OR, AF_INET);
+  d->c2 = or_connection_new(CONN_TYPE_OR, AF_INET);
+
+  crypto_pk_t *key1 = NULL, *key2 = NULL;
+  key1 = pk_generate(2);
+  key2 = pk_generate(3);
+  tt_int_op(tor_tls_context_init(TOR_TLS_CTX_IS_PUBLIC_SERVER,
+                                 key1, key2, 86400), ==, 0);
+
+  d->c1->base_.state = OR_CONN_STATE_OR_HANDSHAKING_V3;
+  d->c1->link_proto = 3;
+  tt_int_op(connection_init_or_handshake_state(d->c1, 1), ==, 0);
+
+  d->c2->base_.state = OR_CONN_STATE_OR_HANDSHAKING_V3;
+  d->c2->link_proto = 3;
+  tt_int_op(connection_init_or_handshake_state(d->c2, 0), ==, 0);
+  var_cell_t *cell = var_cell_new(16);
+  cell->command = CELL_CERTS;
+  or_handshake_state_record_var_cell(d->c1, d->c1->handshake_state, cell, 1);
+  or_handshake_state_record_var_cell(d->c2, d->c2->handshake_state, cell, 0);
+  memset(cell->payload, 0xf0, 16);
+  or_handshake_state_record_var_cell(d->c1, d->c1->handshake_state, cell, 0);
+  or_handshake_state_record_var_cell(d->c2, d->c2->handshake_state, cell, 1);
+  tor_free(cell);
+
+  d->chan2 = tor_malloc_zero(sizeof(*d->chan2));
+  channel_tls_common_init(d->chan2);
+  d->c2->chan = d->chan2;
+  d->chan2->conn = d->c2;
+  d->c2->base_.address = tor_strdup("C2");
+  d->c2->tls = tor_tls_new(-1, 1);
+  d->c2->handshake_state->received_certs_cell = 1;
+
+  const tor_x509_cert_t *id_cert=NULL, *link_cert=NULL, *auth_cert=NULL;
+  tt_assert(! tor_tls_get_my_certs(1, &link_cert, &id_cert));
+
+  const uint8_t *der;
+  size_t sz;
+  tor_x509_cert_get_der(id_cert, &der, &sz);
+  d->c1->handshake_state->id_cert = tor_x509_cert_decode(der, sz);
+  d->c2->handshake_state->id_cert = tor_x509_cert_decode(der, sz);
+
+  tor_x509_cert_get_der(link_cert, &der, &sz);
+  mock_peer_cert = tor_x509_cert_decode(der, sz);
+  tt_assert(mock_peer_cert);
+  tt_assert(! tor_tls_get_my_certs(0, &auth_cert, &id_cert));
+  tor_x509_cert_get_der(auth_cert, &der, &sz);
+  d->c2->handshake_state->auth_cert = tor_x509_cert_decode(der, sz);
+
+  /* Make an authenticate cell ... */
+  tt_int_op(0, ==, connection_or_send_authenticate_cell(d->c1,
+                                             AUTHTYPE_RSA_SHA256_TLSSECRET));
+  tt_assert(mock_got_var_cell);
+  d->cell = mock_got_var_cell;
+  mock_got_var_cell = NULL;
+
+  return d;
+ done:
+  authenticate_data_cleanup(test, d);
+  return NULL;
+}
+
+static struct testcase_setup_t setup_authenticate = {
+  .setup_fn = authenticate_data_setup,
+  .cleanup_fn = authenticate_data_cleanup
+};
+
+static void
+test_link_handshake_auth_cell(void *arg)
+{
+  authenticate_data_t *d = arg;
+  auth1_t *auth1 = NULL;
+
+  /* Is the cell well-formed on the outer layer? */
+  tt_int_op(d->cell->command, ==, CELL_AUTHENTICATE);
+  tt_int_op(d->cell->payload[0], ==, 0);
+  tt_int_op(d->cell->payload[1], ==, 1);
+  tt_int_op(ntohs(get_uint16(d->cell->payload + 2)), ==,
+            d->cell->payload_len - 4);
+
+  /* Check it out for plausibility... */
+  auth_ctx_t ctx;
+  ctx.is_ed = 0;
+  tt_int_op(d->cell->payload_len-4, ==, auth1_parse(&auth1,
+                                             d->cell->payload+4,
+                                             d->cell->payload_len - 4, &ctx));
+  tt_assert(auth1);
+
+  tt_mem_op(auth1->type, ==, "AUTH0001", 8);
+  tt_mem_op(auth1->tlssecrets, ==, "int getRandomNumber(){return 4;}", 32);
+  tt_int_op(auth1_getlen_sig(auth1), >, 120);
+
+  /* Is the signature okay? */
+  uint8_t sig[128];
+  uint8_t digest[32];
+  int n = crypto_pk_public_checksig(
+              tor_tls_cert_get_key(d->c2->handshake_state->auth_cert),
+              (char*)sig, sizeof(sig), (char*)auth1_getarray_sig(auth1),
+              auth1_getlen_sig(auth1));
+  tt_int_op(n, ==, 32);
+  const uint8_t *start = d->cell->payload+4, *end = auth1->end_of_signed;
+  crypto_digest256((char*)digest,
+                   (const char*)start, end-start, DIGEST_SHA256);
+  tt_mem_op(sig, ==, digest, 32);
+
+  /* Then feed it to c2. */
+  tt_int_op(d->c2->handshake_state->authenticated, ==, 0);
+  channel_tls_process_authenticate_cell(d->cell, d->chan2);
+  tt_int_op(mock_close_called, ==, 0);
+  tt_int_op(d->c2->handshake_state->authenticated, ==, 1);
+
+ done:
+  auth1_free(auth1);
+}
+
+#define AUTHENTICATE_FAIL(name, code)                           \
+  static void                                                   \
+  test_link_handshake_auth_ ## name (void *arg)                 \
+  {                                                             \
+    authenticate_data_t *d = arg;                               \
+    { code ; }                                                  \
+    tt_int_op(d->c2->handshake_state->authenticated, ==, 0);    \
+    channel_tls_process_authenticate_cell(d->cell, d->chan2);   \
+    tt_int_op(mock_close_called, ==, 1);                        \
+    tt_int_op(d->c2->handshake_state->authenticated, ==, 0);    \
+   done:                                                        \
+   ;                                                            \
+  }
+
+AUTHENTICATE_FAIL(badstate,
+                  d->c2->base_.state = OR_CONN_STATE_CONNECTING)
+AUTHENTICATE_FAIL(badproto,
+                  d->c2->link_proto = 2)
+AUTHENTICATE_FAIL(atclient,
+                  d->c2->handshake_state->started_here = 1)
+AUTHENTICATE_FAIL(duplicate,
+                  d->c2->handshake_state->received_authenticate = 1)
+static void
+test_link_handshake_auth_already_authenticated(void *arg)
+{
+  authenticate_data_t *d = arg;
+  d->c2->handshake_state->authenticated = 1;
+  channel_tls_process_authenticate_cell(d->cell, d->chan2);
+  tt_int_op(mock_close_called, ==, 1);
+  tt_int_op(d->c2->handshake_state->authenticated, ==, 1);
+ done:
+  ;
+}
+AUTHENTICATE_FAIL(nocerts,
+                  d->c2->handshake_state->received_certs_cell = 0)
+AUTHENTICATE_FAIL(noidcert,
+                  d->c2->handshake_state->id_cert = NULL)
+AUTHENTICATE_FAIL(noauthcert,
+                  d->c2->handshake_state->auth_cert = NULL)
+AUTHENTICATE_FAIL(tooshort,
+                  d->cell->payload_len = 3)
+AUTHENTICATE_FAIL(badtype,
+                  d->cell->payload[0] = 0xff)
+AUTHENTICATE_FAIL(truncated_1,
+                  d->cell->payload[2]++)
+AUTHENTICATE_FAIL(truncated_2,
+                  d->cell->payload[3]++)
+AUTHENTICATE_FAIL(tooshort_1,
+                  tt_int_op(d->cell->payload_len, >=, 260);
+                  d->cell->payload[2] -= 1;
+                  d->cell->payload_len -= 256;)
+AUTHENTICATE_FAIL(badcontent,
+                  d->cell->payload[10] ^= 0xff)
+AUTHENTICATE_FAIL(badsig_1,
+                  d->cell->payload[d->cell->payload_len - 5] ^= 0xff)
+
 #define TEST(name, flags)                                       \
   { #name , test_link_handshake_ ## name, (flags), NULL, NULL }
 
@@ -594,6 +832,10 @@ AUTHCHALLENGE_FAIL(nonzero_circid,
   { "recv_certs/" #name ,                                       \
       test_link_handshake_recv_certs_ ## name, TT_FORK,         \
       &setup_recv_certs, NULL }
+
+#define TEST_AUTHENTICATE(name)                                         \
+  { "authenticate/" #name , test_link_handshake_auth_ ## name, TT_FORK, \
+      &setup_authenticate, NULL }
 
 struct testcase_t link_handshake_tests[] = {
   TEST(certs_ok, TT_FORK),
@@ -632,6 +874,23 @@ struct testcase_t link_handshake_tests[] = {
   TEST_RCV_AUTHCHALLENGE(truncated),
   TEST_RCV_AUTHCHALLENGE(nonzero_circid),
 
+  TEST_AUTHENTICATE(cell),
+  TEST_AUTHENTICATE(badstate),
+  TEST_AUTHENTICATE(badproto),
+  TEST_AUTHENTICATE(atclient),
+  TEST_AUTHENTICATE(duplicate),
+  TEST_AUTHENTICATE(already_authenticated),
+  TEST_AUTHENTICATE(nocerts),
+  TEST_AUTHENTICATE(noidcert),
+  TEST_AUTHENTICATE(noauthcert),
+  TEST_AUTHENTICATE(tooshort),
+  TEST_AUTHENTICATE(badtype),
+  TEST_AUTHENTICATE(truncated_1),
+  TEST_AUTHENTICATE(truncated_2),
+  TEST_AUTHENTICATE(tooshort_1),
+  TEST_AUTHENTICATE(badcontent),
+  TEST_AUTHENTICATE(badsig_1),
+  //TEST_AUTHENTICATE(),
+
   END_OF_TESTCASES
 };
-

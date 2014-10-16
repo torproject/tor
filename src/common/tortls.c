@@ -2394,8 +2394,8 @@ tor_tls_peer_has_cert(tor_tls_t *tls)
 }
 
 /** Return the peer certificate, or NULL if there isn't one. */
-tor_x509_cert_t *
-tor_tls_get_peer_cert(tor_tls_t *tls)
+MOCK_IMPL(tor_x509_cert_t *,
+tor_tls_get_peer_cert,(tor_tls_t *tls))
 {
   X509 *cert;
   cert = SSL_get_peer_certificate(tls->ssl);
@@ -2820,8 +2820,8 @@ tor_tls_server_got_renegotiate(tor_tls_t *tls)
  * the v3 handshake to prove that the client knows the TLS secrets for the
  * connection <b>tls</b>.  Return 0 on success, -1 on failure.
  */
-int
-tor_tls_get_tlssecrets(tor_tls_t *tls, uint8_t *secrets_out)
+MOCK_IMPL(int,
+tor_tls_get_tlssecrets,(tor_tls_t *tls, uint8_t *secrets_out))
 {
 #define TLSSECRET_MAGIC "Tor V3 handshake TLS cross-certification"
   char buf[128];

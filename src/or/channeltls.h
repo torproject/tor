@@ -58,6 +58,8 @@ STATIC void channel_tls_process_certs_cell(var_cell_t *cell,
 STATIC void channel_tls_process_auth_challenge_cell(var_cell_t *cell,
                                                     channel_tls_t *tlschan);
 STATIC void channel_tls_common_init(channel_tls_t *tlschan);
+STATIC void channel_tls_process_authenticate_cell(var_cell_t *cell,
+                                                  channel_tls_t *tlschan);
 #endif
 
 #endif

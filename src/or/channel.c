@@ -4431,10 +4431,10 @@ channel_num_circuits(channel_t *chan)
  * This is called when setting up a channel and replaces the old
  * connection_or_set_circid_type()
  */
-void
-channel_set_circid_type(channel_t *chan,
-                        crypto_pk_t *identity_rcvd,
-                        int consider_identity)
+MOCK_IMPL(void,
+channel_set_circid_type,(channel_t *chan,
+                         crypto_pk_t *identity_rcvd,
+                         int consider_identity))
 {
   int started_here;
   crypto_pk_t *our_identity;

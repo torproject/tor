@@ -90,8 +90,6 @@ static void channel_tls_process_versions_cell(var_cell_t *cell,
                                               channel_tls_t *tlschan);
 static void channel_tls_process_netinfo_cell(cell_t *cell,
                                              channel_tls_t *tlschan);
-static void channel_tls_process_authenticate_cell(var_cell_t *cell,
-                                                  channel_tls_t *tlschan);
 static int command_allowed_before_handshake(uint8_t command);
 static int enter_v3_handshake_with_cell(var_cell_t *cell,
                                         channel_tls_t *tlschan);
@@ -2037,7 +2035,7 @@ channel_tls_process_auth_challenge_cell(var_cell_t *cell, channel_tls_t *chan)
  * the identity of the router on the other side of the connection.
  */
 
-static void
+STATIC void
 channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
 {
   uint8_t expected[V3_AUTH_FIXED_PART_LEN];
