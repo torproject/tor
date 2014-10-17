@@ -179,8 +179,12 @@ test_link_handshake_certs_ok(void *arg)
   tor_free(cell2);
   certs_cell_free(cc1);
   certs_cell_free(cc2);
+  circuitmux_free(chan1->base_.cmux);
   tor_free(chan1);
+  circuitmux_free(chan2->base_.cmux);
   tor_free(chan2);
+  crypto_pk_free(key1);
+  crypto_pk_free(key2);
 }
 
 typedef struct certs_data_s {
@@ -188,6 +192,7 @@ typedef struct certs_data_s {
   channel_tls_t *chan;
   certs_cell_t *ccell;
   var_cell_t *cell;
+  crypto_pk_t *key1, *key2;
 } certs_data_t;
 
 
@@ -204,7 +209,10 @@ recv_certs_cleanup(const struct testcase_t *test, void *obj)
     tor_free(d->cell);
     certs_cell_free(d->ccell);
     connection_free_(TO_CONN(d->c));
+    circuitmux_free(d->chan->base_.cmux);
     tor_free(d->chan);
+    crypto_pk_free(d->key1);
+    crypto_pk_free(d->key2);
     tor_free(d);
   }
   return 1;
@@ -228,12 +236,11 @@ recv_certs_setup(const struct testcase_t *test)
   tt_int_op(connection_init_or_handshake_state(d->c, 1), ==, 0);
   d->c->link_proto = 4;
 
-  crypto_pk_t *key1 = NULL, *key2 = NULL;
-  key1 = pk_generate(2);
-  key2 = pk_generate(3);
+  d->key1 = pk_generate(2);
+  d->key2 = pk_generate(3);
 
   tt_int_op(tor_tls_context_init(TOR_TLS_CTX_IS_PUBLIC_SERVER,
-                                 key1, key2, 86400), ==, 0);
+                                 d->key1, d->key2, 86400), ==, 0);
   d->ccell = certs_cell_new();
   ccc1 = certs_cell_cert_new();
   certs_cell_add_certs(d->ccell, ccc1);
@@ -460,6 +467,7 @@ recv_authchallenge_cleanup(const struct testcase_t *test, void *obj)
   if (d) {
     tor_free(d->cell);
     connection_free_(TO_CONN(d->c));
+    circuitmux_free(d->chan->base_.cmux);
     tor_free(d->chan);
     tor_free(d);
   }
@@ -614,6 +622,7 @@ typedef struct authenticate_data_s {
   or_connection_t *c1, *c2;
   channel_tls_t *chan2;
   var_cell_t *cell;
+  crypto_pk_t *key1, *key2;
 } authenticate_data_t;
 
 static int
@@ -630,7 +639,11 @@ authenticate_data_cleanup(const struct testcase_t *test, void *arg)
     tor_free(d->cell);
     connection_free_(TO_CONN(d->c1));
     connection_free_(TO_CONN(d->c2));
+    circuitmux_free(d->chan2->base_.cmux);
     tor_free(d->chan2);
+    crypto_pk_free(d->key1);
+    crypto_pk_free(d->key2);
+    tor_free(d);
   }
   mock_peer_cert = NULL;
 
@@ -652,11 +665,10 @@ authenticate_data_setup(const struct testcase_t *test)
   d->c1 = or_connection_new(CONN_TYPE_OR, AF_INET);
   d->c2 = or_connection_new(CONN_TYPE_OR, AF_INET);
 
-  crypto_pk_t *key1 = NULL, *key2 = NULL;
-  key1 = pk_generate(2);
-  key2 = pk_generate(3);
+  d->key1 = pk_generate(2);
+  d->key2 = pk_generate(3);
   tt_int_op(tor_tls_context_init(TOR_TLS_CTX_IS_PUBLIC_SERVER,
-                                 key1, key2, 86400), ==, 0);
+                                 d->key1, d->key2, 86400), ==, 0);
 
   d->c1->base_.state = OR_CONN_STATE_OR_HANDSHAKING_V3;
   d->c1->link_proto = 3;
@@ -721,6 +733,7 @@ test_link_handshake_auth_cell(void *arg)
 {
   authenticate_data_t *d = arg;
   auth1_t *auth1 = NULL;
+  crypto_pk_t *auth_pubkey = NULL;
 
   /* Is the cell well-formed on the outer layer? */
   tt_int_op(d->cell->command, ==, CELL_AUTHENTICATE);
@@ -744,8 +757,10 @@ test_link_handshake_auth_cell(void *arg)
   /* Is the signature okay? */
   uint8_t sig[128];
   uint8_t digest[32];
+
+  auth_pubkey = tor_tls_cert_get_key(d->c2->handshake_state->auth_cert);
   int n = crypto_pk_public_checksig(
-              tor_tls_cert_get_key(d->c2->handshake_state->auth_cert),
+              auth_pubkey,
               (char*)sig, sizeof(sig), (char*)auth1_getarray_sig(auth1),
               auth1_getlen_sig(auth1));
   tt_int_op(n, ==, 32);
@@ -762,6 +777,7 @@ test_link_handshake_auth_cell(void *arg)
 
  done:
   auth1_free(auth1);
+  crypto_pk_free(auth_pubkey);
 }
 
 #define AUTHENTICATE_FAIL(name, code)                           \
@@ -800,8 +816,10 @@ test_link_handshake_auth_already_authenticated(void *arg)
 AUTHENTICATE_FAIL(nocerts,
                   d->c2->handshake_state->received_certs_cell = 0)
 AUTHENTICATE_FAIL(noidcert,
+                  tor_x509_cert_free(d->c2->handshake_state->id_cert);
                   d->c2->handshake_state->id_cert = NULL)
 AUTHENTICATE_FAIL(noauthcert,
+                  tor_x509_cert_free(d->c2->handshake_state->auth_cert);
                   d->c2->handshake_state->auth_cert = NULL)
 AUTHENTICATE_FAIL(tooshort,
                   d->cell->payload_len = 3)
