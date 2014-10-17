@@ -24,6 +24,7 @@
 #include "connection.h"
 #include "connection_or.h"
 #include "control.h"
+#include "link_handshake.h"
 #include "relay.h"
 #include "router.h"
 #include "routerlist.h"
@@ -1740,13 +1741,14 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
 STATIC void
 channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
 {
-  tor_x509_cert_t *link_cert = NULL;
-  tor_x509_cert_t *id_cert = NULL;
-  tor_x509_cert_t *auth_cert = NULL;
-  uint8_t *ptr;
+#define MAX_CERT_TYPE_WANTED OR_CERT_TYPE_AUTH_1024
+  tor_x509_cert_t *certs[MAX_CERT_TYPE_WANTED + 1];
   int n_certs, i;
+  certs_cell_t *cc = NULL;
+
   int send_netinfo = 0;
 
+  memset(certs, 0, sizeof(certs));
   tor_assert(cell);
   tor_assert(chan);
   tor_assert(chan->conn);
@@ -1776,62 +1778,40 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
   if (cell->circ_id)
     ERR("It had a nonzero circuit ID");
 
-  n_certs = cell->payload[0];
-  ptr = cell->payload + 1;
+  if (certs_cell_parse(&cc, cell->payload, cell->payload_len) < 0)
+    ERR("It couldn't be parsed.");
+
+  n_certs = cc->n_certs;
+
   for (i = 0; i < n_certs; ++i) {
-    uint8_t cert_type;
-    uint16_t cert_len;
-    if (cell->payload_len < 3)
-      goto truncated;
-    if (ptr > cell->payload + cell->payload_len - 3) {
-      goto truncated;
-    }
-    cert_type = *ptr;
-    cert_len = ntohs(get_uint16(ptr+1));
-    if (cell->payload_len < 3 + cert_len)
-      goto truncated;
-    if (ptr > cell->payload + cell->payload_len - cert_len - 3) {
-      goto truncated;
-    }
-    if (cert_type == OR_CERT_TYPE_TLS_LINK ||
-        cert_type == OR_CERT_TYPE_ID_1024 ||
-        cert_type == OR_CERT_TYPE_AUTH_1024) {
-      tor_x509_cert_t *cert = tor_x509_cert_decode(ptr + 3, cert_len);
-      if (!cert) {
-        log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-               "Received undecodable certificate in CERTS cell from %s:%d",
-               safe_str(chan->conn->base_.address),
-               chan->conn->base_.port);
+    certs_cell_cert_t *c = certs_cell_get_certs(cc, i);
+
+    uint16_t cert_type = c->cert_type;
+    uint16_t cert_len = c->cert_len;
+    uint8_t *cert_body = certs_cell_cert_getarray_body(c);
+
+    if (cert_type > MAX_CERT_TYPE_WANTED)
+      continue;
+
+    tor_x509_cert_t *cert = tor_x509_cert_decode(cert_body, cert_len);
+    if (!cert) {
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+             "Received undecodable certificate in CERTS cell from %s:%d",
+             safe_str(chan->conn->base_.address),
+             chan->conn->base_.port);
+    } else {
+      if (certs[cert_type]) {
+        tor_x509_cert_free(cert);
+        ERR("Duplicate x509 certificate");
       } else {
-        if (cert_type == OR_CERT_TYPE_TLS_LINK) {
-          if (link_cert) {
-            tor_x509_cert_free(cert);
-            ERR("Too many TLS_LINK certificates");
-          }
-          link_cert = cert;
-        } else if (cert_type == OR_CERT_TYPE_ID_1024) {
-          if (id_cert) {
-            tor_x509_cert_free(cert);
-            ERR("Too many ID_1024 certificates");
-          }
-          id_cert = cert;
-        } else if (cert_type == OR_CERT_TYPE_AUTH_1024) {
-          if (auth_cert) {
-            tor_x509_cert_free(cert);
-            ERR("Too many AUTH_1024 certificates");
-          }
-          auth_cert = cert;
-        } else {
-          tor_x509_cert_free(cert);
-        }
+        certs[cert_type] = cert;
       }
     }
-    ptr += 3 + cert_len;
-    continue;
-
-  truncated:
-    ERR("It ends in the middle of a certificate");
   }
+
+  tor_x509_cert_t *id_cert = certs[OR_CERT_TYPE_ID_1024];
+  tor_x509_cert_t *auth_cert = certs[OR_CERT_TYPE_AUTH_1024];
+  tor_x509_cert_t *link_cert = certs[OR_CERT_TYPE_TLS_LINK];
 
   if (chan->conn->handshake_state->started_here) {
     int severity;
@@ -1881,7 +1861,7 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
              safe_str(chan->conn->base_.address), chan->conn->base_.port);
 
     chan->conn->handshake_state->id_cert = id_cert;
-    id_cert = NULL;
+    certs[OR_CERT_TYPE_ID_1024] = NULL;
 
     if (!public_server_mode(get_options())) {
       /* If we initiated the connection and we are not a public server, we
@@ -1908,7 +1888,7 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
 
     chan->conn->handshake_state->id_cert = id_cert;
     chan->conn->handshake_state->auth_cert = auth_cert;
-    id_cert = auth_cert = NULL;
+    certs[OR_CERT_TYPE_ID_1024] = certs[OR_CERT_TYPE_AUTH_1024] = NULL;
   }
 
   chan->conn->handshake_state->received_certs_cell = 1;
@@ -1922,9 +1902,10 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
   }
 
  err:
-  tor_x509_cert_free(id_cert);
-  tor_x509_cert_free(link_cert);
-  tor_x509_cert_free(auth_cert);
+  for (unsigned i = 0; i < ARRAY_LENGTH(certs); ++i) {
+    tor_x509_cert_free(certs[i]);
+  }
+  certs_cell_free(cc);
 #undef ERR
 }
 
@@ -1943,7 +1924,7 @@ STATIC void
 channel_tls_process_auth_challenge_cell(var_cell_t *cell, channel_tls_t *chan)
 {
   int n_types, i, use_type = -1;
-  uint8_t *cp;
+  auth_challenge_cell_t *ac = NULL;
 
   tor_assert(cell);
   tor_assert(chan);
@@ -1956,7 +1937,7 @@ channel_tls_process_auth_challenge_cell(var_cell_t *cell, channel_tls_t *chan)
            safe_str(chan->conn->base_.address),                 \
            chan->conn->base_.port, (s));                        \
     connection_or_close_for_error(chan->conn, 0);               \
-    return;                                                     \
+    goto done;                                                  \
   } while (0)
 
   if (chan->conn->base_.state != OR_CONN_STATE_OR_HANDSHAKING_V3)
@@ -1969,19 +1950,17 @@ channel_tls_process_auth_challenge_cell(var_cell_t *cell, channel_tls_t *chan)
     ERR("We already received one");
   if (!(chan->conn->handshake_state->received_certs_cell))
     ERR("We haven't gotten a CERTS cell yet");
-  if (cell->payload_len < OR_AUTH_CHALLENGE_LEN + 2)
-    ERR("It was too short");
   if (cell->circ_id)
     ERR("It had a nonzero circuit ID");
 
-  n_types = ntohs(get_uint16(cell->payload + OR_AUTH_CHALLENGE_LEN));
-  if (cell->payload_len < OR_AUTH_CHALLENGE_LEN + 2 + 2*n_types)
-    ERR("It looks truncated");
+  if (auth_challenge_cell_parse(&ac, cell->payload, cell->payload_len) < 0)
+    ERR("It was not well-formed.");
+
+  n_types = ac->n_methods;
 
   /* Now see if there is an authentication type we can use */
-  cp = cell->payload+OR_AUTH_CHALLENGE_LEN + 2;
-  for (i = 0; i < n_types; ++i, cp += 2) {
-    uint16_t authtype = ntohs(get_uint16(cp));
+  for (i = 0; i < n_types; ++i) {
+    uint16_t authtype = auth_challenge_cell_get_methods(ac, i);
     if (authtype == AUTHTYPE_RSA_SHA256_TLSSECRET)
       use_type = authtype;
   }
@@ -1992,7 +1971,7 @@ channel_tls_process_auth_challenge_cell(var_cell_t *cell, channel_tls_t *chan)
     /* If we're not a public server then we don't want to authenticate on a
        connection we originated, and we already sent a NETINFO cell when we
        got the CERTS cell. We have nothing more to do. */
-    return;
+    goto done;
   }
 
   if (use_type >= 0) {
@@ -2006,7 +1985,7 @@ channel_tls_process_auth_challenge_cell(var_cell_t *cell, channel_tls_t *chan)
       log_warn(LD_OR,
                "Couldn't send authenticate cell");
       connection_or_close_for_error(chan->conn, 0);
-      return;
+      goto done;
     }
   } else {
     log_info(LD_OR,
@@ -2019,8 +1998,11 @@ channel_tls_process_auth_challenge_cell(var_cell_t *cell, channel_tls_t *chan)
   if (connection_or_send_netinfo(chan->conn) < 0) {
     log_warn(LD_OR, "Couldn't send netinfo cell");
     connection_or_close_for_error(chan->conn, 0);
-    return;
+    goto done;
   }
+
+done:
+  auth_challenge_cell_free(ac);
 
 #undef ERR
 }
@@ -2038,7 +2020,7 @@ channel_tls_process_auth_challenge_cell(var_cell_t *cell, channel_tls_t *chan)
 STATIC void
 channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
 {
-  uint8_t expected[V3_AUTH_FIXED_PART_LEN];
+  uint8_t expected[V3_AUTH_FIXED_PART_LEN+256];
   const uint8_t *auth;
   int authlen;
 
@@ -2094,11 +2076,13 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
   if (authlen < V3_AUTH_BODY_LEN + 1)
     ERR("Authenticator was too short");
 
-  if (connection_or_compute_authenticate_cell_body(
-                        chan->conn, expected, sizeof(expected), NULL, 1) < 0)
+  ssize_t bodylen =
+    connection_or_compute_authenticate_cell_body(
+                        chan->conn, expected, sizeof(expected), NULL, 1);
+  if (bodylen < 0 || bodylen != V3_AUTH_FIXED_PART_LEN)
     ERR("Couldn't compute expected AUTHENTICATE cell body");
 
-  if (tor_memneq(expected, auth, sizeof(expected)))
+  if (tor_memneq(expected, auth, bodylen))
     ERR("Some field in the AUTHENTICATE cell body was not as expected");
 
   {

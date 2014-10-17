@@ -30,6 +30,7 @@
 #include "entrynodes.h"
 #include "geoip.h"
 #include "main.h"
+#include "link_handshake.h"
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "reasons.h"
@@ -2279,28 +2280,37 @@ connection_or_send_certs_cell(or_connection_t *conn)
 int
 connection_or_send_auth_challenge_cell(or_connection_t *conn)
 {
-  var_cell_t *cell;
-  uint8_t *cp;
-  uint8_t challenge[OR_AUTH_CHALLENGE_LEN];
+  var_cell_t *cell = NULL;
+  int r = -1;
   tor_assert(conn->base_.state == OR_CONN_STATE_OR_HANDSHAKING_V3);
 
   if (! conn->handshake_state)
     return -1;
 
-  if (crypto_rand((char*)challenge, OR_AUTH_CHALLENGE_LEN) < 0)
-    return -1;
-  cell = var_cell_new(OR_AUTH_CHALLENGE_LEN + 4);
+  auth_challenge_cell_t *ac = auth_challenge_cell_new();
+
+  if (crypto_rand((char*)ac->challenge, sizeof(ac->challenge)) < 0)
+    goto done;
+
+  auth_challenge_cell_add_methods(ac, AUTHTYPE_RSA_SHA256_TLSSECRET);
+  auth_challenge_cell_set_n_methods(ac,
+                                    auth_challenge_cell_getlen_methods(ac));
+
+  cell = var_cell_new(auth_challenge_cell_encoded_len(ac));
+  ssize_t len = auth_challenge_cell_encode(cell->payload, cell->payload_len,
+                                           ac);
+  if (len != cell->payload_len)
+    goto done;
   cell->command = CELL_AUTH_CHALLENGE;
-  memcpy(cell->payload, challenge, OR_AUTH_CHALLENGE_LEN);
-  cp = cell->payload + OR_AUTH_CHALLENGE_LEN;
-  set_uint16(cp, htons(1)); /* We recognize one authentication type. */
-  set_uint16(cp+2, htons(AUTHTYPE_RSA_SHA256_TLSSECRET));
 
   connection_or_write_var_cell_to_buf(cell, conn);
-  var_cell_free(cell);
-  memwipe(challenge, 0, sizeof(challenge));
+  r = 0;
 
-  return 0;
+ done:
+  var_cell_free(cell);
+  auth_challenge_cell_free(ac);
+
+  return r;
 }
 
 /** Compute the main body of an AUTHENTICATE cell that a client can use
@@ -2327,19 +2337,18 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
                                              crypto_pk_t *signing_key,
                                              int server)
 {
-  uint8_t *ptr;
+  auth1_t *auth = NULL;
+  auth_ctx_t *ctx = auth_ctx_new();
+  int result;
 
   /* assert state is reasonable XXXX */
 
-  if (outlen < V3_AUTH_FIXED_PART_LEN ||
-      (!server && outlen < V3_AUTH_BODY_LEN))
-    return -1;
+  ctx->is_ed = 0;
 
-  ptr = out;
+  auth = auth1_new();
 
   /* Type: 8 bytes. */
-  memcpy(ptr, "AUTH0001", 8);
-  ptr += 8;
+  memcpy(auth1_getarray_type(auth), "AUTH0001", 8);
 
   {
     const tor_x509_cert_t *id_cert=NULL, *link_cert=NULL;
@@ -2359,12 +2368,10 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
     server_id = server ? my_id : their_id;
 
     /* Client ID digest: 32 octets. */
-    memcpy(ptr, client_id, 32);
-    ptr += 32;
+    memcpy(auth->cid, client_id, 32);
 
     /* Server ID digest: 32 octets. */
-    memcpy(ptr, server_id, 32);
-    ptr += 32;
+    memcpy(auth->sid, server_id, 32);
   }
 
   {
@@ -2378,12 +2385,10 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
     }
 
     /* Server log digest : 32 octets */
-    crypto_digest_get_digest(server_d, (char*)ptr, 32);
-    ptr += 32;
+    crypto_digest_get_digest(server_d, (char*)auth->slog, 32);
 
     /* Client log digest : 32 octets */
-    crypto_digest_get_digest(client_d, (char*)ptr, 32);
-    ptr += 32;
+    crypto_digest_get_digest(client_d, (char*)auth->clog, 32);
   }
 
   {
@@ -2396,49 +2401,79 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
       freecert = tor_tls_get_peer_cert(conn->tls);
       cert = freecert;
     }
-    if (!cert)
-      return -1;
-    memcpy(ptr, tor_x509_cert_get_cert_digests(cert)->d[DIGEST_SHA256], 32);
+    if (!cert) {
+      log_warn(LD_OR, "Unable to find cert when making AUTH1 data.");
+      goto err;
+    }
+
+    memcpy(auth->scert,
+           tor_x509_cert_get_cert_digests(cert)->d[DIGEST_SHA256], 32);
 
     if (freecert)
       tor_x509_cert_free(freecert);
-    ptr += 32;
   }
 
   /* HMAC of clientrandom and serverrandom using master key : 32 octets */
-  tor_tls_get_tlssecrets(conn->tls, ptr);
-  ptr += 32;
-
-  tor_assert(ptr - out == V3_AUTH_FIXED_PART_LEN);
-
-  if (server)
-    return V3_AUTH_FIXED_PART_LEN; // ptr-out
+  tor_tls_get_tlssecrets(conn->tls, auth->tlssecrets);
 
   /* 8 octets were reserved for the current time, but we're trying to get out
    * of the habit of sending time around willynilly.  Fortunately, nothing
    * checks it.  That's followed by 16 bytes of nonce. */
-  crypto_rand((char*)ptr, 24);
-  ptr += 24;
+  crypto_rand((char*)auth->rand, 24);
 
-  tor_assert(ptr - out == V3_AUTH_BODY_LEN);
-
-  if (!signing_key)
-    return V3_AUTH_BODY_LEN; // ptr - out
-
-  {
-    int siglen;
-    char d[32];
-    crypto_digest256(d, (char*)out, ptr-out, DIGEST_SHA256);
-    siglen = crypto_pk_private_sign(signing_key,
-                                    (char*)ptr, outlen - (ptr-out),
-                                    d, 32);
-    if (siglen < 0)
-      return -1;
-
-    ptr += siglen;
-    tor_assert(ptr <= out+outlen);
-    return (int)(ptr - out);
+  ssize_t len;
+  if ((len = auth1_encode(out, outlen, auth, ctx)) < 0) {
+    log_warn(LD_OR, "Unable to encode signed part of AUTH1 data.");
+    goto err;
   }
+
+  if (server) {
+    auth1_t *tmp = NULL;
+    ssize_t len2 = auth1_parse(&tmp, out, len, ctx);
+    if (!tmp) {
+      log_warn(LD_OR, "Unable to parse signed part of AUTH1 data.");
+      goto err;
+    }
+    result = (int) (tmp->end_of_fixed_part - out);
+    auth1_free(tmp);
+    if (len2 != len) {
+      log_warn(LD_OR, "Mismatched length when re-parsing AUTH1 data.");
+      goto err;
+    }
+    goto done;
+  }
+
+  if (signing_key) {
+    auth1_setlen_sig(auth, crypto_pk_keysize(signing_key));
+
+    char d[32];
+    crypto_digest256(d, (char*)out, len, DIGEST_SHA256);
+    int siglen = crypto_pk_private_sign(signing_key,
+                                    (char*)auth1_getarray_sig(auth),
+                                    auth1_getlen_sig(auth),
+                                    d, 32);
+    if (siglen < 0) {
+      log_warn(LD_OR, "Unable to sign AUTH1 data.");
+      return -1;
+    }
+
+    auth1_setlen_sig(auth, siglen);
+
+    len = auth1_encode(out, outlen, auth, ctx);
+    if (len < 0) {
+      log_warn(LD_OR, "Unable to encode signed AUTH1 data.");
+      goto err;
+    }
+  }
+  result = (int) len;
+  goto done;
+
+ err:
+  result = -1;
+ done:
+  auth1_free(auth);
+  auth_ctx_free(ctx);
+  return result;
 }
 
 /** Send an AUTHENTICATE cell on the connection <b>conn</b>.  Return 0 on
