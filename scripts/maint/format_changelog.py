@@ -34,6 +34,9 @@ import optparse
 
 NO_HYPHENATE=set("""
 pf-divert
+tor-resolve
+tor-gencert
+tor-fw-helper
 """.split())
 
 LASTLINE_UNDERFLOW_EXPONENT = 1
@@ -117,6 +120,9 @@ def wrap_graf(words, prefix_len1=0, prefix_len2=0, width=72):
     return lines
 
 def hyphenateable(word):
+    if "--" in word:
+        return False
+
     if re.match(r'^[^\d\-]\D*-', word):
         stripped = re.sub(r'^\W+','',word)
         stripped = re.sub(r'\W+$','',word)
