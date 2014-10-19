@@ -1,0 +1,5 @@
+  o Major bugfixes (openssl bug workaround):
+    - Avoid crashing when using OpenSSL version 0.9.8zc, 1.0.0o, or
+      1.0.1j, built with the 'no-ssl3' configuration option. Fixes
+      bug 13471. This is a workaround for an OpenSSL bug.
+
