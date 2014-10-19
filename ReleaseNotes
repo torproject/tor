@@ -3,12 +3,25 @@ of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
 Changes in version 0.2.5.9 - 2014-10-2x
-
   o Deprecated versions:
     - Tor 0.2.2.x has reached end-of-life; it has received no patches or
       attention for some while. Directory authorities no longer accept
       descriptors from relays running any version of Tor prior to Tor
       0.2.3.16-alpha. Resolves ticket 11149.
+
+  o Major features (client security):
+    - The ntor handshake is now on-by-default, no matter what the
+      directory authorities recommend. Implements ticket 8561.
+
+  o Major features (other security):
+    - Disable support for SSLv3. All versions of OpenSSL in use with Tor
+      today support TLS 1.0 or later, so we can safely turn off support
+      for this old (and insecure) protocol. Fixes bug 13426.
+    - Warn about attempts to run hidden services and relays in the same
+      process: that's probably not a good idea. Closes ticket 12908.
+    - Make the "tor-gencert" tool used by directory authority operators
+      create 2048-bit signing keys by default (rather than 1024-bit, since
+      1024-bit is uncomfortably small these days). Addresses ticket 10324.
 
   o Major features (relay security, DoS-resistance):
     - When deciding whether we have run out of memory and we need to
@@ -34,19 +47,13 @@ Changes in version 0.2.5.9 - 2014-10-2x
       the default was always 8 GB. You can still override the default by
       setting MaxMemInQueues yourself. Resolves ticket 11396.
 
-  o Major features (client security):
-    - The ntor handshake is now on-by-default, no matter what the
-      directory authorities recommend. Implements ticket 8561.
-
-  o Major features (other security):
-    - Disable support for SSLv3. All versions of OpenSSL in use with Tor
-      today support TLS 1.0 or later, so we can safely turn off support
-      for this old (and insecure) protocol. Fixes bug 13426.
-    - Warn about attempts to run hidden services and relays in the same
-      process: that's probably not a good idea. Closes ticket 12908.
-    - Make the "tor-gencert" tool used by directory authority operators
-      create 2048-bit signing keys by default (rather than 1024-bit, since
-      1024-bit is uncomfortably small these days). Addresses ticket 10324.
+  o Major features (bridges and pluggable transports):
+    - Add support for passing arguments to managed pluggable transport
+      proxies. Implements ticket 3594.
+    - Bridges now track GeoIP information and the number of their users
+      even when pluggable transports are in use, and report usage
+      statistics in their extra-info descriptors. Resolves tickets 4773
+      and 5040.
 
   o Major features (bridges):
     - Don't launch pluggable transport proxies if we don't have any
@@ -58,6 +65,14 @@ Changes in version 0.2.5.9 - 2014-10-2x
       Running bridges. Now bridgedb can finally make use of its features
       to e.g. include at least one Stable bridge in its answers. Fixes
       bug 9859.
+
+  o Major features (controller):
+    - Extend ORCONN controller event to include an "ID" parameter,
+      and add four new controller event types CONN_BW, CIRC_BW,
+      CELL_STATS, and TB_EMPTY that show connection and circuit usage.
+      The new events are emitted in private Tor networks only, with the
+      goal of being able to better track performance and load during
+      full-network simulations. Implements proposal 218 and ticket 7359.
 
   o Major features (relay performance):
     - Speed up server-side lookups of rendezvous and introduction point
@@ -82,13 +97,12 @@ Changes in version 0.2.5.9 - 2014-10-2x
       platforms. This work has been done by Cristian-Matei Toader for
       Google Summer of Code. Resolves tickets 11351 and 11465.
 
-  o Major features (controller):
-    - Extend ORCONN controller event to include an "ID" parameter,
-      and add four new controller event types CONN_BW, CIRC_BW,
-      CELL_STATS, and TB_EMPTY that show connection and circuit usage.
-      The new events are emitted in private Tor networks only, with the
-      goal of being able to better track performance and load during
-      full-network simulations. Implements proposal 218 and ticket 7359.
+  o Major features (testing networks):
+    - Make testing Tor networks bootstrap better: lower directory fetch
+      retry schedules and maximum interval without directory requests,
+      and raise maximum download tries. Implements ticket 6752.
+    - Add make target 'test-network' to run tests on a Chutney network.
+      Implements ticket 8530.
 
   o Major features (other):
     - On some platforms (currently: recent OSX versions, glibc-based
@@ -97,21 +111,6 @@ Changes in version 0.2.5.9 - 2014-10-2x
       when a crash occurs or an assertion fails. By default, traces
       are dumped to stderr (if possible) and to any logs that are
       reporting errors. Implements ticket 9299.
-
-  o Major features (bridges and pluggable transports):
-    - Add support for passing arguments to managed pluggable transport
-      proxies. Implements ticket 3594.
-    - Bridges now track GeoIP information and the number of their users
-      even when pluggable transports are in use, and report usage
-      statistics in their extra-info descriptors. Resolves tickets 4773
-      and 5040.
-
-  o Major features (testing networks):
-    - Make testing Tor networks bootstrap better: lower directory fetch
-      retry schedules and maximum interval without directory requests,
-      and raise maximum download tries. Implements ticket 6752.
-    - Add make target 'test-network' to run tests on a Chutney network.
-      Implements ticket 8530.
 
   o Major bugfixes (security, directory authorities):
     - Directory authorities now include a digest of each relay's
@@ -139,6 +138,12 @@ Changes in version 0.2.5.9 - 2014-10-2x
       became more strict about when we have "enough directory information
       to build circuits".
 
+  o Major bugfixes (client, pluggable transports):
+    - When managing pluggable transports, use OS notification facilities
+      to learn if they have crashed, and don't attempt to kill any
+      process that has already exited. Fixes bug 8746; bugfix
+      on 0.2.3.6-alpha.
+
   o Major bugfixes (relay denial of service):
     - Instead of writing destroy cells directly to outgoing connection
       buffers, queue them and intersperse them with other outgoing cells.
@@ -146,12 +151,6 @@ Changes in version 0.2.5.9 - 2014-10-2x
       many pending destroy cells prevent data cells from actually getting
       delivered. Reported by "oftc_must_be_destroyed". Fixes bug 7912;
       bugfix on 0.2.0.1-alpha.
-
-  o Major bugfixes (client, pluggable transports):
-    - When managing pluggable transports, use OS notification facilities
-      to learn if they have crashed, and don't attempt to kill any
-      process that has already exited. Fixes bug 8746; bugfix
-      on 0.2.3.6-alpha.
 
   o Major bugfixes (relay):
     - Avoid queuing or sending destroy cells for circuit ID zero when we
@@ -236,6 +235,12 @@ Changes in version 0.2.5.9 - 2014-10-2x
       configure rather than at build time. Fixes issue 6506. Patch from
       Arlo Breault.
 
+  o Minor features (client):
+    - Add a new option, PredictedPortsRelevanceTime, to control how long
+      after having received a request to connect to a given port Tor
+      will try to keep circuits ready in anticipation of future requests
+      for that port. Patch from "unixninja92"; implements ticket 9176.
+
   o Minor features (config options and command line):
     - Add an --allow-missing-torrc commandline option that tells Tor to
       run even if the configuration file specified by -f is not available.
@@ -277,6 +282,9 @@ Changes in version 0.2.5.9 - 2014-10-2x
       guards. Not recommended for ordinary use, since replacing guards
       too frequently makes several attacks easier. Resolves ticket 9934;
       patch from "ra".
+    - Implement the TRANSPORT_LAUNCHED control port event that
+      notifies controllers about new launched pluggable
+      transports. Resolves ticket 5609.
 
   o Minor features (diagnostic):
     - When logging a warning because of bug 7164, additionally check the
@@ -300,10 +308,23 @@ Changes in version 0.2.5.9 - 2014-10-2x
       warnings. We now include more information, to figure out why we
       might be cleaning a microdescriptor for being too old if it's
       still referenced by a live node_t object.
+    - Log current accounting state (bytes sent and received + remaining
+      time for the current accounting period) in the relay's heartbeat
+      message. Implements ticket 5526; patch from Peter Retzlaff.
 
   o Minor features (geoip):
     - Update geoip and geoip6 to the August 7 2014 Maxmind GeoLite2
       Country database.
+
+  o Minor features (interface):
+    - Generate a warning if any ports are listed in the SocksPolicy,
+      DirPolicy, AuthDirReject, AuthDirInvalid, AuthDirBadDir, or
+      AuthDirBadExit options. (These options only support address
+      ranges.) Fixes part of ticket 11108.
+
+  o Minor features (kernel API usage):
+    - Use the SOCK_NONBLOCK socket type, if supported, to open nonblocking
+      sockets in a single system call. Implements ticket 5129.
 
   o Minor features (log messages):
     - When ServerTransportPlugin is set on a bridge, Tor can write more
@@ -325,6 +346,13 @@ Changes in version 0.2.5.9 - 2014-10-2x
       at every 5% of progress. Fixes bug 9963.
     - Warn less verbosely when receiving a malformed
       ESTABLISH_RENDEZVOUS cell. Fixes ticket 11279.
+
+  o Minor features (performance):
+    - If we're using the pure-C 32-bit curve25519_donna implementation
+      of curve25519, build it with the -fomit-frame-pointer option to
+      make it go faster on register-starved hosts. This improves our
+      handshake performance by about 6% on i386 hosts without nacl.
+      Closes ticket 8109.
 
   o Minor features (relay):
     - If a circuit timed out for at least 3 minutes, check if we have a
@@ -350,79 +378,6 @@ Changes in version 0.2.5.9 - 2014-10-2x
       pf.conf(5) manual page for information on configuring pf to use
       divert-to rules. Closes ticket 10896; patch from Dana Koch.
 
-  o Minor features (client):
-    - Add a new option, PredictedPortsRelevanceTime, to control how long
-      after having received a request to connect to a given port Tor
-      will try to keep circuits ready in anticipation of future requests
-      for that port. Patch from "unixninja92"; implements ticket 9176.
-
-  o Minor features (interface):
-    - Generate a warning if any ports are listed in the SocksPolicy,
-      DirPolicy, AuthDirReject, AuthDirInvalid, AuthDirBadDir, or
-      AuthDirBadExit options. (These options only support address
-      ranges.) Fixes part of ticket 11108.
-
-  o Minor features (kernel API usage):
-    - Use the SOCK_NONBLOCK socket type, if supported, to open nonblocking
-      sockets in a single system call. Implements ticket 5129.
-
-  o Minor features (diagnostic):
-    - Log current accounting state (bytes sent and received + remaining
-      time for the current accounting period) in the relay's heartbeat
-      message. Implements ticket 5526; patch from Peter Retzlaff.
-
-  o Minor features (controller):
-    - Implement the TRANSPORT_LAUNCHED control port event that
-      notifies controllers about new launched pluggable
-      transports. Resolves ticket 5609.
-
-  o Minor features (performance):
-    - If we're using the pure-C 32-bit curve25519_donna implementation
-      of curve25519, build it with the -fomit-frame-pointer option to
-      make it go faster on register-starved hosts. This improves our
-      handshake performance by about 6% on i386 hosts without nacl.
-      Closes ticket 8109.
-
-  o Minor bugfixes (tools):
-    - Disable the sandbox name resolver cache when running tor-resolve:
-      tor-resolve doesn't use the sandbox code, and turning it on was
-      breaking attempts to do tor-resolve on a non-default server on
-      Linux. Fixes bug 13295; bugfix on 0.2.5.3-alpha.
-
-  o Minor bugfixes (compilation):
-    - Compile correctly with builds and forks of OpenSSL (such as
-      LibreSSL) that disable compression. Fixes bug 12602; bugfix on
-      0.2.1.1-alpha. Patch from "dhill".
-
-  o Minor bugfixes (Directory server):
-    - No longer accept malformed http headers when parsing urls from
-      headers. Now we reply with Bad Request ("400"). Fixes bug 2767;
-      bugfix on 0.0.6pre1.
-
-  o Minor bugfixes (misc code correctness):
-    - In munge_extrainfo_into_routerinfo(), check the return value of
-      memchr(). This would have been a serious issue if we ever passed
-      it a non-extrainfo. Fixes bug 8791; bugfix on 0.2.0.6-alpha. Patch
-      from Arlo Breault.
-    - On the chance that somebody manages to build Tor on a
-      platform where time_t is unsigned, correct the way that
-      microdesc_add_to_cache() handles negative time arguments.
-      Fixes bug 8042; bugfix on 0.2.3.1-alpha.
-
-  o Minor bugfixes (interface):
-    - Reject relative control socket paths and emit a warning. Previously,
-      single-component control socket paths would be rejected, but Tor
-      would not log why it could not validate the config. Fixes bug 9258;
-      bugfix on 0.2.3.16-alpha.
-
-  o Minor bugfixes (Directory server):
-    - When sending a compressed set of descriptors or microdescriptors,
-      make sure to finalize the zlib stream. Previously, we would write
-      all the compressed data, but if the last descriptor we wanted to
-      send was missing or too old, we would not mark the stream as
-      finished. This caused problems for decompression tools. Fixes bug
-      11648; bugfix on 0.1.1.23.
-
   o Minor bugfixes (bridge client):
     - Stop accepting bridge lines containing hostnames. Doing so would
       cause clients to perform DNS requests on the hostnames, which was
@@ -439,10 +394,15 @@ Changes in version 0.2.5.9 - 2014-10-2x
       but ScrambleSuit will soon become the first one.) Fixes bug 9162;
       bugfix on 0.2.0.3-alpha. Based on a patch from "rl1987".
 
-  o Minor bugfixes (compilation):
-    - Restore the ability to compile Tor with V2_HANDSHAKE_SERVER
-      turned off (that is, without support for v2 link handshakes). Fixes
-      bug 4677; bugfix on 0.2.3.2-alpha. Patch from "piet".
+  o Minor bugfixes (build, auxiliary programs):
+    - Stop preprocessing the "torify" script with autoconf, since
+      it no longer refers to LOCALSTATEDIR. Fixes bug 5505; patch
+      from Guilhem.
+    - The tor-fw-helper program now follows the standard convention and
+      exits with status code "0" on success. Fixes bug 9030; bugfix on
+      0.2.3.1-alpha. Patch by Arlo Breault.
+    - Corrected ./configure advice for what openssl dev package you should
+      install on Debian. Fixes bug 9207; bugfix on 0.2.0.1-alpha.
 
   o Minor bugfixes (client):
     - Avoid "Tried to open a socket with DisableNetwork set" warnings
@@ -521,6 +481,12 @@ Changes in version 0.2.5.9 - 2014-10-2x
       9573; bugfix on 0.0.9pre5.
 
   o Minor bugfixes (compilation):
+    - Compile correctly with builds and forks of OpenSSL (such as
+      LibreSSL) that disable compression. Fixes bug 12602; bugfix on
+      0.2.1.1-alpha. Patch from "dhill".
+    - Restore the ability to compile Tor with V2_HANDSHAKE_SERVER
+      turned off (that is, without support for v2 link handshakes). Fixes
+      bug 4677; bugfix on 0.2.3.2-alpha. Patch from "piet".
     - In routerlist_assert_ok(), don't take the address of a
       routerinfo's cache_info member unless that routerinfo is non-NULL.
       Fixes bug 13096; bugfix on 0.1.1.9-alpha. Patch by "teor".
@@ -542,6 +508,9 @@ Changes in version 0.2.5.9 - 2014-10-2x
       bugfix on 0.2.3.13-alpha. Found by "cypherpunks".
     - Fix compilation with dmalloc. Fixes bug 11605; bugfix
       on 0.2.4.10-alpha.
+    - Build and run correctly on systems like OpenBSD-current that have
+      patched OpenSSL to remove get_cipher_by_char and/or its
+      implementations. Fixes issue 13325.
 
   o Minor bugfixes (controller and command-line):
     - If changing a config option via "setconf" fails in a recoverable
@@ -550,9 +519,26 @@ Changes in version 0.2.5.9 - 2014-10-2x
       write out that file if we successfully switch to the new config
       option. Fixes bug 5605; bugfix on 0.2.2.26-beta. Patch from "Ryman".
 
+  o Minor bugfixes (Directory server):
+    - No longer accept malformed http headers when parsing urls from
+      headers. Now we reply with Bad Request ("400"). Fixes bug 2767;
+      bugfix on 0.0.6pre1.
+    - When sending a compressed set of descriptors or microdescriptors,
+      make sure to finalize the zlib stream. Previously, we would write
+      all the compressed data, but if the last descriptor we wanted to
+      send was missing or too old, we would not mark the stream as
+      finished. This caused problems for decompression tools. Fixes bug
+      11648; bugfix on 0.1.1.23.
+
   o Minor bugfixes (hidden service):
     - Only retry attempts to connect to a chosen rendezvous point 8
       times, not 30. Fixes bug 4241; bugfix on 0.1.0.1-rc.
+
+  o Minor bugfixes (interface):
+    - Reject relative control socket paths and emit a warning. Previously,
+      single-component control socket paths would be rejected, but Tor
+      would not log why it could not validate the config. Fixes bug 9258;
+      bugfix on 0.2.3.16-alpha.
 
   o Minor bugfixes (log messages):
     - Fix a bug where clients using bridges would report themselves
@@ -591,6 +577,14 @@ Changes in version 0.2.5.9 - 2014-10-2x
       from 'warn' to 'protocol warning'. Closes ticket 8093.
 
   o Minor bugfixes (misc code correctness):
+    - In munge_extrainfo_into_routerinfo(), check the return value of
+      memchr(). This would have been a serious issue if we ever passed
+      it a non-extrainfo. Fixes bug 8791; bugfix on 0.2.0.6-alpha. Patch
+      from Arlo Breault.
+    - On the chance that somebody manages to build Tor on a
+      platform where time_t is unsigned, correct the way that
+      microdesc_add_to_cache() handles negative time arguments.
+      Fixes bug 8042; bugfix on 0.2.3.1-alpha.
     - Fix various instances of undefined behavior in channeltls.c,
       tor_memmem(), and eventdns.c that would cause us to construct
       pointers to memory outside an allocated object. (These invalid
@@ -698,6 +692,12 @@ Changes in version 0.2.5.9 - 2014-10-2x
       by forgetting to free things in the unit test code. Fixes bug
       11618, bugfixes on many versions of Tor.
 
+  o Minor bugfixes (tools):
+    - Disable the sandbox name resolver cache when running tor-resolve:
+      tor-resolve doesn't use the sandbox code, and turning it on was
+      breaking attempts to do tor-resolve on a non-default server on
+      Linux. Fixes bug 13295; bugfix on 0.2.5.3-alpha.
+
   o Minor bugfixes (tor-fw-helper):
     - Give a correct log message when tor-fw-helper fails to launch.
       (Previously, we would say something like "tor-fw-helper sent us a
@@ -711,16 +711,6 @@ Changes in version 0.2.5.9 - 2014-10-2x
       exit in tor-gencert, and on a failure to compute digests for our
       own keys when generating a v3 networkstatus vote. These leaks
       should never have affected anyone in practice.
-
-  o Minor bugfixes (build, auxiliary programs):
-    - Stop preprocessing the "torify" script with autoconf, since
-      it no longer refers to LOCALSTATEDIR. Fixes bug 5505; patch
-      from Guilhem.
-    - The tor-fw-helper program now follows the standard convention and
-      exits with status code "0" on success. Fixes bug 9030; bugfix on
-      0.2.3.1-alpha. Patch by Arlo Breault.
-    - Corrected ./configure advice for what openssl dev package you should
-      install on Debian. Fixes bug 9207; bugfix on 0.2.0.1-alpha.
 
   o Code simplification and refactoring:
     - Remove some old fallback code designed to keep Tor clients working
@@ -759,11 +749,6 @@ Changes in version 0.2.5.9 - 2014-10-2x
       confuse Doxygen.
     - Get rid of router->address, since in all cases it was just the
       string representation of router->addr. Resolves ticket 5528.
-
-  o Minor bugfixes (compilation):
-    - Build and run correctly on systems like OpenBSD-current that have
-      patched OpenSSL to remove get_cipher_by_char and/or its
-      implementations. Fixes issue 13325.
 
   o Documentation:
     - Adjust the URLs in the README to refer to the new locations of
