@@ -1,9 +1,10 @@
-Changes in version 0.2.5.9 - 2014-10-2x
-  Tor 0.2.5.9, the first stable release in the 0.2.5 branch, XXXXX
-  WRITEME XXXXX DO NOT RELEASE WITHOUT FINISHING THIS PARAGRAPH. XXXXX
+Changes in version 0.2.5.9-rc - 2014-10-xx
 
-  Below are the changes since 0.2.5.8-rc; see the ReleaseNotes file for
-  a list of changes since the 0.2.4 branch.
+  Tor 0.2.5.9-rc is the third release candidate for the Tor 0.2.5.x
+  series. It contains a response to the recent "POODLE" attack against
+  SSL3 (which doesn't affect Tor), and a response to a crash bug caused
+  by some operating systems' response to the "POODLE" attack (which does
+  affect Tor). It also contains a few miscellaneous fixes.
 
   o Major security fixes:
     - Disable support for SSLv3. All versions of OpenSSL in use with Tor

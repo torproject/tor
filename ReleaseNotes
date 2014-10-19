@@ -2,7 +2,7 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
-Changes in version 0.2.5.9 - 2014-10-2x
+Changes in version 0.2.5.xx - 2014-10-xx
   o Deprecated versions:
     - Tor 0.2.2.x has reached end-of-life; it has received no patches or
       attention for some while. Directory authorities no longer accept
