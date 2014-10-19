@@ -96,6 +96,28 @@ Changes in version 0.2.5.? - 2014-10-??
 
 
 
+  o Major security fixes:
+    - Disable support for SSLv3. All versions of OpenSSL in use with Tor
+      today support TLS 1.0 or later, so we can safely turn off support
+      for this old (and insecure) protocol. Fixes bug 13426.
+
+  o Minor bugfixes:
+    - Disable the sandbox name resolver cache when running tor-resolve:
+      tor-resolve doesn't use the sandbox code, and turning it on was
+      breaking attempts to do tor-resolve on a non-default server on
+      Linux. Fixes bug 13295; bugfix on 0.2.5.3-alpha.
+
+  o Compilation fixes:
+    - Build and run correctly on systems like OpenBSD-current that have
+      patched OpenSSL to remove get_cipher_by_char and/or its
+      implementations. Fixes issue 13325.
+
+  o Downgraded warnings:
+    - Downgrade the severity of the 'unexpected sendme cell from client'
+      from 'warn' to 'protocol warning'. Closes ticket 8093.
+
+
+
   o Major bugfixes (client, startup):
     - Warn about attempts to run hidden services and relays in the same
       process: that's probably not a good idea. Closes ticket 12908.
