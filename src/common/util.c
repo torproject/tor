@@ -262,7 +262,7 @@ tor_reallocarray_(void *ptr, size_t sz1, size_t sz2 DMALLOC_PARAMS)
 {
   /* XXXX we can make this return 0, but we would need to check all the
    * reallocarray users. */
-  tor_assert(sz2 == 0 || sz1 < SIZE_T_CEILING / sz2);
+  tor_assert(size_mul_check(sz1, sz2));
 
   return tor_realloc(ptr, (sz1 * sz2) DMALLOC_FN_ARGS);
 }
