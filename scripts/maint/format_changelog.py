@@ -321,12 +321,12 @@ class ChangeLog(object):
                 s = sectionsByHead[head]
             except KeyError:
                 s = sectionsByHead[head] = []
-                heads.append( (head_score(head), head, s) )
+                heads.append( (head_score(head), head.lower(), head, s) )
 
             s.extend(items)
 
         heads.sort()
-        self.sections = [ (0, head, items) for _,head,items in heads ]
+        self.sections = [ (0, head, items) for _1,_2,head,items in heads ]
 
     def dump(self):
         if self.prehead:
