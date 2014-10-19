@@ -1,14 +1,14 @@
 Changes in version 0.2.5.9 - 2014-10-2x
-  Tor 0.2.5.9, the first stable release in the 0.2.5 branch, XXXXX WRITEME
-  XXXXX DO NOT RELEASE WITHOUT FINISHING THIS PARAGRAPH. XXXXX
+  Tor 0.2.5.9, the first stable release in the 0.2.5 branch, XXXXX
+  WRITEME XXXXX DO NOT RELEASE WITHOUT FINISHING THIS PARAGRAPH. XXXXX
 
-  Below are the changes since 0.2.5.8-rc; see the ReleaseNotes file for a
-  list of changes since the 0.2.4 branch.
+  Below are the changes since 0.2.5.8-rc; see the ReleaseNotes file for
+  a list of changes since the 0.2.4 branch.
 
   o Major security fixes:
-    - Disable support for SSLv3. All versions of OpenSSL in use with
-      Tor today support TLS 1.0 or later, so we can safely turn off
-      support for this old (and insecure) protocol. Fixes bug 13426.
+    - Disable support for SSLv3. All versions of OpenSSL in use with Tor
+      today support TLS 1.0 or later, so we can safely turn off support
+      for this old (and insecure) protocol. Fixes bug 13426.
 
   o Minor bugfixes:
     - Disable sandbox name resolver cache when running tor-resolve:
@@ -17,13 +17,13 @@ Changes in version 0.2.5.9 - 2014-10-2x
       Linux. Fixes bug 13295; bugfix on 0.2.5.3-alpha.
 
   o Compilation fixes:
-    - Build and run correctly on systems like OpenBSD-current that
-      have patched OpenSSL to remove get_cipher_by_char and/or its
+    - Build and run correctly on systems like OpenBSD-current that have
+      patched OpenSSL to remove get_cipher_by_char and/or its
       implementations. Fixes issue 13325.
 
   o Downgraded warnings:
-    - Downgrade the severity of the 'unexpected sendme cell from client' from
-      'warn' to 'protocol warning'. Closes ticket 8093.
+    - Downgrade the severity of the 'unexpected sendme cell from client'
+      from 'warn' to 'protocol warning'. Closes ticket 8093.
 
 
 Changes in version 0.2.5.8-rc - 2014-09-22
