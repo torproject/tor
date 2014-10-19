@@ -229,11 +229,24 @@ test_util_write_chunks_to_file(void *arg)
   tor_free(temp_str);
 }
 
+#define _TFE(a, b, f)  tt_int_op((a).f, ==, (b).f)
+/** test the minimum set of struct tm fields needed for a unique epoch value
+ * this is also the set we use to test tor_timegm */
+#define TM_EQUAL(a, b)           \
+          TT_STMT_BEGIN          \
+            _TFE(a, b, tm_year); \
+            _TFE(a, b, tm_mon ); \
+            _TFE(a, b, tm_mday); \
+            _TFE(a, b, tm_hour); \
+            _TFE(a, b, tm_min ); \
+            _TFE(a, b, tm_sec ); \
+          TT_STMT_END
+
 static void
 test_util_time(void *arg)
 {
   struct timeval start, end;
-  struct tm a_time;
+  struct tm a_time, b_time;
   char timestr[128];
   time_t t_res;
   int i;
@@ -266,31 +279,251 @@ test_util_time(void *arg)
 
   tt_int_op(-1005000L,==, tv_udiff(&start, &end));
 
-  /* Test tor_timegm */
+  /* Test tor_timegm & tor_gmtime_r */
 
   /* The test values here are confirmed to be correct on a platform
-   * with a working timegm. */
+   * with a working timegm & gmtime_r. */
+
+  /* Start with known-zero a_time and b_time.
+   * This avoids passing uninitialised values to TM_EQUAL in a_time.
+   * Zeroing may not be needed for b_time, as long as tor_gmtime_r
+   * never reads the existing values in the structure.
+   * But we really don't want intermittently failing tests. */
+  memset(&a_time, 0, sizeof(struct tm));
+  memset(&b_time, 0, sizeof(struct tm));
+
   a_time.tm_year = 2003-1900;
   a_time.tm_mon = 7;
   a_time.tm_mday = 30;
   a_time.tm_hour = 6;
   a_time.tm_min = 14;
   a_time.tm_sec = 55;
-  tt_int_op((time_t) 1062224095UL,==, tor_timegm(&a_time));
+  t_res = 1062224095UL;
+  tt_int_op(t_res, ==, tor_timegm(&a_time));
+  tor_gmtime_r(&t_res, &b_time);
+  TM_EQUAL(a_time, b_time);
+
   a_time.tm_year = 2004-1900; /* Try a leap year, after feb. */
-  tt_int_op((time_t) 1093846495UL,==, tor_timegm(&a_time));
+  t_res = 1093846495UL;
+  tt_int_op(t_res, ==, tor_timegm(&a_time));
+  tor_gmtime_r(&t_res, &b_time);
+  TM_EQUAL(a_time, b_time);
+
   a_time.tm_mon = 1;          /* Try a leap year, in feb. */
   a_time.tm_mday = 10;
-  tt_int_op((time_t) 1076393695UL,==, tor_timegm(&a_time));
+  t_res = 1076393695UL;
+  tt_int_op(t_res, ==, tor_timegm(&a_time));
+  tor_gmtime_r(&t_res, &b_time);
+  TM_EQUAL(a_time, b_time);
+
   a_time.tm_mon = 0;
-  a_time.tm_mday = 10;
-  tt_int_op((time_t) 1073715295UL,==, tor_timegm(&a_time));
+  t_res = 1073715295UL;
+  tt_int_op(t_res, ==, tor_timegm(&a_time));
+  tor_gmtime_r(&t_res, &b_time);
+  TM_EQUAL(a_time, b_time);
+
+  /* Test tor_timegm out of range */
+
+  /* year */
+
+  /* Wrong year < 1970 */
+  a_time.tm_year = 1969-1900;
+  tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+
+  a_time.tm_year = -1-1900;
+  tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+
+  if (sizeof(a_time.tm_year) == 4 || sizeof(a_time.tm_year) == 8) {
+    a_time.tm_year = -1*(1 << 16);
+    tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+
+    /* one of the smallest tm_year values my 64 bit system supports:
+     * t_res = -9223372036854775LL without clamping */
+    a_time.tm_year = -292275055-1900;
+    tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+
+    a_time.tm_year = INT32_MIN;
+    tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+  }
+
+  if (sizeof(a_time.tm_year) == 8) {
+    a_time.tm_year = -1L*(1L << 48L);
+    tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+
+    /* while unlikely, the system's gmtime(_r) could return
+     * a "correct" retrospective gregorian negative year value,
+     * which I'm pretty sure is:
+     * -1*(2^63)/60/60/24*2000/730485 + 1970 = -292277022657
+     * 730485 is the number of days in two millenia, including leap days */
+    a_time.tm_year = -292277022657L-1900L;
+    tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+
+    a_time.tm_year = INT64_MIN;
+    tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+  }
+
+  /* Wrong year >= INT32_MAX - 1900 */
+  if (sizeof(a_time.tm_year) == 4 || sizeof(a_time.tm_year) == 8) {
+    a_time.tm_year = INT32_MAX-1900;
+    tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+
+    a_time.tm_year = INT32_MAX;
+    tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+  }
+
+  if (sizeof(a_time.tm_year) == 8) {
+    /* one of the largest tm_year values my 64 bit system supports */
+    a_time.tm_year = 292278994LL-1900LL;
+    tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+
+    /* while unlikely, the system's gmtime(_r) could return
+     * a "correct" proleptic gregorian year value,
+     * which I'm pretty sure is:
+     * (2^63-1)/60/60/24*2000/730485 + 1970 = 292277026596
+     * 730485 is the number of days in two millenia, including leap days */
+    a_time.tm_year = 292277026596LL-1900LL;
+    tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+
+    a_time.tm_year = INT64_MAX-1900;
+    tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+
+    a_time.tm_year = INT64_MAX;
+    tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+  }
+
+  /* month */
+  a_time.tm_year = 2007-1900;  /* restore valid year */
+
   a_time.tm_mon = 12;          /* Wrong month, it's 0-based */
-  a_time.tm_mday = 10;
   tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+
   a_time.tm_mon = -1;          /* Wrong month */
-  a_time.tm_mday = 10;
   tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+
+  /* day */
+  a_time.tm_mon = 6;            /* Try July */
+  a_time.tm_mday = 32;          /* Wrong day */
+  tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+
+  a_time.tm_mon = 5;            /* Try June */
+  a_time.tm_mday = 31;          /* Wrong day */
+  tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+
+  a_time.tm_year = 2008-1900;   /* Try a leap year */
+  a_time.tm_mon = 1;            /* in feb. */
+  a_time.tm_mday = 30;          /* Wrong day */
+  tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+
+  a_time.tm_year = 2011-1900;   /* Try a non-leap year */
+  a_time.tm_mon = 1;            /* in feb. */
+  a_time.tm_mday = 29;          /* Wrong day */
+  tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+
+  a_time.tm_mday = 0;           /* Wrong day, it's 1-based (to be different) */
+  tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+
+  /* hour */
+  a_time.tm_mday = 3;           /* restore valid month day */
+
+  a_time.tm_hour = 24;          /* Wrong hour, it's 0-based */
+  tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+
+  a_time.tm_hour = -1;          /* Wrong hour */
+  tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+
+  /* minute */
+  a_time.tm_hour = 22;          /* restore valid hour */
+
+  a_time.tm_min = 60;           /* Wrong minute, it's 0-based */
+  tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+
+  a_time.tm_min = -1;           /* Wrong minute */
+  tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+
+  /* second */
+  a_time.tm_min = 37;           /* restore valid minute */
+
+  a_time.tm_sec = 61;           /* Wrong second: 0-based with leap seconds */
+  tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+
+  a_time.tm_sec = -1;           /* Wrong second */
+  tt_int_op((time_t) -1,==, tor_timegm(&a_time));
+
+  /* Test tor_gmtime_r out of range */
+
+  /* time_t < 0 yields a year clamped to 1 or 1970,
+   * depending on whether the implementation of the system gmtime(_r)
+   * sets struct tm (1) or not (1970) */
+  t_res = -1;
+  tor_gmtime_r(&t_res, &b_time);
+  tt_assert(b_time.tm_year == (1970-1900) ||
+            b_time.tm_year == (1969-1900));
+
+  if (sizeof(time_t) == 4 || sizeof(time_t) == 8) {
+    t_res = -1*(1 << 30);
+    tor_gmtime_r(&t_res, &b_time);
+    tt_assert(b_time.tm_year == (1970-1900) ||
+              b_time.tm_year == (1935-1900));
+
+    t_res = INT32_MIN;
+    tor_gmtime_r(&t_res, &b_time);
+    tt_assert(b_time.tm_year == (1970-1900) ||
+              b_time.tm_year == (1901-1900));
+  }
+
+  if (sizeof(time_t) == 8) {
+    /* one of the smallest tm_year values my 64 bit system supports:
+     * b_time.tm_year == (-292275055LL-1900LL) without clamping */
+    t_res = -9223372036854775LL;
+    tor_gmtime_r(&t_res, &b_time);
+    tt_assert(b_time.tm_year == (1970-1900) ||
+              b_time.tm_year == (1-1900));
+
+    /* while unlikely, the system's gmtime(_r) could return
+     * a "correct" retrospective gregorian negative year value,
+     * which I'm pretty sure is:
+     * -1*(2^63)/60/60/24*2000/730485 + 1970 = -292277022657
+     * 730485 is the number of days in two millenia, including leap days
+     * (int64_t)b_time.tm_year == (-292277022657LL-1900LL) without clamping */
+    t_res = INT64_MIN;
+    tor_gmtime_r(&t_res, &b_time);
+    tt_assert(b_time.tm_year == (1970-1900) ||
+              b_time.tm_year == (1-1900));
+  }
+
+  /* time_t >= INT_MAX yields a year clamped to 2037 or 9999,
+   * depending on whether the implementation of the system gmtime(_r)
+   * sets struct tm (9999) or not (2037) */
+  if (sizeof(time_t) == 4 || sizeof(time_t) == 8) {
+    t_res = 3*(1 << 29);
+    tor_gmtime_r(&t_res, &b_time);
+    tt_assert(b_time.tm_year == (2021-1900));
+
+    t_res = INT32_MAX;
+    tor_gmtime_r(&t_res, &b_time);
+    tt_assert(b_time.tm_year == (2037-1900) ||
+              b_time.tm_year == (2038-1900));
+  }
+
+  if (sizeof(time_t) == 8) {
+    /* one of the largest tm_year values my 64 bit system supports:
+     * b_time.tm_year == (292278994L-1900L) without clamping */
+    t_res = 9223372036854775LL;
+    tor_gmtime_r(&t_res, &b_time);
+    tt_assert(b_time.tm_year == (2037-1900) ||
+              b_time.tm_year == (9999-1900));
+
+    /* while unlikely, the system's gmtime(_r) could return
+     * a "correct" proleptic gregorian year value,
+     * which I'm pretty sure is:
+     * (2^63-1)/60/60/24*2000/730485 + 1970 = 292277026596
+     * 730485 is the number of days in two millenia, including leap days
+     * (int64_t)b_time.tm_year == (292277026596L-1900L) without clamping */
+    t_res = INT64_MAX;
+    tor_gmtime_r(&t_res, &b_time);
+    tt_assert(b_time.tm_year == (2037-1900) ||
+              b_time.tm_year == (9999-1900));
+  }
 
   /* Test {format,parse}_rfc1123_time */
 
@@ -324,13 +557,10 @@ test_util_time(void *arg)
   tt_int_op(-1,==,
             parse_rfc1123_time("Wed, 30 Mar 2011 23:59:59 GM", &t_res));
 
-#if 0
-  /* This fails, I imagine it's important and should be fixed? */
-  test_eq(-1, parse_rfc1123_time("Wed, 29 Feb 2011 16:00:00 GMT", &t_res));
-  /* Why is this string valid (ie. the test fails because it doesn't
-     return -1)? */
-  test_eq(-1, parse_rfc1123_time("Wed, 30 Mar 2011 23:59:61 GMT", &t_res));
-#endif
+  tt_int_op(-1,==,
+            parse_rfc1123_time("Wed, 29 Feb 2011 16:00:00 GMT", &t_res));
+  tt_int_op(-1,==,
+            parse_rfc1123_time("Wed, 30 Mar 2011 23:59:61 GMT", &t_res));
 
   /* Test parse_iso_time */
 
