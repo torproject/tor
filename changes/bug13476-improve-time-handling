@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Set the correct day of year value when the system's localtime(_r)
+      or gmtime(_r) functions fail to set struct tm.
+      Fixes bug 13476.
