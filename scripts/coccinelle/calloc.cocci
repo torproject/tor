@@ -2,7 +2,8 @@
 
 @malloc_to_calloc@
 identifier f =~ "(tor_malloc|tor_malloc_zero)";
-expression a, b;
+expression a;
+constant b;
 @@
 - f(a * b)
 + tor_calloc(a, b)
