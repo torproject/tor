@@ -29,12 +29,24 @@ Changes in version 0.2.5.9 - 2014-10-2x
       table positions are derived from a randomized cryptographic key,
       and an attacker cannot predict which entries will collide. Closes
       ticket 4900.
-
-  o Major features (security):
     - If you don't specify MaxMemInQueues yourself, Tor now tries to
       pick a good value based on your total system memory. Previously,
       the default was always 8 GB. You can still override the default by
       setting MaxMemInQueues yourself. Resolves ticket 11396.
+
+  o Major features (client security):
+    - The ntor handshake is now on-by-default, no matter what the
+      directory authorities recommend. Implements ticket 8561.
+
+  o Major features (other security):
+    - Disable support for SSLv3. All versions of OpenSSL in use with Tor
+      today support TLS 1.0 or later, so we can safely turn off support
+      for this old (and insecure) protocol. Fixes bug 13426.
+    - Warn about attempts to run hidden services and relays in the same
+      process: that's probably not a good idea. Closes ticket 12908.
+    - Make the "tor-gencert" tool used by directory authority operators
+      create 2048-bit signing keys by default (rather than 1024-bit, since
+      1024-bit is uncomfortably small these days). Addresses ticket 10324.
 
   o Major features (bridges):
     - Don't launch pluggable transport proxies if we don't have any
@@ -70,32 +82,36 @@ Changes in version 0.2.5.9 - 2014-10-2x
       platforms. This work has been done by Cristian-Matei Toader for
       Google Summer of Code. Resolves tickets 11351 and 11465.
 
-  o Major features (other):
+  o Major features (controller):
     - Extend ORCONN controller event to include an "ID" parameter,
       and add four new controller event types CONN_BW, CIRC_BW,
       CELL_STATS, and TB_EMPTY that show connection and circuit usage.
       The new events are emitted in private Tor networks only, with the
       goal of being able to better track performance and load during
       full-network simulations. Implements proposal 218 and ticket 7359.
+
+  o Major features (other):
     - On some platforms (currently: recent OSX versions, glibc-based
       platforms that support the ELF format, and a few other
       Unix-like operating systems), Tor can now dump stack traces
       when a crash occurs or an assertion fails. By default, traces
       are dumped to stderr (if possible) and to any logs that are
       reporting errors. Implements ticket 9299.
+
+  o Major features (bridges and pluggable transports):
     - Add support for passing arguments to managed pluggable transport
       proxies. Implements ticket 3594.
     - Bridges now track GeoIP information and the number of their users
       even when pluggable transports are in use, and report usage
       statistics in their extra-info descriptors. Resolves tickets 4773
       and 5040.
+
+  o Major features (testing networks):
     - Make testing Tor networks bootstrap better: lower directory fetch
       retry schedules and maximum interval without directory requests,
       and raise maximum download tries. Implements ticket 6752.
     - Add make target 'test-network' to run tests on a Chutney network.
       Implements ticket 8530.
-    - The ntor handshake is now on-by-default, no matter what the
-      directory authorities recommend. Implements ticket 8561.
 
   o Major bugfixes (security, directory authorities):
     - Directory authorities now include a digest of each relay's
@@ -135,10 +151,6 @@ Changes in version 0.2.5.9 - 2014-10-2x
       process that has already exited. Fixes bug 8746; bugfix
       on 0.2.3.6-alpha.
 
-  o Major bugfixes (client, startup):
-    - Warn about attempts to run hidden services and relays in the same
-      process: that's probably not a good idea. Closes ticket 12908.
-
   o Major bugfixes (relay):
     - Avoid queuing or sending destroy cells for circuit ID zero when we
       fail to send a CREATE cell. Fixes bug 12848; bugfix on 0.0.8pre1.
@@ -156,11 +168,6 @@ Changes in version 0.2.5.9 - 2014-10-2x
       cells using that circuit. Previously, this bug made roughly one
       circuit in a million non-functional. Fixes bug 12195; this is a
       bugfix on every version of Tor.
-
-  o Major security fixes:
-    - Disable support for SSLv3. All versions of OpenSSL in use with Tor
-      today support TLS 1.0 or later, so we can safely turn off support
-      for this old (and insecure) protocol. Fixes bug 13426.
 
   o Minor features (security):
     - New --enable-expensive-hardening option to enable security
@@ -685,7 +692,7 @@ Changes in version 0.2.5.9 - 2014-10-2x
       own keys when generating a v3 networkstatus vote. These leaks
       should never have affected anyone in practice.
 
-  o Minor fixes (build, auxiliary programs):
+  o Minor bugfixes (build, auxiliary programs):
     - Stop preprocessing the "torify" script with autoconf, since
       it no longer refers to LOCALSTATEDIR. Fixes bug 5505; patch
       from Guilhem.
@@ -735,16 +742,10 @@ Changes in version 0.2.5.9 - 2014-10-2x
     - Get rid of router->address, since in all cases it was just the
       string representation of router->addr. Resolves ticket 5528.
 
-  o Compilation fixes:
+  o Minor bugfixes (compilation):
     - Build and run correctly on systems like OpenBSD-current that have
       patched OpenSSL to remove get_cipher_by_char and/or its
       implementations. Fixes issue 13325.
-
-  o Distribution:
-    - Include a tor.service file in contrib/dist for use with systemd.
-      Some distributions will be able to use this file unmodified;
-      others will need to tweak it, or write their own. Patch from Jamie
-      Nguyen; resolves ticket 8368.
 
   o Documentation:
     - Adjust the URLs in the README to refer to the new locations of
@@ -752,6 +753,8 @@ Changes in version 0.2.5.9 - 2014-10-2x
       Matt Pagan.
     - Document 'reject6' and 'accept6' ExitPolicy entries. Resolves
       ticket 12878.
+    - Update manpage to describe some of the files you can expect to
+      find in Tor's DataDirectory. Addresses ticket 9839.
     - Clean up several option names in the manpage to match their real
       names, add the missing documentation for a couple of testing and
       directory authority options, remove the documentation for a
@@ -807,8 +810,6 @@ Changes in version 0.2.5.9 - 2014-10-2x
       authorities since 0.2.2.1-alpha, when we stopped uploading or
       downloading v0 hidden service descriptors. Fixes bug 10881; also
       part of a fix for bug 10841.
-
-  o Removed code:
     - Remove /tor/dbg-stability.txt URL that was meant to help debug WFU
       and MTBF calculations, but that nobody was using. Fixes bug 11742.
     - The TunnelDirConns and PreferTunnelledDirConns options no longer
@@ -821,8 +822,6 @@ Changes in version 0.2.5.9 - 2014-10-2x
     - Remove all remaining code related to version-0 hidden service
       descriptors: they have not been in use since 0.2.2.1-alpha. Fixes
       the rest of bug 10841.
-
-  o Removed features:
     - Remove migration code from when we renamed the "cached-routers"
       file to "cached-descriptors" back in 0.2.0.8-alpha. This
       incidentally resolves ticket 6502 by cleaning up the related code
@@ -844,28 +843,27 @@ Changes in version 0.2.5.9 - 2014-10-2x
     - Improve the tinytest implementation of string operation tests so
       that comparisons with NULL strings no longer crash the tests; they
       now just fail, normally. Fixes bug 9004; bugfix on 0.2.2.4-alpha.
-
-  o Testing:
     - New macros in test.h to simplify writing mock-functions for unit
       tests. Part of ticket 11507. Patch from Dana Koch.
-    - Complete tests for the status.c module. Resolves ticket 11507.
-      Patch from Dana Koch.
     - We now have rudimentary function mocking support that our unit
       tests can use to test functions in isolation. Function mocking
       lets the tests temporarily replace a function's dependencies with
       stub functions, so that the tests can check the function without
       invoking the other functions it calls.
+
+  o Testing:
+    - Complete tests for the status.c module. Resolves ticket 11507.
+      Patch from Dana Koch.
     - Add more unit tests for the <circid,channel>->circuit map, and
       the destroy-cell-tracking code to fix bug 7912.
     - Unit tests for failing cases of the TAP onion handshake.
     - More unit tests for address-manipulation functions.
 
-  o Tool changes:
-    - Make the "tor-gencert" tool used by directory authority operators
-      create 2048-bit signing keys by default (rather than 1024-bit, since
-      1024-bit is uncomfortably small these days). Addresses ticket 10324.
-
   o Distribution (systemd):
+    - Include a tor.service file in contrib/dist for use with systemd.
+      Some distributions will be able to use this file unmodified;
+      others will need to tweak it, or write their own. Patch from Jamie
+      Nguyen; resolves ticket 8368.
     - Verify configuration file via ExecStartPre in the systemd unit
       file. Patch from intrigeri; resolves ticket 12730.
     - Explicitly disable RunAsDaemon in the systemd unit file. Our
@@ -876,10 +874,6 @@ Changes in version 0.2.5.9 - 2014-10-2x
       /usr/share/tor/tor-service-defaults-torrc" (that contains
       "RunAsDaemon 1") by default. Patch by intrigeri; resolves
       ticket 12731.
-
-  o Documentation (man page) fixes:
-    - Update manpage to describe some of the files you can expect to
-      find in Tor's DataDirectory. Addresses ticket 9839.
 
 
 Changes in version 0.2.4.24 - 2014-09-22
