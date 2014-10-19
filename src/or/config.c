@@ -4017,17 +4017,24 @@ find_torrc_filename(config_line_t *cmd_arg,
   if (*using_default_fname) {
     /* didn't find one, try CONFDIR */
     const char *dflt = get_default_conf_file(defaults_file);
-    if (dflt && file_status(dflt) == FN_FILE) {
+    file_status_t st = file_status(dflt);
+    if (dflt && (st == FN_FILE || st == FN_EMPTY)) {
       fname = tor_strdup(dflt);
     } else {
 #ifndef _WIN32
       char *fn = NULL;
-      if (!defaults_file)
+      if (!defaults_file) {
         fn = expand_filename("~/.torrc");
-      if (fn && file_status(fn) == FN_FILE) {
-        fname = fn;
+      }
+      if (fn) {
+        file_status_t hmst = file_status(fn);
+        if (hmst == FN_FILE || hmst == FN_EMPTY) {
+          fname = fn;
+        } else {
+          tor_free(fn);
+          fname = tor_strdup(dflt);
+        }
       } else {
-        tor_free(fn);
         fname = tor_strdup(dflt);
       }
 #else
@@ -4063,7 +4070,8 @@ load_torrc_from_disk(config_line_t *cmd_arg, int defaults_file)
   *fname_var = fname;
 
   /* Open config file */
-  if (file_status(fname) != FN_FILE ||
+  file_status_t st = file_status(fname);
+  if (!(st == FN_FILE || st == FN_EMPTY) ||
       !(cf = read_file_to_str(fname,0,NULL))) {
     if (using_default_torrc == 1 || ignore_missing_torrc) {
       if (!defaults_file)
@@ -6413,7 +6421,9 @@ write_configuration_file(const char *fname, const or_options_t *options)
   tor_assert(fname);
 
   switch (file_status(fname)) {
+    /* create backups of old config files, even if they're empty */
     case FN_FILE:
+    case FN_EMPTY:
       old_val = read_file_to_str(fname, 0, NULL);
       if (!old_val || strcmpstart(old_val, GENERATED_FILE_PREFIX)) {
         rename_old = 1;

@@ -1888,10 +1888,15 @@ clean_name_for_stat(char *name)
 #endif
 }
 
-/** Return FN_ERROR if filename can't be read, or is NULL or zero-length,
- * FN_NOENT if it doesn't
- * exist, FN_FILE if it is a regular file, or FN_DIR if it's a
- * directory.  On FN_ERROR, sets errno. */
+/** Return:
+ * FN_ERROR if filename can't be read, is NULL, or is zero-length,
+ * FN_NOENT if it doesn't exist,
+ * FN_FILE if it is a non-empty regular file, or a FIFO on unix-like systems,
+ * FN_EMPTY for zero-byte regular files,
+ * FN_DIR if it's a directory, and
+ * FN_ERROR for any other file type.
+ * On FN_ERROR and FN_NOENT, sets errno.  (errno is not set when FN_ERROR
+ * is returned due to an unhandled file type.) */
 file_status_t
 file_status(const char *fname)
 {
@@ -1912,16 +1917,23 @@ file_status(const char *fname)
     }
     return FN_ERROR;
   }
-  if (st.st_mode & S_IFDIR)
+  if (st.st_mode & S_IFDIR) {
     return FN_DIR;
-  else if (st.st_mode & S_IFREG)
-    return FN_FILE;
+  } else if (st.st_mode & S_IFREG) {
+    if (st.st_size > 0) {
+      return FN_FILE;
+    } else if (st.st_size == 0) {
+      return FN_EMPTY;
+    } else {
+      return FN_ERROR;
+    }
 #ifndef _WIN32
-  else if (st.st_mode & S_IFIFO)
+  } else if (st.st_mode & S_IFIFO) {
     return FN_FILE;
 #endif
-  else
+  } else {
     return FN_ERROR;
+  }
 }
 
 /** Check whether <b>dirname</b> exists and is private.  If yes return 0.  If

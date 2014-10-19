@@ -823,6 +823,7 @@ replace_file(const char *from, const char *to)
     case FN_NOENT:
       break;
     case FN_FILE:
+    case FN_EMPTY:
       if (unlink(to)) return -1;
       break;
     case FN_ERROR:

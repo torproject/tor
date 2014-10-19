@@ -1204,6 +1204,7 @@ router_reload_router_list_impl(desc_store_t *store)
 
   tor_free(fname);
   fname = get_datadir_fname_suffix(store->fname_base, ".new");
+  /* don't load empty files - we wouldn't get any data, even if we tried */
   if (file_status(fname) == FN_FILE)
     contents = read_file_to_str(fname, RFTS_BIN|RFTS_IGNORE_MISSING, &st);
   if (contents) {

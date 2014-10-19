@@ -323,7 +323,10 @@ or_state_load(void)
         goto done;
       }
       break;
+    /* treat empty state files as if the file doesn't exist, and generate
+     * a new state file, overwriting the empty file in or_state_save() */
     case FN_NOENT:
+    case FN_EMPTY:
       break;
     case FN_ERROR:
     case FN_DIR:

@@ -1,7 +1,17 @@
   o Minor bugfixes
+    - Stop failing when key files are zero-length. Instead, generate new
+      keys, and overwrite the empty key files.
+      Fixes bug 13111.
+    - Stop generating a fresh .old RSA key file when the .old file is missing.
+      Fixed as part of bug 13111.
+    - Avoid overwriting .old key files with empty key files.
+      Fixed as part of bug 13111.
     - Stop crashing when a NULL filename is passed to file_status().
       Fixed as part of bug 13111.
 
   o Minor enhancements:
+    - Skip loading zero-length extra info store, router store, stats, state,
+      and key files.
+      Implemented with bug 13111.
     - Return FN_ERROR when a zero-length filename is passed to file_status().
       Fixed as part of bug 13111.
