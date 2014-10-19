@@ -129,7 +129,7 @@ Changes in version 0.2.5.9 - 2014-10-2x
       attacker from causing a microdescriptor collision, because the
       router's identity is not forgeable.
 
-  o Major bugfixes:
+  o Major bugfixes (client):
     - Perform circuit cleanup operations even when circuit
       construction operations are disabled (because the network is
       disabled, or because there isn't enough directory information).
@@ -138,6 +138,8 @@ Changes in version 0.2.5.9 - 2014-10-2x
       0.1.1.11-alpha. This bug became visible in 0.2.4.10-alpha when we
       became more strict about when we have "enough directory information
       to build circuits".
+
+  o Major bugfixes (relay denial of service):
     - Instead of writing destroy cells directly to outgoing connection
       buffers, queue them and intersperse them with other outgoing cells.
       This can prevent a set of resource starvation conditions where too
@@ -175,6 +177,13 @@ Changes in version 0.2.5.9 - 2014-10-2x
       memory. Right now, this includes AddressSanitizer and UbSan, which
       are supported in newer versions of GCC and Clang. Closes ticket
       11477.
+    - Authorities now assign the Guard flag to the fastest 25% of the
+      network (it used to be the fastest 50%). Also raise the consensus
+      weight that guarantees the Guard flag from 250 to 2000. For the
+      current network, this results in about 1100 guards, down from 2500.
+      This step paves the way for moving the number of entry guards
+      down to 1 (proposal 236) while still providing reasonable expected
+      performance for most users. Implements ticket 12690.
 
   o Minor features (security, memory management):
     - Memory allocation tricks (mempools and buffer freelists) are now
@@ -183,15 +192,6 @@ Changes in version 0.2.5.9 - 2014-10-2x
       disabling these features because malloc performance is good enough
       on most platforms, and a similar feature in OpenSSL exacerbated
       exploitation of the Heartbleed attack. Resolves ticket 11476.
-
-  o Minor features:
-    - Authorities now assign the Guard flag to the fastest 25% of the
-      network (it used to be the fastest 50%). Also raise the consensus
-      weight that guarantees the Guard flag from 250 to 2000. For the
-      current network, this results in about 1100 guards, down from 2500.
-      This step paves the way for moving the number of entry guards
-      down to 1 (proposal 236) while still providing reasonable expected
-      performance for most users. Implements ticket 12690.
 
   o Minor features (bridge client):
     - Report a more useful failure message when we can't connect to a
@@ -350,40 +350,56 @@ Changes in version 0.2.5.9 - 2014-10-2x
       pf.conf(5) manual page for information on configuring pf to use
       divert-to rules. Closes ticket 10896; patch from Dana Koch.
 
-  o Minor features (other):
+  o Minor features (client):
     - Add a new option, PredictedPortsRelevanceTime, to control how long
       after having received a request to connect to a given port Tor
       will try to keep circuits ready in anticipation of future requests
       for that port. Patch from "unixninja92"; implements ticket 9176.
+
+  o Minor features (interface):
     - Generate a warning if any ports are listed in the SocksPolicy,
       DirPolicy, AuthDirReject, AuthDirInvalid, AuthDirBadDir, or
       AuthDirBadExit options. (These options only support address
       ranges.) Fixes part of ticket 11108.
+
+  o Minor features (kernel API usage):
     - Use the SOCK_NONBLOCK socket type, if supported, to open nonblocking
       sockets in a single system call. Implements ticket 5129.
+
+  o Minor features (diagnostic):
     - Log current accounting state (bytes sent and received + remaining
       time for the current accounting period) in the relay's heartbeat
       message. Implements ticket 5526; patch from Peter Retzlaff.
+
+  o Minor features (controller):
     - Implement the TRANSPORT_LAUNCHED control port event that
       notifies controllers about new launched pluggable
       transports. Resolves ticket 5609.
+
+  o Minor features (performance):
     - If we're using the pure-C 32-bit curve25519_donna implementation
       of curve25519, build it with the -fomit-frame-pointer option to
       make it go faster on register-starved hosts. This improves our
       handshake performance by about 6% on i386 hosts without nacl.
       Closes ticket 8109.
 
-  o Minor bugfixes:
+  o Minor bugfixes (tools):
     - Disable the sandbox name resolver cache when running tor-resolve:
       tor-resolve doesn't use the sandbox code, and turning it on was
       breaking attempts to do tor-resolve on a non-default server on
       Linux. Fixes bug 13295; bugfix on 0.2.5.3-alpha.
+
+  o Minor bugfixes (compilation):
     - Compile correctly with builds and forks of OpenSSL (such as
       LibreSSL) that disable compression. Fixes bug 12602; bugfix on
       0.2.1.1-alpha. Patch from "dhill".
+
+  o Minor bugfixes (Directory server):
     - No longer accept malformed http headers when parsing urls from
       headers. Now we reply with Bad Request ("400"). Fixes bug 2767;
       bugfix on 0.0.6pre1.
+
+  o Minor bugfixes (misc code correctness):
     - In munge_extrainfo_into_routerinfo(), check the return value of
       memchr(). This would have been a serious issue if we ever passed
       it a non-extrainfo. Fixes bug 8791; bugfix on 0.2.0.6-alpha. Patch
@@ -392,6 +408,8 @@ Changes in version 0.2.5.9 - 2014-10-2x
       platform where time_t is unsigned, correct the way that
       microdesc_add_to_cache() handles negative time arguments.
       Fixes bug 8042; bugfix on 0.2.3.1-alpha.
+
+  o Minor bugfixes (interface):
     - Reject relative control socket paths and emit a warning. Previously,
       single-component control socket paths would be rejected, but Tor
       would not log why it could not validate the config. Fixes bug 9258;
@@ -421,7 +439,7 @@ Changes in version 0.2.5.9 - 2014-10-2x
       but ScrambleSuit will soon become the first one.) Fixes bug 9162;
       bugfix on 0.2.0.3-alpha. Based on a patch from "rl1987".
 
-  o Minor bugfixes (build):
+  o Minor bugfixes (compilation):
     - Restore the ability to compile Tor with V2_HANDSHAKE_SERVER
       turned off (that is, without support for v2 link handshakes). Fixes
       bug 4677; bugfix on 0.2.3.2-alpha. Patch from "piet".
@@ -569,6 +587,8 @@ Changes in version 0.2.5.9 - 2014-10-2x
     - Squelch a spurious LD_BUG message "No origin circuit for
       successful SOCKS stream" in certain hidden service failure cases;
       fixes bug 10616.
+    - Downgrade the severity of the 'unexpected sendme cell from client'
+      from 'warn' to 'protocol warning'. Closes ticket 8093.
 
   o Minor bugfixes (misc code correctness):
     - Fix various instances of undefined behavior in channeltls.c,
@@ -724,8 +744,6 @@ Changes in version 0.2.5.9 - 2014-10-2x
     - Use a doubly-linked list to implement the global circuit list.
       Resolves ticket 9108. Patch from Marek Majkowski.
     - Remove contrib/id_to_fp.c since it wasn't used anywhere.
-
-  o Code simplifications and refactoring:
     - Remove constants and tests for PKCS1 padding; it's insecure and
       shouldn't be used for anything new. Fixes bug 8792; patch
       from Arlo Breault.
@@ -784,10 +802,6 @@ Changes in version 0.2.5.9 - 2014-10-2x
     - Fix the manpage's description of HiddenServiceAuthorizeClient:
       the maximum client name length is 16, not 19. Fixes bug 11118;
       bugfix on 0.2.1.6-alpha.
-
-  o Downgraded warnings:
-    - Downgrade the severity of the 'unexpected sendme cell from client'
-      from 'warn' to 'protocol warning'. Closes ticket 8093.
 
   o Package cleanup:
     - The contrib directory has been sorted and tidied. Before, it was
