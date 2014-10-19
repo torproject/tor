@@ -1376,7 +1376,8 @@ n_leapdays(int y1, int y2)
   --y2;
   return (y2/4 - y1/4) - (y2/100 - y1/100) + (y2/400 - y1/400);
 }
-/** Number of days per month in non-leap year; used by tor_timegm. */
+/** Number of days per month in non-leap year; used by tor_timegm and
+ * parse_rfc1123_time. */
 static const int days_per_month[] =
   { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
@@ -1390,10 +1391,32 @@ tor_timegm(const struct tm *tm, time_t *time_out)
    * It's way more brute-force than fiddling with tzset().
    */
   time_t year, days, hours, minutes, seconds;
-  int i;
-  year = tm->tm_year + 1900;
-  if (year < 1970 || tm->tm_mon < 0 || tm->tm_mon > 11 ||
-      tm->tm_year >= INT32_MAX-1900) {
+  int i, invalid_year, dpm;
+  /* avoid int overflow on addition */
+  if (tm->tm_year < INT32_MAX-1900) {
+    year = tm->tm_year + 1900;
+  } else {
+    /* clamp year */
+    year = INT32_MAX;
+  }
+  invalid_year = (year < 1970 || tm->tm_year >= INT32_MAX-1900);
+
+  if (tm->tm_mon >= 0 && tm->tm_mon <= 11) {
+    dpm = days_per_month[tm->tm_mon];
+    if (tm->tm_mon == 1 && !invalid_year && IS_LEAPYEAR(tm->tm_year)) {
+      dpm = 29;
+    }
+  } else {
+    /* invalid month - default to 0 days per month */
+    dpm = 0;
+  }
+
+  if (invalid_year ||
+      tm->tm_mon < 0 || tm->tm_mon > 11 ||
+      tm->tm_mday < 1 || tm->tm_mday > dpm ||
+      tm->tm_hour < 0 || tm->tm_hour > 23 ||
+      tm->tm_min < 0 || tm->tm_min > 59 ||
+      tm->tm_sec < 0 || tm->tm_sec > 60) {
     log_warn(LD_BUG, "Out-of-range argument to tor_timegm");
     return -1;
   }
@@ -1457,8 +1480,9 @@ parse_rfc1123_time(const char *buf, time_t *t)
   struct tm tm;
   char month[4];
   char weekday[4];
-  int i, m;
+  int i, m, invalid_year;
   unsigned tm_mday, tm_year, tm_hour, tm_min, tm_sec;
+  unsigned dpm;
 
   if (strlen(buf) != RFC1123_TIME_LEN)
     return -1;
@@ -1471,18 +1495,6 @@ parse_rfc1123_time(const char *buf, time_t *t)
     tor_free(esc);
     return -1;
   }
-  if (tm_mday < 1 || tm_mday > 31 || tm_hour > 23 || tm_min > 59 ||
-      tm_sec > 60 || tm_year >= INT32_MAX || tm_year < 1970) {
-    char *esc = esc_for_log(buf);
-    log_warn(LD_GENERAL, "Got invalid RFC1123 time %s", esc);
-    tor_free(esc);
-    return -1;
-  }
-  tm.tm_mday = (int)tm_mday;
-  tm.tm_year = (int)tm_year;
-  tm.tm_hour = (int)tm_hour;
-  tm.tm_min = (int)tm_min;
-  tm.tm_sec = (int)tm_sec;
 
   m = -1;
   for (i = 0; i < 12; ++i) {
@@ -1498,6 +1510,26 @@ parse_rfc1123_time(const char *buf, time_t *t)
     return -1;
   }
   tm.tm_mon = m;
+
+  invalid_year = (tm_year >= INT32_MAX || tm_year < 1970);
+  tor_assert(m >= 0 && m <= 11);
+  dpm = days_per_month[m];
+  if (m == 1 && !invalid_year && IS_LEAPYEAR(tm_year)) {
+    dpm = 29;
+  }
+
+  if (invalid_year || tm_mday < 1 || tm_mday > dpm ||
+      tm_hour > 23 || tm_min > 59 || tm_sec > 60) {
+    char *esc = esc_for_log(buf);
+    log_warn(LD_GENERAL, "Got invalid RFC1123 time %s", esc);
+    tor_free(esc);
+    return -1;
+  }
+  tm.tm_mday = (int)tm_mday;
+  tm.tm_year = (int)tm_year;
+  tm.tm_hour = (int)tm_hour;
+  tm.tm_min = (int)tm_min;
+  tm.tm_sec = (int)tm_sec;
 
   if (tm.tm_year < 1970) {
     char *esc = esc_for_log(buf);

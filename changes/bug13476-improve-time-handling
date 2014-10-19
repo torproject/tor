@@ -2,3 +2,11 @@
     - Set the correct day of year value when the system's localtime(_r)
       or gmtime(_r) functions fail to set struct tm.
       Fixes bug 13476.
+    - Avoid unlikely signed integer overflow in tor_timegm on systems with
+      32-bit time_t.
+      Fixes bug 13476.
+  o Minor enhancements (validation):
+    - Check all date/time values passed to tor_timegm and parse_rfc1123_time
+      for validity, taking leap years into account.
+      Improves HTTP header validation.
+      Implemented with bug 13476.
