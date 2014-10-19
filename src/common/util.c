@@ -195,16 +195,19 @@ tor_malloc_zero_(size_t size DMALLOC_PARAMS)
   return result;
 }
 
+#define SQRT_SIZE_MAX (((size_t) SIZE_MAX) >> (sizeof(size_t) * 8 / 2))
+
+static INLINE int
+size_mul_check(const size_t x, const size_t y)
+{
+  return ((x <= SQRT_SIZE_MAX && y <= SQRT_SIZE_MAX) ||
+          y == 0 || x <= SIZE_MAX / y);
+}
+
 /** Allocate a chunk of <b>nmemb</b>*<b>size</b> bytes of memory, fill
  * the memory with zero bytes, and return a pointer to the result.
  * Log and terminate the process on error.  (Same as
  * calloc(<b>nmemb</b>,<b>size</b>), but never returns NULL.)
- *
- * XXXX This implementation probably asserts in cases where it could
- * work, because it only tries dividing SIZE_MAX by size (according to
- * the calloc(3) man page, the size of an element of the nmemb-element
- * array to be allocated), not by nmemb (which could in theory be
- * smaller than size).  Don't do that then.
  */
 void *
 tor_calloc_(size_t nmemb, size_t size DMALLOC_PARAMS)
@@ -215,13 +218,8 @@ tor_calloc_(size_t nmemb, size_t size DMALLOC_PARAMS)
    * we're allocating something very big (it knows if it just got the memory
    * from the OS in a pre-zeroed state).  We don't want to use tor_malloc_zero
    * for big stuff, so we don't bother with calloc. */
-  void *result;
-  size_t max_nmemb = (size == 0) ? SIZE_MAX : SIZE_MAX/size;
-
-  tor_assert(nmemb < max_nmemb);
-
-  result = tor_malloc_zero_((nmemb * size) DMALLOC_FN_ARGS);
-  return result;
+  tor_assert(size_mul_check(nmemb, size));
+  return tor_malloc_zero_((nmemb * size) DMALLOC_FN_ARGS);
 }
 
 /** Change the size of the memory block pointed to by <b>ptr</b> to <b>size</b>
