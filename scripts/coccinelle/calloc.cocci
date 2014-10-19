@@ -8,6 +8,13 @@ constant b;
 - f(a * b)
 + tor_calloc(a, b)
 
+@calloc_arg_order@
+expression a;
+type t;
+@@
+- tor_calloc(sizeof(t), a)
++ tor_calloc(a, sizeof(t))
+
 @realloc_to_reallocarray@
 expression a, b;
 expression p;
