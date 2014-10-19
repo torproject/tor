@@ -10,3 +10,6 @@
       for validity, taking leap years into account.
       Improves HTTP header validation.
       Implemented with bug 13476.
+    - Clamp year values returned by system localtime(_r) and gmtime(_r)
+      to year 1. This ensures tor can read any values it might write out.
+      Fixes bug 13476.
