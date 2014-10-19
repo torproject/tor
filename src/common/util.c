@@ -212,12 +212,6 @@ size_mul_check(const size_t x, const size_t y)
 void *
 tor_calloc_(size_t nmemb, size_t size DMALLOC_PARAMS)
 {
-  /* You may ask yourself, "wouldn't it be smart to use calloc instead of
-   * malloc+memset?  Perhaps libc's calloc knows some nifty optimization trick
-   * we don't!"  Indeed it does, but its optimizations are only a big win when
-   * we're allocating something very big (it knows if it just got the memory
-   * from the OS in a pre-zeroed state).  We don't want to use tor_malloc_zero
-   * for big stuff, so we don't bother with calloc. */
   tor_assert(size_mul_check(nmemb, size));
   return tor_malloc_zero_((nmemb * size) DMALLOC_FN_ARGS);
 }
