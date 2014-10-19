@@ -119,7 +119,7 @@ def wrap_graf(words, prefix_len1=0, prefix_len2=0, width=72):
 
     return lines
 
-def hyphenateable(word):
+def hyphenatable(word):
     if "--" in word:
         return False
 
@@ -135,7 +135,7 @@ def split_paragraph(s):
 
     r = []
     for word in s.split():
-        if hyphenateable(word):
+        if hyphenatable(word):
             while "-" in word:
                 a,word = word.split("-",1)
                 r.append(a+"\xff")
