@@ -156,10 +156,13 @@ TP_SECHEAD = 3
 TP_ITEMFIRST = 4
 TP_ITEMBODY = 5
 TP_END = 6
+TP_PREHEAD = 7
 
 def head_parser(line):
-    if re.match(r'^[A-Z]', line):
+    if re.match(r'^Changes in', line):
         return TP_MAINHEAD
+    elif re.match(r'^[A-Za-z]', line):
+        return TP_PREHEAD
     elif re.match(r'^  o ', line):
         return TP_SECHEAD
     elif re.match(r'^\s*$', line):
@@ -178,11 +181,14 @@ def body_parser(line):
         return TP_BLANK
     elif re.match(r'^Changes in', line):
         return TP_END
+    elif re.match(r'^\s+\S', line):
+        return TP_HEADTEXT
     else:
         print "Weird line %r"%line
 
 class ChangeLog(object):
     def __init__(self):
+        self.prehead = []
         self.mainhead = None
         self.headtext = []
         self.curgraf = None
@@ -196,6 +202,9 @@ class ChangeLog(object):
         if tp == TP_MAINHEAD:
             assert not self.mainhead
             self.mainhead = line
+
+        elif tp == TP_PREHEAD:
+            self.prehead.append(line)
 
         elif tp == TP_HEADTEXT:
             if self.curgraf is None:
@@ -250,6 +259,9 @@ class ChangeLog(object):
                               subsequent_indent=" "*indent2))
 
     def dump(self):
+        if self.prehead:
+            self.dumpGraf(self.prehead, 0)
+            print
         print self.mainhead
         for par in self.headtext:
             self.dumpGraf(par, 2)
