@@ -1385,6 +1385,18 @@ HT_GENERATE(getaddrinfo_cache, cached_getaddrinfo_item_t, node,
             cached_getaddrinfo_items_eq,
             0.6, tor_malloc_, tor_realloc_, tor_free_);
 
+/** If true, don't try to cache getaddrinfo results. */
+static int sandbox_getaddrinfo_cache_disabled = 0;
+
+/** Tell the sandbox layer not to try to cache getaddrinfo results. Used as in
+ * tor-resolve, when we have no intention of initializing crypto or of
+ * installing the sandbox.*/
+void
+sandbox_disable_getaddrinfo_cache(void)
+{
+  sandbox_getaddrinfo_cache_disabled = 1;
+}
+
 int
 sandbox_getaddrinfo(const char *name, const char *servname,
                     const struct addrinfo *hints,
@@ -1392,6 +1404,10 @@ sandbox_getaddrinfo(const char *name, const char *servname,
 {
   int err;
   struct cached_getaddrinfo_item_t search, *item;
+
+  if (sandbox_getaddrinfo_cache_disabled) {
+    return getaddrinfo(name, NULL, hints, res);
+  }
 
   if (servname != NULL) {
     log_warn(LD_BUG, "called with non-NULL servname");
@@ -1833,6 +1849,11 @@ int
 sandbox_is_active(void)
 {
   return 0;
+}
+
+void
+sandbox_disable_getaddrinfo_cache(void)
+{
 }
 #endif
 

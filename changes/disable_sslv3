@@ -1,0 +1,4 @@
+  o Major security fixes:
+    - Disable support for SSLv3. All versions of OpenSSL in use with
+      Tor today support TLS 1.0 or later, so we can safely turn off
+      support for this old (and insecure) protocol. Fixes bug 13426.
