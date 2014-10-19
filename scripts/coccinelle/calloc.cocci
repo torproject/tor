@@ -1,15 +1,10 @@
 // Use calloc or realloc as appropriate instead of multiply-and-alloc
 
 @malloc_to_calloc@
-expression a,b;
-@@
-- tor_malloc(a * b)
-+ tor_calloc(a, b)
-
-@malloc_zero_to_calloc@
+identifier f =~ "(tor_malloc|tor_malloc_zero)";
 expression a, b;
 @@
-- tor_malloc_zero(a * b)
+- f(a * b)
 + tor_calloc(a, b)
 
 @realloc_to_reallocarray@
