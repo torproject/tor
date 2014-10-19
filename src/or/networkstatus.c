@@ -453,6 +453,17 @@ networkstatus_check_document_signature(const networkstatus_t *consensus,
                  DIGEST_LEN))
     return -1;
 
+  if (authority_cert_is_blacklisted(cert)) {
+    /* We implement blacklisting for authority signing keys by treating
+     * all their signatures as always bad. That way we don't get into
+     * crazy loops of dropping and re-fetching signatures. */
+    log_warn(LD_DIR, "Ignoring a consensus signature made with deprecated"
+             " signing key %s",
+             hex_str(cert->signing_key_digest, DIGEST_LEN));
+    sig->bad_signature = 1;
+    return 0;
+  }
+
   signed_digest_len = crypto_pk_keysize(cert->signing_key);
   signed_digest = tor_malloc(signed_digest_len);
   if (crypto_pk_public_checksig(cert->signing_key,
@@ -1239,7 +1250,7 @@ update_consensus_networkstatus_downloads(time_t now)
     }
 
     if (time_to_download_next_consensus[i] > now)
-      return; /* Wait until the current consensus is older. */
+      continue; /* Wait until the current consensus is older. */
 
     resource = networkstatus_get_flavor_name(i);
 

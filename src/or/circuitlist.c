@@ -1359,6 +1359,144 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
   }
 }
 
+/** Given a marked circuit <b>circ</b>, aggressively free its cell queues to
+ * recover memory. */
+static void
+marked_circuit_free_cells(circuit_t *circ)
+{
+  if (!circ->marked_for_close) {
+    log_warn(LD_BUG, "Called on non-marked circuit");
+    return;
+  }
+  cell_queue_clear(&circ->n_conn_cells);
+  if (! CIRCUIT_IS_ORIGIN(circ))
+    cell_queue_clear(& TO_OR_CIRCUIT(circ)->p_conn_cells);
+}
+
+/** Return the number of cells used by the circuit <b>c</b>'s cell queues. */
+static size_t
+n_cells_in_circ_queues(const circuit_t *c)
+{
+  size_t n = c->n_conn_cells.n;
+  if (! CIRCUIT_IS_ORIGIN(c))
+    n += TO_OR_CIRCUIT((circuit_t*)c)->p_conn_cells.n;
+  return n;
+}
+
+/**
+ * Return the age of the oldest cell queued on <b>c</b>, in milliseconds.
+ * Return 0 if there are no cells queued on c.  Requires that <b>now</b> be
+ * the current time in milliseconds since the epoch, truncated.
+ *
+ * This function will return incorrect results if the oldest cell queued on
+ * the circuit is older than 2**32 msec (about 49 days) old.
+ */
+static uint32_t
+circuit_max_queued_cell_age(const circuit_t *c, uint32_t now)
+{
+  uint32_t age = 0;
+  if (c->n_conn_cells.head)
+    age = now - c->n_conn_cells.head->inserted_time;
+
+  if (! CIRCUIT_IS_ORIGIN(c)) {
+    const or_circuit_t *orcirc = TO_OR_CIRCUIT((circuit_t*)c);
+    if (orcirc->p_conn_cells.head) {
+      uint32_t age2 = now - orcirc->p_conn_cells.head->inserted_time;
+      if (age2 > age)
+        return age2;
+    }
+  }
+  return age;
+}
+
+/** Temporary variable for circuits_compare_by_oldest_queued_cell_ This is a
+ * kludge to work around the fact that qsort doesn't provide a way for
+ * comparison functions to take an extra argument. */
+static uint32_t circcomp_now_tmp;
+
+/** Helper to sort a list of circuit_t by age of oldest cell, in descending
+ * order. Requires that circcomp_now_tmp is set correctly. */
+static int
+circuits_compare_by_oldest_queued_cell_(const void **a_, const void **b_)
+{
+  const circuit_t *a = *a_;
+  const circuit_t *b = *b_;
+  uint32_t age_a = circuit_max_queued_cell_age(a, circcomp_now_tmp);
+  uint32_t age_b = circuit_max_queued_cell_age(b, circcomp_now_tmp);
+
+  if (age_a < age_b)
+    return 1;
+  else if (age_a == age_b)
+    return 0;
+  else
+    return -1;
+}
+
+#define FRACTION_OF_CELLS_TO_RETAIN_ON_OOM 0.90
+
+/** We're out of memory for cells, having allocated <b>current_allocation</b>
+ * bytes' worth.  Kill the 'worst' circuits until we're under
+ * FRACTION_OF_CIRCS_TO_RETAIN_ON_OOM of our maximum usage. */
+void
+circuits_handle_oom(size_t current_allocation)
+{
+  /* Let's hope there's enough slack space for this allocation here... */
+  smartlist_t *circlist = smartlist_new();
+  circuit_t *circ;
+  size_t n_cells_removed=0, n_cells_to_remove;
+  int n_circuits_killed=0;
+  struct timeval now;
+  log_notice(LD_GENERAL, "We're low on memory.  Killing circuits with "
+             "over-long queues. (This behavior is controlled by "
+             "MaxMemInCellQueues.)");
+
+  {
+    size_t mem_target = (size_t)(get_options()->MaxMemInCellQueues *
+                                 FRACTION_OF_CELLS_TO_RETAIN_ON_OOM);
+    size_t mem_to_recover;
+    if (current_allocation <= mem_target)
+      return;
+    mem_to_recover = current_allocation - mem_target;
+    n_cells_to_remove = CEIL_DIV(mem_to_recover, packed_cell_mem_cost());
+  }
+
+  /* This algorithm itself assumes that you've got enough memory slack
+   * to actually run it. */
+  for (circ = global_circuitlist; circ; circ = circ->next)
+    smartlist_add(circlist, circ);
+
+  /* Set circcomp_now_tmp so that the sort can work. */
+  tor_gettimeofday_cached(&now);
+  circcomp_now_tmp = (uint32_t)tv_to_msec(&now);
+
+  /* This is O(n log n); there are faster algorithms we could use instead.
+   * Let's hope this doesn't happen enough to be in the critical path. */
+  smartlist_sort(circlist, circuits_compare_by_oldest_queued_cell_);
+
+  /* Okay, now the worst circuits are at the front of the list. Let's mark
+   * them, and reclaim their storage aggressively. */
+  SMARTLIST_FOREACH_BEGIN(circlist, circuit_t *, circ) {
+    size_t n = n_cells_in_circ_queues(circ);
+    if (! circ->marked_for_close) {
+      circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
+    }
+    marked_circuit_free_cells(circ);
+
+    ++n_circuits_killed;
+    n_cells_removed += n;
+    if (n_cells_removed >= n_cells_to_remove)
+      break;
+  } SMARTLIST_FOREACH_END(circ);
+
+  clean_cell_pool(); /* In case this helps. */
+
+  log_notice(LD_GENERAL, "Removed "U64_FORMAT" bytes by killing %d circuits.",
+             U64_PRINTF_ARG(n_cells_removed * packed_cell_mem_cost()),
+             n_circuits_killed);
+
+  smartlist_free(circlist);
+}
+
 /** Verify that cpath layer <b>cp</b> has all of its invariants
  * correct. Trigger an assert if anything is invalid.
  */

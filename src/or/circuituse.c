@@ -746,7 +746,7 @@ circuit_predict_and_launch_new(void)
    * want, don't do another -- we want to leave a few slots open so
    * we can still build circuits preemptively as needed. */
   if (num < MAX_UNUSED_OPEN_CIRCUITS-2 &&
-      get_options()->LearnCircuitBuildTimeout &&
+      ! circuit_build_times_disabled() &&
       circuit_build_times_needs_circuits_now(&circ_times)) {
     flags = CIRCLAUNCH_NEED_CAPACITY;
     log_info(LD_CIRC,
@@ -882,7 +882,7 @@ circuit_expire_old_circuits_clientside(void)
   tor_gettimeofday(&now);
   cutoff = now;
 
-  if (get_options()->LearnCircuitBuildTimeout &&
+  if (! circuit_build_times_disabled() &&
       circuit_build_times_needs_circuits(&circ_times)) {
     /* Circuits should be shorter lived if we need more of them
      * for learning a good build timeout */
@@ -1310,7 +1310,7 @@ circuit_launch_by_extend_info(uint8_t purpose,
     circ = circuit_find_to_cannibalize(purpose, extend_info, flags);
     if (circ) {
       uint8_t old_purpose = circ->_base.purpose;
-      struct timeval old_timestamp_created;
+      struct timeval old_timestamp_created = circ->_base.timestamp_created;
 
       log_info(LD_CIRC,"Cannibalizing circ '%s' for purpose %d (%s)",
                build_state_get_exit_nickname(circ->build_state), purpose,

@@ -1799,7 +1799,7 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
 #endif
 
 /** The total number of cells we have allocated from the memory pool. */
-static int total_cells_allocated = 0;
+static size_t total_cells_allocated = 0;
 
 /** A memory pool to allocate packed_cell_t objects. */
 static mp_pool_t *cell_pool = NULL;
@@ -1871,7 +1871,7 @@ dump_cell_pool_usage(int severity)
     ++n_circs;
   }
   log(severity, LD_MM, "%d cells allocated on %d circuits. %d cells leaked.",
-      n_cells, n_circs, total_cells_allocated - n_cells);
+      n_cells, n_circs, (int)total_cells_allocated - n_cells);
   mp_pool_log_status(cell_pool, severity);
 }
 
@@ -1904,15 +1904,19 @@ cell_queue_append(cell_queue_t *queue, packed_cell_t *cell)
 void
 cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell)
 {
+  struct timeval now;
   packed_cell_t *copy = packed_cell_copy(cell);
+  tor_gettimeofday_cached(&now);
+  copy->inserted_time = (uint32_t)tv_to_msec(&now);
+
   /* Remember the time when this cell was put in the queue. */
+  /*XXXX This may be obsoleted by inserted_time */
   if (get_options()->CellStatistics) {
-    struct timeval now;
     uint32_t added;
     insertion_time_queue_t *it_queue = queue->insertion_times;
     if (!it_pool)
       it_pool = mp_pool_new(sizeof(insertion_time_elem_t), 1024);
-    tor_gettimeofday_cached(&now);
+
 #define SECONDS_IN_A_DAY 86400L
     added = (uint32_t)(((now.tv_sec % SECONDS_IN_A_DAY) * 100L)
             + ((uint32_t)now.tv_usec / (uint32_t)10000L));
@@ -1976,6 +1980,29 @@ cell_queue_pop(cell_queue_t *queue)
   }
   --queue->n;
   return cell;
+}
+
+/** Return the total number of bytes used for each packed_cell in a queue.
+ * Approximate. */
+size_t
+packed_cell_mem_cost(void)
+{
+  return sizeof(packed_cell_t) + MP_POOL_ITEM_OVERHEAD +
+    get_options()->CellStatistics ?
+    (sizeof(insertion_time_elem_t)+MP_POOL_ITEM_OVERHEAD) : 0;
+}
+
+/** Check whether we've got too much space used for cells.  If so,
+ * call the OOM handler and return 1.  Otherwise, return 0. */
+static int
+cell_queues_check_size(void)
+{
+  size_t alloc = total_cells_allocated * packed_cell_mem_cost();
+  if (alloc >= get_options()->MaxMemInCellQueues) {
+    circuits_handle_oom(alloc);
+    return 1;
+  }
+  return 0;
 }
 
 /** Return a pointer to the "next_active_on_{n,p}_conn" pointer of <b>circ</b>,
@@ -2532,8 +2559,10 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
                              cell_t *cell, cell_direction_t direction,
                              streamid_t fromstream)
 {
+  or_circuit_t *orcirc = NULL;
   cell_queue_t *queue;
   int streams_blocked;
+
   if (circ->marked_for_close)
     return;
 
@@ -2541,12 +2570,42 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
     queue = &circ->n_conn_cells;
     streams_blocked = circ->streams_blocked_on_n_conn;
   } else {
-    or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
+    orcirc = TO_OR_CIRCUIT(circ);
     queue = &orcirc->p_conn_cells;
     streams_blocked = circ->streams_blocked_on_p_conn;
   }
 
+  /*
+   * Disabling this for now because of a possible guard discovery attack
+   */
+#if 0
+  /* Are we a middle circuit about to exceed ORCIRC_MAX_MIDDLE_CELLS? */
+  if ((circ->n_conn != NULL) && CIRCUIT_IS_ORCIRC(circ)) {
+    orcirc = TO_OR_CIRCUIT(circ);
+    if (orcirc->p_conn) {
+      if (queue->n + 1 >= ORCIRC_MAX_MIDDLE_CELLS) {
+        /* Queueing this cell would put queue over the cap */
+        log_warn(LD_CIRC,
+                 "Got a cell exceeding the cap of %u in the %s direction "
+                 "on middle circ ID %u; killing the circuit.",
+                 ORCIRC_MAX_MIDDLE_CELLS,
+                 (direction == CELL_DIRECTION_OUT) ? "n" : "p",
+                 (direction == CELL_DIRECTION_OUT) ?
+                    circ->n_circ_id : orcirc->p_circ_id);
+        circuit_mark_for_close(circ, END_CIRC_REASON_RESOURCELIMIT);
+        return;
+      }
+    }
+  }
+#endif
+
   cell_queue_append_packed_copy(queue, cell);
+
+  if (PREDICT_UNLIKELY(cell_queues_check_size())) {
+    /* We ran the OOM handler */
+    if (circ->marked_for_close)
+      return;
+  }
 
   /* If we have too many cells on the circuit, we should stop reading from
    * the edge streams for a while. */

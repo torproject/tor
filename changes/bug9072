@@ -1,0 +1,3 @@
+  o Critical bugfixes:
+    - Disable middle relay queue overfill detection code due to possible
+      guard discovery attack, pending further analysis.  Fixes bug #9072.

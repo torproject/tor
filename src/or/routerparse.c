@@ -3053,6 +3053,14 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
         log_warn(LD_DIR,"Mismatch between identities in certificate and vote");
         goto err;
       }
+      if (ns->type != NS_TYPE_CONSENSUS) {
+        if (authority_cert_is_blacklisted(ns->cert)) {
+          log_warn(LD_DIR, "Rejecting vote signature made with blacklisted "
+                   "signing key %s",
+                   hex_str(ns->cert->signing_key_digest, DIGEST_LEN));
+          goto err;
+        }
+      }
       voter->address = tor_strdup(tok->args[2]);
       if (!tor_inet_aton(tok->args[3], &in)) {
         log_warn(LD_DIR, "Error decoding IP address %s in network-status.",
@@ -4447,11 +4455,13 @@ microdescs_parse_from_string(const char *s, const char *eos,
     microdesc_free(md);
     md = NULL;
 
+    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
     memarea_clear(area);
     smartlist_clear(tokens);
     s = start_of_next_microdesc;
   }
 
+  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
   memarea_drop_all(area);
   smartlist_free(tokens);
 

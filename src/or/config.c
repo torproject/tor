@@ -343,6 +343,7 @@ static config_var_t _option_vars[] = {
   V(MaxAdvertisedBandwidth,      MEMUNIT,  "1 GB"),
   V(MaxCircuitDirtiness,         INTERVAL, "10 minutes"),
   V(MaxClientCircuitsPending,    UINT,     "32"),
+  V(MaxMemInCellQueues,          MEMUNIT,  "8 GB"),
   V(MaxOnionsPending,            UINT,     "100"),
   OBSOLETE("MonthlyAccountingStart"),
   V(MyFamily,                    STRING,   NULL),
@@ -960,7 +961,7 @@ add_default_trusted_dir_authorities(dirinfo_type_t type)
       "76.73.17.194:9030 F397 038A DC51 3361 35E7 B80B D99C A384 4360 292B",
     "gabelmoo orport=443 no-v2 "
       "v3ident=ED03BB616EB2F60BEC80151114BB25CEF515B226 "
-      "212.112.245.170:80 F204 4413 DAC2 E02E 3D6B CF47 35A1 9BCA 1DE9 7281",
+      "131.188.40.189:80 F204 4413 DAC2 E02E 3D6B CF47 35A1 9BCA 1DE9 7281",
     "dannenberg orport=443 no-v2 "
       "v3ident=585769C78764D58426B8B52B6651A5A71137189A "
       "193.23.244.244:80 7BE6 83E6 5D48 1413 21C5 ED92 F075 C553 64AC 7123",
@@ -3668,6 +3669,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
     log_warn(LD_CONFIG, "EntryNodes is set, but UseEntryGuards is disabled. "
              "EntryNodes will be ignored.");
 
+  if (options->MaxMemInCellQueues < (500 << 20)) {
+    log_warn(LD_CONFIG, "MaxMemInCellQueues must be at least 500 MB for now. "
+             "Ideally, have it as large as you can afford.");
+    options->MaxMemInCellQueues = (500 << 20);
+  }
+
   options->_AllowInvalid = 0;
   if (options->AllowInvalidNodes) {
     SMARTLIST_FOREACH_BEGIN(options->AllowInvalidNodes, const char *, cp) {
@@ -4042,6 +4049,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("If you set UseBridges, you must specify at least one bridge.");
   if (options->UseBridges && !options->TunnelDirConns)
     REJECT("If you set UseBridges, you must set TunnelDirConns.");
+  if (options->RendConfigLines &&
+      (!options->TunnelDirConns || !options->PreferTunneledDirConns))
+    REJECT("If you are running a hidden service, you must set TunnelDirConns "
+           "and PreferTunneledDirConns");
 
   for (cl = options->Bridges; cl; cl = cl->next) {
     if (parse_bridge_line(cl->value, 1)<0)

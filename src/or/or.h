@@ -539,6 +539,8 @@ typedef enum {
 #define CIRCUIT_PURPOSE_IS_ESTABLISHED_REND(p) \
   ((p) == CIRCUIT_PURPOSE_C_REND_JOINED ||     \
    (p) == CIRCUIT_PURPOSE_S_REND_JOINED)
+/** True iff the circuit_t c is actually an or_circuit_t */
+#define CIRCUIT_IS_ORCIRC(c) (((circuit_t *)(c))->magic == OR_CIRCUIT_MAGIC)
 
 /** How many circuits do we want simultaneously in-progress to handle
  * a given stream? */
@@ -814,6 +816,13 @@ typedef enum {
 /** Amount to increment a stream window when we get a stream SENDME. */
 #define STREAMWINDOW_INCREMENT 50
 
+/** Maximum number of queued cells on a circuit for which we are the
+ * midpoint before we give up and kill it.  This must be >= circwindow
+ * to avoid killing innocent circuits, and >= circwindow*2 to give
+ * leaky-pipe a chance for being useful someday.
+ */
+#define ORCIRC_MAX_MIDDLE_CELLS (21*(CIRCWINDOW_START_MAX)/10)
+
 /* Cell commands.  These values are defined in tor-spec.txt. */
 #define CELL_PADDING 0
 #define CELL_CREATE 1
@@ -903,7 +912,12 @@ typedef struct var_cell_t {
 typedef struct packed_cell_t {
   struct packed_cell_t *next; /**< Next cell queued on this circuit. */
   char body[CELL_NETWORK_SIZE]; /**< Cell as packed for network. */
+  uint32_t inserted_time; /**< Time (in milliseconds since epoch, with high
+                           * bits truncated) when this cell was inserted. */
 } packed_cell_t;
+
+/* XXXX This next structure may be obsoleted by inserted_time in
+ * packed_cell_t */
 
 /** Number of cells added to a circuit queue including their insertion
  * time on 10 millisecond detail; used for buffer statistics. */
@@ -998,6 +1012,9 @@ typedef struct connection_t {
   /** Set to 1 when we're inside connection_flushed_some to keep us from
    * calling connection_handle_write() recursively. */
   unsigned int in_flushed_some:1;
+  /** True if connection_handle_write is currently running on this connection.
+   */
+  unsigned int in_connection_handle_write:1;
 
   /* For linked connections:
    */
@@ -1148,6 +1165,9 @@ typedef struct or_handshake_state_t {
 
   /* True iff we've received valid authentication to some identity. */
   unsigned int authenticated : 1;
+
+  /* True iff we have sent a netinfo cell */
+  unsigned int sent_netinfo : 1;
 
   /** True iff we should feed outgoing cells into digest_sent and
    * digest_received respectively.
@@ -3051,6 +3071,10 @@ typedef struct {
   /** Ports to listen on for directory connections. */
   config_line_t *DirPort_lines;
   config_line_t *DNSPort_lines; /**< Ports to listen on for DNS requests. */
+
+  uint64_t MaxMemInCellQueues; /**< If we have more memory than this allocated
+                                * for circuit cell queues, run the OOM handler
+                                */
 
   /** @name port booleans
    *
