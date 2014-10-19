@@ -195,8 +195,10 @@ tor_malloc_zero_(size_t size DMALLOC_PARAMS)
   return result;
 }
 
+/* Estimate the square root of SIZE_MAX. */
 #define SQRT_SIZE_MAX (((size_t) SIZE_MAX) >> (sizeof(size_t) * 8 / 2))
 
+/** Return non-zero if and only if the product of the arguments is exact. */
 static INLINE int
 size_mul_check(const size_t x, const size_t y)
 {
@@ -208,6 +210,8 @@ size_mul_check(const size_t x, const size_t y)
  * the memory with zero bytes, and return a pointer to the result.
  * Log and terminate the process on error.  (Same as
  * calloc(<b>nmemb</b>,<b>size</b>), but never returns NULL.)
+ * The second argument (<b>size</b>) should preferably be non-zero
+ * and a compile-time constant.
  */
 void *
 tor_calloc_(size_t nmemb, size_t size DMALLOC_PARAMS)
