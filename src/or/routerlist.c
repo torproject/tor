@@ -3974,10 +3974,10 @@ router_load_extrainfo_from_string(const char *s, const char *eos,
   log_info(LD_DIR, "%d elements to add", smartlist_len(extrainfo_list));
 
   SMARTLIST_FOREACH_BEGIN(extrainfo_list, extrainfo_t *, ei) {
-      was_router_added_t added =
-        router_add_extrainfo_to_routerlist(ei, &msg, from_cache, !from_cache);
       uint8_t d[DIGEST_LEN];
       memcpy(d, ei->cache_info.signed_descriptor_digest, DIGEST_LEN);
+      was_router_added_t added =
+        router_add_extrainfo_to_routerlist(ei, &msg, from_cache, !from_cache);
       if (WRA_WAS_ADDED(added) && requested_fingerprints) {
         char fp[HEX_DIGEST_LEN+1];
         base16_encode(fp, sizeof(fp), descriptor_digests ?
