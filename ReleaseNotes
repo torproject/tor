@@ -128,6 +128,11 @@ Changes in version 0.2.5.xx - 2014-10-xx
       attacker from causing a microdescriptor collision, because the
       router's identity is not forgeable.
 
+  o Major bugfixes (openssl bug workaround):
+    - Avoid crashing when using OpenSSL version 0.9.8zc, 1.0.0o, or
+      1.0.1j, built with the 'no-ssl3' configuration option. Fixes
+      bug 13471. This is a workaround for an OpenSSL bug.
+
   o Major bugfixes (client):
     - Perform circuit cleanup operations even when circuit
       construction operations are disabled (because the network is

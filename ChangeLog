@@ -11,6 +11,11 @@ Changes in version 0.2.5.9-rc - 2014-10-xx
       today support TLS 1.0 or later, so we can safely turn off support
       for this old (and insecure) protocol. Fixes bug 13426.
 
+  o Major bugfixes (openssl bug workaround):
+    - Avoid crashing when using OpenSSL version 0.9.8zc, 1.0.0o, or
+      1.0.1j, built with the 'no-ssl3' configuration option. Fixes
+      bug 13471. This is a workaround for an OpenSSL bug.
+
   o Minor bugfixes:
     - Disable the sandbox name resolver cache when running tor-resolve:
       tor-resolve doesn't use the sandbox code, and turning it on was
