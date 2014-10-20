@@ -1,8 +1,8 @@
 Changes in version 0.2.4.25 - 2014-10-20
-  Tor 0.2.4.25 contains a response to the recent "POODLE" attack against
-  SSL3 (which doesn't affect Tor), and a response to a crash bug caused
-  by some operating systems' response to the "POODLE" attack (which does
-  affect Tor).
+  Tor 0.2.4.25 disables SSL3 in response to the recent "POODLE" attack
+  (even though POODLE does not affect Tor). It also works around a crash
+  bug caused by some operating systems' response to the "POODLE" attack
+  (which does affect Tor).
 
   o Major security fixes (also in 0.2.5.9-rc):
     - Disable support for SSLv3. All versions of OpenSSL in use with Tor
