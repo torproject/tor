@@ -1,5 +1,4 @@
-Changes in version 0.2.5.9-rc - 2014-10-xx
-
+Changes in version 0.2.5.9-rc - 2014-10-20
   Tor 0.2.5.9-rc is the third release candidate for the Tor 0.2.5.x
   series. It contains a response to the recent "POODLE" attack against
   SSL3 (which doesn't affect Tor), and a response to a crash bug caused
@@ -13,8 +12,8 @@ Changes in version 0.2.5.9-rc - 2014-10-xx
 
   o Major bugfixes (openssl bug workaround):
     - Avoid crashing when using OpenSSL version 0.9.8zc, 1.0.0o, or
-      1.0.1j, built with the 'no-ssl3' configuration option. Fixes
-      bug 13471. This is a workaround for an OpenSSL bug.
+      1.0.1j, built with the 'no-ssl3' configuration option. Fixes bug
+      13471. This is a workaround for an OpenSSL bug.
 
   o Minor bugfixes:
     - Disable the sandbox name resolver cache when running tor-resolve:
