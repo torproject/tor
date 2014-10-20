@@ -3,6 +3,23 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.2.4.25 - 2014-10-20
+  Tor 0.2.4.25 disables SSL3 in response to the recent "POODLE" attack
+  (even though POODLE does not affect Tor). It also works around a crash
+  bug caused by some operating systems' response to the "POODLE" attack
+  (which does affect Tor).
+
+  o Major security fixes (also in 0.2.5.9-rc):
+    - Disable support for SSLv3. All versions of OpenSSL in use with Tor
+      today support TLS 1.0 or later, so we can safely turn off support
+      for this old (and insecure) protocol. Fixes bug 13426.
+
+  o Major bugfixes (openssl bug workaround, also in 0.2.5.9-rc):
+    - Avoid crashing when using OpenSSL version 0.9.8zc, 1.0.0o, or
+      1.0.1j, built with the 'no-ssl3' configuration option. Fixes bug
+      13471. This is a workaround for an OpenSSL bug.
+
+
 Changes in version 0.2.4.24 - 2014-09-22
   Tor 0.2.4.24 fixes a bug that affects consistency and speed when
   connecting to hidden services, and it updates the location of one of

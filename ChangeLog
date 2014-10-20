@@ -1,6 +1,56 @@
 Changes in version 0.2.6.1-alpha - 2014-??-??
 
 
+Changes in version 0.2.5.9-rc - 2014-10-20
+  Tor 0.2.5.9-rc is the third release candidate for the Tor 0.2.5.x
+  series. It disables SSL3 in response to the recent "POODLE" attack
+  (even though POODLE does not affect Tor). It also works around a crash
+  bug caused by some operating systems' response to the "POODLE" attack
+  (which does affect Tor). It also contains a few miscellaneous fixes.
+
+  o Major security fixes:
+    - Disable support for SSLv3. All versions of OpenSSL in use with Tor
+      today support TLS 1.0 or later, so we can safely turn off support
+      for this old (and insecure) protocol. Fixes bug 13426.
+
+  o Major bugfixes (openssl bug workaround):
+    - Avoid crashing when using OpenSSL version 0.9.8zc, 1.0.0o, or
+      1.0.1j, built with the 'no-ssl3' configuration option. Fixes bug
+      13471. This is a workaround for an OpenSSL bug.
+
+  o Minor bugfixes:
+    - Disable the sandbox name resolver cache when running tor-resolve:
+      tor-resolve doesn't use the sandbox code, and turning it on was
+      breaking attempts to do tor-resolve on a non-default server on
+      Linux. Fixes bug 13295; bugfix on 0.2.5.3-alpha.
+
+  o Compilation fixes:
+    - Build and run correctly on systems like OpenBSD-current that have
+      patched OpenSSL to remove get_cipher_by_char and/or its
+      implementations. Fixes issue 13325.
+
+  o Downgraded warnings:
+    - Downgrade the severity of the 'unexpected sendme cell from client'
+      from 'warn' to 'protocol warning'. Closes ticket 8093.
+
+
+Changes in version 0.2.4.25 - 2014-10-20
+  Tor 0.2.4.25 disables SSL3 in response to the recent "POODLE" attack
+  (even though POODLE does not affect Tor). It also works around a crash
+  bug caused by some operating systems' response to the "POODLE" attack
+  (which does affect Tor).
+
+  o Major security fixes (also in 0.2.5.9-rc):
+    - Disable support for SSLv3. All versions of OpenSSL in use with Tor
+      today support TLS 1.0 or later, so we can safely turn off support
+      for this old (and insecure) protocol. Fixes bug 13426.
+
+  o Major bugfixes (openssl bug workaround, also in 0.2.5.9-rc):
+    - Avoid crashing when using OpenSSL version 0.9.8zc, 1.0.0o, or
+      1.0.1j, built with the 'no-ssl3' configuration option. Fixes bug
+      13471. This is a workaround for an OpenSSL bug.
+
+
 Changes in version 0.2.5.8-rc - 2014-09-22
   Tor 0.2.5.8-rc is the second release candidate for the Tor 0.2.5.x
   series. It fixes a bug that affects consistency and speed when
