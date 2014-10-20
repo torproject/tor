@@ -333,7 +333,7 @@ test_util_time(void *arg)
   a_time.tm_year = -1-1900;
   tt_int_op((time_t) -1,==, tor_timegm(&a_time));
 
-  if (sizeof(a_time.tm_year) == 4 || sizeof(a_time.tm_year) == 8) {
+#if SIZEOF_INT == 4 || SIZEOF_INT == 8
     a_time.tm_year = -1*(1 << 16);
     tt_int_op((time_t) -1,==, tor_timegm(&a_time));
 
@@ -344,10 +344,10 @@ test_util_time(void *arg)
 
     a_time.tm_year = INT32_MIN;
     tt_int_op((time_t) -1,==, tor_timegm(&a_time));
-  }
+#endif
 
-  if (sizeof(a_time.tm_year) == 8) {
-    a_time.tm_year = -1L*(1L << 48L);
+#if SIZEOF_INT == 8
+    a_time.tm_year = -1*(1 << 48);
     tt_int_op((time_t) -1,==, tor_timegm(&a_time));
 
     /* while unlikely, the system's gmtime(_r) could return
@@ -355,25 +355,25 @@ test_util_time(void *arg)
      * which I'm pretty sure is:
      * -1*(2^63)/60/60/24*2000/730485 + 1970 = -292277022657
      * 730485 is the number of days in two millenia, including leap days */
-    a_time.tm_year = -292277022657L-1900L;
+    a_time.tm_year = -292277022657-1900;
     tt_int_op((time_t) -1,==, tor_timegm(&a_time));
 
     a_time.tm_year = INT64_MIN;
     tt_int_op((time_t) -1,==, tor_timegm(&a_time));
-  }
+#endif
 
   /* Wrong year >= INT32_MAX - 1900 */
-  if (sizeof(a_time.tm_year) == 4 || sizeof(a_time.tm_year) == 8) {
+#if SIZEOF_INT == 4 || SIZEOF_INT == 8
     a_time.tm_year = INT32_MAX-1900;
     tt_int_op((time_t) -1,==, tor_timegm(&a_time));
 
     a_time.tm_year = INT32_MAX;
     tt_int_op((time_t) -1,==, tor_timegm(&a_time));
-  }
+#endif
 
-  if (sizeof(a_time.tm_year) == 8) {
+#if SIZEOF_INT == 8
     /* one of the largest tm_year values my 64 bit system supports */
-    a_time.tm_year = 292278994LL-1900LL;
+    a_time.tm_year = 292278994-1900;
     tt_int_op((time_t) -1,==, tor_timegm(&a_time));
 
     /* while unlikely, the system's gmtime(_r) could return
@@ -381,7 +381,7 @@ test_util_time(void *arg)
      * which I'm pretty sure is:
      * (2^63-1)/60/60/24*2000/730485 + 1970 = 292277026596
      * 730485 is the number of days in two millenia, including leap days */
-    a_time.tm_year = 292277026596LL-1900LL;
+    a_time.tm_year = 292277026596-1900;
     tt_int_op((time_t) -1,==, tor_timegm(&a_time));
 
     a_time.tm_year = INT64_MAX-1900;
@@ -389,7 +389,7 @@ test_util_time(void *arg)
 
     a_time.tm_year = INT64_MAX;
     tt_int_op((time_t) -1,==, tor_timegm(&a_time));
-  }
+#endif
 
   /* month */
   a_time.tm_year = 2007-1900;  /* restore valid year */
