@@ -1684,7 +1684,7 @@ crypto_digest_get_digest(crypto_digest_t *digest,
       log_warn(LD_BUG, "Called with unknown algorithm %d", digest->algorithm);
       /* If fragile_assert is not enabled, then we should at least not
        * leak anything. */
-      memset(r, 0xff, sizeof(r));
+      memwipe(r, 0xff, sizeof(r));
       tor_fragile_assert();
       break;
   }

@@ -488,7 +488,7 @@ init_curve25519_keypair_from_file(curve25519_keypair_t *keys_out,
         if (curve25519_keypair_write_to_file(keys_out, fname, tag)<0) {
           tor_log(severity, LD_FS,
               "Couldn't write generated key to \"%s\".", fname);
-          memset(keys_out, 0, sizeof(*keys_out));
+          memwipe(keys_out, 0, sizeof(*keys_out));
           goto error;
         }
       } else {
