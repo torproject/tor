@@ -5,20 +5,17 @@ each development snapshot, see the ChangeLog file.
 Changes in version 0.2.5.10 - 2014-10-xx
   Tor 0.2.5.10 is the first stable release in the 0.2.5 series.
 
-  XXXX Write a paragraph saying it's got these things XXXX
-
-    - deprecates some old versions of the tor protocol,
-    - defends against more dos attacks
-    - improves pluggable transport usability
-    - adds new controller features
-    - modest speedups to relays under heavy load
-    - seccomp2 sandbox (linux only)
-    - improves error reporting and testability
-    - better BSD transparent proxy support
-    - improved IPv6 DNS support
-    - various new security features.
-    - numerous bugfixes
-
+  It adds several new security features, including improved DoS
+  resistance for relays, new compiler hardening options, and a
+  system-call sandbox for hardened installations on Linux (requires
+  seccomp2). The controller protocol has several new features, resolving
+  IPv6 addresses should work better than before, and relays should be a
+  little more CPU-efficient. We've added support for more (Open,Free)BSD
+  transparent proxy types. We've improved the build system and testing
+  intrastructure to allow unit testing of more parts of the Tor
+  codebase. Finally, we've addressed several nagging pluggable transport
+  usability issues, and included numerous other small bugfixes and
+  features mentioned below.
 
   o Deprecated versions:
     - Tor 0.2.2.x has reached end-of-life; it has received no patches or
