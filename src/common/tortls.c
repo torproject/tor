@@ -1170,6 +1170,9 @@ tor_tls_context_init_one(tor_tls_context_t **ppcontext,
   return ((new_ctx != NULL) ? 0 : -1);
 }
 
+/** The group we should use for ecdhe when none was selected. */
+#define  NID_tor_default_ecdhe_group NID_X9_62_prime256v1
+
 /** Create a new TLS context for use with Tor TLS handshakes.
  * <b>identity</b> should be set to the identity key used to sign the
  * certificate.
@@ -1365,7 +1368,7 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
     else if (flags & TOR_TLS_CTX_USE_ECDHE_P256)
       nid = NID_X9_62_prime256v1;
     else
-      nid = NID_X9_62_prime256v1;
+      nid = NID_tor_default_ecdhe_group;
     /* Use P-256 for ECDHE. */
     ec_key = EC_KEY_new_by_curve_name(nid);
     if (ec_key != NULL) /*XXXX Handle errors? */
