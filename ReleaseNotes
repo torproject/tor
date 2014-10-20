@@ -2,7 +2,24 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
-Changes in version 0.2.5.xx - 2014-10-xx
+Changes in version 0.2.5.10 - 2014-10-xx
+  Tor 0.2.5.10 is the first stable release in the 0.2.5 series.
+
+  XXXX Write a paragraph saying it's got these things XXXX
+
+    - deprecates some old versions of the tor protocol,
+    - defends against more dos attacks
+    - improves pluggable transport usability
+    - adds new controller features
+    - modest speedups to relays under heavy load
+    - seccomp2 sandbox (linux only)
+    - improves error reporting and testability
+    - better BSD transparent proxy support
+    - improved IPv6 DNS support
+    - various new security features.
+    - numerous bugfixes
+
+
   o Deprecated versions:
     - Tor 0.2.2.x has reached end-of-life; it has received no patches or
       attention for some while. Directory authorities no longer accept
@@ -696,12 +713,6 @@ Changes in version 0.2.5.xx - 2014-10-xx
       over a thousand memory leak warnings previously, mostly produced
       by forgetting to free things in the unit test code. Fixes bug
       11618, bugfixes on many versions of Tor.
-
-  o Minor bugfixes (tools):
-    - Disable the sandbox name resolver cache when running tor-resolve:
-      tor-resolve doesn't use the sandbox code, and turning it on was
-      breaking attempts to do tor-resolve on a non-default server on
-      Linux. Fixes bug 13295; bugfix on 0.2.5.3-alpha.
 
   o Minor bugfixes (tor-fw-helper):
     - Give a correct log message when tor-fw-helper fails to launch.
