@@ -556,12 +556,11 @@ in their approved versions list.
   git push origin tag tor-0.2.x.y-status
 
 8a) scp the tarball and its sig to the dist website, i.e.
-/srv/dist-master.torproject.org/htdocs/ on staticiforme. When you want
+/srv/dist-master.torproject.org/htdocs/ on dist-master. When you want
 it to go live, you run "static-update-component dist.torproject.org"
-on staticiforme.
+on dist-master.
 
-8b) 
- Edit "include/versions.wmi" and "Makefile" to note the new version.
+8b) Edit "include/versions.wmi" and "Makefile" to note the new version.
 
 9) Email the packagers (cc'ing tor-assistants) that a new tarball is up.
 
