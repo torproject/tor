@@ -238,6 +238,13 @@ test_socks_5_supported_commands(void *ptr)
   ADD_DATA(buf, "\x01\x02");
   tt_assert(fetch_from_buf_socks(buf,socks,get_options()->TestSocks,1)
             == -1);
+
+  tt_int_op(5,==,socks->socks_version);
+  tt_int_op(10,==,socks->replylen);
+  tt_int_op(5,==,socks->reply[0]);
+  tt_int_op(SOCKS5_NOT_ALLOWED,==,socks->reply[1]);
+  tt_int_op(1,==,socks->reply[3]);
+
   socks_request_clear(socks);
 
   /* SOCKS 5 should reject RESOLVE [F0] reject for IPv6 address
@@ -249,6 +256,13 @@ test_socks_5_supported_commands(void *ptr)
   ADD_DATA(buf, "\x01\x02");
   tt_assert(fetch_from_buf_socks(buf,socks,get_options()->TestSocks,1)
             == -1);
+
+  tt_int_op(5,==,socks->socks_version);
+  tt_int_op(10,==,socks->replylen);
+  tt_int_op(5,==,socks->reply[0]);
+  tt_int_op(SOCKS5_NOT_ALLOWED,==,socks->reply[1]);
+  tt_int_op(1,==,socks->reply[3]);
+
   socks_request_clear(socks);
 
   /* SOCKS 5 Send RESOLVE_PTR [F1] for IP address 2.2.2.5 */

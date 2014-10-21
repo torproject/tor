@@ -2053,8 +2053,10 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
               string_is_valid_ipv6_address(req->address)) {
             log_unsafe_socks_warning(5,req->address,req->port,safe_socks);
 
-            if (safe_socks)
+            if (safe_socks) {
+              socks_request_set_socks5_error(req, SOCKS5_NOT_ALLOWED);
               return -1;
+            }
           }
 
           if (!string_is_valid_hostname(req->address)) {
