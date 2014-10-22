@@ -471,7 +471,8 @@ test_util_time(void *arg)
               b_time.tm_year == (1901-1900));
   }
 
-  if (sizeof(time_t) == 8) {
+#if SIZEOF_TIME_T == 8
+  {
     /* one of the smallest tm_year values my 64 bit system supports:
      * b_time.tm_year == (-292275055LL-1900LL) without clamping */
     t_res = -9223372036854775LL;
@@ -490,11 +491,13 @@ test_util_time(void *arg)
     tt_assert(b_time.tm_year == (1970-1900) ||
               b_time.tm_year == (1-1900));
   }
+#endif
 
   /* time_t >= INT_MAX yields a year clamped to 2037 or 9999,
    * depending on whether the implementation of the system gmtime(_r)
    * sets struct tm (9999) or not (2037) */
-  if (sizeof(time_t) == 4 || sizeof(time_t) == 8) {
+#if SIZEOF_TIME_T == 4 || SIZEOF_TIME_T == 8
+  {
     t_res = 3*(1 << 29);
     tor_gmtime_r(&t_res, &b_time);
     tt_assert(b_time.tm_year == (2021-1900));
@@ -504,8 +507,10 @@ test_util_time(void *arg)
     tt_assert(b_time.tm_year == (2037-1900) ||
               b_time.tm_year == (2038-1900));
   }
+#endif
 
-  if (sizeof(time_t) == 8) {
+#if SIZEOF_TIME_T == 8
+  {
     /* one of the largest tm_year values my 64 bit system supports:
      * b_time.tm_year == (292278994L-1900L) without clamping */
     t_res = 9223372036854775LL;
@@ -524,6 +529,7 @@ test_util_time(void *arg)
     tt_assert(b_time.tm_year == (2037-1900) ||
               b_time.tm_year == (9999-1900));
   }
+#endif
 
   /* Test {format,parse}_rfc1123_time */
 
