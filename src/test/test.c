@@ -1366,7 +1366,7 @@ main(int c, const char **v)
   update_approx_time(time(NULL));
   options = options_new();
   tor_threads_init();
-  init_logging();
+  init_logging(1);
   configure_backtrace_handler(get_version());
 
   for (i_out = i = 1; i < c; ++i) {

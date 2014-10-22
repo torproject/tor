@@ -19,7 +19,7 @@ test_get_sigsafe_err_fds(void *arg)
   int n;
   log_severity_list_t include_bug, no_bug, no_bug2;
   (void) arg;
-  init_logging();
+  init_logging(1);
 
   n = tor_log_get_sigsafe_err_fds(&fds);
   tt_int_op(n, ==, 1);
@@ -87,7 +87,7 @@ test_sigsafe_err(void *arg)
 
   set_log_severity_config(LOG_WARN, LOG_ERR, &include_bug);
 
-  init_logging();
+  init_logging(1);
   mark_logs_temp();
   add_file_log(&include_bug, fn, 0);
   tor_log_update_sigsafe_err_fds();

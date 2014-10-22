@@ -117,14 +117,32 @@ static int syslog_count = 0;
 
 /** Represents a log message that we are going to send to callback-driven
  * loggers once we can do so in a non-reentrant way. */
-typedef struct pending_cb_message_t {
+typedef struct pending_log_message_t {
   int severity; /**< The severity of the message */
   log_domain_mask_t domain; /**< The domain of the message */
+  char *fullmsg; /**< The message, with all decorations */
   char *msg; /**< The content of the message */
-} pending_cb_message_t;
+} pending_log_message_t;
 
 /** Log messages waiting to be replayed onto callback-based logs */
 static smartlist_t *pending_cb_messages = NULL;
+
+/** Log messages waiting to be replayed once the logging system is initialized.
+ */
+static smartlist_t *pending_startup_messages = NULL;
+
+/** Number of bytes of messages queued in pending_startup_messages.  (This is
+ * the length of the messages, not the number of bytes used to store
+ * them.) */
+static size_t pending_startup_messages_len;
+
+/** True iff we should store messages while waiting for the logs to get
+ * configured. */
+static int queue_startup_messages = 1;
+
+/** Don't store more than this many bytes of messages while waiting for the
+ * logs to get configured. */
+#define MAX_STARTUP_MSG_LEN (1<<16)
 
 /** Lock the log_mutex to prevent others from changing the logfile_t list */
 #define LOCK_LOGS() STMT_BEGIN                                          \
@@ -329,6 +347,102 @@ format_msg(char *buf, size_t buf_len,
   return end_of_prefix;
 }
 
+/* Create a new pending_log_message_t with appropriate values */
+static pending_log_message_t *
+pending_log_message_new(int severity, log_domain_mask_t domain,
+                        const char *fullmsg, const char *shortmsg)
+{
+  pending_log_message_t *m = tor_malloc(sizeof(pending_log_message_t));
+  m->severity = severity;
+  m->domain = domain;
+  m->fullmsg = fullmsg ? tor_strdup(fullmsg) : NULL;
+  m->msg = tor_strdup(shortmsg);
+  return m;
+}
+
+/** Release all storage held by <b>msg</b>. */
+static void
+pending_log_message_free(pending_log_message_t *msg)
+{
+  if (!msg)
+    return;
+  tor_free(msg->msg);
+  tor_free(msg->fullmsg);
+  tor_free(msg);
+}
+
+/** Return true iff <b>lf</b> would like to receive a message with the specified
+ * <b>severity</b> in the specified <b>domain</b>.
+ */
+static INLINE int
+logfile_wants_message(const logfile_t *lf, int severity,
+                      log_domain_mask_t domain)
+{
+  if (! (lf->severities->masks[SEVERITY_MASK_IDX(severity)] & domain)) {
+    return 0;
+  }
+  if (! (lf->fd >= 0 || lf->is_syslog || lf->callback)) {
+    return 0;
+  }
+  if (lf->seems_dead) {
+    return 0;
+  }
+
+  return 1;
+}
+
+/** Send a message to <b>lf</b>.  The full message, with time prefix and
+ * severity, is in <b>buf</b>.  The message itself is in
+ * <b>msg_after_prefix</b>.  If <b>callbacks_deferred</b> points to true, then
+ * we already deferred this message for pending callbacks and don't need to do
+ * it again.  Otherwise, if we need to do it, do it, and set
+ * <b>callbacks_deferred</b> to 1. */
+static INLINE void
+logfile_deliver(logfile_t *lf, const char *buf, size_t msg_len,
+                const char *msg_after_prefix, log_domain_mask_t domain,
+                int severity, int *callbacks_deferred)
+{
+
+  if (lf->is_syslog) {
+#ifdef HAVE_SYSLOG_H
+#ifdef MAXLINE
+    /* Some syslog implementations have limits on the length of what you can
+     * pass them, and some very old ones do not detect overflow so well.
+     * Regrettably, they call their maximum line length MAXLINE. */
+#if MAXLINE < 64
+#warn "MAXLINE is a very low number; it might not be from syslog.h after all"
+#endif
+    char *m = msg_after_prefix;
+    if (msg_len >= MAXLINE)
+      m = tor_strndup(msg_after_prefix, MAXLINE-1);
+    syslog(severity, "%s", m);
+    if (m != msg_after_prefix) {
+      tor_free(m);
+    }
+#else
+    /* We have syslog but not MAXLINE.  That's promising! */
+    syslog(severity, "%s", msg_after_prefix);
+#endif
+#endif
+  } else if (lf->callback) {
+    if (domain & LD_NOCB) {
+      if (!*callbacks_deferred && pending_cb_messages) {
+        smartlist_add(pending_cb_messages,
+            pending_log_message_new(severity,domain,NULL,msg_after_prefix));
+        *callbacks_deferred = 1;
+      }
+    } else {
+      lf->callback(severity, domain, msg_after_prefix);
+    }
+  } else {
+    if (write_all(lf->fd, buf, msg_len, 0) < 0) { /* error */
+      /* don't log the error! mark this log entry to be blown away, and
+       * continue. */
+      lf->seems_dead = 1;
+    }
+  }
+}
+
 /** Helper: sends a message to the appropriate logfiles, at loglevel
  * <b>severity</b>.  If provided, <b>funcname</b> is prepended to the
  * message.  The actual message is derived as from tor_snprintf(format,ap).
@@ -354,20 +468,21 @@ logv,(int severity, log_domain_mask_t domain, const char *funcname,
   if ((! (domain & LD_NOCB)) && smartlist_len(pending_cb_messages))
     flush_pending_log_callbacks();
 
-  lf = logfiles;
-  while (lf) {
-    if (! (lf->severities->masks[SEVERITY_MASK_IDX(severity)] & domain)) {
-      lf = lf->next;
+  if (queue_startup_messages &&
+      pending_startup_messages_len < MAX_STARTUP_MSG_LEN) {
+    end_of_prefix =
+      format_msg(buf, sizeof(buf), domain, severity, funcname, suffix,
+      format, ap, &msg_len);
+    formatted = 1;
+
+    smartlist_add(pending_startup_messages,
+      pending_log_message_new(severity,domain,buf,end_of_prefix));
+    pending_startup_messages_len += msg_len;
+  }
+
+  for (lf = logfiles; lf; lf = lf->next) {
+    if (! logfile_wants_message(lf, severity, domain))
       continue;
-    }
-    if (! (lf->fd >= 0 || lf->is_syslog || lf->callback)) {
-      lf = lf->next;
-      continue;
-    }
-    if (lf->seems_dead) {
-      lf = lf->next;
-      continue;
-    }
 
     if (!formatted) {
       end_of_prefix =
@@ -376,51 +491,8 @@ logv,(int severity, log_domain_mask_t domain, const char *funcname,
       formatted = 1;
     }
 
-    if (lf->is_syslog) {
-#ifdef HAVE_SYSLOG_H
-      char *m = end_of_prefix;
-#ifdef MAXLINE
-      /* Some syslog implementations have limits on the length of what you can
-       * pass them, and some very old ones do not detect overflow so well.
-       * Regrettably, they call their maximum line length MAXLINE. */
-#if MAXLINE < 64
-#warn "MAXLINE is a very low number; it might not be from syslog.h after all"
-#endif
-      if (msg_len >= MAXLINE)
-        m = tor_strndup(end_of_prefix, MAXLINE-1);
-#endif
-      syslog(severity, "%s", m);
-#ifdef MAXLINE
-      if (m != end_of_prefix) {
-        tor_free(m);
-      }
-#endif
-#endif
-      lf = lf->next;
-      continue;
-    } else if (lf->callback) {
-      if (domain & LD_NOCB) {
-        if (!callbacks_deferred && pending_cb_messages) {
-          pending_cb_message_t *msg = tor_malloc(sizeof(pending_cb_message_t));
-          msg->severity = severity;
-          msg->domain = domain;
-          msg->msg = tor_strdup(end_of_prefix);
-          smartlist_add(pending_cb_messages, msg);
-
-          callbacks_deferred = 1;
-        }
-      } else {
-        lf->callback(severity, domain, end_of_prefix);
-      }
-      lf = lf->next;
-      continue;
-    }
-    if (write_all(lf->fd, buf, msg_len, 0) < 0) { /* error */
-      /* don't log the error! mark this log entry to be blown away, and
-       * continue. */
-      lf->seems_dead = 1;
-    }
-    lf = lf->next;
+    logfile_deliver(lf, buf, msg_len, end_of_prefix, domain, severity,
+      &callbacks_deferred);
   }
   UNLOCK_LOGS();
 }
@@ -724,12 +796,14 @@ void
 logs_free_all(void)
 {
   logfile_t *victim, *next;
-  smartlist_t *messages;
+  smartlist_t *messages, *messages2;
   LOCK_LOGS();
   next = logfiles;
   logfiles = NULL;
   messages = pending_cb_messages;
   pending_cb_messages = NULL;
+  messages2 = pending_startup_messages;
+  pending_startup_messages = NULL;
   UNLOCK_LOGS();
   while (next) {
     victim = next;
@@ -739,11 +813,17 @@ logs_free_all(void)
   }
   tor_free(appname);
 
-  SMARTLIST_FOREACH(messages, pending_cb_message_t *, msg, {
-      tor_free(msg->msg);
-      tor_free(msg);
+  SMARTLIST_FOREACH(messages, pending_log_message_t *, msg, {
+      pending_log_message_free(msg);
     });
   smartlist_free(messages);
+
+  if (messages2) {
+    SMARTLIST_FOREACH(messages2, pending_log_message_t *, msg, {
+        pending_log_message_free(msg);
+      });
+    smartlist_free(messages2);
+  }
 
   /* We _could_ destroy the log mutex here, but that would screw up any logs
    * that happened between here and the end of execution. */
@@ -839,7 +919,7 @@ add_stream_log(const log_severity_list_t *severity, const char *name, int fd)
 
 /** Initialize the global logging facility */
 void
-init_logging(void)
+init_logging(int disable_startup_queue)
 {
   if (!log_mutex_initialized) {
     tor_mutex_init(&log_mutex);
@@ -847,6 +927,11 @@ init_logging(void)
   }
   if (pending_cb_messages == NULL)
     pending_cb_messages = smartlist_new();
+  if (disable_startup_queue)
+    queue_startup_messages = 0;
+  if (pending_startup_messages == NULL && queue_startup_messages) {
+    pending_startup_messages = smartlist_new();
+  }
 }
 
 /** Set whether we report logging domains as a part of our log messages.
@@ -932,7 +1017,7 @@ flush_pending_log_callbacks(void)
   messages = pending_cb_messages;
   pending_cb_messages = smartlist_new();
   do {
-    SMARTLIST_FOREACH_BEGIN(messages, pending_cb_message_t *, msg) {
+    SMARTLIST_FOREACH_BEGIN(messages, pending_log_message_t *, msg) {
       const int severity = msg->severity;
       const int domain = msg->domain;
       for (lf = logfiles; lf; lf = lf->next) {
@@ -942,8 +1027,7 @@ flush_pending_log_callbacks(void)
         }
         lf->callback(severity, domain, msg->msg);
       }
-      tor_free(msg->msg);
-      tor_free(msg);
+      pending_log_message_free(msg);
     } SMARTLIST_FOREACH_END(msg);
     smartlist_clear(messages);
 
@@ -954,6 +1038,39 @@ flush_pending_log_callbacks(void)
 
   smartlist_free(messages);
 
+  UNLOCK_LOGS();
+}
+
+/** Flush all the messages we stored from startup while waiting for log
+ * initialization.
+ */
+void
+flush_log_messages_from_startup(void)
+{
+  logfile_t *lf;
+
+  LOCK_LOGS();
+  queue_startup_messages = 0;
+  pending_startup_messages_len = 0;
+  if (! pending_startup_messages)
+    goto out;
+
+  SMARTLIST_FOREACH_BEGIN(pending_startup_messages, pending_log_message_t *,
+                          msg) {
+    int callbacks_deferred = 0;
+    for (lf = logfiles; lf; lf = lf->next) {
+      if (! logfile_wants_message(lf, msg->severity, msg->domain))
+        continue;
+
+      logfile_deliver(lf, msg->fullmsg, strlen(msg->fullmsg), msg->msg,
+                      msg->domain, msg->severity, &callbacks_deferred);
+    }
+    pending_log_message_free(msg);
+  } SMARTLIST_FOREACH_END(msg);
+  smartlist_free(pending_startup_messages);
+  pending_startup_messages = NULL;
+
+ out:
   UNLOCK_LOGS();
 }
 

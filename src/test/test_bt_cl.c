@@ -96,7 +96,7 @@ main(int argc, char **argv)
     return 1;
   }
 
-  init_logging();
+  init_logging(1);
   set_log_severity_config(LOG_WARN, LOG_ERR, &severity);
   add_stream_log(&severity, "stdout", STDOUT_FILENO);
   tor_log_update_sigsafe_err_fds();

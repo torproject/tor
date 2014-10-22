@@ -344,7 +344,7 @@ main(int argc, char **argv)
   char *result_hostname = NULL;
   log_severity_list_t *s = tor_malloc_zero(sizeof(log_severity_list_t));
 
-  init_logging();
+  init_logging(1);
   sandbox_disable_getaddrinfo_cache();
 
   arg = &argv[1];
