@@ -883,7 +883,7 @@ tor_addr_copy(tor_addr_t *dest, const tor_addr_t *src)
   memcpy(dest, src, sizeof(tor_addr_t));
 }
 
-/** Copy a tor_addr_t from <b>src</b> to <b>dest</b>, taking extra case to
+/** Copy a tor_addr_t from <b>src</b> to <b>dest</b>, taking extra care to
  * copy only the well-defined portions. Used for computing hashes of
  * addresses.
  */

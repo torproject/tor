@@ -1912,7 +1912,7 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
       }
       *drain_out = 2u + usernamelen + 1u + passlen;
       req->got_auth = 1;
-      *want_length_out = 7; /* Minimal socks5 sommand. */
+      *want_length_out = 7; /* Minimal socks5 command. */
       return 0;
     } else if (req->auth_type == SOCKS_USER_PASS) {
       /* unknown version byte */

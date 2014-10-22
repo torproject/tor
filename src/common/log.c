@@ -371,8 +371,8 @@ pending_log_message_free(pending_log_message_t *msg)
   tor_free(msg);
 }
 
-/** Return true iff <b>lf</b> would like to receive a message with the specified
- * <b>severity</b> in the specified <b>domain</b>.
+/** Return true iff <b>lf</b> would like to receive a message with the
+ * specified <b>severity</b> in the specified <b>domain</b>.
  */
 static INLINE int
 logfile_wants_message(const logfile_t *lf, int severity,

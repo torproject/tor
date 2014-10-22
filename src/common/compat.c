@@ -77,6 +77,7 @@
 
 /* Includes for the process attaching prevention */
 #if defined(HAVE_SYS_PRCTL_H) && defined(__linux__)
+/* Only use the linux prctl;  the IRIX prctl is totally different */
 #include <sys/prctl.h>
 #elif defined(__APPLE__)
 #include <sys/types.h>
@@ -109,10 +110,6 @@
 #endif
 #ifdef HAVE_SYS_FILE_H
 #include <sys/file.h>
-#endif
-#if defined(HAVE_SYS_PRCTL_H) && defined(__linux__)
-/* Only use the linux prctl;  the IRIX prctl is totally different */
-#include <sys/prctl.h>
 #endif
 #ifdef TOR_UNIT_TESTS
 #if !defined(HAVE_USLEEP) && defined(HAVE_SYS_SELECT_H)
@@ -2883,7 +2880,7 @@ tor_localtime_r(const time_t *timep, struct tm *result)
 /** @} */
 
 /** @{ */
-/** As gmtimee_r, but defined for platforms that don't have it:
+/** As gmtime_r, but defined for platforms that don't have it:
  *
  * Convert *<b>timep</b> to a struct tm in UTC, and store the value in
  * *<b>result</b>.  Return the result on success, or NULL on failure.
