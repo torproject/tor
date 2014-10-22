@@ -1,5 +1,5 @@
   o Minor bugfixes:
     - When trying to finalize a zlib stream where we have already
       exhausted all the input bytes and we need more bytes in the
-      output buffer, do not report the the write as successful.
+      output buffer, do not report the write as successful.
       Fixes bug 11824; bugfix on 0.1.1.23.
