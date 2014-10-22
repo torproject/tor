@@ -352,7 +352,7 @@ test_dir_formats(void *arg)
 #include "failing_routerdescs.inc"
 
 static void
-test_dir_routerparse_bad(void *arg)
+test_dir_routerinfo_parsing(void *arg)
 {
   (void) arg;
 
@@ -376,6 +376,8 @@ test_dir_routerparse_bad(void *arg)
 
   CHECK_OK(EX_RI_MINIMAL);
   CHECK_OK(EX_RI_MAXIMAL);
+
+  CHECK_OK(EX_RI_MINIMAL_ED);
 
   /* good annotations prepended */
   routerinfo_free(ri);
@@ -3168,7 +3170,7 @@ test_dir_packages(void *arg)
 struct testcase_t dir_tests[] = {
   DIR_LEGACY(nicknames),
   DIR_LEGACY(formats),
-  DIR(routerparse_bad, 0),
+  DIR(routerinfo_parsing, 0),
   DIR(extrainfo_parsing, 0),
   DIR(parse_router_list, TT_FORK),
   DIR(load_routers, TT_FORK),
