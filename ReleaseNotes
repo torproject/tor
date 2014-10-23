@@ -17,11 +17,17 @@ Changes in version 0.2.5.10 - 2014-10-24
   usability issues, and included numerous other small bugfixes and
   features mentioned below.
 
+  This release coincides with the likely end of further 0.2.3.x
+  releases; see below for more information.
+
   o Deprecated versions:
     - Tor 0.2.2.x has reached end-of-life; it has received no patches or
       attention for some while. Directory authorities no longer accept
       descriptors from relays running any version of Tor prior to Tor
       0.2.3.16-alpha. Resolves ticket 11149.
+    - Tor 0.2.3.x is approaching its end-of-life too; we do not plan on
+      releasing further updates for it except under highly unusual
+      circumstances.
 
   o Major features (client security):
     - The ntor handshake is now on-by-default, no matter what the

@@ -13,6 +13,14 @@ Changes in version 0.2.5.10 - 2014-10-24
   usability issues, and included numerous other small bugfixes and
   features mentioned below.
 
+  This release coincides with the likely end of further 0.2.3.x
+  releases; see below for more information.
+
+  o Deprecated versions:
+    - Tor 0.2.3.x is approaching its end-of-life too; we do not plan on
+      releasing further updates for it except under highly unusual
+      circumstances.
+
 
 Changes in version 0.2.5.9-rc - 2014-10-20
   Tor 0.2.5.9-rc is the third release candidate for the Tor 0.2.5.x
