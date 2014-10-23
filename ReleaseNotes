@@ -2,7 +2,7 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
-Changes in version 0.2.5.10 - 2014-10-xx
+Changes in version 0.2.5.10 - 2014-10-24
   Tor 0.2.5.10 is the first stable release in the 0.2.5 series.
 
   It adds several new security features, including improved DoS
