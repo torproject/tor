@@ -1,6 +1,29 @@
 Changes in version 0.2.6.1-alpha - 2014-??-??
 
 
+Changes in version 0.2.5.10 - 2014-10-24
+  Tor 0.2.5.10 is the first stable release in the 0.2.5 series.
+
+  It adds several new security features, including improved
+  denial-of-service resistance for relays, new compiler hardening
+  options, and a system-call sandbox for hardened installations on Linux
+  (requires seccomp2). The controller protocol has several new features,
+  resolving IPv6 addresses should work better than before, and relays
+  should be a little more CPU-efficient. We've added support for more
+  OpenBSD and FreeBSD transparent proxy types. We've improved the build
+  system and testing infrastructure to allow unit testing of more parts
+  of the Tor codebase. Finally, we've addressed several nagging pluggable
+  transport usability issues, and included numerous other small bugfixes
+  and features mentioned below.
+
+  This release marks end-of-life for Tor 0.2.3.x; those Tor versions
+  have accumulated many known flaws; everyone should upgrade.
+
+  o Deprecated versions:
+    - Tor 0.2.3.x has reached end-of-life; it has received no patches or
+      attention for some while.
+
+
 Changes in version 0.2.5.9-rc - 2014-10-20
   Tor 0.2.5.9-rc is the third release candidate for the Tor 0.2.5.x
   series. It disables SSL3 in response to the recent "POODLE" attack
