@@ -5,43 +5,32 @@ each development snapshot, see the ChangeLog file.
 Changes in version 0.2.5.10 - 2014-10-24
   Tor 0.2.5.10 is the first stable release in the 0.2.5 series.
 
-  It adds several new security features, including improved DoS
-  resistance for relays, new compiler hardening options, and a
-  system-call sandbox for hardened installations on Linux (requires
-  seccomp2). The controller protocol has several new features, resolving
-  IPv6 addresses should work better than before, and relays should be a
-  little more CPU-efficient. We've added support for more (Open,Free)BSD
-  transparent proxy types. We've improved the build system and testing
-  intrastructure to allow unit testing of more parts of the Tor
-  codebase. Finally, we've addressed several nagging pluggable transport
-  usability issues, and included numerous other small bugfixes and
-  features mentioned below.
+  It adds several new security features, including improved
+  denial-of-service resistance for relays, new compiler hardening
+  options, and a system-call sandbox for hardened installations on Linux
+  (requires seccomp2). The controller protocol has several new features,
+  resolving IPv6 addresses should work better than before, and relays
+  should be a little more CPU-efficient. We've added support for more
+  OpenBSD and FreeBSD transparent proxy types. We've improved the build
+  system and testing infrastructure to allow unit testing of more parts
+  of the Tor codebase. Finally, we've addressed several nagging pluggable
+  transport usability issues, and included numerous other small bugfixes
+  and features mentioned below.
 
-  This release coincides with the likely end of further 0.2.3.x
-  releases; see below for more information.
+  This release marks end-of-life for Tor 0.2.3.x; those Tor versions
+  have accumulated many known flaws; everyone should upgrade.
 
-  o Deprecated versions:
-    - Tor 0.2.2.x has reached end-of-life; it has received no patches or
-      attention for some while. Directory authorities no longer accept
-      descriptors from relays running any version of Tor prior to Tor
-      0.2.3.16-alpha. Resolves ticket 11149.
-    - Tor 0.2.3.x is approaching its end-of-life too; we do not plan on
-      releasing further updates for it except under highly unusual
-      circumstances.
-
-  o Major features (client security):
+  o Major features (security):
     - The ntor handshake is now on-by-default, no matter what the
       directory authorities recommend. Implements ticket 8561.
-
-  o Major features (other security):
-    - Disable support for SSLv3. All versions of OpenSSL in use with Tor
-      today support TLS 1.0 or later, so we can safely turn off support
-      for this old (and insecure) protocol. Fixes bug 13426.
-    - Warn about attempts to run hidden services and relays in the same
-      process: that's probably not a good idea. Closes ticket 12908.
     - Make the "tor-gencert" tool used by directory authority operators
       create 2048-bit signing keys by default (rather than 1024-bit, since
       1024-bit is uncomfortably small these days). Addresses ticket 10324.
+    - Warn about attempts to run hidden services and relays in the same
+      process: that's probably not a good idea. Closes ticket 12908.
+    - Disable support for SSLv3. All versions of OpenSSL in use with Tor
+      today support TLS 1.0 or later, so we can safely turn off support
+      for this old (and insecure) protocol. Fixes bug 13426.
 
   o Major features (relay security, DoS-resistance):
     - When deciding whether we have run out of memory and we need to
@@ -74,8 +63,6 @@ Changes in version 0.2.5.10 - 2014-10-24
       even when pluggable transports are in use, and report usage
       statistics in their extra-info descriptors. Resolves tickets 4773
       and 5040.
-
-  o Major features (bridges):
     - Don't launch pluggable transport proxies if we don't have any
       bridges configured that would use them. Now we can list many
       pluggable transports, and Tor will dynamically start one when it
@@ -131,6 +118,10 @@ Changes in version 0.2.5.10 - 2014-10-24
       when a crash occurs or an assertion fails. By default, traces
       are dumped to stderr (if possible) and to any logs that are
       reporting errors. Implements ticket 9299.
+
+  o Deprecated versions:
+    - Tor 0.2.3.x has reached end-of-life; it has received no patches or
+      attention for some while.
 
   o Major bugfixes (security, directory authorities):
     - Directory authorities now include a digest of each relay's
@@ -544,7 +535,7 @@ Changes in version 0.2.5.10 - 2014-10-24
       write out that file if we successfully switch to the new config
       option. Fixes bug 5605; bugfix on 0.2.2.26-beta. Patch from "Ryman".
 
-  o Minor bugfixes (Directory server):
+  o Minor bugfixes (directory server):
     - No longer accept malformed http headers when parsing urls from
       headers. Now we reply with Bad Request ("400"). Fixes bug 2767;
       bugfix on 0.0.6pre1.
