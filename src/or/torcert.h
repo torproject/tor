@@ -64,6 +64,8 @@ int tor_cert_checksig(tor_cert_t *cert,
                       const ed25519_public_key_t *pubkey, time_t now);
 
 tor_cert_t *tor_cert_dup(const tor_cert_t *cert);
+int tor_cert_eq(const tor_cert_t *cert1, const tor_cert_t *cert2);
+int tor_cert_opt_eq(const tor_cert_t *cert1, const tor_cert_t *cert2);
 
 #endif
 

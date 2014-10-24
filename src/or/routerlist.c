@@ -4906,7 +4906,7 @@ routerinfo_incompatible_with_extrainfo(const routerinfo_t *ri,
                                        signed_descriptor_t *sd,
                                        const char **msg)
 {
-  int digest_matches, r=1;
+  int digest_matches, digest256_matches, r=1;
   tor_assert(ri);
   tor_assert(ei);
   if (!sd)
@@ -4919,6 +4919,11 @@ routerinfo_incompatible_with_extrainfo(const routerinfo_t *ri,
 
   digest_matches = tor_memeq(ei->cache_info.signed_descriptor_digest,
                            sd->extra_info_digest, DIGEST_LEN);
+  /* Set digest256_matches to 1 if the digest is correct, or if no
+   * digest256 was in the ri. */
+  digest256_matches = tor_memeq(ei->digest256,
+                                ri->extra_info_digest256, DIGEST256_LEN);
+  digest256_matches |= tor_mem_is_zero(ri->extra_info_digest256, DIGEST256_LEN);
 
   /* The identity must match exactly to have been generated at the same time
    * by the same router. */
@@ -4926,6 +4931,11 @@ routerinfo_incompatible_with_extrainfo(const routerinfo_t *ri,
                  ei->cache_info.identity_digest,
                  DIGEST_LEN)) {
     if (msg) *msg = "Extrainfo nickname or identity did not match routerinfo";
+    goto err; /* different servers */
+  }
+
+  if (! tor_cert_opt_eq(ri->signing_key_cert, ei->signing_key_cert)) {
+    if (msg) *msg = "Extrainfo signing key cert didn't match routerinfo";
     goto err; /* different servers */
   }
 
@@ -4953,6 +4963,11 @@ routerinfo_incompatible_with_extrainfo(const routerinfo_t *ri,
     if (msg) *msg = "Extrainfo published time did not match routerdesc";
     r = -1;
     goto err;
+  }
+
+  if (!digest256_matches) {
+    if (msg) *msg = "Extrainfo digest did not match digest256 from routerdesc";
+    goto err; /* Digest doesn't match declared value. */
   }
 
   if (!digest_matches) {

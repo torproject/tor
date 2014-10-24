@@ -216,3 +216,24 @@ tor_cert_dup(const tor_cert_t *cert)
   return newcert;
 }
 
+/** Return true iff cert1 and cert2 are the same cert. */
+int
+tor_cert_eq(const tor_cert_t *cert1, const tor_cert_t *cert2)
+{
+  tor_assert(cert1);
+  tor_assert(cert2);
+  return cert1->encoded_len == cert2->encoded_len &&
+    tor_memeq(cert1->encoded, cert2->encoded, cert1->encoded_len);
+}
+
+/** Return true iff cert1 and cert2 are the same cert, or if they are both
+ * NULL. */
+int
+tor_cert_opt_eq(const tor_cert_t *cert1, const tor_cert_t *cert2)
+{
+  if (cert1 == NULL && cert2 == NULL)
+    return 1;
+  if (!cert1 || !cert2)
+    return 0;
+  return tor_cert_eq(cert1, cert2);
+}
