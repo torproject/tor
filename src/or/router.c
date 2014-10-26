@@ -381,6 +381,26 @@ rotate_onion_key(void)
   tor_free(fname_prev);
 }
 
+/** Log greeting message that points to new relay lifecycle document the
+ * first time this function has been called.
+ */
+static void
+log_new_relay_greeting(void)
+{
+  static int already_logged = 0;
+
+  if (already_logged)
+    return;
+
+  tor_log(LOG_NOTICE, LD_GENERAL, "You are running a new relay. "
+         "Thanks for helping the Tor network! If you wish to know "
+         "what will happen in the upcoming weeks regarding its usage, "
+         "have a look at https://blog.torproject.org/blog/lifecycle-of"
+         "-a-new-relay");
+
+  already_logged = 1;
+}
+
 /** Try to read an RSA key from <b>fname</b>.  If <b>fname</b> doesn't exist
  * and <b>generate</b> is true, create a new RSA key and save it in
  * <b>fname</b>.  Return the read/created key, or NULL on error.  Log all
@@ -425,6 +445,7 @@ init_key_from_file(const char *fname, int generate, int severity)
           goto error;
         }
         log_info(LD_GENERAL, "Generated key seems valid");
+        log_new_relay_greeting();
         if (crypto_pk_write_private_key_to_filename(prkey, fname)) {
           tor_log(severity, LD_FS,
               "Couldn't write generated key to \"%s\".", fname);

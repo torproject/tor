@@ -1,0 +1,4 @@
+  o Minor features:
+    - When identity keypair is generated for first time, log a 
+      congratulatory message that points to new relay lifecycle
+      document. Implements feature 10427.
