@@ -3228,6 +3228,14 @@ static const or_circuit_t *CONST_TO_OR_CIRCUIT(const circuit_t *);
 static origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *);
 static const origin_circuit_t *CONST_TO_ORIGIN_CIRCUIT(const circuit_t *);
 
+/** Return 1 iff <b>node</b> has Exit flag and no BadExit flag.
+ * Otherwise, return 0.
+ */
+static INLINE int node_is_good_exit(const node_t *node)
+{
+  return node->is_exit && ! node->is_bad_exit;
+}
+
 static INLINE or_circuit_t *TO_OR_CIRCUIT(circuit_t *x)
 {
   tor_assert(x->magic == OR_CIRCUIT_MAGIC);

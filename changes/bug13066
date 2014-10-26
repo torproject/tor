@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Fix node selection logic in smartlist_choose_node_by_bandwidth()
+      so that onion routers with BadExit flag are not considered to be
+      worthy candidates. Fixes issue 13066.

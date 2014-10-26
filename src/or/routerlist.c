@@ -2202,7 +2202,7 @@ smartlist_choose_node_by_bandwidth(const smartlist_t *sl,
     uint32_t this_bw = 0;
     i = node_sl_idx;
 
-    is_exit = node->is_exit;
+    is_exit = node_is_good_exit(node);
     is_guard = node->is_possible_guard;
     if (node->rs) {
       if (node->rs->has_bandwidth) {
