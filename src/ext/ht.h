@@ -38,8 +38,9 @@
   }
 #endif
 
+/* || 0 is for -Wparentheses-equality (-Wall?) appeasement under clang */
 #define HT_EMPTY(head)                          \
-  ((head)->hth_n_entries == 0)
+  (((head)->hth_n_entries == 0) || 0)
 
 /* How many elements in 'head'? */
 #define HT_SIZE(head)                           \

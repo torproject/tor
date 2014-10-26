@@ -273,8 +273,8 @@ ewma_alloc_circ_data(circuitmux_t *cmux,
   tor_assert(circ);
   tor_assert(direction == CELL_DIRECTION_OUT ||
              direction == CELL_DIRECTION_IN);
-  /* Shut the compiler up */
-  tor_assert(cell_count == cell_count);
+  /* Shut the compiler up without triggering -Wtautological-compare */
+  (void)cell_count;
 
   cdata = tor_malloc_zero(sizeof(*cdata));
   cdata->base_.magic = EWMA_POL_CIRC_DATA_MAGIC;

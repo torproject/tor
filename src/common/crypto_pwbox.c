@@ -62,7 +62,7 @@ crypto_pwbox(uint8_t **out, size_t *outlen_out,
   pwbox_encoded_setlen_data(enc, encrypted_len);
   encrypted_portion = pwbox_encoded_getarray_data(enc);
 
-  set_uint32(encrypted_portion, htonl(input_len));
+  set_uint32(encrypted_portion, htonl((uint32_t)input_len));
   memcpy(encrypted_portion+4, input, input_len);
 
   /* Now that all the data is in position, derive some keys, encrypt, and

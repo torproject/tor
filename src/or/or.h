@@ -241,7 +241,7 @@ typedef enum {
 #define PROXY_CONNECT 1
 #define PROXY_SOCKS4 2
 #define PROXY_SOCKS5 3
-/* !!!! If there is ever a PROXY_* type over 2, we must grow the proxy_type
+/* !!!! If there is ever a PROXY_* type over 3, we must grow the proxy_type
  * field in or_connection_t */
 
 /* Pluggable transport proxy type. Don't use this in or_connection_t,
@@ -4317,7 +4317,8 @@ static INLINE void or_state_mark_dirty(or_state_t *state, time_t when)
 /** Please turn this IP address into an FQDN, privately. */
 #define SOCKS_COMMAND_RESOLVE_PTR   0xF1
 
-#define SOCKS_COMMAND_IS_CONNECT(c) ((c)==SOCKS_COMMAND_CONNECT)
+/* || 0 is for -Wparentheses-equality (-Wall?) appeasement under clang */
+#define SOCKS_COMMAND_IS_CONNECT(c) (((c)==SOCKS_COMMAND_CONNECT) || 0)
 #define SOCKS_COMMAND_IS_RESOLVE(c) ((c)==SOCKS_COMMAND_RESOLVE || \
                                      (c)==SOCKS_COMMAND_RESOLVE_PTR)
 
