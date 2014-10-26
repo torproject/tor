@@ -2960,7 +2960,8 @@ extrainfo_insert,(routerlist_t *rl, extrainfo_t *ei))
     goto done;
   }
   if (routerinfo_incompatible_with_extrainfo(ri, ei, sd, NULL)) {
-    r = (sd->extrainfo_is_bogus) ? ROUTER_BAD_EI : ROUTER_NOT_IN_CONSENSUS;
+    r = (ri->cache_info.extrainfo_is_bogus) ?
+      ROUTER_BAD_EI : ROUTER_NOT_IN_CONSENSUS;
     goto done;
   }
 
