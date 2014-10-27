@@ -235,7 +235,7 @@ def head_score(s):
     return score
 
 class ChangeLog(object):
-    def __init__(self, wrapText=True):
+    def __init__(self, wrapText=True, blogOrder=True):
         self.prehead = []
         self.mainhead = None
         self.headtext = []
@@ -244,6 +244,7 @@ class ChangeLog(object):
         self.cursection = None
         self.lineno = 0
         self.wrapText = wrapText
+        self.blogOrder = blogOrder
 
     def addLine(self, tp, line):
         self.lineno += 1
@@ -312,6 +313,38 @@ class ChangeLog(object):
                               initial_indent=" "*indent1,
                               subsequent_indent=" "*indent2))
 
+    def dumpPreheader(self, graf):
+        self.dumpGraf(graf, 0)
+        print
+
+    def dumpMainhead(self, head):
+        print head
+
+    def dumpHeadGraf(self, graf):
+        self.dumpGraf(graf, 2)
+        print
+
+    def dumpSectionHeader(self, header):
+        print header
+
+    def dumpStartOfSections(self):
+        pass
+
+    def dumpEndOfSections(self):
+        pass
+
+    def dumpEndOfSection(self):
+        print
+
+    def dumpEndOfChangelog(self):
+        print
+
+    def dumpItem(self, grafs):
+        self.dumpGraf(grafs[0],4,6)
+        for par in grafs[1:]:
+            print
+            self.dumpGraf(par,6,6)
+
     def collateAndSortSections(self):
         heads = []
         sectionsByHead = { }
@@ -330,23 +363,79 @@ class ChangeLog(object):
 
     def dump(self):
         if self.prehead:
-            self.dumpGraf(self.prehead, 0)
-            print
-        print self.mainhead
+            self.dumpPreheader(self.prehead)
+
+        if not self.blogOrder:
+            self.dumpMainhead(self.mainhead)
+
         for par in self.headtext:
-            self.dumpGraf(par, 2)
-            print
+            self.dumpHeadGraf(par)
+
+        if self.blogOrder:
+            self.dumpMainhead(self.mainhead)
+
+        self.dumpStartOfSections()
         for _,head,items in self.sections:
             if not head.endswith(':'):
                 print >>sys.stderr, "adding : to %r"%head
                 head = head + ":"
-            print head
+            self.dumpSectionHeader(head)
             for _,grafs in items:
-                self.dumpGraf(grafs[0],4,6)
-                for par in grafs[1:]:
-                    print
-                    self.dumpGraf(par,6,6)
-            print
+                self.dumpItem(grafs)
+            self.dumpEndOfSection()
+        self.dumpEndOfSections()
+        self.dumpEndOfChangelog()
+
+class HTMLChangeLog(ChangeLog):
+    def __init__(self, *args, **kwargs):
+        ChangeLog.__init__(self, *args, **kwargs)
+
+    def htmlText(self, graf):
+        for line in graf:
+            line = line.rstrip().replace("&","&amp;")
+            line = line.rstrip().replace("<","&lt;").replace(">","&gt;")
+            sys.stdout.write(line.strip())
+            sys.stdout.write(" ")
+
+    def htmlPar(self, graf):
+        sys.stdout.write("<p>")
+        self.htmlText(graf)
+        sys.stdout.write("</p>\n")
+
+    def dumpPreheader(self, graf):
+        self.htmlPar(graf)
+
+    def dumpMainhead(self, head):
+        sys.stdout.write("<h2>%s</h2>"%head)
+
+    def dumpHeadGraf(self, graf):
+        self.htmlPar(graf)
+
+    def dumpSectionHeader(self, header):
+        header = header.replace(" o ", "", 1).lstrip()
+        sys.stdout.write("  <li>%s\n"%header)
+        sys.stdout.write("  <ul>\n")
+
+    def dumpEndOfSection(self):
+        sys.stdout.write("  </ul>\n\n")
+
+    def dumpEndOfChangelog(self):
+        pass
+
+    def dumpStartOfSections(self):
+        print "<ul>\n"
+
+    def dumpEndOfSections(self):
+        print "</ul>\n"
+
+    def dumpItem(self, grafs):
+        grafs[0][0] = grafs[0][0].replace(" - ", "", 1).lstrip()
+        sys.stdout.write("  <li>")
+        if len(grafs) > 1:
+            for par in grafs:
+                self.htmlPar(par)
+        else:
+            self.htmlText(grafs[0])
         print
 
 op = optparse.OptionParser(usage="usage: %prog [options] [filename]")
@@ -358,6 +447,15 @@ op.add_option('-S', '--no-sort', action='store_false',
               help='Do not sort or collate sections')
 op.add_option('-o', '--output', dest='output',
               default=None, metavar='FILE', help="write output to FILE")
+op.add_option('-H', '--html', action='store_true',
+              dest='html', default=False,
+              help="generate an HTML fragment")
+op.add_option('-1', '--first', action='store_true',
+              dest='firstOnly', default=False,
+              help="write only the first section")
+op.add_option('-b', '--blog-format', action='store_true',
+              dest='blogOrder', default=False,
+              help="Write the header in blog order")
 
 options,args = op.parse_args()
 
@@ -376,7 +474,12 @@ if fname != '-':
 
 nextline = None
 
-CL = ChangeLog(wrapText=options.wrapText)
+if options.html:
+    ChangeLogClass = HTMLChangeLog
+else:
+    ChangeLogClass = ChangeLog
+
+CL = ChangeLogClass(wrapText=options.wrapText, blogOrder=options.blogOrder)
 parser = head_parser
 
 for line in sys.stdin:
@@ -404,6 +507,9 @@ if options.sort:
     CL.collateAndSortSections()
 
 CL.dump()
+
+if options.firstOnly:
+    sys.exit(0)
 
 if nextline is not None:
     print nextline
