@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - When a bridge has been configured without an identity digest
-      (not recommended), avoid launching an extra channel to it when
-      bootstrapping. Fixes bug 7733; bugfix on 0.2.4.4-alpha.

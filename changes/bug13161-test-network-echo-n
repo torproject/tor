@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Stop using "echo -n", as some shells' built-in echo doesn't support
-      "-n". Instead, use "/bin/echo -n". Partially fixes bug 13161.

@@ -1,3 +1,0 @@
-  o Testing:
-    - Fix and re-enable the fgets_eagain unit test. Fixes bug 12503;
-      bugfix on 0.2.3.1-alpha. Patch from "cypherpunks."

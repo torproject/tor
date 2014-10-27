@@ -1,5 +1,0 @@
-  o Minor refactoring:
-    - Document usage of the NO_DIRINFO and ALL_DIRINFO flags clearly in
-      functions which take them as arguments. Replace 0 with NO_DIRINFO
-      in a function call for clarity.
-      Seeks to prevent future issues like 13163.

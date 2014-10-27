@@ -1,6 +1,0 @@
-  o Minor bugfixes:
-    - Stop modifying the value of our DirReqStatistics torrc option just
-      because we're not a bridge or relay. This bug was causing Tor
-      Browser users to write "DirReqStatistics 0" in their torrc files
-      as if they had chosen to change the config. Fixes bug 4244; bugfix
-      on 0.2.3.1-alpha.

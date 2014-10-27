@@ -1,5 +1,0 @@
-  o Code simplification and refactoring
-    - Use calloc and reallocarray functions in preference to
-      multiply-then-malloc.  This makes it less likely for us to fall
-      victim to an integer overflow attack when allocating. Resolves
-      ticket 12855.

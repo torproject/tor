@@ -1,5 +1,0 @@
-  o Minor bugfixes (directory bandwidth performance):
-    - Don't flush the zlib buffer aggressively when compressing
-      directory information for clients.  This should save about 7% of
-      the bandwidth currently used for compressed descriptors and
-      microdescriptors. Fixes bug 11787; bugfix on 0.1.1.23.

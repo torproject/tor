@@ -1,2 +1,0 @@
- o Minor features:
-   - Add an option to overwrite logs (TruncateLogFile). Closes ticket #5583.

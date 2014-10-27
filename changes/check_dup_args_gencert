@@ -1,3 +1,0 @@
-  o Minor features:
-    - In tor-gencert, report an error if the user provides the same
-      argument more than once.

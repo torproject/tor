@@ -1,3 +1,0 @@
-  o Removed code:
-    - We no longer remind the user about obsolete configuration options
-      that have been obsolete since 0.2.3.x or later. Patch by Adrien Bak. 

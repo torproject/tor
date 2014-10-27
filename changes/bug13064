@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Fix TestingDirAuthVoteGuard to properly give out Guard flags in
-      a testing network. Fixes bug 13064; bugfix on 0.2.5.2-alpha.

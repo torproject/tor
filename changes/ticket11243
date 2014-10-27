@@ -1,7 +1,0 @@
-  o Major features (downloading):
-    - Upon receiving a server descriptor, microdescriptor, extrainfo
-      document, or other object that is unparseable, if its digest
-      matches what we expected, then mark it as not to be downloaded
-      again. Previously, when we got a descriptor we didn't like, we
-      would keep trying to download it over and over. Closes ticket
-      11243.

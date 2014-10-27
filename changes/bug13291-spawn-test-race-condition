@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Stop spawn test failures due to a race condition between the SIGCHLD
-      handler updating the process status, and the test reading it.
-      Fixes bug 13291; bugfix on 0.2.3.3-alpha.

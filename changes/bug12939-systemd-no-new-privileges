@@ -1,4 +1,0 @@
-  o Distribution:
-    - systemd unit file: ensures that the process and all its children
-      can never gain new privileges.
-      Patch by intrigeri; resolves ticket 12939.

@@ -1,6 +1,0 @@
-  o Removed features:
-    - Directory authorities do not support giving out the BadDirectory
-      flag anymore.
-    - Clients don't understand the BadDirectory flag in the consensus
-      anymore, and ignore it.
-

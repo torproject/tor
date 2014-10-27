@@ -1,4 +1,0 @@
-  o Removed platform support:
-    - We no longer include special code to build on Windows CE; as far
-      as we know, nobody has used Tor on Windows CE in a very long
-      time. Closes ticket 11446.

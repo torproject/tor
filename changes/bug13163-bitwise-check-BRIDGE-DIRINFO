@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Bitwise check the BRIDGE_DIRINFO flag rather than using equality.
-      Fixes a (potential) bug where directories offering BRIDGE_DIRINFO and
-      some other flag (i.e. microdescriptors or extrainfo) would be ignored
-      when looking for bridge directories. Partially fixes bug 13163.

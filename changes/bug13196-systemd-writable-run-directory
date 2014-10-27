@@ -1,3 +1,0 @@
-  o Distribution:
-    - systemd unit file: set up /var/run/tor as writable for the Tor service.
-      Patch by intrigeri; resolves ticket 13196.

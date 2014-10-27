@@ -1,3 +1,0 @@
-  o Build fixes:
-    - Allow our configure script to build correctly with autoconf 2.62
-      again. Fixes bug 12693; bugfix on 0.2.5.2-alpha.

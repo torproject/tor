@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Stop test & bench build failures with --disable-curve25519.
-      Fixes bug 13285.

@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Stop using the default authorities in networks which provide both
-      AlternateDirAuthority and AlternateBridgeAuthority.
-      Partially fixes bug 13163.

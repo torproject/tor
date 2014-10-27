@@ -1,4 +1,0 @@
-  o Minor features:
-
-    - When opening a log file at startup, send it every log message that we
-      generated between startup and opening it.  Closes ticket 6938.

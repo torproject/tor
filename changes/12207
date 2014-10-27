@@ -1,4 +1,0 @@
-  - Testing:
-    - Refactor the function that chooses guard nodes so that it can
-      more easily be tested; write some tests for it.
-

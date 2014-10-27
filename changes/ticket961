@@ -1,5 +1,0 @@
-  o Minor features:
-    - A new AccountingRule option lets you set whether you'd like the
-      AccountingMax value to be applied separately to inbound and
-      outbound traffic, or applied to the sum of inbound and outbound
-      traffic. Resolves ticket 961. Patch by "chobe".

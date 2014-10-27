@@ -1,6 +1,0 @@
-  o Minor bugfixes:
-    - Fix an instance of integer overflow in format_time_interval().
-      Fixes bug 13393.
-
-  o Minor features (test):
-    - Create unit tests for format_time_interval(). With bug 13393.

@@ -1,4 +1,0 @@
-  o Bugfixes:
-    - Check for orconns and use connection_or_close_for_error() rather than
-      connection_mark_for_close() directly in the getsockopt() failure case
-      of connection_handle_write_impl().  Fixes bug #11302.

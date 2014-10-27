@@ -1,4 +1,0 @@
-  o Minor refactoring:
-    - Refactoring and unit-testing entry_is_time_to_retry() in 
-      entrynodes.c. Resolves ticket 12205.
-

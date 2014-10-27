@@ -1,2 +1,0 @@
-  o Code refactoring:
-    - Use the standard macro name SIZE_MAX, instead of our own SIZE_T_MAX.

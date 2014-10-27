@@ -1,8 +1,0 @@
-  o Minor bugfixes:
-    - Always believe that v3 directory authorities serve extra-info
-      documents, regardless of whether their server descriptor contains a
-      "caches-extra-info" line or not. Fixes part of #11683. Bugfix on
-      0.2.0.1-alpha.
-    - When running as a v3 directory authority, advertise that you serve
-      extra-info documents so that clients who want them can find them from
-      you too. Fixes part of bug #11683. Bugfix on 0.2.0.1-alpha.

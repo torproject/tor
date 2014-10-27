@@ -1,3 +1,0 @@
-  o Minor bugfixes (client):
-    - Use the consensus schedule for downloading consensuses, and not the
-      generic schedule. Fixes bug 11679; bugfix on 0.2.2.6-alpha.

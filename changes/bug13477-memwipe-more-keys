@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Ensure we securely wipe keys from memory after
-      crypto_digest_get_digest and init_curve25519_keypair_from_file
-      have finished using them.
-      Fixes bug 13477.

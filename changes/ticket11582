@@ -1,5 +1,0 @@
-  o Minor features:
-    - Re-check our address after we detect a changed IP address from
-      getsockname(). This ensures that the controller command "GETINFO
-      address" will report the correct value. Resolves ticket 11582.
-      Patch from "ra".

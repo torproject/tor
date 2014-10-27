@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - When GeoIPExcludeUnkonwn is enabled, do not incorrectly decide
-      that our options have changed every time we SIGHUP. Fixes bug
-      9801; bugfix on 0.2.4.10-alpha. Patch from "qwerty1".
-
