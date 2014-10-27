@@ -59,9 +59,7 @@ static crypt_path_t *onion_next_hop_in_cpath(crypt_path_t *cpath);
 static int onion_extend_cpath(origin_circuit_t *circ);
 static int count_acceptable_nodes(smartlist_t *routers);
 static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
-#ifdef CURVE25519_ENABLED
 static int circuits_can_use_ntor(void);
-#endif
 
 /** This function tries to get a channel to the specified endpoint,
  * and then calls command_setup_channel() to give it the right
@@ -368,7 +366,6 @@ circuit_rep_hist_note_result(origin_circuit_t *circ)
   } while (hop!=circ->cpath);
 }
 
-#ifdef CURVE25519_ENABLED
 /** Return 1 iff at least one node in circ's cpath supports ntor. */
 static int
 circuit_cpath_supports_ntor(const origin_circuit_t *circ)
@@ -388,9 +385,6 @@ circuit_cpath_supports_ntor(const origin_circuit_t *circ)
 
   return 0;
 }
-#else
-#define circuit_cpath_supports_ntor(circ) 0
-#endif
 
 /** Pick all the entries in our cpath. Stop and return 0 when we're
  * happy, or return -1 if an error occurs. */
@@ -398,11 +392,7 @@ static int
 onion_populate_cpath(origin_circuit_t *circ)
 {
   int n_tries = 0;
-#ifdef CURVE25519_ENABLED
   const int using_ntor = circuits_can_use_ntor();
-#else
-  const int using_ntor = 0;
-#endif
 
 #define MAX_POPULATE_ATTEMPTS 32
 
@@ -772,7 +762,6 @@ circuit_timeout_want_to_count_circ(origin_circuit_t *circ)
           && circ->build_state->desired_path_len == DEFAULT_ROUTE_LEN;
 }
 
-#ifdef CURVE25519_ENABLED
 /** Return true if the ntor handshake is enabled in the configuration, or if
  * it's been set to "auto" in the configuration and it's enabled in the
  * consensus. */
@@ -784,7 +773,6 @@ circuits_can_use_ntor(void)
     return options->UseNTorHandshake;
   return networkstatus_get_param(NULL, "UseNTorHandshake", 0, 0, 1);
 }
-#endif
 
 /** Decide whether to use a TAP or ntor handshake for connecting to <b>ei</b>
  * directly, and set *<b>cell_type_out</b> and *<b>handshake_type_out</b>
@@ -794,7 +782,6 @@ circuit_pick_create_handshake(uint8_t *cell_type_out,
                               uint16_t *handshake_type_out,
                               const extend_info_t *ei)
 {
-#ifdef CURVE25519_ENABLED
   if (!tor_mem_is_zero((const char*)ei->curve25519_onion_key.public_key,
                        CURVE25519_PUBKEY_LEN) &&
       circuits_can_use_ntor()) {
@@ -802,9 +789,6 @@ circuit_pick_create_handshake(uint8_t *cell_type_out,
     *handshake_type_out = ONION_HANDSHAKE_TYPE_NTOR;
     return;
   }
-#else
-  (void) ei;
-#endif
 
   *cell_type_out = CELL_CREATE;
   *handshake_type_out = ONION_HANDSHAKE_TYPE_TAP;
@@ -2198,13 +2182,9 @@ extend_info_new(const char *nickname, const char *digest,
     strlcpy(info->nickname, nickname, sizeof(info->nickname));
   if (onion_key)
     info->onion_key = crypto_pk_dup_key(onion_key);
-#ifdef CURVE25519_ENABLED
   if (curve25519_key)
     memcpy(&info->curve25519_onion_key, curve25519_key,
            sizeof(curve25519_public_key_t));
-#else
-  (void)curve25519_key;
-#endif
   tor_addr_copy(&info->addr, addr);
   info->port = port;
   return info;

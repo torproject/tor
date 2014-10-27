@@ -54,12 +54,6 @@ endif
 
 LIBDONNA += $(LIBED25519_REF10)
 
-if CURVE25519_ENABLED
-libcrypto_extra_source = \
-	src/common/crypto_curve25519.c \
-	src/common/crypto_ed25519.c
-endif
-
 LIBOR_A_SOURCES = \
   src/common/address.c					\
   src/common/backtrace.c				\
@@ -85,8 +79,9 @@ LIBOR_CRYPTO_A_SOURCES = \
   src/common/crypto_format.c	\
   src/common/torgzip.c		\
   src/common/tortls.c		\
-  src/trunnel/pwbox.c	 	\
-  $(libcrypto_extra_source)
+  src/trunnel/pwbox.c		\
+  src/common/crypto_curve25519.c \
+  src/common/crypto_ed25519.c
 
 LIBOR_EVENT_A_SOURCES = \
 	src/common/compat_libevent.c \

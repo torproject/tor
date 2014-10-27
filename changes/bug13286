@@ -1,0 +1,2 @@
+  o Removed features:
+    Remove the --disable-curve25519 configure option.

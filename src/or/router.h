@@ -32,10 +32,8 @@ crypto_pk_t *init_key_from_file(const char *fname, int generate,
                                     int severity);
 void v3_authority_check_key_expiry(void);
 
-#ifdef CURVE25519_ENABLED
 di_digest256_map_t *construct_ntor_key_map(void);
 void ntor_key_map_free(di_digest256_map_t *map);
-#endif
 
 int router_initialize_tls_context(void);
 int init_keys(void);

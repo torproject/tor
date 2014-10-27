@@ -111,15 +111,11 @@ have_room_for_onionskin(uint16_t type)
        (uint64_t)options->MaxOnionQueueDelay)
     return 0;
 
-#ifdef CURVE25519_ENABLED
   /* If we support the ntor handshake, then don't let TAP handshakes use
    * more than 2/3 of the space on the queue. */
   if (type == ONION_HANDSHAKE_TYPE_TAP &&
       tap_usec / 1000 > (uint64_t)options->MaxOnionQueueDelay * 2 / 3)
     return 0;
-#else
-  (void) type;
-#endif
 
   return 1;
 }
@@ -353,11 +349,9 @@ setup_server_onion_keys(server_onion_keys_t *keys)
   memset(keys, 0, sizeof(server_onion_keys_t));
   memcpy(keys->my_identity, router_get_my_id_digest(), DIGEST_LEN);
   dup_onion_keys(&keys->onion_key, &keys->last_onion_key);
-#ifdef CURVE25519_ENABLED
   keys->curve25519_key_map = construct_ntor_key_map();
   keys->junk_keypair = tor_malloc_zero(sizeof(curve25519_keypair_t));
   curve25519_keypair_generate(keys->junk_keypair, 0);
-#endif
 }
 
 /** Release all storage held in <b>keys</b>, but do not free <b>keys</b>
@@ -370,10 +364,8 @@ release_server_onion_keys(server_onion_keys_t *keys)
 
   crypto_pk_free(keys->onion_key);
   crypto_pk_free(keys->last_onion_key);
-#ifdef CURVE25519_ENABLED
   ntor_key_map_free(keys->curve25519_key_map);
   tor_free(keys->junk_keypair);
-#endif
   memset(keys, 0, sizeof(server_onion_keys_t));
 }
 
@@ -391,12 +383,10 @@ onion_handshake_state_release(onion_handshake_state_t *state)
     fast_handshake_state_free(state->u.fast);
     state->u.fast = NULL;
     break;
-#ifdef CURVE25519_ENABLED
   case ONION_HANDSHAKE_TYPE_NTOR:
     ntor_handshake_state_free(state->u.ntor);
     state->u.ntor = NULL;
     break;
-#endif
   default:
     log_warn(LD_BUG, "called with unknown handshake state type %d",
              (int)state->tag);
@@ -436,7 +426,6 @@ onion_skin_create(int type,
     r = CREATE_FAST_LEN;
     break;
   case ONION_HANDSHAKE_TYPE_NTOR:
-#ifdef CURVE25519_ENABLED
     if (tor_mem_is_zero((const char*)node->curve25519_onion_key.public_key,
                         CURVE25519_PUBKEY_LEN))
       return -1;
@@ -447,9 +436,6 @@ onion_skin_create(int type,
       return -1;
 
     r = NTOR_ONIONSKIN_LEN;
-#else
-    return -1;
-#endif
     break;
   default:
     log_warn(LD_BUG, "called with unknown handshake state type %d", type);
@@ -501,7 +487,6 @@ onion_skin_server_handshake(int type,
     memcpy(rend_nonce_out, reply_out+DIGEST_LEN, DIGEST_LEN);
     break;
   case ONION_HANDSHAKE_TYPE_NTOR:
-#ifdef CURVE25519_ENABLED
     if (onionskin_len < NTOR_ONIONSKIN_LEN)
       return -1;
     {
@@ -522,9 +507,6 @@ onion_skin_server_handshake(int type,
       tor_free(keys_tmp);
       r = NTOR_REPLY_LEN;
     }
-#else
-    return -1;
-#endif
     break;
   default:
     log_warn(LD_BUG, "called with unknown handshake state type %d", type);
@@ -577,7 +559,6 @@ onion_skin_client_handshake(int type,
 
     memcpy(rend_authenticator_out, reply+DIGEST_LEN, DIGEST_LEN);
     return 0;
-#ifdef CURVE25519_ENABLED
   case ONION_HANDSHAKE_TYPE_NTOR:
     if (reply_len < NTOR_REPLY_LEN) {
       log_warn(LD_CIRC, "ntor reply was not of the correct length.");
@@ -598,7 +579,6 @@ onion_skin_client_handshake(int type,
       tor_free(keys_tmp);
     }
     return 0;
-#endif
   default:
     log_warn(LD_BUG, "called with unknown handshake state type %d", type);
     tor_fragile_assert();
@@ -637,12 +617,10 @@ check_create_cell(const create_cell_t *cell, int unknown_ok)
     if (cell->handshake_len != CREATE_FAST_LEN)
       return -1;
     break;
-#ifdef CURVE25519_ENABLED
   case ONION_HANDSHAKE_TYPE_NTOR:
     if (cell->handshake_len != NTOR_ONIONSKIN_LEN)
       return -1;
     break;
-#endif
   default:
     if (! unknown_ok)
       return -1;

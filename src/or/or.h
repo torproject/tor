@@ -2554,9 +2554,7 @@ typedef struct extend_info_t {
   uint16_t port; /**< OR port. */
   tor_addr_t addr; /**< IP address. */
   crypto_pk_t *onion_key; /**< Current onionskin key. */
-#ifdef CURVE25519_ENABLED
   curve25519_public_key_t curve25519_onion_key;
-#endif
 } extend_info_t;
 
 /** Certificate for v3 directory protocol: binds long-term authority identity

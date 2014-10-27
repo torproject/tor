@@ -30,7 +30,6 @@ typedef struct curve25519_keypair_t {
   curve25519_secret_key_t seckey;
 } curve25519_keypair_t;
 
-#ifdef CURVE25519_ENABLED
 /* These functions require that we actually know how to use curve25519 keys.
  * The other data structures and functions in this header let us parse them,
  * store them, and move them around.
@@ -62,7 +61,6 @@ int curve25519_rand_seckey_bytes(uint8_t *out, int extra_strong);
 #ifdef CRYPTO_CURVE25519_PRIVATE
 STATIC int curve25519_impl(uint8_t *output, const uint8_t *secret,
                            const uint8_t *basepoint);
-#endif
 #endif
 
 #define CURVE25519_BASE64_PADDED_LEN 44

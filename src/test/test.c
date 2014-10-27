@@ -64,10 +64,8 @@ double fabs(double x);
 #include "rephist.h"
 #include "routerparse.h"
 #include "statefile.h"
-#ifdef CURVE25519_ENABLED
 #include "crypto_curve25519.h"
 #include "onion_ntor.h"
-#endif
 
 #ifdef USE_DMALLOC
 #include <dmalloc.h>
@@ -365,7 +363,6 @@ test_bad_onion_handshake(void *arg)
   crypto_pk_free(pk2);
 }
 
-#ifdef CURVE25519_ENABLED
 static void
 test_ntor_handshake(void *arg)
 {
@@ -417,7 +414,6 @@ test_ntor_handshake(void *arg)
   ntor_handshake_state_free(c_state);
   dimap_free(s_keymap, NULL);
 }
-#endif
 
 /** Run unit tests for the onion queues. */
 static void
@@ -1267,9 +1263,7 @@ static struct testcase_t test_array[] = {
   ENT(onion_handshake),
   { "bad_onion_handshake", test_bad_onion_handshake, 0, NULL, NULL },
   ENT(onion_queues),
-#ifdef CURVE25519_ENABLED
   { "ntor_handshake", test_ntor_handshake, 0, NULL, NULL },
-#endif
   ENT(circuit_timeout),
   ENT(rend_fns),
   ENT(geoip),

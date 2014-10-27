@@ -39,8 +39,6 @@ AC_ARG_ENABLE(static-zlib,
    AS_HELP_STRING(--enable-static-zlib, Link against a static zlib library. Requires --with-zlib-dir))
 AC_ARG_ENABLE(static-tor,
    AS_HELP_STRING(--enable-static-tor, Create an entirely static Tor binary. Requires --with-openssl-dir and --with-libevent-dir and --with-zlib-dir))
-AC_ARG_ENABLE(curve25519,
-   AS_HELP_STRING(--disable-curve25519, Build Tor with no curve25519 elliptic-curve crypto support))
 AC_ARG_ENABLE(unittests,
    AS_HELP_STRING(--disable-unittests, [Don't build unit tests for Tor. Risky!]))
 AC_ARG_ENABLE(coverage,
@@ -765,101 +763,92 @@ dnl ============================================================
 dnl We need an implementation of curve25519.
 
 dnl set these defaults.
-have_a_curve25519=no
 build_curve25519_donna=no
 build_curve25519_donna_c64=no
 use_curve25519_donna=no
 use_curve25519_nacl=no
 CURVE25519_LIBS=
 
-if test x$enable_curve25519 != xno; then
+dnl The best choice is using curve25519-donna-c64, but that requires
+dnl that we
+AC_CACHE_CHECK([whether we can use curve25519-donna-c64],
+  tor_cv_can_use_curve25519_donna_c64,
+  [AC_RUN_IFELSE(
+    [AC_LANG_PROGRAM([dnl
+      #include <stdint.h>
+      typedef unsigned uint128_t __attribute__((mode(TI)));
+  int func(uint64_t a, uint64_t b) {
+           uint128_t c = ((uint128_t)a) * b;
+           int ok = ((uint64_t)(c>>96)) == 522859 &&
+             (((uint64_t)(c>>64))&0xffffffffL) == 3604448702L &&
+                 (((uint64_t)(c>>32))&0xffffffffL) == 2351960064L &&
+                 (((uint64_t)(c))&0xffffffffL) == 0;
+           return ok;
+      }
+  ], [dnl
+    int ok = func( ((uint64_t)2000000000) * 1000000000,
+                   ((uint64_t)1234567890) << 24);
+        return !ok;
+      ])],
+  [tor_cv_can_use_curve25519_donna_c64=yes],
+      [tor_cv_can_use_curve25519_donna_c64=no],
+  [AC_LINK_IFELSE(
+        [AC_LANG_PROGRAM([dnl
+      #include <stdint.h>
+      typedef unsigned uint128_t __attribute__((mode(TI)));
+  int func(uint64_t a, uint64_t b) {
+           uint128_t c = ((uint128_t)a) * b;
+           int ok = ((uint64_t)(c>>96)) == 522859 &&
+             (((uint64_t)(c>>64))&0xffffffffL) == 3604448702L &&
+                 (((uint64_t)(c>>32))&0xffffffffL) == 2351960064L &&
+                 (((uint64_t)(c))&0xffffffffL) == 0;
+           return ok;
+      }
+  ], [dnl
+    int ok = func( ((uint64_t)2000000000) * 1000000000,
+    	         ((uint64_t)1234567890) << 24);
+        return !ok;
+      ])],
+          [tor_cv_can_use_curve25519_donna_c64=cross],
+      [tor_cv_can_use_curve25519_donna_c64=no])])])
 
-  dnl The best choice is using curve25519-donna-c64, but that requires
-  dnl that we
-  AC_CACHE_CHECK([whether we can use curve25519-donna-c64],
-    tor_cv_can_use_curve25519_donna_c64,
-    [AC_RUN_IFELSE(
-      [AC_LANG_PROGRAM([dnl
-        #include <stdint.h>
-        typedef unsigned uint128_t __attribute__((mode(TI)));
-	int func(uint64_t a, uint64_t b) {
-  	     uint128_t c = ((uint128_t)a) * b;
-             int ok = ((uint64_t)(c>>96)) == 522859 &&
-	           (((uint64_t)(c>>64))&0xffffffffL) == 3604448702L &&
-                   (((uint64_t)(c>>32))&0xffffffffL) == 2351960064L &&
-                   (((uint64_t)(c))&0xffffffffL) == 0;
-             return ok;
-        }
-	], [dnl
-	  int ok = func( ((uint64_t)2000000000) * 1000000000,
-	  	         ((uint64_t)1234567890) << 24);
-          return !ok;
-        ])],
-	[tor_cv_can_use_curve25519_donna_c64=yes],
-        [tor_cv_can_use_curve25519_donna_c64=no],
-	[AC_LINK_IFELSE(
-          [AC_LANG_PROGRAM([dnl
-        #include <stdint.h>
-        typedef unsigned uint128_t __attribute__((mode(TI)));
-	int func(uint64_t a, uint64_t b) {
-  	     uint128_t c = ((uint128_t)a) * b;
-             int ok = ((uint64_t)(c>>96)) == 522859 &&
-	           (((uint64_t)(c>>64))&0xffffffffL) == 3604448702L &&
-                   (((uint64_t)(c>>32))&0xffffffffL) == 2351960064L &&
-                   (((uint64_t)(c))&0xffffffffL) == 0;
-             return ok;
-        }
-	], [dnl
-	  int ok = func( ((uint64_t)2000000000) * 1000000000,
-	  	         ((uint64_t)1234567890) << 24);
-          return !ok;
-        ])],
-            [tor_cv_can_use_curve25519_donna_c64=cross],
-	    [tor_cv_can_use_curve25519_donna_c64=no])])])
+AC_CHECK_HEADERS([crypto_scalarmult_curve25519.h \
+                  nacl/crypto_scalarmult_curve25519.h])
 
-  AC_CHECK_HEADERS([crypto_scalarmult_curve25519.h \
-                    nacl/crypto_scalarmult_curve25519.h])
+AC_CACHE_CHECK([for nacl compiled with a fast curve25519 implementation],
+  tor_cv_can_use_curve25519_nacl,
+  [tor_saved_LIBS="$LIBS"
+   LIBS="$LIBS -lnacl"
+   AC_LINK_IFELSE(
+     [AC_LANG_PROGRAM([dnl
+       #ifdef HAVE_CRYPTO_SCALARMULT_CURVE25519_H
+       #include <crypto_scalarmult_curve25519.h>
+   #elif defined(HAVE_NACL_CRYPTO_SCALARMULT_CURVE25519_H)
+   #include <nacl/crypto_scalarmult_curve25519.h>
+   #endif
+       #ifdef crypto_scalarmult_curve25519_ref_BYTES
+   #error Hey, this is the reference implementation! That's not fast.
+   #endif
+     ], [
+   unsigned char *a, *b, *c; crypto_scalarmult_curve25519(a,b,c);
+     ])], [tor_cv_can_use_curve25519_nacl=yes],
+     [tor_cv_can_use_curve25519_nacl=no])
+   LIBS="$tor_saved_LIBS" ])
 
-  AC_CACHE_CHECK([for nacl compiled with a fast curve25519 implementation],
-    tor_cv_can_use_curve25519_nacl,
-    [tor_saved_LIBS="$LIBS"
-     LIBS="$LIBS -lnacl"
-     AC_LINK_IFELSE(
-       [AC_LANG_PROGRAM([dnl
-         #ifdef HAVE_CRYPTO_SCALARMULT_CURVE25519_H
-         #include <crypto_scalarmult_curve25519.h>
-	 #elif defined(HAVE_NACL_CRYPTO_SCALARMULT_CURVE25519_H)
-	 #include <nacl/crypto_scalarmult_curve25519.h>
-	 #endif
-         #ifdef crypto_scalarmult_curve25519_ref_BYTES
-	 #error Hey, this is the reference implementation! That's not fast.
-	 #endif
-       ], [
-	 unsigned char *a, *b, *c; crypto_scalarmult_curve25519(a,b,c);
-       ])], [tor_cv_can_use_curve25519_nacl=yes],
-       [tor_cv_can_use_curve25519_nacl=no])
-     LIBS="$tor_saved_LIBS" ])
+ dnl Okay, now we need to figure out which one to actually use. Fall back
+ dnl to curve25519-donna.c
 
-   dnl Okay, now we need to figure out which one to actually use. Fall back
-   dnl to curve25519-donna.c
+ if test x$tor_cv_can_use_curve25519_donna_c64 != xno; then
+   build_curve25519_donna_c64=yes
+   use_curve25519_donna=yes
+ elif test x$tor_cv_can_use_curve25519_nacl = xyes; then
+   use_curve25519_nacl=yes
+   CURVE25519_LIBS=-lnacl
+ else
+   build_curve25519_donna=yes
+   use_curve25519_donna=yes
+ fi
 
-   if test x$tor_cv_can_use_curve25519_donna_c64 != xno; then
-     build_curve25519_donna_c64=yes
-     use_curve25519_donna=yes
-   elif test x$tor_cv_can_use_curve25519_nacl = xyes; then
-     use_curve25519_nacl=yes
-     CURVE25519_LIBS=-lnacl
-   else
-     build_curve25519_donna=yes
-     use_curve25519_donna=yes
-   fi
-   have_a_curve25519=yes
-fi
-
-if test x$have_a_curve25519 = xyes; then
-  AC_DEFINE(CURVE25519_ENABLED, 1,
-            [Defined if we have a curve25519 implementation])
-fi
 if test x$use_curve25519_donna = xyes; then
   AC_DEFINE(USE_CURVE25519_DONNA, 1,
             [Defined if we should use an internal curve25519_donna{,_c64} implementation])
@@ -870,7 +859,6 @@ if test x$use_curve25519_nacl = xyes; then
 fi
 AM_CONDITIONAL(BUILD_CURVE25519_DONNA, test x$build_curve25519_donna = xyes)
 AM_CONDITIONAL(BUILD_CURVE25519_DONNA_C64, test x$build_curve25519_donna_c64 = xyes)
-AM_CONDITIONAL(CURVE25519_ENABLED, test x$have_a_curve25519 = xyes)
 AC_SUBST(CURVE25519_LIBS)
 
 dnl Make sure to enable support for large off_t if available.
