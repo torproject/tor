@@ -23,12 +23,6 @@ else
 evdns_source=src/ext/eventdns.c
 endif
 
-if CURVE25519_ENABLED
-onion_ntor_source=src/or/onion_ntor.c
-else
-onion_ntor_source=
-endif
-
 LIBTOR_A_SOURCES = \
 	src/or/addressmap.c				\
 	src/or/buffers.c				\
@@ -82,9 +76,9 @@ LIBTOR_A_SOURCES = \
 	src/or/routerset.c				\
 	src/or/statefile.c				\
 	src/or/status.c					\
+	src/or/onion_ntor.c				\
 	$(evdns_source)					\
 	$(tor_platform_source)				\
-	$(onion_ntor_source)				\
 	src/or/config_codedigest.c
 
 src_or_libtor_a_SOURCES = $(LIBTOR_A_SOURCES)

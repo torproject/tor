@@ -80,7 +80,6 @@ noinst_HEADERS+= \
 	src/test/failing_routerdescs.inc \
 	src/test/ed25519_vectors.inc
 
-if CURVE25519_ENABLED
 noinst_PROGRAMS+= src/test/test-ntor-cl
 src_test_test_ntor_cl_SOURCES  = src/test/test_ntor_cl.c
 src_test_test_ntor_cl_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@
@@ -91,9 +90,6 @@ src_test_test_ntor_cl_LDADD = src/or/libtor.a src/common/libor.a \
 src_test_test_ntor_cl_AM_CPPFLAGS =	       \
 	-I"$(top_srcdir)/src/or"
 NTOR_TEST_DEPS=src/test/test-ntor-cl
-else
-NTOR_TEST_DEPS=
-endif
 
 if COVERAGE_ENABLED
 CMDLINE_TEST_TOR = ./src/or/tor-cov
@@ -113,10 +109,8 @@ src_test_test_bt_cl_CPPFLAGS= $(src_test_AM_CPPFLAGS)
 check-local: $(NTOR_TEST_DEPS) $(CMDLINE_TEST_TOR)
 if USEPYTHON
 	$(PYTHON) $(top_srcdir)/src/test/test_cmdline_args.py $(CMDLINE_TEST_TOR) "${top_srcdir}"
-if CURVE25519_ENABLED
 	$(PYTHON) $(top_srcdir)/src/test/ntor_ref.py test-tor
 	$(PYTHON) $(top_srcdir)/src/test/ntor_ref.py self-test
-endif
 	./src/test/test-bt-cl assert | $(PYTHON) $(top_srcdir)/src/test/bt_test.py
 	./src/test/test-bt-cl crash | $(PYTHON) $(top_srcdir)/src/test/bt_test.py
 endif

@@ -13,10 +13,6 @@
 #include "crypto_curve25519.h"
 #include "onion_ntor.h"
 
-#ifndef CURVE25519_ENABLED
-#error "This isn't going to work without curve25519."
-#endif
-
 #define N_ARGS(n) STMT_BEGIN {                                  \
     if (argc < (n)) {                                           \
       fprintf(stderr, "%s needs %d arguments.\n",argv[1],n);    \

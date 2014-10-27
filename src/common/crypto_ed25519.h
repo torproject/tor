@@ -39,7 +39,6 @@ typedef struct {
   ed25519_secret_key_t seckey;
 } ed25519_keypair_t;
 
-#ifdef CURVE25519_ENABLED
 int ed25519_secret_key_generate(ed25519_secret_key_t *seckey_out,
                             int extra_strong);
 int ed25519_secret_key_from_seed(ed25519_secret_key_t *seckey_out,
@@ -87,8 +86,6 @@ int ed25519_keypair_blind(ed25519_keypair_t *out,
 int ed25519_public_blind(ed25519_public_key_t *out,
                          const ed25519_public_key_t *inp,
                          const uint8_t *param);
-
-#endif
 
 #define ED25519_BASE64_LEN 43
 

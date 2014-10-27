@@ -26,10 +26,8 @@ const char tor_git_revision[] = "";
 #endif
 
 #include "config.h"
-#ifdef CURVE25519_ENABLED
 #include "crypto_curve25519.h"
 #include "onion_ntor.h"
-#endif
 #include "crypto_ed25519.h"
 
 #if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_PROCESS_CPUTIME_ID)
@@ -179,7 +177,6 @@ bench_onion_TAP(void)
   crypto_pk_free(key2);
 }
 
-#ifdef CURVE25519_ENABLED
 static void
 bench_onion_ntor(void)
 {
@@ -293,7 +290,6 @@ bench_ed25519(void)
   printf("Blind a public key: %.2f usec\n",
          MICROCOUNT(start, end, iters));
 }
-#endif
 
 static void
 bench_cell_aes(void)
@@ -573,10 +569,9 @@ static struct benchmark_t benchmarks[] = {
   ENT(siphash),
   ENT(aes),
   ENT(onion_TAP),
-#ifdef CURVE25519_ENABLED
   ENT(onion_ntor),
   ENT(ed25519),
-#endif
+
   ENT(cell_aes),
   ENT(cell_ops),
   ENT(dh),

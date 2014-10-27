@@ -445,7 +445,6 @@ test_cfmt_create_cells(void *arg)
   cell.command = CELL_CREATE2;
   memcpy(cell.payload, "\x00\x02\x00\x54", 4); /* ntor, 84 bytes long */
   memcpy(cell.payload+4, b, NTOR_ONIONSKIN_LEN);
-#ifdef CURVE25519_ENABLED
   tt_int_op(0, ==, create_cell_parse(&cc, &cell));
   tt_int_op(CELL_CREATE2, ==, cc.cell_type);
   tt_int_op(ONION_HANDSHAKE_TYPE_NTOR, ==, cc.handshake_type);
@@ -454,9 +453,6 @@ test_cfmt_create_cells(void *arg)
   tt_int_op(0, ==, create_cell_format(&cell2, &cc));
   tt_int_op(cell.command, ==, cell2.command);
   tt_mem_op(cell.payload,==, cell2.payload, CELL_PAYLOAD_SIZE);
-#else
-  tt_int_op(-1, ==, create_cell_parse(&cc, &cell));
-#endif
 
   /* A valid create cell with an ntor payload, in legacy format. */
   memset(&cell, 0, sizeof(cell));
@@ -465,7 +461,6 @@ test_cfmt_create_cells(void *arg)
   cell.command = CELL_CREATE;
   memcpy(cell.payload, "ntorNTORntorNTOR", 16);
   memcpy(cell.payload+16, b, NTOR_ONIONSKIN_LEN);
-#ifdef CURVE25519_ENABLED
   tt_int_op(0, ==, create_cell_parse(&cc, &cell));
   tt_int_op(CELL_CREATE, ==, cc.cell_type);
   tt_int_op(ONION_HANDSHAKE_TYPE_NTOR, ==, cc.handshake_type);
@@ -474,9 +469,6 @@ test_cfmt_create_cells(void *arg)
   tt_int_op(0, ==, create_cell_format(&cell2, &cc));
   tt_int_op(cell.command, ==, cell2.command);
   tt_mem_op(cell.payload,==, cell2.payload, CELL_PAYLOAD_SIZE);
-#else
-  tt_int_op(-1, ==, create_cell_parse(&cc, &cell));
-#endif
 
   /* == Okay, now let's try to parse some impossible stuff. */
 

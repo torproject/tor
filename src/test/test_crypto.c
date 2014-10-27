@@ -11,9 +11,7 @@
 #include "aes.h"
 #include "util.h"
 #include "siphash.h"
-#ifdef CURVE25519_ENABLED
 #include "crypto_curve25519.h"
-#endif
 #include "crypto_ed25519.h"
 #include "ed25519_vectors.inc"
 #include "crypto_s2k.h"
@@ -1332,7 +1330,6 @@ test_crypto_hkdf_sha256(void *arg)
 #undef EXPAND
 }
 
-#ifdef CURVE25519_ENABLED
 static void
 test_crypto_curve25519_impl(void *arg)
 {
@@ -1876,7 +1873,6 @@ test_crypto_ed25519_testvectors(void *arg)
  done:
   tor_free(mem_op_hex_tmp);
 }
-#endif /* CURVE25519_ENABLED */
 
 static void
 test_crypto_siphash(void *arg)
@@ -2025,7 +2021,6 @@ struct testcase_t crypto_tests[] = {
   CRYPTO_LEGACY(base32_decode),
   { "kdf_TAP", test_crypto_kdf_TAP, 0, NULL, NULL },
   { "hkdf_sha256", test_crypto_hkdf_sha256, 0, NULL, NULL },
-#ifdef CURVE25519_ENABLED
   { "curve25519_impl", test_crypto_curve25519_impl, 0, NULL, NULL },
   { "curve25519_impl_hibit", test_crypto_curve25519_impl, 0, NULL, (void*)"y"},
   { "curve25519_wrappers", test_crypto_curve25519_wrappers, 0, NULL, NULL },
@@ -2037,7 +2032,6 @@ struct testcase_t crypto_tests[] = {
   { "ed25519_convert", test_crypto_ed25519_convert, 0, NULL, NULL },
   { "ed25519_blinding", test_crypto_ed25519_blinding, 0, NULL, NULL },
   { "ed25519_testvectors", test_crypto_ed25519_testvectors, 0, NULL, NULL },
-#endif
   { "siphash", test_crypto_siphash, 0, NULL, NULL },
   END_OF_TESTCASES
 };
