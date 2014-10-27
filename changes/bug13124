@@ -1,8 +1,0 @@
-  o Minor bugfixes:
-    - Reduce the log severity of the "Pluggable transport proxy does
-      not provide any needed transports and will not be launched."
-      message, since Tor Browser includes several ClientTransportPlugin
-      lines in its torrc-defaults file, leading every Tor Browser user
-      who looks at her logs to see these notices and wonder if they're
-      dangerous. Resolves bug 13124; bugfix on 0.2.5.3-alpha.
-

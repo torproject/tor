@@ -1,4 +1,0 @@
-  o Minor bugfixes (conformance):
-    - In routerlist_assert_ok(), don't take the address of a routerinfo's
-      cache_info member unless that routerinfo is non-NULL. Fixes bug
-      13096; bugfix on 0.1.1.9-alpha. Patch by "teor".

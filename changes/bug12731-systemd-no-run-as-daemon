@@ -1,9 +1,0 @@
-  o Distribution:
-    - Explicitly disable RunAsDaemon in the systemd unit file.
-      Our current systemd unit uses "Type = simple", so systemd does
-      not expect tor to fork. If the user has "RunAsDaemon 1" in their
-      torrc, then things won't work as expected. This is e.g. the case
-      on Debian (and derivatives), since there we pass
-      "--defaults-torrc /usr/share/tor/tor-service-defaults-torrc"
-      (that contains "RunAsDaemon 1") by default.
-      Patch by intrigeri; resolves ticket 12731.

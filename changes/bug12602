@@ -1,5 +1,0 @@
-  o Minor bugfixes (portability):
-    - Compile correctly with builds and forks of OpenSSL (such as
-      LibreSSL) that disable compression. Fixes bug 12602; bugfix on
-      0.2.1.1-alpha. Patch from "dhill".
-

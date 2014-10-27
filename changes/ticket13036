@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Fix a large number of false positive warnings from the clang
-      analyzer static analysis tool. This should make real warnings
-      easier for clang analyzer to find. Patch from "teor". Closes
-      ticket 13036.

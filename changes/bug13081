@@ -1,3 +1,0 @@
-  o Compilation fixes:
-    - Make the nmake make files work again. Fixes bug 13081. Bugfix on 0.2.5.1-alpha. Patch
-      from "NewEraCracker".

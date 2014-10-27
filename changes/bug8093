@@ -1,3 +1,0 @@
-  o Downgraded warnings:
-    - Downgrade the severity of the 'unexpected sendme cell from client' from
-      'warn' to 'protocol warning'. Closes ticket 8093.
