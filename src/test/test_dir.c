@@ -1579,8 +1579,9 @@ gen_routerstatus_for_v3ns(int idx, time_t now)
       rs->addr = 0x99008801;
       rs->or_port = 443;
       rs->dir_port = 8000;
-      /* all flags but running cleared */
+      /* all flags but running and v2dir cleared */
       rs->is_flagged_running = 1;
+      rs->is_v2_dir = 1;
       break;
     case 1:
       /* Generate the second routerstatus. */
@@ -1598,7 +1599,7 @@ gen_routerstatus_for_v3ns(int idx, time_t now)
       tor_addr_copy(&rs->ipv6_addr, &addr_ipv6);
       rs->ipv6_orport = 4711;
       rs->is_exit = rs->is_stable = rs->is_fast = rs->is_flagged_running =
-        rs->is_valid = rs->is_possible_guard = 1;
+        rs->is_valid = rs->is_possible_guard = rs->is_v2_dir = 1;
       break;
     case 2:
       /* Generate the third routerstatus. */
@@ -1613,7 +1614,7 @@ gen_routerstatus_for_v3ns(int idx, time_t now)
       rs->or_port = 400;
       rs->dir_port = 9999;
       rs->is_authority = rs->is_exit = rs->is_stable = rs->is_fast =
-        rs->is_flagged_running = rs->is_valid =
+        rs->is_flagged_running = rs->is_valid = rs->is_v2_dir =
         rs->is_possible_guard = 1;
       break;
     case 3:
@@ -1746,11 +1747,11 @@ test_vrs_for_v3ns(vote_routerstatus_t *vrs, int voter, time_t now)
     tt_assert(tor_addr_eq(&rs->ipv6_addr, &addr_ipv6));
     tt_int_op(rs->ipv6_orport,OP_EQ, 4711);
     if (voter == 1) {
-      /* all except "authority" (1) and "v2dir" (64) */
-      tt_u64_op(vrs->flags, OP_EQ, U64_LITERAL(190));
+      /* all except "authority" (1) */
+      tt_u64_op(vrs->flags, OP_EQ, U64_LITERAL(254));
     } else {
-      /* 1023 - authority(1) - madeofcheese(16) - madeoftin(32) - v2dir(256) */
-      tt_u64_op(vrs->flags, OP_EQ, U64_LITERAL(718));
+      /* 1023 - authority(1) - madeofcheese(16) - madeoftin(32) */
+      tt_u64_op(vrs->flags, OP_EQ, U64_LITERAL(974));
     }
   } else if (tor_memeq(rs->identity_digest,
                        "\x33\x33\x33\x33\x33\x33\x33\x33\x33\x33"
@@ -1845,6 +1846,7 @@ test_routerstatus_for_v3ns(routerstatus_t *rs, time_t now)
     tt_assert(rs->is_stable);
     tt_assert(rs->is_flagged_running);
     tt_assert(rs->is_valid);
+    tt_assert(rs->is_v2_dir);
     tt_assert(!rs->is_named);
     /* XXXX check version */
   } else {
@@ -2965,6 +2967,7 @@ test_dir_fmt_control_ns(void *arg)
   rs.is_fast = 1;
   rs.is_flagged_running = 1;
   rs.has_bandwidth = 1;
+  rs.is_v2_dir = 1;
   rs.bandwidth_kb = 1000;
 
   s = networkstatus_getinfo_helper_single(&rs);

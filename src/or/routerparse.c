@@ -35,8 +35,9 @@
 /****************************************************************************/
 
 /** Enumeration of possible token types.  The ones starting with K_ correspond
- * to directory 'keywords'. ERR_ is an error in the tokenizing process, EOF_
- * is an end-of-file marker, and NIL_ is used to encode not-a-token.
+ * to directory 'keywords'. A_ is for an annotation, R or C is related to
+ * hidden services, ERR_ is an error in the tokenizing process, EOF_ is an
+ * end-of-file marker, and NIL_ is used to encode not-a-token.
  */
 typedef enum {
   K_ACCEPT = 0,
@@ -125,6 +126,7 @@ typedef enum {
   K_DIR_KEY_CERTIFICATION,
   K_DIR_KEY_CROSSCERT,
   K_DIR_ADDRESS,
+  K_DIR_TUNNELLED,
 
   K_VOTE_STATUS,
   K_VALID_AFTER,
@@ -318,6 +320,7 @@ static token_rule_t routerdesc_token_table[] = {
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   T1( "bandwidth",           K_BANDWIDTH,           GE(3),   NO_OBJ ),
   A01("@purpose",            A_PURPOSE,             GE(1),   NO_OBJ ),
+  T01("tunnelled-dir-server",K_DIR_TUNNELLED,       NO_ARGS, NO_OBJ ),
 
   END_OF_TABLE
 };
@@ -1609,6 +1612,12 @@ router_parse_entry_from_string(const char *s, const char *end,
     router->wants_to_be_hs_dir = 1;
   }
 
+  /* This router accepts tunnelled directory requests via begindir if it has
+   * an open dirport or it included "tunnelled-dir-server". */
+  if (find_opt_by_keyword(tokens, K_DIR_TUNNELLED) || router->dir_port > 0) {
+    router->supports_tunnelled_dir_requests = 1;
+  }
+
   tok = find_by_keyword(tokens, K_ROUTER_SIGNATURE);
   note_crypto_pk_op(VERIFY_RTR);
 #ifdef COUNT_DISTINCT_DIGESTS
@@ -2294,6 +2303,8 @@ routerstatus_parse_entry_from_string(memarea_t *area,
         rs->is_unnamed = 1;
       } else if (!strcmp(tok->args[i], "HSDir")) {
         rs->is_hs_dir = 1;
+      } else if (!strcmp(tok->args[i], "V2Dir")) {
+        rs->is_v2_dir = 1;
       }
     }
   }

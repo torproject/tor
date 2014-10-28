@@ -1921,7 +1921,7 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
                    rs->is_hs_dir?" HSDir":"",
                    rs->is_flagged_running?" Running":"",
                    rs->is_stable?" Stable":"",
-                   (rs->dir_port!=0)?" V2Dir":"",
+                   rs->is_v2_dir?" V2Dir":"",
                    rs->is_valid?" Valid":"");
 
   /* length of "opt v \n" */
@@ -2185,6 +2185,7 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   strlcpy(rs->nickname, ri->nickname, sizeof(rs->nickname));
   rs->or_port = ri->or_port;
   rs->dir_port = ri->dir_port;
+  rs->is_v2_dir = ri->supports_tunnelled_dir_requests;
   if (options->AuthDirHasIPv6Connectivity == 1 &&
       !tor_addr_is_null(&ri->ipv6_addr) &&
       node->last_reachable6 >= now - REACHABLE_TIMEOUT) {
