@@ -174,8 +174,13 @@ test_dir_formats(void *arg)
   /* XXXX025 router_dump_to_string should really take this from ri.*/
   options->ContactInfo = tor_strdup("Magri White "
                                     "<magri@elsewhere.example.com>");
+
+  options->ORPort_set = options->DirPort_set = options->AssumeReachable = 1;
   buf = router_dump_router_to_string(r1, pk2, NULL, NULL, NULL);
+
   tor_free(options->ContactInfo);
+  /* Reset for later */
+  options->ORPort_set = options->DirPort_set = options->AssumeReachable = 0;
   tt_assert(buf);
 
   strlcpy(buf2, "router Magri 192.168.0.1 9000 0 9003\n"
@@ -200,7 +205,8 @@ test_dir_formats(void *arg)
   strlcat(buf2, "hidden-service-dir\n", sizeof(buf2));
   strlcat(buf2, "contact Magri White <magri@elsewhere.example.com>\n",
           sizeof(buf2));
-  strlcat(buf2, "reject *:*\nrouter-signature\n", sizeof(buf2));
+  strlcat(buf2, "reject *:*\n", sizeof(buf2));
+  strlcat(buf2, "tunnelled-dir-server\nrouter-signature\n", sizeof(buf2));
   buf[strlen(buf2)] = '\0'; /* Don't compare the sig; it's never the same
                              * twice */
 
@@ -214,12 +220,13 @@ test_dir_formats(void *arg)
   tt_assert(rp1);
   tt_int_op(rp1->addr,OP_EQ, r1->addr);
   tt_int_op(rp1->or_port,OP_EQ, r1->or_port);
-  //test_eq(rp1->dir_port, r1->dir_port);
+  tt_int_op(rp1->dir_port,OP_EQ, r1->dir_port);
   tt_int_op(rp1->bandwidthrate,OP_EQ, r1->bandwidthrate);
   tt_int_op(rp1->bandwidthburst,OP_EQ, r1->bandwidthburst);
   tt_int_op(rp1->bandwidthcapacity,OP_EQ, r1->bandwidthcapacity);
   tt_assert(crypto_pk_cmp_keys(rp1->onion_pkey, pk1) == 0);
   tt_assert(crypto_pk_cmp_keys(rp1->identity_pkey, pk2) == 0);
+  tt_assert(rp1->supports_tunnelled_dir_requests);
   //tt_assert(rp1->exit_policy == NULL);
   tor_free(buf);
 
@@ -290,6 +297,7 @@ test_dir_formats(void *arg)
                 BASE64_ENCODE_MULTILINE);
   strlcat(buf2, cert_buf, sizeof(buf2));
   strlcat(buf2, "accept *:80\nreject 18.0.0.0/8:24\n", sizeof(buf2));
+  strlcat(buf2, "tunnelled-dir-server\n", sizeof(buf2));
   strlcat(buf2, "router-sig-ed25519 ", sizeof(buf2));
 
   buf = router_dump_router_to_string(r2, pk1, pk2, &r2_onion_keypair, &kp2);
@@ -301,6 +309,9 @@ test_dir_formats(void *arg)
   tor_free(buf);
 
   buf = router_dump_router_to_string(r2, pk1, NULL, NULL, NULL);
+
+  /* Reset for later */
+  options->ORPort_set = 0;
   cp = buf;
   rp2 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL,NULL);
   tt_assert(rp2);
@@ -315,6 +326,7 @@ test_dir_formats(void *arg)
              CURVE25519_PUBKEY_LEN);
   tt_assert(crypto_pk_cmp_keys(rp2->onion_pkey, pk2) == 0);
   tt_assert(crypto_pk_cmp_keys(rp2->identity_pkey, pk1) == 0);
+  tt_assert(rp2->supports_tunnelled_dir_requests);
 
   tt_int_op(smartlist_len(rp2->exit_policy),OP_EQ, 2);
 
@@ -1821,6 +1833,7 @@ test_routerstatus_for_v3ns(routerstatus_t *rs, time_t now)
     tt_assert(rs->is_flagged_running);
     tt_assert(!rs->is_valid);
     tt_assert(!rs->is_named);
+    tt_assert(rs->is_v2_dir);
     /* XXXX check version */
   } else if (tor_memeq(rs->identity_digest,
                        "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"

@@ -1099,38 +1099,24 @@ check_whether_dirport_reachable(void)
          can_reach_dir_port;
 }
 
-/** Look at a variety of factors, and return 0 if we don't want to
- * advertise the fact that we have a DirPort open. Else return the
- * DirPort we want to advertise.
- *
- * Log a helpful message if we change our mind about whether to publish
- * a DirPort.
+/** The lower threshold of remaining bandwidth required to advertise directory
+ * services */
+/* XXX Should this be increased? */
+#define MIN_BW_TO_ADVERTISE_DIRSERVER 51200
+
+/** Helper: Return 1 if we have sufficient resources for serving directory
+ * requests, return 0 otherwise.
+ * dir_port is either 0 or the configured DirPort number.
+ * If AccountingMax is set less than our advertised bandwidth, then don't
+ * serve requests. Likewise, if our advertised bandwidth is less than
+ * MIN_BW_TO_ADVERTISE_DIRSERVER, don't bother trying to serve requests.
  */
 static int
-decide_to_advertise_dirport(const or_options_t *options, uint16_t dir_port)
+router_should_be_directory_server(const or_options_t *options, int dir_port)
 {
   static int advertising=1; /* start out assuming we will advertise */
   int new_choice=1;
   const char *reason = NULL;
-
-  /* Section one: reasons to publish or not publish that aren't
-   * worth mentioning to the user, either because they're obvious
-   * or because they're normal behavior. */
-
-  if (!dir_port) /* short circuit the rest of the function */
-    return 0;
-  if (authdir_mode(options)) /* always publish */
-    return dir_port;
-  if (net_is_disabled())
-    return 0;
-  if (!check_whether_dirport_reachable())
-    return 0;
-  if (!router_get_advertised_dir_port(options, dir_port))
-    return 0;
-
-  /* Section two: reasons to publish or not publish that the user
-   * might find surprising. These are generally config options that
-   * make us choose not to publish. */
 
   if (accounting_is_enabled(options)) {
     /* Don't spend bytes for directory traffic if we could end up hibernating,
@@ -1158,10 +1144,9 @@ decide_to_advertise_dirport(const or_options_t *options, uint16_t dir_port)
       new_choice = 0;
       reason = "AccountingMax enabled";
     }
-#define MIN_BW_TO_ADVERTISE_DIRPORT 51200
-  } else if (options->BandwidthRate < MIN_BW_TO_ADVERTISE_DIRPORT ||
+  } else if (options->BandwidthRate < MIN_BW_TO_ADVERTISE_DIRSERVER ||
              (options->RelayBandwidthRate > 0 &&
-              options->RelayBandwidthRate < MIN_BW_TO_ADVERTISE_DIRPORT)) {
+              options->RelayBandwidthRate < MIN_BW_TO_ADVERTISE_DIRSERVER)) {
     /* if we're advertising a small amount */
     new_choice = 0;
     reason = "BandwidthRate under 50KB";
@@ -1169,15 +1154,61 @@ decide_to_advertise_dirport(const or_options_t *options, uint16_t dir_port)
 
   if (advertising != new_choice) {
     if (new_choice == 1) {
-      log_notice(LD_DIR, "Advertising DirPort as %d", dir_port);
+      if (dir_port > 0)
+        log_notice(LD_DIR, "Advertising DirPort as %d", dir_port);
+      else
+        log_notice(LD_DIR, "Advertising directory service support");
     } else {
       tor_assert(reason);
-      log_notice(LD_DIR, "Not advertising DirPort (Reason: %s)", reason);
+      log_notice(LD_DIR, "Not advertising Dir%s (Reason: %s)",
+                 dir_port ? "Port" : "ectory Service support", reason);
     }
     advertising = new_choice;
   }
 
-  return advertising ? dir_port : 0;
+  return advertising;
+}
+
+/** Return 1 if we are configured to accept either relay or directory requests
+ * from clients and we aren't at risk of exceeding our bandwidth limits, thus
+ * we should be a directory server. If not, return 0.
+ */
+int
+dir_server_mode(const or_options_t *options)
+{
+    return (server_mode(options) || options->DirPort_set) &&
+          router_should_be_directory_server(options, 0);
+}
+
+/** Look at a variety of factors, and return 0 if we don't want to
+ * advertise the fact that we have a DirPort open, else return the
+ * DirPort we want to advertise.
+ *
+ * Log a helpful message if we change our mind about whether to publish
+ * a DirPort.
+ */
+static int
+decide_to_advertise_dirport(const or_options_t *options, uint16_t dir_port)
+{
+  /* Part one: reasons to publish or not publish that aren't
+   * worth mentioning to the user, either because they're obvious
+   * or because they're normal behavior. */
+
+  if (!dir_port) /* short circuit the rest of the function */
+    return 0;
+  if (authdir_mode(options)) /* always publish */
+    return dir_port;
+  if (net_is_disabled())
+    return 0;
+  if (!check_whether_dirport_reachable())
+    return 0;
+  if (!router_get_advertised_dir_port(options, dir_port))
+    return 0;
+
+  /* Part two: reasons to publish or not publish that the user
+   * might find surprising. router_should_be_directory_server()
+   * considers config options that make us choose not to publish. */
+  return router_should_be_directory_server(options, dir_port) ? dir_port : 0;
 }
 
 /** Allocate and return a new extend_info_t that can be used to build
@@ -2640,6 +2671,10 @@ router_dump_router_to_string(routerinfo_t *router,
                             "ipv6-policy %s\n", p6);
     }
     tor_free(p6);
+  }
+
+  if (dir_server_mode(options)) {
+    smartlist_add(chunks, tor_strdup("tunnelled-dir-server\n"));
   }
 
   /* Sign the descriptor with Ed25519 */

@@ -943,6 +943,15 @@ directory_initiate_command_rend(const tor_addr_t *_addr,
   log_debug(LD_DIR, "anonymized %d, use_begindir %d.",
             anonymized_connection, use_begindir);
 
+  if (!dir_port && !use_begindir) {
+    char ipaddr[TOR_ADDR_BUF_LEN];
+    tor_addr_to_str(ipaddr, _addr, TOR_ADDR_BUF_LEN, 0);
+    log_warn(LD_BUG, "Cannot use directory server without dirport or "
+                     "begindir! Address: %s, ORPort: %d, DirPort: %d",
+                     escaped_safe_str_client(ipaddr), or_port, dir_port);
+    return;
+  }
+
   log_debug(LD_DIR, "Initiating %s", dir_conn_purpose_to_string(dir_purpose));
 
 #ifndef NON_ANONYMOUS_MODE_ENABLED

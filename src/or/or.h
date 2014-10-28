@@ -2148,7 +2148,7 @@ typedef struct {
   unsigned int needs_retest_if_added:1;
 
   /** True iff this router included "tunnelled-dir-server" in its descriptor,
-   * implies it accepts tunnelled directory requests, or it advertised
+   * implying it accepts tunnelled directory requests, or it advertised
    * dir_port > 0. */
   unsigned int supports_tunnelled_dir_requests:1;
 

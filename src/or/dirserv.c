@@ -1091,13 +1091,13 @@ directory_fetches_from_authorities(const or_options_t *options)
     return 1; /* we don't know our IP address; ask an authority. */
   refuseunknown = ! router_my_exit_policy_is_reject_star() &&
     should_refuse_unknown_exits(options);
-  if (!options->DirPort_set && !refuseunknown)
+  if (!dir_server_mode(options) && !refuseunknown)
     return 0;
   if (!server_mode(options) || !advertised_server_mode())
     return 0;
   me = router_get_my_routerinfo();
-  if (!me || (!me->dir_port && !refuseunknown))
-    return 0; /* if dirport not advertised, return 0 too */
+  if (!me || (!me->supports_tunnelled_dir_requests && !refuseunknown))
+    return 0; /* if we don't service directory requests, return 0 too */
   return 1;
 }
 
@@ -1128,7 +1128,7 @@ directory_fetches_dir_info_later(const or_options_t *options)
 int
 directory_caches_unknown_auth_certs(const or_options_t *options)
 {
-  return options->DirPort_set || options->BridgeRelay;
+  return dir_server_mode(options) || options->BridgeRelay;
 }
 
 /** Return 1 if we want to keep descriptors, networkstatuses, etc around
@@ -1137,7 +1137,7 @@ directory_caches_unknown_auth_certs(const or_options_t *options)
 int
 directory_caches_dir_info(const or_options_t *options)
 {
-  if (options->BridgeRelay || options->DirPort_set)
+  if (options->BridgeRelay || dir_server_mode(options))
     return 1;
   if (!server_mode(options) || !advertised_server_mode())
     return 0;
@@ -1153,7 +1153,7 @@ directory_caches_dir_info(const or_options_t *options)
 int
 directory_permits_begindir_requests(const or_options_t *options)
 {
-  return options->BridgeRelay != 0 || options->DirPort_set;
+  return options->BridgeRelay != 0 || dir_server_mode(options);
 }
 
 /** Return 1 if we have no need to fetch new descriptors. This generally

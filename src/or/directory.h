@@ -101,7 +101,8 @@ time_t download_status_increment_attempt(download_status_t *dls,
  * the optional status code <b>sc</b>. */
 #define download_status_failed(dls, sc)                                 \
   download_status_increment_failure((dls), (sc), NULL,                  \
-                                    get_options()->DirPort_set, time(NULL))
+                                    dir_server_mode(get_options()), \
+                                    time(NULL))
 
 void download_status_reset(download_status_t *dls);
 static int download_status_is_ready(download_status_t *dls, time_t now,
