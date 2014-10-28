@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2013, The Tor Project, Inc. */
+/* Copyright (c) 2012-2014, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #ifndef TOR_CRYPTO_CURVE25519_H

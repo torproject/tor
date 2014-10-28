@@ -1,6 +1,6 @@
 dnl Copyright (c) 2001-2004, Roger Dingledine
 dnl Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson
-dnl Copyright (c) 2007-2013, The Tor Project, Inc.
+dnl Copyright (c) 2007-2014, The Tor Project, Inc.
 dnl See LICENSE for licensing information
 
 AC_INIT([tor],[0.2.6.0-alpha-dev])

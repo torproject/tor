@@ -1,5 +1,5 @@
 /* Copyright (c) 2010, Jacob Appelbaum, Steven J. Murdoch.
- * Copyright (c) 2010-2013, The Tor Project, Inc. */
+ * Copyright (c) 2010-2014, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**

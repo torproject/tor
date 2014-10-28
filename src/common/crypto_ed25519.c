@@ -1,4 +1,4 @@
-/* Copyright (c) 2013, The Tor Project, Inc. */
+/* Copyright (c) 2013-2014, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /* Wrapper code for an ed25519 implementation. */
