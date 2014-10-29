@@ -204,9 +204,12 @@ def head_score(s):
     lw = m.group(1).lower()
     if lw.startswith("security") and "feature" not in lw:
         score = -300
-    elif lw.startswith("deprecated versions"):
+    elif lw.startswith("deprecated version"):
         score = -200
-    elif "build require" in lw:
+    elif (('new' in lw and 'requirement' in lw) or
+          ('new' in lw and 'dependenc' in lw) or
+          ('build' in lw and 'requirement' in lw) or
+          ('removed' in lw and 'platform' in lw)):
         score = -100
     elif lw.startswith("major feature"):
         score = 00

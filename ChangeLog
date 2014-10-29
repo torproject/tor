@@ -1,4 +1,24 @@
 Changes in version 0.2.6.1-alpha - 2014-??-??
+  o New compiler and system requirements:
+    - Tor 0.2.6.x requires that your compiler support more of the C99
+      language standard than before. The 'configure' script now detects
+      whether your compiler supports C99 mid-block declarations and
+      designated initializers. If it does not, Tor will not compile.
+
+      We may revisit this requirement if it turns out that a significant
+      number of people need to build Tor with compilers that don't
+      bother implementing a 15-year-old standard. Closes ticket 13233.
+    - Tor no longer supports systems without threading support. When we
+      began working on Tor, there were several systems that didn't have
+      threads, or where the thread support wasn't able to run the
+      threads of a single process on multiple CPUs. That no longer
+      holds: every system where Tor needs to run well now has threading
+      support. Resolves ticket 12439.
+
+  o Removed platform support:
+    - We no longer include special code to build on Windows CE; as far
+      as we know, nobody has used Tor on Windows CE in a very long time.
+      Closes ticket 11446.
 
   o Major features (bridges):
     - Expose the outgoing upstream HTTP/SOCKS proxy to pluggable
@@ -8,28 +28,26 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
   o Major features (client performance, hidden services):
     - Allow clients to use optimistic data when connecting to a hidden
       service, which should remove a round-trip from hidden service
-      initialization. See proposal 181 for details. Implements ticket
-      13211.
+      initialization. See proposal 181 for details. Implements
+      ticket 13211.
 
   o Major features (directory system):
     - Upon receiving an unparseable directory object,if its digest
-      matches what we expected, then don't try to download it
-      again. Previously, when we got a descriptor we didn't like, we
-      would keep trying to download it over and over. Closes
-      ticket 11243.
+      matches what we expected, then don't try to download it again.
+      Previously, when we got a descriptor we didn't like, we would keep
+      trying to download it over and over. Closes ticket 11243.
 
   o Major features (sample torrc):
-    - Add a new, infrequently-changed "torrc.minimal". This file
-      is similar to torrc.sample, but it will
-      change as infrequently as possible, for the benefit of users
-      whose systems prompt them for intervention whenever a default
-      configuration file is changed. Making this change allows us to
-      update torrc.sample to be a more generally useful "sample torrc".
+    - Add a new, infrequently-changed "torrc.minimal". This file is
+      similar to torrc.sample, but it will change as infrequently as
+      possible, for the benefit of users whose systems prompt them for
+      intervention whenever a default configuration file is changed.
+      Making this change allows us to update torrc.sample to be a more
+      generally useful "sample torrc".
 
   o Major bugfixes (directory authorities):
-    - Do not assign the HSDir flag to relays if they are
-      not Valid, or currently hibernating. Fixes #12573. Bugfix
-      on tor-0.2.0.10-alpha
+    - Do not assign the HSDir flag to relays if they are not Valid, or
+      currently hibernating. Fixes #12573. Bugfix on tor-0.2.0.10-alpha
 
   o Major bugfixes (directory bandwidth performance):
     - Don't flush the zlib buffer aggressively when compressing
@@ -55,8 +73,8 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
       document on the wiki. Implements feature 10427.
 
   o Minor features (client):
-    - Clients are now willing to send optimistic data (before
-      they receive a 'connected' cell) to relays of any version. (Relays
+    - Clients are now willing to send optimistic data (before they
+      receive a 'connected' cell) to relays of any version. (Relays
       without support for optimistic data are no longer supported on the
       Tor network.) Resolves ticket 13153.
 
@@ -73,16 +91,15 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
       method. Implements part of proposal 215.
 
   o Minor features (logging):
-    - On unix-like systems, you can now use named pipes as the target of the
-      Log option, and other options that try to append to files. Closes
-      ticket 12061. Patch from "carlo von lynX".
+    - On unix-like systems, you can now use named pipes as the target of
+      the Log option, and other options that try to append to files.
+      Closes ticket 12061. Patch from "carlo von lynX".
     - When opening a log file at startup, send it every log message that
-      we generated between startup and opening it. Previously, log messages
-      that were generated before opening the log file were only logged to
-      stdout. Closes ticket 6938.
-    - Add a TruncateLogFile option to overwrite logs instead of appending to
-      them. Closes
-      ticket #5583.
+      we generated between startup and opening it. Previously, log
+      messages that were generated before opening the log file were only
+      logged to stdout. Closes ticket 6938.
+    - Add a TruncateLogFile option to overwrite logs instead of
+      appending to them. Closes ticket #5583.
 
   o Minor features (portability, Solaris):
     - Threads are no longer disabled by default on Solaris; we believe
@@ -95,17 +112,17 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
       address" will report the correct value. Resolves ticket 11582.
       Patch from "ra".
     - A new AccountingRule option lets Relays set whether they'd like
-      AccountingMax to be applied separately to inbound and
-      outbound traffic, or applied to the sum of inbound and outbound
-      traffic. Resolves ticket 961. Patch by "chobe".
+      AccountingMax to be applied separately to inbound and outbound
+      traffic, or applied to the sum of inbound and outbound traffic.
+      Resolves ticket 961. Patch by "chobe".
 
   o Minor features (testing networks):
-    - Add the TestingDirAuthVoteExit option, which lists nodes to assign the
-      "Exit" flag regardless of their uptime, bandwidth, or exit policy.
-      TestingTorNetwork must be set for this option to have any effect.
-      Previously, authorities would take up to 35
-      minutes to give nodes the Exit flag in a test network. Partially
-      implements ticket 13161.
+    - Add the TestingDirAuthVoteExit option, which lists nodes to assign
+      the "Exit" flag regardless of their uptime, bandwidth, or exit
+      policy. TestingTorNetwork must be set for this option to have any
+      effect. Previously, authorities would take up to 35 minutes to
+      give nodes the Exit flag in a test network. Partially implements
+      ticket 13161.
 
   o Minor features (validation):
     - Check all date/time values passed to tor_timegm and
@@ -122,8 +139,8 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
 
   o Minor bugfixes (bridges):
     - When DisableNetwork is set, do not launch pluggable transport
-      plugins, and if any are running, terminate them.
-      Fixes bug 13213; bugfix on 0.2.3.6-alpha.
+      plugins, and if any are running, terminate them. Fixes bug 13213;
+      bugfix on 0.2.3.6-alpha.
 
   o Minor bugfixes (C correctness):
     - Fix several instances of possible integer overflow/underflow/NaN.
@@ -133,8 +150,8 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
       avoid dividing by zero in the pareto calculations. This traps
       under clang's "undefined-trap" sanitizer. Fixes bug 13290; bugfix
       on tor-0.2.2.2-alpha.
-    - Fix an integer overflow in format_time_interval().
-      Fixes bug 13393; bugfix on 0.2.0.10-alpha.
+    - Fix an integer overflow in format_time_interval(). Fixes bug
+      13393; bugfix on 0.2.0.10-alpha.
     - Set the correct day of year value when the system's localtime(_r)
       or gmtime(_r) functions fail to set struct tm. Not externally
       visible. Fixes bug 13476; bugfix on 0.0.2pre14.
@@ -142,14 +159,14 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
       with 32-bit time_t. Fixes bug 13476; bugfix on 0.0.2pre14.
 
   o Minor bugfixes (client):
-    - Fix smartlist_choose_node_by_bandwidth()
-      so that relays with the BadExit flag are not considered
-      worthy candidates. Fixes bug 13066; bugfix on 0.1.2.3-alpha.
+    - Fix smartlist_choose_node_by_bandwidth() so that relays with the
+      BadExit flag are not considered worthy candidates. Fixes bug
+      13066; bugfix on 0.1.2.3-alpha.
     - Use the consensus schedule for downloading consensuses, and not
       the generic schedule. Fixes bug 11679; bugfix on 0.2.2.6-alpha.
-    - Handle unsupported or malformed SOCKS5 requests properly by responding
-      with the appropriate error message before closing the connection.
-      Fixes bugs 12971 and 13314; bugfix on 0.0.2pre13.
+    - Handle unsupported or malformed SOCKS5 requests properly by
+      responding with the appropriate error message before closing the
+      connection. Fixes bugs 12971 and 13314; bugfix on 0.0.2pre13.
 
   o Minor bugfixes (client, torrc):
     - Stop modifying the value of our DirReqStatistics torrc option just
@@ -169,17 +186,16 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
 
   o Minor bugfixes (directory system):
     - Always believe that v3 directory authorities serve extra-info
-      documents, regardless of whether they advertise
-      "caches-extra-info" or not. Fixes part of bug 11683; bugfix
-      on 0.2.0.1-alpha.
+      documents, regardless of whether they advertise "caches-extra-
+      info" or not. Fixes part of bug 11683; bugfix on 0.2.0.1-alpha.
     - When running as a v3 directory authority, advertise that you serve
       extra-info documents so that clients who want them can find them
       from you too. Fixes part of bug 11683; bugfix on 0.2.0.1-alpha.
     - Check the BRIDGE_DIRINFO flag bitwise rather than using equality.
-      Previously, directories offering BRIDGE_DIRINFO
-      and some other flag (i.e. microdescriptors or extrainfo) would be
-      ignored when looking for bridges. Partially fixes bug
-      13163; bugfix on 0.2.0.7-alpha.
+      Previously, directories offering BRIDGE_DIRINFO and some other
+      flag (i.e. microdescriptors or extrainfo) would be ignored when
+      looking for bridges. Partially fixes bug 13163; bugfix
+      on 0.2.0.7-alpha.
 
   o Minor bugfixes (networking):
     - Check for orconns and use connection_or_close_for_error() rather
@@ -218,9 +234,8 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
       on 0.0.2pre26.
 
   o Minor bugfixes (zlib):
-    - Avoid truncating a zlib stream when trying to finalize it with an empty
-      output buffer. Fixes bug 11824;
-      bugfix on 0.1.1.23.
+    - Avoid truncating a zlib stream when trying to finalize it with an
+      empty output buffer. Fixes bug 11824; bugfix on 0.1.1.23.
 
   o Build fixes:
     - Allow our configure script to build correctly with autoconf 2.62
@@ -234,8 +249,8 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
     - Change the entry_is_live() function to take named bitfield
       elements instead of an unnamed list of booleans. Closes
       ticket 12202.
-    - Refactor and unit-test entry_is_time_to_retry() in
-      entrynodes.c. Resolves ticket 12205.
+    - Refactor and unit-test entry_is_time_to_retry() in entrynodes.c.
+      Resolves ticket 12205.
     - Use calloc and reallocarray functions in preference to multiply-
       then-malloc. This makes it less likely for us to fall victim to an
       integer overflow attack when allocating. Resolves ticket 12855.
@@ -250,9 +265,9 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
       bug 13284.
 
   o Code simplifications and refactoring:
-    - Rework the API of policies_parse_exit_policy() to use a
-      bitmask to represent parsing options, instead of a confusing mess
-      of booleans. Resolves ticket 8197.
+    - Rework the API of policies_parse_exit_policy() to use a bitmask to
+      represent parsing options, instead of a confusing mess of
+      booleans. Resolves ticket 8197.
     - Introduce a helper function to parse ExitPolicy in
       or_options_t structure.
 
@@ -263,27 +278,9 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
       operating system is allowing to use simultaneously. Resolves
       ticket 9708.
 
-  o New compiler and system requirements:
-    - Tor 0.2.6.x requires that your compiler support more of the C99
-      language standard than before. The 'configure' script now detects
-      whether your compiler supports C99 mid-block declarations and
-      designated initializers. If it does not, Tor will not compile.
-
-      We may revisit this requirement if it turns out that a significant
-      number of people need to build Tor with compilers that don't
-      bother implementing a 15-year-old standard. Closes ticket 13233.
-
-    - Tor no longer supports systems without threading support. When we
-      began working on Tor, there were several systems that didn't have
-      threads, or where the thread support wasn't able to run the
-      threads of a single process on multiple CPUs. That no longer
-      holds: every system where Tor needs to run well now has threading
-      support. Resolves ticket 12439.
-
   o Removed code:
-    - We no longer remind the user about configuration options
-      that have been obsolete since 0.2.3.x or earlier. Patch by
-      Adrien Bak.
+    - We no longer remind the user about configuration options that have
+      been obsolete since 0.2.3.x or earlier. Patch by Adrien Bak.
 
   o Removed features:
     - Remove the --disable-curve25519 configure option. Relays and
@@ -294,18 +291,12 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
       obsolete. Resolves ticket 12226.
     - The "AuthDirRejectUnlisted" option no longer has any effect, as
       the fingerprints file (approved-routers) has been deprecated.
-    - Directory authorities do not support being Naming dirauths
-      anymore. The "NamingAuthoritativeDir" config option is now
-      obsolete.
+    - Directory authorities do not support being Naming dirauths anymore.
+      The "NamingAuthoritativeDir" config option is now obsolete.
     - Directory authorities do not support giving out the BadDirectory
       flag anymore.
     - Clients don't understand the BadDirectory flag in the consensus
       anymore, and ignore it.
-
-  o Removed platform support:
-    - We no longer include special code to build on Windows CE; as far
-      as we know, nobody has used Tor on Windows CE in a very long time.
-      Closes ticket 11446.
 
   o Testing:
     - Refactor the function that chooses guard nodes so that it can more
