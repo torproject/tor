@@ -17,6 +17,7 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
       We may revisit this requirement if it turns out that a significant
       number of people need to build Tor with compilers that don't
       bother implementing a 15-year-old standard. Closes ticket 13233.
+
     - Tor no longer supports systems without threading support. When we
       began working on Tor, there were several systems that didn't have
       threads, or where the thread support wasn't able to run the
@@ -31,7 +32,7 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
 
   o Major features (bridges):
     - Expose the outgoing upstream HTTP/SOCKS proxy to pluggable
-      transports if they are configured via the "TOR_PT_PROXY" enviorment
+      transports if they are configured via the "TOR_PT_PROXY" environment
       variable. Implements proposal 232. Resolves ticket 8402.
 
   o Major features (client performance, hidden services):
@@ -71,7 +72,7 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
 
   o Minor features (security, out-of-memory handling):
     - When handling an out-of-memory condition, allocate less memory for
-      teporary data structures. Fixes issue 10115.
+      temporary data structures. Fixes issue 10115.
     - When handling an out-of-memory condition, consider more types of
       buffers, including those on directory connections, and zlib
       buffers. Resolves ticket 11792.
@@ -100,7 +101,7 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
       method. Implements part of proposal 215.
 
   o Minor features (logging):
-    - On unix-like systems, you can now use named pipes as the target of
+    - On Unix-like systems, you can now use named pipes as the target of
       the Log option, and other options that try to append to files.
       Closes ticket 12061. Patch from "carlo von lynX".
     - When opening a log file at startup, send it every log message that
@@ -272,8 +273,6 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
     - Avoid 4 null pointer errors under clang shallow analysis by using
       tor_assert() to prove that the pointers aren't null. Fixes
       bug 13284.
-
-  o Code simplifications and refactoring:
     - Rework the API of policies_parse_exit_policy() to use a bitmask to
       represent parsing options, instead of a confusing mess of
       booleans. Resolves ticket 8197.
