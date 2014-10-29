@@ -1512,7 +1512,7 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
     if (!status)
       continue;
 
-    if (!node->is_running || !status->dir_port || !node->is_valid)
+    if (!node->is_running || !node_is_dir(node) || !node->is_valid)
       continue;
     if (requireother && router_digest_is_me(node->identity))
       continue;
