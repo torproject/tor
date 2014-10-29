@@ -782,6 +782,28 @@ networkstatus_check_weights(int64_t Wgg, int64_t Wgd, int64_t Wmg,
   return berr;
 }
 
+#if 0
+/** DOCDOC */
+static vote_identity_map_t *
+networkstatus_compute_identity_mapping(const smartlist_t *votes)
+{
+  vote_identity_map_t *map = vote_identity_map_new();
+
+  SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, vote) {
+    SMARTLIST_FOREACH_BEGIN(vote->routerstatus_list,
+                            vote_routerstatus_t *, vrs) {
+      vote_identity_map_add(map, vrs->status.identity_digest,
+                            vrs->has_ed25519_listing ? vrs->ed25519_id : NULL,
+                            vote_sl_idx);
+    } SMARTLIST_FOREACH_END(vrs);
+  } SMARTLIST_FOREACH_END(vote);
+
+  vote_identity_map_resolve(map);
+
+  return map;
+}
+#endif
+
 /**
  * This function computes the bandwidth weights for consensus method 10.
  *
@@ -1139,6 +1161,9 @@ networkstatus_compute_consensus(smartlist_t *votes,
   char *params = NULL;
   char *packages = NULL;
   int added_weights = 0;
+#if 0
+  vote_identity_map_t *id_map = NULL;
+#endif
   tor_assert(flavor == FLAV_NS || flavor == FLAV_MICRODESC);
   tor_assert(total_authorities >= smartlist_len(votes));
 
@@ -1493,6 +1518,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
          ++n_authorities_measuring_bandwidth;
        }
     );
+
+#if 0
+    id_map = networkstatus_compute_identity_mapping(votes);
+#endif
 
     /* Now go through all the votes */
     flag_counts = tor_calloc(smartlist_len(flags), sizeof(int));
@@ -1981,6 +2010,9 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
  done:
 
+#if 0
+  vote_identity_map_free(id_map);
+#endif
   tor_free(client_versions);
   tor_free(server_versions);
   tor_free(packages);

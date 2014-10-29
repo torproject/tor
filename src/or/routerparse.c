@@ -369,6 +369,7 @@ static token_rule_t rtrstatus_token_table[] = {
   T01("v",                   K_V,               CONCAT_ARGS, NO_OBJ ),
   T01("w",                   K_W,                   ARGS,    NO_OBJ ),
   T0N("m",                   K_M,               CONCAT_ARGS, NO_OBJ ),
+  T0N("id",                  K_ID,                  GE(2),   NO_OBJ ),
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   END_OF_TABLE
 };
@@ -2348,6 +2349,17 @@ routerstatus_parse_entry_from_string(memarea_t *area,
         line->microdesc_hash_line = tor_strdup(t->args[0]);
         vote_rs->microdesc = line;
       }
+      if (t->tp == K_ID) {
+        tor_assert(t->n_args >= 2);
+        if (!strcmp(t->args[0], "ed25519")) {
+          vote_rs->has_ed25519_listing = 1;
+          if (strcmp(t->args[1], "none") &&
+              digest256_from_base64((char*)vote_rs->ed25519_id, t->args[1])<0) {
+            log_warn(LD_DIR, "Bogus ed25519 key in networkstatus vote");
+            goto err;
+          }
+        }
+      }
     } SMARTLIST_FOREACH_END(t);
   } else if (flav == FLAV_MICRODESC) {
     tok = find_opt_by_keyword(tokens, K_M);
@@ -3171,6 +3183,21 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
                "digest");
       goto err;
     }
+  }
+  if (ns_type != NS_TYPE_CONSENSUS) {
+    digest256map_t *ed_id_map = digest256map_new();
+    SMARTLIST_FOREACH_BEGIN(ns->routerstatus_list, vote_routerstatus_t *, vrs) {
+      if (! vrs->has_ed25519_listing ||
+          tor_mem_is_zero((const char *)vrs->ed25519_id, DIGEST256_LEN))
+        continue;
+      if (digest256map_get(ed_id_map, vrs->ed25519_id) != NULL) {
+        log_warn(LD_DIR, "Vote networkstatus ed25519 identities were not "
+                 "unique");
+        goto err;
+      }
+      digest256map_set(ed_id_map, vrs->ed25519_id, (void*)1);
+    } SMARTLIST_FOREACH_END(vrs);
+    digest256map_free(ed_id_map, NULL);
   }
 
   /* Parse footer; check signature. */

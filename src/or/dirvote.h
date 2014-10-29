@@ -89,6 +89,9 @@
 /** Lowest consensus method where authorities may include an "id" line for
  * ed25519 identities in microdescriptors. */
 #define MIN_METHOD_FOR_ED25519_ID_IN_MD 21
+/** Lowest consensus method where authorities vote on ed25519 ids and ensure
+ * ed25519 id consistency. */
+#define MIN_METHOD_FOR_ED25519_ID_VOTING MIN_METHOD_FOR_ED25519_ID_IN_MD
 
 /** Default bandwidth to clip unmeasured bandwidths to using method >=
  * MIN_METHOD_TO_CLIP_UNMEASURED_BW.  (This is not a consensus method; do not

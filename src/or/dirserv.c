@@ -1993,6 +1993,16 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
       smartlist_add_asprintf(chunks, "p %s\n", summary);
       tor_free(summary);
     }
+
+    if (format == NS_V3_VOTE && vrs) {
+      if (tor_mem_is_zero((char*)vrs->ed25519_id, ED25519_PUBKEY_LEN)) {
+        smartlist_add(chunks, tor_strdup("id ed25519 none\n"));
+      } else {
+        char ed_b64[BASE64_DIGEST256_LEN+1];
+        digest256_to_base64(ed_b64, (const char*)vrs->ed25519_id);
+        smartlist_add_asprintf(chunks, "id ed25519 %s\n", ed_b64);
+      }
+    }
   }
 
  done:
@@ -2814,6 +2824,11 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
       set_routerstatus_from_routerinfo(rs, node, ri, now,
                                        listbadexits,
                                        vote_on_hsdirs);
+
+      if (ri->signing_key_cert) {
+        memcpy(vrs->ed25519_id, ri->signing_key_cert->signing_key.pubkey,
+               ED25519_PUBKEY_LEN);
+      }
 
       if (digestmap_get(omit_as_sybil, ri->cache_info.identity_digest))
         clear_status_flags_on_sybil(rs);

@@ -2356,9 +2356,12 @@ typedef struct vote_routerstatus_t {
   char *version; /**< The version that the authority says this router is
                   * running. */
   unsigned int has_measured_bw:1; /**< The vote had a measured bw */
+  unsigned int has_ed25519_listing:1; /** DOCDOC */
   uint32_t measured_bw_kb; /**< Measured bandwidth (capacity) of the router */
   /** The hash or hashes that the authority claims this microdesc has. */
   vote_microdesc_hash_t *microdesc;
+  /** Ed25519 identity for this router, or zero if it has none. */
+  uint8_t ed25519_id[ED25519_PUBKEY_LEN];
 } vote_routerstatus_t;
 
 /** A signature of some document by an authority. */
