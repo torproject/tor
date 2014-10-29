@@ -103,7 +103,7 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
     - Add the TestingDirAuthVoteExit option, which lists nodes to assign the
       "Exit" flag regardless of their uptime, bandwidth, or exit policy.
       TestingTorNetwork must be set for this option to have any effect.
-      Works around an issue where authorities would take up to 35
+      Previously, authorities would take up to 35
       minutes to give nodes the Exit flag in a test network. Partially
       implements ticket 13161.
 
@@ -169,14 +169,14 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
 
   o Minor bugfixes (directory system):
     - Always believe that v3 directory authorities serve extra-info
-      documents, regardless of whether their server descriptor contains
-      a "caches-extra-info" line or not. Fixes part of bug 11683; bugfix
+      documents, regardless of whether they advertise
+      "caches-extra-info" or not. Fixes part of bug 11683; bugfix
       on 0.2.0.1-alpha.
     - When running as a v3 directory authority, advertise that you serve
       extra-info documents so that clients who want them can find them
       from you too. Fixes part of bug 11683; bugfix on 0.2.0.1-alpha.
     - Check the BRIDGE_DIRINFO flag bitwise rather than using equality.
-      This fixes a potential bug where directories offering BRIDGE_DIRINFO
+      Previously, directories offering BRIDGE_DIRINFO
       and some other flag (i.e. microdescriptors or extrainfo) would be
       ignored when looking for bridges. Partially fixes bug
       13163; bugfix on 0.2.0.7-alpha.
@@ -329,7 +329,7 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
     - systemd unit file: only allow tor to write to /var/lib/tor and
       /var/log/tor. The rest of the filesystem is accessible for reading
       only. Patch by intrigeri; resolves ticket 12751.
-    - systemd unit file: ensures that the process and all its children
+    - systemd unit file: ensure that the process and all its children
       can never gain new privileges. Patch by intrigeri; resolves
       ticket 12939.
     - systemd unit file: set up /var/run/tor as writable for the Tor
@@ -337,7 +337,7 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
 
   o Removed features (directory authorities):
     - Remove code that prevented authorities from listing Tor relays
-      affected by CVE-2011-2769 as guards. These servers are already
+      affected by CVE-2011-2769 as guards. These relays are already
       rejected altogether due to the minimum version requirement of
       0.2.3.16-alpha. Closes ticket 13152.
     - Directory authorities no longer advertise or support consensus
