@@ -44,7 +44,7 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
   o Minor features (security, memory wiping):
     - Ensure we securely wipe keys from memory after
       crypto_digest_get_digest and init_curve25519_keypair_from_file
-      have finished using them. Fixes bug 13477.
+      have finished using them. Resolves ticket 13477.
 
   o Minor features (security, out-of-memory handling):
     - When handling a low-memory situation, allocate less memory for
@@ -124,7 +124,7 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
   o Minor bugfixes (bridges):
     - When DisableNetwork is set, do not launch pluggable transport
       plugins, and if any are running already, terminate the existing
-      instances. Resolves ticket 13213.
+      instances. Fixes bug 13213; bugfix on 0.2.3.6-alpha.
 
   o Minor bugfixes (C correctness):
     - Fix several instances of possible integer overflow/underflow/NaN.
@@ -136,22 +136,22 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
       -fsanitize-undefined-trap-on-error. Fixes bug 13290; bugfix
       on tor-0.2.2.2-alpha.
     - Fix an instance of integer overflow in format_time_interval().
-      Fixes bug 13393.
+      Fixes bug 13393; bugfix on 0.2.0.10-alpha.
     - Set the correct day of year value when the system's localtime(_r)
       or gmtime(_r) functions fail to set struct tm. Not externally
-      visible. Fixes bug 13476.
+      visible. Fixes bug 13476; bugfix on 0.0.2pre14.
     - Avoid unlikely signed integer overflow in tor_timegm on systems
-      with 32-bit time_t. Fixes bug 13476.
+      with 32-bit time_t. Fixes bug 13476; bugfix on 0.0.2pre14.
 
   o Minor bugfixes (client):
     - Use the consensus schedule for downloading consensuses, and not
       the generic schedule. Fixes bug 11679; bugfix on 0.2.2.6-alpha.
     - Handle unsupported SOCKS5 requests properly by responding with
       'Command not supported' reply message before closing a TCP
-      connection to the user. Fixes bug 12971.
+      connection to the user. Fixes bug 12971; bugfix on 0.0.2pre13.
     - Handle malformed SOCKS5 requests properly by responding with an
       appropriate error message before closing a TCP connection to the
-      user. Fixes bug 13314.
+      user. Fixes bug 13314; bugfix on 0.0.2pre13.
 
   o Minor bugfixes (client, torrc):
     - Stop modifying the value of our DirReqStatistics torrc option just
@@ -172,21 +172,22 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
   o Minor bugfixes (directory system):
     - Always believe that v3 directory authorities serve extra-info
       documents, regardless of whether their server descriptor contains
-      a "caches-extra-info" line or not. Fixes part of #11683. Bugfix
+      a "caches-extra-info" line or not. Fixes part of bug 11683; bugfix
       on 0.2.0.1-alpha.
     - When running as a v3 directory authority, advertise that you serve
       extra-info documents so that clients who want them can find them
-      from you too. Fixes part of bug #11683. Bugfix on 0.2.0.1-alpha.
+      from you too. Fixes part of bug 11683; bugfix on 0.2.0.1-alpha.
     - Bitwise check the BRIDGE_DIRINFO flag rather than using equality.
       Fixes a (potential) bug where directories offering BRIDGE_DIRINFO
       and some other flag (i.e. microdescriptors or extrainfo) would be
       ignored when looking for bridge directories. Partially fixes
-      bug 13163.
+      bug 13163; bugfix on 0.2.0.7-alpha.
 
   o Minor bugfixes (networking):
     - Check for orconns and use connection_or_close_for_error() rather
       than connection_mark_for_close() directly in the getsockopt()
-      failure case of connection_handle_write_impl(). Fixes bug #11302.
+      failure case of connection_handle_write_impl(). Fixes bug 11302;
+      bugfix on 0.2.4.4-alpha.
 
   o Minor bugfixes (relay):
     - When generating our family list, remove spaces from around the
@@ -200,7 +201,7 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
       testing network. Fixes bug 13064; bugfix on 0.2.5.2-alpha.
     - Stop using the default authorities in networks which provide both
       AlternateDirAuthority and AlternateBridgeAuthority. Partially
-      fixes bug 13163.
+      fixes bug 13163; bugfix on 0.2.0.13-alpha.
 
   o Minor bugfixes (testing):
     - Stop spawn test failures due to a race condition between the
@@ -231,8 +232,6 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
       compilation has failed and that user has to either add
       --disable-asciidoc argument or install asciidoc. Resolves
       ticket 13228.
-    - Stop test & bench build failures with --disable-curve25519. Fixes
-      bug 13285.
 
   o Code simplification and refactoring:
     - Change the entry_is_live() function to take named bitfield
