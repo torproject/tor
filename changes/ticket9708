@@ -1,6 +1,0 @@
-  o Documentation:
-    - Add doc/TUNING document with tips for handling large numbers of TCP
-      connections when running busy Tor relay. Update warning message to
-      point to this file when running out of sockets operating system
-      is allowing to use simultaneously. Resolves ticket 9708.
-

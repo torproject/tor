@@ -60,6 +60,11 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
       directory connections, and kill the ones that have had data
       sitting on them for the longest. Part of ticket 11792.
 
+  o Minor features:
+    - When identity keypair is generated for first time, log a
+      congratulatory message that points to the new relay lifecycle
+      document. Implements feature 10427.
+
   o Minor features (client):
     - Clients are now willing to send optimistic circuit data (before
       they receive a 'connected' cell) to relays of any version. We used
@@ -144,6 +149,9 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
       with 32-bit time_t. Fixes bug 13476; bugfix on 0.0.2pre14.
 
   o Minor bugfixes (client):
+    - Fix node selection logic in smartlist_choose_node_by_bandwidth()
+      so that onion routers with BadExit flag are not considered to be
+      worthy candidates. Fixes bug 13066; bugfix on 0.1.2.3-alpha.
     - Use the consensus schedule for downloading consensuses, and not
       the generic schedule. Fixes bug 11679; bugfix on 0.2.2.6-alpha.
     - Handle unsupported SOCKS5 requests properly by responding with
@@ -180,8 +188,8 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
     - Bitwise check the BRIDGE_DIRINFO flag rather than using equality.
       Fixes a (potential) bug where directories offering BRIDGE_DIRINFO
       and some other flag (i.e. microdescriptors or extrainfo) would be
-      ignored when looking for bridge directories. Partially fixes
-      bug 13163; bugfix on 0.2.0.7-alpha.
+      ignored when looking for bridge directories. Partially fixes bug
+      13163; bugfix on 0.2.0.7-alpha.
 
   o Minor bugfixes (networking):
     - Check for orconns and use connection_or_close_for_error() rather
@@ -259,6 +267,13 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
     - Introducing helper function to parse ExitPolicy in
       or_options_t structure.
 
+  o Documentation:
+    - Add a doc/TUNING document with tips for handling large numbers of
+      TCP connections when running busy Tor relay. Update warning
+      message to point to this file when running out of sockets
+      operating system is allowing to use simultaneously. Resolves
+      ticket 9708.
+
   o New compiler requirements:
     - Tor 0.2.6.x requires that your compiler support more of the C99
       language standard than before. The 'configure' script now detects
@@ -275,6 +290,9 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
       Adrien Bak.
 
   o Removed features:
+    - Remove the --disable-curve25519 configure option. Relays and
+      clients now are required to support curve25519 and the
+      ntor handshake.
     - The old "StrictEntryNodes" and "StrictExitNodes" options, which
       used to be deprecated synonyms for "StrictNodes", are now marked
       obsolete. Resolves ticket 12226.
