@@ -1,4 +1,13 @@
 Changes in version 0.2.6.1-alpha - 2014-??-??
+  Tor 0.2.6.1-alpha is the first release in the Tor 0.2.6.x series. It
+  includes numerous code cleanups and new tests, and fixes a large
+  number of annoying bugs. Out-of-memory conditions are handled better
+  than in 0.2.5, pluggable transports have improved proxy support, and
+  clients how use optimistic data for contacting hidden services. Also,
+  we are now more robust to changes in what we consider a parseable
+  directory object, so that tightening restrictions does not have a risk
+  of introducing infinite download loops.
+
   o New compiler and system requirements:
     - Tor 0.2.6.x requires that your compiler support more of the C99
       language standard than before. The 'configure' script now detects
@@ -32,7 +41,7 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
       ticket 13211.
 
   o Major features (directory system):
-    - Upon receiving an unparseable directory object,if its digest
+    - Upon receiving an unparseable directory object, if its digest
       matches what we expected, then don't try to download it again.
       Previously, when we got a descriptor we didn't like, we would keep
       trying to download it over and over. Closes ticket 11243.
@@ -186,8 +195,8 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
 
   o Minor bugfixes (directory system):
     - Always believe that v3 directory authorities serve extra-info
-      documents, regardless of whether they advertise "caches-extra-
-      info" or not. Fixes part of bug 11683; bugfix on 0.2.0.1-alpha.
+      documents, whether they advertise "caches-extra-info" or not.
+      Fixes part of bug 11683; bugfix on 0.2.0.1-alpha.
     - When running as a v3 directory authority, advertise that you serve
       extra-info documents so that clients who want them can find them
       from you too. Fixes part of bug 11683; bugfix on 0.2.0.1-alpha.
