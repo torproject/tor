@@ -1,4 +1,4 @@
-Changes in version 0.2.6.1-alpha - 2014-??-??
+Changes in version 0.2.6.1-alpha - 2014-10-30
   Tor 0.2.6.1-alpha is the first release in the Tor 0.2.6.x series. It
   includes numerous code cleanups and new tests, and fixes a large
   number of annoying bugs. Out-of-memory conditions are handled better
@@ -7,6 +7,10 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
   we are now more robust to changes in what we consider a parseable
   directory object, so that tightening restrictions does not have a risk
   of introducing infinite download loops.
+
+  This is the first alpha release in a new series, so expect there to be
+  bugs. Users who would rather test out a more stable branch should stay
+  with 0.2.5.x for now.
 
   o New compiler and system requirements:
     - Tor 0.2.6.x requires that your compiler support more of the C99
@@ -17,7 +21,6 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
       We may revisit this requirement if it turns out that a significant
       number of people need to build Tor with compilers that don't
       bother implementing a 15-year-old standard. Closes ticket 13233.
-
     - Tor no longer supports systems without threading support. When we
       began working on Tor, there were several systems that didn't have
       threads, or where the thread support wasn't able to run the
@@ -32,8 +35,9 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
 
   o Major features (bridges):
     - Expose the outgoing upstream HTTP/SOCKS proxy to pluggable
-      transports if they are configured via the "TOR_PT_PROXY" environment
-      variable. Implements proposal 232. Resolves ticket 8402.
+      transports if they are configured via the "TOR_PT_PROXY"
+      environment variable. Implements proposal 232. Resolves
+      ticket 8402.
 
   o Major features (client performance, hidden services):
     - Allow clients to use optimistic data when connecting to a hidden
@@ -79,8 +83,8 @@ Changes in version 0.2.6.1-alpha - 2014-??-??
 
   o Minor features:
     - When identity keypair is generated for first time, log a
-      congratulatory message that points to the new relay lifecycle
-      document on the wiki. Implements feature 10427.
+      congratulatory message that links to the new relay lifecycle
+      document. Implements feature 10427.
 
   o Minor features (client):
     - Clients are now willing to send optimistic data (before they
