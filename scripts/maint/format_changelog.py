@@ -449,18 +449,31 @@ op.add_option('-S', '--no-sort', action='store_false',
               dest='sort', default=True,
               help='Do not sort or collate sections')
 op.add_option('-o', '--output', dest='output',
-              default=None, metavar='FILE', help="write output to FILE")
+              default='-', metavar='FILE', help="write output to FILE")
 op.add_option('-H', '--html', action='store_true',
               dest='html', default=False,
               help="generate an HTML fragment")
 op.add_option('-1', '--first', action='store_true',
               dest='firstOnly', default=False,
               help="write only the first section")
-op.add_option('-b', '--blog-format', action='store_true',
+op.add_option('-b', '--blog-header', action='store_true',
               dest='blogOrder', default=False,
               help="Write the header in blog order")
+op.add_option('-B', '--blog', action='store_true',
+              dest='blogFormat', default=False,
+              help="Set all other options as appropriate for a blog post")
+op.add_option('--inplace', action='store_true',
+              dest='inplace', default=False,
+              help="Alter the ChangeLog in place")
 
 options,args = op.parse_args()
+
+if options.blogFormat:
+    options.blogOrder = True
+    options.html = True
+    options.sort = False
+    options.wrapText = False
+    options.firstOnly = True
 
 if len(args) > 1:
     op.error("Too many arguments")
@@ -469,7 +482,8 @@ elif len(args) == 0:
 else:
     fname = args[0]
 
-if options.output == None:
+if options.inplace:
+    assert options.output == '-'
     options.output = fname
 
 if fname != '-':
