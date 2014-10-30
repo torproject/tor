@@ -238,7 +238,7 @@ def head_score(s):
     return score
 
 class ChangeLog(object):
-    def __init__(self, wrapText=True, blogOrder=True):
+    def __init__(self, wrapText=True, blogOrder=True, drupalBreak=False):
         self.prehead = []
         self.mainhead = None
         self.headtext = []
@@ -248,6 +248,7 @@ class ChangeLog(object):
         self.lineno = 0
         self.wrapText = wrapText
         self.blogOrder = blogOrder
+        self.drupalBreak = drupalBreak
 
     def addLine(self, tp, line):
         self.lineno += 1
@@ -342,6 +343,9 @@ class ChangeLog(object):
     def dumpEndOfChangelog(self):
         print
 
+    def dumpDrupalBreak(self):
+        pass
+
     def dumpItem(self, grafs):
         self.dumpGraf(grafs[0],4,6)
         for par in grafs[1:]:
@@ -377,6 +381,10 @@ class ChangeLog(object):
         if self.blogOrder:
             self.dumpMainhead(self.mainhead)
 
+        drupalBreakAfter = None
+        if self.drupalBreak and len(self.sections) > 4:
+            drupalBreakAfter = self.sections[1][2]
+
         self.dumpStartOfSections()
         for _,head,items in self.sections:
             if not head.endswith(':'):
@@ -386,6 +394,8 @@ class ChangeLog(object):
             for _,grafs in items:
                 self.dumpItem(grafs)
             self.dumpEndOfSection()
+            if items is drupalBreakAfter:
+                self.dumpDrupalBreak()
         self.dumpEndOfSections()
         self.dumpEndOfChangelog()
 
@@ -431,6 +441,9 @@ class HTMLChangeLog(ChangeLog):
     def dumpEndOfSections(self):
         print "</ul>\n"
 
+    def dumpDrupalBreak(self):
+        print "\n<!--break-->\n\n"
+
     def dumpItem(self, grafs):
         grafs[0][0] = grafs[0][0].replace(" - ", "", 1).lstrip()
         sys.stdout.write("  <li>")
@@ -465,6 +478,9 @@ op.add_option('-B', '--blog', action='store_true',
 op.add_option('--inplace', action='store_true',
               dest='inplace', default=False,
               help="Alter the ChangeLog in place")
+op.add_option('--drupal-break', action='store_true',
+              dest='drupalBreak', default=False,
+              help='Insert a drupal-friendly <!--break--> as needed')
 
 options,args = op.parse_args()
 
@@ -474,6 +490,7 @@ if options.blogFormat:
     options.sort = False
     options.wrapText = False
     options.firstOnly = True
+    options.drupalBreak = True
 
 if len(args) > 1:
     op.error("Too many arguments")
@@ -496,7 +513,9 @@ if options.html:
 else:
     ChangeLogClass = ChangeLog
 
-CL = ChangeLogClass(wrapText=options.wrapText, blogOrder=options.blogOrder)
+CL = ChangeLogClass(wrapText=options.wrapText,
+                    blogOrder=options.blogOrder,
+                    drupalBreak=options.drupalBreak)
 parser = head_parser
 
 for line in sys.stdin:
