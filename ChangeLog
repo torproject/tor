@@ -3,7 +3,7 @@ Changes in version 0.2.6.1-alpha - 2014-10-30
   includes numerous code cleanups and new tests, and fixes a large
   number of annoying bugs. Out-of-memory conditions are handled better
   than in 0.2.5, pluggable transports have improved proxy support, and
-  clients how use optimistic data for contacting hidden services. Also,
+  clients now use optimistic data for contacting hidden services. Also,
   we are now more robust to changes in what we consider a parseable
   directory object, so that tightening restrictions does not have a risk
   of introducing infinite download loops.
