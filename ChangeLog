@@ -142,9 +142,11 @@ Changes in version 0.2.6.1-alpha - 2014-10-30
     - Check all date/time values passed to tor_timegm and
       parse_rfc1123_time for validity, taking leap years into account.
       Improves HTTP header validation. Implemented with bug 13476.
-    - Clamp year values returned by system localtime(_r) and gmtime(_r)
-      to year 1 in correct_tm. This ensures tor can read any values it
-      writes out. Fixes bug 13476.
+    - In correct_tm(), limit the range of values returned by system
+      localtime(_r) and gmtime(_r) to be between the years 1 and 8099.
+      This means we don't have to deal with negative or too large dates,
+      even if a clock is wrong. Otherwise we might fail to read a file
+      written by us which includes such a date. Fixes bug 13476.
 
   o Minor bugfixes (bridge clients):
     - When configured to use a bridge without an identity digest (not
