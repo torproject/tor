@@ -1,0 +1,3 @@
+  o Code simplifications and refactoring:
+    - Refactor our generic strmap and digestmap types into a single
+      implementation, so that we can add a new digest256map type trivially.
