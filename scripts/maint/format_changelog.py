@@ -442,7 +442,10 @@ class HTMLChangeLog(ChangeLog):
         print "</ul>\n"
 
     def dumpDrupalBreak(self):
+        print "\n</ul>\n"
+        print "<p>&nbsp;</p>"
         print "\n<!--break-->\n\n"
+        print "<ul>"
 
     def dumpItem(self, grafs):
         grafs[0][0] = grafs[0][0].replace(" - ", "", 1).lstrip()
