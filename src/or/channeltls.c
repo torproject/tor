@@ -847,8 +847,8 @@ channel_tls_handle_state_change_on_orconn(channel_tls_t *chan,
   tor_assert(conn);
   tor_assert(conn->chan == chan);
   tor_assert(chan->conn == conn);
-  /* -Werror appeasement */
-  tor_assert(old_state == old_state);
+  /* Shut the compiler up without triggering -Wtautological-compare */
+  (void)old_state;
 
   base_chan = TLS_CHAN_TO_BASE(chan);
 

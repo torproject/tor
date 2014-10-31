@@ -138,9 +138,10 @@ int
 tor_open_cloexec(const char *path, int flags, unsigned mode)
 {
   int fd;
+  const char *p = path;
 #ifdef O_CLOEXEC
-  path = sandbox_intern_string(path);
-  fd = open(path, flags|O_CLOEXEC, mode);
+  p = sandbox_intern_string(path);
+  fd = open(p, flags|O_CLOEXEC, mode);
   if (fd >= 0)
     return fd;
   /* If we got an error, see if it is EINVAL. EINVAL might indicate that,
@@ -150,8 +151,8 @@ tor_open_cloexec(const char *path, int flags, unsigned mode)
     return -1;
 #endif
 
-  log_debug(LD_FS, "Opening %s with flags %x", path, flags);
-  fd = open(path, flags, mode);
+  log_debug(LD_FS, "Opening %s with flags %x", p, flags);
+  fd = open(p, flags, mode);
 #ifdef FD_CLOEXEC
   if (fd >= 0) {
     if (fcntl(fd, F_SETFD, FD_CLOEXEC) == -1) {

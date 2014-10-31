@@ -562,17 +562,18 @@ const char *tor_socket_strerror(int e);
 #else
 #define SOCK_ERRNO(e) e
 #if EAGAIN == EWOULDBLOCK
-#define ERRNO_IS_EAGAIN(e)           ((e) == EAGAIN)
+/* || 0 is for -Wparentheses-equality (-Wall?) appeasement under clang */
+#define ERRNO_IS_EAGAIN(e)           ((e) == EAGAIN || 0)
 #else
 #define ERRNO_IS_EAGAIN(e)           ((e) == EAGAIN || (e) == EWOULDBLOCK)
 #endif
-#define ERRNO_IS_EINPROGRESS(e)      ((e) == EINPROGRESS)
-#define ERRNO_IS_CONN_EINPROGRESS(e) ((e) == EINPROGRESS)
+#define ERRNO_IS_EINPROGRESS(e)      ((e) == EINPROGRESS || 0)
+#define ERRNO_IS_CONN_EINPROGRESS(e) ((e) == EINPROGRESS || 0)
 #define ERRNO_IS_ACCEPT_EAGAIN(e) \
   (ERRNO_IS_EAGAIN(e) || (e) == ECONNABORTED)
 #define ERRNO_IS_ACCEPT_RESOURCE_LIMIT(e) \
   ((e) == EMFILE || (e) == ENFILE || (e) == ENOBUFS || (e) == ENOMEM)
-#define ERRNO_IS_EADDRINUSE(e)       ((e) == EADDRINUSE)
+#define ERRNO_IS_EADDRINUSE(e)       (((e) == EADDRINUSE) || 0)
 #define tor_socket_errno(sock)       (errno)
 #define tor_socket_strerror(e)       strerror(e)
 #endif
