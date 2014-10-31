@@ -79,6 +79,7 @@ static const char *signed_descriptor_get_body_impl(
                                               const signed_descriptor_t *desc,
                                               int with_annotations);
 static void list_pending_downloads(digestmap_t *result,
+                                   digest256map_t *result256,
                                    int purpose, const char *prefix);
 static void list_pending_fpsk_downloads(fp_pair_map_t *result);
 static void launch_dummy_descriptor_download_as_needed(time_t now,
@@ -717,7 +718,8 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
    * First, we get the lists of already pending downloads so we don't
    * duplicate effort.
    */
-  list_pending_downloads(pending_id, DIR_PURPOSE_FETCH_CERTIFICATE, "fp/");
+  list_pending_downloads(pending_id, NULL,
+                         DIR_PURPOSE_FETCH_CERTIFICATE, "fp/");
   list_pending_fpsk_downloads(pending_cert);
 
   /*
@@ -4268,7 +4270,7 @@ clear_dir_servers(void)
  * corresponding elements of <b>result</b> to a nonzero value.
  */
 static void
-list_pending_downloads(digestmap_t *result,
+list_pending_downloads(digestmap_t *result, digest256map_t *result256,
                        int purpose, const char *prefix)
 {
   const size_t p_len = strlen(prefix);
@@ -4278,7 +4280,7 @@ list_pending_downloads(digestmap_t *result,
   if (purpose == DIR_PURPOSE_FETCH_MICRODESC)
     flags = DSR_DIGEST256|DSR_BASE64;
 
-  tor_assert(result);
+  tor_assert(result || result256);
 
   SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
     if (conn->type == CONN_TYPE_DIR &&
@@ -4291,11 +4293,19 @@ list_pending_downloads(digestmap_t *result,
     }
   } SMARTLIST_FOREACH_END(conn);
 
-  SMARTLIST_FOREACH(tmp, char *, d,
+  if (result) {
+    SMARTLIST_FOREACH(tmp, char *, d,
                     {
                       digestmap_set(result, d, (void*)1);
                       tor_free(d);
                     });
+  } else if (result256) {
+    SMARTLIST_FOREACH(tmp, uint8_t *, d,
+                    {
+                      digest256map_set(result256, d, (void*)1);
+                      tor_free(d);
+                    });
+  }
   smartlist_free(tmp);
 }
 
@@ -4307,20 +4317,16 @@ list_pending_descriptor_downloads(digestmap_t *result, int extrainfo)
 {
   int purpose =
     extrainfo ? DIR_PURPOSE_FETCH_EXTRAINFO : DIR_PURPOSE_FETCH_SERVERDESC;
-  list_pending_downloads(result, purpose, "d/");
+  list_pending_downloads(result, NULL, purpose, "d/");
 }
 
 /** For every microdescriptor we are currently downloading by descriptor
- * digest, set result[d] to (void*)1.   (Note that microdescriptor digests
- * are 256-bit, and digestmap_t only holds 160-bit digests, so we're only
- * getting the first 20 bytes of each digest here.)
- *
- * XXXX Let there be a digestmap256_t, and use that instead.
+ * digest, set result[d] to (void*)1.
  */
 void
-list_pending_microdesc_downloads(digestmap_t *result)
+list_pending_microdesc_downloads(digest256map_t *result)
 {
-  list_pending_downloads(result, DIR_PURPOSE_FETCH_MICRODESC, "d/");
+  list_pending_downloads(NULL, result, DIR_PURPOSE_FETCH_MICRODESC, "d/");
 }
 
 /** For every certificate we are currently downloading by (identity digest,
