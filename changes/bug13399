@@ -5,3 +5,8 @@
       the same first 160 bits. Fixes part of bug 13399; bugfix on
       0.2.3.1-alpha.
 
+    - Reset a router's status if its microdescriptor digest changes,
+      even if the first 160 bits remain the same.  Fixes part of bug
+      13399; bugfix on 0.2.3.1-alpha.
+
+
