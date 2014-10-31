@@ -346,6 +346,9 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
 DECLARE_MAP_FNS(strmap_t, const char *, strmap_);
 /* Map from const char[DIGEST_LEN] to void *. Implemented with a hash table. */
 DECLARE_MAP_FNS(digestmap_t, const char *, digestmap_);
+/* Map from const uint8_t[DIGEST_LEN] to void *. Implemented with a hash
+ * table. */
+DECLARE_MAP_FNS(digest256map_t, const uint8_t *, digest256map_);
 
 #undef DECLARE_MAP_FNS
 
@@ -460,6 +463,13 @@ DECLARE_MAP_FNS(digestmap_t, const char *, digestmap_);
   MAP_FOREACH_MODIFY(digestmap_, map, const char *, keyvar, valtype, valvar)
 /** Used to end a DIGESTMAP_FOREACH() block. */
 #define DIGESTMAP_FOREACH_END MAP_FOREACH_END
+
+#define DIGEST256MAP_FOREACH(map, keyvar, valtype, valvar)               \
+  MAP_FOREACH(digest256map_, map, const uint8_t *, keyvar, valtype, valvar)
+#define DIGEST256MAP_FOREACH_MODIFY(map, keyvar, valtype, valvar)       \
+  MAP_FOREACH_MODIFY(digest256map_, map, const uint8_t *,               \
+                     keyvar, valtype, valvar)
+#define DIGEST256MAP_FOREACH_END MAP_FOREACH_END
 
 #define STRMAP_FOREACH(map, keyvar, valtype, valvar)                 \
   MAP_FOREACH(strmap_, map, const char *, keyvar, valtype, valvar)
