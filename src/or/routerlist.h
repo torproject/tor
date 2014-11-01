@@ -196,7 +196,7 @@ int hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
 int hid_serv_acting_as_directory(void);
 int hid_serv_responsible_for_desc_id(const char *id);
 
-void list_pending_microdesc_downloads(digestmap_t *result);
+void list_pending_microdesc_downloads(digest256map_t *result);
 void launch_descriptor_downloads(int purpose,
                                  smartlist_t *downloadable,
                                  const routerstatus_t *source,
