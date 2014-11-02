@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Check more thoroughly throughout the TLS code for possible unlogged
+      TLS errors. Possible diagnostic or fix for bug 13319.
+
