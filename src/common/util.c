@@ -206,8 +206,15 @@ tor_malloc_zero_(size_t size DMALLOC_PARAMS)
 static INLINE int
 size_mul_check(const size_t x, const size_t y)
 {
-  return ((x < SQRT_SIZE_MAX_P1 && y < SQRT_SIZE_MAX_P1) ||
-          y == 0 || x <= SIZE_MAX / y);
+  /* This first check is equivalent to
+     (x < SQRT_SIZE_MAX_P1 && y < SQRT_SIZE_MAX_P1)
+
+     Rationale: if either one of x or y is >= SQRT_SIZE_MAX_P1, then it
+     will have some bit set in its most significant half.
+   */
+  return ((x|y) < SQRT_SIZE_MAX_P1 ||
+          y == 0 ||
+          x <= SIZE_MAX / y);
 }
 
 /** Allocate a chunk of <b>nmemb</b>*<b>size</b> bytes of memory, fill
