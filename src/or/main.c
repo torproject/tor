@@ -2137,6 +2137,9 @@ process_signal(uintptr_t sig)
       addressmap_clear_transient();
       control_event_signal(sig);
       break;
+    case SIGHEARTBEAT:
+      log_heartbeat(time(NULL));
+      break;
   }
 }
 

@@ -1263,6 +1263,7 @@ static const struct signal_t signal_table[] = {
   { SIGTERM, "INT" },
   { SIGNEWNYM, "NEWNYM" },
   { SIGCLEARDNSCACHE, "CLEARDNSCACHE"},
+  { SIGHEARTBEAT, "HEARTBEAT"},
   { 0, NULL },
 };
 
