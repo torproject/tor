@@ -195,14 +195,18 @@ tor_malloc_zero_(size_t size DMALLOC_PARAMS)
   return result;
 }
 
-/* Estimate the square root of SIZE_MAX. */
-#define SQRT_SIZE_MAX (((size_t) SIZE_MAX) >> (sizeof(size_t) * 8 / 2))
+/* The square root of SIZE_MAX + 1.  If a is less than this, and b is less
+ * than this, then a*b is less than SIZE_MAX.  (For example, if size_t is
+ * 32 bits, then SIZE_MAX is 0xffffffff and this value is 0x10000.  If a and
+ * b are less than this, then their product is at most (65535*65535) ==
+ * 0xfffe0001. */
+#define SQRT_SIZE_MAX_P1 (((size_t)1) << (sizeof(size_t)*4))
 
 /** Return non-zero if and only if the product of the arguments is exact. */
 static INLINE int
 size_mul_check(const size_t x, const size_t y)
 {
-  return ((x <= SQRT_SIZE_MAX && y <= SQRT_SIZE_MAX) ||
+  return ((x < SQRT_SIZE_MAX_P1 && y < SQRT_SIZE_MAX_P1) ||
           y == 0 || x <= SIZE_MAX / y);
 }
 
