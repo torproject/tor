@@ -4856,7 +4856,7 @@ parse_client_transport_line(const or_options_t *options,
     if (!validate_only && !is_useless_proxy) {
       proxy_argc = line_length-2;
       tor_assert(proxy_argc > 0);
-      proxy_argv = tor_calloc(sizeof(char *), (proxy_argc + 1));
+      proxy_argv = tor_calloc((proxy_argc + 1), sizeof(char *));
       tmp = proxy_argv;
       for (i=0;i<proxy_argc;i++) { /* store arguments */
         *tmp++ = smartlist_get(items, 2);
@@ -5143,7 +5143,7 @@ parse_server_transport_line(const or_options_t *options,
     if (!validate_only) {
       proxy_argc = line_length-2;
       tor_assert(proxy_argc > 0);
-      proxy_argv = tor_calloc(sizeof(char *), (proxy_argc + 1));
+      proxy_argv = tor_calloc((proxy_argc + 1), sizeof(char *));
       tmp = proxy_argv;
 
       for (i=0;i<proxy_argc;i++) { /* store arguments */
