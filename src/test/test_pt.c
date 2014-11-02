@@ -196,7 +196,7 @@ test_pt_protocol(void *arg)
   (void)arg;
   mp->conf_state = PT_PROTO_LAUNCHED;
   mp->transports = smartlist_new();
-  mp->argv = tor_calloc(sizeof(char *), 2);
+  mp->argv = tor_calloc(2, sizeof(char *));
   mp->argv[0] = tor_strdup("<testcase>");
 
   /* various wrong protocol runs: */

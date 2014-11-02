@@ -611,7 +611,7 @@ dirvote_compute_params(smartlist_t *votes, int method, int total_authorities)
      between INT32_MIN and INT32_MAX inclusive.  This should be guaranteed by
      the parsing code. */
 
-  vals = tor_calloc(sizeof(int), n_votes);
+  vals = tor_calloc(n_votes, sizeof(int));
 
   SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, v) {
     if (!v->net_params)
@@ -1258,10 +1258,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_t *chosen_flags = smartlist_new();
     smartlist_t *versions = smartlist_new();
     smartlist_t *exitsummaries = smartlist_new();
-    uint32_t *bandwidths_kb = tor_calloc(sizeof(uint32_t),
-                                         smartlist_len(votes));
-    uint32_t *measured_bws_kb = tor_calloc(sizeof(uint32_t),
-                                           smartlist_len(votes));
+    uint32_t *bandwidths_kb = tor_calloc(smartlist_len(votes),
+                                         sizeof(uint32_t));
+    uint32_t *measured_bws_kb = tor_calloc(smartlist_len(votes),
+                                           sizeof(uint32_t));
     int num_bandwidths;
     int num_mbws;
 
@@ -1281,13 +1281,13 @@ networkstatus_compute_consensus(smartlist_t *votes,
     memset(conflict, 0, sizeof(conflict));
     memset(unknown, 0xff, sizeof(conflict));
 
-    index = tor_calloc(sizeof(int), smartlist_len(votes));
-    size = tor_calloc(sizeof(int), smartlist_len(votes));
-    n_voter_flags = tor_calloc(sizeof(int), smartlist_len(votes));
-    n_flag_voters = tor_calloc(sizeof(int), smartlist_len(flags));
-    flag_map = tor_calloc(sizeof(int *), smartlist_len(votes));
-    named_flag = tor_calloc(sizeof(int), smartlist_len(votes));
-    unnamed_flag = tor_calloc(sizeof(int), smartlist_len(votes));
+    index = tor_calloc(smartlist_len(votes), sizeof(int));
+    size = tor_calloc(smartlist_len(votes), sizeof(int));
+    n_voter_flags = tor_calloc(smartlist_len(votes), sizeof(int));
+    n_flag_voters = tor_calloc(smartlist_len(flags), sizeof(int));
+    flag_map = tor_calloc(smartlist_len(votes), sizeof(int *));
+    named_flag = tor_calloc(smartlist_len(votes), sizeof(int));
+    unnamed_flag = tor_calloc(smartlist_len(votes), sizeof(int));
     for (i = 0; i < smartlist_len(votes); ++i)
       unnamed_flag[i] = named_flag[i] = -1;
 
@@ -1298,8 +1298,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
      * that they're actually set before doing U64_LITERAL(1) << index with
      * them.*/
     SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, v) {
-      flag_map[v_sl_idx] = tor_calloc(sizeof(int),
-                                      smartlist_len(v->known_flags));
+      flag_map[v_sl_idx] = tor_calloc(smartlist_len(v->known_flags),
+                                      sizeof(int));
       if (smartlist_len(v->known_flags) > MAX_KNOWN_FLAGS_IN_VOTE) {
         log_warn(LD_BUG, "Somehow, a vote has %d entries in known_flags",
                  smartlist_len(v->known_flags));
@@ -1379,7 +1379,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     );
 
     /* Now go through all the votes */
-    flag_counts = tor_calloc(sizeof(int), smartlist_len(flags));
+    flag_counts = tor_calloc(smartlist_len(flags), sizeof(int));
     while (1) {
       vote_routerstatus_t *rs;
       routerstatus_t rs_out;

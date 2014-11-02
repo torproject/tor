@@ -1536,7 +1536,7 @@ dirserver_choose_by_weight(const smartlist_t *servers, double authority_weight)
   u64_dbl_t *weights;
   const dir_server_t *ds;
 
-  weights = tor_calloc(sizeof(u64_dbl_t), n);
+  weights = tor_calloc(n, sizeof(u64_dbl_t));
   for (i = 0; i < n; ++i) {
     ds = smartlist_get(servers, i);
     weights[i].dbl = ds->weight;
@@ -2045,7 +2045,7 @@ compute_weighted_bandwidths(const smartlist_t *sl,
   Web /= weight_scale;
   Wdb /= weight_scale;
 
-  bandwidths = tor_calloc(sizeof(u64_dbl_t), smartlist_len(sl));
+  bandwidths = tor_calloc(smartlist_len(sl), sizeof(u64_dbl_t));
 
   // Cycle through smartlist and total the bandwidth.
   SMARTLIST_FOREACH_BEGIN(sl, const node_t *, node) {
@@ -2192,7 +2192,7 @@ smartlist_choose_node_by_bandwidth(const smartlist_t *sl,
 
   /* First count the total bandwidth weight, and make a list
    * of each value.  We use UINT64_MAX to indicate "unknown". */
-  bandwidths = tor_calloc(sizeof(u64_dbl_t), smartlist_len(sl));
+  bandwidths = tor_calloc(smartlist_len(sl), sizeof(u64_dbl_t));
   fast_bits = bitarray_init_zero(smartlist_len(sl));
   exit_bits = bitarray_init_zero(smartlist_len(sl));
   guard_bits = bitarray_init_zero(smartlist_len(sl));
@@ -3584,9 +3584,9 @@ routerlist_remove_old_cached_routers_with_id(time_t now,
     n_extra = n - mdpr;
   }
 
-  lifespans = tor_calloc(sizeof(struct duration_idx_t), n);
-  rmv = tor_calloc(sizeof(uint8_t), n);
-  must_keep = tor_calloc(sizeof(uint8_t), n);
+  lifespans = tor_calloc(n, sizeof(struct duration_idx_t));
+  rmv = tor_calloc(n, sizeof(uint8_t));
+  must_keep = tor_calloc(n, sizeof(uint8_t));
   /* Set lifespans to contain the lifespan and index of each server. */
   /* Set rmv[i-lo]=1 if we're going to remove a server for being too old. */
   for (i = lo; i <= hi; ++i) {

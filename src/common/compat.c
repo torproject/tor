@@ -1697,7 +1697,7 @@ log_credential_status(void)
 
   /* log supplementary groups */
   sup_gids_size = 64;
-  sup_gids = tor_calloc(sizeof(gid_t), 64);
+  sup_gids = tor_calloc(64, sizeof(gid_t));
   while ((ngids = getgroups(sup_gids_size, sup_gids)) < 0 &&
          errno == EINVAL &&
          sup_gids_size < NGROUPS_MAX) {

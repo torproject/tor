@@ -195,33 +195,40 @@ tor_malloc_zero_(size_t size DMALLOC_PARAMS)
   return result;
 }
 
+/* The square root of SIZE_MAX + 1.  If a is less than this, and b is less
+ * than this, then a*b is less than SIZE_MAX.  (For example, if size_t is
+ * 32 bits, then SIZE_MAX is 0xffffffff and this value is 0x10000.  If a and
+ * b are less than this, then their product is at most (65535*65535) ==
+ * 0xfffe0001. */
+#define SQRT_SIZE_MAX_P1 (((size_t)1) << (sizeof(size_t)*4))
+
+/** Return non-zero if and only if the product of the arguments is exact. */
+static INLINE int
+size_mul_check(const size_t x, const size_t y)
+{
+  /* This first check is equivalent to
+     (x < SQRT_SIZE_MAX_P1 && y < SQRT_SIZE_MAX_P1)
+
+     Rationale: if either one of x or y is >= SQRT_SIZE_MAX_P1, then it
+     will have some bit set in its most significant half.
+   */
+  return ((x|y) < SQRT_SIZE_MAX_P1 ||
+          y == 0 ||
+          x <= SIZE_MAX / y);
+}
+
 /** Allocate a chunk of <b>nmemb</b>*<b>size</b> bytes of memory, fill
  * the memory with zero bytes, and return a pointer to the result.
  * Log and terminate the process on error.  (Same as
  * calloc(<b>nmemb</b>,<b>size</b>), but never returns NULL.)
- *
- * XXXX This implementation probably asserts in cases where it could
- * work, because it only tries dividing SIZE_MAX by size (according to
- * the calloc(3) man page, the size of an element of the nmemb-element
- * array to be allocated), not by nmemb (which could in theory be
- * smaller than size).  Don't do that then.
+ * The second argument (<b>size</b>) should preferably be non-zero
+ * and a compile-time constant.
  */
 void *
 tor_calloc_(size_t nmemb, size_t size DMALLOC_PARAMS)
 {
-  /* You may ask yourself, "wouldn't it be smart to use calloc instead of
-   * malloc+memset?  Perhaps libc's calloc knows some nifty optimization trick
-   * we don't!"  Indeed it does, but its optimizations are only a big win when
-   * we're allocating something very big (it knows if it just got the memory
-   * from the OS in a pre-zeroed state).  We don't want to use tor_malloc_zero
-   * for big stuff, so we don't bother with calloc. */
-  void *result;
-  size_t max_nmemb = (size == 0) ? SIZE_MAX : SIZE_MAX/size;
-
-  tor_assert(nmemb < max_nmemb);
-
-  result = tor_malloc_zero_((nmemb * size) DMALLOC_FN_ARGS);
-  return result;
+  tor_assert(size_mul_check(nmemb, size));
+  return tor_malloc_zero_((nmemb * size) DMALLOC_FN_ARGS);
 }
 
 /** Change the size of the memory block pointed to by <b>ptr</b> to <b>size</b>
@@ -264,7 +271,7 @@ tor_reallocarray_(void *ptr, size_t sz1, size_t sz2 DMALLOC_PARAMS)
 {
   /* XXXX we can make this return 0, but we would need to check all the
    * reallocarray users. */
-  tor_assert(sz2 == 0 || sz1 < SIZE_T_CEILING / sz2);
+  tor_assert(size_mul_check(sz1, sz2));
 
   return tor_realloc(ptr, (sz1 * sz2) DMALLOC_FN_ARGS);
 }
@@ -3458,8 +3465,8 @@ format_win_cmdline_argument(const char *arg)
     smartlist_add(arg_chars, (void*)&backslash);
 
   /* Allocate space for argument, quotes (if needed), and terminator */
-  formatted_arg = tor_calloc(sizeof(char),
-                    (smartlist_len(arg_chars) + (need_quotes ? 2 : 0) + 1));
+  formatted_arg = tor_calloc((smartlist_len(arg_chars) + (need_quotes ? 2 : 0) + 1),
+                             sizeof(char));
 
   /* Add leading quote */
   i=0;
@@ -5097,7 +5104,7 @@ tor_check_port_forwarding(const char *filename,
        for each smartlist element (one for "-p" and one for the
        ports), and one for the final NULL. */
     args_n = 1 + 2*smartlist_len(ports_to_forward) + 1;
-    argv = tor_calloc(sizeof(char *), args_n);
+    argv = tor_calloc(args_n, sizeof(char *));
 
     argv[argv_index++] = filename;
     SMARTLIST_FOREACH_BEGIN(ports_to_forward, const char *, port) {
