@@ -2082,7 +2082,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
              (int)body_len, status_code, escaped(reason));
     switch (status_code) {
       case 200:
-        switch (rend_cache_store_v2_desc_as_client(body, conn->rend_data)) {
+        switch (rend_cache_store_v2_desc_as_client(body,
+                                  conn->requested_resource, conn->rend_data)) {
           case RCS_BADDESC:
           case RCS_NOTDIR: /* Impossible */
             log_warn(LD_REND,"Fetching v2 rendezvous descriptor failed. "
