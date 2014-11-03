@@ -5006,7 +5006,7 @@ typedef enum was_router_added_t {
   ROUTER_NOT_IN_CONSENSUS_OR_NETWORKSTATUS = -4,
   ROUTER_AUTHDIR_REJECTS = -5,
   ROUTER_WAS_NOT_WANTED = -6,
-  ROUTER_WAS_TOO_OLD = -7,
+  ROUTER_WAS_TOO_OLD = -7, /* note contrast with 'NOT_NEW' */
 } was_router_added_t;
 
 /********************************* routerparse.c ************************/
