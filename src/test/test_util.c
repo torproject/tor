@@ -4790,6 +4790,52 @@ test_util_max_mem(void *arg)
   ;
 }
 
+static void
+test_util_hostname_validation(void *arg)
+{
+  (void)arg;
+
+  // Lets try valid hostnames first.
+  tt_assert(string_is_valid_hostname("torproject.org"));
+  tt_assert(string_is_valid_hostname("ocw.mit.edu"));
+  tt_assert(string_is_valid_hostname("i.4cdn.org"));
+  tt_assert(string_is_valid_hostname("stanford.edu"));
+  tt_assert(string_is_valid_hostname("multiple-words-with-hypens.jp"));
+
+  // Subdomain name cannot start with '-'.
+  tt_assert(!string_is_valid_hostname("-torproject.org"));
+  tt_assert(!string_is_valid_hostname("subdomain.-domain.org"));
+  tt_assert(!string_is_valid_hostname("-subdomain.domain.org"));
+
+  // Hostnames cannot contain non-alphanumeric characters.
+  tt_assert(!string_is_valid_hostname("%%domain.\\org."));
+  tt_assert(!string_is_valid_hostname("***x.net"));
+  tt_assert(!string_is_valid_hostname("___abc.org"));
+  tt_assert(!string_is_valid_hostname("\xff\xffxyz.org"));
+  tt_assert(!string_is_valid_hostname("word1 word2.net"));
+
+  // XXX: do we allow single-label DNS names?
+
+  done:
+  return;
+}
+
+static void
+test_util_ipv4_validation(void *arg)
+{
+  (void)arg;
+
+  tt_assert(string_is_valid_ipv4_address("192.168.0.1"));
+  tt_assert(string_is_valid_ipv4_address("8.8.8.8"));
+
+  tt_assert(!string_is_valid_ipv4_address("abcd"));
+  tt_assert(!string_is_valid_ipv4_address("300.300.300.300"));
+  tt_assert(!string_is_valid_ipv4_address("8.8."));
+
+  done:
+  return;
+}
+
 struct testcase_t util_tests[] = {
   UTIL_LEGACY(time),
   UTIL_TEST(parse_http_time, 0),
@@ -4863,6 +4909,8 @@ struct testcase_t util_tests[] = {
   { "socketpair_ersatz", test_util_socketpair, TT_FORK,
     &socketpair_setup, (void*)"1" },
   UTIL_TEST(max_mem, 0),
+  UTIL_TEST(hostname_validation, 0),
+  UTIL_TEST(ipv4_validation, 0),
   END_OF_TESTCASES
 };
 

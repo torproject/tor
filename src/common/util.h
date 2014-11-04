@@ -227,6 +227,9 @@ const char *find_str_at_start_of_line(const char *haystack,
                                       const char *needle);
 int string_is_C_identifier(const char *string);
 int string_is_key_value(int severity, const char *string);
+int string_is_valid_hostname(const char *string);
+int string_is_valid_ipv4_address(const char *string);
+int string_is_valid_ipv6_address(const char *string);
 
 int tor_mem_is_zero(const char *mem, size_t len);
 int tor_digest_is_zero(const char *digest);
