@@ -1034,10 +1034,14 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
  * If the descriptor's service ID does not match
  * <b>rend_query</b>-\>onion_address, reject it.
  *
+ * If the descriptor's descriptor ID doesn't match <b>desc_id_base32</b>,
+ * reject it.
+ *
  * Return an appropriate rend_cache_store_status_t.
  */
 rend_cache_store_status_t
 rend_cache_store_v2_desc_as_client(const char *desc,
+                                   const char *desc_id_base32,
                                    const rend_data_t *rend_query)
 {
   /*XXXX this seems to have a bit of duplicate code with
@@ -1064,10 +1068,19 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   time_t now = time(NULL);
   char key[REND_SERVICE_ID_LEN_BASE32+2];
   char service_id[REND_SERVICE_ID_LEN_BASE32+1];
+  char want_desc_id[DIGEST_LEN];
   rend_cache_entry_t *e;
   rend_cache_store_status_t retval = RCS_BADDESC;
   tor_assert(rend_cache);
   tor_assert(desc);
+  tor_assert(desc_id_base32);
+  memset(want_desc_id, 0, sizeof(want_desc_id));
+  if (base32_decode(want_desc_id, sizeof(want_desc_id),
+                    desc_id_base32, strlen(desc_id_base32)) != 0) {
+    log_warn(LD_BUG, "Couldn't decode base32 %s for descriptor id.",
+             escaped_safe_str_client(desc_id_base32));
+    goto err;
+  }
   /* Parse the descriptor. */
   if (rend_parse_v2_service_descriptor(&parsed, desc_id, &intro_content,
                                        &intro_size, &encoded_size,
@@ -1086,6 +1099,12 @@ rend_cache_store_v2_desc_as_client(const char *desc,
              service_id, safe_str(rend_query->onion_address));
     goto err;
   }
+  if (tor_memneq(desc_id, want_desc_id, DIGEST_LEN)) {
+    log_warn(LD_REND, "Received service descriptor for %s with incorrect "
+             "descriptor ID.", service_id);
+    goto err;
+  }
+
   /* Decode/decrypt introduction points. */
   if (intro_content) {
     int n_intro_points;
