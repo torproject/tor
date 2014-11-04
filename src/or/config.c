@@ -4892,8 +4892,8 @@ parse_transport_line(const or_options_t *options,
     /* external */
 
     /* ClientTransportPlugins connecting through a proxy is managed only. */
-    if (!server &&
-        (options->Socks4Proxy || options->Socks5Proxy || options->HTTPSProxy)) {
+    if (!server && (options->Socks4Proxy || options->Socks5Proxy ||
+                    options->HTTPSProxy)) {
       log_warn(LD_CONFIG, "You have configured an external proxy with another "
                           "proxy type. (Socks4Proxy|Socks5Proxy|HTTPSProxy)");
       goto err;
