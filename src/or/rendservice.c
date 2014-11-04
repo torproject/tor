@@ -3028,15 +3028,16 @@ rend_services_introduce(void)
   int intro_point_set_changed, prev_intro_nodes;
   unsigned int n_intro_points_unexpired;
   unsigned int n_intro_points_to_open;
-  smartlist_t *intro_nodes;
   time_t now;
   const or_options_t *options = get_options();
+  /* List of nodes we need to _exclude_ when choosing a new node to establish
+   * an intro point to. */
+  smartlist_t *exclude_nodes = smartlist_new();
 
-  intro_nodes = smartlist_new();
   now = time(NULL);
 
   for (i=0; i < smartlist_len(rend_service_list); ++i) {
-    smartlist_clear(intro_nodes);
+    smartlist_clear(exclude_nodes);
     service = smartlist_get(rend_service_list, i);
 
     tor_assert(service);
@@ -3135,8 +3136,10 @@ rend_services_introduce(void)
       if (intro != NULL && intro->time_expiring == -1)
         ++n_intro_points_unexpired;
 
+      /* Add the valid node to the exclusion list so we don't try to establish
+       * an introduction point to it again. */
       if (node)
-        smartlist_add(intro_nodes, (void*)node);
+        smartlist_add(exclude_nodes, (void*)node);
     } SMARTLIST_FOREACH_END(intro);
 
     if (!intro_point_set_changed &&
@@ -3172,7 +3175,7 @@ rend_services_introduce(void)
       router_crn_flags_t flags = CRN_NEED_UPTIME|CRN_NEED_DESC;
       if (get_options()->AllowInvalid_ & ALLOW_INVALID_INTRODUCTION)
         flags |= CRN_ALLOW_INVALID;
-      node = router_choose_random_node(intro_nodes,
+      node = router_choose_random_node(exclude_nodes,
                                        options->ExcludeNodes, flags);
       if (!node) {
         log_warn(LD_REND,
@@ -3183,7 +3186,9 @@ rend_services_introduce(void)
         break;
       }
       intro_point_set_changed = 1;
-      smartlist_add(intro_nodes, (void*)node);
+      /* Add the choosen node to the exclusion list in order to avoid to pick
+       * it again in the next iteration. */
+      smartlist_add(exclude_nodes, (void*)node);
       intro = tor_malloc_zero(sizeof(rend_intro_point_t));
       intro->extend_info = extend_info_from_node(node, 0);
       intro->intro_key = crypto_pk_new();
@@ -3212,7 +3217,7 @@ rend_services_introduce(void)
       }
     }
   }
-  smartlist_free(intro_nodes);
+  smartlist_free(exclude_nodes);
 }
 
 /** Regenerate and upload rendezvous service descriptors for all
