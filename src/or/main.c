@@ -2139,6 +2139,7 @@ process_signal(uintptr_t sig)
       break;
     case SIGHEARTBEAT:
       log_heartbeat(time(NULL));
+      control_event_signal(sig);
       break;
   }
 }

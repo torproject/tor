@@ -4455,6 +4455,9 @@ control_event_signal(uintptr_t signal)
     case SIGCLEARDNSCACHE:
       signal_string = "CLEARDNSCACHE";
       break;
+    case SIGHEARTBEAT:
+      signal_string = "HEARTBEAT";
+      break;
     default:
       log_warn(LD_BUG, "Unrecognized signal %lu in control_event_signal",
                (unsigned long)signal);
