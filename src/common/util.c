@@ -963,9 +963,9 @@ string_is_key_value(int severity, const char *string)
 int
 string_is_valid_ipv4_address(const char *string)
 {
-   struct sockaddr_in sockaddr;
+   struct in_addr addr;
 
-   return (tor_inet_pton(AF_INET,string,&sockaddr) == 1);
+   return (tor_inet_pton(AF_INET,string,&addr) == 1);
 }
 
 /** Return true if <b>string</b> represents a valid IPv6 address in
@@ -974,9 +974,9 @@ string_is_valid_ipv4_address(const char *string)
 int
 string_is_valid_ipv6_address(const char *string)
 {
-   struct sockaddr_in sockaddr_dummy;
+   struct in6_addr addr;
 
-   return (tor_inet_pton(AF_INET6,string,&sockaddr_dummy) == 1);
+   return (tor_inet_pton(AF_INET6,string,&addr) == 1);
 }
 
 /** Return true iff <b>string</b> matches a pattern of DNS names
