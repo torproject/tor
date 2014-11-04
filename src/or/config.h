@@ -141,6 +141,9 @@ STATIC int options_validate(or_options_t *old_options,
                             or_options_t *options,
                             or_options_t *default_options,
                             int from_setconf, char **msg);
+STATIC int parse_transport_line(const or_options_t *options,
+                                const char *line, int validate_only,
+                                int server);
 #endif
 
 #endif
