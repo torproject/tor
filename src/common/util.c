@@ -963,9 +963,9 @@ string_is_key_value(int severity, const char *string)
 int
 string_is_valid_ipv4_address(const char *string)
 {
-   struct in_addr addr;
+  struct in_addr addr;
 
-   return (tor_inet_pton(AF_INET,string,&addr) == 1);
+  return (tor_inet_pton(AF_INET,string,&addr) == 1);
 }
 
 /** Return true if <b>string</b> represents a valid IPv6 address in
@@ -974,9 +974,9 @@ string_is_valid_ipv4_address(const char *string)
 int
 string_is_valid_ipv6_address(const char *string)
 {
-   struct in6_addr addr;
+  struct in6_addr addr;
 
-   return (tor_inet_pton(AF_INET6,string,&addr) == 1);
+  return (tor_inet_pton(AF_INET6,string,&addr) == 1);
 }
 
 /** Return true iff <b>string</b> matches a pattern of DNS names
@@ -985,38 +985,38 @@ string_is_valid_ipv6_address(const char *string)
 int
 string_is_valid_hostname(const char *string)
 {
-   int result = 1;
-   smartlist_t *components;
+  int result = 1;
+  smartlist_t *components;
 
-   components = smartlist_new();
+  components = smartlist_new();
 
-   smartlist_split_string(components,string,".",0,0);
+  smartlist_split_string(components,string,".",0,0);
 
-   SMARTLIST_FOREACH_BEGIN(components, char *, c) {
-     if (c[0] == '-') {
-       result = 0;
-       break;
-     }
+  SMARTLIST_FOREACH_BEGIN(components, char *, c) {
+    if (c[0] == '-') {
+      result = 0;
+      break;
+    }
 
-     do {
-       if ((*c >= 'a' && *c <= 'z') ||
-           (*c >= 'A' && *c <= 'Z') ||
-           (*c >= '0' && *c <= '9') ||
-           (*c == '-'))
-         c++;
-       else
-         result = 0;
-     } while (result && *c);
+    do {
+      if ((*c >= 'a' && *c <= 'z') ||
+          (*c >= 'A' && *c <= 'Z') ||
+          (*c >= '0' && *c <= '9') ||
+          (*c == '-'))
+        c++;
+      else
+        result = 0;
+    } while (result && *c);
 
-   } SMARTLIST_FOREACH_END(c);
+  } SMARTLIST_FOREACH_END(c);
 
-   SMARTLIST_FOREACH_BEGIN(components, char *, c) {
-     tor_free(c);
-   } SMARTLIST_FOREACH_END(c);
+  SMARTLIST_FOREACH_BEGIN(components, char *, c) {
+    tor_free(c);
+  } SMARTLIST_FOREACH_END(c);
 
-   smartlist_free(components);
+  smartlist_free(components);
 
-   return result;
+  return result;
 }
 
 /** Return true iff the DIGEST256_LEN bytes in digest are all zero. */
