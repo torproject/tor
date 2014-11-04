@@ -1,0 +1,6 @@
+  o Code simplification and refactoring:
+    - Combine the functions used to parse ClientTransportPlugin and
+      ServerTransportPlugin into a single function. Closes ticket 6456.
+
+  o Testing:
+    - New tests for parse_transport_line(). Part of ticket 6456.
