@@ -572,6 +572,11 @@ static void
 pt_kickstart_proxy_mock(const smartlist_t *transport_list,
                         char **proxy_argv, int is_server)
 {
+  (void) transport_list;
+  (void) proxy_argv;
+  (void) is_server;
+  /* XXXX check that args are as expected. */
+
   ++pt_kickstart_proxy_mock_call_count;
 }
 
@@ -580,6 +585,12 @@ transport_add_from_config_mock(const tor_addr_t *addr,
                                uint16_t port, const char *name,
                                int socks_ver)
 {
+  (void) addr;
+  (void) port;
+  (void) name;
+  (void) socks_ver;
+  /* XXXX check that args are as expected. */
+
   ++transport_add_from_config_mock_call_count;
 
   return 0;
@@ -588,6 +599,9 @@ transport_add_from_config_mock(const tor_addr_t *addr,
 static int
 transport_is_needed_mock(const char *transport_name)
 {
+  (void) transport_name;
+  /* XXXX check that arg is as expected. */
+
   ++transport_is_needed_mock_call_count;
 
   return transport_is_needed_mock_return;
@@ -601,6 +615,8 @@ transport_is_needed_mock(const char *transport_name)
 static void
 test_config_parse_transport_plugin_line(void *arg)
 {
+  (void)arg;
+
   or_options_t *options = get_options_mutable();
   int r, tmp;
   int old_pt_kickstart_proxy_mock_call_count;
