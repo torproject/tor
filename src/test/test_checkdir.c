@@ -70,6 +70,7 @@ test_checkdir_perms(void *testdata)
   testdir = get_datadir_fname("checkdir_exists_none");
   cpd_chkopts = CPD_CREATE;
   unix_create_opts = 0700;
+  (void)unix_create_opts;
   unix_verify_optsmask = 0077;
   tt_int_op(0, ==, mkdir(testdir, unix_create_opts));
   tt_int_op(0, ==, check_private_dir(testdir, cpd_chkopts, NULL));
