@@ -95,6 +95,8 @@ typedef struct rend_service_port_config_t {
 typedef struct rend_service_t {
   /* Fields specified in config file */
   char *directory; /**< where in the filesystem it stores it */
+  int dir_group_readable; /**< if 1, allow group read
+                             permissions on directory */
   smartlist_t *ports; /**< List of rend_service_port_config_t */
   rend_auth_type_t auth_type; /**< Client authorization type or 0 if no client
                                * authorization is performed. */
@@ -359,6 +361,7 @@ rend_config_services(const or_options_t *options, int validate_only)
   rend_service_t *service = NULL;
   rend_service_port_config_t *portcfg;
   smartlist_t *old_service_list = NULL;
+  int ok = 0;
 
   if (!validate_only) {
     old_service_list = rend_service_list;
@@ -393,6 +396,20 @@ rend_config_services(const or_options_t *options, int validate_only)
         return -1;
       }
       smartlist_add(service->ports, portcfg);
+    } else if (!strcasecmp(line->key,
+                           "HiddenServiceDirGroupReadable")) {
+        service->dir_group_readable = (int)tor_parse_long(line->value,
+                                                          10, 0, 1, &ok, NULL);
+        if (!ok) {
+            log_warn(LD_CONFIG,
+                     "HiddenServiceDirGroupReadable should be 0 or 1, not %s",
+                     line->value);
+            rend_service_free(service);
+            return -1;
+        }
+        log_info(LD_CONFIG,
+                 "HiddenServiceDirGroupReadable=%d for %s",
+                 service->dir_group_readable, service->directory);
     } else if (!strcasecmp(line->key, "HiddenServiceAuthorizeClient")) {
       /* Parse auth type and comma-separated list of client names and add a
        * rend_authorized_client_t for each client to the service's list
@@ -513,10 +530,11 @@ rend_config_services(const or_options_t *options, int validate_only)
     }
   }
   if (service) {
-    if (validate_only)
+    if (validate_only) {
       rend_service_free(service);
-    else
+    } else {
       rend_add_service(service);
+    }
   }
 
   /* If this is a reload and there were hidden services configured before,
@@ -693,10 +711,23 @@ rend_service_load_keys(rend_service_t *s)
 {
   char fname[512];
   char buf[128];
+  cpd_check_t  check_opts = CPD_CREATE;
 
+  if (s->dir_group_readable) {
+    check_opts |= CPD_GROUP_READ;
+  }
   /* Check/create directory */
-  if (check_private_dir(s->directory, CPD_CREATE, get_options()->User) < 0)
+  if (check_private_dir(s->directory, check_opts, get_options()->User) < 0) {
     return -1;
+  }
+#ifndef _WIN32
+  if (s->dir_group_readable) {
+    /* Only new dirs created get new opts, also enforce group read. */
+    if (chmod(s->directory, 0750)) {
+      log_warn(LD_FS,"Unable to make %s group-readable.", s->directory);
+    }
+  }
+#endif
 
   /* Load key */
   if (strlcpy(fname,s->directory,sizeof(fname)) >= sizeof(fname) ||
@@ -733,6 +764,15 @@ rend_service_load_keys(rend_service_t *s)
     memwipe(buf, 0, sizeof(buf));
     return -1;
   }
+#ifndef _WIN32
+  if (s->dir_group_readable) {
+    /* Also verify hostname file created with group read. */
+    if (chmod(fname, 0640))
+      log_warn(LD_FS,"Unable to make hidden hostname file %s group-readable.",
+               fname);
+  }
+#endif
+
   memwipe(buf, 0, sizeof(buf));
 
   /* If client authorization is configured, load or generate keys. */

@@ -1279,6 +1279,7 @@ extern struct testcase_t crypto_tests[];
 extern struct testcase_t container_tests[];
 extern struct testcase_t util_tests[];
 extern struct testcase_t dir_tests[];
+extern struct testcase_t checkdir_tests[];
 extern struct testcase_t microdesc_tests[];
 extern struct testcase_t pt_tests[];
 extern struct testcase_t config_tests[];
@@ -1316,6 +1317,7 @@ static struct testgroup_t testgroups[] = {
   { "cellfmt/", cell_format_tests },
   { "cellqueue/", cell_queue_tests },
   { "dir/", dir_tests },
+  { "checkdir/", checkdir_tests },
   { "dir/md/", microdesc_tests },
   { "pt/", pt_tests },
   { "config/", config_tests },

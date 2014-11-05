@@ -2066,6 +2066,12 @@ The following options are used to configure a hidden service.
     service descriptors to the directory servers. This information  is also
     uploaded whenever it changes. (Default: 1 hour)
 
+[[HiddenServiceDirGroupReadable]] **HiddenServiceDirGroupReadable** **0**|**1**::
+    If this option is set to 1, allow the filesystem group to read the
+    hidden service directory and hostname file. If the option is set to 0,
+    only owner is able to read the hidden service directory. (Default: 0)
+    Has no effect on Windows.
+
 TESTING NETWORK OPTIONS
 -----------------------
 
