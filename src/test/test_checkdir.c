@@ -8,6 +8,10 @@
 #include "test.h"
 #include "util.h"
 
+#ifdef _WIN32
+#define mkdir(a,b) mkdir(a)
+#endif
+
 /** Run unit tests for private dir permission enforcement logic. */
 static void
 test_checkdir_perms(void *testdata)
