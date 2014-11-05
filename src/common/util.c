@@ -2012,8 +2012,7 @@ check_private_dir(const char *dirname, cpd_check_t check,
   struct stat st;
   char *f;
 #ifndef _WIN32
-  int mask = 0;
-  int perm = 0;
+  unsigned unwanted_bits = 0;
   const struct passwd *pw = NULL;
   uid_t running_uid;
   gid_t running_gid;
@@ -2112,11 +2111,11 @@ check_private_dir(const char *dirname, cpd_check_t check,
     return -1;
   }
   if (check & (CPD_GROUP_OK|CPD_GROUP_READ)) {
-    mask = 0027;
+    unwanted_bits = 0027;
   } else {
-    mask = 0077;
+    unwanted_bits = 0077;
   }
-  if (st.st_mode & mask) {
+  if ((st.st_mode & unwanted_bits) != 0) {
     unsigned new_mode;
     if (check & CPD_CHECK_MODE_ONLY) {
       log_warn(LD_FS, "Permissions on directory %s are too permissive.",
@@ -2129,7 +2128,7 @@ check_private_dir(const char *dirname, cpd_check_t check,
     if (check & CPD_GROUP_READ) {
       new_mode |= 0050; /* Group should have rx */
     }
-    new_mode &= ~mask; /* Clear the other bits that we didn't want set...*/
+    new_mode &= ~unwanted_bits; /* Clear the bits that we didn't want set...*/
     if (chmod(dirname, new_mode)) {
       log_warn(LD_FS, "Could not chmod directory %s: %s", dirname,
                strerror(errno));

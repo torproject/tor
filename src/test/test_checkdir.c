@@ -12,6 +12,7 @@
 static void
 test_checkdir_perms(void *testdata)
 {
+  (void)testdata;
   or_options_t *options = get_options_mutable();
   const char *subdir = "test_checkdir";
   char *testdir;

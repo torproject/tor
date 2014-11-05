@@ -1,0 +1,4 @@
+  o Minor features (hidden services):
+    - New HiddenServiceDirGroupReadable option to cause hidden service
+      directories and hostname files to be created group-readable.
+      Patch from "anon", David Stainton, and "meejah".
