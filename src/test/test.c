@@ -123,6 +123,10 @@ setup_directory(void)
   tor_snprintf(temp_dir, sizeof(temp_dir), "/tmp/tor_test_%d_%s",
                (int) getpid(), rnd32);
   r = mkdir(temp_dir, 0700);
+  if (!r) {
+    /* undo sticky bit so tests don't get confused. */
+    r = chown(temp_dir, getuid(), getgid());
+  }
 #endif
   if (r) {
     fprintf(stderr, "Can't create directory %s:", temp_dir);
