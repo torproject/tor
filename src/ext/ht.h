@@ -121,15 +121,23 @@ ht_string_hash(const char *s)
         ((void)0)
 #endif
 
+#define HT_BUCKET_NUM_(head, field, elm, hashfn)                        \
+  (HT_ELT_HASH_(elm,field,hashfn) % head->hth_table_length)
+
 /* Helper: alias for the bucket containing 'elm'. */
 #define HT_BUCKET_(head, field, elm, hashfn)                            \
-    ((head)->hth_table[HT_ELT_HASH_(elm,field,hashfn)                   \
-        % head->hth_table_length])
+  ((head)->hth_table[HT_BUCKET_NUM_(head, field, elm, hashfn)])
 
 #define HT_FOREACH(x, name, head)                 \
   for ((x) = HT_START(name, head);                \
        (x) != NULL;                               \
        (x) = HT_NEXT(name, head, x))
+
+#ifndef HT_NDEBUG
+#define HT_ASSERT_(x) tor_assert(x)
+#else
+#define HT_ASSERT_(x) (void)0
+#endif
 
 #define HT_PROTOTYPE(name, type, field, hashfn, eqfn)                   \
   int name##_HT_GROW(struct name *ht, unsigned min_capacity);           \
@@ -257,8 +265,11 @@ ht_string_hash(const char *s)
   {                                                                     \
     unsigned b = 0;                                                     \
     while (b < head->hth_table_length) {                                \
-      if (head->hth_table[b])                                           \
+      if (head->hth_table[b]) {                                         \
+        HT_ASSERT_(b ==                                                 \
+                HT_BUCKET_NUM_(head,field,head->hth_table[b],hashfn));  \
         return &head->hth_table[b];                                     \
+      }                                                                 \
       ++b;                                                              \
     }                                                                   \
     return NULL;                                                        \
@@ -272,13 +283,18 @@ ht_string_hash(const char *s)
   name##_HT_NEXT(struct name *head, struct type **elm)                  \
   {                                                                     \
     if ((*elm)->field.hte_next) {                                       \
+      HT_ASSERT_(HT_BUCKET_NUM_(head,field,*elm,hashfn) ==              \
+             HT_BUCKET_NUM_(head,field,(*elm)->field.hte_next,hashfn)); \
       return &(*elm)->field.hte_next;                                   \
     } else {                                                            \
       unsigned b = (HT_ELT_HASH_(*elm, field, hashfn)                   \
       % head->hth_table_length)+1;                                      \
       while (b < head->hth_table_length) {                              \
-        if (head->hth_table[b])                                         \
+        if (head->hth_table[b]) {                                       \
+          HT_ASSERT_(b ==                                               \
+                 HT_BUCKET_NUM_(head,field,head->hth_table[b],hashfn)); \
           return &head->hth_table[b];                                   \
+        }                                                               \
         ++b;                                                            \
       }                                                                 \
       return NULL;                                                      \
