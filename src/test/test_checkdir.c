@@ -10,6 +10,9 @@
 
 #ifdef _WIN32
 #define mkdir(a,b) mkdir(a)
+#define tt_int_op_nowin(a,op,b) do { (void)(a); (void)(b); } while (0)
+#else
+#define tt_int_op_nowin(a,op,b) tt_int_op((a),op,(b))
 #endif
 
 /** Run unit tests for private dir permission enforcement logic. */
@@ -19,7 +22,7 @@ test_checkdir_perms(void *testdata)
   (void)testdata;
   or_options_t *options = get_options_mutable();
   const char *subdir = "test_checkdir";
-  char *testdir;
+  char *testdir = NULL;
   cpd_check_t  cpd_chkopts;
   cpd_check_t  unix_create_opts;
   cpd_check_t  unix_verify_optsmask;
@@ -36,7 +39,7 @@ test_checkdir_perms(void *testdata)
   unix_verify_optsmask = 0077;
   tt_int_op(0, ==, check_private_dir(testdir, cpd_chkopts, NULL));
   tt_int_op(0, ==, stat(testdir, &st));
-  tt_int_op(0, ==, (st.st_mode & unix_verify_optsmask));
+  tt_int_op_nowin(0, ==, (st.st_mode & unix_verify_optsmask));
   tor_free(testdir);
 
   /* test: create new dir, CPD_GROUP_OK option set. */
@@ -45,7 +48,7 @@ test_checkdir_perms(void *testdata)
   unix_verify_optsmask = 0077;
   tt_int_op(0, ==, check_private_dir(testdir, cpd_chkopts, NULL));
   tt_int_op(0, ==, stat(testdir, &st));
-  tt_int_op(0, ==, (st.st_mode & unix_verify_optsmask));
+  tt_int_op_nowin(0, ==, (st.st_mode & unix_verify_optsmask));
   tor_free(testdir);
 
   /* test: should get an error on existing dir with
@@ -62,7 +65,7 @@ test_checkdir_perms(void *testdata)
   unix_verify_optsmask = 0027;
   tt_int_op(0, ==, check_private_dir(testdir, cpd_chkopts, NULL));
   tt_int_op(0, ==, stat(testdir, &st));
-  tt_int_op(0, ==, (st.st_mode & unix_verify_optsmask));
+  tt_int_op_nowin(0, ==, (st.st_mode & unix_verify_optsmask));
   tor_free(testdir);
 
   /* test: check existing dir created with defaults,
@@ -75,7 +78,7 @@ test_checkdir_perms(void *testdata)
   tt_int_op(0, ==, mkdir(testdir, unix_create_opts));
   tt_int_op(0, ==, check_private_dir(testdir, cpd_chkopts, NULL));
   tt_int_op(0, ==, stat(testdir, &st));
-  tt_int_op(0, ==, (st.st_mode & unix_verify_optsmask));
+  tt_int_op_nowin(0, ==, (st.st_mode & unix_verify_optsmask));
   tor_free(testdir);
 
   /* test: check existing dir created with defaults,
@@ -87,7 +90,7 @@ test_checkdir_perms(void *testdata)
   cpd_chkopts = CPD_GROUP_OK;
   tt_int_op(0, ==, check_private_dir(testdir, cpd_chkopts, NULL));
   tt_int_op(0, ==, stat(testdir, &st));
-  tt_int_op(0, ==, (st.st_mode & unix_verify_optsmask));
+  tt_int_op_nowin(0, ==, (st.st_mode & unix_verify_optsmask));
   tor_free(testdir);
 
   /* test: check existing dir created with defaults,
@@ -99,7 +102,7 @@ test_checkdir_perms(void *testdata)
   cpd_chkopts = CPD_GROUP_READ;
   tt_int_op(0, ==, check_private_dir(testdir, cpd_chkopts, NULL));
   tt_int_op(0, ==, stat(testdir, &st));
-  tt_int_op(0, ==, (st.st_mode & unix_verify_optsmask));
+  tt_int_op_nowin(0, ==, (st.st_mode & unix_verify_optsmask));
   tor_free(testdir);
 
   /* test: check existing dir created with CPD_GROUP_READ,
@@ -111,7 +114,7 @@ test_checkdir_perms(void *testdata)
   cpd_chkopts = CPD_GROUP_OK;
   tt_int_op(0, ==, check_private_dir(testdir, cpd_chkopts, NULL));
   tt_int_op(0, ==, stat(testdir, &st));
-  tt_int_op(0, ==, (st.st_mode & unix_verify_optsmask));
+  tt_int_op_nowin(0, ==, (st.st_mode & unix_verify_optsmask));
   tor_free(testdir);
 
   /* test: check existing dir created with CPD_GROUP_READ,
@@ -121,11 +124,11 @@ test_checkdir_perms(void *testdata)
   unix_verify_optsmask = 0027;
   tt_int_op(0, ==, check_private_dir(testdir, cpd_chkopts, NULL));
   tt_int_op(0, ==, stat(testdir, &st));
-  tt_int_op(0, ==, (st.st_mode & unix_verify_optsmask));
-  tor_free(testdir);
+  tt_int_op_nowin(0, ==, (st.st_mode & unix_verify_optsmask));
 
   done:
-  ;
+  tor_free(testdir);
+
 }
 
 #define CHECKDIR(name,flags)                              \
