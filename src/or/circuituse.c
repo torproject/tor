@@ -2324,7 +2324,7 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
       tor_assert(rendcirc);
       /* one is already established, attach */
       log_info(LD_REND,
-               "rend joined circ %d already here. attaching. "
+               "rend joined circ %u already here. attaching. "
                "(stream %d sec old)",
                (unsigned)rendcirc->base_.n_circ_id, conn_age);
       /* Mark rendezvous circuits as 'newly dirty' every time you use

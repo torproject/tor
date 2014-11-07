@@ -1,0 +1,4 @@
+  o Minor bugfixes (logging):
+    - Log the circuit identifier correctly in
+      connection_ap_handshake_attach_circuit().  Fixes bug 13701;
+      bugfix on 0.0.6.
