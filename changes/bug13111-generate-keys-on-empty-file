@@ -1,0 +1,7 @@
+  o Minor bugfixes
+    - Stop crashing when a NULL filename is passed to file_status().
+      Fixed as part of bug 13111.
+
+  o Minor enhancements:
+    - Return FN_ERROR when a zero-length filename is passed to file_status().
+      Fixed as part of bug 13111.

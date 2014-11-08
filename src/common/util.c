@@ -1888,7 +1888,8 @@ clean_name_for_stat(char *name)
 #endif
 }
 
-/** Return FN_ERROR if filename can't be read, FN_NOENT if it doesn't
+/** Return FN_ERROR if filename can't be read, or is NULL or zero-length,
+ * FN_NOENT if it doesn't
  * exist, FN_FILE if it is a regular file, or FN_DIR if it's a
  * directory.  On FN_ERROR, sets errno. */
 file_status_t
@@ -1897,6 +1898,9 @@ file_status(const char *fname)
   struct stat st;
   char *f;
   int r;
+  if (!fname || strlen(fname) == 0) {
+    return FN_ERROR;
+  }
   f = tor_strdup(fname);
   clean_name_for_stat(f);
   log_debug(LD_FS, "stat()ing %s", f);
