@@ -1012,7 +1012,7 @@ crypto_pk_public_checksig(crypto_pk_t *env, char *to,
                          env->key, RSA_PKCS1_PADDING);
 
   if (r<0) {
-    crypto_log_errors(LOG_WARN, "checking RSA signature");
+    crypto_log_errors(LOG_INFO, "checking RSA signature");
     return -1;
   }
   return r;
