@@ -1,0 +1,4 @@
+  o Documentation:
+    - Fix typo in PredictedPortsRelevanceTime option description in 
+      manpage. Resolves issue 13707.
+

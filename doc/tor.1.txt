@@ -550,7 +550,7 @@ GENERAL OPTIONS
     \'info'. (Default: 0)
 
 [[PredictedPortsRelevanceTime]] **PredictedPortsRelevanceTime** __NUM__::
-    Set how long, after the client has mad an anonymized connection to a
+    Set how long, after the client has made an anonymized connection to a
     given port, we will try to make sure that we build circuits to
     exits that support that port. The maximum value for this option is 1
     hour. (Default: 1 hour)
