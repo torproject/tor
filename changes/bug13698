@@ -1,0 +1,4 @@
+  o Bugfixes:
+	- When closing an introduction circuit that was opened in parallel, don't
+	  mark it unreachable which can causes it to be removed from the rend cache
+	  object thus not usable anymore.
