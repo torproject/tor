@@ -2409,6 +2409,11 @@ __DataDirectory__**/stats/conn-stats**::
     Only used by servers. This file is used to collect approximate connection
     history (number of active connections over time).
 
+__DataDirectory__**/networkstatus-bridges**::
+    Only used by authoritative bridge directories. Contains information
+    about bridges that have self-reported themselves to the bridge
+    authority.
+
 __HiddenServiceDirectory__**/hostname**::
     The <base32-encoded-fingerprint>.onion domain name for this hidden service.
     If the hidden service is restricted to authorized clients only, this file
