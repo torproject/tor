@@ -512,7 +512,7 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
     if (!n_parsed) {
       *msg = "No descriptors found in your POST.";
       if (WRA_WAS_ADDED(r))
-        r = ROUTER_WAS_NOT_NEW;
+        r = ROUTER_IS_ALREADY_KNOWN;
     } else {
       *msg = "(no message)";
     }
@@ -574,7 +574,7 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
                          ri->cache_info.signed_descriptor_body,
                          ri->cache_info.signed_descriptor_len, *msg);
     routerinfo_free(ri);
-    return ROUTER_WAS_NOT_NEW;
+    return ROUTER_IS_ALREADY_KNOWN;
   }
 
   /* Make a copy of desc, since router_add_to_routerlist might free
@@ -646,7 +646,7 @@ dirserv_add_extrainfo(extrainfo_t *ei, const char **msg)
 
   if ((r = routerinfo_incompatible_with_extrainfo(ri, ei, NULL, msg))) {
     extrainfo_free(ei);
-    return r < 0 ? ROUTER_WAS_NOT_NEW : ROUTER_BAD_EI;
+    return r < 0 ? ROUTER_IS_ALREADY_KNOWN : ROUTER_BAD_EI;
   }
   router_add_extrainfo_to_routerlist(ei, msg, 0, 0);
   return ROUTER_ADDED_SUCCESSFULLY;

@@ -5008,7 +5008,7 @@ typedef enum was_router_added_t {
    * it was incompatible with its extrainfo document. */
   ROUTER_BAD_EI = -1,
   /* Router descriptor was rejected because it is already known. */
-  ROUTER_WAS_NOT_NEW = -2,
+  ROUTER_IS_ALREADY_KNOWN = -2,
   /* General purpose router was rejected, because it was not listed
    * in consensus. */
   ROUTER_NOT_IN_CONSENSUS = -3,
