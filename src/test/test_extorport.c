@@ -24,7 +24,8 @@ test_ext_or_id_map(void *arg)
   (void)arg;
 
   /* pre-initialization */
-  tt_ptr_op(NULL, OP_EQ, connection_or_get_by_ext_or_id("xxxxxxxxxxxxxxxxxxxx"));
+  tt_ptr_op(NULL, OP_EQ,
+            connection_or_get_by_ext_or_id("xxxxxxxxxxxxxxxxxxxx"));
 
   c1 = or_connection_new(CONN_TYPE_EXT_OR, AF_INET);
   c2 = or_connection_new(CONN_TYPE_EXT_OR, AF_INET);
@@ -36,7 +37,8 @@ test_ext_or_id_map(void *arg)
 
   tt_ptr_op(c1, OP_EQ, connection_or_get_by_ext_or_id(c1->ext_or_conn_id));
   tt_ptr_op(c2, OP_EQ, connection_or_get_by_ext_or_id(c2->ext_or_conn_id));
-  tt_ptr_op(NULL, OP_EQ, connection_or_get_by_ext_or_id("xxxxxxxxxxxxxxxxxxxx"));
+  tt_ptr_op(NULL, OP_EQ,
+            connection_or_get_by_ext_or_id("xxxxxxxxxxxxxxxxxxxx"));
 
   idp = tor_memdup(c2->ext_or_conn_id, EXT_OR_CONN_ID_LEN);
 
@@ -423,7 +425,8 @@ do_ext_or_handshake(or_connection_t *conn)
   MOCK(crypto_rand, crypto_rand_return_tse_str);
   tt_int_op(0, OP_EQ, connection_ext_or_process_inbuf(conn));
   UNMOCK(crypto_rand);
-  tt_int_op(TO_CONN(conn)->state, OP_EQ, EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_HASH);
+  tt_int_op(TO_CONN(conn)->state, OP_EQ,
+            EXT_OR_CONN_STATE_AUTH_WAIT_CLIENT_HASH);
   CONTAINS("\xec\x80\xed\x6e\x54\x6d\x3b\x36\xfd\xfc\x22\xfe\x13\x15\x41\x6b"
            "\x02\x9f\x1a\xde\x76\x10\xd9\x10\x87\x8b\x62\xee\xb7\x40\x38\x21"
            "te road There is always another ", 64);

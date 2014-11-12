@@ -704,7 +704,7 @@ test_rend_fns(void *arg)
                                      smartlist_get(descs, 0))->desc_str) == 0);
   tt_assert(parsed);
   tt_mem_op(((rend_encoded_v2_service_descriptor_t *)
-             smartlist_get(descs, 0))->desc_id,OP_EQ, parsed_desc_id, DIGEST_LEN);
+         smartlist_get(descs, 0))->desc_id,OP_EQ, parsed_desc_id, DIGEST_LEN);
   tt_int_op(rend_parse_introduction_points(parsed, intro_points_encrypted,
                                          intro_points_size),OP_EQ, 3);
   tt_assert(!crypto_pk_cmp_keys(generated->pk, parsed->pk));

@@ -700,7 +700,8 @@ test_crypto_formats(void *arg)
     tt_int_op(strlen(data1),OP_EQ, 40);
     data2 = tor_malloc(FINGERPRINT_LEN+1);
     crypto_add_spaces_to_fp(data2, FINGERPRINT_LEN+1, data1);
-    tt_str_op(data2,OP_EQ, "ABCD 1234 ABCD 5678 0000 ABCD 1234 ABCD 5678 0000");
+    tt_str_op(data2, OP_EQ,
+              "ABCD 1234 ABCD 5678 0000 ABCD 1234 ABCD 5678 0000");
     tor_free(data1);
     tor_free(data2);
   }
@@ -1474,7 +1475,8 @@ test_crypto_curve25519_persist(void *arg)
 
   tt_int_op(0,OP_EQ,curve25519_keypair_generate(&keypair, 0));
 
-  tt_int_op(0,OP_EQ,curve25519_keypair_write_to_file(&keypair, fname, "testing"));
+  tt_int_op(0,OP_EQ,
+            curve25519_keypair_write_to_file(&keypair, fname, "testing"));
   tt_int_op(0,OP_EQ,curve25519_keypair_read_from_file(&keypair2, &tag, fname));
   tt_str_op(tag,OP_EQ,"testing");
   tor_free(tag);
@@ -1505,12 +1507,15 @@ test_crypto_curve25519_persist(void *arg)
   tor_free(fname);
   fname = tor_strdup(get_fname("bogus_keypair"));
 
-  tt_int_op(-1, OP_EQ, curve25519_keypair_read_from_file(&keypair2, &tag, fname));
+  tt_int_op(-1, OP_EQ,
+            curve25519_keypair_read_from_file(&keypair2, &tag, fname));
   tor_free(tag);
 
   content[69] ^= 0xff;
-  tt_int_op(0, OP_EQ, write_bytes_to_file(fname, content, (size_t)st.st_size, 1));
-  tt_int_op(-1, OP_EQ, curve25519_keypair_read_from_file(&keypair2, &tag, fname));
+  tt_int_op(0, OP_EQ,
+            write_bytes_to_file(fname, content, (size_t)st.st_size, 1));
+  tt_int_op(-1, OP_EQ,
+            curve25519_keypair_read_from_file(&keypair2, &tag, fname));
 
  done:
   tor_free(fname);

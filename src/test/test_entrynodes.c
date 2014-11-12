@@ -75,7 +75,8 @@ setup_fake_routerlist(void)
 
   /* Sanity checking of routerlist and nodelist. */
   our_routerlist = router_get_routerlist();
-  tt_int_op(smartlist_len(our_routerlist->routers), OP_EQ, NUMBER_OF_DESCRIPTORS);
+  tt_int_op(smartlist_len(our_routerlist->routers), OP_EQ,
+            NUMBER_OF_DESCRIPTORS);
   routerlist_assert_ok(our_routerlist);
 
   our_nodelist = nodelist_get_list();
@@ -408,7 +409,7 @@ test_entry_guards_parse_state_simple(void *arg)
 
     tt_assert(e->is_dir_cache); /* Verify dirness */
 
-    tt_str_op(e->chosen_by_version, OP_EQ, tor_version); /* Verify tor version */
+    tt_str_op(e->chosen_by_version, OP_EQ, tor_version); /* Verify version */
 
     tt_assert(e->made_contact); /* All saved guards have been contacted */
 
@@ -507,7 +508,8 @@ test_entry_guards_parse_state_pathbias(void *arg)
     /* XXX tt_double_op doesn't support equality. Cast to int for now. */
     tt_int_op((int)e->circ_attempts, OP_EQ, (int)circ_attempts);
     tt_int_op((int)e->circ_successes, OP_EQ, (int)circ_successes);
-    tt_int_op((int)e->successful_circuits_closed, OP_EQ, (int)successful_closed);
+    tt_int_op((int)e->successful_circuits_closed, OP_EQ,
+              (int)successful_closed);
     tt_int_op((int)e->timeouts, OP_EQ, (int)timeouts);
     tt_int_op((int)e->collapsed_circuits, OP_EQ, (int)collapsed);
     tt_int_op((int)e->unusable_circuits, OP_EQ, (int)unusable);

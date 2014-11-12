@@ -841,7 +841,8 @@ test_cfmt_extended_cells(void *arg)
   crypto_rand((char*)b, 42);
   memcpy(p,"\x00\x2a",2);
   memcpy(p+2,b,42);
-  tt_int_op(0, OP_EQ, extended_cell_parse(&ec, RELAY_COMMAND_EXTENDED2, p, 2+42));
+  tt_int_op(0, OP_EQ,
+            extended_cell_parse(&ec, RELAY_COMMAND_EXTENDED2, p, 2+42));
   tt_int_op(RELAY_COMMAND_EXTENDED2, OP_EQ, ec.cell_type);
   tt_int_op(cc->cell_type, OP_EQ, CELL_CREATED2);
   tt_int_op(cc->handshake_len, OP_EQ, 42);

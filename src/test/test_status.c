@@ -435,8 +435,8 @@ NS(logv)(int severity, log_domain_mask_t domain,
     case 2:
       tt_int_op(severity, OP_EQ, LOG_NOTICE);
       tt_int_op(domain, OP_EQ, LD_HEARTBEAT);
-      tt_ptr_op(
-          strstr(funcname, "rep_hist_log_circuit_handshake_stats"), OP_NE, NULL);
+      tt_ptr_op(strstr(funcname, "rep_hist_log_circuit_handshake_stats"),
+                OP_NE, NULL);
       tt_ptr_op(suffix, OP_EQ, NULL);
       tt_str_op(format, OP_EQ,
         "Circuit handshake stats since last time: %d/%d TAP, %d/%d NTor.");
@@ -737,7 +737,8 @@ NS(logv)(int severity, log_domain_mask_t domain,
       tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* acc_rcvd */
       tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* acc_max */
       /* format_local_iso_time uses local tz, just check mins and secs. */
-      tt_ptr_op(strstr(va_arg(ap, char *), ":01:00"), OP_NE, NULL);  /* end_buf */
+      tt_ptr_op(strstr(va_arg(ap, char *), ":01:00"),
+                OP_NE, NULL); /* end_buf */
       tt_str_op(va_arg(ap, char *), OP_EQ, "0:01 hours");   /* remaining */
       break;
     default:

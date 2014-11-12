@@ -62,12 +62,13 @@ test_addr_basic(void *arg)
     struct in_addr in;
 
     /* good round trip */
-    tt_int_op(tor_inet_pton(AF_INET, ip, &in),OP_EQ, 1);
-    tt_ptr_op(tor_inet_ntop(AF_INET, &in, tmpbuf, sizeof(tmpbuf)),OP_EQ, &tmpbuf);
+    tt_int_op(tor_inet_pton(AF_INET, ip, &in), OP_EQ, 1);
+    tt_ptr_op(tor_inet_ntop(AF_INET, &in, tmpbuf, sizeof(tmpbuf)),
+              OP_EQ, &tmpbuf);
     tt_str_op(tmpbuf,OP_EQ, ip);
 
     /* just enough buffer length */
-    tt_str_op(tor_inet_ntop(AF_INET, &in, tmpbuf, strlen(ip) + 1),OP_EQ, ip);
+    tt_str_op(tor_inet_ntop(AF_INET, &in, tmpbuf, strlen(ip) + 1), OP_EQ, ip);
 
     /* too short buffer */
     tt_ptr_op(tor_inet_ntop(AF_INET, &in, tmpbuf, strlen(ip)),OP_EQ, NULL);
@@ -414,7 +415,8 @@ test_addr_ip6_helpers(void *arg)
   test_addr_compare("0::3:2:1", OP_LT, "0::ffff:0.3.2.1");
   test_addr_compare("0::2:2:1", OP_LT, "0::ffff:0.3.2.1");
   test_addr_compare("0::ffff:0.3.2.1", OP_GT, "0::0:0:0");
-  test_addr_compare("0::ffff:5.2.2.1", OP_LT, "::ffff:6.0.0.0"); /* XXXX wrong. */
+  test_addr_compare("0::ffff:5.2.2.1", OP_LT,
+                    "::ffff:6.0.0.0"); /* XXXX wrong. */
   tor_addr_parse_mask_ports("[::ffff:2.3.4.5]", 0, &t1, NULL, NULL, NULL);
   tor_addr_parse_mask_ports("2.3.4.5", 0, &t2, NULL, NULL, NULL);
   tt_assert(tor_addr_compare(&t1, &t2, CMP_SEMANTIC) == 0);
@@ -461,7 +463,8 @@ test_addr_ip6_helpers(void *arg)
   tt_ptr_op(tor_addr_to_str(buf, &t1, 7, 0),OP_EQ, NULL); /* too short buf */
   tt_str_op(tor_addr_to_str(buf, &t1, 8, 0),OP_EQ, "1.2.3.4");
 
-  tt_int_op(AF_INET,OP_EQ, tor_addr_parse(&t1, "255.255.255.255")); /* 15 + \0 */
+  tt_int_op(AF_INET, OP_EQ,
+            tor_addr_parse(&t1, "255.255.255.255")); /* 15 + \0 */
   tt_ptr_op(tor_addr_to_str(buf, &t1, 15, 0),OP_EQ, NULL); /* too short buf */
   tt_str_op(tor_addr_to_str(buf, &t1, 16, 0),OP_EQ, "255.255.255.255");
   tt_ptr_op(tor_addr_to_str(buf, &t1, 15, 1),OP_EQ, NULL); /* too short buf */
@@ -1014,7 +1017,8 @@ test_addr_is_loopback(void *data)
 
   for (i=0; loopback_items[i].name; ++i) {
     tt_int_op(tor_addr_parse(&addr, loopback_items[i].name), OP_GE, 0);
-    tt_int_op(tor_addr_is_loopback(&addr), OP_EQ, loopback_items[i].is_loopback);
+    tt_int_op(tor_addr_is_loopback(&addr), OP_EQ,
+              loopback_items[i].is_loopback);
   }
 
   tor_addr_make_unspec(&addr);

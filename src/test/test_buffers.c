@@ -499,7 +499,8 @@ test_buffer_allocation_tracking(void *arg)
   tt_int_op(buf_get_total_allocation(), OP_EQ, 16384);
   write_to_buf(junk, 4000, buf2);
   tt_int_op(buf_allocation(buf2), OP_EQ, 8192); /* another 4k chunk. */
-  tt_int_op(buf_get_total_allocation(), OP_EQ, 5*4096); /* that chunk was new. */
+  tt_int_op(buf_get_total_allocation(),
+            OP_EQ, 5*4096); /* that chunk was new. */
 
   /* Make a really huge buffer */
   for (i = 0; i < 1000; ++i) {
@@ -554,7 +555,8 @@ test_buffer_time_tracking(void *arg)
 
   buf2 = buf_copy(buf);
   tt_assert(buf2);
-  tt_int_op(1234, OP_EQ, buf_get_oldest_chunk_timestamp(buf2, START_MSEC+1234));
+  tt_int_op(1234, OP_EQ,
+            buf_get_oldest_chunk_timestamp(buf2, START_MSEC+1234));
 
   /* Now add more bytes; enough to overflow the first chunk. */
   tv0.tv_usec += 123 * 1000;

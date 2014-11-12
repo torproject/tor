@@ -544,7 +544,8 @@ test_util_time(void *arg)
   tt_int_op(t_res,OP_EQ, (time_t)1091580502UL);
   /* The timezone doesn't matter */
   t_res = 0;
-  tt_int_op(0,OP_EQ, parse_rfc1123_time("Wed, 04 Aug 2004 00:48:22 ZUL", &t_res));
+  tt_int_op(0,OP_EQ,
+            parse_rfc1123_time("Wed, 04 Aug 2004 00:48:22 ZUL", &t_res));
   tt_int_op(t_res,OP_EQ, (time_t)1091580502UL);
   tt_int_op(-1,OP_EQ,
             parse_rfc1123_time("Wed, zz Aug 2004 99-99x99 GMT", &t_res));
@@ -680,10 +681,12 @@ test_util_parse_http_time(void *arg)
             parse_http_time("Wednesday, 04-Aug-94 00:48:22 GMT", &a_time));
   tt_int_op((time_t)775961302UL,OP_EQ, tor_timegm(&a_time));
   T("1994-08-04 00:48:22");
-  tt_int_op(0,OP_EQ, parse_http_time("Wednesday, 4-Aug-94 0:48:22 GMT", &a_time));
+  tt_int_op(0,OP_EQ,
+            parse_http_time("Wednesday, 4-Aug-94 0:48:22 GMT", &a_time));
   tt_int_op((time_t)775961302UL,OP_EQ, tor_timegm(&a_time));
   T("1994-08-04 00:48:22");
-  tt_int_op(0,OP_EQ, parse_http_time("Miercoles, 4-Aug-94 0:48:22 GMT", &a_time));
+  tt_int_op(0,OP_EQ,
+            parse_http_time("Miercoles, 4-Aug-94 0:48:22 GMT", &a_time));
   tt_int_op((time_t)775961302UL,OP_EQ, tor_timegm(&a_time));
   T("1994-08-04 00:48:22");
   tt_int_op(0,OP_EQ, parse_http_time("Wed Aug 04 00:48:22 1994", &a_time));
@@ -695,10 +698,10 @@ test_util_parse_http_time(void *arg)
   tt_int_op(0,OP_EQ, parse_http_time("Mie Aug 4 0:48:22 1994", &a_time));
   tt_int_op((time_t)775961302UL,OP_EQ, tor_timegm(&a_time));
   T("1994-08-04 00:48:22");
-  tt_int_op(0,OP_EQ, parse_http_time("Sun, 1 Jan 2012 00:00:00 GMT", &a_time));
+  tt_int_op(0,OP_EQ,parse_http_time("Sun, 1 Jan 2012 00:00:00 GMT", &a_time));
   tt_int_op((time_t)1325376000UL,OP_EQ, tor_timegm(&a_time));
   T("2012-01-01 00:00:00");
-  tt_int_op(0,OP_EQ, parse_http_time("Mon, 31 Dec 2012 00:00:00 GMT", &a_time));
+  tt_int_op(0,OP_EQ,parse_http_time("Mon, 31 Dec 2012 00:00:00 GMT", &a_time));
   tt_int_op((time_t)1356912000UL,OP_EQ, tor_timegm(&a_time));
   T("2012-12-31 00:00:00");
   tt_int_op(-1,OP_EQ, parse_http_time("2004-08-zz 99-99x99 GMT", &a_time));
@@ -1373,7 +1376,8 @@ test_util_strmisc(void *arg)
     /* Test tor_parse_* where we overflow/underflow the underlying type. */
     /* This string should overflow 64-bit ints. */
 #define TOOBIG "100000000000000000000000000"
-    tt_int_op(0L,OP_EQ, tor_parse_long(TOOBIG, 10, LONG_MIN, LONG_MAX, &i, NULL));
+    tt_int_op(0L, OP_EQ,
+              tor_parse_long(TOOBIG, 10, LONG_MIN, LONG_MAX, &i, NULL));
     tt_int_op(i,OP_EQ, 0);
     tt_int_op(0L,OP_EQ,
               tor_parse_long("-"TOOBIG, 10, LONG_MIN, LONG_MAX, &i, NULL));
@@ -1551,10 +1555,10 @@ test_util_strmisc(void *arg)
 
   /* Test strcmp_len */
   tt_int_op(strcmp_len("foo", "bar", 3),   OP_GT, 0);
-  tt_int_op(strcmp_len("foo", "bar", 2),   OP_LT, 0); /* First len, then lexical */
+  tt_int_op(strcmp_len("foo", "bar", 2),   OP_LT, 0);
   tt_int_op(strcmp_len("foo2", "foo1", 4), OP_GT, 0);
   tt_int_op(strcmp_len("foo2", "foo1", 3), OP_LT, 0); /* Really stop at len */
-  tt_int_op(strcmp_len("foo2", "foo", 3), OP_EQ, 0);   /* Really stop at len */
+  tt_int_op(strcmp_len("foo2", "foo", 3), OP_EQ, 0);  /* Really stop at len */
   tt_int_op(strcmp_len("blah", "", 4),     OP_GT, 0);
   tt_int_op(strcmp_len("blah", "", 0),    OP_EQ, 0);
 
@@ -1570,7 +1574,8 @@ test_util_pow2(void *arg)
   tt_int_op(tor_log2(64),OP_EQ, 6);
   tt_int_op(tor_log2(65),OP_EQ, 6);
   tt_int_op(tor_log2(63),OP_EQ, 5);
-  tt_int_op(tor_log2(0),OP_EQ, 0);/* incorrect mathematically, but as specified */
+  /* incorrect mathematically, but as specified: */
+  tt_int_op(tor_log2(0),OP_EQ, 0);
   tt_int_op(tor_log2(1),OP_EQ, 0);
   tt_int_op(tor_log2(2),OP_EQ, 1);
   tt_int_op(tor_log2(3),OP_EQ, 1);
@@ -1835,7 +1840,8 @@ test_util_gzip(void *arg)
 
   tt_assert(!tor_gzip_uncompress(&buf3, &len2, buf1, 1024-len1,
                                   ZLIB_METHOD, 1, LOG_WARN));
-  tt_str_op(buf3,OP_EQ,"ABCDEFGHIJABCDEFGHIJ"); /*Make sure it compressed right.*/
+  /* Make sure it compressed right. */
+  tt_str_op(buf3, OP_EQ, "ABCDEFGHIJABCDEFGHIJ");
   tt_int_op(21,OP_EQ, len2);
 
  done:
@@ -2043,7 +2049,8 @@ test_util_sscanf(void *arg)
   tt_int_op(99u,OP_EQ, u3);
 
   /* Hex (ie. %x) */
-  tt_int_op(3,OP_EQ, tor_sscanf("1234 02aBcdEf ff", "%x %x %x", &u1, &u2, &u3));
+  tt_int_op(3,OP_EQ,
+            tor_sscanf("1234 02aBcdEf ff", "%x %x %x", &u1, &u2, &u3));
   tt_int_op(0x1234,OP_EQ, u1);
   tt_int_op(0x2ABCDEF,OP_EQ, u2);
   tt_int_op(0xFF,OP_EQ, u3);
@@ -3067,12 +3074,14 @@ test_util_find_str_at_start_of_line(void *ptr)
   tt_ptr_op(line2,OP_EQ, find_str_at_start_of_line(long_string, "he"));
   tt_ptr_op(line2,OP_EQ, find_str_at_start_of_line(long_string, "hell"));
   tt_ptr_op(line2,OP_EQ, find_str_at_start_of_line(long_string, "hello k"));
-  tt_ptr_op(line2,OP_EQ, find_str_at_start_of_line(long_string, "hello kitty\n"));
+  tt_ptr_op(line2,OP_EQ,
+            find_str_at_start_of_line(long_string, "hello kitty\n"));
   tt_ptr_op(line2,OP_EQ,
             find_str_at_start_of_line(long_string, "hello kitty\nt"));
   tt_ptr_op(line3,OP_EQ, find_str_at_start_of_line(long_string, "third"));
   tt_ptr_op(line3,OP_EQ, find_str_at_start_of_line(long_string, "third line"));
-  tt_ptr_op(NULL,OP_EQ,  find_str_at_start_of_line(long_string, "third line\n"));
+  tt_ptr_op(NULL, OP_EQ,
+            find_str_at_start_of_line(long_string, "third line\n"));
   tt_ptr_op(short_line2,OP_EQ, find_str_at_start_of_line(short_string,
                                                      "second line\n"));
  done:
@@ -3283,7 +3292,7 @@ test_util_ftruncate(void *ptr)
   tt_int_op(fd, OP_GE, 0);
 
   /* Make the file be there. */
-  tt_int_op(strlen(message), OP_EQ, write_all(fd, message, strlen(message), 0));
+  tt_int_op(strlen(message), OP_EQ, write_all(fd, message, strlen(message),0));
   tt_int_op((int)tor_fd_getpos(fd), OP_EQ, strlen(message));
   tt_int_op(0, OP_EQ, fstat(fd, &st));
   tt_int_op((int)st.st_size, OP_EQ, strlen(message));
@@ -4145,8 +4154,10 @@ test_util_di_ops(void *arg)
         ii = (uint8_t)i;
         zz = (uint8_t)z;
         tt_int_op(tor_memeq(&zz, &ii, 1),OP_EQ, zz == ii);
-        tt_int_op(tor_memcmp(&zz, &ii, 1) > 0 ? GT : EQ,OP_EQ, zz > ii ? GT : EQ);
-        tt_int_op(tor_memcmp(&ii, &zz, 1) < 0 ? LT : EQ,OP_EQ, ii < zz ? LT : EQ);
+        tt_int_op(tor_memcmp(&zz, &ii, 1) > 0 ? GT : EQ,OP_EQ,
+                  zz > ii ? GT : EQ);
+        tt_int_op(tor_memcmp(&ii, &zz, 1) < 0 ? LT : EQ,OP_EQ,
+                  ii < zz ? LT : EQ);
       }
     }
   }
@@ -4219,7 +4230,8 @@ test_util_eat_whitespace(void *ptr)
   /* Only ws */
   strlcpy(str, " \t\r\n", sizeof(str));
   tt_ptr_op(str + strlen(str),OP_EQ, eat_whitespace(str));
-  tt_ptr_op(str + strlen(str),OP_EQ, eat_whitespace_eos(str, str + strlen(str)));
+  tt_ptr_op(str + strlen(str),OP_EQ,
+            eat_whitespace_eos(str, str + strlen(str)));
   tt_ptr_op(str + strlen(str) - 1,OP_EQ,
               eat_whitespace_no_nl(str));
   tt_ptr_op(str + strlen(str) - 1,OP_EQ,
@@ -4238,7 +4250,8 @@ test_util_eat_whitespace(void *ptr)
   for (i = 0; i < sizeof(ws); ++i)
     str[i] = ws[i];
   tt_ptr_op(str + sizeof(ws),OP_EQ, eat_whitespace(str));
-  tt_ptr_op(str + sizeof(ws),OP_EQ, eat_whitespace_eos(str, str + strlen(str)));
+  tt_ptr_op(str + sizeof(ws),OP_EQ,
+            eat_whitespace_eos(str, str + strlen(str)));
   tt_ptr_op(str + sizeof(ws),OP_EQ, eat_whitespace_no_nl(str));
   tt_ptr_op(str + sizeof(ws),OP_EQ,
               eat_whitespace_eos_no_nl(str, str + strlen(str)));
@@ -4260,14 +4273,16 @@ test_util_eat_whitespace(void *ptr)
   /* Eat entire comment */
   strlcpy(str, "#Comment", sizeof(str));
   tt_ptr_op(str + strlen(str),OP_EQ, eat_whitespace(str));
-  tt_ptr_op(str + strlen(str),OP_EQ, eat_whitespace_eos(str, str + strlen(str)));
+  tt_ptr_op(str + strlen(str),OP_EQ,
+            eat_whitespace_eos(str, str + strlen(str)));
   tt_ptr_op(str,OP_EQ, eat_whitespace_no_nl(str));
   tt_ptr_op(str,OP_EQ, eat_whitespace_eos_no_nl(str, str + strlen(str)));
 
   /* Blank line, then comment */
   strlcpy(str, " \t\n # Comment", sizeof(str));
   tt_ptr_op(str + strlen(str),OP_EQ, eat_whitespace(str));
-  tt_ptr_op(str + strlen(str),OP_EQ, eat_whitespace_eos(str, str + strlen(str)));
+  tt_ptr_op(str + strlen(str),OP_EQ,
+            eat_whitespace_eos(str, str + strlen(str)));
   tt_ptr_op(str + 2,OP_EQ, eat_whitespace_no_nl(str));
   tt_ptr_op(str + 2,OP_EQ, eat_whitespace_eos_no_nl(str, str + strlen(str)));
 

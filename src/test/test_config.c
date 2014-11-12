@@ -839,7 +839,8 @@ test_config_fix_my_family(void *arg)
     TT_FAIL(("options_validate failed: %s", err));
   }
 
-  tt_str_op(options->MyFamily,OP_EQ, "$1111111111111111111111111111111111111111, "
+  tt_str_op(options->MyFamily,OP_EQ,
+                                "$1111111111111111111111111111111111111111, "
                                 "$1111111111111111111111111111111111111112, "
                                 "$1111111111111111111111111111111111111113");
 

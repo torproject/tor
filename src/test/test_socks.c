@@ -432,8 +432,8 @@ test_socks_5_malformed_commands(void *ptr)
    */
   ADD_DATA(buf, "\x05\x01\x00");
   ADD_DATA(buf, "\x05\x01\x00\x01\x02\x02\x02\x02\x11\x11");
-  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks, 1),OP_EQ,
-                                 -1);
+  tt_int_op(fetch_from_buf_socks(buf, socks, get_options()->TestSocks, 1),
+            OP_EQ, -1);
 
   tt_int_op(5,OP_EQ,socks->socks_version);
   tt_int_op(10,OP_EQ,socks->replylen);

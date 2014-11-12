@@ -879,7 +879,8 @@ test_dir_versions(void *arg)
   /* Now try svn revisions. */
   tt_int_op(1,OP_EQ, tor_version_as_new_as("Tor 0.2.1.0-dev (r100)",
                                    "Tor 0.2.1.0-dev (r99)"));
-  tt_int_op(1,OP_EQ, tor_version_as_new_as("Tor 0.2.1.0-dev (r100) on Banana Jr",
+  tt_int_op(1,OP_EQ, tor_version_as_new_as(
+                                   "Tor 0.2.1.0-dev (r100) on Banana Jr",
                                    "Tor 0.2.1.0-dev (r99) on Hal 9000"));
   tt_int_op(1,OP_EQ, tor_version_as_new_as("Tor 0.2.1.0-dev (r100)",
                                    "Tor 0.2.1.0-dev on Colossus"));
@@ -929,7 +930,8 @@ test_dir_fp_pairs(void *arg)
   tt_mem_op(pair->first,OP_EQ,  "Hexadecimal isn't so", DIGEST_LEN);
   tt_mem_op(pair->second,OP_EQ, "good for hiding your", DIGEST_LEN);
   pair = smartlist_get(sl, 1);
-  tt_mem_op(pair->first,OP_EQ,  "secret data.\0\0\0\0\0\xff\xff\xff", DIGEST_LEN);
+  tt_mem_op(pair->first,OP_EQ,  "secret data.\0\0\0\0\0\xff\xff\xff",
+            DIGEST_LEN);
   tt_mem_op(pair->second,OP_EQ, "Use AES-256 instead.", DIGEST_LEN);
 
  done:
@@ -2067,8 +2069,8 @@ test_a_networkstatus(
     {
       digests_t *dsig_digests = strmap_get(dsig1->digests, "ns");
       tt_assert(dsig_digests);
-      tt_mem_op(dsig_digests->d[DIGEST_SHA1],OP_EQ, con3->digests.d[DIGEST_SHA1],
-                 DIGEST_LEN);
+      tt_mem_op(dsig_digests->d[DIGEST_SHA1], OP_EQ,
+                con3->digests.d[DIGEST_SHA1], DIGEST_LEN);
       dsig_digests = strmap_get(dsig1->digests, "microdesc");
       tt_assert(dsig_digests);
       tt_mem_op(dsig_digests->d[DIGEST_SHA256],OP_EQ,
@@ -2095,8 +2097,8 @@ test_a_networkstatus(
 
     /* Try adding it to con2. */
     detached_text2 = get_detached_sigs(con2,con_md2);
-    tt_int_op(1,OP_EQ, networkstatus_add_detached_signatures(con2, dsig1, "test",
-                                                     LOG_INFO, &msg));
+    tt_int_op(1,OP_EQ, networkstatus_add_detached_signatures(con2, dsig1,
+                                                   "test", LOG_INFO, &msg));
     tor_free(detached_text2);
     tt_int_op(1,OP_EQ,
               networkstatus_add_detached_signatures(con_md2, dsig1, "test",
@@ -2121,12 +2123,12 @@ test_a_networkstatus(
                                                    "microdesc")));
 
     /* Try adding to con2 twice; verify that nothing changes. */
-    tt_int_op(0,OP_EQ, networkstatus_add_detached_signatures(con2, dsig1, "test",
-                                                     LOG_INFO, &msg));
+    tt_int_op(0,OP_EQ, networkstatus_add_detached_signatures(con2, dsig1,
+                                               "test", LOG_INFO, &msg));
 
     /* Add to con. */
-    tt_int_op(2,OP_EQ, networkstatus_add_detached_signatures(con, dsig2, "test",
-                                                     LOG_INFO, &msg));
+    tt_int_op(2,OP_EQ, networkstatus_add_detached_signatures(con, dsig2,
+                                               "test", LOG_INFO, &msg));
     /* Check signatures */
     voter = smartlist_get(con->voters, 1);
     sig = smartlist_get(voter->sigs, 0);
@@ -2832,7 +2834,8 @@ test_dir_http_handling(void *args)
   tt_str_op(url,OP_EQ, "/tor/a/b/c.txt");
   tor_free(url);
 
-  tt_int_op(parse_http_url("GET /tor/a/b/c.txt HTTP/1.600\r\n", &url),OP_EQ, 0);
+  tt_int_op(parse_http_url("GET /tor/a/b/c.txt HTTP/1.600\r\n", &url),
+            OP_EQ, 0);
   tt_str_op(url,OP_EQ, "/tor/a/b/c.txt");
   tor_free(url);
 
@@ -2867,7 +2870,8 @@ test_dir_http_handling(void *args)
   tt_int_op(parse_http_url("GET /tor/a/b/c.txt HTTP/1.1", &url),OP_EQ, -1);
   tt_assert(!url);
 
-  tt_int_op(parse_http_url("GET /tor/a/b/c.txt HTTP/1.1x\r\n", &url),OP_EQ, -1);
+  tt_int_op(parse_http_url("GET /tor/a/b/c.txt HTTP/1.1x\r\n", &url),
+            OP_EQ, -1);
   tt_assert(!url);
 
   tt_int_op(parse_http_url("GET /tor/a/b/c.txt HTTP/1.", &url),OP_EQ, -1);

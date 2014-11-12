@@ -241,11 +241,14 @@ test_container_smartlist_strings(void *arg)
     tt_int_op(f,OP_EQ, 1);
     tt_int_op(1,OP_EQ, smartlist_bsearch_idx(sl," arm",cmp_without_first_,&f));
     tt_int_op(f,OP_EQ, 0);
-    tt_int_op(1,OP_EQ, smartlist_bsearch_idx(sl," arma",cmp_without_first_,&f));
+    tt_int_op(1,OP_EQ,
+              smartlist_bsearch_idx(sl," arma",cmp_without_first_,&f));
     tt_int_op(f,OP_EQ, 1);
-    tt_int_op(2,OP_EQ, smartlist_bsearch_idx(sl," armb",cmp_without_first_,&f));
+    tt_int_op(2,OP_EQ,
+              smartlist_bsearch_idx(sl," armb",cmp_without_first_,&f));
     tt_int_op(f,OP_EQ, 0);
-    tt_int_op(7,OP_EQ, smartlist_bsearch_idx(sl," zzzz",cmp_without_first_,&f));
+    tt_int_op(7,OP_EQ,
+              smartlist_bsearch_idx(sl," zzzz",cmp_without_first_,&f));
     tt_int_op(f,OP_EQ, 0);
 
     /* Test trivial cases for list of length 0 or 1 */
@@ -477,7 +480,8 @@ test_container_smartlist_join(void *arg)
   tt_str_op(joined,OP_EQ, "Anemias,Anemias,Crossbowmen,Work");
   tor_free(joined);
   joined = smartlist_join_strings(sl4, ",", 0, NULL);
-  tt_str_op(joined,OP_EQ, "Ambush,Anchorman,Anchorman,Bacon,Inhumane,Insurance,"
+  tt_str_op(joined,OP_EQ,
+            "Ambush,Anchorman,Anchorman,Bacon,Inhumane,Insurance,"
              "Knish,Know,Manners,Manners,Maraschinos,Wombats,Wombats");
   tor_free(joined);
 
@@ -887,7 +891,8 @@ test_container_order_functions(void *arg)
   tt_int_op(7,OP_EQ, third_quartile()); /* 1, 2, 3, 4, 5, 6, ~7~, 8, 9 */
   lst2[n++] = 10;
   lst2[n++] = 11;
-  tt_int_op(9,OP_EQ, third_quartile()); /* 1, 2, 3, 4, 5, 6, 7, 8, ~9~, 10, 11 */
+  /* 1, 2, 3, 4, 5, 6, 7, 8, ~9~, 10, 11 */
+  tt_int_op(9,OP_EQ, third_quartile());
 
 #undef third_quartile
 
