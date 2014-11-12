@@ -1,4 +1,6 @@
-  o Bugfixes:
-	- When closing an introduction circuit that was opened in parallel, don't
-	  mark it unreachable which can causes it to be removed from the rend cache
-	  object thus not usable anymore.
+  o Major bugfixes:
+    - When closing an introduction circuit that was opened in
+      parallel, don't mark the introduction point as
+      unreachable. Previously, the first successful connection to an
+      introduction point would make the other uintroduction points get
+      marked as having timed out. Fixes bug 13698; bugfix on 0.0.6rc2.
