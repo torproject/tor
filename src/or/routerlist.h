@@ -118,7 +118,7 @@ WRA_WAS_ADDED(was_router_added_t s) {
 static INLINE int WRA_WAS_OUTDATED(was_router_added_t s)
 {
   return (s == ROUTER_WAS_TOO_OLD ||
-          s == ROUTER_WAS_NOT_NEW ||
+          s == ROUTER_IS_ALREADY_KNOWN ||
           s == ROUTER_NOT_IN_CONSENSUS ||
           s == ROUTER_NOT_IN_CONSENSUS_OR_NETWORKSTATUS);
 }

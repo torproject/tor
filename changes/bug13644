@@ -1,0 +1,4 @@
+  o Code simplifications and refactoring:
+    - Document all members of was_router_added_t enum and rename 
+      ROUTER_WAS_NOT_NEW to ROUTER_IS_ALREADY_KNOWN to make it less
+      confusable with ROUTER_WAS_TOO_OLD. Fixes issue 13644.

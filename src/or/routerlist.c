@@ -3382,7 +3382,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
                router_describe(router));
       *msg = "Router descriptor was not new.";
       routerinfo_free(router);
-      return ROUTER_WAS_NOT_NEW;
+      return ROUTER_IS_ALREADY_KNOWN;
     }
   }
 
@@ -3467,7 +3467,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
                                       &routerlist->desc_store);
       routerlist_insert_old(routerlist, router);
       *msg = "Router descriptor was not new.";
-      return ROUTER_WAS_NOT_NEW;
+      return ROUTER_IS_ALREADY_KNOWN;
     } else {
       /* Same key, and either new, or listed in the consensus. */
       log_debug(LD_DIR, "Replacing entry for router %s",
