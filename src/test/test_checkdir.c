@@ -126,9 +126,8 @@ test_checkdir_perms(void *testdata)
   tt_int_op(0, ==, stat(testdir, &st));
   tt_int_op_nowin(0, ==, (st.st_mode & unix_verify_optsmask));
 
-  done:
+ done:
   tor_free(testdir);
-
 }
 
 #define CHECKDIR(name,flags)                              \

@@ -1740,10 +1740,11 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
             "(building circuit to intro point). "
             "Marking intro point as possibly unreachable.",
             safe_str_client(ocirc->rend_data->onion_address),
-            safe_str_client(build_state_get_exit_nickname(ocirc->build_state)));
+            safe_str_client(build_state_get_exit_nickname(
+                                              ocirc->build_state)));
         rend_client_report_intro_point_failure(ocirc->build_state->chosen_exit,
-                                               ocirc->rend_data,
-                                               INTRO_POINT_FAILURE_UNREACHABLE);
+                                              ocirc->rend_data,
+                                              INTRO_POINT_FAILURE_UNREACHABLE);
       }
     }
   }
