@@ -203,6 +203,15 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
 #define STMT_END } while (0)
 #endif
 
+/* Some tools (like coccinelle) don't like to see operators as macro
+ * arguments. */
+#define OP_LT <
+#define OP_GT >
+#define OP_GE >=
+#define OP_LE <=
+#define OP_EQ ==
+#define OP_NE !=
+
 /* ===== String compatibility */
 #ifdef _WIN32
 /* Windows names string functions differently from most other platforms. */
