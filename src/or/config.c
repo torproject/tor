@@ -830,9 +830,6 @@ add_default_trusted_dir_authorities(dirinfo_type_t type)
       "194.109.206.212:80 7EA6 EAD6 FD83 083C 538F 4403 8BBF A077 587D D755",
     "Tonga orport=443 bridge 82.94.251.203:80 "
       "4A0C CD2D DC79 9508 3D73 F5D6 6710 0C8A 5831 F16D",
-    "turtles orport=9090 "
-      "v3ident=27B6B5996C426270A5C95488AA5BCEB6BCC86956 "
-      "76.73.17.194:9030 F397 038A DC51 3361 35E7 B80B D99C A384 4360 292B",
     "gabelmoo orport=443 "
       "v3ident=ED03BB616EB2F60BEC80151114BB25CEF515B226 "
       "131.188.40.189:80 F204 4413 DAC2 E02E 3D6B CF47 35A1 9BCA 1DE9 7281",
@@ -847,6 +844,9 @@ add_default_trusted_dir_authorities(dirinfo_type_t type)
     "Faravahar orport=443 "
       "v3ident=EFCBE720AB3A82B99F9E953CD5BF50F7EEFC7B97 "
       "154.35.32.5:80 CF6D 0AAF B385 BE71 B8E1 11FC 5CFF 4B47 9237 33BC",
+    "longclaw orport=443 "
+      "v3ident=23D15D965BC35114467363C165C4F724B64B4F66 "
+      "202.85.227.202:80 74A9 1064 6BCE EFBC D2E8 74FC 1DC9 9743 0F96 8145",
     NULL
   };
   for (i=0; authorities[i]; i++) {
