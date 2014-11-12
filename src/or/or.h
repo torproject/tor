@@ -676,6 +676,10 @@ typedef enum {
 
 /* Negative reasons are internal: we never send them in a DESTROY or TRUNCATE
  * call; they only go to the controller for tracking  */
+
+/* Closing introduction point that were opened in parallel. */
+#define END_CIRC_REASON_IP_NOW_REDUNDANT -4
+
 /** Our post-timeout circuit time measurement period expired.
  * We must give up now */
 #define END_CIRC_REASON_MEASUREMENT_EXPIRED -3
