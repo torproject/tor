@@ -717,7 +717,7 @@ tor_gettimeofday_cached_monotonic(struct timeval *tv)
   struct timeval last_tv = { 0, 0 };
 
   tor_gettimeofday_cached(tv);
-  if (timercmp(tv, &last_tv, <)) {
+  if (timercmp(tv, &last_tv, OP_LT)) {
     memcpy(tv, &last_tv, sizeof(struct timeval));
   } else {
     memcpy(&last_tv, tv, sizeof(struct timeval));

@@ -25,7 +25,7 @@ test_nodelist_node_get_verbose_nickname_by_id_null_node(void *arg)
   /* make sure node_get_by_id returns NULL */
   tt_assert(!node_get_by_id(ID));
   node_get_verbose_nickname_by_id(ID, vname);
-  tt_str_op(vname,==, "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+  tt_str_op(vname,OP_EQ, "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
  done:
   return;
 }
@@ -54,7 +54,7 @@ test_nodelist_node_get_verbose_nickname_not_named(void *arg)
           "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA",
           DIGEST_LEN);
   node_get_verbose_nickname(&mock_node, vname);
-  tt_str_op(vname,==, "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR");
+  tt_str_op(vname,OP_EQ, "$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA~TestOR");
 
  done:
   return;

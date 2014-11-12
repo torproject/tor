@@ -65,22 +65,22 @@ test_config_addressmap(void *arg)
   /* MapAddress .google.com .torserver.exit */
   strlcpy(address, "reader.google.com", sizeof(address));
   tt_assert(addressmap_rewrite(address, sizeof(address), &expires, NULL));
-  tt_str_op(address,==, "reader.torserver.exit");
+  tt_str_op(address,OP_EQ, "reader.torserver.exit");
 
   /* MapAddress *.yahoo.com *.google.com.torserver.exit */
   strlcpy(address, "reader.yahoo.com", sizeof(address));
   tt_assert(addressmap_rewrite(address, sizeof(address), &expires, NULL));
-  tt_str_op(address,==, "reader.google.com.torserver.exit");
+  tt_str_op(address,OP_EQ, "reader.google.com.torserver.exit");
 
   /*MapAddress *.cnn.com www.cnn.com */
   strlcpy(address, "cnn.com", sizeof(address));
   tt_assert(addressmap_rewrite(address, sizeof(address), &expires, NULL));
-  tt_str_op(address,==, "www.cnn.com");
+  tt_str_op(address,OP_EQ, "www.cnn.com");
 
   /* MapAddress .cn.com www.cnn.com */
   strlcpy(address, "www.cn.com", sizeof(address));
   tt_assert(addressmap_rewrite(address, sizeof(address), &expires, NULL));
-  tt_str_op(address,==, "www.cnn.com");
+  tt_str_op(address,OP_EQ, "www.cnn.com");
 
   /* MapAddress ex.com www.cnn.com  - no match */
   strlcpy(address, "www.ex.com", sizeof(address));
@@ -93,19 +93,19 @@ test_config_addressmap(void *arg)
   /* Where mapping for FQDN match on FQDN */
   strlcpy(address, "www.google.com", sizeof(address));
   tt_assert(addressmap_rewrite(address, sizeof(address), &expires, NULL));
-  tt_str_op(address,==, "3.3.3.3");
+  tt_str_op(address,OP_EQ, "3.3.3.3");
 
   strlcpy(address, "www.torproject.org", sizeof(address));
   tt_assert(addressmap_rewrite(address, sizeof(address), &expires, NULL));
-  tt_str_op(address,==, "1.1.1.1");
+  tt_str_op(address,OP_EQ, "1.1.1.1");
 
   strlcpy(address, "other.torproject.org", sizeof(address));
   tt_assert(addressmap_rewrite(address, sizeof(address), &expires, NULL));
-  tt_str_op(address,==, "this.torproject.org.otherserver.exit");
+  tt_str_op(address,OP_EQ, "this.torproject.org.otherserver.exit");
 
   strlcpy(address, "test.torproject.org", sizeof(address));
   tt_assert(addressmap_rewrite(address, sizeof(address), &expires, NULL));
-  tt_str_op(address,==, "2.2.2.2");
+  tt_str_op(address,OP_EQ, "2.2.2.2");
 
   /* Test a chain of address mappings and the order in which they were added:
           "MapAddress www.example.org 4.4.4.4"
@@ -114,12 +114,12 @@ test_config_addressmap(void *arg)
   */
   strlcpy(address, "www.example.org", sizeof(address));
   tt_assert(addressmap_rewrite(address, sizeof(address), &expires, NULL));
-  tt_str_op(address,==, "5.5.5.5");
+  tt_str_op(address,OP_EQ, "5.5.5.5");
 
   /* Test infinite address mapping results in no change */
   strlcpy(address, "www.infiniteloop.org", sizeof(address));
   tt_assert(addressmap_rewrite(address, sizeof(address), &expires, NULL));
-  tt_str_op(address,==, "www.infiniteloop.org");
+  tt_str_op(address,OP_EQ, "www.infiniteloop.org");
 
   /* Test we don't find false positives */
   strlcpy(address, "www.example.com", sizeof(address));
@@ -137,23 +137,23 @@ test_config_addressmap(void *arg)
 
   strlcpy(address, "www.abc.com", sizeof(address));
   tt_assert(addressmap_rewrite(address, sizeof(address), &expires, NULL));
-  tt_str_op(address,==, "www.abc.torserver.exit");
+  tt_str_op(address,OP_EQ, "www.abc.torserver.exit");
 
   strlcpy(address, "www.def.com", sizeof(address));
   tt_assert(addressmap_rewrite(address, sizeof(address), &expires, NULL));
-  tt_str_op(address,==, "www.def.torserver.exit");
+  tt_str_op(address,OP_EQ, "www.def.torserver.exit");
 
   strlcpy(address, "www.torproject.org", sizeof(address));
   tt_assert(addressmap_rewrite(address, sizeof(address), &expires, NULL));
-  tt_str_op(address,==, "1.1.1.1");
+  tt_str_op(address,OP_EQ, "1.1.1.1");
 
   strlcpy(address, "test.torproject.org", sizeof(address));
   tt_assert(addressmap_rewrite(address, sizeof(address), &expires, NULL));
-  tt_str_op(address,==, "1.1.1.1");
+  tt_str_op(address,OP_EQ, "1.1.1.1");
 
   strlcpy(address, "torproject.net", sizeof(address));
   tt_assert(addressmap_rewrite(address, sizeof(address), &expires, NULL));
-  tt_str_op(address,==, "2.2.2.2");
+  tt_str_op(address,OP_EQ, "2.2.2.2");
 
   /* We don't support '*' as a mapping directive */
   config_free_lines(get_options_mutable()->AddressMap);
@@ -213,9 +213,9 @@ test_config_check_or_create_data_subdir(void *arg)
   subpath = get_datadir_fname(subdir);
 
 #if defined (_WIN32)
-  tt_int_op(mkdir(options->DataDirectory), ==, 0);
+  tt_int_op(mkdir(options->DataDirectory), OP_EQ, 0);
 #else
-  tt_int_op(mkdir(options->DataDirectory, 0700), ==, 0);
+  tt_int_op(mkdir(options->DataDirectory, 0700), OP_EQ, 0);
 #endif
 
   r = stat(subpath, &st);
@@ -287,9 +287,9 @@ test_config_write_to_data_subdir(void *arg)
   filepath = get_datadir_fname2(subdir, fname);
 
 #if defined (_WIN32)
-  tt_int_op(mkdir(options->DataDirectory), ==, 0);
+  tt_int_op(mkdir(options->DataDirectory), OP_EQ, 0);
 #else
-  tt_int_op(mkdir(options->DataDirectory, 0700), ==, 0);
+  tt_int_op(mkdir(options->DataDirectory, 0700), OP_EQ, 0);
 #endif
 
   // Write attempt shoudl fail, if subdirectory doesn't exist.
@@ -300,13 +300,13 @@ test_config_write_to_data_subdir(void *arg)
   // equal to the original string.
   tt_assert(!write_to_data_subdir(subdir, fname, str, NULL));
   cp = read_file_to_str(filepath, 0, NULL);
-  tt_str_op(cp,==, str);
+  tt_str_op(cp,OP_EQ, str);
   tor_free(cp);
 
   // A second write operation should overwrite the old content.
   tt_assert(!write_to_data_subdir(subdir, fname, str, NULL));
   cp = read_file_to_str(filepath, 0, NULL);
-  tt_str_op(cp,==, str);
+  tt_str_op(cp,OP_EQ, str);
   tor_free(cp);
 
  done:
@@ -331,7 +331,7 @@ good_bridge_line_test(const char *string, const char *test_addrport,
 
   /* test addrport */
   tmp = tor_strdup(fmt_addrport(&bridge_line->addr, bridge_line->port));
-  tt_str_op(test_addrport,==, tmp);
+  tt_str_op(test_addrport,OP_EQ, tmp);
   tor_free(tmp);
 
   /* If we were asked to validate a digest, but we did not get a
@@ -349,7 +349,7 @@ good_bridge_line_test(const char *string, const char *test_addrport,
   if (test_digest) {
     tmp = tor_strdup(hex_str(bridge_line->digest, DIGEST_LEN));
     tor_strlower(tmp);
-    tt_str_op(test_digest,==, tmp);
+    tt_str_op(test_digest,OP_EQ, tmp);
     tor_free(tmp);
   }
 
@@ -360,7 +360,7 @@ good_bridge_line_test(const char *string, const char *test_addrport,
   if (!test_transport && bridge_line->transport_name)
     tt_assert(0);
   if (test_transport)
-    tt_str_op(test_transport,==, bridge_line->transport_name);
+    tt_str_op(test_transport,OP_EQ, bridge_line->transport_name);
 
   /* Validate the SOCKS argument smartlist. */
   if (test_socks_args && !bridge_line->socks_args)
@@ -839,7 +839,7 @@ test_config_fix_my_family(void *arg)
     TT_FAIL(("options_validate failed: %s", err));
   }
 
-  tt_str_op(options->MyFamily,==, "$1111111111111111111111111111111111111111, "
+  tt_str_op(options->MyFamily,OP_EQ, "$1111111111111111111111111111111111111111, "
                                 "$1111111111111111111111111111111111111112, "
                                 "$1111111111111111111111111111111111111113");
 

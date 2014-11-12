@@ -25,12 +25,12 @@ NS(test_main)(void *arg)
 
   rs = routerset_new();
 
-  tt_ptr_op(rs, !=, NULL);
-  tt_ptr_op(rs->list, !=, NULL);
-  tt_ptr_op(rs->names, !=, NULL);
-  tt_ptr_op(rs->digests, !=, NULL);
-  tt_ptr_op(rs->policies, !=, NULL);
-  tt_ptr_op(rs->country_names, !=, NULL);
+  tt_ptr_op(rs, OP_NE, NULL);
+  tt_ptr_op(rs->list, OP_NE, NULL);
+  tt_ptr_op(rs->names, OP_NE, NULL);
+  tt_ptr_op(rs->digests, OP_NE, NULL);
+  tt_ptr_op(rs->policies, OP_NE, NULL);
+  tt_ptr_op(rs->country_names, OP_NE, NULL);
 
   done:
     routerset_free(rs);
@@ -53,30 +53,30 @@ NS(test_main)(void *arg)
   /* strlen(c) < 4 */
   input = "xxx";
   name = routerset_get_countryname(input);
-  tt_ptr_op(name, ==, NULL);
+  tt_ptr_op(name, OP_EQ, NULL);
   tor_free(name);
 
   /* c[0] != '{' */
   input = "xxx}";
   name = routerset_get_countryname(input);
-  tt_ptr_op(name, ==, NULL);
+  tt_ptr_op(name, OP_EQ, NULL);
   tor_free(name);
 
   /* c[3] != '}' */
   input = "{xxx";
   name = routerset_get_countryname(input);
-  tt_ptr_op(name, ==, NULL);
+  tt_ptr_op(name, OP_EQ, NULL);
   tor_free(name);
 
   /* tor_strlower */
   input = "{XX}";
   name = routerset_get_countryname(input);
-  tt_str_op(name, ==, "xx");
+  tt_str_op(name, OP_EQ, "xx");
   tor_free(name);
 
   input = "{xx}";
   name = routerset_get_countryname(input);
-  tt_str_op(name, ==, "xx");
+  tt_str_op(name, OP_EQ, "xx");
   done:
     tor_free(name);
 }
@@ -103,10 +103,10 @@ NS(test_main)(void *arg)
 
   routerset_refresh_countries(set);
 
-  tt_ptr_op(set->countries, ==, NULL);
-  tt_int_op(set->n_countries, ==, 0);
-  tt_int_op(CALLED(geoip_is_loaded), ==, 1);
-  tt_int_op(CALLED(geoip_get_n_countries), ==, 0);
+  tt_ptr_op(set->countries, OP_EQ, NULL);
+  tt_int_op(set->n_countries, OP_EQ, 0);
+  tt_int_op(CALLED(geoip_is_loaded), OP_EQ, 1);
+  tt_int_op(CALLED(geoip_get_n_countries), OP_EQ, 0);
 
   done:
     NS_UNMOCK(geoip_is_loaded);
@@ -154,12 +154,12 @@ NS(test_main)(void *arg)
 
   routerset_refresh_countries(set);
 
-  tt_ptr_op(set->countries, !=, NULL);
-  tt_int_op(set->n_countries, ==, 1);
-  tt_int_op((unsigned int)(*set->countries), ==, 0);
-  tt_int_op(CALLED(geoip_is_loaded), ==, 1);
-  tt_int_op(CALLED(geoip_get_n_countries), ==, 1);
-  tt_int_op(CALLED(geoip_get_country), ==, 0);
+  tt_ptr_op(set->countries, OP_NE, NULL);
+  tt_int_op(set->n_countries, OP_EQ, 1);
+  tt_int_op((unsigned int)(*set->countries), OP_EQ, 0);
+  tt_int_op(CALLED(geoip_is_loaded), OP_EQ, 1);
+  tt_int_op(CALLED(geoip_get_n_countries), OP_EQ, 1);
+  tt_int_op(CALLED(geoip_get_country), OP_EQ, 0);
 
   done:
     NS_UNMOCK(geoip_is_loaded);
@@ -218,12 +218,12 @@ NS(test_main)(void *arg)
 
   routerset_refresh_countries(set);
 
-  tt_ptr_op(set->countries, !=, NULL);
-  tt_int_op(set->n_countries, ==, 2);
-  tt_int_op(CALLED(geoip_is_loaded), ==, 1);
-  tt_int_op(CALLED(geoip_get_n_countries), ==, 1);
-  tt_int_op(CALLED(geoip_get_country), ==, 1);
-  tt_int_op((unsigned int)(*set->countries), !=, 0);
+  tt_ptr_op(set->countries, OP_NE, NULL);
+  tt_int_op(set->n_countries, OP_EQ, 2);
+  tt_int_op(CALLED(geoip_is_loaded), OP_EQ, 1);
+  tt_int_op(CALLED(geoip_get_n_countries), OP_EQ, 1);
+  tt_int_op(CALLED(geoip_get_country), OP_EQ, 1);
+  tt_int_op((unsigned int)(*set->countries), OP_NE, 0);
 
   done:
     NS_UNMOCK(geoip_is_loaded);
@@ -283,12 +283,12 @@ NS(test_main)(void *arg)
 
   routerset_refresh_countries(set);
 
-  tt_ptr_op(set->countries, !=, NULL);
-  tt_int_op(set->n_countries, ==, 2);
-  tt_int_op(CALLED(geoip_is_loaded), ==, 1);
-  tt_int_op(CALLED(geoip_get_n_countries), ==, 1);
-  tt_int_op(CALLED(geoip_get_country), ==, 1);
-  tt_int_op((unsigned int)(*set->countries), ==, 0);
+  tt_ptr_op(set->countries, OP_NE, NULL);
+  tt_int_op(set->n_countries, OP_EQ, 2);
+  tt_int_op(CALLED(geoip_is_loaded), OP_EQ, 1);
+  tt_int_op(CALLED(geoip_get_n_countries), OP_EQ, 1);
+  tt_int_op(CALLED(geoip_get_country), OP_EQ, 1);
+  tt_int_op((unsigned int)(*set->countries), OP_EQ, 0);
 
   done:
     NS_UNMOCK(geoip_is_loaded);
@@ -340,7 +340,7 @@ NS(test_main)(void *arg)
 
   r = routerset_parse(set, s, "");
 
-  tt_int_op(r, ==, -1);
+  tt_int_op(r, OP_EQ, -1);
 
   done:
     routerset_free(set);
@@ -365,8 +365,8 @@ NS(test_main)(void *arg)
   set = routerset_new();
   s = "$0000000000000000000000000000000000000000";
   r = routerset_parse(set, s, "");
-  tt_int_op(r, ==, 0);
-  tt_int_op(digestmap_isempty(set->digests), !=, 1);
+  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(digestmap_isempty(set->digests), OP_NE, 1);
 
   done:
     routerset_free(set);
@@ -390,8 +390,8 @@ NS(test_main)(void *arg)
   set = routerset_new();
   s = "fred";
   r = routerset_parse(set, s, "");
-  tt_int_op(r, ==, 0);
-  tt_int_op(strmap_isempty(set->names), !=, 1);
+  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(strmap_isempty(set->names), OP_NE, 1);
 
   done:
     routerset_free(set);
@@ -415,8 +415,8 @@ NS(test_main)(void *arg)
   set = routerset_new();
   s = "{cc}";
   r = routerset_parse(set, s, "");
-  tt_int_op(r, ==, 0);
-  tt_int_op(smartlist_len(set->country_names), !=, 0);
+  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(smartlist_len(set->country_names), OP_NE, 0);
 
   done:
     routerset_free(set);
@@ -448,9 +448,9 @@ NS(test_main)(void *arg)
   set = routerset_new();
   s = "*";
   r = routerset_parse(set, s, "");
-  tt_int_op(r, ==, 0);
-  tt_int_op(smartlist_len(set->policies), !=, 0);
-  tt_int_op(CALLED(router_parse_addr_policy_item_from_string), ==, 1);
+  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(smartlist_len(set->policies), OP_NE, 0);
+  tt_int_op(CALLED(router_parse_addr_policy_item_from_string), OP_EQ, 1);
 
   done:
     routerset_free(set);
@@ -489,10 +489,10 @@ NS(test_main)(void *arg)
   NS_MOCK(smartlist_new);
 
   routerset_union(set, NULL);
-  tt_int_op(CALLED(smartlist_new), ==, 0);
+  tt_int_op(CALLED(smartlist_new), OP_EQ, 0);
 
   routerset_union(set, bad_set);
-  tt_int_op(CALLED(smartlist_new), ==, 0);
+  tt_int_op(CALLED(smartlist_new), OP_EQ, 0);
 
   done:
     NS_UNMOCK(smartlist_new);
@@ -529,7 +529,7 @@ NS(test_main)(void *arg)
   smartlist_add(src->list, tor_strdup("{xx}"));
   routerset_union(tgt, src);
 
-  tt_int_op(smartlist_len(tgt->list), !=, 0);
+  tt_int_op(smartlist_len(tgt->list), OP_NE, 0);
 
   done:
     routerset_free(src);
@@ -556,7 +556,7 @@ NS(test_main)(void *arg)
   is_list = routerset_is_list(set);
   routerset_free(set);
   set = NULL;
-  tt_int_op(is_list, !=, 0);
+  tt_int_op(is_list, OP_NE, 0);
 
   /* len(set->country_names) != 0, len(set->policies) == 0 */
   set = routerset_new();
@@ -564,7 +564,7 @@ NS(test_main)(void *arg)
   is_list = routerset_is_list(set);
   routerset_free(set);
   set = NULL;
-  tt_int_op(is_list, ==, 0);
+  tt_int_op(is_list, OP_EQ, 0);
 
   /* len(set->country_names) == 0, len(set->policies) != 0 */
   set = routerset_new();
@@ -573,7 +573,7 @@ NS(test_main)(void *arg)
   is_list = routerset_is_list(set);
   routerset_free(set);
   set = NULL;
-  tt_int_op(is_list, ==, 0);
+  tt_int_op(is_list, OP_EQ, 0);
 
   /* len(set->country_names) != 0, len(set->policies) != 0 */
   set = routerset_new();
@@ -583,7 +583,7 @@ NS(test_main)(void *arg)
   is_list = routerset_is_list(set);
   routerset_free(set);
   set = NULL;
-  tt_int_op(is_list, ==, 0);
+  tt_int_op(is_list, OP_EQ, 0);
 
   done:
     ;
@@ -605,12 +605,12 @@ NS(test_main)(void *arg)
 
   set = NULL;
   needs_geoip = routerset_needs_geoip(set);
-  tt_int_op(needs_geoip, ==, 0);
+  tt_int_op(needs_geoip, OP_EQ, 0);
 
   set = routerset_new();
   needs_geoip = routerset_needs_geoip(set);
   routerset_free((routerset_t *)set);
-  tt_int_op(needs_geoip, ==, 0);
+  tt_int_op(needs_geoip, OP_EQ, 0);
   set = NULL;
 
   set = routerset_new();
@@ -618,7 +618,7 @@ NS(test_main)(void *arg)
   needs_geoip = routerset_needs_geoip(set);
   routerset_free((routerset_t *)set);
   set = NULL;
-  tt_int_op(needs_geoip, !=, 0);
+  tt_int_op(needs_geoip, OP_NE, 0);
 
   done:
     ;
@@ -639,20 +639,20 @@ NS(test_main)(void *arg)
   (void)arg;
 
   is_empty = routerset_is_empty(set);
-  tt_int_op(is_empty, !=, 0);
+  tt_int_op(is_empty, OP_NE, 0);
 
   set = routerset_new();
   is_empty = routerset_is_empty(set);
   routerset_free(set);
   set = NULL;
-  tt_int_op(is_empty, !=, 0);
+  tt_int_op(is_empty, OP_NE, 0);
 
   set = routerset_new();
   smartlist_add(set->list, tor_strdup("{xx}"));
   is_empty = routerset_is_empty(set);
   routerset_free(set);
   set = NULL;
-  tt_int_op(is_empty, ==, 0);
+  tt_int_op(is_empty, OP_EQ, 0);
 
   done:
     ;
@@ -675,13 +675,13 @@ NS(test_main)(void *arg)
 
   contains = routerset_contains(set, NULL, 0, NULL, NULL, 0);
 
-  tt_int_op(contains, ==, 0);
+  tt_int_op(contains, OP_EQ, 0);
 
   set = tor_malloc_zero(sizeof(routerset_t));
   set->list = NULL;
   contains = routerset_contains(set, NULL, 0, NULL, NULL, 0);
   tor_free(set);
-  tt_int_op(contains, ==, 0);
+  tt_int_op(contains, OP_EQ, 0);
 
   done:
     ;
@@ -706,7 +706,7 @@ NS(test_main)(void *arg)
   contains = routerset_contains(set, NULL, 0, nickname, NULL, 0);
   routerset_free(set);
 
-  tt_int_op(contains, ==, 0);
+  tt_int_op(contains, OP_EQ, 0);
 
   done:
     ;
@@ -733,7 +733,7 @@ NS(test_main)(void *arg)
   contains = routerset_contains(set, NULL, 0, nickname, NULL, 0);
   routerset_free(set);
 
-  tt_int_op(contains, ==, 4);
+  tt_int_op(contains, OP_EQ, 4);
   done:
     ;
 }
@@ -757,7 +757,7 @@ NS(test_main)(void *arg)
   contains = routerset_contains(set, NULL, 0, "foo", NULL, 0);
   routerset_free(set);
 
-  tt_int_op(contains, ==, 0);
+  tt_int_op(contains, OP_EQ, 0);
   done:
     ;
 }
@@ -782,7 +782,7 @@ NS(test_main)(void *arg)
   contains = routerset_contains(set, NULL, 0, NULL, (const char*)foo, 0);
   routerset_free(set);
 
-  tt_int_op(contains, ==, 4);
+  tt_int_op(contains, OP_EQ, 4);
   done:
     ;
 }
@@ -808,7 +808,7 @@ NS(test_main)(void *arg)
   contains = routerset_contains(set, NULL, 0, NULL, (const char*)foo, 0);
   routerset_free(set);
 
-  tt_int_op(contains, ==, 0);
+  tt_int_op(contains, OP_EQ, 0);
   done:
     ;
 }
@@ -833,7 +833,7 @@ NS(test_main)(void *arg)
   contains = routerset_contains(set, NULL, 0, NULL, NULL, 0);
   routerset_free(set);
 
-  tt_int_op(contains, ==, 0);
+  tt_int_op(contains, OP_EQ, 0);
   done:
     ;
 }
@@ -865,8 +865,8 @@ NS(test_main)(void *arg)
   contains = routerset_contains(set, addr, 0, NULL, NULL, 0);
   routerset_free(set);
 
-  tt_int_op(CALLED(compare_tor_addr_to_addr_policy), ==, 1);
-  tt_int_op(contains, ==, 3);
+  tt_int_op(CALLED(compare_tor_addr_to_addr_policy), OP_EQ, 1);
+  tt_int_op(contains, OP_EQ, 3);
 
   done:
     ;
@@ -879,7 +879,7 @@ NS(compare_tor_addr_to_addr_policy)(const tor_addr_t *addr, uint16_t port,
   (void)port;
   (void)policy;
   CALLED(compare_tor_addr_to_addr_policy)++;
-  tt_ptr_op(addr, ==, MOCK_TOR_ADDR_PTR);
+  tt_ptr_op(addr, OP_EQ, MOCK_TOR_ADDR_PTR);
   return ADDR_POLICY_REJECTED;
 
   done:
@@ -910,8 +910,8 @@ NS(test_main)(void *arg)
   contains = routerset_contains(set, addr, 0, NULL, NULL, 0);
   routerset_free(set);
 
-  tt_int_op(CALLED(compare_tor_addr_to_addr_policy), ==, 1);
-  tt_int_op(contains, ==, 0);
+  tt_int_op(CALLED(compare_tor_addr_to_addr_policy), OP_EQ, 1);
+  tt_int_op(contains, OP_EQ, 0);
 
   done:
     ;
@@ -924,7 +924,7 @@ NS(compare_tor_addr_to_addr_policy)(const tor_addr_t *addr, uint16_t port,
   (void)port;
   (void)policy;
   CALLED(compare_tor_addr_to_addr_policy)++;
-  tt_ptr_op(addr, ==, MOCK_TOR_ADDR_PTR);
+  tt_ptr_op(addr, OP_EQ, MOCK_TOR_ADDR_PTR);
 
   return ADDR_POLICY_ACCEPTED;
 
@@ -955,7 +955,7 @@ NS(test_main)(void *arg)
   contains = routerset_contains(set, NULL, 0, NULL, NULL, 0);
   routerset_free(set);
 
-  tt_int_op(contains, ==, 0);
+  tt_int_op(contains, OP_EQ, 0);
 
   done:
     ;
@@ -968,7 +968,7 @@ NS(compare_tor_addr_to_addr_policy)(const tor_addr_t *addr, uint16_t port,
   (void)port;
   (void)policy;
   CALLED(compare_tor_addr_to_addr_policy)++;
-  tt_ptr_op(addr, ==, MOCK_TOR_ADDR_PTR);
+  tt_ptr_op(addr, OP_EQ, MOCK_TOR_ADDR_PTR);
 
   return ADDR_POLICY_ACCEPTED;
 
@@ -1003,9 +1003,9 @@ NS(test_main)(void *arg)
   contains = routerset_contains(set, MOCK_TOR_ADDR_PTR, 0, NULL, NULL, -1);
   routerset_free(set);
 
-  tt_int_op(contains, ==, 0);
-  tt_int_op(CALLED(compare_tor_addr_to_addr_policy), ==, 1);
-  tt_int_op(CALLED(geoip_get_country_by_addr), ==, 1);
+  tt_int_op(contains, OP_EQ, 0);
+  tt_int_op(CALLED(compare_tor_addr_to_addr_policy), OP_EQ, 1);
+  tt_int_op(CALLED(geoip_get_country_by_addr), OP_EQ, 1);
 
   done:
     ;
@@ -1018,7 +1018,7 @@ NS(compare_tor_addr_to_addr_policy)(const tor_addr_t *addr, uint16_t port,
   (void)port;
   (void)policy;
   CALLED(compare_tor_addr_to_addr_policy)++;
-  tt_ptr_op(addr, ==, MOCK_TOR_ADDR_PTR);
+  tt_ptr_op(addr, OP_EQ, MOCK_TOR_ADDR_PTR);
 
   done:
     return ADDR_POLICY_ACCEPTED;
@@ -1028,7 +1028,7 @@ int
 NS(geoip_get_country_by_addr)(const tor_addr_t *addr)
 {
   CALLED(geoip_get_country_by_addr)++;
-  tt_ptr_op(addr, ==, MOCK_TOR_ADDR_PTR);
+  tt_ptr_op(addr, OP_EQ, MOCK_TOR_ADDR_PTR);
 
   done:
     return -1;
@@ -1062,9 +1062,9 @@ NS(test_main)(void *arg)
   contains = routerset_contains(set, MOCK_TOR_ADDR_PTR, 0, NULL, NULL, -1);
   routerset_free(set);
 
-  tt_int_op(contains, ==, 2);
-  tt_int_op(CALLED(compare_tor_addr_to_addr_policy), ==, 1);
-  tt_int_op(CALLED(geoip_get_country_by_addr), ==, 1);
+  tt_int_op(contains, OP_EQ, 2);
+  tt_int_op(CALLED(compare_tor_addr_to_addr_policy), OP_EQ, 1);
+  tt_int_op(CALLED(geoip_get_country_by_addr), OP_EQ, 1);
 
   done:
     ;
@@ -1077,7 +1077,7 @@ NS(compare_tor_addr_to_addr_policy)(const tor_addr_t *addr, uint16_t port,
   (void)port;
   (void)policy;
   CALLED(compare_tor_addr_to_addr_policy)++;
-  tt_ptr_op(addr, ==, MOCK_TOR_ADDR_PTR);
+  tt_ptr_op(addr, OP_EQ, MOCK_TOR_ADDR_PTR);
 
   done:
     return ADDR_POLICY_ACCEPTED;
@@ -1087,7 +1087,7 @@ int
 NS(geoip_get_country_by_addr)(const tor_addr_t *addr)
 {
   CALLED(geoip_get_country_by_addr)++;
-  tt_ptr_op(addr, ==, MOCK_TOR_ADDR_PTR);
+  tt_ptr_op(addr, OP_EQ, MOCK_TOR_ADDR_PTR);
 
   done:
     return 1;
@@ -1111,7 +1111,7 @@ NS(test_main)(void *arg)
 
   r = routerset_add_unknown_ccs(setp, 1);
 
-  tt_int_op(r, ==, 0);
+  tt_int_op(r, OP_EQ, 0);
 
   done:
     routerset_free(set);
@@ -1140,8 +1140,8 @@ NS(test_main)(void *arg)
 
   r = routerset_add_unknown_ccs(setp, 0);
 
-  tt_ptr_op(*setp, !=, NULL);
-  tt_int_op(r, ==, 0);
+  tt_ptr_op(*setp, OP_NE, NULL);
+  tt_int_op(r, OP_EQ, 0);
 
   done:
     if (set != NULL)
@@ -1181,9 +1181,9 @@ NS(test_main)(void *arg)
 
   r = routerset_add_unknown_ccs(setp, 0);
 
-  tt_int_op(r, ==, 1);
-  tt_int_op(smartlist_contains_string(set->country_names, "??"), ==, 1);
-  tt_int_op(smartlist_contains_string(set->list, "{??}"), ==, 1);
+  tt_int_op(r, OP_EQ, 1);
+  tt_int_op(smartlist_contains_string(set->country_names, "??"), OP_EQ, 1);
+  tt_int_op(smartlist_contains_string(set->list, "{??}"), OP_EQ, 1);
 
   done:
     if (set != NULL)
@@ -1200,7 +1200,7 @@ NS(geoip_get_country)(const char *country)
   arg_is_qq = !strcmp(country, "??");
   arg_is_a1 = !strcmp(country, "A1");
 
-  tt_int_op(arg_is_qq || arg_is_a1, ==, 1);
+  tt_int_op(arg_is_qq || arg_is_a1, OP_EQ, 1);
 
   if (arg_is_qq)
     return 1;
@@ -1214,7 +1214,7 @@ NS(geoip_is_loaded)(sa_family_t family)
 {
   CALLED(geoip_is_loaded)++;
 
-  tt_int_op(family, ==, AF_INET);
+  tt_int_op(family, OP_EQ, AF_INET);
 
   done:
     return 0;
@@ -1244,9 +1244,9 @@ NS(test_main)(void *arg)
 
   r = routerset_add_unknown_ccs(setp, 0);
 
-  tt_int_op(r, ==, 1);
-  tt_int_op(smartlist_contains_string(set->country_names, "a1"), ==, 1);
-  tt_int_op(smartlist_contains_string(set->list, "{a1}"), ==, 1);
+  tt_int_op(r, OP_EQ, 1);
+  tt_int_op(smartlist_contains_string(set->country_names, "a1"), OP_EQ, 1);
+  tt_int_op(smartlist_contains_string(set->list, "{a1}"), OP_EQ, 1);
 
   done:
     if (set != NULL)
@@ -1263,7 +1263,7 @@ NS(geoip_get_country)(const char *country)
   arg_is_qq = !strcmp(country, "??");
   arg_is_a1 = !strcmp(country, "A1");
 
-  tt_int_op(arg_is_qq || arg_is_a1, ==, 1);
+  tt_int_op(arg_is_qq || arg_is_a1, OP_EQ, 1);
 
   if (arg_is_a1)
     return 1;
@@ -1277,7 +1277,7 @@ NS(geoip_is_loaded)(sa_family_t family)
 {
   CALLED(geoip_is_loaded)++;
 
-  tt_int_op(family, ==, AF_INET);
+  tt_int_op(family, OP_EQ, AF_INET);
 
   done:
     return 0;
@@ -1306,7 +1306,7 @@ NS(test_main)(void *arg)
 
   r = routerset_contains_extendinfo(set, &ei);
 
-  tt_int_op(r, ==, 4);
+  tt_int_op(r, OP_EQ, 4);
   done:
     routerset_free(set);
 }
@@ -1334,7 +1334,7 @@ NS(test_main)(void *arg)
 
   r = routerset_contains_router(set, &ri, country);
 
-  tt_int_op(r, ==, 4);
+  tt_int_op(r, OP_EQ, 4);
   done:
     routerset_free(set);
 }
@@ -1367,7 +1367,7 @@ NS(test_main)(void *arg)
 
   r = routerset_contains_routerstatus(set, &rs, country);
 
-  tt_int_op(r, ==, 4);
+  tt_int_op(r, OP_EQ, 4);
   done:
     routerset_free(set);
 }
@@ -1393,7 +1393,7 @@ NS(test_main)(void *arg)
   NS(mock_node).rs = NULL;
 
   r = routerset_contains_node(set, &NS(mock_node));
-  tt_int_op(r, ==, 0);
+  tt_int_op(r, OP_EQ, 0);
 
   done:
     routerset_free(set);
@@ -1427,7 +1427,7 @@ NS(test_main)(void *arg)
 
   r = routerset_contains_node(set, &NS(mock_node));
 
-  tt_int_op(r, ==, 4);
+  tt_int_op(r, OP_EQ, 4);
   done:
     routerset_free(set);
 }
@@ -1458,7 +1458,7 @@ NS(test_main)(void *arg)
 
   r = routerset_contains_node(set, &mock_node);
 
-  tt_int_op(r, ==, 4);
+  tt_int_op(r, OP_EQ, 4);
   done:
     routerset_free(set);
 }
@@ -1478,15 +1478,15 @@ NS(test_main)(void *arg)
   routerset_t *set = NULL;
   (void)arg;
 
-  tt_int_op(smartlist_len(out), ==, 0);
+  tt_int_op(smartlist_len(out), OP_EQ, 0);
   routerset_get_all_nodes(out, NULL, NULL, 0);
 
-  tt_int_op(smartlist_len(out), ==, 0);
+  tt_int_op(smartlist_len(out), OP_EQ, 0);
 
   set = routerset_new();
   smartlist_free(set->list);
   routerset_get_all_nodes(out, NULL, NULL, 0);
-  tt_int_op(smartlist_len(out), ==, 0);
+  tt_int_op(smartlist_len(out), OP_EQ, 0);
 
   /* Just recreate list, so we can simply use routerset_free. */
   set->list = smartlist_new();
@@ -1527,8 +1527,8 @@ NS(test_main)(void *arg)
   smartlist_free(out);
   routerset_free(set);
 
-  tt_int_op(out_len, ==, 0);
-  tt_int_op(CALLED(node_get_by_nickname), ==, 1);
+  tt_int_op(out_len, OP_EQ, 0);
+  tt_int_op(CALLED(node_get_by_nickname), OP_EQ, 1);
 
   done:
     ;
@@ -1538,8 +1538,8 @@ const node_t *
 NS(node_get_by_nickname)(const char *nickname, int warn_if_unused)
 {
   CALLED(node_get_by_nickname)++;
-  tt_str_op(nickname, ==, NS(mock_nickname));
-  tt_int_op(warn_if_unused, ==, 1);
+  tt_str_op(nickname, OP_EQ, NS(mock_nickname));
+  tt_int_op(warn_if_unused, OP_EQ, 1);
 
   done:
     return NULL;
@@ -1578,8 +1578,8 @@ NS(test_main)(void *arg)
   smartlist_free(out);
   routerset_free(set);
 
-  tt_int_op(out_len, ==, 0);
-  tt_int_op(CALLED(node_get_by_nickname), ==, 1);
+  tt_int_op(out_len, OP_EQ, 0);
+  tt_int_op(CALLED(node_get_by_nickname), OP_EQ, 1);
 
   done:
     ;
@@ -1589,8 +1589,8 @@ const node_t *
 NS(node_get_by_nickname)(const char *nickname, int warn_if_unused)
 {
   CALLED(node_get_by_nickname)++;
-  tt_str_op(nickname, ==, NS(mock_nickname));
-  tt_int_op(warn_if_unused, ==, 1);
+  tt_str_op(nickname, OP_EQ, NS(mock_nickname));
+  tt_int_op(warn_if_unused, OP_EQ, 1);
 
   done:
     return &NS(mock_node);
@@ -1629,9 +1629,9 @@ NS(test_main)(void *arg)
   smartlist_free(out);
   routerset_free(set);
 
-  tt_int_op(out_len, ==, 1);
-  tt_ptr_op(ent, ==, &NS(mock_node));
-  tt_int_op(CALLED(node_get_by_nickname), ==, 1);
+  tt_int_op(out_len, OP_EQ, 1);
+  tt_ptr_op(ent, OP_EQ, &NS(mock_node));
+  tt_int_op(CALLED(node_get_by_nickname), OP_EQ, 1);
 
   done:
     ;
@@ -1641,8 +1641,8 @@ const node_t *
 NS(node_get_by_nickname)(const char *nickname, int warn_if_unused)
 {
   CALLED(node_get_by_nickname)++;
-  tt_str_op(nickname, ==, NS(mock_nickname));
-  tt_int_op(warn_if_unused, ==, 1);
+  tt_str_op(nickname, OP_EQ, NS(mock_nickname));
+  tt_int_op(warn_if_unused, OP_EQ, 1);
 
   done:
     return &NS(mock_node);
@@ -1678,8 +1678,8 @@ NS(test_main)(void *arg)
   smartlist_free(out);
   smartlist_free(NS(mock_smartlist));
 
-  tt_int_op(r, ==, 0);
-  tt_int_op(CALLED(nodelist_get_list), ==, 1);
+  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(CALLED(nodelist_get_list), OP_EQ, 1);
 
   done:
     ;
@@ -1727,8 +1727,8 @@ NS(test_main)(void *arg)
   smartlist_free(out);
   smartlist_free(NS(mock_smartlist));
 
-  tt_int_op(r, ==, 0);
-  tt_int_op(CALLED(nodelist_get_list), ==, 1);
+  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(CALLED(nodelist_get_list), OP_EQ, 1);
 
   done:
     ;
@@ -1766,10 +1766,10 @@ NS(test_main)(void *arg)
   mock_node.ri = &ri;
   smartlist_add(list, (void *)&mock_node);
 
-  tt_int_op(smartlist_len(list), !=, 0);
+  tt_int_op(smartlist_len(list), OP_NE, 0);
   routerset_subtract_nodes(list, set);
 
-  tt_int_op(smartlist_len(list), ==, 0);
+  tt_int_op(smartlist_len(list), OP_EQ, 0);
   done:
     routerset_free(set);
     smartlist_free(list);
@@ -1796,10 +1796,10 @@ NS(test_main)(void *arg)
   mock_node.ri = &ri;
   smartlist_add(list, (void *)&mock_node);
 
-  tt_int_op(smartlist_len(list), !=, 0);
+  tt_int_op(smartlist_len(list), OP_NE, 0);
   routerset_subtract_nodes(list, set);
 
-  tt_int_op(smartlist_len(list), !=, 0);
+  tt_int_op(smartlist_len(list), OP_NE, 0);
   done:
     routerset_free(set);
     smartlist_free(list);
@@ -1821,19 +1821,19 @@ NS(test_main)(void *arg)
 
   set = NULL;
   s = routerset_to_string(set);
-  tt_str_op(s, ==, "");
+  tt_str_op(s, OP_EQ, "");
   tor_free(s);
 
   set = routerset_new();
   s = routerset_to_string(set);
-  tt_str_op(s, ==, "");
+  tt_str_op(s, OP_EQ, "");
   tor_free(s);
   routerset_free(set); set = NULL;
 
   set = routerset_new();
   smartlist_add(set->list, tor_strndup("a", 1));
   s = routerset_to_string(set);
-  tt_str_op(s, ==, "a");
+  tt_str_op(s, OP_EQ, "a");
   tor_free(s);
   routerset_free(set); set = NULL;
 
@@ -1841,7 +1841,7 @@ NS(test_main)(void *arg)
   smartlist_add(set->list, tor_strndup("a", 1));
   smartlist_add(set->list, tor_strndup("b", 1));
   s = routerset_to_string(set);
-  tt_str_op(s, ==, "a,b");
+  tt_str_op(s, OP_EQ, "a,b");
   tor_free(s);
   routerset_free(set); set = NULL;
 
@@ -1868,7 +1868,7 @@ NS(test_main)(void *arg)
   routerset_free(a);
   routerset_free(b);
 
-  tt_int_op(r, ==, 1);
+  tt_int_op(r, OP_EQ, 1);
 
   done:
     ;
@@ -1893,7 +1893,7 @@ NS(test_main)(void *arg)
   routerset_free(a);
   routerset_free(b);
 
-  tt_int_op(r, ==, 0);
+  tt_int_op(r, OP_EQ, 0);
   done:
     ;
 }
@@ -1920,7 +1920,7 @@ NS(test_main)(void *arg)
   routerset_free(a);
   routerset_free(b);
 
-  tt_int_op(r, ==, 0);
+  tt_int_op(r, OP_EQ, 0);
   done:
     ;
 }
@@ -1946,7 +1946,7 @@ NS(test_main)(void *arg)
   routerset_free(a);
   routerset_free(b);
 
-  tt_int_op(r, ==, 0);
+  tt_int_op(r, OP_EQ, 0);
   done:
     ;
 }
@@ -1972,7 +1972,7 @@ NS(test_main)(void *arg)
   routerset_free(a);
   routerset_free(b);
 
-  tt_int_op(r, ==, 1);
+  tt_int_op(r, OP_EQ, 1);
   done:
     ;
 }
@@ -1995,7 +1995,7 @@ NS(test_main)(void *arg)
 
   routerset_free(NULL);
 
-  tt_int_op(CALLED(smartlist_free), ==, 0);
+  tt_int_op(CALLED(smartlist_free), OP_EQ, 0);
 
   done:
     ;
@@ -2031,9 +2031,9 @@ NS(test_main)(void *arg)
 
   routerset_free(routerset);
 
-  tt_int_op(CALLED(smartlist_free), !=, 0);
-  tt_int_op(CALLED(strmap_free), !=, 0);
-  tt_int_op(CALLED(digestmap_free), !=, 0);
+  tt_int_op(CALLED(smartlist_free), OP_NE, 0);
+  tt_int_op(CALLED(strmap_free), OP_NE, 0);
+  tt_int_op(CALLED(digestmap_free), OP_NE, 0);
 
   done:
     ;

@@ -69,7 +69,7 @@ test_pt_parsing(void *arg)
   /* test registered SOCKS version of transport */
   tt_assert(transport->socks_version == PROXY_SOCKS5);
   /* test registered name of transport */
-  tt_str_op(transport->name,==, "trebuchet");
+  tt_str_op(transport->name,OP_EQ, "trebuchet");
 
   reset_mp(mp);
 
@@ -96,7 +96,7 @@ test_pt_parsing(void *arg)
   /* test registered port of transport */
   tt_assert(transport->port == 2999);
   /* test registered name of transport */
-  tt_str_op(transport->name,==, "trebuchy");
+  tt_str_op(transport->name,OP_EQ, "trebuchy");
 
   reset_mp(mp);
 
@@ -105,14 +105,14 @@ test_pt_parsing(void *arg)
           "ARGS:counterweight=3,sling=snappy",
           sizeof(line));
   tt_assert(parse_smethod_line(line, mp) == 0);
-  tt_int_op(1, ==, smartlist_len(mp->transports));
+  tt_int_op(1, OP_EQ, smartlist_len(mp->transports));
   {
     const transport_t *transport = smartlist_get(mp->transports, 0);
     tt_assert(transport);
-    tt_str_op(transport->name, ==, "trebuchet");
-    tt_int_op(transport->port, ==, 9999);
-    tt_str_op(fmt_addr(&transport->addr), ==, "127.0.0.1");
-    tt_str_op(transport->extra_info_args, ==,
+    tt_str_op(transport->name, OP_EQ, "trebuchet");
+    tt_int_op(transport->port, OP_EQ, 9999);
+    tt_str_op(fmt_addr(&transport->addr), OP_EQ, "127.0.0.1");
+    tt_str_op(transport->extra_info_args, OP_EQ,
               "counterweight=3,sling=snappy");
   }
   reset_mp(mp);
@@ -151,9 +151,9 @@ test_pt_get_transport_options(void *arg)
   execve_args[1] = NULL;
 
   mp = managed_proxy_create(transport_list, execve_args, 1);
-  tt_ptr_op(mp, !=, NULL);
+  tt_ptr_op(mp, OP_NE, NULL);
   opt_str = get_transport_options_for_server_proxy(mp);
-  tt_ptr_op(opt_str, ==, NULL);
+  tt_ptr_op(opt_str, OP_EQ, NULL);
 
   smartlist_add(mp->transports_to_launch, tor_strdup("gruyere"));
   smartlist_add(mp->transports_to_launch, tor_strdup("roquefort"));
@@ -176,7 +176,7 @@ test_pt_get_transport_options(void *arg)
   options->ServerTransportOptions = cl;
 
   opt_str = get_transport_options_for_server_proxy(mp);
-  tt_str_op(opt_str, ==,
+  tt_str_op(opt_str, OP_EQ,
             "gruyere:melty=10;gruyere:hardness=se\\;ven;"
             "stnectaire:melty=4;stnectaire:hardness=three");
 
@@ -262,17 +262,17 @@ test_pt_get_extrainfo_string(void *arg)
   mp2 = managed_proxy_create(t2, argv2, 1);
 
   r = parse_smethod_line("SMETHOD hagbard 127.0.0.1:5555", mp1);
-  tt_int_op(r, ==, 0);
+  tt_int_op(r, OP_EQ, 0);
   r = parse_smethod_line("SMETHOD celine 127.0.0.1:1723 ARGS:card=no-enemy",
                          mp2);
-  tt_int_op(r, ==, 0);
+  tt_int_op(r, OP_EQ, 0);
 
   /* Force these proxies to look "completed" or they won't generate output. */
   mp1->conf_state = mp2->conf_state = PT_PROTO_COMPLETED;
 
   s = pt_get_extra_info_descriptor_string();
   tt_assert(s);
-  tt_str_op(s, ==,
+  tt_str_op(s, OP_EQ,
             "transport hagbard 127.0.0.1:5555\n"
             "transport celine 127.0.0.1:1723 card=no-enemy\n");
 
@@ -380,7 +380,7 @@ test_pt_configure_proxy(void *arg)
   for (i = 0 ; i < 5 ; i++) {
     retval = configure_proxy(mp);
     /* retval should be zero because proxy hasn't finished configuring yet */
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, OP_EQ, 0);
     /* check the number of registered transports */
     tt_assert(smartlist_len(mp->transports) == i+1);
     /* check that the mp is still waiting for transports */
@@ -390,23 +390,23 @@ test_pt_configure_proxy(void *arg)
   /* this last configure_proxy() should finalize the proxy configuration. */
   retval = configure_proxy(mp);
   /* retval should be 1 since the proxy finished configuring */
-  tt_int_op(retval, ==, 1);
+  tt_int_op(retval, OP_EQ, 1);
   /* check the mp state */
   tt_assert(mp->conf_state == PT_PROTO_COMPLETED);
 
-  tt_int_op(controlevent_n, ==, 5);
-  tt_int_op(controlevent_event, ==, EVENT_TRANSPORT_LAUNCHED);
-  tt_int_op(smartlist_len(controlevent_msgs), ==, 5);
+  tt_int_op(controlevent_n, OP_EQ, 5);
+  tt_int_op(controlevent_event, OP_EQ, EVENT_TRANSPORT_LAUNCHED);
+  tt_int_op(smartlist_len(controlevent_msgs), OP_EQ, 5);
   smartlist_sort_strings(controlevent_msgs);
-  tt_str_op(smartlist_get(controlevent_msgs, 0), ==,
+  tt_str_op(smartlist_get(controlevent_msgs, 0), OP_EQ,
             "650 TRANSPORT_LAUNCHED server mock1 127.0.0.1 5551\r\n");
-  tt_str_op(smartlist_get(controlevent_msgs, 1), ==,
+  tt_str_op(smartlist_get(controlevent_msgs, 1), OP_EQ,
             "650 TRANSPORT_LAUNCHED server mock2 127.0.0.1 5552\r\n");
-  tt_str_op(smartlist_get(controlevent_msgs, 2), ==,
+  tt_str_op(smartlist_get(controlevent_msgs, 2), OP_EQ,
             "650 TRANSPORT_LAUNCHED server mock3 127.0.0.1 5553\r\n");
-  tt_str_op(smartlist_get(controlevent_msgs, 3), ==,
+  tt_str_op(smartlist_get(controlevent_msgs, 3), OP_EQ,
             "650 TRANSPORT_LAUNCHED server mock4 127.0.0.1 5554\r\n");
-  tt_str_op(smartlist_get(controlevent_msgs, 4), ==,
+  tt_str_op(smartlist_get(controlevent_msgs, 4), OP_EQ,
             "650 TRANSPORT_LAUNCHED server mock5 127.0.0.1 5555\r\n");
 
   { /* check that the transport info were saved properly in the tor state */
@@ -423,8 +423,8 @@ test_pt_configure_proxy(void *arg)
                            NULL, 0, 0);
     name_of_transport = smartlist_get(transport_info_sl, 0);
     bindaddr = smartlist_get(transport_info_sl, 1);
-    tt_str_op(name_of_transport, ==, "mock1");
-    tt_str_op(bindaddr, ==, "127.0.0.1:5551");
+    tt_str_op(name_of_transport, OP_EQ, "mock1");
+    tt_str_op(bindaddr, OP_EQ, "127.0.0.1:5551");
 
     SMARTLIST_FOREACH(transport_info_sl, char *, cp, tor_free(cp));
     smartlist_free(transport_info_sl);
@@ -470,9 +470,9 @@ test_get_pt_proxy_uri(void *arg)
   ret = tor_addr_port_lookup(options->Socks4Proxy,
                              &options->Socks4ProxyAddr,
                              &options->Socks4ProxyPort);
-  tt_int_op(ret, ==, 0);
+  tt_int_op(ret, OP_EQ, 0);
   uri = get_pt_proxy_uri();
-  tt_str_op(uri, ==, "socks4a://192.0.2.1:1080");
+  tt_str_op(uri, OP_EQ, "socks4a://192.0.2.1:1080");
   tor_free(uri);
   tor_free(options->Socks4Proxy);
 
@@ -481,16 +481,16 @@ test_get_pt_proxy_uri(void *arg)
   ret = tor_addr_port_lookup(options->Socks5Proxy,
                              &options->Socks5ProxyAddr,
                              &options->Socks5ProxyPort);
-  tt_int_op(ret, ==, 0);
+  tt_int_op(ret, OP_EQ, 0);
   uri = get_pt_proxy_uri();
-  tt_str_op(uri, ==, "socks5://192.0.2.1:1080");
+  tt_str_op(uri, OP_EQ, "socks5://192.0.2.1:1080");
   tor_free(uri);
 
   /* Test with a SOCKS5 proxy, with username/password. */
   options->Socks5ProxyUsername = tor_strdup("hwest");
   options->Socks5ProxyPassword = tor_strdup("r34n1m470r");
   uri = get_pt_proxy_uri();
-  tt_str_op(uri, ==, "socks5://hwest:r34n1m470r@192.0.2.1:1080");
+  tt_str_op(uri, OP_EQ, "socks5://hwest:r34n1m470r@192.0.2.1:1080");
   tor_free(uri);
   tor_free(options->Socks5Proxy);
   tor_free(options->Socks5ProxyUsername);
@@ -501,15 +501,15 @@ test_get_pt_proxy_uri(void *arg)
   ret = tor_addr_port_lookup(options->HTTPSProxy,
                              &options->HTTPSProxyAddr,
                              &options->HTTPSProxyPort);
-  tt_int_op(ret, ==, 0);
+  tt_int_op(ret, OP_EQ, 0);
   uri = get_pt_proxy_uri();
-  tt_str_op(uri, ==, "http://192.0.2.1:80");
+  tt_str_op(uri, OP_EQ, "http://192.0.2.1:80");
   tor_free(uri);
 
   /* Test with a HTTPS proxy, with authenticator. */
   options->HTTPSProxyAuthenticator = tor_strdup("hwest:r34n1m470r");
   uri = get_pt_proxy_uri();
-  tt_str_op(uri, ==, "http://hwest:r34n1m470r@192.0.2.1:80");
+  tt_str_op(uri, OP_EQ, "http://hwest:r34n1m470r@192.0.2.1:80");
   tor_free(uri);
   tor_free(options->HTTPSProxy);
   tor_free(options->HTTPSProxyAuthenticator);
@@ -519,9 +519,9 @@ test_get_pt_proxy_uri(void *arg)
   ret = tor_addr_port_lookup(options->Socks4Proxy,
                              &options->Socks4ProxyAddr,
                              &options->Socks4ProxyPort);
-  tt_int_op(ret, ==, 0);
+  tt_int_op(ret, OP_EQ, 0);
   uri = get_pt_proxy_uri();
-  tt_str_op(uri, ==, "socks4a://[2001:db8::1]:1080");
+  tt_str_op(uri, OP_EQ, "socks4a://[2001:db8::1]:1080");
   tor_free(uri);
   tor_free(options->Socks4Proxy);
 

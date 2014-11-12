@@ -85,7 +85,7 @@ test_hs_desc_event(void *arg)
   expected_msg = "650 HS_DESC REQUESTED "STR_HS_ADDR" NO_AUTH "\
                   STR_HSDIR_EXIST_LONGNAME" "STR_HS_ID"\r\n";
   tt_assert(received_msg);
-  tt_str_op(received_msg,==, expected_msg);
+  tt_str_op(received_msg,OP_EQ, expected_msg);
   tor_free(received_msg);
 
   /* test received event */
@@ -94,7 +94,7 @@ test_hs_desc_event(void *arg)
   expected_msg = "650 HS_DESC RECEIVED "STR_HS_ADDR" BASIC_AUTH "\
                   STR_HSDIR_EXIST_LONGNAME"\r\n";
   tt_assert(received_msg);
-  tt_str_op(received_msg,==, expected_msg);
+  tt_str_op(received_msg,OP_EQ, expected_msg);
   tor_free(received_msg);
 
   /* test failed event */
@@ -103,7 +103,7 @@ test_hs_desc_event(void *arg)
   expected_msg = "650 HS_DESC FAILED "STR_HS_ADDR" STEALTH_AUTH "\
                   STR_HSDIR_NONE_EXIST_LONGNAME"\r\n";
   tt_assert(received_msg);
-  tt_str_op(received_msg,==, expected_msg);
+  tt_str_op(received_msg,OP_EQ, expected_msg);
   tor_free(received_msg);
 
   /* test invalid auth type */
@@ -112,7 +112,7 @@ test_hs_desc_event(void *arg)
   expected_msg = "650 HS_DESC FAILED "STR_HS_ADDR" UNKNOWN "\
                   STR_HSDIR_EXIST_LONGNAME"\r\n";
   tt_assert(received_msg);
-  tt_str_op(received_msg,==, expected_msg);
+  tt_str_op(received_msg,OP_EQ, expected_msg);
   tor_free(received_msg);
 
  done:

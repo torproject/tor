@@ -74,13 +74,13 @@ test_strcmp(void *data)
 	   values of the failing things.
 
 	   Fail unless strcmp("abc, "abc") == 0 */
-	tt_int_op(strcmp("abc", "abc"), ==, 0);
+	tt_int_op(strcmp("abc", "abc"), OP_EQ, 0);
 
 	/* Fail unless strcmp("abc, "abcd") is less than 0 */
-	tt_int_op(strcmp("abc", "abcd"), < , 0);
+	tt_int_op(strcmp("abc", "abcd"), OP_LT, 0);
 
 	/* Incidentally, there's a test_str_op that uses strcmp internally. */
-	tt_str_op("abc", <, "abcd");
+	tt_str_op("abc", OP_LT, "abcd");
 
 
 	/* Every test-case function needs to finish with an "end:"
@@ -153,11 +153,11 @@ test_memcpy(void *ptr)
 	/* Let's make sure that memcpy does what we'd like. */
 	strcpy(db->buffer1, "String 0");
 	memcpy(db->buffer2, db->buffer1, sizeof(db->buffer1));
-	tt_str_op(db->buffer1, ==, db->buffer2);
+	tt_str_op(db->buffer1, OP_EQ, db->buffer2);
 
         /* tt_mem_op() does a memcmp, as opposed to the strcmp in tt_str_op() */
         db->buffer2[100] = 3; /* Make the buffers unequal */
-        tt_mem_op(db->buffer1, <, db->buffer2, sizeof(db->buffer1));
+        tt_mem_op(db->buffer1, OP_LT, db->buffer2, sizeof(db->buffer1));
 
 	/* Now we've allocated memory that's referenced by a local variable.
 	   The end block of the function will clean it up. */
@@ -165,7 +165,7 @@ test_memcpy(void *ptr)
 	tt_assert(mem);
 
 	/* Another rather trivial test. */
-	tt_str_op(db->buffer1, !=, mem);
+	tt_str_op(db->buffer1, OP_NE, mem);
 
  end:
 	/* This time our end block has something to do. */
@@ -186,9 +186,9 @@ test_timeout(void *ptr)
 #endif
 	t2 = time(NULL);
 
-	tt_int_op(t2-t1, >=, 4);
+	tt_int_op(t2-t1, OP_GE, 4);
 
-	tt_int_op(t2-t1, <=, 6);
+	tt_int_op(t2-t1, OP_LE, 6);
 
  end:
 	;

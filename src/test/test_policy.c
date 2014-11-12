@@ -22,7 +22,7 @@ test_short_policy_parse(const char *input,
   short_policy = parse_short_policy(input);
   tt_assert(short_policy);
   out = write_short_policy(short_policy);
-  tt_str_op(out, ==, expected);
+  tt_str_op(out, OP_EQ, expected);
 
  done:
   tor_free(out);
@@ -50,17 +50,17 @@ test_policy_summary_helper(const char *policy_str,
   r = policies_parse_exit_policy(&line, &policy,
                                  EXIT_POLICY_IPV6_ENABLED |
                                  EXIT_POLICY_ADD_DEFAULT ,0);
-  tt_int_op(r,==, 0);
+  tt_int_op(r,OP_EQ, 0);
 
   summary = policy_summarize(policy, AF_INET);
 
   tt_assert(summary != NULL);
-  tt_str_op(summary,==, expected_summary);
+  tt_str_op(summary,OP_EQ, expected_summary);
 
   short_policy = parse_short_policy(summary);
   tt_assert(short_policy);
   summary_after = write_short_policy(short_policy);
-  tt_str_op(summary,==, summary_after);
+  tt_str_op(summary,OP_EQ, summary_after);
 
  done:
   tor_free(summary_after);
@@ -90,12 +90,12 @@ test_policies_general(void *arg)
 
   p = router_parse_addr_policy_item_from_string("reject 192.168.0.0/16:*",-1);
   tt_assert(p != NULL);
-  tt_int_op(ADDR_POLICY_REJECT,==, p->policy_type);
+  tt_int_op(ADDR_POLICY_REJECT,OP_EQ, p->policy_type);
   tor_addr_from_ipv4h(&tar, 0xc0a80000u);
-  tt_int_op(0,==, tor_addr_compare(&p->addr, &tar, CMP_EXACT));
-  tt_int_op(16,==, p->maskbits);
-  tt_int_op(1,==, p->prt_min);
-  tt_int_op(65535,==, p->prt_max);
+  tt_int_op(0,OP_EQ, tor_addr_compare(&p->addr, &tar, CMP_EXACT));
+  tt_int_op(16,OP_EQ, p->maskbits);
+  tt_int_op(1,OP_EQ, p->prt_min);
+  tt_int_op(65535,OP_EQ, p->prt_max);
 
   smartlist_add(policy, p);
 
@@ -109,7 +109,7 @@ test_policies_general(void *arg)
   tt_assert(ADDR_POLICY_REJECTED ==
           compare_tor_addr_to_addr_policy(&tar, 2, policy));
 
-  tt_int_op(0, ==, policies_parse_exit_policy(NULL, &policy2,
+  tt_int_op(0, OP_EQ, policies_parse_exit_policy(NULL, &policy2,
                                               EXIT_POLICY_IPV6_ENABLED |
                                               EXIT_POLICY_REJECT_PRIVATE |
                                               EXIT_POLICY_ADD_DEFAULT, 0));
@@ -200,14 +200,14 @@ test_policies_general(void *arg)
   line.key = (char*)"foo";
   line.value = (char*)"accept *:80,reject private:*,reject *:*";
   line.next = NULL;
-  tt_int_op(0, ==, policies_parse_exit_policy(&line,&policy,
+  tt_int_op(0, OP_EQ, policies_parse_exit_policy(&line,&policy,
                                               EXIT_POLICY_IPV6_ENABLED |
                                               EXIT_POLICY_ADD_DEFAULT,0));
   tt_assert(policy);
 
   //test_streq(policy->string, "accept *:80");
   //test_streq(policy->next->string, "reject *:*");
-  tt_int_op(smartlist_len(policy),==, 4);
+  tt_int_op(smartlist_len(policy),OP_EQ, 4);
 
   /* test policy summaries */
   /* check if we properly ignore private IP addresses */
@@ -281,7 +281,7 @@ test_policies_general(void *arg)
   /* Try parsing various broken short policies */
 #define TT_BAD_SHORT_POLICY(s)                                          \
   do {                                                                  \
-    tt_ptr_op(NULL, ==, (short_parsed = parse_short_policy((s))));      \
+    tt_ptr_op(NULL, OP_EQ, (short_parsed = parse_short_policy((s))));      \
   } while (0)
   TT_BAD_SHORT_POLICY("accept 200-199");
   TT_BAD_SHORT_POLICY("");
@@ -311,7 +311,7 @@ test_policies_general(void *arg)
     smartlist_free(chunks);
     short_parsed = parse_short_policy(policy);/* shouldn't be accepted */
     tor_free(policy);
-    tt_ptr_op(NULL, ==, short_parsed);
+    tt_ptr_op(NULL, OP_EQ, short_parsed);
   }
 
   /* truncation ports */
@@ -369,7 +369,7 @@ test_dump_exit_policy_to_string(void *arg)
  ri->exit_policy = NULL; // expecting "reject *:*"
  ep = router_dump_exit_policy_to_string(ri,1,1);
 
- tt_str_op("reject *:*",==, ep);
+ tt_str_op("reject *:*",OP_EQ, ep);
 
  tor_free(ep);
 
@@ -382,7 +382,7 @@ test_dump_exit_policy_to_string(void *arg)
 
  ep = router_dump_exit_policy_to_string(ri,1,1);
 
- tt_str_op("accept *:*",==, ep);
+ tt_str_op("accept *:*",OP_EQ, ep);
 
  tor_free(ep);
 
@@ -392,7 +392,7 @@ test_dump_exit_policy_to_string(void *arg)
 
  ep = router_dump_exit_policy_to_string(ri,1,1);
 
- tt_str_op("accept *:*\nreject *:25",==, ep);
+ tt_str_op("accept *:*\nreject *:25",OP_EQ, ep);
 
  tor_free(ep);
 
@@ -403,7 +403,7 @@ test_dump_exit_policy_to_string(void *arg)
 
  ep = router_dump_exit_policy_to_string(ri,1,1);
 
- tt_str_op("accept *:*\nreject *:25\nreject 8.8.8.8:*",==, ep);
+ tt_str_op("accept *:*\nreject *:25\nreject 8.8.8.8:*",OP_EQ, ep);
  tor_free(ep);
 
  policy_entry =
@@ -414,7 +414,7 @@ test_dump_exit_policy_to_string(void *arg)
  ep = router_dump_exit_policy_to_string(ri,1,1);
 
  tt_str_op("accept *:*\nreject *:25\nreject 8.8.8.8:*\n"
-            "reject6 [fc00::]/7:*",==, ep);
+            "reject6 [fc00::]/7:*",OP_EQ, ep);
  tor_free(ep);
 
  policy_entry =
@@ -425,7 +425,7 @@ test_dump_exit_policy_to_string(void *arg)
  ep = router_dump_exit_policy_to_string(ri,1,1);
 
  tt_str_op("accept *:*\nreject *:25\nreject 8.8.8.8:*\n"
-            "reject6 [fc00::]/7:*\naccept6 [c000::]/3:*",==, ep);
+            "reject6 [fc00::]/7:*\naccept6 [c000::]/3:*",OP_EQ, ep);
 
  done:
 

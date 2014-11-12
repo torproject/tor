@@ -86,62 +86,62 @@ NS(test_main)(void *arg)
 
   expected = "0:00 hours";
   actual = secs_to_uptime(0);
-  tt_str_op(actual, ==, expected);
+  tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 
   expected = "0:00 hours";
   actual = secs_to_uptime(1);
-  tt_str_op(actual, ==, expected);
+  tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 
   expected = "0:01 hours";
   actual = secs_to_uptime(60);
-  tt_str_op(actual, ==, expected);
+  tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 
   expected = "0:59 hours";
   actual = secs_to_uptime(60 * 59);
-  tt_str_op(actual, ==, expected);
+  tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 
   expected = "1:00 hours";
   actual = secs_to_uptime(60 * 60);
-  tt_str_op(actual, ==, expected);
+  tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 
   expected = "23:59 hours";
   actual = secs_to_uptime(60 * 60 * 23 + 60 * 59);
-  tt_str_op(actual, ==, expected);
+  tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 
   expected = "1 day 0:00 hours";
   actual = secs_to_uptime(60 * 60 * 23 + 60 * 60);
-  tt_str_op(actual, ==, expected);
+  tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 
   expected = "1 day 0:00 hours";
   actual = secs_to_uptime(86400 + 1);
-  tt_str_op(actual, ==, expected);
+  tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 
   expected = "1 day 0:01 hours";
   actual = secs_to_uptime(86400 + 60);
-  tt_str_op(actual, ==, expected);
+  tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 
   expected = "10 days 0:00 hours";
   actual = secs_to_uptime(86400 * 10);
-  tt_str_op(actual, ==, expected);
+  tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 
   expected = "10 days 0:00 hours";
   actual = secs_to_uptime(864000 + 1);
-  tt_str_op(actual, ==, expected);
+  tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 
   expected = "10 days 0:01 hours";
   actual = secs_to_uptime(864000 + 60);
-  tt_str_op(actual, ==, expected);
+  tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 
   done:
@@ -167,62 +167,62 @@ NS(test_main)(void *arg)
 
   expected = "0 kB";
   actual = bytes_to_usage(0);
-  tt_str_op(actual, ==, expected);
+  tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 
   expected = "0 kB";
   actual = bytes_to_usage(1);
-  tt_str_op(actual, ==, expected);
+  tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 
   expected = "1 kB";
   actual = bytes_to_usage(1024);
-  tt_str_op(actual, ==, expected);
+  tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 
   expected = "1023 kB";
   actual = bytes_to_usage((1 << 20) - 1);
-  tt_str_op(actual, ==, expected);
+  tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 
   expected = "1.00 MB";
   actual = bytes_to_usage((1 << 20));
-  tt_str_op(actual, ==, expected);
+  tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 
   expected = "1.00 MB";
   actual = bytes_to_usage((1 << 20) + 5242);
-  tt_str_op(actual, ==, expected);
+  tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 
   expected = "1.01 MB";
   actual = bytes_to_usage((1 << 20) + 5243);
-  tt_str_op(actual, ==, expected);
+  tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 
   expected = "1024.00 MB";
   actual = bytes_to_usage((1 << 30) - 1);
-  tt_str_op(actual, ==, expected);
+  tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 
   expected = "1.00 GB";
   actual = bytes_to_usage((1 << 30));
-  tt_str_op(actual, ==, expected);
+  tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 
   expected = "1.00 GB";
   actual = bytes_to_usage((1 << 30) + 5368709);
-  tt_str_op(actual, ==, expected);
+  tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 
   expected = "1.01 GB";
   actual = bytes_to_usage((1 << 30) + 5368710);
-  tt_str_op(actual, ==, expected);
+  tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 
   expected = "10.00 GB";
   actual = bytes_to_usage((U64_LITERAL(1) << 30) * 10L);
-  tt_str_op(actual, ==, expected);
+  tt_str_op(actual, OP_EQ, expected);
   tor_free(actual);
 
   done:
@@ -259,7 +259,7 @@ NS(test_main)(void *arg)
   expected = -1;
   actual = log_heartbeat(0);
 
-  tt_int_op(actual, ==, expected);
+  tt_int_op(actual, OP_EQ, expected);
 
   done:
     NS_UNMOCK(tls_get_write_overhead_ratio);
@@ -347,8 +347,8 @@ NS(test_main)(void *arg)
   expected = 0;
   actual = log_heartbeat(0);
 
-  tt_int_op(actual, ==, expected);
-  tt_int_op(CALLED(logv), ==, 3);
+  tt_int_op(actual, OP_EQ, expected);
+  tt_int_op(CALLED(logv), OP_EQ, 3);
 
   done:
     NS_UNMOCK(tls_get_write_overhead_ratio);
@@ -411,39 +411,39 @@ NS(logv)(int severity, log_domain_mask_t domain,
   switch (CALLED(logv))
   {
     case 0:
-      tt_int_op(severity, ==, LOG_NOTICE);
-      tt_int_op(domain, ==, LD_HEARTBEAT);
-      tt_ptr_op(strstr(funcname, "log_heartbeat"), !=, NULL);
-      tt_ptr_op(suffix, ==, NULL);
-      tt_str_op(format, ==,
+      tt_int_op(severity, OP_EQ, LOG_NOTICE);
+      tt_int_op(domain, OP_EQ, LD_HEARTBEAT);
+      tt_ptr_op(strstr(funcname, "log_heartbeat"), OP_NE, NULL);
+      tt_ptr_op(suffix, OP_EQ, NULL);
+      tt_str_op(format, OP_EQ,
           "Heartbeat: It seems like we are not in the cached consensus.");
       break;
     case 1:
-      tt_int_op(severity, ==, LOG_NOTICE);
-      tt_int_op(domain, ==, LD_HEARTBEAT);
-      tt_ptr_op(strstr(funcname, "log_heartbeat"), !=, NULL);
-      tt_ptr_op(suffix, ==, NULL);
-      tt_str_op(format, ==,
+      tt_int_op(severity, OP_EQ, LOG_NOTICE);
+      tt_int_op(domain, OP_EQ, LD_HEARTBEAT);
+      tt_ptr_op(strstr(funcname, "log_heartbeat"), OP_NE, NULL);
+      tt_ptr_op(suffix, OP_EQ, NULL);
+      tt_str_op(format, OP_EQ,
           "Heartbeat: Tor's uptime is %s, with %d circuits open. "
           "I've sent %s and received %s.%s");
-      tt_str_op(va_arg(ap, char *), ==, "0:00 hours");  /* uptime */
-      tt_int_op(va_arg(ap, int), ==, 0);  /* count_circuits() */
-      tt_str_op(va_arg(ap, char *), ==, "0 kB");  /* bw_sent */
-      tt_str_op(va_arg(ap, char *), ==, "0 kB");  /* bw_rcvd */
-      tt_str_op(va_arg(ap, char *), ==, "");  /* hibernating */
+      tt_str_op(va_arg(ap, char *), OP_EQ, "0:00 hours");  /* uptime */
+      tt_int_op(va_arg(ap, int), OP_EQ, 0);  /* count_circuits() */
+      tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* bw_sent */
+      tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* bw_rcvd */
+      tt_str_op(va_arg(ap, char *), OP_EQ, "");  /* hibernating */
       break;
     case 2:
-      tt_int_op(severity, ==, LOG_NOTICE);
-      tt_int_op(domain, ==, LD_HEARTBEAT);
+      tt_int_op(severity, OP_EQ, LOG_NOTICE);
+      tt_int_op(domain, OP_EQ, LD_HEARTBEAT);
       tt_ptr_op(
-          strstr(funcname, "rep_hist_log_circuit_handshake_stats"), !=, NULL);
-      tt_ptr_op(suffix, ==, NULL);
-      tt_str_op(format, ==,
+          strstr(funcname, "rep_hist_log_circuit_handshake_stats"), OP_NE, NULL);
+      tt_ptr_op(suffix, OP_EQ, NULL);
+      tt_str_op(format, OP_EQ,
         "Circuit handshake stats since last time: %d/%d TAP, %d/%d NTor.");
-      tt_int_op(va_arg(ap, int), ==, 1);  /* handshakes assigned (TAP) */
-      tt_int_op(va_arg(ap, int), ==, 1);  /* handshakes requested (TAP) */
-      tt_int_op(va_arg(ap, int), ==, 1);  /* handshakes assigned (NTOR) */
-      tt_int_op(va_arg(ap, int), ==, 1);  /* handshakes requested (NTOR) */
+      tt_int_op(va_arg(ap, int), OP_EQ, 1);  /* handshakes assigned (TAP) */
+      tt_int_op(va_arg(ap, int), OP_EQ, 1);  /* handshakes requested (TAP) */
+      tt_int_op(va_arg(ap, int), OP_EQ, 1);  /* handshakes assigned (NTOR) */
+      tt_int_op(va_arg(ap, int), OP_EQ, 1);  /* handshakes requested (NTOR) */
       break;
     default:
       tt_abort_msg("unexpected call to logv()");  // TODO: prettyprint args
@@ -502,7 +502,7 @@ NS(test_main)(void *arg)
   expected = 0;
   actual = log_heartbeat(0);
 
-  tt_int_op(actual, ==, expected);
+  tt_int_op(actual, OP_EQ, expected);
 
   done:
     NS_UNMOCK(tls_get_write_overhead_ratio);
@@ -564,18 +564,18 @@ static void
 NS(logv)(int severity, log_domain_mask_t domain, const char *funcname,
   const char *suffix, const char *format, va_list ap)
 {
-  tt_int_op(severity, ==, LOG_NOTICE);
-  tt_int_op(domain, ==, LD_HEARTBEAT);
-  tt_ptr_op(strstr(funcname, "log_heartbeat"), !=, NULL);
-  tt_ptr_op(suffix, ==, NULL);
-  tt_str_op(format, ==,
+  tt_int_op(severity, OP_EQ, LOG_NOTICE);
+  tt_int_op(domain, OP_EQ, LD_HEARTBEAT);
+  tt_ptr_op(strstr(funcname, "log_heartbeat"), OP_NE, NULL);
+  tt_ptr_op(suffix, OP_EQ, NULL);
+  tt_str_op(format, OP_EQ,
       "Heartbeat: Tor's uptime is %s, with %d circuits open. "
       "I've sent %s and received %s.%s");
-  tt_str_op(va_arg(ap, char *), ==, "0:00 hours");  /* uptime */
-  tt_int_op(va_arg(ap, int), ==, 0);  /* count_circuits() */
-  tt_str_op(va_arg(ap, char *), ==, "0 kB");  /* bw_sent */
-  tt_str_op(va_arg(ap, char *), ==, "0 kB");  /* bw_rcvd */
-  tt_str_op(va_arg(ap, char *), ==, " We are currently hibernating.");
+  tt_str_op(va_arg(ap, char *), OP_EQ, "0:00 hours");  /* uptime */
+  tt_int_op(va_arg(ap, int), OP_EQ, 0);  /* count_circuits() */
+  tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* bw_sent */
+  tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* bw_rcvd */
+  tt_str_op(va_arg(ap, char *), OP_EQ, " We are currently hibernating.");
 
   done:
     ;
@@ -638,8 +638,8 @@ NS(test_main)(void *arg)
   expected = 0;
   actual = log_heartbeat(0);
 
-  tt_int_op(actual, ==, expected);
-  tt_int_op(CALLED(logv), ==, 2);
+  tt_int_op(actual, OP_EQ, expected);
+  tt_int_op(CALLED(logv), OP_EQ, 2);
 
   done:
     NS_UNMOCK(tls_get_write_overhead_ratio);
@@ -711,34 +711,34 @@ NS(logv)(int severity, log_domain_mask_t domain,
   switch (CALLED(logv))
   {
     case 0:
-      tt_int_op(severity, ==, LOG_NOTICE);
-      tt_int_op(domain, ==, LD_HEARTBEAT);
-      tt_ptr_op(strstr(funcname, "log_heartbeat"), !=, NULL);
-      tt_ptr_op(suffix, ==, NULL);
-      tt_str_op(format, ==,
+      tt_int_op(severity, OP_EQ, LOG_NOTICE);
+      tt_int_op(domain, OP_EQ, LD_HEARTBEAT);
+      tt_ptr_op(strstr(funcname, "log_heartbeat"), OP_NE, NULL);
+      tt_ptr_op(suffix, OP_EQ, NULL);
+      tt_str_op(format, OP_EQ,
           "Heartbeat: Tor's uptime is %s, with %d circuits open. "
           "I've sent %s and received %s.%s");
-      tt_str_op(va_arg(ap, char *), ==, "0:00 hours");  /* uptime */
-      tt_int_op(va_arg(ap, int), ==, 0);  /* count_circuits() */
-      tt_str_op(va_arg(ap, char *), ==, "0 kB");  /* bw_sent */
-      tt_str_op(va_arg(ap, char *), ==, "0 kB");  /* bw_rcvd */
-      tt_str_op(va_arg(ap, char *), ==, "");  /* hibernating */
+      tt_str_op(va_arg(ap, char *), OP_EQ, "0:00 hours");  /* uptime */
+      tt_int_op(va_arg(ap, int), OP_EQ, 0);  /* count_circuits() */
+      tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* bw_sent */
+      tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* bw_rcvd */
+      tt_str_op(va_arg(ap, char *), OP_EQ, "");  /* hibernating */
       break;
     case 1:
-      tt_int_op(severity, ==, LOG_NOTICE);
-      tt_int_op(domain, ==, LD_HEARTBEAT);
-      tt_ptr_op(strstr(funcname, "log_accounting"), !=, NULL);
-      tt_ptr_op(suffix, ==, NULL);
-      tt_str_op(format, ==,
+      tt_int_op(severity, OP_EQ, LOG_NOTICE);
+      tt_int_op(domain, OP_EQ, LD_HEARTBEAT);
+      tt_ptr_op(strstr(funcname, "log_accounting"), OP_NE, NULL);
+      tt_ptr_op(suffix, OP_EQ, NULL);
+      tt_str_op(format, OP_EQ,
           "Heartbeat: Accounting enabled. Sent: %s / %s, Received: %s / %s. "
           "The current accounting interval ends on %s, in %s.");
-      tt_str_op(va_arg(ap, char *), ==, "0 kB");  /* acc_sent */
-      tt_str_op(va_arg(ap, char *), ==, "0 kB");  /* acc_max */
-      tt_str_op(va_arg(ap, char *), ==, "0 kB");  /* acc_rcvd */
-      tt_str_op(va_arg(ap, char *), ==, "0 kB");  /* acc_max */
+      tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* acc_sent */
+      tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* acc_max */
+      tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* acc_rcvd */
+      tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* acc_max */
       /* format_local_iso_time uses local tz, just check mins and secs. */
-      tt_ptr_op(strstr(va_arg(ap, char *), ":01:00"), !=, NULL);  /* end_buf */
-      tt_str_op(va_arg(ap, char *), ==, "0:01 hours");   /* remaining */
+      tt_ptr_op(strstr(va_arg(ap, char *), ":01:00"), OP_NE, NULL);  /* end_buf */
+      tt_str_op(va_arg(ap, char *), OP_EQ, "0:01 hours");   /* remaining */
       break;
     default:
       tt_abort_msg("unexpected call to logv()");  // TODO: prettyprint args
@@ -824,8 +824,8 @@ NS(test_main)(void *arg)
   expected = 0;
   actual = log_heartbeat(0);
 
-  tt_int_op(actual, ==, expected);
-  tt_int_op(CALLED(logv), ==, 2);
+  tt_int_op(actual, OP_EQ, expected);
+  tt_int_op(CALLED(logv), OP_EQ, 2);
 
   done:
     stats_n_data_bytes_packaged = 0;
@@ -893,27 +893,27 @@ NS(logv)(int severity, log_domain_mask_t domain, const char *funcname,
   switch (CALLED(logv))
   {
     case 0:
-      tt_int_op(severity, ==, LOG_NOTICE);
-      tt_int_op(domain, ==, LD_HEARTBEAT);
-      tt_ptr_op(strstr(funcname, "log_heartbeat"), !=, NULL);
-      tt_ptr_op(suffix, ==, NULL);
-      tt_str_op(format, ==,
+      tt_int_op(severity, OP_EQ, LOG_NOTICE);
+      tt_int_op(domain, OP_EQ, LD_HEARTBEAT);
+      tt_ptr_op(strstr(funcname, "log_heartbeat"), OP_NE, NULL);
+      tt_ptr_op(suffix, OP_EQ, NULL);
+      tt_str_op(format, OP_EQ,
           "Heartbeat: Tor's uptime is %s, with %d circuits open. "
           "I've sent %s and received %s.%s");
-      tt_str_op(va_arg(ap, char *), ==, "0:00 hours");  /* uptime */
-      tt_int_op(va_arg(ap, int), ==, 0);  /* count_circuits() */
-      tt_str_op(va_arg(ap, char *), ==, "0 kB");  /* bw_sent */
-      tt_str_op(va_arg(ap, char *), ==, "0 kB");  /* bw_rcvd */
-      tt_str_op(va_arg(ap, char *), ==, "");  /* hibernating */
+      tt_str_op(va_arg(ap, char *), OP_EQ, "0:00 hours");  /* uptime */
+      tt_int_op(va_arg(ap, int), OP_EQ, 0);  /* count_circuits() */
+      tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* bw_sent */
+      tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* bw_rcvd */
+      tt_str_op(va_arg(ap, char *), OP_EQ, "");  /* hibernating */
       break;
     case 1:
-      tt_int_op(severity, ==, LOG_NOTICE);
-      tt_int_op(domain, ==, LD_HEARTBEAT);
-      tt_ptr_op(strstr(funcname, "log_heartbeat"), !=, NULL);
-      tt_ptr_op(suffix, ==, NULL);
-      tt_str_op(format, ==,
+      tt_int_op(severity, OP_EQ, LOG_NOTICE);
+      tt_int_op(domain, OP_EQ, LD_HEARTBEAT);
+      tt_ptr_op(strstr(funcname, "log_heartbeat"), OP_NE, NULL);
+      tt_ptr_op(suffix, OP_EQ, NULL);
+      tt_str_op(format, OP_EQ,
           "Average packaged cell fullness: %2.3f%%");
-      tt_int_op(fabs(va_arg(ap, double) - 100.0) <= DBL_EPSILON, ==, 1);
+      tt_int_op(fabs(va_arg(ap, double) - 100.0) <= DBL_EPSILON, OP_EQ, 1);
       break;
     default:
       tt_abort_msg("unexpected call to logv()");  // TODO: prettyprint args
@@ -982,8 +982,8 @@ NS(test_main)(void *arg)
   expected = 0;
   actual = log_heartbeat(0);
 
-  tt_int_op(actual, ==, expected);
-  tt_int_op(CALLED(logv), ==, 2);
+  tt_int_op(actual, OP_EQ, expected);
+  tt_int_op(CALLED(logv), OP_EQ, 2);
 
   done:
     NS_UNMOCK(tls_get_write_overhead_ratio);
@@ -1049,26 +1049,26 @@ NS(logv)(int severity, log_domain_mask_t domain,
   switch (CALLED(logv))
   {
     case 0:
-      tt_int_op(severity, ==, LOG_NOTICE);
-      tt_int_op(domain, ==, LD_HEARTBEAT);
-      tt_ptr_op(strstr(funcname, "log_heartbeat"), !=, NULL);
-      tt_ptr_op(suffix, ==, NULL);
-      tt_str_op(format, ==,
+      tt_int_op(severity, OP_EQ, LOG_NOTICE);
+      tt_int_op(domain, OP_EQ, LD_HEARTBEAT);
+      tt_ptr_op(strstr(funcname, "log_heartbeat"), OP_NE, NULL);
+      tt_ptr_op(suffix, OP_EQ, NULL);
+      tt_str_op(format, OP_EQ,
           "Heartbeat: Tor's uptime is %s, with %d circuits open. "
           "I've sent %s and received %s.%s");
-      tt_str_op(va_arg(ap, char *), ==, "0:00 hours");  /* uptime */
-      tt_int_op(va_arg(ap, int), ==, 0);  /* count_circuits() */
-      tt_str_op(va_arg(ap, char *), ==, "0 kB");  /* bw_sent */
-      tt_str_op(va_arg(ap, char *), ==, "0 kB");  /* bw_rcvd */
-      tt_str_op(va_arg(ap, char *), ==, "");  /* hibernating */
+      tt_str_op(va_arg(ap, char *), OP_EQ, "0:00 hours");  /* uptime */
+      tt_int_op(va_arg(ap, int), OP_EQ, 0);  /* count_circuits() */
+      tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* bw_sent */
+      tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* bw_rcvd */
+      tt_str_op(va_arg(ap, char *), OP_EQ, "");  /* hibernating */
       break;
     case 1:
-      tt_int_op(severity, ==, LOG_NOTICE);
-      tt_int_op(domain, ==, LD_HEARTBEAT);
-      tt_ptr_op(strstr(funcname, "log_heartbeat"), !=, NULL);
-      tt_ptr_op(suffix, ==, NULL);
-      tt_str_op(format, ==, "TLS write overhead: %.f%%");
-      tt_int_op(fabs(va_arg(ap, double) - 100.0) <= DBL_EPSILON, ==, 1);
+      tt_int_op(severity, OP_EQ, LOG_NOTICE);
+      tt_int_op(domain, OP_EQ, LD_HEARTBEAT);
+      tt_ptr_op(strstr(funcname, "log_heartbeat"), OP_NE, NULL);
+      tt_ptr_op(suffix, OP_EQ, NULL);
+      tt_str_op(format, OP_EQ, "TLS write overhead: %.f%%");
+      tt_int_op(fabs(va_arg(ap, double) - 100.0) <= DBL_EPSILON, OP_EQ, 1);
       break;
     default:
       tt_abort_msg("unexpected call to logv()");  // TODO: prettyprint args
