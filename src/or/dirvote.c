@@ -6,6 +6,7 @@
 #define DIRVOTE_PRIVATE
 #include "or.h"
 #include "config.h"
+#include "dircollate.h"
 #include "directory.h"
 #include "dirserv.h"
 #include "dirvote.h"
@@ -782,28 +783,6 @@ networkstatus_check_weights(int64_t Wgg, int64_t Wgd, int64_t Wmg,
   return berr;
 }
 
-#if 0
-/** DOCDOC */
-static vote_identity_map_t *
-networkstatus_compute_identity_mapping(const smartlist_t *votes)
-{
-  vote_identity_map_t *map = vote_identity_map_new();
-
-  SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, vote) {
-    SMARTLIST_FOREACH_BEGIN(vote->routerstatus_list,
-                            vote_routerstatus_t *, vrs) {
-      vote_identity_map_add(map, vrs->status.identity_digest,
-                            vrs->has_ed25519_listing ? vrs->ed25519_id : NULL,
-                            vote_sl_idx);
-    } SMARTLIST_FOREACH_END(vrs);
-  } SMARTLIST_FOREACH_END(vote);
-
-  vote_identity_map_resolve(map);
-
-  return map;
-}
-#endif
-
 /**
  * This function computes the bandwidth weights for consensus method 10.
  *
@@ -1161,9 +1140,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
   char *params = NULL;
   char *packages = NULL;
   int added_weights = 0;
-#if 0
-  vote_identity_map_t *id_map = NULL;
-#endif
+  dircollator_t *collator = NULL;
   tor_assert(flavor == FLAV_NS || flavor == FLAV_MICRODESC);
   tor_assert(total_authorities >= smartlist_len(votes));
 
@@ -1519,16 +1496,24 @@ networkstatus_compute_consensus(smartlist_t *votes,
        }
     );
 
-#if 0
-    id_map = networkstatus_compute_identity_mapping(votes);
-#endif
+    /* Populate the collator */
+    collator = dircollator_new(smartlist_len(votes), total_authorities);
+    SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, v) {
+      dircollator_add_vote(collator, v);
+    } SMARTLIST_FOREACH_END(v);
+
+    dircollator_collate(collator);
 
     /* Now go through all the votes */
     flag_counts = tor_calloc(smartlist_len(flags), sizeof(int));
-    while (1) {
+    const int num_routers = dircollator_n_routers(collator);
+    for (i = 0; i < num_routers; ++i) {
+      vote_routerstatus_t **vrs_lst =
+        dircollator_get_votes_for_router(collator, i);
+
       vote_routerstatus_t *rs;
       routerstatus_t rs_out;
-      const char *lowest_id = NULL;
+      const char *current_rsa_id = NULL;
       const char *chosen_version;
       const char *chosen_name = NULL;
       int exitsummary_disagreement = 0;
@@ -1536,22 +1521,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
       int is_guard = 0, is_exit = 0, is_bad_exit = 0;
       int naming_conflict = 0;
       int n_listing = 0;
-      int i;
       char microdesc_digest[DIGEST256_LEN];
       tor_addr_port_t alt_orport = {TOR_ADDR_NULL, 0};
-
-      /* Of the next-to-be-considered digest in each voter, which is first? */
-      SMARTLIST_FOREACH(votes, networkstatus_t *, v, {
-        if (index[v_sl_idx] < size[v_sl_idx]) {
-          rs = smartlist_get(v->routerstatus_list, index[v_sl_idx]);
-          if (!lowest_id ||
-              fast_memcmp(rs->status.identity_digest,
-                          lowest_id, DIGEST_LEN) < 0)
-            lowest_id = rs->status.identity_digest;
-        }
-      });
-      if (!lowest_id) /* we're out of routers. */
-        break;
 
       memset(flag_counts, 0, sizeof(int)*smartlist_len(flags));
       smartlist_clear(matching_descs);
@@ -1562,29 +1533,25 @@ networkstatus_compute_consensus(smartlist_t *votes,
       num_guardfraction_inputs = 0;
 
       /* Okay, go through all the entries for this digest. */
-      SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, v) {
-        if (index[v_sl_idx] >= size[v_sl_idx])
-          continue; /* out of entries. */
-        rs = smartlist_get(v->routerstatus_list, index[v_sl_idx]);
-        if (fast_memcmp(rs->status.identity_digest, lowest_id, DIGEST_LEN))
-          continue; /* doesn't include this router. */
-        /* At this point, we know that we're looking at a routerstatus with
-         * identity "lowest".
-         */
-        ++index[v_sl_idx];
+      for (int voter_idx = 0; voter_idx < smartlist_len(votes); ++voter_idx) {
+        if (vrs_lst[voter_idx] == NULL)
+          continue; /* This voter had nothig to say about this entry. */
+        rs = vrs_lst[voter_idx];
         ++n_listing;
+
+        current_rsa_id = rs->status.identity_digest;
 
         smartlist_add(matching_descs, rs);
         if (rs->version && rs->version[0])
           smartlist_add(versions, rs->version);
 
         /* Tally up all the flags. */
-        for (i = 0; i < n_voter_flags[v_sl_idx]; ++i) {
-          if (rs->flags & (U64_LITERAL(1) << i))
-            ++flag_counts[flag_map[v_sl_idx][i]];
+        for (int flag = 0; flag < n_voter_flags[voter_idx]; ++flag) {
+          if (rs->flags & (U64_LITERAL(1) << flag))
+            ++flag_counts[flag_map[voter_idx][flag]];
         }
-        if (named_flag[v_sl_idx] >= 0 &&
-            (rs->flags & (U64_LITERAL(1) << named_flag[v_sl_idx]))) {
+        if (named_flag[voter_idx] >= 0 &&
+            (rs->flags & (U64_LITERAL(1) << named_flag[voter_idx]))) {
           if (chosen_name && strcmp(chosen_name, rs->status.nickname)) {
             log_notice(LD_DIR, "Conflict on naming for router: %s vs %s",
                        chosen_name, rs->status.nickname);
@@ -1605,7 +1572,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
         if (rs->status.has_bandwidth)
           bandwidths_kb[num_bandwidths++] = rs->status.bandwidth_kb;
-      } SMARTLIST_FOREACH_END(v);
+      }
 
       /* We don't include this router at all unless more than half of
        * the authorities we believe in list it. */
@@ -1619,8 +1586,9 @@ networkstatus_compute_consensus(smartlist_t *votes,
                                           microdesc_digest, &alt_orport);
       /* Copy bits of that into rs_out. */
       memset(&rs_out, 0, sizeof(rs_out));
-      tor_assert(fast_memeq(lowest_id, rs->status.identity_digest,DIGEST_LEN));
-      memcpy(rs_out.identity_digest, lowest_id, DIGEST_LEN);
+      tor_assert(fast_memeq(current_rsa_id,
+                            rs->status.identity_digest,DIGEST_LEN));
+      memcpy(rs_out.identity_digest, current_rsa_id, DIGEST_LEN);
       memcpy(rs_out.descriptor_digest, rs->status.descriptor_digest,
              DIGEST_LEN);
       rs_out.addr = rs->status.addr;
@@ -1644,7 +1612,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         const char *d = strmap_get_lc(name_to_id_map, rs_out.nickname);
         if (!d) {
           is_named = is_unnamed = 0;
-        } else if (fast_memeq(d, lowest_id, DIGEST_LEN)) {
+        } else if (fast_memeq(d, current_rsa_id, DIGEST_LEN)) {
           is_named = 1; is_unnamed = 0;
         } else {
           is_named = 0; is_unnamed = 1;
@@ -2010,9 +1978,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
  done:
 
-#if 0
-  vote_identity_map_free(id_map);
-#endif
+  dircollator_free(collator);
   tor_free(client_versions);
   tor_free(server_versions);
   tor_free(packages);

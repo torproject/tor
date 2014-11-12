@@ -43,6 +43,7 @@ LIBTOR_A_SOURCES = \
 	src/or/connection_or.c				\
 	src/or/control.c				\
 	src/or/cpuworker.c				\
+	src/or/dircollate.c				\
 	src/or/directory.c				\
 	src/or/dirserv.c				\
 	src/or/dirvote.c				\
@@ -151,6 +152,7 @@ ORHEADERS = \
 	src/or/connection_or.h				\
 	src/or/control.h				\
 	src/or/cpuworker.h				\
+	src/or/dircollate.h				\
 	src/or/directory.h				\
 	src/or/dirserv.h				\
 	src/or/dirvote.h				\
