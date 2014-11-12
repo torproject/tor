@@ -654,7 +654,7 @@ test_addr_ip6_helpers(void *arg)
   tt_int_op(r, OP_EQ, -1);
   r=tor_addr_parse_mask_ports("*6",0,&t1, &mask, NULL, NULL);
   tt_int_op(r, OP_EQ, -1);
-#if 0
+  tt_assert(r == -1);
   /* Try a mask with a wildcard. */
   r=tor_addr_parse_mask_ports("*/16",0,&t1, &mask, NULL, NULL);
   tt_assert(r == -1);
@@ -664,7 +664,6 @@ test_addr_ip6_helpers(void *arg)
   r=tor_addr_parse_mask_ports("*6/30",TAPMP_EXTENDED_STAR,
                               &t1, &mask, NULL, NULL);
   tt_assert(r == -1);
-#endif
   /* Basic mask tests*/
   r=tor_addr_parse_mask_ports("1.1.2.2/31",0,&t1, &mask, NULL, NULL);
   tt_assert(r == AF_INET);
