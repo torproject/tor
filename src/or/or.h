@@ -4232,6 +4232,13 @@ typedef struct {
   /** Should we send the timestamps that pre-023 hidden services want? */
   int Support022HiddenServices;
 
+  /** Is this an exit node?  This is a tristate, where "1" means "yes, and use
+   * the default exit policy if none is given" and "0" means "no; exit policy
+   * is 'reject *'" and "auto" (-1) means "same as 1, but warn the user."
+   *
+   * XXXX Eventually, the default will be 0. */
+  int ExitRelay;
+
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
