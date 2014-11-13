@@ -1502,7 +1502,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       dircollator_add_vote(collator, v);
     } SMARTLIST_FOREACH_END(v);
 
-    dircollator_collate(collator);
+    dircollator_collate(collator, consensus_method);
 
     /* Now go through all the votes */
     flag_counts = tor_calloc(smartlist_len(flags), sizeof(int));

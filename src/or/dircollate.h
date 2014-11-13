@@ -21,13 +21,15 @@ dircollator_t *dircollator_new(int n_votes, int n_authorities);
 void dircollator_free(dircollator_t *obj);
 void dircollator_add_vote(dircollator_t *dc, networkstatus_t *v);
 
-void dircollator_collate(dircollator_t *dc);
+void dircollator_collate(dircollator_t *dc, int consensus_method);
 
 int dircollator_n_routers(dircollator_t *dc);
 vote_routerstatus_t **dircollator_get_votes_for_router(dircollator_t *dc,
                                                        int idx);
 
 #ifdef DIRCOLLATE_PRIVATE
+struct ddmap_entry_s;
+typedef HT_HEAD(double_digest_map, ddmap_entry_s) double_digest_map_t;
 struct dircollator_s {
   /**DOCDOC */
   int is_collated;
@@ -36,6 +38,9 @@ struct dircollator_s {
 
   int next_vote_num;
   digestmap_t *by_rsa_sha1;
+  struct double_digest_map by_both_ids;
+
+  digestmap_t *by_collated_rsa_sha1;
 
   smartlist_t *all_rsa_sha1_lst;
 };

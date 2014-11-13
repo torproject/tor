@@ -2357,6 +2357,7 @@ typedef struct vote_routerstatus_t {
                   * running. */
   unsigned int has_measured_bw:1; /**< The vote had a measured bw */
   unsigned int has_ed25519_listing:1; /** DOCDOC */
+  unsigned int ed25519_reflects_consensus:1; /** DOCDOC */
   uint32_t measured_bw_kb; /**< Measured bandwidth (capacity) of the router */
   /** The hash or hashes that the authority claims this microdesc has. */
   vote_microdesc_hash_t *microdesc;
