@@ -35,6 +35,66 @@ when it launches tor service (see launchd.plist(5) manpage). Also,
 kern.ipc.maxsockets is determined dynamically by the system and thus is 
 read-only on OS X.
 
+OpenBSD
+-------
+
+For recent versions of OpenBSD (5.5 and 5.6, and probably older releases
+as well), the maximum number of file descriptors that can be opened is
+7030:
+
+http://unix.stackexchange.com/questions/104929/does-openbsd-have-a-limit-to-the-number-of-file-descriptors/104948#104948
+
+The maximum number of file descriptors that an OpenBSD machine can have
+open is stored in the sysctl variable kern.maxfiles. This value defaults
+to 7030 - to verify this, run sysctl kern.maxfiles.
+
+To immediately change a running system's file descriptor limit to, for
+example, 20,000 files, run sudo sysctl kern.maxfiles=20000. All sysctl
+variables are reset upon reboot using defaults and /etc/sysctl.conf, so
+to make your change permanent you must add the line kern.maxfiles=20000
+to /etc/sysctl.conf.
+
+One can also change a maximum number of allowed file descriptors for Tor
+daemon alone by editing /etc/rc.d/tor and adding the following lines:
+
+tor:\
+        :openfiles-max=8192:\
+        :tc=daemon:
+
+However, there are stricter limits set on users. This is a security
+feature intended to prevent one user from choking out others by opening
+all possible file descriptors.
+
+The stricter limits are set in /etc/login.conf. This config file sets
+resource access rules for user classes. You should be running
+Tor as a non-privileged daemon user '_tor', which belongs to the 'daemon'
+class. It will therefore be subject to the 'default' and 'daemon' rules.
+There are two relevant rules: openfiles-cur and openfiles-max. The prior
+is the initial limit upon login - the soft limit. The latter is the maximum
+limit that can be set using 'ulimit -n' or setrlimit() without editing
+/etc/login.conf and rebooting. This is known as the hard limit.
+
+Without editing /etc/login.conf, daemon-owned processes have
+soft limit of 512 open files and a hard limit of 1024 open files.
+Tor can increase the soft limit as needed, so you will therefore
+eventually get warnings about running out of available file descriptors
+once Tor reaches ~1024 open files.
+
+To increase the hard limit, add the following line to the daemon class
+rules in /etc/login.conf:
+
+tor:\
+        :openfiles-max=8192:\
+        :tc=daemon:
+
+Upon restarting the machine, Tor will be able to open up to 6500 file
+descriptors.
+
+Be aware that, by doing this, you are bypassing a security and stability
+feature of the OS. If you are running your relay on a weak or old system,
+watch your system load to ensure that it can handle this many open files.
+Also, Tor may interfere with any other programs that open many files.
+
 Disclaimer
 ----------
 
