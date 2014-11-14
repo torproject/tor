@@ -2042,6 +2042,7 @@ The following options are used to configure a hidden service.
     recent HiddenServiceDir. By default, this option maps the virtual port to
     the same port on 127.0.0.1 over TCP. You may override the target port,
     address, or both by specifying a target of addr, port, or addr:port.
+    (You can specify an IPv6 target as [addr]:port.)
     You may also have multiple lines with  the same VIRTPORT: when a user
     connects to that VIRTPORT, one of the TARGETs from those lines will be
     chosen at random.
