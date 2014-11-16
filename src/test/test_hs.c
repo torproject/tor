@@ -99,18 +99,20 @@ test_hs_desc_event(void *arg)
 
   /* test failed event */
   rend_query.auth_type = 2;
-  control_event_hs_descriptor_failed(&rend_query, HSDIR_NONE_EXIST_ID);
+  control_event_hs_descriptor_failed(&rend_query, HSDIR_NONE_EXIST_ID,
+                                     "QUERY_REJECTED");
   expected_msg = "650 HS_DESC FAILED "STR_HS_ADDR" STEALTH_AUTH "\
-                  STR_HSDIR_NONE_EXIST_LONGNAME"\r\n";
+                  STR_HSDIR_NONE_EXIST_LONGNAME" REASON=QUERY_REJECTED\r\n";
   tt_assert(received_msg);
   tt_str_op(received_msg,OP_EQ, expected_msg);
   tor_free(received_msg);
 
   /* test invalid auth type */
   rend_query.auth_type = 999;
-  control_event_hs_descriptor_failed(&rend_query, HSDIR_EXIST_ID);
+  control_event_hs_descriptor_failed(&rend_query, HSDIR_EXIST_ID,
+                                     "QUERY_REJECTED");
   expected_msg = "650 HS_DESC FAILED "STR_HS_ADDR" UNKNOWN "\
-                  STR_HSDIR_EXIST_LONGNAME"\r\n";
+                  STR_HSDIR_EXIST_LONGNAME" REASON=QUERY_REJECTED\r\n";
   tt_assert(received_msg);
   tt_str_op(received_msg,OP_EQ, expected_msg);
   tor_free(received_msg);

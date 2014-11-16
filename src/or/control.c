@@ -5096,20 +5096,30 @@ control_event_hs_descriptor_requested(const rend_data_t *rend_query,
 void
 control_event_hs_descriptor_receive_end(const char *action,
                                         const rend_data_t *rend_query,
-                                        const char *id_digest)
+                                        const char *id_digest,
+                                        const char *reason)
 {
+  char *reason_field = NULL;
+
   if (!action || !rend_query || !id_digest) {
     log_warn(LD_BUG, "Called with action==%p, rend_query==%p, "
              "id_digest==%p", action, rend_query, id_digest);
     return;
   }
 
+  if (reason) {
+    tor_asprintf(&reason_field, " REASON=%s", reason);
+  }
+
   send_control_event(EVENT_HS_DESC, ALL_FORMATS,
-                     "650 HS_DESC %s %s %s %s\r\n",
+                     "650 HS_DESC %s %s %s %s%s\r\n",
                      action,
                      rend_query->onion_address,
                      rend_auth_type_to_string(rend_query->auth_type),
-                     node_describe_longname_by_id(id_digest));
+                     node_describe_longname_by_id(id_digest),
+                     reason_field ? reason_field : "");
+
+  tor_free(reason_field);
 }
 
 /** send HS_DESC RECEIVED event
@@ -5125,7 +5135,8 @@ control_event_hs_descriptor_received(const rend_data_t *rend_query,
              rend_query, id_digest);
     return;
   }
-  control_event_hs_descriptor_receive_end("RECEIVED", rend_query, id_digest);
+  control_event_hs_descriptor_receive_end("RECEIVED", rend_query,
+                                          id_digest, NULL);
 }
 
 /** send HS_DESC FAILED event
@@ -5134,14 +5145,16 @@ control_event_hs_descriptor_received(const rend_data_t *rend_query,
  */
 void
 control_event_hs_descriptor_failed(const rend_data_t *rend_query,
-                                   const char *id_digest)
+                                   const char *id_digest,
+                                   const char *reason)
 {
   if (!rend_query || !id_digest) {
     log_warn(LD_BUG, "Called with rend_query==%p, id_digest==%p",
              rend_query, id_digest);
     return;
   }
-  control_event_hs_descriptor_receive_end("FAILED", rend_query, id_digest);
+  control_event_hs_descriptor_receive_end("FAILED", rend_query,
+                                          id_digest, reason);
 }
 
 /** Free any leftover allocated memory of the control.c subsystem. */
