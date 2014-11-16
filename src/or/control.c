@@ -5139,9 +5139,10 @@ control_event_hs_descriptor_received(const rend_data_t *rend_query,
                                           id_digest, NULL);
 }
 
-/** send HS_DESC FAILED event
- *
- * called when request for hidden service descriptor returned failure.
+/** Send HS_DESC event to inform controller that query <b>rend_query</b>
+ * failed to retrieve hidden service descriptor identified by
+ * <b>id_digest</b>. If <b>reason</b> is not NULL, add it to REASON=
+ * field.
  */
 void
 control_event_hs_descriptor_failed(const rend_data_t *rend_query,
