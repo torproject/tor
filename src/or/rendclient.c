@@ -130,16 +130,6 @@ rend_client_reextend_intro_circuit(origin_circuit_t *circ)
   return result;
 }
 
-/** Return true iff we should send timestamps in our INTRODUCE1 cells */
-static int
-rend_client_should_send_timestamp(void)
-{
-  if (get_options()->Support022HiddenServices >= 0)
-    return get_options()->Support022HiddenServices;
-
-  return networkstatus_get_param(NULL, "Support022HiddenServices", 1, 0, 1);
-}
-
 /** Called when we're trying to connect an ap conn; sends an INTRODUCE1 cell
  * down introcirc if possible.
  */
@@ -251,14 +241,8 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
              REND_DESC_COOKIE_LEN);
       v3_shift += 2+REND_DESC_COOKIE_LEN;
     }
-    if (rend_client_should_send_timestamp()) {
-      uint32_t now = (uint32_t)time(NULL);
-      now += 300;
-      now -= now % 600;
-      set_uint32(tmp+v3_shift+1, htonl(now));
-    } else {
-      set_uint32(tmp+v3_shift+1, 0);
-    }
+    /* Once this held a timestamp. */
+    set_uint32(tmp+v3_shift+1, 0);
     v3_shift += 4;
   } /* if version 2 only write version number */
   else if (entry->parsed->protocols & (1<<2)) {

@@ -377,7 +377,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("StrictEntryNodes"),
   OBSOLETE("StrictExitNodes"),
   V(StrictNodes,                 BOOL,     "0"),
-  V(Support022HiddenServices,    AUTOBOOL, "auto"),
+  OBSOLETE("Support022HiddenServices"),
   V(TestSocks,                   BOOL,     "0"),
   V(TokenBucketRefillInterval,   MSEC_INTERVAL, "100 msec"),
   V(Tor2webMode,                 BOOL,     "0"),
