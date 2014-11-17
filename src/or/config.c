@@ -2828,6 +2828,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   options->MaxMemInQueues =
     compute_real_max_mem_in_queues(options->MaxMemInQueues_raw,
                                    server_mode(options));
+  options->MaxMemInQueues_low_threshold = (options->MaxMemInQueues / 4) * 3;
 
   options->AllowInvalid_ = 0;
 

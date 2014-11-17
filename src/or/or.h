@@ -3514,6 +3514,8 @@ typedef struct {
   uint64_t MaxMemInQueues_raw;
   uint64_t MaxMemInQueues;/**< If we have more memory than this allocated
                             * for queues and buffers, run the OOM handler */
+  /** Above this value, consider ourselves low on RAM. */
+  uint64_t MaxMemInQueues_low_threshold;
 
   /** @name port booleans
    *

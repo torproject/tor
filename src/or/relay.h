@@ -50,6 +50,8 @@ void clean_cell_pool(void);
 void dump_cell_pool_usage(int severity);
 size_t packed_cell_mem_cost(void);
 
+int have_been_under_memory_pressure(void);
+
 /* For channeltls.c */
 void packed_cell_free(packed_cell_t *cell);
 

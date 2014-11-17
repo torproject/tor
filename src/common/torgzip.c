@@ -92,10 +92,27 @@ tor_zlib_get_header_version_str(void)
 
 /** Return the 'bits' value to tell zlib to use <b>method</b>.*/
 static INLINE int
-method_bits(compress_method_t method)
+method_bits(compress_method_t method, zlib_compression_level_t level)
 {
   /* Bits+16 means "use gzip" in zlib >= 1.2 */
-  return method == GZIP_METHOD ? 15+16 : 15;
+  const int flag = method == GZIP_METHOD ? 16 : 0;
+  switch (level) {
+    default:
+    case HIGH_COMPRESSION: return flag + 15;
+    case MEDIUM_COMPRESSION: return flag + 13;
+    case LOW_COMPRESSION: return flag + 11;
+  }
+}
+
+static INLINE int
+get_memlevel(zlib_compression_level_t level)
+{
+  switch (level) {
+    default:
+    case HIGH_COMPRESSION: return 8;
+    case MEDIUM_COMPRESSION: return 7;
+    case LOW_COMPRESSION: return 6;
+  }
 }
 
 /** @{ */
@@ -162,8 +179,9 @@ tor_gzip_compress(char **out, size_t *out_len,
   stream->avail_in = (unsigned int)in_len;
 
   if (deflateInit2(stream, Z_BEST_COMPRESSION, Z_DEFLATED,
-                   method_bits(method),
-                   8, Z_DEFAULT_STRATEGY) != Z_OK) {
+                   method_bits(method, HIGH_COMPRESSION),
+                   get_memlevel(HIGH_COMPRESSION),
+                   Z_DEFAULT_STRATEGY) != Z_OK) {
     log_warn(LD_GENERAL, "Error from deflateInit2: %s",
              stream->msg?stream->msg:"<no message>");
     goto err;
@@ -289,7 +307,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
   stream->avail_in = (unsigned int)in_len;
 
   if (inflateInit2(stream,
-                   method_bits(method)) != Z_OK) {
+                   method_bits(method, HIGH_COMPRESSION)) != Z_OK) {
     log_warn(LD_GENERAL, "Error from inflateInit2: %s",
              stream->msg?stream->msg:"<no message>");
     goto err;
@@ -315,7 +333,8 @@ tor_gzip_uncompress(char **out, size_t *out_len,
           log_warn(LD_BUG, "Error freeing gzip structures");
           goto err;
         }
-        if (inflateInit2(stream, method_bits(method)) != Z_OK) {
+        if (inflateInit2(stream,
+                         method_bits(method,HIGH_COMPRESSION)) != Z_OK) {
           log_warn(LD_GENERAL, "Error from second inflateInit2: %s",
                    stream->msg?stream->msg:"<no message>");
           goto err;
@@ -426,10 +445,11 @@ struct tor_zlib_state_t {
  * <b>compress</b>, it's for compression; otherwise it's for
  * decompression. */
 tor_zlib_state_t *
-tor_zlib_new(int compress, compress_method_t method)
+tor_zlib_new(int compress, compress_method_t method,
+             zlib_compression_level_t compression_level)
 {
   tor_zlib_state_t *out;
-  int bits;
+  int bits, memlevel;
 
   if (method == GZIP_METHOD && !is_gzip_supported()) {
     /* Old zlib version don't support gzip in inflateInit2 */
@@ -437,21 +457,29 @@ tor_zlib_new(int compress, compress_method_t method)
     return NULL;
  }
 
+ if (! compress) {
+   /* use this setting for decompression, since we might have the
+    * max number of window bits */
+   compression_level = HIGH_COMPRESSION;
+ }
+
  out = tor_malloc_zero(sizeof(tor_zlib_state_t));
  out->stream.zalloc = Z_NULL;
  out->stream.zfree = Z_NULL;
  out->stream.opaque = NULL;
  out->compress = compress;
- bits = method_bits(method);
+ bits = method_bits(method, compression_level);
+ memlevel = get_memlevel(compression_level);
  if (compress) {
    if (deflateInit2(&out->stream, Z_BEST_COMPRESSION, Z_DEFLATED,
-                    bits, 8, Z_DEFAULT_STRATEGY) != Z_OK)
+                    bits, memlevel,
+                    Z_DEFAULT_STRATEGY) != Z_OK)
      goto err;
  } else {
    if (inflateInit2(&out->stream, bits) != Z_OK)
      goto err;
  }
- out->allocation = tor_zlib_state_size_precalc(!compress, bits, 8);
+ out->allocation = tor_zlib_state_size_precalc(!compress, bits, memlevel);
 
  total_zlib_allocation += out->allocation;
 

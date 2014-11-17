@@ -1820,7 +1820,7 @@ test_util_gzip(void *arg)
   tor_free(buf1);
   tor_free(buf2);
   tor_free(buf3);
-  state = tor_zlib_new(1, ZLIB_METHOD);
+  state = tor_zlib_new(1, ZLIB_METHOD, HIGH_COMPRESSION);
   tt_assert(state);
   cp1 = buf1 = tor_malloc(1024);
   len1 = 1024;
