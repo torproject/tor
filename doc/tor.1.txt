@@ -1426,16 +1426,6 @@ The following options are useful only for clients (that is, if
     Tor will use a default value chosen by the directory
     authorities. (Default: -1.)
 
-[[Support022HiddenServices]] **Support022HiddenServices** **0**|**1**|**auto**::
-    Tor hidden services running versions before 0.2.3.x required clients to
-    send timestamps, which can potentially be used to distinguish clients
-    whose view of the current time is skewed. If this option is set to 0, we
-    do not send this timestamp, and hidden services on obsolete Tor versions
-    will not work.  If this option is set to 1, we send the timestamp.  If
-    this option is "auto", we take a recommendation from the latest consensus
-    document. (Default: auto)
-
-
 SERVER OPTIONS
 --------------
 
