@@ -812,7 +812,7 @@ add_default_trusted_dir_authorities(dirinfo_type_t type)
       "154.35.32.5:80 CF6D 0AAF B385 BE71 B8E1 11FC 5CFF 4B47 9237 33BC",
     "longclaw orport=443 no-v2 "
       "v3ident=23D15D965BC35114467363C165C4F724B64B4F66 "
-      "202.85.227.202:80 74A9 1064 6BCE EFBC D2E8 74FC 1DC9 9743 0F96 8145",
+      "199.254.238.52:80 74A9 1064 6BCE EFBC D2E8 74FC 1DC9 9743 0F96 8145",
     NULL
   };
   for (i=0; authorities[i]; i++) {
