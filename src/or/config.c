@@ -1072,7 +1072,7 @@ options_act_reversible(const or_options_t *old_options, char **msg)
                  "connections.");
       connection_mark_all_noncontrol_connections();
       /* We can't complete circuits until the network is re-enabled. */
-      can_complete_circuit = 0;
+      note_that_we_maybe_cant_complete_circuits();
     }
   }
 
@@ -1670,7 +1670,7 @@ options_act(const or_options_t *old_options)
 
       if (server_mode(options) && !server_mode(old_options)) {
         ip_address_changed(0);
-        if (can_complete_circuit || !any_predicted_circuits(time(NULL)))
+        if (have_completed_a_circuit() || !any_predicted_circuits(time(NULL)))
           inform_testing_reachability();
       }
       cpuworkers_rotate();

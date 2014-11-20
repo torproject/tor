@@ -3075,7 +3075,7 @@ rend_services_introduce(void)
    * an intro point to. */
   smartlist_t *exclude_nodes = smartlist_new();
 
-  if (!can_complete_circuit)
+  if (!have_completed_a_circuit())
     return;
 
   now = time(NULL);
