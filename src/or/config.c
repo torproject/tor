@@ -1071,6 +1071,8 @@ options_act_reversible(const or_options_t *old_options, char **msg)
                  "non-control network connections. Shutting down all existing "
                  "connections.");
       connection_mark_all_noncontrol_connections();
+      /* We can't complete circuits until the network is re-enabled. */
+      can_complete_circuit = 0;
     }
   }
 

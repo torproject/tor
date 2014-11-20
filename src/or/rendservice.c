@@ -16,6 +16,7 @@
 #include "circuituse.h"
 #include "config.h"
 #include "directory.h"
+#include "main.h"
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "rendclient.h"
@@ -3073,6 +3074,9 @@ rend_services_introduce(void)
   /* List of nodes we need to _exclude_ when choosing a new node to establish
    * an intro point to. */
   smartlist_t *exclude_nodes = smartlist_new();
+
+  if (!can_complete_circuit)
+    return;
 
   now = time(NULL);
 
