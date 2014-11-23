@@ -768,8 +768,8 @@ pathbias_send_usable_probe(circuit_t *circ)
 
   /* Can't probe if the channel isn't open */
   if (circ->n_chan == NULL ||
-      (circ->n_chan->state != CHANNEL_STATE_OPEN
-       && circ->n_chan->state != CHANNEL_STATE_MAINT)) {
+      (!CHANNEL_IS_OPEN(circ->n_chan)
+       && !CHANNEL_IS_MAINT(circ->n_chan))) {
     log_info(LD_CIRC,
              "Skipping pathbias probe for circuit %d: Channel is not open.",
              ocirc->global_identifier);
