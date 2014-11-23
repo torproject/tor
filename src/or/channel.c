@@ -378,8 +378,7 @@ channel_register(channel_t *chan)
   smartlist_add(all_channels, chan);
 
   /* Is it finished? */
-  if (chan->state == CHANNEL_STATE_CLOSED ||
-      chan->state == CHANNEL_STATE_ERROR) {
+  if (CHANNEL_FINISHED(chan)) {
     /* Put it in the finished list, creating it if necessary */
     if (!finished_channels) finished_channels = smartlist_new();
     smartlist_add(finished_channels, chan);
@@ -388,7 +387,7 @@ channel_register(channel_t *chan)
     if (!active_channels) active_channels = smartlist_new();
     smartlist_add(active_channels, chan);
 
-    if (chan->state != CHANNEL_STATE_CLOSING) {
+    if (!CHANNEL_IS_CLOSING(chan)) {
       /* It should have a digest set */
       if (!tor_digest_is_zero(chan->identity_digest)) {
         /* Yeah, we're good, add it to the map */
@@ -423,8 +422,7 @@ channel_unregister(channel_t *chan)
   if (!(chan->registered)) return;
 
   /* Is it finished? */
-  if (chan->state == CHANNEL_STATE_CLOSED ||
-      chan->state == CHANNEL_STATE_ERROR) {
+  if (CHANNEL_FINISHED(chan)) {
     /* Get it out of the finished list */
     if (finished_channels) smartlist_remove(finished_channels, chan);
   } else {
@@ -440,9 +438,7 @@ channel_unregister(channel_t *chan)
 
   /* Should it be in the digest map? */
   if (!tor_digest_is_zero(chan->identity_digest) &&
-      !(chan->state == CHANNEL_STATE_CLOSING ||
-        chan->state == CHANNEL_STATE_CLOSED ||
-        chan->state == CHANNEL_STATE_ERROR)) {
+      !(CHANNEL_CONDEMNED(chan))) {
     /* Remove it */
     channel_remove_from_digest_map(chan);
   }
@@ -542,9 +538,7 @@ channel_add_to_digest_map(channel_t *chan)
   tor_assert(chan);
 
   /* Assert that the state makes sense */
-  tor_assert(!(chan->state == CHANNEL_STATE_CLOSING ||
-               chan->state == CHANNEL_STATE_CLOSED ||
-               chan->state == CHANNEL_STATE_ERROR));
+  tor_assert(!CHANNEL_CONDEMNED(chan));
 
   /* Assert that there is a digest */
   tor_assert(!tor_digest_is_zero(chan->identity_digest));
@@ -779,8 +773,8 @@ channel_free(channel_t *chan)
   if (!chan) return;
 
   /* It must be closed or errored */
-  tor_assert(chan->state == CHANNEL_STATE_CLOSED ||
-             chan->state == CHANNEL_STATE_ERROR);
+  tor_assert(CHANNEL_FINISHED(chan));
+
   /* It must be deregistered */
   tor_assert(!(chan->registered));
 
@@ -988,9 +982,7 @@ channel_get_cell_handler(channel_t *chan)
 {
   tor_assert(chan);
 
-  if (chan->state == CHANNEL_STATE_OPENING ||
-      chan->state == CHANNEL_STATE_OPEN ||
-      chan->state == CHANNEL_STATE_MAINT)
+  if (CHANNEL_CAN_HANDLE_CELLS(chan))
     return chan->cell_handler;
 
   return NULL;
@@ -1008,9 +1000,7 @@ channel_get_var_cell_handler(channel_t *chan)
 {
   tor_assert(chan);
 
-  if (chan->state == CHANNEL_STATE_OPENING ||
-      chan->state == CHANNEL_STATE_OPEN ||
-      chan->state == CHANNEL_STATE_MAINT)
+  if (CHANNEL_CAN_HANDLE_CELLS(chan))
     return chan->var_cell_handler;
 
   return NULL;
@@ -1033,9 +1023,7 @@ channel_set_cell_handlers(channel_t *chan,
   int try_again = 0;
 
   tor_assert(chan);
-  tor_assert(chan->state == CHANNEL_STATE_OPENING ||
-             chan->state == CHANNEL_STATE_OPEN ||
-             chan->state == CHANNEL_STATE_MAINT);
+  tor_assert(CHANNEL_CAN_HANDLE_CELLS(chan));
 
   log_debug(LD_CHANNEL,
            "Setting cell_handler callback for channel %p to %p",
@@ -1089,9 +1077,8 @@ channel_mark_for_close(channel_t *chan)
   tor_assert(chan->close != NULL);
 
   /* If it's already in CLOSING, CLOSED or ERROR, this is a no-op */
-  if (chan->state == CHANNEL_STATE_CLOSING ||
-      chan->state == CHANNEL_STATE_CLOSED ||
-      chan->state == CHANNEL_STATE_ERROR) return;
+  if (CHANNEL_CONDEMNED(chan))
+    return;
 
   log_debug(LD_CHANNEL,
             "Closing channel %p (global ID " U64_FORMAT ") "
@@ -1170,9 +1157,8 @@ channel_close_from_lower_layer(channel_t *chan)
   tor_assert(chan != NULL);
 
   /* If it's already in CLOSING, CLOSED or ERROR, this is a no-op */
-  if (chan->state == CHANNEL_STATE_CLOSING ||
-      chan->state == CHANNEL_STATE_CLOSED ||
-      chan->state == CHANNEL_STATE_ERROR) return;
+  if (CHANNEL_CONDEMNED(chan))
+    return;
 
   log_debug(LD_CHANNEL,
             "Closing channel %p (global ID " U64_FORMAT ") "
@@ -1230,9 +1216,8 @@ channel_close_for_error(channel_t *chan)
   tor_assert(chan != NULL);
 
   /* If it's already in CLOSING, CLOSED or ERROR, this is a no-op */
-  if (chan->state == CHANNEL_STATE_CLOSING ||
-      chan->state == CHANNEL_STATE_CLOSED ||
-      chan->state == CHANNEL_STATE_ERROR) return;
+  if (CHANNEL_CONDEMNED(chan))
+    return;
 
   log_debug(LD_CHANNEL,
             "Closing channel %p due to lower-layer error",
@@ -1288,13 +1273,11 @@ void
 channel_closed(channel_t *chan)
 {
   tor_assert(chan);
-  tor_assert(chan->state == CHANNEL_STATE_CLOSING ||
-             chan->state == CHANNEL_STATE_CLOSED ||
-             chan->state == CHANNEL_STATE_ERROR);
+  tor_assert(CHANNEL_CONDEMNED(chan));
 
   /* No-op if already inactive */
-  if (chan->state == CHANNEL_STATE_CLOSED ||
-      chan->state == CHANNEL_STATE_ERROR) return;
+  if (CHANNEL_FINISHED(chan))
+    return;
 
   /* Inform any pending (not attached) circs that they should
    * give up. */
@@ -1357,10 +1340,7 @@ channel_clear_identity_digest(channel_t *chan)
             "global ID " U64_FORMAT,
             chan, U64_PRINTF_ARG(chan->global_identifier));
 
-  state_not_in_map =
-    (chan->state == CHANNEL_STATE_CLOSING ||
-     chan->state == CHANNEL_STATE_CLOSED ||
-     chan->state == CHANNEL_STATE_ERROR);
+  state_not_in_map = CHANNEL_CONDEMNED(chan);
 
   if (!state_not_in_map && chan->registered &&
       !tor_digest_is_zero(chan->identity_digest))
@@ -1393,10 +1373,8 @@ channel_set_identity_digest(channel_t *chan,
             identity_digest ?
               hex_str(identity_digest, DIGEST_LEN) : "(null)");
 
-  state_not_in_map =
-    (chan->state == CHANNEL_STATE_CLOSING ||
-     chan->state == CHANNEL_STATE_CLOSED ||
-     chan->state == CHANNEL_STATE_ERROR);
+  state_not_in_map = CHANNEL_CONDEMNED(chan);
+
   was_in_digest_map =
     !state_not_in_map &&
     chan->registered &&
@@ -1446,10 +1424,7 @@ channel_clear_remote_end(channel_t *chan)
             "global ID " U64_FORMAT,
             chan, U64_PRINTF_ARG(chan->global_identifier));
 
-  state_not_in_map =
-    (chan->state == CHANNEL_STATE_CLOSING ||
-     chan->state == CHANNEL_STATE_CLOSED ||
-     chan->state == CHANNEL_STATE_ERROR);
+  state_not_in_map = CHANNEL_CONDEMNED(chan);
 
   if (!state_not_in_map && chan->registered &&
       !tor_digest_is_zero(chan->identity_digest))
@@ -1485,10 +1460,8 @@ channel_set_remote_end(channel_t *chan,
             identity_digest ?
               hex_str(identity_digest, DIGEST_LEN) : "(null)");
 
-  state_not_in_map =
-    (chan->state == CHANNEL_STATE_CLOSING ||
-     chan->state == CHANNEL_STATE_CLOSED ||
-     chan->state == CHANNEL_STATE_ERROR);
+  state_not_in_map = CHANNEL_CONDEMNED(chan);
+
   was_in_digest_map =
     !state_not_in_map &&
     chan->registered &&
@@ -1682,9 +1655,7 @@ channel_write_cell_queue_entry(channel_t *chan, cell_queue_entry_t *q)
   tor_assert(q);
 
   /* Assert that the state makes sense for a cell write */
-  tor_assert(chan->state == CHANNEL_STATE_OPENING ||
-             chan->state == CHANNEL_STATE_OPEN ||
-             chan->state == CHANNEL_STATE_MAINT);
+  tor_assert(CHANNEL_CAN_HANDLE_CELLS(chan));
 
   {
     circid_t circ_id;
@@ -1695,7 +1666,7 @@ channel_write_cell_queue_entry(channel_t *chan, cell_queue_entry_t *q)
 
   /* Can we send it right out?  If so, try */
   if (TOR_SIMPLEQ_EMPTY(&chan->outgoing_queue) &&
-      chan->state == CHANNEL_STATE_OPEN) {
+      CHANNEL_IS_OPEN(chan)) {
     /* Pick the right write function for this cell type and save the result */
     switch (q->type) {
       case CELL_QUEUE_FIXED:
@@ -1738,7 +1709,7 @@ channel_write_cell_queue_entry(channel_t *chan, cell_queue_entry_t *q)
     tmp = cell_queue_entry_dup(q);
     TOR_SIMPLEQ_INSERT_TAIL(&chan->outgoing_queue, tmp, next);
     /* Try to process the queue? */
-    if (chan->state == CHANNEL_STATE_OPEN) channel_flush_cells(chan);
+    if (CHANNEL_IS_OPEN(chan)) channel_flush_cells(chan);
   }
 }
 
@@ -1759,7 +1730,7 @@ channel_write_cell(channel_t *chan, cell_t *cell)
   tor_assert(chan);
   tor_assert(cell);
 
-  if (chan->state == CHANNEL_STATE_CLOSING) {
+  if (CHANNEL_IS_CLOSING(chan)) {
     log_debug(LD_CHANNEL, "Discarding cell_t %p on closing channel %p with "
               "global ID "U64_FORMAT, cell, chan,
               U64_PRINTF_ARG(chan->global_identifier));
@@ -1793,7 +1764,7 @@ channel_write_packed_cell(channel_t *chan, packed_cell_t *packed_cell)
   tor_assert(chan);
   tor_assert(packed_cell);
 
-  if (chan->state == CHANNEL_STATE_CLOSING) {
+  if (CHANNEL_IS_CLOSING(chan)) {
     log_debug(LD_CHANNEL, "Discarding packed_cell_t %p on closing channel %p "
               "with global ID "U64_FORMAT, packed_cell, chan,
               U64_PRINTF_ARG(chan->global_identifier));
@@ -1829,7 +1800,7 @@ channel_write_var_cell(channel_t *chan, var_cell_t *var_cell)
   tor_assert(chan);
   tor_assert(var_cell);
 
-  if (chan->state == CHANNEL_STATE_CLOSING) {
+  if (CHANNEL_IS_CLOSING(chan)) {
     log_debug(LD_CHANNEL, "Discarding var_cell_t %p on closing channel %p "
               "with global ID "U64_FORMAT, var_cell, chan,
               U64_PRINTF_ARG(chan->global_identifier));
@@ -2069,7 +2040,7 @@ channel_flush_some_cells(channel_t *chan, ssize_t num_cells)
   if (!unlimited && num_cells <= flushed) goto done;
 
   /* If we aren't in CHANNEL_STATE_OPEN, nothing goes through */
-  if (chan->state == CHANNEL_STATE_OPEN) {
+  if (CHANNEL_IS_OPEN(chan)) {
     /* Try to flush as much as we can that's already queued */
     flushed += channel_flush_some_cells_from_outgoing_queue(chan,
         (unlimited ? -1 : num_cells - flushed));
@@ -2127,7 +2098,7 @@ channel_flush_some_cells_from_outgoing_queue(channel_t *chan,
   if (!unlimited && num_cells <= flushed) return 0;
 
   /* If we aren't in CHANNEL_STATE_OPEN, nothing goes through */
-  if (chan->state == CHANNEL_STATE_OPEN) {
+  if (CHANNEL_IS_OPEN(chan)) {
     while ((unlimited || num_cells > flushed) &&
            NULL != (q = TOR_SIMPLEQ_FIRST(&chan->outgoing_queue))) {
 
@@ -2462,9 +2433,8 @@ channel_process_cells(channel_t *chan)
 {
   cell_queue_entry_t *q;
   tor_assert(chan);
-  tor_assert(chan->state == CHANNEL_STATE_CLOSING ||
-             chan->state == CHANNEL_STATE_MAINT ||
-             chan->state == CHANNEL_STATE_OPEN);
+  tor_assert(CHANNEL_IS_CLOSING(chan) || CHANNEL_IS_MAINT(chan) ||
+             CHANNEL_IS_OPEN(chan));
 
   log_debug(LD_CHANNEL,
             "Processing as many incoming cells as we can for channel %p",
@@ -2531,7 +2501,7 @@ channel_queue_cell(channel_t *chan, cell_t *cell)
 
   tor_assert(chan);
   tor_assert(cell);
-  tor_assert(chan->state == CHANNEL_STATE_OPEN);
+  tor_assert(CHANNEL_IS_OPEN(chan));
 
   /* Do we need to queue it, or can we just call the handler right away? */
   if (!(chan->cell_handler)) need_to_queue = 1;
@@ -2584,7 +2554,7 @@ channel_queue_var_cell(channel_t *chan, var_cell_t *var_cell)
 
   tor_assert(chan);
   tor_assert(var_cell);
-  tor_assert(chan->state == CHANNEL_STATE_OPEN);
+  tor_assert(CHANNEL_IS_OPEN(chan));
 
   /* Do we need to queue it, or can we just call the handler right away? */
   if (!(chan->var_cell_handler)) need_to_queue = 1;
@@ -2692,10 +2662,7 @@ channel_send_destroy(circid_t circ_id, channel_t *chan, int reason)
   }
 
   /* Check to make sure we can send on this channel first */
-  if (!(chan->state == CHANNEL_STATE_CLOSING ||
-        chan->state == CHANNEL_STATE_CLOSED ||
-        chan->state == CHANNEL_STATE_ERROR) &&
-      chan->cmux) {
+  if (!CHANNEL_CONDEMNED(chan) && chan->cmux) {
     channel_note_destroy_pending(chan, circ_id);
     circuitmux_append_destroy_cell(chan, chan->cmux, circ_id, reason);
     log_debug(LD_OR,
@@ -2872,9 +2839,7 @@ channel_free_list(smartlist_t *channels, int mark_for_close)
     }
     channel_unregister(curr);
     if (mark_for_close) {
-      if (!(curr->state == CHANNEL_STATE_CLOSING ||
-            curr->state == CHANNEL_STATE_CLOSED ||
-            curr->state == CHANNEL_STATE_ERROR)) {
+      if (!CHANNEL_CONDEMNED(curr)) {
         channel_mark_for_close(curr);
       }
       channel_force_free(curr);
@@ -3088,9 +3053,7 @@ channel_get_for_extend(const char *digest,
     tor_assert(tor_memeq(chan->identity_digest,
                          digest, DIGEST_LEN));
 
-    if (chan->state == CHANNEL_STATE_CLOSING ||
-        chan->state == CHANNEL_STATE_CLOSED ||
-        chan->state == CHANNEL_STATE_ERROR)
+   if (CHANNEL_CONDEMNED(chan))
       continue;
 
     /* Never return a channel on which the other end appears to be
@@ -3100,7 +3063,7 @@ channel_get_for_extend(const char *digest,
     }
 
     /* Never return a non-open connection. */
-    if (chan->state != CHANNEL_STATE_OPEN) {
+    if (!CHANNEL_IS_OPEN(chan)) {
       /* If the address matches, don't launch a new connection for this
        * circuit. */
       if (channel_matches_target_addr_for_extend(chan, target_addr))
