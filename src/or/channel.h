@@ -431,6 +431,39 @@ channel_t * channel_find_by_remote_digest(const char *identity_digest);
 channel_t * channel_next_with_digest(channel_t *chan);
 
 /*
+ * Helper macros to lookup state of given channel.
+ */
+
+#define CHANNEL_IS_CLOSED(chan) (channel_is_in_state((chan), \
+                                 CHANNEL_STATE_CLOSED))
+#define CHANNEL_IS_OPENING(chan) (channel_is_in_state((chan), \
+                                  CHANNEL_STATE_OPENING))
+#define CHANNEL_IS_OPEN(chan) (channel_is_in_state((chan), \
+                               CHANNEL_STATE_OPEN))
+#define CHANNEL_IS_MAINT(chan) (channel_is_in_state((chan), \
+                                CHANNEL_STATE_MAINT))
+#define CHANNEL_IS_CLOSING(chan) (channel_is_in_state((chan), \
+                                  CHANNEL_STATE_CLOSING))
+#define CHANNEL_IS_ERROR(chan) (channel_is_in_state((chan), \
+                                CHANNEL_STATE_ERROR))
+
+#define CHANNEL_FINISHED(chan) (CHANNEL_IS_CLOSED(chan) || \
+                                CHANNEL_IS_ERROR(chan))
+
+#define CHANNEL_CONDEMNED(chan) (CHANNEL_IS_CLOSING(chan) || \
+                                 CHANNEL_FINISHED(chan))
+
+#define CHANNEL_CAN_HANDLE_CELLS(chan) (CHANNEL_IS_OPENING(chan) || \
+                                        CHANNEL_IS_OPEN(chan) || \
+                                        CHANNEL_IS_MAINT(chan))
+
+static INLINE int
+channel_is_in_state(channel_t *chan, channel_state_t state)
+{
+  return chan->state == state;
+}
+
+/*
  * Metadata queries/updates
  */
 
