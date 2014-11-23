@@ -855,10 +855,10 @@ channel_tls_handle_state_change_on_orconn(channel_tls_t *chan,
   /* Make sure the base connection state makes sense - shouldn't be error,
    * closed or listening. */
 
-  tor_assert(base_chan->state == CHANNEL_STATE_OPENING ||
-             base_chan->state == CHANNEL_STATE_OPEN ||
-             base_chan->state == CHANNEL_STATE_MAINT ||
-             base_chan->state == CHANNEL_STATE_CLOSING);
+  tor_assert(CHANNEL_IS_OPENING(base_chan) ||
+             CHANNEL_IS_OPEN(base_chan) ||
+             CHANNEL_IS_MAINT(base_chan) ||
+             CHANNEL_IS_CLOSING(base_chan));
 
   /* Did we just go to state open? */
   if (state == OR_CONN_STATE_OPEN) {
@@ -872,7 +872,7 @@ channel_tls_handle_state_change_on_orconn(channel_tls_t *chan,
      * Not open, so from CHANNEL_STATE_OPEN we go to CHANNEL_STATE_MAINT,
      * otherwise no change.
      */
-    if (base_chan->state == CHANNEL_STATE_OPEN) {
+    if (CHANNEL_IS_OPEN(base_chan)) {
       channel_change_state(base_chan, CHANNEL_STATE_MAINT);
     }
   }
