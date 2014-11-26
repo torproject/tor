@@ -5025,7 +5025,7 @@ typedef enum was_router_added_t {
   ROUTER_WAS_NOT_WANTED = -6,
   /* Router descriptor was rejected because it was older than
    * OLD_ROUTER_DESC_MAX_AGE. */
-  ROUTER_WAS_TOO_OLD = -7,
+  ROUTER_WAS_TOO_OLD = -7, /* note contrast with 'NOT_NEW' */
 } was_router_added_t;
 
 /********************************* routerparse.c ************************/

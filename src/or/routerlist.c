@@ -2030,9 +2030,10 @@ compute_weighted_bandwidths(const smartlist_t *sl,
   if (Wg < 0 || Wm < 0 || We < 0 || Wd < 0 || Wgb < 0 || Wmb < 0 || Wdb < 0
       || Web < 0) {
     log_debug(LD_CIRC,
-              "Got negative bandwidth weights. Defaulting to old selection"
+              "Got negative bandwidth weights. Defaulting to naive selection"
               " algorithm.");
-    return -1; // Use old algorithm.
+    Wg = Wm = We = Wd = weight_scale;
+    Wgb = Wmb = Web = Wdb = weight_scale;
   }
 
   Wg /= weight_scale;
@@ -2048,6 +2049,7 @@ compute_weighted_bandwidths(const smartlist_t *sl,
   bandwidths = tor_calloc(smartlist_len(sl), sizeof(u64_dbl_t));
 
   // Cycle through smartlist and total the bandwidth.
+  static int warned_missing_bw = 0;
   SMARTLIST_FOREACH_BEGIN(sl, const node_t *, node) {
     int is_exit = 0, is_guard = 0, is_dir = 0, this_bw = 0;
     double weight = 1;
@@ -2056,15 +2058,18 @@ compute_weighted_bandwidths(const smartlist_t *sl,
     is_dir = node_is_dir(node);
     if (node->rs) {
       if (!node->rs->has_bandwidth) {
-        tor_free(bandwidths);
         /* This should never happen, unless all the authorites downgrade
          * to 0.2.0 or rogue routerstatuses get inserted into our consensus. */
-        log_warn(LD_BUG,
-                 "Consensus is not listing bandwidths. Defaulting back to "
-                 "old router selection algorithm.");
-        return -1;
+        if (! warned_missing_bw) {
+          log_warn(LD_BUG,
+                 "Consensus is missing some bandwidths. Using a naive "
+                 "router selection algorithm");
+          warned_missing_bw = 1;
+        }
+        this_bw = 30000; /* Chosen arbitrarily */
+      } else {
+        this_bw = kb_to_bytes(node->rs->bandwidth_kb);
       }
-      this_bw = kb_to_bytes(node->rs->bandwidth_kb);
     } else if (node->ri) {
       /* bridge or other descriptor not in our consensus */
       this_bw = bridge_get_advertised_bandwidth_bounded(node->ri);
@@ -2141,226 +2146,13 @@ frac_nodes_with_descriptors(const smartlist_t *sl,
   return present / total;
 }
 
-/** Helper function:
- * choose a random node_t element of smartlist <b>sl</b>, weighted by
- * the advertised bandwidth of each element.
- *
- * If <b>rule</b>==WEIGHT_FOR_EXIT. we're picking an exit node: consider all
- * nodes' bandwidth equally regardless of their Exit status, since there may
- * be some in the list because they exit to obscure ports. If
- * <b>rule</b>==NO_WEIGHTING, we're picking a non-exit node: weight
- * exit-node's bandwidth less depending on the smallness of the fraction of
- * Exit-to-total bandwidth.  If <b>rule</b>==WEIGHT_FOR_GUARD, we're picking a
- * guard node: consider all guard's bandwidth equally. Otherwise, weight
- * guards proportionally less.
- */
-static const node_t *
-smartlist_choose_node_by_bandwidth(const smartlist_t *sl,
-                                   bandwidth_weight_rule_t rule)
-{
-  unsigned int i;
-  u64_dbl_t *bandwidths;
-  int is_exit;
-  int is_guard;
-  int is_fast;
-  double total_nonexit_bw = 0, total_exit_bw = 0;
-  double total_nonguard_bw = 0, total_guard_bw = 0;
-  double exit_weight;
-  double guard_weight;
-  int n_unknown = 0;
-  bitarray_t *fast_bits;
-  bitarray_t *exit_bits;
-  bitarray_t *guard_bits;
-
-  // This function does not support WEIGHT_FOR_DIR
-  // or WEIGHT_FOR_MID
-  if (rule == WEIGHT_FOR_DIR || rule == WEIGHT_FOR_MID) {
-    rule = NO_WEIGHTING;
-  }
-
-  /* Can't choose exit and guard at same time */
-  tor_assert(rule == NO_WEIGHTING ||
-             rule == WEIGHT_FOR_EXIT ||
-             rule == WEIGHT_FOR_GUARD);
-
-  if (smartlist_len(sl) == 0) {
-    log_info(LD_CIRC,
-             "Empty routerlist passed in to old node selection for rule %s",
-             bandwidth_weight_rule_to_string(rule));
-    return NULL;
-  }
-
-  /* First count the total bandwidth weight, and make a list
-   * of each value.  We use UINT64_MAX to indicate "unknown". */
-  bandwidths = tor_calloc(smartlist_len(sl), sizeof(u64_dbl_t));
-  fast_bits = bitarray_init_zero(smartlist_len(sl));
-  exit_bits = bitarray_init_zero(smartlist_len(sl));
-  guard_bits = bitarray_init_zero(smartlist_len(sl));
-
-  /* Iterate over all the routerinfo_t or routerstatus_t, and */
-  SMARTLIST_FOREACH_BEGIN(sl, const node_t *, node) {
-    /* first, learn what bandwidth we think i has */
-    int is_known = 1;
-    uint32_t this_bw = 0;
-    i = node_sl_idx;
-
-    is_exit = node_is_good_exit(node);
-    is_guard = node->is_possible_guard;
-    if (node->rs) {
-      if (node->rs->has_bandwidth) {
-        this_bw = kb_to_bytes(node->rs->bandwidth_kb);
-      } else { /* guess */
-        is_known = 0;
-      }
-    } else if (node->ri) {
-      /* Must be a bridge if we're willing to use it */
-      this_bw = bridge_get_advertised_bandwidth_bounded(node->ri);
-    }
-
-    if (is_exit)
-      bitarray_set(exit_bits, i);
-    if (is_guard)
-      bitarray_set(guard_bits, i);
-    if (node->is_fast)
-      bitarray_set(fast_bits, i);
-
-    if (is_known) {
-      bandwidths[i].dbl = this_bw;
-      if (is_guard)
-        total_guard_bw += this_bw;
-      else
-        total_nonguard_bw += this_bw;
-      if (is_exit)
-        total_exit_bw += this_bw;
-      else
-        total_nonexit_bw += this_bw;
-    } else {
-      ++n_unknown;
-      bandwidths[i].dbl = -1.0;
-    }
-  } SMARTLIST_FOREACH_END(node);
-
-#define EPSILON .1
-
-  /* Now, fill in the unknown values. */
-  if (n_unknown) {
-    int32_t avg_fast, avg_slow;
-    if (total_exit_bw+total_nonexit_bw < EPSILON) {
-      /* if there's some bandwidth, there's at least one known router,
-       * so no worries about div by 0 here */
-      int n_known = smartlist_len(sl)-n_unknown;
-      avg_fast = avg_slow = (int32_t)
-        ((total_exit_bw+total_nonexit_bw)/((uint64_t) n_known));
-    } else {
-      avg_fast = 40000;
-      avg_slow = 20000;
-    }
-    for (i=0; i<(unsigned)smartlist_len(sl); ++i) {
-      if (bandwidths[i].dbl >= 0.0)
-        continue;
-      is_fast = bitarray_is_set(fast_bits, i);
-      is_exit = bitarray_is_set(exit_bits, i);
-      is_guard = bitarray_is_set(guard_bits, i);
-      bandwidths[i].dbl = is_fast ? avg_fast : avg_slow;
-      if (is_exit)
-        total_exit_bw += bandwidths[i].dbl;
-      else
-        total_nonexit_bw += bandwidths[i].dbl;
-      if (is_guard)
-        total_guard_bw += bandwidths[i].dbl;
-      else
-        total_nonguard_bw += bandwidths[i].dbl;
-    }
-  }
-
-  /* If there's no bandwidth at all, pick at random. */
-  if (total_exit_bw+total_nonexit_bw < EPSILON) {
-    tor_free(bandwidths);
-    tor_free(fast_bits);
-    tor_free(exit_bits);
-    tor_free(guard_bits);
-    return smartlist_choose(sl);
-  }
-
-  /* Figure out how to weight exits and guards */
-  {
-    double all_bw = U64_TO_DBL(total_exit_bw+total_nonexit_bw);
-    double exit_bw = U64_TO_DBL(total_exit_bw);
-    double guard_bw = U64_TO_DBL(total_guard_bw);
-    /*
-     * For detailed derivation of this formula, see
-     *   http://archives.seul.org/or/dev/Jul-2007/msg00056.html
-     */
-    if (rule == WEIGHT_FOR_EXIT || total_exit_bw<EPSILON)
-      exit_weight = 1.0;
-    else
-      exit_weight = 1.0 - all_bw/(3.0*exit_bw);
-
-    if (rule == WEIGHT_FOR_GUARD || total_guard_bw<EPSILON)
-      guard_weight = 1.0;
-    else
-      guard_weight = 1.0 - all_bw/(3.0*guard_bw);
-
-    if (exit_weight <= 0.0)
-      exit_weight = 0.0;
-
-    if (guard_weight <= 0.0)
-      guard_weight = 0.0;
-
-    for (i=0; i < (unsigned)smartlist_len(sl); i++) {
-      tor_assert(bandwidths[i].dbl >= 0.0);
-
-      is_exit = bitarray_is_set(exit_bits, i);
-      is_guard = bitarray_is_set(guard_bits, i);
-      if (is_exit && is_guard)
-        bandwidths[i].dbl *= exit_weight * guard_weight;
-      else if (is_guard)
-        bandwidths[i].dbl *= guard_weight;
-      else if (is_exit)
-        bandwidths[i].dbl *= exit_weight;
-    }
-  }
-
-#if 0
-  log_debug(LD_CIRC, "Total weighted bw = "U64_FORMAT
-            ", exit bw = "U64_FORMAT
-            ", nonexit bw = "U64_FORMAT", exit weight = %f "
-            "(for exit == %d)"
-            ", guard bw = "U64_FORMAT
-            ", nonguard bw = "U64_FORMAT", guard weight = %f "
-            "(for guard == %d)",
-            U64_PRINTF_ARG(total_bw),
-            U64_PRINTF_ARG(total_exit_bw), U64_PRINTF_ARG(total_nonexit_bw),
-            exit_weight, (int)(rule == WEIGHT_FOR_EXIT),
-            U64_PRINTF_ARG(total_guard_bw), U64_PRINTF_ARG(total_nonguard_bw),
-            guard_weight, (int)(rule == WEIGHT_FOR_GUARD));
-#endif
-
-  scale_array_elements_to_u64(bandwidths, smartlist_len(sl), NULL);
-
-  {
-    int idx = choose_array_element_by_weight(bandwidths,
-                                             smartlist_len(sl));
-    tor_free(bandwidths);
-    tor_free(fast_bits);
-    tor_free(exit_bits);
-    tor_free(guard_bits);
-    return idx < 0 ? NULL : smartlist_get(sl, idx);
-  }
-}
-
 /** Choose a random element of status list <b>sl</b>, weighted by
  * the advertised bandwidth of each node */
 const node_t *
 node_sl_choose_by_bandwidth(const smartlist_t *sl,
                             bandwidth_weight_rule_t rule)
 { /*XXXX MOVE */
-  const node_t *ret;
-  if ((ret = smartlist_choose_node_by_bandwidth_weights(sl, rule))) {
-    return ret;
-  } else {
-    return smartlist_choose_node_by_bandwidth(sl, rule);
-  }
+  return smartlist_choose_node_by_bandwidth_weights(sl, rule);
 }
 
 /** Return a random running node from the nodelist. Never
