@@ -19,9 +19,9 @@ PrivateTmp = yes
 PrivateDevices = yes
 ProtectHome = yes
 ReadOnlyDirectories = /
-ReadWriteDirectories = @LOCALSTATEDIR@/lib/tor
-ReadWriteDirectories = @LOCALSTATEDIR@/log/tor
-ReadWriteDirectories = @LOCALSTATEDIR@/run/tor
+ReadWriteDirectories = -@LOCALSTATEDIR@/lib/tor
+ReadWriteDirectories = -@LOCALSTATEDIR@/log/tor
+ReadWriteDirectories = -@LOCALSTATEDIR@/run/tor
 NoNewPrivileges = yes
 
 [Install]
