@@ -258,7 +258,7 @@ circuitmux_compare_muxes_mock(circuitmux_t *cmux_1,
     else if (cmux_1 == mock_ccm_tgt_2 && cmux_2 == mock_ccm_tgt_1) {
       result = 1;
     } else {
-      if (cmux_1 == mock_ccm_tgt_1 || cmux_1 == mock_ccm_tgt_1) result = -1;
+      if (cmux_1 == mock_ccm_tgt_1 || cmux_1 == mock_ccm_tgt_2) result = -1;
       else if (cmux_2 == mock_ccm_tgt_1 || cmux_2 == mock_ccm_tgt_2) {
         result = 1;
       } else {
