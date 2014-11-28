@@ -3073,11 +3073,12 @@ rend_services_introduce(void)
   const or_options_t *options = get_options();
   /* List of nodes we need to _exclude_ when choosing a new node to establish
    * an intro point to. */
-  smartlist_t *exclude_nodes = smartlist_new();
+  smartlist_t *exclude_nodes;
 
   if (!have_completed_a_circuit())
     return;
 
+  exclude_nodes = smartlist_new();
   now = time(NULL);
 
   for (i=0; i < smartlist_len(rend_service_list); ++i) {
