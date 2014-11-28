@@ -4251,15 +4251,15 @@ typedef struct {
   /** Low-water mark for global scheduler - start sending when estimated
    * queued size falls below this threshold.
    */
-  uint32_t SchedulerLowWaterMark;
+  uint64_t SchedulerLowWaterMark__;
   /** High-water mark for global scheduler - stop sending when estimated
    * queued size exceeds this threshold.
    */
-  uint32_t SchedulerHighWaterMark;
+  uint64_t SchedulerHighWaterMark__;
   /** Flush size for global scheduler - flush this many cells at a time
    * when sending.
    */
-  unsigned int SchedulerMaxFlushCells;
+  int SchedulerMaxFlushCells__;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

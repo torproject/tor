@@ -369,9 +369,9 @@ static config_var_t option_vars_[] = {
   V(ServerDNSSearchDomains,      BOOL,     "0"),
   V(ServerDNSTestAddresses,      CSV,
       "www.google.com,www.mit.edu,www.yahoo.com,www.slashdot.org"),
-  V(SchedulerLowWaterMark,       MEMUNIT,  "16 kB"),
-  V(SchedulerHighWaterMark,      MEMUNIT,  "32 kB"),
-  V(SchedulerMaxFlushCells,      UINT,     "16"),
+  V(SchedulerLowWaterMark__,     MEMUNIT,  "100 MB"),
+  V(SchedulerHighWaterMark__,    MEMUNIT,  "101 MB"),
+  V(SchedulerMaxFlushCells__,    UINT,     "1000"),
   V(ShutdownWaitLength,          INTERVAL, "30 seconds"),
   V(SocksListenAddress,          LINELIST, NULL),
   V(SocksPolicy,                 LINELIST, NULL),
@@ -1539,23 +1539,10 @@ options_act(const or_options_t *old_options)
   }
 
   /* Set up scheduler thresholds */
-  if (options->SchedulerLowWaterMark > 0 &&
-      options->SchedulerHighWaterMark > options->SchedulerLowWaterMark) {
-    scheduler_set_watermarks(options->SchedulerLowWaterMark,
-                             options->SchedulerHighWaterMark,
-                             (options->SchedulerMaxFlushCells > 0) ?
-                              options->SchedulerMaxFlushCells : 16);
-  } else {
-    if (options->SchedulerLowWaterMark == 0) {
-      log_warn(LD_GENERAL, "Bad SchedulerLowWaterMark option");
-    }
-
-    if (options->SchedulerHighWaterMark <= options->SchedulerLowWaterMark) {
-      log_warn(LD_GENERAL, "Bad SchedulerHighWaterMark option");
-    }
-
-    return -1;
-  }
+  scheduler_set_watermarks((uint32_t)options->SchedulerLowWaterMark__,
+                           (uint32_t)options->SchedulerHighWaterMark__,
+                           (options->SchedulerMaxFlushCells__ > 0) ?
+                           options->SchedulerMaxFlushCells__ : 1000);
 
   /* Set up accounting */
   if (accounting_parse_options(options, 0)<0) {
@@ -2652,6 +2639,17 @@ options_validate(or_options_t *old_options, or_options_t *options,
     options->ExcludeExitNodesUnion_ = routerset_new();
     routerset_union(options->ExcludeExitNodesUnion_,options->ExcludeExitNodes);
     routerset_union(options->ExcludeExitNodesUnion_,options->ExcludeNodes);
+  }
+
+  if (options->SchedulerLowWaterMark__ == 0 ||
+      options->SchedulerLowWaterMark__ > UINT32_MAX) {
+    log_warn(LD_GENERAL, "Bad SchedulerLowWaterMark__ option");
+    return -1;
+  } else if (options->SchedulerHighWaterMark__ <=
+             options->SchedulerLowWaterMark__ ||
+             options->SchedulerHighWaterMark__ > UINT32_MAX) {
+    log_warn(LD_GENERAL, "Bad SchedulerHighWaterMark option");
+    return -1;
   }
 
   if (options->NodeFamilies) {
