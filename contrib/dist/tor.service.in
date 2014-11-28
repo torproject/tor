@@ -18,6 +18,7 @@ LimitNOFILE = 32768
 PrivateTmp = yes
 PrivateDevices = yes
 ProtectHome = yes
+ProtectSystem = full
 ReadOnlyDirectories = /
 ReadWriteDirectories = -@LOCALSTATEDIR@/lib/tor
 ReadWriteDirectories = -@LOCALSTATEDIR@/log/tor
