@@ -418,7 +418,7 @@ scheduler_run, (void))
           flushed_this_time =
             channel_flush_some_cells(chan,
                                      MIN(sched_max_flush_cells,
-                                         n_cells - flushed));
+                                         (size_t) n_cells - flushed));
           if (flushed_this_time <= 0) break;
           flushed += flushed_this_time;
         }
