@@ -706,3 +706,4 @@ scheduler_set_watermarks(uint32_t lo, uint32_t hi, uint32_t max_flush)
   sched_q_high_water = hi;
   sched_max_flush_cells = max_flush;
 }
+
