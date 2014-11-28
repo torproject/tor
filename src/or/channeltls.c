@@ -741,7 +741,7 @@ static int
 channel_tls_num_cells_writeable_method(channel_t *chan)
 {
   size_t outbuf_len;
-  int n;
+  ssize_t n;
   channel_tls_t *tlschan = BASE_CHAN_TO_TLS(chan);
   size_t cell_network_size;
 
@@ -753,8 +753,11 @@ channel_tls_num_cells_writeable_method(channel_t *chan)
   /* Get the number of cells */
   n = CEIL_DIV(OR_CONN_HIGHWATER - outbuf_len, cell_network_size);
   if (n < 0) n = 0;
+#if SIZEOF_SIZE_T > SIZEOF_INT
+  if (n > INT_MAX) n = INT_MAX;
+#endif
 
-  return n;
+  return (int)n;
 }
 
 /**
