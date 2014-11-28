@@ -14,6 +14,7 @@
 #include "or.h"
 #include "channel.h"
 #include "circpathbias.h"
+#define CIRCUITBUILD_PRIVATE
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "circuitstats.h"

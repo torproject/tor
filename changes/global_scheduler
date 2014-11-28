@@ -1,0 +1,4 @@
+ o Major changes:
+   - Implement a new inter-cmux comparison API, a global high/low watermark
+     mechanism and a global scheduler loop for transmission prioritization
+     across all channels as well as among circuits on one channel.

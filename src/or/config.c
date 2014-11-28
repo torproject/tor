@@ -43,6 +43,7 @@
 #include "util.h"
 #include "routerlist.h"
 #include "routerset.h"
+#include "scheduler.h"
 #include "statefile.h"
 #include "transports.h"
 #include "ext_orport.h"
@@ -368,6 +369,9 @@ static config_var_t option_vars_[] = {
   V(ServerDNSSearchDomains,      BOOL,     "0"),
   V(ServerDNSTestAddresses,      CSV,
       "www.google.com,www.mit.edu,www.yahoo.com,www.slashdot.org"),
+  V(SchedulerLowWaterMark,       MEMUNIT,  "16 kB"),
+  V(SchedulerHighWaterMark,      MEMUNIT,  "32 kB"),
+  V(SchedulerMaxFlushCells,      UINT,     "16"),
   V(ShutdownWaitLength,          INTERVAL, "30 seconds"),
   V(SocksListenAddress,          LINELIST, NULL),
   V(SocksPolicy,                 LINELIST, NULL),
@@ -1045,6 +1049,14 @@ options_act_reversible(const or_options_t *old_options, char **msg)
     if (running_tor && !libevent_initialized) {
       init_libevent(options);
       libevent_initialized = 1;
+
+      /*
+       * Initialize the scheduler - this has to come after
+       * options_init_from_torrc() sets up libevent - why yes, that seems
+       * completely sensible to hide the libevent setup in the option parsing
+       * code!  It also needs to happen before init_keys(), so it needs to
+       * happen here too.  How yucky. */
+      scheduler_init();
     }
 
     /* Adjust the port configuration so we can launch listeners. */
@@ -1523,6 +1535,25 @@ options_act(const or_options_t *old_options)
   /* reload keys as needed for rendezvous services. */
   if (rend_service_load_all_keys()<0) {
     log_warn(LD_GENERAL,"Error loading rendezvous service keys");
+    return -1;
+  }
+
+  /* Set up scheduler thresholds */
+  if (options->SchedulerLowWaterMark > 0 &&
+      options->SchedulerHighWaterMark > options->SchedulerLowWaterMark) {
+    scheduler_set_watermarks(options->SchedulerLowWaterMark,
+                             options->SchedulerHighWaterMark,
+                             (options->SchedulerMaxFlushCells > 0) ?
+                              options->SchedulerMaxFlushCells : 16);
+  } else {
+    if (options->SchedulerLowWaterMark == 0) {
+      log_warn(LD_GENERAL, "Bad SchedulerLowWaterMark option");
+    }
+
+    if (options->SchedulerHighWaterMark <= options->SchedulerLowWaterMark) {
+      log_warn(LD_GENERAL, "Bad SchedulerHighWaterMark option");
+    }
+
     return -1;
   }
 
@@ -2269,8 +2300,8 @@ resolve_my_address(int warn_severity, const or_options_t *options,
 /** Return true iff <b>addr</b> is judged to be on the same network as us, or
  * on a private network.
  */
-int
-is_local_addr(const tor_addr_t *addr)
+MOCK_IMPL(int,
+is_local_addr, (const tor_addr_t *addr))
 {
   if (tor_addr_is_internal(addr, 0))
     return 1;

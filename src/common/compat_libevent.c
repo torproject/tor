@@ -283,8 +283,8 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
 }
 
 /** Return the current Libevent event base that we're set up to use. */
-struct event_base *
-tor_libevent_get_base(void)
+MOCK_IMPL(struct event_base *,
+tor_libevent_get_base, (void))
 {
   return the_event_base;
 }

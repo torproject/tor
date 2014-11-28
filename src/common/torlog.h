@@ -97,8 +97,10 @@
 #define LD_HEARTBEAT (1u<<20)
 /** Abstract channel_t code */
 #define LD_CHANNEL   (1u<<21)
+/** Scheduler */
+#define LD_SCHED     (1u<<22)
 /** Number of logging domains in the code. */
-#define N_LOGGING_DOMAINS 22
+#define N_LOGGING_DOMAINS 23
 
 /** This log message is not safe to send to a callback-based logger
  * immediately.  Used as a flag, not a log domain. */

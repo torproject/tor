@@ -1431,6 +1431,18 @@ typedef struct or_handshake_state_t {
 
 /** Length of Extended ORPort connection identifier. */
 #define EXT_OR_CONN_ID_LEN DIGEST_LEN /* 20 */
+/*
+ * OR_CONN_HIGHWATER and OR_CONN_LOWWATER moved from connection_or.c so
+ * channeltls.c can see them too.
+ */
+
+/** When adding cells to an OR connection's outbuf, keep adding until the
+ * outbuf is at least this long, or we run out of cells. */
+#define OR_CONN_HIGHWATER (32*1024)
+
+/** Add cells to an OR connection's outbuf whenever the outbuf's data length
+ * drops below this size. */
+#define OR_CONN_LOWWATER (16*1024)
 
 /** Subtype of connection_t for an "OR connection" -- that is, one that speaks
  * cells over TLS. */
@@ -1522,6 +1534,12 @@ typedef struct or_connection_t {
   /** Last emptied write token bucket in msec since midnight; only used if
    * TB_EMPTY events are enabled. */
   uint32_t write_emptied_time;
+
+  /*
+   * Count the number of bytes flushed out on this orconn, and the number of
+   * bytes TLS actually sent - used for overhead estimation for scheduling.
+   */
+  uint64_t bytes_xmitted, bytes_xmitted_by_tls;
 } or_connection_t;
 
 /** Subtype of connection_t for an "edge connection" -- that is, an entry (ap)
@@ -4230,6 +4248,18 @@ typedef struct {
   /** How long (seconds) do we keep a guard before picking a new one? */
   int GuardLifetime;
 
+  /** Low-water mark for global scheduler - start sending when estimated
+   * queued size falls below this threshold.
+   */
+  uint32_t SchedulerLowWaterMark;
+  /** High-water mark for global scheduler - stop sending when estimated
+   * queued size exceeds this threshold.
+   */
+  uint32_t SchedulerHighWaterMark;
+  /** Flush size for global scheduler - flush this many cells at a time
+   * when sending.
+   */
+  unsigned int SchedulerMaxFlushCells;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

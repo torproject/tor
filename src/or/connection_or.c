@@ -38,6 +38,8 @@
 #include "router.h"
 #include "routerlist.h"
 #include "ext_orport.h"
+#include "scheduler.h"
+
 #ifdef USE_BUFFEREVENTS
 #include <event2/bufferevent_ssl.h>
 #endif
@@ -574,46 +576,49 @@ connection_or_process_inbuf(or_connection_t *conn)
   return ret;
 }
 
-/** When adding cells to an OR connection's outbuf, keep adding until the
- * outbuf is at least this long, or we run out of cells. */
-#define OR_CONN_HIGHWATER (32*1024)
-
-/** Add cells to an OR connection's outbuf whenever the outbuf's data length
- * drops below this size. */
-#define OR_CONN_LOWWATER (16*1024)
-
 /** Called whenever we have flushed some data on an or_conn: add more data
  * from active circuits. */
 int
 connection_or_flushed_some(or_connection_t *conn)
 {
-  size_t datalen, temp;
-  ssize_t n, flushed;
-  size_t cell_network_size = get_cell_network_size(conn->wide_circ_ids);
+  size_t datalen;
+
+  /* The channel will want to update its estimated queue size */
+  channel_update_xmit_queue_size(TLS_CHAN_TO_BASE(conn->chan));
 
   /* If we're under the low water mark, add cells until we're just over the
    * high water mark. */
   datalen = connection_get_outbuf_len(TO_CONN(conn));
   if (datalen < OR_CONN_LOWWATER) {
-    while ((conn->chan) && channel_tls_more_to_flush(conn->chan)) {
-      /* Compute how many more cells we want at most */
-      n = CEIL_DIV(OR_CONN_HIGHWATER - datalen, cell_network_size);
-      /* Bail out if we don't want any more */
-      if (n <= 0) break;
-      /* We're still here; try to flush some more cells */
-      flushed = channel_tls_flush_some_cells(conn->chan, n);
-      /* Bail out if it says it didn't flush anything */
-      if (flushed <= 0) break;
-      /* How much in the outbuf now? */
-      temp = connection_get_outbuf_len(TO_CONN(conn));
-      /* Bail out if we didn't actually increase the outbuf size */
-      if (temp <= datalen) break;
-      /* Update datalen for the next iteration */
-      datalen = temp;
-    }
+    /* Let the scheduler know */
+    scheduler_channel_wants_writes(TLS_CHAN_TO_BASE(conn->chan));
   }
 
   return 0;
+}
+
+/** This is for channeltls.c to ask how many cells we could accept if
+ * they were available. */
+ssize_t
+connection_or_num_cells_writeable(or_connection_t *conn)
+{
+  size_t datalen, cell_network_size;
+  ssize_t n = 0;
+
+  tor_assert(conn);
+
+  /*
+   * If we're under the high water mark, we're potentially
+   * writeable; note this is different from the calculation above
+   * used to trigger when to start writing after we've stopped.
+   */
+  datalen = connection_get_outbuf_len(TO_CONN(conn));
+  if (datalen < OR_CONN_HIGHWATER) {
+    cell_network_size = get_cell_network_size(conn->wide_circ_ids);
+    n = CEIL_DIV(OR_CONN_HIGHWATER - datalen, cell_network_size);
+  }
+
+  return n;
 }
 
 /** Connection <b>conn</b> has finished writing and has no bytes left on
@@ -1169,10 +1174,10 @@ connection_or_notify_error(or_connection_t *conn,
  *
  * Return the launched conn, or NULL if it failed.
  */
-or_connection_t *
-connection_or_connect(const tor_addr_t *_addr, uint16_t port,
-                      const char *id_digest,
-                      channel_tls_t *chan)
+
+MOCK_IMPL(or_connection_t *,
+connection_or_connect, (const tor_addr_t *_addr, uint16_t port,
+                        const char *id_digest, channel_tls_t *chan))
 {
   or_connection_t *conn;
   const or_options_t *options = get_options();
