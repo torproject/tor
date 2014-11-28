@@ -729,22 +729,22 @@ test_scheduler_queue_heuristic(void *arg)
 
   /* Not yet inited case */
   scheduler_update_queue_heuristic(now - 180);
-  tt_int_op(queue_heuristic, ==, 0);
+  tt_u64_op(queue_heuristic, ==, 0);
   tt_int_op(queue_heuristic_timestamp, ==, now - 180);
 
   queue_heuristic = 1000000000L;
   queue_heuristic_timestamp = now - 120;
 
   scheduler_update_queue_heuristic(now - 119);
-  tt_int_op(queue_heuristic, ==, 500000000L);
+  tt_u64_op(queue_heuristic, ==, 500000000L);
   tt_int_op(queue_heuristic_timestamp, ==, now - 119);
 
   scheduler_update_queue_heuristic(now - 116);
-  tt_int_op(queue_heuristic, ==, 62500000L);
+  tt_u64_op(queue_heuristic, ==, 62500000L);
   tt_int_op(queue_heuristic_timestamp, ==, now - 116);
 
   qh = scheduler_get_queue_heuristic();
-  tt_int_op(qh, ==, 0);
+  tt_u64_op(qh, ==, 0);
 
  done:
   return;

@@ -1134,11 +1134,11 @@ test_channel_multi(void *arg)
 
   /* Initial queue size update */
   channel_update_xmit_queue_size(ch1);
-  tt_int_op(ch1->bytes_queued_for_xmit, ==, 0);
+  tt_u64_op(ch1->bytes_queued_for_xmit, ==, 0);
   channel_update_xmit_queue_size(ch2);
-  tt_int_op(ch2->bytes_queued_for_xmit, ==, 0);
+  tt_u64_op(ch2->bytes_queued_for_xmit, ==, 0);
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_int_op(global_queue_estimate, ==, 0);
+  tt_u64_op(global_queue_estimate, ==, 0);
 
   /* Queue some cells, check queue estimates */
   cell = tor_malloc_zero(sizeof(cell_t));
@@ -1151,10 +1151,10 @@ test_channel_multi(void *arg)
 
   channel_update_xmit_queue_size(ch1);
   channel_update_xmit_queue_size(ch2);
-  tt_int_op(ch1->bytes_queued_for_xmit, ==, 0);
-  tt_int_op(ch2->bytes_queued_for_xmit, ==, 0);
+  tt_u64_op(ch1->bytes_queued_for_xmit, ==, 0);
+  tt_u64_op(ch2->bytes_queued_for_xmit, ==, 0);
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_int_op(global_queue_estimate, ==, 0);
+  tt_u64_op(global_queue_estimate, ==, 0);
 
   /* Stop accepting cells at lower layer */
   test_chan_accept_cells = 0;
@@ -1165,18 +1165,18 @@ test_channel_multi(void *arg)
   channel_write_cell(ch1, cell);
 
   channel_update_xmit_queue_size(ch1);
-  tt_int_op(ch1->bytes_queued_for_xmit, ==, 512);
+  tt_u64_op(ch1->bytes_queued_for_xmit, ==, 512);
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_int_op(global_queue_estimate, ==, 512);
+  tt_u64_op(global_queue_estimate, ==, 512);
 
   cell = tor_malloc_zero(sizeof(cell_t));
   make_fake_cell(cell);
   channel_write_cell(ch2, cell);
 
   channel_update_xmit_queue_size(ch2);
-  tt_int_op(ch2->bytes_queued_for_xmit, ==, 512);
+  tt_u64_op(ch2->bytes_queued_for_xmit, ==, 512);
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_int_op(global_queue_estimate, ==, 1024);
+  tt_u64_op(global_queue_estimate, ==, 1024);
 
   /* Allow cells through again */
   test_chan_accept_cells = 1;
@@ -1187,10 +1187,10 @@ test_channel_multi(void *arg)
   /* Update and check queue sizes */
   channel_update_xmit_queue_size(ch1);
   channel_update_xmit_queue_size(ch2);
-  tt_int_op(ch1->bytes_queued_for_xmit, ==, 512);
-  tt_int_op(ch2->bytes_queued_for_xmit, ==, 0);
+  tt_u64_op(ch1->bytes_queued_for_xmit, ==, 512);
+  tt_u64_op(ch2->bytes_queued_for_xmit, ==, 0);
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_int_op(global_queue_estimate, ==, 512);
+  tt_u64_op(global_queue_estimate, ==, 512);
 
   /* Flush chan 1 */
   channel_flush_cells(ch1);
@@ -1198,10 +1198,10 @@ test_channel_multi(void *arg)
   /* Update and check queue sizes */
   channel_update_xmit_queue_size(ch1);
   channel_update_xmit_queue_size(ch2);
-  tt_int_op(ch1->bytes_queued_for_xmit, ==, 0);
-  tt_int_op(ch2->bytes_queued_for_xmit, ==, 0);
+  tt_u64_op(ch1->bytes_queued_for_xmit, ==, 0);
+  tt_u64_op(ch2->bytes_queued_for_xmit, ==, 0);
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_int_op(global_queue_estimate, ==, 0);
+  tt_u64_op(global_queue_estimate, ==, 0);
 
   /* Now block again */
   test_chan_accept_cells = 0;
@@ -1218,10 +1218,10 @@ test_channel_multi(void *arg)
   /* Check the estimates */
   channel_update_xmit_queue_size(ch1);
   channel_update_xmit_queue_size(ch2);
-  tt_int_op(ch1->bytes_queued_for_xmit, ==, 512);
-  tt_int_op(ch2->bytes_queued_for_xmit, ==, 512);
+  tt_u64_op(ch1->bytes_queued_for_xmit, ==, 512);
+  tt_u64_op(ch2->bytes_queued_for_xmit, ==, 512);
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_int_op(global_queue_estimate, ==, 1024);
+  tt_u64_op(global_queue_estimate, ==, 1024);
 
   /* Now close channel 2; it should be subtracted from the global queue */
   MOCK(scheduler_release_channel, scheduler_release_channel_mock);
@@ -1229,7 +1229,7 @@ test_channel_multi(void *arg)
   UNMOCK(scheduler_release_channel);
 
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_int_op(global_queue_estimate, ==, 512);
+  tt_u64_op(global_queue_estimate, ==, 512);
 
   /*
    * Since the fake channels aren't registered, channel_free_all() can't
@@ -1240,7 +1240,7 @@ test_channel_multi(void *arg)
   UNMOCK(scheduler_release_channel);
 
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_int_op(global_queue_estimate, ==, 0);
+  tt_u64_op(global_queue_estimate, ==, 0);
 
   /* Now free everything */
   MOCK(scheduler_release_channel, scheduler_release_channel_mock);
@@ -1435,7 +1435,7 @@ test_channel_queue_size(void *arg)
   channel_update_xmit_queue_size(ch);
   tt_int_op(ch->bytes_queued_for_xmit, ==, 0);
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_int_op(global_queue_estimate, ==, 0);
+  tt_u64_op(global_queue_estimate, ==, 0);
 
   /* Test the call-through to our fake lower layer */
   n = channel_num_cells_writeable(ch);
