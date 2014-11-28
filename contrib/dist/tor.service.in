@@ -16,8 +16,7 @@ LimitNOFILE = 32768
 
 # Hardening
 PrivateTmp = yes
-DeviceAllow = /dev/null rw
-DeviceAllow = /dev/urandom r
+PrivateDevices = yes
 InaccessibleDirectories = /home
 ReadOnlyDirectories = /
 ReadWriteDirectories = @LOCALSTATEDIR@/lib/tor
