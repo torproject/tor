@@ -17,7 +17,7 @@ LimitNOFILE = 32768
 # Hardening
 PrivateTmp = yes
 PrivateDevices = yes
-InaccessibleDirectories = /home
+ProtectHome = yes
 ReadOnlyDirectories = /
 ReadWriteDirectories = @LOCALSTATEDIR@/lib/tor
 ReadWriteDirectories = @LOCALSTATEDIR@/log/tor
