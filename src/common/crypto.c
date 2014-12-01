@@ -1293,7 +1293,7 @@ crypto_pk_asn1_decode(const char *str, size_t len)
  * Return 0 on success, -1 on failure.
  */
 int
-crypto_pk_get_digest(crypto_pk_t *pk, char *digest_out)
+crypto_pk_get_digest(const crypto_pk_t *pk, char *digest_out)
 {
   unsigned char *buf = NULL;
   int len;
