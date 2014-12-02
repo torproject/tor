@@ -3204,6 +3204,10 @@ typedef struct or_circuit_t {
   /** True iff this circuit was made with a CREATE_FAST cell. */
   unsigned int is_first_hop : 1;
 
+  /** If set, this circuit carries HS traffic. Consider it in any HS
+   *  statistics. */
+  unsigned int circuit_carries_hs_traffic_stats : 1;
+
   /** Number of cells that were removed from circuit queue; reset every
    * time when writing buffer stats to disk. */
   uint32_t processed_cells;
@@ -3960,6 +3964,10 @@ typedef struct {
 
   /** If true, the user wants us to collect statistics as entry node. */
   int EntryStatistics;
+
+  /** If true, the user wants us to collect statistics as hidden service
+   * directory, introduction point, or rendezvous point. */
+  int HiddenServiceStatistics;
 
   /** If true, include statistics file contents in extra-info documents. */
   int ExtraInfoStatistics;

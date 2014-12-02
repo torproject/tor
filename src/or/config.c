@@ -268,6 +268,7 @@ static config_var_t option_vars_[] = {
   VAR("HiddenServicePort",   LINELIST_S, RendConfigLines,    NULL),
   VAR("HiddenServiceVersion",LINELIST_S, RendConfigLines,    NULL),
   VAR("HiddenServiceAuthorizeClient",LINELIST_S,RendConfigLines, NULL),
+  V(HiddenServiceStatistics,     BOOL,     "0"),
   V(HidServAuth,                 LINELIST, NULL),
   V(CloseHSClientCircuitsImmediatelyOnTimeout, BOOL, "0"),
   V(CloseHSServiceRendCircuitsImmediatelyOnTimeout, BOOL, "0"),
@@ -1714,6 +1715,7 @@ options_act(const or_options_t *old_options)
   if (options->CellStatistics || options->DirReqStatistics ||
       options->EntryStatistics || options->ExitPortStatistics ||
       options->ConnDirectionStatistics ||
+      options->HiddenServiceStatistics ||
       options->BridgeAuthoritativeDir) {
     time_t now = time(NULL);
     int print_notice = 0;
@@ -1722,6 +1724,7 @@ options_act(const or_options_t *old_options)
     if (!public_server_mode(options)) {
       options->CellStatistics = 0;
       options->EntryStatistics = 0;
+      options->HiddenServiceStatistics = 0;
       options->ExitPortStatistics = 0;
     }
 
@@ -1767,6 +1770,11 @@ options_act(const or_options_t *old_options)
         options->ConnDirectionStatistics) {
       rep_hist_conn_stats_init(now);
     }
+    if ((!old_options || !old_options->HiddenServiceStatistics) &&
+        options->HiddenServiceStatistics) {
+      log_info(LD_CONFIG, "Configured to measure hidden service statistics.");
+      rep_hist_hs_stats_init(now);
+    }
     if ((!old_options || !old_options->BridgeAuthoritativeDir) &&
         options->BridgeAuthoritativeDir) {
       rep_hist_desc_stats_init(now);
@@ -1778,6 +1786,8 @@ options_act(const or_options_t *old_options)
                  "data directory in 24 hours from now.");
   }
 
+  /* If we used to have statistics enabled but we just disabled them,
+     stop gathering them.  */
   if (old_options && old_options->CellStatistics &&
       !options->CellStatistics)
     rep_hist_buffer_stats_term();
@@ -1787,6 +1797,9 @@ options_act(const or_options_t *old_options)
   if (old_options && old_options->EntryStatistics &&
       !options->EntryStatistics)
     geoip_entry_stats_term();
+  if (old_options && old_options->HiddenServiceStatistics &&
+      !options->HiddenServiceStatistics)
+    rep_hist_hs_stats_term();
   if (old_options && old_options->ExitPortStatistics &&
       !options->ExitPortStatistics)
     rep_hist_exit_stats_term();
