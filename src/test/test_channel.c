@@ -1433,7 +1433,7 @@ test_channel_queue_size(void *arg)
 
   /* Initial queue size update */
   channel_update_xmit_queue_size(ch);
-  tt_int_op(ch->bytes_queued_for_xmit, ==, 0);
+  tt_u64_op(ch->bytes_queued_for_xmit, ==, 0);
   global_queue_estimate = channel_get_global_queue_estimate();
   tt_u64_op(global_queue_estimate, ==, 0);
 
@@ -1468,23 +1468,23 @@ test_channel_queue_size(void *arg)
   /* Update queue size estimates */
   channel_update_xmit_queue_size(ch);
   /* One cell, times an overhead factor of 1.0 */
-  tt_int_op(ch->bytes_queued_for_xmit, ==, 512);
+  tt_u64_op(ch->bytes_queued_for_xmit, ==, 512);
   /* Try a different overhead factor */
   test_overhead_estimate = 0.5f;
   /* This one should be ignored since it's below 1.0 */
   channel_update_xmit_queue_size(ch);
-  tt_int_op(ch->bytes_queued_for_xmit, ==, 512);
+  tt_u64_op(ch->bytes_queued_for_xmit, ==, 512);
   /* Now try a larger one */
   test_overhead_estimate = 2.0f;
   channel_update_xmit_queue_size(ch);
-  tt_int_op(ch->bytes_queued_for_xmit, ==, 1024);
+  tt_u64_op(ch->bytes_queued_for_xmit, ==, 1024);
   /* Go back to 1.0 */
   test_overhead_estimate = 1.0f;
   channel_update_xmit_queue_size(ch);
-  tt_int_op(ch->bytes_queued_for_xmit, ==, 512);
+  tt_u64_op(ch->bytes_queued_for_xmit, ==, 512);
   /* Check the global estimate too */
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_int_op(global_queue_estimate, ==, 512);
+  tt_u64_op(global_queue_estimate, ==, 512);
 
   /* Go to open */
   old_count = test_cells_written;
@@ -1498,9 +1498,9 @@ test_channel_queue_size(void *arg)
 
   /* Check the queue size again */
   channel_update_xmit_queue_size(ch);
-  tt_int_op(ch->bytes_queued_for_xmit, ==, 512);
+  tt_u64_op(ch->bytes_queued_for_xmit, ==, 512);
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_int_op(global_queue_estimate, ==, 512);
+  tt_u64_op(global_queue_estimate, ==, 512);
 
   /*
    * Now the cell is in the queue, and we're open, so we should get 31
@@ -1522,9 +1522,9 @@ test_channel_queue_size(void *arg)
 
   /* Should have queue size estimate of zero */
   channel_update_xmit_queue_size(ch);
-  tt_int_op(ch->bytes_queued_for_xmit, ==, 0);
+  tt_u64_op(ch->bytes_queued_for_xmit, ==, 0);
   global_queue_estimate = channel_get_global_queue_estimate();
-  tt_int_op(global_queue_estimate, ==, 0);
+  tt_u64_op(global_queue_estimate, ==, 0);
 
   /* Okay, now we're done with this one */
   MOCK(scheduler_release_channel, scheduler_release_channel_mock);
