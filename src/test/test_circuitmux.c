@@ -36,7 +36,11 @@ test_cmux_destroy_cell_queue(void *arg)
   circuit_t *circ = NULL;
   cell_queue_t *cq = NULL;
   packed_cell_t *pc = NULL;
+  tor_libevent_cfg cfg;
 
+  memset(&cfg, 0, sizeof(cfg));
+
+  tor_libevent_initialize(&cfg);
   scheduler_init();
 
 #ifdef ENABLE_MEMPOOLS
