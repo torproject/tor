@@ -1,0 +1,3 @@
+  o Code simplifications and refactoring:
+    - In connection_exit_begin_conn(), use END_CIRC_REASON_TORPROTOCOL
+      constant instead of hardcoded value. Fixes issue 13840.

@@ -2461,7 +2461,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
 
   relay_header_unpack(&rh, cell->payload);
   if (rh.length > RELAY_PAYLOAD_SIZE)
-    return -1;
+    return -END_CIRC_REASON_TORPROTOCOL;
 
   /* Note: we have to use relay_send_command_from_edge here, not
    * connection_edge_end or connection_edge_send_command, since those require
@@ -2479,7 +2479,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
 
   r = begin_cell_parse(cell, &bcell, &end_reason);
   if (r < -1) {
-    return -1;
+    return -END_CIRC_REASON_TORPROTOCOL;
   } else if (r == -1) {
     tor_free(bcell.address);
     relay_send_end_cell_from_edge(rh.stream_id, circ, end_reason, NULL);
