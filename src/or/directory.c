@@ -2210,8 +2210,10 @@ connection_dir_process_inbuf(dir_connection_t *conn)
   }
 
   if (connection_get_inbuf_len(TO_CONN(conn)) > MAX_DIRECTORY_OBJECT_SIZE) {
-    log_warn(LD_HTTP, "Too much data received from directory connection: "
-             "denial of service attempt, or you need to upgrade?");
+    log_warn(LD_HTTP,
+             "Too much data received from directory connection (%s): "
+             "denial of service attempt, or you need to upgrade?",
+             conn->base_.address);
     connection_mark_for_close(TO_CONN(conn));
     return -1;
   }
