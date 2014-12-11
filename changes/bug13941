@@ -1,0 +1,4 @@
+  o Minor bugfixes (hidden services):
+    - When adding a new hidden-service (for example, via SETCONF) Tor
+      no longer logs a congratulations for running a relay.
+
