@@ -531,6 +531,16 @@ rend_config_services(const or_options_t *options, int validate_only)
     }
   }
   if (service) {
+      cpd_check_t check_opts = CPD_CHECK_MODE_ONLY;
+      if (service->dir_group_readable) {
+          check_opts |= CPD_GROUP_READ;
+      }
+
+      if (check_private_dir(service->directory, check_opts, options->User) < 0) {
+          rend_service_free(service);
+          return -1;
+      }
+
     if (validate_only) {
       rend_service_free(service);
     } else {
