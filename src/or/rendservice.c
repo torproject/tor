@@ -748,7 +748,7 @@ rend_service_load_keys(rend_service_t *s)
              s->directory);
     return -1;
   }
-  s->private_key = init_key_from_file(fname, 1, LOG_ERR);
+  s->private_key = init_key_from_file(fname, 1, LOG_ERR, 0);
   if (!s->private_key)
     return -1;
 

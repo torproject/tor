@@ -29,7 +29,7 @@ crypto_pk_t *get_my_v3_legacy_signing_key(void);
 void dup_onion_keys(crypto_pk_t **key, crypto_pk_t **last);
 void rotate_onion_key(void);
 crypto_pk_t *init_key_from_file(const char *fname, int generate,
-                                    int severity);
+                                    int severity, int log_greeting);
 void v3_authority_check_key_expiry(void);
 
 di_digest256_map_t *construct_ntor_key_map(void);
