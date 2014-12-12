@@ -400,7 +400,7 @@ rend_config_services(const or_options_t *options, int validate_only)
      } else if (!strcasecmp(line->key,
                             "HiddenServiceDirGroupReadable")) {
          service->dir_group_readable = (int)tor_parse_long(line->value,
-                                                           10, 0, 1, &ok, NULL);
+                                                         10, 0, 1, &ok, NULL);
          if (!ok) {
              log_warn(LD_CONFIG,
                       "HiddenServiceDirGroupReadable should be 0 or 1, not %s",
