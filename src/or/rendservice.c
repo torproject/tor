@@ -373,101 +373,101 @@ rend_config_services(const or_options_t *options, int validate_only)
     if (!strcasecmp(line->key, "HiddenServiceDir")) {
       if (service) { /* register the one we just finished parsing */
         if (validate_only)
-          rend_service_free(service);
-        else
-          rend_add_service(service);
-      }
-      service = tor_malloc_zero(sizeof(rend_service_t));
-      service->directory = tor_strdup(line->value);
-      service->ports = smartlist_new();
-      service->intro_period_started = time(NULL);
-      service->n_intro_points_wanted = NUM_INTRO_POINTS_DEFAULT;
-      continue;
-    }
-    if (!service) {
-      log_warn(LD_CONFIG, "%s with no preceding HiddenServiceDir directive",
-               line->key);
-      rend_service_free(service);
-      return -1;
-    }
-    if (!strcasecmp(line->key, "HiddenServicePort")) {
-      portcfg = parse_port_config(line->value);
-      if (!portcfg) {
-        rend_service_free(service);
-        return -1;
-      }
-      smartlist_add(service->ports, portcfg);
-    } else if (!strcasecmp(line->key,
-                           "HiddenServiceDirGroupReadable")) {
-        service->dir_group_readable = (int)tor_parse_long(line->value,
-                                                          10, 0, 1, &ok, NULL);
-        if (!ok) {
-            log_warn(LD_CONFIG,
-                     "HiddenServiceDirGroupReadable should be 0 or 1, not %s",
-                     line->value);
-            rend_service_free(service);
-            return -1;
-        }
-        log_info(LD_CONFIG,
-                 "HiddenServiceDirGroupReadable=%d for %s",
-                 service->dir_group_readable, service->directory);
-    } else if (!strcasecmp(line->key, "HiddenServiceAuthorizeClient")) {
-      /* Parse auth type and comma-separated list of client names and add a
-       * rend_authorized_client_t for each client to the service's list
-       * of authorized clients. */
-      smartlist_t *type_names_split, *clients;
-      const char *authname;
-      int num_clients;
-      if (service->auth_type != REND_NO_AUTH) {
-        log_warn(LD_CONFIG, "Got multiple HiddenServiceAuthorizeClient "
-                 "lines for a single service.");
-        rend_service_free(service);
-        return -1;
-      }
-      type_names_split = smartlist_new();
-      smartlist_split_string(type_names_split, line->value, " ", 0, 2);
-      if (smartlist_len(type_names_split) < 1) {
-        log_warn(LD_BUG, "HiddenServiceAuthorizeClient has no value. This "
-                         "should have been prevented when parsing the "
-                         "configuration.");
-        smartlist_free(type_names_split);
-        rend_service_free(service);
-        return -1;
-      }
-      authname = smartlist_get(type_names_split, 0);
-      if (!strcasecmp(authname, "basic")) {
-        service->auth_type = REND_BASIC_AUTH;
-      } else if (!strcasecmp(authname, "stealth")) {
-        service->auth_type = REND_STEALTH_AUTH;
-      } else {
-        log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains "
-                 "unrecognized auth-type '%s'. Only 'basic' or 'stealth' "
-                 "are recognized.",
-                 (char *) smartlist_get(type_names_split, 0));
-        SMARTLIST_FOREACH(type_names_split, char *, cp, tor_free(cp));
-        smartlist_free(type_names_split);
-        rend_service_free(service);
-        return -1;
-      }
-      service->clients = smartlist_new();
-      if (smartlist_len(type_names_split) < 2) {
-        log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains "
-                            "auth-type '%s', but no client names.",
-                 service->auth_type == REND_BASIC_AUTH ? "basic" : "stealth");
-        SMARTLIST_FOREACH(type_names_split, char *, cp, tor_free(cp));
-        smartlist_free(type_names_split);
-        continue;
-      }
-      clients = smartlist_new();
-      smartlist_split_string(clients, smartlist_get(type_names_split, 1),
-                             ",", SPLIT_SKIP_SPACE, 0);
-      SMARTLIST_FOREACH(type_names_split, char *, cp, tor_free(cp));
-      smartlist_free(type_names_split);
-      /* Remove duplicate client names. */
-      num_clients = smartlist_len(clients);
-      smartlist_sort_strings(clients);
-      smartlist_uniq_strings(clients);
-      if (smartlist_len(clients) < num_clients) {
+           rend_service_free(service);
+         else
+           rend_add_service(service);
+       }
+       service = tor_malloc_zero(sizeof(rend_service_t));
+       service->directory = tor_strdup(line->value);
+       service->ports = smartlist_new();
+       service->intro_period_started = time(NULL);
+       service->n_intro_points_wanted = NUM_INTRO_POINTS_DEFAULT;
+       continue;
+     }
+     if (!service) {
+       log_warn(LD_CONFIG, "%s with no preceding HiddenServiceDir directive",
+                line->key);
+       rend_service_free(service);
+       return -1;
+     }
+     if (!strcasecmp(line->key, "HiddenServicePort")) {
+       portcfg = parse_port_config(line->value);
+       if (!portcfg) {
+         rend_service_free(service);
+         return -1;
+       }
+       smartlist_add(service->ports, portcfg);
+     } else if (!strcasecmp(line->key,
+                            "HiddenServiceDirGroupReadable")) {
+         service->dir_group_readable = (int)tor_parse_long(line->value,
+                                                           10, 0, 1, &ok, NULL);
+         if (!ok) {
+             log_warn(LD_CONFIG,
+                      "HiddenServiceDirGroupReadable should be 0 or 1, not %s",
+                      line->value);
+             rend_service_free(service);
+             return -1;
+         }
+         log_info(LD_CONFIG,
+                  "HiddenServiceDirGroupReadable=%d for %s",
+                  service->dir_group_readable, service->directory);
+     } else if (!strcasecmp(line->key, "HiddenServiceAuthorizeClient")) {
+       /* Parse auth type and comma-separated list of client names and add a
+        * rend_authorized_client_t for each client to the service's list
+        * of authorized clients. */
+       smartlist_t *type_names_split, *clients;
+       const char *authname;
+       int num_clients;
+       if (service->auth_type != REND_NO_AUTH) {
+         log_warn(LD_CONFIG, "Got multiple HiddenServiceAuthorizeClient "
+                  "lines for a single service.");
+         rend_service_free(service);
+         return -1;
+       }
+       type_names_split = smartlist_new();
+       smartlist_split_string(type_names_split, line->value, " ", 0, 2);
+       if (smartlist_len(type_names_split) < 1) {
+         log_warn(LD_BUG, "HiddenServiceAuthorizeClient has no value. This "
+                          "should have been prevented when parsing the "
+                          "configuration.");
+         smartlist_free(type_names_split);
+         rend_service_free(service);
+         return -1;
+       }
+       authname = smartlist_get(type_names_split, 0);
+       if (!strcasecmp(authname, "basic")) {
+         service->auth_type = REND_BASIC_AUTH;
+       } else if (!strcasecmp(authname, "stealth")) {
+         service->auth_type = REND_STEALTH_AUTH;
+       } else {
+         log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains "
+                  "unrecognized auth-type '%s'. Only 'basic' or 'stealth' "
+                  "are recognized.",
+                  (char *) smartlist_get(type_names_split, 0));
+         SMARTLIST_FOREACH(type_names_split, char *, cp, tor_free(cp));
+         smartlist_free(type_names_split);
+         rend_service_free(service);
+         return -1;
+       }
+       service->clients = smartlist_new();
+       if (smartlist_len(type_names_split) < 2) {
+         log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains "
+                             "auth-type '%s', but no client names.",
+                  service->auth_type == REND_BASIC_AUTH ? "basic" : "stealth");
+         SMARTLIST_FOREACH(type_names_split, char *, cp, tor_free(cp));
+         smartlist_free(type_names_split);
+         continue;
+       }
+       clients = smartlist_new();
+       smartlist_split_string(clients, smartlist_get(type_names_split, 1),
+                              ",", SPLIT_SKIP_SPACE, 0);
+       SMARTLIST_FOREACH(type_names_split, char *, cp, tor_free(cp));
+       smartlist_free(type_names_split);
+       /* Remove duplicate client names. */
+       num_clients = smartlist_len(clients);
+       smartlist_sort_strings(clients);
+       smartlist_uniq_strings(clients);
+       if (smartlist_len(clients) < num_clients) {
         log_info(LD_CONFIG, "HiddenServiceAuthorizeClient contains %d "
                             "duplicate client name(s); removing.",
                  num_clients - smartlist_len(clients));
@@ -531,15 +531,15 @@ rend_config_services(const or_options_t *options, int validate_only)
     }
   }
   if (service) {
-      cpd_check_t check_opts = CPD_CHECK_MODE_ONLY;
-      if (service->dir_group_readable) {
-          check_opts |= CPD_GROUP_READ;
-      }
+    cpd_check_t check_opts = CPD_CHECK_MODE_ONLY;
+    if (service->dir_group_readable) {
+      check_opts |= CPD_GROUP_READ;
+    }
 
-      if (check_private_dir(service->directory, check_opts, options->User) < 0) {
-          rend_service_free(service);
-          return -1;
-      }
+    if (check_private_dir(service->directory, check_opts, options->User) < 0) {
+      rend_service_free(service);
+      return -1;
+    }
 
     if (validate_only) {
       rend_service_free(service);
