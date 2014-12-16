@@ -852,8 +852,8 @@ channel_tls_handle_state_change_on_orconn(channel_tls_t *chan,
 
   base_chan = TLS_CHAN_TO_BASE(chan);
 
-  /* Make sure the base connection state makes sense - shouldn't be error,
-   * closed or listening. */
+  /* Make sure the base connection state makes sense - shouldn't be error
+   * or closed. */
 
   tor_assert(CHANNEL_IS_OPENING(base_chan) ||
              CHANNEL_IS_OPEN(base_chan) ||
