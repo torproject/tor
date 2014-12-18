@@ -1,0 +1,13 @@
+m  o Major features (hidden services):
+    - Add a HiddenServiceStatistics option that allows Tor relays to
+      gather and publish statistics about hidden service usage, to
+      better understand the size and volume of the hidden service
+      network. Specifically, if a Tor relay is an HSDir it will
+      publish the approximate number of hidden services that have
+      published descriptors to it the past 24 hours. Also, if a relay
+      has acted as a hidden service rendezvous point, it will publish
+      the approximate amount of rendezvous cells it has relayed the
+      past 24 hours. The statistics themselves are obfuscated so that
+      the exact values cannot be derived. For more details see
+      proposal 238 "Better hidden service stats from Tor relays". This
+      feature is currently disabled by default. Implements feature 13192.

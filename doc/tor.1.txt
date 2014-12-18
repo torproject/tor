@@ -1765,9 +1765,11 @@ is non-zero):
     of connections to disk every 24 hours. (Default: 0)
 
 [[HiddenServiceStatistics]] **HiddenServiceStatistics** **0**|**1**::
-    When this option is enabled, a Tor relay writes statistics on its role as
-    hidden-service directory, introduction point, or rendezvous point to disk
-    every 24 hours. (Default: 0)
+    When this option is enabled, a Tor relay writes obfuscated
+    statistics on its role as hidden-service directory, introduction
+    point, or rendezvous point to disk every 24 hours. If
+    ExtraInfoStatistics is also enabled, these statistics are further
+    published to the directory authorities. (Default: 0)
 
 [[ExtraInfoStatistics]] **ExtraInfoStatistics** **0**|**1**::
     When this option is enabled, Tor includes previously gathered statistics in
