@@ -2012,7 +2012,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
         circ->rend_data = rend_data_dup(ENTRY_TO_EDGE_CONN(conn)->rend_data);
         if (circ->base_.purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND &&
             circ->base_.state == CIRCUIT_STATE_OPEN)
-          rend_client_rendcirc_has_opened(circ);
+          circuit_has_opened(circ);
       }
     }
   } /* endif (!circ) */
