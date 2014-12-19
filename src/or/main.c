@@ -1384,6 +1384,11 @@ run_scheduled_events(time_t now)
       if (next_write && next_write < next_time_to_write_stats_files)
         next_time_to_write_stats_files = next_write;
     }
+    if (options->HiddenServiceStatistics) {
+      time_t next_write = rep_hist_hs_stats_write(time_to_write_stats_files);
+      if (next_write && next_write < next_time_to_write_stats_files)
+        next_time_to_write_stats_files = next_write;
+    }
     if (options->ExitPortStatistics) {
       time_t next_write = rep_hist_exit_stats_write(time_to_write_stats_files);
       if (next_write && next_write < next_time_to_write_stats_files)
