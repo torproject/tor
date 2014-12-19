@@ -191,6 +191,10 @@ typedef unsigned __int64 uint64_t;
 #endif
 #endif
 
+#ifndef INT64_MIN
+#define INT64_MIN ((- INT64_MAX) - 1)
+#endif
+
 #ifndef SIZE_MAX
 #if SIZEOF_SIZE_T == 8
 #define SIZE_MAX UINT64_MAX
