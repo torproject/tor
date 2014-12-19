@@ -4663,7 +4663,7 @@ test_util_laplace(void *arg)
    * array([         -inf,  -80.47189562,  -34.65735903,    0.        ,
    *          34.65735903,   80.47189562,  195.60115027])
    */
-  tt_assert(LLONG_MIN + 20 ==
+  tt_assert(INT64_MIN + 20 ==
             add_laplace_noise(20, 0.0, delta_f, epsilon));
   tt_assert(-60 == add_laplace_noise(20, 0.1, delta_f, epsilon));
   tt_assert(-14 == add_laplace_noise(20, 0.25, delta_f, epsilon));
