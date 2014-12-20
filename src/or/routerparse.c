@@ -2598,11 +2598,15 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     (int) tor_parse_long(tok->args[1], 10, 0, INT_MAX, &ok, NULL);
   if (!ok)
     goto err;
-  if (ns->valid_after + MIN_VOTE_INTERVAL > ns->fresh_until) {
+  if (ns->valid_after +
+      (get_options()->TestingTorNetwork ?
+       MIN_VOTE_INTERVAL_TESTING : MIN_VOTE_INTERVAL) > ns->fresh_until) {
     log_warn(LD_DIR, "Vote/consensus freshness interval is too short");
     goto err;
   }
-  if (ns->valid_after + MIN_VOTE_INTERVAL*2 > ns->valid_until) {
+  if (ns->valid_after +
+      (get_options()->TestingTorNetwork ?
+       MIN_VOTE_INTERVAL_TESTING : MIN_VOTE_INTERVAL)*2 > ns->valid_until) {
     log_warn(LD_DIR, "Vote/consensus liveness interval is too short");
     goto err;
   }

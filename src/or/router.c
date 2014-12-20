@@ -1223,6 +1223,11 @@ router_orport_found_reachable(void)
                  " Publishing server descriptor." : "");
     can_reach_or_port = 1;
     mark_my_descriptor_dirty("ORPort found reachable");
+    /* This is a significant enough change to upload immediately,
+     * at least in a test network */
+    if (get_options()->TestingTorNetwork == 1) {
+      reschedule_descriptor_update_check();
+    }
     control_event_server_status(LOG_NOTICE,
                                 "REACHABILITY_SUCCEEDED ORADDRESS=%s:%d",
                                 address, me->or_port);
@@ -1240,8 +1245,14 @@ router_dirport_found_reachable(void)
     log_notice(LD_DIRSERV,"Self-testing indicates your DirPort is reachable "
                "from the outside. Excellent.");
     can_reach_dir_port = 1;
-    if (decide_to_advertise_dirport(get_options(), me->dir_port))
+    if (decide_to_advertise_dirport(get_options(), me->dir_port)) {
       mark_my_descriptor_dirty("DirPort found reachable");
+      /* This is a significant enough change to upload immediately,
+       * at least in a test network */
+      if (get_options()->TestingTorNetwork == 1) {
+        reschedule_descriptor_update_check();
+      }
+    }
     control_event_server_status(LOG_NOTICE,
                                 "REACHABILITY_SUCCEEDED DIRADDRESS=%s:%d",
                                 address, me->dir_port);

@@ -468,7 +468,7 @@ static const config_var_t testing_tor_network_defaults[] = {
   V(V3AuthVotingInterval,        INTERVAL, "5 minutes"),
   V(V3AuthVoteDelay,             INTERVAL, "20 seconds"),
   V(V3AuthDistDelay,             INTERVAL, "20 seconds"),
-  V(TestingV3AuthInitialVotingInterval, INTERVAL, "5 minutes"),
+  V(TestingV3AuthInitialVotingInterval, INTERVAL, "150 seconds"),
   V(TestingV3AuthInitialVoteDelay, INTERVAL, "20 seconds"),
   V(TestingV3AuthInitialDistDelay, INTERVAL, "20 seconds"),
   V(TestingV3AuthVotingStartOffset, INTERVAL, "0"),
@@ -3397,19 +3397,68 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (options->V3AuthVoteDelay + options->V3AuthDistDelay >=
       options->V3AuthVotingInterval/2) {
-    REJECT("V3AuthVoteDelay plus V3AuthDistDelay must be less than half "
-           "V3AuthVotingInterval");
+    /*
+    This doesn't work, but it seems like it should:
+     what code is preventing the interval being less than twice the lead-up?
+    if (options->TestingTorNetwork) {
+      if (options->V3AuthVoteDelay + options->V3AuthDistDelay >=
+          options->V3AuthVotingInterval) {
+        REJECT("V3AuthVoteDelay plus V3AuthDistDelay must be less than "
+               "V3AuthVotingInterval");
+      } else {
+        COMPLAIN("V3AuthVoteDelay plus V3AuthDistDelay is more than half "
+                 "V3AuthVotingInterval. This may lead to "
+                 "consensus instability, particularly if clocks drift.");
+      }
+    } else {
+     */
+      REJECT("V3AuthVoteDelay plus V3AuthDistDelay must be less than half "
+             "V3AuthVotingInterval");
+    /*
+    }
+     */
   }
-  if (options->V3AuthVoteDelay < MIN_VOTE_SECONDS)
-    REJECT("V3AuthVoteDelay is way too low.");
-  if (options->V3AuthDistDelay < MIN_DIST_SECONDS)
-    REJECT("V3AuthDistDelay is way too low.");
+
+  if (options->V3AuthVoteDelay < MIN_VOTE_SECONDS) {
+    if (options->TestingTorNetwork) {
+      if (options->V3AuthVoteDelay < MIN_VOTE_SECONDS_TESTING) {
+        REJECT("V3AuthVoteDelay is way too low.");
+      } else {
+        COMPLAIN("V3AuthVoteDelay is very low. "
+                 "This may lead to failure to vote for a consensus.");
+      }
+    } else {
+      REJECT("V3AuthVoteDelay is way too low.");
+    }
+  }
+
+  if (options->V3AuthDistDelay < MIN_DIST_SECONDS) {
+    if (options->TestingTorNetwork) {
+      if (options->V3AuthDistDelay < MIN_DIST_SECONDS_TESTING) {
+        REJECT("V3AuthDistDelay is way too low.");
+      } else {
+        COMPLAIN("V3AuthDistDelay is very low. "
+                 "This may lead to missing votes in a consensus.");
+      }
+    } else {
+      REJECT("V3AuthDistDelay is way too low.");
+    }
+  }
 
   if (options->V3AuthNIntervalsValid < 2)
     REJECT("V3AuthNIntervalsValid must be at least 2.");
 
   if (options->V3AuthVotingInterval < MIN_VOTE_INTERVAL) {
-    REJECT("V3AuthVotingInterval is insanely low.");
+    if (options->TestingTorNetwork) {
+      if (options->V3AuthVotingInterval < MIN_VOTE_INTERVAL_TESTING) {
+        REJECT("V3AuthVotingInterval is insanely low.");
+      } else {
+        COMPLAIN("V3AuthVotingInterval is very low. "
+                 "This may lead to failure to synchronise for a consensus.");
+      }
+    } else {
+      REJECT("V3AuthVotingInterval is insanely low.");
+    }
   } else if (options->V3AuthVotingInterval > 24*60*60) {
     REJECT("V3AuthVotingInterval is insanely high.");
   } else if (((24*60*60) % options->V3AuthVotingInterval) != 0) {
@@ -3484,26 +3533,27 @@ options_validate(or_options_t *old_options, or_options_t *options,
   CHECK_DEFAULT(TestingCertMaxDownloadTries);
 #undef CHECK_DEFAULT
 
-  if (options->TestingV3AuthInitialVotingInterval < MIN_VOTE_INTERVAL) {
+  if (options->TestingV3AuthInitialVotingInterval
+      < MIN_VOTE_INTERVAL_TESTING_INITIAL) {
     REJECT("TestingV3AuthInitialVotingInterval is insanely low.");
   } else if (((30*60) % options->TestingV3AuthInitialVotingInterval) != 0) {
     REJECT("TestingV3AuthInitialVotingInterval does not divide evenly into "
            "30 minutes.");
   }
 
-  if (options->TestingV3AuthInitialVoteDelay < MIN_VOTE_SECONDS) {
+  if (options->TestingV3AuthInitialVoteDelay < MIN_VOTE_SECONDS_TESTING) {
     REJECT("TestingV3AuthInitialVoteDelay is way too low.");
   }
 
-  if (options->TestingV3AuthInitialDistDelay < MIN_DIST_SECONDS) {
+  if (options->TestingV3AuthInitialDistDelay < MIN_DIST_SECONDS_TESTING) {
     REJECT("TestingV3AuthInitialDistDelay is way too low.");
   }
 
   if (options->TestingV3AuthInitialVoteDelay +
       options->TestingV3AuthInitialDistDelay >=
-      options->TestingV3AuthInitialVotingInterval/2) {
+      options->TestingV3AuthInitialVotingInterval) {
     REJECT("TestingV3AuthInitialVoteDelay plus TestingV3AuthInitialDistDelay "
-           "must be less than half TestingV3AuthInitialVotingInterval");
+           "must be less than TestingV3AuthInitialVotingInterval");
   }
 
   if (options->TestingV3AuthVotingStartOffset >
@@ -3511,6 +3561,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
           options->V3AuthVotingInterval)) {
     REJECT("TestingV3AuthVotingStartOffset is higher than the voting "
            "interval.");
+  } else if (options->TestingV3AuthVotingStartOffset < 0) {
+    REJECT("TestingV3AuthVotingStartOffset must be non-negative.");
   }
 
   if (options->TestingAuthDirTimeToLearnReachability < 0) {
