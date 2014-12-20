@@ -1378,8 +1378,10 @@ onionskin_answer(or_circuit_t *circ,
   log_debug(LD_CIRC,"Finished sending '%s' cell.",
             circ->is_first_hop ? "created_fast" : "created");
 
-  if (!channel_is_local(circ->p_chan) &&
-      !channel_is_outgoing(circ->p_chan)) {
+  /* Ignore the local bit when testing - many test networks run on local
+   * addresses */
+  if ((!channel_is_local(circ->p_chan) || get_options()->TestingTorNetwork)
+      && !channel_is_outgoing(circ->p_chan)) {
     /* record that we could process create cells from a non-local conn
      * that we didn't initiate; presumably this means that create cells
      * can reach us too. */
