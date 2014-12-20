@@ -744,8 +744,17 @@ connection_ap_fail_onehop(const char *failed_digest,
       /* we don't know the digest; have to compare addr:port */
       tor_addr_t addr;
       if (!build_state || !build_state->chosen_exit ||
-          !entry_conn->socks_request || !entry_conn->socks_request->address)
+          !entry_conn->socks_request) {
+        /* clang thinks that an array midway through a structure
+         * will never have a NULL address, under either:
+         * -Wpointer-bool-conversion if using !, or
+         * -Wtautological-pointer-compare if using == or !=
+         * It's probably right (unless pointers overflow and wrap),
+         * so we just skip this check
+         || !entry_conn->socks_request->address
+         */
         continue;
+      }
       if (tor_addr_parse(&addr, entry_conn->socks_request->address)<0 ||
           !tor_addr_eq(&build_state->chosen_exit->addr, &addr) ||
           build_state->chosen_exit->port != entry_conn->socks_request->port)
