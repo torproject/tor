@@ -744,8 +744,9 @@ connection_ap_fail_onehop(const char *failed_digest,
       /* we don't know the digest; have to compare addr:port */
       tor_addr_t addr;
       if (!build_state || !build_state->chosen_exit ||
-          !entry_conn->socks_request || !entry_conn->socks_request->address)
+          !entry_conn->socks_request) {
         continue;
+      }
       if (tor_addr_parse(&addr, entry_conn->socks_request->address)<0 ||
           !tor_addr_eq(&build_state->chosen_exit->addr, &addr) ||
           build_state->chosen_exit->port != entry_conn->socks_request->port)
