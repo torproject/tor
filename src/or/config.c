@@ -2610,20 +2610,24 @@ options_validate(or_options_t *old_options, or_options_t *options,
     if (!strcasecmp(options->TransProxyType, "default")) {
       options->TransProxyType_parsed = TPT_DEFAULT;
     } else if (!strcasecmp(options->TransProxyType, "pf-divert")) {
-#ifndef __OpenBSD__
-      REJECT("pf-divert is a OpenBSD-specific feature.");
+#if !defined(__OpenBSD__) && !defined( DARWIN )
+      /* Later versions of OS X have pf */
+      REJECT("pf-divert is a OpenBSD-specific "
+             "and OS X/Darwin-specific feature.");
 #else
       options->TransProxyType_parsed = TPT_PF_DIVERT;
 #endif
     } else if (!strcasecmp(options->TransProxyType, "tproxy")) {
-#ifndef __linux__
+#if !defined(__linux__)
       REJECT("TPROXY is a Linux-specific feature.");
 #else
       options->TransProxyType_parsed = TPT_TPROXY;
 #endif
     } else if (!strcasecmp(options->TransProxyType, "ipfw")) {
-#ifndef __FreeBSD__
-      REJECT("ipfw is a FreeBSD-specific feature.");
+#if !defined(__FreeBSD__) && !defined( DARWIN )
+      /* Earlier versions of OS X have ipfw */
+      REJECT("ipfw is a FreeBSD-specific"
+             "and OS X/Darwin-specific feature.");
 #else
       options->TransProxyType_parsed = TPT_IPFW;
 #endif
