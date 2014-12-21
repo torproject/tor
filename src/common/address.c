@@ -1119,7 +1119,8 @@ fmt_addr32(uint32_t addr)
 int
 tor_addr_parse(tor_addr_t *addr, const char *src)
 {
-  char *tmp = NULL; /* Holds substring if we got a dotted quad. */
+  /* Holds substring of IPv6 address after removing square brackets */
+  char *tmp = NULL;
   int result;
   struct in_addr in_tmp;
   struct in6_addr in6_tmp;
