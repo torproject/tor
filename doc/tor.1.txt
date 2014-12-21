@@ -2025,6 +2025,8 @@ The following options are used to configure a hidden service.
     Store data files for a hidden service in DIRECTORY. Every hidden service
     must have a separate directory. You may use this option  multiple times to
     specify multiple services. DIRECTORY must be an existing directory.
+    NB: if DIRECTORY is defined in relative way, it will be relative to current
+    working directory of Tor instance, not it's DataDirectory.
 
 [[HiddenServicePort]] **HiddenServicePort** __VIRTPORT__ [__TARGET__]::
     Configure a virtual port VIRTPORT for a hidden service. You may use this
