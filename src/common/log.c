@@ -451,7 +451,7 @@ MOCK_IMPL(STATIC void,
 logv,(int severity, log_domain_mask_t domain, const char *funcname,
      const char *suffix, const char *format, va_list ap))
 {
-  char buf[10024];
+  char buf[10240];
   size_t msg_len = 0;
   int formatted = 0;
   logfile_t *lf;
