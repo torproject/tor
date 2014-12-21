@@ -672,7 +672,7 @@ circuit_deliver_create_cell(circuit_t *circ, const create_cell_t *create_cell,
   if (CIRCUIT_IS_ORIGIN(circ)) {
     /* Update began timestamp for circuits starting their first hop */
     if (TO_ORIGIN_CIRCUIT(circ)->cpath->state == CPATH_STATE_CLOSED) {
-      if (circ->n_chan->state != CHANNEL_STATE_OPEN) {
+      if (!CHANNEL_IS_OPEN(circ->n_chan)) {
         log_warn(LD_CIRC,
                  "Got first hop for a circuit without an opened channel. "
                  "State: %s.", channel_state_to_string(circ->n_chan->state));

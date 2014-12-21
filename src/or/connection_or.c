@@ -1149,9 +1149,7 @@ connection_or_notify_error(or_connection_t *conn,
   if (conn->chan) {
     chan = TLS_CHAN_TO_BASE(conn->chan);
     /* Don't transition if we're already in closing, closed or error */
-    if (!(chan->state == CHANNEL_STATE_CLOSING ||
-          chan->state == CHANNEL_STATE_CLOSED ||
-          chan->state == CHANNEL_STATE_ERROR)) {
+    if (!CHANNEL_CONDEMNED(chan)) {
       channel_close_for_error(chan);
     }
   }
@@ -1310,9 +1308,7 @@ connection_or_close_normally(or_connection_t *orconn, int flush)
   if (orconn->chan) {
     chan = TLS_CHAN_TO_BASE(orconn->chan);
     /* Don't transition if we're already in closing, closed or error */
-    if (!(chan->state == CHANNEL_STATE_CLOSING ||
-          chan->state == CHANNEL_STATE_CLOSED ||
-          chan->state == CHANNEL_STATE_ERROR)) {
+    if (!CHANNEL_CONDEMNED(chan)) {
       channel_close_from_lower_layer(chan);
     }
   }
@@ -1333,9 +1329,7 @@ connection_or_close_for_error(or_connection_t *orconn, int flush)
   if (orconn->chan) {
     chan = TLS_CHAN_TO_BASE(orconn->chan);
     /* Don't transition if we're already in closing, closed or error */
-    if (!(chan->state == CHANNEL_STATE_CLOSING ||
-          chan->state == CHANNEL_STATE_CLOSED ||
-          chan->state == CHANNEL_STATE_ERROR)) {
+    if (!CHANNEL_CONDEMNED(chan)) {
       channel_close_for_error(chan);
     }
   }

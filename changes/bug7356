@@ -1,0 +1,5 @@
+  o Code simplifications and refactoring:
+    - Add inline functions and convenience macros for quick lookup of
+      state component of channel_t structure. Refactor various parts of
+      codebase to use convenience macros instead of checking state
+      member of channel_t directly. Fixes issue 7356.
