@@ -2,42 +2,40 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
   Tor 0.2.6.2-alpha is the second alpha release in the 0.2.6.x series.
 
   o Major features (relay, infrastructure):
+    - Completely revision of the code that relays use to decide which
+      cell to send next. Formerly, we selected the best circuit to write
+      on each channel, but we didn't select among channels in any
+      sophisticated way. Now, we choose the best circuits globally from
+      among those whose channels are ready to deliver traffic.
 
-    - Completely revision of the code that relays use to decide which cell to
-      send next.  Formerly, we selected the best circuit to write on each
-      channel, but we didn't select among channels in any sophisticated way.
-      Now, we choose the best circuits globally from among those whose
-      channels are ready to deliver traffic.
-
-      This patch implements a new inter-cmux comparison API, a global high/low
-      watermark mechanism and a global scheduler loop for transmission
-      prioritization across all channels as well as among circuits on
-      one channel. This schedule is currently tuned to (tolerantly)
-      avoid making changes in the current network performance, but it
-      should form the basis for major circuit performance increases.
-      Code by Andrea; tuning by Rob Jansen; implements ticket 9262.
+      This patch implements a new inter-cmux comparison API, a global
+      high/low watermark mechanism and a global scheduler loop for
+      transmission prioritization across all channels as well as among
+      circuits on one channel. This schedule is currently tuned to
+      (tolerantly) avoid making changes in the current network
+      performance, but it should form the basis for major circuit
+      performance increases. Code by Andrea; tuning by Rob Jansen;
+      implements ticket 9262.
 
   o Major features (hidden services):
     - Add a HiddenServiceStatistics option that allows Tor relays to
-      gather and publish statistics the overall size and volume of hidden
-      service usage.
-      Specifically, when this option is turned on, an HSDir will publish
-      an approximate number of hidden services that have published
-      descriptors to it the past 24 hours. Also, if a relay has acted as
-      a hidden service rendezvous point, it will publish the approximate
-      amount of rendezvous cells it has relayed the past 24 hours. The
-      statistics themselves are obfuscated so that the exact values
-      cannot be derived. For more details see proposal 238, "Better
-      hidden service stats from Tor relays". This feature is currently
-      disabled by default. Implements feature 13192.
+      gather and publish statistics the overall size and volume of
+      hidden service usage. Specifically, when this option is turned on,
+      an HSDir will publish an approximate number of hidden services
+      that have published descriptors to it the past 24 hours. Also, if
+      a relay has acted as a hidden service rendezvous point, it will
+      publish the approximate amount of rendezvous cells it has relayed
+      the past 24 hours. The statistics themselves are obfuscated so
+      that the exact values cannot be derived. For more details see
+      proposal 238, "Better hidden service stats from Tor relays". This
+      feature is currently disabled by default. Implements feature 13192.
 
   o Major bugfixes (hidden services):
-    - When closing an introduction circuit that was opened in parallel with
-      others,
-      don't mark the introduction point as unreachable. Previously, the
-      first successful connection to an introduction point would make
-      the other introduction points get marked as having timed out.
-      Fixes bug 13698; bugfix on 0.0.6rc2.
+    - When closing an introduction circuit that was opened in parallel
+      with others, don't mark the introduction point as unreachable.
+      Previously, the first successful connection to an introduction
+      point would make the other introduction points get marked as
+      having timed out. Fixes bug 13698; bugfix on 0.0.6rc2.
 
   o Minor features (client):
     - Validate hostnames in SOCKS5 requests more strictly. If SafeSocks
@@ -66,8 +64,8 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
       from "anon", David Stainton, and "meejah". Closes ticket 11291.
 
   o Minor features (transparent firewall):
-    - Update the transparent proxy option checks to allow for both ipfw and
-      pf on OS X.  Closes ticket 14002.
+    - Update the transparent proxy option checks to allow for both ipfw
+      and pf on OS X. Closes ticket 14002.
 
   o Minor bugfixes (client, micordescriptors):
     - Use a full 256 bits of the SHA256 digest of a microdescriptor when
@@ -85,24 +83,23 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
       char assignment to self, tautological compare, and additional
       parentheses around equality tests. Fixes bug 13577; bugfix
       on 0.2.5.4-alpha.
-    - Fix a clang warning about checking whether an address in the middle of a
-      structure is NULL.  Fixes bug
-      14001; bugfix on 0.2.1.2-alpha.
+    - Fix a clang warning about checking whether an address in the
+      middle of a structure is NULL. Fixes bug 14001; bugfix
+      on 0.2.1.2-alpha.
 
   o Minor bugfixes (hidden services):
     - Correctly send a controller event when we find that a rendezvous
-      circuit has finished.
-      Fixes bug 13936; bugfix on 0.1.1.5-alpha.
+      circuit has finished. Fixes bug 13936; bugfix on 0.1.1.5-alpha.
     - Pre-check directory permissions for new hidden-services to avoid
       at least one case of "Bug: Acting on config options left us in a
       broken state. Dying." Fixes bug 13942; bugfix on 0.0.6pre1.
-    - When adding a new hidden service (for example, via SETCONF), Tor no
-      longer congratulates the user for running a relay. Fixes bug
+    - When adding a new hidden service (for example, via SETCONF), Tor
+      no longer congratulates the user for running a relay. Fixes bug
       13941; bugfix on 0.2.6.1-alpha.
-    - When fetching hidden service descriptors, we now check not only for
-      whether we got the hidden service we had in mind, but also whether
-      we got the particular descriptors we wanted. This prevents a class
-      of inefficient but annoying DoS attacks by hidden service
+    - When fetching hidden service descriptors, we now check not only
+      for whether we got the hidden service we had in mind, but also
+      whether we got the particular descriptors we wanted. This prevents
+      a class of inefficient but annoying DoS attacks by hidden service
       directories. Fixes bug 13214; bugfix on 0.2.1.6-alpha. Reported
       by "special".
 
@@ -116,10 +113,10 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
       on 0.0.6.
 
   o Minor bugfixes (misc):
-
-    - Stop allowing invalid address patterns like "*/24" that contain both a wildcard
-      address and a bit prefix length. This
-      affects all our address-range parsing code. Fixes bug 7484; bugfix on 0.0.2pre14.
+    - Stop allowing invalid address patterns like "*/24" that contain
+      both a wildcard address and a bit prefix length. This affects all
+      our address-range parsing code. Fixes bug 7484; bugfix
+      on 0.0.2pre14.
 
   o Code simplification and refactoring:
     - Stop using can_complete_circuits as a global variable; access it
