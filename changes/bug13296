@@ -1,0 +1,5 @@
+  o Directory authority changes:
+    - Remove turtles as a directory authority.
+    - Add longclaw as a new (v3) directory authority. This implements
+      ticket 13296. This keeps the directory authority count at 9.
+
