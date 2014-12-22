@@ -21,30 +21,17 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
       prioritization across all channels as well as among circuits on
       one channel. This schedule is currently tuned to (tolerantly)
       avoid making changes in the current network performance, but it
-      should form the basis major circuit performance increases. Code by
-      Andrea; implements ticket 9262.
+      should form the basis for major circuit performance increases.
+      Code by Andrea; implements ticket 9262.
 
-  o Major bugfixes:
+  o Major bugfixes (hidden services):
     - When closing an introduction circuit that was opened in parallel,
       don't mark the introduction point as unreachable. Previously, the
       first successful connection to an introduction point would make
       the other introduction points get marked as having timed out.
       Fixes bug 13698; bugfix on 0.0.6rc2.
 
-  o Minor feature:
-    - When re-enabling the network, don't try to build introduction
-      circuits until we have successfully built a circuit. This makes
-      hidden services come up faster when the network is re-enabled.
-      Patch from "akwizgran". Closes ticket 13447.
-
-  o Minor features:
-    - OS X uses ipfw (FreeBSD) or pf (OpenBSD). Update the transparent
-      proxy option checks to allow for both ipfw and pf on OS X. Closes
-      ticket 14002.
-    - Update geoip to the November 15 2014 Maxmind GeoLite2
-      Country database.
-    - Update geoip6 to the November 15 2014 Maxmind GeoLite2
-      Country database.
+  o Minor features (client):
     - Validate hostnames in SOCKS5 requests more strictly. If SafeSocks
       is enabled, reject requests with IP addresses as hostnames.
       Resolves ticket 13315.
@@ -54,7 +41,17 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
       writing unscheduled heartbeat message to the log. Implements
       feature 9503.
 
+  o Minor features (geoip):
+    - Update geoip to the November 15 2014 Maxmind GeoLite2
+      Country database.
+    - Update geoip6 to the November 15 2014 Maxmind GeoLite2
+      Country database.
+
   o Minor features (hidden services):
+    - When re-enabling the network, don't try to build introduction
+      circuits until we have successfully built a circuit. This makes
+      hidden services come up faster when the network is re-enabled.
+      Patch from "akwizgran". Closes ticket 13447.
     - Inform Tor controller about nature of failure to retrieve hidden
       service descriptor by sending reason string with HS_DESC FAILED
       controller event. Implements feature 13212.
@@ -62,19 +59,12 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
       directories and hostname files to be created group-readable. Patch
       from "anon", David Stainton, and "meejah". Closes ticket 11291.
 
-  o Minor bugfixes:
-    - Silence clang warnings under --enable-expensive-hardening,
-      including: implicit truncation of 64 bit values to 32 bit; const
-      char assignment to self; tautological compare; and additional
-      parentheses around equality tests. Fixes bug 13577; bugfix
-      on 0.2.5.4-alpha.
-    - Stop allowing invalid address patterns containing both a wildcard
-      address and a bit prefix length. This affects all our address-
-      range parsing code. Fixes bug 7484; bugfix on 0.0.2pre14.
-    - The address of an array in the middle of a structure will always
-      be non-NULL. clang recognises this and complains. Disable the
-      tautologous and redundant check to silence this warning. Fixes bug
-      14001; bugfix on 0.2.1.2-alpha.
+  o Minor features (transparent firewall):
+    - OS X uses ipfw (FreeBSD) or pf (OpenBSD). Update the transparent
+      proxy option checks to allow for both ipfw and pf on OS X. Closes
+      ticket 14002.
+
+  o Minor bugfixes (client):
     - Use a full 256 bits of the SHA256 digest of a microdescriptor when
       computing which microdescriptors to download. This keeps us from
       erroneous download behavior if two microdescriptor digests ever
@@ -83,14 +73,25 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
     - Reset a router's status if its microdescriptor digest changes,
       even if the first 160 bits remain the same. Fixes part of bug
       13399; bugfix on 0.2.3.1-alpha.
+
+  o Minor bugfixes (compilation):
+    - Silence clang warnings under --enable-expensive-hardening,
+      including: implicit truncation of 64 bit values to 32 bit; const
+      char assignment to self; tautological compare; and additional
+      parentheses around equality tests. Fixes bug 13577; bugfix
+      on 0.2.5.4-alpha.
+    - The address of an array in the middle of a structure will always
+      be non-NULL. clang recognises this and complains. Disable the
+      tautologous and redundant check to silence this warning. Fixes bug
+      14001; bugfix on 0.2.1.2-alpha.
+
+  o Minor bugfixes (hidden services):
     - Use circuit_has_opened() instead of
       rend_client_rendcirc_has_opened() when a rendezvous circuit is
       opened because circuit_has_opened() jobs is to call a specialized
       function depending on the circuit purpose. Furthermore, a
       controller event will be triggered here where the former did not.
       Fixes bug 13936; bugfix on 0.1.1.5-alpha.
-
-  o Minor bugfixes (hidden services):
     - Pre-check directory permissions for new hidden-services to avoid
       at least one case of "Bug: Acting on config options left us in a
       broken state. Dying." Fixes bug 13942; bugfix on 0.0.6pre1.
@@ -113,11 +114,14 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
       connection_ap_handshake_attach_circuit(). Fixes bug 13701; bugfix
       on 0.0.6.
 
-  o Code Simplification and Refactoring:
-    - Stop using can_complete_circuits as a global variable; access it
-      with a function instead.
+  o Minor bugfixes (misc):
+    - Stop allowing invalid address patterns containing both a wildcard
+      address and a bit prefix length. This affects all our address-
+      range parsing code. Fixes bug 7484; bugfix on 0.0.2pre14.
 
   o Code simplification and refactoring:
+    - Stop using can_complete_circuits as a global variable; access it
+      with a function instead.
     - Remove our old, non-weighted bandwidth-based node selection code.
       Previously, we used it as a fallback when we couldn't perform
       weighted bandwidth-based node selection. But that would only
@@ -131,8 +135,6 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
       Closes ticket 13172.
     - Combine the functions used to parse ClientTransportPlugin and
       ServerTransportPlugin into a single function. Closes ticket 6456.
-
-  o Code simplifications and refactoring:
     - Add inline functions and convenience macros for quick lookup of
       state component of channel_t structure. Refactor various parts of
       codebase to use convenience macros instead of checking state
