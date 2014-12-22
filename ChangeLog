@@ -1,31 +1,39 @@
 Changes in version 0.2.6.2-alpha - 2014-12-??
   Tor 0.2.6.2-alpha is the second alpha release in the 0.2.6.x series.
 
-  o Major features (hidden services):
-    - Add a HiddenServiceStatistics option that allows Tor relays to
-      gather and publish statistics about hidden service usage, to
-      better understand the size and volume of the hidden service
-      network. Specifically, if a Tor relay is an HSDir it will publish
-      the approximate number of hidden services that have published
-      descriptors to it the past 24 hours. Also, if a relay has acted as
-      a hidden service rendezvous point, it will publish the approximate
-      amount of rendezvous cells it has relayed the past 24 hours. The
-      statistics themselves are obfuscated so that the exact values
-      cannot be derived. For more details see proposal 238 "Better
-      hidden service stats from Tor relays". This feature is currently
-      disabled by default. Implements feature 13192.
-
   o Major features (relay, infrastructure):
-    - Implement a new inter-cmux comparison API, a global high/low
+
+    - Completely revision of the code that relays use to decide which cell to
+      send next.  Formerly, we selected the best circuit to write on each
+      channel, but we didn't select among channels in any sophisticated way.
+      Now, we choose the best circuits globally from among those whose
+      channels are ready to deliver traffic.
+
+      This patch implements a new inter-cmux comparison API, a global high/low
       watermark mechanism and a global scheduler loop for transmission
       prioritization across all channels as well as among circuits on
       one channel. This schedule is currently tuned to (tolerantly)
       avoid making changes in the current network performance, but it
       should form the basis for major circuit performance increases.
-      Code by Andrea; implements ticket 9262.
+      Code by Andrea; tuning by Rob Jansen; implements ticket 9262.
+
+  o Major features (hidden services):
+    - Add a HiddenServiceStatistics option that allows Tor relays to
+      gather and publish statistics the overall size and volume of hidden
+      service usage.
+      Specifically, when this option is turned on, an HSDir will publish
+      an approximate number of hidden services that have published
+      descriptors to it the past 24 hours. Also, if a relay has acted as
+      a hidden service rendezvous point, it will publish the approximate
+      amount of rendezvous cells it has relayed the past 24 hours. The
+      statistics themselves are obfuscated so that the exact values
+      cannot be derived. For more details see proposal 238, "Better
+      hidden service stats from Tor relays". This feature is currently
+      disabled by default. Implements feature 13192.
 
   o Major bugfixes (hidden services):
-    - When closing an introduction circuit that was opened in parallel,
+    - When closing an introduction circuit that was opened in parallel with
+      others,
       don't mark the introduction point as unreachable. Previously, the
       first successful connection to an introduction point would make
       the other introduction points get marked as having timed out.
@@ -37,14 +45,12 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
       Resolves ticket 13315.
 
   o Minor features (controller):
-    - Add a "SIGNAL HEARTBEAT" Tor controller command that provokes
-      writing unscheduled heartbeat message to the log. Implements
+    - Add a "SIGNAL HEARTBEAT" Tor controller command that tells Tor to
+      write an unscheduled heartbeat message to the log. Implements
       feature 9503.
 
   o Minor features (geoip):
-    - Update geoip to the November 15 2014 Maxmind GeoLite2
-      Country database.
-    - Update geoip6 to the November 15 2014 Maxmind GeoLite2
+    - Update geoip and geoip6 to the November 15 2014 Maxmind GeoLite2
       Country database.
 
   o Minor features (hidden services):
@@ -52,19 +58,18 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
       circuits until we have successfully built a circuit. This makes
       hidden services come up faster when the network is re-enabled.
       Patch from "akwizgran". Closes ticket 13447.
-    - Inform Tor controller about nature of failure to retrieve hidden
-      service descriptor by sending reason string with HS_DESC FAILED
+    - Inform Tor controller about nature of a failure to retrieve hidden
+      service descriptor by sending reason string with "HS_DESC FAILED"
       controller event. Implements feature 13212.
     - New HiddenServiceDirGroupReadable option to cause hidden service
       directories and hostname files to be created group-readable. Patch
       from "anon", David Stainton, and "meejah". Closes ticket 11291.
 
   o Minor features (transparent firewall):
-    - OS X uses ipfw (FreeBSD) or pf (OpenBSD). Update the transparent
-      proxy option checks to allow for both ipfw and pf on OS X. Closes
-      ticket 14002.
+    - Update the transparent proxy option checks to allow for both ipfw and
+      pf on OS X.  Closes ticket 14002.
 
-  o Minor bugfixes (client):
+  o Minor bugfixes (client, micordescriptors):
     - Use a full 256 bits of the SHA256 digest of a microdescriptor when
       computing which microdescriptors to download. This keeps us from
       erroneous download behavior if two microdescriptor digests ever
@@ -76,29 +81,25 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
 
   o Minor bugfixes (compilation):
     - Silence clang warnings under --enable-expensive-hardening,
-      including: implicit truncation of 64 bit values to 32 bit; const
-      char assignment to self; tautological compare; and additional
+      including implicit truncation of 64 bit values to 32 bit, const
+      char assignment to self, tautological compare, and additional
       parentheses around equality tests. Fixes bug 13577; bugfix
       on 0.2.5.4-alpha.
-    - The address of an array in the middle of a structure will always
-      be non-NULL. clang recognises this and complains. Disable the
-      tautologous and redundant check to silence this warning. Fixes bug
+    - Fix a clang warning about checking whether an address in the middle of a
+      structure is NULL.  Fixes bug
       14001; bugfix on 0.2.1.2-alpha.
 
   o Minor bugfixes (hidden services):
-    - Use circuit_has_opened() instead of
-      rend_client_rendcirc_has_opened() when a rendezvous circuit is
-      opened because circuit_has_opened() jobs is to call a specialized
-      function depending on the circuit purpose. Furthermore, a
-      controller event will be triggered here where the former did not.
+    - Correctly send a controller event when we find that a rendezvous
+      circuit has finished.
       Fixes bug 13936; bugfix on 0.1.1.5-alpha.
     - Pre-check directory permissions for new hidden-services to avoid
       at least one case of "Bug: Acting on config options left us in a
       broken state. Dying." Fixes bug 13942; bugfix on 0.0.6pre1.
-    - When adding a new hidden-service (for example, via SETCONF) Tor no
-      longer logs a congratulations for running a relay. Fixes bug
+    - When adding a new hidden service (for example, via SETCONF), Tor no
+      longer congratulates the user for running a relay. Fixes bug
       13941; bugfix on 0.2.6.1-alpha.
-    - When fetching hidden service descriptors, check not only for
+    - When fetching hidden service descriptors, we now check not only for
       whether we got the hidden service we had in mind, but also whether
       we got the particular descriptors we wanted. This prevents a class
       of inefficient but annoying DoS attacks by hidden service
@@ -110,26 +111,19 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
       Emit a warning when extra info document is found incompatible with
       a corresponding router descriptor. Fixes bug 9812; bugfix
       on 0.0.6rc3.
-    - Log the circuit identifier correctly in
+    - Log the circuit ID correctly in
       connection_ap_handshake_attach_circuit(). Fixes bug 13701; bugfix
       on 0.0.6.
 
   o Minor bugfixes (misc):
-    - Stop allowing invalid address patterns containing both a wildcard
-      address and a bit prefix length. This affects all our address-
-      range parsing code. Fixes bug 7484; bugfix on 0.0.2pre14.
+
+    - Stop allowing invalid address patterns like "*/24" that contain both a wildcard
+      address and a bit prefix length. This
+      affects all our address-range parsing code. Fixes bug 7484; bugfix on 0.0.2pre14.
 
   o Code simplification and refactoring:
     - Stop using can_complete_circuits as a global variable; access it
       with a function instead.
-    - Remove our old, non-weighted bandwidth-based node selection code.
-      Previously, we used it as a fallback when we couldn't perform
-      weighted bandwidth-based node selection. But that would only
-      happen in the cases where we had no consensus, or when we had a
-      consensus generated by buggy or ancient directory authorities. In
-      either case, it's better to use the more modern, better maintained
-      algorithm, with reasonable defaults for the weights. Closes
-      ticket 13126.
     - Avoid using operators directly as macro arguments: this lets us
       apply coccinelle transformations to our codebase more directly.
       Closes ticket 13172.
@@ -163,7 +157,7 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
       all parts of the manual for options that take a list of nodes.
       Closes ticket 13381.
 
-  o Removed features:
+  o Major removed features:
     - Tor clients no longer support connecting to hidden services
       running on Tor 0.2.2.x and earlier; the Support022HiddenServices
       option has been removed. (There shouldn't be any hidden services
@@ -448,7 +442,7 @@ Changes in version 0.2.6.1-alpha - 2014-10-30
       ticket 12202.
     - Refactor and unit-test entry_is_time_to_retry() in entrynodes.c.
       Resolves ticket 12205.
-    - Use calloc and reallocarray functions in preference to multiply-
+    - Use calloc and reallocarray functions instead of multiply-
       then-malloc. This makes it less likely for us to fall victim to an
       integer overflow attack when allocating. Resolves ticket 12855.
     - Use the standard macro name SIZE_MAX, instead of our
@@ -457,7 +451,7 @@ Changes in version 0.2.6.1-alpha - 2014-10-30
       functions which take them as arguments. Replace 0 with NO_DIRINFO
       in a function call for clarity. Seeks to prevent future issues
       like 13163.
-    - Avoid 4 null pointer errors under clang shallow analysis by using
+    - Avoid 4 null pointer errors under clang static analysis by using
       tor_assert() to prove that the pointers aren't null. Fixes
       bug 13284.
     - Rework the API of policies_parse_exit_policy() to use a bitmask to
@@ -473,23 +467,23 @@ Changes in version 0.2.6.1-alpha - 2014-10-30
       operating system is allowing to use simultaneously. Resolves
       ticket 9708.
 
-  o Removed code:
+  o Removed features:
     - We no longer remind the user about configuration options that have
       been obsolete since 0.2.3.x or earlier. Patch by Adrien Bak.
-
-  o Removed features:
+    - Remove our old, non-weighted bandwidth-based node selection code.
+      Previously, we used it as a fallback when we couldn't perform
+      weighted bandwidth-based node selection. But that would only
+      happen in the cases where we had no consensus, or when we had a
+      consensus generated by buggy or ancient directory authorities. In
+      either case, it's better to use the more modern, better maintained
+      algorithm, with reasonable defaults for the weights. Closes
+      ticket 13126.
     - Remove the --disable-curve25519 configure option. Relays and
       clients now are required to support curve25519 and the
       ntor handshake.
     - The old "StrictEntryNodes" and "StrictExitNodes" options, which
       used to be deprecated synonyms for "StrictNodes", are now marked
       obsolete. Resolves ticket 12226.
-    - The "AuthDirRejectUnlisted" option no longer has any effect, as
-      the fingerprints file (approved-routers) has been deprecated.
-    - Directory authorities do not support being Naming dirauths anymore.
-      The "NamingAuthoritativeDir" config option is now obsolete.
-    - Directory authorities do not support giving out the BadDirectory
-      flag anymore.
     - Clients don't understand the BadDirectory flag in the consensus
       anymore, and ignore it.
 
@@ -526,6 +520,12 @@ Changes in version 0.2.6.1-alpha - 2014-10-30
       affected by CVE-2011-2769 as guards. These relays are already
       rejected altogether due to the minimum version requirement of
       0.2.3.16-alpha. Closes ticket 13152.
+    - The "AuthDirRejectUnlisted" option no longer has any effect, as
+      the fingerprints file (approved-routers) has been deprecated.
+    - Directory authorities do not support being Naming dirauths anymore.
+      The "NamingAuthoritativeDir" config option is now obsolete.
+    - Directory authorities do not support giving out the BadDirectory
+      flag anymore.
     - Directory authorities no longer advertise or support consensus
       methods 1 through 12 inclusive. These consensus methods were
       obsolete and/or insecure: maintaining the ability to support them
