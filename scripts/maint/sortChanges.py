@@ -18,10 +18,10 @@ def fetch(fn):
         s = "%s\n" % s.rstrip()
         return s
 
-def score(s):
+def score(s,fname=None):
     m = re.match(r'^ +o (.*)', s)
     if not m:
-        print >>sys.stderr, "Can't score %r"%s
+        print >>sys.stderr, "Can't score %r from %s"%(s,fname)
     lw = m.group(1).lower()
     if lw.startswith("major feature"):
         score = 0
@@ -41,7 +41,7 @@ def score(s):
     return (score,  lw, s)
 
 
-changes = [ score(fetch(fn)) for fn in sys.argv[1:] if not fn.endswith('~') ]
+changes = [ score(fetch(fn),fn) for fn in sys.argv[1:] if not fn.endswith('~') ]
 
 changes.sort()
 

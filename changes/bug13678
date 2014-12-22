@@ -1,4 +1,3 @@
-
   o Testing:
     - In the unit tests, use 'chgrp' to change the group of the unit test
       temporary directory to the current user, so that the sticky bit doesn't

@@ -28,6 +28,9 @@ def lintfile(fname):
     lines = contents.split("\n")
     isBug = ("bug" in lines[0] or "fix" in lines[0])
 
+    if not re.match(r'^ +o (.*)', contents):
+        warn("header not in format expected")
+
     contents = " ".join(contents.split())
 
     if isBug and not re.search(r'(\d+)', contents):

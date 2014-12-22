@@ -1,4 +1,4 @@
-m  o Major features (hidden services):
+  o Major features (hidden services):
     - Add a HiddenServiceStatistics option that allows Tor relays to
       gather and publish statistics about hidden service usage, to
       better understand the size and volume of the hidden service
