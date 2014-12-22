@@ -703,8 +703,7 @@ test_md_reject_cache(void *arg)
  done:
   UNMOCK(networkstatus_get_latest_consensus_by_flavor);
   UNMOCK(router_get_mutable_consensus_status_by_descriptor_digest);
-  if (options)
-    tor_free(options->DataDirectory);
+  tor_free(options->DataDirectory);
   microdesc_free_all();
   smartlist_free(added);
   SMARTLIST_FOREACH(wanted, char *, cp, tor_free(cp));

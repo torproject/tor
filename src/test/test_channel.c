@@ -1566,12 +1566,15 @@ test_channel_write(void *arg)
 
   old_count = test_cells_written;
   channel_write_cell(ch, cell);
+  cell = NULL;
   tt_assert(test_cells_written == old_count + 1);
 
   channel_write_var_cell(ch, var_cell);
+  var_cell = NULL;
   tt_assert(test_cells_written == old_count + 2);
 
   channel_write_packed_cell(ch, packed_cell);
+  packed_cell = NULL;
   tt_assert(test_cells_written == old_count + 3);
 
   /* Now we test queueing; tell it not to accept cells */
@@ -1632,15 +1635,18 @@ test_channel_write(void *arg)
   cell = tor_malloc_zero(sizeof(cell_t));
   make_fake_cell(cell);
   channel_write_cell(ch, cell);
+  cell = NULL;
   tt_assert(test_cells_written == old_count);
 
   var_cell = tor_malloc_zero(sizeof(var_cell_t) + CELL_PAYLOAD_SIZE);
   make_fake_var_cell(var_cell);
   channel_write_var_cell(ch, var_cell);
+  var_cell = NULL;
   tt_assert(test_cells_written == old_count);
 
   packed_cell = packed_cell_new();
   channel_write_packed_cell(ch, packed_cell);
+  packed_cell = NULL;
   tt_assert(test_cells_written == old_count);
 
 #ifdef ENABLE_MEMPOOLS
@@ -1649,7 +1655,9 @@ test_channel_write(void *arg)
 
  done:
   tor_free(ch);
-
+  tor_free(var_cell);
+  tor_free(cell);
+  packed_cell_free(packed_cell);
   return;
 }
 

@@ -114,6 +114,7 @@ test_relay_append_cell_to_circuit_queue(void *arg)
   nchan = pchan = NULL;
 
  done:
+  tor_free(cell);
   tor_free(orcirc);
   if (nchan && nchan->cmux) circuitmux_free(nchan->cmux);
   tor_free(nchan);
