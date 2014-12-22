@@ -2756,6 +2756,8 @@ base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
   if (destlen > SIZE_T_CEILING)
     return -1;
 
+  memset(dest, 0, destlen);
+
   EVP_DecodeInit(&ctx);
   EVP_DecodeUpdate(&ctx, (unsigned char*)dest, &len,
                    (unsigned char*)src, srclen);
@@ -2776,6 +2778,8 @@ base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
     return -1;
   if (destlen > SIZE_T_CEILING)
     return -1;
+
+  memset(dest, 0, destlen);
 
   /* Iterate over all the bytes in src.  Each one will add 0 or 6 bits to the
    * value we're decoding.  Accumulate bits in <b>n</b>, and whenever we have
@@ -2955,6 +2959,8 @@ base32_decode(char *dest, size_t destlen, const char *src, size_t srclen)
   tor_assert((nbits%8) == 0); /* We need an even multiple of 8 bits. */
   tor_assert((nbits/8) <= destlen); /* We need enough space. */
   tor_assert(destlen < SIZE_T_CEILING);
+
+  memset(dest, 0, destlen);
 
   /* Convert base32 encoded chars to the 5-bit values that they represent. */
   tmp = tor_malloc_zero(srclen);

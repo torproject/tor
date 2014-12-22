@@ -1129,6 +1129,9 @@ base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
     return -1;
   if (destlen < srclen/2 || destlen > SIZE_T_CEILING)
     return -1;
+
+  memset(dest, 0, destlen);
+
   end = src+srclen;
   while (src<end) {
     v1 = hex_decode_digit_(*src);
