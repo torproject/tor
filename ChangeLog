@@ -1,17 +1,6 @@
 Changes in version 0.2.6.2-alpha - 2014-12-??
   Tor 0.2.6.2-alpha is the second alpha release in the 0.2.6.x series.
 
-  o Major features (relay, infrastructure): - Implement a new inter-cmux
-  comparison API, a global high/low watermark mechanism and a global
-  scheduler loop for transmission prioritization across all channels as
-  well as among circuits on one channel. This schedule is currently
-  tuned to (tolerantly) avoid making changes in the current network
-  performance, but it should form the basis major circuit performance
-  increases. Code by Andrea; implements ticket 9262.
-
-  o Testing: - New tests for many parts of channel, relay, and circuit
-  mux functionality. Code by Andrea; part of 9262.
-
   o Major features (hidden services):
     - Add a HiddenServiceStatistics option that allows Tor relays to
       gather and publish statistics about hidden service usage, to
@@ -26,11 +15,20 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
       hidden service stats from Tor relays". This feature is currently
       disabled by default. Implements feature 13192.
 
+  o Major features (relay, infrastructure):
+    - Implement a new inter-cmux comparison API, a global high/low
+      watermark mechanism and a global scheduler loop for transmission
+      prioritization across all channels as well as among circuits on
+      one channel. This schedule is currently tuned to (tolerantly)
+      avoid making changes in the current network performance, but it
+      should form the basis major circuit performance increases. Code by
+      Andrea; implements ticket 9262.
+
   o Major bugfixes:
     - When closing an introduction circuit that was opened in parallel,
       don't mark the introduction point as unreachable. Previously, the
       first successful connection to an introduction point would make
-      the other uintroduction points get marked as having timed out.
+      the other introduction points get marked as having timed out.
       Fixes bug 13698; bugfix on 0.0.6rc2.
 
   o Minor feature:
@@ -170,6 +168,8 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
       running these versions on the network.) Closes ticket 7803.
 
   o Testing:
+    - New tests for many parts of channel, relay, and circuit mux
+      functionality. Code by Andrea; part of 9262.
     - New tests for parse_transport_line(). Part of ticket 6456.
     - In the unit tests, use 'chgrp' to change the group of the unit
       test temporary directory to the current user, so that the sticky
