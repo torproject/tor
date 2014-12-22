@@ -1293,6 +1293,7 @@ test_channel_queue_impossible(void *arg)
   int old_count;
   cell_queue_entry_t *q = NULL;
   uint64_t global_queue_estimate;
+  uintptr_t cellintptr;
 
   /* Cache the global queue size (see below) */
   global_queue_estimate = channel_get_global_queue_estimate();
@@ -1320,6 +1321,7 @@ test_channel_queue_impossible(void *arg)
   /* Get a fresh cell and write it to the channel*/
   cell = tor_malloc_zero(sizeof(cell_t));
   make_fake_cell(cell);
+  cellintptr = (uintptr_t)(void*)cell;
   channel_write_cell(ch, cell);
 
   /* Now it should be queued */
@@ -1328,7 +1330,7 @@ test_channel_queue_impossible(void *arg)
   tt_assert(q);
   if (q) {
     tt_int_op(q->type, ==, CELL_QUEUE_FIXED);
-    tt_ptr_op(q->u.fixed.cell, ==, cell);
+    tt_assert((uintptr_t)q->u.fixed.cell == cellintptr);
   }
   /* Do perverse things to it */
   tor_free(q->u.fixed.cell);
@@ -1349,6 +1351,7 @@ test_channel_queue_impossible(void *arg)
   ch->state = CHANNEL_STATE_MAINT;
   var_cell = tor_malloc_zero(sizeof(var_cell_t) + CELL_PAYLOAD_SIZE);
   make_fake_var_cell(var_cell);
+  cellintptr = (uintptr_t)(void*)var_cell;
   channel_write_var_cell(ch, var_cell);
 
   /* Check that it's queued */
@@ -1357,7 +1360,7 @@ test_channel_queue_impossible(void *arg)
   tt_assert(q);
   if (q) {
     tt_int_op(q->type, ==, CELL_QUEUE_VAR);
-    tt_ptr_op(q->u.var.var_cell, ==, var_cell);
+    tt_assert((uintptr_t)q->u.var.var_cell == cellintptr);
   }
 
   /* Remove the cell from the queue entry */
@@ -1376,6 +1379,7 @@ test_channel_queue_impossible(void *arg)
   ch->state = CHANNEL_STATE_MAINT;
   packed_cell = packed_cell_new();
   tt_assert(packed_cell);
+  cellintptr = (uintptr_t)(void*)packed_cell;
   channel_write_packed_cell(ch, packed_cell);
 
   /* Check that it's queued */
@@ -1384,7 +1388,7 @@ test_channel_queue_impossible(void *arg)
   tt_assert(q);
   if (q) {
     tt_int_op(q->type, ==, CELL_QUEUE_PACKED);
-    tt_ptr_op(q->u.packed.packed_cell, ==, packed_cell);
+    tt_assert((uintptr_t)q->u.packed.packed_cell == cellintptr);
   }
 
   /* Remove the cell from the queue entry */
