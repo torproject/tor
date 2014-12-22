@@ -1,46 +1,55 @@
 Changes in version 0.2.6.2-alpha - 2014-12-??
-
   Tor 0.2.6.2-alpha is the second alpha release in the 0.2.6.x series.
+
+  o Major features (relay, infrastructure): - Implement a new inter-cmux
+  comparison API, a global high/low watermark mechanism and a global
+  scheduler loop for transmission prioritization across all channels as
+  well as among circuits on one channel. This schedule is currently
+  tuned to (tolerantly) avoid making changes in the current network
+  performance, but it should form the basis major circuit performance
+  increases. Code by Andrea; implements ticket 9262.
+
+  o Testing: - New tests for many parts of channel, relay, and circuit
+  mux functionality. Code by Andrea; part of 9262.
 
   o Major features (hidden services):
     - Add a HiddenServiceStatistics option that allows Tor relays to
       gather and publish statistics about hidden service usage, to
       better understand the size and volume of the hidden service
-      network. Specifically, if a Tor relay is an HSDir it will
-      publish the approximate number of hidden services that have
-      published descriptors to it the past 24 hours. Also, if a relay
-      has acted as a hidden service rendezvous point, it will publish
-      the approximate amount of rendezvous cells it has relayed the
-      past 24 hours. The statistics themselves are obfuscated so that
-      the exact values cannot be derived. For more details see
-      proposal 238 "Better hidden service stats from Tor relays". This
-      feature is currently disabled by default. Implements feature 13192.
-
- o Major features (relay, infrastructure):
-   - Implement a new inter-cmux comparison API, a global high/low watermark
-     mechanism and a global scheduler loop for transmission prioritization
-     across all channels as well as among circuits on one channel. This
-     schedule is currently tuned to (tolerantly) avoid making changes
-     in the current network performance, but it should form the basis
-     major circuit performance increases.  Code by Andrea; implements
-     ticket 9262.
-
- o Testing:
-   - New tests for many parts of channel, relay, and circuit mux
-     functionality.  Code by Andrea; part of 9262.
+      network. Specifically, if a Tor relay is an HSDir it will publish
+      the approximate number of hidden services that have published
+      descriptors to it the past 24 hours. Also, if a relay has acted as
+      a hidden service rendezvous point, it will publish the approximate
+      amount of rendezvous cells it has relayed the past 24 hours. The
+      statistics themselves are obfuscated so that the exact values
+      cannot be derived. For more details see proposal 238 "Better
+      hidden service stats from Tor relays". This feature is currently
+      disabled by default. Implements feature 13192.
 
   o Major bugfixes:
-    - When closing an introduction circuit that was opened in
-      parallel, don't mark the introduction point as
-      unreachable. Previously, the first successful connection to an
-      introduction point would make the other uintroduction points get
-      marked as having timed out. Fixes bug 13698; bugfix on 0.0.6rc2.
+    - When closing an introduction circuit that was opened in parallel,
+      don't mark the introduction point as unreachable. Previously, the
+      first successful connection to an introduction point would make
+      the other uintroduction points get marked as having timed out.
+      Fixes bug 13698; bugfix on 0.0.6rc2.
 
   o Minor feature:
-    - When re-enabling the network, don't try to build introduction circuits
-      until we have successfully built a circuit.  This makes hidden services
-      come up faster when the network is re-enabled. Patch from
-      "akwizgran". Closes ticket 13447.
+    - When re-enabling the network, don't try to build introduction
+      circuits until we have successfully built a circuit. This makes
+      hidden services come up faster when the network is re-enabled.
+      Patch from "akwizgran". Closes ticket 13447.
+
+  o Minor features:
+    - OS X uses ipfw (FreeBSD) or pf (OpenBSD). Update the transparent
+      proxy option checks to allow for both ipfw and pf on OS X. Closes
+      ticket 14002.
+    - Update geoip to the November 15 2014 Maxmind GeoLite2
+      Country database.
+    - Update geoip6 to the November 15 2014 Maxmind GeoLite2
+      Country database.
+    - Validate hostnames in SOCKS5 requests more strictly. If SafeSocks
+      is enabled, reject requests with IP addresses as hostnames.
+      Resolves ticket 13315.
 
   o Minor features (controller):
     - Add a "SIGNAL HEARTBEAT" Tor controller command that provokes
@@ -48,144 +57,96 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
       feature 9503.
 
   o Minor features (hidden services):
-    - Inform Tor controller about nature of failure to retrieve
-      hidden service descriptor by sending reason string with HS_DESC
-      FAILED controller event. Implements feature 13212.
-
-  o Minor features (hidden services):
+    - Inform Tor controller about nature of failure to retrieve hidden
+      service descriptor by sending reason string with HS_DESC FAILED
+      controller event. Implements feature 13212.
     - New HiddenServiceDirGroupReadable option to cause hidden service
-      directories and hostname files to be created group-readable.
-      Patch from "anon", David Stainton, and "meejah".
-      Closes ticket 11291.
+      directories and hostname files to be created group-readable. Patch
+      from "anon", David Stainton, and "meejah". Closes ticket 11291.
 
-  o Minor features:
-    - OS X uses ipfw (FreeBSD) or pf (OpenBSD). Update the transparent
-      proxy option checks to allow for both ipfw and pf on OS X.
-      Closes ticket 14002.
-
-  o Minor features:
-    - Update geoip to the November 15 2014 Maxmind GeoLite2 Country database.
-
-  o Minor features:
-    - Update geoip6 to the November 15 2014 Maxmind GeoLite2 Country database.
-
-  o Minor features:
-    - Validate hostnames in SOCKS5 requests more strictly. If SafeSocks
-      is enabled, reject requests with IP addresses as hostnames. Resolves
-      ticket 13315.
+  o Minor bugfixes:
+    - Silence clang warnings under --enable-expensive-hardening,
+      including: implicit truncation of 64 bit values to 32 bit; const
+      char assignment to self; tautological compare; and additional
+      parentheses around equality tests. Fixes bug 13577; bugfix
+      on 0.2.5.4-alpha.
+    - Stop allowing invalid address patterns containing both a wildcard
+      address and a bit prefix length. This affects all our address-
+      range parsing code. Fixes bug 7484; bugfix on 0.0.2pre14.
+    - The address of an array in the middle of a structure will always
+      be non-NULL. clang recognises this and complains. Disable the
+      tautologous and redundant check to silence this warning. Fixes bug
+      14001; bugfix on 0.2.1.2-alpha.
+    - Use a full 256 bits of the SHA256 digest of a microdescriptor when
+      computing which microdescriptors to download. This keeps us from
+      erroneous download behavior if two microdescriptor digests ever
+      have the same first 160 bits. Fixes part of bug 13399; bugfix
+      on 0.2.3.1-alpha.
+    - Reset a router's status if its microdescriptor digest changes,
+      even if the first 160 bits remain the same. Fixes part of bug
+      13399; bugfix on 0.2.3.1-alpha.
+    - Use circuit_has_opened() instead of
+      rend_client_rendcirc_has_opened() when a rendezvous circuit is
+      opened because circuit_has_opened() jobs is to call a specialized
+      function depending on the circuit purpose. Furthermore, a
+      controller event will be triggered here where the former did not.
+      Fixes bug 13936; bugfix on 0.1.1.5-alpha.
 
   o Minor bugfixes (hidden services):
     - Pre-check directory permissions for new hidden-services to avoid
       at least one case of "Bug: Acting on config options left us in a
       broken state. Dying." Fixes bug 13942; bugfix on 0.0.6pre1.
-
-  o Minor bugfixes (hidden services):
-    - When adding a new hidden-service (for example, via SETCONF) Tor
-      no longer logs a congratulations for running a relay. Fixes bug
+    - When adding a new hidden-service (for example, via SETCONF) Tor no
+      longer logs a congratulations for running a relay. Fixes bug
       13941; bugfix on 0.2.6.1-alpha.
-
-  o Minor bugfixes (hidden services):
     - When fetching hidden service descriptors, check not only for
-      whether we got the hidden service we had in mind, but also
-      whether we got the particular descriptors we wanted. This
-      prevents a class of inefficient but annoying DoS attacks by
-      hidden service directories. Fixes bug 13214; bugfix on
-      0.2.1.6-alpha. Reported by "special".
+      whether we got the hidden service we had in mind, but also whether
+      we got the particular descriptors we wanted. This prevents a class
+      of inefficient but annoying DoS attacks by hidden service
+      directories. Fixes bug 13214; bugfix on 0.2.1.6-alpha. Reported
+      by "special".
 
   o Minor bugfixes (logging):
-    - Downgrade warnings about RSA signature failures to info log
-      level. Emit a warning when extra info document is found 
-      incompatible with a corresponding router descriptor. Fixes bug
-      9812; bugfix on 0.0.6rc3.
-
-  o Minor bugfixes (logging):
+    - Downgrade warnings about RSA signature failures to info log level.
+      Emit a warning when extra info document is found incompatible with
+      a corresponding router descriptor. Fixes bug 9812; bugfix
+      on 0.0.6rc3.
     - Log the circuit identifier correctly in
-      connection_ap_handshake_attach_circuit().  Fixes bug 13701;
-      bugfix on 0.0.6.
-
-  o Minor bugfixes:
-    - Silence clang warnings under --enable-expensive-hardening, including:
-      implicit truncation of 64 bit values to 32 bit;
-      const char assignment to self;
-      tautological compare; and
-      additional parentheses around equality tests.
-      Fixes bug 13577; bugfix on 0.2.5.4-alpha.
-
-  o Minor bugfixes:
-    - Stop allowing invalid address patterns containing both a wildcard
-      address and a bit prefix length. This affects all our
-      address-range parsing code. Fixes bug 7484; bugfix on 0.0.2pre14.
-
-  o Minor bugfixes:
-    - The address of an array in the middle of a structure will
-      always be non-NULL. clang recognises this and complains.
-      Disable the tautologous and redundant check to silence
-      this warning.
-      Fixes bug 14001; bugfix on 0.2.1.2-alpha.
-
-  o Minor bugfixes:
-    - Use a full 256 bits of the SHA256 digest of a microdescriptor when
-      computing which microdescriptors to download.  This keeps us from
-      erroneous download behavior if two microdescriptor digests ever have
-      the same first 160 bits. Fixes part of bug 13399; bugfix on
-      0.2.3.1-alpha.
-
-    - Reset a router's status if its microdescriptor digest changes,
-      even if the first 160 bits remain the same.  Fixes part of bug
-      13399; bugfix on 0.2.3.1-alpha.
-
-  o Minor bugfixes:
-    - Use circuit_has_opened() instead of rend_client_rendcirc_has_opened()
-      when a rendezvous circuit is opened because circuit_has_opened() jobs
-      is to call a specialized function depending on the circuit purpose.
-      Furthermore, a controller event will be triggered here where the
-      former did not. Fixes bug 13936; bugfix on 0.1.1.5-alpha.
+      connection_ap_handshake_attach_circuit(). Fixes bug 13701; bugfix
+      on 0.0.6.
 
   o Code Simplification and Refactoring:
-    - Stop using can_complete_circuits as a global variable; access it with
-      a function instead.
+    - Stop using can_complete_circuits as a global variable; access it
+      with a function instead.
 
   o Code simplification and refactoring:
-
     - Remove our old, non-weighted bandwidth-based node selection code.
       Previously, we used it as a fallback when we couldn't perform
-      weighted bandwidth-based node selection.  But that would only
+      weighted bandwidth-based node selection. But that would only
       happen in the cases where we had no consensus, or when we had a
-      consensus generated by buggy or ancient directory authorities.  In
+      consensus generated by buggy or ancient directory authorities. In
       either case, it's better to use the more modern, better maintained
       algorithm, with reasonable defaults for the weights. Closes
       ticket 13126.
-
-  o Code simplification and refactoring:
     - Avoid using operators directly as macro arguments: this lets us
-      apply coccinelle transformations to our codebase more
-      directly. Closes ticket 13172.
-
-  o Code simplification and refactoring:
+      apply coccinelle transformations to our codebase more directly.
+      Closes ticket 13172.
     - Combine the functions used to parse ClientTransportPlugin and
       ServerTransportPlugin into a single function. Closes ticket 6456.
-
-  o Testing:
-    - New tests for parse_transport_line(). Part of ticket 6456.
 
   o Code simplifications and refactoring:
     - Add inline functions and convenience macros for quick lookup of
       state component of channel_t structure. Refactor various parts of
       codebase to use convenience macros instead of checking state
       member of channel_t directly. Fixes issue 7356.
-
-  o Code simplifications and refactoring:
-    - Document all members of was_router_added_t enum and rename 
+    - Document all members of was_router_added_t enum and rename
       ROUTER_WAS_NOT_NEW to ROUTER_IS_ALREADY_KNOWN to make it less
       confusable with ROUTER_WAS_TOO_OLD. Fixes issue 13644.
-
-  o Code simplifications and refactoring:
     - In connection_exit_begin_conn(), use END_CIRC_REASON_TORPROTOCOL
       constant instead of hardcoded value. Fixes issue 13840.
-
-  o Code simplifications and refactoring:
     - Refactor our generic strmap and digestmap types into a single
-      implementation, so that we can add a new digest256map type trivially.
+      implementation, so that we can add a new digest256map
+      type trivially.
 
   o Directory authority changes:
     - Remove turtles as a directory authority.
@@ -193,31 +154,27 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
       ticket 13296. This keeps the directory authority count at 9.
 
   o Documentation:
-    - Document the bridge-authority-only 'networkstatus-bridges'
-      file. Closes ticket 13713; patch from "tom".
-
-  o Documentation:
-    - Fix typo in PredictedPortsRelevanceTime option description in 
+    - Document the bridge-authority-only 'networkstatus-bridges' file.
+      Closes ticket 13713; patch from "tom".
+    - Fix typo in PredictedPortsRelevanceTime option description in
       manpage. Resolves issue 13707.
-
-  o Documentation:
     - Stop suggesting that users specify nodes by nickname: it isn't a
-      good idea. Also, properly cross-reference how to specify nodes
-      in all parts of the manual for options that take a list of
-      nodes. Closes ticket 13381.
+      good idea. Also, properly cross-reference how to specify nodes in
+      all parts of the manual for options that take a list of nodes.
+      Closes ticket 13381.
 
   o Removed features:
-    - Tor clients no longer support connecting to hidden services running on
-      Tor 0.2.2.x and earlier; the Support022HiddenServices option has been
-      removed.  (There shouldn't be any hidden services running these
-      versions on the network.)  Closes ticket 7803.
+    - Tor clients no longer support connecting to hidden services
+      running on Tor 0.2.2.x and earlier; the Support022HiddenServices
+      option has been removed. (There shouldn't be any hidden services
+      running these versions on the network.) Closes ticket 7803.
 
   o Testing:
-    - In the unit tests, use 'chgrp' to change the group of the unit test
-      temporary directory to the current user, so that the sticky bit doesn't
-      interfere with tests that check directory groups. Closes 13678.
-
-
+    - New tests for parse_transport_line(). Part of ticket 6456.
+    - In the unit tests, use 'chgrp' to change the group of the unit
+      test temporary directory to the current user, so that the sticky
+      bit doesn't interfere with tests that check directory groups.
+      Closes 13678.
 
 
 Changes in version 0.2.6.1-alpha - 2014-10-30
