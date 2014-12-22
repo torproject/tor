@@ -156,7 +156,9 @@ scheduler_free_all(void)
   log_debug(LD_SCHED, "Shutting down scheduler");
 
   if (run_sched_ev) {
-    event_del(run_sched_ev);
+    if (event_del(run_sched_ev) < 0) {
+      log_warn(LD_BUG, "Problem deleting run_sched_ev");
+    }
     tor_event_free(run_sched_ev);
     run_sched_ev = NULL;
   }
