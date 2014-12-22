@@ -112,8 +112,6 @@ static void parse_method_error(const char *line, int is_server_method);
 #define parse_server_method_error(l) parse_method_error(l, 1)
 #define parse_client_method_error(l) parse_method_error(l, 0)
 
-static INLINE void free_execve_args(char **arg);
-
 /** Managed proxy protocol strings */
 #define PROTO_ENV_ERROR "ENV-ERROR"
 #define PROTO_NEG_SUCCESS "VERSION"
@@ -1502,7 +1500,7 @@ pt_kickstart_proxy, (const smartlist_t *transport_list,
 
 /** Frees the array of pointers in <b>arg</b> used as arguments to
     execve(2). */
-static INLINE void
+STATIC void
 free_execve_args(char **arg)
 {
   char **tmp = arg;

@@ -430,6 +430,27 @@ new_fake_channel(void)
   return chan;
 }
 
+void
+free_fake_channel(channel_t *chan)
+{
+  cell_queue_entry_t *cell, *cell_tmp;
+
+  if (! chan)
+    return;
+
+  if (chan->cmux)
+    circuitmux_free(chan->cmux);
+
+  TOR_SIMPLEQ_FOREACH_SAFE(cell, &chan->incoming_queue, next, cell_tmp) {
+      cell_queue_entry_free(cell, 0);
+  }
+  TOR_SIMPLEQ_FOREACH_SAFE(cell, &chan->outgoing_queue, next, cell_tmp) {
+      cell_queue_entry_free(cell, 0);
+  }
+
+  tor_free(chan);
+}
+
 /**
  * Counter query for scheduler_channel_has_waiting_cells_mock()
  */
@@ -610,7 +631,7 @@ test_channel_dumpstats(void *arg)
 
  done:
   tor_free(cell);
-  tor_free(ch);
+  free_fake_channel(ch);
 
   UNMOCK(scheduler_channel_doesnt_want_writes);
   UNMOCK(scheduler_release_channel);
@@ -748,6 +769,8 @@ test_channel_flushmux(void *arg)
   test_cmux_cells = 0;
 
  done:
+  if (ch)
+    circuitmux_free(ch->cmux);
   tor_free(ch);
 
   UNMOCK(channel_flush_from_first_active_circuit);
@@ -831,7 +854,7 @@ test_channel_incoming(void *arg)
   ch = NULL;
 
  done:
-  tor_free(ch);
+  free_fake_channel(ch);
   tor_free(cell);
   tor_free(var_cell);
 
@@ -944,8 +967,8 @@ test_channel_lifecycle(void *arg)
   tt_int_op(test_releases_count, ==, init_releases_count + 4);
 
  done:
-  tor_free(ch1);
-  tor_free(ch2);
+  free_fake_channel(ch1);
+  free_fake_channel(ch2);
 
   UNMOCK(scheduler_channel_doesnt_want_writes);
   UNMOCK(scheduler_release_channel);
@@ -1214,6 +1237,7 @@ test_channel_multi(void *arg)
   cell = tor_malloc_zero(sizeof(cell_t));
   make_fake_cell(cell);
   channel_write_cell(ch2, cell);
+  cell = NULL;
 
   /* Check the estimates */
   channel_update_xmit_queue_size(ch1);
@@ -1248,8 +1272,8 @@ test_channel_multi(void *arg)
   UNMOCK(scheduler_release_channel);
 
  done:
-  tor_free(ch1);
-  tor_free(ch2);
+  free_fake_channel(ch1);
+  free_fake_channel(ch2);
 
   return;
 }
@@ -1278,9 +1302,6 @@ test_channel_queue_impossible(void *arg)
 #ifdef ENABLE_MEMPOOLS
   init_cell_pool();
 #endif /* ENABLE_MEMPOOLS */
-
-  packed_cell = packed_cell_new();
-  tt_assert(packed_cell);
 
   ch = new_fake_channel();
   tt_assert(ch);
@@ -1403,7 +1424,7 @@ test_channel_queue_impossible(void *arg)
   tt_int_op(chan_cell_queue_len(&(ch->outgoing_queue)), ==, 0);
 
  done:
-  tor_free(ch);
+  free_fake_channel(ch);
 #ifdef ENABLE_MEMPOOLS
   free_cell_pool();
 #endif /* ENABLE_MEMPOOLS */
@@ -1532,7 +1553,7 @@ test_channel_queue_size(void *arg)
   UNMOCK(scheduler_release_channel);
 
  done:
-  tor_free(ch);
+  free_fake_channel(ch);
 
   return;
 }
@@ -1654,7 +1675,7 @@ test_channel_write(void *arg)
 #endif /* ENABLE_MEMPOOLS */
 
  done:
-  tor_free(ch);
+  free_fake_channel(ch);
   tor_free(var_cell);
   tor_free(cell);
   packed_cell_free(packed_cell);

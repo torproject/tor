@@ -6,6 +6,7 @@
 #include "orconfig.h"
 
 #define CONFIG_PRIVATE
+#define PT_PRIVATE
 #include "or.h"
 #include "addressmap.h"
 #include "config.h"
@@ -578,6 +579,8 @@ pt_kickstart_proxy_mock(const smartlist_t *transport_list,
   /* XXXX check that args are as expected. */
 
   ++pt_kickstart_proxy_mock_call_count;
+
+  free_execve_args(proxy_argv);
 }
 
 static int

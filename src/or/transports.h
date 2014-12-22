@@ -131,6 +131,8 @@ STATIC int configure_proxy(managed_proxy_t *mp);
 
 STATIC char* get_pt_proxy_uri(void);
 
+STATIC void free_execve_args(char **arg);
+
 #endif
 
 #endif

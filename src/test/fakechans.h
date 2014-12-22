@@ -12,6 +12,7 @@
 void make_fake_cell(cell_t *c);
 void make_fake_var_cell(var_cell_t *c);
 channel_t * new_fake_channel(void);
+void free_fake_channel(channel_t *c);
 
 /* Also exposes some a mock used by both test_channel.c and test_relay.c */
 void scheduler_channel_has_waiting_cells_mock(channel_t *ch);

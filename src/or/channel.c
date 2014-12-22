@@ -147,7 +147,6 @@ HT_GENERATE2(channel_idmap, channel_idmap_entry_s, node, channel_idmap_hash,
              channel_idmap_eq, 0.5,  tor_reallocarray_, tor_free_);
 
 static cell_queue_entry_t * cell_queue_entry_dup(cell_queue_entry_t *q);
-static void cell_queue_entry_free(cell_queue_entry_t *q, int handed_off);
 #if 0
 static int cell_queue_entry_is_padding(cell_queue_entry_t *q);
 #endif
@@ -1569,7 +1568,7 @@ cell_queue_entry_dup(cell_queue_entry_t *q)
  * them) or not (we should free).
  */
 
-static void
+STATIC void
 cell_queue_entry_free(cell_queue_entry_t *q, int handed_off)
 {
   if (!q) return;

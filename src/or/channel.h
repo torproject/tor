@@ -380,6 +380,8 @@ struct cell_queue_entry_s {
 
 /* Cell queue functions for benefit of test suite */
 STATIC int chan_cell_queue_len(const chan_cell_queue_t *queue);
+
+STATIC void cell_queue_entry_free(cell_queue_entry_t *q, int handed_off);
 #endif
 
 /* Channel operations for subclasses and internal use only */

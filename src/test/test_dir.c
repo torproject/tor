@@ -388,6 +388,12 @@ test_dir_routerparse_bad(void *arg)
 #include "example_extrainfo.inc"
 
 static void
+routerinfo_free_wrapper_(void *arg)
+{
+  routerinfo_free(arg);
+}
+
+static void
 test_dir_extrainfo_parsing(void *arg)
 {
   (void) arg;
@@ -455,9 +461,9 @@ test_dir_extrainfo_parsing(void *arg)
 #undef CHECK_FAIL
 
  done:
+  extrainfo_free(ei);
   routerinfo_free(ri);
-  /* XXXX elements should get freed too */
-  digestmap_free((digestmap_t*)map, NULL);
+  digestmap_free((digestmap_t*)map, routerinfo_free_wrapper_);
 }
 
 static void
@@ -552,9 +558,8 @@ test_dir_parse_router_list(void *arg)
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_free(chunks);
   routerinfo_free(ri);
-  /* XXXX this leaks: */
   if (map) {
-    digestmap_free((digestmap_t*)map, NULL);
+    digestmap_free((digestmap_t*)map, routerinfo_free_wrapper_);
     router_get_routerlist()->identity_map =
       (struct digest_ri_map_t*)digestmap_new();
   }
