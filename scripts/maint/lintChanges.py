@@ -32,11 +32,14 @@ def lintfile(fname):
 
     if isBug and not re.search(r'(\d+)', contents):
         warn("bugfix does not mention a number")
-    elif isBug and not re.search(r'Fixes bug (\d+)', contents):
+    elif isBug and not re.search(r'Fixes ([a-z ]*)bug (\d+)', contents):
         warn("bugfix does not say 'Fixes bug XXX'")
 
-    if re.search(r'[bB]ug (\d+)', contents) and not re.search(r'Bugfix on ', contents):
-        warn("bugfix does not say 'bugfix on X.Y.Z'")
+    if re.search(r'[bB]ug (\d+)', contents):
+        if not re.search(r'[Bb]ugfix on ', contents):
+            warn("bugfix does not say 'bugfix on X.Y.Z'")
+        elif not re.search('[fF]ixes ([a-z ]*)bug (\d+); bugfix on ', contents):
+            warn("bugfix incant is not semicoloned")
 
 
 if __name__=='__main__':

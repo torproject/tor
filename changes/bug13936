@@ -3,4 +3,5 @@
       when a rendezvous circuit is opened because circuit_has_opened() jobs
       is to call a specialized function depending on the circuit purpose.
       Furthermore, a controller event will be triggered here where the
-      former did not.
+      former did not. Fixes bug 13936; bugfix on 0.1.1.5-alpha.
+

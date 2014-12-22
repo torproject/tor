@@ -3,4 +3,4 @@
       always be non-NULL. clang recognises this and complains.
       Disable the tautologous and redundant check to silence
       this warning.
-      Fixes bug 14001.
+      Fixes bug 14001; bugfix on 0.2.1.2-alpha.
