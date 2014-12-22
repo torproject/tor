@@ -1,8 +1,0 @@
-  o Minor bugfixes:
-    - Silence clang warnings under --enable-expensive-hardening, including:
-      implicit truncation of 64 bit values to 32 bit;
-      const char assignment to self;
-      tautological compare; and
-      additional parentheses around equality tests.
-      Fixes bug 13577; bugfix on 0.2.5.4-alpha.
-

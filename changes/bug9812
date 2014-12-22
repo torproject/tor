@@ -1,6 +1,0 @@
-  o Minor bugfixes (logging):
-    - Downgrade warnings about RSA signature failures to info log
-      level. Emit a warning when extra info document is found 
-      incompatible with a corresponding router descriptor. Fixes bug
-      9812; bugfix on 0.0.6rc3.
-

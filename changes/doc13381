@@ -1,5 +1,0 @@
-  o Documentation:
-    - Stop suggesting that users specify nodes by nickname: it isn't a
-      good idea. Also, properly cross-reference how to specify nodes
-      in all parts of the manual for options that take a list of
-      nodes. Closes ticket 13381.

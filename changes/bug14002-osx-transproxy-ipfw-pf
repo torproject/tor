@@ -1,4 +1,0 @@
-  o Minor features:
-    - OS X uses ipfw (FreeBSD) or pf (OpenBSD). Update the transparent
-      proxy option checks to allow for both ipfw and pf on OS X.
-      Closes ticket 14002.

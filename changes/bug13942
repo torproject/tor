@@ -1,6 +1,0 @@
-  o Minor bugfixes (hidden services):
-    - Pre-check directory permissions for new hidden-services to avoid
-      at least one case of "Bug: Acting on config options left us in a
-      broken state. Dying." Fixes bug 13942; bugfix on 0.0.6pre1.
-
-
