@@ -2045,11 +2045,15 @@ do_main_loop(void)
 #ifdef HAVE_SYSTEMD_209
   uint64_t watchdog_delay;
   /* set up systemd watchdog notification. */
-  if (sd_watchdog_enabled(1, &watchdog_delay)) {
+  if (sd_watchdog_enabled(1, &watchdog_delay) > 0) {
     if (! systemd_watchdog_timer) {
       struct timeval watchdog;
-      watchdog.tv_sec = 0;
-      watchdog.tv_usec = watchdog_delay/2;
+      /* The manager will "act on" us if we don't send them a notification
+       * every 'watchdog_delay' microseconds.  So, send notifications twice
+       * that often.  */
+      watchdog_delay /= 2;
+      watchdog.tv_sec = watchdog_delay  / 1000000;
+      watchdog.tv_usec = watchdog_delay % 1000000;
 
       systemd_watchdog_timer = periodic_timer_new(tor_libevent_get_base(),
                                                   &watchdog,
