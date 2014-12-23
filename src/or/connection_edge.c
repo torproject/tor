@@ -59,7 +59,6 @@
 #define TRANS_NETFILTER_IPV6
 #endif
 
-
 #if defined(HAVE_NET_IF_H) && defined(HAVE_NET_PFVAR_H)
 #include <net/if.h>
 #include <net/pfvar.h>
@@ -1430,7 +1429,9 @@ destination_from_socket(entry_connection_t *conn, socks_request_t *req)
       break;
 #endif
     default:
-      log_warn(LD_BUG, "Received transparent data from an unsuported socket family.");
+      log_warn(LD_BUG,
+               "Received transparent data from an unsuported socket family %d",
+               ENTRY_TO_CONN(conn)->socket_family);
       return -1;
   }
   if (rv < 0) {
