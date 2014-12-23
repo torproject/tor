@@ -1,0 +1,6 @@
+  o Major bugfixes:
+    - When reading a hexadecimal, base-32, or base-64 encoded value
+      from a string, always overwrite the complete output buffer. This
+      prevents some bugs where we would look at (but fortunately, not
+      reveal) uninitialized memory on the stack. Fixes bug 14013;
+      bugfix on all versions of Tor.
