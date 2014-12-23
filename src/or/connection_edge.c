@@ -46,7 +46,19 @@
 #ifdef HAVE_LINUX_NETFILTER_IPV4_H
 #include <linux/netfilter_ipv4.h>
 #define TRANS_NETFILTER
+#define TRANS_NETFILTER_IPV4
 #endif
+
+#ifdef HAVE_LINUX_IF_H
+#include <linux/if.h>
+#endif
+
+#ifdef HAVE_LINUX_NETFILTER_IPV6_IP6_TABLES_H
+#include <linux/netfilter_ipv6/ip6_tables.h>
+#define TRANS_NETFILTER
+#define TRANS_NETFILTER_IPV6
+#endif
+
 
 #if defined(HAVE_NET_IF_H) && defined(HAVE_NET_PFVAR_H)
 #include <net/if.h>
@@ -1401,10 +1413,27 @@ destination_from_socket(entry_connection_t *conn, socks_request_t *req)
   struct sockaddr_storage orig_dst;
   socklen_t orig_dst_len = sizeof(orig_dst);
   tor_addr_t addr;
+  int rv;
 
 #ifdef TRANS_NETFILTER
-  if (getsockopt(ENTRY_TO_CONN(conn)->s, SOL_IP, SO_ORIGINAL_DST,
-                 (struct sockaddr*)&orig_dst, &orig_dst_len) < 0) {
+  switch (ENTRY_TO_CONN(conn)->socket_family) {
+#ifdef TRANS_NETFILTER_IPV4
+    case AF_INET:
+      rv = getsockopt(ENTRY_TO_CONN(conn)->s, SOL_IP, SO_ORIGINAL_DST,
+                  (struct sockaddr*)&orig_dst, &orig_dst_len);
+      break;
+#endif
+#ifdef TRANS_NETFILTER_IPV6
+    case AF_INET6:
+      rv = getsockopt(ENTRY_TO_CONN(conn)->s, SOL_IPV6, IP6T_SO_ORIGINAL_DST,
+                  (struct sockaddr*)&orig_dst, &orig_dst_len);
+      break;
+#endif
+    default:
+      log_warn(LD_BUG, "Received transparent data from an unsuported socket family.");
+      return -1;
+  }
+  if (rv < 0) {
     int e = tor_socket_errno(ENTRY_TO_CONN(conn)->s);
     log_warn(LD_NET, "getsockopt() failed: %s", tor_socket_strerror(e));
     return -1;

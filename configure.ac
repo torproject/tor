@@ -937,6 +937,14 @@ AC_CHECK_HEADERS(net/pfvar.h, net_pfvar_found=1, net_pfvar_found=0,
 #ifdef HAVE_NET_IF_H
 #include <net/if.h>
 #endif])
+
+AC_CHECK_HEADERS(linux/if.h,[],[],
+[
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+])
+
 AC_CHECK_HEADERS(linux/netfilter_ipv4.h,
         linux_netfilter_ipv4=1, linux_netfilter_ipv4=0,
 [#ifdef HAVE_SYS_TYPES_H
@@ -958,12 +966,39 @@ AC_CHECK_HEADERS(linux/netfilter_ipv4.h,
 #include <netinet/in.h>
 #endif])
 
+AC_CHECK_HEADERS(linux/netfilter_ipv6/ip6_tables.h,
+        linux_netfilter_ipv6_ip6_tables=1, linux_netfilter_ipv6_ip6_tables=0,
+[#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+#ifdef HAVE_LIMITS_H
+#include <limits.h>
+#endif
+#ifdef HAVE_LINUX_TYPES_H
+#include <linux/types.h>
+#endif
+#ifdef HAVE_NETINET_IN6_H
+#include <netinet/in6.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+#ifdef HAVE_LINUX_IF_H
+#include <linux/if.h>
+#endif])
+
 if test x$transparent = xtrue ; then
    transparent_ok=0
    if test x$net_if_found = x1 && test x$net_pfvar_found = x1 ; then
      transparent_ok=1
    fi
    if test x$linux_netfilter_ipv4 = x1 ; then
+     transparent_ok=1
+   fi
+   if test x$linux_netfilter_ipv6_ip6_tables = x1 ; then
      transparent_ok=1
    fi
    if test x$transparent_ok = x1 ; then
