@@ -1,0 +1,7 @@
+  o Minor bugfixes:
+    - When V3AuthVotingInterval is low, decrease the delay on the
+      If-Modified-Since header passed to directory servers.
+      This allows us to obtain consensuses promptly when the consensus
+      interval is very short.
+      This assists in bootstrapping a testing Tor network.
+      Fixes bugs 13718 & 13963.

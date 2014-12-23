@@ -1,0 +1,7 @@
+  o Minor bugfixes:
+    - Stop requiring exits to have non-zero bandwithcapacity in a
+      TestingTorNetwork. Instead, when TestingMinExitFlagThreshold is 0,
+      ignore exit bandwidthcapacity.
+      This assists in bootstrapping a testing Tor network.
+      Fixes bugs 13718 & 13839.
+      Makes bug 13161's TestingDirAuthVoteExit non-essential.
