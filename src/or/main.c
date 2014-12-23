@@ -1763,6 +1763,17 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
   current_second = now; /* remember which second it is, for next time */
 }
 
+#ifdef HAVE_SYSTEMD_209
+static periodic_timer_t *systemd_watchdog_timer = NULL;
+
+/** Libevent callback: invoked to reset systemd watchdog. */
+static void
+systemd_watchdog_callback(periodic_timer_t *timer, void *arg)
+{
+  sd_notify(1, "WATCHDOG=1");
+}
+#endif
+
 #ifndef USE_BUFFEREVENTS
 /** Timer: used to invoke refill_callback(). */
 static periodic_timer_t *refill_timer = NULL;
@@ -2030,6 +2041,24 @@ do_main_loop(void)
                                       NULL);
     tor_assert(second_timer);
   }
+
+#ifdef HAVE_SYSTEMD_209
+  uint64_t watchdog_delay;
+  /* set up systemd watchdog notification. */
+  if (sd_watchdog_enabled(1, &watchdog_delay)) {
+    if (! systemd_watchdog_timer) {
+      struct timeval watchdog;
+      watchdog.tv_sec = 0;
+      watchdog.tv_usec = watchdog_delay/2;
+
+      systemd_watchdog_timer = periodic_timer_new(tor_libevent_get_base(),
+                                                  &watchdog,
+                                                  systemd_watchdog_callback,
+                                                  NULL);
+      tor_assert(systemd_watchdog_timer);
+    }
+  }
+#endif
 
 #ifndef USE_BUFFEREVENTS
   if (!refill_timer) {

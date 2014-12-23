@@ -138,6 +138,26 @@ if test x$enable_systemd = xyes -a x$have_systemd != xyes ; then
     AC_MSG_ERROR([Explicitly requested systemd support, but systemd not found])
 fi
 
+AC_ARG_ENABLE(threads,
+     AS_HELP_STRING(--disable-threads, disable multi-threading support))
+
+if test x$enable_threads = x; then
+   case $host in
+    *-*-solaris* )
+     # Don't try multithreading on solaris -- cpuworkers seem to lock.
+     AC_MSG_NOTICE([You are running Solaris; Sometimes threading makes
+cpu workers lock up here, so I will disable threads.])
+     enable_threads="no";;
+    *)
+     enable_threads="yes";;
+   esac
+fi
+
+ifdef([HAVE_SYSTEMD], [
+AC_SEARCH_LIBS([sd_watchdog_enabled], [systemd-daemon],
+    [AC_DEFINE(HAVE_SYSTEMD_209,1,[Have systemd v209 or more])], [])
+])
+
 case $host in
    *-*-solaris* )
      AC_DEFINE(_REENTRANT, 1, [Define on some platforms to activate x_r() functions in time.h])
