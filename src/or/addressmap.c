@@ -888,7 +888,7 @@ addressmap_get_virtual_address(int type)
         /* XXXX This code is to make sure I didn't add an undecorated version
          * by mistake. I hope it's needless. */
         char tmp[TOR_ADDR_BUF_LEN];
-        tor_addr_to_str(buf, &addr, sizeof(tmp), 0);
+        tor_addr_to_str(tmp, &addr, sizeof(tmp), 0);
         if (strmap_get(addressmap, tmp)) {
           log_warn(LD_BUG, "%s wasn't in the addressmap, but %s was.",
                    buf, tmp);
