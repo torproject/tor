@@ -12,6 +12,8 @@ AC_CONFIG_HEADERS([orconfig.h])
 
 AC_CANONICAL_HOST
 
+PKG_PROG_PKG_CONFIG
+
 if test -f /etc/redhat-release ; then
   if test -f /usr/kerberos/include ; then
     CPPFLAGS="$CPPFLAGS -I/usr/kerberos/include"
@@ -104,6 +106,57 @@ AC_ARG_ENABLE(upnp,
         no)  upnp=false ;;
         * ) AC_MSG_ERROR(bad value for --enable-upnp) ;;
       esac], [upnp=false])
+
+# systemd notify support
+AC_ARG_ENABLE(systemd,
+      AS_HELP_STRING(--enable-systemd, enable systemd notification support),
+      [case "${enableval}" in
+        yes) systemd=true ;;
+        no)  systemd=false ;;
+        * ) AC_MSG_ERROR(bad value for --enable-systemd) ;;
+      esac], [systemd=auto])
+
+
+
+# systemd support
+if test x$enable_systemd = xfalse ; then
+    have_systemd=no;
+else
+    PKG_CHECK_MODULES(SYSTEMD,
+        [libsystemd-daemon],
+        have_systemd=yes,
+        have_systemd=no)
+fi
+
+if test x$have_systemd = xyes; then
+    AC_DEFINE(HAVE_SYSTEMD,1,[Have systemd])
+    TOR_SYSTEMD_LIBS="-lsystemd-daemon"
+fi
+AC_SUBST(TOR_SYSTEMD_LIBS)
+
+if test x$enable_systemd = xyes -a x$have_systemd != xyes ; then
+    AC_MSG_ERROR([Explicitly requested systemd support, but systemd not found])
+fi
+
+AC_ARG_ENABLE(threads,
+     AS_HELP_STRING(--disable-threads, disable multi-threading support))
+
+if test x$enable_threads = x; then
+   case $host in
+    *-*-solaris* )
+     # Don't try multithreading on solaris -- cpuworkers seem to lock.
+     AC_MSG_NOTICE([You are running Solaris; Sometimes threading makes
+cpu workers lock up here, so I will disable threads.])
+     enable_threads="no";;
+    *)
+     enable_threads="yes";;
+   esac
+fi
+
+ifdef([HAVE_SYSTEMD], [
+AC_SEARCH_LIBS([sd_watchdog_enabled], [systemd-daemon],
+    [AC_DEFINE(HAVE_SYSTEMD_209,1,[Have systemd v209 or more])], [])
+])
 
 case $host in
    *-*-solaris* )
@@ -618,7 +671,7 @@ dnl since sometimes the linker will like an option but not be willing to
 dnl use it with a build of a library.
 
 all_ldflags_for_check="$TOR_LDFLAGS_zlib $TOR_LDFLAGS_openssl $TOR_LDFLAGS_libevent"
-all_libs_for_check="$TOR_ZLIB_LIBS $TOR_LIB_MATH $TOR_LIBEVENT_LIBS $TOR_OPENSSL_LIBS $TOR_LIB_WS32 $TOR_LIB_GDI"
+all_libs_for_check="$TOR_ZLIB_LIBS $TOR_LIB_MATH $TOR_LIBEVENT_LIBS $TOR_OPENSSL_LIBS $TOR_SYSTEMD_LIBS $TOR_LIB_WS32 $TOR_LIB_GDI"
 
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
 #if !defined(__clang__)
