@@ -58,6 +58,17 @@
 #include <time.h>
 #include <poll.h>
 
+#ifdef HAVE_LINUX_NETFILTER_IPV4_H
+#include <linux/netfilter_ipv4.h>
+#endif
+#ifdef HAVE_LINUX_IF_H
+#include <linux/if.h>
+#endif
+#ifdef HAVE_LINUX_NETFILTER_IPV6_IP6_TABLES_H
+#include <linux/netfilter_ipv6/ip6_tables.h>
+#endif
+
+
 #if defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \
   defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION)
 #define USE_BACKTRACE
@@ -633,6 +644,22 @@ sb_getsockopt(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
       SCMP_CMP(2, SCMP_CMP_EQ, SO_ERROR));
   if (rc)
     return rc;
+
+#ifdef HAVE_LINUX_NETFILTER_IPV4_H
+  rc = seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(getsockopt),
+      SCMP_CMP(1, SCMP_CMP_EQ, SOL_IP),
+      SCMP_CMP(2, SCMP_CMP_EQ, SO_ORIGINAL_DST));
+  if (rc)
+    return rc;
+#endif
+
+#ifdef HAVE_LINUX_NETFILTER_IPV6_IP6_TABLES_H
+  rc = seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(getsockopt),
+      SCMP_CMP(1, SCMP_CMP_EQ, SOL_IPV6),
+      SCMP_CMP(2, SCMP_CMP_EQ, IP6T_SO_ORIGINAL_DST));
+  if (rc)
+    return rc;
+#endif
 
   return 0;
 }
