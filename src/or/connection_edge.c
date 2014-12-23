@@ -55,8 +55,10 @@
 
 #ifdef HAVE_LINUX_NETFILTER_IPV6_IP6_TABLES_H
 #include <linux/netfilter_ipv6/ip6_tables.h>
+#if defined(IP6T_SO_ORIGINAL_DST)
 #define TRANS_NETFILTER
 #define TRANS_NETFILTER_IPV6
+#endif
 #endif
 
 #if defined(HAVE_NET_IF_H) && defined(HAVE_NET_PFVAR_H)
