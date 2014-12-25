@@ -2053,9 +2053,18 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
         smartlist_add(excluded, (void*)node);
     });
   }
-  /* and exclude current entry guards and their families, if applicable */
+  /* and exclude current entry guards and their families,
+   * unless we're in a test network, and excluding guards
+   * would exclude all nodes (i.e. we're in an incredibly small tor network,
+   * or we're using TestingAuthVoteGuard *).
+   * This is an incomplete fix, but is no worse than the previous behaviour,
+   * and only applies to minimal, testing tor networks
+   * (so it's no less secure) */
   /*XXXX025 use the using_as_guard flag to accomplish this.*/
-  if (options->UseEntryGuards) {
+  if (options->UseEntryGuards
+      && (!options->TestingTorNetwork ||
+          smartlist_len(nodelist_get_list()) > smartlist_len(get_entry_guards())
+     )) {
     SMARTLIST_FOREACH(get_entry_guards(), const entry_guard_t *, entry,
       {
         if ((node = node_get_by_id(entry->identity))) {
