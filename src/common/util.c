@@ -491,7 +491,9 @@ round_to_power_of_2(uint64_t u64)
 unsigned
 round_to_next_multiple_of(unsigned number, unsigned divisor)
 {
-  number += divisor - 1;
+  tor_assert(divisor > 0);
+  if (UINT_MAX - divisor + 1 >= number)
+    number += divisor - 1;
   number -= number % divisor;
   return number;
 }
@@ -501,7 +503,9 @@ round_to_next_multiple_of(unsigned number, unsigned divisor)
 uint32_t
 round_uint32_to_next_multiple_of(uint32_t number, uint32_t divisor)
 {
-  number += divisor - 1;
+  tor_assert(divisor > 0);
+  if (UINT32_MAX - divisor + 1 >= number)
+    number += divisor - 1;
   number -= number % divisor;
   return number;
 }
@@ -511,7 +515,9 @@ round_uint32_to_next_multiple_of(uint32_t number, uint32_t divisor)
 uint64_t
 round_uint64_to_next_multiple_of(uint64_t number, uint64_t divisor)
 {
-  number += divisor - 1;
+  tor_assert(divisor > 0);
+  if (UINT64_MAX - divisor + 1 >= number)
+    number += divisor - 1;
   number -= number % divisor;
   return number;
 }

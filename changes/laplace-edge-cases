@@ -3,5 +3,9 @@
        * avoid division by zero
        * avoid taking the log of zero
        * silence clang type conversion warnings using round and trunc
-    - Add tests for laplace edge cases.
+       * consistently check for overflow in round_*_to_next_multiple_of
+    - Add tests for laplace edge cases:
+       * check add_laplace_noise with maximal values
+       * check round_*_to_next_multiple_of with additional values
+       * check round_*_to_next_multiple_of with maximal values
       Related to HS stats in #13192.
