@@ -1,0 +1,9 @@
+  o Minor bugfixes:
+    - Add "internal" to some bootstrap statuses when no exits are available.
+      If the consensus does not contain Exits, Tor will only build internal
+      circuits. In this case, relevant statuses will contain the word
+      "internal" as indicated in the Tor control-spec.txt. When bootstrap
+      completes, Tor will be ready to handle an application requesting an
+      internal circuit to hidden services at ".onion" addresses.
+      If a future consensus contains Exits, exit circuits may become available.
+      Consequential change from #13718.
