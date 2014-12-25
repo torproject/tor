@@ -1,0 +1,7 @@
+  o Minor bugfixes:
+    - Handle edge cases in the laplace functions:
+       * avoid division by zero
+       * avoid taking the log of zero
+       * silence clang type conversion warnings using round and trunc
+    - Add tests for laplace edge cases.
+      Related to HS stats in #13192.
