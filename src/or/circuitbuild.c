@@ -1863,7 +1863,7 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit)
       choose_good_exit_server(circ->base_.purpose, state->need_uptime,
                               state->need_capacity, state->is_internal);
     if (!node) {
-      log_warn(LD_CIRC,"failed to choose an exit server");
+      log_warn(LD_CIRC,"Failed to choose an exit server");
       return -1;
     }
     exit = extend_info_from_node(node, 0);
@@ -1990,7 +1990,8 @@ choose_good_middle_server(uint8_t purpose,
   tor_assert(CIRCUIT_PURPOSE_MIN_ <= purpose &&
              purpose <= CIRCUIT_PURPOSE_MAX_);
 
-  log_debug(LD_CIRC, "Contemplating intermediate hop: random choice.");
+  log_debug(LD_CIRC, "Contemplating intermediate hop %d: random choice.",
+            cur_len);
   excluded = smartlist_new();
   if ((r = build_state_get_exit_node(state))) {
     nodelist_add_node_and_family(excluded, r);
