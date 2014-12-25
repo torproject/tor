@@ -733,7 +733,7 @@ running_long_enough_to_decide_unreachable(void)
 }
 
 /** Each server needs to have passed a reachability test no more
- * than this number of seconds ago, or he is listed as down in
+ * than this number of seconds ago, or it is listed as down in
  * the directory. */
 #define REACHABLE_TIMEOUT (45*60)
 
