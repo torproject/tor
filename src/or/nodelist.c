@@ -1275,6 +1275,10 @@ router_set_status(const char *digest, int up)
 /** True iff, the last time we checked whether we had enough directory info
  * to build circuits, the answer was "yes". */
 static int have_min_dir_info = 0;
+
+/** Does the consensus contain nodes that can exit? */
+static consensus_path_type_t have_consensus_path = CONSENSUS_PATH_UNKNOWN;
+
 /** True iff enough has changed since the last time we checked whether we had
  * enough directory info to build circuits that our old answer can no longer
  * be trusted. */
@@ -1306,6 +1310,24 @@ router_have_minimum_dir_info(void)
   }
 
   return have_min_dir_info;
+}
+
+/** Set to CONSENSUS_PATH_EXIT if there is at least one exit node
+ * in the consensus. We update this flag in compute_frac_paths_available if
+ * there is at least one relay that has an Exit flag in the consensus.
+ * Used to avoid building exit circuits when they will almost certainly fail.
+ * Set to CONSENSUS_PATH_INTERNAL if there are no exits in the consensus.
+ * (This situation typically occurs during bootstrap of a test network.)
+ * Set to CONSENSUS_PATH_UNKNOWN if we have never checked, or have
+ * reason to believe our last known value was invalid or has expired.
+ * If we're in a network with TestingDirAuthVoteExit set,
+ * this can cause router_have_consensus_path() to be set to
+ * CONSENSUS_PATH_EXIT, even if there are no nodes with accept exit policies.
+ */
+consensus_path_type_t
+router_have_consensus_path(void)
+{
+  return have_consensus_path;
 }
 
 /** Called when our internal view of the directory has changed.  This can be
@@ -1396,7 +1418,11 @@ compute_frac_paths_available(const networkstatus_t *consensus,
   smartlist_t *myexits= smartlist_new();
   smartlist_t *myexits_unflagged = smartlist_new();
   double f_guard, f_mid, f_exit, f_myexit, f_myexit_unflagged;
-  int np, nu; /* Ignored */
+  double f_path = 0.0;
+  /* Used to determine whether there are any exits in the consensus */
+  int np = 0;
+  /* Used to determine whether there are any exits with descriptors */
+  int nu = 0;
   const int authdir = authdir_mode_v3(options);
 
   count_usable_descriptors(num_present_out, num_usable_out,
@@ -1417,7 +1443,13 @@ compute_frac_paths_available(const networkstatus_t *consensus,
     });
   }
 
-  /* All nodes with exit flag */
+  /* All nodes with exit flag
+   * If we're in a network with TestingDirAuthVoteExit set,
+   * this can cause false positives on have_consensus_path,
+   * incorrectly setting it to CONSENSUS_PATH_EXIT. This is
+   * an unavoidable feature of forcing authorities to declare
+   * certain nodes as exits.
+   */
   count_usable_descriptors(&np, &nu, exits, consensus, options, now,
                            NULL, USABLE_DESCRIPTOR_EXIT_ONLY);
   log_debug(LD_NET,
@@ -1425,6 +1457,27 @@ compute_frac_paths_available(const networkstatus_t *consensus,
             "exits",
             np,
             nu);
+
+  /* We need at least 1 exit present in the consensus to consider
+   * building exit paths */
+  /* Update our understanding of whether the consensus has exits */
+  consensus_path_type_t old_have_consensus_path = have_consensus_path;
+  have_consensus_path = ((np > 0) ?
+                         CONSENSUS_PATH_EXIT :
+                         CONSENSUS_PATH_INTERNAL);
+
+  if (have_consensus_path == CONSENSUS_PATH_INTERNAL
+      && old_have_consensus_path != have_consensus_path) {
+    log_notice(LD_NET,
+               "The current consensus has no exit nodes. "
+               "Tor can only build internal paths, "
+               "such as paths to hidden services.");
+
+    /* However, exit nodes can reachability self-test using this consensus,
+     * join the network, and appear in a later consensus. This will allow
+     * the network to build exit paths, such as paths for world wide web
+     * browsing (as distinct from hidden service web browsing). */
+  }
 
   /* All nodes with exit flag in ExitNodes option */
   count_usable_descriptors(&np, &nu, myexits, consensus, options, now,
@@ -1620,7 +1673,7 @@ update_router_have_minimum_dir_info(void)
      * should only do while circuits are working, like reachability tests
      * and fetching bridge descriptors only over circuits. */
     note_that_we_maybe_cant_complete_circuits();
-
+    have_consensus_path = CONSENSUS_PATH_UNKNOWN;
     control_event_client_status(LOG_NOTICE, "NOT_ENOUGH_DIR_INFO");
   }
   have_min_dir_info = res;
