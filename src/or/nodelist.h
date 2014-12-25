@@ -79,6 +79,14 @@ int node_is_unreliable(const node_t *router, int need_uptime,
 int router_exit_policy_all_nodes_reject(const tor_addr_t *addr, uint16_t port,
                                         int need_uptime);
 void router_set_status(const char *digest, int up);
+
+/** router_have_minimum_dir_info tests to see if we have enough
+ * descriptor information to create circuits.
+ * If there are exits in the consensus, we wait until we have enough
+ * info to create exit paths before creating any circuits. If there are
+ * no exits in the consensus, we wait for enough info to create internal
+ * paths, and should avoid creating exit paths, as they will simply fail.
+ * We make sure we create all available circuit types at the same time. */
 int router_have_minimum_dir_info(void);
 
 /** Set to CONSENSUS_PATH_EXIT if there is at least one exit node

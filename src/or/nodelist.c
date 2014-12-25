@@ -1273,7 +1273,8 @@ router_set_status(const char *digest, int up)
 }
 
 /** True iff, the last time we checked whether we had enough directory info
- * to build circuits, the answer was "yes". */
+ * to build circuits, the answer was "yes". If there are no exits in the
+ * consensus, we act as if we have 100% of the exit directory info. */
 static int have_min_dir_info = 0;
 
 /** Does the consensus contain nodes that can exit? */
@@ -1285,12 +1286,15 @@ static consensus_path_type_t have_consensus_path = CONSENSUS_PATH_UNKNOWN;
 static int need_to_update_have_min_dir_info = 1;
 /** String describing what we're missing before we have enough directory
  * info. */
-static char dir_info_status[256] = "";
+static char dir_info_status[512] = "";
 
-/** Return true iff we have enough networkstatus and router information to
- * start building circuits.  Right now, this means "more than half the
- * networkstatus documents, and at least 1/4 of expected routers." */
-//XXX should consider whether we have enough exiting nodes here.
+/** Return true iff we have enough consensus information to
+ * start building circuits.  Right now, this means "a consensus that's
+ * less than a day old, and at least 60% of router descriptors (configurable),
+ * weighted by bandwidth. Treat the exit fraction as 100% if there are
+ * no exits in the consensus."
+ * To obtain the final weighted bandwidth, we multiply the
+ * weighted bandwidth fraction for each position (guard, middle, exit). */
 int
 router_have_minimum_dir_info(void)
 {
@@ -1405,7 +1409,16 @@ count_usable_descriptors(int *num_present, int *num_usable,
 }
 
 /** Return an estimate of which fraction of usable paths through the Tor
- * network we have available for use. */
+ * network we have available for use.
+ * Count how many routers seem like ones we'd use, and how many of
+ * <em>those</em> we have descriptors for.  Store the former in
+ * *<b>num_usable_out</b> and the latter in *<b>num_present_out</b>.
+ * If **<b>status_out</b> is present, allocate a new string and print the
+ * available percentages of guard, middle, and exit nodes to it, noting
+ * whether there are exits in the consensus.
+ * If there are no guards in the consensus,
+ * we treat the exit fraction as 100%.
+ */
 static double
 compute_frac_paths_available(const networkstatus_t *consensus,
                              const or_options_t *options, time_t now,
@@ -1549,16 +1562,28 @@ compute_frac_paths_available(const networkstatus_t *consensus,
   if (f_myexit < f_exit)
     f_exit = f_myexit;
 
+  /* if the consensus has no exits, treat the exit fraction as 100% */
+  if (router_have_consensus_path() != CONSENSUS_PATH_EXIT) {
+    f_exit = 1.0;
+  }
+
+  f_path = f_guard * f_mid * f_exit;
+
   if (status_out)
     tor_asprintf(status_out,
                  "%d%% of guards bw, "
                  "%d%% of midpoint bw, and "
-                 "%d%% of exit bw",
+                 "%d%% of exit bw%s = "
+                 "%d%% of path bw",
                  (int)(f_guard*100),
                  (int)(f_mid*100),
-                 (int)(f_exit*100));
+                 (int)(f_exit*100),
+                 (router_have_consensus_path() == CONSENSUS_PATH_EXIT ?
+                  "" :
+                  " (no exits in consensus)"),
+                 (int)(f_path*100));
 
-  return f_guard * f_mid * f_exit;
+  return f_path;
 }
 
 /** We just fetched a new set of descriptors. Compute how far through
@@ -1631,6 +1656,9 @@ update_router_have_minimum_dir_info(void)
 
   using_md = consensus->flavor == FLAV_MICRODESC;
 
+#define NOTICE_DIR_INFO_STATUS_INTERVAL (60)
+
+  /* Check fraction of available paths */
   {
     char *status = NULL;
     int num_present=0, num_usable=0;
@@ -1639,16 +1667,37 @@ update_router_have_minimum_dir_info(void)
                                                 &status);
 
     if (paths < get_frac_paths_needed_for_circs(options,consensus)) {
-      tor_snprintf(dir_info_status, sizeof(dir_info_status),
-                   "We need more %sdescriptors: we have %d/%d, and "
-                   "can only build %d%% of likely paths. (We have %s.)",
-                   using_md?"micro":"", num_present, num_usable,
-                   (int)(paths*100), status);
-      /* log_notice(LD_NET, "%s", dir_info_status); */
+      /* these messages can be excessive in testing networks */
+      static ratelim_t last_warned =
+        RATELIM_INIT(NOTICE_DIR_INFO_STATUS_INTERVAL);
+      char *suppression_msg = NULL;
+      if ((suppression_msg = rate_limit_log(&last_warned, time(NULL)))) {
+        tor_snprintf(dir_info_status, sizeof(dir_info_status),
+                     "We need more %sdescriptors: we have %d/%d, and "
+                     "can only build %d%% of likely paths. (We have %s.)",
+                     using_md?"micro":"", num_present, num_usable,
+                     (int)(paths*100), status);
+        log_warn(LD_NET, "%s%s", dir_info_status, suppression_msg);
+        tor_free(suppression_msg);
+      }
       tor_free(status);
       res = 0;
       control_event_bootstrap(BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS, 0);
       goto done;
+    } else {
+      /* these messages can be excessive in testing networks */
+      static ratelim_t last_warned =
+      RATELIM_INIT(NOTICE_DIR_INFO_STATUS_INTERVAL);
+      char *suppression_msg = NULL;
+      if ((suppression_msg = rate_limit_log(&last_warned, time(NULL)))) {
+        tor_snprintf(dir_info_status, sizeof(dir_info_status),
+                     "We have enough %sdescriptors: we have %d/%d, and "
+                     "can build %d%% of likely paths. (We have %s.)",
+                     using_md?"micro":"", num_present, num_usable,
+                     (int)(paths*100), status);
+        log_info(LD_NET, "%s%s", dir_info_status, suppression_msg);
+        tor_free(suppression_msg);
+      }
     }
 
     tor_free(status);
@@ -1656,12 +1705,16 @@ update_router_have_minimum_dir_info(void)
   }
 
  done:
+
+  /* If paths have just become available in this update. */
   if (res && !have_min_dir_info) {
     log_notice(LD_DIR,
         "We now have enough directory information to build circuits.");
     control_event_client_status(LOG_NOTICE, "ENOUGH_DIR_INFO");
     control_event_bootstrap(BOOTSTRAP_STATUS_CONN_OR, 0);
   }
+
+  /* If paths have just become unavailable in this update. */
   if (!res && have_min_dir_info) {
     int quiet = directory_too_idle_to_fetch_descriptors(options, now);
     tor_log(quiet ? LOG_INFO : LOG_NOTICE, LD_DIR,
