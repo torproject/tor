@@ -1406,6 +1406,7 @@ test_channel_queue_impossible(void *arg)
   ch->state = CHANNEL_STATE_MAINT;
   cell = tor_malloc_zero(sizeof(cell_t));
   make_fake_cell(cell);
+  cellintptr = (uintptr_t)(void*)cell;
   channel_write_cell(ch, cell);
 
   /* Check that it's queued */
@@ -1414,7 +1415,7 @@ test_channel_queue_impossible(void *arg)
   tt_assert(q);
   if (q) {
     tt_int_op(q->type, ==, CELL_QUEUE_FIXED);
-    tt_ptr_op(q->u.fixed.cell, ==, cell);
+    tt_assert((uintptr_t)q->u.fixed.cell == cellintptr);
   }
   /* Clobber it, including the queue entry type */
   tor_free(q->u.fixed.cell);
