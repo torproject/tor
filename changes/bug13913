@@ -1,0 +1,5 @@
+  o Documentation:
+    - Clarify HiddenServiceDir option description in manpage to make it
+      clear that directory in question is relative to current working 
+      directory of Tor instance if it is defined as a relative path. Fixes
+      issue 13913.
