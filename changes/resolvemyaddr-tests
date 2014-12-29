@@ -1,0 +1,3 @@
+  o Testing:
+    - Add unit tests for resolve_my_addr(). Part of ticket 12376;
+      patch by 'rl1987'.
