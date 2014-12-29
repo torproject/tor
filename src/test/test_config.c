@@ -680,6 +680,8 @@ static int n_gethostname_failure = 0;
 static int
 tor_gethostname_failure(char *name, size_t namelen)
 {
+  (void)name;
+  (void)namelen;
   n_gethostname_failure++;
 
   return -1;
@@ -765,6 +767,8 @@ static int
 get_interface_address6_failure(int severity, sa_family_t family,
                                tor_addr_t *addr)
 {
+  (void)severity;
+  (void)addr;
    n_get_interface_address6_failure++;
    last_address6_family = family;
 
@@ -774,8 +778,6 @@ get_interface_address6_failure(int severity, sa_family_t family,
 static void
 test_config_resolve_my_address(void *arg)
 {
-  (void)arg;
-
   or_options_t *options;
   uint32_t resolved_addr;
   const char *method_used;
@@ -791,6 +793,8 @@ test_config_resolve_my_address(void *arg)
   int prev_n_get_interface_address_failure;
   int prev_n_get_interface_address6;
   int prev_n_get_interface_address6_failure;
+
+  (void)arg;
 
   options = options_new();
 
