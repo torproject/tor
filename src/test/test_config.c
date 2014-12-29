@@ -636,7 +636,7 @@ tor_lookup_hostname_failure(const char *name, uint32_t *addr)
 static int n_gethostname_replacement = 0;
 
 /** This mock function is meant to replace tor_gethostname(). It
- * responds with string "onionrouter" as hostname. This function
+ * responds with string "onionrouter!" as hostname. This function
  * increments <b>n_gethostname_replacement</b> by one every time
  * it is called.
  */
@@ -646,7 +646,7 @@ tor_gethostname_replacement(char *name, size_t namelen)
   n_gethostname_replacement++;
 
   if (name && namelen) {
-    strlcpy(name,"onionrouter",namelen);
+    strlcpy(name,"onionrouter!",namelen);
   }
 
   return 0;
@@ -870,7 +870,7 @@ test_config_resolve_my_address(void *arg)
   tt_want(n_gethostname_replacement == prev_n_gethostname_replacement + 1);
   tt_want(n_hostname_01010101 == prev_n_hostname_01010101 + 1);
   tt_want_str_op(method_used,==,"GETHOSTNAME");
-  tt_want_str_op(hostname_out,==,"onionrouter");
+  tt_want_str_op(hostname_out,==,"onionrouter!");
   tt_assert(htonl(resolved_addr) == 0x01010101);
 
   UNMOCK(tor_gethostname);
@@ -949,6 +949,7 @@ test_config_resolve_my_address(void *arg)
  */
 
   MOCK(tor_gethostname,tor_gethostname_replacement);
+  MOCK(tor_lookup_hostname,tor_lookup_hostname_failure);
   MOCK(get_interface_address,get_interface_address_08080808);
 
   prev_n_gethostname_replacement = n_gethostname_replacement;
@@ -958,8 +959,10 @@ test_config_resolve_my_address(void *arg)
                               &method_used,&hostname_out);
 
   tt_want(retval == 0);
-  tt_want(n_gethostname_replacement == prev_n_gethostname_replacement + 1);
-  tt_want(n_get_interface_address == prev_n_get_interface_address + 1);
+  tt_want_int_op(n_gethostname_replacement, ==,
+                 prev_n_gethostname_replacement + 1);
+  tt_want_int_op(n_get_interface_address, ==,
+                 prev_n_get_interface_address + 1);
   tt_want_str_op(method_used,==,"INTERFACE");
   tt_want(hostname_out == NULL);
   tt_assert(resolved_addr == ntohl(0x08080808));
