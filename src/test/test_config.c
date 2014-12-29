@@ -781,7 +781,7 @@ test_config_resolve_my_address(void *arg)
   or_options_t *options;
   uint32_t resolved_addr;
   const char *method_used;
-  char *hostname_out;
+  char *hostname_out = NULL;
   int retval;
   int prev_n_hostname_01010101;
   int prev_n_hostname_localhost;
@@ -844,6 +844,7 @@ test_config_resolve_my_address(void *arg)
   UNMOCK(tor_lookup_hostname);
 
   tor_free(options->Address);
+  tor_free(hostname_out);
 
 /*
  * CASE 3:
@@ -875,6 +876,8 @@ test_config_resolve_my_address(void *arg)
   UNMOCK(tor_gethostname);
   UNMOCK(tor_lookup_hostname);
 
+  tor_free(hostname_out);
+
 /*
  * CASE 4:
  * Given that options->Address is a local host address, we want
@@ -892,6 +895,7 @@ test_config_resolve_my_address(void *arg)
   tt_assert(retval == -1);
 
   tor_free(options->Address);
+  tor_free(hostname_out);
 
 /*
  * CASE 5:
@@ -915,7 +919,7 @@ test_config_resolve_my_address(void *arg)
   UNMOCK(tor_lookup_hostname);
 
   tor_free(options->Address);
-  options->Address = NULL;
+  tor_free(hostname_out);
 
 /*
  * CASE 6:
@@ -934,6 +938,8 @@ test_config_resolve_my_address(void *arg)
   tt_assert(retval == -1);
 
   UNMOCK(tor_gethostname);
+  tor_free(hostname_out);
+
 
 /*
  * CASE 7:
@@ -959,6 +965,7 @@ test_config_resolve_my_address(void *arg)
   tt_assert(resolved_addr == ntohl(0x08080808));
 
   UNMOCK(get_interface_address);
+  tor_free(hostname_out);
 
 /*
  * CASE 8:
@@ -982,6 +989,7 @@ test_config_resolve_my_address(void *arg)
   tt_assert(retval == -1);
 
   UNMOCK(get_interface_address);
+  tor_free(hostname_out);
 
 /*
  * CASE 9:
@@ -1015,6 +1023,8 @@ test_config_resolve_my_address(void *arg)
   UNMOCK(tor_gethostname);
   UNMOCK(get_interface_address6);
 
+  tor_free(hostname_out);
+
   /*
    * CASE 10: We want resolve_my_address() to fail if all of the following
    * are true:
@@ -1040,6 +1050,8 @@ test_config_resolve_my_address(void *arg)
 
   UNMOCK(tor_gethostname);
   UNMOCK(tor_lookup_hostname);
+
+  tor_free(hostname_out);
 
   /*
    * CASE 11:
@@ -1138,10 +1150,11 @@ test_config_resolve_my_address(void *arg)
 
   UNMOCK(tor_gethostname);
 
-  done:
+ done:
   tor_free(options->Address);
   tor_free(options->DirAuthorities);
   or_options_free(options);
+  tor_free(hostname_out);
 
   UNMOCK(tor_gethostname);
   UNMOCK(tor_lookup_hostname);
