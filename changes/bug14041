@@ -1,0 +1,5 @@
+  o Minor features (security):
+    - Clear all memory targetted by tor_addr_{to,from}_sockaddr(),
+      not just the part that's used. This makes it harder for data leak
+      bugs to occur in the event of other programming failures.
+      Resolves ticket 14041.

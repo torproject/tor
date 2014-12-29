@@ -89,13 +89,14 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
                      struct sockaddr *sa_out,
                      socklen_t len)
 {
+  memset(sa_out, 0, len);
+
   sa_family_t family = tor_addr_family(a);
   if (family == AF_INET) {
     struct sockaddr_in *sin;
     if (len < (int)sizeof(struct sockaddr_in))
       return 0;
     sin = (struct sockaddr_in *)sa_out;
-    memset(sin, 0, sizeof(struct sockaddr_in));
 #ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
     sin->sin_len = sizeof(struct sockaddr_in);
 #endif
@@ -108,7 +109,6 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
     if (len < (int)sizeof(struct sockaddr_in6))
       return 0;
     sin6 = (struct sockaddr_in6 *)sa_out;
-    memset(sin6, 0, sizeof(struct sockaddr_in6));
 #ifdef HAVE_STRUCT_SOCKADDR_IN6_SIN6_LEN
     sin6->sin6_len = sizeof(struct sockaddr_in6);
 #endif
@@ -129,6 +129,9 @@ tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa,
 {
   tor_assert(a);
   tor_assert(sa);
+
+  memset(a, 0, sizeof(*a));
+
   if (sa->sa_family == AF_INET) {
     struct sockaddr_in *sin = (struct sockaddr_in *) sa;
     tor_addr_from_ipv4n(a, sin->sin_addr.s_addr);
