@@ -1,8 +1,9 @@
-  o Minor bugfixes:
+  o Minor bugfixes (Testing networks):
     - Decrease minimum consensus interval to 10 seconds
-      when TestingTorNetwork is set. (Or 5 seconds for
-      the first consensus.)
-      Fix code that assumes larger interval values.
+      when TestingTorNetwork is set, or 5 seconds for
+      the first consensus.
+      Fix assumptions throughout the code that assume larger interval values.
       This assists in quickly bootstrapping a testing
       Tor network.
-      Fixes bugs 13718 & 13823.
+      Fixes bugs 13718 and 13823; bugfix on 0.2.0.3-alpha.
+

@@ -4,4 +4,4 @@
       This allows us to obtain consensuses promptly when the consensus
       interval is very short.
       This assists in bootstrapping a testing Tor network.
-      Fixes bugs 13718 & 13963.
+      Fixes parts of bugs 13718 and 13963; bugfix on 0.2.0.3-alpha.
