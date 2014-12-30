@@ -1,8 +1,0 @@
-  o Minor features (Testing networks):
-    - Avoid building exit circuits from a consensus with no exits.
-      Now thanks to our fix for 13718,
-      we accept a no-exit network as not wholly lost, but
-      we need to remember not to try to build exit circuits on it.
-      Closes ticket 13814;
-      patch by "teor".
-

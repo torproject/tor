@@ -1,9 +1,0 @@
-  o Minor bugfixes (Testing networks):
-    - Allow Tor to build circuits using a consensus with
-      no exits. If the consensus has no exits (typical of
-      a bootstrapping test network), allow Tor to build
-      circuits once enough descriptors have been
-      downloaded.
-      This assists in bootstrapping a testing Tor
-      network.
-      Fixes bug 13718; bugfix on 0.2.4.10-alpha. Patch by "teor".

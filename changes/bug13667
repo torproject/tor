@@ -1,6 +1,0 @@
- o Major features (security, hidden services):
-   - Make HS port scanning more difficult by sending back REASON_DONE if the
-     exit policy didn't match. Furthermore, immediately close the circuit to
-     avoid other connection attempts on it from the possible attacker trying
-     multiple ports on that same circuits. Closes ticket 13667.
-

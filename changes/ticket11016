@@ -1,6 +1,0 @@
-  o Minor features (systemd):
-    - Where supported, when running with systemd, report successful
-      startup to systemd. Part of ticket 11016. Patch by Michael
-      Scherer.
-    - When running with systemd, support systemd watchdog messages.
-      Part of ticket 11016. Patch by Michael Scherer.

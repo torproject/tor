@@ -18,6 +18,10 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
       implements ticket 9262.
 
   o Major features (hidden services):
+    - Make HS port scanning more difficult by sending back REASON_DONE
+      if the exit policy didn't match. Furthermore, immediately close
+      the circuit to slow down port scanning attempts. Closes
+      ticket 13667.
     - Add a HiddenServiceStatistics option that allows Tor relays to
       gather and publish statistics the overall size and volume of
       hidden service usage. Specifically, when this option is turned on,
@@ -30,12 +34,25 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
       proposal 238, "Better hidden service stats from Tor relays". This
       feature is currently disabled by default. Implements feature 13192.
 
+  o Major bugfixes (client, automap):
+    - Repair automapping with IPv6 addresses; this automapping should
+      have worked previously, but one piece of debugging code that we
+      inserted to detect a regression actually caused the regression to
+      manifest itself again. Fixes bug 13811; bugfix on 0.2.4.7-alpha.
+      Diagnosed and fixed by Francisco Blas Izquierdo Riera.
+
   o Major bugfixes (hidden services):
     - When closing an introduction circuit that was opened in parallel
       with others, don't mark the introduction point as unreachable.
       Previously, the first successful connection to an introduction
       point would make the other introduction points get marked as
       having timed out. Fixes bug 13698; bugfix on 0.0.6rc2.
+
+  o Major removed features:
+    - Tor clients no longer support connecting to hidden services
+      running on Tor 0.2.2.x and earlier; the Support022HiddenServices
+      option has been removed. (There shouldn't be any hidden services
+      running these versions on the network.) Closes ticket 7803.
 
   o Minor features (client):
     - Validate hostnames in SOCKS5 requests more strictly. If SafeSocks
@@ -63,9 +80,29 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
       directories and hostname files to be created group-readable. Patch
       from "anon", David Stainton, and "meejah". Closes ticket 11291.
 
-  o Minor features (transparent firewall):
+  o Minor features (systemd):
+    - Where supported, when running with systemd, report successful
+      startup to systemd. Part of ticket 11016. Patch by Michael Scherer.
+    - When running with systemd, support systemd watchdog messages. Part
+      of ticket 11016. Patch by Michael Scherer.
+
+  o Minor features (transparent proxy):
     - Update the transparent proxy option checks to allow for both ipfw
       and pf on OS X. Closes ticket 14002.
+    - Use the correct option when using IPv6 with transparent proxy
+      support on Linux. Resolves 13808. Patch by Francisco Blas
+      Izquierdo Riera.
+
+  o Minor bugfixes (preventative security, C safety):
+    - When reading a hexadecimal, base-32, or base-64 encoded value from
+      a string, always overwrite the complete output buffer. This
+      prevents some bugs where we would look at (but fortunately, not
+      reveal) uninitialized memory on the stack. Fixes bug 14013; bugfix
+      on all versions of Tor.
+    - Clear all memory targetted by tor_addr_{to,from}_sockaddr(), not
+      just the part that's used. This makes it harder for data leak bugs
+      to occur in the event of other programming failures. Resolves
+      ticket 14041.
 
   o Minor bugfixes (client, micordescriptors):
     - Use a full 256 bits of the SHA256 digest of a microdescriptor when
@@ -103,6 +140,11 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
       directories. Fixes bug 13214; bugfix on 0.2.1.6-alpha. Reported
       by "special".
 
+  o Minor bugfixes (Linux seccomp2 sandbox):
+    - Make transparent proxy support work along with the seccomp2
+      sandbox. Fixes part of bug 13808; bugfix on 0.2.5.1-alpha. Patch
+      by Francisco Blas Izquierdo Riera.
+
   o Minor bugfixes (logging):
     - Downgrade warnings about RSA signature failures to info log level.
       Emit a warning when extra info document is found incompatible with
@@ -117,6 +159,56 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
       both a wildcard address and a bit prefix length. This affects all
       our address-range parsing code. Fixes bug 7484; bugfix
       on 0.0.2pre14.
+
+  o Minor bugfixes (testing networks):
+    - Allow Tor to build circuits using a consensus with no exits. If
+      the consensus has no exits (typical of a bootstrapping test
+      network), allow Tor to build circuits once enough descriptors have
+      been downloaded. This assists in bootstrapping a testing Tor
+      network. Fixes bug 13718; bugfix on 0.2.4.10-alpha. Patch
+      by "teor".
+    - When V3AuthVotingInterval is low, give a lower If-Modified-Since
+      header to directory servers. This allows us to obtain consensuses
+      promptly when the consensus interval is very short. This assists
+      in bootstrapping a testing Tor network. Fixes parts of bugs 13718
+      and 13963; bugfix on 0.2.0.3-alpha. Patch by "teor".
+    - Stop assuming that private addresses are local when checking
+      reachability in a TestingTorNetwork. Instead, when testing, assume
+      all OR connections are remote. (This is necessary due to many test
+      scenarios running all nodes on localhost.) This assists in
+      bootstrapping a testing Tor network. Fixes bug 13924; bugfix on
+      0.1.0.1-rc. Patch by "teor".
+    - Avoid building exit circuits from a consensus with no exits. Now
+      thanks to our fix for 13718, we accept a no-exit network as not
+      wholly lost, but we need to remember not to try to build exit
+      circuits on it. Closes ticket 13814; patch by "teor".
+    - Stop requiring exits to have non-zero bandwithcapacity in a
+      TestingTorNetwork. Instead, when TestingMinExitFlagThreshold is 0,
+      ignore exit bandwidthcapacity. This assists in bootstrapping a
+      testing Tor network. Fixes parts of bugs 13718 and 13839; bugfix
+      on 0.2.0.3-alpha. Patch by "teor".
+    - Add "internal" to some bootstrap statuses when no exits are
+      available. If the consensus does not contain Exits, Tor will only
+      build internal circuits. In this case, relevant statuses will
+      contain the word "internal" as indicated in the Tor control-
+      spec.txt. When bootstrap completes, Tor will be ready to handle an
+      application requesting an internal circuit to hidden services at
+      ".onion" addresses. If a future consensus contains Exits, exit
+      circuits may become available. Fixes part of bug 13718; bugfix on
+      0.2.4.10-alpha. Patch by "teor".
+    - Decrease minimum consensus interval to 10 seconds when
+      TestingTorNetwork is set, or 5 seconds for the first consensus.
+      Fix assumptions throughout the code that assume larger interval
+      values. This assists in quickly bootstrapping a testing Tor
+      network. Fixes bugs 13718 and 13823; bugfix on 0.2.0.3-alpha.
+      Patch by "teor".
+    - Avoid excluding guards from path building in minimal test
+      networks, when we're in a test network, and excluding guards would
+      exclude all nodes. This typically occurs in incredibly small tor
+      networks, and those using TestingAuthVoteGuard * This fix only
+      applies to minimal, testing tor networks, so it's no less secure.
+      Fixes part of bug 13718; bugfix on 0.1.1.11-alpha. Patch
+      by "teor".
 
   o Code simplification and refactoring:
     - Stop using can_complete_circuits as a global variable; access it
@@ -153,12 +245,10 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
       good idea. Also, properly cross-reference how to specify nodes in
       all parts of the manual for options that take a list of nodes.
       Closes ticket 13381.
-
-  o Major removed features:
-    - Tor clients no longer support connecting to hidden services
-      running on Tor 0.2.2.x and earlier; the Support022HiddenServices
-      option has been removed. (There shouldn't be any hidden services
-      running these versions on the network.) Closes ticket 7803.
+    - Clarify HiddenServiceDir option description in manpage to make it
+      clear that relative paths are taken with respect to the current
+      working directory of Tor instance. Also clarify that this behavior
+      is not guaranteed to remain indefinitely. Fixes issue 13913.
 
   o Testing:
     - New tests for many parts of channel, relay, and circuit mux
@@ -168,6 +258,8 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
       test temporary directory to the current user, so that the sticky
       bit doesn't interfere with tests that check directory groups.
       Closes 13678.
+    - Add unit tests for resolve_my_addr(). Part of ticket 12376; patch
+      by 'rl1987'.
 
 
 Changes in version 0.2.6.1-alpha - 2014-10-30

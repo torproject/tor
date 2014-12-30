@@ -1,9 +1,0 @@
-  o Minor features (transparent proxy):
-    - Use the correct option when using IPv6 with transparent proxy
-      support on Linux.  Resolves 13808. Patch by Francisco Blas
-      Izquierdo Riera.
-
-  o Minor bugfixes (sandbox):
-    - Make transparent proxy support work along with the seccomp2
-      sandbox. Fixes part of bug 13808; bugfix on 0.2.5.1-alpha.
-      Patch by Francisco Blas Izquierdo Riera.
