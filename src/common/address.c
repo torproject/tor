@@ -1026,7 +1026,6 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
     } else {
       a2 = tor_addr_to_ipv4h(addr2);
     }
-    if (mbits <= 0) return 0;
     if (mbits > 32) mbits = 32;
     a1 >>= (32-mbits);
     a2 >>= (32-mbits);
