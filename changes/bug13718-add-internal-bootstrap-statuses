@@ -1,4 +1,4 @@
-  o Minor bugfixes:
+  o Minor bugfixes (Testing networks):
     - Add "internal" to some bootstrap statuses when no exits are available.
       If the consensus does not contain Exits, Tor will only build internal
       circuits. In this case, relevant statuses will contain the word
@@ -6,4 +6,4 @@
       completes, Tor will be ready to handle an application requesting an
       internal circuit to hidden services at ".onion" addresses.
       If a future consensus contains Exits, exit circuits may become available.
-      Consequential change from #13718.
+      Fixes part of bug 13718; bugfix on 0.2.4.10-alpha. Patch by "teor".

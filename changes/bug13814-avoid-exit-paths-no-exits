@@ -1,25 +1,8 @@
-  o Minor bugfixes:
-    - Avoid building exit circuits from a consensus with no exits
-      Tor can now build circuits from a consensus with no exits.
-      But if it tries to build exit circuits, they fail and flood the logs.
-      The circuit types in the Exit Circuits list below will only be
-      built if the current consensus has exits. If it doesn't,
-      only the Internal Circuits will be built. (This can change
-      with each new consensus.)
-      Fixes bug #13814, causes fewer path failures due to #13817.
+  o Minor features (Testing networks):
+    - Avoid building exit circuits from a consensus with no exits.
+      Now thanks to our fix for 13718,
+      we accept a no-exit network as not wholly lost, but
+      we need to remember not to try to build exit circuits on it.
+      Closes ticket 13814;
+      patch by "teor".
 
-      Exit Circuits:
-        Predicted Exit Circuits
-        User Traffic Circuits
-        Most AP Streams
-        Circuits Marked Exit
-        Build Timeout Circuits (with exits)
-
-      Internal Circuits:
-        Hidden Service Server Circuits
-        Hidden Service Client Circuits
-        Hidden Service AP Streams
-        Hidden Service Intro Point Streams
-        Circuits Marked Internal
-        Build Timeout Circuits (with no exits)
-        Other Circuits?

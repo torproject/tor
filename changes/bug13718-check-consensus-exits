@@ -1,6 +1,0 @@
-  o Minor enhancement:
-    - Check if there are exits in the consensus.
-      Add router_have_consensus_path() which reports whether
-      the consensus has exit paths, internal paths, or whether it
-      just doesn't know.
-      Used by #13718 and #13814.

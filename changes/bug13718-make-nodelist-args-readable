@@ -1,8 +1,0 @@
-  o Minor refactoring:
-    - Refactor count_usable_descriptors to use named enums for exit_only.
-      count_usable_descriptors now uses named exit_only values:
-       *  USABLE_DESCRIPTOR_ALL
-       *  USABLE_DESCRIPTOR_EXIT_ONLY
-    - Add debug logging code for descriptor counts.
-      This resolves nickm's request in bug 13718 to improve argument
-      readability.

@@ -6,4 +6,4 @@
       This assists in quickly bootstrapping a testing
       Tor network.
       Fixes bugs 13718 and 13823; bugfix on 0.2.0.3-alpha.
-
+      Patch by "teor".
