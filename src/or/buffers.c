@@ -2063,9 +2063,7 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
               socks_request_set_socks5_error(req, SOCKS5_NOT_ALLOWED);
               return -1;
             }
-          }
-
-          if (!string_is_valid_hostname(req->address)) {
+          } else if (!string_is_valid_hostname(req->address)) {
             socks_request_set_socks5_error(req, SOCKS5_GENERAL_ERROR);
 
             log_warn(LD_PROTOCOL,
