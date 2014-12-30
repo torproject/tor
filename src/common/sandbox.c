@@ -1335,6 +1335,13 @@ sandbox_disable_getaddrinfo_cache(void)
   sandbox_getaddrinfo_cache_disabled = 1;
 }
 
+void
+sandbox_freeaddrinfo(struct addrinfo *ai)
+{
+  if (sandbox_getaddrinfo_cache_disabled)
+    freeaddrinfo(ai);
+}
+
 int
 sandbox_getaddrinfo(const char *name, const char *servname,
                     const struct addrinfo *hints,

@@ -145,6 +145,8 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
     - Make transparent proxy support work along with the seccomp2
       sandbox. Fixes part of bug 13808; bugfix on 0.2.5.1-alpha. Patch
       by Francisco Blas Izquierdo Riera.
+    - Fix a memory leak in tor-resolve when running with the sandbox
+      enabled. Fixes bug 14050; bugfix on 0.2.5.9-rc.
 
   o Minor bugfixes (logging):
     - Downgrade warnings about RSA signature failures to info log level.
