@@ -1527,8 +1527,7 @@ find_rp_for_intro(const rend_intro_cell_t *intro,
   }
 
   if (intro->version == 0 || intro->version == 1) {
-    if (intro->version == 1) rp_nickname = (const char *)(intro->u.v1.rp);
-    else rp_nickname = (const char *)(intro->u.v0.rp);
+    rp_nickname = (const char *)(intro->u.v0_v1.rp);
 
     node = node_get_by_nickname(rp_nickname, 0);
     if (!node) {
@@ -1777,11 +1776,7 @@ rend_service_parse_intro_for_v0_or_v1(
     goto err;
   }
 
-  if (intro->version == 1) {
-    memcpy(intro->u.v1.rp, rp_nickname, endptr - rp_nickname + 1);
-  } else {
-    memcpy(intro->u.v0.rp, rp_nickname, endptr - rp_nickname + 1);
-  }
+  memcpy(intro->u.v0_v1.rp, rp_nickname, endptr - rp_nickname + 1);
 
   return ver_specific_len;
 

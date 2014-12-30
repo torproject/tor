@@ -38,13 +38,9 @@ struct rend_intro_cell_s {
   /* Version-specific parts */
   union {
     struct {
-      /* Rendezvous point nickname */
-      uint8_t rp[20];
-    } v0;
-    struct {
       /* Rendezvous point nickname or hex-encoded key digest */
       uint8_t rp[42];
-    } v1;
+    } v0_v1;
     struct {
       /* The extend_info_t struct has everything v2 uses */
       extend_info_t *extend_info;
