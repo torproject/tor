@@ -38,8 +38,9 @@ Changes in version 0.2.6.2-alpha - 2014-12-??
     - Repair automapping with IPv6 addresses; this automapping should
       have worked previously, but one piece of debugging code that we
       inserted to detect a regression actually caused the regression to
-      manifest itself again. Fixes bug 13811; bugfix on 0.2.4.7-alpha.
-      Diagnosed and fixed by Francisco Blas Izquierdo Riera.
+      manifest itself again. Fixes bug 13811 and bug 12831; bugfix on
+      0.2.4.7-alpha. Diagnosed and fixed by Francisco Blas
+      Izquierdo Riera.
 
   o Major bugfixes (hidden services):
     - When closing an introduction circuit that was opened in parallel
