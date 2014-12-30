@@ -2613,12 +2613,23 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     if (rend_service_set_connection_addr_port(n_stream, origin_circ) < 0) {
       log_info(LD_REND,"Didn't find rendezvous service (port %d)",
                n_stream->base_.port);
+      /* Send back reason DONE because we want to make hidden service port
+       * scanning harder thus instead of returning that the exit policy
+       * didn't match, which makes it obvious that the port is closed,
+       * return DONE and kill the circuit. That way, a user (malicious or
+       * not) needs one circuit per bad port unless it matches the policy of
+       * the hidden service. */
       relay_send_end_cell_from_edge(rh.stream_id, circ,
-                                    END_STREAM_REASON_EXITPOLICY,
+                                    END_STREAM_REASON_DONE,
                                     origin_circ->cpath->prev);
       connection_free(TO_CONN(n_stream));
       tor_free(address);
-      return 0;
+
+      /* Drop the circuit here since it might be someone deliberately
+       * scanning the hidden service ports. Note that this mitigates port
+       * scanning by adding more work on the attacker side to successfully
+       * scan but does not fully solve it. */
+      return END_CIRC_AT_ORIGIN;
     }
     assert_circuit_ok(circ);
     log_debug(LD_REND,"Finished assigning addr/port");
