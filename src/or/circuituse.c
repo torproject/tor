@@ -1659,7 +1659,7 @@ have_enough_path_info(int need_exit)
   if (need_exit)
     return router_have_consensus_path() == CONSENSUS_PATH_EXIT;
   else
-    return router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN
+    return router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN;
 }
 
 /** Launch a new circuit with purpose <b>purpose</b> and exit node
