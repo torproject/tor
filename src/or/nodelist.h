@@ -79,7 +79,37 @@ int node_is_unreliable(const node_t *router, int need_uptime,
 int router_exit_policy_all_nodes_reject(const tor_addr_t *addr, uint16_t port,
                                         int need_uptime);
 void router_set_status(const char *digest, int up);
+
+/** router_have_minimum_dir_info tests to see if we have enough
+ * descriptor information to create circuits.
+ * If there are exits in the consensus, we wait until we have enough
+ * info to create exit paths before creating any circuits. If there are
+ * no exits in the consensus, we wait for enough info to create internal
+ * paths, and should avoid creating exit paths, as they will simply fail.
+ * We make sure we create all available circuit types at the same time. */
 int router_have_minimum_dir_info(void);
+
+/** Set to CONSENSUS_PATH_EXIT if there is at least one exit node
+ * in the consensus. We update this flag in compute_frac_paths_available if
+ * there is at least one relay that has an Exit flag in the consensus.
+ * Used to avoid building exit circuits when they will almost certainly fail.
+ * Set to CONSENSUS_PATH_INTERNAL if there are no exits in the consensus.
+ * (This situation typically occurs during bootstrap of a test network.)
+ * Set to CONSENSUS_PATH_UNKNOWN if we have never checked, or have
+ * reason to believe our last known value was invalid or has expired.
+ */
+typedef enum {
+  /* we haven't checked yet, or we have invalidated our previous check */
+  CONSENSUS_PATH_UNKNOWN = -1,
+  /* The consensus only has internal relays, and we should only
+   * create internal paths, circuits, streams, ... */
+  CONSENSUS_PATH_INTERNAL = 0,
+  /* The consensus has at least one exit, and can therefore (potentially)
+   * create exit and internal paths, circuits, streams, ... */
+  CONSENSUS_PATH_EXIT = 1
+} consensus_path_type_t;
+consensus_path_type_t router_have_consensus_path(void);
+
 void router_dir_info_changed(void);
 const char *get_dir_info_status_string(void);
 int count_loading_descriptors_progress(void);

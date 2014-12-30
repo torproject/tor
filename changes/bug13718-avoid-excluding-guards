@@ -1,0 +1,8 @@
+  o Minor bugfixes:
+    - Avoid excluding guards from path building in minimal test networks,
+      when we're in a test network, and excluding guards would exclude
+      all nodes. This typically occurs in incredibly small tor networks,
+      and those using TestingAuthVoteGuard *
+      This fix only applies to minimal, testing tor networks,
+      so it's no less secure.
+      Discovered as part of #13718.

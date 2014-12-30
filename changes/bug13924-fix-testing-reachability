@@ -1,0 +1,7 @@
+  o Minor bugfixes:
+    - Stop assuming that private addresses are local when checking
+      reachability in a TestingTorNetwork. Instead, when testing, assume
+      all OR connections are remote. (This is necessary due to many test
+      scenarios running all nodes on localhost.)
+      This assists in bootstrapping a testing Tor network.
+      Fixes bugs 13718 & 13924.

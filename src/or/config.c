@@ -1833,7 +1833,7 @@ options_act(const or_options_t *old_options)
                  directory_fetches_dir_info_early(old_options)) ||
         !bool_eq(directory_fetches_dir_info_later(options),
                  directory_fetches_dir_info_later(old_options))) {
-      /* Make sure update_router_have_min_dir_info gets called. */
+      /* Make sure update_router_have_minimum_dir_info() gets called. */
       router_dir_info_changed();
       /* We might need to download a new consensus status later or sooner than
        * we had expected. */
