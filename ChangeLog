@@ -1,5 +1,14 @@
-Changes in version 0.2.6.2-alpha - 2014-12-??
+Changes in version 0.2.6.2-alpha - 2014-12-31
   Tor 0.2.6.2-alpha is the second alpha release in the 0.2.6.x series.
+  It introduces a major new backend for deciding when to send cells on
+  channels, which should lead down the road to big performance
+  increases. It contains security and statistics features for better
+  work on hidden services, and numerous bugfixes.
+
+  This release contains many new unit tests, along with major
+  performance improvements for running testing networks using Chutney.
+  Thanks to a series of patches contributed by "teor", testing networks
+  should now bootstrap in seconds, rather than minutes.
 
   o Major features (relay, infrastructure):
     - Completely revision of the code that relays use to decide which
