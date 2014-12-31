@@ -11,9 +11,9 @@ Changes in version 0.2.6.2-alpha - 2014-12-31
   should now bootstrap in seconds, rather than minutes.
 
   o Major features (relay, infrastructure):
-    - Completely revision of the code that relays use to decide which
-      cell to send next. Formerly, we selected the best circuit to write
-      on each channel, but we didn't select among channels in any
+    - Complete revision of the code that relays use to decide which cell
+      to send next. Formerly, we selected the best circuit to write on
+      each channel, but we didn't select among channels in any
       sophisticated way. Now, we choose the best circuits globally from
       among those whose channels are ready to deliver traffic.
 
@@ -21,18 +21,17 @@ Changes in version 0.2.6.2-alpha - 2014-12-31
       high/low watermark mechanism and a global scheduler loop for
       transmission prioritization across all channels as well as among
       circuits on one channel. This schedule is currently tuned to
-      (tolerantly) avoid making changes in the current network
-      performance, but it should form the basis for major circuit
-      performance increases. Code by Andrea; tuning by Rob Jansen;
-      implements ticket 9262.
+      (tolerantly) avoid making changes in network performance, but it
+      should form the basis for major circuit performance increases in
+      the future. Code by Andrea; tuning by Rob Jansen; implements
+      ticket 9262.
 
   o Major features (hidden services):
-    - Make HS port scanning more difficult by sending back REASON_DONE
-      if the exit policy didn't match. Furthermore, immediately close
-      the circuit to slow down port scanning attempts. Closes
-      ticket 13667.
+    - Make HS port scanning more difficult by immediately closing the
+      circuit when a user attempts to connect to a nonexistent port.
+      Closes ticket 13667.
     - Add a HiddenServiceStatistics option that allows Tor relays to
-      gather and publish statistics the overall size and volume of
+      gather and publish statistics about the overall size and volume of
       hidden service usage. Specifically, when this option is turned on,
       an HSDir will publish an approximate number of hidden services
       that have published descriptors to it the past 24 hours. Also, if
@@ -44,7 +43,7 @@ Changes in version 0.2.6.2-alpha - 2014-12-31
       feature is currently disabled by default. Implements feature 13192.
 
   o Major bugfixes (client, automap):
-    - Repair automapping with IPv6 addresses; this automapping should
+    - Repair automapping with IPv6 addresses. This automapping should
       have worked previously, but one piece of debugging code that we
       inserted to detect a regression actually caused the regression to
       manifest itself again. Fixes bug 13811 and bug 12831; bugfix on
@@ -58,6 +57,11 @@ Changes in version 0.2.6.2-alpha - 2014-12-31
       point would make the other introduction points get marked as
       having timed out. Fixes bug 13698; bugfix on 0.0.6rc2.
 
+  o Directory authority changes:
+    - Remove turtles as a directory authority.
+    - Add longclaw as a new (v3) directory authority. This implements
+      ticket 13296. This keeps the directory authority count at 9.
+
   o Major removed features:
     - Tor clients no longer support connecting to hidden services
       running on Tor 0.2.2.x and earlier; the Support022HiddenServices
@@ -70,7 +74,7 @@ Changes in version 0.2.6.2-alpha - 2014-12-31
       Resolves ticket 13315.
 
   o Minor features (controller):
-    - Add a "SIGNAL HEARTBEAT" Tor controller command that tells Tor to
+    - Add a "SIGNAL HEARTBEAT" controller command that tells Tor to
       write an unscheduled heartbeat message to the log. Implements
       feature 9503.
 
@@ -83,9 +87,9 @@ Changes in version 0.2.6.2-alpha - 2014-12-31
       circuits until we have successfully built a circuit. This makes
       hidden services come up faster when the network is re-enabled.
       Patch from "akwizgran". Closes ticket 13447.
-    - Inform Tor controller about nature of a failure to retrieve hidden
-      service descriptor by sending reason string with "HS_DESC FAILED"
-      controller event. Implements feature 13212.
+    - When we fail to a retrieve hidden service descriptor, send the
+      controller an "HS_DESC FAILED" controller event. Implements
+      feature 13212.
     - New HiddenServiceDirGroupReadable option to cause hidden service
       directories and hostname files to be created group-readable. Patch
       from "anon", David Stainton, and "meejah". Closes ticket 11291.
@@ -105,16 +109,16 @@ Changes in version 0.2.6.2-alpha - 2014-12-31
 
   o Minor bugfixes (preventative security, C safety):
     - When reading a hexadecimal, base-32, or base-64 encoded value from
-      a string, always overwrite the complete output buffer. This
-      prevents some bugs where we would look at (but fortunately, not
-      reveal) uninitialized memory on the stack. Fixes bug 14013; bugfix
-      on all versions of Tor.
+      a string, always overwrite the whole output buffer. This prevents
+      some bugs where we would look at (but fortunately, not reveal)
+      uninitialized memory on the stack. Fixes bug 14013; bugfix on all
+      versions of Tor.
     - Clear all memory targetted by tor_addr_{to,from}_sockaddr(), not
       just the part that's used. This makes it harder for data leak bugs
       to occur in the event of other programming failures. Resolves
       ticket 14041.
 
-  o Minor bugfixes (client, micordescriptors):
+  o Minor bugfixes (client, microdescriptors):
     - Use a full 256 bits of the SHA256 digest of a microdescriptor when
       computing which microdescriptors to download. This keeps us from
       erroneous download behavior if two microdescriptor digests ever
@@ -159,12 +163,11 @@ Changes in version 0.2.6.2-alpha - 2014-12-31
 
   o Minor bugfixes (logging):
     - Downgrade warnings about RSA signature failures to info log level.
-      Emit a warning when extra info document is found incompatible with
-      a corresponding router descriptor. Fixes bug 9812; bugfix
+      Emit a warning when an extra info document is found incompatible
+      with a corresponding router descriptor. Fixes bug 9812; bugfix
       on 0.0.6rc3.
-    - Log the circuit ID correctly in
-      connection_ap_handshake_attach_circuit(). Fixes bug 13701; bugfix
-      on 0.0.6.
+    - Make connection_ap_handshake_attach_circuit() log the circuit ID
+      correctly. Fixes bug 13701; bugfix on 0.0.6.
 
   o Minor bugfixes (misc):
     - Stop allowing invalid address patterns like "*/24" that contain
@@ -203,24 +206,20 @@ Changes in version 0.2.6.2-alpha - 2014-12-31
       available. If the consensus does not contain Exits, Tor will only
       build internal circuits. In this case, relevant statuses will
       contain the word "internal" as indicated in the Tor control-
-      spec.txt. When bootstrap completes, Tor will be ready to handle an
-      application requesting an internal circuit to hidden services at
-      ".onion" addresses. If a future consensus contains Exits, exit
+       spec.txt. When bootstrap completes, Tor will be ready to build
+      internal circuits. If a future consensus contains Exits, exit
       circuits may become available. Fixes part of bug 13718; bugfix on
       0.2.4.10-alpha. Patch by "teor".
     - Decrease minimum consensus interval to 10 seconds when
       TestingTorNetwork is set, or 5 seconds for the first consensus.
-      Fix assumptions throughout the code that assume larger interval
-      values. This assists in quickly bootstrapping a testing Tor
-      network. Fixes bugs 13718 and 13823; bugfix on 0.2.0.3-alpha.
-      Patch by "teor".
-    - Avoid excluding guards from path building in minimal test
-      networks, when we're in a test network, and excluding guards would
-      exclude all relays. This typically occurs in incredibly small tor
-      networks, and those using TestingAuthVoteGuard * This fix only
-      applies to minimal, testing tor networks, so it's no less secure.
-      Fixes part of bug 13718; bugfix on 0.1.1.11-alpha. Patch
+      Fix assumptions throughout the code that assume larger intervals.
+      Fixes bugs 13718 and 13823; bugfix on 0.2.0.3-alpha. Patch
       by "teor".
+    - Avoid excluding guards from path building in minimal test
+      networks, when we're in a test network and excluding guards would
+      exclude all relays. This typically occurs in incredibly small tor
+      networks, and those using "TestingAuthVoteGuard *". Fixes part of
+      bug 13718; bugfix on 0.1.1.11-alpha. Patch by "teor".
 
   o Code simplification and refactoring:
     - Stop using can_complete_circuits as a global variable; access it
@@ -230,11 +229,10 @@ Changes in version 0.2.6.2-alpha - 2014-12-31
       Closes ticket 13172.
     - Combine the functions used to parse ClientTransportPlugin and
       ServerTransportPlugin into a single function. Closes ticket 6456.
-    - Add inline functions and convenience macros for quick lookup of
-      state component of channel_t structure. Refactor various parts of
-      codebase to use convenience macros instead of checking state
-      member of channel_t directly. Fixes issue 7356.
-    - Document all members of was_router_added_t enum and rename
+    - Add inline functions and convenience macros for inspecting channel
+      state. Refactor the code to use convenience macros instead of
+      checking channel state directly. Fixes issue 7356.
+    - Document all members of was_router_added_t and rename
       ROUTER_WAS_NOT_NEW to ROUTER_IS_ALREADY_KNOWN to make it less
       confusable with ROUTER_WAS_TOO_OLD. Fixes issue 13644.
     - In connection_exit_begin_conn(), use END_CIRC_REASON_TORPROTOCOL
@@ -243,11 +241,6 @@ Changes in version 0.2.6.2-alpha - 2014-12-31
       implementation, so that we can add a new digest256map
       type trivially.
 
-  o Directory authority changes:
-    - Remove turtles as a directory authority.
-    - Add longclaw as a new (v3) directory authority. This implements
-      ticket 13296. This keeps the directory authority count at 9.
-
   o Documentation:
     - Document the bridge-authority-only 'networkstatus-bridges' file.
       Closes ticket 13713; patch from "tom".
@@ -255,12 +248,12 @@ Changes in version 0.2.6.2-alpha - 2014-12-31
       manpage. Resolves issue 13707.
     - Stop suggesting that users specify relays by nickname: it isn't a
       good idea. Also, properly cross-reference how to specify relays in
-      all parts of the manual for options that take a list of relays.
-      Closes ticket 13381.
-    - Clarify HiddenServiceDir option description in manpage to make it
-      clear that relative paths are taken with respect to the current
-      working directory of Tor instance. Also clarify that this behavior
-      is not guaranteed to remain indefinitely. Fixes issue 13913.
+      all parts of manual documenting options that take a list of
+      relays. Closes ticket 13381.
+    - Clarify the HiddenServiceDir option description in manpage to make
+      it clear that relative paths are taken with respect to the current
+      working directory. Also clarify that this behavior is not
+      guaranteed to remain indefinitely. Fixes issue 13913.
 
   o Testing:
     - New tests for many parts of channel, relay, and circuitmux
