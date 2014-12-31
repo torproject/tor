@@ -172,7 +172,7 @@ Changes in version 0.2.6.2-alpha - 2014-12-31
       our address-range parsing code. Fixes bug 7484; bugfix
       on 0.0.2pre14.
 
-  o Minor bugfixes (testing networks):
+  o Minor bugfixes (testing networks, fast startup):
     - Allow Tor to build circuits using a consensus with no exits. If
       the consensus has no exits (typical of a bootstrapping test
       network), allow Tor to build circuits once enough descriptors have
@@ -187,7 +187,7 @@ Changes in version 0.2.6.2-alpha - 2014-12-31
     - Stop assuming that private addresses are local when checking
       reachability in a TestingTorNetwork. Instead, when testing, assume
       all OR connections are remote. (This is necessary due to many test
-      scenarios running all nodes on localhost.) This assists in
+      scenarios running all relays on localhost.) This assists in
       bootstrapping a testing Tor network. Fixes bug 13924; bugfix on
       0.1.0.1-rc. Patch by "teor".
     - Avoid building exit circuits from a consensus with no exits. Now
@@ -216,7 +216,7 @@ Changes in version 0.2.6.2-alpha - 2014-12-31
       Patch by "teor".
     - Avoid excluding guards from path building in minimal test
       networks, when we're in a test network, and excluding guards would
-      exclude all nodes. This typically occurs in incredibly small tor
+      exclude all relays. This typically occurs in incredibly small tor
       networks, and those using TestingAuthVoteGuard * This fix only
       applies to minimal, testing tor networks, so it's no less secure.
       Fixes part of bug 13718; bugfix on 0.1.1.11-alpha. Patch
@@ -253,9 +253,9 @@ Changes in version 0.2.6.2-alpha - 2014-12-31
       Closes ticket 13713; patch from "tom".
     - Fix typo in PredictedPortsRelevanceTime option description in
       manpage. Resolves issue 13707.
-    - Stop suggesting that users specify nodes by nickname: it isn't a
-      good idea. Also, properly cross-reference how to specify nodes in
-      all parts of the manual for options that take a list of nodes.
+    - Stop suggesting that users specify relays by nickname: it isn't a
+      good idea. Also, properly cross-reference how to specify relays in
+      all parts of the manual for options that take a list of relays.
       Closes ticket 13381.
     - Clarify HiddenServiceDir option description in manpage to make it
       clear that relative paths are taken with respect to the current
@@ -263,10 +263,10 @@ Changes in version 0.2.6.2-alpha - 2014-12-31
       is not guaranteed to remain indefinitely. Fixes issue 13913.
 
   o Testing:
-    - New tests for many parts of channel, relay, and circuit mux
+    - New tests for many parts of channel, relay, and circuitmux
       functionality. Code by Andrea; part of 9262.
     - New tests for parse_transport_line(). Part of ticket 6456.
-    - In the unit tests, use 'chgrp' to change the group of the unit
+    - In the unit tests, use chgrp() to change the group of the unit
       test temporary directory to the current user, so that the sticky
       bit doesn't interfere with tests that check directory groups.
       Closes 13678.
