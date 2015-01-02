@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2014, The Tor Project, Inc. */
+/* Copyright (c) 2009-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #ifndef TOR_COMPAT_LIBEVENT_H
