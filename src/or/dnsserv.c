@@ -155,8 +155,8 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
 
   entry_conn->socks_request->listener_type = listener->base_.type;
   entry_conn->dns_server_request = req;
-  entry_conn->isolation_flags = listener->isolation_flags;
-  entry_conn->session_group = listener->session_group;
+  entry_conn->isolation_flags = listener->entry_cfg.isolation_flags;
+  entry_conn->session_group = listener->entry_cfg.session_group;
   entry_conn->nym_epoch = get_signewnym_epoch();
 
   if (connection_add(ENTRY_TO_CONN(entry_conn)) < 0) {
