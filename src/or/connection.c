@@ -1198,10 +1198,10 @@ connection_listener_new(const struct sockaddr *listensockaddr,
   conn->port = gotPort;
   tor_addr_copy(&conn->addr, &addr);
 
-  if (port_cfg->isolation_flags) {
-    lis_conn->isolation_flags = port_cfg->isolation_flags;
-    if (port_cfg->session_group >= 0) {
-      lis_conn->session_group = port_cfg->session_group;
+  if (port_cfg->entry_cfg.isolation_flags) {
+    lis_conn->isolation_flags = port_cfg->entry_cfg.isolation_flags;
+    if (port_cfg->entry_cfg.session_group >= 0) {
+      lis_conn->session_group = port_cfg->entry_cfg.session_group;
     } else {
       /* This can wrap after around INT_MAX listeners are opened.  But I don't
        * believe that matters, since you would need to open a ridiculous
@@ -1213,19 +1213,19 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     }
   }
   if (type == CONN_TYPE_AP_LISTENER) {
-    lis_conn->socks_ipv4_traffic = port_cfg->ipv4_traffic;
-    lis_conn->socks_ipv6_traffic = port_cfg->ipv6_traffic;
-    lis_conn->socks_prefer_ipv6 = port_cfg->prefer_ipv6;
+    lis_conn->socks_ipv4_traffic = port_cfg->entry_cfg.ipv4_traffic;
+    lis_conn->socks_ipv6_traffic = port_cfg->entry_cfg.ipv6_traffic;
+    lis_conn->socks_prefer_ipv6 = port_cfg->entry_cfg.prefer_ipv6;
   } else {
     lis_conn->socks_ipv4_traffic = 1;
     lis_conn->socks_ipv6_traffic = 1;
   }
-  lis_conn->cache_ipv4_answers = port_cfg->cache_ipv4_answers;
-  lis_conn->cache_ipv6_answers = port_cfg->cache_ipv6_answers;
-  lis_conn->use_cached_ipv4_answers = port_cfg->use_cached_ipv4_answers;
-  lis_conn->use_cached_ipv6_answers = port_cfg->use_cached_ipv6_answers;
-  lis_conn->prefer_ipv6_virtaddr = port_cfg->prefer_ipv6_virtaddr;
-  lis_conn->socks_prefer_no_auth = port_cfg->socks_prefer_no_auth;
+  lis_conn->cache_ipv4_answers = port_cfg->entry_cfg.cache_ipv4_answers;
+  lis_conn->cache_ipv6_answers = port_cfg->entry_cfg.cache_ipv6_answers;
+  lis_conn->use_cached_ipv4_answers = port_cfg->entry_cfg.use_cached_ipv4_answers;
+  lis_conn->use_cached_ipv6_answers = port_cfg->entry_cfg.use_cached_ipv6_answers;
+  lis_conn->prefer_ipv6_virtaddr = port_cfg->entry_cfg.prefer_ipv6_virtaddr;
+  lis_conn->socks_prefer_no_auth = port_cfg->entry_cfg.socks_prefer_no_auth;
 
   if (connection_add(conn) < 0) { /* no space, forget it */
     log_warn(LD_NET,"connection_add for listener failed. Giving up.");
@@ -2184,7 +2184,7 @@ retry_listener_ports(smartlist_t *old_conns,
           (conn->socket_family == AF_UNIX && ! wanted->is_unix_addr))
         continue;
 
-      if (wanted->no_listen)
+      if (wanted->server_cfg.no_listen)
         continue; /* We don't want to open a listener for this one */
 
       if (wanted->is_unix_addr) {
@@ -2225,7 +2225,7 @@ retry_listener_ports(smartlist_t *old_conns,
     connection_t *conn;
     int real_port = port->port == CFG_AUTO_PORT ? 0 : port->port;
     tor_assert(real_port <= UINT16_MAX);
-    if (port->no_listen)
+    if (port->server_cfg.no_listen)
       continue;
 
     if (port->is_unix_addr) {

@@ -3334,29 +3334,16 @@ typedef enum invalid_router_usage_t {
 /** First automatically allocated session group number */
 #define SESSION_GROUP_FIRST_AUTO -4
 
-/** Configuration for a single port that we're listening on. */
-typedef struct port_cfg_t {
-  tor_addr_t addr; /**< The actual IP to listen on, if !is_unix_addr. */
-  int port; /**< The configured port, or CFG_AUTO_PORT to tell Tor to pick its
-             * own port. */
-  uint8_t type; /**< One of CONN_TYPE_*_LISTENER */
-  unsigned is_unix_addr : 1; /**< True iff this is an AF_UNIX address. */
-
+typedef struct entry_port_cfg_t {
   /* Client port types (socks, dns, trans, natd) only: */
   uint8_t isolation_flags; /**< Zero or more isolation flags */
   int session_group; /**< A session group, or -1 if this port is not in a
                       * session group. */
+
   /* Socks only: */
   /** When both no-auth and user/pass are advertised by a SOCKS client, select
    * no-auth. */
   unsigned int socks_prefer_no_auth : 1;
-
-  /* Server port types (or, dir) only: */
-  unsigned int no_advertise : 1;
-  unsigned int no_listen : 1;
-  unsigned int all_addrs : 1;
-  unsigned int bind_ipv4_only : 1;
-  unsigned int bind_ipv6_only : 1;
 
   /* Client port types only: */
   unsigned int ipv4_traffic : 1;
@@ -3380,6 +3367,29 @@ typedef struct port_cfg_t {
   /** For socks listeners: When we can automap an address to IPv4 or IPv6,
    * do we prefer IPv6? */
   unsigned int prefer_ipv6_virtaddr : 1;
+
+} entry_port_cfg_t;
+
+typedef struct server_port_cfg_t {
+  /* Server port types (or, dir) only: */
+  unsigned int no_advertise : 1;
+  unsigned int no_listen : 1;
+  unsigned int all_addrs : 1;
+  unsigned int bind_ipv4_only : 1;
+  unsigned int bind_ipv6_only : 1;
+} server_port_cfg_t;
+
+/** Configuration for a single port that we're listening on. */
+typedef struct port_cfg_t {
+  tor_addr_t addr; /**< The actual IP to listen on, if !is_unix_addr. */
+  int port; /**< The configured port, or CFG_AUTO_PORT to tell Tor to pick its
+             * own port. */
+  uint8_t type; /**< One of CONN_TYPE_*_LISTENER */
+  unsigned is_unix_addr : 1; /**< True iff this is an AF_UNIX address. */
+
+  entry_port_cfg_t entry_cfg;
+
+  server_port_cfg_t server_cfg;
 
   /* Unix sockets only: */
   /** Path for an AF_UNIX address */
