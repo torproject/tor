@@ -1212,20 +1212,14 @@ connection_listener_new(const struct sockaddr *listensockaddr,
       lis_conn->entry_cfg.session_group = global_next_session_group--;
     }
   }
-  if (type == CONN_TYPE_AP_LISTENER) {
-    lis_conn->entry_cfg.ipv4_traffic = port_cfg->entry_cfg.ipv4_traffic;
-    lis_conn->entry_cfg.ipv6_traffic = port_cfg->entry_cfg.ipv6_traffic;
-    lis_conn->entry_cfg.prefer_ipv6 = port_cfg->entry_cfg.prefer_ipv6;
-  } else {
+
+  memcpy(&lis_conn->entry_cfg, &port_cfg->entry_cfg, sizeof(entry_port_cfg_t));
+
+  if (type != CONN_TYPE_AP_LISTENER) {
     lis_conn->entry_cfg.ipv4_traffic = 1;
     lis_conn->entry_cfg.ipv6_traffic = 1;
+    lis_conn->entry_cfg.prefer_ipv6 = 0;
   }
-  lis_conn->entry_cfg.cache_ipv4_answers = port_cfg->entry_cfg.cache_ipv4_answers;
-  lis_conn->entry_cfg.cache_ipv6_answers = port_cfg->entry_cfg.cache_ipv6_answers;
-  lis_conn->entry_cfg.use_cached_ipv4_answers = port_cfg->entry_cfg.use_cached_ipv4_answers;
-  lis_conn->entry_cfg.use_cached_ipv6_answers = port_cfg->entry_cfg.use_cached_ipv6_answers;
-  lis_conn->entry_cfg.prefer_ipv6_virtaddr = port_cfg->entry_cfg.prefer_ipv6_virtaddr;
-  lis_conn->entry_cfg.socks_prefer_no_auth = port_cfg->entry_cfg.socks_prefer_no_auth;
 
   if (connection_add(conn) < 0) { /* no space, forget it */
     log_warn(LD_NET,"connection_add for listener failed. Giving up.");
@@ -1417,10 +1411,6 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     newconn->port = port;
     newconn->address = tor_dup_addr(&addr);
 
-    if (new_type == CONN_TYPE_AP) {
-      TO_ENTRY_CONN(newconn)->socks_request->socks_prefer_no_auth =
-        TO_LISTENER_CONN(conn)->entry_cfg.socks_prefer_no_auth;
-    }
     if (new_type == CONN_TYPE_CONTROL) {
       log_notice(LD_CONTROL, "New control connection opened from %s.",
                  fmt_and_decorate_addr(&addr));
@@ -1483,25 +1473,16 @@ connection_init_accepted_conn(connection_t *conn,
       return rv;
       break;
     case CONN_TYPE_AP:
-      TO_ENTRY_CONN(conn)->entry_cfg.isolation_flags = listener->entry_cfg.isolation_flags;
-      TO_ENTRY_CONN(conn)->entry_cfg.session_group = listener->entry_cfg.session_group;
+      memcpy(&TO_ENTRY_CONN(conn)->entry_cfg, &listener->entry_cfg,
+             sizeof(entry_port_cfg_t));
       TO_ENTRY_CONN(conn)->nym_epoch = get_signewnym_epoch();
       TO_ENTRY_CONN(conn)->socks_request->listener_type = listener->base_.type;
-      TO_ENTRY_CONN(conn)->entry_cfg.ipv4_traffic = listener->entry_cfg.ipv4_traffic;
-      TO_ENTRY_CONN(conn)->entry_cfg.ipv6_traffic = listener->entry_cfg.ipv6_traffic;
-      TO_ENTRY_CONN(conn)->entry_cfg.prefer_ipv6 = listener->entry_cfg.prefer_ipv6;
-      TO_ENTRY_CONN(conn)->entry_cfg.cache_ipv4_answers = listener->entry_cfg.cache_ipv4_answers;
-      TO_ENTRY_CONN(conn)->entry_cfg.cache_ipv6_answers = listener->entry_cfg.cache_ipv6_answers;
-      TO_ENTRY_CONN(conn)->entry_cfg.use_cached_ipv4_answers =
-        listener->entry_cfg.use_cached_ipv4_answers;
-      TO_ENTRY_CONN(conn)->entry_cfg.use_cached_ipv6_answers =
-        listener->entry_cfg.use_cached_ipv6_answers;
-      TO_ENTRY_CONN(conn)->entry_cfg.prefer_ipv6_virtaddr =
-        listener->entry_cfg.prefer_ipv6_virtaddr;
 
       switch (TO_CONN(listener)->type) {
         case CONN_TYPE_AP_LISTENER:
           conn->state = AP_CONN_STATE_SOCKS_WAIT;
+          TO_ENTRY_CONN(conn)->socks_request->socks_prefer_no_auth =
+            listener->entry_cfg.socks_prefer_no_auth;
           break;
         case CONN_TYPE_AP_TRANS_LISTENER:
           TO_ENTRY_CONN(conn)->is_transparent_ap = 1;
