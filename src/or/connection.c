@@ -305,9 +305,9 @@ entry_connection_new(int type, int socket_family)
    * in a little while.  Otherwise, we're doing this as a linked connection
    * of some kind, and we should set it up here based on the socket family */
   if (socket_family == AF_INET)
-    entry_conn->ipv4_traffic_ok = 1;
+    entry_conn->entry_cfg.ipv4_traffic = 1;
   else if (socket_family == AF_INET6)
-    entry_conn->ipv6_traffic_ok = 1;
+    entry_conn->entry_cfg.ipv6_traffic = 1;
   return entry_conn;
 }
 
@@ -1483,20 +1483,20 @@ connection_init_accepted_conn(connection_t *conn,
       return rv;
       break;
     case CONN_TYPE_AP:
-      TO_ENTRY_CONN(conn)->isolation_flags = listener->entry_cfg.isolation_flags;
-      TO_ENTRY_CONN(conn)->session_group = listener->entry_cfg.session_group;
+      TO_ENTRY_CONN(conn)->entry_cfg.isolation_flags = listener->entry_cfg.isolation_flags;
+      TO_ENTRY_CONN(conn)->entry_cfg.session_group = listener->entry_cfg.session_group;
       TO_ENTRY_CONN(conn)->nym_epoch = get_signewnym_epoch();
       TO_ENTRY_CONN(conn)->socks_request->listener_type = listener->base_.type;
-      TO_ENTRY_CONN(conn)->ipv4_traffic_ok = listener->entry_cfg.ipv4_traffic;
-      TO_ENTRY_CONN(conn)->ipv6_traffic_ok = listener->entry_cfg.ipv6_traffic;
-      TO_ENTRY_CONN(conn)->prefer_ipv6_traffic = listener->entry_cfg.prefer_ipv6;
-      TO_ENTRY_CONN(conn)->cache_ipv4_answers = listener->entry_cfg.cache_ipv4_answers;
-      TO_ENTRY_CONN(conn)->cache_ipv6_answers = listener->entry_cfg.cache_ipv6_answers;
-      TO_ENTRY_CONN(conn)->use_cached_ipv4_answers =
+      TO_ENTRY_CONN(conn)->entry_cfg.ipv4_traffic = listener->entry_cfg.ipv4_traffic;
+      TO_ENTRY_CONN(conn)->entry_cfg.ipv6_traffic = listener->entry_cfg.ipv6_traffic;
+      TO_ENTRY_CONN(conn)->entry_cfg.prefer_ipv6 = listener->entry_cfg.prefer_ipv6;
+      TO_ENTRY_CONN(conn)->entry_cfg.cache_ipv4_answers = listener->entry_cfg.cache_ipv4_answers;
+      TO_ENTRY_CONN(conn)->entry_cfg.cache_ipv6_answers = listener->entry_cfg.cache_ipv6_answers;
+      TO_ENTRY_CONN(conn)->entry_cfg.use_cached_ipv4_answers =
         listener->entry_cfg.use_cached_ipv4_answers;
-      TO_ENTRY_CONN(conn)->use_cached_ipv6_answers =
+      TO_ENTRY_CONN(conn)->entry_cfg.use_cached_ipv6_answers =
         listener->entry_cfg.use_cached_ipv6_answers;
-      TO_ENTRY_CONN(conn)->prefer_ipv6_virtaddr =
+      TO_ENTRY_CONN(conn)->entry_cfg.prefer_ipv6_virtaddr =
         listener->entry_cfg.prefer_ipv6_virtaddr;
 
       switch (TO_CONN(listener)->type) {

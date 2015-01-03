@@ -1611,12 +1611,10 @@ typedef struct entry_connection_t {
                                    * only.) */
 
   /* === Isolation related, AP only. === */
-  /** AP only: based on which factors do we isolate this stream? */
-  uint8_t isolation_flags;
-  /** AP only: what session group is this stream in? */
-  int session_group;
+  entry_port_cfg_t entry_cfg;
   /** AP only: The newnym epoch in which we created this connection. */
   unsigned nym_epoch;
+
   /** AP only: The original requested address before we rewrote it. */
   char *original_dest_address;
   /* Other fields to isolate on already exist.  The ClientAddr is addr.  The
@@ -1674,33 +1672,6 @@ typedef struct entry_connection_t {
    * the exit has sent a CONNECTED cell) and we have chosen to use it.
    */
   unsigned int may_use_optimistic_data : 1;
-
-  /** Should we permit IPv4 and IPv6 traffic to use this connection?
-   *
-   * @{ */
-  unsigned int ipv4_traffic_ok : 1;
-  unsigned int ipv6_traffic_ok : 1;
-  /** @} */
-  /** Should we say we prefer IPv6 traffic? */
-  unsigned int prefer_ipv6_traffic : 1;
-
-  /** For a socks listener: should we cache IPv4/IPv6 DNS information that
-   * exit nodes tell us?
-   *
-   * @{ */
-  unsigned int cache_ipv4_answers : 1;
-  unsigned int cache_ipv6_answers : 1;
-  /** @} */
-  /** For a socks listeners: if we find an answer in our client-side DNS cache,
-   * should we use it?
-   *
-   * @{ */
-  unsigned int use_cached_ipv4_answers : 1;
-  unsigned int use_cached_ipv6_answers : 1;
-  /** @} */
-  /** For socks listeners: When we can automap an address to IPv4 or IPv6,
-   * do we prefer IPv6? */
-  unsigned int prefer_ipv6_virtaddr : 1;
 
 } entry_connection_t;
 
