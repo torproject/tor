@@ -1,0 +1,4 @@
+
+  o Minor bugfixes (automapping):
+    - Prevent changes to other optoins from removing the wildcard value "."
+      from "AutomapHostsSuffixes".

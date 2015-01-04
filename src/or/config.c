@@ -3398,15 +3398,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
                                  AF_INET6, 1, msg)<0)
     return -1;
 
-  if (options->AutomapHostsSuffixes) {
-    SMARTLIST_FOREACH(options->AutomapHostsSuffixes, char *, suf,
-    {
-      size_t len = strlen(suf);
-      if (len && suf[len-1] == '.')
-        suf[len-1] = '\0';
-    });
-  }
-
   if (options->TestingTorNetwork &&
       !(options->DirAuthorities ||
         (options->AlternateDirAuthority &&
