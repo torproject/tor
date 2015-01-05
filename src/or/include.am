@@ -123,6 +123,9 @@ src_or_tor_cov_LDADD = src/or/libtor-testing.a src/common/libor-testing.a \
 	src/common/libor-event-testing.a \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ @TOR_OPENSSL_LIBS@ \
 	@TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@ @TOR_SYSTEMD_LIBS@
+TESTING_TOR_BINARY = ./src/or/tor-cov
+else
+TESTING_TOR_BINARY = ./src/or/tor
 endif
 
 ORHEADERS = \

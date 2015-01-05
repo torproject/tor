@@ -1,0 +1,6 @@
+  o Testing:
+
+    - New "make test-stem" target to run stem integration tests.
+      Requires that the "STEM_SOURCE_DIR" environment variable be set.
+      Closes ticket 14107.
+
