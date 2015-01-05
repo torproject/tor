@@ -531,7 +531,7 @@ rend_config_services(const or_options_t *options, int validate_only)
     }
   }
   if (service) {
-    cpd_check_t check_opts = CPD_CHECK_MODE_ONLY;
+    cpd_check_t check_opts = CPD_CHECK_MODE_ONLY|CPD_CHECK;
     if (service->dir_group_readable) {
       check_opts |= CPD_GROUP_READ;
     }
