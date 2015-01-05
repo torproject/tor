@@ -2584,11 +2584,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
       REJECT("Failed to resolve/guess local address. See logs for details.");
   }
 
-#ifndef _WIN32
-  if (options->RunAsDaemon && torrc_fname && path_is_relative(torrc_fname))
-    REJECT("Can't use a relative path to torrc when RunAsDaemon is set.");
-#endif
-
   if (server_mode(options) && options->RendConfigLines)
     log_warn(LD_CONFIG,
         "Tor is currently configured as a relay and a hidden service. "
@@ -4152,13 +4147,16 @@ load_torrc_from_disk(config_line_t *cmd_arg, int defaults_file)
   int ignore_missing_torrc = 0;
   char **fname_var = defaults_file ? &torrc_defaults_fname : &torrc_fname;
 
-  fname = find_torrc_filename(cmd_arg, defaults_file,
-                              &using_default_torrc, &ignore_missing_torrc);
-  tor_assert(fname);
+  if (*fname_var == NULL) {
+    fname = find_torrc_filename(cmd_arg, defaults_file,
+                                &using_default_torrc, &ignore_missing_torrc);
+    tor_assert(fname);
+    tor_free(*fname_var);
+    *fname_var = fname;
+  } else {
+    fname = *fname_var;
+  }
   log_debug(LD_CONFIG, "Opening config file \"%s\"", fname);
-
-  tor_free(*fname_var);
-  *fname_var = fname;
 
   /* Open config file */
   if (file_status(fname) != FN_FILE ||
