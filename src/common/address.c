@@ -1484,6 +1484,72 @@ tor_addr_is_multicast(const tor_addr_t *a)
   return 0;
 }
 
+/** Attempt to retrieve IP address of current host by utilizing some
+ * UDP socket trickery. Only look for address of given <b>family</b>.
+ * Set result to *<b>addr</b>. Return 0 on success, -1 on failure.
+ */
+STATIC int
+get_interface_address6_via_udp_socket_hack(int severity,
+                                           sa_family_t family,
+                                           tor_addr_t *addr)
+{
+  struct sockaddr_storage my_addr, target_addr;
+  int sock=-1, r=-1;
+  socklen_t addr_len;
+
+  memset(addr, 0, sizeof(tor_addr_t));
+  memset(&target_addr, 0, sizeof(target_addr));
+
+  /* Don't worry: no packets are sent. We just need to use a real address
+   * on the actual Internet. */
+  if (family == AF_INET6) {
+    struct sockaddr_in6 *sin6 = (struct sockaddr_in6*)&target_addr;
+    /* Use the "discard" service port */
+    sin6->sin6_port = htons(9);
+    sock = tor_open_socket(PF_INET6,SOCK_DGRAM,IPPROTO_UDP);
+    addr_len = (socklen_t)sizeof(struct sockaddr_in6);
+    sin6->sin6_family = AF_INET6;
+    S6_ADDR16(sin6->sin6_addr)[0] = htons(0x2002); /* 2002:: */
+  } else if (family == AF_INET) {
+    struct sockaddr_in *sin = (struct sockaddr_in*)&target_addr;
+    /* Use the "discard" service port */
+    sin->sin_port = htons(9);
+    sock = tor_open_socket(PF_INET,SOCK_DGRAM,IPPROTO_UDP);
+    addr_len = (socklen_t)sizeof(struct sockaddr_in);
+    sin->sin_family = AF_INET;
+    sin->sin_addr.s_addr = htonl(0x12000001); /* 18.0.0.1 */
+  } else {
+    return -1;
+  }
+
+  if (sock < 0) {
+    int e = tor_socket_errno(-1);
+    log_fn(severity, LD_NET, "unable to create socket: %s",
+           tor_socket_strerror(e));
+    goto err;
+  }
+
+  if (connect(sock,(struct sockaddr *)&target_addr, addr_len) < 0) {
+    int e = tor_socket_errno(sock);
+    log_fn(severity, LD_NET, "connect() failed: %s", tor_socket_strerror(e));
+    goto err;
+  }
+
+  if (getsockname(sock,(struct sockaddr*)&my_addr, &addr_len)) {
+    int e = tor_socket_errno(sock);
+    log_fn(severity, LD_NET, "getsockname() to determine interface failed: %s",
+           tor_socket_strerror(e));
+    goto err;
+  }
+
+  tor_addr_from_sockaddr(addr, (struct sockaddr*)&my_addr, NULL);
+  r=0;
+ err:
+  if (sock >= 0)
+    tor_close_socket(sock);
+  return r;
+}
+
 /** Set *<b>addr</b> to the IP address (if any) of whatever interface
  * connects to the Internet.  This address should only be used in checking
  * whether our address has changed.  Return 0 on success, -1 on failure.
@@ -1493,9 +1559,6 @@ get_interface_address6,(int severity, sa_family_t family, tor_addr_t *addr))
 {
   /* XXX really, this function should yield a smartlist of addresses. */
   smartlist_t *addrs;
-  int sock=-1, r=-1;
-  struct sockaddr_storage my_addr, target_addr;
-  socklen_t addr_len;
   tor_assert(addr);
 
   /* Try to do this the smart way if possible. */
@@ -1523,55 +1586,7 @@ get_interface_address6,(int severity, sa_family_t family, tor_addr_t *addr))
   }
 
   /* Okay, the smart way is out. */
-  memset(addr, 0, sizeof(tor_addr_t));
-  memset(&target_addr, 0, sizeof(target_addr));
-  /* Don't worry: no packets are sent. We just need to use a real address
-   * on the actual Internet. */
-  if (family == AF_INET6) {
-    struct sockaddr_in6 *sin6 = (struct sockaddr_in6*)&target_addr;
-    /* Use the "discard" service port */
-    sin6->sin6_port = htons(9);
-    sock = tor_open_socket(PF_INET6,SOCK_DGRAM,IPPROTO_UDP);
-    addr_len = (socklen_t)sizeof(struct sockaddr_in6);
-    sin6->sin6_family = AF_INET6;
-    S6_ADDR16(sin6->sin6_addr)[0] = htons(0x2002); /* 2002:: */
-  } else if (family == AF_INET) {
-    struct sockaddr_in *sin = (struct sockaddr_in*)&target_addr;
-    /* Use the "discard" service port */
-    sin->sin_port = htons(9);
-    sock = tor_open_socket(PF_INET,SOCK_DGRAM,IPPROTO_UDP);
-    addr_len = (socklen_t)sizeof(struct sockaddr_in);
-    sin->sin_family = AF_INET;
-    sin->sin_addr.s_addr = htonl(0x12000001); /* 18.0.0.1 */
-  } else {
-    return -1;
-  }
-  if (sock < 0) {
-    int e = tor_socket_errno(-1);
-    log_fn(severity, LD_NET, "unable to create socket: %s",
-           tor_socket_strerror(e));
-    goto err;
-  }
-
-  if (connect(sock,(struct sockaddr *)&target_addr, addr_len) < 0) {
-    int e = tor_socket_errno(sock);
-    log_fn(severity, LD_NET, "connect() failed: %s", tor_socket_strerror(e));
-    goto err;
-  }
-
-  if (getsockname(sock,(struct sockaddr*)&my_addr, &addr_len)) {
-    int e = tor_socket_errno(sock);
-    log_fn(severity, LD_NET, "getsockname() to determine interface failed: %s",
-           tor_socket_strerror(e));
-    goto err;
-  }
-
-  tor_addr_from_sockaddr(addr, (struct sockaddr*)&my_addr, NULL);
-  r=0;
- err:
-  if (sock >= 0)
-    tor_close_socket(sock);
-  return r;
+  return get_interface_address6_via_udp_socket_hack(severity,family,addr);
 }
 
 /* ======
