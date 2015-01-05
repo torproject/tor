@@ -1,0 +1,4 @@
+  o Minor features (testing networks):
+    - Drop the minimum RendPostPeriod on a testing network to 5 seconds,
+      and the default to 2 minutes. Closes ticket 13401.
+
