@@ -704,6 +704,9 @@ static strmap_t *rend_cache = NULL;
  * directories. */
 static digestmap_t *rend_cache_v2_dir = NULL;
 
+/** DOCDOC */
+static size_t rend_cache_total_allocation = 0;
+
 /** Initializes the service descriptor cache.
  */
 void
@@ -713,12 +716,64 @@ rend_cache_init(void)
   rend_cache_v2_dir = digestmap_new();
 }
 
+/** Return the approximate number of bytes needed to hold <b>e</b>. */
+static size_t
+rend_cache_entry_allocation(const rend_cache_entry_t *e)
+{
+  if (!e)
+    return 0;
+
+  /* This doesn't count intro_nodes or key size */
+  return sizeof(*e) + e->len + sizeof(*e->parsed);
+}
+
+/** DOCDOC */
+size_t
+rend_cache_get_total_allocation(void)
+{
+  return rend_cache_total_allocation;
+}
+
+/** Decrement the total bytes attributed to the rendezvous cache by n. */
+static void
+rend_cache_decrement_allocation(size_t n)
+{
+  static int have_underflowed = 0;
+
+  if (rend_cache_total_allocation >= n) {
+    rend_cache_total_allocation -= n;
+  } else {
+    rend_cache_total_allocation = 0;
+    if (! have_underflowed) {
+      have_underflowed = 1;
+      log_warn(LD_BUG, "Underflow in rend_cache_decrement_allocation");
+    }
+  }
+}
+
+/** Increase the total bytes attributed to the rendezvous cache by n. */
+static void
+rend_cache_increment_allocation(size_t n)
+{
+  static int have_overflowed = 0;
+  if (rend_cache_total_allocation <= SIZE_MAX - n) {
+    rend_cache_total_allocation += n;
+  } else {
+    rend_cache_total_allocation = SIZE_MAX;
+    if (! have_overflowed) {
+      have_overflowed = 1;
+      log_warn(LD_BUG, "Overflow in rend_cache_increment_allocation");
+    }
+  }
+}
+
 /** Helper: free storage held by a single service descriptor cache entry. */
 static void
 rend_cache_entry_free(rend_cache_entry_t *e)
 {
   if (!e)
     return;
+  rend_cache_decrement_allocation(rend_cache_entry_allocation(e));
   rend_service_descriptor_free(e->parsed);
   tor_free(e->desc);
   tor_free(e);
@@ -740,6 +795,7 @@ rend_cache_free_all(void)
   digestmap_free(rend_cache_v2_dir, rend_cache_entry_free_);
   rend_cache = NULL;
   rend_cache_v2_dir = NULL;
+  rend_cache_total_allocation = 0;
 }
 
 /** Removes all old entries from the service descriptor cache.
@@ -777,31 +833,46 @@ rend_cache_purge(void)
 }
 
 /** Remove all old v2 descriptors and those for which this hidden service
- * directory is not responsible for any more. */
+ * directory is not responsible for any more.
+ *
+ * If at all possible, remove at least <b>force_remove</b> bytes of data.
+ */
 void
-rend_cache_clean_v2_descs_as_dir(time_t now)
+rend_cache_clean_v2_descs_as_dir(time_t now, size_t force_remove)
 {
   digestmap_iter_t *iter;
   time_t cutoff = now - REND_CACHE_MAX_AGE - REND_CACHE_MAX_SKEW;
-  for (iter = digestmap_iter_init(rend_cache_v2_dir);
-       !digestmap_iter_done(iter); ) {
-    const char *key;
-    void *val;
-    rend_cache_entry_t *ent;
-    digestmap_iter_get(iter, &key, &val);
-    ent = val;
-    if (ent->parsed->timestamp < cutoff ||
-        !hid_serv_responsible_for_desc_id(key)) {
-      char key_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
-      base32_encode(key_base32, sizeof(key_base32), key, DIGEST_LEN);
-      log_info(LD_REND, "Removing descriptor with ID '%s' from cache",
-               safe_str_client(key_base32));
-      iter = digestmap_iter_next_rmv(rend_cache_v2_dir, iter);
-      rend_cache_entry_free(ent);
-    } else {
-      iter = digestmap_iter_next(rend_cache_v2_dir, iter);
+  const int LAST_SERVED_CUTOFF_STEP = 1800;
+  time_t last_served_cutoff = cutoff;
+  size_t bytes_removed = 0;
+  do {
+    for (iter = digestmap_iter_init(rend_cache_v2_dir);
+         !digestmap_iter_done(iter); ) {
+      const char *key;
+      void *val;
+      rend_cache_entry_t *ent;
+      digestmap_iter_get(iter, &key, &val);
+      ent = val;
+      if (ent->parsed->timestamp < cutoff ||
+          ent->last_served < last_served_cutoff ||
+          !hid_serv_responsible_for_desc_id(key)) {
+        char key_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
+        base32_encode(key_base32, sizeof(key_base32), key, DIGEST_LEN);
+        log_info(LD_REND, "Removing descriptor with ID '%s' from cache",
+                 safe_str_client(key_base32));
+        bytes_removed += rend_cache_entry_allocation(ent);
+        iter = digestmap_iter_next_rmv(rend_cache_v2_dir, iter);
+        rend_cache_entry_free(ent);
+      } else {
+        iter = digestmap_iter_next(rend_cache_v2_dir, iter);
+      }
     }
-  }
+
+    /* In case we didn't remove enough bytes, advance the cutoff a little. */
+    last_served_cutoff += LAST_SERVED_CUTOFF_STEP;
+    if (last_served_cutoff > now)
+      break;
+  } while (bytes_removed < force_remove);
 }
 
 /** Determines whether <b>a</b> is in the interval of <b>b</b> (excluded) and
@@ -903,6 +974,7 @@ rend_cache_lookup_v2_desc_as_dir(const char *desc_id, const char **desc)
   e = digestmap_get(rend_cache_v2_dir, desc_id_digest);
   if (e) {
     *desc = e->desc;
+    e->last_served = approx_time();
     return 1;
   }
   return 0;
@@ -993,7 +1065,13 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
     if (!e) {
       e = tor_malloc_zero(sizeof(rend_cache_entry_t));
       digestmap_set(rend_cache_v2_dir, desc_id, e);
+      /* Treat something just uploaded as having been served a little
+       * while ago, so that flooding with new descriptors doesn't help
+       * too much.
+       */
+      e->last_served = approx_time() - 3600;
     } else {
+      rend_cache_decrement_allocation(rend_cache_entry_allocation(e));
       rend_service_descriptor_free(e->parsed);
       tor_free(e->desc);
     }
@@ -1001,6 +1079,7 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
     e->parsed = parsed;
     e->desc = tor_strndup(current_desc, encoded_size);
     e->len = encoded_size;
+    rend_cache_increment_allocation(rend_cache_entry_allocation(e));
     log_info(LD_REND, "Successfully stored service descriptor with desc ID "
                       "'%s' and len %d.",
              safe_str(desc_id_base32), (int)encoded_size);
@@ -1189,6 +1268,7 @@ rend_cache_store_v2_desc_as_client(const char *desc,
     e = tor_malloc_zero(sizeof(rend_cache_entry_t));
     strmap_set_lc(rend_cache, key, e);
   } else {
+    rend_cache_decrement_allocation(rend_cache_entry_allocation(e));
     rend_service_descriptor_free(e->parsed);
     tor_free(e->desc);
   }
@@ -1197,6 +1277,7 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   e->desc = tor_malloc_zero(encoded_size + 1);
   strlcpy(e->desc, desc, encoded_size + 1);
   e->len = encoded_size;
+  rend_cache_increment_allocation(rend_cache_entry_allocation(e));
   log_debug(LD_REND,"Successfully stored rend desc '%s', len %d.",
             safe_str_client(service_id), (int)encoded_size);
   return RCS_OKAY;

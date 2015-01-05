@@ -2441,7 +2441,19 @@ cell_queues_check_size(void)
   size_t alloc = cell_queues_get_total_allocation();
   alloc += buf_get_total_allocation();
   alloc += tor_zlib_get_total_allocation();
+  const size_t rend_cache_total = rend_cache_get_total_allocation();
+  alloc += rend_cache_total;
   if (alloc >= get_options()->MaxMemInQueues) {
+    /* If we're spending over 20% of the memory limit on hidden service
+     * descriptors, free them until we're down to 10%.
+     */
+    if (rend_cache_total > get_options()->MaxMemInQueues / 5) {
+      const size_t bytes_to_remove =
+        rend_cache_total - (get_options()->MaxMemInQueues / 10);
+      rend_cache_clean_v2_descs_as_dir(time(NULL), bytes_to_remove);
+      alloc -= rend_cache_total;
+      alloc += rend_cache_get_total_allocation();
+    }
     circuits_handle_oom(alloc);
     return 1;
   }
