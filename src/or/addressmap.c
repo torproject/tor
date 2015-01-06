@@ -104,6 +104,7 @@ addressmap_virtaddress_ent_free(void *_ent)
 
   ent = _ent;
   tor_free(ent->ipv4_address);
+  tor_free(ent->ipv6_address);
   tor_free(ent->hostname_address);
   tor_free(ent);
 }
@@ -121,9 +122,11 @@ addressmap_virtaddress_remove(const char *address, addressmap_entry_t *ent)
     if (ve) {
       if (!strcmp(address, ve->ipv4_address))
         tor_free(ve->ipv4_address);
+      if (!strcmp(address, ve->ipv6_address))
+        tor_free(ve->ipv6_address);
       if (!strcmp(address, ve->hostname_address))
         tor_free(ve->hostname_address);
-      if (!ve->ipv4_address && !ve->hostname_address) {
+      if (!ve->ipv4_address && !ve->ipv6_address && !ve->hostname_address) {
         tor_free(ve);
         strmap_remove(virtaddress_reversemap, ent->new_address);
       }
