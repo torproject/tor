@@ -2081,7 +2081,7 @@ do_main_loop(void)
 #endif
 
 #ifdef HAVE_SYSTEMD
-  log_notice(LD_GENERAL, "Signaling readyness to systemd");
+  log_notice(LD_GENERAL, "Signaling readiness to systemd");
   sd_notify(0, "READY=1");
 #endif
 
