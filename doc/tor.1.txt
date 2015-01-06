@@ -1469,6 +1469,19 @@ is non-zero):
     that it's an email address and/or generate a new address for this
     purpose.
 
+[[ExitRelay]] **ExitRelay** **0**|**1**|**auto**::
+    Tells Tor whether to run as an exit relay.  If Tor is running as a
+    non-bridge server, and ExitRelay is set to 1, then Tor allows traffic to
+    exit according to the ExitPolicy option (or the default ExitPolicy if
+    none is specified).
+ +
+    If ExitRelay is set to 0, no traffic is allowed to
+    exit, and the ExitPolicy option is ignored. +
+ +
+    If ExitRelay is set to "auto", then Tor behaves as if it were set to 1, but
+    warns the user if this would cause traffic to exit.  In a future version,
+    the default value will be 0. (Default: auto)
+
 [[ExitPolicy]] **ExitPolicy** __policy__,__policy__,__...__::
     Set an exit policy for this server. Each policy is of the form
     "**accept**|**reject** __ADDR__[/__MASK__][:__PORT__]". If /__MASK__ is

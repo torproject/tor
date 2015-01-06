@@ -65,7 +65,6 @@ static config_abbrev_t option_abbrevs_[] = {
   PLURAL(AuthDirBadExitCC),
   PLURAL(AuthDirInvalidCC),
   PLURAL(AuthDirRejectCC),
-  PLURAL(ExitNode),
   PLURAL(EntryNode),
   PLURAL(ExcludeNode),
   PLURAL(FirewallPort),
@@ -229,6 +228,7 @@ static config_var_t option_vars_[] = {
   V(ExitPolicyRejectPrivate,     BOOL,     "1"),
   V(ExitPortStatistics,          BOOL,     "0"),
   V(ExtendAllowPrivateAddresses, BOOL,     "0"),
+  V(ExitRelay,                   AUTOBOOL, "auto"),
   VPORT(ExtORPort,               LINELIST, NULL),
   V(ExtORPortCookieAuthFile,     STRING,   NULL),
   V(ExtORPortCookieAuthFileGroupReadable, BOOL, "0"),
@@ -3924,6 +3924,7 @@ options_transition_affects_descriptor(const or_options_t *old_options,
       !opt_streq(old_options->Nickname,new_options->Nickname) ||
       !opt_streq(old_options->Address,new_options->Address) ||
       !config_lines_eq(old_options->ExitPolicy,new_options->ExitPolicy) ||
+      old_options->ExitRelay != new_options->ExitRelay ||
       old_options->ExitPolicyRejectPrivate !=
         new_options->ExitPolicyRejectPrivate ||
       old_options->IPv6Exit != new_options->IPv6Exit ||
