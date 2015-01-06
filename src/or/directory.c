@@ -20,6 +20,7 @@
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "policies.h"
+#include "relay.h"
 #include "rendclient.h"
 #include "rendcommon.h"
 #include "rephist.h"
@@ -2539,6 +2540,24 @@ client_likes_consensus(networkstatus_t *v, const char *want_url)
   return (have >= need_at_least);
 }
 
+/** Return the compression level we should use for sending a compressed
+ * response of size <b>n_bytes</b>. */
+static zlib_compression_level_t
+choose_compression_level(ssize_t n_bytes)
+{
+  if (! have_been_under_memory_pressure()) {
+    return HIGH_COMPRESSION; /* we have plenty of RAM. */
+  } else if (n_bytes < 0) {
+    return HIGH_COMPRESSION; /* unknown; might be big. */
+  } else if (n_bytes < 1024) {
+    return LOW_COMPRESSION;
+  } else if (n_bytes < 2048) {
+    return MEDIUM_COMPRESSION;
+  } else {
+    return HIGH_COMPRESSION;
+  }
+}
+
 /** Helper function: called when a dirserver gets a complete HTTP GET
  * request.  Look for a request for a directory or for a rendezvous
  * service descriptor.  On finding one, write a response into
@@ -2724,7 +2743,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
                                smartlist_len(dir_fps) == 1 ? lifetime : 0);
     conn->fingerprint_stack = dir_fps;
     if (! compressed)
-      conn->zlib_state = tor_zlib_new(0, ZLIB_METHOD);
+      conn->zlib_state = tor_zlib_new(0, ZLIB_METHOD, HIGH_COMPRESSION);
 
     /* Prime the connection with some data. */
     conn->dir_spool_src = DIR_SPOOL_NETWORKSTATUS;
@@ -2812,7 +2831,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
 
     if (smartlist_len(items)) {
       if (compressed) {
-        conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD);
+        conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD,
+                                    choose_compression_level(estimated_len));
         SMARTLIST_FOREACH(items, const char *, c,
                  connection_write_to_buf_zlib(c, strlen(c), conn, 0));
         connection_write_to_buf_zlib("", 0, conn, 1);
@@ -2861,7 +2881,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     conn->fingerprint_stack = fps;
 
     if (compressed)
-      conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD);
+      conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD,
+                                      choose_compression_level(dlen));
 
     connection_dirserv_flushed_some(conn);
     goto done;
@@ -2929,7 +2950,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       }
       write_http_response_header(conn, -1, compressed, cache_lifetime);
       if (compressed)
-        conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD);
+        conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD,
+                                        choose_compression_level(dlen));
       /* Prime the connection with some data. */
       connection_dirserv_flushed_some(conn);
     }
@@ -3004,7 +3026,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
 
     write_http_response_header(conn, compressed?-1:len, compressed, 60*60);
     if (compressed) {
-      conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD);
+      conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD,
+                                      choose_compression_level(len));
       SMARTLIST_FOREACH(certs, authority_cert_t *, c,
             connection_write_to_buf_zlib(c->cache_info.signed_descriptor_body,
                                          c->cache_info.signed_descriptor_len,

@@ -19,6 +19,15 @@ typedef enum {
   NO_METHOD=0, GZIP_METHOD=1, ZLIB_METHOD=2, UNKNOWN_METHOD=3
 } compress_method_t;
 
+/**
+ * Enumeration to define tradeoffs between memory usage and compression level.
+ * HIGH_COMPRESSION saves the most bandwidth; LOW_COMPRESSION saves the most
+ * memory.
+ **/
+typedef enum {
+  HIGH_COMPRESSION, MEDIUM_COMPRESSION, LOW_COMPRESSION
+} zlib_compression_level_t;
+
 int
 tor_gzip_compress(char **out, size_t *out_len,
                   const char *in, size_t in_len,
@@ -47,7 +56,8 @@ typedef enum {
 } tor_zlib_output_t;
 /** Internal state for an incremental zlib compression/decompression. */
 typedef struct tor_zlib_state_t tor_zlib_state_t;
-tor_zlib_state_t *tor_zlib_new(int compress, compress_method_t method);
+tor_zlib_state_t *tor_zlib_new(int compress, compress_method_t method,
+                               zlib_compression_level_t level);
 
 tor_zlib_output_t tor_zlib_process(tor_zlib_state_t *state,
                                    char **out, size_t *out_len,
