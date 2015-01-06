@@ -80,7 +80,7 @@ test-stem: $(TESTING_TOR_BINARY)
 
 
 reset-gcov:
-	rm -f src/*/*.gcda
+	rm -f src/*/*.gcda src/*/*/*.gcda
 
 HTML_COVER_DIR=./coverage_html
 coverage-html: all
@@ -118,4 +118,4 @@ version:
 	fi
 
 mostlyclean-local:
-	rm -f src/*/*.gc{da,no}
+	rm -f src/*/*.gc{da,no} src/*/*/*.gc{da,no}
