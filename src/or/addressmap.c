@@ -539,9 +539,9 @@ addressmap_register(const char *address, char *new_address, time_t expires,
     if (expires > 1) {
       log_info(LD_APP,"Temporary addressmap ('%s' to '%s') not performed, "
                "since it's already mapped to '%s'",
-      safe_str_client(address),
-      safe_str_client(new_address),
-      safe_str_client(ent->new_address));
+               safe_str_client(address),
+               safe_str_client(new_address),
+               safe_str_client(ent->new_address));
       tor_free(new_address);
       return;
     }
