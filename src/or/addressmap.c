@@ -94,7 +94,7 @@ addressmap_ent_free(void *_ent)
   tor_free(ent);
 }
 
-/** Free storage held by a virtaddress_entry_t* entry in <b>ent</b>. */
+/** Free storage held by a virtaddress_entry_t* entry in <b>_ent</b>. */
 static void
 addressmap_virtaddress_ent_free(void *_ent)
 {
@@ -104,11 +104,13 @@ addressmap_virtaddress_ent_free(void *_ent)
 
   ent = _ent;
   tor_free(ent->ipv4_address);
+  tor_free(ent->ipv6_address);
   tor_free(ent->hostname_address);
   tor_free(ent);
 }
 
-/** Free storage held by a virtaddress_entry_t* entry in <b>ent</b>. */
+/** Remove <b>address</b> (which must map to <b>ent</b>) from the
+ * virtual address map. */
 static void
 addressmap_virtaddress_remove(const char *address, addressmap_entry_t *ent)
 {
@@ -120,9 +122,11 @@ addressmap_virtaddress_remove(const char *address, addressmap_entry_t *ent)
     if (ve) {
       if (!strcmp(address, ve->ipv4_address))
         tor_free(ve->ipv4_address);
+      if (!strcmp(address, ve->ipv6_address))
+        tor_free(ve->ipv6_address);
       if (!strcmp(address, ve->hostname_address))
         tor_free(ve->hostname_address);
-      if (!ve->ipv4_address && !ve->hostname_address) {
+      if (!ve->ipv4_address && !ve->ipv6_address && !ve->hostname_address) {
         tor_free(ve);
         strmap_remove(virtaddress_reversemap, ent->new_address);
       }
@@ -131,7 +135,7 @@ addressmap_virtaddress_remove(const char *address, addressmap_entry_t *ent)
 }
 
 /** Remove <b>ent</b> (which must be mapped to by <b>address</b>) from the
- * client address maps. */
+ * client address maps, and then free it. */
 static void
 addressmap_ent_remove(const char *address, addressmap_entry_t *ent)
 {
@@ -496,7 +500,7 @@ addressmap_have_mapping(const char *address, int update_expiry)
  * equal to <b>address</b>, or any address ending with a period followed by
  * <b>address</b>.  If <b>wildcard_addr</b> and <b>wildcard_new_addr</b> are
  * both true, the mapping will rewrite addresses that end with
- * ".<b>address</b>" into ones that end with ".<b>new_address</b>."
+ * ".<b>address</b>" into ones that end with ".<b>new_address</b>".
  *
  * If <b>new_address</b> is NULL, or <b>new_address</b> is equal to
  * <b>address</b> and <b>wildcard_addr</b> is equal to
@@ -535,9 +539,9 @@ addressmap_register(const char *address, char *new_address, time_t expires,
     if (expires > 1) {
       log_info(LD_APP,"Temporary addressmap ('%s' to '%s') not performed, "
                "since it's already mapped to '%s'",
-      safe_str_client(address),
-      safe_str_client(new_address),
-      safe_str_client(ent->new_address));
+               safe_str_client(address),
+               safe_str_client(new_address),
+               safe_str_client(ent->new_address));
       tor_free(new_address);
       return;
     }
@@ -839,8 +843,8 @@ get_random_virtual_addr(const virtual_addr_conf_t *conf, tor_addr_t *addr_out)
 }
 
 /** Return a newly allocated string holding an address of <b>type</b>
- * (one of RESOLVED_TYPE_{IPV4|HOSTNAME}) that has not yet been mapped,
- * and that is very unlikely to be the address of any real host.
+ * (one of RESOLVED_TYPE_{IPV4|IPV6|HOSTNAME}) that has not yet been
+ * mapped, and that is very unlikely to be the address of any real host.
  *
  * May return NULL if we have run out of virtual addresses.
  */
