@@ -4250,40 +4250,50 @@ tor_version_parse(const char *s, tor_version_t *out)
   char *eos=NULL;
   const char *cp=NULL;
   /* Format is:
-   *   "Tor " ? NUM dot NUM dot NUM [ ( pre | rc | dot ) NUM [ - tag ] ]
+   *   "Tor " ? NUM dot NUM [ dot NUM [ ( pre | rc | dot ) NUM ] ] [ - tag ]
    */
   tor_assert(s);
   tor_assert(out);
 
   memset(out, 0, sizeof(tor_version_t));
-
+  out->status = VER_RELEASE;
   if (!strcasecmpstart(s, "Tor "))
     s += 4;
 
-  /* Get major. */
-  out->major = (int)strtol(s,&eos,10);
-  if (!eos || eos==s || *eos != '.') return -1;
-  cp = eos+1;
+  cp = s;
 
-  /* Get minor */
-  out->minor = (int) strtol(cp,&eos,10);
-  if (!eos || eos==cp || *eos != '.') return -1;
-  cp = eos+1;
+#define NUMBER(m)                               \
+  do {                                          \
+    out->m = (int)strtol(cp, &eos, 10);         \
+    if (!eos || eos == cp)                      \
+      return -1;                                \
+    cp = eos;                                   \
+  } while (0)
 
-  /* Get micro */
-  out->micro = (int) strtol(cp,&eos,10);
-  if (!eos || eos==cp) return -1;
-  if (!*eos) {
-    out->status = VER_RELEASE;
-    out->patchlevel = 0;
+#define DOT()                                   \
+  do {                                          \
+    if (*cp != '.')                             \
+      return -1;                                \
+    ++cp;                                       \
+  } while (0)
+
+  NUMBER(major);
+  DOT();
+  NUMBER(minor);
+  if (*cp == 0)
     return 0;
-  }
-  cp = eos;
+  else if (*cp == '-')
+    goto status_tag;
+  DOT();
+  NUMBER(micro);
 
   /* Get status */
-  if (*cp == '.') {
-    out->status = VER_RELEASE;
+  if (*cp == 0) {
+    return 0;
+  } else if (*cp == '.') {
     ++cp;
+  } else if (*cp == '-') {
+    goto status_tag;
   } else if (0==strncmp(cp, "pre", 3)) {
     out->status = VER_PRE;
     cp += 3;
@@ -4294,11 +4304,9 @@ tor_version_parse(const char *s, tor_version_t *out)
     return -1;
   }
 
-  /* Get patchlevel */
-  out->patchlevel = (int) strtol(cp,&eos,10);
-  if (!eos || eos==cp) return -1;
-  cp = eos;
+  NUMBER(patchlevel);
 
+ status_tag:
   /* Get status tag. */
   if (*cp == '-' || *cp == '.')
     ++cp;
@@ -4334,6 +4342,8 @@ tor_version_parse(const char *s, tor_version_t *out)
   }
 
   return 0;
+#undef NUMBER
+#undef DOT
 }
 
 /** Compare two tor versions; Return <0 if a < b; 0 if a ==b, >0 if a >

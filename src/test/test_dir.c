@@ -845,6 +845,42 @@ test_dir_versions(void *arg)
   tt_int_op(VER_RELEASE,OP_EQ, ver1.status);
   tt_str_op("",OP_EQ, ver1.status_tag);
 
+  test_eq(0, tor_version_parse("10.1", &ver1));
+  test_eq(10, ver1.major);
+  test_eq(1, ver1.minor);
+  test_eq(0, ver1.micro);
+  test_eq(0, ver1.patchlevel);
+  test_eq(VER_RELEASE, ver1.status);
+  test_streq("", ver1.status_tag);
+  test_eq(0, tor_version_parse("5.99.999", &ver1));
+  test_eq(5, ver1.major);
+  test_eq(99, ver1.minor);
+  test_eq(999, ver1.micro);
+  test_eq(0, ver1.patchlevel);
+  test_eq(VER_RELEASE, ver1.status);
+  test_streq("", ver1.status_tag);
+  test_eq(0, tor_version_parse("10.1-alpha", &ver1));
+  test_eq(10, ver1.major);
+  test_eq(1, ver1.minor);
+  test_eq(0, ver1.micro);
+  test_eq(0, ver1.patchlevel);
+  test_eq(VER_RELEASE, ver1.status);
+  test_streq("alpha", ver1.status_tag);
+  test_eq(0, tor_version_parse("2.1.700-alpha", &ver1));
+  test_eq(2, ver1.major);
+  test_eq(1, ver1.minor);
+  test_eq(700, ver1.micro);
+  test_eq(0, ver1.patchlevel);
+  test_eq(VER_RELEASE, ver1.status);
+  test_streq("alpha", ver1.status_tag);
+  test_eq(0, tor_version_parse("1.6.8-alpha-dev", &ver1));
+  test_eq(1, ver1.major);
+  test_eq(6, ver1.minor);
+  test_eq(8, ver1.micro);
+  test_eq(0, ver1.patchlevel);
+  test_eq(VER_RELEASE, ver1.status);
+  test_streq("alpha-dev", ver1.status_tag);
+
 #define tt_versionstatus_op(vs1, op, vs2)                               \
   tt_assert_test_type(vs1,vs2,#vs1" "#op" "#vs2,version_status_t,       \
                       (val1_ op val2_),"%d",TT_EXIT_TEST_FUNCTION)
