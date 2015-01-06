@@ -2465,6 +2465,14 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
     goto done;
   }
 
+  if (smartlist_len(args) < 2) {
+    connection_printf_to_buf(conn,
+                             "512 syntax error: not enough arguments.\r\n");
+    SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+    smartlist_free(args);
+    goto done;
+  }
+
   smartlist_split_string(router_nicknames, smartlist_get(args,1), ",", 0, 0);
 
   SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
