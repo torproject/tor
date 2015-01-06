@@ -4147,14 +4147,14 @@ find_torrc_filename(config_line_t *cmd_arg,
       char *fn = NULL;
       if (!defaults_file)
         fn = expand_filename("~/.torrc");
-      if (fn && file_status(fn) == FN_FILE) {
+      if (fn && (file_status(fn) == FN_FILE || dflt == NULL)) {
         fname = fn;
       } else {
         tor_free(fn);
-        fname = tor_strdup(dflt);
+        fname = dflt ? tor_strdup(dflt) : NULL;
       }
 #else
-      fname = tor_strdup(dflt);
+      fname = dflt ? tor_strdup(dflt) : NULL;
 #endif
     }
   }
@@ -4179,14 +4179,15 @@ load_torrc_from_disk(config_line_t *cmd_arg, int defaults_file)
 
   fname = find_torrc_filename(cmd_arg, defaults_file,
                               &using_default_torrc, &ignore_missing_torrc);
-  tor_assert(fname);
-  log_debug(LD_CONFIG, "Opening config file \"%s\"", fname);
+
+  log_debug(LD_CONFIG, "Opening config file \"%s\"", fname?fname:"<NULL>");
 
   tor_free(*fname_var);
   *fname_var = fname;
 
   /* Open config file */
-  if (file_status(fname) != FN_FILE ||
+  if (fname == NULL ||
+      file_status(fname) != FN_FILE ||
       !(cf = read_file_to_str(fname,0,NULL))) {
     if (using_default_torrc == 1 || ignore_missing_torrc) {
       if (!defaults_file)
@@ -4475,7 +4476,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   return err;
 }
 
-/** Return the location for our configuration file.
+/** Return the location for our configuration file.  May return NULL.
  */
 const char *
 get_torrc_fname(int defaults_fname)
@@ -6433,6 +6434,9 @@ write_configuration_file(const char *fname, const or_options_t *options)
 {
   char *old_val=NULL, *new_val=NULL, *new_conf=NULL;
   int rename_old = 0, r;
+
+  if (!fname)
+    return -1;
 
   tor_assert(fname);
 

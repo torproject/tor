@@ -1439,9 +1439,11 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
   if (!strcmp(question, "version")) {
     *answer = tor_strdup(get_version());
   } else if (!strcmp(question, "config-file")) {
-    *answer = tor_strdup(get_torrc_fname(0));
+    if (get_torrc_fname(0))
+      *answer = tor_strdup(get_torrc_fname(0));
   } else if (!strcmp(question, "config-defaults-file")) {
-    *answer = tor_strdup(get_torrc_fname(1));
+    if (get_torrc_fname(1))
+      *answer = tor_strdup(get_torrc_fname(1));
   } else if (!strcmp(question, "config-text")) {
     *answer = options_dump(get_options(), OPTIONS_DUMP_MINIMAL);
   } else if (!strcmp(question, "info/names")) {
