@@ -230,6 +230,8 @@ addressmap_address_should_automap(const char *address,
     return 0;
 
   SMARTLIST_FOREACH_BEGIN(suffix_list, const char *, suffix) {
+    if (!strcmp(suffix, "."))
+      return 1;
     if (!strcasecmpend(address, suffix))
       return 1;
   } SMARTLIST_FOREACH_END(suffix);

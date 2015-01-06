@@ -3675,8 +3675,9 @@ typedef struct {
                               * hostname ending with one of the suffixes in
                               * <b>AutomapHostsSuffixes</b>, map it to a
                               * virtual address. */
-  smartlist_t *AutomapHostsSuffixes; /**< List of suffixes for
-                                      * <b>AutomapHostsOnResolve</b>. */
+  /** List of suffixes for <b>AutomapHostsOnResolve</b>.  The special value
+   * "." means "match everything." */
+  smartlist_t *AutomapHostsSuffixes;
   int RendPostPeriod; /**< How often do we post each rendezvous service
                        * descriptor? Remember to publish them independently. */
   int KeepalivePeriod; /**< How often do we send padding cells to keep
