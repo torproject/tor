@@ -45,6 +45,8 @@ AC_ARG_ENABLE(unittests,
    AS_HELP_STRING(--disable-unittests, [Don't build unit tests for Tor. Risky!]))
 AC_ARG_ENABLE(coverage,
    AS_HELP_STRING(--enable-coverage, [Enable coverage support in the unit-test build]))
+AC_ARG_ENABLE(system-torrc,
+   AS_HELP_STRING(--disable-system-torrc, [Don't look for a system-wide torrc file]))
 
 AM_CONDITIONAL(UNITTESTS_ENABLED, test x$enable_unittests != xno)
 AM_CONDITIONAL(COVERAGE_ENABLED, test x$enable_coverage = xyes)
@@ -54,6 +56,11 @@ if test "$enable_static_tor" = "yes"; then
   enable_static_openssl="yes";
   enable_static_zlib="yes";
   CFLAGS="$CFLAGS -static"
+fi
+
+if test "$enable_system_torrc" = "no"; then
+  AC_DEFINE(DISABLE_SYSTEM_TORRC, 1,
+            [Defined if we're not going to look for a torrc in SYSCONF])
 fi
 
 if test x$enable_buf_freelists = xyes; then

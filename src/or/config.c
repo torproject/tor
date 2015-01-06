@@ -4013,7 +4013,10 @@ get_windows_conf_root(void)
 static const char *
 get_default_conf_file(int defaults_file)
 {
-#ifdef _WIN32
+#ifdef DISABLE_SYSTEM_TORRC
+  (void) defaults_file;
+  return NULL;
+#elif defined(_WIN32)
   if (defaults_file) {
     static char defaults_path[MAX_PATH+1];
     tor_snprintf(defaults_path, MAX_PATH, "%s\\torrc-defaults",
