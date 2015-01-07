@@ -965,7 +965,7 @@ check_location_for_unix_socket(const or_options_t *options, const char *path,
 {
   int r = -1;
   char *p = NULL;
-  
+
   tor_assert(is_valid_unix_socket_purpose(purpose));
 
   p = tor_strdup(path);
@@ -1081,105 +1081,30 @@ connection_listener_new(const struct sockaddr *listensockaddr,
   }
 
   if (listensockaddr->sa_family == AF_INET ||
-      listensockaddr->sa_family == AF_INET6 ||
-      (listensockaddr->sa_family == AF_UNIX &&
-       type != CONN_TYPE_CONTROL_LISTENER)) {
+      listensockaddr->sa_family == AF_INET6) {
     int is_stream = (type != CONN_TYPE_AP_DNS_LISTENER);
     if (is_stream)
       start_reading = 1;
 
-    if ( listensockaddr->sa_family == AF_INET ||
-         listensockaddr->sa_family == AF_INET6) {
+    tor_addr_from_sockaddr(&addr, listensockaddr, &usePort);
 
-      tor_addr_from_sockaddr(&addr, listensockaddr, &usePort);
+    log_notice(LD_NET, "Opening %s on %s",
+               conn_type_to_string(type), fmt_addrport(&addr, usePort));
 
-      log_notice(LD_NET, "Opening %s on %s",
-                 conn_type_to_string(type), fmt_addrport(&addr, usePort));
-
-      s = tor_open_socket_nonblocking(tor_addr_family(&addr),
-        is_stream ? SOCK_STREAM : SOCK_DGRAM,
-        is_stream ? IPPROTO_TCP: IPPROTO_UDP);
-      if (!SOCKET_OK(s)) {
-        log_warn(LD_NET, "Socket creation failed: %s",
-                 tor_socket_strerror(tor_socket_errno(-1)));
-        goto err;
-      }
-
-      if (make_socket_reuseable(s) < 0) {
-        log_warn(LD_NET, "Error setting SO_REUSEADDR flag on %s: %s",
-                 conn_type_to_string(type),
-                 tor_socket_strerror(errno));
-      }
+    s = tor_open_socket_nonblocking(tor_addr_family(&addr),
+      is_stream ? SOCK_STREAM : SOCK_DGRAM,
+      is_stream ? IPPROTO_TCP: IPPROTO_UDP);
+    if (!SOCKET_OK(s)) {
+      log_warn(LD_NET, "Socket creation failed: %s",
+               tor_socket_strerror(tor_socket_errno(-1)));
+      goto err;
     }
 
-#ifdef HAVE_SYS_UN_H
-    if (listensockaddr->sa_family == AF_UNIX &&
-        type != CONN_TYPE_CONTROL_LISTENER) {
-      tor_assert(listensockaddr->sa_family == AF_UNIX);
-
-      if (check_location_for_unix_socket(options, address,
-            UNIX_SOCKET_PURPOSE_SOCKS_SOCKET) < 0) {
-        goto err;
-      }
-
-      log_notice(LD_NET, "Opening SocksSocket %s on %s",
-                 conn_type_to_string(type), address);
-
-      tor_addr_make_unspec(&addr);
-
-      if (unlink(address) < 0 && errno != ENOENT) {
-        log_warn(LD_NET, "Could not unlink %s: %s", address,
-                strerror(errno));
-        goto err;
-      }
-
-      s = tor_open_socket_nonblocking(AF_UNIX, SOCK_STREAM, 0);
-      if (! SOCKET_OK(s)) {
-        log_warn(LD_NET, "SocksSocket socket creation failed: %s.",
-                 strerror(errno));
-        goto err;
-      }
-
-      if (bind(s, listensockaddr,
-               (socklen_t)sizeof(struct sockaddr_un)) == -1) {
-        log_warn(LD_NET, "Bind to %s failed: %s.", address,
-                tor_socket_strerror(tor_socket_errno(s)));
-        goto err;
-      }
-#ifdef HAVE_PWD_H
-      if (options->User) {
-        pw = getpwnam(options->User);
-        if (pw == NULL) {
-          log_warn(LD_NET,
-                   "Unable to chown() %s socket: user %s not found.",
-                   address, options->User);
-          goto err;
-        } else if (chown(address, pw->pw_uid, pw->pw_gid) < 0) {
-          log_warn(LD_NET, "Unable to chown() %s socket: %s.",
-                   address, strerror(errno));
-          goto err;
-        }
-      }
-#endif
-
-      if (options->SocksSocketsGroupWritable) {
-        /* We need to use chmod; fchmod doesn't work on sockets on all
-         * platforms. */
-        if (chmod(address, 0660) < 0) {
-          log_warn(LD_FS, "Unable to make %s group-writable.", address);
-          goto err;
-        }
-      }
-
-      if (listen(s, SOMAXCONN) < 0) {
-        log_warn(LD_NET, "Could not listen on %s: %s", address,
-                 tor_socket_strerror(tor_socket_errno(s)));
-        goto err;
-      }
+    if (make_socket_reuseable(s) < 0) {
+      log_warn(LD_NET, "Error setting SO_REUSEADDR flag on %s: %s",
+               conn_type_to_string(type),
+               tor_socket_strerror(errno));
     }
-#else
-    (void)options;
-#endif /* HAVE_SYS_UN_H */
 
 #if defined USE_TRANSPARENT && defined(IP_TRANSPARENT)
     if (options->TransProxyType_parsed == TPT_TPROXY &&
@@ -1217,54 +1142,57 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     }
 #endif
 
-    if (listensockaddr->sa_family != AF_UNIX) {
-      if (bind(s,listensockaddr,socklen) < 0) {
-        const char *helpfulhint = "";
-        int e = tor_socket_errno(s);
-        if (ERRNO_IS_EADDRINUSE(e))
-          helpfulhint = ". Is Tor already running?";
-        log_warn(LD_NET, "Could not bind to %s:%u: %s%s", address, usePort,
-                 tor_socket_strerror(e), helpfulhint);
+    if (bind(s,listensockaddr,socklen) < 0) {
+      const char *helpfulhint = "";
+      int e = tor_socket_errno(s);
+      if (ERRNO_IS_EADDRINUSE(e))
+        helpfulhint = ". Is Tor already running?";
+      log_warn(LD_NET, "Could not bind to %s:%u: %s%s", address, usePort,
+               tor_socket_strerror(e), helpfulhint);
+      goto err;
+    }
+
+    if (is_stream) {
+      if (tor_listen(s) < 0) {
+        log_warn(LD_NET, "Could not listen on %s:%u: %s", address, usePort,
+                 tor_socket_strerror(tor_socket_errno(s)));
         goto err;
-      }
-
-      if (is_stream) {
-        if (tor_listen(s) < 0) {
-          log_warn(LD_NET, "Could not listen on %s:%u: %s", address, usePort,
-                   tor_socket_strerror(tor_socket_errno(s)));
-          goto err;
-        }
-      }
-
-      if (usePort != 0) {
-        gotPort = usePort;
-      } else {
-        tor_addr_t addr2;
-        struct sockaddr_storage ss;
-        socklen_t ss_len=sizeof(ss);
-        if (getsockname(s, (struct sockaddr*)&ss, &ss_len)<0) {
-          log_warn(LD_NET, "getsockname() couldn't learn address for %s: %s",
-                   conn_type_to_string(type),
-                   tor_socket_strerror(tor_socket_errno(s)));
-          gotPort = 0;
-        }
-        tor_addr_from_sockaddr(&addr2, (struct sockaddr*)&ss, &gotPort);
       }
     }
+
+    if (usePort != 0) {
+      gotPort = usePort;
+    } else {
+      tor_addr_t addr2;
+      struct sockaddr_storage ss;
+      socklen_t ss_len=sizeof(ss);
+      if (getsockname(s, (struct sockaddr*)&ss, &ss_len)<0) {
+        log_warn(LD_NET, "getsockname() couldn't learn address for %s: %s",
+                 conn_type_to_string(type),
+                 tor_socket_strerror(tor_socket_errno(s)));
+        gotPort = 0;
+      }
+      tor_addr_from_sockaddr(&addr2, (struct sockaddr*)&ss, &gotPort);
+    }
 #ifdef HAVE_SYS_UN_H
-  } else if (listensockaddr->sa_family == AF_UNIX &&
-             type != CONN_TYPE_AP_LISTENER) {
+  /*
+   * AF_UNIX generic setup stuff (this covers both CONN_TYPE_CONTROL_LISTENER
+   * and CONN_TYPE_AP_LISTENER cases)
+   */
+  } else if (listensockaddr->sa_family == AF_UNIX) {
+    /* We want to start reading for both AF_UNIX cases */
     start_reading = 1;
 
-    /* For now only control ports can be Unix domain sockets
+    /* For now only control ports or SOCKS ports can be Unix domain sockets
      * and listeners at the same time */
-    tor_assert(type == CONN_TYPE_CONTROL_LISTENER);
+    tor_assert(type == CONN_TYPE_CONTROL_LISTENER ||
+               type == CONN_TYPE_AP_LISTENER);
 
-    if ( type == CONN_TYPE_CONTROL_LISTENER ) {
-      if (check_location_for_unix_socket(options, address,
-            UNIX_SOCKET_PURPOSE_CONTROL_SOCKET) < 0) {
+    if (check_location_for_unix_socket(options, address,
+          (type == CONN_TYPE_CONTROL_LISTENER) ?
+           UNIX_SOCKET_PURPOSE_CONTROL_SOCKET :
+           UNIX_SOCKET_PURPOSE_SOCKS_SOCKET) < 0) {
         goto err;
-      }
     }
 
     log_notice(LD_NET, "Opening %s on %s",
@@ -1277,17 +1205,20 @@ connection_listener_new(const struct sockaddr *listensockaddr,
                        strerror(errno));
       goto err;
     }
+
     s = tor_open_socket_nonblocking(AF_UNIX, SOCK_STREAM, 0);
     if (! SOCKET_OK(s)) {
       log_warn(LD_NET,"Socket creation failed: %s.", strerror(errno));
       goto err;
     }
 
-    if (bind(s, listensockaddr, (socklen_t)sizeof(struct sockaddr_un)) == -1) {
+    if (bind(s, listensockaddr,
+             (socklen_t)sizeof(struct sockaddr_un)) == -1) {
       log_warn(LD_NET,"Bind to %s failed: %s.", address,
                tor_socket_strerror(tor_socket_errno(s)));
       goto err;
     }
+
 #ifdef HAVE_PWD_H
     if (options->User) {
       pw = tor_getpwnam(options->User);
@@ -1302,7 +1233,9 @@ connection_listener_new(const struct sockaddr *listensockaddr,
       }
     }
 #endif
-    if (options->ControlSocketsGroupWritable) {
+
+    if (type == CONN_TYPE_CONTROL_LISTENER &&
+        options->ControlSocketsGroupWritable) {
       /* We need to use chmod; fchmod doesn't work on sockets on all
        * platforms. */
       if (chmod(address, 0660) < 0) {
@@ -1311,7 +1244,8 @@ connection_listener_new(const struct sockaddr *listensockaddr,
       }
     }
 
-    if (options->SocksSocketsGroupWritable) {
+    if (type == CONN_TYPE_AP_LISTENER &&
+        options->SocksSocketsGroupWritable) {
       /* We need to use chmod; fchmod doesn't work on sockets on all
        * platforms. */
       if (chmod(address, 0660) < 0) {
@@ -1325,8 +1259,6 @@ connection_listener_new(const struct sockaddr *listensockaddr,
                tor_socket_strerror(tor_socket_errno(s)));
       goto err;
     }
-#else
-    (void)options;
 #endif /* HAVE_SYS_UN_H */
   } else {
     log_err(LD_BUG, "Got unexpected address family %d.",
