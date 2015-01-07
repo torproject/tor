@@ -1438,6 +1438,8 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
   (void) conn;
   if (!strcmp(question, "version")) {
     *answer = tor_strdup(get_version());
+  } else if (!strcmp(question, "bw-event-cache")) {
+    *answer = get_bw_samples();
   } else if (!strcmp(question, "config-file")) {
     *answer = tor_strdup(get_torrc_fname(0));
   } else if (!strcmp(question, "config-defaults-file")) {
@@ -2113,6 +2115,7 @@ typedef struct getinfo_item_t {
  * to answer them. */
 static const getinfo_item_t getinfo_items[] = {
   ITEM("version", misc, "The current version of Tor."),
+  ITEM("bw-event-cache", misc, "Cached BW events for a short interval."),
   ITEM("config-file", misc, "Current location of the \"torrc\" file."),
   ITEM("config-defaults-file", misc, "Current location of the defaults file."),
   ITEM("config-text", misc,
@@ -4155,11 +4158,29 @@ control_event_tb_empty(const char *bucket, uint32_t read_empty_time,
   return 0;
 }
 
+/* about 5 minutes worth. */
+#define N_BW_EVENTS_TO_CACHE 300
+/* Index into cached_bw_events to next write. */
+static int next_measurement_idx = 0;
+/* number of entries set in n_measurements */
+static int n_measurements = 0;
+static struct cached_bw_event_s {
+  uint32_t n_read;
+  uint32_t n_written;
+} cached_bw_events[N_BW_EVENTS_TO_CACHE];
+
 /** A second or more has elapsed: tell any interested control
  * connections how much bandwidth we used. */
 int
 control_event_bandwidth_used(uint32_t n_read, uint32_t n_written)
 {
+  cached_bw_events[next_measurement_idx].n_read = n_read;
+  cached_bw_events[next_measurement_idx].n_written = n_written;
+  if (++next_measurement_idx == N_BW_EVENTS_TO_CACHE)
+    next_measurement_idx = 0;
+  if (n_measurements < N_BW_EVENTS_TO_CACHE)
+    ++n_measurements;
+
   if (EVENT_IS_INTERESTING(EVENT_BANDWIDTH_USED)) {
     send_control_event(EVENT_BANDWIDTH_USED, ALL_FORMATS,
                        "650 BW %lu %lu\r\n",
@@ -4168,6 +4189,35 @@ control_event_bandwidth_used(uint32_t n_read, uint32_t n_written)
   }
 
   return 0;
+}
+
+STATIC char *
+get_bw_samples(void)
+{
+  int i;
+  int idx = (next_measurement_idx + N_BW_EVENTS_TO_CACHE - n_measurements)
+    % N_BW_EVENTS_TO_CACHE;
+  tor_assert(0 <= idx && idx < N_BW_EVENTS_TO_CACHE);
+
+  smartlist_t *elements = smartlist_new();
+
+  for (i = 0; i < n_measurements; ++i) {
+    tor_assert(0 <= idx && idx < N_BW_EVENTS_TO_CACHE);
+    const struct cached_bw_event_s *bwe = &cached_bw_events[idx];
+
+    smartlist_add_asprintf(elements, "%u,%u",
+                           (unsigned)bwe->n_read,
+                           (unsigned)bwe->n_written);
+
+    idx = (idx + 1) % N_BW_EVENTS_TO_CACHE;
+  }
+
+  char *result = smartlist_join_strings(elements, " ", 0, NULL);
+
+  SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
+  smartlist_free(elements);
+
+  return result;
 }
 
 /** Called when we are sending a log message to the controllers: suspend

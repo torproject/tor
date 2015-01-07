@@ -203,6 +203,7 @@ void append_cell_stats_by_command(smartlist_t *event_parts,
                                   const uint64_t *number_to_include);
 void format_cell_stats(char **event_string, circuit_t *circ,
                        cell_stats_t *cell_stats);
+STATIC char *get_bw_samples(void);
 #endif
 
 #endif
