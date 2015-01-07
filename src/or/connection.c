@@ -1084,8 +1084,8 @@ connection_listener_new(const struct sockaddr *listensockaddr,
       listensockaddr->sa_family == AF_INET6 ||
       (listensockaddr->sa_family == AF_UNIX &&
        type != CONN_TYPE_CONTROL_LISTENER)) {
-    int is_tcp = (type != CONN_TYPE_AP_DNS_LISTENER);
-    if (is_tcp)
+    int is_stream = (type != CONN_TYPE_AP_DNS_LISTENER);
+    if (is_stream)
       start_reading = 1;
 
     if ( listensockaddr->sa_family == AF_INET ||
@@ -1097,8 +1097,8 @@ connection_listener_new(const struct sockaddr *listensockaddr,
                  conn_type_to_string(type), fmt_addrport(&addr, usePort));
 
       s = tor_open_socket_nonblocking(tor_addr_family(&addr),
-        is_tcp ? SOCK_STREAM : SOCK_DGRAM,
-        is_tcp ? IPPROTO_TCP: IPPROTO_UDP);
+        is_stream ? SOCK_STREAM : SOCK_DGRAM,
+        is_stream ? IPPROTO_TCP: IPPROTO_UDP);
       if (!SOCKET_OK(s)) {
         log_warn(LD_NET, "Socket creation failed: %s",
                  tor_socket_strerror(tor_socket_errno(-1)));
@@ -1228,7 +1228,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
         goto err;
       }
 
-      if (is_tcp) {
+      if (is_stream) {
         if (tor_listen(s) < 0) {
           log_warn(LD_NET, "Could not listen on %s:%u: %s", address, usePort,
                    tor_socket_strerror(tor_socket_errno(s)));
