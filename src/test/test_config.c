@@ -1218,7 +1218,6 @@ test_config_resolve_my_address(void *arg)
   UNMOCK(tor_gethostname);
   tor_free(hostname_out);
 
-
 /*
  * CASE 7:
  * We want resolve_my_address() to try and get network interface address via
