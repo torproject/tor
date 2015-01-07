@@ -56,7 +56,6 @@ static smartlist_t *finished_listeners = NULL;
 
 /* Counter for ID numbers */
 static uint64_t n_channels_allocated = 0;
-
 /*
  * Channel global byte/cell counters, for statistics and for scheduler high
  * /low-water marks.
@@ -1329,7 +1328,7 @@ channel_closed(channel_t *chan)
   /* Inform any pending (not attached) circs that they should
    * give up. */
   if (! chan->has_been_open)
-    circuit_n_chan_done(chan, 0);
+    circuit_n_chan_done(chan, 0, 0);
 
   /* Now close all the attached circuits on it. */
   circuit_unlink_all_from_channel(chan, END_CIRC_REASON_CHANNEL_CLOSED);
@@ -2527,8 +2526,9 @@ void
 channel_do_open_actions(channel_t *chan)
 {
   tor_addr_t remote_addr;
-  int started_here, not_using = 0;
+  int started_here;
   time_t now = time(NULL);
+  int close_origin_circuits = 0;
 
   tor_assert(chan);
 
@@ -2545,8 +2545,7 @@ channel_do_open_actions(channel_t *chan)
       log_debug(LD_OR,
                 "New entry guard was reachable, but closing this "
                 "connection so we can retry the earlier entry guards.");
-      circuit_n_chan_done(chan, 0);
-      not_using = 1;
+      close_origin_circuits = 1;
     }
     router_set_status(chan->identity_digest, 1);
   } else {
@@ -2566,7 +2565,7 @@ channel_do_open_actions(channel_t *chan)
     }
   }
 
-  if (!not_using) circuit_n_chan_done(chan, 1);
+  circuit_n_chan_done(chan, 1, close_origin_circuits);
 }
 
 /**
