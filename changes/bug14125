@@ -1,0 +1,5 @@
+  o Minor bugfixes (dirauth):
+    - Enlarge the buffer to read bw-auth generated files to avoid an
+      issue when parsing the file in dirserv_read_measured_bandwidths().
+      Bugfix on 0.2.2.1-alpha, fixes #14125.
+
