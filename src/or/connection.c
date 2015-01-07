@@ -918,54 +918,57 @@ warn_too_many_conns(void)
 }
 
 #ifdef HAVE_SYS_UN_H
-/** Check whether we should be willing to open an AF_UNIX socket in
- * <b>path</b>.  Return 0 if we should go ahead and -1 if we shouldn't. */
+
+#define UNIX_SOCKET_PURPOSE_CONTROL_SOCKET 0
+#define UNIX_SOCKET_PURPOSE_SOCKS_SOCKET 1
+
+/** Check if the purpose isn't one of the ones we know what to do with */
+
 static int
-check_location_for_unix_socket(const or_options_t *options, const char *path)
+is_valid_unix_socket_purpose(int purpose)
 {
-  int r = -1;
-  char *p = tor_strdup(path);
-  cpd_check_t flags = CPD_CHECK_MODE_ONLY;
-  if (get_parent_directory(p)<0 || p[0] != '/') {
-    log_warn(LD_GENERAL, "Bad unix socket address '%s'.  Tor does not support "
-             "relative paths for unix sockets.", path);
-    goto done;
+  int valid = 0;
+
+  switch (purpose) {
+    case UNIX_SOCKET_PURPOSE_CONTROL_SOCKET:
+    case UNIX_SOCKET_PURPOSE_SOCKS_SOCKET:
+      valid = 1;
+      break;
   }
 
-  if (options->ControlSocketsGroupWritable)
-    flags |= CPD_GROUP_OK;
-
-  if (check_private_dir(p, flags, options->User) < 0) {
-    char *escpath, *escdir;
-    escpath = esc_for_log(path);
-    escdir = esc_for_log(p);
-    log_warn(LD_GENERAL, "Before Tor can create a control socket in %s, the "
-             "directory %s needs to exist, and to be accessible only by the "
-             "user%s account that is running Tor.  (On some Unix systems, "
-             "anybody who can list a socket can connect to it, so Tor is "
-             "being careful.)", escpath, escdir,
-             options->ControlSocketsGroupWritable ? " and group" : "");
-    tor_free(escpath);
-    tor_free(escdir);
-    goto done;
-  }
-
-  r = 0;
- done:
-  tor_free(p);
-  return r;
+  return valid;
 }
-#endif
 
-#ifdef HAVE_SYS_UN_H
+/** Return a string description of a unix socket purpose */
+static const char *
+unix_socket_purpose_to_string(int purpose)
+{
+  const char *s = "unknown-purpose socket";
+
+  switch (purpose) {
+    case UNIX_SOCKET_PURPOSE_CONTROL_SOCKET:
+      s = "control socket";
+      break;
+    case UNIX_SOCKET_PURPOSE_SOCKS_SOCKET:
+      s = "SOCKS socket";
+      break;
+  }
+
+  return s;
+}
+
 /** Check whether we should be willing to open an AF_UNIX socket in
  * <b>path</b>.  Return 0 if we should go ahead and -1 if we shouldn't. */
 static int
-check_location_for_socks_unix_socket(const or_options_t *options,
-                                     const char *path)
+check_location_for_unix_socket(const or_options_t *options, const char *path,
+                               int purpose)
 {
   int r = -1;
-  char *p = tor_strdup(path);
+  char *p = NULL;
+  
+  tor_assert(is_valid_unix_socket_purpose(purpose));
+
+  p = tor_strdup(path);
   cpd_check_t flags = CPD_CHECK_MODE_ONLY;
   if (get_parent_directory(p)<0 || p[0] != '/') {
     log_warn(LD_GENERAL, "Bad unix socket address '%s'.  Tor does not support "
@@ -973,19 +976,24 @@ check_location_for_socks_unix_socket(const or_options_t *options,
     goto done;
   }
 
-  if (options->SocksSocketsGroupWritable)
+  if ((purpose == UNIX_SOCKET_PURPOSE_CONTROL_SOCKET &&
+       options->ControlSocketsGroupWritable) ||
+      (purpose == UNIX_SOCKET_PURPOSE_SOCKS_SOCKET &&
+       options->SocksSocketsGroupWritable)) {
     flags |= CPD_GROUP_OK;
+  }
 
   if (check_private_dir(p, flags, options->User) < 0) {
     char *escpath, *escdir;
     escpath = esc_for_log(path);
     escdir = esc_for_log(p);
-    log_warn(LD_GENERAL, "Before Tor can create a SocksSocket in %s, the "
-             "directory %s needs to exist, and to be accessible only by the "
-             "user%s account that is running Tor.  (On some Unix systems, "
-             "anybody who can list a socket can connect to it, so Tor is "
-             "being careful.)", escpath, escdir,
-             options->SocksSocketsGroupWritable ? " and group" : "");
+    log_warn(LD_GENERAL, "Before Tor can create a %s in %s, the directory "
+             "%s needs to exist, and to be accessible only by the user%s "
+             "account that is running Tor.  (On some Unix systems, anybody "
+             "who can list a socket can connect to it, so Tor is being "
+             "careful.)",
+             unix_socket_purpose_to_string(purpose), escpath, escdir,
+             options->ControlSocketsGroupWritable ? " and group" : "");
     tor_free(escpath);
     tor_free(escdir);
     goto done;
@@ -1109,8 +1117,10 @@ connection_listener_new(const struct sockaddr *listensockaddr,
         type != CONN_TYPE_CONTROL_LISTENER) {
       tor_assert(listensockaddr->sa_family == AF_UNIX);
 
-      if (check_location_for_socks_unix_socket(options, address) < 0)
+      if (check_location_for_unix_socket(options, address,
+            UNIX_SOCKET_PURPOSE_SOCKS_SOCKET) < 0) {
         goto err;
+      }
 
       log_notice(LD_NET, "Opening SocksSocket %s on %s",
                  conn_type_to_string(type), address);
@@ -1251,8 +1261,10 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     tor_assert(type == CONN_TYPE_CONTROL_LISTENER);
 
     if ( type == CONN_TYPE_CONTROL_LISTENER ) {
-      if (check_location_for_unix_socket(options, address) < 0)
+      if (check_location_for_unix_socket(options, address,
+            UNIX_SOCKET_PURPOSE_CONTROL_SOCKET) < 0) {
         goto err;
+      }
     }
 
     log_notice(LD_NET, "Opening %s on %s",
