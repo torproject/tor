@@ -386,7 +386,7 @@ connection_remove(connection_t *conn)
             smartlist_len(connection_array));
 
   if (conn->type == CONN_TYPE_AP && conn->socket_family == AF_UNIX) {
-    log_notice(LD_NET, "Closing SOCKS SocksSocket connection");
+    log_info(LD_NET, "Closing SOCKS SocksSocket connection");
   }
 
   control_event_conn_bandwidth(conn);

@@ -1506,7 +1506,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     if (new_type == CONN_TYPE_AP && conn->socket_family == AF_UNIX) {
       newconn->port = 0;
       newconn->address = tor_strdup(conn->address);
-      log_notice(LD_NET, "New SOCKS SocksSocket connection opened");
+      log_info(LD_NET, "New SOCKS SocksSocket connection opened");
       TO_ENTRY_CONN(newconn)->socks_request->socks_prefer_no_auth =
         TO_LISTENER_CONN(conn)->socks_prefer_no_auth;
     }
