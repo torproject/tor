@@ -1131,9 +1131,7 @@ rep_hist_load_mtbf_data(time_t now)
  * totals? */
 #define NUM_SECS_ROLLING_MEASURE 10
 /** How large are the intervals for which we track and report bandwidth use? */
-/* XXXX Watch out! Before Tor 0.2.2.21-alpha, using any other value here would
- * generate an unparseable state file. */
-#define NUM_SECS_BW_SUM_INTERVAL (15*60)
+#define NUM_SECS_BW_SUM_INTERVAL (4*60*60)
 /** How far in the past do we remember and publish bandwidth use? */
 #define NUM_SECS_BW_SUM_IS_VALID (24*60*60)
 /** How many bandwidth usage intervals do we remember? (derived) */
