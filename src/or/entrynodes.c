@@ -1525,10 +1525,10 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
 
 /** How long will we let a change in our guard nodes stay un-saved
  * when we are trying to avoid disk writes? */
-#define SLOW_GUARD_STATE_FLUSH_TIME 3600
+#define SLOW_GUARD_STATE_FLUSH_TIME 600
 /** How long will we let a change in our guard nodes stay un-saved
  * when we are not trying to avoid disk writes? */
-#define FAST_GUARD_STATE_FLUSH_TIME 600
+#define FAST_GUARD_STATE_FLUSH_TIME 30
 
 /** Our list of entry guards has changed, or some element of one
  * of our entry guards has changed. Write the changes to disk within

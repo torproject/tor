@@ -1,0 +1,4 @@
+  o Minor features (Guard nodes):
+    - Reduce the time delay before saving guard status to disk from 10
+      minute to 30 seconds (or from one hour to 10 minutes if
+      AvoidDiskWrites is set).  Closes ticket 12485.
