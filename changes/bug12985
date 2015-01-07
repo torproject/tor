@@ -1,0 +1,5 @@
+  o Minor bugfixes (shutdown):
+    - When shutting down, always call event_del() on lingering read or
+      write events before freeing them. Otherwise, we risk double-frees
+      or read-after-frees in event_base_free(). Fixes bug 12985; bugfix on
+      0.1.0.2-rc.
