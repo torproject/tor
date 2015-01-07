@@ -2487,7 +2487,7 @@ int
 dirserv_read_measured_bandwidths(const char *from_file,
                                  smartlist_t *routerstatuses)
 {
-  char line[256];
+  char line[512];
   FILE *fp = tor_fopen_cloexec(from_file, "r");
   int applied_lines = 0;
   time_t file_time, now;
