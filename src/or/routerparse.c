@@ -4431,6 +4431,9 @@ sort_version_list(smartlist_t *versions, int remove_duplicates)
  * to *<b>encoded_size_out</b>, and a pointer to the possibly next
  * descriptor to *<b>next_out</b>; return 0 for success (including validation)
  * and -1 for failure.
+ *
+ * If <b>as_hsdir</b> is 1, we're parsing this as an HSDir, and we should
+ * be strict about time formats.
  */
 int
 rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
@@ -4438,7 +4441,8 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
                                  char **intro_points_encrypted_out,
                                  size_t *intro_points_encrypted_size_out,
                                  size_t *encoded_size_out,
-                                 const char **next_out, const char *desc)
+                                 const char **next_out, const char *desc,
+                                 int as_hsdir)
 {
   rend_service_descriptor_t *result =
                             tor_malloc_zero(sizeof(rend_service_descriptor_t));
@@ -4452,6 +4456,8 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   char public_key_hash[DIGEST_LEN];
   char test_desc_id[DIGEST_LEN];
   memarea_t *area = NULL;
+  const int strict_time_fmt = as_hsdir;
+
   tor_assert(desc);
   /* Check if desc starts correctly. */
   if (strncmp(desc, "rendezvous-service-descriptor ",
@@ -4546,7 +4552,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
    * descriptor. */
   tok = find_by_keyword(tokens, R_PUBLICATION_TIME);
   tor_assert(tok->n_args == 1);
-  if (parse_iso_time(tok->args[0], &result->timestamp) < 0) {
+  if (parse_iso_time_(tok->args[0], &result->timestamp, strict_time_fmt) < 0) {
     log_warn(LD_REND, "Invalid publication time: '%s'", tok->args[0]);
     goto err;
   }

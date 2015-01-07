@@ -1704,15 +1704,18 @@ format_iso_time_nospace_usec(char *buf, const struct timeval *tv)
 
 /** Given an ISO-formatted UTC time value (after the epoch) in <b>cp</b>,
  * parse it and store its value in *<b>t</b>.  Return 0 on success, -1 on
- * failure.  Ignore extraneous stuff in <b>cp</b> separated by whitespace from
- * the end of the time string. */
+ * failure.  Ignore extraneous stuff in <b>cp</b> after the end of the time
+ * string, unless <b>strict</b> is set. */
 int
-parse_iso_time(const char *cp, time_t *t)
+parse_iso_time_(const char *cp, time_t *t, int strict)
 {
   struct tm st_tm;
   unsigned int year=0, month=0, day=0, hour=0, minute=0, second=0;
-  if (tor_sscanf(cp, "%u-%2u-%2u %2u:%2u:%2u", &year, &month,
-                &day, &hour, &minute, &second) < 6) {
+  int n_fields;
+  char extra_char;
+  n_fields = tor_sscanf(cp, "%u-%2u-%2u %2u:%2u:%2u%c", &year, &month,
+                        &day, &hour, &minute, &second, &extra_char);
+  if (strict ? (n_fields != 6) : (n_fields < 6)) {
     char *esc = esc_for_log(cp);
     log_warn(LD_GENERAL, "ISO time %s was unparseable", esc);
     tor_free(esc);
@@ -1739,6 +1742,16 @@ parse_iso_time(const char *cp, time_t *t)
     return -1;
   }
   return tor_timegm(&st_tm, t);
+}
+
+/** Given an ISO-formatted UTC time value (after the epoch) in <b>cp</b>,
+ * parse it and store its value in *<b>t</b>.  Return 0 on success, -1 on
+ * failure. Reject the string if any characters are present after the time.
+ */
+int
+parse_iso_time(const char *cp, time_t *t)
+{
+  return parse_iso_time_(cp, t, 1);
 }
 
 /** Given a <b>date</b> in one of the three formats allowed by HTTP (ugh),

@@ -411,7 +411,7 @@ rend_desc_v2_is_parsable(rend_encoded_v2_service_descriptor_t *desc)
                                          &test_intro_content,
                                          &test_intro_size,
                                          &test_encoded_size,
-                                         &test_next, desc->desc_str);
+                                         &test_next, desc->desc_str, 1);
   rend_service_descriptor_free(test_parsed);
   tor_free(test_intro_content);
   return (res >= 0);
@@ -946,7 +946,7 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
   }
   while (rend_parse_v2_service_descriptor(&parsed, desc_id, &intro_content,
                                           &intro_size, &encoded_size,
-                                          &next_desc, current_desc) >= 0) {
+                                          &next_desc, current_desc, 1) >= 0) {
     number_parsed++;
     /* We don't care about the introduction points. */
     tor_free(intro_content);
@@ -1091,7 +1091,7 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   /* Parse the descriptor. */
   if (rend_parse_v2_service_descriptor(&parsed, desc_id, &intro_content,
                                        &intro_size, &encoded_size,
-                                       &next_desc, desc) < 0) {
+                                       &next_desc, desc, 0) < 0) {
     log_warn(LD_REND, "Could not parse descriptor.");
     goto err;
   }
