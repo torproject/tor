@@ -5,6 +5,7 @@
 #define TOR_COMPAT_LIBEVENT_H
 
 #include "orconfig.h"
+#include "testsupport.h"
 
 struct event;
 struct event_base;
