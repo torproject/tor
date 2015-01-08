@@ -243,6 +243,17 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
   STMT_END
 
 /** Helper: While in a SMARTLIST_FOREACH loop over the list <b>sl</b> indexed
+ * with the variable <b>var</b>, remove the current element in a way that
+ * won't confuse the loop. */
+#define SMARTLIST_DEL_CURRENT_KEEPORDER(sl, var)          \
+  STMT_BEGIN                                              \
+     smartlist_del_keeporder(sl, var ## _sl_idx);         \
+     --var ## _sl_idx;                                    \
+     --var ## _sl_len;                                    \
+  STMT_END
+
+
+/** Helper: While in a SMARTLIST_FOREACH loop over the list <b>sl</b> indexed
  * with the variable <b>var</b>, replace the current element with <b>val</b>.
  * Does not deallocate the current value of <b>var</b>.
  */

@@ -449,6 +449,19 @@ trusted_dirs_flush_certs_to_disk(void)
   trusted_dir_servers_certs_changed = 0;
 }
 
+static int
+compare_certs_by_pubdates(const void **_a, const void **_b)
+{
+  const authority_cert_t *cert1 = *_a, *cert2=*_b;
+
+  if (cert1->cache_info.published_on < cert2->cache_info.published_on)
+    return -1;
+  else if (cert1->cache_info.published_on >  cert2->cache_info.published_on)
+    return 1;
+  else
+    return 0;
+}
+
 /** Remove all expired v3 authority certificates that have been superseded for
  * more than 48 hours or, if not expired, that were published more than 7 days
  * before being superseded. (If the most recent cert was published more than 48
@@ -459,38 +472,44 @@ trusted_dirs_remove_old_certs(void)
 {
   time_t now = time(NULL);
 #define DEAD_CERT_LIFETIME (2*24*60*60)
-#define OLD_CERT_LIFETIME (7*24*60*60)
+#define SUPERSEDED_CERT_LIFETIME (2*24*60*60)
   if (!trusted_dir_certs)
     return;
 
   DIGESTMAP_FOREACH(trusted_dir_certs, key, cert_list_t *, cl) {
-    authority_cert_t *newest = NULL;
-    SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert,
-          if (!newest || (cert->cache_info.published_on >
-                          newest->cache_info.published_on))
-            newest = cert);
-    if (newest) {
-      const time_t newest_published = newest->cache_info.published_on;
-      SMARTLIST_FOREACH_BEGIN(cl->certs, authority_cert_t *, cert) {
-        int expired;
-        time_t cert_published;
-        if (newest == cert)
-          continue;
-        /* resolve spurious clang shallow analysis null pointer errors */
-        tor_assert(cert);
-        expired = now > cert->expires;
-        cert_published = cert->cache_info.published_on;
-        /* Store expired certs for 48 hours after a newer arrives;
+    /* Sort the list from first-published to last-published */
+    smartlist_sort(cl->certs, compare_certs_by_pubdates);
+
+    SMARTLIST_FOREACH_BEGIN(cl->certs, authority_cert_t *, cert) {
+      if (cert_sl_idx == smartlist_len(cl->certs) - 1) {
+        /* This is the most recently published cert.  Keep it. */
+        continue;
+      }
+      authority_cert_t *next_cert = smartlist_get(cl->certs, cert_sl_idx+1);
+      const time_t next_cert_published = next_cert->cache_info.published_on;
+      if (next_cert_published > now) {
+        /* All later certs are published in the future. Keep everything
+         * we didn't discard. */
+        break;
+      }
+      int should_remove = 0;
+      if (cert->expires + DEAD_CERT_LIFETIME < now) {
+        /* Certificate has been expired for at least DEAD_CERT_LIFETIME.
+         * Remove it. */
+        should_remove = 1;
+      } else if (next_cert_published + SUPERSEDED_CERT_LIFETIME < now) {
+        /* Certificate has been superseded for OLD_CERT_LIFETIME.
+         * Remove it.
          */
-        if (expired ?
-            (newest_published + DEAD_CERT_LIFETIME < now) :
-            (cert_published + OLD_CERT_LIFETIME < newest_published)) {
-          SMARTLIST_DEL_CURRENT(cl->certs, cert);
-          authority_cert_free(cert);
-          trusted_dir_servers_certs_changed = 1;
-        }
-      } SMARTLIST_FOREACH_END(cert);
-    }
+        should_remove = 1;
+      }
+      if (should_remove) {
+        SMARTLIST_DEL_CURRENT_KEEPORDER(cl->certs, cert);
+        authority_cert_free(cert);
+        trusted_dir_servers_certs_changed = 1;
+      }
+    } SMARTLIST_FOREACH_END(cert);
+
   } DIGESTMAP_FOREACH_END;
 #undef DEAD_CERT_LIFETIME
 #undef OLD_CERT_LIFETIME
