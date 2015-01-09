@@ -6021,22 +6021,66 @@ parse_port_config(smartlist_t *out,
 
 /** Parse a list of config_line_t for an AF_UNIX unix socket listener option
  * from <b>cfg</b> and add them to <b>out</b>.  No fancy options are
- * supported: the line contains nothing but the path to the AF_UNIX socket. */
+ * supported: the line contains nothing but the path to the AF_UNIX socket.
+ * We support a *Socket 0 syntax to explicitly disable if we enable by
+ * default.  To use this, pass an initial list containing the default
+ * paths into this function, and if the list passed in is nonempty and
+ * contains paths they will replace it.  If it contains only '0' the
+ * initial list will be cleared. */
 static int
 parse_unix_socket_config(smartlist_t *out, const config_line_t *cfg,
                          int listener_type)
 {
+  /* We can say things like SocksSocket 0 or ControlSocket 0 to explicitly
+   * disable this feature; use this to track if we've seen a disable line
+   */
+
+  int unix_socket_disable = 0, initial_len;
+  size_t len;
 
   if (!out)
     return 0;
 
+  /*
+   * Keep track of this so we know if we added things later; it's
+   * invalid to say both *Socket 0 to disable and list paths
+   */
+  initial_len = smartlist_len(out);
+
   for ( ; cfg; cfg = cfg->next) {
-    size_t len = strlen(cfg->value);
-    port_cfg_t *port = tor_malloc_zero(sizeof(port_cfg_t) + len + 1);
-    port->is_unix_addr = 1;
-    memcpy(port->unix_addr, cfg->value, len+1);
-    port->type = listener_type;
-    smartlist_add(out, port);
+    if (strcmp(cfg->value, "0") != 0) {
+      /* Clear the default list if we have one */
+      if (initial_len > 0) {
+        SMARTLIST_FOREACH(out, port_cfg_t *, port, tor_free(port));
+        smartlist_clear(out);
+        initial_len = 0;
+      }
+      /* Now add it */
+      len = strlen(cfg->value);
+      port_cfg_t *port = tor_malloc_zero(sizeof(port_cfg_t) + len + 1);
+      port->is_unix_addr = 1;
+      memcpy(port->unix_addr, cfg->value, len+1);
+      port->type = listener_type;
+      smartlist_add(out, port);
+    } else {
+      /* Keep track that we've seen a disable */
+      unix_socket_disable = 1;
+    }
+  }
+
+  if (unix_socket_disable) {
+    if (initial_len == 0 && smartlist_len(out) > 0) {
+      /* We saw a disable line and a path; bad news */
+      return -1;
+    } else if (initial_len > 0) {
+      /*
+       * We had a non-empty default list, and still have it, so we have
+       * to clear it.
+       */
+      SMARTLIST_FOREACH(out, port_cfg_t *, port, tor_free(port));
+      smartlist_clear(out);
+      initial_len = 0;
+    }
   }
 
   return 0;
