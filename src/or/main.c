@@ -2169,6 +2169,9 @@ process_signal(uintptr_t sig)
         tor_cleanup();
         exit(0);
       }
+#ifdef HAVE_SYSTEMD
+      sd_notify(0, "STOPPING=1");
+#endif
       hibernate_begin_shutdown();
       break;
 #ifdef SIGPIPE
@@ -2188,11 +2191,17 @@ process_signal(uintptr_t sig)
       control_event_signal(sig);
       break;
     case SIGHUP:
+#ifdef HAVE_SYSTEMD
+      sd_notify(0, "RELOADING=1");
+#endif
       if (do_hup() < 0) {
         log_warn(LD_CONFIG,"Restart failed (config error?). Exiting.");
         tor_cleanup();
         exit(1);
       }
+#ifdef HAVE_SYSTEMD
+      sd_notify(0, "READY=1");
+#endif
       control_event_signal(sig);
       break;
 #ifdef SIGCHLD
