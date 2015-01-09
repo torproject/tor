@@ -55,7 +55,7 @@
 #define MIN_SUPPORTED_CONSENSUS_METHOD 13
 
 /** The highest consensus method that we currently support. */
-#define MAX_SUPPORTED_CONSENSUS_METHOD 18
+#define MAX_SUPPORTED_CONSENSUS_METHOD 19
 
 /** Lowest consensus method where microdesc consensuses omit any entry
  * with no microdesc. */
@@ -78,6 +78,9 @@
 /** Lowest consensus method where authorities may include an "id" line in
  * microdescriptors. */
 #define MIN_METHOD_FOR_ID_HASH_IN_MD 18
+
+/** Lowest consensus method where we include "package" lines*/
+#define MIN_METHOD_FOR_PACKAGE_LINES 19
 
 /** Default bandwidth to clip unmeasured bandwidths to using method >=
  * MIN_METHOD_TO_CLIP_UNMEASURED_BW */
@@ -160,6 +163,7 @@ STATIC char *format_networkstatus_vote(crypto_pk_t *private_key,
                                  networkstatus_t *v3_ns);
 STATIC char *dirvote_compute_params(smartlist_t *votes, int method,
                              int total_authorities);
+STATIC char *compute_consensus_package_lines(smartlist_t *votes);
 #endif
 
 #endif

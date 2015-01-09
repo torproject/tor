@@ -257,6 +257,10 @@ networkstatus_vote_free(networkstatus_t *ns)
     SMARTLIST_FOREACH(ns->supported_methods, char *, c, tor_free(c));
     smartlist_free(ns->supported_methods);
   }
+  if (ns->package_lines) {
+    SMARTLIST_FOREACH(ns->package_lines, char *, c, tor_free(c));
+    smartlist_free(ns->package_lines);
+  }
   if (ns->voters) {
     SMARTLIST_FOREACH_BEGIN(ns->voters, networkstatus_voter_info_t *, voter) {
       tor_free(voter->nickname);

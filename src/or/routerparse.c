@@ -131,6 +131,7 @@ typedef enum {
   K_CONSENSUS_METHOD,
   K_LEGACY_DIR_KEY,
   K_DIRECTORY_FOOTER,
+  K_PACKAGE,
 
   A_PURPOSE,
   A_LAST_LISTED,
@@ -420,6 +421,7 @@ static token_rule_t networkstatus_token_table[] = {
   T1("known-flags",            K_KNOWN_FLAGS,      ARGS,        NO_OBJ ),
   T01("params",                K_PARAMS,           ARGS,        NO_OBJ ),
   T( "fingerprint",            K_FINGERPRINT,      CONCAT_ARGS, NO_OBJ ),
+  T0N("package",               K_PACKAGE,          CONCAT_ARGS, NO_OBJ ),
 
   CERTIFICATE_MEMBERS
 
@@ -2624,6 +2626,16 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   }
   if ((tok = find_opt_by_keyword(tokens, K_SERVER_VERSIONS))) {
     ns->server_versions = tor_strdup(tok->args[0]);
+  }
+
+  {
+    smartlist_t *package_lst = find_all_by_keyword(tokens, K_PACKAGE);
+    if (package_lst) {
+      ns->package_lines = smartlist_new();
+      SMARTLIST_FOREACH(package_lst, directory_token_t *, t,
+                    smartlist_add(ns->package_lines, tor_strdup(t->args[0])));
+    }
+    smartlist_free(package_lst);
   }
 
   tok = find_by_keyword(tokens, K_KNOWN_FLAGS);

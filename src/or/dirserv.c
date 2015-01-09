@@ -2504,6 +2504,15 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
 
   v3_out->client_versions = client_versions;
   v3_out->server_versions = server_versions;
+  v3_out->package_lines = smartlist_new();
+  {
+    config_line_t *cl;
+    for (cl = get_options()->RecommendedPackages; cl; cl = cl->next) {
+      if (validate_recommended_package_line(cl->value))
+        smartlist_add(v3_out->package_lines, tor_strdup(cl->value));
+    }
+  }
+
   v3_out->known_flags = smartlist_new();
   smartlist_split_string(v3_out->known_flags,
                 "Authority Exit Fast Guard Stable V2Dir Valid",
@@ -3247,6 +3256,48 @@ connection_dirserv_flushed_some(dir_connection_t *conn)
     default:
       return 0;
   }
+}
+
+/** Return true iff <b>line</b> is a valid recommened_packages line.
+ */
+int
+validate_recommended_package_line(const char *line)
+{
+  const char *cp = line;
+
+#define WORD()                                  \
+  do {                                          \
+    if (*cp == ' ')                             \
+      return 0;                                 \
+    cp = strchr(cp, ' ');                       \
+    if (!cp)                                    \
+      return 0;                                 \
+  } while (0)
+
+  WORD(); /* skip packagename */
+  ++cp;
+  WORD(); /* skip version */
+  ++cp;
+  WORD(); /* Skip URL */
+  ++cp;
+
+  /* Skip digestname=digestval + */
+  int foundeq = 0;
+  while (*cp) {
+    if (*cp == ' ') {
+      if (!foundeq)
+        return 0;
+      foundeq = 0;
+    } else if (*cp == '=') {
+      if (++foundeq > 1)
+        return 0;
+    }
+    ++cp;
+  }
+
+  if (!foundeq)
+    return 0;
+  return 1;
 }
 
 /** Release all storage used by the directory server. */

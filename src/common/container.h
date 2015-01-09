@@ -94,8 +94,11 @@ void smartlist_del_keeporder(smartlist_t *sl, int idx);
 void smartlist_insert(smartlist_t *sl, int idx, void *val);
 void smartlist_sort(smartlist_t *sl,
                     int (*compare)(const void **a, const void **b));
-void *smartlist_get_most_frequent(const smartlist_t *sl,
-                    int (*compare)(const void **a, const void **b));
+void *smartlist_get_most_frequent_(const smartlist_t *sl,
+                    int (*compare)(const void **a, const void **b),
+                    int *count_out);
+#define smartlist_get_most_frequent(sl, compare) \
+  smartlist_get_most_frequent_((sl), (compare), NULL)
 void smartlist_uniq(smartlist_t *sl,
                     int (*compare)(const void **a, const void **b),
                     void (*free_fn)(void *elt));
@@ -106,6 +109,7 @@ void smartlist_sort_digests256(smartlist_t *sl);
 void smartlist_sort_pointers(smartlist_t *sl);
 
 char *smartlist_get_most_frequent_string(smartlist_t *sl);
+char *smartlist_get_most_frequent_string_(smartlist_t *sl, int *count_out);
 char *smartlist_get_most_frequent_digest256(smartlist_t *sl);
 
 void smartlist_uniq_strings(smartlist_t *sl);

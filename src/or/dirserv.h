@@ -104,6 +104,8 @@ void dirserv_free_all(void);
 void cached_dir_decref(cached_dir_t *d);
 cached_dir_t *new_cached_dir(char *s, time_t published);
 
+int validate_recommended_package_line(const char *line);
+
 #ifdef DIRSERV_PRIVATE
 
 /* Put the MAX_MEASUREMENT_AGE #define here so unit tests can see it */

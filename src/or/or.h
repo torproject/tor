@@ -2456,6 +2456,9 @@ typedef struct networkstatus_t {
   /** Vote only: what methods is this voter willing to use? */
   smartlist_t *supported_methods;
 
+  /** List of 'package' lines describing hashes of downloadable pacakges */
+  smartlist_t *package_lines;
+
   /** How long does this vote/consensus claim that authorities take to
    * distribute their votes to one another? */
   int vote_seconds;
@@ -3498,6 +3501,7 @@ typedef struct {
   config_line_t *RecommendedVersions;
   config_line_t *RecommendedClientVersions;
   config_line_t *RecommendedServerVersions;
+  config_line_t *RecommendedPackages;
   /** Whether dirservers allow router descriptors with private IPs. */
   int DirAllowPrivateAddresses;
   /** Whether routers accept EXTEND cells to routers with private IPs. */
