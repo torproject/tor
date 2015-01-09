@@ -294,7 +294,7 @@ GENERAL OPTIONS
 
 [[ControlSocket]] **ControlSocket** __Path__::
     Like ControlPort, but listens on a Unix domain socket, rather than a TCP
-    socket. (Unix and Unix-like systems only.)
+    socket. '0' disables ControlSocket (Unix and Unix-like systems only.)
 
 [[ControlSocketsGroupWritable]] **ControlSocketsGroupWritable** **0**|**1**::
     If this option is set to 0, don't allow the filesystem group to read and
@@ -485,7 +485,7 @@ GENERAL OPTIONS
 
 [[SocksSocket]] **SocksSocket** __Path__::
     Like SocksPort, but listens on a Unix domain socket, rather than a TCP
-    socket. (Unix and Unix-like systems only.)
+    socket.  '0' disables SocksSocket (Unix and Unix-like systems only.)
 
 [[SocksSocketsGroupWritable]] **SocksSocketsGroupWritable** **0**|**1**::
     If this option is set to 0, don't allow the filesystem group to read and
