@@ -136,6 +136,9 @@ fi
 AC_SUBST(TOR_SYSTEMD_CFLAGS)
 AC_SUBST(TOR_SYSTEMD_LIBS)
 
+PKG_CHECK_MODULES(SYSTEMD209, [systemd >= 209],
+    [AC_DEFINE(HAVE_SYSTEMD_209,1,[Have systemd v209 or more])], [])
+
 if test x$enable_systemd = xyes -a x$have_systemd != xyes ; then
     AC_MSG_ERROR([Explicitly requested systemd support, but systemd not found])
 fi
@@ -155,10 +158,6 @@ cpu workers lock up here, so I will disable threads.])
    esac
 fi
 
-ifdef([HAVE_SYSTEMD], [
-AC_SEARCH_LIBS([sd_watchdog_enabled], [systemd-daemon],
-    [AC_DEFINE(HAVE_SYSTEMD_209,1,[Have systemd v209 or more])], [])
-])
 
 case $host in
    *-*-solaris* )

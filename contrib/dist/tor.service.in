@@ -11,6 +11,7 @@ ExecReload = /bin/kill -HUP ${MAINPID}
 KillSignal = SIGINT
 TimeoutSec = 30
 Restart = on-failure
+WatchdogSec = 1m
 LimitNOFILE = 32768
 
 # Hardening

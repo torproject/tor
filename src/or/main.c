@@ -1776,7 +1776,7 @@ static periodic_timer_t *systemd_watchdog_timer = NULL;
 static void
 systemd_watchdog_callback(periodic_timer_t *timer, void *arg)
 {
-  sd_notify(1, "WATCHDOG=1");
+  sd_notify(0, "WATCHDOG=1");
 }
 #endif
 
