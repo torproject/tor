@@ -2113,9 +2113,10 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
     rs->ipv6_orport = ri->ipv6_orport;
   }
 
-  /* Iff we are in a testing network, use TestingDirAuthVoteExit to
-     give out Exit flags, and TestingDirAuthVoteGuard to
-     give out Guard flags. */
+  /* Iff we are in a testing network, use TestingDirAuthVoteExit,
+     TestingDirAuthVoteGuard, and TestingDirAuthVoteHSDir to
+     give out the Exit, Guard, and HSDir flags, respectively. 
+     But don't set the corresponding node flags. */
   if (options->TestingTorNetwork) {
     if (routerset_contains_routerstatus(options->TestingDirAuthVoteExit,
                                         rs, 0)) {
@@ -2123,8 +2124,14 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
     }
 
     if (routerset_contains_routerstatus(options->TestingDirAuthVoteGuard,
-                                      rs, 0)) {
+                                        rs, 0)) {
       rs->is_possible_guard = 1;
+    }
+
+    if (routerset_contains_routerstatus(options->TestingDirAuthVoteHSDir,
+                                        rs, 0)) {
+      /* TestingDirAuthVoteHSDir respects VoteOnHidServDirectoriesV2 */
+      rs->is_hs_dir = vote_on_hsdirs;
     }
   }
 }

@@ -2245,6 +2245,15 @@ The following options are used for running a testing Tor network.
     In order for this option to have any effect, **TestingTorNetwork**
     has to be set.
 
+[[TestingDirAuthVoteHSDir]] **TestingDirAuthVoteHSDir** __node__,__node__,__...__::
+    A list of identity fingerprints and country codes and
+    address patterns of nodes to vote HSDir for regardless of their
+    uptime and ORPort connectivity. See the **ExcludeNodes** option for more
+    information on how to specify nodes.
+ +
+    In order for this option to have any effect, **TestingTorNetwork**
+    and **VoteOnHidServDirectoriesV2** both have to be set.
+
 [[TestingEnableConnBwEvent]] **TestingEnableConnBwEvent** **0**|**1**::
     If this option is set, then Tor controllers may register for CONN_BW
     events.  Changing this requires that **TestingTorNetwork** is set.
