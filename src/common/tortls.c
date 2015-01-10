@@ -29,6 +29,14 @@
     #include <ws2tcpip.h>
  #endif
 #endif
+
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+/* Some versions of OpenSSL declare SSL_get_selected_srtp_profile twice in
+ * srtp.h. Suppress the GCC warning so we can build with -Wredundant-decl. */
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+#endif
+
 #include <openssl/ssl.h>
 #include <openssl/ssl3.h>
 #include <openssl/err.h>
@@ -36,6 +44,10 @@
 #include <openssl/asn1.h>
 #include <openssl/bio.h>
 #include <openssl/opensslv.h>
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 #ifdef USE_BUFFEREVENTS
 #include <event2/bufferevent_ssl.h>
