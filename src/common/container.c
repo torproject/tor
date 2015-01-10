@@ -735,7 +735,10 @@ smartlist_get_most_frequent_string(smartlist_t *sl)
   return smartlist_get_most_frequent(sl, compare_string_ptrs_);
 }
 
-/** Return the most frequent string in the sorted list <b>sl</b> */
+/** Return the most frequent string in the sorted list <b>sl</b>.
+ * If <b>count_out</b> is provided, set <b>count_out</b> to the
+ * number of times that string appears.
+ */
 char *
 smartlist_get_most_frequent_string_(smartlist_t *sl, int *count_out)
 {

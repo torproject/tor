@@ -1881,6 +1881,12 @@ on the public Tor network.
     multiple times: the values from multiple lines are spliced together. When
     this is set then **VersioningAuthoritativeDirectory** should be set too.
 
+[[RecommendedPackageVersions]] **RecommendedPackageVersions** __PACKAGENAME__ __VERSION__ __URL__ __DIGESTTYPE__**=**__DIGEST__ ::
+    Adds "package" line to the directory authority's vote.  This information
+    is used to vote on the correct URL and digest for the released versions
+    of different Tor-related packages, so that the consensus can certify
+    them.  This line may appear any number of times.
+
 [[RecommendedClientVersions]] **RecommendedClientVersions** __STRING__::
     STRING is a comma-separated list of Tor versions currently believed to be
     safe for clients to use. This information is included in version 2

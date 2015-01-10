@@ -1886,13 +1886,18 @@ networkstatus_compute_consensus(smartlist_t *votes,
   return result;
 }
 
-/** DOCDOC */
+/** Given a list of networkstatus_t for each vote, return a newly allocated
+ * string containing the "package" lines for the vote. */
 STATIC char *
 compute_consensus_package_lines(smartlist_t *votes)
 {
   const int n_votes = smartlist_len(votes);
+
+  /* This will be a map from "packagename version" strings to arrays
+   * of const char *, with the i'th member of the array corresponding to the
+   * package line from the i'th vote.
+   */
   strmap_t *package_status = strmap_new();
-  smartlist_t *result_list = smartlist_new();
 
   SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, v) {
     if (! v->package_lines)
@@ -1901,6 +1906,7 @@ compute_consensus_package_lines(smartlist_t *votes)
       if (! validate_recommended_package_line(line))
         continue;
 
+      /* Skip 'cp' to the second space in the line. */
       const char *cp = strchr(line, ' ');
       if (!cp) continue;
       ++cp;
@@ -1919,7 +1925,8 @@ compute_consensus_package_lines(smartlist_t *votes)
     } SMARTLIST_FOREACH_END(line);
   } SMARTLIST_FOREACH_END(v);
 
-  smartlist_t *entries = smartlist_new();
+  smartlist_t *entries = smartlist_new(); /* temporary */
+  smartlist_t *result_list = smartlist_new(); /* output */
   STRMAP_FOREACH(package_status, key, const char **, values) {
     int i, count=-1;
     for (i = 0; i < n_votes; ++i) {
