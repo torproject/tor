@@ -2953,7 +2953,7 @@ expand_filename(const char *filename)
       tor_free(username);
       rest = slash ? (slash+1) : "";
 #else
-      log_warn(LD_CONFIG, "Couldn't expend homedir on system without pwd.h");
+      log_warn(LD_CONFIG, "Couldn't expand homedir on system without pwd.h");
       return tor_strdup(filename);
 #endif
     }
