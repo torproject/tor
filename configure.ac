@@ -130,9 +130,10 @@ fi
 
 if test x$have_systemd = xyes; then
     AC_DEFINE(HAVE_SYSTEMD,1,[Have systemd])
-    CFLAGS="${CFLAGS} ${SYSTEMD_CFLAGS}"
+    TOR_SYSTEMD_CFLAGS="${SYSTEMD_CFLAGS}"
     TOR_SYSTEMD_LIBS="${SYSTEMD_LIBS}"
 fi
+AC_SUBST(TOR_SYSTEMD_CFLAGS)
 AC_SUBST(TOR_SYSTEMD_LIBS)
 
 if test x$enable_systemd = xyes -a x$have_systemd != xyes ; then
@@ -1543,7 +1544,7 @@ fi
 if test "$GCC" = yes; then
   # Disable GCC's strict aliasing checks.  They are an hours-to-debug
   # accident waiting to happen.
-  CFLAGS="$CFLAGS -Wall -fno-strict-aliasing -g -O2"
+  CFLAGS="$CFLAGS -Wall -fno-strict-aliasing"
 else
   # Override optimization level for non-gcc compilers
   CFLAGS="$CFLAGS -O"

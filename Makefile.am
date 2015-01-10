@@ -19,6 +19,7 @@ noinst_PROGRAMS=
 DISTCLEANFILES=
 bin_SCRIPTS=
 AM_CPPFLAGS=
+AM_CFLAGS = @TOR_SYSTEMD_CFLAGS@
 include src/include.am
 include doc/include.am
 include contrib/include.am
