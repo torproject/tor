@@ -71,15 +71,16 @@ setup_fake_routerlist(void)
   retval = router_load_routers_from_string(TEST_DESCRIPTORS,
                                            NULL, SAVED_IN_JOURNAL,
                                            NULL, 0, NULL);
-  tt_int_op(retval, ==, NUMBER_OF_DESCRIPTORS);
+  tt_int_op(retval, OP_EQ, NUMBER_OF_DESCRIPTORS);
 
   /* Sanity checking of routerlist and nodelist. */
   our_routerlist = router_get_routerlist();
-  tt_int_op(smartlist_len(our_routerlist->routers), ==, NUMBER_OF_DESCRIPTORS);
+  tt_int_op(smartlist_len(our_routerlist->routers), OP_EQ,
+            NUMBER_OF_DESCRIPTORS);
   routerlist_assert_ok(our_routerlist);
 
   our_nodelist = nodelist_get_list();
-  tt_int_op(smartlist_len(our_nodelist), ==, NUMBER_OF_DESCRIPTORS);
+  tt_int_op(smartlist_len(our_nodelist), OP_EQ, NUMBER_OF_DESCRIPTORS);
 
   /* Mark all routers as non-guards but up and running! */
   SMARTLIST_FOREACH_BEGIN(our_nodelist, node_t *, node) {
@@ -163,7 +164,7 @@ test_choose_random_entry_one_possible_guard(void *arg)
 
   /* Pick an entry. Make sure we pick the node we marked as guard. */
   chosen_entry = choose_random_entry(NULL);
-  tt_ptr_op(chosen_entry, ==, the_guard);
+  tt_ptr_op(chosen_entry, OP_EQ, the_guard);
 
  done:
   ;
@@ -189,14 +190,14 @@ populate_live_entry_guards_test_helper(int num_needed)
 
   /* Set NumEntryGuards to the provided number. */
   options->NumEntryGuards = num_needed;
-  tt_int_op(num_needed, ==, decide_num_guards(options, 0));
+  tt_int_op(num_needed, OP_EQ, decide_num_guards(options, 0));
 
   /* The global entry guards smartlist should be empty now. */
-  tt_int_op(smartlist_len(all_entry_guards), ==, 0);
+  tt_int_op(smartlist_len(all_entry_guards), OP_EQ, 0);
 
   /* Walk the nodelist and add all nodes as entry guards. */
   our_nodelist = nodelist_get_list();
-  tt_int_op(smartlist_len(our_nodelist), ==, NUMBER_OF_DESCRIPTORS);
+  tt_int_op(smartlist_len(our_nodelist), OP_EQ, NUMBER_OF_DESCRIPTORS);
 
   SMARTLIST_FOREACH_BEGIN(our_nodelist, const node_t *, node) {
     const node_t *node_tmp;
@@ -205,20 +206,20 @@ populate_live_entry_guards_test_helper(int num_needed)
   } SMARTLIST_FOREACH_END(node);
 
   /* Make sure the nodes were added as entry guards. */
-  tt_int_op(smartlist_len(all_entry_guards), ==, NUMBER_OF_DESCRIPTORS);
+  tt_int_op(smartlist_len(all_entry_guards), OP_EQ, NUMBER_OF_DESCRIPTORS);
 
   /* Ensure that all the possible entry guards are enough to satisfy us. */
-  tt_int_op(smartlist_len(all_entry_guards), >=, num_needed);
+  tt_int_op(smartlist_len(all_entry_guards), OP_GE, num_needed);
 
   /* Walk the entry guard list for some sanity checking */
   SMARTLIST_FOREACH_BEGIN(all_entry_guards, const entry_guard_t *, entry) {
     /* Since we called add_an_entry_guard() with 'for_discovery' being
        False, all guards should have made_contact enabled. */
-    tt_int_op(entry->made_contact, ==, 1);
+    tt_int_op(entry->made_contact, OP_EQ, 1);
 
     /* Since we don't have a routerstatus, all of the entry guards are
        not directory servers. */
-    tt_int_op(entry->is_dir_cache, ==, 0);
+    tt_int_op(entry->is_dir_cache, OP_EQ, 0);
   } SMARTLIST_FOREACH_END(entry);
 
   /* First, try to get some fast guards. This should fail. */
@@ -228,8 +229,8 @@ populate_live_entry_guards_test_helper(int num_needed)
                                       NO_DIRINFO, /* Don't care about DIRINFO*/
                                       0, 0,
                                       1); /* We want fast guard! */
-  tt_int_op(retval, ==, 0);
-  tt_int_op(smartlist_len(live_entry_guards), ==, 0);
+  tt_int_op(retval, OP_EQ, 0);
+  tt_int_op(smartlist_len(live_entry_guards), OP_EQ, 0);
 
   /* Now try to get some stable guards. This should fail too. */
   retval = populate_live_entry_guards(live_entry_guards,
@@ -239,8 +240,8 @@ populate_live_entry_guards_test_helper(int num_needed)
                                       0,
                                       1, /* We want stable guard! */
                                       0);
-  tt_int_op(retval, ==, 0);
-  tt_int_op(smartlist_len(live_entry_guards), ==, 0);
+  tt_int_op(retval, OP_EQ, 0);
+  tt_int_op(smartlist_len(live_entry_guards), OP_EQ, 0);
 
   /* Now try to get any guard we can find. This should succeed. */
   retval = populate_live_entry_guards(live_entry_guards,
@@ -253,8 +254,8 @@ populate_live_entry_guards_test_helper(int num_needed)
      should have added 'num_needed' of them to live_entry_guards.
      'retval' should be 1 since we now have enough live entry guards
      to pick one.  */
-  tt_int_op(retval, ==, 1);
-  tt_int_op(smartlist_len(live_entry_guards), ==, num_needed);
+  tt_int_op(retval, OP_EQ, 1);
+  tt_int_op(smartlist_len(live_entry_guards), OP_EQ, num_needed);
 
  done:
   smartlist_free(live_entry_guards);
@@ -361,7 +362,7 @@ test_entry_guards_parse_state_simple(void *arg)
   (void) arg;
 
   /* The global entry guards smartlist should be empty now. */
-  tt_int_op(smartlist_len(all_entry_guards), ==, 0);
+  tt_int_op(smartlist_len(all_entry_guards), OP_EQ, 0);
 
   { /* Prepare the state entry */
 
@@ -387,34 +388,34 @@ test_entry_guards_parse_state_simple(void *arg)
 
   /* Parse state */
   retval = entry_guards_parse_state(state, 1, &msg);
-  tt_int_op(retval, >=, 0);
+  tt_int_op(retval, OP_GE, 0);
 
   /* Test that the guard was registered.
      We need to re-get the entry guard list since its pointer was
      overwritten in entry_guards_parse_state(). */
   all_entry_guards = get_entry_guards();
-  tt_int_op(smartlist_len(all_entry_guards), ==, 1);
+  tt_int_op(smartlist_len(all_entry_guards), OP_EQ, 1);
 
   { /* Test the entry guard structure */
     char hex_digest[1024];
     char str_time[1024];
 
     const entry_guard_t *e = smartlist_get(all_entry_guards, 0);
-    tt_str_op(e->nickname, ==, nickname); /* Verify nickname */
+    tt_str_op(e->nickname, OP_EQ, nickname); /* Verify nickname */
 
     base16_encode(hex_digest, sizeof(hex_digest),
                   e->identity, DIGEST_LEN);
-    tt_str_op(hex_digest, ==, fpr); /* Verify fingerprint */
+    tt_str_op(hex_digest, OP_EQ, fpr); /* Verify fingerprint */
 
     tt_assert(e->is_dir_cache); /* Verify dirness */
 
-    tt_str_op(e->chosen_by_version, ==, tor_version); /* Verify tor version */
+    tt_str_op(e->chosen_by_version, OP_EQ, tor_version); /* Verify version */
 
     tt_assert(e->made_contact); /* All saved guards have been contacted */
 
     tt_assert(e->bad_since); /* Verify bad_since timestamp */
     format_iso_time(str_time, e->bad_since);
-    tt_str_op(str_time, ==, unlisted_since);
+    tt_str_op(str_time, OP_EQ, unlisted_since);
 
     /* The rest should be unset */
     tt_assert(!e->unreachable_since);
@@ -456,7 +457,7 @@ test_entry_guards_parse_state_pathbias(void *arg)
   (void) arg;
 
   /* The global entry guards smartlist should be empty now. */
-  tt_int_op(smartlist_len(all_entry_guards), ==, 0);
+  tt_int_op(smartlist_len(all_entry_guards), OP_EQ, 0);
 
   { /* Prepare the state entry */
 
@@ -492,11 +493,11 @@ test_entry_guards_parse_state_pathbias(void *arg)
 
   /* Parse state */
   retval = entry_guards_parse_state(state, 1, &msg);
-  tt_int_op(retval, >=, 0);
+  tt_int_op(retval, OP_GE, 0);
 
   /* Test that the guard was registered */
   all_entry_guards = get_entry_guards();
-  tt_int_op(smartlist_len(all_entry_guards), ==, 1);
+  tt_int_op(smartlist_len(all_entry_guards), OP_EQ, 1);
 
   { /* Test the path bias of this guard */
     const entry_guard_t *e = smartlist_get(all_entry_guards, 0);
@@ -505,12 +506,13 @@ test_entry_guards_parse_state_pathbias(void *arg)
     tt_assert(!e->can_retry);
 
     /* XXX tt_double_op doesn't support equality. Cast to int for now. */
-    tt_int_op((int)e->circ_attempts, ==, (int)circ_attempts);
-    tt_int_op((int)e->circ_successes, ==, (int)circ_successes);
-    tt_int_op((int)e->successful_circuits_closed, ==, (int)successful_closed);
-    tt_int_op((int)e->timeouts, ==, (int)timeouts);
-    tt_int_op((int)e->collapsed_circuits, ==, (int)collapsed);
-    tt_int_op((int)e->unusable_circuits, ==, (int)unusable);
+    tt_int_op((int)e->circ_attempts, OP_EQ, (int)circ_attempts);
+    tt_int_op((int)e->circ_successes, OP_EQ, (int)circ_successes);
+    tt_int_op((int)e->successful_circuits_closed, OP_EQ,
+              (int)successful_closed);
+    tt_int_op((int)e->timeouts, OP_EQ, (int)timeouts);
+    tt_int_op((int)e->collapsed_circuits, OP_EQ, (int)collapsed);
+    tt_int_op((int)e->unusable_circuits, OP_EQ, (int)unusable);
   }
 
  done:
@@ -537,17 +539,17 @@ test_entry_guards_set_from_config(void *arg)
   retval = routerset_parse(options->EntryNodes,
                            entrynodes_str,
                            "test_entrynodes");
-  tt_int_op(retval, >=, 0);
+  tt_int_op(retval, OP_GE, 0);
 
   /* Read nodes from EntryNodes */
   entry_guards_set_from_config(options);
 
   /* Test that only one guard was added. */
-  tt_int_op(smartlist_len(all_entry_guards), ==, 1);
+  tt_int_op(smartlist_len(all_entry_guards), OP_EQ, 1);
 
   /* Make sure it was the guard we specified. */
   chosen_entry = choose_random_entry(NULL);
-  tt_str_op(chosen_entry->ri->nickname, ==, entrynodes_str);
+  tt_str_op(chosen_entry->ri->nickname, OP_EQ, entrynodes_str);
 
  done:
   routerset_free(options->EntryNodes);
@@ -569,59 +571,59 @@ test_entry_is_time_to_retry(void *arg)
   test_guard->unreachable_since = now - 1;
 
   retval = entry_is_time_to_retry(test_guard,now);
-  tt_int_op(retval,==,1);
+  tt_int_op(retval,OP_EQ,1);
 
   test_guard->unreachable_since = now - (6*60*60 - 1);
   test_guard->last_attempted = now - (60*60 + 1);
 
   retval = entry_is_time_to_retry(test_guard,now);
-  tt_int_op(retval,==,1);
+  tt_int_op(retval,OP_EQ,1);
 
   test_guard->last_attempted = now - (60*60 - 1);
 
   retval = entry_is_time_to_retry(test_guard,now);
-  tt_int_op(retval,==,0);
+  tt_int_op(retval,OP_EQ,0);
 
   test_guard->unreachable_since = now - (6*60*60 + 1);
   test_guard->last_attempted = now - (4*60*60 + 1);
 
   retval = entry_is_time_to_retry(test_guard,now);
-  tt_int_op(retval,==,1);
+  tt_int_op(retval,OP_EQ,1);
 
   test_guard->unreachable_since = now - (3*24*60*60 - 1);
   test_guard->last_attempted = now - (4*60*60 + 1);
 
   retval = entry_is_time_to_retry(test_guard,now);
-  tt_int_op(retval,==,1);
+  tt_int_op(retval,OP_EQ,1);
 
   test_guard->unreachable_since = now - (3*24*60*60 + 1);
   test_guard->last_attempted = now - (18*60*60 + 1);
 
   retval = entry_is_time_to_retry(test_guard,now);
-  tt_int_op(retval,==,1);
+  tt_int_op(retval,OP_EQ,1);
 
   test_guard->unreachable_since = now - (7*24*60*60 - 1);
   test_guard->last_attempted = now - (18*60*60 + 1);
 
   retval = entry_is_time_to_retry(test_guard,now);
-  tt_int_op(retval,==,1);
+  tt_int_op(retval,OP_EQ,1);
 
   test_guard->last_attempted = now - (18*60*60 - 1);
 
   retval = entry_is_time_to_retry(test_guard,now);
-  tt_int_op(retval,==,0);
+  tt_int_op(retval,OP_EQ,0);
 
   test_guard->unreachable_since = now - (7*24*60*60 + 1);
   test_guard->last_attempted = now - (36*60*60 + 1);
 
   retval = entry_is_time_to_retry(test_guard,now);
-  tt_int_op(retval,==,1);
+  tt_int_op(retval,OP_EQ,1);
 
   test_guard->unreachable_since = now - (7*24*60*60 + 1);
   test_guard->last_attempted = now - (36*60*60 + 1);
 
   retval = entry_is_time_to_retry(test_guard,now);
-  tt_int_op(retval,==,1);
+  tt_int_op(retval,OP_EQ,1);
 
  done:
   tor_free(test_guard);
@@ -641,23 +643,23 @@ test_entry_is_live(void *arg)
   (void) arg;
 
   /* The global entry guards smartlist should be empty now. */
-  tt_int_op(smartlist_len(all_entry_guards), ==, 0);
+  tt_int_op(smartlist_len(all_entry_guards), OP_EQ, 0);
 
   /* Walk the nodelist and add all nodes as entry guards. */
   our_nodelist = nodelist_get_list();
-  tt_int_op(smartlist_len(our_nodelist), ==, NUMBER_OF_DESCRIPTORS);
+  tt_int_op(smartlist_len(our_nodelist), OP_EQ, NUMBER_OF_DESCRIPTORS);
 
   SMARTLIST_FOREACH_BEGIN(our_nodelist, const node_t *, node) {
     const node_t *node_tmp;
     node_tmp = add_an_entry_guard(node, 0, 1, 0, 0);
     tt_assert(node_tmp);
 
-    tt_int_op(node->is_stable, ==, 0);
-    tt_int_op(node->is_fast, ==, 0);
+    tt_int_op(node->is_stable, OP_EQ, 0);
+    tt_int_op(node->is_fast, OP_EQ, 0);
   } SMARTLIST_FOREACH_END(node);
 
   /* Make sure the nodes were added as entry guards. */
-  tt_int_op(smartlist_len(all_entry_guards), ==, NUMBER_OF_DESCRIPTORS);
+  tt_int_op(smartlist_len(all_entry_guards), OP_EQ, NUMBER_OF_DESCRIPTORS);
 
   /* Now get a random test entry that we will use for this unit test. */
   which_node = 3;  /* (chosen by fair dice roll) */
@@ -681,12 +683,12 @@ test_entry_is_live(void *arg)
   /* Don't impose any restrictions on the node. Should succeed. */
   test_node = entry_is_live(test_entry, 0, &msg);
   tt_assert(test_node);
-  tt_ptr_op(test_node, ==, node_get_by_id(test_entry->identity));
+  tt_ptr_op(test_node, OP_EQ, node_get_by_id(test_entry->identity));
 
   /* Require descriptor for this node. It has one so it should succeed. */
   test_node = entry_is_live(test_entry, ENTRY_NEED_DESCRIPTOR, &msg);
   tt_assert(test_node);
-  tt_ptr_op(test_node, ==, node_get_by_id(test_entry->identity));
+  tt_ptr_op(test_node, OP_EQ, node_get_by_id(test_entry->identity));
 
  done:
   ; /* XXX */

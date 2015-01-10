@@ -1,0 +1,7 @@
+  o Minor bugfixes (hidden services):
+    - When fetching hidden service descriptors, check not only for
+      whether we got the hidden service we had in mind, but also
+      whether we got the particular descriptors we wanted. This
+      prevents a class of inefficient but annoying DoS attacks by
+      hidden service directories. Fixes bug 13214; bugfix on
+      0.2.1.6-alpha. Reported by "special".

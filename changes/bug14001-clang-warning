@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - The address of an array in the middle of a structure will
+      always be non-NULL. clang recognises this and complains.
+      Disable the tautologous and redundant check to silence
+      this warning.
+      Fixes bug 14001.

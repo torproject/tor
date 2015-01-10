@@ -87,24 +87,24 @@ test_relaycell_resolved(void *arg)
     srm_ncalls = mum_ncalls = 0;                \
   } while (0)
 #define ASSERT_MARK_CALLED(reason) do {         \
-    tt_int_op(mum_ncalls, ==, 1);               \
-    tt_ptr_op(mum_conn, ==, entryconn);         \
-    tt_int_op(mum_endreason, ==, (reason));     \
+    tt_int_op(mum_ncalls, OP_EQ, 1);               \
+    tt_ptr_op(mum_conn, OP_EQ, entryconn);         \
+    tt_int_op(mum_endreason, OP_EQ, (reason));     \
   } while (0)
 #define ASSERT_RESOLVED_CALLED(atype, answer, ttl, expires) do {  \
-    tt_int_op(srm_ncalls, ==, 1);                                 \
-    tt_ptr_op(srm_conn, ==, entryconn);                           \
-    tt_int_op(srm_atype, ==, (atype));                            \
+    tt_int_op(srm_ncalls, OP_EQ, 1);                                 \
+    tt_ptr_op(srm_conn, OP_EQ, entryconn);                           \
+    tt_int_op(srm_atype, OP_EQ, (atype));                            \
     if (answer) {                                                 \
-      tt_int_op(srm_alen, ==, sizeof(answer)-1);                  \
-      tt_int_op(srm_alen, <, 512);                                \
-      tt_int_op(srm_answer_is_set, ==, 1);                        \
-      tt_mem_op(srm_answer, ==, answer, sizeof(answer)-1);        \
+      tt_int_op(srm_alen, OP_EQ, sizeof(answer)-1);                  \
+      tt_int_op(srm_alen, OP_LT, 512);                                \
+      tt_int_op(srm_answer_is_set, OP_EQ, 1);                        \
+      tt_mem_op(srm_answer, OP_EQ, answer, sizeof(answer)-1);        \
     } else {                                                      \
-      tt_int_op(srm_answer_is_set, ==, 0);                        \
+      tt_int_op(srm_answer_is_set, OP_EQ, 0);                        \
     }                                                             \
-    tt_int_op(srm_ttl, ==, ttl);                                  \
-    tt_int_op(srm_expires, ==, expires);                          \
+    tt_int_op(srm_ttl, OP_EQ, ttl);                                  \
+    tt_int_op(srm_expires, OP_EQ, expires);                          \
   } while (0)
 
   (void)arg;
@@ -130,9 +130,9 @@ test_relaycell_resolved(void *arg)
   /* Try with connection in non-RESOLVE_WAIT state: cell gets ignored */
   MOCK_RESET();
   r = connection_edge_process_resolved_cell(edgeconn, &cell, &rh);
-  tt_int_op(r, ==, 0);
-  tt_int_op(srm_ncalls, ==, 0);
-  tt_int_op(mum_ncalls, ==, 0);
+  tt_int_op(r, OP_EQ, 0);
+  tt_int_op(srm_ncalls, OP_EQ, 0);
+  tt_int_op(mum_ncalls, OP_EQ, 0);
 
   /* Now put it in the right state. */
   ENTRY_TO_CONN(entryconn)->state = AP_CONN_STATE_RESOLVE_WAIT;
@@ -144,7 +144,7 @@ test_relaycell_resolved(void *arg)
   /* We prefer ipv4, so we should get the first ipv4 answer */
   MOCK_RESET();
   r = connection_edge_process_resolved_cell(edgeconn, &cell, &rh);
-  tt_int_op(r, ==, 0);
+  tt_int_op(r, OP_EQ, 0);
   ASSERT_MARK_CALLED(END_STREAM_REASON_DONE|
                      END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
   ASSERT_RESOLVED_CALLED(RESOLVED_TYPE_IPV4, "\x7f\x00\x01\x02", 256, -1);
@@ -153,7 +153,7 @@ test_relaycell_resolved(void *arg)
   MOCK_RESET();
   options->ClientDNSRejectInternalAddresses = 1;
   r = connection_edge_process_resolved_cell(edgeconn, &cell, &rh);
-  tt_int_op(r, ==, 0);
+  tt_int_op(r, OP_EQ, 0);
   ASSERT_MARK_CALLED(END_STREAM_REASON_DONE|
                      END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
   ASSERT_RESOLVED_CALLED(RESOLVED_TYPE_IPV4, "\x12\x00\x00\x01", 512, -1);
@@ -162,7 +162,7 @@ test_relaycell_resolved(void *arg)
   entryconn->prefer_ipv6_traffic = 1;
   MOCK_RESET();
   r = connection_edge_process_resolved_cell(edgeconn, &cell, &rh);
-  tt_int_op(r, ==, 0);
+  tt_int_op(r, OP_EQ, 0);
   ASSERT_MARK_CALLED(END_STREAM_REASON_DONE|
                      END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
   ASSERT_RESOLVED_CALLED(RESOLVED_TYPE_IPV6,
@@ -174,7 +174,7 @@ test_relaycell_resolved(void *arg)
   MOCK_RESET();
   SET_CELL("\x04\x04\x12\x00\x00\x01\x00\x00\x02\x00");
   r = connection_edge_process_resolved_cell(edgeconn, &cell, &rh);
-  tt_int_op(r, ==, 0);
+  tt_int_op(r, OP_EQ, 0);
   ASSERT_MARK_CALLED(END_STREAM_REASON_DONE|
                      END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
   ASSERT_RESOLVED_CALLED(RESOLVED_TYPE_IPV4, "\x12\x00\x00\x01", 512, -1);
@@ -184,7 +184,7 @@ test_relaycell_resolved(void *arg)
   MOCK_RESET();
   entryconn->ipv4_traffic_ok = 0;
   r = connection_edge_process_resolved_cell(edgeconn, &cell, &rh);
-  tt_int_op(r, ==, 0);
+  tt_int_op(r, OP_EQ, 0);
   ASSERT_MARK_CALLED(END_STREAM_REASON_DONE|
                      END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
   ASSERT_RESOLVED_CALLED(RESOLVED_TYPE_ERROR, NULL, -1, -1);
@@ -194,7 +194,7 @@ test_relaycell_resolved(void *arg)
   entryconn->ipv4_traffic_ok = 1;
   entryconn->socks_request->command = SOCKS_COMMAND_RESOLVE_PTR;
   r = connection_edge_process_resolved_cell(edgeconn, &cell, &rh);
-  tt_int_op(r, ==, 0);
+  tt_int_op(r, OP_EQ, 0);
   ASSERT_MARK_CALLED(END_STREAM_REASON_DONE|
                      END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
   ASSERT_RESOLVED_CALLED(RESOLVED_TYPE_ERROR, NULL, -1, -1);
@@ -203,7 +203,7 @@ test_relaycell_resolved(void *arg)
   MOCK_RESET();
   SET_CELL("\x00\x0fwww.example.com\x00\x01\x00\x00");
   r = connection_edge_process_resolved_cell(edgeconn, &cell, &rh);
-  tt_int_op(r, ==, 0);
+  tt_int_op(r, OP_EQ, 0);
   ASSERT_MARK_CALLED(END_STREAM_REASON_DONE|
                      END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
   ASSERT_RESOLVED_CALLED(RESOLVED_TYPE_HOSTNAME, "www.example.com", 65536, -1);
@@ -213,9 +213,9 @@ test_relaycell_resolved(void *arg)
   entryconn->socks_request->command = SOCKS_COMMAND_RESOLVE;
   SET_CELL("\x04\x04\x01\x02\x03\x04"); /* no ttl */
   r = connection_edge_process_resolved_cell(edgeconn, &cell, &rh);
-  tt_int_op(r, ==, 0);
+  tt_int_op(r, OP_EQ, 0);
   ASSERT_MARK_CALLED(END_STREAM_REASON_TORPROTOCOL);
-  tt_int_op(srm_ncalls, ==, 0);
+  tt_int_op(srm_ncalls, OP_EQ, 0);
 
   /* error on all addresses private */
   MOCK_RESET();
@@ -224,7 +224,7 @@ test_relaycell_resolved(void *arg)
            /* IPv4: 192.168.1.1, ttl 256 */
            "\x04\x04\xc0\xa8\x01\x01\x00\x00\x01\x00");
   r = connection_edge_process_resolved_cell(edgeconn, &cell, &rh);
-  tt_int_op(r, ==, 0);
+  tt_int_op(r, OP_EQ, 0);
   ASSERT_MARK_CALLED(END_STREAM_REASON_TORPROTOCOL);
   ASSERT_RESOLVED_CALLED(RESOLVED_TYPE_ERROR_TRANSIENT, NULL, 0, TIME_MAX);
 
@@ -232,7 +232,7 @@ test_relaycell_resolved(void *arg)
   MOCK_RESET();
   SET_CELL("\xf0\x15" "quiet and meaningless" "\x00\x00\x0f\xff");
   r = connection_edge_process_resolved_cell(edgeconn, &cell, &rh);
-  tt_int_op(r, ==, 0);
+  tt_int_op(r, OP_EQ, 0);
   ASSERT_MARK_CALLED(END_STREAM_REASON_DONE|
                      END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
   ASSERT_RESOLVED_CALLED(RESOLVED_TYPE_ERROR_TRANSIENT, NULL, -1, -1);

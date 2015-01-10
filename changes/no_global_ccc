@@ -1,0 +1,3 @@
+  o Code Simplification and Refactoring:
+    - Stop using can_complete_circuits as a global variable; access it with
+      a function instead.

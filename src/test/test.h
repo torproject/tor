@@ -34,7 +34,7 @@
   tt_mem_op(expr1, op, mem_op_hex_tmp, length/2);                       \
   STMT_END
 
-#define test_memeq_hex(expr1, hex) test_mem_op_hex(expr1, ==, hex)
+#define test_memeq_hex(expr1, hex) test_mem_op_hex(expr1, OP_EQ, hex)
 
 #define tt_double_op(a,op,b)                                            \
   tt_assert_test_type(a,b,#a" "#op" "#b,double,(val1_ op val2_),"%f",   \

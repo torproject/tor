@@ -391,13 +391,15 @@ log_new_relay_greeting(void)
   already_logged = 1;
 }
 
-/** Try to read an RSA key from <b>fname</b>.  If <b>fname</b> doesn't exist,
- * or is empty, and <b>generate</b> is true, create a new RSA key and save it
- * in <b>fname</b>.  Return the read/created key, or NULL on error.  Log all
- * errors at level <b>severity</b>.
+/** Try to read an RSA key from <b>fname</b>.  If <b>fname</b> doesn't exist
+ * and <b>generate</b> is true, create a new RSA key and save it in
+ * <b>fname</b>.  Return the read/created key, or NULL on error.  Log all
+ * errors at level <b>severity</b>. If <b>log_greeting</b> is non-zero and a
+ * new key was created, log_new_relay_greeting() is called.
  */
 crypto_pk_t *
-init_key_from_file(const char *fname, int generate, int severity)
+init_key_from_file(const char *fname, int generate, int severity,
+                   int log_greeting)
 {
   crypto_pk_t *prkey = NULL;
 
@@ -439,7 +441,9 @@ init_key_from_file(const char *fname, int generate, int severity)
           goto error;
         }
         log_info(LD_GENERAL, "Generated key seems valid");
-        log_new_relay_greeting();
+        if (log_greeting) {
+            log_new_relay_greeting();
+        }
         if (crypto_pk_write_private_key_to_filename(prkey, fname)) {
           tor_log(severity, LD_FS,
               "Couldn't write generated key to \"%s\".", fname);
@@ -554,7 +558,7 @@ load_authority_keyset(int legacy, crypto_pk_t **key_out,
 
   fname = get_datadir_fname2("keys",
                  legacy ? "legacy_signing_key" : "authority_signing_key");
-  signing_key = init_key_from_file(fname, 0, LOG_INFO);
+  signing_key = init_key_from_file(fname, 0, LOG_INFO, 0);
   if (!signing_key) {
     log_warn(LD_DIR, "No version 3 directory key found in %s", fname);
     goto done;
@@ -837,7 +841,7 @@ init_keys(void)
   /* 1b. Read identity key. Make it if none is found. */
   keydir = get_datadir_fname2("keys", "secret_id_key");
   log_info(LD_GENERAL,"Reading/making identity key \"%s\"...",keydir);
-  prkey = init_key_from_file(keydir, 1, LOG_ERR);
+  prkey = init_key_from_file(keydir, 1, LOG_ERR, 1);
   tor_free(keydir);
   if (!prkey) return -1;
   set_server_identity_key(prkey);
@@ -860,7 +864,7 @@ init_keys(void)
   /* 2. Read onion key.  Make it if none is found. */
   keydir = get_datadir_fname2("keys", "secret_onion_key");
   log_info(LD_GENERAL,"Reading/making onion key \"%s\"...",keydir);
-  prkey = init_key_from_file(keydir, 1, LOG_ERR);
+  prkey = init_key_from_file(keydir, 1, LOG_ERR, 1);
   tor_free(keydir);
   if (!prkey) return -1;
   set_onion_key(prkey);
@@ -887,7 +891,7 @@ init_keys(void)
   if (!lastonionkey && file_status(keydir) == FN_FILE) {
     /* Load keys from non-empty files only.
      * Missing old keys won't be replaced with freshly generated keys. */
-    prkey = init_key_from_file(keydir, 0, LOG_ERR);
+    prkey = init_key_from_file(keydir, 0, LOG_ERR, 0);
     if (prkey)
       lastonionkey = prkey;
   }

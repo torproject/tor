@@ -11,11 +11,12 @@ LIBS = ..\..\..\build-alpha\lib\libevent.lib \
  ws2_32.lib advapi32.lib shell32.lib \
  crypt32.lib gdi32.lib user32.lib
 
-TEST_OBJECTS = test.obj test_addr.obj test_containers.obj \
-	test_controller_events.ogj test_crypto.obj test_data.obj test_dir.obj \
-	test_microdesc.obj test_pt.obj test_util.obj test_config.obj \
-	test_cell_formats.obj test_replay.obj test_introduce.obj tinytest.obj \
-	test_hs.obj
+TEST_OBJECTS = test.obj test_addr.obj test_channel.obj test_channeltls.obj \
+        test_containers.obj \
+	test_controller_events.obj test_crypto.obj test_data.obj test_dir.obj \
+	test_checkdir.obj test_microdesc.obj test_pt.obj test_util.obj test_config.obj \
+	test_cell_formats.obj test_relay.obj test_replay.obj \
+	test_scheduler.obj test_introduce.obj test_hs.obj tinytest.obj
 
 tinytest.obj: ..\ext\tinytest.c
 	$(CC) $(CFLAGS) /D snprintf=_snprintf /c ..\ext\tinytest.c

@@ -33,7 +33,7 @@ void reset_last_resolved_addr(void);
 int resolve_my_address(int warn_severity, const or_options_t *options,
                        uint32_t *addr_out,
                        const char **method_out, char **hostname_out);
-int is_local_addr(const tor_addr_t *addr);
+MOCK_DECL(int, is_local_addr, (const tor_addr_t *addr));
 void options_init(or_options_t *options);
 
 #define OPTIONS_DUMP_MINIMAL 1
@@ -141,6 +141,9 @@ STATIC int options_validate(or_options_t *old_options,
                             or_options_t *options,
                             or_options_t *default_options,
                             int from_setconf, char **msg);
+STATIC int parse_transport_line(const or_options_t *options,
+                                const char *line, int validate_only,
+                                int server);
 #endif
 
 #endif

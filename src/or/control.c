@@ -1263,6 +1263,7 @@ static const struct signal_t signal_table[] = {
   { SIGTERM, "INT" },
   { SIGNEWNYM, "NEWNYM" },
   { SIGCLEARDNSCACHE, "CLEARDNSCACHE"},
+  { SIGHEARTBEAT, "HEARTBEAT"},
   { 0, NULL },
 };
 
@@ -2015,7 +2016,7 @@ getinfo_helper_events(control_connection_t *control_conn,
     /* Note that status/ is not a catch-all for events; there's only supposed
      * to be a status GETINFO if there's a corresponding STATUS event. */
     if (!strcmp(question, "status/circuit-established")) {
-      *answer = tor_strdup(can_complete_circuit ? "1" : "0");
+      *answer = tor_strdup(have_completed_a_circuit() ? "1" : "0");
     } else if (!strcmp(question, "status/enough-dir-info")) {
       *answer = tor_strdup(router_have_minimum_dir_info() ? "1" : "0");
     } else if (!strcmp(question, "status/good-server-descriptor") ||
@@ -4454,6 +4455,9 @@ control_event_signal(uintptr_t signal)
     case SIGCLEARDNSCACHE:
       signal_string = "CLEARDNSCACHE";
       break;
+    case SIGHEARTBEAT:
+      signal_string = "HEARTBEAT";
+      break;
     default:
       log_warn(LD_BUG, "Unrecognized signal %lu in control_event_signal",
                (unsigned long)signal);
@@ -5096,20 +5100,30 @@ control_event_hs_descriptor_requested(const rend_data_t *rend_query,
 void
 control_event_hs_descriptor_receive_end(const char *action,
                                         const rend_data_t *rend_query,
-                                        const char *id_digest)
+                                        const char *id_digest,
+                                        const char *reason)
 {
+  char *reason_field = NULL;
+
   if (!action || !rend_query || !id_digest) {
     log_warn(LD_BUG, "Called with action==%p, rend_query==%p, "
              "id_digest==%p", action, rend_query, id_digest);
     return;
   }
 
+  if (reason) {
+    tor_asprintf(&reason_field, " REASON=%s", reason);
+  }
+
   send_control_event(EVENT_HS_DESC, ALL_FORMATS,
-                     "650 HS_DESC %s %s %s %s\r\n",
+                     "650 HS_DESC %s %s %s %s%s\r\n",
                      action,
                      rend_query->onion_address,
                      rend_auth_type_to_string(rend_query->auth_type),
-                     node_describe_longname_by_id(id_digest));
+                     node_describe_longname_by_id(id_digest),
+                     reason_field ? reason_field : "");
+
+  tor_free(reason_field);
 }
 
 /** send HS_DESC RECEIVED event
@@ -5125,23 +5139,27 @@ control_event_hs_descriptor_received(const rend_data_t *rend_query,
              rend_query, id_digest);
     return;
   }
-  control_event_hs_descriptor_receive_end("RECEIVED", rend_query, id_digest);
+  control_event_hs_descriptor_receive_end("RECEIVED", rend_query,
+                                          id_digest, NULL);
 }
 
-/** send HS_DESC FAILED event
- *
- * called when request for hidden service descriptor returned failure.
+/** Send HS_DESC event to inform controller that query <b>rend_query</b>
+ * failed to retrieve hidden service descriptor identified by
+ * <b>id_digest</b>. If <b>reason</b> is not NULL, add it to REASON=
+ * field.
  */
 void
 control_event_hs_descriptor_failed(const rend_data_t *rend_query,
-                                   const char *id_digest)
+                                   const char *id_digest,
+                                   const char *reason)
 {
   if (!rend_query || !id_digest) {
     log_warn(LD_BUG, "Called with rend_query==%p, id_digest==%p",
              rend_query, id_digest);
     return;
   }
-  control_event_hs_descriptor_receive_end("FAILED", rend_query, id_digest);
+  control_event_hs_descriptor_receive_end("FAILED", rend_query,
+                                          id_digest, reason);
 }
 
 /** Free any leftover allocated memory of the control.c subsystem. */

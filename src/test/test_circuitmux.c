@@ -8,6 +8,7 @@
 #include "channel.h"
 #include "circuitmux.h"
 #include "relay.h"
+#include "scheduler.h"
 #include "test.h"
 
 /* XXXX duplicated function from test_circuitlist.c */
@@ -35,6 +36,12 @@ test_cmux_destroy_cell_queue(void *arg)
   circuit_t *circ = NULL;
   cell_queue_t *cq = NULL;
   packed_cell_t *pc = NULL;
+  tor_libevent_cfg cfg;
+
+  memset(&cfg, 0, sizeof(cfg));
+
+  tor_libevent_initialize(&cfg);
+  scheduler_init();
 
 #ifdef ENABLE_MEMPOOLS
   init_cell_pool();
@@ -55,21 +62,21 @@ test_cmux_destroy_cell_queue(void *arg)
   circuitmux_append_destroy_cell(ch, cmux, 190, 6);
   circuitmux_append_destroy_cell(ch, cmux, 30, 1);
 
-  tt_int_op(circuitmux_num_cells(cmux), ==, 3);
+  tt_int_op(circuitmux_num_cells(cmux), OP_EQ, 3);
 
   circ = circuitmux_get_first_active_circuit(cmux, &cq);
   tt_assert(!circ);
   tt_assert(cq);
 
-  tt_int_op(cq->n, ==, 3);
+  tt_int_op(cq->n, OP_EQ, 3);
 
   pc = cell_queue_pop(cq);
   tt_assert(pc);
-  tt_mem_op(pc->body, ==, "\x00\x00\x00\x64\x04\x0a\x00\x00\x00", 9);
+  tt_mem_op(pc->body, OP_EQ, "\x00\x00\x00\x64\x04\x0a\x00\x00\x00", 9);
   packed_cell_free(pc);
   pc = NULL;
 
-  tt_int_op(circuitmux_num_cells(cmux), ==, 2);
+  tt_int_op(circuitmux_num_cells(cmux), OP_EQ, 2);
 
  done:
   circuitmux_free(cmux);

@@ -562,8 +562,8 @@ buf_clear(buf_t *buf)
 }
 
 /** Return the number of bytes stored in <b>buf</b> */
-size_t
-buf_datalen(const buf_t *buf)
+MOCK_IMPL(size_t,
+buf_datalen, (const buf_t *buf))
 {
   return buf->datalen;
 }
@@ -2054,8 +2054,20 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
           req->address[len] = 0;
           req->port = ntohs(get_uint16(data+5+len));
           *drain_out = 5+len+2;
-          if (!tor_strisprint(req->address) || strchr(req->address,'\"')) {
+
+          if (string_is_valid_ipv4_address(req->address) ||
+              string_is_valid_ipv6_address(req->address)) {
+            log_unsafe_socks_warning(5,req->address,req->port,safe_socks);
+
+            if (safe_socks) {
+              socks_request_set_socks5_error(req, SOCKS5_NOT_ALLOWED);
+              return -1;
+            }
+          }
+
+          if (!string_is_valid_hostname(req->address)) {
             socks_request_set_socks5_error(req, SOCKS5_GENERAL_ERROR);
+
             log_warn(LD_PROTOCOL,
                      "Your application (using socks5 to port %d) gave Tor "
                      "a malformed hostname: %s. Rejecting the connection.",

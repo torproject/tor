@@ -1,0 +1,5 @@
+  o Removed features:
+    - Tor clients no longer support connecting to hidden services running on
+      Tor 0.2.2.x and earlier; the Support022HiddenServices option has been
+      removed.  (There shouldn't be any hidden services running these
+      versions on the network.)

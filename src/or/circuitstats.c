@@ -404,7 +404,7 @@ circuit_build_times_new_consensus_params(circuit_build_times_t *cbt,
          * distress anyway, so memory correctness here is paramount over
          * doing acrobatics to preserve the array.
          */
-        recent_circs = tor_calloc(sizeof(int8_t), num);
+        recent_circs = tor_calloc(num, sizeof(int8_t));
         if (cbt->liveness.timeouts_after_firsthop &&
             cbt->liveness.num_recent_circs > 0) {
           memcpy(recent_circs, cbt->liveness.timeouts_after_firsthop,
@@ -508,7 +508,7 @@ circuit_build_times_init(circuit_build_times_t *cbt)
     cbt->liveness.num_recent_circs =
       circuit_build_times_recent_circuit_count(NULL);
     cbt->liveness.timeouts_after_firsthop =
-      tor_calloc(sizeof(int8_t), cbt->liveness.num_recent_circs);
+      tor_calloc(cbt->liveness.num_recent_circs, sizeof(int8_t));
   } else {
     cbt->liveness.num_recent_circs = 0;
     cbt->liveness.timeouts_after_firsthop = NULL;
@@ -873,7 +873,7 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
   }
 
   /* build_time_t 0 means uninitialized */
-  loaded_times = tor_calloc(sizeof(build_time_t), state->TotalBuildTimes);
+  loaded_times = tor_calloc(state->TotalBuildTimes, sizeof(build_time_t));
 
   for (line = state->BuildtimeHistogram; line; line = line->next) {
     smartlist_t *args = smartlist_new();

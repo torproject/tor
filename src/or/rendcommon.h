@@ -49,6 +49,7 @@ typedef enum {
 
 rend_cache_store_status_t rend_cache_store_v2_desc_as_dir(const char *desc);
 rend_cache_store_status_t rend_cache_store_v2_desc_as_client(const char *desc,
+                                       const char *desc_id_base32,
                                        const rend_data_t *rend_query);
 
 int rend_encode_v2_descriptors(smartlist_t *descs_out,

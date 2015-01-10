@@ -200,7 +200,7 @@ circuit_is_better(const origin_circuit_t *oa, const origin_circuit_t *ob,
           return 1;
       } else {
         if (a->timestamp_dirty ||
-            timercmp(&a->timestamp_began, &b->timestamp_began, >))
+            timercmp(&a->timestamp_began, &b->timestamp_began, OP_GT))
           return 1;
         if (ob->build_state->is_internal)
           /* XXX023 what the heck is this internal thing doing here. I
@@ -514,7 +514,7 @@ circuit_expire_building(void)
     if (TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out)
       cutoff = hs_extremely_old_cutoff;
 
-    if (timercmp(&victim->timestamp_began, &cutoff, >))
+    if (timercmp(&victim->timestamp_began, &cutoff, OP_GT))
       continue; /* it's still young, leave it alone */
 
     /* We need to double-check the opened state here because
@@ -524,7 +524,7 @@ circuit_expire_building(void)
      * aren't either. */
     if (!any_opened_circs && victim->state != CIRCUIT_STATE_OPEN) {
       /* It's still young enough that we wouldn't close it, right? */
-      if (timercmp(&victim->timestamp_began, &close_cutoff, >)) {
+      if (timercmp(&victim->timestamp_began, &close_cutoff, OP_GT)) {
         if (!TO_ORIGIN_CIRCUIT(victim)->relaxed_timeout) {
           int first_hop_succeeded = TO_ORIGIN_CIRCUIT(victim)->cpath->state
                                       == CPATH_STATE_OPEN;
@@ -672,7 +672,7 @@ circuit_expire_building(void)
          * it off at, we probably had a suspend event along this codepath,
          * and we should discard the value.
          */
-        if (timercmp(&victim->timestamp_began, &extremely_old_cutoff, <)) {
+        if (timercmp(&victim->timestamp_began, &extremely_old_cutoff, OP_LT)) {
           log_notice(LD_CIRC,
                      "Extremely large value for circuit build timeout: %lds. "
                      "Assuming clock jump. Purpose %d (%s)",
@@ -1255,7 +1255,7 @@ circuit_expire_old_circuits_clientside(void)
       if (circ->purpose != CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
         circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
     } else if (!circ->timestamp_dirty && circ->state == CIRCUIT_STATE_OPEN) {
-      if (timercmp(&circ->timestamp_began, &cutoff, <)) {
+      if (timercmp(&circ->timestamp_began, &cutoff, OP_LT)) {
         if (circ->purpose == CIRCUIT_PURPOSE_C_GENERAL ||
                 circ->purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT ||
                 circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
@@ -2324,7 +2324,7 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
       tor_assert(rendcirc);
       /* one is already established, attach */
       log_info(LD_REND,
-               "rend joined circ %d already here. attaching. "
+               "rend joined circ %u already here. attaching. "
                "(stream %d sec old)",
                (unsigned)rendcirc->base_.n_circ_id, conn_age);
       /* Mark rendezvous circuits as 'newly dirty' every time you use

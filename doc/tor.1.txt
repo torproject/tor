@@ -550,7 +550,7 @@ GENERAL OPTIONS
     \'info'. (Default: 0)
 
 [[PredictedPortsRelevanceTime]] **PredictedPortsRelevanceTime** __NUM__::
-    Set how long, after the client has mad an anonymized connection to a
+    Set how long, after the client has made an anonymized connection to a
     given port, we will try to make sure that we build circuits to
     exits that support that port. The maximum value for this option is 1
     hour. (Default: 1 hour)
@@ -711,10 +711,11 @@ The following options are useful only for clients (that is, if
     unless ORPort, ExtORPort, or DirPort are configured.) (Default: 0)
 
 [[ExcludeNodes]] **ExcludeNodes** __node__,__node__,__...__::
-    A list of identity fingerprints, nicknames, country codes and address
-    patterns of nodes to avoid when building a circuit.
+    A list of identity fingerprints, country codes, and address
+    patterns of nodes to avoid when building a circuit. Country codes must
+    be wrapped in braces; fingerprints may be preceded by a dollar sign.
     (Example:
-    ExcludeNodes SlowServer, ABCD1234CDEF5678ABCD1234CDEF5678ABCD1234, \{cc}, 255.254.0.0/8) +
+    ExcludeNodes ABCD1234CDEF5678ABCD1234CDEF5678ABCD1234, \{cc}, 255.254.0.0/8) +
  +
     By default, this option is treated as a preference that Tor is allowed
     to override in order to keep working.
@@ -734,11 +735,13 @@ The following options are useful only for clients (that is, if
 
 
 [[ExcludeExitNodes]] **ExcludeExitNodes** __node__,__node__,__...__::
-    A list of identity fingerprints, nicknames, country codes and address
+    A list of identity fingerprints, country codes, and address
     patterns of nodes to never use when picking an exit node---that is, a
     node that delivers traffic for you outside the Tor network.   Note that any
     node listed in ExcludeNodes is automatically considered to be part of this
-    list too.  See also the caveats on the "ExitNodes" option below.
+    list too.  See
+    the **ExcludeNodes** option for more information on how to specify
+    nodes. See also the caveats on the "ExitNodes" option below.
 
 [[GeoIPExcludeUnknown]] **GeoIPExcludeUnknown** **0**|**1**|**auto**::
     If this option is set to 'auto', then whenever any country code is set in
@@ -749,9 +752,10 @@ The following options are useful only for clients (that is, if
     configured or can't be found.  (Default: auto)
 
 [[ExitNodes]] **ExitNodes** __node__,__node__,__...__::
-    A list of identity fingerprints, nicknames, country codes and address
+    A list of identity fingerprints, country codes, and address
     patterns of nodes to use as exit node---that is, a
-    node that delivers traffic for you outside the Tor network. +
+    node that delivers traffic for you outside the Tor network.  See
+    the **ExcludeNodes** option for more information on how to specify nodes. +
  +
     Note that if you list too few nodes here, or if you exclude too many exit
     nodes with ExcludeExitNodes, you can degrade functionality.  For example,
@@ -772,7 +776,7 @@ The following options are useful only for clients (that is, if
     this option.
 
 [[EntryNodes]] **EntryNodes** __node__,__node__,__...__::
-    A list of identity fingerprints, nicknames, and country codes of nodes
+    A list of identity fingerprints and country codes of nodes
     to use for the first hop in your normal circuits.
     Normal circuits include all
     circuits except for direct connections to directory servers.  The Bridge
@@ -780,7 +784,8 @@ The following options are useful only for clients (that is, if
     UseBridges is 1, the Bridges are used as your entry nodes. +
  +
     The ExcludeNodes option overrides this option: any node listed in both
-    EntryNodes and ExcludeNodes is treated as excluded.
+    EntryNodes and ExcludeNodes is treated as excluded. See
+    the **ExcludeNodes** option for more information on how to specify nodes.
 
 [[StrictNodes]] **StrictNodes** **0**|**1**::
     If StrictNodes is set to 1, Tor will treat the ExcludeNodes option as a
@@ -929,12 +934,14 @@ The following options are useful only for clients (that is, if
     but it has not yet been completely constructed.  (Default: 32)
 
 [[NodeFamily]] **NodeFamily** __node__,__node__,__...__::
-    The Tor servers, defined by their identity fingerprints or nicknames,
+    The Tor servers, defined by their identity fingerprints,
     constitute a "family" of similar or co-administered servers, so never use
     any two of them in the same circuit. Defining a NodeFamily is only needed
     when a server doesn't list the family itself (with MyFamily). This option
-    can be used multiple times.  In addition to nodes, you can also list
-    IP address and ranges and country codes in {curly braces}.
+    can be used multiple times; each instance defines a separate family.  In
+    addition to nodes, you can also list IP address and ranges and country
+    codes in {curly braces}. See the **ExcludeNodes** option for more
+    information on how to specify nodes.
 
 [[EnforceDistinctSubnets]] **EnforceDistinctSubnets** **0**|**1**::
     If 1, Tor will not put two servers whose IP addresses are "too close" on
@@ -1419,16 +1426,6 @@ The following options are useful only for clients (that is, if
     Tor will use a default value chosen by the directory
     authorities. (Default: -1.)
 
-[[Support022HiddenServices]] **Support022HiddenServices** **0**|**1**|**auto**::
-    Tor hidden services running versions before 0.2.3.x required clients to
-    send timestamps, which can potentially be used to distinguish clients
-    whose view of the current time is skewed. If this option is set to 0, we
-    do not send this timestamp, and hidden services on obsolete Tor versions
-    will not work.  If this option is set to 1, we send the timestamp.  If
-    this option is "auto", we take a recommendation from the latest consensus
-    document. (Default: auto)
-
-
 SERVER OPTIONS
 --------------
 
@@ -1538,7 +1535,7 @@ is non-zero):
 [[MyFamily]] **MyFamily** __node__,__node__,__...__::
     Declare that this Tor server is controlled or administered by a group or
     organization identical or similar to that of the other servers, defined by
-    their identity fingerprints or nicknames. When two servers both declare
+    their identity fingerprints. When two servers both declare
     that they are in the same \'family', Tor clients will not use them in the
     same circuit. (Each server only needs to list the other servers in its
     family; it doesn't need to list itself, but it won't hurt.) Do not list
@@ -2035,6 +2032,7 @@ The following options are used to configure a hidden service.
     recent HiddenServiceDir. By default, this option maps the virtual port to
     the same port on 127.0.0.1 over TCP. You may override the target port,
     address, or both by specifying a target of addr, port, or addr:port.
+    (You can specify an IPv6 target as [addr]:port.)
     You may also have multiple lines with  the same VIRTPORT: when a user
     connects to that VIRTPORT, one of the TARGETs from those lines will be
     chosen at random.
@@ -2065,6 +2063,12 @@ The following options are used to configure a hidden service.
     Every time the specified period elapses, Tor uploads any rendezvous
     service descriptors to the directory servers. This information  is also
     uploaded whenever it changes. (Default: 1 hour)
+
+[[HiddenServiceDirGroupReadable]] **HiddenServiceDirGroupReadable** **0**|**1**::
+    If this option is set to 1, allow the filesystem group to read the
+    hidden service directory and hostname file. If the option is set to 0,
+    only owner is able to read the hidden service directory. (Default: 0)
+    Has no effect on Windows.
 
 TESTING NETWORK OPTIONS
 -----------------------
@@ -2198,16 +2202,17 @@ The following options are used for running a testing Tor network.
     Changing this requires that **TestingTorNetwork** is set. (Default: 8)
 
 [[TestingDirAuthVoteExit]] **TestingDirAuthVoteExit** __node__,__node__,__...__::
-    A list of identity fingerprints, nicknames, country codes and
+    A list of identity fingerprints, country codes, and
     address patterns of nodes to vote Exit for regardless of their
     uptime, bandwidth, or exit policy. See the **ExcludeNodes**
     option for more information on how to specify nodes.
  +
     In order for this option to have any effect, **TestingTorNetwork**
-    has to be set.
+    has to be set. See the **ExcludeNodes** option for more
+    information on how to specify nodes.
 
 [[TestingDirAuthVoteGuard]] **TestingDirAuthVoteGuard** __node__,__node__,__...__::
-    A list of identity fingerprints, nicknames, country codes and
+    A list of identity fingerprints and country codes and
     address patterns of nodes to vote Guard for regardless of their
     uptime and bandwidth. See the **ExcludeNodes** option for more
     information on how to specify nodes.
@@ -2394,6 +2399,11 @@ __DataDirectory__**/stats/buffer-stats**::
 __DataDirectory__**/stats/conn-stats**::
     Only used by servers. This file is used to collect approximate connection
     history (number of active connections over time).
+
+__DataDirectory__**/networkstatus-bridges**::
+    Only used by authoritative bridge directories. Contains information
+    about bridges that have self-reported themselves to the bridge
+    authority.
 
 __HiddenServiceDirectory__**/hostname**::
     The <base32-encoded-fingerprint>.onion domain name for this hidden service.

@@ -43,6 +43,7 @@
 #include "util.h"
 #include "routerlist.h"
 #include "routerset.h"
+#include "scheduler.h"
 #include "statefile.h"
 #include "transports.h"
 #include "ext_orport.h"
@@ -262,6 +263,7 @@ static config_var_t option_vars_[] = {
   V(HashedControlPassword,       LINELIST, NULL),
   V(HidServDirectoryV2,          BOOL,     "1"),
   VAR("HiddenServiceDir",    LINELIST_S, RendConfigLines,    NULL),
+  VAR("HiddenServiceDirGroupReadable",  LINELIST_S, RendConfigLines, NULL),
   VAR("HiddenServiceOptions",LINELIST_V, RendConfigLines,    NULL),
   VAR("HiddenServicePort",   LINELIST_S, RendConfigLines,    NULL),
   VAR("HiddenServiceVersion",LINELIST_S, RendConfigLines,    NULL),
@@ -367,6 +369,9 @@ static config_var_t option_vars_[] = {
   V(ServerDNSSearchDomains,      BOOL,     "0"),
   V(ServerDNSTestAddresses,      CSV,
       "www.google.com,www.mit.edu,www.yahoo.com,www.slashdot.org"),
+  V(SchedulerLowWaterMark__,     MEMUNIT,  "100 MB"),
+  V(SchedulerHighWaterMark__,    MEMUNIT,  "101 MB"),
+  V(SchedulerMaxFlushCells__,    UINT,     "1000"),
   V(ShutdownWaitLength,          INTERVAL, "30 seconds"),
   V(SocksListenAddress,          LINELIST, NULL),
   V(SocksPolicy,                 LINELIST, NULL),
@@ -376,7 +381,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("StrictEntryNodes"),
   OBSOLETE("StrictExitNodes"),
   V(StrictNodes,                 BOOL,     "0"),
-  V(Support022HiddenServices,    AUTOBOOL, "auto"),
+  OBSOLETE("Support022HiddenServices"),
   V(TestSocks,                   BOOL,     "0"),
   V(TokenBucketRefillInterval,   MSEC_INTERVAL, "100 msec"),
   V(Tor2webMode,                 BOOL,     "0"),
@@ -510,12 +515,6 @@ static int options_transition_affects_workers(
 static int options_transition_affects_descriptor(
       const or_options_t *old_options, const or_options_t *new_options);
 static int check_nickname_list(char **lst, const char *name, char **msg);
-
-static int parse_client_transport_line(const or_options_t *options,
-                                       const char *line, int validate_only);
-
-static int parse_server_transport_line(const or_options_t *options,
-                                       const char *line, int validate_only);
 static char *get_bindaddr_from_transport_listen_line(const char *line,
                                                      const char *transport);
 static int parse_dir_authority_line(const char *line,
@@ -829,22 +828,22 @@ add_default_trusted_dir_authorities(dirinfo_type_t type)
     "moria1 orport=9101 "
       "v3ident=D586D18309DED4CD6D57C18FDB97EFA96D330566 "
       "128.31.0.39:9131 9695 DFC3 5FFE B861 329B 9F1A B04C 4639 7020 CE31",
-    "tor26 orport=443 v3ident=14C131DFC5C6F93646BE72FA1401C02A8DF2E8B4 "
+    "tor26 orport=443 "
+      "v3ident=14C131DFC5C6F93646BE72FA1401C02A8DF2E8B4 "
       "86.59.21.38:80 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D",
-    "dizum orport=443 v3ident=E8A9C45EDE6D711294FADF8E7951F4DE6CA56B58 "
+    "dizum orport=443 "
+      "v3ident=E8A9C45EDE6D711294FADF8E7951F4DE6CA56B58 "
       "194.109.206.212:80 7EA6 EAD6 FD83 083C 538F 4403 8BBF A077 587D D755",
-    "Tonga orport=443 bridge 82.94.251.203:80 "
-      "4A0C CD2D DC79 9508 3D73 F5D6 6710 0C8A 5831 F16D",
-    "turtles orport=9090 "
-      "v3ident=27B6B5996C426270A5C95488AA5BCEB6BCC86956 "
-      "76.73.17.194:9030 F397 038A DC51 3361 35E7 B80B D99C A384 4360 292B",
+    "Tonga orport=443 bridge "
+      "82.94.251.203:80 4A0C CD2D DC79 9508 3D73 F5D6 6710 0C8A 5831 F16D",
     "gabelmoo orport=443 "
       "v3ident=ED03BB616EB2F60BEC80151114BB25CEF515B226 "
       "131.188.40.189:80 F204 4413 DAC2 E02E 3D6B CF47 35A1 9BCA 1DE9 7281",
     "dannenberg orport=443 "
       "v3ident=585769C78764D58426B8B52B6651A5A71137189A "
       "193.23.244.244:80 7BE6 83E6 5D48 1413 21C5 ED92 F075 C553 64AC 7123",
-    "urras orport=80 v3ident=80550987E1D626E3EBA5E5E75A458DE0626D088C "
+    "urras orport=80 "
+      "v3ident=80550987E1D626E3EBA5E5E75A458DE0626D088C "
       "208.83.223.34:443 0AD3 FA88 4D18 F89E EA2D 89C0 1937 9E0E 7FD9 4417",
     "maatuska orport=80 "
       "v3ident=49015F787433103580E3B66A1707A00E60F2D15B "
@@ -852,6 +851,9 @@ add_default_trusted_dir_authorities(dirinfo_type_t type)
     "Faravahar orport=443 "
       "v3ident=EFCBE720AB3A82B99F9E953CD5BF50F7EEFC7B97 "
       "154.35.32.5:80 CF6D 0AAF B385 BE71 B8E1 11FC 5CFF 4B47 9237 33BC",
+    "longclaw orport=443 "
+      "v3ident=23D15D965BC35114467363C165C4F724B64B4F66 "
+      "199.254.238.52:80 74A9 1064 6BCE EFBC D2E8 74FC 1DC9 9743 0F96 8145",
     NULL
   };
   for (i=0; authorities[i]; i++) {
@@ -1047,6 +1049,14 @@ options_act_reversible(const or_options_t *old_options, char **msg)
     if (running_tor && !libevent_initialized) {
       init_libevent(options);
       libevent_initialized = 1;
+
+      /*
+       * Initialize the scheduler - this has to come after
+       * options_init_from_torrc() sets up libevent - why yes, that seems
+       * completely sensible to hide the libevent setup in the option parsing
+       * code!  It also needs to happen before init_keys(), so it needs to
+       * happen here too.  How yucky. */
+      scheduler_init();
     }
 
     /* Adjust the port configuration so we can launch listeners. */
@@ -1076,6 +1086,8 @@ options_act_reversible(const or_options_t *old_options, char **msg)
                  "non-control network connections. Shutting down all existing "
                  "connections.");
       connection_mark_all_noncontrol_connections();
+      /* We can't complete circuits until the network is re-enabled. */
+      note_that_we_maybe_cant_complete_circuits();
     }
   }
 
@@ -1413,7 +1425,7 @@ options_act(const or_options_t *old_options)
   if (!options->DisableNetwork) {
     if (options->ClientTransportPlugin) {
       for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
-        if (parse_client_transport_line(options, cl->value, 0)<0) {
+        if (parse_transport_line(options, cl->value, 0, 0) < 0) {
           log_warn(LD_BUG,
                    "Previously validated ClientTransportPlugin line "
                    "could not be added!");
@@ -1424,7 +1436,7 @@ options_act(const or_options_t *old_options)
 
     if (options->ServerTransportPlugin && server_mode(options)) {
       for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
-        if (parse_server_transport_line(options, cl->value, 0)<0) {
+        if (parse_transport_line(options, cl->value, 0, 1) < 0) {
           log_warn(LD_BUG,
                    "Previously validated ServerTransportPlugin line "
                    "could not be added!");
@@ -1525,6 +1537,12 @@ options_act(const or_options_t *old_options)
     log_warn(LD_GENERAL,"Error loading rendezvous service keys");
     return -1;
   }
+
+  /* Set up scheduler thresholds */
+  scheduler_set_watermarks((uint32_t)options->SchedulerLowWaterMark__,
+                           (uint32_t)options->SchedulerHighWaterMark__,
+                           (options->SchedulerMaxFlushCells__ > 0) ?
+                           options->SchedulerMaxFlushCells__ : 1000);
 
   /* Set up accounting */
   if (accounting_parse_options(options, 0)<0) {
@@ -1673,7 +1691,7 @@ options_act(const or_options_t *old_options)
 
       if (server_mode(options) && !server_mode(old_options)) {
         ip_address_changed(0);
-        if (can_complete_circuit || !any_predicted_circuits(time(NULL)))
+        if (have_completed_a_circuit() || !any_predicted_circuits(time(NULL)))
           inform_testing_reachability();
       }
       cpuworkers_rotate();
@@ -2269,8 +2287,8 @@ resolve_my_address(int warn_severity, const or_options_t *options,
 /** Return true iff <b>addr</b> is judged to be on the same network as us, or
  * on a private network.
  */
-int
-is_local_addr(const tor_addr_t *addr)
+MOCK_IMPL(int,
+is_local_addr, (const tor_addr_t *addr))
 {
   if (tor_addr_is_internal(addr, 0))
     return 1;
@@ -2621,6 +2639,17 @@ options_validate(or_options_t *old_options, or_options_t *options,
     options->ExcludeExitNodesUnion_ = routerset_new();
     routerset_union(options->ExcludeExitNodesUnion_,options->ExcludeExitNodes);
     routerset_union(options->ExcludeExitNodesUnion_,options->ExcludeNodes);
+  }
+
+  if (options->SchedulerLowWaterMark__ == 0 ||
+      options->SchedulerLowWaterMark__ > UINT32_MAX) {
+    log_warn(LD_GENERAL, "Bad SchedulerLowWaterMark__ option");
+    return -1;
+  } else if (options->SchedulerHighWaterMark__ <=
+             options->SchedulerLowWaterMark__ ||
+             options->SchedulerHighWaterMark__ > UINT32_MAX) {
+    log_warn(LD_GENERAL, "Bad SchedulerHighWaterMark option");
+    return -1;
   }
 
   if (options->NodeFamilies) {
@@ -3299,12 +3328,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   for (cl = options->ClientTransportPlugin; cl; cl = cl->next) {
-    if (parse_client_transport_line(options, cl->value, 1)<0)
+    if (parse_transport_line(options, cl->value, 1, 0) < 0)
       REJECT("Invalid client transport line. See logs for details.");
   }
 
   for (cl = options->ServerTransportPlugin; cl; cl = cl->next) {
-    if (parse_server_transport_line(options, cl->value, 1)<0)
+    if (parse_transport_line(options, cl->value, 1, 1) < 0)
       REJECT("Invalid server transport line. See logs for details.");
   }
 
@@ -4768,46 +4797,52 @@ parse_bridge_line(const char *line)
   return bridge_line;
 }
 
-/** Read the contents of a ClientTransportPlugin line from
- * <b>line</b>. Return 0 if the line is well-formed, and -1 if it
- * isn't.
+/** Read the contents of a ClientTransportPlugin or ServerTransportPlugin
+ * line from <b>line</b>, depending on the value of <b>server</b>. Return 0
+ * if the line is well-formed, and -1 if it isn't.
  *
- * If <b>validate_only</b> is 0, the line is well-formed, and the
- * transport is needed by some bridge:
+ * If <b>validate_only</b> is 0, the line is well-formed, and the transport is
+ * needed by some bridge:
  * - If it's an external proxy line, add the transport described in the line to
  * our internal transport list.
- * - If it's a managed proxy line, launch the managed proxy. */
-static int
-parse_client_transport_line(const or_options_t *options,
-                            const char *line, int validate_only)
+ * - If it's a managed proxy line, launch the managed proxy.
+ */
+
+STATIC int
+parse_transport_line(const or_options_t *options,
+                     const char *line, int validate_only,
+                     int server)
 {
+
   smartlist_t *items = NULL;
   int r;
-  char *field2=NULL;
-
-  const char *transports=NULL;
-  smartlist_t *transport_list=NULL;
-  char *addrport=NULL;
+  const char *transports = NULL;
+  smartlist_t *transport_list = NULL;
+  char *type = NULL;
+  char *addrport = NULL;
   tor_addr_t addr;
   uint16_t port = 0;
-  int socks_ver=PROXY_NONE;
+  int socks_ver = PROXY_NONE;
 
   /* managed proxy options */
-  int is_managed=0;
-  char **proxy_argv=NULL;
-  char **tmp=NULL;
+  int is_managed = 0;
+  char **proxy_argv = NULL;
+  char **tmp = NULL;
   int proxy_argc, i;
-  int is_useless_proxy=1;
+  int is_useless_proxy = 1;
 
   int line_length;
 
+  /* Split the line into space-separated tokens */
   items = smartlist_new();
   smartlist_split_string(items, line, NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
+  line_length = smartlist_len(items);
 
-  line_length =  smartlist_len(items);
   if (line_length < 3) {
-    log_warn(LD_CONFIG, "Too few arguments on ClientTransportPlugin line.");
+    log_warn(LD_CONFIG,
+             "Too few arguments on %sTransportPlugin line.",
+             server ? "Server" : "Client");
     goto err;
   }
 
@@ -4831,71 +4866,97 @@ parse_client_transport_line(const or_options_t *options,
       is_useless_proxy = 0;
   } SMARTLIST_FOREACH_END(transport_name);
 
-  /* field2 is either a SOCKS version or "exec" */
-  field2 = smartlist_get(items, 1);
-
-  if (!strcmp(field2,"socks4")) {
+  type = smartlist_get(items, 1);
+  if (!strcmp(type, "exec")) {
+    is_managed = 1;
+  } else if (server && !strcmp(type, "proxy")) {
+    /* 'proxy' syntax only with ServerTransportPlugin */
+    is_managed = 0;
+  } else if (!server && !strcmp(type, "socks4")) {
+    /* 'socks4' syntax only with ClientTransportPlugin */
+    is_managed = 0;
     socks_ver = PROXY_SOCKS4;
-  } else if (!strcmp(field2,"socks5")) {
+  } else if (!server && !strcmp(type, "socks5")) {
+    /* 'socks5' syntax only with ClientTransportPlugin */
+    is_managed = 0;
     socks_ver = PROXY_SOCKS5;
-  } else if (!strcmp(field2,"exec")) {
-    is_managed=1;
   } else {
-    log_warn(LD_CONFIG, "Strange ClientTransportPlugin field '%s'.",
-             field2);
+    log_warn(LD_CONFIG,
+             "Strange %sTransportPlugin type '%s'",
+             server ? "Server" : "Client", type);
     goto err;
   }
 
   if (is_managed && options->Sandbox) {
-    log_warn(LD_CONFIG, "Managed proxies are not compatible with Sandbox mode."
-             "(ClientTransportPlugin line was %s)", escaped(line));
+    log_warn(LD_CONFIG,
+             "Managed proxies are not compatible with Sandbox mode."
+             "(%sTransportPlugin line was %s)",
+             server ? "Server" : "Client", escaped(line));
     goto err;
   }
 
-  if (is_managed) { /* managed */
-    if (!validate_only && is_useless_proxy) {
-      log_info(LD_GENERAL, "Pluggable transport proxy (%s) does not provide "
-               "any needed transports and will not be launched.", line);
+  if (is_managed) {
+    /* managed */
+
+    if (!server && !validate_only && is_useless_proxy) {
+      log_info(LD_GENERAL,
+               "Pluggable transport proxy (%s) does not provide "
+               "any needed transports and will not be launched.",
+               line);
     }
 
-    /* If we are not just validating, use the rest of the line as the
-       argv of the proxy to be launched. Also, make sure that we are
-       only launching proxies that contribute useful transports.  */
-    if (!validate_only && !is_useless_proxy) {
-      proxy_argc = line_length-2;
+    /*
+     * If we are not just validating, use the rest of the line as the
+     * argv of the proxy to be launched. Also, make sure that we are
+     * only launching proxies that contribute useful transports.
+     */
+
+    if (!validate_only && (server || !is_useless_proxy)) {
+      proxy_argc = line_length - 2;
       tor_assert(proxy_argc > 0);
-      proxy_argv = tor_calloc(sizeof(char *), (proxy_argc + 1));
+      proxy_argv = tor_calloc((proxy_argc + 1), sizeof(char *));
       tmp = proxy_argv;
-      for (i=0;i<proxy_argc;i++) { /* store arguments */
+
+      for (i = 0; i < proxy_argc; i++) {
+        /* store arguments */
         *tmp++ = smartlist_get(items, 2);
         smartlist_del_keeporder(items, 2);
       }
-      *tmp = NULL; /*terminated with NULL, just like execve() likes it*/
+      *tmp = NULL; /* terminated with NULL, just like execve() likes it */
 
       /* kickstart the thing */
-      pt_kickstart_client_proxy(transport_list, proxy_argv);
+      if (server) {
+        pt_kickstart_server_proxy(transport_list, proxy_argv);
+      } else {
+        pt_kickstart_client_proxy(transport_list, proxy_argv);
+      }
     }
-  } else { /* external */
+  } else {
+    /* external */
+
     /* ClientTransportPlugins connecting through a proxy is managed only. */
-    if (options->Socks4Proxy || options->Socks5Proxy || options->HTTPSProxy) {
+    if (!server && (options->Socks4Proxy || options->Socks5Proxy ||
+                    options->HTTPSProxy)) {
       log_warn(LD_CONFIG, "You have configured an external proxy with another "
                           "proxy type. (Socks4Proxy|Socks5Proxy|HTTPSProxy)");
       goto err;
     }
 
     if (smartlist_len(transport_list) != 1) {
-      log_warn(LD_CONFIG, "You can't have an external proxy with "
-               "more than one transports.");
+      log_warn(LD_CONFIG,
+               "You can't have an external proxy with more than "
+               "one transport.");
       goto err;
     }
 
     addrport = smartlist_get(items, 2);
 
-    if (tor_addr_port_lookup(addrport, &addr, &port)<0) {
-      log_warn(LD_CONFIG, "Error parsing transport "
-               "address '%s'", addrport);
+    if (tor_addr_port_lookup(addrport, &addr, &port) < 0) {
+      log_warn(LD_CONFIG,
+               "Error parsing transport address '%s'", addrport);
       goto err;
     }
+
     if (!port) {
       log_warn(LD_CONFIG,
                "Transport address '%s' has no port.", addrport);
@@ -4903,11 +4964,15 @@ parse_client_transport_line(const or_options_t *options,
     }
 
     if (!validate_only) {
-      transport_add_from_config(&addr, port, smartlist_get(transport_list, 0),
-                                socks_ver);
-
-      log_info(LD_DIR, "Transport '%s' found at %s",
+      log_info(LD_DIR, "%s '%s' at %s.",
+               server ? "Server transport" : "Transport",
                transports, fmt_addrport(&addr, port));
+
+      if (!server) {
+        transport_add_from_config(&addr, port,
+                                  smartlist_get(transport_list, 0),
+                                  socks_ver);
+      }
     }
   }
 
@@ -5077,133 +5142,6 @@ get_options_for_server_transport(const char *transport)
   }
 
   return NULL;
-}
-
-/** Read the contents of a ServerTransportPlugin line from
- * <b>line</b>. Return 0 if the line is well-formed, and -1 if it
- * isn't.
- * If <b>validate_only</b> is 0, the line is well-formed, and it's a
- * managed proxy line, launch the managed proxy. */
-static int
-parse_server_transport_line(const or_options_t *options,
-                            const char *line, int validate_only)
-{
-  smartlist_t *items = NULL;
-  int r;
-  const char *transports=NULL;
-  smartlist_t *transport_list=NULL;
-  char *type=NULL;
-  char *addrport=NULL;
-  tor_addr_t addr;
-  uint16_t port = 0;
-
-  /* managed proxy options */
-  int is_managed=0;
-  char **proxy_argv=NULL;
-  char **tmp=NULL;
-  int proxy_argc,i;
-
-  int line_length;
-
-  items = smartlist_new();
-  smartlist_split_string(items, line, NULL,
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, -1);
-
-  line_length =  smartlist_len(items);
-  if (line_length < 3) {
-    log_warn(LD_CONFIG, "Too few arguments on ServerTransportPlugin line.");
-    goto err;
-  }
-
-  /* Get the first line element, split it to commas into
-     transport_list (in case it's multiple transports) and validate
-     the transport names. */
-  transports = smartlist_get(items, 0);
-  transport_list = smartlist_new();
-  smartlist_split_string(transport_list, transports, ",",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  SMARTLIST_FOREACH_BEGIN(transport_list, const char *, transport_name) {
-    if (!string_is_C_identifier(transport_name)) {
-      log_warn(LD_CONFIG, "Transport name is not a C identifier (%s).",
-               transport_name);
-      goto err;
-    }
-  } SMARTLIST_FOREACH_END(transport_name);
-
-  type = smartlist_get(items, 1);
-
-  if (!strcmp(type, "exec")) {
-    is_managed=1;
-  } else if (!strcmp(type, "proxy")) {
-    is_managed=0;
-  } else {
-    log_warn(LD_CONFIG, "Strange ServerTransportPlugin type '%s'", type);
-    goto err;
-  }
-
-  if (is_managed && options->Sandbox) {
-    log_warn(LD_CONFIG, "Managed proxies are not compatible with Sandbox mode."
-             "(ServerTransportPlugin line was %s)", escaped(line));
-    goto err;
-  }
-
-  if (is_managed) { /* managed */
-    if (!validate_only) {
-      proxy_argc = line_length-2;
-      tor_assert(proxy_argc > 0);
-      proxy_argv = tor_calloc(sizeof(char *), (proxy_argc + 1));
-      tmp = proxy_argv;
-
-      for (i=0;i<proxy_argc;i++) { /* store arguments */
-        *tmp++ = smartlist_get(items, 2);
-        smartlist_del_keeporder(items, 2);
-      }
-      *tmp = NULL; /*terminated with NULL, just like execve() likes it*/
-
-      /* kickstart the thing */
-      pt_kickstart_server_proxy(transport_list, proxy_argv);
-    }
-  } else { /* external */
-    if (smartlist_len(transport_list) != 1) {
-      log_warn(LD_CONFIG, "You can't have an external proxy with "
-               "more than one transports.");
-      goto err;
-    }
-
-    addrport = smartlist_get(items, 2);
-
-    if (tor_addr_port_lookup(addrport, &addr, &port)<0) {
-      log_warn(LD_CONFIG, "Error parsing transport "
-               "address '%s'", addrport);
-      goto err;
-    }
-    if (!port) {
-      log_warn(LD_CONFIG,
-               "Transport address '%s' has no port.", addrport);
-      goto err;
-    }
-
-    if (!validate_only) {
-      log_info(LD_DIR, "Server transport '%s' at %s.",
-               transports, fmt_addrport(&addr, port));
-    }
-  }
-
-  r = 0;
-  goto done;
-
- err:
-  r = -1;
-
- done:
-  SMARTLIST_FOREACH(items, char*, s, tor_free(s));
-  smartlist_free(items);
-  if (transport_list) {
-    SMARTLIST_FOREACH(transport_list, char*, s, tor_free(s));
-    smartlist_free(transport_list);
-  }
-
-  return r;
 }
 
 /** Read the contents of a DirAuthority line from <b>line</b>. If

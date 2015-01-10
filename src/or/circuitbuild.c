@@ -14,6 +14,7 @@
 #include "or.h"
 #include "channel.h"
 #include "circpathbias.h"
+#define CIRCUITBUILD_PRIVATE
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "circuitstats.h"
@@ -943,9 +944,9 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
       circuit_rep_hist_note_result(circ);
       circuit_has_opened(circ); /* do other actions as necessary */
 
-      if (!can_complete_circuit && !circ->build_state->onehop_tunnel) {
+      if (!have_completed_a_circuit() && !circ->build_state->onehop_tunnel) {
         const or_options_t *options = get_options();
-        can_complete_circuit=1;
+        note_that_we_completed_a_circuit();
         /* FFFF Log a count of known routers here */
         log_notice(LD_GENERAL,
             "Tor has successfully opened a circuit. "
@@ -1033,7 +1034,8 @@ circuit_note_clock_jumped(int seconds_elapsed)
       seconds_elapsed >=0 ? "forward" : "backward");
   control_event_general_status(LOG_WARN, "CLOCK_JUMPED TIME=%d",
                                seconds_elapsed);
-  can_complete_circuit=0; /* so it'll log when it works again */
+  /* so we log when it works again */
+  note_that_we_maybe_cant_complete_circuits();
   control_event_client_status(severity, "CIRCUIT_NOT_ESTABLISHED REASON=%s",
                               "CLOCK_JUMPED");
   circuit_mark_all_unused_circs();
@@ -1548,7 +1550,7 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
    * -1 means "Don't use this router at all."
    */
   the_nodes = nodelist_get_list();
-  n_supported = tor_calloc(sizeof(int), smartlist_len(the_nodes));
+  n_supported = tor_calloc(smartlist_len(the_nodes), sizeof(int));
   SMARTLIST_FOREACH_BEGIN(the_nodes, const node_t *, node) {
     const int i = node_sl_idx;
     if (router_digest_is_me(node->identity)) {

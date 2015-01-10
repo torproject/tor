@@ -75,9 +75,9 @@ test_md_cache(void *data)
   tor_free(options->DataDirectory);
   options->DataDirectory = tor_strdup(get_fname("md_datadir_test"));
 #ifdef _WIN32
-  tt_int_op(0, ==, mkdir(options->DataDirectory));
+  tt_int_op(0, OP_EQ, mkdir(options->DataDirectory));
 #else
-  tt_int_op(0, ==, mkdir(options->DataDirectory, 0700));
+  tt_int_op(0, OP_EQ, mkdir(options->DataDirectory, 0700));
 #endif
 
   tt_assert(!strcmpstart(test_md3_noannotation, "onion-key"));
@@ -91,7 +91,7 @@ test_md_cache(void *data)
 
   added = microdescs_add_to_cache(mc, test_md1, NULL, SAVED_NOWHERE, 0,
                                   time1, NULL);
-  tt_int_op(1, ==, smartlist_len(added));
+  tt_int_op(1, OP_EQ, smartlist_len(added));
   md1 = smartlist_get(added, 0);
   smartlist_free(added);
   added = NULL;
@@ -100,7 +100,7 @@ test_md_cache(void *data)
   added = microdescs_add_to_cache(mc, test_md2, NULL, SAVED_NOWHERE, 0,
                                   time2, wanted);
   /* Should fail, since we didn't list test_md2's digest in wanted */
-  tt_int_op(0, ==, smartlist_len(added));
+  tt_int_op(0, OP_EQ, smartlist_len(added));
   smartlist_free(added);
   added = NULL;
 
@@ -109,75 +109,75 @@ test_md_cache(void *data)
   added = microdescs_add_to_cache(mc, test_md2, NULL, SAVED_NOWHERE, 0,
                                   time2, wanted);
   /* Now it can work. md2 should have been added */
-  tt_int_op(1, ==, smartlist_len(added));
+  tt_int_op(1, OP_EQ, smartlist_len(added));
   md2 = smartlist_get(added, 0);
   /* And it should have gotten removed from 'wanted' */
-  tt_int_op(smartlist_len(wanted), ==, 1);
-  tt_mem_op(smartlist_get(wanted, 0), ==, d3, DIGEST256_LEN);
+  tt_int_op(smartlist_len(wanted), OP_EQ, 1);
+  tt_mem_op(smartlist_get(wanted, 0), OP_EQ, d3, DIGEST256_LEN);
   smartlist_free(added);
   added = NULL;
 
   added = microdescs_add_to_cache(mc, test_md3, NULL,
                                   SAVED_NOWHERE, 0, -1, NULL);
   /* Must fail, since SAVED_NOWHERE precludes annotations */
-  tt_int_op(0, ==, smartlist_len(added));
+  tt_int_op(0, OP_EQ, smartlist_len(added));
   smartlist_free(added);
   added = NULL;
 
   added = microdescs_add_to_cache(mc, test_md3_noannotation, NULL,
                                   SAVED_NOWHERE, 0, time3, NULL);
   /* Now it can work */
-  tt_int_op(1, ==, smartlist_len(added));
+  tt_int_op(1, OP_EQ, smartlist_len(added));
   md3 = smartlist_get(added, 0);
   smartlist_free(added);
   added = NULL;
 
   /* Okay.  We added 1...3.  Let's poke them to see how they look, and make
    * sure they're really in the journal. */
-  tt_ptr_op(md1, ==, microdesc_cache_lookup_by_digest256(mc, d1));
-  tt_ptr_op(md2, ==, microdesc_cache_lookup_by_digest256(mc, d2));
-  tt_ptr_op(md3, ==, microdesc_cache_lookup_by_digest256(mc, d3));
+  tt_ptr_op(md1, OP_EQ, microdesc_cache_lookup_by_digest256(mc, d1));
+  tt_ptr_op(md2, OP_EQ, microdesc_cache_lookup_by_digest256(mc, d2));
+  tt_ptr_op(md3, OP_EQ, microdesc_cache_lookup_by_digest256(mc, d3));
 
-  tt_int_op(md1->last_listed, ==, time1);
-  tt_int_op(md2->last_listed, ==, time2);
-  tt_int_op(md3->last_listed, ==, time3);
+  tt_int_op(md1->last_listed, OP_EQ, time1);
+  tt_int_op(md2->last_listed, OP_EQ, time2);
+  tt_int_op(md3->last_listed, OP_EQ, time3);
 
-  tt_int_op(md1->saved_location, ==, SAVED_IN_JOURNAL);
-  tt_int_op(md2->saved_location, ==, SAVED_IN_JOURNAL);
-  tt_int_op(md3->saved_location, ==, SAVED_IN_JOURNAL);
+  tt_int_op(md1->saved_location, OP_EQ, SAVED_IN_JOURNAL);
+  tt_int_op(md2->saved_location, OP_EQ, SAVED_IN_JOURNAL);
+  tt_int_op(md3->saved_location, OP_EQ, SAVED_IN_JOURNAL);
 
-  tt_int_op(md1->bodylen, ==, strlen(test_md1));
-  tt_int_op(md2->bodylen, ==, strlen(test_md2));
-  tt_int_op(md3->bodylen, ==, strlen(test_md3_noannotation));
-  tt_mem_op(md1->body, ==, test_md1, strlen(test_md1));
-  tt_mem_op(md2->body, ==, test_md2, strlen(test_md2));
-  tt_mem_op(md3->body, ==, test_md3_noannotation,
+  tt_int_op(md1->bodylen, OP_EQ, strlen(test_md1));
+  tt_int_op(md2->bodylen, OP_EQ, strlen(test_md2));
+  tt_int_op(md3->bodylen, OP_EQ, strlen(test_md3_noannotation));
+  tt_mem_op(md1->body, OP_EQ, test_md1, strlen(test_md1));
+  tt_mem_op(md2->body, OP_EQ, test_md2, strlen(test_md2));
+  tt_mem_op(md3->body, OP_EQ, test_md3_noannotation,
               strlen(test_md3_noannotation));
 
   tor_asprintf(&fn, "%s"PATH_SEPARATOR"cached-microdescs.new",
                options->DataDirectory);
   s = read_file_to_str(fn, RFTS_BIN, NULL);
   tt_assert(s);
-  tt_mem_op(md1->body, ==, s + md1->off, md1->bodylen);
-  tt_mem_op(md2->body, ==, s + md2->off, md2->bodylen);
-  tt_mem_op(md3->body, ==, s + md3->off, md3->bodylen);
+  tt_mem_op(md1->body, OP_EQ, s + md1->off, md1->bodylen);
+  tt_mem_op(md2->body, OP_EQ, s + md2->off, md2->bodylen);
+  tt_mem_op(md3->body, OP_EQ, s + md3->off, md3->bodylen);
 
-  tt_ptr_op(md1->family, ==, NULL);
-  tt_ptr_op(md3->family, !=, NULL);
-  tt_int_op(smartlist_len(md3->family), ==, 3);
-  tt_str_op(smartlist_get(md3->family, 0), ==, "nodeX");
+  tt_ptr_op(md1->family, OP_EQ, NULL);
+  tt_ptr_op(md3->family, OP_NE, NULL);
+  tt_int_op(smartlist_len(md3->family), OP_EQ, 3);
+  tt_str_op(smartlist_get(md3->family, 0), OP_EQ, "nodeX");
 
   /* Now rebuild the cache! */
-  tt_int_op(microdesc_cache_rebuild(mc, 1), ==, 0);
+  tt_int_op(microdesc_cache_rebuild(mc, 1), OP_EQ, 0);
 
-  tt_int_op(md1->saved_location, ==, SAVED_IN_CACHE);
-  tt_int_op(md2->saved_location, ==, SAVED_IN_CACHE);
-  tt_int_op(md3->saved_location, ==, SAVED_IN_CACHE);
+  tt_int_op(md1->saved_location, OP_EQ, SAVED_IN_CACHE);
+  tt_int_op(md2->saved_location, OP_EQ, SAVED_IN_CACHE);
+  tt_int_op(md3->saved_location, OP_EQ, SAVED_IN_CACHE);
 
   /* The journal should be empty now */
   tor_free(s);
   s = read_file_to_str(fn, RFTS_BIN, NULL);
-  tt_str_op(s, ==, "");
+  tt_str_op(s, OP_EQ, "");
   tor_free(s);
   tor_free(fn);
 
@@ -185,9 +185,9 @@ test_md_cache(void *data)
   tor_asprintf(&fn, "%s"PATH_SEPARATOR"cached-microdescs",
                options->DataDirectory);
   s = read_file_to_str(fn, RFTS_BIN, NULL);
-  tt_mem_op(md1->body, ==, s + md1->off, strlen(test_md1));
-  tt_mem_op(md2->body, ==, s + md2->off, strlen(test_md2));
-  tt_mem_op(md3->body, ==, s + md3->off, strlen(test_md3_noannotation));
+  tt_mem_op(md1->body, OP_EQ, s + md1->off, strlen(test_md1));
+  tt_mem_op(md2->body, OP_EQ, s + md2->off, strlen(test_md2));
+  tt_mem_op(md3->body, OP_EQ, s + md3->off, strlen(test_md3_noannotation));
 
   /* Okay, now we are going to forget about the cache entirely, and reload it
    * from the disk. */
@@ -199,41 +199,41 @@ test_md_cache(void *data)
   tt_assert(md1);
   tt_assert(md2);
   tt_assert(md3);
-  tt_mem_op(md1->body, ==, s + md1->off, strlen(test_md1));
-  tt_mem_op(md2->body, ==, s + md2->off, strlen(test_md2));
-  tt_mem_op(md3->body, ==, s + md3->off, strlen(test_md3_noannotation));
+  tt_mem_op(md1->body, OP_EQ, s + md1->off, strlen(test_md1));
+  tt_mem_op(md2->body, OP_EQ, s + md2->off, strlen(test_md2));
+  tt_mem_op(md3->body, OP_EQ, s + md3->off, strlen(test_md3_noannotation));
 
-  tt_int_op(md1->last_listed, ==, time1);
-  tt_int_op(md2->last_listed, ==, time2);
-  tt_int_op(md3->last_listed, ==, time3);
+  tt_int_op(md1->last_listed, OP_EQ, time1);
+  tt_int_op(md2->last_listed, OP_EQ, time2);
+  tt_int_op(md3->last_listed, OP_EQ, time3);
 
   /* Okay, now we are going to clear out everything older than a week old.
    * In practice, that means md3 */
   microdesc_cache_clean(mc, time(NULL)-7*24*60*60, 1/*force*/);
-  tt_ptr_op(md1, ==, microdesc_cache_lookup_by_digest256(mc, d1));
-  tt_ptr_op(md2, ==, microdesc_cache_lookup_by_digest256(mc, d2));
-  tt_ptr_op(NULL, ==, microdesc_cache_lookup_by_digest256(mc, d3));
+  tt_ptr_op(md1, OP_EQ, microdesc_cache_lookup_by_digest256(mc, d1));
+  tt_ptr_op(md2, OP_EQ, microdesc_cache_lookup_by_digest256(mc, d2));
+  tt_ptr_op(NULL, OP_EQ, microdesc_cache_lookup_by_digest256(mc, d3));
   md3 = NULL; /* it's history now! */
 
   /* rebuild again, make sure it stays gone. */
-  tt_int_op(microdesc_cache_rebuild(mc, 1), ==, 0);
-  tt_ptr_op(md1, ==, microdesc_cache_lookup_by_digest256(mc, d1));
-  tt_ptr_op(md2, ==, microdesc_cache_lookup_by_digest256(mc, d2));
-  tt_ptr_op(NULL, ==, microdesc_cache_lookup_by_digest256(mc, d3));
+  tt_int_op(microdesc_cache_rebuild(mc, 1), OP_EQ, 0);
+  tt_ptr_op(md1, OP_EQ, microdesc_cache_lookup_by_digest256(mc, d1));
+  tt_ptr_op(md2, OP_EQ, microdesc_cache_lookup_by_digest256(mc, d2));
+  tt_ptr_op(NULL, OP_EQ, microdesc_cache_lookup_by_digest256(mc, d3));
 
   /* Re-add md3, and make sure we can rebuild the cache. */
   added = microdescs_add_to_cache(mc, test_md3_noannotation, NULL,
                                   SAVED_NOWHERE, 0, time3, NULL);
-  tt_int_op(1, ==, smartlist_len(added));
+  tt_int_op(1, OP_EQ, smartlist_len(added));
   md3 = smartlist_get(added, 0);
   smartlist_free(added);
   added = NULL;
-  tt_int_op(md1->saved_location, ==, SAVED_IN_CACHE);
-  tt_int_op(md2->saved_location, ==, SAVED_IN_CACHE);
-  tt_int_op(md3->saved_location, ==, SAVED_IN_JOURNAL);
+  tt_int_op(md1->saved_location, OP_EQ, SAVED_IN_CACHE);
+  tt_int_op(md2->saved_location, OP_EQ, SAVED_IN_CACHE);
+  tt_int_op(md3->saved_location, OP_EQ, SAVED_IN_JOURNAL);
 
-  tt_int_op(microdesc_cache_rebuild(mc, 1), ==, 0);
-  tt_int_op(md3->saved_location, ==, SAVED_IN_CACHE);
+  tt_int_op(microdesc_cache_rebuild(mc, 1), OP_EQ, 0);
+  tt_int_op(md3->saved_location, OP_EQ, SAVED_IN_CACHE);
 
  done:
   if (options)
@@ -273,9 +273,9 @@ test_md_cache_broken(void *data)
   options->DataDirectory = tor_strdup(get_fname("md_datadir_test2"));
 
 #ifdef _WIN32
-  tt_int_op(0, ==, mkdir(options->DataDirectory));
+  tt_int_op(0, OP_EQ, mkdir(options->DataDirectory));
 #else
-  tt_int_op(0, ==, mkdir(options->DataDirectory, 0700));
+  tt_int_op(0, OP_EQ, mkdir(options->DataDirectory, 0700));
 #endif
 
   tor_asprintf(&fn, "%s"PATH_SEPARATOR"cached-microdescs",
@@ -375,7 +375,7 @@ test_md_generate(void *arg)
   ri = router_parse_entry_from_string(test_ri, NULL, 0, 0, NULL, NULL);
   tt_assert(ri);
   md = dirvote_create_microdescriptor(ri, 8);
-  tt_str_op(md->body, ==, test_md_8);
+  tt_str_op(md->body, OP_EQ, test_md_8);
 
   /* XXXX test family lines. */
   /* XXXX test method 14 for A lines. */
@@ -384,12 +384,12 @@ test_md_generate(void *arg)
   microdesc_free(md);
   md = NULL;
   md = dirvote_create_microdescriptor(ri, 16);
-  tt_str_op(md->body, ==, test_md_16);
+  tt_str_op(md->body, OP_EQ, test_md_16);
 
   microdesc_free(md);
   md = NULL;
   md = dirvote_create_microdescriptor(ri, 18);
-  tt_str_op(md->body, ==, test_md_18);
+  tt_str_op(md->body, OP_EQ, test_md_18);
 
  done:
   microdesc_free(md);
@@ -564,8 +564,8 @@ test_md_parse(void *arg)
   smartlist_t *mds = microdescs_parse_from_string(MD_PARSE_TEST_DATA,
                                                   NULL, 1, SAVED_NOWHERE,
                                                   invalid);
-  tt_int_op(smartlist_len(mds), ==, 11);
-  tt_int_op(smartlist_len(invalid), ==, 4);
+  tt_int_op(smartlist_len(mds), OP_EQ, 11);
+  tt_int_op(smartlist_len(invalid), OP_EQ, 4);
 
   test_memeq_hex(smartlist_get(invalid,0),
                  "5d76bf1c6614e885614a1e0ad074e1ab"
@@ -585,11 +585,11 @@ test_md_parse(void *arg)
   test_memeq_hex(md->digest,
                  "54bb6d733ddeb375d2456c79ae103961"
                  "da0cae29620375ac4cf13d54da4d92b3");
-  tt_int_op(md->last_listed, ==, 0);
-  tt_int_op(md->saved_location, ==, SAVED_NOWHERE);
-  tt_int_op(md->no_save, ==, 0);
-  tt_uint_op(md->held_in_map, ==, 0);
-  tt_uint_op(md->held_by_nodes, ==, 0);
+  tt_int_op(md->last_listed, OP_EQ, 0);
+  tt_int_op(md->saved_location, OP_EQ, SAVED_NOWHERE);
+  tt_int_op(md->no_save, OP_EQ, 0);
+  tt_uint_op(md->held_in_map, OP_EQ, 0);
+  tt_uint_op(md->held_by_nodes, OP_EQ, 0);
   tt_assert(md->onion_curve25519_pkey);
 
   md = smartlist_get(mds, 6);
@@ -609,7 +609,7 @@ test_md_parse(void *arg)
                  "409ebd87d23925a2732bd467a92813c9"
                  "21ca378fcb9ca193d354c51550b6d5e9");
   tt_assert(tor_addr_family(&md->ipv6_addr) == AF_INET6);
-  tt_int_op(md->ipv6_orport, ==, 9090);
+  tt_int_op(md->ipv6_orport, OP_EQ, 9090);
 
  done:
   SMARTLIST_FOREACH(mds, microdesc_t *, md, microdesc_free(md));
@@ -667,9 +667,9 @@ test_md_reject_cache(void *arg)
   mock_ns_val->flavor = FLAV_MICRODESC;
 
 #ifdef _WIN32
-  tt_int_op(0, ==, mkdir(options->DataDirectory));
+  tt_int_op(0, OP_EQ, mkdir(options->DataDirectory));
 #else
-  tt_int_op(0, ==, mkdir(options->DataDirectory, 0700));
+  tt_int_op(0, OP_EQ, mkdir(options->DataDirectory, 0700));
 #endif
 
   MOCK(router_get_mutable_consensus_status_by_descriptor_digest,
@@ -679,7 +679,7 @@ test_md_reject_cache(void *arg)
   mc = get_microdesc_cache();
 #define ADD(hex)                                                        \
   do {                                                                  \
-    tt_int_op(0,==,base16_decode(buf,sizeof(buf),hex,strlen(hex)));     \
+    tt_int_op(0,OP_EQ,base16_decode(buf,sizeof(buf),hex,strlen(hex)));     \
     smartlist_add(wanted, tor_memdup(buf, DIGEST256_LEN));              \
   } while (0)
 
@@ -695,10 +695,10 @@ test_md_reject_cache(void *arg)
   added = microdescs_add_to_cache(mc, MD_PARSE_TEST_DATA, NULL,
                                   SAVED_NOWHERE, 0, time(NULL), wanted);
 
-  tt_int_op(smartlist_len(added), ==, 2);
-  tt_int_op(mock_rgsbd_called, ==, 2);
-  tt_int_op(mock_rgsbd_val_a->dl_status.n_download_failures, ==, 255);
-  tt_int_op(mock_rgsbd_val_b->dl_status.n_download_failures, ==, 255);
+  tt_int_op(smartlist_len(added), OP_EQ, 2);
+  tt_int_op(mock_rgsbd_called, OP_EQ, 2);
+  tt_int_op(mock_rgsbd_val_a->dl_status.n_download_failures, OP_EQ, 255);
+  tt_int_op(mock_rgsbd_val_b->dl_status.n_download_failures, OP_EQ, 255);
 
  done:
   UNMOCK(networkstatus_get_latest_consensus_by_flavor);

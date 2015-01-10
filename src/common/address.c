@@ -723,6 +723,11 @@ tor_addr_parse_mask_ports(const char *s,
         /* XXXX_IP6 is this really what we want? */
         bits = 96 + bits%32; /* map v4-mapped masks onto 96-128 bits */
       }
+      if (any_flag) {
+        log_warn(LD_GENERAL,
+                 "Found bit prefix with wildcard address; rejecting");
+        goto err;
+      }
     } else { /* pick an appropriate mask, as none was given */
       if (any_flag)
         bits = 0;  /* This is okay whether it's V6 or V4 (FIX V4-mapped V6!) */
@@ -1114,7 +1119,8 @@ fmt_addr32(uint32_t addr)
 int
 tor_addr_parse(tor_addr_t *addr, const char *src)
 {
-  char *tmp = NULL; /* Holds substring if we got a dotted quad. */
+  /* Holds substring of IPv6 address after removing square brackets */
+  char *tmp = NULL;
   int result;
   struct in_addr in_tmp;
   struct in6_addr in6_tmp;

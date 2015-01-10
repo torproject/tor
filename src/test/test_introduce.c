@@ -310,7 +310,7 @@ do_parse_test(uint8_t *plaintext, size_t plaintext_len, int phase)
   parsed_req = rend_service_begin_parse_intro(cell, cell_len, 2, &err_msg);
   tt_assert(parsed_req);
   tt_assert(!err_msg);
-  tt_mem_op(parsed_req->pk,==, digest, DIGEST_LEN);
+  tt_mem_op(parsed_req->pk,OP_EQ, digest, DIGEST_LEN);
   tt_assert(parsed_req->ciphertext);
   tt_assert(parsed_req->ciphertext_len > 0);
 

@@ -744,8 +744,17 @@ connection_ap_fail_onehop(const char *failed_digest,
       /* we don't know the digest; have to compare addr:port */
       tor_addr_t addr;
       if (!build_state || !build_state->chosen_exit ||
-          !entry_conn->socks_request || !entry_conn->socks_request->address)
+          !entry_conn->socks_request) {
+        /* clang thinks that an array midway through a structure
+         * will never have a NULL address, under either:
+         * -Wpointer-bool-conversion if using !, or
+         * -Wtautological-pointer-compare if using == or !=
+         * It's probably right (unless pointers overflow and wrap),
+         * so we just skip this check
+         || !entry_conn->socks_request->address
+         */
         continue;
+      }
       if (tor_addr_parse(&addr, entry_conn->socks_request->address)<0 ||
           !tor_addr_eq(&build_state->chosen_exit->addr, &addr) ||
           build_state->chosen_exit->port != entry_conn->socks_request->port)
@@ -2461,7 +2470,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
 
   relay_header_unpack(&rh, cell->payload);
   if (rh.length > RELAY_PAYLOAD_SIZE)
-    return -1;
+    return -END_CIRC_REASON_TORPROTOCOL;
 
   /* Note: we have to use relay_send_command_from_edge here, not
    * connection_edge_end or connection_edge_send_command, since those require
@@ -2479,7 +2488,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
 
   r = begin_cell_parse(cell, &bcell, &end_reason);
   if (r < -1) {
-    return -1;
+    return -END_CIRC_REASON_TORPROTOCOL;
   } else if (r == -1) {
     tor_free(bcell.address);
     relay_send_end_cell_from_edge(rh.stream_id, circ, end_reason, NULL);

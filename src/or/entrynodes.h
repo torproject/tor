@@ -154,7 +154,7 @@ struct transport_t;
 int get_transport_by_bridge_addrport(const tor_addr_t *addr, uint16_t port,
                                       const struct transport_t **transport);
 
-int transport_is_needed(const char *transport_name);
+MOCK_DECL(int, transport_is_needed, (const char *transport_name));
 int validate_pluggable_transports_config(void);
 
 double pathbias_get_close_success_count(entry_guard_t *guard);

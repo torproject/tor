@@ -25,6 +25,7 @@
 #include "relay.h"
 #include "router.h"
 #include "routerlist.h"
+#include "scheduler.h"
 
 /** How many CELL_PADDING cells have we received, ever? */
 uint64_t stats_n_padding_cells_processed = 0;
@@ -54,6 +55,7 @@ static void channel_tls_common_init(channel_tls_t *tlschan);
 static void channel_tls_close_method(channel_t *chan);
 static const char * channel_tls_describe_transport_method(channel_t *chan);
 static void channel_tls_free_method(channel_t *chan);
+static double channel_tls_get_overhead_estimate_method(channel_t *chan);
 static int
 channel_tls_get_remote_addr_method(channel_t *chan, tor_addr_t *addr_out);
 static int
@@ -67,6 +69,8 @@ channel_tls_matches_extend_info_method(channel_t *chan,
                                        extend_info_t *extend_info);
 static int channel_tls_matches_target_method(channel_t *chan,
                                              const tor_addr_t *target);
+static int channel_tls_num_cells_writeable_method(channel_t *chan);
+static size_t channel_tls_num_bytes_queued_method(channel_t *chan);
 static int channel_tls_write_cell_method(channel_t *chan,
                                          cell_t *cell);
 static int channel_tls_write_packed_cell_method(channel_t *chan,
@@ -116,6 +120,7 @@ channel_tls_common_init(channel_tls_t *tlschan)
   chan->close = channel_tls_close_method;
   chan->describe_transport = channel_tls_describe_transport_method;
   chan->free = channel_tls_free_method;
+  chan->get_overhead_estimate = channel_tls_get_overhead_estimate_method;
   chan->get_remote_addr = channel_tls_get_remote_addr_method;
   chan->get_remote_descr = channel_tls_get_remote_descr_method;
   chan->get_transport_name = channel_tls_get_transport_name_method;
@@ -123,6 +128,8 @@ channel_tls_common_init(channel_tls_t *tlschan)
   chan->is_canonical = channel_tls_is_canonical_method;
   chan->matches_extend_info = channel_tls_matches_extend_info_method;
   chan->matches_target = channel_tls_matches_target_method;
+  chan->num_bytes_queued = channel_tls_num_bytes_queued_method;
+  chan->num_cells_writeable = channel_tls_num_cells_writeable_method;
   chan->write_cell = channel_tls_write_cell_method;
   chan->write_packed_cell = channel_tls_write_packed_cell_method;
   chan->write_var_cell = channel_tls_write_var_cell_method;
@@ -435,6 +442,40 @@ channel_tls_free_method(channel_t *chan)
 }
 
 /**
+ * Get an estimate of the average TLS overhead for the upper layer
+ */
+
+static double
+channel_tls_get_overhead_estimate_method(channel_t *chan)
+{
+  double overhead = 1.0f;
+  channel_tls_t *tlschan = BASE_CHAN_TO_TLS(chan);
+
+  tor_assert(tlschan);
+  tor_assert(tlschan->conn);
+
+  /* Just return 1.0f if we don't have sensible data */
+  if (tlschan->conn->bytes_xmitted > 0 &&
+      tlschan->conn->bytes_xmitted_by_tls >=
+      tlschan->conn->bytes_xmitted) {
+    overhead = ((double)(tlschan->conn->bytes_xmitted_by_tls)) /
+      ((double)(tlschan->conn->bytes_xmitted));
+
+    /*
+     * Never estimate more than 2.0; otherwise we get silly large estimates
+     * at the very start of a new TLS connection.
+     */
+    if (overhead > 2.0f) overhead = 2.0f;
+  }
+
+  log_debug(LD_CHANNEL,
+            "Estimated overhead ratio for TLS chan " U64_FORMAT " is %f",
+            U64_PRINTF_ARG(chan->global_identifier), overhead);
+
+  return overhead;
+}
+
+/**
  * Get the remote address of a channel_tls_t
  *
  * This implements the get_remote_addr method for channel_tls_t; copy the
@@ -673,6 +714,53 @@ channel_tls_matches_target_method(channel_t *chan,
 }
 
 /**
+ * Tell the upper layer how many bytes we have queued and not yet
+ * sent.
+ */
+
+static size_t
+channel_tls_num_bytes_queued_method(channel_t *chan)
+{
+  channel_tls_t *tlschan = BASE_CHAN_TO_TLS(chan);
+
+  tor_assert(tlschan);
+  tor_assert(tlschan->conn);
+
+  return connection_get_outbuf_len(TO_CONN(tlschan->conn));
+}
+
+/**
+ * Tell the upper layer how many cells we can accept to write
+ *
+ * This implements the num_cells_writeable method for channel_tls_t; it
+ * returns an estimate of the number of cells we can accept with
+ * channel_tls_write_*_cell().
+ */
+
+static int
+channel_tls_num_cells_writeable_method(channel_t *chan)
+{
+  size_t outbuf_len;
+  ssize_t n;
+  channel_tls_t *tlschan = BASE_CHAN_TO_TLS(chan);
+  size_t cell_network_size;
+
+  tor_assert(tlschan);
+  tor_assert(tlschan->conn);
+
+  cell_network_size = get_cell_network_size(tlschan->conn->wide_circ_ids);
+  outbuf_len = connection_get_outbuf_len(TO_CONN(tlschan->conn));
+  /* Get the number of cells */
+  n = CEIL_DIV(OR_CONN_HIGHWATER - outbuf_len, cell_network_size);
+  if (n < 0) n = 0;
+#if SIZEOF_SIZE_T > SIZEOF_INT
+  if (n > INT_MAX) n = INT_MAX;
+#endif
+
+  return (int)n;
+}
+
+/**
  * Write a cell to a channel_tls_t
  *
  * This implements the write_cell method for channel_tls_t; given a
@@ -867,6 +955,10 @@ channel_tls_handle_state_change_on_orconn(channel_tls_t *chan,
      * CHANNEL_STATE_MAINT on this.
      */
     channel_change_state(base_chan, CHANNEL_STATE_OPEN);
+    /* We might have just become writeable; check and tell the scheduler */
+    if (connection_or_num_cells_writeable(conn) > 0) {
+      scheduler_channel_wants_writes(base_chan);
+    }
   } else {
     /*
      * Not open, so from CHANNEL_STATE_OPEN we go to CHANNEL_STATE_MAINT,
@@ -876,58 +968,6 @@ channel_tls_handle_state_change_on_orconn(channel_tls_t *chan,
       channel_change_state(base_chan, CHANNEL_STATE_MAINT);
     }
   }
-}
-
-/**
- * Flush cells from a channel_tls_t
- *
- * Try to flush up to about num_cells cells, and return how many we flushed.
- */
-
-ssize_t
-channel_tls_flush_some_cells(channel_tls_t *chan, ssize_t num_cells)
-{
-  ssize_t flushed = 0;
-
-  tor_assert(chan);
-
-  if (flushed >= num_cells) goto done;
-
-  /*
-   * If channel_tls_t ever buffers anything below the channel_t layer, flush
-   * that first here.
-   */
-
-  flushed += channel_flush_some_cells(TLS_CHAN_TO_BASE(chan),
-                                      num_cells - flushed);
-
-  /*
-   * If channel_tls_t ever buffers anything below the channel_t layer, check
-   * how much we actually got and push it on down here.
-   */
-
- done:
-  return flushed;
-}
-
-/**
- * Check if a channel_tls_t has anything to flush
- *
- * Return true if there is any more to flush on this channel (cells in queue
- * or active circuits).
- */
-
-int
-channel_tls_more_to_flush(channel_tls_t *chan)
-{
-  tor_assert(chan);
-
-  /*
-   * If channel_tls_t ever buffers anything below channel_t, the
-   * check for that should go here first.
-   */
-
-  return channel_more_to_flush(TLS_CHAN_TO_BASE(chan));
 }
 
 #ifdef KEEP_TIMING_STATS

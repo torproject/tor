@@ -24,7 +24,7 @@ void buf_shrink(buf_t *buf);
 size_t buf_shrink_freelists(int free_all);
 void buf_dump_freelist_sizes(int severity);
 
-size_t buf_datalen(const buf_t *buf);
+MOCK_DECL(size_t, buf_datalen, (const buf_t *buf));
 size_t buf_allocation(const buf_t *buf);
 size_t buf_slack(const buf_t *buf);
 

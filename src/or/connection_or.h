@@ -24,6 +24,7 @@ void connection_or_set_bad_connections(const char *digest, int force);
 void connection_or_block_renegotiation(or_connection_t *conn);
 int connection_or_reached_eof(or_connection_t *conn);
 int connection_or_process_inbuf(or_connection_t *conn);
+ssize_t connection_or_num_cells_writeable(or_connection_t *conn);
 int connection_or_flushed_some(or_connection_t *conn);
 int connection_or_finished_flushing(or_connection_t *conn);
 int connection_or_finished_connecting(or_connection_t *conn);
@@ -36,9 +37,10 @@ void connection_or_connect_failed(or_connection_t *conn,
                                   int reason, const char *msg);
 void connection_or_notify_error(or_connection_t *conn,
                                 int reason, const char *msg);
-or_connection_t *connection_or_connect(const tor_addr_t *addr, uint16_t port,
-                                       const char *id_digest,
-                                       channel_tls_t *chan);
+MOCK_DECL(or_connection_t *,
+          connection_or_connect,
+          (const tor_addr_t *addr, uint16_t port,
+           const char *id_digest, channel_tls_t *chan));
 
 void connection_or_close_normally(or_connection_t *orconn, int flush);
 void connection_or_close_for_error(or_connection_t *orconn, int flush);

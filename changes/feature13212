@@ -1,0 +1,4 @@
+  o Minor features (hidden services):
+    - Inform Tor controller about nature of failure to retrieve
+      hidden service descriptor by sending reason string with HS_DESC
+      FAILED controller event. Implements feature 13212.

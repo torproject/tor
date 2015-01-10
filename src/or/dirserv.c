@@ -512,7 +512,7 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
     if (!n_parsed) {
       *msg = "No descriptors found in your POST.";
       if (WRA_WAS_ADDED(r))
-        r = ROUTER_WAS_NOT_NEW;
+        r = ROUTER_IS_ALREADY_KNOWN;
     } else {
       *msg = "(no message)";
     }
@@ -574,7 +574,7 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
                          ri->cache_info.signed_descriptor_body,
                          ri->cache_info.signed_descriptor_len, *msg);
     routerinfo_free(ri);
-    return ROUTER_WAS_NOT_NEW;
+    return ROUTER_IS_ALREADY_KNOWN;
   }
 
   /* Make a copy of desc, since router_add_to_routerlist might free
@@ -646,7 +646,7 @@ dirserv_add_extrainfo(extrainfo_t *ei, const char **msg)
 
   if ((r = routerinfo_incompatible_with_extrainfo(ri, ei, NULL, msg))) {
     extrainfo_free(ei);
-    return r < 0 ? ROUTER_WAS_NOT_NEW : ROUTER_BAD_EI;
+    return r < 0 ? ROUTER_IS_ALREADY_KNOWN : ROUTER_BAD_EI;
   }
   router_add_extrainfo_to_routerlist(ei, msg, 0, 0);
   return ROUTER_ADDED_SUCCESSFULLY;
@@ -1369,18 +1369,18 @@ dirserv_compute_performance_thresholds(routerlist_t *rl,
    * sort them and use that to compute thresholds. */
   n_active = n_active_nonexit = 0;
   /* Uptime for every active router. */
-  uptimes = tor_calloc(sizeof(uint32_t), smartlist_len(rl->routers));
+  uptimes = tor_calloc(smartlist_len(rl->routers), sizeof(uint32_t));
   /* Bandwidth for every active router. */
-  bandwidths_kb = tor_calloc(sizeof(uint32_t), smartlist_len(rl->routers));
+  bandwidths_kb = tor_calloc(smartlist_len(rl->routers), sizeof(uint32_t));
   /* Bandwidth for every active non-exit router. */
   bandwidths_excluding_exits_kb =
-    tor_calloc(sizeof(uint32_t), smartlist_len(rl->routers));
+    tor_calloc(smartlist_len(rl->routers), sizeof(uint32_t));
   /* Weighted mean time between failure for each active router. */
-  mtbfs = tor_calloc(sizeof(double), smartlist_len(rl->routers));
+  mtbfs = tor_calloc(smartlist_len(rl->routers), sizeof(double));
   /* Time-known for each active router. */
-  tks = tor_calloc(sizeof(long), smartlist_len(rl->routers));
+  tks = tor_calloc(smartlist_len(rl->routers), sizeof(long));
   /* Weighted fractional uptime for each active router. */
-  wfus = tor_calloc(sizeof(double), smartlist_len(rl->routers));
+  wfus = tor_calloc(smartlist_len(rl->routers), sizeof(double));
 
   nodelist_assert_ok();
 

@@ -20,6 +20,8 @@ src_test_test_SOURCES = \
 	src/test/test_addr.c \
 	src/test/test_buffers.c \
 	src/test/test_cell_formats.c \
+	src/test/test_channel.c \
+	src/test/test_channeltls.c \
 	src/test/test_circuitlist.c \
 	src/test/test_circuitmux.c \
 	src/test/test_containers.c \
@@ -28,6 +30,7 @@ src_test_test_SOURCES = \
 	src/test/test_cell_queue.c \
 	src/test/test_data.c \
 	src/test/test_dir.c \
+	src/test/test_checkdir.c \
 	src/test/test_entrynodes.c \
 	src/test/test_extorport.c \
 	src/test/test_introduce.c \
@@ -38,8 +41,10 @@ src_test_test_SOURCES = \
 	src/test/test_options.c \
 	src/test/test_pt.c \
 	src/test/test_relaycell.c \
+	src/test/test_relay.c \
 	src/test/test_replay.c \
 	src/test/test_routerkeys.c \
+	src/test/test_scheduler.c \
 	src/test/test_socks.c \
 	src/test/test_util.c \
 	src/test/test_config.c \
@@ -74,6 +79,7 @@ src_test_bench_LDADD = src/or/libtor.a src/common/libor.a \
 	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@
 
 noinst_HEADERS+= \
+	src/test/fakechans.h \
 	src/test/test.h \
 	src/test/test_descriptors.inc \
 	src/test/example_extrainfo.inc \

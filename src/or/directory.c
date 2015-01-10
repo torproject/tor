@@ -2073,23 +2073,25 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   }
 
   if (conn->base_.purpose == DIR_PURPOSE_FETCH_RENDDESC_V2) {
-    #define SEND_HS_DESC_FAILED_EVENT() ( \
+    #define SEND_HS_DESC_FAILED_EVENT(reason) ( \
       control_event_hs_descriptor_failed(conn->rend_data, \
-                                         conn->identity_digest) )
+                                         conn->identity_digest, \
+                                         reason) )
     tor_assert(conn->rend_data);
     log_info(LD_REND,"Received rendezvous descriptor (size %d, status %d "
              "(%s))",
              (int)body_len, status_code, escaped(reason));
     switch (status_code) {
       case 200:
-        switch (rend_cache_store_v2_desc_as_client(body, conn->rend_data)) {
+        switch (rend_cache_store_v2_desc_as_client(body,
+                                  conn->requested_resource, conn->rend_data)) {
           case RCS_BADDESC:
           case RCS_NOTDIR: /* Impossible */
             log_warn(LD_REND,"Fetching v2 rendezvous descriptor failed. "
                      "Retrying at another directory.");
             /* We'll retry when connection_about_to_close_connection()
              * cleans this dir conn up. */
-            SEND_HS_DESC_FAILED_EVENT();
+            SEND_HS_DESC_FAILED_EVENT("BAD_DESC");
             break;
           case RCS_OKAY:
           default:
@@ -2108,14 +2110,14 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
          * connection_about_to_close_connection() cleans this conn up. */
         log_info(LD_REND,"Fetching v2 rendezvous descriptor failed: "
                          "Retrying at another directory.");
-        SEND_HS_DESC_FAILED_EVENT();
+        SEND_HS_DESC_FAILED_EVENT("NOT_FOUND");
         break;
       case 400:
         log_warn(LD_REND, "Fetching v2 rendezvous descriptor failed: "
                  "http status 400 (%s). Dirserver didn't like our "
                  "v2 rendezvous query? Retrying at another directory.",
                  escaped(reason));
-        SEND_HS_DESC_FAILED_EVENT();
+        SEND_HS_DESC_FAILED_EVENT("QUERY_REJECTED");
         break;
       default:
         log_warn(LD_REND, "Fetching v2 rendezvous descriptor failed: "
@@ -2124,7 +2126,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                  "Retrying at another directory.",
                  status_code, escaped(reason), conn->base_.address,
                  conn->base_.port);
-        SEND_HS_DESC_FAILED_EVENT();
+        SEND_HS_DESC_FAILED_EVENT("UNEXPECTED");
         break;
     }
   }
@@ -2208,8 +2210,10 @@ connection_dir_process_inbuf(dir_connection_t *conn)
   }
 
   if (connection_get_inbuf_len(TO_CONN(conn)) > MAX_DIRECTORY_OBJECT_SIZE) {
-    log_warn(LD_HTTP, "Too much data received from directory connection: "
-             "denial of service attempt, or you need to upgrade?");
+    log_warn(LD_HTTP,
+             "Too much data received from directory connection (%s): "
+             "denial of service attempt, or you need to upgrade?",
+             conn->base_.address);
     connection_mark_for_close(TO_CONN(conn));
     return -1;
   }

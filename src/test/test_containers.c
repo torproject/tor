@@ -62,18 +62,18 @@ test_container_smartlist_basic(void *arg)
   smartlist_insert(sl, 1, v22);
   smartlist_insert(sl, 0, v0);
   smartlist_insert(sl, 5, v555);
-  tt_ptr_op(v0,==,   smartlist_get(sl,0));
-  tt_ptr_op(v1,==,   smartlist_get(sl,1));
-  tt_ptr_op(v22,==,  smartlist_get(sl,2));
-  tt_ptr_op(v3,==,   smartlist_get(sl,3));
-  tt_ptr_op(v4,==,   smartlist_get(sl,4));
-  tt_ptr_op(v555,==, smartlist_get(sl,5));
+  tt_ptr_op(v0,OP_EQ,   smartlist_get(sl,0));
+  tt_ptr_op(v1,OP_EQ,   smartlist_get(sl,1));
+  tt_ptr_op(v22,OP_EQ,  smartlist_get(sl,2));
+  tt_ptr_op(v3,OP_EQ,   smartlist_get(sl,3));
+  tt_ptr_op(v4,OP_EQ,   smartlist_get(sl,4));
+  tt_ptr_op(v555,OP_EQ, smartlist_get(sl,5));
   /* Try deleting in the middle. */
   smartlist_del(sl, 1);
-  tt_ptr_op(v555,==, smartlist_get(sl, 1));
+  tt_ptr_op(v555,OP_EQ, smartlist_get(sl, 1));
   /* Try deleting at the end. */
   smartlist_del(sl, 4);
-  tt_int_op(4,==, smartlist_len(sl));
+  tt_int_op(4,OP_EQ, smartlist_len(sl));
 
   /* test isin. */
   tt_assert(smartlist_contains(sl, v3));
@@ -101,119 +101,119 @@ test_container_smartlist_strings(void *arg)
 
   /* Test split and join */
   (void)arg;
-  tt_int_op(0,==, smartlist_len(sl));
+  tt_int_op(0,OP_EQ, smartlist_len(sl));
   smartlist_split_string(sl, "abc", ":", 0, 0);
-  tt_int_op(1,==, smartlist_len(sl));
-  tt_str_op("abc",==, smartlist_get(sl, 0));
+  tt_int_op(1,OP_EQ, smartlist_len(sl));
+  tt_str_op("abc",OP_EQ, smartlist_get(sl, 0));
   smartlist_split_string(sl, "a::bc::", "::", 0, 0);
-  tt_int_op(4,==, smartlist_len(sl));
-  tt_str_op("a",==, smartlist_get(sl, 1));
-  tt_str_op("bc",==, smartlist_get(sl, 2));
-  tt_str_op("",==, smartlist_get(sl, 3));
+  tt_int_op(4,OP_EQ, smartlist_len(sl));
+  tt_str_op("a",OP_EQ, smartlist_get(sl, 1));
+  tt_str_op("bc",OP_EQ, smartlist_get(sl, 2));
+  tt_str_op("",OP_EQ, smartlist_get(sl, 3));
   cp_alloc = smartlist_join_strings(sl, "", 0, NULL);
-  tt_str_op(cp_alloc,==, "abcabc");
+  tt_str_op(cp_alloc,OP_EQ, "abcabc");
   tor_free(cp_alloc);
   cp_alloc = smartlist_join_strings(sl, "!", 0, NULL);
-  tt_str_op(cp_alloc,==, "abc!a!bc!");
+  tt_str_op(cp_alloc,OP_EQ, "abc!a!bc!");
   tor_free(cp_alloc);
   cp_alloc = smartlist_join_strings(sl, "XY", 0, NULL);
-  tt_str_op(cp_alloc,==, "abcXYaXYbcXY");
+  tt_str_op(cp_alloc,OP_EQ, "abcXYaXYbcXY");
   tor_free(cp_alloc);
   cp_alloc = smartlist_join_strings(sl, "XY", 1, NULL);
-  tt_str_op(cp_alloc,==, "abcXYaXYbcXYXY");
+  tt_str_op(cp_alloc,OP_EQ, "abcXYaXYbcXYXY");
   tor_free(cp_alloc);
   cp_alloc = smartlist_join_strings(sl, "", 1, NULL);
-  tt_str_op(cp_alloc,==, "abcabc");
+  tt_str_op(cp_alloc,OP_EQ, "abcabc");
   tor_free(cp_alloc);
 
   smartlist_split_string(sl, "/def/  /ghijk", "/", 0, 0);
-  tt_int_op(8,==, smartlist_len(sl));
-  tt_str_op("",==, smartlist_get(sl, 4));
-  tt_str_op("def",==, smartlist_get(sl, 5));
-  tt_str_op("  ",==, smartlist_get(sl, 6));
-  tt_str_op("ghijk",==, smartlist_get(sl, 7));
+  tt_int_op(8,OP_EQ, smartlist_len(sl));
+  tt_str_op("",OP_EQ, smartlist_get(sl, 4));
+  tt_str_op("def",OP_EQ, smartlist_get(sl, 5));
+  tt_str_op("  ",OP_EQ, smartlist_get(sl, 6));
+  tt_str_op("ghijk",OP_EQ, smartlist_get(sl, 7));
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_clear(sl);
 
   smartlist_split_string(sl, "a,bbd,cdef", ",", SPLIT_SKIP_SPACE, 0);
-  tt_int_op(3,==, smartlist_len(sl));
-  tt_str_op("a",==, smartlist_get(sl,0));
-  tt_str_op("bbd",==, smartlist_get(sl,1));
-  tt_str_op("cdef",==, smartlist_get(sl,2));
+  tt_int_op(3,OP_EQ, smartlist_len(sl));
+  tt_str_op("a",OP_EQ, smartlist_get(sl,0));
+  tt_str_op("bbd",OP_EQ, smartlist_get(sl,1));
+  tt_str_op("cdef",OP_EQ, smartlist_get(sl,2));
   smartlist_split_string(sl, " z <> zhasd <>  <> bnud<>   ", "<>",
                          SPLIT_SKIP_SPACE, 0);
-  tt_int_op(8,==, smartlist_len(sl));
-  tt_str_op("z",==, smartlist_get(sl,3));
-  tt_str_op("zhasd",==, smartlist_get(sl,4));
-  tt_str_op("",==, smartlist_get(sl,5));
-  tt_str_op("bnud",==, smartlist_get(sl,6));
-  tt_str_op("",==, smartlist_get(sl,7));
+  tt_int_op(8,OP_EQ, smartlist_len(sl));
+  tt_str_op("z",OP_EQ, smartlist_get(sl,3));
+  tt_str_op("zhasd",OP_EQ, smartlist_get(sl,4));
+  tt_str_op("",OP_EQ, smartlist_get(sl,5));
+  tt_str_op("bnud",OP_EQ, smartlist_get(sl,6));
+  tt_str_op("",OP_EQ, smartlist_get(sl,7));
 
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_clear(sl);
 
   smartlist_split_string(sl, " ab\tc \td ef  ", NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  tt_int_op(4,==, smartlist_len(sl));
-  tt_str_op("ab",==, smartlist_get(sl,0));
-  tt_str_op("c",==, smartlist_get(sl,1));
-  tt_str_op("d",==, smartlist_get(sl,2));
-  tt_str_op("ef",==, smartlist_get(sl,3));
+  tt_int_op(4,OP_EQ, smartlist_len(sl));
+  tt_str_op("ab",OP_EQ, smartlist_get(sl,0));
+  tt_str_op("c",OP_EQ, smartlist_get(sl,1));
+  tt_str_op("d",OP_EQ, smartlist_get(sl,2));
+  tt_str_op("ef",OP_EQ, smartlist_get(sl,3));
   smartlist_split_string(sl, "ghi\tj", NULL,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  tt_int_op(6,==, smartlist_len(sl));
-  tt_str_op("ghi",==, smartlist_get(sl,4));
-  tt_str_op("j",==, smartlist_get(sl,5));
+  tt_int_op(6,OP_EQ, smartlist_len(sl));
+  tt_str_op("ghi",OP_EQ, smartlist_get(sl,4));
+  tt_str_op("j",OP_EQ, smartlist_get(sl,5));
 
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_clear(sl);
 
   cp_alloc = smartlist_join_strings(sl, "XY", 0, NULL);
-  tt_str_op(cp_alloc,==, "");
+  tt_str_op(cp_alloc,OP_EQ, "");
   tor_free(cp_alloc);
   cp_alloc = smartlist_join_strings(sl, "XY", 1, NULL);
-  tt_str_op(cp_alloc,==, "XY");
+  tt_str_op(cp_alloc,OP_EQ, "XY");
   tor_free(cp_alloc);
 
   smartlist_split_string(sl, " z <> zhasd <>  <> bnud<>   ", "<>",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  tt_int_op(3,==, smartlist_len(sl));
-  tt_str_op("z",==, smartlist_get(sl, 0));
-  tt_str_op("zhasd",==, smartlist_get(sl, 1));
-  tt_str_op("bnud",==, smartlist_get(sl, 2));
+  tt_int_op(3,OP_EQ, smartlist_len(sl));
+  tt_str_op("z",OP_EQ, smartlist_get(sl, 0));
+  tt_str_op("zhasd",OP_EQ, smartlist_get(sl, 1));
+  tt_str_op("bnud",OP_EQ, smartlist_get(sl, 2));
   smartlist_split_string(sl, " z <> zhasd <>  <> bnud<>   ", "<>",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 2);
-  tt_int_op(5,==, smartlist_len(sl));
-  tt_str_op("z",==, smartlist_get(sl, 3));
-  tt_str_op("zhasd <>  <> bnud<>",==, smartlist_get(sl, 4));
+  tt_int_op(5,OP_EQ, smartlist_len(sl));
+  tt_str_op("z",OP_EQ, smartlist_get(sl, 3));
+  tt_str_op("zhasd <>  <> bnud<>",OP_EQ, smartlist_get(sl, 4));
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_clear(sl);
 
   smartlist_split_string(sl, "abcd\n", "\n",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  tt_int_op(1,==, smartlist_len(sl));
-  tt_str_op("abcd",==, smartlist_get(sl, 0));
+  tt_int_op(1,OP_EQ, smartlist_len(sl));
+  tt_str_op("abcd",OP_EQ, smartlist_get(sl, 0));
   smartlist_split_string(sl, "efgh", "\n",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  tt_int_op(2,==, smartlist_len(sl));
-  tt_str_op("efgh",==, smartlist_get(sl, 1));
+  tt_int_op(2,OP_EQ, smartlist_len(sl));
+  tt_str_op("efgh",OP_EQ, smartlist_get(sl, 1));
 
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_clear(sl);
 
   /* Test swapping, shuffling, and sorting. */
   smartlist_split_string(sl, "the,onion,router,by,arma,and,nickm", ",", 0, 0);
-  tt_int_op(7,==, smartlist_len(sl));
+  tt_int_op(7,OP_EQ, smartlist_len(sl));
   smartlist_sort(sl, compare_strs_);
   cp_alloc = smartlist_join_strings(sl, ",", 0, NULL);
-  tt_str_op(cp_alloc,==, "and,arma,by,nickm,onion,router,the");
+  tt_str_op(cp_alloc,OP_EQ, "and,arma,by,nickm,onion,router,the");
   tor_free(cp_alloc);
   smartlist_swap(sl, 1, 5);
   cp_alloc = smartlist_join_strings(sl, ",", 0, NULL);
-  tt_str_op(cp_alloc,==, "and,router,by,nickm,onion,arma,the");
+  tt_str_op(cp_alloc,OP_EQ, "and,router,by,nickm,onion,arma,the");
   tor_free(cp_alloc);
   smartlist_shuffle(sl);
-  tt_int_op(7,==, smartlist_len(sl));
+  tt_int_op(7,OP_EQ, smartlist_len(sl));
   tt_assert(smartlist_contains_string(sl, "and"));
   tt_assert(smartlist_contains_string(sl, "router"));
   tt_assert(smartlist_contains_string(sl, "by"));
@@ -224,69 +224,72 @@ test_container_smartlist_strings(void *arg)
 
   /* Test bsearch. */
   smartlist_sort(sl, compare_strs_);
-  tt_str_op("nickm",==, smartlist_bsearch(sl, "zNicKM",
+  tt_str_op("nickm",OP_EQ, smartlist_bsearch(sl, "zNicKM",
                                         cmp_without_first_));
-  tt_str_op("and",==,
+  tt_str_op("and",OP_EQ,
             smartlist_bsearch(sl, " AND", cmp_without_first_));
-  tt_ptr_op(NULL,==, smartlist_bsearch(sl, " ANz", cmp_without_first_));
+  tt_ptr_op(NULL,OP_EQ, smartlist_bsearch(sl, " ANz", cmp_without_first_));
 
   /* Test bsearch_idx */
   {
     int f;
     smartlist_t *tmp = NULL;
 
-    tt_int_op(0,==,smartlist_bsearch_idx(sl," aaa",cmp_without_first_,&f));
-    tt_int_op(f,==, 0);
-    tt_int_op(0,==, smartlist_bsearch_idx(sl," and",cmp_without_first_,&f));
-    tt_int_op(f,==, 1);
-    tt_int_op(1,==, smartlist_bsearch_idx(sl," arm",cmp_without_first_,&f));
-    tt_int_op(f,==, 0);
-    tt_int_op(1,==, smartlist_bsearch_idx(sl," arma",cmp_without_first_,&f));
-    tt_int_op(f,==, 1);
-    tt_int_op(2,==, smartlist_bsearch_idx(sl," armb",cmp_without_first_,&f));
-    tt_int_op(f,==, 0);
-    tt_int_op(7,==, smartlist_bsearch_idx(sl," zzzz",cmp_without_first_,&f));
-    tt_int_op(f,==, 0);
+    tt_int_op(0,OP_EQ,smartlist_bsearch_idx(sl," aaa",cmp_without_first_,&f));
+    tt_int_op(f,OP_EQ, 0);
+    tt_int_op(0,OP_EQ, smartlist_bsearch_idx(sl," and",cmp_without_first_,&f));
+    tt_int_op(f,OP_EQ, 1);
+    tt_int_op(1,OP_EQ, smartlist_bsearch_idx(sl," arm",cmp_without_first_,&f));
+    tt_int_op(f,OP_EQ, 0);
+    tt_int_op(1,OP_EQ,
+              smartlist_bsearch_idx(sl," arma",cmp_without_first_,&f));
+    tt_int_op(f,OP_EQ, 1);
+    tt_int_op(2,OP_EQ,
+              smartlist_bsearch_idx(sl," armb",cmp_without_first_,&f));
+    tt_int_op(f,OP_EQ, 0);
+    tt_int_op(7,OP_EQ,
+              smartlist_bsearch_idx(sl," zzzz",cmp_without_first_,&f));
+    tt_int_op(f,OP_EQ, 0);
 
     /* Test trivial cases for list of length 0 or 1 */
     tmp = smartlist_new();
-    tt_int_op(0,==, smartlist_bsearch_idx(tmp, "foo",
+    tt_int_op(0,OP_EQ, smartlist_bsearch_idx(tmp, "foo",
                                      compare_strs_for_bsearch_, &f));
-    tt_int_op(f,==, 0);
+    tt_int_op(f,OP_EQ, 0);
     smartlist_insert(tmp, 0, (void *)("bar"));
-    tt_int_op(1,==, smartlist_bsearch_idx(tmp, "foo",
+    tt_int_op(1,OP_EQ, smartlist_bsearch_idx(tmp, "foo",
                                      compare_strs_for_bsearch_, &f));
-    tt_int_op(f,==, 0);
-    tt_int_op(0,==, smartlist_bsearch_idx(tmp, "aaa",
+    tt_int_op(f,OP_EQ, 0);
+    tt_int_op(0,OP_EQ, smartlist_bsearch_idx(tmp, "aaa",
                                      compare_strs_for_bsearch_, &f));
-    tt_int_op(f,==, 0);
-    tt_int_op(0,==, smartlist_bsearch_idx(tmp, "bar",
+    tt_int_op(f,OP_EQ, 0);
+    tt_int_op(0,OP_EQ, smartlist_bsearch_idx(tmp, "bar",
                                      compare_strs_for_bsearch_, &f));
-    tt_int_op(f,==, 1);
+    tt_int_op(f,OP_EQ, 1);
     /* ... and one for length 2 */
     smartlist_insert(tmp, 1, (void *)("foo"));
-    tt_int_op(1,==, smartlist_bsearch_idx(tmp, "foo",
+    tt_int_op(1,OP_EQ, smartlist_bsearch_idx(tmp, "foo",
                                      compare_strs_for_bsearch_, &f));
-    tt_int_op(f,==, 1);
-    tt_int_op(2,==, smartlist_bsearch_idx(tmp, "goo",
+    tt_int_op(f,OP_EQ, 1);
+    tt_int_op(2,OP_EQ, smartlist_bsearch_idx(tmp, "goo",
                                      compare_strs_for_bsearch_, &f));
-    tt_int_op(f,==, 0);
+    tt_int_op(f,OP_EQ, 0);
     smartlist_free(tmp);
   }
 
   /* Test reverse() and pop_last() */
   smartlist_reverse(sl);
   cp_alloc = smartlist_join_strings(sl, ",", 0, NULL);
-  tt_str_op(cp_alloc,==, "the,router,onion,nickm,by,arma,and");
+  tt_str_op(cp_alloc,OP_EQ, "the,router,onion,nickm,by,arma,and");
   tor_free(cp_alloc);
   cp_alloc = smartlist_pop_last(sl);
-  tt_str_op(cp_alloc,==, "and");
+  tt_str_op(cp_alloc,OP_EQ, "and");
   tor_free(cp_alloc);
-  tt_int_op(smartlist_len(sl),==, 6);
+  tt_int_op(smartlist_len(sl),OP_EQ, 6);
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_clear(sl);
   cp_alloc = smartlist_pop_last(sl);
-  tt_ptr_op(cp_alloc,==, NULL);
+  tt_ptr_op(cp_alloc,OP_EQ, NULL);
 
   /* Test uniq() */
   smartlist_split_string(sl,
@@ -295,7 +298,7 @@ test_container_smartlist_strings(void *arg)
   smartlist_sort(sl, compare_strs_);
   smartlist_uniq(sl, compare_strs_, tor_free_);
   cp_alloc = smartlist_join_strings(sl, ",", 0, NULL);
-  tt_str_op(cp_alloc,==, "50,a,canal,man,noon,panama,plan,radar");
+  tt_str_op(cp_alloc,OP_EQ, "50,a,canal,man,noon,panama,plan,radar");
   tor_free(cp_alloc);
 
   /* Test contains_string, contains_string_case and contains_int_as_string */
@@ -331,17 +334,17 @@ test_container_smartlist_strings(void *arg)
                     "Some say the Earth will end in ice and some in fire",
                     " ", 0, 0);
   cp = smartlist_get(sl, 4);
-  tt_str_op(cp,==, "will");
+  tt_str_op(cp,OP_EQ, "will");
   smartlist_add(sl, cp);
   smartlist_remove(sl, cp);
   tor_free(cp);
   cp_alloc = smartlist_join_strings(sl, ",", 0, NULL);
-  tt_str_op(cp_alloc,==, "Some,say,the,Earth,fire,end,in,ice,and,some,in");
+  tt_str_op(cp_alloc,OP_EQ, "Some,say,the,Earth,fire,end,in,ice,and,some,in");
   tor_free(cp_alloc);
   smartlist_string_remove(sl, "in");
   cp_alloc = smartlist_join_strings2(sl, "+XX", 1, 0, &sz);
-  tt_str_op(cp_alloc,==, "Some+say+the+Earth+fire+end+some+ice+and");
-  tt_int_op((int)sz,==, 40);
+  tt_str_op(cp_alloc,OP_EQ, "Some+say+the+Earth+fire+end+some+ice+and");
+  tt_int_op((int)sz,OP_EQ, 40);
 
  done:
 
@@ -369,7 +372,7 @@ test_container_smartlist_overlap(void *arg)
   /* add_all */
   smartlist_add_all(ints, odds);
   smartlist_add_all(ints, evens);
-  tt_int_op(smartlist_len(ints),==, 10);
+  tt_int_op(smartlist_len(ints),OP_EQ, 10);
 
   smartlist_add(primes, (void*)2);
   smartlist_add(primes, (void*)3);
@@ -385,7 +388,7 @@ test_container_smartlist_overlap(void *arg)
   /* intersect */
   smartlist_add_all(sl, odds);
   smartlist_intersect(sl, primes);
-  tt_int_op(smartlist_len(sl),==, 3);
+  tt_int_op(smartlist_len(sl),OP_EQ, 3);
   tt_assert(smartlist_contains(sl, (void*)3));
   tt_assert(smartlist_contains(sl, (void*)5));
   tt_assert(smartlist_contains(sl, (void*)7));
@@ -393,7 +396,7 @@ test_container_smartlist_overlap(void *arg)
   /* subtract */
   smartlist_add_all(sl, primes);
   smartlist_subtract(sl, odds);
-  tt_int_op(smartlist_len(sl),==, 1);
+  tt_int_op(smartlist_len(sl),OP_EQ, 1);
   tt_assert(smartlist_contains(sl, (void*)2));
 
  done:
@@ -415,23 +418,23 @@ test_container_smartlist_digests(void *arg)
   smartlist_add(sl, tor_memdup("AAAAAAAAAAAAAAAAAAAA", DIGEST_LEN));
   smartlist_add(sl, tor_memdup("\00090AAB2AAAAaasdAAAAA", DIGEST_LEN));
   smartlist_add(sl, tor_memdup("\00090AAB2AAAAaasdAAAAA", DIGEST_LEN));
-  tt_int_op(0,==, smartlist_contains_digest(NULL, "AAAAAAAAAAAAAAAAAAAA"));
+  tt_int_op(0,OP_EQ, smartlist_contains_digest(NULL, "AAAAAAAAAAAAAAAAAAAA"));
   tt_assert(smartlist_contains_digest(sl, "AAAAAAAAAAAAAAAAAAAA"));
   tt_assert(smartlist_contains_digest(sl, "\00090AAB2AAAAaasdAAAAA"));
-  tt_int_op(0,==, smartlist_contains_digest(sl, "\00090AAB2AAABaasdAAAAA"));
+  tt_int_op(0,OP_EQ, smartlist_contains_digest(sl, "\00090AAB2AAABaasdAAAAA"));
 
   /* sort digests */
   smartlist_sort_digests(sl);
-  tt_mem_op(smartlist_get(sl, 0),==, "\00090AAB2AAAAaasdAAAAA", DIGEST_LEN);
-  tt_mem_op(smartlist_get(sl, 1),==, "\00090AAB2AAAAaasdAAAAA", DIGEST_LEN);
-  tt_mem_op(smartlist_get(sl, 2),==, "AAAAAAAAAAAAAAAAAAAA", DIGEST_LEN);
-  tt_int_op(3,==, smartlist_len(sl));
+  tt_mem_op(smartlist_get(sl, 0),OP_EQ, "\00090AAB2AAAAaasdAAAAA", DIGEST_LEN);
+  tt_mem_op(smartlist_get(sl, 1),OP_EQ, "\00090AAB2AAAAaasdAAAAA", DIGEST_LEN);
+  tt_mem_op(smartlist_get(sl, 2),OP_EQ, "AAAAAAAAAAAAAAAAAAAA", DIGEST_LEN);
+  tt_int_op(3,OP_EQ, smartlist_len(sl));
 
   /* uniq_digests */
   smartlist_uniq_digests(sl);
-  tt_int_op(2,==, smartlist_len(sl));
-  tt_mem_op(smartlist_get(sl, 0),==, "\00090AAB2AAAAaasdAAAAA", DIGEST_LEN);
-  tt_mem_op(smartlist_get(sl, 1),==, "AAAAAAAAAAAAAAAAAAAA", DIGEST_LEN);
+  tt_int_op(2,OP_EQ, smartlist_len(sl));
+  tt_mem_op(smartlist_get(sl, 0),OP_EQ, "\00090AAB2AAAAaasdAAAAA", DIGEST_LEN);
+  tt_mem_op(smartlist_get(sl, 1),OP_EQ, "AAAAAAAAAAAAAAAAAAAA", DIGEST_LEN);
 
  done:
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
@@ -463,7 +466,7 @@ test_container_smartlist_join(void *arg)
                          sl2, char *, cp2,
                          strcmp(cp1,cp2),
                          smartlist_add(sl3, cp2)) {
-    tt_str_op(cp1,==, cp2);
+    tt_str_op(cp1,OP_EQ, cp2);
     smartlist_add(sl4, cp1);
   } SMARTLIST_FOREACH_JOIN_END(cp1, cp2);
 
@@ -474,10 +477,11 @@ test_container_smartlist_join(void *arg)
                     tt_assert(smartlist_contains(sl, cp) &&
                                 smartlist_contains_string(sl2, cp)));
   joined = smartlist_join_strings(sl3, ",", 0, NULL);
-  tt_str_op(joined,==, "Anemias,Anemias,Crossbowmen,Work");
+  tt_str_op(joined,OP_EQ, "Anemias,Anemias,Crossbowmen,Work");
   tor_free(joined);
   joined = smartlist_join_strings(sl4, ",", 0, NULL);
-  tt_str_op(joined,==, "Ambush,Anchorman,Anchorman,Bacon,Inhumane,Insurance,"
+  tt_str_op(joined,OP_EQ,
+            "Ambush,Anchorman,Anchorman,Bacon,Inhumane,Insurance,"
              "Knish,Know,Manners,Manners,Maraschinos,Wombats,Wombats");
   tor_free(joined);
 
@@ -612,7 +616,7 @@ test_container_digestset(void *arg)
     if (digestset_contains(set, d))
       ++false_positives;
   }
-  tt_int_op(50, >, false_positives); /* Should be far lower. */
+  tt_int_op(50, OP_GT, false_positives); /* Should be far lower. */
 
  done:
   if (set)
@@ -675,31 +679,31 @@ test_container_pqueue(void *arg)
 
   OK();
 
-  tt_int_op(smartlist_len(sl),==, 11);
-  tt_ptr_op(smartlist_get(sl, 0),==, &apples);
-  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),==, &apples);
-  tt_int_op(smartlist_len(sl),==, 10);
+  tt_int_op(smartlist_len(sl),OP_EQ, 11);
+  tt_ptr_op(smartlist_get(sl, 0),OP_EQ, &apples);
+  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),OP_EQ, &apples);
+  tt_int_op(smartlist_len(sl),OP_EQ, 10);
   OK();
-  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),==, &cows);
-  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),==, &daschunds);
+  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),OP_EQ, &cows);
+  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),OP_EQ, &daschunds);
   smartlist_pqueue_add(sl, cmp, offset, &chinchillas);
   OK();
   smartlist_pqueue_add(sl, cmp, offset, &fireflies);
   OK();
-  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),==, &chinchillas);
-  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),==, &eggplants);
-  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),==, &fireflies);
+  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),OP_EQ, &chinchillas);
+  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),OP_EQ, &eggplants);
+  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),OP_EQ, &fireflies);
   OK();
-  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),==, &fish);
-  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),==, &frogs);
-  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),==, &lobsters);
-  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),==, &roquefort);
+  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),OP_EQ, &fish);
+  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),OP_EQ, &frogs);
+  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),OP_EQ, &lobsters);
+  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),OP_EQ, &roquefort);
   OK();
-  tt_int_op(smartlist_len(sl),==, 3);
-  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),==, &squid);
-  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),==, &weissbier);
-  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),==, &zebras);
-  tt_int_op(smartlist_len(sl),==, 0);
+  tt_int_op(smartlist_len(sl),OP_EQ, 3);
+  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),OP_EQ, &squid);
+  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),OP_EQ, &weissbier);
+  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),OP_EQ, &zebras);
+  tt_int_op(smartlist_len(sl),OP_EQ, 0);
   OK();
 
   /* Now test remove. */
@@ -709,21 +713,21 @@ test_container_pqueue(void *arg)
   smartlist_pqueue_add(sl, cmp, offset, &apples);
   smartlist_pqueue_add(sl, cmp, offset, &squid);
   smartlist_pqueue_add(sl, cmp, offset, &zebras);
-  tt_int_op(smartlist_len(sl),==, 6);
+  tt_int_op(smartlist_len(sl),OP_EQ, 6);
   OK();
   smartlist_pqueue_remove(sl, cmp, offset, &zebras);
-  tt_int_op(smartlist_len(sl),==, 5);
+  tt_int_op(smartlist_len(sl),OP_EQ, 5);
   OK();
   smartlist_pqueue_remove(sl, cmp, offset, &cows);
-  tt_int_op(smartlist_len(sl),==, 4);
+  tt_int_op(smartlist_len(sl),OP_EQ, 4);
   OK();
   smartlist_pqueue_remove(sl, cmp, offset, &apples);
-  tt_int_op(smartlist_len(sl),==, 3);
+  tt_int_op(smartlist_len(sl),OP_EQ, 3);
   OK();
-  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),==, &fish);
-  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),==, &frogs);
-  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),==, &squid);
-  tt_int_op(smartlist_len(sl),==, 0);
+  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),OP_EQ, &fish);
+  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),OP_EQ, &frogs);
+  tt_ptr_op(smartlist_pqueue_pop(sl, cmp, offset),OP_EQ, &squid);
+  tt_int_op(smartlist_len(sl),OP_EQ, 0);
   OK();
 
 #undef OK
@@ -755,30 +759,30 @@ test_container_strmap(void *arg)
   (void)arg;
   map = strmap_new();
   tt_assert(map);
-  tt_int_op(strmap_size(map),==, 0);
+  tt_int_op(strmap_size(map),OP_EQ, 0);
   tt_assert(strmap_isempty(map));
   v = strmap_set(map, "K1", v99);
-  tt_ptr_op(v,==, NULL);
+  tt_ptr_op(v,OP_EQ, NULL);
   tt_assert(!strmap_isempty(map));
   v = strmap_set(map, "K2", v101);
-  tt_ptr_op(v,==, NULL);
+  tt_ptr_op(v,OP_EQ, NULL);
   v = strmap_set(map, "K1", v100);
-  tt_ptr_op(v,==, v99);
-  tt_ptr_op(strmap_get(map,"K1"),==, v100);
-  tt_ptr_op(strmap_get(map,"K2"),==, v101);
-  tt_ptr_op(strmap_get(map,"K-not-there"),==, NULL);
+  tt_ptr_op(v,OP_EQ, v99);
+  tt_ptr_op(strmap_get(map,"K1"),OP_EQ, v100);
+  tt_ptr_op(strmap_get(map,"K2"),OP_EQ, v101);
+  tt_ptr_op(strmap_get(map,"K-not-there"),OP_EQ, NULL);
   strmap_assert_ok(map);
 
   v = strmap_remove(map,"K2");
   strmap_assert_ok(map);
-  tt_ptr_op(v,==, v101);
-  tt_ptr_op(strmap_get(map,"K2"),==, NULL);
-  tt_ptr_op(strmap_remove(map,"K2"),==, NULL);
+  tt_ptr_op(v,OP_EQ, v101);
+  tt_ptr_op(strmap_get(map,"K2"),OP_EQ, NULL);
+  tt_ptr_op(strmap_remove(map,"K2"),OP_EQ, NULL);
 
   strmap_set(map, "K2", v101);
   strmap_set(map, "K3", v102);
   strmap_set(map, "K4", v103);
-  tt_int_op(strmap_size(map),==, 4);
+  tt_int_op(strmap_size(map),OP_EQ, 4);
   strmap_assert_ok(map);
   strmap_set(map, "K5", v104);
   strmap_set(map, "K6", v105);
@@ -790,7 +794,7 @@ test_container_strmap(void *arg)
   while (!strmap_iter_done(iter)) {
     strmap_iter_get(iter,&k,&v);
     smartlist_add(found_keys, tor_strdup(k));
-    tt_ptr_op(v,==, strmap_get(map, k));
+    tt_ptr_op(v,OP_EQ, strmap_get(map, k));
 
     if (!strcmp(k, "K2")) {
       iter = strmap_iter_next_rmv(map,iter);
@@ -800,12 +804,12 @@ test_container_strmap(void *arg)
   }
 
   /* Make sure we removed K2, but not the others. */
-  tt_ptr_op(strmap_get(map, "K2"),==, NULL);
-  tt_ptr_op(strmap_get(map, "K5"),==, v104);
+  tt_ptr_op(strmap_get(map, "K2"),OP_EQ, NULL);
+  tt_ptr_op(strmap_get(map, "K5"),OP_EQ, v104);
   /* Make sure we visited everyone once */
   smartlist_sort_strings(found_keys);
   visited = smartlist_join_strings(found_keys, ":", 0, NULL);
-  tt_str_op(visited,==, "K1:K2:K3:K4:K5:K6");
+  tt_str_op(visited,OP_EQ, "K1:K2:K3:K4:K5:K6");
 
   strmap_assert_ok(map);
   /* Clean up after ourselves. */
@@ -815,13 +819,13 @@ test_container_strmap(void *arg)
   /* Now try some lc functions. */
   map = strmap_new();
   strmap_set_lc(map,"Ab.C", v1);
-  tt_ptr_op(strmap_get(map,"ab.c"),==, v1);
+  tt_ptr_op(strmap_get(map,"ab.c"),OP_EQ, v1);
   strmap_assert_ok(map);
-  tt_ptr_op(strmap_get_lc(map,"AB.C"),==, v1);
-  tt_ptr_op(strmap_get(map,"AB.C"),==, NULL);
-  tt_ptr_op(strmap_remove_lc(map,"aB.C"),==, v1);
+  tt_ptr_op(strmap_get_lc(map,"AB.C"),OP_EQ, v1);
+  tt_ptr_op(strmap_get(map,"AB.C"),OP_EQ, NULL);
+  tt_ptr_op(strmap_remove_lc(map,"aB.C"),OP_EQ, v1);
   strmap_assert_ok(map);
-  tt_ptr_op(strmap_get_lc(map,"AB.C"),==, NULL);
+  tt_ptr_op(strmap_get_lc(map,"AB.C"),OP_EQ, NULL);
 
  done:
   if (map)
@@ -853,41 +857,42 @@ test_container_order_functions(void *arg)
 
   (void)arg;
   lst[n++] = 12;
-  tt_int_op(12,==, median()); /* 12 */
+  tt_int_op(12,OP_EQ, median()); /* 12 */
   lst[n++] = 77;
   //smartlist_shuffle(sl);
-  tt_int_op(12,==, median()); /* 12, 77 */
+  tt_int_op(12,OP_EQ, median()); /* 12, 77 */
   lst[n++] = 77;
   //smartlist_shuffle(sl);
-  tt_int_op(77,==, median()); /* 12, 77, 77 */
+  tt_int_op(77,OP_EQ, median()); /* 12, 77, 77 */
   lst[n++] = 24;
-  tt_int_op(24,==, median()); /* 12,24,77,77 */
+  tt_int_op(24,OP_EQ, median()); /* 12,24,77,77 */
   lst[n++] = 60;
   lst[n++] = 12;
   lst[n++] = 25;
   //smartlist_shuffle(sl);
-  tt_int_op(25,==, median()); /* 12,12,24,25,60,77,77 */
+  tt_int_op(25,OP_EQ, median()); /* 12,12,24,25,60,77,77 */
 #undef median
 
 #define third_quartile() third_quartile_uint32(lst2, n)
 
   n = 0;
   lst2[n++] = 1;
-  tt_int_op(1,==, third_quartile()); /* ~1~ */
+  tt_int_op(1,OP_EQ, third_quartile()); /* ~1~ */
   lst2[n++] = 2;
-  tt_int_op(2,==, third_quartile()); /* 1, ~2~ */
+  tt_int_op(2,OP_EQ, third_quartile()); /* 1, ~2~ */
   lst2[n++] = 3;
   lst2[n++] = 4;
   lst2[n++] = 5;
-  tt_int_op(4,==, third_quartile()); /* 1, 2, 3, ~4~, 5 */
+  tt_int_op(4,OP_EQ, third_quartile()); /* 1, 2, 3, ~4~, 5 */
   lst2[n++] = 6;
   lst2[n++] = 7;
   lst2[n++] = 8;
   lst2[n++] = 9;
-  tt_int_op(7,==, third_quartile()); /* 1, 2, 3, 4, 5, 6, ~7~, 8, 9 */
+  tt_int_op(7,OP_EQ, third_quartile()); /* 1, 2, 3, 4, 5, 6, ~7~, 8, 9 */
   lst2[n++] = 10;
   lst2[n++] = 11;
-  tt_int_op(9,==, third_quartile()); /* 1, 2, 3, 4, 5, 6, 7, 8, ~9~, 10, 11 */
+  /* 1, 2, 3, 4, 5, 6, 7, 8, ~9~, 10, 11 */
+  tt_int_op(9,OP_EQ, third_quartile());
 
 #undef third_quartile
 
@@ -911,26 +916,26 @@ test_container_di_map(void *arg)
   (void)arg;
 
   /* Try searching on an empty map. */
-  tt_ptr_op(NULL, ==, dimap_search(map, key1, NULL));
-  tt_ptr_op(NULL, ==, dimap_search(map, key2, NULL));
-  tt_ptr_op(v3, ==, dimap_search(map, key2, v3));
+  tt_ptr_op(NULL, OP_EQ, dimap_search(map, key1, NULL));
+  tt_ptr_op(NULL, OP_EQ, dimap_search(map, key2, NULL));
+  tt_ptr_op(v3, OP_EQ, dimap_search(map, key2, v3));
   dimap_free(map, NULL);
   map = NULL;
 
   /* Add a single entry. */
   dimap_add_entry(&map, key1, v1);
-  tt_ptr_op(NULL, ==, dimap_search(map, key2, NULL));
-  tt_ptr_op(v3, ==, dimap_search(map, key2, v3));
-  tt_ptr_op(v1, ==, dimap_search(map, key1, NULL));
+  tt_ptr_op(NULL, OP_EQ, dimap_search(map, key2, NULL));
+  tt_ptr_op(v3, OP_EQ, dimap_search(map, key2, v3));
+  tt_ptr_op(v1, OP_EQ, dimap_search(map, key1, NULL));
 
   /* Now try it with three entries in the map. */
   dimap_add_entry(&map, key2, v2);
   dimap_add_entry(&map, key3, v3);
-  tt_ptr_op(v1, ==, dimap_search(map, key1, NULL));
-  tt_ptr_op(v2, ==, dimap_search(map, key2, NULL));
-  tt_ptr_op(v3, ==, dimap_search(map, key3, NULL));
-  tt_ptr_op(NULL, ==, dimap_search(map, key4, NULL));
-  tt_ptr_op(v1, ==, dimap_search(map, key4, v1));
+  tt_ptr_op(v1, OP_EQ, dimap_search(map, key1, NULL));
+  tt_ptr_op(v2, OP_EQ, dimap_search(map, key2, NULL));
+  tt_ptr_op(v3, OP_EQ, dimap_search(map, key3, NULL));
+  tt_ptr_op(NULL, OP_EQ, dimap_search(map, key4, NULL));
+  tt_ptr_op(v1, OP_EQ, dimap_search(map, key4, v1));
 
  done:
   tor_free(v1);
@@ -959,7 +964,7 @@ test_container_fp_pair_map(void *arg)
   (void)arg;
   map = fp_pair_map_new();
   tt_assert(map);
-  tt_int_op(fp_pair_map_size(map),==, 0);
+  tt_int_op(fp_pair_map_size(map),OP_EQ, 0);
   tt_assert(fp_pair_map_isempty(map));
 
   memset(fp1.first, 0x11, DIGEST_LEN);
@@ -976,27 +981,27 @@ test_container_fp_pair_map(void *arg)
   memset(fp6.second, 0x62, DIGEST_LEN);
 
   v = fp_pair_map_set(map, &fp1, v99);
-  tt_ptr_op(v, ==, NULL);
+  tt_ptr_op(v, OP_EQ, NULL);
   tt_assert(!fp_pair_map_isempty(map));
   v = fp_pair_map_set(map, &fp2, v101);
-  tt_ptr_op(v, ==, NULL);
+  tt_ptr_op(v, OP_EQ, NULL);
   v = fp_pair_map_set(map, &fp1, v100);
-  tt_ptr_op(v, ==, v99);
-  tt_ptr_op(fp_pair_map_get(map, &fp1),==, v100);
-  tt_ptr_op(fp_pair_map_get(map, &fp2),==, v101);
-  tt_ptr_op(fp_pair_map_get(map, &fp3),==, NULL);
+  tt_ptr_op(v, OP_EQ, v99);
+  tt_ptr_op(fp_pair_map_get(map, &fp1),OP_EQ, v100);
+  tt_ptr_op(fp_pair_map_get(map, &fp2),OP_EQ, v101);
+  tt_ptr_op(fp_pair_map_get(map, &fp3),OP_EQ, NULL);
   fp_pair_map_assert_ok(map);
 
   v = fp_pair_map_remove(map, &fp2);
   fp_pair_map_assert_ok(map);
-  tt_ptr_op(v,==, v101);
-  tt_ptr_op(fp_pair_map_get(map, &fp2),==, NULL);
-  tt_ptr_op(fp_pair_map_remove(map, &fp2),==, NULL);
+  tt_ptr_op(v,OP_EQ, v101);
+  tt_ptr_op(fp_pair_map_get(map, &fp2),OP_EQ, NULL);
+  tt_ptr_op(fp_pair_map_remove(map, &fp2),OP_EQ, NULL);
 
   fp_pair_map_set(map, &fp2, v101);
   fp_pair_map_set(map, &fp3, v102);
   fp_pair_map_set(map, &fp4, v103);
-  tt_int_op(fp_pair_map_size(map),==, 4);
+  tt_int_op(fp_pair_map_size(map),OP_EQ, 4);
   fp_pair_map_assert_ok(map);
   fp_pair_map_set(map, &fp5, v104);
   fp_pair_map_set(map, &fp6, v105);
@@ -1006,7 +1011,7 @@ test_container_fp_pair_map(void *arg)
   iter = fp_pair_map_iter_init(map);
   while (!fp_pair_map_iter_done(iter)) {
     fp_pair_map_iter_get(iter, &k, &v);
-    tt_ptr_op(v,==, fp_pair_map_get(map, &k));
+    tt_ptr_op(v,OP_EQ, fp_pair_map_get(map, &k));
 
     if (tor_memeq(&fp2, &k, sizeof(fp2))) {
       iter = fp_pair_map_iter_next_rmv(map, iter);
@@ -1016,8 +1021,8 @@ test_container_fp_pair_map(void *arg)
   }
 
   /* Make sure we removed fp2, but not the others. */
-  tt_ptr_op(fp_pair_map_get(map, &fp2),==, NULL);
-  tt_ptr_op(fp_pair_map_get(map, &fp5),==, v104);
+  tt_ptr_op(fp_pair_map_get(map, &fp2),OP_EQ, NULL);
+  tt_ptr_op(fp_pair_map_get(map, &fp5),OP_EQ, v104);
 
   fp_pair_map_assert_ok(map);
   /* Clean up after ourselves. */

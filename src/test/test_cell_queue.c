@@ -21,7 +21,7 @@ test_cq_manip(void *arg)
 #endif /* ENABLE_MEMPOOLS */
 
   cell_queue_init(&cq);
-  tt_int_op(cq.n, ==, 0);
+  tt_int_op(cq.n, OP_EQ, 0);
 
   pc1 = packed_cell_new();
   pc2 = packed_cell_new();
@@ -29,26 +29,26 @@ test_cq_manip(void *arg)
   pc4 = packed_cell_new();
   tt_assert(pc1 && pc2 && pc3 && pc4);
 
-  tt_ptr_op(NULL, ==, cell_queue_pop(&cq));
+  tt_ptr_op(NULL, OP_EQ, cell_queue_pop(&cq));
 
   /* Add and remove a singleton. */
   cell_queue_append(&cq, pc1);
-  tt_int_op(cq.n, ==, 1);
-  tt_ptr_op(pc1, ==, cell_queue_pop(&cq));
-  tt_int_op(cq.n, ==, 0);
+  tt_int_op(cq.n, OP_EQ, 1);
+  tt_ptr_op(pc1, OP_EQ, cell_queue_pop(&cq));
+  tt_int_op(cq.n, OP_EQ, 0);
 
   /* Add and remove four items */
   cell_queue_append(&cq, pc4);
   cell_queue_append(&cq, pc3);
   cell_queue_append(&cq, pc2);
   cell_queue_append(&cq, pc1);
-  tt_int_op(cq.n, ==, 4);
-  tt_ptr_op(pc4, ==, cell_queue_pop(&cq));
-  tt_ptr_op(pc3, ==, cell_queue_pop(&cq));
-  tt_ptr_op(pc2, ==, cell_queue_pop(&cq));
-  tt_ptr_op(pc1, ==, cell_queue_pop(&cq));
-  tt_int_op(cq.n, ==, 0);
-  tt_ptr_op(NULL, ==, cell_queue_pop(&cq));
+  tt_int_op(cq.n, OP_EQ, 4);
+  tt_ptr_op(pc4, OP_EQ, cell_queue_pop(&cq));
+  tt_ptr_op(pc3, OP_EQ, cell_queue_pop(&cq));
+  tt_ptr_op(pc2, OP_EQ, cell_queue_pop(&cq));
+  tt_ptr_op(pc1, OP_EQ, cell_queue_pop(&cq));
+  tt_int_op(cq.n, OP_EQ, 0);
+  tt_ptr_op(NULL, OP_EQ, cell_queue_pop(&cq));
 
   /* Try a packed copy (wide, then narrow, which is a bit of a cheat, since a
    * real cell queue has only one type.) */
@@ -64,32 +64,32 @@ test_cq_manip(void *arg)
   cell.circ_id = 0x2013;
   cell_queue_append_packed_copy(NULL /*circ*/, &cq, 0 /*exitward*/, &cell,
                                 0 /*wide*/, 0 /*stats*/);
-  tt_int_op(cq.n, ==, 2);
+  tt_int_op(cq.n, OP_EQ, 2);
 
   pc_tmp = cell_queue_pop(&cq);
-  tt_int_op(cq.n, ==, 1);
-  tt_ptr_op(pc_tmp, !=, NULL);
-  tt_mem_op(pc_tmp->body, ==, "\x12\x34\x56\x78\x0a", 5);
-  tt_mem_op(pc_tmp->body+5, ==, cell.payload, sizeof(cell.payload));
+  tt_int_op(cq.n, OP_EQ, 1);
+  tt_ptr_op(pc_tmp, OP_NE, NULL);
+  tt_mem_op(pc_tmp->body, OP_EQ, "\x12\x34\x56\x78\x0a", 5);
+  tt_mem_op(pc_tmp->body+5, OP_EQ, cell.payload, sizeof(cell.payload));
   packed_cell_free(pc_tmp);
 
   pc_tmp = cell_queue_pop(&cq);
-  tt_int_op(cq.n, ==, 0);
-  tt_ptr_op(pc_tmp, !=, NULL);
-  tt_mem_op(pc_tmp->body, ==, "\x20\x13\x0a", 3);
-  tt_mem_op(pc_tmp->body+3, ==, cell.payload, sizeof(cell.payload));
+  tt_int_op(cq.n, OP_EQ, 0);
+  tt_ptr_op(pc_tmp, OP_NE, NULL);
+  tt_mem_op(pc_tmp->body, OP_EQ, "\x20\x13\x0a", 3);
+  tt_mem_op(pc_tmp->body+3, OP_EQ, cell.payload, sizeof(cell.payload));
   packed_cell_free(pc_tmp);
   pc_tmp = NULL;
 
-  tt_ptr_op(NULL, ==, cell_queue_pop(&cq));
+  tt_ptr_op(NULL, OP_EQ, cell_queue_pop(&cq));
 
   /* Now make sure cell_queue_clear works. */
   cell_queue_append(&cq, pc2);
   cell_queue_append(&cq, pc1);
-  tt_int_op(cq.n, ==, 2);
+  tt_int_op(cq.n, OP_EQ, 2);
   cell_queue_clear(&cq);
   pc2 = pc1 = NULL; /* prevent double-free */
-  tt_int_op(cq.n, ==, 0);
+  tt_int_op(cq.n, OP_EQ, 0);
 
  done:
   packed_cell_free(pc1);
@@ -129,17 +129,17 @@ test_circuit_n_cells(void *arg)
   origin_c = origin_circuit_new();
   origin_c->base_.purpose = CIRCUIT_PURPOSE_C_GENERAL;
 
-  tt_int_op(n_cells_in_circ_queues(TO_CIRCUIT(or_c)), ==, 0);
+  tt_int_op(n_cells_in_circ_queues(TO_CIRCUIT(or_c)), OP_EQ, 0);
   cell_queue_append(&or_c->p_chan_cells, pc1);
-  tt_int_op(n_cells_in_circ_queues(TO_CIRCUIT(or_c)), ==, 1);
+  tt_int_op(n_cells_in_circ_queues(TO_CIRCUIT(or_c)), OP_EQ, 1);
   cell_queue_append(&or_c->base_.n_chan_cells, pc2);
   cell_queue_append(&or_c->base_.n_chan_cells, pc3);
-  tt_int_op(n_cells_in_circ_queues(TO_CIRCUIT(or_c)), ==, 3);
+  tt_int_op(n_cells_in_circ_queues(TO_CIRCUIT(or_c)), OP_EQ, 3);
 
-  tt_int_op(n_cells_in_circ_queues(TO_CIRCUIT(origin_c)), ==, 0);
+  tt_int_op(n_cells_in_circ_queues(TO_CIRCUIT(origin_c)), OP_EQ, 0);
   cell_queue_append(&origin_c->base_.n_chan_cells, pc4);
   cell_queue_append(&origin_c->base_.n_chan_cells, pc5);
-  tt_int_op(n_cells_in_circ_queues(TO_CIRCUIT(origin_c)), ==, 2);
+  tt_int_op(n_cells_in_circ_queues(TO_CIRCUIT(origin_c)), OP_EQ, 2);
 
  done:
   circuit_free(TO_CIRCUIT(or_c));

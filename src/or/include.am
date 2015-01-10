@@ -74,6 +74,7 @@ LIBTOR_A_SOURCES = \
 	src/or/routerlist.c				\
 	src/or/routerparse.c				\
 	src/or/routerset.c				\
+	src/or/scheduler.c				\
 	src/or/statefile.c				\
 	src/or/status.c					\
 	src/or/onion_ntor.c				\
@@ -179,6 +180,7 @@ ORHEADERS = \
 	src/or/routerlist.h				\
 	src/or/routerset.h				\
 	src/or/routerparse.h				\
+	src/or/scheduler.h				\
 	src/or/statefile.h				\
 	src/or/status.h
 

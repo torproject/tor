@@ -227,6 +227,9 @@ const char *find_str_at_start_of_line(const char *haystack,
                                       const char *needle);
 int string_is_C_identifier(const char *string);
 int string_is_key_value(int severity, const char *string);
+int string_is_valid_hostname(const char *string);
+int string_is_valid_ipv4_address(const char *string);
+int string_is_valid_ipv6_address(const char *string);
 
 int tor_mem_is_zero(const char *mem, size_t len);
 int tor_digest_is_zero(const char *digest);
@@ -344,9 +347,11 @@ typedef unsigned int cpd_check_t;
 #define CPD_CREATE 1
 #define CPD_CHECK 2
 #define CPD_GROUP_OK 4
-#define CPD_CHECK_MODE_ONLY 8
+#define CPD_GROUP_READ 8
+#define CPD_CHECK_MODE_ONLY 16
 int check_private_dir(const char *dirname, cpd_check_t check,
                       const char *effective_user);
+
 #define OPEN_FLAGS_REPLACE (O_WRONLY|O_CREAT|O_TRUNC)
 #define OPEN_FLAGS_APPEND (O_WRONLY|O_CREAT|O_APPEND)
 #define OPEN_FLAGS_DONT_REPLACE (O_CREAT|O_EXCL|O_APPEND|O_WRONLY)

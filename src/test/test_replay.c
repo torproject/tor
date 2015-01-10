@@ -44,7 +44,7 @@ test_replaycache_badalloc(void *arg)
   /* Negative interval should get adjusted to zero */
   r = replaycache_new(600, -300);
   tt_assert(r != NULL);
-  tt_int_op(r->scrub_interval,==, 0);
+  tt_int_op(r->scrub_interval,OP_EQ, 0);
   replaycache_free(r);
   /* Negative horizon and negative interval should still fail */
   r = replaycache_new(-600, -300);
@@ -81,13 +81,13 @@ test_replaycache_miss(void *arg)
   result =
     replaycache_add_and_test_internal(1200, r, test_buffer,
         strlen(test_buffer), NULL);
-  tt_int_op(result,==, 0);
+  tt_int_op(result,OP_EQ, 0);
 
   /* poke the bad-parameter error case too */
   result =
     replaycache_add_and_test_internal(1200, NULL, test_buffer,
         strlen(test_buffer), NULL);
-  tt_int_op(result,==, 0);
+  tt_int_op(result,OP_EQ, 0);
 
  done:
   if (r) replaycache_free(r);
@@ -108,12 +108,12 @@ test_replaycache_hit(void *arg)
   result =
     replaycache_add_and_test_internal(1200, r, test_buffer,
         strlen(test_buffer), NULL);
-  tt_int_op(result,==, 0);
+  tt_int_op(result,OP_EQ, 0);
 
   result =
     replaycache_add_and_test_internal(1300, r, test_buffer,
         strlen(test_buffer), NULL);
-  tt_int_op(result,==, 1);
+  tt_int_op(result,OP_EQ, 1);
 
  done:
   if (r) replaycache_free(r);
@@ -134,17 +134,17 @@ test_replaycache_age(void *arg)
   result =
     replaycache_add_and_test_internal(1200, r, test_buffer,
         strlen(test_buffer), NULL);
-  tt_int_op(result,==, 0);
+  tt_int_op(result,OP_EQ, 0);
 
   result =
     replaycache_add_and_test_internal(1300, r, test_buffer,
         strlen(test_buffer), NULL);
-  tt_int_op(result,==, 1);
+  tt_int_op(result,OP_EQ, 1);
 
   result =
     replaycache_add_and_test_internal(3000, r, test_buffer,
         strlen(test_buffer), NULL);
-  tt_int_op(result,==, 0);
+  tt_int_op(result,OP_EQ, 0);
 
  done:
   if (r) replaycache_free(r);
@@ -166,13 +166,13 @@ test_replaycache_elapsed(void *arg)
   result =
     replaycache_add_and_test_internal(1200, r, test_buffer,
         strlen(test_buffer), NULL);
-  tt_int_op(result,==, 0);
+  tt_int_op(result,OP_EQ, 0);
 
   result =
     replaycache_add_and_test_internal(1300, r, test_buffer,
         strlen(test_buffer), &elapsed);
-  tt_int_op(result,==, 1);
-  tt_int_op(elapsed,==, 100);
+  tt_int_op(result,OP_EQ, 1);
+  tt_int_op(elapsed,OP_EQ, 100);
 
  done:
   if (r) replaycache_free(r);
@@ -193,17 +193,17 @@ test_replaycache_noexpire(void *arg)
   result =
     replaycache_add_and_test_internal(1200, r, test_buffer,
         strlen(test_buffer), NULL);
-  tt_int_op(result,==, 0);
+  tt_int_op(result,OP_EQ, 0);
 
   result =
     replaycache_add_and_test_internal(1300, r, test_buffer,
         strlen(test_buffer), NULL);
-  tt_int_op(result,==, 1);
+  tt_int_op(result,OP_EQ, 1);
 
   result =
     replaycache_add_and_test_internal(3000, r, test_buffer,
         strlen(test_buffer), NULL);
-  tt_int_op(result,==, 1);
+  tt_int_op(result,OP_EQ, 1);
 
  done:
   if (r) replaycache_free(r);
@@ -225,12 +225,12 @@ test_replaycache_scrub(void *arg)
   result =
     replaycache_add_and_test_internal(100, r, test_buffer,
         strlen(test_buffer), NULL);
-  tt_int_op(result,==, 0);
+  tt_int_op(result,OP_EQ, 0);
 
   result =
     replaycache_add_and_test_internal(200, r, test_buffer,
         strlen(test_buffer), NULL);
-  tt_int_op(result,==, 1);
+  tt_int_op(result,OP_EQ, 1);
 
   /*
    * Poke a few replaycache_scrub_if_needed_internal() error cases that
@@ -245,7 +245,7 @@ test_replaycache_scrub(void *arg)
   /* Make sure we hit the aging-out case too */
   replaycache_scrub_if_needed_internal(1500, r);
   /* Assert that we aged it */
-  tt_int_op(digestmap_size(r->digests_seen),==, 0);
+  tt_int_op(digestmap_size(r->digests_seen),OP_EQ, 0);
 
  done:
   if (r) replaycache_free(r);
@@ -268,16 +268,16 @@ test_replaycache_future(void *arg)
   result =
     replaycache_add_and_test_internal(100, r, test_buffer,
         strlen(test_buffer), &elapsed);
-  tt_int_op(result,==, 0);
+  tt_int_op(result,OP_EQ, 0);
   /* elapsed should still be 0, since it wasn't written */
-  tt_int_op(elapsed,==, 0);
+  tt_int_op(elapsed,OP_EQ, 0);
 
   result =
     replaycache_add_and_test_internal(200, r, test_buffer,
         strlen(test_buffer), &elapsed);
-  tt_int_op(result,==, 1);
+  tt_int_op(result,OP_EQ, 1);
   /* elapsed should be the time since the last hit */
-  tt_int_op(elapsed,==, 100);
+  tt_int_op(elapsed,OP_EQ, 100);
 
   /*
    * Now let's turn the clock back to get coverage on the cache entry from the
@@ -287,9 +287,9 @@ test_replaycache_future(void *arg)
     replaycache_add_and_test_internal(150, r, test_buffer,
         strlen(test_buffer), &elapsed);
   /* We should still get a hit */
-  tt_int_op(result,==, 1);
+  tt_int_op(result,OP_EQ, 1);
   /* ...but it shouldn't let us see a negative elapsed time */
-  tt_int_op(elapsed,==, 0);
+  tt_int_op(elapsed,OP_EQ, 0);
 
  done:
   if (r) replaycache_free(r);
@@ -316,18 +316,18 @@ test_replaycache_realtime(void *arg)
   /* This should miss */
   result =
     replaycache_add_and_test(r, test_buffer, strlen(test_buffer));
-  tt_int_op(result,==, 0);
+  tt_int_op(result,OP_EQ, 0);
 
   /* This should hit */
   result =
     replaycache_add_and_test(r, test_buffer, strlen(test_buffer));
-  tt_int_op(result,==, 1);
+  tt_int_op(result,OP_EQ, 1);
 
   /* This should hit and return a small elapsed time */
   result =
     replaycache_add_test_and_elapsed(r, test_buffer,
                                      strlen(test_buffer), &elapsed);
-  tt_int_op(result,==, 1);
+  tt_int_op(result,OP_EQ, 1);
   tt_assert(elapsed >= 0);
   tt_assert(elapsed <= 5);
 

@@ -39,6 +39,7 @@
 #include "router.h"
 #include "routerlist.h"
 #include "routerparse.h"
+#include "scheduler.h"
 
 static edge_connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell,
                                             cell_direction_t cell_direction,
@@ -2591,8 +2592,8 @@ packed_cell_get_circid(const packed_cell_t *cell, int wide_circ_ids)
  * queue of the first active circuit on <b>chan</b>, and write them to
  * <b>chan</b>-&gt;outbuf.  Return the number of cells written.  Advance
  * the active circuit pointer to the next active circuit in the ring. */
-int
-channel_flush_from_first_active_circuit(channel_t *chan, int max)
+MOCK_IMPL(int,
+channel_flush_from_first_active_circuit, (channel_t *chan, int max))
 {
   circuitmux_t *cmux = NULL;
   int n_flushed = 0;
@@ -2868,14 +2869,8 @@ append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
     log_debug(LD_GENERAL, "Made a circuit active.");
   }
 
-  if (!channel_has_queued_writes(chan)) {
-    /* There is no data at all waiting to be sent on the outbuf.  Add a
-     * cell, so that we can notice when it gets flushed, flushed_some can
-     * get called, and we can start putting more data onto the buffer then.
-     */
-    log_debug(LD_GENERAL, "Primed a buffer.");
-    channel_flush_from_first_active_circuit(chan, 1);
-  }
+  /* New way: mark this as having waiting cells for the scheduler */
+  scheduler_channel_has_waiting_cells(chan);
 }
 
 /** Append an encoded value of <b>addr</b> to <b>payload_out</b>, which must

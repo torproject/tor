@@ -1,0 +1,3 @@
+  o Documentation:
+    - Document the bridge-authority-only 'networkstatus-bridges'
+      file. Closes ticket 13713; patch from "tom".

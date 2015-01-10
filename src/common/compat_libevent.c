@@ -283,8 +283,8 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
 }
 
 /** Return the current Libevent event base that we're set up to use. */
-struct event_base *
-tor_libevent_get_base(void)
+MOCK_IMPL(struct event_base *,
+tor_libevent_get_base, (void))
 {
   return the_event_base;
 }
@@ -717,7 +717,7 @@ tor_gettimeofday_cached_monotonic(struct timeval *tv)
   struct timeval last_tv = { 0, 0 };
 
   tor_gettimeofday_cached(tv);
-  if (timercmp(tv, &last_tv, <)) {
+  if (timercmp(tv, &last_tv, OP_LT)) {
     memcpy(tv, &last_tv, sizeof(struct timeval));
   } else {
     memcpy(&last_tv, tv, sizeof(struct timeval));

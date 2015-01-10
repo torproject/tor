@@ -37,7 +37,7 @@ size_t microdesc_average_size(microdesc_cache_t *cache);
 smartlist_t *microdesc_list_missing_digest256(networkstatus_t *ns,
                                               microdesc_cache_t *cache,
                                               int downloadable_only,
-                                              digestmap_t *skip);
+                                              digest256map_t *skip);
 
 void microdesc_free_(microdesc_t *md, const char *fname, int line);
 #define microdesc_free(md) \

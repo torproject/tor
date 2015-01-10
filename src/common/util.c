@@ -195,33 +195,40 @@ tor_malloc_zero_(size_t size DMALLOC_PARAMS)
   return result;
 }
 
+/* The square root of SIZE_MAX + 1.  If a is less than this, and b is less
+ * than this, then a*b is less than SIZE_MAX.  (For example, if size_t is
+ * 32 bits, then SIZE_MAX is 0xffffffff and this value is 0x10000.  If a and
+ * b are less than this, then their product is at most (65535*65535) ==
+ * 0xfffe0001. */
+#define SQRT_SIZE_MAX_P1 (((size_t)1) << (sizeof(size_t)*4))
+
+/** Return non-zero if and only if the product of the arguments is exact. */
+static INLINE int
+size_mul_check(const size_t x, const size_t y)
+{
+  /* This first check is equivalent to
+     (x < SQRT_SIZE_MAX_P1 && y < SQRT_SIZE_MAX_P1)
+
+     Rationale: if either one of x or y is >= SQRT_SIZE_MAX_P1, then it
+     will have some bit set in its most significant half.
+   */
+  return ((x|y) < SQRT_SIZE_MAX_P1 ||
+          y == 0 ||
+          x <= SIZE_MAX / y);
+}
+
 /** Allocate a chunk of <b>nmemb</b>*<b>size</b> bytes of memory, fill
  * the memory with zero bytes, and return a pointer to the result.
  * Log and terminate the process on error.  (Same as
  * calloc(<b>nmemb</b>,<b>size</b>), but never returns NULL.)
- *
- * XXXX This implementation probably asserts in cases where it could
- * work, because it only tries dividing SIZE_MAX by size (according to
- * the calloc(3) man page, the size of an element of the nmemb-element
- * array to be allocated), not by nmemb (which could in theory be
- * smaller than size).  Don't do that then.
+ * The second argument (<b>size</b>) should preferably be non-zero
+ * and a compile-time constant.
  */
 void *
 tor_calloc_(size_t nmemb, size_t size DMALLOC_PARAMS)
 {
-  /* You may ask yourself, "wouldn't it be smart to use calloc instead of
-   * malloc+memset?  Perhaps libc's calloc knows some nifty optimization trick
-   * we don't!"  Indeed it does, but its optimizations are only a big win when
-   * we're allocating something very big (it knows if it just got the memory
-   * from the OS in a pre-zeroed state).  We don't want to use tor_malloc_zero
-   * for big stuff, so we don't bother with calloc. */
-  void *result;
-  size_t max_nmemb = (size == 0) ? SIZE_MAX : SIZE_MAX/size;
-
-  tor_assert(nmemb < max_nmemb);
-
-  result = tor_malloc_zero_((nmemb * size) DMALLOC_FN_ARGS);
-  return result;
+  tor_assert(size_mul_check(nmemb, size));
+  return tor_malloc_zero_((nmemb * size) DMALLOC_FN_ARGS);
 }
 
 /** Change the size of the memory block pointed to by <b>ptr</b> to <b>size</b>
@@ -264,7 +271,7 @@ tor_reallocarray_(void *ptr, size_t sz1, size_t sz2 DMALLOC_PARAMS)
 {
   /* XXXX we can make this return 0, but we would need to check all the
    * reallocarray users. */
-  tor_assert(sz2 == 0 || sz1 < SIZE_T_CEILING / sz2);
+  tor_assert(size_mul_check(sz1, sz2));
 
   return tor_realloc(ptr, (sz1 * sz2) DMALLOC_FN_ARGS);
 }
@@ -955,6 +962,68 @@ string_is_key_value(int severity, const char *string)
   }
 
   return 1;
+}
+
+/** Return true if <b>string</b> represents a valid IPv4 adddress in
+ * 'a.b.c.d' form.
+ */
+int
+string_is_valid_ipv4_address(const char *string)
+{
+  struct in_addr addr;
+
+  return (tor_inet_pton(AF_INET,string,&addr) == 1);
+}
+
+/** Return true if <b>string</b> represents a valid IPv6 address in
+ * a form that inet_pton() can parse.
+ */
+int
+string_is_valid_ipv6_address(const char *string)
+{
+  struct in6_addr addr;
+
+  return (tor_inet_pton(AF_INET6,string,&addr) == 1);
+}
+
+/** Return true iff <b>string</b> matches a pattern of DNS names
+ * that we allow Tor clients to connect to.
+ */
+int
+string_is_valid_hostname(const char *string)
+{
+  int result = 1;
+  smartlist_t *components;
+
+  components = smartlist_new();
+
+  smartlist_split_string(components,string,".",0,0);
+
+  SMARTLIST_FOREACH_BEGIN(components, char *, c) {
+    if (c[0] == '-') {
+      result = 0;
+      break;
+    }
+
+    do {
+      if ((*c >= 'a' && *c <= 'z') ||
+          (*c >= 'A' && *c <= 'Z') ||
+          (*c >= '0' && *c <= '9') ||
+          (*c == '-'))
+        c++;
+      else
+        result = 0;
+    } while (result && *c);
+
+  } SMARTLIST_FOREACH_END(c);
+
+  SMARTLIST_FOREACH_BEGIN(components, char *, c) {
+    tor_free(c);
+  } SMARTLIST_FOREACH_END(c);
+
+  smartlist_free(components);
+
+  return result;
 }
 
 /** Return true iff the DIGEST256_LEN bytes in digest are all zero. */
@@ -1942,8 +2011,12 @@ file_status(const char *fname)
  * <b>check</b>&CPD_CHECK, and we think we can create it, return 0.  Else
  * return -1.  If CPD_GROUP_OK is set, then it's okay if the directory
  * is group-readable, but in all cases we create the directory mode 0700.
- * If CPD_CHECK_MODE_ONLY is set, then we don't alter the directory permissions
- * if they are too permissive: we just return -1.
+ * If CPD_GROUP_READ is set, existing directory behaves as CPD_GROUP_OK and
+ * if the directory is created it will use mode 0750 with group read
+ * permission. Group read privileges also assume execute permission
+ * as norm for directories. If CPD_CHECK_MODE_ONLY is set, then we don't
+ * alter the directory permissions if they are too permissive:
+ * we just return -1.
  * When effective_user is not NULL, check permissions against the given user
  * and its primary group.
  */
@@ -1955,7 +2028,7 @@ check_private_dir(const char *dirname, cpd_check_t check,
   struct stat st;
   char *f;
 #ifndef _WIN32
-  int mask;
+  unsigned unwanted_bits = 0;
   const struct passwd *pw = NULL;
   uid_t running_uid;
   gid_t running_gid;
@@ -1980,7 +2053,11 @@ check_private_dir(const char *dirname, cpd_check_t check,
 #if defined (_WIN32)
       r = mkdir(dirname);
 #else
-      r = mkdir(dirname, 0700);
+      if (check & CPD_GROUP_READ) {
+        r = mkdir(dirname, 0750);
+      } else {
+        r = mkdir(dirname, 0700);
+      }
 #endif
       if (r) {
         log_warn(LD_FS, "Error creating directory %s: %s", dirname,
@@ -2033,7 +2110,8 @@ check_private_dir(const char *dirname, cpd_check_t check,
     tor_free(process_ownername);
     return -1;
   }
-  if ((check & CPD_GROUP_OK) && st.st_gid != running_gid) {
+  if ( (check & (CPD_GROUP_OK|CPD_GROUP_READ))
+       && (st.st_gid != running_gid) ) {
     struct group *gr;
     char *process_groupname = NULL;
     gr = getgrgid(running_gid);
@@ -2048,12 +2126,12 @@ check_private_dir(const char *dirname, cpd_check_t check,
     tor_free(process_groupname);
     return -1;
   }
-  if (check & CPD_GROUP_OK) {
-    mask = 0027;
+  if (check & (CPD_GROUP_OK|CPD_GROUP_READ)) {
+    unwanted_bits = 0027;
   } else {
-    mask = 0077;
+    unwanted_bits = 0077;
   }
-  if (st.st_mode & mask) {
+  if ((st.st_mode & unwanted_bits) != 0) {
     unsigned new_mode;
     if (check & CPD_CHECK_MODE_ONLY) {
       log_warn(LD_FS, "Permissions on directory %s are too permissive.",
@@ -2063,10 +2141,13 @@ check_private_dir(const char *dirname, cpd_check_t check,
     log_warn(LD_FS, "Fixing permissions on directory %s", dirname);
     new_mode = st.st_mode;
     new_mode |= 0700; /* Owner should have rwx */
-    new_mode &= ~mask; /* Clear the other bits that we didn't want set...*/
+    if (check & CPD_GROUP_READ) {
+      new_mode |= 0050; /* Group should have rx */
+    }
+    new_mode &= ~unwanted_bits; /* Clear the bits that we didn't want set...*/
     if (chmod(dirname, new_mode)) {
       log_warn(LD_FS, "Could not chmod directory %s: %s", dirname,
-          strerror(errno));
+               strerror(errno));
       return -1;
     } else {
       return 0;
@@ -3474,8 +3555,9 @@ format_win_cmdline_argument(const char *arg)
     smartlist_add(arg_chars, (void*)&backslash);
 
   /* Allocate space for argument, quotes (if needed), and terminator */
-  formatted_arg = tor_calloc(sizeof(char),
-                    (smartlist_len(arg_chars) + (need_quotes ? 2 : 0) + 1));
+  const size_t formatted_arg_len = smartlist_len(arg_chars) +
+    (need_quotes ? 2 : 0) + 1;
+  formatted_arg = tor_malloc_zero(formatted_arg_len);
 
   /* Add leading quote */
   i=0;
@@ -5113,7 +5195,7 @@ tor_check_port_forwarding(const char *filename,
        for each smartlist element (one for "-p" and one for the
        ports), and one for the final NULL. */
     args_n = 1 + 2*smartlist_len(ports_to_forward) + 1;
-    argv = tor_calloc(sizeof(char *), args_n);
+    argv = tor_calloc(args_n, sizeof(char *));
 
     argv[argv_index++] = filename;
     SMARTLIST_FOREACH_BEGIN(ports_to_forward, const char *, port) {
