@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Avoid using operators directly as macro arguments: this lets us
-      apply coccinelle transformations to our codebase more
-      directly. Closes ticket 13172.

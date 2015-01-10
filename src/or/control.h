@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -203,6 +203,7 @@ void append_cell_stats_by_command(smartlist_t *event_parts,
                                   const uint64_t *number_to_include);
 void format_cell_stats(char **event_string, circuit_t *circ,
                        cell_stats_t *cell_stats);
+STATIC char *get_bw_samples(void);
 #endif
 
 #endif

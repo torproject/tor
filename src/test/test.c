@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /* Ordinarily defined in tor_main.c; this bit is just here to provide one
@@ -696,12 +696,12 @@ test_rend_fns(void *arg)
              smartlist_get(descs, 0))->desc_id, OP_EQ,
             computed_desc_id, DIGEST_LEN);
   tt_assert(rend_parse_v2_service_descriptor(&parsed, parsed_desc_id,
-                                               &intro_points_encrypted,
-                                               &intro_points_size,
-                                               &encoded_size,
-                                               &next_desc,
-                                     ((rend_encoded_v2_service_descriptor_t *)
-                                     smartlist_get(descs, 0))->desc_str) == 0);
+                                             &intro_points_encrypted,
+                                             &intro_points_size,
+                                             &encoded_size,
+                                              &next_desc,
+                             ((rend_encoded_v2_service_descriptor_t *)
+                                 smartlist_get(descs, 0))->desc_str, 1) == 0);
   tt_assert(parsed);
   tt_mem_op(((rend_encoded_v2_service_descriptor_t *)
          smartlist_get(descs, 0))->desc_id,OP_EQ, parsed_desc_id, DIGEST_LEN);

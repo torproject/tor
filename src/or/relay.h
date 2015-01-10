@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -49,6 +49,8 @@ void clean_cell_pool(void);
 #endif /* ENABLE_MEMPOOLS */
 void dump_cell_pool_usage(int severity);
 size_t packed_cell_mem_cost(void);
+
+int have_been_under_memory_pressure(void);
 
 /* For channeltls.c */
 void packed_cell_free(packed_cell_t *cell);

@@ -1,6 +1,0 @@
-  o Minor bugfixes (hidden services):
-    - When adding a new hidden-service (for example, via SETCONF) Tor
-      no longer logs a congratulations for running a relay. Fixes bug
-      13941; bugfix on 0.2.6.1-alpha.
-
-

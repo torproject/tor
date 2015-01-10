@@ -4,7 +4,7 @@
  */
 /* trunnel.c -- Helper functions to implement trunnel.
  *
- * Copyright 2014, The Tor Project, Inc.
+ * Copyright 2014-2015, The Tor Project, Inc.
  * See license at the end of this file for copying information.
  *
  * See trunnel-impl.h for documentation of these functions.

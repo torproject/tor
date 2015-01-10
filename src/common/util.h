@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -172,6 +172,10 @@ uint64_t round_to_power_of_2(uint64_t u64);
 unsigned round_to_next_multiple_of(unsigned number, unsigned divisor);
 uint32_t round_uint32_to_next_multiple_of(uint32_t number, uint32_t divisor);
 uint64_t round_uint64_to_next_multiple_of(uint64_t number, uint64_t divisor);
+int64_t round_int64_to_next_multiple_of(int64_t number, int64_t divisor);
+double sample_laplace_distribution(double mu, double b, double p);
+int64_t add_laplace_noise(int64_t signal, double random, double delta_f,
+                          double epsilon);
 int n_bits_set_u8(uint8_t v);
 
 /* Compute the CEIL of <b>a</b> divided by <b>b</b>, for nonnegative <b>a</b>
@@ -270,6 +274,7 @@ void format_local_iso_time(char *buf, time_t t);
 void format_iso_time(char *buf, time_t t);
 void format_iso_time_nospace(char *buf, time_t t);
 void format_iso_time_nospace_usec(char *buf, const struct timeval *tv);
+int parse_iso_time_(const char *cp, time_t *t, int strict);
 int parse_iso_time(const char *buf, time_t *t);
 int parse_http_time(const char *buf, struct tm *tm);
 int format_time_interval(char *out, size_t out_len, long interval);

@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, The Tor Project, Inc. */
+/* Copyright (c) 2014-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #include "or.h"
@@ -111,14 +111,14 @@ test_relay_append_cell_to_circuit_queue(void *arg)
 
   /* Shut down channels */
   channel_free_all();
-  nchan = pchan = NULL;
 
  done:
+  tor_free(cell);
+  cell_queue_clear(&orcirc->base_.n_chan_cells);
+  cell_queue_clear(&orcirc->p_chan_cells);
   tor_free(orcirc);
-  if (nchan && nchan->cmux) circuitmux_free(nchan->cmux);
-  tor_free(nchan);
-  if (pchan && pchan->cmux) circuitmux_free(pchan->cmux);
-  tor_free(pchan);
+  free_fake_channel(nchan);
+  free_fake_channel(pchan);
 #ifdef ENABLE_MEMPOOLS
   free_cell_pool();
 #endif /* ENABLE_MEMPOOLS */

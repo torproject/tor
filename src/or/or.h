@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -3204,6 +3204,10 @@ typedef struct or_circuit_t {
   /** True iff this circuit was made with a CREATE_FAST cell. */
   unsigned int is_first_hop : 1;
 
+  /** If set, this circuit carries HS traffic. Consider it in any HS
+   *  statistics. */
+  unsigned int circuit_carries_hs_traffic_stats : 1;
+
   /** Number of cells that were removed from circuit queue; reset every
    * time when writing buffer stats to disk. */
   uint32_t processed_cells;
@@ -3533,6 +3537,8 @@ typedef struct {
   uint64_t MaxMemInQueues_raw;
   uint64_t MaxMemInQueues;/**< If we have more memory than this allocated
                             * for queues and buffers, run the OOM handler */
+  /** Above this value, consider ourselves low on RAM. */
+  uint64_t MaxMemInQueues_low_threshold;
 
   /** @name port booleans
    *
@@ -3669,8 +3675,9 @@ typedef struct {
                               * hostname ending with one of the suffixes in
                               * <b>AutomapHostsSuffixes</b>, map it to a
                               * virtual address. */
-  smartlist_t *AutomapHostsSuffixes; /**< List of suffixes for
-                                      * <b>AutomapHostsOnResolve</b>. */
+  /** List of suffixes for <b>AutomapHostsOnResolve</b>.  The special value
+   * "." means "match everything." */
+  smartlist_t *AutomapHostsSuffixes;
   int RendPostPeriod; /**< How often do we post each rendezvous service
                        * descriptor? Remember to publish them independently. */
   int KeepalivePeriod; /**< How often do we send padding cells to keep
@@ -3960,6 +3967,10 @@ typedef struct {
 
   /** If true, the user wants us to collect statistics as entry node. */
   int EntryStatistics;
+
+  /** If true, the user wants us to collect statistics as hidden service
+   * directory, introduction point, or rendezvous point. */
+  int HiddenServiceStatistics;
 
   /** If true, include statistics file contents in extra-info documents. */
   int ExtraInfoStatistics;
@@ -4260,6 +4271,14 @@ typedef struct {
    * when sending.
    */
   int SchedulerMaxFlushCells__;
+
+  /** Is this an exit node?  This is a tristate, where "1" means "yes, and use
+   * the default exit policy if none is given" and "0" means "no; exit policy
+   * is 'reject *'" and "auto" (-1) means "same as 1, but warn the user."
+   *
+   * XXXX Eventually, the default will be 0. */
+  int ExitRelay;
+
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

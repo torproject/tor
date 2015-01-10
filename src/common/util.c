@@ -1,6 +1,6 @@
 /* Copyright (c) 2003, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -511,6 +511,51 @@ round_uint64_to_next_multiple_of(uint64_t number, uint64_t divisor)
   number += divisor - 1;
   number -= number % divisor;
   return number;
+}
+
+/** Return the lowest x in [INT64_MIN, INT64_MAX] such that x is at least
+ * <b>number</b>, and x modulo <b>divisor</b> == 0. */
+int64_t
+round_int64_to_next_multiple_of(int64_t number, int64_t divisor)
+{
+  tor_assert(divisor > 0);
+  if (number >= 0 && INT64_MAX - divisor + 1 >= number)
+    number += divisor - 1;
+  number -= number % divisor;
+  return number;
+}
+
+/** Transform a random value <b>p</b> from the uniform distribution in
+ * [0.0, 1.0[ into a Laplace distributed value with location parameter
+ * <b>mu</b> and scale parameter <b>b</b> in [-Inf, Inf[. */
+double
+sample_laplace_distribution(double mu, double b, double p)
+{
+  tor_assert(p >= 0.0 && p < 1.0);
+  /* This is the "inverse cumulative distribution function" from:
+   * http://en.wikipedia.org/wiki/Laplace_distribution */
+  return mu - b * (p > 0.5 ? 1.0 : -1.0)
+                * tor_mathlog(1.0 - 2.0 * fabs(p - 0.5));
+}
+
+/** Add random noise between INT64_MIN and INT64_MAX coming from a
+ * Laplace distribution with mu = 0 and b = <b>delta_f</b>/<b>epsilon</b>
+ * to <b>signal</b> based on the provided <b>random</b> value in
+ * [0.0, 1.0[. */
+int64_t
+add_laplace_noise(int64_t signal, double random, double delta_f,
+                  double epsilon)
+{
+  /* cast to int64_t intended */
+  int64_t noise = sample_laplace_distribution(
+               0.0, /* just add noise, no further signal */
+               delta_f / epsilon, random);
+  if (noise > 0 && INT64_MAX - noise < signal)
+    return INT64_MAX;
+  else if (noise < 0 && INT64_MIN - noise > signal)
+    return INT64_MIN;
+  else
+    return signal + noise;
 }
 
 /** Return the number of bits set in <b>v</b>. */
@@ -1223,6 +1268,9 @@ base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
     return -1;
   if (destlen < srclen/2 || destlen > SIZE_T_CEILING)
     return -1;
+
+  memset(dest, 0, destlen);
+
   end = src+srclen;
   while (src<end) {
     v1 = hex_decode_digit_(*src);
@@ -1656,15 +1704,18 @@ format_iso_time_nospace_usec(char *buf, const struct timeval *tv)
 
 /** Given an ISO-formatted UTC time value (after the epoch) in <b>cp</b>,
  * parse it and store its value in *<b>t</b>.  Return 0 on success, -1 on
- * failure.  Ignore extraneous stuff in <b>cp</b> separated by whitespace from
- * the end of the time string. */
+ * failure.  Ignore extraneous stuff in <b>cp</b> after the end of the time
+ * string, unless <b>strict</b> is set. */
 int
-parse_iso_time(const char *cp, time_t *t)
+parse_iso_time_(const char *cp, time_t *t, int strict)
 {
   struct tm st_tm;
   unsigned int year=0, month=0, day=0, hour=0, minute=0, second=0;
-  if (tor_sscanf(cp, "%u-%2u-%2u %2u:%2u:%2u", &year, &month,
-                &day, &hour, &minute, &second) < 6) {
+  int n_fields;
+  char extra_char;
+  n_fields = tor_sscanf(cp, "%u-%2u-%2u %2u:%2u:%2u%c", &year, &month,
+                        &day, &hour, &minute, &second, &extra_char);
+  if (strict ? (n_fields != 6) : (n_fields < 6)) {
     char *esc = esc_for_log(cp);
     log_warn(LD_GENERAL, "ISO time %s was unparseable", esc);
     tor_free(esc);
@@ -1691,6 +1742,16 @@ parse_iso_time(const char *cp, time_t *t)
     return -1;
   }
   return tor_timegm(&st_tm, t);
+}
+
+/** Given an ISO-formatted UTC time value (after the epoch) in <b>cp</b>,
+ * parse it and store its value in *<b>t</b>.  Return 0 on success, -1 on
+ * failure. Reject the string if any characters are present after the time.
+ */
+int
+parse_iso_time(const char *cp, time_t *t)
+{
+  return parse_iso_time_(cp, t, 1);
 }
 
 /** Given a <b>date</b> in one of the three formats allowed by HTTP (ugh),

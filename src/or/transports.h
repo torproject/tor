@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -130,6 +130,8 @@ STATIC managed_proxy_t *managed_proxy_create(const smartlist_t *transport_list,
 STATIC int configure_proxy(managed_proxy_t *mp);
 
 STATIC char* get_pt_proxy_uri(void);
+
+STATIC void free_execve_args(char **arg);
 
 #endif
 

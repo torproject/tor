@@ -1,5 +1,5 @@
 /* Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -1438,6 +1438,8 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
   (void) conn;
   if (!strcmp(question, "version")) {
     *answer = tor_strdup(get_version());
+  } else if (!strcmp(question, "bw-event-cache")) {
+    *answer = get_bw_samples();
   } else if (!strcmp(question, "config-file")) {
     *answer = tor_strdup(get_torrc_fname(0));
   } else if (!strcmp(question, "config-defaults-file")) {
@@ -2113,6 +2115,7 @@ typedef struct getinfo_item_t {
  * to answer them. */
 static const getinfo_item_t getinfo_items[] = {
   ITEM("version", misc, "The current version of Tor."),
+  ITEM("bw-event-cache", misc, "Cached BW events for a short interval."),
   ITEM("config-file", misc, "Current location of the \"torrc\" file."),
   ITEM("config-defaults-file", misc, "Current location of the defaults file."),
   ITEM("config-text", misc,
@@ -2460,6 +2463,14 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
   if (!zero_circ && !(circ = get_circ(smartlist_get(args,0)))) {
     connection_printf_to_buf(conn, "552 Unknown circuit \"%s\"\r\n",
                              (char*)smartlist_get(args, 0));
+    SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+    smartlist_free(args);
+    goto done;
+  }
+
+  if (smartlist_len(args) < 2) {
+    connection_printf_to_buf(conn,
+                             "512 syntax error: not enough arguments.\r\n");
     SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
     smartlist_free(args);
     goto done;
@@ -4147,11 +4158,29 @@ control_event_tb_empty(const char *bucket, uint32_t read_empty_time,
   return 0;
 }
 
+/* about 5 minutes worth. */
+#define N_BW_EVENTS_TO_CACHE 300
+/* Index into cached_bw_events to next write. */
+static int next_measurement_idx = 0;
+/* number of entries set in n_measurements */
+static int n_measurements = 0;
+static struct cached_bw_event_s {
+  uint32_t n_read;
+  uint32_t n_written;
+} cached_bw_events[N_BW_EVENTS_TO_CACHE];
+
 /** A second or more has elapsed: tell any interested control
  * connections how much bandwidth we used. */
 int
 control_event_bandwidth_used(uint32_t n_read, uint32_t n_written)
 {
+  cached_bw_events[next_measurement_idx].n_read = n_read;
+  cached_bw_events[next_measurement_idx].n_written = n_written;
+  if (++next_measurement_idx == N_BW_EVENTS_TO_CACHE)
+    next_measurement_idx = 0;
+  if (n_measurements < N_BW_EVENTS_TO_CACHE)
+    ++n_measurements;
+
   if (EVENT_IS_INTERESTING(EVENT_BANDWIDTH_USED)) {
     send_control_event(EVENT_BANDWIDTH_USED, ALL_FORMATS,
                        "650 BW %lu %lu\r\n",
@@ -4160,6 +4189,35 @@ control_event_bandwidth_used(uint32_t n_read, uint32_t n_written)
   }
 
   return 0;
+}
+
+STATIC char *
+get_bw_samples(void)
+{
+  int i;
+  int idx = (next_measurement_idx + N_BW_EVENTS_TO_CACHE - n_measurements)
+    % N_BW_EVENTS_TO_CACHE;
+  tor_assert(0 <= idx && idx < N_BW_EVENTS_TO_CACHE);
+
+  smartlist_t *elements = smartlist_new();
+
+  for (i = 0; i < n_measurements; ++i) {
+    tor_assert(0 <= idx && idx < N_BW_EVENTS_TO_CACHE);
+    const struct cached_bw_event_s *bwe = &cached_bw_events[idx];
+
+    smartlist_add_asprintf(elements, "%u,%u",
+                           (unsigned)bwe->n_read,
+                           (unsigned)bwe->n_written);
+
+    idx = (idx + 1) % N_BW_EVENTS_TO_CACHE;
+  }
+
+  char *result = smartlist_join_strings(elements, " ", 0, NULL);
+
+  SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
+  smartlist_free(elements);
+
+  return result;
 }
 
 /** Called when we are sending a log message to the controllers: suspend
@@ -4807,23 +4865,43 @@ bootstrap_status_to_string(bootstrap_status_t s, const char **tag,
       break;
     case BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS:
       *tag = "requesting_descriptors";
-      *summary = "Asking for relay descriptors";
+      /* XXXX this appears to incorrectly report internal on most loads */
+      *summary = router_have_consensus_path() == CONSENSUS_PATH_INTERNAL ?
+        "Asking for relay descriptors for internal paths" :
+        "Asking for relay descriptors";
       break;
+    /* If we're sure there are no exits in the consensus,
+     * inform the controller by adding "internal"
+     * to the status summaries.
+     * (We only check this while loading descriptors,
+     * so we may not know in the earlier stages.)
+     * But if there are exits, we can't be sure whether
+     * we're creating internal or exit paths/circuits.
+     * XXXX Or should be use different tags or statuses
+     * for internal and exit/all? */
     case BOOTSTRAP_STATUS_LOADING_DESCRIPTORS:
       *tag = "loading_descriptors";
-      *summary = "Loading relay descriptors";
+      *summary = router_have_consensus_path() == CONSENSUS_PATH_INTERNAL ?
+        "Loading relay descriptors for internal paths" :
+        "Loading relay descriptors";
       break;
     case BOOTSTRAP_STATUS_CONN_OR:
       *tag = "conn_or";
-      *summary = "Connecting to the Tor network";
+      *summary = router_have_consensus_path() == CONSENSUS_PATH_INTERNAL ?
+        "Connecting to the Tor network internally" :
+        "Connecting to the Tor network";
       break;
     case BOOTSTRAP_STATUS_HANDSHAKE_OR:
       *tag = "handshake_or";
-      *summary = "Finishing handshake with first hop";
+      *summary = router_have_consensus_path() == CONSENSUS_PATH_INTERNAL ?
+        "Finishing handshake with first hop of internal circuit" :
+        "Finishing handshake with first hop";
       break;
     case BOOTSTRAP_STATUS_CIRCUIT_CREATE:
       *tag = "circuit_create";
-      *summary = "Establishing a Tor circuit";
+      *summary = router_have_consensus_path() == CONSENSUS_PATH_INTERNAL ?
+        "Establishing an internal Tor circuit" :
+        "Establishing a Tor circuit";
       break;
     case BOOTSTRAP_STATUS_DONE:
       *tag = "done";

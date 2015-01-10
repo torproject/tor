@@ -1,0 +1,4 @@
+  o Testing:
+    - Make the test_cmdline_args.py script work correctly on Windows.
+      Patch from Gisle Vanem.
+      

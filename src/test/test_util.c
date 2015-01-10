@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
@@ -589,15 +589,17 @@ test_util_time(void *arg)
   i = parse_iso_time("2004-8-4 0:48:22", &t_res);
   tt_int_op(0,OP_EQ, i);
   tt_int_op(t_res,OP_EQ, (time_t)1091580502UL);
-  tt_int_op(-1,OP_EQ, parse_iso_time("2004-08-zz 99-99x99 GMT", &t_res));
-  tt_int_op(-1,OP_EQ, parse_iso_time("2011-03-32 00:00:00 GMT", &t_res));
-  tt_int_op(-1,OP_EQ, parse_iso_time("2011-03-30 24:00:00 GMT", &t_res));
-  tt_int_op(-1,OP_EQ, parse_iso_time("2011-03-30 23:60:00 GMT", &t_res));
-  tt_int_op(-1,OP_EQ, parse_iso_time("2011-03-30 23:59:62 GMT", &t_res));
-  tt_int_op(-1,OP_EQ, parse_iso_time("1969-03-30 23:59:59 GMT", &t_res));
-  tt_int_op(-1,OP_EQ, parse_iso_time("2011-00-30 23:59:59 GMT", &t_res));
+  tt_int_op(-1,OP_EQ, parse_iso_time("2004-08-zz 99-99x99", &t_res));
+  tt_int_op(-1,OP_EQ, parse_iso_time("2011-03-32 00:00:00", &t_res));
+  tt_int_op(-1,OP_EQ, parse_iso_time("2011-03-30 24:00:00", &t_res));
+  tt_int_op(-1,OP_EQ, parse_iso_time("2011-03-30 23:60:00", &t_res));
+  tt_int_op(-1,OP_EQ, parse_iso_time("2011-03-30 23:59:62", &t_res));
+  tt_int_op(-1,OP_EQ, parse_iso_time("1969-03-30 23:59:59", &t_res));
+  tt_int_op(-1,OP_EQ, parse_iso_time("2011-00-30 23:59:59", &t_res));
   tt_int_op(-1,OP_EQ, parse_iso_time("2147483647-08-29 14:00:00", &t_res));
   tt_int_op(-1,OP_EQ, parse_iso_time("2011-03-30 23:59", &t_res));
+  tt_int_op(-1,OP_EQ, parse_iso_time("2004-08-04 00:48:22.100", &t_res));
+  tt_int_op(-1,OP_EQ, parse_iso_time("2004-08-04 00:48:22XYZ", &t_res));
 
   /* Test tor_gettimeofday */
 
@@ -1820,7 +1822,7 @@ test_util_gzip(void *arg)
   tor_free(buf1);
   tor_free(buf2);
   tor_free(buf3);
-  state = tor_zlib_new(1, ZLIB_METHOD);
+  state = tor_zlib_new(1, ZLIB_METHOD, HIGH_COMPRESSION);
   tt_assert(state);
   cp1 = buf1 = tor_malloc(1024);
   len1 = 1024;
@@ -4619,6 +4621,58 @@ test_util_round_to_next_multiple_of(void *arg)
   tt_assert(round_uint64_to_next_multiple_of(99,7) == 105);
   tt_assert(round_uint64_to_next_multiple_of(99,9) == 99);
 
+  tt_assert(round_int64_to_next_multiple_of(0,1) == 0);
+  tt_assert(round_int64_to_next_multiple_of(0,7) == 0);
+
+  tt_assert(round_int64_to_next_multiple_of(99,1) == 99);
+  tt_assert(round_int64_to_next_multiple_of(99,7) == 105);
+  tt_assert(round_int64_to_next_multiple_of(99,9) == 99);
+
+  tt_assert(round_int64_to_next_multiple_of(-99,1) == -99);
+  tt_assert(round_int64_to_next_multiple_of(-99,7) == -98);
+  tt_assert(round_int64_to_next_multiple_of(-99,9) == -99);
+
+  tt_assert(round_int64_to_next_multiple_of(INT64_MIN,2) == INT64_MIN);
+  tt_assert(round_int64_to_next_multiple_of(INT64_MAX,2) ==
+                                            INT64_MAX-INT64_MAX%2);
+ done:
+  ;
+}
+
+static void
+test_util_laplace(void *arg)
+{
+  /* Sample values produced using Python's SciPy:
+   *
+   * >>> from scipy.stats import laplace
+   * >>> laplace.ppf([-0.01, 0.0, 0.01, 0.5, 0.51, 0.99, 1.0, 1.01],
+     ...             loc = 24, scale = 24)
+   * array([          nan,          -inf,  -69.88855213,   24.        ,
+   *          24.48486498,  117.88855213,           inf,           nan])
+   */
+  const double mu = 24.0, b = 24.0;
+  const double delta_f = 15.0, epsilon = 0.3; /* b = 15.0 / 0.3 = 50.0 */
+  (void)arg;
+
+  tt_assert(isinf(sample_laplace_distribution(mu, b, 0.0)));
+  test_feq(-69.88855213, sample_laplace_distribution(mu, b, 0.01));
+  test_feq(24.0, sample_laplace_distribution(mu, b, 0.5));
+  test_feq(24.48486498, sample_laplace_distribution(mu, b, 0.51));
+  test_feq(117.88855213, sample_laplace_distribution(mu, b, 0.99));
+
+  /* >>> laplace.ppf([0.0, 0.1, 0.25, 0.5, 0.75, 0.9, 0.99],
+   * ...             loc = 0, scale = 50)
+   * array([         -inf,  -80.47189562,  -34.65735903,    0.        ,
+   *          34.65735903,   80.47189562,  195.60115027])
+   */
+  tt_assert(INT64_MIN + 20 ==
+            add_laplace_noise(20, 0.0, delta_f, epsilon));
+  tt_assert(-60 == add_laplace_noise(20, 0.1, delta_f, epsilon));
+  tt_assert(-14 == add_laplace_noise(20, 0.25, delta_f, epsilon));
+  tt_assert(20 == add_laplace_noise(20, 0.5, delta_f, epsilon));
+  tt_assert(54 == add_laplace_noise(20, 0.75, delta_f, epsilon));
+  tt_assert(100 == add_laplace_noise(20, 0.9, delta_f, epsilon));
+  tt_assert(215 == add_laplace_noise(20, 0.99, delta_f, epsilon));
  done:
   ;
 }
@@ -4797,7 +4851,7 @@ test_util_max_mem(void *arg)
   } else {
     /* You do not have a petabyte. */
 #if SIZEOF_SIZE_T == SIZEOF_UINT64_T
-    tt_uint_op(memory1, OP_LT, (U64_LITERAL(1)<<50));
+    tt_u64_op(memory1, OP_LT, (U64_LITERAL(1)<<50));
 #endif
   }
 
@@ -4880,6 +4934,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(strtok),
   UTIL_LEGACY(di_ops),
   UTIL_TEST(round_to_next_multiple_of, 0),
+  UTIL_TEST(laplace, 0),
   UTIL_TEST(strclear, 0),
   UTIL_TEST(find_str_at_start_of_line, 0),
   UTIL_TEST(string_is_C_identifier, 0),

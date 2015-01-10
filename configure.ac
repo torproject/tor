@@ -1,9 +1,9 @@
 dnl Copyright (c) 2001-2004, Roger Dingledine
 dnl Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson
-dnl Copyright (c) 2007-2014, The Tor Project, Inc.
+dnl Copyright (c) 2007-2015, The Tor Project, Inc.
 dnl See LICENSE for licensing information
 
-AC_INIT([tor],[0.2.6.1-alpha-dev])
+AC_INIT([tor],[0.2.6.2-alpha-dev])
 AC_CONFIG_SRCDIR([src/or/main.c])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE
@@ -11,6 +11,8 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_CONFIG_HEADERS([orconfig.h])
 
 AC_CANONICAL_HOST
+
+PKG_PROG_PKG_CONFIG
 
 if test -f /etc/redhat-release ; then
   if test -f /usr/kerberos/include ; then
@@ -104,6 +106,58 @@ AC_ARG_ENABLE(upnp,
         no)  upnp=false ;;
         * ) AC_MSG_ERROR(bad value for --enable-upnp) ;;
       esac], [upnp=false])
+
+# systemd notify support
+AC_ARG_ENABLE(systemd,
+      AS_HELP_STRING(--enable-systemd, enable systemd notification support),
+      [case "${enableval}" in
+        yes) systemd=true ;;
+        no)  systemd=false ;;
+        * ) AC_MSG_ERROR(bad value for --enable-systemd) ;;
+      esac], [systemd=auto])
+
+
+
+# systemd support
+if test x$enable_systemd = xfalse ; then
+    have_systemd=no;
+else
+    PKG_CHECK_MODULES(SYSTEMD,
+        [libsystemd-daemon],
+        have_systemd=yes,
+        have_systemd=no)
+fi
+
+if test x$have_systemd = xyes; then
+    AC_DEFINE(HAVE_SYSTEMD,1,[Have systemd])
+    CFLAGS="${CFLAGS} ${SYSTEMD_CFLAGS}"
+    TOR_SYSTEMD_LIBS="${SYSTEMD_LIBS}"
+fi
+AC_SUBST(TOR_SYSTEMD_LIBS)
+
+if test x$enable_systemd = xyes -a x$have_systemd != xyes ; then
+    AC_MSG_ERROR([Explicitly requested systemd support, but systemd not found])
+fi
+
+AC_ARG_ENABLE(threads,
+     AS_HELP_STRING(--disable-threads, disable multi-threading support))
+
+if test x$enable_threads = x; then
+   case $host in
+    *-*-solaris* )
+     # Don't try multithreading on solaris -- cpuworkers seem to lock.
+     AC_MSG_NOTICE([You are running Solaris; Sometimes threading makes
+cpu workers lock up here, so I will disable threads.])
+     enable_threads="no";;
+    *)
+     enable_threads="yes";;
+   esac
+fi
+
+ifdef([HAVE_SYSTEMD], [
+AC_SEARCH_LIBS([sd_watchdog_enabled], [systemd-daemon],
+    [AC_DEFINE(HAVE_SYSTEMD_209,1,[Have systemd v209 or more])], [])
+])
 
 case $host in
    *-*-solaris* )
@@ -618,7 +672,7 @@ dnl since sometimes the linker will like an option but not be willing to
 dnl use it with a build of a library.
 
 all_ldflags_for_check="$TOR_LDFLAGS_zlib $TOR_LDFLAGS_openssl $TOR_LDFLAGS_libevent"
-all_libs_for_check="$TOR_ZLIB_LIBS $TOR_LIB_MATH $TOR_LIBEVENT_LIBS $TOR_OPENSSL_LIBS $TOR_LIB_WS32 $TOR_LIB_GDI"
+all_libs_for_check="$TOR_ZLIB_LIBS $TOR_LIB_MATH $TOR_LIBEVENT_LIBS $TOR_OPENSSL_LIBS $TOR_SYSTEMD_LIBS $TOR_LIB_WS32 $TOR_LIB_GDI"
 
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
 #if !defined(__clang__)
@@ -937,6 +991,14 @@ AC_CHECK_HEADERS(net/pfvar.h, net_pfvar_found=1, net_pfvar_found=0,
 #ifdef HAVE_NET_IF_H
 #include <net/if.h>
 #endif])
+
+AC_CHECK_HEADERS(linux/if.h,[],[],
+[
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+])
+
 AC_CHECK_HEADERS(linux/netfilter_ipv4.h,
         linux_netfilter_ipv4=1, linux_netfilter_ipv4=0,
 [#ifdef HAVE_SYS_TYPES_H
@@ -958,12 +1020,39 @@ AC_CHECK_HEADERS(linux/netfilter_ipv4.h,
 #include <netinet/in.h>
 #endif])
 
+AC_CHECK_HEADERS(linux/netfilter_ipv6/ip6_tables.h,
+        linux_netfilter_ipv6_ip6_tables=1, linux_netfilter_ipv6_ip6_tables=0,
+[#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+#ifdef HAVE_LIMITS_H
+#include <limits.h>
+#endif
+#ifdef HAVE_LINUX_TYPES_H
+#include <linux/types.h>
+#endif
+#ifdef HAVE_NETINET_IN6_H
+#include <netinet/in6.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+#ifdef HAVE_LINUX_IF_H
+#include <linux/if.h>
+#endif])
+
 if test x$transparent = xtrue ; then
    transparent_ok=0
    if test x$net_if_found = x1 && test x$net_pfvar_found = x1 ; then
      transparent_ok=1
    fi
    if test x$linux_netfilter_ipv4 = x1 ; then
+     transparent_ok=1
+   fi
+   if test x$linux_netfilter_ipv6_ip6_tables = x1 ; then
      transparent_ok=1
    fi
    if test x$transparent_ok = x1 ; then
@@ -1454,10 +1543,9 @@ fi
 if test "$GCC" = yes; then
   # Disable GCC's strict aliasing checks.  They are an hours-to-debug
   # accident waiting to happen.
-  CFLAGS="$CFLAGS -Wall -fno-strict-aliasing"
+  CFLAGS="$CFLAGS -Wall -fno-strict-aliasing -g -O2"
 else
-  # Autoconf sets -g -O2 by default. Override optimization level
-  # for non-gcc compilers
+  # Override optimization level for non-gcc compilers
   CFLAGS="$CFLAGS -O"
   enable_gcc_warnings=no
   enable_gcc_warnings_advisory=no

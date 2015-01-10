@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #include "or.h"
@@ -20,6 +20,7 @@
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "policies.h"
+#include "relay.h"
 #include "rendclient.h"
 #include "rendcommon.h"
 #include "rephist.h"
@@ -433,18 +434,33 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
     if (resource)
       flav = networkstatus_parse_flavor_name(resource);
 
+    /* DEFAULT_IF_MODIFIED_SINCE_DELAY is 1/20 of the default consensus
+     * period of 1 hour.
+     */
+#define DEFAULT_IF_MODIFIED_SINCE_DELAY (180)
     if (flav != -1) {
       /* IF we have a parsed consensus of this type, we can do an
        * if-modified-time based on it. */
       v = networkstatus_get_latest_consensus_by_flavor(flav);
-      if (v)
-        if_modified_since = v->valid_after + 180;
+      if (v) {
+        /* In networks with particularly short V3AuthVotingIntervals,
+         * ask for the consensus if it's been modified since half the
+         * V3AuthVotingInterval of the most recent consensus. */
+        time_t ims_delay = DEFAULT_IF_MODIFIED_SINCE_DELAY;
+        if (v->fresh_until > v->valid_after
+            && ims_delay > (v->fresh_until - v->valid_after)/2) {
+          ims_delay = (v->fresh_until - v->valid_after)/2;
+        }
+        if_modified_since = v->valid_after + ims_delay;
+      }
     } else {
       /* Otherwise it might be a consensus we don't parse, but which we
        * do cache.  Look at the cached copy, perhaps. */
       cached_dir_t *cd = dirserv_get_consensus(resource);
+      /* We have no method of determining the voting interval from an
+       * unparsed consensus, so we use the default. */
       if (cd)
-        if_modified_since = cd->published + 180;
+        if_modified_since = cd->published + DEFAULT_IF_MODIFIED_SINCE_DELAY;
     }
   }
 
@@ -2258,6 +2274,7 @@ write_http_status_line(dir_connection_t *conn, int status,
     log_warn(LD_BUG,"status line too long.");
     return;
   }
+  log_debug(LD_DIRSERV,"Wrote status 'HTTP/1.0 %d %s'", status, reason_phrase);
   connection_write_to_buf(buf, strlen(buf), TO_CONN(conn));
 }
 
@@ -2523,6 +2540,24 @@ client_likes_consensus(networkstatus_t *v, const char *want_url)
   return (have >= need_at_least);
 }
 
+/** Return the compression level we should use for sending a compressed
+ * response of size <b>n_bytes</b>. */
+static zlib_compression_level_t
+choose_compression_level(ssize_t n_bytes)
+{
+  if (! have_been_under_memory_pressure()) {
+    return HIGH_COMPRESSION; /* we have plenty of RAM. */
+  } else if (n_bytes < 0) {
+    return HIGH_COMPRESSION; /* unknown; might be big. */
+  } else if (n_bytes < 1024) {
+    return LOW_COMPRESSION;
+  } else if (n_bytes < 2048) {
+    return MEDIUM_COMPRESSION;
+  } else {
+    return HIGH_COMPRESSION;
+  }
+}
+
 /** Helper function: called when a dirserver gets a complete HTTP GET
  * request.  Look for a request for a directory or for a rendezvous
  * service descriptor.  On finding one, write a response into
@@ -2554,8 +2589,11 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
   if ((header = http_get_header(headers, "If-Modified-Since: "))) {
     struct tm tm;
     if (parse_http_time(header, &tm) == 0) {
-      if (tor_timegm(&tm, &if_modified_since)<0)
+      if (tor_timegm(&tm, &if_modified_since)<0) {
         if_modified_since = 0;
+      } else {
+        log_debug(LD_DIRSERV, "If-Modified-Since is '%s'.", escaped(header));
+      }
     }
     /* The correct behavior on a malformed If-Modified-Since header is to
      * act as if no If-Modified-Since header had been given. */
@@ -2705,7 +2743,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
                                smartlist_len(dir_fps) == 1 ? lifetime : 0);
     conn->fingerprint_stack = dir_fps;
     if (! compressed)
-      conn->zlib_state = tor_zlib_new(0, ZLIB_METHOD);
+      conn->zlib_state = tor_zlib_new(0, ZLIB_METHOD, HIGH_COMPRESSION);
 
     /* Prime the connection with some data. */
     conn->dir_spool_src = DIR_SPOOL_NETWORKSTATUS;
@@ -2793,7 +2831,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
 
     if (smartlist_len(items)) {
       if (compressed) {
-        conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD);
+        conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD,
+                                    choose_compression_level(estimated_len));
         SMARTLIST_FOREACH(items, const char *, c,
                  connection_write_to_buf_zlib(c, strlen(c), conn, 0));
         connection_write_to_buf_zlib("", 0, conn, 1);
@@ -2842,7 +2881,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     conn->fingerprint_stack = fps;
 
     if (compressed)
-      conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD);
+      conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD,
+                                      choose_compression_level(dlen));
 
     connection_dirserv_flushed_some(conn);
     goto done;
@@ -2910,7 +2950,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       }
       write_http_response_header(conn, -1, compressed, cache_lifetime);
       if (compressed)
-        conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD);
+        conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD,
+                                        choose_compression_level(dlen));
       /* Prime the connection with some data. */
       connection_dirserv_flushed_some(conn);
     }
@@ -2985,7 +3026,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
 
     write_http_response_header(conn, compressed?-1:len, compressed, 60*60);
     if (compressed) {
-      conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD);
+      conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD,
+                                      choose_compression_level(len));
       SMARTLIST_FOREACH(certs, authority_cert_t *, c,
             connection_write_to_buf_zlib(c->cache_info.signed_descriptor_body,
                                          c->cache_info.signed_descriptor_len,

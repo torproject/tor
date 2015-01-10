@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -1024,9 +1024,11 @@ circuit_predict_and_launch_new(void)
 
   /* Second, see if we need any more exit circuits. */
   /* check if we know of a port that's been requested recently
-   * and no circuit is currently available that can handle it. */
+   * and no circuit is currently available that can handle it.
+   * Exits (obviously) require an exit circuit. */
   if (!circuit_all_predicted_ports_handled(now, &port_needs_uptime,
-                                           &port_needs_capacity)) {
+                                           &port_needs_capacity)
+      && router_have_consensus_path() == CONSENSUS_PATH_EXIT) {
     if (port_needs_uptime)
       flags |= CIRCLAUNCH_NEED_UPTIME;
     if (port_needs_capacity)
@@ -1038,8 +1040,10 @@ circuit_predict_and_launch_new(void)
     return;
   }
 
-  /* Third, see if we need any more hidden service (server) circuits. */
-  if (num_rend_services() && num_uptime_internal < 3) {
+  /* Third, see if we need any more hidden service (server) circuits.
+   * HS servers only need an internal circuit. */
+  if (num_rend_services() && num_uptime_internal < 3
+      && router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN) {
     flags = (CIRCLAUNCH_NEED_CAPACITY | CIRCLAUNCH_NEED_UPTIME |
              CIRCLAUNCH_IS_INTERNAL);
     log_info(LD_CIRC,
@@ -1050,11 +1054,13 @@ circuit_predict_and_launch_new(void)
     return;
   }
 
-  /* Fourth, see if we need any more hidden service (client) circuits. */
+  /* Fourth, see if we need any more hidden service (client) circuits.
+   * HS clients only need an internal circuit. */
   if (rep_hist_get_predicted_internal(now, &hidserv_needs_uptime,
                                       &hidserv_needs_capacity) &&
       ((num_uptime_internal<2 && hidserv_needs_uptime) ||
-        num_internal<2)) {
+        num_internal<2)
+        && router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN) {
     if (hidserv_needs_uptime)
       flags |= CIRCLAUNCH_NEED_UPTIME;
     if (hidserv_needs_capacity)
@@ -1071,15 +1077,23 @@ circuit_predict_and_launch_new(void)
   /* Finally, check to see if we still need more circuits to learn
    * a good build timeout. But if we're close to our max number we
    * want, don't do another -- we want to leave a few slots open so
-   * we can still build circuits preemptively as needed. */
-  if (num < MAX_UNUSED_OPEN_CIRCUITS-2 &&
-      ! circuit_build_times_disabled() &&
-      circuit_build_times_needs_circuits_now(get_circuit_build_times())) {
-    flags = CIRCLAUNCH_NEED_CAPACITY;
-    log_info(LD_CIRC,
-             "Have %d clean circs need another buildtime test circ.", num);
-    circuit_launch(CIRCUIT_PURPOSE_C_GENERAL, flags);
-    return;
+   * we can still build circuits preemptively as needed.
+   * XXXX make the assumption that build timeout streams should be
+   * created whenever we can build internal circuits. */
+  if (router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN) {
+    if (num < MAX_UNUSED_OPEN_CIRCUITS-2 &&
+        ! circuit_build_times_disabled() &&
+        circuit_build_times_needs_circuits_now(get_circuit_build_times())) {
+      flags = CIRCLAUNCH_NEED_CAPACITY;
+      /* if there are no exits in the consensus, make timeout
+       * circuits internal */
+      if (router_have_consensus_path() == CONSENSUS_PATH_INTERNAL)
+        flags |= CIRCLAUNCH_IS_INTERNAL;
+      log_info(LD_CIRC,
+               "Have %d clean circs need another buildtime test circ.", num);
+      circuit_launch(CIRCUIT_PURPOSE_C_GENERAL, flags);
+      return;
+    }
   }
 }
 
@@ -1096,11 +1110,17 @@ circuit_build_needed_circs(time_t now)
 {
   const or_options_t *options = get_options();
 
-  /* launch a new circ for any pending streams that need one */
-  connection_ap_attach_pending();
+  /* launch a new circ for any pending streams that need one
+   * XXXX make the assumption that (some) AP streams (i.e. HS clients)
+   * don't require an exit circuit, review in #13814.
+   * This allows HSs to function in a consensus without exits. */
+  if (router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN)
+    connection_ap_attach_pending();
 
-  /* make sure any hidden services have enough intro points */
-  rend_services_introduce();
+  /* make sure any hidden services have enough intro points
+   * HS intro point streams only require an internal circuit */
+  if (router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN)
+    rend_services_introduce();
 
   circuit_expire_old_circs_as_needed(now);
 
@@ -1632,6 +1652,16 @@ circuit_launch(uint8_t purpose, int flags)
   return circuit_launch_by_extend_info(purpose, NULL, flags);
 }
 
+/** DOCDOC */
+static int
+have_enough_path_info(int need_exit)
+{
+  if (need_exit)
+    return router_have_consensus_path() == CONSENSUS_PATH_EXIT;
+  else
+    return router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN;
+}
+
 /** Launch a new circuit with purpose <b>purpose</b> and exit node
  * <b>extend_info</b> (or NULL to select a random exit node).  If flags
  * contains CIRCLAUNCH_NEED_UPTIME, choose among routers with high uptime.  If
@@ -1646,10 +1676,14 @@ circuit_launch_by_extend_info(uint8_t purpose,
 {
   origin_circuit_t *circ;
   int onehop_tunnel = (flags & CIRCLAUNCH_ONEHOP_TUNNEL) != 0;
+  int have_path = have_enough_path_info(! (flags & CIRCLAUNCH_IS_INTERNAL) );
 
-  if (!onehop_tunnel && !router_have_minimum_dir_info()) {
-    log_debug(LD_CIRC,"Haven't fetched enough directory info yet; canceling "
-              "circuit launch.");
+  if (!onehop_tunnel && (!router_have_minimum_dir_info() || !have_path)) {
+    log_debug(LD_CIRC,"Haven't %s yet; canceling "
+              "circuit launch.",
+              !router_have_minimum_dir_info() ?
+              "fetched enough directory info" :
+              "received a consensus with exits");
     return NULL;
   }
 
@@ -1806,7 +1840,9 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
     return 1; /* we're happy */
   }
 
-  if (!want_onehop && !router_have_minimum_dir_info()) {
+  int have_path = have_enough_path_info(!need_internal);
+
+  if (!want_onehop && (!router_have_minimum_dir_info() || !have_path)) {
     if (!connection_get_by_type(CONN_TYPE_DIR)) {
       int severity = LOG_NOTICE;
       /* FFFF if this is a tunneled directory fetch, don't yell
@@ -1814,14 +1850,20 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
       if (entry_list_is_constrained(options) &&
           entries_known_but_down(options)) {
         log_fn(severity, LD_APP|LD_DIR,
-               "Application request when we haven't used client functionality "
-               "lately. Optimistically trying known %s again.",
+               "Application request when we haven't %s. "
+               "Optimistically trying known %s again.",
+               !router_have_minimum_dir_info() ?
+               "used client functionality lately" :
+               "received a consensus with exits",
                options->UseBridges ? "bridges" : "entrynodes");
         entries_retry_all(options);
       } else if (!options->UseBridges || any_bridge_descriptors_known()) {
         log_fn(severity, LD_APP|LD_DIR,
-               "Application request when we haven't used client functionality "
-               "lately. Optimistically trying directory fetches again.");
+               "Application request when we haven't %s. "
+               "Optimistically trying directory fetches again.",
+               !router_have_minimum_dir_info() ?
+               "used client functionality lately" :
+               "received a consensus with exits");
         routerlist_retry_directory_downloads(time(NULL));
       }
     }
@@ -2012,7 +2054,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
         circ->rend_data = rend_data_dup(ENTRY_TO_EDGE_CONN(conn)->rend_data);
         if (circ->base_.purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND &&
             circ->base_.state == CIRCUIT_STATE_OPEN)
-          rend_client_rendcirc_has_opened(circ);
+          circuit_has_opened(circ);
       }
     }
   } /* endif (!circ) */

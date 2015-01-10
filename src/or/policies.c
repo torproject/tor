@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -432,6 +432,33 @@ validate_addr_policies(const or_options_t *options, char **msg)
 
   if (policies_parse_exit_policy_from_options(options,0,&addr_policy)) {
     REJECT("Error in ExitPolicy entry.");
+  }
+
+  static int warned_about_exitrelay = 0;
+
+  const int exitrelay_setting_is_auto = options->ExitRelay == -1;
+  const int policy_accepts_something =
+    ! (policy_is_reject_star(addr_policy, AF_INET) &&
+       policy_is_reject_star(addr_policy, AF_INET6));
+
+  if (server_mode(options) &&
+      ! warned_about_exitrelay &&
+      exitrelay_setting_is_auto &&
+      policy_accepts_something) {
+      /* Policy accepts something */
+    warned_about_exitrelay = 1;
+    log_warn(LD_CONFIG,
+             "Tor is running as an exit relay%s. If you did not want this "
+             "behavior, please set the ExitRelay option to 0. If you do "
+             "want to run an exit Relay, please set the ExitRelay option "
+             "to 1 to disable this warning, and for forward compatibility.",
+             options->ExitPolicy == NULL ?
+                 " with the default exit policy" : "");
+    if (options->ExitPolicy == NULL) {
+      log_warn(LD_CONFIG,
+               "In a future version of Tor, ExitRelay 0 may become the "
+               "default when no ExitPolicy is given.");
+    }
   }
 
   /* The rest of these calls *append* to addr_policy. So don't actually
@@ -1022,6 +1049,9 @@ policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
  *
  * If <b>or_options->BridgeRelay</b> is false, add entries of default
  * Tor exit policy into <b>result</b> smartlist.
+ *
+ * If or_options->ExitRelay is false, then make our exit policy into
+ * "reject *:*" regardless.
  */
 int
 policies_parse_exit_policy_from_options(const or_options_t *or_options,
@@ -1029,6 +1059,12 @@ policies_parse_exit_policy_from_options(const or_options_t *or_options,
                                         smartlist_t **result)
 {
   exit_policy_parser_cfg_t parser_cfg = 0;
+
+  if (or_options->ExitRelay == 0) {
+    append_exit_policy_string(result, "reject *4:*");
+    append_exit_policy_string(result, "reject *6:*");
+    return 0;
+  }
 
   if (or_options->IPv6Exit) {
     parser_cfg |= EXIT_POLICY_IPV6_ENABLED;

@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -57,6 +57,16 @@
 #include <fcntl.h>
 #include <time.h>
 #include <poll.h>
+
+#ifdef HAVE_LINUX_NETFILTER_IPV4_H
+#include <linux/netfilter_ipv4.h>
+#endif
+#ifdef HAVE_LINUX_IF_H
+#include <linux/if.h>
+#endif
+#ifdef HAVE_LINUX_NETFILTER_IPV6_IP6_TABLES_H
+#include <linux/netfilter_ipv6/ip6_tables.h>
+#endif
 
 #if defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \
   defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION)
@@ -633,6 +643,22 @@ sb_getsockopt(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
       SCMP_CMP(2, SCMP_CMP_EQ, SO_ERROR));
   if (rc)
     return rc;
+
+#ifdef HAVE_LINUX_NETFILTER_IPV4_H
+  rc = seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(getsockopt),
+      SCMP_CMP(1, SCMP_CMP_EQ, SOL_IP),
+      SCMP_CMP(2, SCMP_CMP_EQ, SO_ORIGINAL_DST));
+  if (rc)
+    return rc;
+#endif
+
+#ifdef HAVE_LINUX_NETFILTER_IPV6_IP6_TABLES_H
+  rc = seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(getsockopt),
+      SCMP_CMP(1, SCMP_CMP_EQ, SOL_IPV6),
+      SCMP_CMP(2, SCMP_CMP_EQ, IP6T_SO_ORIGINAL_DST));
+  if (rc)
+    return rc;
+#endif
 
   return 0;
 }
@@ -1307,6 +1333,13 @@ void
 sandbox_disable_getaddrinfo_cache(void)
 {
   sandbox_getaddrinfo_cache_disabled = 1;
+}
+
+void
+sandbox_freeaddrinfo(struct addrinfo *ai)
+{
+  if (sandbox_getaddrinfo_cache_disabled)
+    freeaddrinfo(ai);
 }
 
 int

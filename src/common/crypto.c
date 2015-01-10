@@ -1,7 +1,7 @@
 /* Copyright (c) 2001, Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -1293,7 +1293,7 @@ crypto_pk_asn1_decode(const char *str, size_t len)
  * Return 0 on success, -1 on failure.
  */
 int
-crypto_pk_get_digest(crypto_pk_t *pk, char *digest_out)
+crypto_pk_get_digest(const crypto_pk_t *pk, char *digest_out)
 {
   unsigned char *buf = NULL;
   int len;
@@ -2752,6 +2752,8 @@ base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
   if (destlen > SIZE_T_CEILING)
     return -1;
 
+  memset(dest, 0, destlen);
+
   EVP_DecodeInit(&ctx);
   EVP_DecodeUpdate(&ctx, (unsigned char*)dest, &len,
                    (unsigned char*)src, srclen);
@@ -2772,6 +2774,8 @@ base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
     return -1;
   if (destlen > SIZE_T_CEILING)
     return -1;
+
+  memset(dest, 0, destlen);
 
   /* Iterate over all the bytes in src.  Each one will add 0 or 6 bits to the
    * value we're decoding.  Accumulate bits in <b>n</b>, and whenever we have
@@ -2951,6 +2955,8 @@ base32_decode(char *dest, size_t destlen, const char *src, size_t srclen)
   tor_assert((nbits%8) == 0); /* We need an even multiple of 8 bits. */
   tor_assert((nbits/8) <= destlen); /* We need enough space. */
   tor_assert(destlen < SIZE_T_CEILING);
+
+  memset(dest, 0, destlen);
 
   /* Convert base32 encoded chars to the 5-bit values that they represent. */
   tmp = tor_malloc_zero(srclen);

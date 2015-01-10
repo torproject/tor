@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #define ROUTER_PRIVATE
@@ -1236,6 +1236,11 @@ router_orport_found_reachable(void)
                  " Publishing server descriptor." : "");
     can_reach_or_port = 1;
     mark_my_descriptor_dirty("ORPort found reachable");
+    /* This is a significant enough change to upload immediately,
+     * at least in a test network */
+    if (get_options()->TestingTorNetwork == 1) {
+      reschedule_descriptor_update_check();
+    }
     control_event_server_status(LOG_NOTICE,
                                 "REACHABILITY_SUCCEEDED ORADDRESS=%s:%d",
                                 address, me->or_port);
@@ -1253,8 +1258,14 @@ router_dirport_found_reachable(void)
     log_notice(LD_DIRSERV,"Self-testing indicates your DirPort is reachable "
                "from the outside. Excellent.");
     can_reach_dir_port = 1;
-    if (decide_to_advertise_dirport(get_options(), me->dir_port))
+    if (decide_to_advertise_dirport(get_options(), me->dir_port)) {
       mark_my_descriptor_dirty("DirPort found reachable");
+      /* This is a significant enough change to upload immediately,
+       * at least in a test network */
+      if (get_options()->TestingTorNetwork == 1) {
+        reschedule_descriptor_update_check();
+      }
+    }
     control_event_server_status(LOG_NOTICE,
                                 "REACHABILITY_SUCCEEDED DIRADDRESS=%s:%d",
                                 address, me->dir_port);
@@ -2672,6 +2683,11 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
     if (options->DirReqStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"dirreq-stats",
                         "dirreq-stats-end", now, &contents) > 0) {
+      smartlist_add(chunks, contents);
+    }
+    if (options->HiddenServiceStatistics &&
+        load_stats_file("stats"PATH_SEPARATOR"hidserv-stats",
+                        "hidserv-stats-end", now, &contents) > 0) {
       smartlist_add(chunks, contents);
     }
     if (options->EntryStatistics &&

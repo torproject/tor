@@ -1,5 +1,5 @@
 /* Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -411,7 +411,7 @@ rend_desc_v2_is_parsable(rend_encoded_v2_service_descriptor_t *desc)
                                          &test_intro_content,
                                          &test_intro_size,
                                          &test_encoded_size,
-                                         &test_next, desc->desc_str);
+                                         &test_next, desc->desc_str, 1);
   rend_service_descriptor_free(test_parsed);
   tor_free(test_intro_content);
   return (res >= 0);
@@ -924,6 +924,7 @@ rend_cache_lookup_v2_desc_as_dir(const char *desc_id, const char **desc)
 rend_cache_store_status_t
 rend_cache_store_v2_desc_as_dir(const char *desc)
 {
+  const or_options_t *options = get_options();
   rend_service_descriptor_t *parsed;
   char desc_id[DIGEST_LEN];
   char *intro_content;
@@ -945,7 +946,7 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
   }
   while (rend_parse_v2_service_descriptor(&parsed, desc_id, &intro_content,
                                           &intro_size, &encoded_size,
-                                          &next_desc, current_desc) >= 0) {
+                                          &next_desc, current_desc, 1) >= 0) {
     number_parsed++;
     /* We don't care about the introduction points. */
     tor_free(intro_content);
@@ -1003,6 +1004,12 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
     log_info(LD_REND, "Successfully stored service descriptor with desc ID "
                       "'%s' and len %d.",
              safe_str(desc_id_base32), (int)encoded_size);
+
+    /* Statistics: Note down this potentially new HS. */
+    if (options->HiddenServiceStatistics) {
+      rep_hist_stored_maybe_new_hs(e->parsed->pk);
+    }
+
     number_stored++;
     goto advance;
   skip:
@@ -1084,7 +1091,7 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   /* Parse the descriptor. */
   if (rend_parse_v2_service_descriptor(&parsed, desc_id, &intro_content,
                                        &intro_size, &encoded_size,
-                                       &next_desc, desc) < 0) {
+                                       &next_desc, desc, 0) < 0) {
     log_warn(LD_REND, "Could not parse descriptor.");
     goto err;
   }

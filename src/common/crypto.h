@@ -1,7 +1,7 @@
 /* Copyright (c) 2001, Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -180,7 +180,7 @@ int crypto_pk_private_hybrid_decrypt(crypto_pk_t *env, char *to,
 
 int crypto_pk_asn1_encode(crypto_pk_t *pk, char *dest, size_t dest_len);
 crypto_pk_t *crypto_pk_asn1_decode(const char *str, size_t len);
-int crypto_pk_get_digest(crypto_pk_t *pk, char *digest_out);
+int crypto_pk_get_digest(const crypto_pk_t *pk, char *digest_out);
 int crypto_pk_get_all_digests(crypto_pk_t *pk, digests_t *digests_out);
 int crypto_pk_get_fingerprint(crypto_pk_t *pk, char *fp_out,int add_space);
 int crypto_pk_get_hashed_fingerprint(crypto_pk_t *pk, char *fp_out);

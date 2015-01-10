@@ -1,5 +1,5 @@
 /* Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -281,6 +281,7 @@ int
 rend_mid_rendezvous(or_circuit_t *circ, const uint8_t *request,
                     size_t request_len)
 {
+  const or_options_t *options = get_options();
   or_circuit_t *rend_circ;
   char hexid[9];
   int reason = END_CIRC_REASON_INTERNAL;
@@ -314,6 +315,12 @@ rend_mid_rendezvous(or_circuit_t *circ, const uint8_t *request,
          hexid);
     reason = END_CIRC_REASON_TORPROTOCOL;
     goto err;
+  }
+
+  /* Statistics: Mark this circuit as an RP circuit so that we collect
+     stats from it. */
+  if (options->HiddenServiceStatistics) {
+    circ->circuit_carries_hs_traffic_stats = 1;
   }
 
   /* Send the RENDEZVOUS2 cell to Alice. */

@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -544,8 +544,7 @@ connection_free_(connection_t *conn)
                or_conn, TLS_CHAN_TO_BASE(or_conn->chan),
                U64_PRINTF_ARG(
                  TLS_CHAN_TO_BASE(or_conn->chan)->global_identifier));
-      if (!(TLS_CHAN_TO_BASE(or_conn->chan)->state == CHANNEL_STATE_CLOSED ||
-            TLS_CHAN_TO_BASE(or_conn->chan)->state == CHANNEL_STATE_ERROR)) {
+      if (!CHANNEL_FINISHED(TLS_CHAN_TO_BASE(or_conn->chan))) {
         channel_close_for_error(TLS_CHAN_TO_BASE(or_conn->chan));
       }
 
@@ -575,8 +574,10 @@ connection_free_(connection_t *conn)
     tor_free(control_conn->incoming_cmd);
   }
 
-  tor_free(conn->read_event); /* Probably already freed by connection_free. */
-  tor_free(conn->write_event); /* Probably already freed by connection_free. */
+  /* Probably already freed by connection_free. */
+  tor_event_free(conn->read_event);
+  tor_event_free(conn->write_event);
+  conn->read_event = conn->write_event = NULL;
   IF_HAS_BUFFEREVENT(conn, {
       /* This was a workaround to handle bugs in some old versions of libevent
        * where callbacks can occur after calling bufferevent_free().  Setting

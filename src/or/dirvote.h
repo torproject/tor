@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -14,12 +14,42 @@
 
 #include "testsupport.h"
 
+/*
+ * Ideally, assuming synced clocks, we should only need 1 second for each of:
+ *  - Vote
+ *  - Distribute
+ *  - Consensus Publication
+ * As we can gather descriptors continuously.
+ * (Could we even go as far as publishing the previous consensus,
+ *  in the same second that we vote for the next one?)
+ * But we're not there yet: these are the lowest working values at this time.
+ */
+
 /** Lowest allowable value for VoteSeconds. */
 #define MIN_VOTE_SECONDS 2
+/** Lowest allowable value for VoteSeconds when TestingTorNetwork is 1 */
+#define MIN_VOTE_SECONDS_TESTING 2
+
 /** Lowest allowable value for DistSeconds. */
 #define MIN_DIST_SECONDS 2
-/** Smallest allowable voting interval. */
+/** Lowest allowable value for DistSeconds when TestingTorNetwork is 1 */
+#define MIN_DIST_SECONDS_TESTING 2
+
+/** Lowest allowable voting interval. */
 #define MIN_VOTE_INTERVAL 300
+/** Lowest allowable voting interval when TestingTorNetwork is 1:
+ * Voting Interval can be:
+ *   10, 12, 15, 18, 20, 24, 25, 30, 36, 40, 45, 50, 60, ...
+ * Testing Initial Voting Interval can be:
+ *    5,  6,  8,  9, or any of the possible values for Voting Interval,
+ * as they both need to evenly divide 30 minutes.
+ * If clock desynchronisation is an issue, use an interval of at least:
+ *   18 * drift in seconds, to allow for a clock slop factor */
+#define MIN_VOTE_INTERVAL_TESTING \
+                (((MIN_VOTE_SECONDS_TESTING)+(MIN_DIST_SECONDS_TESTING)+1)*2)
+
+#define MIN_VOTE_INTERVAL_TESTING_INITIAL \
+                ((MIN_VOTE_SECONDS_TESTING)+(MIN_DIST_SECONDS_TESTING)+1)
 
 /** The lowest consensus method that we currently support. */
 #define MIN_SUPPORTED_CONSENSUS_METHOD 13

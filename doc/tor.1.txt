@@ -1469,6 +1469,19 @@ is non-zero):
     that it's an email address and/or generate a new address for this
     purpose.
 
+[[ExitRelay]] **ExitRelay** **0**|**1**|**auto**::
+    Tells Tor whether to run as an exit relay.  If Tor is running as a
+    non-bridge server, and ExitRelay is set to 1, then Tor allows traffic to
+    exit according to the ExitPolicy option (or the default ExitPolicy if
+    none is specified).
+ +
+    If ExitRelay is set to 0, no traffic is allowed to
+    exit, and the ExitPolicy option is ignored. +
+ +
+    If ExitRelay is set to "auto", then Tor behaves as if it were set to 1, but
+    warns the user if this would cause traffic to exit.  In a future version,
+    the default value will be 0. (Default: auto)
+
 [[ExitPolicy]] **ExitPolicy** __policy__,__policy__,__...__::
     Set an exit policy for this server. Each policy is of the form
     "**accept**|**reject** __ADDR__[/__MASK__][:__PORT__]". If /__MASK__ is
@@ -1764,6 +1777,13 @@ is non-zero):
     When this option is enabled, Tor writes statistics on the bidirectional use
     of connections to disk every 24 hours. (Default: 0)
 
+[[HiddenServiceStatistics]] **HiddenServiceStatistics** **0**|**1**::
+    When this option is enabled, a Tor relay writes obfuscated
+    statistics on its role as hidden-service directory, introduction
+    point, or rendezvous point to disk every 24 hours. If
+    ExtraInfoStatistics is also enabled, these statistics are further
+    published to the directory authorities. (Default: 0)
+
 [[ExtraInfoStatistics]] **ExtraInfoStatistics** **0**|**1**::
     When this option is enabled, Tor includes previously gathered statistics in
     its extra-info documents that it uploads to the directory authorities.
@@ -2025,6 +2045,11 @@ The following options are used to configure a hidden service.
     Store data files for a hidden service in DIRECTORY. Every hidden service
     must have a separate directory. You may use this option  multiple times to
     specify multiple services. DIRECTORY must be an existing directory.
+    (Note: in current versions of Tor, if DIRECTORY is a relative path,
+    it will be relative to current
+    working directory of Tor instance, not to its DataDirectory.  Do not
+    rely on this behavior; it is not guaranteed to remain the same in future
+    versions.)
 
 [[HiddenServicePort]] **HiddenServicePort** __VIRTPORT__ [__TARGET__]::
     Configure a virtual port VIRTPORT for a hidden service. You may use this

@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -2598,11 +2598,15 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     (int) tor_parse_long(tok->args[1], 10, 0, INT_MAX, &ok, NULL);
   if (!ok)
     goto err;
-  if (ns->valid_after + MIN_VOTE_INTERVAL > ns->fresh_until) {
+  if (ns->valid_after +
+      (get_options()->TestingTorNetwork ?
+       MIN_VOTE_INTERVAL_TESTING : MIN_VOTE_INTERVAL) > ns->fresh_until) {
     log_warn(LD_DIR, "Vote/consensus freshness interval is too short");
     goto err;
   }
-  if (ns->valid_after + MIN_VOTE_INTERVAL*2 > ns->valid_until) {
+  if (ns->valid_after +
+      (get_options()->TestingTorNetwork ?
+       MIN_VOTE_INTERVAL_TESTING : MIN_VOTE_INTERVAL)*2 > ns->valid_until) {
     log_warn(LD_DIR, "Vote/consensus liveness interval is too short");
     goto err;
   }
@@ -4246,40 +4250,50 @@ tor_version_parse(const char *s, tor_version_t *out)
   char *eos=NULL;
   const char *cp=NULL;
   /* Format is:
-   *   "Tor " ? NUM dot NUM dot NUM [ ( pre | rc | dot ) NUM [ - tag ] ]
+   *   "Tor " ? NUM dot NUM [ dot NUM [ ( pre | rc | dot ) NUM ] ] [ - tag ]
    */
   tor_assert(s);
   tor_assert(out);
 
   memset(out, 0, sizeof(tor_version_t));
-
+  out->status = VER_RELEASE;
   if (!strcasecmpstart(s, "Tor "))
     s += 4;
 
-  /* Get major. */
-  out->major = (int)strtol(s,&eos,10);
-  if (!eos || eos==s || *eos != '.') return -1;
-  cp = eos+1;
+  cp = s;
 
-  /* Get minor */
-  out->minor = (int) strtol(cp,&eos,10);
-  if (!eos || eos==cp || *eos != '.') return -1;
-  cp = eos+1;
+#define NUMBER(m)                               \
+  do {                                          \
+    out->m = (int)strtol(cp, &eos, 10);         \
+    if (!eos || eos == cp)                      \
+      return -1;                                \
+    cp = eos;                                   \
+  } while (0)
 
-  /* Get micro */
-  out->micro = (int) strtol(cp,&eos,10);
-  if (!eos || eos==cp) return -1;
-  if (!*eos) {
-    out->status = VER_RELEASE;
-    out->patchlevel = 0;
+#define DOT()                                   \
+  do {                                          \
+    if (*cp != '.')                             \
+      return -1;                                \
+    ++cp;                                       \
+  } while (0)
+
+  NUMBER(major);
+  DOT();
+  NUMBER(minor);
+  if (*cp == 0)
     return 0;
-  }
-  cp = eos;
+  else if (*cp == '-')
+    goto status_tag;
+  DOT();
+  NUMBER(micro);
 
   /* Get status */
-  if (*cp == '.') {
-    out->status = VER_RELEASE;
+  if (*cp == 0) {
+    return 0;
+  } else if (*cp == '.') {
     ++cp;
+  } else if (*cp == '-') {
+    goto status_tag;
   } else if (0==strncmp(cp, "pre", 3)) {
     out->status = VER_PRE;
     cp += 3;
@@ -4290,11 +4304,9 @@ tor_version_parse(const char *s, tor_version_t *out)
     return -1;
   }
 
-  /* Get patchlevel */
-  out->patchlevel = (int) strtol(cp,&eos,10);
-  if (!eos || eos==cp) return -1;
-  cp = eos;
+  NUMBER(patchlevel);
 
+ status_tag:
   /* Get status tag. */
   if (*cp == '-' || *cp == '.')
     ++cp;
@@ -4330,6 +4342,8 @@ tor_version_parse(const char *s, tor_version_t *out)
   }
 
   return 0;
+#undef NUMBER
+#undef DOT
 }
 
 /** Compare two tor versions; Return <0 if a < b; 0 if a ==b, >0 if a >
@@ -4417,6 +4431,9 @@ sort_version_list(smartlist_t *versions, int remove_duplicates)
  * to *<b>encoded_size_out</b>, and a pointer to the possibly next
  * descriptor to *<b>next_out</b>; return 0 for success (including validation)
  * and -1 for failure.
+ *
+ * If <b>as_hsdir</b> is 1, we're parsing this as an HSDir, and we should
+ * be strict about time formats.
  */
 int
 rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
@@ -4424,7 +4441,8 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
                                  char **intro_points_encrypted_out,
                                  size_t *intro_points_encrypted_size_out,
                                  size_t *encoded_size_out,
-                                 const char **next_out, const char *desc)
+                                 const char **next_out, const char *desc,
+                                 int as_hsdir)
 {
   rend_service_descriptor_t *result =
                             tor_malloc_zero(sizeof(rend_service_descriptor_t));
@@ -4438,6 +4456,8 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   char public_key_hash[DIGEST_LEN];
   char test_desc_id[DIGEST_LEN];
   memarea_t *area = NULL;
+  const int strict_time_fmt = as_hsdir;
+
   tor_assert(desc);
   /* Check if desc starts correctly. */
   if (strncmp(desc, "rendezvous-service-descriptor ",
@@ -4532,7 +4552,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
    * descriptor. */
   tok = find_by_keyword(tokens, R_PUBLICATION_TIME);
   tor_assert(tok->n_args == 1);
-  if (parse_iso_time(tok->args[0], &result->timestamp) < 0) {
+  if (parse_iso_time_(tok->args[0], &result->timestamp, strict_time_fmt) < 0) {
     log_warn(LD_REND, "Invalid publication time: '%s'", tok->args[0]);
     goto err;
   }

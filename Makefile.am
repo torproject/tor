@@ -1,6 +1,6 @@
 # Copyright (c) 2001-2004, Roger Dingledine
 # Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson
-# Copyright (c) 2007-2011, The Tor Project, Inc.
+# Copyright (c) 2007-2015, The Tor Project, Inc.
 # See LICENSE for licensing information
 
 # "foreign" means we don't follow GNU package layout standards
@@ -70,8 +70,17 @@ test: all
 test-network: all
 	./src/test/test-network.sh
 
+test-stem: $(TESTING_TOR_BINARY)
+	@if test -d "$$STEM_SOURCE_DIR"; then \
+		"$$STEM_SOURCE_DIR"/run_tests.py --tor $(TESTING_TOR_BINARY) --all --log notice --target RUN_ALL; \
+	else \
+		echo '$$STEM_SOURCE_DIR was not set.'; echo; \
+		echo "To run these tests, git clone https://git.torproject.org/stem.git/ ; export STEM_SOURCE_DIR=\`pwd\`/stem"; \
+	fi
+
+
 reset-gcov:
-	rm -f src/*/*.gcda
+	rm -f src/*/*.gcda src/*/*/*.gcda
 
 HTML_COVER_DIR=./coverage_html
 coverage-html: all
@@ -109,4 +118,4 @@ version:
 	fi
 
 mostlyclean-local:
-	rm -f src/*/*.gc{da,no}
+	rm -f src/*/*.gc{da,no} src/*/*/*.gc{da,no}

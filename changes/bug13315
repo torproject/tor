@@ -1,5 +1,0 @@
-  o Minor features:
-    - Validate hostnames in SOCKS5 requests more strictly. If SafeSocks
-      is enabled, reject requests with IP addresses as hostnames. Resolves
-      ticket 13315.
-

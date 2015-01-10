@@ -57,14 +57,14 @@ def run_tor(args, failure=False):
         raise UnexpectedFailure()
     elif not result and failure:
         raise UnexpectedSuccess()
-    return b2s(output)
+    return b2s(output.replace('\r\n','\n'))
 
 def spaceify_fp(fp):
     for i in range(0, len(fp), 4):
         yield fp[i:i+4]
 
 def lines(s):
-    out = s.split("\n")
+    out = s.splitlines()
     if out and out[-1] == '':
         del out[-1]
     return out
@@ -151,7 +151,7 @@ class CmdlineTests(unittest.TestCase):
         if os.stat(TOR).st_mtime < os.stat(main_c).st_mtime:
             self.skipTest(TOR+" not up to date")
         out = run_tor(["--digests"])
-        main_line = [ l for l in lines(out) if l.endswith("/main.c") ]
+        main_line = [ l for l in lines(out) if l.endswith("/main.c") or l.endswith(" main.c") ]
         digest, name = main_line[0].split()
         f = open(main_c, 'rb')
         actual = hashlib.sha1(f.read()).hexdigest()

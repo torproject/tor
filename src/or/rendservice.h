@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -38,13 +38,9 @@ struct rend_intro_cell_s {
   /* Version-specific parts */
   union {
     struct {
-      /* Rendezvous point nickname */
-      uint8_t rp[20];
-    } v0;
-    struct {
       /* Rendezvous point nickname or hex-encoded key digest */
       uint8_t rp[42];
-    } v1;
+    } v0_v1;
     struct {
       /* The extend_info_t struct has everything v2 uses */
       extend_info_t *extend_info;

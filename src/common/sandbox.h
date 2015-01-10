@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -115,7 +115,7 @@ struct addrinfo;
 int sandbox_getaddrinfo(const char *name, const char *servname,
                         const struct addrinfo *hints,
                         struct addrinfo **res);
-#define sandbox_freeaddrinfo(addrinfo) ((void)0)
+void sandbox_freeaddrinfo(struct addrinfo *addrinfo);
 void sandbox_free_getaddrinfo_cache(void);
 #else
 #define sandbox_getaddrinfo(name, servname, hints, res)  \

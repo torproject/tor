@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
@@ -388,6 +388,12 @@ test_dir_routerparse_bad(void *arg)
 #include "example_extrainfo.inc"
 
 static void
+routerinfo_free_wrapper_(void *arg)
+{
+  routerinfo_free(arg);
+}
+
+static void
 test_dir_extrainfo_parsing(void *arg)
 {
   (void) arg;
@@ -455,9 +461,9 @@ test_dir_extrainfo_parsing(void *arg)
 #undef CHECK_FAIL
 
  done:
+  extrainfo_free(ei);
   routerinfo_free(ri);
-  /* XXXX elements should get freed too */
-  digestmap_free((digestmap_t*)map, NULL);
+  digestmap_free((digestmap_t*)map, routerinfo_free_wrapper_);
 }
 
 static void
@@ -552,9 +558,8 @@ test_dir_parse_router_list(void *arg)
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_free(chunks);
   routerinfo_free(ri);
-  /* XXXX this leaks: */
   if (map) {
-    digestmap_free((digestmap_t*)map, NULL);
+    digestmap_free((digestmap_t*)map, routerinfo_free_wrapper_);
     router_get_routerlist()->identity_map =
       (struct digest_ri_map_t*)digestmap_new();
   }
@@ -605,6 +610,7 @@ test_dir_load_routers(void *arg)
   smartlist_t *wanted = smartlist_new();
   char buf[DIGEST_LEN];
   char *mem_op_hex_tmp = NULL;
+  char *list = NULL;
 
 #define ADD(str)                                                        \
   do {                                                                  \
@@ -630,7 +636,7 @@ test_dir_load_routers(void *arg)
   /* Not ADDing BAD_PORTS */
   ADD(EX_RI_BAD_TOKENS);
 
-  char *list = smartlist_join_strings(chunks, "", 0, NULL);
+  list = smartlist_join_strings(chunks, "", 0, NULL);
   tt_int_op(1, OP_EQ,
             router_load_routers_from_string(list, NULL, SAVED_IN_JOURNAL,
                                             wanted, 1, NULL));
@@ -670,6 +676,7 @@ test_dir_load_routers(void *arg)
   smartlist_free(chunks);
   SMARTLIST_FOREACH(wanted, char *, cp, tor_free(cp));
   smartlist_free(wanted);
+  tor_free(list);
 }
 
 static int mock_get_by_ei_dd_calls = 0;
@@ -722,6 +729,7 @@ test_dir_load_extrainfo(void *arg)
   smartlist_t *wanted = smartlist_new();
   char buf[DIGEST_LEN];
   char *mem_op_hex_tmp = NULL;
+  char *list = NULL;
 
 #define ADD(str)                                                        \
   do {                                                                  \
@@ -746,7 +754,7 @@ test_dir_load_extrainfo(void *arg)
   ADD(EX_EI_BAD_TOKENS);
   ADD(EX_EI_BAD_SIG2);
 
-  char *list = smartlist_join_strings(chunks, "", 0, NULL);
+  list = smartlist_join_strings(chunks, "", 0, NULL);
   router_load_extrainfo_from_string(list, NULL, SAVED_IN_JOURNAL, wanted, 1);
 
   /* The "maximal" router was added. */
@@ -788,6 +796,7 @@ test_dir_load_extrainfo(void *arg)
   smartlist_free(chunks);
   SMARTLIST_FOREACH(wanted, char *, cp, tor_free(cp));
   smartlist_free(wanted);
+  tor_free(list);
 }
 
 static void
@@ -835,6 +844,42 @@ test_dir_versions(void *arg)
   tt_int_op(4,OP_EQ, ver1.patchlevel);
   tt_int_op(VER_RELEASE,OP_EQ, ver1.status);
   tt_str_op("",OP_EQ, ver1.status_tag);
+
+  tt_int_op(0, OP_EQ, tor_version_parse("10.1", &ver1));
+  tt_int_op(10, OP_EQ, ver1.major);
+  tt_int_op(1, OP_EQ, ver1.minor);
+  tt_int_op(0, OP_EQ, ver1.micro);
+  tt_int_op(0, OP_EQ, ver1.patchlevel);
+  tt_int_op(VER_RELEASE, OP_EQ, ver1.status);
+  tt_str_op("", OP_EQ, ver1.status_tag);
+  tt_int_op(0, OP_EQ, tor_version_parse("5.99.999", &ver1));
+  tt_int_op(5, OP_EQ, ver1.major);
+  tt_int_op(99, OP_EQ, ver1.minor);
+  tt_int_op(999, OP_EQ, ver1.micro);
+  tt_int_op(0, OP_EQ, ver1.patchlevel);
+  tt_int_op(VER_RELEASE, OP_EQ, ver1.status);
+  tt_str_op("", OP_EQ, ver1.status_tag);
+  tt_int_op(0, OP_EQ, tor_version_parse("10.1-alpha", &ver1));
+  tt_int_op(10, OP_EQ, ver1.major);
+  tt_int_op(1, OP_EQ, ver1.minor);
+  tt_int_op(0, OP_EQ, ver1.micro);
+  tt_int_op(0, OP_EQ, ver1.patchlevel);
+  tt_int_op(VER_RELEASE, OP_EQ, ver1.status);
+  tt_str_op("alpha", OP_EQ, ver1.status_tag);
+  tt_int_op(0, OP_EQ, tor_version_parse("2.1.700-alpha", &ver1));
+  tt_int_op(2, OP_EQ, ver1.major);
+  tt_int_op(1, OP_EQ, ver1.minor);
+  tt_int_op(700, OP_EQ, ver1.micro);
+  tt_int_op(0, OP_EQ, ver1.patchlevel);
+  tt_int_op(VER_RELEASE, OP_EQ, ver1.status);
+  tt_str_op("alpha", OP_EQ, ver1.status_tag);
+  tt_int_op(0, OP_EQ, tor_version_parse("1.6.8-alpha-dev", &ver1));
+  tt_int_op(1, OP_EQ, ver1.major);
+  tt_int_op(6, OP_EQ, ver1.minor);
+  tt_int_op(8, OP_EQ, ver1.micro);
+  tt_int_op(0, OP_EQ, ver1.patchlevel);
+  tt_int_op(VER_RELEASE, OP_EQ, ver1.status);
+  tt_str_op("alpha-dev", OP_EQ, ver1.status_tag);
 
 #define tt_versionstatus_op(vs1, op, vs2)                               \
   tt_assert_test_type(vs1,vs2,#vs1" "#op" "#vs2,version_status_t,       \

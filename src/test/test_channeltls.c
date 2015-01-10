@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, The Tor Project, Inc. */
+/* Copyright (c) 2014-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #include <math.h>
@@ -80,7 +80,7 @@ test_channeltls_create(void *arg)
      */
     ch->close = tlschan_fake_close_method;
     channel_mark_for_close(ch);
-    tor_free(ch);
+    free_fake_channel(ch);
     UNMOCK(scheduler_release_channel);
   }
 
@@ -167,7 +167,7 @@ test_channeltls_num_bytes_queued(void *arg)
      */
     ch->close = tlschan_fake_close_method;
     channel_mark_for_close(ch);
-    tor_free(ch);
+    free_fake_channel(ch);
     UNMOCK(scheduler_release_channel);
   }
 
@@ -241,7 +241,7 @@ test_channeltls_overhead_estimate(void *arg)
      */
     ch->close = tlschan_fake_close_method;
     channel_mark_for_close(ch);
-    tor_free(ch);
+    free_fake_channel(ch);
     UNMOCK(scheduler_release_channel);
   }
 
@@ -304,6 +304,7 @@ tlschan_fake_close_method(channel_t *chan)
   tt_assert(tlschan != NULL);
 
   /* Just free the fake orconn */
+  tor_free(tlschan->conn->base_.address);
   tor_free(tlschan->conn);
 
   channel_closed(chan);

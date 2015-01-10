@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #define DIRSERV_PRIVATE
@@ -733,7 +733,7 @@ running_long_enough_to_decide_unreachable(void)
 }
 
 /** Each server needs to have passed a reachability test no more
- * than this number of seconds ago, or he is listed as down in
+ * than this number of seconds ago, or it is listed as down in
  * the directory. */
 #define REACHABLE_TIMEOUT (45*60)
 
@@ -887,12 +887,26 @@ static int
 router_is_active(const routerinfo_t *ri, const node_t *node, time_t now)
 {
   time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
-  if (ri->cache_info.published_on < cutoff)
+  if (ri->cache_info.published_on < cutoff) {
     return 0;
-  if (!node->is_running || !node->is_valid || ri->is_hibernating)
+  }
+  if (!node->is_running || !node->is_valid || ri->is_hibernating) {
     return 0;
-  if (!ri->bandwidthcapacity)
+  }
+  /* Only require bandwith capacity in non-test networks, or
+   * if TestingTorNetwork, and TestingMinExitFlagThreshold is non-zero */
+  if (!ri->bandwidthcapacity) {
+    if (get_options()->TestingTorNetwork) {
+      if (get_options()->TestingMinExitFlagThreshold > 0) {
+        /* If we're in a TestingTorNetwork, and TestingMinExitFlagThreshold is,
+         * then require bandwidthcapacity */
+        return 0;
+      }
+    } else {
+      /* If we're not in a TestingTorNetwork, then require bandwidthcapacity */
       return 0;
+    }
+  }
   return 1;
 }
 
@@ -1037,7 +1051,7 @@ directory_fetches_dir_info_later(const or_options_t *options)
 }
 
 /** Return true iff we want to fetch and keep certificates for authorities
- * that we don't acknowledge as aurthorities ourself.
+ * that we don't acknowledge as authorities ourself.
  */
 int
 directory_caches_unknown_auth_certs(const or_options_t *options)
@@ -1498,7 +1512,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl,
       (unsigned long)guard_tk,
       (unsigned long)guard_bandwidth_including_exits_kb,
       (unsigned long)guard_bandwidth_excluding_exits_kb,
-      enough_mtbf_info ? "" : " don't ");
+      enough_mtbf_info ? "" : " don't");
 
   tor_free(uptimes);
   tor_free(mtbfs);
@@ -2246,7 +2260,7 @@ int
 dirserv_read_measured_bandwidths(const char *from_file,
                                  smartlist_t *routerstatuses)
 {
-  char line[256];
+  char line[512];
   FILE *fp = tor_fopen_cloexec(from_file, "r");
   int applied_lines = 0;
   time_t file_time, now;
@@ -3182,7 +3196,7 @@ connection_dirserv_add_networkstatus_bytes_to_outbuf(dir_connection_t *conn)
         if (uncompressing && ! conn->zlib_state &&
             conn->fingerprint_stack &&
             smartlist_len(conn->fingerprint_stack)) {
-          conn->zlib_state = tor_zlib_new(0, ZLIB_METHOD);
+          conn->zlib_state = tor_zlib_new(0, ZLIB_METHOD, HIGH_COMPRESSION);
         }
       }
       if (r) return r;

@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Stop allowing invalid address patterns containing both a wildcard
-      address and a bit prefix length. This affects all our
-      address-range parsing code. Fixes bug 7484; bugfix on 0.0.2pre14.

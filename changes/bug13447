@@ -1,5 +1,0 @@
-  o Minor feature:
-    - When re-enabling the network, don't try to build introduction circuits
-      until we have successfully built a circuit.  This makes hidden services
-      come up faster when the network is re-enabled. Patch from
-      "akwizgran". Closes ticket 13447.

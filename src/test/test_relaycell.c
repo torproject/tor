@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, The Tor Project, Inc. */
+/* Copyright (c) 2014-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /* Unit tests for handling different kinds of relay cell */
@@ -104,7 +104,7 @@ test_relaycell_resolved(void *arg)
       tt_int_op(srm_answer_is_set, OP_EQ, 0);                        \
     }                                                             \
     tt_int_op(srm_ttl, OP_EQ, ttl);                                  \
-    tt_int_op(srm_expires, OP_EQ, expires);                          \
+    tt_i64_op(srm_expires, OP_EQ, expires);                          \
   } while (0)
 
   (void)arg;

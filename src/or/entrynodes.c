@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -1319,7 +1319,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
                "EntryGuardDownSince/UnlistedSince without EntryGuard");
         break;
       }
-      if (parse_iso_time(line->value, &when)<0) {
+      if (parse_iso_time_(line->value, &when, 0)<0) {
         *msg = tor_strdup("Unable to parse entry nodes: "
                           "Bad time in EntryGuardDownSince/UnlistedSince");
         break;

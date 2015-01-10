@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #define BUFFERS_PRIVATE
@@ -611,7 +611,7 @@ test_buffers_zlib_impl(int finalize_with_nil)
   int done;
 
   buf = buf_new_with_capacity(128); /* will round up */
-  zlib_state = tor_zlib_new(1, ZLIB_METHOD);
+  zlib_state = tor_zlib_new(1, ZLIB_METHOD, HIGH_COMPRESSION);
 
   msg = tor_malloc(512);
   crypto_rand(msg, 512);
@@ -688,7 +688,7 @@ test_buffers_zlib_fin_at_chunk_end(void *arg)
   tt_uint_op(buf->head->datalen, OP_EQ, headerjunk);
   tt_uint_op(buf_datalen(buf), OP_EQ, headerjunk);
   /* Write an empty string, with finalization on. */
-  zlib_state = tor_zlib_new(1, ZLIB_METHOD);
+  zlib_state = tor_zlib_new(1, ZLIB_METHOD, HIGH_COMPRESSION);
   tt_int_op(write_to_buf_zlib(buf, zlib_state, "", 0, 1), OP_EQ, 0);
 
   in_len = buf_datalen(buf);

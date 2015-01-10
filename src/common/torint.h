@@ -1,6 +1,6 @@
 /* Copyright (c) 2003, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -189,6 +189,10 @@ typedef unsigned __int64 uint64_t;
 #ifndef INT64_MAX
 #define INT64_MAX 0x7fffffffffffffffi64
 #endif
+#endif
+
+#ifndef INT64_MIN
+#define INT64_MIN ((- INT64_MAX) - 1)
 #endif
 
 #ifndef SIZE_MAX

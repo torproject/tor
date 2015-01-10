@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -89,13 +89,14 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
                      struct sockaddr *sa_out,
                      socklen_t len)
 {
+  memset(sa_out, 0, len);
+
   sa_family_t family = tor_addr_family(a);
   if (family == AF_INET) {
     struct sockaddr_in *sin;
     if (len < (int)sizeof(struct sockaddr_in))
       return 0;
     sin = (struct sockaddr_in *)sa_out;
-    memset(sin, 0, sizeof(struct sockaddr_in));
 #ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
     sin->sin_len = sizeof(struct sockaddr_in);
 #endif
@@ -108,7 +109,6 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
     if (len < (int)sizeof(struct sockaddr_in6))
       return 0;
     sin6 = (struct sockaddr_in6 *)sa_out;
-    memset(sin6, 0, sizeof(struct sockaddr_in6));
 #ifdef HAVE_STRUCT_SOCKADDR_IN6_SIN6_LEN
     sin6->sin6_len = sizeof(struct sockaddr_in6);
 #endif
@@ -129,6 +129,9 @@ tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa,
 {
   tor_assert(a);
   tor_assert(sa);
+
+  memset(a, 0, sizeof(*a));
+
   if (sa->sa_family == AF_INET) {
     struct sockaddr_in *sin = (struct sockaddr_in *) sa;
     tor_addr_from_ipv4n(a, sin->sin_addr.s_addr);
@@ -1023,7 +1026,6 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
     } else {
       a2 = tor_addr_to_ipv4h(addr2);
     }
-    if (mbits <= 0) return 0;
     if (mbits > 32) mbits = 32;
     a1 >>= (32-mbits);
     a2 >>= (32-mbits);
@@ -1369,8 +1371,8 @@ tor_addr_is_multicast(const tor_addr_t *a)
  * connects to the Internet.  This address should only be used in checking
  * whether our address has changed.  Return 0 on success, -1 on failure.
  */
-int
-get_interface_address6(int severity, sa_family_t family, tor_addr_t *addr)
+MOCK_IMPL(int,
+get_interface_address6,(int severity, sa_family_t family, tor_addr_t *addr))
 {
   /* XXX really, this function should yield a smartlist of addresses. */
   smartlist_t *addrs;
@@ -1699,8 +1701,8 @@ tor_dup_ip(uint32_t addr)
  * checking whether our address has changed.  Return 0 on success, -1 on
  * failure.
  */
-int
-get_interface_address(int severity, uint32_t *addr)
+MOCK_IMPL(int,
+get_interface_address,(int severity, uint32_t *addr))
 {
   tor_addr_t local_addr;
   int r;

@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -2198,9 +2198,20 @@ get_environment(void)
 #endif
 }
 
-/** Set *addr to the IP address (in dotted-quad notation) stored in c.
- * Return 1 on success, 0 if c is badly formatted.  (Like inet_aton(c,addr),
- * but works on Windows and Solaris.)
+/** Get name of current host and write it to <b>name</b> array, whose
+ * length is specified by <b>namelen</b> argument. Return 0 upon
+ * successfull completion; otherwise return return -1. (Currently,
+ * this function is merely a mockable wrapper for POSIX gethostname().)
+ */
+MOCK_IMPL(int,
+tor_gethostname,(char *name, size_t namelen))
+{
+   return gethostname(name,namelen);
+}
+
+/** Set *addr to the IP address (in dotted-quad notation) stored in *str.
+ * Return 1 on success, 0 if *str is badly formatted.
+ * (Like inet_aton(str,addr), but works on Windows and Solaris.)
  */
 int
 tor_inet_aton(const char *str, struct in_addr* addr)
@@ -2420,8 +2431,9 @@ tor_inet_pton(int af, const char *src, void *dst)
  * (This function exists because standard windows gethostbyname
  * doesn't treat raw IP addresses properly.)
  */
-int
-tor_lookup_hostname(const char *name, uint32_t *addr)
+
+MOCK_IMPL(int,
+tor_lookup_hostname,(const char *name, uint32_t *addr))
 {
   tor_addr_t myaddr;
   int ret;

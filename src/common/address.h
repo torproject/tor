@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -159,7 +159,8 @@ char *tor_dup_addr(const tor_addr_t *addr) ATTR_MALLOC;
 const char *fmt_addr_impl(const tor_addr_t *addr, int decorate);
 const char *fmt_addrport(const tor_addr_t *addr, uint16_t port);
 const char * fmt_addr32(uint32_t addr);
-int get_interface_address6(int severity, sa_family_t family, tor_addr_t *addr);
+MOCK_DECL(int,get_interface_address6,(int severity, sa_family_t family,
+tor_addr_t *addr));
 
 /** Flag to specify how to do a comparison between addresses.  In an "exact"
  * comparison, addresses are equivalent only if they are in the same family
@@ -236,7 +237,7 @@ int addr_mask_get_bits(uint32_t mask);
 #define INET_NTOA_BUF_LEN 16
 int tor_inet_ntoa(const struct in_addr *in, char *buf, size_t buf_len);
 char *tor_dup_ip(uint32_t addr) ATTR_MALLOC;
-int get_interface_address(int severity, uint32_t *addr);
+MOCK_DECL(int,get_interface_address,(int severity, uint32_t *addr));
 
 tor_addr_port_t *tor_addr_port_new(const tor_addr_t *addr, uint16_t port);
 

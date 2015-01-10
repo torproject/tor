@@ -1,4 +1,0 @@
-  o Minor features (controller):
-    - Add a "SIGNAL HEARTBEAT" Tor controller command that provokes
-      writing unscheduled heartbeat message to the log. Implements
-      feature 9503.

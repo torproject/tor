@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -11,6 +11,7 @@
 
 #define CONFIG_PRIVATE
 #include "or.h"
+#include "compat.h"
 #include "addressmap.h"
 #include "channel.h"
 #include "circuitbuild.h"
@@ -64,7 +65,6 @@ static config_abbrev_t option_abbrevs_[] = {
   PLURAL(AuthDirBadExitCC),
   PLURAL(AuthDirInvalidCC),
   PLURAL(AuthDirRejectCC),
-  PLURAL(ExitNode),
   PLURAL(EntryNode),
   PLURAL(ExcludeNode),
   PLURAL(FirewallPort),
@@ -228,6 +228,7 @@ static config_var_t option_vars_[] = {
   V(ExitPolicyRejectPrivate,     BOOL,     "1"),
   V(ExitPortStatistics,          BOOL,     "0"),
   V(ExtendAllowPrivateAddresses, BOOL,     "0"),
+  V(ExitRelay,                   AUTOBOOL, "auto"),
   VPORT(ExtORPort,               LINELIST, NULL),
   V(ExtORPortCookieAuthFile,     STRING,   NULL),
   V(ExtORPortCookieAuthFileGroupReadable, BOOL, "0"),
@@ -268,6 +269,7 @@ static config_var_t option_vars_[] = {
   VAR("HiddenServicePort",   LINELIST_S, RendConfigLines,    NULL),
   VAR("HiddenServiceVersion",LINELIST_S, RendConfigLines,    NULL),
   VAR("HiddenServiceAuthorizeClient",LINELIST_S,RendConfigLines, NULL),
+  V(HiddenServiceStatistics,     BOOL,     "0"),
   V(HidServAuth,                 LINELIST, NULL),
   V(CloseHSClientCircuitsImmediatelyOnTimeout, BOOL, "0"),
   V(CloseHSServiceRendCircuitsImmediatelyOnTimeout, BOOL, "0"),
@@ -468,7 +470,7 @@ static const config_var_t testing_tor_network_defaults[] = {
   V(V3AuthVotingInterval,        INTERVAL, "5 minutes"),
   V(V3AuthVoteDelay,             INTERVAL, "20 seconds"),
   V(V3AuthDistDelay,             INTERVAL, "20 seconds"),
-  V(TestingV3AuthInitialVotingInterval, INTERVAL, "5 minutes"),
+  V(TestingV3AuthInitialVotingInterval, INTERVAL, "150 seconds"),
   V(TestingV3AuthInitialVoteDelay, INTERVAL, "20 seconds"),
   V(TestingV3AuthInitialDistDelay, INTERVAL, "20 seconds"),
   V(TestingV3AuthVotingStartOffset, INTERVAL, "0"),
@@ -1714,6 +1716,7 @@ options_act(const or_options_t *old_options)
   if (options->CellStatistics || options->DirReqStatistics ||
       options->EntryStatistics || options->ExitPortStatistics ||
       options->ConnDirectionStatistics ||
+      options->HiddenServiceStatistics ||
       options->BridgeAuthoritativeDir) {
     time_t now = time(NULL);
     int print_notice = 0;
@@ -1722,6 +1725,7 @@ options_act(const or_options_t *old_options)
     if (!public_server_mode(options)) {
       options->CellStatistics = 0;
       options->EntryStatistics = 0;
+      options->HiddenServiceStatistics = 0;
       options->ExitPortStatistics = 0;
     }
 
@@ -1767,6 +1771,11 @@ options_act(const or_options_t *old_options)
         options->ConnDirectionStatistics) {
       rep_hist_conn_stats_init(now);
     }
+    if ((!old_options || !old_options->HiddenServiceStatistics) &&
+        options->HiddenServiceStatistics) {
+      log_info(LD_CONFIG, "Configured to measure hidden service statistics.");
+      rep_hist_hs_stats_init(now);
+    }
     if ((!old_options || !old_options->BridgeAuthoritativeDir) &&
         options->BridgeAuthoritativeDir) {
       rep_hist_desc_stats_init(now);
@@ -1778,6 +1787,8 @@ options_act(const or_options_t *old_options)
                  "data directory in 24 hours from now.");
   }
 
+  /* If we used to have statistics enabled but we just disabled them,
+     stop gathering them.  */
   if (old_options && old_options->CellStatistics &&
       !options->CellStatistics)
     rep_hist_buffer_stats_term();
@@ -1787,6 +1798,9 @@ options_act(const or_options_t *old_options)
   if (old_options && old_options->EntryStatistics &&
       !options->EntryStatistics)
     geoip_entry_stats_term();
+  if (old_options && old_options->HiddenServiceStatistics &&
+      !options->HiddenServiceStatistics)
+    rep_hist_hs_stats_term();
   if (old_options && old_options->ExitPortStatistics &&
       !options->ExitPortStatistics)
     rep_hist_exit_stats_term();
@@ -1819,7 +1833,7 @@ options_act(const or_options_t *old_options)
                  directory_fetches_dir_info_early(old_options)) ||
         !bool_eq(directory_fetches_dir_info_later(options),
                  directory_fetches_dir_info_later(old_options))) {
-      /* Make sure update_router_have_min_dir_info gets called. */
+      /* Make sure update_router_have_minimum_dir_info() gets called. */
       router_dir_info_changed();
       /* We might need to download a new consensus status later or sooner than
        * we had expected. */
@@ -2033,7 +2047,7 @@ print_usage(void)
   printf(
 "Copyright (c) 2001-2004, Roger Dingledine\n"
 "Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson\n"
-"Copyright (c) 2007-2014, The Tor Project, Inc.\n\n"
+"Copyright (c) 2007-2015, The Tor Project, Inc.\n\n"
 "tor -f <torrc> [args]\n"
 "See man page for options, or https://www.torproject.org/ for "
 "documentation.\n");
@@ -2073,7 +2087,33 @@ reset_last_resolved_addr(void)
 }
 
 /**
- * Use <b>options-\>Address</b> to guess our public IP address.
+ * Attempt getting our non-local (as judged by tor_addr_is_internal()
+ * function) IP address using following techniques, listed in
+ * order from best (most desirable, try first) to worst (least
+ * desirable, try if everything else fails).
+ *
+ * First, attempt using <b>options-\>Address</b> to get our
+ * non-local IP address.
+ *
+ * If <b>options-\>Address</b> represents a non-local IP address,
+ * consider it ours.
+ *
+ * If <b>options-\>Address</b> is a DNS name that resolves to
+ * a non-local IP address, consider this IP address ours.
+ *
+ * If <b>options-\>Address</b> is NULL, fall back to getting local
+ * hostname and using it in above-described ways to try and
+ * get our IP address.
+ *
+ * In case local hostname cannot be resolved to a non-local IP
+ * address, try getting an IP address of network interface
+ * in hopes it will be non-local one.
+ *
+ * Fail if one or more of the following is true:
+ *   - DNS name in <b>options-\>Address</b> cannot be resolved.
+ *   - <b>options-\>Address</b> is a local host address.
+ *   - Attempt to getting local hostname fails.
+ *   - Attempt to getting network interface address fails.
  *
  * Return 0 if all is well, or -1 if we can't find a suitable
  * public IP address.
@@ -2082,6 +2122,11 @@ reset_last_resolved_addr(void)
  *   - Put our public IP address (in host order) into *<b>addr_out</b>.
  *   - If <b>method_out</b> is non-NULL, set *<b>method_out</b> to a static
  *     string describing how we arrived at our answer.
+ *      - "CONFIGURED" - parsed from IP address string in
+ *        <b>options-\>Address</b>
+ *      - "RESOLVED" - resolved from DNS name in <b>options-\>Address</b>
+ *      - "GETHOSTNAME" - resolved from a local hostname.
+ *      - "INTERFACE" - retrieved from a network interface.
  *   - If <b>hostname_out</b> is non-NULL, and we resolved a hostname to
  *     get our address, set *<b>hostname_out</b> to a newly allocated string
  *     holding that hostname. (If we didn't get our address by resolving a
@@ -2120,7 +2165,7 @@ resolve_my_address(int warn_severity, const or_options_t *options,
     explicit_ip = 0; /* it's implicit */
     explicit_hostname = 0; /* it's implicit */
 
-    if (gethostname(hostname, sizeof(hostname)) < 0) {
+    if (tor_gethostname(hostname, sizeof(hostname)) < 0) {
       log_fn(warn_severity, LD_NET,"Error obtaining local hostname");
       return -1;
     }
@@ -2597,20 +2642,24 @@ options_validate(or_options_t *old_options, or_options_t *options,
     if (!strcasecmp(options->TransProxyType, "default")) {
       options->TransProxyType_parsed = TPT_DEFAULT;
     } else if (!strcasecmp(options->TransProxyType, "pf-divert")) {
-#ifndef __OpenBSD__
-      REJECT("pf-divert is a OpenBSD-specific feature.");
+#if !defined(__OpenBSD__) && !defined( DARWIN )
+      /* Later versions of OS X have pf */
+      REJECT("pf-divert is a OpenBSD-specific "
+             "and OS X/Darwin-specific feature.");
 #else
       options->TransProxyType_parsed = TPT_PF_DIVERT;
 #endif
     } else if (!strcasecmp(options->TransProxyType, "tproxy")) {
-#ifndef __linux__
+#if !defined(__linux__)
       REJECT("TPROXY is a Linux-specific feature.");
 #else
       options->TransProxyType_parsed = TPT_TPROXY;
 #endif
     } else if (!strcasecmp(options->TransProxyType, "ipfw")) {
-#ifndef __FreeBSD__
-      REJECT("ipfw is a FreeBSD-specific feature.");
+#if !defined(__FreeBSD__) && !defined( DARWIN )
+      /* Earlier versions of OS X have ipfw */
+      REJECT("ipfw is a FreeBSD-specific"
+             "and OS X/Darwin-specific feature.");
 #else
       options->TransProxyType_parsed = TPT_IPFW;
 #endif
@@ -2862,6 +2911,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   options->MaxMemInQueues =
     compute_real_max_mem_in_queues(options->MaxMemInQueues_raw,
                                    server_mode(options));
+  options->MaxMemInQueues_low_threshold = (options->MaxMemInQueues / 4) * 3;
 
   options->AllowInvalid_ = 0;
 
@@ -3397,19 +3447,68 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (options->V3AuthVoteDelay + options->V3AuthDistDelay >=
       options->V3AuthVotingInterval/2) {
-    REJECT("V3AuthVoteDelay plus V3AuthDistDelay must be less than half "
-           "V3AuthVotingInterval");
+    /*
+    This doesn't work, but it seems like it should:
+     what code is preventing the interval being less than twice the lead-up?
+    if (options->TestingTorNetwork) {
+      if (options->V3AuthVoteDelay + options->V3AuthDistDelay >=
+          options->V3AuthVotingInterval) {
+        REJECT("V3AuthVoteDelay plus V3AuthDistDelay must be less than "
+               "V3AuthVotingInterval");
+      } else {
+        COMPLAIN("V3AuthVoteDelay plus V3AuthDistDelay is more than half "
+                 "V3AuthVotingInterval. This may lead to "
+                 "consensus instability, particularly if clocks drift.");
+      }
+    } else {
+     */
+      REJECT("V3AuthVoteDelay plus V3AuthDistDelay must be less than half "
+             "V3AuthVotingInterval");
+    /*
+    }
+     */
   }
-  if (options->V3AuthVoteDelay < MIN_VOTE_SECONDS)
-    REJECT("V3AuthVoteDelay is way too low.");
-  if (options->V3AuthDistDelay < MIN_DIST_SECONDS)
-    REJECT("V3AuthDistDelay is way too low.");
+
+  if (options->V3AuthVoteDelay < MIN_VOTE_SECONDS) {
+    if (options->TestingTorNetwork) {
+      if (options->V3AuthVoteDelay < MIN_VOTE_SECONDS_TESTING) {
+        REJECT("V3AuthVoteDelay is way too low.");
+      } else {
+        COMPLAIN("V3AuthVoteDelay is very low. "
+                 "This may lead to failure to vote for a consensus.");
+      }
+    } else {
+      REJECT("V3AuthVoteDelay is way too low.");
+    }
+  }
+
+  if (options->V3AuthDistDelay < MIN_DIST_SECONDS) {
+    if (options->TestingTorNetwork) {
+      if (options->V3AuthDistDelay < MIN_DIST_SECONDS_TESTING) {
+        REJECT("V3AuthDistDelay is way too low.");
+      } else {
+        COMPLAIN("V3AuthDistDelay is very low. "
+                 "This may lead to missing votes in a consensus.");
+      }
+    } else {
+      REJECT("V3AuthDistDelay is way too low.");
+    }
+  }
 
   if (options->V3AuthNIntervalsValid < 2)
     REJECT("V3AuthNIntervalsValid must be at least 2.");
 
   if (options->V3AuthVotingInterval < MIN_VOTE_INTERVAL) {
-    REJECT("V3AuthVotingInterval is insanely low.");
+    if (options->TestingTorNetwork) {
+      if (options->V3AuthVotingInterval < MIN_VOTE_INTERVAL_TESTING) {
+        REJECT("V3AuthVotingInterval is insanely low.");
+      } else {
+        COMPLAIN("V3AuthVotingInterval is very low. "
+                 "This may lead to failure to synchronise for a consensus.");
+      }
+    } else {
+      REJECT("V3AuthVotingInterval is insanely low.");
+    }
   } else if (options->V3AuthVotingInterval > 24*60*60) {
     REJECT("V3AuthVotingInterval is insanely high.");
   } else if (((24*60*60) % options->V3AuthVotingInterval) != 0) {
@@ -3430,15 +3529,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (parse_virtual_addr_network(options->VirtualAddrNetworkIPv6,
                                  AF_INET6, 1, msg)<0)
     return -1;
-
-  if (options->AutomapHostsSuffixes) {
-    SMARTLIST_FOREACH(options->AutomapHostsSuffixes, char *, suf,
-    {
-      size_t len = strlen(suf);
-      if (len && suf[len-1] == '.')
-        suf[len-1] = '\0';
-    });
-  }
 
   if (options->TestingTorNetwork &&
       !(options->DirAuthorities ||
@@ -3484,26 +3574,27 @@ options_validate(or_options_t *old_options, or_options_t *options,
   CHECK_DEFAULT(TestingCertMaxDownloadTries);
 #undef CHECK_DEFAULT
 
-  if (options->TestingV3AuthInitialVotingInterval < MIN_VOTE_INTERVAL) {
+  if (options->TestingV3AuthInitialVotingInterval
+      < MIN_VOTE_INTERVAL_TESTING_INITIAL) {
     REJECT("TestingV3AuthInitialVotingInterval is insanely low.");
   } else if (((30*60) % options->TestingV3AuthInitialVotingInterval) != 0) {
     REJECT("TestingV3AuthInitialVotingInterval does not divide evenly into "
            "30 minutes.");
   }
 
-  if (options->TestingV3AuthInitialVoteDelay < MIN_VOTE_SECONDS) {
+  if (options->TestingV3AuthInitialVoteDelay < MIN_VOTE_SECONDS_TESTING) {
     REJECT("TestingV3AuthInitialVoteDelay is way too low.");
   }
 
-  if (options->TestingV3AuthInitialDistDelay < MIN_DIST_SECONDS) {
+  if (options->TestingV3AuthInitialDistDelay < MIN_DIST_SECONDS_TESTING) {
     REJECT("TestingV3AuthInitialDistDelay is way too low.");
   }
 
   if (options->TestingV3AuthInitialVoteDelay +
       options->TestingV3AuthInitialDistDelay >=
-      options->TestingV3AuthInitialVotingInterval/2) {
+      options->TestingV3AuthInitialVotingInterval) {
     REJECT("TestingV3AuthInitialVoteDelay plus TestingV3AuthInitialDistDelay "
-           "must be less than half TestingV3AuthInitialVotingInterval");
+           "must be less than TestingV3AuthInitialVotingInterval");
   }
 
   if (options->TestingV3AuthVotingStartOffset >
@@ -3511,6 +3602,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
           options->V3AuthVotingInterval)) {
     REJECT("TestingV3AuthVotingStartOffset is higher than the voting "
            "interval.");
+  } else if (options->TestingV3AuthVotingStartOffset < 0) {
+    REJECT("TestingV3AuthVotingStartOffset must be non-negative.");
   }
 
   if (options->TestingAuthDirTimeToLearnReachability < 0) {
@@ -3831,6 +3924,7 @@ options_transition_affects_descriptor(const or_options_t *old_options,
       !opt_streq(old_options->Nickname,new_options->Nickname) ||
       !opt_streq(old_options->Address,new_options->Address) ||
       !config_lines_eq(old_options->ExitPolicy,new_options->ExitPolicy) ||
+      old_options->ExitRelay != new_options->ExitRelay ||
       old_options->ExitPolicyRejectPrivate !=
         new_options->ExitPolicyRejectPrivate ||
       old_options->IPv6Exit != new_options->IPv6Exit ||

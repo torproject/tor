@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -2433,6 +2433,12 @@ cell_queues_get_total_allocation(void)
   return total_cells_allocated * packed_cell_mem_cost();
 }
 
+/** How long after we've been low on memory should we try to conserve it? */
+#define MEMORY_PRESSURE_INTERVAL (30*60)
+
+/** The time at which we were last low on memory. */
+static time_t last_time_under_memory_pressure = 0;
+
 /** Check whether we've got too much space used for cells.  If so,
  * call the OOM handler and return 1.  Otherwise, return 0. */
 STATIC int
@@ -2441,11 +2447,23 @@ cell_queues_check_size(void)
   size_t alloc = cell_queues_get_total_allocation();
   alloc += buf_get_total_allocation();
   alloc += tor_zlib_get_total_allocation();
-  if (alloc >= get_options()->MaxMemInQueues) {
-    circuits_handle_oom(alloc);
-    return 1;
+  if (alloc >= get_options()->MaxMemInQueues_low_threshold) {
+    last_time_under_memory_pressure = approx_time();
+    if (alloc >= get_options()->MaxMemInQueues) {
+      circuits_handle_oom(alloc);
+      return 1;
+    }
   }
   return 0;
+}
+
+/** Return true if we've been under memory pressure in the last
+ * MEMORY_PRESSURE_INTERVAL seconds. */
+int
+have_been_under_memory_pressure(void)
+{
+  return last_time_under_memory_pressure + MEMORY_PRESSURE_INTERVAL
+    < approx_time();
 }
 
 /**

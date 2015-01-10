@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2014, The Tor Project, Inc
+# Copyright 2014-2015, The Tor Project, Inc
 # See LICENSE for licensing information
 
 # This script parses openssl headers to find ciphersuite names, determines

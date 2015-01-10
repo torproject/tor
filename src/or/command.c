@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2014, The Tor Project, Inc. */
+ * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -438,6 +438,7 @@ command_process_created_cell(cell_t *cell, channel_t *chan)
 static void
 command_process_relay_cell(cell_t *cell, channel_t *chan)
 {
+  const or_options_t *options = get_options();
   circuit_t *circ;
   int reason, direction;
 
@@ -510,6 +511,14 @@ command_process_relay_cell(cell_t *cell, channel_t *chan)
            "(%s) failed. Closing.",
            direction==CELL_DIRECTION_OUT?"forward":"backward");
     circuit_mark_for_close(circ, -reason);
+  }
+
+  /* If this is a cell in an RP circuit, count it as part of the
+     hidden service stats */
+  if (options->HiddenServiceStatistics &&
+      !CIRCUIT_IS_ORIGIN(circ) &&
+      TO_OR_CIRCUIT(circ)->circuit_carries_hs_traffic_stats) {
+    rep_hist_seen_new_rp_cell();
   }
 }
 
