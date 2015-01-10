@@ -3270,6 +3270,9 @@ rend_services_introduce(void)
   smartlist_free(exclude_nodes);
 }
 
+#define MIN_REND_INITIAL_POST_DELAY (30)
+#define MIN_REND_INITIAL_POST_DELAY_TESTING (5)
+
 /** Regenerate and upload rendezvous service descriptors for all
  * services, if necessary. If the descriptor has been dirty enough
  * for long enough, definitely upload; else only upload when the
@@ -3284,6 +3287,9 @@ rend_consider_services_upload(time_t now)
   int i;
   rend_service_t *service;
   int rendpostperiod = get_options()->RendPostPeriod;
+  int rendinitialpostdelay = (get_options()->TestingTorNetwork ?
+                              MIN_REND_INITIAL_POST_DELAY_TESTING :
+                              MIN_REND_INITIAL_POST_DELAY);
 
   if (!get_options()->PublishHidServDescriptors)
     return;
@@ -3291,17 +3297,17 @@ rend_consider_services_upload(time_t now)
   for (i=0; i < smartlist_len(rend_service_list); ++i) {
     service = smartlist_get(rend_service_list, i);
     if (!service->next_upload_time) { /* never been uploaded yet */
-      /* The fixed lower bound of 30 seconds ensures that the descriptor
-       * is stable before being published. See comment below. */
+      /* The fixed lower bound of rendinitialpostdelay seconds ensures that
+       * the descriptor is stable before being published. See comment below. */
       service->next_upload_time =
-        now + 30 + crypto_rand_int(2*rendpostperiod);
+        now + rendinitialpostdelay + crypto_rand_int(2*rendpostperiod);
     }
     if (service->next_upload_time < now ||
         (service->desc_is_dirty &&
-         service->desc_is_dirty < now-30)) {
+         service->desc_is_dirty < now-rendinitialpostdelay)) {
       /* if it's time, or if the directory servers have a wrong service
-       * descriptor and ours has been stable for 30 seconds, upload a
-       * new one of each format. */
+       * descriptor and ours has been stable for rendinitialpostdelay seconds,
+       * upload a new one of each format. */
       rend_service_update_descriptor(service);
       upload_service_descriptor(service);
     }
