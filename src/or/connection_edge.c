@@ -915,12 +915,14 @@ typedef struct {
   int automap;
   addressmap_entry_source_t exit_source;
   time_t map_expires;
+
+  int end_reason;
+  int should_close;
 } rewrite_result_t;
 
-/* DOCDOC 0 if closed successfully. -1 if closed on error.  1 if not
- * closed.
+/* DOCDOC 
 */
-static int
+static void
 connection_ap_handshake_rewrite(entry_connection_t *conn,
                                 rewrite_result_t *out)
 {
@@ -931,6 +933,8 @@ connection_ap_handshake_rewrite(entry_connection_t *conn,
   out->automap = 0;
   out->exit_source = ADDRMAPSRC_NONE;
   out->map_expires = TIME_MAX;
+  out->end_reason = 0;
+  out->should_close = 0;
 
   tor_strlower(socks->address); /* normalize it */
   strlcpy(out->orig_address, socks->address, sizeof(out->orig_address));
@@ -944,8 +948,9 @@ connection_ap_handshake_rewrite(entry_connection_t *conn,
              "it (at your own risk).");
     control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
                                 escaped(socks->address));
-    connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
-    return -1;
+    out->end_reason = END_STREAM_REASON_TORPROTOCOL;
+    out->should_close = 1;
+    return;
   }
 
   if (! conn->original_dest_address)
@@ -969,8 +974,9 @@ connection_ap_handshake_rewrite(entry_connection_t *conn,
       if (! new_addr) {
         log_warn(LD_APP, "Unable to automap address %s",
                  escaped_safe_str(socks->address));
-        connection_mark_unattached_ap(conn, END_STREAM_REASON_INTERNAL);
-        return -1;
+        out->end_reason = END_STREAM_REASON_INTERNAL;
+        out->should_close = 1;
+        return;
       }
       log_info(LD_APP, "Automapping %s to %s",
                escaped_safe_str_client(socks->address),
@@ -996,10 +1002,10 @@ connection_ap_handshake_rewrite(entry_connection_t *conn,
                                              strlen(result), (uint8_t*)result,
                                              -1,
                                              out->map_expires);
-      connection_mark_unattached_ap(conn,
-                                END_STREAM_REASON_DONE |
-                                END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
-      return 0;
+      out->end_reason = END_STREAM_REASON_DONE |
+                        END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED;
+      out->should_close = 1;
+      return;
     }
     if (options->ClientDNSRejectInternalAddresses) {
       /* Don't let people try to do a reverse lookup on 10.0.0.1. */
@@ -1010,10 +1016,10 @@ connection_ap_handshake_rewrite(entry_connection_t *conn,
       if (ok == 1 && tor_addr_is_internal(&addr, 0)) {
         connection_ap_handshake_socks_resolved(conn, RESOLVED_TYPE_ERROR,
                                                0, NULL, -1, TIME_MAX);
-        connection_mark_unattached_ap(conn,
-                                 END_STREAM_REASON_SOCKSPROTOCOL |
-                                 END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
-        return -1;
+        out->end_reason = END_STREAM_REASON_SOCKSPROTOCOL |
+                          END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED;
+        out->should_close = 1;
+        return;
       }
     }
   } else if (!out->automap) {
@@ -1038,11 +1044,10 @@ connection_ap_handshake_rewrite(entry_connection_t *conn,
      */
     log_warn(LD_APP,"Missing mapping for virtual address '%s'. Refusing.",
              safe_str_client(socks->address));
-    connection_mark_unattached_ap(conn, END_STREAM_REASON_INTERNAL);
-    return -1;
+    out->end_reason = END_STREAM_REASON_INTERNAL;
+    out->should_close = 1;
+    return;
   }
-
-  return 1;
 }
 
 /** Connection <b>conn</b> just finished its socks handshake, or the
@@ -1065,7 +1070,6 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
                                            origin_circuit_t *circ,
                                            crypt_path_t *cpath)
 {
-  int r;
   socks_request_t *socks = conn->socks_request;
   hostname_type_t addresstype;
   const or_options_t *options = get_options();
@@ -1074,8 +1078,16 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
   rewrite_result_t rr;
 
   memset(&rr, 0, sizeof(rr));
-  if ((r = connection_ap_handshake_rewrite(conn,&rr)) != 1)
-    return r;
+  connection_ap_handshake_rewrite(conn,&rr);
+
+  if (rr.should_close) {
+    connection_mark_unattached_ap(conn, rr.end_reason);
+    if (0 != (rr.end_reason & END_STREAM_REASON_DONE))
+      return 0;
+    else
+      return -1;
+  }
+
   time_t map_expires = rr.map_expires;
   int automap = rr.automap;
   addressmap_entry_source_t exit_source = rr.exit_source;
