@@ -1,0 +1,11 @@
+  o Minor bugfixes (systemd support):
+    - Fix detection and operation of systemd watchdog. Fixes part of
+      bug 14141; bugfix on 0.2.6.2-alpha. Patch from Tomasz Torcz.
+
+    - Run correctly under systemd with the RunAsDaemon option set.
+      Fixes part of bug 14141; bugfix on 0.2.5.7-rc. Patch from Tomasz
+      Torcz.
+
+  o Minor featurs (systemd support):
+    - Inform the systemd supervisor about more changes in the Tor process
+      status. Implements part of ticket 14141. Patch from Tomasz Torcz.
