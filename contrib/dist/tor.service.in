@@ -16,13 +16,13 @@ LimitNOFILE = 32768
 
 # Hardening
 PrivateTmp = yes
-DeviceAllow = /dev/null rw
-DeviceAllow = /dev/urandom r
-InaccessibleDirectories = /home
+PrivateDevices = yes
+ProtectHome = yes
+ProtectSystem = full
 ReadOnlyDirectories = /
-ReadWriteDirectories = @LOCALSTATEDIR@/lib/tor
-ReadWriteDirectories = @LOCALSTATEDIR@/log/tor
-ReadWriteDirectories = @LOCALSTATEDIR@/run/tor
+ReadWriteDirectories = -@LOCALSTATEDIR@/lib/tor
+ReadWriteDirectories = -@LOCALSTATEDIR@/log/tor
+ReadWriteDirectories = -@LOCALSTATEDIR@/run/tor
 NoNewPrivileges = yes
 
 [Install]
