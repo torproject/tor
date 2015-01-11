@@ -908,41 +908,32 @@ connection_ap_rewrite_and_attach_if_allowed(entry_connection_t *conn,
   return connection_ap_handshake_rewrite_and_attach(conn, circ, cpath);
 }
 
-/** Connection <b>conn</b> just finished its socks handshake, or the
- * controller asked us to take care of it. If <b>circ</b> is defined,
- * then that's where we'll want to attach it. Otherwise we have to
- * figure it out ourselves.
- *
- * First, parse whether it's a .exit address, remap it, and so on. Then
- * if it's for a general circuit, try to attach it to a circuit (or launch
- * one as needed), else if it's for a rendezvous circuit, fetch a
- * rendezvous descriptor first (or attach/launch a circuit if the
- * rendezvous descriptor is already here and fresh enough).
- *
- * The stream will exit from the hop
- * indicated by <b>cpath</b>, or from the last hop in circ's cpath if
- * <b>cpath</b> is NULL.
- */
-int
-connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
-                                           origin_circuit_t *circ,
-                                           crypt_path_t *cpath)
-{
-  socks_request_t *socks = conn->socks_request;
-  hostname_type_t addresstype;
-  const or_options_t *options = get_options();
-  tor_addr_t addr_tmp;
+typedef struct {
+  char orig_address[MAX_SOCKS_ADDR_LEN];
   /* We set this to true if this is an address we should automatically
    * remap to a local address in VirtualAddrNetwork */
-  int automap = 0;
-  char orig_address[MAX_SOCKS_ADDR_LEN];
-  time_t map_expires = TIME_MAX;
-  time_t now = time(NULL);
-  connection_t *base_conn = ENTRY_TO_CONN(conn);
-  addressmap_entry_source_t exit_source = ADDRMAPSRC_NONE;
+  int automap;
+  addressmap_entry_source_t exit_source;
+  time_t map_expires;
+} rewrite_result_t;
+
+/* DOCDOC 0 if closed successfully. -1 if closed on error.  1 if not
+ * closed.
+*/
+static int
+connection_ap_handshake_rewrite(entry_connection_t *conn,
+                                rewrite_result_t *out)
+{
+  socks_request_t *socks = conn->socks_request;
+  const or_options_t *options = get_options();
+  tor_addr_t addr_tmp;
+
+  out->automap = 0;
+  out->exit_source = ADDRMAPSRC_NONE;
+  out->map_expires = TIME_MAX;
 
   tor_strlower(socks->address); /* normalize it */
-  strlcpy(orig_address, socks->address, sizeof(orig_address));
+  strlcpy(out->orig_address, socks->address, sizeof(out->orig_address));
   log_debug(LD_APP,"Client asked for %s:%d",
             safe_str_client(socks->address),
             socks->port);
@@ -963,8 +954,8 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
   if (socks->command == SOCKS_COMMAND_RESOLVE &&
       tor_addr_parse(&addr_tmp, socks->address)<0 &&
       options->AutomapHostsOnResolve) {
-    automap = addressmap_address_should_automap(socks->address, options);
-    if (automap) {
+    out->automap = addressmap_address_should_automap(socks->address, options);
+    if (out->automap) {
       const char *new_addr;
       int addr_type = RESOLVED_TYPE_IPV4;
       if (conn->socks_request->socks_version != 4) {
@@ -996,15 +987,15 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       rewrite_flags |= AMR_FLAG_USE_IPV6_DNS;
 
     if (addressmap_rewrite_reverse(socks->address, sizeof(socks->address),
-                                   rewrite_flags, &map_expires)) {
+                                   rewrite_flags, &out->map_expires)) {
       char *result = tor_strdup(socks->address);
       /* remember _what_ is supposed to have been resolved. */
       tor_snprintf(socks->address, sizeof(socks->address), "REVERSE[%s]",
-                  orig_address);
+                   out->orig_address);
       connection_ap_handshake_socks_resolved(conn, RESOLVED_TYPE_HOSTNAME,
                                              strlen(result), (uint8_t*)result,
                                              -1,
-                                             map_expires);
+                                             out->map_expires);
       connection_mark_unattached_ap(conn,
                                 END_STREAM_REASON_DONE |
                                 END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
@@ -1025,7 +1016,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
         return -1;
       }
     }
-  } else if (!automap) {
+  } else if (!out->automap) {
     /* For address map controls, remap the address. */
     unsigned rewrite_flags = 0;
     if (conn->use_cached_ipv4_answers)
@@ -1033,13 +1024,13 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     if (conn->use_cached_ipv6_answers)
       rewrite_flags |= AMR_FLAG_USE_IPV6_DNS;
     if (addressmap_rewrite(socks->address, sizeof(socks->address),
-                           rewrite_flags, &map_expires, &exit_source)) {
+                           rewrite_flags, &out->map_expires, &out->exit_source)) {
       control_event_stream_status(conn, STREAM_EVENT_REMAP,
                                   REMAP_STREAM_SOURCE_CACHE);
     }
   }
 
-  if (!automap && address_is_in_virtual_range(socks->address)) {
+  if (!out->automap && address_is_in_virtual_range(socks->address)) {
     /* This address was probably handed out by client_dns_get_unmapped_address,
      * but the mapping was discarded for some reason.  We *don't* want to send
      * the address through Tor; that's likely to fail, and may leak
@@ -1050,6 +1041,44 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     connection_mark_unattached_ap(conn, END_STREAM_REASON_INTERNAL);
     return -1;
   }
+
+  return 1;
+}
+
+/** Connection <b>conn</b> just finished its socks handshake, or the
+ * controller asked us to take care of it. If <b>circ</b> is defined,
+ * then that's where we'll want to attach it. Otherwise we have to
+ * figure it out ourselves.
+ *
+ * First, parse whether it's a .exit address, remap it, and so on. Then
+ * if it's for a general circuit, try to attach it to a circuit (or launch
+ * one as needed), else if it's for a rendezvous circuit, fetch a
+ * rendezvous descriptor first (or attach/launch a circuit if the
+ * rendezvous descriptor is already here and fresh enough).
+ *
+ * The stream will exit from the hop
+ * indicated by <b>cpath</b>, or from the last hop in circ's cpath if
+ * <b>cpath</b> is NULL.
+ */
+int
+connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
+                                           origin_circuit_t *circ,
+                                           crypt_path_t *cpath)
+{
+  int r;
+  socks_request_t *socks = conn->socks_request;
+  hostname_type_t addresstype;
+  const or_options_t *options = get_options();
+  connection_t *base_conn = ENTRY_TO_CONN(conn);
+  time_t now = time(NULL);
+  rewrite_result_t rr;
+
+  memset(&rr, 0, sizeof(rr));
+  if ((r = connection_ap_handshake_rewrite(conn,&rr)) != 1)
+    return r;
+  time_t map_expires = rr.map_expires;
+  int automap = rr.automap;
+  addressmap_entry_source_t exit_source = rr.exit_source;
 
   /* Parse the address provided by SOCKS.  Modify it in-place if it
    * specifies a hidden-service (.onion) or particular exit node (.exit).
@@ -1175,7 +1204,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       /* Reply to resolves immediately if we can. */
       if (tor_addr_parse(&answer, socks->address) >= 0) {/* is it an IP? */
         /* remember _what_ is supposed to have been resolved. */
-        strlcpy(socks->address, orig_address, sizeof(socks->address));
+        strlcpy(socks->address, rr.orig_address, sizeof(socks->address));
         connection_ap_handshake_socks_resolved_addr(conn, &answer, -1,
                                                     map_expires);
         connection_mark_unattached_ap(conn,
