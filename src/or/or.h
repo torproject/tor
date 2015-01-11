@@ -4105,6 +4105,11 @@ typedef struct {
    * regardless of uptime and bandwidth. */
   routerset_t *TestingDirAuthVoteGuard;
 
+  /** Relays in a testing network which should be voted HSDir
+   * regardless of uptime and ORPort connectivity.
+   * Respects VoteOnHidServDirectoriesV2. */
+  routerset_t *TestingDirAuthVoteHSDir;
+
   /** Enable CONN_BW events.  Only altered on testing networks. */
   int TestingEnableConnBwEvent;
 

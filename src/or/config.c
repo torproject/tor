@@ -448,6 +448,7 @@ static config_var_t option_vars_[] = {
   V(TestingCertMaxDownloadTries, UINT, "8"),
   V(TestingDirAuthVoteExit, ROUTERSET, NULL),
   V(TestingDirAuthVoteGuard, ROUTERSET, NULL),
+  V(TestingDirAuthVoteHSDir, ROUTERSET, NULL),
   VAR("___UsingTestNetworkDefaults", BOOL, UsingTestNetworkDefaults_, "0"),
 
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
@@ -496,6 +497,7 @@ static const config_var_t testing_tor_network_defaults[] = {
   V(TestingEnableCellStatsEvent, BOOL,     "1"),
   V(TestingEnableTbEmptyEvent,   BOOL,     "1"),
   VAR("___UsingTestNetworkDefaults", BOOL, UsingTestNetworkDefaults_, "1"),
+  V(RendPostPeriod,              INTERVAL, "2 minutes"),
 
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
@@ -2492,6 +2494,7 @@ compute_publishserverdescriptor(or_options_t *options)
 /** Lowest allowable value for RendPostPeriod; if this is too low, hidden
  * services can overload the directory system. */
 #define MIN_REND_POST_PERIOD (10*60)
+#define MIN_REND_POST_PERIOD_TESTING (5)
 
 /** Higest allowable value for PredictedPortsRelevanceTime; if this is
  * too high, our selection of exits will decrease for an extended
@@ -2976,10 +2979,13 @@ options_validate(or_options_t *old_options, or_options_t *options,
     options->MinUptimeHidServDirectoryV2 = 0;
   }
 
-  if (options->RendPostPeriod < MIN_REND_POST_PERIOD) {
+  const int min_rendpostperiod =
+    options->TestingTorNetwork ?
+    MIN_REND_POST_PERIOD_TESTING : MIN_REND_POST_PERIOD;
+  if (options->RendPostPeriod < min_rendpostperiod) {
     log_warn(LD_CONFIG, "RendPostPeriod option is too short; "
-             "raising to %d seconds.", MIN_REND_POST_PERIOD);
-    options->RendPostPeriod = MIN_REND_POST_PERIOD;
+             "raising to %d seconds.", min_rendpostperiod);
+    options->RendPostPeriod = min_rendpostperiod;;
   }
 
   if (options->RendPostPeriod > MAX_DIR_PERIOD) {
