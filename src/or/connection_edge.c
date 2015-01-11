@@ -908,21 +908,10 @@ connection_ap_rewrite_and_attach_if_allowed(entry_connection_t *conn,
   return connection_ap_handshake_rewrite_and_attach(conn, circ, cpath);
 }
 
-typedef struct {
-  char orig_address[MAX_SOCKS_ADDR_LEN];
-  /* We set this to true if this is an address we should automatically
-   * remap to a local address in VirtualAddrNetwork */
-  int automap;
-  addressmap_entry_source_t exit_source;
-  time_t map_expires;
-
-  int end_reason;
-  int should_close;
-} rewrite_result_t;
-
-/* DOCDOC 
-*/
-static void
+/* Try to perform any map-based rewriting of the target address in <b>conn</b>,
+ * filling in the fields of <b>out</b> as we go.
+ */
+STATIC void
 connection_ap_handshake_rewrite(entry_connection_t *conn,
                                 rewrite_result_t *out)
 {
