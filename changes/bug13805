@@ -1,0 +1,3 @@
+  o Minor features (systemd):
+    - Various improvements and modernizations in systemd hardening support.
+      Closes ticket 13805. Patch from Craig Andrews.
