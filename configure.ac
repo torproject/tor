@@ -132,12 +132,11 @@ if test x$have_systemd = xyes; then
     AC_DEFINE(HAVE_SYSTEMD,1,[Have systemd])
     TOR_SYSTEMD_CFLAGS="${SYSTEMD_CFLAGS}"
     TOR_SYSTEMD_LIBS="${SYSTEMD_LIBS}"
+    PKG_CHECK_MODULES(SYSTEMD209, [systemd >= 209],
+         [AC_DEFINE(HAVE_SYSTEMD_209,1,[Have systemd v209 or more])], [])
 fi
 AC_SUBST(TOR_SYSTEMD_CFLAGS)
 AC_SUBST(TOR_SYSTEMD_LIBS)
-
-PKG_CHECK_MODULES(SYSTEMD209, [systemd >= 209],
-    [AC_DEFINE(HAVE_SYSTEMD_209,1,[Have systemd v209 or more])], [])
 
 if test x$enable_systemd = xyes -a x$have_systemd != xyes ; then
     AC_MSG_ERROR([Explicitly requested systemd support, but systemd not found])
