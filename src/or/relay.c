@@ -2451,20 +2451,20 @@ cell_queues_check_size(void)
   alloc += rend_cache_total;
   if (alloc >= get_options()->MaxMemInQueues_low_threshold) {
     last_time_under_memory_pressure = approx_time();
-  if (alloc >= get_options()->MaxMemInQueues) {
-    /* If we're spending over 20% of the memory limit on hidden service
-     * descriptors, free them until we're down to 10%.
-     */
-    if (rend_cache_total > get_options()->MaxMemInQueues / 5) {
-      const size_t bytes_to_remove =
-        rend_cache_total - (get_options()->MaxMemInQueues / 10);
-      rend_cache_clean_v2_descs_as_dir(time(NULL), bytes_to_remove);
-      alloc -= rend_cache_total;
-      alloc += rend_cache_get_total_allocation();
+    if (alloc >= get_options()->MaxMemInQueues) {
+      /* If we're spending over 20% of the memory limit on hidden service
+       * descriptors, free them until we're down to 10%.
+       */
+      if (rend_cache_total > get_options()->MaxMemInQueues / 5) {
+        const size_t bytes_to_remove =
+          rend_cache_total - (get_options()->MaxMemInQueues / 10);
+        rend_cache_clean_v2_descs_as_dir(time(NULL), bytes_to_remove);
+        alloc -= rend_cache_total;
+        alloc += rend_cache_get_total_allocation();
+      }
+      circuits_handle_oom(alloc);
+      return 1;
     }
-    circuits_handle_oom(alloc);
-    return 1;
-  }
   }
   return 0;
 }
