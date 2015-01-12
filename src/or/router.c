@@ -313,6 +313,7 @@ rotate_onion_key(void)
   time_t now;
   fname = get_datadir_fname2("keys", "secret_onion_key");
   fname_prev = get_datadir_fname2("keys", "secret_onion_key.old");
+  /* There isn't much point replacing an old key with an empty file */
   if (file_status(fname) == FN_FILE) {
     if (replace_file(fname, fname_prev))
       goto error;
@@ -335,6 +336,7 @@ rotate_onion_key(void)
   fname_prev = get_datadir_fname2("keys", "secret_onion_key_ntor.old");
   if (curve25519_keypair_generate(&new_curve25519_keypair, 1) < 0)
     goto error;
+  /* There isn't much point replacing an old key with an empty file */
   if (file_status(fname) == FN_FILE) {
     if (replace_file(fname, fname_prev))
       goto error;
@@ -411,7 +413,11 @@ init_key_from_file(const char *fname, int generate, int severity,
     case FN_ERROR:
       tor_log(severity, LD_FS,"Can't read key from \"%s\"", fname);
       goto error;
+    /* treat empty key files as if the file doesn't exist, and,
+     * if generate is set, replace the empty file in
+     * crypto_pk_write_private_key_to_filename() */
     case FN_NOENT:
+    case FN_EMPTY:
       if (generate) {
         if (!have_lockfile()) {
           if (try_locking(get_options(), 0)<0) {
@@ -464,10 +470,10 @@ init_key_from_file(const char *fname, int generate, int severity,
 }
 
 /** Load a curve25519 keypair from the file <b>fname</b>, writing it into
- * <b>keys_out</b>.  If the file isn't found and <b>generate</b> is true,
- * create a new keypair and write it into the file.  If there are errors, log
- * them at level <b>severity</b>. Generate files using <b>tag</b> in their
- * ASCII wrapper. */
+ * <b>keys_out</b>.  If the file isn't found, or is empty, and <b>generate</b>
+ * is true, create a new keypair and write it into the file.  If there are
+ * errors, log them at level <b>severity</b>. Generate files using <b>tag</b>
+ * in their ASCII wrapper. */
 static int
 init_curve25519_keypair_from_file(curve25519_keypair_t *keys_out,
                                   const char *fname,
@@ -480,7 +486,10 @@ init_curve25519_keypair_from_file(curve25519_keypair_t *keys_out,
     case FN_ERROR:
       tor_log(severity, LD_FS,"Can't read key from \"%s\"", fname);
       goto error;
+    /* treat empty key files as if the file doesn't exist, and, if generate
+     * is set, replace the empty file in curve25519_keypair_write_to_file() */
     case FN_NOENT:
+    case FN_EMPTY:
       if (generate) {
         if (!have_lockfile()) {
           if (try_locking(get_options(), 0)<0) {
@@ -880,7 +889,9 @@ init_keys(void)
 
   keydir = get_datadir_fname2("keys", "secret_onion_key.old");
   if (!lastonionkey && file_status(keydir) == FN_FILE) {
-    prkey = init_key_from_file(keydir, 1, LOG_ERR, 0); /* XXXX Why 1? */
+    /* Load keys from non-empty files only.
+     * Missing old keys won't be replaced with freshly generated keys. */
+    prkey = init_key_from_file(keydir, 0, LOG_ERR, 0);
     if (prkey)
       lastonionkey = prkey;
   }
@@ -901,6 +912,8 @@ init_keys(void)
                            last_curve25519_onion_key.pubkey.public_key,
                         CURVE25519_PUBKEY_LEN) &&
         file_status(keydir) == FN_FILE) {
+      /* Load keys from non-empty files only.
+       * Missing old keys won't be replaced with freshly generated keys. */
       init_curve25519_keypair_from_file(&last_curve25519_onion_key,
                                         keydir, 0, LOG_ERR, "onion");
     }
@@ -2577,8 +2590,9 @@ router_has_orport(const routerinfo_t *router, const tor_addr_port_t *orport)
  * <b>end_line</b>, ensure that its timestamp is not more than 25 hours in
  * the past or more than 1 hour in the future with respect to <b>now</b>,
  * and write the file contents starting with that line to *<b>out</b>.
- * Return 1 for success, 0 if the file does not exist, or -1 if the file
- * does not contain a line matching these criteria or other failure. */
+ * Return 1 for success, 0 if the file does not exist or is empty, or -1
+ * if the file does not contain a line matching these criteria or other
+ * failure. */
 static int
 load_stats_file(const char *filename, const char *end_line, time_t now,
                 char **out)
@@ -2612,7 +2626,9 @@ load_stats_file(const char *filename, const char *end_line, time_t now,
      notfound:
       tor_free(contents);
       break;
+    /* treat empty stats files as if the file doesn't exist */
     case FN_NOENT:
+    case FN_EMPTY:
       r = 0;
       break;
     case FN_ERROR:

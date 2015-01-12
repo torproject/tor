@@ -342,7 +342,7 @@ enum stream_status get_string_from_pipe(FILE *stream, char *buf, size_t count);
 
 /** Return values from file_status(); see that function's documentation
  * for details. */
-typedef enum { FN_ERROR, FN_NOENT, FN_FILE, FN_DIR } file_status_t;
+typedef enum { FN_ERROR, FN_NOENT, FN_FILE, FN_DIR, FN_EMPTY } file_status_t;
 file_status_t file_status(const char *filename);
 
 /** Possible behaviors for check_private_dir() on encountering a nonexistent
