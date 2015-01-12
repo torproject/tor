@@ -23,7 +23,6 @@ ReadOnlyDirectories = /
 ReadWriteDirectories = -@LOCALSTATEDIR@/lib/tor
 ReadWriteDirectories = -@LOCALSTATEDIR@/log/tor
 NoNewPrivileges = yes
-ReadWriteDirectories = -@LOCALSTATEDIR@/run/tor
 CapabilityBoundingSet = CAP_SETUID CAP_SETGID CAP_NET_BIND_SERVICE
 
 [Install]
