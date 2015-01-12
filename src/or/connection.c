@@ -1234,18 +1234,10 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     }
 #endif
 
-    if (type == CONN_TYPE_CONTROL_LISTENER &&
-        options->ControlSocketsGroupWritable) {
-      /* We need to use chmod; fchmod doesn't work on sockets on all
-       * platforms. */
-      if (chmod(address, 0660) < 0) {
-        log_warn(LD_FS,"Unable to make %s group-writable.", address);
-        goto err;
-      }
-    }
-
-    if (type == CONN_TYPE_AP_LISTENER &&
-        options->SocksSocketsGroupWritable) {
+    if ((type == CONN_TYPE_CONTROL_LISTENER &&
+         options->ControlSocketsGroupWritable) ||
+        (type == CONN_TYPE_AP_LISTENER &&
+         options->SocksSocketsGroupWritable)) {
       /* We need to use chmod; fchmod doesn't work on sockets on all
        * platforms. */
       if (chmod(address, 0660) < 0) {
