@@ -126,6 +126,13 @@ else
         [libsystemd-daemon],
         have_systemd=yes,
         have_systemd=no)
+    if test x$have_systemd=xno; then
+        AC_MSG_NOTICE([Okay, checking for systemd a different way...])
+        PKG_CHECK_MODULES(SYSTEMD,
+            [libsystemd],
+            have_systemd=yes,
+            have_systemd=no)
+    fi
 fi
 
 if test x$have_systemd = xyes; then
