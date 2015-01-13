@@ -1075,7 +1075,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
   static int global_next_session_group = SESSION_GROUP_FIRST_AUTO;
   tor_addr_t addr;
 
-  if (get_n_open_sockets() >= get_options()->ConnLimit_-1) {
+  if (get_n_open_sockets() >= options->ConnLimit_-1) {
     warn_too_many_conns();
     return NULL;
   }
