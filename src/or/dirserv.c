@@ -2115,7 +2115,7 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
 
   /* Iff we are in a testing network, use TestingDirAuthVoteExit,
      TestingDirAuthVoteGuard, and TestingDirAuthVoteHSDir to
-     give out the Exit, Guard, and HSDir flags, respectively. 
+     give out the Exit, Guard, and HSDir flags, respectively.
      But don't set the corresponding node flags. */
   if (options->TestingTorNetwork) {
     if (routerset_contains_routerstatus(options->TestingDirAuthVoteExit,
