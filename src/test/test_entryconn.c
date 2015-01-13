@@ -641,8 +641,74 @@ test_entryconn_rewrite_mapaddress_automap_onion(void *arg)
   connection_free_(ENTRY_TO_CONN(ec2));
   connection_free_(ENTRY_TO_CONN(ec3));
   connection_free_(ENTRY_TO_CONN(ec4));
-
 }
+
+#if 0
+/* This fails because of #7555 */
+/* This time is the same, but we start with a mapping from a non-onion
+ * address. */
+static void
+test_entryconn_rewrite_mapaddress_automap_onion2(void *arg)
+{
+  entry_connection_t *ec = arg;
+  entry_connection_t *ec2 = NULL;
+  entry_connection_t *ec3 = NULL;
+  rewrite_result_t rr;
+
+  ec2 = entry_connection_new(CONN_TYPE_AP, AF_INET);
+  ec3 = entry_connection_new(CONN_TYPE_AP, AF_INET);
+
+  get_options_mutable()->AutomapHostsOnResolve = 1;
+  get_options_mutable()->AllowDotExit = 1;
+  smartlist_add(get_options_mutable()->AutomapHostsSuffixes,
+                tor_strdup(".onion"));
+  config_line_append(&get_options_mutable()->AddressMap,
+                     "MapAddress", "irc.example.com abcdefghijklmnop.onion");
+  config_register_addressmaps(get_options());
+
+  /* Connect to irc.example.com */
+  strlcpy(ec->socks_request->address, "irc.example.com",
+          sizeof(ec->socks_request->address));
+  ec->socks_request->command = SOCKS_COMMAND_CONNECT;
+  connection_ap_handshake_rewrite(ec, &rr);
+
+  tt_int_op(rr.automap, OP_EQ, 0);
+  tt_int_op(rr.should_close, OP_EQ, 0);
+  tt_int_op(rr.end_reason, OP_EQ, 0);
+  tt_i64_op(rr.map_expires, OP_EQ, TIME_MAX);
+  tt_int_op(rr.exit_source, OP_EQ, ADDRMAPSRC_NONE);
+  tt_str_op(rr.orig_address, OP_EQ, "irc.example.com");
+  tt_str_op(ec->socks_request->address, OP_EQ, "abcdefghijklmnop.onion");
+
+  /* Okay, resolve irc.example.com */
+  strlcpy(ec2->socks_request->address, "irc.example.com",
+          sizeof(ec2->socks_request->address));
+  ec2->socks_request->command = SOCKS_COMMAND_RESOLVE;
+  connection_ap_handshake_rewrite(ec2, &rr);
+
+  //  tt_int_op(rr.automap, OP_EQ, 1);
+  tt_int_op(rr.should_close, OP_EQ, 0);
+  tt_int_op(rr.end_reason, OP_EQ, 0);
+  tt_i64_op(rr.map_expires, OP_EQ, TIME_MAX);
+  tt_int_op(rr.exit_source, OP_EQ, ADDRMAPSRC_NONE);
+  tt_str_op(rr.orig_address, OP_EQ, "irc.example.com");
+  tt_assert(!strcmpstart(ec2->socks_request->address, "192.168."));
+
+  /* Now connect */
+  strlcpy(ec3->socks_request->address, ec2->socks_request->address,
+          sizeof(ec3->socks_request->address));
+  ec3->socks_request->command = SOCKS_COMMAND_CONNECT;
+  connection_ap_handshake_rewrite(ec3, &rr);
+  tt_int_op(rr.automap, OP_EQ, 0);
+  tt_int_op(rr.should_close, OP_EQ, 0);
+  tt_int_op(rr.end_reason, OP_EQ, 0);
+  tt_assert(!strcmpstart(ec3->socks_request->address, "abcdefghijklmnop.onion"));
+
+ done:
+  connection_free_(ENTRY_TO_CONN(ec2));
+  connection_free_(ENTRY_TO_CONN(ec3));
+}
+#endif
 
 #define REWRITE(name)                           \
   { #name, test_entryconn_##name, TT_FORK, &test_rewrite_setup, NULL }
@@ -661,6 +727,10 @@ struct testcase_t entryconn_tests[] = {
   REWRITE(rewrite_automap_exit),
   REWRITE(rewrite_mapaddress_exit),
   REWRITE(rewrite_mapaddress_automap_onion),
+  /*
+    This fails because of #7555
+  REWRITE(rewrite_mapaddress_automap_onion2),
+  */
   END_OF_TESTCASES
 };
 
