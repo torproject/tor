@@ -431,7 +431,7 @@ addressmap_rewrite(char *address, size_t maxlen,
   if (exit_source_out)
     *exit_source_out = exit_source;
   if (expires_out)
-    *expires_out = TIME_MAX;
+    *expires_out = expires;
   return (rewrites > 0);
 }
 
