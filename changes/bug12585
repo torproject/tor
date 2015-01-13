@@ -6,4 +6,4 @@
       with AF_UNIX, it may directly communicate with Tor as if it were an other
       SOCKS proxy. This should allow high risk applications to be entirely prevented
       from connecting directly with TCP/IP, they will be able to only connect to the
-      internet through AF_UNIX and only through Tor.
+      internet through AF_UNIX and only through Tor.  Closes ticket 12585.
