@@ -455,6 +455,8 @@ addressmap_rewrite_reverse(char *address, size_t maxlen, unsigned flags,
       return 0;
     else if (f == AF_INET6 && !(flags & AMR_FLAG_USE_IPV6_DNS))
       return 0;
+    /* FFFF we should reverse-map virtual addresses even if we haven't
+     * enabled DNS cacheing. */
   }
 
   tor_asprintf(&s, "REVERSE[%s]", address);
@@ -974,6 +976,8 @@ addressmap_register_virtual_address(int type, char *new_address)
   if (vent_needs_to_be_added)
     strmap_set(virtaddress_reversemap, new_address, vent);
   addressmap_register(*addrp, new_address, 2, ADDRMAPSRC_AUTOMAP, 0, 0);
+
+  /* FFFF register corresponding reverse mapping. */
 
 #if 0
   {
