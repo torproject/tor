@@ -2457,7 +2457,7 @@ cell_queues_check_size(void)
        */
       if (rend_cache_total > get_options()->MaxMemInQueues / 5) {
         const size_t bytes_to_remove =
-          rend_cache_total - (get_options()->MaxMemInQueues / 10);
+          rend_cache_total - (size_t)(get_options()->MaxMemInQueues / 10);
         rend_cache_clean_v2_descs_as_dir(time(NULL), bytes_to_remove);
         alloc -= rend_cache_total;
         alloc += rend_cache_get_total_allocation();
