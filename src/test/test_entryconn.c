@@ -643,7 +643,6 @@ test_entryconn_rewrite_mapaddress_automap_onion(void *arg)
   connection_free_(ENTRY_TO_CONN(ec4));
 }
 
-/* This fails because of #7555 */
 /* This time is the same, but we start with a mapping from a non-onion
  * address. */
 static void
