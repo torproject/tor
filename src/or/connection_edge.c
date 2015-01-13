@@ -924,6 +924,7 @@ connection_ap_handshake_rewrite(entry_connection_t *conn,
   out->map_expires = TIME_MAX;
   out->end_reason = 0;
   out->should_close = 0;
+  out->orig_address[0] = 0;
 
   tor_strlower(socks->address); /* normalize it */
   strlcpy(out->orig_address, socks->address, sizeof(out->orig_address));
