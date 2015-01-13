@@ -659,7 +659,6 @@ test_entryconn_rewrite_mapaddress_automap_onion2(void *arg)
   ec3 = entry_connection_new(CONN_TYPE_AP, AF_INET);
 
   get_options_mutable()->AutomapHostsOnResolve = 1;
-  get_options_mutable()->AllowDotExit = 1;
   smartlist_add(get_options_mutable()->AutomapHostsSuffixes,
                 tor_strdup(".onion"));
   parse_virtual_addr_network("192.168.0.0/16", AF_INET, 0, &msg);
