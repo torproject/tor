@@ -1508,8 +1508,6 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     }
 
   } else if (conn->socket_family == AF_UNIX && conn->type != CONN_TYPE_AP) {
-    /* For now only control ports can be Unix domain sockets
-     * and listeners at the same time */
     tor_assert(conn->type == CONN_TYPE_CONTROL_LISTENER);
     tor_assert(new_type == CONN_TYPE_CONTROL);
     log_notice(LD_CONTROL, "New control connection opened.");
