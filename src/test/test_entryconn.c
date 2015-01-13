@@ -100,7 +100,6 @@ test_entryconn_rewrite_automap_ipv4(void *arg)
   ec3 = entry_connection_new(CONN_TYPE_AP, AF_INET);
 
   get_options_mutable()->AutomapHostsOnResolve = 1;
-  get_options_mutable()->AutomapHostsSuffixes = smartlist_new();
   smartlist_add(get_options_mutable()->AutomapHostsSuffixes, tor_strdup("."));
   parse_virtual_addr_network("127.202.0.0/16", AF_INET, 0, &msg);
 
@@ -174,7 +173,6 @@ test_entryconn_rewrite_automap_ipv6(void *arg)
   ec3 = entry_connection_new(CONN_TYPE_AP, AF_INET6);
 
   get_options_mutable()->AutomapHostsOnResolve = 1;
-  get_options_mutable()->AutomapHostsSuffixes = smartlist_new();
   smartlist_add(get_options_mutable()->AutomapHostsSuffixes, tor_strdup("."));
   parse_virtual_addr_network("FE80::/32", AF_INET6, 0, &msg);
 
@@ -248,7 +246,6 @@ test_entryconn_rewrite_automap_reverse(void *arg)
   ec2 = entry_connection_new(CONN_TYPE_AP, AF_INET);
 
   get_options_mutable()->AutomapHostsOnResolve = 1;
-  get_options_mutable()->AutomapHostsSuffixes = smartlist_new();
   get_options_mutable()->SafeLogging_ = SAFELOG_SCRUB_NONE;
   smartlist_add(get_options_mutable()->AutomapHostsSuffixes,
                 tor_strdup(".bloom"));
@@ -492,7 +489,6 @@ test_entryconn_rewrite_automap_exit(void *arg)
   ec2 = entry_connection_new(CONN_TYPE_AP, AF_INET);
 
   get_options_mutable()->AutomapHostsOnResolve = 1;
-  get_options_mutable()->AutomapHostsSuffixes = smartlist_new();
   get_options_mutable()->AllowDotExit = 1;
   smartlist_add(get_options_mutable()->AutomapHostsSuffixes,
                 tor_strdup(".EXIT"));
@@ -578,7 +574,6 @@ test_entryconn_rewrite_mapaddress_automap_onion(void *arg)
   ec4 = entry_connection_new(CONN_TYPE_AP, AF_INET);
 
   get_options_mutable()->AutomapHostsOnResolve = 1;
-  get_options_mutable()->AutomapHostsSuffixes = smartlist_new();
   get_options_mutable()->AllowDotExit = 1;
   smartlist_add(get_options_mutable()->AutomapHostsSuffixes,
                 tor_strdup(".onion"));
