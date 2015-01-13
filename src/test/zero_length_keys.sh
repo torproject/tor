@@ -26,7 +26,9 @@ if [ $# -lt 1 ]; then
 fi
 
 export DATA_DIR=`mktemp -d -t tor_zero_length_keys`
-TOR="src/or/tor --hush --DisableNetwork 1 --ShutdownWaitLength 0 --ORPort 12345"
+# DisableNetwork means that the ORPort won't actually be opened.
+# 'ExitRelay 0' suppresses a warning.
+TOR="./src/or/tor --hush --DisableNetwork 1 --ShutdownWaitLength 0 --ORPort 12345 --ExitRelay 0"
 
 if [ -s "$DATA_DIR"/keys/secret_id_key -a -s "$DATA_DIR"/keys/secret_onion_key -a -s "$DATA_DIR"/keys/secret_onion_key_ntor ]; then
   echo "Failure: Previous tor keys present in tor data directory"

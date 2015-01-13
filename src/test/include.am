@@ -122,7 +122,7 @@ if USEPYTHON
 	./src/test/test-bt-cl assert | $(PYTHON) $(top_srcdir)/src/test/bt_test.py
 	./src/test/test-bt-cl crash | $(PYTHON) $(top_srcdir)/src/test/bt_test.py
 endif
-	./src/test/zero_length_keys.sh
+	$(top_srcdir)/src/test/zero_length_keys.sh
 
 EXTRA_DIST += \
 	src/test/bt_test.py \
