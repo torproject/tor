@@ -25,7 +25,7 @@ if [ $# -lt 1 ]; then
   exit $?
 fi
 
-export DATA_DIR=`mktemp -d -t tor_zero_length_keys`
+export DATA_DIR=`mktemp -d -t tor_zero_length_keys.XXXXXX`
 # DisableNetwork means that the ORPort won't actually be opened.
 # 'ExitRelay 0' suppresses a warning.
 TOR="./src/or/tor --hush --DisableNetwork 1 --ShutdownWaitLength 0 --ORPort 12345 --ExitRelay 0"
