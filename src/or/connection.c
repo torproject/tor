@@ -1244,6 +1244,16 @@ connection_listener_new(const struct sockaddr *listensockaddr,
         log_warn(LD_FS,"Unable to make %s group-writable.", address);
         goto err;
       }
+    } else if ((type == CONN_TYPE_CONTROL_LISTENER &&
+                !(options->ControlSocketsGroupWritable)) ||
+               (type == CONN_TYPE_AP_LISTENER &&
+                !(options->SocksSocketsGroupWritable))) {
+      /* We need to use chmod; fchmod doesn't work on sockets on all
+       * platforms. */
+      if (chmod(address, 0600) < 0) {
+        log_warn(LD_FS,"Unable to make %s group-writable.", address);
+        goto err;
+      }
     }
 
     if (listen(s, SOMAXCONN) < 0) {
