@@ -68,7 +68,7 @@ if [ "$1" != "-e" ]; then
 fi
 
 # create empty files for -z
-if [ "$1" == "-z" ]; then
+if [ "$1" = "-z" ]; then
   FILE_DESC="regenerates zero-length"
   touch "$DATA_DIR"/keys/secret_id_key || exit -1
   touch "$DATA_DIR"/keys/secret_onion_key || exit -1
