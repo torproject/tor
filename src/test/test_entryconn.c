@@ -687,7 +687,7 @@ test_entryconn_rewrite_mapaddress_automap_onion2(void *arg)
   ec2->socks_request->command = SOCKS_COMMAND_RESOLVE;
   connection_ap_handshake_rewrite(ec2, &rr);
 
-  //  tt_int_op(rr.automap, OP_EQ, 1);
+  tt_int_op(rr.automap, OP_EQ, 1);
   tt_int_op(rr.should_close, OP_EQ, 0);
   tt_int_op(rr.end_reason, OP_EQ, 0);
   tt_i64_op(rr.map_expires, OP_EQ, TIME_MAX);
