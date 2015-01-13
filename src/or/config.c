@@ -6053,6 +6053,20 @@ parse_unix_socket_config(smartlist_t *out, smartlist_t *defaults,
       port->is_unix_addr = 1;
       memcpy(port->unix_addr, cfg->value, len+1);
       port->type = listener_type;
+      if (listener_type == CONN_TYPE_AP_LISTENER) {
+        /* Some more bits to twiddle for this case
+         *
+         * XXX this should support parsing the same options
+         * parse_port_config() does, and probably that code should be
+         * factored out into a function we can call from here.  For
+         * now, some reasonable defaults.
+         */
+
+        port->ipv4_traffic = 1;
+        port->ipv6_traffic = 1;
+        port->cache_ipv4_answers = 1;
+        port->cache_ipv6_answers = 1;
+      }
       smartlist_add(ports_to_add, port);
     } else {
       /* Keep track that we've seen a disable */
