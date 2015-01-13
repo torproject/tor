@@ -121,6 +121,15 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
   }
 }
 
+/** Set address <b>a</b> to zero.  This address belongs to
+ * the AF_UNIX family. */
+static void
+tor_addr_make_af_unix(tor_addr_t *a)
+{
+  memset(a, 0, sizeof(*a));
+  a->family = AF_UNIX;
+}
+
 /** Set the tor_addr_t in <b>a</b> to contain the socket address contained in
  * <b>sa</b>. */
 int
@@ -142,6 +151,9 @@ tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa,
     tor_addr_from_in6(a, &sin6->sin6_addr);
     if (port_out)
       *port_out = ntohs(sin6->sin6_port);
+  } else if (sa->sa_family == AF_UNIX) {
+    tor_addr_make_af_unix(a);
+    return 0;
   } else {
     tor_addr_make_unspec(a);
     return -1;
@@ -420,6 +432,10 @@ tor_addr_to_str(char *dest, const tor_addr_t *addr, size_t len, int decorate)
         tor_assert(ptr == dest+1);
         ptr = dest;
       }
+      break;
+    case AF_UNIX:
+      tor_snprintf(dest, len, "AF_UNIX");
+      ptr = dest;
       break;
     default:
       return NULL;
@@ -816,6 +832,8 @@ tor_addr_is_null(const tor_addr_t *addr)
     }
     case AF_INET:
       return (tor_addr_to_ipv4n(addr) == 0);
+    case AF_UNIX:
+      return 1;
     case AF_UNSPEC:
       return 1;
     default:

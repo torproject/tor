@@ -200,6 +200,8 @@ static config_var_t option_vars_[] = {
   V(ControlPortWriteToFile,      FILENAME, NULL),
   V(ControlSocket,               LINELIST, NULL),
   V(ControlSocketsGroupWritable, BOOL,     "0"),
+  V(SocksSocket,                 LINELIST, NULL),
+  V(SocksSocketsGroupWritable,   BOOL,     "0"),
   V(CookieAuthentication,        BOOL,     "0"),
   V(CookieAuthFileGroupReadable, BOOL,     "0"),
   V(CookieAuthFile,              STRING,   NULL),
@@ -1043,6 +1045,20 @@ options_act_reversible(const or_options_t *old_options, char **msg)
   if (options->ControlSocketsGroupWritable && !options->ControlSocket) {
     *msg = tor_strdup("Setting ControlSocketGroupWritable without setting"
                       "a ControlSocket makes no sense.");
+    goto rollback;
+  }
+#endif
+
+#ifndef HAVE_SYS_UN_H
+  if (options->SocksSocket || options->SocksSocketsGroupWritable) {
+    *msg = tor_strdup("Unix domain sockets (SocksSocket) not supported "
+                      "on this OS/with this build.");
+    goto rollback;
+  }
+#else
+  if (options->SocksSocketsGroupWritable && !options->SocksSocket) {
+    *msg = tor_strdup("Setting SocksSocketGroupWritable without setting"
+                      "a SocksSocket makes no sense.");
     goto rollback;
   }
 #endif
@@ -6034,22 +6050,87 @@ parse_port_config(smartlist_t *out,
 
 /** Parse a list of config_line_t for an AF_UNIX unix socket listener option
  * from <b>cfg</b> and add them to <b>out</b>.  No fancy options are
- * supported: the line contains nothing but the path to the AF_UNIX socket. */
+ * supported: the line contains nothing but the path to the AF_UNIX socket.
+ * We support a *Socket 0 syntax to explicitly disable if we enable by
+ * default.  To use this, pass a non-NULL list containing the default
+ * paths into this function as the 2nd parameter, and if no config lines at all
+ * are present they will be added to the output list.  If the only config line
+ * present is '0' the input list will be unmodified.
+ */
 static int
-parse_unix_socket_config(smartlist_t *out, const config_line_t *cfg,
-                         int listener_type)
+parse_unix_socket_config(smartlist_t *out, smartlist_t *defaults,
+                         const config_line_t *cfg, int listener_type)
 {
+  /* We can say things like SocksSocket 0 or ControlSocket 0 to explicitly
+   * disable this feature; use this to track if we've seen a disable line
+   */
+
+  int unix_socket_disable = 0;
+  size_t len;
+  smartlist_t *ports_to_add = NULL;
 
   if (!out)
     return 0;
 
+  ports_to_add = smartlist_new();
+
   for ( ; cfg; cfg = cfg->next) {
-    size_t len = strlen(cfg->value);
-    port_cfg_t *port = tor_malloc_zero(sizeof(port_cfg_t) + len + 1);
-    port->is_unix_addr = 1;
-    memcpy(port->unix_addr, cfg->value, len+1);
-    port->type = listener_type;
-    smartlist_add(out, port);
+    if (strcmp(cfg->value, "0") != 0) {
+      /* We have a non-disable; add it */
+      len = strlen(cfg->value);
+      port_cfg_t *port = tor_malloc_zero(sizeof(port_cfg_t) + len + 1);
+      port->is_unix_addr = 1;
+      memcpy(port->unix_addr, cfg->value, len+1);
+      port->type = listener_type;
+      if (listener_type == CONN_TYPE_AP_LISTENER) {
+        /* Some more bits to twiddle for this case
+         *
+         * XXX this should support parsing the same options
+         * parse_port_config() does, and probably that code should be
+         * factored out into a function we can call from here.  For
+         * now, some reasonable defaults.
+         */
+
+        port->ipv4_traffic = 1;
+        port->ipv6_traffic = 1;
+        port->cache_ipv4_answers = 1;
+        port->cache_ipv6_answers = 1;
+      }
+      smartlist_add(ports_to_add, port);
+    } else {
+      /* Keep track that we've seen a disable */
+      unix_socket_disable = 1;
+    }
+  }
+
+  if (unix_socket_disable) {
+    if (smartlist_len(ports_to_add) > 0) {
+      /* We saw a disable line and a path; bad news */
+      SMARTLIST_FOREACH(ports_to_add, port_cfg_t *, port, tor_free(port));
+      smartlist_free(ports_to_add);
+      return -1;
+    }
+    /* else we have a disable and nothing else, so add nothing to out */
+  } else {
+    /* No disable; do we have any ports to add that we parsed? */
+    if (smartlist_len(ports_to_add) > 0) {
+      SMARTLIST_FOREACH_BEGIN(ports_to_add, port_cfg_t *, port) {
+        smartlist_add(out, port);
+      } SMARTLIST_FOREACH_END(port);
+    } else if (defaults != NULL && smartlist_len(defaults) > 0) {
+      /* No, but we have some defaults to copy */
+      SMARTLIST_FOREACH_BEGIN(defaults, const port_cfg_t *, defport) {
+        tor_assert(defport->is_unix_addr);
+        tor_assert(defport->unix_addr);
+        len = sizeof(port_cfg_t) + strlen(defport->unix_addr) + 1;
+        port_cfg_t *port = tor_malloc_zero(len);
+        memcpy(port, defport, len);
+        smartlist_add(out, port);
+      } SMARTLIST_FOREACH_END(defport);
+    }
+
+    /* Free the temporary smartlist we used */
+    smartlist_free(ports_to_add);
   }
 
   return 0;
@@ -6143,10 +6224,17 @@ parse_ports(or_options_t *options, int validate_only,
                         "configuration");
       goto err;
     }
-    if (parse_unix_socket_config(ports,
+
+    if (parse_unix_socket_config(ports, NULL,
                                  options->ControlSocket,
                                  CONN_TYPE_CONTROL_LISTENER) < 0) {
       *msg = tor_strdup("Invalid ControlSocket configuration");
+      goto err;
+    }
+    if (parse_unix_socket_config(ports, NULL,
+                                 options->SocksSocket,
+                                 CONN_TYPE_AP_LISTENER) < 0) {
+      *msg = tor_strdup("Invalid SocksSocket configuration");
       goto err;
     }
   }
@@ -6191,6 +6279,8 @@ parse_ports(or_options_t *options, int validate_only,
   options->ORPort_set =
     !! count_real_listeners(ports, CONN_TYPE_OR_LISTENER);
   options->SocksPort_set =
+    !! count_real_listeners(ports, CONN_TYPE_AP_LISTENER);
+  options->SocksSocket_set =
     !! count_real_listeners(ports, CONN_TYPE_AP_LISTENER);
   options->TransPort_set =
     !! count_real_listeners(ports, CONN_TYPE_AP_TRANS_LISTENER);
