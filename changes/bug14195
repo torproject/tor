@@ -1,0 +1,3 @@
+  o Minor bugfixes (client):
+    - Fix a memory leak when using AutomapHostsOnResolve.
+      Fixes bug 14195; bugfix on 0.1.0.1-rc.

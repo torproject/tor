@@ -957,7 +957,7 @@ addressmap_register_virtual_address(int type, char *new_address)
         !strcasecmp(new_address, ent->new_address)) {
       tor_free(new_address);
       tor_assert(!vent_needs_to_be_added);
-      return tor_strdup(*addrp);
+      return *addrp;
     } else {
       log_warn(LD_BUG,
                "Internal confusion: I thought that '%s' was mapped to by "
