@@ -170,11 +170,6 @@ update_state_threadfn(void *state_, void *work_)
   ++state->generation;
   return WQ_RPL_REPLY;
 }
-static void
-update_state_replyfn(void *work_)
-{
-  tor_free(work_);
-}
 
 /** Called when the onion key has changed and we need to spawn new
  * cpuworkers.  Close all currently idle cpuworkers, and mark the last
@@ -183,11 +178,11 @@ update_state_replyfn(void *work_)
 void
 cpuworkers_rotate_keyinfo(void)
 {
-  if (threadpool_queue_for_all(threadpool,
-                               worker_state_new,
-                               update_state_threadfn,
-                               update_state_replyfn,
-                               NULL)) {
+  if (threadpool_queue_update(threadpool,
+                              worker_state_new,
+                              update_state_threadfn,
+                              worker_state_free,
+                              NULL)) {
     log_warn(LD_OR, "Failed to queue key update for worker threads.");
   }
 }

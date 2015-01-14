@@ -132,7 +132,6 @@ new_state(void *arg)
   /* Every thread gets its own keys. not a problem for benchmarking */
   st->rsa = crypto_pk_new();
   if (crypto_pk_generate_key_with_bits(st->rsa, 1024) < 0) {
-    puts("keygen failed");
     crypto_pk_free(st->rsa);
     tor_free(st);
     return NULL;
@@ -213,7 +212,6 @@ add_n_work_items(threadpool_t *tp, int n)
   while (n_queued++ < n) {
     ent = add_work(tp);
     if (! ent) {
-      puts("Couldn't add work.");
       tor_event_base_loopexit(tor_libevent_get_base(), NULL);
       return -1;
     }
@@ -238,18 +236,6 @@ add_n_work_items(threadpool_t *tp, int n)
 }
 
 static int shutting_down = 0;
-static int n_shutdowns_done = 0;
-
-static void
-shutdown_reply(void *arg)
-{
-  (void)arg;
-  tor_assert(shutting_down);
-  ++n_shutdowns_done;
-  if (n_shutdowns_done == opt_n_threads) {
-    tor_event_base_loopexit(tor_libevent_get_base(), NULL);
-  }
-}
 
 static void
 replysock_readable_cb(tor_socket_t sock, short what, void *arg)
@@ -297,8 +283,8 @@ replysock_readable_cb(tor_socket_t sock, short what, void *arg)
       n_received+n_successful_cancel == n_sent &&
       n_sent >= opt_n_items) {
     shutting_down = 1;
-    threadpool_queue_for_all(tp, NULL,
-                             workqueue_do_shutdown, shutdown_reply, NULL);
+    threadpool_queue_update(tp, NULL,
+                             workqueue_do_shutdown, NULL, NULL);
   }
 }
 
@@ -410,8 +396,9 @@ main(int argc, char **argv)
 
   event_base_loop(tor_libevent_get_base(), 0);
 
-  if (n_sent != opt_n_items || n_received+n_successful_cancel != n_sent ||
-      n_shutdowns_done != opt_n_threads) {
+  if (n_sent != opt_n_items || n_received+n_successful_cancel != n_sent) {
+    printf("%d vs %d\n", n_sent, opt_n_items);
+    printf("%d+%d vs %d\n", n_received, n_successful_cancel, n_sent);
     puts("FAIL");
     return 1;
   } else {

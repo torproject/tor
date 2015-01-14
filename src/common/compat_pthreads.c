@@ -5,6 +5,7 @@
 
 #include "orconfig.h"
 #include <pthread.h>
+#include <signal.h>
 
 #include "compat.h"
 #include "torlog.h"
