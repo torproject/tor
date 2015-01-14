@@ -439,7 +439,7 @@ static config_var_t option_vars_[] = {
   VAR("__HashedControlSessionPassword", LINELIST, HashedControlSessionPassword,
       NULL),
   VAR("__OwningControllerProcess",STRING,OwningControllerProcess, NULL),
-  V(MinUptimeHidServDirectoryV2, INTERVAL, "25 hours"),
+  V(MinUptimeHidServDirectoryV2, INTERVAL, "96 hours"),
   V(VoteOnHidServDirectoriesV2,  BOOL,     "1"),
   V(TestingServerDownloadSchedule, CSV_INTERVAL, "0, 0, 0, 60, 60, 120, "
                                  "300, 900, 2147483647"),
