@@ -4654,25 +4654,25 @@ test_util_laplace(void *arg)
   const double delta_f = 15.0, epsilon = 0.3; /* b = 15.0 / 0.3 = 50.0 */
   (void)arg;
 
-  tt_int_op(INT64_MIN, ==, sample_laplace_distribution(mu, b, 0.0));
-  tt_int_op(-69, ==, sample_laplace_distribution(mu, b, 0.01));
-  tt_int_op(24, ==, sample_laplace_distribution(mu, b, 0.5));
-  tt_int_op(24, ==, sample_laplace_distribution(mu, b, 0.51));
-  tt_int_op(117, ==, sample_laplace_distribution(mu, b, 0.99));
+  tt_i64_op(INT64_MIN, ==, sample_laplace_distribution(mu, b, 0.0));
+  tt_i64_op(-69, ==, sample_laplace_distribution(mu, b, 0.01));
+  tt_i64_op(24, ==, sample_laplace_distribution(mu, b, 0.5));
+  tt_i64_op(24, ==, sample_laplace_distribution(mu, b, 0.51));
+  tt_i64_op(117, ==, sample_laplace_distribution(mu, b, 0.99));
 
   /* >>> laplace.ppf([0.0, 0.1, 0.25, 0.5, 0.75, 0.9, 0.99],
    * ...             loc = 0, scale = 50)
    * array([         -inf,  -80.47189562,  -34.65735903,    0.        ,
    *          34.65735903,   80.47189562,  195.60115027])
    */
-  tt_int_op(INT64_MIN + 20, ==,
+  tt_i64_op(INT64_MIN + 20, ==,
             add_laplace_noise(20, 0.0, delta_f, epsilon));
-  tt_int_op(-60, ==, add_laplace_noise(20, 0.1, delta_f, epsilon));
-  tt_int_op(-14, ==, add_laplace_noise(20, 0.25, delta_f, epsilon));
-  tt_int_op(20, ==, add_laplace_noise(20, 0.5, delta_f, epsilon));
-  tt_int_op(54, ==, add_laplace_noise(20, 0.75, delta_f, epsilon));
-  tt_int_op(100, ==, add_laplace_noise(20, 0.9, delta_f, epsilon));
-  tt_int_op(215, ==, add_laplace_noise(20, 0.99, delta_f, epsilon));
+  tt_i64_op(-60, ==, add_laplace_noise(20, 0.1, delta_f, epsilon));
+  tt_i64_op(-14, ==, add_laplace_noise(20, 0.25, delta_f, epsilon));
+  tt_i64_op(20, ==, add_laplace_noise(20, 0.5, delta_f, epsilon));
+  tt_i64_op(54, ==, add_laplace_noise(20, 0.75, delta_f, epsilon));
+  tt_i64_op(100, ==, add_laplace_noise(20, 0.9, delta_f, epsilon));
+  tt_i64_op(215, ==, add_laplace_noise(20, 0.99, delta_f, epsilon));
 
  done:
   ;
