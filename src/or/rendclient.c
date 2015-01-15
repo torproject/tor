@@ -547,7 +547,12 @@ directory_clean_last_hid_serv_requests(time_t now)
 
 /** Remove all requests related to the hidden service named
  * <b>onion_address</b> from the history of times of requests to
- * hidden service directories. */
+ * hidden service directories.
+ *
+ * This is called from rend_client_note_connection_attempt_ended(), which
+ * must be idempotent, so any future changes to this function must leave
+ * it idempotent too.
+ */
 static void
 purge_hid_serv_from_last_hid_serv_requests(const char *onion_address)
 {
@@ -1076,8 +1081,11 @@ rend_client_desc_trynow(const char *query)
 
 /** Clear temporary state used only during an attempt to connect to
  * the hidden service named <b>onion_address</b>.  Called when a
- * connection attempt has ended; may be called occasionally at other
- * times, and should be reasonably harmless. */
+ * connection attempt has ended; it is possible for this to be called
+ * multiple times while handling an ended connection attempt, and
+ * any future changes to this functio n must ensure it remains
+ * idempotent.
+ */
 void
 rend_client_note_connection_attempt_ended(const char *onion_address)
 {
