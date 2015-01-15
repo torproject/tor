@@ -173,7 +173,7 @@ unsigned round_to_next_multiple_of(unsigned number, unsigned divisor);
 uint32_t round_uint32_to_next_multiple_of(uint32_t number, uint32_t divisor);
 uint64_t round_uint64_to_next_multiple_of(uint64_t number, uint64_t divisor);
 int64_t round_int64_to_next_multiple_of(int64_t number, int64_t divisor);
-double sample_laplace_distribution(double mu, double b, double p);
+int64_t sample_laplace_distribution(double mu, double b, double p);
 int64_t add_laplace_noise(int64_t signal, double random, double delta_f,
                           double epsilon);
 int n_bits_set_u8(uint8_t v);

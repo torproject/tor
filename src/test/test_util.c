@@ -4654,11 +4654,11 @@ test_util_laplace(void *arg)
   const double delta_f = 15.0, epsilon = 0.3; /* b = 15.0 / 0.3 = 50.0 */
   (void)arg;
 
-  tt_assert(isinf(sample_laplace_distribution(mu, b, 0.0)));
-  test_feq(-69.88855213, sample_laplace_distribution(mu, b, 0.01));
-  test_feq(24.0, sample_laplace_distribution(mu, b, 0.5));
-  test_feq(24.48486498, sample_laplace_distribution(mu, b, 0.51));
-  test_feq(117.88855213, sample_laplace_distribution(mu, b, 0.99));
+  tt_int_op(INT64_MIN, ==, sample_laplace_distribution(mu, b, 0.0));
+  tt_int_op(-69, ==, sample_laplace_distribution(mu, b, 0.01));
+  tt_int_op(24, ==, sample_laplace_distribution(mu, b, 0.5));
+  tt_int_op(24, ==, sample_laplace_distribution(mu, b, 0.51));
+  tt_int_op(117, ==, sample_laplace_distribution(mu, b, 0.99));
 
   /* >>> laplace.ppf([0.0, 0.1, 0.25, 0.5, 0.75, 0.9, 0.99],
    * ...             loc = 0, scale = 50)
