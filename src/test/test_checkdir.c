@@ -11,6 +11,7 @@
 #ifdef _WIN32
 #define mkdir(a,b) mkdir(a)
 #define tt_int_op_nowin(a,op,b) do { (void)(a); (void)(b); } while (0)
+#define umask(mask) ((void)0)
 #else
 #define tt_int_op_nowin(a,op,b) tt_int_op((a),op,(b))
 #endif
@@ -27,6 +28,8 @@ test_checkdir_perms(void *testdata)
   cpd_check_t  unix_create_opts;
   cpd_check_t  unix_verify_optsmask;
   struct stat st;
+
+  umask(022);
 
   /* setup data directory before tests. */
   tor_free(options->DataDirectory);
@@ -134,7 +137,7 @@ test_checkdir_perms(void *testdata)
   { #name, test_checkdir_##name, (flags), NULL, NULL }
 
 struct testcase_t checkdir_tests[] = {
-  CHECKDIR(perms, 0),
+  CHECKDIR(perms, TT_FORK),
   END_OF_TESTCASES
 };
 

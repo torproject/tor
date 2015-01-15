@@ -1,0 +1,5 @@
+  o Minor bugfixes (tests):
+    - Make the checkdir/perms test complete successfully even if the
+      global umask is not 022. Fixes bug 14215; bugfix on 0.2.6.2-alpha.
+
+
