@@ -4614,26 +4614,26 @@ test_util_round_to_next_multiple_of(void *arg)
 {
   (void)arg;
 
-  tt_assert(round_uint64_to_next_multiple_of(0,1) == 0);
-  tt_assert(round_uint64_to_next_multiple_of(0,7) == 0);
+  tt_int_op(round_uint64_to_next_multiple_of(0,1), ==, 0);
+  tt_int_op(round_uint64_to_next_multiple_of(0,7), ==, 0);
 
-  tt_assert(round_uint64_to_next_multiple_of(99,1) == 99);
-  tt_assert(round_uint64_to_next_multiple_of(99,7) == 105);
-  tt_assert(round_uint64_to_next_multiple_of(99,9) == 99);
+  tt_int_op(round_uint64_to_next_multiple_of(99,1), ==, 99);
+  tt_int_op(round_uint64_to_next_multiple_of(99,7), ==, 105);
+  tt_int_op(round_uint64_to_next_multiple_of(99,9), ==, 99);
 
-  tt_assert(round_int64_to_next_multiple_of(0,1) == 0);
-  tt_assert(round_int64_to_next_multiple_of(0,7) == 0);
+  tt_int_op(round_int64_to_next_multiple_of(0,1), ==, 0);
+  tt_int_op(round_int64_to_next_multiple_of(0,7), ==, 0);
 
-  tt_assert(round_int64_to_next_multiple_of(99,1) == 99);
-  tt_assert(round_int64_to_next_multiple_of(99,7) == 105);
-  tt_assert(round_int64_to_next_multiple_of(99,9) == 99);
+  tt_int_op(round_int64_to_next_multiple_of(99,1), ==, 99);
+  tt_int_op(round_int64_to_next_multiple_of(99,7), ==, 105);
+  tt_int_op(round_int64_to_next_multiple_of(99,9), ==, 99);
 
-  tt_assert(round_int64_to_next_multiple_of(-99,1) == -99);
-  tt_assert(round_int64_to_next_multiple_of(-99,7) == -98);
-  tt_assert(round_int64_to_next_multiple_of(-99,9) == -99);
+  tt_int_op(round_int64_to_next_multiple_of(-99,1), ==, -99);
+  tt_int_op(round_int64_to_next_multiple_of(-99,7), ==, -98);
+  tt_int_op(round_int64_to_next_multiple_of(-99,9), ==, -99);
 
-  tt_assert(round_int64_to_next_multiple_of(INT64_MIN,2) == INT64_MIN);
-  tt_assert(round_int64_to_next_multiple_of(INT64_MAX,2) ==
+  tt_int_op(round_int64_to_next_multiple_of(INT64_MIN,2), ==, INT64_MIN);
+  tt_int_op(round_int64_to_next_multiple_of(INT64_MAX,2), ==,
                                             INT64_MAX-INT64_MAX%2);
  done:
   ;
@@ -4665,14 +4665,15 @@ test_util_laplace(void *arg)
    * array([         -inf,  -80.47189562,  -34.65735903,    0.        ,
    *          34.65735903,   80.47189562,  195.60115027])
    */
-  tt_assert(INT64_MIN + 20 ==
+  tt_int_op(INT64_MIN + 20, ==,
             add_laplace_noise(20, 0.0, delta_f, epsilon));
-  tt_assert(-60 == add_laplace_noise(20, 0.1, delta_f, epsilon));
-  tt_assert(-14 == add_laplace_noise(20, 0.25, delta_f, epsilon));
-  tt_assert(20 == add_laplace_noise(20, 0.5, delta_f, epsilon));
-  tt_assert(54 == add_laplace_noise(20, 0.75, delta_f, epsilon));
-  tt_assert(100 == add_laplace_noise(20, 0.9, delta_f, epsilon));
-  tt_assert(215 == add_laplace_noise(20, 0.99, delta_f, epsilon));
+  tt_int_op(-60, ==, add_laplace_noise(20, 0.1, delta_f, epsilon));
+  tt_int_op(-14, ==, add_laplace_noise(20, 0.25, delta_f, epsilon));
+  tt_int_op(20, ==, add_laplace_noise(20, 0.5, delta_f, epsilon));
+  tt_int_op(54, ==, add_laplace_noise(20, 0.75, delta_f, epsilon));
+  tt_int_op(100, ==, add_laplace_noise(20, 0.9, delta_f, epsilon));
+  tt_int_op(215, ==, add_laplace_noise(20, 0.99, delta_f, epsilon));
+
  done:
   ;
 }
