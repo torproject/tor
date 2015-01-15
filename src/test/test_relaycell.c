@@ -104,7 +104,7 @@ test_relaycell_resolved(void *arg)
       tt_int_op(srm_answer_is_set, ==, 0);                        \
     }                                                             \
     tt_int_op(srm_ttl, ==, ttl);                                  \
-    tt_int_op(srm_expires, ==, expires);                          \
+    tt_i64_op((int64_t)srm_expires, ==, (int64_t)expires);        \
   } while (0)
 
   (void)arg;
