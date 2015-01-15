@@ -1083,7 +1083,7 @@ rend_client_desc_trynow(const char *query)
  * the hidden service named <b>onion_address</b>.  Called when a
  * connection attempt has ended; it is possible for this to be called
  * multiple times while handling an ended connection attempt, and
- * any future changes to this functio n must ensure it remains
+ * any future changes to this function must ensure it remains
  * idempotent.
  */
 void
