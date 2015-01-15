@@ -350,6 +350,8 @@ circuit_end_reason_to_control_string(int reason)
       return "NOSUCHSERVICE";
     case END_CIRC_REASON_MEASUREMENT_EXPIRED:
       return "MEASUREMENT_EXPIRED";
+    case END_CIRC_REASON_IP_NOW_REDUNDANT:
+      return "IP_NOW_REDUNDANT";
     default:
       if (is_remote) {
         /*
