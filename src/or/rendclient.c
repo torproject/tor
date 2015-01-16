@@ -468,6 +468,10 @@ rend_client_introduction_acked(origin_circuit_t *circ,
       /* XXXX If that call failed, should we close the rend circuit,
        * too? */
       return result;
+    } else {
+      /* Close circuit because no more intro points are usable thus this
+       * circuit is not useful anymore. */
+      circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
     }
   }
   return 0;
