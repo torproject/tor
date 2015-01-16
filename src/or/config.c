@@ -6441,8 +6441,6 @@ write_configuration_file(const char *fname, const or_options_t *options)
   if (!fname)
     return -1;
 
-  tor_assert(fname);
-
   switch (file_status(fname)) {
     case FN_FILE:
       old_val = read_file_to_str(fname, 0, NULL);
