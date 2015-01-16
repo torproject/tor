@@ -676,10 +676,10 @@ client_dns_set_addressmap(entry_connection_t *for_conn,
     return; /* If address was an IP address already, don't add a mapping. */
 
   if (tor_addr_family(val) == AF_INET) {
-    if (! for_conn->cache_ipv4_answers)
+    if (! for_conn->entry_cfg.cache_ipv4_answers)
       return;
   } else if (tor_addr_family(val) == AF_INET6) {
-    if (! for_conn->cache_ipv6_answers)
+    if (! for_conn->entry_cfg.cache_ipv6_answers)
       return;
   }
 
@@ -708,8 +708,8 @@ client_dns_set_reverse_addressmap(entry_connection_t *for_conn,
   {
     tor_addr_t tmp_addr;
     sa_family_t f = tor_addr_parse(&tmp_addr, address);
-    if ((f == AF_INET && ! for_conn->cache_ipv4_answers) ||
-        (f == AF_INET6 && ! for_conn->cache_ipv6_answers))
+    if ((f == AF_INET && ! for_conn->entry_cfg.cache_ipv4_answers) ||
+        (f == AF_INET6 && ! for_conn->entry_cfg.cache_ipv6_answers))
       return;
   }
   tor_asprintf(&s, "REVERSE[%s]", address);

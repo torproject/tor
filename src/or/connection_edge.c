@@ -968,9 +968,9 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       const char *new_addr;
       int addr_type = RESOLVED_TYPE_IPV4;
       if (conn->socks_request->socks_version != 4) {
-        if (!conn->ipv4_traffic_ok ||
-            (conn->ipv6_traffic_ok && conn->prefer_ipv6_traffic) ||
-            conn->prefer_ipv6_virtaddr)
+        if (!conn->entry_cfg.ipv4_traffic ||
+            (conn->entry_cfg.ipv6_traffic && conn->entry_cfg.prefer_ipv6) ||
+            conn->entry_cfg.prefer_ipv6_virtaddr)
           addr_type = RESOLVED_TYPE_IPV6;
       }
       new_addr = addressmap_register_virtual_address(
@@ -990,9 +990,9 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
 
   if (socks->command == SOCKS_COMMAND_RESOLVE_PTR) {
     unsigned rewrite_flags = 0;
-    if (conn->use_cached_ipv4_answers)
+    if (conn->entry_cfg.use_cached_ipv4_answers)
       rewrite_flags |= AMR_FLAG_USE_IPV4_DNS;
-    if (conn->use_cached_ipv6_answers)
+    if (conn->entry_cfg.use_cached_ipv6_answers)
       rewrite_flags |= AMR_FLAG_USE_IPV6_DNS;
 
     if (addressmap_rewrite_reverse(socks->address, sizeof(socks->address),
@@ -1028,9 +1028,9 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
   } else if (!automap) {
     /* For address map controls, remap the address. */
     unsigned rewrite_flags = 0;
-    if (conn->use_cached_ipv4_answers)
+    if (conn->entry_cfg.use_cached_ipv4_answers)
       rewrite_flags |= AMR_FLAG_USE_IPV4_DNS;
-    if (conn->use_cached_ipv6_answers)
+    if (conn->entry_cfg.use_cached_ipv6_answers)
       rewrite_flags |= AMR_FLAG_USE_IPV6_DNS;
     if (addressmap_rewrite(socks->address, sizeof(socks->address),
                            rewrite_flags, &map_expires, &exit_source)) {
@@ -1235,8 +1235,8 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
         /* XXX Duplicate call to tor_addr_parse. */
         if (tor_addr_parse(&addr, socks->address) >= 0) {
           sa_family_t family = tor_addr_family(&addr);
-          if ((family == AF_INET && ! conn->ipv4_traffic_ok) ||
-              (family == AF_INET6 && ! conn->ipv4_traffic_ok)) {
+          if ((family == AF_INET && ! conn->entry_cfg.ipv4_traffic) ||
+              (family == AF_INET6 && ! conn->entry_cfg.ipv4_traffic)) {
             log_warn(LD_NET, "Rejecting SOCKS request for an IP address "
                      "family that this listener does not support.");
             connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
@@ -1245,21 +1245,21 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
             log_warn(LD_NET, "Rejecting SOCKS4 request for an IPv6 address.");
             connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
             return -1;
-          } else if (socks->socks_version == 4 && !conn->ipv4_traffic_ok) {
+          } else if (socks->socks_version == 4 && !conn->entry_cfg.ipv4_traffic) {
             log_warn(LD_NET, "Rejecting SOCKS4 request on a listener with "
                      "no IPv4 traffic supported.");
             connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
             return -1;
           } else if (family == AF_INET6) {
-            conn->ipv4_traffic_ok = 0;
+            conn->entry_cfg.ipv4_traffic = 0;
           } else if (family == AF_INET) {
-            conn->ipv6_traffic_ok = 0;
+            conn->entry_cfg.ipv6_traffic = 0;
           }
         }
       }
 
       if (socks->socks_version == 4)
-        conn->ipv6_traffic_ok = 0;
+        conn->entry_cfg.ipv6_traffic = 0;
 
       if (!conn->use_begindir && !conn->chosen_exit_name && !circ) {
         /* see if we can find a suitable enclave exit */
@@ -1826,19 +1826,19 @@ connection_ap_get_begincell_flags(entry_connection_t *ap_conn)
     return 0;
 
   /* If only IPv4 is supported, no flags */
-  if (ap_conn->ipv4_traffic_ok && !ap_conn->ipv6_traffic_ok)
+  if (ap_conn->entry_cfg.ipv4_traffic && !ap_conn->entry_cfg.ipv6_traffic)
     return 0;
 
   if (! cpath_layer ||
       ! cpath_layer->extend_info)
     return 0;
 
-  if (!ap_conn->ipv4_traffic_ok)
+  if (!ap_conn->entry_cfg.ipv4_traffic)
     flags |= BEGIN_FLAG_IPV4_NOT_OK;
 
   exitnode = node_get_by_id(cpath_layer->extend_info->identity_digest);
 
-  if (ap_conn->ipv6_traffic_ok && exitnode) {
+  if (ap_conn->entry_cfg.ipv6_traffic && exitnode) {
     tor_addr_t a;
     tor_addr_make_null(&a, AF_INET6);
     if (compare_tor_addr_to_node_policy(&a, ap_conn->socks_request->port,
@@ -1853,7 +1853,7 @@ connection_ap_get_begincell_flags(entry_connection_t *ap_conn)
   if (flags == BEGIN_FLAG_IPV6_OK) {
     /* When IPv4 and IPv6 are both allowed, consider whether to say we
      * prefer IPv6.  Otherwise there's no point in declaring a preference */
-    if (ap_conn->prefer_ipv6_traffic)
+    if (ap_conn->entry_cfg.prefer_ipv6)
       flags |= BEGIN_FLAG_IPV6_PREFERRED;
   }
 
@@ -2090,8 +2090,8 @@ connection_ap_make_link(connection_t *partner,
   /* Populate isolation fields. */
   conn->socks_request->listener_type = CONN_TYPE_DIR_LISTENER;
   conn->original_dest_address = tor_strdup(address);
-  conn->session_group = session_group;
-  conn->isolation_flags = isolation_flags;
+  conn->entry_cfg.session_group = session_group;
+  conn->entry_cfg.isolation_flags = isolation_flags;
 
   base_conn->address = tor_strdup("(Tor_internal)");
   tor_addr_make_unspec(&base_conn->addr);
@@ -2947,10 +2947,10 @@ connection_ap_can_use_exit(const entry_connection_t *conn, const node_t *exit)
     addr_policy_result_t r;
     if (0 == tor_addr_parse(&addr, conn->socks_request->address)) {
       addrp = &addr;
-    } else if (!conn->ipv4_traffic_ok && conn->ipv6_traffic_ok) {
+    } else if (!conn->entry_cfg.ipv4_traffic && conn->entry_cfg.ipv6_traffic) {
       tor_addr_make_null(&addr, AF_INET6);
       addrp = &addr;
-    } else if (conn->ipv4_traffic_ok && !conn->ipv6_traffic_ok) {
+    } else if (conn->entry_cfg.ipv4_traffic && !conn->entry_cfg.ipv6_traffic) {
       tor_addr_make_null(&addr, AF_INET);
       addrp = &addr;
     }
@@ -3056,7 +3056,7 @@ int
 connection_edge_compatible_with_circuit(const entry_connection_t *conn,
                                         const origin_circuit_t *circ)
 {
-  const uint8_t iso = conn->isolation_flags;
+  const uint8_t iso = conn->entry_cfg.isolation_flags;
   const socks_request_t *sr = conn->socks_request;
 
   /* If circ has never been used for an isolated connection, we can
@@ -3105,7 +3105,7 @@ connection_edge_compatible_with_circuit(const entry_connection_t *conn,
   if ((iso & ISO_CLIENTADDR) &&
       !tor_addr_eq(&ENTRY_TO_CONN(conn)->addr, &circ->client_addr))
     return 0;
-  if ((iso & ISO_SESSIONGRP) && conn->session_group != circ->session_group)
+  if ((iso & ISO_SESSIONGRP) && conn->entry_cfg.session_group != circ->session_group)
     return 0;
   if ((iso & ISO_NYM_EPOCH) && conn->nym_epoch != circ->nym_epoch)
     return 0;
@@ -3144,7 +3144,7 @@ connection_edge_update_circuit_isolation(const entry_connection_t *conn,
     circ->client_proto_type = conn->socks_request->listener_type;
     circ->client_proto_socksver = conn->socks_request->socks_version;
     tor_addr_copy(&circ->client_addr, &ENTRY_TO_CONN(conn)->addr);
-    circ->session_group = conn->session_group;
+    circ->session_group = conn->entry_cfg.session_group;
     circ->nym_epoch = conn->nym_epoch;
     circ->socks_username = sr->username ?
       tor_memdup(sr->username, sr->usernamelen) : NULL;
@@ -3171,7 +3171,7 @@ connection_edge_update_circuit_isolation(const entry_connection_t *conn,
       mixed |= ISO_CLIENTPROTO;
     if (!tor_addr_eq(&ENTRY_TO_CONN(conn)->addr, &circ->client_addr))
       mixed |= ISO_CLIENTADDR;
-    if (conn->session_group != circ->session_group)
+    if (conn->entry_cfg.session_group != circ->session_group)
       mixed |= ISO_SESSIONGRP;
     if (conn->nym_epoch != circ->nym_epoch)
       mixed |= ISO_NYM_EPOCH;
@@ -3179,7 +3179,7 @@ connection_edge_update_circuit_isolation(const entry_connection_t *conn,
     if (dry_run)
       return mixed;
 
-    if ((mixed & conn->isolation_flags) != 0) {
+    if ((mixed & conn->entry_cfg.isolation_flags) != 0) {
       log_warn(LD_BUG, "Updating a circuit with seemingly incompatible "
                "isolation flags.");
     }

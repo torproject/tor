@@ -804,8 +804,8 @@ connection_ap_process_end_not_open(
             return 0;
           }
 
-          if ((tor_addr_family(&addr) == AF_INET && !conn->ipv4_traffic_ok) ||
-              (tor_addr_family(&addr) == AF_INET6 && !conn->ipv6_traffic_ok)) {
+          if ((tor_addr_family(&addr) == AF_INET && !conn->entry_cfg.ipv4_traffic) ||
+              (tor_addr_family(&addr) == AF_INET6 && !conn->entry_cfg.ipv6_traffic)) {
             log_fn(LOG_PROTOCOL_WARN, LD_APP,
                    "Got an EXITPOLICY failure on a connection with a "
                    "mismatched family. Closing.");
@@ -1156,11 +1156,11 @@ connection_ap_handshake_socks_got_resolved_cell(entry_connection_t *conn,
         addr_hostname = addr;
       }
     } else if (tor_addr_family(&addr->addr) == AF_INET) {
-      if (!addr_ipv4 && conn->ipv4_traffic_ok) {
+      if (!addr_ipv4 && conn->entry_cfg.ipv4_traffic) {
         addr_ipv4 = addr;
       }
     } else if (tor_addr_family(&addr->addr) == AF_INET6) {
-      if (!addr_ipv6 && conn->ipv6_traffic_ok) {
+      if (!addr_ipv6 && conn->entry_cfg.ipv6_traffic) {
         addr_ipv6 = addr;
       }
     }
@@ -1181,7 +1181,7 @@ connection_ap_handshake_socks_got_resolved_cell(entry_connection_t *conn,
     return;
   }
 
-  if (conn->prefer_ipv6_traffic) {
+  if (conn->entry_cfg.prefer_ipv6) {
     addr_best = addr_ipv6 ? addr_ipv6 : addr_ipv4;
   } else {
     addr_best = addr_ipv4 ? addr_ipv4 : addr_ipv6;
@@ -1327,8 +1327,8 @@ connection_edge_process_relay_cell_not_open(
         return 0;
       }
 
-      if (((family == AF_INET && ! entry_conn->ipv4_traffic_ok) ||
-          (family == AF_INET6 && ! entry_conn->ipv6_traffic_ok))) {
+      if ((family == AF_INET && ! entry_conn->entry_cfg.ipv4_traffic) ||
+          (family == AF_INET6 && ! entry_conn->entry_cfg.ipv6_traffic)) {
         log_fn(LOG_PROTOCOL_WARN, LD_APP,
                "Got a connected cell to %s with unsupported address family."
                " Closing.", fmt_addr(&addr));

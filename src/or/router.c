@@ -1848,8 +1848,8 @@ router_rebuild_descriptor(int force)
     const port_cfg_t *ipv6_orport = NULL;
     SMARTLIST_FOREACH_BEGIN(get_configured_ports(), const port_cfg_t *, p) {
       if (p->type == CONN_TYPE_OR_LISTENER &&
-          ! p->no_advertise &&
-          ! p->bind_ipv4_only &&
+          ! p->server_cfg.no_advertise &&
+          ! p->server_cfg.bind_ipv4_only &&
           tor_addr_family(&p->addr) == AF_INET6) {
         if (! tor_addr_is_internal(&p->addr, 0)) {
           ipv6_orport = p;

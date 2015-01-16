@@ -305,9 +305,9 @@ entry_connection_new(int type, int socket_family)
    * in a little while.  Otherwise, we're doing this as a linked connection
    * of some kind, and we should set it up here based on the socket family */
   if (socket_family == AF_INET)
-    entry_conn->ipv4_traffic_ok = 1;
+    entry_conn->entry_cfg.ipv4_traffic = 1;
   else if (socket_family == AF_INET6)
-    entry_conn->ipv6_traffic_ok = 1;
+    entry_conn->entry_cfg.ipv6_traffic = 1;
   else if (socket_family == AF_UNIX)
     entry_conn->is_socks_socket = 1;
   return entry_conn;
@@ -1277,10 +1277,10 @@ connection_listener_new(const struct sockaddr *listensockaddr,
   conn->port = gotPort;
   tor_addr_copy(&conn->addr, &addr);
 
-  if (port_cfg->isolation_flags) {
-    lis_conn->isolation_flags = port_cfg->isolation_flags;
-    if (port_cfg->session_group >= 0) {
-      lis_conn->session_group = port_cfg->session_group;
+  if (port_cfg->entry_cfg.isolation_flags) {
+    lis_conn->entry_cfg.isolation_flags = port_cfg->entry_cfg.isolation_flags;
+    if (port_cfg->entry_cfg.session_group >= 0) {
+      lis_conn->entry_cfg.session_group = port_cfg->entry_cfg.session_group;
     } else {
       /* This can wrap after around INT_MAX listeners are opened.  But I don't
        * believe that matters, since you would need to open a ridiculous
@@ -1288,23 +1288,17 @@ connection_listener_new(const struct sockaddr *listensockaddr,
        * hit this.  An OR with a dozen ports open, for example, would have to
        * close and re-open its listeners every second for 4 years nonstop.
        */
-      lis_conn->session_group = global_next_session_group--;
+      lis_conn->entry_cfg.session_group = global_next_session_group--;
     }
   }
-  if (type == CONN_TYPE_AP_LISTENER) {
-    lis_conn->socks_ipv4_traffic = port_cfg->ipv4_traffic;
-    lis_conn->socks_ipv6_traffic = port_cfg->ipv6_traffic;
-    lis_conn->socks_prefer_ipv6 = port_cfg->prefer_ipv6;
-  } else {
-    lis_conn->socks_ipv4_traffic = 1;
-    lis_conn->socks_ipv6_traffic = 1;
+
+  memcpy(&lis_conn->entry_cfg, &port_cfg->entry_cfg, sizeof(entry_port_cfg_t));
+
+  if (type != CONN_TYPE_AP_LISTENER) {
+    lis_conn->entry_cfg.ipv4_traffic = 1;
+    lis_conn->entry_cfg.ipv6_traffic = 1;
+    lis_conn->entry_cfg.prefer_ipv6 = 0;
   }
-  lis_conn->cache_ipv4_answers = port_cfg->cache_ipv4_answers;
-  lis_conn->cache_ipv6_answers = port_cfg->cache_ipv6_answers;
-  lis_conn->use_cached_ipv4_answers = port_cfg->use_cached_ipv4_answers;
-  lis_conn->use_cached_ipv6_answers = port_cfg->use_cached_ipv6_answers;
-  lis_conn->prefer_ipv6_virtaddr = port_cfg->prefer_ipv6_virtaddr;
-  lis_conn->socks_prefer_no_auth = port_cfg->socks_prefer_no_auth;
 
   if (connection_add(conn) < 0) { /* no space, forget it */
     log_warn(LD_NET,"connection_add for listener failed. Giving up.");
@@ -1502,15 +1496,11 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     if (new_type == CONN_TYPE_AP && conn->socket_family != AF_UNIX) {
       log_info(LD_NET, "New SOCKS connection opened from %s.",
                fmt_and_decorate_addr(&addr));
-      TO_ENTRY_CONN(newconn)->socks_request->socks_prefer_no_auth =
-        TO_LISTENER_CONN(conn)->socks_prefer_no_auth;
     }
     if (new_type == CONN_TYPE_AP && conn->socket_family == AF_UNIX) {
       newconn->port = 0;
       newconn->address = tor_strdup(conn->address);
       log_info(LD_NET, "New SOCKS SocksSocket connection opened");
-      TO_ENTRY_CONN(newconn)->socks_request->socks_prefer_no_auth =
-        TO_LISTENER_CONN(conn)->socks_prefer_no_auth;
     }
     if (new_type == CONN_TYPE_CONTROL) {
       log_notice(LD_CONTROL, "New control connection opened from %s.",
@@ -1572,25 +1562,16 @@ connection_init_accepted_conn(connection_t *conn,
       return rv;
       break;
     case CONN_TYPE_AP:
-      TO_ENTRY_CONN(conn)->isolation_flags = listener->isolation_flags;
-      TO_ENTRY_CONN(conn)->session_group = listener->session_group;
+      memcpy(&TO_ENTRY_CONN(conn)->entry_cfg, &listener->entry_cfg,
+             sizeof(entry_port_cfg_t));
       TO_ENTRY_CONN(conn)->nym_epoch = get_signewnym_epoch();
       TO_ENTRY_CONN(conn)->socks_request->listener_type = listener->base_.type;
-      TO_ENTRY_CONN(conn)->ipv4_traffic_ok = listener->socks_ipv4_traffic;
-      TO_ENTRY_CONN(conn)->ipv6_traffic_ok = listener->socks_ipv6_traffic;
-      TO_ENTRY_CONN(conn)->prefer_ipv6_traffic = listener->socks_prefer_ipv6;
-      TO_ENTRY_CONN(conn)->cache_ipv4_answers = listener->cache_ipv4_answers;
-      TO_ENTRY_CONN(conn)->cache_ipv6_answers = listener->cache_ipv6_answers;
-      TO_ENTRY_CONN(conn)->use_cached_ipv4_answers =
-        listener->use_cached_ipv4_answers;
-      TO_ENTRY_CONN(conn)->use_cached_ipv6_answers =
-        listener->use_cached_ipv6_answers;
-      TO_ENTRY_CONN(conn)->prefer_ipv6_virtaddr =
-        listener->prefer_ipv6_virtaddr;
 
       switch (TO_CONN(listener)->type) {
         case CONN_TYPE_AP_LISTENER:
           conn->state = AP_CONN_STATE_SOCKS_WAIT;
+          TO_ENTRY_CONN(conn)->socks_request->socks_prefer_no_auth =
+            listener->entry_cfg.socks_prefer_no_auth;
           break;
         case CONN_TYPE_AP_TRANS_LISTENER:
           TO_ENTRY_CONN(conn)->is_transparent_ap = 1;
@@ -2273,7 +2254,7 @@ retry_listener_ports(smartlist_t *old_conns,
           (conn->socket_family == AF_UNIX && ! wanted->is_unix_addr))
         continue;
 
-      if (wanted->no_listen)
+      if (wanted->server_cfg.no_listen)
         continue; /* We don't want to open a listener for this one */
 
       if (wanted->is_unix_addr) {
@@ -2314,7 +2295,7 @@ retry_listener_ports(smartlist_t *old_conns,
     connection_t *conn;
     int real_port = port->port == CFG_AUTO_PORT ? 0 : port->port;
     tor_assert(real_port <= UINT16_MAX);
-    if (port->no_listen)
+    if (port->server_cfg.no_listen)
       continue;
 
     if (port->is_unix_addr) {

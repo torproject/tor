@@ -1143,6 +1143,51 @@ typedef struct socks_request_t socks_request_t;
 #define generic_buffer_t buf_t
 #endif
 
+typedef struct entry_port_cfg_t {
+  /* Client port types (socks, dns, trans, natd) only: */
+  uint8_t isolation_flags; /**< Zero or more isolation flags */
+  int session_group; /**< A session group, or -1 if this port is not in a
+                      * session group. */
+
+  /* Socks only: */
+  /** When both no-auth and user/pass are advertised by a SOCKS client, select
+   * no-auth. */
+  unsigned int socks_prefer_no_auth : 1;
+
+  /* Client port types only: */
+  unsigned int ipv4_traffic : 1;
+  unsigned int ipv6_traffic : 1;
+  unsigned int prefer_ipv6 : 1;
+
+  /** For a socks listener: should we cache IPv4/IPv6 DNS information that
+   * exit nodes tell us?
+   *
+   * @{ */
+  unsigned int cache_ipv4_answers : 1;
+  unsigned int cache_ipv6_answers : 1;
+  /** @} */
+  /** For a socks listeners: if we find an answer in our client-side DNS cache,
+   * should we use it?
+   *
+   * @{ */
+  unsigned int use_cached_ipv4_answers : 1;
+  unsigned int use_cached_ipv6_answers : 1;
+  /** @} */
+  /** For socks listeners: When we can automap an address to IPv4 or IPv6,
+   * do we prefer IPv6? */
+  unsigned int prefer_ipv6_virtaddr : 1;
+
+} entry_port_cfg_t;
+
+typedef struct server_port_cfg_t {
+  /* Server port types (or, dir) only: */
+  unsigned int no_advertise : 1;
+  unsigned int no_listen : 1;
+  unsigned int all_addrs : 1;
+  unsigned int bind_ipv4_only : 1;
+  unsigned int bind_ipv6_only : 1;
+} server_port_cfg_t;
+
 /* Values for connection_t.magic: used to make sure that downcasts (casts from
 * connection_t to foo_connection_t) are safe. */
 #define BASE_CONNECTION_MAGIC 0x7C3C304Eu
@@ -1278,52 +1323,7 @@ typedef struct listener_connection_t {
    * to the evdns_server_port it uses to listen to and answer connections. */
   struct evdns_server_port *dns_server_port;
 
-  /** @name Isolation parameters
-   *
-   * For an AP listener, these fields describe how to isolate streams that
-   * arrive on the listener.
-   *
-   * @{
-   */
-  /** The session group for this listener. */
-  int session_group;
-  /** One or more ISO_ flags to describe how to isolate streams. */
-  uint8_t isolation_flags;
-  /**@}*/
-  /** For SOCKS connections only: If this is set, we will choose "no
-   * authentication" instead of "username/password" authentication if both
-   * are offered. Used as input to parse_socks. */
-  unsigned int socks_prefer_no_auth : 1;
-
-  /** For a SOCKS listeners, these fields describe whether we should
-   * allow IPv4 and IPv6 addresses from our exit nodes, respectively.
-   *
-   * @{
-   */
-  unsigned int socks_ipv4_traffic : 1;
-  unsigned int socks_ipv6_traffic : 1;
-  /** @} */
-  /** For a socks listener: should we tell the exit that we prefer IPv6
-   * addresses? */
-  unsigned int socks_prefer_ipv6 : 1;
-
-  /** For a socks listener: should we cache IPv4/IPv6 DNS information that
-   * exit nodes tell us?
-   *
-   * @{ */
-  unsigned int cache_ipv4_answers : 1;
-  unsigned int cache_ipv6_answers : 1;
-  /** @} */
-  /** For a socks listeners: if we find an answer in our client-side DNS cache,
-   * should we use it?
-   *
-   * @{ */
-  unsigned int use_cached_ipv4_answers : 1;
-  unsigned int use_cached_ipv6_answers : 1;
-  /** @} */
-  /** For socks listeners: When we can automap an address to IPv4 or IPv6,
-   * do we prefer IPv6? */
-  unsigned int prefer_ipv6_virtaddr : 1;
+  entry_port_cfg_t entry_cfg;
 
 } listener_connection_t;
 
@@ -1611,12 +1611,10 @@ typedef struct entry_connection_t {
                                    * only.) */
 
   /* === Isolation related, AP only. === */
-  /** AP only: based on which factors do we isolate this stream? */
-  uint8_t isolation_flags;
-  /** AP only: what session group is this stream in? */
-  int session_group;
+  entry_port_cfg_t entry_cfg;
   /** AP only: The newnym epoch in which we created this connection. */
   unsigned nym_epoch;
+
   /** AP only: The original requested address before we rewrote it. */
   char *original_dest_address;
   /* Other fields to isolate on already exist.  The ClientAddr is addr.  The
@@ -1675,36 +1673,8 @@ typedef struct entry_connection_t {
    */
   unsigned int may_use_optimistic_data : 1;
 
-  /** Should we permit IPv4 and IPv6 traffic to use this connection?
-   *
-   * @{ */
-  unsigned int ipv4_traffic_ok : 1;
-  unsigned int ipv6_traffic_ok : 1;
-  /** @} */
-  /** Should we say we prefer IPv6 traffic? */
-  unsigned int prefer_ipv6_traffic : 1;
-
-  /** For a socks listener: should we cache IPv4/IPv6 DNS information that
-   * exit nodes tell us?
-   *
-   * @{ */
-  unsigned int cache_ipv4_answers : 1;
-  unsigned int cache_ipv6_answers : 1;
-  /** @} */
-  /** For a socks listeners: if we find an answer in our client-side DNS cache,
-   * should we use it?
-   *
-   * @{ */
-  unsigned int use_cached_ipv4_answers : 1;
-  unsigned int use_cached_ipv6_answers : 1;
-  /** @} */
-  /** For socks listeners: When we can automap an address to IPv4 or IPv6,
-   * do we prefer IPv6? */
-  unsigned int prefer_ipv6_virtaddr : 1;
-
   /** Are we a socks SocksSocket listener? */
   unsigned int is_socks_socket:1;
-
 } entry_connection_t;
 
 typedef enum {
@@ -3345,44 +3315,9 @@ typedef struct port_cfg_t {
   uint8_t type; /**< One of CONN_TYPE_*_LISTENER */
   unsigned is_unix_addr : 1; /**< True iff this is an AF_UNIX address. */
 
-  /* Client port types (socks, dns, trans, natd) only: */
-  uint8_t isolation_flags; /**< Zero or more isolation flags */
-  int session_group; /**< A session group, or -1 if this port is not in a
-                      * session group. */
-  /* Socks only: */
-  /** When both no-auth and user/pass are advertised by a SOCKS client, select
-   * no-auth. */
-  unsigned int socks_prefer_no_auth : 1;
+  entry_port_cfg_t entry_cfg;
 
-  /* Server port types (or, dir) only: */
-  unsigned int no_advertise : 1;
-  unsigned int no_listen : 1;
-  unsigned int all_addrs : 1;
-  unsigned int bind_ipv4_only : 1;
-  unsigned int bind_ipv6_only : 1;
-
-  /* Client port types only: */
-  unsigned int ipv4_traffic : 1;
-  unsigned int ipv6_traffic : 1;
-  unsigned int prefer_ipv6 : 1;
-
-  /** For a socks listener: should we cache IPv4/IPv6 DNS information that
-   * exit nodes tell us?
-   *
-   * @{ */
-  unsigned int cache_ipv4_answers : 1;
-  unsigned int cache_ipv6_answers : 1;
-  /** @} */
-  /** For a socks listeners: if we find an answer in our client-side DNS cache,
-   * should we use it?
-   *
-   * @{ */
-  unsigned int use_cached_ipv4_answers : 1;
-  unsigned int use_cached_ipv6_answers : 1;
-  /** @} */
-  /** For socks listeners: When we can automap an address to IPv4 or IPv6,
-   * do we prefer IPv6? */
-  unsigned int prefer_ipv6_virtaddr : 1;
+  server_port_cfg_t server_cfg;
 
   /* Unix sockets only: */
   /** Path for an AF_UNIX address */
