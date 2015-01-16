@@ -5821,7 +5821,10 @@ parse_port_config(smartlist_t *out,
     addrport = smartlist_get(elts, 0);
     if (is_unix_socket) {
       /* leave it as it is. */
-      port = 1;
+      if (!strcmp(addrport, "0"))
+        port = 0;
+      else
+        port = 1;
     } else if (!strcmp(addrport, "auto")) {
       port = CFG_AUTO_PORT;
       tor_addr_parse(&addr, defaultaddr);
@@ -6052,7 +6055,7 @@ parse_port_config(smartlist_t *out,
       warn_nonlocal_client_ports(out, portname, listener_type);
   }
 
-  if (!is_unix_socket && got_zero_port && got_nonzero_port) {
+  if (got_zero_port && got_nonzero_port) {
     log_warn(LD_CONFIG, "You specified a nonzero %sPort along with '%sPort 0' "
              "in the same configuration. Did you mean to disable %sPort or "
              "not?", portname, portname, portname);
