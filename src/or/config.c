@@ -6091,8 +6091,8 @@ parse_unix_socket_config(smartlist_t *out, smartlist_t *defaults,
 
         port->entry_cfg.ipv4_traffic = 1;
         port->entry_cfg.ipv6_traffic = 1;
-        port->entry_cfg.cache_ipv4_answers = 1;
-        port->entry_cfg.cache_ipv6_answers = 1;
+        port->entry_cfg.cache_ipv4_answers = 0;
+        port->entry_cfg.cache_ipv6_answers = 0;
       }
       smartlist_add(ports_to_add, port);
     } else {
