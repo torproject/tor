@@ -1251,17 +1251,10 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   /* Do we already have a newer descriptor? */
   tor_snprintf(key, sizeof(key), "2%s", service_id);
   e = (rend_cache_entry_t*) strmap_get_lc(rend_cache, key);
-  if (e && e->parsed->timestamp > parsed->timestamp) {
-    log_info(LD_REND, "We already have a newer service descriptor for "
+  if (e && e->parsed->timestamp >= parsed->timestamp) {
+    log_info(LD_REND, "We already have a new enough service descriptor for "
                       "service ID %s with the same desc ID and version.",
              safe_str_client(service_id));
-    goto okay;
-  }
-  /* Do we already have this descriptor? */
-  if (e && !strcmp(desc, e->desc)) {
-    log_info(LD_REND,"We already have this service descriptor %s.",
-             safe_str_client(service_id));
-    e->received = time(NULL);
     goto okay;
   }
   if (!e) {
