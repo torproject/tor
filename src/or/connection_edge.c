@@ -1001,6 +1001,7 @@ connection_ap_handshake_rewrite(entry_connection_t *conn,
                                              strlen(result), (uint8_t*)result,
                                              -1,
                                              out->map_expires);
+      tor_free(result);
       out->end_reason = END_STREAM_REASON_DONE |
                         END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED;
       out->should_close = 1;
