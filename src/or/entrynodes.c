@@ -1523,6 +1523,13 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
   return *msg ? -1 : 0;
 }
 
+/** How long will we let a change in our guard nodes stay un-saved
+ * when we are trying to avoid disk writes? */
+#define SLOW_GUARD_STATE_FLUSH_TIME 600
+/** How long will we let a change in our guard nodes stay un-saved
+ * when we are not trying to avoid disk writes? */
+#define FAST_GUARD_STATE_FLUSH_TIME 30
+
 /** Our list of entry guards has changed, or some element of one
  * of our entry guards has changed. Write the changes to disk within
  * the next few minutes.
@@ -1533,8 +1540,12 @@ entry_guards_changed(void)
   time_t when;
   entry_guards_dirty = 1;
 
+  if (get_options()->AvoidDiskWrites)
+    when = time(NULL) + SLOW_GUARD_STATE_FLUSH_TIME;
+  else
+    when = time(NULL) + FAST_GUARD_STATE_FLUSH_TIME;
+
   /* or_state_save() will call entry_guards_update_state(). */
-  when = get_options()->AvoidDiskWrites ? time(NULL) + 3600 : time(NULL)+600;
   or_state_mark_dirty(get_or_state(), when);
 }
 
