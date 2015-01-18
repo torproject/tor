@@ -4897,7 +4897,6 @@ typedef struct rend_service_descriptor_t {
 /** A cached rendezvous descriptor. */
 typedef struct rend_cache_entry_t {
   size_t len; /**< Length of <b>desc</b> */
-  time_t received; /**< When was the descriptor received? */
   time_t last_served; /**< When did we last write this one to somebody?
                        * (HSDir only) */
   char *desc; /**< Service descriptor */

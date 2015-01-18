@@ -1058,7 +1058,6 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
     if (e && !strcmp(desc, e->desc)) {
       log_info(LD_REND, "We already have this service descriptor with desc "
                         "ID %s.", safe_str(desc_id_base32));
-      e->received = time(NULL);
       goto skip;
     }
     /* Store received descriptor. */
@@ -1075,7 +1074,6 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
       rend_service_descriptor_free(e->parsed);
       tor_free(e->desc);
     }
-    e->received = time(NULL);
     e->parsed = parsed;
     e->desc = tor_strndup(current_desc, encoded_size);
     e->len = encoded_size;
@@ -1265,7 +1263,6 @@ rend_cache_store_v2_desc_as_client(const char *desc,
     rend_service_descriptor_free(e->parsed);
     tor_free(e->desc);
   }
-  e->received = time(NULL);
   e->parsed = parsed;
   e->desc = tor_malloc_zero(encoded_size + 1);
   strlcpy(e->desc, desc, encoded_size + 1);
