@@ -4045,7 +4045,10 @@ get_windows_conf_root(void)
 static const char *
 get_default_conf_file(int defaults_file)
 {
-#ifdef _WIN32
+#ifdef DISABLE_SYSTEM_TORRC
+  (void) defaults_file;
+  return NULL;
+#elif defined(_WIN32)
   if (defaults_file) {
     static char defaults_path[MAX_PATH+1];
     tor_snprintf(defaults_path, MAX_PATH, "%s\\torrc-defaults",
@@ -4183,17 +4186,17 @@ find_torrc_filename(config_line_t *cmd_arg,
       }
       if (fn) {
         file_status_t hmst = file_status(fn);
-        if (hmst == FN_FILE || hmst == FN_EMPTY) {
+        if (hmst == FN_FILE || hmst == FN_EMPTY || dflt == NULL) {
           fname = fn;
         } else {
           tor_free(fn);
           fname = tor_strdup(dflt);
         }
       } else {
-        fname = tor_strdup(dflt);
+        fname = dflt ? tor_strdup(dflt) : NULL;
       }
 #else
-      fname = tor_strdup(dflt);
+      fname = dflt ? tor_strdup(dflt) : NULL;
 #endif
     }
   }
@@ -4219,17 +4222,17 @@ load_torrc_from_disk(config_line_t *cmd_arg, int defaults_file)
   if (*fname_var == NULL) {
     fname = find_torrc_filename(cmd_arg, defaults_file,
                                 &using_default_torrc, &ignore_missing_torrc);
-    tor_assert(fname);
     tor_free(*fname_var);
     *fname_var = fname;
   } else {
     fname = *fname_var;
   }
-  log_debug(LD_CONFIG, "Opening config file \"%s\"", fname);
+  log_debug(LD_CONFIG, "Opening config file \"%s\"", fname?fname:"<NULL>");
 
   /* Open config file */
-  file_status_t st = file_status(fname);
-  if (!(st == FN_FILE || st == FN_EMPTY) ||
+  file_status_t st = fname ? file_status(fname) : FN_EMPTY;
+  if (fname == NULL ||
+      !(st == FN_FILE || st == FN_EMPTY) ||
       !(cf = read_file_to_str(fname,0,NULL))) {
     if (using_default_torrc == 1 || ignore_missing_torrc) {
       if (!defaults_file)
@@ -4518,7 +4521,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   return err;
 }
 
-/** Return the location for our configuration file.
+/** Return the location for our configuration file.  May return NULL.
  */
 const char *
 get_torrc_fname(int defaults_fname)
@@ -5370,14 +5373,6 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
   if (strlen(fingerprint) != HEX_DIGEST_LEN) {
     log_warn(LD_CONFIG, "Key digest '%s' for DirAuthority is wrong length %d.",
              fingerprint, (int)strlen(fingerprint));
-    goto err;
-  }
-  if (!strcmp(fingerprint, "E623F7625FBE0C87820F11EC5F6D5377ED816294")) {
-    /* a known bad fingerprint. refuse to use it. We can remove this
-     * clause once Tor 0.1.2.17 is obsolete. */
-    log_warn(LD_CONFIG, "Dangerous dirserver line. To correct, erase your "
-             "torrc file (%s), or reinstall Tor and use the default torrc.",
-             get_torrc_fname(0));
     goto err;
   }
   if (base16_decode(digest, DIGEST_LEN, fingerprint, HEX_DIGEST_LEN)<0) {
@@ -6559,7 +6554,8 @@ write_configuration_file(const char *fname, const or_options_t *options)
   char *old_val=NULL, *new_val=NULL, *new_conf=NULL;
   int rename_old = 0, r;
 
-  tor_assert(fname);
+  if (!fname)
+    return -1;
 
   switch (file_status(fname)) {
     /* create backups of old config files, even if they're empty */
