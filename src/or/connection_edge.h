@@ -151,8 +151,8 @@ typedef struct {
    */
   char orig_address[MAX_SOCKS_ADDR_LEN];
   /** True iff the address has been automatically remapped to a local
-   * address in VirtualAddrNetwork.  (Only set true the first time we
-   * do the mapping.) */
+   * address in VirtualAddrNetwork.  (Only set true when we do a resolve
+   * and get a virtual address; not when we connect to the address.) */
   int automap;
   /** If this connection has a .exit address, who put it there? */
   addressmap_entry_source_t exit_source;
