@@ -469,8 +469,11 @@ rend_client_introduction_acked(origin_circuit_t *circ,
        * too? */
       return result;
     } else {
-      /* Close circuit because no more intro points are usable thus this
-       * circuit is not useful anymore. */
+      /* Close circuit because no more intro points are usable thus not
+       * useful anymore. Change it's purpose before so we don't report an
+       * intro point failure again triggering an extra descriptor fetch. */
+      circuit_change_purpose(TO_CIRCUIT(circ),
+          CIRCUIT_PURPOSE_C_INTRODUCE_ACKED);
       circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
     }
   }
