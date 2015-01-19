@@ -1064,7 +1064,7 @@ connection_ap_handshake_rewrite(entry_connection_t *conn,
    * previously registered Automap entries, TrackHostExits entries,
    * and client-side DNS cache entries (not recommended).
    */
-  if (!socks->command != SOCKS_COMMAND_RESOLVE_PTR &&
+  if (socks->command != SOCKS_COMMAND_RESOLVE_PTR &&
       !out->automap) {
     unsigned rewrite_flags = AMR_FLAG_USE_AUTOMAP | AMR_FLAG_USE_TRACKEXIT;
     addressmap_entry_source_t exit_source2;
