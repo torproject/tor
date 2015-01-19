@@ -617,7 +617,8 @@ test_entryconn_rewrite_mapaddress_automap_onion(void *arg)
   tt_int_op(rr.automap, OP_EQ, 0);
   tt_int_op(rr.should_close, OP_EQ, 0);
   tt_int_op(rr.end_reason, OP_EQ, 0);
-  tt_assert(!strcmpstart(ec3->socks_request->address, "abcdefghijklmnop.onion"));
+  tt_assert(!strcmpstart(ec3->socks_request->address,
+                         "abcdefghijklmnop.onion"));
 
   /* Now resolve abcefghijklmnop.onion. */
   strlcpy(ec4->socks_request->address, "abcdefghijklmnop.onion",
@@ -633,7 +634,7 @@ test_entryconn_rewrite_mapaddress_automap_onion(void *arg)
   tt_str_op(rr.orig_address, OP_EQ, "abcdefghijklmnop.onion");
   tt_assert(!strcmpstart(ec4->socks_request->address, "192.168."));
   /* XXXX doesn't work
-     tt_str_op(ec4->socks_request->address, OP_EQ, ec2->socks_request->address);
+   tt_str_op(ec4->socks_request->address, OP_EQ, ec2->socks_request->address);
   */
 
  done:
@@ -741,7 +742,6 @@ test_entryconn_rewrite_mapaddress_automap_onion4(void *arg)
 
   test_entryconn_rewrite_mapaddress_automap_onion_common(arg, 0, 1);
 }
-
 
 #define REWRITE(name)                           \
   { #name, test_entryconn_##name, TT_FORK, &test_rewrite_setup, NULL }

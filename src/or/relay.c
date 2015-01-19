@@ -804,8 +804,10 @@ connection_ap_process_end_not_open(
             return 0;
           }
 
-          if ((tor_addr_family(&addr) == AF_INET && !conn->entry_cfg.ipv4_traffic) ||
-              (tor_addr_family(&addr) == AF_INET6 && !conn->entry_cfg.ipv6_traffic)) {
+          if ((tor_addr_family(&addr) == AF_INET &&
+                                          !conn->entry_cfg.ipv4_traffic) ||
+              (tor_addr_family(&addr) == AF_INET6 &&
+                                          !conn->entry_cfg.ipv6_traffic)) {
             log_fn(LOG_PROTOCOL_WARN, LD_APP,
                    "Got an EXITPOLICY failure on a connection with a "
                    "mismatched family. Closing.");

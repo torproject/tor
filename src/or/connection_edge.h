@@ -144,7 +144,6 @@ STATIC int connected_cell_format_payload(uint8_t *payload_out,
                                   const tor_addr_t *addr,
                                   uint32_t ttl);
 
-
 typedef struct {
   /** Original address, after we lowercased it but before we started
    * mapping it.

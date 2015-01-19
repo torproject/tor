@@ -1378,7 +1378,8 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
             log_warn(LD_NET, "Rejecting SOCKS4 request for an IPv6 address.");
             connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
             return -1;
-          } else if (socks->socks_version == 4 && !conn->entry_cfg.ipv4_traffic) {
+          } else if (socks->socks_version == 4 &&
+                     !conn->entry_cfg.ipv4_traffic) {
             /* You can't do any kind of Socks4 request when IPv4 is forbidden.
              *
              * XXX raise this check outside the enclosing block? */
@@ -3282,7 +3283,8 @@ connection_edge_compatible_with_circuit(const entry_connection_t *conn,
   if ((iso & ISO_CLIENTADDR) &&
       !tor_addr_eq(&ENTRY_TO_CONN(conn)->addr, &circ->client_addr))
     return 0;
-  if ((iso & ISO_SESSIONGRP) && conn->entry_cfg.session_group != circ->session_group)
+  if ((iso & ISO_SESSIONGRP) &&
+      conn->entry_cfg.session_group != circ->session_group)
     return 0;
   if ((iso & ISO_NYM_EPOCH) && conn->nym_epoch != circ->nym_epoch)
     return 0;
