@@ -1364,9 +1364,8 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
           /* If we reach this point, it's an IPv4 or an IPv6 address. */
           sa_family_t family = tor_addr_family(&addr);
 
-          /* XXXX bug: the second one should be "ipv6_traffic" */
           if ((family == AF_INET && ! conn->entry_cfg.ipv4_traffic) ||
-              (family == AF_INET6 && ! conn->entry_cfg.ipv4_traffic)) {
+              (family == AF_INET6 && ! conn->entry_cfg.ipv6_traffic)) {
             /* You can't do an IPv4 address on a v6-only socks listener,
              * or vice versa. */
             log_warn(LD_NET, "Rejecting SOCKS request for an IP address "
