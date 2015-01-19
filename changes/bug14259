@@ -1,0 +1,6 @@
+  o Minor bugfixes (client):
+    - Avoid a small memory leak when we find a cached answer for a reverse
+      DNS lookup in a client-side DNS cache. (Remember, client-side DNS
+      caching is off by default, and is not recommended.) Fixes bug 14259;
+      bugfix on 0.2.0.1-alpha.
+

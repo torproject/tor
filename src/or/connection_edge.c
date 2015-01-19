@@ -908,6 +908,199 @@ connection_ap_rewrite_and_attach_if_allowed(entry_connection_t *conn,
   return connection_ap_handshake_rewrite_and_attach(conn, circ, cpath);
 }
 
+/* Try to perform any map-based rewriting of the target address in
+ * <b>conn</b>, filling in the fields of <b>out</b> as we go, and modifying
+ * conn->socks_request.address as appropriate.
+ */
+STATIC void
+connection_ap_handshake_rewrite(entry_connection_t *conn,
+                                rewrite_result_t *out)
+{
+  socks_request_t *socks = conn->socks_request;
+  const or_options_t *options = get_options();
+  tor_addr_t addr_tmp;
+
+  /* Initialize all the fields of 'out' to reasonable defaults */
+  out->automap = 0;
+  out->exit_source = ADDRMAPSRC_NONE;
+  out->map_expires = TIME_MAX;
+  out->end_reason = 0;
+  out->should_close = 0;
+  out->orig_address[0] = 0;
+
+  /* We convert all incoming addresses to lowercase. */
+  tor_strlower(socks->address);
+  /* Remember the original address. */
+  strlcpy(out->orig_address, socks->address, sizeof(out->orig_address));
+  log_debug(LD_APP,"Client asked for %s:%d",
+            safe_str_client(socks->address),
+            socks->port);
+
+  /* Check for whether this is a .exit address.  By default, those are
+   * disallowed when they're coming straight from the client, but you're
+   * allowed to have them in MapAddress commands and so forth. */
+  if (!strcmpend(socks->address, ".exit") && !options->AllowDotExit) {
+    log_warn(LD_APP, "The  \".exit\" notation is disabled in Tor due to "
+             "security risks. Set AllowDotExit in your torrc to enable "
+             "it (at your own risk).");
+    control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
+                                escaped(socks->address));
+    out->end_reason = END_STREAM_REASON_TORPROTOCOL;
+    out->should_close = 1;
+    return;
+  }
+
+  /* Remember the original address so we can tell the user about what
+   * they actually said, not just what it turned into. */
+  if (! conn->original_dest_address) {
+    /* Is the 'if' necessary here? XXXX */
+    conn->original_dest_address = tor_strdup(conn->socks_request->address);
+  }
+
+  /* First, apply MapAddress and MAPADDRESS mappings. We need to do
+   * these only for non-reverse lookups, since they don't exist for those.
+   * We need to do this before we consider automapping, since we might
+   * e.g. resolve irc.oftc.net into irconionaddress.onion, at which point
+   * we'd need to automap it. */
+  if (socks->command != SOCKS_COMMAND_RESOLVE_PTR) {
+    const unsigned rewrite_flags = AMR_FLAG_USE_MAPADDRESS;
+    if (addressmap_rewrite(socks->address, sizeof(socks->address),
+                       rewrite_flags, &out->map_expires, &out->exit_source)) {
+      control_event_stream_status(conn, STREAM_EVENT_REMAP,
+                                  REMAP_STREAM_SOURCE_CACHE);
+    }
+  }
+
+  /* Now, handle automapping.  Automapping happens when we're asked to
+   * resolve a hostname, and AutomapHostsOnResolve is set, and
+   * the hostname has a suffix listed in AutomapHostsSuffixes.
+   */
+  if (socks->command == SOCKS_COMMAND_RESOLVE &&
+      tor_addr_parse(&addr_tmp, socks->address)<0 &&
+      options->AutomapHostsOnResolve) {
+    /* Check the suffix... */
+    out->automap = addressmap_address_should_automap(socks->address, options);
+    if (out->automap) {
+      /* If we get here, then we should apply an automapping for this. */
+      const char *new_addr;
+      /* We return an IPv4 address by default, or an IPv6 address if we
+       * are allowed to do so. */
+      int addr_type = RESOLVED_TYPE_IPV4;
+      if (conn->socks_request->socks_version != 4) {
+        if (!conn->entry_cfg.ipv4_traffic ||
+            (conn->entry_cfg.ipv6_traffic && conn->entry_cfg.prefer_ipv6) ||
+            conn->entry_cfg.prefer_ipv6_virtaddr)
+          addr_type = RESOLVED_TYPE_IPV6;
+      }
+      /* Okay, register the target address as automapped, and find the new
+       * address we're supposed to give as a resolve answer.  (Return a cached
+       * value if we've looked up this address before.
+       */
+      new_addr = addressmap_register_virtual_address(
+                                    addr_type, tor_strdup(socks->address));
+      if (! new_addr) {
+        log_warn(LD_APP, "Unable to automap address %s",
+                 escaped_safe_str(socks->address));
+        out->end_reason = END_STREAM_REASON_INTERNAL;
+        out->should_close = 1;
+        return;
+      }
+      log_info(LD_APP, "Automapping %s to %s",
+               escaped_safe_str_client(socks->address),
+               safe_str_client(new_addr));
+      strlcpy(socks->address, new_addr, sizeof(socks->address));
+    }
+  }
+
+  /* Now handle reverse lookups, if they're in the cache.  This doesn't
+   * happen too often, since client-side DNS caching is off by default. */
+  if (socks->command == SOCKS_COMMAND_RESOLVE_PTR) {
+    unsigned rewrite_flags = 0;
+    if (conn->entry_cfg.use_cached_ipv4_answers)
+      rewrite_flags |= AMR_FLAG_USE_IPV4_DNS;
+    if (conn->entry_cfg.use_cached_ipv6_answers)
+      rewrite_flags |= AMR_FLAG_USE_IPV6_DNS;
+
+    if (addressmap_rewrite_reverse(socks->address, sizeof(socks->address),
+                                   rewrite_flags, &out->map_expires)) {
+      char *result = tor_strdup(socks->address);
+      /* remember _what_ is supposed to have been resolved. */
+      tor_snprintf(socks->address, sizeof(socks->address), "REVERSE[%s]",
+                   out->orig_address);
+      connection_ap_handshake_socks_resolved(conn, RESOLVED_TYPE_HOSTNAME,
+                                             strlen(result), (uint8_t*)result,
+                                             -1,
+                                             out->map_expires);
+      tor_free(result);
+      out->end_reason = END_STREAM_REASON_DONE |
+                        END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED;
+      out->should_close = 1;
+      return;
+    }
+
+    /* Hang on, did we find an answer saying that this is a reverse lookup for
+     * an internal address?  If so, we should reject it if we're condigured to
+     * do so. */
+    if (options->ClientDNSRejectInternalAddresses) {
+      /* Don't let people try to do a reverse lookup on 10.0.0.1. */
+      tor_addr_t addr;
+      int ok;
+      ok = tor_addr_parse_PTR_name(
+                               &addr, socks->address, AF_UNSPEC, 1);
+      if (ok == 1 && tor_addr_is_internal(&addr, 0)) {
+        connection_ap_handshake_socks_resolved(conn, RESOLVED_TYPE_ERROR,
+                                               0, NULL, -1, TIME_MAX);
+        out->end_reason = END_STREAM_REASON_SOCKSPROTOCOL |
+                          END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED;
+        out->should_close = 1;
+        return;
+      }
+    }
+  }
+
+  /* If we didn't automap it before, then this is still the address
+   * that came straight from the user, mapped according to any
+   * MapAddress/MAPADDRESS commands.  Now other mappings, including
+   * previously registered Automap entries, TrackHostExits entries,
+   * and client-side DNS cache entries (not recommended).
+   */
+  if (!socks->command != SOCKS_COMMAND_RESOLVE_PTR &&
+      !out->automap) {
+    unsigned rewrite_flags = AMR_FLAG_USE_AUTOMAP | AMR_FLAG_USE_TRACKEXIT;
+    addressmap_entry_source_t exit_source2;
+    if (conn->entry_cfg.use_cached_ipv4_answers)
+      rewrite_flags |= AMR_FLAG_USE_IPV4_DNS;
+    if (conn->entry_cfg.use_cached_ipv6_answers)
+      rewrite_flags |= AMR_FLAG_USE_IPV6_DNS;
+    if (addressmap_rewrite(socks->address, sizeof(socks->address),
+                        rewrite_flags, &out->map_expires, &exit_source2)) {
+      control_event_stream_status(conn, STREAM_EVENT_REMAP,
+                                  REMAP_STREAM_SOURCE_CACHE);
+    }
+    if (out->exit_source == ADDRMAPSRC_NONE) {
+      /* If it wasn't a .exit before, maybe it turned into a .exit. Remember
+       * the original source of a .exit. */
+      out->exit_source = exit_source2;
+    }
+  }
+
+  /* Check to see whether we're about to use an address in the virtual
+   * range without actually having gotten it from an Automap. */
+  if (!out->automap && address_is_in_virtual_range(socks->address)) {
+    /* This address was probably handed out by
+     * client_dns_get_unmapped_address, but the mapping was discarded for some
+     * reason.  Or the user typed in a virtual address range manually.  We
+     * *don't* want to send the address through Tor; that's likely to fail,
+     * and may leak information.
+     */
+    log_warn(LD_APP,"Missing mapping for virtual address '%s'. Refusing.",
+             safe_str_client(socks->address));
+    out->end_reason = END_STREAM_REASON_INTERNAL;
+    out->should_close = 1;
+    return;
+  }
+}
+
 /** Connection <b>conn</b> just finished its socks handshake, or the
  * controller asked us to take care of it. If <b>circ</b> is defined,
  * then that's where we'll want to attach it. Otherwise we have to
@@ -929,133 +1122,36 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
                                            crypt_path_t *cpath)
 {
   socks_request_t *socks = conn->socks_request;
-  hostname_type_t addresstype;
   const or_options_t *options = get_options();
-  tor_addr_t addr_tmp;
-  /* We set this to true if this is an address we should automatically
-   * remap to a local address in VirtualAddrNetwork */
-  int automap = 0;
-  char orig_address[MAX_SOCKS_ADDR_LEN];
-  time_t map_expires = TIME_MAX;
-  time_t now = time(NULL);
   connection_t *base_conn = ENTRY_TO_CONN(conn);
-  addressmap_entry_source_t exit_source = ADDRMAPSRC_NONE;
+  time_t now = time(NULL);
+  rewrite_result_t rr;
 
-  tor_strlower(socks->address); /* normalize it */
-  strlcpy(orig_address, socks->address, sizeof(orig_address));
-  log_debug(LD_APP,"Client asked for %s:%d",
-            safe_str_client(socks->address),
-            socks->port);
+  memset(&rr, 0, sizeof(rr));
+  connection_ap_handshake_rewrite(conn,&rr);
 
-  if (!strcmpend(socks->address, ".exit") && !options->AllowDotExit) {
-    log_warn(LD_APP, "The  \".exit\" notation is disabled in Tor due to "
-             "security risks. Set AllowDotExit in your torrc to enable "
-             "it (at your own risk).");
-    control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
-                                escaped(socks->address));
-    connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
-    return -1;
-  }
-
-  if (! conn->original_dest_address)
-    conn->original_dest_address = tor_strdup(conn->socks_request->address);
-
-  if (socks->command == SOCKS_COMMAND_RESOLVE &&
-      tor_addr_parse(&addr_tmp, socks->address)<0 &&
-      options->AutomapHostsOnResolve) {
-    automap = addressmap_address_should_automap(socks->address, options);
-    if (automap) {
-      const char *new_addr;
-      int addr_type = RESOLVED_TYPE_IPV4;
-      if (conn->socks_request->socks_version != 4) {
-        if (!conn->entry_cfg.ipv4_traffic ||
-            (conn->entry_cfg.ipv6_traffic && conn->entry_cfg.prefer_ipv6) ||
-            conn->entry_cfg.prefer_ipv6_virtaddr)
-          addr_type = RESOLVED_TYPE_IPV6;
-      }
-      new_addr = addressmap_register_virtual_address(
-                                    addr_type, tor_strdup(socks->address));
-      if (! new_addr) {
-        log_warn(LD_APP, "Unable to automap address %s",
-                 escaped_safe_str(socks->address));
-        connection_mark_unattached_ap(conn, END_STREAM_REASON_INTERNAL);
-        return -1;
-      }
-      log_info(LD_APP, "Automapping %s to %s",
-               escaped_safe_str_client(socks->address),
-               safe_str_client(new_addr));
-      strlcpy(socks->address, new_addr, sizeof(socks->address));
-    }
-  }
-
-  if (socks->command == SOCKS_COMMAND_RESOLVE_PTR) {
-    unsigned rewrite_flags = 0;
-    if (conn->entry_cfg.use_cached_ipv4_answers)
-      rewrite_flags |= AMR_FLAG_USE_IPV4_DNS;
-    if (conn->entry_cfg.use_cached_ipv6_answers)
-      rewrite_flags |= AMR_FLAG_USE_IPV6_DNS;
-
-    if (addressmap_rewrite_reverse(socks->address, sizeof(socks->address),
-                                   rewrite_flags, &map_expires)) {
-      char *result = tor_strdup(socks->address);
-      /* remember _what_ is supposed to have been resolved. */
-      tor_snprintf(socks->address, sizeof(socks->address), "REVERSE[%s]",
-                  orig_address);
-      connection_ap_handshake_socks_resolved(conn, RESOLVED_TYPE_HOSTNAME,
-                                             strlen(result), (uint8_t*)result,
-                                             -1,
-                                             map_expires);
-      connection_mark_unattached_ap(conn,
-                                END_STREAM_REASON_DONE |
-                                END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
+  if (rr.should_close) {
+    /* connection_ap_handshake_rewrite told us to close the connection,
+     * either because it sent back an answer, or because it sent back an
+     * error */
+    connection_mark_unattached_ap(conn, rr.end_reason);
+    if (END_STREAM_REASON_DONE == (rr.end_reason & END_STREAM_REASON_MASK))
       return 0;
-    }
-    if (options->ClientDNSRejectInternalAddresses) {
-      /* Don't let people try to do a reverse lookup on 10.0.0.1. */
-      tor_addr_t addr;
-      int ok;
-      ok = tor_addr_parse_PTR_name(
-                               &addr, socks->address, AF_UNSPEC, 1);
-      if (ok == 1 && tor_addr_is_internal(&addr, 0)) {
-        connection_ap_handshake_socks_resolved(conn, RESOLVED_TYPE_ERROR,
-                                               0, NULL, -1, TIME_MAX);
-        connection_mark_unattached_ap(conn,
-                                 END_STREAM_REASON_SOCKSPROTOCOL |
-                                 END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
-        return -1;
-      }
-    }
-  } else if (!automap) {
-    /* For address map controls, remap the address. */
-    unsigned rewrite_flags = 0;
-    if (conn->entry_cfg.use_cached_ipv4_answers)
-      rewrite_flags |= AMR_FLAG_USE_IPV4_DNS;
-    if (conn->entry_cfg.use_cached_ipv6_answers)
-      rewrite_flags |= AMR_FLAG_USE_IPV6_DNS;
-    if (addressmap_rewrite(socks->address, sizeof(socks->address),
-                           rewrite_flags, &map_expires, &exit_source)) {
-      control_event_stream_status(conn, STREAM_EVENT_REMAP,
-                                  REMAP_STREAM_SOURCE_CACHE);
-    }
+    else
+      return -1;
   }
 
-  if (!automap && address_is_in_virtual_range(socks->address)) {
-    /* This address was probably handed out by client_dns_get_unmapped_address,
-     * but the mapping was discarded for some reason.  We *don't* want to send
-     * the address through Tor; that's likely to fail, and may leak
-     * information.
-     */
-    log_warn(LD_APP,"Missing mapping for virtual address '%s'. Refusing.",
-             safe_str_client(socks->address));
-    connection_mark_unattached_ap(conn, END_STREAM_REASON_INTERNAL);
-    return -1;
-  }
+  const time_t map_expires = rr.map_expires;
+  const int automap = rr.automap;
+  const addressmap_entry_source_t exit_source = rr.exit_source;
 
   /* Parse the address provided by SOCKS.  Modify it in-place if it
    * specifies a hidden-service (.onion) or particular exit node (.exit).
    */
-  addresstype = parse_extended_hostname(socks->address);
+  const hostname_type_t addresstype = parse_extended_hostname(socks->address);
 
+  /* Now see whether the hostname is bogus.  This could happen because of an
+   * onion hostname whose format we don't recognize. */
   if (addresstype == BAD_HOSTNAME) {
     control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
                                 escaped(socks->address));
@@ -1063,16 +1159,21 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     return -1;
   }
 
+  /* If this is a .exit hostname, strip off the .name.exit part, and
+   * see whether we're going to connect there, and otherwise handle it.
+   * (The ".exit" part got stripped off by "parse_extended_hostname").
+   *
+   * We'll set chosen_exit_name and/or close the connection as appropriate.
+   */
   if (addresstype == EXIT_HOSTNAME) {
-    /* foo.exit -- modify conn->chosen_exit_node to specify the exit
-     * node, and conn->address to hold only the address portion. */
-    char *s = strrchr(socks->address,'.');
-
-    /* If StrictNodes is not set, then .exit overrides ExcludeNodes. */
+    /* If StrictNodes is not set, then .exit overrides ExcludeNodes but
+     * not ExcludeExitNodes. */
     routerset_t *excludeset = options->StrictNodes ?
       options->ExcludeExitNodesUnion_ : options->ExcludeExitNodes;
-    const node_t *node;
+    const node_t *node = NULL;
 
+    /* If this .exit was added by an AUTOMAP, then it came straight from
+     * a user.  Make sure that options->AllowDotExit permits that. */
     if (exit_source == ADDRMAPSRC_AUTOMAP && !options->AllowDotExit) {
       /* Whoops; this one is stale.  It must have gotten added earlier,
        * when AllowDotExit was on. */
@@ -1085,6 +1186,8 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       return -1;
     }
 
+    /* Double-check to make sure there are no .exits coming from
+     * impossible/weird sources. */
     if (exit_source == ADDRMAPSRC_DNS ||
         (exit_source == ADDRMAPSRC_NONE && !options->AllowDotExit)) {
       /* It shouldn't be possible to get a .exit address from any of these
@@ -1099,9 +1202,12 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     }
 
     tor_assert(!automap);
+    /* Now, find the character before the .(name) part. */
+    char *s = strrchr(socks->address,'.');
     if (s) {
       /* The address was of the form "(stuff).(name).exit */
       if (s[1] != '\0') {
+        /* Looks like a real .exit one. */
         conn->chosen_exit_name = tor_strdup(s+1);
         node = node_get_by_nickname(conn->chosen_exit_name, 1);
 
@@ -1120,7 +1226,8 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
         return -1;
       }
     } else {
-      /* It looks like they just asked for "foo.exit". */
+      /* It looks like they just asked for "foo.exit".  That's a special
+       * form that means (foo's address).foo.exit. */
 
       conn->chosen_exit_name = tor_strdup(socks->address);
       node = node_get_by_nickname(conn->chosen_exit_name, 1);
@@ -1129,6 +1236,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
         node_get_address_string(node, socks->address, sizeof(socks->address));
       }
     }
+
     /* Now make sure that the chosen exit exists... */
     if (!node) {
       log_warn(LD_APP,
@@ -1150,8 +1258,12 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
        implies no. */
   }
 
+  /* Now, handle everything that isn't a .onion address. */
   if (addresstype != ONION_HOSTNAME) {
-    /* not a hidden-service request (i.e. normal or .exit) */
+    /* Not a hidden-service request.  It's either a hostname or an IP,
+     * possibly with a .exit that we stripped off. */
+
+    /* Check for funny characters in the address. */
     if (address_is_invalid_destination(socks->address, 1)) {
       control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
                                   escaped(socks->address));
@@ -1162,6 +1274,8 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       return -1;
     }
 
+    /* If we're running in Tor2webMode, we don't allow anything BUT .onion
+     * addresses. */
     if (options->Tor2webMode) {
       log_warn(LD_APP, "Refusing to connect to non-hidden-service hostname %s "
                "because tor2web mode is enabled.",
@@ -1170,12 +1284,15 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       return -1;
     }
 
+    /* See if this is a hostname lookup that we can answer immediately.
+     * (For example, an attempt to look up the IP address for an IP address.)
+     */
     if (socks->command == SOCKS_COMMAND_RESOLVE) {
       tor_addr_t answer;
       /* Reply to resolves immediately if we can. */
       if (tor_addr_parse(&answer, socks->address) >= 0) {/* is it an IP? */
         /* remember _what_ is supposed to have been resolved. */
-        strlcpy(socks->address, orig_address, sizeof(socks->address));
+        strlcpy(socks->address, rr.orig_address, sizeof(socks->address));
         connection_ap_handshake_socks_resolved_addr(conn, &answer, -1,
                                                     map_expires);
         connection_mark_unattached_ap(conn,
@@ -1186,14 +1303,22 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       tor_assert(!automap);
       rep_hist_note_used_resolve(now); /* help predict this next time */
     } else if (socks->command == SOCKS_COMMAND_CONNECT) {
+      /* Special handling for attempts to connect */
       tor_assert(!automap);
+      /* Don't allow connections to port 0. */
       if (socks->port == 0) {
         log_notice(LD_APP,"Application asked to connect to port 0. Refusing.");
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
         return -1;
       }
+      /* You can't make connections to internal addresses, by default.
+       * Exceptions are begindir requests (where the address is meaningless,
+       * or cases where you've hand-configured a particular exit, thereby
+       * making the local address meaningful. */
       if (options->ClientRejectInternalAddresses &&
           !conn->use_begindir && !conn->chosen_exit_name && !circ) {
+        /* If we reach this point then we don't want to allow internal
+         * addresses.  Check if we got one. */
         tor_addr_t addr;
         if (tor_addr_hostname_is_local(socks->address) ||
             (tor_addr_parse(&addr, socks->address) >= 0 &&
@@ -1228,31 +1353,47 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
           connection_mark_unattached_ap(conn, END_STREAM_REASON_PRIVATE_ADDR);
           return -1;
         }
-      }
+      } /* end "if we should check for internal addresses" */
 
+      /* Okay.  We're still doing a CONNECT, and it wasn't a private
+       * address.  Do special handling for literal IP addresses */
       {
         tor_addr_t addr;
         /* XXX Duplicate call to tor_addr_parse. */
         if (tor_addr_parse(&addr, socks->address) >= 0) {
+          /* If we reach this point, it's an IPv4 or an IPv6 address. */
           sa_family_t family = tor_addr_family(&addr);
+
+          /* XXXX bug: the second one should be "ipv6_traffic" */
           if ((family == AF_INET && ! conn->entry_cfg.ipv4_traffic) ||
               (family == AF_INET6 && ! conn->entry_cfg.ipv4_traffic)) {
+            /* You can't do an IPv4 address on a v6-only socks listener,
+             * or vice versa. */
             log_warn(LD_NET, "Rejecting SOCKS request for an IP address "
                      "family that this listener does not support.");
             connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
             return -1;
           } else if (family == AF_INET6 && socks->socks_version == 4) {
+            /* You can't make a socks4 request to an IPv6 address. Socks4
+             * doesn't support that. */
             log_warn(LD_NET, "Rejecting SOCKS4 request for an IPv6 address.");
             connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
             return -1;
           } else if (socks->socks_version == 4 && !conn->entry_cfg.ipv4_traffic) {
+            /* You can't do any kind of Socks4 request when IPv4 is forbidden.
+             *
+             * XXX raise this check outside the enclosing block? */
             log_warn(LD_NET, "Rejecting SOCKS4 request on a listener with "
                      "no IPv4 traffic supported.");
             connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
             return -1;
           } else if (family == AF_INET6) {
+            /* Tell the exit: we won't accept any ipv4 connection to an IPv6
+             * address. */
             conn->entry_cfg.ipv4_traffic = 0;
           } else if (family == AF_INET) {
+            /* Tell the exit: we won't accept any ipv6 connection to an IPv4
+             * address. */
             conn->entry_cfg.ipv6_traffic = 0;
           }
         }
@@ -1261,6 +1402,9 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       if (socks->socks_version == 4)
         conn->entry_cfg.ipv6_traffic = 0;
 
+      /* Still handling CONNECT. Now, check for exit enclaves.  (Which we
+       * don't do on BEGINDIR, or there is a chosen exit.)
+       */
       if (!conn->use_begindir && !conn->chosen_exit_name && !circ) {
         /* see if we can find a suitable enclave exit */
         const node_t *r =
@@ -1277,11 +1421,13 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
         }
       }
 
-      /* warn or reject if it's using a dangerous port */
+      /* Still handling CONNECT: warn or reject if it's using a dangerous
+       * port. */
       if (!conn->use_begindir && !conn->chosen_exit_name && !circ)
         if (consider_plaintext_ports(conn, socks->port) < 0)
           return -1;
 
+      /* Remember the port so that we do predicted requests there. */
       if (!conn->use_begindir) {
         /* help predict this next time */
         rep_hist_note_used_port(now, socks->port);
@@ -1290,25 +1436,41 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       rep_hist_note_used_resolve(now); /* help predict this next time */
       /* no extra processing needed */
     } else {
+      /* We should only be doing CONNECT or RESOLVE! */
       tor_fragile_assert();
     }
+
+    /* Okay. At this point we've set chosen_exit_name if needed, rewritten the
+     * address, and decided not to reject it for any number of reasons. Now
+     * mark the connection as waiting for a circuit, and try to attach it!
+     */
     base_conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
-    if ((circ && connection_ap_handshake_attach_chosen_circuit(
-                   conn, circ, cpath) < 0) ||
-        (!circ &&
-         connection_ap_handshake_attach_circuit(conn) < 0)) {
+
+    /* If we were given a circuit to attach to, try to attach. Otherwise,
+     * try to find a good one and attach to that. */
+    int rv;
+    if (circ)
+      rv =  connection_ap_handshake_attach_chosen_circuit(conn, circ, cpath);
+    else
+      rv = connection_ap_handshake_attach_circuit(conn);
+
+    /* If the above function returned 0 then we're waiting for a circuit.
+     * if it returned 1, we're attached.  Both are okay.  But if it returned
+     * -1, there was an error, so make sure the connection is marked, and
+     * return -1. */
+    if (rv < 0) {
       if (!base_conn->marked_for_close)
         connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
       return -1;
     }
+
     return 0;
   } else {
-    /* it's a hidden-service request */
-    rend_cache_entry_t *entry;
-    int r;
-    rend_service_authorization_t *client_auth;
-    rend_data_t *rend_data;
+    /* If we get here, it's a request for a .onion address! */
     tor_assert(!automap);
+
+    /* Check whether it's RESOLVE or RESOLVE_PTR.  We don't handle those
+     * for hidden service addresses. */
     if (SOCKS_COMMAND_IS_RESOLVE(socks->command)) {
       /* if it's a resolve request, fail it right now, rather than
        * building all the circuits and then realizing it won't work. */
@@ -1322,6 +1484,8 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       return -1;
     }
 
+    /* If we were passed a circuit, then we need to fail.  .onion addresses
+     * only work when we launch our own circuits for now. */
     if (circ) {
       log_warn(LD_CONTROL, "Attachstream to a circuit is not "
                "supported for .onion addresses currently. Failing.");
@@ -1329,15 +1493,22 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       return -1;
     }
 
-    ENTRY_TO_EDGE_CONN(conn)->rend_data = rend_data =
+    /* Fill in the rend_data field so we can start doing a connection to
+     * a hidden service. */
+    rend_data_t *rend_data = ENTRY_TO_EDGE_CONN(conn)->rend_data =
       tor_malloc_zero(sizeof(rend_data_t));
     strlcpy(rend_data->onion_address, socks->address,
             sizeof(rend_data->onion_address));
     log_info(LD_REND,"Got a hidden service request for ID '%s'",
              safe_str_client(rend_data->onion_address));
-    /* see if we already have it cached */
-    r = rend_cache_lookup_entry(rend_data->onion_address, -1, &entry);
-    if (r<0) {
+
+    /* see if we already have a hidden service descriptor cached for this
+     * address. */
+    rend_cache_entry_t *entry = NULL;
+    const int rend_cache_lookup_result =
+      rend_cache_lookup_entry(rend_data->onion_address, -1, &entry);
+    if (rend_cache_lookup_result < 0) {
+      /* We should already have rejected this address! */
       log_warn(LD_BUG,"Invalid service name '%s'",
                safe_str_client(rend_data->onion_address));
       connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
@@ -1348,8 +1519,10 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
      * a stable circuit yet, but we know we'll need *something*. */
     rep_hist_note_used_internal(now, 0, 1);
 
-    /* Look up if we have client authorization for it. */
-    client_auth = rend_client_lookup_service_authorization(
+    /* Look up if we have client authorization configured for this hidden
+     * service.  If we do, associate it with the rend_data. */
+    rend_service_authorization_t *client_auth =
+      rend_client_lookup_service_authorization(
                                           rend_data->onion_address);
     if (client_auth) {
       log_info(LD_REND, "Using previously configured client authorization "
@@ -1358,12 +1531,16 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
              client_auth->descriptor_cookie, REND_DESC_COOKIE_LEN);
       rend_data->auth_type = client_auth->auth_type;
     }
-    if (r==0) {
+
+    /* Now, we either launch an attempt to connect to the hidden service,
+     * or we launch an attempt to look up its descriptor, depending on
+     * whether we had the descriptor. */
+    if (rend_cache_lookup_result == 0) {
       base_conn->state = AP_CONN_STATE_RENDDESC_WAIT;
       log_info(LD_REND, "Unknown descriptor %s. Fetching.",
                safe_str_client(rend_data->onion_address));
       rend_client_refetch_v2_renddesc(rend_data);
-    } else { /* r > 0 */
+    } else { /* rend_cache_lookup_result > 0 */
       base_conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
       log_info(LD_REND, "Descriptor is here. Great.");
       if (connection_ap_handshake_attach_circuit(conn) < 0) {
@@ -1374,6 +1551,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     }
     return 0;
   }
+
   return 0; /* unreached but keeps the compiler happy */
 }
 

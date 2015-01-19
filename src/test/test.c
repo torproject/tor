@@ -1313,6 +1313,7 @@ extern struct testcase_t channel_tests[];
 extern struct testcase_t channeltls_tests[];
 extern struct testcase_t relay_tests[];
 extern struct testcase_t scheduler_tests[];
+extern struct testcase_t entryconn_tests[];
 
 static struct testgroup_t testgroups[] = {
   { "", test_array },
@@ -1337,6 +1338,7 @@ static struct testgroup_t testgroups[] = {
   { "circuitmux/", circuitmux_tests },
   { "options/", options_tests },
   { "entrynodes/", entrynodes_tests },
+  { "entryconn/", entryconn_tests },
   { "extorport/", extorport_tests },
   { "control/", controller_event_tests },
   { "hs/", hs_tests },

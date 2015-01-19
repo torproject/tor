@@ -1,0 +1,4 @@
+  o Minor bugfixes (client DNS):
+    - Report the correct cached DNS expiration times. Previously, we
+      would report everything as "never expires."  Fixes bug 14193;
+      bugfix on 0.2.3.17-beta.
