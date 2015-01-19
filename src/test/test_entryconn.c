@@ -269,7 +269,6 @@ test_entryconn_rewrite_automap_reverse(void *arg)
 
   strlcpy(ec2->socks_request->address, ec->socks_request->address,
           sizeof(ec2->socks_request->address));
-  ec2->entry_cfg.use_cached_ipv4_answers = 1; // XXXX REMOVE.  This is only there to hide a bug.
   ec2->socks_request->command = SOCKS_COMMAND_RESOLVE_PTR;
   connection_ap_handshake_rewrite(ec2, &rr);
 
