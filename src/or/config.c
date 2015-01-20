@@ -5504,9 +5504,10 @@ parse_dir_fallback_line(const char *line,
 
 /** Allocate and return a new port_cfg_t with reasonable defaults. */
 static port_cfg_t *
-port_cfg_new(void)
+port_cfg_new(size_t namelen)
 {
-  port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t));
+  tor_assert(namelen <= SIZE_T_CEILING - sizeof(port_cfg_t) - 1);
+  port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t) + namelen + 1);
   cfg->entry_cfg.ipv4_traffic = 1;
   cfg->entry_cfg.cache_ipv4_answers = 1;
   cfg->entry_cfg.prefer_ipv6_virtaddr = 1;
@@ -5616,6 +5617,7 @@ warn_nonlocal_controller_ports(smartlist_t *ports, unsigned forbid)
 #define CL_PORT_SERVER_OPTIONS (1u<<3)
 #define CL_PORT_FORBID_NONLOCAL (1u<<4)
 #define CL_PORT_TAKES_HOSTNAMES (1u<<5)
+#define CL_PORT_IS_UNIXSOCKET (1u<<6)
 
 /**
  * Parse port configuration for a single port type.
@@ -5663,7 +5665,7 @@ parse_port_config(smartlist_t *out,
                   int listener_type,
                   const char *defaultaddr,
                   int defaultport,
-                  unsigned flags)
+                  const unsigned flags)
 {
   smartlist_t *elts;
   int retval = -1;
@@ -5676,6 +5678,7 @@ parse_port_config(smartlist_t *out,
   const unsigned allow_spurious_listenaddr =
     flags & CL_PORT_ALLOW_EXTRA_LISTENADDR;
   const unsigned takes_hostnames = flags & CL_PORT_TAKES_HOSTNAMES;
+  const unsigned is_unix_socket = flags & CL_PORT_IS_UNIXSOCKET;
   int got_zero_port=0, got_nonzero_port=0;
 
   /* FooListenAddress is deprecated; let's make it work like it used to work,
@@ -5712,7 +5715,7 @@ parse_port_config(smartlist_t *out,
 
     if (use_server_options && out) {
       /* Add a no_listen port. */
-      port_cfg_t *cfg = port_cfg_new();
+      port_cfg_t *cfg = port_cfg_new(0);
       cfg->type = listener_type;
       cfg->port = mainport;
       tor_addr_make_unspec(&cfg->addr); /* Server ports default to 0.0.0.0 */
@@ -5732,7 +5735,7 @@ parse_port_config(smartlist_t *out,
         return -1;
       }
       if (out) {
-        port_cfg_t *cfg = port_cfg_new();
+        port_cfg_t *cfg = port_cfg_new(0);
         cfg->type = listener_type;
         cfg->port = port ? port : mainport;
         tor_addr_copy(&cfg->addr, &addr);
@@ -5754,14 +5757,21 @@ parse_port_config(smartlist_t *out,
     return 0;
   } /* end if (listenaddrs) */
 
+
   /* No ListenAddress lines. If there's no FooPort, then maybe make a default
    * one. */
   if (! ports) {
-    if (defaultport && out) {
-       port_cfg_t *cfg = port_cfg_new();
+    if (defaultport && defaultaddr && out) {
+      port_cfg_t *cfg = port_cfg_new(is_unix_socket ? strlen(defaultaddr) : 0);
        cfg->type = listener_type;
-       cfg->port = defaultport;
-       tor_addr_parse(&cfg->addr, defaultaddr);
+       if (is_unix_socket) {
+         tor_addr_make_unspec(&cfg->addr);
+         memcpy(cfg->unix_addr, defaultaddr, strlen(defaultaddr) + 1);
+         cfg->is_unix_addr = 1;
+       } else {
+         cfg->port = defaultport;
+         tor_addr_parse(&cfg->addr, defaultaddr);
+       }
        cfg->entry_cfg.session_group = SESSION_GROUP_UNSET;
        cfg->entry_cfg.isolation_flags = ISO_DEFAULT;
        smartlist_add(out, cfg);
@@ -5804,7 +5814,13 @@ parse_port_config(smartlist_t *out,
 
     /* Now parse the addr/port value */
     addrport = smartlist_get(elts, 0);
-    if (!strcmp(addrport, "auto")) {
+    if (is_unix_socket) {
+      /* leave it as it is. */
+      if (!strcmp(addrport, "0"))
+        port = 0;
+      else
+        port = 1;
+    } else if (!strcmp(addrport, "auto")) {
       port = CFG_AUTO_PORT;
       tor_addr_parse(&addr, defaultaddr);
     } else if (!strcasecmpend(addrport, ":auto")) {
@@ -5989,9 +6005,16 @@ parse_port_config(smartlist_t *out,
     }
 
     if (out && port) {
-      port_cfg_t *cfg = port_cfg_new();
-      tor_addr_copy(&cfg->addr, &addr);
-      cfg->port = port;
+      size_t namelen = is_unix_socket ? strlen(addrport) : 0;
+      port_cfg_t *cfg = port_cfg_new(namelen);
+      if (is_unix_socket) {
+        tor_addr_make_unspec(&cfg->addr);
+        memcpy(cfg->unix_addr, addrport, strlen(addrport) + 1);
+        cfg->is_unix_addr = 1;
+      } else {
+        tor_addr_copy(&cfg->addr, &addr);
+        cfg->port = port;
+      }
       cfg->type = listener_type;
       cfg->entry_cfg.isolation_flags = isolation;
       cfg->entry_cfg.session_group = sessiongroup;
@@ -6039,94 +6062,6 @@ parse_port_config(smartlist_t *out,
   SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
   smartlist_free(elts);
   return retval;
-}
-
-/** Parse a list of config_line_t for an AF_UNIX unix socket listener option
- * from <b>cfg</b> and add them to <b>out</b>.  No fancy options are
- * supported: the line contains nothing but the path to the AF_UNIX socket.
- * We support a *Socket 0 syntax to explicitly disable if we enable by
- * default.  To use this, pass a non-NULL list containing the default
- * paths into this function as the 2nd parameter, and if no config lines at all
- * are present they will be added to the output list.  If the only config line
- * present is '0' the input list will be unmodified.
- */
-static int
-parse_unix_socket_config(smartlist_t *out, smartlist_t *defaults,
-                         const config_line_t *cfg, int listener_type)
-{
-  /* We can say things like SocksSocket 0 or ControlSocket 0 to explicitly
-   * disable this feature; use this to track if we've seen a disable line
-   */
-
-  int unix_socket_disable = 0;
-  size_t len;
-  smartlist_t *ports_to_add = NULL;
-
-  if (!out)
-    return 0;
-
-  ports_to_add = smartlist_new();
-
-  for ( ; cfg; cfg = cfg->next) {
-    if (strcmp(cfg->value, "0") != 0) {
-      /* We have a non-disable; add it */
-      len = strlen(cfg->value);
-      port_cfg_t *port = tor_malloc_zero(sizeof(port_cfg_t) + len + 1);
-      port->is_unix_addr = 1;
-      memcpy(port->unix_addr, cfg->value, len+1);
-      port->type = listener_type;
-      if (listener_type == CONN_TYPE_AP_LISTENER) {
-        /* Some more bits to twiddle for this case
-         *
-         * XXX this should support parsing the same options
-         * parse_port_config() does, and probably that code should be
-         * factored out into a function we can call from here.  For
-         * now, some reasonable defaults.
-         */
-
-        port->entry_cfg.ipv4_traffic = 1;
-        port->entry_cfg.ipv6_traffic = 1;
-        port->entry_cfg.cache_ipv4_answers = 0;
-        port->entry_cfg.cache_ipv6_answers = 0;
-      }
-      smartlist_add(ports_to_add, port);
-    } else {
-      /* Keep track that we've seen a disable */
-      unix_socket_disable = 1;
-    }
-  }
-
-  if (unix_socket_disable) {
-    if (smartlist_len(ports_to_add) > 0) {
-      /* We saw a disable line and a path; bad news */
-      SMARTLIST_FOREACH(ports_to_add, port_cfg_t *, port, tor_free(port));
-      smartlist_free(ports_to_add);
-      return -1;
-    }
-    /* else we have a disable and nothing else, so add nothing to out */
-  } else {
-    /* No disable; do we have any ports to add that we parsed? */
-    if (smartlist_len(ports_to_add) > 0) {
-      SMARTLIST_FOREACH_BEGIN(ports_to_add, port_cfg_t *, port) {
-        smartlist_add(out, port);
-      } SMARTLIST_FOREACH_END(port);
-    } else if (defaults != NULL && smartlist_len(defaults) > 0) {
-      /* No, but we have some defaults to copy */
-      SMARTLIST_FOREACH_BEGIN(defaults, const port_cfg_t *, defport) {
-        tor_assert(defport->is_unix_addr);
-        tor_assert(defport->unix_addr);
-        len = sizeof(port_cfg_t) + strlen(defport->unix_addr) + 1;
-        port_cfg_t *port = tor_malloc_zero(len);
-        memcpy(port, defport, len);
-        smartlist_add(out, port);
-      } SMARTLIST_FOREACH_END(defport);
-    }
-
-    /* Free the temporary smartlist we used */
-    smartlist_free(ports_to_add);
-  }
-
-  return 0;
 }
 
 /** Return the number of ports which are actually going to listen with type
@@ -6218,15 +6153,17 @@ parse_ports(or_options_t *options, int validate_only,
       goto err;
     }
 
-    if (parse_unix_socket_config(ports, NULL,
-                                 options->ControlSocket,
-                                 CONN_TYPE_CONTROL_LISTENER) < 0) {
+    if (parse_port_config(ports, options->ControlSocket, NULL,
+                          "ControlSocket",
+                          CONN_TYPE_CONTROL_LISTENER, NULL, 0,
+                          control_port_flags | CL_PORT_IS_UNIXSOCKET) < 0) {
       *msg = tor_strdup("Invalid ControlSocket configuration");
       goto err;
     }
-    if (parse_unix_socket_config(ports, NULL,
-                                 options->SocksSocket,
-                                 CONN_TYPE_AP_LISTENER) < 0) {
+    if (parse_port_config(ports, options->SocksSocket, NULL,
+                          "SocksSocket",
+                          CONN_TYPE_AP_LISTENER, NULL, 0,
+                          CL_PORT_IS_UNIXSOCKET) < 0) {
       *msg = tor_strdup("Invalid SocksSocket configuration");
       goto err;
     }
