@@ -2073,7 +2073,9 @@ The following options are used to configure a hidden service.
 
 [[HiddenServiceAllowUnknownPorts]] **HiddenServiceAllowUnknownPorts** **0**|**1**::
    If set to 1, then connections to unrecognized ports do not cause the
-   current hidden service to close rendezvous circuits. (Default: 0)
+   current hidden service to close rendezvous circuits. (Setting this to 0 is
+   not an authorization mechanism; it is instead meant to be a mild
+   inconvenience to port-scanners.) (Default: 0)
 
 [[RendPostPeriod]] **RendPostPeriod** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
     Every time the specified period elapses, Tor uploads any rendezvous
