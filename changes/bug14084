@@ -1,0 +1,6 @@
+  o Minor features:
+    - New option "HiddenServiceAllowUnknownPorts" to allow hidden
+      services to disable the anti-scanning feature introduced in
+      0.2.6.2-alpha. With this option not set, a connection to an
+      unlisted port closes the circuit.  With this option set, only a
+      RELAY_DONE cell is sent.  Closes ticket #14084.

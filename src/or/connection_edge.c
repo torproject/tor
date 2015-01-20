@@ -2788,7 +2788,9 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     n_stream->rend_data = rend_data_dup(origin_circ->rend_data);
     tor_assert(connection_edge_is_rendezvous_stream(n_stream));
     assert_circuit_ok(circ);
-    if (rend_service_set_connection_addr_port(n_stream, origin_circ) < 0) {
+
+    const int r = rend_service_set_connection_addr_port(n_stream, origin_circ);
+    if (r < 0) {
       log_info(LD_REND,"Didn't find rendezvous service (port %d)",
                n_stream->base_.port);
       /* Send back reason DONE because we want to make hidden service port
@@ -2807,7 +2809,10 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
        * scanning the hidden service ports. Note that this mitigates port
        * scanning by adding more work on the attacker side to successfully
        * scan but does not fully solve it. */
-      return END_CIRC_AT_ORIGIN;
+      if (r < -1)
+        return END_CIRC_AT_ORIGIN;
+      else
+        return 0;
     }
     assert_circuit_ok(circ);
     log_debug(LD_REND,"Finished assigning addr/port");

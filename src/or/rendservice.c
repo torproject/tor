@@ -129,6 +129,9 @@ typedef struct rend_service_t {
    * when they do, this keeps us from launching multiple simultaneous attempts
    * to connect to the same rend point. */
   replaycache_t *accepted_intro_dh_parts;
+  /** If true, we don't close circuits for making requests to unsupported
+   * ports. */
+  int allow_unknown_ports;
 } rend_service_t;
 
 /** A list of rend_service_t's for services run on this OP.
@@ -397,6 +400,19 @@ rend_config_services(const or_options_t *options, int validate_only)
          return -1;
        }
        smartlist_add(service->ports, portcfg);
+     } else if (!strcasecmp(line->key, "HiddenServiceAllowUnknownPorts")) {
+       service->allow_unknown_ports = (int)tor_parse_long(line->value,
+                                                         10, 0, 1, &ok, NULL);
+       if (!ok) {
+         log_warn(LD_CONFIG,
+                  "HiddenServiceAllowUnknownPorts should be 0 or 1, not %s",
+                  line->value);
+         rend_service_free(service);
+         return -1;
+       }
+       log_info(LD_CONFIG,
+                "HiddenServiceAllowUnknownPorts=%d for %s",
+                (int)service->allow_unknown_ports, service->directory);
      } else if (!strcasecmp(line->key,
                             "HiddenServiceDirGroupReadable")) {
          service->dir_group_readable = (int)tor_parse_long(line->value,
@@ -3388,7 +3404,8 @@ rend_service_dump_stats(int severity)
 
 /** Given <b>conn</b>, a rendezvous exit stream, look up the hidden service for
  * 'circ', and look up the port and address based on conn-\>port.
- * Assign the actual conn-\>addr and conn-\>port. Return -1 if failure,
+ * Assign the actual conn-\>addr and conn-\>port. Return -2 on failure
+ * for which the circuit should be closed, -1 on other failure,
  * or 0 for success.
  */
 int
@@ -3411,7 +3428,7 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
     log_warn(LD_REND, "Couldn't find any service associated with pk %s on "
              "rendezvous circuit %u; closing.",
              serviceid, (unsigned)circ->base_.n_circ_id);
-    return -1;
+    return -2;
   }
   matching_ports = smartlist_new();
   SMARTLIST_FOREACH(service->ports, rend_service_port_config_t *, p,
@@ -3429,6 +3446,9 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
   }
   log_info(LD_REND, "No virtual port mapping exists for port %d on service %s",
            conn->base_.port,serviceid);
-  return -1;
+  if (service->allow_unknown_ports)
+    return -1;
+  else
+    return -2;
 }
 
