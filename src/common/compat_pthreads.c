@@ -212,7 +212,8 @@ tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex, const struct timeval *tv)
     struct timespec ts;
     struct timeval tvnow, tvsum;
     while (1) {
-      gettimeofday(&tvnow, NULL);
+      if (gettimeofday(&tvnow, NULL) < 0)
+        return -1;
       timeradd(tv, &tvnow, &tvsum);
       ts.tv_sec = tvsum.tv_sec;
       ts.tv_nsec = tvsum.tv_usec * 1000;

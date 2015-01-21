@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2015, The Tor Project, Inc. */
+/* copyright (c) 2013-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
@@ -81,13 +81,6 @@ typedef struct workerthread_s {
   int index;
   /** The pool this thread is a part of. */
   struct threadpool_s *in_pool;
-  /** True iff this thread is currently in its loop. (Not currently used.) */
-  unsigned is_running;
-  /** True iff this thread has crashed or is shut down for some reason. (Not
-   * currently used.) */
-  unsigned is_shut_down;
-  /** True if we're waiting for more elements to get added to the queue. */
-  unsigned waiting;
   /** User-supplied state field that we pass to the worker functions of each
    * work item. */
   void *state;
@@ -181,8 +174,6 @@ worker_thread_main(void *thread_)
   workqueue_entry_t *work;
   int result;
 
-  thread->is_running = 1;
-
   tor_mutex_acquire(&pool->lock);
   while (1) {
     /* lock must be held at this point. */
@@ -198,8 +189,6 @@ worker_thread_main(void *thread_)
         int r = update_fn(thread->state, arg);
 
         if (r < 0) {
-          thread->is_running = 0;
-          thread->is_shut_down = 1;
           return;
         }
 
@@ -220,8 +209,6 @@ worker_thread_main(void *thread_)
 
       /* We may need to exit the thread. */
       if (result >= WQ_RPL_ERROR) {
-        thread->is_running = 0;
-        thread->is_shut_down = 1;
         return;
       }
       tor_mutex_acquire(&pool->lock);
@@ -232,12 +219,9 @@ worker_thread_main(void *thread_)
     /* TODO: support an idle-function */
 
     /* Okay. Now, wait till somebody has work for us. */
-    /* XXXX we could just omit waiting and instead */
-    thread->waiting = 1;
     if (tor_cond_wait(&pool->condition, &pool->lock, NULL) < 0) {
-      /* XXXX ERROR */
+      log_warn(LD_GENERAL, "Fail tor_cond_wait.");
     }
-    thread->waiting = 0;
   }
 }
 
@@ -482,7 +466,9 @@ void
 replyqueue_process(replyqueue_t *queue)
 {
   if (queue->alert.drain_fn(queue->alert.read_fd) < 0) {
-    /* XXXX complain! */
+    static ratelim_t warn_limit = RATELIM_INIT(7200);
+    log_fn_ratelim(&warn_limit, LOG_WARN, LD_GENERAL,
+                   "Failure from drain_fd");
   }
 
   tor_mutex_acquire(&queue->lock);
