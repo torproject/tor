@@ -148,7 +148,7 @@ workqueue_entry_cancel(workqueue_entry_t *ent)
   tor_mutex_release(&ent->on_pool->lock);
 
   if (cancelled) {
-    tor_free(ent);
+    workqueue_entry_free(ent);
   }
   return result;
 }
