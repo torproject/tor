@@ -400,6 +400,10 @@ fi
 AC_SEARCH_LIBS(pthread_create, [pthread])
 AC_SEARCH_LIBS(pthread_detach, [pthread])
 
+AM_CONDITIONAL(THREADS_WIN32, test "$enable_threads" = "yes" && test "$bwin32" = "true")
+AM_CONDITIONAL(THREADS_PTHREADS, test "$enable_threads" = "yes" && test "$bwin32" = "false")
+AM_CONDITIONAL(THREADS_NONE, test "$enable_threads" != "yes")
+
 dnl -------------------------------------------------------------------
 dnl Check for functions before libevent, since libevent-1.2 apparently
 dnl exports strlcpy without defining it in a header.
@@ -410,6 +414,7 @@ AC_CHECK_FUNCS(
         backtrace \
         backtrace_symbols_fd \
         clock_gettime \
+	eventfd \
         flock \
         ftime \
         getaddrinfo \
@@ -424,6 +429,8 @@ AC_CHECK_FUNCS(
         localtime_r \
         lround \
         memmem \
+	pipe \
+	pipe2 \
         prctl \
         rint \
         sigaction \
@@ -437,7 +444,7 @@ AC_CHECK_FUNCS(
         sysconf \
 	sysctl \
         uname \
-        usleep \
+	usleep \
         vasprintf \
 	_vscprintf
 )
@@ -965,6 +972,7 @@ AC_CHECK_HEADERS(
         netinet/in6.h \
         pwd.h \
         stdint.h \
+	sys/eventfd.h \
         sys/file.h \
         sys/ioctl.h \
         sys/limits.h \

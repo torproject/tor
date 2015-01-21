@@ -54,10 +54,18 @@ endif
 
 LIBDONNA += $(LIBED25519_REF10)
 
+if THREADS_PTHREADS
+threads_impl_source=src/common/compat_pthreads.c
+endif
+if THREADS_WIN32
+threads_impl_source=src/common/compat_winthreads.c
+endif
+
 LIBOR_A_SOURCES = \
   src/common/address.c					\
   src/common/backtrace.c				\
   src/common/compat.c					\
+  src/common/compat_threads.c				\
   src/common/container.c				\
   src/common/di_ops.c					\
   src/common/log.c					\
@@ -66,10 +74,12 @@ LIBOR_A_SOURCES = \
   src/common/util_codedigest.c				\
   src/common/util_process.c				\
   src/common/sandbox.c					\
+  src/common/workqueue.c				\
   src/ext/csiphash.c					\
   src/ext/trunnel/trunnel.c				\
   $(libor_extra_source)					\
-  $(libor_mempool_source)
+  $(libor_mempool_source)				\
+  $(threads_impl_source)
 
 LIBOR_CRYPTO_A_SOURCES = \
   src/common/aes.c		\
@@ -102,7 +112,6 @@ src_common_libor_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 src_common_libor_crypto_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 src_common_libor_event_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 
-
 COMMONHEADERS = \
   src/common/address.h				\
   src/common/backtrace.h			\
@@ -110,6 +119,7 @@ COMMONHEADERS = \
   src/common/ciphers.inc			\
   src/common/compat.h				\
   src/common/compat_libevent.h			\
+  src/common/compat_threads.h			\
   src/common/container.h			\
   src/common/crypto.h				\
   src/common/crypto_curve25519.h		\
@@ -128,6 +138,7 @@ COMMONHEADERS = \
   src/common/tortls.h				\
   src/common/util.h				\
   src/common/util_process.h			\
+  src/common/workqueue.h			\
   $(libor_mempool_header)
 
 noinst_HEADERS+= $(COMMONHEADERS)

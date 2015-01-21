@@ -30,8 +30,8 @@ typedef struct server_onion_keys_t {
 #define MAX_ONIONSKIN_CHALLENGE_LEN 255
 #define MAX_ONIONSKIN_REPLY_LEN 255
 
-void setup_server_onion_keys(server_onion_keys_t *keys);
-void release_server_onion_keys(server_onion_keys_t *keys);
+server_onion_keys_t *server_onion_keys_new(void);
+void server_onion_keys_free(server_onion_keys_t *keys);
 
 void onion_handshake_state_release(onion_handshake_state_t *state);
 

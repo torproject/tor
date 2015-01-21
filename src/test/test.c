@@ -1258,6 +1258,23 @@ test_stats(void *arg)
   tor_free(s);
 }
 
+static void *
+passthrough_test_setup(const struct testcase_t *testcase)
+{
+  return testcase->setup_data;
+}
+static int
+passthrough_test_cleanup(const struct testcase_t *testcase, void *ptr)
+{
+  (void)testcase;
+  (void)ptr;
+  return 1;
+}
+
+const struct testcase_setup_t passthrough_setup = {
+  passthrough_test_setup, passthrough_test_cleanup
+};
+
 #define ENT(name)                                                       \
   { #name, test_ ## name , 0, NULL, NULL }
 #define FORK(name)                                                      \
@@ -1297,6 +1314,7 @@ extern struct testcase_t cell_queue_tests[];
 extern struct testcase_t options_tests[];
 extern struct testcase_t socks_tests[];
 extern struct testcase_t entrynodes_tests[];
+extern struct testcase_t thread_tests[];
 extern struct testcase_t extorport_tests[];
 extern struct testcase_t controller_event_tests[];
 extern struct testcase_t logging_tests[];
@@ -1324,6 +1342,7 @@ static struct testgroup_t testgroups[] = {
   { "container/", container_tests },
   { "util/", util_tests },
   { "util/logging/", logging_tests },
+  { "util/thread/", thread_tests },
   { "cellfmt/", cell_format_tests },
   { "cellqueue/", cell_queue_tests },
   { "dir/", dir_tests },

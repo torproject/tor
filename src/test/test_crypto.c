@@ -1975,30 +1975,14 @@ test_crypto_siphash(void *arg)
   ;
 }
 
-static void *
-pass_data_setup_fn(const struct testcase_t *testcase)
-{
-  return testcase->setup_data;
-}
-static int
-pass_data_cleanup_fn(const struct testcase_t *testcase, void *ptr)
-{
-  (void)ptr;
-  (void)testcase;
-  return 1;
-}
-static const struct testcase_setup_t pass_data = {
-  pass_data_setup_fn, pass_data_cleanup_fn
-};
-
 #define CRYPTO_LEGACY(name)                                            \
   { #name, test_crypto_ ## name , 0, NULL, NULL }
 
 struct testcase_t crypto_tests[] = {
   CRYPTO_LEGACY(formats),
   CRYPTO_LEGACY(rng),
-  { "aes_AES", test_crypto_aes, TT_FORK, &pass_data, (void*)"aes" },
-  { "aes_EVP", test_crypto_aes, TT_FORK, &pass_data, (void*)"evp" },
+  { "aes_AES", test_crypto_aes, TT_FORK, &passthrough_setup, (void*)"aes" },
+  { "aes_EVP", test_crypto_aes, TT_FORK, &passthrough_setup, (void*)"evp" },
   CRYPTO_LEGACY(sha),
   CRYPTO_LEGACY(pk),
   { "pk_fingerprints", test_crypto_pk_fingerprints, TT_FORK, NULL, NULL },
@@ -2006,23 +1990,25 @@ struct testcase_t crypto_tests[] = {
   CRYPTO_LEGACY(dh),
   CRYPTO_LEGACY(s2k_rfc2440),
 #ifdef HAVE_LIBSCRYPT_H
-  { "s2k_scrypt", test_crypto_s2k_general, 0, &pass_data,
+  { "s2k_scrypt", test_crypto_s2k_general, 0, &passthrough_setup,
     (void*)"scrypt" },
-  { "s2k_scrypt_low", test_crypto_s2k_general, 0, &pass_data,
+  { "s2k_scrypt_low", test_crypto_s2k_general, 0, &passthrough_setup,
     (void*)"scrypt-low" },
 #endif
-  { "s2k_pbkdf2", test_crypto_s2k_general, 0, &pass_data,
+  { "s2k_pbkdf2", test_crypto_s2k_general, 0, &passthrough_setup,
     (void*)"pbkdf2" },
-  { "s2k_rfc2440_general", test_crypto_s2k_general, 0, &pass_data,
+  { "s2k_rfc2440_general", test_crypto_s2k_general, 0, &passthrough_setup,
     (void*)"rfc2440" },
-  { "s2k_rfc2440_legacy", test_crypto_s2k_general, 0, &pass_data,
+  { "s2k_rfc2440_legacy", test_crypto_s2k_general, 0, &passthrough_setup,
     (void*)"rfc2440-legacy" },
   { "s2k_errors", test_crypto_s2k_errors, 0, NULL, NULL },
   { "scrypt_vectors", test_crypto_scrypt_vectors, 0, NULL, NULL },
   { "pbkdf2_vectors", test_crypto_pbkdf2_vectors, 0, NULL, NULL },
   { "pwbox", test_crypto_pwbox, 0, NULL, NULL },
-  { "aes_iv_AES", test_crypto_aes_iv, TT_FORK, &pass_data, (void*)"aes" },
-  { "aes_iv_EVP", test_crypto_aes_iv, TT_FORK, &pass_data, (void*)"evp" },
+  { "aes_iv_AES", test_crypto_aes_iv, TT_FORK, &passthrough_setup,
+    (void*)"aes" },
+  { "aes_iv_EVP", test_crypto_aes_iv, TT_FORK, &passthrough_setup,
+    (void*)"evp" },
   CRYPTO_LEGACY(base32_decode),
   { "kdf_TAP", test_crypto_kdf_TAP, 0, NULL, NULL },
   { "hkdf_sha256", test_crypto_hkdf_sha256, 0, NULL, NULL },

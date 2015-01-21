@@ -158,5 +158,7 @@ crypto_pk_t *pk_generate(int idx);
 #define NS_MOCK(name) MOCK(name, NS(name))
 #define NS_UNMOCK(name) UNMOCK(name)
 
+extern const struct testcase_setup_t passthrough_setup;
+
 #endif
 

@@ -1271,7 +1271,7 @@ run_scheduled_events(time_t now)
       get_onion_key_set_at()+MIN_ONION_KEY_LIFETIME < now) {
     log_info(LD_GENERAL,"Rotating onion key.");
     rotate_onion_key();
-    cpuworkers_rotate();
+    cpuworkers_rotate_keyinfo();
     if (router_rebuild_descriptor(1)<0) {
       log_info(LD_CONFIG, "Couldn't rebuild router descriptor");
     }
@@ -1960,9 +1960,9 @@ do_hup(void)
    * force a retry there. */
 
   if (server_mode(options)) {
-    /* Restart cpuworker and dnsworker processes, so they get up-to-date
+    /* Update cpuworker and dnsworker processes, so they get up-to-date
      * configuration options. */
-    cpuworkers_rotate();
+    cpuworkers_rotate_keyinfo();
     dns_reset();
   }
   return 0;
