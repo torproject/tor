@@ -552,9 +552,9 @@ circuit_handle_first_hop(origin_circuit_t *circ)
  *
  * Status is 1 if connect succeeded, or 0 if connect failed.
  *
- * Close_origin_circs is 1 if we should close all the origin circuits through
- * this channel, or 0 otherwise.  (This happens when we want to retry an
- * older guard.)
+ * Close_origin_circuits is 1 if we should close all the origin circuits
+ * through this channel, or 0 otherwise.  (This happens when we want to retry
+ * an older guard.)
  */
 void
 circuit_n_chan_done(channel_t *chan, int status, int close_origin_circuits)
