@@ -171,9 +171,8 @@ update_state_threadfn(void *state_, void *work_)
   return WQ_RPL_REPLY;
 }
 
-/** Called when the onion key has changed and we need to spawn new
- * cpuworkers.  Close all currently idle cpuworkers, and mark the last
- * rotation time as now.
+/** Called when the onion key has changed so update all CPU worker(s) with
+ * new function pointers with which a new state will be generated.
  */
 void
 cpuworkers_rotate_keyinfo(void)
@@ -336,7 +335,7 @@ cpuworker_onion_handshake_replyfn(void *work_)
             "Unpacking cpuworker reply %p, circ=%p, success=%d",
             job, circ, rpl.success);
 
-  if (circ->base_.magic == DEAD_CIRCUIT_MAGIC) { 
+  if (circ->base_.magic == DEAD_CIRCUIT_MAGIC) {
     /* The circuit was supposed to get freed while the reply was
      * pending. Instead, it got left for us to free so that we wouldn't freak
      * out when the job->circ field wound up pointing to nothing. */
