@@ -196,23 +196,37 @@ tor_cond_uninit(tor_cond_t *cond)
 int
 tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex, const struct timeval *tv)
 {
+  int r;
   if (tv == NULL) {
-    return pthread_cond_wait(&cond->cond, &mutex->mutex) ? -1 : 0;
+    while (1) {
+      r = pthread_cond_wait(&cond->cond, &mutex->mutex);
+      if (r == EINTR) {
+        /* EINTR should be impossible according to POSIX, but POSIX, like the
+         * Pirate's Code, is apparently treated "more like what you'd call
+         * guidelines than actual rules." */
+        continue;
+      }
+      return r ? -1 : 0;
+    }
   } else {
     struct timespec ts;
     struct timeval tvnow, tvsum;
-    int r;
-    gettimeofday(&tvnow, NULL);
-    timeradd(tv, &tvnow, &tvsum);
-    ts.tv_sec = tvsum.tv_sec;
-    ts.tv_nsec = tvsum.tv_usec * 1000;
-    r = pthread_cond_timedwait(&cond->cond, &mutex->mutex, &ts);
-    if (r == 0)
-      return 0;
-    else if (r == ETIMEDOUT)
-      return 1;
-    else
-      return -1;
+    while (1) {
+      gettimeofday(&tvnow, NULL);
+      timeradd(tv, &tvnow, &tvsum);
+      ts.tv_sec = tvsum.tv_sec;
+      ts.tv_nsec = tvsum.tv_usec * 1000;
+
+      r = pthread_cond_timedwait(&cond->cond, &mutex->mutex, &ts);
+      if (r == 0)
+        return 0;
+      else if (r == ETIMEDOUT)
+        return 1;
+      else if (r == EINTR)
+        continue;
+      else
+        return -1;
+    }
   }
 }
 /** Wake up one of the waiters on <b>cond</b>. */

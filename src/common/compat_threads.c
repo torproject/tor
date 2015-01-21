@@ -88,12 +88,59 @@ in_main_thread(void)
   return main_thread_id == tor_get_thread_id();
 }
 
+#if defined(HAVE_EVENTFD) || defined(HAVE_PIPE)
+/* non-interruptable versions */
+static int
+write_ni(int fd, const void *buf, size_t n)
+{
+  int r;
+ again:
+  r = write(fd, buf, n);
+  if (r < 0 && errno == EINTR)
+    goto again;
+  return r;
+}
+static int
+read_ni(int fd, void *buf, size_t n)
+{
+  int r;
+ again:
+  r = read(fd, buf, n);
+  if (r < 0 && errno == EINTR)
+    goto again;
+  return r;
+}
+#endif
+
+/* non-interruptable versions */
+static int
+send_ni(int fd, const void *buf, size_t n, int flags)
+{
+  int r;
+ again:
+  r = send(fd, buf, n, flags);
+  if (r < 0 && errno == EINTR)
+    goto again;
+  return r;
+}
+
+static int
+recv_ni(int fd, void *buf, size_t n, int flags)
+{
+  int r;
+ again:
+   r = recv(fd, buf, n, flags);
+  if (r < 0 && errno == EINTR)
+    goto again;
+  return r;
+}
+
 #ifdef HAVE_EVENTFD
 static int
 eventfd_alert(int fd)
 {
   uint64_t u = 1;
-  int r = write(fd, (void*)&u, sizeof(u));
+  int r = write_ni(fd, (void*)&u, sizeof(u));
   if (r < 0 && errno != EAGAIN)
     return -1;
   return 0;
@@ -103,7 +150,7 @@ static int
 eventfd_drain(int fd)
 {
   uint64_t u = 0;
-  int r = read(fd, (void*)&u, sizeof(u));
+  int r = read_ni(fd, (void*)&u, sizeof(u));
   if (r < 0 && errno != EAGAIN)
     return -1;
   return 0;
@@ -136,7 +183,7 @@ pipe_drain(int fd)
 static int
 sock_alert(tor_socket_t fd)
 {
-  ssize_t r = send(fd, "x", 1, 0);
+  ssize_t r = send_ni(fd, "x", 1, 0);
   if (r < 0 && !ERRNO_IS_EAGAIN(tor_socket_errno(fd)))
     return -1;
   return 0;
@@ -147,7 +194,7 @@ sock_drain(tor_socket_t fd)
 {
   char buf[32];
   ssize_t r;
-  while ((r = recv(fd, buf, sizeof(buf), 0)) >= 0)
+  while ((r = recv_ni(fd, buf, sizeof(buf), 0)) >= 0)
     ;
   if (r == 0 || !ERRNO_IS_EAGAIN(tor_socket_errno(fd)))
     return -1;
