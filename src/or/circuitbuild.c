@@ -551,9 +551,13 @@ circuit_handle_first_hop(origin_circuit_t *circ)
  * open and get them to send their create cells forward.
  *
  * Status is 1 if connect succeeded, or 0 if connect failed.
+ *
+ * Close_origin_circuits is 1 if we should close all the origin circuits
+ * through this channel, or 0 otherwise.  (This happens when we want to retry
+ * an older guard.)
  */
 void
-circuit_n_chan_done(channel_t *chan, int status)
+circuit_n_chan_done(channel_t *chan, int status, int close_origin_circuits)
 {
   smartlist_t *pending_circs;
   int err_reason = 0;
@@ -588,6 +592,11 @@ circuit_n_chan_done(channel_t *chan, int status)
       }
       if (!status) { /* chan failed; close circ */
         log_info(LD_CIRC,"Channel failed; closing circ.");
+        circuit_mark_for_close(circ, END_CIRC_REASON_CHANNEL_CLOSED);
+        continue;
+      }
+      if (close_origin_circuits && CIRCUIT_IS_ORIGIN(circ)) {
+        log_info(LD_CIRC,"Channel deprecated for origin circs; closing circ.");
         circuit_mark_for_close(circ, END_CIRC_REASON_CHANNEL_CLOSED);
         continue;
       }
