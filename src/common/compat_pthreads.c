@@ -6,6 +6,7 @@
 #include "orconfig.h"
 #include <pthread.h>
 #include <signal.h>
+#include <time.h>
 
 #include "compat.h"
 #include "torlog.h"
@@ -169,8 +170,23 @@ tor_get_thread_id(void)
 int
 tor_cond_init(tor_cond_t *cond)
 {
+  pthread_condattr_t condattr;
+
   memset(cond, 0, sizeof(tor_cond_t));
-  if (pthread_cond_init(&cond->cond, NULL)) {
+  /* Default condition attribute. Might be used if clock monotonic is
+   * available else this won't affect anything. */
+  if (pthread_condattr_init(&condattr)) {
+    return -1;
+  }
+
+#if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_MONOTONIC)
+  /* Use monotonic time so when we timedwait() on it, any clock adjustment
+   * won't affect the timeout value. */
+  if (pthread_condattr_setclock(&condattr, CLOCK_MONOTONIC)) {
+    return -1;
+  }
+#endif
+  if (pthread_cond_init(&cond->cond, &condattr)) {
     return -1;
   }
   return 0;
@@ -209,12 +225,22 @@ tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex, const struct timeval *tv)
       return r ? -1 : 0;
     }
   } else {
-    struct timespec ts;
     struct timeval tvnow, tvsum;
+    struct timespec ts;
     while (1) {
+#if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_MONOTONIC)
+      if (clock_gettime(CLOCK_MONOTONIC, &ts) < 0) {
+        return -1;
+      }
+      tvnow.tv_sec = ts.tv_sec;
+      tvnow.tv_usec = ts.tv_nsec / 1000;
+      timeradd(tv, &tvnow, &tvsum);
+#else
       if (gettimeofday(&tvnow, NULL) < 0)
         return -1;
       timeradd(tv, &tvnow, &tvsum);
+#endif /* HAVE_CLOCK_GETTIME, CLOCK_MONOTONIC */
+
       ts.tv_sec = tvsum.tv_sec;
       ts.tv_nsec = tvsum.tv_usec * 1000;
 
