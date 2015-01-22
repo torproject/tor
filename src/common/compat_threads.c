@@ -6,7 +6,6 @@
 #define _GNU_SOURCE
 
 #include "orconfig.h"
-#define _GNU_SOURCE
 #include <stdlib.h>
 #include "compat.h"
 #include "compat_threads.h"

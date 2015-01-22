@@ -3,6 +3,8 @@
  * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+#define _GNU_SOURCE
+
 #include "orconfig.h"
 #include <pthread.h>
 #include <signal.h>
