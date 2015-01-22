@@ -66,9 +66,16 @@ static ssize_t rend_service_parse_intro_for_v3(
  * a real port on some IP.
  */
 typedef struct rend_service_port_config_t {
+  /* The incoming HS virtual port we're mapping */
   uint16_t virtual_port;
+  /* Is this an AF_UNIX port? */
+  unsigned int is_unix_addr:1;
+  /* The outgoing TCP port to use, if !is_unix_addr */
   uint16_t real_port;
+  /* The outgoing IPv4 or IPv6 address to use, if !is_unix_addr */
   tor_addr_t real_addr;
+  /* The socket path to connect to, if is_unix_addr */
+  char unix_addr[FLEXIBLE_ARRAY_MEMBER];
 } rend_service_port_config_t;
 
 /** Try to maintain this many intro points per service by default. */
@@ -279,8 +286,24 @@ rend_add_service(rend_service_t *service)
               service->directory);
     for (i = 0; i < smartlist_len(service->ports); ++i) {
       p = smartlist_get(service->ports, i);
-      log_debug(LD_REND,"Service maps port %d to %s",
-                p->virtual_port, fmt_addrport(&p->real_addr, p->real_port));
+      if (!(p->is_unix_addr)) {
+        log_debug(LD_REND,
+                  "Service maps port %d to %s",
+                  p->virtual_port,
+                  fmt_addrport(&p->real_addr, p->real_port));
+      } else {
+#ifdef HAVE_SYS_UN_H
+        log_debug(LD_REND,
+                  "Service maps port %d to socket at \"%s\"",
+                  p->virtual_port, p->unix_addr);
+#else
+        log_debug(LD_REND,
+                  "Service maps port %d to an AF_UNIX socket, but we "
+                  "have no AF_UNIX support on this platform.  This is "
+                  "probably a bug.",
+                  p->virtual_port);
+#endif /* defined(HAVE_SYS_UN_H) */
+      }
     }
   }
 }
@@ -345,6 +368,8 @@ parse_port_config(const char *string)
 
   result = tor_malloc(sizeof(rend_service_port_config_t));
   result->virtual_port = virtport;
+  /* TODO actually support AF_UNIX here */
+  result->is_unix_addr = 0;
   result->real_port = realport;
   tor_addr_copy(&result->real_addr, &addr);
  err:
@@ -3416,6 +3441,7 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
   char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
   smartlist_t *matching_ports;
   rend_service_port_config_t *chosen_port;
+  int unix_addrs;
 
   tor_assert(circ->base_.purpose == CIRCUIT_PURPOSE_S_REND_JOINED);
   tor_assert(circ->rend_data);
@@ -3431,10 +3457,19 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
     return -2;
   }
   matching_ports = smartlist_new();
+  unix_addrs = 0;
   SMARTLIST_FOREACH(service->ports, rend_service_port_config_t *, p,
   {
+    /*
+     * TODO don't just ignore AF_UNIX ports, but set up edge_connection_t
+     * properly to use them.
+     */
     if (conn->base_.port == p->virtual_port) {
-      smartlist_add(matching_ports, p);
+      if (!(p->is_unix_addr)) {
+        smartlist_add(matching_ports, p);
+      } else {
+        ++unix_addrs;
+      }
     }
   });
   chosen_port = smartlist_choose(matching_ports);
@@ -3444,8 +3479,23 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
     conn->base_.port = chosen_port->real_port;
     return 0;
   }
-  log_info(LD_REND, "No virtual port mapping exists for port %d on service %s",
-           conn->base_.port,serviceid);
+  if (!unix_addrs) {
+    log_info(LD_REND,
+             "No virtual port mapping exists for port %d on service %s",
+             conn->base_.port, serviceid);
+  } else {
+#ifdef HAVE_SYS_UN_H
+    log_info(LD_REND,
+             "Only AF_UNIX virtual port mappings exists for port %d "
+             "on service %s, and support is not yet implemented",
+             conn->base_.port, serviceid);
+#else
+    log_info(LD_REND,
+             "Only AF_UNIX virtual port mappings exists for port %d "
+             "on service %s, and support is not available on this platform",
+             conn->base_.port, serviceid);
+#endif /* defined(HAVE_SYS_UN_H) */
+  }
   if (service->allow_unknown_ports)
     return -1;
   else
