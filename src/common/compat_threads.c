@@ -94,7 +94,7 @@ write_ni(int fd, const void *buf, size_t n)
 {
   int r;
  again:
-  r = write(fd, buf, n);
+  r = (int) write(fd, buf, n);
   if (r < 0 && errno == EINTR)
     goto again;
   return r;
@@ -104,7 +104,7 @@ read_ni(int fd, void *buf, size_t n)
 {
   int r;
  again:
-  r = read(fd, buf, n);
+  r = (int) read(fd, buf, n);
   if (r < 0 && errno == EINTR)
     goto again;
   return r;
@@ -117,7 +117,7 @@ send_ni(int fd, const void *buf, size_t n, int flags)
 {
   int r;
  again:
-  r = send(fd, buf, n, flags);
+  r = (int) send(fd, buf, n, flags);
   if (r < 0 && errno == EINTR)
     goto again;
   return r;
@@ -128,7 +128,7 @@ recv_ni(int fd, void *buf, size_t n, int flags)
 {
   int r;
  again:
-   r = recv(fd, buf, n, flags);
+   r = (int) recv(fd, buf, n, flags);
   if (r < 0 && errno == EINTR)
     goto again;
   return r;
@@ -160,7 +160,7 @@ eventfd_drain(int fd)
 static int
 pipe_alert(int fd)
 {
-  ssize_t r = write(fd, "x", 1);
+  ssize_t r = write_ni(fd, "x", 1);
   if (r < 0 && errno != EAGAIN)
     return -1;
   return 0;
@@ -171,7 +171,7 @@ pipe_drain(int fd)
 {
   char buf[32];
   ssize_t r;
-  while ((r = read(fd, buf, sizeof(buf))) >= 0)
+  while ((r = read_ni(fd, buf, sizeof(buf))) >= 0)
     ;
   if (r == 0 || errno != EAGAIN)
     return -1;
