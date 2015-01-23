@@ -10,7 +10,7 @@
 #include "nodelist.h"
 #include "test.h"
 
-/** Tese the case when node_get_by_id() returns NULL,
+/** Test the case when node_get_by_id() returns NULL,
  * node_get_verbose_nickname_by_id should return the base 16 encoding
  * of the id.
  */

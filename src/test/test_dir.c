@@ -2930,6 +2930,30 @@ test_dir_http_handling(void *args)
   tor_free(url);
 }
 
+static void
+test_dir_purpose_needs_anonymity(void *arg)
+{
+  (void)arg;
+  tt_int_op(1, ==, purpose_needs_anonymity(0, ROUTER_PURPOSE_BRIDGE));
+  tt_int_op(1, ==, purpose_needs_anonymity(0, ROUTER_PURPOSE_GENERAL));
+  tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_FETCH_MICRODESC,
+                                            ROUTER_PURPOSE_GENERAL));
+ done: ;
+}
+
+static void
+test_dir_fetch_type(void *arg)
+{
+  (void)arg;
+  tt_assert(dir_fetch_type(DIR_PURPOSE_FETCH_MICRODESC, ROUTER_PURPOSE_GENERAL,
+                           NULL) == MICRODESC_DIRINFO);
+  tt_assert(dir_fetch_type(DIR_PURPOSE_FETCH_SERVERDESC, ROUTER_PURPOSE_BRIDGE,
+                           NULL) == BRIDGE_DIRINFO);
+  tt_assert(dir_fetch_type(DIR_PURPOSE_FETCH_CONSENSUS, ROUTER_PURPOSE_GENERAL,
+                           "microdesc") == (V3_DIRINFO | MICRODESC_DIRINFO));
+ done: ;
+}
+
 #define DIR_LEGACY(name)                                                   \
   { #name, test_dir_ ## name , TT_FORK, NULL, NULL }
 
@@ -2957,6 +2981,8 @@ struct testcase_t dir_tests[] = {
   DIR_LEGACY(clip_unmeasured_bw_kb_alt),
   DIR(fmt_control_ns, 0),
   DIR(http_handling, 0),
+  DIR(purpose_needs_anonymity, 0),
+  DIR(fetch_type, 0),
   END_OF_TESTCASES
 };
 

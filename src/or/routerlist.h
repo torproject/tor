@@ -229,6 +229,10 @@ MOCK_DECL(int, router_descriptor_is_older_than, (const routerinfo_t *router,
 MOCK_DECL(STATIC was_router_added_t, extrainfo_insert,
           (routerlist_t *rl, extrainfo_t *ei, int warn_if_incompatible));
 
+MOCK_DECL(STATIC void, initiate_descriptor_downloads,
+          (const routerstatus_t *source, int purpose, smartlist_t *digests,
+           int lo, int hi, int pds_flags));
+
 #endif
 
 #endif

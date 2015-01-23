@@ -64,8 +64,6 @@ static void directory_send_command(dir_connection_t *conn,
                              time_t if_modified_since);
 static int directory_handle_command(dir_connection_t *conn);
 static int body_is_plausible(const char *body, size_t body_len, int purpose);
-static int purpose_needs_anonymity(uint8_t dir_purpose,
-                                   uint8_t router_purpose);
 static char *http_get_header(const char *headers, const char *which);
 static void http_set_address_origin(const char *headers, connection_t *conn);
 static void connection_dir_download_routerdesc_failed(dir_connection_t *conn);
@@ -120,7 +118,7 @@ static void directory_initiate_command_rend(const tor_addr_t *addr,
 /** Return true iff the directory purpose <b>dir_purpose</b> (and if it's
  * fetching descriptors, it's fetching them for <b>router_purpose</b>)
  * must use an anonymous connection to a directory. */
-static int
+STATIC int
 purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose)
 {
   if (get_options()->AllDirActionsPrivate)
@@ -197,6 +195,47 @@ dir_conn_purpose_to_string(int purpose)
   log_warn(LD_BUG, "Called with unknown purpose %d", purpose);
   return "(unknown)";
 }
+
+/** Return the requisite directory information types. */
+STATIC dirinfo_type_t
+dir_fetch_type(int dir_purpose, int router_purpose, const char *resource)
+{
+  dirinfo_type_t type;
+  switch (dir_purpose) {
+    case DIR_PURPOSE_FETCH_EXTRAINFO:
+      type = EXTRAINFO_DIRINFO;
+      if (router_purpose == ROUTER_PURPOSE_BRIDGE)
+        type |= BRIDGE_DIRINFO;
+      else
+        type |= V3_DIRINFO;
+      break;
+    case DIR_PURPOSE_FETCH_SERVERDESC:
+      if (router_purpose == ROUTER_PURPOSE_BRIDGE)
+        type = BRIDGE_DIRINFO;
+      else
+        type = V3_DIRINFO;
+      break;
+    case DIR_PURPOSE_FETCH_STATUS_VOTE:
+    case DIR_PURPOSE_FETCH_DETACHED_SIGNATURES:
+    case DIR_PURPOSE_FETCH_CERTIFICATE:
+      type = V3_DIRINFO;
+      break;
+    case DIR_PURPOSE_FETCH_CONSENSUS:
+      type = V3_DIRINFO;
+      if (resource && !strcmp(resource, "microdesc"))
+        type |= MICRODESC_DIRINFO;
+      break;
+    case DIR_PURPOSE_FETCH_MICRODESC:
+      type = MICRODESC_DIRINFO;
+      break;
+    default:
+      log_warn(LD_BUG, "Unexpected purpose %d", (int)dir_purpose);
+      type = NO_DIRINFO;
+      break;
+  }
+  return type;
+}
+
 
 /** Return true iff <b>identity_digest</b> is the digest of a router which
  * says that it caches extrainfos.  (If <b>is_authority</b> we always
@@ -386,47 +425,21 @@ directory_pick_generic_dirserver(dirinfo_type_t type, int pds_flags,
  * Use <b>pds_flags</b> as arguments to router_pick_directory_server()
  * or router_pick_trusteddirserver().
  */
-void
-directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
-                             const char *resource, int pds_flags)
+MOCK_IMPL(void, directory_get_from_dirserver, (uint8_t dir_purpose,
+                                               uint8_t router_purpose,
+                                               const char *resource,
+                                               int pds_flags))
 {
   const routerstatus_t *rs = NULL;
   const or_options_t *options = get_options();
   int prefer_authority = directory_fetches_from_authorities(options);
   int require_authority = 0;
   int get_via_tor = purpose_needs_anonymity(dir_purpose, router_purpose);
-  dirinfo_type_t type;
+  dirinfo_type_t type = dir_fetch_type(dir_purpose, router_purpose, resource);
   time_t if_modified_since = 0;
 
-  /* FFFF we could break this switch into its own function, and call
-   * it elsewhere in directory.c. -RD */
-  switch (dir_purpose) {
-    case DIR_PURPOSE_FETCH_EXTRAINFO:
-      type = EXTRAINFO_DIRINFO |
-             (router_purpose == ROUTER_PURPOSE_BRIDGE ? BRIDGE_DIRINFO :
-                                                        V3_DIRINFO);
-      break;
-    case DIR_PURPOSE_FETCH_SERVERDESC:
-      type = (router_purpose == ROUTER_PURPOSE_BRIDGE ? BRIDGE_DIRINFO :
-                                                        V3_DIRINFO);
-      break;
-    case DIR_PURPOSE_FETCH_STATUS_VOTE:
-    case DIR_PURPOSE_FETCH_DETACHED_SIGNATURES:
-    case DIR_PURPOSE_FETCH_CERTIFICATE:
-      type = V3_DIRINFO;
-      break;
-    case DIR_PURPOSE_FETCH_CONSENSUS:
-      type = V3_DIRINFO;
-      if (resource && !strcmp(resource,"microdesc"))
-        type |= MICRODESC_DIRINFO;
-      break;
-    case DIR_PURPOSE_FETCH_MICRODESC:
-      type = MICRODESC_DIRINFO;
-      break;
-    default:
-      log_warn(LD_BUG, "Unexpected purpose %d", (int)dir_purpose);
-      return;
-  }
+  if (type == NO_DIRINFO)
+    return;
 
   if (dir_purpose == DIR_PURPOSE_FETCH_CONSENSUS) {
     int flav = FLAV_NS;
@@ -526,20 +539,16 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
         /* */
         rs = directory_pick_generic_dirserver(type, pds_flags,
                                               dir_purpose);
-        if (!rs) {
-          /*XXXX024 I'm pretty sure this can never do any good, since
-           * rs isn't set. */
+        if (!rs)
           get_via_tor = 1; /* last resort: try routing it via Tor */
-        }
       }
     }
-  } else { /* get_via_tor */
+  }
+
+  if (get_via_tor) {
     /* Never use fascistfirewall; we're going via Tor. */
-    if (1) {
-      /* anybody with a non-zero dirport will do. Disregard firewalls. */
-      pds_flags |= PDS_IGNORE_FASCISTFIREWALL;
-      rs = router_pick_directory_server(type, pds_flags);
-    }
+    pds_flags |= PDS_IGNORE_FASCISTFIREWALL;
+    rs = router_pick_directory_server(type, pds_flags);
   }
 
   /* If we have any hope of building an indirect conn, we know some router
@@ -1271,7 +1280,8 @@ directory_send_command(dir_connection_t *conn,
       return;
   }
 
-  if (strlen(proxystring) + strlen(url) >= 4096) {
+  /* warn in the non-tunneled case */
+  if (direct && (strlen(proxystring) + strlen(url) >= 4096)) {
     log_warn(LD_BUG,
              "Squid does not like URLs longer than 4095 bytes, and this "
              "one is %d bytes long: %s%s",

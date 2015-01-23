@@ -1294,84 +1294,86 @@ static struct testcase_t test_array[] = {
   END_OF_TESTCASES
 };
 
+extern struct testcase_t accounting_tests[];
 extern struct testcase_t addr_tests[];
 extern struct testcase_t buffer_tests[];
-extern struct testcase_t crypto_tests[];
-extern struct testcase_t container_tests[];
-extern struct testcase_t util_tests[];
-extern struct testcase_t dir_tests[];
-extern struct testcase_t checkdir_tests[];
-extern struct testcase_t microdesc_tests[];
-extern struct testcase_t pt_tests[];
-extern struct testcase_t config_tests[];
-extern struct testcase_t introduce_tests[];
-extern struct testcase_t replaycache_tests[];
-extern struct testcase_t relaycell_tests[];
 extern struct testcase_t cell_format_tests[];
-extern struct testcase_t circuitlist_tests[];
-extern struct testcase_t circuitmux_tests[];
 extern struct testcase_t cell_queue_tests[];
-extern struct testcase_t options_tests[];
-extern struct testcase_t socks_tests[];
-extern struct testcase_t entrynodes_tests[];
-extern struct testcase_t thread_tests[];
-extern struct testcase_t extorport_tests[];
-extern struct testcase_t controller_event_tests[];
-extern struct testcase_t logging_tests[];
-extern struct testcase_t hs_tests[];
-extern struct testcase_t nodelist_tests[];
-extern struct testcase_t routerkeys_tests[];
-extern struct testcase_t oom_tests[];
-extern struct testcase_t accounting_tests[];
-extern struct testcase_t policy_tests[];
-extern struct testcase_t status_tests[];
-extern struct testcase_t routerset_tests[];
-extern struct testcase_t router_tests[];
 extern struct testcase_t channel_tests[];
 extern struct testcase_t channeltls_tests[];
-extern struct testcase_t relay_tests[];
-extern struct testcase_t scheduler_tests[];
+extern struct testcase_t checkdir_tests[];
+extern struct testcase_t circuitlist_tests[];
+extern struct testcase_t circuitmux_tests[];
+extern struct testcase_t config_tests[];
+extern struct testcase_t container_tests[];
+extern struct testcase_t controller_event_tests[];
+extern struct testcase_t crypto_tests[];
+extern struct testcase_t dir_tests[];
 extern struct testcase_t entryconn_tests[];
+extern struct testcase_t entrynodes_tests[];
+extern struct testcase_t extorport_tests[];
+extern struct testcase_t hs_tests[];
+extern struct testcase_t introduce_tests[];
+extern struct testcase_t logging_tests[];
+extern struct testcase_t microdesc_tests[];
+extern struct testcase_t nodelist_tests[];
+extern struct testcase_t oom_tests[];
+extern struct testcase_t options_tests[];
+extern struct testcase_t policy_tests[];
+extern struct testcase_t pt_tests[];
+extern struct testcase_t relay_tests[];
+extern struct testcase_t relaycell_tests[];
+extern struct testcase_t replaycache_tests[];
+extern struct testcase_t router_tests[];
+extern struct testcase_t routerkeys_tests[];
+extern struct testcase_t routerlist_tests[];
+extern struct testcase_t routerset_tests[];
+extern struct testcase_t scheduler_tests[];
+extern struct testcase_t socks_tests[];
+extern struct testcase_t status_tests[];
+extern struct testcase_t thread_tests[];
+extern struct testcase_t util_tests[];
 
 static struct testgroup_t testgroups[] = {
   { "", test_array },
-  { "buffer/", buffer_tests },
-  { "socks/", socks_tests },
+  { "accounting/", accounting_tests },
   { "addr/", addr_tests },
-  { "crypto/", crypto_tests },
+  { "buffer/", buffer_tests },
+  { "cellfmt/", cell_format_tests },
+  { "cellqueue/", cell_queue_tests },
+  { "channel/", channel_tests },
+  { "channeltls/", channeltls_tests },
+  { "checkdir/", checkdir_tests },
+  { "circuitlist/", circuitlist_tests },
+  { "circuitmux/", circuitmux_tests },
+  { "config/", config_tests },
   { "container/", container_tests },
+  { "control/", controller_event_tests },
+  { "crypto/", crypto_tests },
+  { "dir/", dir_tests },
+  { "dir/md/", microdesc_tests },
+  { "entryconn/", entryconn_tests },
+  { "entrynodes/", entrynodes_tests },
+  { "extorport/", extorport_tests },
+  { "hs/", hs_tests },
+  { "introduce/", introduce_tests },
+  { "nodelist/", nodelist_tests },
+  { "oom/", oom_tests },
+  { "options/", options_tests },
+  { "policy/" , policy_tests },
+  { "pt/", pt_tests },
+  { "relay/" , relay_tests },
+  { "relaycell/", relaycell_tests },
+  { "replaycache/", replaycache_tests },
+  { "routerkeys/", routerkeys_tests },
+  { "routerlist/", routerlist_tests },
+  { "routerset/" , routerset_tests },
+  { "scheduler/", scheduler_tests },
+  { "socks/", socks_tests },
+  { "status/" , status_tests },
   { "util/", util_tests },
   { "util/logging/", logging_tests },
   { "util/thread/", thread_tests },
-  { "cellfmt/", cell_format_tests },
-  { "cellqueue/", cell_queue_tests },
-  { "dir/", dir_tests },
-  { "checkdir/", checkdir_tests },
-  { "dir/md/", microdesc_tests },
-  { "pt/", pt_tests },
-  { "config/", config_tests },
-  { "replaycache/", replaycache_tests },
-  { "relaycell/", relaycell_tests },
-  { "introduce/", introduce_tests },
-  { "circuitlist/", circuitlist_tests },
-  { "circuitmux/", circuitmux_tests },
-  { "options/", options_tests },
-  { "entrynodes/", entrynodes_tests },
-  { "entryconn/", entryconn_tests },
-  { "extorport/", extorport_tests },
-  { "control/", controller_event_tests },
-  { "hs/", hs_tests },
-  { "nodelist/", nodelist_tests },
-  { "routerkeys/", routerkeys_tests },
-  { "oom/", oom_tests },
-  { "accounting/", accounting_tests },
-  { "policy/" , policy_tests },
-  { "status/" , status_tests },
-  { "routerset/" , routerset_tests },
-  { "channel/", channel_tests },
-  { "channeltls/", channeltls_tests },
-  { "relay/" , relay_tests },
-  { "scheduler/", scheduler_tests },
   END_OF_GROUPS
 };
 

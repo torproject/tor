@@ -16,9 +16,10 @@ int directories_have_accepted_server_descriptor(void);
 void directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
                                   dirinfo_type_t type, const char *payload,
                                   size_t payload_len, size_t extrainfo_len);
-void directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
-                                  const char *resource,
-                                  int pds_flags);
+MOCK_DECL(void, directory_get_from_dirserver, (uint8_t dir_purpose,
+                                               uint8_t router_purpose,
+                                               const char *resource,
+                                               int pds_flags));
 void directory_get_from_all_authorities(uint8_t dir_purpose,
                                         uint8_t router_purpose,
                                         const char *resource);
@@ -120,7 +121,11 @@ int download_status_get_n_failures(const download_status_t *dls);
 
 #ifdef TOR_UNIT_TESTS
 /* Used only by directory.c and test_dir.c */
+
 STATIC int parse_http_url(const char *headers, char **url);
+STATIC int purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose);
+STATIC dirinfo_type_t dir_fetch_type(int dir_purpose, int router_purpose,
+                                     const char *resource);
 #endif
 
 #endif

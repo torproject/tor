@@ -4961,14 +4961,13 @@ typedef struct dir_server_t {
  * or extrainfo documents.
  *
  * Passed to router_pick_directory_server (et al)
- *
- * [XXXX NOTE: This option is only implemented for pick_trusteddirserver,
- *  not pick_directory_server.  If we make it work on pick_directory_server
- *  too, we could conservatively make it only prevent multiple fetches to
- *  the same authority, or we could aggressively make it prevent multiple
- *  fetches to _any_ single directory server.]
  */
 #define PDS_NO_EXISTING_SERVERDESC_FETCH (1<<3)
+/** Flag to indicate that we should not use any directory authority to which
+ * we have an existing directory connection for downloading microdescs.
+ *
+ * Passed to router_pick_directory_server (et al)
+ */
 #define PDS_NO_EXISTING_MICRODESC_FETCH (1<<4)
 
 /** This node is to be chosen as a directory guard, so don't choose any
