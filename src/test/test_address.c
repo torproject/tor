@@ -228,7 +228,7 @@ test_address_get_if_addrs_ifaddrs(void *arg)
 
   done:
   SMARTLIST_FOREACH(results, tor_addr_t *, t, tor_free(t));
-  tor_free(results);
+  smartlist_free(results);
   return;
 }
 

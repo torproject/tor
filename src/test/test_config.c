@@ -176,6 +176,7 @@ test_config_addressmap(void *arg)
  done:
   config_free_lines(get_options_mutable()->AddressMap);
   get_options_mutable()->AddressMap = NULL;
+  addressmap_free_all();
 }
 
 static int
