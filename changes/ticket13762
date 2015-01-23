@@ -1,5 +1,5 @@
   o Minor features:
     - Suppress "router info incompatible with extra info" message when
       reading extrainfo documents from cache. (This message got loud
-      around 0.2.6.2-alpha, when we fixed bug 9812.) Closes ticket
+      around when we closed bug 9812 in 0.2.6.2-alpha.) Closes ticket
       13762.

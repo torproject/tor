@@ -1,4 +1,4 @@
-
   o Minor bugfixes (automapping):
-    - Prevent changes to other optoins from removing the wildcard value "."
+    - Prevent changes to other options from removing the wildcard value "."
       from "AutomapHostsSuffixes".
+      Fixes bug 12509; bugfix on 0.2.0.1-alpha.

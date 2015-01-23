@@ -2,3 +2,6 @@
     - Close the intro circuit once we don't have any more usable intro
       points instead of making it timeout at some point. This also make sure
       no extra HS descriptor fetch is triggered.
+      Fixes bug 14224; bugfix on 0.0.6.
+
+

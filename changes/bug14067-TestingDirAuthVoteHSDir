@@ -3,4 +3,4 @@
       Ensures that authorities vote the HSDir flag for the listed
       relays regardless of uptime or ORPort connectivity.
       Respects the value of VoteOnHidServDirectoriesV2.
-      Partial fix for bug 14067. Patch by "teor".
+      Partial implementation for ticket 14067. Patch by "teor".
