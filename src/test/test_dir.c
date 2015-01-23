@@ -714,9 +714,10 @@ mock_get_by_ei_desc_digest(const char *d)
 
 static smartlist_t *mock_ei_insert_list = NULL;
 static was_router_added_t
-mock_ei_insert(routerlist_t *rl, extrainfo_t *ei)
+mock_ei_insert(routerlist_t *rl, extrainfo_t *ei, int warn_if_incompatible)
 {
   (void) rl;
+  (void) warn_if_incompatible;
   smartlist_add(mock_ei_insert_list, ei);
   return ROUTER_ADDED_SUCCESSFULLY;
 }

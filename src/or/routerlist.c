@@ -2753,7 +2753,7 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
  * corresponding router in rl-\>routers or rl-\>old_routers.  Return the status
  * of inserting <b>ei</b>.  Free <b>ei</b> if it isn't inserted. */
 MOCK_IMPL(STATIC was_router_added_t,
-extrainfo_insert,(routerlist_t *rl, extrainfo_t *ei))
+extrainfo_insert,(routerlist_t *rl, extrainfo_t *ei, int warn_if_incompatible))
 {
   was_router_added_t r;
   const char *compatibility_error_msg;
@@ -2775,11 +2775,13 @@ extrainfo_insert,(routerlist_t *rl, extrainfo_t *ei))
   }
   if (routerinfo_incompatible_with_extrainfo(ri, ei, sd,
                                              &compatibility_error_msg)) {
+    const int severity = warn_if_incompatible ? LOG_WARN : LOG_INFO;
     r = (ri->cache_info.extrainfo_is_bogus) ?
       ROUTER_BAD_EI : ROUTER_NOT_IN_CONSENSUS;
 
-    log_warn(LD_DIR,"router info incompatible with extra info (reason: %s)",
-             compatibility_error_msg);
+    log_fn(severity,LD_DIR,
+           "router info incompatible with extra info (reason: %s)",
+           compatibility_error_msg);
 
     goto done;
   }
@@ -3325,7 +3327,7 @@ router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
   if (msg) *msg = NULL;
   /*XXXX023 Do something with msg */
 
-  inserted = extrainfo_insert(router_get_routerlist(), ei);
+  inserted = extrainfo_insert(router_get_routerlist(), ei, !from_cache);
 
   if (WRA_WAS_ADDED(inserted) && !from_cache)
     signed_desc_append_to_journal(&ei->cache_info,
