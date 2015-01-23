@@ -366,7 +366,6 @@ cpuworker_onion_handshake_replyfn(void *work_)
   }
   log_debug(LD_OR,"onionskin_answer succeeded. Yay.");
 
-
  done_processing:
   memwipe(&rpl, 0, sizeof(rpl));
   memwipe(job, 0, sizeof(*job));

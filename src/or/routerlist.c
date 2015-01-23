@@ -1442,7 +1442,7 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
   const networkstatus_t *consensus = networkstatus_get_latest_consensus();
   const int requireother = ! (flags & PDS_ALLOW_SELF);
   const int fascistfirewall = ! (flags & PDS_IGNORE_FASCISTFIREWALL);
-  const int no_serverdesc_fetching = (flags & PDS_NO_EXISTING_SERVERDESC_FETCH);
+  const int no_serverdesc_fetching =(flags & PDS_NO_EXISTING_SERVERDESC_FETCH);
   const int no_microdesc_fetching = (flags & PDS_NO_EXISTING_MICRODESC_FETCH);
   const int for_guard = (flags & PDS_FOR_GUARD);
   int try_excluding = 1, n_excluded = 0, n_busy = 0;
@@ -4265,7 +4265,8 @@ MOCK_IMPL(STATIC void, initiate_descriptor_downloads,
     if (b64_256) {
       digest256_to_base64(cp, smartlist_get(digests, lo));
     } else {
-      base16_encode(cp, enc_digest_len, smartlist_get(digests, lo), digest_len);
+      base16_encode(cp, enc_digest_len, smartlist_get(digests, lo),
+                    digest_len);
     }
     smartlist_add(tmp, cp);
   }
@@ -4372,7 +4373,6 @@ launch_descriptor_downloads(int purpose,
                  "tried downloading descriptors recently. Downloading.",
                  descname);
       }
-
     }
   }
 

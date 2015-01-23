@@ -386,3 +386,4 @@ struct testcase_t slow_util_tests[] = {
   UTIL_TEST(spawn_background_waitpid_notify, 0),
   END_OF_TESTCASES
 };
+

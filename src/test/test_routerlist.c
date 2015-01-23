@@ -7,7 +7,6 @@
 #include "directory.h"
 #include "test.h"
 
-
 /* 4 digests + 3 sep + pre + post + NULL */
 static char output[4*BASE64_DIGEST256_LEN+3+2+2+1];
 
@@ -101,3 +100,4 @@ struct testcase_t routerlist_tests[] = {
   NODE(launch_descriptor_downloads, 0),
   END_OF_TESTCASES
 };
+

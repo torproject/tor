@@ -236,7 +236,6 @@ dir_fetch_type(int dir_purpose, int router_purpose, const char *resource)
   return type;
 }
 
-
 /** Return true iff <b>identity_digest</b> is the digest of a router which
  * says that it caches extrainfos.  (If <b>is_authority</b> we always
  * believe that to be true.) */

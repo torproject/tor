@@ -10,7 +10,6 @@
 #include "crypto_s2k.h"
 #include "crypto_pwbox.h"
 
-
 /** Run unit tests for our secret-to-key passphrase hashing functionality. */
 static void
 test_crypto_s2k_rfc2440(void *arg)

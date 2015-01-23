@@ -22,7 +22,8 @@ origin_circuit_t *circuit_establish_circuit(uint8_t purpose,
                                             extend_info_t *exit,
                                             int flags);
 int circuit_handle_first_hop(origin_circuit_t *circ);
-void circuit_n_chan_done(channel_t *chan, int status, int close_origin_circuits);
+void circuit_n_chan_done(channel_t *chan, int status,
+                         int close_origin_circuits);
 int inform_testing_reachability(void);
 int circuit_timeout_want_to_count_circ(origin_circuit_t *circ);
 int circuit_send_next_onion_skin(origin_circuit_t *circ);

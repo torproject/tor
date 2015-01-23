@@ -5758,7 +5758,6 @@ parse_port_config(smartlist_t *out,
     return 0;
   } /* end if (listenaddrs) */
 
-
   /* No ListenAddress lines. If there's no FooPort, then maybe make a default
    * one. */
   if (! ports) {
