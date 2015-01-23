@@ -200,6 +200,9 @@ test_address_ifaddrs_to_smartlist(void *arg)
    tor_free(ipv4_sockaddr_local);
    tor_free(ipv4_sockaddr_remote);
    tor_free(ipv6_sockaddr);
+   tor_free(ifa->ifa_name);
+   tor_free(ifa_ipv4->ifa_name);
+   tor_free(ifa_ipv6->ifa_name);
    tor_free(ifa);
    tor_free(ifa_ipv4);
    tor_free(ifa_ipv6);
@@ -346,7 +349,7 @@ static void
 test_address_ifreq_to_smartlist(void *arg)
 {
   smartlist_t *results = NULL;
-  tor_addr_t *tor_addr = NULL;
+  const tor_addr_t *tor_addr = NULL;
   struct sockaddr_in *sockaddr = NULL;
   struct sockaddr_in *sockaddr_eth1 = NULL;
   struct sockaddr_in *sockaddr_to_check = NULL;
@@ -392,7 +395,7 @@ test_address_ifreq_to_smartlist(void *arg)
 
   sockaddr_eth1 = (struct sockaddr_in *) &(ifr_next->ifr_ifru.ifru_addr);
   sockaddr_in_from_string("192.168.10.55",sockaddr_eth1);
-
+  SMARTLIST_FOREACH(results, tor_addr_t *, t, tor_free(t));
   smartlist_free(results);
 
   results = ifreq_to_smartlist((struct ifreq *)ifc->ifc_buf,ifc->ifc_len);
@@ -416,8 +419,8 @@ test_address_ifreq_to_smartlist(void *arg)
 
   done:
   tor_free(sockaddr_to_check);
+  SMARTLIST_FOREACH(results, tor_addr_t *, t, tor_free(t));
   smartlist_free(results);
-  tor_free(tor_addr);
   tor_free(ifc);
   tor_free(ifr);
   return;
