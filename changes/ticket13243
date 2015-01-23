@@ -1,0 +1,3 @@
+  o Testing:
+    - Move the slower unit tests into a new "./src/test/test-slow" binary
+      that can be run independently of the other tests. Closes ticket 13243.
