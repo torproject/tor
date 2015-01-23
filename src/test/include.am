@@ -19,6 +19,7 @@ src_test_test_SOURCES = \
 	src/test/test.c \
 	src/test/test_accounting.c \
 	src/test/test_addr.c \
+	src/test/test_address.c \
 	src/test/test_buffers.c \
 	src/test/test_cell_formats.c \
 	src/test/test_cell_queue.c \
