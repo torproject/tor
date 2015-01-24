@@ -89,6 +89,13 @@ int connection_connect(connection_t *conn, const char *address,
                        const tor_addr_t *addr,
                        uint16_t port, int *socket_error);
 
+#ifdef HAVE_SYS_UN_H
+
+int connection_connect_unix(connection_t *conn, const char *socket_path,
+                            int *socket_error);
+
+#endif /* defined(HAVE_SYS_UN_H) */
+
 /** Maximum size of information that we can fit into SOCKS5 username
     or password fields. */
 #define MAX_SOCKS5_AUTH_FIELD_SIZE 255

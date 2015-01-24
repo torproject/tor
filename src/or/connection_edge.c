@@ -2940,7 +2940,7 @@ connection_exit_connect(edge_connection_t *edge_conn)
   const tor_addr_t *addr;
   uint16_t port;
   connection_t *conn = TO_CONN(edge_conn);
-  int socket_error = 0;
+  int socket_error = 0, result;
 
   if ( (!connection_edge_is_rendezvous_stream(edge_conn) &&
         router_compare_to_my_exit_policy(&edge_conn->base_.addr,
@@ -2955,14 +2955,36 @@ connection_exit_connect(edge_connection_t *edge_conn)
     return;
   }
 
-  addr = &conn->addr;
-  port = conn->port;
+#ifdef HAVE_SYS_UN_H
+  if (conn->socket_family != AF_UNIX) {
+#else
+  {
+#endif /* defined(HAVE_SYS_UN_H) */
+    addr = &conn->addr;
+    port = conn->port;
 
-  if (tor_addr_family(addr) == AF_INET6)
-    conn->socket_family = AF_INET6;
+    if (tor_addr_family(addr) == AF_INET6)
+      conn->socket_family = AF_INET6;
 
-  log_debug(LD_EXIT,"about to try connecting");
-  switch (connection_connect(conn, conn->address, addr, port, &socket_error)) {
+    log_debug(LD_EXIT, "about to try connecting");
+    result = connection_connect(conn, conn->address,
+                                addr, port, &socket_error);
+#ifdef HAVE_SYS_UN_H
+  } else {
+    /*
+     * In the AF_UNIX case, we expect to have already had conn->port = 1,
+     * tor_addr_make_unspec(conn->addr) (cf. the way we mark in the incoming
+     * case in connection_handle_listener_read()), and conn->address should
+     * have the socket path to connect to.
+     */
+    tor_assert(conn->address && strlen(conn->address) > 0);
+
+    log_debug(LD_EXIT, "about to try connecting");
+    result = connection_connect_unix(conn, conn->address, &socket_error);
+#endif /* defined(HAVE_SYS_UN_H) */
+  }
+
+  switch (result) {
     case -1: {
       int reason = errno_to_stream_end_reason(socket_error);
       connection_edge_end(edge_conn, reason);
