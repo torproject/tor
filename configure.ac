@@ -126,7 +126,7 @@ AC_ARG_ENABLE(systemd,
 
 
 # systemd support
-if test x$enable_systemd = xfalse ; then
+if test x$enable_systemd = xno ; then
     have_systemd=no;
 else
     PKG_CHECK_MODULES(SYSTEMD,
