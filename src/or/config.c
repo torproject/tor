@@ -4204,6 +4204,17 @@ find_torrc_filename(config_line_t *cmd_arg,
   return fname;
 }
 
+/** Read the torrc from standard input and return it as a string.
+ * Upon failure, return NULL.
+ */
+static char *
+load_torrc_from_stdin(config_line_t *cmd_arg)
+{
+   size_t sz_out;
+
+   return read_file_to_str_until_eof(STDIN_FILENO,SIZE_MAX,&sz_out);
+}
+
 /** Load a configuration file from disk, setting torrc_fname or
  * torrc_defaults_fname if successful.
  *
@@ -4344,7 +4355,19 @@ options_init_from_torrc(int argc, char **argv)
     cf = tor_strdup("");
   } else {
     cf_defaults = load_torrc_from_disk(cmdline_only_options, 1);
-    cf = load_torrc_from_disk(cmdline_only_options, 0);
+
+    const config_line_t *f_line = config_line_find(cmdline_only_options,
+                                                   "-f");
+
+    const int read_torrc_from_stdin =
+    (f_line != NULL && strcmp(f_line->value, "-") == 0);
+
+    if (read_torrc_from_stdin) {
+      cf = load_torrc_from_stdin(cmdline_only_options);
+    } else {
+      cf = load_torrc_from_disk(cmdline_only_options, 0);
+    }
+
     if (!cf) {
       if (config_line_find(cmdline_only_options, "--allow-missing-torrc")) {
         cf = tor_strdup("");
