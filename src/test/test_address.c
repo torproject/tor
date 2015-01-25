@@ -452,10 +452,71 @@ test_address_get_if_addrs_ioctl(void *arg)
 
 #endif
 
+/** Return 1 iff an address exactly equal to <b>tor_addr</b> is in
+ * <b>smartlist</b>. Otherwise, return 0.
+ */
+static int
+smartlist_contain_tor_addr(smartlist_t *smartlist, tor_addr_t *tor_addr)
+{
+  int success = 0;
+
+  SMARTLIST_FOREACH_BEGIN(smartlist, tor_addr_t *, a) {
+    if (tor_addr_compare(tor_addr,a,CMP_EXACT) == 0) {
+      success = 1;
+      break;
+    }
+  } SMARTLIST_FOREACH_END(a);
+
+  return success;
+}
+
+static void
+test_address_udp_socket_trick_blackbox(void *arg)
+{
+  smartlist_t *all_addrs;
+  tor_addr_t *addr4;
+  tor_addr_t *addr6;
+  int retval;
+
+  (void)arg;
+
+  addr4 = tor_malloc(sizeof(tor_addr_t));
+  addr6 = tor_malloc(sizeof(tor_addr_t));
+
+  all_addrs = get_interface_addresses_raw(LOG_DEBUG);
+  retval = get_interface_address6_via_udp_socket_hack(LOG_DEBUG,
+                                                      AF_INET,addr4);
+
+  tt_assert(all_addrs);
+  tt_assert(retval == 0);
+
+  tt_assert(smartlist_contain_tor_addr(all_addrs,addr4));
+
+#if 0
+  retval = get_interface_address6_via_udp_socket_hack(LOG_DEBUG,
+                                                      AF_INET6,addr6);
+
+  tt_assert(smartlist_contain_tor_addr(all_addrs,addr6));
+#endif
+
+  retval = get_interface_address6_via_udp_socket_hack(LOG_DEBUG,
+                                                      AF_CCITT,addr4);
+
+  tt_assert(retval == -1);
+
+  done:
+  tor_free(addr4);
+  tor_free(addr6);
+  SMARTLIST_FOREACH(all_addrs, tor_addr_t *, t, tor_free(t));
+  smartlist_free(all_addrs);
+  return;
+}
+
 #define ADDRESS_TEST(name, flags) \
   { #name, test_address_ ## name, flags, NULL, NULL }
 
 struct testcase_t address_tests[] = {
+  ADDRESS_TEST(udp_socket_trick_blackbox, TT_FORK),
 #ifdef HAVE_IFADDRS_TO_SMARTLIST
   ADDRESS_TEST(get_if_addrs_ifaddrs, TT_FORK),
   ADDRESS_TEST(ifaddrs_to_smartlist, 0),
