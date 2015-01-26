@@ -42,7 +42,8 @@ COMMAND-LINE OPTIONS
 
 [[opt-f]] **-f** __FILE__::
     Specify a new configuration file to contain further Tor configuration
-    options. (Default: @CONFDIR@/torrc, or $HOME/.torrc if that file is not
+    options OR pass *-* to make Tor read its configuration from standard
+    input. (Default: @CONFDIR@/torrc, or $HOME/.torrc if that file is not
     found)
 
 [[opt-allow-missing-torrc]] **--allow-missing-torrc**::
