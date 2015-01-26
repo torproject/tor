@@ -67,8 +67,6 @@ typedef struct cert_list_t cert_list_t;
 static int compute_weighted_bandwidths(const smartlist_t *sl,
                                        bandwidth_weight_rule_t rule,
                                        u64_dbl_t **bandwidths_out);
-static const routerstatus_t *router_pick_directory_server_impl(
-                              dirinfo_type_t auth, int flags, int *n_busy_out);
 static const routerstatus_t *router_pick_trusteddirserver_impl(
                 const smartlist_t *sourcelist, dirinfo_type_t auth,
                 int flags, int *n_busy_out);
@@ -1472,7 +1470,7 @@ router_pick_dirserver_generic(smartlist_t *sourcelist,
  * directories that we excluded for no other reason than
  * PDS_NO_EXISTING_SERVERDESC_FETCH or PDS_NO_EXISTING_MICRODESC_FETCH.
  */
-static const routerstatus_t *
+STATIC const routerstatus_t *
 router_pick_directory_server_impl(dirinfo_type_t type, int flags,
                                   int *n_busy_out)
 {
@@ -3238,7 +3236,11 @@ routerlist_reparse_old(routerlist_t *rl, signed_descriptor_t *sd)
   return ri;
 }
 
-/** Free all memory held by the routerlist module. */
+/** Free all memory held by the routerlist module.
+ * Note: Calling routerlist_free_all() should always be paired with
+ * a call to nodelist_free_all(). These should only be called during
+ * cleanup.
+ */
 void
 routerlist_free_all(void)
 {

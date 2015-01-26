@@ -1457,6 +1457,38 @@ networkstatus_copy_old_consensus_info(networkstatus_t *new_c,
   } SMARTLIST_FOREACH_JOIN_END(rs_old, rs_new);
 }
 
+#ifdef TOR_UNIT_TESTS
+/**Accept a <b>flavor</b> consensus <b>c</b> without any additional
+ * validation. This is exclusively for unit tests.
+ * We copy any ancillary information from a pre-existing consensus
+ * and then free the current one and replace it with the newly
+ * provided instance. Returns -1 on unrecognized flavor, 0 otherwise.
+ */
+int
+networkstatus_set_current_consensus_from_ns(networkstatus_t *c,
+                                            const char *flavor)
+{
+  int flav = networkstatus_parse_flavor_name(flavor);
+  switch (flav) {
+    case FLAV_NS:
+      if (current_ns_consensus) {
+        networkstatus_copy_old_consensus_info(c, current_ns_consensus);
+        networkstatus_vote_free(current_ns_consensus);
+      }
+      current_ns_consensus = c;
+      break;
+    case FLAV_MICRODESC:
+      if (current_md_consensus) {
+        networkstatus_copy_old_consensus_info(c, current_md_consensus);
+        networkstatus_vote_free(current_md_consensus);
+      }
+      current_md_consensus = c;
+      break;
+  }
+  return current_md_consensus ? 0 : -1;
+}
+#endif //TOR_UNIT_TESTS
+
 /** Try to replace the current cached v3 networkstatus with the one in
  * <b>consensus</b>.  If we don't have enough certificates to validate it,
  * store it in consensus_waiting_for_certs and launch a certificate fetch.

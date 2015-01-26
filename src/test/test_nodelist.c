@@ -66,6 +66,8 @@ test_nodelist_node_get_verbose_nickname_not_named(void *arg)
 static void
 test_nodelist_node_is_dir(void *arg)
 {
+  (void)arg;
+
   routerstatus_t rs;
   routerinfo_t ri;
   node_t node;
