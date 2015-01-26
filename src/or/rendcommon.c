@@ -920,36 +920,52 @@ rend_valid_service_id(const char *query)
   return 1;
 }
 
-/** If we have a cached rend_cache_entry_t for the service ID <b>query</b>
- * with <b>version</b>, set *<b>e</b> to that entry and return 1.
- * Else return 0. If <b>version</b> is nonnegative, only return an entry
- * in that descriptor format version. Otherwise (if <b>version</b> is
- * negative), return the most recent format we have.
- */
+/** Lookup in the client cache the given service ID <b>query</b> for
+ * <b>version</b>.
+ *
+ * Return 0 if found and if <b>e</b> is non NULL, set it with the entry
+ * found. Else, a negative value is returned and <b>e</b> is untouched.
+ * -EINVAL means that <b>query</b> is not a valid service id.
+ * -ENOENT means that no entry in the cache was found. */
 int
 rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **e)
 {
-  char key[REND_SERVICE_ID_LEN_BASE32+2]; /* <version><query>\0 */
+  int ret = 0;
+  char key[REND_SERVICE_ID_LEN_BASE32 + 2]; /* <version><query>\0 */
+  rend_cache_entry_t *entry = NULL;
+  static const int default_version = 2;
+
   tor_assert(rend_cache);
-  if (!rend_valid_service_id(query))
-    return -1;
-  *e = NULL;
-  if (version != 0) {
-    tor_snprintf(key, sizeof(key), "2%s", query);
-    *e = strmap_get_lc(rend_cache, key);
+  tor_assert(query);
+
+  if (!rend_valid_service_id(query)) {
+    ret = -EINVAL;
+    goto end;
   }
-  if (!*e && version != 2) {
-    tor_snprintf(key, sizeof(key), "0%s", query);
-    *e = strmap_get_lc(rend_cache, key);
+
+  switch (version) {
+  case 0:
+    log_warn(LD_REND, "Cache lookup of a v0 renddesc is deprecated.");
+    break;
+  case 2:
+    /* Default is version 2. */
+  default:
+    tor_snprintf(key, sizeof(key), "%d%s", default_version, query);
+    entry = strmap_get_lc(rend_cache, key);
+    break;
   }
-  if (!*e)
-    return 0;
-  tor_assert((*e)->parsed && (*e)->parsed->intro_nodes);
-  /* XXX023 hack for now, to return "not found" if there are no intro
-   * points remaining. See bug 997. */
-  if (! rend_client_any_intro_points_usable(*e))
-    return 0;
-  return 1;
+  if (!entry) {
+    ret = -ENOENT;
+    goto end;
+  }
+  tor_assert(entry->parsed && entry->parsed->intro_nodes);
+
+  if (e) {
+    *e = entry;
+  }
+
+end:
+  return ret;
 }
 
 /** Lookup the v2 service descriptor with base32-encoded <b>desc_id</b> and

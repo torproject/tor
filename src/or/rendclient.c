@@ -141,7 +141,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   int r, v3_shift = 0;
   char payload[RELAY_PAYLOAD_SIZE];
   char tmp[RELAY_PAYLOAD_SIZE];
-  rend_cache_entry_t *entry;
+  rend_cache_entry_t *entry = NULL;
   crypt_path_t *cpath;
   off_t dh_offset;
   crypto_pk_t *intro_key = NULL;
@@ -158,8 +158,13 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   tor_assert(!(rendcirc->build_state->onehop_tunnel));
 #endif
 
-  if (rend_cache_lookup_entry(introcirc->rend_data->onion_address, -1,
-                              &entry) < 1) {
+  r = rend_cache_lookup_entry(introcirc->rend_data->onion_address, -1,
+                              &entry);
+  /* An invalid onion address is not possible else we have a big issue. */
+  tor_assert(r != -EINVAL);
+  if (r < 0 || !rend_client_any_intro_points_usable(entry)) {
+    /* If the descriptor is not found or the intro points are not usable
+     * anymore, trigger a fetch. */
     log_info(LD_REND,
              "query %s didn't have valid rend desc in cache. "
              "Refetching descriptor.",
@@ -734,7 +739,7 @@ rend_client_refetch_v2_renddesc(const rend_data_t *rend_query)
     return;
   }
   /* Before fetching, check if we already have a usable descriptor here. */
-  if (rend_cache_lookup_entry(rend_query->onion_address, -1, &e) > 0 &&
+  if (rend_cache_lookup_entry(rend_query->onion_address, -1, &e) == 0 &&
       rend_client_any_intro_points_usable(e)) {
     log_info(LD_REND, "We would fetch a v2 rendezvous descriptor, but we "
                       "already have a usable descriptor here. Not fetching.");
@@ -848,17 +853,26 @@ rend_client_report_intro_point_failure(extend_info_t *failed_intro,
   connection_t *conn;
 
   r = rend_cache_lookup_entry(rend_query->onion_address, -1, &ent);
-  if (r<0) {
-    log_warn(LD_BUG, "Malformed service ID %s.",
-             escaped_safe_str_client(rend_query->onion_address));
-    return -1;
+  if (r < 0) {
+    /* Either invalid onion address or cache entry not found. */
+    switch (-r) {
+    case EINVAL:
+      log_warn(LD_BUG, "Malformed service ID %s.",
+          escaped_safe_str_client(rend_query->onion_address));
+      return -1;
+    case ENOENT:
+      log_info(LD_REND, "Unknown service %s. Re-fetching descriptor.",
+          escaped_safe_str_client(rend_query->onion_address));
+      rend_client_refetch_v2_renddesc(rend_query);
+      return 0;
+    default:
+      log_warn(LD_BUG, "Unknown cache lookup returned code: %d", r);
+      return -1;
+    }
   }
-  if (r==0) {
-    log_info(LD_REND, "Unknown service %s. Re-fetching descriptor.",
-             escaped_safe_str_client(rend_query->onion_address));
-    rend_client_refetch_v2_renddesc(rend_query);
-    return 0;
-  }
+  /* The intro points are not checked here if they are usable or not because
+   * this is called when an intro point circuit is closed thus there must be
+   * at least one intro point that is usable and is about to be flagged. */
 
   for (i = 0; i < smartlist_len(ent->parsed->intro_nodes); i++) {
     rend_intro_point_t *intro = smartlist_get(ent->parsed->intro_nodes, i);
@@ -1057,7 +1071,7 @@ rend_client_desc_trynow(const char *query)
       continue;
     assert_connection_ok(base_conn, now);
     if (rend_cache_lookup_entry(rend_data->onion_address, -1,
-                                &entry) == 1 &&
+                                &entry) == 0 &&
         rend_client_any_intro_points_usable(entry)) {
       /* either this fetch worked, or it failed but there was a
        * valid entry from before which we should reuse */
@@ -1121,13 +1135,17 @@ rend_client_note_connection_attempt_ended(const char *onion_address)
 extend_info_t *
 rend_client_get_random_intro(const rend_data_t *rend_query)
 {
+  int ret;
   extend_info_t *result;
   rend_cache_entry_t *entry;
 
-  if (rend_cache_lookup_entry(rend_query->onion_address, -1, &entry) < 1) {
-      log_warn(LD_REND,
-               "Query '%s' didn't have valid rend desc in cache. Failing.",
-               safe_str_client(rend_query->onion_address));
+  ret = rend_cache_lookup_entry(rend_query->onion_address, -1, &entry);
+  if (ret < 0 || !rend_client_any_intro_points_usable(entry)) {
+    log_warn(LD_REND,
+             "Query '%s' didn't have valid rend desc in cache. Failing.",
+             safe_str_client(rend_query->onion_address));
+    /* XXX: Should we refetch the descriptor here if the IPs are not usable
+     * anymore ?. */
     return NULL;
   }
 
