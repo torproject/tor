@@ -347,6 +347,12 @@ cpuworker_onion_handshake_replyfn(void *work_)
 
   circ->workqueue_entry = NULL;
 
+  if (TO_CIRCUIT(circ)->marked_for_close) {
+    /* We already marked this circuit; we can't call it open. */
+    log_debug(LD_OR,"circuit is already marked.");
+    goto done_processing;
+  }
+
   if (rpl.success == 0) {
     log_debug(LD_OR,
               "decoding onionskin failed. "
