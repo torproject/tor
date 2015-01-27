@@ -1913,6 +1913,11 @@ getinfo_helper_networkstatus(control_connection_t *conn,
   } else if (!strcmpstart(question, "ns/purpose/")) {
     *answer = networkstatus_getinfo_by_purpose(question+11, time(NULL));
     return *answer ? 0 : -1;
+  } else if (!strcmpstart(question, "consensus/packages")) {
+    const networkstatus_t *ns = networkstatus_get_latest_consensus();
+    if (ns->package_lines)
+      *answer = smartlist_join_strings(ns->package_lines, "\n", 1, NULL);
+    return *answer ? 0 : -1;
   } else {
     return 0;
   }
