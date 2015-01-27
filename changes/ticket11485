@@ -1,0 +1,3 @@
+  o Features (hidden services):
+    - Support mapping hidden service virtual ports to AF_UNIX sockets on
+      suitable platforms.  Resolves ticket #11485.
