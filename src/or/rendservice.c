@@ -3485,7 +3485,9 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
   char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
   smartlist_t *matching_ports;
   rend_service_port_config_t *chosen_port;
-  int unix_addrs;
+#ifndef HAVE_SYS_UN_H
+  int unix_addrs_rejected;
+#endif /* !defined(HAVE_SYS_UN_H) */
 
   tor_assert(circ->base_.purpose == CIRCUIT_PURPOSE_S_REND_JOINED);
   tor_assert(circ->rend_data);
@@ -3501,45 +3503,58 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
     return -2;
   }
   matching_ports = smartlist_new();
-  unix_addrs = 0;
+#ifndef HAVE_SYS_UN_H
+  unix_addrs_rejected = 0;
+#endif /* !defined(HAVE_SYS_UN_H) */
   SMARTLIST_FOREACH(service->ports, rend_service_port_config_t *, p,
   {
-    /*
-     * TODO don't just ignore AF_UNIX ports, but set up edge_connection_t
-     * properly to use them.
-     */
     if (conn->base_.port == p->virtual_port) {
+#ifdef HAVE_SYS_UN_H
+      smartlist_add(matching_ports, p);
+#else
       if (!(p->is_unix_addr)) {
         smartlist_add(matching_ports, p);
       } else {
-        ++unix_addrs;
+        if (unix_addrs_rejected == 0) {
+          /* If we have no support, bitch about it for just the first one */
+          log_warn(LD_REND,
+                   "Saw AF_UNIX virtual port mapping for port %d on service "
+                   "%s, which is unsupported on this platform.  Ignoring it.",
+                   conn->base_.port, serviceid);
+        }
+        ++unix_addrs_rejected;
       }
+#endif /* defined(HAVE_SYS_UN_H) */
     }
   });
   chosen_port = smartlist_choose(matching_ports);
   smartlist_free(matching_ports);
   if (chosen_port) {
-    tor_addr_copy(&conn->base_.addr, &chosen_port->real_addr);
-    conn->base_.port = chosen_port->real_port;
+#ifdef HAVE_SYS_UN_H
+    if (!(chosen_port->is_unix_addr)) {
+#else
+    {
+#endif /* defined(HAVE_SYS_UN_H) */
+      /* Get a non-AF_UNIX connection ready for connection_exit_connect() */
+      tor_addr_copy(&conn->base_.addr, &chosen_port->real_addr);
+      conn->base_.port = chosen_port->real_port;
+#ifdef HAVE_SYS_UN_H
+    } else {
+      /* Get an AF_UNIX connection ready for connection_exit_connect() */
+      conn->base_.socket_family = AF_UNIX;
+      tor_addr_make_unspec(&conn->base_.addr);
+      conn->base_.port = 1;
+      conn->base_.address = tor_strdup(chosen_port->unix_addr);
+#endif /* defined(HAVE_SYS_UN_H) */
+    }
+
     return 0;
   }
-  if (!unix_addrs) {
-    log_info(LD_REND,
-             "No virtual port mapping exists for port %d on service %s",
-             conn->base_.port, serviceid);
-  } else {
-#ifdef HAVE_SYS_UN_H
-    log_info(LD_REND,
-             "Only AF_UNIX virtual port mappings exists for port %d "
-             "on service %s, and support is not yet implemented",
-             conn->base_.port, serviceid);
-#else
-    log_info(LD_REND,
-             "Only AF_UNIX virtual port mappings exists for port %d "
-             "on service %s, and support is not available on this platform",
-             conn->base_.port, serviceid);
-#endif /* defined(HAVE_SYS_UN_H) */
-  }
+
+  log_info(LD_REND,
+           "No virtual port mapping exists for port %d on service %s",
+           conn->base_.port, serviceid);
+
   if (service->allow_unknown_ports)
     return -1;
   else
