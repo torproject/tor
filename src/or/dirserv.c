@@ -3258,7 +3258,26 @@ connection_dirserv_flushed_some(dir_connection_t *conn)
   }
 }
 
-/** Return true iff <b>line</b> is a valid recommened_packages line.
+/** Return true iff <b>line</b> is a valid RecommenedPackages line.
+ */
+/*
+  The grammar is:
+
+    "package" SP PACKAGENAME SP VERSION SP URL SP DIGESTS NL
+
+      PACKAGENAME = NONSPACE
+      VERSION = NONSPACE
+      URL = NONSPACE
+      DIGESTS = DIGEST | DIGESTS SP DIGEST
+      DIGEST = DIGESTTYPE "=" DIGESTVAL
+
+      NONSPACE = one or more non-space printing characters
+
+      DIGESTVAL = any number of non-=, non-" " characters.
+
+      SP = " "
+      NL = a newline
+
  */
 int
 validate_recommended_package_line(const char *line)

@@ -2456,7 +2456,7 @@ typedef struct networkstatus_t {
   /** Vote only: what methods is this voter willing to use? */
   smartlist_t *supported_methods;
 
-  /** List of 'package' lines describing hashes of downloadable pacakges */
+  /** List of 'package' lines describing hashes of downloadable packages */
   smartlist_t *package_lines;
 
   /** How long does this vote/consensus claim that authorities take to
