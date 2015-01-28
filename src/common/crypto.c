@@ -1780,8 +1780,12 @@ crypto_generate_dynamic_dh_modulus(void)
   dynamic_dh_modulus = BN_new();
   tor_assert(dynamic_dh_modulus);
 
-  dh_parameters = DH_generate_parameters(DH_BYTES*8, DH_GENERATOR, NULL, NULL);
+  dh_parameters = DH_new();
   tor_assert(dh_parameters);
+
+  r = DH_generate_parameters_ex(dh_parameters,
+                                DH_BYTES*8, DH_GENERATOR, NULL);
+  tor_assert(r == 0);
 
   r = DH_check(dh_parameters, &dh_codes);
   tor_assert(r && !dh_codes);
@@ -3115,6 +3119,14 @@ openssl_dynlock_destroy_cb_(struct CRYPTO_dynlock_value *v,
   tor_free(v);
 }
 
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,0,0)
+static void
+tor_set_openssl_thread_id(CRYPTO_THREADID *threadid)
+{
+  CRYPTO_THREADID_set_numeric(threadid, tor_get_thread_id());
+}
+#endif
+
 /** @{ */
 /** Helper: Construct mutexes, and set callbacks to help OpenSSL handle being
  * multithreaded. */
@@ -3128,7 +3140,11 @@ setup_openssl_threading(void)
   for (i=0; i < n; ++i)
     openssl_mutexes_[i] = tor_mutex_new();
   CRYPTO_set_locking_callback(openssl_locking_cb_);
+#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,0,0)
   CRYPTO_set_id_callback(tor_get_thread_id);
+#else
+  CRYPTO_THREADID_set_callback(tor_set_openssl_thread_id);
+#endif
   CRYPTO_set_dynlock_create_callback(openssl_dynlock_create_cb_);
   CRYPTO_set_dynlock_lock_callback(openssl_dynlock_lock_cb_);
   CRYPTO_set_dynlock_destroy_callback(openssl_dynlock_destroy_cb_);
