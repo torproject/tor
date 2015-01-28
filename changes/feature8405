@@ -1,0 +1,4 @@
+  o Minor features (controller):
+    - Include SOCKS_USERNAME and SOCKS_PASSWORD values in controller
+      events to let controllers observe circuit isolation inputs.
+      Closes ticket 8405.
