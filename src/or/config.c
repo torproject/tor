@@ -68,6 +68,9 @@
 /* From main.c */
 extern int quiet_level;
 
+/* Prefix used to indicate a Unix socket in a FooPort configuration. */
+static const char *unix_socket_prefix = "unix:";
+
 /** A list of abbreviations and aliases to map command-line options, obsolete
  * option names, or alternative option names, to their current values. */
 static config_abbrev_t option_abbrevs_[] = {
@@ -5620,6 +5623,47 @@ warn_nonlocal_controller_ports(smartlist_t *ports, unsigned forbid)
 #define CL_PORT_TAKES_HOSTNAMES (1u<<5)
 #define CL_PORT_IS_UNIXSOCKET (1u<<6)
 
+#ifdef HAVE_SYS_UN_H
+
+/** Parse the given <b>addrport</b> and set <b>path_out</b> if a Unix socket
+ * path is found. Return 0 on success. On error, a negative value is
+ * returned, -ENOENT if no Unix statement found, -EINVAL if the socket path
+ * is empty and -ENOSYS if AF_UNIX is not supported (see function in the
+ * #else statement below). */
+
+int
+config_parse_unix_port(const char *addrport, char **path_out)
+{
+  tor_assert(path_out);
+  tor_assert(addrport);
+
+  if (strcmpstart(addrport, unix_socket_prefix)) {
+    /* Not a Unix socket path. */
+    return -ENOENT;
+  }
+
+  if (strlen(addrport + strlen(unix_socket_prefix)) == 0) {
+    /* Empty socket path, not very usable. */
+    return -EINVAL;
+  }
+
+  *path_out = tor_strdup(addrport + strlen(unix_socket_prefix));
+  return 0;
+}
+
+#else /* defined(HAVE_SYS_UN_H) */
+
+int
+config_parse_unix_port(const char *addrport, char **path_out)
+{
+  log_warn(LD_CONFIG,
+           "Port configuration %s is for an AF_UNIX socket, but we have no"
+           "support available on this platform",
+           escaped(addrport));
+  return -ENOSYS;
+}
+#endif /* defined(HAVE_SYS_UN_H) */
+
 /**
  * Parse port configuration for a single port type.
  *
@@ -5681,6 +5725,7 @@ parse_port_config(smartlist_t *out,
   const unsigned takes_hostnames = flags & CL_PORT_TAKES_HOSTNAMES;
   const unsigned is_unix_socket = flags & CL_PORT_IS_UNIXSOCKET;
   int got_zero_port=0, got_nonzero_port=0;
+  char *unix_socket_path = NULL;
 
   /* FooListenAddress is deprecated; let's make it work like it used to work,
    * though. */
@@ -5785,7 +5830,7 @@ parse_port_config(smartlist_t *out,
 
   for (; ports; ports = ports->next) {
     tor_addr_t addr;
-    int port;
+    int port, ret;
     int sessiongroup = SESSION_GROUP_UNSET;
     unsigned isolation = ISO_DEFAULT;
     int prefer_no_auth = 0;
@@ -5814,8 +5859,20 @@ parse_port_config(smartlist_t *out,
 
     /* Now parse the addr/port value */
     addrport = smartlist_get(elts, 0);
-    if (is_unix_socket) {
-      /* leave it as it is. */
+
+    /* Let's start to check if it's a Unix socket path. */
+    ret = config_parse_unix_port(addrport, &unix_socket_path);
+    if (ret < 0 && ret != -ENOENT) {
+      if (ret == -EINVAL) {
+        log_warn(LD_CONFIG, "Empty Unix socket path.");
+      }
+      goto err;
+    }
+
+    if (unix_socket_path) {
+      port = 1;
+    } else if (is_unix_socket) {
+      unix_socket_path = tor_strdup(addrport);
       if (!strcmp(addrport, "0"))
         port = 0;
       else
@@ -6005,12 +6062,13 @@ parse_port_config(smartlist_t *out,
     }
 
     if (out && port) {
-      size_t namelen = is_unix_socket ? strlen(addrport) : 0;
+      size_t namelen = unix_socket_path ? strlen(unix_socket_path) : 0;
       port_cfg_t *cfg = port_cfg_new(namelen);
-      if (is_unix_socket) {
+      if (unix_socket_path) {
         tor_addr_make_unspec(&cfg->addr);
-        memcpy(cfg->unix_addr, addrport, strlen(addrport) + 1);
+        memcpy(cfg->unix_addr, unix_socket_path, namelen + 1);
         cfg->is_unix_addr = 1;
+        tor_free(unix_socket_path);
       } else {
         tor_addr_copy(&cfg->addr, &addr);
         cfg->port = port;

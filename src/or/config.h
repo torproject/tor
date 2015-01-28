@@ -113,6 +113,7 @@ int addressmap_register_auto(const char *from, const char *to,
                              time_t expires,
                              addressmap_entry_source_t addrmap_source,
                              const char **msg);
+int config_parse_unix_port(const char *addrport, char **path_out);
 
 /** Represents the information stored in a torrc Bridge line. */
 typedef struct bridge_line_t {
