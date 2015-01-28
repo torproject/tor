@@ -1666,6 +1666,9 @@ getinfo_helper_entry_guards(control_connection_t *conn,
         } else if (e->bad_since) {
           when = e->bad_since;
           status = "unusable";
+        } else if (e->unreachable_since) {
+          when = e->unreachable_since;
+          status = "down";
         } else {
           status = "up";
         }
