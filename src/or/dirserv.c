@@ -3258,7 +3258,7 @@ connection_dirserv_flushed_some(dir_connection_t *conn)
   }
 }
 
-/** Return true iff <b>line</b> is a valid RecommenedPackages line.
+/** Return true iff <b>line</b> is a valid RecommendedPackages line.
  */
 /*
   The grammar is:
