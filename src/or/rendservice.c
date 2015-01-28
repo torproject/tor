@@ -341,7 +341,6 @@ parse_port_config(const char *string)
   tor_addr_t addr;
   const char *addrport;
   rend_service_port_config_t *result = NULL;
-  const char *socket_prefix = "socket:";
   unsigned int is_unix_addr = 0;
   char *socket_path = NULL;
 
@@ -365,25 +364,19 @@ parse_port_config(const char *string)
     realport = virtport;
     tor_addr_from_ipv4h(&addr, 0x7F000001u); /* 127.0.0.1 */
   } else {
+    int ret;
+
     addrport = smartlist_get(sl,1);
-    /* If it starts with socket:, try to parse it as a socket path */
-    if (!strcmpstart(addrport, socket_prefix)) {
-      if (strlen(addrport + strlen(socket_prefix)) > 0) {
-#ifdef HAVE_SYS_UN_H
-        is_unix_addr = 1;
-        socket_path = tor_strdup(addrport + strlen(socket_prefix));
-#else
-        log_warn(LD_CONFIG,
-                 "Hidden service port configuration %s is for an AF_UNIX "
-                 "socket, but we have no support available on this platform",
-                 escaped(addrport));
-        goto err;
-#endif /* defined(HAVE_SYS_UN_H) */
-      } else {
+    ret = config_parse_unix_port(addrport, &socket_path);
+    if (ret < 0 && ret != ENOENT) {
+      if (ret == -EINVAL) {
         log_warn(LD_CONFIG,
                  "Empty socket path in hidden service port configuration.");
-        goto err;
       }
+      goto err;
+    }
+    if (socket_path) {
+      is_unix_addr = 1;
     } else if (strchr(addrport, ':') || strchr(addrport, '.')) {
       /* else try it as an IP:port pair if it has a : or . in it */
       if (tor_addr_port_lookup(addrport, &addr, &p)<0) {
