@@ -3471,6 +3471,56 @@ rend_service_dump_stats(int severity)
   }
 }
 
+#ifdef HAVE_SYS_UN_H
+
+/** Given <b>ports</b>, a smarlist containing rend_service_port_config_t,
+ * add the given <b>p</b>, a AF_UNIX port to the list. Return 0 on success
+ * else return -ENOSYS if AF_UNIX is not supported (see function in the
+ * #else statement below). */
+static int
+add_unix_port(smartlist_t *ports, rend_service_port_config_t *p)
+{
+  tor_assert(ports);
+  tor_assert(p);
+  tor_assert(p->is_unix_addr);
+
+  smartlist_add(ports, p);
+  return 0;
+}
+
+/** Given <b>conn</b> set it to use the given port <b>p</b> values. Return 0
+ * on success else return -ENOSYS if AF_UNIX is not supported (see function
+ * in the #else statement below). */
+static int
+set_unix_port(edge_connection_t *conn, rend_service_port_config_t *p)
+{
+  tor_assert(conn);
+  tor_assert(p);
+  tor_assert(p->is_unix_addr);
+
+  conn->base_.socket_family = AF_UNIX;
+  tor_addr_make_unspec(&conn->base_.addr);
+  conn->base_.port = 1;
+  conn->base_.address = tor_strdup(p->unix_addr);
+  return 0;
+}
+
+#else /* defined(HAVE_SYS_UN_H) */
+
+static int
+set_unix_port(edge_connection_t *conn, rend_service_port_config_t *p)
+{
+  return -ENOSYS;
+}
+
+static int
+add_unix_port(smartlist_t *ports, rend_service_port_config_t *p)
+{
+  return -ENOSYS;
+}
+
+#endif /* HAVE_SYS_UN_H */
+
 /** Given <b>conn</b>, a rendezvous exit stream, look up the hidden service for
  * 'circ', and look up the port and address based on conn-\>port.
  * Assign the actual conn-\>addr and conn-\>port. Return -2 on failure
@@ -3485,9 +3535,7 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
   char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
   smartlist_t *matching_ports;
   rend_service_port_config_t *chosen_port;
-#ifndef HAVE_SYS_UN_H
-  int unix_addrs_rejected;
-#endif /* !defined(HAVE_SYS_UN_H) */
+  unsigned int warn_once = 0;
 
   tor_assert(circ->base_.purpose == CIRCUIT_PURPOSE_S_REND_JOINED);
   tor_assert(circ->rend_data);
@@ -3503,51 +3551,40 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
     return -2;
   }
   matching_ports = smartlist_new();
-#ifndef HAVE_SYS_UN_H
-  unix_addrs_rejected = 0;
-#endif /* !defined(HAVE_SYS_UN_H) */
   SMARTLIST_FOREACH(service->ports, rend_service_port_config_t *, p,
   {
-    if (conn->base_.port == p->virtual_port) {
-#ifdef HAVE_SYS_UN_H
+    if (conn->base_.port != p->virtual_port) {
+      continue;
+    }
+    if (!(p->is_unix_addr)) {
       smartlist_add(matching_ports, p);
-#else
-      if (!(p->is_unix_addr)) {
-        smartlist_add(matching_ports, p);
-      } else {
-        if (unix_addrs_rejected == 0) {
-          /* If we have no support, bitch about it for just the first one */
+    } else {
+      if (add_unix_port(matching_ports, p)) {
+        if (!warn_once) {
+         /* Unix port not supported so warn only once. */
           log_warn(LD_REND,
-                   "Saw AF_UNIX virtual port mapping for port %d on service "
-                   "%s, which is unsupported on this platform.  Ignoring it.",
-                   conn->base_.port, serviceid);
+              "Saw AF_UNIX virtual port mapping for port %d on service "
+              "%s, which is unsupported on this platform. Ignoring it.",
+              conn->base_.port, serviceid);
         }
-        ++unix_addrs_rejected;
+        warn_once++;
       }
-#endif /* defined(HAVE_SYS_UN_H) */
     }
   });
   chosen_port = smartlist_choose(matching_ports);
   smartlist_free(matching_ports);
   if (chosen_port) {
-#ifdef HAVE_SYS_UN_H
     if (!(chosen_port->is_unix_addr)) {
-#else
-    {
-#endif /* defined(HAVE_SYS_UN_H) */
       /* Get a non-AF_UNIX connection ready for connection_exit_connect() */
       tor_addr_copy(&conn->base_.addr, &chosen_port->real_addr);
       conn->base_.port = chosen_port->real_port;
-#ifdef HAVE_SYS_UN_H
     } else {
-      /* Get an AF_UNIX connection ready for connection_exit_connect() */
-      conn->base_.socket_family = AF_UNIX;
-      tor_addr_make_unspec(&conn->base_.addr);
-      conn->base_.port = 1;
-      conn->base_.address = tor_strdup(chosen_port->unix_addr);
-#endif /* defined(HAVE_SYS_UN_H) */
+      if (set_unix_port(conn, chosen_port)) {
+        /* Simply impossible to end up here else we were able to add a Unix
+         * port without AF_UNIX support... ? */
+        tor_assert(0);
+      }
     }
-
     return 0;
   }
 
