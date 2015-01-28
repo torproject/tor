@@ -1915,8 +1915,26 @@ getinfo_helper_networkstatus(control_connection_t *conn,
     return *answer ? 0 : -1;
   } else if (!strcmp(question, "consensus/packages")) {
     const networkstatus_t *ns = networkstatus_get_latest_consensus();
-    if (ns->package_lines)
+    if (ns && ns->package_lines)
       *answer = smartlist_join_strings(ns->package_lines, "\n", 1, NULL);
+    return *answer ? 0 : -1;
+  } else if (!strcmp(question, "consensus/valid-after") ||
+             !strcmp(question, "consensus/fresh-until") ||
+             !strcmp(question, "consensus/valid-until")) {
+    const networkstatus_t *ns = networkstatus_get_latest_consensus();
+    if (ns) {
+      time_t t;
+      if (!strcmp(question, "consensus/valid-after"))
+        t = ns->valid_after;
+      else if (!strcmp(question, "consensus/fresh-until"))
+        t = ns->fresh_until;
+      else
+        t = ns->valid_until;
+
+      char tbuf[ISO_TIME_LEN+1];
+      format_iso_time(tbuf, t);
+      *answer = tor_strdup(tbuf);
+    }
     return *answer ? 0 : -1;
   } else {
     return 0;
