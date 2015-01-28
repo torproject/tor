@@ -1070,8 +1070,8 @@ rend_check_authorization(rend_service_t *service,
   }
 
   /* Allow the request. */
-  log_debug(LD_REND, "Client %s authorized for service %s.",
-            auth_client->client_name, service->service_id);
+  log_info(LD_REND, "Client %s authorized for service %s.",
+           auth_client->client_name, service->service_id);
   return 1;
 }
 

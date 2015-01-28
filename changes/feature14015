@@ -1,0 +1,3 @@
+  o Minor features (logging, hidden services):
+    - Elevate authorized-client message from DEBUG to INFO. Closes
+      ticket 14015.
