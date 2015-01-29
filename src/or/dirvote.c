@@ -1266,8 +1266,11 @@ networkstatus_compute_consensus(smartlist_t *votes,
                                          sizeof(uint32_t));
     uint32_t *measured_bws_kb = tor_calloc(smartlist_len(votes),
                                            sizeof(uint32_t));
+    uint32_t *measured_guardfraction = tor_calloc(smartlist_len(votes),
+                                                  sizeof(uint32_t));
     int num_bandwidths;
     int num_mbws;
+    int num_guardfraction_inputs;
 
     int *n_voter_flags; /* n_voter_flags[j] is the number of flags that
                          * votes[j] knows about. */
@@ -1376,7 +1379,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
     /* We need to know how many votes measure bandwidth. */
     n_authorities_measuring_bandwidth = 0;
-    SMARTLIST_FOREACH(votes, networkstatus_t *, v,
+    SMARTLIST_FOREACH(votes, const networkstatus_t *, v,
        if (v->has_measured_bws) {
          ++n_authorities_measuring_bandwidth;
        }
@@ -1418,6 +1421,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       smartlist_clear(versions);
       num_bandwidths = 0;
       num_mbws = 0;
+      num_guardfraction_inputs = 0;
 
       /* Okay, go through all the entries for this digest. */
       SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, v) {
@@ -1449,6 +1453,12 @@ networkstatus_compute_consensus(smartlist_t *votes,
             naming_conflict = 1;
           }
           chosen_name = rs->status.nickname;
+        }
+
+        /* Count guardfraction votes and note down the values. */
+        if (rs->status.has_guardfraction) {
+          measured_guardfraction[num_guardfraction_inputs++] =
+            rs->status.guardfraction_percentage;
         }
 
         /* count bandwidths */
@@ -1538,6 +1548,17 @@ networkstatus_compute_consensus(smartlist_t *votes,
         chosen_version = get_most_frequent_member(versions);
       } else {
         chosen_version = NULL;
+      }
+
+      /* If it's a guard and we have enough guardfraction votes,
+         calculate its consensus guardfraction value. */
+      if (is_guard && num_guardfraction_inputs > 2 &&
+          consensus_method >= MIN_METHOD_FOR_GUARDFRACTION) {
+        rs_out.has_guardfraction = 1;
+        rs_out.guardfraction_percentage = median_uint32(measured_guardfraction,
+                                                     num_guardfraction_inputs);
+        /* final value should be an integer percentage! */
+        tor_assert(rs_out.guardfraction_percentage <= 100);
       }
 
       /* Pick a bandwidth */
@@ -1694,11 +1715,21 @@ networkstatus_compute_consensus(smartlist_t *votes,
       smartlist_add(chunks, tor_strdup("\n"));
       /*     Now the weight line. */
       if (rs_out.has_bandwidth) {
+        char *guardfraction_str = NULL;
         int unmeasured = rs_out.bw_is_unmeasured &&
           consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW;
-        smartlist_add_asprintf(chunks, "w Bandwidth=%d%s\n",
+
+        /* If we have guardfraction info, include it in the 'w' line. */
+        if (rs_out.has_guardfraction) {
+          tor_asprintf(&guardfraction_str,
+                       " GuardFraction=%u", rs_out.guardfraction_percentage);
+        }
+        smartlist_add_asprintf(chunks, "w Bandwidth=%d%s%s\n",
                                rs_out.bandwidth_kb,
-                               unmeasured?" Unmeasured=1":"");
+                               unmeasured?" Unmeasured=1":"",
+                               guardfraction_str ? guardfraction_str : "");
+
+        tor_free(guardfraction_str);
       }
 
       /*     Now the exitpolicy summary line. */

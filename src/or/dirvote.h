@@ -55,7 +55,7 @@
 #define MIN_SUPPORTED_CONSENSUS_METHOD 13
 
 /** The highest consensus method that we currently support. */
-#define MAX_SUPPORTED_CONSENSUS_METHOD 18
+#define MAX_SUPPORTED_CONSENSUS_METHOD 19
 
 /** Lowest consensus method where microdesc consensuses omit any entry
  * with no microdesc. */
@@ -78,6 +78,10 @@
 /** Lowest consensus method where authorities may include an "id" line in
  * microdescriptors. */
 #define MIN_METHOD_FOR_ID_HASH_IN_MD 18
+
+/** Lowest consensus method where authorities may include
+ * GuardFraction information in microdescriptors. */
+#define MIN_METHOD_FOR_GUARDFRACTION 19
 
 /** Default bandwidth to clip unmeasured bandwidths to using method >=
  * MIN_METHOD_TO_CLIP_UNMEASURED_BW */
