@@ -2961,6 +2961,13 @@ test_dir_packages(void *arg)
   BAD("tor ");
   BAD("tor");
   BAD("");
+  BAD("=foobar sha256="
+      "3c179f46ca77069a6a0bac70212a9b3b838b2f66129cb52d568837fc79d8fcc7");
+  BAD("= = sha256="
+      "3c179f46ca77069a6a0bac70212a9b3b838b2f66129cb52d568837fc79d8fcc7");
+
+  BAD("sha512= sha256="
+      "3c179f46ca77069a6a0bac70212a9b3b838b2f66129cb52d568837fc79d8fcc7");
 
   votes = smartlist_new();
   smartlist_add(votes, tor_malloc_zero(sizeof(networkstatus_t)));

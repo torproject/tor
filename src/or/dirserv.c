@@ -3300,22 +3300,38 @@ validate_recommended_package_line(const char *line)
   WORD(); /* Skip URL */
   ++cp;
 
-  /* Skip digestname=digestval + */
-  int foundeq = 0;
-  while (*cp) {
-    if (*cp == ' ') {
-      if (!foundeq)
-        return 0;
-      foundeq = 0;
-    } else if (*cp == '=') {
-      if (++foundeq > 1)
-        return 0;
-    }
-    ++cp;
+  /* Skip digesttype=digestval + */
+  int n_entries = 0;
+  while (1) {
+    const char *start_of_word = cp;
+    const char *end_of_word = strchr(cp, ' ');
+    if (! end_of_word)
+      end_of_word = cp + strlen(cp);
+
+    if (start_of_word == end_of_word)
+      return 0;
+
+    const char *eq = memchr(start_of_word, '=', end_of_word - start_of_word);
+
+    if (!eq)
+      return 0;
+    if (eq == start_of_word)
+      return 0;
+    if (eq == end_of_word - 1)
+      return 0;
+    if (memchr(eq+1, '=', end_of_word - (eq+1)))
+      return 0;
+
+    ++n_entries;
+    if (0 == *end_of_word)
+      break;
+
+    cp = end_of_word + 1;
   }
 
-  if (!foundeq)
+  if (n_entries == 0)
     return 0;
+
   return 1;
 }
 
