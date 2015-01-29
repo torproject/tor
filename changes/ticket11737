@@ -1,0 +1,4 @@
+  o Minor features:
+    - Prevent bugs from causing infinite loops in our hash-table
+      iteration code by adding assertions that cached hash values have
+      not been corrupted. Closes ticket 11737.
