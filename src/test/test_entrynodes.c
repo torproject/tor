@@ -19,6 +19,7 @@
 #include "config.h"
 
 #include "test_descriptors.inc"
+#include "test_helpers.h"
 
 /* TODO:
  * choose_random_entry() test with state set.
@@ -324,19 +325,6 @@ state_lines_free(smartlist_t *entry_guard_lines)
   } SMARTLIST_FOREACH_END(state_lines);
 
   smartlist_free(entry_guard_lines);
-}
-
-/* Return a statically allocated string representing yesterday's date
- * in ISO format. We use it so that state file items are not found to
- * be outdated. */
-static const char *
-get_yesterday_date_str(void)
-{
-  static char buf[ISO_TIME_LEN+1];
-
-  time_t yesterday = time(NULL) - 24*60*60;
-  format_iso_time(buf, yesterday);
-  return buf;
 }
 
 /* Tests entry_guards_parse_state(). It creates a fake Tor state with

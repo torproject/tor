@@ -61,6 +61,7 @@ src_test_test_SOURCES = \
 	src/test/test_status.c \
 	src/test/test_threads.c \
 	src/test/test_util.c \
+	src/test/test_helpers.c \
 	src/test/testing_common.c \
 	src/ext/tinytest.c
 
@@ -119,6 +120,7 @@ src_test_test_workqueue_LDADD = src/or/libtor-testing.a \
 noinst_HEADERS+= \
 	src/test/fakechans.h \
 	src/test/test.h \
+	src/test/test_helpers.h \
 	src/test/test_descriptors.inc \
 	src/test/example_extrainfo.inc \
 	src/test/failing_routerdescs.inc \
