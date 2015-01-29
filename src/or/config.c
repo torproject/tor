@@ -411,6 +411,7 @@ static config_var_t option_vars_[] = {
   V(UseBridges,                  BOOL,     "0"),
   V(UseEntryGuards,              BOOL,     "1"),
   V(UseEntryGuardsAsDirGuards,   BOOL,     "1"),
+  V(UseGuardFraction,            AUTOBOOL, "auto"),
   V(UseMicrodescriptors,         AUTOBOOL, "auto"),
   V(UseNTorHandshake,            AUTOBOOL, "1"),
   V(User,                        STRING,   NULL),

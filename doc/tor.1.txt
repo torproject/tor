@@ -1122,6 +1122,12 @@ The following options are useful only for clients (that is, if
     guardfraction file which contains information about how long relays
     have been guards. (Default: unset)
 
+[[UseGuardFraction]] **UseGuardFraction** **0**|**1**|**auto**::
+    This torrc option specifies whether clients should use the
+    guardfraction information found in the consensus during path
+    selection. If it's set to 'auto', clients will do what the
+    UseGuardFraction consensus parameter tells them to do.
+
 [[NumEntryGuards]] **NumEntryGuards** __NUM__::
     If UseEntryGuards is set to 1, we will try to pick a total of NUM routers
     as long-term entries for our circuits. If NUM is 0, we try to learn

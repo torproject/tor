@@ -3818,6 +3818,12 @@ typedef struct {
   int NumEntryGuards; /**< How many entry guards do we try to establish? */
   int UseEntryGuardsAsDirGuards; /** Boolean: Do we try to get directory info
                                   * from a smallish number of fixed nodes? */
+
+  /** If 1, we use any guardfraction information we see in the
+   * consensus.  If 0, we don't.  If -1, let the consensus parameter
+   * decide. */
+  int UseGuardFraction;
+
   int NumDirectoryGuards; /**< How many dir guards do we try to establish?
                            * If 0, use value from NumEntryGuards. */
   int RephistTrackTime; /**< How many seconds do we keep rephist info? */

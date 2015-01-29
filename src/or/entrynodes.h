@@ -160,5 +160,7 @@ int validate_pluggable_transports_config(void);
 double pathbias_get_close_success_count(entry_guard_t *guard);
 double pathbias_get_use_success_count(entry_guard_t *guard);
 
+int should_apply_guardfraction(const networkstatus_t *ns);
+
 #endif
 

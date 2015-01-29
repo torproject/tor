@@ -1694,6 +1694,27 @@ getinfo_helper_entry_guards(control_connection_t *conn,
   return 0;
 }
 
+/** Return 0 if we should apply guardfraction information found in the
+ *  consensus. A specific consensus can be specified with the
+ *  <b>ns</b> argument, if NULL the most recent one will be picked.*/
+int
+should_apply_guardfraction(const networkstatus_t *ns)
+{
+  /* We need to check the corresponding torrc option and the consensus
+   * parameter if we need to. */
+  const or_options_t *options = get_options();
+
+  /* If UseGuardFraction is 'auto' then check the same-named consensus
+   * parameter. If the consensus parameter is not present, default to
+   * "off". */
+  if (options->UseGuardFraction == -1) {
+    return networkstatus_get_param(ns, "UseGuardFraction",
+                                   0, /* default to "off" */
+                                   0, 1);
+  }
+
+  return options->UseGuardFraction;
+}
 /** A list of configured bridges. Whenever we actually get a descriptor
  * for one, we add it as an entry guard.  Note that the order of bridges
  * in this list does not necessarily correspond to the order of bridges
