@@ -1,9 +1,12 @@
   o Major features (security)
-    - Implementation of SocksSocket option - SocksSocket implements a SOCKS
+    - Implementation of an AF_UNIX socket  option to implement a SOCKS
       proxy reachable by Unix Domain Socket. This allows client applications to
       communicate with Tor without having the ability to create AF_INET or
       AF_INET6 family sockets. If an application has permission to create a socket
       with AF_UNIX, it may directly communicate with Tor as if it were an other
       SOCKS proxy. This should allow high risk applications to be entirely prevented
       from connecting directly with TCP/IP, they will be able to only connect to the
-      internet through AF_UNIX and only through Tor.  Closes ticket 12585.
+      internet through AF_UNIX and only through Tor.
+      To create a socket of this type, use the syntax "unix:/path/to/socket".
+      Closes ticket 12585.
+
