@@ -1117,6 +1117,11 @@ The following options are useful only for clients (that is, if
     download any non-default directory material.  It doesn't currently
     do anything when we lack a live consensus. (Default: 1)
 
+[[GuardfractionFile]] **GuardfractionFile** __FILENAME__::
+    V3 authoritative directories only. Configures the location of the
+    guardfraction file which contains information about how long relays
+    have been guards. (Default: unset)
+
 [[NumEntryGuards]] **NumEntryGuards** __NUM__::
     If UseEntryGuards is set to 1, we will try to pick a total of NUM routers
     as long-term entries for our circuits. If NUM is 0, we try to learn

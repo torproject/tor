@@ -2145,6 +2145,12 @@ typedef struct routerstatus_t {
 
   uint32_t bandwidth_kb; /**< Bandwidth (capacity) of the router as reported in
                        * the vote/consensus, in kilobytes/sec. */
+
+  /** The consensus has guardfraction information for this router. */
+  unsigned int has_guardfraction:1;
+  /** The guardfraction value of this router. */
+  uint32_t guardfraction_percentage;
+
   char *exitsummary; /**< exit policy summary -
                       * XXX weasel: this probably should not stay a string. */
 
@@ -3946,6 +3952,9 @@ typedef struct {
 
   /** Location of bandwidth measurement file */
   char *V3BandwidthsFile;
+
+  /** Location of guardfraction file */
+  char *GuardfractionFile;
 
   /** Authority only: key=value pairs that we add to our networkstatus
    * consensus vote on the 'params' line. */
