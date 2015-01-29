@@ -483,10 +483,6 @@ GENERAL OPTIONS
     in accordance to RFC 1929. Both username and password must be between 1 and
     255 characters.
 
-[[SocksSocket]] **SocksSocket** __Path__ [_flags_] [_isolation flags_]::
-    Like SocksPort, but listens on a Unix domain socket, rather than a TCP
-    socket.  '0' disables SocksSocket (Unix and Unix-like systems only.)
-
 [[SocksSocketsGroupWritable]] **SocksSocketsGroupWritable** **0**|**1**::
     If this option is set to 0, don't allow the filesystem group to read and
     write unix sockets (e.g. SocksSocket). If the option is set to 1, make

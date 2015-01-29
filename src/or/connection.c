@@ -1496,7 +1496,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     if (new_type == CONN_TYPE_AP && conn->socket_family == AF_UNIX) {
       newconn->port = 0;
       newconn->address = tor_strdup(conn->address);
-      log_info(LD_NET, "New SOCKS SocksSocket connection opened");
+      log_info(LD_NET, "New SOCKS AF_UNIX connection opened");
     }
     if (new_type == CONN_TYPE_CONTROL) {
       log_notice(LD_CONTROL, "New control connection opened from %s.",
