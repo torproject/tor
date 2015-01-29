@@ -2166,9 +2166,9 @@ compute_weighted_bandwidths(const smartlist_t *sl,
         guardfraction_bw.guard_bw * weight +
         guardfraction_bw.non_guard_bw * weight_without_guard_flag;
 
-      log_warn(LD_GENERAL, "%s: Guardfraction weight %f instead of %f (%s)",
-               node->rs->nickname, final_weight, weight*this_bw,
-               bandwidth_weight_rule_to_string(rule));
+      log_debug(LD_GENERAL, "%s: Guardfraction weight %f instead of %f (%s)",
+                node->rs->nickname, final_weight, weight*this_bw,
+                bandwidth_weight_rule_to_string(rule));
     } else { /* no guardfraction information. calculate the weight normally. */
       final_weight = weight*this_bw;
     }

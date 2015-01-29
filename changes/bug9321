@@ -1,0 +1,7 @@
+  o Major features:
+    - Introduce the Guardfraction feature which improves the load
+      balancing of path selection towards guard nodes. Specifically,
+      it aims to reduce the traffic gap that guard nodes experience
+      when they first get the Guard flag. This is a required step if
+      we want to increase the guard lifetime to 9 months or greater.
+      Resolves ticket 9321.

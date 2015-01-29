@@ -1831,9 +1831,9 @@ routerstatus_parse_guardfraction(const char *guardfraction_str,
     return -1;
   }
 
-  log_warn(LD_GENERAL, "[*] Parsed %s guardfraction '%s' for '%s'.",
-           is_consensus ? "consensus" : "vote",
-           guardfraction_str, rs->nickname);
+  log_debug(LD_GENERAL, "[*] Parsed %s guardfraction '%s' for '%s'.",
+            is_consensus ? "consensus" : "vote",
+            guardfraction_str, rs->nickname);
 
   if (!is_consensus) { /* We are parsing a vote */
     vote_rs->status.guardfraction_percentage = guardfraction;

@@ -2436,7 +2436,7 @@ dirserv_read_guardfraction_file_from_str(const char *guardfraction_file_str,
 
   retval = 0;
 
-  log_warn(LD_CONFIG,
+  log_info(LD_CONFIG,
            "Successfully parsed guardfraction file with %d consensuses over "
            "%d days. Parsed %d nodes and applied %d of them%s.",
            total_consensuses, total_days, guards_read_n, guards_applied_n,

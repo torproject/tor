@@ -1020,7 +1020,7 @@ update_total_bandwidth_weights(const routerstatus_t *rs,
   int guardfraction_bandwidth = 0;
 
   if (!rs->has_bandwidth) {
-    log_warn(LD_BUG, "Missing consensus bandwidth for router %s",
+    log_info(LD_BUG, "Missing consensus bandwidth for router %s",
              rs->nickname);
     return;
   }
