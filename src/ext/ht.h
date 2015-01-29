@@ -287,8 +287,7 @@ ht_string_hash(const char *s)
              HT_BUCKET_NUM_(head,field,(*elm)->field.hte_next,hashfn)); \
       return &(*elm)->field.hte_next;                                   \
     } else {                                                            \
-      unsigned b = (HT_ELT_HASH_(*elm, field, hashfn)                   \
-      % head->hth_table_length)+1;                                      \
+      unsigned b = HT_BUCKET_NUM_(head,field,*elm,hashfn)+1;            \
       while (b < head->hth_table_length) {                              \
         if (head->hth_table[b]) {                                       \
           HT_ASSERT_(b ==                                               \
@@ -434,7 +433,7 @@ ht_string_hash(const char *s)
       for (elm = head->hth_table[i]; elm; elm = elm->field.hte_next) {  \
         if (HT_ELT_HASH_(elm, field, hashfn) != hashfn(elm))            \
           return 1000 + i;                                              \
-        if ((HT_ELT_HASH_(elm, field, hashfn) % head->hth_table_length) != i) \
+        if (HT_BUCKET_NUM_(head,field,elm,hashfn) != i)                 \
           return 10000 + i;                                             \
         ++n;                                                            \
       }                                                                 \
