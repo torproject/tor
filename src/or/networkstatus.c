@@ -1916,7 +1916,9 @@ getinfo_helper_networkstatus(control_connection_t *conn,
   } else if (!strcmp(question, "consensus/packages")) {
     const networkstatus_t *ns = networkstatus_get_latest_consensus();
     if (ns && ns->package_lines)
-      *answer = smartlist_join_strings(ns->package_lines, "\n", 1, NULL);
+      *answer = smartlist_join_strings(ns->package_lines, "\n", 0, NULL);
+    else
+      *errmsg = "No consensus available";
     return *answer ? 0 : -1;
   } else if (!strcmp(question, "consensus/valid-after") ||
              !strcmp(question, "consensus/fresh-until") ||
@@ -1934,6 +1936,8 @@ getinfo_helper_networkstatus(control_connection_t *conn,
       char tbuf[ISO_TIME_LEN+1];
       format_iso_time(tbuf, t);
       *answer = tor_strdup(tbuf);
+    } else {
+      *errmsg = "No consensus available";
     }
     return *answer ? 0 : -1;
   } else {

@@ -2630,8 +2630,8 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
 
   {
     smartlist_t *package_lst = find_all_by_keyword(tokens, K_PACKAGE);
+    ns->package_lines = smartlist_new();
     if (package_lst) {
-      ns->package_lines = smartlist_new();
       SMARTLIST_FOREACH(package_lst, directory_token_t *, t,
                     smartlist_add(ns->package_lines, tor_strdup(t->args[0])));
     }
