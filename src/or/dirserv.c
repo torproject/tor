@@ -3273,7 +3273,7 @@ connection_dirserv_flushed_some(dir_connection_t *conn)
 
       NONSPACE = one or more non-space printing characters
 
-      DIGESTVAL = any number of non-=, non-" " characters.
+      DIGESTVAL = DIGESTTYPE = one or more non-=, non-" " characters.
 
       SP = " "
       NL = a newline
