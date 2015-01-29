@@ -5862,6 +5862,12 @@ parse_port_config(smartlist_t *out,
       goto err;
     }
 
+    if (unix_socket_path &&
+        ! conn_listener_type_supports_af_unix(listener_type)) {
+      log_warn(LD_CONFIG, "%sPort does not support unix sockets", portname);
+      goto err;
+    }
+
     if (unix_socket_path) {
       port = 1;
     } else if (is_unix_socket) {

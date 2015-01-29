@@ -449,6 +449,22 @@ connection_link_connections(connection_t *conn_a, connection_t *conn_b)
   conn_b->linked_conn = conn_a;
 }
 
+/** Return true iff the provided connection listener type supports AF_UNIX
+ * sockets. */
+int
+conn_listener_type_supports_af_unix(int type)
+{
+  /* For now only control ports or SOCKS ports can be Unix domain sockets
+   * and listeners at the same time */
+  switch (type) {
+    case CONN_TYPE_CONTROL_LISTENER:
+    case CONN_TYPE_AP_LISTENER:
+      return 1;
+    default:
+      return 0;
+  }
+}
+
 /** Deallocate memory used by <b>conn</b>. Deallocate its buffers if
  * necessary, close its socket if necessary, and mark the directory as dirty
  * if <b>conn</b> is an OR or OP connection.
@@ -516,8 +532,7 @@ connection_free_(connection_t *conn)
     if (conn->socket_family == AF_UNIX) {
       /* For now only control and SOCKS ports can be Unix domain sockets
        * and listeners at the same time */
-      tor_assert(conn->type == CONN_TYPE_CONTROL_LISTENER ||
-                 conn->type == CONN_TYPE_AP_LISTENER);
+      tor_assert(conn_listener_type_supports_af_unix(conn->type));
 
       if (unlink(conn->address) < 0 && errno != ENOENT) {
         log_warn(LD_NET, "Could not unlink %s: %s", conn->address,
@@ -1172,17 +1187,13 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     }
 #ifdef HAVE_SYS_UN_H
   /*
-   * AF_UNIX generic setup stuff (this covers both CONN_TYPE_CONTROL_LISTENER
-   * and CONN_TYPE_AP_LISTENER cases)
+   * AF_UNIX generic setup stuff
    */
   } else if (listensockaddr->sa_family == AF_UNIX) {
     /* We want to start reading for both AF_UNIX cases */
     start_reading = 1;
 
-    /* For now only control ports or SOCKS ports can be Unix domain sockets
-     * and listeners at the same time */
-    tor_assert(type == CONN_TYPE_CONTROL_LISTENER ||
-               type == CONN_TYPE_AP_LISTENER);
+    tor_assert(conn_listener_type_supports_af_unix(type));
 
     if (check_location_for_unix_socket(options, address,
           (type == CONN_TYPE_CONTROL_LISTENER) ?
