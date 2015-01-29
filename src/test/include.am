@@ -40,6 +40,7 @@ src_test_test_SOURCES = \
 	src/test/test_dir.c \
 	src/test/test_entryconn.c \
 	src/test/test_entrynodes.c \
+	src/test/test_guardfraction.c \
 	src/test/test_extorport.c \
 	src/test/test_hs.c \
 	src/test/test_introduce.c \

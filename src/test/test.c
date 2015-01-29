@@ -1126,6 +1126,7 @@ extern struct testcase_t crypto_tests[];
 extern struct testcase_t dir_tests[];
 extern struct testcase_t entryconn_tests[];
 extern struct testcase_t entrynodes_tests[];
+extern struct testcase_t guardfraction_tests[];
 extern struct testcase_t extorport_tests[];
 extern struct testcase_t hs_tests[];
 extern struct testcase_t introduce_tests[];
@@ -1170,6 +1171,7 @@ struct testgroup_t testgroups[] = {
   { "dir/md/", microdesc_tests },
   { "entryconn/", entryconn_tests },
   { "entrynodes/", entrynodes_tests },
+  { "guardfraction/", guardfraction_tests },
   { "extorport/", extorport_tests },
   { "hs/", hs_tests },
   { "introduce/", introduce_tests },
