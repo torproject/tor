@@ -1,0 +1,4 @@
+  o Major bugfix
+    - Possibility of an infinite loop if the returned value of the read/recv
+      was 0. A returned value of 0 means that we've reached the EOF thus the
+      pipe/sock is drained so return success not an error.
