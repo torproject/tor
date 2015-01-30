@@ -174,7 +174,7 @@ pipe_drain(int fd)
   do {
     r = read_ni(fd, buf, sizeof(buf));
   } while (r > 0);
-  if (errno != EAGAIN)
+  if (r < 0 && errno != EAGAIN)
     return -1;
   /* A value of r = 0 means EOF on the fd so successfully drained. */
   return 0;
@@ -198,7 +198,7 @@ sock_drain(tor_socket_t fd)
   do {
     r = recv_ni(fd, buf, sizeof(buf), 0);
   } while (r > 0);
-  if (!ERRNO_IS_EAGAIN(tor_socket_errno(fd)))
+  if (r < 0 && !ERRNO_IS_EAGAIN(tor_socket_errno(fd)))
     return -1;
   /* A value of r = 0 means EOF on the fd so successfully drained. */
   return 0;
