@@ -336,7 +336,7 @@ parse_port_config(const char *string)
 {
   smartlist_t *sl;
   int virtport;
-  int realport;
+  int realport = 0;
   uint16_t p;
   tor_addr_t addr;
   const char *addrport;
