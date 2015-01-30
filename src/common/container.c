@@ -518,11 +518,13 @@ smartlist_sort(smartlist_t *sl, int (*compare)(const void **a, const void **b))
 
 /** Given a smartlist <b>sl</b> sorted with the function <b>compare</b>,
  * return the most frequent member in the list.  Break ties in favor of
- * later elements.  If the list is empty, return NULL.
+ * later elements.  If the list is empty, return NULL.  If count_out is
+ * non-null, set it to the most frequent member.
  */
 void *
-smartlist_get_most_frequent(const smartlist_t *sl,
-                            int (*compare)(const void **a, const void **b))
+smartlist_get_most_frequent_(const smartlist_t *sl,
+                             int (*compare)(const void **a, const void **b),
+                             int *count_out)
 {
   const void *most_frequent = NULL;
   int most_frequent_count = 0;
@@ -530,8 +532,11 @@ smartlist_get_most_frequent(const smartlist_t *sl,
   const void *cur = NULL;
   int i, count=0;
 
-  if (!sl->num_used)
+  if (!sl->num_used) {
+    if (count_out)
+      *count_out = 0;
     return NULL;
+  }
   for (i = 0; i < sl->num_used; ++i) {
     const void *item = sl->list[i];
     if (cur && 0 == compare(&cur, &item)) {
@@ -549,6 +554,8 @@ smartlist_get_most_frequent(const smartlist_t *sl,
     most_frequent = cur;
     most_frequent_count = count;
   }
+  if (count_out)
+    *count_out = most_frequent_count;
   return (void*)most_frequent;
 }
 
@@ -726,6 +733,16 @@ char *
 smartlist_get_most_frequent_string(smartlist_t *sl)
 {
   return smartlist_get_most_frequent(sl, compare_string_ptrs_);
+}
+
+/** Return the most frequent string in the sorted list <b>sl</b>.
+ * If <b>count_out</b> is provided, set <b>count_out</b> to the
+ * number of times that string appears.
+ */
+char *
+smartlist_get_most_frequent_string_(smartlist_t *sl, int *count_out)
+{
+  return smartlist_get_most_frequent_(sl, compare_string_ptrs_, count_out);
 }
 
 /** Remove duplicate strings from a sorted list, and free them with tor_free().

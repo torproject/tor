@@ -66,6 +66,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
 {
   smartlist_t *chunks = smartlist_new();
   const char *client_versions = NULL, *server_versions = NULL;
+  char *packages = NULL;
   char fingerprint[FINGERPRINT_LEN+1];
   char digest[DIGEST_LEN];
   uint32_t addr;
@@ -96,6 +97,18 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  server_versions);
   } else {
     server_versions_line = tor_strdup("");
+  }
+
+  if (v3_ns->package_lines) {
+    smartlist_t *tmp = smartlist_new();
+    SMARTLIST_FOREACH(v3_ns->package_lines, const char *, p,
+                      if (validate_recommended_package_line(p))
+                        smartlist_add_asprintf(tmp, "package %s\n", p));
+    packages = smartlist_join_strings(tmp, "", 0, NULL);
+    SMARTLIST_FOREACH(tmp, char *, cp, tor_free(cp));
+    smartlist_free(tmp);
+  } else {
+    packages = tor_strdup("");
   }
 
   {
@@ -132,6 +145,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  "valid-until %s\n"
                  "voting-delay %d %d\n"
                  "%s%s" /* versions */
+                 "%s" /* packages */
                  "known-flags %s\n"
                  "flag-thresholds %s\n"
                  "params %s\n"
@@ -143,6 +157,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  v3_ns->vote_seconds, v3_ns->dist_seconds,
                  client_versions_line,
                  server_versions_line,
+                 packages,
                  flags,
                  flag_thresholds,
                  params,
@@ -230,6 +245,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
  done:
   tor_free(client_versions_line);
   tor_free(server_versions_line);
+  tor_free(packages);
 
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_free(chunks);
@@ -1037,6 +1053,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
   const routerstatus_format_type_t rs_format =
     flavor == FLAV_NS ? NS_V3_CONSENSUS : NS_V3_CONSENSUS_MICRODESC;
   char *params = NULL;
+  char *packages = NULL;
   int added_weights = 0;
   tor_assert(flavor == FLAV_NS || flavor == FLAV_MICRODESC);
   tor_assert(total_authorities >= smartlist_len(votes));
@@ -1120,6 +1137,11 @@ networkstatus_compute_consensus(smartlist_t *votes,
                                                       n_versioning_servers);
     client_versions = compute_consensus_versions_list(combined_client_versions,
                                                       n_versioning_clients);
+    if (consensus_method >= MIN_METHOD_FOR_PACKAGE_LINES) {
+      packages = compute_consensus_package_lines(votes);
+    } else {
+      packages = tor_strdup("");
+    }
 
     SMARTLIST_FOREACH(combined_server_versions, char *, cp, tor_free(cp));
     SMARTLIST_FOREACH(combined_client_versions, char *, cp, tor_free(cp));
@@ -1162,10 +1184,13 @@ networkstatus_compute_consensus(smartlist_t *votes,
                  "voting-delay %d %d\n"
                  "client-versions %s\n"
                  "server-versions %s\n"
+                 "%s" /* packages */
                  "known-flags %s\n",
                  va_buf, fu_buf, vu_buf,
                  vote_seconds, dist_seconds,
-                 client_versions, server_versions, flaglist);
+                 client_versions, server_versions,
+                 packages,
+                 flaglist);
 
     tor_free(flaglist);
   }
@@ -1852,10 +1877,83 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
   tor_free(client_versions);
   tor_free(server_versions);
+  tor_free(packages);
   SMARTLIST_FOREACH(flags, char *, cp, tor_free(cp));
   smartlist_free(flags);
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_free(chunks);
+
+  return result;
+}
+
+/** Given a list of networkstatus_t for each vote, return a newly allocated
+ * string containing the "package" lines for the vote. */
+STATIC char *
+compute_consensus_package_lines(smartlist_t *votes)
+{
+  const int n_votes = smartlist_len(votes);
+
+  /* This will be a map from "packagename version" strings to arrays
+   * of const char *, with the i'th member of the array corresponding to the
+   * package line from the i'th vote.
+   */
+  strmap_t *package_status = strmap_new();
+
+  SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, v) {
+    if (! v->package_lines)
+      continue;
+    SMARTLIST_FOREACH_BEGIN(v->package_lines, const char *, line) {
+      if (! validate_recommended_package_line(line))
+        continue;
+
+      /* Skip 'cp' to the second space in the line. */
+      const char *cp = strchr(line, ' ');
+      if (!cp) continue;
+      ++cp;
+      cp = strchr(cp, ' ');
+      if (!cp) continue;
+
+      char *key = tor_strndup(line, cp - line);
+
+      const char **status = strmap_get(package_status, key);
+      if (!status) {
+        status = tor_calloc(n_votes, sizeof(const char *));
+        strmap_set(package_status, key, status);
+      }
+      status[v_sl_idx] = line; /* overwrite old value */
+      tor_free(key);
+    } SMARTLIST_FOREACH_END(line);
+  } SMARTLIST_FOREACH_END(v);
+
+  smartlist_t *entries = smartlist_new(); /* temporary */
+  smartlist_t *result_list = smartlist_new(); /* output */
+  STRMAP_FOREACH(package_status, key, const char **, values) {
+    int i, count=-1;
+    for (i = 0; i < n_votes; ++i) {
+      if (values[i])
+        smartlist_add(entries, (void*) values[i]);
+    }
+    smartlist_sort_strings(entries);
+    int n_voting_for_entry = smartlist_len(entries);
+    const char *most_frequent =
+      smartlist_get_most_frequent_string_(entries, &count);
+
+    if (n_voting_for_entry >= 3 && count > n_voting_for_entry / 2) {
+      smartlist_add_asprintf(result_list, "package %s\n", most_frequent);
+    }
+
+    smartlist_clear(entries);
+
+  } STRMAP_FOREACH_END;
+
+  smartlist_sort_strings(result_list);
+
+  char *result = smartlist_join_strings(result_list, "", 0, NULL);
+
+  SMARTLIST_FOREACH(result_list, char *, cp, tor_free(cp));
+  smartlist_free(result_list);
+  smartlist_free(entries);
+  strmap_free(package_status, tor_free_);
 
   return result;
 }
