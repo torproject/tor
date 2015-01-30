@@ -368,7 +368,7 @@ parse_port_config(const char *string)
 
     addrport = smartlist_get(sl,1);
     ret = config_parse_unix_port(addrport, &socket_path);
-    if (ret < 0 && ret != ENOENT) {
+    if (ret < 0 && ret != -ENOENT) {
       if (ret == -EINVAL) {
         log_warn(LD_CONFIG,
                  "Empty socket path in hidden service port configuration.");
