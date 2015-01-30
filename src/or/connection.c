@@ -1728,12 +1728,11 @@ connection_connect(connection_t *conn, const char *address,
              !tor_addr_is_null(&options->OutboundBindAddressIPv6_))
       ext_addr = &options->OutboundBindAddressIPv6_;
     if (ext_addr) {
-      socklen_t ext_addr_len = 0;
       memset(&bind_addr_ss, 0, sizeof(bind_addr_ss));
       bind_addr_len = tor_addr_to_sockaddr(ext_addr, 0,
                                            (struct sockaddr *) &bind_addr_ss,
                                            sizeof(bind_addr_ss));
-      if (ext_addr_len == 0) {
+      if (bind_addr_len == 0) {
         log_warn(LD_NET,
                  "Error converting OutboundBindAddress %s into sockaddr. "
                  "Ignoring.", fmt_and_decorate_addr(ext_addr));

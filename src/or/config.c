@@ -1617,7 +1617,7 @@ options_act(const or_options_t *old_options)
   }
 
   if (parse_outbound_addresses(options, 0, &msg) < 0) {
-    log_warn(LD_BUG, "Failed parsing oubound bind addresses: %s", msg);
+    log_warn(LD_BUG, "Failed parsing outbound bind addresses: %s", msg);
     tor_free(msg);
     return -1;
   }
