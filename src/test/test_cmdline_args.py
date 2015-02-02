@@ -49,9 +49,12 @@ def contents(fn):
     finally:
         f.close()
 
-def run_tor(args, failure=False):
-    p = subprocess.Popen([TOR] + args, stdout=subprocess.PIPE)
-    output, _ = p.communicate()
+def run_tor(args, failure=False, stdin=None):
+    kwargs = {}
+    if stdin != None:
+        kwargs['stdin'] = subprocess.PIPE
+    p = subprocess.Popen([TOR] + args, stdout=subprocess.PIPE, **kwargs)
+    output, _ = p.communicate(input=stdin)
     result = p.poll()
     if result and not failure:
         raise UnexpectedFailure()
@@ -234,20 +237,26 @@ class CmdlineTests(unittest.TestCase):
     def test_cmdline_args(self):
         default_torrc = NamedTemporaryFile()
         torrc = NamedTemporaryFile()
-        torrc.write("SocksPort 9999\n")
-        torrc.write("SocksPort 9998\n")
-        torrc.write("ORPort 9000\n")
-        torrc.write("ORPort 9001\n")
-        torrc.write("Nickname eleventeen\n")
-        torrc.write("ControlPort 9500\n")
-        torrc.close()
+        contents = ("SocksPort 9999\n"
+                    "SocksPort 9998\n"
+                    "ORPort 9000\n"
+                    "ORPort 9001\n"
+                    "Nickname eleventeen\n"
+                    "ControlPort 9500\n")
+        torrc.write(contents)
         default_torrc.write("")
         default_torrc.close()
+        torrc.close()
         out_sh = out_nb = out_fl = None
+
+        opts_stdin = [ "-f", "-",
+                       "--defaults-torrc", default_torrc.name,
+                       "--dump-config", "short" ]
         opts = [ "-f", torrc.name,
                  "--defaults-torrc", default_torrc.name,
                  "--dump-config", "short" ]
         try:
+            out_0 = run_tor(opts_stdin,stdin=contents)
             out_1 = run_tor(opts)
             out_2 = run_tor(opts+["+ORPort", "9003",
                                   "SocksPort", "9090",
@@ -258,8 +267,17 @@ class CmdlineTests(unittest.TestCase):
             os.unlink(torrc.name)
             os.unlink(default_torrc.name)
 
+        out_0 = [ l for l in lines(out_0) if not l.startswith("DataDir") ]
         out_1 = [ l for l in lines(out_1) if not l.startswith("DataDir") ]
         out_2 = [ l for l in lines(out_2) if not l.startswith("DataDir") ]
+
+        self.assertEqual(out_0,
+                          ["ControlPort 9500",
+                           "Nickname eleventeen",
+                           "ORPort 9000",
+                           "ORPort 9001",
+                           "SocksPort 9999",
+                           "SocksPort 9998"])
 
         self.assertEqual(out_1,
                           ["ControlPort 9500",
@@ -268,6 +286,7 @@ class CmdlineTests(unittest.TestCase):
                            "ORPort 9001",
                            "SocksPort 9999",
                            "SocksPort 9998"])
+
         self.assertEqual(out_2,
                           ["ExtORPort 9005",
                            "Nickname eleventeen",
