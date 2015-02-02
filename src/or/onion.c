@@ -526,13 +526,15 @@ onion_skin_server_handshake(int type,
  * bytes worth of key material in <b>keys_out_len</b>, set
  * <b>rend_authenticator_out</b> to the "KH" field that can be used to
  * establish introduction points at this hop, and return 0. On failure,
- * return -1. */
+ * return -1, and set *msg_out to an error message if this is worth
+ * complaining to the usre about. */
 int
 onion_skin_client_handshake(int type,
                       const onion_handshake_state_t *handshake_state,
                       const uint8_t *reply, size_t reply_len,
                       uint8_t *keys_out, size_t keys_out_len,
-                      uint8_t *rend_authenticator_out)
+                      uint8_t *rend_authenticator_out,
+                      const char **msg_out)
 {
   if (handshake_state->tag != type)
     return -1;
@@ -540,12 +542,14 @@ onion_skin_client_handshake(int type,
   switch (type) {
   case ONION_HANDSHAKE_TYPE_TAP:
     if (reply_len != TAP_ONIONSKIN_REPLY_LEN) {
-      log_warn(LD_CIRC, "TAP reply was not of the correct length.");
+      if (msg_out)
+        *msg_out = "TAP reply was not of the correct length.";
       return -1;
     }
     if (onion_skin_TAP_client_handshake(handshake_state->u.tap,
                                         (const char*)reply,
-                                        (char *)keys_out, keys_out_len) < 0)
+                                        (char *)keys_out, keys_out_len,
+                                        msg_out) < 0)
       return -1;
 
     memcpy(rend_authenticator_out, reply+DH_KEY_LEN, DIGEST_LEN);
@@ -553,26 +557,28 @@ onion_skin_client_handshake(int type,
     return 0;
   case ONION_HANDSHAKE_TYPE_FAST:
     if (reply_len != CREATED_FAST_LEN) {
-      log_warn(LD_CIRC, "CREATED_FAST reply was not of the correct length.");
+      if (msg_out)
+        *msg_out = "TAP reply was not of the correct length.";
       return -1;
     }
     if (fast_client_handshake(handshake_state->u.fast, reply,
-                              keys_out, keys_out_len) < 0)
+                              keys_out, keys_out_len, msg_out) < 0)
       return -1;
 
     memcpy(rend_authenticator_out, reply+DIGEST_LEN, DIGEST_LEN);
     return 0;
   case ONION_HANDSHAKE_TYPE_NTOR:
     if (reply_len < NTOR_REPLY_LEN) {
-      log_warn(LD_CIRC, "ntor reply was not of the correct length.");
+      if (msg_out)
+        *msg_out = "ntor reply was not of the correct length.";
       return -1;
     }
     {
       size_t keys_tmp_len = keys_out_len + DIGEST_LEN;
       uint8_t *keys_tmp = tor_malloc(keys_tmp_len);
       if (onion_skin_ntor_client_handshake(handshake_state->u.ntor,
-                                           reply,
-                                           keys_tmp, keys_tmp_len) < 0) {
+                                        reply,
+                                        keys_tmp, keys_tmp_len, msg_out) < 0) {
         tor_free(keys_tmp);
         return -1;
       }

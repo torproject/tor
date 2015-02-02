@@ -398,7 +398,6 @@ command_process_created_cell(cell_t *cell, channel_t *chan)
     log_debug(LD_OR,"at OP. Finishing handshake.");
     if ((err_reason = circuit_finish_handshake(origin_circ,
                                         &extended_cell.created_cell)) < 0) {
-      log_warn(LD_OR,"circuit_finish_handshake failed.");
       circuit_mark_for_close(circ, -err_reason);
       return;
     }

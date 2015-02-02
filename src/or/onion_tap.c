@@ -183,7 +183,8 @@ int
 onion_skin_TAP_client_handshake(crypto_dh_t *handshake_state,
             const char *handshake_reply, /* TAP_ONIONSKIN_REPLY_LEN bytes */
             char *key_out,
-            size_t key_out_len)
+            size_t key_out_len,
+            const char **msg_out)
 {
   ssize_t len;
   char *key_material=NULL;
@@ -196,14 +197,15 @@ onion_skin_TAP_client_handshake(crypto_dh_t *handshake_state,
                                  handshake_reply, DH_KEY_LEN, key_material,
                                  key_material_len);
   if (len < 0) {
-    log_warn(LD_PROTOCOL,"DH computation failed.");
+    if (msg_out)
+      *msg_out = "DH computation failed.";
     goto err;
   }
 
   if (tor_memneq(key_material, handshake_reply+DH_KEY_LEN, DIGEST_LEN)) {
     /* H(K) does *not* match. Something fishy. */
-    log_warn(LD_PROTOCOL,"Digest DOES NOT MATCH on onion handshake. "
-             "Bug or attack.");
+    if (msg_out)
+      *msg_out = "Digest DOES NOT MATCH on onion handshake. Bug or attack.";
     goto err;
   }
 

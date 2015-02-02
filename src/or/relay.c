@@ -1646,8 +1646,9 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         }
         if ((reason = circuit_finish_handshake(TO_ORIGIN_CIRCUIT(circ),
                                          &extended_cell.created_cell)) < 0) {
-          log_warn(domain,"circuit_finish_handshake failed.");
-          return reason;
+          circuit_mark_for_close(circ, -reason);
+          return 0; /* We don't want to cause a warning, so we mark the circuit
+                     * here. */
         }
       }
       if ((reason=circuit_send_next_onion_skin(TO_ORIGIN_CIRCUIT(circ)))<0) {

@@ -164,7 +164,8 @@ bench_onion_TAP(void)
     char key_out[CPATH_KEY_MATERIAL_LEN];
     int s;
     dh = crypto_dh_dup(dh_out);
-    s = onion_skin_TAP_client_handshake(dh, or, key_out, sizeof(key_out));
+    s = onion_skin_TAP_client_handshake(dh, or, key_out, sizeof(key_out),
+                                        NULL);
     crypto_dh_free(dh);
     tor_assert(s == 0);
   }
@@ -223,7 +224,8 @@ bench_onion_ntor(void)
   for (i = 0; i < iters; ++i) {
     uint8_t key_out[CPATH_KEY_MATERIAL_LEN];
     int s;
-    s = onion_skin_ntor_client_handshake(state, or, key_out, sizeof(key_out));
+    s = onion_skin_ntor_client_handshake(state, or, key_out, sizeof(key_out),
+                                         NULL);
     tor_assert(s == 0);
   }
   end = perftime();
