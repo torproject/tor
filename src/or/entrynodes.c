@@ -2368,7 +2368,9 @@ entries_retry_helper(const or_options_t *options, int act)
   SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, e) {
       node = node_get_by_id(e->identity);
       if (node && node_has_descriptor(node) &&
-          node_is_bridge(node) == need_bridges) {
+          node_is_bridge(node) == need_bridges &&
+          (!need_bridges || (!e->bad_since &&
+                             node_is_a_configured_bridge(node)))) {
         any_known = 1;
         if (node->is_running)
           any_running = 1; /* some entry is both known and running */
