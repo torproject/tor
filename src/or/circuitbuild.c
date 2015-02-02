@@ -1289,7 +1289,6 @@ circuit_finish_handshake(origin_circuit_t *circ,
   onion_handshake_state_release(&hop->handshake_state);
 
   if (circuit_init_cpath_crypto(hop, keys, 0)<0) {
-    log_warn(LD_BUG, "Couldn't initialize cpath crypto");
     return -END_CIRC_REASON_TORPROTOCOL;
   }
 

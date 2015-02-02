@@ -292,15 +292,17 @@ onion_skin_ntor_client_handshake(
 
   memwipe(&s, 0, sizeof(s));
 
-  if (bad && msg_out) {
+  if (bad) {
     if (bad & 4) {
-      *msg_out = NULL; /* Don't report this one; we probably just had the
-                        * wrong onion key.*/
+      if (msg_out)
+        *msg_out = NULL; /* Don't report this one; we probably just had the
+                          * wrong onion key.*/
       log_fn(LOG_INFO, LD_PROTOCOL,
              "Invalid result from curve25519 handshake: %d", bad);
     }
     if (bad & 3) {
-      *msg_out = "Zero output from curve25519 handshake";
+      if (msg_out)
+        *msg_out = "Zero output from curve25519 handshake";
       log_fn(LOG_WARN, LD_PROTOCOL,
              "Invalid result from curve25519 handshake: %d", bad);
     }
