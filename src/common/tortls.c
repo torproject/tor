@@ -476,6 +476,8 @@ tor_tls_get_error(tor_tls_t *tls, int r, int extra,
 static void
 tor_tls_init(void)
 {
+  check_no_tls_errors();
+
   if (!tls_library_is_initialized) {
     long version;
     SSL_library_init();
@@ -574,6 +576,8 @@ tor_tls_init(void)
 void
 tor_tls_free_all(void)
 {
+  check_no_tls_errors();
+
   if (server_tls_context) {
     tor_tls_context_t *ctx = server_tls_context;
     server_tls_context = NULL;
@@ -885,29 +889,33 @@ tor_cert_decode(const uint8_t *certificate, size_t certificate_len)
   const unsigned char *cp = (const unsigned char *)certificate;
   tor_cert_t *newcert;
   tor_assert(certificate);
+  check_no_tls_errors();
 
   if (certificate_len > INT_MAX)
-    return NULL;
+    goto err;
 
   x509 = d2i_X509(NULL, &cp, (int)certificate_len);
 
   if (!x509)
-    return NULL; /* Couldn't decode */
+    goto err; /* Couldn't decode */
   if (cp - certificate != (int)certificate_len) {
     X509_free(x509);
-    return NULL; /* Didn't use all the bytes */
+    goto err; /* Didn't use all the bytes */
   }
   newcert = tor_cert_new(x509);
   if (!newcert) {
-    return NULL;
+    goto err;
   }
   if (newcert->encoded_len != certificate_len ||
       fast_memneq(newcert->encoded, certificate, certificate_len)) {
     /* Cert wasn't in DER */
     tor_cert_free(newcert);
-    return NULL;
+    goto err;
   }
   return newcert;
+ err:
+  tls_log_errors(NULL, LOG_INFO, LD_CRYPTO, "decoding a certificate");
+  return NULL;
 }
 
 /** Set *<b>encoded_out</b> and *<b>size_out</b> to <b>cert</b>'s encoded DER
@@ -1049,21 +1057,24 @@ tor_tls_cert_is_valid(int severity,
                       const tor_cert_t *signing_cert,
                       int check_rsa_1024)
 {
+  check_no_tls_errors();
+
   EVP_PKEY *cert_key;
   EVP_PKEY *signing_key = X509_get_pubkey(signing_cert->cert);
   int r, key_ok = 0;
+
   if (!signing_key)
-    return 0;
+    goto bad;
   r = X509_verify(cert->cert, signing_key);
   EVP_PKEY_free(signing_key);
   if (r <= 0)
-    return 0;
+    goto bad;
 
   /* okay, the signature checked out right.  Now let's check the check the
    * lifetime. */
   if (check_cert_lifetime_internal(severity, cert->cert,
                                    48*60*60, 30*24*60*60) < 0)
-    return 0;
+    goto bad;
 
   cert_key = X509_get_pubkey(cert->cert);
   if (check_rsa_1024 && cert_key) {
@@ -1083,11 +1094,14 @@ tor_tls_cert_is_valid(int severity,
   }
   EVP_PKEY_free(cert_key);
   if (!key_ok)
-    return 0;
+    goto bad;
 
   /* XXXX compare DNs or anything? */
 
   return 1;
+ bad:
+  tls_log_errors(NULL, LOG_INFO, LD_CRYPTO, "checking a certificate");
+  return 0;
 }
 
 /** Increase the reference count of <b>ctx</b>. */
@@ -1114,6 +1128,7 @@ tor_tls_context_init(unsigned flags,
   int rv1 = 0;
   int rv2 = 0;
   const int is_public_server = flags & TOR_TLS_CTX_IS_PUBLIC_SERVER;
+  check_no_tls_errors();
 
   if (is_public_server) {
     tor_tls_context_t *new_ctx;
@@ -1158,6 +1173,7 @@ tor_tls_context_init(unsigned flags,
                                    1);
   }
 
+  tls_log_errors(NULL, LOG_WARN, LD_CRYPTO, "constructing a TLS context");
   return MIN(rv1, rv2);
 }
 
@@ -1881,11 +1897,12 @@ tor_tls_new(int sock, int isServer)
     client_tls_context;
   result->magic = TOR_TLS_MAGIC;
 
+  check_no_tls_errors();
   tor_assert(context); /* make sure somebody made it first */
   if (!(result->ssl = SSL_new(context->ctx))) {
     tls_log_errors(NULL, LOG_WARN, LD_NET, "creating SSL object");
     tor_free(result);
-    return NULL;
+    goto err;
   }
 
 #ifdef SSL_set_tlsext_host_name
@@ -1905,7 +1922,7 @@ tor_tls_new(int sock, int isServer)
 #endif
     SSL_free(result->ssl);
     tor_free(result);
-    return NULL;
+    goto err;
   }
   if (!isServer)
     rectify_client_ciphers(&result->ssl->cipher_list);
@@ -1918,7 +1935,7 @@ tor_tls_new(int sock, int isServer)
 #endif
     SSL_free(result->ssl);
     tor_free(result);
-    return NULL;
+    goto err;
   }
   {
     int set_worked =
@@ -1952,6 +1969,10 @@ tor_tls_new(int sock, int isServer)
   if (isServer)
     tor_tls_setup_session_secret_cb(result);
 
+  goto done;
+ err:
+  result = NULL;
+ done:
   /* Not expected to get called. */
   tls_log_errors(NULL, LOG_WARN, LD_NET, "creating tor_tls_t object");
   return result;
@@ -2199,6 +2220,7 @@ int
 tor_tls_finish_handshake(tor_tls_t *tls)
 {
   int r = TOR_TLS_DONE;
+  check_no_tls_errors();
   if (tls->isServer) {
     SSL_set_info_callback(tls->ssl, NULL);
     SSL_set_verify(tls->ssl, SSL_VERIFY_PEER, always_accept_verify_cb);
@@ -2244,6 +2266,7 @@ tor_tls_finish_handshake(tor_tls_t *tls)
       r = TOR_TLS_ERROR_MISC;
     }
   }
+  tls_log_errors(NULL, LOG_WARN, LD_NET, "finishing the handshake");
   return r;
 }
 
@@ -2274,6 +2297,8 @@ tor_tls_renegotiate(tor_tls_t *tls)
   /* We could do server-initiated renegotiation too, but that would be tricky.
    * Instead of "SSL_renegotiate, then SSL_do_handshake until done" */
   tor_assert(!tls->isServer);
+
+  check_no_tls_errors();
   if (tls->state != TOR_TLS_ST_RENEGOTIATE) {
     int r = SSL_renegotiate(tls->ssl);
     if (r <= 0) {
@@ -2302,6 +2327,7 @@ tor_tls_shutdown(tor_tls_t *tls)
   char buf[128];
   tor_assert(tls);
   tor_assert(tls->ssl);
+  check_no_tls_errors();
 
   while (1) {
     if (tls->state == TOR_TLS_ST_SENTCLOSE) {
@@ -2489,6 +2515,7 @@ tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_t **identity_key)
   RSA *rsa;
   int r = -1;
 
+  check_no_tls_errors();
   *identity_key = NULL;
 
   try_to_extract_certs_from_tls(severity, tls, &cert, &id_cert);
@@ -2729,6 +2756,8 @@ dn_indicates_v3_cert(X509_NAME *name)
 int
 tor_tls_received_v3_certificate(tor_tls_t *tls)
 {
+  check_no_tls_errors();
+
   X509 *cert = SSL_get_peer_certificate(tls->ssl);
   EVP_PKEY *key = NULL;
   X509_NAME *issuer_name, *subject_name;
@@ -2761,6 +2790,8 @@ tor_tls_received_v3_certificate(tor_tls_t *tls)
   }
 
  done:
+  tls_log_errors(tls, LOG_WARN, LD_NET, "checking for a v3 cert");
+
   if (key)
     EVP_PKEY_free(key);
   if (cert)
