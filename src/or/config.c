@@ -4205,7 +4205,7 @@ find_torrc_filename(config_line_t *cmd_arg,
  * Upon failure, return NULL.
  */
 static char *
-load_torrc_from_stdin(config_line_t *cmd_arg)
+load_torrc_from_stdin(void)
 {
    size_t sz_out;
 
@@ -4360,7 +4360,7 @@ options_init_from_torrc(int argc, char **argv)
     (f_line != NULL && strcmp(f_line->value, "-") == 0);
 
     if (read_torrc_from_stdin) {
-      cf = load_torrc_from_stdin(cmdline_only_options);
+      cf = load_torrc_from_stdin();
     } else {
       cf = load_torrc_from_disk(cmdline_only_options, 0);
     }
