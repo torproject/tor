@@ -50,6 +50,8 @@
 #include <openssl/asn1.h>
 #include <openssl/bio.h>
 #include <openssl/opensslv.h>
+#include <openssl/bn.h>
+#include <openssl/rsa.h>
 
 #if __GNUC__ && GCC_VERSION >= 402
 #if GCC_VERSION >= 406
