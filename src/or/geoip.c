@@ -1298,10 +1298,11 @@ format_bridge_stats_controller(time_t now)
 char *
 format_client_stats_heartbeat(time_t now)
 {
+  const int n_hours = 6;
   char *out = NULL;
   int n_clients = 0;
   clientmap_entry_t **ent;
-  double elapsed_time = 0;
+  unsigned cutoff = (unsigned)( (now-n_hours*3600)/60 );
 
   if (!start_of_bridge_stats_interval)
     return NULL; /* Not initialized. */
@@ -1311,14 +1312,14 @@ format_client_stats_heartbeat(time_t now)
     /* only count directly connecting clients */
     if ((*ent)->action != GEOIP_CLIENT_CONNECT)
       continue;
+    if ((*ent)->last_seen_in_minutes < cutoff)
+      continue;
     n_clients++;
   }
 
-  elapsed_time = difftime(now, start_of_bridge_stats_interval);
-
   tor_asprintf(&out, "Heartbeat: "
-               "Since the last %ld hours, I have seen %d unique clients.",
-               tor_lround(elapsed_time / 3600),
+               "In the last %d hours, I have seen %d unique clients.",
+               n_hours,
                n_clients);
 
   return out;
