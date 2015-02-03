@@ -23,6 +23,7 @@
 #include "statefile.h"
 
 static void log_accounting(const time_t now, const or_options_t *options);
+#include "geoip.h"
 
 /** Return the total number of circuits. */
 STATIC int
@@ -92,7 +93,6 @@ log_heartbeat(time_t now)
   const int hibernating = we_are_hibernating();
 
   const or_options_t *options = get_options();
-  (void)now;
 
   if (public_server_mode(options) && !hibernating) {
     /* Let's check if we are in the current cached consensus. */
@@ -131,6 +131,14 @@ log_heartbeat(time_t now)
     rep_hist_log_circuit_handshake_stats(now);
 
   circuit_log_ancient_one_hop_circuits(1800);
+
+  if (options->BridgeRelay) {
+    char *msg = NULL;
+    msg = format_client_stats_heartbeat(now);
+    if (msg)
+      log_notice(LD_HEARTBEAT, "%s", msg);
+    tor_free(msg);
+  }
 
   tor_free(uptime);
   tor_free(bw_sent);
