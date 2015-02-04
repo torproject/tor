@@ -67,6 +67,10 @@
 #define TRANS_PF
 #endif
 
+#ifdef IP_TRANSPARENT
+#define TRANS_TPROXY
+#endif
+
 #define SOCKS4_GRANTED          90
 #define SOCKS4_REJECT           91
 
@@ -1583,7 +1587,7 @@ get_pf_socket(void)
 }
 #endif
 
-#if defined(TRANS_NETFILTER) || defined(TRANS_PF)
+#if defined(TRANS_NETFILTER) || defined(TRANS_PF) || defined(TRANS_TPROXY)
 /** Try fill in the address of <b>req</b> from the socket configured
  * with <b>conn</b>. */
 static int
@@ -1593,6 +1597,18 @@ destination_from_socket(entry_connection_t *conn, socks_request_t *req)
   socklen_t orig_dst_len = sizeof(orig_dst);
   tor_addr_t addr;
   int rv;
+
+#ifdef TRANS_TRPOXY
+  if (options->TransProxyType_parsed == TPT_TPROXY) {
+    if (getsockname(ENTRY_TO_CONN(conn)->s, (struct sockaddr*)&orig_dst,
+                    &orig_dst_len) < 0) {
+      int e = tor_socket_errno(ENTRY_TO_CONN(conn)->s);
+      log_warn(LD_NET, "getsockname() failed: %s", tor_socket_strerror(e));
+      return -1;
+    }
+    goto done;
+  }
+#endif
 
 #ifdef TRANS_NETFILTER
   switch (ENTRY_TO_CONN(conn)->socket_family) {
@@ -1619,6 +1635,7 @@ destination_from_socket(entry_connection_t *conn, socks_request_t *req)
     log_warn(LD_NET, "getsockopt() failed: %s", tor_socket_strerror(e));
     return -1;
   }
+  goto done;
 #elif defined(TRANS_PF)
   if (getsockname(ENTRY_TO_CONN(conn)->s, (struct sockaddr*)&orig_dst,
                   &orig_dst_len) < 0) {
@@ -1626,6 +1643,7 @@ destination_from_socket(entry_connection_t *conn, socks_request_t *req)
     log_warn(LD_NET, "getsockname() failed: %s", tor_socket_strerror(e));
     return -1;
   }
+  goto done;
 #else
   (void)conn;
   (void)req;
@@ -1633,6 +1651,7 @@ destination_from_socket(entry_connection_t *conn, socks_request_t *req)
   return -1;
 #endif
 
+ done:
   tor_addr_from_sockaddr(&addr, (struct sockaddr*)&orig_dst, &req->port);
   tor_addr_to_str(req->address, &addr, sizeof(req->address), 1);
 
