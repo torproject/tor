@@ -285,9 +285,9 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
               strmap_size(fingerprint_list->fp_by_name),
               digestmap_size(fingerprint_list->status_by_digest));
 
-  /* Versions before Tor 0.2.3.16-alpha are too old to support, and are
+  /* Versions before Tor 0.2.4.18-rc are too old to support, and are
    * missing some important security fixes too. Disable them. */
-  if (platform && !tor_version_as_new_as(platform,"0.2.3.16-alpha")) {
+  if (platform && !tor_version_as_new_as(platform,"0.2.4.18-rc")) {
     if (msg)
       *msg = "Tor version is insecure or unsupported. Please upgrade!";
     return FP_REJECT;
