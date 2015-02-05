@@ -1,4 +1,0 @@
-  o Minor bugfixes (small memory leaks):
-    - Avoid leaking memory when using IPv6 virtual address mappings.
-      Fixes bug 14123; bugfix on 0.2.4.7-alpha. Patch by Tom van der
-      Woerdt.

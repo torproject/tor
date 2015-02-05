@@ -1,4 +1,0 @@
-  o Minor features (hidden service parameters):
-    - Make hidden service Sybil attacks harder by changing the minimum
-      time required to become an HSDir from 25 hours up to 96 hours.
-      Addresses ticket #14149.

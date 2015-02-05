@@ -1,8 +1,0 @@
-  o Major bugfixes (mixed relay-client operation):
-
-    - When running as a relay and a client at the same time (not
-      recommended), if we decide not to use a new guard because we
-      want to retry older guards, only close the locally-originating
-      circuits passing through that guard. Previously we would close
-      all the circuits. Fixes bug 9819; bugfix on
-      0.2.1.1-alpha. Reported by "skruffy".

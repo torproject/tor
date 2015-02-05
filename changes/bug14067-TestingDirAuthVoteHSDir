@@ -1,6 +1,0 @@
-  o Minor features (authorities, testing):
-    - Create TestingDirAuthVoteHSDir like TestingDirAuthVoteExit/Guard.
-      Ensures that authorities vote the HSDir flag for the listed
-      relays regardless of uptime or ORPort connectivity.
-      Respects the value of VoteOnHidServDirectoriesV2.
-      Partial implementation for ticket 14067. Patch by "teor".

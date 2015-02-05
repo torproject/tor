@@ -1,4 +1,0 @@
-  o Minor bugfixes (compilation):
-    - Build without warnings with the stock OpenSSL srtp.h header,
-      which has a duplicate declaration of SSL_get_selected_srtp_profile().
-      Fixes bug 14220; this is OpenSSL's bug, not ours.

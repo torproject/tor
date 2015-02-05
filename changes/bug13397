@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Avoid crashing when trying to reload a torrc specified as a relative
-      path with RunAsDaemon turned on.  Fixes bug 13397; bugfix on
-      0.2.3.11-alpha.

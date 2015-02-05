@@ -1,4 +1,0 @@
-  o Documentation:
-    - Adding section on OpenBSD to our TUNING document. Thanks to
-      mmcc for writing the OpenBSD-specific tips. Resolves ticket
-      13702.

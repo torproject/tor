@@ -1,6 +1,0 @@
-  o Code simplification and refactoring:
-    - Move fields related to isolating and configuring client ports
-      into a shared structure. Previously, they were duplicated across
-      port_cfg_t, listener_connection_t, and edge_connection_t.
-      Failure to copy one of them correctly had been the cause of at
-      least one bug in the past.  Closes ticket 8546.

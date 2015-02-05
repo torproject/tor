@@ -1,6 +1,0 @@
-  o Minor bugfixes (hidden services):
-
-    - When fetching a hidden service descriptor for a down service that we
-      recently up, do not keep refetching until we try the same replica twice
-      in a row.  Fixes bug 14219; bugfix on 0.2.0.10-alpha.
-

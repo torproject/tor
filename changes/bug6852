@@ -1,3 +1,0 @@
-  o Minor features:
-    - Add a unique client counter to the heartbeat message. Resolves
-      ticket 6852.

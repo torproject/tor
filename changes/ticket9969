@@ -1,8 +1,0 @@
-  o Minor features (directory client):
-    - When downloading server- or microdescriptors from a directory server,
-      we no longer launch multiple simultaneous requests to the same server.
-      This reduces load on the directory servers, especially when directory
-      guards are in use.  Closes ticket 9969.
-    - When downloading server- or microdescriptors over a tunneled
-      connection, do not limit the length of our request to what the Squid
-      proxy is willing to handle.  Part of ticket 9969.

@@ -1,7 +1,0 @@
-  o Minor bugfixes (client):
-    - Check for a missing option value in parse_virtual_addr_network
-      before asserting on the NULL in tor_addr_parse_mask_ports.
-      This avoids crashing on torrc lines like
-      Vi[rtualAddrNetworkIPv[4|6]] when no value follows the option.
-      Fixes bug 14142; bugfix on 0.2.4.7-alpha.
-      Patch by "teor".

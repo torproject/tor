@@ -1,4 +1,0 @@
-  o Minor features (directory, memory usage):
-    - When we have recently been under memory pressure (over 3/4 of
-      MaxMemInQueues is allocated), then allocate smaller zlib objects for
-      small requests. Closes ticket 11791.

@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Reject socks requests to literal IPv6 addresses when IPv6Traffic
-      flag is not set; and not because the NoIPv4Traffic flag was set.
-      Previously we'd looked at the NoIPv4Traffic flag for both types
-      of literal addresses. Fixes bug 14280; bugfix on 0.2.4.7-alpha.

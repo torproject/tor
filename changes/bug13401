@@ -1,7 +1,0 @@
-  o Minor features (testing networks):
-    - Drop the minimum RendPostPeriod on a testing network to 5 seconds,
-      and the default to 2 minutes. Closes ticket 13401. Patch by "nickm".
-    - Drop the MIN_REND_INITIAL_POST_DELAY on a testing network to 5 seconds,
-      but keep the default at 30 seconds. This reduces HS bootstrap time to
-      around 25 seconds. Change src/test/test-network.sh default time to match.
-      Closes ticket 13401. Patch by "teor".

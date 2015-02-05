@@ -1,5 +1,0 @@
-  o Minor features:
-    - Implement '-f -' CLI suboption to allow torrc to be read 
-      from standard input, thus not requiring to store torrc in file
-      system. Implements feature 13865.
-

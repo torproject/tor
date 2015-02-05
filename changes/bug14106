@@ -1,4 +1,0 @@
-  o Minor bugfixes (hidden services):
-    - Successfully launch Tor with a nonexistent hidden service directory.
-      Our fix for bug 13942 didn't catch this case. Fixes bug 14106;
-      bugfix on 0.2.6.2-alpha.

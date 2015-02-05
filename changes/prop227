@@ -1,5 +1,0 @@
-  o Minor features (directory system):
-    - Authorities can now vote on the correct digests and latest versions for
-      different software packages. This allows packages that include Tor to use
-      the Tor authority system as a way to get notified of updates and their
-      correct digests. Implements proposal 227. Closes ticket 10395.

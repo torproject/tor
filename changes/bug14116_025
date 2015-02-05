@@ -1,3 +1,0 @@
-  o Minor bugfixes (controller):
-    - Avoid crashing on a malformed EXTENDCIRCUIT command. Fixes bug 14116;
-      bugfix on 0.2.2.9-alpha.

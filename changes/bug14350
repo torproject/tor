@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Cause the "--disable-systemd" option to actually disable systemd
-      support.  Fixes bug 14350; bugfix on 0.2.6.2-alpha. Patch from
-      "blueness".

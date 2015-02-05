@@ -1,8 +1,0 @@
-  o Minor features (DOS resistance):
-    - Count the total number of bytes used storing hidden service descriptors
-      against the value of MaxMemInQueues. If we're low on memory, and more
-      than 20% of our memory is used holding hidden service descriptors, free
-      them until no more than 10% of our memory holds hidden service
-      descriptors. Free the least recently fetched descriptors first.
-      Resolves ticket 13806.
-

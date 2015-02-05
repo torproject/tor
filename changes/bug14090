@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Avoid undefined behavior when sampling huge values from the
-      Laplace distribution. This made unittests fail on Raspberry Pi.
-      Bug found by Device. Fixes bug 14090; bugfix on 0.2.6.2-alpha.

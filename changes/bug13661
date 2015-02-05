@@ -1,6 +1,0 @@
-  o Minor bugfixes:
-
-    - Support two-number and three-number version numbers correctly, in
-      case we change the Tor versioning system in the future.  Fixes bug
-      13661; bugfix on 0.0.8pre1.
-

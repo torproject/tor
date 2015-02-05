@@ -1,4 +1,0 @@
-  o Minor features (build):
-    - New --disable-system-torrc compile-time option to prevent Tor from
-      looking for a system-wide torrc or torrc-defaults tile. Resolves
-      ticket 13037.
