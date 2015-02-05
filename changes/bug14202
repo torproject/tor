@@ -1,3 +1,3 @@
-  o Minor cleanup
+  o Minor cleanup:
     - Remove workaround in dirserv_thinks_router_is_hs_dir() that was only
-      for version <= 0.2.2.24 which is now deprecated.
+      for version <= 0.2.2.24 which is now deprecated. Closes ticket 14202.

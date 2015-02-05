@@ -1,5 +1,3 @@
-
-
   o Minor features:
     - ControlPort now supports the unix:/path/to/dir syntax as an alternative
       to the ControlSocket option, for consistency with SocksPort and

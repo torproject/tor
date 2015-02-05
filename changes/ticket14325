@@ -1,4 +1,4 @@
-  o Documentation fixes:
+  o Documentation:
     - Make the tor-resolve documentation match its help string and its
       options. Resolves part of ticket 14325.
     - Log a more useful error message from tor-resolve when failing to

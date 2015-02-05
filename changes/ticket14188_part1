@@ -1,2 +1,4 @@
   o Compilation fixes:
     - Compile correctly with (unreleased) OpenSSL 1.1.0 headers.
+      Addresses ticket 14188.
+
