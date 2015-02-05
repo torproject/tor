@@ -1215,7 +1215,8 @@ log_level_to_string(int level)
 static const char *domain_list[] = {
   "GENERAL", "CRYPTO", "NET", "CONFIG", "FS", "PROTOCOL", "MM",
   "HTTP", "APP", "CONTROL", "CIRC", "REND", "BUG", "DIR", "DIRSERV",
-  "OR", "EDGE", "ACCT", "HIST", "HANDSHAKE", "HEARTBEAT", "CHANNEL", NULL
+  "OR", "EDGE", "ACCT", "HIST", "HANDSHAKE", "HEARTBEAT", "CHANNEL",
+  "SCHED", NULL
 };
 
 /** Return a bitmask for the log domain for which <b>domain</b> is the name,
@@ -1245,7 +1246,8 @@ domain_to_string(log_domain_mask_t domain, char *buf, size_t buflen)
     const char *d;
     int bit = tor_log2(domain);
     size_t n;
-    if (bit >= N_LOGGING_DOMAINS) {
+    if ((unsigned)bit >= sizeof(domain_list)/sizeof(*domain_list) - 1 ||
+        bit >= N_LOGGING_DOMAINS) {
       tor_snprintf(buf, buflen, "<BUG:Unknown domain %lx>", (long)domain);
       return buf+strlen(buf);
     }

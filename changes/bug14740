@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Avoid crashing when there are more log domains than entries in
+      domain_list.  Bugfix on 0.2.3.1-alpha.
+    - Add a string representation for LD_SCHED.  Fixes bug 14740;
+      bugfix on 0.2.6.1-alpha.
