@@ -298,6 +298,7 @@ cpuworker_onion_handshake_replyfn(void *work_)
   cpuworker_reply_t rpl;
   or_circuit_t *circ = NULL;
 
+  tor_assert(total_pending_tasks > 0);
   --total_pending_tasks;
 
   /* Could avoid this, but doesn't matter. */
@@ -553,6 +554,8 @@ cpuworker_cancel_circ_handshake(or_circuit_t *circ)
     /* It successfully cancelled. */
     memwipe(job, 0xe0, sizeof(*job));
     tor_free(job);
+    tor_assert(total_pending_tasks > 0);
+    --total_pending_tasks;
   }
 
   circ->workqueue_entry = NULL;
