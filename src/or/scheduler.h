@@ -29,7 +29,7 @@ void scheduler_channel_wants_writes(channel_t *chan);
 MOCK_DECL(void,scheduler_release_channel,(channel_t *chan));
 
 /* Notify scheduler of queue size adjustments */
-void scheduler_adjust_queue_size(channel_t *chan, char dir, uint64_t adj);
+void scheduler_adjust_queue_size(channel_t *chan, int dir, uint64_t adj);
 
 /* Notify scheduler that a channel's queue position may have changed */
 void scheduler_touch_channel(channel_t *chan);

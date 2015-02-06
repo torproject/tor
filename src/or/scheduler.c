@@ -613,7 +613,7 @@ scheduler_touch_channel(channel_t *chan)
  */
 
 void
-scheduler_adjust_queue_size(channel_t *chan, char dir, uint64_t adj)
+scheduler_adjust_queue_size(channel_t *chan, int dir, uint64_t adj)
 {
   time_t now = approx_time();
 
