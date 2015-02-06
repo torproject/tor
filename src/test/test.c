@@ -106,7 +106,8 @@ test_onion_handshake(void *arg)
 
     /* client handshake 2 */
     memset(c_keys, 0, 40);
-    tt_assert(! onion_skin_TAP_client_handshake(c_dh, s_buf, c_keys, 40, NULL));
+    tt_assert(! onion_skin_TAP_client_handshake(c_dh, s_buf, c_keys,
+                                                40, NULL));
 
     tt_mem_op(c_keys,OP_EQ, s_keys, 40);
     memset(s_buf, 0, 40);
