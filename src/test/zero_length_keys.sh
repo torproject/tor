@@ -26,6 +26,12 @@ if [ $# -lt 1 ]; then
 fi
 
 DATA_DIR=`mktemp -d -t tor_zero_length_keys.XXXXXX`
+if [ -z "$DATA_DIR" ]; then
+  echo "Failure: mktemp invocation returned empty string"
+  exit 255
+fi
+trap "rm -rf '$DATA_DIR'" 0
+
 # DisableNetwork means that the ORPort won't actually be opened.
 # 'ExitRelay 0' suppresses a warning.
 TOR="./src/or/tor --hush --DisableNetwork 1 --ShutdownWaitLength 0 --ORPort 12345 --ExitRelay 0"
