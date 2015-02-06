@@ -1062,6 +1062,12 @@ flush_log_messages_from_startup(void)
       if (! logfile_wants_message(lf, msg->severity, msg->domain))
         continue;
 
+      /* We configure a temporary startup log that goes to stdout, so we
+       * shouldn't replay to stdout/stderr*/
+      if (lf->fd == STDOUT_FILENO || lf->fd == STDERR_FILENO) {
+        continue;
+      }
+
       logfile_deliver(lf, msg->fullmsg, strlen(msg->fullmsg), msg->msg,
                       msg->domain, msg->severity, &callbacks_deferred);
     }

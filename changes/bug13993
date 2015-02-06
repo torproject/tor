@@ -1,0 +1,4 @@
+   o Minor bugfixes (logging):
+       - Don't log messages to stdout twice when starting up. Fixes bug
+         13993; bugfix on 0.2.6.1-alpha.
+

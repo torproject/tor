@@ -3079,7 +3079,6 @@ test_dir_packages(void *arg)
   ADD(2, "cbc 99.1.11.1.2 http://example.com/ cubehash=ahooy");
   ADD(2, "cbc 99.1.11.1.2 http://example.com/ cubehash=ahooy");
 
-
   res = compute_consensus_package_lines(votes);
   tt_assert(res);
   tt_str_op(res, ==,

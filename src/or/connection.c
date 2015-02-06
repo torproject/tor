@@ -1601,7 +1601,6 @@ connection_init_accepted_conn(connection_t *conn,
   return 0;
 }
 
-
 static int
 connection_connect_sockaddr(connection_t *conn,
                             const struct sockaddr *sa,
@@ -1688,10 +1687,9 @@ connection_connect_sockaddr(connection_t *conn,
     *socket_error = SOCK_ERRNO(ENOBUFS);
     return -1;
   }
+
   return inprogress ? 0 : 1;
-
 }
-
 
 /** Take conn, make a nonblocking socket; try to connect to
  * addr:port (they arrive in *host order*). If fail, return -1 and if
