@@ -1074,7 +1074,7 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
  *     random_sample_from_Pareto_distribution
  * That's right. I'll cite wikipedia all day long.
  *
- * Return value is in milliseconds.
+ * Return value is in milliseconds, clamped to INT32_MAX.
  */
 STATIC double
 circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,

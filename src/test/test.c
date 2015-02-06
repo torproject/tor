@@ -442,6 +442,14 @@ test_circuit_timeout(void *arg)
     tt_assert(circuit_build_times_network_check_live(&final));
 
     circuit_build_times_count_timeout(&final, 1);
+
+    /* Ensure return value for degenerate cases are clamped correctly */
+    initial.alpha = INT32_MAX;
+    tt_assert(circuit_build_times_calculate_timeout(&initial, .99999999) <=
+              INT32_MAX);
+    initial.alpha = 0;
+    tt_assert(circuit_build_times_calculate_timeout(&initial, .5) <=
+              INT32_MAX);
   }
 
  done:
