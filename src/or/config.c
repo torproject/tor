@@ -2791,13 +2791,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
     }
     /* same for guardfraction file */
     if (options->GuardfractionFile && !old_options) {
-      file_status_t fs = file_status(options->GuardfractionFile);
-      if (fs == FN_EMPTY) {
-        REJECT("GuardfractionFile set but it's an empty file? Failing");
-      } else if (fs != FN_FILE) {
-        REJECT("GuardfractionFile set but not a file? Failing");
-      }
-
       dirserv_read_guardfraction_file(options->GuardfractionFile, NULL);
     }
   }
