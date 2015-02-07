@@ -1802,12 +1802,15 @@ router_pick_published_address(const or_options_t *options, uint32_t *addr)
   return 0;
 }
 
-/** If <b>force</b> is true, or our descriptor is out-of-date, rebuild a fresh
- * routerinfo, signed server descriptor, and extra-info document for this OR.
- * Return 0 on success, -1 on temporary error.
+/** Build a fresh routerinfo, signed server descriptor, and extra-info document
+ * for this OR. Set r to the generated routerinfo, e to the generated
+ * extra-info document. Return 0 on success, -1 on temporary error. Failure to
+ * generate an extra-info document is not an error and is indicated by setting
+ * e to NULL. Caller is responsible for freeing generated documents if 0 is
+ * returned.
  */
 int
-router_rebuild_descriptor(int force)
+router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
 {
   routerinfo_t *ri;
   extrainfo_t *ei;
@@ -1816,19 +1819,10 @@ router_rebuild_descriptor(int force)
   int hibernating = we_are_hibernating();
   const or_options_t *options = get_options();
 
-  if (desc_clean_since && !force)
-    return 0;
-
-  if (router_pick_published_address(options, &addr) < 0 ||
-      router_get_advertised_or_port(options) == 0) {
-    /* Stop trying to rebuild our descriptor every second. We'll
-     * learn that it's time to try again when ip_address_changed()
-     * marks it dirty. */
-    desc_clean_since = time(NULL);
+  if (router_pick_published_address(options, &addr) < 0) {
+    log_warn(LD_CONFIG, "Don't know my address while generating descriptor");
     return -1;
   }
-
-  log_info(LD_OR, "Rebuilding relay descriptor%s", force ? " (forced)" : "");
 
   ri = tor_malloc_zero(sizeof(routerinfo_t));
   ri->cache_info.routerlist_index = -1;
@@ -2022,6 +2016,41 @@ router_rebuild_descriptor(int force)
 
   if (ei) {
     tor_assert(! routerinfo_incompatible_with_extrainfo(ri, ei, NULL, NULL));
+  }
+
+  *r = ri;
+  *e = ei;
+  return 0;
+}
+
+/** If <b>force</b> is true, or our descriptor is out-of-date, rebuild a fresh
+ * routerinfo, signed server descriptor, and extra-info document for this OR.
+ * Return 0 on success, -1 on temporary error.
+ */
+int
+router_rebuild_descriptor(int force)
+{
+  routerinfo_t *ri;
+  extrainfo_t *ei;
+  uint32_t addr;
+  const or_options_t *options = get_options();
+
+  if (desc_clean_since && !force)
+    return 0;
+
+  if (router_pick_published_address(options, &addr) < 0 ||
+      router_get_advertised_or_port(options) == 0) {
+    /* Stop trying to rebuild our descriptor every second. We'll
+     * learn that it's time to try again when ip_address_changed()
+     * marks it dirty. */
+    desc_clean_since = time(NULL);
+    return -1;
+  }
+
+  log_info(LD_OR, "Rebuilding relay descriptor%s", force ? " (forced)" : "");
+
+  if (router_build_fresh_descriptor(&ri, &ei) < 0) {
+    return -1;
   }
 
   routerinfo_free(desc_routerinfo);
