@@ -30,7 +30,8 @@ if [ -z "$DATA_DIR" ]; then
   echo "Failure: mktemp invocation returned empty string"
   exit 255
 fi
-if [ -d "$DATA_DIR" ]; then
+if [ ! -d "$DATA_DIR" ]; then
+    echo "$DATA_DIR"
   echo "Failure: mktemp invocation result doesn't point to directory"
   exit 255
 fi
@@ -40,7 +41,8 @@ trap "rm -rf '$DATA_DIR'" 0
 # 'ExitRelay 0' suppresses a warning.
 TOR="./src/or/tor --hush --DisableNetwork 1 --ShutdownWaitLength 0 --ORPort 12345 --ExitRelay 0"
 
-if [ -s "$DATA_DIR"/keys/secret_id_key -a -s "$DATA_DIR"/keys/secret_onion_key -a -s "$DATA_DIR"/keys/secret_onion_key_ntor ]; then
+if [ -s "$DATA_DIR"/keys/secret_id_key ] && [ -s "$DATA_DIR"/keys/secret_onion_key ] &&
+   [ -s "$DATA_DIR"/keys/secret_onion_key_ntor ]; then
   echo "Failure: Previous tor keys present in tor data directory"
   exit 255
 else
@@ -53,7 +55,8 @@ else
   wait $TOR_PID
 
   # tor must successfully generate non-zero-length key files
-  if [ -s "$DATA_DIR"/keys/secret_id_key -a -s "$DATA_DIR"/keys/secret_onion_key -a -s "$DATA_DIR"/keys/secret_onion_key_ntor ]; then
+  if [ -s "$DATA_DIR"/keys/secret_id_key ] && [ -s "$DATA_DIR"/keys/secret_onion_key ] &&
+     [ -s "$DATA_DIR"/keys/secret_onion_key_ntor ]; then
     true #echo "tor generated the initial key files"
   else
     echo "Failure: tor failed to generate the initial key files"
@@ -96,7 +99,8 @@ wait $TOR_PID
 #ls -lh "$DATA_DIR"/keys/ || exit 255
 
 # tor must always have non-zero-length key files
-if [ -s "$DATA_DIR"/keys/secret_id_key -a -s "$DATA_DIR"/keys/secret_onion_key -a -s "$DATA_DIR"/keys/secret_onion_key_ntor ]; then
+if [ -s "$DATA_DIR"/keys/secret_id_key ] && [ -s "$DATA_DIR"/keys/secret_onion_key ] &&
+   [ -s "$DATA_DIR"/keys/secret_onion_key_ntor ]; then
   # check if the keys are different to the old ones
   diff -q -r "$DATA_DIR"/keys "$DATA_DIR"/keys.old > /dev/null
   SAME_KEYS=$?
