@@ -3180,19 +3180,24 @@ options_validate(or_options_t *old_options, or_options_t *options,
     options->RelayBandwidthRate = options->RelayBandwidthBurst;
 
   if (server_mode(options)) {
+    const unsigned ROUTER_REQUIRED_MIN_BANDWIDTH = // tolower XXXX
+      public_server_mode(options) ?
+       RELAY_REQUIRED_MIN_BANDWIDTH : BRIDGE_REQUIRED_MIN_BANDWIDTH;
+    const char * const optbridge =
+      public_server_mode(options) ? "" : "bridge ";
     if (options->BandwidthRate < ROUTER_REQUIRED_MIN_BANDWIDTH) {
       tor_asprintf(msg,
                        "BandwidthRate is set to %d bytes/second. "
-                       "For servers, it must be at least %d.",
-                       (int)options->BandwidthRate,
+                       "For %sservers, it must be at least %u.",
+                       (int)options->BandwidthRate, optbridge,
                        ROUTER_REQUIRED_MIN_BANDWIDTH);
       return -1;
     } else if (options->MaxAdvertisedBandwidth <
                ROUTER_REQUIRED_MIN_BANDWIDTH/2) {
       tor_asprintf(msg,
                        "MaxAdvertisedBandwidth is set to %d bytes/second. "
-                       "For servers, it must be at least %d.",
-                       (int)options->MaxAdvertisedBandwidth,
+                       "For %sservers, it must be at least %u.",
+                       (int)options->MaxAdvertisedBandwidth, optbridge,
                        ROUTER_REQUIRED_MIN_BANDWIDTH/2);
       return -1;
     }
@@ -3200,8 +3205,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
       options->RelayBandwidthRate < ROUTER_REQUIRED_MIN_BANDWIDTH) {
       tor_asprintf(msg,
                        "RelayBandwidthRate is set to %d bytes/second. "
-                       "For servers, it must be at least %d.",
-                       (int)options->RelayBandwidthRate,
+                       "For %sservers, it must be at least %u.",
+                       (int)options->RelayBandwidthRate, optbridge,
                        ROUTER_REQUIRED_MIN_BANDWIDTH);
       return -1;
     }

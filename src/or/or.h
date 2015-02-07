@@ -4937,7 +4937,8 @@ typedef struct dir_server_t {
                                **/
 } dir_server_t;
 
-#define ROUTER_REQUIRED_MIN_BANDWIDTH (20*1024)
+#define RELAY_REQUIRED_MIN_BANDWIDTH (75*1024)
+#define BRIDGE_REQUIRED_MIN_BANDWIDTH (50*1024)
 
 #define ROUTER_MAX_DECLARED_BANDWIDTH INT32_MAX
 

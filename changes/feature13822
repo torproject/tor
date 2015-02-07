@@ -1,0 +1,5 @@
+  o Minor features:
+    - Use separate minimum bandwidth values for the configurations of
+      relays and bridges. Raise the minimum configured bandwidth for
+      bridges to 50 KiB/sec and for relays to 75 KiB/sec. (The old
+      values were 20 KiB/sec.) Closes ticket 13822.
