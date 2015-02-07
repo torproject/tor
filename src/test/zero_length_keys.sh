@@ -30,6 +30,10 @@ if [ -z "$DATA_DIR" ]; then
   echo "Failure: mktemp invocation returned empty string"
   exit 255
 fi
+if [ -d "$DATA_DIR" ]; then
+  echo "Failure: mktemp invocation result doesn't point to directory"
+  exit 255
+fi
 trap "rm -rf '$DATA_DIR'" 0
 
 # DisableNetwork means that the ORPort won't actually be opened.
