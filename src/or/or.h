@@ -3969,6 +3969,10 @@ typedef struct {
   /** Should we fetch our dir info at the start of the consensus period? */
   int FetchDirInfoExtraEarly;
 
+  int DirCache; /**< Cache all directory documents and accept requests via
+                 * tunnelled dir conns from clients. If 1, enabled (default);
+                 * If 0, disabled. */
+
   char *VirtualAddrNetworkIPv4; /**< Address and mask to hand out for virtual
                                  * MAPADDRESS requests for IPv4 addresses */
   char *VirtualAddrNetworkIPv6; /**< Address and mask to hand out for virtual

@@ -158,6 +158,8 @@ STATIC int parse_dir_authority_line(const char *line,
                                     dirinfo_type_t required_type,
                                     int validate_only);
 STATIC int parse_dir_fallback_line(const char *line, int validate_only);
+STATIC int have_enough_mem_for_dircache(const or_options_t *options,
+                                        size_t total_mem, char **msg);
 #endif
 
 #endif

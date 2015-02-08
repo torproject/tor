@@ -69,22 +69,29 @@ clear_log_messages(void)
   messages = NULL;
 }
 
+#define setup_options(opt,dflt)              \
+  do {                                       \
+    opt = options_new();                     \
+    opt->command = CMD_RUN_TOR;              \
+    options_init(opt);                       \
+                                             \
+    dflt = config_dup(&options_format, opt); \
+    clear_log_messages();                    \
+  } while (0)
+
 static void
 test_options_validate_impl(const char *configuration,
                            const char *expect_errmsg,
                            int expect_log_severity,
                            const char *expect_log)
 {
-  or_options_t *opt = options_new();
+  or_options_t *opt=NULL;
   or_options_t *dflt;
   config_line_t *cl=NULL;
   char *msg=NULL;
   int r;
-  opt->command = CMD_RUN_TOR;
-  options_init(opt);
 
-  dflt = config_dup(&options_format, opt);
-  clear_log_messages();
+  setup_options(opt, dflt);
 
   r = config_get_lines(configuration, &cl, 1);
   tt_int_op(r, OP_EQ, 0);
@@ -159,12 +166,110 @@ test_options_validate(void *arg)
                "ServerTransportOptions did not parse",
                LOG_WARN, "\"slingsnappy\" is not a k=v");
 
+  WANT_ERR("DirPort 8080\nDirCache 0",
+           "DirPort configured but DirCache disabled.");
+  WANT_ERR("BridgeRelay 1\nDirCache 0",
+           "We're a bridge but DirCache is disabled.");
+
   clear_log_messages();
+  return;
+}
+
+#define MEGABYTEIFY(mb) (U64_LITERAL(mb) << 20)
+static void
+test_have_enough_mem_for_dircache(void *arg)
+{
+  (void)arg;
+  or_options_t *opt=NULL;
+  or_options_t *dflt;
+  config_line_t *cl=NULL;
+  char *msg=NULL;;
+  int r;
+  const char *configuration = "ORPort 8080\nDirCache 1", *expect_errmsg;
+
+  setup_options(opt, dflt);
+  setup_log_callback();
+  (void)dflt;
+
+  r = config_get_lines(configuration, &cl, 1);
+  tt_int_op(r, OP_EQ, 0);
+
+  r = config_assign(&options_format, opt, cl, 0, 0, &msg);
+  tt_int_op(r, OP_EQ, 0);
+
+  /* 300 MB RAM available, DirCache enabled */
+  r = have_enough_mem_for_dircache(opt, MEGABYTEIFY(300), &msg);
+  tt_int_op(r, OP_EQ, 0);
+  tt_assert(!msg);
+
+  /* 200 MB RAM available, DirCache enabled */
+  r = have_enough_mem_for_dircache(opt, MEGABYTEIFY(200), &msg);
+  tt_int_op(r, OP_EQ, -1);
+  expect_errmsg = "Being a directory cache (default) with less than ";
+  if (!strstr(msg, expect_errmsg)) {
+    TT_DIE(("Expected error message <%s> from <%s>, but got <%s>.",
+            expect_errmsg, configuration, msg));
+  }
+  tor_free(msg);
+
+  configuration = "ORPort 8080\nDirCache 1\nBridgeRelay 1";
+  r = config_get_lines(configuration, &cl, 1);
+  tt_int_op(r, OP_EQ, 0);
+
+  r = config_assign(&options_format, opt, cl, 0, 0, &msg);
+  tt_int_op(r, OP_EQ, 0);
+
+  /* 300 MB RAM available, DirCache enabled, Bridge */
+  r = have_enough_mem_for_dircache(opt, MEGABYTEIFY(300), &msg);
+  tt_int_op(r, OP_EQ, 0);
+  tt_assert(!msg);
+
+  /* 200 MB RAM available, DirCache enabled, Bridge */
+  r = have_enough_mem_for_dircache(opt, MEGABYTEIFY(200), &msg);
+  tt_int_op(r, OP_EQ, -1);
+  expect_errmsg = "Running a Bridge with less than ";
+  if (!strstr(msg, expect_errmsg)) {
+    TT_DIE(("Expected error message <%s> from <%s>, but got <%s>.",
+            expect_errmsg, configuration, msg));
+  }
+  tor_free(msg);
+
+  configuration = "ORPort 8080\nDirCache 0";
+  r = config_get_lines(configuration, &cl, 1);
+  tt_int_op(r, OP_EQ, 0);
+
+  r = config_assign(&options_format, opt, cl, 0, 0, &msg);
+  tt_int_op(r, OP_EQ, 0);
+
+  /* 200 MB RAM available, DirCache disabled */
+  r = have_enough_mem_for_dircache(opt, MEGABYTEIFY(200), &msg);
+  tt_int_op(r, OP_EQ, 0);
+  tt_assert(!msg);
+
+  /* 300 MB RAM available, DirCache disabled */
+  r = have_enough_mem_for_dircache(opt, MEGABYTEIFY(300), &msg);
+  tt_int_op(r, OP_EQ, -1);
+  expect_errmsg = "DirCache is disabled and we are configured as a ";
+  if (!strstr(msg, expect_errmsg)) {
+    TT_DIE(("Expected error message <%s> from <%s>, but got <%s>.",
+            expect_errmsg, configuration, msg));
+  }
+  tor_free(msg);
+
+  clear_log_messages();
+
+ done:
+  if (msg)
+    tor_free(msg);
+  tor_free(dflt);
+  tor_free(opt);
+  tor_free(cl);
   return;
 }
 
 struct testcase_t options_tests[] = {
   { "validate", test_options_validate, TT_FORK, NULL, NULL },
+  { "mem_dircache", test_have_enough_mem_for_dircache, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
 

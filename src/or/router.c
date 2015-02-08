@@ -1176,7 +1176,9 @@ router_should_be_directory_server(const or_options_t *options, int dir_port)
 int
 dir_server_mode(const or_options_t *options)
 {
-    return (server_mode(options) || options->DirPort_set) &&
+  if (!options->DirCache)
+    return 0;
+  return (server_mode(options) || options->DirPort_set) &&
           router_should_be_directory_server(options, 0);
 }
 
