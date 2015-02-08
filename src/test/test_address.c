@@ -207,9 +207,10 @@ test_address_ifaddrs_to_smartlist(void *arg)
    tor_free(ifa_ipv4);
    tor_free(ifa_ipv6);
    tor_free(sockaddr_to_check);
-   SMARTLIST_FOREACH(smartlist, tor_addr_t *, t, tor_free(t));
-   smartlist_free(smartlist);
-
+   if (smartlist) {
+     SMARTLIST_FOREACH(smartlist, tor_addr_t *, t, tor_free(t));
+     smartlist_free(smartlist);
+   }
    return;
 }
 
@@ -442,8 +443,10 @@ test_address_get_if_addrs_ioctl(void *arg)
   tt_assert(smartlist_contains_localhost_tor_addr(result));
 
   done:
-  SMARTLIST_FOREACH(result, tor_addr_t *, t, tor_free(t));
-  smartlist_free(result);
+  if (result) {
+    SMARTLIST_FOREACH(result, tor_addr_t *, t, tor_free(t));
+    smartlist_free(result);
+  }
   return;
 }
 
