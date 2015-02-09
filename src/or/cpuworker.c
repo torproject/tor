@@ -556,8 +556,7 @@ cpuworker_cancel_circ_handshake(or_circuit_t *circ)
     tor_free(job);
     tor_assert(total_pending_tasks > 0);
     --total_pending_tasks;
+    circ->workqueue_entry = NULL;
   }
-
-  circ->workqueue_entry = NULL;
 }
 
