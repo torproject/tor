@@ -1,0 +1,7 @@
+  o Minor features:
+    - Recover better when our clock jumps back many hours, like might
+      happen for Tails or Whonix users who start with a very wrong
+      hardware clock, use Tor to discover a more accurate time, and then
+      fix their clock. Resolves part of ticket 8766.
+      [I'd call this a major feature if it actually fixed all of the issues.]
+

@@ -52,6 +52,7 @@ void directory_info_has_arrived(time_t now, int from_cache);
 
 void ip_address_changed(int at_interface);
 void dns_servers_relaunch_checks(void);
+void reset_all_main_loop_timers(void);
 void reschedule_descriptor_update_check(void);
 
 MOCK_DECL(long,get_uptime,(void));

@@ -1049,6 +1049,10 @@ circuit_note_clock_jumped(int seconds_elapsed)
                               "CLOCK_JUMPED");
   circuit_mark_all_unused_circs();
   circuit_mark_all_dirty_circs_as_unusable();
+  if (seconds_elapsed < 0) {
+    /* Restart all the timers in case we jumped a long way into the past. */
+    reset_all_main_loop_timers();
+  }
 }
 
 /** Take the 'extend' <b>cell</b>, pull out addr/port plus the onion

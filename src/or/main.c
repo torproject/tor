@@ -1227,6 +1227,15 @@ typedef struct {
 
 static time_to_t time_to = { 0 };
 
+/** Reset all the time_to's so we'll do all our actions again as if we
+ * just started up.
+ * Useful if our clock just moved back a long time from the future,
+ * so we don't wait until that future arrives again before acting.
+ */
+void reset_all_main_loop_timers(void) {
+  memset(&time_to, 0, sizeof(time_to_t));
+}
+
 /**
  * Update our schedule so that we'll check whether we need to update our
  * descriptor immediately, rather than after up to CHECK_DESCRIPTOR_INTERVAL
@@ -1768,8 +1777,6 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
   if (seconds_elapsed < -NUM_JUMPED_SECONDS_BEFORE_WARN ||
       seconds_elapsed >= NUM_JUMPED_SECONDS_BEFORE_WARN) {
     circuit_note_clock_jumped(seconds_elapsed);
-    /* XXX if the time jumps *back* many months, do our events in
-     * run_scheduled_events() recover? I don't think they do. -RD */
   } else if (seconds_elapsed > 0)
     stats_n_seconds_working += seconds_elapsed;
 
