@@ -1,0 +1,3 @@
+   o Minor bugfixes (testing):
+       - Commandline argument tests moved to Stem. Fixes bug 14806.
+
