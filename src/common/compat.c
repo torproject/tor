@@ -3517,7 +3517,7 @@ get_total_system_memory_impl(void)
   size_t len = sizeof(memsize);
   int mib[2] = {CTL_HW, HW_USERMEM};
   if (sysctl(mib,2,&memsize,&len,NULL,0))
-    return -1;
+    return 0;
 
   return memsize;
 
