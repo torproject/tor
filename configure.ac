@@ -156,22 +156,6 @@ if test x$enable_systemd = xyes -a x$have_systemd != xyes ; then
     AC_MSG_ERROR([Explicitly requested systemd support, but systemd not found])
 fi
 
-AC_ARG_ENABLE(threads,
-     AS_HELP_STRING(--disable-threads, disable multi-threading support))
-
-if test x$enable_threads = x; then
-   case $host in
-    *-*-solaris* )
-     # Don't try multithreading on solaris -- cpuworkers seem to lock.
-     AC_MSG_NOTICE([You are running Solaris; Sometimes threading makes
-cpu workers lock up here, so I will disable threads.])
-     enable_threads="no";;
-    *)
-     enable_threads="yes";;
-   esac
-fi
-
-
 case $host in
    *-*-solaris* )
      AC_DEFINE(_REENTRANT, 1, [Define on some platforms to activate x_r() functions in time.h])
@@ -400,9 +384,8 @@ fi
 AC_SEARCH_LIBS(pthread_create, [pthread])
 AC_SEARCH_LIBS(pthread_detach, [pthread])
 
-AM_CONDITIONAL(THREADS_WIN32, test "$enable_threads" = "yes" && test "$bwin32" = "true")
-AM_CONDITIONAL(THREADS_PTHREADS, test "$enable_threads" = "yes" && test "$bwin32" = "false")
-AM_CONDITIONAL(THREADS_NONE, test "$enable_threads" != "yes")
+AM_CONDITIONAL(THREADS_WIN32, test "$bwin32" = "true")
+AM_CONDITIONAL(THREADS_PTHREADS, test "$bwin32" = "false")
 
 dnl -------------------------------------------------------------------
 dnl Check for functions before libevent, since libevent-1.2 apparently
