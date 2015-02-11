@@ -27,12 +27,11 @@ fi
 
 DATA_DIR=`mktemp -d -t tor_zero_length_keys.XXXXXX`
 if [ -z "$DATA_DIR" ]; then
-  echo "Failure: mktemp invocation returned empty string"
+  echo "Failure: mktemp invocation returned empty string" >&2
   exit 3
 fi
 if [ ! -d "$DATA_DIR" ]; then
-    echo "$DATA_DIR"
-  echo "Failure: mktemp invocation result doesn't point to directory"
+  echo "Failure: mktemp invocation result doesn't point to directory" >&2
   exit 3
 fi
 trap "rm -rf '$DATA_DIR'" 0
@@ -43,7 +42,7 @@ TOR="./src/or/tor --hush --DisableNetwork 1 --ShutdownWaitLength 0 --ORPort 1234
 
 if [ -s "$DATA_DIR"/keys/secret_id_key ] && [ -s "$DATA_DIR"/keys/secret_onion_key ] &&
    [ -s "$DATA_DIR"/keys/secret_onion_key_ntor ]; then
-  echo "Failure: Previous tor keys present in tor data directory"
+  echo "Failure: Previous tor keys present in tor data directory" >&2
   exit 3
 else
   echo "Generating initial tor keys"
