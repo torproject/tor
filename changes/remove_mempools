@@ -1,0 +1,5 @@
+  o Removed features:
+    - The --enable-mempool and --enable-buf-freelists options, which
+      were originally created to work around bad malloc implementations,
+      no longer exist.  They were off-by-default in 0.2.5.  Closes
+      ticket 14848.

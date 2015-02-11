@@ -1223,7 +1223,6 @@ run_scheduled_events(time_t now)
   static time_t time_to_check_v3_certificate = 0;
   static time_t time_to_check_listeners = 0;
   static time_t time_to_download_networkstatus = 0;
-  static time_t time_to_shrink_memory = 0;
   static time_t time_to_try_getting_descriptors = 0;
   static time_t time_to_reset_descriptor_failures = 0;
   static time_t time_to_add_entropy = 0;
@@ -1572,22 +1571,6 @@ run_scheduled_events(time_t now)
   connection_or_set_bad_connections(NULL, 0);
   for (i=0;i<smartlist_len(connection_array);i++) {
     run_connection_housekeeping(i, now);
-  }
-  if (time_to_shrink_memory < now) {
-    SMARTLIST_FOREACH(connection_array, connection_t *, conn, {
-        if (conn->outbuf)
-          buf_shrink(conn->outbuf);
-        if (conn->inbuf)
-          buf_shrink(conn->inbuf);
-      });
-#ifdef ENABLE_MEMPOOL
-    clean_cell_pool();
-#endif /* ENABLE_MEMPOOL */
-    buf_shrink_freelists(0);
-/** How often do we check buffers and pools for empty space that can be
- * deallocated? */
-#define MEM_SHRINK_INTERVAL (60)
-    time_to_shrink_memory = now + MEM_SHRINK_INTERVAL;
   }
 
   /* 6. And remove any marked circuits... */
@@ -2260,7 +2243,6 @@ dumpmemusage(int severity)
   dump_routerlist_mem_usage(severity);
   dump_cell_pool_usage(severity);
   dump_dns_mem_usage(severity);
-  buf_dump_freelist_sizes(severity);
   tor_log_mallinfo(severity);
 }
 
@@ -2652,7 +2634,6 @@ tor_free_all(int postfork)
   channel_free_all();
   connection_free_all();
   scheduler_free_all();
-  buf_shrink_freelists(1);
   memarea_clear_freelist();
   nodelist_free_all();
   microdesc_free_all();

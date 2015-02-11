@@ -25,10 +25,6 @@ fi
 CPPFLAGS="$CPPFLAGS -I\${top_srcdir}/src/common"
 
 #XXXX020 We should make these enabled or not, before 0.2.0.x-final
-AC_ARG_ENABLE(buf-freelists,
-   AS_HELP_STRING(--enable-buf-freelists, enable freelists for buffer RAM))
-AC_ARG_ENABLE(mempools,
-   AS_HELP_STRING(--enable-mempools, enable mempools for relay cells))
 AC_ARG_ENABLE(openbsd-malloc,
    AS_HELP_STRING(--enable-openbsd-malloc, Use malloc code from openbsd.  Linux only))
 AC_ARG_ENABLE(instrument-downloads,
