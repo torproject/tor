@@ -1735,6 +1735,7 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
   return NULL;
 }
 
+#if defined(ENABLE_TOR2WEB_MODE) || defined(TOR_UNIT_TESTS)
 /* The config option Tor2webRendezvousPoints has been set and we need
  * to pick an RP out of that set. Make sure that the RP we choose is
  * alive, and return it. Return NULL if no usable RP could be found in
@@ -1786,6 +1787,7 @@ pick_tor2web_rendezvous_node(router_crn_flags_t flags,
 
   return rp_node;
 }
+#endif
 
 /* Pick a Rendezvous Point for our HS circuits according to <b>flags</b>. */
 static const node_t *
@@ -1796,6 +1798,7 @@ pick_rendezvous_node(router_crn_flags_t flags)
   if (options->AllowInvalid_ & ALLOW_INVALID_RENDEZVOUS)
     flags |= CRN_ALLOW_INVALID;
 
+#ifdef ENABLE_TOR2WEB_MODE
   /* The user wants us to pick specific RPs. */
   if (options->Tor2webRendezvousPoints) {
     const node_t *tor2web_rp = pick_tor2web_rendezvous_node(flags, options);
@@ -1804,6 +1807,7 @@ pick_rendezvous_node(router_crn_flags_t flags)
     }
     /* Else, if no tor2web RP was found, fall back to choosing a random node */
   }
+#endif
 
   return router_choose_random_node(NULL, options->ExcludeNodes, flags);
 }
