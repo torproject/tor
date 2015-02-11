@@ -1677,6 +1677,7 @@ circuit_launch_by_extend_info(uint8_t purpose,
   origin_circuit_t *circ;
   int onehop_tunnel = (flags & CIRCLAUNCH_ONEHOP_TUNNEL) != 0;
   int have_path = have_enough_path_info(! (flags & CIRCLAUNCH_IS_INTERNAL) );
+  int need_specific_rp = 0;
 
   if (!onehop_tunnel && (!router_have_minimum_dir_info() || !have_path)) {
     log_debug(LD_CIRC,"Haven't %s yet; canceling "
@@ -1687,8 +1688,17 @@ circuit_launch_by_extend_info(uint8_t purpose,
     return NULL;
   }
 
+  /* If Tor2webRendezvousPoints is enabled and we are dealing with an
+     RP circuit, we want a specific RP node so we shouldn't canibalize
+     an already existing circuit. */
+  if (get_options()->Tor2webRendezvousPoints &&
+      purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND) {
+    need_specific_rp = 1;
+  }
+
   if ((extend_info || purpose != CIRCUIT_PURPOSE_C_GENERAL) &&
-      purpose != CIRCUIT_PURPOSE_TESTING && !onehop_tunnel) {
+      purpose != CIRCUIT_PURPOSE_TESTING &&
+      !onehop_tunnel && !need_specific_rp) {
     /* see if there are appropriate circs available to cannibalize. */
     /* XXX if we're planning to add a hop, perhaps we want to look for
      * internal circs rather than exit circs? -RD */

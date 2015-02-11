@@ -61,6 +61,9 @@ const node_t *choose_good_entry_server(uint8_t purpose,
 
 #ifdef CIRCUITBUILD_PRIVATE
 STATIC circid_t get_unique_circ_id_by_chan(channel_t *chan);
+STATIC const node_t *pick_tor2web_rendezvous_node(router_crn_flags_t flags,
+                                                  const or_options_t *options);
+
 #endif
 
 #endif

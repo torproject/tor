@@ -80,6 +80,7 @@ static config_abbrev_t option_abbrevs_[] = {
   PLURAL(AuthDirRejectCC),
   PLURAL(EntryNode),
   PLURAL(ExcludeNode),
+  PLURAL(Tor2webRendezvousPoint),
   PLURAL(FirewallPort),
   PLURAL(LongLivedPort),
   PLURAL(HiddenServiceNode),
@@ -404,6 +405,7 @@ static config_var_t option_vars_[] = {
   V(TestSocks,                   BOOL,     "0"),
   V(TokenBucketRefillInterval,   MSEC_INTERVAL, "100 msec"),
   V(Tor2webMode,                 BOOL,     "0"),
+  V(Tor2webRendezvousPoints,      ROUTERSET, NULL),
   V(TLSECGroup,                  STRING,   NULL),
   V(TrackHostExits,              CSV,      NULL),
   V(TrackHostExitsExpire,        INTERVAL, "30 minutes"),
@@ -1262,7 +1264,8 @@ options_need_geoip_info(const or_options_t *options, const char **reason_out)
     routerset_needs_geoip(options->EntryNodes) ||
     routerset_needs_geoip(options->ExitNodes) ||
     routerset_needs_geoip(options->ExcludeExitNodes) ||
-    routerset_needs_geoip(options->ExcludeNodes);
+    routerset_needs_geoip(options->ExcludeNodes) ||
+    routerset_needs_geoip(options->Tor2webRendezvousPoints);
 
   if (routerset_usage && reason_out) {
     *reason_out = "We've been configured to use (or avoid) nodes in certain "
@@ -1395,7 +1398,7 @@ options_act(const or_options_t *old_options)
     log_err(LD_CONFIG, "This copy of Tor was not compiled to run in "
             "'tor2web mode'. It cannot be run with the Tor2webMode torrc "
             "option enabled. To enable Tor2webMode recompile with the "
-            "--enable-tor2webmode option.");
+            "--enable-tor2web-mode option.");
     return -1;
   }
 #endif
@@ -1651,6 +1654,8 @@ options_act(const or_options_t *old_options)
                          options->ExcludeExitNodes) ||
         !routerset_equal(old_options->EntryNodes, options->EntryNodes) ||
         !routerset_equal(old_options->ExitNodes, options->ExitNodes) ||
+        !routerset_equal(old_options->Tor2webRendezvousPoints,
+                         options->Tor2webRendezvousPoints) ||
         options->StrictNodes != old_options->StrictNodes) {
       log_info(LD_CIRC,
                "Changed to using entry guards or bridges, or changed "
@@ -3055,6 +3060,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
     log_notice(LD_CONFIG,
                "Tor2WebMode is enabled; disabling UseEntryGuards.");
     options->UseEntryGuards = 0;
+  }
+
+  if (options->Tor2webRendezvousPoints && !options->Tor2webMode) {
+    REJECT("Tor2webRendezvousPoints cannot be set without Tor2webMode.");
   }
 
   if (!(options->UseEntryGuards) &&

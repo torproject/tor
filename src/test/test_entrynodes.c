@@ -18,7 +18,7 @@
 #include "statefile.h"
 #include "config.h"
 
-#include "test_descriptors.inc"
+#include "testhelper.h"
 
 /* TODO:
  * choose_random_entry() test with state set.
@@ -35,62 +35,6 @@ static or_state_t *
 get_or_state_replacement(void)
 {
   return dummy_state;
-}
-
-/* NOP replacement for router_descriptor_is_older_than() */
-static int
-router_descriptor_is_older_than_replacement(const routerinfo_t *router,
-                                            int seconds)
-{
-  (void) router;
-  (void) seconds;
-  return 0;
-}
-
-/* Number of descriptors contained in test_descriptors.txt. */
-#define NUMBER_OF_DESCRIPTORS 8
-
-/** Parse a file containing router descriptors and load them to our
-    routerlist. This function is used to setup an artificial network
-    so that we can conduct entry guard tests. */
-static void
-setup_fake_routerlist(void)
-{
-  int retval;
-  routerlist_t *our_routerlist = NULL;
-  smartlist_t *our_nodelist = NULL;
-
-  /* Read the file that contains our test descriptors. */
-
-  /* We need to mock this function otherwise the descriptors will not
-     accepted as they are too old. */
-  MOCK(router_descriptor_is_older_than,
-       router_descriptor_is_older_than_replacement);
-
-  /* Load all the test descriptors to the routerlist. */
-  retval = router_load_routers_from_string(TEST_DESCRIPTORS,
-                                           NULL, SAVED_IN_JOURNAL,
-                                           NULL, 0, NULL);
-  tt_int_op(retval, OP_EQ, NUMBER_OF_DESCRIPTORS);
-
-  /* Sanity checking of routerlist and nodelist. */
-  our_routerlist = router_get_routerlist();
-  tt_int_op(smartlist_len(our_routerlist->routers), OP_EQ,
-            NUMBER_OF_DESCRIPTORS);
-  routerlist_assert_ok(our_routerlist);
-
-  our_nodelist = nodelist_get_list();
-  tt_int_op(smartlist_len(our_nodelist), OP_EQ, NUMBER_OF_DESCRIPTORS);
-
-  /* Mark all routers as non-guards but up and running! */
-  SMARTLIST_FOREACH_BEGIN(our_nodelist, node_t *, node) {
-    node->is_running = 1;
-    node->is_valid = 1;
-    node->is_possible_guard = 0;
-  } SMARTLIST_FOREACH_END(node);
-
- done:
-  UNMOCK(router_descriptor_is_older_than);
 }
 
 /* Unittest cleanup function: Cleanup the fake network. */
@@ -120,7 +64,7 @@ fake_network_setup(const struct testcase_t *testcase)
        get_or_state_replacement);
 
   /* Setup fake routerlist. */
-  setup_fake_routerlist();
+  helper_setup_fake_routerlist();
 
   /* Return anything but NULL (it's interpreted as test fail) */
   return dummy_state;
@@ -197,7 +141,7 @@ populate_live_entry_guards_test_helper(int num_needed)
 
   /* Walk the nodelist and add all nodes as entry guards. */
   our_nodelist = nodelist_get_list();
-  tt_int_op(smartlist_len(our_nodelist), OP_EQ, NUMBER_OF_DESCRIPTORS);
+  tt_int_op(smartlist_len(our_nodelist), OP_EQ, HELPER_NUMBER_OF_DESCRIPTORS);
 
   SMARTLIST_FOREACH_BEGIN(our_nodelist, const node_t *, node) {
     const node_t *node_tmp;
@@ -206,7 +150,7 @@ populate_live_entry_guards_test_helper(int num_needed)
   } SMARTLIST_FOREACH_END(node);
 
   /* Make sure the nodes were added as entry guards. */
-  tt_int_op(smartlist_len(all_entry_guards), OP_EQ, NUMBER_OF_DESCRIPTORS);
+  tt_int_op(smartlist_len(all_entry_guards), OP_EQ, HELPER_NUMBER_OF_DESCRIPTORS);
 
   /* Ensure that all the possible entry guards are enough to satisfy us. */
   tt_int_op(smartlist_len(all_entry_guards), OP_GE, num_needed);
@@ -647,7 +591,7 @@ test_entry_is_live(void *arg)
 
   /* Walk the nodelist and add all nodes as entry guards. */
   our_nodelist = nodelist_get_list();
-  tt_int_op(smartlist_len(our_nodelist), OP_EQ, NUMBER_OF_DESCRIPTORS);
+  tt_int_op(smartlist_len(our_nodelist), OP_EQ, HELPER_NUMBER_OF_DESCRIPTORS);
 
   SMARTLIST_FOREACH_BEGIN(our_nodelist, const node_t *, node) {
     const node_t *node_tmp;
@@ -659,7 +603,7 @@ test_entry_is_live(void *arg)
   } SMARTLIST_FOREACH_END(node);
 
   /* Make sure the nodes were added as entry guards. */
-  tt_int_op(smartlist_len(all_entry_guards), OP_EQ, NUMBER_OF_DESCRIPTORS);
+  tt_int_op(smartlist_len(all_entry_guards), OP_EQ, HELPER_NUMBER_OF_DESCRIPTORS);
 
   /* Now get a random test entry that we will use for this unit test. */
   which_node = 3;  /* (chosen by fair dice roll) */

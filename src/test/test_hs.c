@@ -7,9 +7,15 @@
  **/
 
 #define CONTROL_PRIVATE
+#define CIRCUITBUILD_PRIVATE
+
 #include "or.h"
 #include "test.h"
 #include "control.h"
+#include "testhelper.h"
+#include "config.h"
+#include "routerset.h"
+#include "circuitbuild.h"
 
 /* mock ID digest and longname for node that's in nodelist */
 #define HSDIR_EXIST_ID "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA" \
@@ -123,8 +129,82 @@ test_hs_desc_event(void *arg)
   tor_free(received_msg);
 }
 
+/* Make sure we always pick the right RP, given a well formatted
+ * Tor2webRendezvousPoints value. */
+static void
+test_pick_tor2web_rendezvous_node(void *arg)
+{
+  or_options_t *options = get_options_mutable();
+  const node_t *chosen_rp = NULL;
+  router_crn_flags_t flags = CRN_NEED_DESC;
+  int retval, i;
+  const char *tor2web_rendezvous_str = "test003r";
+
+  (void) arg;
+
+  /* Setup fake routerlist. */
+  helper_setup_fake_routerlist();
+
+  /* Parse Tor2webRendezvousPoints as a routerset. */
+  options->Tor2webRendezvousPoints = routerset_new();
+  retval = routerset_parse(options->Tor2webRendezvousPoints,
+                           tor2web_rendezvous_str,
+                           "test_tor2web_rp");
+  tt_int_op(retval, >=, 0);
+
+  /* Pick rendezvous point. Make sure the correct one is
+     picked. Repeat many times to make sure it works properly. */
+  for (i = 0; i < 50 ; i++) {
+    chosen_rp = pick_tor2web_rendezvous_node(flags, options);
+    tt_assert(chosen_rp);
+    tt_str_op(chosen_rp->ri->nickname, ==, tor2web_rendezvous_str);
+  }
+
+ done:
+  routerset_free(options->Tor2webRendezvousPoints);
+}
+
+/* Make sure we never pick an RP if Tor2webRendezvousPoints doesn't
+ * correspond to an actual node. */
+static void
+test_pick_bad_tor2web_rendezvous_node(void *arg)
+{
+  or_options_t *options = get_options_mutable();
+  const node_t *chosen_rp = NULL;
+  router_crn_flags_t flags = CRN_NEED_DESC;
+  int retval, i;
+  const char *tor2web_rendezvous_str = "dummy";
+
+  (void) arg;
+
+  /* Setup fake routerlist. */
+  helper_setup_fake_routerlist();
+
+  /* Parse Tor2webRendezvousPoints as a routerset. */
+  options->Tor2webRendezvousPoints = routerset_new();
+  retval = routerset_parse(options->Tor2webRendezvousPoints,
+                           tor2web_rendezvous_str,
+                           "test_tor2web_rp");
+  tt_int_op(retval, >=, 0);
+
+  /* Pick rendezvous point. Since Tor2webRendezvousPoints was set to a
+     dummy value, we shouldn't find any eligible RPs. */
+  for (i = 0; i < 50 ; i++) {
+    chosen_rp = pick_tor2web_rendezvous_node(flags, options);
+    tt_assert(!chosen_rp);
+  }
+
+ done:
+  routerset_free(options->Tor2webRendezvousPoints);
+}
+
 struct testcase_t hs_tests[] = {
   { "hs_desc_event", test_hs_desc_event, TT_FORK,
+    NULL, NULL },
+  { "pick_tor2web_rendezvous_node", test_pick_tor2web_rendezvous_node, TT_FORK,
+    NULL, NULL },
+  { "pick_bad_tor2web_rendezvous_node",
+    test_pick_bad_tor2web_rendezvous_node, TT_FORK,
     NULL, NULL },
   END_OF_TESTCASES
 };

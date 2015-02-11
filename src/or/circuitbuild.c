@@ -1737,6 +1737,83 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
   return NULL;
 }
 
+#if defined(ENABLE_TOR2WEB_MODE) || defined(TOR_UNIT_TESTS)
+/* The config option Tor2webRendezvousPoints has been set and we need
+ * to pick an RP out of that set. Make sure that the RP we choose is
+ * alive, and return it. Return NULL if no usable RP could be found in
+ * Tor2webRendezvousPoints. */
+STATIC const node_t *
+pick_tor2web_rendezvous_node(router_crn_flags_t flags,
+                             const or_options_t *options)
+{
+  const node_t *rp_node = NULL;
+  const int allow_invalid = (flags & CRN_ALLOW_INVALID) != 0;
+  const int need_desc = (flags & CRN_NEED_DESC) != 0;
+
+  smartlist_t *whitelisted_live_rps = smartlist_new();
+  smartlist_t *all_live_nodes = smartlist_new();
+
+  tor_assert(options->Tor2webRendezvousPoints);
+
+  /* Add all running nodes to all_live_nodes */
+  router_add_running_nodes_to_smartlist(all_live_nodes,
+                                        allow_invalid,
+                                        0, 0, 0,
+                                        need_desc);
+
+  /* Filter all_live_nodes to only add live *and* whitelisted RPs to
+   * the list whitelisted_live_rps. */
+  SMARTLIST_FOREACH_BEGIN(all_live_nodes, node_t *, live_node) {
+    if (routerset_contains_node(options->Tor2webRendezvousPoints, live_node)) {
+      smartlist_add(whitelisted_live_rps, live_node);
+    }
+  } SMARTLIST_FOREACH_END(live_node);
+
+  /* Honor ExcludeNodes */
+  if (options->ExcludeNodes) {
+    routerset_subtract_nodes(whitelisted_live_rps, options->ExcludeNodes);
+  }
+
+  /* Now pick randomly amongst the whitelisted RPs. No need to waste time
+     doing bandwidth load balancing, for most use cases
+     'whitelisted_live_rps' contains a single OR anyway. */
+  rp_node = smartlist_choose(whitelisted_live_rps);
+
+  if (!rp_node) {
+    log_warn(LD_REND, "Could not find a Rendezvous Point that suits "
+             "the purposes of Tor2webRendezvousPoints. Choosing random one.");
+  }
+
+  smartlist_free(whitelisted_live_rps);
+  smartlist_free(all_live_nodes);
+
+  return rp_node;
+}
+#endif
+
+/* Pick a Rendezvous Point for our HS circuits according to <b>flags</b>. */
+static const node_t *
+pick_rendezvous_node(router_crn_flags_t flags)
+{
+  const or_options_t *options = get_options();
+
+  if (options->AllowInvalid_ & ALLOW_INVALID_RENDEZVOUS)
+    flags |= CRN_ALLOW_INVALID;
+
+#ifdef ENABLE_TOR2WEB_MODE
+  /* The user wants us to pick specific RPs. */
+  if (options->Tor2webRendezvousPoints) {
+    const node_t *tor2web_rp = pick_tor2web_rendezvous_node(flags, options);
+    if (tor2web_rp) {
+      return tor2web_rp;
+    }
+    /* Else, if no tor2web RP was found, fall back to choosing a random node */
+  }
+#endif
+
+  return router_choose_random_node(NULL, options->ExcludeNodes, flags);
+}
+
 /** Return a pointer to a suitable router to be the exit node for the
  * circuit of purpose <b>purpose</b> that we're about to build (or NULL
  * if no router is suitable).
@@ -1767,9 +1844,13 @@ choose_good_exit_server(uint8_t purpose,
       else
         return choose_good_exit_server_general(need_uptime,need_capacity);
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
-      if (options->AllowInvalid_ & ALLOW_INVALID_RENDEZVOUS)
-        flags |= CRN_ALLOW_INVALID;
-      return router_choose_random_node(NULL, options->ExcludeNodes, flags);
+      {
+        /* Pick a new RP */
+        const node_t *rendezvous_node = pick_rendezvous_node(flags);
+        log_info(LD_REND, "Picked new RP: %s",
+                 safe_str_client(node_describe(rendezvous_node)));
+        return rendezvous_node;
+      }
   }
   log_warn(LD_BUG,"Unhandled purpose %d", purpose);
   tor_fragile_assert();
