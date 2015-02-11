@@ -1676,6 +1676,9 @@ register_cfg(sandbox_cfg_t* cfg)
 static int
 initialise_libseccomp_sandbox(sandbox_cfg_t* cfg)
 {
+  /* Prevent glibc from trying to open /dev/tty on fatal error */
+  setenv("LIBC_FATAL_STDERR_", "1", 1);
+
   if (install_sigsys_debugging())
     return -1;
 
