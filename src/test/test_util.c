@@ -6,15 +6,11 @@
 #include "orconfig.h"
 #define COMPAT_PRIVATE
 #define CONTROL_PRIVATE
-#define MEMPOOL_PRIVATE
 #define UTIL_PRIVATE
 #include "or.h"
 #include "config.h"
 #include "control.h"
 #include "test.h"
-#ifdef ENABLE_MEMPOOLS
-#include "mempool.h"
-#endif /* ENABLE_MEMPOOLS */
 #include "memarea.h"
 #include "util_process.h"
 
@@ -2643,69 +2639,6 @@ test_util_path_is_relative(void *arg)
  done:
   ;
 }
-
-#ifdef ENABLE_MEMPOOLS
-
-/** Run unittests for memory pool allocator */
-static void
-test_util_mempool(void *arg)
-{
-  mp_pool_t *pool = NULL;
-  smartlist_t *allocated = NULL;
-  int i;
-
-  (void)arg;
-  pool = mp_pool_new(1, 100);
-  tt_assert(pool);
-  tt_assert(pool->new_chunk_capacity >= 100);
-  tt_assert(pool->item_alloc_size >= sizeof(void*)+1);
-  mp_pool_destroy(pool);
-  pool = NULL;
-
-  pool = mp_pool_new(241, 2500);
-  tt_assert(pool);
-  tt_assert(pool->new_chunk_capacity >= 10);
-  tt_assert(pool->item_alloc_size >= sizeof(void*)+241);
-  tt_int_op(pool->item_alloc_size & 0x03,OP_EQ, 0);
-  tt_assert(pool->new_chunk_capacity < 60);
-
-  allocated = smartlist_new();
-  for (i = 0; i < 20000; ++i) {
-    if (smartlist_len(allocated) < 20 || crypto_rand_int(2)) {
-      void *m = mp_pool_get(pool);
-      memset(m, 0x09, 241);
-      smartlist_add(allocated, m);
-      //printf("%d: %p\n", i, m);
-      //mp_pool_assert_ok(pool);
-    } else {
-      int idx = crypto_rand_int(smartlist_len(allocated));
-      void *m = smartlist_get(allocated, idx);
-      //printf("%d: free %p\n", i, m);
-      smartlist_del(allocated, idx);
-      mp_pool_release(m);
-      //mp_pool_assert_ok(pool);
-    }
-    if (crypto_rand_int(777)==0)
-      mp_pool_clean(pool, 1, 1);
-
-    if (i % 777)
-      mp_pool_assert_ok(pool);
-  }
-
- done:
-  if (allocated) {
-    SMARTLIST_FOREACH(allocated, void *, m, mp_pool_release(m));
-    mp_pool_assert_ok(pool);
-    mp_pool_clean(pool, 0, 0);
-    mp_pool_assert_ok(pool);
-    smartlist_free(allocated);
-  }
-
-  if (pool)
-    mp_pool_destroy(pool);
-}
-
-#endif /* ENABLE_MEMPOOLS */
 
 /** Run unittests for memory area allocator */
 static void

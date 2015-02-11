@@ -24,14 +24,6 @@ else
 libor_extra_source=
 endif
 
-if USE_MEMPOOLS
-libor_mempool_source=src/common/mempool.c
-libor_mempool_header=src/common/mempool.h
-else
-libor_mempool_source=
-libor_mempool_header=
-endif
-
 src_common_libcurve25519_donna_a_CFLAGS=
 
 if BUILD_CURVE25519_DONNA
@@ -78,7 +70,6 @@ LIBOR_A_SOURCES = \
   src/ext/csiphash.c					\
   src/ext/trunnel/trunnel.c				\
   $(libor_extra_source)					\
-  $(libor_mempool_source)				\
   $(threads_impl_source)
 
 LIBOR_CRYPTO_A_SOURCES = \
@@ -138,8 +129,7 @@ COMMONHEADERS = \
   src/common/tortls.h				\
   src/common/util.h				\
   src/common/util_process.h			\
-  src/common/workqueue.h			\
-  $(libor_mempool_header)
+  src/common/workqueue.h
 
 noinst_HEADERS+= $(COMMONHEADERS)
 
