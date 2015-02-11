@@ -15,8 +15,8 @@
 # Exit Statuses:
 #   0: test succeeded - tor regenerated/kept the files
 #   1: test failed - tor did not regenerate/keep the files
-# 254: test failed - tor did not generate the key files on first run
-# 255: a command failed - the test could not be completed
+#   2: test failed - tor did not generate the key files on first run
+#   3: a command failed - the test could not be completed
 #
 
 if [ $# -lt 1 ]; then
@@ -28,12 +28,12 @@ fi
 DATA_DIR=`mktemp -d -t tor_zero_length_keys.XXXXXX`
 if [ -z "$DATA_DIR" ]; then
   echo "Failure: mktemp invocation returned empty string"
-  exit 255
+  exit 3
 fi
 if [ ! -d "$DATA_DIR" ]; then
     echo "$DATA_DIR"
   echo "Failure: mktemp invocation result doesn't point to directory"
-  exit 255
+  exit 3
 fi
 trap "rm -rf '$DATA_DIR'" 0
 
@@ -44,7 +44,7 @@ TOR="./src/or/tor --hush --DisableNetwork 1 --ShutdownWaitLength 0 --ORPort 1234
 if [ -s "$DATA_DIR"/keys/secret_id_key ] && [ -s "$DATA_DIR"/keys/secret_onion_key ] &&
    [ -s "$DATA_DIR"/keys/secret_onion_key_ntor ]; then
   echo "Failure: Previous tor keys present in tor data directory"
-  exit 255
+  exit 3
 else
   echo "Generating initial tor keys"
   $TOR --DataDirectory "$DATA_DIR" --PidFile "$DATA_DIR"/pid &
@@ -60,11 +60,11 @@ else
     true #echo "tor generated the initial key files"
   else
     echo "Failure: tor failed to generate the initial key files"
-    exit 254
+    exit 2
   fi
 fi
 
-#ls -lh  "$DATA_DIR"/keys/ || exit 255
+#ls -lh  "$DATA_DIR"/keys/ || exit 3
 
 # backup and keep/delete/create zero-length files for the keys
 
@@ -75,17 +75,17 @@ cp -r "$DATA_DIR"/keys "$DATA_DIR"/keys.old
 # delete keys for -d or -z
 if [ "$1" != "-e" ]; then
   FILE_DESC="regenerates deleted"
-  rm "$DATA_DIR"/keys/secret_id_key || exit 255
-  rm "$DATA_DIR"/keys/secret_onion_key || exit 255
-  rm "$DATA_DIR"/keys/secret_onion_key_ntor || exit 255
+  rm "$DATA_DIR"/keys/secret_id_key || exit 3
+  rm "$DATA_DIR"/keys/secret_onion_key || exit 3
+  rm "$DATA_DIR"/keys/secret_onion_key_ntor || exit 3
 fi
 
 # create empty files for -z
 if [ "$1" = "-z" ]; then
   FILE_DESC="regenerates zero-length"
-  touch "$DATA_DIR"/keys/secret_id_key || exit 255
-  touch "$DATA_DIR"/keys/secret_onion_key || exit 255
-  touch "$DATA_DIR"/keys/secret_onion_key_ntor || exit 255
+  touch "$DATA_DIR"/keys/secret_id_key || exit 3
+  touch "$DATA_DIR"/keys/secret_onion_key || exit 3
+  touch "$DATA_DIR"/keys/secret_onion_key_ntor || exit 3
 fi
 
 echo "Running tor again to check if it $FILE_DESC keys"
@@ -96,7 +96,7 @@ sleep 5
 kill $TOR_PID
 wait $TOR_PID
 
-#ls -lh "$DATA_DIR"/keys/ || exit 255
+#ls -lh "$DATA_DIR"/keys/ || exit 3
 
 # tor must always have non-zero-length key files
 if [ -s "$DATA_DIR"/keys/secret_id_key ] && [ -s "$DATA_DIR"/keys/secret_onion_key ] &&
