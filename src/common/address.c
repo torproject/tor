@@ -1374,22 +1374,33 @@ get_interface_addresses_win32(int severity)
 
 #ifdef HAVE_IFCONF_TO_SMARTLIST
 
+/* Guess how much space we need. There shouldn't be any struct ifreqs
+ * larger than this, even on OS X where the struct's size is dynamic. */
+#define IFREQ_SIZE 4096
+
 /* This is defined on Mac OS X */
 #ifndef _SIZEOF_ADDR_IFREQ
 #define _SIZEOF_ADDR_IFREQ sizeof
 #endif
 
-/** Convert <b>*ifr</b>, an ifreq structure array of size <b>buflen</b>
+/** Convert <b>*buf</b>, an ifreq structure array of size <b>buflen</b>,
  * into smartlist of <b>tor_addr_t</b> structures.
  */
 STATIC smartlist_t *
-ifreq_to_smartlist(const struct ifreq *ifr, size_t buflen)
+ifreq_to_smartlist(char *buf, size_t buflen)
 {
   smartlist_t *result = smartlist_new();
+  char *end = buf + buflen;
 
-  struct ifreq *r = (struct ifreq *)ifr;
+  /* These acrobatics are due to alignment issues which trigger
+   * undefined behaviour traps on OSX. */
+  struct ifreq *r = tor_malloc(IFREQ_SIZE);
 
-  while ((char *)r < (char *)ifr+buflen) {
+  while (buf < end) {
+    /* Copy up to IFREQ_SIZE bytes into the struct ifreq, but don't overrun
+     * buf. */
+    memcpy(r, buf, end - buf < IFREQ_SIZE ? end - buf : IFREQ_SIZE);
+
     const struct sockaddr *sa = &r->ifr_addr;
     tor_addr_t tmp;
     int valid_sa_family = (sa->sa_family == AF_INET ||
@@ -1400,9 +1411,10 @@ ifreq_to_smartlist(const struct ifreq *ifr, size_t buflen)
     if (valid_sa_family && conversion_success)
       smartlist_add(result, tor_memdup(&tmp, sizeof(tmp)));
 
-    r = (struct ifreq *)((char *)r + _SIZEOF_ADDR_IFREQ(*r));
+    buf += _SIZEOF_ADDR_IFREQ(*r);
   }
 
+  tor_free(r);
   return result;
 }
 
@@ -1415,8 +1427,7 @@ get_interface_addresses_ioctl(int severity)
 {
   /* Some older unixy systems make us use ioctl(SIOCGIFCONF) */
   struct ifconf ifc;
-  int fd, sz;
-  void *databuf = NULL;
+  int fd;
   smartlist_t *result = NULL;
 
   /* This interface, AFAICT, only supports AF_INET addresses */
@@ -1426,22 +1437,28 @@ get_interface_addresses_ioctl(int severity)
     goto done;
   }
 
-  /* Guess how much space we need. */
-  ifc.ifc_len = sz = 4096;
-  databuf = tor_malloc_zero(sz);
-  ifc.ifc_buf = databuf;
+  int mult = 1;
+  ifc.ifc_buf = NULL;
+  do {
+    mult *= 2;
+    ifc.ifc_len = mult * IFREQ_SIZE;
+    ifc.ifc_buf = tor_realloc(ifc.ifc_buf, ifc.ifc_len);
 
-  if (ioctl(fd, SIOCGIFCONF, &ifc) < 0) {
-    tor_log(severity, LD_NET, "ioctl failed: %s", strerror(errno));
-    close(fd);
-    goto done;
-  }
+    tor_assert(ifc.ifc_buf);
 
-  result = ifreq_to_smartlist(databuf, ifc.ifc_len);
+    if (ioctl(fd, SIOCGIFCONF, &ifc) < 0) {
+      tor_log(severity, LD_NET, "ioctl failed: %s", strerror(errno));
+      close(fd);
+      goto done;
+    }
+    /* Ensure we have least IFREQ_SIZE bytes unused at the end. Otherwise, we
+     * don't know if we got everything during ioctl. */
+  } while (mult * IFREQ_SIZE - ifc.ifc_len <= IFREQ_SIZE);
+  result = ifreq_to_smartlist(ifc.ifc_buf, ifc.ifc_len);
 
  done:
   close(fd);
-  tor_free(databuf);
+  tor_free(ifc.ifc_buf);
   return result;
 }
 #endif
