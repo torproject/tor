@@ -19,6 +19,7 @@
 #endif
 #include <math.h>
 #include <ctype.h>
+#include <values.h>
 
 /* XXXX this is a minimal wrapper to make the unit tests compile with the
  * changed tor_timegm interface. */
@@ -4156,10 +4157,10 @@ test_util_laplace(void *arg)
             add_laplace_noise(0, 0.0, delta_f, epsilon));
   tt_assert(INT64_MIN ==
             add_laplace_noise(0, 0.0,
-                              INT64_MAX, 1));
+                              DBL_MAX, 1));
   tt_assert(INT64_MIN ==
             add_laplace_noise(INT64_MIN, 0.0,
-                              INT64_MAX, 1));
+                              DBL_MAX, 1));
 
   /* does it play nice with INT64_MAX? */
   tt_assert((INT64_MIN + INT64_MAX) ==
@@ -4180,13 +4181,13 @@ test_util_laplace(void *arg)
                               noscale_df, noscale_eps));
   tt_assert(INT64_MIN ==
             add_laplace_noise(0, min_dbl_error,
-                              INT64_MAX, 1));
+                              DBL_MAX, 1));
   tt_assert((INT64_MAX + INT64_MIN) ==
             add_laplace_noise(INT64_MAX, min_dbl_error,
-                              INT64_MAX, 1));
+                              DBL_MAX, 1));
   tt_assert(INT64_MIN ==
             add_laplace_noise(INT64_MIN, min_dbl_error,
-                              INT64_MAX, 1));
+                              DBL_MAX, 1));
 
   /* does it play nice with INT64_MAX? */
   tt_assert((INT64_MAX - 35) ==
@@ -4223,10 +4224,10 @@ test_util_laplace(void *arg)
                               delta_f, epsilon));
   tt_assert((INT64_MIN + INT64_MAX) ==
             add_laplace_noise(INT64_MIN, max_dbl_lt_one,
-                              INT64_MAX, 1));
+                              DBL_MAX, 1));
   tt_assert(INT64_MAX ==
             add_laplace_noise(INT64_MAX, max_dbl_lt_one,
-                              INT64_MAX, 1));
+                              DBL_MAX, 1));
   /* does it play nice with INT64_MIN? */
   tt_assert((INT64_MIN + 35) ==
             add_laplace_noise(INT64_MIN, max_dbl_lt_one,
