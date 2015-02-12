@@ -287,7 +287,7 @@ STATIC smartlist_t *get_interface_addresses_win32(int severity);
 #endif
 
 #ifdef HAVE_IFCONF_TO_SMARTLIST
-STATIC smartlist_t *ifreq_to_smartlist(const struct ifreq *ifr,
+STATIC smartlist_t *ifreq_to_smartlist(char *ifr,
                                        size_t buflen);
 STATIC smartlist_t *get_interface_addresses_ioctl(int severity);
 #endif
