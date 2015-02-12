@@ -4178,29 +4178,6 @@ test_util_laplace(void *arg)
   tt_assert((-35 + INT64_MAX) ==
             add_laplace_noise(INT64_MAX, min_dbl_error,
                               noscale_df, noscale_eps));
-  /* ... even when scaled? */
-  tt_assert(INT64_MIN ==
-            add_laplace_noise(0, min_dbl_error,
-                              INT64_MIN, -35));
-  tt_assert(INT64_MIN ==
-            add_laplace_noise(0, min_dbl_error,
-                              INT64_MIN, -34));
-  tt_assert(INT64_MAX ==
-            add_laplace_noise(0, min_dbl_error,
-                              INT64_MIN, 1));
-  tt_assert((INT64_MIN + INT64_MAX) ==
-            add_laplace_noise(INT64_MIN, min_dbl_error,
-                              INT64_MIN, 1));
-  tt_assert(INT64_MAX ==
-            add_laplace_noise(INT64_MAX, min_dbl_error,
-                              INT64_MIN, 1));
-
-  tt_assert(INT64_MAX ==
-            add_laplace_noise(0, min_dbl_error,
-                              INT64_MAX, -35));
-  tt_assert(INT64_MAX ==
-            add_laplace_noise(0, min_dbl_error,
-                              INT64_MAX, -34));
   tt_assert(INT64_MIN ==
             add_laplace_noise(0, min_dbl_error,
                               INT64_MAX, 1));
@@ -4244,80 +4221,16 @@ test_util_laplace(void *arg)
   tt_assert(INT64_MAX ==
             add_laplace_noise(INT64_MAX, max_dbl_lt_one,
                               delta_f, epsilon));
-  tt_assert(INT64_MAX ==
-            add_laplace_noise(0, max_dbl_lt_one,
-                              INT64_MAX, 35));
-  tt_assert(INT64_MAX ==
-            add_laplace_noise(0, max_dbl_lt_one,
-                              INT64_MAX, 34));
   tt_assert((INT64_MIN + INT64_MAX) ==
             add_laplace_noise(INT64_MIN, max_dbl_lt_one,
                               INT64_MAX, 1));
   tt_assert(INT64_MAX ==
             add_laplace_noise(INT64_MAX, max_dbl_lt_one,
                               INT64_MAX, 1));
-  tt_assert((INT64_MAX + INT64_MIN) ==
-            add_laplace_noise(INT64_MAX, max_dbl_lt_one,
-                              INT64_MIN, 1));
-  tt_assert(INT64_MIN ==
-            add_laplace_noise(INT64_MIN, max_dbl_lt_one,
-                              INT64_MIN, 1));
-
   /* does it play nice with INT64_MIN? */
   tt_assert((INT64_MIN + 35) ==
             add_laplace_noise(INT64_MIN, max_dbl_lt_one,
                               noscale_df, noscale_eps));
-
-  /* Test extreme values of b = delta_f / epsilon
-   * >>> laplace.ppf([0.5], loc = 0, scale = 1)
-   * array([0.        ])
-   */
-
-  /* Make sure edge cases don't depend on architecture,
-   * optimisation level, or other compiler flags.
-   * XXXX Are these edge cases important enough to make consistent? */
-
-  /* b = positive zero, p yields positive zero */
-  tt_assert(0.0 ==
-            add_laplace_noise(0.0, 0.5, 0.0, 1.0))
-  /* b = negative zero, p yields positive zero */
-  tt_assert(0.0 ==
-            add_laplace_noise(0.0, 0.5, 0.0, -1.0))
-  /* b = positive infinity, p yields positive zero, result is -NaN -> -Inf */
-  tt_assert(INT64_MIN ==
-            add_laplace_noise(0.0, 0.5, 1.0, 0.0))
-  /* b = negative infinity, p yields positive zero, result is -NaN -> -Inf */
-  tt_assert(INT64_MIN ==
-            add_laplace_noise(0.0, 0.5, -1.0, 0.0))
-  /* b = positive NaN (rounded to -Inf), p yields positive zero,
-   * result is -NaN -> -Inf */
-  tt_assert(INT64_MIN ==
-            add_laplace_noise(0.0, 0.5, -0.0, -0.0))
-  /* b = negative NaN (rounded to -Inf), p yields positive zero,
-   * result is -NaN -> -Inf*/
-  tt_assert(INT64_MIN ==
-            add_laplace_noise(0.0, 0.5, -0.0, 0.0))
-
-  /* b = positive zero, p yields negative infinity, result is -NaN -> -Inf */
-  tt_assert(INT64_MIN ==
-            add_laplace_noise(0.0, 0.0, 0.0, 1.0))
-  /* b = negative zero, p yields negative infinity, result is -NaN -> -Inf */
-  tt_assert(INT64_MIN ==
-            add_laplace_noise(0.0, 0.0, 0.0, -1.0))
-  /* b = positive infinity, p yields negative infinity */
-  tt_assert(INT64_MIN ==
-            add_laplace_noise(0.0, 0.0, 1.0, 0.0))
-  /* b = negative infinity, p yields negative infinity */
-  tt_assert(INT64_MAX ==
-            add_laplace_noise(0.0, 0.0, -1.0, 0.0))
-  /* b = positive NaN (rounded to -Inf), p yields negative infinity,
-   * result is -NaN -> -Inf */
-  tt_assert(INT64_MIN ==
-            add_laplace_noise(0.0, 0.0, -0.0, -0.0))
-  /* b = negative NaN (rounded to -Inf), p yields negative infinity,
-   * result is NaN -> Inf */
-  tt_assert(INT64_MAX ==
-            add_laplace_noise(0.0, 0.0, -0.0, 0.0))
 
  done:
   ;
