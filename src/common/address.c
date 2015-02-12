@@ -1383,17 +1383,24 @@ get_interface_addresses_win32(int severity)
 #define _SIZEOF_ADDR_IFREQ sizeof
 #endif
 
-/** Convert <b>*ifr</b>, an ifreq structure array of size <b>buflen</b>
+/** Convert <b>*buf</b>, an ifreq structure array of size <b>buflen</b>,
  * into smartlist of <b>tor_addr_t</b> structures.
  */
 STATIC smartlist_t *
-ifreq_to_smartlist(char *ifr, size_t buflen)
+ifreq_to_smartlist(char *buf, size_t buflen)
 {
   smartlist_t *result = smartlist_new();
+  char *end = buf + buflen;
 
-  struct ifreq *r = (struct ifreq *)ifr;
+  /* These acrobatics are due to alignment issues which trigger
+   * undefined behaviour traps on OSX. */
+  struct ifreq *r = tor_malloc(IFREQ_SIZE);
 
-  while ((char *)r < (char *)ifr+buflen) {
+  while (buf < end) {
+    /* Copy up to IFREQ_SIZE bytes into the struct ifreq, but don't overrun
+     * buf. */
+    memcpy(r, buf, end - buf < IFREQ_SIZE ? end - buf : IFREQ_SIZE);
+
     const struct sockaddr *sa = &r->ifr_addr;
     tor_addr_t tmp;
     int valid_sa_family = (sa->sa_family == AF_INET ||
@@ -1404,9 +1411,10 @@ ifreq_to_smartlist(char *ifr, size_t buflen)
     if (valid_sa_family && conversion_success)
       smartlist_add(result, tor_memdup(&tmp, sizeof(tmp)));
 
-    r = (struct ifreq *)((char *)r + _SIZEOF_ADDR_IFREQ(*r));
+    buf += _SIZEOF_ADDR_IFREQ(*r);
   }
 
+  tor_free(r);
   return result;
 }
 
