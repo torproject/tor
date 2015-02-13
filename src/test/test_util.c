@@ -4055,11 +4055,11 @@ test_util_round_to_next_multiple_of(void *arg)
   tt_u64_op(round_uint64_to_next_multiple_of(99,7), ==, 105);
   tt_u64_op(round_uint64_to_next_multiple_of(99,9), ==, 99);
 
-  tt_assert(round_uint64_to_next_multiple_of(UINT64_MAX,2) ==
+  tt_u64_op(round_uint64_to_next_multiple_of(UINT64_MAX,2), ==,
             UINT64_MAX-UINT64_MAX%2);
 
-  tt_assert(round_int64_to_next_multiple_of(0,1) == 0);
-  tt_assert(round_int64_to_next_multiple_of(0,7) == 0);
+  tt_i64_op(round_int64_to_next_multiple_of(0,1), ==, 0);
+  tt_i64_op(round_int64_to_next_multiple_of(0,7), ==, 0);
 
   tt_i64_op(round_int64_to_next_multiple_of(99,1), ==, 99);
   tt_i64_op(round_int64_to_next_multiple_of(99,7), ==, 105);
@@ -4073,24 +4073,24 @@ test_util_round_to_next_multiple_of(void *arg)
   tt_i64_op(round_int64_to_next_multiple_of(INT64_MAX,2), ==,
                                             INT64_MAX-INT64_MAX%2);
 
-  tt_assert(round_uint32_to_next_multiple_of(0,1) == 0);
-  tt_assert(round_uint32_to_next_multiple_of(0,7) == 0);
+  tt_int_op(round_uint32_to_next_multiple_of(0,1), ==, 0);
+  tt_int_op(round_uint32_to_next_multiple_of(0,7), ==, 0);
 
-  tt_assert(round_uint32_to_next_multiple_of(99,1) == 99);
-  tt_assert(round_uint32_to_next_multiple_of(99,7) == 105);
-  tt_assert(round_uint32_to_next_multiple_of(99,9) == 99);
+  tt_int_op(round_uint32_to_next_multiple_of(99,1), ==, 99);
+  tt_int_op(round_uint32_to_next_multiple_of(99,7), ==, 105);
+  tt_int_op(round_uint32_to_next_multiple_of(99,9), ==, 99);
 
-  tt_assert(round_uint32_to_next_multiple_of(UINT32_MAX,2) ==
+  tt_int_op(round_uint32_to_next_multiple_of(UINT32_MAX,2), ==,
             UINT32_MAX-UINT32_MAX%2);
 
-  tt_assert(round_to_next_multiple_of(0,1) == 0);
-  tt_assert(round_to_next_multiple_of(0,7) == 0);
+  tt_uint_op(round_to_next_multiple_of(0,1), ==, 0);
+  tt_uint_op(round_to_next_multiple_of(0,7), ==, 0);
 
-  tt_assert(round_to_next_multiple_of(99,1) == 99);
-  tt_assert(round_to_next_multiple_of(99,7) == 105);
-  tt_assert(round_to_next_multiple_of(99,9) == 99);
+  tt_uint_op(round_to_next_multiple_of(99,1), ==, 99);
+  tt_uint_op(round_to_next_multiple_of(99,7), ==, 105);
+  tt_uint_op(round_to_next_multiple_of(99,9), ==, 99);
 
-  tt_assert(round_to_next_multiple_of(UINT_MAX,2) ==
+  tt_uint_op(round_to_next_multiple_of(UINT_MAX,2), ==,
             UINT_MAX-UINT_MAX%2);
  done:
   ;
@@ -4125,12 +4125,12 @@ test_util_laplace(void *arg)
   tt_i64_op(INT64_MIN + 20, ==,
             add_laplace_noise(20, 0.0, delta_f, epsilon));
 
-  tt_assert(-60 == add_laplace_noise(20, 0.1, delta_f, epsilon));
-  tt_assert(-14 == add_laplace_noise(20, 0.25, delta_f, epsilon));
-  tt_assert(20 == add_laplace_noise(20, 0.5, delta_f, epsilon));
-  tt_assert(54 == add_laplace_noise(20, 0.75, delta_f, epsilon));
-  tt_assert(100 == add_laplace_noise(20, 0.9, delta_f, epsilon));
-  tt_assert(215 == add_laplace_noise(20, 0.99, delta_f, epsilon));
+  tt_i64_op(-60, ==, add_laplace_noise(20, 0.1, delta_f, epsilon));
+  tt_i64_op(-14, ==, add_laplace_noise(20, 0.25, delta_f, epsilon));
+  tt_i64_op(20, ==, add_laplace_noise(20, 0.5, delta_f, epsilon));
+  tt_i64_op(54, ==, add_laplace_noise(20, 0.75, delta_f, epsilon));
+  tt_i64_op(100, ==, add_laplace_noise(20, 0.9, delta_f, epsilon));
+  tt_i64_op(215, ==, add_laplace_noise(20, 0.99, delta_f, epsilon));
 
   /* Test extreme values of signal with maximally negative values of noise
    * 1.0000000000000002 is the smallest number > 1
@@ -4143,54 +4143,54 @@ test_util_laplace(void *arg)
    */
   const double noscale_df = 1.0, noscale_eps = 1.0;
 
-  tt_assert(INT64_MIN ==
+  tt_i64_op(INT64_MIN, ==,
             add_laplace_noise(0, 0.0, noscale_df, noscale_eps));
 
   /* is it clipped to INT64_MIN? */
-  tt_assert(INT64_MIN ==
+  tt_i64_op(INT64_MIN, ==,
             add_laplace_noise(-1, 0.0, noscale_df, noscale_eps));
-  tt_assert(INT64_MIN ==
+  tt_i64_op(INT64_MIN, ==,
             add_laplace_noise(INT64_MIN, 0.0,
                               noscale_df, noscale_eps));
   /* ... even when scaled? */
-  tt_assert(INT64_MIN ==
+  tt_i64_op(INT64_MIN, ==,
             add_laplace_noise(0, 0.0, delta_f, epsilon));
-  tt_assert(INT64_MIN ==
+  tt_i64_op(INT64_MIN, ==,
             add_laplace_noise(0, 0.0,
                               DBL_MAX, 1));
-  tt_assert(INT64_MIN ==
+  tt_i64_op(INT64_MIN, ==,
             add_laplace_noise(INT64_MIN, 0.0,
                               DBL_MAX, 1));
 
   /* does it play nice with INT64_MAX? */
-  tt_assert((INT64_MIN + INT64_MAX) ==
+  tt_i64_op((INT64_MIN + INT64_MAX), ==,
             add_laplace_noise(INT64_MAX, 0.0,
                               noscale_df, noscale_eps));
 
   /* do near-zero fractional values work? */
   const double min_dbl_error = 0.0000000000000002;
 
-  tt_assert(-35 ==
+  tt_i64_op(-35, ==,
             add_laplace_noise(0, min_dbl_error,
                               noscale_df, noscale_eps));
-  tt_assert(INT64_MIN ==
+  tt_i64_op(INT64_MIN, ==,
             add_laplace_noise(INT64_MIN, min_dbl_error,
                               noscale_df, noscale_eps));
-  tt_assert((-35 + INT64_MAX) ==
+  tt_i64_op((-35 + INT64_MAX), ==,
             add_laplace_noise(INT64_MAX, min_dbl_error,
                               noscale_df, noscale_eps));
-  tt_assert(INT64_MIN ==
+  tt_i64_op(INT64_MIN, ==,
             add_laplace_noise(0, min_dbl_error,
                               DBL_MAX, 1));
-  tt_assert((INT64_MAX + INT64_MIN) ==
+  tt_i64_op((INT64_MAX + INT64_MIN), ==,
             add_laplace_noise(INT64_MAX, min_dbl_error,
                               DBL_MAX, 1));
-  tt_assert(INT64_MIN ==
+  tt_i64_op(INT64_MIN, ==,
             add_laplace_noise(INT64_MIN, min_dbl_error,
                               DBL_MAX, 1));
 
   /* does it play nice with INT64_MAX? */
-  tt_assert((INT64_MAX - 35) ==
+  tt_i64_op((INT64_MAX - 35), ==,
             add_laplace_noise(INT64_MAX, min_dbl_error,
                               noscale_df, noscale_eps));
 
@@ -4205,31 +4205,31 @@ test_util_laplace(void *arg)
   const double max_dbl_lt_one = 0.9999999999999998;
 
   /* do near-one fractional values work? */
-  tt_assert(35 ==
+  tt_i64_op(35, ==,
             add_laplace_noise(0, max_dbl_lt_one, noscale_df, noscale_eps));
 
   /* is it clipped to INT64_MAX? */
-  tt_assert(INT64_MAX ==
+  tt_i64_op(INT64_MAX, ==,
             add_laplace_noise(INT64_MAX - 35, max_dbl_lt_one,
                               noscale_df, noscale_eps));
-  tt_assert(INT64_MAX ==
+  tt_i64_op(INT64_MAX, ==,
             add_laplace_noise(INT64_MAX - 34, max_dbl_lt_one,
                               noscale_df, noscale_eps));
-  tt_assert(INT64_MAX ==
+  tt_i64_op(INT64_MAX, ==,
             add_laplace_noise(INT64_MAX, max_dbl_lt_one,
                               noscale_df, noscale_eps));
   /* ... even when scaled? */
-  tt_assert(INT64_MAX ==
+  tt_i64_op(INT64_MAX, ==,
             add_laplace_noise(INT64_MAX, max_dbl_lt_one,
                               delta_f, epsilon));
-  tt_assert((INT64_MIN + INT64_MAX) ==
+  tt_i64_op((INT64_MIN + INT64_MAX), ==,
             add_laplace_noise(INT64_MIN, max_dbl_lt_one,
                               DBL_MAX, 1));
-  tt_assert(INT64_MAX ==
+  tt_i64_op(INT64_MAX, ==,
             add_laplace_noise(INT64_MAX, max_dbl_lt_one,
                               DBL_MAX, 1));
   /* does it play nice with INT64_MIN? */
-  tt_assert((INT64_MIN + 35) ==
+  tt_i64_op((INT64_MIN + 35), ==,
             add_laplace_noise(INT64_MIN, max_dbl_lt_one,
                               noscale_df, noscale_eps));
 

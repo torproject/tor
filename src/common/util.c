@@ -546,26 +546,26 @@ sample_laplace_distribution(double mu, double b, double p)
 
   /* This is the "inverse cumulative distribution function" from:
    * http://en.wikipedia.org/wiki/Laplace_distribution */
-  if (p == 0.0) {
+  if (p <= 0.0) {
     /* Avoid taking log(0.0) == -INFINITY, as some processors or compiler
      * options can cause the program to trap. */
     return INT64_MIN;
   }
 
-  result =  mu - b * (p > 0.5 ? 1.0 : -1.0)
-                   * tor_mathlog(1.0 - 2.0 * fabs(p - 0.5));
+  result = mu - b * (p > 0.5 ? 1.0 : -1.0)
+                  * tor_mathlog(1.0 - 2.0 * fabs(p - 0.5));
   if (result >= INT64_MAX)
     return INT64_MAX;
   else if (result <= INT64_MIN)
     return INT64_MIN;
   else
-    return (int64_t) result;
+    return tor_llround(trunc(result));
 }
 
 /** Add random noise between INT64_MIN and INT64_MAX coming from a Laplace
  * distribution with mu = 0 and b = <b>delta_f</b>/<b>epsilon</b> to
  * <b>signal</b> based on the provided <b>random</b> value in [0.0, 1.0[.
- * The epislon value must be between ]0.0, 1.0]. delta_f must be greater
+ * The epsilon value must be between ]0.0, 1.0]. delta_f must be greater
  * than 0. */
 int64_t
 add_laplace_noise(int64_t signal, double random, double delta_f,

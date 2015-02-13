@@ -1,11 +1,8 @@
-  o Minor bugfixes:
-    - Handle edge cases in the laplace functions:
-       * avoid division by zero
-       * avoid taking the log of zero
-       * silence clang type conversion warnings using round and trunc
-       * consistently check for overflow in round_*_to_next_multiple_of
-    - Add tests for laplace edge cases:
-       * check add_laplace_noise with maximal values
-       * check round_*_to_next_multiple_of with additional values
-       * check round_*_to_next_multiple_of with maximal values
-      Related to HS stats in #13192.
+  o Code simplifications and unit tests:
+    - Handle edge cases in the laplace functions: avoid division by zero,
+      avoid taking the log of zero, and silence clang type conversion
+      warnings using round and trunc.  Add unit tests for edge cases with
+      maximal values.
+    - Consistently check for overflow in round_*_to_next_multiple_of
+      functions, and add unit tests with additional and maximal values.
+
