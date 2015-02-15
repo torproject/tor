@@ -1721,6 +1721,7 @@ options_act(const or_options_t *old_options)
                "Worker-related options changed. Rotating workers.");
 
       if (server_mode(options) && !server_mode(old_options)) {
+        cpu_init();
         ip_address_changed(0);
         if (have_completed_a_circuit() || !any_predicted_circuits(time(NULL)))
           inform_testing_reachability();

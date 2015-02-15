@@ -71,7 +71,8 @@ replyqueue_process_cb(evutil_socket_t sock, short events, void *arg)
   replyqueue_process(rq);
 }
 
-/** Initialize the cpuworker subsystem.
+/** Initialize the cpuworker subsystem. It is OK to call this more than once
+ * during Tor's lifetime.
  */
 void
 cpu_init(void)
