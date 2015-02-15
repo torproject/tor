@@ -410,6 +410,7 @@ threadpool_new(int n_threads,
   pool->reply_queue = replyqueue;
 
   if (threadpool_start_threads(pool, n_threads) < 0) {
+    tor_cond_uninit(&pool->condition);
     tor_mutex_uninit(&pool->lock);
     tor_free(pool);
     return NULL;
