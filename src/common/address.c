@@ -1470,18 +1470,21 @@ get_interface_addresses_ioctl(int severity)
 STATIC smartlist_t *
 get_interface_addresses_raw(int severity)
 {
+  smartlist_t *result = NULL;
 #if defined(HAVE_IFADDRS_TO_SMARTLIST)
-  return get_interface_addresses_ifaddrs(severity);
+  if ((result = get_interface_addresses_ifaddrs(severity)))
+    return result;
 #endif
 #if defined(HAVE_IP_ADAPTER_TO_SMARTLIST)
-  return get_interface_addresses_win32(severity);
+  if ((result = get_interface_addresses_win32(severity)))
+    return result;
 #endif
 #if defined(HAVE_IFCONF_TO_SMARTLIST)
-  return get_interface_addresses_ioctl(severity);
-#else
+  if ((result = get_interface_addresses_ioctl(severity)))
+    return result;
+#endif
   (void) severity;
   return NULL;
-#endif
 }
 
 /** Return true iff <b>a</b> is a multicast address.  */
