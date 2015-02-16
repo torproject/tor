@@ -132,7 +132,7 @@ log_heartbeat(time_t now)
 
   circuit_log_ancient_one_hop_circuits(1800);
 
-  if (options && options->BridgeRelay) {
+  if (options->BridgeRelay) {
     char *msg = NULL;
     msg = format_client_stats_heartbeat(now);
     if (msg)

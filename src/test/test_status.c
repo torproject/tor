@@ -240,7 +240,6 @@ NS(test_main)(void *arg)
 
 NS_DECL(double, tls_get_write_overhead_ratio, (void));
 NS_DECL(int, we_are_hibernating, (void));
-NS_DECL(const or_options_t *, get_options, (void));
 NS_DECL(int, public_server_mode, (const or_options_t *options));
 NS_DECL(const routerinfo_t *, router_get_my_routerinfo, (void));
 
@@ -252,7 +251,6 @@ NS(test_main)(void *arg)
 
   NS_MOCK(tls_get_write_overhead_ratio);
   NS_MOCK(we_are_hibernating);
-  NS_MOCK(get_options);
   NS_MOCK(public_server_mode);
   NS_MOCK(router_get_my_routerinfo);
 
@@ -264,7 +262,6 @@ NS(test_main)(void *arg)
   done:
     NS_UNMOCK(tls_get_write_overhead_ratio);
     NS_UNMOCK(we_are_hibernating);
-    NS_UNMOCK(get_options);
     NS_UNMOCK(public_server_mode);
     NS_UNMOCK(router_get_my_routerinfo);
 }
@@ -279,12 +276,6 @@ static int
 NS(we_are_hibernating)(void)
 {
   return 0;
-}
-
-static const or_options_t *
-NS(get_options)(void)
-{
-  return NULL;
 }
 
 static int
@@ -311,7 +302,6 @@ NS(router_get_my_routerinfo)(void)
 
 NS_DECL(double, tls_get_write_overhead_ratio, (void));
 NS_DECL(int, we_are_hibernating, (void));
-NS_DECL(const or_options_t *, get_options, (void));
 NS_DECL(int, public_server_mode, (const or_options_t *options));
 NS_DECL(const routerinfo_t *, router_get_my_routerinfo, (void));
 NS_DECL(const node_t *, node_get_by_id, (const char *identity_digest));
@@ -331,7 +321,6 @@ NS(test_main)(void *arg)
 
   NS_MOCK(tls_get_write_overhead_ratio);
   NS_MOCK(we_are_hibernating);
-  NS_MOCK(get_options);
   NS_MOCK(public_server_mode);
   NS_MOCK(router_get_my_routerinfo);
   NS_MOCK(node_get_by_id);
@@ -353,7 +342,6 @@ NS(test_main)(void *arg)
   done:
     NS_UNMOCK(tls_get_write_overhead_ratio);
     NS_UNMOCK(we_are_hibernating);
-    NS_UNMOCK(get_options);
     NS_UNMOCK(public_server_mode);
     NS_UNMOCK(router_get_my_routerinfo);
     NS_UNMOCK(node_get_by_id);
@@ -372,12 +360,6 @@ static int
 NS(we_are_hibernating)(void)
 {
   return 0;
-}
-
-static const or_options_t *
-NS(get_options)(void)
-{
-  return NULL;
 }
 
 static int
@@ -472,7 +454,6 @@ NS(server_mode)(const or_options_t *options)
 
 NS_DECL(double, tls_get_write_overhead_ratio, (void));
 NS_DECL(int, we_are_hibernating, (void));
-NS_DECL(const or_options_t *, get_options, (void));
 NS_DECL(int, public_server_mode, (const or_options_t *options));
 NS_DECL(long, get_uptime, (void));
 NS_DECL(uint64_t, get_bytes_read, (void));
@@ -489,7 +470,6 @@ NS(test_main)(void *arg)
 
   NS_MOCK(tls_get_write_overhead_ratio);
   NS_MOCK(we_are_hibernating);
-  NS_MOCK(get_options);
   NS_MOCK(public_server_mode);
   NS_MOCK(get_uptime);
   NS_MOCK(get_bytes_read);
@@ -507,7 +487,6 @@ NS(test_main)(void *arg)
   done:
     NS_UNMOCK(tls_get_write_overhead_ratio);
     NS_UNMOCK(we_are_hibernating);
-    NS_UNMOCK(get_options);
     NS_UNMOCK(public_server_mode);
     NS_UNMOCK(get_uptime);
     NS_UNMOCK(get_bytes_read);
@@ -526,12 +505,6 @@ static int
 NS(we_are_hibernating)(void)
 {
   return 1;
-}
-
-static const or_options_t *
-NS(get_options)(void)
-{
-  return NULL;
 }
 
 static int
@@ -599,7 +572,6 @@ NS(server_mode)(const or_options_t *options)
 
 NS_DECL(double, tls_get_write_overhead_ratio, (void));
 NS_DECL(int, we_are_hibernating, (void));
-NS_DECL(const or_options_t *, get_options, (void));
 NS_DECL(int, public_server_mode, (const or_options_t *options));
 NS_DECL(long, get_uptime, (void));
 NS_DECL(uint64_t, get_bytes_read, (void));
@@ -622,7 +594,6 @@ NS(test_main)(void *arg)
 
   NS_MOCK(tls_get_write_overhead_ratio);
   NS_MOCK(we_are_hibernating);
-  NS_MOCK(get_options);
   NS_MOCK(public_server_mode);
   NS_MOCK(get_uptime);
   NS_MOCK(get_bytes_read);
@@ -644,7 +615,6 @@ NS(test_main)(void *arg)
   done:
     NS_UNMOCK(tls_get_write_overhead_ratio);
     NS_UNMOCK(we_are_hibernating);
-    NS_UNMOCK(get_options);
     NS_UNMOCK(public_server_mode);
     NS_UNMOCK(get_uptime);
     NS_UNMOCK(get_bytes_read);
@@ -667,15 +637,6 @@ static int
 NS(we_are_hibernating)(void)
 {
   return 0;
-}
-
-static const or_options_t *
-NS(get_options)(void)
-{
-  NS(mock_options) = tor_malloc_zero(sizeof(or_options_t));
-  NS(mock_options)->AccountingMax = 0;
-
-  return NS(mock_options);
 }
 
 static int
@@ -792,7 +753,6 @@ NS(get_or_state)(void)
 
 NS_DECL(double, tls_get_write_overhead_ratio, (void));
 NS_DECL(int, we_are_hibernating, (void));
-NS_DECL(const or_options_t *, get_options, (void));
 NS_DECL(int, public_server_mode, (const or_options_t *options));
 NS_DECL(long, get_uptime, (void));
 NS_DECL(uint64_t, get_bytes_read, (void));
@@ -810,7 +770,6 @@ NS(test_main)(void *arg)
 
   NS_MOCK(tls_get_write_overhead_ratio);
   NS_MOCK(we_are_hibernating);
-  NS_MOCK(get_options);
   NS_MOCK(public_server_mode);
   NS_MOCK(get_uptime);
   NS_MOCK(get_bytes_read);
@@ -833,7 +792,6 @@ NS(test_main)(void *arg)
     stats_n_data_cells_packaged = 0;
     NS_UNMOCK(tls_get_write_overhead_ratio);
     NS_UNMOCK(we_are_hibernating);
-    NS_UNMOCK(get_options);
     NS_UNMOCK(public_server_mode);
     NS_UNMOCK(get_uptime);
     NS_UNMOCK(get_bytes_read);
@@ -853,12 +811,6 @@ static int
 NS(we_are_hibernating)(void)
 {
   return 0;
-}
-
-static const or_options_t *
-NS(get_options)(void)
-{
-  return NULL;
 }
 
 static int
@@ -951,7 +903,6 @@ NS(accounting_is_enabled)(const or_options_t *options)
 
 NS_DECL(double, tls_get_write_overhead_ratio, (void));
 NS_DECL(int, we_are_hibernating, (void));
-NS_DECL(const or_options_t *, get_options, (void));
 NS_DECL(int, public_server_mode, (const or_options_t *options));
 NS_DECL(long, get_uptime, (void));
 NS_DECL(uint64_t, get_bytes_read, (void));
@@ -969,7 +920,6 @@ NS(test_main)(void *arg)
 
   NS_MOCK(tls_get_write_overhead_ratio);
   NS_MOCK(we_are_hibernating);
-  NS_MOCK(get_options);
   NS_MOCK(public_server_mode);
   NS_MOCK(get_uptime);
   NS_MOCK(get_bytes_read);
@@ -989,7 +939,6 @@ NS(test_main)(void *arg)
   done:
     NS_UNMOCK(tls_get_write_overhead_ratio);
     NS_UNMOCK(we_are_hibernating);
-    NS_UNMOCK(get_options);
     NS_UNMOCK(public_server_mode);
     NS_UNMOCK(get_uptime);
     NS_UNMOCK(get_bytes_read);
@@ -1009,12 +958,6 @@ static int
 NS(we_are_hibernating)(void)
 {
   return 0;
-}
-
-static const or_options_t *
-NS(get_options)(void)
-{
-  return NULL;
 }
 
 static int

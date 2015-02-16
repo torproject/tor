@@ -371,12 +371,12 @@ threadpool_start_threads(threadpool_t *pool, int n)
   while (pool->n_threads < n) {
     void *state = pool->new_thread_state_fn(pool->new_thread_state_arg);
     workerthread_t *thr = workerthread_new(state, pool, pool->reply_queue);
-    thr->index = pool->n_threads;
 
     if (!thr) {
       tor_mutex_release(&pool->lock);
       return -1;
     }
+    thr->index = pool->n_threads;
     pool->threads[pool->n_threads++] = thr;
   }
   tor_mutex_release(&pool->lock);

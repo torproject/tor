@@ -359,8 +359,7 @@ cpuworker_onion_handshake_replyfn(void *work_)
     log_debug(LD_OR,
               "decoding onionskin failed. "
               "(Old key or bad software.) Closing.");
-    if (circ)
-      circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
     goto done_processing;
   }
 
