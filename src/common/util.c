@@ -554,12 +554,8 @@ sample_laplace_distribution(double mu, double b, double p)
 
   result = mu - b * (p > 0.5 ? 1.0 : -1.0)
                   * tor_mathlog(1.0 - 2.0 * fabs(p - 0.5));
-  if (result >= INT64_MAX)
-    return INT64_MAX;
-  else if (result <= INT64_MIN)
-    return INT64_MIN;
-  else
-    return tor_llround(trunc(result));
+
+  return cast_double_to_int64(result);
 }
 
 /** Add random noise between INT64_MIN and INT64_MAX coming from a Laplace
@@ -5500,3 +5496,36 @@ tor_weak_random_range(tor_weak_rng_t *rng, int32_t top)
   return result;
 }
 
+/** Cast a given double value to a int64_t. Return 0 if number is NaN.
+ * Returns either INT64_MIN or INT64_MAX if number is outside of the int64_t
+ * range. */
+int64_t cast_double_to_int64(double number)
+{
+  int exp;
+
+  /* NaN is a special case that can't be used with the logic below. */
+  if (isnan(number)) {
+    return 0;
+  }
+
+  /* Time to validate if result can overflows a int64_t value. Fun with
+   * float! Find that exponent exp such that
+   *    number == x * 2^exp
+   * for some x with abs(x) in [0.5, 1.0). Note that this implies that the
+   * magnitude of number is strictly less than 2^exp.
+   *
+   * If number is infinite, the call to frexp is legal but the contents of
+   * exp are unspecified. */
+  frexp(number, &exp);
+
+  /* If the magnitude of number is strictly less than 2^63, the truncated
+   * version of number is guaranteed to be representable. The only
+   * representable integer for which this is not the case is INT64_MIN, but
+   * it is covered by the logic below. */
+  if (isfinite(number) && exp <= 63) {
+    return number;
+  }
+
+  /* Handle infinities and finite numbers with magnitude >= 2^63. */
+  return signbit(number) ? INT64_MIN : INT64_MAX;
+}
