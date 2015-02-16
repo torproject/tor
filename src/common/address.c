@@ -1448,7 +1448,6 @@ get_interface_addresses_ioctl(int severity)
 
     if (ioctl(fd, SIOCGIFCONF, &ifc) < 0) {
       tor_log(severity, LD_NET, "ioctl failed: %s", strerror(errno));
-      close(fd);
       goto done;
     }
     /* Ensure we have least IFREQ_SIZE bytes unused at the end. Otherwise, we
@@ -1457,7 +1456,8 @@ get_interface_addresses_ioctl(int severity)
   result = ifreq_to_smartlist(ifc.ifc_buf, ifc.ifc_len);
 
  done:
-  close(fd);
+  if (fd >= 0)
+    close(fd);
   tor_free(ifc.ifc_buf);
   return result;
 }
