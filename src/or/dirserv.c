@@ -3329,10 +3329,7 @@ validate_recommended_package_line(const char *line)
     cp = end_of_word + 1;
   }
 
-  if (n_entries == 0)
-    return 0;
-
-  return 1;
+  return (n_entries == 0) ? 0 : 1;
 }
 
 /** Release all storage used by the directory server. */
