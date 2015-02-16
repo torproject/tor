@@ -6160,6 +6160,7 @@ parse_port_config(smartlist_t *out,
  err:
   SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
   smartlist_free(elts);
+  tor_free(unix_socket_path);
   return retval;
 }
 
