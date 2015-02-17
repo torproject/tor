@@ -150,7 +150,8 @@ populate_live_entry_guards_test_helper(int num_needed)
   } SMARTLIST_FOREACH_END(node);
 
   /* Make sure the nodes were added as entry guards. */
-  tt_int_op(smartlist_len(all_entry_guards), OP_EQ, HELPER_NUMBER_OF_DESCRIPTORS);
+  tt_int_op(smartlist_len(all_entry_guards), OP_EQ,
+            HELPER_NUMBER_OF_DESCRIPTORS);
 
   /* Ensure that all the possible entry guards are enough to satisfy us. */
   tt_int_op(smartlist_len(all_entry_guards), OP_GE, num_needed);
@@ -603,7 +604,8 @@ test_entry_is_live(void *arg)
   } SMARTLIST_FOREACH_END(node);
 
   /* Make sure the nodes were added as entry guards. */
-  tt_int_op(smartlist_len(all_entry_guards), OP_EQ, HELPER_NUMBER_OF_DESCRIPTORS);
+  tt_int_op(smartlist_len(all_entry_guards), OP_EQ,
+            HELPER_NUMBER_OF_DESCRIPTORS);
 
   /* Now get a random test entry that we will use for this unit test. */
   which_node = 3;  /* (chosen by fair dice roll) */
