@@ -1,6 +1,10 @@
 Changes in version 0.2.6.3-alpha - 2015-02-??
   blah blah blah
 
+  o Deprecated versions:
+    - Tor relays older than 0.2.4.18-rc are no longer allowed to
+      advertise themselves on the network. Closes ticket 13555.
+
   o Major features (security):
     - Implementation of an AF_UNIX socket option to implement a SOCKS
       proxy reachable by Unix Domain Socket. This allows client
@@ -54,10 +58,6 @@ Changes in version 0.2.6.3-alpha - 2015-02-??
       passing through that guard. Previously we would close all the
       circuits. Fixes bug 9819; bugfix on 0.2.1.1-alpha. Reported
       by "skruffy".
-
-  o Deprecated versions:
-    - Tor relays older than 0.2.4.18-rc are no longer allowed to advertise
-      themselves on the network. Closes ticket 13555.
 
   o Minor features (authorities, testing):
     - Create TestingDirAuthVoteHSDir like TestingDirAuthVoteExit/Guard.
@@ -162,28 +162,24 @@ Changes in version 0.2.6.3-alpha - 2015-02-??
       by "nickm".
     - Drop the MIN_REND_INITIAL_POST_DELAY on a testing network to 5
       seconds, but keep the default at 30 seconds. This reduces HS
-      bootstrap time to around 25 seconds. Change src/test/test-
-      network.sh default time to match. Closes ticket 13401. Patch
-      by "teor".
+      bootstrap time to around 25 seconds. Also, change the default time
+      in test-network.sh to match. Closes ticket 13401. Patch by "teor".
 
   o Minor features (tor2web mode):
-    - Introduce the config option Tor2webRendezvousPoints, which
-      allows clients in Tor2webMode to select a specific Rendezvous
-      Point to be used in HS circuits. This might allow better
-      performance for Tor2Web nodes. Implements ticket #12844.
+    - Introduce the config option Tor2webRendezvousPoints, which allows
+      clients in Tor2webMode to select a specific Rendezvous Point to be
+      used in HS circuits. This might allow better performance for
+      Tor2Web nodes. Implements ticket #12844.
+
+  o Minor bugfix (oom resistance):
+    - Make an educated guess about how much memory the system has when
+      our detection functionality fails on some operating system. Fixes
+      bug 14802; bugfix on 0.2.5.4-alpha.
 
   o Minor bugfixes (automapping):
     - Prevent changes to other options from removing the wildcard value
       "." from "AutomapHostsSuffixes". Fixes bug 12509; bugfix
       on 0.2.0.1-alpha.
-
-  o Minor bugfixes (build):
-    - Avoid warnings when building with systemd 209 or later. Fixes bug
-      14072; bugfix on 0.2.6.2-alpha. Patch from "h.venev".
-    - Remove the --disable-threads configure option again. It was accidentally
-      partially re-introduced in 29ac883606d6d.
-      Fixes bug 14819; bugfix on 0.2.6.2-alpha.
-
 
   o Minor bugfixes (client DNS):
     - Report the correct cached DNS expiration times. Previously, we
@@ -225,19 +221,21 @@ Changes in version 0.2.6.3-alpha - 2015-02-??
       14001; bugfix on 0.2.1.2-alpha.
     - Compile correctly with (unreleased) OpenSSL 1.1.0 headers.
       Addresses ticket 14188.
-    - Remove the --disable-threads configure option again. It was accidentally
-      partially re-introduced in 29ac883606d6d5ebfdcc2efceb2b4b60ee6a8916.
-      Fixes bug 14819; bugfix on 0.2.6.2-alpha.
+    - Avoid warnings when building with systemd 209 or later. Fixes bug
+      14072; bugfix on 0.2.6.2-alpha. Patch from "h.venev".
+    - Remove the --disable-threads configure option again. It was
+      accidentally partially reintroduced in 29ac883606d6d. Fixes bug
+      14819; bugfix on 0.2.6.2-alpha.
 
   o Minor bugfixes (controller):
     - Add a code for the END_CIRC_REASON_IP_NOW_REDUNDANT circuit close
       reason. Fixes bug 14207; bugfix on 0.2.6.2-alpha.
     - Avoid crashing on a malformed EXTENDCIRCUIT command. Fixes bug
       14116; bugfix on 0.2.2.9-alpha.
-    - On the control port, the "entry-guards" command was reporting an "up"
-      status for a relay that was actually down. This fixes the check if
-      "unreachable_since" is set and if so reports the "down" status. Fixes
-      bug 14184; bugfix on 0.1.2.2-alpha.
+    - On the control port, the "entry-guards" command was reporting an
+      "up" status for a relay that was actually down. This fixes the
+      check if "unreachable_since" is set and if so reports the "down"
+      status. Fixes bug 14184; bugfix on 0.1.2.2-alpha.
 
   o Minor bugfixes (directory authority):
     - Allow directory authorities to fetch more data from one another if
@@ -281,11 +279,6 @@ Changes in version 0.2.6.3-alpha - 2015-02-??
     - Don't log messages to stdout twice when starting up. Fixes bug
       13993; bugfix on 0.2.6.1-alpha.
 
-  o Minor bugfix (oom resistance):
-    - Make an educated guess about how much memory the system has when our
-      detection functionality fails on some operating system.  Fixes bug 14802;
-      bugfix on 0.2.5.4-alpha.
-
   o Minor bugfixes (parsing):
     - Stop accepting milliseconds (or other junk) at the end of
       descriptor publication times. Fixes bug 9286; bugfix on 0.0.2pre25.
@@ -297,15 +290,14 @@ Changes in version 0.2.6.3-alpha - 2015-02-??
     - Fix the ioctl()-based network interface lookup code so that it
       will work on systems that have variable-length struct ifreq, for
       example Mac OS X.
-    - Fix scheduler compilation on targets where char is unsigned.
-      Fixes bug 14764; bugfix on 0.2.6.2-alpha. Reported by Christian
-      Kujau.
+    - Fix scheduler compilation on targets where char is unsigned. Fixes
+      bug 14764; bugfix on 0.2.6.2-alpha. Reported by Christian Kujau.
 
   o Minor bugfixes (sandbox):
     - Allow Glibc fatal errors to be sent to stderr before Tor exits.
-      Previously, glibc would try to write them to /dev/tty, and the sandbox
-      would trap the call and make Tor exit prematurely. Fixes bug 14759;
-      bugfix on 0.2.5.1-alpha.
+      Previously, glibc would try to write them to /dev/tty, and the
+      sandbox would trap the call and make Tor exit prematurely. Fixes
+      bug 14759; bugfix on 0.2.5.1-alpha.
 
   o Minor bugfixes (shutdown):
     - When shutting down, always call event_del() on lingering read or
@@ -334,13 +326,14 @@ Changes in version 0.2.6.3-alpha - 2015-02-??
       support. Fixes bug 14350; bugfix on 0.2.6.2-alpha. Patch
       from "blueness".
 
-  o Minor bugfixes (transparent proxy)
-    - Use getsockname, not getsockopt, to retrieve the address for
-      a TPROXY-redirected connection. Fixes bug 13796; bugfix on 0.2.5.2-alpha.
-
   o Minor bugfixes (TLS):
     - Check more thoroughly throughout the TLS code for possible
       unlogged TLS errors. Possible diagnostic or fix for bug 13319.
+
+  o Minor bugfixes (transparent proxy):
+    - Use getsockname, not getsockopt, to retrieve the address for a
+      TPROXY-redirected connection. Fixes bug 13796; bugfix
+      on 0.2.5.2-alpha.
 
   o Code simplification and refactoring:
     - Move fields related to isolating and configuring client ports into
@@ -375,7 +368,7 @@ Changes in version 0.2.6.3-alpha - 2015-02-??
       longer silently accepted as an alias for 'ExitNodes'.
     - The --enable-mempool and --enable-buf-freelists options, which
       were originally created to work around bad malloc implementations,
-      no longer exist.  They were off-by-default in 0.2.5.  Closes
+      no longer exist. They were off-by-default in 0.2.5. Closes
       ticket 14848.
 
   o Testing:
