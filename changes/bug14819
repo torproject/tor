@@ -1,5 +1,5 @@
   o Minor bugfixes
     - Remove the --disable-threads configure option again. It was accidentally
       partially re-introduced in 29ac883606d6d5ebfdcc2efceb2b4b60ee6a8916.
-      Fixes bug 13819; bugfix on 0.2.6.2-alpha.
+      Fixes bug 14819; bugfix on 0.2.6.2-alpha.
 

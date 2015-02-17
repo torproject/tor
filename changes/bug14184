@@ -1,5 +1,5 @@
   o Minor bugfixes:
     - On the control port, the "entry-guards" command was reporting an "up"
-      status for a relay that was actually down. This fix check if
+      status for a relay that was actually down. This fixes the check if
       "unreachable_since" is set and if so reports the "down" status. Fixes
-      bug 14184.
+      bug 14184; bugfix on 0.1.2.2-alpha.
