@@ -1545,7 +1545,7 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
           do {
             const node_t *ri2;
             if (tor_memeq(hop->extend_info->identity_digest,
-                        info->identity_digest, DIGEST_LEN))
+                          info->identity_digest, DIGEST_LEN))
               goto next;
             if (ri1 &&
                 (ri2 = node_get_by_id(hop->extend_info->identity_digest))
