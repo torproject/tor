@@ -1354,9 +1354,10 @@ get_dir_info_status_string(void)
 }
 
 /** Iterate over the servers listed in <b>consensus</b>, and count how many of
- * them seem like ones we'd use, and how many of <em>those</em> we have
- * descriptors for.  Store the former in *<b>num_usable</b> and the latter in
- * *<b>num_present</b>.
+ * them seem like ones we'd use (store this in *<b>num_usable</b>), and how
+ * many of <em>those</em> we have descriptors for (store this in
+ * *<b>num_present</b>).
+ *
  * If <b>in_set</b> is non-NULL, only consider those routers in <b>in_set</b>.
  * If <b>exit_only</b> is USABLE_DESCRIPTOR_EXIT_ONLY, only consider nodes
  * with the Exit flag.
@@ -1409,10 +1410,11 @@ count_usable_descriptors(int *num_present, int *num_usable,
 }
 
 /** Return an estimate of which fraction of usable paths through the Tor
- * network we have available for use.
- * Count how many routers seem like ones we'd use, and how many of
- * <em>those</em> we have descriptors for.  Store the former in
- * *<b>num_usable_out</b> and the latter in *<b>num_present_out</b>.
+ * network we have available for use.  Count how many routers seem like ones
+ * we'd use (store this in *<b>num_usable_out</b>), and how many of
+ * <em>those</em> we have descriptors for (store this in
+ * *<b>num_present_out</b>.)
+ *
  * If **<b>status_out</b> is present, allocate a new string and print the
  * available percentages of guard, middle, and exit nodes to it, noting
  * whether there are exits in the consensus.
@@ -1475,7 +1477,7 @@ compute_frac_paths_available(const networkstatus_t *consensus,
    * building exit paths */
   /* Update our understanding of whether the consensus has exits */
   consensus_path_type_t old_have_consensus_path = have_consensus_path;
-  have_consensus_path = ((np > 0) ?
+  have_consensus_path = ((nu > 0) ?
                          CONSENSUS_PATH_EXIT :
                          CONSENSUS_PATH_INTERNAL);
 
@@ -1677,7 +1679,10 @@ update_router_have_minimum_dir_info(void)
                      "can only build %d%% of likely paths. (We have %s.)",
                      using_md?"micro":"", num_present, num_usable,
                      (int)(paths*100), status);
-        log_warn(LD_NET, "%s%s", dir_info_status, suppression_msg);
+        if (!should_delay_dir_fetches(options, NULL) &&
+            !directory_too_idle_to_fetch_descriptors(options, now)) {
+          log_warn(LD_NET, "%s%s", dir_info_status, suppression_msg);
+        }
         tor_free(suppression_msg);
       }
       tor_free(status);
