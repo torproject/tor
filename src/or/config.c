@@ -3190,29 +3190,34 @@ options_validate(or_options_t *old_options, or_options_t *options,
     options->RelayBandwidthRate = options->RelayBandwidthBurst;
 
   if (server_mode(options)) {
-    if (options->BandwidthRate < ROUTER_REQUIRED_MIN_BANDWIDTH) {
+    const unsigned required_min_bw =
+      public_server_mode(options) ?
+       RELAY_REQUIRED_MIN_BANDWIDTH : BRIDGE_REQUIRED_MIN_BANDWIDTH;
+    const char * const optbridge =
+      public_server_mode(options) ? "" : "bridge ";
+    if (options->BandwidthRate < required_min_bw) {
       tor_asprintf(msg,
                        "BandwidthRate is set to %d bytes/second. "
-                       "For servers, it must be at least %d.",
-                       (int)options->BandwidthRate,
-                       ROUTER_REQUIRED_MIN_BANDWIDTH);
+                       "For %sservers, it must be at least %u.",
+                       (int)options->BandwidthRate, optbridge,
+                       required_min_bw);
       return -1;
     } else if (options->MaxAdvertisedBandwidth <
-               ROUTER_REQUIRED_MIN_BANDWIDTH/2) {
+               required_min_bw/2) {
       tor_asprintf(msg,
                        "MaxAdvertisedBandwidth is set to %d bytes/second. "
-                       "For servers, it must be at least %d.",
-                       (int)options->MaxAdvertisedBandwidth,
-                       ROUTER_REQUIRED_MIN_BANDWIDTH/2);
+                       "For %sservers, it must be at least %u.",
+                       (int)options->MaxAdvertisedBandwidth, optbridge,
+                       required_min_bw/2);
       return -1;
     }
     if (options->RelayBandwidthRate &&
-      options->RelayBandwidthRate < ROUTER_REQUIRED_MIN_BANDWIDTH) {
+      options->RelayBandwidthRate < required_min_bw) {
       tor_asprintf(msg,
                        "RelayBandwidthRate is set to %d bytes/second. "
-                       "For servers, it must be at least %d.",
-                       (int)options->RelayBandwidthRate,
-                       ROUTER_REQUIRED_MIN_BANDWIDTH);
+                       "For %sservers, it must be at least %u.",
+                       (int)options->RelayBandwidthRate, optbridge,
+                       required_min_bw);
       return -1;
     }
   }

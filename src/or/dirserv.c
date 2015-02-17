@@ -1427,7 +1427,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl,
     /* The 12.5th percentile bandwidth is fast. */
     fast_bandwidth_kb = find_nth_uint32(bandwidths_kb, n_active, n_active/8);
     /* (Now bandwidths is sorted.) */
-    if (fast_bandwidth_kb < ROUTER_REQUIRED_MIN_BANDWIDTH/(2 * 1000))
+    if (fast_bandwidth_kb < RELAY_REQUIRED_MIN_BANDWIDTH/(2 * 1000))
       fast_bandwidth_kb = bandwidths_kb[n_active/4];
     guard_bandwidth_including_exits_kb =
       third_quartile_uint32(bandwidths_kb, n_active);
