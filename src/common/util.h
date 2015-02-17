@@ -209,7 +209,6 @@ int strcasecmpstart(const char *s1, const char *s2) ATTR_NONNULL((1,2));
 int strcmpend(const char *s1, const char *s2) ATTR_NONNULL((1,2));
 int strcasecmpend(const char *s1, const char *s2) ATTR_NONNULL((1,2));
 int fast_memcmpstart(const void *mem, size_t memlen, const char *prefix);
-void tor_strclear(char *s);
 
 void tor_strstrip(char *s, const char *strip) ATTR_NONNULL((1,2));
 long tor_parse_long(const char *s, int base, long min,
