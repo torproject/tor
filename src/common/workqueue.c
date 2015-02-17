@@ -363,10 +363,14 @@ threadpool_queue_update(threadpool_t *pool,
 static int
 threadpool_start_threads(threadpool_t *pool, int n)
 {
+  if (n < 0)
+    return -1;
+
   tor_mutex_acquire(&pool->lock);
 
   if (pool->n_threads < n)
-    pool->threads = tor_realloc(pool->threads, sizeof(workerthread_t*)*n);
+    pool->threads = tor_reallocarray(pool->threads,
+                                     sizeof(workerthread_t*), n);
 
   while (pool->n_threads < n) {
     void *state = pool->new_thread_state_fn(pool->new_thread_state_arg);
