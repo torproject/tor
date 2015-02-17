@@ -46,12 +46,7 @@ if [ -s "$DATA_DIR"/keys/secret_id_key ] && [ -s "$DATA_DIR"/keys/secret_onion_k
   exit 3
 else
   echo "Generating initial tor keys"
-  $TOR --DataDirectory "$DATA_DIR" --PidFile "$DATA_DIR"/pid &
-  TOR_PID=$!
-  # generate SIGTERM, hopefully after the keys have been regenerated
-  sleep 5
-  kill $TOR_PID
-  wait $TOR_PID
+  $TOR --DataDirectory "$DATA_DIR"  --list-fingerprint
 
   # tor must successfully generate non-zero-length key files
   if [ -s "$DATA_DIR"/keys/secret_id_key ] && [ -s "$DATA_DIR"/keys/secret_onion_key ] &&
@@ -88,12 +83,7 @@ if [ "$1" = "-z" ]; then
 fi
 
 echo "Running tor again to check if it $FILE_DESC keys"
-$TOR --DataDirectory "$DATA_DIR" --PidFile "$DATA_DIR"/pid &
-TOR_PID=$!
-# generate SIGTERM, hopefully after the keys have been regenerated
-sleep 5
-kill $TOR_PID
-wait $TOR_PID
+$TOR --DataDirectory "$DATA_DIR" --list-fingerprint
 
 #ls -lh "$DATA_DIR"/keys/ || exit 3
 
