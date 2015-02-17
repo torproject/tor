@@ -85,8 +85,9 @@ LIBTOR_A_SOURCES = \
 src_or_libtor_a_SOURCES = $(LIBTOR_A_SOURCES)
 src_or_libtor_testing_a_SOURCES = $(LIBTOR_A_SOURCES)
 
-#libtor_a_LIBADD = ../common/libor.a ../common/libor-crypto.a \
-#	../common/libor-event.a
+#libtor_a_LIBADD = $(top_builddir)/common/libor.a \
+#    $(top_builddir)/common/libor-crypto.a \
+#    $(top_builddir)/common/libor-event.a
 
 
 src_or_tor_SOURCES = src/or/tor_main.c
@@ -123,9 +124,9 @@ src_or_tor_cov_LDADD = src/or/libtor-testing.a src/common/libor-testing.a \
 	src/common/libor-event-testing.a \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ @TOR_OPENSSL_LIBS@ \
 	@TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@ @TOR_SYSTEMD_LIBS@
-TESTING_TOR_BINARY = ./src/or/tor-cov
+TESTING_TOR_BINARY = $(top_builddir)/src/or/tor-cov
 else
-TESTING_TOR_BINARY = ./src/or/tor
+TESTING_TOR_BINARY = $(top_builddir)/src/or/tor
 endif
 
 ORHEADERS = \

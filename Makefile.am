@@ -20,6 +20,7 @@ DISTCLEANFILES=
 bin_SCRIPTS=
 AM_CPPFLAGS=
 AM_CFLAGS = @TOR_SYSTEMD_CFLAGS@
+SHELL = @SHELL@
 include src/include.am
 include doc/include.am
 include contrib/include.am
@@ -64,12 +65,12 @@ doxygen:
 	doxygen && cd doc/doxygen/latex && make
 
 test: all
-	./src/test/test
+	$(top_builddir)/src/test/test
 
 # Note that test-network requires a copy of Chutney in $CHUTNEY_PATH.
 # Chutney can be cloned from https://git.torproject.org/chutney.git .
 test-network: all
-	./src/test/test-network.sh
+	$(top_srcdir)/src/test/test-network.sh
 
 test-stem: $(TESTING_TOR_BINARY)
 	@if test -d "$$STEM_SOURCE_DIR"; then \
@@ -81,35 +82,35 @@ test-stem: $(TESTING_TOR_BINARY)
 
 
 reset-gcov:
-	rm -f src/*/*.gcda src/*/*/*.gcda
+	rm -f $(top_builddir)/src/*/*.gcda $(top_builddir)/src/*/*/*.gcda
 
-HTML_COVER_DIR=./coverage_html
+HTML_COVER_DIR=$(top_builddir)/coverage_html
 coverage-html: all
 	test -e "`which lcov`" || (echo "lcov must be installed. See <http://ltp.sourceforge.net/coverage/lcov.php>." && false)
-	test -d "$(HTML_COVER_DIR)" || mkdir -p "$(HTML_COVER_DIR)"
-	lcov --rc lcov_branch_coverage=1 --directory ./src --zerocounters
+	test -d "$(HTML_COVER_DIR)" || $(MKDIR_P) "$(HTML_COVER_DIR)"
+	lcov --rc lcov_branch_coverage=1 --directory $(top_builddir)/src --zerocounters
 	$(MAKE) reset-gcov
 	$(MAKE) check
-	lcov --capture --rc lcov_branch_coverage=1 --no-external --directory . --output-file "$(HTML_COVER_DIR)/lcov.tmp"
+	lcov --capture --rc lcov_branch_coverage=1 --no-external --directory $(top_builddir) --base-directory $(top_srcdir) --output-file "$(HTML_COVER_DIR)/lcov.tmp"
 	lcov --remove "$(HTML_COVER_DIR)/lcov.tmp" --rc lcov_branch_coverage=1 'test/*' 'ext/tinytest*' '/usr/*' --output-file "$(HTML_COVER_DIR)/lcov.info"
 	genhtml --branch-coverage -o "$(HTML_COVER_DIR)" "$(HTML_COVER_DIR)/lcov.info"
 
 # Avoid strlcpy.c, strlcat.c, aes.c, OpenBSD_malloc_Linux.c, sha256.c,
 # eventdns.[hc], tinytest*.[ch]
 check-spaces:
-	./scripts/maint/checkSpace.pl -C              \
-		src/common/*.[ch]		      \
-		src/or/*.[ch]			      \
-		src/test/*.[ch]			      \
-		src/tools/*.[ch]		      \
-		src/tools/tor-fw-helper/*.[ch]
+	$(top_srcdir)/scripts/maint/checkSpace.pl -C \
+		$(top_srcdir)/src/common/*.[ch] \
+		$(top_srcdir)/src/or/*.[ch] \
+		$(top_srcdir)/src/test/*.[ch] \
+		$(top_srcdir)/src/tools/*.[ch] \
+		$(top_srcdir)/src/tools/tor-fw-helper/*.[ch]
 
 check-docs:
-	./scripts/maint/checkOptionDocs.pl
+	$(top_srcdir)/scripts/maint/checkOptionDocs.pl
 
 check-logs:
-	./scripts/maint/checkLogs.pl                  \
-		src/*/*.[ch] | sort -n
+	$(top_srcdir)/scripts/maint/checkLogs.pl \
+		$(top_srcdir)/src/*/*.[ch] | sort -n
 
 .PHONY: check-changes
 check-changes:
@@ -125,4 +126,6 @@ version:
 	fi
 
 mostlyclean-local:
-	rm -f src/*/*.gc{da,no} src/*/*/*.gc{da,no}
+	rm -f $(top_builddir)/src/*/*.gc{da,no} $(top_builddir)/src/*/*/*.gc{da,no}
+	rm -rf $(HTML_COVER_DIR)
+	rm -rf $(top_builddir)/doc/doxygen

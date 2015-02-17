@@ -140,9 +140,9 @@ src_test_test_ntor_cl_AM_CPPFLAGS =	       \
 NTOR_TEST_DEPS=src/test/test-ntor-cl
 
 if COVERAGE_ENABLED
-CMDLINE_TEST_TOR = ./src/or/tor-cov
+CMDLINE_TEST_TOR = $(top_builddir)/src/or/tor-cov
 else
-CMDLINE_TEST_TOR = ./src/or/tor
+CMDLINE_TEST_TOR = $(top_builddir)/src/or/tor
 endif
 
 noinst_PROGRAMS += src/test/test-bt-cl
@@ -158,10 +158,10 @@ check-local: $(NTOR_TEST_DEPS) $(CMDLINE_TEST_TOR)
 if USEPYTHON
 	$(PYTHON) $(top_srcdir)/src/test/ntor_ref.py test-tor
 	$(PYTHON) $(top_srcdir)/src/test/ntor_ref.py self-test
-	./src/test/test-bt-cl assert | $(PYTHON) $(top_srcdir)/src/test/bt_test.py
-	./src/test/test-bt-cl crash | $(PYTHON) $(top_srcdir)/src/test/bt_test.py
+	$(top_builddir)/src/test/test-bt-cl assert | $(PYTHON) $(top_srcdir)/src/test/bt_test.py
+	$(top_builddir)/src/test/test-bt-cl crash | $(PYTHON) $(top_srcdir)/src/test/bt_test.py
 endif
-	$(top_srcdir)/src/test/zero_length_keys.sh
+	$(SHELL) $(top_srcdir)/src/test/zero_length_keys.sh
 
 EXTRA_DIST += \
 	src/test/bt_test.py \
