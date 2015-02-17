@@ -1,5 +1,0 @@
-  o Minor features:
-    - Introduce the config option Tor2webRendezvousPoints, which
-      allows clients in Tor2webMode to select a specific Rendezvous
-      Point to be used in HS circuits. This might allow better
-      performance for Tor2Web nodes. Implements ticket #12844.

@@ -1,4 +1,0 @@
-  o Minor bugfixes (portability):
-    - Fix scheduler compilation on targets where char is unsigned.
-      Fixes bug 14764; bugfix on 0.2.6.2-alpha. Reported by Christian
-      Kujau.

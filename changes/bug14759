@@ -1,6 +1,0 @@
-  o Minor bugfixes (sandbox):
-    - Allow Glibc fatal errors to be sent to stderr before Tor exits.
-      Previously, glibc would try to write them to /dev/tty, and the sandbox
-      would trap the call and make Tor exit prematurely. Fixes bug 14759;
-      bugfix on 0.2.5.1-alpha.
-

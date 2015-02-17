@@ -1,3 +1,0 @@
-  o Deprecated versions:
-    - Tor relays older than 0.2.4.18-rc are no longer allowed to advertise
-      themselves on the network. Closes ticket 13555.

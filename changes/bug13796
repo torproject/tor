@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Use getsockname, not getsockopt, to retrieve the address for
-      a TPROXY-redirected connection. Fixes bug 13796; bugfix on 0.2.5.2-alpha.

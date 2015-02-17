@@ -1,4 +1,0 @@
-  o Minor bugfix:
-    - Make an educated guess about how much memory the system has when our
-      detection functionality fails on some operating system.  Fixes bug 14802;
-      bugfix on 0.2.5.4-alpha.
