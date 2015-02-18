@@ -12,10 +12,10 @@
 #include "or.h"
 #include "test.h"
 #include "control.h"
-#include "testhelper.h"
 #include "config.h"
 #include "routerset.h"
 #include "circuitbuild.h"
+#include "test_helpers.h"
 
 /* mock ID digest and longname for node that's in nodelist */
 #define HSDIR_EXIST_ID "\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA\xAA" \

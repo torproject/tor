@@ -18,7 +18,6 @@
 #include "statefile.h"
 #include "config.h"
 
-#include "testhelper.h"
 #include "test_helpers.h"
 
 /* TODO:
