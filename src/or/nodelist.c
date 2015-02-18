@@ -1685,12 +1685,14 @@ update_router_have_minimum_dir_info(void)
       static ratelim_t last_warned =
         RATELIM_INIT(NOTICE_DIR_INFO_STATUS_INTERVAL);
       char *suppression_msg = NULL;
+
+      tor_snprintf(dir_info_status, sizeof(dir_info_status),
+                   "We need more %sdescriptors: we have %d/%d, and "
+                   "can only build %d%% of likely paths. (We have %s.)",
+                   using_md?"micro":"", num_present, num_usable,
+                   (int)(paths*100), status);
+
       if ((suppression_msg = rate_limit_log(&last_warned, time(NULL)))) {
-        tor_snprintf(dir_info_status, sizeof(dir_info_status),
-                     "We need more %sdescriptors: we have %d/%d, and "
-                     "can only build %d%% of likely paths. (We have %s.)",
-                     using_md?"micro":"", num_present, num_usable,
-                     (int)(paths*100), status);
         if (!should_delay_dir_fetches(options, NULL) &&
             !directory_too_idle_to_fetch_descriptors(options, now)) {
           log_warn(LD_NET, "%s%s", dir_info_status, suppression_msg);
@@ -1706,12 +1708,14 @@ update_router_have_minimum_dir_info(void)
       static ratelim_t last_warned =
       RATELIM_INIT(NOTICE_DIR_INFO_STATUS_INTERVAL);
       char *suppression_msg = NULL;
+
+      tor_snprintf(dir_info_status, sizeof(dir_info_status),
+                   "We have enough %sdescriptors: we have %d/%d, and "
+                   "can build %d%% of likely paths. (We have %s.)",
+                   using_md?"micro":"", num_present, num_usable,
+                   (int)(paths*100), status);
+
       if ((suppression_msg = rate_limit_log(&last_warned, time(NULL)))) {
-        tor_snprintf(dir_info_status, sizeof(dir_info_status),
-                     "We have enough %sdescriptors: we have %d/%d, and "
-                     "can build %d%% of likely paths. (We have %s.)",
-                     using_md?"micro":"", num_present, num_usable,
-                     (int)(paths*100), status);
         log_info(LD_NET, "%s%s", dir_info_status, suppression_msg);
         tor_free(suppression_msg);
       }

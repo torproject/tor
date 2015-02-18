@@ -8,3 +8,8 @@
     - When deciding whether we have any exit nodes, only do processing for
       ExitNodes when the ExitNodes option is actually set. Fixes part of
       bug 14918; bugfix on 0.2.6.2-alpha.
+
+  o Minor bugfixes (logging during bootstrap):
+    - Correctly update and log the amount of directory information that
+      has been fetched during the bootstrap process. Fixes part of bug
+      14918; bugfix on 0.2.6.2-alpha.
