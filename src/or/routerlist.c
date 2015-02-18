@@ -2851,15 +2851,38 @@ extrainfo_insert,(routerlist_t *rl, extrainfo_t *ei, int warn_if_incompatible))
     r = ROUTER_NOT_IN_CONSENSUS;
     goto done;
   }
+  if (! sd) {
+    /* The extrainfo router doesn't have a known routerdesc to attach it to.
+     * This just won't work. */;
+    static ratelim_t no_sd_ratelim = RATELIM_INIT(1800);
+    r = ROUTER_BAD_EI;
+    log_fn_ratelim(&no_sd_ratelim, LOG_WARN, LD_BUG,
+                   "No entry found in extrainfo map.");
+    goto done;
+  }
+  if (tor_memneq(ei->cache_info.signed_descriptor_digest,
+                 sd->extra_info_digest, DIGEST_LEN)) {
+    static ratelim_t digest_mismatch_ratelim = RATELIM_INIT(1800);
+    /* The sd we got from the map doesn't match the digest we used to look
+     * it up. This makes no sense. */
+    r = ROUTER_BAD_EI;
+    log_fn_ratelim(&digest_mismatch_ratelim, LOG_WARN, LD_BUG,
+                   "Mismatch in digest in extrainfo map.");
+    goto done;
+  }
   if (routerinfo_incompatible_with_extrainfo(ri, ei, sd,
                                              &compatibility_error_msg)) {
+    char d1[HEX_DIGEST_LEN+1], d2[HEX_DIGEST_LEN+1];
     const int severity = warn_if_incompatible ? LOG_WARN : LOG_INFO;
     r = (ri->cache_info.extrainfo_is_bogus) ?
       ROUTER_BAD_EI : ROUTER_NOT_IN_CONSENSUS;
 
+    base16_encode(d1, sizeof(d1), ri->cache_info.identity_digest, DIGEST_LEN);
+    base16_encode(d2, sizeof(d2), ei->cache_info.identity_digest, DIGEST_LEN);
+
     log_fn(severity,LD_DIR,
-           "router info incompatible with extra info (reason: %s)",
-           compatibility_error_msg);
+           "router info incompatible with extra info (ri id: %s, ei id %s, "
+           "reason: %s)", d1, d2, compatibility_error_msg);
 
     goto done;
   }
@@ -4637,7 +4660,7 @@ update_extrainfo_downloads(time_t now)
   smartlist_t *wanted;
   digestmap_t *pending;
   int old_routers, i, max_dl_per_req;
-  int n_no_ei = 0, n_pending = 0, n_have = 0, n_delay = 0;
+  int n_no_ei = 0, n_pending = 0, n_have = 0, n_delay = 0, n_bogus[2] = {0,0};
   if (! options->DownloadExtraInfo)
     return;
   if (should_delay_dir_fetches(options, NULL))
@@ -4682,6 +4705,10 @@ update_extrainfo_downloads(time_t now)
         ++n_pending;
         continue;
       }
+      if (router_get_by_extrainfo_digest(d) != sd) {
+        ++n_bogus[old_routers];
+        continue;
+      }
       smartlist_add(wanted, d);
     }
   }
@@ -4690,6 +4717,14 @@ update_extrainfo_downloads(time_t now)
   log_info(LD_DIR, "Extrainfo download status: %d router with no ei, %d "
            "with present ei, %d delaying, %d pending, %d downloadable.",
            n_no_ei, n_have, n_delay, n_pending, smartlist_len(wanted));
+
+  if (n_bogus[0] || n_bogus[1]) {
+    static ratelim_t bogus_ei_warning = RATELIM_INIT(1800);
+    log_fn_ratelim(&bogus_ei_warning, LOG_WARN, LD_BUG,
+                   "While downloading extrainfo documents, I found %d "
+                   "inconsistencies in routers and %d inconsistencies in "
+                   "old_routers.", n_bogus[0], n_bogus[1]);
+  }
 
   smartlist_shuffle(wanted);
 
