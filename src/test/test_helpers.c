@@ -31,7 +31,6 @@ get_yesterday_date_str(void)
   return buf;
 }
 
-
 /* NOP replacement for router_descriptor_is_older_than() */
 static int
 router_descriptor_is_older_than_replacement(const routerinfo_t *router,
@@ -84,6 +83,4 @@ helper_setup_fake_routerlist(void)
  done:
   UNMOCK(router_descriptor_is_older_than);
 }
-
-
 
