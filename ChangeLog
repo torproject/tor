@@ -147,17 +147,6 @@ Changes in version 0.2.6.3-alpha - 2015-02-??
     - Elevate authorized-client message from DEBUG to INFO. Closes
       ticket 14015.
 
-  o Minor bugfixes (path counting):
-    - When deciding whether we have any exit nodes, count the number listed
-      in the consensus, not the number we have descriptors for. Fixes part
-      of bug 14918; bugfix on 0.2.6.2-alpha.
-    - Do not warn that we are missing directory information if we have
-      decided not to fetch directory information due to a long period
-      of idleness. Fixes part of bug 14918; bugfix on 0.2.6.2-alpha.
-    - When deciding whether we have any exit nodes, only do processing for
-      ExitNodes when the ExitNodes option is actually set. Fixes part of
-      bug 14918; bugfix on 0.2.6.2-alpha.
-
   o Minor features (relay):
     - Use separate minimum bandwidth values for the configurations of
       relays and bridges. Raise the minimum configured bandwidth for
@@ -302,6 +291,17 @@ Changes in version 0.2.6.3-alpha - 2015-02-??
     - Support two-number and three-number version numbers correctly, in
       case we change the Tor versioning system in the future. Fixes bug
       13661; bugfix on 0.0.8pre1.
+
+  o Minor bugfixes (path counting):
+    - When deciding whether we have any exit nodes, count the number
+      listed in the consensus, not the number we have descriptors for.
+      Fixes part of bug 14918; bugfix on 0.2.6.2-alpha.
+    - Do not warn that we are missing directory information if we have
+      decided not to fetch directory information due to a long period of
+      idleness. Fixes part of bug 14918; bugfix on 0.2.6.2-alpha.
+    - When deciding whether we have any exit nodes, only do processing
+      for ExitNodes when the ExitNodes option is actually set. Fixes
+      part of bug 14918; bugfix on 0.2.6.2-alpha.
 
   o Minor bugfixes (portability):
     - Fix the ioctl()-based network interface lookup code so that it
