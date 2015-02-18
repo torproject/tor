@@ -14,17 +14,14 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       advertise themselves on the network. Closes ticket 13555.
 
   o Major features (security, unix domain sockets):
-    - Tor can now expose a SOCKS proxy over an AF_UNIX Unix Domain Socket.
-      This allows client
-      applications to Tor without having creating
-      AF_INET or AF_INET6 sockets. If an application has
-      permission to connect to Tor's AF_UNIX socket, it can
-      communicate with Tor as if it were an other SOCKS proxy. This
-      should allow high risk applications to use Tor while completely
-      disabling their ability to make non-Tor connections.
-      To create a
-      socket of this type, use "SocksPort unix:/path/to/socket". Closes
-      ticket 12585.
+    - Tor can now expose a SOCKS proxy over an AF_UNIX Unix Domain
+      Socket. This allows client applications to Tor without having
+      creating AF_INET or AF_INET6 sockets. If an application has
+      permission to connect to Tor's AF_UNIX socket, it can communicate
+      with Tor as if it were an other SOCKS proxy. This should allow
+      high risk applications to use Tor while completely disabling their
+      ability to make non-Tor connections. To create a socket of this
+      type, use "SocksPort unix:/path/to/socket". Closes ticket 12585.
     - Support mapping hidden service virtual ports to AF_UNIX sockets on
       suitable platforms. The syntax is "HiddenServicePort 80
       socket:/path/to/socket". Resolves ticket #11485.
@@ -38,14 +35,14 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       stops Tor from running as an exit relay. Closes ticket 10067.
 
   o Major features (performance):
-    - Make the the CPU worker implementation more efficient by
-      avoiding the kernel and lengthening pipelines. The original
-      implementation used sockets to transfer data from the main thread
-      to the workers, and didn't allow any thread to be assigned
-      more than a single piece of work at once. The new implementation
-      avoids communications overhead by making requests in shared
-      memory, avoiding kernel IO where possible, and keeping more
-      requests in flight at once. Resolves issue #9682.
+    - Make the the CPU worker implementation more efficient by avoiding
+      the kernel and lengthening pipelines. The original implementation
+      used sockets to transfer data from the main thread to the workers,
+      and didn't allow any thread to be assigned more than a single
+      piece of work at once. The new implementation avoids communications
+      overhead by making requests in shared memory, avoiding kernel IO
+      where possible, and keeping more requests in flight at once.
+      Resolves issue #9682.
 
   o Major bugfixes (client):
     - Allow MapAddress and AutomapHostsOnResolve to work together when
@@ -63,8 +60,8 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       recommended), if we decide not to use a new guard because we want
       to retry older guards, only close the locally-originating circuits
       passing through that guard. Previously we would close all the
-      circuits through that guard. Fixes bug 9819; bugfix on 0.2.1.1-alpha. Reported
-      by "skruffy".
+      circuits through that guard. Fixes bug 9819; bugfix on
+      0.2.1.1-alpha. Reported by "skruffy".
 
   o Minor features (build):
     - New --disable-system-torrc compile-time option to prevent Tor from
@@ -122,9 +119,9 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       AvoidDiskWrites is set). Closes ticket 12485.
 
   o Minor features (hidden service):
-    - Make Sybil attacks against hidden services harder by changing the minimum
-      time required to become an HSDir from 25 hours up to 96 hours.
-      Addresses ticket #14149.
+    - Make Sybil attacks against hidden services harder by changing the
+      minimum time required to become an HSDir from 25 hours up to 96
+      hours. Addresses ticket #14149.
     - New option "HiddenServiceAllowUnknownPorts" to allow hidden
       services to disable the anti-scanning feature introduced in
       0.2.6.2-alpha. With this option not set, a connection to an
@@ -143,14 +140,14 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       reading extrainfo documents from cache. (This message got loud
       around when we closed bug 9812 in 0.2.6.2-alpha.) Closes
       ticket 13762.
-    - Elevate hidden service authorized-client message from DEBUG to INFO. Closes
-      ticket 14015.
+    - Elevate hidden service authorized-client message from DEBUG to
+      INFO. Closes ticket 14015.
 
   o Minor features (relay):
-    - Use separate minimum bandwidth values for
-      relays and bridges. Raise the minimum configured bandwidth for
-      bridges to 50 KiB/sec and for relays to 75 KiB/sec. (The old
-      values were 20 KiB/sec.) Closes ticket 13822.
+    - Use separate minimum bandwidth values for relays and bridges.
+      Raise the minimum configured bandwidth for bridges to 50 KiB/sec
+      and for relays to 75 KiB/sec. (The old values were 20 KiB/sec.)
+      Closes ticket 13822.
 
   o Minor features (stability):
     - Prevent bugs from causing infinite loops in our hash-table
@@ -168,11 +165,11 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       seconds, but keep the default at 30 seconds. This reduces HS
       bootstrap time to around 25 seconds. Also, change the default time
       in test-network.sh to match. Closes ticket 13401. Patch by "teor".
-    - Create TestingDirAuthVoteHSDir to correspond to TestingDirAuthVoteExit/Guard.
-      Ensures that authorities vote the HSDir flag for the listed relays
-      regardless of uptime or ORPort connectivity. Respects the value of
-      VoteOnHidServDirectoriesV2. Partial implementation for ticket
-      14067. Patch by "teor".
+    - Create TestingDirAuthVoteHSDir to correspond to
+      TestingDirAuthVoteExit/Guard. Ensures that authorities vote the
+      HSDir flag for the listed relays regardless of uptime or ORPort
+      connectivity. Respects the value of VoteOnHidServDirectoriesV2.
+      Partial implementation for ticket 14067. Patch by "teor".
 
   o Minor features (tor2web mode):
     - Introduce the config option Tor2webRendezvousPoints, which allows
@@ -195,8 +192,8 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       bug 14259; bugfix on 0.2.0.1-alpha.
 
   o Minor bugfixes (client, automapping):
-    - Avoid crashing on torrc lines for VirtualAddrNetworkIPv[4|6]
-      when no value follows the option. Fixes bug 14142; bugfix on
+    - Avoid crashing on torrc lines for VirtualAddrNetworkIPv[4|6] when
+      no value follows the option. Fixes bug 14142; bugfix on
       0.2.4.7-alpha. Patch by "teor".
     - Fix a memory leak when using AutomapHostsOnResolve. Fixes bug
       14195; bugfix on 0.1.0.1-rc.
@@ -234,9 +231,9 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       reason. Fixes bug 14207; bugfix on 0.2.6.2-alpha.
     - Avoid crashing on a malformed EXTENDCIRCUIT command. Fixes bug
       14116; bugfix on 0.2.2.9-alpha.
-    - Report "down" in response to the "GETINFO entry-guards" command when
-      relays are down with an unreachable_since value.  Previously, we
-      would report "up". Fixes bug 14184; bugfix on 0.1.2.2-alpha.
+    - Report "down" in response to the "GETINFO entry-guards" command
+      when relays are down with an unreachable_since value. Previously,
+      we would report "up". Fixes bug 14184; bugfix on 0.1.2.2-alpha.
 
   o Minor bugfixes (directory authority):
     - Allow directory authorities to fetch more data from one another if
@@ -251,8 +248,8 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
     - Stop failing when key files are zero-length. Instead, generate new
       keys, and overwrite the empty key files. Fixes bug 13111; bugfix
       on all versions of Tor. Patch by "teor".
-    - Stop generating a fresh .old RSA onion key file when the .old file is
-      missing. Fixes part of 13111; bugfix on 0.0.6rc1.
+    - Stop generating a fresh .old RSA onion key file when the .old file
+      is missing. Fixes part of 13111; bugfix on 0.0.6rc1.
     - Avoid overwriting .old key files with empty key files.
     - Skip loading zero-length extra info store, router store, stats,
       state, and key files.
@@ -262,9 +259,9 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
 
   o Minor bugfixes (hidden services):
     - Close the introduction circuit when we have no, more usable intro
-      points, instead of waiting for it to time out. This also make
-      sure no extra HS descriptor fetch is triggered. Fixes bug 14224;
-      bugfix on 0.0.6.
+      points, instead of waiting for it to time out. This also make sure
+      no extra HS descriptor fetch is triggered. Fixes bug 14224; bugfix
+      on 0.0.6.
     - When fetching a hidden service descriptor for a down service that
       we recently up, do not keep refetching until we try the same
       replica twice in a row. Fixes bug 14219; bugfix on 0.2.0.10-alpha.
@@ -295,8 +292,8 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       decided not to fetch directory information due to a long period of
       idleness. Fixes part of bug 14918; bugfix on 0.2.6.2-alpha.
     - When deciding whether we have any exit nodes, only process
-      ExitNodes when the ExitNodes option is actually set. Fixes
-      part of bug 14918; bugfix on 0.2.6.2-alpha.
+      ExitNodes when the ExitNodes option is actually set. Fixes part of
+      bug 14918; bugfix on 0.2.6.2-alpha.
 
   o Minor bugfixes (portability):
     - Fix the ioctl()-based network interface lookup code so that it
@@ -351,12 +348,12 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
     - Move fields related to isolating and configuring client ports into
       a shared structure. Previously, they were duplicated across
       port_cfg_t, listener_connection_t, and edge_connection_t. Failure
-      to copy them correctly had been the cause of at least one
-      bug in the past. Closes ticket 8546.
+      to copy them correctly had been the cause of at least one bug in
+      the past. Closes ticket 8546.
     - Refactor the get_interface_addresses_raw() doom-function into
-      multiple smaller and simpler subfunctions. Cover the
-      resulting subfunctions with unit-tests. Fixes a significant
-      portion of issue 12376.
+      multiple smaller and simpler subfunctions. Cover the resulting
+      subfunctions with unit-tests. Fixes a significant portion of
+      issue 12376.
     - Remove workaround in dirserv_thinks_router_is_hs_dir() that was
       only for version <= 0.2.2.24 which is now deprecated. Closes
       ticket 14202.
