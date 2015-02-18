@@ -1853,6 +1853,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_free(exitsummaries);
     tor_free(bandwidths_kb);
     tor_free(measured_bws_kb);
+    tor_free(measured_guardfraction);
   }
 
   /* Mark the directory footer region */
