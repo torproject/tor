@@ -845,12 +845,14 @@ circuit_log_ancient_one_hop_circuits(int age)
     }
 
     log_notice(LD_HEARTBEAT, "  #%d created at %s. %s, %s. %s for close. "
+               "Package window: %d. "
                "%s for new conns. %s.",
                ocirc_sl_idx,
                created,
                circuit_state_to_string(circ->state),
                circuit_purpose_to_string(circ->purpose),
                circ->marked_for_close ? "Marked" : "Not marked",
+               circ->package_window,
                ocirc->unusable_for_new_conns ? "Not usable" : "usable",
                dirty);
     tor_free(dirty);
@@ -866,12 +868,18 @@ circuit_log_ancient_one_hop_circuits(int age)
 
       log_notice(LD_HEARTBEAT, "     Stream#%d created at %s. "
                  "%s conn in state %s. "
+                 "It is %slinked and %sreading from a linked connection %p. "
+                 "Package window %d. "
                  "%s for close (%s:%d). Hold-open is %sset. "
                  "Has %ssent RELAY_END. %s on circuit.",
                  stream_num,
                  stream_created,
                  conn_type_to_string(c->type),
                  conn_state_to_string(c->type, c->state),
+                 c->linked ? "" : "not ",
+                 c->reading_from_linked_conn ? "": "not",
+                 c->linked_conn,
+                 conn->package_window,
                  c->marked_for_close ? "Marked" : "Not marked",
                  c->marked_for_close_file ? c->marked_for_close_file : "--",
                  c->marked_for_close,
