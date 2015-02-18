@@ -13,7 +13,7 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
     - Tor relays older than 0.2.4.18-rc are no longer allowed to
       advertise themselves on the network. Closes ticket 13555.
 
-  o Major features (security):
+  o Major features (security, unix domain sockets):
     - Tor can now expose a SOCKS proxy over an AF_UNIX Unix Domain Socket.
       This allows client
       applications to Tor without having creating
@@ -25,6 +25,9 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       To create a
       socket of this type, use "SocksPort unix:/path/to/socket". Closes
       ticket 12585.
+    - Support mapping hidden service virtual ports to AF_UNIX sockets on
+      suitable platforms. The syntax is "HiddenServicePort 80
+      socket:/path/to/socket". Resolves ticket #11485.
 
   o Major features (changed defaults):
     - Prevent relay operators from unintentionally running exits: When a
@@ -34,20 +37,15 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       can indicate accidental misconfiguration. Setting 'ExitRelay 0'
       stops Tor from running as an exit relay. Closes ticket 10067.
 
-  o Major features (hidden services):
-    - Support mapping hidden service virtual ports to AF_UNIX sockets on
-      suitable platforms. The syntax is "HiddenServicePort 80
-      socket:/path/to/socket". Resolves ticket #11485.
-
   o Major features (performance):
-    - Refactor the CPU worker implementation for better performance by
+    - Make the the CPU worker implementation more efficient by
       avoiding the kernel and lengthening pipelines. The original
       implementation used sockets to transfer data from the main thread
-      to the worker threads, and didn't allow any thread to be assigned
+      to the workers, and didn't allow any thread to be assigned
       more than a single piece of work at once. The new implementation
       avoids communications overhead by making requests in shared
       memory, avoiding kernel IO where possible, and keeping more
-      request in flight at once. Resolves issue #9682.
+      requests in flight at once. Resolves issue #9682.
 
   o Major bugfixes (client):
     - Allow MapAddress and AutomapHostsOnResolve to work together when
@@ -61,56 +59,42 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       diagnosed and fixed by "cypherpunks".
 
   o Major bugfixes (mixed relay-client operation):
-    - When running as a relay and a client at the same time (not
+    - When running as a relay and client at the same time (not
       recommended), if we decide not to use a new guard because we want
       to retry older guards, only close the locally-originating circuits
       passing through that guard. Previously we would close all the
-      circuits. Fixes bug 9819; bugfix on 0.2.1.1-alpha. Reported
+      circuits through that guard. Fixes bug 9819; bugfix on 0.2.1.1-alpha. Reported
       by "skruffy".
-
-  o Minor features (authorities, testing):
-    - Create TestingDirAuthVoteHSDir like TestingDirAuthVoteExit/Guard.
-      Ensures that authorities vote the HSDir flag for the listed relays
-      regardless of uptime or ORPort connectivity. Respects the value of
-      VoteOnHidServDirectoriesV2. Partial implementation for ticket
-      14067. Patch by "teor".
 
   o Minor features (build):
     - New --disable-system-torrc compile-time option to prevent Tor from
-      looking for a system-wide torrc or torrc-defaults tile. Resolves
+      looking for a system-wide torrc or torrc-defaults file. Resolves
       ticket 13037.
 
   o Minor features (controller):
     - Include SOCKS_USERNAME and SOCKS_PASSWORD values in controller
-      events to let controllers observe circuit isolation inputs. Closes
+      events so controllers can observe circuit isolation inputs. Closes
       ticket 8405.
     - ControlPort now supports the unix:/path/to/dir syntax as an
       alternative to the ControlSocket option, for consistency with
-      SocksPort and hidden services. Closes ticket 14451.
+      SocksPort and HiddenServicePort. Closes ticket 14451.
     - New "GETINFO bw-event-cache" to get information about recent
       bandwidth events. Closes ticket 14128. Useful for controllers to
       get recent bandwidth history after the fix for 13988.
 
-  o Minor features (directory client):
+  o Minor features (directory system):
     - When downloading server- or microdescriptors from a directory
       server, we no longer launch multiple simultaneous requests to the
       same server. This reduces load on the directory servers,
       especially when directory guards are in use. Closes ticket 9969.
     - When downloading server- or microdescriptors over a tunneled
-      connection, do not limit the length of our request to what the
+      connection, do not limit the length of our requests to what the
       Squid proxy is willing to handle. Part of ticket 9969.
-
-  o Minor features (directory system):
     - Authorities can now vote on the correct digests and latest
       versions for different software packages. This allows packages
       that include Tor to use the Tor authority system as a way to get
       notified of updates and their correct digests. Implements proposal
       227. Closes ticket 10395.
-
-  o Minor features (directory, memory usage):
-    - When we have recently been under memory pressure (over 3/4 of
-      MaxMemInQueues is allocated), then allocate smaller zlib objects
-      for small requests. Closes ticket 11791.
 
   o Minor features (DOS resistance):
     - Count the total number of bytes used storing hidden service
@@ -119,6 +103,12 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       service descriptors, free them until no more than 10% of our
       memory holds hidden service descriptors. Free the least recently
       fetched descriptors first. Resolves ticket 13806.
+    - When we have recently been under memory pressure (over 3/4 of
+      MaxMemInQueues is allocated), then allocate smaller zlib objects
+      for small requests. Closes ticket 11791.
+    - When we have recently been under memory pressure (over 3/4 of
+      MaxMemInQueues is allocated), then allocate smaller zlib objects
+      for small requests. Closes ticket 11791.
 
   o Minor features (geoip):
     - Update geoip to the January 7 2015 Maxmind GeoLite2
@@ -126,13 +116,13 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
     - Update geoip6 to the January 7 2015 Maxmind GeoLite2
       Country database.
 
-  o Minor features (Guard nodes):
+  o Minor features (guard nodes):
     - Reduce the time delay before saving guard status to disk from 10
       minute to 30 seconds (or from one hour to 10 minutes if
       AvoidDiskWrites is set). Closes ticket 12485.
 
   o Minor features (hidden service):
-    - Make hidden service Sybil attacks harder by changing the minimum
+    - Make Sybil attacks against hidden services harder by changing the minimum
       time required to become an HSDir from 25 hours up to 96 hours.
       Addresses ticket #14149.
     - New option "HiddenServiceAllowUnknownPorts" to allow hidden
@@ -142,7 +132,7 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       RELAY_DONE cell is sent. Closes ticket #14084.
 
   o Minor features (interface):
-    - Implement '-f -' CLI suboption to allow torrc to be read from
+    - Implement '-f -' CLI suboption to read torrc configuration from
       standard input, thus not requiring to store torrc in file system.
       Implements feature 13865.
 
@@ -153,11 +143,11 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       reading extrainfo documents from cache. (This message got loud
       around when we closed bug 9812 in 0.2.6.2-alpha.) Closes
       ticket 13762.
-    - Elevate authorized-client message from DEBUG to INFO. Closes
+    - Elevate hidden service authorized-client message from DEBUG to INFO. Closes
       ticket 14015.
 
   o Minor features (relay):
-    - Use separate minimum bandwidth values for the configurations of
+    - Use separate minimum bandwidth values for
       relays and bridges. Raise the minimum configured bandwidth for
       bridges to 50 KiB/sec and for relays to 75 KiB/sec. (The old
       values were 20 KiB/sec.) Closes ticket 13822.
@@ -173,23 +163,22 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
 
   o Minor features (testing networks):
     - Drop the minimum RendPostPeriod on a testing network to 5 seconds,
-      and the default to 2 minutes. Closes ticket 13401. Patch
-      by "nickm".
+      and the default to 2 minutes. Closes ticket 13401.
     - Drop the MIN_REND_INITIAL_POST_DELAY on a testing network to 5
       seconds, but keep the default at 30 seconds. This reduces HS
       bootstrap time to around 25 seconds. Also, change the default time
       in test-network.sh to match. Closes ticket 13401. Patch by "teor".
+    - Create TestingDirAuthVoteHSDir to correspond to TestingDirAuthVoteExit/Guard.
+      Ensures that authorities vote the HSDir flag for the listed relays
+      regardless of uptime or ORPort connectivity. Respects the value of
+      VoteOnHidServDirectoriesV2. Partial implementation for ticket
+      14067. Patch by "teor".
 
   o Minor features (tor2web mode):
     - Introduce the config option Tor2webRendezvousPoints, which allows
       clients in Tor2webMode to select a specific Rendezvous Point to be
       used in HS circuits. This might allow better performance for
       Tor2Web nodes. Implements ticket #12844.
-
-  o Minor bugfix (oom resistance):
-    - Make an educated guess about how much memory the system has when
-      our detection functionality fails on some operating system. Fixes
-      bug 14802; bugfix on 0.2.5.4-alpha.
 
   o Minor bugfixes (automapping):
     - Prevent changes to other options from removing the wildcard value
@@ -206,9 +195,7 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       bug 14259; bugfix on 0.2.0.1-alpha.
 
   o Minor bugfixes (client, automapping):
-    - Check for a missing option value in parse_virtual_addr_network
-      before asserting on the NULL in tor_addr_parse_mask_ports. This
-      avoids crashing on torrc lines like Vi[rtualAddrNetworkIPv[4|6]]
+    - Avoid crashing on torrc lines for VirtualAddrNetworkIPv[4|6]
       when no value follows the option. Fixes bug 14142; bugfix on
       0.2.4.7-alpha. Patch by "teor".
     - Fix a memory leak when using AutomapHostsOnResolve. Fixes bug
@@ -247,10 +234,9 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       reason. Fixes bug 14207; bugfix on 0.2.6.2-alpha.
     - Avoid crashing on a malformed EXTENDCIRCUIT command. Fixes bug
       14116; bugfix on 0.2.2.9-alpha.
-    - On the control port, the "entry-guards" command was reporting an
-      "up" status for a relay that was actually down. This fixes the
-      check if "unreachable_since" is set and if so reports the "down"
-      status. Fixes bug 14184; bugfix on 0.1.2.2-alpha.
+    - Report "down" in response to the "GETINFO entry-guards" command when
+      relays are down with an unreachable_since value.  Previously, we
+      would report "up". Fixes bug 14184; bugfix on 0.1.2.2-alpha.
 
   o Minor bugfixes (directory authority):
     - Allow directory authorities to fetch more data from one another if
@@ -265,7 +251,7 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
     - Stop failing when key files are zero-length. Instead, generate new
       keys, and overwrite the empty key files. Fixes bug 13111; bugfix
       on all versions of Tor. Patch by "teor".
-    - Stop generating a fresh .old RSA key file when the .old file is
+    - Stop generating a fresh .old RSA onion key file when the .old file is
       missing. Fixes part of 13111; bugfix on 0.0.6rc1.
     - Avoid overwriting .old key files with empty key files.
     - Skip loading zero-length extra info store, router store, stats,
@@ -275,8 +261,8 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       on 0.2.3.11-alpha.
 
   o Minor bugfixes (hidden services):
-    - Close the intro circuit once we don't have any more usable intro
-      points instead of making it timeout at some point. This also make
+    - Close the introduction circuit when we have no, more usable intro
+      points, instead of waiting for it to time out. This also make
       sure no extra HS descriptor fetch is triggered. Fixes bug 14224;
       bugfix on 0.0.6.
     - When fetching a hidden service descriptor for a down service that
@@ -308,8 +294,8 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
     - Do not warn that we are missing directory information if we have
       decided not to fetch directory information due to a long period of
       idleness. Fixes part of bug 14918; bugfix on 0.2.6.2-alpha.
-    - When deciding whether we have any exit nodes, only do processing
-      for ExitNodes when the ExitNodes option is actually set. Fixes
+    - When deciding whether we have any exit nodes, only process
+      ExitNodes when the ExitNodes option is actually set. Fixes
       part of bug 14918; bugfix on 0.2.6.2-alpha.
 
   o Minor bugfixes (portability):
@@ -365,10 +351,10 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
     - Move fields related to isolating and configuring client ports into
       a shared structure. Previously, they were duplicated across
       port_cfg_t, listener_connection_t, and edge_connection_t. Failure
-      to copy one of them correctly had been the cause of at least one
+      to copy them correctly had been the cause of at least one
       bug in the past. Closes ticket 8546.
-    - Refactor the get_interface_addresses_raw() Doom-function into
-      multiple smaller and easier to understand subfunctions. Cover the
+    - Refactor the get_interface_addresses_raw() doom-function into
+      multiple smaller and simpler subfunctions. Cover the
       resulting subfunctions with unit-tests. Fixes a significant
       portion of issue 12376.
     - Remove workaround in dirserv_thinks_router_is_hs_dir() that was
