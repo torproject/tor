@@ -1751,7 +1751,7 @@ guard_get_guardfraction_bandwidth(guardfraction_bandwidth_t *guardfraction_bw,
 
   guardfraction_bw->guard_bw = (int) guard_bw;
 
-  guardfraction_bw->non_guard_bw = orig_bandwidth - guard_bw;
+  guardfraction_bw->non_guard_bw = orig_bandwidth - (int) guard_bw;
 }
 
 /** A list of configured bridges. Whenever we actually get a descriptor
