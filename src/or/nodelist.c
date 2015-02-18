@@ -1430,9 +1430,7 @@ compute_frac_paths_available(const networkstatus_t *consensus,
   smartlist_t *guards = smartlist_new();
   smartlist_t *mid    = smartlist_new();
   smartlist_t *exits  = smartlist_new();
-  smartlist_t *myexits= smartlist_new();
-  smartlist_t *myexits_unflagged = smartlist_new();
-  double f_guard, f_mid, f_exit, f_myexit, f_myexit_unflagged;
+  double f_guard, f_mid, f_exit;
   double f_path = 0.0;
   /* Used to determine whether there are any exits in the consensus */
   int np = 0;
@@ -1494,75 +1492,89 @@ compute_frac_paths_available(const networkstatus_t *consensus,
      * browsing (as distinct from hidden service web browsing). */
   }
 
-  /* All nodes with exit flag in ExitNodes option */
-  count_usable_descriptors(&np, &nu, myexits, consensus, options, now,
-                           options->ExitNodes, USABLE_DESCRIPTOR_EXIT_ONLY);
-  log_debug(LD_NET,
-            "%s: %d present, %d usable",
-            "myexits",
-            np,
-            nu);
-
-  /* Now compute the nodes in the ExitNodes option where which we don't know
-   * what their exit policy is, or we know it permits something. */
-  count_usable_descriptors(&np, &nu, myexits_unflagged,
-                           consensus, options, now,
-                           options->ExitNodes, USABLE_DESCRIPTOR_ALL);
-  log_debug(LD_NET,
-            "%s: %d present, %d usable",
-            "myexits_unflagged (initial)",
-            np,
-            nu);
-
-  SMARTLIST_FOREACH_BEGIN(myexits_unflagged, const node_t *, node) {
-    if (node_has_descriptor(node) && node_exit_policy_rejects_all(node)) {
-      SMARTLIST_DEL_CURRENT(myexits_unflagged, node);
-      /* this node is not actually an exit */
-      np--;
-      /* this node is unusable as an exit */
-      nu--;
-    }
-  } SMARTLIST_FOREACH_END(node);
-
-  log_debug(LD_NET,
-            "%s: %d present, %d usable",
-            "myexits_unflagged (final)",
-            np,
-            nu);
-
   f_guard = frac_nodes_with_descriptors(guards, WEIGHT_FOR_GUARD);
   f_mid   = frac_nodes_with_descriptors(mid,    WEIGHT_FOR_MID);
   f_exit  = frac_nodes_with_descriptors(exits,  WEIGHT_FOR_EXIT);
-  f_myexit= frac_nodes_with_descriptors(myexits,WEIGHT_FOR_EXIT);
-  f_myexit_unflagged=
-            frac_nodes_with_descriptors(myexits_unflagged,WEIGHT_FOR_EXIT);
 
   log_debug(LD_NET,
-            "f_exit: %.2f, f_myexit: %.2f, f_myexit_unflagged: %.2f",
-            f_exit,
-            f_myexit,
-            f_myexit_unflagged);
-
-  /* If our ExitNodes list has eliminated every possible Exit node, and there
-   * were some possible Exit nodes, then instead consider nodes that permit
-   * exiting to some ports. */
-  if (smartlist_len(myexits) == 0 &&
-      smartlist_len(myexits_unflagged)) {
-    f_myexit = f_myexit_unflagged;
-  }
+            "f_guard: %.2f, f_mid: %.2f, f_exit: %.2f",
+             f_guard,
+             f_mid,
+             f_exit);
 
   smartlist_free(guards);
   smartlist_free(mid);
   smartlist_free(exits);
-  smartlist_free(myexits);
-  smartlist_free(myexits_unflagged);
 
-  /* This is a tricky point here: we don't want to make it easy for a
-   * directory to trickle exits to us until it learns which exits we have
-   * configured, so require that we have a threshold both of total exits
-   * and usable exits. */
-  if (f_myexit < f_exit)
-    f_exit = f_myexit;
+  if (options->ExitNodes) {
+    double f_myexit, f_myexit_unflagged;
+    smartlist_t *myexits= smartlist_new();
+    smartlist_t *myexits_unflagged = smartlist_new();
+
+    /* All nodes with exit flag in ExitNodes option */
+    count_usable_descriptors(&np, &nu, myexits, consensus, options, now,
+                             options->ExitNodes, USABLE_DESCRIPTOR_EXIT_ONLY);
+    log_debug(LD_NET,
+              "%s: %d present, %d usable",
+              "myexits",
+              np,
+              nu);
+
+    /* Now compute the nodes in the ExitNodes option where which we don't know
+     * what their exit policy is, or we know it permits something. */
+    count_usable_descriptors(&np, &nu, myexits_unflagged,
+                             consensus, options, now,
+                             options->ExitNodes, USABLE_DESCRIPTOR_ALL);
+    log_debug(LD_NET,
+              "%s: %d present, %d usable",
+              "myexits_unflagged (initial)",
+              np,
+              nu);
+
+    SMARTLIST_FOREACH_BEGIN(myexits_unflagged, const node_t *, node) {
+      if (node_has_descriptor(node) && node_exit_policy_rejects_all(node)) {
+        SMARTLIST_DEL_CURRENT(myexits_unflagged, node);
+        /* this node is not actually an exit */
+        np--;
+        /* this node is unusable as an exit */
+        nu--;
+      }
+    } SMARTLIST_FOREACH_END(node);
+
+    log_debug(LD_NET,
+              "%s: %d present, %d usable",
+              "myexits_unflagged (final)",
+              np,
+              nu);
+
+    f_myexit= frac_nodes_with_descriptors(myexits,WEIGHT_FOR_EXIT);
+    f_myexit_unflagged=
+              frac_nodes_with_descriptors(myexits_unflagged,WEIGHT_FOR_EXIT);
+
+    log_debug(LD_NET,
+              "f_exit: %.2f, f_myexit: %.2f, f_myexit_unflagged: %.2f",
+              f_exit,
+              f_myexit,
+              f_myexit_unflagged);
+
+    /* If our ExitNodes list has eliminated every possible Exit node, and there
+     * were some possible Exit nodes, then instead consider nodes that permit
+     * exiting to some ports. */
+    if (smartlist_len(myexits) == 0 &&
+        smartlist_len(myexits_unflagged)) {
+      f_myexit = f_myexit_unflagged;
+    }
+
+    smartlist_free(myexits);
+    smartlist_free(myexits_unflagged);
+
+    /* This is a tricky point here: we don't want to make it easy for a
+     * directory to trickle exits to us until it learns which exits we have
+     * configured, so require that we have a threshold both of total exits
+     * and usable exits. */
+    if (f_myexit < f_exit)
+      f_exit = f_myexit;
+  }
 
   /* if the consensus has no exits, treat the exit fraction as 100% */
   if (router_have_consensus_path() != CONSENSUS_PATH_EXIT) {
@@ -1673,12 +1685,14 @@ update_router_have_minimum_dir_info(void)
       static ratelim_t last_warned =
         RATELIM_INIT(NOTICE_DIR_INFO_STATUS_INTERVAL);
       char *suppression_msg = NULL;
+
+      tor_snprintf(dir_info_status, sizeof(dir_info_status),
+                   "We need more %sdescriptors: we have %d/%d, and "
+                   "can only build %d%% of likely paths. (We have %s.)",
+                   using_md?"micro":"", num_present, num_usable,
+                   (int)(paths*100), status);
+
       if ((suppression_msg = rate_limit_log(&last_warned, time(NULL)))) {
-        tor_snprintf(dir_info_status, sizeof(dir_info_status),
-                     "We need more %sdescriptors: we have %d/%d, and "
-                     "can only build %d%% of likely paths. (We have %s.)",
-                     using_md?"micro":"", num_present, num_usable,
-                     (int)(paths*100), status);
         if (!should_delay_dir_fetches(options, NULL) &&
             !directory_too_idle_to_fetch_descriptors(options, now)) {
           log_warn(LD_NET, "%s%s", dir_info_status, suppression_msg);
@@ -1694,12 +1708,14 @@ update_router_have_minimum_dir_info(void)
       static ratelim_t last_warned =
       RATELIM_INIT(NOTICE_DIR_INFO_STATUS_INTERVAL);
       char *suppression_msg = NULL;
+
+      tor_snprintf(dir_info_status, sizeof(dir_info_status),
+                   "We have enough %sdescriptors: we have %d/%d, and "
+                   "can build %d%% of likely paths. (We have %s.)",
+                   using_md?"micro":"", num_present, num_usable,
+                   (int)(paths*100), status);
+
       if ((suppression_msg = rate_limit_log(&last_warned, time(NULL)))) {
-        tor_snprintf(dir_info_status, sizeof(dir_info_status),
-                     "We have enough %sdescriptors: we have %d/%d, and "
-                     "can build %d%% of likely paths. (We have %s.)",
-                     using_md?"micro":"", num_present, num_usable,
-                     (int)(paths*100), status);
         log_info(LD_NET, "%s%s", dir_info_status, suppression_msg);
         tor_free(suppression_msg);
       }
