@@ -2840,6 +2840,7 @@ extrainfo_insert,(routerlist_t *rl, extrainfo_t *ei, int warn_if_incompatible))
   signed_descriptor_t *sd =
     sdmap_get(rl->desc_by_eid_map, ei->cache_info.signed_descriptor_digest);
   extrainfo_t *ei_tmp;
+  const int severity = warn_if_incompatible ? LOG_WARN : LOG_INFO;
 
   {
     extrainfo_t *ei_generated = router_get_my_extrainfo();
@@ -2856,7 +2857,7 @@ extrainfo_insert,(routerlist_t *rl, extrainfo_t *ei, int warn_if_incompatible))
      * This just won't work. */;
     static ratelim_t no_sd_ratelim = RATELIM_INIT(1800);
     r = ROUTER_BAD_EI;
-    log_fn_ratelim(&no_sd_ratelim, LOG_WARN, LD_BUG,
+    log_fn_ratelim(&no_sd_ratelim, severity, LD_BUG,
                    "No entry found in extrainfo map.");
     goto done;
   }
@@ -2866,14 +2867,13 @@ extrainfo_insert,(routerlist_t *rl, extrainfo_t *ei, int warn_if_incompatible))
     /* The sd we got from the map doesn't match the digest we used to look
      * it up. This makes no sense. */
     r = ROUTER_BAD_EI;
-    log_fn_ratelim(&digest_mismatch_ratelim, LOG_WARN, LD_BUG,
-                   "Mismatch in digest in extrainfo map.");
+    log_fn_ratelim(&digest_mismatch_ratelim, severity, LD_BUG,
+                     "Mismatch in digest in extrainfo map.");
     goto done;
   }
   if (routerinfo_incompatible_with_extrainfo(ri, ei, sd,
                                              &compatibility_error_msg)) {
     char d1[HEX_DIGEST_LEN+1], d2[HEX_DIGEST_LEN+1];
-    const int severity = warn_if_incompatible ? LOG_WARN : LOG_INFO;
     r = (ri->cache_info.extrainfo_is_bogus) ?
       ROUTER_BAD_EI : ROUTER_NOT_IN_CONSENSUS;
 
