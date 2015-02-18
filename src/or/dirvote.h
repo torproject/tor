@@ -55,7 +55,7 @@
 #define MIN_SUPPORTED_CONSENSUS_METHOD 13
 
 /** The highest consensus method that we currently support. */
-#define MAX_SUPPORTED_CONSENSUS_METHOD 19
+#define MAX_SUPPORTED_CONSENSUS_METHOD 20
 
 /** Lowest consensus method where microdesc consensuses omit any entry
  * with no microdesc. */
@@ -82,8 +82,13 @@
 /** Lowest consensus method where we include "package" lines*/
 #define MIN_METHOD_FOR_PACKAGE_LINES 19
 
+/** Lowest consensus method where authorities may include
+ * GuardFraction information in microdescriptors. */
+#define MIN_METHOD_FOR_GUARDFRACTION 20
+
 /** Default bandwidth to clip unmeasured bandwidths to using method >=
- * MIN_METHOD_TO_CLIP_UNMEASURED_BW */
+ * MIN_METHOD_TO_CLIP_UNMEASURED_BW.  (This is not a consensus method; do not
+ * get confused with the above macros.) */
 #define DEFAULT_MAX_UNMEASURED_BW_KB 20
 
 void dirvote_free_all(void);

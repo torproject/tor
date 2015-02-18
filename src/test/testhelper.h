@@ -6,5 +6,7 @@
 
 void helper_setup_fake_routerlist(void);
 
+extern const char TEST_DESCRIPTORS[];
+
 #endif
 

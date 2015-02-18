@@ -16,6 +16,7 @@
 #include "router.h"
 #include "routerlist.h"
 #include "routerparse.h"
+#include "entrynodes.h" /* needed for guardfraction methods */
 
 /**
  * \file dirvote.c
@@ -1023,6 +1024,86 @@ networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
   return 1;
 }
 
+/** Update total bandwidth weights (G/M/E/D/T) with the bandwidth of
+ *  the router in <b>rs</b>. */
+static void
+update_total_bandwidth_weights(const routerstatus_t *rs,
+                               int is_exit, int is_guard,
+                               int64_t *G, int64_t *M, int64_t *E, int64_t *D,
+                               int64_t *T)
+{
+  int default_bandwidth = rs->bandwidth_kb;
+  int guardfraction_bandwidth = 0;
+
+  if (!rs->has_bandwidth) {
+    log_info(LD_BUG, "Missing consensus bandwidth for router %s",
+             rs->nickname);
+    return;
+  }
+
+  /* If this routerstatus represents a guard that we have
+   * guardfraction information on, use it to calculate its actual
+   * bandwidth. From proposal236:
+   *
+   *    Similarly, when calculating the bandwidth-weights line as in
+   *    section 3.8.3 of dir-spec.txt, directory authorities should treat N
+   *    as if fraction F of its bandwidth has the guard flag and (1-F) does
+   *    not.  So when computing the totals G,M,E,D, each relay N with guard
+   *    visibility fraction F and bandwidth B should be added as follows:
+   *
+   *    G' = G + F*B, if N does not have the exit flag
+   *    M' = M + (1-F)*B, if N does not have the exit flag
+   *
+   *    or
+   *
+   *    D' = D + F*B, if N has the exit flag
+   *    E' = E + (1-F)*B, if N has the exit flag
+   *
+   * In this block of code, we prepare the bandwidth values by setting
+   * the default_bandwidth to F*B and guardfraction_bandwidth to (1-F)*B. */
+  if (rs->has_guardfraction) {
+    guardfraction_bandwidth_t guardfraction_bw;
+
+    tor_assert(is_guard);
+
+    guard_get_guardfraction_bandwidth(&guardfraction_bw,
+                                      rs->bandwidth_kb,
+                                      rs->guardfraction_percentage);
+
+    default_bandwidth = guardfraction_bw.guard_bw;
+    guardfraction_bandwidth = guardfraction_bw.non_guard_bw;
+  }
+
+  /* Now calculate the total bandwidth weights with or without
+     guardfraction. Depending on the flags of the relay, add its
+     bandwidth to the appropriate weight pool. If it's a guard and
+     guardfraction is enabled, add its bandwidth to both pools as
+     indicated by the previous comment. */
+  *T += default_bandwidth;
+  if (is_exit && is_guard) {
+
+    *D += default_bandwidth;
+    if (rs->has_guardfraction) {
+      *E += guardfraction_bandwidth;
+    }
+
+  } else if (is_exit) {
+
+    *E += default_bandwidth;
+
+  } else if (is_guard) {
+
+    *G += default_bandwidth;
+    if (rs->has_guardfraction) {
+      *M += guardfraction_bandwidth;
+    }
+
+  } else {
+
+    *M += default_bandwidth;
+  }
+}
+
 /** Given a list of vote networkstatus_t in <b>votes</b>, our public
  * authority <b>identity_key</b>, our private authority <b>signing_key</b>,
  * and the number of <b>total_authorities</b> that we believe exist in our
@@ -1291,8 +1372,11 @@ networkstatus_compute_consensus(smartlist_t *votes,
                                          sizeof(uint32_t));
     uint32_t *measured_bws_kb = tor_calloc(smartlist_len(votes),
                                            sizeof(uint32_t));
+    uint32_t *measured_guardfraction = tor_calloc(smartlist_len(votes),
+                                                  sizeof(uint32_t));
     int num_bandwidths;
     int num_mbws;
+    int num_guardfraction_inputs;
 
     int *n_voter_flags; /* n_voter_flags[j] is the number of flags that
                          * votes[j] knows about. */
@@ -1401,7 +1485,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
     /* We need to know how many votes measure bandwidth. */
     n_authorities_measuring_bandwidth = 0;
-    SMARTLIST_FOREACH(votes, networkstatus_t *, v,
+    SMARTLIST_FOREACH(votes, const networkstatus_t *, v,
        if (v->has_measured_bws) {
          ++n_authorities_measuring_bandwidth;
        }
@@ -1443,6 +1527,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       smartlist_clear(versions);
       num_bandwidths = 0;
       num_mbws = 0;
+      num_guardfraction_inputs = 0;
 
       /* Okay, go through all the entries for this digest. */
       SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, v) {
@@ -1474,6 +1559,12 @@ networkstatus_compute_consensus(smartlist_t *votes,
             naming_conflict = 1;
           }
           chosen_name = rs->status.nickname;
+        }
+
+        /* Count guardfraction votes and note down the values. */
+        if (rs->status.has_guardfraction) {
+          measured_guardfraction[num_guardfraction_inputs++] =
+            rs->status.guardfraction_percentage;
         }
 
         /* count bandwidths */
@@ -1565,6 +1656,17 @@ networkstatus_compute_consensus(smartlist_t *votes,
         chosen_version = NULL;
       }
 
+      /* If it's a guard and we have enough guardfraction votes,
+         calculate its consensus guardfraction value. */
+      if (is_guard && num_guardfraction_inputs > 2 &&
+          consensus_method >= MIN_METHOD_FOR_GUARDFRACTION) {
+        rs_out.has_guardfraction = 1;
+        rs_out.guardfraction_percentage = median_uint32(measured_guardfraction,
+                                                     num_guardfraction_inputs);
+        /* final value should be an integer percentage! */
+        tor_assert(rs_out.guardfraction_percentage <= 100);
+      }
+
       /* Pick a bandwidth */
       if (num_mbws > 2) {
         rs_out.has_bandwidth = 1;
@@ -1586,21 +1688,11 @@ networkstatus_compute_consensus(smartlist_t *votes,
       /* Fix bug 2203: Do not count BadExit nodes as Exits for bw weights */
       is_exit = is_exit && !is_bad_exit;
 
+      /* Update total bandwidth weights with the bandwidths of this router. */
       {
-        if (rs_out.has_bandwidth) {
-          T += rs_out.bandwidth_kb;
-          if (is_exit && is_guard)
-            D += rs_out.bandwidth_kb;
-          else if (is_exit)
-            E += rs_out.bandwidth_kb;
-          else if (is_guard)
-            G += rs_out.bandwidth_kb;
-          else
-            M += rs_out.bandwidth_kb;
-        } else {
-          log_warn(LD_BUG, "Missing consensus bandwidth for router %s",
-              rs_out.nickname);
-        }
+        update_total_bandwidth_weights(&rs_out,
+                                       is_exit, is_guard,
+                                       &G, &M, &E, &D, &T);
       }
 
       /* Ok, we already picked a descriptor digest we want to list
@@ -1719,11 +1811,21 @@ networkstatus_compute_consensus(smartlist_t *votes,
       smartlist_add(chunks, tor_strdup("\n"));
       /*     Now the weight line. */
       if (rs_out.has_bandwidth) {
+        char *guardfraction_str = NULL;
         int unmeasured = rs_out.bw_is_unmeasured &&
           consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW;
-        smartlist_add_asprintf(chunks, "w Bandwidth=%d%s\n",
+
+        /* If we have guardfraction info, include it in the 'w' line. */
+        if (rs_out.has_guardfraction) {
+          tor_asprintf(&guardfraction_str,
+                       " GuardFraction=%u", rs_out.guardfraction_percentage);
+        }
+        smartlist_add_asprintf(chunks, "w Bandwidth=%d%s%s\n",
                                rs_out.bandwidth_kb,
-                               unmeasured?" Unmeasured=1":"");
+                               unmeasured?" Unmeasured=1":"",
+                               guardfraction_str ? guardfraction_str : "");
+
+        tor_free(guardfraction_str);
       }
 
       /*     Now the exitpolicy summary line. */
