@@ -1,21 +1,29 @@
-Changes in version 0.2.6.3-alpha - 2015-02-??
-  blah blah blah
+Changes in version 0.2.6.3-alpha - 2015-02-2?
+  Tor 0.2.6.3-alpha is the third (and hopefully final) alpha release in
+  the 0.2.6.x series. It introduces features for running Tor instances
+  that on more kinds of sockets, makes it harder to accidentally run an
+  exit, improves our multithreading backend, incorporates several fixes
+  for the AutomapHostsOnResolve option, and fixes numerous other
+  bugs besides.
+
+  If no major regressions or security holes are found in this version,
+  the next version will be a release candidate.
 
   o Deprecated versions:
     - Tor relays older than 0.2.4.18-rc are no longer allowed to
       advertise themselves on the network. Closes ticket 13555.
 
   o Major features (security):
-    - Implementation of an AF_UNIX socket option to implement a SOCKS
-      proxy reachable by Unix Domain Socket. This allows client
-      applications to communicate with Tor without having the ability to
-      create AF_INET or AF_INET6 family sockets. If an application has
-      permission to create a socket with AF_UNIX, it may directly
+    - Tor can now expose a SOCKS proxy over an AF_UNIX Unix Domain Socket.
+      This allows client
+      applications to Tor without having creating
+      AF_INET or AF_INET6 sockets. If an application has
+      permission to connect to Tor's AF_UNIX socket, it can
       communicate with Tor as if it were an other SOCKS proxy. This
-      should allow high risk applications to be entirely prevented from
-      connecting directly with TCP/IP, they will be able to only connect
-      to the internet through AF_UNIX and only through Tor. To create a
-      socket of this type, use the syntax "unix:/path/to/socket". Closes
+      should allow high risk applications to use Tor while completely
+      disabling their ability to make non-Tor connections.
+      To create a
+      socket of this type, use "SocksPort unix:/path/to/socket". Closes
       ticket 12585.
 
   o Major features (changed defaults):
@@ -23,12 +31,13 @@ Changes in version 0.2.6.3-alpha - 2015-02-??
       relay is configured as an exit node, we now warn the user unless
       the 'ExitRelay' option is set to 1. We warn even more loudly if
       the relay is configured with the default exit policy, since this
-      tends to indicate accidental misconfiguration. Setting 'ExitRelay'
-      to 0 stops Tor from running as an exit relay. Closes ticket 10067.
+      can indicate accidental misconfiguration. Setting 'ExitRelay 0'
+      stops Tor from running as an exit relay. Closes ticket 10067.
 
   o Major features (hidden services):
     - Support mapping hidden service virtual ports to AF_UNIX sockets on
-      suitable platforms. Resolves ticket #11485.
+      suitable platforms. The syntax is "HiddenServicePort 80
+      socket:/path/to/socket". Resolves ticket #11485.
 
   o Major features (performance):
     - Refactor the CPU worker implementation for better performance by
