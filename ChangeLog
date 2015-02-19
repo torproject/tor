@@ -285,14 +285,14 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       13661; bugfix on 0.0.8pre1.
 
   o Minor bugfixes (path counting):
-    - When deciding whether we have any exit nodes, count the number
-      listed in the consensus, not the number we have descriptors for.
-      Fixes part of bug 14918; bugfix on 0.2.6.2-alpha.
-    - Do not warn that we are missing directory information if we have
-      decided not to fetch directory information due to a long period of
-      idleness. Fixes part of bug 14918; bugfix on 0.2.6.2-alpha.
+    - When deciding whether the consensus lists any exit nodes, count
+      the number listed in the consensus, not the number we have
+      descriptors for. Fixes part of bug 14918; bugfix on 0.2.6.2-alpha.
     - When deciding whether we have any exit nodes, only process
       ExitNodes when the ExitNodes option is actually set. Fixes part of
+      bug 14918; bugfix on 0.2.6.2-alpha.
+    - Get rid of redundant and possibly scary warnings that we are
+      missing directory information while we bootstrap. Fixes part of
       bug 14918; bugfix on 0.2.6.2-alpha.
 
   o Minor bugfixes (portability):
