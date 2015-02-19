@@ -1670,8 +1670,6 @@ update_router_have_minimum_dir_info(void)
 
   using_md = consensus->flavor == FLAV_MICRODESC;
 
-#define NOTICE_DIR_INFO_STATUS_INTERVAL (60)
-
   /* Check fraction of available paths */
   {
     char *status = NULL;
@@ -1681,24 +1679,11 @@ update_router_have_minimum_dir_info(void)
                                                 &status);
 
     if (paths < get_frac_paths_needed_for_circs(options,consensus)) {
-      /* these messages can be excessive in testing networks */
-      static ratelim_t last_warned =
-        RATELIM_INIT(NOTICE_DIR_INFO_STATUS_INTERVAL);
-      char *suppression_msg = NULL;
-
       tor_snprintf(dir_info_status, sizeof(dir_info_status),
                    "We need more %sdescriptors: we have %d/%d, and "
                    "can only build %d%% of likely paths. (We have %s.)",
                    using_md?"micro":"", num_present, num_usable,
                    (int)(paths*100), status);
-
-      if ((suppression_msg = rate_limit_log(&last_warned, time(NULL)))) {
-        if (!should_delay_dir_fetches(options, NULL) &&
-            !directory_too_idle_to_fetch_descriptors(options, now)) {
-          log_warn(LD_NET, "%s%s", dir_info_status, suppression_msg);
-        }
-        tor_free(suppression_msg);
-      }
       tor_free(status);
       res = 0;
       control_event_bootstrap(BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS, 0);
