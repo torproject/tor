@@ -537,7 +537,8 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
   was_router_added_t r;
   routerinfo_t *ri_old;
   char *desc, *nickname;
-  size_t desclen = 0;
+  const size_t desclen = ri->cache_info.signed_descriptor_len +
+      ri->cache_info.annotations_len;
   *msg = NULL;
 
   /* If it's too big, refuse it now. Otherwise we'll cache it all over the
@@ -551,7 +552,7 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
     *msg = "Router descriptor was too large.";
     control_event_or_authdir_new_descriptor("REJECTED",
                ri->cache_info.signed_descriptor_body,
-               ri->cache_info.signed_descriptor_len, *msg);
+                                            desclen, *msg);
     routerinfo_free(ri);
     return ROUTER_AUTHDIR_REJECTS;
   }
@@ -572,14 +573,13 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
       "the last one with this identity.";
     control_event_or_authdir_new_descriptor("DROPPED",
                          ri->cache_info.signed_descriptor_body,
-                         ri->cache_info.signed_descriptor_len, *msg);
+                                            desclen, *msg);
     routerinfo_free(ri);
     return ROUTER_IS_ALREADY_KNOWN;
   }
 
   /* Make a copy of desc, since router_add_to_routerlist might free
    * ri and its associated signed_descriptor_t. */
-  desclen = ri->cache_info.signed_descriptor_len;
   desc = tor_strndup(ri->cache_info.signed_descriptor_body, desclen);
   nickname = tor_strdup(ri->nickname);
 
