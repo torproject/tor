@@ -60,12 +60,6 @@ Changes in version 0.2.6.3-alpha - 2015-02-19
       to 50 KiB/sec and for relays to 75 KiB/sec. (The old values were
       20 KiB/sec.) Closes ticket 13822.
 
-  o Major bugfixes (client):
-    - Allow MapAddress and AutomapHostsOnResolve to work together when
-      an address is mapped into another address type (like .onion) that
-      must be automapped at resolve time. Fixes bug 7555; bugfix
-      on 0.2.0.1-alpha.
-
   o Major bugfixes (exit node stability):
     - Fix an assertion failure that could occur under high DNS load.
       Fixes bug 14129; bugfix on Tor 0.0.7rc1. Found by "jowr";
@@ -169,11 +163,6 @@ Changes in version 0.2.6.3-alpha - 2015-02-19
       used in HS circuits. This might allow better performance for
       Tor2Web nodes. Implements ticket 12844.
 
-  o Minor bugfixes (automapping):
-    - Prevent changes to other options from removing the wildcard value
-      "." from "AutomapHostsSuffixes". Fixes bug 12509; bugfix
-      on 0.2.0.1-alpha.
-
   o Minor bugfixes (client DNS):
     - Report the correct cached DNS expiration times on SOCKS port or in
       DNS replies. Previously, we would report everything as "never
@@ -189,6 +178,13 @@ Changes in version 0.2.6.3-alpha - 2015-02-19
       0.2.4.7-alpha. Patch by "teor".
     - Fix a memory leak when using AutomapHostsOnResolve. Fixes bug
       14195; bugfix on 0.1.0.1-rc.
+    - Prevent changes to other options from removing the wildcard value
+      "." from "AutomapHostsSuffixes". Fixes bug 12509; bugfix
+      on 0.2.0.1-alpha.
+    - Allow MapAddress and AutomapHostsOnResolve to work together when
+      an address is mapped into another address type (like .onion) that
+      must be automapped at resolve time. Fixes bug 7555; bugfix
+      on 0.2.0.1-alpha.
 
   o Minor bugfixes (client, bridges):
     - When we are using bridges and we had a network connectivity
