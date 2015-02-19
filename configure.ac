@@ -26,23 +26,23 @@ CPPFLAGS="$CPPFLAGS -I\${top_srcdir}/src/common"
 
 #XXXX020 We should make these enabled or not, before 0.2.0.x-final
 AC_ARG_ENABLE(openbsd-malloc,
-   AS_HELP_STRING(--enable-openbsd-malloc, Use malloc code from openbsd.  Linux only))
+   AS_HELP_STRING(--enable-openbsd-malloc, [use malloc code from OpenBSD.  Linux only]))
 AC_ARG_ENABLE(instrument-downloads,
-   AS_HELP_STRING(--enable-instrument-downloads, Instrument downloads of directory resources etc.))
+   AS_HELP_STRING(--enable-instrument-downloads, [instrument downloads of directory resources etc.]))
 AC_ARG_ENABLE(static-openssl,
-   AS_HELP_STRING(--enable-static-openssl, Link against a static openssl library. Requires --with-openssl-dir))
+   AS_HELP_STRING(--enable-static-openssl, [link against a static openssl library. Requires --with-openssl-dir]))
 AC_ARG_ENABLE(static-libevent,
-   AS_HELP_STRING(--enable-static-libevent, Link against a static libevent library. Requires --with-libevent-dir))
+   AS_HELP_STRING(--enable-static-libevent, [link against a static libevent library. Requires --with-libevent-dir]))
 AC_ARG_ENABLE(static-zlib,
-   AS_HELP_STRING(--enable-static-zlib, Link against a static zlib library. Requires --with-zlib-dir))
+   AS_HELP_STRING(--enable-static-zlib, [link against a static zlib library. Requires --with-zlib-dir]))
 AC_ARG_ENABLE(static-tor,
-   AS_HELP_STRING(--enable-static-tor, Create an entirely static Tor binary. Requires --with-openssl-dir and --with-libevent-dir and --with-zlib-dir))
+   AS_HELP_STRING(--enable-static-tor, [create an entirely static Tor binary. Requires --with-openssl-dir and --with-libevent-dir and --with-zlib-dir]))
 AC_ARG_ENABLE(unittests,
-   AS_HELP_STRING(--disable-unittests, [Don't build unit tests for Tor. Risky!]))
+   AS_HELP_STRING(--disable-unittests, [don't build unit tests for Tor. Risky!]))
 AC_ARG_ENABLE(coverage,
-   AS_HELP_STRING(--enable-coverage, [Enable coverage support in the unit-test build]))
+   AS_HELP_STRING(--enable-coverage, [enable coverage support in the unit-test build]))
 AC_ARG_ENABLE(system-torrc,
-   AS_HELP_STRING(--disable-system-torrc, [Don't look for a system-wide torrc file]))
+   AS_HELP_STRING(--disable-system-torrc, [don't look for a system-wide torrc file]))
 
 AM_CONDITIONAL(UNITTESTS_ENABLED, test x$enable_unittests != xno)
 AM_CONDITIONAL(COVERAGE_ENABLED, test x$enable_coverage = xyes)
@@ -66,7 +66,7 @@ if test x$enable_instrument_downloads = xyes; then
 fi
 
 AC_ARG_ENABLE(transparent,
-     AS_HELP_STRING(--disable-transparent, disable transparent proxy support),
+     AS_HELP_STRING(--disable-transparent, [disable transparent proxy support]),
      [case "${enableval}" in
         yes) transparent=true ;;
         no)  transparent=false ;;
@@ -74,7 +74,7 @@ AC_ARG_ENABLE(transparent,
       esac], [transparent=true])
 
 AC_ARG_ENABLE(asciidoc,
-     AS_HELP_STRING(--disable-asciidoc, don't use asciidoc (disables building of manpages)),
+     AS_HELP_STRING(--disable-asciidoc, [don't use asciidoc (disables building of manpages)]),
      [case "${enableval}" in
         yes) asciidoc=true ;;
         no)  asciidoc=false ;;
@@ -83,7 +83,7 @@ AC_ARG_ENABLE(asciidoc,
 
 # By default, we're not ready to ship a NAT-PMP aware Tor
 AC_ARG_ENABLE(nat-pmp,
-     AS_HELP_STRING(--enable-nat-pmp, enable NAT-PMP support),
+     AS_HELP_STRING(--enable-nat-pmp, [enable NAT-PMP support]),
      [case "${enableval}" in
         yes) natpmp=true ;;
         no)  natpmp=false ;;
@@ -92,7 +92,7 @@ AC_ARG_ENABLE(nat-pmp,
 
 # By default, we're not ready to ship a UPnP aware Tor
 AC_ARG_ENABLE(upnp,
-     AS_HELP_STRING(--enable-upnp, enable UPnP support),
+     AS_HELP_STRING(--enable-upnp, [enable UPnP support]),
      [case "${enableval}" in
         yes) upnp=true ;;
         no)  upnp=false ;;
@@ -101,7 +101,7 @@ AC_ARG_ENABLE(upnp,
 
 # systemd notify support
 AC_ARG_ENABLE(systemd,
-      AS_HELP_STRING(--enable-systemd, enable systemd notification support),
+      AS_HELP_STRING(--enable-systemd, [enable systemd notification support]),
       [case "${enableval}" in
         yes) systemd=true ;;
         no)  systemd=false ;;
@@ -148,24 +148,24 @@ case $host in
 esac
 
 AC_ARG_ENABLE(gcc-warnings,
-     AS_HELP_STRING(--enable-gcc-warnings, enable verbose warnings))
+     AS_HELP_STRING(--enable-gcc-warnings, [enable verbose warnings]))
 AC_ARG_ENABLE(gcc-warnings-advisory,
      AS_HELP_STRING(--enable-gcc-warnings-advisory, [enable verbose warnings, excluding -Werror]))
 
 dnl Others suggest '/gs /safeseh /nxcompat /dynamicbase' for non-gcc on Windows
 AC_ARG_ENABLE(gcc-hardening,
-    AS_HELP_STRING(--disable-gcc-hardening, disable compiler security checks))
+    AS_HELP_STRING(--disable-gcc-hardening, [disable compiler security checks]))
 
 AC_ARG_ENABLE(expensive-hardening,
-    AS_HELP_STRING(--enable-expensive-hardening, enable more expensive compiler hardening; makes Tor slower))
+    AS_HELP_STRING(--enable-expensive-hardening, [enable more expensive compiler hardening; makes Tor slower]))
 
 dnl Linker hardening options
 dnl Currently these options are ELF specific - you can't use this with MacOSX
 AC_ARG_ENABLE(linker-hardening,
-    AS_HELP_STRING(--disable-linker-hardening, disable linker security fixups))
+    AS_HELP_STRING(--disable-linker-hardening, [disable linker security fixups]))
 
 AC_ARG_ENABLE(local-appdata,
-   AS_HELP_STRING(--enable-local-appdata, default to host local application data paths on Windows))
+   AS_HELP_STRING(--enable-local-appdata, [default to host local application data paths on Windows]))
 if test "$enable_local_appdata" = "yes"; then
   AC_DEFINE(ENABLE_LOCAL_APPDATA, 1,
             [Defined if we default to host local appdata paths on Windows])
@@ -173,22 +173,22 @@ fi
 
 # Tor2web mode flag
 AC_ARG_ENABLE(tor2web-mode,
-     AS_HELP_STRING(--enable-tor2web-mode, support tor2web non-anonymous mode),
+     AS_HELP_STRING(--enable-tor2web-mode, [support tor2web non-anonymous mode]),
 [if test x$enableval = xyes; then
     CFLAGS="$CFLAGS -D ENABLE_TOR2WEB_MODE=1"
 fi])
 
 AC_ARG_ENABLE(bufferevents,
-     AS_HELP_STRING(--enable-bufferevents, use Libevent's buffered IO.))
+     AS_HELP_STRING(--enable-bufferevents, [use Libevent's buffered IO]))
 
 AC_ARG_ENABLE(tool-name-check,
-     AS_HELP_STRING(--disable-tool-name-check, check for sanely named toolchain when cross-compiling))
+     AS_HELP_STRING(--disable-tool-name-check, [check for sanely named toolchain when cross-compiling]))
 
 AC_ARG_ENABLE(seccomp,
-     AS_HELP_STRING(--disable-seccomp, do not attempt to use libseccomp))
+     AS_HELP_STRING(--disable-seccomp, [do not attempt to use libseccomp]))
 
 AC_ARG_ENABLE(libscrypt,
-     AS_HELP_STRING(--disable-libscrypt, do not attempt to use libscrypt))
+     AS_HELP_STRING(--disable-libscrypt, [do not attempt to use libscrypt]))
 
 dnl check for the correct "ar" when cross-compiling
 AN_MAKEVAR([AR], [AC_PROG_AR])
@@ -286,7 +286,7 @@ AC_PATH_PROG([OPENSSL], [openssl], none)
 
 TORUSER=_tor
 AC_ARG_WITH(tor-user,
-        [  --with-tor-user=NAME    Specify username for tor daemon ],
+        AS_HELP_STRING(--with-tor-user=NAME, [specify username for tor daemon]),
         [
            TORUSER=$withval
         ]
@@ -295,7 +295,7 @@ AC_SUBST(TORUSER)
 
 TORGROUP=_tor
 AC_ARG_WITH(tor-group,
-        [  --with-tor-group=NAME   Specify group name for tor daemon ],
+        AS_HELP_STRING(--with-tor-group=NAME, [specify group name for tor daemon]),
         [
            TORGROUP=$withval
         ]
@@ -597,7 +597,7 @@ tor_openssl_devpkg_debian="libssl-dev"
 
 ALT_openssl_WITHVAL=""
 AC_ARG_WITH(ssl-dir,
-  [  --with-ssl-dir=PATH    Obsolete alias for --with-openssl-dir ],
+  AS_HELP_STRING(--with-ssl-dir=PATH, [obsolete alias for --with-openssl-dir]),
   [
       if test "x$withval" != xno && test "x$withval" != "x" ; then
          ALT_openssl_WITHVAL="$withval"
@@ -1315,7 +1315,7 @@ fi
 # Whether we should use the dmalloc memory allocation debugging library.
 AC_MSG_CHECKING(whether to use dmalloc (debug memory allocation library))
 AC_ARG_WITH(dmalloc,
-[  --with-dmalloc          Use debug memory allocation library. ],
+AS_HELP_STRING(--with-dmalloc, [use debug memory allocation library]),
 [if [[ "$withval" = "yes" ]]; then
   dmalloc=1
   AC_MSG_RESULT(yes)
@@ -1333,7 +1333,7 @@ if [[ $dmalloc -eq 1 ]]; then
 fi
 
 AC_ARG_WITH(tcmalloc,
-[  --with-tcmalloc         Use tcmalloc memory allocation library. ],
+AS_HELP_STRING(--with-tcmalloc, [use tcmalloc memory allocation library]),
 [ tcmalloc=yes ], [ tcmalloc=no ])
 
 if test x$tcmalloc = xyes ; then
@@ -1363,7 +1363,7 @@ AC_CHECK_DECLS([mlockall], , , [
 
 # Allow user to specify an alternate syslog facility
 AC_ARG_WITH(syslog-facility,
-[  --with-syslog-facility=LOG syslog facility to use (default=LOG_DAEMON)],
+AS_HELP_STRING(--with-syslog-facility=LOG, [syslog facility to use (default=LOG_DAEMON)]),
 syslog_facility="$withval", syslog_facility="LOG_DAEMON")
 AC_DEFINE_UNQUOTED(LOGFACILITY,$syslog_facility,[name of the syslog facility])
 AC_SUBST(LOGFACILITY)

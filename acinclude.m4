@@ -137,7 +137,7 @@ dnl
 AC_DEFUN([TOR_SEARCH_LIBRARY], [
 try$1dir=""
 AC_ARG_WITH($1-dir,
-  [  --with-$1-dir=PATH    Specify path to $1 installation ],
+  AS_HELP_STRING(--with-$1-dir=PATH, [specify path to $1 installation]),
   [
      if test x$withval != xno ; then
         try$1dir="$withval"
