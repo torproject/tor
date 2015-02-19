@@ -1,7 +1,7 @@
 Changes in version 0.2.6.3-alpha - 2015-02-2?
   Tor 0.2.6.3-alpha is the third (and hopefully final) alpha release in
   the 0.2.6.x series. It introduces features for running Tor instances
-  that on more kinds of sockets, makes it harder to accidentally run an
+  that [VERB?] on more kinds of sockets, makes it harder to accidentally run an
   exit, improves our multithreading backend, incorporates several fixes
   for the AutomapHostsOnResolve option, and fixes numerous other
   bugs besides.
@@ -14,17 +14,15 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       advertise themselves on the network. Closes ticket 13555.
 
   o Major features (security, unix domain sockets):
-    - Tor can now expose a SOCKS proxy over an AF_UNIX Unix Domain
-      Socket. This allows client applications to Tor without having
-      creating AF_INET or AF_INET6 sockets. If an application has
-      permission to connect to Tor's AF_UNIX socket, it can communicate
-      with Tor as if it were an other SOCKS proxy. This should allow
-      high risk applications to use Tor while completely disabling their
-      ability to make non-Tor connections. To create a socket of this
-      type, use "SocksPort unix:/path/to/socket". Closes ticket 12585.
+    - Allow SocksPort to be an AF_UNIX Unix Domain Socket. Now high risk
+      applications can reach Tor without having to create AF_INET or
+      AF_INET6 sockets, meaning they can completely disable their ability
+      to make non-Tor network connections. To create a socket of this
+      type, use "SocksPort unix:/path/to/socket". Implements ticket 12585.
     - Support mapping hidden service virtual ports to AF_UNIX sockets on
-      suitable platforms. The syntax is "HiddenServicePort 80
-      socket:/path/to/socket". Resolves ticket #11485.
+      suitable platforms [suitable platforms? which ones are those?].
+      The syntax is "HiddenServicePort 80
+      socket:/path/to/socket". Implements ticket 11485.
 
   o Major features (changed defaults):
     - Prevent relay operators from unintentionally running exits: When a
