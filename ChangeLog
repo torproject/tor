@@ -27,25 +27,44 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
   o Major features (changed defaults):
     - Prevent relay operators from unintentionally running exits: When a
       relay is configured as an exit node, we now warn the user unless
-      the 'ExitRelay' option is set to 1. We warn even more loudly if
+      the "ExitRelay" option is set to 1. We warn even more loudly if
       the relay is configured with the default exit policy, since this
-      can indicate accidental misconfiguration. Setting 'ExitRelay 0'
+      can indicate accidental misconfiguration. Setting "ExitRelay 0"
       stops Tor from running as an exit relay. Closes ticket 10067.
 
   o Major features (performance):
-    - Make the the CPU worker implementation more efficient by avoiding
+    - Make the CPU worker implementation more efficient by avoiding
       the kernel and lengthening pipelines. The original implementation
       used sockets to transfer data from the main thread to the workers,
       and didn't allow any thread to be assigned more than a single
       piece of work at once. The new implementation avoids communications
       overhead by making requests in shared memory, avoiding kernel IO
       where possible, and keeping more requests in flight at once.
-      Resolves issue #9682.
+      Implements ticket 9682.
+
+  o Major features (relay):
+    - Raise the minimum acceptable configured bandwidth rate for bridges
+      to 50 KiB/sec and for relays to 75 KiB/sec. (The old values were
+      20 KiB/sec.) Closes ticket 13822.
+
+  o Major features (directory system):
+    - When downloading server- or microdescriptors from a directory
+      server, we no longer launch multiple simultaneous requests to the
+      same server. This reduces load on the directory servers,
+      especially when directory guards are in use. Closes ticket 9969.
+    - When downloading server- or microdescriptors over a tunneled
+      connection, do not limit the length of our requests to what the
+      Squid proxy is willing to handle. Part of ticket 9969.
+    - Authorities can now vote on the correct digests and latest
+      versions for different software packages. This allows packages
+      that include Tor to use the Tor authority system as a way to get
+      notified of updates and their correct digests. Implements proposal
+      227. Closes ticket 10395.
 
   o Major bugfixes (client):
     - Allow MapAddress and AutomapHostsOnResolve to work together when
-      an address is mapped into another address type that must be
-      automapped at resolve time. Fixes bug 7555; bugfix
+      an address is mapped into another address type (like .onion)
+      that must be automapped at resolve time. Fixes bug 7555; bugfix
       on 0.2.0.1-alpha.
 
   o Major bugfixes (exit node stability):
@@ -63,35 +82,21 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
 
   o Minor features (build):
     - New --disable-system-torrc compile-time option to prevent Tor from
-      looking for a system-wide torrc or torrc-defaults file. Resolves
+      looking for the system-wide torrc or torrc-defaults files. Resolves
       ticket 13037.
 
   o Minor features (controller):
     - Include SOCKS_USERNAME and SOCKS_PASSWORD values in controller
       events so controllers can observe circuit isolation inputs. Closes
       ticket 8405.
-    - ControlPort now supports the unix:/path/to/dir syntax as an
+    - ControlPort now supports the unix:/path/to/socket syntax as an
       alternative to the ControlSocket option, for consistency with
       SocksPort and HiddenServicePort. Closes ticket 14451.
     - New "GETINFO bw-event-cache" to get information about recent
       bandwidth events. Closes ticket 14128. Useful for controllers to
-      get recent bandwidth history after the fix for 13988.
+      get recent bandwidth history after the fix for ticket 13988.
 
-  o Minor features (directory system):
-    - When downloading server- or microdescriptors from a directory
-      server, we no longer launch multiple simultaneous requests to the
-      same server. This reduces load on the directory servers,
-      especially when directory guards are in use. Closes ticket 9969.
-    - When downloading server- or microdescriptors over a tunneled
-      connection, do not limit the length of our requests to what the
-      Squid proxy is willing to handle. Part of ticket 9969.
-    - Authorities can now vote on the correct digests and latest
-      versions for different software packages. This allows packages
-      that include Tor to use the Tor authority system as a way to get
-      notified of updates and their correct digests. Implements proposal
-      227. Closes ticket 10395.
-
-  o Minor features (DOS resistance):
+  o Minor features (Denial of service resistance):
     - Count the total number of bytes used storing hidden service
       descriptors against the value of MaxMemInQueues. If we're low on
       memory, and more than 20% of our memory is used holding hidden
@@ -101,35 +106,30 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
     - When we have recently been under memory pressure (over 3/4 of
       MaxMemInQueues is allocated), then allocate smaller zlib objects
       for small requests. Closes ticket 11791.
-    - When we have recently been under memory pressure (over 3/4 of
-      MaxMemInQueues is allocated), then allocate smaller zlib objects
-      for small requests. Closes ticket 11791.
 
   o Minor features (geoip):
-    - Update geoip to the January 7 2015 Maxmind GeoLite2
-      Country database.
-    - Update geoip6 to the January 7 2015 Maxmind GeoLite2
+    - Update geoip and geoip6 files to the January 7 2015 Maxmind GeoLite2
       Country database.
 
   o Minor features (guard nodes):
     - Reduce the time delay before saving guard status to disk from 10
-      minute to 30 seconds (or from one hour to 10 minutes if
+      minutes to 30 seconds (or from one hour to 10 minutes if
       AvoidDiskWrites is set). Closes ticket 12485.
 
   o Minor features (hidden service):
     - Make Sybil attacks against hidden services harder by changing the
-      minimum time required to become an HSDir from 25 hours up to 96
-      hours. Addresses ticket #14149.
+      minimum time required to get the HSDir flag from 25 hours up to 96
+      hours. Addresses ticket 14149.
     - New option "HiddenServiceAllowUnknownPorts" to allow hidden
       services to disable the anti-scanning feature introduced in
       0.2.6.2-alpha. With this option not set, a connection to an
       unlisted port closes the circuit. With this option set, only a
-      RELAY_DONE cell is sent. Closes ticket #14084.
+      RELAY_DONE cell is sent. Closes ticket 14084.
 
   o Minor features (interface):
-    - Implement '-f -' CLI suboption to read torrc configuration from
-      standard input, thus not requiring to store torrc in file system.
-      Implements feature 13865.
+    - Implement "-f -" command-line option to read torrc configuration
+      from standard input, if you don't want to store the torrc file in
+      the file system. Implements feature 13865.
 
   o Minor features (logging):
     - Add a count of unique clients to the bridge heartbeat message.
@@ -141,16 +141,10 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
     - Elevate hidden service authorized-client message from DEBUG to
       INFO. Closes ticket 14015.
 
-  o Minor features (relay):
-    - Use separate minimum bandwidth values for relays and bridges.
-      Raise the minimum configured bandwidth for bridges to 50 KiB/sec
-      and for relays to 75 KiB/sec. (The old values were 20 KiB/sec.)
-      Closes ticket 13822.
-
   o Minor features (stability):
-    - Prevent bugs from causing infinite loops in our hash-table
-      iteration code by adding assertions that cached hash values have
-      not been corrupted. Closes ticket 11737.
+    - Add assertions in our hash-table iteration code to check for
+      corrupted values that could cause infinite loops. Closes ticket
+      11737.
 
   o Minor features (systemd):
     - Various improvements and modernizations in systemd hardening
@@ -158,9 +152,9 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
 
   o Minor features (testing networks):
     - Drop the minimum RendPostPeriod on a testing network to 5 seconds,
-      and the default to 2 minutes. Closes ticket 13401.
-    - Drop the MIN_REND_INITIAL_POST_DELAY on a testing network to 5
-      seconds, but keep the default at 30 seconds. This reduces HS
+      and the default on a testing network to 2 minutes. Drop the
+      MIN_REND_INITIAL_POST_DELAY on a testing network to 5 seconds, but
+      keep the default on a testing network at 30 seconds. This reduces HS
       bootstrap time to around 25 seconds. Also, change the default time
       in test-network.sh to match. Closes ticket 13401. Patch by "teor".
     - Create TestingDirAuthVoteHSDir to correspond to
@@ -173,7 +167,7 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
     - Introduce the config option Tor2webRendezvousPoints, which allows
       clients in Tor2webMode to select a specific Rendezvous Point to be
       used in HS circuits. This might allow better performance for
-      Tor2Web nodes. Implements ticket #12844.
+      Tor2Web nodes. Implements ticket 12844.
 
   o Minor bugfixes (automapping):
     - Prevent changes to other options from removing the wildcard value
@@ -181,7 +175,7 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       on 0.2.0.1-alpha.
 
   o Minor bugfixes (client DNS):
-    - Report the correct cached DNS expiration times. Previously, we
+    - Report the correct cached DNS expiration times [Report them where?]. Previously, we
       would report everything as "never expires." Fixes bug 14193;
       bugfix on 0.2.3.17-beta.
     - Avoid a small memory leak when we find a cached answer for a
