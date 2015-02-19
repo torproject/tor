@@ -33,6 +33,9 @@ def lintfile(fname):
 
     contents = " ".join(contents.split())
 
+    if re.search(r'\#\d{2,}', contents):
+        warn("don't use a # before ticket numbers")
+
     if isBug and not re.search(r'(\d+)', contents):
         warn("bugfix does not mention a number")
     elif isBug and not re.search(r'Fixes ([a-z ]*)bug (\d+)', contents):
