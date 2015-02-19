@@ -1,0 +1,4 @@
+  o Minor features (compilation):
+    - Do not compile any code related to Tor2Web mode when Tor2Web mode
+      is not enabled at compile time. Previously, this code was included
+      in a disabled state. See discussion on ticket #12844.

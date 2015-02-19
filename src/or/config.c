@@ -3037,6 +3037,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     options->PredictedPortsRelevanceTime = MAX_PREDICTED_CIRCS_RELEVANCE;
   }
 
+#ifdef ENABLE_TOR2WEB_MODE
   if (options->Tor2webMode && options->LearnCircuitBuildTimeout) {
     /* LearnCircuitBuildTimeout and Tor2webMode are incompatible in
      * two ways:
@@ -3068,6 +3069,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
                "Tor2WebMode is enabled; disabling UseEntryGuards.");
     options->UseEntryGuards = 0;
   }
+#endif
 
   if (options->Tor2webRendezvousPoints && !options->Tor2webMode) {
     REJECT("Tor2webRendezvousPoints cannot be set without Tor2webMode.");

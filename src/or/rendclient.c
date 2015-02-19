@@ -620,7 +620,12 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
   char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
   time_t now = time(NULL);
   char descriptor_cookie_base64[3*REND_DESC_COOKIE_LEN_BASE64];
+#ifdef ENABLE_TOR2WEB_MODE
   const int tor2web_mode = options->Tor2webMode;
+  const int how_to_fetch = tor2web_mode ? DIRIND_ONEHOP : DIRIND_ANONYMOUS;
+#else
+  const int how_to_fetch = DIRIND_ANONYMOUS;
+#endif
   int excluded_some;
   tor_assert(desc_id);
   tor_assert(rend_query);
@@ -697,7 +702,7 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
   directory_initiate_command_routerstatus_rend(hs_dir,
                                           DIR_PURPOSE_FETCH_RENDDESC_V2,
                                           ROUTER_PURPOSE_GENERAL,
-                                   tor2web_mode?DIRIND_ONEHOP:DIRIND_ANONYMOUS,
+                                          how_to_fetch,
                                           desc_id_base32,
                                           NULL, 0, 0,
                                           rend_query);
