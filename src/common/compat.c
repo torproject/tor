@@ -1793,8 +1793,8 @@ tor_getpwnam(const char *username)
   if ((pw = getpwnam(username))) {
     tor_passwd_free(passwd_cached);
     passwd_cached = tor_passwd_dup(pw);
-    log_notice(LD_GENERAL, "Caching new entry %s for %s",
-               passwd_cached->pw_name, username);
+    log_info(LD_GENERAL, "Caching new entry %s for %s",
+             passwd_cached->pw_name, username);
     return pw;
   }
 
