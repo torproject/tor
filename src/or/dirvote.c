@@ -1060,7 +1060,8 @@ update_total_bandwidth_weights(const routerstatus_t *rs,
    *    E' = E + (1-F)*B, if N has the exit flag
    *
    * In this block of code, we prepare the bandwidth values by setting
-   * the default_bandwidth to F*B and guardfraction_bandwidth to (1-F)*B. */
+   * the default_bandwidth to F*B and guardfraction_bandwidth to (1-F)*B.
+   */
   if (rs->has_guardfraction) {
     guardfraction_bandwidth_t guardfraction_bw;
 
@@ -1075,10 +1076,11 @@ update_total_bandwidth_weights(const routerstatus_t *rs,
   }
 
   /* Now calculate the total bandwidth weights with or without
-     guardfraction. Depending on the flags of the relay, add its
-     bandwidth to the appropriate weight pool. If it's a guard and
-     guardfraction is enabled, add its bandwidth to both pools as
-     indicated by the previous comment. */
+   * guardfraction. Depending on the flags of the relay, add its
+   * bandwidth to the appropriate weight pool. If it's a guard and
+   * guardfraction is enabled, add its bandwidth to both pools as
+   * indicated by the previous comment.
+   */
   *T += default_bandwidth;
   if (is_exit && is_guard) {
 

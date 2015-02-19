@@ -18,8 +18,8 @@
 #include "test.h"
 #include "test_helpers.h"
 
-/* Generate a vote_routerstatus_t for a router with identity digest
-   <b>digest_in_hex</b>. */
+/** Generate a vote_routerstatus_t for a router with identity digest
+ * <b>digest_in_hex</b>. */
 static vote_routerstatus_t *
 gen_vote_routerstatus_for_tests(const char *digest_in_hex, int is_guard)
 {
@@ -169,7 +169,7 @@ test_parse_guardfraction_file_bad(void *arg)
   tor_free(guardfraction_bad);
 }
 
-/* Make sure that our test guardfraction file gets parsed properly, and
+/** Make sure that our test guardfraction file gets parsed properly, and
  * its information are applied properly to our routerstatuses. */
 static void
 test_parse_guardfraction_file_good(void *arg)
@@ -263,7 +263,7 @@ test_get_guardfraction_bandwidth(void *arg)
 }
 
 /** Parse the GuardFraction element of the consensus, and make sure it
- *  gets parsed correctly. */
+ * gets parsed correctly. */
 static void
 test_parse_guardfraction_consensus(void *arg)
 {
@@ -337,8 +337,8 @@ test_parse_guardfraction_consensus(void *arg)
   ;
 }
 
-/* Make sure that we use GuardFraction information when we should,
-   according to the torrc option and consensus parameter. */
+/** Make sure that we use GuardFraction information when we should,
+ * according to the torrc option and consensus parameter. */
 static void
 test_should_apply_guardfraction(void *arg)
 {

@@ -1827,7 +1827,7 @@ routerstatus_parse_guardfraction(const char *guardfraction_str,
   }
 
   guardfraction = (uint32_t)tor_parse_ulong(end_of_header+1,
-                                         10, 0, 100, &ok, NULL);
+                                            10, 0, 100, &ok, NULL);
   if (!ok) {
     log_warn(LD_DIR, "Invalid GuardFraction %s", escaped(guardfraction_str));
     return -1;
