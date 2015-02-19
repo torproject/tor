@@ -157,6 +157,8 @@ static int handle_control_resolve(control_connection_t *conn, uint32_t len,
 static int handle_control_usefeature(control_connection_t *conn,
                                      uint32_t len,
                                      const char *body);
+static int handle_control_hsfetch(control_connection_t *conn, uint32_t len,
+                                  const char *body);
 static int write_stream_target_to_buf(entry_connection_t *conn, char *buf,
                                       size_t len);
 static void orconn_target_get_name(char *buf, size_t len,
@@ -3253,6 +3255,98 @@ handle_control_dropguards(control_connection_t *conn,
   return 0;
 }
 
+/** Implementation for the HSFETCH command. */
+static int
+handle_control_hsfetch(control_connection_t *conn, uint32_t len,
+                       const char *body)
+{
+  char digest[DIGEST_LEN], *hsaddress = NULL, *arg1 = NULL, *desc_id = NULL;
+  smartlist_t *args = NULL, *hsdirs = NULL;
+  (void) len; /* body is nul-terminated; it's safe to ignore the length */
+  static const char *v2_str = "v2-";
+  const size_t v2_str_len = strlen(v2_str);
+
+  /* Make sure we have at least one argument, the HSAddress. */
+  args = getargs_helper("HSFETCH", conn, body, 1, -1);
+  if (!args) {
+    goto done;
+  }
+
+  /* Extract the HS address that should NOT contain the .onion part. */
+  arg1 = smartlist_get(args, 0);
+  /* Remove the HS address from the argument list so we can safely iterate
+   * on all the rest to find optional argument(s). */
+  smartlist_del(args, 0);
+  /* Test if it's an HS address without the .onion part. */
+  if (strlen(arg1) == REND_SERVICE_ID_LEN_BASE32 &&
+      base32_decode(digest, sizeof(digest), arg1,
+                    REND_SERVICE_ID_LEN_BASE32) == 0) {
+    hsaddress = arg1;
+  } else if (strstr(arg1, v2_str) &&
+             strlen(arg1 + v2_str_len) == REND_DESC_ID_V2_LEN_BASE32 &&
+             base32_decode(digest, sizeof(digest), arg1 + v2_str_len,
+                           REND_DESC_ID_V2_LEN_BASE32) == 0) {
+    /* We have a well formed version 2 descriptor ID. */
+    desc_id = arg1 + v2_str_len;
+  } else {
+    connection_printf_to_buf(conn, "552 Unrecognized \"%s\"\r\n",
+                             arg1);
+    goto done;
+  }
+
+  /* Stores routerstatus_t object for each specified server. */
+  hsdirs = smartlist_new();
+
+  /* Skip first argument because it's the HSAddress. */
+  SMARTLIST_FOREACH_BEGIN(args, char *, arg) {
+    const node_t *node;
+    static const char *opt_server = "SERVER=";
+
+    if (!strcasecmpstart(arg, opt_server)) {
+      const char *server;
+
+      memset(digest, 0, sizeof(digest));
+      server = arg + strlen(opt_server);
+      /* Is the server fingerprint valid?. */
+      if (!string_is_hex(server) || strlen(server) != HEX_DIGEST_LEN ||
+          base16_decode(digest, sizeof(digest), server, HEX_DIGEST_LEN)) {
+        connection_printf_to_buf(conn, "552 Invalid fingerprint \"%s\"\r\n",
+                                 server);
+        goto done;
+      }
+      node = node_get_by_id(digest);
+      if (!node) {
+        connection_printf_to_buf(conn, "552 Server \"%s\" not found\r\n",
+                                 server);
+        goto done;
+      }
+      /* Valid server, add it to our local list. */
+      smartlist_add(hsdirs, node->rs);
+    } else {
+      connection_printf_to_buf(conn, "552 Unexpected argument \"%s\"\r\n",
+                               arg);
+      goto done;
+    }
+  } SMARTLIST_FOREACH_END(arg);
+
+  /* XXX: Actually trigger the fetch(es). */
+  (void) hsaddress;
+  (void) desc_id;
+  (void) hsdirs;
+
+  /* All good, thanks and come again! */
+  send_control_done(conn);
+
+done:
+  if (args) {
+    SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+    smartlist_free(args);
+  }
+  tor_free(arg1);
+  smartlist_free(hsdirs);
+  return 0;
+}
+
 /** Called when <b>conn</b> has no more bytes left on its outbuf. */
 int
 connection_control_finished_flushing(control_connection_t *conn)
@@ -3549,6 +3643,9 @@ connection_control_process_inbuf(control_connection_t *conn)
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "DROPGUARDS")) {
     if (handle_control_dropguards(conn, cmd_data_len, args))
+      return -1;
+  } else if (!strcasecmp(conn->incoming_cmd, "HSFETCH")) {
+    if (handle_control_hsfetch(conn, cmd_data_len, args))
       return -1;
   } else {
     connection_printf_to_buf(conn, "510 Unrecognized command \"%s\"\r\n",
