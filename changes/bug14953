@@ -1,3 +1,0 @@
-  o Minor bugfixes (directory authority):
-    - Fix a bug that was truncating AUTHDIR_NEWDESC events sent to the
-      control port. Fixes bug 14953; bugfix on 0.2.0.1-alpha.

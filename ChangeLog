@@ -238,6 +238,8 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
     - Do not attempt to download extrainfo documents which we will be
       unable to validate with a matching server descriptor. Fixes bug
       13762; bugfix on 0.2.0.1-alpha.
+    - Fix a bug that was truncating AUTHDIR_NEWDESC events sent to the
+      control port. Fixes bug 14953; bugfix on 0.2.0.1-alpha.
     - Enlarge the buffer to read bwauth generated files to avoid an
       issue when parsing the file in dirserv_read_measured_bandwidths().
       Fixes bug 14125; bugfix on 0.2.2.1-alpha.
