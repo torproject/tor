@@ -1,0 +1,5 @@
+  o Minor bugfixes (directory authority):
+    - Do not attempt to download extrainfo documents which we will be
+      unable to validate with a matching server descriptor. Fixes bug
+      13762; bugfix on 0.2.0.1-alpha.
+

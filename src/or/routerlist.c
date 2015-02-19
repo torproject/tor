@@ -4705,7 +4705,34 @@ update_extrainfo_downloads(time_t now)
         ++n_pending;
         continue;
       }
-      if (router_get_by_extrainfo_digest(d) != sd) {
+
+      const signed_descriptor_t *sd2 = router_get_by_extrainfo_digest(d);
+      if (sd2 != sd) {
+        if (sd2 != NULL) {
+          char d1[HEX_DIGEST_LEN+1], d2[HEX_DIGEST_LEN+1];
+          char d3[HEX_DIGEST_LEN+1], d4[HEX_DIGEST_LEN+1];
+          base16_encode(d1, sizeof(d1), sd->identity_digest, DIGEST_LEN);
+          base16_encode(d2, sizeof(d2), sd2->identity_digest, DIGEST_LEN);
+          base16_encode(d3, sizeof(d3), d, DIGEST_LEN);
+          base16_encode(d4, sizeof(d3), sd2->extra_info_digest, DIGEST_LEN);
+
+          log_info(LD_DIR, "Found an entry in %s with mismatched "
+                   "router_get_by_extrainfo_digest() value. This has ID %s "
+                   "but the entry in the map has ID %s. This has EI digest "
+                   "%s and the entry in the map has EI digest %s.",
+                   old_routers?"old_routers":"routers",
+                   d1, d2, d3, d4);
+        } else {
+          char d1[HEX_DIGEST_LEN+1], d2[HEX_DIGEST_LEN+1];
+          base16_encode(d1, sizeof(d1), sd->identity_digest, DIGEST_LEN);
+          base16_encode(d2, sizeof(d2), d, DIGEST_LEN);
+
+          log_info(LD_DIR, "Found an entry in %s with NULL "
+                   "router_get_by_extrainfo_digest() value. This has ID %s "
+                   "and EI digest %s.",
+                   old_routers?"old_routers":"routers",
+                   d1, d2);
+        }
         ++n_bogus[old_routers];
         continue;
       }
@@ -4715,16 +4742,10 @@ update_extrainfo_downloads(time_t now)
   digestmap_free(pending, NULL);
 
   log_info(LD_DIR, "Extrainfo download status: %d router with no ei, %d "
-           "with present ei, %d delaying, %d pending, %d downloadable.",
-           n_no_ei, n_have, n_delay, n_pending, smartlist_len(wanted));
-
-  if (n_bogus[0] || n_bogus[1]) {
-    static ratelim_t bogus_ei_warning = RATELIM_INIT(1800);
-    log_fn_ratelim(&bogus_ei_warning, LOG_WARN, LD_BUG,
-                   "While downloading extrainfo documents, I found %d "
-                   "inconsistencies in routers and %d inconsistencies in "
-                   "old_routers.", n_bogus[0], n_bogus[1]);
-  }
+           "with present ei, %d delaying, %d pending, %d downloadable, %d "
+           "bogus in routers, %d bogus in old_routers",
+           n_no_ei, n_have, n_delay, n_pending, smartlist_len(wanted),
+           n_bogus[0], n_bogus[1]);
 
   smartlist_shuffle(wanted);
 
