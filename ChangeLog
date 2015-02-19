@@ -295,7 +295,7 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       bug 14764; bugfix on 0.2.6.2-alpha. Reported by Christian Kujau.
 
   o Minor bugfixes (sandbox):
-    - Allow Glibc fatal errors to be sent to stderr before Tor exits.
+    - Allow glibc fatal errors to be sent to stderr before Tor exits.
       Previously, glibc would try to write them to /dev/tty, and the
       sandbox would trap the call and make Tor exit prematurely. Fixes
       bug 14759; bugfix on 0.2.5.1-alpha.
@@ -778,7 +778,7 @@ Changes in version 0.2.6.1-alpha - 2014-10-30
       messages that were generated before opening the log file were only
       logged to stdout. Closes ticket 6938.
     - Add a TruncateLogFile option to overwrite logs instead of
-      appending to them. Closes ticket #5583.
+      appending to them. Closes ticket 5583.
 
   o Minor features (portability, Solaris):
     - Threads are no longer disabled by default on Solaris; we believe
@@ -830,7 +830,7 @@ Changes in version 0.2.6.1-alpha - 2014-10-30
     - In circuit_build_times_calculate_timeout() in circuitstats.c,
       avoid dividing by zero in the pareto calculations. This traps
       under clang's "undefined-trap" sanitizer. Fixes bug 13290; bugfix
-      on tor-0.2.2.2-alpha.
+      on 0.2.2.2-alpha.
     - Fix an integer overflow in format_time_interval(). Fixes bug
       13393; bugfix on 0.2.0.10-alpha.
     - Set the correct day of year value when the system's localtime(_r)
@@ -1668,7 +1668,7 @@ Changes in version 0.2.5.5-alpha - 2014-06-18
 
   o Removed code:
     - Remove /tor/dbg-stability.txt URL that was meant to help debug WFU
-      and MTBF calculations, but that nobody was using. Fixes #11742.
+      and MTBF calculations, but that nobody was using. Fixes ticket 11742.
     - The TunnelDirConns and PreferTunnelledDirConns options no longer
       exist; tunneled directory connections have been available since
       0.1.2.5-alpha, and turning them off is not a good idea. This is a
