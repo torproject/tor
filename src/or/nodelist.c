@@ -1703,22 +1703,6 @@ update_router_have_minimum_dir_info(void)
       res = 0;
       control_event_bootstrap(BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS, 0);
       goto done;
-    } else {
-      /* these messages can be excessive in testing networks */
-      static ratelim_t last_warned =
-      RATELIM_INIT(NOTICE_DIR_INFO_STATUS_INTERVAL);
-      char *suppression_msg = NULL;
-
-      tor_snprintf(dir_info_status, sizeof(dir_info_status),
-                   "We have enough %sdescriptors: we have %d/%d, and "
-                   "can build %d%% of likely paths. (We have %s.)",
-                   using_md?"micro":"", num_present, num_usable,
-                   (int)(paths*100), status);
-
-      if ((suppression_msg = rate_limit_log(&last_warned, time(NULL)))) {
-        log_info(LD_NET, "%s%s", dir_info_status, suppression_msg);
-        tor_free(suppression_msg);
-      }
     }
 
     tor_free(status);
