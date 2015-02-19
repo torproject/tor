@@ -194,45 +194,45 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
     - When we are using bridges and we had a network connectivity
       problem, only retry connecting to our currently configured
       bridges, not all bridges we know about and remember using. Fixes
-      bug 14216; bugfix on tor-0.2.2.17-alpha. Patch from arma.
+      bug 14216; bugfix on 0.2.2.17-alpha.
 
-  o Minor bugfixes (client, IPV6):
+  o Minor bugfixes (client, IPv6):
     - Reject socks requests to literal IPv6 addresses when IPv6Traffic
       flag is not set; and not because the NoIPv4Traffic flag was set.
       Previously we'd looked at the NoIPv4Traffic flag for both types of
       literal addresses. Fixes bug 14280; bugfix on 0.2.4.7-alpha.
 
   o Minor bugfixes (compilation):
-    - Build without warnings with the stock OpenSSL srtp.h header, which
-      has a duplicate declaration of SSL_get_selected_srtp_profile().
-      Fixes bug 14220; this is OpenSSL's bug, not ours.
     - The address of an array in the middle of a structure will always
       be non-NULL. clang recognises this and complains. Disable the
       tautologous and redundant check to silence this warning. Fixes bug
       14001; bugfix on 0.2.1.2-alpha.
-    - Compile correctly with (unreleased) OpenSSL 1.1.0 headers.
-      Addresses ticket 14188.
     - Avoid warnings when building with systemd 209 or later. Fixes bug
       14072; bugfix on 0.2.6.2-alpha. Patch from "h.venev".
+    - Compile correctly with (unreleased) OpenSSL 1.1.0 headers.
+      Addresses ticket 14188.
+    - Build without warnings with the stock OpenSSL srtp.h header, which
+      has a duplicate declaration of SSL_get_selected_srtp_profile().
+      Fixes bug 14220; this is OpenSSL's bug, not ours.
     - Remove the --disable-threads configure option again. It was
       accidentally partially reintroduced in 29ac883606d6d. Fixes bug
       14819; bugfix on 0.2.6.2-alpha.
 
   o Minor bugfixes (controller):
-    - Add a code for the END_CIRC_REASON_IP_NOW_REDUNDANT circuit close
-      reason. Fixes bug 14207; bugfix on 0.2.6.2-alpha.
-    - Avoid crashing on a malformed EXTENDCIRCUIT command. Fixes bug
-      14116; bugfix on 0.2.2.9-alpha.
     - Report "down" in response to the "GETINFO entry-guards" command
       when relays are down with an unreachable_since value. Previously,
       we would report "up". Fixes bug 14184; bugfix on 0.1.2.2-alpha.
+    - Avoid crashing on a malformed EXTENDCIRCUIT command. Fixes bug
+      14116; bugfix on 0.2.2.9-alpha.
+    - Add a code for the END_CIRC_REASON_IP_NOW_REDUNDANT circuit close
+      reason. Fixes bug 14207; bugfix on 0.2.6.2-alpha.
 
   o Minor bugfixes (directory authority):
     - Allow directory authorities to fetch more data from one another if
       they find themselves missing lots of votes. Previously, they had
       been bumping against the 10 MB queued data limit. Fixes bug 14261;
       bugfix on 0.1.2.5-alpha.
-    - Enlarge the buffer to read bw-auth generated files to avoid an
+    - Enlarge the buffer to read bwauth generated files to avoid an
       issue when parsing the file in dirserv_read_measured_bandwidths().
       Fixes bug 14125; bugfix on 0.2.2.1-alpha.
 
@@ -243,19 +243,19 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
     - Stop generating a fresh .old RSA onion key file when the .old file
       is missing. Fixes part of 13111; bugfix on 0.0.6rc1.
     - Avoid overwriting .old key files with empty key files.
-    - Skip loading zero-length extra info store, router store, stats,
+    - Skip loading zero-length extrainfo store, router store, stats,
       state, and key files.
     - Avoid crashing when trying to reload a torrc specified as a
       relative path with RunAsDaemon turned on. Fixes bug 13397; bugfix
       on 0.2.3.11-alpha.
 
   o Minor bugfixes (hidden services):
-    - Close the introduction circuit when we have no, more usable intro
-      points, instead of waiting for it to time out. This also make sure
-      no extra HS descriptor fetch is triggered. Fixes bug 14224; bugfix
-      on 0.0.6.
+    - Close the introduction circuit when we have no more usable intro
+      points, instead of waiting for it to time out. This also ensures
+      that no follow-up HS descriptor fetch is triggered when the circuit
+      eventually times out. Fixes bug 14224; bugfix on 0.0.6.
     - When fetching a hidden service descriptor for a down service that
-      we recently up, do not keep refetching until we try the same
+      was recently up, do not keep refetching until we try the same
       replica twice in a row. Fixes bug 14219; bugfix on 0.2.0.10-alpha.
     - Successfully launch Tor with a nonexistent hidden service
       directory. Our fix for bug 13942 didn't catch this case. Fixes bug
@@ -280,7 +280,7 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
     - When deciding whether the consensus lists any exit nodes, count
       the number listed in the consensus, not the number we have
       descriptors for. Fixes part of bug 14918; bugfix on 0.2.6.2-alpha.
-    - When deciding whether we have any exit nodes, only process
+    - When deciding whether we have any exit nodes, only examine
       ExitNodes when the ExitNodes option is actually set. Fixes part of
       bug 14918; bugfix on 0.2.6.2-alpha.
     - Get rid of redundant and possibly scary warnings that we are
@@ -365,8 +365,8 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       ntor onion key. Closes ticket 9635.
 
   o Removed features:
-    - To avoid confusion with the 'ExitRelay' option, 'ExitNode' is no
-      longer silently accepted as an alias for 'ExitNodes'.
+    - To avoid confusion with the "ExitRelay" option, "ExitNode" is no
+      longer silently accepted as an alias for "ExitNodes".
     - The --enable-mempool and --enable-buf-freelists options, which
       were originally created to work around bad malloc implementations,
       no longer exist. They were off-by-default in 0.2.5. Closes
