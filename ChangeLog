@@ -378,9 +378,9 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
     - Test that tor does not fail when key files are zero-length. Check
       that tor generates new keys, and overwrites the empty key files.
     - Test that tor generates new keys when keys are missing
-      (existing behaviour).
+      (existing behavior).
     - Test that tor does not overwrite key files that already contain
-      data (existing behaviour). Tests bug 13111. Patch by "teor".
+      data (existing behavior). Tests bug 13111. Patch by "teor".
     - New "make test-stem" target to run stem integration tests.
       Requires that the "STEM_SOURCE_DIR" environment variable be set.
       Closes ticket 14107.
@@ -4311,7 +4311,7 @@ Changes in version 0.2.3.23-rc - 2012-10-20
     - Correct file sizes when reading binary files on Cygwin, to avoid
       a bug where Tor would fail to read its state file. Fixes bug 6844;
       bugfix on 0.1.2.7-alpha.
-    - Avoid undefined behaviour when parsing the list of supported
+    - Avoid undefined behavior when parsing the list of supported
       rendezvous/introduction protocols in a hidden service descriptor.
       Previously, Tor would have confused (as-yet-unused) protocol version
       numbers greater than 32 with lower ones on many platforms. Fixes
@@ -4387,7 +4387,7 @@ Changes in version 0.2.4.3-alpha - 2012-09-22
     - Reject consensus votes with more than 64 known-flags. We aren't even
       close to that limit yet, and our code doesn't handle it correctly.
       Fixes bug 6833; bugfix on 0.2.0.1-alpha.
-    - Avoid undefined behaviour when parsing the list of supported
+    - Avoid undefined behavior when parsing the list of supported
       rendezvous/introduction protocols in a hidden service descriptor.
       Previously, Tor would have confused (as-yet-unused) protocol version
       numbers greater than 32 with lower ones on many platforms. Fixes
@@ -5824,7 +5824,7 @@ Changes in version 0.2.3.11-alpha - 2012-01-22
       be disabled using the new CloseHSClientCircuitsImmediatelyOnTimeout
       option. Fixes part of bug 1297; bugfix on 0.2.2.2-alpha.
     - Don't close hidden-service-side rendezvous circuits when they
-      reach the normal circuit-build timeout. This behaviour change can
+      reach the normal circuit-build timeout. This behavior change can
       be disabled using the new
       CloseHSServiceRendCircuitsImmediatelyOnTimeout option. Fixes the
       remaining part of bug 1297; bugfix on 0.2.2.2-alpha.
@@ -7405,14 +7405,14 @@ Changes in version 0.2.2.29-beta - 2011-06-20
       directory's group would be checked against the current group, not
       the configured group. Patch by Jérémy Bobbio. Fixes bug 3393;
       bugfix on 0.2.2.26-beta.
-    - Make connection_printf_to_buf()'s behaviour sane. Its callers
+    - Make connection_printf_to_buf()'s behavior sane. Its callers
       expect it to emit a CRLF iff the format string ends with CRLF;
       it actually emitted a CRLF iff (a) the format string ended with
       CRLF or (b) the resulting string was over 1023 characters long or
       (c) the format string did not end with CRLF *and* the resulting
       string was 1021 characters long or longer. Bugfix on 0.1.1.9-alpha;
       fixes part of bug 3407.
-    - Make send_control_event_impl()'s behaviour sane. Its callers
+    - Make send_control_event_impl()'s behavior sane. Its callers
       expect it to always emit a CRLF at the end of the string; it
       might have emitted extra control characters as well. Bugfix on
       0.1.1.9-alpha; fixes another part of bug 3407.
@@ -9513,7 +9513,7 @@ Changes in version 0.2.2.9-alpha - 2010-02-22
     - Avoid a bogus overlapped memcpy in tor_addr_copy(). Reported by
       "memcpyfail".
     - Make the DNSPort option work with libevent 2.x. Don't alter the
-      behaviour for libevent 1.x. Fixes bug 1143. Found by SwissTorExit.
+      behavior for libevent 1.x. Fixes bug 1143. Found by SwissTorExit.
     - Emit a GUARD DROPPED controller event for a case we missed.
     - Make more fields in the controller protocol case-insensitive, since
       control-spec.txt said they were.

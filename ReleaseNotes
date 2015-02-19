@@ -2883,7 +2883,7 @@ Changes in version 0.2.3.25 - 2012-11-19
       but not that other sensitive operations on the client and service
       side are not performed using single-hop circuits. Fixes bug 3332;
       bugfix on 0.0.6.
-    - Avoid undefined behaviour when parsing the list of supported
+    - Avoid undefined behavior when parsing the list of supported
       rendezvous/introduction protocols in a hidden service descriptor.
       Previously, Tor would have confused (as-yet-unused) protocol version
       numbers greater than 32 with lower ones on many platforms. Fixes
@@ -2901,7 +2901,7 @@ Changes in version 0.2.3.25 - 2012-11-19
 
   o Minor bugfixes (hidden services, service-side):
     - Don't close hidden-service-side rendezvous circuits when they
-      reach the normal circuit-build timeout. This behaviour change can
+      reach the normal circuit-build timeout. This behavior change can
       be disabled using the new
       CloseHSServiceRendCircuitsImmediatelyOnTimeout option. Fixes the
       remaining part of bug 1297; bugfix on 0.2.2.2-alpha.
@@ -4730,7 +4730,7 @@ Changes in version 0.2.2.32 - 2011-08-27
     - Resolve an edge case in path weighting that could make us misweight
       our relay selection. Fixes bug 1203; bugfix on 0.0.8rc1.
     - Make the DNSPort option work with libevent 2.x. Don't alter the
-      behaviour for libevent 1.x. Fixes bug 1143. Found by SwissTorExit.
+      behavior for libevent 1.x. Fixes bug 1143. Found by SwissTorExit.
 
   o Minor bugfixes (directory authorities):
     - Make directory authorities more accurate at recording when
@@ -4945,14 +4945,14 @@ Changes in version 0.2.2.32 - 2011-08-27
       passing it to the kernel. (Not a security issue: kernels are
       smart enough to reject bad sockaddr_uns.) Found by Coverity;
       CID #428. Bugfix on Tor 0.2.0.3-alpha.
-    - Make connection_printf_to_buf()'s behaviour sane. Its callers
+    - Make connection_printf_to_buf()'s behavior sane. Its callers
       expect it to emit a CRLF iff the format string ends with CRLF;
       it actually emitted a CRLF iff (a) the format string ended with
       CRLF or (b) the resulting string was over 1023 characters long or
       (c) the format string did not end with CRLF *and* the resulting
       string was 1021 characters long or longer. Bugfix on 0.1.1.9-alpha;
       fixes part of bug 3407.
-    - Make send_control_event_impl()'s behaviour sane. Its callers
+    - Make send_control_event_impl()'s behavior sane. Its callers
       expect it to always emit a CRLF at the end of the string; it
       might have emitted extra control characters as well. Bugfix on
       0.1.1.9-alpha; fixes another part of bug 3407.
