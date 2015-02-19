@@ -214,6 +214,9 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
     - Build without warnings with the stock OpenSSL srtp.h header, which
       has a duplicate declaration of SSL_get_selected_srtp_profile().
       Fixes bug 14220; this is OpenSSL's bug, not ours.
+    - Do not compile any code related to Tor2Web mode when Tor2Web mode
+      is not enabled at compile time. Previously, this code was included
+      in a disabled state. See discussion on ticket 12844.
     - Remove the --disable-threads configure option again. It was
       accidentally partially reintroduced in 29ac883606d6d. Fixes bug
       14819; bugfix on 0.2.6.2-alpha.
@@ -232,6 +235,9 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       they find themselves missing lots of votes. Previously, they had
       been bumping against the 10 MB queued data limit. Fixes bug 14261;
       bugfix on 0.1.2.5-alpha.
+    - Do not attempt to download extrainfo documents which we will be
+      unable to validate with a matching server descriptor. Fixes bug
+      13762; bugfix on 0.2.0.1-alpha.
     - Enlarge the buffer to read bwauth generated files to avoid an
       issue when parsing the file in dirserv_read_measured_bandwidths().
       Fixes bug 14125; bugfix on 0.2.2.1-alpha.
