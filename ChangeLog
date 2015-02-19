@@ -483,7 +483,7 @@ Changes in version 0.2.6.2-alpha - 2014-12-31
       circuits until we have successfully built a circuit. This makes
       hidden services come up faster when the network is re-enabled.
       Patch from "akwizgran". Closes ticket 13447.
-    - When we fail to a retrieve hidden service descriptor, send the
+    - When we fail to retrieve a hidden service descriptor, send the
       controller an "HS_DESC FAILED" controller event. Implements
       feature 13212.
     - New HiddenServiceDirGroupReadable option to cause hidden service
@@ -726,7 +726,7 @@ Changes in version 0.2.6.1-alpha - 2014-10-30
 
   o Major bugfixes (directory authorities):
     - Do not assign the HSDir flag to relays if they are not Valid, or
-      currently hibernating. Fixes #12573. Bugfix on tor-0.2.0.10-alpha
+      currently hibernating. Fixes 12573; bugfix on 0.2.0.10-alpha.
 
   o Major bugfixes (directory bandwidth performance):
     - Don't flush the zlib buffer aggressively when compressing
