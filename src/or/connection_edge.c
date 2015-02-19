@@ -1278,6 +1278,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       return -1;
     }
 
+#ifdef ENABLE_TOR2WEB_MODE
     /* If we're running in Tor2webMode, we don't allow anything BUT .onion
      * addresses. */
     if (options->Tor2webMode) {
@@ -1287,6 +1288,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
       return -1;
     }
+#endif
 
     /* See if this is a hostname lookup that we can answer immediately.
      * (For example, an attempt to look up the IP address for an IP address.)

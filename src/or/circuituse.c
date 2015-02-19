@@ -2036,11 +2036,13 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
     else
       new_circ_purpose = desired_circuit_purpose;
 
+#ifdef ENABLE_TOR2WEB_MODE
     if (options->Tor2webMode &&
         (new_circ_purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND ||
          new_circ_purpose == CIRCUIT_PURPOSE_C_INTRODUCING)) {
       want_onehop = 1;
     }
+#endif
 
     {
       int flags = CIRCLAUNCH_NEED_CAPACITY;
