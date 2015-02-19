@@ -1,10 +1,9 @@
 Changes in version 0.2.6.3-alpha - 2015-02-2?
   Tor 0.2.6.3-alpha is the third (and hopefully final) alpha release in
-  the 0.2.6.x series. It introduces support for
-  more kinds of sockets, makes it harder to accidentally run an
-  exit, improves our multithreading backend, incorporates several fixes
-  for the AutomapHostsOnResolve option, and fixes numerous other
-  bugs besides.
+  the 0.2.6.x series. It introduces support for more kinds of sockets,
+  makes it harder to accidentally run an exit, improves our
+  multithreading backend, incorporates several fixes for the
+  AutomapHostsOnResolve option, and fixes numerous other bugs besides.
 
   If no major regressions or security holes are found in this version,
   the next version will be a release candidate.
@@ -16,12 +15,13 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
   o Major features (security, unix domain sockets):
     - Allow SocksPort to be an AF_UNIX Unix Domain Socket. Now high risk
       applications can reach Tor without having to create AF_INET or
-      AF_INET6 sockets, meaning they can completely disable their ability
-      to make non-Tor network connections. To create a socket of this
-      type, use "SocksPort unix:/path/to/socket". Implements ticket 12585.
+      AF_INET6 sockets, meaning they can completely disable their
+      ability to make non-Tor network connections. To create a socket of
+      this type, use "SocksPort unix:/path/to/socket". Implements
+      ticket 12585.
     - Support mapping hidden service virtual ports to AF_UNIX sockets.
-      The syntax is "HiddenServicePort 80
-      unix:/path/to/socket". Implements ticket 11485.
+      The syntax is "HiddenServicePort 80 unix:/path/to/socket".
+      Implements ticket 11485.
 
   o Major features (changed defaults):
     - Prevent relay operators from unintentionally running exits: When a
@@ -30,21 +30,6 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       the relay is configured with the default exit policy, since this
       can indicate accidental misconfiguration. Setting "ExitRelay 0"
       stops Tor from running as an exit relay. Closes ticket 10067.
-
-  o Major features (performance):
-    - Make the CPU worker implementation more efficient by avoiding
-      the kernel and lengthening pipelines. The original implementation
-      used sockets to transfer data from the main thread to the workers,
-      and didn't allow any thread to be assigned more than a single
-      piece of work at once. The new implementation avoids communications
-      overhead by making requests in shared memory, avoiding kernel IO
-      where possible, and keeping more requests in flight at once.
-      Implements ticket 9682.
-
-  o Major features (relay):
-    - Raise the minimum acceptable configured bandwidth rate for bridges
-      to 50 KiB/sec and for relays to 75 KiB/sec. (The old values were
-      20 KiB/sec.) Closes ticket 13822.
 
   o Major features (directory system):
     - When downloading server- or microdescriptors from a directory
@@ -60,10 +45,25 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       notified of updates and their correct digests. Implements proposal
       227. Closes ticket 10395.
 
+  o Major features (performance):
+    - Make the CPU worker implementation more efficient by avoiding the
+      kernel and lengthening pipelines. The original implementation used
+      sockets to transfer data from the main thread to the workers, and
+      didn't allow any thread to be assigned more than a single piece of
+      work at once. The new implementation avoids communications
+      overhead by making requests in shared memory, avoiding kernel IO
+      where possible, and keeping more requests in flight at once.
+      Implements ticket 9682.
+
+  o Major features (relay):
+    - Raise the minimum acceptable configured bandwidth rate for bridges
+      to 50 KiB/sec and for relays to 75 KiB/sec. (The old values were
+      20 KiB/sec.) Closes ticket 13822.
+
   o Major bugfixes (client):
     - Allow MapAddress and AutomapHostsOnResolve to work together when
-      an address is mapped into another address type (like .onion)
-      that must be automapped at resolve time. Fixes bug 7555; bugfix
+      an address is mapped into another address type (like .onion) that
+      must be automapped at resolve time. Fixes bug 7555; bugfix
       on 0.2.0.1-alpha.
 
   o Major bugfixes (exit node stability):
@@ -81,8 +81,8 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
 
   o Minor features (build):
     - New --disable-system-torrc compile-time option to prevent Tor from
-      looking for the system-wide torrc or torrc-defaults files. Resolves
-      ticket 13037.
+      looking for the system-wide torrc or torrc-defaults files.
+      Resolves ticket 13037.
 
   o Minor features (controller):
     - Include SOCKS_USERNAME and SOCKS_PASSWORD values in controller
@@ -107,8 +107,8 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       for small requests. Closes ticket 11791.
 
   o Minor features (geoip):
-    - Update geoip and geoip6 files to the January 7 2015 Maxmind GeoLite2
-      Country database.
+    - Update geoip and geoip6 files to the January 7 2015 Maxmind
+      GeoLite2 Country database.
 
   o Minor features (guard nodes):
     - Reduce the time delay before saving guard status to disk from 10
@@ -142,8 +142,8 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
 
   o Minor features (stability):
     - Add assertions in our hash-table iteration code to check for
-      corrupted values that could cause infinite loops. Closes ticket
-      11737.
+      corrupted values that could cause infinite loops. Closes
+      ticket 11737.
 
   o Minor features (systemd):
     - Various improvements and modernizations in systemd hardening
@@ -153,9 +153,10 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
     - Drop the minimum RendPostPeriod on a testing network to 5 seconds,
       and the default on a testing network to 2 minutes. Drop the
       MIN_REND_INITIAL_POST_DELAY on a testing network to 5 seconds, but
-      keep the default on a testing network at 30 seconds. This reduces HS
-      bootstrap time to around 25 seconds. Also, change the default time
-      in test-network.sh to match. Closes ticket 13401. Patch by "teor".
+      keep the default on a testing network at 30 seconds. This reduces
+      HS bootstrap time to around 25 seconds. Also, change the default
+      time in test-network.sh to match. Closes ticket 13401. Patch
+      by "teor".
     - Create TestingDirAuthVoteHSDir to correspond to
       TestingDirAuthVoteExit/Guard. Ensures that authorities vote the
       HSDir flag for the listed relays regardless of uptime or ORPort
@@ -174,9 +175,9 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
       on 0.2.0.1-alpha.
 
   o Minor bugfixes (client DNS):
-    - Report the correct cached DNS expiration times on SOCKS port or in DNS replies. Previously, we
-      would report everything as "never expires." Fixes bug 14193;
-      bugfix on 0.2.3.17-beta.
+    - Report the correct cached DNS expiration times on SOCKS port or in
+      DNS replies. Previously, we would report everything as "never
+      expires." Fixes bug 14193; bugfix on 0.2.3.17-beta.
     - Avoid a small memory leak when we find a cached answer for a
       reverse DNS lookup in a client-side DNS cache. (Remember, client-
       side DNS caching is off by default, and is not recommended.) Fixes
@@ -251,8 +252,8 @@ Changes in version 0.2.6.3-alpha - 2015-02-2?
   o Minor bugfixes (hidden services):
     - Close the introduction circuit when we have no more usable intro
       points, instead of waiting for it to time out. This also ensures
-      that no follow-up HS descriptor fetch is triggered when the circuit
-      eventually times out. Fixes bug 14224; bugfix on 0.0.6.
+      that no follow-up HS descriptor fetch is triggered when the
+      circuit eventually times out. Fixes bug 14224; bugfix on 0.0.6.
     - When fetching a hidden service descriptor for a down service that
       was recently up, do not keep refetching until we try the same
       replica twice in a row. Fixes bug 14219; bugfix on 0.2.0.10-alpha.
