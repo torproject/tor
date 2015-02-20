@@ -1698,10 +1698,11 @@ update_router_have_minimum_dir_info(void)
 
   /* If paths have just become available in this update. */
   if (res && !have_min_dir_info) {
-    log_notice(LD_DIR,
-        "We now have enough directory information to build circuits.");
     control_event_client_status(LOG_NOTICE, "ENOUGH_DIR_INFO");
-    control_event_bootstrap(BOOTSTRAP_STATUS_CONN_OR, 0);
+    if (control_event_bootstrap(BOOTSTRAP_STATUS_CONN_OR, 0) == 0) {
+      log_notice(LD_DIR,
+              "We now have enough directory information to build circuits.");
+    }
   }
 
   /* If paths have just become unavailable in this update. */

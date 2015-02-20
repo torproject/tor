@@ -960,7 +960,11 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
         log_notice(LD_GENERAL,
             "Tor has successfully opened a circuit. "
             "Looks like client functionality is working.");
-        control_event_bootstrap(BOOTSTRAP_STATUS_DONE, 0);
+        if (control_event_bootstrap(BOOTSTRAP_STATUS_DONE, 0) == 0) {
+          log_notice(LD_GENERAL,
+                     "Tor has successfully opened a circuit. "
+                     "Looks like client functionality is working.");
+        }
         control_event_client_status(LOG_NOTICE, "CIRCUIT_ESTABLISHED");
         clear_broken_connection_map(1);
         if (server_mode(options) && !check_whether_orport_reachable()) {
