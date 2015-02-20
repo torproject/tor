@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - Remove any old authority certificates that have been superseded
+      for at least two days.  Previously, we would keep superseded
+      certificates until they expired, if they were published close
+      in time to the certificate that superseded them.
+      Fixes bug 11454; bugfix on 0.2.1.8-alpha.
