@@ -110,22 +110,31 @@ log_heartbeat(time_t now)
 
   log_fn(LOG_NOTICE, LD_HEARTBEAT, "Heartbeat: Tor's uptime is %s, with %d "
          "circuits open. I've sent %s and received %s.%s",
-         uptime, count_circuits(),bw_sent,bw_rcvd,
+         uptime, count_circuits(), bw_sent, bw_rcvd,
          hibernating?" We are currently hibernating.":"");
 
   if (server_mode(options) && accounting_is_enabled(options) && !hibernating) {
     log_accounting(now, options);
   }
 
-  if (stats_n_data_cells_packaged && !hibernating)
-    log_notice(LD_HEARTBEAT, "Average packaged cell fullness: %2.3f%%",
-        100*(U64_TO_DBL(stats_n_data_bytes_packaged) /
-             U64_TO_DBL(stats_n_data_cells_packaged*RELAY_PAYLOAD_SIZE)) );
-
-  if (r > 1.0) {
-    double overhead = ( r - 1.0 ) * 100.0;
-    log_notice(LD_HEARTBEAT, "TLS write overhead: %.f%%", overhead);
+  double fullness_pct = 100;
+  if (stats_n_data_cells_packaged && !hibernating) {
+    fullness_pct =
+      100*(U64_TO_DBL(stats_n_data_bytes_packaged) /
+           U64_TO_DBL(stats_n_data_cells_packaged*RELAY_PAYLOAD_SIZE));
   }
+  const double overhead_pct = ( r - 1.0 ) * 100.0;
+
+#define FULLNESS_PCT_THRESHOLD 80
+#define TLS_OVERHEAD_THRESHOLD 15
+
+  const int severity = (fullness_pct < FULLNESS_PCT_THRESHOLD ||
+                        overhead_pct > TLS_OVERHEAD_THRESHOLD)
+    ? LOG_NOTICE : LOG_INFO;
+
+  log_fn(severity, LD_HEARTBEAT,
+         "Average packaged cell fullness: %2.3f%%"
+         "TLS write overhead: %.f%%", fullness_pct, overhead_pct);
 
   if (public_server_mode(options))
     rep_hist_log_circuit_handshake_stats(now);
