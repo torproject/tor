@@ -26,9 +26,6 @@
 #include "control.h"
 #include "geoip.h"
 #include "main.h"
-#ifdef ENABLE_MEMPOOLS
-#include "mempool.h"
-#endif
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "onion.h"
@@ -2252,62 +2249,12 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
 /** The total number of cells we have allocated. */
 static size_t total_cells_allocated = 0;
 
-#ifdef ENABLE_MEMPOOLS
-/** A memory pool to allocate packed_cell_t objects. */
-static mp_pool_t *cell_pool = NULL;
-
-/** Allocate structures to hold cells. */
-void
-init_cell_pool(void)
-{
-  tor_assert(!cell_pool);
-  cell_pool = mp_pool_new(sizeof(packed_cell_t), 128*1024);
-}
-
-/** Free all storage used to hold cells (and insertion times/commands if we
- * measure cell statistics and/or if CELL_STATS events are enabled). */
-void
-free_cell_pool(void)
-{
-  /* Maybe we haven't called init_cell_pool yet; need to check for it. */
-  if (cell_pool) {
-    mp_pool_destroy(cell_pool);
-    cell_pool = NULL;
-  }
-}
-
-/** Free excess storage in cell pool. */
-void
-clean_cell_pool(void)
-{
-  tor_assert(cell_pool);
-  mp_pool_clean(cell_pool, 0, 1);
-}
-
-#define relay_alloc_cell() \
-  mp_pool_get(cell_pool)
-#define relay_free_cell(cell) \
-  mp_pool_release(cell)
-
-#define RELAY_CELL_MEM_COST (sizeof(packed_cell_t) + MP_POOL_ITEM_OVERHEAD)
-
-#else /* !ENABLE_MEMPOOLS case */
-
-#define relay_alloc_cell() \
-  tor_malloc_zero(sizeof(packed_cell_t))
-#define relay_free_cell(cell) \
-  tor_free(cell)
-
-#define RELAY_CELL_MEM_COST (sizeof(packed_cell_t))
-
-#endif /* ENABLE_MEMPOOLS */
-
 /** Release storage held by <b>cell</b>. */
 static INLINE void
 packed_cell_free_unchecked(packed_cell_t *cell)
 {
   --total_cells_allocated;
-  relay_free_cell(cell);
+  tor_free(cell);
 }
 
 /** Allocate and return a new packed_cell_t. */
@@ -2315,7 +2262,7 @@ STATIC packed_cell_t *
 packed_cell_new(void)
 {
   ++total_cells_allocated;
-  return relay_alloc_cell();
+  return tor_malloc_zero(sizeof(packed_cell_t));
 }
 
 /** Return a packed cell used outside by channel_t lower layer */
@@ -2344,9 +2291,6 @@ dump_cell_pool_usage(int severity)
   tor_log(severity, LD_MM,
           "%d cells allocated on %d circuits. %d cells leaked.",
           n_cells, n_circs, (int)total_cells_allocated - n_cells);
-#ifdef ENABLE_MEMPOOLS
-  mp_pool_log_status(cell_pool, severity);
-#endif
 }
 
 /** Allocate a new copy of packed <b>cell</b>. */
@@ -2426,7 +2370,7 @@ cell_queue_pop(cell_queue_t *queue)
 size_t
 packed_cell_mem_cost(void)
 {
-  return RELAY_CELL_MEM_COST;
+  return sizeof(packed_cell_t);
 }
 
 /** DOCDOC */

@@ -59,17 +59,6 @@ if test "$enable_system_torrc" = "no"; then
             [Defined if we're not going to look for a torrc in SYSCONF])
 fi
 
-if test x$enable_buf_freelists = xyes; then
-  AC_DEFINE(ENABLE_BUF_FREELISTS, 1,
-            [Defined if we try to use freelists for buffer RAM chunks])
-fi
-
-AM_CONDITIONAL(USE_MEMPOOLS, test x$enable_mempools = xyes)
-if test x$enable_mempools = xyes; then
-  AC_DEFINE(ENABLE_MEMPOOLS, 1,
-            [Defined if we try to use mempools for cells being relayed])
-fi
-
 AM_CONDITIONAL(USE_OPENBSD_MALLOC, test x$enable_openbsd_malloc = xyes)
 if test x$enable_instrument_downloads = xyes; then
   AC_DEFINE(INSTRUMENT_DOWNLOADS, 1,

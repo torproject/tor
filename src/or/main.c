@@ -1987,11 +1987,6 @@ do_main_loop(void)
     }
   }
 
-#ifdef ENABLE_MEMPOOLS
-  /* Set up the packed_cell_t memory pool. */
-  init_cell_pool();
-#endif /* ENABLE_MEMPOOLS */
-
   /* Set up our buckets */
   connection_bucket_init();
 #ifndef USE_BUFFEREVENTS
@@ -2646,9 +2641,6 @@ tor_free_all(int postfork)
     router_free_all();
     policies_free_all();
   }
-#ifdef ENABLE_MEMPOOLS
-  free_cell_pool();
-#endif /* ENABLE_MEMPOOLS */
   if (!postfork) {
     tor_tls_free_all();
 #ifndef _WIN32

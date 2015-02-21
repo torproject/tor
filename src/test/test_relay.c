@@ -60,11 +60,6 @@ test_relay_append_cell_to_circuit_queue(void *arg)
 
   (void)arg;
 
-  /* We'll need the cell pool for append_cell_to_circuit_queue() to work */
-#ifdef ENABLE_MEMPOOLS
-  init_cell_pool();
-#endif /* ENABLE_MEMPOOLS */
-
   /* Make fake channels to be nchan and pchan for the circuit */
   nchan = new_fake_channel();
   tt_assert(nchan);
@@ -119,9 +114,6 @@ test_relay_append_cell_to_circuit_queue(void *arg)
   tor_free(orcirc);
   free_fake_channel(nchan);
   free_fake_channel(pchan);
-#ifdef ENABLE_MEMPOOLS
-  free_cell_pool();
-#endif /* ENABLE_MEMPOOLS */
 
   return;
 }

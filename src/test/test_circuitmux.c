@@ -43,9 +43,6 @@ test_cmux_destroy_cell_queue(void *arg)
   tor_libevent_initialize(&cfg);
   scheduler_init();
 
-#ifdef ENABLE_MEMPOOLS
-  init_cell_pool();
-#endif /* ENABLE_MEMPOOLS */
   (void) arg;
 
   cmux = circuitmux_alloc();
@@ -82,10 +79,6 @@ test_cmux_destroy_cell_queue(void *arg)
   circuitmux_free(cmux);
   channel_free(ch);
   packed_cell_free(pc);
-
-#ifdef ENABLE_MEMPOOLS
-  free_cell_pool();
-#endif /* ENABLE_MEMPOOLS */
 }
 
 struct testcase_t circuitmux_tests[] = {

@@ -4338,9 +4338,6 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(pow2),
   UTIL_LEGACY(gzip),
   UTIL_LEGACY(datadir),
-#ifdef ENABLE_MEMPOOLS
-  UTIL_LEGACY(mempool),
-#endif
   UTIL_LEGACY(memarea),
   UTIL_LEGACY(control_formats),
   UTIL_LEGACY(mmap),

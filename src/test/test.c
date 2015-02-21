@@ -49,9 +49,6 @@ double fabs(double x);
 #include "rendcommon.h"
 #include "test.h"
 #include "torgzip.h"
-#ifdef ENABLE_MEMPOOLS
-#include "mempool.h"
-#endif
 #include "memarea.h"
 #include "onion.h"
 #include "onion_ntor.h"

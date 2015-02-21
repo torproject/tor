@@ -650,10 +650,6 @@ test_channel_flush(void *arg)
 
   (void)arg;
 
-#ifdef ENABLE_MEMPOOLS
-  init_cell_pool();
-#endif /* ENABLE_MEMPOOLS */
-
   ch = new_fake_channel();
   tt_assert(ch);
 
@@ -695,9 +691,6 @@ test_channel_flush(void *arg)
 
  done:
   tor_free(ch);
-#ifdef ENABLE_MEMPOOLS
-  free_cell_pool();
-#endif /* ENABLE_MEMPOOLS */
 
   return;
 }
@@ -714,10 +707,6 @@ test_channel_flushmux(void *arg)
   ssize_t result;
 
   (void)arg;
-
-#ifdef ENABLE_MEMPOOLS
-  init_cell_pool();
-#endif /* ENABLE_MEMPOOLS */
 
   /* Install mocks we need for this test */
   MOCK(channel_flush_from_first_active_circuit,
@@ -777,10 +766,6 @@ test_channel_flushmux(void *arg)
   UNMOCK(circuitmux_num_cells);
 
   test_chan_accept_cells = 0;
-
-#ifdef ENABLE_MEMPOOLS
-  free_cell_pool();
-#endif /* ENABLE_MEMPOOLS */
 
   return;
 }
@@ -1300,10 +1285,6 @@ test_channel_queue_impossible(void *arg)
 
   (void)arg;
 
-#ifdef ENABLE_MEMPOOLS
-  init_cell_pool();
-#endif /* ENABLE_MEMPOOLS */
-
   ch = new_fake_channel();
   tt_assert(ch);
 
@@ -1430,9 +1411,6 @@ test_channel_queue_impossible(void *arg)
 
  done:
   free_fake_channel(ch);
-#ifdef ENABLE_MEMPOOLS
-  free_cell_pool();
-#endif /* ENABLE_MEMPOOLS */
 
   /*
    * Doing that meant that we couldn't correctly adjust the queue size
@@ -1575,10 +1553,6 @@ test_channel_write(void *arg)
 
   (void)arg;
 
-#ifdef ENABLE_MEMPOOLS
-  init_cell_pool();
-#endif /* ENABLE_MEMPOOLS */
-
   packed_cell = packed_cell_new();
   tt_assert(packed_cell);
 
@@ -1674,10 +1648,6 @@ test_channel_write(void *arg)
   channel_write_packed_cell(ch, packed_cell);
   packed_cell = NULL;
   tt_assert(test_cells_written == old_count);
-
-#ifdef ENABLE_MEMPOOLS
-  free_cell_pool();
-#endif /* ENABLE_MEMPOOLS */
 
  done:
   free_fake_channel(ch);
