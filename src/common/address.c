@@ -1542,8 +1542,16 @@ get_interface_address6_via_udp_socket_hack(int severity,
     goto err;
   }
 
-  tor_addr_from_sockaddr(addr, (struct sockaddr*)&my_addr, NULL);
-  r=0;
+ if (tor_addr_from_sockaddr(addr, (struct sockaddr*)&my_addr, NULL) == 0) {
+    if (tor_addr_is_loopback(addr) || tor_addr_is_multicast(addr)) {
+      log_fn(severity, LD_NET, "Address that we determined via UDP socket"
+                               " magic is unsuitable for public comms.");
+    }
+    else {
+      r=0;
+    }
+ }
+
  err:
   if (sock >= 0)
     tor_close_socket(sock);
