@@ -473,42 +473,51 @@ smartlist_contain_tor_addr(smartlist_t *smartlist, tor_addr_t *tor_addr)
 static void
 test_address_udp_socket_trick_blackbox(void *arg)
 {
-  smartlist_t *all_addrs;
-  tor_addr_t *addr4;
-  tor_addr_t *addr6;
-  int retval;
+  /* We want get_interface_address6_via_udp_socket_hack() to yield 
+   * the same valid address that get_interface_address6() returns. 
+   * If the latter is unable to find a valid address, we want 
+   * _hack() to fail and return-1.
+   *
+   * Furthermore, we want _hack() never to crash, even if 
+   * get_interface_addresses_raw() is returning NULL.
+   */
+
+  tor_addr_t addr4;
+  tor_addr_t addr4_to_check;
+  tor_addr_t addr6;
+  tor_addr_t addr6_to_check;
+  int retval, retval_reference;
 
   (void)arg;
 
-  addr4 = tor_malloc(sizeof(tor_addr_t));
-  addr6 = tor_malloc(sizeof(tor_addr_t));
-
-  all_addrs = get_interface_addresses_raw(LOG_DEBUG);
+  retval_reference = get_interface_address6(LOG_DEBUG,AF_INET,&addr4);
   retval = get_interface_address6_via_udp_socket_hack(LOG_DEBUG,
-                                                      AF_INET,addr4);
+                                                      AF_INET,
+                                                      &addr4_to_check);
 
-  tt_assert(all_addrs);
-  tt_assert(retval == 0);
+  tt_int_op(retval,==,retval_reference);
+  tt_assert( (retval == -1 && retval_reference == -1) ||
+             (tor_addr_compare(&addr4,&addr4_to_check,CMP_EXACT) == 0) );
 
-  tt_assert(smartlist_contain_tor_addr(all_addrs,addr4));
-
-#if 0
+  retval_reference = get_interface_address6(LOG_DEBUG,AF_INET6,&addr6);
   retval = get_interface_address6_via_udp_socket_hack(LOG_DEBUG,
-                                                      AF_INET6,addr6);
+                                                      AF_INET6,
+                                                      &addr6_to_check);
 
-  tt_assert(smartlist_contain_tor_addr(all_addrs,addr6));
-#endif
+  tt_int_op(retval,==,retval_reference);
+  tt_assert( (retval == -1 && retval_reference == -1) ||
+             (tor_addr_compare(&addr6,&addr6_to_check,CMP_EXACT) == 0) );
+
+  /* When family is neither AF_INET nor AF_INET6, we want _hack to
+   * fail and return -1.
+   */
 
   retval = get_interface_address6_via_udp_socket_hack(LOG_DEBUG,
-                                                      AF_CCITT,addr4);
+                                                      AF_CCITT,&addr4);
 
   tt_assert(retval == -1);
 
   done:
-  tor_free(addr4);
-  tor_free(addr6);
-  SMARTLIST_FOREACH(all_addrs, tor_addr_t *, t, tor_free(t));
-  smartlist_free(all_addrs);
   return;
 }
 
