@@ -1612,7 +1612,6 @@ connection_connect_sockaddr(connection_t *conn,
   tor_socket_t s;
   int inprogress = 0;
   const or_options_t *options = get_options();
-  int protocol_family;
 
   tor_assert(conn);
   tor_assert(sa);
@@ -1623,8 +1622,6 @@ connection_connect_sockaddr(connection_t *conn,
     *socket_error = SOCK_ERRNO(ENOBUFS);
     return -1;
   }
-
-  protocol_family = sa->sa_family;
 
   if (get_options()->DisableNetwork) {
     /* We should never even try to connect anyplace if DisableNetwork is set.
@@ -1637,7 +1634,11 @@ connection_connect_sockaddr(connection_t *conn,
     return -1;
   }
 
-  s = tor_open_socket_nonblocking(protocol_family, SOCK_STREAM, 0);
+  const int protocol_family = sa->sa_family;
+  const int proto = (sa->sa_family == AF_INET6 ||
+                     sa->sa_family == AF_INET) ? IPPROTO_TCP : 0;
+
+  s = tor_open_socket_nonblocking(protocol_family, SOCK_STREAM, proto);
   if (! SOCKET_OK(s)) {
     *socket_error = tor_socket_errno(-1);
     log_warn(LD_NET,"Error creating network socket: %s",

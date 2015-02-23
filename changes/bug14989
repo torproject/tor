@@ -1,0 +1,4 @@
+  o Major bugfixes (Linux seccomp2 sandbox):
+    - Pass IPPROTO_TCP rather than 0 to socket(), so that the
+      Linux seccomp2 sandbox doesn't fail. Fixes bug 14989;
+      bugfix on 0.2.6.3-alpha.
