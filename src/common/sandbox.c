@@ -543,6 +543,11 @@ sb_socket(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   }
 
   rc = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket),
+      SCMP_CMP(0, SCMP_CMP_EQ, PF_UNIX),
+      SCMP_CMP_MASKED(1, SOCK_CLOEXEC|SOCK_NONBLOCK, SOCK_STREAM),
+      SCMP_CMP(2, SCMP_CMP_EQ, 0));
+
+  rc = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket),
       SCMP_CMP(0, SCMP_CMP_EQ, PF_NETLINK),
       SCMP_CMP(1, SCMP_CMP_EQ, SOCK_RAW),
       SCMP_CMP(2, SCMP_CMP_EQ, 0));
