@@ -1,0 +1,5 @@
+  o Removed code:
+    - Remove some lingering dead code that once supported mempools. Mempools
+      were disabled by default in 0.2.5, and removed entirely in
+      0.2.6.3-alpha. Closes more of ticket 14848; patch by "cypherpunks".
+
