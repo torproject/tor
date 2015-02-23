@@ -80,6 +80,7 @@ clean_backtrace(void **stack, int depth, const ucontext_t *ctx)
 #else
   (void) depth;
   (void) ctx;
+  (void) stack;
 #endif
 }
 
