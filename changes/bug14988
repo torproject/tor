@@ -1,0 +1,4 @@
+  o Minor bugfixes (compilation):
+    - Fix a compilation warning on s390. Fixes bug 14988; bugfix on
+      0.2.5.2-alpha.
+
