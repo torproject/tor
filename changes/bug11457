@@ -1,4 +1,4 @@
-  o Minor bugfixes:
+  o Minor bugfixes (certificate handling):
     - If an authority operator accidentally makes a signing certificate with
       a future publication time, do not discard its real signing
       certificates. Fixes bug 11457; bugfix on 0.2.0.3-alpha.

@@ -1,4 +1,4 @@
-  o Minor bugfixes:
+  o Minor bugfixes (testing):
     - Fix endianness issues in unit test for resolve_my_address() to
-      have it pass on big endian systems. Resolves issue 14980; bugfix on
+      have it pass on big endian systems. Fixes bug 14980; bugfix on
       Tor 0.2.6.3-alpha.
