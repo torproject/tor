@@ -37,7 +37,7 @@
 #define test_memeq_hex(expr1, hex) test_mem_op_hex(expr1, OP_EQ, hex)
 
 #define tt_double_op(a,op,b)                                            \
-  tt_assert_test_type(a,b,#a" "#op" "#b,double,(val1_ op val2_),"%f",   \
+  tt_assert_test_type(a,b,#a" "#op" "#b,double,(val1_ op val2_),"%g",   \
                       TT_EXIT_TEST_FUNCTION)
 
 #ifdef _MSC_VER

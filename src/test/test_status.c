@@ -337,7 +337,7 @@ NS(test_main)(void *arg)
   actual = log_heartbeat(0);
 
   tt_int_op(actual, OP_EQ, expected);
-  tt_int_op(CALLED(logv), OP_EQ, 3);
+  tt_int_op(CALLED(logv), OP_EQ, 4);
 
   done:
     NS_UNMOCK(tls_get_write_overhead_ratio);
@@ -415,6 +415,9 @@ NS(logv)(int severity, log_domain_mask_t domain,
       tt_str_op(va_arg(ap, char *), OP_EQ, "");  /* hibernating */
       break;
     case 2:
+      tt_int_op(severity, OP_EQ, LOG_INFO);
+      break;
+    case 3:
       tt_int_op(severity, OP_EQ, LOG_NOTICE);
       tt_int_op(domain, OP_EQ, LD_HEARTBEAT);
       tt_ptr_op(strstr(funcname, "rep_hist_log_circuit_handshake_stats"),
@@ -462,6 +465,8 @@ NS_DECL(void, logv, (int severity, log_domain_mask_t domain,
     const char *funcname, const char *suffix, const char *format, va_list ap));
 NS_DECL(int, server_mode, (const or_options_t *options));
 
+static int NS(n_msgs) = 0;
+
 static void
 NS(test_main)(void *arg)
 {
@@ -483,6 +488,7 @@ NS(test_main)(void *arg)
   actual = log_heartbeat(0);
 
   tt_int_op(actual, OP_EQ, expected);
+  tt_int_op(NS(n_msgs), OP_EQ, 1);
 
   done:
     NS_UNMOCK(tls_get_write_overhead_ratio);
@@ -537,6 +543,10 @@ static void
 NS(logv)(int severity, log_domain_mask_t domain, const char *funcname,
   const char *suffix, const char *format, va_list ap)
 {
+  if (severity == LOG_INFO)
+    return;
+  ++NS(n_msgs);
+
   tt_int_op(severity, OP_EQ, LOG_NOTICE);
   tt_int_op(domain, OP_EQ, LD_HEARTBEAT);
   tt_ptr_op(strstr(funcname, "log_heartbeat"), OP_NE, NULL);
@@ -610,7 +620,7 @@ NS(test_main)(void *arg)
   actual = log_heartbeat(0);
 
   tt_int_op(actual, OP_EQ, expected);
-  tt_int_op(CALLED(logv), OP_EQ, 2);
+  tt_int_op(CALLED(logv), OP_EQ, 3);
 
   done:
     NS_UNMOCK(tls_get_write_overhead_ratio);
@@ -702,6 +712,9 @@ NS(logv)(int severity, log_domain_mask_t domain,
                 OP_NE, NULL); /* end_buf */
       tt_str_op(va_arg(ap, char *), OP_EQ, "0:01 hours");   /* remaining */
       break;
+    case 2:
+      tt_int_op(severity, OP_EQ, LOG_INFO);
+      break;
     default:
       tt_abort_msg("unexpected call to logv()");  // TODO: prettyprint args
       break;
@@ -780,7 +793,7 @@ NS(test_main)(void *arg)
   log_global_min_severity_ = LOG_DEBUG;
 
   stats_n_data_bytes_packaged = RELAY_PAYLOAD_SIZE;
-  stats_n_data_cells_packaged = 1;
+  stats_n_data_cells_packaged = 2;
   expected = 0;
   actual = log_heartbeat(0);
 
@@ -865,8 +878,9 @@ NS(logv)(int severity, log_domain_mask_t domain, const char *funcname,
       tt_ptr_op(strstr(funcname, "log_heartbeat"), OP_NE, NULL);
       tt_ptr_op(suffix, OP_EQ, NULL);
       tt_str_op(format, OP_EQ,
-          "Average packaged cell fullness: %2.3f%%");
-      tt_int_op(fabs(va_arg(ap, double) - 100.0) <= DBL_EPSILON, OP_EQ, 1);
+          "Average packaged cell fullness: %2.3f%%. TLS write overhead: %.f%%");
+      tt_double_op(fabs(va_arg(ap, double) - 50.0), <=, DBL_EPSILON);
+      tt_double_op(fabs(va_arg(ap, double) - 0.0), <=, DBL_EPSILON);
       break;
     default:
       tt_abort_msg("unexpected call to logv()");  // TODO: prettyprint args
@@ -1011,8 +1025,10 @@ NS(logv)(int severity, log_domain_mask_t domain,
       tt_int_op(domain, OP_EQ, LD_HEARTBEAT);
       tt_ptr_op(strstr(funcname, "log_heartbeat"), OP_NE, NULL);
       tt_ptr_op(suffix, OP_EQ, NULL);
-      tt_str_op(format, OP_EQ, "TLS write overhead: %.f%%");
+      tt_str_op(format, OP_EQ,
+          "Average packaged cell fullness: %2.3f%%. TLS write overhead: %.f%%");
       tt_int_op(fabs(va_arg(ap, double) - 100.0) <= DBL_EPSILON, OP_EQ, 1);
+      tt_double_op(fabs(va_arg(ap, double) - 100.0), <=, DBL_EPSILON);
       break;
     default:
       tt_abort_msg("unexpected call to logv()");  // TODO: prettyprint args

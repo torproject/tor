@@ -133,7 +133,7 @@ log_heartbeat(time_t now)
     ? LOG_NOTICE : LOG_INFO;
 
   log_fn(severity, LD_HEARTBEAT,
-         "Average packaged cell fullness: %2.3f%%"
+         "Average packaged cell fullness: %2.3f%%. "
          "TLS write overhead: %.f%%", fullness_pct, overhead_pct);
 
   if (public_server_mode(options))
