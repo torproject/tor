@@ -1,0 +1,3 @@
+  o Directory authority IP change:
+    - The directory authority Faravahar has a new IP address. Closes
+      ticket 14487.
