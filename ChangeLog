@@ -1,5 +1,45 @@
 Changes in version 0.2.6.4-?? - 2015-0?-??
+  XXXX write a blurb here.
 
+  o Major bugfixes (Linux seccomp2 sandbox):
+    - Pass IPPROTO_TCP rather than 0 to socket(), so that the Linux
+      seccomp2 sandbox doesn't fail. Fixes bug 14989; bugfix
+      on 0.2.6.3-alpha.
+    - Allow AF_UNIX hidden services to be used with the seccomp2
+      sandbox. Fixes bug 15003; bugfix on 0.2.6.3-alpha.
+
+  o Minor features (logs):
+    - Quiet some log messages in the heartbeat and at startup. Closes
+      ticket 14950.
+
+  o Minor bugfixes (certificate handling):
+    - If an authority operator accidentally makes a signing certificate
+      with a future publication time, do not discard its real signing
+      certificates. Fixes bug 11457; bugfix on 0.2.0.3-alpha.
+    - Remove any old authority certificates that have been superseded
+      for at least two days. Previously, we would keep superseded
+      certificates until they expired, if they were published close in
+      time to the certificate that superseded them. Fixes bug 11454;
+      bugfix on 0.2.1.8-alpha.
+
+  o Minor bugfixes (compilation):
+    - Fix a compilation warning on s390. Fixes bug 14988; bugfix
+      on 0.2.5.2-alpha.
+
+  o Minor bugfixes (testing):
+    - Fix endianness issues in unit test for resolve_my_address() to
+      have it pass on big endian systems. Fixes bug 14980; bugfix on
+      Tor 0.2.6.3-alpha.
+
+  o Directory authority IP change:
+    - The directory authority Faravahar has a new IP address. This
+      closes ticket 14487.
+
+  o Removed code:
+    - Remove some lingering dead code that once supported mempools.
+      Mempools were disabled by default in 0.2.5, and removed entirely
+      in 0.2.6.3-alpha. Closes more of ticket 14848; patch
+      by "cypherpunks".
 
 
 Changes in version 0.2.6.3-alpha - 2015-02-19
