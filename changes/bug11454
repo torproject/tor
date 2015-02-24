@@ -1,4 +1,4 @@
-  o Minor bugfixes:
+  o Minor bugfixes (certificate handling):
     - Remove any old authority certificates that have been superseded
       for at least two days.  Previously, we would keep superseded
       certificates until they expired, if they were published close
