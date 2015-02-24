@@ -2071,8 +2071,17 @@ do_main_loop(void)
 #endif
 
 #ifdef HAVE_SYSTEMD
-  log_notice(LD_GENERAL, "Signaling readiness to systemd");
-  sd_notify(0, "READY=1");
+  {
+    const int r = sd_notify(0, "READY=1");
+    if (r < 0) {
+      log_warn(LD_GENERAL, "Unable to send readiness to systemd: %s",
+               strerror(r));
+    } else if (r > 0) {
+      log_notice(LD_GENERAL, "Signaled readiness to systemd");
+    } else {
+      log_info(LD_GENERAL, "Systemd NOTIFY_SOCKET not present.");
+    }
+  }
 #endif
 
   for (;;) {

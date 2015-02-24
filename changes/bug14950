@@ -1,0 +1,3 @@
+  o Minor features (logs):
+    - Quiet some log messages in the heartbeat and at startup. Closes
+      ticket 14950.
