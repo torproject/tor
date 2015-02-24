@@ -557,6 +557,8 @@ purge_expired_resolves(time_t now)
         /* Connections should only be pending if they have no socket. */
         tor_assert(!SOCKET_OK(pend->conn->base_.s));
         pendconn = pend->conn;
+        /* Prevent double-remove */
+        pendconn->base_.state = EXIT_CONN_STATE_RESOLVEFAILED;
         if (!pendconn->base_.marked_for_close) {
           connection_edge_end(pendconn, END_STREAM_REASON_TIMEOUT);
           circuit_detach_stream(circuit_get_by_edge_conn(pendconn), pendconn);
@@ -1132,7 +1134,9 @@ connection_dns_remove(edge_connection_t *conn)
         return; /* more are pending */
       }
     }
-    tor_assert(0); /* not reachable unless onlyconn not in pending list */
+    log_warn(LD_BUG, "Connection (fd "TOR_SOCKET_T_FORMAT") was not waiting "
+             "for a resolve of %s, but we tried to remove it.",
+             conn->base_.s, escaped_safe_str(conn->base_.address));
   }
 }
 
