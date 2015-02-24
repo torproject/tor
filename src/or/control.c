@@ -943,6 +943,7 @@ static const struct control_event_t control_event_table[] = {
   { EVENT_CIRC_BANDWIDTH_USED, "CIRC_BW" },
   { EVENT_TRANSPORT_LAUNCHED, "TRANSPORT_LAUNCHED" },
   { EVENT_HS_DESC, "HS_DESC" },
+  { EVENT_HS_DESC_CONTENT, "HS_DESC_CONTENT" },
   { 0, NULL },
 };
 
@@ -5412,6 +5413,36 @@ control_event_hs_descriptor_failed(const rend_data_t *rend_query,
   }
   control_event_hs_descriptor_receive_end("FAILED", rend_query,
                                           id_digest, reason);
+}
+
+/** send HS_DESC_CONTENT event after completion of a successful fetch from
+ * hs directory. */
+void
+control_event_hs_descriptor_content(const char *onion_address,
+                                    const char *desc_id,
+                                    const char *hsdir_id_digest,
+                                    const char *content)
+{
+  static const char *event_name = "HS_DESC_CONTENT";
+  char *esc_content = NULL;
+
+  if (!onion_address || !desc_id || !hsdir_id_digest || !content) {
+    log_warn(LD_BUG, "Called with onion_address==%p, desc_id==%p, "
+             "hsdir_id_digest==%p, content==%p", onion_address, desc_id,
+             hsdir_id_digest, content);
+    return;
+  }
+
+  write_escaped_data(content, strlen(content), &esc_content);
+
+  send_control_event(EVENT_HS_DESC_CONTENT, ALL_FORMATS,
+                     "650 %s %s %s %s\r\n%s",
+                     event_name,
+                     onion_address,
+                     desc_id,
+                     node_describe_longname_by_id(hsdir_id_digest),
+                     esc_content);
+  tor_free(esc_content);
 }
 
 /** Free any leftover allocated memory of the control.c subsystem. */

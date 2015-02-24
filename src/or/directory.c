@@ -2102,6 +2102,11 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       control_event_hs_descriptor_failed(conn->rend_data, \
                                          conn->identity_digest, \
                                          reason) )
+    #define SEND_HS_DESC_FAILED_CONTENT() ( \
+      control_event_hs_descriptor_content(conn->rend_data->onion_address, \
+                                          conn->requested_resource, \
+                                          conn->identity_digest, \
+                                          "") )
     tor_assert(conn->rend_data);
     log_info(LD_REND,"Received rendezvous descriptor (size %d, status %d "
              "(%s))",
@@ -2117,6 +2122,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
             /* We'll retry when connection_about_to_close_connection()
              * cleans this dir conn up. */
             SEND_HS_DESC_FAILED_EVENT("BAD_DESC");
+            SEND_HS_DESC_FAILED_CONTENT();
             break;
           case RCS_OKAY:
           default:
@@ -2125,6 +2131,10 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                      "descriptor.");
             control_event_hs_descriptor_received(conn->rend_data,
                                                  conn->identity_digest);
+            control_event_hs_descriptor_content(conn->rend_data->onion_address,
+                                                conn->requested_resource,
+                                                conn->identity_digest,
+                                                body);
             conn->base_.purpose = DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2;
             rend_client_desc_trynow(conn->rend_data->onion_address);
             break;
@@ -2136,6 +2146,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         log_info(LD_REND,"Fetching v2 rendezvous descriptor failed: "
                          "Retrying at another directory.");
         SEND_HS_DESC_FAILED_EVENT("NOT_FOUND");
+        SEND_HS_DESC_FAILED_CONTENT();
         break;
       case 400:
         log_warn(LD_REND, "Fetching v2 rendezvous descriptor failed: "
@@ -2143,6 +2154,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                  "v2 rendezvous query? Retrying at another directory.",
                  escaped(reason));
         SEND_HS_DESC_FAILED_EVENT("QUERY_REJECTED");
+        SEND_HS_DESC_FAILED_CONTENT();
         break;
       default:
         log_warn(LD_REND, "Fetching v2 rendezvous descriptor failed: "
@@ -2152,6 +2164,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                  status_code, escaped(reason), conn->base_.address,
                  conn->base_.port);
         SEND_HS_DESC_FAILED_EVENT("UNEXPECTED");
+        SEND_HS_DESC_FAILED_CONTENT();
         break;
     }
   }
