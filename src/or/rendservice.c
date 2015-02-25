@@ -173,7 +173,7 @@ rend_authorized_client_free(rend_authorized_client_t *client)
     return;
   if (client->client_key)
     crypto_pk_free(client->client_key);
-  tor_strclear(client->client_name);
+  memwipe(client->client_name, 0, strlen(client->client_name));
   tor_free(client->client_name);
   memwipe(client->descriptor_cookie, 0, sizeof(client->descriptor_cookie));
   tor_free(client);
@@ -1052,7 +1052,7 @@ rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
     abort_writing_to_file(open_hfile);
  done:
   if (client_keys_str) {
-    tor_strclear(client_keys_str);
+    memwipe(client_keys_str, 0, strlen(client_keys_str));
     tor_free(client_keys_str);
   }
   strmap_free(parsed_clients, rend_authorized_client_strmap_item_free);

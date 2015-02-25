@@ -4111,26 +4111,6 @@ test_util_laplace(void *arg)
   ;
 }
 
-static void
-test_util_strclear(void *arg)
-{
-  static const char *vals[] = { "", "a", "abcdef", "abcdefgh", NULL };
-  int i;
-  char *v = NULL;
-  (void)arg;
-
-  for (i = 0; vals[i]; ++i) {
-    size_t n;
-    v = tor_strdup(vals[i]);
-    n = strlen(v);
-    tor_strclear(v);
-    tt_assert(tor_mem_is_zero(v, n+1));
-    tor_free(v);
-  }
- done:
-  tor_free(v);
-}
-
 #define UTIL_LEGACY(name)                                               \
   { #name, test_util_ ## name , 0, NULL, NULL }
 
@@ -4348,7 +4328,6 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(di_ops),
   UTIL_TEST(round_to_next_multiple_of, 0),
   UTIL_TEST(laplace, 0),
-  UTIL_TEST(strclear, 0),
   UTIL_TEST(find_str_at_start_of_line, 0),
   UTIL_TEST(string_is_C_identifier, 0),
   UTIL_TEST(asprintf, 0),

@@ -771,16 +771,6 @@ fast_memcmpstart(const void *mem, size_t memlen,
   return fast_memcmp(mem, prefix, plen);
 }
 
-/** Given a nul-terminated string s, set every character before the nul
- * to zero. */
-void
-tor_strclear(char *s)
-{
-  while (*s) {
-    *s++ = '\0';
-  }
-}
-
 /** Return a pointer to the first char of s that is not whitespace and
  * not a comment, or to the terminating NUL if no such character exists.
  */
