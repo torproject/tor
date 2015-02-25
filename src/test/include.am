@@ -156,7 +156,6 @@ src_test_test_bt_cl_CPPFLAGS= $(src_test_AM_CPPFLAGS)
 
 check-local: $(NTOR_TEST_DEPS) $(CMDLINE_TEST_TOR)
 if USEPYTHON
-	$(PYTHON) $(top_srcdir)/src/test/test_cmdline_args.py $(CMDLINE_TEST_TOR) "${top_srcdir}"
 	$(PYTHON) $(top_srcdir)/src/test/ntor_ref.py test-tor
 	$(PYTHON) $(top_srcdir)/src/test/ntor_ref.py self-test
 	./src/test/test-bt-cl assert | $(PYTHON) $(top_srcdir)/src/test/bt_test.py
@@ -168,5 +167,4 @@ EXTRA_DIST += \
 	src/test/bt_test.py \
 	src/test/ntor_ref.py \
 	src/test/slownacl_curve25519.py \
-	src/test/test_cmdline_args.py \
 	src/test/zero_length_keys.sh
