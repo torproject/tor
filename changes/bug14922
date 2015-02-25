@@ -1,0 +1,3 @@
+  o Removed code:
+    - Remove the 'tor_strclear()' function; use memwipe() instead.
+      Closes ticket 14922.
