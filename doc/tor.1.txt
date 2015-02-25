@@ -1311,7 +1311,7 @@ The following options are useful only for clients (that is, if
 [[DownloadExtraInfo]] **DownloadExtraInfo** **0**|**1**::
     If true, Tor downloads and caches "extra-info" documents. These documents
     contain information about servers other than the information in their
-    regular router descriptors. Tor does not use this information for anything
+    regular server descriptors. Tor does not use this information for anything
     itself; to save bandwidth, leave this option turned off. (Default: 0)
 
 [[WarnPlaintextPorts]] **WarnPlaintextPorts** __port__,__port__,__...__::
@@ -1490,8 +1490,8 @@ is non-zero):
 [[BridgeRelay]] **BridgeRelay** **0**|**1**::
     Sets the relay to act as a "bridge" with respect to relaying connections
     from bridge users to the Tor network. It mainly causes Tor to publish a
-    server descriptor to the bridge database, rather than publishing a relay
-    descriptor to the public directory authorities.
+    server descriptor to the bridge database, rather than
+    to the public directory authorities.
 
 [[ContactInfo]] **ContactInfo** __email_address__::
     Administrative contact information for this relay or bridge. This line
@@ -1929,7 +1929,7 @@ on the public Tor network.
 
 [[BridgeAuthoritativeDir]] **BridgeAuthoritativeDir** **0**|**1**::
     When this option is set in addition to **AuthoritativeDirectory**, Tor
-    accepts and serves router descriptors, but it caches and serves the main
+    accepts and serves server descriptors, but it caches and serves the main
     networkstatus documents rather than generating its own. (Default: 0)
 
 [[MinUptimeHidServDirectoryV2]] **MinUptimeHidServDirectoryV2** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
@@ -1948,9 +1948,9 @@ on the public Tor network.
     in the "params" line of its networkstatus vote.
 
 [[DirAllowPrivateAddresses]] **DirAllowPrivateAddresses** **0**|**1**::
-    If set to 1, Tor will accept router descriptors with arbitrary "Address"
+    If set to 1, Tor will accept server descriptors with arbitrary "Address"
     elements. Otherwise, if the address is not an IP address or is a private IP
-    address, it will reject the router descriptor. (Default: 0)
+    address, it will reject the server descriptor. (Default: 0)
 
 [[AuthDirBadExit]] **AuthDirBadExit** __AddressPattern...__::
     Authoritative directories only. A set of address patterns for servers that
@@ -2212,7 +2212,7 @@ The following options are used for running a testing Tor network.
     that **TestingTorNetwork** is set.  (Default: 30 minutes)
 
 [[TestingEstimatedDescriptorPropagationTime]] **TestingEstimatedDescriptorPropagationTime** __N__ **minutes**|**hours**::
-    Clients try downloading router descriptors from directory caches after this
+    Clients try downloading server descriptors from directory caches after this
     time. Changing this requires that **TestingTorNetwork** is set. (Default:
     10 minutes)
 
@@ -2260,7 +2260,7 @@ The following options are used for running a testing Tor network.
     this requires that **TestingTorNetwork** is set. (Default: 8)
 
 [[TestingDescriptorMaxDownloadTries]] **TestingDescriptorMaxDownloadTries** __NUM__::
-    Try this often to download a router descriptor before giving up.
+    Try this often to download a server descriptor before giving up.
     Changing this requires that **TestingTorNetwork** is set. (Default: 8)
 
 [[TestingMicrodescMaxDownloadTries]] **TestingMicrodescMaxDownloadTries** __NUM__::
@@ -2402,7 +2402,7 @@ __DataDirectory__**/state**::
             below).
             - When the file was last written
             - What version of Tor generated the state file
-            - A short history of bandwidth usage, as produced in the router
+            - A short history of bandwidth usage, as produced in the server
             descriptors.
 
 __DataDirectory__**/bw_accounting**::
@@ -2447,7 +2447,7 @@ __DataDirectory__**/unverified-microdesc-consensus**::
     to check yet.
 
 __DataDirectory__**/unparseable-desc**::
-    Onion router descriptors that Tor was unable to parse are dumped to this
+    Onion server descriptors that Tor was unable to parse are dumped to this
     file. Only used for debugging.
 
 __DataDirectory__**/router-stability**::

@@ -1,0 +1,4 @@
+  o Documentation:
+    - Standardize on the term "server descriptor" in the manual page.
+      Previously, we had used "router descriptor", "server descriptor",
+      and "relay descriptor" interchangeably. Part of ticket 14987.
