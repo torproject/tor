@@ -133,7 +133,7 @@ COMMONHEADERS = \
 
 noinst_HEADERS+= $(COMMONHEADERS)
 
-DISTCLEANFILES+= src/common/common_sha1.i
+CLEANFILES+= src/common/common_sha1.i
 
 src/common/common_sha1.i: $(libor_SOURCES) $(libor_crypto_a_SOURCES) $(COMMONHEADERS)
 	$(AM_V_GEN)if test "@SHA1SUM@" != none; then \
