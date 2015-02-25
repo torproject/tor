@@ -263,6 +263,13 @@ log_tor_version(logfile_t *lf, int reset)
   return 0;
 }
 
+const char bug_suffix[] = " (on Tor " VERSION
+#ifndef _MSC_VER
+  " "
+#include "micro-revision.i"
+#endif
+  ")";
+
 /** Helper: Format a log message into a fixed-sized buffer. (This is
  * factored out of <b>logv</b> so that we never format a message more
  * than once.)  Return a pointer to the first character of the message
@@ -341,6 +348,13 @@ format_msg(char *buf, size_t buf_len,
       }
     }
   }
+
+  if (domain == LD_BUG &&
+      buf_len - n > strlen(bug_suffix)+1) {
+    memcpy(buf+n, bug_suffix, strlen(bug_suffix));
+    n += strlen(bug_suffix);
+  }
+
   buf[n]='\n';
   buf[n+1]='\0';
   *msg_len_out = n+1;
