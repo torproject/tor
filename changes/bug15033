@@ -1,0 +1,4 @@
+  o Minor bugfixes (tests):
+    - When running the zero-length-keys check, do not use the default
+      torrc file. Fixes bug 15033; bugfix on 0.2.6.3-alpha. Reported
+      by "reezer".
