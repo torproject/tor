@@ -1682,7 +1682,3 @@ if test x$asciidoc = xtrue && test "$ASCIIDOC" = "none" ; then
 fi
 
 AC_OUTPUT
-
-if test -x /usr/bin/perl && test -x ./scripts/maint/updateVersions.pl ; then
-  ./scripts/maint/updateVersions.pl
-fi
