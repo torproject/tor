@@ -28,8 +28,8 @@
 #endif
 
 #include "compat.h"
-#include "../common/util.h"
-#include "../common/torlog.h"
+#include "util.h"
+#include "torlog.h"
 #include "crypto.h"
 #include "address.h"
 

@@ -20,8 +20,8 @@
 #include "control.h"
 #include "reasons.h"
 #include "ext_orport.h"
-#include "../common/util.h"
-#include "../common/torlog.h"
+#include "util.h"
+#include "torlog.h"
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif

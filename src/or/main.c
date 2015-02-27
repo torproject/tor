@@ -63,7 +63,7 @@
 #include <openssl/crypto.h>
 #endif
 #include "memarea.h"
-#include "../common/sandbox.h"
+#include "sandbox.h"
 
 #ifdef HAVE_EVENT2_EVENT_H
 #include <event2/event.h>

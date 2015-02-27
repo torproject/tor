@@ -5,9 +5,9 @@
 
 #include "orconfig.h"
 #include "compat.h"
-#include "../common/util.h"
+#include "util.h"
 #include "address.h"
-#include "../common/torlog.h"
+#include "torlog.h"
 #include "sandbox.h"
 
 #include <stdio.h>

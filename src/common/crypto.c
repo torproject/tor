@@ -51,9 +51,9 @@
 
 #define CRYPTO_PRIVATE
 #include "crypto.h"
-#include "../common/torlog.h"
+#include "torlog.h"
 #include "aes.h"
-#include "../common/util.h"
+#include "util.h"
 #include "container.h"
 #include "compat.h"
 #include "sandbox.h"

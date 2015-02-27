@@ -789,7 +789,7 @@ const char UNRESTRICTED_SERVER_CIPHER_LIST[] =
 /** List of ciphers that clients should advertise, omitting items that
  * our OpenSSL doesn't know about. */
 static const char CLIENT_CIPHER_LIST[] =
-#include "./ciphers.inc"
+#include "ciphers.inc"
   /* Tell it not to use SSLv2 ciphers, so that it can select an SSLv3 version
    * of any cipher we say. */
   "!SSLv2"
@@ -804,7 +804,7 @@ typedef struct cipher_info_t { unsigned id; const char *name; } cipher_info_t;
 static const cipher_info_t CLIENT_CIPHER_INFO_LIST[] = {
 #define CIPHER(id, name) { id, name },
 #define XCIPHER(id, name) { id, #name },
-#include "./ciphers.inc"
+#include "ciphers.inc"
 #undef CIPHER
 #undef XCIPHER
 };
