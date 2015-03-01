@@ -4261,6 +4261,21 @@ typedef struct {
    * XXXX Eventually, the default will be 0. */
   int ExitRelay;
 
+
+  /** For how long (seconds) do we declare our singning keys to be valid? */
+  int SigningKeyLifetime;
+  /** For how long (seconds) do we declare our link keys to be valid? */
+  int TestingLinkKeyLifetime;
+  /** For how long (seconds) do we declare our auth keys to be valid? */
+  int TestingAuthKeyLifetime;
+
+  /** How long before signing keys expire will we try to make a new one? */
+  int TestingSigningKeySlop;
+  /** How long before link keys expire will we try to make a new one? */
+  int TestingLinkKeySlop;
+  /** How long before auth keys expire will we try to make a new one? */
+  int TestingAuthKeySlop;
+
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

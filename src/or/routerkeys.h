@@ -55,6 +55,8 @@ int check_tap_onion_key_crosscert(const uint8_t *crosscert,
                                   const uint8_t *rsa_id_digest);
 
 int load_ed_keys(const or_options_t *options, time_t now);
+int should_make_new_ed_keys(const or_options_t *options, const time_t now);
+
 void routerkeys_free_all(void);
 
 #endif

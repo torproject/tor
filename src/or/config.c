@@ -298,6 +298,7 @@ static config_var_t option_vars_[] = {
   VAR("ServerTransportPlugin",   LINELIST, ServerTransportPlugin,  NULL),
   V(ServerTransportListenAddr,   LINELIST, NULL),
   V(ServerTransportOptions,      LINELIST, NULL),
+  V(SigningKeyLifetime,          INTERVAL, "30 days"),
   V(Socks4Proxy,                 STRING,   NULL),
   V(Socks5Proxy,                 STRING,   NULL),
   V(Socks5ProxyUsername,         STRING,   NULL),
@@ -356,6 +357,13 @@ static config_var_t option_vars_[] = {
   V(TestingTorNetwork,           BOOL,     "0"),
   V(TestingMinExitFlagThreshold, MEMUNIT,  "0"),
   V(TestingMinFastFlagThreshold, MEMUNIT,  "0"),
+
+  V(TestingLinkKeyLifetime,          INTERVAL, "2 days"),
+  V(TestingAuthKeyLifetime,          INTERVAL, "2 days"),
+  V(TestingLinkKeySlop,              INTERVAL, "3 hours"),
+  V(TestingAuthKeySlop,              INTERVAL, "3 hours"),
+  V(TestingSigningKeySlop,           INTERVAL, "1 day"),
+
   V(OptimisticData,              AUTOBOOL, "auto"),
   V(PortForwarding,              BOOL,     "0"),
   V(PortForwardingHelper,        FILENAME, "tor-fw-helper"),
@@ -3625,7 +3633,19 @@ options_validate(or_options_t *old_options, or_options_t *options,
   CHECK_DEFAULT(TestingDescriptorMaxDownloadTries);
   CHECK_DEFAULT(TestingMicrodescMaxDownloadTries);
   CHECK_DEFAULT(TestingCertMaxDownloadTries);
+  CHECK_DEFAULT(TestingAuthKeyLifetime);
+  CHECK_DEFAULT(TestingLinkKeyLifetime);
+  CHECK_DEFAULT(TestingSigningKeySlop);
+  CHECK_DEFAULT(TestingAuthKeySlop);
+  CHECK_DEFAULT(TestingLinkKeySlop);
 #undef CHECK_DEFAULT
+
+  if (options->SigningKeyLifetime < options->TestingSigningKeySlop*2)
+    REJECT("SigningKeyLifetime is too short.");
+  if (options->TestingLinkKeyLifetime < options->TestingAuthKeySlop*2)
+    REJECT("LinkKeyLifetime is too short.");
+  if (options->TestingAuthKeyLifetime < options->TestingLinkKeySlop*2)
+    REJECT("AuthKeyLifetime is too short.");
 
   if (options->TestingV3AuthInitialVotingInterval
       < MIN_VOTE_INTERVAL_TESTING_INITIAL) {

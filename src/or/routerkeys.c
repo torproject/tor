@@ -306,9 +306,6 @@ load_ed_keys(const or_options_t *options, time_t now)
 
   /* XXXX support encrypted identity keys fully */
 
-  /* XXXX use options. */
-  (void) options;
-
   /* First try to get the signing key to see how it is. */
   if (master_signing_key) {
     check_signing_cert = signing_key_cert;
@@ -329,7 +326,7 @@ load_ed_keys(const or_options_t *options, time_t now)
     EXPIRES_SOON(check_signing_cert, 0);
   const int want_new_signing_key =
     need_new_signing_key ||
-    EXPIRES_SOON(check_signing_cert, 86400/*???*/);
+    EXPIRES_SOON(check_signing_cert, options->TestingSigningKeySlop);
 
   {
     uint32_t flags =
@@ -365,7 +362,7 @@ load_ed_keys(const or_options_t *options, time_t now)
                options_get_datadir_fname2(options, "keys", "ed25519_signing"),
                                  flags, LOG_WARN,
                                  sign_signing_key_with_id, now,
-                                 30*86400/*XXX option*/,
+                                 options->SigningKeyLifetime,
                                  CERT_TYPE_ID_SIGNING, &sign_cert);
     if (!sign)
       FAIL("Missing signing key");
@@ -383,18 +380,22 @@ load_ed_keys(const or_options_t *options, time_t now)
    * it, if we loaded it in the first place. */
   memwipe(id->seckey.seckey, 0, sizeof(id->seckey));
 
-  if (!current_link_key || EXPIRES_SOON(link_key_cert, 7200/*???*/)) {
+  if (!current_link_key ||
+      EXPIRES_SOON(link_key_cert, options->TestingLinkKeySlop)) {
     link = ed_key_new(use_signing, INIT_ED_KEY_NEEDCERT,
-                      now, 2*86400/*XXX option??*/,
+                      now,
+                      options->TestingLinkKeyLifetime,
                       CERT_TYPE_SIGNING_LINK, &link_cert);
 
     if (!link)
       FAIL("Can't create link key");
   }
 
-  if (!current_auth_key || EXPIRES_SOON(auth_key_cert, 7200)/*???*/) {
+  if (!current_auth_key ||
+      EXPIRES_SOON(auth_key_cert, options->TestingAuthKeySlop)) {
     auth = ed_key_new(use_signing, INIT_ED_KEY_NEEDCERT,
-                      now, 2*86400/*XXX option??*/,
+                      now,
+                      options->TestingAuthKeyLifetime,
                       CERT_TYPE_SIGNING_AUTH, &auth_cert);
 
     if (!auth)
@@ -434,8 +435,21 @@ load_ed_keys(const or_options_t *options, time_t now)
 #undef FAIL
 #undef SET_KEY
 #undef SET_CERT
-#undef EXPIRES_SOON
 }
+
+int
+should_make_new_ed_keys(const or_options_t *options, const time_t now)
+{
+  return (!master_identity_key ||
+          !master_signing_key ||
+          !current_link_key ||
+          !current_auth_key ||
+          EXPIRES_SOON(signing_key_cert, options->TestingSigningKeySlop) ||
+          EXPIRES_SOON(link_key_cert, options->TestingLinkKeySlop) ||
+          EXPIRES_SOON(auth_key_cert, options->TestingAuthKeySlop));
+}
+
+#undef EXPIRES_SOON
 
 const ed25519_public_key_t *
 get_master_identity_key(void)

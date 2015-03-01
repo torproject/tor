@@ -419,6 +419,13 @@ test_routerkeys_ed_keys_init_all(void *arg)
   ed25519_keypair_t sign, link, auth;
   //  tor_cert_t *cert_is, *cert_sl, *cert_auth;
 
+  options->SigningKeyLifetime = 30*86400;
+  options->TestingAuthKeyLifetime = 2*86400;
+  options->TestingLinkKeyLifetime = 2*86400;
+  options->TestingSigningKeySlop = 2*86400;
+  options->TestingAuthKeySlop = 2*3600;
+  options->TestingLinkKeySlop = 2*3600;
+
 #ifdef _WIN32
   mkdir(dir);
   mkdir(get_fname("test_ed_keys_init_all/keys"));

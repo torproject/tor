@@ -134,6 +134,8 @@ time_t time_of_process_start = 0;
 long stats_n_seconds_working = 0;
 /** When do we next launch DNS wildcarding checks? */
 static time_t time_to_check_for_correct_dns = 0;
+/** When do we next make sure our Ed25519 keys aren't about to expire? */
+static time_t time_to_check_ed_keys = 0;
 
 /** How often will we honor SIGNEWNYM requests? */
 #define MAX_SIGNEWNYM_RATE 10
@@ -1278,6 +1280,17 @@ run_scheduled_events(time_t now)
     }
     if (advertised_server_mode() && !options->DisableNetwork)
       router_upload_dir_desc_to_dirservers(0);
+  }
+
+  if (is_server && time_to_check_ed_keys < now) {
+    if (should_make_new_ed_keys(options, now)) {
+      if (load_ed_keys(options, now) < 0) {
+        log_err(LD_OR, "Unable to update Ed25519 keys!  Exiting.");
+        tor_cleanup();
+        exit(0);
+      }
+    }
+    time_to_check_ed_keys = now + 30;
   }
 
   if (!should_delay_dir_fetches(options, NULL) &&
