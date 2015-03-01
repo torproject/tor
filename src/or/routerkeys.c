@@ -4,8 +4,129 @@
 #include "or.h"
 #include "config.h"
 #include "router.h"
+#include "crypto_pwbox.h"
 #include "routerkeys.h"
 #include "torcert.h"
+
+#define ENC_KEY_HEADER "Boxed Ed25519 key"
+#define ENC_KEY_TAG "master"
+
+int
+read_encrypted_secret_key(ed25519_secret_key_t *out,
+                          const char *fname)
+{
+  int r = -1;
+  uint8_t *secret = NULL;
+  size_t secret_len = 0;
+  char pwbuf[256];
+  uint8_t encrypted_key[256];
+  char *tag = NULL;
+
+  ssize_t encrypted_len = crypto_read_tagged_contents_from_file(fname,
+                                          ENC_KEY_HEADER,
+                                          &tag,
+                                          encrypted_key,
+                                          sizeof(encrypted_key));
+  if (encrypted_len < 0) {
+    log_info(LD_OR, "%s is missing", fname);
+    return 0;
+  }
+  if (strcmp(tag, ENC_KEY_TAG))
+    return -1;
+
+  while (1) {
+    ssize_t pwlen =
+      tor_getpass("Enter pasphrase for master key:", pwbuf, sizeof(pwbuf));
+    if (pwlen < 0)
+      goto done;
+
+    const int r = crypto_unpwbox(&secret, &secret_len,
+                                 encrypted_key, encrypted_len,
+                                 pwbuf, pwlen);
+    if (r == UNPWBOX_CORRUPTED) {
+      log_err(LD_OR, "%s is corrupted.", fname);
+      goto done;
+    } else if (r == UNPWBOX_OKAY) {
+      break;
+    }
+    /* Otherwise, passphrase is bad, so try again till user does ctrl-c or gets
+     * it right. */
+  }
+
+
+  if (secret_len != ED25519_SECKEY_LEN) {
+    log_err(LD_OR, "%s is corrupted.", fname);
+    goto done;
+  }
+  memcpy(out->seckey, secret, ED25519_SECKEY_LEN);
+  r = 1;
+
+ done:
+  memwipe(encrypted_key, 0, encrypted_len);
+  memwipe(pwbuf, 0, sizeof(pwbuf));
+  if (secret) {
+    memwipe(secret, 0, secret_len);
+    tor_free(secret);
+  }
+  return r;
+}
+
+int
+write_encrypted_secret_key(const ed25519_secret_key_t *key,
+                           const char *fname)
+{
+  int r = -1;
+  char pwbuf0[256], pwbuf1[256];
+  uint8_t *encrypted_key = NULL;
+  size_t encrypted_len = 0;
+
+  while (1) {
+    if (tor_getpass("Enter passphrase:", pwbuf0, sizeof(pwbuf0)) < 0)
+      return -1;
+    if (tor_getpass("   One more time:", pwbuf1, sizeof(pwbuf1)) < 0)
+      return -1;
+
+    if (!strcmp(pwbuf0, pwbuf1))
+      break;
+    fprintf(stderr, "That didn't match.\n");
+  }
+  if (0 == strlen(pwbuf0))
+    return 0;
+  if (crypto_pwbox(&encrypted_key, &encrypted_len,
+                   key->seckey, sizeof(key->seckey),
+                   pwbuf0, strlen(pwbuf0),  0) < 0) {
+    log_warn(LD_OR, "crypto_pwbox failed!?");
+    goto done;
+  }
+  if (crypto_write_tagged_contents_to_file(fname,
+                                           ENC_KEY_HEADER,
+                                           ENC_KEY_TAG,
+                                           encrypted_key, encrypted_len) < 0)
+    goto done;
+  r = 1;
+ done:
+  if (encrypted_key) {
+    memwipe(encrypted_key, 0, encrypted_len);
+    tor_free(encrypted_key);
+  }
+  memwipe(pwbuf0, 0, sizeof(pwbuf0));
+  memwipe(pwbuf1, 0, sizeof(pwbuf1));
+  return r;
+}
+
+static int
+write_secret_key(const ed25519_secret_key_t *key, int encrypted,
+                 const char *fname,
+                 const char *fname_tag,
+                 const char *encrypted_fname)
+{
+  if (encrypted) {
+    int r = write_encrypted_secret_key(key, encrypted_fname);
+    if (r != 0)
+      return r;
+  }
+  return ed25519_seckey_write_to_file(key, fname, fname_tag);
+}
 
 /**
  * Read an ed25519 key and associated certificates from files beginning with
@@ -38,6 +159,9 @@
  *
  * If INIT_ED_KEY_OMIT_SECRET is set in <b>flags</b>, do not even try to
  * load or return a secret key (but create and save on if needed).
+ *
+ * If INIT_ED_KEY_TRY_ENCRYPTED is set, we look for an encrypted secret key
+ * and consider encrypting any new secret key.
  */
 ed25519_keypair_t *
 ed_key_init_from_file(const char *fname, uint32_t flags,
@@ -49,10 +173,12 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
                       struct tor_cert_st **cert_out)
 {
   char *secret_fname = NULL;
+  char *encrypted_secret_fname = NULL;
   char *public_fname = NULL;
   char *cert_fname = NULL;
   int created_pk = 0, created_sk = 0, created_cert = 0;
   const int try_to_load = ! (flags & INIT_ED_KEY_REPLACE);
+  const int encrypt_key = (flags & INIT_ED_KEY_TRY_ENCRYPTED);
 
   char tag[8];
   tor_snprintf(tag, sizeof(tag), "type%d", (int)cert_type);
@@ -62,14 +188,25 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
   ed25519_keypair_t *keypair = tor_malloc_zero(sizeof(ed25519_keypair_t));
 
   tor_asprintf(&secret_fname, "%s_secret_key", fname);
+  tor_asprintf(&encrypted_secret_fname, "%s_secret_key_encrypted", fname);
   tor_asprintf(&public_fname, "%s_public_key", fname);
   tor_asprintf(&cert_fname, "%s_cert", fname);
 
   /* Try to read the secret key. */
-  const int have_secret = try_to_load &&
+  int have_secret = try_to_load &&
     !(flags & INIT_ED_KEY_OMIT_SECRET) &&
     ed25519_seckey_read_from_file(&keypair->seckey,
                                   &got_tag, secret_fname) == 0;
+
+  /* Should we try for an encrypted key? */
+  if (!have_secret && try_to_load && encrypt_key) {
+    int r = read_encrypted_secret_key(&keypair->seckey,
+                                      encrypted_secret_fname);
+    if (r > 0) {
+      have_secret = 1;
+      got_tag = tor_strdup(tag);
+    }
+  }
 
   if (have_secret) {
     if (strcmp(got_tag, tag)) {
@@ -115,7 +252,9 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
     }
 
     created_pk = created_sk = created_cert = 1;
-    if (ed25519_seckey_write_to_file(&keypair->seckey, secret_fname, tag) < 0
+    if (write_secret_key(&keypair->seckey,
+                         encrypt_key,
+                         secret_fname, tag, encrypted_secret_fname) < 0
         ||
         (split &&
          ed25519_pubkey_write_to_file(&keypair->pubkey, public_fname, tag) < 0)
@@ -214,6 +353,7 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
     unlink(cert_fname);
 
  cleanup:
+  tor_free(encrypted_secret_fname);
   tor_free(secret_fname);
   tor_free(public_fname);
   tor_free(cert_fname);
@@ -324,7 +464,8 @@ load_ed_keys(const or_options_t *options, time_t now)
 
   const int need_new_signing_key =
     NULL == use_signing ||
-    EXPIRES_SOON(check_signing_cert, 0);
+    EXPIRES_SOON(check_signing_cert, 0) ||
+    options->command == CMD_KEYGEN;
   const int want_new_signing_key =
     need_new_signing_key ||
     EXPIRES_SOON(check_signing_cert, options->TestingSigningKeySlop);
@@ -337,6 +478,8 @@ load_ed_keys(const or_options_t *options, time_t now)
       flags |= INIT_ED_KEY_MISSING_SECRET_OK;
     if (! want_new_signing_key)
       flags |= INIT_ED_KEY_OMIT_SECRET;
+    if (options->command == CMD_KEYGEN)
+      flags |= INIT_ED_KEY_TRY_ENCRYPTED;
 
     id = ed_key_init_from_file(
              options_get_datadir_fname2(options, "keys", "ed25519_master_id"),

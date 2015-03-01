@@ -1909,6 +1909,7 @@ static const struct {
   { "--hash-password",        ARGUMENT_NECESSARY },
   { "--dump-config",          ARGUMENT_OPTIONAL },
   { "--list-fingerprint",     TAKES_NO_ARGUMENT },
+  { "--keygen",               TAKES_NO_ARGUMENT },
   { "--verify-config",        TAKES_NO_ARGUMENT },
   { "--ignore-missing-torrc", TAKES_NO_ARGUMENT },
   { "--quiet",                TAKES_NO_ARGUMENT },
@@ -4434,7 +4435,9 @@ options_init_from_torrc(int argc, char **argv)
 
   command = CMD_RUN_TOR;
   for (p_index = cmdline_only_options; p_index; p_index = p_index->next) {
-    if (!strcmp(p_index->key,"--list-fingerprint")) {
+    if (!strcmp(p_index->key,"--keygen")) {
+      command = CMD_KEYGEN;
+    } else if (!strcmp(p_index->key,"--list-fingerprint")) {
       command = CMD_LIST_FINGERPRINT;
     } else if (!strcmp(p_index->key, "--hash-password")) {
       command = CMD_HASH_PASSWORD;

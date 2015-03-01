@@ -3162,6 +3162,9 @@ tor_main(int argc, char *argv[])
 #endif
     result = do_main_loop();
     break;
+  case CMD_KEYGEN:
+    result = load_ed_keys(get_options(), time(NULL));
+    break;
   case CMD_LIST_FINGERPRINT:
     result = do_list_fingerprint();
     break;
