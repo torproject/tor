@@ -67,6 +67,9 @@
 #ifdef HAVE_CRT_EXTERNS_H
 #include <crt_externs.h>
 #endif
+#ifdef HAVE_READPASSPHRASE_H
+#include <readpassphrase.h>
+#endif
 
 #ifndef HAVE_GETTIMEOFDAY
 #ifdef HAVE_FTIME
@@ -3242,3 +3245,33 @@ tor_sleep_msec(int msec)
 }
 #endif
 
+/** Emit the password prompt <b>prompt</b>, then read up to <b>buflen</b>
+ * characters of passphrase into <b>output</b>. */
+ssize_t
+tor_getpass(const char *prompt, char *output, size_t buflen)
+{
+  tor_assert(buflen <= SSIZE_MAX);
+#if defined(HAVE_READPASSPHRASE)
+  char *pwd = readpassphrase(prompt, output, buflen, RPP_ECHO_OFF);
+  if (pwd == NULL)
+    return -1;
+  return strlen(pwd);
+#elif defined(HAVE_GETPASS)
+  /* XXX We shouldn't actually use this; it's deprecated to hell and back */
+  memset(output, 0, buflen);
+  char *pwd = getpass(prompt);
+  if (pwd == NULL)
+    return -1;
+  ssize_t len = (ssize_t)strlen(pwd);
+  strlcpy(output, pwd, buflen);
+  memset(pwd, 0, len);
+  return len;
+#else
+  /* XXX This is even worse. */
+  puts(prompt);
+  ssize_t n = read(STDIN_FILENO, output, buflen);
+  if (n < 0)
+    return -1;
+  return n;
+#endif
+}

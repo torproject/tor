@@ -386,6 +386,7 @@ AC_CHECK_FUNCS(
         ftime \
         getaddrinfo \
         getifaddrs \
+        getpass \
         getrlimit \
         gettimeofday \
         gmtime_r \
@@ -399,6 +400,7 @@ AC_CHECK_FUNCS(
 	pipe \
 	pipe2 \
         prctl \
+	readpassphrase \
         rint \
         sigaction \
         socketpair \
@@ -926,6 +928,7 @@ AC_CHECK_HEADERS(
         netinet/in.h \
         netinet/in6.h \
         pwd.h \
+	readpassphrase.h \
         stdint.h \
 	sys/eventfd.h \
         sys/file.h \
