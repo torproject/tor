@@ -34,6 +34,9 @@
  *
  * If INIT_ED_KEY_MISSING_SECRET_OK is set in <b>flags</b>, and we find a
  * public key file but no secret key file, return successfully anyway.
+ *
+ * If INIT_ED_KEY_OMIT_SECRET is set in <b>flags</b>, do not even try to
+ * load or return a secret key (but create and save on if needed).
  */
 ed25519_keypair_t *
 ed_key_init_from_file(const char *fname, uint32_t flags,
@@ -63,6 +66,7 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
 
   /* Try to read the secret key. */
   const int have_secret = try_to_load &&
+    !(flags & INIT_ED_KEY_OMIT_SECRET) &&
     ed25519_seckey_read_from_file(&keypair->seckey,
                                   &got_tag, secret_fname) == 0;
 
@@ -80,7 +84,7 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
 
   /* If it's absent and that's okay, try to read the pubkey. */
   int found_public = 0;
-  if (!have_secret && try_to_load && (flags & INIT_ED_KEY_MISSING_SECRET_OK)) {
+  if (!have_secret && try_to_load) {
     tor_free(got_tag);
     found_public = ed25519_pubkey_read_from_file(&keypair->pubkey,
                                                  &got_tag, public_fname) == 0;
@@ -89,6 +93,10 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
       goto err;
     }
   }
+
+  /* If the secret key is absent and it's not allowed to be, fail. */
+  if (!have_secret && found_public && !(flags & INIT_ED_KEY_MISSING_SECRET_OK))
+    goto err;
 
   /* If it's absent, and we're not supposed to make a new keypair, fail. */
   if (!have_secret && !found_public && !(flags & INIT_ED_KEY_CREATE))
@@ -274,7 +282,9 @@ load_ed_keys(const or_options_t *options, time_t now)
   ed25519_keypair_t *sign = NULL;
   ed25519_keypair_t *link = NULL;
   ed25519_keypair_t *auth = NULL;
+  const ed25519_keypair_t *sign_signing_key_with_id = NULL;
   const ed25519_keypair_t *use_signing = NULL;
+  const tor_cert_t *check_signing_cert = NULL;
   tor_cert_t *sign_cert = NULL;
   tor_cert_t *link_cert = NULL;
   tor_cert_t *auth_cert = NULL;
@@ -299,39 +309,75 @@ load_ed_keys(const or_options_t *options, time_t now)
   /* XXXX use options. */
   (void) options;
 
-  id = ed_key_init_from_file(
-             options_get_datadir_fname2(options, "keys", "ed25519_master_id"),
-                             (INIT_ED_KEY_CREATE|INIT_ED_KEY_SPLIT|
-                              INIT_ED_KEY_MISSING_SECRET_OK|
-                              INIT_ED_KEY_EXTRA_STRONG),
-                             LOG_WARN, NULL, 0, 0, 0, NULL);
-  if (!id)
-    FAIL("Missing identity key");
+  /* First try to get the signing key to see how it is. */
+  if (master_signing_key) {
+    check_signing_cert = signing_key_cert;
+    use_signing = master_signing_key;
+  } else {
+    sign = ed_key_init_from_file(
+               options_get_datadir_fname2(options, "keys", "ed25519_signing"),
+               INIT_ED_KEY_NEEDCERT|
+               INIT_ED_KEY_INCLUDE_SIGNING_KEY_IN_CERT,
+               LOG_INFO,
+               NULL, 0, 0, CERT_TYPE_ID_SIGNING, &sign_cert);
+    check_signing_cert = sign_cert;
+    use_signing = sign;
+  }
 
-  if (!master_signing_key || EXPIRES_SOON(signing_key_cert, 86400/*???*/)) {
+  const int need_new_signing_key =
+    NULL == use_signing ||
+    EXPIRES_SOON(check_signing_cert, 0);
+  const int want_new_signing_key =
+    need_new_signing_key ||
+    EXPIRES_SOON(check_signing_cert, 86400/*???*/);
+
+  {
+    uint32_t flags =
+      (INIT_ED_KEY_CREATE|INIT_ED_KEY_SPLIT|
+       INIT_ED_KEY_EXTRA_STRONG);
+    if (! need_new_signing_key)
+      flags |= INIT_ED_KEY_MISSING_SECRET_OK;
+    if (! want_new_signing_key)
+      flags |= INIT_ED_KEY_OMIT_SECRET;
+
+    id = ed_key_init_from_file(
+             options_get_datadir_fname2(options, "keys", "ed25519_master_id"),
+             flags,
+             LOG_WARN, NULL, 0, 0, 0, NULL);
+    if (!id)
+      FAIL("Missing identity key");
+    if (tor_mem_is_zero((char*)id->seckey.seckey, sizeof(id->seckey)))
+      sign_signing_key_with_id = NULL;
+    else
+      sign_signing_key_with_id = id;
+  }
+
+  if (need_new_signing_key && NULL == sign_signing_key_with_id)
+    FAIL("Can't load master key make a new signing key.");
+
+  if (want_new_signing_key && sign_signing_key_with_id) {
     uint32_t flags = (INIT_ED_KEY_CREATE|
+                      INIT_ED_KEY_REPLACE|
                       INIT_ED_KEY_EXTRA_STRONG|
                       INIT_ED_KEY_NEEDCERT|
                       INIT_ED_KEY_INCLUDE_SIGNING_KEY_IN_CERT);
-    const ed25519_keypair_t *sign_with_id = id;
-    if (master_signing_key) {
-      flags |= INIT_ED_KEY_REPLACE; /* it's expired, so force-replace it. */
-    }
-    if (tor_mem_is_zero((char*)id->seckey.seckey, sizeof(id->seckey))) {
-      sign_with_id = NULL;
-      flags &= ~INIT_ED_KEY_CREATE;
-    }
     sign = ed_key_init_from_file(
                options_get_datadir_fname2(options, "keys", "ed25519_signing"),
                                  flags, LOG_WARN,
-                                 sign_with_id, now, 30*86400/*XXX option*/,
+                                 sign_signing_key_with_id, now,
+                                 30*86400/*XXX option*/,
                                  CERT_TYPE_ID_SIGNING, &sign_cert);
     if (!sign)
       FAIL("Missing signing key");
     use_signing = sign;
-  } else {
-    use_signing = master_signing_key;
+  } else if (want_new_signing_key) {
+    static ratelim_t missing_master = RATELIM_INIT(3600);
+    log_fn_ratelim(&missing_master, LOG_WARN, LD_OR,
+                   "Signing key will expire soon, but I can't load the "
+                   "master key to sign a new one!");
   }
+
+  tor_assert(use_signing);
 
   /* At this point we no longer need our secret identity key.  So wipe
    * it, if we loaded it in the first place. */

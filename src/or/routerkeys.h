@@ -13,6 +13,7 @@
 #define INIT_ED_KEY_NEEDCERT                    (1u<<4)
 #define INIT_ED_KEY_EXTRA_STRONG                (1u<<5)
 #define INIT_ED_KEY_INCLUDE_SIGNING_KEY_IN_CERT (1u<<6)
+#define INIT_ED_KEY_OMIT_SECRET                 (1u<<7)
 
 struct tor_cert_st;
 ed25519_keypair_t *ed_key_init_from_file(const char *fname, uint32_t flags,
