@@ -1,0 +1,6 @@
+  o Major bugfixes (relay, stability):
+    - Fix a bug that could lead to a relay crashing with an assertion
+      failure if a buffer of exactly the wrong layout was passed
+      to buf_pullup() at exactly the wrong time. Fixes bug 15083;
+      bugfix on 0.2.0.10-alpha. Patch from 'cypherpunks'.
+   

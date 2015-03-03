@@ -426,7 +426,7 @@ buf_pullup(buf_t *buf, size_t bytes, int nulterminate)
     size_t n = bytes - dest->datalen;
     src = dest->next;
     tor_assert(src);
-    if (n > src->datalen) {
+    if (n >= src->datalen) {
       memcpy(CHUNK_WRITE_PTR(dest), src->data, src->datalen);
       dest->datalen += src->datalen;
       dest->next = src->next;
