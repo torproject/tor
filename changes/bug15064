@@ -1,0 +1,4 @@
+  o Major bugfixes (FreeBSD IPFW transparent proxy):
+    - Fix address detection with FreeBSD transparent proxies,
+      when "TransProxyType ipfw" is in use.
+      Fixes bug 15064; bugfix on 0.2.5.4-alpha.
