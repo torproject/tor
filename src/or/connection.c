@@ -3774,7 +3774,7 @@ connection_fetch_from_buf_line(connection_t *conn, char *data,
   }
 }
 
-/** As fetch_from_buf_http, but fetches from a conncetion's input buffer_t or
+/** As fetch_from_buf_http, but fetches from a connection's input buffer_t or
  * its bufferevent as appropriate. */
 int
 connection_fetch_from_buf_http(connection_t *conn,
