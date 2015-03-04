@@ -1,0 +1,4 @@
+  o Minor bugfixes (Linux seccomp2 sandbox):
+    - Upon receiving sighup, do not crash during attempts to call
+      wait4. Fixes bug 15088; bugfix on 0.2.5.1-alpha. Patch from
+      "sanic".
