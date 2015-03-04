@@ -191,6 +191,7 @@ ORHEADERS = \
 noinst_HEADERS+= $(ORHEADERS) micro-revision.i
 
 src/or/config_codedigest.o: src/or/or_sha1.i
+src/or/src_or_libtor_testing_a-config_codedigest.o: src/or/or_sha1.i
 
 micro-revision.i: FORCE
 	@rm -f micro-revision.tmp;				\

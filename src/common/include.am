@@ -139,4 +139,5 @@ src/common/common_sha1.i: $(libor_SOURCES) $(libor_crypto_a_SOURCES) $(COMMONHEA
 	fi
 
 src/common/util_codedigest.o: src/common/common_sha1.i
+src/common/src_common_libor_testing_a-util_codedigest.o: src/common/common_sha1.i
 
