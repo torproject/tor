@@ -1763,7 +1763,8 @@ connection_ap_get_original_destination(entry_connection_t *conn,
   if (options->TransProxyType_parsed == TPT_PF_DIVERT)
     return destination_from_socket(conn, req);
 
-  if (options->TransProxyType_parsed == TPT_DEFAULT)
+  if (options->TransProxyType_parsed == TPT_DEFAULT ||
+      options->TransProxyType_parsed == TPT_IPFW)
     return destination_from_pf(conn, req);
 
   (void)conn;
