@@ -1,3 +1,0 @@
-  o Minor bugfixes (compilation):
-    - Add missing dependencies to fix compilation on BSD.  Patch from
-      Peter Palfrader. Fixes bug 15127; bugfix on 0.2.5.1-alpha.
