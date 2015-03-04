@@ -5049,7 +5049,6 @@ MOCK_IMPL(void,
   char buf[BOOTSTRAP_MSG_LEN];
   const char *recommendation = "ignore";
   int severity;
-  char host[128];
 
   /* bootstrap_percent must not be in "undefined" state here. */
   tor_assert(status >= 0);
@@ -5079,8 +5078,6 @@ MOCK_IMPL(void,
   if (we_are_hibernating())
     recommendation = "ignore";
 
-  orconn_target_get_name(host, sizeof(host), or_conn);
-
   while (status>=0 && bootstrap_status_to_string(status, &tag, &summary) < 0)
     status--; /* find a recognized status string based on current progress */
   status = bootstrap_percent; /* set status back to the actual number */
@@ -5089,19 +5086,26 @@ MOCK_IMPL(void,
 
   log_fn(severity,
          LD_CONTROL, "Problem bootstrapping. Stuck at %d%%: %s. (%s; %s; "
-         "count %d; recommendation %s; host %s)",
+         "count %d; recommendation %s; host %s at %s:%d)",
          status, summary, warn,
          orconn_end_reason_to_control_string(reason),
-         bootstrap_problems, recommendation, host);
+         bootstrap_problems, recommendation,
+         hex_str(or_conn->identity_digest, DIGEST_LEN),
+         or_conn->base_.address,
+         or_conn->base_.port);
 
   connection_or_report_broken_states(severity, LD_HANDSHAKE);
 
   tor_snprintf(buf, sizeof(buf),
       "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\" WARNING=\"%s\" REASON=%s "
-      "COUNT=%d RECOMMENDATION=%s HOST=\"%s\"",
+      "COUNT=%d RECOMMENDATION=%s HOSTID=\"%s\" HOSTADDR=\"%s:%d\"",
       bootstrap_percent, tag, summary, warn,
       orconn_end_reason_to_control_string(reason), bootstrap_problems,
-      recommendation, host);
+      recommendation,
+      hex_str(or_conn->identity_digest, DIGEST_LEN),
+      or_conn->base_.address,
+      (int)or_conn->base_.port);
+
   tor_snprintf(last_sent_bootstrap_message,
                sizeof(last_sent_bootstrap_message),
                "WARN %s", buf);
