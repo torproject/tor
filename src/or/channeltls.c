@@ -33,6 +33,7 @@
 #include "router.h"
 #include "routerlist.h"
 #include "scheduler.h"
+#include "torcert.h"
 
 /** How many CELL_PADDING cells have we received, ever? */
 uint64_t stats_n_padding_cells_processed = 0;
@@ -1722,6 +1723,41 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
   assert_connection_ok(TO_CONN(chan->conn),time(NULL));
 }
 
+/** Types of certificates that we know how to parse from CERTS cells.  Each
+ * type corresponds to a different encoding format. */
+typedef enum cert_encoding_t {
+  CERT_ENCODING_UNKNOWN, /**< We don't recognize this. */
+  CERT_ENCODING_X509, /**< It's an RSA key, signed with RSA, encoded in x509.
+                   * (Actually, it might not be RSA. We test that later.) */
+  CERT_ENCODING_ED25519, /**< It's something signed with an Ed25519 key,
+                      * encoded asa a tor_cert_t.*/
+  CERT_ENCODING_RSA_CROSSCERT, /**< It's an Ed key signed with an RSA key. */
+} cert_encoding_t;
+
+/**
+ * Given one of the certificate type codes used in a CERTS cell,
+ * return the corresponding cert_encoding_t that we should use to parse
+ * the certificate.
+ */
+static cert_encoding_t
+certs_cell_typenum_to_cert_type(int typenum)
+{
+  switch (typenum) {
+  case CERTTYPE_RSA1024_ID_LINK:
+  case CERTTYPE_RSA1024_ID_ID:
+  case CERTTYPE_RSA1024_ID_AUTH:
+    return CERT_ENCODING_X509;
+  case CERTTYPE_ED_ID_SIGN:
+  case CERTTYPE_ED_SIGN_LINK:
+  case CERTTYPE_ED_SIGN_AUTH:
+    return CERT_ENCODING_ED25519;
+  case CERTTYPE_RSA1024_ID_EDID:
+    return CERT_ENCODING_RSA_CROSSCERT;
+  default:
+    return CERT_ENCODING_UNKNOWN;
+  }
+}
+
 /**
  * Process a CERTS cell from a channel.
  *
@@ -1741,14 +1777,20 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
 STATIC void
 channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
 {
-#define MAX_CERT_TYPE_WANTED OR_CERT_TYPE_AUTH_1024
-  tor_x509_cert_t *certs[MAX_CERT_TYPE_WANTED + 1];
+#define MAX_CERT_TYPE_WANTED CERTTYPE_RSA1024_ID_EDID
+  /* These arrays will be sparse, since a cert type can be at most one
+   * of ed/x509 */
+  tor_x509_cert_t *x509_certs[MAX_CERT_TYPE_WANTED + 1];
+  tor_cert_t *ed_certs[MAX_CERT_TYPE_WANTED + 1];
+
+  rsa_ed_crosscert_t *rsa_crosscert = NULL;
   int n_certs, i;
   certs_cell_t *cc = NULL;
 
   int send_netinfo = 0;
 
-  memset(certs, 0, sizeof(certs));
+  memset(x509_certs, 0, sizeof(x509_certs));
+  memset(ed_certs, 0, sizeof(ed_certs));
   tor_assert(cell);
   tor_assert(chan);
   tor_assert(chan->conn);
@@ -1792,26 +1834,70 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
 
     if (cert_type > MAX_CERT_TYPE_WANTED)
       continue;
-
-    tor_x509_cert_t *cert = tor_x509_cert_decode(cert_body, cert_len);
-    if (!cert) {
-      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-             "Received undecodable certificate in CERTS cell from %s:%d",
-             safe_str(chan->conn->base_.address),
-             chan->conn->base_.port);
-    } else {
-      if (certs[cert_type]) {
-        tor_x509_cert_free(cert);
-        ERR("Duplicate x509 certificate");
-      } else {
-        certs[cert_type] = cert;
+    const cert_encoding_t ct = certs_cell_typenum_to_cert_type(cert_type);
+    switch (ct) {
+      default:
+      case CERT_ENCODING_UNKNOWN:
+        break;
+      case CERT_ENCODING_X509: {
+        tor_x509_cert_t *x509_cert = tor_x509_cert_decode(cert_body, cert_len);
+        if (!x509_cert) {
+          log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+                 "Received undecodable certificate in CERTS cell from %s:%d",
+                 safe_str(chan->conn->base_.address),
+               chan->conn->base_.port);
+        } else {
+          if (x509_certs[cert_type]) {
+            tor_x509_cert_free(x509_cert);
+            ERR("Duplicate x509 certificate");
+          } else {
+            x509_certs[cert_type] = x509_cert;
+          }
+        }
+        break;
+      }
+      case CERT_ENCODING_ED25519: {
+        tor_cert_t *ed_cert = tor_cert_parse(cert_body, cert_len);
+        if (!ed_cert) {
+          log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+                 "Received undecodable Ed certificate in CERTS cell from %s:%d",
+                 safe_str(chan->conn->base_.address),
+               chan->conn->base_.port);
+        } else {
+          if (ed_certs[cert_type]) {
+            tor_cert_free(ed_cert);
+            ERR("Duplicate Ed25519 certificate");
+          } else {
+            ed_certs[cert_type] = ed_cert;
+          }
+        }
+        break;
+      }
+     case CERT_ENCODING_RSA_CROSSCERT: {
+        rsa_ed_crosscert_t *cc_cert = NULL;
+        ssize_t n = rsa_ed_crosscert_parse(&cc_cert, cert_body, cert_len);
+        if (n != cert_len) {
+          log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+                 "Received unparseable RS1024-Ed25519 crosscert "
+                 " in CERTS cell from %s:%d",
+                 safe_str(chan->conn->base_.address),
+                 chan->conn->base_.port);
+        } else {
+          if (rsa_crosscert) {
+            rsa_ed_crosscert_free(cc_cert);
+            ERR("Duplicate RSA->Ed25519 crosscert");
+          } else {
+            rsa_crosscert = cc_cert;
+          }
+        }
+        break;
       }
     }
   }
 
-  tor_x509_cert_t *id_cert = certs[OR_CERT_TYPE_ID_1024];
-  tor_x509_cert_t *auth_cert = certs[OR_CERT_TYPE_AUTH_1024];
-  tor_x509_cert_t *link_cert = certs[OR_CERT_TYPE_TLS_LINK];
+  tor_x509_cert_t *id_cert = x509_certs[OR_CERT_TYPE_ID_1024];
+  tor_x509_cert_t *auth_cert = x509_certs[OR_CERT_TYPE_AUTH_1024];
+  tor_x509_cert_t *link_cert = x509_certs[OR_CERT_TYPE_TLS_LINK];
 
   if (chan->conn->handshake_state->started_here) {
     int severity;
@@ -1862,7 +1948,7 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
              safe_str(chan->conn->base_.address), chan->conn->base_.port);
 
     chan->conn->handshake_state->id_cert = id_cert;
-    certs[OR_CERT_TYPE_ID_1024] = NULL;
+    x509_certs[OR_CERT_TYPE_ID_1024] = NULL;
 
     if (!public_server_mode(get_options())) {
       /* If we initiated the connection and we are not a public server, we
@@ -1889,7 +1975,8 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
 
     chan->conn->handshake_state->id_cert = id_cert;
     chan->conn->handshake_state->auth_cert = auth_cert;
-    certs[OR_CERT_TYPE_ID_1024] = certs[OR_CERT_TYPE_AUTH_1024] = NULL;
+    x509_certs[OR_CERT_TYPE_ID_1024] = x509_certs[OR_CERT_TYPE_AUTH_1024]
+      = NULL;
   }
 
   chan->conn->handshake_state->received_certs_cell = 1;
@@ -1903,9 +1990,13 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
   }
 
  err:
-  for (unsigned u = 0; u < ARRAY_LENGTH(certs); ++u) {
-    tor_x509_cert_free(certs[u]);
+  for (unsigned u = 0; u < ARRAY_LENGTH(x509_certs); ++u) {
+    tor_x509_cert_free(x509_certs[u]);
   }
+  for (unsigned u = 0; u < ARRAY_LENGTH(ed_certs); ++u) {
+    tor_cert_free(ed_certs[u]);
+  }
+  rsa_ed_crosscert_free(rsa_crosscert);
   certs_cell_free(cc);
 #undef ERR
 }
