@@ -2130,8 +2130,8 @@ connection_or_send_certs_cell(or_connection_t *conn)
   const uint8_t *link_encoded = NULL, *id_encoded = NULL;
   size_t link_len, id_len;
   var_cell_t *cell;
-  size_t cell_len;
-  ssize_t pos;
+
+  certs_cell_t *certs_cell = NULL;
 
   tor_assert(conn->base_.state == OR_CONN_STATE_OR_HANDSHAKING_V3);
 
@@ -2140,34 +2140,44 @@ connection_or_send_certs_cell(or_connection_t *conn)
   const int conn_in_server_mode = ! conn->handshake_state->started_here;
   if (tor_tls_get_my_certs(conn_in_server_mode, &link_cert, &id_cert) < 0)
     return -1;
+
+  certs_cell = certs_cell_new();
+
   tor_x509_cert_get_der(link_cert, &link_encoded, &link_len);
   tor_x509_cert_get_der(id_cert, &id_encoded, &id_len);
 
-  cell_len = 1 /* 1 byte: num certs in cell */ +
-             2 * ( 1 + 2 ) /* For each cert: 1 byte for type, 2 for length */ +
-             link_len + id_len;
-  cell = var_cell_new(cell_len);
-  cell->command = CELL_CERTS;
-  cell->payload[0] = 2;
-  pos = 1;
-
+  certs_cell_cert_t *ccc = certs_cell_cert_new();
   if (conn_in_server_mode)
-    cell->payload[pos] = OR_CERT_TYPE_TLS_LINK; /* Link cert  */
+    ccc->cert_type = OR_CERT_TYPE_TLS_LINK; /* Link cert  */
   else
-    cell->payload[pos] = OR_CERT_TYPE_AUTH_1024; /* client authentication */
-  set_uint16(&cell->payload[pos+1], htons(link_len));
-  memcpy(&cell->payload[pos+3], link_encoded, link_len);
-  pos += 3 + link_len;
+    ccc->cert_type = OR_CERT_TYPE_AUTH_1024; /* client authentication */
+  ccc->cert_len = link_len;
+  certs_cell_cert_setlen_body(ccc, link_len);
+  memcpy(certs_cell_cert_getarray_body(ccc), link_encoded, link_len);
 
-  cell->payload[pos] = OR_CERT_TYPE_ID_1024; /* ID cert */
-  set_uint16(&cell->payload[pos+1], htons(id_len));
-  memcpy(&cell->payload[pos+3], id_encoded, id_len);
-  pos += 3 + id_len;
+  certs_cell_add_certs(certs_cell, ccc);
 
-  tor_assert(pos == (int)cell_len); /* Otherwise we just smashed the heap */
+  ccc = certs_cell_cert_new();
+  ccc->cert_type = OR_CERT_TYPE_ID_1024; /* ID cert */
+  ccc->cert_len = id_len;
+  certs_cell_cert_setlen_body(ccc, id_len);
+  memcpy(certs_cell_cert_getarray_body(ccc), id_encoded, id_len);
+
+  certs_cell_add_certs(certs_cell, ccc);
+
+  certs_cell->n_certs = certs_cell_getlen_certs(certs_cell);
+
+  ssize_t alloc_len = certs_cell_encoded_len(certs_cell);
+  tor_assert(alloc_len >= 0 && alloc_len <= UINT16_MAX);
+  cell = var_cell_new(alloc_len);
+  cell->command = CELL_CERTS;
+  ssize_t enc_len = certs_cell_encode(cell->payload, alloc_len, certs_cell);
+  tor_assert(enc_len > 0 && enc_len <= alloc_len);
+  cell->payload_len = enc_len;
 
   connection_or_write_var_cell_to_buf(cell, conn);
   var_cell_free(cell);
+  certs_cell_free(certs_cell);
 
   return 0;
 }
