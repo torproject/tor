@@ -36,7 +36,7 @@ LINES = sys.stdin.readlines()
 for I in range(len(LINES)):
     if matches(LINES[I:], FUNCNAMES):
         print("OK")
-        break
+        sys.exit(0)
 else:
     print("BAD")
-
+    sys.exit(1)

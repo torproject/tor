@@ -176,6 +176,7 @@ cscope.*
 /src/test/test_workqueue.exe
 /src/test/test_zero_length_keys.sh
 /src/test/test_ntor.sh
+/src/test/test_bt.sh
 
 # /src/tools/
 /src/tools/tor-checkkey

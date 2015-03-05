@@ -1664,6 +1664,7 @@ AC_CONFIG_FILES([
         scripts/maint/updateVersions.pl
         src/test/test_zero_length_keys.sh
         src/test/test_ntor.sh
+        src/test/test_bt.sh
 ])
 
 if test x$asciidoc = xtrue && test "$ASCIIDOC" = "none" ; then
