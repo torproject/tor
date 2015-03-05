@@ -1,6 +1,10 @@
 TESTS += src/test/test src/test/test-slow src/test/test-memwipe \
 	src/test/test_zero_length_keys.sh
 
+if USEPYTHON
+TESTS += src/test/test_ntor.sh
+endif
+
 TEST_EXTENSIONS = .sh
 SH_LOG_COMPILER = $(SHELL)
 
@@ -169,8 +173,6 @@ src_test_test_bt_cl_CPPFLAGS= $(src_test_AM_CPPFLAGS) $(TEST_CPPFLAGS)
 
 check-local: $(NTOR_TEST_DEPS) $(CMDLINE_TEST_TOR)
 if USEPYTHON
-	$(PYTHON) $(top_srcdir)/src/test/ntor_ref.py test-tor
-	$(PYTHON) $(top_srcdir)/src/test/ntor_ref.py self-test
 	$(top_builddir)/src/test/test-bt-cl assert | $(PYTHON) $(top_srcdir)/src/test/bt_test.py
 	$(top_builddir)/src/test/test-bt-cl crash | $(PYTHON) $(top_srcdir)/src/test/bt_test.py
 endif
