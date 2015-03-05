@@ -38,9 +38,11 @@
 #include "relay.h"
 #include "rephist.h"
 #include "router.h"
+#include "routerkeys.h"
 #include "routerlist.h"
 #include "ext_orport.h"
 #include "scheduler.h"
+#include "torcert.h"
 
 static int connection_tls_finish_handshake(or_connection_t *conn);
 static int connection_or_launch_v3_or_handshake(or_connection_t *conn);
@@ -2121,14 +2123,56 @@ connection_or_send_netinfo,(or_connection_t *conn))
   return 0;
 }
 
+/** Add an encoded X509 cert (stored as <b>cert_len</b> bytes at
+ * <b>cert_encoded</b>) to the trunnel certs_cell_t object that we are
+ * building in <b>certs_cell</b>.  Set its type field to <b>cert_type</b>. */
+static void
+add_x509_cert(certs_cell_t *certs_cell,
+              uint8_t cert_type,
+              const tor_x509_cert_t *cert)
+{
+  const uint8_t *cert_encoded = NULL;
+  size_t cert_len;
+  tor_x509_cert_get_der(cert, &cert_encoded, &cert_len);
+  tor_assert(cert_len <= UINT16_MAX);
+
+  certs_cell_cert_t *ccc = certs_cell_cert_new();
+  ccc->cert_type = cert_type;
+  ccc->cert_len = cert_len;
+  certs_cell_cert_setlen_body(ccc, cert_len);
+  memcpy(certs_cell_cert_getarray_body(ccc), cert_encoded, cert_len);
+
+  certs_cell_add_certs(certs_cell, ccc);
+}
+
+/** Add an Ed25519 cert from <b>cert</b> to the trunnel certs_cell_t object
+ * that we are building in <b>certs_cell</b>.  Set its type field to
+ * <b>cert_type</b>. */
+static void
+add_ed25519_cert(certs_cell_t *certs_cell,
+                 uint8_t cert_type,
+                 const tor_cert_t *cert)
+{
+  if (NULL == cert)
+    return;
+
+  certs_cell_cert_t *ccc = certs_cell_cert_new();
+  ccc->cert_type = cert_type;
+  tor_assert(cert->encoded_len <= UINT16_MAX);
+  ccc->cert_len = cert->encoded_len;
+  certs_cell_cert_setlen_body(ccc, cert->encoded_len);
+  memcpy(certs_cell_cert_getarray_body(ccc), cert->encoded,
+         cert->encoded_len);
+
+  certs_cell_add_certs(certs_cell, ccc);
+}
+
 /** Send a CERTS cell on the connection <b>conn</b>.  Return 0 on success, -1
  * on failure. */
 int
 connection_or_send_certs_cell(or_connection_t *conn)
 {
   const tor_x509_cert_t *link_cert = NULL, *id_cert = NULL;
-  const uint8_t *link_encoded = NULL, *id_encoded = NULL;
-  size_t link_len, id_len;
   var_cell_t *cell;
 
   certs_cell_t *certs_cell = NULL;
@@ -2137,34 +2181,62 @@ connection_or_send_certs_cell(or_connection_t *conn)
 
   if (! conn->handshake_state)
     return -1;
+
   const int conn_in_server_mode = ! conn->handshake_state->started_here;
+
+  /* Get the encoded values of the X509 certificates */
   if (tor_tls_get_my_certs(conn_in_server_mode, &link_cert, &id_cert) < 0)
     return -1;
 
+  tor_assert(link_cert);
+  tor_assert(id_cert);
+
   certs_cell = certs_cell_new();
 
-  tor_x509_cert_get_der(link_cert, &link_encoded, &link_len);
-  tor_x509_cert_get_der(id_cert, &id_encoded, &id_len);
+  /* Start adding certs.  First the link cert or auth1024 cert. */
+  if (conn_in_server_mode) {
+    add_x509_cert(certs_cell,
+                  OR_CERT_TYPE_TLS_LINK, link_cert);
+  } else {
+    add_x509_cert(certs_cell,
+                  OR_CERT_TYPE_AUTH_1024, link_cert);
+  }
 
-  certs_cell_cert_t *ccc = certs_cell_cert_new();
-  if (conn_in_server_mode)
-    ccc->cert_type = OR_CERT_TYPE_TLS_LINK; /* Link cert  */
-  else
-    ccc->cert_type = OR_CERT_TYPE_AUTH_1024; /* client authentication */
-  ccc->cert_len = link_len;
-  certs_cell_cert_setlen_body(ccc, link_len);
-  memcpy(certs_cell_cert_getarray_body(ccc), link_encoded, link_len);
+  /* Next the RSA->RSA ID cert */
+  add_x509_cert(certs_cell,
+                OR_CERT_TYPE_ID_1024, id_cert);
 
-  certs_cell_add_certs(certs_cell, ccc);
+  /* Next the Ed25519 certs */
+  add_ed25519_cert(certs_cell,
+                   CERTTYPE_ED_ID_SIGN,
+                   get_master_signing_key_cert());
+  if (conn_in_server_mode) {
+    add_ed25519_cert(certs_cell,
+                     CERTTYPE_ED_SIGN_LINK,
+                     get_current_link_cert_cert());
+  } else {
+    add_ed25519_cert(certs_cell,
+                     CERTTYPE_ED_SIGN_AUTH,
+                     get_current_auth_key_cert());
+  }
 
-  ccc = certs_cell_cert_new();
-  ccc->cert_type = OR_CERT_TYPE_ID_1024; /* ID cert */
-  ccc->cert_len = id_len;
-  certs_cell_cert_setlen_body(ccc, id_len);
-  memcpy(certs_cell_cert_getarray_body(ccc), id_encoded, id_len);
+  /* And finally the crosscert. */
+  {
+    const uint8_t *crosscert=NULL;
+    size_t crosscert_len;
+    get_master_rsa_crosscert(&crosscert, &crosscert_len);
+    if (crosscert) {
+      certs_cell_cert_t *ccc = certs_cell_cert_new();
+      ccc->cert_type = CERTTYPE_RSA1024_ID_EDID;
+      ccc->cert_len = crosscert_len;
+      certs_cell_cert_setlen_body(ccc, crosscert_len);
+      memcpy(certs_cell_cert_getarray_body(ccc), crosscert,
+             crosscert_len);
+      certs_cell_add_certs(certs_cell, ccc);
+    }
+  }
 
-  certs_cell_add_certs(certs_cell, ccc);
-
+  /* We've added all the certs; make the cell. */
   certs_cell->n_certs = certs_cell_getlen_certs(certs_cell);
 
   ssize_t alloc_len = certs_cell_encoded_len(certs_cell);
