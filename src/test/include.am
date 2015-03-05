@@ -1,4 +1,8 @@
-TESTS += src/test/test src/test/test-slow src/test/test-memwipe
+TESTS += src/test/test src/test/test-slow src/test/test-memwipe \
+	src/test/test_zero_length_keys.sh
+
+TEST_EXTENSIONS = .sh
+SH_LOG_COMPILER = $(SHELL)
 
 noinst_PROGRAMS+= src/test/bench
 if UNITTESTS_ENABLED
@@ -170,7 +174,6 @@ if USEPYTHON
 	$(top_builddir)/src/test/test-bt-cl assert | $(PYTHON) $(top_srcdir)/src/test/bt_test.py
 	$(top_builddir)/src/test/test-bt-cl crash | $(PYTHON) $(top_srcdir)/src/test/bt_test.py
 endif
-	$(SHELL) $(top_srcdir)/src/test/zero_length_keys.sh
 
 EXTRA_DIST += \
 	src/test/bt_test.py \

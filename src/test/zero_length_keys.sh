@@ -3,13 +3,13 @@
 # Test for bug #13111 - Tor fails to start if onion keys are zero length
 #
 # Usage:
-#  ./zero_length_keys.sh
+#  ./zero_length_keys.sh PATH_TO_TOR
 #    Run all the tests below
-#  ./zero_length_keys.sh -z
+#  ./zero_length_keys.sh PATH_TO_TOR -z
 #    Check tor will launch and regenerate zero-length keys
-#  ./zero_length_keys.sh -d
+#  ./zero_length_keys.sh PATH_TO_TOR -d
 #    Check tor regenerates deleted keys (existing behaviour)
-#  ./zero_length_keys.sh -e
+#  ./zero_length_keys.sh PATH_TO_TOR -e
 #    Check tor does not overwrite existing keys (existing behaviour)
 #
 # Exit Statuses:
@@ -19,10 +19,16 @@
 #   3: a command failed - the test could not be completed
 #
 
-if [ $# -lt 1 ]; then
+if [ $# -eq 0 ] || [ ! -f ${1} ] || [ ! -x ${1} ]; then
+  echo "Usage: ${0} PATH_TO_TOR [-z|-d|-e]"
+  exit 1
+elif [ $# -eq 1 ]; then
   echo "Testing that tor correctly handles zero-length keys"
-  "$0" -z && "$0" -d && "$0" -e
+  "$0" "${1}" -z && "$0" "${1}" -d && "$0" "${1}" -e
   exit $?
+else #[$# -gt 1 ]; then
+  TOR_BINARY="${1}"
+  shift
 fi
 
 DATA_DIR=`mktemp -d -t tor_zero_length_keys.XXXXXX`
@@ -40,7 +46,7 @@ touch "$DATA_DIR"/empty_torrc
 
 # DisableNetwork means that the ORPort won't actually be opened.
 # 'ExitRelay 0' suppresses a warning.
-TOR="./src/or/tor --hush --DisableNetwork 1 --ShutdownWaitLength 0 --ORPort 12345 --ExitRelay 0 -f $DATA_DIR/empty_torrc"
+TOR="${TOR_BINARY} --hush --DisableNetwork 1 --ShutdownWaitLength 0 --ORPort 12345 --ExitRelay 0 -f $DATA_DIR/empty_torrc"
 
 if [ -s "$DATA_DIR"/keys/secret_id_key ] && [ -s "$DATA_DIR"/keys/secret_onion_key ] &&
    [ -s "$DATA_DIR"/keys/secret_onion_key_ntor ]; then
