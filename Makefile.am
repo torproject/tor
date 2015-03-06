@@ -111,6 +111,12 @@ check-logs:
 	./scripts/maint/checkLogs.pl                  \
 		src/*/*.[ch] | sort -n
 
+.PHONY: check-changes
+check-changes:
+	@if test -d "$(top_srcdir)/changes"; then \
+		$(PYTHON) $(top_srcdir)/scripts/maint/lintChanges.py $(top_srcdir)/changes/*; \
+		fi
+
 version:
 	@echo "Tor @VERSION@"
 	@if test -d "$(top_srcdir)/.git" && test -x "`which git 2>&1;true`"; then \

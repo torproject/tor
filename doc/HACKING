@@ -61,9 +61,10 @@ it's a bugfix, mention what bug it fixes and when the bug was
 introduced.  To find out which Git tag the change was introduced in,
 you can use "git describe --contains <sha1 of commit>".
 
-If at all possible, try to create this file in the same commit where
-you are making the change.  Please give it a distinctive name that no
-other branch will use for the lifetime of your change.
+If at all possible, try to create this file in the same commit where you are
+making the change.  Please give it a distinctive name that no other branch will
+use for the lifetime of your change. To verify the format of the changes file,
+you can use "make check-changes".
 
 When we go to make a release, we will concatenate all the entries
 in changes to make a draft changelog, and clear the directory. We'll
