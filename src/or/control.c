@@ -4175,12 +4175,12 @@ get_bw_samples(void)
   int i;
   int idx = (next_measurement_idx + N_BW_EVENTS_TO_CACHE - n_measurements)
     % N_BW_EVENTS_TO_CACHE;
-  tor_assert(0 <= idx && idx < N_BW_EVENTS_TO_CACHE);
-
   smartlist_t *elements = smartlist_new();
+  tor_assert(0 <= idx && idx < N_BW_EVENTS_TO_CACHE);
 
   for (i = 0; i < n_measurements; ++i) {
     tor_assert(0 <= idx && idx < N_BW_EVENTS_TO_CACHE);
+    {
     const struct cached_bw_event_s *bwe = &cached_bw_events[idx];
 
     smartlist_add_asprintf(elements, "%u,%u",
@@ -4188,14 +4188,17 @@ get_bw_samples(void)
                            (unsigned)bwe->n_written);
 
     idx = (idx + 1) % N_BW_EVENTS_TO_CACHE;
+    }
   }
 
+  {
   char *result = smartlist_join_strings(elements, " ", 0, NULL);
 
   SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
   smartlist_free(elements);
 
   return result;
+  }
 }
 
 /** Called when we are sending a log message to the controllers: suspend
