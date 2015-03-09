@@ -1,7 +1,7 @@
-Changes in version 0.2.6.4-beta - 2015-03-??
-  Tor 0.2.6.4-alpha fixes a couple of critical issues in the directory
-  code that an attacker might be able to use in order to crash certain
-  Tor directories. It also resolves some minor issues left over from, or
+Changes in version 0.2.6.4-rc - 2015-03-09
+  Tor 0.2.6.4-alpha fixes an issue in the directory code that an
+  attacker might be able to use in order to crash certain Tor
+  directories. It also resolves some minor issues left over from, or
   introduced in, Tor 0.2.6.3-alpha or earlier.
 
   o Major bugfixes (relay, stability, possible security):
@@ -24,8 +24,9 @@ Changes in version 0.2.6.4-beta - 2015-03-??
       on 0.2.6.3-alpha.
     - Allow AF_UNIX hidden services to be used with the seccomp2
       sandbox. Fixes bug 15003; bugfix on 0.2.6.3-alpha.
-    - Upon receiving sighup, do not crash during attempts to call wait4.
-      Fixes bug 15088; bugfix on 0.2.5.1-alpha. Patch from "sanic".
+    - Upon receiving sighup with the seccomp2 sandbox enabled, do not
+      crash during attempts to call wait4. Fixes bug 15088; bugfix on
+      0.2.5.1-alpha. Patch from "sanic".
 
   o Minor features (controller):
     - Messages about problems in the bootstrap process now include
@@ -61,7 +62,7 @@ Changes in version 0.2.6.4-beta - 2015-03-??
     - When running the new 'make test-stem' target, use the configured
       python binary. Fixes bug 15037; bugfix on 0.2.6.3-alpha. Patch
       from "cypherpunks".
-    - When running the zero-length-keys check, do not use the default
+    - When running the zero-length-keys tests, do not use the default
       torrc file. Fixes bug 15033; bugfix on 0.2.6.3-alpha. Reported
       by "reezer".
 
