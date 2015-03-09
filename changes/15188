@@ -1,0 +1,3 @@
+  o Minor bugfixes (testing):
+    - Avoid a side-effect in a tor_assert() in the unit tests. Fixes bug
+      15188; bugfix on 0.1.2.3-alpha. Patch from Tom van der Woerdt.
