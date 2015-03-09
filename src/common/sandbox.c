@@ -176,6 +176,7 @@ static int filter_nopar_gen[] = {
 #endif
     SCMP_SYS(stat),
     SCMP_SYS(uname),
+    SCMP_SYS(wait4),
     SCMP_SYS(write),
     SCMP_SYS(writev),
     SCMP_SYS(exit_group),

@@ -165,18 +165,21 @@ static crypto_pk_t *pregen_keys[5] = {NULL, NULL, NULL, NULL, NULL};
 crypto_pk_t *
 pk_generate(int idx)
 {
+  int res;
 #ifdef CACHE_GENERATED_KEYS
   tor_assert(idx < N_PREGEN_KEYS);
   if (! pregen_keys[idx]) {
     pregen_keys[idx] = crypto_pk_new();
-    tor_assert(!crypto_pk_generate_key(pregen_keys[idx]));
+    res = crypto_pk_generate_key(pregen_keys[idx]);
+    tor_assert(!res);
   }
   return crypto_pk_dup_key(pregen_keys[idx]);
 #else
   crypto_pk_t *result;
   (void) idx;
   result = crypto_pk_new();
-  tor_assert(!crypto_pk_generate_key(result));
+  res = crypto_pk_generate_key(result);
+  tor_assert(!res);
   return result;
 #endif
 }

@@ -1598,7 +1598,6 @@ destination_from_socket(entry_connection_t *conn, socks_request_t *req)
   struct sockaddr_storage orig_dst;
   socklen_t orig_dst_len = sizeof(orig_dst);
   tor_addr_t addr;
-  int rv;
 
 #ifdef TRANS_TRPOXY
   if (options->TransProxyType_parsed == TPT_TPROXY) {
@@ -1613,6 +1612,7 @@ destination_from_socket(entry_connection_t *conn, socks_request_t *req)
 #endif
 
 #ifdef TRANS_NETFILTER
+  int rv = -1;
   switch (ENTRY_TO_CONN(conn)->socket_family) {
 #ifdef TRANS_NETFILTER_IPV4
     case AF_INET:
@@ -1763,7 +1763,8 @@ connection_ap_get_original_destination(entry_connection_t *conn,
   if (options->TransProxyType_parsed == TPT_PF_DIVERT)
     return destination_from_socket(conn, req);
 
-  if (options->TransProxyType_parsed == TPT_DEFAULT)
+  if (options->TransProxyType_parsed == TPT_DEFAULT ||
+      options->TransProxyType_parsed == TPT_IPFW)
     return destination_from_pf(conn, req);
 
   (void)conn;

@@ -1,0 +1,4 @@
+  o Minor features (controller):
+    - Messages about problems in the bootstrap process now include
+      information about the server we were trying to connect to when we
+      noticed the problem. Closes ticket 15006.

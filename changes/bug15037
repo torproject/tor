@@ -1,0 +1,4 @@
+  o Minor bugfixes (testing):
+    - When running the new 'make test-stem' target, use the configured
+      python binary. Fixes bug 15037; bugfix on 0.2.6.3-alpha. Patch
+      from "cypherpunks".
