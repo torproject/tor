@@ -1,7 +1,0 @@
-  o Major bugfixes (exit node stability):
-
-    - Fix an assertion failure that could occur under high DNS load.  Fixes
-      bug 14129; bugfix on Tor 0.0.7rc1. Found by "jowr"; diagnosed and fixed
-      by "cypherpunks".
-
-
