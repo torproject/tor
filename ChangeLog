@@ -4,6 +4,11 @@ Changes in version 0.2.6.4-rc - 2015-03-09
   directories. It also resolves some minor issues left over from, or
   introduced in, Tor 0.2.6.3-alpha or earlier.
 
+  o Major bugfixes (crash, OSX, security):
+    - Fix a remote denial-of-service opportunity caused by a bug in
+      OSX's _strlcat_chk() function. Fixes bug 15205; bug first appeared
+      in OSX 10.9.
+
   o Major bugfixes (relay, stability, possible security):
     - Fix a bug that could lead to a relay crashing with an assertion
       failure if a buffer of exactly the wrong layout is passed to
@@ -32,6 +37,11 @@ Changes in version 0.2.6.4-rc - 2015-03-09
     - Messages about problems in the bootstrap process now include
       information about the server we were trying to connect to when we
       noticed the problem. Closes ticket 15006.
+
+  o Minor features (geoip):
+    - Update geoip to the March 3 2015 Maxmind GeoLite2 Country database.
+    - Update geoip6 to the March 3 2015 Maxmind GeoLite2
+      Country database.
 
   o Minor features (logs):
     - Quiet some log messages in the heartbeat and at startup. Closes
