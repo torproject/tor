@@ -5086,19 +5086,26 @@ MOCK_IMPL(void,
 
   log_fn(severity,
          LD_CONTROL, "Problem bootstrapping. Stuck at %d%%: %s. (%s; %s; "
-         "count %d; recommendation %s)",
+         "count %d; recommendation %s; host %s at %s:%d)",
          status, summary, warn,
          orconn_end_reason_to_control_string(reason),
-         bootstrap_problems, recommendation);
+         bootstrap_problems, recommendation,
+         hex_str(or_conn->identity_digest, DIGEST_LEN),
+         or_conn->base_.address,
+         or_conn->base_.port);
 
   connection_or_report_broken_states(severity, LD_HANDSHAKE);
 
   tor_snprintf(buf, sizeof(buf),
       "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\" WARNING=\"%s\" REASON=%s "
-      "COUNT=%d RECOMMENDATION=%s",
+      "COUNT=%d RECOMMENDATION=%s HOSTID=\"%s\" HOSTADDR=\"%s:%d\"",
       bootstrap_percent, tag, summary, warn,
       orconn_end_reason_to_control_string(reason), bootstrap_problems,
-      recommendation);
+      recommendation,
+      hex_str(or_conn->identity_digest, DIGEST_LEN),
+      or_conn->base_.address,
+      (int)or_conn->base_.port);
+
   tor_snprintf(last_sent_bootstrap_message,
                sizeof(last_sent_bootstrap_message),
                "WARN %s", buf);
