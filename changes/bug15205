@@ -1,0 +1,5 @@
+  o Major bugfixes (crash, OSX, security):
+    - Fix a remote denial-of-service opportunity caused by a bug
+      in OSX's _strlcat_chk() function. Fixes bug 15205; bug first
+      appeared in OSX 10.9. 
+      
