@@ -1,12 +1,34 @@
 Changes in version 0.2.6.4-?? - 2015-0?-??
   XXXX write a blurb here.
 
+  o Major bugfixes (relay, stability, possible security):
+    - Fix a bug that could lead to a relay crashing with an assertion
+      failure if a buffer of exactly the wrong layout was passed
+      to buf_pullup() at exactly the wrong time. Fixes bug 15083;
+      bugfix on 0.2.0.10-alpha. Patch from 'cypherpunks'.
+    - Do not assert if the 'data' pointer on a buffer is advanced to the very
+      end of the buffer; log a BUG message instead.  Only assert if it is
+      past that point. Fixes bug 15083; bugfix on 0.2.0.10-alpha.
+
   o Major bugfixes (Linux seccomp2 sandbox):
     - Pass IPPROTO_TCP rather than 0 to socket(), so that the Linux
       seccomp2 sandbox doesn't fail. Fixes bug 14989; bugfix
       on 0.2.6.3-alpha.
     - Allow AF_UNIX hidden services to be used with the seccomp2
       sandbox. Fixes bug 15003; bugfix on 0.2.6.3-alpha.
+    - Upon receiving sighup, do not crash during attempts to call
+      wait4. Fixes bug 15088; bugfix on 0.2.5.1-alpha. Patch from
+      "sanic".
+
+  o Major bugfixes (FreeBSD IPFW transparent proxy):
+    - Fix address detection with FreeBSD transparent proxies,
+      when "TransProxyType ipfw" is in use.
+      Fixes bug 15064; bugfix on 0.2.5.4-alpha.
+
+  o Minor features (controller):
+    - Messages about problems in the bootstrap process now include
+      information about the server we were trying to connect to when we
+      noticed the problem. Closes ticket 15006.
 
   o Minor features (logs):
     - Quiet some log messages in the heartbeat and at startup. Closes
@@ -25,11 +47,21 @@ Changes in version 0.2.6.4-?? - 2015-0?-??
   o Minor bugfixes (compilation):
     - Fix a compilation warning on s390. Fixes bug 14988; bugfix
       on 0.2.5.2-alpha.
+    - Fix a compilation warning on FreeBSD. Fixes bug 15151; bugfix on
+      0.2.6.2-alpha.
 
   o Minor bugfixes (testing):
     - Fix endianness issues in unit test for resolve_my_address() to
       have it pass on big endian systems. Fixes bug 14980; bugfix on
       Tor 0.2.6.3-alpha.
+    - Avoid a side-effect in a tor_assert() in the unit tests. Fixes bug
+      15188; bugfix on 0.1.2.3-alpha. Patch from Tom van der Woerdt.
+    - When running the new 'make test-stem' target, use the configured
+      python binary. Fixes bug 15037; bugfix on 0.2.6.3-alpha. Patch
+      from "cypherpunks".
+    - When running the zero-length-keys check, do not use the default
+      torrc file. Fixes bug 15033; bugfix on 0.2.6.3-alpha. Reported
+      by "reezer".
 
   o Directory authority IP change:
     - The directory authority Faravahar has a new IP address. This
