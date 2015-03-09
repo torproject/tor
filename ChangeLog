@@ -1,14 +1,22 @@
-Changes in version 0.2.6.4-?? - 2015-0?-??
-  XXXX write a blurb here.
+Changes in version 0.2.6.4-beta - 2015-03-??
+  Tor 0.2.6.4-alpha fixes a couple of critical issues in the directory
+  code that an attacker might be able to use in order to crash certain
+  Tor directories. It also resolves some minor issues left over from, or
+  introduced in, Tor 0.2.6.3-alpha or earlier.
 
   o Major bugfixes (relay, stability, possible security):
     - Fix a bug that could lead to a relay crashing with an assertion
-      failure if a buffer of exactly the wrong layout was passed
-      to buf_pullup() at exactly the wrong time. Fixes bug 15083;
-      bugfix on 0.2.0.10-alpha. Patch from 'cypherpunks'.
-    - Do not assert if the 'data' pointer on a buffer is advanced to the very
-      end of the buffer; log a BUG message instead.  Only assert if it is
-      past that point. Fixes bug 15083; bugfix on 0.2.0.10-alpha.
+      failure if a buffer of exactly the wrong layout was passed to
+      buf_pullup() at exactly the wrong time. Fixes bug 15083; bugfix on
+      0.2.0.10-alpha. Patch from 'cypherpunks'.
+    - Do not assert if the 'data' pointer on a buffer is advanced to the
+      very end of the buffer; log a BUG message instead. Only assert if
+      it is past that point. Fixes bug 15083; bugfix on 0.2.0.10-alpha.
+
+  o Major bugfixes (FreeBSD IPFW transparent proxy):
+    - Fix address detection with FreeBSD transparent proxies, when
+      "TransProxyType ipfw" is in use. Fixes bug 15064; bugfix
+      on 0.2.5.4-alpha.
 
   o Major bugfixes (Linux seccomp2 sandbox):
     - Pass IPPROTO_TCP rather than 0 to socket(), so that the Linux
@@ -16,14 +24,8 @@ Changes in version 0.2.6.4-?? - 2015-0?-??
       on 0.2.6.3-alpha.
     - Allow AF_UNIX hidden services to be used with the seccomp2
       sandbox. Fixes bug 15003; bugfix on 0.2.6.3-alpha.
-    - Upon receiving sighup, do not crash during attempts to call
-      wait4. Fixes bug 15088; bugfix on 0.2.5.1-alpha. Patch from
-      "sanic".
-
-  o Major bugfixes (FreeBSD IPFW transparent proxy):
-    - Fix address detection with FreeBSD transparent proxies,
-      when "TransProxyType ipfw" is in use.
-      Fixes bug 15064; bugfix on 0.2.5.4-alpha.
+    - Upon receiving sighup, do not crash during attempts to call wait4.
+      Fixes bug 15088; bugfix on 0.2.5.1-alpha. Patch from "sanic".
 
   o Minor features (controller):
     - Messages about problems in the bootstrap process now include
@@ -47,8 +49,8 @@ Changes in version 0.2.6.4-?? - 2015-0?-??
   o Minor bugfixes (compilation):
     - Fix a compilation warning on s390. Fixes bug 14988; bugfix
       on 0.2.5.2-alpha.
-    - Fix a compilation warning on FreeBSD. Fixes bug 15151; bugfix on
-      0.2.6.2-alpha.
+    - Fix a compilation warning on FreeBSD. Fixes bug 15151; bugfix
+      on 0.2.6.2-alpha.
 
   o Minor bugfixes (testing):
     - Fix endianness issues in unit test for resolve_my_address() to
