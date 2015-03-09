@@ -2183,12 +2183,15 @@ connection_dir_reached_eof(dir_connection_t *conn)
  */
 #define MAX_DIRECTORY_OBJECT_SIZE (10*(1<<20))
 
+#define MAX_VOTE_DL_SIZE (MAX_DIRECTORY_OBJECT_SIZE * 5)
+
 /** Read handler for directory connections.  (That's connections <em>to</em>
  * directory servers and connections <em>at</em> directory servers.)
  */
 int
 connection_dir_process_inbuf(dir_connection_t *conn)
 {
+  size_t max_size;
   tor_assert(conn);
   tor_assert(conn->base_.type == CONN_TYPE_DIR);
 
@@ -2207,7 +2210,11 @@ connection_dir_process_inbuf(dir_connection_t *conn)
     return 0;
   }
 
-  if (connection_get_inbuf_len(TO_CONN(conn)) > MAX_DIRECTORY_OBJECT_SIZE) {
+  max_size =
+    (TO_CONN(conn)->purpose == DIR_PURPOSE_FETCH_STATUS_VOTE) ?
+    MAX_VOTE_DL_SIZE : MAX_DIRECTORY_OBJECT_SIZE;
+
+  if (connection_get_inbuf_len(TO_CONN(conn)) > max_size) {
     log_warn(LD_HTTP, "Too much data received from directory connection: "
              "denial of service attempt, or you need to upgrade?");
     connection_mark_for_close(TO_CONN(conn));

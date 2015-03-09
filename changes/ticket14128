@@ -1,0 +1,5 @@
+  o Minor features (controller):
+    - New "GETINFO bw-event-cache" to get information about recent bandwidth
+      events. Closes ticket 14128. Useful for controllers to get recent
+      bandwidth history after the fix for 13988.
+

@@ -1,0 +1,5 @@
+  O Minor bugfixes (directory authority):
+    - Allow directory authorities to fetch more data from one
+      another if they find themselves missing lots of votes.
+      Previously, they had been bumping against the 10 MB queued
+      data limit. Fixes bug 14261. Bugfix on 0.1.2.5-alpha.

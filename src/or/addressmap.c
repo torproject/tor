@@ -738,6 +738,12 @@ parse_virtual_addr_network(const char *val, sa_family_t family,
   const int max_bits = ipv6 ? 40 : 16;
   virtual_addr_conf_t *conf = ipv6 ? &virtaddr_conf_ipv6 : &virtaddr_conf_ipv4;
 
+  if (!val || val[0] == '\0') {
+    if (msg)
+      tor_asprintf(msg, "Value not present (%s) after VirtualAddressNetwork%s",
+                   val?"Empty":"NULL", ipv6?"IPv6":"");
+    return -1;
+  }
   if (tor_addr_parse_mask_ports(val, 0, &addr, &bits, NULL, NULL) < 0) {
     if (msg)
       tor_asprintf(msg, "Error parsing VirtualAddressNetwork%s %s",
@@ -945,7 +951,7 @@ addressmap_register_virtual_address(int type, char *new_address)
         !strcasecmp(new_address, ent->new_address)) {
       tor_free(new_address);
       tor_assert(!vent_needs_to_be_added);
-      return tor_strdup(*addrp);
+      return *addrp;
     } else {
       log_warn(LD_BUG,
                "Internal confusion: I thought that '%s' was mapped to by "
