@@ -447,7 +447,7 @@ buf_pullup(buf_t *buf, size_t bytes, int nulterminate)
     size_t n = bytes - dest->datalen;
     src = dest->next;
     tor_assert(src);
-    if (n > src->datalen) {
+    if (n >= src->datalen) {
       memcpy(CHUNK_WRITE_PTR(dest), src->data, src->datalen);
       dest->datalen += src->datalen;
       dest->next = src->next;
@@ -2624,7 +2624,14 @@ assert_buf_ok(buf_t *buf)
       total += ch->datalen;
       tor_assert(ch->datalen <= ch->memlen);
       tor_assert(ch->data >= &ch->mem[0]);
-      tor_assert(ch->data < &ch->mem[0]+ch->memlen);
+      tor_assert(ch->data <= &ch->mem[0]+ch->memlen);
+      if (ch->data == &ch->mem[0]+ch->memlen) {
+        static int warned = 0;
+        if (! warned) {
+          log_warn(LD_BUG, "Invariant violation in buf.c related to #15083");
+          warned = 1;
+        }
+      }
       tor_assert(ch->data+ch->datalen <= &ch->mem[0] + ch->memlen);
       if (!ch->next)
         tor_assert(ch == buf->tail);

@@ -1,0 +1,10 @@
+  o Major bugfixes (relay, stability, possible security):
+    - Fix a bug that could lead to a relay crashing with an assertion
+      failure if a buffer of exactly the wrong layout was passed
+      to buf_pullup() at exactly the wrong time. Fixes bug 15083;
+      bugfix on 0.2.0.10-alpha. Patch from 'cypherpunks'.
+
+    - Do not assert if the 'data' pointer on a buffer is advanced to the very
+      end of the buffer; log a BUG message instead.  Only assert if it is
+      past that point. Fixes bug 15083; bugfix on 0.2.0.10-alpha.
+
