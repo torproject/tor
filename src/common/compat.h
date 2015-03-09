@@ -224,6 +224,18 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
 #define strncasecmp _strnicmp
 #define strcasecmp _stricmp
 #endif
+
+#if defined __APPLE__
+/* On OSX 10.9 and later, the overlap-checking code for strlcat would
+ * appear to have a severe bug that can sometimes cause aborts in Tor.
+ * Instead, use the non-checking variants.  This is sad.
+ *
+ * See https://trac.torproject.org/projects/tor/ticket/15205
+ */
+#undef strlcat
+#undef strlcpy
+#endif
+
 #ifndef HAVE_STRLCAT
 size_t strlcat(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
 #endif
