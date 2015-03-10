@@ -878,7 +878,8 @@ NS(logv)(int severity, log_domain_mask_t domain, const char *funcname,
       tt_ptr_op(strstr(funcname, "log_heartbeat"), OP_NE, NULL);
       tt_ptr_op(suffix, OP_EQ, NULL);
       tt_str_op(format, OP_EQ,
-          "Average packaged cell fullness: %2.3f%%. TLS write overhead: %.f%%");
+          "Average packaged cell fullness: %2.3f%%. "
+          "TLS write overhead: %.f%%");
       tt_double_op(fabs(va_arg(ap, double) - 50.0), <=, DBL_EPSILON);
       tt_double_op(fabs(va_arg(ap, double) - 0.0), <=, DBL_EPSILON);
       break;
@@ -1026,7 +1027,8 @@ NS(logv)(int severity, log_domain_mask_t domain,
       tt_ptr_op(strstr(funcname, "log_heartbeat"), OP_NE, NULL);
       tt_ptr_op(suffix, OP_EQ, NULL);
       tt_str_op(format, OP_EQ,
-          "Average packaged cell fullness: %2.3f%%. TLS write overhead: %.f%%");
+          "Average packaged cell fullness: %2.3f%%. "
+          "TLS write overhead: %.f%%");
       tt_int_op(fabs(va_arg(ap, double) - 100.0) <= DBL_EPSILON, OP_EQ, 1);
       tt_double_op(fabs(va_arg(ap, double) - 100.0), <=, DBL_EPSILON);
       break;
