@@ -37,6 +37,7 @@
 #include "nodelist.h"
 #include "policies.h"
 #include "reasons.h"
+#include "rendclient.h"
 #include "rephist.h"
 #include "router.h"
 #include "routerlist.h"
@@ -3266,6 +3267,7 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
   (void) len; /* body is nul-terminated; it's safe to ignore the length */
   static const char *v2_str = "v2-";
   const size_t v2_str_len = strlen(v2_str);
+  rend_data_t *rend_query = NULL;
 
   /* Make sure we have at least one argument, the HSAddress. */
   args = getargs_helper("HSFETCH", conn, body, 1, -1);
@@ -3273,10 +3275,10 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
     goto done;
   }
 
-  /* Extract the HS address that should NOT contain the .onion part. */
+  /* Extract the first argument (either HSAddress or DescID). */
   arg1 = smartlist_get(args, 0);
-  /* Remove the HS address from the argument list so we can safely iterate
-   * on all the rest to find optional argument(s). */
+  /* Remove it from the argument list so we can safely iterate on all the
+   * rest to find optional argument(s). */
   smartlist_del(args, 0);
   /* Test if it's an HS address without the .onion part. */
   if (strlen(arg1) == REND_SERVICE_ID_LEN_BASE32 &&
@@ -3287,16 +3289,14 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
              strlen(arg1 + v2_str_len) == REND_DESC_ID_V2_LEN_BASE32 &&
              base32_decode(digest, sizeof(digest), arg1 + v2_str_len,
                            REND_DESC_ID_V2_LEN_BASE32) == 0) {
-    /* We have a well formed version 2 descriptor ID. */
-    desc_id = arg1 + v2_str_len;
+    /* We have a well formed version 2 descriptor ID. Keep the decoded value
+     * of the id. */
+    desc_id = digest;
   } else {
     connection_printf_to_buf(conn, "552 Unrecognized \"%s\"\r\n",
                              arg1);
     goto done;
   }
-
-  /* Stores routerstatus_t object for each specified server. */
-  hsdirs = smartlist_new();
 
   /* Skip first argument because it's the HSAddress. */
   SMARTLIST_FOREACH_BEGIN(args, char *, arg) {
@@ -3304,22 +3304,26 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
     static const char *opt_server = "SERVER=";
 
     if (!strcasecmpstart(arg, opt_server)) {
+      char id[DIGEST_LEN] = {0};
       const char *server;
 
-      memset(digest, 0, sizeof(digest));
       server = arg + strlen(opt_server);
-      /* Is the server fingerprint valid?. */
+      /* Is the server's fingerprint valid?. */
       if (!string_is_hex(server) || strlen(server) != HEX_DIGEST_LEN ||
-          base16_decode(digest, sizeof(digest), server, HEX_DIGEST_LEN)) {
+          base16_decode(id, sizeof(id), server, HEX_DIGEST_LEN)) {
         connection_printf_to_buf(conn, "552 Invalid fingerprint \"%s\"\r\n",
                                  server);
         goto done;
       }
-      node = node_get_by_id(digest);
+      node = node_get_by_id(id);
       if (!node) {
         connection_printf_to_buf(conn, "552 Server \"%s\" not found\r\n",
                                  server);
         goto done;
+      }
+      if (!hsdirs) {
+        /* Stores routerstatus_t object for each specified server. */
+        hsdirs = smartlist_new();
       }
       /* Valid server, add it to our local list. */
       smartlist_add(hsdirs, node->rs);
@@ -3330,21 +3334,44 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
     }
   } SMARTLIST_FOREACH_END(arg);
 
-  /* XXX: Actually trigger the fetch(es). */
-  (void) hsaddress;
-  (void) desc_id;
-  (void) hsdirs;
+  rend_query = tor_malloc_zero(sizeof(*rend_query));
 
-  /* All good, thanks and come again! */
+  if (hsaddress) {
+    strncpy(rend_query->onion_address, hsaddress,
+            sizeof(rend_query->onion_address));
+  } else if (desc_id) {
+    /* Using a descriptor ID, we force the user to provide at least one
+     * hsdir server using the SERVER= option. */
+    if (!hsdirs || !smartlist_len(hsdirs)) {
+      connection_printf_to_buf(conn, "552 SERVER= option is required\r\n");
+      goto done;
+    }
+    memcpy(rend_query->descriptor_id, desc_id,
+           sizeof(rend_query->descriptor_id));
+  } else {
+    /* We can't get in here because of the first argument check. */
+    tor_assert(0);
+  }
+  /* We are about to trigger HSDir fetch so send the OK now because after
+   * that 650 event(s) are possible so better to have the 250 OK before them
+   * to avoid out of order replies. */
   send_control_done(conn);
 
+  /* Trigger the fetch using the built rend query and possibly a lit of HS
+   * directory to use. This function ignores the client cache thus this will
+   * always send a fetch command. */
+  rend_client_fetch_v2_desc(rend_query, hsdirs);
+
 done:
+  if (hsdirs) {
+    smartlist_free(hsdirs);
+  }
   if (args) {
     SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
     smartlist_free(args);
   }
+  tor_free(rend_query);
   tor_free(arg1);
-  smartlist_free(hsdirs);
   return 0;
 }
 

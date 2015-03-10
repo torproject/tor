@@ -1174,6 +1174,9 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   tor_assert(desc);
   tor_assert(desc_id_base32);
   memset(want_desc_id, 0, sizeof(want_desc_id));
+  if (entry) {
+    *entry = NULL;
+  }
   if (base32_decode(want_desc_id, sizeof(want_desc_id),
                     desc_id_base32, strlen(desc_id_base32)) != 0) {
     log_warn(LD_BUG, "Couldn't decode base32 %s for descriptor id.",
@@ -1192,7 +1195,8 @@ rend_cache_store_v2_desc_as_client(const char *desc,
     log_warn(LD_REND, "Couldn't compute service ID.");
     goto err;
   }
-  if (strcmp(rend_query->onion_address, service_id)) {
+  if (rend_query->onion_address[0] != '\0' &&
+      strcmp(rend_query->onion_address, service_id)) {
     log_warn(LD_REND, "Received service descriptor for service ID %s; "
              "expected descriptor for service ID %s.",
              service_id, safe_str(rend_query->onion_address));
@@ -1239,7 +1243,7 @@ rend_cache_store_v2_desc_as_client(const char *desc,
                "service descriptor for %s. This is probably a (misguided) "
                "attempt to improve reliability, but it could also be an "
                "attempt to do a guard enumeration attack. Rejecting.",
-               safe_str_client(rend_query->onion_address));
+               safe_str_client(service_id));
 
       goto err;
     }
