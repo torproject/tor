@@ -3121,6 +3121,50 @@ rep_hist_hs_stats_write(time_t now)
   return start_of_hs_stats_interval + WRITE_STATS_INTERVAL;
 }
 
+#define MAX_LINK_PROTO_TO_LOG 4
+static uint64_t link_proto_count[MAX_LINK_PROTO_TO_LOG+1][2];
+
+/** Note that we negotiated link protocol version <b>link_proto</b>, on
+ * a connection that started here iff <b>started_here</b> is true.
+ */
+void
+rep_hist_note_negotiated_link_proto(unsigned link_proto, int started_here)
+{
+  started_here = !!started_here; /* force to 0 or 1 */
+  if (link_proto > MAX_LINK_PROTO_TO_LOG) {
+    log_warn(LD_BUG, "Can't log link protocol %u", link_proto);
+    return;
+  }
+
+  link_proto_count[link_proto][started_here]++;
+}
+
+/** Log a heartbeat message explaining how many connections of each link
+ * protocol version we have used.
+ */
+void
+rep_hist_log_link_protocol_counts(void)
+{
+  log_notice(LD_HEARTBEAT,
+             "Since startup, we have initiated "
+             U64_FORMAT" v1 connections, "
+             U64_FORMAT" v2 connections, "
+             U64_FORMAT" v3 connections, and "
+             U64_FORMAT" v4 connections; and received "
+             U64_FORMAT" v1 connections, "
+             U64_FORMAT" v2 connections, "
+             U64_FORMAT" v3 connections, and "
+             U64_FORMAT" v4 connections.",
+             U64_PRINTF_ARG(link_proto_count[1][1]),
+             U64_PRINTF_ARG(link_proto_count[2][1]),
+             U64_PRINTF_ARG(link_proto_count[3][1]),
+             U64_PRINTF_ARG(link_proto_count[4][1]),
+             U64_PRINTF_ARG(link_proto_count[1][0]),
+             U64_PRINTF_ARG(link_proto_count[2][0]),
+             U64_PRINTF_ARG(link_proto_count[3][0]),
+             U64_PRINTF_ARG(link_proto_count[4][0]));
+}
+
 /** Free all storage held by the OR/link history caches, by the
  * bandwidth history arrays, by the port history, or by statistics . */
 void
