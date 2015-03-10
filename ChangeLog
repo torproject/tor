@@ -49,6 +49,13 @@ Changes in version 0.2.6.3-alpha - 2015-02-19
       notified of updates and their correct digests. Implements proposal
       227. Closes ticket 10395.
 
+  o Major features (guards):
+    - Introduce the Guardfraction feature to improves load balancing on
+      guard nodes. Specifically, it aims to reduce the traffic gap that
+      guard nodes experience when they first get the Guard flag. This is
+      a required step if we want to increase the guard lifetime to 9
+      months or greater.  Closes ticket 9321.
+
   o Major features (performance):
     - Make the CPU worker implementation more efficient by avoiding the
       kernel and lengthening pipelines. The original implementation used
