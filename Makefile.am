@@ -109,8 +109,8 @@ check-spaces:
 		$(top_srcdir)/src/tools/*.[ch] \
 		$(top_srcdir)/src/tools/tor-fw-helper/*.[ch]
 
-check-docs:
-	$(top_srcdir)/scripts/maint/checkOptionDocs.pl
+check-docs: all
+	$(PERL) $(top_builddir)/scripts/maint/checkOptionDocs.pl
 
 check-logs:
 	$(top_srcdir)/scripts/maint/checkLogs.pl \
