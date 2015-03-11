@@ -972,7 +972,7 @@ unix_socket_purpose_to_string(int purpose)
  * <b>path</b>.  Return 0 if we should go ahead and -1 if we shouldn't. */
 static int
 check_location_for_unix_socket(const or_options_t *options, const char *path,
-                               int purpose)
+                               int purpose, const port_cfg_t *port)
 {
   int r = -1;
   char *p = NULL;
@@ -987,10 +987,13 @@ check_location_for_unix_socket(const or_options_t *options, const char *path,
     goto done;
   }
 
-  if ((purpose == UNIX_SOCKET_PURPOSE_CONTROL_SOCKET &&
-       options->ControlSocketsGroupWritable) ||
-      (purpose == UNIX_SOCKET_PURPOSE_SOCKS_SOCKET &&
-       options->SocksSocketsGroupWritable)) {
+  if (port->is_world_writable) {
+    /* World-writable sockets can go anywhere. */
+    r = 0;
+    goto done;
+  }
+
+  if (port->is_group_writable) {
     flags |= CPD_GROUP_OK;
   }
 
@@ -1004,7 +1007,7 @@ check_location_for_unix_socket(const or_options_t *options, const char *path,
              "who can list a socket can connect to it, so Tor is being "
              "careful.)",
              unix_socket_purpose_to_string(purpose), escpath, escdir,
-             options->ControlSocketsGroupWritable ? " and group" : "");
+             port->is_group_writable ? " and group" : "");
     tor_free(escpath);
     tor_free(escdir);
     goto done;
@@ -1198,7 +1201,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     if (check_location_for_unix_socket(options, address,
           (type == CONN_TYPE_CONTROL_LISTENER) ?
            UNIX_SOCKET_PURPOSE_CONTROL_SOCKET :
-           UNIX_SOCKET_PURPOSE_SOCKS_SOCKET) < 0) {
+           UNIX_SOCKET_PURPOSE_SOCKS_SOCKET, port_cfg) < 0) {
         goto err;
     }
 
@@ -1241,24 +1244,23 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     }
 #endif
 
-    if ((type == CONN_TYPE_CONTROL_LISTENER &&
-         options->ControlSocketsGroupWritable) ||
-        (type == CONN_TYPE_AP_LISTENER &&
-         options->SocksSocketsGroupWritable)) {
-      /* We need to use chmod; fchmod doesn't work on sockets on all
-       * platforms. */
-      if (chmod(address, 0660) < 0) {
-        log_warn(LD_FS,"Unable to make %s group-writable.", address);
-        goto err;
+    {
+      unsigned mode;
+      const char *status;
+      if (port_cfg->is_world_writable) {
+        mode = 0666;
+        status = "world-writable";
+      } else if (port_cfg->is_group_writable) {
+        mode = 0660;
+        status = "group-writable";
+      } else {
+        mode = 0600;
+        status = "private";
       }
-    } else if ((type == CONN_TYPE_CONTROL_LISTENER &&
-                !(options->ControlSocketsGroupWritable)) ||
-               (type == CONN_TYPE_AP_LISTENER &&
-                !(options->SocksSocketsGroupWritable))) {
       /* We need to use chmod; fchmod doesn't work on sockets on all
        * platforms. */
-      if (chmod(address, 0600) < 0) {
-        log_warn(LD_FS,"Unable to make %s group-writable.", address);
+      if (chmod(address, mode) < 0) {
+        log_warn(LD_FS,"Unable to make %s %s.", address, status);
         goto err;
       }
     }

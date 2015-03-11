@@ -1,0 +1,5 @@
+  o Minor features (client, unix sockets):
+    - Add GroupWritable and WorldWritable options to unix-socket based
+      SocksPort and ControlPort options. These options apply to a single
+      socket, and override {Control,Socks}SocketsGroupWritable. Closes
+      ticket 15220.

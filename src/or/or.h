@@ -3322,6 +3322,9 @@ typedef struct port_cfg_t {
   uint8_t type; /**< One of CONN_TYPE_*_LISTENER */
   unsigned is_unix_addr : 1; /**< True iff this is an AF_UNIX address. */
 
+  unsigned is_group_writable : 1;
+  unsigned is_world_writable : 1;
+
   entry_port_cfg_t entry_cfg;
 
   server_port_cfg_t server_cfg;

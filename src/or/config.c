@@ -5618,7 +5618,7 @@ warn_nonlocal_ext_orports(const smartlist_t *ports, const char *portname)
  * then emit a stronger warning and remove the port from the list.
  */
 static void
-warn_nonlocal_controller_ports(smartlist_t *ports, unsigned forbid)
+warn_nonlocal_controller_ports(smartlist_t *ports, unsigned forbid_nonlocal)
 {
   int warned = 0;
   SMARTLIST_FOREACH_BEGIN(ports, port_cfg_t *, port) {
@@ -5627,7 +5627,7 @@ warn_nonlocal_controller_ports(smartlist_t *ports, unsigned forbid)
     if (port->is_unix_addr)
       continue;
     if (!tor_addr_is_loopback(&port->addr)) {
-      if (forbid) {
+      if (forbid_nonlocal) {
         if (!warned)
           log_warn(LD_CONFIG,
                  "You have a ControlPort set to accept "
@@ -5655,13 +5655,14 @@ warn_nonlocal_controller_ports(smartlist_t *ports, unsigned forbid)
   } SMARTLIST_FOREACH_END(port);
 }
 
-#define CL_PORT_NO_OPTIONS (1u<<0)
+#define CL_PORT_NO_STREAM_OPTIONS (1u<<0)
 #define CL_PORT_WARN_NONLOCAL (1u<<1)
 #define CL_PORT_ALLOW_EXTRA_LISTENADDR (1u<<2)
 #define CL_PORT_SERVER_OPTIONS (1u<<3)
 #define CL_PORT_FORBID_NONLOCAL (1u<<4)
 #define CL_PORT_TAKES_HOSTNAMES (1u<<5)
 #define CL_PORT_IS_UNIXSOCKET (1u<<6)
+#define CL_PORT_DFLT_GROUP_WRITABLE (1u<<7)
 
 #ifdef HAVE_SYS_UN_H
 
@@ -5729,7 +5730,7 @@ config_parse_unix_port(const char *addrport, char **path_out)
  * If no address is specified, default to <b>defaultaddr</b>.  If no
  * FooPort is given, default to defaultport (if 0, there is no default).
  *
- * If CL_PORT_NO_OPTIONS is set in <b>flags</b>, do not allow stream
+ * If CL_PORT_NO_STREAM_OPTIONS is set in <b>flags</b>, do not allow stream
  * isolation options in the FooPort entries.
  *
  * If CL_PORT_WARN_NONLOCAL is set in <b>flags</b>, warn if any of the
@@ -5764,10 +5765,12 @@ parse_port_config(smartlist_t *out,
   int retval = -1;
   const unsigned is_control = (listener_type == CONN_TYPE_CONTROL_LISTENER);
   const unsigned is_ext_orport = (listener_type == CONN_TYPE_EXT_OR_LISTENER);
-  const unsigned allow_no_options = flags & CL_PORT_NO_OPTIONS;
+  const unsigned allow_no_stream_options = flags & CL_PORT_NO_STREAM_OPTIONS;
   const unsigned use_server_options = flags & CL_PORT_SERVER_OPTIONS;
   const unsigned warn_nonlocal = flags & CL_PORT_WARN_NONLOCAL;
   const unsigned forbid_nonlocal = flags & CL_PORT_FORBID_NONLOCAL;
+  const unsigned default_to_group_writable =
+    flags & CL_PORT_DFLT_GROUP_WRITABLE;
   const unsigned allow_spurious_listenaddr =
     flags & CL_PORT_ALLOW_EXTRA_LISTENADDR;
   const unsigned takes_hostnames = flags & CL_PORT_TAKES_HOSTNAMES;
@@ -5891,17 +5894,12 @@ parse_port_config(smartlist_t *out,
       ipv4_traffic = 1, ipv6_traffic = 0, prefer_ipv6 = 0,
       cache_ipv4 = 1, use_cached_ipv4 = 0,
       cache_ipv6 = 0, use_cached_ipv6 = 0,
-      prefer_ipv6_automap = 1;
+      prefer_ipv6_automap = 1, world_writable = 0, group_writable = 0;
 
     smartlist_split_string(elts, ports->value, NULL,
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     if (smartlist_len(elts) == 0) {
       log_warn(LD_CONFIG, "Invalid %sPort line with no value", portname);
-      goto err;
-    }
-
-    if (allow_no_options && smartlist_len(elts) > 1) {
-      log_warn(LD_CONFIG, "Too many options on %sPort line", portname);
       goto err;
     }
 
@@ -5962,6 +5960,9 @@ parse_port_config(smartlist_t *out,
       }
     }
 
+    if (unix_socket_path && default_to_group_writable)
+      group_writable = 1;
+
     /* Now parse the rest of the options, if any. */
     if (use_server_options) {
       /* This is a server port; parse advertising options */
@@ -6018,10 +6019,11 @@ parse_port_config(smartlist_t *out,
         const char *elt_orig = elt;
         if (elt_sl_idx == 0)
           continue; /* Skip addr:port */
+
         if (!strcasecmpstart(elt, "SessionGroup=")) {
           int group = (int)tor_parse_long(elt+strlen("SessionGroup="),
                                           10, 0, INT_MAX, &ok, NULL);
-          if (!ok) {
+          if (!ok || !allow_no_stream_options) {
             log_warn(LD_CONFIG, "Invalid %sPort option '%s'",
                      portname, escaped(elt));
             goto err;
@@ -6038,6 +6040,18 @@ parse_port_config(smartlist_t *out,
         if (!strcasecmpstart(elt, "No")) {
           no = 1;
           elt += 2;
+        }
+
+        if (!strcasecmp(elt, "GroupWritable")) {
+          group_writable = !no;
+        } else if (!strcasecmp(elt, "WorldWritable")) {
+          world_writable = !no;
+        }
+
+        if (allow_no_stream_options) {
+          log_warn(LD_CONFIG, "Unrecognized %sPort option '%s'",
+                   portname, escaped(elt));
+          continue;
         }
 
         if (takes_hostnames) {
@@ -6115,6 +6129,12 @@ parse_port_config(smartlist_t *out,
       goto err;
     }
 
+    if ( (world_writable || group_writable) && ! unix_socket_path) {
+      log_warn(LD_CONFIG, "You have a %sPort entry with GroupWritable "
+               "or WorldWritable set, but it is not a unix socket.", portname);
+      goto err;
+    }
+
     if (out && port) {
       size_t namelen = unix_socket_path ? strlen(unix_socket_path) : 0;
       port_cfg_t *cfg = port_cfg_new(namelen);
@@ -6128,6 +6148,8 @@ parse_port_config(smartlist_t *out,
         cfg->port = port;
       }
       cfg->type = listener_type;
+      cfg->is_world_writable = world_writable;
+      cfg->is_group_writable = group_writable;
       cfg->entry_cfg.isolation_flags = isolation;
       cfg->entry_cfg.session_group = sessiongroup;
       cfg->server_cfg.no_advertise = no_advertise;
@@ -6214,12 +6236,14 @@ parse_ports(or_options_t *options, int validate_only,
 
   *n_ports_out = 0;
 
+  const unsigned gw_flag = options->SocksSocketsGroupWritable ?
+    CL_PORT_DFLT_GROUP_WRITABLE : 0;
   if (parse_port_config(ports,
              options->SocksPort_lines, options->SocksListenAddress,
              "Socks", CONN_TYPE_AP_LISTENER,
              "127.0.0.1", 9050,
              CL_PORT_WARN_NONLOCAL|CL_PORT_ALLOW_EXTRA_LISTENADDR|
-             CL_PORT_TAKES_HOSTNAMES) < 0) {
+             CL_PORT_TAKES_HOSTNAMES|gw_flag) < 0) {
     *msg = tor_strdup("Invalid SocksPort/SocksListenAddress configuration");
     goto err;
   }
@@ -6248,12 +6272,15 @@ parse_ports(or_options_t *options, int validate_only,
     goto err;
   }
   {
-    unsigned control_port_flags = CL_PORT_NO_OPTIONS | CL_PORT_WARN_NONLOCAL;
+    unsigned control_port_flags = CL_PORT_NO_STREAM_OPTIONS |
+      CL_PORT_WARN_NONLOCAL;
     const int any_passwords = (options->HashedControlPassword ||
                                options->HashedControlSessionPassword ||
                                options->CookieAuthentication);
     if (! any_passwords)
       control_port_flags |= CL_PORT_FORBID_NONLOCAL;
+    if (options->ControlSocketsGroupWritable)
+      control_port_flags |= CL_PORT_DFLT_GROUP_WRITABLE;
 
     if (parse_port_config(ports,
                           options->ControlPort_lines,
