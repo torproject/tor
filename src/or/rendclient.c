@@ -504,7 +504,6 @@ get_last_hid_serv_requests(void)
 static time_t
 lookup_last_hid_serv_request(routerstatus_t *hs_dir,
                              const char *desc_id_base32,
-                             const rend_data_t *rend_query,
                              time_t now, int set)
 {
   char hsdir_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
@@ -513,10 +512,9 @@ lookup_last_hid_serv_request(routerstatus_t *hs_dir,
   strmap_t *last_hid_serv_requests = get_last_hid_serv_requests();
   base32_encode(hsdir_id_base32, sizeof(hsdir_id_base32),
                 hs_dir->identity_digest, DIGEST_LEN);
-  tor_snprintf(hsdir_desc_comb_id, sizeof(hsdir_desc_comb_id), "%s%s%s",
+  tor_snprintf(hsdir_desc_comb_id, sizeof(hsdir_desc_comb_id), "%s%s",
                hsdir_id_base32,
-               desc_id_base32,
-               rend_query->onion_address);
+               desc_id_base32);
   /* XXX023 tor_assert(strlen(hsdir_desc_comb_id) ==
                        LAST_HID_SERV_REQUEST_KEY_LEN); */
   if (set) {
@@ -649,7 +647,7 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
 
   SMARTLIST_FOREACH(responsible_dirs, routerstatus_t *, dir, {
       time_t last = lookup_last_hid_serv_request(
-                            dir, desc_id_base32, rend_query, 0, 0);
+                            dir, desc_id_base32, 0, 0);
       const node_t *node = node_get_by_id(dir->identity_digest);
       if (last + REND_HID_SERV_DIR_REQUERY_PERIOD >= now ||
           !node || !node_has_descriptor(node)) {
@@ -684,7 +682,7 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
 
   /* Remember that we are requesting a descriptor from this hidden service
    * directory now. */
-  lookup_last_hid_serv_request(hs_dir, desc_id_base32, rend_query, now, 1);
+  lookup_last_hid_serv_request(hs_dir, desc_id_base32, now, 1);
 
   /* Encode descriptor cookie for logging purposes. */
   if (rend_query->auth_type != REND_NO_AUTH) {
