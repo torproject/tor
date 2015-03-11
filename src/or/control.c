@@ -5343,6 +5343,31 @@ node_describe_longname_by_id,(const char *id_digest))
   return longname;
 }
 
+
+/** Return either the onion address if the given pointer is a non empty
+ * string else the unknown string. */
+static const char *
+rend_hsaddress_str_or_unknown(const char *onion_address)
+{
+  static const char *str_unknown = "UNKNOWN";
+  const char *str_ret = str_unknown;
+
+  /* No valid pointer, unknown it is. */
+  if (!onion_address) {
+    goto end;
+  }
+  /* Empty onion address thus we don't know, unknown it is. */
+  if (onion_address[0] == '\0') {
+    goto end;
+  }
+  /* All checks are good so return the given onion address. */
+  str_ret = onion_address;
+
+end:
+  return str_ret;
+}
+
+
 /** send HS_DESC requested event.
  *
  * <b>rend_query</b> is used to fetch requested onion address and auth type.
@@ -5363,7 +5388,7 @@ control_event_hs_descriptor_requested(const rend_data_t *rend_query,
 
   send_control_event(EVENT_HS_DESC, ALL_FORMATS,
                      "650 HS_DESC REQUESTED %s %s %s %s\r\n",
-                     rend_query->onion_address,
+                     rend_hsaddress_str_or_unknown(rend_query->onion_address),
                      rend_auth_type_to_string(rend_query->auth_type),
                      node_describe_longname_by_id(id_digest),
                      desc_id_base32);
@@ -5379,15 +5404,16 @@ control_event_hs_descriptor_requested(const rend_data_t *rend_query,
  */
 void
 control_event_hs_descriptor_receive_end(const char *action,
-                                        const rend_data_t *rend_query,
+                                        const char *onion_address,
+                                        rend_auth_type_t auth_type,
                                         const char *id_digest,
                                         const char *reason)
 {
   char *reason_field = NULL;
 
-  if (!action || !rend_query || !id_digest) {
-    log_warn(LD_BUG, "Called with action==%p, rend_query==%p, "
-             "id_digest==%p", action, rend_query, id_digest);
+  if (!action || !id_digest || !onion_address) {
+    log_warn(LD_BUG, "Called with action==%p, id_digest==%p "
+             "onion_address==%p", action, id_digest, onion_address);
     return;
   }
 
@@ -5398,8 +5424,8 @@ control_event_hs_descriptor_receive_end(const char *action,
   send_control_event(EVENT_HS_DESC, ALL_FORMATS,
                      "650 HS_DESC %s %s %s %s%s\r\n",
                      action,
-                     rend_query->onion_address,
-                     rend_auth_type_to_string(rend_query->auth_type),
+                     rend_hsaddress_str_or_unknown(onion_address),
+                     rend_auth_type_to_string(auth_type),
                      node_describe_longname_by_id(id_digest),
                      reason_field ? reason_field : "");
 
@@ -5411,16 +5437,16 @@ control_event_hs_descriptor_receive_end(const char *action,
  * called when a we successfully received a hidden service descriptor.
  */
 void
-control_event_hs_descriptor_received(const rend_data_t *rend_query,
+control_event_hs_descriptor_received(const char *onion_address,
+                                     rend_auth_type_t auth_type,
                                      const char *id_digest)
 {
-  if (!rend_query || !id_digest) {
-    log_warn(LD_BUG, "Called with rend_query==%p, id_digest==%p",
-             rend_query, id_digest);
+  if (!id_digest) {
+    log_warn(LD_BUG, "Called with id_digest==%p", id_digest);
     return;
   }
-  control_event_hs_descriptor_receive_end("RECEIVED", rend_query,
-                                          id_digest, NULL);
+  control_event_hs_descriptor_receive_end("RECEIVED", onion_address,
+                                          auth_type, id_digest, NULL);
 }
 
 /** Send HS_DESC event to inform controller that query <b>rend_query</b>
@@ -5429,16 +5455,16 @@ control_event_hs_descriptor_received(const rend_data_t *rend_query,
  * field.
  */
 void
-control_event_hs_descriptor_failed(const rend_data_t *rend_query,
+control_event_hs_descriptor_failed(const char *onion_address,
+                                   rend_auth_type_t auth_type,
                                    const char *id_digest,
                                    const char *reason)
 {
-  if (!rend_query || !id_digest) {
-    log_warn(LD_BUG, "Called with rend_query==%p, id_digest==%p",
-             rend_query, id_digest);
+  if (!id_digest) {
+    log_warn(LD_BUG, "Called with id_digest==%p", id_digest);
     return;
   }
-  control_event_hs_descriptor_receive_end("FAILED", rend_query,
+  control_event_hs_descriptor_receive_end("FAILED", onion_address, auth_type,
                                           id_digest, reason);
 }
 
@@ -5465,7 +5491,7 @@ control_event_hs_descriptor_content(const char *onion_address,
   send_control_event(EVENT_HS_DESC_CONTENT, ALL_FORMATS,
                      "650 %s %s %s %s\r\n%s",
                      event_name,
-                     onion_address,
+                     rend_hsaddress_str_or_unknown(onion_address),
                      desc_id,
                      node_describe_longname_by_id(hsdir_id_digest),
                      esc_content);

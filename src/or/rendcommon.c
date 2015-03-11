@@ -1136,12 +1136,14 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
  * If the descriptor's descriptor ID doesn't match <b>desc_id_base32</b>,
  * reject it.
  *
- * Return an appropriate rend_cache_store_status_t.
+ * Return an appropriate rend_cache_store_status_t. If entry is not NULL,
+ * set it with the cache entry pointer of the descriptor.
  */
 rend_cache_store_status_t
 rend_cache_store_v2_desc_as_client(const char *desc,
                                    const char *desc_id_base32,
-                                   const rend_data_t *rend_query)
+                                   const rend_data_t *rend_query,
+                                   rend_cache_entry_t **entry)
 {
   /*XXXX this seems to have a bit of duplicate code with
    * rend_cache_store_v2_desc_as_dir().  Fix that. */
@@ -1289,9 +1291,15 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   rend_cache_increment_allocation(rend_cache_entry_allocation(e));
   log_debug(LD_REND,"Successfully stored rend desc '%s', len %d.",
             safe_str_client(service_id), (int)encoded_size);
+  if (entry) {
+    *entry = e;
+  }
   return RCS_OKAY;
 
  okay:
+  if (entry) {
+    *entry = e;
+  }
   retval = RCS_OKAY;
 
  err:
