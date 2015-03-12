@@ -3102,8 +3102,8 @@ handle_control_authchallenge(control_connection_t *conn, uint32_t len,
     tor_free(client_nonce);
     return -1;
   }
-
-  tor_assert(!crypto_rand(server_nonce, SAFECOOKIE_SERVER_NONCE_LEN));
+  int fail = crypto_rand(server_nonce, SAFECOOKIE_SERVER_NONCE_LEN);
+  tor_assert(!fail);
 
   /* Now compute and send the server-to-controller response, and the
    * server's nonce. */
