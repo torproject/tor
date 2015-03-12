@@ -25,8 +25,9 @@ Changes in version 0.2.4.26 - 2015-03-??
       it is past that point. Fixes bug 15083; bugfix on 0.2.0.10-alpha.
 
   o Minor features (geoip):
-    - Update geoip and geoip6 files to the January 7 2015 Maxmind
-      GeoLite2 Country database.
+    - Update geoip to the March 3 2015 Maxmind GeoLite2 Country database.
+    - Update geoip6 to the March 3 2015 Maxmind GeoLite2
+      Country database.
 
 
 Changes in version 0.2.4.25 - 2014-10-20
