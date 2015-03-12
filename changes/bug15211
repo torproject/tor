@@ -1,5 +1,6 @@
   o Minor bugfixes:
     - Remove side-effects from tor_assert() calls. This was harmless,
       because we never disable assertions, but it is bad style and
-      unnecessary. Fixes bug 15211; bugfix on 0.2.5.5, 0.2.2.36.
+      unnecessary. Fixes bug 15211; bugfix on 0.2.5.5, 0.2.2.36, and
+      0.2.0.10.
 
