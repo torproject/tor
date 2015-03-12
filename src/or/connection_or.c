@@ -1819,6 +1819,7 @@ connection_tls_finish_handshake(or_connection_t *conn)
                                            conn->base_.port, digest_rcvd, 0);
     }
     tor_tls_block_renegotiation(conn->tls);
+    rep_hist_note_negotiated_link_proto(1, started_here);
     return connection_or_set_state_open(conn);
   } else {
     connection_or_change_state(conn, OR_CONN_STATE_OR_HANDSHAKING_V2);

@@ -1451,6 +1451,13 @@ options_act(const or_options_t *old_options)
     rep_hist_load_mtbf_data(time(NULL));
   }
 
+  /* If we have an ExtORPort, initialize its auth cookie. */
+  if (running_tor &&
+      init_ext_or_cookie_authentication(!!options->ExtORPort_lines) < 0) {
+    log_warn(LD_CONFIG,"Error creating Extended ORPort cookie file.");
+    return -1;
+  }
+
   mark_transport_list();
   pt_prepare_proxy_list_for_config_read();
   if (!options->DisableNetwork) {
@@ -1552,12 +1559,6 @@ options_act(const or_options_t *old_options)
 
   if (init_control_cookie_authentication(options->CookieAuthentication) < 0) {
     log_warn(LD_CONFIG,"Error creating control cookie authentication file.");
-    return -1;
-  }
-
-  /* If we have an ExtORPort, initialize its auth cookie. */
-  if (init_ext_or_cookie_authentication(!!options->ExtORPort_lines) < 0) {
-    log_warn(LD_CONFIG,"Error creating Extended ORPort cookie file.");
     return -1;
   }
 

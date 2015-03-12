@@ -108,5 +108,9 @@ void rep_hist_stored_maybe_new_hs(const crypto_pk_t *pubkey);
 
 void rep_hist_free_all(void);
 
+void rep_hist_note_negotiated_link_proto(unsigned link_proto,
+                                         int started_here);
+void rep_hist_log_link_protocol_counts(void);
+
 #endif
 
