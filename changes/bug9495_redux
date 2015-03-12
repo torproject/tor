@@ -1,0 +1,4 @@
+  o Major bugfixes (portability):
+    - Do not crash on startup when running on Solaris. Fixes a bug
+      related to our fix for 9495; bugfix on 0.2.6.1-alpha. Reported
+      by "ruebezahl".

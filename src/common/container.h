@@ -256,7 +256,6 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
      --var ## _sl_len;                                    \
   STMT_END
 
-
 /** Helper: While in a SMARTLIST_FOREACH loop over the list <b>sl</b> indexed
  * with the variable <b>var</b>, replace the current element with <b>val</b>.
  * Does not deallocate the current value of <b>var</b>.
