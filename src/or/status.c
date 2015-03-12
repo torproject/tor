@@ -136,8 +136,10 @@ log_heartbeat(time_t now)
          "Average packaged cell fullness: %2.3f%%. "
          "TLS write overhead: %.f%%", fullness_pct, overhead_pct);
 
-  if (public_server_mode(options))
+  if (public_server_mode(options)) {
     rep_hist_log_circuit_handshake_stats(now);
+    rep_hist_log_link_protocol_counts();
+  }
 
   circuit_log_ancient_one_hop_circuits(1800);
 
