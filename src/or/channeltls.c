@@ -23,6 +23,7 @@
 #include "connection_or.h"
 #include "control.h"
 #include "relay.h"
+#include "rephist.h"
 #include "router.h"
 #include "routerlist.h"
 #include "scheduler.h"
@@ -1462,6 +1463,8 @@ channel_tls_process_versions_cell(var_cell_t *cell, channel_tls_t *chan)
     connection_or_close_for_error(chan->conn, 0);
     return;
   }
+
+  rep_hist_note_negotiated_link_proto(highest_supported_version, started_here);
 
   chan->conn->link_proto = highest_supported_version;
   chan->conn->handshake_state->received_versions = 1;
