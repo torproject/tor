@@ -15,7 +15,7 @@ else
 tor_platform_source=
 endif
 
-EXTRA_DIST+= src/or/ntmain.c src/or/or_sha1.i src/or/Makefile.nmake
+EXTRA_DIST+= src/or/ntmain.c src/or/Makefile.nmake
 
 if USE_EXTERNAL_EVDNS
 evdns_source=
