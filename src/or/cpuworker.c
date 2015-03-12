@@ -178,6 +178,8 @@ update_state_threadfn(void *state_, void *work_)
 void
 cpuworkers_rotate_keyinfo(void)
 {
+  if (!threadpool)
+    return;
   if (threadpool_queue_update(threadpool,
                               worker_state_new,
                               update_state_threadfn,
