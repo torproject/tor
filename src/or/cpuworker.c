@@ -488,6 +488,8 @@ assign_onionskin_to_cpuworker(or_circuit_t *circ,
   cpuworker_request_t req;
   int should_time;
 
+  tor_assert(threadpool);
+
   if (!circ->p_chan) {
     log_info(LD_OR,"circ->p_chan gone. Failing circ.");
     tor_free(onionskin);
