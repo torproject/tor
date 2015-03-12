@@ -11,6 +11,11 @@ Changes in version 0.2.5.11 - 2015-03-??
     - The directory authority Faravahar has a new IP address. This
       closes ticket 14487.
 
+  o Major bugfixes (crash, OSX, security):
+    - Fix a remote denial-of-service opportunity caused by a bug in
+      OSX's _strlcat_chk() function. Fixes bug 15205; bug first appeared
+      in OSX 10.9.
+
   o Major bugfixes (relay, stability, possible security):
     - Fix a bug that could lead to a relay crashing with an assertion
       failure if a buffer of exactly the wrong layout was passed to
