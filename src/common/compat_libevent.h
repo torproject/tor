@@ -52,12 +52,7 @@ periodic_timer_t *periodic_timer_new(struct event_base *base,
              void *data);
 void periodic_timer_free(periodic_timer_t *);
 
-#ifdef HAVE_EVENT_BASE_LOOPEXIT
 #define tor_event_base_loopexit event_base_loopexit
-#else
-struct timeval;
-int tor_event_base_loopexit(struct event_base *base, struct timeval *tv);
-#endif
 
 /** Defines a configuration for using libevent with Tor: passed as an argument
  * to tor_libevent_initialize() to describe how we want to set up. */
@@ -74,8 +69,6 @@ typedef struct tor_libevent_cfg {
 void tor_libevent_initialize(tor_libevent_cfg *cfg);
 MOCK_DECL(struct event_base *, tor_libevent_get_base, (void));
 const char *tor_libevent_get_method(void);
-void tor_check_libevent_version(const char *m, int server,
-                                const char **badness_out);
 void tor_check_libevent_header_compatibility(void);
 const char *tor_libevent_get_version_str(void);
 const char *tor_libevent_get_header_version_str(void);

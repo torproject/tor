@@ -6695,7 +6695,6 @@ get_num_cpus(const or_options_t *options)
 static void
 init_libevent(const or_options_t *options)
 {
-  const char *badness=NULL;
   tor_libevent_cfg cfg;
 
   tor_assert(options);
@@ -6716,17 +6715,6 @@ init_libevent(const or_options_t *options)
   tor_libevent_initialize(&cfg);
 
   suppress_libevent_log_msg(NULL);
-
-  tor_check_libevent_version(tor_libevent_get_method(),
-                             server_mode(get_options()),
-                             &badness);
-  if (badness) {
-    const char *v = tor_libevent_get_version_str();
-    const char *m = tor_libevent_get_method();
-    control_event_general_status(LOG_WARN,
-        "BAD_LIBEVENT VERSION=%s METHOD=%s BADNESS=%s RECOVERED=NO",
-                                 v, m, badness);
-  }
 }
 
 /** Return a newly allocated string holding a filename relative to the data
