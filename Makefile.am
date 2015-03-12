@@ -122,6 +122,10 @@ check-changes:
 		$(PYTHON) $(top_srcdir)/scripts/maint/lintChanges.py $(top_srcdir)/changes/*; \
 		fi
 
+.PHONY: update-versions
+update-versions:
+	$(PERL) $(top_builddir)/scripts/maint/updateVersions.pl
+
 version:
 	@echo "Tor @VERSION@"
 	@if test -d "$(top_srcdir)/.git" && test -x "`which git 2>&1;true`"; then \

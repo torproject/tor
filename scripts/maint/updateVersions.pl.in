@@ -1,8 +1,8 @@
 #!/usr/bin/perl -w
 
-$CONFIGURE_IN = './configure.ac';
-$ORCONFIG_H = './src/win32/orconfig.h';
-$TOR_NSI = './contrib/win32build/tor-mingw.nsi.in';
+$CONFIGURE_IN = '@abs_top_srcdir@/configure.ac';
+$ORCONFIG_H = '@abs_top_srcdir@/src/win32/orconfig.h';
+$TOR_NSI = '@abs_top_srcdir@/contrib/win32build/tor-mingw.nsi.in';
 
 $quiet = 1;
 

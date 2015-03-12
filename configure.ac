@@ -1664,6 +1664,7 @@ AC_CONFIG_FILES([
         src/config/torrc.sample
         src/config/torrc.minimal
         scripts/maint/checkOptionDocs.pl
+        scripts/maint/updateVersions.pl
 ])
 
 if test x$asciidoc = xtrue && test "$ASCIIDOC" = "none" ; then
