@@ -1,0 +1,5 @@
+  o Major bugfixes:
+    - Avoid crashing when making certain configuration option changes
+      on clients. Fixes bug 15245; bugfix on 0.2.6.3-alpha. Reported
+      by "anonym".
+

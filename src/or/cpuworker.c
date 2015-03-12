@@ -178,6 +178,12 @@ update_state_threadfn(void *state_, void *work_)
 void
 cpuworkers_rotate_keyinfo(void)
 {
+  if (!threadpool) {
+    /* If we're a client, then we won't have cpuworkers, and we won't need
+     * to tell them to rotate their state.
+     */
+    return;
+  }
   if (threadpool_queue_update(threadpool,
                               worker_state_new,
                               update_state_threadfn,
@@ -485,6 +491,8 @@ assign_onionskin_to_cpuworker(or_circuit_t *circ,
   cpuworker_job_t *job;
   cpuworker_request_t req;
   int should_time;
+
+  tor_assert(threadpool);
 
   if (!circ->p_chan) {
     log_info(LD_OR,"circ->p_chan gone. Failing circ.");
