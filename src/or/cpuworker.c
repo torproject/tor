@@ -178,8 +178,12 @@ update_state_threadfn(void *state_, void *work_)
 void
 cpuworkers_rotate_keyinfo(void)
 {
-  if (!threadpool)
+  if (!threadpool) {
+    /* If we're a client, then we won't have cpuworkers, and we won't need
+     * to tell them to rotate their state.
+     */
     return;
+  }
   if (threadpool_queue_update(threadpool,
                               worker_state_new,
                               update_state_threadfn,
