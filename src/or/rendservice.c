@@ -3320,7 +3320,8 @@ rend_services_introduce(void)
       intro = tor_malloc_zero(sizeof(rend_intro_point_t));
       intro->extend_info = extend_info_from_node(node, 0);
       intro->intro_key = crypto_pk_new();
-      tor_assert(!crypto_pk_generate_key(intro->intro_key));
+      int fail = crypto_pk_generate_key(intro->intro_key);
+      tor_assert(!fail);
       intro->time_published = -1;
       intro->time_to_expire = -1;
       intro->time_expiring = -1;

@@ -276,14 +276,16 @@ void
 tor_threads_init(void)
 {
   if (!threads_initialized) {
+    int ret;
     pthread_mutexattr_init(&attr_recursive);
     pthread_mutexattr_settype(&attr_recursive, PTHREAD_MUTEX_RECURSIVE);
-    tor_assert(0==pthread_attr_init(&attr_detached));
+    ret = pthread_attr_init(&attr_detached);
+    tor_assert(ret == 0);
 #ifndef PTHREAD_CREATE_DETACHED
 #define PTHREAD_CREATE_DETACHED 1
 #endif
-    tor_assert(0==pthread_attr_setdetachstate(&attr_detached,
-                                              PTHREAD_CREATE_DETACHED));
+    ret = pthread_attr_setdetachstate(&attr_detached, PTHREAD_CREATE_DETACHED);
+    tor_assert(ret == 0);
     threads_initialized = 1;
     set_main_thread();
   }
