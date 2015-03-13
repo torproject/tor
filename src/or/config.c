@@ -549,7 +549,8 @@ static int parse_dir_fallback_line(const char *line,
                                    int validate_only);
 static void port_cfg_free(port_cfg_t *port);
 static int parse_ports(or_options_t *options, int validate_only,
-                              char **msg_out, int *n_ports_out);
+                              char **msg_out, int *n_ports_out,
+                              int *world_writable_control_socket);
 static int check_server_ports(const smartlist_t *ports,
                               const or_options_t *options);
 
@@ -1090,7 +1091,7 @@ options_act_reversible(const or_options_t *old_options, char **msg)
     }
 
     /* Adjust the port configuration so we can launch listeners. */
-    if (parse_ports(options, 0, msg, &n_ports)) {
+    if (parse_ports(options, 0, msg, &n_ports, NULL)) {
       if (!*msg)
         *msg = tor_strdup("Unexpected problem parsing port config");
       goto rollback;
@@ -2586,6 +2587,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   config_line_t *cl;
   const char *uname = get_uname();
   int n_ports=0;
+  int world_writable_control_socket;
 #define REJECT(arg) \
   STMT_BEGIN *msg = tor_strdup(arg); return -1; STMT_END
 #define COMPLAIN(arg) STMT_BEGIN log_warn(LD_CONFIG, arg); STMT_END
@@ -2603,7 +2605,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
         "for details.", uname);
   }
 
-  if (parse_ports(options, 1, msg, &n_ports) < 0)
+  if (parse_ports(options, 1, msg, &n_ports,
+                  &world_writable_control_socket) < 0)
     return -1;
 
   if (parse_outbound_addresses(options, 1, msg) < 0)
@@ -3381,13 +3384,16 @@ options_validate(or_options_t *old_options, or_options_t *options,
     }
   }
 
-  if (options->ControlPort_set && !options->HashedControlPassword &&
+  if ((options->ControlPort_set || world_writable_control_socket) &&
+      !options->HashedControlPassword &&
       !options->HashedControlSessionPassword &&
       !options->CookieAuthentication) {
-    log_warn(LD_CONFIG, "ControlPort is open, but no authentication method "
+    log_warn(LD_CONFIG, "Control%s is %s, but no authentication method "
              "has been configured.  This means that any program on your "
              "computer can reconfigure your Tor.  That's bad!  You should "
-             "upgrade your Tor controller as soon as possible.");
+             "upgrade your Tor controller as soon as possible.",
+             options->ControlPort_set ? "Port" : "Socket",
+             options->ControlPort_set ? "open" : "world writable");
   }
 
   if (options->CookieAuthFileGroupReadable && !options->CookieAuthFile) {
@@ -6229,7 +6235,8 @@ count_real_listeners(const smartlist_t *ports, int listenertype)
  **/
 static int
 parse_ports(or_options_t *options, int validate_only,
-            char **msg, int *n_ports_out)
+            char **msg, int *n_ports_out,
+            int *world_writable_control_socket)
 {
   smartlist_t *ports;
   int retval = -1;
@@ -6357,6 +6364,16 @@ parse_ports(or_options_t *options, int validate_only,
     !! count_real_listeners(ports, CONN_TYPE_AP_DNS_LISTENER);
   options->ExtORPort_set =
     !! count_real_listeners(ports, CONN_TYPE_EXT_OR_LISTENER);
+
+  if (world_writable_control_socket) {
+    SMARTLIST_FOREACH(ports, port_cfg_t *, p,
+      if (p->type == CONN_TYPE_CONTROL_LISTENER &&
+          p->is_unix_addr &&
+          p->is_world_writable) {
+        *world_writable_control_socket = 1;
+        break;
+      });
+  }
 
   if (!validate_only) {
     if (configured_ports) {
