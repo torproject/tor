@@ -5614,7 +5614,7 @@ warn_nonlocal_ext_orports(const smartlist_t *ports, const char *portname)
 }
 
 /** Given a list of port_cfg_t in <b>ports</b>, warn any controller port there
- * is listening on any non-loopback address.  If <b>forbid</b> is true,
+ * is listening on any non-loopback address.  If <b>forbid_nonlocal</b> is true,
  * then emit a stronger warning and remove the port from the list.
  */
 static void
@@ -5735,7 +5735,7 @@ config_parse_unix_port(const char *addrport, char **path_out)
  *
  * If CL_PORT_WARN_NONLOCAL is set in <b>flags</b>, warn if any of the
  * ports are not on a local address.  If CL_PORT_FORBID_NONLOCAL is set,
- * this is a contrl port with no password set: don't even allow it.
+ * this is a control port with no password set: don't even allow it.
  *
  * Unless CL_PORT_ALLOW_EXTRA_LISTENADDR is set in <b>flags</b>, warn
  * if FooListenAddress is set but FooPort is 0.
@@ -6044,8 +6044,10 @@ parse_port_config(smartlist_t *out,
 
         if (!strcasecmp(elt, "GroupWritable")) {
           group_writable = !no;
+          continue;
         } else if (!strcasecmp(elt, "WorldWritable")) {
           world_writable = !no;
+          continue;
         }
 
         if (allow_no_stream_options) {
