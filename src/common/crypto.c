@@ -1768,235 +1768,12 @@ static BIGNUM *dh_param_p_tls = NULL;
 /** Shared G parameter for our DH key exchanges. */
 static BIGNUM *dh_param_g = NULL;
 
-/** Generate and return a reasonable and safe DH parameter p. */
-static BIGNUM *
-crypto_generate_dynamic_dh_modulus(void)
-{
-  BIGNUM *dynamic_dh_modulus;
-  DH *dh_parameters;
-  int r, dh_codes;
-  char *s;
-
-  dynamic_dh_modulus = BN_new();
-  tor_assert(dynamic_dh_modulus);
-
-  dh_parameters = DH_new();
-  tor_assert(dh_parameters);
-
-  r = DH_generate_parameters_ex(dh_parameters,
-                                DH_BYTES*8, DH_GENERATOR, NULL);
-  tor_assert(r == 0);
-
-  r = DH_check(dh_parameters, &dh_codes);
-  tor_assert(r && !dh_codes);
-
-  BN_copy(dynamic_dh_modulus, dh_parameters->p);
-  tor_assert(dynamic_dh_modulus);
-
-  DH_free(dh_parameters);
-
-  { /* log the dynamic DH modulus: */
-    s = BN_bn2hex(dynamic_dh_modulus);
-    tor_assert(s);
-    log_info(LD_OR, "Dynamic DH modulus generated: [%s]", s);
-    OPENSSL_free(s);
-  }
-
-  return dynamic_dh_modulus;
-}
-
-/** Store our dynamic DH modulus (and its group parameters) to
-    <b>fname</b> for future use. */
-static int
-crypto_store_dynamic_dh_modulus(const char *fname)
-{
-  int len, new_len;
-  DH *dh = NULL;
-  unsigned char *dh_string_repr = NULL;
-  char *base64_encoded_dh = NULL;
-  char *file_string = NULL;
-  int retval = -1;
-  static const char file_header[] = "# This file contains stored Diffie-"
-    "Hellman parameters for future use.\n# You *do not* need to edit this "
-    "file.\n\n";
-
-  tor_assert(fname);
-
-  if (!dh_param_p_tls) {
-    log_info(LD_CRYPTO, "Tried to store a DH modulus that does not exist.");
-    goto done;
-  }
-
-  if (!(dh = DH_new()))
-    goto done;
-  if (!(dh->p = BN_dup(dh_param_p_tls)))
-    goto done;
-  if (!(dh->g = BN_new()))
-    goto done;
-  if (!BN_set_word(dh->g, DH_GENERATOR))
-    goto done;
-
-  len = i2d_DHparams(dh, &dh_string_repr);
-  if ((len < 0) || (dh_string_repr == NULL)) {
-    log_warn(LD_CRYPTO, "Error occured while DER encoding DH modulus (2).");
-    goto done;
-  }
-
-  base64_encoded_dh = tor_calloc(len, 2); /* should be enough */
-  new_len = base64_encode(base64_encoded_dh, len * 2,
-                          (char *)dh_string_repr, len);
-  if (new_len < 0) {
-    log_warn(LD_CRYPTO, "Error occured while base64-encoding DH modulus.");
-    goto done;
-  }
-
-  /* concatenate file header and the dh parameters blob */
-  new_len = tor_asprintf(&file_string, "%s%s", file_header, base64_encoded_dh);
-
-  /* write to file */
-  if (write_bytes_to_new_file(fname, file_string, new_len, 0) < 0) {
-    log_info(LD_CRYPTO, "'%s' was already occupied.", fname);
-    goto done;
-  }
-
-  retval = 0;
-
- done:
-  if (dh)
-    DH_free(dh);
-  if (dh_string_repr)
-    OPENSSL_free(dh_string_repr);
-  tor_free(base64_encoded_dh);
-  tor_free(file_string);
-
-  return retval;
-}
-
-/** Return the dynamic DH modulus stored in <b>fname</b>. If there is no
-    dynamic DH modulus stored in <b>fname</b>, return NULL. */
-static BIGNUM *
-crypto_get_stored_dynamic_dh_modulus(const char *fname)
-{
-  int retval;
-  char *contents = NULL;
-  const char *contents_tmp = NULL;
-  int dh_codes;
-  DH *stored_dh = NULL;
-  BIGNUM *dynamic_dh_modulus = NULL;
-  int length = 0;
-  unsigned char *base64_decoded_dh = NULL;
-  const unsigned char *cp = NULL;
-
-  tor_assert(fname);
-
-  contents = read_file_to_str(fname, RFTS_IGNORE_MISSING, NULL);
-  if (!contents) {
-    log_info(LD_CRYPTO, "Could not open file '%s'", fname);
-    goto done; /*usually means that ENOENT. don't try to move file to broken.*/
-  }
-
-  /* skip the file header */
-  contents_tmp = eat_whitespace(contents);
-  if (!*contents_tmp) {
-    log_warn(LD_CRYPTO, "Stored dynamic DH modulus file "
-             "seems corrupted (eat_whitespace).");
-    goto err;
-  }
-
-  /* 'fname' contains the DH parameters stored in base64-ed DER
-   *  format. We are only interested in the DH modulus.
-   *  NOTE: We allocate more storage here than we need. Since we're already
-   *  doing that, we can also add 1 byte extra to appease Coverity's
-   *  scanner. */
-
-  cp = base64_decoded_dh = tor_malloc_zero(strlen(contents_tmp) + 1);
-  length = base64_decode((char *)base64_decoded_dh, strlen(contents_tmp),
-                         contents_tmp, strlen(contents_tmp));
-  if (length < 0) {
-    log_warn(LD_CRYPTO, "Stored dynamic DH modulus seems corrupted (base64).");
-    goto err;
-  }
-
-  stored_dh = d2i_DHparams(NULL, &cp, length);
-  if ((!stored_dh) || (cp - base64_decoded_dh != length)) {
-    log_warn(LD_CRYPTO, "Stored dynamic DH modulus seems corrupted (d2i).");
-    goto err;
-  }
-
-  { /* check the cryptographic qualities of the stored dynamic DH modulus: */
-    retval = DH_check(stored_dh, &dh_codes);
-    if (!retval || dh_codes) {
-      log_warn(LD_CRYPTO, "Stored dynamic DH modulus is not a safe prime.");
-      goto err;
-    }
-
-    retval = DH_size(stored_dh);
-    if (retval < DH_BYTES) {
-      log_warn(LD_CRYPTO, "Stored dynamic DH modulus is smaller "
-               "than '%d' bits.", DH_BYTES*8);
-      goto err;
-    }
-
-    if (!BN_is_word(stored_dh->g, 2)) {
-      log_warn(LD_CRYPTO, "Stored dynamic DH parameters do not use '2' "
-               "as the group generator.");
-      goto err;
-    }
-  }
-
-  { /* log the dynamic DH modulus: */
-    char *s = BN_bn2hex(stored_dh->p);
-    tor_assert(s);
-    log_info(LD_OR, "Found stored dynamic DH modulus: [%s]", s);
-    OPENSSL_free(s);
-  }
-
-  goto done;
-
- err:
-
-  {
-    /* move broken prime to $filename.broken */
-    char *fname_new=NULL;
-    tor_asprintf(&fname_new, "%s.broken", fname);
-
-    log_warn(LD_CRYPTO, "Moving broken dynamic DH prime to '%s'.", fname_new);
-
-    if (replace_file(fname, fname_new))
-      log_notice(LD_CRYPTO, "Error while moving '%s' to '%s'.",
-                 fname, fname_new);
-
-    tor_free(fname_new);
-  }
-
-  if (stored_dh) {
-    DH_free(stored_dh);
-    stored_dh = NULL;
-  }
-
- done:
-  tor_free(contents);
-  tor_free(base64_decoded_dh);
-
-  if (stored_dh) {
-    dynamic_dh_modulus = BN_dup(stored_dh->p);
-    DH_free(stored_dh);
-  }
-
-  return dynamic_dh_modulus;
-}
-
-/** Set the global TLS Diffie-Hellman modulus.
- * If <b>dynamic_dh_modulus_fname</b> is set, try to read a dynamic DH modulus
- * off it and use it as the DH modulus. If that's not possible,
- * generate a new dynamic DH modulus.
- * If <b>dynamic_dh_modulus_fname</b> is NULL, use the Apache mod_ssl DH
+/** Set the global TLS Diffie-Hellman modulus.  Use the Apache mod_ssl DH
  * modulus. */
 void
-crypto_set_tls_dh_prime(const char *dynamic_dh_modulus_fname)
+crypto_set_tls_dh_prime(void)
 {
   BIGNUM *tls_prime = NULL;
-  int store_dh_prime_afterwards = 0;
   int r;
 
   /* If the space is occupied, free the previous TLS DH prime */
@@ -2005,18 +1782,7 @@ crypto_set_tls_dh_prime(const char *dynamic_dh_modulus_fname)
     dh_param_p_tls = NULL;
   }
 
-  if (dynamic_dh_modulus_fname) { /* use dynamic DH modulus: */
-    log_info(LD_OR, "Using stored dynamic DH modulus.");
-    tls_prime = crypto_get_stored_dynamic_dh_modulus(dynamic_dh_modulus_fname);
-
-    if (!tls_prime) {
-      log_notice(LD_OR, "Generating fresh dynamic DH modulus. "
-                 "This might take a while...");
-      tls_prime = crypto_generate_dynamic_dh_modulus();
-
-      store_dh_prime_afterwards++;
-    }
-  } else { /* use the static DH prime modulus used by Apache in mod_ssl: */
+  if (1) {
     tls_prime = BN_new();
     tor_assert(tls_prime);
 
@@ -2036,13 +1802,6 @@ crypto_set_tls_dh_prime(const char *dynamic_dh_modulus_fname)
   tor_assert(tls_prime);
 
   dh_param_p_tls = tls_prime;
-
-  if (store_dh_prime_afterwards)
-    /* save the new dynamic DH modulus to disk. */
-    if (crypto_store_dynamic_dh_modulus(dynamic_dh_modulus_fname)) {
-      log_notice(LD_CRYPTO, "Failed while storing dynamic DH modulus. "
-                 "Make sure your data directory is sane.");
-    }
 }
 
 /** Initialize dh_param_p and dh_param_g if they are not already
@@ -2079,10 +1838,8 @@ init_dh_param(void)
   dh_param_p = circuit_dh_prime;
   dh_param_g = generator;
 
-  /* Ensure that we have TLS DH parameters set up, too, even if we're
-     going to change them soon. */
   if (!dh_param_p_tls) {
-    crypto_set_tls_dh_prime(NULL);
+    crypto_set_tls_dh_prime();
   }
 }
 

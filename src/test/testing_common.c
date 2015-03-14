@@ -269,7 +269,7 @@ main(int c, const char **v)
     printf("Can't initialize crypto subsystem; exiting.\n");
     return 1;
   }
-  crypto_set_tls_dh_prime(NULL);
+  crypto_set_tls_dh_prime();
   crypto_seed_rng(1);
   rep_hist_init();
   network_init();

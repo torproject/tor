@@ -3384,8 +3384,6 @@ typedef struct {
   char *Address; /**< OR only: configured address for this onion router. */
   char *PidFile; /**< Where to store PID of Tor process. */
 
-  int DynamicDHGroups; /**< Dynamic generation of prime moduli for use in DH.*/
-
   routerset_t *ExitNodes; /**< Structure containing nicknames, digests,
                            * country codes and IP address patterns of ORs to
                            * consider as exits. */

@@ -225,7 +225,7 @@ static config_var_t option_vars_[] = {
   V(DisableDebuggerAttachment,   BOOL,     "1"),
   V(DisableIOCP,                 BOOL,     "1"),
   OBSOLETE("DisableV2DirectoryInfo_"),
-  V(DynamicDHGroups,             BOOL,     "0"),
+  OBSOLETE("DynamicDHGroups"),
   VPORT(DNSPort,                     LINELIST, NULL),
   V(DNSListenAddress,            LINELIST, NULL),
   V(DownloadExtraInfo,           BOOL,     "0"),
@@ -1318,10 +1318,6 @@ options_transition_requires_fresh_tls_context(const or_options_t *old_options,
   if (!old_options)
     return 0;
 
-  if ((old_options->DynamicDHGroups != new_options->DynamicDHGroups)) {
-    return 1;
-  }
-
   if (!opt_streq(old_options->TLSECGroup, new_options->TLSECGroup))
     return 1;
 
@@ -1503,23 +1499,8 @@ options_act(const or_options_t *old_options)
     finish_daemon(options->DataDirectory);
   }
 
-  /* If needed, generate a new TLS DH prime according to the current torrc. */
-  if (server_mode(options) && options->DynamicDHGroups) {
-    char *keydir = get_datadir_fname("keys");
-    if (check_private_dir(keydir, CPD_CREATE, options->User)) {
-      tor_free(keydir);
-      return -1;
-    }
-    tor_free(keydir);
-
-    if (!old_options || !old_options->DynamicDHGroups) {
-      char *fname = get_datadir_fname2("keys", "dynamic_dh_params");
-      crypto_set_tls_dh_prime(fname);
-      tor_free(fname);
-    }
-  } else { /* clients don't need a dynamic DH prime. */
-    crypto_set_tls_dh_prime(NULL);
-  }
+  /* Probably not needed any longer XXXX */
+  crypto_set_tls_dh_prime();
 
   /* We want to reinit keys as needed before we do much of anything else:
      keys are important, and other things can depend on them. */

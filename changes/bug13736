@@ -1,0 +1,5 @@
+  o Removed features:
+    - Remove the (seldom-used) DynamicDHGroups feature. For
+      anti-fingerprinting we now recommend pluggable transports; for
+      forward-secrecy in TLS, we now use the P-256 group.
+      Closes ticket 13736.
