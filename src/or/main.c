@@ -2151,10 +2151,11 @@ run_main_loop_once(void)
 static int
 run_main_loop_until_done(void)
 {
- int loop_result = 1;
- while ((loop_result = run_main_loop_once()) == 1)
-   continue;
- return loop_result;
+  int loop_result = 1;
+  do {
+    loop_result = run_main_loop_once();
+  } while (loop_result == 1);
+  return loop_result;
 }
 
 #ifndef _WIN32 /* Only called when we're willing to use signals */
