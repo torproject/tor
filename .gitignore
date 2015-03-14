@@ -110,6 +110,10 @@ cscope.*
 /doc/spec/Makefile
 /doc/spec/Makefile.in
 
+# /scripts
+/scripts/maint/checkOptionDocs.pl
+/scripts/maint/updateVersions.pl
+
 # /src/
 /src/Makefile
 /src/Makefile.in
