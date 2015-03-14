@@ -97,6 +97,7 @@ static void second_elapsed_callback(periodic_timer_t *timer, void *args);
 static int conn_close_if_marked(int i);
 static void connection_start_reading_from_linked_conn(connection_t *conn);
 static int connection_should_read_from_linked_conn(connection_t *conn);
+static int run_main_loop_until_done(void);
 
 /********* START VARIABLES **********/
 
@@ -1955,7 +1956,6 @@ do_hup(void)
 int
 do_main_loop(void)
 {
-  int loop_result;
   time_t now;
 
   /* initialize dns resolve map, spawn workers if needed */
@@ -2084,7 +2084,14 @@ do_main_loop(void)
   }
 #endif
 
-  for (;;) {
+  return run_main_loop_until_done();
+}
+
+static int
+run_main_loop_once(void)
+{
+  int loop_result;
+  if (1) {
     if (nt_service_is_stopping())
       return 0;
 
@@ -2125,10 +2132,20 @@ do_main_loop(void)
         log_debug(LD_NET,"libevent call interrupted.");
         /* You can't trust the results of this poll(). Go back to the
          * top of the big for loop. */
-        continue;
+        return 1;
       }
     }
   }
+  return 1;
+}
+
+static int
+run_main_loop_until_done(void)
+{
+ int loop_result = 1;
+ while ((loop_result = run_main_loop_once()) == 1)
+   continue;
+ return loop_result;
 }
 
 #ifndef _WIN32 /* Only called when we're willing to use signals */
