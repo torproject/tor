@@ -3085,7 +3085,7 @@ tor_main(int argc, char *argv[])
     result = 0;
     break;
   case CMD_VERIFY_CONFIG:
-    if (get_options()->quiet_level)
+    if (quiet_level == 0)
       printf("Configuration was valid\n");
     result = 0;
     break;
