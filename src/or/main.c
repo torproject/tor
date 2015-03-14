@@ -2091,51 +2091,51 @@ static int
 run_main_loop_once(void)
 {
   int loop_result;
-  if (1) {
-    if (nt_service_is_stopping())
-      return 0;
+
+  if (nt_service_is_stopping())
+    return 0;
 
 #ifndef _WIN32
-    /* Make it easier to tell whether libevent failure is our fault or not. */
-    errno = 0;
+  /* Make it easier to tell whether libevent failure is our fault or not. */
+  errno = 0;
 #endif
-    /* All active linked conns should get their read events activated. */
-    SMARTLIST_FOREACH(active_linked_connection_lst, connection_t *, conn,
-                      event_active(conn->read_event, EV_READ, 1));
-    called_loop_once = smartlist_len(active_linked_connection_lst) ? 1 : 0;
+  /* All active linked conns should get their read events activated. */
+  SMARTLIST_FOREACH(active_linked_connection_lst, connection_t *, conn,
+                    event_active(conn->read_event, EV_READ, 1));
+  called_loop_once = smartlist_len(active_linked_connection_lst) ? 1 : 0;
 
-    update_approx_time(time(NULL));
+  update_approx_time(time(NULL));
 
-    /* poll until we have an event, or the second ends, or until we have
-     * some active linked connections to trigger events for. */
-    loop_result = event_base_loop(tor_libevent_get_base(),
-                                  called_loop_once ? EVLOOP_ONCE : 0);
+  /* poll until we have an event, or the second ends, or until we have
+   * some active linked connections to trigger events for. */
+  loop_result = event_base_loop(tor_libevent_get_base(),
+                                called_loop_once ? EVLOOP_ONCE : 0);
 
-    /* let catch() handle things like ^c, and otherwise don't worry about it */
-    if (loop_result < 0) {
-      int e = tor_socket_errno(-1);
-      /* let the program survive things like ^z */
-      if (e != EINTR && !ERRNO_IS_EINPROGRESS(e)) {
-        log_err(LD_NET,"libevent call with %s failed: %s [%d]",
-                tor_libevent_get_method(), tor_socket_strerror(e), e);
+  /* let catch() handle things like ^c, and otherwise don't worry about it */
+  if (loop_result < 0) {
+    int e = tor_socket_errno(-1);
+    /* let the program survive things like ^z */
+    if (e != EINTR && !ERRNO_IS_EINPROGRESS(e)) {
+      log_err(LD_NET,"libevent call with %s failed: %s [%d]",
+              tor_libevent_get_method(), tor_socket_strerror(e), e);
+      return -1;
+#ifndef _WIN32
+    } else if (e == EINVAL) {
+      log_warn(LD_NET, "EINVAL from libevent: should you upgrade libevent?");
+      if (got_libevent_error())
         return -1;
-#ifndef _WIN32
-      } else if (e == EINVAL) {
-        log_warn(LD_NET, "EINVAL from libevent: should you upgrade libevent?");
-        if (got_libevent_error())
-          return -1;
 #endif
-      } else {
-        if (ERRNO_IS_EINPROGRESS(e))
-          log_warn(LD_BUG,
-                   "libevent call returned EINPROGRESS? Please report.");
-        log_debug(LD_NET,"libevent call interrupted.");
-        /* You can't trust the results of this poll(). Go back to the
-         * top of the big for loop. */
-        return 1;
-      }
+    } else {
+      if (ERRNO_IS_EINPROGRESS(e))
+        log_warn(LD_BUG,
+                 "libevent call returned EINPROGRESS? Please report.");
+      log_debug(LD_NET,"libevent call interrupted.");
+      /* You can't trust the results of this poll(). Go back to the
+       * top of the big for loop. */
+      return 1;
     }
   }
+
   return 1;
 }
 
