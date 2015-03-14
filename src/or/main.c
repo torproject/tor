@@ -2087,6 +2087,10 @@ do_main_loop(void)
   return run_main_loop_until_done();
 }
 
+/**
+ * Run the main loop a single time. Return 0 for "exit"; -1 for "exit with
+ * error", and 1 for "run this again."
+ */
 static int
 run_main_loop_once(void)
 {
@@ -2139,6 +2143,11 @@ run_main_loop_once(void)
   return 1;
 }
 
+/** Run the run_main_loop_once() function until it declares itself done,
+ * and return its final return value.
+ *
+ * Shadow won't invoke this function, so don't fill it up with things.
+ */
 static int
 run_main_loop_until_done(void)
 {
