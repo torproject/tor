@@ -2783,8 +2783,8 @@ do_dump_config(void)
   } else if (!strcmp(arg, "full")) {
     how = OPTIONS_DUMP_ALL;
   } else {
-    printf("%s is not a recognized argument to --dump-config. "
-           "Please select 'short', 'non-builtin', or 'full'", arg);
+    fprintf(stderr, "%s is not a recognized argument to --dump-config. "
+            "Please select 'short', 'non-builtin', or 'full'", arg);
     return -1;
   }
 
@@ -3085,7 +3085,8 @@ tor_main(int argc, char *argv[])
     result = 0;
     break;
   case CMD_VERIFY_CONFIG:
-    printf("Configuration was valid\n");
+    if (get_options()->quiet_level)
+      printf("Configuration was valid\n");
     result = 0;
     break;
   case CMD_DUMP_CONFIG:

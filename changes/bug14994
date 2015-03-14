@@ -1,0 +1,8 @@
+  o Minor bugfixes (command-line interface):
+    - When "--quiet" is provided along with "--validate-config", do not
+      write anything to stdout on success. Fixes bug 14994; bugfix on
+      0.2.3.3-alpha.
+    - When complaining about bad arguments to "--dump-config", use
+      stderr, not stdout.
+
+
