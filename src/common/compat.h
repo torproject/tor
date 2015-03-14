@@ -451,7 +451,8 @@ int tor_close_socket(tor_socket_t s);
 tor_socket_t tor_open_socket_with_extensions(
                                            int domain, int type, int protocol,
                                            int cloexec, int nonblock);
-tor_socket_t tor_open_socket(int domain, int type, int protocol);
+MOCK_DECL(tor_socket_t,
+tor_open_socket,(int domain, int type, int protocol));
 tor_socket_t tor_open_socket_nonblocking(int domain, int type, int protocol);
 tor_socket_t tor_accept_socket(tor_socket_t sockfd, struct sockaddr *addr,
                                   socklen_t *len);
@@ -462,7 +463,14 @@ tor_socket_t tor_accept_socket_with_extensions(tor_socket_t sockfd,
                                                struct sockaddr *addr,
                                                socklen_t *len,
                                                int cloexec, int nonblock);
+MOCK_DECL(tor_socket_t,
+tor_connect_socket,(tor_socket_t socket,const struct sockaddr *address,
+                    socklen_t address_len));
 int get_n_open_sockets(void);
+
+MOCK_DECL(int,
+tor_getsockname,(tor_socket_t socket, struct sockaddr *address,
+                 socklen_t *address_len));
 
 #define tor_socket_send(s, buf, len, flags) send(s, buf, len, flags)
 #define tor_socket_recv(s, buf, len, flags) recv(s, buf, len, flags)

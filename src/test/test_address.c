@@ -470,15 +470,92 @@ smartlist_contain_tor_addr(smartlist_t *smartlist, tor_addr_t *tor_addr)
   return success;
 }
 
+#define FAKE_SOCKET_FD (42)
+
+tor_socket_t
+fake_open_socket(int domain, int type, int protocol)
+{
+  (void)domain;
+  (void)type;
+  (void)protocol;
+
+  return FAKE_SOCKET_FD;
+}
+
+static int last_connected_socket_fd = 0;
+
+static int connect_retval = 0;
+
+tor_socket_t
+pretend_to_connect(tor_socket_t socket, const struct sockaddr *address,
+                   socklen_t address_len)
+{
+  (void)address;
+  (void)address_len;
+
+  last_connected_socket_fd = socket;
+
+  return connect_retval;
+}
+
+static struct sockaddr *mock_addr = NULL;
+
+int
+fake_getsockname(tor_socket_t socket, struct sockaddr *address,
+                 socklen_t *address_len)
+{
+  if (!mock_addr)
+    return -1;
+
+  if (*address_len < sizeof(struct sockaddr))
+    return -1;
+
+  memcpy(address,mock_addr,sizeof(struct sockaddr));
+  *address_len = sizeof(mock_addr);
+  return 0;
+}
+
+static void
+test_address_udp_socket_trick_whitebox(void *arg)
+{
+  int hack_retval;
+  tor_addr_t *addr_from_hack = tor_malloc_zero(sizeof(tor_addr_t));
+
+  (void)arg;
+
+  MOCK(tor_open_socket,fake_open_socket);
+  MOCK(tor_connect_socket,pretend_to_connect);
+  MOCK(tor_getsockname,fake_getsockname);
+
+  mock_addr = tor_malloc_zero(sizeof(struct sockaddr));
+  sockaddr_in_from_string("23.32.246.118",(struct sockaddr_in *)mock_addr);
+
+  hack_retval =
+  get_interface_address6_via_udp_socket_hack(LOG_DEBUG,
+                                             AF_INET, addr_from_hack);
+
+  tt_int_op(hack_retval,==,0);
+  tt_assert(tor_addr_eq_ipv4h(addr_from_hack, 0x1720f676));
+
+  UNMOCK(tor_open_socket);
+  UNMOCK(tor_connect_socket);
+  UNMOCK(tor_getsockname);
+
+  done:
+  tor_free(mock_addr);
+  tor_free(addr_from_hack);
+  return;
+}
+
 static void
 test_address_udp_socket_trick_blackbox(void *arg)
 {
-  /* We want get_interface_address6_via_udp_socket_hack() to yield 
-   * the same valid address that get_interface_address6() returns. 
-   * If the latter is unable to find a valid address, we want 
+  /* We want get_interface_address6_via_udp_socket_hack() to yield
+   * the same valid address that get_interface_address6() returns.
+   * If the latter is unable to find a valid address, we want
    * _hack() to fail and return-1.
    *
-   * Furthermore, we want _hack() never to crash, even if 
+   * Furthermore, we want _hack() never to crash, even if
    * get_interface_addresses_raw() is returning NULL.
    */
 
@@ -531,6 +608,7 @@ test_address_udp_socket_trick_blackbox(void *arg)
   { #name, test_address_ ## name, flags, NULL, NULL }
 
 struct testcase_t address_tests[] = {
+  ADDRESS_TEST(udp_socket_trick_whitebox, TT_FORK),
   ADDRESS_TEST(udp_socket_trick_blackbox, TT_FORK),
 #ifdef HAVE_IFADDRS_TO_SMARTLIST
   ADDRESS_TEST(get_if_addrs_ifaddrs, TT_FORK),

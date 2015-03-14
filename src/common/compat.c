@@ -1156,10 +1156,18 @@ mark_socket_open(tor_socket_t s)
 /** @} */
 
 /** As socket(), but counts the number of open sockets. */
-tor_socket_t
-tor_open_socket(int domain, int type, int protocol)
+MOCK_IMPL(tor_socket_t,
+tor_open_socket,(int domain, int type, int protocol))
 {
   return tor_open_socket_with_extensions(domain, type, protocol, 1, 0);
+}
+
+/** Mockable wrapper for connect(). */
+MOCK_IMPL(tor_socket_t,
+tor_connect_socket,(tor_socket_t socket,const struct sockaddr *address,
+                     socklen_t address_len))
+{
+  return connect(socket,address,address_len);
 }
 
 /** As socket(), but creates a nonblocking socket and
@@ -1306,6 +1314,14 @@ get_n_open_sockets(void)
   n = n_sockets_open;
   socket_accounting_unlock();
   return n;
+}
+
+/** Mockable wrapper for getsockname(). */
+MOCK_IMPL(int,
+tor_getsockname,(tor_socket_t socket, struct sockaddr *address,
+                 socklen_t *address_len))
+{
+   return getsockname(socket, address, address_len);
 }
 
 /** Turn <b>socket</b> into a nonblocking socket. Return 0 on success, -1
