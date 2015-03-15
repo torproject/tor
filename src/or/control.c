@@ -3304,18 +3304,10 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
     static const char *opt_server = "SERVER=";
 
     if (!strcasecmpstart(arg, opt_server)) {
-      char id[DIGEST_LEN] = {0};
       const char *server;
 
       server = arg + strlen(opt_server);
-      /* Is the server's fingerprint valid?. */
-      if (!string_is_hex(server) || strlen(server) != HEX_DIGEST_LEN ||
-          base16_decode(id, sizeof(id), server, HEX_DIGEST_LEN)) {
-        connection_printf_to_buf(conn, "552 Invalid fingerprint \"%s\"\r\n",
-                                 server);
-        goto done;
-      }
-      node = node_get_by_id(id);
+      node = node_get_by_hex_id(server);
       if (!node) {
         connection_printf_to_buf(conn, "552 Server \"%s\" not found\r\n",
                                  server);
