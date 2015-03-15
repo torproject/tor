@@ -5489,7 +5489,7 @@ control_event_hs_descriptor_content(const char *onion_address,
   write_escaped_data(content, strlen(content), &esc_content);
 
   send_control_event(EVENT_HS_DESC_CONTENT, ALL_FORMATS,
-                     "650 %s %s %s %s\r\n%s",
+                     "650+%s %s %s %s\r\n%s650 OK\r\n",
                      event_name,
                      rend_hsaddress_str_or_unknown(onion_address),
                      desc_id,
