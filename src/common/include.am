@@ -72,6 +72,8 @@ LIBOR_A_SOURCES = \
   $(libor_extra_source)					\
   $(threads_impl_source)
 
+src/common/log.o: micro-revision.i
+
 LIBOR_CRYPTO_A_SOURCES = \
   src/common/aes.c		\
   src/common/crypto.c		\
