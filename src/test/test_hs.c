@@ -193,8 +193,9 @@ test_hs_desc_event(void *arg)
   char *exp_msg;
   control_event_hs_descriptor_content(rend_query.onion_address, STR_DESC_ID,
                                       HSDIR_EXIST_ID, hs_desc_content);
-  tor_asprintf(&exp_msg, "650 HS_DESC_CONTENT " STR_HS_ADDR " " STR_DESC_ID \
-               " " STR_HSDIR_EXIST_LONGNAME "\r\n%s\r\n.\r\n", hs_desc_content);
+  tor_asprintf(&exp_msg, "650+HS_DESC_CONTENT " STR_HS_ADDR " " STR_DESC_ID \
+               " " STR_HSDIR_EXIST_LONGNAME "\r\n%s\r\n.\r\n650 OK\r\n",
+               hs_desc_content);
   tt_assert(received_msg);
   tt_str_op(received_msg, OP_EQ, exp_msg);
   tor_free(received_msg);
