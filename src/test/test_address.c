@@ -504,14 +504,26 @@ int
 fake_getsockname(tor_socket_t socket, struct sockaddr *address,
                  socklen_t *address_len)
 {
+  socklen_t bytes_to_copy = 0;
+
   if (!mock_addr)
     return -1;
 
-  if (*address_len < sizeof(struct sockaddr))
+  if (mock_addr->sa_family == AF_INET) {
+    bytes_to_copy = sizeof(struct sockaddr_in);
+  } else if (mock_addr->sa_family == AF_INET6) {
+    bytes_to_copy = sizeof(struct sockaddr_in6);
+  } else {
     return -1;
+  }
 
-  memcpy(address,mock_addr,sizeof(struct sockaddr));
-  *address_len = sizeof(mock_addr);
+  if (*address_len < bytes_to_copy) {
+    return -1;
+  }
+
+  memcpy(address,mock_addr,bytes_to_copy);
+  *address_len = bytes_to_copy;
+
   return 0;
 }
 
@@ -520,6 +532,9 @@ test_address_udp_socket_trick_whitebox(void *arg)
 {
   int hack_retval;
   tor_addr_t *addr_from_hack = tor_malloc_zero(sizeof(tor_addr_t));
+  struct sockaddr_in6 *mock_addr6;
+  struct sockaddr_in6 *ipv6_to_check =
+  tor_malloc_zero(sizeof(struct sockaddr_in6));
 
   (void)arg;
 
@@ -527,7 +542,7 @@ test_address_udp_socket_trick_whitebox(void *arg)
   MOCK(tor_connect_socket,pretend_to_connect);
   MOCK(tor_getsockname,fake_getsockname);
 
-  mock_addr = tor_malloc_zero(sizeof(struct sockaddr));
+  mock_addr = tor_malloc_zero(sizeof(struct sockaddr_storage));
   sockaddr_in_from_string("23.32.246.118",(struct sockaddr_in *)mock_addr);
 
   hack_retval =
@@ -537,11 +552,31 @@ test_address_udp_socket_trick_whitebox(void *arg)
   tt_int_op(hack_retval,==,0);
   tt_assert(tor_addr_eq_ipv4h(addr_from_hack, 0x1720f676));
 
+  /* Now, lets do an IPv6 case. */
+  memset(mock_addr,0,sizeof(struct sockaddr_storage));
+
+  mock_addr6 = (struct sockaddr_in6 *)mock_addr;
+  mock_addr6->sin6_family = AF_INET6;
+  mock_addr6->sin6_port = 0;
+  inet_pton(AF_INET6,"2001:cdba::3257:9652",&(mock_addr6->sin6_addr));
+
+  hack_retval =
+  get_interface_address6_via_udp_socket_hack(LOG_DEBUG,
+                                             AF_INET6, addr_from_hack);
+
+  tt_int_op(hack_retval,==,0);
+
+  tor_addr_to_sockaddr(addr_from_hack,0,(struct sockaddr *)ipv6_to_check,
+                       sizeof(struct sockaddr_in6));
+
+  tt_assert(sockaddr_in6_are_equal(mock_addr6,ipv6_to_check));
+
   UNMOCK(tor_open_socket);
   UNMOCK(tor_connect_socket);
   UNMOCK(tor_getsockname);
 
   done:
+  tor_free(ipv6_to_check);
   tor_free(mock_addr);
   tor_free(addr_from_hack);
   return;
