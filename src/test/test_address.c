@@ -452,24 +452,6 @@ test_address_get_if_addrs_ioctl(void *arg)
 
 #endif
 
-/** Return 1 iff an address exactly equal to <b>tor_addr</b> is in
- * <b>smartlist</b>. Otherwise, return 0.
- */
-static int
-smartlist_contain_tor_addr(smartlist_t *smartlist, tor_addr_t *tor_addr)
-{
-  int success = 0;
-
-  SMARTLIST_FOREACH_BEGIN(smartlist, tor_addr_t *, a) {
-    if (tor_addr_compare(tor_addr,a,CMP_EXACT) == 0) {
-      success = 1;
-      break;
-    }
-  } SMARTLIST_FOREACH_END(a);
-
-  return success;
-}
-
 #define FAKE_SOCKET_FD (42)
 
 tor_socket_t
