@@ -1,4 +1,4 @@
-Changes in version 0.2.4.26 - 2015-03-??
+Changes in version 0.2.4.26 - 2015-03-17
   Tor 0.2.4.26 includes an updated list of directory authorities.  It
   also backports a couple of stability and security bugfixes from 0.2.5
   and beyond.
