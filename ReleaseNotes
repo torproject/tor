@@ -3,6 +3,118 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.2.5.11 - 2015-03-17
+  Tor 0.2.5.11 is the second stable release in the 0.2.5 series.
+
+  It backports several bugfixes from the 0.2.6 branch, including a
+  couple of medium-level security fixes for relays and exit nodes.
+  It also updates the list of directory authorities.
+
+  o Directory authority changes:
+    - Remove turtles as a directory authority.
+    - Add longclaw as a new (v3) directory authority. This implements
+      ticket 13296. This keeps the directory authority count at 9.
+    - The directory authority Faravahar has a new IP address. This
+      closes ticket 14487.
+
+  o Major bugfixes (crash, OSX, security):
+    - Fix a remote denial-of-service opportunity caused by a bug in
+      OSX's _strlcat_chk() function. Fixes bug 15205; bug first appeared
+      in OSX 10.9.
+
+  o Major bugfixes (relay, stability, possible security):
+    - Fix a bug that could lead to a relay crashing with an assertion
+      failure if a buffer of exactly the wrong layout was passed to
+      buf_pullup() at exactly the wrong time. Fixes bug 15083; bugfix on
+      0.2.0.10-alpha. Patch from 'cypherpunks'.
+    - Do not assert if the 'data' pointer on a buffer is advanced to the
+      very end of the buffer; log a BUG message instead. Only assert if
+      it is past that point. Fixes bug 15083; bugfix on 0.2.0.10-alpha.
+
+  o Major bugfixes (exit node stability):
+    - Fix an assertion failure that could occur under high DNS load.
+      Fixes bug 14129; bugfix on Tor 0.0.7rc1. Found by "jowr";
+      diagnosed and fixed by "cypherpunks".
+
+  o Major bugfixes (Linux seccomp2 sandbox):
+    - Upon receiving sighup with the seccomp2 sandbox enabled, do not
+      crash during attempts to call wait4. Fixes bug 15088; bugfix on
+      0.2.5.1-alpha. Patch from "sanic".
+
+  o Minor features (controller):
+    - New "GETINFO bw-event-cache" to get information about recent
+      bandwidth events. Closes ticket 14128. Useful for controllers to
+      get recent bandwidth history after the fix for ticket 13988.
+
+  o Minor features (geoip):
+    - Update geoip to the March 3 2015 Maxmind GeoLite2 Country database.
+    - Update geoip6 to the March 3 2015 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfixes (client, automapping):
+    - Avoid crashing on torrc lines for VirtualAddrNetworkIPv[4|6] when
+      no value follows the option. Fixes bug 14142; bugfix on
+      0.2.4.7-alpha. Patch by "teor".
+    - Fix a memory leak when using AutomapHostsOnResolve. Fixes bug
+      14195; bugfix on 0.1.0.1-rc.
+
+  o Minor bugfixes (compilation):
+    - Build without warnings with the stock OpenSSL srtp.h header, which
+      has a duplicate declaration of SSL_get_selected_srtp_profile().
+      Fixes bug 14220; this is OpenSSL's bug, not ours.
+
+  o Minor bugfixes (directory authority):
+    - Allow directory authorities to fetch more data from one another if
+      they find themselves missing lots of votes. Previously, they had
+      been bumping against the 10 MB queued data limit. Fixes bug 14261;
+      bugfix on 0.1.2.5-alpha.
+    - Enlarge the buffer to read bwauth generated files to avoid an
+      issue when parsing the file in dirserv_read_measured_bandwidths().
+      Fixes bug 14125; bugfix on 0.2.2.1-alpha.
+
+  o Minor bugfixes (statistics):
+    - Increase period over which bandwidth observations are aggregated
+      from 15 minutes to 4 hours. Fixes bug 13988; bugfix on 0.0.8pre1.
+
+  o Minor bugfixes (preventative security, C safety):
+    - When reading a hexadecimal, base-32, or base-64 encoded value from
+      a string, always overwrite the whole output buffer. This prevents
+      some bugs where we would look at (but fortunately, not reveal)
+      uninitialized memory on the stack. Fixes bug 14013; bugfix on all
+      versions of Tor.
+
+
+Changes in version 0.2.4.26 - 2015-03-17
+  Tor 0.2.4.26 includes an updated list of directory authorities.  It
+  also backports a couple of stability and security bugfixes from 0.2.5
+  and beyond.
+
+  o Directory authority changes:
+    - Remove turtles as a directory authority.
+    - Add longclaw as a new (v3) directory authority. This implements
+      ticket 13296. This keeps the directory authority count at 9.
+    - The directory authority Faravahar has a new IP address. This
+      closes ticket 14487.
+
+  o Major bugfixes (exit node stability, also in 0.2.6.3-alpha):
+    - Fix an assertion failure that could occur under high DNS load.
+      Fixes bug 14129; bugfix on Tor 0.0.7rc1. Found by "jowr";
+      diagnosed and fixed by "cypherpunks".
+
+  o Major bugfixes (relay, stability, possible security, also in 0.2.6.4-rc):
+    - Fix a bug that could lead to a relay crashing with an assertion
+      failure if a buffer of exactly the wrong layout was passed to
+      buf_pullup() at exactly the wrong time. Fixes bug 15083; bugfix on
+      0.2.0.10-alpha. Patch from 'cypherpunks'.
+    - Do not assert if the 'data' pointer on a buffer is advanced to the
+      very end of the buffer; log a BUG message instead. Only assert if
+      it is past that point. Fixes bug 15083; bugfix on 0.2.0.10-alpha.
+
+  o Minor features (geoip):
+    - Update geoip to the March 3 2015 Maxmind GeoLite2 Country database.
+    - Update geoip6 to the March 3 2015 Maxmind GeoLite2
+      Country database.
+
 Changes in version 0.2.5.10 - 2014-10-24
   Tor 0.2.5.10 is the first stable release in the 0.2.5 series.
 
