@@ -3,6 +3,38 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.2.4.26 - 2015-03-17
+  Tor 0.2.4.26 includes an updated list of directory authorities.  It
+  also backports a couple of stability and security bugfixes from 0.2.5
+  and beyond.
+
+  o Directory authority changes:
+    - Remove turtles as a directory authority.
+    - Add longclaw as a new (v3) directory authority. This implements
+      ticket 13296. This keeps the directory authority count at 9.
+    - The directory authority Faravahar has a new IP address. This
+      closes ticket 14487.
+
+  o Major bugfixes (exit node stability, also in 0.2.6.3-alpha):
+    - Fix an assertion failure that could occur under high DNS load.
+      Fixes bug 14129; bugfix on Tor 0.0.7rc1. Found by "jowr";
+      diagnosed and fixed by "cypherpunks".
+
+  o Major bugfixes (relay, stability, possible security, also in 0.2.6.4-rc):
+    - Fix a bug that could lead to a relay crashing with an assertion
+      failure if a buffer of exactly the wrong layout was passed to
+      buf_pullup() at exactly the wrong time. Fixes bug 15083; bugfix on
+      0.2.0.10-alpha. Patch from 'cypherpunks'.
+    - Do not assert if the 'data' pointer on a buffer is advanced to the
+      very end of the buffer; log a BUG message instead. Only assert if
+      it is past that point. Fixes bug 15083; bugfix on 0.2.0.10-alpha.
+
+  o Minor features (geoip):
+    - Update geoip to the March 3 2015 Maxmind GeoLite2 Country database.
+    - Update geoip6 to the March 3 2015 Maxmind GeoLite2
+      Country database.
+
+
 Changes in version 0.2.4.25 - 2014-10-20
   Tor 0.2.4.25 disables SSL3 in response to the recent "POODLE" attack
   (even though POODLE does not affect Tor). It also works around a crash
