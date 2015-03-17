@@ -1,4 +1,29 @@
 Changes in version 0.2.6.5-?? - 2015-03-??
+  Tor 0.2.6.5-?? is the second and (hopefully) last release candidate in
+  the 0.2.6. It fixes a small number of bugs found in 0.2.6.4-rc.
+
+  o Major bugfixes (client):
+    - Avoid crashing when making certain configuration option changes on
+      clients. Fixes bug 15245; bugfix on 0.2.6.3-alpha. Reported
+      by "anonym".
+
+  o Major bugfixes (pluggable transports):
+    - Initialize the extended OR Port authentication cookie before
+      launching pluggable transports. This prevents a race condition
+      that occured when server-side pluggable transports would cache the
+      authentication cookie before it has been (re)generated. Fixes bug
+      15240; bugfix on 0.2.5.1-alpha.
+
+  o Major bugfixes (portability):
+    - Do not crash on startup when running on Solaris. Fixes a bug
+      related to our fix for 9495; bugfix on 0.2.6.1-alpha. Reported
+      by "ruebezahl".
+
+  o Minor features (heartbeat):
+    - On relays, report how many connections we negotiated using each
+      version of the Tor link protocols. This information will let us
+      know if removing support for very old versions of the Tor
+      protocols is harming the network. Closes ticket 15212.
 
 
 Changes in version 0.2.5.11 - 2015-03-17
