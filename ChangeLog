@@ -25,6 +25,10 @@ Changes in version 0.2.6.5-?? - 2015-03-??
       know if removing support for very old versions of the Tor
       protocols is harming the network. Closes ticket 15212.
 
+  o Code simplification and refactoring:
+    - Refactor main loop to extract the 'loop' part. This makes it
+      easier to run Tor under Shadow. Closes ticket 15176.
+
 
 Changes in version 0.2.5.11 - 2015-03-17
   Tor 0.2.5.11 is the second stable release in the 0.2.5 series.
