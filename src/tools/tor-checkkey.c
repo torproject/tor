@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include "crypto.h"
 #include "torlog.h"
-#include "../common/util.h"
+#include "util.h"
 #include "compat.h"
 #include <openssl/bn.h>
 #include <openssl/rsa.h>

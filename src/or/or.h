@@ -88,7 +88,7 @@
 
 #include "crypto.h"
 #include "tortls.h"
-#include "../common/torlog.h"
+#include "torlog.h"
 #include "container.h"
 #include "torgzip.h"
 #include "address.h"

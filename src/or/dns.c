@@ -24,7 +24,7 @@
 #include "relay.h"
 #include "router.h"
 #include "ht.h"
-#include "../common/sandbox.h"
+#include "sandbox.h"
 #ifdef HAVE_EVENT2_DNS_H
 #include <event2/event.h>
 #include <event2/dns.h>

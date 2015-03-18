@@ -215,6 +215,8 @@ AC_PROG_CPP
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 
+AC_PATH_PROG([PERL], [perl])
+
 dnl autoconf 2.59 appears not to support AC_PROG_SED
 AC_CHECK_PROG([SED],[sed],[sed],[/bin/false])
 
@@ -1661,6 +1663,8 @@ AC_CONFIG_FILES([
         contrib/dist/tor.service
         src/config/torrc.sample
         src/config/torrc.minimal
+        scripts/maint/checkOptionDocs.pl
+        scripts/maint/updateVersions.pl
 ])
 
 if test x$asciidoc = xtrue && test "$ASCIIDOC" = "none" ; then
@@ -1682,7 +1686,3 @@ if test x$asciidoc = xtrue && test "$ASCIIDOC" = "none" ; then
 fi
 
 AC_OUTPUT
-
-if test -x /usr/bin/perl && test -x ./scripts/maint/updateVersions.pl ; then
-  ./scripts/maint/updateVersions.pl
-fi

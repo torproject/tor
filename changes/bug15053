@@ -1,0 +1,4 @@
+  o Minor bugfixes (build):
+    - Improve out-of-tree builds by making non-standard rules work and clean up
+      additional files and directories. Fixes bug 15053; bugfix on
+      0.2.7.0-alpha.
