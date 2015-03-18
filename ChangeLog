@@ -1,5 +1,5 @@
-Changes in version 0.2.6.5-?? - 2015-03-??
-  Tor 0.2.6.5-?? is the second and (hopefully) last release candidate in
+Changes in version 0.2.6.5-rc - 2015-03-18
+  Tor 0.2.6.5-rc is the second and (hopefully) last release candidate in
   the 0.2.6. It fixes a small number of bugs found in 0.2.6.4-rc.
 
   o Major bugfixes (client):
