@@ -1,10 +1,11 @@
-TESTS += src/test/test src/test/test-slow
+TESTS += src/test/test src/test/test-slow src/test/test-memwipe
 
 noinst_PROGRAMS+= src/test/bench
 if UNITTESTS_ENABLED
 noinst_PROGRAMS+= \
 	src/test/test \
 	src/test/test-slow \
+	src/test/test-memwipe \
 	src/test/test-child \
 	src/test/test_workqueue
 endif
@@ -73,6 +74,9 @@ src_test_test_slow_SOURCES = \
 	src/test/testing_common.c \
 	src/ext/tinytest.c
 
+src_test_test_memwipe_SOURCES = \
+	src/test/test-memwipe.c
+
 
 src_test_test_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 
@@ -99,6 +103,11 @@ src_test_test_slow_CPPFLAGS = $(src_test_test_CPPFLAGS)
 src_test_test_slow_CFLAGS = $(src_test_test_CFLAGS)
 src_test_test_slow_LDADD = $(src_test_test_LDADD)
 src_test_test_slow_LDFLAGS = $(src_test_test_LDFLAGS)
+
+src_test_test_memwipe_CPPFLAGS = $(src_test_test_CPPFLAGS)
+src_test_test_memwipe_CFLAGS = $(src_test_test_CFLAGS)
+src_test_test_memwipe_LDADD = $(src_test_test_LDADD)
+src_test_test_memwipe_LDFLAGS = $(src_test_test_LDFLAGS)
 
 src_test_bench_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
         @TOR_LDFLAGS_libevent@
