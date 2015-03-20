@@ -45,6 +45,13 @@
 #error "Sorry; we don't support building with NDEBUG."
 #endif
 
+/* Don't use assertions during coverage. It leads to tons of unreached
+ * branches which in reality are only assertions we didn't hit. */
+#ifdef TOR_COVERAGE
+#define tor_assert(a) STMT_BEGIN                                        \
+  (void)(a);                                                            \
+  STMT_END
+#else
 /** Like assert(3), but send assertion failures to the log as well as to
  * stderr. */
 #define tor_assert(expr) STMT_BEGIN                                     \
@@ -52,6 +59,7 @@
     tor_assertion_failed_(SHORT_FILE__, __LINE__, __func__, #expr);     \
     abort();                                                            \
   } STMT_END
+#endif
 
 void tor_assertion_failed_(const char *fname, unsigned int line,
                            const char *func, const char *expr);
