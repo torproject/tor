@@ -1407,7 +1407,7 @@ static int
 connection_handle_listener_read(connection_t *conn, int new_type)
 {
   tor_socket_t news; /* the new socket */
-  connection_t *newconn;
+  connection_t *newconn = 0;
   /* information about the remote peer when connecting to other routers */
   struct sockaddr_storage addrbuf;
   struct sockaddr *remote = (struct sockaddr*)&addrbuf;
