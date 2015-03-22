@@ -130,8 +130,8 @@ test_address_ifaddrs_to_smartlist(void *arg)
    ipv6_sockaddr = tor_malloc(sizeof(struct sockaddr_in6));
    ipv6_sockaddr->sin6_family = AF_INET6;
    ipv6_sockaddr->sin6_port = 0;
-   inet_pton(AF_INET6, "2001:db8:8714:3a90::12",
-             &(ipv6_sockaddr->sin6_addr));
+   tor_inet_pton(AF_INET6, "2001:db8:8714:3a90::12",
+                 &(ipv6_sockaddr->sin6_addr));
 
    ifa = tor_malloc(sizeof(struct ifaddrs));
    ifa_ipv4 = tor_malloc(sizeof(struct ifaddrs));
@@ -540,7 +540,7 @@ test_address_udp_socket_trick_whitebox(void *arg)
   mock_addr6 = (struct sockaddr_in6 *)mock_addr;
   mock_addr6->sin6_family = AF_INET6;
   mock_addr6->sin6_port = 0;
-  inet_pton(AF_INET6,"2001:cdba::3257:9652",&(mock_addr6->sin6_addr));
+  tor_inet_pton(AF_INET6,"2001:cdba::3257:9652",&(mock_addr6->sin6_addr));
 
   hack_retval =
   get_interface_address6_via_udp_socket_hack(LOG_DEBUG,
