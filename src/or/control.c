@@ -72,7 +72,7 @@ static int disable_log_messages = 0;
 /** Macro: true if any control connection is interested in events of type
  * <b>e</b>. */
 #define EVENT_IS_INTERESTING(e) \
-  (!! (global_event_mask & (((uint64_t)1)<<(e))))
+  (!! (global_event_mask & EVENT_MASK_(e)))
 
 /** If we're using cookie-type authentication, how long should our cookies be?
  */

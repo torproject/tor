@@ -1,0 +1,4 @@
+  o Minor features (testing):
+    - Add unit tests for control_event_is_interesting().
+      Part of ticket 15431, checks for bugs similar to 13085.
+      Patch by "teor".
