@@ -166,6 +166,10 @@ void control_free_all(void);
 /* If EVENT_MAX_ ever hits 0x0040, we need to make the mask into a
  * different structure, as it can only handle a maximum left shift of 1<<63. */
 
+#if EVENT_MAX_ >= EVENT_CAPACITY_
+#error control_connection_t.event_mask has an event greater than its capacity
+#endif
+
 #define EVENT_MASK_(e)               (((uint64_t)1)<<(e))
 
 #define EVENT_MASK_NONE_             ((uint64_t)0x0)
