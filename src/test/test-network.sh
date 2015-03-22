@@ -13,7 +13,7 @@ do
       export TOR_DIR="$2"
       shift
     ;;
-    --flavo?r|--network-flavo?r)
+    --flavor|--flavour|--network-flavor|--network-flavour)
       export NETWORK_FLAVOUR="$2"
       shift
     ;;
