@@ -38,6 +38,7 @@
 #include "policies.h"
 #include "reasons.h"
 #include "rendclient.h"
+#include "rendcommon.h"
 #include "rephist.h"
 #include "router.h"
 #include "routerlist.h"
@@ -3281,9 +3282,7 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
    * rest to find optional argument(s). */
   smartlist_del(args, 0);
   /* Test if it's an HS address without the .onion part. */
-  if (strlen(arg1) == REND_SERVICE_ID_LEN_BASE32 &&
-      base32_decode(digest, sizeof(digest), arg1,
-                    REND_SERVICE_ID_LEN_BASE32) == 0) {
+  if (rend_valid_service_id(arg1)) {
     hsaddress = arg1;
   } else if (strstr(arg1, v2_str) &&
              strlen(arg1 + v2_str_len) == REND_DESC_ID_V2_LEN_BASE32 &&
@@ -3349,7 +3348,7 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
    * to avoid out of order replies. */
   send_control_done(conn);
 
-  /* Trigger the fetch using the built rend query and possibly a lit of HS
+  /* Trigger the fetch using the built rend query and possibly a list of HS
    * directory to use. This function ignores the client cache thus this will
    * always send a fetch command. */
   rend_client_fetch_v2_desc(rend_query, hsdirs);
