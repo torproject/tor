@@ -2107,7 +2107,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       control_event_hs_descriptor_content(conn->rend_data->onion_address, \
                                           conn->requested_resource, \
                                           conn->identity_digest, \
-                                          "") )
+                                          NULL) )
     tor_assert(conn->rend_data);
     log_info(LD_REND,"Received rendezvous descriptor (size %d, status %d "
              "(%s))",
@@ -2149,6 +2149,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                                                 body);
             conn->base_.purpose = DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2;
             rend_client_desc_trynow(service_id);
+            memwipe(service_id, 0, sizeof(service_id));
             break;
           }
         }

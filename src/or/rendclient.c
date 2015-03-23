@@ -496,11 +496,10 @@ get_last_hid_serv_requests(void)
                                        REND_SERVICE_ID_LEN_BASE32)
 
 /** Look up the last request time to hidden service directory <b>hs_dir</b>
- * for descriptor ID <b>desc_id_base32</b> for the service specified in
- * <b>rend_query</b>. If <b>set</b> is non-zero,
- * assign the current time <b>now</b> and return that. Otherwise, return
- * the most recent request time, or 0 if no such request has been sent
- * before. */
+ * for descriptor ID <b>desc_id_base32</b>. If <b>set</b> is non-zero,
+ * assign the current time <b>now</b> and return that. Otherwise, return the
+ * most recent request time, or 0 if no such request has been sent before.
+ */
 static time_t
 lookup_last_hid_serv_request(routerstatus_t *hs_dir,
                              const char *desc_id_base32,
@@ -612,20 +611,17 @@ rend_client_purge_last_hid_serv_requests(void)
  *
  * Return NULL on error else the hsdir node pointer. */
 static routerstatus_t *
-pick_hsdir(const char *desc_id)
+pick_hsdir(const char *desc_id, const char *desc_id_base32)
 {
   smartlist_t *responsible_dirs = smartlist_new();
   smartlist_t *usable_responsible_dirs = smartlist_new();
   const or_options_t *options = get_options();
   routerstatus_t *hs_dir;
-  char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
   time_t now = time(NULL);
   int excluded_some;
 
   tor_assert(desc_id);
-
-  base32_encode(desc_id_base32, sizeof(desc_id_base32),
-                desc_id, DIGEST_LEN);
+  tor_assert(desc_id_base32);
 
   /* Determine responsible dirs. Even if we can't get all we want, work with
    * the ones we have. If it's empty, we'll notice below. */
@@ -705,7 +701,7 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query,
 
   /* Automatically pick an hs dir if none given. */
   if (!rs_hsdir) {
-    hs_dir = pick_hsdir(desc_id);
+    hs_dir = pick_hsdir(desc_id, desc_id_base32);
     if (!hs_dir) {
       /* No suitable hs dir can be found, stop right now. */
       return 0;
