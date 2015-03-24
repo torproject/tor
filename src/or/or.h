@@ -2131,9 +2131,6 @@ typedef struct routerstatus_t {
    * if the number of traits we care about ever becomes incredibly big. */
   unsigned int version_known:1;
 
-  /** True iff this router is a version that, if it caches directory info,
-   * we can get microdescriptors from. */
-  unsigned int version_supports_microdesc_cache:1;
   /** True iff this router has a version that allows it to accept EXTEND2
    * cells */
   unsigned int version_supports_extend2_cells:1;
