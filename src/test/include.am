@@ -1,10 +1,11 @@
-TESTS += src/test/test src/test/test-slow
+TESTS += src/test/test src/test/test-slow src/test/test-memwipe
 
 noinst_PROGRAMS+= src/test/bench
 if UNITTESTS_ENABLED
 noinst_PROGRAMS+= \
 	src/test/test \
 	src/test/test-slow \
+	src/test/test-memwipe \
 	src/test/test-child \
 	src/test/test_workqueue
 endif
@@ -73,6 +74,9 @@ src_test_test_slow_SOURCES = \
 	src/test/testing_common.c \
 	src/ext/tinytest.c
 
+src_test_test_memwipe_SOURCES = \
+	src/test/test-memwipe.c
+
 
 src_test_test_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 
@@ -89,7 +93,7 @@ src_test_test_workqueue_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 src_test_test_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
         @TOR_LDFLAGS_libevent@
 src_test_test_LDADD = src/or/libtor-testing.a src/common/libor-testing.a \
-	src/common/libor-crypto-testing.a $(LIBDONNA) \
+	src/common/libor-crypto-testing.a $(LIBDONNA) src/common/libor.a \
 	src/common/libor-event-testing.a src/trunnel/libor-trunnel-testing.a \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
 	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@ \
@@ -99,6 +103,11 @@ src_test_test_slow_CPPFLAGS = $(src_test_test_CPPFLAGS)
 src_test_test_slow_CFLAGS = $(src_test_test_CFLAGS)
 src_test_test_slow_LDADD = $(src_test_test_LDADD)
 src_test_test_slow_LDFLAGS = $(src_test_test_LDFLAGS)
+
+src_test_test_memwipe_CPPFLAGS = $(src_test_test_CPPFLAGS)
+src_test_test_memwipe_CFLAGS = $(src_test_test_CFLAGS)
+src_test_test_memwipe_LDADD = $(src_test_test_LDADD)
+src_test_test_memwipe_LDFLAGS = $(src_test_test_LDFLAGS)
 
 src_test_bench_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
         @TOR_LDFLAGS_libevent@
