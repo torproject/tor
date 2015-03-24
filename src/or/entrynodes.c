@@ -571,22 +571,6 @@ remove_obsolete_entry_guards(time_t now)
     } else if (tor_version_parse(ver, &v)) {
       msg = "does not seem to be from any recognized version of Tor";
       version_is_bad = 1;
-    } else {
-      char *tor_ver = NULL;
-      tor_asprintf(&tor_ver, "Tor %s", ver);
-      if ((tor_version_as_new_as(tor_ver, "0.1.0.10-alpha") &&
-           !tor_version_as_new_as(tor_ver, "0.1.2.16-dev")) ||
-          (tor_version_as_new_as(tor_ver, "0.2.0.0-alpha") &&
-           !tor_version_as_new_as(tor_ver, "0.2.0.6-alpha")) ||
-          /* above are bug 440; below are bug 1217 */
-          (tor_version_as_new_as(tor_ver, "0.2.1.3-alpha") &&
-           !tor_version_as_new_as(tor_ver, "0.2.1.23")) ||
-          (tor_version_as_new_as(tor_ver, "0.2.2.0-alpha") &&
-           !tor_version_as_new_as(tor_ver, "0.2.2.7-alpha"))) {
-        msg = "was selected without regard for guard bandwidth";
-        version_is_bad = 1;
-      }
-      tor_free(tor_ver);
     }
     if (!version_is_bad && entry->chosen_on_date + guard_lifetime < now) {
       /* It's been too long since the date listed in our state file. */
