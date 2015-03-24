@@ -566,7 +566,7 @@ on dist-master.
 9) Email the packagers (cc'ing tor-assistants) that a new tarball is up.
    The current list of packagers is:
        {weasel,gk} at torproject dot org
-       {blueneess} at gentoo dot org
+       {blueness} at gentoo dot org
 
 10) Add the version number to Trac.  To do this, go to Trac, log in,
 select "Admin" near the top of the screen, then select "Versions" from
