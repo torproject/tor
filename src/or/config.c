@@ -2566,6 +2566,62 @@ options_validate_cb(void *old_options, void *options, void *default_options,
                           from_setconf, msg);
 }
 
+#define REJECT(arg) \
+  STMT_BEGIN *msg = tor_strdup(arg); return -1; STMT_END
+#define COMPLAIN(args...) \
+  STMT_BEGIN log_warn(LD_CONFIG, args); STMT_END
+
+/** Log a warning message iff <b>filepath</b> is not absolute.
+ * Warning message must contain option name <b>option</b> and
+ * an absolute path that <b>filepath<b> will resolve to.
+ *
+ * In case <b>filepath</b> is absolute, do nothing.
+ */
+static void
+warn_if_option_path_is_relative(const char *option,
+                                char *filepath)
+{
+  if (filepath &&path_is_relative(filepath))
+    COMPLAIN("Path for %s (%s) is relative and will resolve to %s."
+             " Is this what you wanted?",option,filepath,
+             make_path_absolute(filepath));
+}
+
+/** Scan <b>options</b> for occurances of relative file/directory
+ * path and log a warning whenever it is found.
+ */
+static void
+warn_about_relative_paths(or_options_t *options)
+{
+  tor_assert(options);
+
+  warn_if_option_path_is_relative("CookieAuthFile",
+                                  options->CookieAuthFile);
+  warn_if_option_path_is_relative("ExtORPortCookieAuthFile",
+                                  options->ExtORPortCookieAuthFile);
+  warn_if_option_path_is_relative("DirPortFrontPage",
+                                  options->DirPortFrontPage);
+  warn_if_option_path_is_relative("PortForwardingHelper",
+                                  options->PortForwardingHelper);
+  warn_if_option_path_is_relative("V3BandwidthsFile",
+                                  options->V3BandwidthsFile);
+  warn_if_option_path_is_relative("ControlPortWriteToFile",
+                                  options->ControlPortWriteToFile);
+  warn_if_option_path_is_relative("GeoIPFile",options->GeoIPFile);
+  warn_if_option_path_is_relative("GeoIPv6File",options->GeoIPv6File);
+  warn_if_option_path_is_relative("Log",options->DebugLogFile);
+  warn_if_option_path_is_relative("AccelDir",options->AccelDir);
+  warn_if_option_path_is_relative("Log",options->DebugLogFile);
+  warn_if_option_path_is_relative("DataDirectory",options->DataDirectory);
+  warn_if_option_path_is_relative("PidFile",options->PidFile);
+
+  for (config_line_t *hs_line = options->RendConfigLines; hs_line;
+       hs_line = hs_line->next) {
+    if (!strcasecmp(hs_line->key, "HiddenServiceDir"))
+      warn_if_option_path_is_relative("HiddenServiceDir",hs_line->value);
+  }
+}
+
 /** Return 0 if every setting in <b>options</b> is reasonable, is a
  * permissible transition from <b>old_options</b>, and none of the
  * testing-only settings differ from <b>default_options</b> unless in
@@ -2587,12 +2643,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
   config_line_t *cl;
   const char *uname = get_uname();
   int n_ports=0;
-#define REJECT(arg) \
-  STMT_BEGIN *msg = tor_strdup(arg); return -1; STMT_END
-#define COMPLAIN(arg) STMT_BEGIN log_warn(LD_CONFIG, arg); STMT_END
 
   tor_assert(msg);
   *msg = NULL;
+
+  warn_about_relative_paths(options);
 
   if (server_mode(options) &&
       (!strcmpstart(uname, "Windows 95") ||
@@ -3755,9 +3810,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
              "combination.");
 
   return 0;
+}
+
 #undef REJECT
 #undef COMPLAIN
-}
 
 /* Given the value that the user has set for MaxMemInQueues, compute the
  * actual maximum value.  We clip this value if it's too low, and autodetect

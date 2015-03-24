@@ -1,0 +1,4 @@
+  o Minor features:
+    - Complain (i.e. print a warning) whenever we find a relative
+      file path being used as torrc option. Resolves issue 14018.
+
