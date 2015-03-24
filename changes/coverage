@@ -1,0 +1,6 @@
+  o Minor features:
+    - Remove assertions during builds to determine Tor's test coverage.
+      We don't want to trigger these even in assertions, so including
+      them artificially makes our branch coverage look worse than it is.
+      This patch provides the new test-stem-full and coverage-html-full
+      configure options. Implements ticket 15400.

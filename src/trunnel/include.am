@@ -23,7 +23,7 @@ src_trunnel_libor_trunnel_a_SOURCES = $(TRUNNELSOURCES)
 src_trunnel_libor_trunnel_a_CPPFLAGS = -DTRUNNEL_LOCAL_H $(AM_CPPFLAGS)
 
 src_trunnel_libor_trunnel_testing_a_SOURCES = $(TRUNNELSOURCES)
-src_trunnel_libor_trunnel_testing_a_CPPFLAGS = -DTOR_UNIT_TESTS -DTRUNNEL_LOCAL_H $(AM_CPPFLAGS)
+src_trunnel_libor_trunnel_testing_a_CPPFLAGS = -DTRUNNEL_LOCAL_H $(AM_CPPFLAGS) $(TEST_CPPFLAGS)
 src_trunnel_libor_trunnel_testing_a_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
 
 noinst_HEADERS+= $(TRUNNELHEADERS)

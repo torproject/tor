@@ -331,7 +331,7 @@ static void
 aes_set_key(aes_cnt_cipher_t *cipher, const char *key, int key_bits)
 {
   if (should_use_EVP) {
-    const EVP_CIPHER *c;
+    const EVP_CIPHER *c = 0;
     switch (key_bits) {
       case 128: c = EVP_aes_128_ecb(); break;
       case 192: c = EVP_aes_192_ecb(); break;

@@ -35,8 +35,10 @@ EXTRA_DIST+= \
 
 if COVERAGE_ENABLED
 TEST_CFLAGS=-fno-inline -fprofile-arcs -ftest-coverage
+TEST_CPPFLAGS=-DTOR_UNIT_TESTS -DTOR_COVERAGE
 else
 TEST_CFLAGS=
+TEST_CPPFLAGS=-DTOR_UNIT_TESTS
 endif
 
 #install-data-local:
@@ -80,6 +82,13 @@ test-stem: $(TESTING_TOR_BINARY)
 		echo "To run these tests, git clone https://git.torproject.org/stem.git/ ; export STEM_SOURCE_DIR=\`pwd\`/stem"; \
 	fi
 
+test-stem-full: $(TESTING_TOR_BINARY)
+	@if test -d "$$STEM_SOURCE_DIR"; then \
+		"$$STEM_SOURCE_DIR"/run_tests.py --tor $(TESTING_TOR_BINARY) --all --log notice --target RUN_ALL,ONLINE -v; \
+	else \
+		echo '$$STEM_SOURCE_DIR was not set.'; echo; \
+		echo "To run these tests, git clone https://git.torproject.org/stem.git/ ; export STEM_SOURCE_DIR=\`pwd\`/stem"; \
+	fi
 
 reset-gcov:
 	rm -f $(top_builddir)/src/*/*.gcda $(top_builddir)/src/*/*/*.gcda
@@ -98,6 +107,19 @@ if COVERAGE_ENABLED
 else
 	@printf "Not configured with --enable-coverage, run ./configure --enable-coverage\n"
 endif
+
+coverage-html-full: all
+	test -e "`which lcov`" || (echo "lcov must be installed. See <http://ltp.sourceforge.net/coverage/lcov.php>." && false)
+	test -d "$(HTML_COVER_DIR)" || mkdir -p "$(HTML_COVER_DIR)"
+	lcov --rc lcov_branch_coverage=1 --directory ./src --zerocounters
+	$(MAKE) reset-gcov
+	$(MAKE) check
+	$(MAKE) test-stem-full
+	CHUTNEY_TOR=tor-cov CHUTNEY_TOR_GENCERT=tor-cov-gencert $(top_srcdir)/src/test/test-network.sh
+	CHUTNEY_TOR=tor-cov CHUTNEY_TOR_GENCERT=tor-cov-gencert $(top_srcdir)/src/test/test-network.sh --flavor hs
+	lcov --capture --rc lcov_branch_coverage=1 --no-external --directory . --output-file "$(HTML_COVER_DIR)/lcov.tmp"
+	lcov --remove "$(HTML_COVER_DIR)/lcov.tmp" --rc lcov_branch_coverage=1 'test/*' 'ext/tinytest*' '/usr/*' --output-file "$(HTML_COVER_DIR)/lcov.info"
+	genhtml --branch-coverage -o "$(HTML_COVER_DIR)" "$(HTML_COVER_DIR)/lcov.info"
 
 # Avoid strlcpy.c, strlcat.c, aes.c, OpenBSD_malloc_Linux.c, sha256.c,
 # eventdns.[hc], tinytest*.[ch]

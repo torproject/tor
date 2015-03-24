@@ -179,10 +179,14 @@ cscope.*
 # /src/tools/
 /src/tools/tor-checkkey
 /src/tools/tor-resolve
+/src/tools/tor-cov-resolve
 /src/tools/tor-gencert
+/src/tools/tor-cov-gencert
 /src/tools/tor-checkkey.exe
 /src/tools/tor-resolve.exe
+/src/tools/tor-cov-resolve.exe
 /src/tools/tor-gencert.exe
+/src/tools/tor-cov-gencert.exe
 /src/tools/Makefile
 /src/tools/Makefile.in
 
