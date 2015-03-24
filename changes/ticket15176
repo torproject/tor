@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Refactor main loop to extract the 'loop' part.  This makes it easier
-      to run Tor under Shadow. Closes ticket 15176.

@@ -1,6 +1,0 @@
-  o Minor bugfixes (pluggable transports):
-    - Initialize the extended OR Port authentication cookie before launching
-      pluggable transports. This prevents a race condition that occured when
-      server-side pluggable transports would cache the authentication cookie
-      before it has been (re)generated. Fixes bug 15240; bugfix on
-      0.2.5.1-alpha.

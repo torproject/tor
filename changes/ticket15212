@@ -1,6 +1,0 @@
-  o Minor features (heartbeat):
-
-    - On relays, report how many connections we negotiated using each
-      version of the Tor link protocols. This information will let us
-      know if removing support for very old versions of the Tor
-      protocols is harming the network. Closes ticket 15212.
