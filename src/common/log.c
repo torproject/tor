@@ -140,6 +140,9 @@ static size_t pending_startup_messages_len;
  * configured. */
 static int queue_startup_messages = 1;
 
+/** True iff __PRETTY_FUNCTION__ includes parenthesized arguments. */
+static int pretty_fn_has_parens = 0;
+
 /** Don't store more than this many bytes of messages while waiting for the
  * logs to get configured. */
 #define MAX_STARTUP_MSG_LEN (1<<16)
@@ -313,7 +316,9 @@ format_msg(char *buf, size_t buf_len,
   }
 
   if (funcname && should_log_function_name(domain, severity)) {
-    r = tor_snprintf(buf+n, buf_len-n, "%s(): ", funcname);
+    r = tor_snprintf(buf+n, buf_len-n,
+                     pretty_fn_has_parens ? "%s: " : "%s(): ",
+                     funcname);
     if (r<0)
       n = strlen(buf);
     else
@@ -939,6 +944,11 @@ init_logging(int disable_startup_queue)
     tor_mutex_init(&log_mutex);
     log_mutex_initialized = 1;
   }
+#ifdef __GNUC__
+  if (strchr(__PRETTY_FUNCTION__, '(')) {
+    pretty_fn_has_parens = 1;
+  }
+#endif
   if (pending_cb_messages == NULL)
     pending_cb_messages = smartlist_new();
   if (disable_startup_queue)
