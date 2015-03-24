@@ -5934,7 +5934,8 @@ parse_port_config(smartlist_t *out,
         port = 1;
     } else if (!strcmp(addrport, "auto")) {
       port = CFG_AUTO_PORT;
-      tor_addr_parse(&addr, defaultaddr);
+      int af = tor_addr_parse(&addr, defaultaddr);
+      tor_assert(af >= 0);
     } else if (!strcasecmpend(addrport, ":auto")) {
       char *addrtmp = tor_strndup(addrport, strlen(addrport)-5);
       port = CFG_AUTO_PORT;
@@ -5949,7 +5950,8 @@ parse_port_config(smartlist_t *out,
          "9050" might be a valid address. */
       port = (int) tor_parse_long(addrport, 10, 0, 65535, &ok, NULL);
       if (ok) {
-        tor_addr_parse(&addr, defaultaddr);
+        int af = tor_addr_parse(&addr, defaultaddr);
+        tor_assert(af >= 0);
       } else if (tor_addr_port_lookup(addrport, &addr, &ptmp) == 0) {
         if (ptmp == 0) {
           log_warn(LD_CONFIG, "%sPort line has address but no port", portname);
