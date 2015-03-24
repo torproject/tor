@@ -167,6 +167,7 @@ cscope.*
 /src/test/test-slow
 /src/test/test-bt-cl
 /src/test/test-child
+/src/test/test-memwipe
 /src/test/test-ntor-cl
 /src/test/test_workqueue
 /src/test/test.exe
