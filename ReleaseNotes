@@ -5,17 +5,16 @@ each development snapshot, see the ChangeLog file.
 
 
 Changes in version 0.2.6.6 - 2015-0?-??
-
   Tor 0.2.6.6 is the first stable release in the 0.2.6 series.
 
   It adds numerous safety, security, correctness, and performance
-  improvements. Client programs can be configured to use more kinds
-  of sockets, AutomapHosts works better, the multithreading backend
-  is improved, cell transmission is refactored, test coverage is
-  much higher, more denial-of-service attacks are handled, guard
-  selection is improved to handle long-term guards better, pluggable
-  transports should work a bit better, and some annoying hidden
-  service performance bugs should be addressed.
+  improvements. Client programs can be configured to use more kinds of
+  sockets, AutomapHosts works better, the multithreading backend is
+  improved, cell transmission is refactored, test coverage is much
+  higher, more denial-of-service attacks are handled, guard selection is
+  improved to handle long-term guards better, pluggable transports
+  should work a bit better, and some annoying hidden service performance
+  bugs should be addressed.
 
   o New compiler and system requirements:
     - Tor 0.2.6.x requires that your compiler support more of the C99
@@ -676,6 +675,9 @@ Changes in version 0.2.6.6 - 2015-0?-??
     - Fix the ioctl()-based network interface lookup code so that it
       will work on systems that have variable-length struct ifreq, for
       example Mac OS X.
+    - Use the correct datatype in the SipHash-2-4 function to prevent
+      compilers from assuming any sort of alignment. Fixes bug 15436;
+      bugfix on 0.2.5.3-alpha.
 
   o Minor bugfixes (preventative security, C safety):
     - When reading a hexadecimal, base-32, or base-64 encoded value from

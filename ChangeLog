@@ -1,3 +1,21 @@
+Changes in version 0.2.6.6 - 2015-0?-??
+  Tor 0.2.6.6 is the first stable release in the 0.2.6 series.
+
+  It adds numerous safety, security, correctness, and performance
+  improvements. Client programs can be configured to use more kinds of
+  sockets, AutomapHosts works better, the multithreading backend is
+  improved, cell transmission is refactored, test coverage is much
+  higher, more denial-of-service attacks are handled, guard selection is
+  improved to handle long-term guards better, pluggable transports
+  should work a bit better, and some annoying hidden service performance
+  bugs should be addressed.
+
+  o Minor bugfixes (portability):
+    - Use the correct datatype in the SipHash-2-4 function to prevent
+      compilers from assuming any sort of alignment. Fixes bug 15436;
+      bugfix on 0.2.5.3-alpha.
+
+
 Changes in version 0.2.6.5-rc - 2015-03-18
   Tor 0.2.6.5-rc is the second and (hopefully) last release candidate in
   the 0.2.6. It fixes a small number of bugs found in 0.2.6.4-rc.

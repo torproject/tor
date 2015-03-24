@@ -1,4 +1,0 @@
-  o Minor bugfixes (portability):
-    - Use the correct datatype in the SipHash-2-4 function to prevent compilers
-      from assuming any sort of alignment.  Fixes bug 15436; bugfix on
-      0.2.5.3-alpha.
