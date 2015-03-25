@@ -2601,8 +2601,6 @@ warn_about_relative_paths(or_options_t *options)
                                   options->ExtORPortCookieAuthFile);
   warn_if_option_path_is_relative("DirPortFrontPage",
                                   options->DirPortFrontPage);
-  warn_if_option_path_is_relative("PortForwardingHelper",
-                                  options->PortForwardingHelper);
   warn_if_option_path_is_relative("V3BandwidthsFile",
                                   options->V3BandwidthsFile);
   warn_if_option_path_is_relative("ControlPortWriteToFile",
@@ -2611,7 +2609,6 @@ warn_about_relative_paths(or_options_t *options)
   warn_if_option_path_is_relative("GeoIPv6File",options->GeoIPv6File);
   warn_if_option_path_is_relative("Log",options->DebugLogFile);
   warn_if_option_path_is_relative("AccelDir",options->AccelDir);
-  warn_if_option_path_is_relative("Log",options->DebugLogFile);
   warn_if_option_path_is_relative("DataDirectory",options->DataDirectory);
   warn_if_option_path_is_relative("PidFile",options->PidFile);
 
