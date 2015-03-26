@@ -1,0 +1,5 @@
+  o Minor features (pluggable transports):
+    - When launching managed pluggable transports on linux systems,
+      attempt to have the kernel deliver a SIGTERM on tor exit if
+      the pluggable transport process is still running. Resolves
+      ticket 15471.

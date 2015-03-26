@@ -95,6 +95,9 @@
 #ifdef HAVE_SYS_WAIT_H
 #include <sys/wait.h>
 #endif
+#if defined(HAVE_SYS_PRCTL_H) && defined(__linux__)
+#include <sys/prctl.h>
+#endif
 
 #ifdef __clang_analyzer__
 #undef MALLOC_ZERO_WORKS
@@ -4180,6 +4183,15 @@ tor_spawn_background(const char *const filename, const char **argv,
   if (0 == pid) {
     /* In child */
 
+#if defined(HAVE_SYS_PRCTL_H) && defined(__linux__)
+    /* Attempt to have the kernel issue a SIGTERM if the parent
+     * goes away. Certain attributes of the binary being execve()ed
+     * will clear this during the execve() call, but it's better
+     * than nothing.
+     */
+    prctl(PR_SET_PDEATHSIG, SIGTERM);
+#endif
+
     child_state = CHILD_STATE_DUPOUT;
 
     /* Link child stdout to the write end of the pipe */
@@ -4225,8 +4237,10 @@ tor_spawn_background(const char *const filename, const char **argv,
        does not modify the arguments */
     if (env)
       execve(filename, (char *const *) argv, env->unixoid_environment_block);
-    else
-      execvp(filename, (char *const *) argv);
+    else {
+      static char *new_env[] = { NULL };
+      execve(filename, (char *const *) argv, new_env);
+    }
 
     /* If we got here, the exec or open(/dev/null) failed */
 
