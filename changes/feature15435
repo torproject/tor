@@ -1,0 +1,5 @@
+  o Minor features (pluggable Transports):
+    - When launching managed pluggable transports, setup a valid open stdin
+      in the child process that can be used to detect if tor has terminated.
+      The "TOR_PT_EXIT_ON_STDIN_CLOSE" enviornment variable can be used by
+      implementations to detect this new behavior. Resolves ticket 15435.

@@ -3939,9 +3939,11 @@ process_handle_new(void)
   process_handle_t *out = tor_malloc_zero(sizeof(process_handle_t));
 
 #ifdef _WIN32
+  out->stdin_pipe = INVALID_HANDLE_VALUE;
   out->stdout_pipe = INVALID_HANDLE_VALUE;
   out->stderr_pipe = INVALID_HANDLE_VALUE;
 #else
+  out->stdin_pipe = -1;
   out->stdout_pipe = -1;
   out->stderr_pipe = -1;
 #endif
@@ -3981,7 +3983,7 @@ process_handle_waitpid_cb(int status, void *arg)
 #define CHILD_STATE_FORK 3
 #define CHILD_STATE_DUPOUT 4
 #define CHILD_STATE_DUPERR 5
-#define CHILD_STATE_REDIRECT 6
+#define CHILD_STATE_DUPIN 6
 #define CHILD_STATE_CLOSEFD 7
 #define CHILD_STATE_EXEC 8
 #define CHILD_STATE_FAILEXEC 9
@@ -4015,6 +4017,8 @@ tor_spawn_background(const char *const filename, const char **argv,
   HANDLE stdout_pipe_write = NULL;
   HANDLE stderr_pipe_read = NULL;
   HANDLE stderr_pipe_write = NULL;
+  HANDLE stdin_pipe_read = NULL;
+  HANDLE stdin_pipe_write = NULL;
   process_handle_t *process_handle;
   int status;
 
@@ -4060,6 +4064,20 @@ tor_spawn_background(const char *const filename, const char **argv,
     return status;
   }
 
+  /* Set up pipe for stdin */
+  if (!CreatePipe(&stdin_pipe_read, &stdin_pipe_write, &saAttr, 0)) {
+    log_warn(LD_GENERAL,
+      "Failed to create pipe for stdin communication with child process: %s",
+      format_win32_error(GetLastError()));
+    return status;
+  }
+  if (!SetHandleInformation(stderr_pipe_write, HANDLE_FLAG_INHERIT, 0)) {
+    log_warn(LD_GENERAL,
+      "Failed to configure pipe for stdin communication with child "
+      "process: %s", format_win32_error(GetLastError()));
+    return status;
+  }
+
   /* Create the child process */
 
   /* Windows expects argv to be a whitespace delimited string, so join argv up
@@ -4074,7 +4092,7 @@ tor_spawn_background(const char *const filename, const char **argv,
   siStartInfo.cb = sizeof(STARTUPINFO);
   siStartInfo.hStdError = stderr_pipe_write;
   siStartInfo.hStdOutput = stdout_pipe_write;
-  siStartInfo.hStdInput = NULL;
+  siStartInfo.hStdInput = stdin_pipe_read;
   siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
 
   /* Create the child process */
@@ -4104,6 +4122,7 @@ tor_spawn_background(const char *const filename, const char **argv,
     /* TODO: Close hProcess and hThread in process_handle->pid? */
     process_handle->stdout_pipe = stdout_pipe_read;
     process_handle->stderr_pipe = stderr_pipe_read;
+    process_handle->stdin_pipe = stdin_pipe_write;
     status = process_handle->status = PROCESS_STATUS_RUNNING;
   }
 
@@ -4114,6 +4133,7 @@ tor_spawn_background(const char *const filename, const char **argv,
   pid_t pid;
   int stdout_pipe[2];
   int stderr_pipe[2];
+  int stdin_pipe[2];
   int fd, retval;
   ssize_t nbytes;
   process_handle_t *process_handle;
@@ -4138,7 +4158,7 @@ tor_spawn_background(const char *const filename, const char **argv,
 
   child_state = CHILD_STATE_PIPE;
 
-  /* Set up pipe for redirecting stdout and stderr of child */
+  /* Set up pipe for redirecting stdout, stderr, and stdin of child */
   retval = pipe(stdout_pipe);
   if (-1 == retval) {
     log_warn(LD_GENERAL,
@@ -4155,6 +4175,20 @@ tor_spawn_background(const char *const filename, const char **argv,
 
     close(stdout_pipe[0]);
     close(stdout_pipe[1]);
+
+    return status;
+  }
+
+  retval = pipe(stdin_pipe);
+  if (-1 == retval) {
+    log_warn(LD_GENERAL,
+      "Failed to set up pipe for stdin communication with child process: %s",
+       strerror(errno));
+
+    close(stdout_pipe[0]);
+    close(stdout_pipe[1]);
+    close(stderr_pipe[0]);
+    close(stderr_pipe[1]);
 
     return status;
   }
@@ -4194,13 +4228,11 @@ tor_spawn_background(const char *const filename, const char **argv,
     if (-1 == retval)
         goto error;
 
-    child_state = CHILD_STATE_REDIRECT;
+    child_state = CHILD_STATE_DUPIN;
 
-    /* Link stdin to /dev/null */
-    fd = open("/dev/null", O_RDONLY); /* NOT cloexec, obviously. */
-    if (fd != -1)
-      dup2(fd, STDIN_FILENO);
-    else
+    /* Link child stdin to the read end of the pipe */
+    retval = dup2(stdin_pipe[0], STDIN_FILENO);
+    if (-1 == retval)
       goto error;
 
     child_state = CHILD_STATE_CLOSEFD;
@@ -4209,7 +4241,8 @@ tor_spawn_background(const char *const filename, const char **argv,
     close(stderr_pipe[1]);
     close(stdout_pipe[0]);
     close(stdout_pipe[1]);
-    close(fd);
+    close(stdin_pipe[0]);
+    close(stdin_pipe[1]);
 
     /* Close all other fds, including the read end of the pipe */
     /* XXX: We should now be doing enough FD_CLOEXEC setting to make
@@ -4259,6 +4292,8 @@ tor_spawn_background(const char *const filename, const char **argv,
 
   if (-1 == pid) {
     log_warn(LD_GENERAL, "Failed to fork child process: %s", strerror(errno));
+    close(stdin_pipe[0]);
+    close(stdin_pipe[1]);
     close(stdout_pipe[0]);
     close(stdout_pipe[1]);
     close(stderr_pipe[0]);
@@ -4295,16 +4330,28 @@ tor_spawn_background(const char *const filename, const char **argv,
             strerror(errno));
   }
 
+  /* Return write end of the stdin pipe to caller, and close the read end */
+  process_handle->stdin_pipe = stdin_pipe[1];
+  retval = close(stdin_pipe[0]);
+
+  if (-1 == retval) {
+    log_warn(LD_GENERAL,
+            "Failed to close read end of stdin pipe in parent process: %s",
+            strerror(errno));
+  }
+
   status = process_handle->status = PROCESS_STATUS_RUNNING;
-  /* Set stdout/stderr pipes to be non-blocking */
+  /* Set stdin/stdout/stderr pipes to be non-blocking */
   if (fcntl(process_handle->stdout_pipe, F_SETFL, O_NONBLOCK) < 0 ||
-      fcntl(process_handle->stderr_pipe, F_SETFL, O_NONBLOCK) < 0) {
-    log_warn(LD_GENERAL, "Failed to set stderror/stdout pipes nonblocking "
-             "in parent process: %s", strerror(errno));
+      fcntl(process_handle->stderr_pipe, F_SETFL, O_NONBLOCK) < 0 ||
+      fcntl(process_handle->stdin_pipe, F_SETFL, O_NONBLOCK) < 0) {
+    log_warn(LD_GENERAL, "Failed to set stderror/stdout/stdin pipes "
+             "nonblocking in parent process: %s", strerror(errno));
   }
   /* Open the buffered IO streams */
   process_handle->stdout_handle = fdopen(process_handle->stdout_pipe, "r");
   process_handle->stderr_handle = fdopen(process_handle->stderr_pipe, "r");
+  process_handle->stdin_handle = fdopen(process_handle->stdin_pipe, "r");
 
   *process_handle_out = process_handle;
   return process_handle->status;
@@ -4347,12 +4394,18 @@ tor_process_handle_destroy,(process_handle_t *process_handle,
 
   if (process_handle->stderr_pipe)
     CloseHandle(process_handle->stderr_pipe);
+
+  if (process_handle->stdin_pipe)
+    CloseHandle(process_handle->stdin_pipe);
 #else
   if (process_handle->stdout_handle)
     fclose(process_handle->stdout_handle);
 
   if (process_handle->stderr_handle)
     fclose(process_handle->stderr_handle);
+
+  if (process_handle->stdin_handle)
+    fclose(process_handle->stdin_handle);
 
   clear_waitpid_callback(process_handle->waitpid_cb);
 #endif
