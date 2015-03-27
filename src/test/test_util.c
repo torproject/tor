@@ -19,7 +19,7 @@
 #endif
 #include <math.h>
 #include <ctype.h>
-#include <values.h>
+#include <float.h>
 
 /* XXXX this is a minimal wrapper to make the unit tests compile with the
  * changed tor_timegm interface. */
@@ -4247,9 +4247,9 @@ test_util_cast_double_to_int64(void *arg)
             cast_double_to_int64(-1.0 * pow(2.0, 64.0) - 1.0));
   tt_i64_op(INT64_MIN, ==,
             cast_double_to_int64(-1.0 * pow(2.0, 63.0) - 1.0));
-  tt_i64_op(((int64_t) -1) << 53, ==,
+  tt_i64_op(((uint64_t) -1) << 53, ==,
             cast_double_to_int64(-1.0 * pow(2.0, 53.0)));
-  tt_i64_op((((int64_t) -1) << 53) + 1, ==,
+  tt_i64_op((((uint64_t) -1) << 53) + 1, ==,
             cast_double_to_int64(-1.0 * pow(2.0, 53.0) + 1.0));
   tt_i64_op(-1, ==, cast_double_to_int64(-1.0));
   tt_i64_op(0, ==, cast_double_to_int64(-0.9));
