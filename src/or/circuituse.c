@@ -2284,8 +2284,15 @@ connection_ap_handshake_attach_chosen_circuit(entry_connection_t *conn,
 
   base_conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
 
-  if (!circ->base_.timestamp_dirty)
-    circ->base_.timestamp_dirty = time(NULL);
+  if (!circ->base_.timestamp_dirty) {
+    circ->base_.timestamp_dirty = approx_time();
+  } else if ((conn->entry_cfg.isolation_flags & ISO_SOCKSAUTH) &&
+             (conn->socks_request->usernamelen ||
+              conn->socks_request->passwordlen)) {
+    /* When stream isolation is in use and controlled by an application
+     * we are willing to keep using the stream. */
+    circ->base_.timestamp_dirty = approx_time();
+  }
 
   pathbias_count_use_attempt(circ);
 
