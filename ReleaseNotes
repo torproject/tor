@@ -858,6 +858,8 @@ Changes in version 0.2.6.6 - 2015-03-24
     - Refactor our generic strmap and digestmap types into a single
       implementation, so that we can add a new digest256map
       type trivially.
+
+  o Documentation:
     - Add a doc/TUNING document with tips for handling large numbers of
       TCP connections when running busy Tor relay. Update the warning
       message to point to this file when running out of sockets
