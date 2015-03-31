@@ -614,7 +614,7 @@ test_address_udp_socket_trick_blackbox(void *arg)
    */
 
   retval = get_interface_address6_via_udp_socket_hack(LOG_DEBUG,
-                                                      AF_CCITT,&addr4);
+                                                      AF_INET+AF_INET6,&addr4);
 
   tt_assert(retval == -1);
 
