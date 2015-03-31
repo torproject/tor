@@ -454,7 +454,7 @@ test_address_get_if_addrs_ioctl(void *arg)
 
 #define FAKE_SOCKET_FD (42)
 
-tor_socket_t
+static tor_socket_t
 fake_open_socket(int domain, int type, int protocol)
 {
   (void)domain;
@@ -468,7 +468,7 @@ static int last_connected_socket_fd = 0;
 
 static int connect_retval = 0;
 
-tor_socket_t
+static tor_socket_t
 pretend_to_connect(tor_socket_t socket, const struct sockaddr *address,
                    socklen_t address_len)
 {
@@ -482,11 +482,12 @@ pretend_to_connect(tor_socket_t socket, const struct sockaddr *address,
 
 static struct sockaddr *mock_addr = NULL;
 
-int
+static int
 fake_getsockname(tor_socket_t socket, struct sockaddr *address,
                  socklen_t *address_len)
 {
   socklen_t bytes_to_copy = 0;
+  (void) socket;
 
   if (!mock_addr)
     return -1;
