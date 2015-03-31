@@ -123,6 +123,7 @@ void control_free_all(void);
  * because it is used both as a list of v0 event types, and as indices
  * into the bitfield to determine which controllers want which events.
  */
+/* This bitfield has no event zero    0x0000 */
 #define EVENT_MIN_                    0x0001
 #define EVENT_CIRCUIT_STATUS          0x0001
 #define EVENT_STREAM_STATUS           0x0002
@@ -158,8 +159,28 @@ void control_free_all(void);
 #define EVENT_TRANSPORT_LAUNCHED      0x0020
 #define EVENT_HS_DESC                 0x0021
 #define EVENT_MAX_                    0x0021
-/* If EVENT_MAX_ ever hits 0x003F, we need to make the mask into a
+
+/* sizeof(control_connection_t.event_mask) in bits, currently a uint64_t */
+#define EVENT_CAPACITY_               0x0040
+
+/* If EVENT_MAX_ ever hits 0x0040, we need to make the mask into a
  * different structure, as it can only handle a maximum left shift of 1<<63. */
+
+#if EVENT_MAX_ >= EVENT_CAPACITY_
+#error control_connection_t.event_mask has an event greater than its capacity
+#endif
+
+#define EVENT_MASK_(e)               (((uint64_t)1)<<(e))
+
+#define EVENT_MASK_NONE_             ((uint64_t)0x0)
+
+#define EVENT_MASK_ABOVE_MIN_        ((~((uint64_t)0x0)) << EVENT_MIN_)
+#define EVENT_MASK_BELOW_MAX_        ((~((uint64_t)0x0)) \
+                                      >> (EVENT_CAPACITY_ - EVENT_MAX_ \
+                                          - EVENT_MIN_))
+
+#define EVENT_MASK_ALL_              (EVENT_MASK_ABOVE_MIN_ \
+                                      & EVENT_MASK_BELOW_MAX_)
 
 /* Used only by control.c and test.c */
 STATIC size_t write_escaped_data(const char *data, size_t len, char **out);

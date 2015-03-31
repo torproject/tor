@@ -293,6 +293,104 @@ test_cntev_format_cell_stats(void *arg)
   tor_free(n_chan);
 }
 
+static void
+test_cntev_event_mask(void *arg)
+{
+  unsigned int test_event, selected_event;
+  (void)arg;
+
+  /* Check that nothing is interesting when no events are set */
+  control_testing_set_global_event_mask(EVENT_MASK_NONE_);
+
+  /* Check that nothing is interesting between EVENT_MIN_ and EVENT_MAX_ */
+  for (test_event = EVENT_MIN_; test_event <= EVENT_MAX_; test_event++)
+    tt_assert(!control_event_is_interesting(test_event));
+
+  /* Check that nothing is interesting outside EVENT_MIN_ to EVENT_MAX_
+   * This will break if control_event_is_interesting() checks its arguments */
+  for (test_event = 0; test_event < EVENT_MIN_; test_event++)
+    tt_assert(!control_event_is_interesting(test_event));
+  for (test_event = EVENT_MAX_ + 1;
+       test_event < EVENT_CAPACITY_;
+       test_event++)
+    tt_assert(!control_event_is_interesting(test_event));
+
+  /* Check that all valid events are interesting when all events are set */
+  control_testing_set_global_event_mask(EVENT_MASK_ALL_);
+
+  /* Check that everything is interesting between EVENT_MIN_ and EVENT_MAX_ */
+  for (test_event = EVENT_MIN_; test_event <= EVENT_MAX_; test_event++)
+    tt_assert(control_event_is_interesting(test_event));
+
+  /* Check that nothing is interesting outside EVENT_MIN_ to EVENT_MAX_
+   * This will break if control_event_is_interesting() checks its arguments */
+  for (test_event = 0; test_event < EVENT_MIN_; test_event++)
+    tt_assert(!control_event_is_interesting(test_event));
+  for (test_event = EVENT_MAX_ + 1;
+       test_event < EVENT_CAPACITY_;
+       test_event++)
+    tt_assert(!control_event_is_interesting(test_event));
+
+  /* Check that only that event is interesting when a single event is set */
+  for (selected_event = EVENT_MIN_;
+       selected_event <= EVENT_MAX_;
+       selected_event++) {
+    control_testing_set_global_event_mask(EVENT_MASK_(selected_event));
+
+    /* Check that only this event is interesting
+     * between EVENT_MIN_ and EVENT_MAX_ */
+    for (test_event = EVENT_MIN_; test_event <= EVENT_MAX_; test_event++) {
+      if (test_event == selected_event) {
+        tt_assert(control_event_is_interesting(test_event));
+      } else {
+        tt_assert(!control_event_is_interesting(test_event));
+      }
+    }
+
+    /* Check that nothing is interesting outside EVENT_MIN_ to EVENT_MAX_
+     * This will break if control_event_is_interesting checks its arguments */
+    for (test_event = 0; test_event < EVENT_MIN_; test_event++)
+      tt_assert(!control_event_is_interesting(test_event));
+    for (test_event = EVENT_MAX_ + 1;
+         test_event < EVENT_CAPACITY_;
+         test_event++)
+      tt_assert(!control_event_is_interesting(test_event));
+  }
+
+  /* Check that only that event is not-interesting
+   * when a single event is un-set */
+  for (selected_event = EVENT_MIN_;
+       selected_event <= EVENT_MAX_;
+       selected_event++) {
+    control_testing_set_global_event_mask(
+                                          EVENT_MASK_ALL_
+                                          & ~(EVENT_MASK_(selected_event))
+                                          );
+
+    /* Check that only this event is not-interesting
+     * between EVENT_MIN_ and EVENT_MAX_ */
+    for (test_event = EVENT_MIN_; test_event <= EVENT_MAX_; test_event++) {
+      if (test_event == selected_event) {
+        tt_assert(!control_event_is_interesting(test_event));
+      } else {
+        tt_assert(control_event_is_interesting(test_event));
+      }
+    }
+
+    /* Check that nothing is interesting outside EVENT_MIN_ to EVENT_MAX_
+     * This will break if control_event_is_interesting checks its arguments */
+    for (test_event = 0; test_event < EVENT_MIN_; test_event++)
+      tt_assert(!control_event_is_interesting(test_event));
+    for (test_event = EVENT_MAX_ + 1;
+         test_event < EVENT_CAPACITY_;
+         test_event++)
+      tt_assert(!control_event_is_interesting(test_event));
+  }
+
+ done:
+  ;
+}
+
 #define TEST(name, flags)                                               \
   { #name, test_cntev_ ## name, flags, 0, NULL }
 
@@ -302,6 +400,7 @@ struct testcase_t controller_event_tests[] = {
   TEST(sum_up_cell_stats, 0),
   TEST(append_cell_stats, 0),
   TEST(format_cell_stats, 0),
+  TEST(event_mask, 0),
   END_OF_TESTCASES
 };
 
