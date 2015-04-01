@@ -1023,6 +1023,8 @@ populate_live_entry_guards(smartlist_t *live_entry_guards,
   int retval = 0;
   entry_is_live_flags_t entry_flags = 0;
 
+  (void) dirinfo_type;
+
   { /* Set the flags we want our entry node to have */
     if (need_uptime) {
       entry_flags |= ENTRY_NEED_UPTIME;
