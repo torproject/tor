@@ -79,8 +79,7 @@ LIBTOR_A_SOURCES = \
 	src/or/status.c					\
 	src/or/onion_ntor.c				\
 	$(evdns_source)					\
-	$(tor_platform_source)				\
-	src/or/config_codedigest.c
+	$(tor_platform_source)
 
 src_or_libtor_a_SOURCES = $(LIBTOR_A_SOURCES)
 src_or_libtor_testing_a_SOURCES = $(LIBTOR_A_SOURCES)
@@ -190,8 +189,6 @@ ORHEADERS = \
 
 noinst_HEADERS+= $(ORHEADERS) micro-revision.i
 
-src/or/config_codedigest.o: src/or/or_sha1.i
-
 micro-revision.i: FORCE
 	$(AM_V_GEN)rm -f micro-revision.tmp; \
 	if test -d "$(top_srcdir)/.git" && \
@@ -210,18 +207,6 @@ micro-revision.i: FORCE
 	rm -f micro-revision.tmp; \
 	true
 
-src/or/or_sha1.i: $(src_or_tor_SOURCES) $(src_or_libtor_a_SOURCES) $(ORHEADERS)
-	$(AM_V_GEN)if test "@SHA1SUM@" != none; then \
-	  (cd "$(srcdir)" && "@SHA1SUM@" $(src_or_tor_SOURCES) $(src_or_libtor_a_SOURCES) $(ORHEADERS) ) | \
-	  "@SED@" -n 's/^\(.*\)$$/"\1\\n"/p' > src/or/or_sha1.i; \
-	elif test "@OPENSSL@" != none; then \
-	  (cd "$(srcdir)" && "@OPENSSL@" sha1 $(src_or_tor_SOURCES) $(src_or_libtor_a_SOURCES) $(ORHEADERS)) | \
-	  "@SED@" -n 's/SHA1(\(.*\))= \(.*\)/"\2  \1\\n"/p' > src/or/or_sha1.i; \
-	else \
-	  rm src/or/or_sha1.i; \
-	  touch src/or/or_sha1.i; \
-	fi
-
-CLEANFILES+= src/or/or_sha1.i micro-revision.i src/or/micro-revision.i micro-revision.tmp
+CLEANFILES+= micro-revision.i src/or/micro-revision.i micro-revision.tmp
 
 FORCE:

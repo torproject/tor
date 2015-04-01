@@ -1909,7 +1909,6 @@ static const struct {
   { "-h",                     0 },
   { "--help",                 0 },
   { "--list-torrc-options",   0 },
-  { "--digests",              0 },
   { "--nt-service",           0 },
   { "-nt-service",            0 },
   { NULL, 0 },
@@ -4383,13 +4382,6 @@ options_init_from_torrc(int argc, char **argv)
 
   if (config_line_find(cmdline_only_options, "--version")) {
     printf("Tor version %s.\n",get_version());
-    exit(0);
-  }
-
-  if (config_line_find(cmdline_only_options, "--digests")) {
-    printf("Tor version %s.\n",get_version());
-    printf("%s", libor_get_digests());
-    printf("%s", tor_get_digests());
     exit(0);
   }
 

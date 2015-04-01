@@ -121,7 +121,6 @@ cscope.*
 # /src/common/
 /src/common/Makefile
 /src/common/Makefile.in
-/src/common/common_sha1.i
 /src/common/libor.a
 /src/common/libor-testing.a
 /src/common/libor.lib
@@ -149,7 +148,6 @@ cscope.*
 # /src/or/
 /src/or/Makefile
 /src/or/Makefile.in
-/src/or/or_sha1.i
 /src/or/tor
 /src/or/tor.exe
 /src/or/tor-cov
