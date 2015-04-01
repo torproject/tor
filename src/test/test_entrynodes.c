@@ -162,9 +162,6 @@ populate_live_entry_guards_test_helper(int num_needed)
        False, all guards should have made_contact enabled. */
     tt_int_op(entry->made_contact, OP_EQ, 1);
 
-    /* Since we don't have a routerstatus, all of the entry guards are
-       not directory servers. */
-    tt_int_op(entry->is_dir_cache, OP_EQ, 0);
   } SMARTLIST_FOREACH_END(entry);
 
   /* First, try to get some fast guards. This should fail. */
