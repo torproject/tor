@@ -2015,10 +2015,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
     tor_assert(tok->n_args == 1);
     rs->version_known = 1;
     if (strcmpstart(tok->args[0], "Tor ")) {
-      rs->version_supports_microdesc_cache = 1;
     } else {
-      rs->version_supports_microdesc_cache =
-        tor_version_supports_microdescriptors(tok->args[0]);
       rs->version_supports_extend2_cells =
         tor_version_as_new_as(tok->args[0], "0.2.4.8-alpha");
     }
@@ -4261,14 +4258,6 @@ microdescs_parse_from_string(const char *s, const char *eos,
   smartlist_free(tokens);
 
   return result;
-}
-
-/** Return true iff this Tor version can answer directory questions
- * about microdescriptors. */
-int
-tor_version_supports_microdescriptors(const char *platform)
-{
-  return tor_version_as_new_as(platform, "0.2.3.1-alpha");
 }
 
 /** Parse the Tor version of the platform string <b>platform</b>,

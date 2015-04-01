@@ -1498,9 +1498,6 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
     if ((type & EXTRAINFO_DIRINFO) &&
         !router_supports_extrainfo(node->identity, is_trusted_extrainfo))
       continue;
-    if ((type & MICRODESC_DIRINFO) && !is_trusted &&
-        !node->rs->version_supports_microdesc_cache)
-      continue;
     if (for_guard && node->using_as_guard)
       continue; /* Don't make the same node a guard twice. */
     if (try_excluding &&
