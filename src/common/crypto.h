@@ -122,8 +122,7 @@ int crypto_global_cleanup(void);
 crypto_pk_t *crypto_pk_new(void);
 void crypto_pk_free(crypto_pk_t *env);
 
-void crypto_set_tls_dh_prime(const char *dynamic_dh_modulus_fname);
-
+void crypto_set_tls_dh_prime(void);
 crypto_cipher_t *crypto_cipher_new(const char *key);
 crypto_cipher_t *crypto_cipher_new_with_iv(const char *key, const char *iv);
 void crypto_cipher_free(crypto_cipher_t *env);
@@ -297,4 +296,3 @@ struct dh_st *crypto_dh_get_dh_(crypto_dh_t *dh);
 void crypto_add_spaces_to_fp(char *out, size_t outlen, const char *in);
 
 #endif
-
