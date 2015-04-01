@@ -646,7 +646,6 @@ rend_encode_v2_descriptors(smartlist_t *descs_out,
         rend_encoded_v2_service_descriptor_free(enc);
         goto err;
     }
-    desc_str[written++] = '\n';
     desc_str[written++] = 0;
     /* Check if we can parse our own descriptor. */
     if (!rend_desc_v2_is_parsable(enc)) {
