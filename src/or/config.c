@@ -1499,9 +1499,6 @@ options_act(const or_options_t *old_options)
     finish_daemon(options->DataDirectory);
   }
 
-  /* Probably not needed any longer XXXX */
-  crypto_set_tls_dh_prime();
-
   /* We want to reinit keys as needed before we do much of anything else:
      keys are important, and other things can depend on them. */
   if (transition_affects_workers ||
