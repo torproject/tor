@@ -61,7 +61,6 @@ LIBOR_A_SOURCES = \
   src/common/log.c					\
   src/common/memarea.c					\
   src/common/util.c					\
-  src/common/util_codedigest.c				\
   src/common/util_process.c				\
   src/common/sandbox.c					\
   src/common/workqueue.c				\
@@ -132,18 +131,4 @@ COMMONHEADERS = \
   src/common/workqueue.h
 
 noinst_HEADERS+= $(COMMONHEADERS)
-
-CLEANFILES+= src/common/common_sha1.i
-
-src/common/common_sha1.i: $(libor_SOURCES) $(libor_crypto_a_SOURCES) $(COMMONHEADERS)
-	$(AM_V_GEN)if test "@SHA1SUM@" != none; then \
-	  (cd "$(srcdir)" && "@SHA1SUM@" $(src_common_libor_SOURCES) $(src_common_libor_crypto_a_SOURCES) $(COMMONHEADERS)) | "@SED@" -n 's/^\(.*\)$$/"\1\\n"/p' > $@; \
-	elif test "@OPENSSL@" != none; then \
-	  (cd "$(srcdir)" && "@OPENSSL@" sha1 $(src_common_libor_SOURCES) $(src_Common_libor_crypto_a_SOURCES) $(COMMONHEADERS)) | "@SED@" -n 's/SHA1(\(.*\))= \(.*\)/"\2  \1\\n"/p' > $@; \
-	else \
-	  rm $@; \
-	  touch $@; \
-	fi
-
-src/common/util_codedigest.o: src/common/common_sha1.i
 

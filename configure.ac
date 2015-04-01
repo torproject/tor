@@ -283,9 +283,6 @@ if test "$tor_cv_c_c99_designated_init" != "yes"; then
   AC_MSG_ERROR([Your compiler doesn't support c99 designated initializers. This is required as of Tor 0.2.6.x])
 fi
 
-AC_PATH_PROG([SHA1SUM], [sha1sum], none)
-AC_PATH_PROG([OPENSSL], [openssl], none)
-
 TORUSER=_tor
 AC_ARG_WITH(tor-user,
         AS_HELP_STRING(--with-tor-user=NAME, [specify username for tor daemon]),
