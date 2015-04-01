@@ -107,9 +107,11 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
 #ifdef _WIN32
   tt_assert(process_handle->stdout_pipe != INVALID_HANDLE_VALUE);
   tt_assert(process_handle->stderr_pipe != INVALID_HANDLE_VALUE);
+  tt_assert(process_handle->stdin_pipe != INVALID_HANDLE_VALUE);
 #else
   tt_assert(process_handle->stdout_pipe >= 0);
   tt_assert(process_handle->stderr_pipe >= 0);
+  tt_assert(process_handle->stdin_pipe >= 0);
 #endif
 
   /* Check stdout */

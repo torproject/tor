@@ -474,12 +474,15 @@ struct process_handle_t {
   /** One of the PROCESS_STATUS_* values */
   int status;
 #ifdef _WIN32
+  HANDLE stdin_pipe;
   HANDLE stdout_pipe;
   HANDLE stderr_pipe;
   PROCESS_INFORMATION pid;
 #else
+  int stdin_pipe;
   int stdout_pipe;
   int stderr_pipe;
+  FILE *stdin_handle;
   FILE *stdout_handle;
   FILE *stderr_handle;
   pid_t pid;
