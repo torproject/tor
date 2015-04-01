@@ -1,0 +1,3 @@
+  o Minor bugfixes (hidden service):
+    - Remove an extraneous newline character from the end of hidden
+      service descriptors. Fixes bug 15296; bugfix on 0.2.0.10-alpha.
