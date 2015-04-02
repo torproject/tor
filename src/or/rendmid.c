@@ -157,7 +157,8 @@ rend_mid_introduce(or_circuit_t *circ, const uint8_t *request,
            "Blocking multiple introductions on the same circuit. "
            "Someone might be trying to attack a hidden service through "
            "this relay.");
-    goto err;
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
+    return -1;
   }
 
   circ->already_received_introduce1 = 1;
