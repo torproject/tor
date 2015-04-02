@@ -4074,7 +4074,7 @@ tor_spawn_background(const char *const filename, const char **argv,
       format_win32_error(GetLastError()));
     return status;
   }
-  if (!SetHandleInformation(stderr_pipe_write, HANDLE_FLAG_INHERIT, 0)) {
+  if (!SetHandleInformation(stdin_pipe_write, HANDLE_FLAG_INHERIT, 0)) {
     log_warn(LD_GENERAL,
       "Failed to configure pipe for stdin communication with child "
       "process: %s", format_win32_error(GetLastError()));
