@@ -1,0 +1,5 @@
+  o Minor features (DoS-resistance):
+    - Decrease the amount of reattempts that a hidden service is
+      willing to perform when its rendezvous circuits fail. This
+      reduces the computational cost for hidden service under heavy
+      load. Resolves ticket #11447.
