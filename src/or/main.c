@@ -2811,7 +2811,7 @@ do_dump_config(void)
   } else if (!strcmp(arg, "full")) {
     how = OPTIONS_DUMP_ALL;
   } else {
-    fprintf(stderr, "No recognizable option to --dump-config found!\n");
+    fprintf(stderr, "No valid argument to --dump-config found!\n");
     fprintf(stderr, "Please select 'short', 'non-builtin', or 'full'.\n");
 
     return -1;

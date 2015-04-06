@@ -1868,15 +1868,21 @@ options_act(const or_options_t *old_options)
   return 0;
 }
 
+typedef enum {
+  TAKES_NO_ARGUMENT = 0,
+  ARGUMENT_NECESSARY = 1,
+  ARGUMENT_OPTIONAL = 2
+} takes_argument_t;
+
 static const struct {
   const char *name;
-  int takes_argument;
+  takes_argument_t takes_argument;
 } CMDLINE_ONLY_OPTIONS[] = {
   { "-f",                     1 },
   { "--allow-missing-torrc",  0 },
   { "--defaults-torrc",       1 },
   { "--hash-password",        1 },
-  { "--dump-config",          1 },
+  { "--dump-config",          ARGUMENT_OPTIONAL },
   { "--list-fingerprint",     0 },
   { "--verify-config",        0 },
   { "--ignore-missing-torrc", 0 },
@@ -1915,7 +1921,7 @@ config_parse_commandline(int argc, char **argv, int ignore_errors,
 
   while (i < argc) {
     unsigned command = CONFIG_LINE_NORMAL;
-    int want_arg = 1;
+    takes_argument_t want_arg = ARGUMENT_NECESSARY;
     int is_cmdline = 0;
     int j;
 
@@ -1945,7 +1951,9 @@ config_parse_commandline(int argc, char **argv, int ignore_errors,
       want_arg = 0;
     }
 
-    if (want_arg && i == argc-1) {
+    const int is_last = (i == argc-1);
+
+    if (want_arg == ARGUMENT_NECESSARY && is_last) {
       if (ignore_errors) {
         arg = strdup("");
       } else {
@@ -1955,8 +1963,11 @@ config_parse_commandline(int argc, char **argv, int ignore_errors,
         config_free_lines(front_cmdline);
         return -1;
       }
+    } else if (want_arg == ARGUMENT_OPTIONAL && is_last) {
+      arg = tor_strdup("");
     } else {
-      arg = want_arg ? tor_strdup(argv[i+1]) : strdup("");
+      arg = (want_arg != TAKES_NO_ARGUMENT) ? tor_strdup(argv[i+1]) :
+                                              tor_strdup("");
     }
 
     param = tor_malloc_zero(sizeof(config_line_t));

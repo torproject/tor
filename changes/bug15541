@@ -1,0 +1,5 @@
+  o Minor bugfixes (interface): 
+    - Print usage information for --dump-config when it is used without
+      an argument. Also, fix the error message to use different wording
+      and add newline at the end. Fixes bug 15541; bugfix on 0.2.5.1-alpha.
+
