@@ -1,0 +1,4 @@
+  o Major bugfixes (security, hidden service):
+    - Fix a bug that could cause a client to crash with an assertion
+      failure when parsing a malformed hidden service descriptor.
+      Fixes bug 15601; bugfix on 0.2.1.5-alpha. Found by "DonnCha".
