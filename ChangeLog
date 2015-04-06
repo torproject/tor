@@ -10,19 +10,20 @@ Changes in version 0.2.6.7 - 2015-04-06
   o Major bugfixes (security, hidden service):
     - Fix an issue that would allow a malicious client to trigger an
       assertion failure and halt a hidden service. Fixes bug 15600;
-      bugfix on 0.2.1.6-alpha. Reported by "skruffy".
+      bugfix on 0.2.1.6-alpha. Reported by "disgleirio".
     - Fix a bug that could cause a client to crash with an assertion
       failure when parsing a malformed hidden service descriptor. Fixes
       bug 15601; bugfix on 0.2.1.5-alpha. Found by "DonnCha".
 
   o Minor features (DoS-resistance, hidden service):
-    - Make it harder for attackers to overwhelm hidden services with
-      introductions, by blocking multiple introduction requests on the
-      same circuit. Resolves ticket #15515.
-    - Decrease the amount of reattempts that a hidden service is willing
-      to perform when its rendezvous circuits fail. This reduces the
-      computational cost for hidden service under heavy load. Resolves
-      ticket #11447.
+    - Introduction points no longer allow multiple INTRODUCE1 cells to
+      arrive on the same circuit. This should make it more expensive for
+      attackers to overwhelm hidden services with introductions.
+      Resolves ticket 15515.
+    - Decrease the amount of reattempts that a hidden service performs
+      when its rendezvous circuits fail. This reduces the computational
+      cost for running a hidden service under heavy load. Resolves
+      ticket 11447.
 
 
 Changes in version 0.2.6.6 - 2015-03-24
