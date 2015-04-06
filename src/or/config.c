@@ -2558,10 +2558,12 @@ static void
 warn_if_option_path_is_relative(const char *option,
                                 char *filepath)
 {
-  if (filepath &&path_is_relative(filepath))
+  if (filepath && path_is_relative(filepath)) {
+    char *abs_path = make_path_absolute(filepath);
     COMPLAIN("Path for %s (%s) is relative and will resolve to %s."
-             " Is this what you wanted?",option,filepath,
-             make_path_absolute(filepath));
+             " Is this what you wanted?", option, filepath, abs_path);
+    tor_free(abs_path);
+  }
 }
 
 /** Scan <b>options</b> for occurances of relative file/directory
