@@ -13,7 +13,7 @@ Changes in version 0.2.6.7 - 2015-04-06
       bugfix on 0.2.1.6-alpha. Reported by "disgleirio".
     - Fix a bug that could cause a client to crash with an assertion
       failure when parsing a malformed hidden service descriptor. Fixes
-      bug 15601; bugfix on 0.2.1.5-alpha. Found by "DonnCha".
+      bug 15601; bugfix on 0.2.1.5-alpha. Found by "DonnchaC".
 
   o Minor features (DoS-resistance, hidden service):
     - Introduction points no longer allow multiple INTRODUCE1 cells to
