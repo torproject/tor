@@ -1,0 +1,5 @@
+  o Major bugfixes (security, hidden service):
+    - Fix an issue that would allow a malicious client to trigger
+      an assertion failure and halt a hidden service. Fixes
+      bug 15600; bugfix on 0.2.1.6-alpha. Reported by "skruffy".
+
