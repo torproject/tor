@@ -1,0 +1,4 @@
+  o Documentation:
+    - Improve the descriptions of statistics-related torrc options in
+      the manpage to describe rationale and possible uses cases. Fixes
+      issue 15550.

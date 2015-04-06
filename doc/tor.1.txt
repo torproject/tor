@@ -1784,27 +1784,53 @@ is non-zero):
     (Default: P256)
 
 [[CellStatistics]] **CellStatistics** **0**|**1**::
-    When this option is enabled, Tor writes statistics on the mean time that
-    cells spend in circuit queues to disk every 24 hours. (Default: 0)
+    Relays only.
+    When this option is enabled, Tor collects statistics about cell
+    processing (i.e. mean time a cell is spending in a queue, mean
+    number of cells in a queue and mean number of processed cells per
+    circuit) and writes them into disk every 24 hours. Onion router
+    operators may use the statistics for performance monitoring.
+    If ExtraInfoStatistics is enabled, it will published as part of
+    extra-info document. (Default: 0)
 
 [[DirReqStatistics]] **DirReqStatistics** **0**|**1**::
+    Relays and bridges only.
     When this option is enabled, a Tor directory writes statistics on the
     number and response time of network status requests to disk every 24
-    hours. (Default: 1)
+    hours. Enables relay and bridge operators to monitor how much their
+    server is being used by clients to learn about Tor network.
+    If ExtraInfoStatistics is enabled, it will published as part of
+    extra-info document. (Default: 1)
 
 [[EntryStatistics]] **EntryStatistics** **0**|**1**::
+    Relays only.
     When this option is enabled, Tor writes statistics on the number of
-    directly connecting clients to disk every 24 hours. (Default: 0)
+    directly connecting clients to disk every 24 hours. Enables relay
+    operators to monitor how much inbound traffic that originates from
+    Tor clients passes through their server to go further down the
+    Tor network. If ExtraInfoStatistics is enabled, it will be published
+    as part of extra-info document. (Default: 0)
 
 [[ExitPortStatistics]] **ExitPortStatistics** **0**|**1**::
-    When this option is enabled, Tor writes statistics on the number of relayed
-    bytes and opened stream per exit port to disk every 24 hours. (Default: 0)
+    Exit relays only.
+    When this option is enabled, Tor writes statistics on the number of
+    relayed bytes and opened stream per exit port to disk every 24 hours.
+    Enables exit relay operators to measure and monitor amounts of traffic
+    that leaves Tor network through their exit node. If ExtraInfoStatistics
+    is enabled, it will be published as part of extra-info document.
+    (Default: 0)
 
 [[ConnDirectionStatistics]] **ConnDirectionStatistics** **0**|**1**::
-    When this option is enabled, Tor writes statistics on the bidirectional use
-    of connections to disk every 24 hours. (Default: 0)
+    Relays only.
+    When this option is enabled, Tor writes statistics on the amounts of
+    traffic it passes between itself and other relays to disk every 24
+    hours. Enables relay operators to monitor how much their relay is
+    being used as middle node in the circuit. If ExtraInfoStatistics is
+    enabled, it will be published as part of extra-info document.
+    (Default: 0)
 
 [[HiddenServiceStatistics]] **HiddenServiceStatistics** **0**|**1**::
+    Relays only.
     When this option is enabled, a Tor relay writes obfuscated
     statistics on its role as hidden-service directory, introduction
     point, or rendezvous point to disk every 24 hours. If
