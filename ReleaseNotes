@@ -3,6 +3,81 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.2.6.7 - 2015-04-06
+  Tor 0.2.6.7 fixes two security issues that could be used by an
+  attacker to crash hidden services, or crash clients visiting hidden
+  services. Hidden services should upgrade as soon as possible; clients
+  should upgrade whenever packages become available.
+
+  This release also contains two simple improvements to make hidden
+  services a bit less vulnerable to denial-of-service attacks.
+
+  o Major bugfixes (security, hidden service):
+    - Fix an issue that would allow a malicious client to trigger an
+      assertion failure and halt a hidden service. Fixes bug 15600;
+      bugfix on 0.2.1.6-alpha. Reported by "disgleirio".
+    - Fix a bug that could cause a client to crash with an assertion
+      failure when parsing a malformed hidden service descriptor. Fixes
+      bug 15601; bugfix on 0.2.1.5-alpha. Found by "DonnchaC".
+
+  o Minor features (DoS-resistance, hidden service):
+    - Introduction points no longer allow multiple INTRODUCE1 cells to
+      arrive on the same circuit. This should make it more expensive for
+      attackers to overwhelm hidden services with introductions.
+      Resolves ticket 15515.
+    - Decrease the amount of reattempts that a hidden service performs
+      when its rendezvous circuits fail. This reduces the computational
+      cost for running a hidden service under heavy load. Resolves
+      ticket 11447.
+
+
+Changes in version 0.2.5.12 - 2015-04-06
+  Tor 0.2.5.12 backports two fixes from 0.2.6.7 for security issues that
+  could be used by an attacker to crash hidden services, or crash clients
+  visiting hidden services. Hidden services should upgrade as soon as
+  possible; clients should upgrade whenever packages become available.
+
+  This release also backports a simple improvement to make hidden
+  services a bit less vulnerable to denial-of-service attacks.
+
+  o Major bugfixes (security, hidden service):
+    - Fix an issue that would allow a malicious client to trigger an
+      assertion failure and halt a hidden service. Fixes bug 15600;
+      bugfix on 0.2.1.6-alpha. Reported by "disgleirio".
+    - Fix a bug that could cause a client to crash with an assertion
+      failure when parsing a malformed hidden service descriptor. Fixes
+      bug 15601; bugfix on 0.2.1.5-alpha. Found by "DonnchaC".
+
+  o Minor features (DoS-resistance, hidden service):
+    - Introduction points no longer allow multiple INTRODUCE1 cells to
+      arrive on the same circuit. This should make it more expensive for
+      attackers to overwhelm hidden services with introductions.
+      Resolves ticket 15515.
+
+
+Changes in version 0.2.4.27 - 2015-04-06
+  Tor 0.2.4.27 backports two fixes from 0.2.6.7 for security issues that
+  could be used by an attacker to crash hidden services, or crash clients
+  visiting hidden services. Hidden services should upgrade as soon as
+  possible; clients should upgrade whenever packages become available.
+
+  This release also backports a simple improvement to make hidden
+  services a bit less vulnerable to denial-of-service attacks.
+
+  o Major bugfixes (security, hidden service):
+    - Fix an issue that would allow a malicious client to trigger an
+      assertion failure and halt a hidden service. Fixes bug 15600;
+      bugfix on 0.2.1.6-alpha. Reported by "disgleirio".
+    - Fix a bug that could cause a client to crash with an assertion
+      failure when parsing a malformed hidden service descriptor. Fixes
+      bug 15601; bugfix on 0.2.1.5-alpha. Found by "DonnchaC".
+
+  o Minor features (DoS-resistance, hidden service):
+    - Introduction points no longer allow multiple INTRODUCE1 cells to
+      arrive on the same circuit. This should make it more expensive for
+      attackers to overwhelm hidden services with introductions.
+      Resolves ticket 15515.
+
 
 Changes in version 0.2.6.6 - 2015-03-24
   Tor 0.2.6.6 is the first stable release in the 0.2.6 series.
