@@ -1736,6 +1736,7 @@ options_act(const or_options_t *old_options)
     if (!public_server_mode(options)) {
       options->CellStatistics = 0;
       options->EntryStatistics = 0;
+      options->ConnDirectionStatistics = 0;
       options->HiddenServiceStatistics = 0;
       options->ExitPortStatistics = 0;
     }
