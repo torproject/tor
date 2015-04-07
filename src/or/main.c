@@ -2803,6 +2803,7 @@ do_dump_config(void)
   const char *arg = options->command_arg;
   int how;
   char *opts;
+
   if (!strcmp(arg, "short")) {
     how = OPTIONS_DUMP_MINIMAL;
   } else if (!strcmp(arg, "non-builtin")) {
@@ -2810,8 +2811,9 @@ do_dump_config(void)
   } else if (!strcmp(arg, "full")) {
     how = OPTIONS_DUMP_ALL;
   } else {
-    fprintf(stderr, "%s is not a recognized argument to --dump-config. "
-            "Please select 'short', 'non-builtin', or 'full'", arg);
+    fprintf(stderr, "No valid argument to --dump-config found!\n");
+    fprintf(stderr, "Please select 'short', 'non-builtin', or 'full'.\n");
+
     return -1;
   }
 
