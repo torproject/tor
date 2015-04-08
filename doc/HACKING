@@ -374,7 +374,7 @@ do your own profiling to determine otherwise.
 Log conventions
 ~~~~~~~~~~~~~~~
 
-https://trac.torproject.org/projects/tor/wiki/doc/TorFAQ#loglevel
+https://www.torproject.org/docs/faq#LogLevel
 
 No error or warning messages should be expected during normal OR or OP
 operation.
