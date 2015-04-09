@@ -985,17 +985,22 @@ consider_adding_dir_servers(const or_options_t *options,
   if (!options->DirAuthorities) {
     /* then we may want some of the defaults */
     dirinfo_type_t type = NO_DIRINFO;
-    if (!options->AlternateBridgeAuthority)
+    if (!options->AlternateBridgeAuthority) {
       type |= BRIDGE_DIRINFO;
-    if (!options->AlternateDirAuthority)
+    }
+    if (!options->AlternateDirAuthority) {
       type |= V3_DIRINFO | EXTRAINFO_DIRINFO | MICRODESC_DIRINFO;
+      /* Only add the default fallback directories when the DirAuthorities,
+       * AlternateDirAuthority, and FallbackDir directory config options
+       * are set to their defaults. */
+      if (!options->FallbackDir)
+        add_default_fallback_dir_servers();
+    }
     /* if type == NO_DIRINFO, we don't want to add any of the
      * default authorities, because we've replaced them all */
     if (type != NO_DIRINFO)
       add_default_trusted_dir_authorities(type);
   }
-  if (!options->FallbackDir)
-    add_default_fallback_dir_servers();
 
   for (cl = options->DirAuthorities; cl; cl = cl->next)
     if (parse_dir_authority_line(cl->value, NO_DIRINFO, 0)<0)

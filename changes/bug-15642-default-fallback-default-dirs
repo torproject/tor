@@ -1,0 +1,8 @@
+  o Minor bugfixes (configuration):
+    - Only add the default fallback directories when the DirAuthorities,
+      AlternateDirAuthority, and FallbackDir directory config options
+      are set to their defaults.
+      The default fallback directory list is empty, this fix will only
+      change tor's behaviour when it has default fallback directories.
+      Fixes bug 15642; bugfix on 90f6071d8dc0 in 0.2.4.7-alpha.
+      Patch by "teor".
