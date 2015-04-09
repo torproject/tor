@@ -1,0 +1,4 @@
+  o Testing:
+    - Check for matching value in server response in ntor_ref.py.
+      Fixes bug 15591; bugfix on 0.2.4.8-alpha. Reported and fixed
+      by "joelanders".

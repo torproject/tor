@@ -283,7 +283,7 @@ def client_part2(seckey_x, msg, node_id, pubkey_B, keyBytes=72):
     my_auth = H_mac(auth_input)
 
     badness = my_auth != their_auth
-    badness = bad_result(yx) + bad_result(bx)
+    badness |= bad_result(yx) + bad_result(bx)
 
     if badness:
         return None
