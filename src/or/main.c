@@ -2484,10 +2484,11 @@ tor_init(int argc, char *argv[])
       if (!strcmp(cl->key, "--quiet") ||
           !strcmp(cl->key, "--dump-config"))
         quiet = 2;
-      /* --version, --digests, and --help imply --hush */
+      /* The following options imply --hush */
       if (!strcmp(cl->key, "--version") || !strcmp(cl->key, "--digests") ||
           !strcmp(cl->key, "--list-torrc-options") ||
           !strcmp(cl->key, "--library-versions") ||
+          !strcmp(cl->key, "--hash-password") ||
           !strcmp(cl->key, "-h") || !strcmp(cl->key, "--help")) {
         if (quiet < 1)
           quiet = 1;
