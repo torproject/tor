@@ -585,6 +585,7 @@ test_address_udp_socket_trick_blackbox(void *arg)
 
   (void)arg;
 
+#if 0
   retval_reference = get_interface_address6(LOG_DEBUG,AF_INET,&addr4);
   retval = get_interface_address6_via_udp_socket_hack(LOG_DEBUG,
                                                       AF_INET,
@@ -594,10 +595,6 @@ test_address_udp_socket_trick_blackbox(void *arg)
   tt_assert( (retval == -1 && retval_reference == -1) ||
              (tor_addr_compare(&addr4,&addr4_to_check,CMP_EXACT) == 0) );
 
-  //[XXX: Skipping the AF_INET6 case because bug #12377 makes it fail.]
-  (void)addr6_to_check;
-  (void)addr6;
-#if 0
   retval_reference = get_interface_address6(LOG_DEBUG,AF_INET6,&addr6);
   retval = get_interface_address6_via_udp_socket_hack(LOG_DEBUG,
                                                       AF_INET6,
@@ -607,6 +604,21 @@ test_address_udp_socket_trick_blackbox(void *arg)
   tt_assert( (retval == -1 && retval_reference == -1) ||
              (tor_addr_compare(&addr6,&addr6_to_check,CMP_EXACT) == 0) );
 
+#else
+  /* Both of the blackbox test cases fail horribly if:
+   *  * The host has no external addreses.
+   *  * There are multiple interfaces with either AF_INET or AF_INET6.
+   *  * The last address isn't the one associated with the default route.
+   *
+   * The tests SHOULD be re-enabled when #12377 is fixed correctly, but till
+   * then this fails a lot, in situations we expect failures due to knowing
+   * about the code being broken.
+   */
+
+  (void)addr4_to_check;
+  (void)addr6_to_check;
+  (void)addr6;
+  (void) retval_reference;
 #endif
 
   /* When family is neither AF_INET nor AF_INET6, we want _hack to
