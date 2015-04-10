@@ -14,6 +14,8 @@
 #include "crypto_ed25519.h"
 #include "ed25519_vectors.inc"
 
+#include <openssl/evp.h>
+
 extern const char AUTHORITY_SIGNKEY_3[];
 extern const char AUTHORITY_SIGNKEY_A_DIGEST[];
 extern const char AUTHORITY_SIGNKEY_A_DIGEST256[];
@@ -601,6 +603,22 @@ test_crypto_digests(void *arg)
   crypto_pk_free(k);
 }
 
+/** Encode src into dest with OpenSSL's EVP Encode interface, returning the
+ * length of the encoded data in bytes.
+ */
+static int
+base64_encode_evp(char *dest, char *src, size_t srclen)
+{
+  const unsigned char *s = (unsigned char*)src;
+  EVP_ENCODE_CTX ctx;
+  int len, ret;
+
+  EVP_EncodeInit(&ctx);
+  EVP_EncodeUpdate(&ctx, (unsigned char *)dest, &len, s, srclen);
+  EVP_EncodeFinal(&ctx, (unsigned char *)(dest + len), &ret);
+  return ret+ len;
+}
+
 /** Run unit tests for misc crypto formatting functionality (base64, base32,
  * fingerprints, etc) */
 static void
@@ -618,7 +636,7 @@ test_crypto_formats(void *arg)
   /* Base64 tests */
   memset(data1, 6, 1024);
   for (idx = 0; idx < 10; ++idx) {
-    i = base64_encode(data2, 1024, data1, idx);
+    i = base64_encode(data2, 1024, data1, idx, 0);
     tt_int_op(i, OP_GE, 0);
     j = base64_decode(data3, 1024, data2, i);
     tt_int_op(j,OP_EQ, idx);
@@ -628,7 +646,7 @@ test_crypto_formats(void *arg)
   strlcpy(data1, "Test string that contains 35 chars.", 1024);
   strlcat(data1, " 2nd string that contains 35 chars.", 1024);
 
-  i = base64_encode(data2, 1024, data1, 71);
+  i = base64_encode(data2, 1024, data1, 71, 0);
   tt_int_op(i, OP_GE, 0);
   j = base64_decode(data3, 1024, data2, i);
   tt_int_op(j,OP_EQ, 71);
@@ -646,6 +664,20 @@ test_crypto_formats(void *arg)
   tt_int_op(99,OP_EQ, data3[DIGEST_LEN+1]);
 
   tt_assert(digest_from_base64(data3, "###") < 0);
+
+  for (i = 0; i < 256; i++) {
+    /* Test the multiline format Base64 encoder with 0 .. 256 bytes of
+     * output against OpenSSL.
+     */
+    const size_t enclen = base64_encode_size(i, BASE64_ENCODE_MULTILINE);
+    data1[i] = i;
+    j = base64_encode(data2, 1024, data1, i, BASE64_ENCODE_MULTILINE);
+    tt_int_op(j, OP_EQ, enclen);
+    j = base64_encode_evp(data3, data1, i);
+    tt_int_op(j, OP_EQ, enclen);
+    tt_mem_op(data2, OP_EQ, data3, enclen);
+    tt_int_op(j, OP_EQ, strlen(data2));
+  }
 
   /* Encoding SHA256 */
   crypto_rand(data2, DIGEST256_LEN);

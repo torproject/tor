@@ -941,7 +941,7 @@ rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
     }
     if (base64_encode(desc_cook_out, 3*REND_DESC_COOKIE_LEN_BASE64+1,
                       client->descriptor_cookie,
-                      REND_DESC_COOKIE_LEN) < 0) {
+                      REND_DESC_COOKIE_LEN, 0) < 0) {
       log_warn(LD_BUG, "Could not base64-encode descriptor cookie.");
       goto err;
     }
@@ -968,7 +968,6 @@ rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
       client->client_key = prkey;
     }
     /* Add entry to client_keys file. */
-    desc_cook_out[strlen(desc_cook_out)-1] = '\0'; /* Remove newline. */
     written = tor_snprintf(buf, sizeof(buf),
                            "client-name %s\ndescriptor-cookie %s\n",
                            client->client_name, desc_cook_out);
@@ -1023,12 +1022,11 @@ rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
         ((int)s->auth_type - 1) << 4;
       if (base64_encode(desc_cook_out, 3*REND_DESC_COOKIE_LEN_BASE64+1,
                         extended_desc_cookie,
-                        REND_DESC_COOKIE_LEN+1) < 0) {
+                        REND_DESC_COOKIE_LEN+1, 0) < 0) {
         log_warn(LD_BUG, "Could not base64-encode descriptor cookie.");
         goto err;
       }
-      desc_cook_out[strlen(desc_cook_out)-3] = '\0'; /* Remove A= and
-                                                        newline. */
+      desc_cook_out[strlen(desc_cook_out)-2] = '\0'; /* Remove A=. */
       tor_snprintf(buf, sizeof(buf),"%s.onion %s # client: %s\n",
                    service_id, desc_cook_out, client->client_name);
     }
@@ -1124,7 +1122,7 @@ rend_check_authorization(rend_service_t *service,
   if (!auth_client) {
     char descriptor_cookie_base64[3*REND_DESC_COOKIE_LEN_BASE64];
     base64_encode(descriptor_cookie_base64, sizeof(descriptor_cookie_base64),
-                  descriptor_cookie, REND_DESC_COOKIE_LEN);
+                  descriptor_cookie, REND_DESC_COOKIE_LEN, 0);
     log_info(LD_REND, "No authorization found for descriptor cookie '%s'! "
                       "Dropping cell!",
              descriptor_cookie_base64);

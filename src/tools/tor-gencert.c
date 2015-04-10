@@ -486,7 +486,8 @@ generate_certificate(void)
                           EVP_PKEY_get1_RSA(signing_key),
                           RSA_PKCS1_PADDING);
   signed_len = strlen(buf);
-  base64_encode(buf+signed_len, sizeof(buf)-signed_len, signature, r);
+  base64_encode(buf+signed_len, sizeof(buf)-signed_len, signature, r,
+                BASE64_ENCODE_MULTILINE);
 
   strlcat(buf,
           "-----END ID SIGNATURE-----\n"
@@ -501,7 +502,8 @@ generate_certificate(void)
                           RSA_PKCS1_PADDING);
   strlcat(buf, "-----BEGIN SIGNATURE-----\n", sizeof(buf));
   signed_len = strlen(buf);
-  base64_encode(buf+signed_len, sizeof(buf)-signed_len, signature, r);
+  base64_encode(buf+signed_len, sizeof(buf)-signed_len, signature, r,
+                BASE64_ENCODE_MULTILINE);
   strlcat(buf, "-----END SIGNATURE-----\n", sizeof(buf));
 
   if (!(f = fopen(certificate_file, "w"))) {

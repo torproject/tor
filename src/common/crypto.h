@@ -267,7 +267,10 @@ struct smartlist_t;
 void *smartlist_choose(const struct smartlist_t *sl);
 void smartlist_shuffle(struct smartlist_t *sl);
 
-int base64_encode(char *dest, size_t destlen, const char *src, size_t srclen);
+#define BASE64_ENCODE_MULTILINE 1
+size_t base64_encode_size(size_t srclen, int flags);
+int base64_encode(char *dest, size_t destlen, const char *src, size_t srclen,
+                  int flags);
 int base64_decode(char *dest, size_t destlen, const char *src, size_t srclen);
 /** Characters that can appear (case-insensitively) in a base32 encoding. */
 #define BASE32_CHARS "abcdefghijklmnopqrstuvwxyz234567"

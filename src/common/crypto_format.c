@@ -19,7 +19,7 @@ curve25519_public_to_base64(char *output,
 {
   char buf[128];
   base64_encode(buf, sizeof(buf),
-                (const char*)pkey->public_key, CURVE25519_PUBKEY_LEN);
+                (const char*)pkey->public_key, CURVE25519_PUBKEY_LEN, 0);
   buf[CURVE25519_BASE64_PADDED_LEN] = '\0';
   memcpy(output, buf, CURVE25519_BASE64_PADDED_LEN+1);
   return 0;

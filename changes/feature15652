@@ -1,3 +1,7 @@
+  o Code simplifications and refactoring:
+    - Use our own Base64 encoder instead of OpenSSL's, to allow more control
+      over the output. Part of ticket 15652.
+
   o Removed code:
     - Remove `USE_OPENSSL_BASE64` and the corresponding fallback code and
       always use the internal Base64 decoder. The internal decoder has been

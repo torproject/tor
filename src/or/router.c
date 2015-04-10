@@ -2424,7 +2424,7 @@ router_dump_router_to_string(routerinfo_t *router,
     char kbuf[128];
     base64_encode(kbuf, sizeof(kbuf),
                   (const char *)router->onion_curve25519_pkey->public_key,
-                  CURVE25519_PUBKEY_LEN);
+                  CURVE25519_PUBKEY_LEN, BASE64_ENCODE_MULTILINE);
     smartlist_add_asprintf(chunks, "ntor-onion-key %s", kbuf);
   }
 
