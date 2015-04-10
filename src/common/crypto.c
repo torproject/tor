@@ -2500,26 +2500,6 @@ static const uint8_t base64_decode_table[256] = {
 int
 base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
-#ifdef USE_OPENSSL_BASE64
-  EVP_ENCODE_CTX ctx;
-  int len, ret;
-  /* 64 bytes of input -> *up to* 48 bytes of output.
-     Plus one more byte, in case I'm wrong.
-  */
-  if (destlen < ((srclen/64)+1)*49)
-    return -1;
-  if (destlen > SIZE_T_CEILING)
-    return -1;
-
-  memset(dest, 0, destlen);
-
-  EVP_DecodeInit(&ctx);
-  EVP_DecodeUpdate(&ctx, (unsigned char*)dest, &len,
-                   (unsigned char*)src, srclen);
-  EVP_DecodeFinal(&ctx, (unsigned char*)dest, &ret);
-  ret += len;
-  return ret;
-#else
   const char *eos = src+srclen;
   uint32_t n=0;
   int n_idx=0;
@@ -2590,7 +2570,6 @@ base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
   tor_assert((dest-dest_orig) <= INT_MAX);
 
   return (int)(dest-dest_orig);
-#endif
 }
 #undef X
 #undef SP
@@ -2615,23 +2594,10 @@ digest_to_base64(char *d64, const char *digest)
 int
 digest_from_base64(char *digest, const char *d64)
 {
-#ifdef USE_OPENSSL_BASE64
-  char buf_in[BASE64_DIGEST_LEN+3];
-  char buf[256];
-  if (strlen(d64) != BASE64_DIGEST_LEN)
-    return -1;
-  memcpy(buf_in, d64, BASE64_DIGEST_LEN);
-  memcpy(buf_in+BASE64_DIGEST_LEN, "=\n\0", 3);
-  if (base64_decode(buf, sizeof(buf), buf_in, strlen(buf_in)) != DIGEST_LEN)
-    return -1;
-  memcpy(digest, buf, DIGEST_LEN);
-  return 0;
-#else
   if (base64_decode(digest, DIGEST_LEN, d64, strlen(d64)) == DIGEST_LEN)
     return 0;
   else
     return -1;
-#endif
 }
 
 /** Base64 encode DIGEST256_LINE bytes from <b>digest</b>, remove the
@@ -2653,23 +2619,10 @@ digest256_to_base64(char *d64, const char *digest)
 int
 digest256_from_base64(char *digest, const char *d64)
 {
-#ifdef USE_OPENSSL_BASE64
-  char buf_in[BASE64_DIGEST256_LEN+3];
-  char buf[256];
-  if (strlen(d64) != BASE64_DIGEST256_LEN)
-    return -1;
-  memcpy(buf_in, d64, BASE64_DIGEST256_LEN);
-  memcpy(buf_in+BASE64_DIGEST256_LEN, "=\n\0", 3);
-  if (base64_decode(buf, sizeof(buf), buf_in, strlen(buf_in)) != DIGEST256_LEN)
-    return -1;
-  memcpy(digest, buf, DIGEST256_LEN);
-  return 0;
-#else
   if (base64_decode(digest, DIGEST256_LEN, d64, strlen(d64)) == DIGEST256_LEN)
     return 0;
   else
     return -1;
-#endif
 }
 
 /** Implements base32 encoding as in RFC 4648.  Limitation: Requires

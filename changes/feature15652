@@ -1,0 +1,5 @@
+  o Removed code:
+    - Remove `USE_OPENSSL_BASE64` and the corresponding fallback code and
+      always use the internal Base64 decoder. The internal decoder has been
+      part of tor since tor-0.2.0.10-alpha, and no one should be using the
+      OpenSSL one. Part of ticket 15652.
