@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - On Linux systems try to use an AF_NETLINK socket to determine the
+      external interface's IP address, before falling back to the various
+      older approaches (interface enumeration and then a UDP socket based
+      hack). Fixes part of #12377. Bugfix on Tor 0.2.3.11-alpha.
