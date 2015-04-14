@@ -106,6 +106,8 @@ rend_service_port_config_t *rend_service_parse_port_config(const char *string,
                                                            char **err_msg_out);
 void rend_service_port_config_free(rend_service_port_config_t *p);
 
+void rend_authorized_client_free(rend_authorized_client_t *client);
+
 /** Return value from rend_service_add_ephemeral. */
 typedef enum {
   RSAE_BADVIRTPORT = -4, /**< Invalid VIRTPORT/TARGET(s) */
