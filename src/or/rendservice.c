@@ -828,14 +828,17 @@ rend_config_services(const or_options_t *options, int validate_only)
   return 0;
 }
 
-/** Add the ephemeral service <b>pk</b>/<b>ports</b> if possible, with
+/** Add the ephemeral service <b>pk</b>/<b>ports</b> if possible, using
+ * client authorization <b>auth_type</b> and an optional list of
+ * rend_authorized_client_t in <b>auth_clients</b>, with
  * <b>max_streams_per_circuit</b> streams allowed per rendezvous circuit,
  * and circuit closure on max streams being exceeded set by
  * <b>max_streams_close_circuit</b>.
  *
- * Regardless of sucess/failure, callers should not touch pk/ports after
- * calling this routine, and may assume that correct cleanup has been done
- * on failure.
+ * Ownership of pk, ports, and auth_clients is passed to this routine.
+ * Regardless of success/failure, callers should not touch these values
+ * after calling this routine, and may assume that correct cleanup has
+ * been done on failure.
  *
  * Return an appropriate rend_service_add_ephemeral_status_t.
  */
@@ -844,6 +847,8 @@ rend_service_add_ephemeral(crypto_pk_t *pk,
                            smartlist_t *ports,
                            int max_streams_per_circuit,
                            int max_streams_close_circuit,
+                           rend_auth_type_t auth_type,
+                           smartlist_t *auth_clients,
                            char **service_id_out)
 {
   *service_id_out = NULL;
@@ -853,7 +858,8 @@ rend_service_add_ephemeral(crypto_pk_t *pk,
   rend_service_t *s = tor_malloc_zero(sizeof(rend_service_t));
   s->directory = NULL; /* This indicates the service is ephemeral. */
   s->private_key = pk;
-  s->auth_type = REND_NO_AUTH;
+  s->auth_type = auth_type;
+  s->clients = auth_clients;
   s->ports = ports;
   s->intro_period_started = time(NULL);
   s->n_intro_points_wanted = NUM_INTRO_POINTS_DEFAULT;
@@ -868,6 +874,12 @@ rend_service_add_ephemeral(crypto_pk_t *pk,
     log_warn(LD_CONFIG, "At least one VIRTPORT/TARGET must be specified.");
     rend_service_free(s);
     return RSAE_BADVIRTPORT;
+  }
+  if (s->auth_type != REND_NO_AUTH &&
+      (!s->clients || smartlist_len(s->clients) == 0)) {
+    log_warn(LD_CONFIG, "At least one authorized client must be specified.");
+    rend_service_free(s);
+    return RSAE_BADAUTH;
   }
 
   /* Enforcing pk/id uniqueness should be done by rend_service_load_keys(), but

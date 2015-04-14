@@ -110,6 +110,7 @@ void rend_authorized_client_free(rend_authorized_client_t *client);
 
 /** Return value from rend_service_add_ephemeral. */
 typedef enum {
+  RSAE_BADAUTH = -5, /**< Invalid auth_type/auth_clients */
   RSAE_BADVIRTPORT = -4, /**< Invalid VIRTPORT/TARGET(s) */
   RSAE_ADDREXISTS = -3, /**< Onion address collision */
   RSAE_BADPRIVKEY = -2, /**< Invalid public key */
@@ -120,6 +121,8 @@ rend_service_add_ephemeral_status_t rend_service_add_ephemeral(crypto_pk_t *pk,
                                smartlist_t *ports,
                                int max_streams_per_circuit,
                                int max_streams_close_circuit,
+                               rend_auth_type_t auth_type,
+                               smartlist_t *auth_clients,
                                char **service_id_out);
 int rend_service_del_ephemeral(const char *service_id);
 

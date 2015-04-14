@@ -3845,13 +3845,15 @@ handle_control_add_onion(control_connection_t *conn,
   }
   tor_assert(!err_msg);
 
-  /* Create the HS, using private key pk, and port config port_cfg.
+  /* Create the HS, using private key pk, client authentication auth_type,
+   * the list of auth_clients, and port config port_cfg.
    * rend_service_add_ephemeral() will take ownership of pk and port_cfg,
    * regardless of success/failure.
    */
   char *service_id = NULL;
   int ret = rend_service_add_ephemeral(pk, port_cfgs, max_streams,
                                        max_streams_close_circuit,
+                                       REND_NO_AUTH, NULL,
                                        &service_id);
   port_cfgs = NULL; /* port_cfgs is now owned by the rendservice code. */
   switch (ret) {
