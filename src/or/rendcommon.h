@@ -67,5 +67,13 @@ rend_data_t *rend_data_service_create(const char *onion_address,
                                       const char *pk_digest,
                                       const uint8_t *cookie,
                                       rend_auth_type_t auth_type);
+
+char *rend_auth_encode_cookie(const uint8_t *cookie_in,
+                              rend_auth_type_t auth_type);
+int rend_auth_decode_cookie(const char *cookie_in,
+                            uint8_t *cookie_out,
+                            rend_auth_type_t *auth_type_out,
+                            char **err_msg_out);
+
 #endif
 

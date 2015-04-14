@@ -1157,7 +1157,6 @@ rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
   strmap_t *parsed_clients = strmap_new();
   FILE *cfile, *hfile;
   open_file_t *open_cfile = NULL, *open_hfile = NULL;
-  char extended_desc_cookie[REND_DESC_COOKIE_LEN+1];
   char desc_cook_out[3*REND_DESC_COOKIE_LEN_BASE64+1];
   char service_id[16+1];
   char buf[1500];
@@ -1211,6 +1210,8 @@ rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
     } else {
       crypto_rand((char *) client->descriptor_cookie, REND_DESC_COOKIE_LEN);
     }
+    /* For compatibility with older tor clients, this does not
+     * truncate the padding characters, unlike rend_auth_encode_cookie.  */
     if (base64_encode(desc_cook_out, 3*REND_DESC_COOKIE_LEN_BASE64+1,
                       (char *) client->descriptor_cookie,
                       REND_DESC_COOKIE_LEN, 0) < 0) {
@@ -1273,6 +1274,8 @@ rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
         log_warn(LD_BUG, "Could not write client entry.");
         goto err;
       }
+    } else {
+      strlcpy(service_id, s->service_id, sizeof(service_id));
     }
 
     if (fputs(buf, cfile) < 0) {
@@ -1281,27 +1284,18 @@ rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
       goto err;
     }
 
-    /* Add line to hostname file. */
-    if (s->auth_type == REND_BASIC_AUTH) {
-      /* Remove == signs (newline has been removed above). */
-      desc_cook_out[strlen(desc_cook_out)-2] = '\0';
-      tor_snprintf(buf, sizeof(buf),"%s.onion %s # client: %s\n",
-                   s->service_id, desc_cook_out, client->client_name);
-    } else {
-      memcpy(extended_desc_cookie, client->descriptor_cookie,
-             REND_DESC_COOKIE_LEN);
-      extended_desc_cookie[REND_DESC_COOKIE_LEN] =
-        ((int)s->auth_type - 1) << 4;
-      if (base64_encode(desc_cook_out, 3*REND_DESC_COOKIE_LEN_BASE64+1,
-                        extended_desc_cookie,
-                        REND_DESC_COOKIE_LEN+1, 0) < 0) {
-        log_warn(LD_BUG, "Could not base64-encode descriptor cookie.");
-        goto err;
-      }
-      desc_cook_out[strlen(desc_cook_out)-2] = '\0'; /* Remove A=. */
-      tor_snprintf(buf, sizeof(buf),"%s.onion %s # client: %s\n",
-                   service_id, desc_cook_out, client->client_name);
+    /* Add line to hostname file. This is not the same encoding as in
+     * client_keys. */
+    char *encoded_cookie = rend_auth_encode_cookie(client->descriptor_cookie,
+                                                   s->auth_type);
+    if (!encoded_cookie) {
+      log_warn(LD_BUG, "Could not base64-encode descriptor cookie.");
+      goto err;
     }
+    tor_snprintf(buf, sizeof(buf), "%s.onion %s # client: %s\n",
+                 service_id, encoded_cookie, client->client_name);
+    memwipe(encoded_cookie, 0, strlen(encoded_cookie));
+    tor_free(encoded_cookie);
 
     if (fputs(buf, hfile)<0) {
       log_warn(LD_FS, "Could not append host entry to file: %s",
@@ -1333,7 +1327,6 @@ rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
   memwipe(buf, 0, sizeof(buf));
   memwipe(desc_cook_out, 0, sizeof(desc_cook_out));
   memwipe(service_id, 0, sizeof(service_id));
-  memwipe(extended_desc_cookie, 0, sizeof(extended_desc_cookie));
 
   return r;
 }
