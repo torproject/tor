@@ -1,0 +1,5 @@
+
+  o Code simplification and refactoring:
+    - Refactor hidden service client-side cache lookup to intelligently
+      report its various failure cases, and disentangle failure cases
+      involving a lack of introduction points. Closes ticket 14391.
