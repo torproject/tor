@@ -148,8 +148,11 @@ check_heap_buffer(void)
 
 static struct testcase {
   const char *name;
-  unsigned (*fill_fn)(void);
-  unsigned (*check_fn)(void);
+  /* this spacing satisfies make check-spaces */
+  unsigned
+    (*fill_fn)(void);
+  unsigned
+    (*check_fn)(void);
 } testcases[] = {
   { "nil", fill_a_buffer_nothing, check_a_buffer },
   { "nil-heap", fill_heap_buffer_nothing, check_heap_buffer },
