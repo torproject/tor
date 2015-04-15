@@ -963,7 +963,7 @@ rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **e)
     *e = entry;
   }
 
-end:
+ end:
   return ret;
 }
 
