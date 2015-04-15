@@ -1,0 +1,4 @@
+  o Minor features:
+    - Implement a new controller command "status/fresh-relay-descs" to
+      fetch a descriptor/extrainfo pair that was generated on demand
+      just for the controller's use. Implements ticket 14784.
