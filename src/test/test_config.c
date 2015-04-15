@@ -17,6 +17,7 @@
 #include "address.h"
 #include "entrynodes.h"
 #include "transports.h"
+#include "routerlist.h"
 
 static void
 test_config_addressmap(void *arg)
@@ -1036,7 +1037,7 @@ static int n_get_interface_address6_failure = 0;
 
 /**
  * This mock function is meant to replace get_interface_addres6().
- * It will pretent to fail by return -1.
+ * It will pretend to fail by return -1.
  * <b>n_get_interface_address6_failure</b> is incremented by one
  * every time this function is called and <b>last_address6_family</b>
  * is assigned the value of <b>family</b> argument.
@@ -1405,7 +1406,7 @@ test_config_resolve_my_address(void *arg)
 
   /* CASE 12:
    * Suppose the following happens:
-   *   1. options->Address is NULL AND options->DirAuthorities is 1.
+   *   1. options->Address is NULL AND options->DirAuthorities is non-NULL
    *   2. tor_gethostname() succeeds in getting hostname of a machine ...
    *   3. ... which is successfully parsed by tor_inet_aton() ...
    *   4. into IPv4 address that tor_addr_is_inernal() considers to be
@@ -1443,10 +1444,1776 @@ test_config_resolve_my_address(void *arg)
   UNMOCK(tor_gethostname);
 }
 
+static int n_add_default_fallback_dir_servers_known_default = 0;
+
+/**
+ * This mock function is meant to replace add_default_fallback_dir_servers().
+ * It will parse and add one known default fallback dir server,
+ * which has a dir_port of 99.
+ * <b>n_add_default_fallback_dir_servers_known_default</b> is incremented by
+ * one every time this function is called.
+ */
+static void
+add_default_fallback_dir_servers_known_default(void)
+{
+  int i;
+  const char *fallback[] = {
+    "127.0.0.1:60099 orport=9009 "
+    "id=0923456789012345678901234567890123456789",
+    NULL
+  };
+  for (i=0; fallback[i]; i++) {
+    if (parse_dir_fallback_line(fallback[i], 0)<0) {
+      log_err(LD_BUG, "Couldn't parse internal FallbackDir line %s",
+              fallback[i]);
+    }
+  }
+  n_add_default_fallback_dir_servers_known_default++;
+}
+
+static void
+test_config_adding_dir_servers(void *arg)
+{
+  (void)arg;
+
+  /* allocate options */
+  or_options_t *options = tor_malloc(sizeof(or_options_t));
+
+  /* Allocate and populate configuration lines:
+   *
+   * Use the same format as the hard-coded directories in
+   * add_default_trusted_dir_authorities().
+   * Zeroing the structure has the same effect as initialising to:
+   * { NULL, NULL, NULL, CONFIG_LINE_NORMAL, 0};
+   */
+  config_line_t *test_dir_authority = tor_malloc(sizeof(config_line_t));
+  memset(test_dir_authority, 0, sizeof(config_line_t));
+  test_dir_authority->key = tor_strdup("DirAuthority");
+  test_dir_authority->value = tor_strdup(
+    "D0 orport=9000 "
+    "v3ident=0023456789012345678901234567890123456789 "
+    "127.0.0.1:60090 0123 4567 8901 2345 6789 0123 4567 8901 2345 6789"
+    );
+
+  config_line_t *test_alt_bridge_authority = tor_malloc(sizeof(config_line_t));
+  memset(test_alt_bridge_authority, 0, sizeof(config_line_t));
+  test_alt_bridge_authority->key = tor_strdup("AlternateBridgeAuthority");
+  test_alt_bridge_authority->value = tor_strdup(
+    "B1 orport=9001 bridge "
+    "127.0.0.1:60091 1123 4567 8901 2345 6789 0123 4567 8901 2345 6789"
+    );
+
+  config_line_t *test_alt_dir_authority = tor_malloc(sizeof(config_line_t));
+  memset(test_alt_dir_authority, 0, sizeof(config_line_t));
+  test_alt_dir_authority->key = tor_strdup("AlternateDirAuthority");
+  test_alt_dir_authority->value = tor_strdup(
+    "A2 orport=9002 "
+    "v3ident=0223456789012345678901234567890123456789 "
+    "127.0.0.1:60092 2123 4567 8901 2345 6789 0123 4567 8901 2345 6789"
+    );
+
+  /* Use the format specified in the manual page */
+  config_line_t *test_fallback_directory = tor_malloc(sizeof(config_line_t));
+  memset(test_fallback_directory, 0, sizeof(config_line_t));
+  test_fallback_directory->key = tor_strdup("FallbackDir");
+  test_fallback_directory->value = tor_strdup(
+    "127.0.0.1:60093 orport=9003 id=0323456789012345678901234567890123456789"
+    );
+
+  /* We need to know if add_default_fallback_dir_servers is called,
+   * so we use a version of add_default_fallback_dir_servers that adds
+   * one known default fallback directory.
+   * There doesn't appear to be any need to test it unmocked. */
+  MOCK(add_default_fallback_dir_servers,
+       add_default_fallback_dir_servers_known_default);
+
+  /* There are 16 different cases, covering each combination of set/NULL for:
+   * DirAuthorities, AlternateBridgeAuthority, AlternateDirAuthority &
+   * FallbackDir.
+   * But validate_dir_servers() ensures that:
+   *   "You cannot set both DirAuthority and Alternate*Authority."
+   * This reduces the number of cases to 10.
+   *
+   * Let's count these cases using binary, with 1 meaning set & 0 meaning NULL
+   * So 1001 or case 9 is:
+   *   DirAuthorities set,
+   *   AlternateBridgeAuthority NULL,
+   *   AlternateDirAuthority NULL
+   *   FallbackDir set
+   * The valid cases are cases 0-9 counting using this method, as every case
+   * greater than or equal to 10 = 1010 is invalid.
+   *
+   * After #15642 - Disable default fallback dirs when any custom dirs set
+   *
+   * 1. Outcome: Use Set Directory Authorities
+   *   - No Default Authorities
+   *   - Use AlternateBridgeAuthority, AlternateDirAuthority, and FallbackDir
+   *     if they are set
+   *   Cases expected to yield this outcome:
+   *     8 & 9 (the 2 valid cases where DirAuthorities is set)
+   *     6 & 7 (the 2 cases where DirAuthorities is NULL, and
+   *           AlternateBridgeAuthority and AlternateDirAuthority are both set)
+   *
+   * 2. Outcome: Use Set Bridge Authority
+   *  - Use Default Non-Bridge Directory Authorities
+   *  - Use FallbackDir if it is set, otherwise use default FallbackDir
+   *  Cases expected to yield this outcome:
+   *    4 & 5 (the 2 cases where DirAuthorities is NULL,
+   *           AlternateBridgeAuthority is set, and
+   *           AlternateDirAuthority is NULL)
+   *
+   * 3. Outcome: Use Set Alternate Directory Authority
+   *  - Use Default Bridge Authorities
+   *  - Use FallbackDir if it is set, otherwise No Default Fallback Directories
+   *  Cases expected to yield this outcome:
+   *    2 & 3 (the 2 cases where DirAuthorities and AlternateBridgeAuthority
+   *           are both NULL, but AlternateDirAuthority is set)
+   *
+   * 4. Outcome: Use Set Custom Fallback Directory
+   *  - Use Default Bridge & Directory Authorities
+   *  Cases expected to yield this outcome:
+   *    1 (DirAuthorities, AlternateBridgeAuthority and AlternateDirAuthority
+   *       are all NULL, but FallbackDir is set)
+   *
+   * 5. Outcome: Use All Defaults
+   *  - Use Default Bridge & Directory Authorities, and
+   *    Default Fallback Directories
+   *  Cases expected to yield this outcome:
+   *    0 (DirAuthorities, AlternateBridgeAuthority, AlternateDirAuthority
+   *       and FallbackDir are all NULL)
+   *
+   * Before #15642 but after #13163 - Stop using default authorities when both
+   * Alternate Dir and Bridge Authority are set
+   * (#13163 was committed in 0.2.6 as c1dd43d823c7)
+   *
+   * The behaviour is different in the following cases
+   * where FallbackDir is NULL:
+   *  2, 6, 8
+   *
+   * In these cases, the Default Fallback Directories are applied, even when
+   * DirAuthorities or AlternateDirAuthority are set.
+   *
+   * However, as the list of default fallback directories is currently empty,
+   * this change doesn't modify any user-visible behaviour.
+   */
+
+  /*
+   * Find out how many default Bridge, Non-Bridge and Fallback Directories
+   * are hard-coded into this build.
+   * This code makes some assumptions about the implementation.
+   * If they are wrong, one or more of cases 0-5 could fail.
+   */
+  int n_default_alt_bridge_authority = 0;
+  int n_default_alt_dir_authority = 0;
+  int n_default_fallback_dir = 0;
+#define n_default_authorities ((n_default_alt_bridge_authority) \
+                               + (n_default_alt_dir_authority))
+
+  /* Pre-Count Number of Authorities of Each Type
+   * Use 0000: No Directory Authorities or Fallback Directories Set
+   */
+  {
+    /* clear fallback dirs counter */
+    n_add_default_fallback_dir_servers_known_default = 0;
+
+    /* clear options*/
+    memset(options, 0, sizeof(or_options_t));
+
+    /* clear any previous dir servers:
+     consider_adding_dir_servers() should do this anyway */
+    clear_dir_servers();
+
+    /* assign options: 0000 */
+    options->DirAuthorities = NULL;
+    options->AlternateBridgeAuthority = NULL;
+    options->AlternateDirAuthority = NULL;
+    options->FallbackDir = NULL;
+
+    /* parse options - ensure we always update by passing NULL old_options */
+    consider_adding_dir_servers(options, NULL);
+
+    /* check outcome */
+
+    /* we must have added the default fallback dirs */
+    tt_assert(n_add_default_fallback_dir_servers_known_default == 1);
+
+    {
+      /* fallback_dir_servers */
+      const smartlist_t *fallback_servers = router_get_fallback_dir_servers();
+
+      /* Count Bridge Authorities */
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if it's a bridge auth */
+                        n_default_alt_bridge_authority +=
+                        ((ds->is_authority && (ds->type & BRIDGE_DIRINFO)) ?
+                         1 : 0)
+                        );
+      /* If we have no default bridge authority, something has gone wrong */
+      tt_assert(n_default_alt_bridge_authority >= 1);
+
+      /* Count v3 Authorities */
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment found counter if it's a v3 auth */
+                        n_default_alt_dir_authority +=
+                        ((ds->is_authority && (ds->type & V3_DIRINFO)) ?
+                         1 : 0)
+                        );
+      /* If we have no default authorities, something has gone really wrong */
+      tt_assert(n_default_alt_dir_authority >= 1);
+
+      /* Calculate Fallback Directory Count */
+      n_default_fallback_dir = (smartlist_len(fallback_servers) -
+                                n_default_alt_bridge_authority -
+                                n_default_alt_dir_authority);
+      /* If we have a negative count, something has gone really wrong */
+      tt_assert(n_default_fallback_dir >= 0);
+    }
+  }
+
+  /*
+   * 1. Outcome: Use Set Directory Authorities
+   *   - No Default Authorities
+   *   - Use AlternateBridgeAuthority, AlternateDirAuthority, and FallbackDir
+   *     if they are set
+   *   Cases expected to yield this outcome:
+   *     8 & 9 (the 2 valid cases where DirAuthorities is set)
+   *     6 & 7 (the 2 cases where DirAuthorities is NULL, and
+   *           AlternateBridgeAuthority and AlternateDirAuthority are both set)
+   */
+
+  /* Case 9: 1001 - DirAuthorities Set, AlternateBridgeAuthority Not Set,
+     AlternateDirAuthority Not Set, FallbackDir Set */
+  {
+    /* clear fallback dirs counter */
+    n_add_default_fallback_dir_servers_known_default = 0;
+
+    /* clear options*/
+    memset(options, 0, sizeof(or_options_t));
+
+    /* clear any previous dir servers:
+     consider_adding_dir_servers() should do this anyway */
+    clear_dir_servers();
+
+    /* assign options: 1001 */
+    options->DirAuthorities = test_dir_authority;
+    options->AlternateBridgeAuthority = NULL;
+    options->AlternateDirAuthority = NULL;
+    options->FallbackDir = test_fallback_directory;
+
+    /* parse options - ensure we always update by passing NULL old_options */
+    consider_adding_dir_servers(options, NULL);
+
+    /* check outcome */
+
+    /* we must not have added the default fallback dirs */
+    tt_assert(n_add_default_fallback_dir_servers_known_default == 0);
+
+    {
+      /* trusted_dir_servers */
+      const smartlist_t *dir_servers = router_get_trusted_dir_servers();
+      /* D0, (No B1), (No A2) */
+      tt_assert(smartlist_len(dir_servers) == 1);
+
+      /* DirAuthority - D0 - dir_port: 60090 */
+      int found_D0 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_D0 +=
+                        (ds->dir_port == 60090 ?
+                         1 : 0)
+                        );
+      tt_assert(found_D0 == 1);
+
+      /* (No AlternateBridgeAuthority) - B1 - dir_port: 60091 */
+      int found_B1 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_B1 +=
+                        (ds->dir_port == 60091 ?
+                         1 : 0)
+                        );
+      tt_assert(found_B1 == 0);
+
+      /* (No AlternateDirAuthority) - A2 - dir_port: 60092 */
+      int found_A2 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_A2 +=
+                        (ds->dir_port == 60092 ?
+                         1 : 0)
+                        );
+      tt_assert(found_A2 == 0);
+    }
+
+    {
+      /* fallback_dir_servers */
+      const smartlist_t *fallback_servers = router_get_fallback_dir_servers();
+      /* D0, (No B1), (No A2), Custom Fallback */
+      tt_assert(smartlist_len(fallback_servers) == 2);
+
+      /* DirAuthority - D0 - dir_port: 60090 */
+      int found_D0 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_D0 +=
+                        (ds->dir_port == 60090 ?
+                         1 : 0)
+                        );
+      tt_assert(found_D0 == 1);
+
+      /* (No AlternateBridgeAuthority) - B1 - dir_port: 60091 */
+      int found_B1 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_B1 +=
+                        (ds->dir_port == 60091 ?
+                         1 : 0)
+                        );
+      tt_assert(found_B1 == 0);
+
+      /* (No AlternateDirAuthority) - A2 - dir_port: 60092 */
+      int found_A2 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_A2 +=
+                        (ds->dir_port == 60092 ?
+                         1 : 0)
+                        );
+      tt_assert(found_A2 == 0);
+
+      /* Custom FallbackDir - No Nickname - dir_port: 60093 */
+      int found_non_default_fallback = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_non_default_fallback +=
+                        (ds->dir_port == 60093 ?
+                         1 : 0)
+                        );
+      tt_assert(found_non_default_fallback == 1);
+
+      /* (No Default FallbackDir) - No Nickname - dir_port: 60099 */
+      int found_default_fallback = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_default_fallback +=
+                        (ds->dir_port == 60099 ?
+                         1 : 0)
+                        );
+      tt_assert(found_default_fallback == 0);
+    }
+  }
+
+  /* Case 8: 1000 - DirAuthorities Set, Others Not Set */
+  {
+    /* clear fallback dirs counter */
+    n_add_default_fallback_dir_servers_known_default = 0;
+
+    /* clear options*/
+    memset(options, 0, sizeof(or_options_t));
+
+    /* clear any previous dir servers:
+     consider_adding_dir_servers() should do this anyway */
+    clear_dir_servers();
+
+    /* assign options: 1000 */
+    options->DirAuthorities = test_dir_authority;
+    options->AlternateBridgeAuthority = NULL;
+    options->AlternateDirAuthority = NULL;
+    options->FallbackDir = NULL;
+
+    /* parse options - ensure we always update by passing NULL old_options */
+    consider_adding_dir_servers(options, NULL);
+
+    /* check outcome */
+
+    /* we must not have added the default fallback dirs */
+    tt_assert(n_add_default_fallback_dir_servers_known_default == 0);
+
+    {
+      /* trusted_dir_servers */
+      const smartlist_t *dir_servers = router_get_trusted_dir_servers();
+      /* D0, (No B1), (No A2) */
+      tt_assert(smartlist_len(dir_servers) == 1);
+
+      /* DirAuthority - D0 - dir_port: 60090 */
+      int found_D0 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_D0 +=
+                        (ds->dir_port == 60090 ?
+                         1 : 0)
+                        );
+      tt_assert(found_D0 == 1);
+
+      /* (No AlternateBridgeAuthority) - B1 - dir_port: 60091 */
+      int found_B1 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_B1 +=
+                        (ds->dir_port == 60091 ?
+                         1 : 0)
+                        );
+      tt_assert(found_B1 == 0);
+
+      /* (No AlternateDirAuthority) - A2 - dir_port: 60092 */
+      int found_A2 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_A2 +=
+                        (ds->dir_port == 60092 ?
+                         1 : 0)
+                        );
+      tt_assert(found_A2 == 0);
+    }
+
+    {
+      /* fallback_dir_servers */
+      const smartlist_t *fallback_servers = router_get_fallback_dir_servers();
+      /* D0, (No B1), (No A2), (No Fallback) */
+      tt_assert(smartlist_len(fallback_servers) == 1);
+
+      /* DirAuthority - D0 - dir_port: 60090 */
+      int found_D0 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_D0 +=
+                        (ds->dir_port == 60090 ?
+                         1 : 0)
+                        );
+      tt_assert(found_D0 == 1);
+
+      /* (No AlternateBridgeAuthority) - B1 - dir_port: 60091 */
+      int found_B1 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_B1 +=
+                        (ds->dir_port == 60091 ?
+                         1 : 0)
+                        );
+      tt_assert(found_B1 == 0);
+
+      /* (No AlternateDirAuthority) - A2 - dir_port: 60092 */
+      int found_A2 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_A2 +=
+                        (ds->dir_port == 60092 ?
+                         1 : 0)
+                        );
+      tt_assert(found_A2 == 0);
+
+      /* (No Custom FallbackDir) - No Nickname - dir_port: 60093 */
+      int found_non_default_fallback = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_non_default_fallback +=
+                        (ds->dir_port == 60093 ?
+                         1 : 0)
+                        );
+      tt_assert(found_non_default_fallback == 0);
+
+      /* (No Default FallbackDir) - No Nickname - dir_port: 60099 */
+      int found_default_fallback = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_default_fallback +=
+                        (ds->dir_port == 60099 ?
+                         1 : 0)
+                        );
+      tt_assert(found_default_fallback == 0);
+    }
+  }
+
+  /* Case 7: 0111 - DirAuthorities Not Set, Others Set */
+  {
+    /* clear fallback dirs counter */
+    n_add_default_fallback_dir_servers_known_default = 0;
+
+    /* clear options*/
+    memset(options, 0, sizeof(or_options_t));
+
+    /* clear any previous dir servers:
+     consider_adding_dir_servers() should do this anyway */
+    clear_dir_servers();
+
+    /* assign options: 0111 */
+    options->DirAuthorities = NULL;
+    options->AlternateBridgeAuthority = test_alt_bridge_authority;
+    options->AlternateDirAuthority = test_alt_dir_authority;
+    options->FallbackDir = test_fallback_directory;
+
+    /* parse options - ensure we always update by passing NULL old_options */
+    consider_adding_dir_servers(options, NULL);
+
+    /* check outcome */
+
+    /* we must not have added the default fallback dirs */
+    tt_assert(n_add_default_fallback_dir_servers_known_default == 0);
+
+    {
+      /* trusted_dir_servers */
+      const smartlist_t *dir_servers = router_get_trusted_dir_servers();
+      /* (No D0), B1, A2 */
+      tt_assert(smartlist_len(dir_servers) == 2);
+
+      /* (No DirAuthority) - D0 - dir_port: 60090 */
+      int found_D0 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_D0 +=
+                        (ds->dir_port == 60090 ?
+                         1 : 0)
+                        );
+      tt_assert(found_D0 == 0);
+
+      /* AlternateBridgeAuthority - B1 - dir_port: 60091 */
+      int found_B1 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_B1 +=
+                        (ds->dir_port == 60091 ?
+                         1 : 0)
+                        );
+      tt_assert(found_B1 == 1);
+
+      /* AlternateDirAuthority - A2 - dir_port: 60092 */
+      int found_A2 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_A2 +=
+                        (ds->dir_port == 60092 ?
+                         1 : 0)
+                        );
+      tt_assert(found_A2 == 1);
+    }
+
+    {
+      /* fallback_dir_servers */
+      const smartlist_t *fallback_servers = router_get_fallback_dir_servers();
+      /* (No D0), B1, A2, Custom Fallback */
+      tt_assert(smartlist_len(fallback_servers) == 3);
+
+      /* (No DirAuthority) - D0 - dir_port: 60090 */
+      int found_D0 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_D0 +=
+                        (ds->dir_port == 60090 ?
+                         1 : 0)
+                        );
+      tt_assert(found_D0 == 0);
+
+      /* AlternateBridgeAuthority - B1 - dir_port: 60091 */
+      int found_B1 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_B1 +=
+                        (ds->dir_port == 60091 ?
+                         1 : 0)
+                        );
+      tt_assert(found_B1 == 1);
+
+      /* AlternateDirAuthority - A2 - dir_port: 60092 */
+      int found_A2 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_A2 +=
+                        (ds->dir_port == 60092 ?
+                         1 : 0)
+                        );
+      tt_assert(found_A2 == 1);
+
+      /* Custom FallbackDir - No Nickname - dir_port: 60093 */
+      int found_non_default_fallback = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_non_default_fallback +=
+                        (ds->dir_port == 60093 ?
+                         1 : 0)
+                        );
+      tt_assert(found_non_default_fallback == 1);
+
+      /* (No Default FallbackDir) - No Nickname - dir_port: 60099 */
+      int found_default_fallback = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_default_fallback +=
+                        (ds->dir_port == 60099 ?
+                         1 : 0)
+                        );
+      tt_assert(found_default_fallback == 0);
+    }
+  }
+
+  /* Case 6: 0110 - DirAuthorities Not Set, AlternateBridgeAuthority &
+     AlternateDirAuthority Set, FallbackDir Not Set */
+  {
+    /* clear fallback dirs counter */
+    n_add_default_fallback_dir_servers_known_default = 0;
+
+    /* clear options*/
+    memset(options, 0, sizeof(or_options_t));
+
+    /* clear any previous dir servers:
+     consider_adding_dir_servers() should do this anyway */
+    clear_dir_servers();
+
+    /* assign options: 0110 */
+    options->DirAuthorities = NULL;
+    options->AlternateBridgeAuthority = test_alt_bridge_authority;
+    options->AlternateDirAuthority = test_alt_dir_authority;
+    options->FallbackDir = NULL;
+
+    /* parse options - ensure we always update by passing NULL old_options */
+    consider_adding_dir_servers(options, NULL);
+
+    /* check outcome */
+
+    /* we must not have added the default fallback dirs */
+    tt_assert(n_add_default_fallback_dir_servers_known_default == 0);
+
+    {
+      /* trusted_dir_servers */
+      const smartlist_t *dir_servers = router_get_trusted_dir_servers();
+      /* (No D0), B1, A2 */
+      tt_assert(smartlist_len(dir_servers) == 2);
+
+      /* (No DirAuthority) - D0 - dir_port: 60090 */
+      int found_D0 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_D0 +=
+                        (ds->dir_port == 60090 ?
+                         1 : 0)
+                        );
+      tt_assert(found_D0 == 0);
+
+      /* AlternateBridgeAuthority - B1 - dir_port: 60091 */
+      int found_B1 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_B1 +=
+                        (ds->dir_port == 60091 ?
+                         1 : 0)
+                        );
+      tt_assert(found_B1 == 1);
+
+      /* AlternateDirAuthority - A2 - dir_port: 60092 */
+      int found_A2 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_A2 +=
+                        (ds->dir_port == 60092 ?
+                         1 : 0)
+                        );
+      tt_assert(found_A2 == 1);
+    }
+
+    {
+      /* fallback_dir_servers */
+      const smartlist_t *fallback_servers = router_get_fallback_dir_servers();
+      /* (No D0), B1, A2, (No Fallback) */
+      tt_assert(smartlist_len(fallback_servers) == 2);
+
+      /* (No DirAuthority) - D0 - dir_port: 60090 */
+      int found_D0 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_D0 +=
+                        (ds->dir_port == 60090 ?
+                         1 : 0)
+                        );
+      tt_assert(found_D0 == 0);
+
+      /* AlternateBridgeAuthority - B1 - dir_port: 60091 */
+      int found_B1 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_B1 +=
+                        (ds->dir_port == 60091 ?
+                         1 : 0)
+                        );
+      tt_assert(found_B1 == 1);
+
+      /* AlternateDirAuthority - A2 - dir_port: 60092 */
+      int found_A2 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_A2 +=
+                        (ds->dir_port == 60092 ?
+                         1 : 0)
+                        );
+      tt_assert(found_A2 == 1);
+
+      /* (No Custom FallbackDir) - No Nickname - dir_port: 60093 */
+      int found_non_default_fallback = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_non_default_fallback +=
+                        (ds->dir_port == 60093 ?
+                         1 : 0)
+                        );
+      tt_assert(found_non_default_fallback == 0);
+
+      /* (No Default FallbackDir) - No Nickname - dir_port: 60099 */
+      int found_default_fallback = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_default_fallback +=
+                        (ds->dir_port == 60099 ?
+                         1 : 0)
+                        );
+      tt_assert(found_default_fallback == 0);
+    }
+  }
+
+  /*
+   2. Outcome: Use Set Bridge Authority
+     - Use Default Non-Bridge Directory Authorities
+     - Use FallbackDir if it is set, otherwise use default FallbackDir
+     Cases expected to yield this outcome:
+       4 & 5 (the 2 cases where DirAuthorities is NULL,
+              AlternateBridgeAuthority is set, and
+              AlternateDirAuthority is NULL)
+  */
+
+  /* Case 5: 0101 - DirAuthorities Not Set, AlternateBridgeAuthority Set,
+     AlternateDirAuthority Not Set, FallbackDir Set */
+  {
+    /* clear fallback dirs counter */
+    n_add_default_fallback_dir_servers_known_default = 0;
+
+    /* clear options*/
+    memset(options, 0, sizeof(or_options_t));
+
+    /* clear any previous dir servers:
+     consider_adding_dir_servers() should do this anyway */
+    clear_dir_servers();
+
+    /* assign options: 0101 */
+    options->DirAuthorities = NULL;
+    options->AlternateBridgeAuthority = test_alt_bridge_authority;
+    options->AlternateDirAuthority = NULL;
+    options->FallbackDir = test_fallback_directory;
+
+    /* parse options - ensure we always update by passing NULL old_options */
+    consider_adding_dir_servers(options, NULL);
+
+    /* check outcome */
+
+    /* we must not have added the default fallback dirs */
+    tt_assert(n_add_default_fallback_dir_servers_known_default == 0);
+
+    {
+      /* trusted_dir_servers */
+      const smartlist_t *dir_servers = router_get_trusted_dir_servers();
+      /* (No D0), B1, (No A2), Default v3 Non-Bridge Authorities */
+      tt_assert(smartlist_len(dir_servers) == 1 + n_default_alt_dir_authority);
+
+      /* (No DirAuthorities) - D0 - dir_port: 60090 */
+      int found_D0 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_D0 +=
+                        (ds->dir_port == 60090 ?
+                         1 : 0)
+                        );
+      tt_assert(found_D0 == 0);
+
+      /* AlternateBridgeAuthority - B1 - dir_port: 60091 */
+      int found_B1 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_B1 +=
+                        (ds->dir_port == 60091 ?
+                         1 : 0)
+                        );
+      tt_assert(found_B1 == 1);
+
+      /* (No AlternateDirAuthority) - A2 - dir_port: 60092 */
+      int found_A2 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_A2 +=
+                        (ds->dir_port == 60092 ?
+                         1 : 0)
+                        );
+      tt_assert(found_A2 == 0);
+
+      /* There's no easy way of checking that we have included all the
+       * default v3 non-Bridge directory authorities, so let's assume that
+       * if the total count above is correct, we have the right ones.
+       */
+    }
+
+    {
+      /* fallback_dir_servers */
+      const smartlist_t *fallback_servers = router_get_fallback_dir_servers();
+      /* (No D0), B1, (No A2), Default v3 Non-Bridge Authorities,
+       * Custom Fallback */
+      tt_assert(smartlist_len(fallback_servers) ==
+                2 + n_default_alt_dir_authority);
+
+      /* (No DirAuthorities) - D0 - dir_port: 60090 */
+      int found_D0 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_D0 +=
+                        (ds->dir_port == 60090 ?
+                         1 : 0)
+                        );
+      tt_assert(found_D0 == 0);
+
+      /* AlternateBridgeAuthority - B1 - dir_port: 60091 */
+      int found_B1 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_B1 +=
+                        (ds->dir_port == 60091 ?
+                         1 : 0)
+                        );
+      tt_assert(found_B1 == 1);
+
+      /* (No AlternateDirAuthority) - A2 - dir_port: 60092 */
+      int found_A2 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_A2 +=
+                        (ds->dir_port == 60092 ?
+                         1 : 0)
+                        );
+      tt_assert(found_A2 == 0);
+
+      /* Custom FallbackDir - No Nickname - dir_port: 60093 */
+      int found_non_default_fallback = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_non_default_fallback +=
+                        (ds->dir_port == 60093 ?
+                         1 : 0)
+                        );
+      tt_assert(found_non_default_fallback == 1);
+
+      /* (No Default FallbackDir) - No Nickname - dir_port: 60099 */
+      int found_default_fallback = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_default_fallback +=
+                        (ds->dir_port == 60099 ?
+                         1 : 0)
+                        );
+      tt_assert(found_default_fallback == 0);
+
+      /* There's no easy way of checking that we have included all the
+       * default v3 non-Bridge directory authorities, so let's assume that
+       * if the total count above is correct, we have the right ones.
+       */
+    }
+  }
+
+  /* Case 4: 0100 - DirAuthorities Not Set, AlternateBridgeAuthority Set,
+   AlternateDirAuthority & FallbackDir Not Set */
+  {
+    /* clear fallback dirs counter */
+    n_add_default_fallback_dir_servers_known_default = 0;
+
+    /* clear options*/
+    memset(options, 0, sizeof(or_options_t));
+
+    /* clear any previous dir servers:
+     consider_adding_dir_servers() should do this anyway */
+    clear_dir_servers();
+
+    /* assign options: 0100 */
+    options->DirAuthorities = NULL;
+    options->AlternateBridgeAuthority = test_alt_bridge_authority;
+    options->AlternateDirAuthority = NULL;
+    options->FallbackDir = NULL;
+
+    /* parse options - ensure we always update by passing NULL old_options */
+    consider_adding_dir_servers(options, NULL);
+
+    /* check outcome */
+
+    /* we must have added the default fallback dirs */
+    tt_assert(n_add_default_fallback_dir_servers_known_default == 1);
+
+    {
+      /* trusted_dir_servers */
+      const smartlist_t *dir_servers = router_get_trusted_dir_servers();
+      /* (No D0), B1, (No A2), Default v3 Non-Bridge Authorities */
+      tt_assert(smartlist_len(dir_servers) == 1 + n_default_alt_dir_authority);
+
+      /* (No DirAuthorities) - D0 - dir_port: 60090 */
+      int found_D0 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_D0 +=
+                        (ds->dir_port == 60090 ?
+                         1 : 0)
+                        );
+      tt_assert(found_D0 == 0);
+
+      /* AlternateBridgeAuthority - B1 - dir_port: 60091 */
+      int found_B1 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_B1 +=
+                        (ds->dir_port == 60091 ?
+                         1 : 0)
+                        );
+      tt_assert(found_B1 == 1);
+
+      /* (No AlternateDirAuthority) - A2 - dir_port: 60092 */
+      int found_A2 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_A2 +=
+                        (ds->dir_port == 60092 ?
+                         1 : 0)
+                        );
+      tt_assert(found_A2 == 0);
+
+      /* There's no easy way of checking that we have included all the
+       * default v3 non-Bridge directory authorities, so let's assume that
+       * if the total count above is correct, we have the right ones.
+       */
+    }
+
+    {
+      /* fallback_dir_servers */
+      const smartlist_t *fallback_servers = router_get_fallback_dir_servers();
+      /* (No D0), B1, (No A2), Default v3 Non-Bridge Authorities,
+       * Default Fallback */
+      tt_assert(smartlist_len(fallback_servers) ==
+                2 + n_default_alt_dir_authority);
+
+      /* (No DirAuthorities) - D0 - dir_port: 60090 */
+      int found_D0 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_D0 +=
+                        (ds->dir_port == 60090 ?
+                         1 : 0)
+                        );
+      tt_assert(found_D0 == 0);
+
+      /* AlternateBridgeAuthority - B1 - dir_port: 60091 */
+      int found_B1 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_B1 +=
+                        (ds->dir_port == 60091 ?
+                         1 : 0)
+                        );
+      tt_assert(found_B1 == 1);
+
+      /* (No AlternateDirAuthority) - A2 - dir_port: 60092 */
+      int found_A2 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_A2 +=
+                        (ds->dir_port == 60092 ?
+                         1 : 0)
+                        );
+      tt_assert(found_A2 == 0);
+
+      /* (No Custom FallbackDir) - No Nickname - dir_port: 60093 */
+      int found_non_default_fallback = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_non_default_fallback +=
+                        (ds->dir_port == 60093 ?
+                         1 : 0)
+                        );
+      tt_assert(found_non_default_fallback == 0);
+
+      /* Default FallbackDir - No Nickname - dir_port: 60099 */
+      int found_default_fallback = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_default_fallback +=
+                        (ds->dir_port == 60099 ?
+                         1 : 0)
+                        );
+      tt_assert(found_default_fallback == 1);
+
+      /* There's no easy way of checking that we have included all the
+       * default v3 non-Bridge directory authorities, so let's assume that
+       * if the total count above is correct, we have the right ones.
+       */
+    }
+  }
+
+  /*
+   3. Outcome: Use Set Alternate Directory Authority
+     - Use Default Bridge Authorities
+     - Use FallbackDir if it is set, otherwise No Default Fallback Directories
+     Cases expected to yield this outcome:
+       2 & 3 (the 2 cases where DirAuthorities and AlternateBridgeAuthority
+              are both NULL, but AlternateDirAuthority is set)
+  */
+
+  /* Case 3: 0011 - DirAuthorities & AlternateBridgeAuthority Not Set,
+     AlternateDirAuthority & FallbackDir Set */
+  {
+    /* clear fallback dirs counter */
+    n_add_default_fallback_dir_servers_known_default = 0;
+
+    /* clear options*/
+    memset(options, 0, sizeof(or_options_t));
+
+    /* clear any previous dir servers:
+     consider_adding_dir_servers() should do this anyway */
+    clear_dir_servers();
+
+    /* assign options: 0011 */
+    options->DirAuthorities = NULL;
+    options->AlternateBridgeAuthority = NULL;
+    options->AlternateDirAuthority = test_alt_dir_authority;
+    options->FallbackDir = test_fallback_directory;
+
+    /* parse options - ensure we always update by passing NULL old_options */
+    consider_adding_dir_servers(options, NULL);
+
+    /* check outcome */
+
+    /* we must not have added the default fallback dirs */
+    tt_assert(n_add_default_fallback_dir_servers_known_default == 0);
+
+    {
+      /* trusted_dir_servers */
+      const smartlist_t *dir_servers = router_get_trusted_dir_servers();
+      /* (No D0), (No B1), Default Bridge Authorities, A2 */
+      tt_assert(smartlist_len(dir_servers) ==
+                1 + n_default_alt_bridge_authority);
+
+      /* (No DirAuthorities) - D0 - dir_port: 60090 */
+      int found_D0 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_D0 +=
+                        (ds->dir_port == 60090 ?
+                         1 : 0)
+                        );
+      tt_assert(found_D0 == 0);
+
+      /* (No AlternateBridgeAuthority) - B1 - dir_port: 60091 */
+      int found_B1 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_B1 +=
+                        (ds->dir_port == 60091 ?
+                         1 : 0)
+                        );
+      tt_assert(found_B1 == 0);
+
+      /* AlternateDirAuthority - A2 - dir_port: 60092 */
+      int found_A2 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_A2 +=
+                        (ds->dir_port == 60092 ?
+                         1 : 0)
+                        );
+      tt_assert(found_A2 == 1);
+
+      /* There's no easy way of checking that we have included all the
+       * default Bridge authorities (except for hard-coding tonga's details),
+       * so let's assume that if the total count above is correct,
+       * we have the right ones.
+       */
+    }
+
+    {
+      /* fallback_dir_servers */
+      const smartlist_t *fallback_servers = router_get_fallback_dir_servers();
+      /* (No D0), (No B1), Default Bridge Authorities, A2,
+       * Custom Fallback Directory, (No Default Fallback Directories) */
+      tt_assert(smartlist_len(fallback_servers) ==
+                2 + n_default_alt_bridge_authority);
+
+      /* (No DirAuthorities) - D0 - dir_port: 60090 */
+      int found_D0 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_D0 +=
+                        (ds->dir_port == 60090 ?
+                         1 : 0)
+                        );
+      tt_assert(found_D0 == 0);
+
+      /* (No AlternateBridgeAuthority) - B1 - dir_port: 60091 */
+      int found_B1 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_B1 +=
+                        (ds->dir_port == 60091 ?
+                         1 : 0)
+                        );
+      tt_assert(found_B1 == 0);
+
+      /* AlternateDirAuthority - A2 - dir_port: 60092 */
+      int found_A2 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_A2 +=
+                        (ds->dir_port == 60092 ?
+                         1 : 0)
+                        );
+      tt_assert(found_A2 == 1);
+
+      /* Custom FallbackDir - No Nickname - dir_port: 60093 */
+      int found_non_default_fallback = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_non_default_fallback +=
+                        (ds->dir_port == 60093 ?
+                         1 : 0)
+                        );
+      tt_assert(found_non_default_fallback == 1);
+
+      /* (No Default FallbackDir) - No Nickname - dir_port: 60099 */
+      int found_default_fallback = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_default_fallback +=
+                        (ds->dir_port == 60099 ?
+                         1 : 0)
+                        );
+      tt_assert(found_default_fallback == 0);
+
+      /* There's no easy way of checking that we have included all the
+       * default Bridge authorities (except for hard-coding tonga's details),
+       * so let's assume that if the total count above is correct,
+       * we have the right ones.
+       */
+    }
+  }
+
+  /* Case 2: 0010 - DirAuthorities & AlternateBridgeAuthority Not Set,
+   AlternateDirAuthority Set, FallbackDir Not Set */
+  {
+    /* clear fallback dirs counter */
+    n_add_default_fallback_dir_servers_known_default = 0;
+
+    /* clear options*/
+    memset(options, 0, sizeof(or_options_t));
+
+    /* clear any previous dir servers:
+     consider_adding_dir_servers() should do this anyway */
+    clear_dir_servers();
+
+    /* assign options: 0010 */
+    options->DirAuthorities = NULL;
+    options->AlternateBridgeAuthority = NULL;
+    options->AlternateDirAuthority = test_alt_dir_authority;
+    options->FallbackDir = NULL;
+
+    /* parse options - ensure we always update by passing NULL old_options */
+    consider_adding_dir_servers(options, NULL);
+
+    /* check outcome */
+
+    /* we must not have added the default fallback dirs */
+    tt_assert(n_add_default_fallback_dir_servers_known_default == 0);
+
+    {
+      /* trusted_dir_servers */
+      const smartlist_t *dir_servers = router_get_trusted_dir_servers();
+      /* (No D0), (No B1), Default Bridge Authorities, A2,
+       * No Default or Custom Fallback Directories */
+      tt_assert(smartlist_len(dir_servers) ==
+                1 + n_default_alt_bridge_authority);
+
+      /* (No DirAuthorities) - D0 - dir_port: 60090 */
+      int found_D0 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_D0 +=
+                        (ds->dir_port == 60090 ?
+                         1 : 0)
+                        );
+      tt_assert(found_D0 == 0);
+
+      /* (No AlternateBridgeAuthority) - B1 - dir_port: 60091 */
+      int found_B1 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_B1 +=
+                        (ds->dir_port == 60091 ?
+                         1 : 0)
+                        );
+      tt_assert(found_B1 == 0);
+
+      /* AlternateDirAuthority - A2 - dir_port: 60092 */
+      int found_A2 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_A2 +=
+                        (ds->dir_port == 60092 ?
+                         1 : 0)
+                        );
+      tt_assert(found_A2 == 1);
+
+      /* There's no easy way of checking that we have included all the
+       * default Bridge authorities (except for hard-coding tonga's details),
+       * so let's assume that if the total count above is correct,
+       * we have the right ones.
+       */
+    }
+
+    {
+      /* fallback_dir_servers */
+      const smartlist_t *fallback_servers = router_get_fallback_dir_servers();
+      /* (No D0), (No B1), Default Bridge Authorities, A2,
+       * No Custom or Default Fallback Directories */
+      tt_assert(smartlist_len(fallback_servers) ==
+                1 + n_default_alt_bridge_authority);
+
+      /* (No DirAuthorities) - D0 - dir_port: 60090 */
+      int found_D0 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_D0 +=
+                        (ds->dir_port == 60090 ?
+                         1 : 0)
+                        );
+      tt_assert(found_D0 == 0);
+
+      /* (No AlternateBridgeAuthority) - B1 - dir_port: 60091 */
+      int found_B1 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_B1 +=
+                        (ds->dir_port == 60091 ?
+                         1 : 0)
+                        );
+      tt_assert(found_B1 == 0);
+
+      /* AlternateDirAuthority - A2 - dir_port: 60092 */
+      int found_A2 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_A2 +=
+                        (ds->dir_port == 60092 ?
+                         1 : 0)
+                        );
+      tt_assert(found_A2 == 1);
+
+      /* (No Custom FallbackDir) - No Nickname - dir_port: 60093 */
+      int found_non_default_fallback = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_non_default_fallback +=
+                        (ds->dir_port == 60093 ?
+                         1 : 0)
+                        );
+      tt_assert(found_non_default_fallback == 0);
+
+      /* (No Default FallbackDir) - No Nickname - dir_port: 60099 */
+      int found_default_fallback = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_default_fallback +=
+                        (ds->dir_port == 60099 ?
+                         1 : 0)
+                        );
+      tt_assert(found_default_fallback == 0);
+
+      /* There's no easy way of checking that we have included all the
+       * default Bridge authorities (except for hard-coding tonga's details),
+       * so let's assume that if the total count above is correct,
+       * we have the right ones.
+       */
+    }
+  }
+
+  /*
+   4. Outcome: Use Set Custom Fallback Directory
+     - Use Default Bridge & Directory Authorities
+     Cases expected to yield this outcome:
+       1 (DirAuthorities, AlternateBridgeAuthority and AlternateDirAuthority
+          are all NULL, but FallbackDir is set)
+  */
+
+  /* Case 1: 0001 - DirAuthorities, AlternateBridgeAuthority
+    & AlternateDirAuthority Not Set, FallbackDir Set */
+  {
+    /* clear fallback dirs counter */
+    n_add_default_fallback_dir_servers_known_default = 0;
+
+    /* clear options*/
+    memset(options, 0, sizeof(or_options_t));
+
+    /* clear any previous dir servers:
+     consider_adding_dir_servers() should do this anyway */
+    clear_dir_servers();
+
+    /* assign options: 0001 */
+    options->DirAuthorities = NULL;
+    options->AlternateBridgeAuthority = NULL;
+    options->AlternateDirAuthority = NULL;
+    options->FallbackDir = test_fallback_directory;
+
+    /* parse options - ensure we always update by passing NULL old_options */
+    consider_adding_dir_servers(options, NULL);
+
+    /* check outcome */
+
+    /* we must not have added the default fallback dirs */
+    tt_assert(n_add_default_fallback_dir_servers_known_default == 0);
+
+    {
+      /* trusted_dir_servers */
+      const smartlist_t *dir_servers = router_get_trusted_dir_servers();
+      /* (No D0), (No B1), Default Bridge Authorities,
+       * (No A2), Default v3 Directory Authorities */
+      tt_assert(smartlist_len(dir_servers) == n_default_authorities);
+
+      /* (No DirAuthorities) - D0 - dir_port: 60090 */
+      int found_D0 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_D0 +=
+                        (ds->dir_port == 60090 ?
+                         1 : 0)
+                        );
+      tt_assert(found_D0 == 0);
+
+      /* (No AlternateBridgeAuthority) - B1 - dir_port: 60091 */
+      int found_B1 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_B1 +=
+                        (ds->dir_port == 60091 ?
+                         1 : 0)
+                        );
+      tt_assert(found_B1 == 0);
+
+      /* (No AlternateDirAuthority) - A2 - dir_port: 60092 */
+      int found_A2 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_A2 +=
+                        (ds->dir_port == 60092 ?
+                         1 : 0)
+                        );
+      tt_assert(found_A2 == 0);
+
+      /* There's no easy way of checking that we have included all the
+       * default Bridge & V3 Directory authorities, so let's assume that
+       * if the total count above is correct, we have the right ones.
+       */
+    }
+
+    {
+      /* fallback_dir_servers */
+      const smartlist_t *fallback_servers = router_get_fallback_dir_servers();
+      /* (No D0), (No B1), Default Bridge Authorities,
+       * (No A2), Default v3 Directory Authorities,
+       * Custom Fallback Directory, (No Default Fallback Directories) */
+      tt_assert(smartlist_len(fallback_servers) ==
+                1 + n_default_authorities);
+
+      /* (No DirAuthorities) - D0 - dir_port: 60090 */
+      int found_D0 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_D0 +=
+                        (ds->dir_port == 60090 ?
+                         1 : 0)
+                        );
+      tt_assert(found_D0 == 0);
+
+      /* (No AlternateBridgeAuthority) - B1 - dir_port: 60091 */
+      int found_B1 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_B1 +=
+                        (ds->dir_port == 60091 ?
+                         1 : 0)
+                        );
+      tt_assert(found_B1 == 0);
+
+      /* (No AlternateDirAuthority) - A2 - dir_port: 60092 */
+      int found_A2 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_A2 +=
+                        (ds->dir_port == 60092 ?
+                         1 : 0)
+                        );
+      tt_assert(found_A2 == 0);
+
+      /* Custom FallbackDir - No Nickname - dir_port: 60093 */
+      int found_non_default_fallback = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_non_default_fallback +=
+                        (ds->dir_port == 60093 ?
+                         1 : 0)
+                        );
+      tt_assert(found_non_default_fallback == 1);
+
+      /* (No Default FallbackDir) - No Nickname - dir_port: 60099 */
+      int found_default_fallback = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_default_fallback +=
+                        (ds->dir_port == 60099 ?
+                         1 : 0)
+                        );
+      tt_assert(found_default_fallback == 0);
+
+      /* There's no easy way of checking that we have included all the
+       * default Bridge & V3 Directory authorities, so let's assume that
+       * if the total count above is correct, we have the right ones.
+       */
+    }
+  }
+
+  /*
+   5. Outcome: Use All Defaults
+     - Use Default Bridge & Directory Authorities, Default Fallback Directories
+     Cases expected to yield this outcome:
+       0 (DirAuthorities, AlternateBridgeAuthority, AlternateDirAuthority
+          and FallbackDir are all NULL)
+  */
+
+  /* Case 0: 0000 - All Not Set */
+  {
+    /* clear fallback dirs counter */
+    n_add_default_fallback_dir_servers_known_default = 0;
+
+    /* clear options*/
+    memset(options, 0, sizeof(or_options_t));
+
+    /* clear any previous dir servers:
+     consider_adding_dir_servers() should do this anyway */
+    clear_dir_servers();
+
+    /* assign options: 0001 */
+    options->DirAuthorities = NULL;
+    options->AlternateBridgeAuthority = NULL;
+    options->AlternateDirAuthority = NULL;
+    options->FallbackDir = NULL;
+
+    /* parse options - ensure we always update by passing NULL old_options */
+    consider_adding_dir_servers(options, NULL);
+
+    /* check outcome */
+
+    /* we must have added the default fallback dirs */
+    tt_assert(n_add_default_fallback_dir_servers_known_default == 1);
+
+    {
+      /* trusted_dir_servers */
+      const smartlist_t *dir_servers = router_get_trusted_dir_servers();
+      /* (No D0), (No B1), Default Bridge Authorities,
+       * (No A2), Default v3 Directory Authorities */
+      tt_assert(smartlist_len(dir_servers) == n_default_authorities);
+
+      /* (No DirAuthorities) - D0 - dir_port: 60090 */
+      int found_D0 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_D0 +=
+                        (ds->dir_port == 60090 ?
+                         1 : 0)
+                        );
+      tt_assert(found_D0 == 0);
+
+      /* (No AlternateBridgeAuthority) - B1 - dir_port: 60091 */
+      int found_B1 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_B1 +=
+                        (ds->dir_port == 60091 ?
+                         1 : 0)
+                        );
+      tt_assert(found_B1 == 0);
+
+      /* (No AlternateDirAuthority) - A2 - dir_port: 60092 */
+      int found_A2 = 0;
+      SMARTLIST_FOREACH(dir_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_A2 +=
+                        (ds->dir_port == 60092 ?
+                         1 : 0)
+                        );
+      tt_assert(found_A2 == 0);
+
+      /* There's no easy way of checking that we have included all the
+       * default Bridge & V3 Directory authorities, so let's assume that
+       * if the total count above is correct, we have the right ones.
+       */
+    }
+
+    {
+      /* fallback_dir_servers */
+      const smartlist_t *fallback_servers = router_get_fallback_dir_servers();
+      /* (No D0), (No B1), Default Bridge Authorities,
+       * (No A2), Default v3 Directory Authorities,
+       * (No Custom Fallback Directory), Default Fallback Directories */
+      tt_assert(smartlist_len(fallback_servers) ==
+                n_default_authorities + n_default_fallback_dir);
+
+      /* (No DirAuthorities) - D0 - dir_port: 60090 */
+      int found_D0 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_D0 +=
+                        (ds->dir_port == 60090 ?
+                         1 : 0)
+                        );
+      tt_assert(found_D0 == 0);
+
+      /* (No AlternateBridgeAuthority) - B1 - dir_port: 60091 */
+      int found_B1 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_B1 +=
+                        (ds->dir_port == 60091 ?
+                         1 : 0)
+                        );
+      tt_assert(found_B1 == 0);
+
+      /* (No AlternateDirAuthority) - A2 - dir_port: 60092 */
+      int found_A2 = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_A2 +=
+                        (ds->dir_port == 60092 ?
+                         1 : 0)
+                        );
+      tt_assert(found_A2 == 0);
+
+      /* Custom FallbackDir - No Nickname - dir_port: 60093 */
+      int found_non_default_fallback = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_non_default_fallback +=
+                        (ds->dir_port == 60093 ?
+                         1 : 0)
+                        );
+      tt_assert(found_non_default_fallback == 0);
+
+      /* (No Default FallbackDir) - No Nickname - dir_port: 60099 */
+      int found_default_fallback = 0;
+      SMARTLIST_FOREACH(fallback_servers,
+                        dir_server_t *,
+                        ds,
+                        /* increment the found counter if dir_port matches */
+                        found_default_fallback +=
+                        (ds->dir_port == 60099 ?
+                         1 : 0)
+                        );
+      tt_assert(found_default_fallback == 1);
+
+      /* There's no easy way of checking that we have included all the
+       * default Bridge & V3 Directory authorities, and the default
+       * Fallback Directories, so let's assume that if the total count
+       * above is correct, we have the right ones.
+       */
+    }
+  }
+
+  done:
+  clear_dir_servers();
+
+  tor_free(test_dir_authority->key);
+  tor_free(test_dir_authority->value);
+  tor_free(test_dir_authority);
+
+  tor_free(test_alt_dir_authority->key);
+  tor_free(test_alt_dir_authority->value);
+  tor_free(test_alt_dir_authority);
+
+  tor_free(test_alt_bridge_authority->key);
+  tor_free(test_alt_bridge_authority->value);
+  tor_free(test_alt_bridge_authority);
+
+  tor_free(test_fallback_directory->key);
+  tor_free(test_fallback_directory->value);
+  tor_free(test_fallback_directory);
+
+  options->DirAuthorities = NULL;
+  options->AlternateBridgeAuthority = NULL;
+  options->AlternateDirAuthority = NULL;
+  options->FallbackDir = NULL;
+  or_options_free(options);
+
+  UNMOCK(add_default_fallback_dir_servers);
+}
+
 #define CONFIG_TEST(name, flags)                          \
   { #name, test_config_ ## name, flags, NULL, NULL }
 
 struct testcase_t config_tests[] = {
+  CONFIG_TEST(adding_dir_servers, TT_FORK),
   CONFIG_TEST(resolve_my_address, TT_FORK),
   CONFIG_TEST(addressmap, 0),
   CONFIG_TEST(parse_bridge_line, 0),

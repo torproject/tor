@@ -144,6 +144,12 @@ STATIC int options_validate(or_options_t *old_options,
 STATIC int parse_transport_line(const or_options_t *options,
                                 const char *line, int validate_only,
                                 int server);
+STATIC int consider_adding_dir_servers(const or_options_t *options,
+                                       const or_options_t *old_options);
+MOCK_DECL(STATIC void, add_default_fallback_dir_servers, (void));
+STATIC int
+parse_dir_fallback_line(const char *line,
+                        int validate_only);
 #endif
 
 #endif

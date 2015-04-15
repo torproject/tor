@@ -545,8 +545,6 @@ static char *get_bindaddr_from_transport_listen_line(const char *line,
 static int parse_dir_authority_line(const char *line,
                                  dirinfo_type_t required_type,
                                  int validate_only);
-static int parse_dir_fallback_line(const char *line,
-                                   int validate_only);
 static void port_cfg_free(port_cfg_t *port);
 static int parse_ports(or_options_t *options, int validate_only,
                               char **msg_out, int *n_ports_out);
@@ -891,8 +889,8 @@ add_default_trusted_dir_authorities(dirinfo_type_t type)
 
 /** Add the default fallback directory servers into the fallback directory
  * server list. */
-static void
-add_default_fallback_dir_servers(void)
+MOCK_IMPL(void,
+add_default_fallback_dir_servers,(void))
 {
   int i;
   const char *fallback[] = {
@@ -961,7 +959,7 @@ validate_dir_servers(or_options_t *options, or_options_t *old_options)
 /** Look at all the config options and assign new dir authorities
  * as appropriate.
  */
-static int
+int
 consider_adding_dir_servers(const or_options_t *options,
                             const or_options_t *old_options)
 {
@@ -979,6 +977,13 @@ consider_adding_dir_servers(const or_options_t *options,
   if (!need_to_update)
     return 0; /* all done */
 
+  /* "You cannot set both DirAuthority and Alternate*Authority."
+   * Checking that this restriction holds allows us to simplify
+   * the unit tests. */
+  tor_assert(!(options->DirAuthorities &&
+               (options->AlternateDirAuthority
+                || options->AlternateBridgeAuthority)));
+
   /* Start from a clean slate. */
   clear_dir_servers();
 
@@ -993,8 +998,9 @@ consider_adding_dir_servers(const or_options_t *options,
       /* Only add the default fallback directories when the DirAuthorities,
        * AlternateDirAuthority, and FallbackDir directory config options
        * are set to their defaults. */
-      if (!options->FallbackDir)
+      if (!options->FallbackDir) {
         add_default_fallback_dir_servers();
+      }
     }
     /* if type == NO_DIRINFO, we don't want to add any of the
      * default authorities, because we've replaced them all */
@@ -5500,7 +5506,7 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
  * <b>validate_only</b> is 0, and the line is well-formed, then add the
  * dirserver described in the line as a fallback directory. Return 0 on
  * success, or -1 if the line isn't well-formed or if we can't add it. */
-static int
+int
 parse_dir_fallback_line(const char *line,
                         int validate_only)
 {
