@@ -1,0 +1,3 @@
+  o Minor features:
+    - The "--hash-password" option now implies "--hush" to avoid needless
+      noise. Closes ticket 15542. Patch from "cypherpunks".
