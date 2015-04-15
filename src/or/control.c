@@ -2137,7 +2137,6 @@ getinfo_helper_events(control_connection_t *control_conn,
         } else if (cp[0] != '\0') {
           cp[1] = '\0';
         }
-        log_warn(LD_CONFIG, "%s", descs);
         *answer = descs;
         routerinfo_free(r);
         extrainfo_free(e);
