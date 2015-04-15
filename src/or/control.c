@@ -2101,45 +2101,45 @@ getinfo_helper_events(control_connection_t *control_conn,
       }
       *answer = bridge_stats;
     } else if (!strcmp(question, "status/fresh-relay-descs")) {
-        if (!server_mode(get_options())) {
-          *errmsg = "Only relays have descriptors";
-          return -1;
+      if (!server_mode(get_options())) {
+        *errmsg = "Only relays have descriptors";
+        return -1;
+      }
+      routerinfo_t *r;
+      extrainfo_t *e;
+      if (router_build_fresh_descriptor(&r, &e) < 0) {
+        *errmsg = "Error generating descriptor";
+        return -1;
+      }
+      size_t size = r->cache_info.signed_descriptor_len + 1;
+      if (e) {
+        size += e->cache_info.signed_descriptor_len + 1;
+      }
+      tor_assert(r->cache_info.signed_descriptor_len);
+      char *descs = tor_malloc(size);
+      char *cp = descs;
+      memcpy(cp, signed_descriptor_get_body(&r->cache_info),
+             r->cache_info.signed_descriptor_len);
+      cp += r->cache_info.signed_descriptor_len - 1;
+      if (e) {
+        if (cp[0] == '\0') {
+          cp[0] = '\n';
+        } else if (cp[0] != '\n') {
+          cp[1] = '\n';
+          cp++;
         }
-        routerinfo_t *r;
-        extrainfo_t *e;
-        if (router_build_fresh_descriptor(&r, &e) < 0) {
-          *errmsg = "Error generating descriptor";
-          return -1;
-        }
-        size_t size = r->cache_info.signed_descriptor_len + 1;
-        if (e) {
-          size += e->cache_info.signed_descriptor_len + 1;
-        }
-        tor_assert(r->cache_info.signed_descriptor_len);
-        char *descs = tor_malloc(size);
-        char *cp = descs;
-        memcpy(cp, signed_descriptor_get_body(&r->cache_info),
-               r->cache_info.signed_descriptor_len);
-        cp += r->cache_info.signed_descriptor_len - 1;
-        if (e) {
-          if (cp[0] == '\0') {
-            cp[0] = '\n';
-          } else if (cp[0] != '\n') {
-            cp[1] = '\n';
-            cp++;
-          }
-          memcpy(cp, signed_descriptor_get_body(&e->cache_info),
-                 e->cache_info.signed_descriptor_len);
-          cp += e->cache_info.signed_descriptor_len - 1;
-        }
-        if (cp[0] == '\n') {
-          cp[0] = '\0';
-        } else if (cp[0] != '\0') {
-          cp[1] = '\0';
-        }
-        *answer = descs;
-        routerinfo_free(r);
-        extrainfo_free(e);
+        memcpy(cp, signed_descriptor_get_body(&e->cache_info),
+               e->cache_info.signed_descriptor_len);
+        cp += e->cache_info.signed_descriptor_len - 1;
+      }
+      if (cp[0] == '\n') {
+        cp[0] = '\0';
+      } else if (cp[0] != '\0') {
+        cp[1] = '\0';
+      }
+      *answer = descs;
+      routerinfo_free(r);
+      extrainfo_free(e);
     } else {
       return 0;
     }
