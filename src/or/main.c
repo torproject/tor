@@ -1225,7 +1225,9 @@ typedef struct {
   time_t check_for_correct_dns;
 } time_to_t;
 
-static time_to_t time_to = { 0 };
+static time_to_t time_to = {
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
 
 /** Reset all the time_to's so we'll do all our actions again as if we
  * just started up.
