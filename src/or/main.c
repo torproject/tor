@@ -1234,8 +1234,10 @@ static time_to_t time_to = {
  * Useful if our clock just moved back a long time from the future,
  * so we don't wait until that future arrives again before acting.
  */
-void reset_all_main_loop_timers(void) {
-  memset(&time_to, 0, sizeof(time_to_t));
+void
+reset_all_main_loop_timers(void)
+{
+  memset(&time_to, 0, sizeof(time_to));
 }
 
 /**
@@ -1318,7 +1320,8 @@ run_scheduled_events(time_t now)
    * TLS context. */
   if (!time_to.last_rotated_x509_certificate)
     time_to.last_rotated_x509_certificate = now;
-  if (time_to.last_rotated_x509_certificate+MAX_SSL_KEY_LIFETIME_INTERNAL < now) {
+  if (time_to.last_rotated_x509_certificate +
+      MAX_SSL_KEY_LIFETIME_INTERNAL < now) {
     log_info(LD_GENERAL,"Rotating tls context.");
     if (router_initialize_tls_context() < 0) {
       log_warn(LD_BUG, "Error reinitializing TLS context");
