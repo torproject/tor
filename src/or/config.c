@@ -6969,15 +6969,42 @@ getinfo_helper_config(control_connection_t *conn,
     smartlist_free(sl);
   } else if (!strcmp(question, "config/defaults")) {
     smartlist_t *sl = smartlist_new();
-    int i;
+    int i, dirauth_lines_seen = 0;
     for (i = 0; option_vars_[i].name; ++i) {
       const config_var_t *var = &option_vars_[i];
       if (var->initvalue != NULL) {
-          char *val = esc_for_log(var->initvalue);
-          smartlist_add_asprintf(sl, "%s %s\n",var->name,val);
-          tor_free(val);
+        if (strcmp(option_vars_[i].name, "DirAuthority") == 0) {
+          /*
+           * Count dirauth lines we have a default for; we'll use the
+           * count later to decide whether to add the defaults manually
+           */
+          ++dirauth_lines_seen;
+        }
+        char *val = esc_for_log(var->initvalue);
+        smartlist_add_asprintf(sl, "%s %s\n",var->name,val);
+        tor_free(val);
       }
     }
+
+    if (dirauth_lines_seen == 0) {
+      /*
+       * We didn't see any directory authorities with default values,
+       * so add the list of default authorities manually.
+       */
+      const char **i;
+
+      /*
+       * default_authorities is defined earlier in this file and
+       * is a const char ** NULL-terminated array of dirauth config
+       * lines.
+       */
+      for (i = default_authorities; *i != NULL; ++i) {
+        char *val = esc_for_log(*i);
+        smartlist_add_asprintf(sl, "DirAuthority %s\n", val);
+        tor_free(val);
+      }
+    }
+
     *answer = smartlist_join_strings(sl, "", 0, NULL);
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
     smartlist_free(sl);
