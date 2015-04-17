@@ -1,0 +1,5 @@
+  o Minor features:
+    - Add DirAuthority lines for default directory authorities to output
+      of the GETINFO config/defaults controller command if not already
+      present.  Implements ticket 14840.
+
