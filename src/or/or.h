@@ -4805,12 +4805,13 @@ typedef struct rend_encoded_v2_service_descriptor_t {
  * introduction point.  See also rend_intro_point_t.unreachable_count. */
 #define MAX_INTRO_POINT_REACHABILITY_FAILURES 5
 
-/** The maximum number of distinct INTRODUCE2 cells which a hidden
- * service's introduction point will receive before it begins to
- * expire.
- *
- * XXX023 Is this number at all sane? */
-#define INTRO_POINT_LIFETIME_INTRODUCTIONS 16384
+/** The minimum and maximum number of distinct INTRODUCE2 cells which a
+ * hidden service's introduction point will receive before it begins to
+ * expire. */
+#define INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS 16384
+/* Double the minimum value so the interval is [min, min * 2]. */
+#define INTRO_POINT_MAX_LIFETIME_INTRODUCTIONS \
+  (INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS * 2)
 
 /** The minimum number of seconds that an introduction point will last
  * before expiring due to old age.  (If it receives
@@ -4863,6 +4864,12 @@ typedef struct rend_intro_point_t {
    * intro point.
    */
   int accepted_introduce2_count;
+
+  /** (Service side only) Number of maximum INTRODUCE2 cells that this IP
+   * will accept. This is a random value between
+   * INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS and
+   * INTRO_POINT_MAX_LIFETIME_INTRODUCTIONS. */
+  unsigned int max_introductions;
 
   /** (Service side only) The time at which this intro point was first
    * published, or -1 if this intro point has not yet been

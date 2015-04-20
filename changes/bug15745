@@ -1,0 +1,7 @@
+  o Minor feature (HS popularity countermeasure):
+    - To avoid leaking HS popularity, don't cycle the introduction point
+      when we've handled a fixed number of INTRODUCE2 cells but instead
+      cycle it when a random value of introductions is reached thus making
+      it more difficult for an attacker to find out the amount of clients
+      that has passed through the introduction point for a specific HS.
+      Closes ticket 15745.
