@@ -3284,7 +3284,7 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
   if (rend_valid_service_id(arg1)) {
     hsaddress = arg1;
   } else if (strcmpstart(arg1, v2_str) == 0 &&
-             strlen(arg1 + v2_str_len) == REND_DESC_ID_V2_LEN_BASE32 &&
+             rend_valid_descriptor_id(arg1 + v2_str_len) &&
              base32_decode(digest, sizeof(digest), arg1 + v2_str_len,
                            REND_DESC_ID_V2_LEN_BASE32) == 0) {
     /* We have a well formed version 2 descriptor ID. Keep the decoded value

@@ -37,6 +37,7 @@ void rend_cache_clean_v2_descs_as_dir(time_t now, size_t min_to_remove);
 void rend_cache_purge(void);
 void rend_cache_free_all(void);
 int rend_valid_service_id(const char *query);
+int rend_valid_descriptor_id(const char *query);
 int rend_cache_lookup_entry(const char *query, int version,
                             rend_cache_entry_t **entry_out);
 int rend_cache_lookup_v2_desc_as_dir(const char *query, const char **desc);

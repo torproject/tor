@@ -3094,7 +3094,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     /* Handle v2 rendezvous descriptor fetch request. */
     const char *descp;
     const char *query = url + strlen("/tor/rendezvous2/");
-    if (strlen(query) == REND_DESC_ID_V2_LEN_BASE32) {
+    if (rend_valid_descriptor_id(query)) {
       log_info(LD_REND, "Got a v2 rendezvous descriptor request for ID '%s'",
                safe_str(escaped(query)));
       switch (rend_cache_lookup_v2_desc_as_dir(query, &descp)) {
