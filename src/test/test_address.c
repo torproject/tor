@@ -222,7 +222,7 @@ test_address_get_if_addrs_ifaddrs(void *arg)
 
   (void)arg;
 
-  results = get_interface_addresses_ifaddrs(0);
+  results = get_interface_addresses_ifaddrs(LOG_ERR);
 
   tt_int_op(smartlist_len(results),>=,1);
   tt_assert(smartlist_contains_localhost_tor_addr(results));
@@ -245,7 +245,7 @@ test_address_get_if_addrs_win32(void *arg)
 
   (void)arg;
 
-  results = get_interface_addresses_win32(0);
+  results = get_interface_addresses_win32(LOG_ERR);
 
   tt_int_op(smartlist_len(results),>=,1);
   tt_assert(smartlist_contains_localhost_tor_addr(results));
