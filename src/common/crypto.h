@@ -254,6 +254,7 @@ int crypto_seed_rng(int startup);
 MOCK_DECL(int,crypto_rand,(char *to, size_t n));
 int crypto_strongest_rand(uint8_t *out, size_t out_len);
 int crypto_rand_int(unsigned int max);
+int crypto_rand_int_range(unsigned int min, unsigned int max);
 uint64_t crypto_rand_uint64(uint64_t max);
 double crypto_rand_double(void);
 struct tor_weak_rng_t;

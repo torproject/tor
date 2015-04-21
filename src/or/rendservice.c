@@ -3133,9 +3133,8 @@ intro_point_should_expire_now(rend_intro_point_t *intro,
     /* This intro point has been published, but we haven't picked an
      * expiration time for it.  Pick one now. */
     int intro_point_lifetime_seconds =
-      INTRO_POINT_LIFETIME_MIN_SECONDS +
-      crypto_rand_int(INTRO_POINT_LIFETIME_MAX_SECONDS -
-                      INTRO_POINT_LIFETIME_MIN_SECONDS);
+      crypto_rand_int_range(INTRO_POINT_LIFETIME_MIN_SECONDS,
+                            INTRO_POINT_LIFETIME_MAX_SECONDS);
 
     /* Start the expiration timer now, rather than when the intro
      * point was first published.  There shouldn't be much of a time
@@ -3337,9 +3336,8 @@ rend_services_introduce(void)
       intro->time_to_expire = -1;
       intro->time_expiring = -1;
       intro->max_introductions =
-        INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS +
-        crypto_rand_int(INTRO_POINT_MAX_LIFETIME_INTRODUCTIONS -
-                        INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS);
+        crypto_rand_int_range(INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS,
+                              INTRO_POINT_MAX_LIFETIME_INTRODUCTIONS);
       smartlist_add(service->intro_nodes, intro);
       log_info(LD_REND, "Picked router %s as an intro point for %s.",
                safe_str_client(node_describe(node)),
