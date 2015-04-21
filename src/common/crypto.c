@@ -2317,23 +2317,23 @@ crypto_rand_int(unsigned int max)
   }
 }
 
-/** Return a pseudorandom integer, chosen uniformly from the values between
- * <b>min</b> and <b>max</b> inclusive.
+/** Return a pseudorandom integer, chosen uniformly from the values <i>i</i>
+ * such that <b>min</b> &lt;= <i>i</i> &lt <b>max</b>.
  *
- * <b>min</b> MUST be between 0 and <b>max</b> - 1.
- * <b>max</b> MUST be bigger than <b>min</b> and <= to INT_MAX.
+ * <b>min</b> MUST be in range [0, <b>max</b>).
+ * <b>max</b> MUST be in range (min, INT_MAX].
  */
 int
 crypto_rand_int_range(unsigned int min, unsigned int max)
 {
-  tor_assert(min <= max);
+  tor_assert(min < max);
   tor_assert(max <= INT_MAX);
 
   /* The overflow is avoided here because crypto_rand_int() returns a value
    * between 0 and (max - min - 1) with max being <= INT_MAX and min <= max.
    * This is why we add 1 to the maximum value so we can actually get max as
    * a return value. */
-  return min + crypto_rand_int(max - min + 1);
+  return min + crypto_rand_int(max - min);
 }
 
 /** Return a pseudorandom 64-bit integer, chosen uniformly from the values
@@ -2398,7 +2398,7 @@ crypto_random_hostname(int min_rand_len, int max_rand_len, const char *prefix,
   if (min_rand_len > max_rand_len)
     min_rand_len = max_rand_len;
 
-  randlen = crypto_rand_int_range(min_rand_len, max_rand_len);
+  randlen = crypto_rand_int_range(min_rand_len, max_rand_len+1);
 
   prefixlen = strlen(prefix);
   resultlen = prefixlen + strlen(suffix) + randlen + 16;
