@@ -569,7 +569,7 @@ on dist-master.
        {blueness} at gentoo dot org
        {paul} at invizbox dot io
        {ondrej.mikle} at gmail dot com
-       {archlinux} at cryptocrack dot de
+       {lfleischer} at archlinux dot org
 
 10) Add the version number to Trac.  To do this, go to Trac, log in,
 select "Admin" near the top of the screen, then select "Versions" from
