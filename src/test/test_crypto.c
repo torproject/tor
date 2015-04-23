@@ -107,6 +107,30 @@ test_crypto_rng(void *arg)
   ;
 }
 
+static void
+test_crypto_rng_range(void *arg)
+{
+  int got_smallest = 0, got_largest = 0;
+  int i;
+
+  (void)arg;
+  for (i = 0; i < 1000; ++i) {
+    int x = crypto_rand_int_range(5,9);
+    tt_int_op(x, OP_GE, 5);
+    tt_int_op(x, OP_LT, 9);
+    if (x == 5)
+      got_smallest = 1;
+    if (x == 8)
+      got_largest = 1;
+  }
+
+  /* These fail with probability 1/10^603. */
+  tt_assert(got_smallest);
+  tt_assert(got_largest);
+ done:
+  ;
+}
+
 /** Run unit tests for our AES functionality */
 static void
 test_crypto_aes(void *arg)
@@ -1637,6 +1661,7 @@ test_crypto_siphash(void *arg)
 struct testcase_t crypto_tests[] = {
   CRYPTO_LEGACY(formats),
   CRYPTO_LEGACY(rng),
+  { "rng_range", test_crypto_rng_range, 0, NULL, NULL },
   { "aes_AES", test_crypto_aes, TT_FORK, &passthrough_setup, (void*)"aes" },
   { "aes_EVP", test_crypto_aes, TT_FORK, &passthrough_setup, (void*)"evp" },
   CRYPTO_LEGACY(sha),

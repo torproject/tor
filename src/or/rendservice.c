@@ -1156,16 +1156,17 @@ rend_service_note_removing_intro_point(rend_service_t *service,
     /* This intro point was never used.  Don't change
      * n_intro_points_wanted. */
   } else {
+
     /* We want to increase the number of introduction points service
      * operates if intro was heavily used, or decrease the number of
      * intro points if intro was lightly used.
      *
      * We consider an intro point's target 'usage' to be
-     * INTRO_POINT_LIFETIME_INTRODUCTIONS introductions in
+     * maximum of INTRODUCE2 cells divided by
      * INTRO_POINT_LIFETIME_MIN_SECONDS seconds.  To calculate intro's
-     * fraction of target usage, we divide the fraction of
-     * _LIFETIME_INTRODUCTIONS introductions that it has handled by
-     * the fraction of _LIFETIME_MIN_SECONDS for which it existed.
+     * fraction of target usage, we divide the amount of INTRODUCE2 cells
+     * that it has handled by the fraction of _LIFETIME_MIN_SECONDS for
+     * which it existed.
      *
      * Then we multiply that fraction of desired usage by a fudge
      * factor of 1.5, to decide how many new introduction points
@@ -1187,7 +1188,7 @@ rend_service_note_removing_intro_point(rend_service_t *service,
       intro_point_accepted_intro_count(intro) /
       (double)(now - intro->time_published);
     const double intro_point_target_usage =
-      INTRO_POINT_LIFETIME_INTRODUCTIONS /
+      intro->max_introductions /
       (double)INTRO_POINT_LIFETIME_MIN_SECONDS;
     const double fractional_n_intro_points_wanted_to_replace_this_one =
       (1.5 * (intro_point_usage / intro_point_target_usage));
@@ -3121,7 +3122,7 @@ intro_point_should_expire_now(rend_intro_point_t *intro,
   }
 
   if (intro_point_accepted_intro_count(intro) >=
-      INTRO_POINT_LIFETIME_INTRODUCTIONS) {
+      intro->max_introductions) {
     /* This intro point has been used too many times.  Expire it now. */
     return 1;
   }
@@ -3130,9 +3131,8 @@ intro_point_should_expire_now(rend_intro_point_t *intro,
     /* This intro point has been published, but we haven't picked an
      * expiration time for it.  Pick one now. */
     int intro_point_lifetime_seconds =
-      INTRO_POINT_LIFETIME_MIN_SECONDS +
-      crypto_rand_int(INTRO_POINT_LIFETIME_MAX_SECONDS -
-                      INTRO_POINT_LIFETIME_MIN_SECONDS);
+      crypto_rand_int_range(INTRO_POINT_LIFETIME_MIN_SECONDS,
+                            INTRO_POINT_LIFETIME_MAX_SECONDS);
 
     /* Start the expiration timer now, rather than when the intro
      * point was first published.  There shouldn't be much of a time
@@ -3333,6 +3333,9 @@ rend_services_introduce(void)
       intro->time_published = -1;
       intro->time_to_expire = -1;
       intro->time_expiring = -1;
+      intro->max_introductions =
+        crypto_rand_int_range(INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS,
+                              INTRO_POINT_MAX_LIFETIME_INTRODUCTIONS);
       smartlist_add(service->intro_nodes, intro);
       log_info(LD_REND, "Picked router %s as an intro point for %s.",
                safe_str_client(node_describe(node)),

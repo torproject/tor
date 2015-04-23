@@ -440,7 +440,8 @@ add_an_entry_guard(const node_t *chosen, int reset_status, int prepend,
    * don't all select them on the same day, and b) avoid leaving a
    * precise timestamp in the state file about when we first picked
    * this guard. For details, see the Jan 2010 or-dev thread. */
-  entry->chosen_on_date = time(NULL) - crypto_rand_int(3600*24*30);
+  time_t now = time(NULL);
+  entry->chosen_on_date = crypto_rand_int_range(now - 3600*24*30, now);
   entry->chosen_by_version = tor_strdup(VERSION);
 
   /* Are we picking this guard because all of our current guards are
@@ -1439,8 +1440,9 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
        }
      } else {
        if (state_version) {
+         time_t now = time(NULL);
+         e->chosen_on_date = crypto_rand_int_range(now - 3600*24*30, now);
          e->chosen_by_version = tor_strdup(state_version);
-         e->chosen_on_date = time(NULL) - crypto_rand_int(3600*24*30);
        }
      }
      if (e->path_bias_disabled && !e->bad_since)

@@ -659,7 +659,8 @@ tor_tls_create_certificate(crypto_pk_t *rsa,
    * than having it start right now. Don't choose quite uniformly, since
    * then we might pick a time where we're about to expire. Lastly, be
    * sure to start on a day boundary. */
-  start_time = time(NULL) - crypto_rand_int(cert_lifetime) + 2*24*3600;
+  time_t now = time(NULL);
+  start_time = crypto_rand_int_range(now - cert_lifetime, now) + 2*24*3600;
   start_time -= start_time % (24*3600);
 
   tor_assert(rsa);
