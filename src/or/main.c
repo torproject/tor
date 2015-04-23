@@ -1623,7 +1623,7 @@ run_scheduled_events(time_t now)
       time_to.check_for_correct_dns < now &&
       ! router_my_exit_policy_is_reject_star()) {
     if (!time_to.check_for_correct_dns) {
-      time_to.check_for_correct_dns = crypto_rand_int_range(now, now + 120) + 60;
+      time_to.check_for_correct_dns = crypto_rand_time_range(now, now + 120) + 60;
     } else {
       dns_launch_correctness_checks();
       time_to.check_for_correct_dns = now + 12*3600 +

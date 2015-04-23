@@ -2336,6 +2336,21 @@ crypto_rand_int_range(unsigned int min, unsigned int max)
   return min + crypto_rand_int(max - min);
 }
 
+/** As crypto_rand_int_range, but supports uint64_t. */
+uint64_t
+crypto_rand_uint64_range(uint64_t min, uint64_t max)
+{
+  tor_assert(min < max);
+  return min + crypto_rand_uint64(max - min);
+}
+
+/** As crypto_rand_int_range, but supports time_t. */
+time_t
+crypto_rand_time_range(time_t min, time_t max)
+{
+  return (time_t) crypto_rand_uint64_range(min, max);
+}
+
 /** Return a pseudorandom 64-bit integer, chosen uniformly from the values
  * between 0 and <b>max</b>-1. */
 uint64_t
