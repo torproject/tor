@@ -690,12 +690,13 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
   if (rend_query->auth_type != REND_NO_AUTH) {
     if (base64_encode(descriptor_cookie_base64,
                       sizeof(descriptor_cookie_base64),
-                      rend_query->descriptor_cookie, REND_DESC_COOKIE_LEN)<0) {
+                      rend_query->descriptor_cookie, REND_DESC_COOKIE_LEN,
+                      0)<0) {
       log_warn(LD_BUG, "Could not base64-encode descriptor cookie.");
       return 0;
     }
-    /* Remove == signs and newline. */
-    descriptor_cookie_base64[strlen(descriptor_cookie_base64)-3] = '\0';
+    /* Remove == signs. */
+    descriptor_cookie_base64[strlen(descriptor_cookie_base64)-2] = '\0';
   } else {
     strlcpy(descriptor_cookie_base64, "(none)",
             sizeof(descriptor_cookie_base64));

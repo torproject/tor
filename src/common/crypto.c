@@ -2426,35 +2426,162 @@ smartlist_shuffle(smartlist_t *sl)
   }
 }
 
-/** Base64 encode <b>srclen</b> bytes of data from <b>src</b>.  Write
- * the result into <b>dest</b>, if it will fit within <b>destlen</b>
- * bytes.  Return the number of bytes written on success; -1 if
- * destlen is too short, or other failure.
+#define BASE64_OPENSSL_LINELEN 64
+
+/** Return the Base64 encoded size of <b>srclen</b> bytes of data in
+ * bytes.
+ *
+ * If <b>flags</b>&amp;BASE64_ENCODE_MULTILINE is true, return the size
+ * of the encoded output as multiline output (64 character, `\n' terminated
+ * lines).
  */
-int
-base64_encode(char *dest, size_t destlen, const char *src, size_t srclen)
+size_t
+base64_encode_size(size_t srclen, int flags)
 {
-  /* FFFF we might want to rewrite this along the lines of base64_decode, if
-   * it ever shows up in the profile. */
-  EVP_ENCODE_CTX ctx;
-  int len, ret;
+  size_t enclen;
   tor_assert(srclen < INT_MAX);
 
-  /* 48 bytes of input -> 64 bytes of output plus newline.
-     Plus one more byte, in case I'm wrong.
-  */
-  if (destlen < ((srclen/48)+1)*66)
+  if (srclen == 0)
+    return 0;
+
+  enclen = ((srclen - 1) / 3) * 4 + 4;
+  if (flags & BASE64_ENCODE_MULTILINE) {
+    size_t remainder = enclen % BASE64_OPENSSL_LINELEN;
+    enclen += enclen / BASE64_OPENSSL_LINELEN;
+    if (remainder)
+      enclen++;
+  }
+  tor_assert(enclen < INT_MAX && enclen > srclen);
+  return enclen;
+}
+
+/** Internal table mapping 6 bit values to the Base64 alphabet. */
+static const char base64_encode_table[64] = {
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+  'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+  'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+  'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+  'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+  'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+  'w', 'x', 'y', 'z', '0', '1', '2', '3',
+  '4', '5', '6', '7', '8', '9', '+', '/'
+};
+
+/** Base64 encode <b>srclen</b> bytes of data from <b>src</b>.  Write
+ * the result into <b>dest</b>, if it will fit within <b>destlen</b>
+ * bytes. Return the number of bytes written on success; -1 if
+ * destlen is too short, or other failure.
+ *
+ * If <b>flags</b>&amp;BASE64_ENCODE_MULTILINE is true, return encoded 
+ * output in multiline format (64 character, `\n' terminated lines).
+ */
+int
+base64_encode(char *dest, size_t destlen, const char *src, size_t srclen,
+              int flags)
+{
+  const unsigned char *usrc = (unsigned char *)src;
+  const unsigned char *eous = usrc + srclen;
+  char *d = dest;
+  uint32_t n = 0;
+  size_t linelen = 0;
+  size_t enclen;
+  int n_idx = 0;
+
+  if (!src || !dest)
+    return -1;
+
+  /* Ensure that there is sufficient space, including the NUL. */
+  enclen = base64_encode_size(srclen, flags);
+  if (destlen < enclen + 1)
     return -1;
   if (destlen > SIZE_T_CEILING)
     return -1;
+  if (enclen > INT_MAX)
+    return -1;
 
-  EVP_EncodeInit(&ctx);
-  EVP_EncodeUpdate(&ctx, (unsigned char*)dest, &len,
-                   (unsigned char*)src, (int)srclen);
-  EVP_EncodeFinal(&ctx, (unsigned char*)(dest+len), &ret);
-  ret += len;
-  return ret;
+  memset(dest, 0, enclen);
+
+  /* XXX/Yawning: If this ends up being too slow, this can be sped up
+   * by separating the multiline format case and the normal case, and
+   * processing 48 bytes of input at a time when newlines are desired.
+   */
+#define ENCODE_CHAR(ch) \
+  STMT_BEGIN                                                    \
+    *d++ = ch;                                                  \
+    if (flags & BASE64_ENCODE_MULTILINE) {                      \
+      if (++linelen % BASE64_OPENSSL_LINELEN == 0) {            \
+        linelen = 0;                                            \
+        *d++ = '\n';                                            \
+      }                                                         \
+    }                                                           \
+  STMT_END
+
+#define ENCODE_N(idx) \
+  ENCODE_CHAR(base64_encode_table[(n >> ((3 - idx) * 6)) & 0x3f])
+
+#define ENCODE_PAD() ENCODE_CHAR('=')
+
+  /* Iterate over all the bytes in src.  Each one will add 8 bits to the
+   * value we're encoding.  Accumulate bits in <b>n</b>, and whenever we
+   * have 24 bits, batch them into 4 bytes and flush those bytes to dest.
+   */
+  for ( ; usrc < eous; ++usrc) {
+    n = (n << 8) | *usrc;
+    if ((++n_idx) == 3) {
+      ENCODE_N(0);
+      ENCODE_N(1);
+      ENCODE_N(2);
+      ENCODE_N(3);
+      n_idx = 0;
+      n = 0;
+    }
+  }
+  switch (n_idx) {
+  case 0:
+    /* 0 leftover bits, no pading to add. */
+    break;
+  case 1:
+    /* 8 leftover bits, pad to 12 bits, write the 2 6-bit values followed
+     * by 2 padding characters.
+     */
+    n <<= 4;
+    ENCODE_N(2);
+    ENCODE_N(3);
+    ENCODE_PAD();
+    ENCODE_PAD();
+    break;
+  case 2:
+    /* 16 leftover bits, pad to 18 bits, write the 3 6-bit values followed
+     * by 1 padding character.
+     */
+    n <<= 2;
+    ENCODE_N(1);
+    ENCODE_N(2);
+    ENCODE_N(3);
+    ENCODE_PAD();
+    break;
+  default:
+    /* Something went catastrophically wrong. */
+    tor_fragile_assert();
+    return -1;
+  }
+
+#undef ENCODE_N
+#undef ENCODE_PAD
+#undef ENCODE_CHAR
+
+  /* Multiline output always includes at least one newline. */
+  if (flags & BASE64_ENCODE_MULTILINE && linelen != 0)
+    *d++ = '\n';
+
+  tor_assert(d - dest == (ptrdiff_t)enclen);
+
+  *d++ = '\0'; /* NUL terminate the output. */
+
+  return (int) enclen;
 }
+
+#undef BASE64_OPENSSL_LINELEN
 
 /** @{ */
 /** Special values used for the base64_decode_table */
@@ -2500,26 +2627,6 @@ static const uint8_t base64_decode_table[256] = {
 int
 base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
-#ifdef USE_OPENSSL_BASE64
-  EVP_ENCODE_CTX ctx;
-  int len, ret;
-  /* 64 bytes of input -> *up to* 48 bytes of output.
-     Plus one more byte, in case I'm wrong.
-  */
-  if (destlen < ((srclen/64)+1)*49)
-    return -1;
-  if (destlen > SIZE_T_CEILING)
-    return -1;
-
-  memset(dest, 0, destlen);
-
-  EVP_DecodeInit(&ctx);
-  EVP_DecodeUpdate(&ctx, (unsigned char*)dest, &len,
-                   (unsigned char*)src, srclen);
-  EVP_DecodeFinal(&ctx, (unsigned char*)dest, &ret);
-  ret += len;
-  return ret;
-#else
   const char *eos = src+srclen;
   uint32_t n=0;
   int n_idx=0;
@@ -2590,20 +2697,19 @@ base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
   tor_assert((dest-dest_orig) <= INT_MAX);
 
   return (int)(dest-dest_orig);
-#endif
 }
 #undef X
 #undef SP
 #undef PAD
 
 /** Base64 encode DIGEST_LINE bytes from <b>digest</b>, remove the trailing =
- * and newline characters, and store the nul-terminated result in the first
+ * characters, and store the nul-terminated result in the first
  * BASE64_DIGEST_LEN+1 bytes of <b>d64</b>.  */
 int
 digest_to_base64(char *d64, const char *digest)
 {
   char buf[256];
-  base64_encode(buf, sizeof(buf), digest, DIGEST_LEN);
+  base64_encode(buf, sizeof(buf), digest, DIGEST_LEN, 0);
   buf[BASE64_DIGEST_LEN] = '\0';
   memcpy(d64, buf, BASE64_DIGEST_LEN+1);
   return 0;
@@ -2615,33 +2721,20 @@ digest_to_base64(char *d64, const char *digest)
 int
 digest_from_base64(char *digest, const char *d64)
 {
-#ifdef USE_OPENSSL_BASE64
-  char buf_in[BASE64_DIGEST_LEN+3];
-  char buf[256];
-  if (strlen(d64) != BASE64_DIGEST_LEN)
-    return -1;
-  memcpy(buf_in, d64, BASE64_DIGEST_LEN);
-  memcpy(buf_in+BASE64_DIGEST_LEN, "=\n\0", 3);
-  if (base64_decode(buf, sizeof(buf), buf_in, strlen(buf_in)) != DIGEST_LEN)
-    return -1;
-  memcpy(digest, buf, DIGEST_LEN);
-  return 0;
-#else
   if (base64_decode(digest, DIGEST_LEN, d64, strlen(d64)) == DIGEST_LEN)
     return 0;
   else
     return -1;
-#endif
 }
 
 /** Base64 encode DIGEST256_LINE bytes from <b>digest</b>, remove the
- * trailing = and newline characters, and store the nul-terminated result in
- * the first BASE64_DIGEST256_LEN+1 bytes of <b>d64</b>.  */
+ * trailing = characters, and store the nul-terminated result in the first
+ * BASE64_DIGEST256_LEN+1 bytes of <b>d64</b>.  */
 int
 digest256_to_base64(char *d64, const char *digest)
 {
   char buf[256];
-  base64_encode(buf, sizeof(buf), digest, DIGEST256_LEN);
+  base64_encode(buf, sizeof(buf), digest, DIGEST256_LEN, 0);
   buf[BASE64_DIGEST256_LEN] = '\0';
   memcpy(d64, buf, BASE64_DIGEST256_LEN+1);
   return 0;
@@ -2653,23 +2746,10 @@ digest256_to_base64(char *d64, const char *digest)
 int
 digest256_from_base64(char *digest, const char *d64)
 {
-#ifdef USE_OPENSSL_BASE64
-  char buf_in[BASE64_DIGEST256_LEN+3];
-  char buf[256];
-  if (strlen(d64) != BASE64_DIGEST256_LEN)
-    return -1;
-  memcpy(buf_in, d64, BASE64_DIGEST256_LEN);
-  memcpy(buf_in+BASE64_DIGEST256_LEN, "=\n\0", 3);
-  if (base64_decode(buf, sizeof(buf), buf_in, strlen(buf_in)) != DIGEST256_LEN)
-    return -1;
-  memcpy(digest, buf, DIGEST256_LEN);
-  return 0;
-#else
   if (base64_decode(digest, DIGEST256_LEN, d64, strlen(d64)) == DIGEST256_LEN)
     return 0;
   else
     return -1;
-#endif
 }
 
 /** Implements base32 encoding as in RFC 4648.  Limitation: Requires
