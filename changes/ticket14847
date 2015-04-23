@@ -1,0 +1,3 @@
+  o Major features (controller):
+    - New HSFETCH command to launch a request for a hidden service descriptor.
+      Closes ticket 14847.
