@@ -2330,9 +2330,7 @@ crypto_rand_int_range(unsigned int min, unsigned int max)
   tor_assert(max <= INT_MAX);
 
   /* The overflow is avoided here because crypto_rand_int() returns a value
-   * between 0 and (max - min - 1) with max being <= INT_MAX and min <= max.
-   * This is why we add 1 to the maximum value so we can actually get max as
-   * a return value. */
+   * between 0 and (max - min) inclusive. */
   return min + crypto_rand_int(max - min);
 }
 
@@ -2352,7 +2350,7 @@ crypto_rand_time_range(time_t min, time_t max)
 }
 
 /** Return a pseudorandom 64-bit integer, chosen uniformly from the values
- * between 0 and <b>max</b>-1. */
+ * between 0 and <b>max</b>-1 inclusive. */
 uint64_t
 crypto_rand_uint64(uint64_t max)
 {
