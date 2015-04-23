@@ -1716,13 +1716,11 @@ getinfo_helper_dir(control_connection_t *control_conn,
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
     smartlist_free(sl);
   } else if (!strcmpstart(question, "hs/client/desc/id/")) {
-    char *msg;
     rend_cache_entry_t *e = NULL;
 
     question += strlen("hs/client/desc/id/");
     if (strlen(question) != REND_SERVICE_ID_LEN_BASE32) {
-      tor_asprintf(&msg, "\"%s\" invalid address.", question);
-      *errmsg = msg;
+      *errmsg = "Invalid address";
       return -1;
     }
 
@@ -1730,8 +1728,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
       /* Descriptor found in cache */
       *answer = tor_strdup(e->desc);
     } else {
-      tor_asprintf(&msg, "\"%s\" not found in cache.", question);
-      *errmsg = msg;
+      *errmsg = "Not found in cache";
       return -1;
     }
   } else if (!strcmpstart(question, "md/id/")) {
