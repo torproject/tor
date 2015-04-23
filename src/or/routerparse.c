@@ -3361,7 +3361,9 @@ router_parse_addr_policy_item_from_string,(const char *s, int assume_action))
 {
   directory_token_t *tok = NULL;
   const char *cp, *eos;
-  /* Longest possible policy is "accept ffff:ffff:..255/ffff:...255:0-65535".
+  /* Longest possible policy is
+   * "accept6 ffff:ffff:..255/ffff:...255:10000-65535",
+   * which contains 2 max-length IPv6 addresses, plus 21 characters.
    * But note that there can be an arbitrary amount of space between the
    * accept and the address:mask/port element. */
   char line[TOR_ADDR_BUF_LEN*2 + 32];
