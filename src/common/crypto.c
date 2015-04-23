@@ -2506,7 +2506,7 @@ static const char base64_encode_table[64] = {
  * bytes. Return the number of bytes written on success; -1 if
  * destlen is too short, or other failure.
  *
- * If <b>flags</b>&amp;BASE64_ENCODE_MULTILINE is true, return encoded 
+ * If <b>flags</b>&amp;BASE64_ENCODE_MULTILINE is true, return encoded
  * output in multiline format (64 character, `\n' terminated lines).
  */
 int
