@@ -405,7 +405,11 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
 void
 crypto_thread_cleanup(void)
 {
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
+  ERR_remove_thread_state(NULL);
+#else
   ERR_remove_state(0);
+#endif
 }
 
 /** used by tortls.c: wrap an RSA* in a crypto_pk_t. */
@@ -3157,7 +3161,11 @@ int
 crypto_global_cleanup(void)
 {
   EVP_cleanup();
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
+  ERR_remove_thread_state(NULL);
+#else
   ERR_remove_state(0);
+#endif
   ERR_free_strings();
 
   if (dh_param_p)
