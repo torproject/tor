@@ -4869,7 +4869,7 @@ typedef struct rend_intro_point_t {
    * will accept. This is a random value between
    * INTRO_POINT_MIN_LIFETIME_INTRODUCTIONS and
    * INTRO_POINT_MAX_LIFETIME_INTRODUCTIONS. */
-  unsigned int max_introductions;
+  int max_introductions;
 
   /** (Service side only) The time at which this intro point was first
    * published, or -1 if this intro point has not yet been
