@@ -37,6 +37,7 @@ void rend_cache_clean_v2_descs_as_dir(time_t now, size_t min_to_remove);
 void rend_cache_purge(void);
 void rend_cache_free_all(void);
 int rend_valid_service_id(const char *query);
+int rend_valid_descriptor_id(const char *query);
 int rend_cache_lookup_entry(const char *query, int version,
                             rend_cache_entry_t **entry_out);
 int rend_cache_lookup_v2_desc_as_dir(const char *query, const char **desc);
@@ -50,7 +51,8 @@ typedef enum {
 rend_cache_store_status_t rend_cache_store_v2_desc_as_dir(const char *desc);
 rend_cache_store_status_t rend_cache_store_v2_desc_as_client(const char *desc,
                                        const char *desc_id_base32,
-                                       const rend_data_t *rend_query);
+                                       const rend_data_t *rend_query,
+                                       rend_cache_entry_t **entry);
 int rend_encode_v2_descriptors(smartlist_t *descs_out,
                                rend_service_descriptor_t *desc, time_t now,
                                uint8_t period, rend_auth_type_t auth_type,

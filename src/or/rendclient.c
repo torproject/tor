@@ -496,15 +496,13 @@ get_last_hid_serv_requests(void)
                                        REND_SERVICE_ID_LEN_BASE32)
 
 /** Look up the last request time to hidden service directory <b>hs_dir</b>
- * for descriptor ID <b>desc_id_base32</b> for the service specified in
- * <b>rend_query</b>. If <b>set</b> is non-zero,
- * assign the current time <b>now</b> and return that. Otherwise, return
- * the most recent request time, or 0 if no such request has been sent
- * before. */
+ * for descriptor ID <b>desc_id_base32</b>. If <b>set</b> is non-zero,
+ * assign the current time <b>now</b> and return that. Otherwise, return the
+ * most recent request time, or 0 if no such request has been sent before.
+ */
 static time_t
 lookup_last_hid_serv_request(routerstatus_t *hs_dir,
                              const char *desc_id_base32,
-                             const rend_data_t *rend_query,
                              time_t now, int set)
 {
   char hsdir_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
@@ -513,10 +511,9 @@ lookup_last_hid_serv_request(routerstatus_t *hs_dir,
   strmap_t *last_hid_serv_requests = get_last_hid_serv_requests();
   base32_encode(hsdir_id_base32, sizeof(hsdir_id_base32),
                 hs_dir->identity_digest, DIGEST_LEN);
-  tor_snprintf(hsdir_desc_comb_id, sizeof(hsdir_desc_comb_id), "%s%s%s",
+  tor_snprintf(hsdir_desc_comb_id, sizeof(hsdir_desc_comb_id), "%s%s",
                hsdir_id_base32,
-               desc_id_base32,
-               rend_query->onion_address);
+               desc_id_base32);
   /* XXX023 tor_assert(strlen(hsdir_desc_comb_id) ==
                        LAST_HID_SERV_REQUEST_KEY_LEN); */
   if (set) {
@@ -609,64 +606,53 @@ rend_client_purge_last_hid_serv_requests(void)
   }
 }
 
-/** Determine the responsible hidden service directories for <b>desc_id</b>
- * and fetch the descriptor with that ID from one of them. Only
- * send a request to a hidden service directory that we have not yet tried
- * during this attempt to connect to this hidden service; on success, return 1,
- * in the case that no hidden service directory is left to ask for the
- * descriptor, return 0, and in case of a failure -1.  */
-static int
-directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
+/** This returns a good valid hs dir that should be used for the given
+ * descriptor id.
+ *
+ * Return NULL on error else the hsdir node pointer. */
+static routerstatus_t *
+pick_hsdir(const char *desc_id, const char *desc_id_base32)
 {
   smartlist_t *responsible_dirs = smartlist_new();
   smartlist_t *usable_responsible_dirs = smartlist_new();
   const or_options_t *options = get_options();
   routerstatus_t *hs_dir;
-  char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
   time_t now = time(NULL);
-  char descriptor_cookie_base64[3*REND_DESC_COOKIE_LEN_BASE64];
-#ifdef ENABLE_TOR2WEB_MODE
-  const int tor2web_mode = options->Tor2webMode;
-  const int how_to_fetch = tor2web_mode ? DIRIND_ONEHOP : DIRIND_ANONYMOUS;
-#else
-  const int how_to_fetch = DIRIND_ANONYMOUS;
-#endif
   int excluded_some;
+
   tor_assert(desc_id);
-  tor_assert(rend_query);
-  /* Determine responsible dirs. Even if we can't get all we want,
-   * work with the ones we have. If it's empty, we'll notice below. */
+  tor_assert(desc_id_base32);
+
+  /* Determine responsible dirs. Even if we can't get all we want, work with
+   * the ones we have. If it's empty, we'll notice below. */
   hid_serv_get_responsible_directories(responsible_dirs, desc_id);
-
-  base32_encode(desc_id_base32, sizeof(desc_id_base32),
-                desc_id, DIGEST_LEN);
-
-  /* Only select those hidden service directories to which we did not send
-   * a request recently and for which we have a router descriptor here. */
 
   /* Clean request history first. */
   directory_clean_last_hid_serv_requests(now);
 
-  SMARTLIST_FOREACH(responsible_dirs, routerstatus_t *, dir, {
-      time_t last = lookup_last_hid_serv_request(
-                            dir, desc_id_base32, rend_query, 0, 0);
-      const node_t *node = node_get_by_id(dir->identity_digest);
-      if (last + REND_HID_SERV_DIR_REQUERY_PERIOD >= now ||
-          !node || !node_has_descriptor(node)) {
-        SMARTLIST_DEL_CURRENT(responsible_dirs, dir);
-        continue;
-      }
-      if (! routerset_contains_node(options->ExcludeNodes, node)) {
-        smartlist_add(usable_responsible_dirs, dir);
-      }
-  });
+  /* Only select those hidden service directories to which we did not send a
+   * request recently and for which we have a router descriptor here. */
+  SMARTLIST_FOREACH_BEGIN(responsible_dirs, routerstatus_t *, dir) {
+    time_t last = lookup_last_hid_serv_request(dir, desc_id_base32,
+                                               0, 0);
+    const node_t *node = node_get_by_id(dir->identity_digest);
+    if (last + REND_HID_SERV_DIR_REQUERY_PERIOD >= now ||
+        !node || !node_has_descriptor(node)) {
+      SMARTLIST_DEL_CURRENT(responsible_dirs, dir);
+      continue;
+    }
+    if (!routerset_contains_node(options->ExcludeNodes, node)) {
+      smartlist_add(usable_responsible_dirs, dir);
+    }
+  } SMARTLIST_FOREACH_END(dir);
 
   excluded_some =
     smartlist_len(usable_responsible_dirs) < smartlist_len(responsible_dirs);
 
   hs_dir = smartlist_choose(usable_responsible_dirs);
-  if (! hs_dir && ! options->StrictNodes)
+  if (!hs_dir && !options->StrictNodes) {
     hs_dir = smartlist_choose(responsible_dirs);
+  }
 
   smartlist_free(responsible_dirs);
   smartlist_free(usable_responsible_dirs);
@@ -679,14 +665,52 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
                "requested hidden service: they are all either down or "
                "excluded, and StrictNodes is set.");
     }
-    return 0;
+  } else {
+    /* Remember that we are requesting a descriptor from this hidden service
+     * directory now. */
+    lookup_last_hid_serv_request(hs_dir, desc_id_base32, now, 1);
   }
 
-  /* Remember that we are requesting a descriptor from this hidden service
-   * directory now. */
-  lookup_last_hid_serv_request(hs_dir, desc_id_base32, rend_query, now, 1);
+  return hs_dir;
+}
 
-  /* Encode descriptor cookie for logging purposes. */
+/** Determine the responsible hidden service directories for <b>desc_id</b>
+ * and fetch the descriptor with that ID from one of them. Only
+ * send a request to a hidden service directory that we have not yet tried
+ * during this attempt to connect to this hidden service; on success, return 1,
+ * in the case that no hidden service directory is left to ask for the
+ * descriptor, return 0, and in case of a failure -1.  */
+static int
+directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query,
+                          routerstatus_t *rs_hsdir)
+{
+  routerstatus_t *hs_dir = rs_hsdir;
+  char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
+  char descriptor_cookie_base64[3*REND_DESC_COOKIE_LEN_BASE64];
+#ifdef ENABLE_TOR2WEB_MODE
+  const int tor2web_mode = get_options()->Tor2webMode;
+  const int how_to_fetch = tor2web_mode ? DIRIND_ONEHOP : DIRIND_ANONYMOUS;
+#else
+  const int how_to_fetch = DIRIND_ANONYMOUS;
+#endif
+
+  tor_assert(desc_id);
+
+  base32_encode(desc_id_base32, sizeof(desc_id_base32),
+                desc_id, DIGEST_LEN);
+
+  /* Automatically pick an hs dir if none given. */
+  if (!rs_hsdir) {
+    hs_dir = pick_hsdir(desc_id, desc_id_base32);
+    if (!hs_dir) {
+      /* No suitable hs dir can be found, stop right now. */
+      return 0;
+    }
+  }
+
+  /* Encode descriptor cookie for logging purposes. Also, if the cookie is
+   * malformed, no fetch is triggered thus this needs to be done before the
+   * fetch request. */
   if (rend_query->auth_type != REND_NO_AUTH) {
     if (base64_encode(descriptor_cookie_base64,
                       sizeof(descriptor_cookie_base64),
@@ -727,16 +751,136 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
   return 1;
 }
 
+/** Fetch a v2 descriptor using the given descriptor id. If any hsdir(s) are
+ * given, they will be used instead.
+ *
+ * On success, 1 is returned. If no hidden service is left to ask, return 0.
+ * On error, -1 is returned. */
+static int
+fetch_v2_desc_by_descid(const char *desc_id, const rend_data_t *rend_query,
+                        smartlist_t *hsdirs)
+{
+  int ret;
+
+  tor_assert(rend_query);
+
+  if (!hsdirs) {
+    ret = directory_get_from_hs_dir(desc_id, rend_query, NULL);
+    goto end; /* either success or failure, but we're done */
+  }
+
+  /* Using the given hsdir list, trigger a fetch on each of them. */
+  SMARTLIST_FOREACH_BEGIN(hsdirs, routerstatus_t *, hs_dir) {
+    /* This should always be a success. */
+    ret = directory_get_from_hs_dir(desc_id, rend_query, hs_dir);
+    tor_assert(ret);
+  } SMARTLIST_FOREACH_END(hs_dir);
+
+  /* Everything went well. */
+  ret = 0;
+
+end:
+  return ret;
+}
+
+/** Fetch a v2 descriptor using the onion address in the given query object.
+ * This will compute the descriptor id for each replicas and fetch it on the
+ * given hsdir(s) if any or the responsible ones that are choosen
+ * automatically.
+ *
+ * On success, 1 is returned. If no hidden service is left to ask, return 0.
+ * On error, -1 is returned. */
+static int
+fetch_v2_desc_by_addr(const rend_data_t *query,
+                      smartlist_t *hsdirs)
+{
+  char descriptor_id[DIGEST_LEN];
+  int replicas_left_to_try[REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS];
+  int i, tries_left, ret;
+
+  tor_assert(query);
+
+  /* Randomly iterate over the replicas until a descriptor can be fetched
+   * from one of the consecutive nodes, or no options are left. */
+  for (i = 0; i < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; i++) {
+    replicas_left_to_try[i] = i;
+  }
+
+  tries_left = REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS;
+  while (tries_left > 0) {
+    int rand = crypto_rand_int(tries_left);
+    int chosen_replica = replicas_left_to_try[rand];
+    replicas_left_to_try[rand] = replicas_left_to_try[--tries_left];
+
+    ret = rend_compute_v2_desc_id(descriptor_id, query->onion_address,
+                                  query->auth_type == REND_STEALTH_AUTH ?
+                                  query->descriptor_cookie : NULL,
+                                  time(NULL), chosen_replica);
+    if (ret < 0) {
+      /* Normally, on failure the descriptor_id is untouched but let's be
+       * safe in general in case the function changes at some point. */
+      goto end;
+    }
+
+    /* Trigger the fetch with the computed descriptor ID. */
+    ret = fetch_v2_desc_by_descid(descriptor_id, query, hsdirs);
+    if (ret != 0) {
+      /* Either on success or failure, as long as we tried a fetch we are
+       * done here. */
+      goto end;
+    }
+  }
+
+  /* If we come here, there are no hidden service directories left. */
+  log_info(LD_REND, "Could not pick one of the responsible hidden "
+                    "service directories to fetch descriptors, because "
+                    "we already tried them all unsuccessfully.");
+  ret = 0;
+
+end:
+  memwipe(descriptor_id, 0, sizeof(descriptor_id));
+  return ret;
+}
+
+/** Fetch a v2 descriptor using the given query. If any hsdir are specified,
+ * use them for the fetch.
+ *
+ * On success, 1 is returned. If no hidden service is left to ask, return 0.
+ * On error, -1 is returned. */
+int
+rend_client_fetch_v2_desc(const rend_data_t *query,
+                          smartlist_t *hsdirs)
+{
+  int ret;
+
+  tor_assert(query);
+
+  /* Depending on what's available in the rend data query object, we will
+   * trigger a fetch by HS address or using a descriptor ID. */
+
+  if (query->onion_address[0] != '\0') {
+    ret = fetch_v2_desc_by_addr(query, hsdirs);
+  } else if (query->descriptor_id[0] != '\0') {
+    ret = fetch_v2_desc_by_descid(query->descriptor_id, query, hsdirs);
+  } else {
+    /* Query data is invalid. */
+    ret = -1;
+    goto error;
+  }
+
+error:
+  return ret;
+}
+
 /** Unless we already have a descriptor for <b>rend_query</b> with at least
  * one (possibly) working introduction point in it, start a connection to a
  * hidden service directory to fetch a v2 rendezvous service descriptor. */
 void
 rend_client_refetch_v2_renddesc(const rend_data_t *rend_query)
 {
-  char descriptor_id[DIGEST_LEN];
-  int replicas_left_to_try[REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS];
-  int i, tries_left;
+  int ret;
   rend_cache_entry_t *e = NULL;
+
   tor_assert(rend_query);
   /* Are we configured to fetch descriptors? */
   if (!get_options()->FetchHidServDescriptors) {
@@ -753,44 +897,12 @@ rend_client_refetch_v2_renddesc(const rend_data_t *rend_query)
   }
   log_debug(LD_REND, "Fetching v2 rendezvous descriptor for service %s",
             safe_str_client(rend_query->onion_address));
-  /* Randomly iterate over the replicas until a descriptor can be fetched
-   * from one of the consecutive nodes, or no options are left. */
-  tries_left = REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS;
-  for (i = 0; i < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; i++)
-    replicas_left_to_try[i] = i;
-  while (tries_left > 0) {
-    int rand = crypto_rand_int(tries_left);
-    int chosen_replica = replicas_left_to_try[rand];
-    replicas_left_to_try[rand] = replicas_left_to_try[--tries_left];
 
-    if (rend_compute_v2_desc_id(descriptor_id, rend_query->onion_address,
-                                rend_query->auth_type == REND_STEALTH_AUTH ?
-                                    rend_query->descriptor_cookie : NULL,
-                                time(NULL), chosen_replica) < 0) {
-      log_warn(LD_REND, "Internal error: Computing v2 rendezvous "
-                        "descriptor ID did not succeed.");
-      /*
-       * Hmm, can this write anything to descriptor_id and still fail?
-       * Let's clear it just to be safe.
-       *
-       * From here on, any returns should goto done which clears
-       * descriptor_id so we don't leave key-derived material on the stack.
-       */
-      goto done;
-    }
-    if (directory_get_from_hs_dir(descriptor_id, rend_query) != 0)
-      goto done; /* either success or failure, but we're done */
+  ret = rend_client_fetch_v2_desc(rend_query, NULL);
+  if (ret <= 0) {
+    /* Close pending connections on error or if no hsdir can be found. */
+    rend_client_desc_trynow(rend_query->onion_address);
   }
-  /* If we come here, there are no hidden service directories left. */
-  log_info(LD_REND, "Could not pick one of the responsible hidden "
-                    "service directories to fetch descriptors, because "
-                    "we already tried them all unsuccessfully.");
-  /* Close pending connections. */
-  rend_client_desc_trynow(rend_query->onion_address);
-
- done:
-  memwipe(descriptor_id, 0, sizeof(descriptor_id));
-
   return;
 }
 

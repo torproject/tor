@@ -20,6 +20,8 @@ int rend_client_introduction_acked(origin_circuit_t *circ,
                                    const uint8_t *request,
                                    size_t request_len);
 void rend_client_refetch_v2_renddesc(const rend_data_t *rend_query);
+int rend_client_fetch_v2_desc(const rend_data_t *query,
+                              smartlist_t *hsdirs);
 void rend_client_cancel_descriptor_fetches(void);
 void rend_client_purge_last_hid_serv_requests(void);
 

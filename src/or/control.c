@@ -37,6 +37,8 @@
 #include "nodelist.h"
 #include "policies.h"
 #include "reasons.h"
+#include "rendclient.h"
+#include "rendcommon.h"
 #include "rephist.h"
 #include "router.h"
 #include "routerlist.h"
@@ -159,6 +161,8 @@ static int handle_control_resolve(control_connection_t *conn, uint32_t len,
 static int handle_control_usefeature(control_connection_t *conn,
                                      uint32_t len,
                                      const char *body);
+static int handle_control_hsfetch(control_connection_t *conn, uint32_t len,
+                                  const char *body);
 static int write_stream_target_to_buf(entry_connection_t *conn, char *buf,
                                       size_t len);
 static void orconn_target_get_name(char *buf, size_t len,
@@ -943,6 +947,7 @@ static const struct control_event_t control_event_table[] = {
   { EVENT_CIRC_BANDWIDTH_USED, "CIRC_BW" },
   { EVENT_TRANSPORT_LAUNCHED, "TRANSPORT_LAUNCHED" },
   { EVENT_HS_DESC, "HS_DESC" },
+  { EVENT_HS_DESC_CONTENT, "HS_DESC_CONTENT" },
   { 0, NULL },
 };
 
@@ -3276,6 +3281,113 @@ handle_control_dropguards(control_connection_t *conn,
   return 0;
 }
 
+/** Implementation for the HSFETCH command. */
+static int
+handle_control_hsfetch(control_connection_t *conn, uint32_t len,
+                       const char *body)
+{
+  int i;
+  char digest[DIGEST_LEN], *hsaddress = NULL, *arg1 = NULL, *desc_id = NULL;
+  smartlist_t *args = NULL, *hsdirs = NULL;
+  (void) len; /* body is nul-terminated; it's safe to ignore the length */
+  static const char *hsfetch_command = "HSFETCH";
+  static const char *v2_str = "v2-";
+  const size_t v2_str_len = strlen(v2_str);
+  rend_data_t *rend_query = NULL;
+
+  /* Make sure we have at least one argument, the HSAddress. */
+  args = getargs_helper(hsfetch_command, conn, body, 1, -1);
+  if (!args) {
+    goto exit;
+  }
+
+  /* Extract the first argument (either HSAddress or DescID). */
+  arg1 = smartlist_get(args, 0);
+  /* Test if it's an HS address without the .onion part. */
+  if (rend_valid_service_id(arg1)) {
+    hsaddress = arg1;
+  } else if (strcmpstart(arg1, v2_str) == 0 &&
+             rend_valid_descriptor_id(arg1 + v2_str_len) &&
+             base32_decode(digest, sizeof(digest), arg1 + v2_str_len,
+                           REND_DESC_ID_V2_LEN_BASE32) == 0) {
+    /* We have a well formed version 2 descriptor ID. Keep the decoded value
+     * of the id. */
+    desc_id = digest;
+  } else {
+    connection_printf_to_buf(conn, "513 Unrecognized \"%s\"\r\n",
+                             arg1);
+    goto done;
+  }
+
+  static const char *opt_server = "SERVER=";
+
+  /* Skip first argument because it's the HSAddress or DescID. */
+  for (i = 1; i < smartlist_len(args); ++i) {
+    const char *arg = smartlist_get(args, i);
+    const node_t *node;
+
+    if (!strcasecmpstart(arg, opt_server)) {
+      const char *server;
+
+      server = arg + strlen(opt_server);
+      node = node_get_by_hex_id(server);
+      if (!node) {
+        connection_printf_to_buf(conn, "552 Server \"%s\" not found\r\n",
+                                 server);
+        goto done;
+      }
+      if (!hsdirs) {
+        /* Stores routerstatus_t object for each specified server. */
+        hsdirs = smartlist_new();
+      }
+      /* Valid server, add it to our local list. */
+      smartlist_add(hsdirs, node->rs);
+    } else {
+      connection_printf_to_buf(conn, "513 Unexpected argument \"%s\"\r\n",
+                               arg);
+      goto done;
+    }
+  }
+
+  rend_query = tor_malloc_zero(sizeof(*rend_query));
+
+  if (hsaddress) {
+    strncpy(rend_query->onion_address, hsaddress,
+            sizeof(rend_query->onion_address));
+  } else if (desc_id) {
+    /* Using a descriptor ID, we force the user to provide at least one
+     * hsdir server using the SERVER= option. */
+    if (!hsdirs || !smartlist_len(hsdirs)) {
+      connection_printf_to_buf(conn, "512 %s option is required\r\n",
+                               opt_server);
+      goto done;
+    }
+    memcpy(rend_query->descriptor_id, desc_id,
+           sizeof(rend_query->descriptor_id));
+  } else {
+    /* We can't get in here because of the first argument check. */
+    tor_assert(0);
+  }
+  /* We are about to trigger HSDir fetch so send the OK now because after
+   * that 650 event(s) are possible so better to have the 250 OK before them
+   * to avoid out of order replies. */
+  send_control_done(conn);
+
+  /* Trigger the fetch using the built rend query and possibly a list of HS
+   * directory to use. This function ignores the client cache thus this will
+   * always send a fetch command. */
+  rend_client_fetch_v2_desc(rend_query, hsdirs);
+
+done:
+  SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+  smartlist_free(args);
+  /* Contains data pointer that we don't own thus no cleanup. */
+  smartlist_free(hsdirs);
+  tor_free(rend_query);
+exit:
+  return 0;
+}
+
 /** Called when <b>conn</b> has no more bytes left on its outbuf. */
 int
 connection_control_finished_flushing(control_connection_t *conn)
@@ -3572,6 +3684,9 @@ connection_control_process_inbuf(control_connection_t *conn)
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "DROPGUARDS")) {
     if (handle_control_dropguards(conn, cmd_data_len, args))
+      return -1;
+  } else if (!strcasecmp(conn->incoming_cmd, "HSFETCH")) {
+    if (handle_control_hsfetch(conn, cmd_data_len, args))
       return -1;
   } else {
     connection_printf_to_buf(conn, "510 Unrecognized command \"%s\"\r\n",
@@ -5241,6 +5356,31 @@ node_describe_longname_by_id,(const char *id_digest))
   return longname;
 }
 
+
+/** Return either the onion address if the given pointer is a non empty
+ * string else the unknown string. */
+static const char *
+rend_hsaddress_str_or_unknown(const char *onion_address)
+{
+  static const char *str_unknown = "UNKNOWN";
+  const char *str_ret = str_unknown;
+
+  /* No valid pointer, unknown it is. */
+  if (!onion_address) {
+    goto end;
+  }
+  /* Empty onion address thus we don't know, unknown it is. */
+  if (onion_address[0] == '\0') {
+    goto end;
+  }
+  /* All checks are good so return the given onion address. */
+  str_ret = onion_address;
+
+end:
+  return str_ret;
+}
+
+
 /** send HS_DESC requested event.
  *
  * <b>rend_query</b> is used to fetch requested onion address and auth type.
@@ -5261,7 +5401,7 @@ control_event_hs_descriptor_requested(const rend_data_t *rend_query,
 
   send_control_event(EVENT_HS_DESC, ALL_FORMATS,
                      "650 HS_DESC REQUESTED %s %s %s %s\r\n",
-                     rend_query->onion_address,
+                     rend_hsaddress_str_or_unknown(rend_query->onion_address),
                      rend_auth_type_to_string(rend_query->auth_type),
                      node_describe_longname_by_id(id_digest),
                      desc_id_base32);
@@ -5277,15 +5417,16 @@ control_event_hs_descriptor_requested(const rend_data_t *rend_query,
  */
 void
 control_event_hs_descriptor_receive_end(const char *action,
-                                        const rend_data_t *rend_query,
+                                        const char *onion_address,
+                                        rend_auth_type_t auth_type,
                                         const char *id_digest,
                                         const char *reason)
 {
   char *reason_field = NULL;
 
-  if (!action || !rend_query || !id_digest) {
-    log_warn(LD_BUG, "Called with action==%p, rend_query==%p, "
-             "id_digest==%p", action, rend_query, id_digest);
+  if (!action || !id_digest || !onion_address) {
+    log_warn(LD_BUG, "Called with action==%p, id_digest==%p "
+             "onion_address==%p", action, id_digest, onion_address);
     return;
   }
 
@@ -5296,8 +5437,8 @@ control_event_hs_descriptor_receive_end(const char *action,
   send_control_event(EVENT_HS_DESC, ALL_FORMATS,
                      "650 HS_DESC %s %s %s %s%s\r\n",
                      action,
-                     rend_query->onion_address,
-                     rend_auth_type_to_string(rend_query->auth_type),
+                     rend_hsaddress_str_or_unknown(onion_address),
+                     rend_auth_type_to_string(auth_type),
                      node_describe_longname_by_id(id_digest),
                      reason_field ? reason_field : "");
 
@@ -5309,16 +5450,16 @@ control_event_hs_descriptor_receive_end(const char *action,
  * called when a we successfully received a hidden service descriptor.
  */
 void
-control_event_hs_descriptor_received(const rend_data_t *rend_query,
+control_event_hs_descriptor_received(const char *onion_address,
+                                     rend_auth_type_t auth_type,
                                      const char *id_digest)
 {
-  if (!rend_query || !id_digest) {
-    log_warn(LD_BUG, "Called with rend_query==%p, id_digest==%p",
-             rend_query, id_digest);
+  if (!id_digest) {
+    log_warn(LD_BUG, "Called with id_digest==%p", id_digest);
     return;
   }
-  control_event_hs_descriptor_receive_end("RECEIVED", rend_query,
-                                          id_digest, NULL);
+  control_event_hs_descriptor_receive_end("RECEIVED", onion_address,
+                                          auth_type, id_digest, NULL);
 }
 
 /** Send HS_DESC event to inform controller that query <b>rend_query</b>
@@ -5327,17 +5468,50 @@ control_event_hs_descriptor_received(const rend_data_t *rend_query,
  * field.
  */
 void
-control_event_hs_descriptor_failed(const rend_data_t *rend_query,
+control_event_hs_descriptor_failed(const char *onion_address,
+                                   rend_auth_type_t auth_type,
                                    const char *id_digest,
                                    const char *reason)
 {
-  if (!rend_query || !id_digest) {
-    log_warn(LD_BUG, "Called with rend_query==%p, id_digest==%p",
-             rend_query, id_digest);
+  if (!id_digest) {
+    log_warn(LD_BUG, "Called with id_digest==%p", id_digest);
     return;
   }
-  control_event_hs_descriptor_receive_end("FAILED", rend_query,
+  control_event_hs_descriptor_receive_end("FAILED", onion_address, auth_type,
                                           id_digest, reason);
+}
+
+/** send HS_DESC_CONTENT event after completion of a successful fetch from
+ * hs directory. */
+void
+control_event_hs_descriptor_content(const char *onion_address,
+                                    const char *desc_id,
+                                    const char *hsdir_id_digest,
+                                    const char *content)
+{
+  static const char *event_name = "HS_DESC_CONTENT";
+  char *esc_content = NULL;
+
+  if (!onion_address || !desc_id || !hsdir_id_digest) {
+    log_warn(LD_BUG, "Called with onion_address==%p, desc_id==%p, "
+             "hsdir_id_digest==%p", onion_address, desc_id, hsdir_id_digest);
+    return;
+  }
+
+  if (content == NULL) {
+    /* Point it to empty content so it can still be escaped. */
+    content = "";
+  }
+  write_escaped_data(content, strlen(content), &esc_content);
+
+  send_control_event(EVENT_HS_DESC_CONTENT, ALL_FORMATS,
+                     "650+%s %s %s %s\r\n%s650 OK\r\n",
+                     event_name,
+                     rend_hsaddress_str_or_unknown(onion_address),
+                     desc_id,
+                     node_describe_longname_by_id(hsdir_id_digest),
+                     esc_content);
+  tor_free(esc_content);
 }
 
 /** Free any leftover allocated memory of the control.c subsystem. */

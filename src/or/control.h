@@ -107,14 +107,21 @@ void control_event_hs_descriptor_requested(const rend_data_t *rend_query,
                                            const char *desc_id_base32,
                                            const char *hs_dir);
 void control_event_hs_descriptor_receive_end(const char *action,
-                                        const rend_data_t *rend_query,
-                                        const char *hs_dir,
+                                             const char *onion_address,
+                                             rend_auth_type_t auth_type,
+                                             const char *id_digest,
+                                             const char *reason);
+void control_event_hs_descriptor_received(const char *onion_address,
+                                          rend_auth_type_t auth_type,
+                                          const char *id_digest);
+void control_event_hs_descriptor_failed(const char *onion_address,
+                                        rend_auth_type_t auth_type,
+                                        const char *id_digest,
                                         const char *reason);
-void control_event_hs_descriptor_received(const rend_data_t *rend_query,
-                                          const char *hs_dir);
-void control_event_hs_descriptor_failed(const rend_data_t *rend_query,
-                                        const char *hs_dir,
-                                        const char *reason);
+void control_event_hs_descriptor_content(const char *onion_address,
+                                         const char *desc_id,
+                                         const char *hsdir_fp,
+                                         const char *content);
 
 void control_free_all(void);
 
@@ -158,7 +165,8 @@ void control_free_all(void);
 #define EVENT_CIRC_BANDWIDTH_USED     0x001D
 #define EVENT_TRANSPORT_LAUNCHED      0x0020
 #define EVENT_HS_DESC                 0x0021
-#define EVENT_MAX_                    0x0021
+#define EVENT_HS_DESC_CONTENT         0x0022
+#define EVENT_MAX_                    0x0022
 
 /* sizeof(control_connection_t.event_mask) in bits, currently a uint64_t */
 #define EVENT_CAPACITY_               0x0040

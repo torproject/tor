@@ -799,6 +799,10 @@ typedef struct rend_data_t {
   /** Authorization type for accessing a service used by a client. */
   rend_auth_type_t auth_type;
 
+  /** Descriptor ID for a client request. The control port command HSFETCH
+   * can use this. */
+  char descriptor_id[DIGEST_LEN];
+
   /** Hash of the hidden service's PK used by a service. */
   char rend_pk_digest[DIGEST_LEN];
 
