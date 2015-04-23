@@ -1229,7 +1229,8 @@ void
 rend_client_note_connection_attempt_ended(const char *onion_address)
 {
   rend_cache_entry_t *cache_entry = NULL;
-  rend_cache_lookup_entry(onion_address, -1, &cache_entry);
+  /* Ignore return value; we find an entry, or we don't. */
+  (void) rend_cache_lookup_entry(onion_address, -1, &cache_entry);
 
   log_info(LD_REND, "Connection attempt for %s has ended; "
            "cleaning up temporary state.",
