@@ -2795,12 +2795,14 @@ handle_control_postdescriptor(control_connection_t *conn, uint32_t len,
   uint8_t purpose = ROUTER_PURPOSE_GENERAL;
   int cache = 0; /* eventually, we may switch this to 1 */
 
-  char *cp = memchr(body, '\n', len);
+  const char *cp = memchr(body, '\n', len);
   smartlist_t *args = smartlist_new();
   tor_assert(cp);
-  *cp++ = '\0';
+  ++cp;
 
-  smartlist_split_string(args, body, " ",
+  char *cmdline = tor_memdup_nulterm(body, cp-body);
+
+  smartlist_split_string(args, cmdline, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   SMARTLIST_FOREACH_BEGIN(args, char *, option) {
     if (!strcasecmpstart(option, "purpose=")) {
@@ -2849,6 +2851,7 @@ handle_control_postdescriptor(control_connection_t *conn, uint32_t len,
  done:
   SMARTLIST_FOREACH(args, char *, arg, tor_free(arg));
   smartlist_free(args);
+  tor_free(cmdline);
   return 0;
 }
 
