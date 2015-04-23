@@ -1,0 +1,6 @@
+  o Minor bugfixes (testing):
+    - Set the severity correctly when testing get_interface_addresses_ifaddrs()
+      and get_interface_addresses_win32(), so that the tests fail gracefully
+      instead of triggering an assertion. Fixes bug 15759; bugfix on
+      0.2.6.3-alpha. Reported by Nicolas Derive.
+
