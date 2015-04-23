@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/* To prevent 'assert' from going away. */
+#undef TOR_COVERAGE
 #include "or.h"
 #include "util.h"
 #include "backtrace.h"
