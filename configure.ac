@@ -438,15 +438,6 @@ AC_SUBST(TOR_LIB_WS32)
 AC_SUBST(TOR_LIB_GDI)
 AC_SUBST(TOR_LIB_IPHLPAPI)
 
-dnl We need to do this before we try our disgusting hack below.
-AC_CHECK_HEADERS([sys/types.h])
-
-dnl This is a disgusting hack so we safely include older libevent headers.
-AC_CHECK_TYPE(u_int64_t, unsigned long long)
-AC_CHECK_TYPE(u_int32_t, unsigned long)
-AC_CHECK_TYPE(u_int16_t, unsigned short)
-AC_CHECK_TYPE(u_int8_t, unsigned char)
-
 tor_libevent_pkg_redhat="libevent"
 tor_libevent_pkg_debian="libevent-dev"
 tor_libevent_devpkg_redhat="libevent-devel"
@@ -487,13 +478,10 @@ save_CPPFLAGS="$CPPFLAGS"
 LIBS="-levent $STATIC_LIBEVENT_FLAGS $TOR_LIB_WS32 $LIBS"
 LDFLAGS="$TOR_LDFLAGS_libevent $LDFLAGS"
 CPPFLAGS="$TOR_CPPFLAGS_libevent $CPPFLAGS"
-AC_CHECK_FUNCS([event_get_version \
-                event_get_version_number \
-                event_get_method \
-                event_set_log_callback \
+AC_CHECK_FUNCS([event_get_version_number \
                 evutil_secure_rng_set_urandom_device_file \
                 evutil_secure_rng_init \
-                event_base_loopexit])
+               ])
 AC_CHECK_MEMBERS([struct event.min_heap_idx], , ,
 [#include <event.h>
 ])
