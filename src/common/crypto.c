@@ -2496,6 +2496,8 @@ base64_encode(char *dest, size_t destlen, const char *src, size_t srclen,
     return -1;
   if (destlen > SIZE_T_CEILING)
     return -1;
+  if (enclen > INT_MAX)
+    return -1;
 
   memset(dest, 0, enclen);
 
@@ -2576,7 +2578,7 @@ base64_encode(char *dest, size_t destlen, const char *src, size_t srclen,
 
   *d++ = '\0'; /* NUL terminate the output. */
 
-  return enclen;
+  return (int) enclen;
 }
 
 #undef BASE64_OPENSSL_LINELEN

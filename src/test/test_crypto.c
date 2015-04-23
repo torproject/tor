@@ -614,7 +614,7 @@ base64_encode_evp(char *dest, char *src, size_t srclen)
   int len, ret;
 
   EVP_EncodeInit(&ctx);
-  EVP_EncodeUpdate(&ctx, (unsigned char *)dest, &len, s, srclen);
+  EVP_EncodeUpdate(&ctx, (unsigned char *)dest, &len, s, (int)srclen);
   EVP_EncodeFinal(&ctx, (unsigned char *)(dest + len), &ret);
   return ret+ len;
 }
