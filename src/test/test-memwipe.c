@@ -200,7 +200,7 @@ main(int argc, char **argv)
     printf("ERROR: memwipe does not wipe data!\n");
     return 1;
   } else {
-    printf("OKAY: memwipe seems to work.");
+    printf("OKAY: memwipe seems to work.\n");
     return 0;
   }
 }
