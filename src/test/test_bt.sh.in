@@ -1,4 +1,4 @@
-#!/bin/sh
+#!@SHELL@
 # Test backtrace functionality.
 
 exitcode=0
