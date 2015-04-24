@@ -16,8 +16,9 @@ TESTS += src/test/test src/test/test-slow src/test/test-memwipe \
 
 check-am: set-test-permissions
 
+.PHONY: set-test-permissions
 set-test-permissions:
-	chmod 755 $(TESTSCRIPTS)
+	chmod u+x $(TESTSCRIPTS)
 
 
 noinst_PROGRAMS+= src/test/bench
