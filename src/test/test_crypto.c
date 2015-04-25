@@ -597,6 +597,42 @@ test_crypto_pk_fingerprints(void *arg)
   tor_free(mem_op_hex_tmp);
 }
 
+static void
+test_crypto_pk_base64(void *arg)
+{
+  crypto_pk_t *pk1 = NULL;
+  crypto_pk_t *pk2 = NULL;
+  char *encoded = NULL;
+
+  (void)arg;
+
+  /* Test Base64 encoding a key. */
+  pk1 = pk_generate(0);
+  tt_assert(pk1);
+  tt_int_op(0, OP_EQ, crypto_pk_base64_encode(pk1, &encoded));
+  tt_assert(encoded);
+
+  /* Test decoding a valid key. */
+  pk2 = crypto_pk_base64_decode(encoded, strlen(encoded));
+  tt_assert(pk2);
+  tt_assert(crypto_pk_cmp_keys(pk1,pk2) == 0);
+  crypto_pk_free(pk2);
+
+  /* Test decoding a invalid key (not Base64). */
+  static const char *invalid_b64 = "The key is in another castle!";
+  pk2 = crypto_pk_base64_decode(invalid_b64, strlen(invalid_b64));
+  tt_assert(!pk2);
+
+  /* Test decoding a truncated Base64 blob. */
+  pk2 = crypto_pk_base64_decode(encoded, strlen(encoded)/2);
+  tt_assert(!pk2);
+
+ done:
+  crypto_pk_free(pk1);
+  crypto_pk_free(pk2);
+  tor_free(encoded);
+}
+
 /** Sanity check for crypto pk digests  */
 static void
 test_crypto_digests(void *arg)
@@ -1667,6 +1703,7 @@ struct testcase_t crypto_tests[] = {
   CRYPTO_LEGACY(sha),
   CRYPTO_LEGACY(pk),
   { "pk_fingerprints", test_crypto_pk_fingerprints, TT_FORK, NULL, NULL },
+  { "pk_base64", test_crypto_pk_base64, TT_FORK, NULL, NULL },
   CRYPTO_LEGACY(digests),
   CRYPTO_LEGACY(dh),
   { "aes_iv_AES", test_crypto_aes_iv, TT_FORK, &passthrough_setup,

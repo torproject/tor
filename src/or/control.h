@@ -233,6 +233,11 @@ void append_cell_stats_by_command(smartlist_t *event_parts,
 void format_cell_stats(char **event_string, circuit_t *circ,
                        cell_stats_t *cell_stats);
 STATIC char *get_bw_samples(void);
+
+STATIC crypto_pk_t *add_onion_helper_keyarg(const char *arg, int discard_pk,
+                                            const char **key_new_alg_out,
+                                            char **key_new_blob_out,
+                                            char **err_msg_out);
 #endif
 
 #endif
