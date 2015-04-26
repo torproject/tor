@@ -1,0 +1,4 @@
+  o Minor bugfixes (hidden service):
+    - Fix an out-of-bounds read when parsing invalid INTRODUCE2 cells
+      on a client authorized hidden service. Fixes bug 15823; bugfix
+      on 0.2.1.6-alpha.
