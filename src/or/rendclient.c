@@ -474,9 +474,8 @@ rend_client_introduction_acked(origin_circuit_t *circ,
 
 /** Contains the last request times to hidden service directories for
  * certain queries; each key is a string consisting of the
- * concatenation of a base32-encoded HS directory identity digest, a
- * base32-encoded HS descriptor ID, and a hidden service address
- * (without the ".onion" part); each value is a pointer to a time_t
+ * concatenation of a base32-encoded HS directory identity digest and
+ * base32-encoded HS descriptor ID; each value is a pointer to a time_t
  * holding the time of the last request for that descriptor ID to that
  * HS directory. */
 static strmap_t *last_hid_serv_requests_ = NULL;
@@ -492,8 +491,7 @@ get_last_hid_serv_requests(void)
 }
 
 #define LAST_HID_SERV_REQUEST_KEY_LEN (REND_DESC_ID_V2_LEN_BASE32 + \
-                                       REND_DESC_ID_V2_LEN_BASE32 + \
-                                       REND_SERVICE_ID_LEN_BASE32)
+                                       REND_DESC_ID_V2_LEN_BASE32)
 
 /** Look up the last request time to hidden service directory <b>hs_dir</b>
  * for descriptor ID <b>desc_id_base32</b>. If <b>set</b> is non-zero,
@@ -554,20 +552,23 @@ directory_clean_last_hid_serv_requests(time_t now)
   }
 }
 
-/** Remove all requests related to the hidden service named
- * <b>onion_address</b> from the history of times of requests to
- * hidden service directories.
+/** Remove all requests related to the descriptor ID <b>desc_id</b> from the
+ * history of times of requests to hidden service directories.
+ * <b>desc_id</b> is an unencoded descriptor ID of size DIGEST_LEN.
  *
  * This is called from rend_client_note_connection_attempt_ended(), which
- * must be idempotent, so any future changes to this function must leave
- * it idempotent too.
- */
+ * must be idempotent, so any future changes to this function must leave it
+ * idempotent too. */
 static void
-purge_hid_serv_from_last_hid_serv_requests(const char *onion_address)
+purge_hid_serv_from_last_hid_serv_requests(const char *desc_id)
 {
   strmap_iter_t *iter;
   strmap_t *last_hid_serv_requests = get_last_hid_serv_requests();
-  /* XXX023 tor_assert(strlen(onion_address) == REND_SERVICE_ID_LEN_BASE32); */
+  char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
+
+  /* Key is stored with the base32 encoded desc_id. */
+  base32_encode(desc_id_base32, sizeof(desc_id_base32), desc_id,
+                DIGEST_LEN);
   for (iter = strmap_iter_init(last_hid_serv_requests);
        !strmap_iter_done(iter); ) {
     const char *key;
@@ -575,9 +576,9 @@ purge_hid_serv_from_last_hid_serv_requests(const char *onion_address)
     strmap_iter_get(iter, &key, &val);
     /* XXX023 tor_assert(strlen(key) == LAST_HID_SERV_REQUEST_KEY_LEN); */
     if (tor_memeq(key + LAST_HID_SERV_REQUEST_KEY_LEN -
-                  REND_SERVICE_ID_LEN_BASE32,
-                  onion_address,
-                  REND_SERVICE_ID_LEN_BASE32)) {
+                  REND_DESC_ID_V2_LEN_BASE32,
+                  desc_id_base32,
+                  REND_DESC_ID_V2_LEN_BASE32)) {
       iter = strmap_iter_next_rmv(last_hid_serv_requests, iter);
       tor_free(val);
     } else {
@@ -1213,28 +1214,28 @@ rend_client_desc_trynow(const char *query)
                  "unavailable (try again later).",
                  safe_str_client(query));
       connection_mark_unattached_ap(conn, END_STREAM_REASON_RESOLVEFAILED);
-      rend_client_note_connection_attempt_ended(query);
+      rend_client_note_connection_attempt_ended(rend_data);
     }
   } SMARTLIST_FOREACH_END(base_conn);
 }
 
-/** Clear temporary state used only during an attempt to connect to
- * the hidden service named <b>onion_address</b>.  Called when a
- * connection attempt has ended; it is possible for this to be called
- * multiple times while handling an ended connection attempt, and
- * any future changes to this function must ensure it remains
- * idempotent.
- */
+/** Clear temporary state used only during an attempt to connect to the
+ * hidden service with <b>rend_data</b>. Called when a connection attempt
+ * has ended; it is possible for this to be called multiple times while
+ * handling an ended connection attempt, and any future changes to this
+ * function must ensure it remains idempotent. */
 void
-rend_client_note_connection_attempt_ended(const char *onion_address)
+rend_client_note_connection_attempt_ended(const rend_data_t *rend_data)
 {
+  unsigned int have_onion = 0;
   rend_cache_entry_t *cache_entry = NULL;
-  /* Ignore return value; we find an entry, or we don't. */
-  (void) rend_cache_lookup_entry(onion_address, -1, &cache_entry);
 
-  log_info(LD_REND, "Connection attempt for %s has ended; "
-           "cleaning up temporary state.",
-           safe_str_client(onion_address));
+  if (*rend_data->onion_address != '\0') {
+    /* Ignore return value; we find an entry, or we don't. */
+    (void) rend_cache_lookup_entry(rend_data->onion_address, -1,
+                                   &cache_entry);
+    have_onion = 1;
+  }
 
   /* Clear the timed_out flag on all remaining intro points for this HS. */
   if (cache_entry != NULL) {
@@ -1244,7 +1245,20 @@ rend_client_note_connection_attempt_ended(const char *onion_address)
   }
 
   /* Remove the HS's entries in last_hid_serv_requests. */
-  purge_hid_serv_from_last_hid_serv_requests(onion_address);
+  if (have_onion) {
+    unsigned int replica;
+    for (replica = 0; replica < ARRAY_LENGTH(rend_data->descriptor_id);
+         replica++) {
+      const char *desc_id = rend_data->descriptor_id[replica];
+      purge_hid_serv_from_last_hid_serv_requests(desc_id);
+    }
+    log_info(LD_REND, "Connection attempt for %s has ended; "
+             "cleaning up temporary state.",
+             safe_str_client(rend_data->onion_address));
+  } else {
+    /* We only have an ID for a fetch. Probably used by HSFETCH. */
+    purge_hid_serv_from_last_hid_serv_requests(rend_data->desc_id_fetch);
+  }
 }
 
 /** Return a newly allocated extend_info_t* for a randomly chosen introduction

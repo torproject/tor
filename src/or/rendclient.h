@@ -41,7 +41,7 @@ int rend_client_receive_rendezvous(origin_circuit_t *circ,
                                    size_t request_len);
 void rend_client_desc_trynow(const char *query);
 
-void rend_client_note_connection_attempt_ended(const char *onion_address);
+void rend_client_note_connection_attempt_ended(const rend_data_t *rend_data);
 
 extend_info_t *rend_client_get_random_intro(const rend_data_t *rend_query);
 int rend_client_any_intro_points_usable(const rend_cache_entry_t *entry);

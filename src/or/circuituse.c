@@ -2149,7 +2149,7 @@ link_apconn_to_circ(entry_connection_t *apconn, origin_circuit_t *circ,
      * that an attempt to connect to a hidden service just
      * succeeded.  Tell rendclient.c. */
     rend_client_note_connection_attempt_ended(
-                    ENTRY_TO_EDGE_CONN(apconn)->rend_data->onion_address);
+                    ENTRY_TO_EDGE_CONN(apconn)->rend_data);
   }
 
   if (cpath) { /* we were given one; use it */
