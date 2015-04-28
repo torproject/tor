@@ -792,8 +792,7 @@ end:
  * On success, 1 is returned. If no hidden service is left to ask, return 0.
  * On error, -1 is returned. */
 static int
-fetch_v2_desc_by_addr(const rend_data_t *query,
-                      smartlist_t *hsdirs)
+fetch_v2_desc_by_addr(rend_data_t *query, smartlist_t *hsdirs)
 {
   char descriptor_id[DIGEST_LEN];
   int replicas_left_to_try[REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS];
@@ -823,6 +822,16 @@ fetch_v2_desc_by_addr(const rend_data_t *query,
       goto end;
     }
 
+    if (tor_memcmp(descriptor_id, query->descriptor_id[chosen_replica],
+                   sizeof(descriptor_id)) != 0) {
+      /* Not equal from what we currently have so purge the last hid serv
+       * request cache and update the descriptor ID with the new value. */
+      purge_hid_serv_from_last_hid_serv_requests(
+                                        query->descriptor_id[chosen_replica]);
+      memcpy(query->descriptor_id[chosen_replica], descriptor_id,
+             sizeof(query->descriptor_id[chosen_replica]));
+    }
+
     /* Trigger the fetch with the computed descriptor ID. */
     ret = fetch_v2_desc_by_descid(descriptor_id, query, hsdirs);
     if (ret != 0) {
@@ -849,8 +858,7 @@ end:
  * On success, 1 is returned. If no hidden service is left to ask, return 0.
  * On error, -1 is returned. */
 int
-rend_client_fetch_v2_desc(const rend_data_t *query,
-                          smartlist_t *hsdirs)
+rend_client_fetch_v2_desc(rend_data_t *query, smartlist_t *hsdirs)
 {
   int ret;
 
@@ -877,7 +885,7 @@ error:
  * one (possibly) working introduction point in it, start a connection to a
  * hidden service directory to fetch a v2 rendezvous service descriptor. */
 void
-rend_client_refetch_v2_renddesc(const rend_data_t *rend_query)
+rend_client_refetch_v2_renddesc(rend_data_t *rend_query)
 {
   int ret;
   rend_cache_entry_t *e = NULL;
@@ -964,7 +972,7 @@ rend_client_cancel_descriptor_fetches(void)
  */
 int
 rend_client_report_intro_point_failure(extend_info_t *failed_intro,
-                                       const rend_data_t *rend_query,
+                                       rend_data_t *rend_query,
                                        unsigned int failure_type)
 {
   int i, r;
