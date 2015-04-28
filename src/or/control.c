@@ -36,6 +36,8 @@
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "policies.h"
+#include "rendcommon.h"
+#include "rendservice.h"
 #include "reasons.h"
 #include "rendclient.h"
 #include "rendcommon.h"
@@ -95,6 +97,11 @@ static uint8_t *authentication_cookie = NULL;
 #define SAFECOOKIE_CONTROLLER_TO_SERVER_CONSTANT \
   "Tor safe cookie authentication controller-to-server hash"
 #define SAFECOOKIE_SERVER_NONCE_LEN DIGEST256_LEN
+
+/** The list of onion services that have been added via ADD_ONION that do not
+ * belong to any particular control connection.
+ */
+static smartlist_t *detached_onion_services = NULL;
 
 /** A sufficiently large size to record the last bootstrap phase string. */
 #define BOOTSTRAP_MSG_LEN 1024
@@ -163,6 +170,10 @@ static int handle_control_usefeature(control_connection_t *conn,
                                      const char *body);
 static int handle_control_hsfetch(control_connection_t *conn, uint32_t len,
                                   const char *body);
+static int handle_control_add_onion(control_connection_t *conn, uint32_t len,
+                                    const char *body);
+static int handle_control_del_onion(control_connection_t *conn, uint32_t len,
+                                    const char *body);
 static int write_stream_target_to_buf(entry_connection_t *conn, char *buf,
                                       size_t len);
 static void orconn_target_get_name(char *buf, size_t len,
@@ -2170,6 +2181,31 @@ getinfo_helper_events(control_connection_t *control_conn,
   return 0;
 }
 
+/** Implementation helper for GETINFO: knows how to enumerate hidden services
+ * created via the control port. */
+static int
+getinfo_helper_onions(control_connection_t *control_conn,
+                      const char *question, char **answer,
+                      const char **errmsg)
+{
+  smartlist_t *onion_list = NULL;
+
+  if (!strcmp(question, "onions/current")) {
+    onion_list = control_conn->ephemeral_onion_services;
+  } else if (!strcmp(question, "onions/detached")) {
+    onion_list = detached_onion_services;
+  } else {
+    return 0;
+  }
+  if (!onion_list || smartlist_len(onion_list) == 0) {
+    *errmsg = "No onion services of the specified type.";
+    return -1;
+  }
+  *answer = smartlist_join_strings(onion_list, "\r\n", 0, NULL);
+
+  return 0;
+}
+
 /** Callback function for GETINFO: on a given control connection, try to
  * answer the question <b>q</b> and store the newly-allocated answer in
  * *<b>a</b>. If an internal error occurs, return -1 and optionally set
@@ -2306,6 +2342,10 @@ static const getinfo_item_t getinfo_items[] = {
   ITEM("exit-policy/ipv4", policies, "IPv4 parts of exit policy"),
   ITEM("exit-policy/ipv6", policies, "IPv6 parts of exit policy"),
   PREFIX("ip-to-country/", geoip, "Perform a GEOIP lookup"),
+  ITEM("onions/current", onions,
+       "Onion services owned by the current control connection."),
+  ITEM("onions/detached", onions,
+       "Onion services detached from the control connection."),
   { NULL, NULL, NULL, 0 }
 };
 
@@ -3388,6 +3428,348 @@ exit:
   return 0;
 }
 
+/** Called when we get a ADD_ONION command; parse the body, and set up
+ * the new ephemeral Onion Service. */
+static int
+handle_control_add_onion(control_connection_t *conn,
+                         uint32_t len,
+                         const char *body)
+{
+  smartlist_t *args;
+  size_t arg_len;
+  (void) len; /* body is nul-terminated; it's safe to ignore the length */
+  args = getargs_helper("ADD_ONION", conn, body, 2, -1);
+  if (!args)
+    return 0;
+  arg_len = smartlist_len(args);
+
+  /* Parse all of the arguments that do not involve handling cryptographic
+   * material first, since there's no reason to touch that at all if any of
+   * the other arguments are malformed.
+   */
+  smartlist_t *port_cfgs = smartlist_new();
+  int discard_pk = 0;
+  int detach = 0;
+  for (size_t i = 1; i < arg_len; i++) {
+    static const char *port_prefix = "Port=";
+    static const char *flags_prefix = "Flags=";
+
+    const char *arg = smartlist_get(args, i);
+    if (!strcasecmpstart(arg, port_prefix)) {
+      /* "Port=VIRTPORT[,TARGET]". */
+      const char *port_str = arg + strlen(port_prefix);
+
+      rend_service_port_config_t *cfg =
+          rend_service_parse_port_config(port_str, ",", NULL);
+      if (!cfg) {
+        connection_printf_to_buf(conn, "512 Invalid VIRTPORT/TARGET\r\n");
+        goto out;
+      }
+      smartlist_add(port_cfgs, cfg);
+    } else if (!strcasecmpstart(arg, flags_prefix)) {
+      /* "Flags=Flag[,Flag]", where Flag can be:
+       *   * 'DiscardPK' - If tor generates the keypair, do not include it in
+       *                   the response.
+       *   * 'Detach' - Do not tie this onion service to any particular control
+       *                connection.
+       */
+      static const char *discard_flag = "DiscardPK";
+      static const char *detach_flag = "Detach";
+
+      smartlist_t *flags = smartlist_new();
+      int bad = 0;
+
+      smartlist_split_string(flags, arg + strlen(flags_prefix), ",",
+                             SPLIT_IGNORE_BLANK, 0);
+      if (smartlist_len(flags) < 1) {
+        connection_printf_to_buf(conn, "512 Invalid 'Flags' argument\r\n");
+        bad = 1;
+      }
+      SMARTLIST_FOREACH_BEGIN(flags, const char *, flag)
+      {
+        if (!strcasecmp(flag, discard_flag)) {
+          discard_pk = 1;
+        } else if (!strcasecmp(flag, detach_flag)) {
+          detach = 1;
+        } else {
+          connection_printf_to_buf(conn,
+                                   "512 Invalid 'Flags' argument: %s\r\n",
+                                   escaped(flag));
+          bad = 1;
+          break;
+        }
+      } SMARTLIST_FOREACH_END(flag);
+      SMARTLIST_FOREACH(flags, char *, cp, tor_free(cp));
+      smartlist_free(flags);
+      if (bad)
+        goto out;
+    } else {
+      connection_printf_to_buf(conn, "513 Invalid argument\r\n");
+      goto out;
+    }
+  }
+  if (smartlist_len(port_cfgs) == 0) {
+    connection_printf_to_buf(conn, "512 Missing 'Port' argument\r\n");
+    goto out;
+  }
+
+  /* Parse the "keytype:keyblob" argument. */
+  crypto_pk_t *pk = NULL;
+  const char *key_new_alg = NULL;
+  char *key_new_blob = NULL;
+  char *err_msg = NULL;
+
+  pk = add_onion_helper_keyarg(smartlist_get(args, 0), discard_pk,
+                               &key_new_alg, &key_new_blob,
+                               &err_msg);
+  if (!pk) {
+    if (err_msg) {
+      connection_write_str_to_buf(err_msg, conn);
+      tor_free(err_msg);
+    }
+    goto out;
+  }
+  tor_assert(!err_msg);
+
+  /* Create the HS, using private key pk, and port config port_cfg.
+   * rend_service_add_ephemeral() will take ownership of pk and port_cfg,
+   * regardless of success/failure.
+   */
+  char *service_id = NULL;
+  int ret = rend_service_add_ephemeral(pk, port_cfgs, &service_id);
+  port_cfgs = NULL; /* port_cfgs is now owned by the rendservice code. */
+  switch (ret) {
+  case RSAE_OKAY:
+  {
+    char *buf = NULL;
+    tor_assert(service_id);
+    if (key_new_alg) {
+      tor_assert(key_new_blob);
+      tor_asprintf(&buf,
+                   "250-ServiceID=%s\r\n"
+                   "250-PrivateKey=%s:%s\r\n"
+                   "250 OK\r\n",
+                   service_id,
+                   key_new_alg,
+                   key_new_blob);
+    } else {
+      tor_asprintf(&buf,
+                   "250-ServiceID=%s\r\n"
+                   "250 OK\r\n",
+                   service_id);
+    }
+    if (detach) {
+      if (!detached_onion_services)
+        detached_onion_services = smartlist_new();
+      smartlist_add(detached_onion_services, service_id);
+    } else {
+      if (!conn->ephemeral_onion_services)
+        conn->ephemeral_onion_services = smartlist_new();
+      smartlist_add(conn->ephemeral_onion_services, service_id);
+    }
+
+    connection_write_str_to_buf(buf, conn);
+    memwipe(buf, 0, strlen(buf));
+    tor_free(buf);
+    break;
+  }
+  case RSAE_BADPRIVKEY:
+    connection_printf_to_buf(conn, "551 Failed to generate onion address\r\n");
+    break;
+  case RSAE_ADDREXISTS:
+    connection_printf_to_buf(conn, "550 Onion address collision\r\n");
+    break;
+  case RSAE_BADVIRTPORT:
+    connection_printf_to_buf(conn, "512 Invalid VIRTPORT/TARGET\r\n");
+    break;
+  case RSAE_INTERNAL: /* FALLSTHROUGH */
+  default:
+    connection_printf_to_buf(conn, "551 Failed to add Onion Service\r\n");
+  }
+  if (key_new_blob) {
+    memwipe(key_new_blob, 0, strlen(key_new_blob));
+    tor_free(key_new_blob);
+  }
+
+ out:
+  if (port_cfgs) {
+    SMARTLIST_FOREACH(port_cfgs, rend_service_port_config_t*, p,
+                      rend_service_port_config_free(p));
+    smartlist_free(port_cfgs);
+  }
+
+  SMARTLIST_FOREACH(args, char *, cp, {
+    memwipe(cp, 0, strlen(cp));
+    tor_free(cp);
+  });
+  smartlist_free(args);
+  return 0;
+}
+
+/** Helper function to handle parsing the KeyType:KeyBlob argument to the
+ * ADD_ONION command. Return a new crypto_pk_t and if a new key was generated
+ * and the private key not discarded, the algorithm and serialized private key,
+ * or NULL and an optional control protocol error message on failure.  The
+ * caller is responsible for freeing the returned key_new_blob and err_msg.
+ *
+ * Note: The error messages returned are deliberately vague to avoid echoing
+ * key material.
+ */
+STATIC crypto_pk_t *
+add_onion_helper_keyarg(const char *arg, int discard_pk,
+                        const char **key_new_alg_out, char **key_new_blob_out,
+                        char **err_msg_out)
+{
+  smartlist_t *key_args = smartlist_new();
+  crypto_pk_t *pk = NULL;
+  const char *key_new_alg = NULL;
+  char *key_new_blob = NULL;
+  char *err_msg = NULL;
+  int ok = 0;
+
+  smartlist_split_string(key_args, arg, ":", SPLIT_IGNORE_BLANK, 0);
+  if (smartlist_len(key_args) != 2) {
+    err_msg = tor_strdup("512 Invalid key type/blob\r\n");
+    goto err;
+  }
+
+  /* The format is "KeyType:KeyBlob". */
+  static const char *key_type_new = "NEW";
+  static const char *key_type_best = "BEST";
+  static const char *key_type_rsa1024 = "RSA1024";
+
+  const char *key_type = smartlist_get(key_args, 0);
+  const char *key_blob = smartlist_get(key_args, 1);
+
+  if (!strcasecmp(key_type_rsa1024, key_type)) {
+    /* "RSA:<Base64 Blob>" - Loading a pre-existing RSA1024 key. */
+    pk = crypto_pk_base64_decode(key_blob, strlen(key_blob));
+    if (!pk) {
+      err_msg = tor_strdup("512 Failed to decode RSA key\r\n");
+      goto err;
+    }
+    if (crypto_pk_num_bits(pk) != PK_BYTES*8) {
+      err_msg = tor_strdup("512 Invalid RSA key size\r\n");
+      goto err;
+    }
+  } else if (!strcasecmp(key_type_new, key_type)) {
+    /* "NEW:<Algorithm>" - Generating a new key, blob as algorithm. */
+    if (!strcasecmp(key_type_rsa1024, key_blob) ||
+        !strcasecmp(key_type_best, key_blob)) {
+      /* "RSA1024", RSA 1024 bit, also currently "BEST" by default. */
+      pk = crypto_pk_new();
+      if (crypto_pk_generate_key(pk)) {
+        tor_asprintf(&err_msg, "551 Failed to generate %s key\r\n",
+                     key_type_rsa1024);
+        goto err;
+      }
+      if (!discard_pk) {
+        if (crypto_pk_base64_encode(pk, &key_new_blob)) {
+          tor_asprintf(&err_msg, "551 Failed to encode %s key\r\n",
+                       key_type_rsa1024);
+          goto err;
+        }
+        key_new_alg = key_type_rsa1024;
+      }
+    } else {
+      err_msg = tor_strdup("513 Invalid key type\r\n");
+      goto err;
+    }
+  } else {
+    err_msg = tor_strdup("513 Invalid key type\r\n");
+    goto err;
+  }
+
+  /* Succeded in loading or generating a private key. */
+  tor_assert(pk);
+  ok = 1;
+
+ err:
+  SMARTLIST_FOREACH(key_args, char *, cp, {
+    memwipe(cp, 0, strlen(cp));
+    tor_free(cp);
+  });
+
+  if (!ok) {
+    crypto_pk_free(pk);
+    pk = NULL;
+  }
+  if (err_msg_out) *err_msg_out = err_msg;
+  *key_new_alg_out = key_new_alg;
+  *key_new_blob_out = key_new_blob;
+
+  return pk;
+}
+
+/** Called when we get a DEL_ONION command; parse the body, and remove
+ * the existing ephemeral Onion Service. */
+static int
+handle_control_del_onion(control_connection_t *conn,
+                          uint32_t len,
+                          const char *body)
+{
+  smartlist_t *args;
+  (void) len; /* body is nul-terminated; it's safe to ignore the length */
+  args = getargs_helper("DEL_ONION", conn, body, 1, 1);
+  if (!args)
+    return 0;
+
+  const char *service_id = smartlist_get(args, 0);
+  if (!rend_valid_service_id(service_id)) {
+    connection_printf_to_buf(conn, "512 Malformed Onion Service id\r\n");
+    goto out;
+  }
+
+  /* Determine if the onion service belongs to this particular control
+   * connection, or if it is in the global list of detached services.  If it
+   * is in neither, either the service ID is invalid in some way, or it
+   * explicitly belongs to a different control connection, and an error
+   * should be returned.
+   */
+  smartlist_t *services[2] = {
+    conn->ephemeral_onion_services,
+    detached_onion_services
+  };
+  smartlist_t *onion_services = NULL;
+  int idx = -1;
+  for (size_t i = 0; i < ARRAY_LENGTH(services); i++) {
+    idx = smartlist_string_pos(services[i], service_id);
+    if (idx != -1) {
+      onion_services = services[i];
+      break;
+    }
+  }
+  if (onion_services == NULL) {
+    connection_printf_to_buf(conn, "552 Unknown Onion Service id\r\n");
+  } else {
+    int ret = rend_service_del_ephemeral(service_id);
+    if (ret) {
+      /* This should *NEVER* fail, since the service is on either the
+       * per-control connection list, or the global one.
+       */
+      log_warn(LD_BUG, "Failed to remove Onion Service %s.",
+               escaped(service_id));
+      tor_fragile_assert();
+    }
+
+    /* Remove/scrub the service_id from the appropriate list. */
+    char *cp = smartlist_get(onion_services, idx);
+    smartlist_del(onion_services, idx);
+    memwipe(cp, 0, strlen(cp));
+    tor_free(cp);
+
+    send_control_done(conn);
+  }
+
+ out:
+  SMARTLIST_FOREACH(args, char *, cp, {
+    memwipe(cp, 0, strlen(cp));
+    tor_free(cp);
+  });
+  smartlist_free(args);
+  return 0;
+}
+
 /** Called when <b>conn</b> has no more bytes left on its outbuf. */
 int
 connection_control_finished_flushing(control_connection_t *conn)
@@ -3433,6 +3815,15 @@ connection_control_closed(control_connection_t *conn)
 
   conn->event_mask = 0;
   control_update_global_event_mask();
+
+  /* Close all ephemeral Onion Services if any.
+   * The list and it's contents are scrubbed/freed in connection_free_.
+   */
+  if (conn->ephemeral_onion_services) {
+    SMARTLIST_FOREACH(conn->ephemeral_onion_services, char *, cp, {
+      rend_service_del_ephemeral(cp);
+    });
+  }
 
   if (conn->is_owning_control_connection) {
     lost_owning_controller("connection", "closed");
@@ -3687,6 +4078,16 @@ connection_control_process_inbuf(control_connection_t *conn)
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "HSFETCH")) {
     if (handle_control_hsfetch(conn, cmd_data_len, args))
+      return -1;
+  } else if (!strcasecmp(conn->incoming_cmd, "ADD_ONION")) {
+    int ret = handle_control_add_onion(conn, cmd_data_len, args);
+    memwipe(args, 0, cmd_data_len); /* Scrub the private key. */
+    if (ret)
+      return -1;
+  } else if (!strcasecmp(conn->incoming_cmd, "DEL_ONION")) {
+    int ret = handle_control_del_onion(conn, cmd_data_len, args);
+    memwipe(args, 0, cmd_data_len); /* Scrub the service id/pk. */
+    if (ret)
       return -1;
   } else {
     connection_printf_to_buf(conn, "510 Unrecognized command \"%s\"\r\n",
@@ -5520,6 +5921,10 @@ control_free_all(void)
 {
   if (authentication_cookie) /* Free the auth cookie */
     tor_free(authentication_cookie);
+  if (detached_onion_services) { /* Free the detached onion services */
+    SMARTLIST_FOREACH(detached_onion_services, char *, cp, tor_free(cp));
+    smartlist_free(detached_onion_services);
+  }
 }
 
 #ifdef TOR_UNIT_TESTS

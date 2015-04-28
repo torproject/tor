@@ -1127,6 +1127,7 @@ extern struct testcase_t circuitlist_tests[];
 extern struct testcase_t circuitmux_tests[];
 extern struct testcase_t config_tests[];
 extern struct testcase_t container_tests[];
+extern struct testcase_t controller_tests[];
 extern struct testcase_t controller_event_tests[];
 extern struct testcase_t crypto_tests[];
 extern struct testcase_t dir_tests[];
@@ -1171,7 +1172,8 @@ struct testgroup_t testgroups[] = {
   { "circuitmux/", circuitmux_tests },
   { "config/", config_tests },
   { "container/", container_tests },
-  { "control/", controller_event_tests },
+  { "control/", controller_tests },
+  { "control/event/", controller_event_tests },
   { "crypto/", crypto_tests },
   { "dir/", dir_tests },
   { "dir/md/", microdesc_tests },

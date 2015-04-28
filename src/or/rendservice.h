@@ -15,6 +15,7 @@
 #include "or.h"
 
 typedef struct rend_intro_cell_s rend_intro_cell_t;
+typedef struct rend_service_port_config_s rend_service_port_config_t;
 
 #ifdef RENDSERVICE_PRIVATE
 
@@ -100,6 +101,24 @@ int rend_service_set_connection_addr_port(edge_connection_t *conn,
                                           origin_circuit_t *circ);
 void rend_service_dump_stats(int severity);
 void rend_service_free_all(void);
+
+rend_service_port_config_t *rend_service_parse_port_config(const char *string,
+                                                           const char *sep,
+                                                           char **err_msg_out);
+void rend_service_port_config_free(rend_service_port_config_t *p);
+
+/** Return value from rend_service_add_ephemeral. */
+typedef enum {
+  RSAE_BADVIRTPORT = -4, /**< Invalid VIRTPORT/TARGET(s) */
+  RSAE_ADDREXISTS = -3, /**< Onion address collision */
+  RSAE_BADPRIVKEY = -2, /**< Invalid public key */
+  RSAE_INTERNAL = -1, /**< Internal error */
+  RSAE_OKAY = 0 /**< Service added as expected */
+} rend_service_add_ephemeral_status_t;
+rend_service_add_ephemeral_status_t rend_service_add_ephemeral(crypto_pk_t *pk,
+                               smartlist_t *ports,
+                               char **service_id_out);
+int rend_service_del_ephemeral(const char *service_id);
 
 #endif
 

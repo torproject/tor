@@ -1,0 +1,7 @@
+  o Major features (controller):
+    - Add the ADD_ONION and DEL_ONION commands that allows the creation
+      and management of hidden services via the controller. Closes
+      ticket 6411.
+    - New "GETINFO onions/current" and "GETINFO onions/detached" to get
+      information about hidden services created via the controller.
+      Part of ticket 6411.

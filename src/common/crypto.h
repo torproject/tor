@@ -184,6 +184,9 @@ int crypto_pk_get_all_digests(crypto_pk_t *pk, digests_t *digests_out);
 int crypto_pk_get_fingerprint(crypto_pk_t *pk, char *fp_out,int add_space);
 int crypto_pk_get_hashed_fingerprint(crypto_pk_t *pk, char *fp_out);
 
+int crypto_pk_base64_encode(const crypto_pk_t *pk, char **priv_out);
+crypto_pk_t *crypto_pk_base64_decode(const char *str, size_t len);
+
 /* symmetric crypto */
 const char *crypto_cipher_get_key(crypto_cipher_t *env);
 
