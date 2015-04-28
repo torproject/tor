@@ -860,8 +860,8 @@ rend_client_fetch_v2_desc(const rend_data_t *query,
 
   if (query->onion_address[0] != '\0') {
     ret = fetch_v2_desc_by_addr(query, hsdirs);
-  } else if (query->descriptor_id[0] != '\0') {
-    ret = fetch_v2_desc_by_descid(query->descriptor_id, query, hsdirs);
+  } else if (!tor_digest_is_zero(query->desc_id_fetch)) {
+    ret = fetch_v2_desc_by_descid(query->desc_id_fetch, query, hsdirs);
   } else {
     /* Query data is invalid. */
     ret = -1;

@@ -67,5 +67,13 @@ void rend_get_descriptor_id_bytes(char *descriptor_id_out,
                                   const char *secret_id_part);
 size_t rend_cache_get_total_allocation(void);
 
+rend_data_t *rend_data_client_create(const char *onion_address,
+                                     const char *desc_id,
+                                     const char *cookie,
+                                     rend_auth_type_t auth_type);
+rend_data_t *rend_data_service_create(const char *onion_address,
+                                      const char *pk_digest,
+                                      const uint8_t *cookie,
+                                      rend_auth_type_t auth_type);
 #endif
 

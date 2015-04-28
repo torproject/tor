@@ -793,6 +793,11 @@ typedef struct rend_data_t {
   /** Onion address (without the .onion part) that a client requests. */
   char onion_address[REND_SERVICE_ID_LEN_BASE32+1];
 
+  /** Descriptor ID for each replicas computed from the onion address. If
+   * the onion address is empty, this array MUST be empty. We keep them so
+   * we know when to purge our entry in the last hsdir request table. */
+  char descriptor_id[REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS][DIGEST_LEN];
+
   /** (Optional) descriptor cookie that is used by a client. */
   char descriptor_cookie[REND_DESC_COOKIE_LEN];
 
@@ -800,8 +805,9 @@ typedef struct rend_data_t {
   rend_auth_type_t auth_type;
 
   /** Descriptor ID for a client request. The control port command HSFETCH
-   * can use this. */
-  char descriptor_id[DIGEST_LEN];
+   * uses this. It's set if the descriptor query should only use this
+   * descriptor ID. */
+  char desc_id_fetch[DIGEST_LEN];
 
   /** Hash of the hidden service's PK used by a service. */
   char rend_pk_digest[DIGEST_LEN];
