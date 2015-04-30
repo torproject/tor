@@ -1411,7 +1411,8 @@ rend_data_dup(const rend_data_t *data)
 static int
 compute_desc_id(rend_data_t *rend_data)
 {
-  int ret, replica;
+  int ret;
+  unsigned replica;
   time_t now = time(NULL);
 
   tor_assert(rend_data);
