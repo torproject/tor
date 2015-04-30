@@ -1,4 +1,4 @@
   o Major bugfix
     - Revert commit that made directory authority assign the HSDir flag to
       relay without a DirPort which is bad because relay can't handle
-      BEGIN_DIR cells. Fixes #15850. Bugfix on tor-0.2.6.3-alpha;
+      BEGIN_DIR cells. Fixes bug 15850; bugfix on tor-0.2.6.3-alpha.
