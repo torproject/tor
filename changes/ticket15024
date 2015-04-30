@@ -1,4 +1,0 @@
-  o Documentation:
-    - Improve the layout and formatting of ./configure --help messages.
-      Closes ticket 15024. Patch from "cypherpunks".
-  

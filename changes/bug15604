@@ -1,7 +1,0 @@
-  o Minor bugfixes
-    - Disregard the ConnDirectionStatistics torrc options when Tor is
-      not a relay since in that mode of operation no sensible data is
-      being collected and because Tor might run into measurement hiccups
-      when running as a client for some time, then becoming a relay. Fixes
-      bug 15604; bugfix on 0.2.2.35.
-

@@ -1,6 +1,0 @@
-  o Minor features (testing):
-    - Add unit tests for control_event_is_interesting().
-      Add a compile-time check that the number of events doesn't exceed
-      the capacity of control_event_t.event_mask.
-      Closes ticket 15431, checks for bugs similar to 13085.
-      Patch by "teor".

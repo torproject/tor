@@ -1,5 +1,0 @@
-  o Removed features:
-    - Remove the undocumented "--digests" command-line option. It
-      complicated our build process, caused subtle build issues
-      on multiple platforms, and is now redundant since we started
-      including git version identifiers. Closes ticket 14742.

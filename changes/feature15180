@@ -1,3 +1,0 @@
-  o Minor features (testing):
-    - Add make rule `check-changes` to verify the format of changes files.
-      Closes ticket 15180.

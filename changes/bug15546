@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-   - For correctness, avoid modifying a constant string in
-     handle_control_postdescriptor. Fixes bug 15546; bugfix on
-     0.1.1.16-rc.

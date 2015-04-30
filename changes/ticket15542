@@ -1,3 +1,0 @@
-  o Minor features (command-line interface):
-    - Make --hash-password imply --hush to prevent unnecessary noise. Closes
-      ticket 15542.

@@ -1,3 +1,0 @@
-  o Testing:
-    - Add a test to verify that the compiler does not eliminate our
-      memwipe() implementation. Closes ticket 15377.

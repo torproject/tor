@@ -1,4 +1,0 @@
-  o Minor features (controller)
-    - Controllers can now use GETINFO hs/client/desc/id/... to
-      retrieve items from the client's hidden service descriptor
-      cache. Closes ticket 14845.

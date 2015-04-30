@@ -1,7 +1,0 @@
-  o Minor bugfixes (logs):
-    - When building Tor under Clang, do not include an extra set of
-      parentheses in log messages that include function names.
-      Fixes bug 15269; bugfix on every released version of Tor when
-      compiled with recent enough Clang.
-
-

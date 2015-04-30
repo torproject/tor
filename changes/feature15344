@@ -1,3 +1,0 @@
-  o Minor features (testing):
-    - Integrate the ntor, backtrace and zero lengths keys tests into the
-      automake test suite. Closes ticket 15344.

@@ -1,5 +1,0 @@
-  o Minor features (logging):
-    - Include the Tor version in all LD_BUG log messages, since people
-      tend to cut and paste those into the bugtracker. Implements
-      ticket 15026.
-

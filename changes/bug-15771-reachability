@@ -1,8 +1,0 @@
-  o Minor bugfixes (test networks)
-    - When self-testing reachability, use ExtendAllowPrivateAddresses
-      to determine if local/private addresses imply reachability.
-      The previous fix used TestingTorNetwork, which implies
-      ExtendAllowPrivateAddresses, but this excluded rare configs where
-      ExtendAllowPrivateAddresses is set but TestingTorNetwork is not.
-      Fixes bug 15771; bugfix on 0.2.6.1-alpha.
-      Patch by "teor", issue discovered by CJ Ess.
