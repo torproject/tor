@@ -1735,13 +1735,11 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
            hexcookie, serviceid);
   tor_assert(launched->build_state);
   /* Fill in the circuit's state. */
-  launched->rend_data = tor_malloc_zero(sizeof(rend_data_t));
-  memcpy(launched->rend_data->rend_pk_digest,
-         circuit->rend_data->rend_pk_digest,
-         DIGEST_LEN);
-  memcpy(launched->rend_data->rend_cookie, parsed_req->rc, REND_COOKIE_LEN);
-  strlcpy(launched->rend_data->onion_address, service->service_id,
-          sizeof(launched->rend_data->onion_address));
+
+  launched->rend_data =
+    rend_data_service_create(service->service_id,
+                             circuit->rend_data->rend_pk_digest,
+                             parsed_req->rc, service->auth_type);
 
   launched->build_state->service_pending_final_cpath_ref =
     tor_malloc_zero(sizeof(crypt_path_reference_t));
@@ -2713,10 +2711,9 @@ rend_service_launch_establish_intro(rend_service_t *service,
     intro->extend_info = extend_info_dup(launched->build_state->chosen_exit);
   }
 
-  launched->rend_data = tor_malloc_zero(sizeof(rend_data_t));
-  strlcpy(launched->rend_data->onion_address, service->service_id,
-          sizeof(launched->rend_data->onion_address));
-  memcpy(launched->rend_data->rend_pk_digest, service->pk_digest, DIGEST_LEN);
+  launched->rend_data = rend_data_service_create(service->service_id,
+                                                 service->pk_digest, NULL,
+                                                 service->auth_type);
   launched->intro_key = crypto_pk_dup_key(intro->intro_key);
   if (launched->base_.state == CIRCUIT_STATE_OPEN)
     rend_service_intro_has_opened(launched);

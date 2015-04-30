@@ -3389,25 +3389,21 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
     }
   }
 
-  rend_query = tor_malloc_zero(sizeof(*rend_query));
+  rend_query = rend_data_client_create(hsaddress, desc_id, NULL,
+                                       REND_NO_AUTH);
+  if (rend_query == NULL) {
+    connection_printf_to_buf(conn, "551 Error creating the HS query\r\n");
+    goto done;
+  }
 
-  if (hsaddress) {
-    strncpy(rend_query->onion_address, hsaddress,
-            sizeof(rend_query->onion_address));
-  } else if (desc_id) {
-    /* Using a descriptor ID, we force the user to provide at least one
-     * hsdir server using the SERVER= option. */
-    if (!hsdirs || !smartlist_len(hsdirs)) {
+  /* Using a descriptor ID, we force the user to provide at least one
+   * hsdir server using the SERVER= option. */
+  if (desc_id && (!hsdirs || !smartlist_len(hsdirs))) {
       connection_printf_to_buf(conn, "512 %s option is required\r\n",
                                opt_server);
       goto done;
-    }
-    memcpy(rend_query->descriptor_id, desc_id,
-           sizeof(rend_query->descriptor_id));
-  } else {
-    /* We can't get in here because of the first argument check. */
-    tor_assert(0);
   }
+
   /* We are about to trigger HSDir fetch so send the OK now because after
    * that 650 event(s) are possible so better to have the 250 OK before them
    * to avoid out of order replies. */
@@ -3423,7 +3419,7 @@ done:
   smartlist_free(args);
   /* Contains data pointer that we don't own thus no cleanup. */
   smartlist_free(hsdirs);
-  tor_free(rend_query);
+  rend_data_free(rend_query);
 exit:
   return 0;
 }

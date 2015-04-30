@@ -1404,3 +1404,100 @@ rend_data_dup(const rend_data_t *data)
   return tor_memdup(data, sizeof(rend_data_t));
 }
 
+/** Compute descriptor ID for each replicas and save them. A valid onion
+ * address must be present in the <b>rend_data</b>.
+ *
+ * Return 0 on success else -1. */
+static int
+compute_desc_id(rend_data_t *rend_data)
+{
+  int ret, replica;
+  time_t now = time(NULL);
+
+  tor_assert(rend_data);
+
+  /* Compute descriptor ID for each replicas. */
+  for (replica = 0; replica < ARRAY_LENGTH(rend_data->descriptor_id);
+       replica++) {
+    ret = rend_compute_v2_desc_id(rend_data->descriptor_id[replica],
+                                  rend_data->onion_address,
+                                  rend_data->descriptor_cookie,
+                                  now, replica);
+    if (ret < 0) {
+      goto end;
+    }
+  }
+
+end:
+  return ret;
+}
+
+/** Allocate and initialize a rend_data_t object for a service using the
+ * given arguments. Only the <b>onion_address</b> is not optional.
+ *
+ * Return a valid rend_data_t pointer. */
+rend_data_t *
+rend_data_service_create(const char *onion_address, const char *pk_digest,
+                         const uint8_t *cookie, rend_auth_type_t auth_type)
+{
+  rend_data_t *rend_data = tor_malloc_zero(sizeof(*rend_data));
+
+  /* We need at least one else the call is wrong. */
+  tor_assert(onion_address != NULL);
+
+  if (pk_digest) {
+    memcpy(rend_data->rend_pk_digest, pk_digest,
+           sizeof(rend_data->rend_pk_digest));
+  }
+  if (cookie) {
+    memcpy(rend_data->rend_cookie, cookie,
+           sizeof(rend_data->rend_cookie));
+  }
+
+  strlcpy(rend_data->onion_address, onion_address,
+          sizeof(rend_data->onion_address));
+  rend_data->auth_type = auth_type;
+
+  return rend_data;
+}
+
+/** Allocate and initialize a rend_data_t object for a client request using
+ * the given arguments.  Either an onion address or a descriptor ID is
+ * needed. Both can be given but only the onion address will be used to make
+ * the descriptor fetch.
+ *
+ * Return a valid rend_data_t pointer or NULL on error meaning the
+ * descriptor IDs couldn't be computed from the given data. */
+rend_data_t *
+rend_data_client_create(const char *onion_address, const char *desc_id,
+                        const char *cookie, rend_auth_type_t auth_type)
+{
+  rend_data_t *rend_data = tor_malloc_zero(sizeof(*rend_data));
+
+  /* We need at least one else the call is wrong. */
+  tor_assert(onion_address != NULL || desc_id != NULL);
+
+  if (cookie) {
+    memcpy(rend_data->descriptor_cookie, cookie,
+           sizeof(rend_data->descriptor_cookie));
+  }
+  if (desc_id) {
+    memcpy(rend_data->desc_id_fetch, desc_id,
+           sizeof(rend_data->desc_id_fetch));
+  }
+  if (onion_address) {
+    strlcpy(rend_data->onion_address, onion_address,
+            sizeof(rend_data->onion_address));
+    if (compute_desc_id(rend_data) < 0) {
+      goto error;
+    }
+  }
+
+  rend_data->auth_type = auth_type;
+
+  return rend_data;
+
+error:
+  rend_data_free(rend_data);
+  return NULL;
+}

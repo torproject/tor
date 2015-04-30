@@ -102,8 +102,7 @@ connection_mark_unattached_ap_,(entry_connection_t *conn, int endreason,
    * but we should fix it someday anyway. */
   if ((edge_conn->on_circuit != NULL || edge_conn->edge_has_sent_end) &&
       connection_edge_is_rendezvous_stream(edge_conn)) {
-    rend_client_note_connection_attempt_ended(
-                                    edge_conn->rend_data->onion_address);
+    rend_client_note_connection_attempt_ended(edge_conn->rend_data);
   }
 
   if (base_conn->marked_for_close) {
@@ -1499,12 +1498,27 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       return -1;
     }
 
+    /* Look up if we have client authorization configured for this hidden
+     * service.  If we do, associate it with the rend_data. */
+    rend_service_authorization_t *client_auth =
+      rend_client_lookup_service_authorization(socks->address);
+
+    const char *cookie = NULL;
+    rend_auth_type_t auth_type = REND_NO_AUTH;
+    if (client_auth) {
+      log_info(LD_REND, "Using previously configured client authorization "
+               "for hidden service request.");
+      auth_type = client_auth->auth_type;
+      cookie = client_auth->descriptor_cookie;
+    }
+
     /* Fill in the rend_data field so we can start doing a connection to
      * a hidden service. */
     rend_data_t *rend_data = ENTRY_TO_EDGE_CONN(conn)->rend_data =
-      tor_malloc_zero(sizeof(rend_data_t));
-    strlcpy(rend_data->onion_address, socks->address,
-            sizeof(rend_data->onion_address));
+      rend_data_client_create(socks->address, NULL, cookie, auth_type);
+    if (rend_data == NULL) {
+      return -1;
+    }
     log_info(LD_REND,"Got a hidden service request for ID '%s'",
              safe_str_client(rend_data->onion_address));
 
@@ -1545,19 +1559,6 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
           safe_str_client(rend_data->onion_address));
       rend_client_refetch_v2_renddesc(rend_data);
       return 0;
-    }
-
-    /* Look up if we have client authorization configured for this hidden
-     * service.  If we do, associate it with the rend_data. */
-    rend_service_authorization_t *client_auth =
-      rend_client_lookup_service_authorization(
-                                          rend_data->onion_address);
-    if (client_auth) {
-      log_info(LD_REND, "Using previously configured client authorization "
-                        "for hidden service request.");
-      memcpy(rend_data->descriptor_cookie,
-             client_auth->descriptor_cookie, REND_DESC_COOKIE_LEN);
-      rend_data->auth_type = client_auth->auth_type;
     }
 
     /* We have the descriptor so launch a connection to the HS. */
