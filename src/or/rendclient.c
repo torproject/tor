@@ -780,7 +780,7 @@ fetch_v2_desc_by_descid(const char *desc_id, const rend_data_t *rend_query,
   /* Everything went well. */
   ret = 0;
 
-end:
+ end:
   return ret;
 }
 
@@ -847,7 +847,7 @@ fetch_v2_desc_by_addr(rend_data_t *query, smartlist_t *hsdirs)
                     "we already tried them all unsuccessfully.");
   ret = 0;
 
-end:
+ end:
   memwipe(descriptor_id, 0, sizeof(descriptor_id));
   return ret;
 }
@@ -877,7 +877,7 @@ rend_client_fetch_v2_desc(rend_data_t *query, smartlist_t *hsdirs)
     goto error;
   }
 
-error:
+ error:
   return ret;
 }
 

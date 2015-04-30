@@ -934,7 +934,7 @@ rend_valid_descriptor_id(const char *query)
 
   return 1;
 
-invalid:
+ invalid:
   return 0;
 }
 
@@ -1429,7 +1429,7 @@ compute_desc_id(rend_data_t *rend_data)
     }
   }
 
-end:
+ end:
   return ret;
 }
 
@@ -1498,7 +1498,8 @@ rend_data_client_create(const char *onion_address, const char *desc_id,
 
   return rend_data;
 
-error:
+ error:
   rend_data_free(rend_data);
   return NULL;
 }
+

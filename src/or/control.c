@@ -3414,13 +3414,13 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
    * always send a fetch command. */
   rend_client_fetch_v2_desc(rend_query, hsdirs);
 
-done:
+ done:
   SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
   smartlist_free(args);
   /* Contains data pointer that we don't own thus no cleanup. */
   smartlist_free(hsdirs);
   rend_data_free(rend_query);
-exit:
+ exit:
   return 0;
 }
 
@@ -5753,7 +5753,6 @@ node_describe_longname_by_id,(const char *id_digest))
   return longname;
 }
 
-
 /** Return either the onion address if the given pointer is a non empty
  * string else the unknown string. */
 static const char *
@@ -5773,10 +5772,9 @@ rend_hsaddress_str_or_unknown(const char *onion_address)
   /* All checks are good so return the given onion address. */
   str_ret = onion_address;
 
-end:
+ end:
   return str_ret;
 }
-
 
 /** send HS_DESC requested event.
  *
