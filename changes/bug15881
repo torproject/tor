@@ -1,0 +1,3 @@
+  o Controller fixes:
+    - Add the descriptor ID in each HS_DESC control event. It was missing
+      but specified in control-spec.txt. Fixes ticket 15881.

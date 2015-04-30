@@ -5904,6 +5904,44 @@ control_event_hs_descriptor_requested(const rend_data_t *rend_query,
                      desc_id_base32);
 }
 
+/** For an HS descriptor query <b>rend_data</b>, using the
+ * <b>onion_address</b> and HSDir fingerprint <b>hsdir_fp</b>, find out
+ * which descriptor ID in the query is the right one.
+ *
+ * Return a pointer of the binary descriptor ID found in the query's object
+ * or NULL if not found. */
+static const char *
+get_desc_id_from_query(const rend_data_t *rend_data, const char *hsdir_fp)
+{
+  int replica;
+  const char *desc_id = NULL;
+
+  /* Possible if the fetch was done using a descriptor ID. This means that
+   * the HSFETCH command was used. */
+  if (!tor_digest_is_zero(rend_data->desc_id_fetch)) {
+    desc_id = rend_data->desc_id_fetch;
+    goto end;
+  }
+
+  /* OK, we have an onion address so now let's find which descriptor ID
+   * is the one associated with the HSDir fingerprint. */
+  for (replica = 0; replica < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS;
+       replica++) {
+    const char *digest = rend_data->descriptor_id[replica];
+
+    SMARTLIST_FOREACH_BEGIN(rend_data->hsdirs_fp, char *, fingerprint) {
+      if (tor_memcmp(fingerprint, hsdir_fp, DIGEST_LEN) == 0) {
+        /* Found it! This descriptor ID is the right one. */
+        desc_id = digest;
+        goto end;
+      }
+    } SMARTLIST_FOREACH_END(fingerprint);
+  }
+
+end:
+  return desc_id;
+}
+
 /** send HS_DESC upload event.
  *
  * <b>service_id</b> is the descriptor onion address.
@@ -5940,16 +5978,29 @@ control_event_hs_descriptor_upload(const char *service_id,
 void
 control_event_hs_descriptor_receive_end(const char *action,
                                         const char *onion_address,
-                                        rend_auth_type_t auth_type,
+                                        const rend_data_t *rend_data,
                                         const char *id_digest,
                                         const char *reason)
 {
+  char *desc_id_field = NULL;
   char *reason_field = NULL;
+  char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
+  const char *desc_id = NULL;
 
-  if (!action || !id_digest || !onion_address) {
-    log_warn(LD_BUG, "Called with action==%p, id_digest==%p "
-             "onion_address==%p", action, id_digest, onion_address);
+  if (!action || !id_digest || !rend_data || !onion_address) {
+    log_warn(LD_BUG, "Called with action==%p, id_digest==%p, "
+             "rend_data==%p, onion_address==%p", action, id_digest,
+             rend_data, onion_address);
     return;
+  }
+
+  desc_id = get_desc_id_from_query(rend_data, id_digest);
+  if (desc_id != NULL) {
+    /* Set the descriptor ID digest to base32 so we can send it. */
+    base32_encode(desc_id_base32, sizeof(desc_id_base32), desc_id,
+                  DIGEST_LEN);
+    /* Extra whitespace is needed before the value. */
+    tor_asprintf(&desc_id_field, " %s", desc_id_base32);
   }
 
   if (reason) {
@@ -5957,13 +6008,15 @@ control_event_hs_descriptor_receive_end(const char *action,
   }
 
   send_control_event(EVENT_HS_DESC, ALL_FORMATS,
-                     "650 HS_DESC %s %s %s %s%s\r\n",
+                     "650 HS_DESC %s %s %s %s%s%s\r\n",
                      action,
                      rend_hsaddress_str_or_unknown(onion_address),
-                     rend_auth_type_to_string(auth_type),
+                     rend_auth_type_to_string(rend_data->auth_type),
                      node_describe_longname_by_id(id_digest),
+                     desc_id_field ? desc_id_field : "",
                      reason_field ? reason_field : "");
 
+  tor_free(desc_id_field);
   tor_free(reason_field);
 }
 
@@ -6007,15 +6060,16 @@ control_event_hs_descriptor_upload_end(const char *action,
  */
 void
 control_event_hs_descriptor_received(const char *onion_address,
-                                     rend_auth_type_t auth_type,
+                                     const rend_data_t *rend_data,
                                      const char *id_digest)
 {
-  if (!id_digest) {
-    log_warn(LD_BUG, "Called with id_digest==%p", id_digest);
+  if (!rend_data || !id_digest || !onion_address) {
+    log_warn(LD_BUG, "Called with rend_data==%p, id_digest==%p, "
+             "onion_address==%p", rend_data, id_digest, onion_address);
     return;
   }
   control_event_hs_descriptor_receive_end("RECEIVED", onion_address,
-                                          auth_type, id_digest, NULL);
+                                          rend_data, id_digest, NULL);
 }
 
 /** send HS_DESC UPLOADED event
@@ -6039,17 +6093,18 @@ control_event_hs_descriptor_uploaded(const char *id_digest)
  * field.
  */
 void
-control_event_hs_descriptor_failed(const char *onion_address,
-                                   rend_auth_type_t auth_type,
+control_event_hs_descriptor_failed(const rend_data_t *rend_data,
                                    const char *id_digest,
                                    const char *reason)
 {
-  if (!id_digest) {
-    log_warn(LD_BUG, "Called with id_digest==%p", id_digest);
+  if (!rend_data || !id_digest) {
+    log_warn(LD_BUG, "Called with rend_data==%p, id_digest==%p",
+             rend_data, id_digest);
     return;
   }
-  control_event_hs_descriptor_receive_end("FAILED", onion_address, auth_type,
-                                          id_digest, reason);
+  control_event_hs_descriptor_receive_end("FAILED",
+                                          rend_data->onion_address,
+                                          rend_data, id_digest, reason);
 }
 
 /** send HS_DESC_CONTENT event after completion of a successful fetch from

@@ -814,6 +814,10 @@ typedef struct rend_data_t {
 
   /** Rendezvous cookie used by both, client and service. */
   char rend_cookie[REND_COOKIE_LEN];
+
+  /** List of HSDir fingerprints on which this request has been sent to.
+   * This contains binary identity digest of the directory. */
+  smartlist_t *hsdirs_fp;
 } rend_data_t;
 
 /** Time interval for tracking replays of DH public keys received in

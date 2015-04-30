@@ -111,18 +111,17 @@ void control_event_hs_descriptor_upload(const char *service_id,
                                         const char *hs_dir);
 void control_event_hs_descriptor_receive_end(const char *action,
                                              const char *onion_address,
-                                             rend_auth_type_t auth_type,
+                                             const rend_data_t *rend_data,
                                              const char *id_digest,
                                              const char *reason);
 void control_event_hs_descriptor_upload_end(const char *action,
                                             const char *hs_dir,
                                             const char *reason);
 void control_event_hs_descriptor_received(const char *onion_address,
-                                          rend_auth_type_t auth_type,
+                                          const rend_data_t *rend_data,
                                           const char *id_digest);
 void control_event_hs_descriptor_uploaded(const char *hs_dir);
-void control_event_hs_descriptor_failed(const char *onion_address,
-                                        rend_auth_type_t auth_type,
+void control_event_hs_descriptor_failed(const rend_data_t *rend_data,
                                         const char *id_digest,
                                         const char *reason);
 void control_event_hs_descriptor_upload_failed(const char *hs_dir,

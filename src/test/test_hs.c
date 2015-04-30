@@ -160,7 +160,7 @@ test_hs_desc_event(void *arg)
   /* test received event */
   rend_query.auth_type = 1;
   control_event_hs_descriptor_received(rend_query.onion_address,
-                                       rend_query.auth_type, HSDIR_EXIST_ID);
+                                       &rend_query, HSDIR_EXIST_ID);
   expected_msg = "650 HS_DESC RECEIVED "STR_HS_ADDR" BASIC_AUTH "\
                   STR_HSDIR_EXIST_LONGNAME"\r\n";
   tt_assert(received_msg);
@@ -169,8 +169,8 @@ test_hs_desc_event(void *arg)
 
   /* test failed event */
   rend_query.auth_type = 2;
-  control_event_hs_descriptor_failed(rend_query.onion_address,
-                                     rend_query.auth_type, HSDIR_NONE_EXIST_ID,
+  control_event_hs_descriptor_failed(&rend_query,
+                                     HSDIR_NONE_EXIST_ID,
                                      "QUERY_REJECTED");
   expected_msg = "650 HS_DESC FAILED "STR_HS_ADDR" STEALTH_AUTH "\
                   STR_HSDIR_NONE_EXIST_LONGNAME" REASON=QUERY_REJECTED\r\n";
@@ -180,8 +180,8 @@ test_hs_desc_event(void *arg)
 
   /* test invalid auth type */
   rend_query.auth_type = 999;
-  control_event_hs_descriptor_failed(rend_query.onion_address,
-                                     rend_query.auth_type, HSDIR_EXIST_ID,
+  control_event_hs_descriptor_failed(&rend_query,
+                                     HSDIR_EXIST_ID,
                                      "QUERY_REJECTED");
   expected_msg = "650 HS_DESC FAILED "STR_HS_ADDR" UNKNOWN "\
                   STR_HSDIR_EXIST_LONGNAME" REASON=QUERY_REJECTED\r\n";
