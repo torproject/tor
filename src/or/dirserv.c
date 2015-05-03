@@ -2143,10 +2143,8 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   /* Already set by compute_performance_thresholds. */
   rs->is_exit = node->is_exit;
   rs->is_stable = node->is_stable =
-    router_is_active(ri, node, now) &&
     !dirserv_thinks_router_is_unreliable(now, ri, 1, 0);
   rs->is_fast = node->is_fast =
-    router_is_active(ri, node, now) &&
     !dirserv_thinks_router_is_unreliable(now, ri, 0, 1);
   rs->is_flagged_running = node->is_running; /* computed above */
 
