@@ -15,6 +15,7 @@
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "config.h"
+#include "control.h"
 #include "directory.h"
 #include "main.h"
 #include "networkstatus.h"
@@ -3098,14 +3099,16 @@ find_intro_point(origin_circuit_t *circ)
   return NULL;
 }
 
-/** Determine the responsible hidden service directories for the
- * rend_encoded_v2_service_descriptor_t's in <b>descs</b> and upload them;
- * <b>service_id</b> and <b>seconds_valid</b> are only passed for logging
- * purposes. */
-static void
+/** Upload the rend_encoded_v2_service_descriptor_t's in <b>descs</b>
+ * associated with the rend_service_descriptor_t <b>renddesc</b> to
+ * the responsible hidden service directories OR the hidden service
+ * directories specified by <b>hs_dirs</b>; <b>service_id</b> and
+ * <b>seconds_valid</b> are only passed for logging purposes.
+ */
+void
 directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
-                         smartlist_t *descs, const char *service_id,
-                         int seconds_valid)
+                         smartlist_t *descs, smartlist_t *hs_dirs,
+                         const char *service_id, int seconds_valid)
 {
   int i, j, failed_upload = 0;
   smartlist_t *responsible_dirs = smartlist_new();
@@ -3113,14 +3116,21 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
   routerstatus_t *hs_dir;
   for (i = 0; i < smartlist_len(descs); i++) {
     rend_encoded_v2_service_descriptor_t *desc = smartlist_get(descs, i);
-    /* Determine responsible dirs. */
-    if (hid_serv_get_responsible_directories(responsible_dirs,
-                                             desc->desc_id) < 0) {
-      log_warn(LD_REND, "Could not determine the responsible hidden service "
-                        "directories to post descriptors to.");
-      smartlist_free(responsible_dirs);
-      smartlist_free(successful_uploads);
-      return;
+    /** If any HSDirs are specified, they should be used instead of
+     *  the responsible directories */
+    if (hs_dirs && smartlist_len(hs_dirs) > 0) {
+      smartlist_add_all(responsible_dirs, hs_dirs);
+    } else {
+      /* Determine responsible dirs. */
+      if (hid_serv_get_responsible_directories(responsible_dirs,
+                                               desc->desc_id) < 0) {
+        log_warn(LD_REND, "Could not determine the responsible hidden service "
+                          "directories to post descriptors to.");
+        control_event_hs_descriptor_upload(service_id,
+                                           "UNKNOWN",
+                                           "UNKNOWN");
+        goto done;
+      }
     }
     for (j = 0; j < smartlist_len(responsible_dirs); j++) {
       char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
@@ -3160,6 +3170,9 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
                hs_dir->nickname,
                hs_dir_ip,
                hs_dir->or_port);
+      control_event_hs_descriptor_upload(service_id,
+                                         hs_dir->identity_digest,
+                                         desc_id_base32);
       tor_free(hs_dir_ip);
       /* Remember successful upload to this router for next time. */
       if (!smartlist_contains_digest(successful_uploads,
@@ -3187,6 +3200,7 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
       }
     });
   }
+ done:
   smartlist_free(responsible_dirs);
   smartlist_free(successful_uploads);
 }
@@ -3251,7 +3265,7 @@ upload_service_descriptor(rend_service_t *service)
         rend_get_service_id(service->desc->pk, serviceid);
         log_info(LD_REND, "Launching upload for hidden service %s",
                      serviceid);
-        directory_post_to_hs_dir(service->desc, descs, serviceid,
+        directory_post_to_hs_dir(service->desc, descs, NULL, serviceid,
                                  seconds_valid);
         /* Free memory for descriptors. */
         for (i = 0; i < smartlist_len(descs); i++)
@@ -3280,7 +3294,7 @@ upload_service_descriptor(rend_service_t *service)
             smartlist_free(client_cookies);
             return;
           }
-          directory_post_to_hs_dir(service->desc, descs, serviceid,
+          directory_post_to_hs_dir(service->desc, descs, NULL, serviceid,
                                    seconds_valid);
           /* Free memory for descriptors. */
           for (i = 0; i < smartlist_len(descs); i++)

@@ -1,0 +1,3 @@
+  o Major features (controller):
+    - New HSPOST command to upload a hidden service descriptor. 
+      Closes ticket 3523. Patch by "DonnchaC".
