@@ -14,6 +14,8 @@ Changes in version 0.2.7.1-alpha - 2015-05-??
       of ticket 6411.
     - New HSFETCH command to launch a request for a hidden service
       descriptor. Closes ticket 14847.
+    - New HSPOST command to upload a hidden service descriptor. Closes
+      ticket 3523. Patch by "DonnchaC".
 
   o Major bugfixes (hidden services):
     - Revert commit that made directory authority assign the HSDir flag
@@ -36,14 +38,12 @@ Changes in version 0.2.7.1-alpha - 2015-05-??
       needless noise. Closes ticket 15542. Patch from "cypherpunks".
 
   o Minor features (controller):
-    - Controllers can now use GETINFO hs/client/desc/id/... to retrieve
-      items from the client's hidden service descriptor cache. Closes
-      ticket 14845.
-
-  o Minor features (controller):
     - Add DirAuthority lines for default directory authorities to output
       of the GETINFO config/defaults controller command if not already
       present. Implements ticket 14840.
+    - Controllers can now use GETINFO hs/client/desc/id/... to retrieve
+      items from the client's hidden service descriptor cache. Closes
+      ticket 14845.
     - Implement a new controller command "status/fresh-relay-descs" to
       fetch a descriptor/extrainfo pair that was generated on demand
       just for the controller's use. Implements ticket 14784.
@@ -72,17 +72,19 @@ Changes in version 0.2.7.1-alpha - 2015-05-??
       ticket 15026.
 
   o Minor features (pluggable transports):
+    - When launching managed pluggable transports on linux systems,
+      attempt to have the kernel deliver a SIGTERM on tor exit if the
+      pluggable transport process is still running. Resolves
+      ticket 15471.
     - When launching managed pluggable transports, setup a valid open
       stdin in the child process that can be used to detect if tor has
       terminated. The "TOR_PT_EXIT_ON_STDIN_CLOSE" enviornment variable
       can be used by implementations to detect this new behavior.
       Resolves ticket 15435.
-    - When launching managed pluggable transports on linux systems,
-      attempt to have the kernel deliver a SIGTERM on tor exit if the
-      pluggable transport process is still running. Resolves
-      ticket 15471.
 
   o Minor features (testing):
+    - Add a test to verify that the compiler does not eliminate our
+      memwipe() implementation. Closes ticket 15377.
     - Add make rule `check-changes` to verify the format of changes
       files. Closes ticket 15180.
     - Add unit tests for control_event_is_interesting(). Add a compile-
@@ -97,8 +99,6 @@ Changes in version 0.2.7.1-alpha - 2015-05-??
       them artificially makes our branch coverage look worse than it is.
       This patch provides the new test-stem-full and coverage-html-full
       configure options. Implements ticket 15400.
-    - Add a test to verify that the compiler does not eliminate our
-      memwipe() implementation. Closes ticket 15377.
 
   o Minor bugfixes (build):
     - Improve out-of-tree builds by making non-standard rules work and
@@ -122,13 +122,13 @@ Changes in version 0.2.7.1-alpha - 2015-05-??
       90f6071d8dc0 in 0.2.4.7-alpha. Patch by "teor".
 
   o Minor bugfixes (correctness):
+    - For correctness, avoid modifying a constant string in
+      handle_control_postdescriptor. Fixes bug 15546; bugfix
+      on 0.1.1.16-rc.
     - Remove side-effects from tor_assert() calls. This was harmless,
       because we never disable assertions, but it is bad style and
       unnecessary. Fixes bug 15211; bugfix on 0.2.5.5, 0.2.2.36,
       and 0.2.0.10.
-    - For correctness, avoid modifying a constant string in
-      handle_control_postdescriptor. Fixes bug 15546; bugfix
-      on 0.1.1.16-rc.
 
   o Minor bugfixes (hidden service):
     - Remove an extraneous newline character from the end of hidden
@@ -168,14 +168,14 @@ Changes in version 0.2.7.1-alpha - 2015-05-??
       discovered by CJ Ess.
 
   o Minor bugfixes (testing):
+    - Check for matching value in server response in ntor_ref.py. Fixes
+      bug 15591; bugfix on 0.2.4.8-alpha. Reported and fixed
+      by "joelanders".
     - Set the severity correctly when testing
       get_interface_addresses_ifaddrs() and
       get_interface_addresses_win32(), so that the tests fail gracefully
       instead of triggering an assertion. Fixes bug 15759; bugfix on
       0.2.6.3-alpha. Reported by Nicolas Derive.
-    - Check for matching value in server response in ntor_ref.py. Fixes
-      bug 15591; bugfix on 0.2.4.8-alpha. Reported and fixed
-      by "joelanders".
 
   o Code simplification and refactoring:
     - Move the hacky fallback code out of get_interface_address6() into
@@ -213,10 +213,10 @@ Changes in version 0.2.7.1-alpha - 2015-05-??
       complicated our build process, caused subtle build issues on
       multiple platforms, and is now redundant since we started
       including git version identifiers. Closes ticket 14742.
-    - Tor no longer contains workarounds for stat files generated by
-      super-old versions of Tor that didn't choose guards sensibly.
     - Tor no longer contains checks for ancient directory cache versions
       that didn't know about microdescriptors.
+    - Tor no longer contains workarounds for stat files generated by
+      super-old versions of Tor that didn't choose guards sensibly.
 
 
 Changes in version 0.2.4.27 - 2015-04-06
