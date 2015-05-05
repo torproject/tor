@@ -5,8 +5,6 @@
 """This script sorts a bunch of changes files listed on its command
    line into roughly the order in which they should appear in the
    changelog.
-
-   TODO: collation support.
 """
 
 import re
@@ -19,7 +17,7 @@ def fetch(fn):
         return s
 
 def score(s,fname=None):
-    m = re.match(r'^ +o (.*)', s)
+    m = re.match(r'^ +o ([^\n]*)\n(.*)', s, re.M|re.S)
     if not m:
         print >>sys.stderr, "Can't score %r from %s"%(s,fname)
     lw = m.group(1).lower()
@@ -38,12 +36,47 @@ def score(s,fname=None):
     else:
         score = 100
 
-    return (score,  lw, s)
+    return (score, lw, m.group(1), m.group(2))
+
+def splitChanges(s):
+    this_entry = []
+    for line in s.split("\n"):
+        if line.strip() == "":
+            continue
+        if re.match(r" +o ", line):
+            if len(this_entry) > 2:
+                yield "".join(this_entry)
+            curHeader = line
+            this_entry = [ curHeader, "\n" ]
+            continue
+        elif re.match(r" +- ", line):
+            if len(this_entry) > 2:
+                yield "".join(this_entry)
+            this_entry = [ curHeader, "\n" ]
+
+        this_entry.append(line)
+        this_entry.append("\n")
+
+    if len(this_entry) > 2:
+        yield "".join(this_entry)
 
 
-changes = [ score(fetch(fn),fn) for fn in sys.argv[1:] if not fn.endswith('~') ]
+changes = []
+
+for fn in sys.argv[1:]:
+    if fn.endswith('~'):
+        continue
+    for change in splitChanges(fetch(fn)):
+        changes.append(score(change,fn))
 
 changes.sort()
 
-for _, _, s in changes:
-    print s
+last_lw = "this is not a header"
+for _, lw, header, rest in changes:
+    if lw == last_lw:
+        print rest,
+    else:
+        print
+        print "  o",header
+        print rest,
+        last_lw = lw
