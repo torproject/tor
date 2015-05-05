@@ -2,14 +2,14 @@ Changes in version 0.2.7.1-alpha - 2015-05-??
   Tor 0.2.7.1-alpha is the first alpha release in its series.
 
   o New system requirements:
-    - Tor no longer includes workarounds for Libevent versions before
+    - Tor no longer includes workarounds to support Libevent versions before
       1.3e. Libevent 2.0 or later is recommended. Closes ticket 15248.
 
   o Major features (controller):
-    - Add the ADD_ONION and DEL_ONION commands that allows the creation
+    - Add the ADD_ONION and DEL_ONION commands that allow the creation
       and management of hidden services via the controller. Closes
       ticket 6411.
-    - New "GETINFO onions/current" and "GETINFO onions/detached" to get
+    - New "GETINFO onions/current" and "GETINFO onions/detached" commands to get
       information about hidden services created via the controller. Part
       of ticket 6411.
     - New HSFETCH command to launch a request for a hidden service
@@ -18,33 +18,30 @@ Changes in version 0.2.7.1-alpha - 2015-05-??
       ticket 3523. Patch by "DonnchaC".
 
   o Major bugfixes (hidden services):
-    - Revert commit that made directory authority assign the HSDir flag
-      to relay without a DirPort which is bad because relay can't handle
+    - Revert commit that made directory authorities assign the HSDir flag
+      to relay without a DirPort; this was bad because such relays can't handle
       BEGIN_DIR cells. Fixes bug 15850; bugfix on tor-0.2.6.3-alpha.
 
   o Minor features (clock-jump tolerance):
     - Recover better when our clock jumps back many hours, like might
       happen for Tails or Whonix users who start with a very wrong
       hardware clock, use Tor to discover a more accurate time, and then
-      fix their clock. Resolves part of ticket 8766. [I'd call this a
-      major feature if it actually fixed all of the issues.]
+      fix their clock. Resolves part of ticket 8766.
 
   o Minor features (command-line interface):
     - Make --hash-password imply --hush to prevent unnecessary noise.
-      Closes ticket 15542.
+      Closes ticket 15542. Patch from "cypherpunks".
     - Print a warning whenever we find a relative file path being used
       as torrc option. Resolves issue 14018.
-    - The "--hash-password" option now implies "--hush" to avoid
-      needless noise. Closes ticket 15542. Patch from "cypherpunks".
 
   o Minor features (controller):
-    - Add DirAuthority lines for default directory authorities to output
-      of the GETINFO config/defaults controller command if not already
+    - Add DirAuthority lines for default directory authorities to the output
+      of the "GETINFO config/defaults" command if not already
       present. Implements ticket 14840.
-    - Controllers can now use GETINFO hs/client/desc/id/... to retrieve
+    - Controllers can now use "GETINFO hs/client/desc/id/..." to retrieve
       items from the client's hidden service descriptor cache. Closes
       ticket 14845.
-    - Implement a new controller command "status/fresh-relay-descs" to
+    - Implement a new controller command "GETINFO status/fresh-relay-descs" to
       fetch a descriptor/extrainfo pair that was generated on demand
       just for the controller's use. Implements ticket 14784.
 
@@ -61,9 +58,9 @@ Changes in version 0.2.7.1-alpha - 2015-05-??
   o Minor features (HS popularity countermeasure):
     - To avoid leaking HS popularity, don't cycle the introduction point
       when we've handled a fixed number of INTRODUCE2 cells but instead
-      cycle it when a random value of introductions is reached thus
+      cycle it when a random number of introductions is reached, thus
       making it more difficult for an attacker to find out the amount of
-      clients that has passed through the introduction point for a
+      clients that have used the introduction point for a
       specific HS. Closes ticket 15745.
 
   o Minor features (logging):
@@ -72,7 +69,7 @@ Changes in version 0.2.7.1-alpha - 2015-05-??
       ticket 15026.
 
   o Minor features (pluggable transports):
-    - When launching managed pluggable transports on linux systems,
+    - When launching managed pluggable transports on Linux systems,
       attempt to have the kernel deliver a SIGTERM on tor exit if the
       pluggable transport process is still running. Resolves
       ticket 15471.
