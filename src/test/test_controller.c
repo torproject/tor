@@ -72,6 +72,7 @@ test_add_onion_helper_keyarg(void *arg)
 
   /* Test loading a invalid key type. */
   tor_free(arg_str);
+  crypto_pk_free(pk); pk = NULL;
   tor_asprintf(&arg_str, "RSA512:%s", encoded);
   pk = add_onion_helper_keyarg(arg_str, 0, &key_new_alg, &key_new_blob,
                                &err_msg);
@@ -82,6 +83,7 @@ test_add_onion_helper_keyarg(void *arg)
 
   /* Test loading a invalid key. */
   tor_free(arg_str);
+  crypto_pk_free(pk); pk = NULL;
   tor_free(err_msg);
   encoded[strlen(encoded)/2] = '\0';
   tor_asprintf(&arg_str, "RSA1024:%s", encoded);
