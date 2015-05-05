@@ -186,8 +186,7 @@ parse_commandline(int argc, char **argv)
         return 1;
       in.s_addr = htonl(addr);
       tor_inet_ntoa(&in, b, sizeof(b));
-      address = tor_malloc(INET_NTOA_BUF_LEN+32);
-      tor_snprintf(address, INET_NTOA_BUF_LEN+32, "%s:%d", b, (int)port);
+      tor_asprintf(&address, "%s:%d", b, (int)port);
     } else if (!strcmp(argv[i], "--create-identity-key")) {
       make_new_id = 1;
     } else if (!strcmp(argv[i], "--passphrase-fd")) {
@@ -566,6 +565,7 @@ main(int argc, char **argv)
   tor_free(identity_key_file);
   tor_free(signing_key_file);
   tor_free(certificate_file);
+  tor_free(address);
 
   crypto_global_cleanup();
   return r;
