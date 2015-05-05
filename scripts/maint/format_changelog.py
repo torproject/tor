@@ -59,7 +59,7 @@ def generate_wrapping(words, divisions):
         w = words[last:i]
         last = i
         line = " ".join(w).replace("\xff ","-").replace("\xff","-")
-        lines.append(line)
+        lines.append(line.strip())
     return lines
 
 def wrapping_quality(words, divisions, width1, width2):
