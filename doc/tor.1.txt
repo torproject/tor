@@ -2335,11 +2335,26 @@ The following options are used for running a testing Tor network.
     has to be set. See the **ExcludeNodes** option for more
     information on how to specify nodes.
 
+[[TestingDirAuthVoteExitIsStrict]] **TestingDirAuthVoteExitIsStrict** **0**|**1** ::
+    If True (1), a node will never receive the Exit flag unless it is specified
+    in the **TestingDirAuthVoteExit** list, regardless of its uptime, bandwidth,
+    or exit policy.
+ +
+    In order for this option to have any effect, **TestingTorNetwork**
+    has to be set.
+
 [[TestingDirAuthVoteGuard]] **TestingDirAuthVoteGuard** __node__,__node__,__...__::
     A list of identity fingerprints and country codes and
     address patterns of nodes to vote Guard for regardless of their
     uptime and bandwidth. See the **ExcludeNodes** option for more
     information on how to specify nodes.
+ +
+    In order for this option to have any effect, **TestingTorNetwork**
+    has to be set.
+
+[[TestingDirAuthVoteGuardIsStrict]] **TestingDirAuthVoteGuardIsStrict** **0**|**1** ::
+    If True (1), a node will never receive the Guard flag unless it is specified
+    in the **TestingDirAuthVoteGuard** list, regardless of its uptime and bandwidth.
  +
     In order for this option to have any effect, **TestingTorNetwork**
     has to be set.
@@ -2352,6 +2367,13 @@ The following options are used for running a testing Tor network.
  +
     In order for this option to have any effect, **TestingTorNetwork**
     and **VoteOnHidServDirectoriesV2** both have to be set.
+
+[[TestingDirAuthVoteHSDirIsStrict]] **TestingDirAuthVoteHSDirIsStrict** **0**|**1** ::
+    If True (1), a node will never receive the HSDir flag unless it is specified
+    in the **TestingDirAuthVoteHSDir** list, regardless of its uptime and DirPort.
+ +
+    In order for this option to have any effect, **TestingTorNetwork**
+    has to be set.
 
 [[TestingEnableConnBwEvent]] **TestingEnableConnBwEvent** **0**|**1**::
     If this option is set, then Tor controllers may register for CONN_BW
