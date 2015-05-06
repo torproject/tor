@@ -959,6 +959,7 @@ static const struct control_event_t control_event_table[] = {
   { EVENT_TRANSPORT_LAUNCHED, "TRANSPORT_LAUNCHED" },
   { EVENT_HS_DESC, "HS_DESC" },
   { EVENT_HS_DESC_CONTENT, "HS_DESC_CONTENT" },
+  { EVENT_NETWORK_LIVENESS, "NETWORK_LIVENESS" },
   { 0, NULL },
 };
 
@@ -4988,6 +4989,52 @@ control_event_or_authdir_new_descriptor(const char *action,
                             "650 OK\r\n");
   tor_free(esc);
   tor_free(buf);
+
+  return 0;
+}
+
+/** Cached liveness for network liveness events and GETINFO
+ */
+
+static int network_is_live = 0;
+
+static int
+get_cached_network_liveness(void)
+{
+  return network_is_live;
+}
+
+static void
+set_cached_network_liveness(int liveness)
+{
+  network_is_live = liveness;
+}
+
+/** The network liveness has changed; this is called from circuitstats.c
+ * whenever we receive a cell, or when timeout expires and we assume the
+ * network is down. */
+int
+control_event_network_liveness_update(int liveness)
+{
+  if (liveness > 0) {
+    if (get_cached_network_liveness() <= 0) {
+      /* Update cached liveness */
+      set_cached_network_liveness(1);
+      log_debug(LD_CONTROL, "Sending NETWORK_LIVENESS UP");
+      send_control_event_string(EVENT_NETWORK_LIVENESS, ALL_FORMATS,
+                                "650 NETWORK_LIVENESS UP\r\n");
+    }
+    /* else was already live, no-op */
+  } else {
+    if (get_cached_network_liveness() > 0) {
+      /* Update cached liveness */
+      set_cached_network_liveness(0);
+      log_debug(LD_CONTROL, "Sending NETWORK_LIVENESS DOWN");
+      send_control_event_string(EVENT_NETWORK_LIVENESS, ALL_FORMATS,
+                                "650 NETWORK_LIVENESS DOWN\r\n");
+    }
+    /* else was already dead, no-op */
+  }
 
   return 0;
 }

@@ -67,6 +67,7 @@ int control_event_or_authdir_new_descriptor(const char *action,
                                             size_t desclen,
                                             const char *msg);
 int control_event_my_descriptor_changed(void);
+int control_event_network_liveness_update(int liveness);
 int control_event_networkstatus_changed(smartlist_t *statuses);
 
 int control_event_newconsensus(const networkstatus_t *consensus);
@@ -166,7 +167,8 @@ void control_free_all(void);
 #define EVENT_TRANSPORT_LAUNCHED      0x0020
 #define EVENT_HS_DESC                 0x0021
 #define EVENT_HS_DESC_CONTENT         0x0022
-#define EVENT_MAX_                    0x0022
+#define EVENT_NETWORK_LIVENESS        0x0023
+#define EVENT_MAX_                    0x0023
 
 /* sizeof(control_connection_t.event_mask) in bits, currently a uint64_t */
 #define EVENT_CAPACITY_               0x0040
