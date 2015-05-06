@@ -2347,7 +2347,7 @@ The following options are used for running a testing Tor network.
 [[TestingDirAuthVoteHSDir]] **TestingDirAuthVoteHSDir** __node__,__node__,__...__::
     A list of identity fingerprints and country codes and
     address patterns of nodes to vote HSDir for regardless of their
-    uptime and ORPort connectivity. See the **ExcludeNodes** option for more
+    uptime and DirPort. See the **ExcludeNodes** option for more
     information on how to specify nodes.
  +
     In order for this option to have any effect, **TestingTorNetwork**

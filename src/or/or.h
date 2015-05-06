@@ -4100,7 +4100,7 @@ typedef struct {
   routerset_t *TestingDirAuthVoteGuard;
 
   /** Relays in a testing network which should be voted HSDir
-   * regardless of uptime and ORPort connectivity.
+   * regardless of uptime and DirPort.
    * Respects VoteOnHidServDirectoriesV2. */
   routerset_t *TestingDirAuthVoteHSDir;
 
