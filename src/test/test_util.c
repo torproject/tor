@@ -4302,6 +4302,35 @@ test_util_ipv4_validation(void *arg)
   return;
 }
 
+static void
+test_util_writepid(void *arg)
+{
+  (void) arg;
+
+  char *contents = NULL;
+  const char *fname = get_fname("tmp_pid");
+  unsigned long pid;
+  char c;
+
+  write_pidfile(fname);
+
+  contents = read_file_to_str(fname, 0, NULL);
+  tt_assert(contents);
+
+  int n = sscanf(contents, "%lu\n%c", &pid, &c);
+  tt_int_op(n, OP_EQ, 1);
+  tt_uint_op(pid, OP_EQ,
+#ifdef _WIN32
+             _getpid()
+#else
+             getpid()
+#endif
+             );
+
+ done:
+  tor_free(contents);
+}
+
 struct testcase_t util_tests[] = {
   UTIL_LEGACY(time),
   UTIL_TEST(parse_http_time, 0),
@@ -4368,6 +4397,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(max_mem, 0),
   UTIL_TEST(hostname_validation, 0),
   UTIL_TEST(ipv4_validation, 0),
+  UTIL_TEST(writepid, 0),
   END_OF_TESTCASES
 };
 

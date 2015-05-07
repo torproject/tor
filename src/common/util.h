@@ -418,7 +418,7 @@ int path_is_relative(const char *filename);
 /* Process helpers */
 void start_daemon(void);
 void finish_daemon(const char *desired_cwd);
-void write_pidfile(char *filename);
+void write_pidfile(const char *filename);
 
 /* Port forwarding */
 void tor_check_port_forwarding(const char *filename,
