@@ -3452,7 +3452,7 @@ handle_control_hspost(control_connection_t *conn,
         const char *server = arg + strlen(opt_server);
         const node_t *node = node_get_by_hex_id(server);
 
-        if (!node) {
+        if (!node || !node->rs) {
           connection_printf_to_buf(conn, "552 Server \"%s\" not found\r\n",
                                    server);
           goto done;
