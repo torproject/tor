@@ -1,30 +1,32 @@
 Changes in version 0.2.7.1-alpha - 2015-05-1?
-  Tor 0.2.7.1-alpha is the first alpha release in its series. It includes
-  numerous small features and bugfixes against previous Tor versions,
-  and numerous small infrastructure improvements. The most notable
-  features are several new ways for controllers to interact with
+  Tor 0.2.7.1-alpha is the first alpha release in its series. It
+  includes numerous small features and bugfixes against previous Tor
+  versions, and numerous small infrastructure improvements. The most
+  notable features are several new ways for controllers to interact with
   the hidden services subsystem.
 
   o New system requirements:
-    - Tor no longer includes workarounds to support Libevent versions before
-      1.3e. Libevent 2.0 or later is recommended. Closes ticket 15248.
+    - Tor no longer includes workarounds to support Libevent versions
+      before 1.3e. Libevent 2.0 or later is recommended. Closes
+      ticket 15248.
 
   o Major features (controller):
     - Add the ADD_ONION and DEL_ONION commands that allow the creation
       and management of hidden services via the controller. Closes
       ticket 6411.
-    - New "GETINFO onions/current" and "GETINFO onions/detached" commands to get
-      information about hidden services created via the controller. Part
-      of ticket 6411.
+    - New "GETINFO onions/current" and "GETINFO onions/detached"
+      commands to get information about hidden services created via the
+      controller. Part of ticket 6411.
     - New HSFETCH command to launch a request for a hidden service
       descriptor. Closes ticket 14847.
     - New HSPOST command to upload a hidden service descriptor. Closes
       ticket 3523. Patch by "DonnchaC".
 
   o Major bugfixes (hidden services):
-    - Revert commit that made directory authorities assign the HSDir flag
-      to relay without a DirPort; this was bad because such relays can't handle
-      BEGIN_DIR cells. Fixes bug 15850; bugfix on tor-0.2.6.3-alpha.
+    - Revert commit that made directory authorities assign the HSDir
+      flag to relay without a DirPort; this was bad because such relays
+      can't handle BEGIN_DIR cells. Fixes bug 15850; bugfix
+      on tor-0.2.6.3-alpha.
 
   o Minor features (clock-jump tolerance):
     - Recover better when our clock jumps back many hours, like might
@@ -39,15 +41,15 @@ Changes in version 0.2.7.1-alpha - 2015-05-1?
       as torrc option. Resolves issue 14018.
 
   o Minor features (controller):
-    - Add DirAuthority lines for default directory authorities to the output
-      of the "GETINFO config/defaults" command if not already
+    - Add DirAuthority lines for default directory authorities to the
+      output of the "GETINFO config/defaults" command if not already
       present. Implements ticket 14840.
-    - Controllers can now use "GETINFO hs/client/desc/id/..." to retrieve
-      items from the client's hidden service descriptor cache. Closes
-      ticket 14845.
-    - Implement a new controller command "GETINFO status/fresh-relay-descs" to
-      fetch a descriptor/extrainfo pair that was generated on demand
-      just for the controller's use. Implements ticket 14784.
+    - Controllers can now use "GETINFO hs/client/desc/id/..." to
+      retrieve items from the client's hidden service descriptor cache.
+      Closes ticket 14845.
+    - Implement a new controller command "GETINFO status/fresh-relay-
+      descs" to fetch a descriptor/extrainfo pair that was generated on
+      demand just for the controller's use. Implements ticket 14784.
 
   o Minor features (DoS-resistance):
     - Make it harder for attackers to overload hidden services with
@@ -64,8 +66,8 @@ Changes in version 0.2.7.1-alpha - 2015-05-1?
       when we've handled a fixed number of INTRODUCE2 cells but instead
       cycle it when a random number of introductions is reached, thus
       making it more difficult for an attacker to find out the amount of
-      clients that have used the introduction point for a
-      specific HS. Closes ticket 15745.
+      clients that have used the introduction point for a specific HS.
+      Closes ticket 15745.
 
   o Minor features (logging):
     - Include the Tor version in all LD_BUG log messages, since people
@@ -132,8 +134,8 @@ Changes in version 0.2.7.1-alpha - 2015-05-1?
       and 0.2.0.10.
 
   o Minor bugfixes (hidden service):
-    - Fix an out-of-bounds read when parsing invalid INTRODUCE2 cells
-      on a client authorized hidden service. Fixes bug 15823; bugfix
+    - Fix an out-of-bounds read when parsing invalid INTRODUCE2 cells on
+      a client authorized hidden service. Fixes bug 15823; bugfix
       on 0.2.1.6-alpha.
     - Remove an extraneous newline character from the end of hidden
       service descriptors. Fixes bug 15296; bugfix on 0.2.0.10-alpha.
@@ -166,10 +168,10 @@ Changes in version 0.2.7.1-alpha - 2015-05-1?
     - When self-testing reachability, use ExtendAllowPrivateAddresses to
       determine if local/private addresses imply reachability. The
       previous fix used TestingTorNetwork, which implies
-      ExtendAllowPrivateAddresses, but this excluded rare configurations where
-      ExtendAllowPrivateAddresses is set but TestingTorNetwork is not.
-      Fixes bug 15771; bugfix on 0.2.6.1-alpha. Patch by "teor", issue
-      discovered by CJ Ess.
+      ExtendAllowPrivateAddresses, but this excluded rare configurations
+      where ExtendAllowPrivateAddresses is set but TestingTorNetwork is
+      not. Fixes bug 15771; bugfix on 0.2.6.1-alpha. Patch by "teor",
+      issue discovered by CJ Ess.
 
   o Minor bugfixes (testing):
     - Check for matching value in server response in ntor_ref.py. Fixes
