@@ -87,6 +87,8 @@ struct rend_service_port_config_s {
 
 /** Try to maintain this many intro points per service by default. */
 #define NUM_INTRO_POINTS_DEFAULT 3
+/** Maximum number of intro points per service. */
+#define NUM_INTRO_POINTS_MAX 10
 
 /** If we can't build our intro circuits, don't retry for this long. */
 #define INTRO_CIRC_RETRY_PERIOD (60*5)
@@ -577,7 +579,22 @@ rend_config_services(const or_options_t *options, int validate_only)
       log_info(LD_CONFIG,
                "HiddenServiceMaxStreamsCloseCircuit=%d for %s",
                (int)service->max_streams_close_circuit, service->directory);
-
+    } else if (!strcasecmp(line->key, "HiddenServiceNumIntroductionPoints")) {
+      service->n_intro_points_wanted =
+        (unsigned int) tor_parse_long(line->value, 10,
+                                      NUM_INTRO_POINTS_DEFAULT,
+                                      NUM_INTRO_POINTS_MAX, &ok, NULL);
+      if (!ok) {
+        log_warn(LD_CONFIG,
+                 "HiddenServiceNumIntroductionPoints "
+                 "should be between %d and %d, not %s",
+                 NUM_INTRO_POINTS_DEFAULT, NUM_INTRO_POINTS_MAX,
+                 line->value);
+        rend_service_free(service);
+        return -1;
+      }
+      log_info(LD_CONFIG, "HiddenServiceNumIntroductionPoints=%d for %s",
+               service->n_intro_points_wanted, service->directory);
     } else if (!strcasecmp(line->key, "HiddenServiceAuthorizeClient")) {
       /* Parse auth type and comma-separated list of client names and add a
        * rend_authorized_client_t for each client to the service's list

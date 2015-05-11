@@ -2177,6 +2177,10 @@ The following options are used to configure a hidden service.
     only owner is able to read the hidden service directory. (Default: 0)
     Has no effect on Windows.
 
+[[HiddenServiceNumIntroductionPoints]] **HiddenServiceNumIntroductionPoints** __NUM__::
+    Number of introduction points the hidden service will have. You can't
+    have more than 10. (Default: 3)
+
 TESTING NETWORK OPTIONS
 -----------------------
 
