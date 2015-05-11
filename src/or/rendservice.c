@@ -87,8 +87,6 @@ struct rend_service_port_config_s {
 
 /** Try to maintain this many intro points per service by default. */
 #define NUM_INTRO_POINTS_DEFAULT 3
-/** Maintain no more than this many intro points per hidden service. */
-#define NUM_INTRO_POINTS_MAX 10
 
 /** If we can't build our intro circuits, don't retry for this long. */
 #define INTRO_CIRC_RETRY_PERIOD (60*5)
@@ -175,17 +173,6 @@ num_rend_services(void)
   if (!rend_service_list)
     return 0;
   return smartlist_len(rend_service_list);
-}
-
-/** Return a string identifying <b>service</b>, suitable for use in a
- * log message.  The result does not need to be freed, but may be
- * overwritten by the next call to this function. */
-static const char *
-rend_service_describe_for_log(rend_service_t *service)
-{
-  /* XXX024 Use this function throughout rendservice.c. */
-  /* XXX024 Return a more useful description? */
-  return safe_str_client(service->service_id);
 }
 
 /** Helper: free storage held by a single service authorized client entry. */
@@ -1415,107 +1402,6 @@ rend_check_authorization(rend_service_t *service,
   log_info(LD_REND, "Client %s authorized for service %s.",
            auth_client->client_name, service->service_id);
   return 1;
-}
-
-/** Called when <b>intro</b> will soon be removed from
- * <b>service</b>'s list of intro points. */
-static void
-rend_service_note_removing_intro_point(rend_service_t *service,
-                                       rend_intro_point_t *intro)
-{
-  time_t now = time(NULL);
-
-  /* Don't process an intro point twice here. */
-  if (intro->rend_service_note_removing_intro_point_called) {
-    return;
-  } else {
-    intro->rend_service_note_removing_intro_point_called = 1;
-  }
-
-  /* Update service->n_intro_points_wanted based on how long intro
-   * lasted and how many introductions it handled. */
-  if (intro->time_published == -1) {
-    /* This intro point was never used.  Don't change
-     * n_intro_points_wanted. */
-  } else {
-
-    /* We want to increase the number of introduction points service
-     * operates if intro was heavily used, or decrease the number of
-     * intro points if intro was lightly used.
-     *
-     * We consider an intro point's target 'usage' to be
-     * maximum of INTRODUCE2 cells divided by
-     * INTRO_POINT_LIFETIME_MIN_SECONDS seconds.  To calculate intro's
-     * fraction of target usage, we divide the amount of INTRODUCE2 cells
-     * that it has handled by the fraction of _LIFETIME_MIN_SECONDS for
-     * which it existed.
-     *
-     * Then we multiply that fraction of desired usage by a fudge
-     * factor of 1.5, to decide how many new introduction points
-     * should ideally replace intro (which is now closed or soon to be
-     * closed).  In theory, assuming that introduction load is
-     * distributed equally across all intro points and ignoring the
-     * fact that different intro points are established and closed at
-     * different times, that number of intro points should bring all
-     * of our intro points exactly to our target usage.
-     *
-     * Then we clamp that number to a number of intro points we might
-     * be willing to replace this intro point with and turn it into an
-     * integer. then we clamp it again to the number of new intro
-     * points we could establish now, then we adjust
-     * service->n_intro_points_wanted and let rend_services_introduce
-     * create the new intro points we want (if any).
-     */
-    const double intro_point_usage =
-      intro_point_accepted_intro_count(intro) /
-      (double)(now - intro->time_published);
-    const double intro_point_target_usage =
-      intro->max_introductions /
-      (double)INTRO_POINT_LIFETIME_MIN_SECONDS;
-    const double fractional_n_intro_points_wanted_to_replace_this_one =
-      (1.5 * (intro_point_usage / intro_point_target_usage));
-    unsigned int n_intro_points_wanted_to_replace_this_one;
-    unsigned int n_intro_points_wanted_now;
-    unsigned int n_intro_points_really_wanted_now;
-    int n_intro_points_really_replacing_this_one;
-
-    if (fractional_n_intro_points_wanted_to_replace_this_one >
-        NUM_INTRO_POINTS_MAX) {
-      n_intro_points_wanted_to_replace_this_one = NUM_INTRO_POINTS_MAX;
-    } else if (fractional_n_intro_points_wanted_to_replace_this_one < 0) {
-      n_intro_points_wanted_to_replace_this_one = 0;
-    } else {
-      n_intro_points_wanted_to_replace_this_one = (unsigned)
-        fractional_n_intro_points_wanted_to_replace_this_one;
-    }
-
-    n_intro_points_wanted_now =
-      service->n_intro_points_wanted +
-      n_intro_points_wanted_to_replace_this_one - 1;
-
-    if (n_intro_points_wanted_now < NUM_INTRO_POINTS_DEFAULT) {
-      /* XXXX This should be NUM_INTRO_POINTS_MIN instead.  Perhaps
-       * another use of NUM_INTRO_POINTS_DEFAULT should be, too. */
-      n_intro_points_really_wanted_now = NUM_INTRO_POINTS_DEFAULT;
-    } else if (n_intro_points_wanted_now > NUM_INTRO_POINTS_MAX) {
-      n_intro_points_really_wanted_now = NUM_INTRO_POINTS_MAX;
-    } else {
-      n_intro_points_really_wanted_now = n_intro_points_wanted_now;
-    }
-
-    n_intro_points_really_replacing_this_one =
-      n_intro_points_really_wanted_now - service->n_intro_points_wanted + 1;
-
-    log_info(LD_REND, "Replacing closing intro point for service %s "
-             "with %d new intro points (wanted %g replacements); "
-             "service will now try to have %u intro points",
-             rend_service_describe_for_log(service),
-             n_intro_points_really_replacing_this_one,
-             fractional_n_intro_points_wanted_to_replace_this_one,
-             n_intro_points_really_wanted_now);
-
-    service->n_intro_points_wanted = n_intro_points_really_wanted_now;
-  }
 }
 
 /******
@@ -3506,16 +3392,15 @@ rend_services_introduce(void)
 
       node = node_get_by_id(intro->extend_info->identity_digest);
       if (!node || !intro_circ) {
-        int removing_this_intro_point_changes_the_intro_point_set = 1;
+        intro_point_set_changed = 1;
         log_info(LD_REND, "Giving up on %s as intro point for %s"
                  " (circuit disappeared).",
                  safe_str_client(extend_info_describe(intro->extend_info)),
                  safe_str_client(service->service_id));
-        rend_service_note_removing_intro_point(service, intro);
         if (intro->time_expiring != -1) {
           log_info(LD_REND, "We were already expiring the intro point; "
                    "no need to mark the HS descriptor as dirty over this.");
-          removing_this_intro_point_changes_the_intro_point_set = 0;
+          intro_point_set_changed = 0;
         } else if (intro->listed_in_last_desc) {
           log_info(LD_REND, "The intro point we are giving up on was "
                    "included in the last published descriptor. "
@@ -3525,17 +3410,12 @@ rend_services_introduce(void)
         rend_intro_point_free(intro);
         intro = NULL; /* SMARTLIST_DEL_CURRENT takes a name, not a value. */
         SMARTLIST_DEL_CURRENT(service->intro_nodes, intro);
-        if (removing_this_intro_point_changes_the_intro_point_set)
-          intro_point_set_changed = 1;
       }
 
       if (intro != NULL && intro_point_should_expire_now(intro, now)) {
         log_info(LD_REND, "Expiring %s as intro point for %s.",
                  safe_str_client(extend_info_describe(intro->extend_info)),
                  safe_str_client(service->service_id));
-
-        rend_service_note_removing_intro_point(service, intro);
-
         /* The polite (and generally Right) way to expire an intro
          * point is to establish a new one to replace it, publish a
          * new descriptor that doesn't list any expiring intro points,
@@ -3561,7 +3441,7 @@ rend_services_introduce(void)
     } SMARTLIST_FOREACH_END(intro);
 
     if (!intro_point_set_changed &&
-        (n_intro_points_unexpired >= service->n_intro_points_wanted)) {
+        (n_intro_points_unexpired == service->n_intro_points_wanted)) {
       continue;
     }
 
