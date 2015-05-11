@@ -50,7 +50,7 @@ Changes in version 0.2.7.1-alpha - 2015-05-1?
       just for the controller's use. Implements ticket 14784.
 
   o Minor features (DoS-resistance):
-    - Make it harder for attackers to overwhelm hidden services with
+    - Make it harder for attackers to overload hidden services with
       introductions, by blocking multiple introduction requests on the
       same circuit. Resolves ticket 15515.
 
@@ -79,7 +79,7 @@ Changes in version 0.2.7.1-alpha - 2015-05-1?
       ticket 15471.
     - When launching managed pluggable transports, setup a valid open
       stdin in the child process that can be used to detect if tor has
-      terminated. The "TOR_PT_EXIT_ON_STDIN_CLOSE" enviornment variable
+      terminated. The "TOR_PT_EXIT_ON_STDIN_CLOSE" environment variable
       can be used by implementations to detect this new behavior.
       Resolves ticket 15435.
 
@@ -92,8 +92,8 @@ Changes in version 0.2.7.1-alpha - 2015-05-1?
       time check that the number of events doesn't exceed the capacity
       of control_event_t.event_mask. Closes ticket 15431, checks for
       bugs similar to 13085. Patch by "teor".
-    - Commandline argument tests moved to Stem. Resolves ticket 14806.
-    - Integrate the ntor, backtrace and zero lengths keys tests into the
+    - Command-line argument tests moved to Stem. Resolves ticket 14806.
+    - Integrate the ntor, backtrace, and zero-length keys tests into the
       automake test suite. Closes ticket 15344.
     - Remove assertions during builds to determine Tor's test coverage.
       We don't want to trigger these even in assertions, so including
@@ -117,7 +117,7 @@ Changes in version 0.2.7.1-alpha - 2015-05-1?
     - Only add the default fallback directories when the DirAuthorities,
       AlternateDirAuthority, and FallbackDir directory config options
       are set to their defaults. The default fallback directory list is
-      currently empty, this fix will only change tor's behaviour when it
+      currently empty, this fix will only change tor's behavior when it
       has default fallback directories. Includes unit tests for
       consider_adding_dir_servers(). Fixes bug 15642; bugfix on
       90f6071d8dc0 in 0.2.4.7-alpha. Patch by "teor".
@@ -166,7 +166,7 @@ Changes in version 0.2.7.1-alpha - 2015-05-1?
     - When self-testing reachability, use ExtendAllowPrivateAddresses to
       determine if local/private addresses imply reachability. The
       previous fix used TestingTorNetwork, which implies
-      ExtendAllowPrivateAddresses, but this excluded rare configs where
+      ExtendAllowPrivateAddresses, but this excluded rare configurations where
       ExtendAllowPrivateAddresses is set but TestingTorNetwork is not.
       Fixes bug 15771; bugfix on 0.2.6.1-alpha. Patch by "teor", issue
       discovered by CJ Ess.
