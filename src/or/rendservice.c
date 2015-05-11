@@ -3551,7 +3551,8 @@ rend_services_introduce(void)
         log_warn(LD_REND,
                  "Could only establish %d introduction points for %s; "
                  "wanted %u.",
-                 smartlist_len(service->intro_nodes), service->service_id,
+                 smartlist_len(service->intro_nodes),
+                 safe_str_client(service->service_id),
                  n_intro_points_to_open);
         break;
       }
