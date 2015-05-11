@@ -1,4 +1,4 @@
-Changes in version 0.2.7.1-alpha - 2015-05-??
+Changes in version 0.2.7.1-alpha - 2015-05-1?
   Tor 0.2.7.1-alpha is the first alpha release in its series.
 
   o New system requirements:
@@ -128,6 +128,9 @@ Changes in version 0.2.7.1-alpha - 2015-05-??
       and 0.2.0.10.
 
   o Minor bugfixes (hidden service):
+    - Fix an out-of-bounds read when parsing invalid INTRODUCE2 cells
+      on a client authorized hidden service. Fixes bug 15823; bugfix
+      on 0.2.1.6-alpha.
     - Remove an extraneous newline character from the end of hidden
       service descriptors. Fixes bug 15296; bugfix on 0.2.0.10-alpha.
 
