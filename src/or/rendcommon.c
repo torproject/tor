@@ -155,10 +155,10 @@ rend_compute_v2_desc_id(char *desc_id_out, const char *service_id,
   }
   /* Calculate current time-period. */
   time_period = get_time_period(now, 0, service_id_binary);
-  /* Calculate secret-id-part = h(time-period | replica). */
+  /* Calculate secret-id-part = h(time-period | desc-cookie | replica). */
   get_secret_id_part_bytes(secret_id_part, time_period, descriptor_cookie,
                            replica);
-  /* Calculate descriptor ID. */
+  /* Calculate descriptor ID: H(permanent-id | secret-id-part) */
   rend_get_descriptor_id_bytes(desc_id_out, service_id_binary, secret_id_part);
   return 0;
 }
