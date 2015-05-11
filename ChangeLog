@@ -1,5 +1,9 @@
 Changes in version 0.2.7.1-alpha - 2015-05-1?
-  Tor 0.2.7.1-alpha is the first alpha release in its series.
+  Tor 0.2.7.1-alpha is the first alpha release in its series. It includes
+  numerous small features and bugfixes against previous Tor versions,
+  and numerous small infrastructure improvements. The most notable
+  features are several new ways for controllers to interact with
+  the hidden services subsystem.
 
   o New system requirements:
     - Tor no longer includes workarounds to support Libevent versions before
