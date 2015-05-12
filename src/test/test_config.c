@@ -1521,9 +1521,9 @@ test_config_adding_dir_servers(void *arg)
     );
 
   /* We need to know if add_default_fallback_dir_servers is called,
+   * whatever the size of the list in fallback_dirs.inc,
    * so we use a version of add_default_fallback_dir_servers that adds
-   * one known default fallback directory.
-   * There doesn't appear to be any need to test it unmocked. */
+   * one known default fallback directory. */
   MOCK(add_default_fallback_dir_servers,
        add_default_fallback_dir_servers_known_default);
 
@@ -1581,20 +1581,6 @@ test_config_adding_dir_servers(void *arg)
    *  Cases expected to yield this outcome:
    *    0 (DirAuthorities, AlternateBridgeAuthority, AlternateDirAuthority
    *       and FallbackDir are all NULL)
-   *
-   * Before #15642 but after #13163 - Stop using default authorities when both
-   * Alternate Dir and Bridge Authority are set
-   * (#13163 was committed in 0.2.6 as c1dd43d823c7)
-   *
-   * The behaviour is different in the following cases
-   * where FallbackDir is NULL:
-   *  2, 6, 8
-   *
-   * In these cases, the Default Fallback Directories are applied, even when
-   * DirAuthorities or AlternateDirAuthority are set.
-   *
-   * However, as the list of default fallback directories is currently empty,
-   * this change doesn't modify any user-visible behaviour.
    */
 
   /*
@@ -3209,11 +3195,39 @@ test_config_adding_dir_servers(void *arg)
   UNMOCK(add_default_fallback_dir_servers);
 }
 
+static void
+test_config_default_fallback_dirs(void *arg)
+{
+  const char *fallback[] = {
+#include "../or/fallback_dirs.inc"
+    NULL
+  };
+
+  int n_included_fallback_dirs = 0;
+  int n_added_fallback_dirs = 0;
+
+  (void)arg;
+  clear_dir_servers();
+
+  while (fallback[n_included_fallback_dirs])
+    n_included_fallback_dirs++;
+
+  add_default_fallback_dir_servers();
+
+  n_added_fallback_dirs = smartlist_len(router_get_fallback_dir_servers());
+
+  tt_assert(n_included_fallback_dirs == n_added_fallback_dirs);
+
+  done:
+  clear_dir_servers();
+}
+
 #define CONFIG_TEST(name, flags)                          \
   { #name, test_config_ ## name, flags, NULL, NULL }
 
 struct testcase_t config_tests[] = {
-  CONFIG_TEST(adding_dir_servers, TT_FORK),
+  CONFIG_TEST(adding_dir_servers, 0),
+  CONFIG_TEST(default_fallback_dirs, 0),
   CONFIG_TEST(resolve_my_address, TT_FORK),
   CONFIG_TEST(addressmap, 0),
   CONFIG_TEST(parse_bridge_line, 0),

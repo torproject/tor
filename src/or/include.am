@@ -158,6 +158,7 @@ ORHEADERS = \
 	src/or/dnsserv.h				\
 	src/or/eventdns_tor.h				\
 	src/or/ext_orport.h				\
+	src/or/fallback_dirs.inc			\
 	src/or/fp_pair.h				\
 	src/or/geoip.h					\
 	src/or/entrynodes.h				\
