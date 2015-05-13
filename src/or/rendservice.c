@@ -1098,11 +1098,13 @@ rend_service_requires_uptime(rend_service_t *service)
   return 0;
 }
 
-/** Check client authorization of a given <b>descriptor_cookie</b> for
- * <b>service</b>. Return 1 for success and 0 for failure. */
+/** Check client authorization of a given <b>descriptor_cookie</b> of
+ * length <b>cookie_len</b> for <b>service</b>. Return 1 for success
+ * and 0 for failure. */
 static int
 rend_check_authorization(rend_service_t *service,
-                         const char *descriptor_cookie)
+                         const char *descriptor_cookie,
+                         size_t cookie_len)
 {
   rend_authorized_client_t *auth_client = NULL;
   tor_assert(service);
@@ -1110,6 +1112,13 @@ rend_check_authorization(rend_service_t *service,
   if (!service->clients) {
     log_warn(LD_BUG, "Can't check authorization for a service that has no "
                      "authorized clients configured.");
+    return 0;
+  }
+
+  if (cookie_len != REND_DESC_COOKIE_LEN) {
+    log_info(LD_REND, "Descriptor cookie is %lu bytes, but we expected "
+                      "%lu bytes. Dropping cell.",
+             (unsigned long)cookie_len, (unsigned long)REND_DESC_COOKIE_LEN);
     return 0;
   }
 
@@ -1459,7 +1468,8 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   if (service->clients) {
     if (parsed_req->version == 3 && parsed_req->u.v3.auth_len > 0) {
       if (rend_check_authorization(service,
-                                   (const char*)parsed_req->u.v3.auth_data)) {
+                                   (const char*)parsed_req->u.v3.auth_data,
+                                   parsed_req->u.v3.auth_len)) {
         log_info(LD_REND, "Authorization data in INTRODUCE2 cell are valid.");
       } else {
         log_info(LD_REND, "The authorization data that are contained in "
