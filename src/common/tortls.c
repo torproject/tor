@@ -120,6 +120,13 @@ static int use_unsafe_renegotiation_op = 0;
 /** Does the run-time openssl version look like we need
  * SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION? */
 static int use_unsafe_renegotiation_flag = 0;
+#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,1,0)
+/* If we have openssl 1.1, we just trust that the "mode" will work, and don't
+ * use the "flag" at all.  Nobody would forward-port that weird little glitch
+ * from 0.9.8l to 1.1, would they?
+ */
+#define SUPPORT_UNSAFE_RENEGOTIATION_FLAG
+#endif
 
 /** Structure that we use for a single certificate. */
 struct tor_cert_t {
@@ -1713,7 +1720,7 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
 
     if (tls) {
       tls->wasV2Handshake = 1;
-#ifdef USE_BUFFEREVENTS
+#if (defined(USE_BUFFEREVENTS) && defined(SUPPORT_UNSAFE_RENEGOTATION_FLAG))
       if (use_unsafe_renegotiation_flag)
         tls->ssl->s3->flags |= SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION;
 #endif
@@ -2018,9 +2025,11 @@ tor_tls_unblock_renegotiation(tor_tls_t *tls)
 {
   /* Yes, we know what we are doing here.  No, we do not treat a renegotiation
    * as authenticating any earlier-received data. */
+#ifdef SUPPORT_UNSAFE_RENEGOTIATION_FLAG
   if (use_unsafe_renegotiation_flag) {
     tls->ssl->s3->flags |= SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION;
   }
+#endif
   if (use_unsafe_renegotiation_op) {
     SSL_set_options(tls->ssl,
                     SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION);
@@ -2034,17 +2043,23 @@ tor_tls_unblock_renegotiation(tor_tls_t *tls)
 void
 tor_tls_block_renegotiation(tor_tls_t *tls)
 {
+#ifdef SUPPORT_UNSAFE_RENEGOTIATION_FLAG
   tls->ssl->s3->flags &= ~SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION;
+#else
+  (void) tls;
+#endif
 }
 
 /** Assert that the flags that allow legacy renegotiation are still set */
 void
 tor_tls_assert_renegotiation_unblocked(tor_tls_t *tls)
 {
+#ifdef SUPPORT_UNSAFE_RENEGOTIATION_FLAG
   if (use_unsafe_renegotiation_flag) {
     tor_assert(0 != (tls->ssl->s3->flags &
                      SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION));
   }
+#endif
   if (use_unsafe_renegotiation_op) {
     long options = SSL_get_options(tls->ssl);
     tor_assert(0 != (options & SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION));
