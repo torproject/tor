@@ -1800,21 +1800,46 @@ log_unsupported_ciphers(smartlist_t *unsupported)
   tor_free(joined);
 }
 
-/** Replace *<b>ciphers</b> with a new list of SSL ciphersuites: specifically,
- * a list designed to mimic a common web browser.  We might not be able to do
- * that if OpenSSL doesn't support all the ciphers we want.  Some of the
- * ciphers in the list won't actually be implemented by OpenSSL: that's okay
- * so long as the server doesn't select them.
+static void
+set_ssl_ciphers_to_list(SSL *ssl, STACK_OF(SSL_CIPHER) *stack)
+{
+  STACK_OF(SSL_CIPHER) *ciphers;
+
+  int r, i;
+  /* #1: ensure that the ssl object has its own list of ciphers.  Otherwise we
+   *     might be about to stomp the SSL_CTX ciphers list. */
+  r = SSL_set_cipher_list(ssl, "HIGH");
+  tor_assert(r);
+
+  /* #2: Grab ssl_ciphers and clear it.  */
+  ciphers = SSL_get_ciphers(ssl);
+  tor_assert(ciphers);
+  sk_SSL_CIPHER_zero(ciphers);
+
+  /* #3: Copy the elements from stack. */
+  for (i = 0; i < sk_SSL_CIPHER_num(stack); ++i) {
+    SSL_CIPHER *c = sk_SSL_CIPHER_value(stack, i);
+    sk_SSL_CIPHER_push(ciphers, c);
+  }
+}
+
+/** Replace the ciphers on <b>ssl</b> with a new list of SSL ciphersuites:
+ * specifically, a list designed to mimic a common web browser.  We might not
+ * be able to do that if OpenSSL doesn't support all the ciphers we want.
+ * Some of the ciphers in the list won't actually be implemented by OpenSSL:
+ * that's okay so long as the server doesn't select them.
  *
  * [If the server <b>does</b> select a bogus cipher, we won't crash or
  * anything; we'll just fail later when we try to look up the cipher in
  * ssl->cipher_list_by_id.]
  */
 static void
-rectify_client_ciphers(STACK_OF(SSL_CIPHER) **ciphers)
+rectify_client_ciphers(SSL *ssl)
 {
 #ifdef V2_HANDSHAKE_CLIENT
   if (PREDICT_UNLIKELY(!CLIENT_CIPHER_STACK)) {
+    STACK_OF(SSL_CIPHER) *ciphers = SSL_get_ciphers(ssl);
+
     /* We need to set CLIENT_CIPHER_STACK to an array of the ciphers
      * we want to use/advertise. */
     int i = 0, j = 0;
@@ -1835,21 +1860,21 @@ rectify_client_ciphers(STACK_OF(SSL_CIPHER) **ciphers)
     tor_assert(CLIENT_CIPHER_STACK);
 
     log_debug(LD_NET, "List was: %s", CLIENT_CIPHER_LIST);
-    for (j = 0; j < sk_SSL_CIPHER_num(*ciphers); ++j) {
-      SSL_CIPHER *cipher = sk_SSL_CIPHER_value(*ciphers, j);
+    for (j = 0; j < sk_SSL_CIPHER_num(ciphers); ++j) {
+      SSL_CIPHER *cipher = sk_SSL_CIPHER_value(ciphers, j);
       log_debug(LD_NET, "Cipher %d: %lx %s", j, cipher->id, cipher->name);
     }
 
     /* Then copy as many ciphers as we can from the good list, inserting
      * dummies as needed. Let j be an index into list of ciphers we have
-     * (*ciphers) and let i be an index into the ciphers we want
+     * (ciphers) and let i be an index into the ciphers we want
      * (CLIENT_INFO_CIPHER_LIST).  We are building a list of ciphers in
      * CLIENT_CIPHER_STACK.
      */
     for (i = j = 0; i < N_CLIENT_CIPHERS; ) {
       SSL_CIPHER *cipher = NULL;
-      if (j < sk_SSL_CIPHER_num(*ciphers))
-        cipher = sk_SSL_CIPHER_value(*ciphers, j);
+      if (j < sk_SSL_CIPHER_num(ciphers))
+        cipher = sk_SSL_CIPHER_value(ciphers, j);
       if (cipher && ((cipher->id >> 24) & 0xff) != 3) {
         /* Skip over non-v3 ciphers entirely.  (This should no longer be
          * needed, thanks to saying !SSLv2 above.) */
@@ -1886,12 +1911,10 @@ rectify_client_ciphers(STACK_OF(SSL_CIPHER) **ciphers)
     smartlist_free(unsupported);
   }
 
-  sk_SSL_CIPHER_free(*ciphers);
-  *ciphers = sk_SSL_CIPHER_dup(CLIENT_CIPHER_STACK);
-  tor_assert(*ciphers);
+  set_ssl_ciphers_to_list(ssl, CLIENT_CIPHER_STACK);
 
 #else
-    (void)ciphers;
+  (void)ciphers;
 #endif
 }
 
@@ -1935,7 +1958,7 @@ tor_tls_new(int sock, int isServer)
     goto err;
   }
   if (!isServer)
-    rectify_client_ciphers(&result->ssl->cipher_list);
+    rectify_client_ciphers(result->ssl);
   result->socket = sock;
   bio = BIO_new_socket(sock, BIO_NOCLOSE);
   if (! bio) {
