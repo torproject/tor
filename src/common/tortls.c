@@ -2875,12 +2875,23 @@ tor_tls_get_tlssecrets(tor_tls_t *tls, uint8_t *secrets_out)
  * Set *<b>rbuf_capacity</b> to the amount of storage allocated for the read
  * buffer and *<b>rbuf_bytes</b> to the amount actually used.
  * Set *<b>wbuf_capacity</b> to the amount of storage allocated for the write
- * buffer and *<b>wbuf_bytes</b> to the amount actually used. */
-void
+ * buffer and *<b>wbuf_bytes</b> to the amount actually used.
+ *
+ * Return 0 on success, -1 on failure.*/
+int
 tor_tls_get_buffer_sizes(tor_tls_t *tls,
                          size_t *rbuf_capacity, size_t *rbuf_bytes,
                          size_t *wbuf_capacity, size_t *wbuf_bytes)
 {
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
+  (void)tls;
+  (void)rbuf_capacity;
+  (void)rbuf_bytes;
+  (void)wbuf_capacity;
+  (void)wbuf_bytes;
+
+  return -1;
+#else
   if (tls->ssl->s3->rbuf.buf)
     *rbuf_capacity = tls->ssl->s3->rbuf.len;
   else
@@ -2891,6 +2902,8 @@ tor_tls_get_buffer_sizes(tor_tls_t *tls,
     *wbuf_capacity = 0;
   *rbuf_bytes = tls->ssl->s3->rbuf.left;
   *wbuf_bytes = tls->ssl->s3->wbuf.left;
+  return 0;
+#endif
 }
 
 #ifdef USE_BUFFEREVENTS
