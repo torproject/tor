@@ -1464,6 +1464,9 @@ rend_data_service_create(const char *onion_address, const char *pk_digest,
   strlcpy(rend_data->onion_address, onion_address,
           sizeof(rend_data->onion_address));
   rend_data->auth_type = auth_type;
+  /* Won't be used but still need to initialize it for rend_data dup and
+   * free. */
+  rend_data->hsdirs_fp = smartlist_new();
 
   return rend_data;
 }
