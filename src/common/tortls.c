@@ -1634,7 +1634,7 @@ tor_tls_classify_client_ciphers(const SSL *ssl,
     const uint16_t *v2_cipher = v2_cipher_list;
     for (i = 0; i < sk_SSL_CIPHER_num(peer_ciphers); ++i) {
       SSL_CIPHER *cipher = sk_SSL_CIPHER_value(peer_ciphers, i);
-      uint16_t id = cipher->id & 0xffff;
+      uint16_t id = SSL_CIPHER_get_id(cipher) & 0xffff;
       if (id == 0x00ff) /* extended renegotiation indicator. */
         continue;
       if (!id || id != *v2_cipher) {
@@ -1699,10 +1699,12 @@ tor_tls_client_is_using_v2_ciphers(const SSL *ssl)
     for (i = 0; i < sk_SSL_CIPHER_num(c1); ++i) {
       SSL_CIPHER *a = sk_SSL_CIPHER_value(ciphers, i);
       SSL_CIPHER *b = sk_SSL_CIPHER_value(c1, i);
-      if (a->id != b->id) {
+      unsigned long a_id = SSL_CIPHER_get_id(a);
+      unsigned long b_id = SSL_CIPHER_get_id(b);
+      if (a_id != b_id) {
         log_warn(LD_BUG, "Cipher mismatch between session->ciphers and "
-                 "SSL_get_ciphers() at %d: %u vs %u", i,
-                 (unsigned)a, (unsigned)b);
+                 "SSL_get_ciphers() at %d: %lx vs %lx", i,
+                 a_id, b_id);
       }
     }
   }
@@ -1901,7 +1903,8 @@ rectify_client_ciphers(SSL *ssl)
     log_debug(LD_NET, "List was: %s", CLIENT_CIPHER_LIST);
     for (j = 0; j < sk_SSL_CIPHER_num(ciphers); ++j) {
       SSL_CIPHER *cipher = sk_SSL_CIPHER_value(ciphers, j);
-      log_debug(LD_NET, "Cipher %d: %lx %s", j, cipher->id, cipher->name);
+      log_debug(LD_NET, "Cipher %d: %lx %s", j,
+                SSL_CIPHER_get_id(cipher), SSL_CIPHER_get_name(cipher));
     }
 
     /* Then copy as many ciphers as we can from the good list, inserting
@@ -1914,17 +1917,17 @@ rectify_client_ciphers(SSL *ssl)
       SSL_CIPHER *cipher = NULL;
       if (j < sk_SSL_CIPHER_num(ciphers))
         cipher = sk_SSL_CIPHER_value(ciphers, j);
-      if (cipher && ((cipher->id >> 24) & 0xff) != 3) {
+      if (cipher && ((SSL_CIPHER_get_id(cipher) >> 24) & 0xff) != 3) {
         /* Skip over non-v3 ciphers entirely.  (This should no longer be
          * needed, thanks to saying !SSLv2 above.) */
         log_debug(LD_NET, "Skipping v%d cipher %s",
-                  (int)((cipher->id>>24) & 0xff),
-                  cipher->name);
+                  (int)((SSL_CIPHER_get_id(cipher)>>24) & 0xff),
+                  SSL_CIPHER_get_name(cipher));
         ++j;
       } else if (cipher &&
-                 (cipher->id & 0xffff) == CLIENT_CIPHER_INFO_LIST[i].id) {
+                 (SSL_CIPHER_get_id(cipher) & 0xffff) == CLIENT_CIPHER_INFO_LIST[i].id) {
         /* "cipher" is the cipher we expect. Put it on the list. */
-        log_debug(LD_NET, "Found cipher %s", cipher->name);
+        log_debug(LD_NET, "Found cipher %s", SSL_CIPHER_get_name(cipher));
         sk_SSL_CIPHER_push(CLIENT_CIPHER_STACK, cipher);
         ++j;
         ++i;
