@@ -1518,10 +1518,23 @@ static int v2_cipher_list_pruned = 0;
 /** Return 0 if <b>m</b> does not support the cipher with ID <b>cipher</b>;
  * return 1 if it does support it, or if we have no way to tell. */
 static int
-find_cipher_by_id(const SSL_METHOD *m, uint16_t cipher)
+find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m, uint16_t cipher)
 {
   const SSL_CIPHER *c;
-#ifdef HAVE_STRUCT_SSL_METHOD_ST_GET_CIPHER_BY_CHAR
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,0,2)
+  {
+    unsigned char cipherid[3];
+    tor_assert(ssl);
+    set_uint16(cipherid, htons(cipher));
+    cipherid[2] = 0; /* If ssl23_get_cipher_by_char finds no cipher starting
+                      * with a two-byte 'cipherid', it may look for a v2
+                      * cipher with the appropriate 3 bytes. */
+    c = SSL_CIPHER_find((SSL*)ssl, cipherid);
+    if (c)
+      tor_assert((c->id & 0xffff) == cipher);
+    return c != NULL;
+  }
+#elif defined(HAVE_STRUCT_SSL_METHOD_ST_GET_CIPHER_BY_CHAR)
   if (m && m->get_cipher_by_char) {
     unsigned char cipherid[3];
     set_uint16(cipherid, htons(cipher));
@@ -1534,6 +1547,7 @@ find_cipher_by_id(const SSL_METHOD *m, uint16_t cipher)
     return c != NULL;
   } else
 #endif
+#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,1,0)
   if (m && m->get_cipher && m->num_ciphers) {
     /* It would seem that some of the "let's-clean-up-openssl" forks have
      * removed the get_cipher_by_char function.  Okay, so now you get a
@@ -1547,23 +1561,24 @@ find_cipher_by_id(const SSL_METHOD *m, uint16_t cipher)
       }
     }
     return 0;
-  } else {
-    return 1; /* No way to search */
   }
+#endif
+  (void) ssl;
+  return 1; /* No way to search */
 }
 
 /** Remove from v2_cipher_list every cipher that we don't support, so that
  * comparing v2_cipher_list to a client's cipher list will give a sensible
  * result. */
 static void
-prune_v2_cipher_list(void)
+prune_v2_cipher_list(const SSL *ssl)
 {
   uint16_t *inp, *outp;
   const SSL_METHOD *m = SSLv23_method();
 
   inp = outp = v2_cipher_list;
   while (*inp) {
-    if (find_cipher_by_id(m, *inp)) {
+    if (find_cipher_by_id(ssl, m, *inp)) {
       *outp++ = *inp++;
     } else {
       inp++;
@@ -1585,7 +1600,7 @@ tor_tls_classify_client_ciphers(const SSL *ssl,
   int i, res;
   tor_tls_t *tor_tls;
   if (PREDICT_UNLIKELY(!v2_cipher_list_pruned))
-    prune_v2_cipher_list();
+    prune_v2_cipher_list(ssl);
 
   tor_tls = tor_tls_get_by_ssl(ssl);
   if (tor_tls && tor_tls->client_cipher_list_type)
