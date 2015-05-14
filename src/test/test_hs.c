@@ -298,7 +298,140 @@ test_pick_bad_tor2web_rendezvous_node(void *arg)
   routerset_free(options->Tor2webRendezvousPoints);
 }
 
+/* Make sure rend_data_t is valid at creation, destruction and when
+ * duplicated. */
+static void
+test_hs_rend_data(void *arg)
+{
+  int rep;
+  rend_data_t *client;
+  /* Binary format of a descriptor ID. */
+  char desc_id[DIGEST_LEN];
+  char client_cookie[REND_DESC_COOKIE_LEN];
+  time_t now = time(NULL);
+
+  base32_decode(desc_id, sizeof(desc_id), STR_DESC_ID_BASE32,
+                REND_DESC_ID_V2_LEN_BASE32);
+  memset(client_cookie, 'e', sizeof(client_cookie));
+
+  client = rend_data_client_create(STR_HS_ADDR, desc_id, client_cookie,
+                                   REND_NO_AUTH);
+  tt_assert(client);
+  tt_int_op(client->auth_type, ==, REND_NO_AUTH);
+  tt_str_op(client->onion_address, OP_EQ, STR_HS_ADDR);
+  tt_mem_op(client->desc_id_fetch, OP_EQ, desc_id, sizeof(desc_id));
+  tt_mem_op(client->descriptor_cookie, OP_EQ, client_cookie,
+            sizeof(client_cookie));
+  tt_assert(client->hsdirs_fp);
+  tt_int_op(smartlist_len(client->hsdirs_fp), ==, 0);
+  for (rep = 0; rep < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; rep++) {
+    int ret = rend_compute_v2_desc_id(desc_id, client->onion_address,
+                                      client->descriptor_cookie, now, rep);
+    /* That shouldn't never fail. */
+    tt_int_op(ret, ==, 0);
+    tt_mem_op(client->descriptor_id[rep], OP_EQ, desc_id, sizeof(desc_id));
+  }
+  /* The rest should be zeroed because this is a client request. */
+  tt_int_op(tor_digest_is_zero(client->rend_pk_digest), ==, 1);
+  tt_int_op(tor_digest_is_zero(client->rend_cookie), ==, 1);
+
+  /* Test dup(). */
+  rend_data_t *client_dup = rend_data_dup(client);
+  tt_assert(client_dup);
+  tt_int_op(client_dup->auth_type, ==, client->auth_type);
+  tt_str_op(client_dup->onion_address, OP_EQ, client->onion_address);
+  tt_mem_op(client_dup->desc_id_fetch, OP_EQ, client->desc_id_fetch,
+            sizeof(client_dup->desc_id_fetch));
+  tt_mem_op(client_dup->descriptor_cookie, OP_EQ, client->descriptor_cookie,
+            sizeof(client_dup->descriptor_cookie));
+
+  tt_assert(client_dup->hsdirs_fp);
+  tt_int_op(smartlist_len(client_dup->hsdirs_fp), ==, 0);
+  for (rep = 0; rep < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; rep++) {
+    tt_mem_op(client_dup->descriptor_id[rep], OP_EQ,
+              client->descriptor_id[rep], DIGEST_LEN);
+  }
+  /* The rest should be zeroed because this is a client request. */
+  tt_int_op(tor_digest_is_zero(client_dup->rend_pk_digest), ==, 1);
+  tt_int_op(tor_digest_is_zero(client_dup->rend_cookie), ==, 1);
+  rend_data_free(client);
+  rend_data_free(client_dup);
+
+  /* Reset state. */
+  base32_decode(desc_id, sizeof(desc_id), STR_DESC_ID_BASE32,
+                REND_DESC_ID_V2_LEN_BASE32);
+  memset(client_cookie, 'e', sizeof(client_cookie));
+
+  /* Try with different parameters here for which some content should be
+   * zeroed out. */
+  client = rend_data_client_create(NULL, desc_id, NULL, REND_BASIC_AUTH);
+  tt_assert(client);
+  tt_int_op(client->auth_type, ==, REND_BASIC_AUTH);
+  tt_int_op(strlen(client->onion_address), ==, 0);
+  tt_mem_op(client->desc_id_fetch, OP_EQ, desc_id, sizeof(desc_id));
+  tt_int_op(tor_mem_is_zero(client->descriptor_cookie,
+                            sizeof(client->descriptor_cookie)), ==, 1);
+  tt_assert(client->hsdirs_fp);
+  tt_int_op(smartlist_len(client->hsdirs_fp), ==, 0);
+  for (rep = 0; rep < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; rep++) {
+    tt_int_op(tor_digest_is_zero(client->descriptor_id[rep]), ==, 1);
+  }
+  /* The rest should be zeroed because this is a client request. */
+  tt_int_op(tor_digest_is_zero(client->rend_pk_digest), ==, 1);
+  tt_int_op(tor_digest_is_zero(client->rend_cookie), ==, 1);
+  rend_data_free(client);
+
+  /* Let's test the service object now. */
+  rend_data_t *service;
+  char rend_pk_digest[DIGEST_LEN];
+  uint8_t rend_cookie[DIGEST_LEN];
+  memset(rend_pk_digest, 'f', sizeof(rend_pk_digest));
+  memset(rend_cookie, 'g', sizeof(rend_cookie));
+
+  service = rend_data_service_create(STR_HS_ADDR, rend_pk_digest,
+                                     rend_cookie, REND_NO_AUTH);
+  tt_assert(service);
+  tt_int_op(service->auth_type, ==, REND_NO_AUTH);
+  tt_str_op(service->onion_address, OP_EQ, STR_HS_ADDR);
+  tt_mem_op(service->rend_pk_digest, OP_EQ, rend_pk_digest,
+            sizeof(rend_pk_digest));
+  tt_mem_op(service->rend_cookie, OP_EQ, rend_cookie, sizeof(rend_cookie));
+  tt_assert(service->hsdirs_fp);
+  tt_int_op(smartlist_len(service->hsdirs_fp), ==, 0);
+  for (rep = 0; rep < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; rep++) {
+    tt_int_op(tor_digest_is_zero(service->descriptor_id[rep]), ==, 1);
+  }
+  /* The rest should be zeroed because this is a service request. */
+  tt_int_op(tor_digest_is_zero(service->descriptor_cookie), ==, 1);
+  tt_int_op(tor_digest_is_zero(service->desc_id_fetch), ==, 1);
+
+  /* Test dup(). */
+  rend_data_t *service_dup = rend_data_dup(service);
+  tt_assert(service_dup);
+  tt_int_op(service_dup->auth_type, ==, service->auth_type);
+  tt_str_op(service_dup->onion_address, OP_EQ, service->onion_address);
+  tt_mem_op(service_dup->rend_pk_digest, OP_EQ, service->rend_pk_digest,
+            sizeof(service_dup->rend_pk_digest));
+  tt_mem_op(service_dup->rend_cookie, OP_EQ, service->rend_cookie,
+            sizeof(service_dup->rend_cookie));
+  tt_assert(service_dup->hsdirs_fp);
+  tt_int_op(smartlist_len(service_dup->hsdirs_fp), ==, 0);
+  for (rep = 0; rep < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; rep++) {
+    tt_int_op(tor_digest_is_zero(service_dup->descriptor_id[rep]), ==, 1);
+  }
+  /* The rest should be zeroed because this is a service request. */
+  tt_int_op(tor_digest_is_zero(service_dup->descriptor_cookie), ==, 1);
+  tt_int_op(tor_digest_is_zero(service_dup->desc_id_fetch), ==, 1);
+  rend_data_free(service);
+  rend_data_free(service_dup);
+
+ done:
+  return;
+}
+
 struct testcase_t hs_tests[] = {
+  { "hs_rend_data", test_hs_rend_data, TT_FORK,
+    NULL, NULL },
   { "hs_desc_event", test_hs_desc_event, TT_FORK,
     NULL, NULL },
   { "pick_tor2web_rendezvous_node", test_pick_tor2web_rendezvous_node, TT_FORK,
