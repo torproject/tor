@@ -1365,11 +1365,16 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
     SSL_CTX_set_options(result->ctx,
                         SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION);
   }
+#ifdef SSL_OP_NO_COMPRESSION
+  SSL_CTX_set_options(result->ctx, SSL_OP_NO_COMPRESSION);
+#endif
+#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,1,0)
 #ifndef OPENSSL_NO_COMP
   /* Don't actually allow compression; it uses ram and time, but the data
    * we transmit is all encrypted anyway. */
   if (result->ctx->comp_methods)
     result->ctx->comp_methods = NULL;
+#endif
 #endif
 #ifdef SSL_MODE_RELEASE_BUFFERS
   SSL_CTX_set_mode(result->ctx, SSL_MODE_RELEASE_BUFFERS);
