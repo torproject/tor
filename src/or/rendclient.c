@@ -686,6 +686,7 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query,
                           routerstatus_t *rs_hsdir)
 {
   routerstatus_t *hs_dir = rs_hsdir;
+  char *hsdir_fp;
   char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
   char descriptor_cookie_base64[3*REND_DESC_COOKIE_LEN_BASE64];
 #ifdef ENABLE_TOR2WEB_MODE
@@ -708,6 +709,12 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query,
       return 0;
     }
   }
+
+  /* Add a copy of the HSDir identity digest to the query so we can track it
+   * on the control port. */
+  hsdir_fp = tor_memdup(hs_dir->identity_digest,
+                        sizeof(hs_dir->identity_digest));
+  smartlist_add(rend_query->hsdirs_fp, hsdir_fp);
 
   /* Encode descriptor cookie for logging purposes. Also, if the cookie is
    * malformed, no fetch is triggered thus this needs to be done before the

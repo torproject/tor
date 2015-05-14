@@ -1400,8 +1400,14 @@ rend_process_relay_cell(circuit_t *circ, const crypt_path_t *layer_hint,
 rend_data_t *
 rend_data_dup(const rend_data_t *data)
 {
+  rend_data_t *data_dup;
   tor_assert(data);
-  return tor_memdup(data, sizeof(rend_data_t));
+  data_dup = tor_memdup(data, sizeof(rend_data_t));
+  data_dup->hsdirs_fp = smartlist_new();
+  SMARTLIST_FOREACH(data->hsdirs_fp, char *, fp,
+                    smartlist_add(data_dup->hsdirs_fp,
+                                  tor_memdup(fp, DIGEST_LEN)));
+  return data_dup;
 }
 
 /** Compute descriptor ID for each replicas and save them. A valid onion
@@ -1495,6 +1501,7 @@ rend_data_client_create(const char *onion_address, const char *desc_id,
   }
 
   rend_data->auth_type = auth_type;
+  rend_data->hsdirs_fp = smartlist_new();
 
   return rend_data;
 

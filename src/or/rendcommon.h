@@ -16,6 +16,12 @@
 static INLINE void
 rend_data_free(rend_data_t *data)
 {
+  if (!data) {
+    return;
+  }
+  /* Cleanup the HSDir identity digest. */
+  SMARTLIST_FOREACH(data->hsdirs_fp, char *, d, tor_free(d));
+  smartlist_free(data->hsdirs_fp);
   tor_free(data);
 }
 

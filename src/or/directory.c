@@ -2099,8 +2099,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
 
   if (conn->base_.purpose == DIR_PURPOSE_FETCH_RENDDESC_V2) {
     #define SEND_HS_DESC_FAILED_EVENT(reason) ( \
-      control_event_hs_descriptor_failed(conn->rend_data->onion_address, \
-                                         conn->rend_data->auth_type, \
+      control_event_hs_descriptor_failed(conn->rend_data, \
                                          conn->identity_digest, \
                                          reason) )
     #define SEND_HS_DESC_FAILED_CONTENT() ( \
@@ -2141,7 +2140,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
             log_info(LD_REND, "Successfully fetched v2 rendezvous "
                      "descriptor.");
             control_event_hs_descriptor_received(service_id,
-                                                 conn->rend_data->auth_type,
+                                                 conn->rend_data,
                                                  conn->identity_digest);
             control_event_hs_descriptor_content(service_id,
                                                 conn->requested_resource,

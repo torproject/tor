@@ -13,6 +13,7 @@
 #include "test.h"
 #include "control.h"
 #include "config.h"
+#include "rendcommon.h"
 #include "routerset.h"
 #include "circuitbuild.h"
 #include "test_helpers.h"
@@ -131,11 +132,13 @@ static void
 test_hs_desc_event(void *arg)
 {
   #define STR_HS_ADDR "ajhb7kljbiru65qo"
-  #define STR_HS_ID "b3oeducbhjmbqmgw2i3jtz4fekkrinwj"
-  #define STR_DESC_ID "g5ojobzupf275beh5ra72uyhb3dkpxwg"
+  #define STR_HS_CONTENT_DESC_ID "g5ojobzupf275beh5ra72uyhb3dkpxwg"
+  #define STR_DESC_ID_BASE32 "hba3gmcgpfivzfhx5rtfqkfdhv65yrj3"
 
+  int ret;
   rend_data_t rend_query;
   const char *expected_msg;
+  char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
 
   (void) arg;
   MOCK(send_control_event_string,
@@ -144,33 +147,48 @@ test_hs_desc_event(void *arg)
        node_describe_longname_by_id_replacement);
 
   /* setup rend_query struct */
+  memset(&rend_query, 0, sizeof(rend_query));
   strncpy(rend_query.onion_address, STR_HS_ADDR,
           REND_SERVICE_ID_LEN_BASE32+1);
-  rend_query.auth_type = 0;
+  rend_query.auth_type = REND_NO_AUTH;
+  rend_query.hsdirs_fp = smartlist_new();
+  smartlist_add(rend_query.hsdirs_fp, tor_memdup(HSDIR_EXIST_ID,
+                                                 DIGEST_LEN));
+
+  /* Compute descriptor ID for replica 0, should be STR_DESC_ID_BASE32. */
+  ret = rend_compute_v2_desc_id(rend_query.descriptor_id[0],
+                                rend_query.onion_address,
+                                NULL, 0, 0);
+  tt_int_op(ret, ==, 0);
+  base32_encode(desc_id_base32, sizeof(desc_id_base32),
+                rend_query.descriptor_id[0], DIGEST_LEN);
+  /* Make sure rend_compute_v2_desc_id works properly. */
+  tt_mem_op(desc_id_base32, OP_EQ, STR_DESC_ID_BASE32,
+            sizeof(desc_id_base32));
 
   /* test request event */
   control_event_hs_descriptor_requested(&rend_query, HSDIR_EXIST_ID,
-                                        STR_HS_ID);
+                                        STR_DESC_ID_BASE32);
   expected_msg = "650 HS_DESC REQUESTED "STR_HS_ADDR" NO_AUTH "\
-                  STR_HSDIR_EXIST_LONGNAME" "STR_HS_ID"\r\n";
+                  STR_HSDIR_EXIST_LONGNAME " " STR_DESC_ID_BASE32 "\r\n";
   tt_assert(received_msg);
   tt_str_op(received_msg,OP_EQ, expected_msg);
   tor_free(received_msg);
 
   /* test received event */
-  rend_query.auth_type = 1;
+  rend_query.auth_type = REND_BASIC_AUTH;
   control_event_hs_descriptor_received(rend_query.onion_address,
-                                       rend_query.auth_type, HSDIR_EXIST_ID);
+                                       &rend_query, HSDIR_EXIST_ID);
   expected_msg = "650 HS_DESC RECEIVED "STR_HS_ADDR" BASIC_AUTH "\
-                  STR_HSDIR_EXIST_LONGNAME"\r\n";
+                  STR_HSDIR_EXIST_LONGNAME " " STR_DESC_ID_BASE32"\r\n";
   tt_assert(received_msg);
   tt_str_op(received_msg,OP_EQ, expected_msg);
   tor_free(received_msg);
 
   /* test failed event */
-  rend_query.auth_type = 2;
-  control_event_hs_descriptor_failed(rend_query.onion_address,
-                                     rend_query.auth_type, HSDIR_NONE_EXIST_ID,
+  rend_query.auth_type = REND_STEALTH_AUTH;
+  control_event_hs_descriptor_failed(&rend_query,
+                                     HSDIR_NONE_EXIST_ID,
                                      "QUERY_REJECTED");
   expected_msg = "650 HS_DESC FAILED "STR_HS_ADDR" STEALTH_AUTH "\
                   STR_HSDIR_NONE_EXIST_LONGNAME" REASON=QUERY_REJECTED\r\n";
@@ -180,26 +198,30 @@ test_hs_desc_event(void *arg)
 
   /* test invalid auth type */
   rend_query.auth_type = 999;
-  control_event_hs_descriptor_failed(rend_query.onion_address,
-                                     rend_query.auth_type, HSDIR_EXIST_ID,
+  control_event_hs_descriptor_failed(&rend_query,
+                                     HSDIR_EXIST_ID,
                                      "QUERY_REJECTED");
   expected_msg = "650 HS_DESC FAILED "STR_HS_ADDR" UNKNOWN "\
-                  STR_HSDIR_EXIST_LONGNAME" REASON=QUERY_REJECTED\r\n";
+                  STR_HSDIR_EXIST_LONGNAME " " STR_DESC_ID_BASE32\
+                  " REASON=QUERY_REJECTED\r\n";
   tt_assert(received_msg);
   tt_str_op(received_msg,OP_EQ, expected_msg);
   tor_free(received_msg);
 
   /* test valid content. */
   char *exp_msg;
-  control_event_hs_descriptor_content(rend_query.onion_address, STR_DESC_ID,
+  control_event_hs_descriptor_content(rend_query.onion_address, STR_HS_CONTENT_DESC_ID,
                                       HSDIR_EXIST_ID, hs_desc_content);
-  tor_asprintf(&exp_msg, "650+HS_DESC_CONTENT " STR_HS_ADDR " " STR_DESC_ID \
-               " " STR_HSDIR_EXIST_LONGNAME "\r\n%s\r\n.\r\n650 OK\r\n",
-               hs_desc_content);
+  tor_asprintf(&exp_msg, "650+HS_DESC_CONTENT " STR_HS_ADDR " "\
+               STR_HS_CONTENT_DESC_ID " " STR_HSDIR_EXIST_LONGNAME\
+               "\r\n%s\r\n.\r\n650 OK\r\n", hs_desc_content);
+
   tt_assert(received_msg);
   tt_str_op(received_msg, OP_EQ, exp_msg);
   tor_free(received_msg);
   tor_free(exp_msg);
+  SMARTLIST_FOREACH(rend_query.hsdirs_fp, char *, d, tor_free(d));
+  smartlist_free(rend_query.hsdirs_fp);
 
  done:
   UNMOCK(send_control_event_string);
