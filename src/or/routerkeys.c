@@ -418,9 +418,6 @@ load_ed_keys(const or_options_t *options, time_t now)
     SET_CERT(auth_key_cert, auth_cert);
   }
 
-  if (generate_ed_link_cert(options, now) < 0)
-    FAIL("Couldn't make link cert");
-
   return 0;
  err:
   ed25519_keypair_free(id);
@@ -438,8 +435,10 @@ generate_ed_link_cert(const or_options_t *options, time_t now)
   const tor_x509_cert_t *link = NULL, *id = NULL;
   tor_cert_t *link_cert = NULL;
 
-  if (tor_tls_get_my_certs(1, &link, &id) < 0 || link == NULL)
+  if (tor_tls_get_my_certs(1, &link, &id) < 0 || link == NULL) {
+    log_warn(LD_OR, "Can't get my x509 link cert.");
     return -1;
+  }
 
   const digests_t *digests = tor_x509_cert_get_cert_digests(link);
 

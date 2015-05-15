@@ -866,8 +866,7 @@ init_keys(void)
   }
 
   /* 1d. Load all ed25519 keys */
-  if (load_ed_keys(options,now) < 0 ||
-      generate_ed_link_cert(options,now))
+  if (load_ed_keys(options,now) < 0)
     return -1;
 
   /* 2. Read onion key.  Make it if none is found. */
@@ -932,6 +931,13 @@ init_keys(void)
   /* 3. Initialize link key and TLS context. */
   if (router_initialize_tls_context() < 0) {
     log_err(LD_GENERAL,"Error initializing TLS context");
+    return -1;
+  }
+
+  /* 3b. Get an ed25519 link certificate.  Note that we need to do this
+   * after we set up the TLS context */
+  if (generate_ed_link_cert(options, now) < 0) {
+    log_err(LD_GENERAL,"Couldn't make link cert");
     return -1;
   }
 
