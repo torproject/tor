@@ -2312,7 +2312,9 @@ connection_or_send_auth_challenge_cell(or_connection_t *conn)
 int
 connection_or_compute_authenticate_cell_body(or_connection_t *conn,
                                              uint8_t *out, size_t outlen,
+                                             const int authtype,
                                              crypto_pk_t *signing_key,
+                                             ed25519_keypair_t *ed_signing_key,
                                              int server)
 {
   auth1_t *auth = NULL;
@@ -2322,7 +2324,6 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
   const char *authtype_str = NULL;
 
   int is_ed = 0;
-  const int authtype = 1; /* XXXX this should be an argument. */
 
   /* assert state is reasonable XXXX */
   switch (authtype) {
@@ -2343,6 +2344,7 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
   }
 
   auth = auth1_new();
+  ctx->is_ed = is_ed;
 
   /* Type: 8 bytes. */
   memcpy(auth1_getarray_type(auth), authtype_str, 8);
@@ -2369,6 +2371,20 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
 
     /* Server ID digest: 32 octets. */
     memcpy(auth->sid, server_id, 32);
+  }
+
+  if (is_ed) {
+    const ed25519_public_key_t *my_ed_id, *their_ed_id;
+    if (!conn->handshake_state->ed_id_sign_cert)
+      goto err;
+    my_ed_id = get_master_identity_key();
+    their_ed_id = &conn->handshake_state->ed_id_sign_cert->signing_key;
+
+    const uint8_t *cid_ed = (server ? their_ed_id : my_ed_id)->pubkey;
+    const uint8_t *sid_ed = (server ? my_ed_id : their_ed_id)->pubkey;
+
+    memcpy(auth->u1_cid_ed, cid_ed, ED25519_PUBKEY_LEN);
+    memcpy(auth->u1_sid_ed, sid_ed, ED25519_PUBKEY_LEN);
   }
 
   {
@@ -2450,7 +2466,14 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
     goto done;
   }
 
-  if (signing_key) {
+  if (ed_signing_key && is_ed) {
+    ed25519_signature_t sig;
+    if (ed25519_sign(&sig, out, len, ed_signing_key) < 0)
+      goto err;
+    auth1_setlen_sig(auth, ED25519_SIG_LEN);
+    memcpy(auth1_getarray_sig(auth), sig.sig, ED25519_SIG_LEN);
+
+  } else if (signing_key && !is_ed) {
     auth1_setlen_sig(auth, crypto_pk_keysize(signing_key));
 
     char d[32];
@@ -2466,12 +2489,14 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
 
     auth1_setlen_sig(auth, siglen);
 
-    len = auth1_encode(out, outlen, auth, ctx);
-    if (len < 0) {
-      log_warn(LD_OR, "Unable to encode signed AUTH1 data.");
-      goto err;
-    }
   }
+
+  len = auth1_encode(out, outlen, auth, ctx);
+  if (len < 0) {
+    log_warn(LD_OR, "Unable to encode signed AUTH1 data.");
+    goto err;
+  }
+
   result = (int) len;
   goto done;
 
@@ -2504,6 +2529,7 @@ connection_or_send_authenticate_cell,(or_connection_t *conn, int authtype))
     return -1;
   }
 
+  /* XXXX stop precomputing this. */
   cell_maxlen = 4 + /* overhead */
     V3_AUTH_BODY_LEN + /* Authentication body */
     crypto_pk_keysize(pk) + /* Max signature length */
@@ -2517,7 +2543,9 @@ connection_or_send_authenticate_cell,(or_connection_t *conn, int authtype))
   authlen = connection_or_compute_authenticate_cell_body(conn,
                                                          cell->payload+4,
                                                          cell_maxlen-4,
+                                             AUTHTYPE_RSA_SHA256_TLSSECRET,
                                                          pk,
+                                                         NULL,
                                                          0 /* not server */);
   if (authlen < 0) {
     log_warn(LD_BUG, "Unable to compute authenticate cell!");

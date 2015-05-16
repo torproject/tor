@@ -2170,7 +2170,8 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
 
   ssize_t bodylen =
     connection_or_compute_authenticate_cell_body(
-                        chan->conn, expected, sizeof(expected), NULL, 1);
+                chan->conn, expected, sizeof(expected),
+                AUTHTYPE_RSA_SHA256_TLSSECRET, NULL, NULL, 1);
   if (bodylen < 0 || bodylen != V3_AUTH_FIXED_PART_LEN)
     ERR("Couldn't compute expected AUTHENTICATE cell body");
 

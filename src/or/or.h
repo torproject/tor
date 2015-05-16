@@ -1445,6 +1445,8 @@ typedef struct or_handshake_state_t {
   tor_x509_cert_t *auth_cert;
   /** A self-signed identity certificate */
   tor_x509_cert_t *id_cert;
+  /** DOCDOC */
+  struct tor_cert_st *ed_id_sign_cert;
   /**@}*/
 } or_handshake_state_t;
 
