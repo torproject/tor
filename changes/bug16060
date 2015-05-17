@@ -1,0 +1,4 @@
+  o Minor bugfixes (hidden service):
+    - Fix a crash when reloading configuration while at least one
+      configured and one ephemeral hidden service exists. Fixes bug 16060;
+      bugfix on 0.2.7.1-alpha.
