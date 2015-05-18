@@ -190,7 +190,7 @@ ORHEADERS = \
 noinst_HEADERS+= $(ORHEADERS) micro-revision.i
 
 micro-revision.i: FORCE
-	$(AM_V_GEN)rm -f micro-revision.tmp; \
+	$(AM_V_at)rm -f micro-revision.tmp; \
 	if test -d "$(top_srcdir)/.git" && \
 			test -x "`which git 2>&1;true`"; then \
 		HASH="`cd "$(top_srcdir)" && git rev-parse --short=16 HEAD`"; \

@@ -18,7 +18,7 @@ check-am: set-test-permissions
 
 .PHONY: set-test-permissions
 set-test-permissions: $(TESTSCRIPTS)
-	chmod u+x $(TESTSCRIPTS)
+	$(AM_V_at)chmod u+x $(TESTSCRIPTS)
 
 
 noinst_PROGRAMS+= src/test/bench
