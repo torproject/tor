@@ -709,7 +709,8 @@ rend_config_services(const or_options_t *options, int validate_only)
      * probably ok? */
     SMARTLIST_FOREACH_BEGIN(rend_service_list, rend_service_t *, new) {
       SMARTLIST_FOREACH_BEGIN(old_service_list, rend_service_t *, old) {
-        if (!strcmp(old->directory, new->directory)) {
+        if (new->directory && old->directory &&
+            !strcmp(old->directory, new->directory)) {
           smartlist_add_all(new->intro_nodes, old->intro_nodes);
           smartlist_clear(old->intro_nodes);
           smartlist_add(surviving_services, old);
