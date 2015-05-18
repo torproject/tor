@@ -178,6 +178,9 @@ static int write_stream_target_to_buf(entry_connection_t *conn, char *buf,
 static void orconn_target_get_name(char *buf, size_t len,
                                    or_connection_t *conn);
 
+static int get_cached_network_liveness(void);
+static void set_cached_network_liveness(int liveness);
+
 /** Given a control event code for a message event, return the corresponding
  * log severity. */
 static INLINE int
@@ -958,6 +961,7 @@ static const struct control_event_t control_event_table[] = {
   { EVENT_TRANSPORT_LAUNCHED, "TRANSPORT_LAUNCHED" },
   { EVENT_HS_DESC, "HS_DESC" },
   { EVENT_HS_DESC_CONTENT, "HS_DESC_CONTENT" },
+  { EVENT_NETWORK_LIVENESS, "NETWORK_LIVENESS" },
   { 0, NULL },
 };
 
@@ -2205,6 +2209,24 @@ getinfo_helper_onions(control_connection_t *control_conn,
   return 0;
 }
 
+/** Implementation helper for GETINFO: answers queries about network
+ * liveness. */
+static int
+getinfo_helper_liveness(control_connection_t *control_conn,
+                      const char *question, char **answer,
+                      const char **errmsg)
+{
+  if (strcmp(question, "network-liveness") == 0) {
+    if (get_cached_network_liveness()) {
+      *answer = tor_strdup("up");
+    } else {
+      *answer = tor_strdup("down");
+    }
+  }
+
+  return 0;
+}
+
 /** Callback function for GETINFO: on a given control connection, try to
  * answer the question <b>q</b> and store the newly-allocated answer in
  * *<b>a</b>. If an internal error occurs, return -1 and optionally set
@@ -2289,6 +2311,8 @@ static const getinfo_item_t getinfo_items[] = {
          "Information about and from the ns consensus."),
   ITEM("network-status", dir,
        "Brief summary of router status (v1 directory format)"),
+  ITEM("network-liveness", liveness,
+       "Current opinion on whether the network is live"),
   ITEM("circuit-status", events, "List of current circuits originating here."),
   ITEM("stream-status", events,"List of current streams."),
   ITEM("orconn-status", events, "A list of current OR connections."),
@@ -5090,6 +5114,52 @@ control_event_or_authdir_new_descriptor(const char *action,
                             "650 OK\r\n");
   tor_free(esc);
   tor_free(buf);
+
+  return 0;
+}
+
+/** Cached liveness for network liveness events and GETINFO
+ */
+
+static int network_is_live = 0;
+
+static int
+get_cached_network_liveness(void)
+{
+  return network_is_live;
+}
+
+static void
+set_cached_network_liveness(int liveness)
+{
+  network_is_live = liveness;
+}
+
+/** The network liveness has changed; this is called from circuitstats.c
+ * whenever we receive a cell, or when timeout expires and we assume the
+ * network is down. */
+int
+control_event_network_liveness_update(int liveness)
+{
+  if (liveness > 0) {
+    if (get_cached_network_liveness() <= 0) {
+      /* Update cached liveness */
+      set_cached_network_liveness(1);
+      log_debug(LD_CONTROL, "Sending NETWORK_LIVENESS UP");
+      send_control_event_string(EVENT_NETWORK_LIVENESS, ALL_FORMATS,
+                                "650 NETWORK_LIVENESS UP\r\n");
+    }
+    /* else was already live, no-op */
+  } else {
+    if (get_cached_network_liveness() > 0) {
+      /* Update cached liveness */
+      set_cached_network_liveness(0);
+      log_debug(LD_CONTROL, "Sending NETWORK_LIVENESS DOWN");
+      send_control_event_string(EVENT_NETWORK_LIVENESS, ALL_FORMATS,
+                                "650 NETWORK_LIVENESS DOWN\r\n");
+    }
+    /* else was already dead, no-op */
+  }
 
   return 0;
 }

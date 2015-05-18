@@ -1232,6 +1232,9 @@ circuit_build_times_network_is_live(circuit_build_times_t *cbt)
   }
   cbt->liveness.network_last_live = now;
   cbt->liveness.nonlive_timeouts = 0;
+
+  /* Tell control.c */
+  control_event_network_liveness_update(1);
 }
 
 /**
@@ -1316,6 +1319,9 @@ circuit_build_times_network_close(circuit_build_times_t *cbt,
                  "Tor has not observed any network activity for the past %d "
                  "seconds. Disabling circuit build timeout recording.",
                  (int)(now - cbt->liveness.network_last_live));
+
+      /* Tell control.c */
+      control_event_network_liveness_update(0);
     } else {
       log_info(LD_CIRC,
              "Got non-live timeout. Current count is: %d",
