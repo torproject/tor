@@ -310,6 +310,8 @@ test_hs_rend_data(void *arg)
   char client_cookie[REND_DESC_COOKIE_LEN];
   time_t now = time(NULL);
 
+  (void)arg;
+
   base32_decode(desc_id, sizeof(desc_id), STR_DESC_ID_BASE32,
                 REND_DESC_ID_V2_LEN_BASE32);
   memset(client_cookie, 'e', sizeof(client_cookie));

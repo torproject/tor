@@ -2216,6 +2216,8 @@ getinfo_helper_liveness(control_connection_t *control_conn,
                       const char *question, char **answer,
                       const char **errmsg)
 {
+  (void)control_conn;
+  (void)errmsg;
   if (strcmp(question, "network-liveness") == 0) {
     if (get_cached_network_liveness()) {
       *answer = tor_strdup("up");

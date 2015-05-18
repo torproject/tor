@@ -52,7 +52,6 @@ int rend_parse_service_authorization(const or_options_t *options,
 rend_service_authorization_t *rend_client_lookup_service_authorization(
                                                 const char *onion_address);
 void rend_service_authorization_free_all(void);
-rend_data_t *rend_data_dup(const rend_data_t *request);
 
 #endif
 
