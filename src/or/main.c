@@ -1317,7 +1317,7 @@ run_scheduled_events(time_t now)
   if (time_to_add_entropy < now) {
     if (time_to_add_entropy) {
       /* We already seeded once, so don't die on failure. */
-      crypto_seed_rng(0);
+      crypto_seed_rng();
     }
 /** How often do we add more entropy to OpenSSL's RNG pool? */
 #define ENTROPY_INTERVAL (60*60)

@@ -624,7 +624,7 @@ main(int argc, const char **argv)
 
   reset_perftime();
 
-  crypto_seed_rng(1);
+  crypto_seed_rng();
   crypto_init_siphash_key();
   options = options_new();
   init_logging(1);

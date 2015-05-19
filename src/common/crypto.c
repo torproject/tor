@@ -302,7 +302,7 @@ crypto_early_init(void)
 
     crypto_force_rand_ssleay();
 
-    if (crypto_seed_rng(1) < 0)
+    if (crypto_seed_rng() < 0)
       return -1;
     if (crypto_init_siphash_key() < 0)
       return -1;
@@ -384,7 +384,7 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
     }
 
     if (crypto_force_rand_ssleay()) {
-      if (crypto_seed_rng(1) < 0)
+      if (crypto_seed_rng() < 0)
         return -1;
     }
 
@@ -2485,12 +2485,10 @@ crypto_strongest_rand(uint8_t *out, size_t out_len)
  * have not yet allocated a bunch of fds.  Return 0 on success, -1 on failure.
  */
 int
-crypto_seed_rng(int startup)
+crypto_seed_rng(void)
 {
   int rand_poll_ok = 0, load_entropy_ok = 0;
   uint8_t buf[ADD_ENTROPY];
-
-  (void) startup;
 
   /* OpenSSL has a RAND_poll function that knows about more kinds of
    * entropy than we do.  We'll try calling that, *and* calling our own entropy
