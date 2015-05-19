@@ -84,8 +84,7 @@ int connection_or_send_versions(or_connection_t *conn, int v3_plus);
 MOCK_DECL(int,connection_or_send_netinfo,(or_connection_t *conn));
 int connection_or_send_certs_cell(or_connection_t *conn);
 int connection_or_send_auth_challenge_cell(or_connection_t *conn);
-int connection_or_compute_authenticate_cell_body(or_connection_t *conn,
-                                             uint8_t *out, size_t outlen,
+var_cell_t *connection_or_compute_authenticate_cell_body(or_connection_t *conn,
                                              const int authtype,
                                              crypto_pk_t *signing_key,
                                              ed25519_keypair_t *ed_signing_key,

@@ -2112,9 +2112,11 @@ channel_tls_process_auth_challenge_cell(var_cell_t *cell, channel_tls_t *chan)
 STATIC void
 channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
 {
-  uint8_t expected[V3_AUTH_FIXED_PART_LEN+256];
+  var_cell_t *expected_cell = NULL;
   const uint8_t *auth;
   int authlen;
+  const int authtype = 1; /* XXXX extend this */
+  int bodylen;
 
   tor_assert(cell);
   tor_assert(chan);
@@ -2127,6 +2129,7 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
            safe_str(chan->conn->base_.address),                 \
            chan->conn->base_.port, (s));                        \
     connection_or_close_for_error(chan->conn, 0);               \
+    var_cell_free(expected_cell);                               \
     return;                                                     \
   } while (0)
 
@@ -2158,7 +2161,7 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
     if (4 + len > cell->payload_len)
       ERR("Authenticator was truncated");
 
-    if (type != AUTHTYPE_RSA_SHA256_TLSSECRET)
+    if (type != authtype)
       ERR("Authenticator type was not recognized");
 
     auth += 4;
@@ -2168,14 +2171,26 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
   if (authlen < V3_AUTH_BODY_LEN + 1)
     ERR("Authenticator was too short");
 
-  ssize_t bodylen =
-    connection_or_compute_authenticate_cell_body(
-                chan->conn, expected, sizeof(expected),
-                AUTHTYPE_RSA_SHA256_TLSSECRET, NULL, NULL, 1);
-  if (bodylen < 0 || bodylen != V3_AUTH_FIXED_PART_LEN)
+  expected_cell = connection_or_compute_authenticate_cell_body(
+                chan->conn, authtype, NULL, NULL, 1);
+  if (! expected_cell)
     ERR("Couldn't compute expected AUTHENTICATE cell body");
 
-  if (tor_memneq(expected, auth, bodylen))
+  if (authtype == AUTHTYPE_RSA_SHA256_TLSSECRET ||
+      authtype == AUTHTYPE_RSA_SHA256_RFC5705) {
+    bodylen = V3_AUTH_BODY_LEN;
+  } else {
+    bodylen = authlen - ED25519_SIG_LEN; /* XXXX  DOCDOC */
+  }
+  if (expected_cell->payload_len != bodylen+4) {
+    ERR("Expected AUTHENTICATE cell body len not as expected.");
+  }
+
+  /* Length of random part. */
+  if (bodylen < 24)
+    ERR("Bodylen is somehow less than 24, which should really be impossible");
+
+  if (tor_memneq(expected_cell->payload+4, auth, bodylen-24))
     ERR("Some field in the AUTHENTICATE cell body was not as expected");
 
   {
@@ -2245,6 +2260,8 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
              safe_str(chan->conn->base_.address),
              chan->conn->base_.port);
   }
+
+  var_cell_free(expected_cell);
 
 #undef ERR
 }

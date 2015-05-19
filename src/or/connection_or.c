@@ -2292,8 +2292,8 @@ connection_or_send_auth_challenge_cell(or_connection_t *conn)
 }
 
 /** Compute the main body of an AUTHENTICATE cell that a client can use
- * to authenticate itself on a v3 handshake for <b>conn</b>.  Write it to the
- * <b>outlen</b>-byte buffer at <b>out</b>.
+ * to authenticate itself on a v3 handshake for <b>conn</b>.  Return it
+ * in a var_cell_t.
  *
  * If <b>server</b> is true, only calculate the first
  * V3_AUTH_FIXED_PART_LEN bytes -- the part of the authenticator that's
@@ -2309,9 +2309,8 @@ connection_or_send_auth_challenge_cell(or_connection_t *conn)
  *
  * Return the length of the cell body on success, and -1 on failure.
  */
-int
+var_cell_t *
 connection_or_compute_authenticate_cell_body(or_connection_t *conn,
-                                             uint8_t *out, size_t outlen,
                                              const int authtype,
                                              crypto_pk_t *signing_key,
                                              ed25519_keypair_t *ed_signing_key,
@@ -2319,7 +2318,7 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
 {
   auth1_t *auth = NULL;
   auth_ctx_t *ctx = auth_ctx_new();
-  int result;
+  var_cell_t *result = NULL;
   int old_tlssecrets_algorithm = 0;
   const char *authtype_str = NULL;
 
@@ -2444,7 +2443,22 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
    * checks it.  That's followed by 16 bytes of nonce. */
   crypto_rand((char*)auth->rand, 24);
 
+  ssize_t maxlen = auth1_encoded_len(auth, ctx);
+  if (ed_signing_key && is_ed) {
+    maxlen += ED25519_SIG_LEN;
+  } else if (signing_key && !is_ed) {
+    maxlen += crypto_pk_keysize(signing_key);
+  }
+
+  const int AUTH_CELL_HEADER_LEN = 4; /* 2 bytes of type, 2 bytes of length */
+  result = var_cell_new(AUTH_CELL_HEADER_LEN + maxlen);
+  uint8_t *const out = result->payload + AUTH_CELL_HEADER_LEN;
+  const size_t outlen = maxlen;
   ssize_t len;
+
+  result->command = CELL_AUTHENTICATE;
+  set_uint16(result->payload, htons(authtype));
+
   if ((len = auth1_encode(out, outlen, auth, ctx)) < 0) {
     log_warn(LD_OR, "Unable to encode signed part of AUTH1 data.");
     goto err;
@@ -2457,7 +2471,8 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
       log_warn(LD_OR, "Unable to parse signed part of AUTH1 data.");
       goto err;
     }
-    result = (int) (tmp->end_of_fixed_part - out);
+    result->payload_len = (tmp->end_of_signed - result->payload);
+    
     auth1_free(tmp);
     if (len2 != len) {
       log_warn(LD_OR, "Mismatched length when re-parsing AUTH1 data.");
@@ -2488,7 +2503,6 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
     }
 
     auth1_setlen_sig(auth, siglen);
-
   }
 
   len = auth1_encode(out, outlen, auth, ctx);
@@ -2496,12 +2510,15 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
     log_warn(LD_OR, "Unable to encode signed AUTH1 data.");
     goto err;
   }
+  tor_assert(len + AUTH_CELL_HEADER_LEN <= result->payload_len);
+  result->payload_len = len + AUTH_CELL_HEADER_LEN;
+  set_uint16(result->payload+2, htons(len));
 
-  result = (int) len;
   goto done;
 
  err:
-  result = -1;
+  var_cell_free(result);
+  result = NULL;
  done:
   auth1_free(auth);
   auth_ctx_free(ctx);
@@ -2515,8 +2532,6 @@ connection_or_send_authenticate_cell,(or_connection_t *conn, int authtype))
 {
   var_cell_t *cell;
   crypto_pk_t *pk = tor_tls_get_my_client_auth_key();
-  int authlen;
-  size_t cell_maxlen;
   /* XXXX make sure we're actually supposed to send this! */
 
   if (!pk) {
@@ -2529,33 +2544,15 @@ connection_or_send_authenticate_cell,(or_connection_t *conn, int authtype))
     return -1;
   }
 
-  /* XXXX stop precomputing this. */
-  cell_maxlen = 4 + /* overhead */
-    V3_AUTH_BODY_LEN + /* Authentication body */
-    crypto_pk_keysize(pk) + /* Max signature length */
-    16 /* add a few extra bytes just in case. */;
-
-  cell = var_cell_new(cell_maxlen);
-  cell->command = CELL_AUTHENTICATE;
-  set_uint16(cell->payload, htons(AUTHTYPE_RSA_SHA256_TLSSECRET));
-  /* skip over length ; we don't know that yet. */
-
-  authlen = connection_or_compute_authenticate_cell_body(conn,
-                                                         cell->payload+4,
-                                                         cell_maxlen-4,
+  cell = connection_or_compute_authenticate_cell_body(conn,
                                              AUTHTYPE_RSA_SHA256_TLSSECRET,
                                                          pk,
                                                          NULL,
                                                          0 /* not server */);
-  if (authlen < 0) {
+  if (! cell) {
     log_warn(LD_BUG, "Unable to compute authenticate cell!");
-    var_cell_free(cell);
     return -1;
   }
-  tor_assert(authlen + 4 <= cell->payload_len);
-  set_uint16(cell->payload+2, htons(authlen));
-  cell->payload_len = authlen + 4;
-
   connection_or_write_var_cell_to_buf(cell, conn);
   var_cell_free(cell);
 
