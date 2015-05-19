@@ -232,8 +232,7 @@
 #define USING_TWOS_COMPLEMENT
 
 /* Version number of package */
-#define VERSION "0.2.6.7"
-
+#define VERSION "0.2.6.8"
 
 
 #define HAVE_STRUCT_SOCKADDR_IN6
