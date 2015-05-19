@@ -58,8 +58,8 @@
 #include "compat.h"
 #include "sandbox.h"
 
-#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(0,9,8)
-#error "We require OpenSSL >= 0.9.8"
+#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,0,0)
+#error "We require OpenSSL >= 1.0.0"
 #endif
 
 #ifdef ANDROID
@@ -298,13 +298,6 @@ crypto_early_init(void)
                "might be why. (Compiled with %lx: %s; running with %lx: %s).",
                (unsigned long)OPENSSL_VERSION_NUMBER, OPENSSL_VERSION_TEXT,
                SSLeay(), SSLeay_version(SSLEAY_VERSION));
-    }
-
-    if (SSLeay() < OPENSSL_V_SERIES(1,0,0)) {
-      log_notice(LD_CRYPTO,
-                 "Your OpenSSL version seems to be %s. We recommend 1.0.0 "
-                 "or later.",
-                 crypto_openssl_get_version_str());
     }
 
     crypto_force_rand_ssleay();
@@ -2423,15 +2416,6 @@ crypto_dh_free(crypto_dh_t *dh)
  * work for us too. */
 #define ADD_ENTROPY 32
 
-/** True iff it's safe to use RAND_poll after setup.
- *
- * Versions of OpenSSL prior to 0.9.7k and 0.9.8c had a bug where RAND_poll
- * would allocate an fd_set on the stack, open a new file, and try to FD_SET
- * that fd without checking whether it fit in the fd_set.  Thus, if the
- * system has not just been started up, it is unsafe to call */
-#define RAND_POLL_IS_SAFE                       \
-  (OPENSSL_VERSION_NUMBER >= OPENSSL_V(0,9,8,'c'))
-
 /** Set the seed of the weak RNG to a random value. */
 void
 crypto_seed_weak_rng(tor_weak_rng_t *rng)
@@ -2506,14 +2490,14 @@ crypto_seed_rng(int startup)
   int rand_poll_ok = 0, load_entropy_ok = 0;
   uint8_t buf[ADD_ENTROPY];
 
+  (void) startup;
+
   /* OpenSSL has a RAND_poll function that knows about more kinds of
    * entropy than we do.  We'll try calling that, *and* calling our own entropy
    * functions.  If one succeeds, we'll accept the RNG as seeded. */
-  if (startup || RAND_POLL_IS_SAFE) {
-    rand_poll_ok = RAND_poll();
-    if (rand_poll_ok == 0)
-      log_warn(LD_CRYPTO, "RAND_poll() failed.");
-  }
+  rand_poll_ok = RAND_poll();
+  if (rand_poll_ok == 0)
+    log_warn(LD_CRYPTO, "RAND_poll() failed.");
 
   load_entropy_ok = !crypto_strongest_rand(buf, sizeof(buf));
   if (load_entropy_ok) {
@@ -3123,13 +3107,11 @@ openssl_dynlock_destroy_cb_(struct CRYPTO_dynlock_value *v,
   tor_free(v);
 }
 
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,0,0)
 static void
 tor_set_openssl_thread_id(CRYPTO_THREADID *threadid)
 {
   CRYPTO_THREADID_set_numeric(threadid, tor_get_thread_id());
 }
-#endif
 
 /** @{ */
 /** Helper: Construct mutexes, and set callbacks to help OpenSSL handle being
@@ -3144,11 +3126,7 @@ setup_openssl_threading(void)
   for (i=0; i < n; ++i)
     openssl_mutexes_[i] = tor_mutex_new();
   CRYPTO_set_locking_callback(openssl_locking_cb_);
-#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,0,0)
-  CRYPTO_set_id_callback(tor_get_thread_id);
-#else
   CRYPTO_THREADID_set_callback(tor_set_openssl_thread_id);
-#endif
   CRYPTO_set_dynlock_create_callback(openssl_dynlock_create_cb_);
   CRYPTO_set_dynlock_lock_callback(openssl_dynlock_lock_cb_);
   CRYPTO_set_dynlock_destroy_callback(openssl_dynlock_destroy_cb_);
