@@ -2189,14 +2189,6 @@ tor_tls_handshake(tor_tls_t *tls)
   return r;
 }
 
-/* SSL_clear_mode was introduced in 0.9.8m */
-#ifndef SSL_clear_mode
-static void SSL_clear_mode(SSL *s, unsigned long m)
-{
-  s->mode &= ~m;
-}
-#endif
-
 /** Perform the final part of the intial TLS handshake on <b>tls</b>.  This
  * should be called for the first handshake only: it determines whether the v1
  * or the v2 handshake was used, and adjusts things for the renegotiation
