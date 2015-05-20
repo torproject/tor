@@ -74,7 +74,7 @@ test_crypto_rng(void *arg)
 
   /* Try out RNG. */
   (void)arg;
-  tt_assert(! crypto_seed_rng(0));
+  tt_assert(! crypto_seed_rng());
   crypto_rand(data1, 100);
   crypto_rand(data2, 100);
   tt_mem_op(data1,OP_NE, data2,100);

@@ -358,7 +358,7 @@ main(int argc, char **argv)
 
   init_logging(1);
   crypto_global_init(1, NULL, NULL);
-  crypto_seed_rng(1);
+  crypto_seed_rng();
 
   rq = replyqueue_new(as_flags);
   tor_assert(rq);

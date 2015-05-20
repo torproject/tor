@@ -533,7 +533,7 @@ main(int argc, char **argv)
     fprintf(stderr, "Couldn't initialize crypto library.\n");
     return 1;
   }
-  if (crypto_seed_rng(1)) {
+  if (crypto_seed_rng()) {
     fprintf(stderr, "Couldn't seed RNG.\n");
     goto done;
   }
