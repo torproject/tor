@@ -1,0 +1,5 @@
+  o Minor features (hidden service):
+    - Add the new options "HiddenServiceMaxStreams" and
+      "HiddenServiceMaxStreamsCloseCircuit" to allow hidden services to limit
+      the maximum number of simultaneous streams per circuit, and optionally
+      tear down the circuit when the limit is exceeded. Part of ticket 16052.

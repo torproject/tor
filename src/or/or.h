@@ -818,6 +818,9 @@ typedef struct rend_data_t {
   /** List of HSDir fingerprints on which this request has been sent to.
    * This contains binary identity digest of the directory. */
   smartlist_t *hsdirs_fp;
+
+  /** Number of streams associated with this rendezvous circuit. */
+  int nr_streams;
 } rend_data_t;
 
 /** Time interval for tracking replays of DH public keys received in

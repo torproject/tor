@@ -2149,6 +2149,16 @@ The following options are used to configure a hidden service.
    not an authorization mechanism; it is instead meant to be a mild
    inconvenience to port-scanners.) (Default: 0)
 
+[[HiddenServiceMaxStreams]] **HiddenServiceMaxStreams** __N__::
+   The maximum number of simultaneous streams (connections) per rendezvous
+   circuit. (Setting this to 0 will allow an unlimited number of simultanous
+   streams.) (Default: 0)
+
+[[HiddenServiceMaxStreamsCloseCircuit]] **HiddenServiceMaxStreamsCloseCircuit** **0**|**1**::
+   If set to 1, then exceeding **HiddenServiceMaxStreams** will cause the
+   offending rendezvous circuit to be torn down, as opposed to stream creation
+   requests that exceed the limit being silently ignored. (Default: 0)
+
 [[RendPostPeriod]] **RendPostPeriod** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
     Every time the specified period elapses, Tor uploads any rendezvous
     service descriptors to the directory servers. This information  is also
