@@ -1,4 +1,4 @@
-Changes in version 0.2.6.8 - 2015-05-2?
+Changes in version 0.2.6.8 - 2015-05-21
   Tor 0.2.6.8 fixes a bit of dodgy code in parsing INTRODUCE2 cells, and
   fixes an authority-side bug in assigning the HSDir flag. All directory
   authorities should upgrade.
