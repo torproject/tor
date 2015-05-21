@@ -470,15 +470,14 @@ tor_tls_init(void)
   check_no_tls_errors();
 
   if (!tls_library_is_initialized) {
-    long version;
     SSL_library_init();
     SSL_load_error_strings();
-
-    version = SSLeay();
 
 #if (SIZEOF_VOID_P >= 8 &&                              \
      !defined(OPENSSL_NO_EC) &&                         \
      OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,0,1))
+    long version = SSLeay();
+
     if (version >= OPENSSL_V_SERIES(1,0,1)) {
       /* Warn if we could *almost* be running with much faster ECDH.
          If we're built for a 64-bit target, using OpenSSL 1.0.1, but we
