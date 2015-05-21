@@ -117,6 +117,8 @@ typedef enum {
 } rend_service_add_ephemeral_status_t;
 rend_service_add_ephemeral_status_t rend_service_add_ephemeral(crypto_pk_t *pk,
                                smartlist_t *ports,
+                               int max_streams_per_circuit,
+                               int max_streams_close_circuit,
                                char **service_id_out);
 int rend_service_del_ephemeral(const char *service_id);
 

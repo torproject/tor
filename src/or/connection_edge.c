@@ -2860,6 +2860,8 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     origin_circ->p_streams = n_stream;
     assert_circuit_ok(circ);
 
+    origin_circ->rend_data->nr_streams++;
+
     connection_exit_connect(n_stream);
 
     /* For path bias: This circuit was used successfully */

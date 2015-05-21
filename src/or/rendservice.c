@@ -147,6 +147,13 @@ typedef struct rend_service_t {
   /** If true, we don't close circuits for making requests to unsupported
    * ports. */
   int allow_unknown_ports;
+  /** The maximum number of simultanious streams-per-circuit that are allowed
+   * to be established, or 0 if no limit is set.
+   */
+  int max_streams_per_circuit;
+  /** If true, we close circuits that exceed the max_streams_per_circuit
+   * limit.  */
+  int max_streams_close_circuit;
 } rend_service_t;
 
 /** Returns a escaped string representation of the service, <b>s</b>.
@@ -258,6 +265,23 @@ rend_add_service(rend_service_t *service)
   rend_service_port_config_t *p;
 
   service->intro_nodes = smartlist_new();
+
+  if (service->max_streams_per_circuit < 0) {
+    log_warn(LD_CONFIG, "Hidden service (%s) configured with negative max "
+                        "streams per circuit; ignoring.",
+             rend_service_escaped_dir(service));
+    rend_service_free(service);
+    return -1;
+  }
+
+  if (service->max_streams_close_circuit < 0 ||
+      service->max_streams_close_circuit > 1) {
+    log_warn(LD_CONFIG, "Hidden service (%s) configured with invalid "
+                        "max streams handling; ignoring.",
+             rend_service_escaped_dir(service));
+    rend_service_free(service);
+    return -1;
+  }
 
   if (service->auth_type != REND_NO_AUTH &&
       smartlist_len(service->clients) == 0) {
@@ -539,6 +563,33 @@ rend_config_services(const or_options_t *options, int validate_only)
         log_info(LD_CONFIG,
                  "HiddenServiceDirGroupReadable=%d for %s",
                  service->dir_group_readable, service->directory);
+    } else if (!strcasecmp(line->key, "HiddenServiceMaxStreams")) {
+      service->max_streams_per_circuit = (int)tor_parse_long(line->value,
+                                                    10, 0, 65535, &ok, NULL);
+      if (!ok) {
+        log_warn(LD_CONFIG,
+                 "HiddenServiceMaxStreams should be between 0 and %d, not %s",
+                 65535, line->value);
+        rend_service_free(service);
+        return -1;
+      }
+      log_info(LD_CONFIG,
+               "HiddenServiceMaxStreams=%d for %s",
+               service->max_streams_per_circuit, service->directory);
+    } else if (!strcasecmp(line->key, "HiddenServiceMaxStreamsCloseCircuit")) {
+      service->max_streams_close_circuit = (int)tor_parse_long(line->value,
+                                                        10, 0, 1, &ok, NULL);
+      if (!ok) {
+        log_warn(LD_CONFIG,
+                 "HiddenServiceMaxStreamsCloseCircuit should be 0 or 1, not %s",
+                 line->value);
+        rend_service_free(service);
+        return -1;
+      }
+      log_info(LD_CONFIG,
+               "HiddenServiceMaxStreamsCloseCircuit=%d for %s",
+               (int)service->max_streams_close_circuit, service->directory);
+
     } else if (!strcasecmp(line->key, "HiddenServiceAuthorizeClient")) {
       /* Parse auth type and comma-separated list of client names and add a
        * rend_authorized_client_t for each client to the service's list
@@ -758,7 +809,10 @@ rend_config_services(const or_options_t *options, int validate_only)
   return 0;
 }
 
-/** Add the ephemeral service <b>pk</b>/<b>ports</b> if possible.
+/** Add the ephemeral service <b>pk</b>/<b>ports</b> if possible, with
+ * <b>max_streams_per_circuit</b> streams allowed per rendezvous circuit,
+ * and circuit closure on max streams being exceeded set by
+ * <b>max_streams_close_circuit</b>.
  *
  * Regardless of sucess/failure, callers should not touch pk/ports after
  * calling this routine, and may assume that correct cleanup has been done
@@ -769,6 +823,8 @@ rend_config_services(const or_options_t *options, int validate_only)
 rend_service_add_ephemeral_status_t
 rend_service_add_ephemeral(crypto_pk_t *pk,
                            smartlist_t *ports,
+                           int max_streams_per_circuit,
+                           int max_streams_close_circuit,
                            char **service_id_out)
 {
   *service_id_out = NULL;
@@ -782,6 +838,8 @@ rend_service_add_ephemeral(crypto_pk_t *pk,
   s->ports = ports;
   s->intro_period_started = time(NULL);
   s->n_intro_points_wanted = NUM_INTRO_POINTS_DEFAULT;
+  s->max_streams_per_circuit = max_streams_per_circuit;
+  s->max_streams_close_circuit = max_streams_close_circuit;
   if (rend_service_derive_key_digests(s) < 0) {
     rend_service_free(s);
     return RSAE_BADPRIVKEY;
@@ -3794,6 +3852,25 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
              "rendezvous circuit %u; closing.",
              serviceid, (unsigned)circ->base_.n_circ_id);
     return -2;
+  }
+  if (service->max_streams_per_circuit > 0) {
+    /* Enforce the streams-per-circuit limit, and refuse to provide a
+     * mapping if this circuit will exceed the limit. */
+#define MAX_STREAM_WARN_INTERVAL 600
+    static struct ratelim_t stream_ratelim =
+        RATELIM_INIT(MAX_STREAM_WARN_INTERVAL);
+    if (circ->rend_data->nr_streams >= service->max_streams_per_circuit) {
+      log_fn_ratelim(&stream_ratelim, LOG_WARN, LD_REND,
+                     "Maximum streams per circuit limit reached on rendezvous "
+                     "circuit %u; %s.  Circuit has %d out of %d streams.",
+                     (unsigned)circ->base_.n_circ_id,
+                     service->max_streams_close_circuit ?
+                       "closing circuit" :
+                       "ignoring open stream request",
+                     circ->rend_data->nr_streams,
+                     service->max_streams_per_circuit);
+      return service->max_streams_close_circuit ? -2 : -1;
+    }
   }
   matching_ports = smartlist_new();
   SMARTLIST_FOREACH(service->ports, rend_service_port_config_t *, p,

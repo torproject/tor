@@ -286,6 +286,8 @@ static config_var_t option_vars_[] = {
   VAR("HiddenServiceVersion",LINELIST_S, RendConfigLines,    NULL),
   VAR("HiddenServiceAuthorizeClient",LINELIST_S,RendConfigLines, NULL),
   VAR("HiddenServiceAllowUnknownPorts",LINELIST_S, RendConfigLines, NULL),
+  VAR("HiddenServiceMaxStreams",LINELIST_S, RendConfigLines, NULL),
+  VAR("HiddenServiceMaxStreamsCloseCircuit",LINELIST_S, RendConfigLines, NULL),
   V(HiddenServiceStatistics,     BOOL,     "0"),
   V(HidServAuth,                 LINELIST, NULL),
   V(CloseHSClientCircuitsImmediatelyOnTimeout, BOOL, "0"),
