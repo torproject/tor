@@ -2806,6 +2806,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
     COMPLAIN("Unrecognized TLSECGroup: Falling back to the default.");
     tor_free(options->TLSECGroup);
   }
+  if (!evaluate_ecgroup_for_tls(options->TLSECGroup)) {
+    REJECT("Unsupported TLSECGroup.");
+  }
 
   if (options->ExcludeNodes && options->StrictNodes) {
     COMPLAIN("You have asked to exclude certain relays from all positions "

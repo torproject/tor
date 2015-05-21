@@ -1,0 +1,6 @@
+  o Removed features:
+
+    - Tor no longer supports copies of OpenSSL that are missing support for
+      Elliptic Curve Cryptography.  In particular support for at least one of
+      P256 or P224 is now required, with manual configuration needed if only
+      P224 is available.
