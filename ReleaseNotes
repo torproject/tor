@@ -3,6 +3,27 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.2.6.8 - 2015-05-21
+  Tor 0.2.6.8 fixes a bit of dodgy code in parsing INTRODUCE2 cells, and
+  fixes an authority-side bug in assigning the HSDir flag. All directory
+  authorities should upgrade.
+
+  o Major bugfixes (hidden services, backport from 0.2.7.1-alpha):
+    - Revert commit that made directory authorities assign the HSDir
+      flag to relay without a DirPort; this was bad because such relays
+      can't handle BEGIN_DIR cells. Fixes bug 15850; bugfix
+      on tor-0.2.6.3-alpha.
+
+  o Minor bugfixes (hidden service, backport from 0.2.7.1-alpha):
+    - Fix an out-of-bounds read when parsing invalid INTRODUCE2 cells on
+      a client authorized hidden service. Fixes bug 15823; bugfix
+      on 0.2.1.6-alpha.
+
+  o Minor features (geoip):
+    - Update geoip to the April 8 2015 Maxmind GeoLite2 Country database.
+    - Update geoip6 to the April 8 2015 Maxmind GeoLite2
+      Country database.
+
 
 Changes in version 0.2.6.7 - 2015-04-06
   Tor 0.2.6.7 fixes two security issues that could be used by an
