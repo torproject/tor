@@ -1899,27 +1899,30 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
   tor_x509_cert_t *auth_cert = x509_certs[OR_CERT_TYPE_AUTH_1024];
   tor_x509_cert_t *link_cert = x509_certs[OR_CERT_TYPE_TLS_LINK];
 
-  if (chan->conn->handshake_state->started_here) {
-    int severity;
-    if (! (id_cert && link_cert))
-      ERR("The certs we wanted were missing");
-    /* Okay. We should be able to check the certificates now. */
-    if (! tor_tls_cert_matches_key(chan->conn->tls, link_cert)) {
-      ERR("The link certificate didn't match the TLS public key");
-    }
-    /* Note that this warns more loudly about time and validity if we were
-    * _trying_ to connect to an authority, not necessarily if we _did_ connect
-    * to one. */
-    if (router_digest_is_trusted_dir(
-          TLS_CHAN_TO_BASE(chan)->identity_digest))
-      severity = LOG_WARN;
-    else
-      severity = LOG_PROTOCOL_WARN;
+  chan->conn->handshake_state->certs->auth_cert = auth_cert;
+  chan->conn->handshake_state->certs->link_cert = link_cert;
+  chan->conn->handshake_state->certs->id_cert = id_cert;
+  x509_certs[OR_CERT_TYPE_ID_1024] =
+    x509_certs[OR_CERT_TYPE_AUTH_1024] =
+    x509_certs[OR_CERT_TYPE_TLS_LINK] = NULL;
 
-    if (! tor_tls_cert_is_valid(severity, link_cert, id_cert, 0))
-      ERR("The link certificate was not valid");
-    if (! tor_tls_cert_is_valid(severity, id_cert, id_cert, 1))
-      ERR("The ID certificate was not valid");
+  int severity;
+  /* Note that this warns more loudly about time and validity if we were
+   * _trying_ to connect to an authority, not necessarily if we _did_ connect
+   * to one. */
+  if (chan->conn->handshake_state->started_here &&
+      router_digest_is_trusted_dir(TLS_CHAN_TO_BASE(chan)->identity_digest))
+    severity = LOG_WARN;
+  else
+    severity = LOG_PROTOCOL_WARN;
+
+  if (! or_handshake_certs_rsa_ok(severity,
+                                  chan->conn->handshake_state->certs,
+                                  chan->conn->tls))
+    ERR("Invalid RSA certificates!");
+
+  if (chan->conn->handshake_state->started_here) {
+    /* No more information is needed. */
 
     chan->conn->handshake_state->authenticated = 1;
     {
@@ -1947,9 +1950,6 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
              "Got some good certificates from %s:%d: Authenticated it.",
              safe_str(chan->conn->base_.address), chan->conn->base_.port);
 
-    chan->conn->handshake_state->certs->id_cert = id_cert;
-    x509_certs[OR_CERT_TYPE_ID_1024] = NULL;
-
     if (!public_server_mode(get_options())) {
       /* If we initiated the connection and we are not a public server, we
        * aren't planning to authenticate at all.  At this point we know who we
@@ -1957,26 +1957,13 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
       send_netinfo = 1;
     }
   } else {
-    if (! (id_cert && auth_cert))
-      ERR("The certs we wanted were missing");
-
-    /* Remember these certificates so we can check an AUTHENTICATE cell */
-    if (! tor_tls_cert_is_valid(LOG_PROTOCOL_WARN, auth_cert, id_cert, 1))
-      ERR("The authentication certificate was not valid");
-    if (! tor_tls_cert_is_valid(LOG_PROTOCOL_WARN, id_cert, id_cert, 1))
-      ERR("The ID certificate was not valid");
-
+    /* We can't call it authenticated till we see an AUTHENTICATE cell. */
     log_info(LD_OR,
              "Got some good certificates from %s:%d: "
              "Waiting for AUTHENTICATE.",
              safe_str(chan->conn->base_.address),
              chan->conn->base_.port);
     /* XXXX check more stuff? */
-
-    chan->conn->handshake_state->certs->id_cert = id_cert;
-    chan->conn->handshake_state->certs->auth_cert = auth_cert;
-    x509_certs[OR_CERT_TYPE_ID_1024] = x509_certs[OR_CERT_TYPE_AUTH_1024]
-      = NULL;
   }
 
   chan->conn->handshake_state->received_certs_cell = 1;

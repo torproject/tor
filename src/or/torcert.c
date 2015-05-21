@@ -9,6 +9,7 @@
  */
 
 #include "or.h"
+#include "config.h"
 #include "crypto.h"
 #include "torcert.h"
 #include "ed25519_cert.h"
@@ -314,4 +315,50 @@ or_handshake_certs_free(or_handshake_certs_t *certs)
 
   memwipe(certs, 0xBD, sizeof(*certs));
   tor_free(certs);
+}
+
+#define ERR(s)                                                  \
+  do {                                                          \
+    log_fn(severity, LD_PROTOCOL,                               \
+           "Received a bad CERTS cell: %s",                     \
+           (s));                                                \
+    return 0;                                                   \
+  } while (0)
+
+int
+or_handshake_certs_rsa_ok(int severity,
+                          or_handshake_certs_t *certs,
+                          tor_tls_t *tls)
+{
+  tor_x509_cert_t *link_cert = certs->link_cert;
+  tor_x509_cert_t *auth_cert = certs->auth_cert;
+  tor_x509_cert_t *id_cert = certs->id_cert;
+
+  if (certs->started_here) {
+    if (! (id_cert && link_cert))
+      ERR("The certs we wanted were missing");
+    if (! tor_tls_cert_matches_key(tls, link_cert))
+      ERR("The link certificate didn't match the TLS public key");
+    if (! tor_tls_cert_is_valid(severity, link_cert, id_cert, 0))
+      ERR("The link certificate was not valid");
+    if (! tor_tls_cert_is_valid(severity, id_cert, id_cert, 1))
+      ERR("The ID certificate was not valid");
+  } else {
+    if (! (id_cert && auth_cert))
+      ERR("The certs we wanted were missing");
+    /* Remember these certificates so we can check an AUTHENTICATE cell */
+    if (! tor_tls_cert_is_valid(LOG_PROTOCOL_WARN, auth_cert, id_cert, 1))
+      ERR("The authentication certificate was not valid");
+    if (! tor_tls_cert_is_valid(LOG_PROTOCOL_WARN, id_cert, id_cert, 1))
+      ERR("The ID certificate was not valid");
+  }
+
+  return 1;
+}
+
+int
+or_handshake_certs_ed25519_ok(or_handshake_certs_t *certs)
+{
+  (void) certs;
+  return 0;
 }

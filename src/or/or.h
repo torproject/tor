@@ -1387,8 +1387,12 @@ typedef struct listener_connection_t {
 #define V3_AUTH_BODY_LEN (V3_AUTH_FIXED_PART_LEN + 8 + 16)
 
 typedef struct or_handshake_certs_t {
+  /** DOCDOC */
+  int started_here;
   /** The cert for the key that's supposed to sign the AUTHENTICATE cell */
   tor_x509_cert_t *auth_cert;
+  /** DOCDOC */
+  tor_x509_cert_t *link_cert;
   /** A self-signed identity certificate */
   tor_x509_cert_t *id_cert;
   /** DOCDOC */

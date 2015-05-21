@@ -315,6 +315,7 @@ test_link_handshake_recv_certs_ok_server(void *arg)
 {
   certs_data_t *d = arg;
   d->c->handshake_state->started_here = 0;
+  d->c->handshake_state->certs->started_here = 0;
   certs_cell_get_certs(d->ccell, 0)->cert_type = 3;
   certs_cell_get_certs(d->ccell, 1)->cert_type = 2;
   ssize_t n = certs_cell_encode(d->cell->payload, 2048, d->ccell);
@@ -450,16 +451,20 @@ CERTS_FAIL(server_missing_certs,
            {
              require_failure_message = "The certs we wanted were missing";
              d->c->handshake_state->started_here = 0;
+             d->c->handshake_state->certs->started_here = 0;
+
            })
 CERTS_FAIL(server_wrong_labels_1,
            {
              require_failure_message =
                "The authentication certificate was not valid";
              d->c->handshake_state->started_here = 0;
+             d->c->handshake_state->certs->started_here = 0;
              certs_cell_get_certs(d->ccell, 0)->cert_type = 2;
              certs_cell_get_certs(d->ccell, 1)->cert_type = 3;
              REENCODE();
            })
+
 
 static void
 test_link_handshake_send_authchallenge(void *arg)
@@ -637,7 +642,8 @@ AUTHCHALLENGE_FAIL(badproto,
 AUTHCHALLENGE_FAIL(as_server,
                    require_failure_message = "We didn't originate this "
                      "connection";
-                   d->c->handshake_state->started_here = 0;)
+                   d->c->handshake_state->started_here = 0;
+                   d->c->handshake_state->certs->started_here = 0;)
 AUTHCHALLENGE_FAIL(duplicate,
                    require_failure_message = "We already received one";
                    d->c->handshake_state->received_auth_challenge = 1)
@@ -874,7 +880,8 @@ AUTHENTICATE_FAIL(badproto,
                   d->c2->link_proto = 2)
 AUTHENTICATE_FAIL(atclient,
                   require_failure_message = "We originated this connection";
-                  d->c2->handshake_state->started_here = 1)
+                  d->c2->handshake_state->started_here = 1;
+                  d->c2->handshake_state->certs->started_here = 1;)
 AUTHENTICATE_FAIL(duplicate,
                   require_failure_message = "We already got one";
                   d->c2->handshake_state->received_authenticate = 1)

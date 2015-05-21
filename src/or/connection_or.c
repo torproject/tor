@@ -1765,6 +1765,7 @@ connection_init_or_handshake_state(or_connection_t *conn, int started_here)
   s->digest_sent_data = 1;
   s->digest_received_data = 1;
   s->certs = or_handshake_certs_new();
+  s->certs->started_here = s->started_here;
   return 0;
 }
 
