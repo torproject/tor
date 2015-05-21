@@ -24,13 +24,21 @@
 #undef OCSP_RESPONSE
 #endif
 
+#include <openssl/opensslv.h>
+
+#define CRYPTO_PRIVATE
+#include "crypto.h"
+
+#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,0,0)
+#error "We require OpenSSL >= 1.0.0"
+#endif
+
 #include <openssl/err.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
 #include <openssl/evp.h>
 #include <openssl/engine.h>
 #include <openssl/rand.h>
-#include <openssl/opensslv.h>
 #include <openssl/bn.h>
 #include <openssl/dh.h>
 #include <openssl/conf.h>
@@ -49,18 +57,12 @@
 #include <sys/fcntl.h>
 #endif
 
-#define CRYPTO_PRIVATE
-#include "crypto.h"
 #include "torlog.h"
 #include "aes.h"
 #include "util.h"
 #include "container.h"
 #include "compat.h"
 #include "sandbox.h"
-
-#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,0,0)
-#error "We require OpenSSL >= 1.0.0"
-#endif
 
 #ifdef ANDROID
 /* Android's OpenSSL seems to have removed all of its Engine support. */

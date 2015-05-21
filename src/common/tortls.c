@@ -43,13 +43,19 @@
 #pragma GCC diagnostic ignored "-Wredundant-decls"
 #endif
 
+#include <openssl/opensslv.h>
+#include "crypto.h"
+
+#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,0,0)
+#error "We require OpenSSL >= 1.0.0"
+#endif
+
 #include <openssl/ssl.h>
 #include <openssl/ssl3.h>
 #include <openssl/err.h>
 #include <openssl/tls1.h>
 #include <openssl/asn1.h>
 #include <openssl/bio.h>
-#include <openssl/opensslv.h>
 #include <openssl/bn.h>
 #include <openssl/rsa.h>
 
@@ -68,16 +74,11 @@
 #include "compat_libevent.h"
 #endif
 
-#include "crypto.h"
 #include "tortls.h"
 #include "util.h"
 #include "torlog.h"
 #include "container.h"
 #include <string.h>
-
-#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,0,0)
-#error "We require OpenSSL >= 1.0.0"
-#endif
 
 /* Enable the "v2" TLS handshake.
  */

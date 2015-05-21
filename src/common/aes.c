@@ -25,13 +25,18 @@
 #endif
 
 #include <openssl/opensslv.h>
+#include "crypto.h"
+
+#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,0,0)
+#error "We require OpenSSL >= 1.0.0"
+#endif
+
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <openssl/aes.h>
 #include <openssl/evp.h>
 #include <openssl/engine.h>
-#include "crypto.h"
 #include <openssl/modes.h>
 #include "compat.h"
 #include "aes.h"
