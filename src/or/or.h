@@ -1386,6 +1386,15 @@ typedef struct listener_connection_t {
  * signs. */
 #define V3_AUTH_BODY_LEN (V3_AUTH_FIXED_PART_LEN + 8 + 16)
 
+typedef struct or_handshake_certs_t {
+  /** The cert for the key that's supposed to sign the AUTHENTICATE cell */
+  tor_x509_cert_t *auth_cert;
+  /** A self-signed identity certificate */
+  tor_x509_cert_t *id_cert;
+  /** DOCDOC */
+  struct tor_cert_st *ed_id_sign_cert;
+} or_handshake_certs_t;
+
 /** Stores flags and information related to the portion of a v2/v3 Tor OR
  * connection handshake that happens after the TLS handshake is finished.
  */
@@ -1438,16 +1447,8 @@ typedef struct or_handshake_state_t {
 
   /** Certificates that a connection initiator sent us in a CERTS cell; we're
    * holding on to them until we get an AUTHENTICATE cell.
-   *
-   * @{
    */
-  /** The cert for the key that's supposed to sign the AUTHENTICATE cell */
-  tor_x509_cert_t *auth_cert;
-  /** A self-signed identity certificate */
-  tor_x509_cert_t *id_cert;
-  /** DOCDOC */
-  struct tor_cert_st *ed_id_sign_cert;
-  /**@}*/
+  or_handshake_certs_t *certs;
 } or_handshake_state_t;
 
 /** Length of Extended ORPort connection identifier. */

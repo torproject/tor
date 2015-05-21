@@ -147,8 +147,8 @@ test_link_handshake_certs_ok(void *arg)
   channel_tls_process_certs_cell(cell2, chan1);
 
   tt_assert(c1->handshake_state->received_certs_cell);
-  tt_assert(c1->handshake_state->auth_cert == NULL);
-  tt_assert(c1->handshake_state->id_cert);
+  tt_assert(c1->handshake_state->certs->auth_cert == NULL);
+  tt_assert(c1->handshake_state->certs->id_cert);
   tt_assert(! tor_mem_is_zero(
                   (char*)c1->handshake_state->authenticated_peer_id, 20));
 
@@ -165,8 +165,8 @@ test_link_handshake_certs_ok(void *arg)
   channel_tls_process_certs_cell(cell1, chan2);
 
   tt_assert(c2->handshake_state->received_certs_cell);
-  tt_assert(c2->handshake_state->auth_cert);
-  tt_assert(c2->handshake_state->id_cert);
+  tt_assert(c2->handshake_state->certs->auth_cert);
+  tt_assert(c2->handshake_state->certs->id_cert);
   tt_assert(tor_mem_is_zero(
                 (char*)c2->handshake_state->authenticated_peer_id, 20));
 
@@ -303,8 +303,8 @@ test_link_handshake_recv_certs_ok(void *arg)
   tt_int_op(0, ==, mock_close_called);
   tt_int_op(d->c->handshake_state->authenticated, ==, 1);
   tt_int_op(d->c->handshake_state->received_certs_cell, ==, 1);
-  tt_assert(d->c->handshake_state->id_cert != NULL);
-  tt_assert(d->c->handshake_state->auth_cert == NULL);
+  tt_assert(d->c->handshake_state->certs->id_cert != NULL);
+  tt_assert(d->c->handshake_state->certs->auth_cert == NULL);
 
  done:
   ;
@@ -324,8 +324,8 @@ test_link_handshake_recv_certs_ok_server(void *arg)
   tt_int_op(0, ==, mock_close_called);
   tt_int_op(d->c->handshake_state->authenticated, ==, 0);
   tt_int_op(d->c->handshake_state->received_certs_cell, ==, 1);
-  tt_assert(d->c->handshake_state->id_cert != NULL);
-  tt_assert(d->c->handshake_state->auth_cert != NULL);
+  tt_assert(d->c->handshake_state->certs->id_cert != NULL);
+  tt_assert(d->c->handshake_state->certs->auth_cert != NULL);
 
  done:
   ;
@@ -767,15 +767,15 @@ authenticate_data_setup(const struct testcase_t *test)
   const uint8_t *der;
   size_t sz;
   tor_x509_cert_get_der(id_cert, &der, &sz);
-  d->c1->handshake_state->id_cert = tor_x509_cert_decode(der, sz);
-  d->c2->handshake_state->id_cert = tor_x509_cert_decode(der, sz);
+  d->c1->handshake_state->certs->id_cert = tor_x509_cert_decode(der, sz);
+  d->c2->handshake_state->certs->id_cert = tor_x509_cert_decode(der, sz);
 
   tor_x509_cert_get_der(link_cert, &der, &sz);
   mock_peer_cert = tor_x509_cert_decode(der, sz);
   tt_assert(mock_peer_cert);
   tt_assert(! tor_tls_get_my_certs(0, &auth_cert, &id_cert));
   tor_x509_cert_get_der(auth_cert, &der, &sz);
-  d->c2->handshake_state->auth_cert = tor_x509_cert_decode(der, sz);
+  d->c2->handshake_state->certs->auth_cert = tor_x509_cert_decode(der, sz);
 
   /* Make an authenticate cell ... */
   tt_int_op(0, ==, connection_or_send_authenticate_cell(d->c1,
@@ -825,7 +825,7 @@ test_link_handshake_auth_cell(void *arg)
   uint8_t sig[128];
   uint8_t digest[32];
 
-  auth_pubkey = tor_tls_cert_get_key(d->c2->handshake_state->auth_cert);
+  auth_pubkey = tor_tls_cert_get_key(d->c2->handshake_state->certs->auth_cert);
   int n = crypto_pk_public_checksig(
               auth_pubkey,
               (char*)sig, sizeof(sig), (char*)auth1_getarray_sig(auth1),
@@ -898,13 +898,13 @@ AUTHENTICATE_FAIL(nocerts,
 AUTHENTICATE_FAIL(noidcert,
                   require_failure_message = "We never got an identity "
                     "certificate";
-                  tor_x509_cert_free(d->c2->handshake_state->id_cert);
-                  d->c2->handshake_state->id_cert = NULL)
+                  tor_x509_cert_free(d->c2->handshake_state->certs->id_cert);
+                  d->c2->handshake_state->certs->id_cert = NULL)
 AUTHENTICATE_FAIL(noauthcert,
                   require_failure_message = "We never got an authentication "
                     "certificate";
-                  tor_x509_cert_free(d->c2->handshake_state->auth_cert);
-                  d->c2->handshake_state->auth_cert = NULL)
+                  tor_x509_cert_free(d->c2->handshake_state->certs->auth_cert);
+                  d->c2->handshake_state->certs->auth_cert = NULL)
 AUTHENTICATE_FAIL(tooshort,
                   require_failure_message = "Cell was way too short";
                   d->cell->payload_len = 3)

@@ -8,6 +8,7 @@
  * protocol.
  */
 
+#include "or.h"
 #include "crypto.h"
 #include "torcert.h"
 #include "ed25519_cert.h"
@@ -295,3 +296,22 @@ tor_make_rsa_ed25519_crosscert(const ed25519_public_key_t *ed_key,
   return sz;
 }
 
+or_handshake_certs_t *
+or_handshake_certs_new(void)
+{
+  return tor_malloc_zero(sizeof(or_handshake_certs_t));
+}
+
+/** DODCDOC */
+void
+or_handshake_certs_free(or_handshake_certs_t *certs)
+{
+  if (!certs)
+    return;
+
+  tor_x509_cert_free(certs->auth_cert);
+  tor_x509_cert_free(certs->id_cert);
+
+  memwipe(certs, 0xBD, sizeof(*certs));
+  tor_free(certs);
+}

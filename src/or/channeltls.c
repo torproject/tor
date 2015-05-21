@@ -1947,7 +1947,7 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
              "Got some good certificates from %s:%d: Authenticated it.",
              safe_str(chan->conn->base_.address), chan->conn->base_.port);
 
-    chan->conn->handshake_state->id_cert = id_cert;
+    chan->conn->handshake_state->certs->id_cert = id_cert;
     x509_certs[OR_CERT_TYPE_ID_1024] = NULL;
 
     if (!public_server_mode(get_options())) {
@@ -1973,8 +1973,8 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
              chan->conn->base_.port);
     /* XXXX check more stuff? */
 
-    chan->conn->handshake_state->id_cert = id_cert;
-    chan->conn->handshake_state->auth_cert = auth_cert;
+    chan->conn->handshake_state->certs->id_cert = id_cert;
+    chan->conn->handshake_state->certs->auth_cert = auth_cert;
     x509_certs[OR_CERT_TYPE_ID_1024] = x509_certs[OR_CERT_TYPE_AUTH_1024]
       = NULL;
   }
@@ -2147,9 +2147,9 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
   }
   if (!(chan->conn->handshake_state->received_certs_cell))
     ERR("We never got a certs cell");
-  if (chan->conn->handshake_state->auth_cert == NULL)
+  if (chan->conn->handshake_state->certs->auth_cert == NULL)
     ERR("We never got an authentication certificate");
-  if (chan->conn->handshake_state->id_cert == NULL)
+  if (chan->conn->handshake_state->certs->id_cert == NULL)
     ERR("We never got an identity certificate");
   if (cell->payload_len < 4)
     ERR("Cell was way too short");
@@ -2195,7 +2195,7 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
 
   {
     crypto_pk_t *pk = tor_tls_cert_get_key(
-                                   chan->conn->handshake_state->auth_cert);
+                                   chan->conn->handshake_state->certs->auth_cert);
     char d[DIGEST256_LEN];
     char *signed_data;
     size_t keysize;
@@ -2234,9 +2234,9 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
   chan->conn->handshake_state->digest_received_data = 0;
   {
     crypto_pk_t *identity_rcvd =
-      tor_tls_cert_get_key(chan->conn->handshake_state->id_cert);
+      tor_tls_cert_get_key(chan->conn->handshake_state->certs->id_cert);
     const common_digests_t *id_digests =
-      tor_x509_cert_get_id_digests(chan->conn->handshake_state->id_cert);
+      tor_x509_cert_get_id_digests(chan->conn->handshake_state->certs->id_cert);
 
     /* This must exist; we checked key type when reading the cert. */
     tor_assert(id_digests);

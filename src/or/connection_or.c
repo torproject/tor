@@ -1764,6 +1764,7 @@ connection_init_or_handshake_state(or_connection_t *conn, int started_here)
   s->started_here = started_here ? 1 : 0;
   s->digest_sent_data = 1;
   s->digest_received_data = 1;
+  s->certs = or_handshake_certs_new();
   return 0;
 }
 
@@ -1775,8 +1776,7 @@ or_handshake_state_free(or_handshake_state_t *state)
     return;
   crypto_digest_free(state->digest_sent);
   crypto_digest_free(state->digest_received);
-  tor_x509_cert_free(state->auth_cert);
-  tor_x509_cert_free(state->id_cert);
+  or_handshake_certs_free(state->certs);
   memwipe(state, 0xBE, sizeof(or_handshake_state_t));
   tor_free(state);
 }
@@ -2356,7 +2356,7 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
       goto err;
     my_digests = tor_x509_cert_get_id_digests(id_cert);
     their_digests =
-      tor_x509_cert_get_id_digests(conn->handshake_state->id_cert);
+      tor_x509_cert_get_id_digests(conn->handshake_state->certs->id_cert);
     tor_assert(my_digests);
     tor_assert(their_digests);
     my_id = (uint8_t*)my_digests->d[DIGEST_SHA256];
@@ -2374,10 +2374,10 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
 
   if (is_ed) {
     const ed25519_public_key_t *my_ed_id, *their_ed_id;
-    if (!conn->handshake_state->ed_id_sign_cert)
+    if (!conn->handshake_state->certs->ed_id_sign_cert)
       goto err;
     my_ed_id = get_master_identity_key();
-    their_ed_id = &conn->handshake_state->ed_id_sign_cert->signing_key;
+    their_ed_id = &conn->handshake_state->certs->ed_id_sign_cert->signing_key;
 
     const uint8_t *cid_ed = (server ? their_ed_id : my_ed_id)->pubkey;
     const uint8_t *sid_ed = (server ? my_ed_id : their_ed_id)->pubkey;

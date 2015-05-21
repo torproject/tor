@@ -72,5 +72,8 @@ ssize_t tor_make_rsa_ed25519_crosscert(const ed25519_public_key_t *ed_key,
                                        time_t expires,
                                        uint8_t **cert);
 
+or_handshake_certs_t *or_handshake_certs_new(void);
+void or_handshake_certs_free(or_handshake_certs_t *certs);
+
 #endif
 
