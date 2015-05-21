@@ -49,6 +49,9 @@
 #if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,0,0)
 #error "We require OpenSSL >= 1.0.0"
 #endif
+#ifdef OPENSSL_NO_EC
+#error "We require OpenSSL with ECC support"
+#endif
 
 #include <openssl/ssl.h>
 #include <openssl/ssl3.h>
@@ -475,7 +478,6 @@ tor_tls_init(void)
     SSL_load_error_strings();
 
 #if (SIZEOF_VOID_P >= 8 &&                              \
-     !defined(OPENSSL_NO_EC) &&                         \
      OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,0,1))
     long version = SSLeay();
 
@@ -1327,7 +1329,6 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
     SSL_CTX_set_tmp_dh(result->ctx, crypto_dh_get_dh_(dh));
     crypto_dh_free(dh);
   }
-#if !defined(OPENSSL_NO_EC)
   if (! is_client) {
     int nid;
     EC_KEY *ec_key;
@@ -1343,9 +1344,6 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
       SSL_CTX_set_tmp_ecdh(result->ctx, ec_key);
     EC_KEY_free(ec_key);
   }
-#else
-  (void)flags;
-#endif
   SSL_CTX_set_verify(result->ctx, SSL_VERIFY_PEER,
                      always_accept_verify_cb);
   /* let us realloc bufs that we're writing from */
@@ -2932,4 +2930,30 @@ tor_tls_init_bufferevent(tor_tls_t *tls, struct bufferevent *bufev_in,
   return out;
 }
 #endif
+
+/** Check whether the ECC group requested is supported by the current OpenSSL
+ * library instance.  Return 1 if the group is supported, and 0 if not.
+ */
+int
+evaluate_ecgroup_for_tls(const char *ecgroup)
+{
+  EC_KEY *ec_key;
+  int nid;
+  int ret;
+
+  if (!ecgroup)
+    nid = NID_tor_default_ecdhe_group;
+  else if (!strcasecmp(ecgroup, "P256"))
+    nid = NID_X9_62_prime256v1;
+  else if (!strcasecmp(ecgroup, "P224"))
+    nid = NID_secp224r1;
+  else
+    return 0;
+
+  ec_key = EC_KEY_new_by_curve_name(nid);
+  ret = (ec_key != NULL);
+  EC_KEY_free(ec_key);
+
+  return ret;
+}
 

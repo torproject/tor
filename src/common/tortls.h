@@ -139,5 +139,7 @@ int tor_tls_cert_is_valid(int severity,
                           int check_rsa_1024);
 const char *tor_tls_get_ciphersuite_name(tor_tls_t *tls);
 
+int evaluate_ecgroup_for_tls(const char *ecgroup);
+
 #endif
 
