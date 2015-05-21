@@ -8,10 +8,16 @@
 Description = Anonymizing overlay network for TCP
 After = syslog.target network.target nss-lookup.target
 
-[Service] Type = notify NotifyAccess = all ExecStartPre = @BINDIR@/tor
--f @CONFDIR@/torrc --verify-config ExecStart = @BINDIR@/tor -f
-@CONFDIR@/torrc ExecReload = /bin/kill -HUP ${MAINPID} KillSignal =
-SIGINT TimeoutSec = 30 Restart = on-failure WatchdogSec = 1m
+[Service]
+Type = notify
+NotifyAccess = all
+ExecStartPre = @BINDIR@/tor -f @CONFDIR@/torrc --verify-config
+ExecStart = @BINDIR@/tor -f @CONFDIR@/torrc
+ExecReload = /bin/kill -HUP ${MAINPID}
+KillSignal = SIGINT
+TimeoutSec = 30
+Restart = on-failure
+WatchdogSec = 1m
 LimitNOFILE = 32768
 
 # Hardening
