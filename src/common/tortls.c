@@ -1597,39 +1597,13 @@ tor_tls_classify_client_ciphers(const SSL *ssl,
 static int
 tor_tls_client_is_using_v2_ciphers(const SSL *ssl)
 {
-  STACK_OF(SSL_CIPHER) *ciphers = SSL_get_ciphers(ssl);
-
-#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,1,0)
-  {
-    SSL_SESSION *session;
-    STACK_OF(SSL_CIPHER) *c1;
-    int i;
-    if (!(session = SSL_get_session((SSL *)ssl))) {
-      log_info(LD_NET, "No session on TLS?");
-      return CIPHERS_ERR;
-    }
-    c1 = session->ciphers;
-
-    if (sk_SSL_CIPHER_num(c1) != sk_SSL_CIPHER_num(ciphers)) {
-      log_warn(LD_BUG, "Whoops. session->ciphers doesn't "
-               "match SSL_get_ciphers()");
-      return 0;
-    }
-    for (i = 0; i < sk_SSL_CIPHER_num(c1); ++i) {
-      SSL_CIPHER *a = sk_SSL_CIPHER_value(ciphers, i);
-      SSL_CIPHER *b = sk_SSL_CIPHER_value(c1, i);
-      unsigned long a_id = SSL_CIPHER_get_id(a);
-      unsigned long b_id = SSL_CIPHER_get_id(b);
-      if (a_id != b_id) {
-        log_warn(LD_BUG, "Cipher mismatch between session->ciphers and "
-                 "SSL_get_ciphers() at %d: %lx vs %lx", i,
-                 a_id, b_id);
-      }
-    }
+  SSL_SESSION *session;
+  if (!(session = SSL_get_session((SSL *)ssl))) {
+    log_info(LD_NET, "No session on TLS?");
+    return CIPHERS_ERR;
   }
-#endif
 
-  return tor_tls_classify_client_ciphers(ssl, ciphers) >= CIPHERS_V2;
+  return tor_tls_classify_client_ciphers(ssl, session->ciphers) >= CIPHERS_V2;
 }
 
 /** Invoked when we're accepting a connection on <b>ssl</b>, and the connection
