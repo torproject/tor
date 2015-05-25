@@ -4905,7 +4905,8 @@ router_differences_are_cosmetic(const routerinfo_t *r1, const routerinfo_t *r2)
        strcasecmp(r1->contact_info, r2->contact_info)) ||
       r1->is_hibernating != r2->is_hibernating ||
       cmp_addr_policies(r1->exit_policy, r2->exit_policy) ||
-      r1->dir_cache != r2->dir_cache)
+      (r1->supports_tunnelled_dir_requests !=
+       r2->supports_tunnelled_dir_requests))
     return 0;
   if ((r1->declared_family == NULL) != (r2->declared_family == NULL))
     return 0;
