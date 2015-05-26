@@ -420,6 +420,7 @@ new_fake_channel(void)
 
   chan->close = chan_test_close;
   chan->get_overhead_estimate = chan_test_get_overhead_estimate;
+  chan->get_remote_descr = chan_test_get_remote_descr;
   chan->num_bytes_queued = chan_test_num_bytes_queued;
   chan->num_cells_writeable = chan_test_num_cells_writeable;
   chan->write_cell = chan_test_write_cell;
@@ -615,7 +616,6 @@ test_channel_dumpstats(void *arg)
   /* Test channel_dump_statistics */
   ch->describe_transport = chan_test_describe_transport;
   ch->dumpstats = chan_test_dumpstats;
-  ch->get_remote_descr = chan_test_get_remote_descr;
   ch->is_canonical = chan_test_is_canonical;
   old_count = test_dumpstats_calls;
   channel_dump_statistics(ch, LOG_DEBUG);
