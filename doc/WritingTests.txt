@@ -96,7 +96,7 @@ Here's an example of a test function for a simple function in util.c:
       tor_free(contents);
     }
 
-This should look pretty familier to you if you've read the tinytest
+This should look pretty familiar to you if you've read the tinytest
 manual.  One thing to note here is that we use the testing-specific
 function "get_fname" to generate a file with respect to a temporary
 directory that the tests use.  You don't need to delete the file;
@@ -119,7 +119,7 @@ it outside its usual module.
 To support this, Tor's build system compiles a testing version of
 teach module, with extra identifiers exposed.  If you want to
 declare a function as static but available for testing, use the
-macro "STATIC" instead of "static."  Then, make sure there's a
+macro "STATIC" instead of "static".  Then, make sure there's a
 macro-protected declaration of the function in the module's header.
 
 For example, crypto_curve25519.h contains:
