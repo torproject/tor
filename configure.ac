@@ -623,9 +623,26 @@ else
 fi
 AC_SUBST(TOR_OPENSSL_LIBS)
 
+dnl Now check for particular openssl functions.
+save_LIBS="$LIBS"
+save_LDFLAGS="$LDFLAGS"
+save_CPPFLAGS="$CPPFLAGS"
+LIBS="$TOR_OPENSSL_LIBS $LIBS"
+LDFLAGS="$TOR_LDFLAGS_openssl $LDFLAGS"
+CPPFLAGS="$TOR_CPPFLAGS_openssl $CPPFLAGS"
 AC_CHECK_MEMBERS([struct ssl_method_st.get_cipher_by_char], , ,
 [#include <openssl/ssl.h>
 ])
+
+AC_CHECK_FUNCS([ \
+		SSL_SESSION_get_master_key \
+		SSL_get_server_random \
+                SSL_get_client_ciphers \
+                SSL_get_client_random \
+	       ])
+LIBS="$save_LIBS"
+LDFLAGS="$save_LDFLAGS"
+CPPFLAGS="$save_CPPFLAGS"
 
 dnl ------------------------------------------------------
 dnl Where do you live, zlib?  And how do we call you?

@@ -1644,13 +1644,19 @@ tor_tls_classify_client_ciphers(const SSL *ssl,
 static int
 tor_tls_client_is_using_v2_ciphers(const SSL *ssl)
 {
+  STACK_OF(SSL_CIPHER) *ciphers;
+#ifdef HAVE_SSL_GET_CLIENT_CIPHERS
+  ciphers = SSL_get_client_ciphers(ssl);
+#else
   SSL_SESSION *session;
   if (!(session = SSL_get_session((SSL *)ssl))) {
     log_info(LD_NET, "No session on TLS?");
     return CIPHERS_ERR;
   }
+  ciphers = session->ciphers;
+#endif
 
-  return tor_tls_classify_client_ciphers(ssl, session->ciphers) >= CIPHERS_V2;
+  return tor_tls_classify_client_ciphers(ssl, ciphers) >= CIPHERS_V2;
 }
 
 /** Invoked when we're accepting a connection on <b>ssl</b>, and the connection
