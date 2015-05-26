@@ -2707,6 +2707,46 @@ tor_tls_server_got_renegotiate(tor_tls_t *tls)
   return tls->got_renegotiate;
 }
 
+#ifndef HAVE_SSL_GET_CLIENT_RANDOM
+static size_t
+SSL_get_client_random(SSL *s, uint8_t *out, size_t len)
+{
+  if (len == 0)
+    return SSL3_RANDOM_SIZE;
+  tor_assert(len == SSL3_RANDOM_SIZE);
+  tor_assert(s->s3);
+  memcpy(out, s->s3->client_random, len);
+  return len;
+}
+#endif
+
+#ifndef HAVE_SSL_GET_SERVER_RANDOM
+static size_t
+SSL_get_server_random(SSL *s, uint8_t *out, size_t len)
+{
+  if (len == 0)
+    return SSL3_RANDOM_SIZE;
+  tor_assert(len == SSL3_RANDOM_SIZE);
+  tor_assert(s->s3);
+  memcpy(out, s->s3->server_random, len);
+  return len;
+}
+#endif
+
+#ifndef HAVE_SSL_SESSION_GET_MASTER_KEY
+static size_t
+SSL_SESSION_get_master_key(SSL_SESSION *s, uint8_t *out, size_t len)
+{
+  if (len == 0)
+    return s->master_key_length;
+  tor_assert(len == (size_t)s->master_key_length);
+  tor_assert(s->master_key);
+  memcpy(out, s->master_key, len);
+  return len;
+}
+#endif
+
+
 /** Set the DIGEST256_LEN buffer at <b>secrets_out</b> to the value used in
  * the v3 handshake to prove that the client knows the TLS secrets for the
  * connection <b>tls</b>.  Return 0 on success, -1 on failure.
@@ -2715,25 +2755,57 @@ int
 tor_tls_get_tlssecrets(tor_tls_t *tls, uint8_t *secrets_out)
 {
 #define TLSSECRET_MAGIC "Tor V3 handshake TLS cross-certification"
-  char buf[128];
+  uint8_t buf[128];
   size_t len;
+
   tor_assert(tls);
-  tor_assert(tls->ssl);
-  tor_assert(tls->ssl->s3);
-  tor_assert(tls->ssl->session);
+
+  SSL *const ssl = tls->ssl;
+  SSL_SESSION *const session = SSL_get_session(ssl);
+
+  tor_assert(ssl);
+  tor_assert(session);
+
+  const size_t server_random_len = SSL_get_server_random(ssl, NULL, 0);
+  const size_t client_random_len = SSL_get_client_random(ssl, NULL, 0);
+  const size_t master_key_len = SSL_SESSION_get_master_key(session, NULL, 0);
+
+  tor_assert(server_random_len);
+  tor_assert(client_random_len);
+  tor_assert(master_key_len);
+
+  len = client_random_len + server_random_len + strlen(TLSSECRET_MAGIC) + 1;
+  tor_assert(len <= sizeof(buf));
+
+  {
+    size_t r = SSL_get_client_random(ssl, buf, client_random_len);
+    tor_assert(r == client_random_len);
+  }
+  {
+    size_t r = SSL_get_server_random(ssl, buf+client_random_len, server_random_len);
+    tor_assert(r == server_random_len);
+  }
+  uint8_t *master_key = tor_malloc_zero(master_key_len);
+  {
+    size_t r = SSL_SESSION_get_master_key(session, master_key, master_key_len);
+    tor_assert(r == master_key_len);
+  }
+
+  uint8_t *nextbuf = buf + client_random_len + server_random_len;
+  memcpy(nextbuf, TLSSECRET_MAGIC, strlen(TLSSECRET_MAGIC) + 1);
+
   /*
     The value is an HMAC, using the TLS master key as the HMAC key, of
     client_random | server_random | TLSSECRET_MAGIC
   */
-  memcpy(buf +  0, tls->ssl->s3->client_random, 32);
-  memcpy(buf + 32, tls->ssl->s3->server_random, 32);
-  memcpy(buf + 64, TLSSECRET_MAGIC, strlen(TLSSECRET_MAGIC) + 1);
-  len = 64 + strlen(TLSSECRET_MAGIC) + 1;
   crypto_hmac_sha256((char*)secrets_out,
-                     (char*)tls->ssl->session->master_key,
-                     tls->ssl->session->master_key_length,
-                     buf, len);
+                     (char*)master_key,
+                     master_key_len,
+                     (char*)buf, len);
   memwipe(buf, 0, sizeof(buf));
+  memwipe(master_key, 0, master_key_len);
+  tor_free(master_key);
+
   return 0;
 }
 
