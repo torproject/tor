@@ -217,16 +217,6 @@ struct tor_tls_t {
   void *callback_arg;
 };
 
-#ifdef V2_HANDSHAKE_CLIENT
-/** An array of fake SSL_CIPHER objects that we use in order to trick OpenSSL
- * in client mode into advertising the ciphers we want.  See
- * rectify_client_ciphers() for details. */
-static SSL_CIPHER *CLIENT_CIPHER_DUMMIES = NULL;
-/** A stack of SSL_CIPHER objects, some real, some fake.
- * See rectify_client_ciphers() for details. */
-static STACK_OF(SSL_CIPHER) *CLIENT_CIPHER_STACK = NULL;
-#endif
-
 /** The ex_data index in which we store a pointer to an SSL object's
  * corresponding tor_tls_t object. */
 static int tor_tls_object_ex_data_index = -1;
@@ -595,12 +585,6 @@ tor_tls_free_all(void)
     client_tls_context = NULL;
     tor_tls_context_decref(ctx);
   }
-#ifdef V2_HANDSHAKE_CLIENT
-  if (CLIENT_CIPHER_DUMMIES)
-    tor_free(CLIENT_CIPHER_DUMMIES);
-  if (CLIENT_CIPHER_STACK)
-    sk_SSL_CIPHER_free(CLIENT_CIPHER_STACK);
-#endif
 }
 
 /** We need to give OpenSSL a callback to verify certificates. This is
@@ -790,7 +774,6 @@ const char UNRESTRICTED_SERVER_CIPHER_LIST[] =
  * (SSL3_TXT_RSA_NULL_SHA).  If you do this, you won't be able to communicate
  * with any of the "real" Tors, though. */
 
-#ifdef V2_HANDSHAKE_CLIENT
 #define CIPHER(id, name) name ":"
 #define XCIPHER(id, name)
 /** List of ciphers that clients should advertise, omitting items that
@@ -803,28 +786,6 @@ static const char CLIENT_CIPHER_LIST[] =
   ;
 #undef CIPHER
 #undef XCIPHER
-
-/** Holds a cipher that we want to advertise, and its 2-byte ID. */
-typedef struct cipher_info_t { unsigned id; const char *name; } cipher_info_t;
-/** A list of all the ciphers that clients should advertise, including items
- * that OpenSSL might not know about. */
-static const cipher_info_t CLIENT_CIPHER_INFO_LIST[] = {
-#define CIPHER(id, name) { id, name },
-#define XCIPHER(id, name) { id, #name },
-#include "./ciphers.inc"
-#undef CIPHER
-#undef XCIPHER
-};
-
-/** The length of CLIENT_CIPHER_INFO_LIST and CLIENT_CIPHER_DUMMIES. */
-static const int N_CLIENT_CIPHERS = ARRAY_LENGTH(CLIENT_CIPHER_INFO_LIST);
-#endif
-
-#ifndef V2_HANDSHAKE_CLIENT
-#undef CLIENT_CIPHER_LIST
-#define CLIENT_CIPHER_LIST  (TLS1_TXT_DHE_RSA_WITH_AES_128_SHA ":"      \
-                             SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA)
-#endif
 
 /** Free all storage held in <b>cert</b> */
 void
@@ -1796,149 +1757,6 @@ tor_tls_setup_session_secret_cb(tor_tls_t *tls)
 #define tor_tls_setup_session_secret_cb(tls) STMT_NIL
 #endif
 
-/** Explain which ciphers we're missing. */
-static void
-log_unsupported_ciphers(smartlist_t *unsupported)
-{
-  char *joined;
-
-  log_notice(LD_NET, "We weren't able to find support for all of the "
-             "TLS ciphersuites that we wanted to advertise. This won't "
-             "hurt security, but it might make your Tor (if run as a client) "
-             "more easy for censors to block.");
-
-  if (SSLeay() < 0x10000000L) {
-    log_notice(LD_NET, "To correct this, use a more recent OpenSSL, "
-               "built without disabling any secure ciphers or features.");
-  } else {
-    log_notice(LD_NET, "To correct this, use a version of OpenSSL "
-               "built with none of its ciphers disabled.");
-  }
-
-  joined = smartlist_join_strings(unsupported, ":", 0, NULL);
-  log_info(LD_NET, "The unsupported ciphers were: %s", joined);
-  tor_free(joined);
-}
-
-static void
-set_ssl_ciphers_to_list(SSL *ssl, STACK_OF(SSL_CIPHER) *stack)
-{
-  STACK_OF(SSL_CIPHER) *ciphers;
-
-  int r, i;
-  /* #1: ensure that the ssl object has its own list of ciphers.  Otherwise we
-   *     might be about to stomp the SSL_CTX ciphers list. */
-  r = SSL_set_cipher_list(ssl, "HIGH");
-  tor_assert(r);
-
-  /* #2: Grab ssl_ciphers and clear it.  */
-  ciphers = SSL_get_ciphers(ssl);
-  tor_assert(ciphers);
-  sk_SSL_CIPHER_zero(ciphers);
-
-  /* #3: Copy the elements from stack. */
-  for (i = 0; i < sk_SSL_CIPHER_num(stack); ++i) {
-    SSL_CIPHER *c = sk_SSL_CIPHER_value(stack, i);
-    sk_SSL_CIPHER_push(ciphers, c);
-  }
-}
-
-/** Replace the ciphers on <b>ssl</b> with a new list of SSL ciphersuites:
- * specifically, a list designed to mimic a common web browser.  We might not
- * be able to do that if OpenSSL doesn't support all the ciphers we want.
- * Some of the ciphers in the list won't actually be implemented by OpenSSL:
- * that's okay so long as the server doesn't select them.
- *
- * [If the server <b>does</b> select a bogus cipher, we won't crash or
- * anything; we'll just fail later when we try to look up the cipher in
- * ssl->cipher_list_by_id.]
- */
-static void
-rectify_client_ciphers(SSL *ssl)
-{
-#ifdef V2_HANDSHAKE_CLIENT
-  if (PREDICT_UNLIKELY(!CLIENT_CIPHER_STACK)) {
-    STACK_OF(SSL_CIPHER) *ciphers = SSL_get_ciphers(ssl);
-
-    /* We need to set CLIENT_CIPHER_STACK to an array of the ciphers
-     * we want to use/advertise. */
-    int i = 0, j = 0;
-    smartlist_t *unsupported = smartlist_new();
-
-    /* First, create a dummy SSL_CIPHER for every cipher. */
-    CLIENT_CIPHER_DUMMIES =
-      tor_malloc_zero(sizeof(SSL_CIPHER)*N_CLIENT_CIPHERS);
-    for (i=0; i < N_CLIENT_CIPHERS; ++i) {
-      CLIENT_CIPHER_DUMMIES[i].valid = 1;
-      /* The "3<<24" here signifies that the cipher is supposed to work with
-       * SSL3 and TLS1. */
-      CLIENT_CIPHER_DUMMIES[i].id = CLIENT_CIPHER_INFO_LIST[i].id | (3<<24);
-      CLIENT_CIPHER_DUMMIES[i].name = CLIENT_CIPHER_INFO_LIST[i].name;
-    }
-
-    CLIENT_CIPHER_STACK = sk_SSL_CIPHER_new_null();
-    tor_assert(CLIENT_CIPHER_STACK);
-
-    log_debug(LD_NET, "List was: %s", CLIENT_CIPHER_LIST);
-    for (j = 0; j < sk_SSL_CIPHER_num(ciphers); ++j) {
-      SSL_CIPHER *cipher = sk_SSL_CIPHER_value(ciphers, j);
-      log_debug(LD_NET, "Cipher %d: %lx %s", j,
-                SSL_CIPHER_get_id(cipher), SSL_CIPHER_get_name(cipher));
-    }
-
-    /* Then copy as many ciphers as we can from the good list, inserting
-     * dummies as needed. Let j be an index into list of ciphers we have
-     * (ciphers) and let i be an index into the ciphers we want
-     * (CLIENT_INFO_CIPHER_LIST).  We are building a list of ciphers in
-     * CLIENT_CIPHER_STACK.
-     */
-    for (i = j = 0; i < N_CLIENT_CIPHERS; ) {
-      SSL_CIPHER *cipher = NULL;
-      if (j < sk_SSL_CIPHER_num(ciphers))
-        cipher = sk_SSL_CIPHER_value(ciphers, j);
-      if (cipher && ((SSL_CIPHER_get_id(cipher) >> 24) & 0xff) != 3) {
-        /* Skip over non-v3 ciphers entirely.  (This should no longer be
-         * needed, thanks to saying !SSLv2 above.) */
-        log_debug(LD_NET, "Skipping v%d cipher %s",
-                  (int)((SSL_CIPHER_get_id(cipher)>>24) & 0xff),
-                  SSL_CIPHER_get_name(cipher));
-        ++j;
-      } else if (cipher &&
-                 (SSL_CIPHER_get_id(cipher) & 0xffff) == CLIENT_CIPHER_INFO_LIST[i].id) {
-        /* "cipher" is the cipher we expect. Put it on the list. */
-        log_debug(LD_NET, "Found cipher %s", SSL_CIPHER_get_name(cipher));
-        sk_SSL_CIPHER_push(CLIENT_CIPHER_STACK, cipher);
-        ++j;
-        ++i;
-      } else if (!strcmp(CLIENT_CIPHER_DUMMIES[i].name,
-                         "SSL_RSA_FIPS_WITH_3DES_EDE_CBC_SHA")) {
-        /* We found bogus cipher 0xfeff, which OpenSSL doesn't support and
-         * never has.  For this one, we need a dummy. */
-        log_debug(LD_NET, "Inserting fake %s", CLIENT_CIPHER_DUMMIES[i].name);
-        sk_SSL_CIPHER_push(CLIENT_CIPHER_STACK, &CLIENT_CIPHER_DUMMIES[i]);
-        ++i;
-      } else {
-        /* OpenSSL doesn't have this one. */
-        log_debug(LD_NET, "Completely omitting unsupported cipher %s",
-                  CLIENT_CIPHER_INFO_LIST[i].name);
-        smartlist_add(unsupported, (char*) CLIENT_CIPHER_INFO_LIST[i].name);
-        ++i;
-      }
-    }
-
-    if (smartlist_len(unsupported))
-      log_unsupported_ciphers(unsupported);
-
-    smartlist_free(unsupported);
-  }
-
-  set_ssl_ciphers_to_list(ssl, CLIENT_CIPHER_STACK);
-
-#else
-  (void)ciphers;
-#endif
-}
-
 /** Create a new TLS object from a file descriptor, and a flag to
  * determine whether it is functioning as a server.
  */
@@ -1978,8 +1796,6 @@ tor_tls_new(int sock, int isServer)
     tor_free(result);
     goto err;
   }
-  if (!isServer)
-    rectify_client_ciphers(result->ssl);
   result->socket = sock;
   bio = BIO_new_socket(sock, BIO_NOCLOSE);
   if (! bio) {
