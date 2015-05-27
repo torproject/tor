@@ -78,6 +78,7 @@ dir_common_gen_routerstatus_for_v3ns(int idx, time_t now)
   vote_routerstatus_t *vrs=NULL;
   routerstatus_t *rs = NULL;
   tor_addr_t addr_ipv6;
+  char *method_list = NULL;
 
   switch (idx) {
     case 0:
@@ -154,13 +155,17 @@ dir_common_gen_routerstatus_for_v3ns(int idx, time_t now)
   }
   if (vrs) {
     vrs->microdesc = tor_malloc_zero(sizeof(vote_microdesc_hash_t));
+    method_list = make_consensus_method_list(MIN_SUPPORTED_CONSENSUS_METHOD,
+                                             MAX_SUPPORTED_CONSENSUS_METHOD,
+                                             ",");
     tor_asprintf(&vrs->microdesc->microdesc_hash_line,
-                 "m 9,10,11,12,13,14,15,16,17,18,19 "
+                 "m %s "
                  "sha256=xyzajkldsdsajdadlsdjaslsdksdjlsdjsdaskdaaa%d\n",
-                 idx);
+                 method_list, idx);
   }
 
  done:
+  tor_free(method_list);
   return vrs;
 }
 
