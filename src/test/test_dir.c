@@ -1920,10 +1920,18 @@ test_a_networkstatus(
 
   /* Check the routerstatuses. */
   n_rs = smartlist_len(con->routerstatus_list);
+  tt_assert(n_rs);
   for (idx = 0; idx < n_rs; ++idx) {
     rs = smartlist_get(con->routerstatus_list, idx);
     tt_assert(rs);
     rs_test(rs, now);
+  }
+
+  n_rs = smartlist_len(con_md->routerstatus_list);
+  tt_assert(n_rs);
+  for (idx = 0; idx < n_rs; ++idx) {
+    rs = smartlist_get(con_md->routerstatus_list, idx);
+    tt_assert(rs);
   }
 
   /* Check signatures.  the first voter is a pseudo-entry with a legacy key.
