@@ -54,7 +54,6 @@ static int dirvote_perform_vote(void);
 static void dirvote_clear_votes(int all_votes);
 static int dirvote_compute_consensuses(void);
 static int dirvote_publish_consensus(void);
-static char *make_consensus_method_list(int low, int high, const char *sep);
 
 /* =====
  * Voting
@@ -564,7 +563,7 @@ consensus_method_is_supported(int method)
 
 /** Return a newly allocated string holding the numbers between low and high
  * (inclusive) that are supported consensus methods. */
-static char *
+STATIC char *
 make_consensus_method_list(int low, int high, const char *separator)
 {
   char *list;
