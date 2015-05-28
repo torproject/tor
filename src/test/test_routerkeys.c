@@ -416,12 +416,21 @@ test_routerkeys_ed_keys_init_all(void *arg)
   or_options_t *options = tor_malloc_zero(sizeof(or_options_t));
   time_t now = time(NULL);
   ed25519_public_key_t id;
-  ed25519_keypair_t sign, link, auth;
-  //  tor_cert_t *cert_is, *cert_sl, *cert_auth;
+  ed25519_keypair_t sign, auth;
+  tor_cert_t *link_cert = NULL;
+
+  get_options_mutable()->ORPort_set = 1;
+
+  crypto_pk_t *rsa = pk_generate(0);
+
+  set_server_identity_key(rsa);
+  set_client_identity_key(rsa);
+
+  router_initialize_tls_context();
 
   options->SigningKeyLifetime = 30*86400;
   options->TestingAuthKeyLifetime = 2*86400;
-  options->TestingLinkKeyLifetime = 2*86400;
+  options->TestingLinkCertLifetime = 2*86400;
   options->TestingSigningKeySlop = 2*86400;
   options->TestingAuthKeySlop = 2*3600;
   options->TestingLinkKeySlop = 2*3600;
@@ -440,59 +449,61 @@ test_routerkeys_ed_keys_init_all(void *arg)
   tt_assert(get_master_identity_key());
   tt_assert(get_master_identity_key());
   tt_assert(get_master_signing_keypair());
-  tt_assert(get_current_link_keypair());
   tt_assert(get_current_auth_keypair());
   tt_assert(get_master_signing_key_cert());
-  tt_assert(get_current_link_key_cert());
+  tt_assert(get_current_link_cert_cert());
   tt_assert(get_current_auth_key_cert());
   memcpy(&id, get_master_identity_key(), sizeof(id));
   memcpy(&sign, get_master_signing_keypair(), sizeof(sign));
-  memcpy(&link, get_current_link_keypair(), sizeof(link));
   memcpy(&auth, get_current_auth_keypair(), sizeof(auth));
+  link_cert = tor_cert_dup(get_current_link_cert_cert());
 
   /* Call load_ed_keys again, but nothing has changed. */
   tt_int_op(0, ==, load_ed_keys(options, now));
   tt_mem_op(&id, ==, get_master_identity_key(), sizeof(id));
   tt_mem_op(&sign, ==, get_master_signing_keypair(), sizeof(sign));
-  tt_mem_op(&link, ==, get_current_link_keypair(), sizeof(link));
   tt_mem_op(&auth, ==, get_current_auth_keypair(), sizeof(auth));
+  tt_assert(tor_cert_eq(link_cert, get_current_link_cert_cert()));
 
   /* Force a reload: we make new link/auth keys. */
   routerkeys_free_all();
   tt_int_op(0, ==, load_ed_keys(options, now));
   tt_mem_op(&id, ==, get_master_identity_key(), sizeof(id));
   tt_mem_op(&sign, ==, get_master_signing_keypair(), sizeof(sign));
-  tt_mem_op(&link, !=, get_current_link_keypair(), sizeof(link));
+  tt_assert(tor_cert_eq(link_cert, get_current_link_cert_cert()));
   tt_mem_op(&auth, !=, get_current_auth_keypair(), sizeof(auth));
   tt_assert(get_master_signing_key_cert());
-  tt_assert(get_current_link_key_cert());
+  tt_assert(get_current_link_cert_cert());
   tt_assert(get_current_auth_key_cert());
-  memcpy(&link, get_current_link_keypair(), sizeof(link));
+  tor_cert_free(link_cert);
+  link_cert = tor_cert_dup(get_current_link_cert_cert());
   memcpy(&auth, get_current_auth_keypair(), sizeof(auth));
 
   /* Force a link/auth-key regeneration by advancing time. */
   tt_int_op(0, ==, load_ed_keys(options, now+3*86400));
   tt_mem_op(&id, ==, get_master_identity_key(), sizeof(id));
   tt_mem_op(&sign, ==, get_master_signing_keypair(), sizeof(sign));
-  tt_mem_op(&link, !=, get_current_link_keypair(), sizeof(link));
+  tt_assert(! tor_cert_eq(link_cert, get_current_link_cert_cert()));
   tt_mem_op(&auth, !=, get_current_auth_keypair(), sizeof(auth));
   tt_assert(get_master_signing_key_cert());
-  tt_assert(get_current_link_key_cert());
+  tt_assert(get_current_link_cert_cert());
   tt_assert(get_current_auth_key_cert());
-  memcpy(&link, get_current_link_keypair(), sizeof(link));
+  tor_cert_free(link_cert);
+  link_cert = tor_cert_dup(get_current_link_cert_cert());
   memcpy(&auth, get_current_auth_keypair(), sizeof(auth));
 
   /* Force a signing-key regeneration by advancing time. */
   tt_int_op(0, ==, load_ed_keys(options, now+100*86400));
   tt_mem_op(&id, ==, get_master_identity_key(), sizeof(id));
   tt_mem_op(&sign, !=, get_master_signing_keypair(), sizeof(sign));
-  tt_mem_op(&link, !=, get_current_link_keypair(), sizeof(link));
+  tt_assert(! tor_cert_eq(link_cert, get_current_link_cert_cert()));
   tt_mem_op(&auth, !=, get_current_auth_keypair(), sizeof(auth));
   tt_assert(get_master_signing_key_cert());
-  tt_assert(get_current_link_key_cert());
+  tt_assert(get_current_link_cert_cert());
   tt_assert(get_current_auth_key_cert());
   memcpy(&sign, get_master_signing_keypair(), sizeof(sign));
-  memcpy(&link, get_current_link_keypair(), sizeof(link));
+  tor_cert_free(link_cert);
+  link_cert = tor_cert_dup(get_current_link_cert_cert());
   memcpy(&auth, get_current_auth_keypair(), sizeof(auth));
 
   /* Demonstrate that we can start up with no secret identity key */
@@ -502,10 +513,10 @@ test_routerkeys_ed_keys_init_all(void *arg)
   tt_int_op(0, ==, load_ed_keys(options, now));
   tt_mem_op(&id, ==, get_master_identity_key(), sizeof(id));
   tt_mem_op(&sign, ==, get_master_signing_keypair(), sizeof(sign));
-  tt_mem_op(&link, !=, get_current_link_keypair(), sizeof(link));
+  tt_assert(! tor_cert_eq(link_cert, get_current_link_cert_cert()));
   tt_mem_op(&auth, !=, get_current_auth_keypair(), sizeof(auth));
   tt_assert(get_master_signing_key_cert());
-  tt_assert(get_current_link_key_cert());
+  tt_assert(get_current_link_cert_cert());
   tt_assert(get_current_auth_key_cert());
 
   /* But we're in trouble if we have no id key and our signing key has

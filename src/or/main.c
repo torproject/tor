@@ -1284,7 +1284,8 @@ run_scheduled_events(time_t now)
 
   if (is_server && time_to_check_ed_keys < now) {
     if (should_make_new_ed_keys(options, now)) {
-      if (load_ed_keys(options, now) < 0) {
+      if (load_ed_keys(options, now) < 0 ||
+          generate_ed_link_cert(options, now)) {
         log_err(LD_OR, "Unable to update Ed25519 keys!  Exiting.");
         tor_cleanup();
         exit(0);

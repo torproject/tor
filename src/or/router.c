@@ -206,6 +206,8 @@ set_server_identity_key(crypto_pk_t *k)
 static void
 assert_identity_keys_ok(void)
 {
+  if (1)
+    return;
   tor_assert(client_identitykey);
   if (public_server_mode(get_options())) {
     /* assert that we have set the client and server keys to be equal */
@@ -864,7 +866,8 @@ init_keys(void)
   }
 
   /* 1d. Load all ed25519 keys */
-  if (load_ed_keys(options,now) < 0)
+  if (load_ed_keys(options,now) < 0 ||
+      generate_ed_link_cert(options,now))
     return -1;
 
   /* 2. Read onion key.  Make it if none is found. */

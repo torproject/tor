@@ -3,6 +3,7 @@
 
 #include "or.h"
 #include "config.h"
+#include "router.h"
 #include "routerkeys.h"
 #include "torcert.h"
 
@@ -265,11 +266,13 @@ ed_key_new(const ed25519_keypair_t *signing_key,
 
 static ed25519_keypair_t *master_identity_key = NULL;
 static ed25519_keypair_t *master_signing_key = NULL;
-static ed25519_keypair_t *current_link_key = NULL;
 static ed25519_keypair_t *current_auth_key = NULL;
 static tor_cert_t *signing_key_cert = NULL;
-static tor_cert_t *link_key_cert = NULL;
+static tor_cert_t *link_cert_cert = NULL;
 static tor_cert_t *auth_key_cert = NULL;
+
+static uint8_t *rsa_ed_crosscert = NULL;
+static size_t rsa_ed_crosscert_len = 0;
 
 /**
  * Running as a server: load, reload, or refresh our ed25519 keys and
@@ -280,13 +283,11 @@ load_ed_keys(const or_options_t *options, time_t now)
 {
   ed25519_keypair_t *id = NULL;
   ed25519_keypair_t *sign = NULL;
-  ed25519_keypair_t *link = NULL;
   ed25519_keypair_t *auth = NULL;
   const ed25519_keypair_t *sign_signing_key_with_id = NULL;
   const ed25519_keypair_t *use_signing = NULL;
   const tor_cert_t *check_signing_cert = NULL;
   tor_cert_t *sign_cert = NULL;
-  tor_cert_t *link_cert = NULL;
   tor_cert_t *auth_cert = NULL;
 
 #define FAIL(msg) do {                          \
@@ -380,15 +381,14 @@ load_ed_keys(const or_options_t *options, time_t now)
    * it, if we loaded it in the first place. */
   memwipe(id->seckey.seckey, 0, sizeof(id->seckey));
 
-  if (!current_link_key ||
-      EXPIRES_SOON(link_key_cert, options->TestingLinkKeySlop)) {
-    link = ed_key_new(use_signing, INIT_ED_KEY_NEEDCERT,
-                      now,
-                      options->TestingLinkKeyLifetime,
-                      CERT_TYPE_SIGNING_LINK, &link_cert);
-
-    if (!link)
-      FAIL("Can't create link key");
+  if (!rsa_ed_crosscert && server_mode(options)) {
+    uint8_t *crosscert;
+    ssize_t crosscert_len = tor_make_rsa_ed25519_crosscert(&id->pubkey,
+                                                   get_server_identity_key(),
+                                                   now+10*365*86400,/*XXXX*/
+                                                   &crosscert);
+    rsa_ed_crosscert_len = crosscert_len;
+    rsa_ed_crosscert = crosscert;
   }
 
   if (!current_auth_key ||
@@ -413,40 +413,88 @@ load_ed_keys(const or_options_t *options, time_t now)
     SET_KEY(master_signing_key, sign);
     SET_CERT(signing_key_cert, sign_cert);
   }
-  if (link) {
-    SET_KEY(current_link_key, link);
-    SET_CERT(link_key_cert, link_cert);
-  }
   if (auth) {
     SET_KEY(current_auth_key, auth);
     SET_CERT(auth_key_cert, auth_cert);
   }
 
+  if (generate_ed_link_cert(options, now) < 0)
+    FAIL("Couldn't make link cert");
+
   return 0;
  err:
   ed25519_keypair_free(id);
   ed25519_keypair_free(sign);
-  ed25519_keypair_free(link);
   ed25519_keypair_free(auth);
   tor_cert_free(sign_cert);
-  tor_cert_free(link_cert);
   tor_cert_free(auth_cert);
   return -1;
+}
+
+/**DOCDOC*/
+int
+generate_ed_link_cert(const or_options_t *options, time_t now)
+{
+  const tor_x509_cert_t *link = NULL, *id = NULL;
+  tor_cert_t *link_cert = NULL;
+
+  if (tor_tls_get_my_certs(1, &link, &id) < 0 || link == NULL)
+    return -1;
+
+  const digests_t *digests = tor_x509_cert_get_cert_digests(link);
+
+  if (link_cert_cert &&
+      ! EXPIRES_SOON(link_cert_cert, options->TestingLinkKeySlop) &&
+      fast_memeq(digests->d[DIGEST_SHA256], link_cert_cert->signed_key.pubkey,
+                 DIGEST256_LEN)) {
+    return 0;
+  }
+
+  ed25519_public_key_t dummy_key;
+  memcpy(dummy_key.pubkey, digests->d[DIGEST_SHA256], DIGEST256_LEN);
+
+  link_cert = tor_cert_create(get_master_signing_keypair(),
+                              CERT_TYPE_SIGNING_LINK,
+                              &dummy_key,
+                              now,
+                              options->TestingLinkCertLifetime, 0);
+
+  if (link_cert) {
+    SET_CERT(link_cert_cert, link_cert);
+  }
+  return 0;
+}
+
 #undef FAIL
 #undef SET_KEY
 #undef SET_CERT
-}
 
 int
 should_make_new_ed_keys(const or_options_t *options, const time_t now)
 {
-  return (!master_identity_key ||
-          !master_signing_key ||
-          !current_link_key ||
-          !current_auth_key ||
-          EXPIRES_SOON(signing_key_cert, options->TestingSigningKeySlop) ||
-          EXPIRES_SOON(link_key_cert, options->TestingLinkKeySlop) ||
-          EXPIRES_SOON(auth_key_cert, options->TestingAuthKeySlop));
+  if (!master_identity_key ||
+      !master_signing_key ||
+      !current_auth_key ||
+      !link_cert_cert ||
+      EXPIRES_SOON(signing_key_cert, options->TestingSigningKeySlop) ||
+      EXPIRES_SOON(auth_key_cert, options->TestingAuthKeySlop) ||
+      EXPIRES_SOON(link_cert_cert, options->TestingLinkKeySlop))
+    return 1;
+
+  const tor_x509_cert_t *link = NULL, *id = NULL;
+
+  if (tor_tls_get_my_certs(1, &link, &id) < 0 || link == NULL)
+    return 1;
+
+  const digests_t *digests = tor_x509_cert_get_cert_digests(link);
+
+  if (!fast_memeq(digests->d[DIGEST_SHA256],
+                  link_cert_cert->signed_key.pubkey,
+                  DIGEST256_LEN)) {
+    return 1;
+  }
+
+  return 0;
 }
 
 #undef EXPIRES_SOON
@@ -472,27 +520,29 @@ get_master_signing_key_cert(void)
 }
 
 const ed25519_keypair_t *
-get_current_link_keypair(void)
-{
-  return current_link_key;
-}
-
-const ed25519_keypair_t *
 get_current_auth_keypair(void)
 {
   return current_auth_key;
 }
 
 const tor_cert_t *
-get_current_link_key_cert(void)
+get_current_link_cert_cert(void)
 {
-  return link_key_cert;
+  return link_cert_cert;
 }
 
 const tor_cert_t *
 get_current_auth_key_cert(void)
 {
   return auth_key_cert;
+}
+
+void
+get_master_rsa_crosscert(const uint8_t **cert_out,
+                         size_t *size_out)
+{
+  *cert_out = rsa_ed_crosscert;
+  *size_out = rsa_ed_crosscert_len;
 }
 
 /** Construct cross-certification for the master identity key with
@@ -587,14 +637,13 @@ routerkeys_free_all(void)
 {
   ed25519_keypair_free(master_identity_key);
   ed25519_keypair_free(master_signing_key);
-  ed25519_keypair_free(current_link_key);
   ed25519_keypair_free(current_auth_key);
   tor_cert_free(signing_key_cert);
-  tor_cert_free(link_key_cert);
+  tor_cert_free(link_cert_cert);
   tor_cert_free(auth_key_cert);
 
   master_identity_key = master_signing_key = NULL;
-  current_link_key = current_auth_key = NULL;
-  signing_key_cert = link_key_cert = auth_key_cert = NULL;
+  current_auth_key = NULL;
+  signing_key_cert = link_cert_cert = auth_key_cert = NULL;
 }
 

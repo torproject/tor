@@ -358,7 +358,7 @@ static config_var_t option_vars_[] = {
   V(TestingMinExitFlagThreshold, MEMUNIT,  "0"),
   V(TestingMinFastFlagThreshold, MEMUNIT,  "0"),
 
-  V(TestingLinkKeyLifetime,          INTERVAL, "2 days"),
+  V(TestingLinkCertLifetime,          INTERVAL, "2 days"),
   V(TestingAuthKeyLifetime,          INTERVAL, "2 days"),
   V(TestingLinkKeySlop,              INTERVAL, "3 hours"),
   V(TestingAuthKeySlop,              INTERVAL, "3 hours"),
@@ -3634,7 +3634,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   CHECK_DEFAULT(TestingMicrodescMaxDownloadTries);
   CHECK_DEFAULT(TestingCertMaxDownloadTries);
   CHECK_DEFAULT(TestingAuthKeyLifetime);
-  CHECK_DEFAULT(TestingLinkKeyLifetime);
+  CHECK_DEFAULT(TestingLinkCertLifetime);
   CHECK_DEFAULT(TestingSigningKeySlop);
   CHECK_DEFAULT(TestingAuthKeySlop);
   CHECK_DEFAULT(TestingLinkKeySlop);
@@ -3642,8 +3642,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (options->SigningKeyLifetime < options->TestingSigningKeySlop*2)
     REJECT("SigningKeyLifetime is too short.");
-  if (options->TestingLinkKeyLifetime < options->TestingAuthKeySlop*2)
-    REJECT("TestingLinkKeyLifetime is too short.");
+  if (options->TestingLinkCertLifetime < options->TestingAuthKeySlop*2)
+    REJECT("LinkCertLifetime is too short.");
   if (options->TestingAuthKeyLifetime < options->TestingLinkKeySlop*2)
     REJECT("TestingAuthKeyLifetime is too short.");
 

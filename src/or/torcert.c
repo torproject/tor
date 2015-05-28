@@ -1,12 +1,13 @@
 /* Copyright (c) 2014, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include "torcert.h"
 #include "crypto.h"
+#include "torcert.h"
 #include "ed25519_cert.h"
 #include "torlog.h"
 #include "util.h"
 #include "compat.h"
+#include "link_handshake.h"
 
 /** Helper for tor_cert_create(): signs any 32 bytes, not just an ed25519
  * key.
@@ -236,4 +237,44 @@ tor_cert_opt_eq(const tor_cert_t *cert1, const tor_cert_t *cert2)
   if (!cert1 || !cert2)
     return 0;
   return tor_cert_eq(cert1, cert2);
+}
+
+/** Create new cross-certification object to certify <b>ed_key</b> as the
+ * master ed25519 identity key for the RSA identity key <b>rsa_key</b>.
+ * Allocates and stores the encoded certificate in *<b>cert</b>, and returns
+ * the number of bytes stored. Returns negative on error.*/
+ssize_t
+tor_make_rsa_ed25519_crosscert(const ed25519_public_key_t *ed_key,
+                               const crypto_pk_t *rsa_key,
+                               time_t expires,
+                               uint8_t **cert)
+{
+  uint8_t *res;
+
+  rsa_ed_crosscert_t *cc = rsa_ed_crosscert_new();
+  memcpy(cc->ed_key, ed_key->pubkey, ED25519_PUBKEY_LEN);
+  cc->expiration = (uint32_t) CEIL_DIV(expires, 3600);
+  cc->sig_len = crypto_pk_keysize(rsa_key);
+  rsa_ed_crosscert_setlen_sig(cc, crypto_pk_keysize(rsa_key));
+
+  ssize_t alloc_sz = rsa_ed_crosscert_encoded_len(cc);
+  tor_assert(alloc_sz > 0);
+  res = tor_malloc_zero(alloc_sz);
+  ssize_t sz = rsa_ed_crosscert_encode(res, alloc_sz, cc);
+  tor_assert(sz > 0 && sz <= alloc_sz);
+
+  const int signed_part_len = 32 + 4;
+  int siglen = crypto_pk_private_sign(rsa_key,
+                                      (char*)rsa_ed_crosscert_getarray_sig(cc),
+                                      rsa_ed_crosscert_getlen_sig(cc),
+                                      (char*)res, signed_part_len);
+  tor_assert(siglen > 0 && siglen <= (int)crypto_pk_keysize(rsa_key));
+  tor_assert(siglen <= UINT8_MAX);
+  cc->sig_len = siglen;
+  rsa_ed_crosscert_setlen_sig(cc, siglen);
+
+  sz = rsa_ed_crosscert_encode(res, alloc_sz, cc);
+  rsa_ed_crosscert_free(cc);
+  *cert = res;
+  return sz;
 }
