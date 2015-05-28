@@ -2882,7 +2882,6 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
                extrainfo->nickname, identity,
                ed_cert_line,
                published, bandwidth_usage);
-  tor_free(bandwidth_usage);
   smartlist_add(chunks, pre);
 
   if (geoip_is_loaded(AF_INET))
@@ -3030,6 +3029,7 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   tor_free(s_dup);
   tor_free(ed_cert_line);
   extrainfo_free(ei_tmp);
+  tor_free(bandwidth_usage);
 
   return result;
 }
