@@ -1,0 +1,4 @@
+  o Minor bugfixes (hidden services):
+    - Avoid crashing with a double-free bug when we create an
+      ephemeral hidden service but adding it fails for some reason.
+      Fixes bug 16228; bugfix on 0.2.7.1-alpha.

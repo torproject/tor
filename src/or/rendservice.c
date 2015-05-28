@@ -256,7 +256,7 @@ rend_service_free_all(void)
 }
 
 /** Validate <b>service</b> and add it to rend_service_list if possible.
- * Return 0 on success and -1 on failure.
+ * Return 0 on success.  On failure, free <b>service</b> and return -1.
  */
 static int
 rend_add_service(rend_service_t *service)
@@ -868,7 +868,6 @@ rend_service_add_ephemeral(crypto_pk_t *pk,
 
   /* Initialize the service. */
   if (rend_add_service(s)) {
-    rend_service_free(s);
     return RSAE_INTERNAL;
   }
   *service_id_out = tor_strdup(s->service_id);
