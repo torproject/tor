@@ -179,9 +179,11 @@ test_link_handshake_certs_ok(void *arg)
   tor_free(cell2);
   certs_cell_free(cc1);
   certs_cell_free(cc2);
-  circuitmux_free(chan1->base_.cmux);
+  if (chan1)
+    circuitmux_free(chan1->base_.cmux);
   tor_free(chan1);
-  circuitmux_free(chan2->base_.cmux);
+  if (chan2)
+    circuitmux_free(chan2->base_.cmux);
   tor_free(chan2);
   crypto_pk_free(key1);
   crypto_pk_free(key2);
