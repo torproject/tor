@@ -142,26 +142,24 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
     cert = tor_cert_parse(certbuf, cert_body_len);
 
   /* If we got it, check it to the extent we can. */
-  if (cert) {
-    int bad_cert = 0;
+  int bad_cert = 0;
 
-    if (! cert) {
-      tor_log(severity, LD_OR, "Cert was unparseable");
-      bad_cert = 1;
-    } else if (!tor_memeq(cert->signed_key.pubkey, keypair->pubkey.pubkey,
-                          ED25519_PUBKEY_LEN)) {
-      tor_log(severity, LD_OR, "Cert was for wrong key");
-      bad_cert = 1;
-    } else if (tor_cert_checksig(cert, &signing_key->pubkey, now) < 0 &&
-               (signing_key || cert->cert_expired)) {
-      tor_log(severity, LD_OR, "Can't check certificate");
-      bad_cert = 1;
-    }
+  if (! cert) {
+    tor_log(severity, LD_OR, "Cert was unparseable");
+    bad_cert = 1;
+  } else if (!tor_memeq(cert->signed_key.pubkey, keypair->pubkey.pubkey,
+                        ED25519_PUBKEY_LEN)) {
+    tor_log(severity, LD_OR, "Cert was for wrong key");
+    bad_cert = 1;
+  } else if (tor_cert_checksig(cert, &signing_key->pubkey, now) < 0 &&
+             (signing_key || cert->cert_expired)) {
+    tor_log(severity, LD_OR, "Can't check certificate");
+    bad_cert = 1;
+  }
 
-    if (bad_cert) {
-      tor_cert_free(cert);
-      cert = NULL;
-    }
+  if (bad_cert) {
+    tor_cert_free(cert);
+    cert = NULL;
   }
 
   /* If we got a cert, we're done. */
