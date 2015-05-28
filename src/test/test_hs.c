@@ -309,6 +309,8 @@ test_hs_rend_data(void *arg)
   char desc_id[DIGEST_LEN];
   char client_cookie[REND_DESC_COOKIE_LEN];
   time_t now = time(NULL);
+  rend_data_t *service_dup = NULL;
+  rend_data_t *service = NULL;
 
   (void)arg;
 
@@ -384,7 +386,6 @@ test_hs_rend_data(void *arg)
   rend_data_free(client);
 
   /* Let's test the service object now. */
-  rend_data_t *service;
   char rend_pk_digest[DIGEST_LEN];
   uint8_t rend_cookie[DIGEST_LEN];
   memset(rend_pk_digest, 'f', sizeof(rend_pk_digest));
@@ -408,7 +409,7 @@ test_hs_rend_data(void *arg)
   tt_int_op(tor_digest_is_zero(service->desc_id_fetch), ==, 1);
 
   /* Test dup(). */
-  rend_data_t *service_dup = rend_data_dup(service);
+  service_dup = rend_data_dup(service);
   tt_assert(service_dup);
   tt_int_op(service_dup->auth_type, ==, service->auth_type);
   tt_str_op(service_dup->onion_address, OP_EQ, service->onion_address);
@@ -424,11 +425,10 @@ test_hs_rend_data(void *arg)
   /* The rest should be zeroed because this is a service request. */
   tt_int_op(tor_digest_is_zero(service_dup->descriptor_cookie), ==, 1);
   tt_int_op(tor_digest_is_zero(service_dup->desc_id_fetch), ==, 1);
-  rend_data_free(service);
-  rend_data_free(service_dup);
 
  done:
-  return;
+  rend_data_free(service);
+  rend_data_free(service_dup);
 }
 
 struct testcase_t hs_tests[] = {
