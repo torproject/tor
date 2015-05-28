@@ -199,7 +199,8 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
   goto cleanup;
 
  err:
-  memwipe(keypair, 0, sizeof(*keypair));
+  if (keypair)
+    memwipe(keypair, 0, sizeof(*keypair));
   tor_free(keypair);
   tor_cert_free(cert);
   if (cert_out)
