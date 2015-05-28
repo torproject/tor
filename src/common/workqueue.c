@@ -359,12 +359,17 @@ threadpool_queue_update(threadpool_t *pool,
   return 0;
 }
 
+/** Don't have more than this many threads per pool. */
+#define MAX_THREADS 1024
+
 /** Launch threads until we have <b>n</b>. */
 static int
 threadpool_start_threads(threadpool_t *pool, int n)
 {
   if (n < 0)
     return -1;
+  if (n > MAX_THREADS)
+    n = MAX_THREADS;
 
   tor_mutex_acquire(&pool->lock);
 
