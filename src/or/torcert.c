@@ -68,13 +68,15 @@ tor_cert_sign_impl(const ed25519_keypair_t *signing_key,
 
   tor_free(encoded);
 
-  return torcert;
+  goto done;
 
  err:
   tor_cert_free(torcert);
+  torcert = NULL;
+ done:
   ed25519_cert_free(cert);
   tor_free(encoded);
-  return NULL;
+  return torcert;
 }
 
 /**
@@ -151,7 +153,7 @@ tor_cert_parse(const uint8_t *encoded, const size_t len)
   cert = NULL;
  done:
   ed25519_cert_free(parsed);
-  return NULL;
+  return cert;
 }
 
 /** Fill in <b>checkable_out</b> with the information needed to check
