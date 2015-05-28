@@ -604,6 +604,8 @@ test_routerkeys_cross_certify_tap(void *args)
 
  done:
   tor_free(cc);
+  crypto_pk_free(id_key);
+  crypto_pk_free(onion_key);
 }
 
 #define TEST(name, flags)                                       \
