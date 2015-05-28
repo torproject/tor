@@ -216,6 +216,7 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
   tor_free(secret_fname);
   tor_free(public_fname);
   tor_free(cert_fname);
+  tor_free(got_tag);
 
   return keypair;
 }
