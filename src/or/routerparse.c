@@ -324,6 +324,8 @@ static token_rule_t routerdesc_token_table[] = {
 static token_rule_t extrainfo_token_table[] = {
   T1_END( "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ ),
   T1( "published",           K_PUBLISHED,       CONCAT_ARGS, NO_OBJ ),
+  T01("identity-ed25519",    K_IDENTITY_ED25519,    NO_ARGS, NEED_OBJ ),
+  T01("router-sig-ed25519",  K_ROUTER_SIG_ED25519,  GE(1),   NO_OBJ ),
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   T01("read-history",        K_READ_HISTORY,        ARGS,    NO_OBJ ),
   T01("write-history",       K_WRITE_HISTORY,       ARGS,    NO_OBJ ),
@@ -1398,7 +1400,7 @@ router_parse_entry_from_string(const char *s, const char *end,
 
       ntor_cc_cert = tor_cert_parse((const uint8_t*)cc_ntor_tok->object_body,
                                     cc_ntor_tok->object_size);
-      if (!cc_ntor_tok) {
+      if (!ntor_cc_cert) {
         log_warn(LD_DIR, "Couldn't parse ntor-onion-key-crosscert cert");
         goto err;
       }
@@ -1564,6 +1566,14 @@ router_parse_entry_from_string(const char *s, const char *end,
     } else {
       log_warn(LD_DIR, "Invalid extra info digest %s", escaped(tok->args[0]));
     }
+
+    if (tok->n_args >= 2) {
+      if (digest256_from_base64(router->extra_info_digest256, tok->args[1])
+          < 0) {
+        log_warn(LD_DIR, "Invalid extra info digest256 %s",
+                 escaped(tok->args[1]));
+      }
+    }
   }
 
   if (find_opt_by_keyword(tokens, K_HIDDEN_SERVICE_DIR)) {
@@ -1666,6 +1676,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
     goto err;
   }
 
+  /* XXXX Accept this in position 1 too, and ed identity in position 0. */
   tok = smartlist_get(tokens,0);
   if (tok->tp != K_EXTRA_INFO) {
     log_warn(LD_DIR,"Entry does not start with \"extra-info\"");
@@ -1678,6 +1689,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
     extrainfo->cache_info.signed_descriptor_body = tor_memdup_nulterm(s,end-s);
   extrainfo->cache_info.signed_descriptor_len = end-s;
   memcpy(extrainfo->cache_info.signed_descriptor_digest, digest, DIGEST_LEN);
+  crypto_digest256((char*)extrainfo->digest256, s, end-s, DIGEST_SHA256);
 
   tor_assert(tok->n_args >= 2);
   if (!is_legal_nickname(tok->args[0])) {
@@ -1698,6 +1710,87 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
     log_warn(LD_DIR,"Invalid published time %s on \"extra-info\"",
              escaped(tok->args[0]));
     goto err;
+  }
+
+  {
+    directory_token_t *ed_sig_tok, *ed_cert_tok;
+    ed_sig_tok = find_opt_by_keyword(tokens, K_ROUTER_SIG_ED25519);
+    ed_cert_tok = find_opt_by_keyword(tokens, K_IDENTITY_ED25519);
+    int n_ed_toks = !!ed_sig_tok + !!ed_cert_tok;
+    if (n_ed_toks != 0 && n_ed_toks != 2) {
+      log_warn(LD_DIR, "Router descriptor with only partial ed25519/"
+               "cross-certification support");
+      goto err;
+    }
+    if (ed_sig_tok) {
+      tor_assert(ed_cert_tok);
+      const int ed_cert_token_pos = smartlist_pos(tokens, ed_cert_tok);
+      if (ed_cert_token_pos != 1) {
+        /* Accept this in position 0 XXXX */
+        log_warn(LD_DIR, "Ed25519 certificate in wrong position");
+        goto err;
+      }
+      if (ed_sig_tok != smartlist_get(tokens, smartlist_len(tokens)-2)) {
+        log_warn(LD_DIR, "Ed25519 signature in wrong position");
+        goto err;
+      }
+      if (strcmp(ed_cert_tok->object_type, "ED25519 CERT")) {
+        log_warn(LD_DIR, "Wrong object type on identity-ed25519 in decriptor");
+        goto err;
+      }
+
+      uint8_t d256[DIGEST256_LEN];
+      const char *signed_start, *signed_end;
+      tor_cert_t *cert = tor_cert_parse(
+                       (const uint8_t*)ed_cert_tok->object_body,
+                       ed_cert_tok->object_size);
+      if (! cert) {
+        log_warn(LD_DIR, "Couldn't parse ed25519 cert");
+        goto err;
+      }
+      extrainfo->signing_key_cert = cert; /* makes sure it gets freed. */
+      if (cert->cert_type != CERT_TYPE_ID_SIGNING ||
+          ! cert->signing_key_included) {
+        log_warn(LD_DIR, "Invalid form for ed25519 cert");
+        goto err;
+      }
+
+      if (router_get_hash_impl_helper(s, end-s, "extra-info ",
+                                      "\nrouter-sig-ed25519",
+                                      ' ', &signed_start, &signed_end) < 0) {
+        log_warn(LD_DIR, "Can't find ed25519-signed portion of extrainfo");
+        goto err;
+      }
+      crypto_digest_t *d = crypto_digest256_new(DIGEST_SHA256);
+      crypto_digest_add_bytes(d, ED_DESC_SIGNATURE_PREFIX,
+        strlen(ED_DESC_SIGNATURE_PREFIX));
+      crypto_digest_add_bytes(d, signed_start, signed_end-signed_start);
+      crypto_digest_get_digest(d, (char*)d256, sizeof(d256));
+      crypto_digest_free(d);
+
+      ed25519_checkable_t check[2];
+      int check_ok[2];
+      if (tor_cert_get_checkable_sig(&check[0], cert, NULL) < 0) {
+        log_err(LD_BUG, "Couldn't create 'checkable' for cert.");
+        goto err;
+      }
+
+      if (ed25519_signature_from_base64(&check[1].signature,
+                                        ed_sig_tok->args[0])<0) {
+        log_warn(LD_DIR, "Couldn't decode ed25519 signature");
+        goto err;
+      }
+      check[1].pubkey = &cert->signed_key;
+      check[1].msg = d256;
+      check[1].len = DIGEST256_LEN;
+
+      if (ed25519_checksig_batch(check_ok, check, 2) < 0) {
+        log_warn(LD_DIR, "Incorrect ed25519 signature(s)");
+        goto err;
+      }
+      /* We don't check the certificate expiration time: checking that it
+       * matches the cert in the router descriptor is adequate. */
+    }
   }
 
   /* We've checked everything that's covered by the hash. */

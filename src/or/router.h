@@ -109,7 +109,8 @@ int router_has_addr(const routerinfo_t *router, const tor_addr_t *addr);
 int router_has_orport(const routerinfo_t *router,
                       const tor_addr_port_t *orport);
 int extrainfo_dump_to_string(char **s, extrainfo_t *extrainfo,
-                             crypto_pk_t *ident_key);
+                             crypto_pk_t *ident_key,
+                             const ed25519_keypair_t *signing_keypair);
 int is_legal_nickname(const char *s);
 int is_legal_nickname_or_hexdigest(const char *s);
 int is_legal_hexdigest(const char *s);

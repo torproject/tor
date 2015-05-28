@@ -1974,10 +1974,12 @@ router_rebuild_descriptor(int force)
   ei->cache_info.is_extrainfo = 1;
   strlcpy(ei->nickname, get_options()->Nickname, sizeof(ei->nickname));
   ei->cache_info.published_on = ri->cache_info.published_on;
+  ei->signing_key_cert = tor_cert_dup(get_master_signing_key_cert());
   memcpy(ei->cache_info.identity_digest, ri->cache_info.identity_digest,
          DIGEST_LEN);
   if (extrainfo_dump_to_string(&ei->cache_info.signed_descriptor_body,
-                               ei, get_server_identity_key()) < 0) {
+                               ei, get_server_identity_key(),
+                               get_master_signing_keypair()) < 0) {
     log_warn(LD_BUG, "Couldn't generate extra-info descriptor.");
     extrainfo_free(ei);
     ei = NULL;
@@ -1987,6 +1989,10 @@ router_rebuild_descriptor(int force)
     router_get_extrainfo_hash(ei->cache_info.signed_descriptor_body,
                               ei->cache_info.signed_descriptor_len,
                               ei->cache_info.signed_descriptor_digest);
+    crypto_digest256((char*) ei->digest256,
+                     ei->cache_info.signed_descriptor_body,
+                     ei->cache_info.signed_descriptor_len,
+                     DIGEST_SHA256);
   }
 
   /* Now finish the router descriptor. */
@@ -1994,6 +2000,9 @@ router_rebuild_descriptor(int force)
     memcpy(ri->cache_info.extra_info_digest,
            ei->cache_info.signed_descriptor_digest,
            DIGEST_LEN);
+    memcpy(ri->extra_info_digest256,
+           ei->digest256,
+           DIGEST256_LEN);
   } else {
     /* ri was allocated with tor_malloc_zero, so there is no need to
      * zero ri->cache_info.extra_info_digest here. */
@@ -2319,8 +2328,7 @@ router_dump_router_to_string(routerinfo_t *router,
   char digest[DIGEST256_LEN];
   char published[ISO_TIME_LEN+1];
   char fingerprint[FINGERPRINT_LEN+1];
-  int has_extra_info_digest;
-  char extra_info_digest[HEX_DIGEST_LEN+1];
+  char *extra_info_line = NULL;
   size_t onion_pkeylen, identity_pkeylen;
   char *family_line = NULL;
   char *extra_or_address = NULL;
@@ -2457,12 +2465,19 @@ router_dump_router_to_string(routerinfo_t *router,
     family_line = tor_strdup("");
   }
 
-  has_extra_info_digest =
-    ! tor_digest_is_zero(router->cache_info.extra_info_digest);
-
-  if (has_extra_info_digest) {
+  if (!tor_digest_is_zero(router->cache_info.extra_info_digest)) {
+    char extra_info_digest[HEX_DIGEST_LEN+1];
     base16_encode(extra_info_digest, sizeof(extra_info_digest),
                   router->cache_info.extra_info_digest, DIGEST_LEN);
+    if (!tor_digest256_is_zero(router->extra_info_digest256)) {
+      char d256_64[BASE64_DIGEST256_LEN+1];
+      digest256_to_base64(d256_64, router->extra_info_digest256);
+      tor_asprintf(&extra_info_line, "extra-info-digest %s %s\n",
+                   extra_info_digest, d256_64);
+    } else {
+      tor_asprintf(&extra_info_line, "extra-info-digest %s\n",
+                   extra_info_digest);
+    }
   }
 
   if (router->ipv6_orport &&
@@ -2491,7 +2506,7 @@ router_dump_router_to_string(routerinfo_t *router,
                     "fingerprint %s\n"
                     "uptime %ld\n"
                     "bandwidth %d %d %d\n"
-                    "%s%s%s%s"
+                    "%s%s"
                     "onion-key\n%s"
                     "signing-key\n%s"
                     "%s%s"
@@ -2509,9 +2524,7 @@ router_dump_router_to_string(routerinfo_t *router,
     (int) router->bandwidthrate,
     (int) router->bandwidthburst,
     (int) router->bandwidthcapacity,
-    has_extra_info_digest ? "extra-info-digest " : "",
-    has_extra_info_digest ? extra_info_digest : "",
-    has_extra_info_digest ? "\n" : "",
+    extra_info_line ? extra_info_line : "",
     (options->DownloadExtraInfo || options->V3AuthoritativeDir) ?
                          "caches-extra-info\n" : "",
     onion_pkey, identity_pkey,
@@ -2631,6 +2644,7 @@ router_dump_router_to_string(routerinfo_t *router,
   tor_free(ed_cert_line);
   tor_free(rsa_tap_cc_line);
   tor_free(ntor_cc_line);
+  tor_free(extra_info_line);
 
   return output;
 }
@@ -2774,7 +2788,8 @@ load_stats_file(const char *filename, const char *end_line, time_t now,
  * success, negative on failure. */
 int
 extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
-                         crypto_pk_t *ident_key)
+                         crypto_pk_t *ident_key,
+                         const ed25519_keypair_t *signing_keypair)
 {
   const or_options_t *options = get_options();
   char identity[HEX_DIGEST_LEN+1];
@@ -2784,18 +2799,44 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   int result;
   static int write_stats_to_extrainfo = 1;
   char sig[DIROBJ_MAX_SIG_LEN+1];
-  char *s, *pre, *contents, *cp, *s_dup = NULL;
+  char *s = NULL, *pre, *contents, *cp, *s_dup = NULL;
   time_t now = time(NULL);
   smartlist_t *chunks = smartlist_new();
   extrainfo_t *ei_tmp = NULL;
+  const int emit_ed_sigs = signing_keypair && extrainfo->signing_key_cert;
+  char *ed_cert_line = NULL;
 
   base16_encode(identity, sizeof(identity),
                 extrainfo->cache_info.identity_digest, DIGEST_LEN);
   format_iso_time(published, extrainfo->cache_info.published_on);
   bandwidth_usage = rep_hist_get_bandwidth_lines();
+  if (emit_ed_sigs) {
+    if (!extrainfo->signing_key_cert->signing_key_included ||
+        !ed25519_pubkey_eq(&extrainfo->signing_key_cert->signed_key,
+                           &signing_keypair->pubkey)) {
+      log_warn(LD_BUG, "Tried to sign a extrainfo descriptor with a "
+               "mismatched ed25519 key chain %d",
+               extrainfo->signing_key_cert->signing_key_included);
+      goto err;
+    }
+    char ed_cert_base64[256];
+    if (base64_encode(ed_cert_base64, sizeof(ed_cert_base64),
+                      (const char*)extrainfo->signing_key_cert->encoded,
+                      extrainfo->signing_key_cert->encoded_len) < 0) {
+      log_err(LD_BUG,"Couldn't base64-encode signing key certificate!");
+      goto err;
+    }
+    tor_asprintf(&ed_cert_line, "identity-ed25519\n"
+                 "-----BEGIN ED25519 CERT-----\n"
+                 "%s"
+                 "-----END ED25519 CERT-----\n", ed_cert_base64);
+  } else {
+    ed_cert_line = tor_strdup("");
+  }
 
-  tor_asprintf(&pre, "extra-info %s %s\npublished %s\n%s",
+  tor_asprintf(&pre, "extra-info %s %s\n%spublished %s\n%s",
                extrainfo->nickname, identity,
+               ed_cert_line,
                published, bandwidth_usage);
   tor_free(bandwidth_usage);
   smartlist_add(chunks, pre);
@@ -2855,6 +2896,23 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
     }
   }
 
+  if (emit_ed_sigs) {
+    char digest[DIGEST256_LEN];
+    smartlist_add(chunks, tor_strdup("router-sig-ed25519 "));
+    crypto_digest_smartlist_prefix(digest, DIGEST256_LEN,
+                                   ED_DESC_SIGNATURE_PREFIX,
+                                   chunks, "", DIGEST_SHA256);
+    ed25519_signature_t sig;
+    char buf[ED25519_SIG_BASE64_LEN+1];
+    if (ed25519_sign(&sig, (const uint8_t*)digest, DIGEST256_LEN,
+                     signing_keypair) < 0)
+      goto err;
+    if (ed25519_signature_to_base64(buf, &sig) < 0)
+      goto err;
+
+    smartlist_add_asprintf(chunks, "%s\n", buf);
+  }
+
   smartlist_add(chunks, tor_strdup("router-signature\n"));
   s = smartlist_join_strings(chunks, "", 0, NULL);
 
@@ -2903,7 +2961,8 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
                            "adding statistics to this or any future "
                            "extra-info descriptors.");
       write_stats_to_extrainfo = 0;
-      result = extrainfo_dump_to_string(s_out, extrainfo, ident_key);
+      result = extrainfo_dump_to_string(s_out, extrainfo, ident_key,
+                                        signing_keypair);
       goto done;
     } else {
       log_warn(LD_BUG, "We just generated an extrainfo descriptor we "
@@ -2925,6 +2984,7 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_free(chunks);
   tor_free(s_dup);
+  tor_free(ed_cert_line);
   extrainfo_free(ei_tmp);
 
   return result;

@@ -16,6 +16,7 @@ import ctypes.util
 import hashlib
 import optparse
 import os
+import re
 import struct
 import time
 import UserDict
@@ -297,7 +298,7 @@ def signdesc(body, args_out=None):
     return body.rstrip()
 
 def print_c_string(ident, body):
-    print "static const char EX %s[] =" % ident
+    print "static const char %s[] =" % ident
     for line in body.split("\n"):
         print '  "%s\\n"' %(line)
     print "  ;"
@@ -314,9 +315,9 @@ def emit_ei(name, body):
     body = info.sign_desc(body)
     print_c_string("EX_EI_%s"%name.upper(), body)
 
-    print 'const char {NAME}_FP[] = "{d.RSA_FINGERPRINT_NOSPACE}";'.format(
+    print 'const char EX_EI_{NAME}_FP[] = "{d.RSA_FINGERPRINT_NOSPACE}";'.format(
         d=info, NAME=name.upper())
-    prnit_c_string("%s_KEY"%name.upper(), d.RSA_IDENTITY)
+    print_c_string("EX_EI_%s_KEY"%name.upper(), info.RSA_IDENTITY)
 
 def analyze(s):
     fields = {}
@@ -330,6 +331,7 @@ def analyze(s):
     return fields, s
 
 def process_file(s):
+    fields, s = analyze(s)
     try:
         name = fields['name']
         tp = fields['type']
@@ -343,25 +345,7 @@ def process_file(s):
     else:
         raise ValueError("unrecognized type")
 
-if 0:
-    emit_ri("minimal_ed",
-     """\
-router fred 127.0.0.1 9001 0 9002
-identity-ed25519
-{d.ED_CERT}
-signing-key
-{d.RSA_IDENTITY}
-onion-key
-{d.RSA_ONION_KEY}
-ntor-onion-key {d.NTOR_ONION_KEY}
-ntor-onion-key-crosscert {d.NTOR_CROSSCERT_SIGN}
-{d.NTOR_CROSSCERT}
-onion-key-crosscert
-{d.RSA_CROSSCERT_ED}
-published 2014-10-05 12:00:00
-bandwidth 1000 1000 1000
-reject *:*
-router-sig-ed25519 {d.ED_SIGNATURE}
-router-signature
-{d.RSA_SIGNATURE}
-""")
+if __name__ == '__main__':
+    import sys
+    for fn in sys.argv[1:]:
+        process_file(open(fn).read())
