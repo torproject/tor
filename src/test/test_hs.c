@@ -304,7 +304,7 @@ static void
 test_hs_rend_data(void *arg)
 {
   int rep;
-  rend_data_t *client = NULL;
+  rend_data_t *client = NULL, *client_dup = NULL;
   /* Binary format of a descriptor ID. */
   char desc_id[DIGEST_LEN];
   char client_cookie[REND_DESC_COOKIE_LEN];
@@ -340,7 +340,7 @@ test_hs_rend_data(void *arg)
   tt_int_op(tor_digest_is_zero(client->rend_cookie), ==, 1);
 
   /* Test dup(). */
-  rend_data_t *client_dup = rend_data_dup(client);
+  client_dup = rend_data_dup(client);
   tt_assert(client_dup);
   tt_int_op(client_dup->auth_type, ==, client->auth_type);
   tt_str_op(client_dup->onion_address, OP_EQ, client->onion_address);
@@ -359,7 +359,9 @@ test_hs_rend_data(void *arg)
   tt_int_op(tor_digest_is_zero(client_dup->rend_pk_digest), ==, 1);
   tt_int_op(tor_digest_is_zero(client_dup->rend_cookie), ==, 1);
   rend_data_free(client);
+  client = NULL;
   rend_data_free(client_dup);
+  client_dup = NULL;
 
   /* Reset state. */
   base32_decode(desc_id, sizeof(desc_id), STR_DESC_ID_BASE32,
@@ -431,6 +433,7 @@ test_hs_rend_data(void *arg)
   rend_data_free(service);
   rend_data_free(service_dup);
   rend_data_free(client);
+  rend_data_free(client_dup);
 }
 
 struct testcase_t hs_tests[] = {
