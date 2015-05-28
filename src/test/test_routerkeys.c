@@ -86,7 +86,7 @@ test_routerkeys_ed_certs(void *args)
 {
   (void)args;
   ed25519_keypair_t kp1, kp2;
-  tor_cert_t *cert[2] = {NULL, NULL};
+  tor_cert_t *cert[2] = {NULL, NULL}, *nocert = NULL;
   tor_cert_t *parsed_cert[2] = {NULL, NULL};
   time_t now = 1412094534;
   uint8_t *junk = NULL;
@@ -156,17 +156,20 @@ test_routerkeys_ed_certs(void *args)
 
   /* Now try some junky certs. */
   /* - Truncated */
-  tt_ptr_op(NULL, ==,tor_cert_parse(cert[0]->encoded, cert[0]->encoded_len-1));
+  nocert = tor_cert_parse(cert[0]->encoded, cert[0]->encoded_len-1);
+  tt_ptr_op(NULL, ==, nocert);
 
   /* - First byte modified */
   cert[0]->encoded[0] = 99;
-  tt_ptr_op(NULL, ==,tor_cert_parse(cert[0]->encoded, cert[0]->encoded_len));
+  nocert = tor_cert_parse(cert[0]->encoded, cert[0]->encoded_len);
+  tt_ptr_op(NULL, ==, nocert);
   cert[0]->encoded[0] = 1;
 
   /* - Extra byte at the end*/
   junk = tor_malloc_zero(cert[0]->encoded_len + 1);
   memcpy(junk, cert[0]->encoded, cert[0]->encoded_len);
-  tt_ptr_op(NULL, ==, tor_cert_parse(junk, cert[0]->encoded_len+1));
+  nocert = tor_cert_parse(junk, cert[0]->encoded_len+1);
+  tt_ptr_op(NULL, ==, nocert);
 
   /* - Multiple signing key instances */
   tor_free(junk);
@@ -179,13 +182,15 @@ test_routerkeys_ed_certs(void *args)
   junk[42] = 4; /* exttype */
   junk[77] = 32; /* extlen */
   junk[78] = 4; /* exttype */
-  tt_ptr_op(NULL, ==, tor_cert_parse(junk, 104 + 36 * 2));
+  nocert = tor_cert_parse(junk, 104 + 36 * 2);
+  tt_ptr_op(NULL, ==, nocert);
 
  done:
   tor_cert_free(cert[0]);
   tor_cert_free(cert[1]);
   tor_cert_free(parsed_cert[0]);
   tor_cert_free(parsed_cert[1]);
+  tor_cert_free(nocert);
   tor_free(junk);
   tor_free(base64);
 }
