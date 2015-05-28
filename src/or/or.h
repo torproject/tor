@@ -96,6 +96,7 @@
 #include "ht.h"
 #include "replaycache.h"
 #include "crypto_curve25519.h"
+#include "crypto_ed25519.h"
 #include "tor_queue.h"
 
 /* These signals are defined to help handle_control_signal work.
@@ -1353,6 +1354,8 @@ typedef struct listener_connection_t {
  * in the v3 handshake.  The subject key must be a 1024-bit RSA key; it
  * must be signed by the identity key */
 #define OR_CERT_TYPE_AUTH_1024 3
+/** DOCDOC */
+#define OR_CERT_TYPE_RSA_ED_CROSSCERT 7
 /**@}*/
 
 /** The one currently supported type of AUTHENTICATE cell.  It contains
@@ -1428,9 +1431,9 @@ typedef struct or_handshake_state_t {
    * @{
    */
   /** The cert for the key that's supposed to sign the AUTHENTICATE cell */
-  tor_cert_t *auth_cert;
+  tor_x509_cert_t *auth_cert;
   /** A self-signed identity certificate */
-  tor_cert_t *id_cert;
+  tor_x509_cert_t *id_cert;
   /**@}*/
 } or_handshake_state_t;
 
@@ -2023,6 +2026,8 @@ typedef int16_t country_t;
 /** Information about another onion router in the network. */
 typedef struct {
   signed_descriptor_t cache_info;
+  /** A SHA256-digest of the extrainfo (if any) */
+  char extra_info_digest256[DIGEST256_LEN];
   char *nickname; /**< Human-readable OR name. */
 
   uint32_t addr; /**< IPv4 address of OR, in host order. */
@@ -2040,6 +2045,11 @@ typedef struct {
   crypto_pk_t *identity_pkey;  /**< Public RSA key for signing. */
   /** Public curve25519 key for onions */
   curve25519_public_key_t *onion_curve25519_pkey;
+  /** Certificate for ed25519 signing key */
+  struct tor_cert_st *signing_key_cert;
+  /** What's the earliest expiration time on all the certs in this
+   * routerinfo? */
+  time_t cert_expiration_time;
 
   char *platform; /**< What software/operating system is this OR using? */
 
@@ -2099,8 +2109,12 @@ typedef struct {
 /** Information needed to keep and cache a signed extra-info document. */
 typedef struct extrainfo_t {
   signed_descriptor_t cache_info;
+  /** SHA256 digest of this document */
+  uint8_t digest256[DIGEST256_LEN];
   /** The router's nickname. */
   char nickname[MAX_NICKNAME_LEN+1];
+  /** Certificate for ed25519 signing key */
+  struct tor_cert_st *signing_key_cert;
   /** True iff we found the right key for this extra-info, verified the
    * signature, and found it to be bad. */
   unsigned int bad_sig : 1;
@@ -2245,6 +2259,8 @@ typedef struct microdesc_t {
   crypto_pk_t *onion_pkey;
   /** As routerinfo_t.onion_curve25519_pkey */
   curve25519_public_key_t *onion_curve25519_pkey;
+  /** Ed25519 identity key, if included. */
+  ed25519_public_key_t *ed25519_identity_pkey;
   /** As routerinfo_t.ipv6_add */
   tor_addr_t ipv6_addr;
   /** As routerinfo_t.ipv6_orport */
@@ -2359,9 +2375,13 @@ typedef struct vote_routerstatus_t {
   char *version; /**< The version that the authority says this router is
                   * running. */
   unsigned int has_measured_bw:1; /**< The vote had a measured bw */
+  unsigned int has_ed25519_listing:1; /** DOCDOC */
+  unsigned int ed25519_reflects_consensus:1; /** DOCDOC */
   uint32_t measured_bw_kb; /**< Measured bandwidth (capacity) of the router */
   /** The hash or hashes that the authority claims this microdesc has. */
   vote_microdesc_hash_t *microdesc;
+  /** Ed25519 identity for this router, or zero if it has none. */
+  uint8_t ed25519_id[ED25519_PUBKEY_LEN];
 } vote_routerstatus_t;
 
 /** A signature of some document by an authority. */
@@ -4261,6 +4281,21 @@ typedef struct {
    * XXXX Eventually, the default will be 0. */
   int ExitRelay;
 
+
+  /** For how long (seconds) do we declare our singning keys to be valid? */
+  int SigningKeyLifetime;
+  /** For how long (seconds) do we declare our link keys to be valid? */
+  int TestingLinkCertLifetime;
+  /** For how long (seconds) do we declare our auth keys to be valid? */
+  int TestingAuthKeyLifetime;
+
+  /** How long before signing keys expire will we try to make a new one? */
+  int TestingSigningKeySlop;
+  /** How long before link keys expire will we try to make a new one? */
+  int TestingLinkKeySlop;
+  /** How long before auth keys expire will we try to make a new one? */
+  int TestingAuthKeySlop;
+
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
@@ -5065,6 +5100,8 @@ typedef enum was_router_added_t {
   /* Router descriptor was rejected because it was older than
    * OLD_ROUTER_DESC_MAX_AGE. */
   ROUTER_WAS_TOO_OLD = -7, /* note contrast with 'NOT_NEW' */
+  /* DOCDOC */
+  ROUTER_CERTS_EXPIRED = -8
 } was_router_added_t;
 
 /********************************* routerparse.c ************************/

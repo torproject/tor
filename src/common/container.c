@@ -208,6 +208,19 @@ smartlist_string_pos(const smartlist_t *sl, const char *element)
   return -1;
 }
 
+/** If <b>element</b> is the same pointer as an element of <b>sl</b>, return
+ * that element's index.  Otherwise, return -1. */
+int
+smartlist_pos(const smartlist_t *sl, const void *element)
+{
+  int i;
+  if (!sl) return -1;
+  for (i=0; i < sl->num_used; i++)
+    if (element == sl->list[i])
+      return i;
+  return -1;
+}
+
 /** Return true iff <b>sl</b> has some element E such that
  * !strcasecmp(E,<b>element</b>)
  */

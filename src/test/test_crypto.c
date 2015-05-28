@@ -698,8 +698,17 @@ test_crypto_formats(void *arg)
   for (idx = 0; idx < 10; ++idx) {
     i = base64_encode(data2, 1024, data1, idx, 0);
     tt_int_op(i, OP_GE, 0);
+    tt_int_op(i, OP_EQ, strlen(data2));
     j = base64_decode(data3, 1024, data2, i);
     tt_int_op(j,OP_EQ, idx);
+    tt_mem_op(data3,OP_EQ, data1, idx);
+
+    i = base64_encode_nopad(data2, 1024, (uint8_t*)data1, idx);
+    tt_int_op(i, OP_GE, 0);
+    tt_int_op(i, OP_EQ, strlen(data2));
+    tt_assert(! strchr(data2, '='));
+    j = base64_decode_nopad((uint8_t*)data3, 1024, data2, i);
+    tt_int_op(j, OP_EQ, idx);
     tt_mem_op(data3,OP_EQ, data1, idx);
   }
 
@@ -1264,6 +1273,8 @@ test_crypto_ed25519_simple(void *arg)
   tt_int_op(0, OP_EQ, ed25519_public_key_generate(&pub2, &sec1));
 
   tt_mem_op(pub1.pubkey, OP_EQ, pub2.pubkey, sizeof(pub1.pubkey));
+  tt_assert(ed25519_pubkey_eq(&pub1, &pub2));
+  tt_assert(ed25519_pubkey_eq(&pub1, &pub1));
 
   memcpy(&kp1.pubkey, &pub1, sizeof(pub1));
   memcpy(&kp1.seckey, &sec1, sizeof(sec1));
@@ -1283,6 +1294,7 @@ test_crypto_ed25519_simple(void *arg)
   /* Wrong public key doesn't work. */
   tt_int_op(0, OP_EQ, ed25519_public_key_generate(&pub2, &sec2));
   tt_int_op(-1, OP_EQ, ed25519_checksig(&sig2, msg, msg_len, &pub2));
+  tt_assert(! ed25519_pubkey_eq(&pub1, &pub2));
 
   /* Wrong message doesn't work. */
   tt_int_op(0, OP_EQ, ed25519_checksig(&sig2, msg, msg_len, &pub1));
@@ -1421,9 +1433,10 @@ test_crypto_ed25519_test_vectors(void *arg)
 static void
 test_crypto_ed25519_encode(void *arg)
 {
-  char buf[ED25519_BASE64_LEN+1];
+  char buf[ED25519_SIG_BASE64_LEN+1];
   ed25519_keypair_t kp;
   ed25519_public_key_t pk;
+  ed25519_signature_t sig1, sig2;
   char *mem_op_hex_tmp = NULL;
   (void) arg;
 
@@ -1433,6 +1446,11 @@ test_crypto_ed25519_encode(void *arg)
   tt_int_op(ED25519_BASE64_LEN, OP_EQ, strlen(buf));
   tt_int_op(0, OP_EQ, ed25519_public_from_base64(&pk, buf));
   tt_mem_op(kp.pubkey.pubkey, OP_EQ, pk.pubkey, ED25519_PUBKEY_LEN);
+
+  tt_int_op(0, OP_EQ, ed25519_sign(&sig1, (const uint8_t*)"ABC", 3, &kp));
+  tt_int_op(0, OP_EQ, ed25519_signature_to_base64(buf, &sig1));
+  tt_int_op(0, OP_EQ, ed25519_signature_from_base64(&sig2, buf));
+  tt_mem_op(sig1.sig, OP_EQ, sig2.sig, ED25519_SIG_LEN);
 
   /* Test known value. */
   tt_int_op(0, OP_EQ, ed25519_public_from_base64(&pk,

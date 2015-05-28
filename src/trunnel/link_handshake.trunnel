@@ -1,0 +1,57 @@
+
+struct certs_cell {
+  u8 n_certs;
+  struct certs_cell_cert certs[n_certs];
+}
+
+const CERTTYPE_RSA1024_ID_LINK = 1;
+const CERTTYPE_RSA1024_ID_ID   = 2;
+const CERTTYPE_RSA1024_ID_AUTH = 3;
+const CERTTYPE_ED_ID_SIGN      = 4;
+const CERTTYPE_ED_SIGN_LINK    = 5;
+const CERTTYPE_ED_SIGN_AUTH    = 6;
+const CERTTYPE_RSA1024_ID_EDID = 7;
+
+struct certs_cell_cert {
+  u8 cert_type;
+  u16 cert_len;
+  u8 body[cert_len];
+}
+
+struct rsa_ed_crosscert {
+  u8 ed_key[32];
+  u32 expiration;
+  @ptr end_of_signed;
+  u8 sig_len;
+  u8 sig[sig_len]; // mismatches spec.
+}
+
+struct auth_challenge_cell {
+  u8 challenge[32];
+  u16 n_methods;
+  u16 methods[n_methods];
+}
+
+context auth_ctx {
+  u8 is_ed;
+}
+
+struct auth1 with context auth_ctx {
+  u8 type[8];
+  u8 cid[32];
+  u8 sid[32];
+  union u1[auth_ctx.is_ed] {
+    0 : ;
+    1 : u8 cid_ed[32];
+        u8 sid_ed[32];
+    default: fail;
+  };
+  u8 slog[32];
+  u8 clog[32];
+  u8 scert[32];
+  u8 tlssecrets[32];
+  @ptr end_of_fixed_part;
+  u8 rand[24];
+  @ptr end_of_signed;
+  u8 sig[];
+}

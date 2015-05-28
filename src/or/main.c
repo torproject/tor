@@ -37,6 +37,7 @@
 #include "entrynodes.h"
 #include "geoip.h"
 #include "hibernate.h"
+#include "keypin.h"
 #include "main.h"
 #include "microdesc.h"
 #include "networkstatus.h"
@@ -51,6 +52,7 @@
 #include "rendservice.h"
 #include "rephist.h"
 #include "router.h"
+#include "routerkeys.h"
 #include "routerlist.h"
 #include "routerparse.h"
 #include "scheduler.h"
@@ -1223,10 +1225,13 @@ typedef struct {
   time_t check_descriptor;
   /** When do we next launch DNS wildcarding checks? */
   time_t check_for_correct_dns;
+  /** When do we next make sure our Ed25519 keys aren't about to expire? */
+  time_t check_ed_keys;
+
 } time_to_t;
 
 static time_to_t time_to = {
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
 /** Reset all the time_to's so we'll do all our actions again as if we
@@ -1295,6 +1300,18 @@ run_scheduled_events(time_t now)
     }
     if (advertised_server_mode() && !options->DisableNetwork)
       router_upload_dir_desc_to_dirservers(0);
+  }
+
+  if (is_server && time_to.check_ed_keys < now) {
+    if (should_make_new_ed_keys(options, now)) {
+      if (load_ed_keys(options, now) < 0 ||
+          generate_ed_link_cert(options, now)) {
+        log_err(LD_OR, "Unable to update Ed25519 keys!  Exiting.");
+        tor_cleanup();
+        exit(0);
+      }
+    }
+    time_to.check_ed_keys = now + 30;
   }
 
   if (!should_delay_dir_fetches(options, NULL) &&
@@ -2015,6 +2032,23 @@ do_main_loop(void)
   /* initialize the bootstrap status events to know we're starting up */
   control_event_bootstrap(BOOTSTRAP_STATUS_STARTING, 0);
 
+  /* Initialize the keypinning log. */
+  if (authdir_mode_v3(get_options())) {
+    char *fname = get_datadir_fname("key-pinning-entries");
+    int r = 0;
+    if (keypin_load_journal(fname)<0) {
+      log_err(LD_DIR, "Error loading key-pinning journal: %s",strerror(errno));
+      r = -1;
+    }
+    if (keypin_open_journal(fname)<0) {
+      log_err(LD_DIR, "Error opening key-pinning journal: %s",strerror(errno));
+      r = -1;
+    }
+    tor_free(fname);
+    if (r)
+      return r;
+  }
+
   if (trusted_dirs_reload_certs()) {
     log_warn(LD_DIR,
              "Couldn't load all cached v3 certificates. Starting anyway.");
@@ -2695,6 +2729,7 @@ tor_free_all(int postfork)
     config_free_all();
     or_state_free_all();
     router_free_all();
+    routerkeys_free_all();
     policies_free_all();
   }
   if (!postfork) {
@@ -2752,6 +2787,7 @@ tor_cleanup(void)
     or_state_save(now);
     if (authdir_mode_tests_reachability(options))
       rep_hist_record_mtbf_data(now, 0);
+    keypin_close_journal();
   }
 #ifdef USE_DMALLOC
   dmalloc_log_stats();

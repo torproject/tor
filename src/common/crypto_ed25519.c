@@ -351,3 +351,24 @@ ed25519_pubkey_read_from_file(ed25519_public_key_t *pubkey_out,
   return 0;
 }
 
+/** Release all storage held for <b>kp</b>. */
+void
+ed25519_keypair_free(ed25519_keypair_t *kp)
+{
+  if (! kp)
+    return;
+
+  memwipe(kp, 0, sizeof(*kp));
+  tor_free(kp);
+}
+
+/** Return true iff <b>key1</b> and <b>key2</b> are the same public key. */
+int
+ed25519_pubkey_eq(const ed25519_public_key_t *key1,
+                  const ed25519_public_key_t *key2)
+{
+  tor_assert(key1);
+  tor_assert(key2);
+  return tor_memeq(key1->pubkey, key2->pubkey, ED25519_PUBKEY_LEN);
+}
+

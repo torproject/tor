@@ -52,5 +52,15 @@ void channel_tls_update_marks(or_connection_t *conn);
 /* Cleanup at shutdown */
 void channel_tls_free_all(void);
 
+#ifdef CHANNELTLS_PRIVATE
+STATIC void channel_tls_process_certs_cell(var_cell_t *cell,
+                                           channel_tls_t *tlschan);
+STATIC void channel_tls_process_auth_challenge_cell(var_cell_t *cell,
+                                                    channel_tls_t *tlschan);
+STATIC void channel_tls_common_init(channel_tls_t *tlschan);
+STATIC void channel_tls_process_authenticate_cell(var_cell_t *cell,
+                                                  channel_tls_t *tlschan);
+#endif
+
 #endif
 

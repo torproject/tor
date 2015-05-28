@@ -118,13 +118,15 @@ WRA_WAS_ADDED(was_router_added_t s) {
  * - not in the consensus
  * - neither in the consensus nor in any networkstatus document
  * - it was outdated.
+ * - its certificates were expired.
  */
 static INLINE int WRA_WAS_OUTDATED(was_router_added_t s)
 {
   return (s == ROUTER_WAS_TOO_OLD ||
           s == ROUTER_IS_ALREADY_KNOWN ||
           s == ROUTER_NOT_IN_CONSENSUS ||
-          s == ROUTER_NOT_IN_CONSENSUS_OR_NETWORKSTATUS);
+          s == ROUTER_NOT_IN_CONSENSUS_OR_NETWORKSTATUS ||
+          s == ROUTER_CERTS_EXPIRED);
 }
 /** Return true iff the outcome code in <b>s</b> indicates that the descriptor
  * was flat-out rejected. */
@@ -138,7 +140,8 @@ static INLINE int WRA_NEVER_DOWNLOADABLE(was_router_added_t s)
 {
   return (s == ROUTER_AUTHDIR_REJECTS ||
           s == ROUTER_BAD_EI ||
-          s == ROUTER_WAS_TOO_OLD);
+          s == ROUTER_WAS_TOO_OLD ||
+          s == ROUTER_CERTS_EXPIRED);
 }
 was_router_added_t router_add_to_routerlist(routerinfo_t *router,
                                             const char **msg,

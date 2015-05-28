@@ -829,7 +829,7 @@ crypto_pk_public_exponent_ok(crypto_pk_t *env)
  * Note that this may leak information about the keys through timing.
  */
 int
-crypto_pk_cmp_keys(crypto_pk_t *a, crypto_pk_t *b)
+crypto_pk_cmp_keys(const crypto_pk_t *a, const crypto_pk_t *b)
 {
   int result;
   char a_is_non_null = (a != NULL) && (a->key != NULL);
@@ -855,19 +855,19 @@ crypto_pk_cmp_keys(crypto_pk_t *a, crypto_pk_t *b)
  *  Note that this may leak information about the keys through timing.
  */
 int
-crypto_pk_eq_keys(crypto_pk_t *a, crypto_pk_t *b)
+crypto_pk_eq_keys(const crypto_pk_t *a, const crypto_pk_t *b)
 {
   return (crypto_pk_cmp_keys(a, b) == 0);
 }
 
 /** Return the size of the public key modulus in <b>env</b>, in bytes. */
 size_t
-crypto_pk_keysize(crypto_pk_t *env)
+crypto_pk_keysize(const crypto_pk_t *env)
 {
   tor_assert(env);
   tor_assert(env->key);
 
-  return (size_t) RSA_size(env->key);
+  return (size_t) RSA_size((RSA*)env->key);
 }
 
 /** Return the size of the public key modulus of <b>env</b>, in bits. */
@@ -996,7 +996,7 @@ crypto_pk_private_decrypt(crypto_pk_t *env, char *to,
  * at least the length of the modulus of <b>env</b>.
  */
 int
-crypto_pk_public_checksig(crypto_pk_t *env, char *to,
+crypto_pk_public_checksig(const crypto_pk_t *env, char *to,
                           size_t tolen,
                           const char *from, size_t fromlen)
 {
@@ -1068,7 +1068,7 @@ crypto_pk_public_checksig_digest(crypto_pk_t *env, const char *data,
  * at least the length of the modulus of <b>env</b>.
  */
 int
-crypto_pk_private_sign(crypto_pk_t *env, char *to, size_t tolen,
+crypto_pk_private_sign(const crypto_pk_t *env, char *to, size_t tolen,
                        const char *from, size_t fromlen)
 {
   int r;
@@ -1083,7 +1083,7 @@ crypto_pk_private_sign(crypto_pk_t *env, char *to, size_t tolen,
 
   r = RSA_private_encrypt((int)fromlen,
                           (unsigned char*)from, (unsigned char*)to,
-                          env->key, RSA_PKCS1_PADDING);
+                          (RSA*)env->key, RSA_PKCS1_PADDING);
   if (r<0) {
     crypto_log_errors(LOG_WARN, "generating RSA signature");
     return -1;
@@ -1297,7 +1297,7 @@ crypto_pk_get_digest(const crypto_pk_t *pk, char *digest_out)
   unsigned char *buf = NULL;
   int len;
 
-  len = i2d_RSAPublicKey(pk->key, &buf);
+  len = i2d_RSAPublicKey((RSA*)pk->key, &buf);
   if (len < 0 || buf == NULL)
     return -1;
   if (crypto_digest(digest_out, (char*)buf, len) < 0) {
@@ -1795,7 +1795,24 @@ crypto_digest_assign(crypto_digest_t *into,
  * <b>out_len</b> must be \<= DIGEST256_LEN. */
 void
 crypto_digest_smartlist(char *digest_out, size_t len_out,
-                        const smartlist_t *lst, const char *append,
+                        const smartlist_t *lst,
+                        const char *append,
+                        digest_algorithm_t alg)
+{
+  crypto_digest_smartlist_prefix(digest_out, len_out, NULL, lst, append, alg);
+}
+
+/** Given a list of strings in <b>lst</b>, set the <b>len_out</b>-byte digest
+ * at <b>digest_out</b> to the hash of the concatenation of: the
+ * optional string <b>prepend</b>, those strings,
+ * and the optional string <b>append</b>, computed with the algorithm
+ * <b>alg</b>.
+ * <b>out_len</b> must be \<= DIGEST256_LEN. */
+void
+crypto_digest_smartlist_prefix(char *digest_out, size_t len_out,
+                        const char *prepend,
+                        const smartlist_t *lst,
+                        const char *append,
                         digest_algorithm_t alg)
 {
   crypto_digest_t *d;
@@ -1803,6 +1820,8 @@ crypto_digest_smartlist(char *digest_out, size_t len_out,
     d = crypto_digest_new();
   else
     d = crypto_digest256_new(alg);
+  if (prepend)
+    crypto_digest_add_bytes(d, prepend, strlen(prepend));
   SMARTLIST_FOREACH(lst, const char *, cp,
                     crypto_digest_add_bytes(d, cp, strlen(cp)));
   if (append)
@@ -2673,6 +2692,65 @@ base64_encode(char *dest, size_t destlen, const char *src, size_t srclen,
   return (int) enclen;
 }
 
+/** As base64_encode, but do not add any internal spaces or external padding
+ * to the output stream. */
+int
+base64_encode_nopad(char *dest, size_t destlen,
+                    const uint8_t *src, size_t srclen)
+{
+  int n = base64_encode(dest, destlen, (const char*) src, srclen, 0);
+  if (n <= 0)
+    return n;
+  tor_assert((size_t)n < destlen && dest[n] == 0);
+  char *in, *out;
+  in = out = dest;
+  while (*in) {
+    if (*in == '=' || *in == '\n') {
+      ++in;
+    } else {
+      *out++ = *in++;
+    }
+  }
+  *out = 0;
+
+  tor_assert(out - dest <= INT_MAX);
+
+  return (int)(out - dest);
+}
+
+/** As base64_decode, but do not require any padding on the input */
+int
+base64_decode_nopad(uint8_t *dest, size_t destlen,
+                    const char *src, size_t srclen)
+{
+  if (srclen > SIZE_T_CEILING - 4)
+    return -1;
+  char *buf = tor_malloc(srclen + 4);
+  memcpy(buf, src, srclen+1);
+  size_t buflen;
+  switch (srclen % 4)
+    {
+    case 0:
+    default:
+      buflen = srclen;
+      break;
+    case 1:
+      tor_free(buf);
+      return -1;
+    case 2:
+      memcpy(buf+srclen, "==", 3);
+      buflen = srclen + 2;
+      break;
+    case 3:
+      memcpy(buf+srclen, "=", 2);
+      buflen = srclen + 1;
+      break;
+  }
+  int n = base64_decode((char*)dest, destlen, buf, buflen);
+  tor_free(buf);
+  return n;
+}
+
 #undef BASE64_OPENSSL_LINELEN
 
 /** @{ */
@@ -2797,6 +2875,7 @@ base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
 /** Base64 encode DIGEST_LINE bytes from <b>digest</b>, remove the trailing =
  * characters, and store the nul-terminated result in the first
  * BASE64_DIGEST_LEN+1 bytes of <b>d64</b>.  */
+/* XXXX unify with crypto_format.c code */
 int
 digest_to_base64(char *d64, const char *digest)
 {
@@ -2810,6 +2889,7 @@ digest_to_base64(char *d64, const char *digest)
 /** Given a base64 encoded, nul-terminated digest in <b>d64</b> (without
  * trailing newline or = characters), decode it and store the result in the
  * first DIGEST_LEN bytes at <b>digest</b>. */
+/* XXXX unify with crypto_format.c code */
 int
 digest_from_base64(char *digest, const char *d64)
 {
@@ -2821,7 +2901,8 @@ digest_from_base64(char *digest, const char *d64)
 
 /** Base64 encode DIGEST256_LINE bytes from <b>digest</b>, remove the
  * trailing = characters, and store the nul-terminated result in the first
- * BASE64_DIGEST256_LEN+1 bytes of <b>d64</b>.  */
+ * BASE64_DIGEST256_LEN+1 bytes of <b>d64</b>. */
+ /* XXXX unify with crypto_format.c code */
 int
 digest256_to_base64(char *d64, const char *digest)
 {
@@ -2835,6 +2916,7 @@ digest256_to_base64(char *d64, const char *digest)
 /** Given a base64 encoded, nul-terminated digest in <b>d64</b> (without
  * trailing newline or = characters), decode it and store the result in the
  * first DIGEST256_LEN bytes at <b>digest</b>. */
+/* XXXX unify with crypto_format.c code */
 int
 digest256_from_base64(char *digest, const char *d64)
 {

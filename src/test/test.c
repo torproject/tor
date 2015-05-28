@@ -1137,6 +1137,8 @@ extern struct testcase_t guardfraction_tests[];
 extern struct testcase_t extorport_tests[];
 extern struct testcase_t hs_tests[];
 extern struct testcase_t introduce_tests[];
+extern struct testcase_t keypin_tests[];
+extern struct testcase_t link_handshake_tests[];
 extern struct testcase_t logging_tests[];
 extern struct testcase_t microdesc_tests[];
 extern struct testcase_t nodelist_tests[];
@@ -1183,6 +1185,8 @@ struct testgroup_t testgroups[] = {
   { "extorport/", extorport_tests },
   { "hs/", hs_tests },
   { "introduce/", introduce_tests },
+  { "keypin/", keypin_tests },
+  { "link-handshake/", link_handshake_tests },
   { "nodelist/", nodelist_tests },
   { "oom/", oom_tests },
   { "options/", options_tests },

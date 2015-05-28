@@ -6,6 +6,7 @@
 
 #include "testsupport.h"
 #include "torint.h"
+#include "crypto_curve25519.h"
 
 #define ED25519_PUBKEY_LEN 32
 #define ED25519_SECKEY_LEN 64
@@ -60,7 +61,7 @@ int ed25519_checksig(const ed25519_signature_t *signature,
  */
 typedef struct {
   /** The public key that supposedly generated the signature. */
-  ed25519_public_key_t *pubkey;
+  const ed25519_public_key_t *pubkey;
   /** The signature to check. */
   ed25519_signature_t signature;
   /** The message that the signature is supposed to have been applied to. */
@@ -87,12 +88,21 @@ int ed25519_public_blind(ed25519_public_key_t *out,
                          const ed25519_public_key_t *inp,
                          const uint8_t *param);
 
-#define ED25519_BASE64_LEN 43
 
+/* XXXX move these to crypto_format.h */
+#define ED25519_BASE64_LEN 43
 int ed25519_public_from_base64(ed25519_public_key_t *pkey,
                                const char *input);
 int ed25519_public_to_base64(char *output,
                              const ed25519_public_key_t *pkey);
+
+/* XXXX move these to crypto_format.h */
+#define ED25519_SIG_BASE64_LEN 86
+
+int ed25519_signature_from_base64(ed25519_signature_t *sig,
+                                  const char *input);
+int ed25519_signature_to_base64(char *output,
+                                const ed25519_signature_t *sig);
 
 /* XXXX read encrypted, write encrypted. */
 
@@ -108,6 +118,11 @@ int ed25519_pubkey_write_to_file(const ed25519_public_key_t *pubkey,
 int ed25519_pubkey_read_from_file(ed25519_public_key_t *pubkey_out,
                                   char **tag_out,
                                   const char *filename);
+
+void ed25519_keypair_free(ed25519_keypair_t *kp);
+
+int ed25519_pubkey_eq(const ed25519_public_key_t *key1,
+                      const ed25519_public_key_t *key2);
 
 #endif
 

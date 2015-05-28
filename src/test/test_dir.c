@@ -14,15 +14,18 @@
 #define NETWORKSTATUS_PRIVATE
 #include "or.h"
 #include "config.h"
+#include "crypto_ed25519.h"
 #include "directory.h"
 #include "dirserv.h"
 #include "dirvote.h"
 #include "hibernate.h"
 #include "networkstatus.h"
 #include "router.h"
+#include "routerkeys.h"
 #include "routerlist.h"
 #include "routerparse.h"
 #include "test.h"
+#include "torcert.h"
 
 static void
 test_dir_nicknames(void *arg)
@@ -87,8 +90,11 @@ test_dir_formats(void *arg)
   routerinfo_t *rp1 = NULL, *rp2 = NULL;
   addr_policy_t *ex1, *ex2;
   routerlist_t *dir1 = NULL, *dir2 = NULL;
+  uint8_t *rsa_cc = NULL;
+  tor_cert_t *ntor_cc = NULL;
   or_options_t *options = get_options_mutable();
   const addr_policy_t *p;
+  time_t now = time(NULL);
 
   (void)arg;
   pk1 = pk_generate(0);
@@ -127,14 +133,33 @@ test_dir_formats(void *arg)
   ex2->prt_min = ex2->prt_max = 24;
   r2 = tor_malloc_zero(sizeof(routerinfo_t));
   r2->addr = 0x0a030201u; /* 10.3.2.1 */
+  ed25519_keypair_t kp1, kp2;
+  ed25519_secret_key_from_seed(&kp1.seckey,
+                          (const uint8_t*)"YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY");
+  ed25519_public_key_generate(&kp1.pubkey, &kp1.seckey);
+  ed25519_secret_key_from_seed(&kp2.seckey,
+                          (const uint8_t*)"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+  ed25519_public_key_generate(&kp2.pubkey, &kp2.seckey);
+  r2->signing_key_cert = tor_cert_create(&kp1,
+                                         CERT_TYPE_ID_SIGNING,
+                                         &kp2.pubkey,
+                                         now, 86400,
+                                         CERT_FLAG_INCLUDE_SIGNING_KEY);
+  char cert_buf[256];
+  base64_encode(cert_buf, sizeof(cert_buf),
+                (const char*)r2->signing_key_cert->encoded,
+                r2->signing_key_cert->encoded_len,
+                BASE64_ENCODE_MULTILINE);
   r2->platform = tor_strdup(platform);
   r2->cache_info.published_on = 5;
   r2->or_port = 9005;
   r2->dir_port = 0;
   r2->onion_pkey = crypto_pk_dup_key(pk2);
   r2->onion_curve25519_pkey = tor_malloc_zero(sizeof(curve25519_public_key_t));
-  curve25519_public_from_base64(r2->onion_curve25519_pkey,
-                                "skyinAnvardNostarsNomoonNowindormistsorsnow");
+  curve25519_keypair_t r2_onion_keypair;
+  curve25519_keypair_generate(&r2_onion_keypair, 0);
+  r2->onion_curve25519_pkey = tor_memdup(&r2_onion_keypair.pubkey,
+                                         sizeof(curve25519_public_key_t));
   r2->identity_pkey = crypto_pk_dup_key(pk1);
   r2->bandwidthrate = r2->bandwidthburst = r2->bandwidthcapacity = 3000;
   r2->exit_policy = smartlist_new();
@@ -150,7 +175,7 @@ test_dir_formats(void *arg)
   /* XXXX025 router_dump_to_string should really take this from ri.*/
   options->ContactInfo = tor_strdup("Magri White "
                                     "<magri@elsewhere.example.com>");
-  buf = router_dump_router_to_string(r1, pk2);
+  buf = router_dump_router_to_string(r1, pk2, NULL, NULL, NULL);
   tor_free(options->ContactInfo);
   tt_assert(buf);
 
@@ -183,7 +208,7 @@ test_dir_formats(void *arg)
   tt_str_op(buf,OP_EQ, buf2);
   tor_free(buf);
 
-  buf = router_dump_router_to_string(r1, pk2);
+  buf = router_dump_router_to_string(r1, pk2, NULL, NULL, NULL);
   tt_assert(buf);
   cp = buf;
   rp1 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL,NULL);
@@ -201,6 +226,10 @@ test_dir_formats(void *arg)
 
   strlcpy(buf2,
           "router Fred 10.3.2.1 9005 0 0\n"
+          "identity-ed25519\n"
+          "-----BEGIN ED25519 CERT-----\n", sizeof(buf2));
+  strlcat(buf2, cert_buf, sizeof(buf2));
+  strlcat(buf2, "-----END ED25519 CERT-----\n"
           "platform Tor "VERSION" on ", sizeof(buf2));
   strlcat(buf2, get_uname(), sizeof(buf2));
   strlcat(buf2, "\n"
@@ -215,19 +244,52 @@ test_dir_formats(void *arg)
   strlcat(buf2, pk2_str, sizeof(buf2));
   strlcat(buf2, "signing-key\n", sizeof(buf2));
   strlcat(buf2, pk1_str, sizeof(buf2));
-  strlcat(buf2, "hidden-service-dir\n", sizeof(buf2));
-  strlcat(buf2, "ntor-onion-key "
-          "skyinAnvardNostarsNomoonNowindormistsorsnow=\n", sizeof(buf2));
-  strlcat(buf2, "accept *:80\nreject 18.0.0.0/8:24\n", sizeof(buf2));
-  strlcat(buf2, "router-signature\n", sizeof(buf2));
+  int rsa_cc_len;
+  rsa_cc = make_tap_onion_key_crosscert(pk2,
+                                        &kp1.pubkey,
+                                        pk1,
+                                        &rsa_cc_len);
+  tt_assert(rsa_cc);
+  base64_encode(cert_buf, sizeof(cert_buf), (char*)rsa_cc, rsa_cc_len,
+                BASE64_ENCODE_MULTILINE);
+  strlcat(buf2, "onion-key-crosscert\n"
+          "-----BEGIN CROSSCERT-----\n", sizeof(buf2));
+  strlcat(buf2, cert_buf, sizeof(buf2));
+  strlcat(buf2, "-----END CROSSCERT-----\n", sizeof(buf2));
+  int ntor_cc_sign;
+  ntor_cc = make_ntor_onion_key_crosscert(&r2_onion_keypair,
+                                          &kp1.pubkey,
+                                          r2->cache_info.published_on,
+                                          MIN_ONION_KEY_LIFETIME,
+                                          &ntor_cc_sign);
+  tt_assert(ntor_cc);
+  base64_encode(cert_buf, sizeof(cert_buf),
+                (char*)ntor_cc->encoded, ntor_cc->encoded_len,
+                BASE64_ENCODE_MULTILINE);
+  tor_snprintf(buf2+strlen(buf2), sizeof(buf2)-strlen(buf2),
+               "ntor-onion-key-crosscert %d\n"
+               "-----BEGIN ED25519 CERT-----\n"
+               "%s"
+               "-----END ED25519 CERT-----\n", ntor_cc_sign, cert_buf);
 
-  buf = router_dump_router_to_string(r2, pk1);
+  strlcat(buf2, "hidden-service-dir\n", sizeof(buf2));
+  strlcat(buf2, "ntor-onion-key ", sizeof(buf2));
+  base64_encode(cert_buf, sizeof(cert_buf),
+                (const char*)r2_onion_keypair.pubkey.public_key, 32,
+                BASE64_ENCODE_MULTILINE);
+  strlcat(buf2, cert_buf, sizeof(buf2));
+  strlcat(buf2, "accept *:80\nreject 18.0.0.0/8:24\n", sizeof(buf2));
+  strlcat(buf2, "router-sig-ed25519 ", sizeof(buf2));
+
+  buf = router_dump_router_to_string(r2, pk1, pk2, &r2_onion_keypair, &kp2);
+  tt_assert(buf);
   buf[strlen(buf2)] = '\0'; /* Don't compare the sig; it's never the same
                              * twice */
-  tt_str_op(buf,OP_EQ, buf2);
+
+  tt_str_op(buf, OP_EQ, buf2);
   tor_free(buf);
 
-  buf = router_dump_router_to_string(r2, pk1);
+  buf = router_dump_router_to_string(r2, pk1, NULL, NULL, NULL);
   cp = buf;
   rp2 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL,NULL);
   tt_assert(rp2);
@@ -280,6 +342,7 @@ test_dir_formats(void *arg)
   if (rp2)
     routerinfo_free(rp2);
 
+  tor_free(rsa_cc);
   tor_free(buf);
   tor_free(pk1_str);
   tor_free(pk2_str);
@@ -293,7 +356,7 @@ test_dir_formats(void *arg)
 #include "failing_routerdescs.inc"
 
 static void
-test_dir_routerparse_bad(void *arg)
+test_dir_routerinfo_parsing(void *arg)
 {
   (void) arg;
 
@@ -317,6 +380,8 @@ test_dir_routerparse_bad(void *arg)
 
   CHECK_OK(EX_RI_MINIMAL);
   CHECK_OK(EX_RI_MAXIMAL);
+
+  CHECK_OK(EX_RI_MINIMAL_ED);
 
   /* good annotations prepended */
   routerinfo_free(ri);
@@ -376,8 +441,28 @@ test_dir_routerparse_bad(void *arg)
   CHECK_FAIL(EX_RI_BAD_FAMILY, 0);
   CHECK_FAIL(EX_RI_ZERO_ORPORT, 0);
 
+  CHECK_FAIL(EX_RI_ED_MISSING_CROSSCERT, 0);
+  CHECK_FAIL(EX_RI_ED_MISSING_CROSSCERT2, 0);
+  CHECK_FAIL(EX_RI_ED_MISSING_CROSSCERT_SIGN, 0);
+  CHECK_FAIL(EX_RI_ED_BAD_SIG1, 0);
+  CHECK_FAIL(EX_RI_ED_BAD_SIG2, 0);
+  CHECK_FAIL(EX_RI_ED_BAD_SIG3, 0);
+  CHECK_FAIL(EX_RI_ED_BAD_SIG4, 0);
+  CHECK_FAIL(EX_RI_ED_BAD_CROSSCERT1, 0);
+  CHECK_FAIL(EX_RI_ED_BAD_CROSSCERT3, 0);
+  CHECK_FAIL(EX_RI_ED_BAD_CROSSCERT4, 0);
+  CHECK_FAIL(EX_RI_ED_BAD_CROSSCERT5, 0);
+  CHECK_FAIL(EX_RI_ED_BAD_CROSSCERT6, 0);
+  CHECK_FAIL(EX_RI_ED_BAD_CROSSCERT7, 0);
+  CHECK_FAIL(EX_RI_ED_MISPLACED1, 0);
+  CHECK_FAIL(EX_RI_ED_MISPLACED2, 0);
+  CHECK_FAIL(EX_RI_ED_BAD_CERT1, 0);
+  CHECK_FAIL(EX_RI_ED_BAD_CERT2, 0);
+  CHECK_FAIL(EX_RI_ED_BAD_CERT3, 0);
+
   /* This is allowed; we just ignore it. */
   CHECK_OK(EX_RI_BAD_EI_DIGEST);
+  CHECK_OK(EX_RI_BAD_EI_DIGEST2);
 
 #undef CHECK_FAIL
 #undef CHECK_OK
@@ -433,19 +518,33 @@ test_dir_extrainfo_parsing(void *arg)
   tt_assert(ei->pending_sig);
   CHECK_OK(EX_EI_MAXIMAL);
   tt_assert(ei->pending_sig);
+  CHECK_OK(EX_EI_GOOD_ED_EI);
+  tt_assert(ei->pending_sig);
 
   map = (struct digest_ri_map_t *)digestmap_new();
   ADD(EX_EI_MINIMAL);
   ADD(EX_EI_MAXIMAL);
+  ADD(EX_EI_GOOD_ED_EI);
   ADD(EX_EI_BAD_FP);
   ADD(EX_EI_BAD_NICKNAME);
   ADD(EX_EI_BAD_TOKENS);
   ADD(EX_EI_BAD_START);
   ADD(EX_EI_BAD_PUBLISHED);
 
+  ADD(EX_EI_ED_MISSING_SIG);
+  ADD(EX_EI_ED_MISSING_CERT);
+  ADD(EX_EI_ED_BAD_CERT1);
+  ADD(EX_EI_ED_BAD_CERT2);
+  ADD(EX_EI_ED_BAD_SIG1);
+  ADD(EX_EI_ED_BAD_SIG2);
+  ADD(EX_EI_ED_MISPLACED_CERT);
+  ADD(EX_EI_ED_MISPLACED_SIG);
+
   CHECK_OK(EX_EI_MINIMAL);
   tt_assert(!ei->pending_sig);
   CHECK_OK(EX_EI_MAXIMAL);
+  tt_assert(!ei->pending_sig);
+  CHECK_OK(EX_EI_GOOD_ED_EI);
   tt_assert(!ei->pending_sig);
 
   CHECK_FAIL(EX_EI_BAD_SIG1,1);
@@ -456,6 +555,15 @@ test_dir_extrainfo_parsing(void *arg)
   CHECK_FAIL(EX_EI_BAD_TOKENS,0);
   CHECK_FAIL(EX_EI_BAD_START,0);
   CHECK_FAIL(EX_EI_BAD_PUBLISHED,0);
+
+  CHECK_FAIL(EX_EI_ED_MISSING_SIG,0);
+  CHECK_FAIL(EX_EI_ED_MISSING_CERT,0);
+  CHECK_FAIL(EX_EI_ED_BAD_CERT1,0);
+  CHECK_FAIL(EX_EI_ED_BAD_CERT2,0);
+  CHECK_FAIL(EX_EI_ED_BAD_SIG1,0);
+  CHECK_FAIL(EX_EI_ED_BAD_SIG2,0);
+  CHECK_FAIL(EX_EI_ED_MISPLACED_CERT,0);
+  CHECK_FAIL(EX_EI_ED_MISPLACED_SIG,0);
 
 #undef CHECK_OK
 #undef CHECK_FAIL
@@ -1394,6 +1502,7 @@ generate_ri_from_rs(const vote_routerstatus_t *vrs)
   static time_t published = 0;
 
   r = tor_malloc_zero(sizeof(routerinfo_t));
+  r->cert_expiration_time = TIME_MAX;
   memcpy(r->cache_info.identity_digest, rs->identity_digest, DIGEST_LEN);
   memcpy(r->cache_info.signed_descriptor_digest, rs->descriptor_digest,
          DIGEST_LEN);
@@ -3108,7 +3217,7 @@ test_dir_packages(void *arg)
 struct testcase_t dir_tests[] = {
   DIR_LEGACY(nicknames),
   DIR_LEGACY(formats),
-  DIR(routerparse_bad, 0),
+  DIR(routerinfo_parsing, 0),
   DIR(extrainfo_parsing, 0),
   DIR(parse_router_list, TT_FORK),
   DIR(load_routers, TT_FORK),

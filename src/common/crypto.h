@@ -146,9 +146,9 @@ int crypto_pk_write_private_key_to_filename(crypto_pk_t *env,
                                             const char *fname);
 
 int crypto_pk_check_key(crypto_pk_t *env);
-int crypto_pk_cmp_keys(crypto_pk_t *a, crypto_pk_t *b);
-int crypto_pk_eq_keys(crypto_pk_t *a, crypto_pk_t *b);
-size_t crypto_pk_keysize(crypto_pk_t *env);
+int crypto_pk_cmp_keys(const crypto_pk_t *a, const crypto_pk_t *b);
+int crypto_pk_eq_keys(const crypto_pk_t *a, const crypto_pk_t *b);
+size_t crypto_pk_keysize(const crypto_pk_t *env);
 int crypto_pk_num_bits(crypto_pk_t *env);
 crypto_pk_t *crypto_pk_dup_key(crypto_pk_t *orig);
 crypto_pk_t *crypto_pk_copy_full(crypto_pk_t *orig);
@@ -160,11 +160,11 @@ int crypto_pk_public_encrypt(crypto_pk_t *env, char *to, size_t tolen,
 int crypto_pk_private_decrypt(crypto_pk_t *env, char *to, size_t tolen,
                               const char *from, size_t fromlen,
                               int padding, int warnOnFailure);
-int crypto_pk_public_checksig(crypto_pk_t *env, char *to, size_t tolen,
+int crypto_pk_public_checksig(const crypto_pk_t *env, char *to, size_t tolen,
                               const char *from, size_t fromlen);
 int crypto_pk_public_checksig_digest(crypto_pk_t *env, const char *data,
                                size_t datalen, const char *sig, size_t siglen);
-int crypto_pk_private_sign(crypto_pk_t *env, char *to, size_t tolen,
+int crypto_pk_private_sign(const crypto_pk_t *env, char *to, size_t tolen,
                            const char *from, size_t fromlen);
 int crypto_pk_private_sign_digest(crypto_pk_t *env, char *to, size_t tolen,
                                   const char *from, size_t fromlen);
@@ -209,6 +209,11 @@ int crypto_digest256(char *digest, const char *m, size_t len,
                      digest_algorithm_t algorithm);
 int crypto_digest_all(digests_t *ds_out, const char *m, size_t len);
 struct smartlist_t;
+void crypto_digest_smartlist_prefix(char *digest_out, size_t len_out,
+                                    const char *prepend,
+                                    const struct smartlist_t *lst,
+                                    const char *append,
+                                    digest_algorithm_t alg);
 void crypto_digest_smartlist(char *digest_out, size_t len_out,
                              const struct smartlist_t *lst, const char *append,
                              digest_algorithm_t alg);
@@ -278,6 +283,11 @@ size_t base64_encode_size(size_t srclen, int flags);
 int base64_encode(char *dest, size_t destlen, const char *src, size_t srclen,
                   int flags);
 int base64_decode(char *dest, size_t destlen, const char *src, size_t srclen);
+int base64_encode_nopad(char *dest, size_t destlen,
+                        const uint8_t *src, size_t srclen);
+int base64_decode_nopad(uint8_t *dest, size_t destlen,
+                        const char *src, size_t srclen);
+
 /** Characters that can appear (case-insensitively) in a base32 encoding. */
 #define BASE32_CHARS "abcdefghijklmnopqrstuvwxyz234567"
 void base32_encode(char *dest, size_t destlen, const char *src, size_t srclen);
