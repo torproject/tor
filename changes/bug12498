@@ -1,0 +1,29 @@
+  o Major features (Ed25519 identity keys: #12498, Prop220):
+    - All relays now maintain a stronger identity key, using the
+      Ed25519 elliptic curve signature format.  This master key is
+      designed so that it can be kept offline. Relays also generate
+      an online signing key, and a set of other Ed25519 keys and certificates.
+      These are all automatically regenerated and rotated as needed.     
+    - Directory authorities track which Ed25519 identity keys have been
+      used with which RSA1024 identity keys, and do not allow them to vary
+      freely.
+    - Directory authorities now vote on Ed25519 identity keys along with
+      RSA1024 keys.
+    - Microdescriptors now include ed25519 identity keys.
+
+  o Major features (onion key cross-certification):
+    - Relay descriptors now include signatures of the identity keys using
+      the TAP and ntor onion keys. This allows relays to prove ownership of
+      their own onion keys. Because of this change, microdescriptors no longer
+      need to include RSA identity keys. Implements proposal 228;
+      closes ticket 12499.
+
+  o Code simplification and refactoring:
+    - The link authentication code has been refactored for better testability
+      and reliability.  It now uses code generated with the "trunnel"
+      binary encoding generator, to reduce the risk of bugs due to 
+      programmer error. Done as part of ticket 12498.
+
+  o Testing:
+    - The link authentication protocol code now has extensive tests.
+    - The relay descriptor signature testing code now has extensive tests.
