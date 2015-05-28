@@ -1,0 +1,5 @@
+  o Minor bugfixes (sandbox, systemd):
+    - Allow systemd connections to work with the Linux seccomp2 sandbox
+      code.  Fixes bug 16212; bugfix on 0.2.6.2-alpha.
+      Patch by Peter Palfrader.
+
