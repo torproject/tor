@@ -1979,6 +1979,8 @@ crypto_dh_t *
 crypto_dh_dup(const crypto_dh_t *dh)
 {
   crypto_dh_t *dh_new = tor_malloc_zero(sizeof(crypto_dh_t));
+  tor_assert(dh);
+  tor_assert(dh->dh);
   dh_new->dh = dh->dh;
   DH_up_ref(dh->dh);
   return dh_new;
