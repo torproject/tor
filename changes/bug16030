@@ -1,0 +1,3 @@
+  o Minor bugfixes (tests):
+    - Fix a crash in the unit tests on MSVC2013.  Fixes bug 16030; bugfix on
+      0.2.6.2-alpha.  Patch from "NewEraCracker".
