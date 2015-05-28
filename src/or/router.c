@@ -2628,6 +2628,8 @@ router_dump_router_to_string(routerinfo_t *router,
   tor_free(identity_pkey);
   tor_free(extra_or_address);
   tor_free(ed_cert_line);
+  tor_free(rsa_tap_cc_line);
+  tor_free(ntor_cc_line);
 
   return output;
 }
