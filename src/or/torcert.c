@@ -145,10 +145,12 @@ tor_cert_parse(const uint8_t *encoded, const size_t len)
     }
   }
 
-  return cert;
+  goto done;
  err:
-  ed25519_cert_free(parsed);
   tor_cert_free(cert);
+  cert = NULL;
+ done:
+  ed25519_cert_free(parsed);
   return NULL;
 }
 
