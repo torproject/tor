@@ -2356,7 +2356,7 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
     const digests_t *my_digests, *their_digests;
     const uint8_t *my_id, *their_id, *client_id, *server_id;
     if (tor_tls_get_my_certs(server, &link_cert, &id_cert))
-      return -1;
+      goto err;
     my_digests = tor_x509_cert_get_id_digests(id_cert);
     their_digests =
       tor_x509_cert_get_id_digests(conn->handshake_state->id_cert);
@@ -2455,7 +2455,7 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
                                     d, 32);
     if (siglen < 0) {
       log_warn(LD_OR, "Unable to sign AUTH1 data.");
-      return -1;
+      goto err;
     }
 
     auth1_setlen_sig(auth, siglen);
