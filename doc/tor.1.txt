@@ -1837,6 +1837,13 @@ is non-zero):
     this.  If this option is set to 0, Tor will try to pick a reasonable
     default based on your system's physical memory.  (Default: 0)
 
+[[SigningKeyLifetime]] **SigningKeyLifetime** __N__ **days**|**weeks**|**months**::
+    For how long should each Ed25519 signing key be valid?  Tor uses a
+    permanent master identity key that can be kept offline, and periodically
+    generates new "signing" keys that it uses online.  This option
+    configures their lifetime.
+    (Default: 30 days)
+
 DIRECTORY SERVER OPTIONS
 ------------------------
 
@@ -2318,6 +2325,23 @@ The following options are used for running a testing Tor network.
     Sets a lower-bound for assigning an exit flag when running as an
     authority on a testing network. Overrides the usual default lower bound
     of 4 KB. (Default: 0)
+
+[[TestingLinkCertLifetime]] **TestingLinkCertifetime** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**|**months**::
+    Overrides the default lifetime for the certificates used to authenticate
+    our X509 link cert with our ed25519 signing key.
+    (Default: 2 days)
+
+[[TestingAuthKeyLifetime]] **TestingAuthKeyLifetime** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**|**months**::
+    Overrides the default lifetime for a signing Ed25519 TLS Link authentication
+    key.
+    (Default: 2 days)
+
+[[TestingLinkKeySlop]] **TestingLinkKeySlop** __N__ **seconds**|**minutes**|**hours**::
+[[TestingAuthKeySlop]] **TestingAuthKeySlop** __N__ **seconds**|**minutes**|**hours**::
+[[TestingSigningKeySlop]] **TestingSigningKeySlop** __N__ **seconds**|**minutes**|**hours**::
+    How early before the official expiration of a an Ed25519 signing key do
+    we replace it and issue a new key?
+    (Default: 3 hours for link and auth; 1 day for signing.)
 
 SIGNALS
 -------
