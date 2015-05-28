@@ -3191,6 +3191,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       if (digest256map_get(ed_id_map, vrs->ed25519_id) != NULL) {
         log_warn(LD_DIR, "Vote networkstatus ed25519 identities were not "
                  "unique");
+        digest256map_free(ed_id_map, NULL);
         goto err;
       }
       digest256map_set(ed_id_map, vrs->ed25519_id, (void*)1);
