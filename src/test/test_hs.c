@@ -304,7 +304,7 @@ static void
 test_hs_rend_data(void *arg)
 {
   int rep;
-  rend_data_t *client;
+  rend_data_t *client = NULL;
   /* Binary format of a descriptor ID. */
   char desc_id[DIGEST_LEN];
   char client_cookie[REND_DESC_COOKIE_LEN];
@@ -384,6 +384,7 @@ test_hs_rend_data(void *arg)
   tt_int_op(tor_digest_is_zero(client->rend_pk_digest), ==, 1);
   tt_int_op(tor_digest_is_zero(client->rend_cookie), ==, 1);
   rend_data_free(client);
+  client = NULL;
 
   /* Let's test the service object now. */
   char rend_pk_digest[DIGEST_LEN];
@@ -429,6 +430,7 @@ test_hs_rend_data(void *arg)
  done:
   rend_data_free(service);
   rend_data_free(service_dup);
+  rend_data_free(client);
 }
 
 struct testcase_t hs_tests[] = {
