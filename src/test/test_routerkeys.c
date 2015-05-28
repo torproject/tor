@@ -540,6 +540,7 @@ test_routerkeys_ed_keys_init_all(void *arg)
  done:
   tor_free(dir);
   tor_free(options);
+  tor_cert_free(link_cert);
   routerkeys_free_all();
 }
 
