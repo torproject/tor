@@ -3643,9 +3643,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->SigningKeyLifetime < options->TestingSigningKeySlop*2)
     REJECT("SigningKeyLifetime is too short.");
   if (options->TestingLinkKeyLifetime < options->TestingAuthKeySlop*2)
-    REJECT("LinkKeyLifetime is too short.");
+    REJECT("TestingLinkKeyLifetime is too short.");
   if (options->TestingAuthKeyLifetime < options->TestingLinkKeySlop*2)
-    REJECT("AuthKeyLifetime is too short.");
+    REJECT("TestingAuthKeyLifetime is too short.");
 
   if (options->TestingV3AuthInitialVotingInterval
       < MIN_VOTE_INTERVAL_TESTING_INITIAL) {
