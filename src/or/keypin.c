@@ -202,7 +202,7 @@ int
 keypin_open_journal(const char *fname)
 {
   /* O_SYNC ??*/
-  int fd = tor_open_cloexec(fname, O_WRONLY|O_CREAT, 0600);
+  int fd = tor_open_cloexec(fname, O_WRONLY|O_CREAT|O_BINARY, 0600);
   if (fd < 0)
     goto err;
 
