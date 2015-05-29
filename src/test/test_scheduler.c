@@ -38,9 +38,9 @@ static circuitmux_t *mock_ccm_tgt_1 = NULL;
 static circuitmux_t *mock_ccm_tgt_2 = NULL;
 
 static circuitmux_t *mock_cgp_tgt_1 = NULL;
-static const circuitmux_policy_t *mock_cgp_val_1 = NULL;
+static circuitmux_policy_t *mock_cgp_val_1 = NULL;
 static circuitmux_t *mock_cgp_tgt_2 = NULL;
-static const circuitmux_policy_t *mock_cgp_val_2 = NULL;
+static circuitmux_policy_t *mock_cgp_val_2 = NULL;
 static int scheduler_compare_channels_mock_ctr = 0;
 static int scheduler_run_mock_ctr = 0;
 
@@ -457,13 +457,19 @@ test_scheduler_compare_channels(void *arg)
 
   /* Configure circuitmux_get_policy() mock */
   mock_cgp_tgt_1 = cm1;
+  mock_cgp_tgt_2 = cm2;
+
   /*
    * This is to test the different-policies case, which uses the policy
    * cast to an intptr_t as an arbitrary but definite thing to compare.
    */
-  mock_cgp_val_1 = (const circuitmux_policy_t *)(1);
-  mock_cgp_tgt_2 = cm2;
-  mock_cgp_val_2 = (const circuitmux_policy_t *)(2);
+  mock_cgp_val_1 = tor_malloc_zero(16);
+  mock_cgp_val_2 = tor_malloc_zero(16);
+  if ( ((intptr_t) mock_cgp_val_1) > ((intptr_t) mock_cgp_val_2) ) {
+    void *tmp = mock_cgp_val_1;
+    mock_cgp_val_1 = mock_cgp_val_2;
+    mock_cgp_val_2 = tmp;
+  }
 
   MOCK(circuitmux_get_policy, circuitmux_get_policy_mock);
 
@@ -483,6 +489,7 @@ test_scheduler_compare_channels(void *arg)
   tt_int_op(result, ==, 1);
 
   /* Distinct channels, same policy */
+  tor_free(mock_cgp_val_2);
   mock_cgp_val_2 = mock_cgp_val_1;
   result = scheduler_compare_channels(&c1, &c2);
   tt_int_op(result, ==, -1);
@@ -497,12 +504,16 @@ test_scheduler_compare_channels(void *arg)
 
   UNMOCK(circuitmux_get_policy);
   mock_cgp_tgt_1 = NULL;
-  mock_cgp_val_1 = NULL;
   mock_cgp_tgt_2 = NULL;
-  mock_cgp_val_2 = NULL;
 
   tor_free(cm1);
   tor_free(cm2);
+
+  if (mock_cgp_val_1 != mock_cgp_val_2)
+    tor_free(mock_cgp_val_1);
+  tor_free(mock_cgp_val_2);
+  mock_cgp_val_1 = NULL;
+  mock_cgp_val_2 = NULL;
 
   return;
 }
