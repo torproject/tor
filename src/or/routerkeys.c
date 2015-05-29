@@ -312,12 +312,14 @@ load_ed_keys(const or_options_t *options, time_t now)
     check_signing_cert = signing_key_cert;
     use_signing = master_signing_key;
   } else {
+    char *fname = options_get_datadir_fname2(options, "keys", "ed25519_signing");
     sign = ed_key_init_from_file(
-               options_get_datadir_fname2(options, "keys", "ed25519_signing"),
+               fname,
                INIT_ED_KEY_NEEDCERT|
                INIT_ED_KEY_INCLUDE_SIGNING_KEY_IN_CERT,
                LOG_INFO,
                NULL, 0, 0, CERT_TYPE_ID_SIGNING, &sign_cert);
+    tor_free(fname);
     check_signing_cert = sign_cert;
     use_signing = sign;
   }
@@ -338,10 +340,12 @@ load_ed_keys(const or_options_t *options, time_t now)
     if (! want_new_signing_key)
       flags |= INIT_ED_KEY_OMIT_SECRET;
 
+    char *fname = options_get_datadir_fname2(options, "keys", "ed25519_master_id");
     id = ed_key_init_from_file(
-             options_get_datadir_fname2(options, "keys", "ed25519_master_id"),
+             fname,
              flags,
              LOG_WARN, NULL, 0, 0, 0, NULL);
+    tor_free(fname);
     if (!id)
       FAIL("Missing identity key");
     if (tor_mem_is_zero((char*)id->seckey.seckey, sizeof(id->seckey)))
@@ -359,12 +363,13 @@ load_ed_keys(const or_options_t *options, time_t now)
                       INIT_ED_KEY_EXTRA_STRONG|
                       INIT_ED_KEY_NEEDCERT|
                       INIT_ED_KEY_INCLUDE_SIGNING_KEY_IN_CERT);
-    sign = ed_key_init_from_file(
-               options_get_datadir_fname2(options, "keys", "ed25519_signing"),
+    char *fname = options_get_datadir_fname2(options, "keys", "ed25519_signing");
+    sign = ed_key_init_from_file(fname,
                                  flags, LOG_WARN,
                                  sign_signing_key_with_id, now,
                                  options->SigningKeyLifetime,
                                  CERT_TYPE_ID_SIGNING, &sign_cert);
+    tor_free(fname);
     if (!sign)
       FAIL("Missing signing key");
     use_signing = sign;
