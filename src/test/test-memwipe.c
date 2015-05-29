@@ -19,25 +19,27 @@ static unsigned check_a_buffer(void) __attribute__((noinline));
 
 const char *s = NULL;
 
+#define BUF_LEN 2048
+
 #define FILL_BUFFER_IMPL()                                              \
   unsigned int i;                                                       \
   unsigned sum = 0;                                                     \
                                                                         \
   /* Fill up a 1k buffer with a recognizable pattern. */                \
-  for (i = 0; i < 2048; i += strlen(s)) {                               \
-    memcpy(buf+i, s, MIN(strlen(s), 2048-i));                           \
+  for (i = 0; i < BUF_LEN; i += strlen(s)) {                            \
+    memcpy(buf+i, s, MIN(strlen(s), BUF_LEN-i));                        \
   }                                                                     \
                                                                         \
   /* Use the buffer as input to a computation so the above can't get */ \
   /* optimized away. */                                                 \
-  for (i = 0; i < 2048; ++i) {                                          \
+  for (i = 0; i < BUF_LEN; ++i) {                                       \
     sum += (unsigned char)buf[i];                                       \
   }
 
 static unsigned
 fill_a_buffer_memset(void)
 {
-  char buf[2048];
+  char buf[BUF_LEN];
   FILL_BUFFER_IMPL()
   memset(buf, 0, sizeof(buf));
   return sum;
@@ -46,7 +48,7 @@ fill_a_buffer_memset(void)
 static unsigned
 fill_a_buffer_memwipe(void)
 {
-  char buf[2048];
+  char buf[BUF_LEN];
   FILL_BUFFER_IMPL()
   memwipe(buf, 0, sizeof(buf));
   return sum;
@@ -55,7 +57,7 @@ fill_a_buffer_memwipe(void)
 static unsigned
 fill_a_buffer_nothing(void)
 {
-  char buf[2048];
+  char buf[BUF_LEN];
   FILL_BUFFER_IMPL()
   return sum;
 }
@@ -85,7 +87,7 @@ check_a_buffer(void)
      If you know a better way to figure out whether the compiler eliminated
      the memset/memwipe calls or not, please let me know.
    */
-  for (i = 0; i < sizeof(buf); ++i) {
+  for (i = 0; i < BUF_LEN - strlen(s); ++i) {
     if (vmemeq(buf+i, s, strlen(s)))
       ++sum;
   }
@@ -98,9 +100,9 @@ static char *heap_buf = NULL;
 static unsigned
 fill_heap_buffer_memset(void)
 {
-  char *buf = heap_buf = malloc(2048);
+  char *buf = heap_buf = malloc(BUF_LEN);
   FILL_BUFFER_IMPL()
-  memset(buf, 0, 2048);
+  memset(buf, 0, BUF_LEN);
   free(buf);
   return sum;
 }
@@ -108,9 +110,9 @@ fill_heap_buffer_memset(void)
 static unsigned
 fill_heap_buffer_memwipe(void)
 {
-  char *buf = heap_buf = malloc(2048);
+  char *buf = heap_buf = malloc(BUF_LEN);
   FILL_BUFFER_IMPL()
-  memwipe(buf, 0, 2048);
+  memwipe(buf, 0, BUF_LEN);
   free(buf);
   return sum;
 }
@@ -118,7 +120,7 @@ fill_heap_buffer_memwipe(void)
 static unsigned
 fill_heap_buffer_nothing(void)
 {
-  char *buf = heap_buf = malloc(2048);
+  char *buf = heap_buf = malloc(BUF_LEN);
   FILL_BUFFER_IMPL()
   free(buf);
   return sum;
@@ -138,7 +140,7 @@ check_heap_buffer(void)
      If you know a better way to figure out whether the compiler eliminated
      the memset/memwipe calls or not, please let me know.
    */
-  for (i = 0; i < sizeof(buf); ++i) {
+  for (i = 0; i < BUF_LEN - strlen(s); ++i) {
     if (vmemeq(buf+i, s, strlen(s)))
       ++sum;
   }
