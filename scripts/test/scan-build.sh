@@ -25,15 +25,13 @@ CHECKERS="\
     -enable-checker security.insecureAPI.strcpy
 "
 
-/opt/clang-3.4/bin/scan-build/scan-build \
+scan-build \
     $CHECKERS \
-    --use-analyzer=/opt/clang-3.4/bin/clang \
     ./configure
 
-/opt/clang-3.4/bin/scan-build/scan-build \
+scan-build \
     $CHECKERS \
-    --use-analyzer=/opt/clang-3.4/bin/clang \
-    make -j2
+    make -j2 -k
 
 
 # Haven't tried this yet.
