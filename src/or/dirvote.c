@@ -1143,6 +1143,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
   dircollator_t *collator = NULL;
   tor_assert(flavor == FLAV_NS || flavor == FLAV_MICRODESC);
   tor_assert(total_authorities >= smartlist_len(votes));
+  tor_assert(total_authorities > 0);
 
   flavor_name = networkstatus_get_flavor_name(flavor);
 
@@ -1535,7 +1536,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       /* Okay, go through all the entries for this digest. */
       for (int voter_idx = 0; voter_idx < smartlist_len(votes); ++voter_idx) {
         if (vrs_lst[voter_idx] == NULL)
-          continue; /* This voter had nothig to say about this entry. */
+          continue; /* This voter had nothing to say about this entry. */
         rs = vrs_lst[voter_idx];
         ++n_listing;
 
@@ -1578,6 +1579,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
        * the authorities we believe in list it. */
       if (n_listing <= total_authorities/2)
         continue;
+
+      /* The clangalyzer can't figure out that this will never be NULL
+       * if n_listing is at least 1 */
+      tor_assert(current_rsa_id);
 
       /* Figure out the most popular opinion of what the most recent
        * routerinfo and its contents are. */
