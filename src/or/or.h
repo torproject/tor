@@ -4905,11 +4905,6 @@ typedef struct rend_intro_point_t {
    * included in the last HS descriptor we generated. */
   unsigned int listed_in_last_desc : 1;
 
-  /** (Service side only) Flag indicating that
-   * rend_service_note_removing_intro_point has been called for this
-   * intro point. */
-  unsigned int rend_service_note_removing_intro_point_called : 1;
-
   /** (Service side only) A replay cache recording the RSA-encrypted parts
    * of INTRODUCE2 cells this intro point's circuit has received.  This is
    * used to prevent replay attacks. */
@@ -4935,16 +4930,6 @@ typedef struct rend_intro_point_t {
    * (start to) expire, or -1 if we haven't decided when this intro
    * point should expire. */
   time_t time_to_expire;
-
-  /** (Service side only) The time at which we decided that this intro
-   * point should start expiring, or -1 if this intro point is not yet
-   * expiring.
-   *
-   * This field also serves as a flag to indicate that we have decided
-   * to expire this intro point, in case intro_point_should_expire_now
-   * flaps (perhaps due to a clock jump; perhaps due to other
-   * weirdness, or even a (present or future) bug). */
-  time_t time_expiring;
 } rend_intro_point_t;
 
 #define REND_PROTOCOL_VERSION_BITMASK_WIDTH 16
