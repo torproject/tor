@@ -3479,6 +3479,9 @@ find_dl_schedule_and_len(download_status_t *dls, int server)
     default:
       tor_assert(0);
   }
+
+  /* Impossible, but gcc will fail with -Werror without a `return`. */
+  return NULL;
 }
 
 /** Called when an attempt to download <b>dls</b> has failed with HTTP status
