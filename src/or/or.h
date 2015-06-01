@@ -4942,6 +4942,10 @@ typedef struct rend_intro_point_t {
    * still in the consensus. After MAX_INTRO_POINT_CIRCUIT_RETRIES, we give
    * up on it. */
   unsigned int circuit_retries;
+
+  /** (Service side only) Set if this intro point has an established circuit
+   * and unset if it doesn't. */
+  unsigned int circuit_established:1;
 } rend_intro_point_t;
 
 #define REND_PROTOCOL_VERSION_BITMASK_WIDTH 16

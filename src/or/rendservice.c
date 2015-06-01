@@ -2689,24 +2689,16 @@ rend_service_launch_establish_intro(rend_service_t *service,
 }
 
 /** Return the number of introduction points that are or have been
- * established for the given service address in <b>query</b>. */
-static int
-count_established_intro_points(const char *query)
+ * established for the given service. */
+static unsigned int
+count_established_intro_points(const rend_service_t *service)
 {
-  int num_ipos = 0;
-  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
-    if (!circ->marked_for_close &&
-        circ->state == CIRCUIT_STATE_OPEN &&
-        (circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
-         circ->purpose == CIRCUIT_PURPOSE_S_INTRO)) {
-      origin_circuit_t *oc = TO_ORIGIN_CIRCUIT(circ);
-      if (oc->rend_data &&
-          !rend_cmp_service_ids(query, oc->rend_data->onion_address))
-        num_ipos++;
-    }
-  }
-  SMARTLIST_FOREACH_END(circ);
-  return num_ipos;
+  unsigned int num = 0;
+
+  SMARTLIST_FOREACH(service->intro_nodes, rend_intro_point_t *, intro,
+    num += intro->circuit_established
+  );
+  return num;
 }
 
 /** Called when we're done building a circuit to an introduction point:
@@ -2747,9 +2739,8 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
    * redefine this one as a general circuit or close it, depending.
    * Substract the amount of expiring nodes here since the circuits are
    * still opened. */
-  if ((count_established_intro_points(serviceid) -
-       smartlist_len(service->expiring_nodes)) >
-      (int)service->n_intro_points_wanted) { /* XXX023 remove cast */
+  if (count_established_intro_points(service) >
+      service->n_intro_points_wanted) {
     const or_options_t *options = get_options();
     /* Remove the intro point associated with this circuit, it's being
      * repurposed or closed thus cleanup memory. */
@@ -2857,6 +2848,7 @@ rend_service_intro_established(origin_circuit_t *circuit,
                                size_t request_len)
 {
   rend_service_t *service;
+  rend_intro_point_t *intro;
   char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
   (void) request;
   (void) request_len;
@@ -2874,6 +2866,19 @@ rend_service_intro_established(origin_circuit_t *circuit,
              (unsigned)circuit->base_.n_circ_id);
     goto err;
   }
+  /* We've just successfully established a intro circuit to one of our
+   * introduction point, account for it. */
+  intro = find_intro_point(circuit);
+  if (intro == NULL) {
+    log_warn(LD_REND,
+             "Introduction circuit established without a rend_intro_point_t "
+             "object for service %s on circuit %u",
+             safe_str_client(serviceid), (unsigned)circuit->base_.n_circ_id);
+    goto err;
+  }
+  intro->circuit_established = 1;
+  /* We might not have every introduction point ready but at this point we
+   * know that the descriptor needs to be uploaded. */
   service->desc_is_dirty = time(NULL);
   circuit_change_purpose(TO_CIRCUIT(circuit), CIRCUIT_PURPOSE_S_INTRO);
 
@@ -3390,6 +3395,10 @@ remove_invalid_intro_points(rend_service_t *service,
                " (circuit disappeared).",
                safe_str_client(extend_info_describe(intro->extend_info)),
                safe_str_client(service->service_id));
+      /* We've lost the circuit for this intro point, flag it so it can be
+       * accounted for when considiring uploading a descriptor. */
+      intro->circuit_established = 0;
+
       /* Node is gone or we've reached our maximum circuit creationg retry
        * count, clean up everything, we'll find a new one. */
       if (node == NULL ||
@@ -3421,6 +3430,9 @@ remove_invalid_intro_points(rend_service_t *service,
                safe_str_client(service->service_id));
       smartlist_add(service->expiring_nodes, intro);
       SMARTLIST_DEL_CURRENT(service->intro_nodes, intro);
+      /* Intro point is expired, we need a new one thus don't consider it
+       * anymore has a valid established intro point. */
+      intro->circuit_established = 0;
     }
   } SMARTLIST_FOREACH_END(intro);
 }
@@ -3639,9 +3651,13 @@ rend_consider_services_upload(time_t now)
       service->next_upload_time =
         now + rendinitialpostdelay + crypto_rand_int(2*rendpostperiod);
     }
+    /* Does every introduction points have been established? */
+    unsigned int intro_points_ready =
+      count_established_intro_points(service) >= service->n_intro_points_wanted;
     if (service->next_upload_time < now ||
         (service->desc_is_dirty &&
-         service->desc_is_dirty < now-rendinitialpostdelay)) {
+         service->desc_is_dirty < now-rendinitialpostdelay &&
+         intro_points_ready)) {
       /* if it's time, or if the directory servers have a wrong service
        * descriptor and ours has been stable for rendinitialpostdelay seconds,
        * upload a new one of each format. */
