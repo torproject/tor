@@ -227,8 +227,16 @@ test_dir_formats(void *arg)
           "identity-ed25519\n"
           "-----BEGIN ED25519 CERT-----\n", sizeof(buf2));
   strlcat(buf2, cert_buf, sizeof(buf2));
-  strlcat(buf2, "-----END ED25519 CERT-----\n"
-          "platform Tor "VERSION" on ", sizeof(buf2));
+  strlcat(buf2, "-----END ED25519 CERT-----\n", sizeof(buf2));
+  strlcat(buf2, "master-key-ed25519 ", sizeof(buf2));
+  {
+    char k[ED25519_BASE64_LEN+1];
+    tt_assert(ed25519_public_to_base64(k, &r2->signing_key_cert->signing_key)
+              >= 0);
+    strlcat(buf2, k, sizeof(buf2));
+    strlcat(buf2, "\n", sizeof(buf2));
+  }
+  strlcat(buf2, "platform Tor "VERSION" on ", sizeof(buf2));
   strlcat(buf2, get_uname(), sizeof(buf2));
   strlcat(buf2, "\n"
           "protocols Link 1 2 Circuit 1\n"

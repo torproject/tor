@@ -2406,6 +2406,7 @@ router_dump_router_to_string(routerinfo_t *router,
   if (emit_ed_sigs) {
     /* Encode ed25519 signing cert */
     char ed_cert_base64[256];
+    char ed_fp_base64[ED25519_BASE64_LEN+1];
     if (base64_encode(ed_cert_base64, sizeof(ed_cert_base64),
                       (const char*)router->signing_key_cert->encoded,
                       router->signing_key_cert->encoded_len,
@@ -2413,10 +2414,17 @@ router_dump_router_to_string(routerinfo_t *router,
       log_err(LD_BUG,"Couldn't base64-encode signing key certificate!");
       goto err;
     }
+    if (ed25519_public_to_base64(ed_fp_base64,
+                                 &router->signing_key_cert->signing_key)<0) {
+      log_err(LD_BUG,"Couldn't base64-encode identity key\n");
+      goto err;
+    }
     tor_asprintf(&ed_cert_line, "identity-ed25519\n"
                  "-----BEGIN ED25519 CERT-----\n"
                  "%s"
-                 "-----END ED25519 CERT-----\n", ed_cert_base64);
+                 "-----END ED25519 CERT-----\n"
+                 "master-key-ed25519 %s\n",
+                 ed_cert_base64, ed_fp_base64);
   }
 
   /* PEM-encode the onion key */

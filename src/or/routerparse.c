@@ -89,6 +89,7 @@ typedef enum {
   K_IPV6_POLICY,
   K_ROUTER_SIG_ED25519,
   K_IDENTITY_ED25519,
+  K_MASTER_KEY_ED25519,
   K_ONION_KEY_CROSSCERT,
   K_NTOR_ONION_KEY_CROSSCERT,
 
@@ -302,6 +303,7 @@ static token_rule_t routerdesc_token_table[] = {
   T01("extra-info-digest",   K_EXTRA_INFO_DIGEST,   GE(1),   NO_OBJ ),
   T01("hidden-service-dir",  K_HIDDEN_SERVICE_DIR,  NO_ARGS, NO_OBJ ),
   T01("identity-ed25519",    K_IDENTITY_ED25519,    NO_ARGS, NEED_OBJ ),
+  T01("master-key-ed25519",  K_MASTER_KEY_ED25519,  GE(1),   NO_OBJ ),
   T01("router-sig-ed25519",  K_ROUTER_SIG_ED25519,  GE(1),   NO_OBJ ),
   T01("onion-key-crosscert", K_ONION_KEY_CROSSCERT, NO_ARGS, NEED_OBJ ),
   T01("ntor-onion-key-crosscert", K_NTOR_ONION_KEY_CROSSCERT,
@@ -1337,9 +1339,11 @@ router_parse_entry_from_string(const char *s, const char *end,
   }
 
   {
-    directory_token_t *ed_sig_tok, *ed_cert_tok, *cc_tap_tok, *cc_ntor_tok;
+    directory_token_t *ed_sig_tok, *ed_cert_tok, *cc_tap_tok, *cc_ntor_tok,
+      *master_key_tok;
     ed_sig_tok = find_opt_by_keyword(tokens, K_ROUTER_SIG_ED25519);
     ed_cert_tok = find_opt_by_keyword(tokens, K_IDENTITY_ED25519);
+    master_key_tok = find_opt_by_keyword(tokens, K_MASTER_KEY_ED25519);
     cc_tap_tok = find_opt_by_keyword(tokens, K_ONION_KEY_CROSSCERT);
     cc_ntor_tok = find_opt_by_keyword(tokens, K_NTOR_ONION_KEY_CROSSCERT);
     int n_ed_toks = !!ed_sig_tok + !!ed_cert_tok +
@@ -1348,6 +1352,11 @@ router_parse_entry_from_string(const char *s, const char *end,
         (n_ed_toks == 4 && !router->onion_curve25519_pkey)) {
       log_warn(LD_DIR, "Router descriptor with only partial ed25519/"
                "cross-certification support");
+      goto err;
+    }
+    if (master_key_tok && !ed_sig_tok) {
+      log_warn(LD_DIR, "Router descriptor has ed25519 master key but no "
+               "certificate");
       goto err;
     }
     if (ed_sig_tok) {
@@ -1394,12 +1403,30 @@ router_parse_entry_from_string(const char *s, const char *end,
         goto err;
       }
       router->signing_key_cert = cert; /* makes sure it gets freed. */
+
       if (cert->cert_type != CERT_TYPE_ID_SIGNING ||
           ! cert->signing_key_included) {
         log_warn(LD_DIR, "Invalid form for ed25519 cert");
         goto err;
       }
 
+      if (master_key_tok) {
+        /* This token is optional, but if it's present, it must match
+         * the signature in the signing cert, or supplant it. */
+        tor_assert(master_key_tok->n_args >= 1);
+        ed25519_public_key_t pkey;
+        if (ed25519_public_from_base64(&pkey, master_key_tok->args[0])<0) {
+          log_warn(LD_DIR, "Can't parse ed25519 master key");
+          goto err;
+        }
+
+        if (fast_memneq(&cert->signing_key.pubkey,
+                        pkey.pubkey, ED25519_PUBKEY_LEN)) {
+          log_warn(LD_DIR, "Ed25519 master key does not match "
+                   "key in certificate");
+          goto err;
+        }
+      }
       ntor_cc_cert = tor_cert_parse((const uint8_t*)cc_ntor_tok->object_body,
                                     cc_ntor_tok->object_size);
       if (!ntor_cc_cert) {
