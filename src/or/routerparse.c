@@ -2352,7 +2352,8 @@ routerstatus_parse_entry_from_string(memarea_t *area,
         if (!strcmp(t->args[0], "ed25519")) {
           vote_rs->has_ed25519_listing = 1;
           if (strcmp(t->args[1], "none") &&
-              digest256_from_base64((char*)vote_rs->ed25519_id, t->args[1])<0) {
+              digest256_from_base64((char*)vote_rs->ed25519_id,
+                                    t->args[1])<0) {
             log_warn(LD_DIR, "Bogus ed25519 key in networkstatus vote");
             goto err;
           }
@@ -3184,7 +3185,8 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   }
   if (ns_type != NS_TYPE_CONSENSUS) {
     digest256map_t *ed_id_map = digest256map_new();
-    SMARTLIST_FOREACH_BEGIN(ns->routerstatus_list, vote_routerstatus_t *, vrs) {
+    SMARTLIST_FOREACH_BEGIN(ns->routerstatus_list, vote_routerstatus_t *,
+                            vrs) {
       if (! vrs->has_ed25519_listing ||
           tor_mem_is_zero((const char *)vrs->ed25519_id, DIGEST256_LEN))
         continue;

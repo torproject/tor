@@ -581,7 +581,8 @@ rend_config_services(const or_options_t *options, int validate_only)
                                                         10, 0, 1, &ok, NULL);
       if (!ok) {
         log_warn(LD_CONFIG,
-                 "HiddenServiceMaxStreamsCloseCircuit should be 0 or 1, not %s",
+                 "HiddenServiceMaxStreamsCloseCircuit should be 0 or 1, "
+                 "not %s",
                  line->value);
         rend_service_free(service);
         return -1;

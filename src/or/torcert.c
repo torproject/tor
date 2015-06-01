@@ -282,3 +282,4 @@ tor_make_rsa_ed25519_crosscert(const ed25519_public_key_t *ed_key,
   *cert = res;
   return sz;
 }
+

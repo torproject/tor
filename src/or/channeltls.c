@@ -2004,7 +2004,7 @@ channel_tls_process_auth_challenge_cell(var_cell_t *cell, channel_tls_t *chan)
     goto done;
   }
 
-done:
+ done:
   auth_challenge_cell_free(ac);
 
 #undef ERR

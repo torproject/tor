@@ -210,8 +210,9 @@ test_hs_desc_event(void *arg)
 
   /* test valid content. */
   char *exp_msg;
-  control_event_hs_descriptor_content(rend_query.onion_address, STR_HS_CONTENT_DESC_ID,
-                                      HSDIR_EXIST_ID, hs_desc_content);
+  control_event_hs_descriptor_content(rend_query.onion_address,
+                                      STR_HS_CONTENT_DESC_ID, HSDIR_EXIST_ID,
+                                      hs_desc_content);
   tor_asprintf(&exp_msg, "650+HS_DESC_CONTENT " STR_HS_ADDR " "\
                STR_HS_CONTENT_DESC_ID " " STR_HSDIR_EXIST_LONGNAME\
                "\r\n%s\r\n.\r\n650 OK\r\n", hs_desc_content);

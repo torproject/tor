@@ -59,8 +59,10 @@ ddmap_entry_set_digests(ddmap_entry_t *ent,
   memcpy(ent->d + DIGEST_LEN, ed25519, DIGEST256_LEN);
 }
 
-HT_PROTOTYPE(double_digest_map, ddmap_entry_s, node, ddmap_entry_hash, ddmap_entry_eq);
-HT_GENERATE2(double_digest_map, ddmap_entry_s, node, ddmap_entry_hash, ddmap_entry_eq, 0.6, tor_reallocarray, tor_free_);
+HT_PROTOTYPE(double_digest_map, ddmap_entry_s, node, ddmap_entry_hash,
+             ddmap_entry_eq);
+HT_GENERATE2(double_digest_map, ddmap_entry_s, node, ddmap_entry_hash,
+             ddmap_entry_eq, 0.6, tor_reallocarray, tor_free_);
 static void
 dircollator_add_routerstatus(dircollator_t *dc,
                              int vote_num,

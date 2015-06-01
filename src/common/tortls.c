@@ -1810,7 +1810,8 @@ rectify_client_ciphers(SSL *ssl)
                   SSL_CIPHER_get_name(cipher));
         ++j;
       } else if (cipher &&
-                 (SSL_CIPHER_get_id(cipher) & 0xffff) == CLIENT_CIPHER_INFO_LIST[i].id) {
+                 (SSL_CIPHER_get_id(cipher) & 0xffff) ==
+                  CLIENT_CIPHER_INFO_LIST[i].id) {
         /* "cipher" is the cipher we expect. Put it on the list. */
         log_debug(LD_NET, "Found cipher %s", SSL_CIPHER_get_name(cipher));
         sk_SSL_CIPHER_push(CLIENT_CIPHER_STACK, cipher);

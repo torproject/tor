@@ -312,7 +312,8 @@ load_ed_keys(const or_options_t *options, time_t now)
     check_signing_cert = signing_key_cert;
     use_signing = master_signing_key;
   } else {
-    char *fname = options_get_datadir_fname2(options, "keys", "ed25519_signing");
+    char *fname =
+      options_get_datadir_fname2(options, "keys", "ed25519_signing");
     sign = ed_key_init_from_file(
                fname,
                INIT_ED_KEY_NEEDCERT|
@@ -340,7 +341,8 @@ load_ed_keys(const or_options_t *options, time_t now)
     if (! want_new_signing_key)
       flags |= INIT_ED_KEY_OMIT_SECRET;
 
-    char *fname = options_get_datadir_fname2(options, "keys", "ed25519_master_id");
+    char *fname =
+      options_get_datadir_fname2(options, "keys", "ed25519_master_id");
     id = ed_key_init_from_file(
              fname,
              flags,
@@ -363,7 +365,8 @@ load_ed_keys(const or_options_t *options, time_t now)
                       INIT_ED_KEY_EXTRA_STRONG|
                       INIT_ED_KEY_NEEDCERT|
                       INIT_ED_KEY_INCLUDE_SIGNING_KEY_IN_CERT);
-    char *fname = options_get_datadir_fname2(options, "keys", "ed25519_signing");
+    char *fname =
+      options_get_datadir_fname2(options, "keys", "ed25519_signing");
     sign = ed_key_init_from_file(fname,
                                  flags, LOG_WARN,
                                  sign_signing_key_with_id, now,

@@ -197,7 +197,6 @@ typedef struct certs_data_s {
   crypto_pk_t *key1, *key2;
 } certs_data_t;
 
-
 static int
 recv_certs_cleanup(const struct testcase_t *test, void *obj)
 {
@@ -593,7 +592,6 @@ AUTHCHALLENGE_FAIL(truncated,
 AUTHCHALLENGE_FAIL(nonzero_circid,
                    d->cell->circ_id = 1337)
 
-
 static tor_x509_cert_t *mock_peer_cert = NULL;
 static tor_x509_cert_t *
 mock_get_peer_cert(tor_tls_t *tls)
@@ -914,3 +912,4 @@ struct testcase_t link_handshake_tests[] = {
 
   END_OF_TESTCASES
 };
+

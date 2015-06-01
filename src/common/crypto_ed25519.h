@@ -88,7 +88,6 @@ int ed25519_public_blind(ed25519_public_key_t *out,
                          const ed25519_public_key_t *inp,
                          const uint8_t *param);
 
-
 /* XXXX move these to crypto_format.h */
 #define ED25519_BASE64_LEN 43
 int ed25519_public_from_base64(ed25519_public_key_t *pkey,

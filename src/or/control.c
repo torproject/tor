@@ -6029,7 +6029,7 @@ get_desc_id_from_query(const rend_data_t *rend_data, const char *hsdir_fp)
     } SMARTLIST_FOREACH_END(fingerprint);
   }
 
-end:
+ end:
   return desc_id;
 }
 
