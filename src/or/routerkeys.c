@@ -134,6 +134,7 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
     goto done;
 
   /* Read a cert. */
+  tor_free(got_tag);
   uint8_t certbuf[256];
   ssize_t cert_body_len = crypto_read_tagged_contents_from_file(
                  cert_fname, "ed25519v1-cert",
