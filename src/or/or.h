@@ -4881,6 +4881,11 @@ typedef struct rend_encoded_v2_service_descriptor_t {
  * XXX023 Should this be configurable? */
 #define INTRO_POINT_LIFETIME_MAX_SECONDS (24*60*60)
 
+/** The maximum number of circuit creation retry we do to an intro point
+ * before giving up. We try to reuse intro point that fails during their
+ * lifetime so this is a hard limit on the amount of time we do that. */
+#define MAX_INTRO_POINT_CIRCUIT_RETRIES 3
+
 /** Introduction point information.  Used both in rend_service_t (on
  * the service side) and in rend_service_descriptor_t (on both the
  * client and service side). */
@@ -4930,6 +4935,13 @@ typedef struct rend_intro_point_t {
    * (start to) expire, or -1 if we haven't decided when this intro
    * point should expire. */
   time_t time_to_expire;
+
+  /** (Service side only) The amount of circuit creation we've made to this
+   * intro point. This is incremented every time we do a circuit relaunch on
+   * this object which is triggered when the circuit dies but the node is
+   * still in the consensus. After MAX_INTRO_POINT_CIRCUIT_RETRIES, we give
+   * up on it. */
+  unsigned int circuit_retries;
 } rend_intro_point_t;
 
 #define REND_PROTOCOL_VERSION_BITMASK_WIDTH 16

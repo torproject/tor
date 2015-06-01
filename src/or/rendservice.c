@@ -2751,6 +2751,14 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
        smartlist_len(service->expiring_nodes)) >
       (int)service->n_intro_points_wanted) { /* XXX023 remove cast */
     const or_options_t *options = get_options();
+    /* Remove the intro point associated with this circuit, it's being
+     * repurposed or closed thus cleanup memory. */
+    rend_intro_point_t *intro = find_intro_point(circuit);
+    if (intro != NULL) {
+      smartlist_remove(service->intro_nodes, intro);
+      rend_intro_point_free(intro);
+    }
+
     if (options->ExcludeNodes) {
       /* XXXX in some future version, we can test whether the transition is
          allowed or not given the actual nodes in the circuit.  But for now,
@@ -3344,15 +3352,19 @@ intro_point_should_expire_now(rend_intro_point_t *intro,
 
 /** Iterate over intro points in the given service and remove the invalid
  * ones. For an intro point object to be considered invalid, the circuit
- * needs to have disappeared.
+ * _and_ node need to have disappeared.
  *
  * If the intro point should expire, it's placed into the expiring_nodes
  * list of the service and removed from the active intro nodes list.
  *
- * If <b>exclude_nodes</b> is not NULL, add the valid nodes to it. */
+ * If <b>exclude_nodes</b> is not NULL, add the valid nodes to it.
+ *
+ * If <b>retry_nodes</b> is not NULL, add the valid node to it if the
+ * circuit disappeared but the node is still in the consensus. */
 static void
 remove_invalid_intro_points(rend_service_t *service,
-                            smartlist_t *exclude_nodes, time_t now)
+                            smartlist_t *exclude_nodes,
+                            smartlist_t *retry_nodes, time_t now)
 {
   tor_assert(service);
 
@@ -3365,6 +3377,12 @@ remove_invalid_intro_points(rend_service_t *service,
     origin_circuit_t *intro_circ =
       find_intro_circuit(intro, service->pk_digest);
 
+    /* Add the valid node to the exclusion list so we don't try to establish
+     * an introduction point to it again. */
+    if (node && exclude_nodes) {
+      smartlist_add(exclude_nodes, (void*) node);
+    }
+
     /* First, make sure we still have a valid circuit for this intro point.
      * If we dont, we'll give up on it and make a new one. */
     if (intro_circ == NULL) {
@@ -3372,10 +3390,23 @@ remove_invalid_intro_points(rend_service_t *service,
                " (circuit disappeared).",
                safe_str_client(extend_info_describe(intro->extend_info)),
                safe_str_client(service->service_id));
-      rend_intro_point_free(intro);
-      SMARTLIST_DEL_CURRENT(service->intro_nodes, intro);
-      /* Useful, it indicates if the intro point has been freed. */
-      intro = NULL;
+      /* Node is gone or we've reached our maximum circuit creationg retry
+       * count, clean up everything, we'll find a new one. */
+      if (node == NULL ||
+          intro->circuit_retries >= MAX_INTRO_POINT_CIRCUIT_RETRIES) {
+        rend_intro_point_free(intro);
+        SMARTLIST_DEL_CURRENT(service->intro_nodes, intro);
+        /* We've just killed the intro point, nothing left to do. */
+        continue;
+      }
+
+      /* The intro point is still alive so let's try to use it again because
+       * we have a published descriptor containing it. Keep the intro point
+       * in the intro_nodes list because it's still valid, we are rebuilding
+       * a circuit to it. */
+      if (retry_nodes) {
+        smartlist_add(retry_nodes, intro);
+      }
     }
     /* else, the circuit is valid so in both cases, node being alive or not,
      * we leave the circuit and intro point object as is. Closing the
@@ -3384,18 +3415,12 @@ remove_invalid_intro_points(rend_service_t *service,
 
     /* Now, check if intro point should expire. If it does, queue it so
      * it can be cleaned up once it has been replaced properly. */
-    if (intro != NULL && intro_point_should_expire_now(intro, now)) {
+    if (intro_point_should_expire_now(intro, now)) {
       log_info(LD_REND, "Expiring %s as intro point for %s.",
                safe_str_client(extend_info_describe(intro->extend_info)),
                safe_str_client(service->service_id));
       smartlist_add(service->expiring_nodes, intro);
       SMARTLIST_DEL_CURRENT(service->intro_nodes, intro);
-    }
-
-    /* Add the valid node to the exclusion list so we don't try to
-     * establish an introduction point to it again. */
-    if (node && exclude_nodes) {
-      smartlist_add(exclude_nodes, (void*)node);
     }
   } SMARTLIST_FOREACH_END(intro);
 }
@@ -3447,14 +3472,19 @@ rend_services_introduce(void)
   /* List of nodes we need to _exclude_ when choosing a new node to
    * establish an intro point to. */
   smartlist_t *exclude_nodes;
+  /* List of nodes we need to retry to build a circuit on them because the
+   * node is valid but circuit died. */
+  smartlist_t *retry_nodes;
 
   if (!have_completed_a_circuit())
     return;
 
   exclude_nodes = smartlist_new();
+  retry_nodes = smartlist_new();
   now = time(NULL);
 
   SMARTLIST_FOREACH_BEGIN(rend_service_list, rend_service_t *, service) {
+    int r;
     /* Number of intro points we want to open and add to the intro nodes
      * list of the service. */
     unsigned int n_intro_points_to_open;
@@ -3464,6 +3494,7 @@ rend_services_introduce(void)
     /* Different service are allowed to have the same introduction point as
      * long as they are on different circuit thus why we clear this list. */
     smartlist_clear(exclude_nodes);
+    smartlist_clear(retry_nodes);
 
     /* This retry period is important here so we don't stress circuit
      * creation. */
@@ -3478,9 +3509,27 @@ rend_services_introduce(void)
       continue;
     }
 
-    /* Cleanup the invalid intro points and save the node objects, if any,
-     * in the exclude_nodes list. */
-    remove_invalid_intro_points(service, exclude_nodes, now);
+    /* Cleanup the invalid intro points and save the node objects, if apply,
+     * in the exclude_nodes and retry_nodes list. */
+    remove_invalid_intro_points(service, exclude_nodes, retry_nodes, now);
+
+    /* Let's try to rebuild circuit on the nodes we want to retry on. */
+    SMARTLIST_FOREACH_BEGIN(retry_nodes, rend_intro_point_t *, intro) {
+      r = rend_service_launch_establish_intro(service, intro);
+      if (r < 0) {
+        log_warn(LD_REND, "Error launching circuit to node %s for service %s.",
+                 safe_str_client(extend_info_describe(intro->extend_info)),
+                 safe_str_client(service->service_id));
+        /* Unable to launch a circuit to that intro point, remove it from
+         * the valid list so we can create a new one. */
+        smartlist_remove(service->intro_nodes, intro);
+        rend_intro_point_free(intro);
+        continue;
+      }
+      intro->circuit_retries++;
+    } SMARTLIST_FOREACH_END(intro);
+
+    /* Avoid mismatched signed comparaison below. */
     intro_nodes_len = (unsigned int) smartlist_len(service->intro_nodes);
 
     /* Quiescent state, no node expiring and we have more or the amount of
@@ -3510,7 +3559,6 @@ rend_services_introduce(void)
     }
 
     for (i = 0; i < (int) n_intro_points_to_open; i++) {
-      int r;
       const node_t *node;
       rend_intro_point_t *intro;
       router_crn_flags_t flags = CRN_NEED_UPTIME|CRN_NEED_DESC;
@@ -3556,6 +3604,7 @@ rend_services_introduce(void)
     }
   } SMARTLIST_FOREACH_END(service);
   smartlist_free(exclude_nodes);
+  smartlist_free(retry_nodes);
 }
 
 #define MIN_REND_INITIAL_POST_DELAY (30)
