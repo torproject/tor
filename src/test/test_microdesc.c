@@ -470,6 +470,7 @@ test_md_generate(void *arg)
   md = dirvote_create_microdescriptor(ri, 21);
   tt_str_op(md->body, ==, test_md_18);
 
+  routerinfo_free(ri);
   ri = router_parse_entry_from_string(test_ri2, NULL, 0, 0, NULL, NULL);
 
   microdesc_free(md);

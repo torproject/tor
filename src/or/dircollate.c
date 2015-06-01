@@ -125,6 +125,7 @@ dircollator_free(dircollator_t *dc)
     digestmap_free(dc->by_collated_rsa_sha1, NULL);
 
   digestmap_free(dc->by_rsa_sha1, tor_free_);
+  smartlist_free(dc->all_rsa_sha1_lst);
 
   ddmap_entry_t **e, **next, *this;
   for (e = HT_START(double_digest_map, &dc->by_both_ids);

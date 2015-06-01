@@ -91,7 +91,6 @@ test_dir_formats(void *arg)
   addr_policy_t *ex1, *ex2;
   routerlist_t *dir1 = NULL, *dir2 = NULL;
   uint8_t *rsa_cc = NULL;
-  tor_cert_t *ntor_cc = NULL;
   or_options_t *options = get_options_mutable();
   const addr_policy_t *p;
   time_t now = time(NULL);
@@ -155,7 +154,6 @@ test_dir_formats(void *arg)
   r2->or_port = 9005;
   r2->dir_port = 0;
   r2->onion_pkey = crypto_pk_dup_key(pk2);
-  r2->onion_curve25519_pkey = tor_malloc_zero(sizeof(curve25519_public_key_t));
   curve25519_keypair_t r2_onion_keypair;
   curve25519_keypair_generate(&r2_onion_keypair, 0);
   r2->onion_curve25519_pkey = tor_memdup(&r2_onion_keypair.pubkey,
@@ -257,15 +255,19 @@ test_dir_formats(void *arg)
   strlcat(buf2, cert_buf, sizeof(buf2));
   strlcat(buf2, "-----END CROSSCERT-----\n", sizeof(buf2));
   int ntor_cc_sign;
-  ntor_cc = make_ntor_onion_key_crosscert(&r2_onion_keypair,
+  {
+    tor_cert_t *ntor_cc = NULL;
+    ntor_cc = make_ntor_onion_key_crosscert(&r2_onion_keypair,
                                           &kp1.pubkey,
                                           r2->cache_info.published_on,
                                           MIN_ONION_KEY_LIFETIME,
                                           &ntor_cc_sign);
-  tt_assert(ntor_cc);
-  base64_encode(cert_buf, sizeof(cert_buf),
+    tt_assert(ntor_cc);
+    base64_encode(cert_buf, sizeof(cert_buf),
                 (char*)ntor_cc->encoded, ntor_cc->encoded_len,
                 BASE64_ENCODE_MULTILINE);
+    tor_cert_free(ntor_cc);
+  }
   tor_snprintf(buf2+strlen(buf2), sizeof(buf2)-strlen(buf2),
                "ntor-onion-key-crosscert %d\n"
                "-----BEGIN ED25519 CERT-----\n"
