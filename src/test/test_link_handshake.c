@@ -329,7 +329,7 @@ test_link_handshake_recv_certs_ok_server(void *arg)
 
 #define CERTS_FAIL(name, code)                          \
   static void                                                           \
-  test_link_handshake_recv_certs_ ## name (void *arg)                   \
+  test_link_handshake_recv_certs_ ## name(void *arg)                    \
   {                                                                     \
     certs_data_t *d = arg;                                              \
     { code ; }                                                          \
@@ -349,44 +349,54 @@ CERTS_FAIL(already_authenticated,
 CERTS_FAIL(empty, d->cell->payload_len = 0)
 CERTS_FAIL(bad_circid, d->cell->circ_id = 1)
 CERTS_FAIL(truncated_1, d->cell->payload[0] = 5)
-CERTS_FAIL(truncated_2, {
-           d->cell->payload_len = 4;
-           memcpy(d->cell->payload, "\x01\x01\x00\x05", 4);})
-CERTS_FAIL(truncated_3, {
-           d->cell->payload_len = 7;
-           memcpy(d->cell->payload, "\x01\x01\x00\x05""abc", 7);})
+CERTS_FAIL(truncated_2,
+           {
+             d->cell->payload_len = 4;
+             memcpy(d->cell->payload, "\x01\x01\x00\x05", 4);
+           })
+CERTS_FAIL(truncated_3,
+           {
+             d->cell->payload_len = 7;
+             memcpy(d->cell->payload, "\x01\x01\x00\x05""abc", 7);
+           })
 #define REENCODE() do {                                                 \
     ssize_t n = certs_cell_encode(d->cell->payload, 4096, d->ccell);    \
     tt_int_op(n, >, 0);                                                 \
     d->cell->payload_len = n;                                           \
   } while (0)
 
-CERTS_FAIL(not_x509, {
+CERTS_FAIL(not_x509,
+  {
     certs_cell_cert_setlen_body(certs_cell_get_certs(d->ccell, 0), 3);
     certs_cell_get_certs(d->ccell, 0)->cert_len = 3;
     REENCODE();
-    })
-CERTS_FAIL(both_link, {
+  })
+CERTS_FAIL(both_link,
+  {
     certs_cell_get_certs(d->ccell, 0)->cert_type = 1;
     certs_cell_get_certs(d->ccell, 1)->cert_type = 1;
     REENCODE();
-    })
-CERTS_FAIL(both_id_rsa, {
+  })
+CERTS_FAIL(both_id_rsa,
+  {
     certs_cell_get_certs(d->ccell, 0)->cert_type = 2;
     certs_cell_get_certs(d->ccell, 1)->cert_type = 2;
     REENCODE();
-    })
-CERTS_FAIL(both_auth, {
+  })
+CERTS_FAIL(both_auth,
+  {
     certs_cell_get_certs(d->ccell, 0)->cert_type = 3;
     certs_cell_get_certs(d->ccell, 1)->cert_type = 3;
     REENCODE();
-    })
-CERTS_FAIL(wrong_labels_1, {
+  })
+CERTS_FAIL(wrong_labels_1,
+  {
     certs_cell_get_certs(d->ccell, 0)->cert_type = 2;
     certs_cell_get_certs(d->ccell, 1)->cert_type = 1;
     REENCODE();
-    })
-CERTS_FAIL(wrong_labels_2, {
+  })
+CERTS_FAIL(wrong_labels_2,
+  {
     const tor_x509_cert_t *a;
     const tor_x509_cert_t *b;
     const uint8_t *enca;
@@ -399,20 +409,23 @@ CERTS_FAIL(wrong_labels_2, {
     certs_cell_get_certs(d->ccell, 1)->cert_len = lena;
     REENCODE();
   })
-CERTS_FAIL(wrong_labels_3, {
-    certs_cell_get_certs(d->ccell, 0)->cert_type = 2;
-    certs_cell_get_certs(d->ccell, 1)->cert_type = 3;
-    REENCODE();
-    })
-CERTS_FAIL(server_missing_certs, {
-  d->c->handshake_state->started_here = 0;
-  })
-CERTS_FAIL(server_wrong_labels_1, {
-  d->c->handshake_state->started_here = 0;
-  certs_cell_get_certs(d->ccell, 0)->cert_type = 2;
-  certs_cell_get_certs(d->ccell, 1)->cert_type = 3;
-  REENCODE();
-  })
+CERTS_FAIL(wrong_labels_3,
+           {
+             certs_cell_get_certs(d->ccell, 0)->cert_type = 2;
+             certs_cell_get_certs(d->ccell, 1)->cert_type = 3;
+             REENCODE();
+           })
+CERTS_FAIL(server_missing_certs,
+           {
+             d->c->handshake_state->started_here = 0;
+           })
+CERTS_FAIL(server_wrong_labels_1,
+           {
+             d->c->handshake_state->started_here = 0;
+             certs_cell_get_certs(d->ccell, 0)->cert_type = 2;
+             certs_cell_get_certs(d->ccell, 1)->cert_type = 3;
+             REENCODE();
+           })
 
 static void
 test_link_handshake_send_authchallenge(void *arg)
@@ -563,7 +576,7 @@ test_link_handshake_recv_authchallenge_ok_unrecognized(void *arg)
 
 #define AUTHCHALLENGE_FAIL(name, code)                          \
   static void                                                           \
-  test_link_handshake_recv_authchallenge_ ## name (void *arg)           \
+  test_link_handshake_recv_authchallenge_ ## name(void *arg)            \
   {                                                                     \
     authchallenge_data_t *d = arg;                                      \
     { code ; }                                                          \
@@ -782,7 +795,7 @@ test_link_handshake_auth_cell(void *arg)
 
 #define AUTHENTICATE_FAIL(name, code)                           \
   static void                                                   \
-  test_link_handshake_auth_ ## name (void *arg)                 \
+  test_link_handshake_auth_ ## name(void *arg)                  \
   {                                                             \
     authenticate_data_t *d = arg;                               \
     { code ; }                                                  \
