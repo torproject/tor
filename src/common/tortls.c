@@ -1252,8 +1252,13 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
 #endif
 
   /* Tell OpenSSL to use TLS 1.0 or later but not SSL2 or SSL3. */
+#ifdef HAVE_TLS_METHOD
+  if (!(result->ctx = SSL_CTX_new(TLS_method())))
+    goto error;
+#else
   if (!(result->ctx = SSL_CTX_new(SSLv23_method())))
     goto error;
+#endif
   SSL_CTX_set_options(result->ctx, SSL_OP_NO_SSLv2);
   SSL_CTX_set_options(result->ctx, SSL_OP_NO_SSLv3);
 
@@ -1497,7 +1502,7 @@ find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m, uint16_t cipher)
                       * cipher with the appropriate 3 bytes. */
     c = SSL_CIPHER_find((SSL*)ssl, cipherid);
     if (c)
-      tor_assert((c->id & 0xffff) == cipher);
+      tor_assert((SSL_CIPHER_get_id(c) & 0xffff) == cipher);
     return c != NULL;
   }
 #elif defined(HAVE_STRUCT_SSL_METHOD_ST_GET_CIPHER_BY_CHAR)
@@ -1540,7 +1545,11 @@ static void
 prune_v2_cipher_list(const SSL *ssl)
 {
   uint16_t *inp, *outp;
+#ifdef HAVE_TLS_METHOD
+  const SSL_METHOD *m = TLS_method();
+#else
   const SSL_METHOD *m = SSLv23_method();
+#endif
 
   inp = outp = v2_cipher_list;
   while (*inp) {
