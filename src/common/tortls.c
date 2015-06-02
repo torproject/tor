@@ -1487,7 +1487,7 @@ static int
 find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m, uint16_t cipher)
 {
   const SSL_CIPHER *c;
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,0,2)
+#ifdef HAVE_SSL_CIPHER_FIND
   {
     unsigned char cipherid[3];
     tor_assert(ssl);

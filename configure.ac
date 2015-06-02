@@ -639,6 +639,7 @@ AC_CHECK_FUNCS([ \
 		SSL_get_server_random \
                 SSL_get_client_ciphers \
                 SSL_get_client_random \
+		SSL_CIPHER_find \
 	       ])
 LIBS="$save_LIBS"
 LDFLAGS="$save_LDFLAGS"
