@@ -3042,7 +3042,7 @@ sandbox_init_filter(void)
   // orport
   if (server_mode(get_options())) {
 
-    OPEN_DATADIR2_SUFFIX("keys", "secret_id_key", "tmp");
+    OPEN_DATADIR2_SUFFIX("keys", "secret_id_key", ".tmp");
     OPEN_DATADIR2_SUFFIX("keys", "secret_onion_key", ".tmp");
     OPEN_DATADIR2_SUFFIX("keys", "secret_onion_key_ntor", ".tmp");
     OPEN_DATADIR2("keys", "secret_id_key.old");
