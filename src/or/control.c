@@ -2193,7 +2193,7 @@ getinfo_helper_onions(control_connection_t *control_conn,
 {
   smartlist_t *onion_list = NULL;
 
-  if (!strcmp(question, "onions/current")) {
+  if (control_conn && !strcmp(question, "onions/current")) {
     onion_list = control_conn->ephemeral_onion_services;
   } else if (!strcmp(question, "onions/detached")) {
     onion_list = detached_onion_services;
@@ -2201,10 +2201,14 @@ getinfo_helper_onions(control_connection_t *control_conn,
     return 0;
   }
   if (!onion_list || smartlist_len(onion_list) == 0) {
-    *errmsg = "No onion services of the specified type.";
+    if (errmsg) {
+        *errmsg = "No onion services of the specified type.";
+    }
     return -1;
   }
-  *answer = smartlist_join_strings(onion_list, "\r\n", 0, NULL);
+  if (answer) {
+      *answer = smartlist_join_strings(onion_list, "\r\n", 0, NULL);
+  }
 
   return 0;
 }
