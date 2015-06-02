@@ -1,0 +1,6 @@
+  o Minor fixes (threads, comments):
+    - Remove undefined directive-in-macro in test_util_writepid
+      clang 3.7 complains that using a preprocessor directive inside
+      a macro invocation in test_util_writepid in test_util.c is undefined.
+      Patch by "teor".
+      Fix on 79e85313aa61 on 0.2.7.1-alpha.

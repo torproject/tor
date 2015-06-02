@@ -1,0 +1,6 @@
+  o Minor fixes (threads, comments):
+    - Fix an incorrect comment on spawn_func in compat_pthreads.c.
+      spawn_func calls pthread_create on unix, not fork
+      Patch by "teor".
+      Bugfix on unknown tor version (existing code split out of
+      compat.c into compat_pthreads.c in c2f0d52b7fb9 on 22 Sep 2013).

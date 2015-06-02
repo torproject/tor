@@ -4319,13 +4319,12 @@ test_util_writepid(void *arg)
 
   int n = sscanf(contents, "%lu\n%c", &pid, &c);
   tt_int_op(n, OP_EQ, 1);
-  tt_uint_op(pid, OP_EQ,
+
 #ifdef _WIN32
-             _getpid()
+  tt_uint_op(pid, OP_EQ, _getpid());
 #else
-             getpid()
+  tt_uint_op(pid, OP_EQ, getpid());
 #endif
-             );
 
  done:
   tor_free(contents);

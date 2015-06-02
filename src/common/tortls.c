@@ -1444,6 +1444,8 @@ find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m, uint16_t cipher)
   }
 #endif
   (void) ssl;
+  (void) m;
+  (void) cipher;
   return 1; /* No way to search */
 }
 

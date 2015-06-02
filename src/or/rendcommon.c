@@ -1417,7 +1417,7 @@ rend_data_dup(const rend_data_t *data)
 static int
 compute_desc_id(rend_data_t *rend_data)
 {
-  int ret;
+  int ret = 0;
   unsigned replica;
   time_t now = time(NULL);
 
