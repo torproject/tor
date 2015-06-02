@@ -1,0 +1,6 @@
+  o Minor fixes (threads, comments):
+    - Ensure signing_key is non-NULL before accessing one of its members
+      signing_key can be NULL in ed_key_init_from_file in routerkeys.c.
+      Discovered by clang 3.7 address sanitizer.
+      Patch by "teor".
+      Fix on c03694938ed0, not in any released version of Tor.

@@ -152,7 +152,8 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
                         ED25519_PUBKEY_LEN)) {
     tor_log(severity, LD_OR, "Cert was for wrong key");
     bad_cert = 1;
-  } else if (tor_cert_checksig(cert, &signing_key->pubkey, now) < 0 &&
+  } else if (signing_key &&
+             tor_cert_checksig(cert, &signing_key->pubkey, now) < 0 &&
              (signing_key || cert->cert_expired)) {
     tor_log(severity, LD_OR, "Can't check certificate");
     bad_cert = 1;
