@@ -1600,15 +1600,23 @@ get_max_sockets(void)
  * tell Tor it's allowed to use. */
 #define ULIMIT_BUFFER 32 /* keep 32 extra fd's beyond ConnLimit_ */
 
-/** Learn the maximum allowed number of file descriptors, and tell the system
- * we want to use up to that number. (Some systems have a low soft limit, and
- * let us set it higher.)
+/** Learn the maximum allowed number of file descriptors, and tell the
+ * system we want to use up to that number. (Some systems have a low soft
+ * limit, and let us set it higher.)  We compute this by finding the largest
+ * number that we can use.
  *
- * We compute this by finding the largest number that we can use.
- * If we can't find a number greater than or equal to <b>limit</b>,
- * then we fail: return -1.
+ * If the limit is below the reserved file descriptor value (ULIMIT_BUFFER),
+ * return -1 and <b>max_out</b> is untouched.
  *
- * Otherwise, return 0 and store the maximum we found inside <b>max_out</b>.*/
+ * If we can't find a number greater than or equal to <b>limit</b>, then we
+ * fail by returning -1 and <b>max_out</b> is untouched.
+ *
+ * If we are unable to set the limit value because of setrlimit() failing,
+ * return -1 and <b>max_out</b> is set to the current maximum value returned
+ * by getrlimit().
+ *
+ * Otherwise, return 0 and store the maximum we found inside <b>max_out</b>
+ * and set <b>max_sockets</b> with that value as well.*/
 int
 set_max_file_descriptors(rlim_t limit, int *max_out)
 {
@@ -1665,7 +1673,7 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
   }
   /* Set the current limit value so if the attempt to set the limit to the
    * max fails at least we'll have a valid value of maximum sockets. */
-  max_sockets = (int)rlim.rlim_cur - ULIMIT_BUFFER;
+  *max_out = max_sockets = (int)rlim.rlim_cur - ULIMIT_BUFFER;
   rlim.rlim_cur = rlim.rlim_max;
 
   if (setrlimit(RLIMIT_NOFILE, &rlim) != 0) {
