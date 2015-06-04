@@ -1284,6 +1284,8 @@ connection_listener_new(const struct sockaddr *listensockaddr,
   conn->port = gotPort;
   tor_addr_copy(&conn->addr, &addr);
 
+  memcpy(&lis_conn->entry_cfg, &port_cfg->entry_cfg, sizeof(entry_port_cfg_t));
+
   if (port_cfg->entry_cfg.isolation_flags) {
     lis_conn->entry_cfg.isolation_flags = port_cfg->entry_cfg.isolation_flags;
     if (port_cfg->entry_cfg.session_group >= 0) {
@@ -1298,8 +1300,6 @@ connection_listener_new(const struct sockaddr *listensockaddr,
       lis_conn->entry_cfg.session_group = global_next_session_group--;
     }
   }
-
-  memcpy(&lis_conn->entry_cfg, &port_cfg->entry_cfg, sizeof(entry_port_cfg_t));
 
   if (type != CONN_TYPE_AP_LISTENER) {
     lis_conn->entry_cfg.ipv4_traffic = 1;
