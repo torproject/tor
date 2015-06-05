@@ -115,6 +115,32 @@ valgrind --leak-check=yes --error-limit=no --show-reachable=yes src/or/tor
 pass --undef-value-errors=no to valgrind, or rebuild your openssl
 with -DPURIFY.)
 
+Coverity
+~~~~~~~~
+
+Nick regularly runs the coverity static analyzer on the Tor codebase.
+
+The preprocessor define __COVERITY__ is used to work around instances
+where coverity picks up behavior that we wish to permit.
+
+clang Static Analyzer
+~~~~~~~~~~~~~~~~~~~~~
+
+The clang static analyzer can be run on the Tor codebase using Xcode (WIP)
+or a command-line build.
+
+The preprocessor define __clang_analyzer__ is used to work around instances
+where clang picks up behavior that we wish to permit.
+
+clang Runtime Sanitizers
+~~~~~~~~~~~~~~~~
+
+To build the Tor codebase with the clang Address and Undefined Behavior
+sanitizers, see the file contrib/clang/sanitize_blacklist.txt.
+
+Preprocessor workarounds for instances where clang picks up behavior that
+we wish to permit are also documented in the blacklist file.
+
 Running lcov for unit test coverage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

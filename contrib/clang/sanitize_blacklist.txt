@@ -1,0 +1,89 @@
+# clang sanitizer special case list
+# syntax specified in http://clang.llvm.org/docs/SanitizerSpecialCaseList.html
+# for more info see http://clang.llvm.org/docs/AddressSanitizer.html
+
+# usage:
+# 1. configure tor build:
+#    ./configure \
+#    CC=clang \
+#    CFLAGS="-fsanitize-blacklist=contrib/clang/sanitize_blacklist.txt -fsanitize=undefined -fsanitize=address -fno-sanitize-recover=all -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-inline" \
+#    LDFLAGS="-fsanitize=address" \
+#    --disable-gcc-hardening
+# and any other flags required to build tor on your OS.
+#
+# 2. build tor:
+#    make
+#
+# 3. test tor:
+#    ASAN_OPTIONS=allow_user_segv_handler=1 make test
+#    ASAN_OPTIONS=allow_user_segv_handler=1 make check
+#    make test-network # requires chutney
+#
+# 4. the tor binary is now instrumented with clang sanitizers,
+#    and can be run just like a standard tor binary
+
+# Compatibility:
+# This blacklist has been tested with clang 3.7's UndefinedBehaviorSanitizer
+# and AddressSanitizer on OS X 10.10 Yosemite, with all tests passing
+# on both x86_64 and i386 (using CC="clang -arch i386")
+# It has not been tested with ThreadSanitizer or MemorySanitizer
+# Success report and patches for other sanitizers or OSs are welcome
+
+# Configuration Flags:
+# -fno-sanitize-recover=all
+# causes clang to crash on undefined behavior, rather than printing
+# a warning and continuing (the AddressSanitizer always crashes)
+# -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-inline
+# make clang backtraces easier to read
+# --disable-gcc-hardening
+# disables warnings about the redefinition of _FORTIFY_SOURCE
+# (it conflicts with the sanitizers)
+
+# Turning the sanitizers off for particular functions:
+# (Unfortunately, exempting functions doesn't work for the blacklisted
+# functions below, and we can't turn the code off because it's essential)
+#
+# #if defined(__has_feature)
+# #if __has_feature(address_sanitizer)
+# /* tell clang AddressSanitizer not to instrument this function */
+# #define NOASAN __attribute__((no_sanitize_address))
+# #define _CLANG_ASAN_
+# #else
+# #define NOASAN
+# #endif
+# #else
+# #define NOASAN
+# #endif
+#
+# /* Telling AddressSanitizer to not instrument a function */
+# void func(void) NOASAN;
+#
+# /* Including or excluding sections of code */
+# #ifdef _CLANG_ASAN_
+# /* code that only runs under address sanitizer */
+# #else
+# /* code that doesn't run under address sanitizer */
+# #endif
+
+# Blacklist Entries:
+
+# we need to allow the tor bt handler to catch SIGSEGV
+# otherwise address sanitizer munges the expected output and the test fails
+# we can do this by setting an environmental variable
+# See https://code.google.com/p/address-sanitizer/wiki/Flags
+# ASAN_OPTIONS=allow_user_segv_handler=1
+
+# test-memwipe.c checks if a freed buffer was properly wiped
+fun:vmemeq
+fun:check_a_buffer
+
+# test_bt_cl.c stores to a NULL pointer to trigger a crash
+fun:crash
+
+# curve25519-donna.c left-shifts 1 bits into and past the sign bit of signed
+# integers. Until #13538 is resolved, we can exempt the entire file from all
+# analysis under clang's undefined behavior sanitizer.
+# This may be overkill, but it works, and is easier than listing every
+# function in the file.
+# Note that x86_64 uses curve25519-donna-c64.c instead of curve25519-donna.c
+src:src/ext/curve25519_donna/curve25519-donna.c
