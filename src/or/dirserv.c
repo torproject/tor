@@ -1342,8 +1342,9 @@ dirserv_thinks_router_is_unreliable(time_t now,
 }
 
 /** Return true iff <b>router</b> should be assigned the "HSDir" flag.
- * Right now this means it advertises support for it, it has a high
- * uptime, it has a DirPort open, and it's currently considered Running.
+ * Right now this means it advertises support for it, it has a high uptime,
+ * it has a DirPort open, it has the Stable flag and it's currently
+ * considered Running.
  *
  * This function needs to be called after router-\>is_running has
  * been set.
@@ -1370,6 +1371,7 @@ dirserv_thinks_router_is_hs_dir(const routerinfo_t *router,
     uptime = real_uptime(router, now);
 
   return (router->wants_to_be_hs_dir && router->dir_port &&
+          node->is_stable &&
           uptime >= get_options()->MinUptimeHidServDirectoryV2 &&
           router_is_active(router, node, now));
 }
