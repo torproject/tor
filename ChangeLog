@@ -1,3 +1,39 @@
+Changes in version 0.2.6.9 - 2015-06-??
+  Blurb goes here.
+
+  o Major bugfixes (client-side privacy):
+    - Properly separate out each SOCKSPort when applying stream
+      isolation. The error occured because each port's session group was
+      being overwritten by a default value. Fixes bug 16247; bugfix on
+      0.2.6.3-alpha. Patch by "jojelino".
+
+  o Minor feature (directory aurhorities, security):
+    - The HSDir flag given by authorities now requires the Stable flag.
+      For the current network, this results in going from 2887 to 2806
+      HSDirs. Also, it makes it harder for an attacker to launch a sybil
+      attack by raising the effort for a relay to become Stable which
+      takes at the very least 7 days to do so and by keeping the 96
+      hours uptime requirement for HSDir. Implements ticket 8243.
+
+  o Minor bugfixes (compilation):
+    - Build with --enable-systemd correctly when libsystemd is
+      installed, but systemd is not. Fixes bug 16164; bugfix on
+      0.2.6.3-alpha. Patch from Peter Palfrader.
+
+  o Minor bugfixes (Linux seccomp2 sandbox):
+    - Fix sandboxing to work when running as a relay again. This
+      includes correctly allowing renaming secret_id_key and allowing
+      the eventfd2 and futex syscalls. Fixes bug 16244; bugfix on
+      0.2.6.1-alpha. Patch by Peter Palfrader.
+    - Allow systemd connections to work with the Linux seccomp2 sandbox
+      code. Fixes bug 16212; bugfix on 0.2.6.2-alpha. Patch by
+      Peter Palfrader.
+
+  o Minor bugfixes (tests):
+    - Fix a crash in the unit tests on MSVC2013. Fixes bug 16030; bugfix
+      on 0.2.6.2-alpha. Patch from "NewEraCracker".
+
+
 Changes in version 0.2.6.8 - 2015-05-21
   Tor 0.2.6.8 fixes a bit of dodgy code in parsing INTRODUCE2 cells, and
   fixes an authority-side bug in assigning the HSDir flag. All directory

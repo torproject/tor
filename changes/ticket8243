@@ -1,7 +1,0 @@
-  o Minor feature:
-    - The HSDir flag given by authorities now requires the Stable flag. For
-      the current network, this results in going from 2887 to 2806 HSDirs.
-      Also, it makes it harder for an attacker to launch a sybil attack by
-      raising the effort for a relay to become Stable which takes at the
-      very least 7 days to do so and by keeping the 96 hours uptime
-      requirement for HSDir. Implements ticket #8243.

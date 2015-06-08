@@ -1,7 +1,0 @@
-  o Minor bugfixes (sandbox, relay):
-    - Fix sandboxing to work when running as a relay again.  This
-      includes correctly allowing renaming secret_id_key and
-      allowing the eventfd2 and futex syscalls.
-      Fixes bug 16244; bugfix on 0.2.6.1-alpha.
-      Patch by Peter Palfrader.
-
