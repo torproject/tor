@@ -7,7 +7,7 @@ Changes in version 0.2.6.9 - 2015-06-??
       being overwritten by a default value. Fixes bug 16247; bugfix on
       0.2.6.3-alpha. Patch by "jojelino".
 
-  o Minor feature (directory aurhorities, security):
+  o Minor feature (directory authorities, security):
     - The HSDir flag given by authorities now requires the Stable flag.
       For the current network, this results in going from 2887 to 2806
       HSDirs. Also, it makes it harder for an attacker to launch a sybil
