@@ -1,5 +1,8 @@
-Changes in version 0.2.6.9 - 2015-06-??
-  Blurb goes here.
+Changes in version 0.2.6.9 - 2015-06-1?
+  Tor 0.2.6.9 fixes a regression in the circuit isolation code, increases the
+  requirements for receiving an HSDir flag, and addresses some other small
+  bugs in the systemd and sandboc code. Clients using circuit isolation
+  should upgrade; all directory authorities should upgrade.
 
   o Major bugfixes (client-side privacy):
     - Properly separate out each SOCKSPort when applying stream
