@@ -11,7 +11,7 @@ Changes in version 0.2.6.9 - 2015-06-11
 
   o Major bugfixes (client-side privacy):
     - Properly separate out each SOCKSPort when applying stream
-      isolation. The error occured because each port's session group was
+      isolation. The error occurred because each port's session group was
       being overwritten by a default value when the listener connection
       was initialized. Fixes bug 16247; bugfix on 0.2.6.3-alpha. Patch
       by "jojelino".
