@@ -2631,10 +2631,11 @@ SSL_get_server_random(SSL *s, uint8_t *out, size_t len)
 static size_t
 SSL_SESSION_get_master_key(SSL_SESSION *s, uint8_t *out, size_t len)
 {
+  tor_assert(s);
   if (len == 0)
     return s->master_key_length;
   tor_assert(len == (size_t)s->master_key_length);
-  tor_assert(s->master_key);
+  tor_assert(out);
   memcpy(out, s->master_key, len);
   return len;
 }
