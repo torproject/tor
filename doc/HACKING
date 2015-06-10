@@ -568,8 +568,9 @@ a stable release, add it to the ReleaseNotes file too. If we're adding
 to a release-0.2.x branch, manually commit the changelogs to the later
 git branches too.
 
-4) Bump the version number in configure.ac and rebuild.  Then run
-   "make update-versions".
+4) In maint-0.2.x, bump the version number in configure.ac and run
+   scripts/maint/updateVersions.pl to update version numbers in other
+   places, and commit.  Then merge maint-0.2.x into release-0.2.x.
 
 5) Make dist, put the tarball up somewhere, and tell #tor about it. Wait
 a while to see if anybody has problems building it. Try to get Sebastian
