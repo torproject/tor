@@ -29,6 +29,9 @@
 # It has not been tested with ThreadSanitizer or MemorySanitizer
 # Success report and patches for other sanitizers or OSs are welcome
 
+# ccache and make don't account for the sanitizer blacklist as a dependency
+# you might need to set CCACHE_DISABLE=1 and/or use make clean to workaround
+
 # Configuration Flags:
 # -fno-sanitize-recover=all
 # causes clang to crash on undefined behavior, rather than printing
@@ -67,23 +70,23 @@
 
 # Blacklist Entries:
 
+# test-memwipe.c checks if a freed buffer was properly wiped
+fun:vmemeq
+fun:check_a_buffer
+
 # we need to allow the tor bt handler to catch SIGSEGV
 # otherwise address sanitizer munges the expected output and the test fails
 # we can do this by setting an environmental variable
 # See https://code.google.com/p/address-sanitizer/wiki/Flags
 # ASAN_OPTIONS=allow_user_segv_handler=1
 
-# test-memwipe.c checks if a freed buffer was properly wiped
-fun:vmemeq
-fun:check_a_buffer
-
 # test_bt_cl.c stores to a NULL pointer to trigger a crash
 fun:crash
 
 # curve25519-donna.c left-shifts 1 bits into and past the sign bit of signed
-# integers. Until #13538 is resolved, we can exempt the entire file from all
-# analysis under clang's undefined behavior sanitizer.
-# This may be overkill, but it works, and is easier than listing every
-# function in the file.
+# integers. Until #13538 is resolved, we exempt functions that do left shifts.
 # Note that x86_64 uses curve25519-donna-c64.c instead of curve25519-donna.c
-src:src/ext/curve25519_donna/curve25519-donna.c
+fun:freduce_coefficients
+fun:freduce_degree
+fun:s32_eq
+fun:fcontract
