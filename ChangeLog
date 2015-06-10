@@ -4,8 +4,9 @@ Changes in version 0.2.6.9 - 2015-06-??
   o Major bugfixes (client-side privacy):
     - Properly separate out each SOCKSPort when applying stream
       isolation. The error occured because each port's session group was
-      being overwritten by a default value. Fixes bug 16247; bugfix on
-      0.2.6.3-alpha. Patch by "jojelino".
+      being overwritten by a default value when the listener connection
+      was initialized. Fixes bug 16247; bugfix on 0.2.6.3-alpha. Patch
+      by "jojelino".
 
   o Minor feature (directory authorities, security):
     - The HSDir flag given by authorities now requires the Stable flag.
@@ -21,17 +22,16 @@ Changes in version 0.2.6.9 - 2015-06-??
       0.2.6.3-alpha. Patch from Peter Palfrader.
 
   o Minor bugfixes (Linux seccomp2 sandbox):
-    - Fix sandboxing to work when running as a relay again. This
-      includes correctly allowing renaming secret_id_key and allowing
-      the eventfd2 and futex syscalls. Fixes bug 16244; bugfix on
-      0.2.6.1-alpha. Patch by Peter Palfrader.
+    - Fix sandboxing to work when running as a relaymby renaming of
+      secret_id_key, and allowing the eventfd2 and futex syscalls. Fixes
+      bug 16244; bugfix on 0.2.6.1-alpha. Patch by Peter Palfrader.
     - Allow systemd connections to work with the Linux seccomp2 sandbox
       code. Fixes bug 16212; bugfix on 0.2.6.2-alpha. Patch by
       Peter Palfrader.
 
   o Minor bugfixes (tests):
-    - Fix a crash in the unit tests on MSVC2013. Fixes bug 16030; bugfix
-      on 0.2.6.2-alpha. Patch from "NewEraCracker".
+    - Fix a crash in the unit tests when built with MSVC2013. Fixes bug
+      16030; bugfix on 0.2.6.2-alpha. Patch from "NewEraCracker".
 
 
 Changes in version 0.2.6.8 - 2015-05-21
