@@ -1843,6 +1843,12 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
 
   tor_assert(conn);
   tor_assert(circp);
+  if (ENTRY_TO_CONN(conn)->state != AP_CONN_STATE_CIRCUIT_WAIT) {
+    connection_t *c = ENTRY_TO_CONN(conn);
+    log_err(LD_BUG, "Connection state mismatch: wanted "
+            "AP_CONN_STATE_CIRCUIT_WAIT, but got %d (%s)",
+            c->state, conn_state_to_string(c->type, c->state));
+  }
   tor_assert(ENTRY_TO_CONN(conn)->state == AP_CONN_STATE_CIRCUIT_WAIT);
   check_exit_policy =
       conn->socks_request->command == SOCKS_COMMAND_CONNECT &&
