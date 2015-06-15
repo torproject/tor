@@ -2641,7 +2641,6 @@ SSL_SESSION_get_master_key(SSL_SESSION *s, uint8_t *out, size_t len)
 }
 #endif
 
-
 /** Set the DIGEST256_LEN buffer at <b>secrets_out</b> to the value used in
  * the v3 handshake to prove that the client knows the TLS secrets for the
  * connection <b>tls</b>.  Return 0 on success, -1 on failure.
@@ -2677,7 +2676,9 @@ tor_tls_get_tlssecrets,(tor_tls_t *tls, uint8_t *secrets_out))
     tor_assert(r == client_random_len);
   }
   {
-    size_t r = SSL_get_server_random(ssl, buf+client_random_len, server_random_len);
+    size_t r = SSL_get_server_random(ssl,
+                                     buf+client_random_len,
+                                     server_random_len);
     tor_assert(r == server_random_len);
   }
   uint8_t *master_key = tor_malloc_zero(master_key_len);
