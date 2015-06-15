@@ -856,8 +856,8 @@ update_consensus_networkstatus_fetch_time_impl(time_t now, int flav)
         dl_interval = interval/2;
       }
     } else {
-      /* We're an ordinary client or a bridge. Give all the caches enough
-       * time to download the consensus. */
+      /* We're an ordinary client, a bridge, or a hidden service.
+       * Give all the caches enough time to download the consensus. */
       start = (time_t)(c->fresh_until + (interval*3)/4);
       /* But download the next one well before this one is expired. */
       dl_interval = ((c->valid_until - start) * 7 )/ 8;
