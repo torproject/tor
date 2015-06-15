@@ -143,8 +143,8 @@ GENERAL OPTIONS
     A token bucket limits the average incoming bandwidth usage on this node to
     the specified number of bytes per second, and the average outgoing
     bandwidth usage to that same value.  If you want to run a relay in the
-    public network, this needs to be _at the very least_ 30 KBytes (that is,
-    30720 bytes). (Default: 1 GByte) +
+    public network, this needs to be _at the very least_ 250 KBytes (that is,
+    2 mbit). (Default: 1 GByte) +
  +
     With this option, and in other options that take arguments in bytes,
     KBytes, and so on, other formats are also supported. Notably, "KBytes" can
