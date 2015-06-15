@@ -31,9 +31,12 @@
 #include "routerparse.h"
 #include "routerset.h"
 
+struct rend_service_t;
 static origin_circuit_t *find_intro_circuit(rend_intro_point_t *intro,
                                             const char *pk_digest);
 static rend_intro_point_t *find_intro_point(origin_circuit_t *circ);
+static rend_intro_point_t *find_expiring_intro_point(
+    struct rend_service_t *service, origin_circuit_t *circ);
 
 static extend_info_t *find_rp_for_intro(
     const rend_intro_cell_t *intro,
@@ -42,7 +45,6 @@ static extend_info_t *find_rp_for_intro(
 static int intro_point_accepted_intro_count(rend_intro_point_t *intro);
 static int intro_point_should_expire_now(rend_intro_point_t *intro,
                                          time_t now);
-struct rend_service_t;
 static int rend_service_derive_key_digests(struct rend_service_t *s);
 static int rend_service_load_keys(struct rend_service_t *s);
 static int rend_service_load_auth_keys(struct rend_service_t *s,
@@ -1503,12 +1505,15 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
 
   intro_point = find_intro_point(circuit);
   if (intro_point == NULL) {
-    log_warn(LD_BUG,
-             "Internal error: Got an INTRODUCE2 cell on an "
-             "intro circ (for service %s) with no corresponding "
-             "rend_intro_point_t.",
-             escaped(serviceid));
-    goto err;
+    intro_point = find_expiring_intro_point(service, circuit);
+    if (intro_point == NULL) {
+      log_warn(LD_BUG,
+               "Internal error: Got an INTRODUCE2 cell on an "
+               "intro circ (for service %s) with no corresponding "
+               "rend_intro_point_t.",
+               escaped(serviceid));
+      goto err;
+    }
   }
 
   log_info(LD_REND, "Received INTRODUCE2 cell for service %s on circ %u.",
@@ -2688,8 +2693,8 @@ rend_service_launch_establish_intro(rend_service_t *service,
   return 0;
 }
 
-/** Return the number of introduction points that are or have been
- * established for the given service. */
+/** Return the number of introduction points that are established for the
+ * given service. */
 static unsigned int
 count_established_intro_points(const rend_service_t *service)
 {
@@ -2699,6 +2704,30 @@ count_established_intro_points(const rend_service_t *service)
     num += intro->circuit_established
   );
   return num;
+}
+
+/** Return the number of introduction points that are or are being
+ * established for the given service. This function iterates over all
+ * circuit and count those that are linked to the service and are waiting
+ * for the intro point to respond. */
+static unsigned int
+count_intro_point_circuits(const rend_service_t *service)
+{
+  unsigned int num_ipos = 0;
+  SMARTLIST_FOREACH_BEGIN(circuit_get_global_list(), circuit_t *, circ) {
+    if (!circ->marked_for_close &&
+        circ->state == CIRCUIT_STATE_OPEN &&
+        (circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
+         circ->purpose == CIRCUIT_PURPOSE_S_INTRO)) {
+      origin_circuit_t *oc = TO_ORIGIN_CIRCUIT(circ);
+      if (oc->rend_data &&
+          !rend_cmp_service_ids(service->service_id,
+                                oc->rend_data->onion_address))
+        num_ipos++;
+    }
+  }
+  SMARTLIST_FOREACH_END(circ);
+  return num_ipos;
 }
 
 /** Called when we're done building a circuit to an introduction point:
@@ -2739,7 +2768,8 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
    * redefine this one as a general circuit or close it, depending.
    * Substract the amount of expiring nodes here since the circuits are
    * still opened. */
-  if (count_established_intro_points(service) >
+  if ((count_intro_point_circuits(service) -
+       smartlist_len(service->expiring_nodes)) >
       service->n_intro_points_wanted) {
     const or_options_t *options = get_options();
     /* Remove the intro point associated with this circuit, it's being
@@ -3050,6 +3080,23 @@ find_intro_circuit(rend_intro_point_t *intro, const char *pk_digest)
       return circ;
     }
   }
+  return NULL;
+}
+
+/** Return the corresponding introdution point using the circuit <b>circ</b>
+ * found in the <b>service</b>. NULL is returned if not found. */
+static rend_intro_point_t *
+find_expiring_intro_point(rend_service_t *service, origin_circuit_t *circ)
+{
+  tor_assert(service);
+  tor_assert(TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
+             TO_CIRCUIT(circ)->purpose == CIRCUIT_PURPOSE_S_INTRO);
+
+  SMARTLIST_FOREACH(service->intro_nodes, rend_intro_point_t *, intro_point,
+    if (crypto_pk_eq_keys(intro_point->intro_key, circ->intro_key)) {
+      return intro_point;
+  });
+
   return NULL;
 }
 
@@ -3654,10 +3701,10 @@ rend_consider_services_upload(time_t now)
     /* Does every introduction points have been established? */
     unsigned int intro_points_ready =
       count_established_intro_points(service) >= service->n_intro_points_wanted;
-    if (service->next_upload_time < now ||
+    if (intro_points_ready &&
+        (service->next_upload_time < now ||
         (service->desc_is_dirty &&
-         service->desc_is_dirty < now-rendinitialpostdelay &&
-         intro_points_ready)) {
+         service->desc_is_dirty < now-rendinitialpostdelay))) {
       /* if it's time, or if the directory servers have a wrong service
        * descriptor and ours has been stable for rendinitialpostdelay seconds,
        * upload a new one of each format. */
