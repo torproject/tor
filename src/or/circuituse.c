@@ -1766,12 +1766,12 @@ circuit_launch_by_extend_info(uint8_t purpose,
 
       switch (purpose) {
         case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
-        case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
           /* it's ready right now */
           break;
         case CIRCUIT_PURPOSE_C_INTRODUCING:
         case CIRCUIT_PURPOSE_S_CONNECT_REND:
         case CIRCUIT_PURPOSE_C_GENERAL:
+        case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
           /* need to add a new hop */
           tor_assert(extend_info);
           if (circuit_extend_to_new_exit(circ, extend_info) < 0)

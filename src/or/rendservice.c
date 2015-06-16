@@ -2765,21 +2765,10 @@ rend_service_launch_establish_intro(rend_service_t *service,
              safe_str_client(extend_info_describe(intro->extend_info)));
     return -1;
   }
-
-  if (tor_memneq(intro->extend_info->identity_digest,
-      launched->build_state->chosen_exit->identity_digest, DIGEST_LEN)) {
-    char cann[HEX_DIGEST_LEN+1], orig[HEX_DIGEST_LEN+1];
-    base16_encode(cann, sizeof(cann),
-                  launched->build_state->chosen_exit->identity_digest,
-                  DIGEST_LEN);
-    base16_encode(orig, sizeof(orig),
-                  intro->extend_info->identity_digest, DIGEST_LEN);
-    log_info(LD_REND, "The intro circuit we just cannibalized ends at $%s, "
-                      "but we requested an intro circuit to $%s. Updating "
-                      "our service.", cann, orig);
-    extend_info_free(intro->extend_info);
-    intro->extend_info = extend_info_dup(launched->build_state->chosen_exit);
-  }
+  /* We must have the same exit node even if cannibalized. */
+  tor_assert(tor_memeq(intro->extend_info->identity_digest,
+                       launched->build_state->chosen_exit->identity_digest,
+                       DIGEST_LEN));
 
   launched->rend_data = rend_data_service_create(service->service_id,
                                                  service->pk_digest, NULL,

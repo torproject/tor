@@ -1,0 +1,11 @@
+  o Minor bugfix (Hidden service)
+    - When cannibalizing a circuit for an introduction point, always extend
+      to the chosen exit node creating a 4 hop circuit instead of using the
+      current circuit exit node which resulted in changing the original
+      intro point choice. This resulted in the hidden service skipping
+      excluded nodes like for instance reconnecting to an expired intro
+      point.; Fixes #16260; bugfixes on tor-0.1.0.1-rc~460.
+
+      This is particularly important for the introduction point retry
+      behavior (#8239) since cannibalization is allowed, which is desired,
+      so it's important to pin the chosen exit point.
