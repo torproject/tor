@@ -315,8 +315,10 @@ nt_service_main(void)
       case CMD_HASH_PASSWORD:
       case CMD_VERIFY_CONFIG:
       case CMD_DUMP_CONFIG:
+      case CMD_KEYGEN:
         log_err(LD_CONFIG, "Unsupported command (--list-fingerprint, "
-                "--hash-password, or --verify-config) in NT service.");
+                "--hash-password, --keygen, --dump-config, or --verify-config) "
+                "in NT service.");
         break;
       case CMD_RUN_UNITTESTS:
       default:
