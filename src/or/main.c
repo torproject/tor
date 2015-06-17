@@ -2462,7 +2462,7 @@ tor_init(int argc, char *argv[])
   /* Set up the crypto nice and early */
   if (crypto_early_init() < 0) {
     log_err(LD_GENERAL, "Unable to initialize the crypto subsystem!");
-    return 1;
+    return -1;
   }
 
   /* Initialize the history structures. */
