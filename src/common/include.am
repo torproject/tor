@@ -51,6 +51,12 @@ if THREADS_WIN32
 threads_impl_source=src/common/compat_winthreads.c
 endif
 
+if BUILD_READPASSPHRASE_C
+readpassphrase_source=src/ext/readpassphrase.c
+else
+readpassphrase_source=
+endif
+
 LIBOR_A_SOURCES = \
   src/common/address.c					\
   src/common/backtrace.c				\
@@ -67,7 +73,8 @@ LIBOR_A_SOURCES = \
   src/ext/csiphash.c					\
   src/ext/trunnel/trunnel.c				\
   $(libor_extra_source)					\
-  $(threads_impl_source)
+  $(threads_impl_source)				\
+  $(readpassphrase_source)
 
 src/common/log.o: micro-revision.i
 

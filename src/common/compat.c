@@ -69,6 +69,8 @@
 #endif
 #ifdef HAVE_READPASSPHRASE_H
 #include <readpassphrase.h>
+#elif !defined(_WIN32)
+#include "readpassphrase.h"
 #endif
 
 #ifndef HAVE_GETTIMEOFDAY

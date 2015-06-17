@@ -22,7 +22,7 @@
 
 /* OPENBSD ORIGINAL: lib/libc/gen/readpassphrase.c */
 
-#include "includes.h"
+#include "orconfig.h"
 
 #ifndef HAVE_READPASSPHRASE
 
@@ -34,6 +34,10 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
+
+#ifndef _PATH_TTY
+# define _PATH_TTY "/dev/tty"
+#endif
 
 #ifdef TCSASOFT
 # define _T_FLUSH	(TCSAFLUSH|TCSASOFT)
@@ -61,6 +65,7 @@ static void handler(int);
 char *
 readpassphrase(const char *prompt, char *buf, size_t bufsiz, int flags)
 {
+	ssize_t bytes_written = 0;
 	ssize_t nr;
 	int input, output, save_errno, i, need_restart;
 	char ch, *p, *end;
@@ -132,7 +137,7 @@ restart:
 	/* No I/O if we are already backgrounded. */
 	if (signo[SIGTTOU] != 1 && signo[SIGTTIN] != 1) {
 		if (!(flags & RPP_STDIN))
-			(void)write(output, prompt, strlen(prompt));
+			bytes_written = write(output, prompt, strlen(prompt));
 		end = buf + bufsiz - 1;
 		p = buf;
 		while ((nr = read(input, &ch, 1)) == 1 && ch != '\n' && ch != '\r') {
@@ -151,8 +156,10 @@ restart:
 		*p = '\0';
 		save_errno = errno;
 		if (!(term.c_lflag & ECHO))
-			(void)write(output, "\n", 1);
+			bytes_written = write(output, "\n", 1);
 	}
+
+	(void) bytes_written;
 
 	/* Restore old terminal settings and signals. */
 	if (memcmp(&term, &oterm, sizeof(term)) != 0) {

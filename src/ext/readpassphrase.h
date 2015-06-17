@@ -25,7 +25,7 @@
 #ifndef _READPASSPHRASE_H_
 #define _READPASSPHRASE_H_
 
-#include "includes.h"
+#include "orconfig.h"
 
 #ifndef HAVE_READPASSPHRASE
 
@@ -38,6 +38,8 @@
 #define RPP_STDIN       0x20		/* Read from stdin, not /dev/tty */
 
 char * readpassphrase(const char *, char *, size_t, int);
+
+#define HAVE_READPASSPHRASE
 
 #endif /* HAVE_READPASSPHRASE */
 
