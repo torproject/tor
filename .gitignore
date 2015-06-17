@@ -173,6 +173,7 @@ cscope.*
 /src/test/test-bt-cl.exe
 /src/test/test-child.exe
 /src/test/test-ntor-cl.exe
+/src/test/test-memwipe.exe
 /src/test/test_workqueue.exe
 /src/test/test_zero_length_keys.sh
 /src/test/test_ntor.sh
