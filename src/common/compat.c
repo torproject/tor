@@ -3321,22 +3321,7 @@ tor_getpass(const char *prompt, char *output, size_t buflen)
   SecureZeroMemory(buf, sizeof(wchar_t)*buflen);
   tor_free(buf);
   return r;
-#elif defined(HAVE_GETPASS)
-  /* XXX We shouldn't actually use this; it's deprecated to hell and back */
-  memset(output, 0, buflen);
-  char *pwd = getpass(prompt);
-  if (pwd == NULL)
-    return -1;
-  ssize_t len = (ssize_t)strlen(pwd);
-  strlcpy(output, pwd, buflen);
-  memset(pwd, 0, len);
-  return len;
 #else
-  /* XXX This is even worse. */
-  puts(prompt);
-  ssize_t n = read(STDIN_FILENO, output, buflen);
-  if (n < 0)
-    return -1;
-  return n;
+#error "No implementation for tor_getpass found!"
 #endif
 }
