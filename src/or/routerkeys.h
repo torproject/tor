@@ -14,6 +14,7 @@
 #define INIT_ED_KEY_EXTRA_STRONG                (1u<<5)
 #define INIT_ED_KEY_INCLUDE_SIGNING_KEY_IN_CERT (1u<<6)
 #define INIT_ED_KEY_OMIT_SECRET                 (1u<<7)
+#define INIT_ED_KEY_TRY_ENCRYPTED               (1u<<8)
 
 struct tor_cert_st;
 ed25519_keypair_t *ed_key_init_from_file(const char *fname, uint32_t flags,
@@ -60,6 +61,11 @@ int load_ed_keys(const or_options_t *options, time_t now);
 int should_make_new_ed_keys(const or_options_t *options, const time_t now);
 
 int generate_ed_link_cert(const or_options_t *options, time_t now);
+
+int read_encrypted_secret_key(ed25519_secret_key_t *out,
+                              const char *fname);
+int write_encrypted_secret_key(const ed25519_secret_key_t *out,
+                               const char *fname);
 
 void routerkeys_free_all(void);
 
