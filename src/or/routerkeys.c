@@ -486,8 +486,19 @@ load_ed_keys(const or_options_t *options, time_t now)
     if (options->command == CMD_KEYGEN)
       flags |= INIT_ED_KEY_TRY_ENCRYPTED;
 
-    char *fname =
-      options_get_datadir_fname2(options, "keys", "ed25519_master_id");
+    /* Check the key directory */
+    if (check_private_dir(options->DataDirectory, CPD_CREATE, options->User)) {
+      log_err(LD_OR, "Can't create/check datadirectory %s",
+              options->DataDirectory);
+      goto err;
+    }
+    char *fname = get_datadir_fname("keys");
+    if (check_private_dir(fname, CPD_CREATE, options->User) < 0) {
+      log_err(LD_OR, "Problem creating/checking key directory %s", fname);
+      tor_free(fname);
+      goto err;
+    }
+    fname = options_get_datadir_fname2(options, "keys", "ed25519_master_id");
     id = ed_key_init_from_file(
              fname,
              flags,
