@@ -10,6 +10,7 @@
 #define TOR_RENDCACHE_H
 
 #include "or.h"
+#include "rendcommon.h"
 
 /** How old do we let hidden service descriptors get before discarding
  * them as too old? */
@@ -30,6 +31,17 @@ typedef struct rend_cache_entry_t {
   char *desc; /**< Service descriptor */
   rend_service_descriptor_t *parsed; /**< Parsed value of 'desc' */
 } rend_cache_entry_t;
+
+/* Introduction point failure type. */
+typedef struct rend_cache_failure_intro_t {
+  unsigned int failure_type;
+} rend_cache_failure_intro_t;
+
+/** Cache failure object indexed by service ID. */
+typedef struct rend_cache_failure_t {
+  /* Contains rend_cache_failure_intro_t indexed by identity digest. */
+  digestmap_t *intro_failures;
+} rend_cache_failure_t;
 
 void rend_cache_init(void);
 void rend_cache_clean(time_t now);
@@ -52,6 +64,10 @@ rend_cache_store_status_t rend_cache_store_v2_desc_as_client(const char *desc,
                                                 const rend_data_t *rend_query,
                                                 rend_cache_entry_t **entry);
 size_t rend_cache_get_total_allocation(void);
+
+void rend_cache_intro_failure_note(unsigned int failure,
+                                   const uint8_t *identity,
+                                   const char *service_id);
 
 #endif /* TOR_RENDCACHE_H */
 

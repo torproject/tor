@@ -9,7 +9,6 @@
 #include "rendcache.h"
 
 #include "config.h"
-#include "rendcommon.h"
 #include "rephist.h"
 #include "routerlist.h"
 #include "routerparse.h"
@@ -22,6 +21,33 @@ static strmap_t *rend_cache = NULL;
  * directories. */
 static digestmap_t *rend_cache_v2_dir = NULL;
 
+/** (Client side only) Map from service id to rend_cache_failure_t. This
+ * cache is used to track intro point(IP) failures so we know when to keep
+ * or discard a new descriptor we just fetched. Here is a description of the
+ * cache behavior.
+ *
+ * Everytime tor discards an IP (ex: receives a NACK), we add an entry to
+ * this cache noting the identity digest of the IP and it's failure type for
+ * the service ID. The reason we indexed this cache by service ID is to
+ * differentiate errors that can occur only for a specific service like a
+ * NACK for instance. It applies for one but maybe not for the others.
+ *
+ * Once a service descriptor is fetched and considered valid, each IP is
+ * looked up in this cache and if present, it is discarded from the fetched
+ * descriptor. At the end, all IP(s) in the cache, for a specific service
+ * ID, that were NOT present in the descriptor are removed from this cache.
+ * Which means that if at least one IP was not in this cache, thus usuable,
+ * it's considered a new descriptor so we keep it. Else, if all IPs were in
+ * this cache, we discard the descriptor as it's considered unsuable.
+ *
+ * Once a descriptor is removed from the rend cache or expires, the entry
+ * in this cache is also removed for the service ID.
+ *
+ * This scheme allows us to not realy on the descriptor's timestamp (which
+ * is rounded down to the hour) to know if we have a newer descriptor. We
+ * only rely on the usability of intro points from an internal state. */
+static strmap_t *rend_cache_failure = NULL;
+
 /** DOCDOC */
 static size_t rend_cache_total_allocation = 0;
 
@@ -32,6 +58,7 @@ rend_cache_init(void)
 {
   rend_cache = strmap_new();
   rend_cache_v2_dir = digestmap_new();
+  rend_cache_failure = strmap_new();
 }
 
 /** Return the approximate number of bytes needed to hold <b>e</b>. */
@@ -85,6 +112,82 @@ rend_cache_increment_allocation(size_t n)
   }
 }
 
+/** Helper: free a rend cache failure intro object. */
+static void
+rend_cache_failure_intro_entry_free(rend_cache_failure_intro_t *entry)
+{
+  if (entry == NULL) {
+    return;
+  }
+  tor_free(entry);
+}
+
+/** Allocate a rend cache failure intro object and return it. <b>failure</b>
+ * is set into the object. This function can not fail. */
+static rend_cache_failure_intro_t *
+rend_cache_failure_intro_entry_new(unsigned int failure)
+{
+  rend_cache_failure_intro_t *entry = tor_malloc(sizeof(*entry));
+  entry->failure_type = failure;
+  return entry;
+}
+
+/** Helper: free a rend cache failure object. */
+static void
+rend_cache_failure_entry_free(rend_cache_failure_t *entry)
+{
+  if (entry == NULL) {
+    return;
+  }
+
+  /* Free and remove every intro failure object. */
+  DIGESTMAP_FOREACH_MODIFY(entry->intro_failures, key,
+                           rend_cache_failure_intro_t *, e) {
+    rend_cache_failure_intro_entry_free(e);
+    MAP_DEL_CURRENT(key);
+  } DIGESTMAP_FOREACH_END;
+  tor_free(entry);
+}
+
+/** Helper: deallocate a rend_cache_failure_t. (Used with strmap_free(),
+ * which requires a function pointer whose argument is void*). */
+static void
+rend_cache_failure_entry_free_(void *entry)
+{
+  rend_cache_failure_entry_free(entry);
+}
+
+/** Allocate a rend cache failure object and return it. This function can
+ * not fail. */
+static rend_cache_failure_t *
+rend_cache_failure_entry_new(void)
+{
+  rend_cache_failure_t *entry = tor_malloc(sizeof(*entry));
+  entry->intro_failures = digestmap_new();
+  return entry;
+}
+
+/** Remove failure cache entry for the service ID in the given descriptor
+ * <b>desc</b>. */
+static void
+rend_cache_failure_remove(rend_service_descriptor_t *desc)
+{
+  char service_id[REND_SERVICE_ID_LEN_BASE32 + 1];
+  rend_cache_failure_t *entry;
+
+  if (desc == NULL) {
+    return;
+  }
+  if (rend_get_service_id(desc->pk, service_id) < 0) {
+    return;
+  }
+  entry = strmap_get_lc(rend_cache_failure, service_id);
+  if (entry != NULL) {
+    strmap_remove_lc(rend_cache_failure, service_id);
+    rend_cache_failure_entry_free(entry);
+  }
+}
+
 /** Helper: free storage held by a single service descriptor cache entry. */
 static void
 rend_cache_entry_free(rend_cache_entry_t *e)
@@ -92,6 +195,9 @@ rend_cache_entry_free(rend_cache_entry_t *e)
   if (!e)
     return;
   rend_cache_decrement_allocation(rend_cache_entry_allocation(e));
+  /* We are about to remove a descriptor from the cache so remove the entry
+   * in the failure cache. */
+  rend_cache_failure_remove(e->parsed);
   rend_service_descriptor_free(e->parsed);
   tor_free(e->desc);
   tor_free(e);
@@ -111,8 +217,10 @@ rend_cache_free_all(void)
 {
   strmap_free(rend_cache, rend_cache_entry_free_);
   digestmap_free(rend_cache_v2_dir, rend_cache_entry_free_);
+  strmap_free(rend_cache_failure, rend_cache_failure_entry_free_);
   rend_cache = NULL;
   rend_cache_v2_dir = NULL;
+  rend_cache_failure = NULL;
   rend_cache_total_allocation = 0;
 }
 
@@ -148,6 +256,127 @@ rend_cache_purge(void)
     strmap_free(rend_cache, rend_cache_entry_free_);
   }
   rend_cache = strmap_new();
+}
+
+/** Lookup the rend failure cache using a relay identity digest in
+ * <b>identity</b> and service ID <b>service_id</b>. If found, the intro
+ * failure is set in <b>intro_entry</b> else it stays untouched. Return 1
+ * iff found else 0. */
+static int
+cache_failure_intro_lookup(const uint8_t *identity, const char *service_id,
+                           rend_cache_failure_intro_t **intro_entry)
+{
+  rend_cache_failure_t *elem;
+  rend_cache_failure_intro_t *intro_elem;
+
+  tor_assert(rend_cache_failure);
+
+  if (intro_entry) {
+    *intro_entry = NULL;
+  }
+
+  /* Lookup descriptor and return it. */
+  elem = strmap_get_lc(rend_cache_failure, service_id);
+  if (elem == NULL) {
+    goto not_found;
+  }
+  intro_elem = digestmap_get(elem->intro_failures, (char *) identity);
+  if (intro_elem == NULL) {
+    goto not_found;
+  }
+  if (intro_entry) {
+    *intro_entry = intro_elem;
+  }
+  return 1;
+not_found:
+  return 0;
+}
+
+/** Add an intro point failure to the failure cache using the relay
+ * <b>identity</b> and service ID <b>service_id</b>. Record the
+ * <b>failure</b> in that object. */
+static void
+cache_failure_intro_add(const uint8_t *identity, const char *service_id,
+                        unsigned int failure)
+{
+  rend_cache_failure_t *fail_entry;
+  rend_cache_failure_intro_t *entry;
+
+  /* Make sure we have a failure object for this service ID and if not,
+   * create it with this new intro failure entry. */
+  fail_entry = strmap_get_lc(rend_cache_failure, service_id);
+  if (fail_entry == NULL) {
+    fail_entry = rend_cache_failure_entry_new();
+    /* Add failure entry to global rend failure cache. */
+    strmap_set_lc(rend_cache_failure, service_id, fail_entry);
+  }
+  entry = rend_cache_failure_intro_entry_new(failure);
+  digestmap_set(fail_entry->intro_failures, (char *) identity, entry);
+}
+
+/** Using a parsed descriptor <b>desc</b>, check if the introduction points
+ * are present in the failure cache and if so they are removed from the
+ * descriptor and kept into the failure cache. Then, each intro points that
+ * are NOT in the descriptor but in the failure cache for the given
+ * <b>service_id</b> are removed from the failure cache. */
+static void
+validate_intro_point_failure(const rend_service_descriptor_t *desc,
+                             const char *service_id)
+{
+  rend_cache_failure_t *new_entry, *cur_entry;
+  /* New entry for the service ID that will be replacing the one in the
+   * failure cache since we have a new descriptor. In the case where all
+   * intro points are removed, we are assured that the new entry is the same
+   * as the current one. */
+  new_entry = tor_malloc(sizeof(*new_entry));
+  new_entry->intro_failures = digestmap_new();
+
+  tor_assert(desc);
+
+  SMARTLIST_FOREACH_BEGIN(desc->intro_nodes, rend_intro_point_t *, intro) {
+    int found;
+    rend_cache_failure_intro_t *entry;
+    const uint8_t *identity =
+      (uint8_t *) intro->extend_info->identity_digest;
+
+    found = cache_failure_intro_lookup(identity, service_id, &entry);
+    if (found) {
+      /* This intro point is in our cache, discard it from the descriptor
+       * because chances are that it's unusable. */
+      SMARTLIST_DEL_CURRENT(desc->intro_nodes, intro);
+      rend_intro_point_free(intro);
+      /* Keep it for our new entry. */
+      digestmap_set(new_entry->intro_failures, (char *) identity, entry);
+      continue;
+    }
+  } SMARTLIST_FOREACH_END(intro);
+
+  /* Swap the failure entry in the cache and free the current one. */
+  cur_entry = strmap_get_lc(rend_cache_failure, service_id);
+  if (cur_entry != NULL) {
+    rend_cache_failure_entry_free(cur_entry);
+  }
+  strmap_set_lc(rend_cache_failure, service_id, new_entry);
+}
+
+/** Note down an intro failure in the rend failure cache using the type of
+ * failure in <b>failure</b> for the relay identity digest in
+ * <b>identity</b> and service ID <b>service_id</b>. If an entry already
+ * exists in the cache, the failure type is changed with <b>failure</b>. */
+void
+rend_cache_intro_failure_note(unsigned int failure, const uint8_t *identity,
+                              const char *service_id)
+{
+  int found;
+  rend_cache_failure_intro_t *entry;
+
+  found = cache_failure_intro_lookup(identity, service_id, &entry);
+  if (!found) {
+    cache_failure_intro_add(identity, service_id, failure);
+  } else {
+    /* Replace introduction point failure with this one. */
+    entry->failure_type = failure;
+  }
 }
 
 /** Remove all old v2 descriptors and those for which this hidden service
@@ -537,20 +766,44 @@ rend_cache_store_v2_desc_as_client(const char *desc,
              "the future.", safe_str_client(service_id));
     goto err;
   }
-  /* Do we already have a newer descriptor? */
+  /* Do we have the same exact copy already in our cache? */
   tor_snprintf(key, sizeof(key), "2%s", service_id);
   e = (rend_cache_entry_t*) strmap_get_lc(rend_cache, key);
-  if (e && e->parsed->timestamp >= parsed->timestamp) {
+  if (e && !strcmp(desc, e->desc)) {
+    log_info(LD_REND,"We already have this service descriptor %s.",
+             safe_str_client(service_id));
+    goto okay;
+  }
+  /* Verify that we are not replacing an older descriptor. It's important to
+   * avoid an evil HSDir serving old descriptor. We validate if the
+   * timestamp is greater than and not equal because it's a rounded down
+   * timestamp to the hour so if the descriptor changed in the same hour,
+   * the rend cache failure will tells us if we have a new descriptor. */
+  if (e && e->parsed->timestamp > parsed->timestamp) {
     log_info(LD_REND, "We already have a new enough service descriptor for "
              "service ID %s with the same desc ID and version.",
              safe_str_client(service_id));
     goto okay;
   }
+  /* Lookup our failure cache for intro point that might be unsuable. */
+  validate_intro_point_failure(parsed, service_id);
+  /* It's now possible that our intro point list is empty, this means that
+   * this descriptor is useless to us because intro points have all failed
+   * somehow before. Discard the descriptor. */
+  if (smartlist_len(parsed->intro_nodes) == 0) {
+    log_info(LD_REND, "Service descriptor with service ID %s, every "
+             "intro points are unusable. Discarding it.",
+             safe_str_client(service_id));
+    goto err;
+  }
+  /* Now either purge the current one and replace it's content or create a
+   * new one and add it to the rend cache. */
   if (!e) {
     e = tor_malloc_zero(sizeof(rend_cache_entry_t));
     strmap_set_lc(rend_cache, key, e);
   } else {
     rend_cache_decrement_allocation(rend_cache_entry_allocation(e));
+    rend_cache_failure_remove(e->parsed);
     rend_service_descriptor_free(e->parsed);
     tor_free(e->desc);
   }
