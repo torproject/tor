@@ -32,6 +32,7 @@
 #include "policies.h"
 #include "reasons.h"
 #include "relay.h"
+#include "rendcache.h"
 #include "rendcommon.h"
 #include "router.h"
 #include "routerlist.h"
