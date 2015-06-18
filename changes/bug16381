@@ -1,0 +1,13 @@
+  o Major bugfix (Hidden service client)
+    - Revert commit 9407040c592184e05e45a3c1a00739c2dd302288 of bug #14219
+      that indeed fixed an issue but introduced a major hidden service
+      reachability regression detailed in bug #16381. This is a temporary
+      fix since we can live with the minor issue in #14219 but the
+      regression introduced is too much of a set back.
+
+      To be clear, #14219 bug just results in some load on the network, and
+      some delay for the client when visiting a hidden service that will
+      ultimately fail.
+
+      This is only a bandaid for #16381 thus it does _not_ fixes it. bugfix
+      on tor-0.2.6.3-alpha~138.
