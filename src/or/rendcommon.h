@@ -12,6 +12,8 @@
 #ifndef TOR_RENDCOMMON_H
 #define TOR_RENDCOMMON_H
 
+#include "rendcache.h"
+
 /** Free all storage associated with <b>data</b> */
 static INLINE void
 rend_data_free(rend_data_t *data)

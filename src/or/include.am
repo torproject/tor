@@ -66,6 +66,7 @@ LIBTOR_A_SOURCES = \
 	src/or/policies.c				\
 	src/or/reasons.c				\
 	src/or/relay.c					\
+	src/or/rendcache.c				\
 	src/or/rendclient.c				\
 	src/or/rendcommon.c				\
 	src/or/rendmid.c				\
@@ -174,6 +175,7 @@ ORHEADERS = \
 	src/or/policies.h				\
 	src/or/reasons.h				\
 	src/or/relay.h					\
+	src/or/rendcache.h				\
 	src/or/rendclient.h				\
 	src/or/rendcommon.h				\
 	src/or/rendmid.h				\
