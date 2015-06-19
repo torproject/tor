@@ -4970,15 +4970,6 @@ typedef struct rend_service_descriptor_t {
   smartlist_t *successful_uploads;
 } rend_service_descriptor_t;
 
-/** A cached rendezvous descriptor. */
-typedef struct rend_cache_entry_t {
-  size_t len; /**< Length of <b>desc</b> */
-  time_t last_served; /**< When did we last write this one to somebody?
-                       * (HSDir only) */
-  char *desc; /**< Service descriptor */
-  rend_service_descriptor_t *parsed; /**< Parsed value of 'desc' */
-} rend_cache_entry_t;
-
 /********************************* routerlist.c ***************************/
 
 /** Represents information about a single trusted or fallback directory

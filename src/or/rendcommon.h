@@ -37,28 +37,8 @@ void rend_encoded_v2_service_descriptor_free(
                                rend_encoded_v2_service_descriptor_t *desc);
 void rend_intro_point_free(rend_intro_point_t *intro);
 
-void rend_cache_init(void);
-void rend_cache_clean(time_t now);
-void rend_cache_clean_v2_descs_as_dir(time_t now, size_t min_to_remove);
-void rend_cache_purge(void);
-void rend_cache_free_all(void);
 int rend_valid_service_id(const char *query);
 int rend_valid_descriptor_id(const char *query);
-int rend_cache_lookup_entry(const char *query, int version,
-                            rend_cache_entry_t **entry_out);
-int rend_cache_lookup_v2_desc_as_dir(const char *query, const char **desc);
-/** Return value from rend_cache_store_v2_desc_as_{dir,client}. */
-typedef enum {
-  RCS_NOTDIR = -2, /**< We're not a directory */
-  RCS_BADDESC = -1, /**< This descriptor is no good. */
-  RCS_OKAY = 0 /**< All worked as expected */
-} rend_cache_store_status_t;
-
-rend_cache_store_status_t rend_cache_store_v2_desc_as_dir(const char *desc);
-rend_cache_store_status_t rend_cache_store_v2_desc_as_client(const char *desc,
-                                       const char *desc_id_base32,
-                                       const rend_data_t *rend_query,
-                                       rend_cache_entry_t **entry);
 int rend_encode_v2_descriptors(smartlist_t *descs_out,
                                rend_service_descriptor_t *desc, time_t now,
                                uint8_t period, rend_auth_type_t auth_type,
@@ -71,7 +51,6 @@ int rend_id_is_in_interval(const char *a, const char *b, const char *c);
 void rend_get_descriptor_id_bytes(char *descriptor_id_out,
                                   const char *service_id,
                                   const char *secret_id_part);
-size_t rend_cache_get_total_allocation(void);
 
 rend_data_t *rend_data_dup(const rend_data_t *data);
 rend_data_t *rend_data_client_create(const char *onion_address,
