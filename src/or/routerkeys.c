@@ -29,10 +29,11 @@ read_encrypted_secret_key(ed25519_secret_key_t *out,
                                           sizeof(encrypted_key));
   if (encrypted_len < 0) {
     log_info(LD_OR, "%s is missing", fname);
-    return 0;
+    r = 0;
+    goto done;
   }
   if (strcmp(tag, ENC_KEY_TAG))
-    return -1;
+    goto done;
 
   while (1) {
     ssize_t pwlen =
@@ -64,6 +65,7 @@ read_encrypted_secret_key(ed25519_secret_key_t *out,
  done:
   memwipe(encrypted_key, 0, encrypted_len);
   memwipe(pwbuf, 0, sizeof(pwbuf));
+  tor_free(tag);
   if (secret) {
     memwipe(secret, 0, secret_len);
     tor_free(secret);
@@ -498,6 +500,7 @@ load_ed_keys(const or_options_t *options, time_t now)
       tor_free(fname);
       goto err;
     }
+    tor_free(fname);
     fname = options_get_datadir_fname2(options, "keys", "ed25519_master_id");
     id = ed_key_init_from_file(
              fname,
