@@ -84,6 +84,16 @@ int or_handshake_certs_rsa_ok(int severity,
                               or_handshake_certs_t *certs,
                               tor_tls_t *tls,
                               time_t now);
+int or_handshake_certs_ed25519_ok(int severity,
+                                  or_handshake_certs_t *certs,
+                                  tor_tls_t *tls,
+                                  time_t now);
+void or_handshake_certs_check_both(int severity,
+                              or_handshake_certs_t *certs,
+                              tor_tls_t *tls,
+                              time_t now,
+                              const ed25519_public_key_t **ed_id_out,
+                              const common_digests_t **rsa_id_out);
 
 #endif
 

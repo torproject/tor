@@ -2391,10 +2391,12 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
 
   if (is_ed) {
     const ed25519_public_key_t *my_ed_id, *their_ed_id;
-    if (!conn->handshake_state->certs->ed_id_sign_cert)
+    if (!conn->handshake_state->certs->ed_id_sign) {
+      log_warn(LD_OR, "Ed authenticate without Ed ID cert from peer.");
       goto err;
+    }
     my_ed_id = get_master_identity_key();
-    their_ed_id = &conn->handshake_state->certs->ed_id_sign_cert->signing_key;
+    their_ed_id = &conn->handshake_state->certs->ed_id_sign->signing_key;
 
     const uint8_t *cid_ed = (server ? their_ed_id : my_ed_id)->pubkey;
     const uint8_t *sid_ed = (server ? my_ed_id : their_ed_id)->pubkey;
@@ -2500,8 +2502,10 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
 
   if (ed_signing_key && is_ed) {
     ed25519_signature_t sig;
-    if (ed25519_sign(&sig, out, len, ed_signing_key) < 0)
+    if (ed25519_sign(&sig, out, len, ed_signing_key) < 0) {
+      log_warn(LD_OR, "Unable to sign ed25519 cert");
       goto err;
+    }
     auth1_setlen_sig(auth, ED25519_SIG_LEN);
     memcpy(auth1_getarray_sig(auth), sig.sig, ED25519_SIG_LEN);
 

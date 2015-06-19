@@ -1386,17 +1386,32 @@ typedef struct listener_connection_t {
  * signs. */
 #define V3_AUTH_BODY_LEN (V3_AUTH_FIXED_PART_LEN + 8 + 16)
 
+/** Structure to hold all the certificates we've received on an OR connection
+ */
 typedef struct or_handshake_certs_t {
-  /** DOCDOC */
+  /** True iff we originated this connection. */
   int started_here;
-  /** The cert for the key that's supposed to sign the AUTHENTICATE cell */
+  /** The cert for the 'auth' RSA key that's supposed to sign the AUTHENTICATE
+   * cell. Signed with the RSA identity key. */
   tor_x509_cert_t *auth_cert;
-  /** DOCDOC */
+  /** The cert for the 'link' RSA key that was used to negotiate the TLS
+   *  connection.  Signed with the RSA identity key. */
   tor_x509_cert_t *link_cert;
-  /** A self-signed identity certificate */
+  /** A self-signed identity certificate: the RSA identity key signed
+   * with itself.  */
   tor_x509_cert_t *id_cert;
-  /** DOCDOC */
-  struct tor_cert_st *ed_id_sign_cert;
+  /** The Ed25519 signing key, signed with the Ed25519 identity key. */
+  struct tor_cert_st *ed_id_sign;
+  /** A digest of the X509 link certificate for the TLS connection, signed
+   * with the Ed25519 siging key. */
+  struct tor_cert_st *ed_sign_link;
+  /** The Ed25519 authentication key (that's supposed to sign an AUTHENTICATE
+   * cell) , signed with the Ed25519 siging key. */
+  struct tor_cert_st *ed_sign_auth;
+  /** The Ed25519 identity key, crosssigned with the RSA identity key. */
+  uint8_t *ed_rsa_crosscert;
+  /** The length of <b>ed_rsa_crosscert</b> in bytes */
+  size_t ed_rsa_crosscert_len;
 } or_handshake_certs_t;
 
 /** Stores flags and information related to the portion of a v2/v3 Tor OR

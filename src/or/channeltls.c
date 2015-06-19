@@ -1788,8 +1788,9 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
    * of ed/x509 */
   tor_x509_cert_t *x509_certs[MAX_CERT_TYPE_WANTED + 1];
   tor_cert_t *ed_certs[MAX_CERT_TYPE_WANTED + 1];
+  uint8_t *rsa_ed_cc_cert = NULL;
+  size_t rsa_ed_cc_cert_len = 0;
 
-  rsa_ed_crosscert_t *rsa_crosscert = NULL;
   int n_certs, i;
   certs_cell_t *cc = NULL;
 
@@ -1879,38 +1880,45 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
         }
         break;
       }
+
      case CERT_ENCODING_RSA_CROSSCERT: {
-        rsa_ed_crosscert_t *cc_cert = NULL;
-        ssize_t n = rsa_ed_crosscert_parse(&cc_cert, cert_body, cert_len);
-        if (n != cert_len) {
-          log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-                 "Received unparseable RS1024-Ed25519 crosscert "
-                 " in CERTS cell from %s:%d",
-                 safe_str(chan->conn->base_.address),
-                 chan->conn->base_.port);
+        if (rsa_ed_cc_cert) {
+          ERR("Duplicate RSA->Ed25519 crosscert");
         } else {
-          if (rsa_crosscert) {
-            rsa_ed_crosscert_free(cc_cert);
-            ERR("Duplicate RSA->Ed25519 crosscert");
-          } else {
-            rsa_crosscert = cc_cert;
-          }
+          rsa_ed_cc_cert = tor_memdup(cert_body, cert_len);
+          rsa_ed_cc_cert_len = cert_len;
         }
         break;
       }
     }
   }
 
-  tor_x509_cert_t *id_cert = x509_certs[OR_CERT_TYPE_ID_1024];
-  tor_x509_cert_t *auth_cert = x509_certs[OR_CERT_TYPE_AUTH_1024];
-  tor_x509_cert_t *link_cert = x509_certs[OR_CERT_TYPE_TLS_LINK];
-
+  /* Move the certificates we (might) want into the handshake_state->certs
+   * structure. */
+  tor_x509_cert_t *id_cert = x509_certs[CERTTYPE_RSA1024_ID_ID];
+  tor_x509_cert_t *auth_cert = x509_certs[CERTTYPE_RSA1024_ID_AUTH];
+  tor_x509_cert_t *link_cert = x509_certs[CERTTYPE_RSA1024_ID_LINK];
   chan->conn->handshake_state->certs->auth_cert = auth_cert;
   chan->conn->handshake_state->certs->link_cert = link_cert;
   chan->conn->handshake_state->certs->id_cert = id_cert;
-  x509_certs[OR_CERT_TYPE_ID_1024] =
-    x509_certs[OR_CERT_TYPE_AUTH_1024] =
-    x509_certs[OR_CERT_TYPE_TLS_LINK] = NULL;
+  x509_certs[CERTTYPE_RSA1024_ID_ID] =
+    x509_certs[CERTTYPE_RSA1024_ID_AUTH] =
+    x509_certs[CERTTYPE_RSA1024_ID_LINK] = NULL;
+
+  tor_cert_t *ed_id_sign = ed_certs[CERTTYPE_ED_ID_SIGN];
+  tor_cert_t *ed_sign_link = ed_certs[CERTTYPE_ED_SIGN_LINK];
+  tor_cert_t *ed_sign_auth = ed_certs[CERTTYPE_ED_SIGN_AUTH];
+  chan->conn->handshake_state->certs->ed_id_sign = ed_id_sign;
+  chan->conn->handshake_state->certs->ed_sign_link = ed_sign_link;
+  chan->conn->handshake_state->certs->ed_sign_auth = ed_sign_auth;
+  ed_certs[CERTTYPE_ED_ID_SIGN] =
+    ed_certs[CERTTYPE_ED_SIGN_LINK] =
+    ed_certs[CERTTYPE_ED_SIGN_AUTH] = NULL;
+
+  chan->conn->handshake_state->certs->ed_rsa_crosscert = rsa_ed_cc_cert;
+  chan->conn->handshake_state->certs->ed_rsa_crosscert_len =
+    rsa_ed_cc_cert_len;
+  rsa_ed_cc_cert = NULL;
 
   int severity;
   /* Note that this warns more loudly about time and validity if we were
@@ -1922,11 +1930,17 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
   else
     severity = LOG_PROTOCOL_WARN;
 
-  if (! or_handshake_certs_rsa_ok(severity,
-                                  chan->conn->handshake_state->certs,
-                                  chan->conn->tls,
-                                  time(NULL)))
-    ERR("Invalid RSA certificates!");
+  const ed25519_public_key_t *checked_ed_id = NULL;
+  const common_digests_t *checked_rsa_id = NULL;
+  or_handshake_certs_check_both(severity,
+                                chan->conn->handshake_state->certs,
+                                chan->conn->tls,
+                                time(NULL),
+                                &checked_ed_id,
+                                &checked_rsa_id);
+
+  if (!checked_rsa_id)
+    ERR("Invalid certificate chain!");
 
   if (chan->conn->handshake_state->started_here) {
     /* No more information is needed. */
@@ -1934,8 +1948,7 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
     chan->conn->handshake_state->authenticated = 1;
     chan->conn->handshake_state->authenticated_rsa = 1;
     {
-      const common_digests_t *id_digests =
-        tor_x509_cert_get_id_digests(id_cert);
+      const common_digests_t *id_digests = checked_rsa_id;
       crypto_pk_t *identity_rcvd;
       if (!id_digests)
         ERR("Couldn't compute digests for key in ID cert");
@@ -1950,14 +1963,22 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
       crypto_pk_free(identity_rcvd);
     }
 
+    if (checked_ed_id) {
+      chan->conn->handshake_state->authenticated_ed25519 = 1;
+      memcpy(&chan->conn->handshake_state->authenticated_ed25519_peer_id,
+             checked_ed_id, sizeof(ed25519_public_key_t));
+    }
+
     if (connection_or_client_learned_peer_id(chan->conn,
                   chan->conn->handshake_state->authenticated_rsa_peer_id,
-                  NULL) < 0)
+                  checked_ed_id) < 0)
       ERR("Problem setting or checking peer id");
 
     log_info(LD_OR,
-             "Got some good certificates from %s:%d: Authenticated it.",
-             safe_str(chan->conn->base_.address), chan->conn->base_.port);
+             "Got some good certificates from %s:%d: Authenticated it with "
+             "RSA%s",
+             safe_str(chan->conn->base_.address), chan->conn->base_.port,
+             checked_ed_id ? " and Ed25519" : "");
 
     if (!public_server_mode(get_options())) {
       /* If we initiated the connection and we are not a public server, we
@@ -1968,8 +1989,9 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
   } else {
     /* We can't call it authenticated till we see an AUTHENTICATE cell. */
     log_info(LD_OR,
-             "Got some good certificates from %s:%d: "
+             "Got some good RSA%s certificates from %s:%d. "
              "Waiting for AUTHENTICATE.",
+             checked_ed_id ? " and Ed25519" : "",
              safe_str(chan->conn->base_.address),
              chan->conn->base_.port);
     /* XXXX check more stuff? */
@@ -1992,7 +2014,7 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
   for (unsigned u = 0; u < ARRAY_LENGTH(ed_certs); ++u) {
     tor_cert_free(ed_certs[u]);
   }
-  rsa_ed_crosscert_free(rsa_crosscert);
+  tor_free(rsa_ed_cc_cert);
   certs_cell_free(cc);
 #undef ERR
 }
