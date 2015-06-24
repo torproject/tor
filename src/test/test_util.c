@@ -4268,17 +4268,22 @@ test_util_hostname_validation(void *arg)
   tt_assert(string_is_valid_hostname("stanford.edu"));
   tt_assert(string_is_valid_hostname("multiple-words-with-hypens.jp"));
 
-  // Subdomain name cannot start with '-'.
+  // Subdomain name cannot start with '-' or '_'.
   tt_assert(!string_is_valid_hostname("-torproject.org"));
   tt_assert(!string_is_valid_hostname("subdomain.-domain.org"));
   tt_assert(!string_is_valid_hostname("-subdomain.domain.org"));
+  tt_assert(!string_is_valid_hostname("___abc.org"));
 
   // Hostnames cannot contain non-alphanumeric characters.
   tt_assert(!string_is_valid_hostname("%%domain.\\org."));
   tt_assert(!string_is_valid_hostname("***x.net"));
-  tt_assert(!string_is_valid_hostname("___abc.org"));
   tt_assert(!string_is_valid_hostname("\xff\xffxyz.org"));
   tt_assert(!string_is_valid_hostname("word1 word2.net"));
+
+  // Test workaround for nytimes.com stupidity, technically invalid,
+  // but we allow it since they are big, even though they are failing to
+  // comply with a ~30 year old standard.
+  tt_assert(string_is_valid_hostname("core3_euw1.fabrik.nytimes.com"));
 
   // XXX: do we allow single-label DNS names?
 

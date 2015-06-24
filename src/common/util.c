@@ -1036,6 +1036,9 @@ string_is_valid_ipv6_address(const char *string)
 
 /** Return true iff <b>string</b> matches a pattern of DNS names
  * that we allow Tor clients to connect to.
+ *
+ * Note: This allows certain technically invalid characters ('_') to cope
+ * with misconfigured zones that have been encountered in the wild.
  */
 int
 string_is_valid_hostname(const char *string)
@@ -1048,7 +1051,7 @@ string_is_valid_hostname(const char *string)
   smartlist_split_string(components,string,".",0,0);
 
   SMARTLIST_FOREACH_BEGIN(components, char *, c) {
-    if (c[0] == '-') {
+    if ((c[0] == '-') || (*c == '_')) {
       result = 0;
       break;
     }
@@ -1057,7 +1060,7 @@ string_is_valid_hostname(const char *string)
       if ((*c >= 'a' && *c <= 'z') ||
           (*c >= 'A' && *c <= 'Z') ||
           (*c >= '0' && *c <= '9') ||
-          (*c == '-'))
+          (*c == '-') || (*c == '_'))
         c++;
       else
         result = 0;
