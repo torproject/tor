@@ -60,6 +60,11 @@ ed25519/ref10/*
     Daniel Bernsten's portable ref10 implementation of ed25519.
     Public domain.
 
+ed25519/donna/*
+
+    Andrew Moon's semi-portable ed25519-donna implementation of
+    ed25519. Public domain.
+
 readpassphrase.[ch]
 
     Portable readpassphrase implementation from OpenSSH portable, version
