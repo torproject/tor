@@ -68,6 +68,7 @@ size_t rend_cache_get_total_allocation(void);
 void rend_cache_intro_failure_note(unsigned int failure,
                                    const uint8_t *identity,
                                    const char *service_id);
+void rend_cache_failure_purge(void);
 
 #endif /* TOR_RENDCACHE_H */
 

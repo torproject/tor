@@ -38,6 +38,7 @@ void
 rend_client_purge_state(void)
 {
   rend_cache_purge();
+  rend_cache_failure_purge();
   rend_client_cancel_descriptor_fetches();
   rend_client_purge_last_hid_serv_requests();
 }

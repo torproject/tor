@@ -258,6 +258,18 @@ rend_cache_purge(void)
   rend_cache = strmap_new();
 }
 
+/** Remove ALL entries from the failure cache. This is also called when a
+ * NEWNYM signal is received. */
+void
+rend_cache_failure_purge(void)
+{
+  if (rend_cache_failure) {
+    log_info(LD_REND, "Purging HS failure cache");
+    strmap_free(rend_cache_failure, rend_cache_failure_entry_free_);
+  }
+  rend_cache_failure = strmap_new();
+}
+
 /** Lookup the rend failure cache using a relay identity digest in
  * <b>identity</b> and service ID <b>service_id</b>. If found, the intro
  * failure is set in <b>intro_entry</b> else it stays untouched. Return 1
