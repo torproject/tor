@@ -129,7 +129,15 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(clone),
     SCMP_SYS(epoll_create),
     SCMP_SYS(epoll_wait),
+#ifdef HAVE_EVENTFD
     SCMP_SYS(eventfd2),
+#endif
+#ifdef HAVE_PIPE2
+    SCMP_SYS(pipe2),
+#endif
+#ifdef HAVE_PIPE
+    SCMP_SYS(pipe),
+#endif
     SCMP_SYS(fcntl),
     SCMP_SYS(fstat),
 #ifdef __NR_fstat64

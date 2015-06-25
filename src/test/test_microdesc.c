@@ -713,12 +713,46 @@ test_md_reject_cache(void *arg)
   tor_free(mock_ns_val);
 }
 
+static void
+test_md_corrupt_desc(void *arg)
+{
+  char *cp = NULL;
+  smartlist_t *sl = NULL;
+  (void) arg;
+
+  sl = microdescs_add_to_cache(get_microdesc_cache(),
+                               "@last-listed 2015-06-22 10:00:00\n"
+                               "onion-k\n",
+                               NULL, SAVED_IN_JOURNAL, 0, time(NULL), NULL);
+  tt_int_op(smartlist_len(sl), ==, 0);
+  smartlist_free(sl);
+
+  sl = microdescs_add_to_cache(get_microdesc_cache(),
+                               "@last-listed 2015-06-22 10:00:00\n"
+                               "wiggly\n",
+                               NULL, SAVED_IN_JOURNAL, 0, time(NULL), NULL);
+  tt_int_op(smartlist_len(sl), ==, 0);
+  smartlist_free(sl);
+
+  tor_asprintf(&cp, "%s\n%s", test_md1, "@foobar\nonion-wobble\n");
+
+  sl = microdescs_add_to_cache(get_microdesc_cache(),
+                               cp, cp+strlen(cp),
+                               SAVED_IN_JOURNAL, 0, time(NULL), NULL);
+  tt_int_op(smartlist_len(sl), ==, 0);
+  smartlist_free(sl);
+
+ done:
+  tor_free(cp);
+}
+
 struct testcase_t microdesc_tests[] = {
   { "cache", test_md_cache, TT_FORK, NULL, NULL },
   { "broken_cache", test_md_cache_broken, TT_FORK, NULL, NULL },
   { "generate", test_md_generate, 0, NULL, NULL },
   { "parse", test_md_parse, 0, NULL, NULL },
   { "reject_cache", test_md_reject_cache, TT_FORK, NULL, NULL },
+  { "corrupt_desc", test_md_corrupt_desc, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
 

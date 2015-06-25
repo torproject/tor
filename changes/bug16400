@@ -1,0 +1,5 @@
+  o Major bugfixes:
+   - Do not crash with an assertion error when parsing certain kinds
+     of malformed or truncated microdescriptors. Fixes bug 16400;
+     bugfix on 0.2.6.1-alpha. Found by "torkeln"; fix based on a patch by
+     "cypherpunks_backup".

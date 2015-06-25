@@ -1,0 +1,5 @@
+  o Major bugfixes (hidden service, stability):
+    - Stop randomly crashing with an assertion failure when connecting to a
+      busy hidden service, or connecting to a hidden service while a NEWNYM
+      is in progress. Fixes bug 16013; bugfix on 0.1.0.1-rc.
+

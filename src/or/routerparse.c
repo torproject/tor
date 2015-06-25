@@ -1,4 +1,4 @@
-/* Copyright (c) 2001 Matej Pfajfar.
+ /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2015, The Tor Project, Inc. */
@@ -4165,7 +4165,10 @@ microdescs_parse_from_string(const char *s, const char *eos,
     {
       const char *cp = tor_memstr(s, start_of_next_microdesc-s,
                                   "onion-key");
-      tor_assert(cp);
+      const int no_onion_key = (cp == NULL);
+      if (no_onion_key) {
+        cp = s; /* So that we have *some* junk to put in the body */
+      }
 
       md->bodylen = start_of_next_microdesc - cp;
       md->saved_location = where;
@@ -4174,8 +4177,13 @@ microdescs_parse_from_string(const char *s, const char *eos,
       else
         md->body = (char*)cp;
       md->off = cp - start;
+      crypto_digest256(md->digest, md->body, md->bodylen, DIGEST_SHA256);
+      if (no_onion_key) {
+        log_fn(LOG_PROTOCOL_WARN, LD_DIR, "Malformed or truncated descriptor");
+        goto next;
+      }
     }
-    crypto_digest256(md->digest, md->body, md->bodylen, DIGEST_SHA256);
+
 
     if (tokenize_string(area, s, start_of_next_microdesc, tokens,
                         microdesc_token_table, flags)) {
