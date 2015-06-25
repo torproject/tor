@@ -2423,6 +2423,18 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
       return 1;
     }
 
+    /* At this point we need to re-check the state, since it's possible that
+     * our call to circuit_get_open_circ_or_launch() changed the connection's
+     * state from "CIRCUIT_WAIT" to "RENDDESC_WAIT" because we decided to
+     * re-fetch the descriptor.
+     */
+    if (ENTRY_TO_CONN(conn)->state != AP_CONN_STATE_CIRCUIT_WAIT) {
+      log_info(LD_REND, "This connection is no longer ready to attach; its "
+               "state changed."
+               "(We probably have to re-fetch its descriptor.)");
+      return 0;
+    }
+
     if (rendcirc && (rendcirc->base_.purpose ==
                      CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED)) {
       log_info(LD_REND,
