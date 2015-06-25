@@ -423,6 +423,8 @@ if test "$bwin32" != true; then
   AC_CHECK_FUNCS(pthread_create)
 fi
 
+AM_CONDITIONAL(BUILD_READPASSPHRASE_C, test x$ac_cv_func_readpassphrase = xno && test $bwin32 = false)
+
 dnl ------------------------------------------------------
 dnl Where do you live, libevent?  And how do we call you?
 
