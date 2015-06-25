@@ -1093,11 +1093,6 @@ connection_listener_new(const struct sockaddr *listensockaddr,
   static int global_next_session_group = SESSION_GROUP_FIRST_AUTO;
   tor_addr_t addr;
 
-  if (get_n_open_sockets() >= options->ConnLimit_-1) {
-    warn_too_many_conns();
-    return NULL;
-  }
-
   if (listensockaddr->sa_family == AF_INET ||
       listensockaddr->sa_family == AF_INET6) {
     int is_stream = (type != CONN_TYPE_AP_DNS_LISTENER);
@@ -1113,8 +1108,13 @@ connection_listener_new(const struct sockaddr *listensockaddr,
       is_stream ? SOCK_STREAM : SOCK_DGRAM,
       is_stream ? IPPROTO_TCP: IPPROTO_UDP);
     if (!SOCKET_OK(s)) {
-      log_warn(LD_NET, "Socket creation failed: %s",
-               tor_socket_strerror(tor_socket_errno(-1)));
+      int e = tor_socket_errno(s);
+      if (ERRNO_IS_RESOURCE_LIMIT(e)) {
+        warn_too_many_conns();
+      } else {
+        log_warn(LD_NET, "Socket creation failed: %s",
+                 tor_socket_strerror(e));
+      }
       goto err;
     }
 
@@ -1222,7 +1222,12 @@ connection_listener_new(const struct sockaddr *listensockaddr,
 
     s = tor_open_socket_nonblocking(AF_UNIX, SOCK_STREAM, 0);
     if (! SOCKET_OK(s)) {
-      log_warn(LD_NET,"Socket creation failed: %s.", strerror(errno));
+      int e = tor_socket_errno(s);
+      if (ERRNO_IS_RESOURCE_LIMIT(e)) {
+        warn_too_many_conns();
+      } else {
+        log_warn(LD_NET,"Socket creation failed: %s.", strerror(e));
+      }
       goto err;
     }
 
@@ -1430,7 +1435,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     int e = tor_socket_errno(conn->s);
     if (ERRNO_IS_ACCEPT_EAGAIN(e)) {
       return 0; /* he hung up before we could accept(). that's fine. */
-    } else if (ERRNO_IS_ACCEPT_RESOURCE_LIMIT(e)) {
+    } else if (ERRNO_IS_RESOURCE_LIMIT(e)) {
       warn_too_many_conns();
       return 0;
     }
@@ -1624,12 +1629,6 @@ connection_connect_sockaddr(connection_t *conn,
   tor_assert(sa);
   tor_assert(socket_error);
 
-  if (get_n_open_sockets() >= get_options()->ConnLimit_-1) {
-    warn_too_many_conns();
-    *socket_error = SOCK_ERRNO(ENOBUFS);
-    return -1;
-  }
-
   if (get_options()->DisableNetwork) {
     /* We should never even try to connect anyplace if DisableNetwork is set.
      * Warn if we do, and refuse to make the connection. */
@@ -1647,9 +1646,13 @@ connection_connect_sockaddr(connection_t *conn,
 
   s = tor_open_socket_nonblocking(protocol_family, SOCK_STREAM, proto);
   if (! SOCKET_OK(s)) {
-    *socket_error = tor_socket_errno(-1);
-    log_warn(LD_NET,"Error creating network socket: %s",
-             tor_socket_strerror(*socket_error));
+    *socket_error = tor_socket_errno(s);
+    if (ERRNO_IS_RESOURCE_LIMIT(*socket_error)) {
+      warn_too_many_conns();
+    } else {
+      log_warn(LD_NET,"Error creating network socket: %s",
+               tor_socket_strerror(*socket_error));
+    }
     return -1;
   }
 

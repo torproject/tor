@@ -138,6 +138,11 @@
 #include "strlcat.c"
 #endif
 
+/* When set_max_file_descriptors() is called, update this with the max file
+ * descriptor value so we can use it to check the limit when opening a new
+ * socket. Default value is what Debian sets as the default hard limit. */
+static int max_sockets = 1024;
+
 /** As open(path, flags, mode), but return an fd with the close-on-exec mode
  * set. */
 int
@@ -1194,6 +1199,18 @@ tor_open_socket_with_extensions(int domain, int type, int protocol,
                                 int cloexec, int nonblock)
 {
   tor_socket_t s;
+
+  /* We are about to create a new file descriptor so make sure we have
+   * enough of them. */
+  if (get_n_open_sockets() >= max_sockets - 1) {
+#ifdef _WIN32
+    WSASetLastError(WSAEMFILE);
+#else
+    errno = EMFILE;
+#endif
+    return TOR_INVALID_SOCKET;
+  }
+
 #if defined(SOCK_CLOEXEC) && defined(SOCK_NONBLOCK)
   int ext_flags = (cloexec ? SOCK_CLOEXEC : 0) |
                   (nonblock ? SOCK_NONBLOCK : 0);
@@ -1265,6 +1282,18 @@ tor_accept_socket_with_extensions(tor_socket_t sockfd, struct sockaddr *addr,
                                  socklen_t *len, int cloexec, int nonblock)
 {
   tor_socket_t s;
+
+  /* We are about to create a new file descriptor so make sure we have
+   * enough of them. */
+  if (get_n_open_sockets() >= max_sockets - 1) {
+#ifdef _WIN32
+    WSASetLastError(WSAEMFILE);
+#else
+    errno = EMFILE;
+#endif
+    return TOR_INVALID_SOCKET;
+  }
+
 #if defined(HAVE_ACCEPT4) && defined(SOCK_CLOEXEC) && defined(SOCK_NONBLOCK)
   int ext_flags = (cloexec ? SOCK_CLOEXEC : 0) |
                   (nonblock ? SOCK_NONBLOCK : 0);
@@ -1560,6 +1589,12 @@ tor_ersatz_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
 int
 set_max_file_descriptors(rlim_t limit, int *max_out)
 {
+  if (limit < ULIMIT_BUFFER) {
+    log_warn(LD_CONFIG,
+             "ConnLimit must be at least %d. Failing.", ULIMIT_BUFFER);
+    return -1;
+  }
+
   /* Define some maximum connections values for systems where we cannot
    * automatically determine a limit. Re Cygwin, see
    * http://archives.seul.org/or/talk/Aug-2006/msg00210.html
@@ -1599,7 +1634,7 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
     limit = rlim.rlim_max;
     if (limit > INT_MAX)
       limit = INT_MAX;
-    *max_out = (int)limit - ULIMIT_BUFFER;
+    *max_out = max_sockets = (int)limit - ULIMIT_BUFFER;
     return 0;
   }
   if (rlim.rlim_max < limit) {
@@ -1613,6 +1648,9 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
     log_info(LD_NET,"Raising max file descriptors from %lu to %lu.",
              (unsigned long)rlim.rlim_cur, (unsigned long)rlim.rlim_max);
   }
+  /* Set the current limit value so if the attempt to set the limit to the
+   * max fails at least we'll have a valid value of maximum sockets. */
+  max_sockets = rlim.rlim_cur - ULIMIT_BUFFER;
   rlim.rlim_cur = rlim.rlim_max;
 
   if (setrlimit(RLIMIT_NOFILE, &rlim) != 0) {
@@ -1646,15 +1684,10 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
   limit = rlim.rlim_cur;
 #endif /* HAVE_GETRLIMIT */
 
-  if (limit < ULIMIT_BUFFER) {
-    log_warn(LD_CONFIG,
-             "ConnLimit must be at least %d. Failing.", ULIMIT_BUFFER);
-    return -1;
-  }
   if (limit > INT_MAX)
     limit = INT_MAX;
   tor_assert(max_out);
-  *max_out = (int)limit - ULIMIT_BUFFER;
+  *max_out = max_sockets = (int)limit - ULIMIT_BUFFER;
   return 0;
 }
 
