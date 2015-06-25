@@ -125,7 +125,7 @@ rend_cache_failure_intro_entry_free(rend_cache_failure_intro_t *entry)
 /** Allocate a rend cache failure intro object and return it. <b>failure</b>
  * is set into the object. This function can not fail. */
 static rend_cache_failure_intro_t *
-rend_cache_failure_intro_entry_new(unsigned int failure)
+rend_cache_failure_intro_entry_new(rend_intro_point_failure_t failure)
 {
   rend_cache_failure_intro_t *entry = tor_malloc(sizeof(*entry));
   entry->failure_type = failure;
@@ -309,7 +309,7 @@ not_found:
  * <b>failure</b> in that object. */
 static void
 cache_failure_intro_add(const uint8_t *identity, const char *service_id,
-                        unsigned int failure)
+                        rend_intro_point_failure_t failure)
 {
   rend_cache_failure_t *fail_entry;
   rend_cache_failure_intro_t *entry;
@@ -376,7 +376,8 @@ validate_intro_point_failure(const rend_service_descriptor_t *desc,
  * <b>identity</b> and service ID <b>service_id</b>. If an entry already
  * exists in the cache, the failure type is changed with <b>failure</b>. */
 void
-rend_cache_intro_failure_note(unsigned int failure, const uint8_t *identity,
+rend_cache_intro_failure_note(rend_intro_point_failure_t failure,
+                              const uint8_t *identity,
                               const char *service_id)
 {
   int found;

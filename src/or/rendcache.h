@@ -34,7 +34,7 @@ typedef struct rend_cache_entry_t {
 
 /* Introduction point failure type. */
 typedef struct rend_cache_failure_intro_t {
-  unsigned int failure_type;
+  rend_intro_point_failure_t failure_type;
 } rend_cache_failure_intro_t;
 
 /** Cache failure object indexed by service ID. */
@@ -65,7 +65,7 @@ rend_cache_store_status_t rend_cache_store_v2_desc_as_client(const char *desc,
                                                 rend_cache_entry_t **entry);
 size_t rend_cache_get_total_allocation(void);
 
-void rend_cache_intro_failure_note(unsigned int failure,
+void rend_cache_intro_failure_note(rend_intro_point_failure_t failure,
                                    const uint8_t *identity,
                                    const char *service_id);
 void rend_cache_failure_purge(void);

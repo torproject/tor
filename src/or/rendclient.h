@@ -26,10 +26,6 @@ int rend_client_fetch_v2_desc(rend_data_t *query, smartlist_t *hsdirs);
 void rend_client_cancel_descriptor_fetches(void);
 void rend_client_purge_last_hid_serv_requests(void);
 
-#define INTRO_POINT_FAILURE_GENERIC 0
-#define INTRO_POINT_FAILURE_TIMEOUT 1
-#define INTRO_POINT_FAILURE_UNREACHABLE 2
-
 int rend_client_report_intro_point_failure(extend_info_t *failed_intro,
                                            rend_data_t *rend_query,
                                            unsigned int failure_type);
