@@ -361,7 +361,7 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
 DECLARE_MAP_FNS(strmap_t, const char *, strmap_);
 /* Map from const char[DIGEST_LEN] to void *. Implemented with a hash table. */
 DECLARE_MAP_FNS(digestmap_t, const char *, digestmap_);
-/* Map from const uint8_t[DIGEST_LEN] to void *. Implemented with a hash
+/* Map from const uint8_t[DIGEST256_LEN] to void *. Implemented with a hash
  * table. */
 DECLARE_MAP_FNS(digest256map_t, const uint8_t *, digest256map_);
 
