@@ -70,7 +70,7 @@
 #ifdef HAVE_READPASSPHRASE_H
 #include <readpassphrase.h>
 #elif !defined(_WIN32)
-#include "readpassphrase.h"
+#include "tor_readpassphrase.h"
 #else
 #include <conio.h>
 #endif
@@ -1650,7 +1650,7 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
   }
   /* Set the current limit value so if the attempt to set the limit to the
    * max fails at least we'll have a valid value of maximum sockets. */
-  max_sockets = rlim.rlim_cur - ULIMIT_BUFFER;
+  max_sockets = (int)rlim.rlim_cur - ULIMIT_BUFFER;
   rlim.rlim_cur = rlim.rlim_max;
 
   if (setrlimit(RLIMIT_NOFILE, &rlim) != 0) {
