@@ -63,7 +63,7 @@ read_encrypted_secret_key(ed25519_secret_key_t *out,
   r = 1;
 
  done:
-  memwipe(encrypted_key, 0, encrypted_len);
+  memwipe(encrypted_key, 0, sizeof(encrypted_key));
   memwipe(pwbuf, 0, sizeof(pwbuf));
   tor_free(tag);
   if (secret) {
