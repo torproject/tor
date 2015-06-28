@@ -1085,6 +1085,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
   connection_t *conn = NULL;
   tor_socket_t s = TOR_INVALID_SOCKET;  /* the socket we're going to make */
   or_options_t const *options = get_options();
+  (void) options; /* Windows doesn't use this. */
 #if defined(HAVE_PWD_H) && defined(HAVE_SYS_UN_H)
   const struct passwd *pw = NULL;
 #endif
