@@ -30,7 +30,7 @@
 #include <signal.h>
 #include <ctype.h>
 #include <fcntl.h>
-#include <readpassphrase.h>
+#include "tor_readpassphrase.h"
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
