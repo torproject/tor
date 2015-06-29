@@ -7,12 +7,12 @@
 #define TOR_COMPAT_H
 
 #include "orconfig.h"
-#include "torint.h"
-#include "testsupport.h"
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #endif
+#include "torint.h"
+#include "testsupport.h"
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif

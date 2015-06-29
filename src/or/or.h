@@ -67,6 +67,7 @@
 #endif
 
 #ifdef _WIN32
+#include <winsock2.h>
 #include <io.h>
 #include <process.h>
 #include <direct.h>
