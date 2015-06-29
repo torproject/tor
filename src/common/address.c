@@ -14,8 +14,23 @@
 
 #ifdef _WIN32
 /* For access to structs needed by GetAdaptersAddresses */
-#include <process.h>
+#ifndef WIN32_LEAN_AND_MEAN
+#error "orconfig.h didn't define WIN32_LEAN_AND_MEAN"
+#endif
+#ifndef WINVER
+#error "orconfig.h didn't define WINVER"
+#endif
+#ifndef _WIN32_WINNT
+#error "orconfig.h didn't define _WIN32_WINNT"
+#endif
+#if WINVER < 0x0501
+#error "winver too low"
+#endif
+#if _WIN32_WINNT < 0x0501
+#error "winver too low"
+#endif
 #include <winsock2.h>
+#include <process.h>
 #include <windows.h>
 #include <iphlpapi.h>
 #endif
