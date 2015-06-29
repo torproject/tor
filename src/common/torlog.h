@@ -210,16 +210,6 @@ void log_notice_(log_domain_mask_t domain, const char *format, ...);
 void log_warn_(log_domain_mask_t domain, const char *format, ...);
 void log_err_(log_domain_mask_t domain, const char *format, ...);
 
-#if defined(_MSC_VER) && _MSC_VER < 1300
-/* MSVC 6 and earlier don't have __func__, or even __LINE__. */
-#define log_fn log_fn_
-#define log_fn_ratelim log_fn_ratelim_
-#define log_debug log_debug_
-#define log_info log_info_
-#define log_notice log_notice_
-#define log_warn log_warn_
-#define log_err log_err_
-#else
 /* We don't have GCC's varargs macros, so use a global variable to pass the
  * function name to log_fn */
 extern const char *log_fn_function_name_;
@@ -233,7 +223,6 @@ extern const char *log_fn_function_name_;
 #define log_notice (log_fn_function_name_=__func__),log_notice_
 #define log_warn (log_fn_function_name_=__func__),log_warn_
 #define log_err (log_fn_function_name_=__func__),log_err_
-#endif
 
 #endif /* !GNUC */
 

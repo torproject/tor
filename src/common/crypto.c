@@ -13,10 +13,6 @@
 #include "orconfig.h"
 
 #ifdef _WIN32
-#ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x0501
-#endif
-#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <wincrypt.h>
 /* Windows defines this; so does OpenSSL 0.9.8h and later. We don't actually

@@ -2,6 +2,6 @@
     - Define WINVER and _WIN32_WINNT centrally, in orconfig.h, in order
       to ensure they remain consistent and visible everywhere.
 
-    - Remove vestigial workarounds for some ancient versions of the MSVC
-      compiler.
+    - Remove some vestigial workarounds for the MSVC6 compiler.  We haven't
+      supported that in ages.
 

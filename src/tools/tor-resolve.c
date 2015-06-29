@@ -33,12 +33,8 @@
 #endif
 
 #ifdef _WIN32
-#if defined(_MSC_VER) && (_MSC_VER <= 1300)
-#include <winsock.h>
-#else
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#endif
 #endif
 
 #define RESPONSE_LEN_4 8

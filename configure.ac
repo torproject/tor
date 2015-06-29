@@ -335,6 +335,12 @@ bwin32=true; AC_MSG_RESULT([yes]),
 bwin32=false; AC_MSG_RESULT([no]))
 fi
 
+if test "$bwin32" = yes; then
+  AC_DEFINE(WIN32_LEAN_AND_MEAN, 1, [Defined to avoid including some windows headers])
+  AC_DEFINE(WINVER, 0x0501, [Defined to access windows functions and definitions for >=WinXP])
+  AC_DEFINE(_WIN32_WINNT, 0x0501, [Defined to access windows functions and definitions for >=WinXP])
+fi
+
 AM_CONDITIONAL(BUILD_NT_SERVICES, test x$bwin32 = xtrue)
 
 dnl Enable C99 when compiling with MIPSpro
@@ -1122,12 +1128,8 @@ AC_CHECK_TYPES([struct in6_addr, struct sockaddr_in6, sa_family_t], , ,
 #ifdef _WIN32
 #define _WIN32_WINNT 0x0501
 #define WIN32_LEAN_AND_MEAN
-#if defined(_MSC_VER) && (_MSC_VER < 1300)
-#include <winsock.h>
-#else
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#endif
 #endif
 ])
 AC_CHECK_MEMBERS([struct in6_addr.s6_addr32, struct in6_addr.s6_addr16, struct sockaddr_in.sin_len, struct sockaddr_in6.sin6_len], , ,
@@ -1146,9 +1148,6 @@ AC_CHECK_MEMBERS([struct in6_addr.s6_addr32, struct in6_addr.s6_addr16, struct s
 #ifdef _WIN32
 #define _WIN32_WINNT 0x0501
 #define WIN32_LEAN_AND_MEAN
-#if defined(_MSC_VER) && (_MSC_VER < 1300)
-#include <winsock.h>
-#else
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #endif

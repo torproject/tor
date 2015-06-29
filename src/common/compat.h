@@ -10,16 +10,8 @@
 #include "torint.h"
 #include "testsupport.h"
 #ifdef _WIN32
-#ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x0501
-#endif
-#define WIN32_LEAN_AND_MEAN
-#if defined(_MSC_VER) && (_MSC_VER < 1300)
-#include <winsock.h>
-#else
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#endif
 #endif
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
@@ -90,13 +82,8 @@
 
 /* Try to get a reasonable __func__ substitute in place. */
 #if defined(_MSC_VER)
-/* MSVC compilers before VC7 don't have __func__ at all; later ones call it
- * __FUNCTION__. */
-#if _MSC_VER < 1300
-#define __func__ "???"
-#else
+
 #define __func__ __FUNCTION__
-#endif
 
 #else
 /* For platforms where autoconf works, make sure __func__ is defined
@@ -112,18 +99,8 @@
 #endif /* ifndef MAVE_MACRO__func__ */
 #endif /* if not windows */
 
-#if defined(_MSC_VER) && (_MSC_VER < 1300)
-/* MSVC versions before 7 apparently don't believe that you can cast uint64_t
- * to double and really mean it. */
-extern INLINE double U64_TO_DBL(uint64_t x) {
-  int64_t i = (int64_t) x;
-  return (i < 0) ? ((double) INT64_MAX) : (double) i;
-}
-#define DBL_TO_U64(x) ((uint64_t)(int64_t) (x))
-#else
 #define U64_TO_DBL(x) ((double) (x))
 #define DBL_TO_U64(x) ((uint64_t) (x))
-#endif
 
 #ifdef ENUM_VALS_ARE_SIGNED
 #define ENUM_BF(t) unsigned

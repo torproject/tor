@@ -3,11 +3,11 @@
 
 #define ADDRESS_PRIVATE
 
+#include "orconfig.h"
+
 #ifdef _WIN32
 #include <winsock2.h>
 /* For access to structs needed by GetAdaptersAddresses */
-#undef _WIN32_WINNT
-#define _WIN32_WINNT 0x0501
 #include <iphlpapi.h>
 #endif
 
