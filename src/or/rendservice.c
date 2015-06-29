@@ -3438,7 +3438,7 @@ remove_invalid_intro_points(rend_service_t *service,
     /* First, make sure we still have a valid circuit for this intro point.
      * If we dont, we'll give up on it and make a new one. */
     if (intro_circ == NULL) {
-      log_info(LD_REND, "Giving up on %s as intro point for %s"
+      log_info(LD_REND, "Attempting to retry on %s as intro point for %s"
                " (circuit disappeared).",
                safe_str_client(extend_info_describe(intro->extend_info)),
                safe_str_client(service->service_id));
@@ -3658,7 +3658,8 @@ rend_services_introduce(void)
                  safe_str_client(extend_info_describe(intro->extend_info)),
                  safe_str_client(service->service_id));
         /* This funcion will be called again by the main loop so this intro
-         * point without a intro circuit will be removed. */
+         * point without a intro circuit will be retried on or removed after
+         * a maximum number of attempts. */
       }
     }
   } SMARTLIST_FOREACH_END(service);
