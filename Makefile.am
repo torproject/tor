@@ -84,7 +84,7 @@ test-stem: $(TESTING_TOR_BINARY)
 
 test-stem-full: $(TESTING_TOR_BINARY)
 	@if test -d "$$STEM_SOURCE_DIR"; then \
-		"$$STEM_SOURCE_DIR"/run_tests.py --tor $(TESTING_TOR_BINARY) --all --log notice --target RUN_ALL,ONLINE -v; \
+		$(PYTHON) "$$STEM_SOURCE_DIR"/run_tests.py --tor $(TESTING_TOR_BINARY) --all --log notice --target RUN_ALL,ONLINE -v; \
 	else \
 		echo '$$STEM_SOURCE_DIR was not set.'; echo; \
 		echo "To run these tests, git clone https://git.torproject.org/stem.git/ ; export STEM_SOURCE_DIR=\`pwd\`/stem"; \

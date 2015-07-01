@@ -1,0 +1,3 @@
+  o Minor bugfixes (tests):
+    - Use the configured Python executable when running test-stem-full. Fixes
+      bug 16470; bugfix on 0.2.7.1-alpha.
