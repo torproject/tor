@@ -2227,7 +2227,8 @@ run_main_loop_until_done(void)
 static void
 signal_callback(int fd, short events, void *arg)
 {
-  uintptr_t sig = (uintptr_t)arg;
+  const int *sigptr = arg;
+  const int sig = *sigptr;
   (void)fd;
   (void)events;
 
@@ -2237,7 +2238,7 @@ signal_callback(int fd, short events, void *arg)
 
 /** Do the work of acting on a signal received in <b>sig</b> */
 void
-process_signal(uintptr_t sig)
+process_signal(int sig)
 {
   switch (sig)
     {
@@ -2482,9 +2483,10 @@ handle_signals(int is_parent)
   static struct event *signal_events[16]; /* bigger than it has to be. */
   if (is_parent) {
     for (i = 0; signals[i] >= 0; ++i) {
-      signal_events[i] = tor_evsignal_new(
-                       tor_libevent_get_base(), signals[i], signal_callback,
-                       (void*)(uintptr_t)signals[i]);
+      signal_events[i] = tor_evsignal_new(tor_libevent_get_base(), signals[i],
+                                          signal_callback,
+                                          /* Cast away const */
+                                          (int*)&signals[i]);
       if (event_add(signal_events[i], NULL))
         log_warn(LD_BUG, "Error from libevent when adding event for signal %d",
                  signals[i]);
