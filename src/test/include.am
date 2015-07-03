@@ -6,7 +6,7 @@ TESTSCRIPTS += src/test/test_ntor.sh src/test/test_bt.sh
 endif
 
 TESTS += src/test/test src/test/test-slow src/test/test-memwipe \
-	$(TESTSCRIPTS)
+	src/test/test_workqueue $(TESTSCRIPTS)
 
 ### This is a lovely feature, but it requires automake >= 1.12, and Tor
 ###  doesn't require that yet.  Below is a kludge to work around.

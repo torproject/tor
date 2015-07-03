@@ -214,6 +214,7 @@ add_n_work_items(threadpool_t *tp, int n)
   while (n_queued++ < n) {
     ent = add_work(tp);
     if (! ent) {
+      puts("Z");
       tor_event_base_loopexit(tor_libevent_get_base(), NULL);
       return -1;
     }
@@ -287,6 +288,10 @@ replysock_readable_cb(tor_socket_t sock, short what, void *arg)
     shutting_down = 1;
     threadpool_queue_update(tp, NULL,
                              workqueue_do_shutdown, NULL, NULL);
+    {
+      struct timeval limit = { 2, 0 };
+      tor_event_base_loopexit(tor_libevent_get_base(), &limit);
+    }
   }
 }
 
@@ -392,7 +397,7 @@ main(int argc, char **argv)
   }
 
   {
-    struct timeval limit = { 30, 0 };
+    struct timeval limit = { 180, 0 };
     tor_event_base_loopexit(tor_libevent_get_base(), &limit);
   }
 
