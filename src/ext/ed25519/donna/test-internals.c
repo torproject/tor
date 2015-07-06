@@ -1,19 +1,22 @@
-#include <stdio.h>
-#include "ed25519-donna.h"
+/* Tor: Removed, file is inclued in ed25519.c instead. */
+/* #include <stdio.h> */
+/* #include "ed25519-donna.h" */
 
 static int
-test_adds() {
+test_adds(void) {
 #if defined(HAVE_UINT128) && !defined(ED25519_SSE2)
 	/* largest result for each limb from a mult or square: all elements except r1 reduced, r1 overflowed as far as possible */
 	static const bignum25519 max_bignum = {
 		0x7ffffffffffff,0x8000000001230,0x7ffffffffffff,0x7ffffffffffff,0x7ffffffffffff
 	};
 
+#if 0
 	/* what max_bignum should fully reduce to */
 	static const unsigned char max_bignum_raw[32] = {
 		0x12,0x00,0x00,0x00,0x00,0x00,0x88,0x91,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 		0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
 	};
+#endif
 
 	/* (max_bignum + max_bignum)^2 */
 	static const unsigned char max_bignum2_squared_raw[32] = {
@@ -46,9 +49,9 @@ test_adds() {
 	};
 #endif
 	unsigned char result[32];
-	static const bignum25519 ALIGN(16) zero = {0};
-	bignum25519 ALIGN(16) a, b, c;
-	size_t i;
+	/* static const bignum25519 ALIGN(16) zero = {0}; */
+	bignum25519 ALIGN(16) a, b /* , c */;
+	/* size_t i; */
 
 	/* a = (max_bignum + max_bignum) */
 	curve25519_add(a, max_bignum, max_bignum);
@@ -80,7 +83,7 @@ test_adds() {
 }
 
 static int
-test_subs() {
+test_subs(void) {
 #if defined(HAVE_UINT128) && !defined(ED25519_SSE2)
 	/* largest result for each limb from a mult or square: all elements except r1 reduced, r1 overflowed as far as possible */
 	static const bignum25519 max_bignum = {
@@ -119,8 +122,8 @@ test_subs() {
 #endif
 	unsigned char result[32];
 	static const bignum25519 ALIGN(16) zero = {0};
-	bignum25519 ALIGN(16) a, b, c;
-	size_t i;
+	bignum25519 ALIGN(16) a, b /* , c */;
+	/* size_t i; */
 
 	/* a = max_bignum - 0, which expands to 2p + max_bignum - 0 */
 	curve25519_sub(a, max_bignum, zero);
@@ -158,7 +161,8 @@ test_subs() {
 	return 0;
 }
 
-
+/* Tor: Removed, tests are invoked as a function instead. */
+#if 0
 int
 main() {
 	int ret = 0;
@@ -172,5 +176,15 @@ main() {
 	if (!ret) printf("success\n");
 	return ret;
 }
+#endif
 
+/* Tor: Added for initialization self-testing. */
+int
+ed25519_donna_selftest(void)
+{
+	int ret = 0;
+	ret |= test_adds();
+	ret |= test_subs();
+	return (ret == 0) ? 0 : -1;
+}
 

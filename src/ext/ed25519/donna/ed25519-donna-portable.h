@@ -20,6 +20,8 @@
 	#include <sys/param.h>
 	#define DONNA_INLINE inline __attribute__((always_inline))
 	#define DONNA_NOINLINE __attribute__((noinline))
+	/* Tor: OSX pollutes the global namespace with an ALIGN macro. */
+	#undef ALIGN
 	#define ALIGN(x) __attribute__((aligned(x)))
 	#define ROTL32(a,b) (((a) << (b)) | ((a) >> (32 - b)))
 	#define ROTR32(a,b) (((a) >> (b)) | ((a) << (32 - b)))
@@ -127,6 +129,19 @@ static inline void U64TO8_LE(unsigned char *p, const uint64_t v) {
 	p[6] = (unsigned char)(v >> 48);
 	p[7] = (unsigned char)(v >> 56);
 }
+#endif
+
+/* Tor: Detect and disable inline assembly when clang's AddressSanitizer
+ * is present, due to compilation failing because it runs out of registers.
+ *
+ * The alternative is to annotate `ge25519_scalarmult_base_choose_niels`
+ * and selectively disable AddressSanitizer insturmentation, however doing
+ * things this way results in a "more sanitized" binary.
+ */
+#if defined(__has_feature)
+	#if __has_feature(address_sanitizer)
+		#define ED25519_NO_INLINE_ASM
+	#endif
 #endif
 
 #include <stdlib.h>

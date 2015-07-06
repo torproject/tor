@@ -93,3 +93,44 @@ noinst_HEADERS += $(ED25519_REF10_HDRS)
 LIBED25519_REF10=src/ext/ed25519/ref10/libed25519_ref10.a
 noinst_LIBRARIES += $(LIBED25519_REF10)
 
+src_ext_ed25519_donna_libed25519_donna_a_CFLAGS= \
+  -DED25519_CUSTOMRANDOM \
+  -DED25519_SUFFIX=_donna
+
+src_ext_ed25519_donna_libed25519_donna_a_SOURCES= \
+	src/ext/ed25519/donna/ed25519_tor.c
+
+ED25519_DONNA_HDRS = \
+	src/ext/ed25519/donna/curve25519-donna-32bit.h \
+	src/ext/ed25519/donna/curve25519-donna-64bit.h \
+	src/ext/ed25519/donna/curve25519-donna-helpers.h \
+	src/ext/ed25519/donna/curve25519-donna-sse2.h \
+	src/ext/ed25519/donna/ed25519-donna-32bit-sse2.h \
+	src/ext/ed25519/donna/ed25519-donna-32bit-tables.h \
+	src/ext/ed25519/donna/ed25519-donna-64bit-sse2.h \
+	src/ext/ed25519/donna/ed25519-donna-64bit-tables.h \
+	src/ext/ed25519/donna/ed25519-donna-64bit-x86-32bit.h \
+	src/ext/ed25519/donna/ed25519-donna-64bit-x86.h \
+	src/ext/ed25519/donna/ed25519-donna-basepoint-table.h \
+	src/ext/ed25519/donna/ed25519-donna-batchverify.h \
+	src/ext/ed25519/donna/ed25519-donna.h \
+	src/ext/ed25519/donna/ed25519-donna-impl-base.h \
+	src/ext/ed25519/donna/ed25519-donna-impl-sse2.h \
+	src/ext/ed25519/donna/ed25519-donna-portable.h \
+	src/ext/ed25519/donna/ed25519-donna-portable-identify.h \
+	src/ext/ed25519/donna/ed25519_donna_tor.h \
+	src/ext/ed25519/donna/ed25519.h \
+	src/ext/ed25519/donna/ed25519-hash-custom.h \
+	src/ext/ed25519/donna/ed25519-hash.h \
+	src/ext/ed25519/donna/ed25519-randombytes-custom.h \
+	src/ext/ed25519/donna/ed25519-randombytes.h \
+	src/ext/ed25519/donna/modm-donna-32bit.h \
+	src/ext/ed25519/donna/modm-donna-64bit.h \
+	src/ext/ed25519/donna/regression.h \
+	src/ext/ed25519/donna/test-ticks.h
+
+noinst_HEADERS += $(ED25519_DONNA_HDRS)
+
+LIBED25519_DONNA=src/ext/ed25519/donna/libed25519_donna.a
+noinst_LIBRARIES += $(LIBED25519_DONNA)
+
