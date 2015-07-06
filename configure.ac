@@ -639,6 +639,10 @@ AC_CHECK_FUNCS([ \
 		SSL_CIPHER_find \
 		TLS_method
 	       ])
+
+dnl Check if OpenSSL has scrypt implementation.
+AC_CHECK_FUNCS([ EVP_PBE_scrypt ])
+
 LIBS="$save_LIBS"
 LDFLAGS="$save_LDFLAGS"
 CPPFLAGS="$save_CPPFLAGS"
