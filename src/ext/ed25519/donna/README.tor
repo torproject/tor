@@ -20,6 +20,10 @@ as of 8757bd4cd209cb032853ece0ce413f122eef212c.
     * There's an implementation of multiplicative key blinding so we
       can use it for next-gen hidden service descriptors.
 
+    * There's an implementation of 'convert a curve25519 key to an
+      ed25519 key' so we can do cross-certification with curve25519
+      keys.
+
  * `ED25519_FN(ed25519_randombytes_unsafe)` is now static.
 
  * `ed25519-randombytes-custom.h` has the appropriate code to call

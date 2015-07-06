@@ -27,4 +27,7 @@ int ed25519_donna_blind_secret_key(unsigned char *out, const unsigned char *inp,
 int ed25519_donna_blind_public_key(unsigned char *out, const unsigned char *inp,
   const unsigned char *param);
 
+int ed25519_donna_pubkey_from_curve25519_pubkey(unsigned char *out,
+  const unsigned char *inp, int signbit);
+
 #endif
