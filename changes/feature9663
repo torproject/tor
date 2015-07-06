@@ -1,0 +1,5 @@
+  o Minor feature (performance):
+    - Improve the runtime speed of the ntor handshake by using an
+      optimized curve25519 basepoint scalarmult implementation from the
+      public-domain ed25519-donna by Andrew M. ("floodyberry"), based on
+      ideas by Adam Langley. Implements ticket 9663.

@@ -1125,6 +1125,29 @@ test_crypto_curve25519_impl(void *arg)
 }
 
 static void
+test_crypto_curve25519_basepoint(void *arg)
+{
+  uint8_t secret[32];
+  uint8_t public1[32];
+  uint8_t public2[32];
+  const int iters = 2048;
+  int i;
+  (void) arg;
+
+  for (i = 0; i < iters; ++i) {
+    crypto_rand((char*)secret, 32);
+    curve25519_set_impl_params(1); /* Use optimization */
+    curve25519_basepoint_impl(public1, secret);
+    curve25519_set_impl_params(0); /* Disable optimization */
+    curve25519_basepoint_impl(public2, secret);
+    tt_mem_op(public1, OP_EQ, public2, 32);
+  }
+
+ done:
+  ;
+}
+
+static void
 test_crypto_curve25519_wrappers(void *arg)
 {
   curve25519_public_key_t pubkey1, pubkey2;
@@ -1733,6 +1756,8 @@ struct testcase_t crypto_tests[] = {
   { "hkdf_sha256", test_crypto_hkdf_sha256, 0, NULL, NULL },
   { "curve25519_impl", test_crypto_curve25519_impl, 0, NULL, NULL },
   { "curve25519_impl_hibit", test_crypto_curve25519_impl, 0, NULL, (void*)"y"},
+  { "curve25519_basepoint",
+    test_crypto_curve25519_basepoint, TT_FORK, NULL, NULL },
   { "curve25519_wrappers", test_crypto_curve25519_wrappers, 0, NULL, NULL },
   { "curve25519_encode", test_crypto_curve25519_encode, 0, NULL, NULL },
   { "curve25519_persist", test_crypto_curve25519_persist, 0, NULL, NULL },

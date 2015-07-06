@@ -177,7 +177,7 @@ bench_onion_TAP(void)
 }
 
 static void
-bench_onion_ntor(void)
+bench_onion_ntor_impl(void)
 {
   const int iters = 1<<10;
   int i;
@@ -232,6 +232,19 @@ bench_onion_ntor(void)
 
   ntor_handshake_state_free(state);
   dimap_free(keymap, NULL);
+}
+
+static void
+bench_onion_ntor(void)
+{
+  int ed;
+
+  for (ed = 0; ed <= 1; ++ed) {
+    printf("Ed25519-based basepoint multiply = %s.\n",
+           (ed == 0) ? "disabled" : "enabled");
+    curve25519_set_impl_params(ed);
+    bench_onion_ntor_impl();
+  }
 }
 
 static void
