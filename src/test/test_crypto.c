@@ -1637,6 +1637,77 @@ test_crypto_ed25519_testvectors(void *arg)
 }
 
 static void
+test_crypto_ed25519_fuzz_donna(void *arg)
+{
+  const unsigned iters = 1024;
+  uint8_t msg[1024];
+  unsigned i;
+  (void)arg;
+
+  tt_assert(sizeof(msg) == iters);
+  crypto_rand((char*) msg, sizeof(msg));
+
+  /* Fuzz Ed25519-donna vs ref10, alternating the implementation used to
+   * generate keys/sign per iteration.
+   */
+  for (i = 0; i < iters; ++i) {
+    const int use_donna = i & 1;
+    uint8_t blinding[32];
+    curve25519_keypair_t ckp;
+    ed25519_keypair_t kp, kp_blind, kp_curve25519;
+    ed25519_public_key_t pk, pk_blind, pk_curve25519;
+    ed25519_signature_t sig, sig_blind;
+    int bit = 0;
+
+    crypto_rand((char*) blinding, sizeof(blinding));
+
+    /* Impl. A:
+     *  1. Generate a keypair.
+     *  2. Blinded the keypair.
+     *  3. Sign a message (unblinded).
+     *  4. Sign a message (blinded).
+     *  5. Generate a curve25519 keypair, and convert it to Ed25519.
+     */
+    ed25519_set_impl_params(use_donna);
+    tt_int_op(0, OP_EQ, ed25519_keypair_generate(&kp, i&1));
+    tt_int_op(0, OP_EQ, ed25519_keypair_blind(&kp_blind, &kp, blinding));
+    tt_int_op(0, OP_EQ, ed25519_sign(&sig, msg, i, &kp));
+    tt_int_op(0, OP_EQ, ed25519_sign(&sig_blind, msg, i, &kp_blind));
+
+    tt_int_op(0, OP_EQ, curve25519_keypair_generate(&ckp, i&1));
+    tt_int_op(0, OP_EQ, ed25519_keypair_from_curve25519_keypair(
+            &kp_curve25519, &bit, &ckp));
+
+    /* Impl. B:
+     *  1. Validate the public key by rederiving it.
+     *  2. Validate the blinded public key by rederiving it.
+     *  3. Validate the unblinded signature (and test a invalid signature).
+     *  4. Validate the blinded signature.
+     *  5. Validate the public key (from Curve25519) by rederiving it.
+     */
+    ed25519_set_impl_params(!use_donna);
+    tt_int_op(0, OP_EQ, ed25519_public_key_generate(&pk, &kp.seckey));
+    tt_mem_op(pk.pubkey, OP_EQ, kp.pubkey.pubkey, 32);
+
+    tt_int_op(0, OP_EQ, ed25519_public_blind(&pk_blind, &kp.pubkey, blinding));
+    tt_mem_op(pk_blind.pubkey, OP_EQ, kp_blind.pubkey.pubkey, 32);
+
+    tt_int_op(0, OP_EQ, ed25519_checksig(&sig, msg, i, &pk));
+    sig.sig[0] ^= 15;
+    tt_int_op(-1, OP_EQ, ed25519_checksig(&sig, msg, sizeof(msg), &pk));
+
+    tt_int_op(0, OP_EQ, ed25519_checksig(&sig_blind, msg, i, &pk_blind));
+
+    tt_int_op(0, OP_EQ, ed25519_public_key_from_curve25519_public_key(
+            &pk_curve25519, &ckp.pubkey, bit));
+    tt_mem_op(pk_curve25519.pubkey, OP_EQ, kp_curve25519.pubkey.pubkey, 32);
+  }
+
+ done:
+  ;
+}
+
+static void
 test_crypto_siphash(void *arg)
 {
   /* From the reference implementation, taking
@@ -1767,6 +1838,7 @@ struct testcase_t crypto_tests[] = {
   { "ed25519_convert", test_crypto_ed25519_convert, 0, NULL, NULL },
   { "ed25519_blinding", test_crypto_ed25519_blinding, 0, NULL, NULL },
   { "ed25519_testvectors", test_crypto_ed25519_testvectors, 0, NULL, NULL },
+  { "ed25519_fuzz_donna", test_crypto_ed25519_fuzz_donna, TT_FORK, NULL, NULL },
   { "siphash", test_crypto_siphash, 0, NULL, NULL },
   END_OF_TESTCASES
 };

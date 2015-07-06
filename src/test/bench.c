@@ -248,7 +248,7 @@ bench_onion_ntor(void)
 }
 
 static void
-bench_ed25519(void)
+bench_ed25519_impl(void)
 {
   uint64_t start, end;
   const int iters = 1<<12;
@@ -302,6 +302,19 @@ bench_ed25519(void)
   end = perftime();
   printf("Blind a public key: %.2f usec\n",
          MICROCOUNT(start, end, iters));
+}
+
+static void
+bench_ed25519(void)
+{
+  int donna;
+
+  for (donna = 0; donna <= 1; ++donna) {
+    printf("Ed25519-donna = %s.\n",
+           (donna == 0) ? "disabled" : "enabled");
+    ed25519_set_impl_params(donna);
+    bench_ed25519_impl();
+  }
 }
 
 static void

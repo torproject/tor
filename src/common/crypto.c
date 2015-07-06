@@ -26,6 +26,7 @@
 #define CRYPTO_PRIVATE
 #include "crypto.h"
 #include "crypto_curve25519.h"
+#include "crypto_ed25519.h"
 
 #if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,0,0)
 #error "We require OpenSSL >= 1.0.0"
@@ -308,6 +309,7 @@ crypto_early_init(void)
       return -1;
 
     curve25519_init();
+    ed25519_init();
   }
   return 0;
 }
