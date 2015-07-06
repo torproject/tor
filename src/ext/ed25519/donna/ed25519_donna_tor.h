@@ -21,4 +21,10 @@ int ed25519_donna_open(const unsigned char *signature, const unsigned char *m,
 int ed25519_donna_sign(unsigned char *sig, const unsigned char *m, size_t mlen,
   const unsigned char *sk, const unsigned char *pk);
 
+int ed25519_donna_blind_secret_key(unsigned char *out, const unsigned char *inp,
+  const unsigned char *param);
+
+int ed25519_donna_blind_public_key(unsigned char *out, const unsigned char *inp,
+  const unsigned char *param);
+
 #endif

@@ -17,6 +17,9 @@ as of 8757bd4cd209cb032853ece0ce413f122eef212c.
       in a function and the entire file is included to allow for
       runtime validation.
 
+    * There's an implementation of multiplicative key blinding so we
+      can use it for next-gen hidden service descriptors.
+
  * `ED25519_FN(ed25519_randombytes_unsafe)` is now static.
 
  * `ed25519-randombytes-custom.h` has the appropriate code to call
