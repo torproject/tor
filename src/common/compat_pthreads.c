@@ -64,13 +64,17 @@ spawn_func(void (*func)(void *), void *data)
 {
   pthread_t thread;
   tor_pthread_data_t *d;
-  if (PREDICT_UNLIKELY(!threads_initialized))
+  if (PREDICT_UNLIKELY(!threads_initialized)) {
     tor_threads_init();
+  }
   d = tor_malloc(sizeof(tor_pthread_data_t));
   d->data = data;
   d->func = func;
-  if (pthread_create(&thread,&attr_detached,tor_pthread_helper_fn,d))
+  if (pthread_create(&thread, &attr_detached, tor_pthread_helper_fn, d)) {
+    tor_free(d);
     return -1;
+  }
+
   return 0;
 }
 
