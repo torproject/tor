@@ -150,9 +150,8 @@ int
 tor_open_cloexec(const char *path, int flags, unsigned mode)
 {
   int fd;
-  const char *p = path;
+  const char *p = sandbox_intern_string(path);
 #ifdef O_CLOEXEC
-  p = sandbox_intern_string(path);
   fd = open(p, flags|O_CLOEXEC, mode);
   if (fd >= 0)
     return fd;
