@@ -10,6 +10,12 @@
 #include "crypto_s2k.h"
 #include "crypto_pwbox.h"
 
+#if defined(HAVE_LIBSCRYPT_H)
+#include <libscrypt.h>
+#endif
+
+#include <openssl/evp.h>
+
 /** Run unit tests for our secret-to-key passphrase hashing functionality. */
 static void
 test_crypto_s2k_rfc2440(void *arg)
@@ -122,6 +128,109 @@ test_crypto_s2k_general(void *arg)
     tt_fail();
   }
 }
+
+#if defined(HAVE_LIBSCRYPT_H) && HAVE_EVP_PBE_SCRYPT
+static void
+test_libscrypt_eq_openssl(void *arg)
+{
+  uint8_t buf1[64];
+  uint8_t buf2[64];
+
+  uint64_t N, r, p;
+  uint64_t maxmem = 0; // --> SCRYPT_MAX_MEM in OpenSSL.
+
+  int libscrypt_retval, openssl_retval;
+
+  size_t dk_len = 64;
+
+  (void)arg;
+
+  memset(buf1,0,64);
+  memset(buf2,0,64);
+
+  N = 1;
+  r = 16;
+  p = 1;
+
+  libscrypt_retval =
+  libscrypt_scrypt((const uint8_t *)"", 0, (const uint8_t *)"", 0,
+                   r, N, p, buf1, dk_len);
+  openssl_retval =
+  EVP_PBE_scrypt((const char *)"", 0, (const unsigned char *)"", 0,
+                  r, N, p, maxmem, buf2, dk_len);
+
+  tt_int_op(libscrypt_retval, ==, 0);
+  tt_int_op(openssl_retval, ==, 1);
+
+  tt_mem_op(buf1, ==, buf2, 64);
+
+  memset(buf1,0,64);
+  memset(buf2,0,64);
+
+  N = 8;
+  r = 1024;
+  p = 16;
+
+  libscrypt_retval =
+  libscrypt_scrypt((const uint8_t *)"password", 0, 
+                   (const uint8_t *)"NaCl", 0, 
+                   r, N, p, buf1, dk_len);
+  openssl_retval =
+  EVP_PBE_scrypt((const char *)"password", 0,
+                 (const unsigned char *)"NaCl", 0,
+                  r, N, p, maxmem, buf2, dk_len);
+
+  tt_int_op(libscrypt_retval, ==, 0);
+  tt_int_op(openssl_retval, ==, 1);
+
+  tt_mem_op(buf1, ==, buf2, 64);
+
+  memset(buf1,0,64);
+  memset(buf2,0,64);
+
+  N = 8;
+  r = 16384;
+  p = 1;
+
+  libscrypt_retval =
+  libscrypt_scrypt((const uint8_t *)"pleaseletmein", 0,
+                   (const uint8_t *)"SodiumChloride", 0,
+                   N, r, p, buf1, dk_len);
+  openssl_retval =
+  EVP_PBE_scrypt((const char *)"pleaseletmein", 0,
+                 (const unsigned char *)"SodiumChloride", 0,
+                  N, r, p, maxmem, buf2, dk_len);
+
+  tt_int_op(libscrypt_retval, ==, 0);
+  tt_int_op(openssl_retval, ==, 1);
+
+  tt_mem_op(buf1, ==, buf2, 64);
+
+#if 0
+  memset(buf1,0,64);
+  memset(buf2,0,64);
+
+  r = 1048576;
+ 
+  libscrypt_retval =
+  libscrypt_scrypt((const uint8_t *)"pleaseletmein", 0, 
+                   (const uint8_t *)"SodiumChloride", 0, 
+                   N, r, p, buf1, dk_len);
+  openssl_retval =
+  EVP_PBE_scrypt((const char *)"pleaseletmein", 0,
+                 (const unsigned char *)"SodiumChloride", 0,
+                  N, r, p, maxmem, buf2, dk_len);
+
+  tt_int_op(libscrypt_retval, ==, 0);
+  tt_int_op(openssl_retval, ==, 1);
+
+  tt_mem_op(buf1, ==, buf2, 64);
+#endif
+
+  done:
+  return;
+}
+#endif
 
 static void
 test_crypto_s2k_errors(void *arg)
@@ -393,6 +502,9 @@ struct testcase_t slow_crypto_tests[] = {
     (void*)"scrypt" },
   { "s2k_scrypt_low", test_crypto_s2k_general, 0, &passthrough_setup,
     (void*)"scrypt-low" },
+#if HAVE_EVP_PBE_SCRYPT
+  { "libscrypt_eq_openssl", test_libscrypt_eq_openssl, 0, NULL, NULL },
+#endif
 #endif
   { "s2k_pbkdf2", test_crypto_s2k_general, 0, &passthrough_setup,
     (void*)"pbkdf2" },
