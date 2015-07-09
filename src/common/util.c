@@ -565,7 +565,7 @@ sample_laplace_distribution(double mu, double b, double p)
   result = mu - b * (p > 0.5 ? 1.0 : -1.0)
                   * tor_mathlog(1.0 - 2.0 * fabs(p - 0.5));
 
-  return cast_double_to_int64(result);
+  return clamp_double_to_int64(result);
 }
 
 /** Add random noise between INT64_MIN and INT64_MAX coming from a Laplace
@@ -5509,7 +5509,7 @@ tor_weak_random_range(tor_weak_rng_t *rng, int32_t top)
 /** Cast a given double value to a int64_t. Return 0 if number is NaN.
  * Returns either INT64_MIN or INT64_MAX if number is outside of the int64_t
  * range. */
-int64_t cast_double_to_int64(double number)
+int64_t clamp_double_to_int64(double number)
 {
   int exp;
 

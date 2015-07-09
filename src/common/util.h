@@ -185,7 +185,7 @@ int64_t sample_laplace_distribution(double mu, double b, double p);
 int64_t add_laplace_noise(int64_t signal, double random, double delta_f,
                           double epsilon);
 int n_bits_set_u8(uint8_t v);
-int64_t cast_double_to_int64(double number);
+int64_t clamp_double_to_int64(double number);
 
 /* Compute the CEIL of <b>a</b> divided by <b>b</b>, for nonnegative <b>a</b>
  * and positive <b>b</b>.  Works on integer types only. Not defined if a+b can

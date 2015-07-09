@@ -4238,36 +4238,36 @@ test_util_laplace(void *arg)
 }
 
 static void
-test_util_cast_double_to_int64(void *arg)
+test_util_clamp_double_to_int64(void *arg)
 {
   (void)arg;
 
-  tt_i64_op(INT64_MIN, ==, cast_double_to_int64(-INFINITY));
+  tt_i64_op(INT64_MIN, ==, clamp_double_to_int64(-INFINITY));
   tt_i64_op(INT64_MIN, ==,
-            cast_double_to_int64(-1.0 * pow(2.0, 64.0) - 1.0));
+            clamp_double_to_int64(-1.0 * pow(2.0, 64.0) - 1.0));
   tt_i64_op(INT64_MIN, ==,
-            cast_double_to_int64(-1.0 * pow(2.0, 63.0) - 1.0));
+            clamp_double_to_int64(-1.0 * pow(2.0, 63.0) - 1.0));
   tt_i64_op(((uint64_t) -1) << 53, ==,
-            cast_double_to_int64(-1.0 * pow(2.0, 53.0)));
+            clamp_double_to_int64(-1.0 * pow(2.0, 53.0)));
   tt_i64_op((((uint64_t) -1) << 53) + 1, ==,
-            cast_double_to_int64(-1.0 * pow(2.0, 53.0) + 1.0));
-  tt_i64_op(-1, ==, cast_double_to_int64(-1.0));
-  tt_i64_op(0, ==, cast_double_to_int64(-0.9));
-  tt_i64_op(0, ==, cast_double_to_int64(-0.1));
-  tt_i64_op(0, ==, cast_double_to_int64(0.0));
-  tt_i64_op(0, ==, cast_double_to_int64(NAN));
-  tt_i64_op(0, ==, cast_double_to_int64(0.1));
-  tt_i64_op(0, ==, cast_double_to_int64(0.9));
-  tt_i64_op(1, ==, cast_double_to_int64(1.0));
+            clamp_double_to_int64(-1.0 * pow(2.0, 53.0) + 1.0));
+  tt_i64_op(-1, ==, clamp_double_to_int64(-1.0));
+  tt_i64_op(0, ==, clamp_double_to_int64(-0.9));
+  tt_i64_op(0, ==, clamp_double_to_int64(-0.1));
+  tt_i64_op(0, ==, clamp_double_to_int64(0.0));
+  tt_i64_op(0, ==, clamp_double_to_int64(NAN));
+  tt_i64_op(0, ==, clamp_double_to_int64(0.1));
+  tt_i64_op(0, ==, clamp_double_to_int64(0.9));
+  tt_i64_op(1, ==, clamp_double_to_int64(1.0));
   tt_i64_op((((int64_t) 1) << 53) - 1, ==,
-            cast_double_to_int64(pow(2.0, 53.0) - 1.0));
+            clamp_double_to_int64(pow(2.0, 53.0) - 1.0));
   tt_i64_op(((int64_t) 1) << 53, ==,
-            cast_double_to_int64(pow(2.0, 53.0)));
+            clamp_double_to_int64(pow(2.0, 53.0)));
   tt_i64_op(INT64_MAX, ==,
-            cast_double_to_int64(pow(2.0, 63.0)));
+            clamp_double_to_int64(pow(2.0, 63.0)));
   tt_i64_op(INT64_MAX, ==,
-            cast_double_to_int64(pow(2.0, 64.0)));
-  tt_i64_op(INT64_MAX, ==, cast_double_to_int64(INFINITY));
+            clamp_double_to_int64(pow(2.0, 64.0)));
+  tt_i64_op(INT64_MAX, ==, clamp_double_to_int64(INFINITY));
 
  done:
   ;
@@ -4490,7 +4490,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(di_ops),
   UTIL_TEST(round_to_next_multiple_of, 0),
   UTIL_TEST(laplace, 0),
-  UTIL_TEST(cast_double_to_int64, 0),
+  UTIL_TEST(clamp_double_to_int64, 0),
   UTIL_TEST(find_str_at_start_of_line, 0),
   UTIL_TEST(string_is_C_identifier, 0),
   UTIL_TEST(asprintf, 0),
