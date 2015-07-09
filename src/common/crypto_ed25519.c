@@ -16,8 +16,80 @@
 #include "util.h"
 
 #include "ed25519/ref10/ed25519_ref10.h"
+#include "ed25519/donna/ed25519_donna_tor.h"
 
 #include <openssl/sha.h>
+
+static void pick_ed25519_impl(void);
+static int ed25519_impl_spot_check(void);
+
+/** An Ed25519 implementation */
+typedef struct {
+  int (*selftest)(void);
+
+  int (*seckey)(unsigned char *);
+  int (*seckey_expand)(unsigned char *, const unsigned char *);
+  int (*pubkey)(unsigned char *, const unsigned char *);
+  int (*keygen)(unsigned char *, unsigned char *);
+
+  int (*open)(const unsigned char *, const unsigned char *, size_t, const
+              unsigned char *);
+  int (*sign)(unsigned char *, const unsigned char *, size_t,
+              const unsigned char *, const unsigned char *);
+
+  int (*blind_secret_key)(unsigned char *, const unsigned char *,
+                          const unsigned char *);
+  int (*blind_public_key)(unsigned char *, const unsigned char *,
+                          const unsigned char *);
+
+  int (*pubkey_from_curve25519_pubkey)(unsigned char *, const unsigned char *,
+                                       int);
+} ed25519_impl_t;
+
+static const ed25519_impl_t impl_ref10 = {
+  NULL,
+
+  ed25519_ref10_seckey,
+  ed25519_ref10_seckey_expand,
+  ed25519_ref10_pubkey,
+  ed25519_ref10_keygen,
+
+  ed25519_ref10_open,
+  ed25519_ref10_sign,
+
+  ed25519_ref10_blind_secret_key,
+  ed25519_ref10_blind_public_key,
+
+  ed25519_ref10_pubkey_from_curve25519_pubkey,
+};
+
+static const ed25519_impl_t impl_donna = {
+  ed25519_donna_selftest,
+
+  ed25519_donna_seckey,
+  ed25519_donna_seckey_expand,
+  ed25519_donna_pubkey,
+  ed25519_donna_keygen,
+
+  ed25519_donna_open,
+  ed25519_donna_sign,
+
+  ed25519_donna_blind_secret_key,
+  ed25519_donna_blind_public_key,
+
+  ed25519_donna_pubkey_from_curve25519_pubkey,
+};
+
+static const ed25519_impl_t *ed25519_impl = NULL;
+
+static inline const ed25519_impl_t *
+get_ed_impl(void)
+{
+  if (PREDICT_UNLIKELY(ed25519_impl == NULL)) {
+    pick_ed25519_impl();
+  }
+  return ed25519_impl;
+}
 
 /**
  * Initialize a new ed25519 secret key in <b>seckey_out</b>.  If
@@ -33,7 +105,7 @@ ed25519_secret_key_generate(ed25519_secret_key_t *seckey_out,
   if (! extra_strong || crypto_strongest_rand(seed, sizeof(seed)) < 0)
     crypto_rand((char*)seed, sizeof(seed));
 
-  r = ed25519_ref10_seckey_expand(seckey_out->seckey, seed);
+  r = get_ed_impl()->seckey_expand(seckey_out->seckey, seed);
   memwipe(seed, 0, sizeof(seed));
 
   return r < 0 ? -1 : 0;
@@ -47,8 +119,8 @@ int
 ed25519_secret_key_from_seed(ed25519_secret_key_t *seckey_out,
                              const uint8_t *seed)
 {
-  if (ed25519_ref10_seckey_expand(seckey_out->seckey, seed) < 0)
-    return -1;
+  if (get_ed_impl()->seckey_expand(seckey_out->seckey, seed) < 0)
+     return -1;
   return 0;
 }
 
@@ -60,7 +132,7 @@ int
 ed25519_public_key_generate(ed25519_public_key_t *pubkey_out,
                         const ed25519_secret_key_t *seckey)
 {
-  if (ed25519_ref10_pubkey(pubkey_out->pubkey, seckey->seckey) < 0)
+  if (get_ed_impl()->pubkey(pubkey_out->pubkey, seckey->seckey) < 0)
     return -1;
   return 0;
 }
@@ -88,10 +160,9 @@ ed25519_sign(ed25519_signature_t *signature_out,
              const uint8_t *msg, size_t len,
              const ed25519_keypair_t *keypair)
 {
-
-  if (ed25519_ref10_sign(signature_out->sig, msg, len,
-                         keypair->seckey.seckey,
-                         keypair->pubkey.pubkey) < 0) {
+  if (get_ed_impl()->sign(signature_out->sig, msg, len,
+                          keypair->seckey.seckey,
+                          keypair->pubkey.pubkey) < 0) {
     return -1;
   }
 
@@ -110,7 +181,7 @@ ed25519_checksig(const ed25519_signature_t *signature,
                  const ed25519_public_key_t *pubkey)
 {
   return
-    ed25519_ref10_open(signature->sig, msg, len, pubkey->pubkey) < 0 ? -1 : 0;
+    get_ed_impl()->open(signature->sig, msg, len, pubkey->pubkey) < 0 ? -1 : 0;
 }
 
 /** Validate every signature among those in <b>checkable</b>, which contains
@@ -164,6 +235,7 @@ ed25519_checksig_batch(int *okay_out,
 
   res = 0;
   for (i = 0; i < n_checkable; ++i) {
+    /* XXX/yawning: Propagate to okay_out? */
     if (!oks[i])
       --res;
   }
@@ -229,9 +301,9 @@ ed25519_public_key_from_curve25519_public_key(ed25519_public_key_t *pubkey,
                                      const curve25519_public_key_t *pubkey_in,
                                      int signbit)
 {
-  return ed25519_ref10_pubkey_from_curve25519_pubkey(pubkey->pubkey,
-                                                     pubkey_in->public_key,
-                                                     signbit);
+  return get_ed_impl()->pubkey_from_curve25519_pubkey(pubkey->pubkey,
+                                                      pubkey_in->public_key,
+                                                      signbit);
 }
 
 /**
@@ -251,7 +323,7 @@ ed25519_keypair_blind(ed25519_keypair_t *out,
 {
   ed25519_public_key_t pubkey_check;
 
-  ed25519_ref10_blind_secret_key(out->seckey.seckey,
+  get_ed_impl()->blind_secret_key(out->seckey.seckey,
                                   inp->seckey.seckey, param);
 
   ed25519_public_blind(&pubkey_check, &inp->pubkey, param);
@@ -274,7 +346,7 @@ ed25519_public_blind(ed25519_public_key_t *out,
                      const ed25519_public_key_t *inp,
                      const uint8_t *param)
 {
-  ed25519_ref10_blind_public_key(out->pubkey, inp->pubkey, param);
+  get_ed_impl()->blind_public_key(out->pubkey, inp->pubkey, param);
   return 0;
 }
 
@@ -370,5 +442,116 @@ ed25519_pubkey_eq(const ed25519_public_key_t *key1,
   tor_assert(key1);
   tor_assert(key2);
   return tor_memeq(key1->pubkey, key2->pubkey, ED25519_PUBKEY_LEN);
+}
+
+/** Check whether the given Ed25519 implementation seems to be working.
+ * If so, return 0; otherwise return -1. */
+static int
+ed25519_impl_spot_check(void)
+{
+  static const uint8_t alicesk[32] = {
+    0xc5,0xaa,0x8d,0xf4,0x3f,0x9f,0x83,0x7b,
+    0xed,0xb7,0x44,0x2f,0x31,0xdc,0xb7,0xb1,
+    0x66,0xd3,0x85,0x35,0x07,0x6f,0x09,0x4b,
+    0x85,0xce,0x3a,0x2e,0x0b,0x44,0x58,0xf7
+  };
+  static const uint8_t alicepk[32] = {
+    0xfc,0x51,0xcd,0x8e,0x62,0x18,0xa1,0xa3,
+    0x8d,0xa4,0x7e,0xd0,0x02,0x30,0xf0,0x58,
+    0x08,0x16,0xed,0x13,0xba,0x33,0x03,0xac,
+    0x5d,0xeb,0x91,0x15,0x48,0x90,0x80,0x25
+  };
+  static const uint8_t alicemsg[2] = { 0xaf, 0x82 };
+  static const uint8_t alicesig[64] = {
+    0x62,0x91,0xd6,0x57,0xde,0xec,0x24,0x02,
+    0x48,0x27,0xe6,0x9c,0x3a,0xbe,0x01,0xa3,
+    0x0c,0xe5,0x48,0xa2,0x84,0x74,0x3a,0x44,
+    0x5e,0x36,0x80,0xd7,0xdb,0x5a,0xc3,0xac,
+    0x18,0xff,0x9b,0x53,0x8d,0x16,0xf2,0x90,
+    0xae,0x67,0xf7,0x60,0x98,0x4d,0xc6,0x59,
+    0x4a,0x7c,0x15,0xe9,0x71,0x6e,0xd2,0x8d,
+    0xc0,0x27,0xbe,0xce,0xea,0x1e,0xc4,0x0a
+  };
+  const ed25519_impl_t *impl = get_ed_impl();
+  uint8_t sk[ED25519_SECKEY_LEN];
+  uint8_t pk[ED25519_PUBKEY_LEN];
+  uint8_t sig[ED25519_SIG_LEN];
+  int r = 0;
+
+  /* Some implementations (eg: The modified Ed25519-donna) have handy self-test
+   * code that sanity-checks the internals.  If present, use that to screen out
+   * catastrophic errors like massive compiler failure.
+   */
+  if (impl->selftest && impl->selftest() != 0)
+    goto fail;
+
+  /* Validate results versus known answer tests.  People really should be
+   * running "make test" instead of relying on this, but it's better than
+   * nothing.
+   *
+   * Test vectors taken from "EdDSA & Ed25519 - 6. Test Vectors for Ed25519
+   * (TEST3)" (draft-josefsson-eddsa-ed25519-03).
+   */
+
+  /* Key expansion, public key derivation. */
+  if (impl->seckey_expand(sk, alicesk) < 0)
+    goto fail;
+  if (impl->pubkey(pk, sk) < 0)
+    goto fail;
+  if (fast_memneq(pk, alicepk, ED25519_PUBKEY_LEN))
+    goto fail;
+
+  /* Signing, verification. */
+  if (impl->sign(sig, alicemsg, sizeof(alicemsg), sk, pk) < 0)
+    return -1;
+  if (fast_memneq(sig, alicesig, ED25519_SIG_LEN))
+    return -1;
+  if (impl->open(sig, alicemsg, sizeof(alicemsg), pk) < 0)
+    return -1;
+
+  /* XXX/yawning: Someone that's more paranoid than I am, can write "Assume
+   * ref0 is cannonical, and fuzz impl against it" if they want, but I doubt
+   * that will catch anything that the known answer tests won't.
+   */
+  goto end;
+
+ fail:
+  r = -1;
+ end:
+  return r;
+}
+
+/** Force the Ed25519 implementation to a given one, without sanity checking
+ * the output.  Used for testing.
+ */
+void
+ed25519_set_impl_params(int use_donna)
+{
+  if (use_donna)
+    ed25519_impl = &impl_donna;
+  else
+    ed25519_impl = &impl_ref10;
+}
+
+/** Choose whether to use the Ed25519-donna implementation. */
+static void
+pick_ed25519_impl(void)
+{
+  ed25519_impl = &impl_donna;
+
+  if (ed25519_impl_spot_check() == 0)
+    return;
+
+  log_warn(LD_CRYPTO, "The Ed25519-donna implementation seems broken; using "
+           "the ref10 implementation.");
+  ed25519_impl = &impl_ref10;
+}
+
+/* Initialize the Ed25519 implementation. This is neccessary if you're
+ * going to use them in a multithreaded setting, and not otherwise. */
+void
+ed25519_init(void)
+{
+  pick_ed25519_impl();
 }
 

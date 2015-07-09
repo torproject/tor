@@ -1,0 +1,4 @@
+  o Minor feature (performance):
+    - Improve the runtime speed of Ed25519 operations by using the
+      public-domain ed25519-donna by Andrew M. ("floodyberry"). Implements
+      ticket 16467.

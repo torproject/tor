@@ -43,6 +43,7 @@ endif
 endif
 
 LIBDONNA += $(LIBED25519_REF10)
+LIBDONNA += $(LIBED25519_DONNA)
 
 if THREADS_PTHREADS
 threads_impl_source=src/common/compat_pthreads.c

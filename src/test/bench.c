@@ -177,7 +177,7 @@ bench_onion_TAP(void)
 }
 
 static void
-bench_onion_ntor(void)
+bench_onion_ntor_impl(void)
 {
   const int iters = 1<<10;
   int i;
@@ -235,7 +235,20 @@ bench_onion_ntor(void)
 }
 
 static void
-bench_ed25519(void)
+bench_onion_ntor(void)
+{
+  int ed;
+
+  for (ed = 0; ed <= 1; ++ed) {
+    printf("Ed25519-based basepoint multiply = %s.\n",
+           (ed == 0) ? "disabled" : "enabled");
+    curve25519_set_impl_params(ed);
+    bench_onion_ntor_impl();
+  }
+}
+
+static void
+bench_ed25519_impl(void)
 {
   uint64_t start, end;
   const int iters = 1<<12;
@@ -289,6 +302,19 @@ bench_ed25519(void)
   end = perftime();
   printf("Blind a public key: %.2f usec\n",
          MICROCOUNT(start, end, iters));
+}
+
+static void
+bench_ed25519(void)
+{
+  int donna;
+
+  for (donna = 0; donna <= 1; ++donna) {
+    printf("Ed25519-donna = %s.\n",
+           (donna == 0) ? "disabled" : "enabled");
+    ed25519_set_impl_params(donna);
+    bench_ed25519_impl();
+  }
 }
 
 static void

@@ -14,6 +14,8 @@
 #include "util.h"
 #include "torlog.h"
 
+#include "ed25519/donna/ed25519_donna_tor.h"
+
 /* ==============================
    Part 1: wrap a suitable curve25519 implementation as curve25519_impl
    ============================== */
@@ -29,6 +31,10 @@ int curve25519_donna(uint8_t *mypublic,
 #include <nacl/crypto_scalarmult_curve25519.h>
 #endif
 #endif
+
+static void pick_curve25519_basepoint_impl(void);
+
+static int curve25519_use_ed = -1;
 
 STATIC int
 curve25519_impl(uint8_t *output, const uint8_t *secret,
@@ -48,6 +54,34 @@ curve25519_impl(uint8_t *output, const uint8_t *secret,
 #endif
   memwipe(bp, 0, sizeof(bp));
   return r;
+}
+
+STATIC int
+curve25519_basepoint_impl(uint8_t *output, const uint8_t *secret)
+{
+  int r = 0;
+  if (PREDICT_UNLIKELY(curve25519_use_ed == -1)) {
+    pick_curve25519_basepoint_impl();
+  }
+
+  /* TODO: Someone should benchmark curved25519_scalarmult_basepoint versus
+   * an optimized NaCl build to see which should be used when compiled with
+   * NaCl available.  I suspected that the ed25519 optimization always wins.
+   */
+  if (PREDICT_LIKELY(curve25519_use_ed == 1)) {
+    curved25519_scalarmult_basepoint_donna(output, secret);
+    r = 0;
+  } else {
+    static const uint8_t basepoint[32] = {9};
+    r = curve25519_impl(output, secret, basepoint);
+  }
+  return r;
+}
+
+void
+curve25519_set_impl_params(int use_ed)
+{
+  curve25519_use_ed = use_ed;
 }
 
 /* ==============================
@@ -113,9 +147,7 @@ void
 curve25519_public_key_generate(curve25519_public_key_t *key_out,
                                const curve25519_secret_key_t *seckey)
 {
-  static const uint8_t basepoint[32] = {9};
-
-  curve25519_impl(key_out->public_key, seckey->secret_key, basepoint);
+  curve25519_basepoint_impl(key_out->public_key, seckey->secret_key);
 }
 
 int
@@ -281,5 +313,86 @@ curve25519_handshake(uint8_t *output,
                      const curve25519_public_key_t *pkey)
 {
   curve25519_impl(output, skey->secret_key, pkey->public_key);
+}
+
+/** Check whether the ed25519-based curve25519 basepoint optimization seems to
+ * be working. If so, return 0; otherwise return -1. */
+static int
+curve25519_basepoint_spot_check(void)
+{
+  static const uint8_t alicesk[32] = {
+    0x77,0x07,0x6d,0x0a,0x73,0x18,0xa5,0x7d,
+    0x3c,0x16,0xc1,0x72,0x51,0xb2,0x66,0x45,
+    0xdf,0x4c,0x2f,0x87,0xeb,0xc0,0x99,0x2a,
+    0xb1,0x77,0xfb,0xa5,0x1d,0xb9,0x2c,0x2a
+  };
+  static const uint8_t alicepk[32] = {
+    0x85,0x20,0xf0,0x09,0x89,0x30,0xa7,0x54,
+    0x74,0x8b,0x7d,0xdc,0xb4,0x3e,0xf7,0x5a,
+    0x0d,0xbf,0x3a,0x0d,0x26,0x38,0x1a,0xf4,
+    0xeb,0xa4,0xa9,0x8e,0xaa,0x9b,0x4e,0x6a
+  };
+  const int loop_max=200;
+  int save_use_ed = curve25519_use_ed;
+  unsigned char e1[32] = { 5 };
+  unsigned char e2[32] = { 5 };
+  unsigned char x[32],y[32];
+  int i;
+  int r=0;
+
+  /* Check the most basic possible sanity via the test secret/public key pair
+   * used in "Cryptography in NaCl - 2. Secret keys and public keys".  This
+   * may catch catastrophic failures on systems where Curve25519 is expensive, 
+   * without requiring a ton of key generation.
+   */
+  curve25519_use_ed = 1;
+  r |= curve25519_basepoint_impl(x, alicesk);
+  if (fast_memneq(x, alicepk, 32))
+    goto fail;
+
+  /* Ok, the optimization appears to produce passable results, try a few more
+   * values, maybe there's something subtle wrong.
+   */
+  for (i = 0; i < loop_max; ++i) {
+    curve25519_use_ed = 0;
+    r |= curve25519_basepoint_impl(x, e1);
+    curve25519_use_ed = 1;
+    r |= curve25519_basepoint_impl(y, e2);
+    if (fast_memneq(x,y,32))
+      goto fail;
+    memcpy(e1, x, 32);
+    memcpy(e2, x, 32);
+  }
+
+  goto end;
+ fail:
+  r = -1;
+ end:
+  curve25519_use_ed = save_use_ed;
+  return r;
+}
+
+/** Choose whether to use the ed25519-based curve25519-basepoint
+ * implementation. */
+static void
+pick_curve25519_basepoint_impl(void)
+{
+  curve25519_use_ed = 1;
+
+  if (curve25519_basepoint_spot_check() == 0)
+    return;
+
+  log_warn(LD_CRYPTO, "The ed25519-based curve25519 basepoint "
+           "multiplication seems broken; using the curve25519 "
+           "implementation.");
+  curve25519_use_ed = 0;
+}
+
+/** Initialize the curve25519 implementations. This is necessary if you're
+ * going to use them in a multithreaded setting, and not otherwise. */
+void
+curve25519_init(void)
+{
+  pick_curve25519_basepoint_impl();
 }
 
