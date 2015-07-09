@@ -335,11 +335,25 @@ bwin32=true; AC_MSG_RESULT([yes]),
 bwin32=false; AC_MSG_RESULT([no]))
 fi
 
-if test "$bwin32" = true; then
-  AC_DEFINE(WIN32_LEAN_AND_MEAN, 1, [Defined to avoid including some windows headers])
-  AC_DEFINE(WINVER, 0x0501, [Defined to access windows functions and definitions for >=WinXP])
-  AC_DEFINE(_WIN32_WINNT, 0x0501, [Defined to access windows functions and definitions for >=WinXP])
-fi
+AH_BOTTOM([
+#ifdef _WIN32
+/* Defined to access windows functions and definitions for >=WinXP */
+# ifndef WINVER
+#  define WINVER 0x0501
+# endif
+
+/* Defined to access _other_ windows functions and definitions for >=WinXP */
+# ifndef _WIN32_WINNT
+#  define _WIN32_WINNT 0x0501
+# endif
+
+/* Defined to avoid including some windows headers as part of Windows.h */
+# ifndef WIN32_LEAN_AND_MEAN
+#  define WIN32_LEAN_AND_MEAN 1
+# endif
+#endif
+])
+
 
 AM_CONDITIONAL(BUILD_NT_SERVICES, test x$bwin32 = xtrue)
 
