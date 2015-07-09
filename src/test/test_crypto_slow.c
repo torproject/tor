@@ -129,7 +129,7 @@ test_crypto_s2k_general(void *arg)
   }
 }
 
-#if defined(HAVE_LIBSCRYPT_H) && HAVE_EVP_PBE_SCRYPT
+#if defined(HAVE_LIBSCRYPT_H) && defined(HAVE_EVP_PBE_SCRYPT)
 static void
 test_libscrypt_eq_openssl(void *arg)
 {
@@ -502,7 +502,7 @@ struct testcase_t slow_crypto_tests[] = {
     (void*)"scrypt" },
   { "s2k_scrypt_low", test_crypto_s2k_general, 0, &passthrough_setup,
     (void*)"scrypt-low" },
-#if HAVE_EVP_PBE_SCRYPT
+#ifdef HAVE_EVP_PBE_SCRYPT
   { "libscrypt_eq_openssl", test_libscrypt_eq_openssl, 0, NULL, NULL },
 #endif
 #endif
