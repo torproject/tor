@@ -335,7 +335,7 @@ bwin32=true; AC_MSG_RESULT([yes]),
 bwin32=false; AC_MSG_RESULT([no]))
 fi
 
-if test "$bwin32" = yes; then
+if test "$bwin32" = true; then
   AC_DEFINE(WIN32_LEAN_AND_MEAN, 1, [Defined to avoid including some windows headers])
   AC_DEFINE(WINVER, 0x0501, [Defined to access windows functions and definitions for >=WinXP])
   AC_DEFINE(_WIN32_WINNT, 0x0501, [Defined to access windows functions and definitions for >=WinXP])
