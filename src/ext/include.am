@@ -127,7 +127,8 @@ ED25519_DONNA_HDRS = \
 	src/ext/ed25519/donna/modm-donna-32bit.h \
 	src/ext/ed25519/donna/modm-donna-64bit.h \
 	src/ext/ed25519/donna/regression.h \
-	src/ext/ed25519/donna/test-ticks.h
+	src/ext/ed25519/donna/test-ticks.h \
+	src/ext/ed25519/donna/test-internals.c
 
 noinst_HEADERS += $(ED25519_DONNA_HDRS)
 
