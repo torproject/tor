@@ -125,6 +125,7 @@ int rend_service_del_ephemeral(const char *service_id);
 void directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
                               smartlist_t *descs, smartlist_t *hs_dirs,
                               const char *service_id, int seconds_valid);
+void rend_service_desc_has_uploaded(const rend_data_t *rend_data);
 
 #endif
 

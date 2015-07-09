@@ -23,6 +23,7 @@
 #include "relay.h"
 #include "rendclient.h"
 #include "rendcommon.h"
+#include "rendservice.h"
 #include "rephist.h"
 #include "router.h"
 #include "routerlist.h"
@@ -2196,6 +2197,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                  "Uploading rendezvous descriptor: finished with status "
                  "200 (%s)", escaped(reason));
         control_event_hs_descriptor_uploaded(conn->identity_digest);
+        rend_service_desc_has_uploaded(conn->rend_data);
         break;
       case 400:
         log_warn(LD_REND,"http status 400 (%s) response from dirserver "

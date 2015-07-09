@@ -4875,6 +4875,11 @@ typedef struct rend_encoded_v2_service_descriptor_t {
  * XXX023 Should this be configurable? */
 #define INTRO_POINT_LIFETIME_MAX_SECONDS (24*60*60)
 
+/** The maximum number of circuit creation retry we do to an intro point
+ * before giving up. We try to reuse intro point that fails during their
+ * lifetime so this is a hard limit on the amount of time we do that. */
+#define MAX_INTRO_POINT_CIRCUIT_RETRIES 3
+
 /** Introduction point information.  Used both in rend_service_t (on
  * the service side) and in rend_service_descriptor_t (on both the
  * client and service side). */
@@ -4898,11 +4903,6 @@ typedef struct rend_intro_point_t {
   /** (Service side only) Flag indicating that this intro point was
    * included in the last HS descriptor we generated. */
   unsigned int listed_in_last_desc : 1;
-
-  /** (Service side only) Flag indicating that
-   * rend_service_note_removing_intro_point has been called for this
-   * intro point. */
-  unsigned int rend_service_note_removing_intro_point_called : 1;
 
   /** (Service side only) A replay cache recording the RSA-encrypted parts
    * of INTRODUCE2 cells this intro point's circuit has received.  This is
@@ -4930,15 +4930,16 @@ typedef struct rend_intro_point_t {
    * point should expire. */
   time_t time_to_expire;
 
-  /** (Service side only) The time at which we decided that this intro
-   * point should start expiring, or -1 if this intro point is not yet
-   * expiring.
-   *
-   * This field also serves as a flag to indicate that we have decided
-   * to expire this intro point, in case intro_point_should_expire_now
-   * flaps (perhaps due to a clock jump; perhaps due to other
-   * weirdness, or even a (present or future) bug). */
-  time_t time_expiring;
+  /** (Service side only) The amount of circuit creation we've made to this
+   * intro point. This is incremented every time we do a circuit relaunch on
+   * this object which is triggered when the circuit dies but the node is
+   * still in the consensus. After MAX_INTRO_POINT_CIRCUIT_RETRIES, we give
+   * up on it. */
+  unsigned int circuit_retries;
+
+  /** (Service side only) Set if this intro point has an established circuit
+   * and unset if it doesn't. */
+  unsigned int circuit_established:1;
 } rend_intro_point_t;
 
 #define REND_PROTOCOL_VERSION_BITMASK_WIDTH 16
