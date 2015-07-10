@@ -68,12 +68,14 @@
 #ifdef HAVE_CRT_EXTERNS_H
 #include <crt_externs.h>
 #endif
-#ifdef HAVE_READPASSPHRASE_H
-#include <readpassphrase.h>
-#elif !defined(_WIN32)
-#include "tor_readpassphrase.h"
-#else
+
+#ifdef _WIN32
 #include <conio.h>
+#include <wchar.h>
+#elif defined(HAVE_READPASSPHRASE_H)
+#include <readpassphrase.h>
+#else
+#include "tor_readpassphrase.h"
 #endif
 
 #ifndef HAVE_GETTIMEOFDAY
