@@ -72,6 +72,16 @@
 #ifdef _WIN32
 #include <conio.h>
 #include <wchar.h>
+/* Some mingw headers lack these. :p */
+#ifndef HAVE__GETWCH
+wint_t _getwch(void);
+#endif
+#ifndef WEOF
+#define WEOF (wchar_t)(0xFFFF)
+#endif
+#ifndef HAVE_SECUREZEROMEMORY
+PVOID SecureZeroMemory(PVOID ptr, SIZE_T cnt);
+#endif
 #elif defined(HAVE_READPASSPHRASE_H)
 #include <readpassphrase.h>
 #else

@@ -396,6 +396,7 @@ dnl Check for functions before libevent, since libevent-1.2 apparently
 dnl exports strlcpy without defining it in a header.
 
 AC_CHECK_FUNCS(
+	SecureZeroMemory \
         _NSGetEnviron \
         accept4 \
         backtrace \
@@ -435,6 +436,7 @@ AC_CHECK_FUNCS(
         uname \
 	usleep \
         vasprintf \
+	_getwch \
 	_vscprintf
 )
 
