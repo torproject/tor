@@ -145,8 +145,7 @@ const cached_dir_t *dirvote_get_vote(const char *fp, int flags);
 void set_routerstatus_from_routerinfo(routerstatus_t *rs,
                                       node_t *node,
                                       routerinfo_t *ri, time_t now,
-                                      int listbadexits,
-                                      int vote_on_hsdirs);
+                                      int listbadexits);
 networkstatus_t *
 dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
                                         authority_cert_t *cert);

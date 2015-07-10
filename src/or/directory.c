@@ -3095,8 +3095,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     goto done;
   }
 
-  if (options->HidServDirectoryV2 &&
-      connection_dir_is_encrypted(conn) &&
+  if (connection_dir_is_encrypted(conn) &&
        !strcmpstart(url,"/tor/rendezvous2/")) {
     /* Handle v2 rendezvous descriptor fetch request. */
     const char *descp;
@@ -3240,8 +3239,7 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
   log_debug(LD_DIRSERV,"rewritten url as '%s'.", escaped(url));
 
   /* Handle v2 rendezvous service publish request. */
-  if (options->HidServDirectoryV2 &&
-      connection_dir_is_encrypted(conn) &&
+  if (connection_dir_is_encrypted(conn) &&
       !strcmpstart(url,"/tor/rendezvous2/publish")) {
     switch (rend_cache_store_v2_desc_as_dir(body)) {
       case RCS_NOTDIR:

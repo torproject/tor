@@ -278,7 +278,7 @@ static config_var_t option_vars_[] = {
   V(AccelName,                   STRING,   NULL),
   V(AccelDir,                    FILENAME, NULL),
   V(HashedControlPassword,       LINELIST, NULL),
-  V(HidServDirectoryV2,          BOOL,     "1"),
+  OBSOLETE("HidServDirectoryV2"),
   VAR("HiddenServiceDir",    LINELIST_S, RendConfigLines,    NULL),
   VAR("HiddenServiceDirGroupReadable",  LINELIST_S, RendConfigLines, NULL),
   VAR("HiddenServiceOptions",LINELIST_V, RendConfigLines,    NULL),
@@ -448,6 +448,7 @@ static config_var_t option_vars_[] = {
   V(V3BandwidthsFile,            FILENAME, NULL),
   V(GuardfractionFile,           FILENAME, NULL),
   VAR("VersioningAuthoritativeDirectory",BOOL,VersioningAuthoritativeDir, "0"),
+  OBSOLETE("VoteOnHidServDirectoriesV2"),
   V(VirtualAddrNetworkIPv4,      STRING,   "127.192.0.0/10"),
   V(VirtualAddrNetworkIPv6,      STRING,   "[FE80::]/10"),
   V(WarnPlaintextPorts,          CSV,      "23,109,110,143"),
@@ -460,7 +461,6 @@ static config_var_t option_vars_[] = {
       NULL),
   VAR("__OwningControllerProcess",STRING,OwningControllerProcess, NULL),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "96 hours"),
-  V(VoteOnHidServDirectoriesV2,  BOOL,     "1"),
   V(TestingServerDownloadSchedule, CSV_INTERVAL, "0, 0, 0, 60, 60, 120, "
                                  "300, 900, 2147483647"),
   V(TestingClientDownloadSchedule, CSV_INTERVAL, "0, 0, 60, 300, 600, "

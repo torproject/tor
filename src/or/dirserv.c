@@ -2129,8 +2129,7 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
                                  node_t *node,
                                  routerinfo_t *ri,
                                  time_t now,
-                                 int listbadexits,
-                                 int vote_on_hsdirs)
+                                 int listbadexits)
 {
   const or_options_t *options = get_options();
   uint32_t routerbw_kb = dirserv_get_credible_bandwidth_kb(ri);
@@ -2167,8 +2166,8 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   }
 
   rs->is_bad_exit = listbadexits && node->is_bad_exit;
-  node->is_hs_dir = dirserv_thinks_router_is_hs_dir(ri, node, now);
-  rs->is_hs_dir = vote_on_hsdirs && node->is_hs_dir;
+  rs->is_hs_dir = node->is_hs_dir =
+    dirserv_thinks_router_is_hs_dir(ri, node, now);
 
   rs->is_named = rs->is_unnamed = 0;
 
@@ -2206,8 +2205,7 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
 
     if (routerset_contains_routerstatus(options->TestingDirAuthVoteHSDir,
                                         rs, 0)) {
-      /* TestingDirAuthVoteHSDir respects VoteOnHidServDirectoriesV2 */
-      rs->is_hs_dir = vote_on_hsdirs;
+      rs->is_hs_dir = 1;
     }
   }
 }
@@ -2733,7 +2731,6 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   char identity_digest[DIGEST_LEN];
   char signing_key_digest[DIGEST_LEN];
   int listbadexits = options->AuthDirListBadExits;
-  int vote_on_hsdirs = options->VoteOnHidServDirectoriesV2;
   routerlist_t *rl = router_get_routerlist();
   time_t now = time(NULL);
   time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
@@ -2824,8 +2821,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
       vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
       rs = &vrs->status;
       set_routerstatus_from_routerinfo(rs, node, ri, now,
-                                       listbadexits,
-                                       vote_on_hsdirs);
+                                       listbadexits);
 
       if (ri->signing_key_cert) {
         memcpy(vrs->ed25519_id, ri->signing_key_cert->signing_key.pubkey,
@@ -2922,14 +2918,12 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
 
   v3_out->known_flags = smartlist_new();
   smartlist_split_string(v3_out->known_flags,
-                "Authority Exit Fast Guard Stable V2Dir Valid",
+                "Authority Exit Fast Guard Stable V2Dir Valid HSDir",
                 0, SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   if (vote_on_reachability)
     smartlist_add(v3_out->known_flags, tor_strdup("Running"));
   if (listbadexits)
     smartlist_add(v3_out->known_flags, tor_strdup("BadExit"));
-  if (vote_on_hsdirs)
-    smartlist_add(v3_out->known_flags, tor_strdup("HSDir"));
   smartlist_sort_strings(v3_out->known_flags);
 
   if (options->ConsensusParams) {

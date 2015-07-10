@@ -5179,11 +5179,6 @@ hid_serv_acting_as_directory(void)
   const routerinfo_t *me = router_get_my_routerinfo();
   if (!me)
     return 0;
-  if (!get_options()->HidServDirectoryV2) {
-    log_info(LD_REND, "We are not acting as hidden service directory, "
-                      "because we have not been configured as such.");
-    return 0;
-  }
   return 1;
 }
 
