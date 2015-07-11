@@ -1642,6 +1642,9 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
     return -1;
   }
   if (limit == 0) {
+    /* XXXX DEAD CODE We can't reach this point, since the first "if" in this
+     * function increases limit if it started out less than ULIMIT_BUFFER */
+
     /* If limit == 0, return the maximum value without setting it. */
     limit = rlim.rlim_max;
     if (limit > INT_MAX)
