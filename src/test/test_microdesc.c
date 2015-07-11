@@ -834,10 +834,10 @@ test_md_corrupt_desc(void *arg)
                                cp, cp+strlen(cp),
                                SAVED_IN_JOURNAL, 0, time(NULL), NULL);
   tt_int_op(smartlist_len(sl), ==, 0);
-  smartlist_free(sl);
 
  done:
   tor_free(cp);
+  smartlist_free(sl);
 }
 
 struct testcase_t microdesc_tests[] = {
