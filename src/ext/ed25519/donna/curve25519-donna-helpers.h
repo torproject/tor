@@ -5,6 +5,19 @@
 	Curve25519 implementation agnostic helpers
 */
 
+#ifdef __GNUC__
+#define ED_GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__)
+#endif
+
+#if __GNUC__ && ED_GCC_VERSION >= 401
+#if ED_GCC_VERSION >= 406
+#pragma GCC diagnostic push
+#endif
+/* Some versions of GCC (particularly on arm) give us bogus warnings here.
+ * Suppress the GCC warning so we can build Tor with -Wstack-protector. */
+#pragma GCC diagnostic ignored "-Wstack-protector"
+#endif
+
 /*
  * In:  b =   2^5 - 2^0
  * Out: b = 2^250 - 2^0
@@ -65,3 +78,7 @@ curve25519_pow_two252m3(bignum25519 two252m3, const bignum25519 z) {
 	/* 2^252 - 2^2 */ curve25519_square_times(b, b, 2);
 	/* 2^252 - 3 */ curve25519_mul_noinline(two252m3, b, z);
 }
+
+#if __GNUC__ && ED_GCC_VERSION >= 406
+#pragma GCC diagnostic pop
+#endif
