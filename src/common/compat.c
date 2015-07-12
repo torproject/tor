@@ -80,7 +80,8 @@ wint_t _getwch(void);
 #define WEOF (wchar_t)(0xFFFF)
 #endif
 #if defined(HAVE_DECL_SECUREZEROMEMORY) && !HAVE_DECL_SECUREZEROMEMORY
-PVOID SecureZeroMemory(PVOID ptr, SIZE_T cnt);
+#define SecureZeroMemory RtlSecureZeroMemory
+PVOID WINAPI SecureZeroMemory(PVOID ptr, SIZE_T cnt);
 #endif
 #elif defined(HAVE_READPASSPHRASE_H)
 #include <readpassphrase.h>
