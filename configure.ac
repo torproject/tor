@@ -396,7 +396,6 @@ dnl Check for functions before libevent, since libevent-1.2 apparently
 dnl exports strlcpy without defining it in a header.
 
 AC_CHECK_FUNCS(
-	SecureZeroMemory \
         _NSGetEnviron \
         accept4 \
         backtrace \
@@ -436,13 +435,20 @@ AC_CHECK_FUNCS(
         uname \
 	usleep \
         vasprintf \
-	_getwch \
 	_vscprintf
 )
 
 if test "$bwin32" != true; then
   AC_CHECK_HEADERS(pthread.h)
   AC_CHECK_FUNCS(pthread_create)
+fi
+
+if test "$bwin32" = true; then
+  AC_CHECK_DECLS([SecureZeroMemory, _getwch], , , [
+#include <windows.h>
+#include <conio.h>
+#include <wchar.h>
+                 ])
 fi
 
 AM_CONDITIONAL(BUILD_READPASSPHRASE_C, test x$ac_cv_func_readpassphrase = xno && test $bwin32 = false)

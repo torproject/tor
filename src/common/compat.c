@@ -73,13 +73,13 @@
 #include <conio.h>
 #include <wchar.h>
 /* Some mingw headers lack these. :p */
-#ifndef HAVE__GETWCH
+#ifndef HAVE_DECL__GETWCH
 wint_t _getwch(void);
 #endif
 #ifndef WEOF
 #define WEOF (wchar_t)(0xFFFF)
 #endif
-#ifndef HAVE_SECUREZEROMEMORY
+#ifndef HAVE_DECL_SECUREZEROMEMORY
 PVOID SecureZeroMemory(PVOID ptr, SIZE_T cnt);
 #endif
 #elif defined(HAVE_READPASSPHRASE_H)
