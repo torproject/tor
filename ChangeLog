@@ -1,4 +1,4 @@
-Changes in version 0.2.6.10 - 2015-07-14
+Changes in version 0.2.6.10 - 2015-07-12
   Tor version 0.2.6.10 fixes some significant stability and hidden
   service client bugs, bulletproofs the cryptography init process, and
   fixes a bug when using the sandbox code with some older versions of

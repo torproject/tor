@@ -3,6 +3,50 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.2.6.10 - 2015-07-12
+  Tor version 0.2.6.10 fixes some significant stability and hidden
+  service client bugs, bulletproofs the cryptography init process, and
+  fixes a bug when using the sandbox code with some older versions of
+  Linux. Everyone running an older version, especially an older version
+  of 0.2.6, should upgrade.
+
+  o Major bugfixes (hidden service clients, stability):
+    - Stop refusing to store updated hidden service descriptors on a
+      client. This reverts commit 9407040c59218 (which indeed fixed bug
+      14219, but introduced a major hidden service reachability
+      regression detailed in bug 16381). This is a temporary fix since
+      we can live with the minor issue in bug 14219 (it just results in
+      some load on the network) but the regression of 16381 is too much
+      of a setback. First-round fix for bug 16381; bugfix
+      on 0.2.6.3-alpha.
+
+  o Major bugfixes (stability):
+    - Stop crashing with an assertion failure when parsing certain kinds
+      of malformed or truncated microdescriptors. Fixes bug 16400;
+      bugfix on 0.2.6.1-alpha. Found by "torkeln"; fix based on a patch
+      by "cypherpunks_backup".
+    - Stop random client-side assertion failures that could occur when
+      connecting to a busy hidden service, or connecting to a hidden
+      service while a NEWNYM is in progress. Fixes bug 16013; bugfix
+      on 0.1.0.1-rc.
+
+  o Minor features (geoip):
+    - Update geoip to the June 3 2015 Maxmind GeoLite2 Country database.
+    - Update geoip6 to the June 3 2015 Maxmind GeoLite2 Country database.
+
+  o Minor bugfixes (crypto error-handling):
+    - Check for failures from crypto_early_init, and refuse to continue.
+      A previous typo meant that we could keep going with an
+      uninitialized crypto library, and would have OpenSSL initialize
+      its own PRNG. Fixes bug 16360; bugfix on 0.2.5.2-alpha, introduced
+      when implementing ticket 4900. Patch by "teor".
+
+  o Minor bugfixes (Linux seccomp2 sandbox):
+    - Allow pipe() and pipe2() syscalls in the seccomp2 sandbox: we need
+      these when eventfd2() support is missing. Fixes bug 16363; bugfix
+      on 0.2.6.3-alpha. Patch from "teor".
+
+
 Changes in version 0.2.6.9 - 2015-06-11
   Tor 0.2.6.9 fixes a regression in the circuit isolation code, increases the
   requirements for receiving an HSDir flag, and addresses some other small
