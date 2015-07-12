@@ -80,7 +80,7 @@ wint_t _getwch(void);
 #define WEOF (wchar_t)(0xFFFF)
 #endif
 #if defined(HAVE_DECL_SECUREZEROMEMORY) && !HAVE_DECL_SECUREZEROMEMORY
-static void inline SecureZeroMemory(PVOID ptr, SIZE_T cnt)
+static inline void SecureZeroMemory(PVOID ptr, SIZE_T cnt)
 {
   volatile char *vcptr = (volatile char*)ptr;
   while (cnt--)
