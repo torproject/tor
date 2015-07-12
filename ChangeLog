@@ -9,10 +9,11 @@ Changes in version 0.2.6.10 - 2015-07-14
     - Stop refusing to store updated hidden service descriptors on a
       client. This reverts commit 9407040c59218 (which indeed fixed bug
       14219, but introduced a major hidden service reachability
-      regression detailed in bug 16381). This is a temporary fix since we
-      can live with the minor issue in bug 14219 (it just results in
+      regression detailed in bug 16381). This is a temporary fix since
+      we can live with the minor issue in bug 14219 (it just results in
       some load on the network) but the regression of 16381 is too much
-      of a setback. First-round fix for bug 16381; bugfix on 0.2.6.3-alpha.
+      of a setback. First-round fix for bug 16381; bugfix
+      on 0.2.6.3-alpha.
 
   o Major bugfixes (stability):
     - Stop crashing with an assertion failure when parsing certain kinds
