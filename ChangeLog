@@ -1,8 +1,9 @@
 Changes in version 0.2.6.10 - 2015-07-14
   Tor version 0.2.6.10 fixes some significant stability and hidden
-  service client bugs, bulletproofs the cryptography init process, and .
-  Everyone running an older version, especially an older version of
-  0.2.6, should upgrade.
+  service client bugs, bulletproofs the cryptography init process, and
+  fixes a bug when using the sandbox code with some older versions of
+  Linux. Everyone running an older version, especially an older version
+  of 0.2.6, should upgrade.
 
   o Major bugfixes (crypto error-handling):
     - If crypto_early_init fails, a typo in a return value from tor_init
