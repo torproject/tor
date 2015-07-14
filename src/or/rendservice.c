@@ -1437,8 +1437,9 @@ rend_check_authorization(rend_service_t *service,
  * rendezvous point.
  */
 int
-rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
-                       size_t request_len)
+rend_service_receive_introduction(origin_circuit_t *circuit,
+                                  const uint8_t *request,
+                                  size_t request_len)
 {
   /* Global status stuff */
   int status = 0, result;
@@ -3523,7 +3524,7 @@ rend_service_desc_has_uploaded(const rend_data_t *rend_data)
  * This is called once a second by the main loop.
  */
 void
-rend_services_introduce(void)
+rend_consider_services_intro_points(void)
 {
   int i;
   time_t now;

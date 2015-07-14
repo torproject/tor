@@ -1128,7 +1128,7 @@ circuit_build_needed_circs(time_t now)
   /* make sure any hidden services have enough intro points
    * HS intro point streams only require an internal circuit */
   if (router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN)
-    rend_services_introduce();
+    rend_consider_services_intro_points();
 
   circuit_expire_old_circs_as_needed(now);
 

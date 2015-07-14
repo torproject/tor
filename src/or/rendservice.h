@@ -70,7 +70,7 @@ int rend_config_services(const or_options_t *options, int validate_only);
 int rend_service_load_all_keys(void);
 void rend_services_add_filenames_to_lists(smartlist_t *open_lst,
                                           smartlist_t *stat_lst);
-void rend_services_introduce(void);
+void rend_consider_services_intro_points(void);
 void rend_consider_services_upload(time_t now);
 void rend_hsdir_routers_changed(void);
 void rend_consider_descriptor_republication(void);
@@ -80,8 +80,9 @@ int rend_service_intro_established(origin_circuit_t *circuit,
                                    const uint8_t *request,
                                    size_t request_len);
 void rend_service_rendezvous_has_opened(origin_circuit_t *circuit);
-int rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
-                           size_t request_len);
+int rend_service_receive_introduction(origin_circuit_t *circuit,
+                                      const uint8_t *request,
+                                      size_t request_len);
 int rend_service_decrypt_intro(rend_intro_cell_t *request,
                                crypto_pk_t *key,
                                char **err_msg_out);
