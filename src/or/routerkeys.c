@@ -187,10 +187,12 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
   char *encrypted_secret_fname = NULL;
   char *public_fname = NULL;
   char *cert_fname = NULL;
+  const char *loaded_secret_fname = NULL;
   int created_pk = 0, created_sk = 0, created_cert = 0;
   const int try_to_load = ! (flags & INIT_ED_KEY_REPLACE);
-  const int encrypt_key = (flags & INIT_ED_KEY_TRY_ENCRYPTED);
-  const int norepair = (flags & INIT_ED_KEY_NO_REPAIR);
+  const int encrypt_key = !! (flags & INIT_ED_KEY_TRY_ENCRYPTED);
+  const int norepair = !! (flags & INIT_ED_KEY_NO_REPAIR);
+  const int split = !! (flags & INIT_ED_KEY_SPLIT);
 
   char tag[8];
   tor_snprintf(tag, sizeof(tag), "type%d", (int)cert_type);
@@ -212,6 +214,7 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
                                            &got_tag, secret_fname);
     if (rv == 0) {
       have_secret = 1;
+      loaded_secret_fname = secret_fname;
     } else {
       if (errno != ENOENT && norepair) {
         tor_log(severity, LD_OR, "Unable to read %s: %s", secret_fname,
@@ -228,6 +231,7 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
     if (r > 0) {
       have_secret = 1;
       got_tag = tor_strdup(tag);
+      loaded_secret_fname = encrypted_secret_fname;
     } else if (errno != ENOENT && norepair) {
       tor_log(severity, LD_OR, "Unable to read %s: %s", encrypted_secret_fname,
               strerror(errno));
@@ -237,21 +241,24 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
 
   if (have_secret) {
     if (strcmp(got_tag, tag)) {
-      tor_log(severity, LD_OR, "%s has wrong tag", secret_fname);
+      tor_log(severity, LD_OR, "%s has wrong tag", loaded_secret_fname);
       goto err;
     }
     /* Derive the public key */
     if (ed25519_public_key_generate(&keypair->pubkey, &keypair->seckey)<0) {
-      tor_log(severity, LD_OR, "%s can't produce a public key", secret_fname);
+      tor_log(severity, LD_OR, "%s can't produce a public key",
+              loaded_secret_fname);
       goto err;
     }
   }
 
-  /* If it's absent and that's okay, try to read the pubkey. */
+  /* If it's absent and that's okay, or if we do split keys here, try to re
+   * the pubkey. */
   int found_public = 0;
-  if (!have_secret && try_to_load) {
+  if ((!have_secret && try_to_load) || (have_secret && split)) {
+    ed25519_public_key_t pubkey_tmp;
     tor_free(got_tag);
-    found_public = ed25519_pubkey_read_from_file(&keypair->pubkey,
+    found_public = ed25519_pubkey_read_from_file(&pubkey_tmp,
                                                  &got_tag, public_fname) == 0;
     if (!found_public && errno != ENOENT && norepair) {
       tor_log(severity, LD_OR, "Unable to read %s: %s", public_fname,
@@ -261,6 +268,20 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
     if (found_public && strcmp(got_tag, tag)) {
       tor_log(severity, LD_OR, "%s has wrong tag", public_fname);
       goto err;
+    }
+    if (found_public) {
+      if (have_secret) {
+        /* If we have a secret key and we're reloading the public key,
+         * the key must match! */
+        if (! ed25519_pubkey_eq(&keypair->pubkey, &pubkey_tmp)) {
+          tor_log(severity, LD_OR, "%s does not match %s!",
+                  public_fname, loaded_secret_fname);
+          goto err;
+        }
+      } else {
+        tor_assert(split);
+        memcpy(&keypair->pubkey, &pubkey_tmp, sizeof(pubkey_tmp));
+      }
     }
   }
 
@@ -274,7 +295,6 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
 
   /* if it's absent, make a new keypair and save it. */
   if (!have_secret && !found_public) {
-    const int split = !! (flags & INIT_ED_KEY_SPLIT);
     tor_free(keypair);
     keypair = ed_key_new(signing_key, flags, now, lifetime,
                          cert_type, &cert);
@@ -327,6 +347,10 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
              tor_cert_checksig(cert, &signing_key->pubkey, now) < 0 &&
              (signing_key || cert->cert_expired)) {
     tor_log(severity, LD_OR, "Can't check certificate");
+    bad_cert = 1;
+  } else if (signing_key && cert->signing_key_included &&
+             ! ed25519_pubkey_eq(&signing_key->pubkey, &cert->signing_key)) {
+    tor_log(severity, LD_OR, "Certificate signed by unexpectd key!");
     bad_cert = 1;
   }
 
