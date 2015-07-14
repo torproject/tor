@@ -21,6 +21,7 @@ read_encrypted_secret_key(ed25519_secret_key_t *out,
   char pwbuf[256];
   uint8_t encrypted_key[256];
   char *tag = NULL;
+  int saved_errno = 0;
 
   ssize_t encrypted_len = crypto_read_tagged_contents_from_file(fname,
                                           ENC_KEY_HEADER,
@@ -28,6 +29,7 @@ read_encrypted_secret_key(ed25519_secret_key_t *out,
                                           encrypted_key,
                                           sizeof(encrypted_key));
   if (encrypted_len < 0) {
+    saved_errno = errno;
     log_info(LD_OR, "%s is missing", fname);
     r = 0;
     goto done;
@@ -46,6 +48,7 @@ read_encrypted_secret_key(ed25519_secret_key_t *out,
                                  pwbuf, pwlen);
     if (r == UNPWBOX_CORRUPTED) {
       log_err(LD_OR, "%s is corrupted.", fname);
+      saved_errno = EINVAL;
       goto done;
     } else if (r == UNPWBOX_OKAY) {
       break;
@@ -57,6 +60,7 @@ read_encrypted_secret_key(ed25519_secret_key_t *out,
 
   if (secret_len != ED25519_SECKEY_LEN) {
     log_err(LD_OR, "%s is corrupted.", fname);
+    saved_errno = EINVAL;
     goto done;
   }
   memcpy(out->seckey, secret, ED25519_SECKEY_LEN);
@@ -70,6 +74,8 @@ read_encrypted_secret_key(ed25519_secret_key_t *out,
     memwipe(secret, 0, secret_len);
     tor_free(secret);
   }
+  if (saved_errno)
+    errno = saved_errno;
   return r;
 }
 
