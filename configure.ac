@@ -81,24 +81,6 @@ AC_ARG_ENABLE(asciidoc,
         *) AC_MSG_ERROR(bad value for --disable-asciidoc) ;;
       esac], [asciidoc=true])
 
-# By default, we're not ready to ship a NAT-PMP aware Tor
-AC_ARG_ENABLE(nat-pmp,
-     AS_HELP_STRING(--enable-nat-pmp, [enable NAT-PMP support]),
-     [case "${enableval}" in
-        yes) natpmp=true ;;
-        no)  natpmp=false ;;
-        * ) AC_MSG_ERROR(bad value for --enable-nat-pmp) ;;
-      esac], [natpmp=false])
-
-# By default, we're not ready to ship a UPnP aware Tor
-AC_ARG_ENABLE(upnp,
-     AS_HELP_STRING(--enable-upnp, [enable UPnP support]),
-     [case "${enableval}" in
-        yes) upnp=true ;;
-        no)  upnp=false ;;
-        * ) AC_MSG_ERROR(bad value for --enable-upnp) ;;
-      esac], [upnp=false])
-
 # systemd notify support
 AC_ARG_ENABLE(systemd,
       AS_HELP_STRING(--enable-systemd, [enable systemd notification support]),
@@ -767,65 +749,6 @@ dnl for us, as GCC 4.6 and later do at many optimization levels), then
 dnl we should try to add -fasynchronous-unwind-tables so that our backtrace
 dnl code will work.
 TOR_CHECK_CFLAGS(-fasynchronous-unwind-tables)
-
-dnl ------------------------------------------------------
-dnl Where do you live, libnatpmp?  And how do we call you?
-dnl There are no packages for Debian or Redhat as of this patch
-
-if test "$natpmp" = "true"; then
-    AC_DEFINE(NAT_PMP, 1, [Define to 1 if we are building with nat-pmp.])
-    TOR_SEARCH_LIBRARY(libnatpmp, $trylibnatpmpdir, [-lnatpmp $TOR_LIB_WS32 $TOR_LIB_IPHLPAPI],
-        [#include <natpmp.h>],
-        [#ifdef _WIN32
-         #define STATICLIB
-         #endif
-         #include <natpmp.h>],
-        [   int r;
-            natpmp_t natpmp;
-            natpmpresp_t response;
-            r = initnatpmp(&natpmp, 0, 0);],
-            [printf("initnatpmp() returned %d (%s)\n", r, r?"FAILED":"SUCCESS");
-            exit(0);],
-        [--with-libnatpmp-dir],
-        [/usr/lib/])
-fi
-
-
-dnl ------------------------------------------------------
-dnl Where do you live, libminiupnpc?  And how do we call you?
-dnl There are no packages for Debian or Redhat as of this patch
-
-if test "$upnp" = "true"; then
-    AC_DEFINE(MINIUPNPC, 1, [Define to 1 if we are building with UPnP.])
-
-    dnl Before we call TOR_SEARCH_LIBRARY we'll do a quick compile test
-    dnl to see if we have miniupnpc-1.5 or -1.6
-    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <miniupnpc/miniupnpc.h>],
-        [upnpDiscover(1, 0, 0, 0);exit(0);])],[miniupnpc15="true"],[miniupnpc15="false"])
-
-    if test "$miniupnpc15" = "true" ; then
-        AC_DEFINE([MINIUPNPC15],[1],[libminiupnpc version 1.5 found])
-        TOR_SEARCH_LIBRARY(libminiupnpc, $trylibminiupnpcdir, [-lminiupnpc $TOR_LIB_WS32 $TOR_LIB_IPHLPAPI],
-            [#include <miniupnpc/miniwget.h>
-             #include <miniupnpc/miniupnpc.h>
-             #include <miniupnpc/upnpcommands.h>],
-            [void upnpDiscover(int delay, const char * multicastif,
-             const char * minissdpdsock, int sameport);],
-            [upnpDiscover(1, 0, 0, 0); exit(0);],
-            [--with-libminiupnpc-dir],
-            [/usr/lib/])
-    else
-        TOR_SEARCH_LIBRARY(libminiupnpc, $trylibminiupnpcdir, [-lminiupnpc $TOR_LIB_WS32 $TOR_LIB_IPHLPAPI],
-            [#include <miniupnpc/miniwget.h>
-             #include <miniupnpc/miniupnpc.h>
-             #include <miniupnpc/upnpcommands.h>],
-            [void upnpDiscover(int delay, const char * multicastif,
-             const char * minissdpdsock, int sameport, int ipv6, int * error);],
-            [upnpDiscover(1, 0, 0, 0, 0, 0); exit(0);],
-            [--with-libminiupnpc-dir],
-            [/usr/lib/])
-    fi
-fi
 
 dnl ============================================================
 dnl Check for libseccomp
