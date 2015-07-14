@@ -166,10 +166,13 @@ write_secret_key(const ed25519_secret_key_t *key, int encrypted,
  * public key file but no secret key file, return successfully anyway.
  *
  * If INIT_ED_KEY_OMIT_SECRET is set in <b>flags</b>, do not even try to
- * load or return a secret key (but create and save on if needed).
+ * load or return a secret key (but create and save one if needed).
  *
  * If INIT_ED_KEY_TRY_ENCRYPTED is set, we look for an encrypted secret key
  * and consider encrypting any new secret key.
+ *
+ * If INIT_ED_KEY_NO_REPAIR is set, and there is any issue loading the keys
+ * from disk _other than their absence_, we do not try to replace them.
  */
 ed25519_keypair_t *
 ed_key_init_from_file(const char *fname, uint32_t flags,
@@ -187,6 +190,7 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
   int created_pk = 0, created_sk = 0, created_cert = 0;
   const int try_to_load = ! (flags & INIT_ED_KEY_REPLACE);
   const int encrypt_key = (flags & INIT_ED_KEY_TRY_ENCRYPTED);
+  const int norepair = (flags & INIT_ED_KEY_NO_REPAIR);
 
   char tag[8];
   tor_snprintf(tag, sizeof(tag), "type%d", (int)cert_type);
@@ -201,10 +205,21 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
   tor_asprintf(&cert_fname, "%s_cert", fname);
 
   /* Try to read the secret key. */
-  int have_secret = try_to_load &&
-    !(flags & INIT_ED_KEY_OMIT_SECRET) &&
-    ed25519_seckey_read_from_file(&keypair->seckey,
-                                  &got_tag, secret_fname) == 0;
+  int have_secret = 0;
+  if (try_to_load &&
+      !(flags & INIT_ED_KEY_OMIT_SECRET)) {
+    int rv = ed25519_seckey_read_from_file(&keypair->seckey,
+                                           &got_tag, secret_fname);
+    if (rv == 0) {
+      have_secret = 1;
+    } else {
+      if (errno != ENOENT && norepair) {
+        tor_log(severity, LD_OR, "Unable to read %s: %s", secret_fname,
+                strerror(errno));
+        goto err;
+      }
+    }
+  }
 
   /* Should we try for an encrypted key? */
   if (!have_secret && try_to_load && encrypt_key) {
@@ -213,6 +228,10 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
     if (r > 0) {
       have_secret = 1;
       got_tag = tor_strdup(tag);
+    } else if (errno != ENOENT && norepair) {
+      tor_log(severity, LD_OR, "Unable to read %s: %s", encrypted_secret_fname,
+              strerror(errno));
+      goto err;
     }
   }
 
@@ -234,6 +253,11 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
     tor_free(got_tag);
     found_public = ed25519_pubkey_read_from_file(&keypair->pubkey,
                                                  &got_tag, public_fname) == 0;
+    if (!found_public && errno != ENOENT && norepair) {
+      tor_log(severity, LD_OR, "Unable to read %s: %s", public_fname,
+              strerror(errno));
+      goto err;
+    }
     if (found_public && strcmp(got_tag, tag)) {
       tor_log(severity, LD_OR, "%s has wrong tag", public_fname);
       goto err;
@@ -486,7 +510,7 @@ load_ed_keys(const or_options_t *options, time_t now)
   {
     uint32_t flags =
       (INIT_ED_KEY_CREATE|INIT_ED_KEY_SPLIT|
-       INIT_ED_KEY_EXTRA_STRONG);
+       INIT_ED_KEY_EXTRA_STRONG|INIT_ED_KEY_NO_REPAIR);
     if (! need_new_signing_key)
       flags |= INIT_ED_KEY_MISSING_SECRET_OK;
     if (! want_new_signing_key)
