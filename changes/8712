@@ -1,0 +1,6 @@
+  o Minor features (directory authorities):
+    - Directory authorities no longer vote against the "Fast",
+      "Stable", and "HSDir" flags just because they were going to vote
+      against "Running": if the consensus turns out to be that the
+      router was running, then the authority's vote should count.
+      Patch from Peter Retzlaff; closes issue 8712.
