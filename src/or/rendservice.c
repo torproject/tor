@@ -1538,17 +1538,6 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
     tor_free(err_msg);
   }
 
-  stage_descr = "early validation";
-  /* Early validation of pk/ciphertext part */
-  result = rend_service_validate_intro_early(parsed_req, &err_msg);
-  if (result < 0) {
-    goto log_error;
-  } else if (err_msg) {
-    log_info(LD_REND, "%s on circ %u.", err_msg,
-             (unsigned)circuit->base_.n_circ_id);
-    tor_free(err_msg);
-  }
-
   /* make sure service replay caches are present */
   if (!service->accepted_intro_dh_parts) {
     service->accepted_intro_dh_parts =
@@ -2512,37 +2501,6 @@ rend_service_parse_intro_plaintext(
   if (err_msg_out) *err_msg_out = err_msg;
   else tor_free(err_msg);
 
-  return status;
-}
-
-/** Do validity checks on a parsed intro cell before decryption; some of
- * these are not done in rend_service_begin_parse_intro() itself because
- * they depend on a lot of other state and would make it hard to unit test.
- * Returns >= 0 if successful or < 0 if the intro cell is invalid, and
- * optionally writes out an error message for logging.  If an err_msg
- * pointer is provided, it is the caller's responsibility to free any
- * provided message.
- */
-
-int
-rend_service_validate_intro_early(const rend_intro_cell_t *intro,
-                                  char **err_msg_out)
-{
-  int status = 0;
-
-  if (!intro) {
-    if (err_msg_out)
-      *err_msg_out =
-        tor_strdup("NULL intro cell passed to "
-                   "rend_service_validate_intro_early()");
-
-    status = -1;
-    goto err;
-  }
-
-  /* TODO */
-
- err:
   return status;
 }
 

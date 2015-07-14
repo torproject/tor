@@ -93,8 +93,6 @@ rend_intro_cell_t * rend_service_begin_parse_intro(const uint8_t *request,
                                                    char **err_msg_out);
 int rend_service_parse_intro_plaintext(rend_intro_cell_t *intro,
                                        char **err_msg_out);
-int rend_service_validate_intro_early(const rend_intro_cell_t *intro,
-                                      char **err_msg_out);
 int rend_service_validate_intro_late(const rend_intro_cell_t *intro,
                                      char **err_msg_out);
 void rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc);
