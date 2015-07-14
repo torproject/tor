@@ -2571,7 +2571,9 @@ read_file_to_str_until_eof(int fd, size_t max_bytes_to_read, size_t *sz_out)
     string = tor_realloc(string, string_max);
     r = read(fd, string + pos, string_max - pos - 1);
     if (r < 0) {
+      int save_errno = errno;
       tor_free(string);
+      errno = save_errno;
       return NULL;
     }
 
@@ -2639,11 +2641,14 @@ read_file_to_str(const char *filename, int flags, struct stat *stat_out)
   if (S_ISFIFO(statbuf.st_mode)) {
     size_t sz = 0;
     string = read_file_to_str_until_eof(fd, FIFO_READ_MAX, &sz);
+    int save_errno = errno;
     if (string && stat_out) {
       statbuf.st_size = sz;
       memcpy(stat_out, &statbuf, sizeof(struct stat));
     }
     close(fd);
+    if (!string)
+      errno = save_errno;
     return string;
   }
 #endif

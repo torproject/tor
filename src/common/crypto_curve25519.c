@@ -201,7 +201,7 @@ crypto_write_tagged_contents_to_file(const char *fname,
  * <b>data_out_len</b>-byte buffer in <b>data_out</b>. Check that the
  * typestring matches <b>typestring</b>; store the tag into a newly allocated
  * string in <b>tag_out</b>. Return -1 on failure, and the number of bytes of
- * data on success. */
+ * data on success.  Preserves the errno from reading the file. */
 ssize_t
 crypto_read_tagged_contents_from_file(const char *fname,
                                       const char *typestring,
@@ -214,27 +214,36 @@ crypto_read_tagged_contents_from_file(const char *fname,
   struct stat st;
   ssize_t r = -1;
   size_t st_size = 0;
+  int saved_errno = 0;
 
   *tag_out = NULL;
   st.st_size = 0;
   content = read_file_to_str(fname, RFTS_BIN|RFTS_IGNORE_MISSING, &st);
-  if (! content)
+  if (! content) {
+    saved_errno = errno;
     goto end;
-  if (st.st_size < 32 || st.st_size > 32 + data_out_len)
+  }
+  if (st.st_size < 32 || st.st_size > 32 + data_out_len) {
+    saved_errno = EINVAL;
     goto end;
+  }
   st_size = (size_t)st.st_size;
 
   memcpy(prefix, content, 32);
   prefix[32] = 0;
   /* Check type, extract tag. */
   if (strcmpstart(prefix, "== ") || strcmpend(prefix, " ==") ||
-      ! tor_mem_is_zero(prefix+strlen(prefix), 32-strlen(prefix)))
+      ! tor_mem_is_zero(prefix+strlen(prefix), 32-strlen(prefix))) {
+    saved_errno = EINVAL;
     goto end;
+  }
 
   if (strcmpstart(prefix+3, typestring) ||
       3+strlen(typestring) >= 32 ||
-      strcmpstart(prefix+3+strlen(typestring), ": "))
+      strcmpstart(prefix+3+strlen(typestring), ": ")) {
+    saved_errno = EINVAL;
     goto end;
+  }
 
   *tag_out = tor_strndup(prefix+5+strlen(typestring),
                          strlen(prefix)-8-strlen(typestring));
@@ -246,6 +255,8 @@ crypto_read_tagged_contents_from_file(const char *fname,
   if (content)
     memwipe(content, 0, st_size);
   tor_free(content);
+  if (saved_errno)
+    errno = saved_errno;
   return r;
 }
 
