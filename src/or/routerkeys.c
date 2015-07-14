@@ -569,8 +569,23 @@ load_ed_keys(const or_options_t *options, time_t now)
       sign_signing_key_with_id = id;
   }
 
+  if (master_identity_key &&
+      !ed25519_pubkey_eq(&id->pubkey, &master_identity_key->pubkey)) {
+    FAIL("Identity key on disk does not match key we loaded earlier!");
+  }
+
   if (need_new_signing_key && NULL == sign_signing_key_with_id)
     FAIL("Can't load master key make a new signing key.");
+
+  if (sign_cert) {
+    if (! sign_cert->signing_key_included)
+      FAIL("Loaded a signing cert with no key included!");
+    if (! ed25519_pubkey_eq(&sign_cert->signing_key, &id->pubkey))
+      FAIL("The signing cert we have was not signed with the master key "
+           "we loaded!");
+    if (tor_cert_checksig(sign_cert, &id->pubkey, 0) < 0)
+      FAIL("The signing cert we loaded was not signed correctly!");
+  }
 
   if (want_new_signing_key && sign_signing_key_with_id) {
     uint32_t flags = (INIT_ED_KEY_CREATE|
@@ -589,6 +604,10 @@ load_ed_keys(const or_options_t *options, time_t now)
     if (!sign)
       FAIL("Missing signing key");
     use_signing = sign;
+
+    tor_assert(sign_cert->signing_key_included);
+    tor_assert(ed25519_pubkey_eq(&sign_cert->signing_key, &id->pubkey));
+    tor_assert(ed25519_pubkey_eq(&sign_cert->signed_key, &sign->pubkey));
   } else if (want_new_signing_key) {
     static ratelim_t missing_master = RATELIM_INIT(3600);
     log_fn_ratelim(&missing_master, LOG_WARN, LD_OR,
