@@ -381,10 +381,13 @@ ed25519_seckey_read_from_file(ed25519_secret_key_t *seckey_out,
   len = crypto_read_tagged_contents_from_file(filename, "ed25519v1-secret",
                                               tag_out, seckey_out->seckey,
                                               sizeof(seckey_out->seckey));
-  if (len != sizeof(seckey_out->seckey))
-    return -1;
+  if (len == sizeof(seckey_out->seckey)) {
+    return 0;
+  } else if (len >= 0) {
+    errno = EINVAL;
+  }
 
-  return 0;
+  return -1;
 }
 
 /**
@@ -417,10 +420,13 @@ ed25519_pubkey_read_from_file(ed25519_public_key_t *pubkey_out,
   len = crypto_read_tagged_contents_from_file(filename, "ed25519v1-public",
                                               tag_out, pubkey_out->pubkey,
                                               sizeof(pubkey_out->pubkey));
-  if (len != sizeof(pubkey_out->pubkey))
-    return -1;
+  if (len == sizeof(pubkey_out->pubkey)) {
+    return 0;
+  } else if (len >= 0) {
+    errno = EINVAL;
+  }
 
-  return 0;
+  return -1;
 }
 
 /** Release all storage held for <b>kp</b>. */

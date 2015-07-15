@@ -34,14 +34,18 @@ read_encrypted_secret_key(ed25519_secret_key_t *out,
     r = 0;
     goto done;
   }
-  if (strcmp(tag, ENC_KEY_TAG))
+  if (strcmp(tag, ENC_KEY_TAG)) {
+    saved_errno = EINVAL;
     goto done;
+  }
 
   while (1) {
     ssize_t pwlen =
       tor_getpass("Enter pasphrase for master key:", pwbuf, sizeof(pwbuf));
-    if (pwlen < 0)
+    if (pwlen < 0) {
+      saved_errno = EINVAL;
       goto done;
+    }
 
     const int r = crypto_unpwbox(&secret, &secret_len,
                                  encrypted_key, encrypted_len,
