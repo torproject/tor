@@ -674,9 +674,7 @@ tor_log_get_logfile_names(smartlist_t *out)
   UNLOCK_LOGS();
 }
 
-/** Output a message to the log, prefixed with a function name <b>fn</b>. */
-#ifdef __GNUC__
-/** GCC-based implementation of the log_fn backend, used when we have
+/** Implementation of the log_fn backend, used when we have
  * variadic macros. All arguments are as for log_fn, except for
  * <b>fn</b>, which is the name of the calling functions. */
 void
@@ -706,98 +704,6 @@ log_fn_ratelim_(ratelim_t *ratelim, int severity, log_domain_mask_t domain,
   va_end(ap);
   tor_free(m);
 }
-#else
-/** @{ */
-/** Variant implementation of log_fn, log_debug, log_info,... for C compilers
- * without variadic macros.  In this case, the calling function sets
- * log_fn_function_name_ to the name of the function, then invokes the
- * appropriate log_fn_, log_debug_, etc. */
-const char *log_fn_function_name_=NULL;
-void
-log_fn_(int severity, log_domain_mask_t domain, const char *format, ...)
-{
-  va_list ap;
-  if (severity > log_global_min_severity_)
-    return;
-  va_start(ap,format);
-  logv(severity, domain, log_fn_function_name_, NULL, format, ap);
-  va_end(ap);
-  log_fn_function_name_ = NULL;
-}
-void
-log_fn_ratelim_(ratelim_t *ratelim, int severity, log_domain_mask_t domain,
-                const char *format, ...)
-{
-  va_list ap;
-  char *m;
-  if (severity > log_global_min_severity_)
-    return;
-  m = rate_limit_log(ratelim, approx_time());
-  if (m == NULL)
-      return;
-  va_start(ap, format);
-  logv(severity, domain, log_fn_function_name_, m, format, ap);
-  va_end(ap);
-  tor_free(m);
-}
-void
-log_debug_(log_domain_mask_t domain, const char *format, ...)
-{
-  va_list ap;
-  /* For GCC we do this check in the macro. */
-  if (PREDICT_LIKELY(LOG_DEBUG > log_global_min_severity_))
-    return;
-  va_start(ap,format);
-  logv(LOG_DEBUG, domain, log_fn_function_name_, NULL, format, ap);
-  va_end(ap);
-  log_fn_function_name_ = NULL;
-}
-void
-log_info_(log_domain_mask_t domain, const char *format, ...)
-{
-  va_list ap;
-  if (LOG_INFO > log_global_min_severity_)
-    return;
-  va_start(ap,format);
-  logv(LOG_INFO, domain, log_fn_function_name_, NULL, format, ap);
-  va_end(ap);
-  log_fn_function_name_ = NULL;
-}
-void
-log_notice_(log_domain_mask_t domain, const char *format, ...)
-{
-  va_list ap;
-  if (LOG_NOTICE > log_global_min_severity_)
-    return;
-  va_start(ap,format);
-  logv(LOG_NOTICE, domain, log_fn_function_name_, NULL, format, ap);
-  va_end(ap);
-  log_fn_function_name_ = NULL;
-}
-void
-log_warn_(log_domain_mask_t domain, const char *format, ...)
-{
-  va_list ap;
-  if (LOG_WARN > log_global_min_severity_)
-    return;
-  va_start(ap,format);
-  logv(LOG_WARN, domain, log_fn_function_name_, NULL, format, ap);
-  va_end(ap);
-  log_fn_function_name_ = NULL;
-}
-void
-log_err_(log_domain_mask_t domain, const char *format, ...)
-{
-  va_list ap;
-  if (LOG_ERR > log_global_min_severity_)
-    return;
-  va_start(ap,format);
-  logv(LOG_ERR, domain, log_fn_function_name_, NULL, format, ap);
-  va_end(ap);
-  log_fn_function_name_ = NULL;
-}
-/** @} */
-#endif
 
 /** Free all storage held by <b>victim</b>. */
 static void

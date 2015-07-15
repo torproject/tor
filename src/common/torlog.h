@@ -166,7 +166,6 @@ void tor_log_get_logfile_names(struct smartlist_t *out);
 
 extern int log_global_min_severity_;
 
-#if defined(__GNUC__) || defined(RUNNING_DOXYGEN)
 void log_fn_(int severity, log_domain_mask_t domain,
              const char *funcname, const char *format, ...)
   CHECK_PRINTF(4,5);
@@ -175,6 +174,12 @@ void log_fn_ratelim_(struct ratelim_t *ratelim, int severity,
                      log_domain_mask_t domain, const char *funcname,
                      const char *format, ...)
   CHECK_PRINTF(5,6);
+
+#if defined(__GNUC__)
+
+/* These are the GCC varidaic macros, so that older versions of GCC don't
+ * break. */
+
 /** Log a message at level <b>severity</b>, using a pretty-printed version
  * of the current function name. */
 #define log_fn(severity, domain, args...)               \
@@ -200,31 +205,32 @@ void log_fn_ratelim_(struct ratelim_t *ratelim, int severity,
 
 #else /* ! defined(__GNUC__) */
 
-void log_fn_(int severity, log_domain_mask_t domain, const char *format, ...);
-struct ratelim_t;
-void log_fn_ratelim_(struct ratelim_t *ratelim, int severity,
-             log_domain_mask_t domain, const char *format, ...);
-void log_debug_(log_domain_mask_t domain, const char *format, ...);
-void log_info_(log_domain_mask_t domain, const char *format, ...);
-void log_notice_(log_domain_mask_t domain, const char *format, ...);
-void log_warn_(log_domain_mask_t domain, const char *format, ...);
-void log_err_(log_domain_mask_t domain, const char *format, ...);
+/* Here are the c99 variadic macros, to work with non-GCC compilers */
 
-/* We don't have GCC's varargs macros, so use a global variable to pass the
- * function name to log_fn */
-extern const char *log_fn_function_name_;
-/* We abuse the comma operator here, since we can't use the standard
- * do {...} while (0) trick to wrap this macro, since the macro can't take
- * arguments. */
-#define log_fn (log_fn_function_name_=__func__),log_fn_
-#define log_fn_ratelim (log_fn_function_name_=__func__),log_fn_ratelim_
-#define log_debug (log_fn_function_name_=__func__),log_debug_
-#define log_info (log_fn_function_name_=__func__),log_info_
-#define log_notice (log_fn_function_name_=__func__),log_notice_
-#define log_warn (log_fn_function_name_=__func__),log_warn_
-#define log_err (log_fn_function_name_=__func__),log_err_
-
-#endif /* !GNUC */
+#define log_debug(domain, args, ...)                                        \
+  STMT_BEGIN                                                                \
+    if (PREDICT_UNLIKELY(log_global_min_severity_ == LOG_DEBUG))            \
+      log_fn_(LOG_DEBUG, domain, __PRETTY_FUNCTION__, args, ##__VA_ARGS__); \
+  STMT_END
+#define log_info(domain, args,...)                                      \
+  log_fn_(LOG_INFO, domain, __PRETTY_FUNCTION__, args, ##__VA_ARGS__)
+#define log_notice(domain, args,...)                                    \
+  log_fn_(LOG_NOTICE, domain, __PRETTY_FUNCTION__, args, ##__VA_ARGS__)
+#define log_warn(domain, args,...)                                      \
+  log_fn_(LOG_WARN, domain, __PRETTY_FUNCTION__, args, ##__VA_ARGS__)
+#define log_err(domain, args,...)                                       \
+  log_fn_(LOG_ERR, domain, __PRETTY_FUNCTION__, args, ##__VA_ARGS__)
+/** Log a message at level <b>severity</b>, using a pretty-printed version
+ * of the current function name. */
+#define log_fn(severity, domain, args,...)                              \
+  log_fn_(severity, domain, __PRETTY_FUNCTION__, args, ##__VA_ARGS__)
+/** As log_fn, but use <b>ratelim</b> (an instance of ratelim_t) to control
+ * the frequency at which messages can appear.
+ */
+#define log_fn_ratelim(ratelim, severity, domain, args,...)      \
+  log_fn_ratelim_(ratelim, severity, domain, __PRETTY_FUNCTION__, \
+                  args, ##__VA_ARGS__)
+#endif
 
 #ifdef LOG_PRIVATE
 MOCK_DECL(STATIC void, logv, (int severity, log_domain_mask_t domain,

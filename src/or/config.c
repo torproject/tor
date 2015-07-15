@@ -2583,8 +2583,14 @@ options_validate_cb(void *old_options, void *options, void *default_options,
 
 #define REJECT(arg) \
   STMT_BEGIN *msg = tor_strdup(arg); return -1; STMT_END
+#ifdef __GNUC__
 #define COMPLAIN(args...) \
   STMT_BEGIN log_warn(LD_CONFIG, args); STMT_END
+#else
+#define COMPLAIN(args, ...)                                     \
+  STMT_BEGIN log_warn(LD_CONFIG, args, ##__VA_ARGS__); STMT_END
+#endif
+
 
 /** Log a warning message iff <b>filepath</b> is not absolute.
  * Warning message must contain option name <b>option</b> and
