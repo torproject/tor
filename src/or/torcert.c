@@ -181,9 +181,10 @@ tor_cert_get_checkable_sig(ed25519_checkable_t *checkable_out,
   return 0;
 }
 
-/** Validates the signature on <b>cert</b> with <b>pubkey</b> relative to
- * the current time <b>now</b>.  Return 0 on success, -1 on failure.
- * Sets flags in <b>cert</b> as appropriate.
+/** Validates the signature on <b>cert</b> with <b>pubkey</b> relative to the
+ * current time <b>now</b>.  (If <b>now</b> is 0, do not check the expiration
+ * time.) Return 0 on success, -1 on failure.  Sets flags in <b>cert</b> as
+ * appropriate.
  */
 int
 tor_cert_checksig(tor_cert_t *cert,
@@ -192,7 +193,7 @@ tor_cert_checksig(tor_cert_t *cert,
   ed25519_checkable_t checkable;
   int okay;
 
-  if (now > cert->valid_until) {
+  if (now && now > cert->valid_until) {
     cert->cert_expired = 1;
     return -1;
   }
