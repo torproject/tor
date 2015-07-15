@@ -196,6 +196,10 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
   const int encrypt_key = (flags & INIT_ED_KEY_TRY_ENCRYPTED);
   const int norepair = (flags & INIT_ED_KEY_NO_REPAIR);
 
+  /* we don't support setting both of these flags at once. */
+  tor_assert((flags & (INIT_ED_KEY_NO_REPAIR|INIT_ED_KEY_NEEDCERT)) !=
+                      (INIT_ED_KEY_NO_REPAIR|INIT_ED_KEY_NEEDCERT));
+
   char tag[8];
   tor_snprintf(tag, sizeof(tag), "type%d", (int)cert_type);
 
