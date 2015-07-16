@@ -1,7 +1,0 @@
-  o Minor bugfixes (crypto error-handling):
-    - If crypto_early_init fails, a typo in a return value from tor_init
-      means that tor_main continues running, rather than returning
-      an error value.
-      Fixes bug 16360; bugfix on d3fb846d8c98 in 0.2.5.2-alpha,
-      introduced when implementing #4900.
-      Patch by "teor".

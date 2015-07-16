@@ -1,4 +1,0 @@
-  o Minor bugfixes (Linux seccomp2 sandbox):
-    - Allow pipe() and pipe2() syscalls; we need these when eventfd2()
-      support is missing. Fixes bug 16363; bugfix on 0.2.6.3-alpha.
-      Patch from "teor".
