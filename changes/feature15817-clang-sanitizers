@@ -1,7 +1,0 @@
-  o Minor enhancements (correctness, testing):
-    - Document use of coverity, clang static analyzer, and clang dynamic
-      undefined behavior and address sanitizers in doc/HACKING.
-      Add clang dynamic sanitizer blacklist in
-      contrib/clang/sanitizer_blacklist.txt to exempt known undefined
-      behavior. Include detailed usage instructions in the blacklist.
-      Patch by "teor". Closes ticket 15817.

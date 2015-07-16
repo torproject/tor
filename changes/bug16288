@@ -1,6 +1,0 @@
-  o Major bugfixes (open file limit):
-    - The max open file limit wasn't checked before calling
-      tor_accept_socket_nonblocking() which made tor go beyond the open
-      file limit set previously. With this fix, before opening a new socket,
-      tor validates the open file limit just before and if the max has been
-      reached, return EMFILE. Fixes  bug 16288; bugfix on 0.1.1.1-alpha.

@@ -1,6 +1,0 @@
-  o Minor Features (crypto, testing):
-    - Now that OpenSSL has its own scrypt implementation, add an unit
-      test that checks for interoperability between libscrypt_scrypt()
-      and OpenSSL's EVP_PBE_scrypt() so that we could not use libscrypt
-      and rely on EVP_PBE_scrypt() whenever possible. Resolves ticket
-      16189.

@@ -1,3 +1,0 @@
-  o Minor fixes (threads, comments):
-    - Check for NULL values in getinfo_helper_onions
-      Patch by "teor". Fixes part of bug 16115; bugfix on 0.2.7.1-alpha.

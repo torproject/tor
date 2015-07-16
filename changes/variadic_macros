@@ -1,4 +1,0 @@
-  o Minor features (portability):
-    - Use C99 variadic macros when the compiler is not GCC. This avoids
-      failing compilations on MSVC, and fixes a log-file-based race
-      condition in our old workarounds. Original patch from Gisle Vanem.

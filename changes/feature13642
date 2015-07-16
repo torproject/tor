@@ -1,5 +1,0 @@
-  o Major features:
-    - Add support for offline encrypted ed25519 master keys. To use
-      this feature on your tor relay, run "tor --keygen" to make a new
-      master key (or to make a new signing key if you already have a
-      master key).  Closes ticket 13642.

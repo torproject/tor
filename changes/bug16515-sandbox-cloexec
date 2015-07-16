@@ -1,3 +1,0 @@
-  o Minor fixes (sandbox, files):
-    - Use the sandbox in tor_open_cloexec whether or not O_CLOEXEC is defined.
-      Patch by "teor". Fixes bug 16515; bugfix on 0.2.3.1-alpha.

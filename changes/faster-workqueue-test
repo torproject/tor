@@ -1,3 +1,0 @@
-  o Testing:
-    - The test_workqueue program now runs faster, and is enabled by
-      default as a part of "make check".

@@ -1,36 +1,45 @@
 Changes in version 0.2.7.2-alpha - 2015-07-??
+  o Major features:
+    - Add support for offline encrypted ed25519 master keys. To use this
+      feature on your tor relay, run "tor --keygen" to make a new master
+      key (or to make a new signing key if you already have a master
+      key). Closes ticket 13642.
+
+  o Major feature (Hidden Service):
+    - Add the torrc option HiddenServiceNumIntroductionPoints for an
+      operatory to specify a fix amount of introduction points. Maximum
+      value is 10 and default is 3. Closes ticket 4862.
+    - Remove the introduction point adaptative algorithm which is
+      leaking popularity by changing the amount of introduction points
+      depending on the amount of traffic the HS sees. With this, we
+      stick to only 3 introduction points. Closes ticket 4862.
+
+  o Major features (Ed25519 identity keys, Prop220):
+    - All relays now maintain a stronger identity key, using the Ed25519
+      elliptic curve signature format. This master key is designed so
+      that it can be kept offline. Relays also generate an online
+      signing key, and a set of other Ed25519 keys and certificates.
+      These are all automatically regenerated and rotated as needed.
+    - Directory authorities now vote on Ed25519 identity keys along with
+      RSA1024 keys.
+    - Directory authorities track which Ed25519 identity keys have been
+      used with which RSA1024 identity keys, and do not allow them to
+      vary freely.
+    - Microdescriptors now include ed25519 identity keys.
+
+  o Major features (onion key cross-certification):
+    - Relay descriptors now include signatures of the identity keys
+      using the TAP and ntor onion keys. This allows relays to prove
+      ownership of their own onion keys. Because of this change,
+      microdescriptors no longer need to include RSA identity keys.
+      Implements proposal 228; closes ticket 12499.
 
   o Major bugfixes (client-side privacy, also in 0.2.6.9):
     - Properly separate out each SOCKSPort when applying stream
-      isolation. The error occurred because each port's session group was
-      being overwritten by a default value when the listener connection
-      was initialized. Fixes bug 16247; bugfix on 0.2.6.3-alpha. Patch
-      by "jojelino".
-
-  o Minor feature (directory authorities, security, also in 0.2.6.9):
-    - The HSDir flag given by authorities now requires the Stable flag.
-      For the current network, this results in going from 2887 to 2806
-      HSDirs. Also, it makes it harder for an attacker to launch a sybil
-      attack by raising the effort for a relay to become Stable which
-      takes at the very least 7 days to do so and by keeping the 96
-      hours uptime requirement for HSDir. Implements ticket 8243.
-
-  o Minor bugfixes (compilation, also in 0.2.6.9):
-    - Build with --enable-systemd correctly when libsystemd is
-      installed, but systemd is not. Fixes bug 16164; bugfix on
-      0.2.6.3-alpha. Patch from Peter Palfrader.
-
-  o Minor bugfixes (Linux seccomp2 sandbox, also in 0.2.6.9):
-    - Fix sandboxing to work when running as a relaymby renaming of
-      secret_id_key, and allowing the eventfd2 and futex syscalls. Fixes
-      bug 16244; bugfix on 0.2.6.1-alpha. Patch by Peter Palfrader.
-    - Allow systemd connections to work with the Linux seccomp2 sandbox
-      code. Fixes bug 16212; bugfix on 0.2.6.2-alpha. Patch by
-      Peter Palfrader.
-
-  o Minor bugfixes (tests, also in 0.2.6.9):
-    - Fix a crash in the unit tests when built with MSVC2013. Fixes bug
-      16030; bugfix on 0.2.6.2-alpha. Patch from "NewEraCracker".
+      isolation. The error occurred because each port's session group
+      was being overwritten by a default value when the listener
+      connection was initialized. Fixes bug 16247; bugfix on
+      0.2.6.3-alpha. Patch by "jojelino".
 
   o Major bugfixes (hidden service clients, stability, also in 0.2.6.10):
     - Stop refusing to store updated hidden service descriptors on a
@@ -42,6 +51,14 @@ Changes in version 0.2.7.2-alpha - 2015-07-??
       of a setback. First-round fix for bug 16381; bugfix
       on 0.2.6.3-alpha.
 
+  o Major bugfixes (open file limit):
+    - The max open file limit wasn't checked before calling
+      tor_accept_socket_nonblocking() which made tor go beyond the open
+      file limit set previously. With this fix, before opening a new
+      socket, tor validates the open file limit just before and if the
+      max has been reached, return EMFILE. Fixes bug 16288; bugfix
+      on 0.1.1.1-alpha.
+
   o Major bugfixes (stability, also in 0.2.6.10):
     - Stop crashing with an assertion failure when parsing certain kinds
       of malformed or truncated microdescriptors. Fixes bug 16400;
@@ -52,9 +69,73 @@ Changes in version 0.2.7.2-alpha - 2015-07-??
       service while a NEWNYM is in progress. Fixes bug 16013; bugfix
       on 0.1.0.1-rc.
 
+  o Minor feature (directory authorities, security, also in 0.2.6.9):
+    - The HSDir flag given by authorities now requires the Stable flag.
+      For the current network, this results in going from 2887 to 2806
+      HSDirs. Also, it makes it harder for an attacker to launch a sybil
+      attack by raising the effort for a relay to become Stable which
+      takes at the very least 7 days to do so and by keeping the 96
+      hours uptime requirement for HSDir. Implements ticket 8243.
+
+  o Minor feature (performance):
+    - Improve the runtime speed of Ed25519 operations by using the
+      public-domain ed25519-donna by Andrew M. ("floodyberry").
+      Implements ticket 16467.
+    - Improve the runtime speed of the ntor handshake by using an
+      optimized curve25519 basepoint scalarmult implementation from the
+      public-domain ed25519-donna by Andrew M. ("floodyberry"), based on
+      ideas by Adam Langley. Implements ticket 9663.
+
+  o Minor features (client):
+    - Relax the validation done to hostnames in SOCKS5 requests, and
+      allow '_' to cope with domains observed in the wild that are
+      serving non-RFC compliant records. Resolves ticket 16430.
+
+  o Minor features (client, unix sockets):
+    - Add GroupWritable and WorldWritable options to unix-socket based
+      SocksPort and ControlPort options. These options apply to a single
+      socket, and override {Control,Socks}SocketsGroupWritable. Closes
+      ticket 15220.
+
+  o Minor Features (crypto, testing):
+    - Now that OpenSSL has its own scrypt implementation, add an unit
+      test that checks for interoperability between libscrypt_scrypt()
+      and OpenSSL's EVP_PBE_scrypt() so that we could not use libscrypt
+      and rely on EVP_PBE_scrypt() whenever possible. Resolves
+      ticket 16189.
+
+  o Minor features (directory authorities):
+    - Directory authorities no longer vote against the "Fast", "Stable",
+      and "HSDir" flags just because they were going to vote against
+      "Running": if the consensus turns out to be that the router was
+      running, then the authority's vote should count. Patch from Peter
+      Retzlaff; closes issue 8712.
+
   o Minor features (geoip, also in 0.2.6.10):
     - Update geoip to the June 3 2015 Maxmind GeoLite2 Country database.
     - Update geoip6 to the June 3 2015 Maxmind GeoLite2 Country database.
+
+  o Minor features (hidden service):
+    - Add the new options "HiddenServiceMaxStreams" and
+      "HiddenServiceMaxStreamsCloseCircuit" to allow hidden services to
+      limit the maximum number of simultaneous streams per circuit, and
+      optionally tear down the circuit when the limit is exceeded. Part
+      of ticket 16052.
+
+  o Minor features (portability):
+    - Use C99 variadic macros when the compiler is not GCC. This avoids
+      failing compilations on MSVC, and fixes a log-file-based race
+      condition in our old workarounds. Original patch from Gisle Vanem.
+
+  o Minor bugfixes (compilation, also in 0.2.6.9):
+    - Build with --enable-systemd correctly when libsystemd is
+      installed, but systemd is not. Fixes bug 16164; bugfix on
+      0.2.6.3-alpha. Patch from Peter Palfrader.
+
+  o Minor bugfixes (controller):
+    - Add the descriptor ID in each HS_DESC control event. It was
+      missing but specified in control-spec.txt. Fixes bug 15881; bugfix
+      on 0.2.5.2-alpha.
 
   o Minor bugfixes (crypto error-handling, also in 0.2.6.10):
     - Check for failures from crypto_early_init, and refuse to continue.
@@ -63,10 +144,109 @@ Changes in version 0.2.7.2-alpha - 2015-07-??
       its own PRNG. Fixes bug 16360; bugfix on 0.2.5.2-alpha, introduced
       when implementing ticket 4900. Patch by "teor".
 
+  o Minor bugfixes (Hidden service):
+    - When cannibalizing a circuit for an introduction point, always
+      extend to the chosen exit node creating a 4 hop circuit instead of
+      using the current circuit exit node which resulted in changing the
+      original intro point choice. This resulted in the hidden service
+      skipping excluded nodes like for instance reconnecting to an
+      expired intro point. Fixes bug 16260; bugfix on 0.1.0.1-rc. This
+      is particularly important for the introduction point retry
+      behavior (see bug 8239) since cannibalization is allowed, which is
+      desired, so it's important to pin the chosen exit point.
+
+  o Minor bugfixes (hidden service):
+    - Fix a crash when reloading configuration while at least one
+      configured and one ephemeral hidden service exists. Fixes bug
+      16060; bugfix on 0.2.7.1-alpha.
+
+  o Minor bugfixes (hidden services):
+    - Avoid crashing with a double-free bug when we create an ephemeral
+      hidden service but adding it fails for some reason. Fixes bug
+      16228; bugfix on 0.2.7.1-alpha.
+
   o Minor bugfixes (Linux seccomp2 sandbox, also in 0.2.6.10):
     - Allow pipe() and pipe2() syscalls in the seccomp2 sandbox: we need
       these when eventfd2() support is missing. Fixes bug 16363; bugfix
       on 0.2.6.3-alpha. Patch from "teor".
+
+  o Minor bugfixes (Linux seccomp2 sandbox, also in 0.2.6.9):
+    - Fix sandboxing to work when running as a relaymby renaming of
+      secret_id_key, and allowing the eventfd2 and futex syscalls. Fixes
+      bug 16244; bugfix on 0.2.6.1-alpha. Patch by Peter Palfrader.
+    - Allow systemd connections to work with the Linux seccomp2 sandbox
+      code. Fixes bug 16212; bugfix on 0.2.6.2-alpha. Patch by
+      Peter Palfrader.
+
+  o Minor bugfixes (systemd):
+    - Fix an accidental formatting error that broke the systemd
+      configuration file. Fixes bug 16152; bugfix on 0.2.7.1-alpha.
+
+  o Minor bugfixes (tests):
+    - Use the configured Python executable when running test-stem-full.
+      Fixes bug 16470; bugfix on 0.2.7.1-alpha.
+
+  o Minor bugfixes (tests, also in 0.2.6.9):
+    - Fix a crash in the unit tests when built with MSVC2013. Fixes bug
+      16030; bugfix on 0.2.6.2-alpha. Patch from "NewEraCracker".
+
+  o Minor enhancements (correctness, testing):
+    - Document use of coverity, clang static analyzer, and clang dynamic
+      undefined behavior and address sanitizers in doc/HACKING. Add
+      clang dynamic sanitizer blacklist in
+      contrib/clang/sanitizer_blacklist.txt to exempt known undefined
+      behavior. Include detailed usage instructions in the blacklist.
+      Patch by "teor". Closes ticket 15817.
+
+  o Minor fixes (sandbox, files):
+    - Use the sandbox in tor_open_cloexec whether or not O_CLOEXEC is
+      defined. Patch by "teor". Fixes bug 16515; bugfix on 0.2.3.1-alpha.
+
+  o Minor fixes (threads, comments):
+    - Always initialise return value in compute_desc_id in rendcommon.c
+      Patch by "teor". Fixes part of bug 16115; bugfix on 0.2.7.1-alpha.
+    - Check for NULL values in getinfo_helper_onions Patch by "teor".
+      Fixes part of bug 16115; bugfix on 0.2.7.1-alpha.
+    - Remove undefined directive-in-macro in test_util_writepid clang
+      3.7 complains that using a preprocessor directive inside a macro
+      invocation in test_util_writepid in test_util.c is undefined.
+      Patch by "teor". Fixes part of bug 16115; bugfix on 0.2.7.1-alpha.
+
+  o Code simplification and refactoring:
+    - Define WINVER and _WIN32_WINNT centrally, in orconfig.h, in order
+      to ensure they remain consistent and visible everywhere.
+    - Remove some vestigial workarounds for the MSVC6 compiler. We
+      haven't supported that in ages.
+    - The link authentication code has been refactored for better
+      testability and reliability. It now uses code generated with the
+      "trunnel" binary encoding generator, to reduce the risk of bugs
+      due to programmer error. Done as part of ticket 12498.
+
+  o Removed features:
+    - Remove the HidServDirectoryV2 option. Now all relays offer to
+      store hidden service descriptors. Related to 16543.
+    - Remove the VoteOnHidServDirectoriesV2 option, since all
+      authorities have long set it to 1. Closes ticket 16543.
+    - Tor no longer supports copies of OpenSSL that are missing support
+      for Elliptic Curve Cryptography. In particular support for at
+      least one of P256 or P224 is now required, with manual
+      configuration needed if only P224 is available. Resolves
+      ticket 16140.
+    - Tor no longer supports versions of OpenSSL before 1.0. (If you are
+      on an operating system that has not upgraded to OpenSSL 1.0 or
+      later, and you compile Tor from source, you will need to install a
+      more recent OpenSSL to link Tor against.) Resolves ticket 16034.
+
+  o Testing:
+    - The link authentication protocol code now has extensive tests.
+    - The relay descriptor signature testing code now has
+      extensive tests.
+    - The test_workqueue program now runs faster, and is enabled by
+      default as a part of "make check".
+
+  o Features (control protocl):
+    - Support network-liveness GETINFO key and NETWORK_LIVENESS events
+      in the control protocol. Resolves ticket 15358.
 
 
 Changes in version 0.2.6.10 - 2015-07-12

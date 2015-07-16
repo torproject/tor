@@ -1,3 +1,0 @@
-  o Features (control protocl):
-    - Support network-liveness GETINFO key and NETWORK_LIVENESS events in the
-      control protocol.  Resolves ticket 15358.
