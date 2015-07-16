@@ -2561,7 +2561,7 @@ read_file_to_str_until_eof(int fd, size_t max_bytes_to_read, size_t *sz_out)
   size_t string_max = 0;
 
   if (max_bytes_to_read+1 >= SIZE_T_CEILING) {
-    errno = EINVAL; 
+    errno = EINVAL;
     return NULL;
   }
 

@@ -237,7 +237,7 @@ rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **e)
     *e = entry;
   }
 
-end:
+ end:
   return ret;
 }
 
@@ -374,9 +374,9 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
 
     number_stored++;
     goto advance;
-skip:
+ skip:
     rend_service_descriptor_free(parsed);
-advance:
+ advance:
     /* advance to next descriptor, if available. */
     current_desc = next_desc;
     /* check if there is a next descriptor. */
@@ -566,14 +566,15 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   }
   return RCS_OKAY;
 
-okay:
+ okay:
   if (entry) {
     *entry = e;
   }
   retval = RCS_OKAY;
 
-err:
+ err:
   rend_service_descriptor_free(parsed);
   tor_free(intro_content);
   return retval;
 }
+

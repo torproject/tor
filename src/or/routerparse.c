@@ -4498,7 +4498,6 @@ microdescs_parse_from_string(const char *s, const char *eos,
       }
     }
 
-
     if (tokenize_string(area, s, start_of_next_microdesc, tokens,
                         microdesc_token_table, flags)) {
       log_warn(LD_DIR, "Unparseable microdescriptor");

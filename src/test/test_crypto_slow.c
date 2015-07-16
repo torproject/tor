@@ -172,8 +172,8 @@ test_libscrypt_eq_openssl(void *arg)
   p = 16;
 
   libscrypt_retval =
-  libscrypt_scrypt((const uint8_t *)"password", 0, 
-                   (const uint8_t *)"NaCl", 0, 
+  libscrypt_scrypt((const uint8_t *)"password", 0,
+                   (const uint8_t *)"NaCl", 0,
                    r, N, p, buf1, dk_len);
   openssl_retval =
   EVP_PBE_scrypt((const char *)"password", 0,
@@ -211,10 +211,10 @@ test_libscrypt_eq_openssl(void *arg)
   memset(buf2,0,64);
 
   r = 1048576;
- 
+
   libscrypt_retval =
-  libscrypt_scrypt((const uint8_t *)"pleaseletmein", 0, 
-                   (const uint8_t *)"SodiumChloride", 0, 
+  libscrypt_scrypt((const uint8_t *)"pleaseletmein", 0,
+                   (const uint8_t *)"SodiumChloride", 0,
                    N, r, p, buf1, dk_len);
   openssl_retval =
   EVP_PBE_scrypt((const char *)"pleaseletmein", 0,

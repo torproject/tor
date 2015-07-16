@@ -2591,7 +2591,6 @@ options_validate_cb(void *old_options, void *options, void *default_options,
   STMT_BEGIN log_warn(LD_CONFIG, args, ##__VA_ARGS__); STMT_END
 #endif
 
-
 /** Log a warning message iff <b>filepath</b> is not absolute.
  * Warning message must contain option name <b>option</b> and
  * an absolute path that <b>filepath<b> will resolve to.

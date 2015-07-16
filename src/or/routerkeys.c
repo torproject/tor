@@ -61,7 +61,6 @@ read_encrypted_secret_key(ed25519_secret_key_t *out,
      * it right. */
   }
 
-
   if (secret_len != ED25519_SECKEY_LEN) {
     log_err(LD_OR, "%s is corrupted.", fname);
     saved_errno = EINVAL;

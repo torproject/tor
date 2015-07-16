@@ -353,7 +353,7 @@ curve25519_basepoint_spot_check(void)
 
   /* Check the most basic possible sanity via the test secret/public key pair
    * used in "Cryptography in NaCl - 2. Secret keys and public keys".  This
-   * may catch catastrophic failures on systems where Curve25519 is expensive, 
+   * may catch catastrophic failures on systems where Curve25519 is expensive,
    * without requiring a ton of key generation.
    */
   curve25519_use_ed = 1;

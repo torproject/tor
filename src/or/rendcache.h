@@ -54,3 +54,4 @@ rend_cache_store_status_t rend_cache_store_v2_desc_as_client(const char *desc,
 size_t rend_cache_get_total_allocation(void);
 
 #endif /* TOR_RENDCACHE_H */
+

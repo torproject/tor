@@ -80,7 +80,8 @@ wint_t _getwch(void);
 #define WEOF (wchar_t)(0xFFFF)
 #endif
 #if defined(HAVE_DECL_SECUREZEROMEMORY) && !HAVE_DECL_SECUREZEROMEMORY
-static inline void SecureZeroMemory(PVOID ptr, SIZE_T cnt)
+static inline void
+SecureZeroMemory(PVOID ptr, SIZE_T cnt)
 {
   volatile char *vcptr = (volatile char*)ptr;
   while (cnt--)
@@ -3378,3 +3379,4 @@ tor_getpass(const char *prompt, char *output, size_t buflen)
 #error "No implementation for tor_getpass found!"
 #endif
 }
+
