@@ -1838,7 +1838,8 @@ struct testcase_t crypto_tests[] = {
   { "ed25519_convert", test_crypto_ed25519_convert, 0, NULL, NULL },
   { "ed25519_blinding", test_crypto_ed25519_blinding, 0, NULL, NULL },
   { "ed25519_testvectors", test_crypto_ed25519_testvectors, 0, NULL, NULL },
-  { "ed25519_fuzz_donna", test_crypto_ed25519_fuzz_donna, TT_FORK, NULL, NULL },
+  { "ed25519_fuzz_donna", test_crypto_ed25519_fuzz_donna, TT_FORK, NULL,
+    NULL },
   { "siphash", test_crypto_siphash, 0, NULL, NULL },
   END_OF_TESTCASES
 };

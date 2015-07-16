@@ -48,9 +48,9 @@ typedef enum {
 
 rend_cache_store_status_t rend_cache_store_v2_desc_as_dir(const char *desc);
 rend_cache_store_status_t rend_cache_store_v2_desc_as_client(const char *desc,
-                                                             const char *desc_id_base32,
-                                                             const rend_data_t *rend_query,
-                                                             rend_cache_entry_t **entry);
+                                                const char *desc_id_base32,
+                                                const rend_data_t *rend_query,
+                                                rend_cache_entry_t **entry);
 size_t rend_cache_get_total_allocation(void);
 
 #endif /* TOR_RENDCACHE_H */

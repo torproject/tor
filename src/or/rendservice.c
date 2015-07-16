@@ -3147,7 +3147,7 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
       rend_data = rend_data_client_create(service_id, desc->desc_id, NULL,
                                           REND_NO_AUTH);
       directory_initiate_command_routerstatus_rend(hs_dir,
-                                                   DIR_PURPOSE_UPLOAD_RENDDESC_V2,
+                                              DIR_PURPOSE_UPLOAD_RENDDESC_V2,
                                                    ROUTER_PURPOSE_GENERAL,
                                                    DIRIND_ANONYMOUS, NULL,
                                                    desc->desc_str,
@@ -3660,7 +3660,8 @@ rend_consider_services_upload(time_t now)
     }
     /* Does every introduction points have been established? */
     unsigned int intro_points_ready =
-      count_established_intro_points(service) >= service->n_intro_points_wanted;
+      count_established_intro_points(service) >=
+        service->n_intro_points_wanted;
     if (intro_points_ready &&
         (service->next_upload_time < now ||
         (service->desc_is_dirty &&
