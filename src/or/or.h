@@ -3593,10 +3593,7 @@ typedef struct {
   int PublishHidServDescriptors;
   int FetchServerDescriptors; /**< Do we fetch server descriptors as normal? */
   int FetchHidServDescriptors; /**< and hidden service descriptors? */
-  int HidServDirectoryV2; /**< Do we participate in the HS DHT? */
 
-  int VoteOnHidServDirectoriesV2; /**< As a directory authority, vote on
-                                   * assignment of the HSDir flag? */
   int MinUptimeHidServDirectoryV2; /**< As directory authority, accept hidden
                                     * service directories after what time? */
 

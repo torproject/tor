@@ -2583,7 +2583,7 @@ router_dump_router_to_string(routerinfo_t *router,
     ntor_cc_line ? ntor_cc_line : "",
     family_line,
     we_are_hibernating() ? "hibernating 1\n" : "",
-    options->HidServDirectoryV2 ? "hidden-service-dir\n" : "",
+    "hidden-service-dir\n",
     options->AllowSingleHopExits ? "allow-single-hop-exits\n" : "");
 
   if (options->ContactInfo && strlen(options->ContactInfo)) {
