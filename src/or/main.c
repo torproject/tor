@@ -2034,7 +2034,7 @@ do_main_loop(void)
 
   /* Initialize the keypinning log. */
   if (authdir_mode_v3(get_options())) {
-    char *fname = get_datadir_fname("key-pinning-entries");
+    char *fname = get_datadir_fname("key-pinning-journal");
     int r = 0;
     if (keypin_load_journal(fname)<0) {
       log_err(LD_DIR, "Error loading key-pinning journal: %s",strerror(errno));
@@ -2047,6 +2047,17 @@ do_main_loop(void)
     tor_free(fname);
     if (r)
       return r;
+  }
+  {
+    /* This is the old name for key-pinning-journal.  These got corrupted
+     * in a couple of cases by #16530, so we started over. See #16580 for
+     * the rationale and for other options we didn't take.  We can remove
+     * this code once all the authorities that ran 0.2.7.1-alpha-dev are
+     * upgraded.
+     */
+    char *fname = get_datadir_fname("key-pinning-entries");
+    unlink(fname);
+    tor_free(fname);
   }
 
   if (trusted_dirs_reload_certs()) {
