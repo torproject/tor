@@ -2,7 +2,7 @@
     - Remove the introduction point adaptative algorithm which is leaking
       popularity by changing the amount of introduction points depending on
       the amount of traffic the HS sees. With this, we stick to only 3
-      introduction points.
+      introduction points. Closes ticket 4862.
     - Add the torrc option HiddenServiceNumIntroductionPoints for an
       operatory to specify a fix amount of introduction points. Maximum
-      value is 10 and default is 3.
+      value is 10 and default is 3. Closes ticket 4862.

@@ -1,4 +1,4 @@
   o Minor fixes (threads, comments):
     - Always initialise return value in compute_desc_id in rendcommon.c
       Patch by "teor".
-      Fix on e6a581f126ba, released in 0.2.7.1-alpha.
+      Fixes part of bug 16115; bugfix on 0.2.7.1-alpha.

@@ -4,8 +4,8 @@
       current circuit exit node which resulted in changing the original
       intro point choice. This resulted in the hidden service skipping
       excluded nodes like for instance reconnecting to an expired intro
-      point.; Fixes #16260; bugfixes on tor-0.1.0.1-rc~460.
+      point. Fixes bug 16260; bugfix on 0.1.0.1-rc.
 
       This is particularly important for the introduction point retry
-      behavior (#8239) since cannibalization is allowed, which is desired,
-      so it's important to pin the chosen exit point.
+      behavior (see bug 8239) since cannibalization is allowed, which is
+      desired, so it's important to pin the chosen exit point.

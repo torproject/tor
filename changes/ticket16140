@@ -4,3 +4,4 @@
       Elliptic Curve Cryptography.  In particular support for at least one of
       P256 or P224 is now required, with manual configuration needed if only
       P224 is available.
+      Resolves ticket 16140.

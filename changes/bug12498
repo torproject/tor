@@ -1,9 +1,9 @@
-  o Major features (Ed25519 identity keys: #12498, Prop220):
+  o Major features (Ed25519 identity keys, Prop220):
     - All relays now maintain a stronger identity key, using the
       Ed25519 elliptic curve signature format.  This master key is
       designed so that it can be kept offline. Relays also generate
       an online signing key, and a set of other Ed25519 keys and certificates.
-      These are all automatically regenerated and rotated as needed.     
+      These are all automatically regenerated and rotated as needed.
     - Directory authorities track which Ed25519 identity keys have been
       used with which RSA1024 identity keys, and do not allow them to vary
       freely.

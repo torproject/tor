@@ -1,7 +1,0 @@
-  o Minor fixes (threads, comments):
-    - Silence unused variable warnings in find_cipher_by_id
-      Unused variable warnings were still generated under some versions
-      of OpenSSL. Instead, make sure all variables are used under all
-      versions of OpenSSL.
-      Patch by "teor".
-      Fix on 496df21c89d1, not in any released version of tor.

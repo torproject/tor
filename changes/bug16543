@@ -1,4 +1,4 @@
-  - Removed features:
+  o Removed features:
     - Remove the HidServDirectoryV2 option. Now all relays offer to store
       hidden service descriptors. Related to 16543.
     - Remove the VoteOnHidServDirectoriesV2 option, since all authorities

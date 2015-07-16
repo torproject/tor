@@ -1,3 +1,4 @@
-  o Controller fixes:
+  o Minor bugfixes (controller):
     - Add the descriptor ID in each HS_DESC control event. It was missing
-      but specified in control-spec.txt. Fixes ticket 15881.
+      but specified in control-spec.txt. Fixes bug 15881; bugfix
+      on 0.2.5.2-alpha.

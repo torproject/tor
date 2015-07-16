@@ -4,4 +4,4 @@
       Add clang dynamic sanitizer blacklist in
       contrib/clang/sanitizer_blacklist.txt to exempt known undefined
       behavior. Include detailed usage instructions in the blacklist.
-      Patch by "teor".
+      Patch by "teor". Closes ticket 15817.

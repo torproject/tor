@@ -4,3 +4,4 @@
       are on an operating system that has not upgraded to OpenSSL 1.0
       or later, and you compile Tor from source, you will need to
       install a more recent OpenSSL to link Tor against.)
+      Resolves ticket 16034.
