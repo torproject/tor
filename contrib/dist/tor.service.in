@@ -5,31 +5,31 @@
 # for your tor.service; it is not the last point.
 
 [Unit]
-Description = Anonymizing overlay network for TCP
-After = syslog.target network.target nss-lookup.target
+Description=Anonymizing overlay network for TCP
+After=syslog.target network.target nss-lookup.target
 
 [Service]
-Type = notify
-NotifyAccess = all
-ExecStartPre = @BINDIR@/tor -f @CONFDIR@/torrc --verify-config
-ExecStart = @BINDIR@/tor -f @CONFDIR@/torrc
-ExecReload = /bin/kill -HUP ${MAINPID}
-KillSignal = SIGINT
-TimeoutSec = 30
-Restart = on-failure
-WatchdogSec = 1m
-LimitNOFILE = 32768
+Type=notify
+NotifyAccess=all
+ExecStartPre=@BINDIR@/tor -f @CONFDIR@/torrc --verify-config
+ExecStart=@BINDIR@/tor -f @CONFDIR@/torrc
+ExecReload=/bin/kill -HUP ${MAINPID}
+KillSignal=SIGINT
+TimeoutSec=30
+Restart=on-failure
+WatchdogSec=1m
+LimitNOFILE=32768
 
 # Hardening
-PrivateTmp = yes
-PrivateDevices = yes
-ProtectHome = yes
-ProtectSystem = full
-ReadOnlyDirectories = /
-ReadWriteDirectories = -@LOCALSTATEDIR@/lib/tor
-ReadWriteDirectories = -@LOCALSTATEDIR@/log/tor
-NoNewPrivileges = yes
-CapabilityBoundingSet = CAP_SETUID CAP_SETGID CAP_NET_BIND_SERVICE
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectHome=yes
+ProtectSystem=full
+ReadOnlyDirectories=/
+ReadWriteDirectories=-@LOCALSTATEDIR@/lib/tor
+ReadWriteDirectories=-@LOCALSTATEDIR@/log/tor
+NoNewPrivileges=yes
+CapabilityBoundingSet=CAP_SETUID CAP_SETGID CAP_NET_BIND_SERVICE
 
 [Install]
-WantedBy = multi-user.target
+WantedBy=multi-user.target
