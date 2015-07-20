@@ -148,16 +148,19 @@ test_libscrypt_eq_openssl(void *arg)
   memset(buf1,0,64);
   memset(buf2,0,64);
 
-  N = 1;
-  r = 16;
+  /* NOTE: we're using N,r the way OpenSSL and libscryot define them,
+   * not the way draft-josefsson-scrypt-kdf-00.txt define them.
+   */
+  N = 16;
+  r = 1;
   p = 1;
 
   libscrypt_retval =
   libscrypt_scrypt((const uint8_t *)"", 0, (const uint8_t *)"", 0,
-                   r, N, p, buf1, dk_len);
+                   N, r, p, buf1, dk_len);
   openssl_retval =
   EVP_PBE_scrypt((const char *)"", 0, (const unsigned char *)"", 0,
-                  r, N, p, maxmem, buf2, dk_len);
+                  N, r, p, maxmem, buf2, dk_len);
 
   tt_int_op(libscrypt_retval, ==, 0);
   tt_int_op(openssl_retval, ==, 1);
@@ -167,18 +170,18 @@ test_libscrypt_eq_openssl(void *arg)
   memset(buf1,0,64);
   memset(buf2,0,64);
 
-  N = 8;
-  r = 1024;
+  N = 1024;
+  r = 8;
   p = 16;
 
   libscrypt_retval =
-  libscrypt_scrypt((const uint8_t *)"password", 0,
-                   (const uint8_t *)"NaCl", 0,
-                   r, N, p, buf1, dk_len);
+  libscrypt_scrypt((const uint8_t *)"password", strlen("password"),
+                   (const uint8_t *)"NaCl", strlen("NaCl"),
+                   N, r, p, buf1, dk_len);
   openssl_retval =
-  EVP_PBE_scrypt((const char *)"password", 0,
-                 (const unsigned char *)"NaCl", 0,
-                  r, N, p, maxmem, buf2, dk_len);
+  EVP_PBE_scrypt((const char *)"password", strlen("password"),
+                 (const unsigned char *)"NaCl", strlen("NaCl"),
+                 N, r, p, maxmem, buf2, dk_len);
 
   tt_int_op(libscrypt_retval, ==, 0);
   tt_int_op(openssl_retval, ==, 1);
@@ -188,44 +191,51 @@ test_libscrypt_eq_openssl(void *arg)
   memset(buf1,0,64);
   memset(buf2,0,64);
 
-  N = 8;
-  r = 16384;
+  N = 16384;
+  r = 8;
   p = 1;
 
   libscrypt_retval =
-  libscrypt_scrypt((const uint8_t *)"pleaseletmein", 0,
-                   (const uint8_t *)"SodiumChloride", 0,
+  libscrypt_scrypt((const uint8_t *)"pleaseletmein",
+                   strlen("pleaseletmein"),
+                   (const uint8_t *)"SodiumChloride",
+                   strlen("SodiumChloride"),
                    N, r, p, buf1, dk_len);
   openssl_retval =
-  EVP_PBE_scrypt((const char *)"pleaseletmein", 0,
-                 (const unsigned char *)"SodiumChloride", 0,
-                  N, r, p, maxmem, buf2, dk_len);
+  EVP_PBE_scrypt((const char *)"pleaseletmein",
+                 strlen("pleaseletmein"),
+                 (const unsigned char *)"SodiumChloride",
+                 strlen("SodiumChloride"),
+                 N, r, p, maxmem, buf2, dk_len);
 
   tt_int_op(libscrypt_retval, ==, 0);
   tt_int_op(openssl_retval, ==, 1);
 
   tt_mem_op(buf1, ==, buf2, 64);
 
-#if 0
   memset(buf1,0,64);
   memset(buf2,0,64);
 
-  r = 1048576;
+  N = 1048576;
+  maxmem = 2 * 1024 * 1024 * 1024; // 2 GB
 
   libscrypt_retval =
-  libscrypt_scrypt((const uint8_t *)"pleaseletmein", 0,
-                   (const uint8_t *)"SodiumChloride", 0,
+  libscrypt_scrypt((const uint8_t *)"pleaseletmein",
+                   strlen("pleaseletmein"),
+                   (const uint8_t *)"SodiumChloride",
+                   strlen("SodiumChloride"),
                    N, r, p, buf1, dk_len);
   openssl_retval =
-  EVP_PBE_scrypt((const char *)"pleaseletmein", 0,
-                 (const unsigned char *)"SodiumChloride", 0,
-                  N, r, p, maxmem, buf2, dk_len);
+  EVP_PBE_scrypt((const char *)"pleaseletmein",
+                 strlen("pleaseletmein"),
+                 (const unsigned char *)"SodiumChloride",
+                 strlen("SodiumChloride"),
+                 N, r, p, maxmem, buf2, dk_len);
 
   tt_int_op(libscrypt_retval, ==, 0);
   tt_int_op(openssl_retval, ==, 1);
 
   tt_mem_op(buf1, ==, buf2, 64);
-#endif
 
   done:
   return;
