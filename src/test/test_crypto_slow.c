@@ -148,7 +148,7 @@ test_libscrypt_eq_openssl(void *arg)
   memset(buf1,0,64);
   memset(buf2,0,64);
 
-  /* NOTE: we're using N,r the way OpenSSL and libscryot define them,
+  /* NOTE: we're using N,r the way OpenSSL and libscrypt define them,
    * not the way draft-josefsson-scrypt-kdf-00.txt define them.
    */
   N = 16;
