@@ -14,68 +14,66 @@ does, not what it should do.
 
 1. File Syntax
 
-   # A file is interpreted as every Entry in the file, in order.
-   TorrcFile = Line*
+   ; The syntax here is defined an Augmented Backus-Naur form, as
+   ; specified in RFC5234.
 
-   Line = BlankLine | Entry
+   ; A file is interpreted as every Entry in the file, in order.
+   TorrcFile = *Line
 
-   BlankLine = WS* OptComment LF
-             | WS* LF
+   Line = BlankLine / Entry
 
-   OptComment =
-              | Comment
+   BlankLine =  *WSP OptComment LF
+   BlankLine =/ *WSP LF
 
-   Comment = '#' NonLF*
+   OptComment = [ Comment ]
 
-   # Each Entry is interpreted as an optional "Magic" flag, a key, and a
-   # value.
-   Entry = SP* OptMagic Key (SP+ | '\\' NL SP*)+ Val LF
-         | SP* OptMagic Key (SP* | '\\' NL SP*)* LF
+   Comment = "#" *NonLF
 
-   OptMagic =
-            | "+"
-            | "/"
+   ; Each Entry is interpreted as an optional "Magic" flag, a key, and a
+   ; value.
+   Entry =  *WSP [ Magic ] Key 1*(1*WSP / "\" NL *WSP) Val LF
+   Entry =/ *WSP [ Magic ] Key  *( *WSP / "\" NL *WSP) LF
 
-   # Keys are always specified verbatim.  They are case insensitive.  It
-   # is an error to specify a key that Tor does not recognize.
-   Key = KC*
+   Magic = "+" / "/"
 
-   # Sadly, every kind of value is decoded differently...
-   Val = QuotedVal | ContinuedVal | PlainVal
+   ; Keys are always specified verbatim.  They are case insensitive.  It
+   ; is an error to specify a key that Tor does not recognize.
+   Key = 1*KC
 
-   # The text of a PlainVal is the text of its PVBody portion,
-   # plus the optional trailing backslash.
-   PlainVal = PVBody* ('\\')? SP* OptComment
+   ; Sadly, every kind of value is decoded differently...
+   Val = QuotedVal / ContinuedVal / PlainVal
 
-   # Note that a PVBody is copied verbatim.  Slashes are included
-   # verbatim.  No changes are made.  Note that a body may be empty.
-   PVBody = (VC | '\\' NonLF ) *
+   ; The text of a PlainVal is the text of its PVBody portion,
+   ; plus the optional trailing backslash.
+   PlainVal = PVBody [ "\" ] *WSP OptComment
 
-   # The text of a ContinuedVal is the text of each of its PVBody
-   # sub-elements, in order, concatenated.
-   ContinuedVal = CVal1 CVal2* CVal3
+   ; Note that a PVBody is copied verbatim.  Slashes are included
+   ; verbatim.  No changes are made.  Note that a body may be empty.
+   PVBody = * (VC / "\" NonLF )
 
-   CVal1 = PVBody '\\' LF
-   CVal2 = PVBody ( '\\' LF | Comment LF )
+   ; The text of a ContinuedVal is the text of each of its PVBody
+   ; sub-elements, in order, concatenated.
+   ContinuedVal = CVal1 *CVal2 CVal3
+
+   CVal1 = PVBody "\" LF
+   CVal2 = PVBody ( "\" LF / Comment LF )
    CVal3 = PVBody
 
-   # The text of a QuotedVal is decoded as if it were a C string.
-   QuotedVal = DQ QVBody DQ SP* Comment
+   ; The text of a QuotedVal is decoded as if it were a C string.
+   QuotedVal = DQ QVBody DQ *WSP Comment
 
-   QVBody = QC
-          | '\\' ( 'n' | 'r' | 't' | '\\' | '\'' | DQ | 'x' XD XD | OD OD? OD? )
+   QVBody =  QC
+   QVBody =/ "\" ( "n" / "r" / "t" / "\" / "'" / DQUOTE )
+   QVBOdy =/ "\" ( "x" 2HEXDIG / 1*3OCTDIG )
 
-   XD = any hexadecimal digit
-   OD = any octal digit
+   ; Anything besides NUL and LF
+   NonLF = %x01-%x09 / %x0b - %xff
 
-   NonLF = Any character but '\n'
-   LF = '\n' | EOF
-   WS = ' ' | '\t' | '\r'
-   SP = ' ' | '\t'
-   DQ = '\"'
-   KC = Any character except an isspace() character or '#'
-   VC = Any character except '\\', '\n', or '#'
-   QC = Any character except '\n', '\\', or '\"'
+   OCTDIG = '0' - '7'
+
+   KC = Any character except an isspace() character or '#' or NUL
+   VC = Any character except '\\', '\n', '#', or NUL
+   QC = Any character except '\n', '\\', '\"', or NUL
 
 2. Mid-level Semantics
 
