@@ -6233,6 +6233,27 @@ get_desc_id_from_query(const rend_data_t *rend_data, const char *hsdir_fp)
   return desc_id;
 }
 
+/** send HS_DESC CREATED event when a local service generates a descriptor.
+ *
+ * <b>service_id</b> is the descriptor onion address.
+ * <b>desc_id_base32</b> is the descriptor ID.
+ */
+void
+control_event_hs_descriptor_created(const char *service_id,
+                                    const char *desc_id_base32)
+{
+  if (!service_id || !desc_id_base32) {
+    log_warn(LD_BUG, "Called with service_digest==%p, "
+             "desc_id_base32==%p", service_id, desc_id_base32);
+    return;
+  }
+
+  send_control_event(EVENT_HS_DESC,
+                     "650 HS_DESC CREATED %s UNKNOWN UNKNOWN %s\r\n",
+                     service_id,
+                     desc_id_base32);
+}
+
 /** send HS_DESC upload event.
  *
  * <b>service_id</b> is the descriptor onion address.
