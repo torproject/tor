@@ -353,12 +353,17 @@ main(int argc, char **argv)
       return 1;
     }
   }
+
   if (opt_n_threads < 1 ||
       opt_n_items < 1 || opt_n_inflight < 1 || opt_n_lowwater < 0 ||
       opt_n_cancel > opt_n_inflight || opt_n_inflight > MAX_INFLIGHT ||
       opt_ratio_rsa < 0) {
     help();
     return 1;
+  }
+
+  if (opt_n_inflight > opt_n_items) {
+      opt_n_inflight = opt_n_items;
   }
 
   init_logging(1);
