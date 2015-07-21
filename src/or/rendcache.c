@@ -3,7 +3,7 @@
 
 /**
  * \file rendcache.c
- * \brief Hidden service desriptor cache.
+ * \brief Hidden service descriptor cache.
  **/
 
 #include "rendcache.h"
