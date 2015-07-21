@@ -300,14 +300,16 @@ help(void)
 {
   puts(
      "Options:\n"
-     "    -N <items>    Run this many items of work\n"
-     "    -T <threads>  Use this many threads\n"
-     "    -I <inflight> Have no more than this many requests queued at once\n"
-     "    -L <lowwater> Add items whenever fewer than this many are pending\n"
-     "    -C <cancel>   Try to cancel N items of every batch that we add\n"
-     "    -R <ratio>    Make one out of this many items be a slow (RSA) one\n"
-     "    --no-{eventfd2,eventfd,pipe2,pipe,socketpair}\n"
-     "                  Disable one of the alert_socket backends.");
+     "  -h            Display this information\n"
+     "  -v            Be verbose\n"
+     "  -N <items>    Run this many items of work\n"
+     "  -T <threads>  Use this many threads\n"
+     "  -I <inflight> Have no more than this many requests queued at once\n"
+     "  -L <lowwater> Add items whenever fewer than this many are pending\n"
+     "  -C <cancel>   Try to cancel N items of every batch that we add\n"
+     "  -R <ratio>    Make one out of this many items be a slow (RSA) one\n"
+     "  --no-{eventfd2,eventfd,pipe2,pipe,socketpair}\n"
+     "                Disable one of the alert_socket backends.");
 }
 
 int
