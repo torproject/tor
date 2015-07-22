@@ -1,20 +1,15 @@
-Changes in version 0.2.7.2-alpha - 2015-07-??
-  o Major features:
-    - Add support for offline encrypted ed25519 master keys. To use this
-      feature on your tor relay, run "tor --keygen" to make a new master
-      key (or to make a new signing key if you already have a master
-      key). Closes ticket 13642.
+Changes in version 0.2.7.2-alpha - 2015-07-2?
+  This, the second alpha in the Tor 0.2.7 series, has a number of new
+  features, including a manual approach to picking the number of
+  introduction points for hidden services, and the much stronger Ed25519
+  signing key algorithm for regular Tor relays (including support for
+  encrypted offline identity keys in the new algorithm).
 
-  o Major feature (Hidden Service):
-    - Add the torrc option HiddenServiceNumIntroductionPoints for an
-      operatory to specify a fix amount of introduction points. Maximum
-      value is 10 and default is 3. Closes ticket 4862.
-    - Remove the introduction point adaptative algorithm which is
-      leaking popularity by changing the amount of introduction points
-      depending on the amount of traffic the HS sees. With this, we
-      stick to only 3 introduction points. Closes ticket 4862.
+  Support for Ed25519 on relays is currently limited to signing router
+  descriptors; later alphas in this series will extend Ed25519 key
+  support to more parts of the Tor protocol.
 
-  o Major features (Ed25519 identity keys, Prop220):
+  o Major features (Ed25519 identity keys, Proposal 220):
     - All relays now maintain a stronger identity key, using the Ed25519
       elliptic curve signature format. This master key is designed so
       that it can be kept offline. Relays also generate an online
@@ -26,6 +21,19 @@ Changes in version 0.2.7.2-alpha - 2015-07-??
       used with which RSA1024 identity keys, and do not allow them to
       vary freely.
     - Microdescriptors now include ed25519 identity keys.
+    - Add support for offline encrypted ed25519 master keys. To use this
+      feature on your tor relay, run "tor --keygen" to make a new master
+      key (or to make a new signing key if you already have a master
+      key). Closes ticket 13642.
+
+  o Major features (Hidden services):
+    - Add the torrc option HiddenServiceNumIntroductionPoints for an
+      operator to specify a fix amount of introduction points. Maximum
+      value is 10 and default is 3. Closes ticket 4862.
+    - Remove the adaptive algorithm for chosing the number of
+      introduction points, which tended to leak popularity information
+      by changing the amount of introduction points depending on the
+      amount of traffic the HS sees. Closes ticket 4862.
 
   o Major features (onion key cross-certification):
     - Relay descriptors now include signatures of the identity keys
@@ -69,7 +77,7 @@ Changes in version 0.2.7.2-alpha - 2015-07-??
       service while a NEWNYM is in progress. Fixes bug 16013; bugfix
       on 0.1.0.1-rc.
 
-  o Minor feature (directory authorities, security, also in 0.2.6.9):
+  o Minor features (directory authorities, security, also in 0.2.6.9):
     - The HSDir flag given by authorities now requires the Stable flag.
       For the current network, this results in going from 2887 to 2806
       HSDirs. Also, it makes it harder for an attacker to launch a sybil
@@ -77,32 +85,18 @@ Changes in version 0.2.7.2-alpha - 2015-07-??
       takes at the very least 7 days to do so and by keeping the 96
       hours uptime requirement for HSDir. Implements ticket 8243.
 
-  o Minor feature (performance):
-    - Improve the runtime speed of Ed25519 operations by using the
-      public-domain ed25519-donna by Andrew M. ("floodyberry").
-      Implements ticket 16467.
-    - Improve the runtime speed of the ntor handshake by using an
-      optimized curve25519 basepoint scalarmult implementation from the
-      public-domain ed25519-donna by Andrew M. ("floodyberry"), based on
-      ideas by Adam Langley. Implements ticket 9663.
-
   o Minor features (client):
     - Relax the validation done to hostnames in SOCKS5 requests, and
       allow '_' to cope with domains observed in the wild that are
       serving non-RFC compliant records. Resolves ticket 16430.
-
-  o Minor features (client, unix sockets):
     - Add GroupWritable and WorldWritable options to unix-socket based
       SocksPort and ControlPort options. These options apply to a single
       socket, and override {Control,Socks}SocketsGroupWritable. Closes
       ticket 15220.
 
-  o Minor Features (crypto, testing):
-    - Now that OpenSSL has its own scrypt implementation, add an unit
-      test that checks for interoperability between libscrypt_scrypt()
-      and OpenSSL's EVP_PBE_scrypt() so that we could not use libscrypt
-      and rely on EVP_PBE_scrypt() whenever possible. Resolves
-      ticket 16189.
+  o Minor features (control protocol):
+    - Support network-liveness GETINFO key and NETWORK_LIVENESS events
+      in the control protocol. Resolves ticket 15358.
 
   o Minor features (directory authorities):
     - Directory authorities no longer vote against the "Fast", "Stable",
@@ -115,12 +109,21 @@ Changes in version 0.2.7.2-alpha - 2015-07-??
     - Update geoip to the June 3 2015 Maxmind GeoLite2 Country database.
     - Update geoip6 to the June 3 2015 Maxmind GeoLite2 Country database.
 
-  o Minor features (hidden service):
+  o Minor features (hidden servicse):
     - Add the new options "HiddenServiceMaxStreams" and
       "HiddenServiceMaxStreamsCloseCircuit" to allow hidden services to
       limit the maximum number of simultaneous streams per circuit, and
       optionally tear down the circuit when the limit is exceeded. Part
       of ticket 16052.
+
+  o Minor features (performance):
+    - Improve the runtime speed of Ed25519 operations by using the
+      public-domain ed25519-donna by Andrew M. ("floodyberry").
+      Implements ticket 16467.
+    - Improve the runtime speed of the ntor handshake by using an
+      optimized curve25519 basepoint scalarmult implementation from the
+      public-domain ed25519-donna by Andrew M. ("floodyberry"), based on
+      ideas by Adam Langley. Implements ticket 9663.
 
   o Minor features (portability):
     - Use C99 variadic macros when the compiler is not GCC. This avoids
@@ -144,7 +147,7 @@ Changes in version 0.2.7.2-alpha - 2015-07-??
       its own PRNG. Fixes bug 16360; bugfix on 0.2.5.2-alpha, introduced
       when implementing ticket 4900. Patch by "teor".
 
-  o Minor bugfixes (Hidden service):
+  o Minor bugfixes (hidden services):
     - When cannibalizing a circuit for an introduction point, always
       extend to the chosen exit node creating a 4 hop circuit instead of
       using the current circuit exit node which resulted in changing the
@@ -154,16 +157,16 @@ Changes in version 0.2.7.2-alpha - 2015-07-??
       is particularly important for the introduction point retry
       behavior (see bug 8239) since cannibalization is allowed, which is
       desired, so it's important to pin the chosen exit point.
-
-  o Minor bugfixes (hidden service):
     - Fix a crash when reloading configuration while at least one
       configured and one ephemeral hidden service exists. Fixes bug
       16060; bugfix on 0.2.7.1-alpha.
-
-  o Minor bugfixes (hidden services):
     - Avoid crashing with a double-free bug when we create an ephemeral
       hidden service but adding it fails for some reason. Fixes bug
       16228; bugfix on 0.2.7.1-alpha.
+
+  o Minor bugfixes (Linux seccomp2 sandbox):
+    - Use the sandbox in tor_open_cloexec whether or not O_CLOEXEC is
+      defined. Patch by "teor". Fixes bug 16515; bugfix on 0.2.3.1-alpha.
 
   o Minor bugfixes (Linux seccomp2 sandbox, also in 0.2.6.10):
     - Allow pipe() and pipe2() syscalls in the seccomp2 sandbox: we need
@@ -185,12 +188,6 @@ Changes in version 0.2.7.2-alpha - 2015-07-??
   o Minor bugfixes (tests):
     - Use the configured Python executable when running test-stem-full.
       Fixes bug 16470; bugfix on 0.2.7.1-alpha.
-
-  o Minor bugfixes (tests, also in 0.2.6.9):
-    - Fix a crash in the unit tests when built with MSVC2013. Fixes bug
-      16030; bugfix on 0.2.6.2-alpha. Patch from "NewEraCracker".
-
-  o Minor enhancements (correctness, testing):
     - Document use of coverity, clang static analyzer, and clang dynamic
       undefined behavior and address sanitizers in doc/HACKING. Add
       clang dynamic sanitizer blacklist in
@@ -198,12 +195,12 @@ Changes in version 0.2.7.2-alpha - 2015-07-??
       behavior. Include detailed usage instructions in the blacklist.
       Patch by "teor". Closes ticket 15817.
 
-  o Minor fixes (sandbox, files):
-    - Use the sandbox in tor_open_cloexec whether or not O_CLOEXEC is
-      defined. Patch by "teor". Fixes bug 16515; bugfix on 0.2.3.1-alpha.
+  o Minor bugfixes (tests, also in 0.2.6.9):
+    - Fix a crash in the unit tests when built with MSVC2013. Fixes bug
+      16030; bugfix on 0.2.6.2-alpha. Patch from "NewEraCracker".
 
-  o Minor fixes (threads, comments):
-    - Always initialise return value in compute_desc_id in rendcommon.c
+  o Minor bugfixes (threads, comments):
+    - Always initialize return value in compute_desc_id in rendcommon.c
       Patch by "teor". Fixes part of bug 16115; bugfix on 0.2.7.1-alpha.
     - Check for NULL values in getinfo_helper_onions Patch by "teor".
       Fixes part of bug 16115; bugfix on 0.2.7.1-alpha.
@@ -223,10 +220,6 @@ Changes in version 0.2.7.2-alpha - 2015-07-??
       due to programmer error. Done as part of ticket 12498.
 
   o Removed features:
-    - Remove the HidServDirectoryV2 option. Now all relays offer to
-      store hidden service descriptors. Related to 16543.
-    - Remove the VoteOnHidServDirectoriesV2 option, since all
-      authorities have long set it to 1. Closes ticket 16543.
     - Tor no longer supports copies of OpenSSL that are missing support
       for Elliptic Curve Cryptography. In particular support for at
       least one of P256 or P224 is now required, with manual
@@ -236,6 +229,10 @@ Changes in version 0.2.7.2-alpha - 2015-07-??
       on an operating system that has not upgraded to OpenSSL 1.0 or
       later, and you compile Tor from source, you will need to install a
       more recent OpenSSL to link Tor against.) Resolves ticket 16034.
+    - Remove the HidServDirectoryV2 option. Now all relays offer to
+      store hidden service descriptors. Related to 16543.
+    - Remove the VoteOnHidServDirectoriesV2 option, since all
+      authorities have long set it to 1. Closes ticket 16543.
 
   o Testing:
     - The link authentication protocol code now has extensive tests.
@@ -243,10 +240,11 @@ Changes in version 0.2.7.2-alpha - 2015-07-??
       extensive tests.
     - The test_workqueue program now runs faster, and is enabled by
       default as a part of "make check".
-
-  o Features (control protocl):
-    - Support network-liveness GETINFO key and NETWORK_LIVENESS events
-      in the control protocol. Resolves ticket 15358.
+    - Now that OpenSSL has its own scrypt implementation, add an unit
+      test that checks for interoperability between libscrypt_scrypt()
+      and OpenSSL's EVP_PBE_scrypt() so that we could not use libscrypt
+      and rely on EVP_PBE_scrypt() whenever possible. Resolves
+      ticket 16189.
 
 
 Changes in version 0.2.6.10 - 2015-07-12
