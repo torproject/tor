@@ -15,32 +15,43 @@ Changes in version 0.2.7.2-alpha - 2015-07-2?
       that it can be kept offline. Relays also generate an online
       signing key, and a set of other Ed25519 keys and certificates.
       These are all automatically regenerated and rotated as needed.
+      Implements part of ticket 12498.
     - Directory authorities now vote on Ed25519 identity keys along with
-      RSA1024 keys.
+      RSA1024 keys. Implements part of ticket 12498.
     - Directory authorities track which Ed25519 identity keys have been
       used with which RSA1024 identity keys, and do not allow them to
-      vary freely.
-    - Microdescriptors now include ed25519 identity keys.
+      vary freely. Implements part of ticket 12498.
+    - Microdescriptors now include ed25519 identity keys. Implements
+      part of ticket 12498.
     - Add support for offline encrypted ed25519 master keys. To use this
       feature on your tor relay, run "tor --keygen" to make a new master
       key (or to make a new signing key if you already have a master
       key). Closes ticket 13642.
 
   o Major features (Hidden services):
-    - Add the torrc option HiddenServiceNumIntroductionPoints for an
-      operator to specify a fix amount of introduction points. Maximum
-      value is 10 and default is 3. Closes ticket 4862.
+    - Add the torrc option HiddenServiceNumIntroductionPoints, to
+      specify a fixed amount of introduction points. Its maximum value
+      is 10 and default is 3. Closes ticket 4862.
     - Remove the adaptive algorithm for chosing the number of
       introduction points, which tended to leak popularity information
       by changing the amount of introduction points depending on the
       amount of traffic the HS sees. Closes ticket 4862.
 
   o Major features (onion key cross-certification):
-    - Relay descriptors now include signatures of the identity keys
-      using the TAP and ntor onion keys. This allows relays to prove
-      ownership of their own onion keys. Because of this change,
-      microdescriptors no longer need to include RSA identity keys.
-      Implements proposal 228; closes ticket 12499.
+    - Relay descriptors now include signatures of their own identity
+      keys, made using the TAP and ntor onion keys. These signatures
+      allow relays to prove ownership of their own onion keys. Because
+      of this change, microdescriptors will no longer need to include
+      RSA identity keys. Implements proposal 228; closes ticket 12499.
+
+  o Major features (performance):
+    - Improve the runtime speed of Ed25519 operations by using the
+      public-domain ed25519-donna by Andrew M. ("floodyberry").
+      Implements ticket 16467.
+    - Improve the runtime speed of the ntor handshake by using an
+      optimized curve25519 basepoint scalarmult implementation from the
+      public-domain ed25519-donna by Andrew M. ("floodyberry"), based on
+      ideas by Adam Langley. Implements ticket 9663.
 
   o Major bugfixes (client-side privacy, also in 0.2.6.9):
     - Properly separate out each SOCKSPort when applying stream
@@ -59,13 +70,21 @@ Changes in version 0.2.7.2-alpha - 2015-07-2?
       of a setback. First-round fix for bug 16381; bugfix
       on 0.2.6.3-alpha.
 
+  o Major bugfixes (hidden services):
+    - When cannibalizing a circuit for an introduction point, always
+      extend to the chosen exit node (creating a 4 hop circuit).
+      Previously Tor would use the current circuit exit node, which
+      changed the original choice of introduction point, and could cause
+      the hidden service to skip excluded introduction points or
+      reconnect to a skipped introduction point. Fixes bug 16260; bugfix
+      on 0.1.0.1-rc.
+
   o Major bugfixes (open file limit):
-    - The max open file limit wasn't checked before calling
-      tor_accept_socket_nonblocking() which made tor go beyond the open
-      file limit set previously. With this fix, before opening a new
-      socket, tor validates the open file limit just before and if the
-      max has been reached, return EMFILE. Fixes bug 16288; bugfix
-      on 0.1.1.1-alpha.
+    - The open file limit wasn't checked before calling
+      tor_accept_socket_nonblocking(), which would made Tor exceed the
+      limit. Now, before opening a new socket, Tor validates the open
+      file limit just before, and if the max has been reached, return an
+      error. Fixes bug 16288; bugfix on 0.1.1.1-alpha.
 
   o Major bugfixes (stability, also in 0.2.6.10):
     - Stop crashing with an assertion failure when parsing certain kinds
@@ -86,17 +105,18 @@ Changes in version 0.2.7.2-alpha - 2015-07-2?
       hours uptime requirement for HSDir. Implements ticket 8243.
 
   o Minor features (client):
-    - Relax the validation done to hostnames in SOCKS5 requests, and
-      allow '_' to cope with domains observed in the wild that are
-      serving non-RFC compliant records. Resolves ticket 16430.
+    - Relax the validation of hostnames in SOCKS5 requests, allowing the
+      character '_' to appear, in order to cope with domains observed in
+      the wild that are serving non-RFC compliant records. Resolves
+      ticket 16430.
     - Add GroupWritable and WorldWritable options to unix-socket based
       SocksPort and ControlPort options. These options apply to a single
       socket, and override {Control,Socks}SocketsGroupWritable. Closes
       ticket 15220.
 
   o Minor features (control protocol):
-    - Support network-liveness GETINFO key and NETWORK_LIVENESS events
-      in the control protocol. Resolves ticket 15358.
+    - Support network-liveness GETINFO key and NETWORK_LIVENESS event in
+      the control protocol. Resolves ticket 15358.
 
   o Minor features (directory authorities):
     - Directory authorities no longer vote against the "Fast", "Stable",
@@ -116,15 +136,6 @@ Changes in version 0.2.7.2-alpha - 2015-07-2?
       optionally tear down the circuit when the limit is exceeded. Part
       of ticket 16052.
 
-  o Minor features (performance):
-    - Improve the runtime speed of Ed25519 operations by using the
-      public-domain ed25519-donna by Andrew M. ("floodyberry").
-      Implements ticket 16467.
-    - Improve the runtime speed of the ntor handshake by using an
-      optimized curve25519 basepoint scalarmult implementation from the
-      public-domain ed25519-donna by Andrew M. ("floodyberry"), based on
-      ideas by Adam Langley. Implements ticket 9663.
-
   o Minor features (portability):
     - Use C99 variadic macros when the compiler is not GCC. This avoids
       failing compilations on MSVC, and fixes a log-file-based race
@@ -137,8 +148,8 @@ Changes in version 0.2.7.2-alpha - 2015-07-2?
 
   o Minor bugfixes (controller):
     - Add the descriptor ID in each HS_DESC control event. It was
-      missing but specified in control-spec.txt. Fixes bug 15881; bugfix
-      on 0.2.5.2-alpha.
+      missing, but specified in control-spec.txt. Fixes bug 15881;
+      bugfix on 0.2.5.2-alpha.
 
   o Minor bugfixes (crypto error-handling, also in 0.2.6.10):
     - Check for failures from crypto_early_init, and refuse to continue.
@@ -148,15 +159,6 @@ Changes in version 0.2.7.2-alpha - 2015-07-2?
       when implementing ticket 4900. Patch by "teor".
 
   o Minor bugfixes (hidden services):
-    - When cannibalizing a circuit for an introduction point, always
-      extend to the chosen exit node creating a 4 hop circuit instead of
-      using the current circuit exit node which resulted in changing the
-      original intro point choice. This resulted in the hidden service
-      skipping excluded nodes like for instance reconnecting to an
-      expired intro point. Fixes bug 16260; bugfix on 0.1.0.1-rc. This
-      is particularly important for the introduction point retry
-      behavior (see bug 8239) since cannibalization is allowed, which is
-      desired, so it's important to pin the chosen exit point.
     - Fix a crash when reloading configuration while at least one
       configured and one ephemeral hidden service exists. Fixes bug
       16060; bugfix on 0.2.7.1-alpha.
@@ -174,9 +176,10 @@ Changes in version 0.2.7.2-alpha - 2015-07-2?
       on 0.2.6.3-alpha. Patch from "teor".
 
   o Minor bugfixes (Linux seccomp2 sandbox, also in 0.2.6.9):
-    - Fix sandboxing to work when running as a relaymby renaming of
-      secret_id_key, and allowing the eventfd2 and futex syscalls. Fixes
-      bug 16244; bugfix on 0.2.6.1-alpha. Patch by Peter Palfrader.
+    - Fix sandboxing to work when running as a relay, by allowing the
+      renaming of secret_id_key, and allowing the eventfd2 and futex
+      syscalls. Fixes bug 16244; bugfix on 0.2.6.1-alpha. Patch by
+      Peter Palfrader.
     - Allow systemd connections to work with the Linux seccomp2 sandbox
       code. Fixes bug 16212; bugfix on 0.2.6.2-alpha. Patch by
       Peter Palfrader.
@@ -188,12 +191,6 @@ Changes in version 0.2.7.2-alpha - 2015-07-2?
   o Minor bugfixes (tests):
     - Use the configured Python executable when running test-stem-full.
       Fixes bug 16470; bugfix on 0.2.7.1-alpha.
-    - Document use of coverity, clang static analyzer, and clang dynamic
-      undefined behavior and address sanitizers in doc/HACKING. Add
-      clang dynamic sanitizer blacklist in
-      contrib/clang/sanitizer_blacklist.txt to exempt known undefined
-      behavior. Include detailed usage instructions in the blacklist.
-      Patch by "teor". Closes ticket 15817.
 
   o Minor bugfixes (tests, also in 0.2.6.9):
     - Fix a crash in the unit tests when built with MSVC2013. Fixes bug
@@ -202,7 +199,7 @@ Changes in version 0.2.7.2-alpha - 2015-07-2?
   o Minor bugfixes (threads, comments):
     - Always initialize return value in compute_desc_id in rendcommon.c
       Patch by "teor". Fixes part of bug 16115; bugfix on 0.2.7.1-alpha.
-    - Check for NULL values in getinfo_helper_onions Patch by "teor".
+    - Check for NULL values in getinfo_helper_onions(). Patch by "teor".
       Fixes part of bug 16115; bugfix on 0.2.7.1-alpha.
     - Remove undefined directive-in-macro in test_util_writepid clang
       3.7 complains that using a preprocessor directive inside a macro
@@ -235,6 +232,12 @@ Changes in version 0.2.7.2-alpha - 2015-07-2?
       authorities have long set it to 1. Closes ticket 16543.
 
   o Testing:
+    - Document use of coverity, clang static analyzer, and clang dynamic
+      undefined behavior and address sanitizers in doc/HACKING. Add
+      clang dynamic sanitizer blacklist in
+      contrib/clang/sanitizer_blacklist.txt to exempt known undefined
+      behavior. Include detailed usage instructions in the blacklist.
+      Patch by "teor". Closes ticket 15817.
     - The link authentication protocol code now has extensive tests.
     - The relay descriptor signature testing code now has
       extensive tests.
