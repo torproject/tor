@@ -1,0 +1,7 @@
+  o Documentation:
+    - Include a specific and (hopefully) accurate documentation of the torrc
+      file's meta-format in doc/torrc_format.txt. This is mainly of
+      interest to people writing programs to parse or generate torrc files.
+      This document is not a commitment to long-term compatibility;
+      some aspects of the current format are a bit ridiculous. 
+      Closes ticket 2325.

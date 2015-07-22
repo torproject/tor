@@ -2829,38 +2829,9 @@ parse_config_line_from_str_verbose(const char *line, char **key_out,
                                    char **value_out,
                                    const char **err_out)
 {
-  /* I believe the file format here is supposed to be:
-     FILE = (EMPTYLINE | LINE)* (EMPTYLASTLINE | LASTLINE)?
-
-     EMPTYLASTLINE = SPACE* | COMMENT
-     EMPTYLINE = EMPTYLASTLINE NL
-     SPACE = ' ' | '\r' | '\t'
-     COMMENT = '#' NOT-NL*
-     NOT-NL = Any character except '\n'
-     NL = '\n'
-
-     LASTLINE = SPACE* KEY SPACE* VALUES
-     LINE = LASTLINE NL
-     KEY = KEYCHAR+
-     KEYCHAR = Any character except ' ', '\r', '\n', '\t', '#', "\"
-
-     VALUES = QUOTEDVALUE | NORMALVALUE
-     QUOTEDVALUE = QUOTE QVCHAR* QUOTE EOLSPACE?
-     QUOTE = '"'
-     QVCHAR = KEYCHAR | ESC ('n' | 't' | 'r' | '"' | ESC |'\'' | OCTAL | HEX)
-     ESC = "\\"
-     OCTAL = ODIGIT (ODIGIT ODIGIT?)?
-     HEX = ('x' | 'X') HEXDIGIT HEXDIGIT
-     ODIGIT = '0' .. '7'
-     HEXDIGIT = '0'..'9' | 'a' .. 'f' | 'A' .. 'F'
-     EOLSPACE = SPACE* COMMENT?
-
-     NORMALVALUE = (VALCHAR | ESC ESC_IGNORE | CONTINUATION)* EOLSPACE?
-     VALCHAR = Any character except ESC, '#', and '\n'
-     ESC_IGNORE = Any character except '#' or '\n'
-     CONTINUATION = ESC NL ( COMMENT NL )*
+  /*
+    See torrc_format.txt for a description of the (silly) format this parses.
    */
-
   const char *key, *val, *cp;
   int continuation = 0;
 
