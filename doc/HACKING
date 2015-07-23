@@ -572,6 +572,10 @@ git branches too.
    scripts/maint/updateVersions.pl to update version numbers in other
    places, and commit.  Then merge maint-0.2.x into release-0.2.x.
 
+   (NOTE: TO bump the version number, edit configure.ac, and then run
+   either make, or 'perl scripts/maint/updateVersions.pl', depending on
+   your version.)
+
 5) Make dist, put the tarball up somewhere, and tell #tor about it. Wait
 a while to see if anybody has problems building it. Try to get Sebastian
 or somebody to try building it on Windows.
