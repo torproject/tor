@@ -128,7 +128,7 @@ Changes in version 0.2.7.2-alpha - 2015-07-2?
     - Update geoip to the June 3 2015 Maxmind GeoLite2 Country database.
     - Update geoip6 to the June 3 2015 Maxmind GeoLite2 Country database.
 
-  o Minor features (hidden servicse):
+  o Minor features (hidden services):
     - Add the new options "HiddenServiceMaxStreams" and
       "HiddenServiceMaxStreamsCloseCircuit" to allow hidden services to
       limit the maximum number of simultaneous streams per circuit, and
