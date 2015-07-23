@@ -3,7 +3,11 @@
 
 #include "orconfig.h"
 #include "or.h"
+
+#ifndef _WIN32
 #include <dirent.h>
+#endif
+
 #include "config.h"
 #include "test.h"
 #include "util.h"
