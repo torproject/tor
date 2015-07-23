@@ -1,4 +1,4 @@
-/* trunnel-impl.h -- copied from Trunnel v1.4.1
+/* trunnel-impl.h -- copied from Trunnel v1.4.2
  * https://gitweb.torproject.org/trunnel.git
  * You probably shouldn't edit this file.
  */
@@ -18,7 +18,7 @@
 #include "trunnel-local.h"
 #endif
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && (_MSC_VER < 1600)
 #define uint8_t unsigned char
 #define uint16_t unsigned short
 #define uint32_t unsigned int
