@@ -21,21 +21,21 @@ Changes in version 0.2.7.2-alpha - 2015-07-2?
     - Directory authorities track which Ed25519 identity keys have been
       used with which RSA1024 identity keys, and do not allow them to
       vary freely. Implements part of ticket 12498.
-    - Microdescriptors now include ed25519 identity keys. Implements
+    - Microdescriptors now include Ed25519 identity keys. Implements
       part of ticket 12498.
-    - Add support for offline encrypted ed25519 master keys. To use this
+    - Add support for offline encrypted Ed25519 master keys. To use this
       feature on your tor relay, run "tor --keygen" to make a new master
       key (or to make a new signing key if you already have a master
       key). Closes ticket 13642.
 
   o Major features (Hidden services):
     - Add the torrc option HiddenServiceNumIntroductionPoints, to
-      specify a fixed amount of introduction points. Its maximum value
+      specify a fixed number of introduction points. Its maximum value
       is 10 and default is 3. Closes ticket 4862.
-    - Remove the adaptive algorithm for chosing the number of
+    - Remove the adaptive algorithm for choosing the number of
       introduction points, which tended to leak popularity information
-      by changing the amount of introduction points depending on the
-      amount of clients the HS sees. Closes ticket 4862.
+      by changing the number of introduction points depending on the
+      number of clients the HS sees. Closes ticket 4862.
 
   o Major features (onion key cross-certification):
     - Relay descriptors now include signatures of their own identity
@@ -46,11 +46,11 @@ Changes in version 0.2.7.2-alpha - 2015-07-2?
 
   o Major features (performance):
     - Improve the runtime speed of Ed25519 operations by using the
-      public-domain ed25519-donna by Andrew M. ("floodyberry").
+      public-domain Ed25519-donna by Andrew M. ("floodyberry").
       Implements ticket 16467.
     - Improve the runtime speed of the ntor handshake by using an
       optimized curve25519 basepoint scalarmult implementation from the
-      public-domain ed25519-donna by Andrew M. ("floodyberry"), based on
+      public-domain Ed25519-donna by Andrew M. ("floodyberry"), based on
       ideas by Adam Langley. Implements ticket 9663.
 
   o Major bugfixes (client-side privacy, also in 0.2.6.9):
@@ -80,7 +80,7 @@ Changes in version 0.2.7.2-alpha - 2015-07-2?
 
   o Major bugfixes (open file limit):
     - The open file limit wasn't checked before calling
-      tor_accept_socket_nonblocking(), which would made Tor exceed the
+      tor_accept_socket_nonblocking(), which would make Tor exceed the
       limit. Now, before opening a new socket, Tor validates the open
       file limit just before, and if the max has been reached, return an
       error. Fixes bug 16288; bugfix on 0.1.1.1-alpha.
@@ -99,8 +99,8 @@ Changes in version 0.2.7.2-alpha - 2015-07-2?
     - The HSDir flag given by authorities now requires the Stable flag.
       For the current network, this results in going from 2887 to 2806
       HSDirs. Also, it makes it harder for an attacker to launch a sybil
-      attack by raising the effort for a relay to become Stable which
-      takes at the very least 7 days to do so and by keeping the 96
+      attack by raising the effort for a relay to become Stable to require
+      at the very least 7 days, while maintaining the 96
       hours uptime requirement for HSDir. Implements ticket 8243.
 
   o Minor features (client):
