@@ -1,7 +1,7 @@
 Changes in version 0.2.7.2-alpha - 2015-07-2?
   This, the second alpha in the Tor 0.2.7 series, has a number of new
-  features, including a manual approach to picking the number of
-  introduction points for hidden services, and the much stronger Ed25519
+  features, including a way to manually pick the number of introduction
+  points for hidden services, and the much stronger Ed25519
   signing key algorithm for regular Tor relays (including support for
   encrypted offline identity keys in the new algorithm).
 
@@ -35,7 +35,7 @@ Changes in version 0.2.7.2-alpha - 2015-07-2?
     - Remove the adaptive algorithm for chosing the number of
       introduction points, which tended to leak popularity information
       by changing the amount of introduction points depending on the
-      amount of traffic the HS sees. Closes ticket 4862.
+      amount of clients the HS sees. Closes ticket 4862.
 
   o Major features (onion key cross-certification):
     - Relay descriptors now include signatures of their own identity
@@ -67,8 +67,7 @@ Changes in version 0.2.7.2-alpha - 2015-07-2?
       regression detailed in bug 16381). This is a temporary fix since
       we can live with the minor issue in bug 14219 (it just results in
       some load on the network) but the regression of 16381 is too much
-      of a setback. First-round fix for bug 16381; bugfix
-      on 0.2.6.3-alpha.
+      of a setback. First-round fix for bug 16381; bugfix on 0.2.6.3-alpha.
 
   o Major bugfixes (hidden services):
     - When cannibalizing a circuit for an introduction point, always
