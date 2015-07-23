@@ -293,9 +293,9 @@ threadpool_queue_work(threadpool_t *pool,
 
   TOR_TAILQ_INSERT_TAIL(&pool->work, ent, next_work);
 
-  tor_mutex_release(&pool->lock);
-
   tor_cond_signal_one(&pool->condition);
+
+  tor_mutex_release(&pool->lock);
 
   return ent;
 }
@@ -345,9 +345,9 @@ threadpool_queue_update(threadpool_t *pool,
   pool->update_fn = fn;
   ++pool->generation;
 
-  tor_mutex_release(&pool->lock);
-
   tor_cond_signal_all(&pool->condition);
+
+  tor_mutex_release(&pool->lock);
 
   if (old_args) {
     for (i = 0; i < n_threads; ++i) {
