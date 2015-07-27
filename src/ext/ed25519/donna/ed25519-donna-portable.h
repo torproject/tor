@@ -144,6 +144,20 @@ static inline void U64TO8_LE(unsigned char *p, const uint64_t v) {
 	#endif
 #endif
 
+/* Tor: GCC's Stack Protector freaks out and produces variable length
+ * buffer warnings when alignment is requested that is greater than
+ * STACK_BOUNDARY (x86 has special code to deal with this for SSE2).
+ *
+ * Since the only reason things are 16 byte aligned in the first place
+ * is for SSE2, only request variable alignment for SSE2 builds.
+ *
+ * See: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=59674
+ */
+#if !defined(ED25519_SSE2)
+	#undef ALIGN
+	#define ALIGN(x)
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 

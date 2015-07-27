@@ -37,3 +37,6 @@ as of 8757bd4cd209cb032853ece0ce413f122eef212c.
    since the compilation will fail in `ge25519_scalarmult_base_choose_niels`
    on x86_64 targets due to running out of registers.
 
+ * On non-x86 targets, GCC's Stack Protector dislikes variables that have
+   alignment constraints greater than that of other primitive types.
+   The `ALIGN` macro is thus no-oped for all non-SSE2 builds.
