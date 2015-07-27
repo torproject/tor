@@ -1,0 +1,5 @@
+  o Minor features (client):
+    - Relax the validation done to hostnames in SOCKS5 requests, and allow
+      a single trailing '.' to cope with clients that pass FQDNs using that
+      syntax to explicitly indicate that the domain name is
+      fully-qualified. Fixes bug 16674; bugfix on 0.2.6.2-alpha.

@@ -1056,6 +1056,12 @@ string_is_valid_hostname(const char *string)
       break;
     }
 
+    /* Allow a single terminating '.' used rarely to indicate domains
+     * are FQDNs rather than relative. */
+    if ((c_sl_idx > 0) && (c_sl_idx + 1 == c_sl_len) && !*c) {
+      continue;
+    }
+
     do {
       if ((*c >= 'a' && *c <= 'z') ||
           (*c >= 'A' && *c <= 'Z') ||
