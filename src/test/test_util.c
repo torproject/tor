@@ -4285,7 +4285,19 @@ test_util_hostname_validation(void *arg)
   // comply with a ~30 year old standard.
   tt_assert(string_is_valid_hostname("core3_euw1.fabrik.nytimes.com"));
 
+  // Firefox passes FQDNs with trailing '.'s  directly to the SOCKS proxy,
+  // which is redundant since the spec states DOMAINNAME addresses are fully
+  // qualified.  While unusual, this should be tollerated.
+  tt_assert(string_is_valid_hostname("core9_euw1.fabrik.nytimes.com."));
+  tt_assert(!string_is_valid_hostname("..washingtonpost.is.better.com"));
+  tt_assert(!string_is_valid_hostname("so.is..ft.com"));
+  tt_assert(!string_is_valid_hostname("..."));
+
   // XXX: do we allow single-label DNS names?
+  // We shouldn't for SOCKS (spec says "contains a fully-qualified domain name"
+  // but only test pathologically malformed traling '.' cases for now.
+  tt_assert(!string_is_valid_hostname("."));
+  tt_assert(!string_is_valid_hostname(".."));
 
   done:
   return;
