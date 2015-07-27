@@ -1,9 +1,9 @@
-Changes in version 0.2.7.2-alpha - 2015-07-2?
+Changes in version 0.2.7.2-alpha - 2015-07-27
   This, the second alpha in the Tor 0.2.7 series, has a number of new
   features, including a way to manually pick the number of introduction
-  points for hidden services, and the much stronger Ed25519
-  signing key algorithm for regular Tor relays (including support for
-  encrypted offline identity keys in the new algorithm).
+  points for hidden services, and the much stronger Ed25519 signing key
+  algorithm for regular Tor relays (including support for encrypted
+  offline identity keys in the new algorithm).
 
   Support for Ed25519 on relays is currently limited to signing router
   descriptors; later alphas in this series will extend Ed25519 key
@@ -31,11 +31,14 @@ Changes in version 0.2.7.2-alpha - 2015-07-2?
   o Major features (Hidden services):
     - Add the torrc option HiddenServiceNumIntroductionPoints, to
       specify a fixed number of introduction points. Its maximum value
-      is 10 and default is 3. Closes ticket 4862.
+      is 10 and default is 3. Using this option can increase a hidden
+      service's reliability under load, at the cost of making it more
+      visible that the hidden service is facing extra load. Closes
+      ticket 4862.
     - Remove the adaptive algorithm for choosing the number of
-      introduction points, which tended to leak popularity information
-      by changing the number of introduction points depending on the
-      number of clients the HS sees. Closes ticket 4862.
+      introduction points, which used to change the number of
+      introduction points (poorly) depending on the number of
+      connections the HS sees. Closes ticket 4862.
 
   o Major features (onion key cross-certification):
     - Relay descriptors now include signatures of their own identity
@@ -67,7 +70,8 @@ Changes in version 0.2.7.2-alpha - 2015-07-2?
       regression detailed in bug 16381). This is a temporary fix since
       we can live with the minor issue in bug 14219 (it just results in
       some load on the network) but the regression of 16381 is too much
-      of a setback. First-round fix for bug 16381; bugfix on 0.2.6.3-alpha.
+      of a setback. First-round fix for bug 16381; bugfix
+      on 0.2.6.3-alpha.
 
   o Major bugfixes (hidden services):
     - When cannibalizing a circuit for an introduction point, always
@@ -99,9 +103,9 @@ Changes in version 0.2.7.2-alpha - 2015-07-2?
     - The HSDir flag given by authorities now requires the Stable flag.
       For the current network, this results in going from 2887 to 2806
       HSDirs. Also, it makes it harder for an attacker to launch a sybil
-      attack by raising the effort for a relay to become Stable to require
-      at the very least 7 days, while maintaining the 96
-      hours uptime requirement for HSDir. Implements ticket 8243.
+      attack by raising the effort for a relay to become Stable to
+      require at the very least 7 days, while maintaining the 96 hours
+      uptime requirement for HSDir. Implements ticket 8243.
 
   o Minor features (client):
     - Relax the validation of hostnames in SOCKS5 requests, allowing the
@@ -217,14 +221,18 @@ Changes in version 0.2.7.2-alpha - 2015-07-2?
 
   o Removed features:
     - Tor no longer supports copies of OpenSSL that are missing support
-      for Elliptic Curve Cryptography. In particular support for at
-      least one of P256 or P224 is now required, with manual
-      configuration needed if only P224 is available. Resolves
-      ticket 16140.
+      for Elliptic Curve Cryptography. (We began using ECC when
+      available in 0.2.4.8-alpha, for more safe and efficient key
+      negotiation.) In particular, support for at least one of P256 or
+      P224 is now required, with manual configuration needed if only
+      P224 is available. Resolves ticket 16140.
     - Tor no longer supports versions of OpenSSL before 1.0. (If you are
       on an operating system that has not upgraded to OpenSSL 1.0 or
       later, and you compile Tor from source, you will need to install a
-      more recent OpenSSL to link Tor against.) Resolves ticket 16034.
+      more recent OpenSSL to link Tor against.) These versions of
+      OpenSSL are still supported by the OpenSSL, but the numerous
+      cryptographic improvements in later OpenSSL releases makes them a
+      clear choice. Resolves ticket 16034.
     - Remove the HidServDirectoryV2 option. Now all relays offer to
       store hidden service descriptors. Related to 16543.
     - Remove the VoteOnHidServDirectoriesV2 option, since all
@@ -232,11 +240,9 @@ Changes in version 0.2.7.2-alpha - 2015-07-2?
 
   o Testing:
     - Document use of coverity, clang static analyzer, and clang dynamic
-      undefined behavior and address sanitizers in doc/HACKING. Add
-      clang dynamic sanitizer blacklist in
-      contrib/clang/sanitizer_blacklist.txt to exempt known undefined
-      behavior. Include detailed usage instructions in the blacklist.
-      Patch by "teor". Closes ticket 15817.
+      undefined behavior and address sanitizers in doc/HACKING. Include
+      detailed usage instructions in the blacklist. Patch by "teor".
+      Closes ticket 15817.
     - The link authentication protocol code now has extensive tests.
     - The relay descriptor signature testing code now has
       extensive tests.
