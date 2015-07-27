@@ -1,10 +1,9 @@
-None
-  Changes in version 0.2.7.2-alpha - 2015-07-27 This, the second alpha
-  in the Tor 0.2.7 series, has a number of new features, including a way
-  to manually pick the number of introduction points for hidden
-  services, and the much stronger Ed25519 signing key algorithm for
-  regular Tor relays (including support for encrypted offline identity
-  keys in the new algorithm).
+Changes in version 0.2.7.2-alpha - 2015-07-27
+  This, the second alpha in the Tor 0.2.7 series, has a number of new
+  features, including a way to manually pick the number of introduction
+  points for hidden services, and the much stronger Ed25519 signing key
+  algorithm for regular Tor relays (including support for encrypted
+  offline identity keys in the new algorithm).
 
   Support for Ed25519 on relays is currently limited to signing router
   descriptors; later alphas in this series will extend Ed25519 key
