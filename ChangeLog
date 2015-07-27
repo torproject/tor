@@ -1,9 +1,10 @@
-Changes in version 0.2.7.2-alpha - 2015-07-27
-  This, the second alpha in the Tor 0.2.7 series, has a number of new
-  features, including a way to manually pick the number of introduction
-  points for hidden services, and the much stronger Ed25519 signing key
-  algorithm for regular Tor relays (including support for encrypted
-  offline identity keys in the new algorithm).
+None
+  Changes in version 0.2.7.2-alpha - 2015-07-27 This, the second alpha
+  in the Tor 0.2.7 series, has a number of new features, including a way
+  to manually pick the number of introduction points for hidden
+  services, and the much stronger Ed25519 signing key algorithm for
+  regular Tor relays (including support for encrypted offline identity
+  keys in the new algorithm).
 
   Support for Ed25519 on relays is currently limited to signing router
   descriptors; later alphas in this series will extend Ed25519 key
@@ -112,6 +113,10 @@ Changes in version 0.2.7.2-alpha - 2015-07-27
       character '_' to appear, in order to cope with domains observed in
       the wild that are serving non-RFC compliant records. Resolves
       ticket 16430.
+    - Relax the validation done to hostnames in SOCKS5 requests, and
+      allow a single trailing '.' to cope with clients that pass FQDNs
+      using that syntax to explicitly indicate that the domain name is
+      fully-qualified. Fixes bug 16674; bugfix on 0.2.6.2-alpha.
     - Add GroupWritable and WorldWritable options to unix-socket based
       SocksPort and ControlPort options. These options apply to a single
       socket, and override {Control,Socks}SocketsGroupWritable. Closes
@@ -187,9 +192,17 @@ Changes in version 0.2.7.2-alpha - 2015-07-27
       code. Fixes bug 16212; bugfix on 0.2.6.2-alpha. Patch by
       Peter Palfrader.
 
+  o Minor bugfixes (relay):
+    - Fix a rarely-encountered memory leak when failing to initialize
+      the thread pool. Fixes bug 16631; bugfix on 0.2.6.3-alpha. Patch
+      from "cypherpunks".
+
   o Minor bugfixes (systemd):
     - Fix an accidental formatting error that broke the systemd
       configuration file. Fixes bug 16152; bugfix on 0.2.7.1-alpha.
+    - Tor's systemd unit file no longer contains extraneous spaces.
+      These spaces would sometimes confuse tools like deb-systemd-
+      helper. Fixes bug 16162; bugfix on 0.2.5.5-alpha.
 
   o Minor bugfixes (tests):
     - Use the configured Python executable when running test-stem-full.
@@ -218,6 +231,14 @@ Changes in version 0.2.7.2-alpha - 2015-07-27
       testability and reliability. It now uses code generated with the
       "trunnel" binary encoding generator, to reduce the risk of bugs
       due to programmer error. Done as part of ticket 12498.
+
+  o Documentation:
+    - Include a specific and (hopefully) accurate documentation of the
+      torrc file's meta-format in doc/torrc_format.txt. This is mainly
+      of interest to people writing programs to parse or generate torrc
+      files. This document is not a commitment to long-term
+      compatibility; some aspects of the current format are a bit
+      ridiculous. Closes ticket 2325.
 
   o Removed features:
     - Tor no longer supports copies of OpenSSL that are missing support

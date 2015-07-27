@@ -1,5 +1,0 @@
-
-  o Minor bugfixes (systemd):
-    - Tor's systemd unit file no longer contains extraneous spaces.
-      These spaces would sometimes confuse tools like deb-systemd-helper.
-      Fixes bug 16162; bugfix on 0.2.5.5-alpha.
