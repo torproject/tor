@@ -21,6 +21,27 @@ do
       export BOOTSTRAP_TIME="$2"
       shift
     ;;
+    # Environmental variables used by chutney verify performance tests
+    # Send this many bytes per client connection (10 KBytes)
+    --data|--data-bytes|--data-byte|--bytes|--byte)
+      export CHUTNEY_DATA_BYTES="$2"
+      shift
+    ;;
+    # Make this many connections per client (1)
+    # Note: If you create 7 or more connections to a hidden service from
+    # a single client, you'll likely get a verification failure due to
+    # https://trac.torproject.org/projects/tor/ticket/15937
+    --connections|--connection|--connection-count|--count)
+      export CHUTNEY_CONNECTIONS="$2"
+      shift
+    ;;
+    # Make each client connect to each HS (0)
+    # 0 means a single client connects to each HS
+    # 1 means every client connects to every HS
+    --hs-multi-client|--hs-multi-clients|--hs-client|--hs-clients)
+      export CHUTNEY_HS_MULTI_CLIENT="$2"
+      shift
+    ;;
     *)
       echo "Sorry, I don't know what to do with '$1'."
       exit 2
