@@ -3215,8 +3215,6 @@ upload_service_descriptor(rend_service_t *service)
 
   rendpostperiod = get_options()->RendPostPeriod;
 
-  /* Upload descriptor? */
-  if (get_options()->PublishHidServDescriptors) {
   networkstatus_t *c = networkstatus_get_latest_consensus();
   if (c && smartlist_len(c->routerstatus_list) > 0) {
     int seconds_valid, i, j, num_descs;
@@ -3258,12 +3256,14 @@ upload_service_descriptor(rend_service_t *service)
         smartlist_free(client_cookies);
         return;
       }
-      /* Post the current descriptors to the hidden service directories. */
       rend_get_service_id(service->desc->pk, serviceid);
-      log_info(LD_REND, "Launching upload for hidden service %s",
-                   serviceid);
-      directory_post_to_hs_dir(service->desc, descs, NULL, serviceid,
-                               seconds_valid);
+      if (get_options()->PublishHidServDescriptors) {
+        /* Post the current descriptors to the hidden service directories. */
+        log_info(LD_REND, "Launching upload for hidden service %s",
+                     serviceid);
+        directory_post_to_hs_dir(service->desc, descs, NULL, serviceid,
+                                 seconds_valid);
+      }
       /* Free memory for descriptors. */
       for (i = 0; i < smartlist_len(descs); i++)
         rend_encoded_v2_service_descriptor_free(smartlist_get(descs, i));
@@ -3291,8 +3291,10 @@ upload_service_descriptor(rend_service_t *service)
           smartlist_free(client_cookies);
           return;
         }
-        directory_post_to_hs_dir(service->desc, descs, NULL, serviceid,
-                                 seconds_valid);
+        if (get_options()->PublishHidServDescriptors) {
+          directory_post_to_hs_dir(service->desc, descs, NULL, serviceid,
+                                   seconds_valid);
+        }
         /* Free memory for descriptors. */
         for (i = 0; i < smartlist_len(descs); i++)
           rend_encoded_v2_service_descriptor_free(smartlist_get(descs, i));
@@ -3302,8 +3304,11 @@ upload_service_descriptor(rend_service_t *service)
     smartlist_free(descs);
     smartlist_free(client_cookies);
     uploaded = 1;
-    log_info(LD_REND, "Successfully uploaded v2 rend descriptors!");
-  }
+    if (get_options()->PublishHidServDescriptors) {
+      log_info(LD_REND, "Successfully uploaded v2 rend descriptors!");
+    } else {
+      log_info(LD_REND, "Successfully stored created v2 rend descriptors!");
+    }
   }
 
   /* If not uploaded, try again in one minute. */
