@@ -1527,7 +1527,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     unsigned int refetch_desc = 0;
     rend_cache_entry_t *entry = NULL;
     const int rend_cache_lookup_result =
-      rend_cache_lookup_entry(rend_data->onion_address, -1, &entry);
+      rend_cache_lookup_entry(rend_data->onion_address, -1, &entry, 0);
     if (rend_cache_lookup_result < 0) {
       switch (-rend_cache_lookup_result) {
       case EINVAL:

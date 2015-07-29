@@ -17,6 +17,9 @@
  * rend_cache_entry_t. */
 static strmap_t *rend_cache = NULL;
 
+/** Map from service id to rend_cache_entry_t; only for hidden services. */
+static strmap_t *rend_cache_service = NULL;
+
 /** Map from descriptor id to rend_cache_entry_t; only for hidden service
  * directories. */
 static digestmap_t *rend_cache_v2_dir = NULL;
@@ -58,6 +61,7 @@ rend_cache_init(void)
 {
   rend_cache = strmap_new();
   rend_cache_v2_dir = digestmap_new();
+  rend_cache_service = strmap_new();
   rend_cache_failure = strmap_new();
 }
 
@@ -465,21 +469,24 @@ rend_cache_clean_v2_descs_as_dir(time_t now, size_t force_remove)
   } while (bytes_removed < force_remove);
 }
 
-/** Lookup in the client cache the given service ID <b>query</b> for
- * <b>version</b>.
+/** Lookup in the client or service cache the given service ID <b>query</b> for
+ * <b>version</b>. The <b>service</b> argument determines if the lookup should
+ * be from the client cache or the service cache.
  *
  * Return 0 if found and if <b>e</b> is non NULL, set it with the entry
  * found. Else, a negative value is returned and <b>e</b> is untouched.
  * -EINVAL means that <b>query</b> is not a valid service id.
  * -ENOENT means that no entry in the cache was found. */
 int
-rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **e)
+rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **e,
+                        int service)
 {
   int ret = 0;
   char key[REND_SERVICE_ID_LEN_BASE32 + 2]; /* <version><query>\0 */
   rend_cache_entry_t *entry = NULL;
   static const int default_version = 2;
 
+  tor_assert(rend_cache_service);
   tor_assert(rend_cache);
   tor_assert(query);
 
@@ -495,15 +502,22 @@ rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **e)
     case 2:
       /* Default is version 2. */
     default:
-      tor_snprintf(key, sizeof(key), "%d%s", default_version, query);
-      entry = strmap_get_lc(rend_cache, key);
+      if(service){
+        entry = strmap_get_lc(rend_cache_service, query);
+      } else {
+        tor_snprintf(key, sizeof(key), "%d%s", default_version, query);
+        entry = strmap_get_lc(rend_cache, key);
+      }
       break;
   }
   if (!entry) {
     ret = -ENOENT;
     goto end;
   }
-  tor_assert(entry->parsed && entry->parsed->intro_nodes);
+  /* Check descriptor is parsed only if lookup is from client cache */
+  if(!service){
+    tor_assert(entry->parsed && entry->parsed->intro_nodes);
+  }
 
   if (e) {
     *e = entry;
@@ -663,6 +677,79 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
   log_info(LD_REND, "Parsed %d and added %d descriptor%s.",
            number_parsed, number_stored, number_stored != 1 ? "s" : "");
   return RCS_OKAY;
+}
+
+/** Parse the v2 service descriptor in <b>desc</b> and store it to the
+* local service rend cache. Don't attempt to decrypt the included list of
+* introduction points.
+*
+* If we have a newer descriptor with the same ID, ignore this one.
+* If we have an older descriptor with the same ID, replace it.
+*
+* Return an appropriate rend_cache_store_status_t.
+*/
+rend_cache_store_status_t
+rend_cache_store_v2_desc_as_service(const char *desc)
+{
+  rend_service_descriptor_t *parsed = NULL;
+  char desc_id[DIGEST_LEN];
+  char *intro_content = NULL;
+  size_t intro_size;
+  size_t encoded_size;
+  const char *next_desc;
+  char service_id[REND_SERVICE_ID_LEN_BASE32+1];
+  rend_cache_entry_t *e;
+  rend_cache_store_status_t retval = RCS_BADDESC;
+  tor_assert(rend_cache_service);
+  tor_assert(desc);
+
+  /* Parse the descriptor. */
+  if (rend_parse_v2_service_descriptor(&parsed, desc_id, &intro_content,
+                                       &intro_size, &encoded_size,
+                                       &next_desc, desc, 0) < 0) {
+    log_warn(LD_REND, "Could not parse descriptor.");
+    goto err;
+  }
+  /* Compute service ID from public key. */
+  if (rend_get_service_id(parsed->pk, service_id)<0) {
+    log_warn(LD_REND, "Couldn't compute service ID.");
+    goto err;
+  }
+  /* We don't care about the introduction points. */
+  tor_free(intro_content);
+
+  /* Do we already have a newer descriptor? Allow new descriptors with a
+     rounded timestamp equal to or newer than the current descriptor */
+  e = (rend_cache_entry_t*) strmap_get_lc(rend_cache_service, service_id);
+  if (e && e->parsed->timestamp > parsed->timestamp) {
+    log_info(LD_REND, "We already have a newer service descriptor for "
+             "service ID %s.", safe_str_client(service_id));
+    goto okay;
+  }
+  if (!e) {
+    e = tor_malloc_zero(sizeof(rend_cache_entry_t));
+    strmap_set_lc(rend_cache_service, service_id, e);
+  } else {
+    rend_cache_decrement_allocation(rend_cache_entry_allocation(e));
+    rend_service_descriptor_free(e->parsed);
+    tor_free(e->desc);
+  }
+  e->parsed = parsed;
+  e->desc = tor_malloc_zero(encoded_size + 1);
+  strlcpy(e->desc, desc, encoded_size + 1);
+  e->len = encoded_size;
+  rend_cache_increment_allocation(rend_cache_entry_allocation(e));
+  log_debug(LD_REND,"Successfully stored rend desc '%s', len %d.",
+            safe_str_client(service_id), (int)encoded_size);
+  return RCS_OKAY;
+
+ okay:
+  retval = RCS_OKAY;
+
+ err:
+  rend_service_descriptor_free(parsed);
+  tor_free(intro_content);
+  return retval;
 }
 
 /** Parse the v2 service descriptor in <b>desc</b>, decrypt the included list
