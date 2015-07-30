@@ -1007,7 +1007,7 @@ directory_all_unreachable(time_t now)
     connection_mark_unattached_ap(entry_conn,
                                   END_STREAM_REASON_NET_UNREACHABLE);
   }
-  control_event_general_status(LOG_ERR, "DIR_ALL_UNREACHABLE");
+  control_event_general_error("DIR_ALL_UNREACHABLE");
 }
 
 /** This function is called whenever we successfully pull down some new

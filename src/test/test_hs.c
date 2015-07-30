@@ -102,13 +102,11 @@ static char *received_msg = NULL;
 /** Mock function for send_control_event_string
  */
 static void
-send_control_event_string_replacement(uint16_t event, event_format_t which,
-                                      const char *msg)
+queue_control_event_string_replacement(uint16_t event, char *msg)
 {
   (void) event;
-  (void) which;
   tor_free(received_msg);
-  received_msg = tor_strdup(msg);
+  received_msg = msg;
 }
 
 /** Mock function for node_describe_longname_by_id, it returns either
@@ -141,8 +139,8 @@ test_hs_desc_event(void *arg)
   char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
 
   (void) arg;
-  MOCK(send_control_event_string,
-       send_control_event_string_replacement);
+  MOCK(queue_control_event_string,
+       queue_control_event_string_replacement);
   MOCK(node_describe_longname_by_id,
        node_describe_longname_by_id_replacement);
 
@@ -225,7 +223,7 @@ test_hs_desc_event(void *arg)
   smartlist_free(rend_query.hsdirs_fp);
 
  done:
-  UNMOCK(send_control_event_string);
+  UNMOCK(queue_control_event_string);
   UNMOCK(node_describe_longname_by_id);
   tor_free(received_msg);
 }

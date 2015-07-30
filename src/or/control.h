@@ -78,6 +78,14 @@ int control_event_client_status(int severity, const char *format, ...)
   CHECK_PRINTF(2,3);
 int control_event_server_status(int severity, const char *format, ...)
   CHECK_PRINTF(2,3);
+
+int control_event_general_error(const char *format, ...)
+  CHECK_PRINTF(1,2);
+int control_event_client_error(const char *format, ...)
+  CHECK_PRINTF(1,2);
+int control_event_server_error(const char *format, ...)
+  CHECK_PRINTF(1,2);
+
 int control_event_guard(const char *nickname, const char *digest,
                         const char *status);
 int control_event_conf_changed(const smartlist_t *elements);
@@ -215,6 +223,8 @@ typedef int event_format_t;
 MOCK_DECL(STATIC void,
 send_control_event_string,(uint16_t event, event_format_t which,
                            const char *msg));
+MOCK_DECL(STATIC void,
+          queue_control_event_string,(uint16_t event, char *msg));
 
 void control_testing_set_global_event_mask(uint64_t mask);
 #endif
