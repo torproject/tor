@@ -3,6 +3,8 @@
  * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+#ifdef _WIN32
+
 #include "or.h"
 #include "config.h"
 #include "main.h"
@@ -763,4 +765,6 @@ nt_service_parse_options(int argc, char **argv, int *should_exit)
   *should_exit = 0;
   return 0;
 }
+
+#endif
 

@@ -3,6 +3,8 @@
  * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+#ifdef _WIN32
+
 #include "compat.h"
 #include <windows.h>
 #include <process.h>
@@ -193,4 +195,6 @@ tor_threads_init(void)
 {
   set_main_thread();
 }
+
+#endif
 
