@@ -117,17 +117,17 @@ static char last_sent_bootstrap_message[BOOTSTRAP_MSG_LEN];
 static void connection_printf_to_buf(control_connection_t *conn,
                                      const char *format, ...)
   CHECK_PRINTF(2,3);
-static void send_control_event_impl(uint16_t event, event_format_t which,
+static void send_control_event_impl(uint16_t event,
                                     const char *format, va_list ap)
-  CHECK_PRINTF(3,0);
+  CHECK_PRINTF(2,0);
 static int control_event_status(int type, int severity, const char *format,
                                 va_list args)
   CHECK_PRINTF(3,0);
 
 static void send_control_done(control_connection_t *conn);
-static void send_control_event(uint16_t event, event_format_t which,
+static void send_control_event(uint16_t event,
                                const char *format, ...)
-  CHECK_PRINTF(3,4);
+  CHECK_PRINTF(2,3);
 static int handle_control_setconf(control_connection_t *conn, uint32_t len,
                                   char *body);
 static int handle_control_resetconf(control_connection_t *conn, uint32_t len,
@@ -740,18 +740,12 @@ flush_queued_events_cb(evutil_socket_t fd, short what, void *arg)
 /** Send an event to all v1 controllers that are listening for code
  * <b>event</b>.  The event's body is given by <b>msg</b>.
  *
- * If <b>which</b> & SHORT_NAMES, the event contains short-format names: send
- * it to controllers that haven't enabled the VERBOSE_NAMES feature.  If
- * <b>which</b> & LONG_NAMES, the event contains long-format names: send it
- * to controllers that <em>have</em> enabled VERBOSE_NAMES.
- *
  * The EXTENDED_FORMAT and NONEXTENDED_FORMAT flags behave similarly with
  * respect to the EXTENDED_EVENTS feature. */
 MOCK_IMPL(STATIC void,
-send_control_event_string,(uint16_t event, event_format_t which,
+send_control_event_string,(uint16_t event,
                            const char *msg))
 {
-  (void) which;
   tor_assert(event >= EVENT_MIN_ && event <= EVENT_MAX_);
   queue_control_event_string(event, tor_strdup(msg));
 }
@@ -761,11 +755,9 @@ send_control_event_string,(uint16_t event, event_format_t which,
  * <b>event</b>.  The event's body is created by the printf-style format in
  * <b>format</b>, and other arguments as provided. */
 static void
-send_control_event_impl(uint16_t event, event_format_t which,
-                         const char *format, va_list ap)
+send_control_event_impl(uint16_t event,
+                        const char *format, va_list ap)
 {
-  (void) which;
-
   char *buf = NULL;
   int len;
 
@@ -782,12 +774,12 @@ send_control_event_impl(uint16_t event, event_format_t which,
  * <b>event</b>.  The event's body is created by the printf-style format in
  * <b>format</b>, and other arguments as provided. */
 static void
-send_control_event(uint16_t event, event_format_t which,
+send_control_event(uint16_t event,
                    const char *format, ...)
 {
   va_list ap;
   va_start(ap, format);
-  send_control_event_impl(event, which, format, ap);
+  send_control_event_impl(event, format, ap);
   va_end(ap);
 }
 
@@ -4425,7 +4417,7 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
   {
     char *circdesc = circuit_describe_status_for_controller(circ);
     const char *sp = strlen(circdesc) ? " " : "";
-    send_control_event(EVENT_CIRCUIT_STATUS, ALL_FORMATS,
+    send_control_event(EVENT_CIRCUIT_STATUS,
                                 "650 CIRC %lu %s%s%s%s\r\n",
                                 (unsigned long)circ->global_identifier,
                                 status, sp,
@@ -4496,7 +4488,7 @@ control_event_circuit_status_minor(origin_circuit_t *circ,
   {
     char *circdesc = circuit_describe_status_for_controller(circ);
     const char *sp = strlen(circdesc) ? " " : "";
-    send_control_event(EVENT_CIRCUIT_STATUS_MINOR, ALL_FORMATS,
+    send_control_event(EVENT_CIRCUIT_STATUS_MINOR,
                        "650 CIRC_MINOR %lu %s%s%s%s\r\n",
                        (unsigned long)circ->global_identifier,
                        event_desc, sp,
@@ -4671,7 +4663,7 @@ control_event_stream_status(entry_connection_t *conn, stream_status_event_t tp,
   circ = circuit_get_by_edge_conn(ENTRY_TO_EDGE_CONN(conn));
   if (circ && CIRCUIT_IS_ORIGIN(circ))
     origin_circ = TO_ORIGIN_CIRCUIT(circ);
-  send_control_event(EVENT_STREAM_STATUS, ALL_FORMATS,
+  send_control_event(EVENT_STREAM_STATUS,
                         "650 STREAM "U64_FORMAT" %s %lu %s%s%s%s\r\n",
                      U64_PRINTF_ARG(ENTRY_TO_CONN(conn)->global_identifier),
                      status,
@@ -4743,7 +4735,7 @@ control_event_or_conn_status(or_connection_t *conn, or_conn_status_event_t tp,
   }
 
   orconn_target_get_name(name, sizeof(name), conn);
-  send_control_event(EVENT_OR_CONN_STATUS, ALL_FORMATS,
+  send_control_event(EVENT_OR_CONN_STATUS,
                               "650 ORCONN %s %s%s%s%s ID="U64_FORMAT"\r\n",
                               name, status,
                               reason ? " REASON=" : "",
@@ -4766,7 +4758,7 @@ control_event_stream_bandwidth(edge_connection_t *edge_conn)
     if (!edge_conn->n_read && !edge_conn->n_written)
       return 0;
 
-    send_control_event(EVENT_STREAM_BANDWIDTH_USED, ALL_FORMATS,
+    send_control_event(EVENT_STREAM_BANDWIDTH_USED,
                        "650 STREAM_BW "U64_FORMAT" %lu %lu\r\n",
                        U64_PRINTF_ARG(edge_conn->base_.global_identifier),
                        (unsigned long)edge_conn->n_read,
@@ -4801,7 +4793,7 @@ control_event_stream_bandwidth_used(void)
         if (!edge_conn->n_read && !edge_conn->n_written)
           continue;
 
-        send_control_event(EVENT_STREAM_BANDWIDTH_USED, ALL_FORMATS,
+        send_control_event(EVENT_STREAM_BANDWIDTH_USED,
                            "650 STREAM_BW "U64_FORMAT" %lu %lu\r\n",
                            U64_PRINTF_ARG(edge_conn->base_.global_identifier),
                            (unsigned long)edge_conn->n_read,
@@ -4830,7 +4822,7 @@ control_event_circ_bandwidth_used(void)
     ocirc = TO_ORIGIN_CIRCUIT(circ);
     if (!ocirc->n_read_circ_bw && !ocirc->n_written_circ_bw)
       continue;
-    send_control_event(EVENT_CIRC_BANDWIDTH_USED, ALL_FORMATS,
+    send_control_event(EVENT_CIRC_BANDWIDTH_USED,
                        "650 CIRC_BW ID=%d READ=%lu WRITTEN=%lu\r\n",
                        ocirc->global_identifier,
                        (unsigned long)ocirc->n_read_circ_bw,
@@ -4866,7 +4858,7 @@ control_event_conn_bandwidth(connection_t *conn)
     default:
       return 0;
   }
-  send_control_event(EVENT_CONN_BW, ALL_FORMATS,
+  send_control_event(EVENT_CONN_BW,
                      "650 CONN_BW ID="U64_FORMAT" TYPE=%s "
                      "READ=%lu WRITTEN=%lu\r\n",
                      U64_PRINTF_ARG(conn->global_identifier),
@@ -5013,7 +5005,7 @@ control_event_circuit_cell_stats(void)
       continue;
     sum_up_cell_stats_by_command(circ, cell_stats);
     format_cell_stats(&event_string, circ, cell_stats);
-    send_control_event(EVENT_CELL_STATS, ALL_FORMATS,
+    send_control_event(EVENT_CELL_STATS,
                        "650 CELL_STATS %s\r\n", event_string);
     tor_free(event_string);
   }
@@ -5035,7 +5027,7 @@ control_event_tb_empty(const char *bucket, uint32_t read_empty_time,
   if (get_options()->TestingEnableTbEmptyEvent &&
       EVENT_IS_INTERESTING(EVENT_TB_EMPTY) &&
       (read_empty_time > 0 || write_empty_time > 0)) {
-    send_control_event(EVENT_TB_EMPTY, ALL_FORMATS,
+    send_control_event(EVENT_TB_EMPTY,
                        "650 TB_EMPTY %s READ=%d WRITTEN=%d "
                        "LAST=%d\r\n",
                        bucket, read_empty_time, write_empty_time,
@@ -5068,7 +5060,7 @@ control_event_bandwidth_used(uint32_t n_read, uint32_t n_written)
     ++n_measurements;
 
   if (EVENT_IS_INTERESTING(EVENT_BANDWIDTH_USED)) {
-    send_control_event(EVENT_BANDWIDTH_USED, ALL_FORMATS,
+    send_control_event(EVENT_BANDWIDTH_USED,
                        "650 BW %lu %lu\r\n",
                        (unsigned long)n_read,
                        (unsigned long)n_written);
@@ -5167,7 +5159,7 @@ control_event_logmsg(int severity, uint32_t domain, const char *msg)
       default: s = "UnknownLogSeverity"; break;
     }
     ++disable_log_messages;
-    send_control_event(event, ALL_FORMATS, "650 %s %s\r\n", s, b?b:msg);
+    send_control_event(event,  "650 %s %s\r\n", s, b?b:msg);
     if (severity == LOG_ERR) {
       /* Force a flush, since we may be about to die horribly */
       queued_events_flush_all(1);
@@ -5199,7 +5191,7 @@ control_event_descriptors_changed(smartlist_t *routers)
       });
     ids = smartlist_join_strings(names, " ", 0, NULL);
     tor_asprintf(&msg, "650 NEWDESC %s\r\n", ids);
-    send_control_event_string(EVENT_NEW_DESC, ALL_FORMATS, msg);
+    send_control_event_string(EVENT_NEW_DESC,  msg);
     tor_free(ids);
     tor_free(msg);
     SMARTLIST_FOREACH(names, char *, cp, tor_free(cp));
@@ -5221,7 +5213,7 @@ control_event_address_mapped(const char *from, const char *to, time_t expires,
     return 0;
 
   if (expires < 3 || expires == TIME_MAX)
-    send_control_event(EVENT_ADDRMAP, ALL_FORMATS,
+    send_control_event(EVENT_ADDRMAP,
                                 "650 ADDRMAP %s %s NEVER %s%s"
                                 "CACHED=\"%s\"\r\n",
                                   from, to, error?error:"", error?" ":"",
@@ -5231,7 +5223,7 @@ control_event_address_mapped(const char *from, const char *to, time_t expires,
     char buf2[ISO_TIME_LEN+1];
     format_local_iso_time(buf,expires);
     format_iso_time(buf2,expires);
-    send_control_event(EVENT_ADDRMAP, ALL_FORMATS,
+    send_control_event(EVENT_ADDRMAP,
                                 "650 ADDRMAP %s %s \"%s\""
                                 " %s%sEXPIRES=\"%s\" CACHED=\"%s\"\r\n",
                                 from, to, buf,
@@ -5273,9 +5265,9 @@ control_event_or_authdir_new_descriptor(const char *action,
   buf = tor_malloc(totallen);
   strlcpy(buf, firstline, totallen);
   strlcpy(buf+strlen(firstline), esc, totallen);
-  send_control_event_string(EVENT_AUTHDIR_NEWDESCS, ALL_FORMATS,
+  send_control_event_string(EVENT_AUTHDIR_NEWDESCS,
                             buf);
-  send_control_event_string(EVENT_AUTHDIR_NEWDESCS, ALL_FORMATS,
+  send_control_event_string(EVENT_AUTHDIR_NEWDESCS,
                             "650 OK\r\n");
   tor_free(esc);
   tor_free(buf);
@@ -5311,7 +5303,7 @@ control_event_network_liveness_update(int liveness)
       /* Update cached liveness */
       set_cached_network_liveness(1);
       log_debug(LD_CONTROL, "Sending NETWORK_LIVENESS UP");
-      send_control_event_string(EVENT_NETWORK_LIVENESS, ALL_FORMATS,
+      send_control_event_string(EVENT_NETWORK_LIVENESS,
                                 "650 NETWORK_LIVENESS UP\r\n");
     }
     /* else was already live, no-op */
@@ -5320,7 +5312,7 @@ control_event_network_liveness_update(int liveness)
       /* Update cached liveness */
       set_cached_network_liveness(0);
       log_debug(LD_CONTROL, "Sending NETWORK_LIVENESS DOWN");
-      send_control_event_string(EVENT_NETWORK_LIVENESS, ALL_FORMATS,
+      send_control_event_string(EVENT_NETWORK_LIVENESS,
                                 "650 NETWORK_LIVENESS DOWN\r\n");
     }
     /* else was already dead, no-op */
@@ -5359,8 +5351,8 @@ control_event_networkstatus_changed_helper(smartlist_t *statuses,
   SMARTLIST_FOREACH(strs, char *, cp, tor_free(cp));
   smartlist_free(strs);
   tor_free(s);
-  send_control_event_string(event, ALL_FORMATS, esc);
-  send_control_event_string(event, ALL_FORMATS,
+  send_control_event_string(event,  esc);
+  send_control_event_string(event,
                             "650 OK\r\n");
 
   tor_free(esc);
@@ -5417,7 +5409,7 @@ control_event_buildtimeout_set(buildtimeout_set_event_t type,
       break;
   }
 
-  send_control_event(EVENT_BUILDTIMEOUT_SET, ALL_FORMATS,
+  send_control_event(EVENT_BUILDTIMEOUT_SET,
                      "650 BUILDTIMEOUT_SET %s %s\r\n",
                      type_string, args);
 
@@ -5458,7 +5450,7 @@ control_event_signal(uintptr_t signal)
       return -1;
   }
 
-  send_control_event(EVENT_SIGNAL, ALL_FORMATS, "650 SIGNAL %s\r\n",
+  send_control_event(EVENT_SIGNAL,  "650 SIGNAL %s\r\n",
                      signal_string);
   return 0;
 }
@@ -5486,7 +5478,7 @@ control_event_networkstatus_changed_single(const routerstatus_t *rs)
 int
 control_event_my_descriptor_changed(void)
 {
-  send_control_event(EVENT_DESCCHANGED, ALL_FORMATS, "650 DESCCHANGED\r\n");
+  send_control_event(EVENT_DESCCHANGED,  "650 DESCCHANGED\r\n");
   return 0;
 }
 
@@ -5536,7 +5528,7 @@ control_event_status(int type, int severity, const char *format, va_list args)
   }
   tor_vasprintf(&user_buf, format, args);
 
-  send_control_event(type, ALL_FORMATS, "%s %s\r\n", format_buf, user_buf);
+  send_control_event(type,  "%s %s\r\n", format_buf, user_buf);
   tor_free(user_buf);
   return 0;
 }
@@ -5633,7 +5625,7 @@ control_event_guard(const char *nickname, const char *digest,
     } else {
       tor_snprintf(buf, sizeof(buf), "$%s~%s", hbuf, nickname);
     }
-    send_control_event(EVENT_GUARD, ALL_FORMATS,
+    send_control_event(EVENT_GUARD,
                        "650 GUARD ENTRY %s %s\r\n", buf, status);
   }
   return 0;
@@ -5664,7 +5656,7 @@ control_event_conf_changed(const smartlist_t *elements)
     }
   }
   result = smartlist_join_strings(lines, "\r\n", 0, NULL);
-  send_control_event(EVENT_CONF_CHANGED, 0,
+  send_control_event(EVENT_CONF_CHANGED,
     "650-CONF_CHANGED\r\n%s\r\n650 OK\r\n", result);
   tor_free(result);
   SMARTLIST_FOREACH(lines, char *, cp, tor_free(cp));
@@ -6056,7 +6048,7 @@ MOCK_IMPL(void,
 void
 control_event_clients_seen(const char *controller_str)
 {
-  send_control_event(EVENT_CLIENTS_SEEN, 0,
+  send_control_event(EVENT_CLIENTS_SEEN,
     "650 CLIENTS_SEEN %s\r\n", controller_str);
 }
 
@@ -6070,7 +6062,7 @@ void
 control_event_transport_launched(const char *mode, const char *transport_name,
                                  tor_addr_t *addr, uint16_t port)
 {
-  send_control_event(EVENT_TRANSPORT_LAUNCHED, ALL_FORMATS,
+  send_control_event(EVENT_TRANSPORT_LAUNCHED,
                      "650 TRANSPORT_LAUNCHED %s %s %s %u\r\n",
                      mode, transport_name, fmt_addr(addr), port);
 }
@@ -6155,7 +6147,7 @@ control_event_hs_descriptor_requested(const rend_data_t *rend_query,
     return;
   }
 
-  send_control_event(EVENT_HS_DESC, ALL_FORMATS,
+  send_control_event(EVENT_HS_DESC,
                      "650 HS_DESC REQUESTED %s %s %s %s\r\n",
                      rend_hsaddress_str_or_unknown(rend_query->onion_address),
                      rend_auth_type_to_string(rend_query->auth_type),
@@ -6219,7 +6211,7 @@ control_event_hs_descriptor_upload(const char *service_id,
     return;
   }
 
-  send_control_event(EVENT_HS_DESC, ALL_FORMATS,
+  send_control_event(EVENT_HS_DESC,
                      "650 HS_DESC UPLOAD %s UNKNOWN %s %s\r\n",
                      service_id,
                      node_describe_longname_by_id(id_digest),
@@ -6266,7 +6258,7 @@ control_event_hs_descriptor_receive_end(const char *action,
     tor_asprintf(&reason_field, " REASON=%s", reason);
   }
 
-  send_control_event(EVENT_HS_DESC, ALL_FORMATS,
+  send_control_event(EVENT_HS_DESC,
                      "650 HS_DESC %s %s %s %s%s%s\r\n",
                      action,
                      rend_hsaddress_str_or_unknown(onion_address),
@@ -6304,7 +6296,7 @@ control_event_hs_descriptor_upload_end(const char *action,
     tor_asprintf(&reason_field, " REASON=%s", reason);
   }
 
-  send_control_event(EVENT_HS_DESC, ALL_FORMATS,
+  send_control_event(EVENT_HS_DESC,
                      "650 HS_DESC %s UNKNOWN UNKNOWN %s%s\r\n",
                      action,
                      node_describe_longname_by_id(id_digest),
@@ -6389,7 +6381,7 @@ control_event_hs_descriptor_content(const char *onion_address,
   }
   write_escaped_data(content, strlen(content), &esc_content);
 
-  send_control_event(EVENT_HS_DESC_CONTENT, ALL_FORMATS,
+  send_control_event(EVENT_HS_DESC_CONTENT,
                      "650+%s %s %s %s\r\n%s650 OK\r\n",
                      event_name,
                      rend_hsaddress_str_or_unknown(onion_address),
@@ -6446,4 +6438,3 @@ control_testing_set_global_event_mask(uint64_t mask)
   global_event_mask = mask;
 }
 #endif
-

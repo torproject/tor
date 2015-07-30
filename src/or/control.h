@@ -211,18 +211,11 @@ void control_free_all(void);
 /* Used only by control.c and test.c */
 STATIC size_t write_escaped_data(const char *data, size_t len, char **out);
 STATIC size_t read_escaped_data(const char *data, size_t len, char **out);
-/** Flag for event_format_t.  Indicates that we should use the one standard
-    format.  (Other formats previous existed, and are now deprecated)
- */
-#define ALL_FORMATS 1
-/** Bit field of flags to select how to format a controller event.  Recognized
- * flag is ALL_FORMATS. */
-typedef int event_format_t;
 
 #ifdef TOR_UNIT_TESTS
 MOCK_DECL(STATIC void,
-send_control_event_string,(uint16_t event, event_format_t which,
-                           const char *msg));
+          send_control_event_string,(uint16_t event, const char *msg));
+
 MOCK_DECL(STATIC void,
           queue_control_event_string,(uint16_t event, char *msg));
 
