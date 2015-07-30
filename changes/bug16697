@@ -1,0 +1,10 @@
+  o Minor bugfixes
+    - Control port was using set_max_file_descriptors() with a limit set to
+      0 to get the max value. A recent fix made this use case return an
+      error and introduced dead code in that function. This triggered a
+      warning that our limit (ConnLimit) was invalid but in reality it was
+      not.
+      
+      Now, to the control port uses a specific getter function to query the
+      value and set_max_file_descriptors() should never be used again for
+      that purpose. Fixes #16697; bugfix on 0.2.7.2-alpha.

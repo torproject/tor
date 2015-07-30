@@ -1589,6 +1589,13 @@ tor_ersatz_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
 }
 #endif
 
+/* Return the maximum number of allowed sockets. */
+int
+get_max_sockets(void)
+{
+  return max_sockets;
+}
+
 /** Number of extra file descriptors to keep in reserve beyond those that we
  * tell Tor it's allowed to use. */
 #define ULIMIT_BUFFER 32 /* keep 32 extra fd's beyond ConnLimit_ */
@@ -1600,8 +1607,6 @@ tor_ersatz_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
  * We compute this by finding the largest number that we can use.
  * If we can't find a number greater than or equal to <b>limit</b>,
  * then we fail: return -1.
- *
- * If <b>limit</b> is 0, then do not adjust the current maximum.
  *
  * Otherwise, return 0 and store the maximum we found inside <b>max_out</b>.*/
 int
@@ -1646,17 +1651,6 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
     log_warn(LD_NET, "Could not get maximum number of file descriptors: %s",
              strerror(errno));
     return -1;
-  }
-  if (limit == 0) {
-    /* XXXX DEAD CODE We can't reach this point, since the first "if" in this
-     * function increases limit if it started out less than ULIMIT_BUFFER */
-
-    /* If limit == 0, return the maximum value without setting it. */
-    limit = rlim.rlim_max;
-    if (limit > INT_MAX)
-      limit = INT_MAX;
-    *max_out = max_sockets = (int)limit - ULIMIT_BUFFER;
-    return 0;
   }
   if (rlim.rlim_max < limit) {
     log_warn(LD_CONFIG,"We need %lu file descriptors available, and we're "

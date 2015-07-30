@@ -617,6 +617,7 @@ set_uint8(void *cp, uint8_t v)
 #if !defined(HAVE_RLIM_T)
 typedef unsigned long rlim_t;
 #endif
+int get_max_sockets(void);
 int set_max_file_descriptors(rlim_t limit, int *max);
 int tor_disable_debugger_attach(void);
 int switch_id(const char *user);

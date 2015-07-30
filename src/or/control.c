@@ -1541,8 +1541,7 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
       }
     #endif
   } else if (!strcmp(question, "process/descriptor-limit")) {
-    int max_fds=-1;
-    set_max_file_descriptors(0, &max_fds);
+    int max_fds = get_max_sockets();
     tor_asprintf(answer, "%d", max_fds);
   } else if (!strcmp(question, "limits/max-mem-in-queues")) {
     tor_asprintf(answer, U64_FORMAT,
