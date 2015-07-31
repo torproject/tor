@@ -278,26 +278,6 @@ struct smartlist_t;
 void *smartlist_choose(const struct smartlist_t *sl);
 void smartlist_shuffle(struct smartlist_t *sl);
 
-#define BASE64_ENCODE_MULTILINE 1
-size_t base64_encode_size(size_t srclen, int flags);
-int base64_encode(char *dest, size_t destlen, const char *src, size_t srclen,
-                  int flags);
-int base64_decode(char *dest, size_t destlen, const char *src, size_t srclen);
-int base64_encode_nopad(char *dest, size_t destlen,
-                        const uint8_t *src, size_t srclen);
-int base64_decode_nopad(uint8_t *dest, size_t destlen,
-                        const char *src, size_t srclen);
-
-/** Characters that can appear (case-insensitively) in a base32 encoding. */
-#define BASE32_CHARS "abcdefghijklmnopqrstuvwxyz234567"
-void base32_encode(char *dest, size_t destlen, const char *src, size_t srclen);
-int base32_decode(char *dest, size_t destlen, const char *src, size_t srclen);
-
-int digest_to_base64(char *d64, const char *digest);
-int digest_from_base64(char *digest, const char *d64);
-int digest256_to_base64(char *d64, const char *digest);
-int digest256_from_base64(char *digest, const char *d64);
-
 /** OpenSSL-based utility functions. */
 void memwipe(void *mem, uint8_t byte, size_t sz);
 

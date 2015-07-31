@@ -37,6 +37,7 @@
 
 #include "compat.h"
 #include "util.h"
+#include "util_format.h"
 #include "address.h"
 #include "torlog.h"
 #include "container.h"

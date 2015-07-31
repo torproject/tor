@@ -27,6 +27,7 @@
 #include "sandbox.h"
 #include "backtrace.h"
 #include "util_process.h"
+#include "util_format.h"
 
 #ifdef _WIN32
 #include <io.h>
@@ -1209,91 +1210,6 @@ tor_parse_uint64(const char *s, int base, uint64_t min,
 #endif
 
   CHECK_STRTOX_RESULT();
-}
-
-/** Encode the <b>srclen</b> bytes at <b>src</b> in a NUL-terminated,
- * uppercase hexadecimal string; store it in the <b>destlen</b>-byte buffer
- * <b>dest</b>.
- */
-void
-base16_encode(char *dest, size_t destlen, const char *src, size_t srclen)
-{
-  const char *end;
-  char *cp;
-
-  tor_assert(destlen >= srclen*2+1);
-  tor_assert(destlen < SIZE_T_CEILING);
-
-  cp = dest;
-  end = src+srclen;
-  while (src<end) {
-    *cp++ = "0123456789ABCDEF"[ (*(const uint8_t*)src) >> 4 ];
-    *cp++ = "0123456789ABCDEF"[ (*(const uint8_t*)src) & 0xf ];
-    ++src;
-  }
-  *cp = '\0';
-}
-
-/** Helper: given a hex digit, return its value, or -1 if it isn't hex. */
-static INLINE int
-hex_decode_digit_(char c)
-{
-  switch (c) {
-    case '0': return 0;
-    case '1': return 1;
-    case '2': return 2;
-    case '3': return 3;
-    case '4': return 4;
-    case '5': return 5;
-    case '6': return 6;
-    case '7': return 7;
-    case '8': return 8;
-    case '9': return 9;
-    case 'A': case 'a': return 10;
-    case 'B': case 'b': return 11;
-    case 'C': case 'c': return 12;
-    case 'D': case 'd': return 13;
-    case 'E': case 'e': return 14;
-    case 'F': case 'f': return 15;
-    default:
-      return -1;
-  }
-}
-
-/** Helper: given a hex digit, return its value, or -1 if it isn't hex. */
-int
-hex_decode_digit(char c)
-{
-  return hex_decode_digit_(c);
-}
-
-/** Given a hexadecimal string of <b>srclen</b> bytes in <b>src</b>, decode it
- * and store the result in the <b>destlen</b>-byte buffer at <b>dest</b>.
- * Return 0 on success, -1 on failure. */
-int
-base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
-{
-  const char *end;
-
-  int v1,v2;
-  if ((srclen % 2) != 0)
-    return -1;
-  if (destlen < srclen/2 || destlen > SIZE_T_CEILING)
-    return -1;
-
-  memset(dest, 0, destlen);
-
-  end = src+srclen;
-  while (src<end) {
-    v1 = hex_decode_digit_(*src);
-    v2 = hex_decode_digit_(*(src+1));
-    if (v1<0||v2<0)
-      return -1;
-    *(uint8_t*)dest = (v1<<4)|v2;
-    ++dest;
-    src+=2;
-  }
-  return 0;
 }
 
 /** Allocate and return a new string representing the contents of <b>s</b>,

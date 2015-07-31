@@ -32,6 +32,7 @@
 #include "torlog.h"
 #include "crypto.h"
 #include "address.h"
+#include "util_format.h"
 
 #define IDENTITY_KEY_BITS 3072
 #define SIGNING_KEY_BITS 2048

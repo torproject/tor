@@ -264,10 +264,6 @@ void smartlist_add_vasprintf(struct smartlist_t *sl, const char *pattern,
                              va_list args)
   CHECK_PRINTF(2, 0);
 
-int hex_decode_digit(char c);
-void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen);
-int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen);
-
 /* Time helpers */
 long tv_udiff(const struct timeval *start, const struct timeval *end);
 long tv_mdiff(const struct timeval *start, const struct timeval *end);

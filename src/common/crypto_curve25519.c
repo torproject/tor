@@ -11,6 +11,7 @@
 #include "container.h"
 #include "crypto.h"
 #include "crypto_curve25519.h"
+#include "crypto_format.h"
 #include "util.h"
 #include "torlog.h"
 
@@ -158,106 +159,6 @@ curve25519_keypair_generate(curve25519_keypair_t *keypair_out,
     return -1;
   curve25519_public_key_generate(&keypair_out->pubkey, &keypair_out->seckey);
   return 0;
-}
-
-/** Write the <b>datalen</b> bytes from <b>data</b> to the file named
- * <b>fname</b> in the tagged-data format.  This format contains a
- * 32-byte header, followed by the data itself.  The header is the
- * NUL-padded string "== <b>typestring</b>: <b>tag</b> ==".  The length
- * of <b>typestring</b> and <b>tag</b> must therefore be no more than
- * 24.
- **/
-int
-crypto_write_tagged_contents_to_file(const char *fname,
-                                     const char *typestring,
-                                     const char *tag,
-                                     const uint8_t *data,
-                                     size_t datalen)
-{
-  char header[32];
-  smartlist_t *chunks = smartlist_new();
-  sized_chunk_t ch0, ch1;
-  int r = -1;
-
-  memset(header, 0, sizeof(header));
-  if (tor_snprintf(header, sizeof(header),
-                   "== %s: %s ==", typestring, tag) < 0)
-    goto end;
-  ch0.bytes = header;
-  ch0.len = 32;
-  ch1.bytes = (const char*) data;
-  ch1.len = datalen;
-  smartlist_add(chunks, &ch0);
-  smartlist_add(chunks, &ch1);
-
-  r = write_chunks_to_file(fname, chunks, 1, 0);
-
- end:
-  smartlist_free(chunks);
-  return r;
-}
-
-/** Read a tagged-data file from <b>fname</b> into the
- * <b>data_out_len</b>-byte buffer in <b>data_out</b>. Check that the
- * typestring matches <b>typestring</b>; store the tag into a newly allocated
- * string in <b>tag_out</b>. Return -1 on failure, and the number of bytes of
- * data on success.  Preserves the errno from reading the file. */
-ssize_t
-crypto_read_tagged_contents_from_file(const char *fname,
-                                      const char *typestring,
-                                      char **tag_out,
-                                      uint8_t *data_out,
-                                      ssize_t data_out_len)
-{
-  char prefix[33];
-  char *content = NULL;
-  struct stat st;
-  ssize_t r = -1;
-  size_t st_size = 0;
-  int saved_errno = 0;
-
-  *tag_out = NULL;
-  st.st_size = 0;
-  content = read_file_to_str(fname, RFTS_BIN|RFTS_IGNORE_MISSING, &st);
-  if (! content) {
-    saved_errno = errno;
-    goto end;
-  }
-  if (st.st_size < 32 || st.st_size > 32 + data_out_len) {
-    saved_errno = EINVAL;
-    goto end;
-  }
-  st_size = (size_t)st.st_size;
-
-  memcpy(prefix, content, 32);
-  prefix[32] = 0;
-  /* Check type, extract tag. */
-  if (strcmpstart(prefix, "== ") || strcmpend(prefix, " ==") ||
-      ! tor_mem_is_zero(prefix+strlen(prefix), 32-strlen(prefix))) {
-    saved_errno = EINVAL;
-    goto end;
-  }
-
-  if (strcmpstart(prefix+3, typestring) ||
-      3+strlen(typestring) >= 32 ||
-      strcmpstart(prefix+3+strlen(typestring), ": ")) {
-    saved_errno = EINVAL;
-    goto end;
-  }
-
-  *tag_out = tor_strndup(prefix+5+strlen(typestring),
-                         strlen(prefix)-8-strlen(typestring));
-
-  memcpy(data_out, content+32, st_size-32);
-  r = st_size - 32;
-
- end:
-  if (content)
-    memwipe(content, 0, st_size);
-  tor_free(content);
-  if (saved_errno)
-    errno = saved_errno;
-  return r;
 }
 
 /** DOCDOC */

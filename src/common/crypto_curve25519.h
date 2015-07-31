@@ -72,18 +72,6 @@ int curve25519_public_from_base64(curve25519_public_key_t *pkey,
 int curve25519_public_to_base64(char *output,
                                 const curve25519_public_key_t *pkey);
 
-int crypto_write_tagged_contents_to_file(const char *fname,
-                                         const char *typestring,
-                                         const char *tag,
-                                         const uint8_t *data,
-                                         size_t datalen);
-
-ssize_t crypto_read_tagged_contents_from_file(const char *fname,
-                                              const char *typestring,
-                                              char **tag_out,
-                                              uint8_t *data_out,
-                                              ssize_t data_out_len);
-
 void curve25519_set_impl_params(int use_ed);
 void curve25519_init(void);
 

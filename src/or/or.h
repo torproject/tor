@@ -81,6 +81,7 @@
 #endif
 
 #include "crypto.h"
+#include "crypto_format.h"
 #include "tortls.h"
 #include "torlog.h"
 #include "container.h"
@@ -92,6 +93,7 @@
 #include "crypto_curve25519.h"
 #include "crypto_ed25519.h"
 #include "tor_queue.h"
+#include "util_format.h"
 
 /* These signals are defined to help handle_control_signal work.
  */
