@@ -244,7 +244,8 @@ dirserv_load_fingerprint_file(void)
  * If the status is 'FP_REJECT' and <b>msg</b> is provided, set
  * *<b>msg</b> to an explanation of why. */
 uint32_t
-dirserv_router_get_status(const routerinfo_t *router, const char **msg)
+dirserv_router_get_status(const routerinfo_t *router, const char **msg,
+                          int severity)
 {
   char d[DIGEST_LEN];
 
@@ -263,7 +264,8 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg)
       if (msg) {
         *msg = "Ed25519 identity key or RSA identity key has changed.";
       }
-      log_warn(LD_DIR, "Router %s uploaded a descriptor with a Ed25519 key "
+      log_fn(severity, LD_DIR,
+             "Descriptor from router %s has an Ed25519 key, "
                "but the <rsa,ed25519> keys don't match what they were before.",
                router_describe(router));
       return FP_REJECT;
@@ -272,7 +274,8 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg)
     /* No ed25519 key */
     if (KEYPIN_MISMATCH == keypin_check_lone_rsa(
                         (const uint8_t*)router->cache_info.identity_digest)) {
-      log_warn(LD_DIR, "Router %s uploaded a descriptor with no Ed25519 key, "
+      log_fn(severity, LD_DIR,
+               "Descriptor from router %s has no Ed25519 key, "
                "when we previously knew an Ed25519 for it. Ignoring for now, "
                "since Tor 0.2.6 is under development.",
                router_describe(router));
@@ -299,7 +302,7 @@ dirserv_would_reject_router(const routerstatus_t *rs)
 
   res = dirserv_get_status_impl(rs->identity_digest, rs->nickname,
                                 rs->addr, rs->or_port,
-                                NULL, NULL, 0);
+                                NULL, NULL, LOG_DEBUG);
 
   return (res & FP_REJECT) != 0;
 }
@@ -308,13 +311,13 @@ dirserv_would_reject_router(const routerstatus_t *rs)
  * (hex, no spaces), nickname, address (used for logging only), IP address, OR
  * port and platform (logging only) as arguments.
  *
- * If should_log is false, do not log messages.  (There's not much point in
+ * Log messages at 'severity'. (There's not much point in
  * logging that we're rejecting servers we'll not download.)
  */
 static uint32_t
 dirserv_get_status_impl(const char *id_digest, const char *nickname,
                         uint32_t addr, uint16_t or_port,
-                        const char *platform, const char **msg, int should_log)
+                        const char *platform, const char **msg, int severity)
 {
   uint32_t result = 0;
   router_status_t *status_by_digest;
@@ -322,10 +325,9 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
   if (!fingerprint_list)
     fingerprint_list = authdir_config_new();
 
-  if (should_log)
-    log_debug(LD_DIRSERV, "%d fingerprints, %d digests known.",
-              strmap_size(fingerprint_list->fp_by_name),
-              digestmap_size(fingerprint_list->status_by_digest));
+  log_debug(LD_DIRSERV, "%d fingerprints, %d digests known.",
+            strmap_size(fingerprint_list->fp_by_name),
+            digestmap_size(fingerprint_list->status_by_digest));
 
   /* Versions before Tor 0.2.4.18-rc are too old to support, and are
    * missing some important security fixes too. Disable them. */
@@ -350,23 +352,22 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
   }
 
   if (authdir_policy_badexit_address(addr, or_port)) {
-    if (should_log)
-      log_info(LD_DIRSERV, "Marking '%s' as bad exit because of address '%s'",
+    log_fn(severity, LD_DIRSERV,
+           "Marking '%s' as bad exit because of address '%s'",
                nickname, fmt_addr32(addr));
     result |= FP_BADEXIT;
   }
 
   if (!authdir_policy_permits_address(addr, or_port)) {
-    if (should_log)
-      log_info(LD_DIRSERV, "Rejecting '%s' because of address '%s'",
+    log_fn(severity, LD_DIRSERV, "Rejecting '%s' because of address '%s'",
                nickname, fmt_addr32(addr));
     if (msg)
       *msg = "Authdir is rejecting routers in this range.";
     return FP_REJECT;
   }
   if (!authdir_policy_valid_address(addr, or_port)) {
-    if (should_log)
-      log_info(LD_DIRSERV, "Not marking '%s' valid because of address '%s'",
+    log_fn(severity, LD_DIRSERV,
+           "Not marking '%s' valid because of address '%s'",
                nickname, fmt_addr32(addr));
     result |= FP_INVALID;
   }
@@ -422,9 +423,9 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
                                int complain, int *valid_out)
 {
   /* Okay.  Now check whether the fingerprint is recognized. */
-  uint32_t status = dirserv_router_get_status(ri, msg);
   time_t now;
   int severity = (complain && ri->contact_info) ? LOG_NOTICE : LOG_INFO;
+  uint32_t status = dirserv_router_get_status(ri, msg, severity);
   tor_assert(msg);
   if (status & FP_REJECT)
     return -1; /* msg is already set. */
@@ -734,7 +735,7 @@ directory_remove_invalid(void)
     uint32_t r;
     if (!ent)
       continue;
-    r = dirserv_router_get_status(ent, &msg);
+    r = dirserv_router_get_status(ent, &msg, LOG_INFO);
     router_get_description(description, ent);
     if (r & FP_REJECT) {
       log_info(LD_DIRSERV, "Router %s is now rejected: %s",

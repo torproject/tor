@@ -1,0 +1,8 @@
+  o Minor bugfixes (authority):
+    - Downgrade log messages about Ed25519 key issues, if they are in
+      old cached router descriptors. Fixes part of bug 16286; bugfix on
+      0.2.7.2-alpha.
+
+    - When we find an Ed25519 key issue in a cached descriptor, stop saying
+      the descriptor was just "uploaded". Fixes another part of bug 16286;
+      bugfix on 0.2.7.2-alpha.

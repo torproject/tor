@@ -176,7 +176,7 @@ nodelist_set_routerinfo(routerinfo_t *ri, routerinfo_t **ri_old_out)
 
   if (authdir_mode(get_options()) && !had_router) {
     const char *discard=NULL;
-    uint32_t status = dirserv_router_get_status(ri, &discard);
+    uint32_t status = dirserv_router_get_status(ri, &discard, LOG_INFO);
     dirserv_set_node_flags_from_authoritative_status(node, status);
   }
 
