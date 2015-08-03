@@ -164,12 +164,12 @@ investigated (as of July 2014).
 Running the unit tests
 ~~~~~~~~~~~~~~~~~~~~~~
 
-To quickly run all tests:
+To quickly run all the tests distributed with Tor:
 -----
    make check
 -----
 
-To run unit tests only:
+To run the fast unit tests only:
 -----
    make test
 -----
@@ -182,6 +182,17 @@ arbitrarily):
    ./src/test/test :<name_of_excluded_test> [:<name_of_excluded_test2]...
 -----
 
+To run all tests, including those based on Stem or Chutney:
+-----
+   make test-full
+-----
+
+To run all tests, including those basedd on Stem or Chutney that require a
+working connection to the internet:
+-----
+   make test-full-online
+-----
+
 Running gcov for unit test coverage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -189,6 +200,7 @@ Running gcov for unit test coverage
    ./configure --enable-coverage
    make
    make check
+   # or--- make test-full ? make test-full-online?
    mkdir coverage-output
    ./scripts/test/coverage coverage-output
 -----
@@ -223,6 +235,9 @@ Running integration tests
 We have the beginnings of a set of scripts to run integration tests using
 Chutney. To try them, set CHUTNEY_PATH to your chutney source directory, and
 run "make test-network".
+
+We also have scripts to run integration tests using Stem.  To try them, set
+STEM_SOURCE_DIR to your Stem source directory, and run "test-stem".
 
 Profiling Tor with oprofile
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
