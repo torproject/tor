@@ -222,9 +222,11 @@ rend_cache_free_all(void)
 {
   strmap_free(rend_cache, rend_cache_entry_free_);
   digestmap_free(rend_cache_v2_dir, rend_cache_entry_free_);
+  strmap_free(rend_cache_service, rend_cache_entry_free_);
   strmap_free(rend_cache_failure, rend_cache_failure_entry_free_);
   rend_cache = NULL;
   rend_cache_v2_dir = NULL;
+  rend_cache_service = NULL;
   rend_cache_failure = NULL;
   rend_cache_total_allocation = 0;
 }
@@ -715,8 +717,6 @@ rend_cache_store_v2_desc_as_service(const char *desc)
     log_warn(LD_REND, "Couldn't compute service ID.");
     goto err;
   }
-  /* We don't care about the introduction points. */
-  tor_free(intro_content);
 
   /* Do we already have a newer descriptor? Allow new descriptors with a
      rounded timestamp equal to or newer than the current descriptor */
@@ -726,6 +726,8 @@ rend_cache_store_v2_desc_as_service(const char *desc)
              "service ID %s.", safe_str_client(service_id));
     goto okay;
   }
+  /* We don't care about the introduction points. */
+  tor_free(intro_content);
   if (!e) {
     e = tor_malloc_zero(sizeof(rend_cache_entry_t));
     strmap_set_lc(rend_cache_service, service_id, e);
