@@ -69,26 +69,34 @@ doxygen:
 test: all
 	$(top_builddir)/src/test/test
 
+need-chutney-path:
+	@if test ! -d "$$CHUTNEY_PATH"; then \
+		echo '$$CHUTNEY_PATH was not set.'; echo; \
+		echo "To run these tests, git clone https://git.torproject.org/chutney.git ; export CHUTNEY_PATH=\`pwd\`/chutney"; \
+		exit 1; \
+	fi
+
 # Note that test-network requires a copy of Chutney in $CHUTNEY_PATH.
 # Chutney can be cloned from https://git.torproject.org/chutney.git .
-test-network: all
+test-network: need-chutney-path all
 	$(top_srcdir)/src/test/test-network.sh
 
-test-stem: $(TESTING_TOR_BINARY)
-	@if test -d "$$STEM_SOURCE_DIR"; then \
-		$(PYTHON) "$$STEM_SOURCE_DIR"/run_tests.py --tor $(TESTING_TOR_BINARY) --all --log notice --target RUN_ALL; \
-	else \
+need-stem-path:
+	@if test ! -d "$$STEM_SOURCE_DIR"; then \
 		echo '$$STEM_SOURCE_DIR was not set.'; echo; \
 		echo "To run these tests, git clone https://git.torproject.org/stem.git/ ; export STEM_SOURCE_DIR=\`pwd\`/stem"; \
+		exit 1; \
 	fi
 
-test-stem-full: $(TESTING_TOR_BINARY)
-	@if test -d "$$STEM_SOURCE_DIR"; then \
-		$(PYTHON) "$$STEM_SOURCE_DIR"/run_tests.py --tor $(TESTING_TOR_BINARY) --all --log notice --target RUN_ALL,ONLINE -v; \
-	else \
-		echo '$$STEM_SOURCE_DIR was not set.'; echo; \
-		echo "To run these tests, git clone https://git.torproject.org/stem.git/ ; export STEM_SOURCE_DIR=\`pwd\`/stem"; \
-	fi
+test-stem: need-stem-path $(TESTING_TOR_BINARY)
+	@$(PYTHON) "$$STEM_SOURCE_DIR"/run_tests.py --tor $(TESTING_TOR_BINARY) --all --log notice --target RUN_ALL;
+
+test-stem-full: need-stem-path $(TESTING_TOR_BINARY)
+	@$(PYTHON) "$$STEM_SOURCE_DIR"/run_tests.py --tor $(TESTING_TOR_BINARY) --all --log notice --target RUN_ALL,ONLINE -v;
+
+test-full: need-stem-path need-chutney-path check test-network test-stem
+
+test-full-online: need-stem-path need-chutney-path check test-network test-stem-full
 
 reset-gcov:
 	rm -f $(top_builddir)/src/*/*.gcda $(top_builddir)/src/*/*/*.gcda
