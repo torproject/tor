@@ -1,0 +1,3 @@
+  o Testing:
+    - When building Tor with testing coverage enabled, run Chutney tests
+      (if any) using the 'tor-cov' coverage binary.

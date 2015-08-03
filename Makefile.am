@@ -36,9 +36,11 @@ EXTRA_DIST+= \
 if COVERAGE_ENABLED
 TEST_CFLAGS=-fno-inline -fprofile-arcs -ftest-coverage
 TEST_CPPFLAGS=-DTOR_UNIT_TESTS -DTOR_COVERAGE
+TEST_NETWORK_FLAGS="--coverage"
 else
 TEST_CFLAGS=
 TEST_CPPFLAGS=-DTOR_UNIT_TESTS
+TEST_NETWORK_FLAGS=
 endif
 
 #install-data-local:
@@ -79,7 +81,7 @@ need-chutney-path:
 # Note that test-network requires a copy of Chutney in $CHUTNEY_PATH.
 # Chutney can be cloned from https://git.torproject.org/chutney.git .
 test-network: need-chutney-path all
-	$(top_srcdir)/src/test/test-network.sh
+	$(top_srcdir)/src/test/test-network.sh $(TEST_NETWORK_FLAGS)
 
 need-stem-path:
 	@if test ! -d "$$STEM_SOURCE_DIR"; then \

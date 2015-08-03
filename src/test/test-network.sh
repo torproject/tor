@@ -1,6 +1,7 @@
 #! /bin/sh
 
 ECHO_N="/bin/echo -n"
+use_coverage_binary=false
 
 until [ -z $1 ]
 do
@@ -41,7 +42,10 @@ do
     --hs-multi-client|--hs-multi-clients|--hs-client|--hs-clients)
       export CHUTNEY_HS_MULTI_CLIENT="$2"
       shift
-    ;;
+      ;;
+    --coverage)
+      use_coverage_binary=true
+      ;;
     *)
       echo "Sorry, I don't know what to do with '$1'."
       exit 2
@@ -59,9 +63,17 @@ myname=$(basename $0)
     echo "$myname: missing 'chutney' in CHUTNEY_PATH ($CHUTNEY_PATH)"
     exit 1
 }
+
 cd "$CHUTNEY_PATH"
 # For picking up the right tor binaries.
-PATH="$TOR_DIR/src/or:$TOR_DIR/src/tools:$PATH"
+tor_name=tor
+tor_gencert_name=tor-gencert
+if test "$use_coverage_binary" = true; then
+  tor_name=tor-cov
+fi
+export CHUTNEY_TOR="${TOR_DIR}/src/or/${tor_name}"
+export CHUTNEY_TOR_GENCERT="${TOR_DIR}/src/tools/${tor_gencert_name}"
+
 ./tools/bootstrap-network.sh $NETWORK_FLAVOUR || exit 2
 
 # Sleep some, waiting for the network to bootstrap.
