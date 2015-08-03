@@ -48,6 +48,11 @@ typedef struct rend_cache_failure_t {
   digestmap_t *intro_failures;
 } rend_cache_failure_t;
 
+typedef enum {
+  REND_CACHE_TYPE_CLIENT  = 1,
+  REND_CACHE_TYPE_SERVICE = 2,
+} rend_cache_type_t;
+
 void rend_cache_init(void);
 void rend_cache_clean(time_t now);
 void rend_cache_failure_clean(time_t now);
@@ -56,7 +61,7 @@ void rend_cache_purge(void);
 void rend_cache_free_all(void);
 int rend_cache_lookup_entry(const char *query, int version,
                             rend_cache_entry_t **entry_out,
-                            int service);
+                            rend_cache_type_t cache);
 int rend_cache_lookup_v2_desc_as_dir(const char *query, const char **desc);
 /** Return value from rend_cache_store_v2_desc_as_{dir,client}. */
 typedef enum {
