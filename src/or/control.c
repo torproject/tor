@@ -6255,10 +6255,12 @@ get_desc_id_from_query(const rend_data_t *rend_data, const char *hsdir_fp)
  *
  * <b>service_id</b> is the descriptor onion address.
  * <b>desc_id_base32</b> is the descriptor ID.
+ * <b>replica</b> is the the descriptor replica number.
  */
 void
 control_event_hs_descriptor_created(const char *service_id,
-                                    const char *desc_id_base32)
+                                    const char *desc_id_base32,
+                                    int replica)
 {
   if (!service_id || !desc_id_base32) {
     log_warn(LD_BUG, "Called with service_digest==%p, "
@@ -6267,9 +6269,11 @@ control_event_hs_descriptor_created(const char *service_id,
   }
 
   send_control_event(EVENT_HS_DESC,
-                     "650 HS_DESC CREATED %s UNKNOWN UNKNOWN %s\r\n",
+                     "650 HS_DESC CREATED %s UNKNOWN UNKNOWN %s "
+                     "REPLICA=%d\r\n",
                      service_id,
-                     desc_id_base32);
+                     desc_id_base32,
+                     replica);
 }
 
 /** send HS_DESC upload event.

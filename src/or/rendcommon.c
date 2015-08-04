@@ -661,7 +661,7 @@ rend_encode_v2_descriptors(smartlist_t *descs_out,
     rend_cache_store_v2_desc_as_service(enc->desc_str);
     base32_encode(service_id_base32, sizeof(service_id_base32),
           service_id, REND_SERVICE_ID_LEN);
-    control_event_hs_descriptor_created(service_id_base32, desc_id_base32);
+    control_event_hs_descriptor_created(service_id_base32, desc_id_base32, k);
   }
 
   log_info(LD_REND, "Successfully encoded a v2 descriptor and "
