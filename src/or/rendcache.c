@@ -225,6 +225,35 @@ rend_cache_free_all(void)
   rend_cache_total_allocation = 0;
 }
 
+/** Remove all entries that re REND_CACHE_FAILURE_MAX_AGE old. This is
+ * called every second.
+ *
+ * We have to clean these regurlarly else if for whatever reasons an hidden
+ * service goes offline and a client tries to connect to it during that
+ * time, a failure entry is created and the client will be unable to connect
+ * for a while even though the service has return online.  */
+void
+rend_cache_failure_clean(time_t now)
+{
+  time_t cutoff = now - REND_CACHE_FAILURE_MAX_AGE;
+  STRMAP_FOREACH_MODIFY(rend_cache_failure, key,
+                        rend_cache_failure_t *, ent) {
+    /* Free and remove every intro failure object that match the cutoff. */
+    DIGESTMAP_FOREACH_MODIFY(ent->intro_failures, ip_key,
+                             rend_cache_failure_intro_t *, ip_ent) {
+      if (ip_ent->created_ts < cutoff) {
+        rend_cache_failure_intro_entry_free(ip_ent);
+        MAP_DEL_CURRENT(ip_key);
+      }
+    } DIGESTMAP_FOREACH_END;
+    /* If the entry is now empty of intro point failures, remove it. */
+    if (digestmap_isempty(ent->intro_failures)) {
+      rend_cache_failure_entry_free(ent);
+      MAP_DEL_CURRENT(key);
+    }
+  } STRMAP_FOREACH_END;
+}
+
 /** Removes all old entries from the service descriptor cache.
 */
 void

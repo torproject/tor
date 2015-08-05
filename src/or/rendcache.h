@@ -18,6 +18,8 @@
 /** How wrong do we assume our clock may be when checking whether hidden
  * services are too old or too new? */
 #define REND_CACHE_MAX_SKEW (24*60*60)
+/** How old do we keep an intro point failure entry in the failure cache? */
+#define REND_CACHE_FAILURE_MAX_AGE (5*60)
 
 /* Do not allow more than this many introduction points in a hidden service
  * descriptor */
@@ -48,6 +50,7 @@ typedef struct rend_cache_failure_t {
 
 void rend_cache_init(void);
 void rend_cache_clean(time_t now);
+void rend_cache_failure_clean(time_t now);
 void rend_cache_clean_v2_descs_as_dir(time_t now, size_t min_to_remove);
 void rend_cache_purge(void);
 void rend_cache_free_all(void);
