@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import sys, re
+import sys, re, os
 
 none0, some0 = 0,0
 branchTaken0, branchNot0 = 0,0
@@ -20,7 +20,16 @@ def show(name, none, some):
         none = 1
     print name, none, some, "%.02f"%(100*(float(some)/(some+none)))
 
-for fn in sys.argv[1:]:
+
+file_args = sys.argv[1:]
+files = []
+for fn in file_args:
+    if os.path.isdir(fn):
+        files.extend(os.path.join(fn, f) for f in os.listdir(fn))
+    else:
+        files.append(fn)
+
+for fn in files:
     none = some = branchTaken = branchNot = 0
     inFunc = ""
     for line in open(fn, 'r'):
