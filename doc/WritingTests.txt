@@ -32,25 +32,97 @@ set STEM_SOURCE_DIR to the checkout, and run "make test-stem".
 To run the Chutney tests as well, fetch chutney from the git repository,
 set CHUTNEY_PATH to the checkout, and run "make test-network".
 
+To run all of the above, run "make test-full".
+
+To run all of the above, plus tests that require a working connection to the
+internet, run "make test-full-online".
+
 === Running particular subtests
 
-XXXX WRITEME
+The Tor unit tests are divided into separate programs and a couple of
+bundled unit test programs.
+
+Separate programs are easy.  For example, to run the memwipe tests in
+isolation, you just run ./src/test/test-memwipe .
+
+To run tests within the unit test programs, you can specify the name
+of the test.  The string ".." can be used as a wildcard at the end of the
+test name.  For example, to run all the cell format tests, enter
+"./src/test/test cellfmt/..".  To run
+
+Many tests that need to mess with global state run in forked subprocesses in
+order to keep from contaminating one another.  But when debugging a failing test,
+you might want to run it without forking a subprocess.  To do so, use the
+"--no-fork" option with a single test.  (If you specify it along with
+multiple tests, they might interfere.)
+
+You can turn on logging in the unit tests by passing one of "--debug",
+"--info", "--notice", or "--warn".  By default only errors are displayed.
+
+Unit tests are divided into "./src/test/test" and "./src/test/test-slow".
+The former are those that should finish in a few seconds; the latter tend to
+take more time, and may include CPU-intensive operations, deliberate delays,
+and stuff like that.
 
 === Finding test coverage
 
 When you configure Tor with the --enable-coverage option, it should
 build with support for coverage in the unit tests, and in a special
-"tor-cov" binary.  If you launch
+"tor-cov" binary.
 
-XXXX "make test-network" doesn't know about "tor-cov"; you don't get
-XXXX coverage from that yet, unless you do "cp src/or/tor-cov
-XXXX src/or/tor" before you run it.
+Then, run the tests you'd like to see coverage from.  If you have old
+coverage output, you may need to run "reset-gcov" first.
+
+Now you've got a bunch of files scattered around your build directories
+called "*.gcda".  In order to extract the coverage output from them, make a
+temporary directory for them and run "./scripts/test/coverage ${TMPDIR}",
+where ${TMPDIR} is the temporary directory you made.  This will create a
+".gcov" file for each source file under tests, containing that file's source
+annotated with the number of times the tests hit each line.  (You'll need to
+have gcov installed.)
+
+You can get a summary of the test coverage for each file by running
+"./scripts/test/cov-display ${TMPDIR}/*" .  Each line lists the file's name,
+the number of uncovered lines, the number of uncovered lines, and the
+coverage percentage.
+
+For a summary of the test coverage for each _function_, run
+"./scripts/test/cov-display -f ${TMPDIR}/*" .
+
+=== Comparing test coverage
+
+Sometimes it's useful to compare test coverage for a branch you're writing to
+coverage from another branch (such as git master, for example).  But you
+can't run "diff" on the two coverage outputs directly, since the actual
+number of times each line is executed aren't so important, and aren't wholly
+deterministic.
+
+Instead, follow the instructions above for each branch, creating a separate
+temporary directory for each.  Then, run "./scripts/test/cov-diff ${D1}
+${D2}", where D1 and D2 are the directories you want to compare.  This will
+produce a diff of the two directories, with all lines normalized to be either
+covered or uncovered.
+
+To count new or modified uncovered lines in D2, you can run:
+
+    "./scripts/test/cov-diff ${D1} ${D2}" | grep '^+ *\#' |wc -l
+
 
 What kinds of test should I write?
 ----------------------------------
 
-XXXX writeme.
+Integration testing and unit testing are complementary: it's probably a
+good idea to make sure that your code is hit by both if you can.
 
+If your code is very-low level, and its behavior is easily described in
+terms of a relation between inputs and outputs, or a set of state
+transitions, then it's a natural fit for unit tests.  (If not, please
+consider refactoring it until most of it _is_ a good fit for unit
+tests!)
+
+If your code adds new externally visible functionality to Tor, it would
+be great to have a test for that functionality.  That's where
+integration tests more usually come in.
 
 Unit and regression tests: Does this function do what it's supposed to?
 -----------------------------------------------------------------------
@@ -117,7 +189,7 @@ Sometimes you need to test a function, but you don't want to expose
 it outside its usual module.
 
 To support this, Tor's build system compiles a testing version of
-teach module, with extra identifiers exposed.  If you want to
+each module, with extra identifiers exposed.  If you want to
 declare a function as static but available for testing, use the
 macro "STATIC" instead of "static".  Then, make sure there's a
 macro-protected declaration of the function in the module's header.
@@ -134,13 +206,47 @@ CRYPTO_CURVE25519_PRIVATE, so they can see this declaration.
 
 === Mock functions for testing in isolation
 
-Often we want to test that a function works right, but the function depends
-on other functions whose behavior is hard to observe, or whose 
+Often we want to test that a function works right, but the function to
+be tested depends on other functions whose behavior is hard to observe,
+or which require a working Tor network, or something like that.
 
-XXXX WRITEME
+To write tests for this case, you can replace the underlying functions
+with testing stubs while your unit test is running.  You need to declare
+the underlying function as 'mockable', as follows:
+
+   MOCK_DECL(returntype, functionname, (argument list));
+
+and then later implement it as:
+
+    MOCK_IMPL(returntype, functionname, (argument list))
+    {
+       /* implementation here */
+    }
+
+For example, if you had a 'connect to remote server' function, you could
+declare it as:
+
+
+   MOCK_DECL(int, connect_to_remote, (const char *name, status_t *status));
+
+When you declare a function this way, it will be declared as normal in
+regular builds, but when the module is built for testing, it is declared
+as a function pointer initialized to the actual implementation.
+
+In your tests, if you want to override the function with a temporary
+replacement, you say:
+
+   MOCK(functionname, replacement_function_name);
+
+And later, you can restore the original function with:
+
+   UNMOCK(functionname);
+
+For more information, see the definitions of this mocking logic in
+testsupport.h.
+
 
 === Advanced techniques: Namespaces
-
 
 XXXX write this.  danah boyd made us some really awesome stuff here.
 
