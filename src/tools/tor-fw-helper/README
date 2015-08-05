@@ -1,7 +1,7 @@
 
 We no longer recommend the use of this tool.  Instead, please use the
 pure-Go version of tor-fw-helper available at
-     https://github.com/Yawning/tor-fw-helper
+     https://gitweb.torproject.org/tor-fw-helper.git
 
 Why?
 
