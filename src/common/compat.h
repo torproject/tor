@@ -405,6 +405,8 @@ int tor_fd_setpos(int fd, off_t pos);
 int tor_fd_seekend(int fd);
 int tor_ftruncate(int fd);
 
+int64_t tor_get_avail_disk_space(const char *path);
+
 #ifdef _WIN32
 #define PATH_SEPARATOR "\\"
 #else

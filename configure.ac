@@ -406,6 +406,7 @@ AC_CHECK_FUNCS(
         rint \
         sigaction \
         socketpair \
+	statvfs \
         strlcat \
         strlcpy \
 	strnlen \
@@ -916,6 +917,7 @@ AC_CHECK_HEADERS(
         sys/resource.h \
         sys/select.h \
         sys/socket.h \
+	sys/statvfs.h \
 	sys/sysctl.h \
         sys/syslimits.h \
         sys/time.h \
