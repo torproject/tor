@@ -369,6 +369,7 @@ main(int argc, char **argv)
   }
 
   init_logging(1);
+  network_init();
   crypto_global_init(1, NULL, NULL);
   crypto_seed_rng();
 
