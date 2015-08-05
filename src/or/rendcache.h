@@ -34,6 +34,9 @@ typedef struct rend_cache_entry_t {
 
 /* Introduction point failure type. */
 typedef struct rend_cache_failure_intro_t {
+  /* When this intro point failure occured thus we allocated this object and
+   * cache it. */
+  time_t created_ts;
   rend_intro_point_failure_t failure_type;
 } rend_cache_failure_intro_t;
 

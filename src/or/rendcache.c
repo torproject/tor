@@ -129,6 +129,7 @@ rend_cache_failure_intro_entry_new(rend_intro_point_failure_t failure)
 {
   rend_cache_failure_intro_t *entry = tor_malloc(sizeof(*entry));
   entry->failure_type = failure;
+  entry->created_ts = time(NULL);
   return entry;
 }
 
