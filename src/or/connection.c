@@ -4206,34 +4206,6 @@ connection_write_to_buf_impl_,(const char *string, size_t len,
     conn->outbuf_flushlen += buf_datalen(conn->outbuf) - old_datalen;
   } else {
     conn->outbuf_flushlen += len;
-
-    /* Should we try flushing the outbuf now? */
-    if (conn->in_flushed_some) {
-      /* Don't flush the outbuf when the reason we're writing more stuff is
-       * _because_ we flushed the outbuf.  That's unfair. */
-      return;
-    }
-
-    if (conn->type == CONN_TYPE_CONTROL &&
-               !connection_is_rate_limited(conn) &&
-               conn->outbuf_flushlen-len < 1<<16 &&
-               conn->outbuf_flushlen >= 1<<16) {
-      /* just try to flush all of it */
-    } else
-      return; /* no need to try flushing */
-
-    if (connection_handle_write(conn, 0) < 0) {
-      if (!conn->marked_for_close) {
-        /* this connection is broken. remove it. */
-        log_warn(LD_BUG, "unhandled error on write for "
-                 "conn (type %d, fd %d); removing",
-                 conn->type, (int)conn->s);
-        tor_fragile_assert();
-        /* do a close-immediate here, so we don't try to flush */
-        connection_close_immediate(conn);
-      }
-      return;
-    }
   }
 }
 
