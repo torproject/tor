@@ -118,7 +118,6 @@ read_encrypted_secret_key(ed25519_secret_key_t *out,
                                  pwbuf, pwlen);
     if (r == UNPWBOX_CORRUPTED) {
       log_err(LD_OR, "%s is corrupted.", fname);
-            puts("E");
       saved_errno = EINVAL;
       goto done;
     } else if (r == UNPWBOX_OKAY) {
@@ -245,7 +244,8 @@ write_secret_key(const ed25519_secret_key_t *key, int encrypted,
  * and consider encrypting any new secret key.
  *
  * If INIT_ED_KEY_NO_REPAIR is set, and there is any issue loading the keys
- * from disk _other than their absence_, we do not try to replace them.
+ * from disk _other than their absence_ (full or partial), we do not try to
+ * replace them.
  */
 ed25519_keypair_t *
 ed_key_init_from_file(const char *fname, uint32_t flags,
@@ -266,6 +266,7 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
   const int encrypt_key = !! (flags & INIT_ED_KEY_TRY_ENCRYPTED);
   const int norepair = !! (flags & INIT_ED_KEY_NO_REPAIR);
   const int split = !! (flags & INIT_ED_KEY_SPLIT);
+  const int omit_secret = !! (flags &  INIT_ED_KEY_OMIT_SECRET);
 
   /* we don't support setting both of these flags at once. */
   tor_assert((flags & (INIT_ED_KEY_NO_REPAIR|INIT_ED_KEY_NEEDCERT)) !=
@@ -285,8 +286,7 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
 
   /* Try to read the secret key. */
   int have_secret = 0;
-  if (try_to_load &&
-      !(flags & INIT_ED_KEY_OMIT_SECRET)) {
+  if (try_to_load && (!omit_secret || file_status(public_fname)==FN_NOENT )) {
     int rv = ed25519_seckey_read_from_file(&keypair->seckey,
                                            &got_tag, secret_fname);
     if (rv == 0) {
@@ -302,17 +302,25 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
   }
 
   /* Should we try for an encrypted key? */
+  int have_encrypted_secret_file = 0;
   if (!have_secret && try_to_load && encrypt_key) {
     int r = read_encrypted_secret_key(&keypair->seckey,
                                       encrypted_secret_fname);
     if (r > 0) {
       have_secret = 1;
+      have_encrypted_secret_file = 1;
       got_tag = tor_strdup(tag);
       loaded_secret_fname = encrypted_secret_fname;
     } else if (errno != ENOENT && norepair) {
-      tor_log(severity, LD_OR, "Unable to read %s: %s", encrypted_secret_fname,
-              strerror(errno));
+      tor_log(severity, LD_OR, "Unable to read %s: %s",
+              encrypted_secret_fname, strerror(errno));
       goto err;
+    }
+  } else {
+    if (try_to_load) {
+      /* Check if it's there anyway, so we don't replace it. */
+      if (file_status(encrypted_secret_fname) != FN_NOENT)
+        have_encrypted_secret_file = 1;
     }
   }
 
@@ -329,10 +337,9 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
     }
   }
 
-  /* If it's absent and that's okay, or if we do split keys here, try to re
-   * the pubkey. */
+  /* If we do split keys here, try to read the pubkey. */
   int found_public = 0;
-  if ((!have_secret && try_to_load) || (have_secret && split)) {
+  if (try_to_load && (!have_secret || split)) {
     ed25519_public_key_t pubkey_tmp;
     tor_free(got_tag);
     found_public = ed25519_pubkey_read_from_file(&pubkey_tmp,
@@ -356,8 +363,22 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
           goto err;
         }
       } else {
+        /* We only have the public key; better use that. */
         tor_assert(split);
         memcpy(&keypair->pubkey, &pubkey_tmp, sizeof(pubkey_tmp));
+      }
+    } else {
+      /* We have no public key file, but we do have a secret key, make the
+       * public key file! */
+      if (have_secret) {
+        if (ed25519_pubkey_write_to_file(&keypair->pubkey, public_fname, tag)
+            < 0) {
+          tor_log(severity, LD_OR, "Couldn't repair %s", public_fname);
+          goto err;
+        } else {
+          tor_log(severity, LD_OR, "Found secret key but not %s. Regenerating.",
+                  public_fname);
+        }
       }
     }
   }
@@ -369,6 +390,15 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
   /* If it's absent, and we're not supposed to make a new keypair, fail. */
   if (!have_secret && !found_public && !(flags & INIT_ED_KEY_CREATE))
     goto err;
+
+  /* If the secret key is absent, but the encrypted key would be present,
+   * that's an error */
+  if (!have_secret && !found_public && have_encrypted_secret_file) {
+    tor_assert(!encrypt_key);
+    tor_log(severity, LD_OR, "Found an encrypted secret key, "
+            "but not public key file %s!", public_fname);
+    goto err;
+  }
 
   /* if it's absent, make a new keypair and save it. */
   if (!have_secret && !found_public) {
@@ -610,8 +640,10 @@ load_ed_keys(const or_options_t *options, time_t now)
 
   {
     uint32_t flags =
-      (INIT_ED_KEY_CREATE|INIT_ED_KEY_SPLIT|
+      (INIT_ED_KEY_SPLIT|
        INIT_ED_KEY_EXTRA_STRONG|INIT_ED_KEY_NO_REPAIR);
+    if (! use_signing)
+      flags |= INIT_ED_KEY_CREATE;
     if (! need_new_signing_key)
       flags |= INIT_ED_KEY_MISSING_SECRET_OK;
     if (! want_new_signing_key)
@@ -638,8 +670,18 @@ load_ed_keys(const or_options_t *options, time_t now)
              flags,
              LOG_WARN, NULL, 0, 0, 0, NULL);
     tor_free(fname);
-    if (!id)
-      FAIL("Missing identity key");
+    if (!id) {
+      if (need_new_signing_key) {
+        FAIL("Missing identity key");
+      } else {
+        log_warn(LD_OR, "master public key was absent; inferring from "
+                 "public key in signing certificate");
+        tor_assert(check_signing_cert);
+        id = tor_malloc_zero(sizeof(*id));
+        memcpy(&id->pubkey, &check_signing_cert->signing_key,
+               sizeof(ed25519_public_key_t));
+      }
+    }
     if (tor_mem_is_zero((char*)id->seckey.seckey, sizeof(id->seckey)))
       sign_signing_key_with_id = NULL;
     else

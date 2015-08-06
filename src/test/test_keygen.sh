@@ -57,7 +57,8 @@ trap "rm -rf '$DATA_DIR'" 0
 
 touch "${DATA_DIR}/empty_torrc"
 
-TOR="${TOR_BINARY} --hush --DisableNetwork 1 --ShutdownWaitLength 0 --ORPort 12345 --ExitRelay 0 -f ${DATA_DIR}/empty_torrc"
+QUIETLY="--hush"
+TOR="${TOR_BINARY} ${QUIETLY} --DisableNetwork 1 --ShutdownWaitLength 0 --ORPort 12345 --ExitRelay 0 -f ${DATA_DIR}/empty_torrc"
 
 # Step 1: Start Tor with --list-fingerprint.  Make sure everything is there.
 mkdir "${DATA_DIR}/orig"
@@ -71,7 +72,8 @@ check_file "${DATA_DIR}/orig/keys/ed25519_signing_secret_key"
 
 # Step 2: Start Tor with --keygen.  Make sure everything is there.
 mkdir "${DATA_DIR}/keygen"
-${TOR} --DataDirectory "${DATA_DIR}/keygen" --keygen --no-passphrase
+${TOR} --DataDirectory "${DATA_DIR}/keygen" --keygen --no-passphrase 2>"${DATA_DIR}/keygen/stderr"
+grep "Not encrypting the secret key" "${DATA_DIR}/keygen/stderr" >/dev/null || die "Tor didn't declare that there would be no encryption"
 
 check_dir "${DATA_DIR}/keygen/keys"
 check_file "${DATA_DIR}/keygen/keys/ed25519_master_id_public_key"
@@ -91,7 +93,7 @@ check_file "${DATA_DIR}/encrypted/keys/ed25519_signing_cert"
 check_file "${DATA_DIR}/encrypted/keys/ed25519_signing_secret_key"
 
 
-echo "KEY GENERATION WAS SUCCESSFUL."
+echo "=== Starting tests."
 
 #
 # The "case X" numbers below come from s7r's email on
@@ -200,8 +202,8 @@ mkdir -p "${ME}/keys"
 cp "${SRC}/keys/ed25519_master_id_secret_key" "${ME}/keys/"
 ${TOR} --DataDirectory "${ME}" --list-fingerprint || die "Tor wouldn't start with only unencrypted secret key"
 check_file "${ME}/keys/ed25519_master_id_public_key"
-check_file "${ME}/keys/ed25519_master_id_signing_cert"
-check_file "${ME}/keys/ed25519_master_id_signing_secret_key"
+check_file "${ME}/keys/ed25519_signing_cert"
+check_file "${ME}/keys/ed25519_signing_secret_key"
 ${TOR} --DataDirectory "${ME}" --list-fingerprint || die "Tor wouldn't start again after starting once with only unencrypted secret key."
 
 echo "==== Case 4 ok"
@@ -217,8 +219,9 @@ SRC="${DATA_DIR}/encrypted"
 
 mkdir -p "${ME}/keys"
 cp "${SRC}/keys/ed25519_master_id_secret_key_encrypted" "${ME}/keys/"
-${TOR} --DataDirectory "${ME}" --list-fingerprint || die "Tor wouldn't start with only encrypted secret key"
-check_files_eq "${SRC}/keys/ed25519_master_id_public_key" "${ME}/keys/ed25519_master_id_public_key"
+${TOR} --DataDirectory "${ME}" --list-fingerprint && die "Tor started with only encrypted secret key!"
+check_no_file "${ME}/keys/ed25519_master_id_public_key"
+check_no_file "${ME}/keys/ed25519_master_id_public_key"
 
 echo "==== Case 5 ok"
 
@@ -300,7 +303,7 @@ cp "${SRC}/keys/ed25519_signing_secret_key" "${ME}/keys/"
 
 ${TOR} --DataDirectory "${ME}" --list-fingerprint || die "Failed when starting with only signing material"
 check_no_file "${ME}/keys/ed25519_master_id_secret_key"
-check_keys_eq ed25519_master_id_public_key
+check_no_file "${ME}/keys/ed25519_master_id_public_key"
 check_keys_eq ed25519_signing_secret_key
 check_keys_eq ed25519_signing_cert
 
@@ -309,7 +312,7 @@ echo "==== Case 9 ok"
 fi
 
 
-# Case 10: key mismatch.
+# Case 10: master key mismatch.
 
 if [ "$CASE10" = 1 ]; then
 
