@@ -84,7 +84,8 @@ int authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
                                    int complain,
                                    int *valid_out);
 uint32_t dirserv_router_get_status(const routerinfo_t *router,
-                                   const char **msg);
+                                   const char **msg,
+                                   int severity);
 void dirserv_set_node_flags_from_authoritative_status(node_t *node,
                                                       uint32_t authstatus);
 
