@@ -25,6 +25,8 @@
 *.pyo
 # Cscope
 cscope.*
+# OSX junk
+*.dSYM
 
 # /
 /Makefile
