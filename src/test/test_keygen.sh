@@ -69,6 +69,13 @@ touch "${DATA_DIR}/empty_torrc"
 QUIETLY="--hush"
 TOR="${TOR_BINARY} ${QUIETLY} --DisableNetwork 1 --ShutdownWaitLength 0 --ORPort 12345 --ExitRelay 0 -f ${DATA_DIR}/empty_torrc"
 
+##### SETUP
+#
+# Here we create three sets of keys: one using "tor", one using "tor
+# --keygen", and one using "tor --keygen" and encryption.  We'll be
+# copying them into different keys directories in order to simulate
+# different kinds of configuration problems/issues.
+
 # Step 1: Start Tor with --list-fingerprint.  Make sure everything is there.
 mkdir "${DATA_DIR}/orig"
 ${TOR} --DataDirectory "${DATA_DIR}/orig" --list-fingerprint > /dev/null
