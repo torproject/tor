@@ -376,7 +376,8 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
           tor_log(severity, LD_OR, "Couldn't repair %s", public_fname);
           goto err;
         } else {
-          tor_log(severity, LD_OR, "Found secret key but not %s. Regenerating.",
+          tor_log(LOG_NOTICE, LD_OR,
+                  "Found secret key but not %s. Regenerating.",
                   public_fname);
         }
       }
@@ -384,12 +385,29 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
   }
 
   /* If the secret key is absent and it's not allowed to be, fail. */
-  if (!have_secret && found_public && !(flags & INIT_ED_KEY_MISSING_SECRET_OK))
+  if (!have_secret && found_public &&
+      !(flags & INIT_ED_KEY_MISSING_SECRET_OK)) {
+    if (have_encrypted_secret_file) {
+      tor_log(severity, LD_OR, "We needed to load a secret key from %s, "
+              "but it was encrypted. Try tor --keygen instead.",
+              secret_fname);
+    } else {
+      tor_log(severity, LD_OR, "We needed to load a secret key from %s, "
+              "but couldn't find it.", secret_fname);
+    }
     goto err;
+  }
 
   /* If it's absent, and we're not supposed to make a new keypair, fail. */
-  if (!have_secret && !found_public && !(flags & INIT_ED_KEY_CREATE))
+  if (!have_secret && !found_public && !(flags & INIT_ED_KEY_CREATE)) {
+    if (split) {
+      tor_log(severity, LD_OR, "No key found in %s or %s.",
+              secret_fname, public_fname);
+    } else {
+      tor_log(severity, LD_OR, "No key found in %s.", secret_fname);
+    }
     goto err;
+  }
 
   /* If the secret key is absent, but the encrypted key would be present,
    * that's an error */
@@ -471,8 +489,10 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
     goto done;
 
   /* If we didn't get a cert, and we're not supposed to make one, fail. */
-  if (!signing_key || !(flags & INIT_ED_KEY_CREATE))
+  if (!signing_key || !(flags & INIT_ED_KEY_CREATE)) {
+    tor_log(severity, LD_OR, "Without signing key, can't create certificate");
     goto err;
+  }
 
   /* We have keys but not a certificate, so make one. */
   uint32_t cert_flags = 0;
@@ -483,8 +503,10 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
                          now, lifetime,
                          cert_flags);
 
-  if (! cert)
+  if (! cert) {
+    tor_log(severity, LD_OR, "Couldn't create certificate");
     goto err;
+  }
 
   /* Write it to disk. */
   created_cert = 1;
@@ -674,7 +696,7 @@ load_ed_keys(const or_options_t *options, time_t now)
       if (need_new_signing_key) {
         FAIL("Missing identity key");
       } else {
-        log_warn(LD_OR, "master public key was absent; inferring from "
+        log_warn(LD_OR, "Master public key was absent; inferring from "
                  "public key in signing certificate");
         tor_assert(check_signing_cert);
         id = tor_malloc_zero(sizeof(*id));

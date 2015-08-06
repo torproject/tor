@@ -117,8 +117,10 @@ ME="${DATA_DIR}/case2a"
 SRC="${DATA_DIR}/orig"
 mkdir -p "${ME}/keys"
 cp "${SRC}/keys/ed25519_master_id_public_key" "${ME}/keys/"
-${TOR} --DataDirectory "${ME}" --list-fingerprint && die "Somehow succeeded when missing secret key, certs" || true
+${TOR} --DataDirectory "${ME}" --list-fingerprint > "${ME}/stdout" && die "Somehow succeeded when missing secret key, certs" || true
 check_files_eq "${SRC}/keys/ed25519_master_id_public_key" "${ME}/keys/ed25519_master_id_public_key"
+
+grep "We needed to load a secret key.*but couldn't find it" "${ME}/stdout" >/dev/null || die "Tor didn't declare that it was missing a secret key"
 
 echo "==== Case 2A ok"
 fi
@@ -133,10 +135,12 @@ SRC="${DATA_DIR}/encrypted"
 mkdir -p "${ME}/keys"
 cp "${SRC}/keys/ed25519_master_id_public_key" "${ME}/keys/"
 cp "${SRC}/keys/ed25519_master_id_secret_key_encrypted" "${ME}/keys/"
-${TOR} --DataDirectory "${ME}" --list-fingerprint && dir "Somehow succeeded with encrypted secret key, missing certs"
+${TOR} --DataDirectory "${ME}" --list-fingerprint > "${ME}/stdout" && dir "Somehow succeeded with encrypted secret key, missing certs"
 
 check_files_eq "${SRC}/keys/ed25519_master_id_public_key" "${ME}/keys/ed25519_master_id_public_key"
 check_files_eq "${SRC}/keys/ed25519_master_id_secret_key_encrypted" "${ME}/keys/ed25519_master_id_secret_key_encrypted"
+
+grep "We needed to load a secret key.*but it was encrypted.*--keygen" "${ME}/stdout" >/dev/null || die "Tor didn't declare that it was missing a secret key and suggest --keygen."
 
 echo "==== Case 2B ok"
 
@@ -230,9 +234,11 @@ SRC="${DATA_DIR}/encrypted"
 
 mkdir -p "${ME}/keys"
 cp "${SRC}/keys/ed25519_master_id_secret_key_encrypted" "${ME}/keys/"
-${TOR} --DataDirectory "${ME}" --list-fingerprint && die "Tor started with only encrypted secret key!"
+${TOR} --DataDirectory "${ME}" --list-fingerprint >"${ME}/stdout" && die "Tor started with only encrypted secret key!"
 check_no_file "${ME}/keys/ed25519_master_id_public_key"
 check_no_file "${ME}/keys/ed25519_master_id_public_key"
+
+grep "but not public key file" "${ME}/stdout" >/dev/null || die "Tor didn't declare it couldn't find a public key."
 
 echo "==== Case 5 ok"
 
@@ -248,9 +254,11 @@ SRC="${DATA_DIR}/encrypted"
 mkdir -p "${ME}/keys"
 cp "${SRC}/keys/ed25519_master_id_secret_key_encrypted" "${ME}/keys/"
 cp "${SRC}/keys/ed25519_master_id_public_key" "${ME}/keys/"
-${TOR} --DataDirectory "${ME}" --list-fingerprint && die "Tor started with encrypted secret key and no certs" || true
+${TOR} --DataDirectory "${ME}" --list-fingerprint > "${ME}/stdout" && die "Tor started with encrypted secret key and no certs" || true
 check_no_file "${ME}/keys/ed25519_signing_cert"
 check_no_file "${ME}/keys/ed25519_signing_secret_key"
+
+grep "but it was encrypted" "${ME}/stdout" >/dev/null || die "Tor didn't declare that the secret key was encrypted."
 
 echo "==== Case 6 ok"
 
@@ -335,7 +343,9 @@ mkdir -p "${ME}/keys"
 cp "${SRC}/keys/ed25519_master_id_public_key" "${ME}/keys/"
 cp "${OTHER}/keys/ed25519_master_id_secret_key" "${ME}/keys/"
 
-${TOR} --DataDirectory "${ME}" --list-fingerprint && die "Successfully started with mismatched keys!?" || true
+${TOR} --DataDirectory "${ME}" --list-fingerprint >"${ME}/stdout" && die "Successfully started with mismatched keys!?" || true
+
+grep "public_key does not match.*secret_key" "${ME}/stdout" >/dev/null || die "Tor didn't declare that there was a key mismatch"
 
 echo "==== Case 10 ok"
 
