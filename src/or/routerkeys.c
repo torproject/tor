@@ -11,6 +11,72 @@
 #define ENC_KEY_HEADER "Boxed Ed25519 key"
 #define ENC_KEY_TAG "master"
 
+static ssize_t
+do_getpass(const char *prompt, char *buf, size_t buflen,
+           int twice, const or_options_t *options)
+{
+  if (options->keygen_force_passphrase == FORCE_PASSPHRASE_OFF) {
+    tor_assert(buflen);
+    buf[0] = 0;
+    return 0;
+  }
+
+  char *prompt2 = NULL;
+  char *buf2 = NULL;
+  int fd = -1;
+  ssize_t length = -1;
+
+  if (options->use_keygen_passphrase_fd) {
+    twice = 0;
+    fd = options->keygen_passphrase_fd;
+    length = read_all(fd, buf, buflen-1, 0);
+    if (length >= 0)
+      buf[length] = 0;
+    goto done_reading;
+  }
+
+  if (twice) {
+    const char msg[] = "One more time:";
+    size_t p2len = strlen(prompt) + 1;
+    if (p2len < sizeof(msg))
+      p2len = sizeof(msg);
+    prompt2 = tor_malloc(strlen(prompt)+1);
+    memset(prompt2, ' ', p2len);
+    memcpy(prompt2 + p2len - sizeof(msg), msg, sizeof(msg));
+
+    buf2 = tor_malloc_zero(buflen);
+  }
+
+  while (1) {
+    length = tor_getpass(prompt, buf, buflen);
+    if (length < 0)
+      goto done_reading;
+
+    if (! twice)
+      break;
+
+    ssize_t length2 = tor_getpass(prompt2, buf2, buflen);
+
+    if (length != length2 || tor_memneq(buf, buf2, length)) {
+      fprintf(stderr, "That didn't match.\n");
+    } else {
+      break;
+    }
+  }
+
+ done_reading:
+  if (twice) {
+    tor_free(prompt2);
+    memwipe(buf2, 0, buflen);
+    tor_free(buf2);
+  }
+
+  if (options->keygen_force_passphrase == FORCE_PASSPHRASE_ON && length == 0)
+    return -1;
+
+  return length;
+}
+
 int
 read_encrypted_secret_key(ed25519_secret_key_t *out,
                           const char *fname)
@@ -41,22 +107,24 @@ read_encrypted_secret_key(ed25519_secret_key_t *out,
 
   while (1) {
     ssize_t pwlen =
-      tor_getpass("Enter pasphrase for master key:", pwbuf, sizeof(pwbuf));
+      do_getpass("Enter pasphrase for master key:", pwbuf, sizeof(pwbuf), 0,
+                 get_options());
     if (pwlen < 0) {
       saved_errno = EINVAL;
       goto done;
     }
-
     const int r = crypto_unpwbox(&secret, &secret_len,
                                  encrypted_key, encrypted_len,
                                  pwbuf, pwlen);
     if (r == UNPWBOX_CORRUPTED) {
       log_err(LD_OR, "%s is corrupted.", fname);
+            puts("E");
       saved_errno = EINVAL;
       goto done;
     } else if (r == UNPWBOX_OKAY) {
       break;
     }
+
     /* Otherwise, passphrase is bad, so try again till user does ctrl-c or gets
      * it right. */
   }
@@ -87,22 +155,23 @@ write_encrypted_secret_key(const ed25519_secret_key_t *key,
                            const char *fname)
 {
   int r = -1;
-  char pwbuf0[256], pwbuf1[256];
+  char pwbuf0[256];
   uint8_t *encrypted_key = NULL;
   size_t encrypted_len = 0;
 
-  while (1) {
-    if (tor_getpass("Enter passphrase:", pwbuf0, sizeof(pwbuf0)) < 0)
-      return -1;
-    if (tor_getpass("   One more time:", pwbuf1, sizeof(pwbuf1)) < 0)
-      return -1;
-
-    if (!strcmp(pwbuf0, pwbuf1))
-      break;
-    fprintf(stderr, "That didn't match.\n");
+  if (do_getpass("Enter new passphrase:", pwbuf0, sizeof(pwbuf0), 1,
+                 get_options()) < 0) {
+    log_warn(LD_OR, "NO/failed passphrase");
+    return -1;
   }
-  if (0 == strlen(pwbuf0))
-    return 0;
+
+  if (strlen(pwbuf0) == 0) {
+    if (get_options()->keygen_force_passphrase == FORCE_PASSPHRASE_ON)
+      return -1;
+    else
+      return 0;
+  }
+
   if (crypto_pwbox(&encrypted_key, &encrypted_len,
                    key->seckey, sizeof(key->seckey),
                    pwbuf0, strlen(pwbuf0),  0) < 0) {
@@ -121,7 +190,6 @@ write_encrypted_secret_key(const ed25519_secret_key_t *key,
     tor_free(encrypted_key);
   }
   memwipe(pwbuf0, 0, sizeof(pwbuf0));
-  memwipe(pwbuf1, 0, sizeof(pwbuf1));
   return r;
 }
 
@@ -134,7 +202,9 @@ write_secret_key(const ed25519_secret_key_t *key, int encrypted,
   if (encrypted) {
     int r = write_encrypted_secret_key(key, encrypted_fname);
     if (r != 0)
-      return r;
+      return r; /* Either succeeded or failed unrecoverably */
+
+    fprintf(stderr, "Not encrypting the secret key.\n");
   }
   return ed25519_seckey_write_to_file(key, fname, fname_tag);
 }
@@ -628,6 +698,9 @@ load_ed_keys(const or_options_t *options, time_t now)
    * it, if we loaded it in the first place. */
   memwipe(id->seckey.seckey, 0, sizeof(id->seckey));
 
+  if (options->command == CMD_KEYGEN)
+    goto end;
+
   if (!rsa_ed_crosscert && server_mode(options)) {
     uint8_t *crosscert;
     ssize_t crosscert_len = tor_make_rsa_ed25519_crosscert(&id->pubkey,
@@ -651,6 +724,7 @@ load_ed_keys(const or_options_t *options, time_t now)
 
   /* We've generated or loaded everything.  Put them in memory. */
 
+ end:
   if (! master_identity_key) {
     SET_KEY(master_identity_key, id);
   } else {

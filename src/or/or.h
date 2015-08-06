@@ -4292,6 +4292,13 @@ typedef struct {
   /** How long before auth keys expire will we try to make a new one? */
   int TestingAuthKeySlop;
 
+  enum {
+    FORCE_PASSPHRASE_AUTO=0,
+    FORCE_PASSPHRASE_ON,
+    FORCE_PASSPHRASE_OFF
+  } keygen_force_passphrase;
+  int use_keygen_passphrase_fd;
+  int keygen_passphrase_fd;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

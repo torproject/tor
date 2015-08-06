@@ -1912,6 +1912,8 @@ static const struct {
   { "--dump-config",          ARGUMENT_OPTIONAL },
   { "--list-fingerprint",     TAKES_NO_ARGUMENT },
   { "--keygen",               TAKES_NO_ARGUMENT },
+  { "--no-passphrase",        TAKES_NO_ARGUMENT },
+  { "--passphrase-fd",        ARGUMENT_NECESSARY },
   { "--verify-config",        TAKES_NO_ARGUMENT },
   { "--ignore-missing-torrc", TAKES_NO_ARGUMENT },
   { "--quiet",                TAKES_NO_ARGUMENT },
@@ -4491,6 +4493,43 @@ options_init_from_torrc(int argc, char **argv)
 
   retval = options_init_from_string(cf_defaults, cf, command, command_arg,
                                     &errmsg);
+
+  if (retval < 0)
+    goto err;
+
+  if (config_line_find(cmdline_only_options, "--no-passphrase")) {
+    if (command == CMD_KEYGEN) {
+      get_options_mutable()->keygen_force_passphrase = FORCE_PASSPHRASE_OFF;
+    } else {
+      log_err(LD_CONFIG, "--no-passphrase specified without --keygen!");
+      exit(1);
+    }
+  }
+
+  {
+    const config_line_t *fd_line = config_line_find(cmdline_only_options,
+                                                    "--passphrase-fd");
+    if (fd_line) {
+      if (get_options()->keygen_force_passphrase == FORCE_PASSPHRASE_OFF) {
+        log_err(LD_CONFIG, "--no-passphrase specified with --passphrase-fd!");
+        exit(1);
+      } else if (command != CMD_KEYGEN) {
+        log_err(LD_CONFIG, "--passphrase-fd specified without --keygen!");
+        exit(1);
+      } else {
+        const char *v = fd_line->value;
+        int ok = 1;
+        long fd = tor_parse_long(v, 10, 0, INT_MAX, &ok, NULL);
+        if (fd < 0 || ok == 0) {
+          log_err(LD_CONFIG, "Invalid --passphrase-fd value %s", escaped(v));
+          exit(1);
+        }
+        get_options_mutable()->keygen_passphrase_fd = (int)fd;
+        get_options_mutable()->use_keygen_passphrase_fd = 1;
+        get_options_mutable()->keygen_force_passphrase = FORCE_PASSPHRASE_ON;
+      }
+    }
+  }
 
  err:
 
