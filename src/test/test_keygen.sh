@@ -7,11 +7,20 @@ umask 077
 set -e
 
 if [ $# -eq 0 ] || [ ! -f ${1} ] || [ ! -x ${1} ]; then
-  echo "Usage: ${0} PATH_TO_TOR [case-number]"
-  exit 1
-elif [ $# -ge 1 ]; then
+  if [ "$TESTING_TOR_BINARY" = ""] ; then
+    echo "Usage: ${0} PATH_TO_TOR [case-number]"
+    exit 1
+  fi
+fi
+
+if [ $# -ge 1 ]; then
   TOR_BINARY="${1}"
   shift
+else
+  TOR_BINARY="${TESTING_TOR_BINARY}"
+fi
+
+
 
   if [ $# -ge 1 ]; then
       dflt=0
@@ -35,7 +44,7 @@ elif [ $# -ge 1 ]; then
   if [ $# -ge 1 ]; then
      eval "CASE${1}"=1
   fi
-fi
+
 
 die() { echo "$1" >&2 ; exit 5; }
 check_dir() { [ -d "$1" ] || die "$1 did not exist"; }
