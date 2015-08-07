@@ -88,7 +88,7 @@ in_main_thread(void)
 }
 
 #if defined(HAVE_EVENTFD) || defined(HAVE_PIPE)
-/* non-interruptable versions */
+/* As write(), but retry on EINTR */
 static int
 write_ni(int fd, const void *buf, size_t n)
 {
@@ -99,6 +99,7 @@ write_ni(int fd, const void *buf, size_t n)
     goto again;
   return r;
 }
+/* As read(), but retry on EINTR */
 static int
 read_ni(int fd, void *buf, size_t n)
 {
@@ -111,30 +112,32 @@ read_ni(int fd, void *buf, size_t n)
 }
 #endif
 
-/* non-interruptable versions */
+/** As send(), but retry on EINTR. */
 static int
 send_ni(int fd, const void *buf, size_t n, int flags)
 {
   int r;
  again:
   r = (int) send(fd, buf, n, flags);
-  if (r < 0 && errno == EINTR)
+  if (r < 0 && ERRNO_IS_EINTR(tor_socket_errno(fd)))
     goto again;
   return r;
 }
 
+/** As recv(), but retry on EINTR. */
 static int
 recv_ni(int fd, void *buf, size_t n, int flags)
 {
   int r;
  again:
-   r = (int) recv(fd, buf, n, flags);
-  if (r < 0 && errno == EINTR)
+  r = (int) recv(fd, buf, n, flags);
+  if (r < 0 && ERRNO_IS_EINTR(tor_socket_errno(fd)))
     goto again;
   return r;
 }
 
 #ifdef HAVE_EVENTFD
+/* Increment the event count on an eventfd <b>fd</b> */
 static int
 eventfd_alert(int fd)
 {
@@ -145,6 +148,7 @@ eventfd_alert(int fd)
   return 0;
 }
 
+/* Drain all events from an eventfd <b>fd</b>. */
 static int
 eventfd_drain(int fd)
 {
@@ -157,6 +161,7 @@ eventfd_drain(int fd)
 #endif
 
 #ifdef HAVE_PIPE
+/** Send a byte over a pipe. Return 0 on success or EAGAIN; -1 on error */
 static int
 pipe_alert(int fd)
 {
@@ -166,6 +171,8 @@ pipe_alert(int fd)
   return 0;
 }
 
+/** Drain all input from a pipe <b>fd</b> and ignore it.  Return 0 on
+ * success, -1 on error. */
 static int
 pipe_drain(int fd)
 {
@@ -181,6 +188,8 @@ pipe_drain(int fd)
 }
 #endif
 
+/** Send a byte on socket <b>fd</b>t.  Return 0 on success or EAGAIN,
+ * -1 on error. */
 static int
 sock_alert(tor_socket_t fd)
 {
@@ -190,6 +199,8 @@ sock_alert(tor_socket_t fd)
   return 0;
 }
 
+/** Drain all the input from a socket <b>fd</b>, and ignore it.  Return 0 on
+ * success, -1 on error. */
 static int
 sock_drain(tor_socket_t fd)
 {
