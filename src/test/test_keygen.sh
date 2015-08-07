@@ -7,7 +7,7 @@ umask 077
 set -e
 
 if [ $# -eq 0 ] || [ ! -f ${1} ] || [ ! -x ${1} ]; then
-  if [ "$TESTING_TOR_BINARY" = ""] ; then
+  if [ "$TESTING_TOR_BINARY" = "" ] ; then
     echo "Usage: ${0} PATH_TO_TOR [case-number]"
     exit 1
   fi
@@ -329,7 +329,7 @@ cp "${SRC}/keys/ed25519_signing_secret_key" "${ME}/keys/"
 
 ${TOR} --DataDirectory "${ME}" --list-fingerprint >/dev/null || die "Failed when starting with only signing material"
 check_no_file "${ME}/keys/ed25519_master_id_secret_key"
-check_no_file "${ME}/keys/ed25519_master_id_public_key"
+check_file "${ME}/keys/ed25519_master_id_public_key"
 check_keys_eq ed25519_signing_secret_key
 check_keys_eq ed25519_signing_cert
 

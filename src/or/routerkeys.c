@@ -697,11 +697,20 @@ load_ed_keys(const or_options_t *options, time_t now)
         FAIL("Missing identity key");
       } else {
         log_warn(LD_OR, "Master public key was absent; inferring from "
-                 "public key in signing certificate");
+                 "public key in signing certificate and saving to disk.");
         tor_assert(check_signing_cert);
         id = tor_malloc_zero(sizeof(*id));
         memcpy(&id->pubkey, &check_signing_cert->signing_key,
                sizeof(ed25519_public_key_t));
+        fname = options_get_datadir_fname2(options, "keys",
+                                           "ed25519_master_id_public_key");
+        if (ed25519_pubkey_write_to_file(&id->pubkey, fname, "type0") < 0) {
+          log_warn(LD_OR, "Error while attempting to write master public key "
+                   "to disk");
+          tor_free(fname);
+          goto err;
+        }
+        tor_free(fname);
       }
     }
     if (tor_mem_is_zero((char*)id->seckey.seckey, sizeof(id->seckey)))
