@@ -4347,6 +4347,30 @@ test_util_writepid(void *arg)
   tor_free(contents);
 }
 
+static void
+test_util_get_avail_disk_space(void *arg)
+{
+  (void) arg;
+  int64_t val;
+
+  /* No answer for nonexistent directory */
+  val = tor_get_avail_disk_space("/akljasdfklsajdklasjkldjsa");
+  tt_int_op(val, OP_EQ, -1);
+
+  /* Try the current directory */
+  val = tor_get_avail_disk_space(".");
+
+#if !defined(HAVE_STATVFS) && !defined(_WIN32)
+  tt_i64_op(val, OP_EQ, -1); /* You don't have an implementation for this */
+#else
+  tt_i64_op(val, OP_GT, 0); /* You have some space. */
+  tt_i64_op(val, OP_LT, ((int64_t)1)<<56); /* You don't have a zebibyte */
+#endif
+
+ done:
+  ;
+}
+
 struct testcase_t util_tests[] = {
   UTIL_LEGACY(time),
   UTIL_TEST(parse_http_time, 0),
@@ -4414,6 +4438,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(hostname_validation, 0),
   UTIL_TEST(ipv4_validation, 0),
   UTIL_TEST(writepid, 0),
+  UTIL_TEST(get_avail_disk_space, 0),
   END_OF_TESTCASES
 };
 

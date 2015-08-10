@@ -68,6 +68,9 @@
 #ifdef HAVE_CRT_EXTERNS_H
 #include <crt_externs.h>
 #endif
+#ifdef HAVE_SYS_STATVFS_H
+#include <sys/statvfs.h>
+#endif
 
 #ifdef _WIN32
 #include <conio.h>
@@ -3382,3 +3385,42 @@ tor_getpass(const char *prompt, char *output, size_t buflen)
 #endif
 }
 
+/** Return the amount of free disk space we have permission to use, in
+ * bytes. Return -1 if the amount of free space can't be determined. */
+int64_t
+tor_get_avail_disk_space(const char *path)
+{
+#ifdef HAVE_STATVFS
+  struct statvfs st;
+  int r;
+  memset(&st, 0, sizeof(st));
+
+  r = statvfs(path, &st);
+  if (r < 0)
+    return -1;
+
+  int64_t result = st.f_bavail;
+  if (st.f_frsize) {
+    result *= st.f_frsize;
+  } else if (st.f_bsize) {
+    result *= st.f_bsize;
+  } else {
+    return -1;
+  }
+
+  return result;
+#elif defined(_WIN32)
+  ULARGE_INTEGER freeBytesAvail;
+  BOOL ok;
+
+  ok = GetDiskFreeSpaceEx(path, &freeBytesAvail, NULL, NULL);
+  if (!ok) {
+    return -1;
+  }
+  return (int64_t)freeBytesAvail;
+#else
+  (void)path;
+  errno = ENOSYS;
+  return -1;
+#endif
+}
