@@ -1,0 +1,4 @@
+  o Code simplification and refactoring:
+    - Simplify the microdesc_free() implementation so that it no longer
+      appears (to code analysis tools) to potentially invoke a huge suite
+      of other microdesc functions.

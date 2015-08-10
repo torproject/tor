@@ -39,7 +39,12 @@ struct microdesc_cache_t {
   uint64_t total_len_seen;
   /** Total number of microdescriptors we have added to this cache */
   unsigned n_seen;
+
+  /** True iff we have loaded this cache from disk ever. */
+  int is_loaded;
 };
+
+static microdesc_cache_t *get_microdesc_cache_noload(void);
 
 /** Helper: computes a hash of <b>md</b> to place it in a hash table. */
 static INLINE unsigned int
@@ -113,12 +118,24 @@ static microdesc_cache_t *the_microdesc_cache = NULL;
 microdesc_cache_t *
 get_microdesc_cache(void)
 {
+  microdesc_cache_t *cache = get_microdesc_cache_noload();
+  if (PREDICT_UNLIKELY(cache->is_loaded == 0)) {
+    microdesc_cache_reload(cache);
+  }
+  return cache;
+}
+
+/** Return a pointer to the microdescriptor cache, creating (but not loading)
+ * it if necessary. */
+static microdesc_cache_t *
+get_microdesc_cache_noload(void)
+{
   if (PREDICT_UNLIKELY(the_microdesc_cache==NULL)) {
-    microdesc_cache_t *cache = tor_malloc_zero(sizeof(microdesc_cache_t));
+    microdesc_cache_t *cache = tor_malloc_zero(sizeof(*cache));
+    tor_malloc_zero(sizeof(microdesc_cache_t));
     HT_INIT(microdesc_map, &cache->map);
     cache->cache_fname = get_datadir_fname("cached-microdescs");
     cache->journal_fname = get_datadir_fname("cached-microdescs.new");
-    microdesc_cache_reload(cache);
     the_microdesc_cache = cache;
   }
   return the_microdesc_cache;
@@ -352,6 +369,8 @@ microdesc_cache_reload(microdesc_cache_t *cache)
   int total = 0;
 
   microdesc_cache_clear(cache);
+
+  cache->is_loaded = 1;
 
   mm = cache->cache_content = tor_mmap_file(cache->cache_fname);
   if (mm) {
@@ -697,7 +716,7 @@ microdesc_free_(microdesc_t *md, const char *fname, int lineno)
   /* Make sure that the microdesc was really removed from the appropriate data
      structures. */
   if (md->held_in_map) {
-    microdesc_cache_t *cache = get_microdesc_cache();
+    microdesc_cache_t *cache = get_microdesc_cache_noload();
     microdesc_t *md2 = HT_FIND(microdesc_map, &cache->map, md);
     if (md2 == md) {
       log_warn(LD_BUG, "microdesc_free() called from %s:%d, but md was still "
@@ -710,7 +729,7 @@ microdesc_free_(microdesc_t *md, const char *fname, int lineno)
     tor_fragile_assert();
   }
   if (md->held_by_nodes) {
-    microdesc_cache_t *cache = get_microdesc_cache();
+    microdesc_cache_t *cache = get_microdesc_cache_noload();
     int found=0;
     const smartlist_t *nodes = nodelist_get_list();
     const int ht_badness = HT_REP_IS_BAD_(microdesc_map, &cache->map);
