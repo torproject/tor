@@ -246,6 +246,9 @@ write_secret_key(const ed25519_secret_key_t *key, int encrypted,
  * If INIT_ED_KEY_NO_REPAIR is set, and there is any issue loading the keys
  * from disk _other than their absence_ (full or partial), we do not try to
  * replace them.
+ *
+ * If INIT_ED_KEY_SUGGEST_KEYGEN is set, have log messages about failures
+ * refer to the --keygen option.
  */
 ed25519_keypair_t *
 ed_key_init_from_file(const char *fname, uint32_t flags,
@@ -358,8 +361,12 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
         /* If we have a secret key and we're reloading the public key,
          * the key must match! */
         if (! ed25519_pubkey_eq(&keypair->pubkey, &pubkey_tmp)) {
-          tor_log(severity, LD_OR, "%s does not match %s!",
-                  public_fname, loaded_secret_fname);
+          tor_log(severity, LD_OR, "%s does not match %s!  If you are trying "
+                  "to restore from backup, make sure you didn't mix up the "
+                  "key files. If you are absolutely sure that %s is the right "
+                  "key for this relay, delete %s or move it out of the way.",
+                  public_fname, loaded_secret_fname,
+                  loaded_secret_fname, public_fname);
           goto err;
         }
       } else {
@@ -389,11 +396,17 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
       !(flags & INIT_ED_KEY_MISSING_SECRET_OK)) {
     if (have_encrypted_secret_file) {
       tor_log(severity, LD_OR, "We needed to load a secret key from %s, "
-              "but it was encrypted. Try tor --keygen instead.",
+              "but it was encrypted. Try 'tor --keygen' instead, so you "
+              "can enter the passphrase.",
               secret_fname);
     } else {
       tor_log(severity, LD_OR, "We needed to load a secret key from %s, "
-              "but couldn't find it.", secret_fname);
+              "but couldn't find it. %s", secret_fname,
+              (flags & INIT_ED_KEY_SUGGEST_KEYGEN) ?
+              "If you're keeping your master secret key offline, you will "
+              "need to run 'tor --keygen' to generate new signing keys." :
+              "Did you forget to copy it over when you copied the rest of the "
+              "signing key material?");
     }
     goto err;
   }
