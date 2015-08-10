@@ -660,6 +660,20 @@ load_ed_keys(const or_options_t *options, time_t now)
     need_new_signing_key ||
     EXPIRES_SOON(check_signing_cert, options->TestingSigningKeySlop);
 
+  if (need_new_signing_key) {
+    log_notice(LD_OR, "It looks like I need to generate and sign a new "
+               "medium-term signing key, because %s. To do that, I need to "
+               "load (or create) the permanent master identity key.",
+            (NULL == use_signing) ? "I don't have one" :
+            EXPIRES_SOON(check_signing_cert, 0) ? "the one I have is expired" :
+            "you asked me to make one with --keygen");
+  } else if (want_new_signing_key) {
+    log_notice(LD_OR, "It looks like I should try to generate and sign a "
+               "new medium-term signing key, because the one I have is "
+               "going to expire soon. To do that, I'm going to have to try to "
+               "load the permanent master identity key.");
+  }
+
   {
     uint32_t flags =
       (INIT_ED_KEY_SPLIT|
