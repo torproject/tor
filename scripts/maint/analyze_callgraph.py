@@ -32,7 +32,7 @@ class Parser:
            self.extern = True
        m = re.match(r"  CS<[^>]+> calls function '([^']+)'", line)
        if m:
-           self.calledfns.add(m.group(1)) 
+           self.calledfns.add(m.group(1))
     self.enter_func(None)
 
   def extract_callgraph(self):
@@ -56,6 +56,46 @@ def transitive_closure(g):
             changed = True
     return g
 
+def strongly_connected_components(g):
+  # From https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm, done stupidly.
+  index_of = {}
+  index = [ 0 ]
+  lowlink = {}
+  S = []
+  onStack = set()
+
+  all_sccs = []
+
+  def strongconnect(fn):
+    index_of[fn] = index[0]
+    lowlink[fn] = index[0]
+    index[0] += 1
+    S.append(fn)
+    onStack.add(fn)
+
+    for w in g.get(fn, []):
+      if w not in index_of:
+        strongconnect(w)
+        lowlink[fn] = min(lowlink[fn], lowlink[w])
+      elif w in onStack:
+        lowlink[fn] = min(lowlink[fn], index_of[w])
+
+    if lowlink[fn] == index_of[fn]:
+      this_scc = []
+      all_sccs.append(this_scc)
+      while True:
+        w = S.pop()
+        onStack.remove(w)
+        this_scc.append(w)
+        if w == fn:
+          break
+
+  for v in g.keys():
+    if v not in index_of:
+      strongconnect(v)
+
+  return all_sccs
+
 if __name__ == '__main__':
     p = Parser()
     for fname in sys.argv[1:]:
@@ -63,10 +103,15 @@ if __name__ == '__main__':
         p.parse_callgraph_file(f)
     callgraph = p.extract_callgraph()
 
+    sccs = strongly_connected_components(callgraph)
+
     closure = transitive_closure(callgraph)
 
-    with open('callgraph.cp', 'w') as f:
+    with open('callgraph.pkl', 'w') as f:
       cPickle.dump(callgraph, f)
 
-    with open('callgraph_closure.cp', 'w') as f:
+    with open('callgraph_closure.pkl', 'w') as f:
       cPickle.dump(closure, f)
+
+    with open('callgraph_sccs.pkl', 'w') as f:
+      cPickle.dump(sccs, f)
