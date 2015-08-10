@@ -2017,7 +2017,7 @@ do_main_loop(void)
    * TLS context. */
   if (! client_identity_key_is_set()) {
     if (init_keys() < 0) {
-      log_err(LD_BUG,"Error initializing keys; exiting");
+      log_err(LD_OR, "Error initializing keys; exiting");
       return -1;
     }
   }
