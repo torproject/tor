@@ -982,19 +982,18 @@ conn_close_if_marked(int i)
   return 1;
 }
 
-/** We've just tried every dirserver we know about, and none of
- * them were reachable. Assume the network is down. Change state
- * so next time an application connection arrives we'll delay it
- * and try another directory fetch. Kill off all the circuit_wait
- * streams that are waiting now, since they will all timeout anyway.
+/** Implementation for directory_all_unreachable.  This is done in a callback,
+ * since otherwise it would complicate Tor's control-flow graph beyond all
+ * reason.
  */
-void
-directory_all_unreachable(time_t now)
+static void
+directory_all_unreachable_cb(evutil_socket_t fd, short event, void *arg)
 {
-  connection_t *conn;
-  (void)now;
+  (void)fd;
+  (void)event;
+  (void)arg;
 
-  stats_n_seconds_working=0; /* reset it */
+  connection_t *conn;
 
   while ((conn = connection_get_by_type_state(CONN_TYPE_AP,
                                               AP_CONN_STATE_CIRCUIT_WAIT))) {
@@ -1008,6 +1007,31 @@ directory_all_unreachable(time_t now)
                                   END_STREAM_REASON_NET_UNREACHABLE);
   }
   control_event_general_status(LOG_ERR, "DIR_ALL_UNREACHABLE");
+}
+
+static struct event *directory_all_unreachable_cb_event = NULL;
+
+/** We've just tried every dirserver we know about, and none of
+ * them were reachable. Assume the network is down. Change state
+ * so next time an application connection arrives we'll delay it
+ * and try another directory fetch. Kill off all the circuit_wait
+ * streams that are waiting now, since they will all timeout anyway.
+ */
+void
+directory_all_unreachable(time_t now)
+{
+  (void)now;
+
+  stats_n_seconds_working=0; /* reset it */
+
+  if (!directory_all_unreachable_cb_event) {
+    directory_all_unreachable_cb_event =
+      tor_event_new(tor_libevent_get_base(),
+                    -1, EV_READ, directory_all_unreachable_cb, NULL);
+    tor_assert(directory_all_unreachable_cb_event);
+  }
+
+  event_active(directory_all_unreachable_cb_event, EV_READ, 1);
 }
 
 /** This function is called whenever we successfully pull down some new
