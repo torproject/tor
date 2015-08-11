@@ -4355,7 +4355,7 @@ test_util_get_avail_disk_space(void *arg)
 
   /* No answer for nonexistent directory */
   val = tor_get_avail_disk_space("/akljasdfklsajdklasjkldjsa");
-  tt_int_op(val, OP_EQ, -1);
+  tt_i64_op(val, OP_EQ, -1);
 
   /* Try the current directory */
   val = tor_get_avail_disk_space(".");
