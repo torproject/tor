@@ -1373,7 +1373,8 @@ dirserv_thinks_router_is_hs_dir(const routerinfo_t *router,
 
   return (router->wants_to_be_hs_dir && router->dir_port &&
           node->is_stable &&
-          uptime >= get_options()->MinUptimeHidServDirectoryV2);
+          uptime >= get_options()->MinUptimeHidServDirectoryV2 &&
+          router_is_active(router, node, now));
 }
 
 /** Don't consider routers with less bandwidth than this when computing
