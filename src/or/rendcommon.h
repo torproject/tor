@@ -12,6 +12,12 @@
 #ifndef TOR_RENDCOMMON_H
 #define TOR_RENDCOMMON_H
 
+typedef enum rend_intro_point_failure_t {
+  INTRO_POINT_FAILURE_GENERIC     = 0,
+  INTRO_POINT_FAILURE_TIMEOUT     = 1,
+  INTRO_POINT_FAILURE_UNREACHABLE = 2,
+} rend_intro_point_failure_t;
+
 /** Free all storage associated with <b>data</b> */
 static INLINE void
 rend_data_free(rend_data_t *data)

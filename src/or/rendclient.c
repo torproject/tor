@@ -38,6 +38,7 @@ void
 rend_client_purge_state(void)
 {
   rend_cache_purge();
+  rend_cache_failure_purge();
   rend_client_cancel_descriptor_fetches();
   rend_client_purge_last_hid_serv_requests();
 }
@@ -1019,6 +1020,9 @@ rend_client_report_intro_point_failure(extend_info_t *failed_intro,
         tor_fragile_assert();
         /* fall through */
       case INTRO_POINT_FAILURE_GENERIC:
+        rend_cache_intro_failure_note(failure_type,
+                                      (uint8_t *) failed_intro->identity_digest,
+                                      rend_query->onion_address);
         rend_intro_point_free(intro);
         smartlist_del(ent->parsed->intro_nodes, i);
         break;
@@ -1034,6 +1038,9 @@ rend_client_report_intro_point_failure(extend_info_t *failed_intro,
                    intro->unreachable_count,
                    zap_intro_point ? " Removing from descriptor.": "");
           if (zap_intro_point) {
+            rend_cache_intro_failure_note(failure_type,
+                                          (uint8_t *) failed_intro->identity_digest,
+                                          rend_query->onion_address);
             rend_intro_point_free(intro);
             smartlist_del(ent->parsed->intro_nodes, i);
           }

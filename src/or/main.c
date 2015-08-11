@@ -1488,6 +1488,10 @@ run_scheduled_events(time_t now)
 #define CLEAN_CACHES_INTERVAL (30*60)
     time_to.clean_caches = now + CLEAN_CACHES_INTERVAL;
   }
+  /* We don't keep entries that are more than five minutes old so we try to
+   * clean it as soon as we can since we want to make sure the client waits
+   * as little as possible for reachability reasons. */
+  rend_cache_failure_clean(now);
 
 #define RETRY_DNS_INTERVAL (10*60)
   /* If we're a server and initializing dns failed, retry periodically. */
