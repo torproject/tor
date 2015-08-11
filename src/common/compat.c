@@ -3417,7 +3417,7 @@ tor_get_avail_disk_space(const char *path)
   if (!ok) {
     return -1;
   }
-  return (int64_t)freeBytesAvail;
+  return (int64_t)freeBytesAvail.QuadPart;
 #else
   (void)path;
   errno = ENOSYS;
