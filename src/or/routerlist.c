@@ -3295,6 +3295,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
 
   /* Make sure that it isn't expired. */
   if (router->cert_expiration_time < approx_time()) {
+    routerinfo_free(router);
+    *msg = "Some certs on this router are expired.";
     return ROUTER_CERTS_EXPIRED;
   }
 
