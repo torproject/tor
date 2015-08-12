@@ -37,6 +37,8 @@ typedef struct {
               unsigned char *);
   int (*sign)(unsigned char *, const unsigned char *, size_t,
               const unsigned char *, const unsigned char *);
+  int (*open_batch)(const unsigned char **, size_t *, const unsigned char **,
+                    const unsigned char **, size_t, int *);
 
   int (*blind_secret_key)(unsigned char *, const unsigned char *,
                           const unsigned char *);
@@ -57,6 +59,7 @@ static const ed25519_impl_t impl_ref10 = {
 
   ed25519_ref10_open,
   ed25519_ref10_sign,
+  NULL,
 
   ed25519_ref10_blind_secret_key,
   ed25519_ref10_blind_public_key,
@@ -74,6 +77,7 @@ static const ed25519_impl_t impl_donna = {
 
   ed25519_donna_open,
   ed25519_donna_sign,
+  ed25519_sign_open_batch_donna,
 
   ed25519_donna_blind_secret_key,
   ed25519_donna_blind_public_key,
@@ -197,56 +201,68 @@ ed25519_checksig_batch(int *okay_out,
                        const ed25519_checkable_t *checkable,
                        int n_checkable)
 {
-  int res, i;
+  int i, res;
+  const ed25519_impl_t *impl = get_ed_impl();
 
-  res = 0;
-  for (i = 0; i < n_checkable; ++i) {
-    const ed25519_checkable_t *ch = &checkable[i];
-    int r = ed25519_checksig(&ch->signature, ch->msg, ch->len, ch->pubkey);
-    if (r < 0)
-      --res;
-    if (okay_out)
-      okay_out[i] = (r == 0);
+  if (impl->open_batch == NULL) {
+    /* No batch verification implementation available, fake it by checking the
+     * each signature individually.
+     */
+    res = 0;
+    for (i = 0; i < n_checkable; ++i) {
+      const ed25519_checkable_t *ch = &checkable[i];
+      int r = ed25519_checksig(&ch->signature, ch->msg, ch->len, ch->pubkey);
+      if (r < 0)
+        --res;
+      if (okay_out)
+        okay_out[i] = (r == 0);
+    }
+  } else {
+    /* ed25519-donna style batch verification available.
+     *
+     * Theoretically, this should only be called if n_checkable >= 3, since
+     * that's the threshold where the batch verification actually kicks in,
+     * but the only difference is a few mallocs/frees.
+     */
+    const uint8_t **ms;
+    size_t *lens;
+    const uint8_t **pks;
+    const uint8_t **sigs;
+    int *oks;
+    int all_ok;
+
+    ms = tor_malloc(sizeof(uint8_t*)*n_checkable);
+    lens = tor_malloc(sizeof(size_t)*n_checkable);
+    pks = tor_malloc(sizeof(uint8_t*)*n_checkable);
+    sigs = tor_malloc(sizeof(uint8_t*)*n_checkable);
+    oks = okay_out ? okay_out : tor_malloc(sizeof(int)*n_checkable);
+
+    for (i = 0; i < n_checkable; ++i) {
+      ms[i] = checkable[i].msg;
+      lens[i] = checkable[i].len;
+      pks[i] = checkable[i].pubkey->pubkey;
+      sigs[i] = checkable[i].signature.sig;
+      oks[i] = 0;
+    }
+
+    res = 0;
+    all_ok = impl->open_batch(ms, lens, pks, sigs, n_checkable, oks);
+    for (i = 0; i < n_checkable; ++i) {
+      if (!oks[i])
+        --res;
+    }
+    /* XXX: For now sanity check oks with the return value.  Once we have
+     * more confidence in the code, if `all_ok == 0` we can skip iterating
+     * over oks since all the signatures were found to be valid.
+     */
+    tor_assert(((res == 0) && !all_ok) || ((res < 0) && all_ok));
+
+    tor_free(ms);
+    tor_free(lens);
+    tor_free(pks);
+    if (! okay_out)
+      tor_free(oks);
   }
-
-#if 0
-  /* This is how we'd do it if we were using ed25519_donna.  I'll keep this
-   * code around here in case we ever do that. */
-  const uint8_t **ms;
-  size_t *lens;
-  const uint8_t **pks;
-  const uint8_t **sigs;
-  int *oks;
-
-  ms = tor_malloc(sizeof(uint8_t*)*n_checkable);
-  lens = tor_malloc(sizeof(size_t)*n_checkable);
-  pks = tor_malloc(sizeof(uint8_t*)*n_checkable);
-  sigs = tor_malloc(sizeof(uint8_t*)*n_checkable);
-  oks = okay_out ? okay_out : tor_malloc(sizeof(int)*n_checkable);
-
-  for (i = 0; i < n_checkable; ++i) {
-    ms[i] = checkable[i].msg;
-    lens[i] = checkable[i].len;
-    pks[i] = checkable[i].pubkey->pubkey;
-    sigs[i] = checkable[i].signature.sig;
-    oks[i] = 0;
-  }
-
-  ed25519_sign_open_batch_donna_fb(ms, lens, pks, sigs, n_checkable, oks);
-
-  res = 0;
-  for (i = 0; i < n_checkable; ++i) {
-    /* XXX/yawning: Propagate to okay_out? */
-    if (!oks[i])
-      --res;
-  }
-
-  tor_free(ms);
-  tor_free(lens);
-  tor_free(pks);
-  if (! okay_out)
-    tor_free(oks);
-#endif
 
   return res;
 }
