@@ -111,5 +111,18 @@ typedef struct alert_sockets_s {
 int alert_sockets_create(alert_sockets_t *socks_out, uint32_t flags);
 void alert_sockets_close(alert_sockets_t *socks);
 
+typedef struct tor_threadlocal_s {
+#ifdef _WIN32
+  DWORD index;
+#else
+  pthread_key_t key;
+#endif
+} tor_threadlocal_t;
+
+int tor_threadlocal_init(tor_threadlocal_t *threadlocal);
+void tor_threadlocal_destroy(tor_threadlocal_t *threadlocal);
+void *tor_threadlocal_get(tor_threadlocal_t *threadlocal);
+void tor_threadlocal_set(tor_threadlocal_t *threadlocal, void *value);
+
 #endif
 

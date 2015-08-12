@@ -594,9 +594,9 @@ typedef struct queued_event_s {
   char *msg;
 } queued_event_t;
 
-/** If this is greater than 0, we don't allow new events to be queued.
- * XXXX This should be thread-local. */
-static int block_event_queue = 0;
+/** Pointer to int. If this is greater than 0, we don't allow new events to be
+ * queued. */
+static tor_threadlocal_t block_event_queue;
 
 /** Holds a smartlist of queued_event_t objects that may need to be sent
  * to one or more controllers */
@@ -631,7 +631,19 @@ control_initialize_event_queue(void)
 
   if (queued_control_events_lock == NULL) {
     queued_control_events_lock = tor_mutex_new();
+    tor_threadlocal_init(&block_event_queue);
   }
+}
+
+static int *
+get_block_event_queue(void)
+{
+  int *val = tor_threadlocal_get(&block_event_queue);
+  if (PREDICT_UNLIKELY(val == NULL)) {
+    val = tor_malloc_zero(sizeof(int));
+    tor_threadlocal_set(&block_event_queue, val);
+  }
+  return val;
 }
 
 /** Helper: inserts an event on the list of events queued to be sent to
@@ -655,21 +667,20 @@ queue_control_event_string,(uint16_t event, char *msg))
     return;
   }
 
+  int *block_event_queue = get_block_event_queue();
+  if (*block_event_queue) {
+    tor_free(msg);
+    return;
+  }
+
   queued_event_t *ev = tor_malloc(sizeof(*ev));
   ev->event = event;
   ev->msg = msg;
 
-  tor_mutex_acquire(queued_control_events_lock);
-  if (block_event_queue) { /* XXXX This should be thread-specific. */
-    tor_mutex_release(queued_control_events_lock);
-    tor_free(msg);
-    tor_free(ev);
-    return;
-  }
-
   /* No queueing an event while queueing an event */
-  ++block_event_queue;
+  ++*block_event_queue;
 
+  tor_mutex_acquire(queued_control_events_lock);
   tor_assert(queued_control_events);
   smartlist_add(queued_control_events, ev);
 
@@ -679,9 +690,9 @@ queue_control_event_string,(uint16_t event, char *msg))
     flush_queued_event_pending = 1;
   }
 
-  --block_event_queue;
-
   tor_mutex_release(queued_control_events_lock);
+
+  --*block_event_queue;
 
   /* We just put an event on the queue; mark the queue to be
    * flushed.  We only do this from the main thread for now; otherwise,
@@ -718,9 +729,11 @@ queued_events_flush_all(int force)
   smartlist_t *controllers = smartlist_new();
   smartlist_t *queued_events;
 
+  int *block_event_queue = get_block_event_queue();
+  ++*block_event_queue;
+
   tor_mutex_acquire(queued_control_events_lock);
   /* No queueing an event while flushing events. */
-  ++block_event_queue;
   flush_queued_event_pending = 0;
   queued_events = queued_control_events;
   queued_control_events = smartlist_new();
@@ -760,9 +773,7 @@ queued_events_flush_all(int force)
   smartlist_free(queued_events);
   smartlist_free(controllers);
 
-  tor_mutex_acquire(queued_control_events_lock);
-  --block_event_queue;
-  tor_mutex_release(queued_control_events_lock);
+  --*block_event_queue;
 }
 
 /** Libevent callback: Flushes pending events to controllers that are

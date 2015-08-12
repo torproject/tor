@@ -275,6 +275,33 @@ tor_cond_signal_all(tor_cond_t *cond)
   pthread_cond_broadcast(&cond->cond);
 }
 
+int
+tor_threadlocal_init(tor_threadlocal_t *threadlocal)
+{
+  int err = pthread_key_create(&threadlocal->key, NULL);
+  return err ? -1 : 0;
+}
+
+void
+tor_threadlocal_destroy(tor_threadlocal_t *threadlocal)
+{
+  pthread_key_delete(threadlocal->key);
+  memset(threadlocal, 0, sizeof(tor_threadlocal_t));
+}
+
+void *
+tor_threadlocal_get(tor_threadlocal_t *threadlocal)
+{
+  return pthread_getspecific(threadlocal->key);
+}
+
+void
+tor_threadlocal_set(tor_threadlocal_t *threadlocal, void *value)
+{
+  int err = pthread_setspecific(threadlocal->key, value);
+  tor_assert(err == 0);
+}
+
 /** Set up common structures for use by threading. */
 void
 tor_threads_init(void)

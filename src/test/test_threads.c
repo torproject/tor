@@ -28,7 +28,7 @@ static unsigned long thread_fn_tid1, thread_fn_tid2;
 static void thread_test_func_(void* _s) ATTR_NORETURN;
 
 /** How many iterations have the threads in the unit test run? */
-static int t1_count = 0, t2_count = 0;
+static tor_threadlocal_t count;
 
 /** Helper function for threading unit tests: This function runs in a
  * subthread. It grabs its own mutex (start1 or start2) to make sure that it
@@ -38,19 +38,19 @@ static void
 thread_test_func_(void* _s)
 {
   char *s = _s;
-  int i, *count;
+  int i;
   tor_mutex_t *m;
   char buf[64];
   char **cp;
+  int *mycount = tor_malloc_zero(sizeof(int));
+  tor_threadlocal_set(&count, mycount);
   if (!strcmp(s, "thread 1")) {
     m = thread_test_start1_;
     cp = &thread1_name_;
-    count = &t1_count;
     thread_fn_tid1 = tor_get_thread_id();
   } else {
     m = thread_test_start2_;
     cp = &thread2_name_;
-    count = &t2_count;
     thread_fn_tid2 = tor_get_thread_id();
   }
 
@@ -62,8 +62,10 @@ thread_test_func_(void* _s)
   for (i=0; i<10000; ++i) {
     tor_mutex_acquire(thread_test_mutex_);
     strmap_set(thread_test_strmap_, "last to run", *cp);
-    ++*count;
     tor_mutex_release(thread_test_mutex_);
+    int *tls_count = tor_threadlocal_get(&count);
+    tor_assert(tls_count == mycount);
+    ++*tls_count;
   }
   tor_mutex_acquire(thread_test_mutex_);
   strmap_set(thread_test_strmap_, s, *cp);
@@ -89,6 +91,7 @@ test_threads_basic(void *arg)
   tv.tv_usec=100*1000;
 #endif
   (void) arg;
+  tt_int_op(tor_threadlocal_init(&count), OP_EQ, 0);
 
   set_main_thread();
 
@@ -128,7 +131,6 @@ test_threads_basic(void *arg)
   tor_mutex_free(thread_test_mutex_);
 
   if (timedout) {
-    printf("\nTimed out: %d %d", t1_count, t2_count);
     tt_assert(strmap_get(thread_test_strmap_, "thread 1"));
     tt_assert(strmap_get(thread_test_strmap_, "thread 2"));
     tt_assert(!timedout);
