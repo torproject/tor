@@ -100,6 +100,7 @@ static int conn_close_if_marked(int i);
 static void connection_start_reading_from_linked_conn(connection_t *conn);
 static int connection_should_read_from_linked_conn(connection_t *conn);
 static int run_main_loop_until_done(void);
+static void process_signal(int sig);
 
 /********* START VARIABLES **********/
 
@@ -2249,7 +2250,6 @@ run_main_loop_until_done(void)
   return loop_result;
 }
 
-#ifndef _WIN32 /* Only called when we're willing to use signals */
 /** Libevent callback: invoked when we get a signal.
  */
 static void
@@ -2262,10 +2262,9 @@ signal_callback(int fd, short events, void *arg)
 
   process_signal(sig);
 }
-#endif
 
 /** Do the work of acting on a signal received in <b>sig</b> */
-void
+static void
 process_signal(int sig)
 {
   switch (sig)
@@ -2490,36 +2489,73 @@ exit_function(void)
 #endif
 }
 
-/** Set up the signal handlers for either parent or child. */
+#ifdef _WIN32
+#define UNIX_ONLY 0
+#else
+#define UNIX_ONLY 1
+#endif
+static struct {
+  int signal_value;
+  int try_to_register;
+  struct event *signal_event;
+} signal_handlers[] = {
+#ifdef SIGINT
+  { SIGINT, UNIX_ONLY, NULL }, /* do a controlled slow shutdown */
+#endif
+#ifdef SIGTERM
+  { SIGTERM, UNIX_ONLY, NULL }, /* to terminate now */
+#endif
+#ifdef SIGPIPE
+  { SIGPIPE, UNIX_ONLY, NULL }, /* otherwise SIGPIPE kills us */
+#endif
+#ifdef SIGUSR1
+  { SIGUSR1, UNIX_ONLY, NULL }, /* dump stats */
+#endif
+#ifdef SIGUSR2
+  { SIGUSR2, UNIX_ONLY, NULL }, /* go to loglevel debug */
+#endif
+#ifdef SIGHUP
+  { SIGHUP, UNIX_ONLY, NULL }, /* to reload config, retry conns, etc */
+#endif
+#ifdef SIGXFSZ
+  { SIGXFSZ, UNIX_ONLY, NULL }, /* handle file-too-big resource exhaustion */
+#endif
+#ifdef SIGCHLD
+  { SIGCHLD, UNIX_ONLY, NULL }, /* handle dns/cpu workers that exit */
+#endif
+  /* These are controller-only */
+  { SIGNEWNYM, 0, NULL },
+  { SIGCLEARDNSCACHE, 0, NULL },
+  { SIGHEARTBEAT, 0, NULL },
+  { -1, -1, NULL }
+};
+
+/** Set up the signal handlers for either parent or child process */
 void
 handle_signals(int is_parent)
 {
-#ifndef _WIN32 /* do signal stuff only on Unix */
   int i;
-  static const int signals[] = {
-    SIGINT,  /* do a controlled slow shutdown */
-    SIGTERM, /* to terminate now */
-    SIGPIPE, /* otherwise SIGPIPE kills us */
-    SIGUSR1, /* dump stats */
-    SIGUSR2, /* go to loglevel debug */
-    SIGHUP,  /* to reload config, retry conns, etc */
-#ifdef SIGXFSZ
-    SIGXFSZ, /* handle file-too-big resource exhaustion */
-#endif
-    SIGCHLD, /* handle dns/cpu workers that exit */
-    -1 };
-  static struct event *signal_events[16]; /* bigger than it has to be. */
   if (is_parent) {
-    for (i = 0; signals[i] >= 0; ++i) {
-      signal_events[i] = tor_evsignal_new(tor_libevent_get_base(), signals[i],
-                                          signal_callback,
-                                          /* Cast away const */
-                                          (int*)&signals[i]);
-      if (event_add(signal_events[i], NULL))
-        log_warn(LD_BUG, "Error from libevent when adding event for signal %d",
-                 signals[i]);
+    for (i = 0; signal_handlers[i].signal_value >= 0; ++i) {
+      if (signal_handlers[i].try_to_register) {
+        signal_handlers[i].signal_event =
+          tor_evsignal_new(tor_libevent_get_base(),
+                           signal_handlers[i].signal_value,
+                           signal_callback,
+                           &signal_handlers[i].signal_value);
+        if (event_add(signal_handlers[i].signal_event, NULL))
+          log_warn(LD_BUG, "Error from libevent when adding "
+                   "event for signal %d",
+                   signal_handlers[i].signal_value);
+      } else {
+        signal_handlers[i].signal_event =
+          tor_event_new(tor_libevent_get_base(), -1,
+                        EV_SIGNAL, signal_callback,
+                        &signal_handlers[i].signal_value);
+      }
     }
   } else {
+#ifndef _WIN32
     struct sigaction action;
     action.sa_flags = 0;
     sigemptyset(&action.sa_mask);
@@ -2533,10 +2569,21 @@ handle_signals(int is_parent)
 #ifdef SIGXFSZ
     sigaction(SIGXFSZ, &action, NULL);
 #endif
+#endif
   }
-#else /* MS windows */
-  (void)is_parent;
-#endif /* signal stuff */
+}
+
+/* Make sure the signal handler for signal_num will be called. */
+void
+activate_signal(int signal_num)
+{
+  int i;
+  for (i = 0; signal_handlers[i].signal_value >= 0; ++i) {
+    if (signal_handlers[i].signal_value == signal_num) {
+      event_active(signal_handlers[i].signal_event, EV_SIGNAL, 1);
+      return;
+    }
+  }
 }
 
 /** Main entry point for the Tor command-line client.

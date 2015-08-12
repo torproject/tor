@@ -1325,7 +1325,7 @@ handle_control_signal(control_connection_t *conn, uint32_t len,
   if (sig == SIGTERM || sig == SIGINT)
     connection_flush(TO_CONN(conn));
 
-  process_signal(sig);
+  activate_signal(sig);
 
   return 0;
 }
