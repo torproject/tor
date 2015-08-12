@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Move some format-parsing functions out of crypto.c and
+      crypto_curve25519.c into crypto_format.c and/or util_format.c.
