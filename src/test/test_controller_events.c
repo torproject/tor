@@ -395,12 +395,12 @@ test_cntev_event_mask(void *arg)
   { #name, test_cntev_ ## name, flags, 0, NULL }
 
 struct testcase_t controller_event_tests[] = {
-  TEST(bucket_note_empty, 0),
-  TEST(bucket_millis_empty, 0),
-  TEST(sum_up_cell_stats, 0),
-  TEST(append_cell_stats, 0),
-  TEST(format_cell_stats, 0),
-  TEST(event_mask, 0),
+  TEST(bucket_note_empty, TT_FORK),
+  TEST(bucket_millis_empty, TT_FORK),
+  TEST(sum_up_cell_stats, TT_FORK),
+  TEST(append_cell_stats, TT_FORK),
+  TEST(format_cell_stats, TT_FORK),
+  TEST(event_mask, TT_FORK),
   END_OF_TESTCASES
 };
 
