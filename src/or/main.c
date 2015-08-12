@@ -2253,7 +2253,7 @@ run_main_loop_until_done(void)
 /** Libevent callback: invoked when we get a signal.
  */
 static void
-signal_callback(int fd, short events, void *arg)
+signal_callback(evutil_socket_t fd, short events, void *arg)
 {
   const int *sigptr = arg;
   const int sig = *sigptr;
