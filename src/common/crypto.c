@@ -2365,10 +2365,19 @@ crypto_seed_rng(void)
 }
 
 /** Write <b>n</b> bytes of strong random data to <b>to</b>. Return 0 on
- * success, -1 on failure.
+ * success, -1 on failure, with support for mocking for unit tests.
  */
 MOCK_IMPL(int,
 crypto_rand, (char *to, size_t n))
+{
+  return crypto_rand_unmocked(to, n);
+}
+
+/** Write <b>n</b> bytes of strong random data to <b>to</b>. Return 0 on
+ * success, -1 on failure.  Most callers will want crypto_rand instead.
+ */
+int
+crypto_rand_unmocked(char *to, size_t n)
 {
   int r;
   tor_assert(n < INT_MAX);
