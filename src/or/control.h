@@ -12,6 +12,8 @@
 #ifndef TOR_CONTROL_H
 #define TOR_CONTROL_H
 
+void control_initialize_event_queue(void);
+
 void control_update_global_event_mask(void);
 void control_adjust_event_log_severity(void);
 

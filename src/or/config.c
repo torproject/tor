@@ -1106,6 +1106,9 @@ options_act_reversible(const or_options_t *old_options, char **msg)
       init_libevent(options);
       libevent_initialized = 1;
 
+      /* This has to come up after libevent is initialized. */
+      control_initialize_event_queue();
+
       /*
        * Initialize the scheduler - this has to come after
        * options_init_from_torrc() sets up libevent - why yes, that seems

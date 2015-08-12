@@ -605,6 +605,24 @@ static smartlist_t *queued_control_events = NULL;
  * queued_control_events. */
 static struct event *flush_queued_events_event = NULL;
 
+void
+control_initialize_event_queue(void)
+{
+  if (queued_control_events == NULL) {
+    queued_control_events = smartlist_new();
+  }
+
+  if (flush_queued_events_event == NULL) {
+    struct event_base *b = tor_libevent_get_base();
+    if (b) {
+      flush_queued_events_event = tor_event_new(b,
+                                              -1, 0, flush_queued_events_cb,
+                                              NULL);
+      tor_assert(flush_queued_events_event);
+    }
+  }
+}
+
 /** Helper: inserts an event on the list of events queued to be sent to
  * one or more controllers, and schedules the events to be flushed if needed.
  *
@@ -619,10 +637,6 @@ static struct event *flush_queued_events_event = NULL;
 MOCK_IMPL(STATIC void,
 queue_control_event_string,(uint16_t event, char *msg))
 {
-  if (PREDICT_UNLIKELY(queued_control_events == NULL)) {
-    queued_control_events = smartlist_new();
-  }
-
   /* This is redundant with checks done elsewhere, but it's a last-ditch
    * attempt to avoid queueing something we shouldn't have to queue. */
   if (PREDICT_UNLIKELY( ! EVENT_IS_INTERESTING(event) )) {
@@ -634,27 +648,21 @@ queue_control_event_string,(uint16_t event, char *msg))
     return;
   }
 
-  /* No queueing an event while queueing an event */
-  ++block_event_queue;
-
   queued_event_t *ev = tor_malloc(sizeof(*ev));
   ev->event = event;
   ev->msg = msg;
 
+  /* No queueing an event while queueing an event */
+  ++block_event_queue;
+
+  tor_assert(queued_control_events);
   smartlist_add(queued_control_events, ev);
 
   /* We just put the first event on the queue; mark the queue to be
    * flushed.
    */
   if (smartlist_len(queued_control_events) == 1) {
-    if (PREDICT_UNLIKELY(flush_queued_events_event == NULL)) {
-      struct event_base *b = tor_libevent_get_base();
-      tor_assert(b);
-      flush_queued_events_event = tor_event_new(b,
-                                                -1, 0, flush_queued_events_cb,
-                                                NULL);
-      tor_assert(flush_queued_events_event);
-    }
+    tor_assert(flush_queued_events_event);
     event_active(flush_queued_events_event, EV_READ, 1);
   }
 
