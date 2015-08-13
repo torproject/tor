@@ -1,0 +1,6 @@
+  o Code simplification and refactoring:
+    - Change the function that's called when we need to retry all downloads
+      so that it only reschedules the downloads to happen immediately, rather
+      than launching them all at once itself.  This further simplifies
+      Tor's callgraph.
+
