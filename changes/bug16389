@@ -1,0 +1,12 @@
+  o Hidden Service Enhancement
+    Client now uses an introduction point failure cache to know when to
+    fetch or keep a descriptor in their cache.
+
+    When fetching a descriptor, for every introduction points in it, we look
+    them up in the failure cache to know if we keep the descriptor or not.
+    For this to work, everytime an introduction points is discarded (ex:
+    receiving a NACK), we note it down in our introduction cache. If all
+    introduction points for an onion service are in our failure cache, we
+    discard the descriptor and fetch a new one.
+
+    See rendcache.c for a detailed explanation of the cache's behavior.
