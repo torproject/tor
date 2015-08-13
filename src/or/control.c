@@ -3932,10 +3932,6 @@ connection_control_reached_eof(control_connection_t *conn)
   return 0;
 }
 
-static void lost_owning_controller(const char *owner_type,
-                                   const char *loss_manner)
-  ATTR_NORETURN;
-
 /** Shut down this Tor instance in the same way that SIGINT would, but
  * with a log message appropriate for the loss of an owning controller. */
 static void
@@ -3944,10 +3940,7 @@ lost_owning_controller(const char *owner_type, const char *loss_manner)
   log_notice(LD_CONTROL, "Owning controller %s has %s -- exiting now.",
              owner_type, loss_manner);
 
-  /* XXXX Perhaps this chunk of code should be a separate function,
-   * called here and by process_signal(SIGINT). */
-  tor_cleanup();
-  exit(0);
+  activate_signal(SIGTERM);
 }
 
 /** Called when <b>conn</b> is being freed. */
@@ -5551,8 +5544,6 @@ static char *owning_controller_process_spec = NULL;
 /** A process-termination monitor for Tor's owning controller, or NULL
  * if this Tor instance is not currently owned by a process. */
 static tor_process_monitor_t *owning_controller_process_monitor = NULL;
-
-static void owning_controller_procmon_cb(void *unused) ATTR_NORETURN;
 
 /** Process-termination monitor callback for Tor's owning controller
  * process. */
