@@ -767,6 +767,46 @@ router_write_fingerprint(int hashed)
   return result;
 }
 
+static int
+init_keys_common(void)
+{
+  if (!key_lock)
+    key_lock = tor_mutex_new();
+
+  /* There are a couple of paths that put us here before we've asked
+   * openssl to initialize itself. */
+  if (crypto_global_init(get_options()->HardwareAccel,
+                         get_options()->AccelName,
+                         get_options()->AccelDir)) {
+    log_err(LD_BUG, "Unable to initialize OpenSSL. Exiting.");
+    return -1;
+  }
+
+  return 0;
+}
+
+int
+init_keys_client(void)
+{
+  crypto_pk_t *prkey;
+  if (init_keys_common() < 0)
+    return -1;
+
+  if (!(prkey = crypto_pk_new()))
+    return -1;
+  if (crypto_pk_generate_key(prkey)) {
+    crypto_pk_free(prkey);
+    return -1;
+  }
+  set_client_identity_key(prkey);
+  /* Create a TLS context. */
+  if (router_initialize_tls_context() < 0) {
+    log_err(LD_GENERAL,"Error creating TLS context for Tor client.");
+    return -1;
+  }
+  return 0;
+}
+
 /** Initialize all OR private keys, and the TLS context, as necessary.
  * On OPs, this only initializes the tls context. Return 0 on success,
  * or -1 if Tor should die.
@@ -786,35 +826,13 @@ init_keys(void)
   int v3_digest_set = 0;
   authority_cert_t *cert = NULL;
 
-  if (!key_lock)
-    key_lock = tor_mutex_new();
-
-  /* There are a couple of paths that put us here before we've asked
-   * openssl to initialize itself. */
-  if (crypto_global_init(get_options()->HardwareAccel,
-                         get_options()->AccelName,
-                         get_options()->AccelDir)) {
-    log_err(LD_BUG, "Unable to initialize OpenSSL. Exiting.");
-    return -1;
-  }
-
   /* OP's don't need persistent keys; just make up an identity and
    * initialize the TLS context. */
   if (!server_mode(options)) {
-    if (!(prkey = crypto_pk_new()))
-      return -1;
-    if (crypto_pk_generate_key(prkey)) {
-      crypto_pk_free(prkey);
-      return -1;
-    }
-    set_client_identity_key(prkey);
-    /* Create a TLS context. */
-    if (router_initialize_tls_context() < 0) {
-      log_err(LD_GENERAL,"Error creating TLS context for Tor client.");
-      return -1;
-    }
-    return 0;
+    return init_keys_client();
   }
+  if (init_keys_common() < 0)
+    return -1;
   /* Make sure DataDirectory exists, and is private. */
   if (check_private_dir(options->DataDirectory, CPD_CREATE, options->User)) {
     return -1;
