@@ -742,7 +742,7 @@ smartlist_sort_strings(smartlist_t *sl)
 }
 
 /** Return the most frequent string in the sorted list <b>sl</b> */
-char *
+const char *
 smartlist_get_most_frequent_string(smartlist_t *sl)
 {
   return smartlist_get_most_frequent(sl, compare_string_ptrs_);
@@ -752,7 +752,7 @@ smartlist_get_most_frequent_string(smartlist_t *sl)
  * If <b>count_out</b> is provided, set <b>count_out</b> to the
  * number of times that string appears.
  */
-char *
+const char *
 smartlist_get_most_frequent_string_(smartlist_t *sl, int *count_out)
 {
   return smartlist_get_most_frequent_(sl, compare_string_ptrs_, count_out);
@@ -1020,7 +1020,7 @@ smartlist_sort_digests256(smartlist_t *sl)
 
 /** Return the most frequent member of the sorted list of DIGEST256_LEN
  * digests in <b>sl</b> */
-char *
+const uint8_t *
 smartlist_get_most_frequent_digest256(smartlist_t *sl)
 {
   return smartlist_get_most_frequent(sl, compare_digests256_);

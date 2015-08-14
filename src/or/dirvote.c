@@ -478,7 +478,7 @@ compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
 
   if (microdesc_digest256_out) {
     smartlist_t *digests = smartlist_new();
-    const char *best_microdesc_digest;
+    const uint8_t *best_microdesc_digest;
     SMARTLIST_FOREACH_BEGIN(votes, vote_routerstatus_t *, rs) {
         char d[DIGEST256_LEN];
         if (compare_vote_rs(rs, most))

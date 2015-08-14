@@ -109,9 +109,9 @@ void smartlist_sort_digests(smartlist_t *sl);
 void smartlist_sort_digests256(smartlist_t *sl);
 void smartlist_sort_pointers(smartlist_t *sl);
 
-char *smartlist_get_most_frequent_string(smartlist_t *sl);
-char *smartlist_get_most_frequent_string_(smartlist_t *sl, int *count_out);
-char *smartlist_get_most_frequent_digest256(smartlist_t *sl);
+const char *smartlist_get_most_frequent_string(smartlist_t *sl);
+const char *smartlist_get_most_frequent_string_(smartlist_t *sl, int *count_out);
+const uint8_t *smartlist_get_most_frequent_digest256(smartlist_t *sl);
 
 void smartlist_uniq_strings(smartlist_t *sl);
 void smartlist_uniq_digests(smartlist_t *sl);
