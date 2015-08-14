@@ -23,7 +23,7 @@ typedef struct ddmap_entry_s {
   vote_routerstatus_t *vrs_lst[FLEXIBLE_ARRAY_MEMBER];
 } ddmap_entry_t;
 
-struct double_digest_map_s *by_both_ids;
+double_digest_map_t *by_both_ids;
 
 static void
 ddmap_entry_free(ddmap_entry_t *e)
