@@ -40,6 +40,15 @@
   tt_assert_test_type(a,b,#a" "#op" "#b,double,(val1_ op val2_),"%g",   \
                       TT_EXIT_TEST_FUNCTION)
 
+/* Declare "double equal" in a sneaky way, so compiler won't complain about
+ * comparing floats with == or !=.  Of course, only do this if you know what
+ * you're doing. */
+#define tt_double_eq(a,b)     \
+  STMT_BEGIN                  \
+  tt_double_op((a), >=, (b)); \
+  tt_double_op((a), <=, (b)); \
+  STMT_END
+
 #ifdef _MSC_VER
 #define U64_PRINTF_TYPE uint64_t
 #define I64_PRINTF_TYPE int64_t

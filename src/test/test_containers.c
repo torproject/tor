@@ -934,12 +934,12 @@ test_container_order_functions(void *arg)
 #undef third_quartile
 
   double dbls[] = { 1.0, 10.0, 100.0, 1e4, 1e5, 1e6 };
-  tt_assert(1.0 == median_double(dbls, 1));
-  tt_assert(1.0 == median_double(dbls, 2));
-  tt_assert(10.0 == median_double(dbls, 3));
-  tt_assert(10.0 == median_double(dbls, 4));
-  tt_assert(100.0 == median_double(dbls, 5));
-  tt_assert(100.0 == median_double(dbls, 6));
+  tt_double_eq(1.0, median_double(dbls, 1));
+  tt_double_eq(1.0, median_double(dbls, 2));
+  tt_double_eq(10.0, median_double(dbls, 3));
+  tt_double_eq(10.0, median_double(dbls, 4));
+  tt_double_eq(100.0, median_double(dbls, 5));
+  tt_double_eq(100.0, median_double(dbls, 6));
 
   time_t times[] = { 5, 10, 20, 25, 15 };
 
