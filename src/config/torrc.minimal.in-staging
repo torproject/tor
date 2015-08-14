@@ -110,11 +110,11 @@
 
 ## Use these to restrict the maximum traffic per day, week, or month.
 ## Note that this threshold applies separately to sent and received bytes,
-## not to their sum: setting "4 GB" may allow up to 8 GB total before
+## not to their sum: setting "40 GB" may allow up to 80 GB total before
 ## hibernating.
 ##
-## Set a maximum of 4 gigabytes each way per period.
-#AccountingMax 4 GBytes
+## Set a maximum of 40 gigabytes each way per period.
+#AccountingMax 40 GBytes
 ## Each period starts daily at midnight (AccountingMax is per day)
 #AccountingStart day 00:00
 ## Each period starts on the 3rd of the month at 15:00 (AccountingMax

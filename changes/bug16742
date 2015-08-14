@@ -1,0 +1,3 @@
+  o Documentation:
+    - Recommend a 40 GB example AccountingMax in torrc.sample rather
+      than a 4 GB max. Closes ticket 16742.
