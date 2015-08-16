@@ -340,7 +340,6 @@ command_process_create_cell(cell_t *cell, channel_t *chan)
     if (len < 0) {
       log_warn(LD_OR,"Failed to generate key material. Closing.");
       circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
-      tor_free(create_cell);
       return;
     }
     created_cell.cell_type = CELL_CREATED_FAST;
