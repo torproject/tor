@@ -119,9 +119,26 @@ typedef struct tor_threadlocal_s {
 #endif
 } tor_threadlocal_t;
 
+/** Initialize a thread-local variable.
+ *
+ * After you call this function on a tor_threadlocal_t, you can call
+ * tor_threadlocal_set to change the current value of this variable for the
+ * current thread, and tor_threadlocal_get to retrieve the current value for
+ * the current thread.  Each thread has its own value.
+ **/
 int tor_threadlocal_init(tor_threadlocal_t *threadlocal);
+/**
+ * Release all resource associated with a thread-local variable.
+ */
 void tor_threadlocal_destroy(tor_threadlocal_t *threadlocal);
+/**
+ * Return the current value of a thread-local variable for this thread.
+ */
 void *tor_threadlocal_get(tor_threadlocal_t *threadlocal);
+/**
+ * Change the current value of a thread-local variable for this thread to
+ * <b>value</b>.
+ */
 void tor_threadlocal_set(tor_threadlocal_t *threadlocal, void *value);
 
 #endif
