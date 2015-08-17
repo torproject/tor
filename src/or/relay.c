@@ -209,8 +209,7 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
       return 0;
     }
 
-    conn = relay_lookup_conn(circ, cell, cell_direction,
-                                                layer_hint);
+    conn = relay_lookup_conn(circ, cell, cell_direction, layer_hint);
     if (cell_direction == CELL_DIRECTION_OUT) {
       ++stats_n_relay_cells_delivered;
       log_debug(LD_OR,"Sending away from origin.");
@@ -1306,7 +1305,10 @@ connection_edge_process_relay_cell_not_open(
       return 0;
     }
     conn->base_.state = AP_CONN_STATE_OPEN;
-    log_info(LD_APP,"'connected' received after %d seconds.",
+    log_info(LD_APP,"'connected' received for circid %u streamid %d "
+             "after %d seconds.",
+             (unsigned)circ->n_circ_id,
+             rh->stream_id,
              (int)(time(NULL) - conn->base_.timestamp_lastread));
     if (connected_cell_parse(rh, cell, &addr, &ttl) < 0) {
       log_fn(LOG_PROTOCOL_WARN, LD_APP,
@@ -1699,7 +1701,9 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         return -END_CIRC_REASON_TORPROTOCOL;
       }
       log_info(domain,
-               "'connected' received, no conn attached anymore. Ignoring.");
+               "'connected' received on circid %u for streamid %d, "
+               "no conn attached anymore. Ignoring.",
+               (unsigned)circ->n_circ_id, rh.stream_id);
       return 0;
     case RELAY_COMMAND_SENDME:
       if (!rh.stream_id) {
