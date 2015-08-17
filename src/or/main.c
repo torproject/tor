@@ -1280,6 +1280,17 @@ reschedule_descriptor_update_check(void)
   time_to.check_descriptor = 0;
 }
 
+/**
+ * Update our schedule so that we'll check whether we need to fetch directory
+ * info immediately.
+ */
+void
+reschedule_directory_downloads(void)
+{
+  time_to.download_networkstatus = 0;
+  time_to.try_getting_descriptors = 0;
+}
+
 /** Perform regular maintenance tasks.  This function gets run once per
  * second by second_elapsed_callback().
  */

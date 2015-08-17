@@ -4013,12 +4013,10 @@ update_all_descriptor_downloads(time_t now)
 void
 routerlist_retry_directory_downloads(time_t now)
 {
+  (void)now;
   router_reset_status_download_failures();
   router_reset_descriptor_download_failures();
-  if (get_options()->DisableNetwork)
-    return;
-  update_networkstatus_downloads(now);
-  update_all_descriptor_downloads(now);
+  reschedule_directory_downloads();
 }
 
 /** Return true iff <b>router</b> does not permit exit streams.
