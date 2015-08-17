@@ -40,3 +40,7 @@ as of 8757bd4cd209cb032853ece0ce413f122eef212c.
  * On non-x86 targets, GCC's Stack Protector dislikes variables that have
    alignment constraints greater than that of other primitive types.
    The `ALIGN` macro is thus no-oped for all non-SSE2 builds.
+
+ * On 32 bit x86 targets that the compiler thinks supports SSE2, always
+   enable SSE2 support by force defining ED25519_SSE2 (x86_64 would also
+   always support this, but that code path is slower).
