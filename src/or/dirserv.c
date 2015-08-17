@@ -62,7 +62,7 @@ static uint32_t
 dirserv_get_status_impl(const char *fp, const char *nickname,
                         uint32_t addr, uint16_t or_port,
                         const char *platform, const char **msg,
-                        int should_log);
+                        int severity);
 static void clear_cached_dir(cached_dir_t *d);
 static const signed_descriptor_t *get_signed_descriptor_by_fp(
                                                         const char *fp,
@@ -290,7 +290,7 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
 
   return dirserv_get_status_impl(d, router->nickname,
                                  router->addr, router->or_port,
-                                 router->platform, msg, 1);
+                                 router->platform, msg, severity);
 }
 
 /** Return true if there is no point in downloading the router described by
