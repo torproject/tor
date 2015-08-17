@@ -716,8 +716,8 @@ origin_circuit_new(void)
   return circ;
 }
 
-/** Allocate a new or_circuit_t, connected to <b>p_conn</b> as
- * <b>p_circ_id</b>.  If <b>p_conn</b> is NULL, the circuit is unattached. */
+/** Allocate a new or_circuit_t, connected to <b>p_chan</b> as
+ * <b>p_circ_id</b>.  If <b>p_chan</b> is NULL, the circuit is unattached. */
 or_circuit_t *
 or_circuit_new(circid_t p_circ_id, channel_t *p_chan)
 {
