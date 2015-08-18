@@ -1204,6 +1204,9 @@ circuit_detach_stream(circuit_t *circ, edge_connection_t *conn)
       }
     }
     if (removed) {
+      log_debug(LD_APP, "Removing stream %d from circ %u",
+                conn->stream_id, (unsigned)circ->n_circ_id);
+
       /* If the stream was removed, and it was a rend stream, decrement the
        * number of streams on the circuit associated with the rend service.
        */
