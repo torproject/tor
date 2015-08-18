@@ -125,6 +125,49 @@ tor_cond_signal_all(tor_cond_t *cond)
 }
 
 int
+tor_threadlocal_init(tor_threadlocal_t *threadlocal)
+{
+  threadlocal->index = TlsAlloc();
+  return (threadlocal->index == TLS_OUT_OF_INDEXES) ? -1 : 0;
+}
+
+void
+tor_threadlocal_destroy(tor_threadlocal_t *threadlocal)
+{
+  TlsFree(threadlocal->index);
+  memset(threadlocal, 0, sizeof(tor_threadlocal_t));
+}
+
+void *
+tor_threadlocal_get(tor_threadlocal_t *threadlocal)
+{
+  void *value = TlsGetValue(threadlocal->index);
+  if (value == NULL) {
+    DWORD err = GetLastError();
+    if (err != ERROR_SUCCESS) {
+      char *msg = format_win32_error(err);
+      log_err(LD_GENERAL, "Error retrieving thread-local value: %s", msg);
+      tor_free(msg);
+      tor_assert(err == ERROR_SUCCESS);
+    }
+  }
+  return value;
+}
+
+void
+tor_threadlocal_set(tor_threadlocal_t *threadlocal, void *value)
+{
+  BOOL ok = TlsSetValue(threadlocal->index, value);
+  if (!ok) {
+    DWORD err = GetLastError();
+    char *msg = format_win32_error(err);
+    log_err(LD_GENERAL, "Error adjusting thread-local value: %s", msg);
+    tor_free(msg);
+    tor_assert(ok);
+  }
+}
+
+int
 tor_cond_wait(tor_cond_t *cond, tor_mutex_t *lock_, const struct timeval *tv)
 {
   CRITICAL_SECTION *lock = &lock_->mutex;

@@ -333,15 +333,13 @@ static uint16_t controlevent_event = 0;
 static smartlist_t *controlevent_msgs = NULL;
 
 static void
-send_control_event_string_replacement(uint16_t event, event_format_t which,
-                                      const char *msg)
+queue_control_event_string_replacement(uint16_t event, char *msg)
 {
-  (void) which;
   ++controlevent_n;
   controlevent_event = event;
   if (!controlevent_msgs)
     controlevent_msgs = smartlist_new();
-  smartlist_add(controlevent_msgs, tor_strdup(msg));
+  smartlist_add(controlevent_msgs, msg);
 }
 
 /* Test the configure_proxy() function. */
@@ -360,8 +358,8 @@ test_pt_configure_proxy(void *arg)
        tor_process_handle_destroy_replacement);
   MOCK(get_or_state,
        get_or_state_replacement);
-  MOCK(send_control_event_string,
-       send_control_event_string_replacement);
+  MOCK(queue_control_event_string,
+       queue_control_event_string_replacement);
 
   control_testing_set_global_event_mask(EVENT_TRANSPORT_LAUNCHED);
 
@@ -435,7 +433,7 @@ test_pt_configure_proxy(void *arg)
   UNMOCK(tor_get_lines_from_handle);
   UNMOCK(tor_process_handle_destroy);
   UNMOCK(get_or_state);
-  UNMOCK(send_control_event_string);
+  UNMOCK(queue_control_event_string);
   if (controlevent_msgs) {
     SMARTLIST_FOREACH(controlevent_msgs, char *, cp, tor_free(cp));
     smartlist_free(controlevent_msgs);

@@ -12,6 +12,8 @@
 #ifndef TOR_CONTROL_H
 #define TOR_CONTROL_H
 
+void control_initialize_event_queue(void);
+
 void control_update_global_event_mask(void);
 void control_adjust_event_log_severity(void);
 
@@ -78,6 +80,14 @@ int control_event_client_status(int severity, const char *format, ...)
   CHECK_PRINTF(2,3);
 int control_event_server_status(int severity, const char *format, ...)
   CHECK_PRINTF(2,3);
+
+int control_event_general_error(const char *format, ...)
+  CHECK_PRINTF(1,2);
+int control_event_client_error(const char *format, ...)
+  CHECK_PRINTF(1,2);
+int control_event_server_error(const char *format, ...)
+  CHECK_PRINTF(1,2);
+
 int control_event_guard(const char *nickname, const char *digest,
                         const char *status);
 int control_event_conf_changed(const smartlist_t *elements);
@@ -203,18 +213,13 @@ void control_free_all(void);
 /* Used only by control.c and test.c */
 STATIC size_t write_escaped_data(const char *data, size_t len, char **out);
 STATIC size_t read_escaped_data(const char *data, size_t len, char **out);
-/** Flag for event_format_t.  Indicates that we should use the one standard
-    format.  (Other formats previous existed, and are now deprecated)
- */
-#define ALL_FORMATS 1
-/** Bit field of flags to select how to format a controller event.  Recognized
- * flag is ALL_FORMATS. */
-typedef int event_format_t;
 
 #ifdef TOR_UNIT_TESTS
 MOCK_DECL(STATIC void,
-send_control_event_string,(uint16_t event, event_format_t which,
-                           const char *msg));
+          send_control_event_string,(uint16_t event, const char *msg));
+
+MOCK_DECL(STATIC void,
+          queue_control_event_string,(uint16_t event, char *msg));
 
 void control_testing_set_global_event_mask(uint64_t mask);
 #endif

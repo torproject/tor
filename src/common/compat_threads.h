@@ -111,5 +111,41 @@ typedef struct alert_sockets_s {
 int alert_sockets_create(alert_sockets_t *socks_out, uint32_t flags);
 void alert_sockets_close(alert_sockets_t *socks);
 
+typedef struct tor_threadlocal_s {
+#ifdef _WIN32
+  DWORD index;
+#else
+  pthread_key_t key;
+#endif
+} tor_threadlocal_t;
+
+/** Initialize a thread-local variable.
+ *
+ * After you call this function on a tor_threadlocal_t, you can call
+ * tor_threadlocal_set to change the current value of this variable for the
+ * current thread, and tor_threadlocal_get to retrieve the current value for
+ * the current thread.  Each thread has its own value.
+ **/
+int tor_threadlocal_init(tor_threadlocal_t *threadlocal);
+/**
+ * Release all resource associated with a thread-local variable.
+ */
+void tor_threadlocal_destroy(tor_threadlocal_t *threadlocal);
+/**
+ * Return the current value of a thread-local variable for this thread.
+ *
+ * It's undefined behavior to use this function if the threadlocal hasn't
+ * been initialized, or has been destroyed.
+ */
+void *tor_threadlocal_get(tor_threadlocal_t *threadlocal);
+/**
+ * Change the current value of a thread-local variable for this thread to
+ * <b>value</b>.
+ *
+ * It's undefined behavior to use this function if the threadlocal hasn't
+ * been initialized, or has been destroyed.
+ */
+void tor_threadlocal_set(tor_threadlocal_t *threadlocal, void *value);
+
 #endif
 

@@ -1007,7 +1007,7 @@ directory_all_unreachable_cb(evutil_socket_t fd, short event, void *arg)
     connection_mark_unattached_ap(entry_conn,
                                   END_STREAM_REASON_NET_UNREACHABLE);
   }
-  control_event_general_status(LOG_ERR, "DIR_ALL_UNREACHABLE");
+  control_event_general_error("DIR_ALL_UNREACHABLE");
 }
 
 static struct event *directory_all_unreachable_cb_event = NULL;
