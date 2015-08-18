@@ -2187,25 +2187,41 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
     rs->ipv6_orport = ri->ipv6_orport;
   }
 
-  /* Iff we are in a testing network, use TestingDirAuthVoteExit,
-     TestingDirAuthVoteGuard, and TestingDirAuthVoteHSDir to
-     give out the Exit, Guard, and HSDir flags, respectively.
-     But don't set the corresponding node flags. */
   if (options->TestingTorNetwork) {
-    if (routerset_contains_routerstatus(options->TestingDirAuthVoteExit,
-                                        rs, 0)) {
-      rs->is_exit = 1;
-    }
+    dirserv_set_routerstatus_testing(rs);
+  }
+}
 
-    if (routerset_contains_routerstatus(options->TestingDirAuthVoteGuard,
-                                        rs, 0)) {
-      rs->is_possible_guard = 1;
-    }
+/** Use TestingDirAuthVoteExit, TestingDirAuthVoteGuard, and
+ * TestingDirAuthVoteHSDir to give out the Exit, Guard, and HSDir flags,
+ * respectively. But don't set the corresponding node flags.
+ * Should only be called if TestingTorNetwork is set. */
+STATIC void
+dirserv_set_routerstatus_testing(routerstatus_t *rs)
+{
+  const or_options_t *options = get_options();
 
-    if (routerset_contains_routerstatus(options->TestingDirAuthVoteHSDir,
-                                        rs, 0)) {
-      rs->is_hs_dir = 1;
-    }
+  tor_assert(options->TestingTorNetwork);
+
+  if (routerset_contains_routerstatus(options->TestingDirAuthVoteExit,
+                                      rs, 0)) {
+    rs->is_exit = 1;
+  } else if (options->TestingDirAuthVoteExitIsStrict) {
+    rs->is_exit = 0;
+  }
+
+  if (routerset_contains_routerstatus(options->TestingDirAuthVoteGuard,
+                                      rs, 0)) {
+    rs->is_possible_guard = 1;
+  } else if (options->TestingDirAuthVoteGuardIsStrict) {
+    rs->is_possible_guard = 0;
+  }
+
+  if (routerset_contains_routerstatus(options->TestingDirAuthVoteHSDir,
+                                      rs, 0)) {
+    rs->is_hs_dir = 1;
+  } else if (options->TestingDirAuthVoteHSDirIsStrict) {
+    rs->is_hs_dir = 0;
   }
 }
 

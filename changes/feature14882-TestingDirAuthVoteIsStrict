@@ -1,0 +1,18 @@
+  o Minor features (testing, authorities):
+    - New TestingDirAuthVote{Exit,Guard,HSDir}IsStrict flags.
+      "A node will never receive the corresponding flag unless
+       that node is specified in the
+       TestingDirAuthVote{Exit,Guard,HSDir} list, regardless of
+       its uptime, bandwidth, exit policy, or DirPort".
+      Closes ticket 14882. Patch by "robgjansen", modified by
+      "teor" as VoteOnHidServDirectoriesV2 is now obsolete.
+      Commit message and changes file by "teor" & "robgjansen".
+  o Minor features (testing, authorities, documentation):
+    - Fix an error in the manual page and comments for
+      TestingDirAuthVoteHSDir[IsStrict], which suggested that a
+      HSDir required "ORPort connectivity". While this is true,
+      it is in no way unique to the HSDir flag. Of all the flags,
+      only HSDirs need a DirPort configured in order for the
+      authorities to assign that particular flag.
+      Fixed as part of 14882. Patch by "teor".
+      Bugfix on 0.2.6.3 (f9d57473e1ff on 10 January 2015).

@@ -479,8 +479,11 @@ static config_var_t option_vars_[] = {
   V(TestingMicrodescMaxDownloadTries, UINT, "8"),
   V(TestingCertMaxDownloadTries, UINT, "8"),
   V(TestingDirAuthVoteExit, ROUTERSET, NULL),
+  V(TestingDirAuthVoteExitIsStrict,  BOOL,     "0"),
   V(TestingDirAuthVoteGuard, ROUTERSET, NULL),
+  V(TestingDirAuthVoteGuardIsStrict,  BOOL,     "0"),
   V(TestingDirAuthVoteHSDir, ROUTERSET, NULL),
+  V(TestingDirAuthVoteHSDirIsStrict,  BOOL,     "0"),
   VAR("___UsingTestNetworkDefaults", BOOL, UsingTestNetworkDefaults_, "0"),
 
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }

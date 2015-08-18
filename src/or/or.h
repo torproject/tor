@@ -4094,15 +4094,18 @@ typedef struct {
   /** Relays in a testing network which should be voted Exit
    * regardless of exit policy. */
   routerset_t *TestingDirAuthVoteExit;
+  int TestingDirAuthVoteExitIsStrict;
 
   /** Relays in a testing network which should be voted Guard
    * regardless of uptime and bandwidth. */
   routerset_t *TestingDirAuthVoteGuard;
+  int TestingDirAuthVoteGuardIsStrict;
 
   /** Relays in a testing network which should be voted HSDir
-   * regardless of uptime and ORPort connectivity.
+   * regardless of uptime and DirPort.
    * Respects VoteOnHidServDirectoriesV2. */
   routerset_t *TestingDirAuthVoteHSDir;
+  int TestingDirAuthVoteHSDirIsStrict;
 
   /** Enable CONN_BW events.  Only altered on testing networks. */
   int TestingEnableConnBwEvent;
