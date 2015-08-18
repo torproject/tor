@@ -133,11 +133,17 @@ int tor_threadlocal_init(tor_threadlocal_t *threadlocal);
 void tor_threadlocal_destroy(tor_threadlocal_t *threadlocal);
 /**
  * Return the current value of a thread-local variable for this thread.
+ *
+ * It's undefined behavior to use this function if the threadlocal hasn't
+ * been initialized, or has been destroyed.
  */
 void *tor_threadlocal_get(tor_threadlocal_t *threadlocal);
 /**
  * Change the current value of a thread-local variable for this thread to
  * <b>value</b>.
+ *
+ * It's undefined behavior to use this function if the threadlocal hasn't
+ * been initialized, or has been destroyed.
  */
 void tor_threadlocal_set(tor_threadlocal_t *threadlocal, void *value);
 
