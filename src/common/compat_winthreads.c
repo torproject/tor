@@ -139,14 +139,30 @@ tor_threadlocal_destroy(tor_threadlocal_t *threadlocal)
 void *
 tor_threadlocal_get(tor_threadlocal_t *threadlocal)
 {
-  return TlsGetValue(threadlocal->index);
+  void *value = TlsGetValue(threadlocal->index);
+  if (value == NULL) {
+    DWORD err = GetLastError();
+    if (err != ERROR_SUCCESS) {
+      char *msg = format_win32_error(err);
+      log_err(LD_GENERAL, "Error retrieving thread-local value: %s", msg);
+      tor_free(msg);
+      tor_assert(err == ERROR_SUCCESS);
+    }
+  }
+  return value;
 }
 
 void
 tor_threadlocal_set(tor_threadlocal_t *threadlocal, void *value)
 {
   BOOL ok = TlsSetValue(threadlocal->index, value);
-  tor_assert(ok);
+  if (!ok) {
+    DWORD err = GetLastError();
+    char *msg = format_win32_error(err);
+    log_err(LD_GENERAL, "Error adjusting thread-local value: %s", msg);
+    tor_free(msg);
+    tor_assert(ok);
+  }
 }
 
 int
