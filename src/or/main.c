@@ -2019,6 +2019,14 @@ do_hup(void)
    * force a retry there. */
 
   if (server_mode(options)) {
+    /* Maybe we've been given a new ed25519 key or certificate?
+     */
+    time_t now = approx_time();
+    if (load_ed_keys(options, now) < 0 ||
+         generate_ed_link_cert(options, now)) {
+      log_warn(LD_OR, "Problem reloading Ed25519 keys; still using old keys.");
+    }
+
     /* Update cpuworker and dnsworker processes, so they get up-to-date
      * configuration options. */
     cpuworkers_rotate_keyinfo();

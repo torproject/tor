@@ -635,11 +635,13 @@ load_ed_keys(const or_options_t *options, time_t now)
     goto err;                                   \
   } while (0)
 #define SET_KEY(key, newval) do {               \
-    ed25519_keypair_free(key);                  \
+    if ((key) != (newval))                      \
+      ed25519_keypair_free(key);                \
     key = (newval);                             \
   } while (0)
 #define SET_CERT(cert, newval) do {             \
-    tor_cert_free(cert);                        \
+    if ((cert) != (newval))                     \
+      tor_cert_free(cert);                      \
     cert = (newval);                            \
   } while (0)
 #define EXPIRES_SOON(cert, interval)            \
@@ -648,10 +650,7 @@ load_ed_keys(const or_options_t *options, time_t now)
   /* XXXX support encrypted identity keys fully */
 
   /* First try to get the signing key to see how it is. */
-  if (master_signing_key) {
-    check_signing_cert = signing_key_cert;
-    use_signing = master_signing_key;
-  } else {
+  {
     char *fname =
       options_get_datadir_fname2(options, "keys", "ed25519_signing");
     sign = ed_key_init_from_file(
@@ -663,6 +662,11 @@ load_ed_keys(const or_options_t *options, time_t now)
     tor_free(fname);
     check_signing_cert = sign_cert;
     use_signing = sign;
+  }
+
+  if (!use_signing && master_signing_key) {
+    check_signing_cert = signing_key_cert;
+    use_signing = master_signing_key;
   }
 
   const int need_new_signing_key =

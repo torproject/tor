@@ -1,0 +1,4 @@
+  o Minor features (relay, Ed25519):
+    - On receiving a HUP signal, check to see whether the Ed25519
+      signing key has changed, and reload it if so. Closes ticket
+      16790.
