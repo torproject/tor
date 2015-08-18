@@ -24,6 +24,7 @@
 #include "routerkeys.h"
 #include "routerlist.h"
 #include "routerparse.h"
+#include "routerset.h"
 #include "test.h"
 #include "torcert.h"
 
@@ -2979,6 +2980,281 @@ test_dir_fmt_control_ns(void *arg)
   tor_free(s);
 }
 
+static int mock_get_options_calls = 0;
+static or_options_t *mock_options = NULL;
+
+static void
+reset_options(or_options_t *options, int *get_options_calls)
+{
+  memset(options, 0, sizeof(or_options_t));
+  options->TestingTorNetwork = 1;
+
+  *get_options_calls = 0;
+}
+
+static const or_options_t *
+mock_get_options(void)
+{
+  ++mock_get_options_calls;
+  tor_assert(mock_options);
+  return mock_options;
+}
+
+static void
+reset_routerstatus(routerstatus_t *rs,
+                   const char *hex_identity_digest,
+                   int32_t ipv4_addr)
+{
+  memset(rs, 0, sizeof(routerstatus_t));
+  base16_decode(rs->identity_digest, sizeof(rs->identity_digest),
+                hex_identity_digest, HEX_DIGEST_LEN);
+  /* A zero address matches everything, so the address needs to be set.
+   * But the specific value is irrelevant. */
+  rs->addr = ipv4_addr;
+}
+
+#define ROUTER_A_ID_STR    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+#define ROUTER_A_IPV4      0xAA008801
+#define ROUTER_B_ID_STR    "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+#define ROUTER_B_IPV4      0xBB008801
+
+#define ROUTERSET_ALL_STR  "*"
+#define ROUTERSET_A_STR    ROUTER_A_ID_STR
+#define ROUTERSET_NONE_STR ""
+
+/*
+ * Test that dirserv_set_routerstatus_testing sets router flags correctly
+ * Using "*"  sets flags on A and B
+ * Using "A"  sets flags on A
+ * Using ""   sets flags on Neither
+ * If the router is not included:
+ *   - if *Strict is set, the flag is set to 0,
+ *   - otherwise, the flag is not modified. */
+static void
+test_dir_dirserv_set_routerstatus_testing(void *arg)
+{
+  (void)arg;
+
+  /* Init options */
+  mock_options = malloc(sizeof(or_options_t));
+  reset_options(mock_options, &mock_get_options_calls);
+
+  MOCK(get_options, mock_get_options);
+
+  /* Init routersets */
+  routerset_t *routerset_all  = routerset_new();
+  routerset_parse(routerset_all,  ROUTERSET_ALL_STR,  "All routers");
+
+  routerset_t *routerset_a    = routerset_new();
+  routerset_parse(routerset_a,    ROUTERSET_A_STR,    "Router A only");
+
+  routerset_t *routerset_none = routerset_new();
+  /* Routersets are empty when provided by routerset_new(),
+   * so this is not strictly necessary */
+  routerset_parse(routerset_none, ROUTERSET_NONE_STR, "No routers");
+
+  /* Init routerstatuses */
+  routerstatus_t *rs_a = malloc(sizeof(routerstatus_t));
+  reset_routerstatus(rs_a, ROUTER_A_ID_STR, ROUTER_A_IPV4);
+
+  routerstatus_t *rs_b = malloc(sizeof(routerstatus_t));
+  reset_routerstatus(rs_b, ROUTER_B_ID_STR, ROUTER_B_IPV4);
+
+  /* Sanity check that routersets correspond to routerstatuses.
+   * Return values are {2, 3, 4} */
+
+  /* We want 3 ("*" means match all addresses) */
+  tt_assert(routerset_contains_routerstatus(routerset_all,  rs_a, 0) == 3);
+  tt_assert(routerset_contains_routerstatus(routerset_all,  rs_b, 0) == 3);
+
+  /* We want 4 (match id_digest [or nickname]) */
+  tt_assert(routerset_contains_routerstatus(routerset_a,    rs_a, 0) == 4);
+  tt_assert(routerset_contains_routerstatus(routerset_a,    rs_b, 0) == 0);
+
+  tt_assert(routerset_contains_routerstatus(routerset_none, rs_a, 0) == 0);
+  tt_assert(routerset_contains_routerstatus(routerset_none, rs_b, 0) == 0);
+
+  /* Check that "*" sets flags on all routers: Exit
+   * Check the flags aren't being confused with each other */
+  reset_options(mock_options, &mock_get_options_calls);
+  reset_routerstatus(rs_a, ROUTER_A_ID_STR, ROUTER_A_IPV4);
+  reset_routerstatus(rs_b, ROUTER_B_ID_STR, ROUTER_B_IPV4);
+
+  mock_options->TestingDirAuthVoteExit = routerset_all;
+  mock_options->TestingDirAuthVoteExitIsStrict = 0;
+
+  dirserv_set_routerstatus_testing(rs_a);
+  tt_assert(mock_get_options_calls == 1);
+  dirserv_set_routerstatus_testing(rs_b);
+  tt_assert(mock_get_options_calls == 2);
+
+  tt_assert(rs_a->is_exit == 1);
+  tt_assert(rs_b->is_exit == 1);
+  /* Be paranoid - check no other flags are set */
+  tt_assert(rs_a->is_possible_guard == 0);
+  tt_assert(rs_b->is_possible_guard == 0);
+  tt_assert(rs_a->is_hs_dir == 0);
+  tt_assert(rs_b->is_hs_dir == 0);
+
+  /* Check that "*" sets flags on all routers: Guard & HSDir
+   * Cover the remaining flags in one test */
+  reset_options(mock_options, &mock_get_options_calls);
+  reset_routerstatus(rs_a, ROUTER_A_ID_STR, ROUTER_A_IPV4);
+  reset_routerstatus(rs_b, ROUTER_B_ID_STR, ROUTER_B_IPV4);
+
+  mock_options->TestingDirAuthVoteGuard = routerset_all;
+  mock_options->TestingDirAuthVoteGuardIsStrict = 0;
+  mock_options->TestingDirAuthVoteHSDir = routerset_all;
+  mock_options->TestingDirAuthVoteHSDirIsStrict = 0;
+
+  dirserv_set_routerstatus_testing(rs_a);
+  tt_assert(mock_get_options_calls == 1);
+  dirserv_set_routerstatus_testing(rs_b);
+  tt_assert(mock_get_options_calls == 2);
+
+  tt_assert(rs_a->is_possible_guard == 1);
+  tt_assert(rs_b->is_possible_guard == 1);
+  tt_assert(rs_a->is_hs_dir == 1);
+  tt_assert(rs_b->is_hs_dir == 1);
+  /* Be paranoid - check exit isn't set */
+  tt_assert(rs_a->is_exit == 0);
+  tt_assert(rs_b->is_exit == 0);
+
+  /* Check routerset A sets all flags on router A,
+   * but leaves router B unmodified */
+  reset_options(mock_options, &mock_get_options_calls);
+  reset_routerstatus(rs_a, ROUTER_A_ID_STR, ROUTER_A_IPV4);
+  reset_routerstatus(rs_b, ROUTER_B_ID_STR, ROUTER_B_IPV4);
+
+  mock_options->TestingDirAuthVoteExit = routerset_a;
+  mock_options->TestingDirAuthVoteExitIsStrict = 0;
+  mock_options->TestingDirAuthVoteGuard = routerset_a;
+  mock_options->TestingDirAuthVoteGuardIsStrict = 0;
+  mock_options->TestingDirAuthVoteHSDir = routerset_a;
+  mock_options->TestingDirAuthVoteHSDirIsStrict = 0;
+
+  dirserv_set_routerstatus_testing(rs_a);
+  tt_assert(mock_get_options_calls == 1);
+  dirserv_set_routerstatus_testing(rs_b);
+  tt_assert(mock_get_options_calls == 2);
+
+  tt_assert(rs_a->is_exit == 1);
+  tt_assert(rs_b->is_exit == 0);
+  tt_assert(rs_a->is_possible_guard == 1);
+  tt_assert(rs_b->is_possible_guard == 0);
+  tt_assert(rs_a->is_hs_dir == 1);
+  tt_assert(rs_b->is_hs_dir == 0);
+
+  /* Check routerset A unsets all flags on router B when Strict is set */
+  reset_options(mock_options, &mock_get_options_calls);
+  reset_routerstatus(rs_b, ROUTER_B_ID_STR, ROUTER_B_IPV4);
+
+  mock_options->TestingDirAuthVoteExit = routerset_a;
+  mock_options->TestingDirAuthVoteExitIsStrict = 1;
+  mock_options->TestingDirAuthVoteGuard = routerset_a;
+  mock_options->TestingDirAuthVoteGuardIsStrict = 1;
+  mock_options->TestingDirAuthVoteHSDir = routerset_a;
+  mock_options->TestingDirAuthVoteHSDirIsStrict = 1;
+
+  rs_b->is_exit = 1;
+  rs_b->is_possible_guard = 1;
+  rs_b->is_hs_dir = 1;
+
+  dirserv_set_routerstatus_testing(rs_b);
+  tt_assert(mock_get_options_calls == 1);
+
+  tt_assert(rs_b->is_exit == 0);
+  tt_assert(rs_b->is_possible_guard == 0);
+  tt_assert(rs_b->is_hs_dir == 0);
+
+  /* Check routerset A doesn't modify flags on router B without Strict set */
+  reset_options(mock_options, &mock_get_options_calls);
+  reset_routerstatus(rs_b, ROUTER_B_ID_STR, ROUTER_B_IPV4);
+
+  mock_options->TestingDirAuthVoteExit = routerset_a;
+  mock_options->TestingDirAuthVoteExitIsStrict = 0;
+  mock_options->TestingDirAuthVoteGuard = routerset_a;
+  mock_options->TestingDirAuthVoteGuardIsStrict = 0;
+  mock_options->TestingDirAuthVoteHSDir = routerset_a;
+  mock_options->TestingDirAuthVoteHSDirIsStrict = 0;
+
+  rs_b->is_exit = 1;
+  rs_b->is_possible_guard = 1;
+  rs_b->is_hs_dir = 1;
+
+  dirserv_set_routerstatus_testing(rs_b);
+  tt_assert(mock_get_options_calls == 1);
+
+  tt_assert(rs_b->is_exit == 1);
+  tt_assert(rs_b->is_possible_guard == 1);
+  tt_assert(rs_b->is_hs_dir == 1);
+
+  /* Check the empty routerset zeroes all flags
+   * on routers A & B with Strict set */
+  reset_options(mock_options, &mock_get_options_calls);
+  reset_routerstatus(rs_b, ROUTER_B_ID_STR, ROUTER_B_IPV4);
+
+  mock_options->TestingDirAuthVoteExit = routerset_none;
+  mock_options->TestingDirAuthVoteExitIsStrict = 1;
+  mock_options->TestingDirAuthVoteGuard = routerset_none;
+  mock_options->TestingDirAuthVoteGuardIsStrict = 1;
+  mock_options->TestingDirAuthVoteHSDir = routerset_none;
+  mock_options->TestingDirAuthVoteHSDirIsStrict = 1;
+
+  rs_b->is_exit = 1;
+  rs_b->is_possible_guard = 1;
+  rs_b->is_hs_dir = 1;
+
+  dirserv_set_routerstatus_testing(rs_b);
+  tt_assert(mock_get_options_calls == 1);
+
+  tt_assert(rs_b->is_exit == 0);
+  tt_assert(rs_b->is_possible_guard == 0);
+  tt_assert(rs_b->is_hs_dir == 0);
+
+  /* Check the empty routerset doesn't modify any flags
+   * on A or B without Strict set */
+  reset_options(mock_options, &mock_get_options_calls);
+  reset_routerstatus(rs_a, ROUTER_A_ID_STR, ROUTER_A_IPV4);
+  reset_routerstatus(rs_b, ROUTER_B_ID_STR, ROUTER_B_IPV4);
+
+  mock_options->TestingDirAuthVoteExit = routerset_none;
+  mock_options->TestingDirAuthVoteExitIsStrict = 0;
+  mock_options->TestingDirAuthVoteGuard = routerset_none;
+  mock_options->TestingDirAuthVoteGuardIsStrict = 0;
+  mock_options->TestingDirAuthVoteHSDir = routerset_none;
+  mock_options->TestingDirAuthVoteHSDirIsStrict = 0;
+
+  rs_b->is_exit = 1;
+  rs_b->is_possible_guard = 1;
+  rs_b->is_hs_dir = 1;
+
+  dirserv_set_routerstatus_testing(rs_a);
+  tt_assert(mock_get_options_calls == 1);
+  dirserv_set_routerstatus_testing(rs_b);
+  tt_assert(mock_get_options_calls == 2);
+
+  tt_assert(rs_a->is_exit == 0);
+  tt_assert(rs_a->is_possible_guard == 0);
+  tt_assert(rs_a->is_hs_dir == 0);
+  tt_assert(rs_b->is_exit == 1);
+  tt_assert(rs_b->is_possible_guard == 1);
+  tt_assert(rs_b->is_hs_dir == 1);
+
+ done:
+  free(mock_options);
+  mock_options = NULL;
+
+  UNMOCK(get_options);
+
+  routerset_free(routerset_all);
+  routerset_free(routerset_a);
+  routerset_free(routerset_none);
+
+  free(rs_a);
+  free(rs_b);
+}
+
 static void
 test_dir_http_handling(void *args)
 {
@@ -3244,6 +3520,7 @@ struct testcase_t dir_tests[] = {
   DIR_LEGACY(clip_unmeasured_bw_kb),
   DIR_LEGACY(clip_unmeasured_bw_kb_alt),
   DIR(fmt_control_ns, 0),
+  DIR(dirserv_set_routerstatus_testing, 0),
   DIR(http_handling, 0),
   DIR(purpose_needs_anonymity, 0),
   DIR(fetch_type, 0),
