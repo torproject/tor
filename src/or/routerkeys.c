@@ -11,6 +11,72 @@
 #define ENC_KEY_HEADER "Boxed Ed25519 key"
 #define ENC_KEY_TAG "master"
 
+static ssize_t
+do_getpass(const char *prompt, char *buf, size_t buflen,
+           int twice, const or_options_t *options)
+{
+  if (options->keygen_force_passphrase == FORCE_PASSPHRASE_OFF) {
+    tor_assert(buflen);
+    buf[0] = 0;
+    return 0;
+  }
+
+  char *prompt2 = NULL;
+  char *buf2 = NULL;
+  int fd = -1;
+  ssize_t length = -1;
+
+  if (options->use_keygen_passphrase_fd) {
+    twice = 0;
+    fd = options->keygen_passphrase_fd;
+    length = read_all(fd, buf, buflen-1, 0);
+    if (length >= 0)
+      buf[length] = 0;
+    goto done_reading;
+  }
+
+  if (twice) {
+    const char msg[] = "One more time:";
+    size_t p2len = strlen(prompt) + 1;
+    if (p2len < sizeof(msg))
+      p2len = sizeof(msg);
+    prompt2 = tor_malloc(strlen(prompt)+1);
+    memset(prompt2, ' ', p2len);
+    memcpy(prompt2 + p2len - sizeof(msg), msg, sizeof(msg));
+
+    buf2 = tor_malloc_zero(buflen);
+  }
+
+  while (1) {
+    length = tor_getpass(prompt, buf, buflen);
+    if (length < 0)
+      goto done_reading;
+
+    if (! twice)
+      break;
+
+    ssize_t length2 = tor_getpass(prompt2, buf2, buflen);
+
+    if (length != length2 || tor_memneq(buf, buf2, length)) {
+      fprintf(stderr, "That didn't match.\n");
+    } else {
+      break;
+    }
+  }
+
+ done_reading:
+  if (twice) {
+    tor_free(prompt2);
+    memwipe(buf2, 0, buflen);
+    tor_free(buf2);
+  }
+
+  if (options->keygen_force_passphrase == FORCE_PASSPHRASE_ON && length == 0)
+    return -1;
+
+  return length;
+}
+
 int
 read_encrypted_secret_key(ed25519_secret_key_t *out,
                           const char *fname)
@@ -41,12 +107,12 @@ read_encrypted_secret_key(ed25519_secret_key_t *out,
 
   while (1) {
     ssize_t pwlen =
-      tor_getpass("Enter pasphrase for master key:", pwbuf, sizeof(pwbuf));
+      do_getpass("Enter pasphrase for master key:", pwbuf, sizeof(pwbuf), 0,
+                 get_options());
     if (pwlen < 0) {
       saved_errno = EINVAL;
       goto done;
     }
-
     const int r = crypto_unpwbox(&secret, &secret_len,
                                  encrypted_key, encrypted_len,
                                  pwbuf, pwlen);
@@ -57,6 +123,7 @@ read_encrypted_secret_key(ed25519_secret_key_t *out,
     } else if (r == UNPWBOX_OKAY) {
       break;
     }
+
     /* Otherwise, passphrase is bad, so try again till user does ctrl-c or gets
      * it right. */
   }
@@ -87,22 +154,23 @@ write_encrypted_secret_key(const ed25519_secret_key_t *key,
                            const char *fname)
 {
   int r = -1;
-  char pwbuf0[256], pwbuf1[256];
+  char pwbuf0[256];
   uint8_t *encrypted_key = NULL;
   size_t encrypted_len = 0;
 
-  while (1) {
-    if (tor_getpass("Enter passphrase:", pwbuf0, sizeof(pwbuf0)) < 0)
-      return -1;
-    if (tor_getpass("   One more time:", pwbuf1, sizeof(pwbuf1)) < 0)
-      return -1;
-
-    if (!strcmp(pwbuf0, pwbuf1))
-      break;
-    fprintf(stderr, "That didn't match.\n");
+  if (do_getpass("Enter new passphrase:", pwbuf0, sizeof(pwbuf0), 1,
+                 get_options()) < 0) {
+    log_warn(LD_OR, "NO/failed passphrase");
+    return -1;
   }
-  if (0 == strlen(pwbuf0))
-    return 0;
+
+  if (strlen(pwbuf0) == 0) {
+    if (get_options()->keygen_force_passphrase == FORCE_PASSPHRASE_ON)
+      return -1;
+    else
+      return 0;
+  }
+
   if (crypto_pwbox(&encrypted_key, &encrypted_len,
                    key->seckey, sizeof(key->seckey),
                    pwbuf0, strlen(pwbuf0),  0) < 0) {
@@ -121,7 +189,6 @@ write_encrypted_secret_key(const ed25519_secret_key_t *key,
     tor_free(encrypted_key);
   }
   memwipe(pwbuf0, 0, sizeof(pwbuf0));
-  memwipe(pwbuf1, 0, sizeof(pwbuf1));
   return r;
 }
 
@@ -134,7 +201,9 @@ write_secret_key(const ed25519_secret_key_t *key, int encrypted,
   if (encrypted) {
     int r = write_encrypted_secret_key(key, encrypted_fname);
     if (r != 0)
-      return r;
+      return r; /* Either succeeded or failed unrecoverably */
+
+    fprintf(stderr, "Not encrypting the secret key.\n");
   }
   return ed25519_seckey_write_to_file(key, fname, fname_tag);
 }
@@ -175,7 +244,11 @@ write_secret_key(const ed25519_secret_key_t *key, int encrypted,
  * and consider encrypting any new secret key.
  *
  * If INIT_ED_KEY_NO_REPAIR is set, and there is any issue loading the keys
- * from disk _other than their absence_, we do not try to replace them.
+ * from disk _other than their absence_ (full or partial), we do not try to
+ * replace them.
+ *
+ * If INIT_ED_KEY_SUGGEST_KEYGEN is set, have log messages about failures
+ * refer to the --keygen option.
  */
 ed25519_keypair_t *
 ed_key_init_from_file(const char *fname, uint32_t flags,
@@ -196,6 +269,7 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
   const int encrypt_key = !! (flags & INIT_ED_KEY_TRY_ENCRYPTED);
   const int norepair = !! (flags & INIT_ED_KEY_NO_REPAIR);
   const int split = !! (flags & INIT_ED_KEY_SPLIT);
+  const int omit_secret = !! (flags &  INIT_ED_KEY_OMIT_SECRET);
 
   /* we don't support setting both of these flags at once. */
   tor_assert((flags & (INIT_ED_KEY_NO_REPAIR|INIT_ED_KEY_NEEDCERT)) !=
@@ -215,8 +289,7 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
 
   /* Try to read the secret key. */
   int have_secret = 0;
-  if (try_to_load &&
-      !(flags & INIT_ED_KEY_OMIT_SECRET)) {
+  if (try_to_load && (!omit_secret || file_status(public_fname)==FN_NOENT )) {
     int rv = ed25519_seckey_read_from_file(&keypair->seckey,
                                            &got_tag, secret_fname);
     if (rv == 0) {
@@ -232,17 +305,25 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
   }
 
   /* Should we try for an encrypted key? */
+  int have_encrypted_secret_file = 0;
   if (!have_secret && try_to_load && encrypt_key) {
     int r = read_encrypted_secret_key(&keypair->seckey,
                                       encrypted_secret_fname);
     if (r > 0) {
       have_secret = 1;
+      have_encrypted_secret_file = 1;
       got_tag = tor_strdup(tag);
       loaded_secret_fname = encrypted_secret_fname;
     } else if (errno != ENOENT && norepair) {
-      tor_log(severity, LD_OR, "Unable to read %s: %s", encrypted_secret_fname,
-              strerror(errno));
+      tor_log(severity, LD_OR, "Unable to read %s: %s",
+              encrypted_secret_fname, strerror(errno));
       goto err;
+    }
+  } else {
+    if (try_to_load) {
+      /* Check if it's there anyway, so we don't replace it. */
+      if (file_status(encrypted_secret_fname) != FN_NOENT)
+        have_encrypted_secret_file = 1;
     }
   }
 
@@ -259,10 +340,9 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
     }
   }
 
-  /* If it's absent and that's okay, or if we do split keys here, try to re
-   * the pubkey. */
+  /* If we do split keys here, try to read the pubkey. */
   int found_public = 0;
-  if ((!have_secret && try_to_load) || (have_secret && split)) {
+  if (try_to_load && (!have_secret || split)) {
     ed25519_public_key_t pubkey_tmp;
     tor_free(got_tag);
     found_public = ed25519_pubkey_read_from_file(&pubkey_tmp,
@@ -281,24 +361,75 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
         /* If we have a secret key and we're reloading the public key,
          * the key must match! */
         if (! ed25519_pubkey_eq(&keypair->pubkey, &pubkey_tmp)) {
-          tor_log(severity, LD_OR, "%s does not match %s!",
-                  public_fname, loaded_secret_fname);
+          tor_log(severity, LD_OR, "%s does not match %s!  If you are trying "
+                  "to restore from backup, make sure you didn't mix up the "
+                  "key files. If you are absolutely sure that %s is the right "
+                  "key for this relay, delete %s or move it out of the way.",
+                  public_fname, loaded_secret_fname,
+                  loaded_secret_fname, public_fname);
           goto err;
         }
       } else {
+        /* We only have the public key; better use that. */
         tor_assert(split);
         memcpy(&keypair->pubkey, &pubkey_tmp, sizeof(pubkey_tmp));
+      }
+    } else {
+      /* We have no public key file, but we do have a secret key, make the
+       * public key file! */
+      if (have_secret) {
+        if (ed25519_pubkey_write_to_file(&keypair->pubkey, public_fname, tag)
+            < 0) {
+          tor_log(severity, LD_OR, "Couldn't repair %s", public_fname);
+          goto err;
+        } else {
+          tor_log(LOG_NOTICE, LD_OR,
+                  "Found secret key but not %s. Regenerating.",
+                  public_fname);
+        }
       }
     }
   }
 
   /* If the secret key is absent and it's not allowed to be, fail. */
-  if (!have_secret && found_public && !(flags & INIT_ED_KEY_MISSING_SECRET_OK))
+  if (!have_secret && found_public &&
+      !(flags & INIT_ED_KEY_MISSING_SECRET_OK)) {
+    if (have_encrypted_secret_file) {
+      tor_log(severity, LD_OR, "We needed to load a secret key from %s, "
+              "but it was encrypted. Try 'tor --keygen' instead, so you "
+              "can enter the passphrase.",
+              secret_fname);
+    } else {
+      tor_log(severity, LD_OR, "We needed to load a secret key from %s, "
+              "but couldn't find it. %s", secret_fname,
+              (flags & INIT_ED_KEY_SUGGEST_KEYGEN) ?
+              "If you're keeping your master secret key offline, you will "
+              "need to run 'tor --keygen' to generate new signing keys." :
+              "Did you forget to copy it over when you copied the rest of the "
+              "signing key material?");
+    }
     goto err;
+  }
 
   /* If it's absent, and we're not supposed to make a new keypair, fail. */
-  if (!have_secret && !found_public && !(flags & INIT_ED_KEY_CREATE))
+  if (!have_secret && !found_public && !(flags & INIT_ED_KEY_CREATE)) {
+    if (split) {
+      tor_log(severity, LD_OR, "No key found in %s or %s.",
+              secret_fname, public_fname);
+    } else {
+      tor_log(severity, LD_OR, "No key found in %s.", secret_fname);
+    }
     goto err;
+  }
+
+  /* If the secret key is absent, but the encrypted key would be present,
+   * that's an error */
+  if (!have_secret && !found_public && have_encrypted_secret_file) {
+    tor_assert(!encrypt_key);
+    tor_log(severity, LD_OR, "Found an encrypted secret key, "
+            "but not public key file %s!", public_fname);
+    goto err;
+  }
 
   /* if it's absent, make a new keypair and save it. */
   if (!have_secret && !found_public) {
@@ -371,8 +502,10 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
     goto done;
 
   /* If we didn't get a cert, and we're not supposed to make one, fail. */
-  if (!signing_key || !(flags & INIT_ED_KEY_CREATE))
+  if (!signing_key || !(flags & INIT_ED_KEY_CREATE)) {
+    tor_log(severity, LD_OR, "Without signing key, can't create certificate");
     goto err;
+  }
 
   /* We have keys but not a certificate, so make one. */
   uint32_t cert_flags = 0;
@@ -383,8 +516,10 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
                          now, lifetime,
                          cert_flags);
 
-  if (! cert)
+  if (! cert) {
+    tor_log(severity, LD_OR, "Couldn't create certificate");
     goto err;
+  }
 
   /* Write it to disk. */
   created_cert = 1;
@@ -538,10 +673,26 @@ load_ed_keys(const or_options_t *options, time_t now)
     need_new_signing_key ||
     EXPIRES_SOON(check_signing_cert, options->TestingSigningKeySlop);
 
+  if (need_new_signing_key) {
+    log_notice(LD_OR, "It looks like I need to generate and sign a new "
+               "medium-term signing key, because %s. To do that, I need to "
+               "load (or create) the permanent master identity key.",
+            (NULL == use_signing) ? "I don't have one" :
+            EXPIRES_SOON(check_signing_cert, 0) ? "the one I have is expired" :
+            "you asked me to make one with --keygen");
+  } else if (want_new_signing_key) {
+    log_notice(LD_OR, "It looks like I should try to generate and sign a "
+               "new medium-term signing key, because the one I have is "
+               "going to expire soon. To do that, I'm going to have to try to "
+               "load the permanent master identity key.");
+  }
+
   {
     uint32_t flags =
-      (INIT_ED_KEY_CREATE|INIT_ED_KEY_SPLIT|
+      (INIT_ED_KEY_SPLIT|
        INIT_ED_KEY_EXTRA_STRONG|INIT_ED_KEY_NO_REPAIR);
+    if (! use_signing)
+      flags |= INIT_ED_KEY_CREATE;
     if (! need_new_signing_key)
       flags |= INIT_ED_KEY_MISSING_SECRET_OK;
     if (! want_new_signing_key)
@@ -568,8 +719,27 @@ load_ed_keys(const or_options_t *options, time_t now)
              flags,
              LOG_WARN, NULL, 0, 0, 0, NULL);
     tor_free(fname);
-    if (!id)
-      FAIL("Missing identity key");
+    if (!id) {
+      if (need_new_signing_key) {
+        FAIL("Missing identity key");
+      } else {
+        log_warn(LD_OR, "Master public key was absent; inferring from "
+                 "public key in signing certificate and saving to disk.");
+        tor_assert(check_signing_cert);
+        id = tor_malloc_zero(sizeof(*id));
+        memcpy(&id->pubkey, &check_signing_cert->signing_key,
+               sizeof(ed25519_public_key_t));
+        fname = options_get_datadir_fname2(options, "keys",
+                                           "ed25519_master_id_public_key");
+        if (ed25519_pubkey_write_to_file(&id->pubkey, fname, "type0") < 0) {
+          log_warn(LD_OR, "Error while attempting to write master public key "
+                   "to disk");
+          tor_free(fname);
+          goto err;
+        }
+        tor_free(fname);
+      }
+    }
     if (tor_mem_is_zero((char*)id->seckey.seckey, sizeof(id->seckey)))
       sign_signing_key_with_id = NULL;
     else
@@ -628,6 +798,9 @@ load_ed_keys(const or_options_t *options, time_t now)
    * it, if we loaded it in the first place. */
   memwipe(id->seckey.seckey, 0, sizeof(id->seckey));
 
+  if (options->command == CMD_KEYGEN)
+    goto end;
+
   if (!rsa_ed_crosscert && server_mode(options)) {
     uint8_t *crosscert;
     ssize_t crosscert_len = tor_make_rsa_ed25519_crosscert(&id->pubkey,
@@ -651,6 +824,7 @@ load_ed_keys(const or_options_t *options, time_t now)
 
   /* We've generated or loaded everything.  Put them in memory. */
 
+ end:
   if (! master_identity_key) {
     SET_KEY(master_identity_key, id);
   } else {

@@ -1,0 +1,13 @@
+
+  o Major features (relay, Ed25519):
+    - Significant improvements to the usability of relay-side Ed25519
+      key management. Log messages are better, and the code can
+      recover from far more failure conditions.  Thanks to "s7r" for
+      reporting and diagnosing so many of these!
+
+  o Major bugfixes (relay, Ed25519):
+    - Avoid crashing on 'tor --keygen'. Fixes bug 16679; bugfix on
+      0.2.7.2-alpha. Reported by "s7r".
+    - Improve handling of expired signing keys along with offline
+      master keys. Fixes bug 16685; bugfix on 0.2.7.2-alpha. Reported
+      by "s7r".

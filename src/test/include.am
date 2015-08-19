@@ -1,5 +1,5 @@
 
-TESTSCRIPTS = src/test/test_zero_length_keys.sh
+TESTSCRIPTS = src/test/test_zero_length_keys.sh src/test/test_keygen.sh
 
 if USEPYTHON
 TESTSCRIPTS += src/test/test_ntor.sh src/test/test_bt.sh
