@@ -124,6 +124,14 @@ workqueue_do_ecdh(void *state, void *work)
   return WQ_RPL_REPLY;
 }
 
+static int
+workqueue_shutdown_error(void *state, void *work)
+{
+  (void)state;
+  (void)work;
+  return WQ_RPL_REPLY;
+}
+
 static void *
 new_state(void *arg)
 {
@@ -156,6 +164,7 @@ static int n_sent = 0;
 static int rsa_sent = 0;
 static int ecdh_sent = 0;
 static int n_received = 0;
+static int no_shutdown = 0;
 
 #ifdef TRACK_RESPONSES
 bitarray_t *received;
@@ -172,6 +181,14 @@ handle_reply(void *arg)
 
   tor_free(arg);
   ++n_received;
+}
+
+/* This should never get called. */
+static void
+handle_reply_shutdown(void *arg)
+{
+  (void)arg;
+  no_shutdown = 1;
 }
 
 static workqueue_entry_t *
@@ -288,6 +305,8 @@ replysock_readable_cb(tor_socket_t sock, short what, void *arg)
     shutting_down = 1;
     threadpool_queue_update(tp, NULL,
                              workqueue_do_shutdown, NULL, NULL);
+    // Anything we add after starting the shutdown must not be executed.
+    threadpool_queue_work(tp, workqueue_shutdown_error, handle_reply_shutdown, NULL);
     {
       struct timeval limit = { 2, 0 };
       tor_event_base_loopexit(tor_libevent_get_base(), &limit);
@@ -416,6 +435,9 @@ main(int argc, char **argv)
     printf("%d+%d vs %d\n", n_received, n_successful_cancel, n_sent);
     puts("FAIL");
     return 1;
+  } else if (no_shutdown) {
+    puts("Accepted work after shutdown\n");
+    puts("FAIL");
   } else {
     puts("OK");
     return 0;
