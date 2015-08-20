@@ -36,7 +36,6 @@ NO_HYPHENATE=set("""
 pf-divert
 tor-resolve
 tor-gencert
-tor-fw-helper
 """.split())
 
 LASTLINE_UNDERFLOW_EXPONENT = 1
