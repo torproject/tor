@@ -70,7 +70,7 @@ mark_handled(int serial)
 #endif
 }
 
-static int
+static workqueue_reply_t
 workqueue_do_rsa(void *state, void *work)
 {
   rsa_work_t *rw = work;
@@ -98,7 +98,7 @@ workqueue_do_rsa(void *state, void *work)
   return WQ_RPL_REPLY;
 }
 
-static int
+static workqueue_reply_t
 workqueue_do_shutdown(void *state, void *work)
 {
   (void)state;
@@ -108,7 +108,7 @@ workqueue_do_shutdown(void *state, void *work)
   return WQ_RPL_SHUTDOWN;
 }
 
-static int
+static workqueue_reply_t
 workqueue_do_ecdh(void *state, void *work)
 {
   ecdh_work_t *ew = work;
@@ -124,7 +124,7 @@ workqueue_do_ecdh(void *state, void *work)
   return WQ_RPL_REPLY;
 }
 
-static int
+static workqueue_reply_t
 workqueue_shutdown_error(void *state, void *work)
 {
   (void)state;

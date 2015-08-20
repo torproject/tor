@@ -160,7 +160,7 @@ typedef struct cpuworker_job_u {
   } u;
 } cpuworker_job_t;
 
-static int
+static workqueue_reply_t
 update_state_threadfn(void *state_, void *work_)
 {
   worker_state_t *state = state_;
@@ -387,7 +387,7 @@ cpuworker_onion_handshake_replyfn(void *work_)
 }
 
 /** Implementation function for onion handshake requests. */
-static int
+static workqueue_reply_t
 cpuworker_onion_handshake_threadfn(void *state_, void *work_)
 {
   worker_state_t *state = state_;

@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - Ensure that worker threads actually exit when a fatal error or
+      shutdown is indicated. This doesn't currently affect the behaviour
+      of Tor, because Tor never indicates fatal error or shutdown except
+      in its unit tests. Fixes bug 16868; bugfix on 0.2.6.3-alpha.
+

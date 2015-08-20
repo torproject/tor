@@ -15,21 +15,22 @@ typedef struct threadpool_s threadpool_t;
  * pool. */
 typedef struct workqueue_entry_s workqueue_entry_t;
 
-/** Possible return value from a work function: indicates success. */
-#define WQ_RPL_REPLY    0
-/** Possible return value from a work function: indicates fatal error */
-#define WQ_RPL_ERROR    1
-/** Possible return value from a work function: indicates thread is shutting
- * down. */
-#define WQ_RPL_SHUTDOWN 2
+/** Possible return value from a work function: */
+typedef enum {
+  WQ_RPL_REPLY = 0, /** indicates success */
+  WQ_RPL_ERROR = 1, /** indicates fatal error */
+  WQ_RPL_SHUTDOWN = 2, /** indicates thread is shutting down */
+} workqueue_reply_t;
 
 workqueue_entry_t *threadpool_queue_work(threadpool_t *pool,
-                                         int (*fn)(void *, void *),
+                                         workqueue_reply_t (*fn)(void *,
+                                                                 void *),
                                          void (*reply_fn)(void *),
                                          void *arg);
+
 int threadpool_queue_update(threadpool_t *pool,
                             void *(*dup_fn)(void *),
-                            int (*fn)(void *, void *),
+                            workqueue_reply_t (*fn)(void *, void *),
                             void (*free_fn)(void *),
                             void *arg);
 void *workqueue_entry_cancel(workqueue_entry_t *pending_work);
