@@ -176,7 +176,7 @@ void control_free_all(void);
 #define EVENT_CLIENTS_SEEN            0x0015
 #define EVENT_NEWCONSENSUS            0x0016
 #define EVENT_BUILDTIMEOUT_SET        0x0017
-#define EVENT_SIGNAL                  0x0018
+#define EVENT_GOT_SIGNAL              0x0018
 #define EVENT_CONF_CHANGED            0x0019
 #define EVENT_CONN_BW                 0x001A
 #define EVENT_CELL_STATS              0x001B

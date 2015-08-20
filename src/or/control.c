@@ -1130,7 +1130,7 @@ static const struct control_event_t control_event_table[] = {
   { EVENT_CLIENTS_SEEN, "CLIENTS_SEEN" },
   { EVENT_NEWCONSENSUS, "NEWCONSENSUS" },
   { EVENT_BUILDTIMEOUT_SET, "BUILDTIMEOUT_SET" },
-  { EVENT_SIGNAL, "SIGNAL" },
+  { EVENT_GOT_SIGNAL, "SIGNAL" },
   { EVENT_CONF_CHANGED, "CONF_CHANGED"},
   { EVENT_CONN_BW, "CONN_BW" },
   { EVENT_CELL_STATS, "CELL_STATS" },
@@ -5464,7 +5464,7 @@ control_event_signal(uintptr_t signal)
 {
   const char *signal_string = NULL;
 
-  if (!control_event_is_interesting(EVENT_SIGNAL))
+  if (!control_event_is_interesting(EVENT_GOT_SIGNAL))
     return 0;
 
   switch (signal) {
@@ -5492,7 +5492,7 @@ control_event_signal(uintptr_t signal)
       return -1;
   }
 
-  send_control_event(EVENT_SIGNAL,  "650 SIGNAL %s\r\n",
+  send_control_event(EVENT_GOT_SIGNAL,  "650 SIGNAL %s\r\n",
                      signal_string);
   return 0;
 }
