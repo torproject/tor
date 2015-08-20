@@ -6478,3 +6478,4 @@ control_testing_set_global_event_mask(uint64_t mask)
   global_event_mask = mask;
 }
 #endif
+

@@ -330,7 +330,7 @@ cache_failure_intro_lookup(const uint8_t *identity, const char *service_id,
     *intro_entry = intro_elem;
   }
   return 1;
-not_found:
+ not_found:
   return 0;
 }
 

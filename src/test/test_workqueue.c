@@ -306,7 +306,8 @@ replysock_readable_cb(tor_socket_t sock, short what, void *arg)
     threadpool_queue_update(tp, NULL,
                              workqueue_do_shutdown, NULL, NULL);
     // Anything we add after starting the shutdown must not be executed.
-    threadpool_queue_work(tp, workqueue_shutdown_error, handle_reply_shutdown, NULL);
+    threadpool_queue_work(tp, workqueue_shutdown_error,
+                          handle_reply_shutdown, NULL);
     {
       struct timeval limit = { 2, 0 };
       tor_event_base_loopexit(tor_libevent_get_base(), &limit);
