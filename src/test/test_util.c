@@ -3654,7 +3654,6 @@ test_util_di_map(void *arg)
   dimap_free(dimap, tor_free_);
 }
 
-
 /**
  * Test counting high bits
  */

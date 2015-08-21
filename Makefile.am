@@ -140,8 +140,7 @@ check-spaces:
 		$(top_srcdir)/src/common/*.[ch] \
 		$(top_srcdir)/src/or/*.[ch] \
 		$(top_srcdir)/src/test/*.[ch] \
-		$(top_srcdir)/src/tools/*.[ch] \
-		$(top_srcdir)/src/tools/tor-fw-helper/*.[ch]
+		$(top_srcdir)/src/tools/*.[ch]
 
 check-docs: all
 	$(PERL) $(top_builddir)/scripts/maint/checkOptionDocs.pl
