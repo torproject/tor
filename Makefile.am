@@ -25,8 +25,6 @@ include src/include.am
 include doc/include.am
 include contrib/include.am
 
-export TESTING_TOR_BINARY
-
 EXTRA_DIST+= \
 	ChangeLog					\
 	INSTALL						\
