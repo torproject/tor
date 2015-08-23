@@ -1842,7 +1842,7 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
             log_warn(LD_PROTOCOL,
                      "Your application (using socks5 to port %d) gave Tor "
                      "a malformed hostname: %s. Rejecting the connection.",
-                     req->port, escaped(req->address));
+                     req->port, escaped_safe_str_client(req->address));
             return -1;
           }
           if (log_sockstype)
