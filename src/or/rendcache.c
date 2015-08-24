@@ -491,6 +491,7 @@ rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **e,
   tor_assert(rend_cache_service);
   tor_assert(rend_cache);
   tor_assert(query);
+  tor_assert(cache);
 
   if (!rend_valid_service_id(query)) {
     ret = -EINVAL;
@@ -506,7 +507,7 @@ rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **e,
     default:
       if(cache == REND_CACHE_TYPE_SERVICE){
         entry = strmap_get_lc(rend_cache_service, query);
-      } else {
+      } else if (cache == REND_CACHE_TYPE_CLIENT)  {
         tor_snprintf(key, sizeof(key), "%d%s", default_version, query);
         entry = strmap_get_lc(rend_cache, key);
       }
