@@ -18,7 +18,7 @@
 static strmap_t *rend_cache = NULL;
 
 /** Map from service id to rend_cache_entry_t; only for hidden services. */
-static strmap_t *rend_cache_service = NULL;
+static strmap_t *rend_cache_local_service = NULL;
 
 /** Map from descriptor id to rend_cache_entry_t; only for hidden service
  * directories. */
@@ -61,7 +61,7 @@ rend_cache_init(void)
 {
   rend_cache = strmap_new();
   rend_cache_v2_dir = digestmap_new();
-  rend_cache_service = strmap_new();
+  rend_cache_local_service = strmap_new();
   rend_cache_failure = strmap_new();
 }
 
@@ -222,11 +222,11 @@ rend_cache_free_all(void)
 {
   strmap_free(rend_cache, rend_cache_entry_free_);
   digestmap_free(rend_cache_v2_dir, rend_cache_entry_free_);
-  strmap_free(rend_cache_service, rend_cache_entry_free_);
+  strmap_free(rend_cache_local_service, rend_cache_entry_free_);
   strmap_free(rend_cache_failure, rend_cache_failure_entry_free_);
   rend_cache = NULL;
   rend_cache_v2_dir = NULL;
-  rend_cache_service = NULL;
+  rend_cache_local_service = NULL;
   rend_cache_failure = NULL;
   rend_cache_total_allocation = 0;
 }
@@ -275,7 +275,7 @@ rend_cache_clean(time_t now, rend_cache_type_t cache_type)
   if (cache_type == REND_CACHE_TYPE_CLIENT) {
     cache = rend_cache;
   } else if (cache_type == REND_CACHE_TYPE_SERVICE)  {
-    cache = rend_cache_service;
+    cache = rend_cache_local_service;
   }
   tor_assert(cache);
 
@@ -497,7 +497,7 @@ rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **e,
   rend_cache_entry_t *entry = NULL;
   static const int default_version = 2;
 
-  tor_assert(rend_cache_service);
+  tor_assert(rend_cache_local_service);
   tor_assert(rend_cache);
   tor_assert(query);
   tor_assert(cache);
@@ -515,7 +515,7 @@ rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **e,
       /* Default is version 2. */
     default:
       if(cache == REND_CACHE_TYPE_SERVICE){
-        entry = strmap_get_lc(rend_cache_service, query);
+        entry = strmap_get_lc(rend_cache_local_service, query);
       } else if (cache == REND_CACHE_TYPE_CLIENT)  {
         tor_snprintf(key, sizeof(key), "%d%s", default_version, query);
         entry = strmap_get_lc(rend_cache, key);
@@ -712,7 +712,7 @@ rend_cache_store_v2_desc_as_service(const char *desc)
   char service_id[REND_SERVICE_ID_LEN_BASE32+1];
   rend_cache_entry_t *e;
   rend_cache_store_status_t retval = RCS_BADDESC;
-  tor_assert(rend_cache_service);
+  tor_assert(rend_cache_local_service);
   tor_assert(desc);
 
   /* Parse the descriptor. */
@@ -730,7 +730,8 @@ rend_cache_store_v2_desc_as_service(const char *desc)
 
   /* Do we already have a newer descriptor? Allow new descriptors with a
      rounded timestamp equal to or newer than the current descriptor */
-  e = (rend_cache_entry_t*) strmap_get_lc(rend_cache_service, service_id);
+  e = (rend_cache_entry_t*) strmap_get_lc(rend_cache_local_service,
+                                          service_id);
   if (e && e->parsed->timestamp > parsed->timestamp) {
     log_info(LD_REND, "We already have a newer service descriptor for "
              "service ID %s.", safe_str_client(service_id));
@@ -740,7 +741,7 @@ rend_cache_store_v2_desc_as_service(const char *desc)
   tor_free(intro_content);
   if (!e) {
     e = tor_malloc_zero(sizeof(rend_cache_entry_t));
-    strmap_set_lc(rend_cache_service, service_id, e);
+    strmap_set_lc(rend_cache_local_service, service_id, e);
   } else {
     rend_cache_decrement_allocation(rend_cache_entry_allocation(e));
     rend_service_descriptor_free(e->parsed);
