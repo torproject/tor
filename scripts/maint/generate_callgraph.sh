@@ -8,6 +8,7 @@ mkdir -p callgraph/src/or
 mkdir -p callgraph/src/tools
 
 for fn in $C_FILES; do
+  echo $fn
   clang $CFLAGS  -S -emit-llvm -fno-inline -o - $fn  | \
-    opt -analyze -print-callgraph 2> "callgraph/${fn}allgraph"
+    opt -analyze -print-callgraph >/dev/null 2> "callgraph/${fn}allgraph"
 done
