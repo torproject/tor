@@ -260,24 +260,33 @@ rend_cache_failure_clean(time_t now)
   } STRMAP_FOREACH_END;
 }
 
-/** Removes all old entries from the service descriptor cache.
+/** Removes all old entries from the client or service descriptor cache.
 */
 void
-rend_cache_clean(time_t now)
+rend_cache_clean(time_t now, rend_cache_type_t cache_type)
 {
   strmap_iter_t *iter;
   const char *key;
   void *val;
   rend_cache_entry_t *ent;
   time_t cutoff = now - REND_CACHE_MAX_AGE - REND_CACHE_MAX_SKEW;
-  for (iter = strmap_iter_init(rend_cache); !strmap_iter_done(iter); ) {
+  strmap_t *cache = NULL;
+
+  if (cache_type == REND_CACHE_TYPE_CLIENT) {
+    cache = rend_cache;
+  } else if (cache_type == REND_CACHE_TYPE_SERVICE)  {
+    cache = rend_cache_service;
+  }
+  tor_assert(cache);
+
+  for (iter = strmap_iter_init(cache); !strmap_iter_done(iter); ) {
     strmap_iter_get(iter, &key, &val);
     ent = (rend_cache_entry_t*)val;
     if (ent->parsed->timestamp < cutoff) {
-      iter = strmap_iter_next_rmv(rend_cache, iter);
+      iter = strmap_iter_next_rmv(cache, iter);
       rend_cache_entry_free(ent);
     } else {
-      iter = strmap_iter_next(rend_cache, iter);
+      iter = strmap_iter_next(cache, iter);
     }
   }
 }

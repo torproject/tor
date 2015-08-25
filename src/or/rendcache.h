@@ -54,7 +54,7 @@ typedef enum {
 } rend_cache_type_t;
 
 void rend_cache_init(void);
-void rend_cache_clean(time_t now);
+void rend_cache_clean(time_t now, rend_cache_type_t cache_type);
 void rend_cache_failure_clean(time_t now);
 void rend_cache_clean_v2_descs_as_dir(time_t now, size_t min_to_remove);
 void rend_cache_purge(void);
