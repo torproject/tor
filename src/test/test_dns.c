@@ -86,7 +86,7 @@ send_resolved_cell_replacement(edge_connection_t *conn, uint8_t answer_type,
                                const cached_resolve_t *resolved)
 {
   conn_for_resolved_cell = conn;
-  
+
   last_answer_type = answer_type;
   last_resolved = (cached_resolve_t *)resolved;
 
@@ -159,9 +159,9 @@ test_dns_resolve_outer(void *arg)
    * We want dns_resolve() to call send_resolved_hostname_cell() for a
    * given exit connection (represented by edge_connection_t object)
    * with a hostname it received from _impl.
-   */ 
+   */
 
-  prev_n_send_resolved_hostname_cell_replacement = 
+  prev_n_send_resolved_hostname_cell_replacement =
   n_send_resolved_hostname_cell_replacement;
 
   exitconn->base_.purpose = EXIT_PURPOSE_RESOLVE;
@@ -171,7 +171,7 @@ test_dns_resolve_outer(void *arg)
   resolved_name = tor_strdup("www.torproject.org");
 
   retval = dns_resolve(exitconn);
-  
+
   tt_int_op(retval,==,1);
   tt_str_op(resolved_name,==,last_resolved_hostname);
   tt_assert(conn_for_resolved_cell == exitconn);
@@ -184,7 +184,7 @@ test_dns_resolve_outer(void *arg)
   /* CASE 2: dns_resolve_impl returns 1, but does not set hostname.
    * Instead, it yields cached_resolve_t object.
    *
-   * We want dns_resolve to call send_resolved_cell on exitconn with 
+   * We want dns_resolve to call send_resolved_cell on exitconn with
    * RESOLVED_TYPE_AUTO and the cached_resolve_t object from _impl.
    */
 
@@ -210,7 +210,7 @@ test_dns_resolve_outer(void *arg)
 
   /* CASE 3: The purpose of exit connection is not EXIT_PURPOSE_RESOLVE
    * and _impl returns 1.
-   * 
+   *
    * We want dns_resolve to prepend exitconn to n_streams linked list.
    * We don't want it to send any cells about hostname being resolved.
    */
@@ -223,7 +223,7 @@ test_dns_resolve_outer(void *arg)
   prev_n_send_resolved_cell_replacement =
   n_send_resolved_cell_replacement;
 
-  prev_n_send_resolved_hostname_cell_replacement = 
+  prev_n_send_resolved_hostname_cell_replacement =
   n_send_resolved_hostname_cell_replacement;
 
   retval = dns_resolve(exitconn);
@@ -236,12 +236,12 @@ test_dns_resolve_outer(void *arg)
   tt_int_op(prev_n_send_resolved_hostname_cell_replacement,==,
             n_send_resolved_hostname_cell_replacement);
 
-  /* CASE 4: _impl returns 0. 
-   * 
-   * We want dns_resolve() to set exitconn state to 
+  /* CASE 4: _impl returns 0.
+   *
+   * We want dns_resolve() to set exitconn state to
    * EXIT_CONN_STATE_RESOLVING and prepend exitconn to resolving_streams
    * linked list.
-   */ 
+   */
 
   exitconn->on_circuit = &(on_circuit->base_);
 
@@ -257,12 +257,12 @@ test_dns_resolve_outer(void *arg)
   tt_assert(on_circuit->resolving_streams == exitconn);
   tt_assert(exitconn->next_stream == nextconn);
 
-  /* CASE 5: _impl returns -1 when purpose of exitconn is 
+  /* CASE 5: _impl returns -1 when purpose of exitconn is
    * EXIT_PURPOSE_RESOLVE. We want dns_resolve to call send_resolved_cell
    * on exitconn with type being RESOLVED_TYPE_ERROR.
-   */ 
+   */
 
-  MOCK(dns_cancel_pending_resolve,dns_cancel_pending_resolve_replacement); 
+  MOCK(dns_cancel_pending_resolve,dns_cancel_pending_resolve_replacement);
   MOCK(connection_free,connection_free_replacement);
 
   exitconn->on_circuit = &(on_circuit->base_);
@@ -305,6 +305,4 @@ struct testcase_t dns_tests[] = {
    { "resolve_outer", test_dns_resolve_outer, TT_FORK, NULL, NULL },
    END_OF_TESTCASES
 };
-
-#undef DNS_PRIVATE
 
