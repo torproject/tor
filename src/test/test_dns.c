@@ -103,7 +103,8 @@ send_resolved_hostname_cell_replacement(edge_connection_t *conn,
 {
   conn_for_resolved_cell = conn;
 
-  last_resolved_hostname = (char *)hostname;
+  tor_free(last_resolved_hostname);
+  last_resolved_hostname = tor_strdup(hostname);
 
   n_send_resolved_hostname_cell_replacement++;
 }
@@ -179,7 +180,8 @@ test_dns_resolve_outer(void *arg)
             prev_n_send_resolved_hostname_cell_replacement + 1);
   tt_assert(exitconn->on_circuit == NULL);
 
-  last_resolved_hostname = NULL;
+  tor_free(last_resolved_hostname);
+  // implies last_resolved_hostname = NULL;
 
   /* CASE 2: dns_resolve_impl returns 1, but does not set hostname.
    * Instead, it yields cached_resolve_t object.
@@ -296,6 +298,7 @@ test_dns_resolve_outer(void *arg)
   tor_free(nextconn);
   tor_free(resolved_name);
   tor_free(fake_resolved);
+  tor_free(last_resolved_hostname);
   return;
 }
 
