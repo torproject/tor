@@ -51,12 +51,16 @@ static int n_fake_impl = 0;
  * to <b>cache_entry</b>. Lastly, it will increment <b>n_fake_impl</b< by
  * 1.
  */
-STATIC int
+static int
 dns_resolve_fake_impl(edge_connection_t *exitconn, int is_resolve,
                       or_circuit_t *oncirc, char **hostname_out,
                       int *made_connection_pending_out,
                       cached_resolve_t **resolve_out)
 {
+  (void)oncirc;
+  (void)exitconn;
+  (void)is_resolve;
+
   if (made_connection_pending_out)
     *made_connection_pending_out = resolve_made_conn_pending;
 
@@ -109,6 +113,7 @@ static int n_dns_cancel_pending_resolve_replacement = 0;
 static void
 dns_cancel_pending_resolve_replacement(const char *address)
 {
+  (void) address;
   n_dns_cancel_pending_resolve_replacement++;
 }
 
@@ -126,6 +131,7 @@ connection_free_replacement(connection_t *conn)
 static void
 test_dns_resolve_outer(void *arg)
 {
+  (void) arg;
   int retval;
   int prev_n_send_resolved_hostname_cell_replacement;
   int prev_n_send_resolved_cell_replacement;
