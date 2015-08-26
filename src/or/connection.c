@@ -654,8 +654,8 @@ connection_free_(connection_t *conn)
 
 /** Make sure <b>conn</b> isn't in any of the global conn lists; then free it.
  */
-void
-connection_free(connection_t *conn)
+MOCK_IMPL(void,
+connection_free,(connection_t *conn))
 {
   if (!conn)
     return;

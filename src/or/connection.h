@@ -28,7 +28,7 @@ listener_connection_t *listener_connection_new(int type, int socket_family);
 connection_t *connection_new(int type, int socket_family);
 
 void connection_link_connections(connection_t *conn_a, connection_t *conn_b);
-void connection_free(connection_t *conn);
+MOCK_DECL(void,connection_free,(connection_t *conn));
 void connection_free_all(void);
 void connection_about_to_close_connection(connection_t *conn);
 void connection_close_immediate(connection_t *conn);

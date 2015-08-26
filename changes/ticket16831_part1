@@ -1,0 +1,3 @@
+  o Testing:
+    - Unit test dns_resolve(), dns_clip_ttl() and dns_get_expiry_ttl()
+      functions in dns.c. Implements a portion of ticket 16831.
