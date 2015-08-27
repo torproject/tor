@@ -59,8 +59,16 @@ NETWORK_FLAVOUR=${NETWORK_FLAVOUR:-basic}
 CHUTNEY_NETWORK=networks/$NETWORK_FLAVOUR
 myname=$(basename $0)
 
+[ -n "$CHUTNEY_PATH" ] || {
+    echo "$myname: \$CHUTNEY_PATH not set, trying $TOR_DIR/../chutney"
+    CHUTNEY_PATH="$TOR_DIR/../chutney"
+}
+
 [ -d "$CHUTNEY_PATH" ] && [ -x "$CHUTNEY_PATH/chutney" ] || {
     echo "$myname: missing 'chutney' in CHUTNEY_PATH ($CHUTNEY_PATH)"
+    echo "$myname: Get chutney: git clone https://git.torproject.org/\
+chutney.git"
+    echo "$myname: Set \$CHUTNEY_PATH to a non-standard location: export CHUTNEY_PATH=\`pwd\`/chutney"
     exit 1
 }
 

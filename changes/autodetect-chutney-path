@@ -1,0 +1,4 @@
+  o Minor features (testing):
+    - Autodetect CHUTNEY_PATH if the chutney and tor sources are
+      side-by-side in the same parent directory.
+      Closes ticket 16903. Patch by "teor".
