@@ -55,6 +55,7 @@ smartlist_free,(smartlist_t *sl))
 void
 smartlist_clear(smartlist_t *sl)
 {
+  memset(sl->list, 0, sizeof(void *) * sl->num_used);
   sl->num_used = 0;
 }
 
@@ -82,9 +83,10 @@ smartlist_ensure_capacity(smartlist_t *sl, int size)
       while (size > higher)
         higher *= 2;
     }
-    sl->capacity = higher;
     sl->list = tor_reallocarray(sl->list, sizeof(void *),
-                                ((size_t)sl->capacity));
+                                ((size_t)higher));
+    memset(sl->list + sl->capacity, 0, sizeof(void *) * (higher - sl->capacity));
+    sl->capacity = higher;
   }
 #undef ASSERT_CAPACITY
 #undef MAX_CAPACITY
@@ -123,6 +125,7 @@ smartlist_remove(smartlist_t *sl, const void *element)
     if (sl->list[i] == element) {
       sl->list[i] = sl->list[--sl->num_used]; /* swap with the end */
       i--; /* so we process the new i'th element */
+      sl->list[sl->num_used] = NULL;
     }
 }
 
@@ -132,9 +135,11 @@ void *
 smartlist_pop_last(smartlist_t *sl)
 {
   tor_assert(sl);
-  if (sl->num_used)
-    return sl->list[--sl->num_used];
-  else
+  if (sl->num_used) {
+    void *tmp = sl->list[--sl->num_used];
+    sl->list[sl->num_used] = NULL;
+    return tmp;
+  } else
     return NULL;
 }
 
@@ -165,6 +170,7 @@ smartlist_string_remove(smartlist_t *sl, const char *element)
       tor_free(sl->list[i]);
       sl->list[i] = sl->list[--sl->num_used]; /* swap with the end */
       i--; /* so we process the new i'th element */
+      sl->list[sl->num_used] = NULL;
     }
   }
 }
@@ -321,6 +327,7 @@ smartlist_intersect(smartlist_t *sl1, const smartlist_t *sl2)
     if (!smartlist_contains(sl2, sl1->list[i])) {
       sl1->list[i] = sl1->list[--sl1->num_used]; /* swap with the end */
       i--; /* so we process the new i'th element */
+      sl1->list[sl1->num_used] = NULL;
     }
 }
 
@@ -345,6 +352,7 @@ smartlist_del(smartlist_t *sl, int idx)
   tor_assert(idx>=0);
   tor_assert(idx < sl->num_used);
   sl->list[idx] = sl->list[--sl->num_used];
+  sl->list[sl->num_used] = NULL;
 }
 
 /** Remove the <b>idx</b>th element of sl; if idx is not the last element,
@@ -360,6 +368,7 @@ smartlist_del_keeporder(smartlist_t *sl, int idx)
   --sl->num_used;
   if (idx < sl->num_used)
     memmove(sl->list+idx, sl->list+idx+1, sizeof(void*)*(sl->num_used-idx));
+  sl->list[sl->num_used] = NULL;
 }
 
 /** Insert the value <b>val</b> as the new <b>idx</b>th element of
@@ -937,9 +946,11 @@ smartlist_pqueue_pop(smartlist_t *sl,
   *IDXP(top)=-1;
   if (--sl->num_used) {
     sl->list[0] = sl->list[sl->num_used];
+    sl->list[sl->num_used] = NULL;
     UPDATE_IDX(0);
     smartlist_heapify(sl, compare, idx_field_offset, 0);
   }
+  sl->list[sl->num_used] = NULL;
   return top;
 }
 
@@ -959,9 +970,11 @@ smartlist_pqueue_remove(smartlist_t *sl,
   --sl->num_used;
   *IDXP(item) = -1;
   if (idx == sl->num_used) {
+    sl->list[sl->num_used] = NULL;
     return;
   } else {
     sl->list[idx] = sl->list[sl->num_used];
+    sl->list[sl->num_used] = NULL;
     UPDATE_IDX(idx);
     smartlist_heapify(sl, compare, idx_field_offset, idx);
   }
