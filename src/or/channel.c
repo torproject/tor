@@ -3069,6 +3069,7 @@ channel_free_list(smartlist_t *channels, int mark_for_close)
     if (curr->cmux) {
       circuitmux_detach_all_circuits(curr->cmux, NULL);
     }
+    SMARTLIST_DEL_CURRENT(channels, curr);
     channel_unregister(curr);
     if (mark_for_close) {
       if (!CHANNEL_CONDEMNED(curr)) {

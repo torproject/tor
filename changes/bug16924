@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - When calling channel_free_list(), avoid calling smartlist_remove()
+      while inside a FOREACH loop. This partially reverts commit
+      17356fe7fd96af where the correct SMARTLIST_DEL_CURRENT was
+      removed.  Fixes bug 16929; bugfix on 0.2.4.4-alpha.
+
