@@ -327,7 +327,7 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
 static void
 usage(void)
 {
-  puts("Syntax: tor-resolve [-4] [-5] [-v] [-x] [-F] [-p port] "
+  puts("Syntax: tor-resolve [-4] [-5] [-v] [-x] [-p port] "
        "hostname [sockshost[:socksport]]");
   exit(1);
 }
