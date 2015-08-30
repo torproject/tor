@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - include the TUNING document in our source tarball. It is referred
+      to in the ChangeLog and an error message. Fixes bug 16929; bugfix
+      on 0.2.6.1-alpha.
+

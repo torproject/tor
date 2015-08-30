@@ -37,7 +37,7 @@ endif
 EXTRA_DIST+= doc/HACKING doc/asciidoc-helper.sh			\
              $(html_in) $(man_in) $(txt_in)			\
              doc/state-contents.txt				\
-             doc/torrc_format.txt
+             doc/torrc_format.txt doc/TUNING
 
 docdir = @docdir@
 
