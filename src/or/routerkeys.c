@@ -295,6 +295,7 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
     if (rv == 0) {
       have_secret = 1;
       loaded_secret_fname = secret_fname;
+      tor_assert(got_tag);
     } else {
       if (errno != ENOENT && norepair) {
         tor_log(severity, LD_OR, "Unable to read %s: %s", secret_fname,
