@@ -40,7 +40,7 @@ static rend_intro_point_t *find_expiring_intro_point(
 
 static extend_info_t *find_rp_for_intro(
     const rend_intro_cell_t *intro,
-    uint8_t *need_free_out, char **err_msg_out);
+    char **err_msg_out);
 
 static int intro_point_accepted_intro_count(rend_intro_point_t *intro);
 static int intro_point_should_expire_now(rend_intro_point_t *intro,
@@ -1456,13 +1456,6 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
   rend_intro_cell_t *parsed_req = NULL;
   /* Rendezvous point */
   extend_info_t *rp = NULL;
-  /*
-   * We need to look up and construct the extend_info_t for v0 and v1,
-   * but all the info is in the cell and it's constructed by the parser
-   * for v2 and v3, so freeing it would be a double-free.  Use this to
-   * keep track of whether we should free it.
-   */
-  uint8_t need_rp_free = 0;
   /* XXX not handled yet */
   char buf[RELAY_PAYLOAD_SIZE];
   char keys[DIGEST_LEN+CPATH_KEY_MATERIAL_LEN]; /* Holds KH, Df, Db, Kf, Kb */
@@ -1602,7 +1595,7 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
   ++(intro_point->accepted_introduce2_count);
 
   /* Find the rendezvous point */
-  rp = find_rp_for_intro(parsed_req, &need_rp_free, &err_msg);
+  rp = find_rp_for_intro(parsed_req, &err_msg);
   if (!rp)
     goto log_error;
 
@@ -1761,27 +1754,25 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
   /* Free the parsed cell */
   rend_service_free_intro(parsed_req);
 
-  /* Free rp if we must */
-  if (need_rp_free) extend_info_free(rp);
+  /* Free rp */
+  extend_info_free(rp);
 
   return status;
 }
 
 /** Given a parsed and decrypted INTRODUCE2, find the rendezvous point or
- * return NULL and an error string if we can't.
- */
-
+ * return NULL and an error string if we can't. Return a newly allocated
+ * extend_info_t* for the introduction point. */
 static extend_info_t *
 find_rp_for_intro(const rend_intro_cell_t *intro,
-                  uint8_t *need_free_out, char **err_msg_out)
+                  char **err_msg_out)
 {
   extend_info_t *rp = NULL;
   char *err_msg = NULL;
   const char *rp_nickname = NULL;
   const node_t *node = NULL;
-  uint8_t need_free = 0;
 
-  if (!intro || !need_free_out) {
+  if (!intro) {
     if (err_msg_out)
       err_msg = tor_strdup("Bad parameters to find_rp_for_intro()");
 
@@ -1812,13 +1803,11 @@ find_rp_for_intro(const rend_intro_cell_t *intro,
       }
 
       goto err;
-    } else {
-      need_free = 1;
     }
   } else if (intro->version == 2) {
-    rp = intro->u.v2.extend_info;
+    rp = extend_info_dup(intro->u.v2.extend_info);
   } else if (intro->version == 3) {
-    rp = intro->u.v3.extend_info;
+    rp = extend_info_dup(intro->u.v3.extend_info);
   } else {
     if (err_msg_out) {
       tor_asprintf(&err_msg,
@@ -1836,8 +1825,6 @@ find_rp_for_intro(const rend_intro_cell_t *intro,
   else tor_free(err_msg);
 
  done:
-  if (rp && need_free_out) *need_free_out = need_free;
-
   return rp;
 }
 
