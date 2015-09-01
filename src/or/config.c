@@ -6022,6 +6022,7 @@ parse_port_config(smartlist_t *out,
     int sessiongroup = SESSION_GROUP_UNSET;
     unsigned isolation = ISO_DEFAULT;
     int prefer_no_auth = 0;
+    int socks_iso_keep_alive = 0;
 
     char *addrport;
     uint16_t ptmp=0;
@@ -6246,6 +6247,8 @@ parse_port_config(smartlist_t *out,
           isoflag = ISO_CLIENTPROTO;
         } else if (!strcasecmp(elt, "IsolateClientAddr")) {
           isoflag = ISO_CLIENTADDR;
+        } else if (!strcasecmp(elt, "KeepAliveIsolateSOCKSAuth")) {
+          socks_iso_keep_alive = 1;
         } else {
           log_warn(LD_CONFIG, "Unrecognized %sPort option '%s'",
                    portname, escaped(elt_orig));
@@ -6273,6 +6276,13 @@ parse_port_config(smartlist_t *out,
     if ( (world_writable || group_writable) && ! unix_socket_path) {
       log_warn(LD_CONFIG, "You have a %sPort entry with GroupWritable "
                "or WorldWritable set, but it is not a unix socket.", portname);
+      goto err;
+    }
+
+    if (!(isolation & ISO_SOCKSAUTH) && socks_iso_keep_alive) {
+      log_warn(LD_CONFIG, "You have a %sPort entry with both "
+               "NoIsolateSOCKSAuth and KeepAliveIsolateSOCKSAuth set.",
+               portname);
       goto err;
     }
 
@@ -6309,6 +6319,7 @@ parse_port_config(smartlist_t *out,
       cfg->entry_cfg.socks_prefer_no_auth = prefer_no_auth;
       if (! (isolation & ISO_SOCKSAUTH))
         cfg->entry_cfg.socks_prefer_no_auth = 1;
+      cfg->entry_cfg.socks_iso_keep_alive = socks_iso_keep_alive;
 
       smartlist_add(out, cfg);
     }

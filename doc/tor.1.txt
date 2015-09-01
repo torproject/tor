@@ -934,7 +934,9 @@ The following options are useful only for clients (that is, if
     Feel free to reuse a circuit that was first used at most NUM seconds ago,
     but never attach a new stream to a circuit that is too old.  For hidden
     services, this applies to the __last__ time a circuit was used, not the
-    first.  (Default: 10 minutes)
+    first. Circuits with streams constructed with SOCKS authentication via
+    SocksPorts that have **KeepAliveIsolateSOCKSAuth** ignore this value.
+    (Default: 10 minutes)
 
 [[MaxClientCircuitsPending]] **MaxClientCircuitsPending** __NUM__::
     Do not allow more than NUM circuits to be pending at a time for handling
@@ -991,6 +993,9 @@ The following options are useful only for clients (that is, if
     **IsolateDestAddr**;;
         Don't share circuits with streams targeting a different
         destination address.
+    **KeepAliveIsolateSOCKSAuth**;;
+        If **IsolateSOCKSAuth** is enabled, keep alive circuits that have
+        streams with SOCKS authentication set indefinitely.
     **SessionGroup=**__INT__;;
         If no other isolation rules would prevent it, allow streams
         on this port to share circuits with streams from every other

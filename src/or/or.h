@@ -1155,6 +1155,8 @@ typedef struct entry_port_cfg_t {
   /** When both no-auth and user/pass are advertised by a SOCKS client, select
    * no-auth. */
   unsigned int socks_prefer_no_auth : 1;
+  /** When ISO_SOCKSAUTH is in use, Keep-Alive circuits indefinitely. */
+  unsigned int socks_iso_keep_alive : 1;
 
   /* Client port types only: */
   unsigned int ipv4_traffic : 1;
@@ -2877,6 +2879,11 @@ typedef struct circuit_t {
    * circuits entered certain states.  This usage probably won't
    * interfere with this field's primary purpose, but we should
    * document it more thoroughly to make sure of that.
+   *
+   * XXX027 The SocksPort option KeepaliveIsolateSOCKSAuth will artificially
+   * adjust this value forward each time a suitable stream is attached to an
+   * already constructed circuit, potentially keeping the circuit alive
+   * indefinitely.
    */
   time_t timestamp_dirty;
 
