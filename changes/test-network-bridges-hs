@@ -1,0 +1,6 @@
+  o Minor features (testing, bridges, hidden services):
+    - Make "bridges+hs" the default test network. This tests almost all
+      tor functionality during make test-network, while allowing tests
+      to succeed on non-IPv6 systems.
+      Requires chutney commit 396da92 in test-network-bridges-hs.
+      Closes tickets 16945 (tor), 16946 (chutney) . Patches by "teor".
