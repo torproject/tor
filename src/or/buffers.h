@@ -101,7 +101,7 @@ void assert_buf_ok(buf_t *buf);
 
 #ifdef BUFFERS_PRIVATE
 STATIC int buf_find_string_offset(const buf_t *buf, const char *s, size_t n);
-STATIC void buf_pullup(buf_t *buf, size_t bytes, int nulterminate);
+STATIC void buf_pullup(buf_t *buf, size_t bytes);
 void buf_get_first_chunk_data(const buf_t *buf, const char **cp, size_t *sz);
 
 #define DEBUG_CHUNK_ALLOC

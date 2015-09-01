@@ -182,7 +182,7 @@ preferred_chunk_size(size_t target)
  * If <b>nulterminate</b> is true, ensure that there is a 0 byte in
  * buf->head->mem right after all the data. */
 STATIC void
-buf_pullup(buf_t *buf, size_t bytes, int nulterminate)
+buf_pullup(buf_t *buf, size_t bytes)
 {
   /* XXXX nothing uses nulterminate; remove it. */
   chunk_t *dest, *src;
@@ -194,17 +194,9 @@ buf_pullup(buf_t *buf, size_t bytes, int nulterminate)
   if (buf->datalen < bytes)
     bytes = buf->datalen;
 
-  if (nulterminate) {
-    capacity = bytes + 1;
-    if (buf->head->datalen >= bytes && CHUNK_REMAINING_CAPACITY(buf->head)) {
-      *CHUNK_WRITE_PTR(buf->head) = '\0';
-      return;
-    }
-  } else {
-    capacity = bytes;
-    if (buf->head->datalen >= bytes)
-      return;
-  }
+  capacity = bytes;
+  if (buf->head->datalen >= bytes)
+    return;
 
   if (buf->head->memlen >= capacity) {
     /* We don't need to grow the first chunk, but we might need to repack it.*/
@@ -246,11 +238,6 @@ buf_pullup(buf_t *buf, size_t bytes, int nulterminate)
       src->datalen -= n;
       tor_assert(dest->datalen == bytes);
     }
-  }
-
-  if (nulterminate) {
-    tor_assert(CHUNK_REMAINING_CAPACITY(buf->head));
-    *CHUNK_WRITE_PTR(buf->head) = '\0';
   }
 
   check();
@@ -1203,7 +1190,7 @@ fetch_from_buf_http(buf_t *buf,
   /* Okay, we have a full header.  Make sure it all appears in the first
    * chunk. */
   if ((int)buf->head->datalen < crlf_offset + 4)
-    buf_pullup(buf, crlf_offset+4, 0);
+    buf_pullup(buf, crlf_offset+4);
   headerlen = crlf_offset + 4;
 
   headers = buf->head->data;
@@ -1451,7 +1438,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
 
   do {
     n_drain = 0;
-    buf_pullup(buf, want_length, 0);
+    buf_pullup(buf, want_length);
     tor_assert(buf->head && buf->head->datalen >= 2);
     want_length = 0;
 
@@ -1870,7 +1857,7 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
         *want_length_out = SOCKS4_NETWORK_LEN;
         return 0; /* not yet */
       }
-      // buf_pullup(buf, 1280, 0);
+      // buf_pullup(buf, 1280);
       req->command = (unsigned char) *(data+1);
       if (req->command != SOCKS_COMMAND_CONNECT &&
           req->command != SOCKS_COMMAND_RESOLVE) {
@@ -2038,7 +2025,7 @@ fetch_from_buf_socks_client(buf_t *buf, int state, char **reason)
   if (buf->datalen < 2)
     return 0;
 
-  buf_pullup(buf, MAX_SOCKS_MESSAGE_LEN, 0);
+  buf_pullup(buf, MAX_SOCKS_MESSAGE_LEN);
   tor_assert(buf->head && buf->head->datalen >= 2);
 
   r = parse_socks_client((uint8_t*)buf->head->data, buf->head->datalen,
