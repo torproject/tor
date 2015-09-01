@@ -200,8 +200,17 @@ write_secret_key(const ed25519_secret_key_t *key, int encrypted,
 {
   if (encrypted) {
     int r = write_encrypted_secret_key(key, encrypted_fname);
-    if (r != 0)
-      return r; /* Either succeeded or failed unrecoverably */
+    if (r == 1) {
+      /* Success! */
+
+      /* Try to unlink the unencrypted key, if any existed before */
+      if (strcmp(fname, encrypted_fname))
+        unlink(fname);
+      return r;
+    } else if (r != 0) {
+      /* Unrecoverable failure! */
+      return r;
+    }
 
     fprintf(stderr, "Not encrypting the secret key.\n");
   }
@@ -432,7 +441,7 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
     goto err;
   }
 
-  /* if it's absent, make a new keypair and save it. */
+  /* if it's absent, make a new keypair... */
   if (!have_secret && !found_public) {
     tor_free(keypair);
     keypair = ed_key_new(signing_key, flags, now, lifetime,
@@ -441,8 +450,12 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
       tor_log(severity, LD_OR, "Couldn't create keypair");
       goto err;
     }
-
     created_pk = created_sk = created_cert = 1;
+  }
+
+  /* Write it to disk if we're supposed to do with a new passphrase, or if
+   * we just created it. */
+  if (created_sk || (have_secret && get_options()->change_key_passphrase)) {
     if (write_secret_key(&keypair->seckey,
                          encrypt_key,
                          secret_fname, tag, encrypted_secret_fname) < 0
@@ -671,7 +684,7 @@ load_ed_keys(const or_options_t *options, time_t now)
   const int need_new_signing_key =
     NULL == use_signing ||
     EXPIRES_SOON(check_signing_cert, 0) ||
-    options->command == CMD_KEYGEN;
+    (options->command == CMD_KEYGEN && ! options->change_key_passphrase);
   const int want_new_signing_key =
     need_new_signing_key ||
     EXPIRES_SOON(check_signing_cert, options->TestingSigningKeySlop);

@@ -1,0 +1,3 @@
+  o Minor features (ed25519):
+    - Add a --newpass option to allow changing or removing the
+      passphrase of an encrypted key.

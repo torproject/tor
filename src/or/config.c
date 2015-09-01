@@ -1918,6 +1918,7 @@ static const struct {
   { "--dump-config",          ARGUMENT_OPTIONAL },
   { "--list-fingerprint",     TAKES_NO_ARGUMENT },
   { "--keygen",               TAKES_NO_ARGUMENT },
+  { "--newpass",              TAKES_NO_ARGUMENT },
   { "--no-passphrase",        TAKES_NO_ARGUMENT },
   { "--passphrase-fd",        ARGUMENT_NECESSARY },
   { "--verify-config",        TAKES_NO_ARGUMENT },
@@ -4508,6 +4509,15 @@ options_init_from_torrc(int argc, char **argv)
       get_options_mutable()->keygen_force_passphrase = FORCE_PASSPHRASE_OFF;
     } else {
       log_err(LD_CONFIG, "--no-passphrase specified without --keygen!");
+      exit(1);
+    }
+  }
+
+  if (config_line_find(cmdline_only_options, "--newpass")) {
+    if (command == CMD_KEYGEN) {
+      get_options_mutable()->change_key_passphrase = 1;
+    } else {
+      log_err(LD_CONFIG, "--newpass specified without --keygen!");
       exit(1);
     }
   }
