@@ -632,6 +632,16 @@ save_CPPFLAGS="$CPPFLAGS"
 LIBS="$TOR_OPENSSL_LIBS $LIBS"
 LDFLAGS="$TOR_LDFLAGS_openssl $LDFLAGS"
 CPPFLAGS="$TOR_CPPFLAGS_openssl $CPPFLAGS"
+
+AC_TRY_COMPILE([
+#include <openssl/opensslv.h>
+#if OPENSSL_VERSION_NUMBER < 0x1000000fL
+#error "too old"
+#endif
+   ], [],
+   [ ],
+   [ AC_ERROR([OpenSSL is too old. We require 1.0.0 or later. You can specify a path to a newer one with --with-openssl-dir.]) ])
+
 AC_CHECK_MEMBERS([struct ssl_method_st.get_cipher_by_char], , ,
 [#include <openssl/ssl.h>
 ])
