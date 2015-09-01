@@ -160,7 +160,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
 #endif
 
   r = rend_cache_lookup_entry(introcirc->rend_data->onion_address, -1,
-                              &entry, REND_CACHE_TYPE_CLIENT);
+                              &entry);
   /* An invalid onion address is not possible else we have a big issue. */
   tor_assert(r != -EINVAL);
   if (r < 0 || !rend_client_any_intro_points_usable(entry)) {
@@ -906,8 +906,7 @@ rend_client_refetch_v2_renddesc(rend_data_t *rend_query)
     return;
   }
   /* Before fetching, check if we already have a usable descriptor here. */
-  if (rend_cache_lookup_entry(rend_query->onion_address, -1, &e,
-                              REND_CACHE_TYPE_CLIENT) == 0 &&
+  if (rend_cache_lookup_entry(rend_query->onion_address, -1, &e) == 0 &&
       rend_client_any_intro_points_usable(e)) {
     log_info(LD_REND, "We would fetch a v2 rendezvous descriptor, but we "
                       "already have a usable descriptor here. Not fetching.");
@@ -988,8 +987,7 @@ rend_client_report_intro_point_failure(extend_info_t *failed_intro,
   rend_cache_entry_t *ent;
   connection_t *conn;
 
-  r = rend_cache_lookup_entry(rend_query->onion_address, -1, &ent,
-                              REND_CACHE_TYPE_CLIENT);
+  r = rend_cache_lookup_entry(rend_query->onion_address, -1, &ent);
   if (r < 0) {
     /* Either invalid onion address or cache entry not found. */
     switch (-r) {
@@ -1215,7 +1213,7 @@ rend_client_desc_trynow(const char *query)
       continue;
     assert_connection_ok(base_conn, now);
     if (rend_cache_lookup_entry(rend_data->onion_address, -1,
-                                &entry, REND_CACHE_TYPE_CLIENT) == 0 &&
+                                &entry) == 0 &&
         rend_client_any_intro_points_usable(entry)) {
       /* either this fetch worked, or it failed but there was a
        * valid entry from before which we should reuse */
@@ -1258,7 +1256,7 @@ rend_client_note_connection_attempt_ended(const rend_data_t *rend_data)
   if (*rend_data->onion_address != '\0') {
     /* Ignore return value; we find an entry, or we don't. */
     (void) rend_cache_lookup_entry(rend_data->onion_address, -1,
-                                   &cache_entry, 0);
+                                   &cache_entry);
     have_onion = 1;
   }
 
@@ -1297,8 +1295,7 @@ rend_client_get_random_intro(const rend_data_t *rend_query)
   extend_info_t *result;
   rend_cache_entry_t *entry;
 
-  ret = rend_cache_lookup_entry(rend_query->onion_address, -1, &entry,
-                                REND_CACHE_TYPE_CLIENT);
+  ret = rend_cache_lookup_entry(rend_query->onion_address, -1, &entry);
   if (ret < 0 || !rend_client_any_intro_points_usable(entry)) {
     log_warn(LD_REND,
              "Query '%s' didn't have valid rend desc in cache. Failing.",

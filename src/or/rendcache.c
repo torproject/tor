@@ -480,27 +480,23 @@ rend_cache_clean_v2_descs_as_dir(time_t now, size_t force_remove)
   } while (bytes_removed < force_remove);
 }
 
-/** Lookup in the client or service cache the given service ID <b>query</b> for
- * <b>version</b>. The <b>service</b> argument determines if the lookup should
- * be from the client cache or the service cache.
+/** Lookup in the client cache the given service ID <b>query</b> for
+ * <b>version</b>.
  *
  * Return 0 if found and if <b>e</b> is non NULL, set it with the entry
  * found. Else, a negative value is returned and <b>e</b> is untouched.
  * -EINVAL means that <b>query</b> is not a valid service id.
  * -ENOENT means that no entry in the cache was found. */
 int
-rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **e,
-                        rend_cache_type_t cache)
+rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **e)
 {
   int ret = 0;
   char key[REND_SERVICE_ID_LEN_BASE32 + 2]; /* <version><query>\0 */
   rend_cache_entry_t *entry = NULL;
   static const int default_version = 2;
 
-  tor_assert(rend_cache_local_service);
   tor_assert(rend_cache);
   tor_assert(query);
-  tor_assert(cache);
 
   if (!rend_valid_service_id(query)) {
     ret = -EINVAL;
@@ -514,21 +510,50 @@ rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **e,
     case 2:
       /* Default is version 2. */
     default:
-      if(cache == REND_CACHE_TYPE_SERVICE){
-        entry = strmap_get_lc(rend_cache_local_service, query);
-      } else if (cache == REND_CACHE_TYPE_CLIENT)  {
-        tor_snprintf(key, sizeof(key), "%d%s", default_version, query);
-        entry = strmap_get_lc(rend_cache, key);
-      }
+      tor_snprintf(key, sizeof(key), "%d%s", default_version, query);
+      entry = strmap_get_lc(rend_cache, key);
       break;
   }
   if (!entry) {
     ret = -ENOENT;
     goto end;
   }
-  /* Check descriptor is parsed only if lookup is from client cache */
-  if(cache == REND_CACHE_TYPE_CLIENT){
-    tor_assert(entry->parsed && entry->parsed->intro_nodes);
+  tor_assert(entry->parsed && entry->parsed->intro_nodes);
+
+  if (e) {
+    *e = entry;
+  }
+
+ end:
+  return ret;
+}
+
+/*
+ * Lookup the v2 service descriptor with the service ID <b>query</b> in the
+ * local service descriptor cache. Return 0 if found and if <b>e</b> is
+ * non NULL, set it with the entry found. Else, a negative value is returned
+ * and <b>e</b> is untouched.
+ * -EINVAL means that <b>query</b> is not a valid service id.
+ * -ENOENT means that no entry in the cache was found. */
+int
+rend_cache_lookup_v2_desc_as_service(const char *query, rend_cache_entry_t **e)
+{
+  int ret = 0;
+  rend_cache_entry_t *entry = NULL;
+
+  tor_assert(rend_cache_local_service);
+  tor_assert(query);
+
+  if (!rend_valid_service_id(query)) {
+    ret = -EINVAL;
+    goto end;
+  }
+
+  /* Lookup descriptor and return. */
+  entry = strmap_get_lc(rend_cache_local_service, query);
+  if (!entry) {
+    ret = -ENOENT;
+    goto end;
   }
 
   if (e) {
