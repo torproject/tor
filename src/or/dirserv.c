@@ -3746,7 +3746,7 @@ validate_recommended_package_line(const char *line)
   }
 
   /* If we reach this point, we have at least 1 entry. */
-  tor_assert(n_entries > 0)
+  tor_assert(n_entries > 0);
   return 1;
 }
 
