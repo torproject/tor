@@ -482,9 +482,11 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
     tor_log(severity, LD_OR, "Cert was for wrong key");
     bad_cert = 1;
   } else if (signing_key &&
-             tor_cert_checksig(cert, &signing_key->pubkey, now) < 0 &&
-             (signing_key || cert->cert_expired)) {
+             tor_cert_checksig(cert, &signing_key->pubkey, now) < 0) {
     tor_log(severity, LD_OR, "Can't check certificate");
+    bad_cert = 1;
+  } else if (cert->cert_expired) {
+    tor_log(severity, LD_OR, "Certificate is expired");
     bad_cert = 1;
   } else if (signing_key && cert->signing_key_included &&
              ! ed25519_pubkey_eq(&signing_key->pubkey, &cert->signing_key)) {
