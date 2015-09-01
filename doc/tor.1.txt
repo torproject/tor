@@ -1877,6 +1877,11 @@ is non-zero):
     configures their lifetime.
     (Default: 30 days)
 
+[[OfflineMasterKey]] **OfflineMasterKey** **0**|**1**::
+    If non-zero, the Tor relay will never generate or load its master secret
+    key.  Instead, you'll have to use "tor --keygen" to manage the master
+    secret key. (Default: 0)
+
 DIRECTORY SERVER OPTIONS
 ------------------------
 
