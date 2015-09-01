@@ -258,6 +258,9 @@ write_secret_key(const ed25519_secret_key_t *key, int encrypted,
  *
  * If INIT_ED_KEY_SUGGEST_KEYGEN is set, have log messages about failures
  * refer to the --keygen option.
+ *
+ * If INIT_ED_KEY_EXPLICIT_FNAME is set, use the provided file name for the
+ * secret key file, encrypted or not.
  */
 ed25519_keypair_t *
 ed_key_init_from_file(const char *fname, uint32_t flags,
@@ -279,6 +282,7 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
   const int norepair = !! (flags & INIT_ED_KEY_NO_REPAIR);
   const int split = !! (flags & INIT_ED_KEY_SPLIT);
   const int omit_secret = !! (flags &  INIT_ED_KEY_OMIT_SECRET);
+  const int explicit_fname = !! (flags & INIT_ED_KEY_EXPLICIT_FNAME);
 
   /* we don't support setting both of these flags at once. */
   tor_assert((flags & (INIT_ED_KEY_NO_REPAIR|INIT_ED_KEY_NEEDCERT)) !=
@@ -291,8 +295,13 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
   char *got_tag = NULL;
   ed25519_keypair_t *keypair = tor_malloc_zero(sizeof(ed25519_keypair_t));
 
-  tor_asprintf(&secret_fname, "%s_secret_key", fname);
-  tor_asprintf(&encrypted_secret_fname, "%s_secret_key_encrypted", fname);
+  if (explicit_fname) {
+    secret_fname = tor_strdup(fname);
+    encrypted_secret_fname = tor_strdup(fname);
+  } else {
+    tor_asprintf(&secret_fname, "%s_secret_key", fname);
+    tor_asprintf(&encrypted_secret_fname, "%s_secret_key_encrypted", fname);
+  }
   tor_asprintf(&public_fname, "%s_public_key", fname);
   tor_asprintf(&cert_fname, "%s_cert", fname);
 
@@ -729,7 +738,12 @@ load_ed_keys(const or_options_t *options, time_t now)
       goto err;
     }
     tor_free(fname);
-    fname = options_get_datadir_fname2(options, "keys", "ed25519_master_id");
+    if (options->master_key_fname) {
+      fname = tor_strdup(options->master_key_fname);
+      flags |= INIT_ED_KEY_EXPLICIT_FNAME;
+    } else {
+      fname = options_get_datadir_fname2(options, "keys", "ed25519_master_id");
+    }
     id = ed_key_init_from_file(
              fname,
              flags,

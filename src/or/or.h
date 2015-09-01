@@ -4303,6 +4303,7 @@ typedef struct {
   int use_keygen_passphrase_fd;
   int keygen_passphrase_fd;
   int change_key_passphrase;
+  char *master_key_fname;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
