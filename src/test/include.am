@@ -186,4 +186,5 @@ EXTRA_DIST += \
 	src/test/bt_test.py \
 	src/test/ntor_ref.py \
 	src/test/slownacl_curve25519.py \
-	src/test/zero_length_keys.sh
+	src/test/zero_length_keys.sh \
+	src/test/test_keygen.sh
