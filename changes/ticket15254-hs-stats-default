@@ -1,0 +1,4 @@
+  o Hidden Service Statistics
+    - Turn on hidden service statistics collection by setting the torrc
+      option HiddenServiceStatistics to "1" by default. Closes ticket
+      #15254.

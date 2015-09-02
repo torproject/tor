@@ -289,7 +289,7 @@ static config_var_t option_vars_[] = {
   VAR("HiddenServiceMaxStreams",LINELIST_S, RendConfigLines, NULL),
   VAR("HiddenServiceMaxStreamsCloseCircuit",LINELIST_S, RendConfigLines, NULL),
   VAR("HiddenServiceNumIntroductionPoints", LINELIST_S, RendConfigLines, NULL),
-  V(HiddenServiceStatistics,     BOOL,     "0"),
+  V(HiddenServiceStatistics,     BOOL,     "1"),
   V(HidServAuth,                 LINELIST, NULL),
   V(CloseHSClientCircuitsImmediatelyOnTimeout, BOOL, "0"),
   V(CloseHSServiceRendCircuitsImmediatelyOnTimeout, BOOL, "0"),

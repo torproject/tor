@@ -1848,7 +1848,7 @@ is non-zero):
     statistics on its role as hidden-service directory, introduction
     point, or rendezvous point to disk every 24 hours. If
     ExtraInfoStatistics is also enabled, these statistics are further
-    published to the directory authorities. (Default: 0)
+    published to the directory authorities. (Default: 1)
 
 [[ExtraInfoStatistics]] **ExtraInfoStatistics** **0**|**1**::
     When this option is enabled, Tor includes previously gathered statistics in
