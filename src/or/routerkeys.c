@@ -237,8 +237,12 @@ write_secret_key(const ed25519_secret_key_t *key, int encrypted,
  * If INIT_ED_KEY_MISSING_SECRET_OK is set in <b>flags</b>, and we find a
  * public key file but no secret key file, return successfully anyway.
  *
- * If INIT_ED_KEY_OMIT_SECRET is set in <b>flags</b>, do not even try to
- * load or return a secret key (but create and save one if needed).
+ * If INIT_ED_KEY_OMIT_SECRET is set in <b>flags</b>, do not try to load a
+ * secret key unless no public key is found.  Do not return a secret key. (but
+ * create and save one if needed).
+ *
+ * If INIT_ED_KEY_NO_LOAD_SECRET is set in <b>flags</b>, don't try to load
+ * a secret key, no matter what.
  *
  * If INIT_ED_KEY_TRY_ENCRYPTED is set, we look for an encrypted secret key
  * and consider encrypting any new secret key.
@@ -269,7 +273,8 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
   const int encrypt_key = !! (flags & INIT_ED_KEY_TRY_ENCRYPTED);
   const int norepair = !! (flags & INIT_ED_KEY_NO_REPAIR);
   const int split = !! (flags & INIT_ED_KEY_SPLIT);
-  const int omit_secret = !! (flags &  INIT_ED_KEY_OMIT_SECRET);
+  const int omit_secret = !! (flags & INIT_ED_KEY_OMIT_SECRET);
+  const int offline_secret = !! (flags & INIT_ED_KEY_OFFLINE_SECRET);
 
   /* we don't support setting both of these flags at once. */
   tor_assert((flags & (INIT_ED_KEY_NO_REPAIR|INIT_ED_KEY_NEEDCERT)) !=
@@ -289,7 +294,10 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
 
   /* Try to read the secret key. */
   int have_secret = 0;
-  if (try_to_load && (!omit_secret || file_status(public_fname)==FN_NOENT )) {
+  int load_secret = try_to_load &&
+    !offline_secret &&
+    (!omit_secret || file_status(public_fname)==FN_NOENT);
+  if (load_secret) {
     int rv = ed25519_seckey_read_from_file(&keypair->seckey,
                                            &got_tag, secret_fname);
     if (rv == 0) {
@@ -717,6 +725,8 @@ load_ed_keys(const or_options_t *options, time_t now)
       flags |= INIT_ED_KEY_MISSING_SECRET_OK;
     if (! want_new_signing_key || offline_master)
       flags |= INIT_ED_KEY_OMIT_SECRET;
+    if (offline_master)
+      flags |= INIT_ED_KEY_OFFLINE_SECRET;
     if (options->command == CMD_KEYGEN)
       flags |= INIT_ED_KEY_TRY_ENCRYPTED;
 
