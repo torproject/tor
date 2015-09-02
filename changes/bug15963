@@ -1,0 +1,4 @@
+  o Hidden service directory enhancement
+    - Relays need to have the Fast flag to ge the HSDir flag. As this is
+      being written, we'll go from 2745 HSDirs down to 2342, a ~14% drop.
+      Fixes #15983.
