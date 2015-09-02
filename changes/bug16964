@@ -1,0 +1,4 @@
+  o Minor bugfixes (linux seccomp2 sandbox):
+    - Allow bridge authorities to run correctly under the seccomp2
+      sandbox. Fixes bug 16964; bugfix on 0.2.5.1-alpha.
+

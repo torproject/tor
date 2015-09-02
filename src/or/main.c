@@ -3040,6 +3040,12 @@ sandbox_init_filter(void)
   OPEN("/etc/hosts");
   OPEN("/proc/meminfo");
 
+  if (options->BridgeAuthoritativeDir)
+    OPEN_DATADIR_SUFFIX("networkstatus-bridges", ".tmp");
+
+  if (authdir_mode_handles_descs(options, -1))
+    OPEN_DATADIR("approved-routers");
+
   if (options->ServerDNSResolvConfFile)
     sandbox_cfg_allow_open_filename(&cfg,
                                 tor_strdup(options->ServerDNSResolvConfFile));
@@ -3079,6 +3085,9 @@ sandbox_init_filter(void)
   RENAME_SUFFIX("state", ".tmp");
   RENAME_SUFFIX("unparseable-desc", ".tmp");
   RENAME_SUFFIX("v3-status-votes", ".tmp");
+
+  if (options->BridgeAuthoritativeDir)
+    RENAME_SUFFIX("networkstatus-bridges", ".tmp");
 
 #define STAT_DATADIR(name)                      \
   sandbox_cfg_allow_stat_filename(&cfg, get_datadir_fname(name))
