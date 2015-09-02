@@ -1762,7 +1762,7 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
 
 /** Given a parsed and decrypted INTRODUCE2, find the rendezvous point or
  * return NULL and an error string if we can't. Return a newly allocated
- * extend_info_t* for the introduction point. */
+ * extend_info_t* for the rendezvous point. */
 static extend_info_t *
 find_rp_for_intro(const rend_intro_cell_t *intro,
                   char **err_msg_out)
