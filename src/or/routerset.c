@@ -162,6 +162,17 @@ routerset_is_empty(const routerset_t *set)
   return !set || smartlist_len(set->list) == 0;
 }
 
+/** Return the number of entries in <b>set</b>. This does NOT return a
+ * negative value. */
+int
+routerset_len(const routerset_t *set)
+{
+  if (!set) {
+    return 0;
+  }
+  return smartlist_len(set->list);
+}
+
 /** Helper.  Return true iff <b>set</b> contains a router based on the other
  * provided fields.  Return higher values for more specific subentries: a
  * single router is more specific than an address range of routers, which is

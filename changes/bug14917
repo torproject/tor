@@ -1,0 +1,5 @@
+  o Major bugfix
+    - For an hidden service, it is now prohibited to use one single
+      EntryNodes to avoid a very easy guard discovery attack. For more
+      details, see the ticket description here:
+      https://trac.torproject.org/projects/tor/ticket/14917. Fixes #14917.

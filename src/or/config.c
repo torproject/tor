@@ -3173,6 +3173,20 @@ options_validate(or_options_t *old_options, or_options_t *options,
              "http://freehaven.net/anonbib/#hs-attack06 for details.");
   }
 
+  if (routerset_is_list(options->EntryNodes) &&
+      (routerset_len(options->EntryNodes) == 1) &&
+      (options->RendConfigLines != NULL)) {
+    tor_asprintf(msg,
+             "You have one single EntryNodes and at least one hidden service "
+             "configured. This is bad because it's very easy to locate your "
+             "entry guard which can then lead to the deanonymization of your "
+             "hidden service -- for more details, see "
+             "https://trac.torproject.org/projects/tor/ticket/14917. "
+             "For this reason, the use of one EntryNodes with an hidden "
+             "service is prohibited until a better solution is found.");
+    return -1;
+  }
+
   if (!options->LearnCircuitBuildTimeout && options->CircuitBuildTimeout &&
       options->CircuitBuildTimeout < RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT) {
     log_warn(LD_CONFIG,

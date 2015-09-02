@@ -38,6 +38,7 @@ void routerset_subtract_nodes(smartlist_t *out,
 char *routerset_to_string(const routerset_t *routerset);
 int routerset_equal(const routerset_t *old, const routerset_t *new);
 void routerset_free(routerset_t *routerset);
+int routerset_len(const routerset_t *set);
 
 #ifdef ROUTERSET_PRIVATE
 STATIC char * routerset_get_countryname(const char *c);
