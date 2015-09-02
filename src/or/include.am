@@ -153,6 +153,7 @@ ORHEADERS = \
 	src/or/dirserv.h				\
 	src/or/dirvote.h				\
 	src/or/dns.h					\
+	src/or/dns_structs.h				\
 	src/or/dnsserv.h				\
 	src/or/eventdns_tor.h				\
 	src/or/ext_orport.h				\
