@@ -3034,6 +3034,7 @@ sandbox_init_filter(void)
   OPEN_DATADIR_SUFFIX("state", ".tmp");
   OPEN_DATADIR_SUFFIX("unparseable-desc", ".tmp");
   OPEN_DATADIR_SUFFIX("v3-status-votes", ".tmp");
+  OPEN_DATADIR("key-pinning-journal");
   OPEN("/dev/srandom");
   OPEN("/dev/urandom");
   OPEN("/dev/random");
@@ -3157,6 +3158,13 @@ sandbox_init_filter(void)
     OPEN_DATADIR2("keys", "secret_onion_key.old");
     OPEN_DATADIR2("keys", "secret_onion_key_ntor.old");
 
+    OPEN_DATADIR2_SUFFIX("keys", "ed25519_master_id_secret_key", ".tmp");
+    OPEN_DATADIR2_SUFFIX("keys", "ed25519_master_id_secret_key_encrypted",
+                         ".tmp");
+    OPEN_DATADIR2_SUFFIX("keys", "ed25519_master_id_public_key", ".tmp");
+    OPEN_DATADIR2_SUFFIX("keys", "ed25519_signing_secret_key", ".tmp");
+    OPEN_DATADIR2_SUFFIX("keys", "ed25519_signing_cert", ".tmp");
+
     OPEN_DATADIR2_SUFFIX("stats", "bridge-stats", ".tmp");
     OPEN_DATADIR2_SUFFIX("stats", "dirreq-stats", ".tmp");
 
@@ -3186,6 +3194,12 @@ sandbox_init_filter(void)
     RENAME_SUFFIX2("stats", "conn-stats", ".tmp");
     RENAME_SUFFIX("hashed-fingerprint", ".tmp");
     RENAME_SUFFIX("router-stability", ".tmp");
+
+    RENAME_SUFFIX2("keys", "ed25519_master_id_secret_key", ".tmp");
+    RENAME_SUFFIX2("keys", "ed25519_master_id_secret_key_encrypted", ".tmp");
+    RENAME_SUFFIX2("keys", "ed25519_master_id_public_key", ".tmp");
+    RENAME_SUFFIX2("keys", "ed25519_signing_secret_key", ".tmp");
+    RENAME_SUFFIX2("keys", "ed25519_signing_cert", ".tmp");
 
     sandbox_cfg_allow_rename(&cfg,
              get_datadir_fname2("keys", "secret_onion_key"),
