@@ -73,9 +73,14 @@ test: all
 
 need-chutney-path:
 	@if test ! -d "$$CHUTNEY_PATH"; then \
-		echo '$$CHUTNEY_PATH was not set.'; echo; \
-		echo "To run these tests, git clone https://git.torproject.org/chutney.git ; export CHUTNEY_PATH=\`pwd\`/chutney"; \
-		exit 1; \
+		echo '$$CHUTNEY_PATH was not set.'; \
+		if test -d $(top_srcdir)/../chutney -a -x $(top_srcdir)/../chutney/chutney; then \
+			echo "Assuming test-network.sh will find" $(top_srcdir)/../chutney; \
+		else \
+			echo; \
+			echo "To run these tests, git clone https://git.torproject.org/chutney.git ; export CHUTNEY_PATH=\`pwd\`/chutney"; \
+			exit 1; \
+		fi \
 	fi
 
 # Note that test-network requires a copy of Chutney in $CHUTNEY_PATH.
