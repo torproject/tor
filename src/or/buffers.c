@@ -178,13 +178,10 @@ preferred_chunk_size(size_t target)
 /** Collapse data from the first N chunks from <b>buf</b> into buf->head,
  * growing it as necessary, until buf->head has the first <b>bytes</b> bytes
  * of data from the buffer, or until buf->head has all the data in <b>buf</b>.
- *
- * If <b>nulterminate</b> is true, ensure that there is a 0 byte in
- * buf->head->mem right after all the data. */
+ */
 STATIC void
 buf_pullup(buf_t *buf, size_t bytes)
 {
-  /* XXXX nothing uses nulterminate; remove it. */
   chunk_t *dest, *src;
   size_t capacity;
   if (!buf->head)

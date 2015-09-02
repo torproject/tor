@@ -206,9 +206,6 @@ test_buffer_pullup(void *arg)
   stuff = tor_malloc(16384);
   tmp = tor_malloc(16384);
 
-  /* Note: this test doesn't check the nulterminate argument to buf_pullup,
-     since nothing actually uses it.  We should remove it some time. */
-
   buf = buf_new_with_capacity(3000); /* rounds up to next power of 2. */
 
   tt_assert(buf);
