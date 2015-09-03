@@ -27,6 +27,10 @@ int tor_main(int argc, char *argv[]);
 int
 main(int argc, char *argv[])
 {
-  return tor_main(argc, argv);
+  int r = tor_main(argc, argv);
+  if (r < 0 || r > 255)
+    return 1;
+  else
+    return r;
 }
 

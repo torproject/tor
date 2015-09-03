@@ -1,0 +1,3 @@
+  o Minor features:
+    - Try harder to normalize the exit status of the Tor process to the
+      standard-provided range.
