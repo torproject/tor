@@ -65,6 +65,9 @@ if [ ! -d "$DATA_DIR" ]; then
 fi
 trap "rm -rf '$DATA_DIR'" 0
 
+# Use an absolute path for this or Tor will complain
+DATA_DIR=`cd "${DATA_DIR}" && pwd`
+
 touch "${DATA_DIR}/empty_torrc"
 
 QUIETLY="--hush"
