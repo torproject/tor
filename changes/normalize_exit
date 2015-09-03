@@ -1,3 +1,4 @@
   o Minor features:
     - Try harder to normalize the exit status of the Tor process to the
-      standard-provided range.
+      standard-provided range. Fixes bug 16975; bugfix on every version
+      of Tor ever.
