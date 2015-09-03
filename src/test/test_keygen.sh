@@ -71,6 +71,7 @@ DATA_DIR=`cd "${DATA_DIR}" && pwd`
 touch "${DATA_DIR}/empty_torrc"
 
 QUIETLY="--hush"
+SILENTLY="--quiet"
 TOR="${TOR_BINARY} ${QUIETLY} --DisableNetwork 1 --ShutdownWaitLength 0 --ORPort 12345 --ExitRelay 0 -f ${DATA_DIR}/empty_torrc"
 
 ##### SETUP
@@ -80,9 +81,9 @@ TOR="${TOR_BINARY} ${QUIETLY} --DisableNetwork 1 --ShutdownWaitLength 0 --ORPort
 # copying them into different keys directories in order to simulate
 # different kinds of configuration problems/issues.
 
-# Step 1: Start Tor with --list-fingerprint.  Make sure everything is there.
+# Step 1: Start Tor with --list-fingerprint --quiet.  Make sure everything is there.
 mkdir "${DATA_DIR}/orig"
-${TOR} --DataDirectory "${DATA_DIR}/orig" --list-fingerprint > /dev/null
+${TOR} --DataDirectory "${DATA_DIR}/orig" --list-fingerprint ${SILENTLY} > /dev/null
 
 check_dir "${DATA_DIR}/orig/keys"
 check_file "${DATA_DIR}/orig/keys/ed25519_master_id_public_key"
@@ -166,7 +167,7 @@ SRC="${DATA_DIR}/orig"
 
 mkdir -p "${ME}/keys"
 cp "${SRC}/keys/ed25519_master_id_"* "${ME}/keys/"
-${TOR} --DataDirectory "${ME}" --list-fingerprint >/dev/null || die "Tor failed when starting with only master key"
+${TOR} --DataDirectory "${ME}" --list-fingerprint ${SILENTLY} >/dev/null || die "Tor failed when starting with only master key"
 check_files_eq "${SRC}/keys/ed25519_master_id_public_key" "${ME}/keys/ed25519_master_id_public_key"
 check_files_eq "${SRC}/keys/ed25519_master_id_secret_key" "${ME}/keys/ed25519_master_id_secret_key"
 check_file "${ME}/keys/ed25519_signing_cert"
@@ -224,11 +225,11 @@ SRC="${DATA_DIR}/orig"
 
 mkdir -p "${ME}/keys"
 cp "${SRC}/keys/ed25519_master_id_secret_key" "${ME}/keys/"
-${TOR} --DataDirectory "${ME}" --list-fingerprint > "${ME}/fp1" || die "Tor wouldn't start with only unencrypted secret key"
+${TOR} --DataDirectory "${ME}" --list-fingerprint ${SILENTLY} > "${ME}/fp1" || die "Tor wouldn't start with only unencrypted secret key"
 check_file "${ME}/keys/ed25519_master_id_public_key"
 check_file "${ME}/keys/ed25519_signing_cert"
 check_file "${ME}/keys/ed25519_signing_secret_key"
-${TOR} --DataDirectory "${ME}" --list-fingerprint > "${ME}/fp2" || die "Tor wouldn't start again after starting once with only unencrypted secret key."
+${TOR} --DataDirectory "${ME}" --list-fingerprint ${SILENTLY} > "${ME}/fp2" || die "Tor wouldn't start again after starting once with only unencrypted secret key."
 
 check_files_eq "${ME}/fp1" "${ME}/fp2"
 
@@ -288,7 +289,7 @@ cp "${SRC}/keys/ed25519_master_id_secret_key" "${ME}/keys/"
 cp "${SRC}/keys/ed25519_signing_cert" "${ME}/keys/"
 cp "${SRC}/keys/ed25519_signing_secret_key" "${ME}/keys/"
 
-${TOR} --DataDirectory "${ME}" --list-fingerprint >/dev/null || die "Failed when starting with missing public key"
+${TOR} --DataDirectory "${ME}" --list-fingerprint ${SILENTLY} >/dev/null || die "Failed when starting with missing public key"
 check_keys_eq ed25519_master_id_secret_key
 check_keys_eq ed25519_master_id_public_key
 check_keys_eq ed25519_signing_secret_key
@@ -310,7 +311,7 @@ cp "${SRC}/keys/ed25519_master_id_public_key" "${ME}/keys/"
 cp "${SRC}/keys/ed25519_signing_cert" "${ME}/keys/"
 cp "${SRC}/keys/ed25519_signing_secret_key" "${ME}/keys/"
 
-${TOR} --DataDirectory "${ME}" --list-fingerprint >/dev/null || die "Failed when starting with offline secret key"
+${TOR} --DataDirectory "${ME}" --list-fingerprint ${SILENTLY} >/dev/null || die "Failed when starting with offline secret key"
 check_no_file "${ME}/keys/ed25519_master_id_secret_key"
 check_keys_eq ed25519_master_id_public_key
 check_keys_eq ed25519_signing_secret_key
@@ -331,7 +332,7 @@ mkdir -p "${ME}/keys"
 cp "${SRC}/keys/ed25519_signing_cert" "${ME}/keys/"
 cp "${SRC}/keys/ed25519_signing_secret_key" "${ME}/keys/"
 
-${TOR} --DataDirectory "${ME}" --list-fingerprint >/dev/null || die "Failed when starting with only signing material"
+${TOR} --DataDirectory "${ME}" --list-fingerprint ${SILENTLY} >/dev/null || die "Failed when starting with only signing material"
 check_no_file "${ME}/keys/ed25519_master_id_secret_key"
 check_file "${ME}/keys/ed25519_master_id_public_key"
 check_keys_eq ed25519_signing_secret_key
