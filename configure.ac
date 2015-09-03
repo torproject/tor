@@ -639,7 +639,7 @@ AC_TRY_COMPILE([
 #error "too old"
 #endif
    ], [],
-   [ ],
+   [ /bin/true ],
    [ AC_ERROR([OpenSSL is too old. We require 1.0.0 or later. You can specify a path to a newer one with --with-openssl-dir.]) ])
 
 AC_CHECK_MEMBERS([struct ssl_method_st.get_cipher_by_char], , ,
