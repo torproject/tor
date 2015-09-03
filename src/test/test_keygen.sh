@@ -109,7 +109,7 @@ check_file "${DATA_DIR}/encrypted/keys/ed25519_signing_cert"
 check_file "${DATA_DIR}/encrypted/keys/ed25519_signing_secret_key"
 
 
-echo "=== Starting tests."
+echo "=== Starting keygen tests."
 
 #
 # The "case X" numbers below come from s7r's email on
@@ -124,7 +124,7 @@ ME="${DATA_DIR}/case2a"
 SRC="${DATA_DIR}/orig"
 mkdir -p "${ME}/keys"
 cp "${SRC}/keys/ed25519_master_id_public_key" "${ME}/keys/"
-${TOR} --DataDirectory "${ME}" --list-fingerprint > "${ME}/stdout" && die "Somehow succeeded when missing secret key, certs" || true
+${TOR} --DataDirectory "${ME}" --list-fingerprint > "${ME}/stdout" && die "Somehow succeeded when missing secret key, certs: `cat ${ME}/stdout`" || true
 check_files_eq "${SRC}/keys/ed25519_master_id_public_key" "${ME}/keys/ed25519_master_id_public_key"
 
 grep "We needed to load a secret key.*but couldn't find it" "${ME}/stdout" >/dev/null || die "Tor didn't declare that it was missing a secret key"
