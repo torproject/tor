@@ -323,7 +323,7 @@ int
 ed25519_donna_pubkey_from_curve25519_pubkey(unsigned char *out,
   const unsigned char *inp, int signbit)
 {
-  static const bignum25519 one = { 1 };
+  static const bignum25519 ALIGN(16) one = { 1 };
   bignum25519 ALIGN(16) u, uminus1, uplus1, inv_uplus1, y;
 
   /* Prop228: y = (u-1)/(u+1) */
