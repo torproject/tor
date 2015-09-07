@@ -37,14 +37,16 @@ typedef enum {
   DIRIND_ANON_DIRPORT,
 } dir_indirection_t;
 
-void directory_initiate_command_routerstatus(const routerstatus_t *status,
-                                             uint8_t dir_purpose,
-                                             uint8_t router_purpose,
-                                             dir_indirection_t indirection,
-                                             const char *resource,
-                                             const char *payload,
-                                             size_t payload_len,
-                                             time_t if_modified_since);
+MOCK_DECL(void, directory_initiate_command_routerstatus,
+                (const routerstatus_t *status,
+                 uint8_t dir_purpose,
+                 uint8_t router_purpose,
+                 dir_indirection_t indirection,
+                 const char *resource,
+                 const char *payload,
+                 size_t payload_len,
+                 time_t if_modified_since));
+
 void directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
                                                   uint8_t dir_purpose,
                                                   uint8_t router_purpose,
@@ -127,6 +129,12 @@ STATIC int purpose_needs_anonymity(uint8_t dir_purpose,
                                    uint8_t router_purpose);
 STATIC dirinfo_type_t dir_fetch_type(int dir_purpose, int router_purpose,
                                      const char *resource);
+STATIC char* authdir_type_to_string(dirinfo_type_t auth);
+STATIC const char * dir_conn_purpose_to_string(int purpose);
+STATIC int should_use_directory_guards(const or_options_t *options);
+STATIC zlib_compression_level_t choose_compression_level(ssize_t n_bytes);
+STATIC const smartlist_t * find_dl_schedule_and_len(download_status_t *dls,
+                                                    int server);
 #endif
 
 #endif

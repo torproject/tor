@@ -12,6 +12,8 @@
 #define ROUTERLIST_PRIVATE
 #define HIBERNATE_PRIVATE
 #define NETWORKSTATUS_PRIVATE
+#define RELAY_PRIVATE
+
 #include "or.h"
 #include "config.h"
 #include "crypto_ed25519.h"
@@ -27,6 +29,9 @@
 #include "routerset.h"
 #include "test.h"
 #include "torcert.h"
+#include "relay.h"
+
+#define NS_MODULE dir
 
 static void
 test_dir_nicknames(void *arg)
@@ -3340,12 +3345,33 @@ static void
 test_dir_fetch_type(void *arg)
 {
   (void)arg;
-  tt_assert(dir_fetch_type(DIR_PURPOSE_FETCH_MICRODESC, ROUTER_PURPOSE_GENERAL,
-                           NULL) == MICRODESC_DIRINFO);
-  tt_assert(dir_fetch_type(DIR_PURPOSE_FETCH_SERVERDESC, ROUTER_PURPOSE_BRIDGE,
-                           NULL) == BRIDGE_DIRINFO);
-  tt_assert(dir_fetch_type(DIR_PURPOSE_FETCH_CONSENSUS, ROUTER_PURPOSE_GENERAL,
-                           "microdesc") == (V3_DIRINFO | MICRODESC_DIRINFO));
+  tt_int_op(dir_fetch_type(DIR_PURPOSE_FETCH_EXTRAINFO, ROUTER_PURPOSE_BRIDGE,
+                           NULL), OP_EQ, EXTRAINFO_DIRINFO | BRIDGE_DIRINFO);
+  tt_int_op(dir_fetch_type(DIR_PURPOSE_FETCH_EXTRAINFO, ROUTER_PURPOSE_GENERAL,
+                           NULL), OP_EQ, EXTRAINFO_DIRINFO | V3_DIRINFO);
+
+  tt_int_op(dir_fetch_type(DIR_PURPOSE_FETCH_SERVERDESC, ROUTER_PURPOSE_BRIDGE,
+                           NULL), OP_EQ, BRIDGE_DIRINFO);
+  tt_int_op(dir_fetch_type(DIR_PURPOSE_FETCH_SERVERDESC,
+                           ROUTER_PURPOSE_GENERAL, NULL), OP_EQ, V3_DIRINFO);
+
+  tt_int_op(dir_fetch_type(DIR_PURPOSE_FETCH_STATUS_VOTE,
+                           ROUTER_PURPOSE_GENERAL, NULL), OP_EQ, V3_DIRINFO);
+  tt_int_op(dir_fetch_type(DIR_PURPOSE_FETCH_DETACHED_SIGNATURES,
+                           ROUTER_PURPOSE_GENERAL, NULL), OP_EQ, V3_DIRINFO);
+  tt_int_op(dir_fetch_type(DIR_PURPOSE_FETCH_CERTIFICATE,
+                           ROUTER_PURPOSE_GENERAL, NULL), OP_EQ, V3_DIRINFO);
+
+  tt_int_op(dir_fetch_type(DIR_PURPOSE_FETCH_CONSENSUS, ROUTER_PURPOSE_GENERAL,
+                           "microdesc"), OP_EQ, V3_DIRINFO|MICRODESC_DIRINFO);
+  tt_int_op(dir_fetch_type(DIR_PURPOSE_FETCH_CONSENSUS, ROUTER_PURPOSE_GENERAL,
+                           NULL), OP_EQ, V3_DIRINFO);
+
+  tt_int_op(dir_fetch_type(DIR_PURPOSE_FETCH_MICRODESC, ROUTER_PURPOSE_GENERAL,
+                           NULL), OP_EQ, MICRODESC_DIRINFO);
+
+  tt_int_op(dir_fetch_type(DIR_PURPOSE_FETCH_RENDDESC_V2,
+                           ROUTER_PURPOSE_GENERAL, NULL), OP_EQ, NO_DIRINFO);
  done: ;
 }
 
@@ -3494,6 +3520,308 @@ test_dir_packages(void *arg)
   tor_free(res);
 }
 
+static void
+test_dir_authdir_type_to_string(void *data)
+{
+  (void)data;
+
+  tt_str_op(authdir_type_to_string(NO_DIRINFO), OP_EQ,
+            "[Not an authority]");
+  tt_str_op(authdir_type_to_string(EXTRAINFO_DIRINFO), OP_EQ,
+            "[Not an authority]");
+  tt_str_op(authdir_type_to_string(MICRODESC_DIRINFO), OP_EQ,
+            "[Not an authority]");
+
+  tt_str_op(authdir_type_to_string(V3_DIRINFO), OP_EQ, "V3");
+  tt_str_op(authdir_type_to_string(BRIDGE_DIRINFO), OP_EQ, "Bridge");
+  tt_str_op(authdir_type_to_string(
+            V3_DIRINFO | BRIDGE_DIRINFO | EXTRAINFO_DIRINFO), OP_EQ,
+            "V3, Bridge");
+  done: ;
+}
+
+static void
+test_dir_conn_purpose_to_string(void *data)
+{
+  (void)data;
+
+#define EXPECT_CONN_PURPOSE(purpose, expected) \
+  tt_str_op(dir_conn_purpose_to_string(purpose), OP_EQ, expected);
+
+  EXPECT_CONN_PURPOSE(DIR_PURPOSE_UPLOAD_DIR, "server descriptor upload");
+  EXPECT_CONN_PURPOSE(DIR_PURPOSE_UPLOAD_VOTE, "server vote upload");
+  EXPECT_CONN_PURPOSE(DIR_PURPOSE_UPLOAD_SIGNATURES,
+                      "consensus signature upload");
+  EXPECT_CONN_PURPOSE(DIR_PURPOSE_FETCH_SERVERDESC, "server descriptor fetch");
+  EXPECT_CONN_PURPOSE(DIR_PURPOSE_FETCH_EXTRAINFO, "extra-info fetch");
+  EXPECT_CONN_PURPOSE(DIR_PURPOSE_FETCH_CONSENSUS,
+                      "consensus network-status fetch");
+  EXPECT_CONN_PURPOSE(DIR_PURPOSE_FETCH_CERTIFICATE, "authority cert fetch");
+  EXPECT_CONN_PURPOSE(DIR_PURPOSE_FETCH_STATUS_VOTE, "status vote fetch");
+  EXPECT_CONN_PURPOSE(DIR_PURPOSE_FETCH_DETACHED_SIGNATURES,
+                      "consensus signature fetch");
+  EXPECT_CONN_PURPOSE(DIR_PURPOSE_FETCH_RENDDESC_V2,
+                      "hidden-service v2 descriptor fetch");
+  EXPECT_CONN_PURPOSE(DIR_PURPOSE_UPLOAD_RENDDESC_V2,
+                      "hidden-service v2 descriptor upload");
+  EXPECT_CONN_PURPOSE(DIR_PURPOSE_FETCH_MICRODESC, "microdescriptor fetch");
+  EXPECT_CONN_PURPOSE(1024, "(unknown)");
+
+  done: ;
+}
+
+NS_DECL(int,
+public_server_mode, (const or_options_t *options));
+
+static int
+NS(public_server_mode)(const or_options_t *options)
+{
+  (void)options;
+
+  if (CALLED(public_server_mode)++ == 0) {
+    return 1;
+  }
+
+  return 0;
+}
+
+static void
+test_dir_should_use_directory_guards(void *data)
+{
+  or_options_t *options;
+  char *errmsg = NULL;
+  (void)data;
+
+  NS_MOCK(public_server_mode);
+
+  options = options_new();
+  options_init(options);
+
+  tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
+  tt_int_op(CALLED(public_server_mode), OP_EQ, 1);
+
+  options->UseEntryGuardsAsDirGuards = 1;
+  options->UseEntryGuards = 1;
+  options->DownloadExtraInfo = 0;
+  options->FetchDirInfoEarly = 0;
+  options->FetchDirInfoExtraEarly = 0;
+  options->FetchUselessDescriptors = 0;
+  tt_int_op(should_use_directory_guards(options), OP_EQ, 1);
+  tt_int_op(CALLED(public_server_mode), OP_EQ, 2);
+
+  options->UseEntryGuards = 0;
+  tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
+  tt_int_op(CALLED(public_server_mode), OP_EQ, 3);
+  options->UseEntryGuards = 1;
+
+  options->UseEntryGuardsAsDirGuards = 0;
+  tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
+  tt_int_op(CALLED(public_server_mode), OP_EQ, 4);
+  options->UseEntryGuardsAsDirGuards = 1;
+
+  options->DownloadExtraInfo = 1;
+  tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
+  tt_int_op(CALLED(public_server_mode), OP_EQ, 5);
+  options->DownloadExtraInfo = 0;
+
+  options->FetchDirInfoEarly = 1;
+  tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
+  tt_int_op(CALLED(public_server_mode), OP_EQ, 6);
+  options->FetchDirInfoEarly = 0;
+
+  options->FetchDirInfoExtraEarly = 1;
+  tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
+  tt_int_op(CALLED(public_server_mode), OP_EQ, 7);
+  options->FetchDirInfoExtraEarly = 0;
+
+  options->FetchUselessDescriptors = 1;
+  tt_int_op(should_use_directory_guards(options), OP_EQ, 0);
+  tt_int_op(CALLED(public_server_mode), OP_EQ, 8);
+  options->FetchUselessDescriptors = 0;
+
+  done:
+    NS_UNMOCK(public_server_mode);
+    tor_free(options);
+    tor_free(errmsg);
+}
+
+NS_DECL(void,
+directory_initiate_command_routerstatus, (const routerstatus_t *status,
+                                          uint8_t dir_purpose,
+                                          uint8_t router_purpose,
+                                          dir_indirection_t indirection,
+                                          const char *resource,
+                                          const char *payload,
+                                          size_t payload_len,
+                                          time_t if_modified_since));
+
+static void
+test_dir_should_not_init_request_to_ourselves(void *data)
+{
+  char digest[DIGEST_LEN];
+  dir_server_t *ourself = NULL;
+  crypto_pk_t *key = pk_generate(2);
+  (void) data;
+
+  NS_MOCK(directory_initiate_command_routerstatus);
+
+  clear_dir_servers();
+  routerlist_free_all();
+
+  set_server_identity_key(key);
+  crypto_pk_get_digest(key, (char*) &digest);
+  ourself = trusted_dir_server_new("ourself", "127.0.0.1", 9059, 9060, digest,
+                                   NULL, V3_DIRINFO, 1.0);
+
+  tt_assert(ourself);
+  dir_server_add(ourself);
+
+  directory_get_from_all_authorities(DIR_PURPOSE_FETCH_STATUS_VOTE, 0, NULL);
+  tt_int_op(CALLED(directory_initiate_command_routerstatus), OP_EQ, 0);
+
+  directory_get_from_all_authorities(DIR_PURPOSE_FETCH_DETACHED_SIGNATURES, 0,
+                                     NULL);
+
+  tt_int_op(CALLED(directory_initiate_command_routerstatus), OP_EQ, 0);
+
+  done:
+    NS_UNMOCK(directory_initiate_command_routerstatus);
+    clear_dir_servers();
+    routerlist_free_all();
+    crypto_pk_free(key);
+}
+
+static void
+test_dir_should_not_init_request_to_dir_auths_without_v3_info(void *data)
+{
+  dir_server_t *ds = NULL;
+  dirinfo_type_t dirinfo_type = BRIDGE_DIRINFO | EXTRAINFO_DIRINFO \
+                                | MICRODESC_DIRINFO;
+  (void) data;
+
+  NS_MOCK(directory_initiate_command_routerstatus);
+
+  clear_dir_servers();
+  routerlist_free_all();
+
+  ds = trusted_dir_server_new("ds", "10.0.0.1", 9059, 9060,
+                              "12345678901234567890", NULL, dirinfo_type, 1.0);
+  tt_assert(ds);
+  dir_server_add(ds);
+
+  directory_get_from_all_authorities(DIR_PURPOSE_FETCH_STATUS_VOTE, 0, NULL);
+  tt_int_op(CALLED(directory_initiate_command_routerstatus), OP_EQ, 0);
+
+  directory_get_from_all_authorities(DIR_PURPOSE_FETCH_DETACHED_SIGNATURES, 0,
+                                     NULL);
+  tt_int_op(CALLED(directory_initiate_command_routerstatus), OP_EQ, 0);
+
+  done:
+    NS_UNMOCK(directory_initiate_command_routerstatus);
+    clear_dir_servers();
+    routerlist_free_all();
+}
+
+static void
+test_dir_should_init_request_to_dir_auths(void *data)
+{
+  dir_server_t *ds = NULL;
+  (void) data;
+
+  NS_MOCK(directory_initiate_command_routerstatus);
+
+  clear_dir_servers();
+  routerlist_free_all();
+
+  ds = trusted_dir_server_new("ds", "10.0.0.1", 9059, 9060,
+                              "12345678901234567890", NULL, V3_DIRINFO, 1.0);
+  tt_assert(ds);
+  dir_server_add(ds);
+
+  directory_get_from_all_authorities(DIR_PURPOSE_FETCH_STATUS_VOTE, 0, NULL);
+  tt_int_op(CALLED(directory_initiate_command_routerstatus), OP_EQ, 1);
+
+  directory_get_from_all_authorities(DIR_PURPOSE_FETCH_DETACHED_SIGNATURES, 0,
+                                     NULL);
+  tt_int_op(CALLED(directory_initiate_command_routerstatus), OP_EQ, 2);
+
+  done:
+    NS_UNMOCK(directory_initiate_command_routerstatus);
+    clear_dir_servers();
+    routerlist_free_all();
+}
+
+void
+NS(directory_initiate_command_routerstatus)(const routerstatus_t *status,
+                                            uint8_t dir_purpose,
+                                            uint8_t router_purpose,
+                                            dir_indirection_t indirection,
+                                            const char *resource,
+                                            const char *payload,
+                                            size_t payload_len,
+                                            time_t if_modified_since)
+{
+  CALLED(directory_initiate_command_routerstatus)++;
+}
+
+static void
+test_dir_choose_compression_level(void* data)
+{
+  (void)data;
+
+  /* It starts under_memory_pressure */
+  tt_int_op(have_been_under_memory_pressure(), OP_EQ, 1);
+
+  tt_assert(HIGH_COMPRESSION == choose_compression_level(-1));
+  tt_assert(LOW_COMPRESSION == choose_compression_level(1024-1));
+  tt_assert(MEDIUM_COMPRESSION == choose_compression_level(2048-1));
+  tt_assert(HIGH_COMPRESSION == choose_compression_level(2048));
+
+  /* Reset under_memory_pressure timer */
+  cell_queues_check_size();
+  tt_int_op(have_been_under_memory_pressure(), OP_EQ, 0);
+
+  tt_assert(HIGH_COMPRESSION == choose_compression_level(-1));
+  tt_assert(HIGH_COMPRESSION == choose_compression_level(1024-1));
+  tt_assert(HIGH_COMPRESSION == choose_compression_level(2048-1));
+  tt_assert(HIGH_COMPRESSION == choose_compression_level(2048));
+
+  done: ;
+}
+
+static void
+test_dir_find_dl_schedule_and_len(void* data)
+{
+  download_status_t dls;
+  smartlist_t server, client, server_cons, client_cons, bridge;
+  (void)data;
+
+  mock_options = malloc(sizeof(or_options_t));
+  reset_options(mock_options, &mock_get_options_calls);
+  MOCK(get_options, mock_get_options);
+
+  mock_options->TestingServerDownloadSchedule = &server;
+  mock_options->TestingClientDownloadSchedule = &client;
+  mock_options->TestingServerConsensusDownloadSchedule = &server_cons;
+  mock_options->TestingClientConsensusDownloadSchedule = &client_cons;
+  mock_options->TestingBridgeDownloadSchedule = &bridge;
+
+  dls.schedule = DL_SCHED_GENERIC;
+  tt_ptr_op(find_dl_schedule_and_len(&dls, 0), OP_EQ, &client);
+  tt_ptr_op(find_dl_schedule_and_len(&dls, 1), OP_EQ, &server);
+
+  dls.schedule = DL_SCHED_CONSENSUS;
+  tt_ptr_op(find_dl_schedule_and_len(&dls, 0), OP_EQ, &client_cons);
+  tt_ptr_op(find_dl_schedule_and_len(&dls, 1), OP_EQ, &server_cons);
+
+  dls.schedule = DL_SCHED_BRIDGE;
+  tt_ptr_op(find_dl_schedule_and_len(&dls, 0), OP_EQ, &bridge);
+  tt_ptr_op(find_dl_schedule_and_len(&dls, 1), OP_EQ, &bridge);
+
+  done:
+    UNMOCK(get_options);
+}
+
 #define DIR_LEGACY(name)                                                   \
   { #name, test_dir_ ## name , TT_FORK, NULL, NULL }
 
@@ -3525,6 +3853,14 @@ struct testcase_t dir_tests[] = {
   DIR(purpose_needs_anonymity, 0),
   DIR(fetch_type, 0),
   DIR(packages, 0),
+  DIR(authdir_type_to_string, 0),
+  DIR(conn_purpose_to_string, 0),
+  DIR(should_use_directory_guards, 0),
+  DIR(should_not_init_request_to_ourselves, TT_FORK),
+  DIR(should_not_init_request_to_dir_auths_without_v3_info, 0),
+  DIR(should_init_request_to_dir_auths, 0),
+  DIR(choose_compression_level, 0),
+  DIR(find_dl_schedule_and_len, 0),
   END_OF_TESTCASES
 };
 
