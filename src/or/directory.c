@@ -2614,7 +2614,7 @@ choose_compression_level(ssize_t n_bytes)
  * service descriptor.  On finding one, write a response into
  * conn-\>outbuf.  If the request is unrecognized, send a 400.
  * Always return 0. */
-static int
+STATIC int
 directory_handle_command_get(dir_connection_t *conn, const char *headers,
                              const char *req_body, size_t req_body_len)
 {
@@ -2874,7 +2874,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       });
 
     if (global_write_bucket_low(TO_CONN(conn), estimated_len, 2)) {
-      write_http_status_line(conn, 503, "Directory busy, try again later.");
+      write_http_status_line(conn, 503, "Directory busy, try again later");
       goto vote_done;
     }
     write_http_response_header(conn, body_len ? body_len : -1, compressed,
@@ -3071,7 +3071,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
                       len += c->cache_info.signed_descriptor_len);
 
     if (global_write_bucket_low(TO_CONN(conn), compressed?len/2:len, 2)) {
-      write_http_status_line(conn, 503, "Directory busy, try again later.");
+      write_http_status_line(conn, 503, "Directory busy, try again later");
       goto keys_done;
     }
 

@@ -269,8 +269,8 @@ client_identity_key_is_set(void)
 
 /** Return the key certificate for this v3 (voting) authority, or NULL
  * if we have no such certificate. */
-authority_cert_t *
-get_my_v3_authority_cert(void)
+MOCK_IMPL(authority_cert_t *,
+get_my_v3_authority_cert, (void))
 {
   return authority_key_certificate;
 }

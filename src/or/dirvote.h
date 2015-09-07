@@ -136,8 +136,10 @@ int dirvote_add_signatures(const char *detached_signatures_body,
                            const char **msg_out);
 
 /* Item access */
-const char *dirvote_get_pending_consensus(consensus_flavor_t flav);
-const char *dirvote_get_pending_detached_signatures(void);
+MOCK_DECL(const char*, dirvote_get_pending_consensus,
+          (consensus_flavor_t flav));
+MOCK_DECL(const char*, dirvote_get_pending_detached_signatures, (void));
+
 #define DGV_BY_ID 1
 #define DGV_INCLUDE_PENDING 2
 #define DGV_INCLUDE_PREVIOUS 4
