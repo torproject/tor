@@ -118,8 +118,9 @@ test-network-all: need-chutney-path all test-driver
 	done; \
 	for f in $$flavors; do \
 		./test-driver --test-name $$f --log-file $(TEST_NETWORK_ALL_LOG_DIR)/$$f.log --trs-file $(TEST_NETWORK_ALL_LOG_DIR)/$$f.trs $(TEST_NETWORK_ALL_DRIVER_FLAGS) $(top_srcdir)/src/test/test-network.sh --flavor $$f $(TEST_NETWORK_FLAGS); \
-	done
-	@echo "Log and result files are available in $(TEST_NETWORK_ALL_LOG_DIR)."
+	done; \
+	echo "Log and result files are available in $(TEST_NETWORK_ALL_LOG_DIR)."; \
+	! grep -q FAIL test_network_log/*.trs
 
 need-stem-path:
 	@if test ! -d "$$STEM_SOURCE_DIR"; then \
