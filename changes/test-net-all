@@ -1,0 +1,3 @@
+  o Testing:
+    - New make target (make test-network-all) to run multiple applicable
+      chutney test cases. Patch from Teor; closes 16953.
