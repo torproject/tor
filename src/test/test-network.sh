@@ -3,9 +3,9 @@
 ECHO_N="/bin/echo -n"
 use_coverage_binary=false
 
-until [ -z $1 ]
+until [ -z "$1" ]
 do
-  case $1 in
+  case "$1" in
     --chutney-path)
       export CHUTNEY_PATH="$2"
       shift
