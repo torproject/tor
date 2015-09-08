@@ -6263,7 +6263,7 @@ parse_port_config(smartlist_t *out,
         } else if (!strcasecmp(elt, "IsolateClientAddr")) {
           isoflag = ISO_CLIENTADDR;
         } else if (!strcasecmp(elt, "KeepAliveIsolateSOCKSAuth")) {
-          socks_iso_keep_alive = 1;
+          socks_iso_keep_alive = ! no;
         } else {
           log_warn(LD_CONFIG, "Unrecognized %sPort option '%s'",
                    portname, escaped(elt_orig));
