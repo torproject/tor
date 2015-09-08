@@ -2440,7 +2440,8 @@ crypto_rand_uint64_range(uint64_t min, uint64_t max)
 time_t
 crypto_rand_time_range(time_t min, time_t max)
 {
-  return (time_t) crypto_rand_uint64_range(min, max);
+  tor_assert(min < max);
+  return min + (time_t)crypto_rand_uint64(max - min);
 }
 
 /** Return a pseudorandom 64-bit integer, chosen uniformly from the values
