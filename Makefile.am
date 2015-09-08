@@ -36,12 +36,15 @@ EXTRA_DIST+= \
 if COVERAGE_ENABLED
 TEST_CFLAGS=-fno-inline -fprofile-arcs -ftest-coverage
 TEST_CPPFLAGS=-DTOR_UNIT_TESTS -DTOR_COVERAGE
-TEST_NETWORK_FLAGS="--coverage"
+TEST_NETWORK_FLAGS=--coverage --hs-multi-client 1
 else
 TEST_CFLAGS=
 TEST_CPPFLAGS=-DTOR_UNIT_TESTS
-TEST_NETWORK_FLAGS=
+TEST_NETWORK_FLAGS=--hs-multi-client 1
 endif
+
+TEST_NETWORK_ALL_LOG_DIR=$(top_builddir)/test_network_log
+TEST_NETWORK_ALL_DRIVER_FLAGS=--color-tests yes
 
 #install-data-local:
 #	$(INSTALL) -m 755 -d $(LOCALSTATEDIR)/lib/tor
@@ -87,6 +90,37 @@ need-chutney-path:
 # Chutney can be cloned from https://git.torproject.org/chutney.git .
 test-network: need-chutney-path all
 	$(top_srcdir)/src/test/test-network.sh $(TEST_NETWORK_FLAGS)
+
+# Run all available tests using automake's test-driver
+# only run IPv6 tests if we can ping6 ::1 (localhost)
+# some IPv6 tests will fail without an IPv6 DNS server (see #16971 and #17011)
+# only run mixed tests if we have a tor-stable binary
+# see #17015 for autodetection of different tor versions
+test-network-all: need-chutney-path all test-driver
+	mkdir -p $(TEST_NETWORK_ALL_LOG_DIR)
+	@flavors="$(TEST_CHUTNEY_FLAVORS)"; \
+	if ping6 -q -o ::1 >/dev/null 2>&1; then \
+		echo "ping6 ::1 succeeded, running IPv6 flavors: $(TEST_CHUTNEY_FLAVORS_IPV6)."; \
+		flavors="$$flavors $(TEST_CHUTNEY_FLAVORS_IPV6)"; \
+	else \
+		echo "ping6 ::1 failed, skipping IPv6 flavors: $(TEST_CHUTNEY_FLAVORS_IPV6)."; \
+		skip_flavors="$$skip_flavors $(TEST_CHUTNEY_FLAVORS_IPV6)"; \
+	fi; \
+	if command -v tor-stable >/dev/null 2>&1; then \
+		echo "tor-stable found, running mixed flavors: $(TEST_CHUTNEY_FLAVORS_MIXED)."; \
+		flavors="$$flavors $(TEST_CHUTNEY_FLAVORS_MIXED)"; \
+	else \
+		echo "tor-stable not found, skipping mixed flavors: $(TEST_CHUTNEY_FLAVORS_MIXED)."; \
+		skip_flavors="$$skip_flavors $(TEST_CHUTNEY_FLAVORS_MIXED)"; \
+	fi; \
+	for f in $$skip_flavors; do \
+		echo "SKIP: $$f"; \
+	done; \
+	for f in $$flavors; do \
+		./test-driver --test-name $$f --log-file $(TEST_NETWORK_ALL_LOG_DIR)/$$f.log --trs-file $(TEST_NETWORK_ALL_LOG_DIR)/$$f.trs $(TEST_NETWORK_ALL_DRIVER_FLAGS) $(top_srcdir)/src/test/test-network.sh --flavor $$f $(TEST_NETWORK_FLAGS); \
+	done; \
+	echo "Log and result files are available in $(TEST_NETWORK_ALL_LOG_DIR)."; \
+	! grep -q FAIL test_network_log/*.trs
 
 need-stem-path:
 	@if test ! -d "$$STEM_SOURCE_DIR"; then \
@@ -173,3 +207,4 @@ mostlyclean-local:
 	rm -f $(top_builddir)/src/*/*.gc{da,no} $(top_builddir)/src/*/*/*.gc{da,no}
 	rm -rf $(HTML_COVER_DIR)
 	rm -rf $(top_builddir)/doc/doxygen
+	rm -rf $(TEST_NETWORK_ALL_LOG_DIR)
