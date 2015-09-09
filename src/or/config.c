@@ -6247,6 +6247,9 @@ parse_port_config(smartlist_t *out,
         } else if (!strcasecmp(elt, "PreferSOCKSNoAuth")) {
           prefer_no_auth = ! no;
           continue;
+        } else if (!strcasecmp(elt, "KeepAliveIsolateSOCKSAuth")) {
+          socks_iso_keep_alive = ! no;
+          continue;
         }
 
         if (!strcasecmpend(elt, "s"))
@@ -6262,8 +6265,6 @@ parse_port_config(smartlist_t *out,
           isoflag = ISO_CLIENTPROTO;
         } else if (!strcasecmp(elt, "IsolateClientAddr")) {
           isoflag = ISO_CLIENTADDR;
-        } else if (!strcasecmp(elt, "KeepAliveIsolateSOCKSAuth")) {
-          socks_iso_keep_alive = ! no;
         } else {
           log_warn(LD_CONFIG, "Unrecognized %sPort option '%s'",
                    portname, escaped(elt_orig));
