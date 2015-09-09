@@ -1,6 +1,0 @@
-  o Minor bugfixes:
-
-    - Fix the behavior of crypto_time_t when told to consider times
-      before 1970. (These times were possible when running in a
-      simulated network environment where time()'s output starts at
-      zero.) Fixes bug 16980; bugfix on 0.2.7.1-alpha.

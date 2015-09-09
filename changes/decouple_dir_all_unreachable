@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Simply the control graph further by deferring the inner body of
-      directory_all_unreachable() into a callback. Closes ticket
-      16762.

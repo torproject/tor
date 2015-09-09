@@ -1,5 +1,0 @@
-  o Minor features (client-side privacy)
-    - Indefinitely extend circuit lifespan by resetting dirtyness, if
-      IsolateSOCKSAuth is in use, the new `KeepAliveIsolateSOCKSAuth`
-      option is set, and streams with SOCKS authentication are attached
-      to the circuit. Implements feature 15482.

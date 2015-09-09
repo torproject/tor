@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Move the client-only parts of init_keys() into a separate function.
-      Closes ticket 16763.

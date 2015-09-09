@@ -1,6 +1,0 @@
-  o Removed code:
-    - The internal pure-C tor-fw-helper tool is now removed from the
-      Tor distribution, in favor of the pure-Go clone available from
-      https://github.com/Yawning/tor-fw-helper .  The libraries used
-      by the C tor-fw-helper are not, in our opinion, very confidence-
-      inspiring in their secure-proggramming techniques. Closes ticket 13338.

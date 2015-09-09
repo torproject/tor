@@ -1,3 +1,0 @@
-  o Minor bugfixes (authority):
-    - Don't assign "HSDir" to a router if it isn't Valid and Running.
-      Fixes bug 16524; bugfix on 0.2.7.2-alpha.

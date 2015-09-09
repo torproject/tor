@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Fix an usage message of tor-resolve(1) so that it no longer lists
-      the removed -F option. Fixes bug 16913; bugfix on Tor
-      0.2.2.28-beta.

@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Check correctly for windows socket errors in the workqueue backend.
-      Fixes bug 16741; bugfix on 0.2.6.3-alpha.

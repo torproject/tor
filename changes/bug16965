@@ -1,4 +1,0 @@
-  o Minor bugfixes (linux seccomp2 sandbox):
-    - Allow routers with ed25519 keys to run correctly under the seccomp2
-      sandbox. Fixes bug 16965; bugfix on 0.2.7.2-alpha.
-

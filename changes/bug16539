@@ -1,4 +1,0 @@
-  o Minor bugfixes (Ed25519):
-    - Fix a memory leak when reading router descriptors with
-      expired Ed25519 certificate. Fixes bug 16539; bugfix on 0.2.7.2-alpha.
-      

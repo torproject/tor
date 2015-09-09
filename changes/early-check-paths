@@ -1,3 +1,0 @@
-  o Testing:
-    - When running test-network or test-stem, check for the absence
-      of stem/chutney before doing any build operations.

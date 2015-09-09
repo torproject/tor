@@ -1,7 +1,0 @@
-  o Removed features:
-    - Remove the code that would try to aggressively flush controller
-      connections while writing to them.  This code was introduced in
-      0.1.2.7-alpha, in order to keep output buffers from exceeding their
-      limits.  But there is no longer a maximum output buffer size, and
-      flushing data in this way caused some undesirable recursions
-      in our call graph. Closes ticket 16480.

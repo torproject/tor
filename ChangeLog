@@ -1,3 +1,249 @@
+Changes in version 0.2.7.3-????? - 2015-09-1?
+  XXXX write a blurb
+
+  o Major features (security, hidden services):
+    - For an hidden service, it is now prohibited to use one single
+      EntryNodes to avoid a very easy guard discovery attack. For more
+      details, see the ticket description here:
+      https://trac.torproject.org/projects/tor/ticket/14917. Fixes
+      ticket 14917.
+
+  o Major features (relay, Ed25519):
+    - Significant improvements to the usability of relay-side Ed25519
+      key management. Log messages are better, and the code can recover
+      from far more failure conditions. Thanks to "s7r" for reporting
+      and diagnosing so many of these!
+
+  o Major bugfixes (relay, Ed25519):
+    - Avoid crashing on 'tor --keygen'. Fixes bug 16679; bugfix on
+      0.2.7.2-alpha. Reported by "s7r".
+    - Improve handling of expired signing keys along with offline master
+      keys. Fixes bug 16685; bugfix on 0.2.7.2-alpha. Reported by "s7r".
+
+  o Major enhancements (performance testing):
+    - Add chutney performance testing support to src/test/test-
+      network.sh The following arguments change how chutney verifies the
+      network: "--bytes n" sends n bytes per test connection;
+      "--connections n" makes n test connections per client; and
+      "--hs-multi-client 1" makes each client connect to each HS.
+      Requires the corresponding chutney performance testing changes.
+      Note: using --connections 7 or greater on a HS will trigger issue
+      15937. Patch by "teor". Closes ticket 14175.
+
+  o Minor features:
+    - Try harder to normalize the exit status of the Tor process to the
+      standard-provided range. Fixes bug 16975; bugfix on every version
+      of Tor ever.
+    - Update geoip and geoip6 to the July 8 2015 Maxmind GeoLite2
+      Country database.
+
+  o Minor features (client-side privacy):
+    - Indefinitely extend circuit lifespan by resetting dirtyness, if
+      IsolateSOCKSAuth is in use, the new `KeepAliveIsolateSOCKSAuth`
+      option is set, and streams with SOCKS authentication are attached
+      to the circuit. Implements feature 15482.
+
+  o Minor features (compilation):
+    - Give a warning as early as possible when trying to build with an
+      unsupported OpenSSL version. Closes ticket 16901.
+
+  o Minor features (Hidden service directory):
+    - Relays need to have the Fast flag to get the HSDir flag. As this
+      is being written, we'll go from 2745 HSDirs down to 2342, a ~14%
+      drop. Fixes ticket 15963.
+
+  o Minor features (hidden Service Statistics):
+    - Turn on hidden service statistics collection by setting the torrc
+      option HiddenServiceStatistics to "1" by default. Closes
+      ticket 15254.
+
+  o Minor features (hidden service):
+    - Client now uses an introduction point failure cache to know when
+      to fetch or keep a descriptor in their cache.
+
+      When fetching a descriptor, for every introduction points in it,
+      we look them up in the failure cache to know if we keep the
+      descriptor or not. For this to work, everytime an introduction
+      points is discarded (ex: receiving a NACK), we note it down in our
+      introduction cache. If all introduction points for an onion
+      service are in our failure cache, we discard the descriptor and
+      fetch a new one.
+
+      See rendcache.c for a detailed explanation of the cache's
+      behavior. Closes ticket 16389.
+
+  o Minor features (performance):
+    - Improve the runtime speed of Ed25519 operations and Curve25519
+      keypair generation when built targeting 32 bit x86 platforms with
+      SSE2 available. Implements ticket 16535.
+    - Improve the runtime speed of Ed25519 signature verification by
+      using Ed25519-donna's batch verification support when there are a
+      lot of signatures to verify at once. Implements ticket 16533.
+
+  o Minor features (testing):
+    - Autodetect CHUTNEY_PATH if the chutney and tor sources are side-
+      by-side in the same parent directory. Closes ticket 16903. Patch
+      by "teor".
+
+  o Minor features (testing, authorities):
+    - New TestingDirAuthVote{Exit,Guard,HSDir}IsStrict flags. "A node
+      will never receive the corresponding flag unless that node is
+      specified in the TestingDirAuthVote{Exit,Guard,HSDir} list,
+      regardless of its uptime, bandwidth, exit policy, or DirPort".
+      Closes ticket 14882. Patch by "robgjansen", modified by "teor" as
+      VoteOnHidServDirectoriesV2 is now obsolete. Commit message and
+      changes file by "teor" & "robgjansen".
+
+  o Minor features (testing, authorities, documentation):
+    - Fix an error in the manual page and comments for
+      TestingDirAuthVoteHSDir[IsStrict], which suggested that a HSDir
+      required "ORPort connectivity". While this is true, it is in no
+      way unique to the HSDir flag. Of all the flags, only HSDirs need a
+      DirPort configured in order for the authorities to assign that
+      particular flag. Fixed as part of 14882. Patch by "teor". Bugfix
+      on 0.2.6.3 (f9d57473e1ff on 10 January 2015).
+
+  o Minor features (testing, bridges, hidden services):
+    - Make "bridges+hs" the default test network. This tests almost all
+      tor functionality during make test-network, while allowing tests
+      to succeed on non-IPv6 systems. Requires chutney commit 396da92 in
+      test-network-bridges-hs. Closes tickets 16945 (tor), 16946
+      (chutney) . Patches by "teor".
+
+  o Minor bugfixes:
+    - Check correctly for windows socket errors in the workqueue
+      backend. Fixes bug 16741; bugfix on 0.2.6.3-alpha.
+    - Ensure that worker threads actually exit when a fatal error or
+      shutdown is indicated. This doesn't currently affect the behaviour
+      of Tor, because Tor never indicates fatal error or shutdown except
+      in its unit tests. Fixes bug 16868; bugfix on 0.2.6.3-alpha.
+    - Fix an usage message of tor-resolve(1) so that it no longer lists
+      the removed -F option. Fixes bug 16913; bugfix on
+      Tor 0.2.2.28-beta.
+    - Fix the behavior of crypto_time_t when told to consider times
+      before 1970. (These times were possible when running in a
+      simulated network environment where time()'s output starts at
+      zero.) Fixes bug 16980; bugfix on 0.2.7.1-alpha.
+    - When calling channel_free_list(), avoid calling smartlist_remove()
+      while inside a FOREACH loop. This partially reverts commit
+      17356fe7fd96af where the correct SMARTLIST_DEL_CURRENT was
+      removed. Fixes bug 16924; bugfix on 0.2.4.4-alpha.
+    - When logging malformed hostnames in socks5 requests, respect
+      SafeLogging configuration. Fixes bug 16891; bugfix on 0.1.1.16-rc.
+    - include the TUNING document in our source tarball. It is referred
+      to in the ChangeLog and an error message. Fixes bug 16929; bugfix
+      on 0.2.6.1-alpha.
+
+  o Minor bugfix (open file limit):
+    - Fix set_max_file_descriptors() to set by default the max open file
+      limit to the current limit in case setrlimit() fails so we at
+      least have a usable value; Fixes bug 16274; bugfix on tor-
+      0.2.0.10-alpha. Patch by dgoulet.
+
+  o Minor bugfixes (authority):
+    - Don't assign "HSDir" to a router if it isn't Valid and Running.
+      Fixes bug 16524; bugfix on 0.2.7.2-alpha.
+    - Downgrade log messages about Ed25519 key issues, if they are in
+      old cached router descriptors. Fixes part of bug 16286; bugfix
+      on 0.2.7.2-alpha.
+    - When we find an Ed25519 key issue in a cached descriptor, stop
+      saying the descriptor was just "uploaded". Fixes another part of
+      bug 16286; bugfix on 0.2.7.2-alpha.
+
+  o Minor bugfixes (control port):
+    - Control port was using set_max_file_descriptors() with a limit set
+      to 0 to get the max value. A recent fix made this use case return
+      an error and introduced dead code in that function. This triggered
+      a warning that our limit (ConnLimit) was invalid but in reality it
+      was not.
+
+      Now, to the control port uses a specific getter function to query
+      the value and set_max_file_descriptors() should never be used
+      again for that purpose. Fixes bug 16697; bugfix on 0.2.7.2-alpha.
+
+  o Minor bugfixes (Ed25519):
+    - Fix a memory leak when reading router descriptors with expired
+      Ed25519 certificate. Fixes bug 16539; bugfix on 0.2.7.2-alpha.
+
+  o Minor bugfixes (linux seccomp2 sandbox):
+    - Allow bridge authorities to run correctly under the seccomp2
+      sandbox. Fixes bug 16964; bugfix on 0.2.5.1-alpha.
+    - Allow routers with ed25519 keys to run correctly under the
+      seccomp2 sandbox. Fixes bug 16965; bugfix on 0.2.7.2-alpha.
+
+  o Minor bugfixes (relay):
+    - Unblock threads before releasing the mutex to ensure predictable
+      scheduling behavior. Fixes bug 16644; bugfix on 0.2.6.3-alpha.
+
+  o Code simplification and refactoring:
+    - Change the function that's called when we need to retry all
+      downloads so that it only reschedules the downloads to happen
+      immediately, rather than launching them all at once itself. This
+      further simplifies Tor's callgraph.
+    - Move some format-parsing functions out of crypto.c and
+      crypto_curve25519.c into crypto_format.c and/or util_format.c.
+    - Move the client-only parts of init_keys() into a separate
+      function. Closes ticket 16763.
+    - Simplify the microdesc_free() implementation so that it no longer
+      appears (to code analysis tools) to potentially invoke a huge
+      suite of other microdesc functions.
+    - Simply the control graph further by deferring the inner body of
+      directory_all_unreachable() into a callback. Closes ticket 16762.
+    - Treat the loss of an owning controller as equivalent to a SIGTERM
+      signal. This removes a tiny amount of duplicated code, and
+      simplifies our callgraph. Closes ticekt 16788.
+    - When generating an event to send to the controller, we no longer
+      put the event over the network immediately. Instead, we queue
+      these events, and use a Libevent callback to deliver them. This
+      change simplifies Tor's callgraph by reducing the number of
+      functions from which all other Tor functions are reachable. Closes
+      ticket 16695.
+    - Wrap windows-only C files inside '#ifdef _WIN32' so that tools
+      that try to scan or compile every file on Unix won't decide that
+      they are broken.
+
+  o Code simplifications and refactoring:
+    - Remove the unused "nulterminate" argument from buf_pullup().
+
+  o Documentation:
+    - Recommend a 40 GB example AccountingMax in torrc.sample rather
+      than a 4 GB max. Closes ticket 16742.
+
+  o Removed code:
+    - The internal pure-C tor-fw-helper tool is now removed from the Tor
+      distribution, in favor of the pure-Go clone available from
+      https://github.com/Yawning/tor-fw-helper . The libraries used by
+      the C tor-fw-helper are not, in our opinion, very confidence-
+      inspiring in their secure-proggramming techniques. Closes
+      ticket 13338.
+
+  o Removed features:
+    - Remove the code that would try to aggressively flush controller
+      connections while writing to them. This code was introduced in
+      0.1.2.7-alpha, in order to keep output buffers from exceeding
+      their limits. But there is no longer a maximum output buffer size,
+      and flushing data in this way caused some undesirable recursions
+      in our call graph. Closes ticket 16480.
+
+  o Testing:
+    - Add a new set of callgraph analysis scripts that use clang to
+      produce a list of which Tor functions are reachable from which
+      other Tor functions. We're planning to use these to help simplify
+      our code structure by identifying illogical dependencies.
+    - Add new 'test-full' and 'test-full-online' targets to run all
+      tests, including integration tests with stem and chutney.
+    - Make the test-workqueue test work on windows by initializing the
+      network before we begin.
+    - New make target (make test-network-all) to run multiple applicable
+      chutney test cases. Patch from Teor; closes 16953.
+    - Unit test dns_resolve(), dns_clip_ttl() and dns_get_expiry_ttl()
+      functions in dns.c. Implements a portion of ticket 16831.
+    - When building Tor with testing coverage enabled, run Chutney tests
+      (if any) using the 'tor-cov' coverage binary.
+    - When running test-network or test-stem, check for the absence of
+      stem/chutney before doing any build operations.
+
+
 Changes in version 0.2.7.2-alpha - 2015-07-27
   This, the second alpha in the Tor 0.2.7 series, has a number of new
   features, including a way to manually pick the number of introduction

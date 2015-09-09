@@ -1,3 +1,0 @@
-  o Testing:
-    - Make the test-workqueue test work on windows by initializing the
-      network before we begin.

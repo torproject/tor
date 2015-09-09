@@ -1,5 +1,0 @@
-  o Testing:
-    - Add a new set of callgraph analysis scripts that use clang to
-      produce a list of which Tor functions are reachable from which
-      other Tor functions. We're planning to use these to help simplify
-      our code structure by identifying illogical dependencies.

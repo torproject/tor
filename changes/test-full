@@ -1,3 +1,0 @@
-  o Testing:
-    - Add new 'test-full' and 'test-full-online' targets to run all tests,
-      including integration tests with stem and chutney.

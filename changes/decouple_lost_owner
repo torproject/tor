@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Treat the loss of an owning controller as equivalent to a SIGTERM
-      signal. This removes a tiny amount of duplicated code, and simplifies
-      our callgraph. Closes ticekt 16788.

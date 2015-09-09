@@ -1,9 +1,0 @@
-  o Major enhancements (performance testing):
-    - Add chutney performance testing support to src/test/test-network.sh
-      The following arguments change how chutney verifies the network:
-      "--bytes n" sends n bytes per test connection;
-      "--connections n" makes n test connections per client; and
-      "--hs-multi-client 1" makes each client connect to each HS.
-      Requires the corresponding chutney performance testing changes.
-      Note: using --connections 7 or greater on a HS will trigger issue 15937.
-      Patch by "teor". Closes ticket 14175.

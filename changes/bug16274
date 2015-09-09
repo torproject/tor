@@ -1,5 +1,0 @@
-  o Minor bugfix (open file limit):
-    - Fix set_max_file_descriptors() to set by default the max open file
-      limit to the current limit in case setrlimit() fails so we at least
-      have a usable value; Fixes bug 16274; bugfix on tor-0.2.0.10-alpha.
-      Patch by dgoulet.

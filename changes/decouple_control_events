@@ -1,8 +1,0 @@
-  o Code simplification and refactoring:
-    - When generating an event to send to the controller, we no longer
-      put the event over the network immediately.  Instead, we queue
-      these events, and use a Libevent callback to deliver them.
-      This change simplifies Tor's callgraph by reducing the number
-      of functions from which all other Tor functions are reachable.
-      Closes ticket 16695.
-

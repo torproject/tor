@@ -1,3 +1,0 @@
-  o Minor bugfixes (relay):
-    - Unblock threads before releasing the mutex to ensure predictable
-      scheduling behavior. Fixes bug 16644; bugfix on 0.2.6.3-alpha.

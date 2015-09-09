@@ -1,3 +1,0 @@
-  o Minor features (compilation):
-    - Give a warning as early as possible when trying to build with an
-      unsupported OpenSSL version.  Closes ticket 16901.

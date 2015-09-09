@@ -1,4 +1,0 @@
-  o Minor features (performance)
-    - Improve the runtime speed of Ed25519 operations and Curve25519 keypair
-      generation when built targeting 32 bit x86 platforms with SSE2
-      available. Implements ticket 16535.

@@ -1,4 +1,0 @@
-  o Minor features (performance)
-    - Improve the runtime speed of Ed25519 signature verification by using
-      Ed25519-donna's batch verification support when there are a lot of
-      signatures to verify at once. Implements ticket 16533.

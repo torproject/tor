@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Wrap windows-only C files inside '#ifdef _WIN32' so that tools that
-      try to scan or compile every file on Unix won't decide that they
-      are broken.

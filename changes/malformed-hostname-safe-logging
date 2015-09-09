@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - When logging malformed hostnames in socks5 requests, respect
-      SafeLogging configuration. Fixes bug 16891; bugfix on 0.1.1.16-rc.
