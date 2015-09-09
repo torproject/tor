@@ -1,4 +1,3 @@
-
   o Major features (relay, Ed25519):
     - Significant improvements to the usability of relay-side Ed25519
       key management. Log messages are better, and the code can

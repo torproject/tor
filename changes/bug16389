@@ -1,4 +1,4 @@
-  o Hidden Service Enhancement
+  o Minor features (hidden service)
     Client now uses an introduction point failure cache to know when to
     fetch or keep a descriptor in their cache.
 
@@ -10,3 +10,4 @@
     discard the descriptor and fetch a new one.
 
     See rendcache.c for a detailed explanation of the cache's behavior.
+    Closes ticket 16389.
