@@ -152,7 +152,7 @@ policy_expand_unspec(smartlist_t **policy)
 }
 
 /**
- * Given a linked list of config lines containing "allow" and "deny"
+ * Given a linked list of config lines containing "accept[6]" and "reject[6]"
  * tokens, parse them and append the result to <b>dest</b>. Return -1
  * if any tokens are malformed (and don't append any), else return 0.
  *

@@ -3676,10 +3676,14 @@ router_parse_addr_policy_item_from_string,(const char *s, int assume_action))
   directory_token_t *tok = NULL;
   const char *cp, *eos;
   /* Longest possible policy is
-   * "accept6 ffff:ffff:..255/ffff:...255:10000-65535",
-   * which contains 2 max-length IPv6 addresses, plus 21 characters.
+   * "accept6 ffff:ffff:..255/128:10000-65535",
+   * which contains a max-length IPv6 address, plus 24 characters.
    * But note that there can be an arbitrary amount of space between the
-   * accept and the address:mask/port element. */
+   * accept and the address:mask/port element.
+   * We don't need to multiply TOR_ADDR_BUF_LEN by 2, as there is only one
+   * IPv6 address. But making the buffer shorter might cause valid long lines,
+   * which parsed in previous versions, to fail to parse in new versions.
+   * (These lines would have to have excessive amounts of whitespace.) */
   char line[TOR_ADDR_BUF_LEN*2 + 32];
   addr_policy_t *r;
   memarea_t *area = NULL;
