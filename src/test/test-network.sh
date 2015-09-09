@@ -86,7 +86,7 @@ export CHUTNEY_TOR_GENCERT="${TOR_DIR}/src/tools/${tor_gencert_name}"
 
 # Sleep some, waiting for the network to bootstrap.
 # TODO: Add chutney command 'bootstrap-status' and use that instead.
-BOOTSTRAP_TIME=${BOOTSTRAP_TIME:-30}
+BOOTSTRAP_TIME=${BOOTSTRAP_TIME:-35}
 $ECHO_N "$myname: sleeping for $BOOTSTRAP_TIME seconds"
 n=$BOOTSTRAP_TIME; while [ $n -gt 0 ]; do
     sleep 1; n=$(expr $n - 1); $ECHO_N .
