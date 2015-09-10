@@ -639,7 +639,7 @@ AC_TRY_COMPILE([
 #error "too old"
 #endif
    ], [],
-   [ /bin/true ],
+   [ : ],
    [ AC_ERROR([OpenSSL is too old. We require 1.0.0 or later. You can specify a path to a newer one with --with-openssl-dir.]) ])
 
 AC_CHECK_MEMBERS([struct ssl_method_st.get_cipher_by_char], , ,
@@ -1070,7 +1070,7 @@ AC_CHECK_SIZEOF(pid_t)
 
 AC_CHECK_TYPES([uint, u_char, ssize_t])
 
-AC_PC_FROM_UCONTEXT([/bin/true])
+AC_PC_FROM_UCONTEXT([:])
 
 dnl used to include sockaddr_storage, but everybody has that.
 AC_CHECK_TYPES([struct in6_addr, struct sockaddr_in6, sa_family_t], , ,
