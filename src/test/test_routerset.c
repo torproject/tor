@@ -430,7 +430,7 @@ NS(test_main)(void *arg)
  */
 
 NS_DECL(addr_policy_t *, router_parse_addr_policy_item_from_string,
-    (const char *s, int assume_action));
+    (const char *s, int assume_action, int *malformed_list));
 
 addr_policy_t *NS(mock_addr_policy);
 
@@ -457,10 +457,13 @@ NS(test_main)(void *arg)
 }
 
 addr_policy_t *
-NS(router_parse_addr_policy_item_from_string)(const char *s, int assume_action)
+NS(router_parse_addr_policy_item_from_string)(const char *s,
+                                              int assume_action,
+                                              int *malformed_list)
 {
   (void)s;
   (void)assume_action;
+  (void)malformed_list;
   CALLED(router_parse_addr_policy_item_from_string)++;
 
   return NS(mock_addr_policy);

@@ -84,11 +84,13 @@ test_policies_general(void *arg)
   smartlist_t *sm = NULL;
   char *policy_str = NULL;
   short_policy_t *short_parsed = NULL;
+  int malformed_list = -1;
   (void)arg;
 
   policy = smartlist_new();
 
-  p = router_parse_addr_policy_item_from_string("reject 192.168.0.0/16:*",-1);
+  p = router_parse_addr_policy_item_from_string("reject 192.168.0.0/16:*", -1,
+                                                &malformed_list);
   tt_assert(p != NULL);
   tt_int_op(ADDR_POLICY_REJECT,OP_EQ, p->policy_type);
   tor_addr_from_ipv4h(&tar, 0xc0a80000u);
@@ -117,60 +119,76 @@ test_policies_general(void *arg)
   tt_assert(policy2);
 
   policy3 = smartlist_new();
-  p = router_parse_addr_policy_item_from_string("reject *:*",-1);
+  p = router_parse_addr_policy_item_from_string("reject *:*", -1,
+                                                &malformed_list);
   tt_assert(p != NULL);
   smartlist_add(policy3, p);
-  p = router_parse_addr_policy_item_from_string("accept *:*",-1);
+  p = router_parse_addr_policy_item_from_string("accept *:*", -1,
+                                                &malformed_list);
   tt_assert(p != NULL);
   smartlist_add(policy3, p);
 
   policy4 = smartlist_new();
-  p = router_parse_addr_policy_item_from_string("accept *:443",-1);
+  p = router_parse_addr_policy_item_from_string("accept *:443", -1,
+                                                &malformed_list);
   tt_assert(p != NULL);
   smartlist_add(policy4, p);
-  p = router_parse_addr_policy_item_from_string("accept *:443",-1);
+  p = router_parse_addr_policy_item_from_string("accept *:443", -1,
+                                                &malformed_list);
   tt_assert(p != NULL);
   smartlist_add(policy4, p);
 
   policy5 = smartlist_new();
-  p = router_parse_addr_policy_item_from_string("reject 0.0.0.0/8:*",-1);
+  p = router_parse_addr_policy_item_from_string("reject 0.0.0.0/8:*", -1,
+                                                &malformed_list);
   tt_assert(p != NULL);
   smartlist_add(policy5, p);
-  p = router_parse_addr_policy_item_from_string("reject 169.254.0.0/16:*",-1);
+  p = router_parse_addr_policy_item_from_string("reject 169.254.0.0/16:*", -1,
+                                                &malformed_list);
   tt_assert(p != NULL);
   smartlist_add(policy5, p);
-  p = router_parse_addr_policy_item_from_string("reject 127.0.0.0/8:*",-1);
+  p = router_parse_addr_policy_item_from_string("reject 127.0.0.0/8:*", -1,
+                                                &malformed_list);
   tt_assert(p != NULL);
   smartlist_add(policy5, p);
-  p = router_parse_addr_policy_item_from_string("reject 192.168.0.0/16:*",-1);
+  p = router_parse_addr_policy_item_from_string("reject 192.168.0.0/16:*",
+                                                -1, &malformed_list);
   tt_assert(p != NULL);
   smartlist_add(policy5, p);
-  p = router_parse_addr_policy_item_from_string("reject 10.0.0.0/8:*",-1);
+  p = router_parse_addr_policy_item_from_string("reject 10.0.0.0/8:*", -1,
+                                                &malformed_list);
   tt_assert(p != NULL);
   smartlist_add(policy5, p);
-  p = router_parse_addr_policy_item_from_string("reject 172.16.0.0/12:*",-1);
+  p = router_parse_addr_policy_item_from_string("reject 172.16.0.0/12:*", -1,
+                                                &malformed_list);
   tt_assert(p != NULL);
   smartlist_add(policy5, p);
-  p = router_parse_addr_policy_item_from_string("reject 80.190.250.90:*",-1);
+  p = router_parse_addr_policy_item_from_string("reject 80.190.250.90:*", -1,
+                                                &malformed_list);
   tt_assert(p != NULL);
   smartlist_add(policy5, p);
-  p = router_parse_addr_policy_item_from_string("reject *:1-65534",-1);
+  p = router_parse_addr_policy_item_from_string("reject *:1-65534", -1,
+                                                &malformed_list);
   tt_assert(p != NULL);
   smartlist_add(policy5, p);
-  p = router_parse_addr_policy_item_from_string("reject *:65535",-1);
+  p = router_parse_addr_policy_item_from_string("reject *:65535", -1,
+                                                &malformed_list);
   tt_assert(p != NULL);
   smartlist_add(policy5, p);
-  p = router_parse_addr_policy_item_from_string("accept *:1-65535",-1);
+  p = router_parse_addr_policy_item_from_string("accept *:1-65535", -1,
+                                                &malformed_list);
   tt_assert(p != NULL);
   smartlist_add(policy5, p);
 
   policy6 = smartlist_new();
-  p = router_parse_addr_policy_item_from_string("accept 43.3.0.0/9:*",-1);
+  p = router_parse_addr_policy_item_from_string("accept 43.3.0.0/9:*", -1,
+                                                &malformed_list);
   tt_assert(p != NULL);
   smartlist_add(policy6, p);
 
   policy7 = smartlist_new();
-  p = router_parse_addr_policy_item_from_string("accept 0.0.0.0/8:*",-1);
+  p = router_parse_addr_policy_item_from_string("accept 0.0.0.0/8:*", -1,
+                                                &malformed_list);
   tt_assert(p != NULL);
   smartlist_add(policy7, p);
 
@@ -297,6 +315,68 @@ test_policies_general(void *arg)
   TT_BAD_SHORT_POLICY("accept 1-,3");
   TT_BAD_SHORT_POLICY("accept 1-,3");
 
+  /* Make sure that IPv4 addresses are ignored in accept6/reject6 lines. */
+  p = router_parse_addr_policy_item_from_string("accept6 1.2.3.4:*", -1,
+                                                &malformed_list);
+  tt_assert(p == NULL);
+  tt_assert(!malformed_list);
+
+  p = router_parse_addr_policy_item_from_string("reject6 2.4.6.0/24:*", -1,
+                                                &malformed_list);
+  tt_assert(p == NULL);
+  tt_assert(!malformed_list);
+
+  p = router_parse_addr_policy_item_from_string("accept6 *4:*", -1,
+                                                &malformed_list);
+  tt_assert(p == NULL);
+  tt_assert(!malformed_list);
+
+  /* Make sure malformed policies are detected as such. */
+  p = router_parse_addr_policy_item_from_string("bad_token *4:*", -1,
+                                                &malformed_list);
+  tt_assert(p == NULL);
+  tt_assert(malformed_list);
+
+  p = router_parse_addr_policy_item_from_string("accept6 **:*", -1,
+                                                &malformed_list);
+  tt_assert(p == NULL);
+  tt_assert(malformed_list);
+
+  p = router_parse_addr_policy_item_from_string("accept */15:*", -1,
+                                                &malformed_list);
+  tt_assert(p == NULL);
+  tt_assert(malformed_list);
+
+  p = router_parse_addr_policy_item_from_string("reject6 */:*", -1,
+                                                &malformed_list);
+  tt_assert(p == NULL);
+  tt_assert(malformed_list);
+
+  p = router_parse_addr_policy_item_from_string("accept 127.0.0.1/33:*", -1,
+                                                &malformed_list);
+  tt_assert(p == NULL);
+  tt_assert(malformed_list);
+
+  p = router_parse_addr_policy_item_from_string("accept6 [::1]/129:*", -1,
+                                                &malformed_list);
+  tt_assert(p == NULL);
+  tt_assert(malformed_list);
+
+  p = router_parse_addr_policy_item_from_string("reject 8.8.8.8/-1:*", -1,
+                                                &malformed_list);
+  tt_assert(p == NULL);
+  tt_assert(malformed_list);
+
+  p = router_parse_addr_policy_item_from_string("reject 8.8.4.4:10-5", -1,
+                                                &malformed_list);
+  tt_assert(p == NULL);
+  tt_assert(malformed_list);
+
+  p = router_parse_addr_policy_item_from_string("reject 1.2.3.4:-1", -1,
+                                                &malformed_list);
+  tt_assert(p == NULL);
+  tt_assert(malformed_list);
+
   /* Test a too-long policy. */
   {
     int i;
@@ -360,6 +440,7 @@ test_dump_exit_policy_to_string(void *arg)
 {
  char *ep;
  addr_policy_t *policy_entry;
+ int malformed_list = -1;
 
  routerinfo_t *ri = tor_malloc_zero(sizeof(routerinfo_t));
 
@@ -376,7 +457,8 @@ test_dump_exit_policy_to_string(void *arg)
  ri->exit_policy = smartlist_new();
  ri->policy_is_reject_star = 0;
 
- policy_entry = router_parse_addr_policy_item_from_string("accept *:*",-1);
+ policy_entry = router_parse_addr_policy_item_from_string("accept *:*", -1,
+                                                          &malformed_list);
 
  smartlist_add(ri->exit_policy,policy_entry);
 
@@ -386,7 +468,8 @@ test_dump_exit_policy_to_string(void *arg)
 
  tor_free(ep);
 
- policy_entry = router_parse_addr_policy_item_from_string("reject *:25",-1);
+ policy_entry = router_parse_addr_policy_item_from_string("reject *:25", -1,
+                                                          &malformed_list);
 
  smartlist_add(ri->exit_policy,policy_entry);
 
@@ -397,7 +480,8 @@ test_dump_exit_policy_to_string(void *arg)
  tor_free(ep);
 
  policy_entry =
- router_parse_addr_policy_item_from_string("reject 8.8.8.8:*",-1);
+ router_parse_addr_policy_item_from_string("reject 8.8.8.8:*", -1,
+                                           &malformed_list);
 
  smartlist_add(ri->exit_policy,policy_entry);
 
@@ -407,7 +491,8 @@ test_dump_exit_policy_to_string(void *arg)
  tor_free(ep);
 
  policy_entry =
- router_parse_addr_policy_item_from_string("reject6 [FC00::]/7:*",-1);
+ router_parse_addr_policy_item_from_string("reject6 [FC00::]/7:*", -1,
+                                           &malformed_list);
 
  smartlist_add(ri->exit_policy,policy_entry);
 
@@ -418,7 +503,8 @@ test_dump_exit_policy_to_string(void *arg)
  tor_free(ep);
 
  policy_entry =
- router_parse_addr_policy_item_from_string("accept6 [c000::]/3:*",-1);
+ router_parse_addr_policy_item_from_string("accept6 [c000::]/3:*", -1,
+                                           &malformed_list);
 
  smartlist_add(ri->exit_policy,policy_entry);
 

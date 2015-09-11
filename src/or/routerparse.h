@@ -41,7 +41,7 @@ extrainfo_t *extrainfo_parse_entry_from_string(const char *s, const char *end,
                              int cache_copy, struct digest_ri_map_t *routermap,
                              int *can_dl_again_out);
 MOCK_DECL(addr_policy_t *, router_parse_addr_policy_item_from_string,
-    (const char *s, int assume_action));
+         (const char *s, int assume_action, int *malformed_list));
 version_status_t tor_version_is_obsolete(const char *myversion,
                                          const char *versionlist);
 int tor_version_as_new_as(const char *platform, const char *cutoff);

@@ -167,6 +167,7 @@ parse_addr_policy(config_line_t *cfg, smartlist_t **dest,
   smartlist_t *result;
   smartlist_t *entries;
   addr_policy_t *item;
+  int malformed_list;
   int r = 0;
 
   if (!cfg)
@@ -179,12 +180,22 @@ parse_addr_policy(config_line_t *cfg, smartlist_t **dest,
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     SMARTLIST_FOREACH_BEGIN(entries, const char *, ent) {
       log_debug(LD_CONFIG,"Adding new entry '%s'",ent);
-      item = router_parse_addr_policy_item_from_string(ent, assume_action);
+      malformed_list = 0;
+      item = router_parse_addr_policy_item_from_string(ent, assume_action,
+                                                       &malformed_list);
       if (item) {
         smartlist_add(result, item);
-      } else {
-        log_warn(LD_CONFIG,"Malformed policy '%s'.", ent);
+      } else if (malformed_list) {
+        /* the error is so severe the entire list should be discarded */
+        log_warn(LD_CONFIG, "Malformed policy '%s'. Discarding entire policy "
+                 "list.", ent);
         r = -1;
+      } else {
+        /* the error is minor: don't add the item, but keep processing the
+         * rest of the policies in the list */
+        log_debug(LD_CONFIG, "Ignored policy '%s' due to non-fatal error. "
+                  "The remainder of the policy list will be used.",
+                  ent);
       }
     } SMARTLIST_FOREACH_END(ent);
     SMARTLIST_FOREACH(entries, char *, ent, tor_free(ent));
@@ -568,6 +579,8 @@ cmp_single_addr_policy(addr_policy_t *a, addr_policy_t *b)
     return r;
   if ((r=((int)a->is_private - (int)b->is_private)))
     return r;
+  /* refcnt and is_canonical are irrelevant to equality,
+   * they are hash table implementation details */
   if ((r=tor_addr_compare(&a->addr, &b->addr, CMP_EXACT)))
     return r;
   if ((r=((int)a->maskbits - (int)b->maskbits)))
