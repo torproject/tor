@@ -334,6 +334,17 @@ cache_failure_intro_lookup(const uint8_t *identity, const char *service_id,
   return 0;
 }
 
+/** Allocate a new cache failure intro object and copy the content from
+ * <b>entry</b> to this newly allocated object. Return it. */
+static rend_cache_failure_intro_t *
+cache_failure_intro_dup(const rend_cache_failure_intro_t *entry)
+{
+  rend_cache_failure_intro_t *ent_dup =
+    rend_cache_failure_intro_entry_new(entry->failure_type);
+  ent_dup->created_ts = entry->created_ts;
+  return ent_dup;
+}
+
 /** Add an intro point failure to the failure cache using the relay
  * <b>identity</b> and service ID <b>service_id</b>. Record the
  * <b>failure</b> in that object. */
@@ -383,12 +394,15 @@ validate_intro_point_failure(const rend_service_descriptor_t *desc,
 
     found = cache_failure_intro_lookup(identity, service_id, &entry);
     if (found) {
+      /* Dup here since it will be freed at the end when removing the
+       * original entry in the cache. */
+      rend_cache_failure_intro_t *ent_dup = cache_failure_intro_dup(entry);
       /* This intro point is in our cache, discard it from the descriptor
        * because chances are that it's unusable. */
       SMARTLIST_DEL_CURRENT(desc->intro_nodes, intro);
       rend_intro_point_free(intro);
       /* Keep it for our new entry. */
-      digestmap_set(new_entry->intro_failures, (char *) identity, entry);
+      digestmap_set(new_entry->intro_failures, (char *) identity, ent_dup);
       continue;
     }
   } SMARTLIST_FOREACH_END(intro);
