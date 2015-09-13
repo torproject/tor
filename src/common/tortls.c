@@ -1563,7 +1563,7 @@ tor_tls_client_is_using_v2_ciphers(const SSL *ssl)
 {
   STACK_OF(SSL_CIPHER) *ciphers;
 #ifdef HAVE_SSL_GET_CLIENT_CIPHERS
-  ciphers = SSL_get_ciphers(ssl);
+  ciphers = SSL_get_client_ciphers(ssl);
 #else
   SSL_SESSION *session;
   if (!(session = SSL_get_session((SSL *)ssl))) {
