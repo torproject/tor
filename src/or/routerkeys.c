@@ -313,6 +313,7 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
     if (r > 0) {
       have_secret = 1;
       have_encrypted_secret_file = 1;
+      tor_free(got_tag); /* convince coverity we aren't leaking */
       got_tag = tor_strdup(tag);
       loaded_secret_fname = encrypted_secret_fname;
     } else if (errno != ENOENT && norepair) {
