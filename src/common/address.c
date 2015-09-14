@@ -620,13 +620,20 @@ tor_addr_to_PTR_name(char *out, size_t outlen,
  *  yield an IPv4 wildcard.
  *
  *  If 'flags & TAPMP_EXTENDED_STAR' is true, then the wildcard address '*'
- *  yields an AF_UNSPEC wildcard address, and the following change is made
+ *  yields an AF_UNSPEC wildcard address, which expands to corresponding
+ *  wildcard IPv4 and IPv6 rules, and the following change is made
  *  in the grammar above:
  *   Address ::= IPv4Address / "[" IPv6Address "]" / "*" / "*4" / "*6"
  *  with the new "*4" and "*6" productions creating a wildcard to match
  *  IPv4 or IPv6 addresses.
  *
- */
+ *  If 'flags & TAPMP_EXTENDED_STAR' and 'flags & TAPMP_STAR_IPV4_ONLY' are
+ *  both true, then the wildcard address '*' yields an IPv4 wildcard.
+ *
+ *  If 'flags & TAPMP_EXTENDED_STAR' and 'flags & TAPMP_STAR_IPV6_ONLY' are
+ *  both true, then the wildcard address '*' yields an IPv6 wildcard.
+ *
+ * TAPMP_STAR_IPV4_ONLY and TAPMP_STAR_IPV6_ONLY are mutually exclusive. */
 int
 tor_addr_parse_mask_ports(const char *s,
                           unsigned flags,
@@ -643,6 +650,10 @@ tor_addr_parse_mask_ports(const char *s,
 
   tor_assert(s);
   tor_assert(addr_out);
+  /* We can either only want an IPv4 address or only want an IPv6 address,
+   * but we can't only want IPv4 & IPv6 at the same time. */
+  tor_assert(!((flags & TAPMP_STAR_IPV4_ONLY)
+               && (flags & TAPMP_STAR_IPV6_ONLY)));
 
   /** Longest possible length for an address, mask, and port-range combination.
    * Includes IP, [], /mask, :, ports */
@@ -688,12 +699,21 @@ tor_addr_parse_mask_ports(const char *s,
 
   if (!strcmp(address, "*")) {
     if (flags & TAPMP_EXTENDED_STAR) {
-      family = AF_UNSPEC;
-      tor_addr_make_unspec(addr_out);
-      log_info(LD_GENERAL,
-               "'%s' expands into rules which apply to all IPv4 and IPv6 "
-               "addresses. (Use accept/reject *4:* for IPv4 or "
-               "accept[6]/reject[6] *6:* for IPv6.)", s);
+      if (flags & TAPMP_STAR_IPV4_ONLY) {
+        family = AF_INET;
+        tor_addr_from_ipv4h(addr_out, 0);
+      } else if (flags & TAPMP_STAR_IPV6_ONLY) {
+        static char nil_bytes[16] = { [0]=0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0 };
+        family = AF_INET6;
+        tor_addr_from_ipv6_bytes(addr_out, nil_bytes);
+      } else {
+        family = AF_UNSPEC;
+        tor_addr_make_unspec(addr_out);
+        log_info(LD_GENERAL,
+                 "'%s' expands into rules which apply to all IPv4 and IPv6 "
+                 "addresses. (Use accept/reject *4:* for IPv4 or "
+                 "accept[6]/reject[6] *6:* for IPv6.)", s);
+      }
     } else {
       family = AF_INET;
       tor_addr_from_ipv4h(addr_out, 0);

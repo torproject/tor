@@ -1,5 +1,5 @@
 ## Configuration file for a typical Tor user
-## Last updated 2 September 2014 for Tor 0.2.6.1-alpha.
+## Last updated 11 September 2015 for Tor 0.2.7.3-alpha.
 ## (may or may not work for much older or much newer versions of Tor.)
 ##
 ## Lines that begin with "## " try to explain what's going on. Lines
@@ -24,6 +24,7 @@
 ## can access your SocksPort may be able to learn about the connections
 ## you make.
 #SocksPolicy accept 192.168.0.0/16
+#SocksPolicy accept6 FC00::/7
 #SocksPolicy reject *
 
 ## Logs go to stdout at level "notice" unless redirected by something
@@ -174,8 +175,10 @@
 ## networks, including to your public IP address. See the man page entry
 ## for ExitPolicyRejectPrivate if you want to allow "exit enclaving".
 ##
-#ExitPolicy accept *:6660-6667,reject *:* # allow irc ports but no more
-#ExitPolicy accept *:119 # accept nntp as well as default exit policy
+#ExitPolicy accept *:6660-6667,reject *:* # allow irc ports on IPv4 and IPv6 but no more
+#ExitPolicy accept *:119 # accept nntp ports on IPv4 and IPv6 as well as default exit policy
+#ExitPolicy accept *4:119 # accept nntp ports on IPv4 only as well as default exit policy
+#ExitPolicy accept6 *6:119 # accept nntp ports on IPv6 only as well as default exit policy
 #ExitPolicy reject *:* # no exits allowed
 
 ## Bridge relays (or "bridges") are Tor relays that aren't listed in the

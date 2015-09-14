@@ -3820,6 +3820,12 @@ router_parse_addr_policy(directory_token_t *tok, unsigned fmt_flags)
   else
     newe.policy_type = ADDR_POLICY_ACCEPT;
 
+  /* accept6/reject6 * produces an IPv6 wildcard address only.
+   * (accept/reject * produces rules for IPv4 and IPv6 wildcard addresses.) */
+  if (tok->tp == K_ACCEPT6 || tok->tp == K_REJECT6) {
+    fmt_flags |= TAPMP_STAR_IPV6_ONLY;
+  }
+
   if (tor_addr_parse_mask_ports(arg, fmt_flags, &newe.addr, &newe.maskbits,
                                 &newe.prt_min, &newe.prt_max) < 0) {
     log_warn(LD_DIR,"Couldn't parse line %s. Dropping", escaped(arg));
@@ -3829,9 +3835,12 @@ router_parse_addr_policy(directory_token_t *tok, unsigned fmt_flags)
   return addr_policy_get_canonical_entry(&newe);
 }
 
-/** Parse an exit policy line of the format "accept/reject private:...".
+/** Parse an exit policy line of the format "accept[6]/reject[6] private:...".
  * This didn't exist until Tor 0.1.1.15, so nobody should generate it in
  * router descriptors until earlier versions are obsolete.
+ *
+ * accept/reject and accept6/reject6 private all produce rules for both
+ * IPv4 and IPv6 addresses.
  */
 static addr_policy_t *
 router_parse_addr_policy_private(directory_token_t *tok)

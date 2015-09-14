@@ -1,4 +1,6 @@
   o Minor bug fixes (torrc exit policies):
+    - accept6/reject6 * lines only produce IPv6 wildcard addresses,
+      previously they would produce both IPv4 and IPv6 wildcard addresses.
     - When parsing torrc ExitPolicies, we now warn if:
       * an IPv4 address is used on an accept6 or reject6 line. The line is
         ignored, but the rest of the policy items in the list are used.
@@ -13,6 +15,6 @@
       * when expanding an accept/reject * line to include both IPv4 and IPv6
         wildcard addresses.
     - In each instance, usage advice is provided to avoid the message.
-      Partial fix for ticket 16069. Patch by "teor".
+      Resolves ticket 16069. Patch by "teor".
       Patch on 2eb7eafc9d78 and a96c0affcb4c (25 Oct 2012),
       released in 0.2.4.7-alpha.

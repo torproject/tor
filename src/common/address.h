@@ -227,10 +227,19 @@ int tor_addr_parse_PTR_name(tor_addr_t *result, const char *address,
 
 int tor_addr_port_lookup(const char *s, tor_addr_t *addr_out,
                         uint16_t *port_out);
-/* Does the address * yield an AF_UNSPEC wildcard address (1) and do we
+
+/* Does the address * yield an AF_UNSPEC wildcard address (1),
+ * which expands to corresponding wildcard IPv4 and IPv6 rules, and do we
  * allow *4 and *6 for IPv4 and IPv6 wildcards, respectively;
  * or does the address * yield IPv4 wildcard address (0).  */
 #define TAPMP_EXTENDED_STAR 1
+/* Does the address * yield an IPv4 wildcard address rule (1);
+ * or does it yield wildcard IPv4 and IPv6 rules (0) */
+#define TAPMP_STAR_IPV4_ONLY     (1 << 1)
+/* Does the address * yield an IPv6 wildcard address rule (1);
+ * or does it yield wildcard IPv4 and IPv6 rules (0) */
+#define TAPMP_STAR_IPV6_ONLY     (1 << 2)
+/* TAPMP_STAR_IPV4_ONLY and TAPMP_STAR_IPV6_ONLY are mutually exclusive. */
 int tor_addr_parse_mask_ports(const char *s, unsigned flags,
                               tor_addr_t *addr_out, maskbits_t *mask_out,
                               uint16_t *port_min_out, uint16_t *port_max_out);
