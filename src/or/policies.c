@@ -1014,6 +1014,8 @@ policies_parse_exit_policy_internal(config_line_t *cfg, smartlist_t **dest,
       char buf[POLICY_BUF_LEN];
       tor_snprintf(buf, sizeof(buf), "reject %s:*", fmt_addr32(local_address));
       append_exit_policy_string(dest, buf);
+      log_info(LD_CONFIG, "Adding a reject ExitPolicy '%s' for our published "
+               "IPv4 address", buf);
     }
     /* Reject our local IPv6 address */
     if (ipv6_exit && ipv6_local_address != NULL) {
@@ -1025,6 +1027,8 @@ policies_parse_exit_policy_internal(config_line_t *cfg, smartlist_t **dest,
         tor_snprintf(buf6, sizeof(buf6), "reject %s:*",
                      fmt_addr(ipv6_local_address));
         append_exit_policy_string(dest, buf6);
+        log_info(LD_CONFIG, "Adding a reject ExitPolicy '%s' for our "
+                 "published IPv6 address", buf6);
       }
     }
     /* Reject local addresses from public netblocks on any interface,
@@ -1061,6 +1065,8 @@ policies_parse_exit_policy_internal(config_line_t *cfg, smartlist_t **dest,
             tor_snprintf(bufif, sizeof(bufif), "reject6 %s:*",
                          fmt_addr(a));
             append_exit_policy_string(dest, bufif);
+            log_info(LD_CONFIG, "Adding a reject ExitPolicy '%s' for a local "
+                     "interface's public IPv6 address", bufif);
           }
         } SMARTLIST_FOREACH_END(a);
         free_interface_address6_list(public_addresses);
