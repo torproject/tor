@@ -1,5 +1,5 @@
 ## Configuration file for a typical Tor user
-## Last updated 2 September 2014 for Tor 0.2.6.1-alpha.
+## Last updated 15 September 2015 for Tor 0.2.7.3-alpha.
 ## (may or may not work for much older or much newer versions of Tor.)
 ##
 ## Lines that begin with "## " try to explain what's going on. Lines
@@ -171,8 +171,10 @@
 ## users will be told that those destinations are down.
 ##
 ## For security, by default Tor rejects connections to private (local)
-## networks, including to your public IP address. See the man page entry
-## for ExitPolicyRejectPrivate if you want to allow "exit enclaving".
+## networks, including to the configured public IPv4 and IPv6 addresses,
+## and any public IPv4 and IPv6 addresses on any interface on the relay.
+## See the man page entry for ExitPolicyRejectPrivate if you want to allow
+## "exit enclaving".
 ##
 #ExitPolicy accept *:6660-6667,reject *:* # allow irc ports but no more
 #ExitPolicy accept *:119 # accept nntp as well as default exit policy

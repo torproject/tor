@@ -1605,33 +1605,33 @@ MOCK_IMPL(int,
 get_interface_address6,(int severity, sa_family_t family, tor_addr_t *addr))
 {
   smartlist_t *addrs;
+  int rv = -1;
   tor_assert(addr);
 
   /* Get a list of public or internal IPs in arbitrary order */
-  if ((addrs = get_interface_address6_list(severity, family, 1))) {
-    int rv = -1;
-    /* Find the first non-internal address, or the last internal address
-     * Ideally, we want the default route, see #12377 for details */
-    SMARTLIST_FOREACH_BEGIN(addrs, tor_addr_t *, a) {
-      tor_addr_copy(addr, a);
-      rv = 0;
+  addrs = get_interface_address6_list(severity, family, 1);
 
-      /* If we found a non-internal address, declare success.  Otherwise,
-       * keep looking. */
-      if (!tor_addr_is_internal(a, 0))
-        break;
-    } SMARTLIST_FOREACH_END(a);
+  /* Find the first non-internal address, or the last internal address
+   * Ideally, we want the default route, see #12377 for details */
+  SMARTLIST_FOREACH_BEGIN(addrs, tor_addr_t *, a) {
+    tor_addr_copy(addr, a);
+    rv = 0;
 
-    free_interface_address6_list(addrs);
-    return rv;
-  }
+    /* If we found a non-internal address, declare success.  Otherwise,
+     * keep looking. */
+    if (!tor_addr_is_internal(a, 0))
+      break;
+  } SMARTLIST_FOREACH_END(a);
 
-  return -1;
+  free_interface_address6_list(addrs);
+  return rv;
 }
 
 /** Free a smartlist of IP addresses returned by get_interface_address6_list.
  */
-void free_interface_address6_list(smartlist_t *addrs) {
+void
+free_interface_address6_list(smartlist_t *addrs)
+{
   SMARTLIST_FOREACH(addrs, tor_addr_t *, a, tor_free(a));
   smartlist_free(addrs);
 }
@@ -1654,8 +1654,9 @@ MOCK_IMPL(smartlist_t *,get_interface_address6_list,(int severity,
 
   /* Try to do this the smart way if possible. */
   if ((addrs = get_interface_addresses_raw(severity))) {
-    SMARTLIST_FOREACH_BEGIN(addrs, tor_addr_t *, a) {
-      if (family != AF_UNSPEC && family != tor_addr_family(a)){
+    SMARTLIST_FOREACH_BEGIN(addrs, tor_addr_t *, a)
+    {
+      if (family != AF_UNSPEC && family != tor_addr_family(a)) {
         SMARTLIST_DEL_CURRENT(addrs, a);
         tor_free(a);
         continue;
@@ -1668,7 +1669,7 @@ MOCK_IMPL(smartlist_t *,get_interface_address6_list,(int severity,
         continue;
       }
 
-      if (!include_internal && tor_addr_is_internal(a, 0)){
+      if (!include_internal && tor_addr_is_internal(a, 0)) {
         SMARTLIST_DEL_CURRENT(addrs, a);
         tor_free(a);
         continue;

@@ -49,7 +49,7 @@ test_policy_summary_helper(const char *policy_str,
 
   r = policies_parse_exit_policy(&line, &policy,
                                  EXIT_POLICY_IPV6_ENABLED |
-                                 EXIT_POLICY_ADD_DEFAULT ,0);
+                                 EXIT_POLICY_ADD_DEFAULT, 0, NULL, 0);
   tt_int_op(r,OP_EQ, 0);
 
   summary = policy_summarize(policy, AF_INET);
@@ -77,7 +77,7 @@ test_policies_general(void *arg)
   int i;
   smartlist_t *policy = NULL, *policy2 = NULL, *policy3 = NULL,
               *policy4 = NULL, *policy5 = NULL, *policy6 = NULL,
-              *policy7 = NULL;
+              *policy7 = NULL, *policy12 = NULL;
   addr_policy_t *p;
   tor_addr_t tar;
   config_line_t line;
@@ -112,9 +112,19 @@ test_policies_general(void *arg)
   tt_int_op(0, OP_EQ, policies_parse_exit_policy(NULL, &policy2,
                                               EXIT_POLICY_IPV6_ENABLED |
                                               EXIT_POLICY_REJECT_PRIVATE |
-                                              EXIT_POLICY_ADD_DEFAULT, 0));
+                                              EXIT_POLICY_ADD_DEFAULT, 0,
+                                              NULL, 0));
 
   tt_assert(policy2);
+
+  tor_addr_parse(&tar, "[2000::1234]");
+  tt_int_op(0, OP_EQ, policies_parse_exit_policy(NULL, &policy12,
+                                                 EXIT_POLICY_IPV6_ENABLED |
+                                                 EXIT_POLICY_REJECT_PRIVATE |
+                                                 EXIT_POLICY_ADD_DEFAULT,
+                                                 0x0306090cu, &tar, 1));
+
+  tt_assert(policy12);
 
   policy3 = smartlist_new();
   p = router_parse_addr_policy_item_from_string("reject *:*",-1);
@@ -202,7 +212,8 @@ test_policies_general(void *arg)
   line.next = NULL;
   tt_int_op(0, OP_EQ, policies_parse_exit_policy(&line,&policy,
                                               EXIT_POLICY_IPV6_ENABLED |
-                                              EXIT_POLICY_ADD_DEFAULT,0));
+                                              EXIT_POLICY_ADD_DEFAULT, 0,
+                                              NULL, 0));
   tt_assert(policy);
 
   //test_streq(policy->string, "accept *:80");
@@ -347,6 +358,7 @@ test_policies_general(void *arg)
   addr_policy_list_free(policy5);
   addr_policy_list_free(policy6);
   addr_policy_list_free(policy7);
+  addr_policy_list_free(policy12);
   tor_free(policy_str);
   if (sm) {
     SMARTLIST_FOREACH(sm, char *, s, tor_free(s));

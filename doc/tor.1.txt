@@ -1578,8 +1578,11 @@ is non-zero):
        accept *:*
 
 [[ExitPolicyRejectPrivate]] **ExitPolicyRejectPrivate** **0**|**1**::
-    Reject all private (local) networks, along with your own public IP address,
-    at the beginning of your exit policy. See above entry on ExitPolicy.
+    Reject all private (local) networks, along with your own configured public
+    IPv4 and IPv6 addresses, at the beginning of your exit policy. Also reject
+    any public IPv4 and IPv6 addresses on any interface on the relay. (If
+    IPv6Exit is not set, all IPv6 addresses will be rejected anyway.)
+    See above entry on ExitPolicy.
     (Default: 1)
 
 [[IPv6Exit]] **IPv6Exit** **0**|**1**::
