@@ -201,7 +201,7 @@ void refresh_all_country_info(void);
 int hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
                                          const char *id);
 int hid_serv_acting_as_directory(void);
-int hid_serv_responsible_for_desc_id(const char *id);
+MOCK_DECL(int, hid_serv_responsible_for_desc_id, (const char *id));
 
 void list_pending_microdesc_downloads(digest256map_t *result);
 void launch_descriptor_downloads(int purpose,
@@ -243,4 +243,3 @@ MOCK_DECL(STATIC void, initiate_descriptor_downloads,
 #endif
 
 #endif
-
