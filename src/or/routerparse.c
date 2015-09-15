@@ -3795,8 +3795,11 @@ router_add_exit_policy(routerinfo_t *router, directory_token_t *tok)
   return 0;
 }
 
-/** Given a K_ACCEPT or K_REJECT token and a router, create and return
- * a new exit_policy_t corresponding to the token. */
+/** Given a K_ACCEPT[6] or K_REJECT[6] token and a router, create and return
+ * a new exit_policy_t corresponding to the token. If TAPMP_EXTENDED_STAR
+ * is set in fmt_flags, K_ACCEPT6 and K_REJECT6 tokens followed by *
+ * expand to IPv6-only policies, otherwise they expand to IPv4 and IPv6
+ * policies */
 static addr_policy_t *
 router_parse_addr_policy(directory_token_t *tok, unsigned fmt_flags)
 {
@@ -3822,7 +3825,8 @@ router_parse_addr_policy(directory_token_t *tok, unsigned fmt_flags)
 
   /* accept6/reject6 * produces an IPv6 wildcard address only.
    * (accept/reject * produces rules for IPv4 and IPv6 wildcard addresses.) */
-  if (tok->tp == K_ACCEPT6 || tok->tp == K_REJECT6) {
+  if ((fmt_flags & TAPMP_EXTENDED_STAR)
+      && (tok->tp == K_ACCEPT6 || tok->tp == K_REJECT6)) {
     fmt_flags |= TAPMP_STAR_IPV6_ONLY;
   }
 
