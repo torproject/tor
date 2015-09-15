@@ -208,12 +208,14 @@ test_policies_general(void *arg)
 
   /* accept6 * and reject6 * produce IPv6 wildcards only */
   policy10 = smartlist_new();
-  p = router_parse_addr_policy_item_from_string("accept6 *:*",-1);
+  p = router_parse_addr_policy_item_from_string("accept6 *:*", -1,
+                                                &malformed_list);
   tt_assert(p != NULL);
   smartlist_add(policy10, p);
 
   policy11 = smartlist_new();
-  p = router_parse_addr_policy_item_from_string("reject6 *:*",-1);
+  p = router_parse_addr_policy_item_from_string("reject6 *:*", -1,
+                                                &malformed_list);
   tt_assert(p != NULL);
   smartlist_add(policy11, p);
 
