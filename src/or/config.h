@@ -14,9 +14,9 @@
 
 #include "testsupport.h"
 
-const char *get_dirportfrontpage(void);
-MOCK_DECL(const or_options_t *,get_options,(void));
-or_options_t *get_options_mutable(void);
+MOCK_DECL(const char*, get_dirportfrontpage, (void));
+MOCK_DECL(const or_options_t *, get_options, (void));
+MOCK_DECL(or_options_t *, get_options_mutable, (void));
 int set_options(or_options_t *new_val, char **msg);
 void config_free_all(void);
 const char *safe_str_client(const char *address);
@@ -138,6 +138,7 @@ smartlist_t *get_options_for_server_transport(const char *transport);
 #ifdef CONFIG_PRIVATE
 #ifdef TOR_UNIT_TESTS
 extern struct config_format_t options_format;
+STATIC int options_act(const or_options_t *old_options);
 #endif
 
 STATIC void or_options_free(or_options_t *options);
@@ -154,7 +155,15 @@ MOCK_DECL(STATIC void, add_default_fallback_dir_servers, (void));
 STATIC int
 parse_dir_fallback_line(const char *line,
                         int validate_only);
+STATIC int
+parse_port_config(smartlist_t *out,
+                  const config_line_t *ports,
+                  const config_line_t *listenaddrs,
+                  const char *portname,
+                  int listener_type,
+                  const char *defaultaddr,
+                  int defaultport,
+                  const unsigned flags);
 #endif
 
 #endif
-
