@@ -3785,7 +3785,8 @@ router_add_exit_policy(routerinfo_t *router, directory_token_t *tok)
     /* There's nothing the user can do about other relays' descriptors,
      * so we don't provide usage advice here. */
     log_warn(LD_DIR, "Mismatch between field type and address type in exit "
-             "policy '%s'. Ignoring.", tok->n_args == 1 ? tok->args[0] : "");
+             "policy '%s'. Discarding entire router descriptor.",
+             tok->n_args == 1 ? tok->args[0] : "");
     addr_policy_free(newe);
     return -1;
   }
