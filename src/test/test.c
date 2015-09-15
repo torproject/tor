@@ -1157,6 +1157,7 @@ extern struct testcase_t scheduler_tests[];
 extern struct testcase_t socks_tests[];
 extern struct testcase_t status_tests[];
 extern struct testcase_t thread_tests[];
+extern struct testcase_t tortls_tests[];
 extern struct testcase_t util_tests[];
 extern struct testcase_t dns_tests[];
 
@@ -1202,10 +1203,10 @@ struct testgroup_t testgroups[] = {
   { "scheduler/", scheduler_tests },
   { "socks/", socks_tests },
   { "status/" , status_tests },
+  { "tortls/", tortls_tests },
   { "util/", util_tests },
   { "util/logging/", logging_tests },
   { "util/thread/", thread_tests },
   { "dns/", dns_tests },
   END_OF_GROUPS
 };
-
