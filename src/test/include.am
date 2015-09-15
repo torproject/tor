@@ -51,6 +51,7 @@ src_test_AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
 # matters a lot there, and is quite hard to debug if you forget to do it.
 
 src_test_test_SOURCES = \
+	src/test/log_test_helpers.c \
 	src/test/test.c \
 	src/test/test_accounting.c \
 	src/test/test_addr.c \
@@ -96,6 +97,7 @@ src_test_test_SOURCES = \
 	src/test/test_status.c \
 	src/test/test_threads.c \
 	src/test/test_util.c \
+	src/test/test_util_process.c \
 	src/test/test_helpers.c \
         src/test/test_dns.c \
 	src/test/testing_common.c \
