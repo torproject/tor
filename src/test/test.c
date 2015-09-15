@@ -1125,6 +1125,7 @@ extern struct testcase_t channeltls_tests[];
 extern struct testcase_t checkdir_tests[];
 extern struct testcase_t circuitlist_tests[];
 extern struct testcase_t circuitmux_tests[];
+extern struct testcase_t compat_libevent_tests[];
 extern struct testcase_t config_tests[];
 extern struct testcase_t container_tests[];
 extern struct testcase_t controller_tests[];
@@ -1173,6 +1174,7 @@ struct testgroup_t testgroups[] = {
   { "checkdir/", checkdir_tests },
   { "circuitlist/", circuitlist_tests },
   { "circuitmux/", circuitmux_tests },
+  { "compat/libevent/", compat_libevent_tests },
   { "config/", config_tests },
   { "container/", container_tests },
   { "control/", controller_tests },
@@ -1208,4 +1210,3 @@ struct testgroup_t testgroups[] = {
   { "dns/", dns_tests },
   END_OF_GROUPS
 };
-
