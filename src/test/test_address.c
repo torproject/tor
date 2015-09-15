@@ -634,6 +634,132 @@ test_address_udp_socket_trick_blackbox(void *arg)
   return;
 }
 
+
+static void
+test_address_tor_addr_to_in6(void *ignored)
+{
+  (void)ignored;
+  tor_addr_t *a = tor_malloc_zero(sizeof(tor_addr_t));
+  const struct in6_addr *res;
+
+  a->family = AF_INET;
+  res = tor_addr_to_in6(a);
+  tt_assert(!res);
+
+  a->family = AF_INET6;
+  a->addr.in6_addr.s6_addr[0] = 42;
+  res = tor_addr_to_in6(a);
+  tt_assert(res);
+  tt_int_op(res->s6_addr[0], OP_EQ, 42);
+
+ done:
+  (void)0;
+}
+
+static void
+test_address_tor_addr_to_in(void *ignored)
+{
+  (void)ignored;
+  tor_addr_t *a = tor_malloc_zero(sizeof(tor_addr_t));
+  const struct in_addr *res;
+
+  a->family = AF_INET6;
+  res = tor_addr_to_in(a);
+  tt_assert(!res);
+
+  a->family = AF_INET;
+  a->addr.in_addr.s_addr = 44;
+  res = tor_addr_to_in(a);
+  tt_assert(res);
+  tt_int_op(res->s_addr, OP_EQ, 44);
+
+ done:
+  (void)0;
+}
+
+static void
+test_address_tor_addr_to_ipv4n(void *ignored)
+{
+  (void)ignored;
+  tor_addr_t *a = tor_malloc_zero(sizeof(tor_addr_t));
+  uint32_t res;
+
+  a->family = AF_INET6;
+  res = tor_addr_to_ipv4n(a);
+  tt_assert(!res);
+
+  a->family = AF_INET;
+  a->addr.in_addr.s_addr = 43;
+  res = tor_addr_to_ipv4n(a);
+  tt_assert(res);
+  tt_int_op(res, OP_EQ, 43);
+
+ done:
+  (void)0;
+}
+
+
+static void
+test_address_tor_addr_to_mapped_ipv4h(void *ignored)
+{
+  (void)ignored;
+  tor_addr_t *a = tor_malloc_zero(sizeof(tor_addr_t));
+  uint32_t res;
+
+  a->family = AF_INET;
+  res = tor_addr_to_mapped_ipv4h(a);
+  tt_assert(!res);
+
+  a->family = AF_INET6;
+
+  a->addr.in6_addr.s6_addr[0] = 0;
+  a->addr.in6_addr.s6_addr[1] = 0;
+  a->addr.in6_addr.s6_addr[2] = 0;
+  a->addr.in6_addr.s6_addr[3] = 0;
+  a->addr.in6_addr.s6_addr[4] = 0;
+  a->addr.in6_addr.s6_addr[5] = 0;
+  a->addr.in6_addr.s6_addr[6] = 0;
+  a->addr.in6_addr.s6_addr[7] = 0;
+  a->addr.in6_addr.s6_addr[8] = 0;
+  a->addr.in6_addr.s6_addr[9] = 0;
+  a->addr.in6_addr.s6_addr[10] = 255;
+  a->addr.in6_addr.s6_addr[11] = 255;
+  a->addr.in6_addr.s6_addr[12] = 0;
+  a->addr.in6_addr.s6_addr[13] = 0;
+  a->addr.in6_addr.s6_addr[14] = 0;
+  a->addr.in6_addr.s6_addr[15] = 42;
+  res = tor_addr_to_mapped_ipv4h(a);
+  tt_assert(res);
+  tt_int_op(res, OP_EQ, 42);
+
+ done:
+  (void)0;
+}
+
+static void
+test_address_tor_addr_eq_ipv4h(void *ignored)
+{
+  (void)ignored;
+  tor_addr_t *a = tor_malloc_zero(sizeof(tor_addr_t));
+  int res;
+
+  a->family = AF_INET6;
+  res = tor_addr_eq_ipv4h(a, 42);
+  tt_assert(!res);
+
+  a->family = AF_INET;
+  a->addr.in_addr.s_addr = 52;
+  res = tor_addr_eq_ipv4h(a, 42);
+  tt_assert(!res);
+
+  a->addr.in_addr.s_addr = 52;
+  res = tor_addr_eq_ipv4h(a, ntohl(52));
+  tt_assert(res);
+
+ done:
+  (void)0;
+}
+
 #define ADDRESS_TEST(name, flags) \
   { #name, test_address_ ## name, flags, NULL, NULL }
 
@@ -652,6 +778,10 @@ struct testcase_t address_tests[] = {
   ADDRESS_TEST(get_if_addrs_ioctl, TT_FORK),
   ADDRESS_TEST(ifreq_to_smartlist, 0),
 #endif
+  ADDRESS_TEST(tor_addr_to_in6, 0),
+  ADDRESS_TEST(tor_addr_to_in, 0),
+  ADDRESS_TEST(tor_addr_to_ipv4n, 0),
+  ADDRESS_TEST(tor_addr_to_mapped_ipv4h, 0),
+  ADDRESS_TEST(tor_addr_eq_ipv4h, 0),
   END_OF_TESTCASES
 };
-
