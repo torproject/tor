@@ -85,10 +85,13 @@ routerset_parse(routerset_t *target, const char *s, const char *description)
   int added_countries = 0;
   char *countryname;
   smartlist_t *list = smartlist_new();
+  int malformed_list;
   smartlist_split_string(list, s, ",",
                          SPLIT_SKIP_SPACE | SPLIT_IGNORE_BLANK, 0);
   SMARTLIST_FOREACH_BEGIN(list, char *, nick) {
       addr_policy_t *p;
+      /* if it doesn't pass our validation, assume it's malformed */
+      malformed_list = 1;
       if (is_legal_hexdigest(nick)) {
         char d[DIGEST_LEN];
         if (*nick == '$')
@@ -106,13 +109,19 @@ routerset_parse(routerset_t *target, const char *s, const char *description)
         added_countries = 1;
       } else if ((strchr(nick,'.') || strchr(nick, '*')) &&
                  (p = router_parse_addr_policy_item_from_string(
-                                     nick, ADDR_POLICY_REJECT))) {
+                                     nick, ADDR_POLICY_REJECT,
+                                     &malformed_list))) {
         log_debug(LD_CONFIG, "Adding address %s to %s", nick, description);
         smartlist_add(target->policies, p);
-      } else {
-        log_warn(LD_CONFIG, "Entry '%s' in %s is malformed.", nick,
-                 description);
+      } else if (malformed_list) {
+        log_warn(LD_CONFIG, "Entry '%s' in %s is malformed. Discarding entire"
+                 " list.", nick, description);
         r = -1;
+        tor_free(nick);
+        SMARTLIST_DEL_CURRENT(list, nick);
+      } else {
+        log_notice(LD_CONFIG, "Entry '%s' in %s is ignored. Using the"
+                   " remainder of the list.", nick, description);
         tor_free(nick);
         SMARTLIST_DEL_CURRENT(list, nick);
       }

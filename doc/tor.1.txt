@@ -1537,12 +1537,26 @@ is non-zero):
     "\*". +
  +
     For example, "accept 18.7.22.69:\*,reject 18.0.0.0/8:\*,accept \*:\*" would
-    reject any traffic destined for MIT except for web.mit.edu, and accept
-    anything else. +
+    reject any IPv4 traffic destined for MIT except for web.mit.edu, and accept
+    any other IPv4 or IPv6 traffic. +
  +
-    To specify all internal and link-local networks (including 0.0.0.0/8,
-    169.254.0.0/16,    127.0.0.0/8,    192.168.0.0/16, 10.0.0.0/8, and
-    172.16.0.0/12), you can use the "private" alias instead of an address.
+    Tor also allows IPv6 exit policy entries. For instance, "reject6 [FC00::]/7:*"
+    rejects all destinations that share 7 most significant bit prefix with
+    address FC00::. Respectively, "accept6 [C000::]/3:*" accepts all destinations
+    that share 3 most significant bit prefix with address C000::. +
+ +
+    accept6 and reject6 only produce IPv6 exit policy entries. Using an IPv4
+    address with accept6 or reject6 is ignored and generates a warning.
+    accept/reject allows either IPv4 or IPv6 addresses. Use *4 as an IPv4
+    wildcard address, and *6 as an IPv6 wildcard address. accept/reject *
+    expands to matching IPv4 and IPv6 wildcard address rules. +
+ +
+    To specify all IPv4 and IPv6 internal and link-local networks (including
+    0.0.0.0/8, 169.254.0.0/16, 127.0.0.0/8, 192.168.0.0/16, 10.0.0.0/8,
+    172.16.0.0/12, [::]/8, [FC00::]/7, [FE80::]/10, [FEC0::]/10, [FF00::]/8,
+    and [::]/127), you can use the "private" alias instead of an address.
+    ("private" always produces rules for IPv4 and IPv6 addresses, even when
+    used with accept6/reject6.)
     These addresses are rejected by default (at the beginning of your exit
     policy), along with your public IP address, unless you set the
     ExitPolicyRejectPrivate config option to 0. For example, once you've done
@@ -1551,11 +1565,6 @@ is non-zero):
     may also allow connections to your own computer that are addressed to its
     public (external) IP address. See RFC 1918 and RFC 3330 for more details
     about internal and reserved IP address space. +
- +
-    Tor also allow IPv6 exit policy entries. For instance, "reject6 [FC00::]/7:*"
-    rejects all destinations that share 7 most significant bit prefix with 
-    address FC00::. Respectively, "accept6 [C000::]/3:*" accepts all destinations
-    that share 3 most significant bit prefix with address C000::. +
  +
     This directive can be specified multiple times so you don't have to put it
     all on one line. +
@@ -1577,9 +1586,15 @@ is non-zero):
        reject *:6881-6999
        accept *:*
 
+    Since the default exit policy uses accept/reject *, it applies to both
+    IPv4 and IPv6 addresses.
+
 [[ExitPolicyRejectPrivate]] **ExitPolicyRejectPrivate** **0**|**1**::
-    Reject all private (local) networks, along with your own public IP address,
-    at the beginning of your exit policy. See above entry on ExitPolicy.
+    Reject all private (local) networks, along with your own configured public
+    IPv4 and IPv6 addresses, at the beginning of your exit policy. Also reject
+    any public IPv4 and IPv6 addresses on any interface on the relay. (If
+    IPv6Exit is not set, all IPv6 addresses will be rejected anyway.)
+    See above entry on ExitPolicy.
     (Default: 1)
 
 [[IPv6Exit]] **IPv6Exit** **0**|**1**::

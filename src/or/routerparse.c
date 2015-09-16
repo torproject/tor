@@ -3666,23 +3666,37 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
  * assume_action is nonnegative, then insert its action (ADDR_POLICY_ACCEPT or
  * ADDR_POLICY_REJECT) for items that specify no action.
  *
+ * Returns NULL on policy errors.
+ *
+ * If there is a policy error, malformed_list is set to true if the entire
+ * policy list should be discarded. Otherwise, it is set to false, and only
+ * this item should be ignored - the rest of the policy list can continue to
+ * be processed and used.
+ *
  * The addr_policy_t returned by this function can have its address set to
  * AF_UNSPEC for '*'.  Use policy_expand_unspec() to turn this into a pair
  * of AF_INET and AF_INET6 items.
  */
 MOCK_IMPL(addr_policy_t *,
-router_parse_addr_policy_item_from_string,(const char *s, int assume_action))
+router_parse_addr_policy_item_from_string,(const char *s, int assume_action,
+                                           int *malformed_list))
 {
   directory_token_t *tok = NULL;
   const char *cp, *eos;
   /* Longest possible policy is
-   * "accept6 ffff:ffff:..255/ffff:...255:10000-65535",
-   * which contains 2 max-length IPv6 addresses, plus 21 characters.
+   * "accept6 ffff:ffff:..255/128:10000-65535",
+   * which contains a max-length IPv6 address, plus 24 characters.
    * But note that there can be an arbitrary amount of space between the
-   * accept and the address:mask/port element. */
+   * accept and the address:mask/port element.
+   * We don't need to multiply TOR_ADDR_BUF_LEN by 2, as there is only one
+   * IPv6 address. But making the buffer shorter might cause valid long lines,
+   * which parsed in previous versions, to fail to parse in new versions.
+   * (These lines would have to have excessive amounts of whitespace.) */
   char line[TOR_ADDR_BUF_LEN*2 + 32];
   addr_policy_t *r;
   memarea_t *area = NULL;
+
+  tor_assert(malformed_list);
 
   s = eat_whitespace(s);
   if ((*s == '*' || TOR_ISDIGIT(*s)) && assume_action >= 0) {
@@ -3710,9 +3724,32 @@ router_parse_addr_policy_item_from_string,(const char *s, int assume_action))
     goto err;
   }
 
+  /* Use the extended interpretation of accept/reject *,
+   * expanding it into an IPv4 wildcard and an IPv6 wildcard.
+   * Also permit *4 and *6 for IPv4 and IPv6 only wildcards. */
   r = router_parse_addr_policy(tok, TAPMP_EXTENDED_STAR);
+  if (!r) {
+    goto err;
+  }
+
+  /* Ensure that accept6/reject6 fields are followed by IPv6 addresses.
+   * AF_UNSPEC addresses are only permitted on the accept/reject field type.
+   * Unlike descriptors, torrcs exit policy accept/reject can be followed by
+   * either an IPv4 or IPv6 address. */
+  if ((tok->tp == K_ACCEPT6 || tok->tp == K_REJECT6) &&
+       tor_addr_family(&r->addr) != AF_INET6) {
+    /* This is a non-fatal error, just ignore this one entry. */
+    *malformed_list = 0;
+    log_warn(LD_DIR, "IPv4 address '%s' with accept6/reject6 field type in "
+             "exit policy. Ignoring, but continuing to parse rules. (Use "
+             "accept/reject with IPv4 addresses.)",
+             tok->n_args == 1 ? tok->args[0] : "");
+    return NULL;
+  }
+
   goto done;
  err:
+  *malformed_list = 1;
   r = NULL;
  done:
   token_clear(tok);
@@ -3729,19 +3766,27 @@ static int
 router_add_exit_policy(routerinfo_t *router, directory_token_t *tok)
 {
   addr_policy_t *newe;
+  /* Use the standard interpretation of accept/reject *, an IPv4 wildcard. */
   newe = router_parse_addr_policy(tok, 0);
   if (!newe)
     return -1;
   if (! router->exit_policy)
     router->exit_policy = smartlist_new();
 
+  /* Ensure that in descriptors, accept/reject fields are followed by
+   * IPv4 addresses, and accept6/reject6 fields are followed by
+   * IPv6 addresses. Unlike torrcs, descriptor exit policies do not permit
+   * accept/reject followed by IPv6. */
   if (((tok->tp == K_ACCEPT6 || tok->tp == K_REJECT6) &&
        tor_addr_family(&newe->addr) == AF_INET)
       ||
       ((tok->tp == K_ACCEPT || tok->tp == K_REJECT) &&
        tor_addr_family(&newe->addr) == AF_INET6)) {
+    /* There's nothing the user can do about other relays' descriptors,
+     * so we don't provide usage advice here. */
     log_warn(LD_DIR, "Mismatch between field type and address type in exit "
-             "policy");
+             "policy '%s'. Discarding entire router descriptor.",
+             tok->n_args == 1 ? tok->args[0] : "");
     addr_policy_free(newe);
     return -1;
   }
@@ -3751,8 +3796,11 @@ router_add_exit_policy(routerinfo_t *router, directory_token_t *tok)
   return 0;
 }
 
-/** Given a K_ACCEPT or K_REJECT token and a router, create and return
- * a new exit_policy_t corresponding to the token. */
+/** Given a K_ACCEPT[6] or K_REJECT[6] token and a router, create and return
+ * a new exit_policy_t corresponding to the token. If TAPMP_EXTENDED_STAR
+ * is set in fmt_flags, K_ACCEPT6 and K_REJECT6 tokens followed by *
+ * expand to IPv6-only policies, otherwise they expand to IPv4 and IPv6
+ * policies */
 static addr_policy_t *
 router_parse_addr_policy(directory_token_t *tok, unsigned fmt_flags)
 {
@@ -3776,6 +3824,13 @@ router_parse_addr_policy(directory_token_t *tok, unsigned fmt_flags)
   else
     newe.policy_type = ADDR_POLICY_ACCEPT;
 
+  /* accept6/reject6 * produces an IPv6 wildcard address only.
+   * (accept/reject * produces rules for IPv4 and IPv6 wildcard addresses.) */
+  if ((fmt_flags & TAPMP_EXTENDED_STAR)
+      && (tok->tp == K_ACCEPT6 || tok->tp == K_REJECT6)) {
+    fmt_flags |= TAPMP_STAR_IPV6_ONLY;
+  }
+
   if (tor_addr_parse_mask_ports(arg, fmt_flags, &newe.addr, &newe.maskbits,
                                 &newe.prt_min, &newe.prt_max) < 0) {
     log_warn(LD_DIR,"Couldn't parse line %s. Dropping", escaped(arg));
@@ -3785,9 +3840,12 @@ router_parse_addr_policy(directory_token_t *tok, unsigned fmt_flags)
   return addr_policy_get_canonical_entry(&newe);
 }
 
-/** Parse an exit policy line of the format "accept/reject private:...".
+/** Parse an exit policy line of the format "accept[6]/reject[6] private:...".
  * This didn't exist until Tor 0.1.1.15, so nobody should generate it in
  * router descriptors until earlier versions are obsolete.
+ *
+ * accept/reject and accept6/reject6 private all produce rules for both
+ * IPv4 and IPv6 addresses.
  */
 static addr_policy_t *
 router_parse_addr_policy_private(directory_token_t *tok)
@@ -3816,6 +3874,13 @@ router_parse_addr_policy_private(directory_token_t *tok)
   result.is_private = 1;
   result.prt_min = port_min;
   result.prt_max = port_max;
+
+  if (tok->tp == K_ACCEPT6 || tok->tp == K_REJECT6) {
+    log_warn(LD_GENERAL,
+             "'%s' expands into rules which apply to all private IPv4 and "
+             "IPv6 addresses. (Use accept/reject private:* for IPv4 and "
+             "IPv6.)", tok->n_args == 1 ? tok->args[0] : "");
+  }
 
   return addr_policy_get_canonical_entry(&result);
 }
