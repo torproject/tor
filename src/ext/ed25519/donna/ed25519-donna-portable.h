@@ -148,7 +148,7 @@ static inline void U64TO8_LE(unsigned char *p, const uint64_t v) {
  * architecture supports it.  This is not done on x86-64 as the non-SSE2
  * code benchmarks better, at least on Haswell.
  */
-#if defined(__SSE2__) /* && !defined(CPU_X86_64) */
+#if defined(__SSE2__) && !defined(CPU_X86_64)
 	/* undef in case it's manually specified... */
 	#undef ED25519_SSE2
 	#define ED25519_SSE2
