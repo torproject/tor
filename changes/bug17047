@@ -1,3 +1,0 @@
-  o Minor bugfixes (portability):
-    - Restore correct operation of TLS client-cipher detection on
-      OpenSSL 1.1.  Fixes bug 14047; bugfix on 0.2.7.2-alpha.

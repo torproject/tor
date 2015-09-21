@@ -13,6 +13,8 @@ Changes in version 0.2.7.3-????? - 2015-09-1?
       key management. Log messages are better, and the code can recover
       from far more failure conditions. Thanks to "s7r" for reporting
       and diagnosing so many of these!
+    - On receiving a HUP signal, check to see whether the Ed25519
+      signing key has changed, and reload it if so. Closes ticket 16790.
 
   o Major bugfixes (relay, Ed25519):
     - Avoid crashing on 'tor --keygen'. Fixes bug 16679; bugfix on
@@ -110,6 +112,13 @@ Changes in version 0.2.7.3-????? - 2015-09-1?
       test-network-bridges-hs. Closes tickets 16945 (tor), 16946
       (chutney) . Patches by "teor".
 
+  o Minor bug fixes (security, exit policies):
+    - ExitPolicyRejectPrivate rejects more private addresses by default:
+      * the relay's published IPv6 address (if any), and * any publicly
+      routable IPv4 or IPv6 addresses on any local interfaces. Resolves
+      ticket 17027. Patch by "teor". Patch on 42b8fb5a1523 (11 Nov
+      2007), released in 0.2.0.11-alpha.
+
   o Minor bugfixes:
     - Check correctly for windows socket errors in the workqueue
       backend. Fixes bug 16741; bugfix on 0.2.6.3-alpha.
@@ -133,6 +142,26 @@ Changes in version 0.2.7.3-????? - 2015-09-1?
     - include the TUNING document in our source tarball. It is referred
       to in the ChangeLog and an error message. Fixes bug 16929; bugfix
       on 0.2.6.1-alpha.
+
+  o Minor bug fixes (torrc exit policies):
+    - accept6/reject6 * lines only produce IPv6 wildcard addresses,
+      previously they would produce both IPv4 and IPv6
+      wildcard addresses.
+    - When parsing torrc ExitPolicies, we now warn if: * an IPv4 address
+      is used on an accept6 or reject6 line. The line is ignored, but
+      the rest of the policy items in the list are used. (accept/reject
+      continue to allow both IPv4 and IPv6 addresses in torrcs.) * a
+      "private" address alias is used on an accept6 or reject6 line. The
+      line filters both IPv4 and IPv6 private addresses, disregarding
+      the 6 in accept6/reject6. * any ExitPolicy lines occur after
+      accept/reject *:* or variants. These are redundant, and were
+      always ignored.
+    - When parsing torrc ExitPolicies, we now issue an info-level
+      message: * when expanding an accept/reject * line to include both
+      IPv4 and IPv6 wildcard addresses.
+    - In each instance, usage advice is provided to avoid the message.
+      Resolves ticket 16069. Patch by "teor". Patch on 2eb7eafc9d78 and
+      a96c0affcb4c (25 Oct 2012), released in 0.2.4.7-alpha.
 
   o Minor bugfix (open file limit):
     - Fix set_max_file_descriptors() to set by default the max open file
@@ -170,6 +199,10 @@ Changes in version 0.2.7.3-????? - 2015-09-1?
       sandbox. Fixes bug 16964; bugfix on 0.2.5.1-alpha.
     - Allow routers with ed25519 keys to run correctly under the
       seccomp2 sandbox. Fixes bug 16965; bugfix on 0.2.7.2-alpha.
+
+  o Minor bugfixes (portability):
+    - Restore correct operation of TLS client-cipher detection on
+      OpenSSL 1.1. Fixes bug 14047; bugfix on 0.2.7.2-alpha.
 
   o Minor bugfixes (relay):
     - Unblock threads before releasing the mutex to ensure predictable
