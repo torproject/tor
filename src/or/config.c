@@ -1920,7 +1920,11 @@ static const struct {
   { "--list-fingerprint",     TAKES_NO_ARGUMENT },
   { "--keygen",               TAKES_NO_ARGUMENT },
   { "--newpass",              TAKES_NO_ARGUMENT },
+#if 0
+/* XXXX028: This is not working yet in 0.2.7, so disabling with the
+ * minimal code modification. */
   { "--master-key",           ARGUMENT_NECESSARY },
+#endif
   { "--no-passphrase",        TAKES_NO_ARGUMENT },
   { "--passphrase-fd",        ARGUMENT_NECESSARY },
   { "--verify-config",        TAKES_NO_ARGUMENT },
