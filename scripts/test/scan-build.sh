@@ -4,11 +4,8 @@
 #
 # This script is used for running a bunch of clang scan-build checkers
 # on Tor.  
-#
-# It has hardwired paths for Nick's desktop at the moment.
 
 CHECKERS="\
-    --use-analyzer=/opt/clang-3.4/bin/clang \
     -disable-checker deadcode.DeadStores \
     -enable-checker alpha.core.CastSize \
     -enable-checker alpha.core.CastToStruct \
