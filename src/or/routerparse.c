@@ -3744,7 +3744,9 @@ router_parse_addr_policy_item_from_string,(const char *s, int assume_action,
              "exit policy. Ignoring, but continuing to parse rules. (Use "
              "accept/reject with IPv4 addresses.)",
              tok->n_args == 1 ? tok->args[0] : "");
-    return NULL;
+    addr_policy_free(r);
+    r = NULL;
+    goto done;
   }
 
   goto done;
