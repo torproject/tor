@@ -642,6 +642,19 @@ AC_TRY_COMPILE([
    [ : ],
    [ AC_ERROR([OpenSSL is too old. We require 1.0.0 or later. You can specify a path to a newer one with --with-openssl-dir.]) ])
 
+AC_TRY_COMPILE([
+#include <openssl/opensslv.h>
+#include <openssl/evp.h>
+#if defined(OPENSSL_NO_EC) || defined(OPENSSL_NO_ECDH) || defined(OPENSSL_NO_ECDSA)
+#error "no ECC"
+#endif
+#if !defined(NID_X9_62_prime256v1) || !defined(NID_secp224r1)
+#error "curves unavailable"
+#endif
+   ], [],
+   [ : ],
+   [ AC_ERROR([OpenSSL is built without full ECC support, including curves P256 and P224. You can specify a path to one with ECC support with --with-openssl-dir.]) ])
+
 AC_CHECK_MEMBERS([struct ssl_method_st.get_cipher_by_char], , ,
 [#include <openssl/ssl.h>
 ])

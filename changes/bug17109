@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Fail during configure if we're trying to build against an OpenSSL
+      built without ECC support. Fixes bug 17109, bugfix on
+      0.2.7.1-alpha which started requiring ECC.
