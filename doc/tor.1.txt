@@ -1529,7 +1529,7 @@ is non-zero):
 
 [[ExitPolicy]] **ExitPolicy** __policy__,__policy__,__...__::
     Set an exit policy for this server. Each policy is of the form
-    "**accept[6]**|**reject[6]** __ADDR__[/__MASK__][:__PORT__]". If /__MASK__ is
+    "**accept[6]**|**reject[6]**  __ADDR__[/__MASK__][:__PORT__]". If /__MASK__ is
     omitted then this policy just applies to the host given. Instead of giving
     a host or network you can also use "\*" to denote the universe (0.0.0.0/0
     and ::/128), or \*4 to denote all IPv4 addresses, and \*6 to denote all
@@ -1542,15 +1542,15 @@ is non-zero):
     reject any IPv4 traffic destined for MIT except for web.mit.edu, and accept
     any other IPv4 or IPv6 traffic. +
  +
-    Tor also allows IPv6 exit policy entries. For instance, "reject6 [FC00::]/7:*"
+    Tor also allows IPv6 exit policy entries. For instance, "reject6 [FC00::]/7:\*"
     rejects all destinations that share 7 most significant bit prefix with
-    address FC00::. Respectively, "accept6 [C000::]/3:*" accepts all destinations
+    address FC00::. Respectively, "accept6 [C000::]/3:\*" accepts all destinations
     that share 3 most significant bit prefix with address C000::. +
  +
     accept6 and reject6 only produce IPv6 exit policy entries. Using an IPv4
     address with accept6 or reject6 is ignored and generates a warning.
-    accept/reject allows either IPv4 or IPv6 addresses. Use *4 as an IPv4
-    wildcard address, and *6 as an IPv6 wildcard address. accept/reject *
+    accept/reject allows either IPv4 or IPv6 addresses. Use \*4 as an IPv4
+    wildcard address, and \*6 as an IPv6 wildcard address. accept/reject *
     expands to matching IPv4 and IPv6 wildcard address rules. +
  +
     To specify all IPv4 and IPv6 internal and link-local networks (including
@@ -1558,9 +1558,12 @@ is non-zero):
     172.16.0.0/12, [::]/8, [FC00::]/7, [FE80::]/10, [FEC0::]/10, [FF00::]/8,
     and [::]/127), you can use the "private" alias instead of an address.
     ("private" always produces rules for IPv4 and IPv6 addresses, even when
-    used with accept6/reject6.)
-    These addresses are rejected by default (at the beginning of your exit
-    policy), along with your public IP address, unless you set the
+    used with accept6/reject6.) +
+ +
+    Private addresses are rejected by default (at the beginning of your exit
+    policy), along with the configured primary public IPv4 and IPv6 addresses,
+    and any public IPv4 and IPv6 addresses on any interface on the relay.
+    These private addresses are rejected unless you set the
     ExitPolicyRejectPrivate config option to 0. For example, once you've done
     that, you could allow HTTP to 127.0.0.1 and block all other connections to
     internal networks with "accept 127.0.0.1:80,reject private:\*", though that
@@ -1573,9 +1576,9 @@ is non-zero):
  +
     Policies are considered first to last, and the first match wins. If you
     want to allow the same ports on IPv4 and IPv6, write your rules using
-    accept/reject *. If you want to allow different ports on IPv4 and IPv6,
-    write your IPv6 rules using accept6/reject6 *6, and your IPv4 rules using
-    accept/reject *4. If you want to \_replace_ the default exit policy, end
+    accept/reject \*. If you want to allow different ports on IPv4 and IPv6,
+    write your IPv6 rules using accept6/reject6 \*6, and your IPv4 rules using
+    accept/reject \*4. If you want to \_replace_ the default exit policy, end
     your exit policy with either a reject \*:* or an accept \*:*. Otherwise,
     you're \_augmenting_ (prepending to) the default exit policy. The default
     exit policy is: +

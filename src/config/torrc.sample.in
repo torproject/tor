@@ -178,7 +178,7 @@
 ## users will be told that those destinations are down.
 ##
 ## For security, by default Tor rejects connections to private (local)
-## networks, including to the configured public IPv4 and IPv6 addresses,
+## networks, including to the configured primary public IPv4 and IPv6 addresses,
 ## and any public IPv4 and IPv6 addresses on any interface on the relay.
 ## See the man page entry for ExitPolicyRejectPrivate if you want to allow
 ## "exit enclaving".
