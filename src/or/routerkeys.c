@@ -237,8 +237,12 @@ write_secret_key(const ed25519_secret_key_t *key, int encrypted,
  * If INIT_ED_KEY_MISSING_SECRET_OK is set in <b>flags</b>, and we find a
  * public key file but no secret key file, return successfully anyway.
  *
- * If INIT_ED_KEY_OMIT_SECRET is set in <b>flags</b>, do not even try to
- * load or return a secret key (but create and save one if needed).
+ * If INIT_ED_KEY_OMIT_SECRET is set in <b>flags</b>, do not try to load a
+ * secret key unless no public key is found.  Do not return a secret key. (but
+ * create and save one if needed).
+ *
+ * If INIT_ED_KEY_NO_LOAD_SECRET is set in <b>flags</b>, don't try to load
+ * a secret key, no matter what.
  *
  * If INIT_ED_KEY_TRY_ENCRYPTED is set, we look for an encrypted secret key
  * and consider encrypting any new secret key.
@@ -269,7 +273,8 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
   const int encrypt_key = !! (flags & INIT_ED_KEY_TRY_ENCRYPTED);
   const int norepair = !! (flags & INIT_ED_KEY_NO_REPAIR);
   const int split = !! (flags & INIT_ED_KEY_SPLIT);
-  const int omit_secret = !! (flags &  INIT_ED_KEY_OMIT_SECRET);
+  const int omit_secret = !! (flags & INIT_ED_KEY_OMIT_SECRET);
+  const int offline_secret = !! (flags & INIT_ED_KEY_OFFLINE_SECRET);
 
   /* we don't support setting both of these flags at once. */
   tor_assert((flags & (INIT_ED_KEY_NO_REPAIR|INIT_ED_KEY_NEEDCERT)) !=
@@ -289,7 +294,10 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
 
   /* Try to read the secret key. */
   int have_secret = 0;
-  if (try_to_load && (!omit_secret || file_status(public_fname)==FN_NOENT )) {
+  int load_secret = try_to_load &&
+    !offline_secret &&
+    (!omit_secret || file_status(public_fname)==FN_NOENT);
+  if (load_secret) {
     int rv = ed25519_seckey_read_from_file(&keypair->seckey,
                                            &got_tag, secret_fname);
     if (rv == 0) {
@@ -673,6 +681,8 @@ load_ed_keys(const or_options_t *options, time_t now)
     use_signing = master_signing_key;
   }
 
+  const int offline_master =
+    options->OfflineMasterKey && options->command != CMD_KEYGEN;
   const int need_new_signing_key =
     NULL == use_signing ||
     EXPIRES_SOON(check_signing_cert, 0) ||
@@ -681,30 +691,46 @@ load_ed_keys(const or_options_t *options, time_t now)
     need_new_signing_key ||
     EXPIRES_SOON(check_signing_cert, options->TestingSigningKeySlop);
 
+  /* We can only create a master key if we haven't been told that the
+   * master key will always be offline.  Also, if we have a signing key,
+   * then we shouldn't make a new master ID key. */
+  const int can_make_master_id_key = !offline_master &&
+    NULL == use_signing;
+
   if (need_new_signing_key) {
     log_notice(LD_OR, "It looks like I need to generate and sign a new "
                "medium-term signing key, because %s. To do that, I need to "
-               "load (or create) the permanent master identity key.",
+               "load%s the permanent master identity key.",
             (NULL == use_signing) ? "I don't have one" :
             EXPIRES_SOON(check_signing_cert, 0) ? "the one I have is expired" :
-            "you asked me to make one with --keygen");
-  } else if (want_new_signing_key) {
+               "you asked me to make one with --keygen",
+            can_make_master_id_key ? " (or create)" : "");
+  } else if (want_new_signing_key && !offline_master) {
     log_notice(LD_OR, "It looks like I should try to generate and sign a "
                "new medium-term signing key, because the one I have is "
                "going to expire soon. To do that, I'm going to have to try to "
                "load the permanent master identity key.");
+  } else if (want_new_signing_key) {
+    log_notice(LD_OR, "It looks like I should try to generate and sign a "
+               "new medium-term signing key, because the one I have is "
+               "going to expire soon. But OfflineMasterKey is set, so I "
+               "won't try to load a permanent master identity key is set. "
+               "You will need to use 'tor --keygen' make a new signing key "
+               "and certificate.");
   }
 
   {
     uint32_t flags =
       (INIT_ED_KEY_SPLIT|
        INIT_ED_KEY_EXTRA_STRONG|INIT_ED_KEY_NO_REPAIR);
-    if (! use_signing)
+    if (can_make_master_id_key)
       flags |= INIT_ED_KEY_CREATE;
     if (! need_new_signing_key)
       flags |= INIT_ED_KEY_MISSING_SECRET_OK;
-    if (! want_new_signing_key)
+    if (! want_new_signing_key || offline_master)
       flags |= INIT_ED_KEY_OMIT_SECRET;
+    if (offline_master)
+      flags |= INIT_ED_KEY_OFFLINE_SECRET;
     if (options->command == CMD_KEYGEN)
       flags |= INIT_ED_KEY_TRY_ENCRYPTED;
 
@@ -729,7 +755,10 @@ load_ed_keys(const or_options_t *options, time_t now)
     tor_free(fname);
     if (!id) {
       if (need_new_signing_key) {
-        FAIL("Missing identity key");
+        if (offline_master)
+          FAIL("Can't load master identity key; OfflineMasterKey is set.");
+        else
+          FAIL("Missing identity key");
       } else {
         log_warn(LD_OR, "Master public key was absent; inferring from "
                  "public key in signing certificate and saving to disk.");

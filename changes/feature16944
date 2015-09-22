@@ -1,0 +1,5 @@
+  o Minor features (relay, ed25519):
+    - Add a new OfflineMasterKey option to tell Tor never to try
+      loading or generating a secret ed25519 identity key. You can use
+      this in combination with tor --keygen to manage offline and/or
+      encrypted ed25519 keys. Implements ticket 16944.
