@@ -763,6 +763,7 @@ or_options_free(or_options_t *options)
   }
   tor_free(options->BridgePassword_AuthDigest_);
   tor_free(options->command_arg);
+  tor_free(options->master_key_fname);
   config_free(&options_format, options);
 }
 
@@ -1919,6 +1920,12 @@ static const struct {
   { "--dump-config",          ARGUMENT_OPTIONAL },
   { "--list-fingerprint",     TAKES_NO_ARGUMENT },
   { "--keygen",               TAKES_NO_ARGUMENT },
+  { "--newpass",              TAKES_NO_ARGUMENT },
+#if 0
+/* XXXX028: This is not working yet in 0.2.7, so disabling with the
+ * minimal code modification. */
+  { "--master-key",           ARGUMENT_NECESSARY },
+#endif
   { "--no-passphrase",        TAKES_NO_ARGUMENT },
   { "--passphrase-fd",        ARGUMENT_NECESSARY },
   { "--verify-config",        TAKES_NO_ARGUMENT },
@@ -4528,6 +4535,15 @@ options_init_from_torrc(int argc, char **argv)
     }
   }
 
+  if (config_line_find(cmdline_only_options, "--newpass")) {
+    if (command == CMD_KEYGEN) {
+      get_options_mutable()->change_key_passphrase = 1;
+    } else {
+      log_err(LD_CONFIG, "--newpass specified without --keygen!");
+      exit(1);
+    }
+  }
+
   {
     const config_line_t *fd_line = config_line_find(cmdline_only_options,
                                                     "--passphrase-fd");
@@ -4549,6 +4565,19 @@ options_init_from_torrc(int argc, char **argv)
         get_options_mutable()->keygen_passphrase_fd = (int)fd;
         get_options_mutable()->use_keygen_passphrase_fd = 1;
         get_options_mutable()->keygen_force_passphrase = FORCE_PASSPHRASE_ON;
+      }
+    }
+  }
+
+  {
+    const config_line_t *key_line = config_line_find(cmdline_only_options,
+                                                     "--master-key");
+    if (key_line) {
+      if (command != CMD_KEYGEN) {
+        log_err(LD_CONFIG, "--master-key without --keygen!");
+        exit(1);
+      } else {
+        get_options_mutable()->master_key_fname = tor_strdup(key_line->value);
       }
     }
   }

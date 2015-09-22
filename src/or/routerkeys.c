@@ -200,8 +200,17 @@ write_secret_key(const ed25519_secret_key_t *key, int encrypted,
 {
   if (encrypted) {
     int r = write_encrypted_secret_key(key, encrypted_fname);
-    if (r != 0)
-      return r; /* Either succeeded or failed unrecoverably */
+    if (r == 1) {
+      /* Success! */
+
+      /* Try to unlink the unencrypted key, if any existed before */
+      if (strcmp(fname, encrypted_fname))
+        unlink(fname);
+      return r;
+    } else if (r != 0) {
+      /* Unrecoverable failure! */
+      return r;
+    }
 
     fprintf(stderr, "Not encrypting the secret key.\n");
   }
@@ -253,6 +262,9 @@ write_secret_key(const ed25519_secret_key_t *key, int encrypted,
  *
  * If INIT_ED_KEY_SUGGEST_KEYGEN is set, have log messages about failures
  * refer to the --keygen option.
+ *
+ * If INIT_ED_KEY_EXPLICIT_FNAME is set, use the provided file name for the
+ * secret key file, encrypted or not.
  */
 ed25519_keypair_t *
 ed_key_init_from_file(const char *fname, uint32_t flags,
@@ -275,6 +287,7 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
   const int split = !! (flags & INIT_ED_KEY_SPLIT);
   const int omit_secret = !! (flags & INIT_ED_KEY_OMIT_SECRET);
   const int offline_secret = !! (flags & INIT_ED_KEY_OFFLINE_SECRET);
+  const int explicit_fname = !! (flags & INIT_ED_KEY_EXPLICIT_FNAME);
 
   /* we don't support setting both of these flags at once. */
   tor_assert((flags & (INIT_ED_KEY_NO_REPAIR|INIT_ED_KEY_NEEDCERT)) !=
@@ -287,8 +300,13 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
   char *got_tag = NULL;
   ed25519_keypair_t *keypair = tor_malloc_zero(sizeof(ed25519_keypair_t));
 
-  tor_asprintf(&secret_fname, "%s_secret_key", fname);
-  tor_asprintf(&encrypted_secret_fname, "%s_secret_key_encrypted", fname);
+  if (explicit_fname) {
+    secret_fname = tor_strdup(fname);
+    encrypted_secret_fname = tor_strdup(fname);
+  } else {
+    tor_asprintf(&secret_fname, "%s_secret_key", fname);
+    tor_asprintf(&encrypted_secret_fname, "%s_secret_key_encrypted", fname);
+  }
   tor_asprintf(&public_fname, "%s_public_key", fname);
   tor_asprintf(&cert_fname, "%s_cert", fname);
 
@@ -441,7 +459,7 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
     goto err;
   }
 
-  /* if it's absent, make a new keypair and save it. */
+  /* if it's absent, make a new keypair... */
   if (!have_secret && !found_public) {
     tor_free(keypair);
     keypair = ed_key_new(signing_key, flags, now, lifetime,
@@ -450,8 +468,12 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
       tor_log(severity, LD_OR, "Couldn't create keypair");
       goto err;
     }
-
     created_pk = created_sk = created_cert = 1;
+  }
+
+  /* Write it to disk if we're supposed to do with a new passphrase, or if
+   * we just created it. */
+  if (created_sk || (have_secret && get_options()->change_key_passphrase)) {
     if (write_secret_key(&keypair->seckey,
                          encrypt_key,
                          secret_fname, tag, encrypted_secret_fname) < 0
@@ -686,7 +708,7 @@ load_ed_keys(const or_options_t *options, time_t now)
   const int need_new_signing_key =
     NULL == use_signing ||
     EXPIRES_SOON(check_signing_cert, 0) ||
-    options->command == CMD_KEYGEN;
+    (options->command == CMD_KEYGEN && ! options->change_key_passphrase);
   const int want_new_signing_key =
     need_new_signing_key ||
     EXPIRES_SOON(check_signing_cert, options->TestingSigningKeySlop);
@@ -747,7 +769,12 @@ load_ed_keys(const or_options_t *options, time_t now)
       goto err;
     }
     tor_free(fname);
-    fname = options_get_datadir_fname2(options, "keys", "ed25519_master_id");
+    if (options->master_key_fname) {
+      fname = tor_strdup(options->master_key_fname);
+      flags |= INIT_ED_KEY_EXPLICIT_FNAME;
+    } else {
+      fname = options_get_datadir_fname2(options, "keys", "ed25519_master_id");
+    }
     id = ed_key_init_from_file(
              fname,
              flags,

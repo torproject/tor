@@ -18,6 +18,7 @@
 #define INIT_ED_KEY_NO_REPAIR                   (1u<<9)
 #define INIT_ED_KEY_SUGGEST_KEYGEN              (1u<<10)
 #define INIT_ED_KEY_OFFLINE_SECRET              (1u<<11)
+#define INIT_ED_KEY_EXPLICIT_FNAME              (1u<<12)
 
 struct tor_cert_st;
 ed25519_keypair_t *ed_key_init_from_file(const char *fname, uint32_t flags,
