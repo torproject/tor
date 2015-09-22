@@ -1,4 +1,4 @@
-Changes in version 0.2.7.3-????? - 2015-09-1?
+Changes in version 0.2.7.3-rc - 2015-09-2?
   XXXX write a blurb
 
   o Major features (security, hidden services):
@@ -16,50 +16,40 @@ Changes in version 0.2.7.3-????? - 2015-09-1?
     - On receiving a HUP signal, check to see whether the Ed25519
       signing key has changed, and reload it if so. Closes ticket 16790.
 
+  o Major features (performance testing):
+    - The test-network.sh script now supports performance testing.
+      Requires the corresponding chutney performance testing changes.
+      Patch by "teor". Closes ticket 14175.
+
   o Major bugfixes (relay, Ed25519):
     - Avoid crashing on 'tor --keygen'. Fixes bug 16679; bugfix on
       0.2.7.2-alpha. Reported by "s7r".
     - Improve handling of expired signing keys along with offline master
       keys. Fixes bug 16685; bugfix on 0.2.7.2-alpha. Reported by "s7r".
 
-  o Major enhancements (performance testing):
-    - Add chutney performance testing support to src/test/test-
-      network.sh The following arguments change how chutney verifies the
-      network: "--bytes n" sends n bytes per test connection;
-      "--connections n" makes n test connections per client; and
-      "--hs-multi-client 1" makes each client connect to each HS.
-      Requires the corresponding chutney performance testing changes.
-      Note: using --connections 7 or greater on a HS will trigger issue
-      15937. Patch by "teor". Closes ticket 14175.
-
-  o Minor features:
-    - Try harder to normalize the exit status of the Tor process to the
-      standard-provided range. Fixes bug 16975; bugfix on every version
-      of Tor ever.
-    - Update geoip and geoip6 to the July 8 2015 Maxmind GeoLite2
-      Country database.
-
   o Minor features (client-side privacy):
     - Indefinitely extend circuit lifespan by resetting dirtyness, if
       IsolateSOCKSAuth is in use, the new `KeepAliveIsolateSOCKSAuth`
       option is set, and streams with SOCKS authentication are attached
       to the circuit. Implements feature 15482.
+    - When logging malformed hostnames in socks5 requests, respect
+      SafeLogging configuration. Fixes bug 16891; bugfix on 0.1.1.16-rc.
 
   o Minor features (compilation):
     - Give a warning as early as possible when trying to build with an
       unsupported OpenSSL version. Closes ticket 16901.
 
-  o Minor features (Hidden service directory):
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the July 8 2015 Maxmind GeoLite2
+      Country database.
+
+  o Minor features (hidden services):
     - Relays need to have the Fast flag to get the HSDir flag. As this
       is being written, we'll go from 2745 HSDirs down to 2342, a ~14%
       drop. Fixes ticket 15963.
-
-  o Minor features (hidden Service Statistics):
     - Turn on hidden service statistics collection by setting the torrc
       option HiddenServiceStatistics to "1" by default. Closes
       ticket 15254.
-
-  o Minor features (hidden service):
     - Client now uses an introduction point failure cache to know when
       to fetch or keep a descriptor in their cache.
 
@@ -74,7 +64,7 @@ Changes in version 0.2.7.3-????? - 2015-09-1?
       See rendcache.c for a detailed explanation of the cache's
       behavior. Closes ticket 16389.
 
-  o Minor features (performance):
+  o Minor features (ed25519 performance):
     - Improve the runtime speed of Ed25519 operations and Curve25519
       keypair generation when built targeting 32 bit x86 platforms with
       SSE2 available. Implements ticket 16535.
@@ -82,12 +72,7 @@ Changes in version 0.2.7.3-????? - 2015-09-1?
       using Ed25519-donna's batch verification support when there are a
       lot of signatures to verify at once. Implements ticket 16533.
 
-  o Minor features (testing):
-    - Autodetect CHUTNEY_PATH if the chutney and tor sources are side-
-      by-side in the same parent directory. Closes ticket 16903. Patch
-      by "teor".
-
-  o Minor features (testing, authorities):
+  o Minor features (testing, authorities, documentation):
     - New TestingDirAuthVote{Exit,Guard,HSDir}IsStrict flags. "A node
       will never receive the corresponding flag unless that node is
       specified in the TestingDirAuthVote{Exit,Guard,HSDir} list,
@@ -95,8 +80,6 @@ Changes in version 0.2.7.3-????? - 2015-09-1?
       Closes ticket 14882. Patch by "robgjansen", modified by "teor" as
       VoteOnHidServDirectoriesV2 is now obsolete. Commit message and
       changes file by "teor" & "robgjansen".
-
-  o Minor features (testing, authorities, documentation):
     - Fix an error in the manual page and comments for
       TestingDirAuthVoteHSDir[IsStrict], which suggested that a HSDir
       required "ORPort connectivity". While this is true, it is in no
@@ -105,13 +88,6 @@ Changes in version 0.2.7.3-????? - 2015-09-1?
       particular flag. Fixed as part of 14882. Patch by "teor". Bugfix
       on 0.2.6.3 (f9d57473e1ff on 10 January 2015).
 
-  o Minor features (testing, bridges, hidden services):
-    - Make "bridges+hs" the default test network. This tests almost all
-      tor functionality during make test-network, while allowing tests
-      to succeed on non-IPv6 systems. Requires chutney commit 396da92 in
-      test-network-bridges-hs. Closes tickets 16945 (tor), 16946
-      (chutney) . Patches by "teor".
-
   o Minor bug fixes (security, exit policies):
     - ExitPolicyRejectPrivate rejects more private addresses by default:
       * the relay's published IPv6 address (if any), and * any publicly
@@ -119,29 +95,33 @@ Changes in version 0.2.7.3-????? - 2015-09-1?
       ticket 17027. Patch by "teor". Patch on 42b8fb5a1523 (11 Nov
       2007), released in 0.2.0.11-alpha.
 
-  o Minor bugfixes:
+  o Minor bugfixes (portability):
+    - Try harder to normalize the exit status of the Tor process to the
+      standard-provided range. Fixes bug 16975; bugfix on every version
+      of Tor ever.
     - Check correctly for windows socket errors in the workqueue
       backend. Fixes bug 16741; bugfix on 0.2.6.3-alpha.
-    - Ensure that worker threads actually exit when a fatal error or
-      shutdown is indicated. This doesn't currently affect the behaviour
-      of Tor, because Tor never indicates fatal error or shutdown except
-      in its unit tests. Fixes bug 16868; bugfix on 0.2.6.3-alpha.
-    - Fix an usage message of tor-resolve(1) so that it no longer lists
-      the removed -F option. Fixes bug 16913; bugfix on
-      Tor 0.2.2.28-beta.
     - Fix the behavior of crypto_time_t when told to consider times
       before 1970. (These times were possible when running in a
       simulated network environment where time()'s output starts at
       zero.) Fixes bug 16980; bugfix on 0.2.7.1-alpha.
+
+  o Minor bugfixes (documentation):
+    - Fix an usage message of tor-resolve(1) so that it no longer lists
+      the removed -F option. Fixes bug 16913; bugfix on
+      Tor 0.2.2.28-beta.
+
+  o Minor bugfixes (relay):
+    - Ensure that worker threads actually exit when a fatal error or
+      shutdown is indicated. This doesn't currently affect the behaviour
+      of Tor, because Tor never indicates fatal error or shutdown except
+      in its unit tests. Fixes bug 16868; bugfix on 0.2.6.3-alpha.
+
+  o Minor bugfixes (correctness):
     - When calling channel_free_list(), avoid calling smartlist_remove()
       while inside a FOREACH loop. This partially reverts commit
       17356fe7fd96af where the correct SMARTLIST_DEL_CURRENT was
       removed. Fixes bug 16924; bugfix on 0.2.4.4-alpha.
-    - When logging malformed hostnames in socks5 requests, respect
-      SafeLogging configuration. Fixes bug 16891; bugfix on 0.1.1.16-rc.
-    - include the TUNING document in our source tarball. It is referred
-      to in the ChangeLog and an error message. Fixes bug 16929; bugfix
-      on 0.2.6.1-alpha.
 
   o Minor bug fixes (torrc exit policies):
     - accept6/reject6 * lines only produce IPv6 wildcard addresses,
@@ -163,7 +143,7 @@ Changes in version 0.2.7.3-????? - 2015-09-1?
       Resolves ticket 16069. Patch by "teor". Patch on 2eb7eafc9d78 and
       a96c0affcb4c (25 Oct 2012), released in 0.2.4.7-alpha.
 
-  o Minor bugfix (open file limit):
+  o Minor bugfixes (open file limit):
     - Fix set_max_file_descriptors() to set by default the max open file
       limit to the current limit in case setrlimit() fails so we at
       least have a usable value; Fixes bug 16274; bugfix on tor-
@@ -234,13 +214,14 @@ Changes in version 0.2.7.3-????? - 2015-09-1?
     - Wrap windows-only C files inside '#ifdef _WIN32' so that tools
       that try to scan or compile every file on Unix won't decide that
       they are broken.
-
-  o Code simplifications and refactoring:
     - Remove the unused "nulterminate" argument from buf_pullup().
 
   o Documentation:
     - Recommend a 40 GB example AccountingMax in torrc.sample rather
       than a 4 GB max. Closes ticket 16742.
+    - Include the TUNING document in our source tarball. It is referred
+      to in the ChangeLog and an error message. Fixes bug 16929; bugfix
+      on 0.2.6.1-alpha.
 
   o Removed code:
     - The internal pure-C tor-fw-helper tool is now removed from the Tor
@@ -249,8 +230,6 @@ Changes in version 0.2.7.3-????? - 2015-09-1?
       the C tor-fw-helper are not, in our opinion, very confidence-
       inspiring in their secure-proggramming techniques. Closes
       ticket 13338.
-
-  o Removed features:
     - Remove the code that would try to aggressively flush controller
       connections while writing to them. This code was introduced in
       0.1.2.7-alpha, in order to keep output buffers from exceeding
@@ -259,6 +238,14 @@ Changes in version 0.2.7.3-????? - 2015-09-1?
       in our call graph. Closes ticket 16480.
 
   o Testing:
+    - Make "bridges+hs" the default test network. This tests almost all
+      tor functionality during make test-network, while allowing tests
+      to succeed on non-IPv6 systems. Requires chutney commit 396da92 in
+      test-network-bridges-hs. Closes tickets 16945 (tor), 16946
+      (chutney) . Patches by "teor".
+    - Autodetect CHUTNEY_PATH if the chutney and tor sources are side-
+      by-side in the same parent directory. Closes ticket 16903. Patch
+      by "teor".
     - Add a new set of callgraph analysis scripts that use clang to
       produce a list of which Tor functions are reachable from which
       other Tor functions. We're planning to use these to help simplify
