@@ -1,5 +1,5 @@
 ## Configuration file for a typical Tor user
-## Last updated 15 September 2015 for Tor 0.2.7.3-alpha.
+## Last updated 22 September 2015 for Tor 0.2.7.3-alpha.
 ## (may or may not work for much older or much newer versions of Tor.)
 ##
 ## Lines that begin with "## " try to explain what's going on. Lines
@@ -157,10 +157,16 @@
 #MyFamily $keyid,$keyid,...
 
 ## A comma-separated list of exit policies. They're considered first
-## to last, and the first match wins. If you want to _replace_
-## the default exit policy, end this with either a reject *:* or an
-## accept *:*. Otherwise, you're _augmenting_ (prepending to) the
-## default exit policy. Leave commented to just use the default, which is
+## to last, and the first match wins.
+##
+## If you want to allow the same ports on IPv4 and IPv6, write your rules
+## using accept/reject *. If you want to allow different ports on IPv4 and
+## IPv6, write your IPv6 rules using accept6/reject6 *6, and your IPv4 rules
+## using accept/reject *4.
+##
+## If you want to _replace_ the default exit policy, end this with either a
+## reject *:* or an accept *:*. Otherwise, you're _augmenting_ (prepending to)
+## the default exit policy. Leave commented to just use the default, which is
 ## described in the man page or at
 ## https://www.torproject.org/documentation.html
 ##

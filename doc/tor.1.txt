@@ -1570,9 +1570,13 @@ is non-zero):
     all on one line. +
  +
     Policies are considered first to last, and the first match wins. If you
-    want to \_replace_ the default exit policy, end your exit policy with
-    either a reject \*:* or an accept \*:*. Otherwise, you're \_augmenting_
-    (prepending to) the default exit policy. The default exit policy is: +
+    want to allow the same ports on IPv4 and IPv6, write your rules using
+    accept/reject *. If you want to allow different ports on IPv4 and IPv6,
+    write your IPv6 rules using accept6/reject6 *6, and your IPv4 rules using
+    accept/reject *4. If you want to \_replace_ the default exit policy, end
+    your exit policy with either a reject \*:* or an accept \*:*. Otherwise,
+    you're \_augmenting_ (prepending to) the default exit policy. The default
+    exit policy is: +
 
        reject *:25
        reject *:119
