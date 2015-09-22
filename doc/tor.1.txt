@@ -1529,9 +1529,11 @@ is non-zero):
 
 [[ExitPolicy]] **ExitPolicy** __policy__,__policy__,__...__::
     Set an exit policy for this server. Each policy is of the form
-    "**accept**|**reject** __ADDR__[/__MASK__][:__PORT__]". If /__MASK__ is
+    "**accept[6]**|**reject[6]** __ADDR__[/__MASK__][:__PORT__]". If /__MASK__ is
     omitted then this policy just applies to the host given. Instead of giving
-    a host or network you can also use "\*" to denote the universe (0.0.0.0/0).
+    a host or network you can also use "\*" to denote the universe (0.0.0.0/0
+    and ::/128), or \*4 to denote all IPv4 addresses, and \*6 to denote all
+    IPv6 addresses.
     __PORT__ can be a single port number, an interval of ports
     "__FROM_PORT__-__TO_PORT__", or "\*". If __PORT__ is omitted, that means
     "\*". +
