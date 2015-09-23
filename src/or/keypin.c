@@ -321,19 +321,41 @@ keypin_load_journal_impl(const char *data, size_t size)
       continue;
     }
 
-    const keypin_ent_t *ent2;
-    if ((ent2 = HT_FIND(rsamap, &the_rsa_map, ent))) {
-      if (fast_memeq(ent2->ed25519_key, ent->ed25519_key, DIGEST256_LEN)) {
-        ++n_duplicates;
-      } else {
-        ++n_conflicts;
+    keypin_ent_t *ent2 = HT_FIND(rsamap, &the_rsa_map, ent);
+    keypin_ent_t *ent3 = HT_FIND(edmap, &the_ed_map, ent);
+    if (ent2 &&
+        fast_memeq(ent2->ed25519_key, ent->ed25519_key, DIGEST256_LEN)) {
+      /* We already have this mapping stored. Ignore it. */
+      tor_free(ent);
+      ++n_duplicates;
+      continue;
+    } else if (ent2 || ent3) {
+      /* We have a conflict. (If we had no entry, we would have ent2 == ent3
+       * == NULL. If we had a non-conflicting duplicate, we would have found
+       * it above.)
+       *
+       * We respond by having this entry (ent) supersede all entries that it
+       * contradicts (ent2 and/or ent3). In other words, if we receive
+       * <rsa,ed>, we remove all <rsa,ed'> and all <rsa',ed>, for rsa'!=rsa
+       * and ed'!= ed.
+       */
+      const keypin_ent_t *t;
+      if (ent2) {
+        t = HT_REMOVE(rsamap, &the_rsa_map, ent2);
+        tor_assert(ent2 == t);
+        t = HT_REMOVE(edmap, &the_ed_map, ent2);
+        tor_assert(ent2 == t);
       }
-      tor_free(ent);
-      continue;
-    } else if (HT_FIND(edmap, &the_ed_map, ent)) {
-      tor_free(ent);
+      if (ent3 && ent2 != ent3) {
+        t = HT_REMOVE(rsamap, &the_rsa_map, ent3);
+        tor_assert(ent3 == t);
+        t = HT_REMOVE(edmap, &the_ed_map, ent3);
+        tor_assert(ent3 == t);
+        tor_free(ent3);
+      }
+      tor_free(ent2);
       ++n_conflicts;
-      continue;
+      /* Fall through */
     }
 
     keypin_add_entry_to_map(ent);
