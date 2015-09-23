@@ -7,7 +7,8 @@ Changes in version 0.2.7.3-rc - 2015-09-2?
 
   This is the most tested release of Tor to date. The unit tests cover
   39.40% of the code, and the integration tests (accessible with "make
-  test-full", requiring stem and chutney) raise the coverage to XXX.
+  test-full-online", requiring stem and chutney and a network connection)
+  raise the coverage to XXX.
 
   If this is your first time upgrading a relay to Tor 0.2.7, your Tor
   relay will, by default, generate a new Ed25519 identity key.  If you
@@ -16,37 +17,42 @@ Changes in version 0.2.7.3-rc - 2015-09-2?
   XXX.
 
   o Major features (security, hidden services):
-    - For an hidden service, it is now prohibited to use one single
-      EntryNodes to avoid a very easy guard discovery attack. For more
-      details, see the ticket description here:
-      https://trac.torproject.org/projects/tor/ticket/14917. Fixes
-      ticket 14917.
+    - Hidden services are required to use more than one EntryNode,
+      to avoid a guard discovery attack. See ticket for more
+      information. Fixes ticket 14917.
 
   o Major features (relay, Ed25519):
-    - Significant improvements to the usability of relay-side Ed25519
+    - Significant usability improvements for Ed25519
       key management. Log messages are better, and the code can recover
       from far more failure conditions. Thanks to "s7r" for reporting
       and diagnosing so many of these!
     - On receiving a HUP signal, check to see whether the Ed25519
       signing key has changed, and reload it if so. Closes ticket 16790.
 
+  o Major features (ed25519 performance):
+    - Improve the speed of Ed25519 operations and Curve25519
+      keypair generation when built targeting 32 bit x86 platforms with
+      SSE2 available. Implements ticket 16535.
+    - Improve the runtime speed of Ed25519 signature verification by
+      using Ed25519-donna's batch verification support. Implements ticket 16533.
+
   o Major features (performance testing):
     - The test-network.sh script now supports performance testing.
-      Requires the corresponding chutney performance testing changes.
+      Requires corresponding chutney performance testing changes.
       Patch by "teor". Closes ticket 14175.
 
   o Major bugfixes (relay, Ed25519):
     - Avoid crashing on 'tor --keygen'. Fixes bug 16679; bugfix on
       0.2.7.2-alpha. Reported by "s7r".
-    - Improve handling of expired signing keys along with offline master
+    - Improve handling of expired signing keys with offline master
       keys. Fixes bug 16685; bugfix on 0.2.7.2-alpha. Reported by "s7r".
 
   o Minor features (client-side privacy):
-    - Indefinitely extend circuit lifespan by resetting dirtyness, if
-      IsolateSOCKSAuth is in use, the new `KeepAliveIsolateSOCKSAuth`
-      option is set, and streams with SOCKS authentication are attached
-      to the circuit. Implements feature 15482.
-    - When logging malformed hostnames in socks5 requests, respect
+    - New KeyAliveSOCKSAuth option to indefinitely extend circuit lifespan
+      when IsolateSOCKSAuth and streams with SOCKS authentication are attached
+      to the circuit.  This allows applications like TorBrowser to
+      manage circuit lifetime on their own. Implements feature 15482.
+    - When logging malformed hostnames from SOCKS5 requests, respect
       SafeLogging configuration. Fixes bug 16891; bugfix on 0.1.1.16-rc.
 
   o Minor features (compilation):
@@ -60,54 +66,27 @@ Changes in version 0.2.7.3-rc - 2015-09-2?
   o Minor features (hidden services):
     - Relays need to have the Fast flag to get the HSDir flag. As this
       is being written, we'll go from 2745 HSDirs down to 2342, a ~14%
-      drop. Fixes ticket 15963.
+      drop. This change should make some attacks against the hidden
+      service directory system harder. Fixes ticket 15963.
     - Turn on hidden service statistics collection by setting the torrc
       option HiddenServiceStatistics to "1" by default. Closes
       ticket 15254.
     - Client now uses an introduction point failure cache to know when
-      to fetch or keep a descriptor in their cache.
-
-      When fetching a descriptor, for every introduction points in it,
-      we look them up in the failure cache to know if we keep the
-      descriptor or not. For this to work, everytime an introduction
-      points is discarded (ex: receiving a NACK), we note it down in our
-      introduction cache. If all introduction points for an onion
-      service are in our failure cache, we discard the descriptor and
-      fetch a new one.
-
-      See rendcache.c for a detailed explanation of the cache's
-      behavior. Closes ticket 16389.
-
-  o Minor features (ed25519 performance):
-    - Improve the runtime speed of Ed25519 operations and Curve25519
-      keypair generation when built targeting 32 bit x86 platforms with
-      SSE2 available. Implements ticket 16535.
-    - Improve the runtime speed of Ed25519 signature verification by
-      using Ed25519-donna's batch verification support when there are a
-      lot of signatures to verify at once. Implements ticket 16533.
+      to fetch or keep a descriptor in their cache.  Previously,
+      failures were recorded implicitly, but not explicitly remembered.
+      Closes ticket 16389.
 
   o Minor features (testing, authorities, documentation):
-    - New TestingDirAuthVote{Exit,Guard,HSDir}IsStrict flags. "A node
-      will never receive the corresponding flag unless that node is
-      specified in the TestingDirAuthVote{Exit,Guard,HSDir} list,
-      regardless of its uptime, bandwidth, exit policy, or DirPort".
-      Closes ticket 14882. Patch by "robgjansen", modified by "teor" as
-      VoteOnHidServDirectoriesV2 is now obsolete. Commit message and
-      changes file by "teor" & "robgjansen".
-    - Fix an error in the manual page and comments for
-      TestingDirAuthVoteHSDir[IsStrict], which suggested that a HSDir
-      required "ORPort connectivity". While this is true, it is in no
-      way unique to the HSDir flag. Of all the flags, only HSDirs need a
-      DirPort configured in order for the authorities to assign that
-      particular flag. Fixed as part of 14882. Patch by "teor". Bugfix
-      on 0.2.6.3 (f9d57473e1ff on 10 January 2015).
+    - New TestingDirAuthVote{Exit,Guard,HSDir}IsStrict flags to
+      explicitly manage consensus flags in t3esting networks.
+      Patch by "robgjansen", modified by "teor". Implements part of
+      ticket 14882.
 
-  o Minor bug fixes (security, exit policies):
-    - ExitPolicyRejectPrivate rejects more private addresses by default:
-      * the relay's published IPv6 address (if any), and * any publicly
-      routable IPv4 or IPv6 addresses on any local interfaces. Resolves
-      ticket 17027. Patch by "teor". Patch on 42b8fb5a1523 (11 Nov
-      2007), released in 0.2.0.11-alpha.
+  o Minor bugfixes (security, exit policies):
+    - ExitPolicyRejectPrivate now also rejects
+      the relay's published IPv6 address (if any), and any publicly
+      routable IPv4 or IPv6 addresses on any local interfacesn.
+      ticket 17027. Patch by "teor". Fixes bug 17027; bugfix on 0.2.0.11-alpha.
 
   o Minor bugfixes (portability):
     - Try harder to normalize the exit status of the Tor process to the
@@ -115,47 +94,51 @@ Changes in version 0.2.7.3-rc - 2015-09-2?
       of Tor ever.
     - Check correctly for windows socket errors in the workqueue
       backend. Fixes bug 16741; bugfix on 0.2.6.3-alpha.
-    - Fix the behavior of crypto_time_t when told to consider times
+    - Fix the behavior of crypto_rand_time_range() when told to consider times
       before 1970. (These times were possible when running in a
       simulated network environment where time()'s output starts at
       zero.) Fixes bug 16980; bugfix on 0.2.7.1-alpha.
 
   o Minor bugfixes (documentation):
-    - Fix an usage message of tor-resolve(1) so that it no longer lists
+    - Fix the usage message of tor-resolve(1) so that it no longer lists
       the removed -F option. Fixes bug 16913; bugfix on
-      Tor 0.2.2.28-beta.
+      0.2.2.28-beta.
+    - Fix an error in the manual page and comments for
+      TestingDirAuthVoteHSDir[IsStrict], which suggested that a HSDir
+      required "ORPort connectivity". While this is true, it is in no
+      way unique to the HSDir flag. Of all the flags, only HSDirs need a
+      DirPort configured in order for the authorities to assign that
+      particular flag. Patch by "teor". Fixed as part of 14882; bugfix on 0.2.6.3-alpha.
 
   o Minor bugfixes (relay):
     - Ensure that worker threads actually exit when a fatal error or
-      shutdown is indicated. This doesn't currently affect the behaviour
-      of Tor, because Tor never indicates fatal error or shutdown except
-      in its unit tests. Fixes bug 16868; bugfix on 0.2.6.3-alpha.
+      shutdown is indicated. This fix doesn't currently affect the behaviour
+      of Tor, because Tor workers never indicates fatal error or shutdown except
+      in the unit tests. Fixes bug 16868; bugfix on 0.2.6.3-alpha.
 
   o Minor bugfixes (correctness):
     - When calling channel_free_list(), avoid calling smartlist_remove()
       while inside a FOREACH loop. This partially reverts commit
       17356fe7fd96af where the correct SMARTLIST_DEL_CURRENT was
-      removed. Fixes bug 16924; bugfix on 0.2.4.4-alpha.
+      incorrectly removed. Fixes bug 16924; bugfix on 0.2.4.4-alpha.
 
   o Minor bug fixes (torrc exit policies):
-    - accept6/reject6 * lines only produce IPv6 wildcard addresses,
-      previously they would produce both IPv4 and IPv6
-      wildcard addresses.
-    - When parsing torrc ExitPolicies, we now warn if: * an IPv4 address
-      is used on an accept6 or reject6 line. The line is ignored, but
-      the rest of the policy items in the list are used. (accept/reject
-      continue to allow both IPv4 and IPv6 addresses in torrcs.) * a
-      "private" address alias is used on an accept6 or reject6 line. The
-      line filters both IPv4 and IPv6 private addresses, disregarding
-      the 6 in accept6/reject6. * any ExitPolicy lines occur after
-      accept/reject *:* or variants. These are redundant, and were
-      always ignored.
+    - In torrc, "accept6 *" and "reject6 *" ExitPolicy lines now
+  only produce IPv6 wildcard addresses.
+      Previously they would produce both IPv4 and IPv6
+      wildcard addresses. Patch by "teor". Fixes part of bug 16069; bugfix on 0.2.4.7-alpha.
+    - When parsing torrc ExitPolicies, we now warn for a number of
+      cases where the user's intent is likely to differ from Tor's
+      actual behavior. These include: using an IPv4 address
+      with an accept6 or reject6 line; using "private" on an accept6
+      or reject6 line; and including any ExitPolicy lines after
+      accept *:* or reject *:*.
     - When parsing torrc ExitPolicies, we now issue an info-level
       message: * when expanding an accept/reject * line to include both
       IPv4 and IPv6 wildcard addresses.
     - In each instance, usage advice is provided to avoid the message.
-      Resolves ticket 16069. Patch by "teor". Patch on 2eb7eafc9d78 and
-      a96c0affcb4c (25 Oct 2012), released in 0.2.4.7-alpha.
+      Resolves ticket 16069. Patch by "teor". Fixes part of bug
+  16069; bugfix on 0.2.4.7-alpha.
 
   o Minor bugfixes (open file limit):
     - Fix set_max_file_descriptors() to set by default the max open file
