@@ -1,5 +1,19 @@
 Changes in version 0.2.7.3-rc - 2015-09-2?
-  XXXX write a blurb
+
+  Tor 0.2.7.3-rc is the first release candidate in the 0.2.7 series.  It
+  contains numerous usability fixes for Ed25519 keys, safeguards against
+  several misconfiguration problems, and numerous bugfixes and small
+  features.
+
+  This is the most tested release of Tor to date. The unit tests cover
+  39.40% of the code, and the integration tests (accessible with "make
+  test-full", requiring stem and chutney) raise the coverage to XXX.
+
+  If this is your first time upgrading a relay to Tor 0.2.7, your Tor
+  relay will, by default, generate a new Ed25519 identity key.  If you
+  would prefer to keep your Ed25519 identity key offline or encrypted
+  for improved security, you can do so by following the instructions at
+  XXX.
 
   o Major features (security, hidden services):
     - For an hidden service, it is now prohibited to use one single
