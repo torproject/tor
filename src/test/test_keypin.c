@@ -131,7 +131,8 @@ test_keypin_parse_file(void *arg)
   smartlist_free(mock_addent_got);
 }
 
-#define ADD(a,b) keypin_check_and_add((const uint8_t*)(a),(const uint8_t*)(b))
+#define ADD(a,b) keypin_check_and_add((const uint8_t*)(a),\
+                                      (const uint8_t*)(b),0)
 #define LONE_RSA(a) keypin_check_lone_rsa((const uint8_t*)(a))
 
 static void

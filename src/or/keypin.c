@@ -48,7 +48,9 @@ static int keypin_journal_append_entry(const uint8_t *rsa_id_digest,
                                        const uint8_t *ed25519_id_key);
 static int keypin_check_and_add_impl(const uint8_t *rsa_id_digest,
                                      const uint8_t *ed25519_id_key,
-                                     int do_not_add);
+                                     const int do_not_add,
+                                     const int replace);
+static int keypin_add_or_replace_entry_in_map(keypin_ent_t *ent);
 
 static HT_HEAD(rsamap, keypin_ent_st) the_rsa_map = HT_INITIALIZER();
 static HT_HEAD(edmap, keypin_ent_st) the_ed_map = HT_INITIALIZER();
@@ -100,12 +102,17 @@ HT_GENERATE2(edmap, keypin_ent_st, edmap_node, keypin_ent_hash_ed,
  * return KEYPIN_FOUND. If we find an entry that matches one key but
  * not the other, return KEYPIN_MISMATCH.  If we have no entry for either
  * key, add such an entry to the table and return KEYPIN_ADDED.
+ *
+ * If <b>replace_existing_entry</b> is true, then any time we would have said
+ * KEYPIN_FOUND, we instead add this entry anyway and return KEYPIN_ADDED.
  */
 int
 keypin_check_and_add(const uint8_t *rsa_id_digest,
-                     const uint8_t *ed25519_id_key)
+                     const uint8_t *ed25519_id_key,
+                     const int replace_existing_entry)
 {
-  return keypin_check_and_add_impl(rsa_id_digest, ed25519_id_key, 0);
+  return keypin_check_and_add_impl(rsa_id_digest, ed25519_id_key, 0,
+                                   replace_existing_entry);
 }
 
 /**
@@ -116,7 +123,7 @@ int
 keypin_check(const uint8_t *rsa_id_digest,
              const uint8_t *ed25519_id_key)
 {
-  return keypin_check_and_add_impl(rsa_id_digest, ed25519_id_key, 1);
+  return keypin_check_and_add_impl(rsa_id_digest, ed25519_id_key, 1, 0);
 }
 
 /**
@@ -125,7 +132,8 @@ keypin_check(const uint8_t *rsa_id_digest,
 static int
 keypin_check_and_add_impl(const uint8_t *rsa_id_digest,
                           const uint8_t *ed25519_id_key,
-                          int do_not_add)
+                          const int do_not_add,
+                          const int replace)
 {
   keypin_ent_t search, *ent;
   memset(&search, 0, sizeof(search));
@@ -139,18 +147,21 @@ keypin_check_and_add_impl(const uint8_t *rsa_id_digest,
     if (tor_memeq(ent->ed25519_key, ed25519_id_key,sizeof(ent->ed25519_key))) {
       return KEYPIN_FOUND; /* Match on both keys. Great. */
     } else {
-      return KEYPIN_MISMATCH; /* Found RSA with different Ed key */
+      if (!replace)
+        return KEYPIN_MISMATCH; /* Found RSA with different Ed key */
     }
   }
 
   /* See if we know a different RSA key for this ed key */
-  ent = HT_FIND(edmap, &the_ed_map, &search);
-  if (ent) {
-    /* If we got here, then the ed key matches and the RSA doesn't */
-    tor_assert(fast_memeq(ent->ed25519_key, ed25519_id_key,
-                          sizeof(ent->ed25519_key)));
-    tor_assert(fast_memneq(ent->rsa_id, rsa_id_digest, sizeof(ent->rsa_id)));
-    return KEYPIN_MISMATCH;
+  if (! replace) {
+    ent = HT_FIND(edmap, &the_ed_map, &search);
+    if (ent) {
+      /* If we got here, then the ed key matches and the RSA doesn't */
+      tor_assert(fast_memeq(ent->ed25519_key, ed25519_id_key,
+                            sizeof(ent->ed25519_key)));
+      tor_assert(fast_memneq(ent->rsa_id, rsa_id_digest, sizeof(ent->rsa_id)));
+      return KEYPIN_MISMATCH;
+    }
   }
 
   /* Okay, this one is new to us. */
@@ -158,7 +169,12 @@ keypin_check_and_add_impl(const uint8_t *rsa_id_digest,
     return KEYPIN_NOT_FOUND;
 
   ent = tor_memdup(&search, sizeof(search));
-  keypin_add_entry_to_map(ent);
+  int r = keypin_add_or_replace_entry_in_map(ent);
+  if (! replace) {
+    tor_assert(r == 1);
+  } else {
+    tor_assert(r != 0);
+  }
   keypin_journal_append_entry(rsa_id_digest, ed25519_id_key);
   return KEYPIN_ADDED;
 }
