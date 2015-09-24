@@ -4964,6 +4964,12 @@ routerinfo_incompatible_with_extrainfo(const routerinfo_t *ri,
     goto err;
   }
 
+  if (!digest256_matches && !digest_matches) {
+    if (msg) *msg = "Neither digest256 or digest matched "
+               "digest from routerdesc";
+    goto err;
+  }
+
   if (!digest256_matches) {
     if (msg) *msg = "Extrainfo digest did not match digest256 from routerdesc";
     goto err; /* Digest doesn't match declared value. */
