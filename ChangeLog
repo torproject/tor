@@ -234,10 +234,10 @@ Changes in version 0.2.7.3-rc - 2015-09-24
   o Removed code:
     - The internal pure-C tor-fw-helper tool is now removed from the Tor
       distribution, in favor of the pure-Go clone available from
-      https://github.com/Yawning/tor-fw-helper . The libraries used by
-      the C tor-fw-helper are not, in our opinion, very confidence-
-      inspiring in their secure-programming techniques. Closes
-      ticket 13338.
+      https://gitweb.torproject.org/tor-fw-helper.git/ . The libraries
+      used by the C tor-fw-helper are not, in our opinion, very
+      confidence- inspiring in their secure-programming techniques.
+      Closes ticket 13338.
     - Remove the code that would try to aggressively flush controller
       connections while writing to them. This code was introduced in
       0.1.2.7-alpha, in order to keep output buffers from exceeding
