@@ -1,4 +1,9 @@
 
+export PYTHON=@PYTHON@
+export SHELL=@SHELL@
+export abs_top_srcdir
+export builddir
+
 TESTSCRIPTS = src/test/test_zero_length_keys.sh
 
 if USEPYTHON
@@ -16,17 +21,10 @@ TEST_CHUTNEY_FLAVORS_IPV6 = bridges+ipv6-min ipv6-exit-min
 TEST_CHUTNEY_FLAVORS_MIXED = mixed
 
 ### This is a lovely feature, but it requires automake >= 1.12, and Tor
-###  doesn't require that yet.  Below is a kludge to work around.
+###  doesn't require that yet.
 ###
 # TEST_EXTENSIONS = .sh
 # SH_LOG_COMPILER = $(SHELL)
-
-check-am: set-test-permissions
-
-.PHONY: set-test-permissions
-set-test-permissions: $(TESTSCRIPTS)
-	$(AM_V_at)chmod u+x $(TESTSCRIPTS)
-
 
 noinst_PROGRAMS+= src/test/bench
 if UNITTESTS_ENABLED
@@ -194,4 +192,6 @@ EXTRA_DIST += \
 	src/test/ntor_ref.py \
 	src/test/slownacl_curve25519.py \
 	src/test/zero_length_keys.sh \
-	src/test/test_keygen.sh
+	src/test/test_keygen.sh \
+        src/test/test_zero_length_keys.sh \
+        src/test/test_ntor.sh src/test/test_bt.sh

@@ -1,0 +1,6 @@
+  o Testing:
+   - Use environment variables rather than autoconf substitutions to send
+     variables from the build system to the test scripts. This change should
+     be easier to maintain, and cause 'make distcheck' to work better than
+     before. Fixes bug 17148.
+
