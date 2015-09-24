@@ -3790,6 +3790,7 @@ typedef struct {
                                      * number of servers per IP address shared
                                      * with an authority. */
   int AuthDirHasIPv6Connectivity; /**< Boolean: are we on IPv6?  */
+  int AuthDirPinKeys; /**< Boolean: Do we enforce key-pinning? */
 
   /** If non-zero, always vote the Fast flag for any relay advertising
    * this amount of capacity or more. */

@@ -7,7 +7,8 @@
 #include "testsupport.h"
 
 int keypin_check_and_add(const uint8_t *rsa_id_digest,
-                         const uint8_t *ed25519_id_key);
+                         const uint8_t *ed25519_id_key,
+                         const int replace_existing_entry);
 int keypin_check(const uint8_t *rsa_id_digest,
                  const uint8_t *ed25519_id_key);
 

@@ -108,21 +108,21 @@ test_keypin_parse_file(void *arg)
     ;
 
   tt_int_op(0, ==, keypin_load_journal_impl(data2, strlen(data2)));
-  tt_int_op(11, ==, smartlist_len(mock_addent_got));
+  tt_int_op(13, ==, smartlist_len(mock_addent_got));
   ent = smartlist_get(mock_addent_got, 9);
   tt_mem_op(ent->rsa_id, ==, "\"You have made a goo", 20);
   tt_mem_op(ent->ed25519_key, ==, "d beginning.\" But no more. Wizar", 32);
 
-  ent = smartlist_get(mock_addent_got, 10);
+  ent = smartlist_get(mock_addent_got, 12);
   tt_mem_op(ent->rsa_id, ==, "ds speak truth, and ", 20);
-  tt_mem_op(ent->ed25519_key, ==, "it was true that all the master\n", 32);
+  tt_mem_op(ent->ed25519_key, ==, "it was tru\xa5 that all the master\n", 32);
 
   /* File truncated before NL */
   const char data3[] =
     "Tm8gZHJhZ29uIGNhbiByZXNpc3Q IHRoZSBmYXNjaW5hdGlvbiBvZiByaWRkbGluZyB0YWw";
   tt_int_op(0, ==, keypin_load_journal_impl(data3, strlen(data3)));
-  tt_int_op(12, ==, smartlist_len(mock_addent_got));
-  ent = smartlist_get(mock_addent_got, 11);
+  tt_int_op(14, ==, smartlist_len(mock_addent_got));
+  ent = smartlist_get(mock_addent_got, 13);
   tt_mem_op(ent->rsa_id, ==, "No dragon can resist", 20);
   tt_mem_op(ent->ed25519_key, ==, " the fascination of riddling tal", 32);
 
@@ -131,7 +131,8 @@ test_keypin_parse_file(void *arg)
   smartlist_free(mock_addent_got);
 }
 
-#define ADD(a,b) keypin_check_and_add((const uint8_t*)(a),(const uint8_t*)(b))
+#define ADD(a,b) keypin_check_and_add((const uint8_t*)(a),\
+                                      (const uint8_t*)(b),0)
 #define LONE_RSA(a) keypin_check_lone_rsa((const uint8_t*)(a))
 
 static void

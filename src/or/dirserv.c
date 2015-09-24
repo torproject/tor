@@ -248,6 +248,7 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
                           int severity)
 {
   char d[DIGEST_LEN];
+  const int key_pinning = get_options()->AuthDirPinKeys;
 
   if (crypto_pk_get_digest(router->identity_pkey, d)) {
     log_warn(LD_BUG,"Error computing fingerprint");
@@ -261,14 +262,16 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
     if (KEYPIN_MISMATCH ==
         keypin_check((const uint8_t*)router->cache_info.identity_digest,
                      router->signing_key_cert->signing_key.pubkey)) {
-      if (msg) {
-        *msg = "Ed25519 identity key or RSA identity key has changed.";
-      }
       log_fn(severity, LD_DIR,
              "Descriptor from router %s has an Ed25519 key, "
                "but the <rsa,ed25519> keys don't match what they were before.",
                router_describe(router));
-      return FP_REJECT;
+      if (key_pinning) {
+        if (msg) {
+          *msg = "Ed25519 identity key or RSA identity key has changed.";
+        }
+        return FP_REJECT;
+      }
     }
   } else {
     /* No ed25519 key */
@@ -277,13 +280,15 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
       log_fn(severity, LD_DIR,
                "Descriptor from router %s has no Ed25519 key, "
                "when we previously knew an Ed25519 for it. Ignoring for now, "
-               "since Tor 0.2.6 is under development.",
+               "since Ed25519 keys are fairly new.",
                router_describe(router));
 #ifdef DISABLE_DISABLING_ED25519
-      if (msg) {
-        *msg = "Ed25519 identity key has disappeared.";
+      if (key_pinning) {
+        if (msg) {
+          *msg = "Ed25519 identity key has disappeared.";
+        }
+        return FP_REJECT;
       }
-      return FP_REJECT;
 #endif
     }
   }
@@ -582,6 +587,7 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
   char *desc, *nickname;
   const size_t desclen = ri->cache_info.signed_descriptor_len +
       ri->cache_info.annotations_len;
+  const int key_pinning = get_options()->AuthDirPinKeys;
   *msg = NULL;
 
   /* If it's too big, refuse it now. Otherwise we'll cache it all over the
@@ -626,7 +632,8 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
   if (ri->signing_key_cert) {
     keypin_status = keypin_check_and_add(
       (const uint8_t*)ri->cache_info.identity_digest,
-      ri->signing_key_cert->signing_key.pubkey);
+      ri->signing_key_cert->signing_key.pubkey,
+      ! key_pinning);
   } else {
     keypin_status = keypin_check_lone_rsa(
       (const uint8_t*)ri->cache_info.identity_digest);
@@ -635,7 +642,7 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
       keypin_status = KEYPIN_NOT_FOUND;
 #endif
   }
-  if (keypin_status == KEYPIN_MISMATCH) {
+  if (keypin_status == KEYPIN_MISMATCH && key_pinning) {
     log_info(LD_DIRSERV, "Dropping descriptor from %s (source: %s) because "
              "its key did not match an older RSA/Ed25519 keypair",
              router_describe(ri), source);
