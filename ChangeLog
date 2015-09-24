@@ -254,6 +254,10 @@ Changes in version 0.2.7.3-rc - 2015-09-24
     - Autodetect CHUTNEY_PATH if the chutney and Tor sources are side-
       by-side in the same parent directory. Closes ticket 16903. Patch
       by "teor".
+    - Use environment variables rather than autoconf substitutions to
+      send variables from the build system to the test scripts. This
+      change should be easier to maintain, and cause 'make distcheck' to
+      work better than before. Fixes bug 17148.
     - Add a new set of callgraph analysis scripts that use clang to
       produce a list of which Tor functions are reachable from which
       other Tor functions. We're planning to use these to help simplify
