@@ -1,7 +1,0 @@
-  o Major features (Ed25519 keys, keypinning)
-    - The key-pinning option on directory authorities is now
-      advisory-only by default. In a future version, or when the
-      AuthDirPinKeys option is set, pins are enforced again.
-      Disabling key-pinning seemed like a good idea so that we can
-      survive the fallout of any usability problems associated with
-      ed25519 keys. Closes ticket 17135.

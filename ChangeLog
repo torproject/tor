@@ -9,16 +9,18 @@ Changes in version 0.2.7.3-rc - 2015-09-2?
   test-full-online", requiring stem and chutney and a network
   connection) raise the coverage to XXX.
 
-  If this is your first time upgrading a relay to Tor 0.2.7, your Tor
-  relay will, by default, generate a new Ed25519 identity key. If you
-  would prefer to keep your Ed25519 identity key offline or encrypted
-  for improved security, you can do so by following the instructions
-  at XXX.
-
   o Major features (security, hidden services):
     - Hidden services are required to use more than one EntryNode, to
       avoid a guard discovery attack. See ticket for more information.
       Fixes ticket 14917.
+
+  o Major features (Ed25519 keys, keypinning):
+    - The key-pinning option on directory authorities is now advisory-
+      only by default. In a future version, or when the AuthDirPinKeys
+      option is set, pins are enforced again. Disabling key-pinning
+      seemed like a good idea so that we can survive the fallout of any
+      usability problems associated with ed25519 keys. Closes
+      ticket 17135.
 
   o Major features (ed25519 performance):
     - Improve the speed of Ed25519 operations and Curve25519 keypair
