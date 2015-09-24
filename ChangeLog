@@ -10,19 +10,23 @@ Changes in version 0.2.7.3-rc - 2015-09-24
   connection) raise the coverage to 64.49%.
 
   o Major features (security, hidden services):
-    - Hidden services are required to use more than one EntryNode, to
-      avoid a guard discovery attack. See ticket for more information.
-      Fixes ticket 14917.
+    - Hidden services, if using the EntryNodes option, are required to
+      use more than one EntryNode, in order to avoid a guard discovery
+      attack. (This would only affect people who had configured hidden
+      services and manually specified the EntryNodes option with a
+      single entry-node. The impact was that it would be easy to
+      remotely identify the guard node used by such a hidden service.
+      See ticket for more information.) Fixes ticket 14917.
 
   o Major features (Ed25519 keys, keypinning):
     - The key-pinning option on directory authorities is now advisory-
       only by default. In a future version, or when the AuthDirPinKeys
       option is set, pins are enforced again. Disabling key-pinning
       seemed like a good idea so that we can survive the fallout of any
-      usability problems associated with ed25519 keys. Closes
+      usability problems associated with Ed25519 keys. Closes
       ticket 17135.
 
-  o Major features (ed25519 performance):
+  o Major features (Ed25519 performance):
     - Improve the speed of Ed25519 operations and Curve25519 keypair
       generation when built targeting 32 bit x86 platforms with SSE2
       available. Implements ticket 16535.
@@ -41,9 +45,9 @@ Changes in version 0.2.7.3-rc - 2015-09-24
       failure conditions. Thanks to "s7r" for reporting and diagnosing
       so many of these!
     - Add a new OfflineMasterKey option to tell Tor never to try loading
-      or generating a secret ed25519 identity key. You can use this in
+      or generating a secret Ed25519 identity key. You can use this in
       combination with tor --keygen to manage offline and/or encrypted
-      ed25519 keys. Implements ticket 16944.
+      Ed25519 keys. Implements ticket 16944.
     - Add a --newpass option to allow changing or removing the
       passphrase of an encrypted key with tor --keygen. Implements part
       of ticket 16769.
@@ -82,7 +86,9 @@ Changes in version 0.2.7.3-rc - 2015-09-24
       drop. This change should make some attacks against the hidden
       service directory system harder. Fixes ticket 15963.
     - Turn on hidden service statistics collection by setting the torrc
-      option HiddenServiceStatistics to "1" by default. Closes
+      option HiddenServiceStatistics to "1" by default. (This keeps
+      track only of the fraction of traffic used by hidden services, and
+      the total number of hidden services in existence.) Closes
       ticket 15254.
     - Client now uses an introduction point failure cache to know when
       to fetch or keep a descriptor in their cache. Previously, failures
@@ -91,13 +97,13 @@ Changes in version 0.2.7.3-rc - 2015-09-24
 
   o Minor features (testing, authorities, documentation):
     - New TestingDirAuthVote{Exit,Guard,HSDir}IsStrict flags to
-      explicitly manage consensus flags in t3esting networks. Patch by
+      explicitly manage consensus flags in testing networks. Patch by
       "robgjansen", modified by "teor". Implements part of ticket 14882.
 
   o Minor bugfixes (security, exit policies):
     - ExitPolicyRejectPrivate now also rejects the relay's published
       IPv6 address (if any), and any publicly routable IPv4 or IPv6
-      addresses on any local interfacesn. ticket 17027. Patch by "teor".
+      addresses on any local interfaces. ticket 17027. Patch by "teor".
       Fixes bug 17027; bugfix on 0.2.0.11-alpha.
 
   o Minor bug fixes (torrc exit policies):
@@ -112,7 +118,7 @@ Changes in version 0.2.7.3-rc - 2015-09-24
       including any ExitPolicy lines after accept *:* or reject *:*.
       Related to ticket 16069.
     - When parsing torrc ExitPolicies, we now issue an info-level
-      message: when expanding an "accept/reject *" line to include both
+      message when expanding an "accept/reject *" line to include both
       IPv4 and IPv6 wildcard addresses. Related to ticket 16069.
     - In each instance above, usage advice is provided to avoid the
       message. Resolves ticket 16069. Patch by "teor". Fixes part of bug
@@ -121,8 +127,8 @@ Changes in version 0.2.7.3-rc - 2015-09-24
   o Minor bugfixes (authority):
     - Don't assign "HSDir" to a router if it isn't Valid and Running.
       Fixes bug 16524; bugfix on 0.2.7.2-alpha.
-    - Downgrade log messages about Ed25519 key issues, if they are in
-      old cached router descriptors. Fixes part of bug 16286; bugfix
+    - Downgrade log messages about Ed25519 key issues if they are in old
+      cached router descriptors. Fixes part of bug 16286; bugfix
       on 0.2.7.2-alpha.
     - When we find an Ed25519 key issue in a cached descriptor, stop
       saying the descriptor was just "uploaded". Fixes another part of
@@ -140,8 +146,8 @@ Changes in version 0.2.7.3-rc - 2015-09-24
       incorrectly removed. Fixes bug 16924; bugfix on 0.2.4.4-alpha.
 
   o Minor bugfixes (documentation):
-    - Advise users how to configure separate IPv4 and IPv6 exit policies
-      in the manpage and sample torrcs. Related to ticket 16069.
+    - Advise users on how to configure separate IPv4 and IPv6 exit
+      policies in the manpage and sample torrcs. Related to ticket 16069.
     - Fix the usage message of tor-resolve(1) so that it no longer lists
       the removed -F option. Fixes bug 16913; bugfix on 0.2.2.28-beta.
     - Fix an error in the manual page and comments for
@@ -171,7 +177,7 @@ Changes in version 0.2.7.3-rc - 2015-09-24
     - Try harder to normalize the exit status of the Tor process to the
       standard-provided range. Fixes bug 16975; bugfix on every version
       of Tor ever.
-    - Check correctly for windows socket errors in the workqueue
+    - Check correctly for Windows socket errors in the workqueue
       backend. Fixes bug 16741; bugfix on 0.2.6.3-alpha.
     - Fix the behavior of crypto_rand_time_range() when told to consider
       times before 1970. (These times were possible when running in a
@@ -183,7 +189,7 @@ Changes in version 0.2.7.3-rc - 2015-09-24
   o Minor bugfixes (relay):
     - Ensure that worker threads actually exit when a fatal error or
       shutdown is indicated. This fix doesn't currently affect the
-      behaviour of Tor, because Tor workers never indicates fatal error
+      behavior of Tor, because Tor workers never indicates fatal error
       or shutdown except in the unit tests. Fixes bug 16868; bugfix
       on 0.2.6.3-alpha.
     - Unblock threads before releasing the work queue mutex to ensure
@@ -206,14 +212,14 @@ Changes in version 0.2.7.3-rc - 2015-09-24
       directory_all_unreachable() into a callback. Closes ticket 16762.
     - Treat the loss of an owning controller as equivalent to a SIGTERM
       signal. This removes a tiny amount of duplicated code, and
-      simplifies our callgraph. Closes ticekt 16788.
+      simplifies our callgraph. Closes ticket 16788.
     - When generating an event to send to the controller, we no longer
       put the event over the network immediately. Instead, we queue
       these events, and use a Libevent callback to deliver them. This
       change simplifies Tor's callgraph by reducing the number of
       functions from which all other Tor functions are reachable. Closes
       ticket 16695.
-    - Wrap windows-only C files inside '#ifdef _WIN32' so that tools
+    - Wrap Windows-only C files inside '#ifdef _WIN32' so that tools
       that try to scan or compile every file on Unix won't decide that
       they are broken.
     - Remove the unused "nulterminate" argument from buf_pullup().
@@ -230,7 +236,7 @@ Changes in version 0.2.7.3-rc - 2015-09-24
       distribution, in favor of the pure-Go clone available from
       https://github.com/Yawning/tor-fw-helper . The libraries used by
       the C tor-fw-helper are not, in our opinion, very confidence-
-      inspiring in their secure-proggramming techniques. Closes
+      inspiring in their secure-programming techniques. Closes
       ticket 13338.
     - Remove the code that would try to aggressively flush controller
       connections while writing to them. This code was introduced in
@@ -243,9 +249,9 @@ Changes in version 0.2.7.3-rc - 2015-09-24
     - Make "bridges+hs" the default test network. This tests almost all
       tor functionality during make test-network, while allowing tests
       to succeed on non-IPv6 systems. Requires chutney commit 396da92 in
-      test-network-bridges-hs. Closes tickets 16945 (tor), 16946
-      (chutney) . Patches by "teor".
-    - Autodetect CHUTNEY_PATH if the chutney and tor sources are side-
+      test-network-bridges-hs. Closes tickets 16945 (tor) and 16946
+      (chutney). Patches by "teor".
+    - Autodetect CHUTNEY_PATH if the chutney and Tor sources are side-
       by-side in the same parent directory. Closes ticket 16903. Patch
       by "teor".
     - Add a new set of callgraph analysis scripts that use clang to
@@ -254,7 +260,7 @@ Changes in version 0.2.7.3-rc - 2015-09-24
       our code structure by identifying illogical dependencies.
     - Add new 'test-full' and 'test-full-online' targets to run all
       tests, including integration tests with stem and chutney.
-    - Make the test-workqueue test work on windows by initializing the
+    - Make the test-workqueue test work on Windows by initializing the
       network before we begin.
     - New make target (make test-network-all) to run multiple applicable
       chutney test cases. Patch from Teor; closes 16953.
