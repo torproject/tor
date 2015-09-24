@@ -84,15 +84,24 @@ main(int argc, char **argv)
 
   if (argc < 2) {
     puts("I take an argument. It should be \"assert\" or \"crash\" or "
-         "\"none\"");
+         "\"backtraces\" or \"none\"");
     return 1;
   }
+
+#if !(defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \
+   defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION))
+    puts("Backtrace reporting is not supported on this platform");
+    return 77;
+#endif
+
   if (!strcmp(argv[1], "assert")) {
     crashtype = 1;
   } else if (!strcmp(argv[1], "crash")) {
     crashtype = 0;
   } else if (!strcmp(argv[1], "none")) {
     crashtype = -1;
+  } else if (!strcmp(argv[1], "backtraces")) {
+    return 0;
   } else {
     puts("Argument should be \"assert\" or \"crash\" or \"none\"");
     return 1;
