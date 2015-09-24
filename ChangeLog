@@ -2,7 +2,8 @@ Changes in version 0.2.7.3-rc - 2015-09-2?
 
   Tor 0.2.7.3-rc is the first release candidate in the 0.2.7 series.  It
   contains numerous usability fixes for Ed25519 keys, safeguards against
-  several misconfiguration problems, and numerous bugfixes and small
+  several misconfiguration problems, significant simplifications to Tor's
+  callgraph, and numerous bugfixes and small
   features.
 
   This is the most tested release of Tor to date. The unit tests cover
@@ -132,18 +133,17 @@ Changes in version 0.2.7.3-rc - 2015-09-2?
       actual behavior. These include: using an IPv4 address
       with an accept6 or reject6 line; using "private" on an accept6
       or reject6 line; and including any ExitPolicy lines after
-      accept *:* or reject *:*.
+      accept *:* or reject *:*. Related to ticket 16069.
     - When parsing torrc ExitPolicies, we now issue an info-level
-      message: * when expanding an accept/reject * line to include both
-      IPv4 and IPv6 wildcard addresses.
-    - In each instance, usage advice is provided to avoid the message.
+      message: when expanding an "accept/reject *" line to include both
+      IPv4 and IPv6 wildcard addresses. Related to ticket 16069.
+    - In each instance above, usage advice is provided to avoid the message.
       Resolves ticket 16069. Patch by "teor". Fixes part of bug
-  16069; bugfix on 0.2.4.7-alpha.
+      16069; bugfix on 0.2.4.7-alpha.
 
   o Minor bugfixes (open file limit):
     - Fix set_max_file_descriptors() to set by default the max open file
-      limit to the current limit in case setrlimit() fails so we at
-      least have a usable value; Fixes bug 16274; bugfix on tor-
+      limit to the current limit when setrlimit() fails. Fixes bug 16274; bugfix on tor-
       0.2.0.10-alpha. Patch by dgoulet.
 
   o Minor bugfixes (authority):
@@ -157,19 +157,12 @@ Changes in version 0.2.7.3-rc - 2015-09-2?
       bug 16286; bugfix on 0.2.7.2-alpha.
 
   o Minor bugfixes (control port):
-    - Control port was using set_max_file_descriptors() with a limit set
-      to 0 to get the max value. A recent fix made this use case return
-      an error and introduced dead code in that function. This triggered
-      a warning that our limit (ConnLimit) was invalid but in reality it
-      was not.
-
-      Now, to the control port uses a specific getter function to query
-      the value and set_max_file_descriptors() should never be used
-      again for that purpose. Fixes bug 16697; bugfix on 0.2.7.2-alpha.
+    - Repair a warning and a spurious result when getting the maximum number of file descriptors
+      from the controller. Fixes bug 16697; bugfix on 0.2.7.2-alpha.
 
   o Minor bugfixes (Ed25519):
     - Fix a memory leak when reading router descriptors with expired
-      Ed25519 certificate. Fixes bug 16539; bugfix on 0.2.7.2-alpha.
+      Ed25519 certificates. Fixes bug 16539; bugfix on 0.2.7.2-alpha.
 
   o Minor bugfixes (linux seccomp2 sandbox):
     - Allow bridge authorities to run correctly under the seccomp2
@@ -182,7 +175,7 @@ Changes in version 0.2.7.3-rc - 2015-09-2?
       OpenSSL 1.1. Fixes bug 14047; bugfix on 0.2.7.2-alpha.
 
   o Minor bugfixes (relay):
-    - Unblock threads before releasing the mutex to ensure predictable
+    - Unblock threads before releasing the work queue mutex to ensure predictable
       scheduling behavior. Fixes bug 16644; bugfix on 0.2.6.3-alpha.
 
   o Code simplification and refactoring:
