@@ -1037,7 +1037,7 @@ policies_parse_exit_policy_internal(config_line_t *cfg, smartlist_t **dest,
                  "address", fmt_addr(ipv6_local_address));
       } else {
         char buf6[POLICY_BUF_LEN];
-        tor_snprintf(buf6, sizeof(buf6), "reject %s:*",
+        tor_snprintf(buf6, sizeof(buf6), "reject [%s]:*",
                      fmt_addr(ipv6_local_address));
         append_exit_policy_string(dest, buf6);
         log_info(LD_CONFIG, "Adding a reject ExitPolicy '%s' for our "
@@ -1075,7 +1075,7 @@ policies_parse_exit_policy_internal(config_line_t *cfg, smartlist_t **dest,
            * address */
           if (ipv6_local_address == NULL
               || !tor_addr_eq(ipv6_local_address, a)) {
-            tor_snprintf(bufif, sizeof(bufif), "reject6 %s:*",
+            tor_snprintf(bufif, sizeof(bufif), "reject6 [%s]:*",
                          fmt_addr(a));
             append_exit_policy_string(dest, bufif);
             log_info(LD_CONFIG, "Adding a reject ExitPolicy '%s' for a local "
