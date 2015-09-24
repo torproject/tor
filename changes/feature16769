@@ -1,4 +1,0 @@
-  o Minor features (ed25519):
-    - Add a --newpass option to allow changing or removing the
-      passphrase of an encrypted key with tor --keygen. Implements
-      part of ticket 16769.

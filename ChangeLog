@@ -38,6 +38,13 @@ Changes in version 0.2.7.3-rc - 2015-09-2?
       messages are better, and the code can recover from far more
       failure conditions. Thanks to "s7r" for reporting and diagnosing
       so many of these!
+    - Add a new OfflineMasterKey option to tell Tor never to try loading
+      or generating a secret ed25519 identity key. You can use this in
+      combination with tor --keygen to manage offline and/or encrypted
+      ed25519 keys. Implements ticket 16944.
+    - Add a --newpass option to allow changing or removing the
+      passphrase of an encrypted key with tor --keygen. Implements part
+      of ticket 16769.
     - On receiving a HUP signal, check to see whether the Ed25519
       signing key has changed, and reload it if so. Closes ticket 16790.
 
@@ -59,9 +66,12 @@ Changes in version 0.2.7.3-rc - 2015-09-2?
   o Minor features (compilation):
     - Give a warning as early as possible when trying to build with an
       unsupported OpenSSL version. Closes ticket 16901.
+    - Fail during configure if we're trying to build against an OpenSSL
+      built without ECC support. Fixes bug 17109, bugfix on 0.2.7.1-alpha
+      which started requiring ECC.
 
   o Minor features (geoip):
-    - Update geoip and geoip6 to the July 8 2015 Maxmind GeoLite2
+    - Update geoip and geoip6 to the September 3 2015 Maxmind GeoLite2
       Country database.
 
   o Minor features (hidden services):
@@ -128,6 +138,8 @@ Changes in version 0.2.7.3-rc - 2015-09-2?
       incorrectly removed. Fixes bug 16924; bugfix on 0.2.4.4-alpha.
 
   o Minor bugfixes (documentation):
+    - Advise users how to configure separate IPv4 and IPv6 exit policies
+      in the manpage and sample torrcs. Related to ticket 16069.
     - Fix the usage message of tor-resolve(1) so that it no longer lists
       the removed -F option. Fixes bug 16913; bugfix on 0.2.2.28-beta.
     - Fix an error in the manual page and comments for

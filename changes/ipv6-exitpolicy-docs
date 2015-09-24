@@ -1,8 +1,0 @@
-  o Minor bug fixes (documentation, torrc exit policies):
-    - Advise users how to configure separate IPv4 and IPv6 exit
-      policies in the manpage and sample torrcs.
-    - Fixup formatting errors in the documentation changes from
-      tickets #16069 and #17027.
-      Related to fixes in ticket #16069 and #17027. Patch by "teor".
-      Patch on 2eb7eafc9d78 and a96c0affcb4c (25 Oct 2012),
-      released in 0.2.4.7-alpha.
