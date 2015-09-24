@@ -7,7 +7,7 @@ Changes in version 0.2.7.3-rc - 2015-09-2?
   This is the most tested release of Tor to date. The unit tests cover
   39.40% of the code, and the integration tests (accessible with "make
   test-full-online", requiring stem and chutney and a network
-  connection) raise the coverage to XXX.
+  connection) raise the coverage to 64.49%.
 
   o Major features (security, hidden services):
     - Hidden services are required to use more than one EntryNode, to
