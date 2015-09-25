@@ -1,4 +1,4 @@
-Changes in version 0.2.7.3-rc - 2015-09-24
+Changes in version 0.2.7.3-rc - 2015-09-25
   Tor 0.2.7.3-rc is the first release candidate in the 0.2.7 series. It
   contains numerous usability fixes for Ed25519 keys, safeguards against
   several misconfiguration problems, significant simplifications to
