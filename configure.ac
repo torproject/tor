@@ -360,6 +360,7 @@ AC_SEARCH_LIBS(socket, [socket network])
 AC_SEARCH_LIBS(gethostbyname, [nsl])
 AC_SEARCH_LIBS(dlopen, [dl])
 AC_SEARCH_LIBS(inet_aton, [resolv])
+AC_SEARCH_LIBS(backtrace, [execinfo])
 saved_LIBS="$LIBS"
 AC_SEARCH_LIBS([clock_gettime], [rt])
 if test "$LIBS" != "$saved_LIBS"; then
