@@ -21,6 +21,13 @@ bin_SCRIPTS=
 AM_CPPFLAGS=
 AM_CFLAGS = @TOR_SYSTEMD_CFLAGS@
 SHELL = @SHELL@
+
+if COVERAGE_ENABLED
+TESTING_TOR_BINARY="$(top_builddir)/src/or/tor-cov"
+else
+TESTING_TOR_BINARY="$(top_builddir)/src/or/tor"
+endif
+
 include src/include.am
 include doc/include.am
 include contrib/include.am
