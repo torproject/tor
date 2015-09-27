@@ -6,8 +6,12 @@
 #include "dns.h"
 #include "connection.h"
 
+#define NS_MODULE dns
+
+#define NS_SUBMODULE clip_ttl
+
 static void
-test_dns_clip_ttl(void *arg)
+NS(test_main)(void *arg)
 {
   (void)arg;
 
@@ -21,8 +25,12 @@ test_dns_clip_ttl(void *arg)
   return;
 }
 
+#undef NS_SUBMODULE
+
+#define NS_SUBMODULE expiry_ttl
+
 static void
-test_dns_expiry_ttl(void *arg)
+NS(test_main)(void *arg)
 {
   (void)arg;
 
@@ -35,6 +43,10 @@ test_dns_expiry_ttl(void *arg)
   done:
   return;
 }
+
+#undef NS_SUBMODULE
+
+#define NS_SUBMODULE resolve
 
 static int resolve_retval = 0;
 static int resolve_made_conn_pending = 0;
@@ -130,7 +142,7 @@ connection_free_replacement(connection_t *conn)
 }
 
 static void
-test_dns_resolve_outer(void *arg)
+NS(test_main)(void *arg)
 {
   (void) arg;
   int retval;
@@ -302,10 +314,14 @@ test_dns_resolve_outer(void *arg)
   return;
 }
 
+#undef NS_SUBMODULE
+
 struct testcase_t dns_tests[] = {
-   { "clip_ttl", test_dns_clip_ttl, 0, NULL, NULL },
-   { "expiry_ttl", test_dns_expiry_ttl, 0, NULL, NULL },
-   { "resolve_outer", test_dns_resolve_outer, TT_FORK, NULL, NULL },
+   TEST_CASE(clip_ttl),
+   TEST_CASE(expiry_ttl),
+   TEST_CASE(resolve),
    END_OF_TESTCASES
 };
+
+#undef NS_MODULE
 
