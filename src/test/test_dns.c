@@ -55,6 +55,11 @@ static cached_resolve_t *cache_entry = NULL;
 
 static int n_fake_impl = 0;
 
+NS_DECL(int, dns_resolve_impl, (edge_connection_t *exitconn, int is_resolve,
+                                or_circuit_t *oncirc, char **hostname_out,
+                                int *made_connection_pending_out,
+                                cached_resolve_t **resolve_out));
+
 /** This will be our configurable substitute for <b>dns_resolve_impl</b> in
  * dns.c. It will return <b>resolve_retval</b>,
  * and set <b>resolve_made_conn_pending</b> to
@@ -64,10 +69,10 @@ static int n_fake_impl = 0;
  * 1.
  */
 static int
-dns_resolve_fake_impl(edge_connection_t *exitconn, int is_resolve,
-                      or_circuit_t *oncirc, char **hostname_out,
-                      int *made_connection_pending_out,
-                      cached_resolve_t **resolve_out)
+NS(dns_resolve_impl)(edge_connection_t *exitconn, int is_resolve,
+                     or_circuit_t *oncirc, char **hostname_out,
+                     int *made_connection_pending_out,
+                     cached_resolve_t **resolve_out)
 {
   (void)oncirc;
   (void)exitconn;
@@ -94,8 +99,8 @@ static uint8_t last_answer_type = 0;
 static cached_resolve_t *last_resolved;
 
 static void
-send_resolved_cell_replacement(edge_connection_t *conn, uint8_t answer_type,
-                               const cached_resolve_t *resolved)
+NS(send_resolved_cell)(edge_connection_t *conn, uint8_t answer_type,
+                       const cached_resolve_t *resolved)
 {
   conn_for_resolved_cell = conn;
 
@@ -110,8 +115,8 @@ static int n_send_resolved_hostname_cell_replacement = 0;
 static char *last_resolved_hostname = NULL;
 
 static void
-send_resolved_hostname_cell_replacement(edge_connection_t *conn,
-                                        const char *hostname)
+NS(send_resolved_hostname_cell)(edge_connection_t *conn,
+                                const char *hostname)
 {
   conn_for_resolved_cell = conn;
 
@@ -124,7 +129,7 @@ send_resolved_hostname_cell_replacement(edge_connection_t *conn,
 static int n_dns_cancel_pending_resolve_replacement = 0;
 
 static void
-dns_cancel_pending_resolve_replacement(const char *address)
+NS(dns_cancel_pending_resolve)(const char *address)
 {
   (void) address;
   n_dns_cancel_pending_resolve_replacement++;
@@ -134,7 +139,7 @@ static int n_connection_free = 0;
 static connection_t *last_freed_conn = NULL;
 
 static void
-connection_free_replacement(connection_t *conn)
+NS(connection_free)(connection_t *conn)
 {
    n_connection_free++;
 
@@ -161,9 +166,9 @@ NS(test_main)(void *arg)
   memset(exitconn,0,sizeof(edge_connection_t));
   memset(nextconn,0,sizeof(edge_connection_t));
 
-  MOCK(dns_resolve_impl,dns_resolve_fake_impl);
-  MOCK(send_resolved_cell,send_resolved_cell_replacement);
-  MOCK(send_resolved_hostname_cell,send_resolved_hostname_cell_replacement);
+  NS_MOCK(dns_resolve_impl);
+  NS_MOCK(send_resolved_cell);
+  NS_MOCK(send_resolved_hostname_cell);
 
   /*
    * CASE 1: dns_resolve_impl returns 1 and sets a hostname. purpose is
@@ -276,8 +281,8 @@ NS(test_main)(void *arg)
    * on exitconn with type being RESOLVED_TYPE_ERROR.
    */
 
-  MOCK(dns_cancel_pending_resolve,dns_cancel_pending_resolve_replacement);
-  MOCK(connection_free,connection_free_replacement);
+  NS_MOCK(dns_cancel_pending_resolve);
+  NS_MOCK(connection_free);
 
   exitconn->on_circuit = &(on_circuit->base_);
   exitconn->base_.purpose = EXIT_PURPOSE_RESOLVE;
@@ -300,11 +305,11 @@ NS(test_main)(void *arg)
   tt_assert(last_freed_conn == TO_CONN(exitconn));
 
   done:
-  UNMOCK(dns_resolve_impl);
-  UNMOCK(send_resolved_cell);
-  UNMOCK(send_resolved_hostname_cell);
-  UNMOCK(dns_cancel_pending_resolve);
-  UNMOCK(connection_free);
+  NS_UNMOCK(dns_resolve_impl);
+  NS_UNMOCK(send_resolved_cell);
+  NS_UNMOCK(send_resolved_hostname_cell);
+  NS_UNMOCK(dns_cancel_pending_resolve);
+  NS_UNMOCK(connection_free);
   tor_free(on_circuit);
   tor_free(exitconn);
   tor_free(nextconn);
