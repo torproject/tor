@@ -1711,7 +1711,8 @@ MOCK_IMPL(smartlist_t *,get_interface_address6_list,(int severity,
   }
 
   /* Okay, the smart way is out. */
-  get_interface_address6_via_udp_socket_hack(severity,family,&addr);
+  if (get_interface_address6_via_udp_socket_hack(severity,family,&addr))
+     return smartlist_new();
   if (!include_internal && tor_addr_is_internal(&addr, 0)) {
     return smartlist_new();
   } else {
