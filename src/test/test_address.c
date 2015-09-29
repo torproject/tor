@@ -781,7 +781,7 @@ test_address_get_if_addrs6_list_no_internal(void *arg)
 
 static int called_get_interface_addresses_raw = 0;
 
-smartlist_t *
+static smartlist_t *
 mock_get_interface_addresses_raw_fail(int severity)
 {
   (void)severity;
@@ -792,7 +792,7 @@ mock_get_interface_addresses_raw_fail(int severity)
 
 static int called_get_interface_address6_via_udp_socket_hack = 0;
 
-int
+static int
 mock_get_interface_address6_via_udp_socket_hack_fail(int severity,
                                                      sa_family_t family,
                                                      tor_addr_t *addr)
