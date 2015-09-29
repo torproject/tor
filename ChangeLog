@@ -61,7 +61,7 @@ Changes in version 0.2.7.3-rc - 2015-09-25
       Fixes bug 16685; bugfix on 0.2.7.2-alpha. Reported by "s7r".
 
   o Minor features (client-side privacy):
-    - New KeyAliveSOCKSAuth option to indefinitely extend circuit
+    - New KeyepAliveIsolateSOCKSAuth option to indefinitely extend circuit
       lifespan when IsolateSOCKSAuth and streams with SOCKS
       authentication are attached to the circuit. This allows
       applications like TorBrowser to manage circuit lifetime on their
