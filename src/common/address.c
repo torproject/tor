@@ -1506,8 +1506,8 @@ get_interface_addresses_ioctl(int severity)
  * Return a new smartlist of tor_addr_t on success, and NULL on failure.
  * (An empty smartlist indicates that we successfully learned that we have no
  * addresses.)  Log failure messages at <b>severity</b>. */
-STATIC smartlist_t *
-get_interface_addresses_raw(int severity)
+MOCK_IMPL(smartlist_t *,
+get_interface_addresses_raw,(int severity))
 {
   smartlist_t *result = NULL;
 #if defined(HAVE_IFADDRS_TO_SMARTLIST)
@@ -1547,10 +1547,10 @@ tor_addr_is_multicast(const tor_addr_t *a)
  * UDP socket trickery. Only look for address of given <b>family</b>.
  * Set result to *<b>addr</b>. Return 0 on success, -1 on failure.
  */
-STATIC int
-get_interface_address6_via_udp_socket_hack(int severity,
-                                           sa_family_t family,
-                                           tor_addr_t *addr)
+MOCK_IMPL(int,
+get_interface_address6_via_udp_socket_hack,(int severity,
+                                            sa_family_t family,
+                                            tor_addr_t *addr))
 {
   struct sockaddr_storage my_addr, target_addr;
   int sock=-1, r=-1;
@@ -1614,6 +1614,8 @@ get_interface_address6_via_udp_socket_hack(int severity,
  err:
   if (sock >= 0)
     tor_close_socket(sock);
+  if (r == -1)
+    memset(addr, 0, sizeof(tor_addr_t));
   return r;
 }
 
@@ -1631,6 +1633,8 @@ get_interface_address6,(int severity, sa_family_t family, tor_addr_t *addr))
   smartlist_t *addrs;
   int rv = -1;
   tor_assert(addr);
+
+  memset(addr, 0, sizeof(tor_addr_t));
 
   /* Get a list of public or internal IPs in arbitrary order */
   addrs = get_interface_address6_list(severity, family, 1);
@@ -1656,8 +1660,10 @@ get_interface_address6,(int severity, sa_family_t family, tor_addr_t *addr))
 void
 free_interface_address6_list(smartlist_t *addrs)
 {
-  SMARTLIST_FOREACH(addrs, tor_addr_t *, a, tor_free(a));
-  smartlist_free(addrs);
+  if (addrs != NULL) {
+    SMARTLIST_FOREACH(addrs, tor_addr_t *, a, tor_free(a));
+    smartlist_free(addrs);
+  }
 }
 
 /** Return a smartlist of the IP addresses of type family from all interfaces
@@ -1711,7 +1717,8 @@ MOCK_IMPL(smartlist_t *,get_interface_address6_list,(int severity,
   }
 
   /* Okay, the smart way is out. */
-  get_interface_address6_via_udp_socket_hack(severity,family,&addr);
+  if (get_interface_address6_via_udp_socket_hack(severity,family,&addr))
+     return smartlist_new();
   if (!include_internal && tor_addr_is_internal(&addr, 0)) {
     return smartlist_new();
   } else {
@@ -1973,6 +1980,8 @@ get_interface_address,(int severity, uint32_t *addr))
 {
   tor_addr_t local_addr;
   int r;
+
+  memset(addr, 0, sizeof(uint32_t));
 
   r = get_interface_address6(severity, AF_INET, &local_addr);
   if (r>=0)
