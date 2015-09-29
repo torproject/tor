@@ -12,20 +12,20 @@
 ## Tor will look for this file in various places based on your platform:
 ## https://www.torproject.org/docs/faq#torrc
 
-## Tor opens a socks proxy on port 9050 by default -- even if you don't
-## configure one below. Set "SocksPort 0" if you plan to run Tor only
+## Tor opens a SOCKS proxy on port 9050 by default -- even if you don't
+## configure one below. Set "SOCKSPort 0" if you plan to run Tor only
 ## as a relay, and not make any local application connections yourself.
-#SocksPort 9050 # Default: Bind to localhost:9050 for local connections.
-#SocksPort 192.168.0.1:9100 # Bind to this address:port too.
+#SOCKSPort 9050 # Default: Bind to localhost:9050 for local connections.
+#SOCKSPort 192.168.0.1:9100 # Bind to this address:port too.
 
 ## Entry policies to allow/deny SOCKS requests based on IP address.
-## First entry that matches wins. If no SocksPolicy is set, we accept
-## all (and only) requests that reach a SocksPort. Untrusted users who
-## can access your SocksPort may be able to learn about the connections
+## First entry that matches wins. If no SOCKSPolicy is set, we accept
+## all (and only) requests that reach a SOCKSPort. Untrusted users who
+## can access your SOCKSPort may be able to learn about the connections
 ## you make.
-#SocksPolicy accept 192.168.0.0/16
-#SocksPolicy accept6 FC00::/7
-#SocksPolicy reject *
+#SOCKSPolicy accept 192.168.0.0/16
+#SOCKSPolicy accept6 FC00::/7
+#SOCKSPolicy reject *
 
 ## Logs go to stdout at level "notice" unless redirected by something
 ## else, like one of the below lines. You can have as many Log lines as
