@@ -310,11 +310,11 @@ get_interface_address_list(int severity, int include_internal)
 tor_addr_port_t *tor_addr_port_new(const tor_addr_t *addr, uint16_t port);
 
 #ifdef ADDRESS_PRIVATE
-STATIC smartlist_t *get_interface_addresses_raw(int severity);
+MOCK_DECL(smartlist_t *,get_interface_addresses_raw,(int severity));
 STATIC int tor_addr_is_multicast(const tor_addr_t *a);
-STATIC int get_interface_address6_via_udp_socket_hack(int severity,
-                                                      sa_family_t family,
-                                                      tor_addr_t *addr);
+MOCK_DECL(int,get_interface_address6_via_udp_socket_hack,(int severity,
+                                                          sa_family_t family,
+                                                          tor_addr_t *addr));
 
 #ifdef HAVE_IFADDRS_TO_SMARTLIST
 STATIC smartlist_t *ifaddrs_to_smartlist(const struct ifaddrs *ifa);

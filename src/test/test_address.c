@@ -779,6 +779,99 @@ test_address_get_if_addrs6_list_no_internal(void *arg)
   return;
 }
 
+static int called_get_interface_addresses_raw = 0;
+
+smartlist_t *
+mock_get_interface_addresses_raw_fail(int severity)
+{
+  (void)severity;
+
+  called_get_interface_addresses_raw++;
+  return smartlist_new();
+}
+
+static int called_get_interface_address6_via_udp_socket_hack = 0;
+
+int
+mock_get_interface_address6_via_udp_socket_hack_fail(int severity,
+                                                     sa_family_t family,
+                                                     tor_addr_t *addr)
+{
+  (void)severity;
+  (void)family;
+  (void)addr;
+
+  called_get_interface_address6_via_udp_socket_hack++;
+  return -1;
+}
+
+static void
+test_address_get_if_addrs_internal_fail(void *arg)
+{
+  smartlist_t *results1 = NULL, *results2 = NULL;
+  int rv = 0;
+  uint32_t ipv4h_addr = 0;
+  tor_addr_t ipv6_addr;
+
+  memset(&ipv6_addr, 0, sizeof(tor_addr_t));
+
+  (void)arg;
+
+  MOCK(get_interface_addresses_raw,
+       mock_get_interface_addresses_raw_fail);
+  MOCK(get_interface_address6_via_udp_socket_hack,
+       mock_get_interface_address6_via_udp_socket_hack_fail);
+
+  results1 = get_interface_address6_list(LOG_ERR, AF_INET6, 1);
+  tt_assert(results1 != NULL);
+  tt_int_op(smartlist_len(results1),==,0);
+
+  results2 = get_interface_address_list(LOG_ERR, 1);
+  tt_assert(results2 != NULL);
+  tt_int_op(smartlist_len(results2),==,0);
+
+  rv = get_interface_address6(LOG_ERR, AF_INET6, &ipv6_addr);
+  tt_assert(rv == -1);
+
+  rv = get_interface_address(LOG_ERR, &ipv4h_addr);
+  tt_assert(rv == -1);
+
+done:
+  UNMOCK(get_interface_addresses_raw);
+  UNMOCK(get_interface_address6_via_udp_socket_hack);
+  free_interface_address6_list(results1);
+  free_interface_address6_list(results2);
+  return;
+}
+
+static void
+test_address_get_if_addrs_no_internal_fail(void *arg)
+{
+  smartlist_t *results1 = NULL, *results2 = NULL;
+
+  (void)arg;
+
+  MOCK(get_interface_addresses_raw,
+       mock_get_interface_addresses_raw_fail);
+  MOCK(get_interface_address6_via_udp_socket_hack,
+       mock_get_interface_address6_via_udp_socket_hack_fail);
+
+  results1 = get_interface_address6_list(LOG_ERR, AF_INET6, 0);
+  tt_assert(results1 != NULL);
+  tt_int_op(smartlist_len(results1),==,0);
+
+  results2 = get_interface_address_list(LOG_ERR, 0);
+  tt_assert(results2 != NULL);
+  tt_int_op(smartlist_len(results2),==,0);
+
+done:
+  UNMOCK(get_interface_addresses_raw);
+  UNMOCK(get_interface_address6_via_udp_socket_hack);
+  free_interface_address6_list(results1);
+  free_interface_address6_list(results2);
+  return;
+}
+
 static void
 test_address_get_if_addrs(void *arg)
 {
@@ -838,6 +931,8 @@ struct testcase_t address_tests[] = {
   ADDRESS_TEST(get_if_addrs_list_no_internal, 0),
   ADDRESS_TEST(get_if_addrs6_list_internal, 0),
   ADDRESS_TEST(get_if_addrs6_list_no_internal, 0),
+  ADDRESS_TEST(get_if_addrs_internal_fail, 0),
+  ADDRESS_TEST(get_if_addrs_no_internal_fail, 0),
   ADDRESS_TEST(get_if_addrs, 0),
   ADDRESS_TEST(get_if_addrs6, 0),
 #ifdef HAVE_IFADDRS_TO_SMARTLIST
