@@ -1,0 +1,10 @@
+This directory contains code for use with, and code made by, the
+automatic code generation tool "Trunnel".
+
+The .trunnel files are the inputs here; the .c and .h files are the outputs.
+To regenerate the .c and .h files, run "scripts/codegen/run_trunnel.sh".
+
+For the Trunnel source code, and more documentation about using Trunnel,
+see https://gitweb.torproject.org/trunnel.git , especially
+    https://gitweb.torproject.org/trunnel.git/tree/README
+and https://gitweb.torproject.org/trunnel.git/tree/doc/trunnel.md
