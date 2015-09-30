@@ -3997,6 +3997,12 @@ options_transition_allowed(const or_options_t *old,
     return -1;
   }
 
+  if (!opt_streq(old->SyslogIdentityTag, new_val->SyslogIdentityTag)) {
+    *msg = tor_strdup("While Tor is running, changing "
+                      "SyslogIdentityTag is not allowed.");
+    return -1;
+  }
+
   if ((old->HardwareAccel != new_val->HardwareAccel)
       || !opt_streq(old->AccelName, new_val->AccelName)
       || !opt_streq(old->AccelDir, new_val->AccelDir)) {
