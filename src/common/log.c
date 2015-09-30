@@ -1097,6 +1097,9 @@ add_file_log(const log_severity_list_t *severity, const char *filename,
 #ifdef HAVE_SYSLOG_H
 /**
  * Add a log handler to send messages to they system log facility.
+ *
+ * If this is the first log handler, opens syslog with ident Tor or
+ * Tor-<syslog_identity_tag> if that is not NULL.
  */
 int
 add_syslog_log(const log_severity_list_t *severity, const char* syslog_identity_tag)
