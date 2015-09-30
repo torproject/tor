@@ -374,10 +374,6 @@ AC_SEARCH_LIBS(pthread_detach, [pthread])
 AM_CONDITIONAL(THREADS_WIN32, test "$bwin32" = "true")
 AM_CONDITIONAL(THREADS_PTHREADS, test "$bwin32" = "false")
 
-dnl -------------------------------------------------------------------
-dnl Check for functions before libevent, since libevent-1.2 apparently
-dnl exports strlcpy without defining it in a header.
-
 AC_CHECK_FUNCS(
         _NSGetEnviron \
         accept4 \
