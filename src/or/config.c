@@ -312,6 +312,7 @@ static config_var_t option_vars_[] = {
   V(LogMessageDomains,           BOOL,     "0"),
   V(LogTimeGranularity,          MSEC_INTERVAL, "1 second"),
   V(TruncateLogFile,             BOOL,     "0"),
+  V(SyslogIdentityTag,           STRING,   NULL),
   V(LongLivedPorts,              CSV,
         "21,22,706,1863,5050,5190,5222,5223,6523,6667,6697,8300"),
   VAR("MapAddress",              LINELIST, AddressMap,           NULL),
@@ -4937,7 +4938,7 @@ options_init_logs(const or_options_t *old_options, or_options_t *options,
         !strcasecmp(smartlist_get(elts,0), "syslog")) {
 #ifdef HAVE_SYSLOG_H
       if (!validate_only) {
-        add_syslog_log(severity);
+        add_syslog_log(severity, options->SyslogIdentityTag);
       }
 #else
       log_warn(LD_CONFIG, "Syslog is not supported on this system. Sorry.");

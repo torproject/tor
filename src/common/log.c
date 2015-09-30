@@ -1099,12 +1099,19 @@ add_file_log(const log_severity_list_t *severity, const char *filename,
  * Add a log handler to send messages to they system log facility.
  */
 int
-add_syslog_log(const log_severity_list_t *severity)
+add_syslog_log(const log_severity_list_t *severity, const char* syslog_identity_tag)
 {
   logfile_t *lf;
-  if (syslog_count++ == 0)
+  if (syslog_count++ == 0) {
     /* This is the first syslog. */
-    openlog("Tor", LOG_PID | LOG_NDELAY, LOGFACILITY);
+    static char buf[256];
+    if (syslog_identity_tag) {
+      tor_snprintf(buf, sizeof(buf), "Tor-%s", syslog_identity_tag);
+    } else {
+      tor_snprintf(buf, sizeof(buf), "Tor");
+    }
+    openlog(buf, LOG_PID | LOG_NDELAY, LOGFACILITY);
+  }
 
   lf = tor_malloc_zero(sizeof(logfile_t));
   lf->fd = -1;

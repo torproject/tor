@@ -135,7 +135,7 @@ void add_stream_log(const log_severity_list_t *severity, const char *name,
 int add_file_log(const log_severity_list_t *severity, const char *filename,
                  const int truncate);
 #ifdef HAVE_SYSLOG_H
-int add_syslog_log(const log_severity_list_t *severity);
+int add_syslog_log(const log_severity_list_t *severity, const char* syslog_identity_tag);
 #endif
 int add_callback_log(const log_severity_list_t *severity, log_callback cb);
 void logs_set_domain_logging(int enabled);
