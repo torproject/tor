@@ -1102,7 +1102,8 @@ add_file_log(const log_severity_list_t *severity, const char *filename,
  * Tor-<syslog_identity_tag> if that is not NULL.
  */
 int
-add_syslog_log(const log_severity_list_t *severity, const char* syslog_identity_tag)
+add_syslog_log(const log_severity_list_t *severity,
+               const char* syslog_identity_tag)
 {
   logfile_t *lf;
   if (syslog_count++ == 0) {

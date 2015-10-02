@@ -85,7 +85,8 @@ smartlist_ensure_capacity(smartlist_t *sl, int size)
     }
     sl->list = tor_reallocarray(sl->list, sizeof(void *),
                                 ((size_t)higher));
-    memset(sl->list + sl->capacity, 0, sizeof(void *) * (higher - sl->capacity));
+    memset(sl->list + sl->capacity, 0,
+           sizeof(void *) * (higher - sl->capacity));
     sl->capacity = higher;
   }
 #undef ASSERT_CAPACITY

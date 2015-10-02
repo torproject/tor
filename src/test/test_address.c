@@ -836,7 +836,7 @@ test_address_get_if_addrs_internal_fail(void *arg)
   rv = get_interface_address(LOG_ERR, &ipv4h_addr);
   tt_assert(rv == -1);
 
-done:
+ done:
   UNMOCK(get_interface_addresses_raw);
   UNMOCK(get_interface_address6_via_udp_socket_hack);
   free_interface_address6_list(results1);
@@ -864,7 +864,7 @@ test_address_get_if_addrs_no_internal_fail(void *arg)
   tt_assert(results2 != NULL);
   tt_int_op(smartlist_len(results2),==,0);
 
-done:
+ done:
   UNMOCK(get_interface_addresses_raw);
   UNMOCK(get_interface_address6_via_udp_socket_hack);
   free_interface_address6_list(results1);
