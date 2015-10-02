@@ -47,6 +47,7 @@ double fabs(double x);
 #include "connection_edge.h"
 #include "geoip.h"
 #include "rendcommon.h"
+#include "rendcache.h"
 #include "test.h"
 #include "torgzip.h"
 #include "memarea.h"
@@ -493,6 +494,9 @@ test_rend_fns(void *arg)
   tt_assert(ONION_HOSTNAME == parse_extended_hostname(address6));
   tt_str_op(address6,OP_EQ, "abcdefghijklmnop");
   tt_assert(BAD_HOSTNAME == parse_extended_hostname(address7));
+
+  /* Initialize the service cache. */
+  rend_cache_init();
 
   pk1 = pk_generate(0);
   pk2 = pk_generate(1);

@@ -1927,6 +1927,22 @@ getinfo_helper_dir(control_connection_t *control_conn,
       *errmsg = "Not found in cache";
       return -1;
     }
+  } else if (!strcmpstart(question, "hs/service/desc/id/")) {
+    rend_cache_entry_t *e = NULL;
+
+    question += strlen("hs/service/desc/id/");
+    if (strlen(question) != REND_SERVICE_ID_LEN_BASE32) {
+      *errmsg = "Invalid address";
+      return -1;
+    }
+
+    if (!rend_cache_lookup_v2_desc_as_service(question, &e)) {
+      /* Descriptor found in cache */
+      *answer = tor_strdup(e->desc);
+    } else {
+      *errmsg = "Not found in cache";
+      return -1;
+    }
   } else if (!strcmpstart(question, "md/id/")) {
     const node_t *node = node_get_by_hex_id(question+strlen("md/id/"));
     const microdesc_t *md = NULL;
@@ -2481,6 +2497,8 @@ static const getinfo_item_t getinfo_items[] = {
   PREFIX("extra-info/digest/", dir, "Extra-info documents by digest."),
   PREFIX("hs/client/desc/id", dir,
          "Hidden Service descriptor in client's cache by onion."),
+  PREFIX("hs/service/desc/id/", dir,
+         "Hidden Service descriptor in services's cache by onion."),
   PREFIX("net/listeners/", listeners, "Bound addresses by type"),
   ITEM("ns/all", networkstatus,
        "Brief summary of router status (v2 directory format)"),
@@ -6231,6 +6249,31 @@ get_desc_id_from_query(const rend_data_t *rend_data, const char *hsdir_fp)
 
  end:
   return desc_id;
+}
+
+/** send HS_DESC CREATED event when a local service generates a descriptor.
+ *
+ * <b>service_id</b> is the descriptor onion address.
+ * <b>desc_id_base32</b> is the descriptor ID.
+ * <b>replica</b> is the the descriptor replica number.
+ */
+void
+control_event_hs_descriptor_created(const char *service_id,
+                                    const char *desc_id_base32,
+                                    int replica)
+{
+  if (!service_id || !desc_id_base32) {
+    log_warn(LD_BUG, "Called with service_digest==%p, "
+             "desc_id_base32==%p", service_id, desc_id_base32);
+    return;
+  }
+
+  send_control_event(EVENT_HS_DESC,
+                     "650 HS_DESC CREATED %s UNKNOWN UNKNOWN %s "
+                     "REPLICA=%d\r\n",
+                     service_id,
+                     desc_id_base32,
+                     replica);
 }
 
 /** send HS_DESC upload event.

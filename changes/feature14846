@@ -1,0 +1,4 @@
+  o Major features (controller):
+    - New "GETINFO hs/service/desc/id/" command to retrieve a hidden service
+      descriptor from a service's local hidden service descriptor cache.
+      Closes ticket 14846.

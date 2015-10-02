@@ -117,6 +117,9 @@ MOCK_DECL(const char *, node_describe_longname_by_id,(const char *id_digest));
 void control_event_hs_descriptor_requested(const rend_data_t *rend_query,
                                            const char *desc_id_base32,
                                            const char *hs_dir);
+void control_event_hs_descriptor_created(const char *service_id,
+                                         const char *desc_id_base32,
+                                         int replica);
 void control_event_hs_descriptor_upload(const char *service_id,
                                         const char *desc_id_base32,
                                         const char *hs_dir);

@@ -1518,7 +1518,8 @@ run_scheduled_events(time_t now)
   /* Remove old information from rephist and the rend cache. */
   if (time_to.clean_caches < now) {
     rep_history_clean(now - options->RephistTrackTime);
-    rend_cache_clean(now);
+    rend_cache_clean(now, REND_CACHE_TYPE_CLIENT);
+    rend_cache_clean(now, REND_CACHE_TYPE_SERVICE);
     rend_cache_clean_v2_descs_as_dir(now, 0);
     microdesc_cache_rebuild(NULL, 0);
 #define CLEAN_CACHES_INTERVAL (30*60)
