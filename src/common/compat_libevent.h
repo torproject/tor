@@ -91,7 +91,6 @@ void tor_gettimeofday_cache_set(const struct timeval *tv);
 #endif
 void tor_gettimeofday_cached_monotonic(struct timeval *tv);
 
-
 #ifdef COMPAT_LIBEVENT_PRIVATE
 /** A number representing a version of Libevent.
 
@@ -121,7 +120,6 @@ typedef uint32_t le_version_t;
  * it is. */
 #define LE_OTHER V(0,0,99)
 
-
 STATIC void
 libevent_logging_callback(int severity, const char *msg);
 STATIC le_version_t
@@ -131,3 +129,4 @@ le_versions_compatibility(le_version_t v);
 #endif
 
 #endif
+

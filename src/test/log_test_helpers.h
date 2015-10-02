@@ -28,3 +28,4 @@ int mock_saved_severity_at(int ix);
 int mock_saved_log_number(void);
 
 #endif
+

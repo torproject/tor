@@ -626,3 +626,4 @@ tor_gettimeofday_cached_monotonic(struct timeval *tv)
     memcpy(&last_tv, tv, sizeof(struct timeval));
   }
 }
+

@@ -31,47 +31,67 @@ test_compat_libevent_logging_callback(void *ignored)
 
   libevent_logging_callback(_EVENT_LOG_DEBUG, "hello world");
   tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ, "Message from libevent: hello world\n");
+  tt_str_op(mock_saved_log_at(0), OP_EQ,
+            "Message from libevent: hello world\n");
   tt_int_op(mock_saved_severity_at(0), OP_EQ, LOG_DEBUG);
 
   mock_clean_saved_logs();
   libevent_logging_callback(_EVENT_LOG_MSG, "hello world another time");
   tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ, "Message from libevent: hello world another time\n");
+  tt_str_op(mock_saved_log_at(0), OP_EQ,
+            "Message from libevent: hello world another time\n");
   tt_int_op(mock_saved_severity_at(0), OP_EQ, LOG_INFO);
 
   mock_clean_saved_logs();
   libevent_logging_callback(_EVENT_LOG_WARN, "hello world a third time");
   tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ, "Warning from libevent: hello world a third time\n");
+  tt_str_op(mock_saved_log_at(0), OP_EQ,
+            "Warning from libevent: hello world a third time\n");
   tt_int_op(mock_saved_severity_at(0), OP_EQ, LOG_WARN);
 
   mock_clean_saved_logs();
   libevent_logging_callback(_EVENT_LOG_ERR, "hello world a fourth time");
   tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ, "Error from libevent: hello world a fourth time\n");
+  tt_str_op(mock_saved_log_at(0), OP_EQ,
+            "Error from libevent: hello world a fourth time\n");
   tt_int_op(mock_saved_severity_at(0), OP_EQ, LOG_ERR);
 
   mock_clean_saved_logs();
   libevent_logging_callback(42, "hello world a fifth time");
   tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ, "Message [42] from libevent: hello world a fifth time\n");
+  tt_str_op(mock_saved_log_at(0), OP_EQ,
+            "Message [42] from libevent: hello world a fifth time\n");
   tt_int_op(mock_saved_severity_at(0), OP_EQ, LOG_WARN);
 
   mock_clean_saved_logs();
-  libevent_logging_callback(_EVENT_LOG_DEBUG, "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
-                            "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
-                            "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
-                            "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
-                            "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
-                            "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
-                            "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
-                            "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
-                            "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
-                            "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
-                            "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789");
+  libevent_logging_callback(_EVENT_LOG_DEBUG,
+                            "012345678901234567890123456789"
+                            "012345678901234567890123456789"
+                            "012345678901234567890123456789"
+                            "012345678901234567890123456789"
+                            "012345678901234567890123456789"
+                            "012345678901234567890123456789"
+                            "012345678901234567890123456789"
+                            "012345678901234567890123456789"
+                            "012345678901234567890123456789"
+                            "012345678901234567890123456789"
+                            "012345678901234567890123456789"
+                            "012345678901234567890123456789"
+                            );
   tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ, "Message from libevent: 012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012\n");
+  tt_str_op(mock_saved_log_at(0), OP_EQ, "Message from libevent: "
+                            "012345678901234567890123456789"
+                            "012345678901234567890123456789"
+                            "012345678901234567890123456789"
+                            "012345678901234567890123456789"
+                            "012345678901234567890123456789"
+                            "012345678901234567890123456789"
+                            "012345678901234567890123456789"
+                            "012345678901234567890123456789"
+                            "012345678901234567890123456789"
+                            "012345678901234567890123456789"
+                            "012345678901234567890123456789"
+            "012345678901234567890123456789\n");
   tt_int_op(mock_saved_severity_at(0), OP_EQ, LOG_DEBUG);
 
   mock_clean_saved_logs();
@@ -84,7 +104,8 @@ test_compat_libevent_logging_callback(void *ignored)
   mock_clean_saved_logs();
   libevent_logging_callback(_EVENT_LOG_MSG, "hello there");
   tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ, "Message from libevent: hello there\n");
+  tt_str_op(mock_saved_log_at(0), OP_EQ,
+            "Message from libevent: hello there\n");
   tt_int_op(mock_saved_severity_at(0), OP_EQ, LOG_INFO);
 
   mock_clean_saved_logs();
@@ -204,11 +225,14 @@ test_compat_libevent_header_version(void *ignored)
   (void)0;
 }
 
-
 struct testcase_t compat_libevent_tests[] = {
-  { "logging_callback", test_compat_libevent_logging_callback, TT_FORK, NULL, NULL },
-  { "le_versions_compatibility", test_compat_libevent_le_versions_compatibility, 0, NULL, NULL },
-  { "tor_decode_libevent_version", test_compat_libevent_tor_decode_libevent_version, 0, NULL, NULL },
+  { "logging_callback", test_compat_libevent_logging_callback,
+    TT_FORK, NULL, NULL },
+  { "le_versions_compatibility",
+    test_compat_libevent_le_versions_compatibility, 0, NULL, NULL },
+  { "tor_decode_libevent_version",
+    test_compat_libevent_tor_decode_libevent_version, 0, NULL, NULL },
   { "header_version", test_compat_libevent_header_version, 0, NULL, NULL },
   END_OF_TESTCASES
 };
+

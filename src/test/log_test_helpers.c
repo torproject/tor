@@ -1,3 +1,5 @@
+/* Copyright (c) 2015, The Tor Project, Inc. */
+/* See LICENSE for licensing information */
 #define LOG_PRIVATE
 #include "torlog.h"
 #include "log_test_helpers.h"
@@ -37,7 +39,7 @@ static mock_saved_log_entry_t *
 mock_get_log_entry(int ix)
 {
   int saved_log_count = mock_saved_log_number();
-  if(ix < 0) {
+  if (ix < 0) {
     ix = saved_log_count + ix;
   }
 
@@ -106,3 +108,4 @@ mock_saving_logv(int severity, log_domain_mask_t domain,
     saved_logs = smartlist_new();
   smartlist_add(saved_logs, e);
 }
+
