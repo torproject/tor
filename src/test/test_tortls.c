@@ -9,11 +9,6 @@
 #include <winsock2.h>
 #endif
 
-#include "or.h"
-#include "torlog.h"
-#include "config.h"
-#include "tortls.h"
-
 #ifdef __GNUC__
 #define GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__)
 #endif
@@ -41,6 +36,11 @@
 #pragma GCC diagnostic warning "-Wredundant-decls"
 #endif
 #endif
+
+#include "or.h"
+#include "torlog.h"
+#include "config.h"
+#include "tortls.h"
 
 #include "test.h"
 #include "log_test_helpers.h"
