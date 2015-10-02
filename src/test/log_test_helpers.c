@@ -33,8 +33,8 @@ mock_clean_saved_logs(void)
   saved_logs = NULL;
 }
 
-char *
-mock_saved_log_at(int ix)
+static mock_saved_log_entry_t *
+mock_get_log_entry(int ix)
 {
   int saved_log_count = mock_saved_log_number();
   if(ix < 0) {
@@ -42,21 +42,29 @@ mock_saved_log_at(int ix)
   }
 
   if (saved_log_count <= ix)
+    return NULL;
+
+  return smartlist_get(saved_logs, ix);
+}
+
+const char *
+mock_saved_log_at(int ix)
+{
+  mock_saved_log_entry_t *ent = mock_get_log_entry(ix);
+  if (ent)
+    return ent->generated_msg;
+  else
     return "";
-  return ((mock_saved_log_entry_t *)smartlist_get(saved_logs, ix))->generated_msg;
 }
 
 int
 mock_saved_severity_at(int ix)
 {
-  int saved_log_count = mock_saved_log_number();
-  if(ix < 0) {
-    ix = saved_log_count + ix;
-  }
-
-  if (saved_log_count <= ix)
+  mock_saved_log_entry_t *ent = mock_get_log_entry(ix);
+  if (ent)
+    return ent->severity;
+  else
     return -1;
-  return ((mock_saved_log_entry_t *)smartlist_get(saved_logs, ix))->severity;
 }
 
 int
@@ -74,11 +82,15 @@ mock_saved_logs(void)
 }
 
 void
-mock_saving_logv(int severity, log_domain_mask_t domain, const char *funcname, const char *suffix, const char *format, va_list ap)
+mock_saving_logv(int severity, log_domain_mask_t domain,
+                 const char *funcname, const char *suffix,
+                 const char *format, va_list ap)
 {
+  (void)domain;
   char *buf = tor_malloc_zero(10240);
   int n;
   n = tor_vsnprintf(buf,10240,format,ap);
+  tor_assert(n < 10240-1);
   buf[n]='\n';
   buf[n+1]='\0';
 
@@ -87,7 +99,8 @@ mock_saving_logv(int severity, log_domain_mask_t domain, const char *funcname, c
   e->funcname = funcname;
   e->suffix = suffix;
   e->format = format;
-  e->generated_msg = buf;
+  e->generated_msg = tor_strdup(buf);
+  tor_free(buf);
 
   if (!saved_logs)
     saved_logs = smartlist_new();
