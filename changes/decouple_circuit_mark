@@ -1,0 +1,6 @@
+  o Code simplification and refactoring:
+     - Extract the more complicated parts of circuit_mark_for_close into
+       a new function run periodically before connections are freed.
+       This change removes more than half of the functions currently
+       in the "blob".
+       Closes ticket #17218.
