@@ -1110,7 +1110,7 @@ static struct testcase_t test_array[] = {
   ENT(onion_queues),
   { "ntor_handshake", test_ntor_handshake, 0, NULL, NULL },
   ENT(circuit_timeout),
-  ENT(rend_fns),
+  FORK(rend_fns),
   ENT(geoip),
   FORK(geoip_with_pt),
   FORK(stats),
