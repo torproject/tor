@@ -111,7 +111,6 @@
 #define SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION 0x0010
 #endif
 
-
 /** Return values for tor_tls_classify_client_ciphers.
  *
  * @{
@@ -129,7 +128,6 @@
  * supports */
 #define CIPHERS_UNRESTRICTED 3
 /** @} */
-
 
 /** The ex_data index in which we store a pointer to an SSL object's
  * corresponding tor_tls_t object. */
@@ -383,7 +381,7 @@ tor_tls_init(void)
      OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,0,1))
     long version = SSLeay();
 
-    /* LCOV_EXCL_START because we can't reasonably test these lines on the same machine */
+    /* LCOV_EXCL_START : we can't test these lines on the same machine */
     if (version >= OPENSSL_V_SERIES(1,0,1)) {
       /* Warn if we could *almost* be running with much faster ECDH.
          If we're built for a 64-bit target, using OpenSSL 1.0.1, but we
@@ -456,7 +454,7 @@ tor_x509_name_new(const char *cname)
 {
   int nid;
   X509_NAME *name;
-  /* LCOV_EXCL_BR_START because these branches will only fail on out of memory errors */
+  /* LCOV_EXCL_BR_START : these branches will only fail on OOM errors */
   if (!(name = X509_NAME_new()))
     return NULL;
   if ((nid = OBJ_txt2nid("commonName")) == NID_undef) goto error;
@@ -466,7 +464,7 @@ tor_x509_name_new(const char *cname)
   /* LCOV_EXCL_BR_STOP */
   return name;
  error:
-  /* LCOV_EXCL_START because these lines will only execute on out of memory errors*/
+  /* LCOV_EXCL_START : these lines will only execute on out of memory errors*/
   X509_NAME_free(name);
   return NULL;
   /* LCOV_EXCL_STOP */
@@ -516,17 +514,17 @@ MOCK_IMPL(STATIC X509 *,
     goto error;
   if (!(pkey = crypto_pk_get_evp_pkey_(rsa,0)))
     goto error;
-  if (!(x509 = X509_new())) /* LCOV_EXCL_BR_LINE because this can only fail when memory failures occur */
+  if (!(x509 = X509_new()))
     goto error;
-  if (!(X509_set_version(x509, 2))) /* LCOV_EXCL_BR_LINE because this can only fail when something catastrophic happens in openssl  */
+  if (!(X509_set_version(x509, 2)))
     goto error;
 
   { /* our serial number is 8 random bytes. */
     if (crypto_rand((char *)serial_tmp, sizeof(serial_tmp)) < 0)
       goto error;
-    if (!(serial_number = BN_bin2bn(serial_tmp, sizeof(serial_tmp), NULL))) /* LCOV_EXCL_BR_LINE because this can only fail when memory failures occur */
+    if (!(serial_number = BN_bin2bn(serial_tmp, sizeof(serial_tmp), NULL)))
       goto error;
-    if (!(BN_to_ASN1_INTEGER(serial_number, X509_get_serialNumber(x509)))) /* LCOV_EXCL_BR_LINE because this can only fail when memory failures occur */
+    if (!(BN_to_ASN1_INTEGER(serial_number, X509_get_serialNumber(x509))))
       goto error;
   }
 
@@ -676,7 +674,7 @@ MOCK_IMPL(STATIC tor_x509_cert_t *,
 
   length = i2d_X509(x509_cert, &buf);
   cert = tor_malloc_zero(sizeof(tor_x509_cert_t));
-  if (length <= 0 || buf == NULL) { /* LCOV_EXCL_BR_LINE because these conditions can't be provoked without memory failures */
+  if (length <= 0 || buf == NULL) {
     /* LCOV_EXCL_START for the same reason as the exclusion above */
     tor_free(cert);
     log_err(LD_CRYPTO, "Couldn't get length of encoded x509 certificate");
@@ -1192,7 +1190,7 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
       goto error;
     X509_free(cert); /* We just added a reference to cert. */
     cert=NULL;
-    if (idcert) { /* LCOV_EXCL_BR_LINE because we can't actually get here without a valid idcert */
+    if (idcert) {
       X509_STORE *s = SSL_CTX_get_cert_store(result->ctx);
       tor_assert(s);
       X509_STORE_add_cert(s, idcert);
@@ -1272,8 +1270,10 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
 STATIC void
 tor_tls_debug_state_callback(const SSL *ssl, int type, int val)
 {
-  log_debug(LD_HANDSHAKE, "SSL %p is now in state %s [type=%d,val=%d].", /* LCOV_EXCL_BR_LINE since this depends on whether debug is captured or not */
+  /* LCOV_EXCL_START since this depends on whether debug is captured or not */
+  log_debug(LD_HANDSHAKE, "SSL %p is now in state %s [type=%d,val=%d].",
             ssl, SSL_state_string_long(ssl), type, val);
+  /* LCOV_EXCL_STOP */
 }
 
 /* Return the name of the negotiated ciphersuite in use on <b>tls</b> */
@@ -1333,7 +1333,7 @@ find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m, uint16_t cipher)
   {
     unsigned char cipherid[3];
     tor_assert(ssl);
-    set_uint16(cipherid, htons(cipher));  /* LCOV_EXCL_BR_LINE since we won't necessarily hit both branches if htons is a macro */
+    set_uint16(cipherid, htons(cipher));
     cipherid[2] = 0; /* If ssl23_get_cipher_by_char finds no cipher starting
                       * with a two-byte 'cipherid', it may look for a v2
                       * cipher with the appropriate 3 bytes. */
@@ -1345,7 +1345,7 @@ find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m, uint16_t cipher)
 #elif defined(HAVE_STRUCT_SSL_METHOD_ST_GET_CIPHER_BY_CHAR)
   if (m && m->get_cipher_by_char) {
     unsigned char cipherid[3];
-    set_uint16(cipherid, htons(cipher)); /* LCOV_EXCL_BR_LINE since we won't necessarily hit both branches if htons is a macro */
+    set_uint16(cipherid, htons(cipher));
     cipherid[2] = 0; /* If ssl23_get_cipher_by_char finds no cipher starting
                       * with a two-byte 'cipherid', it may look for a v2
                       * cipher with the appropriate 3 bytes. */
@@ -1436,7 +1436,7 @@ tor_tls_classify_client_ciphers(const SSL *ssl,
         strcmp(ciphername, TLS1_TXT_DHE_RSA_WITH_AES_256_SHA) &&
         strcmp(ciphername, SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA) &&
         strcmp(ciphername, "(NONE)")) {
-      log_debug(LD_NET, "Got a non-version-1 cipher called '%s'", ciphername); /* LCOV_EXCL_BR_LINE since this depends on whether debug is captured or not */
+      log_debug(LD_NET, "Got a non-version-1 cipher called '%s'", ciphername);
       // return 1;
       goto v2_or_higher;
     }
@@ -1474,9 +1474,9 @@ tor_tls_classify_client_ciphers(const SSL *ssl,
       smartlist_add(elts, (char*)ciphername);
     }
     s = smartlist_join_strings(elts, ":", 0, NULL);
-    log_debug(LD_NET, "Got a %s V2/V3 cipher list from %s.  It is: '%s'", /* LCOV_EXCL_BR_LINE since this depends on whether debug is captured or not */
+    log_debug(LD_NET, "Got a %s V2/V3 cipher list from %s.  It is: '%s'",
               (res == CIPHERS_V2) ? "fictitious" : "real", ADDR(tor_tls), s);
-    tor_free(s); /* LCOV_EXCL_BR_LINE since s will always be non-null here */
+    tor_free(s);
     smartlist_free(elts);
   }
  done:
@@ -1555,7 +1555,7 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
     /* Don't send a hello request. */
     SSL_set_verify((SSL*) ssl, SSL_VERIFY_NONE, NULL);
 
-    if (tls) { /* LCOV_EXCL_BR_LINE impossible to have tls be NULL here, it's checked earlier */
+    if (tls) {
       tls->wasV2Handshake = 1;
     } else {
       log_warn(LD_BUG, "Couldn't look up the tls for an SSL*. How odd!"); /* LCOV_EXCL_LINE this line is not reachable */
@@ -1618,7 +1618,7 @@ tor_tls_new(int sock, int isServer)
   tor_assert(context); /* make sure somebody made it first */
   if (!(result->ssl = SSL_new(context->ctx))) {
     tls_log_errors(NULL, LOG_WARN, LD_NET, "creating SSL object");
-    tor_free(result); /* LCOV_EXCL_BR_LINE because result can't be null here */
+    tor_free(result);
     goto err;
   }
 
@@ -1627,7 +1627,7 @@ tor_tls_new(int sock, int isServer)
   if (!isServer) {
     char *fake_hostname = crypto_random_hostname(4,25, "www.",".com");
     SSL_set_tlsext_host_name(result->ssl, fake_hostname);
-    tor_free(fake_hostname); /* LCOV_EXCL_BR_LINE because fake_hostname can't be null here */
+    tor_free(fake_hostname);
   }
 #endif
 
@@ -1638,7 +1638,7 @@ tor_tls_new(int sock, int isServer)
     SSL_set_tlsext_host_name(result->ssl, NULL);
 #endif
     SSL_free(result->ssl);
-    tor_free(result); /* LCOV_EXCL_BR_LINE because this can't be null here */
+    tor_free(result);
     goto err;
   }
   result->socket = sock;
@@ -1791,7 +1791,7 @@ tor_tls_free(tor_tls_t *tls)
     tor_tls_context_decref(tls->context);
   tor_free(tls->address);
   tls->magic = 0x99999999;
-  tor_free(tls); /* LCOV_EXCL_BR_LINE because this line will not be reached if tls is NULL */
+  tor_free(tls);
 }
 
 /** Underlying function for TLS reading.  Reads up to <b>len</b>
@@ -1812,7 +1812,7 @@ tor_tls_read,(tor_tls_t *tls, char *cp, size_t len))
 #ifdef V2_HANDSHAKE_SERVER
     if (tls->got_renegotiate) {
       /* Renegotiation happened! */
-      log_info(LD_NET, "Got a TLS renegotiation from %s", ADDR(tls)); /* LCOV_EXCL_BR_LINE because testing the branches of ADDR feels not so useful here */
+      log_info(LD_NET, "Got a TLS renegotiation from %s", ADDR(tls));
       if (tls->negotiated_callback)
         tls->negotiated_callback(tls, tls->callback_arg);
       tls->got_renegotiate = 0;
@@ -1821,13 +1821,13 @@ tor_tls_read,(tor_tls_t *tls, char *cp, size_t len))
     return r;
   }
   err = tor_tls_get_error(tls, r, CATCH_ZERO, "reading", LOG_DEBUG, LD_NET);
-  if (err == TOR_TLS_ZERORETURN_ || err == TOR_TLS_CLOSE) { /* LCOV_EXCL_BR_LINE err can never be TOR_TLS_CLOSE here because tor_tls_get_error will never return it with those parameters */
-    log_debug(LD_NET,"read returned r=%d; TLS is closed",r); /* LCOV_EXCL_BR_LINE since this depends on whether debug is captured or not */
+  if (err == TOR_TLS_ZERORETURN_ || err == TOR_TLS_CLOSE) {
+    log_debug(LD_NET,"read returned r=%d; TLS is closed",r);
     tls->state = TOR_TLS_ST_CLOSED;
     return TOR_TLS_CLOSE;
   } else {
     tor_assert(err != TOR_TLS_DONE);
-    log_debug(LD_NET,"read returned r=%d, err=%d",r,err); /* LCOV_EXCL_BR_LINE since this depends on whether debug is captured or not */
+    log_debug(LD_NET,"read returned r=%d, err=%d",r,err);
     return err;
   }
 }
@@ -1857,7 +1857,7 @@ tor_tls_write(tor_tls_t *tls, const char *cp, size_t n)
   if (tls->wantwrite_n) {
     /* if WANTWRITE last time, we must use the _same_ n as before */
     tor_assert(n >= tls->wantwrite_n);
-    log_debug(LD_NET,"resuming pending-write, (%d to flush, reusing %d)", /* LCOV_EXCL_BR_LINE since this depends on whether debug is captured or not */
+    log_debug(LD_NET,"resuming pending-write, (%d to flush, reusing %d)",
               (int)n, (int)tls->wantwrite_n);
     n = tls->wantwrite_n;
     tls->wantwrite_n = 0;
@@ -1890,16 +1890,16 @@ tor_tls_handshake(tor_tls_t *tls)
   check_no_tls_errors();
   oldstate = SSL_state(tls->ssl);
   if (tls->isServer) {
-    log_debug(LD_HANDSHAKE, "About to call SSL_accept on %p (%s)", tls, /* LCOV_EXCL_BR_LINE since this depends on whether debug is captured or not */
+    log_debug(LD_HANDSHAKE, "About to call SSL_accept on %p (%s)", tls,
               SSL_state_string_long(tls->ssl));
     r = SSL_accept(tls->ssl);
   } else {
-    log_debug(LD_HANDSHAKE, "About to call SSL_connect on %p (%s)", tls, /* LCOV_EXCL_BR_LINE since this depends on whether debug is captured or not */
+    log_debug(LD_HANDSHAKE, "About to call SSL_connect on %p (%s)", tls,
               SSL_state_string_long(tls->ssl));
     r = SSL_connect(tls->ssl);
   }
   if (oldstate != SSL_state(tls->ssl))
-    log_debug(LD_HANDSHAKE, "After call, %p was in state %s",  /* LCOV_EXCL_BR_LINE since this depends on whether debug is captured or not */
+    log_debug(LD_HANDSHAKE, "After call, %p was in state %s",
               tls, SSL_state_string_long(tls->ssl));
   /* We need to call this here and not earlier, since OpenSSL has a penchant
    * for clearing its flags when you say accept or connect. */
@@ -1944,7 +1944,7 @@ tor_tls_finish_handshake(tor_tls_t *tls)
                  " get set. Fixing that.");
       }
       tls->wasV2Handshake = 1;
-      log_debug(LD_HANDSHAKE, "Completed V2 TLS handshake with client; waiting" /* LCOV_EXCL_BR_LINE since this depends on whether debug is captured or not */
+      log_debug(LD_HANDSHAKE, "Completed V2 TLS handshake with client; waiting"
                 " for renegotiation.");
     } else {
       tls->wasV2Handshake = 0;
@@ -1957,11 +1957,11 @@ tor_tls_finish_handshake(tor_tls_t *tls)
     STACK_OF(X509) *chain = SSL_get_peer_cert_chain(tls->ssl);
     int n_certs = sk_X509_num(chain);
     if (n_certs > 1 || (n_certs == 1 && cert != sk_X509_value(chain, 0))) {
-      log_debug(LD_HANDSHAKE, "Server sent back multiple certificates; it " /* LCOV_EXCL_BR_LINE since this depends on whether debug is captured or not */
+      log_debug(LD_HANDSHAKE, "Server sent back multiple certificates; it "
                 "looks like a v1 handshake on %p", tls);
       tls->wasV2Handshake = 0;
     } else {
-      log_debug(LD_HANDSHAKE, /* LCOV_EXCL_BR_LINE since this depends on whether debug is captured or not */
+      log_debug(LD_HANDSHAKE,
                 "Server sent back a single certificate; looks like "
                 "a v2 handshake on %p.", tls);
       tls->wasV2Handshake = 1;
@@ -2200,7 +2200,7 @@ MOCK_IMPL(STATIC void, try_to_extract_certs_from_tls, (int severity, tor_tls_t *
            num_in_chain);
     return;
   }
-  for (i=0; i<num_in_chain; ++i) { /* LCOV_EXCL_BR_LINE because we can never hit the case when we don't enter this loop, since num_in_chain<1 is checked above */
+  for (i=0; i<num_in_chain; ++i) {
     id_cert = sk_X509_value(chain, i);
     if (X509_cmp(id_cert, cert) != 0)
       break;
@@ -2445,7 +2445,7 @@ dn_indicates_v3_cert(X509_NAME *name)
 
   str = X509_NAME_ENTRY_get_data(entry);
   len = ASN1_STRING_to_UTF8(&s, str);
-  if (len < 0){
+  if (len < 0) {
     return 0;
   }
   r = fast_memneq(s + len - 4, ".net", 4);
@@ -2625,7 +2625,7 @@ tor_tls_get_tlssecrets,(tor_tls_t *tls, uint8_t *secrets_out))
                      (char*)buf, len);
   memwipe(buf, 0, sizeof(buf));
   memwipe(master_key, 0, master_key_len);
-  tor_free(master_key); /* LCOV_EXCL_BR_LINE since master_key will never be NULL here */
+  tor_free(master_key);
 
   return 0;
 }
@@ -2762,3 +2762,4 @@ evaluate_ecgroup_for_tls(const char *ecgroup)
 
   return ret;
 }
+

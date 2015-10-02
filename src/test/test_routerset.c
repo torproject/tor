@@ -500,7 +500,7 @@ NS(test_main)(void *arg)
   tt_int_op(smartlist_len(set->policies), OP_NE, 0);
   tt_int_op(CALLED(router_parse_addr_policy_item_from_string), OP_EQ, 1);
 
-done:
+ done:
   routerset_free(set);
 }
 
@@ -547,7 +547,7 @@ NS(test_main)(void *arg)
   tt_int_op(smartlist_len(set->policies), OP_NE, 0);
   tt_int_op(CALLED(router_parse_addr_policy_item_from_string), OP_EQ, 1);
 
-done:
+ done:
   routerset_free(set);
 }
 
