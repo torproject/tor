@@ -1558,7 +1558,9 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
     if (tls) {
       tls->wasV2Handshake = 1;
     } else {
-      log_warn(LD_BUG, "Couldn't look up the tls for an SSL*. How odd!"); /* LCOV_EXCL_LINE this line is not reachable */
+      /* LCOV_EXCL_START this line is not reachable */
+      log_warn(LD_BUG, "Couldn't look up the tls for an SSL*. How odd!");
+      /* LCOV_EXCL_STOP */
     }
   }
 }
@@ -2177,8 +2179,9 @@ log_cert_lifetime(int severity, const X509 *cert, const char *problem)
  *
  * Note that a reference is added to cert_out, so it needs to be
  * freed. id_cert_out doesn't. */
-MOCK_IMPL(STATIC void, try_to_extract_certs_from_tls, (int severity, tor_tls_t *tls,
-                                                       X509 **cert_out, X509 **id_cert_out))
+MOCK_IMPL(STATIC void,
+try_to_extract_certs_from_tls,(int severity, tor_tls_t *tls,
+                               X509 **cert_out, X509 **id_cert_out))
 {
   X509 *cert = NULL, *id_cert = NULL;
   STACK_OF(X509) *chain = NULL;
