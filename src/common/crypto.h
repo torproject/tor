@@ -119,7 +119,7 @@ void crypto_thread_cleanup(void);
 int crypto_global_cleanup(void);
 
 /* environment setup */
-crypto_pk_t *crypto_pk_new(void);
+MOCK_DECL(crypto_pk_t *,crypto_pk_new,(void));
 void crypto_pk_free(crypto_pk_t *env);
 
 void crypto_set_tls_dh_prime(void);
@@ -128,7 +128,7 @@ crypto_cipher_t *crypto_cipher_new_with_iv(const char *key, const char *iv);
 void crypto_cipher_free(crypto_cipher_t *env);
 
 /* public key crypto */
-int crypto_pk_generate_key_with_bits(crypto_pk_t *env, int bits);
+MOCK_DECL(int, crypto_pk_generate_key_with_bits,(crypto_pk_t *env, int bits));
 #define crypto_pk_generate_key(env)                     \
   crypto_pk_generate_key_with_bits((env), (PK_BYTES*8))
 
@@ -289,11 +289,10 @@ struct evp_pkey_st;
 struct dh_st;
 struct rsa_st *crypto_pk_get_rsa_(crypto_pk_t *env);
 crypto_pk_t *crypto_new_pk_from_rsa_(struct rsa_st *rsa);
-struct evp_pkey_st *crypto_pk_get_evp_pkey_(crypto_pk_t *env,
-                                                int private);
+MOCK_DECL(struct evp_pkey_st *, crypto_pk_get_evp_pkey_,(crypto_pk_t *env,
+                                                         int private));
 struct dh_st *crypto_dh_get_dh_(crypto_dh_t *dh);
 
 void crypto_add_spaces_to_fp(char *out, size_t outlen, const char *in);
 
 #endif
-

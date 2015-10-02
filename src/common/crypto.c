@@ -433,8 +433,8 @@ crypto_pk_get_rsa_(crypto_pk_t *env)
 
 /** used by tortls.c: get an equivalent EVP_PKEY* for a crypto_pk_t.  Iff
  * private is set, include the private-key portion of the key. */
-EVP_PKEY *
-crypto_pk_get_evp_pkey_(crypto_pk_t *env, int private)
+MOCK_IMPL(EVP_PKEY *,
+          crypto_pk_get_evp_pkey_,(crypto_pk_t *env, int private))
 {
   RSA *key = NULL;
   EVP_PKEY *pkey = NULL;
@@ -470,8 +470,8 @@ crypto_dh_get_dh_(crypto_dh_t *dh)
 /** Allocate and return storage for a public key.  The key itself will not yet
  * be set.
  */
-crypto_pk_t *
-crypto_pk_new(void)
+MOCK_IMPL(crypto_pk_t *,
+          crypto_pk_new,(void))
 {
   RSA *rsa;
 
@@ -553,8 +553,8 @@ crypto_cipher_free(crypto_cipher_t *env)
 /** Generate a <b>bits</b>-bit new public/private keypair in <b>env</b>.
  * Return 0 on success, -1 on failure.
  */
-int
-crypto_pk_generate_key_with_bits(crypto_pk_t *env, int bits)
+MOCK_IMPL(int,
+          crypto_pk_generate_key_with_bits,(crypto_pk_t *env, int bits))
 {
   tor_assert(env);
 
@@ -2734,4 +2734,3 @@ crypto_global_cleanup(void)
 }
 
 /** @} */
-
