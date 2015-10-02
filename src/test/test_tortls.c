@@ -40,6 +40,7 @@ fake_num_ciphers(void)
 static void
 test_tortls_errno_to_tls_error(void *data)
 {
+  (void) data;
     tt_int_op(tor_errno_to_tls_error(SOCK_ERRNO(ECONNRESET)),OP_EQ,TOR_TLS_ERROR_CONNRESET);
     tt_int_op(tor_errno_to_tls_error(SOCK_ERRNO(ETIMEDOUT)),OP_EQ,TOR_TLS_ERROR_TIMEOUT);
     tt_int_op(tor_errno_to_tls_error(SOCK_ERRNO(EHOSTUNREACH)),OP_EQ,TOR_TLS_ERROR_NO_ROUTE);
@@ -53,6 +54,7 @@ test_tortls_errno_to_tls_error(void *data)
 static void
 test_tortls_err_to_string(void *data)
 {
+  (void) data;
     tt_str_op(tor_tls_err_to_string(1),OP_EQ,"[Not an error.]");
     tt_str_op(tor_tls_err_to_string(TOR_TLS_ERROR_MISC),OP_EQ,"misc error");
     tt_str_op(tor_tls_err_to_string(TOR_TLS_ERROR_IO),OP_EQ,"unexpected close");
@@ -79,6 +81,7 @@ mock_tls_cert_matches_key(const tor_tls_t *tls, const tor_x509_cert_t *cert)
 static void
 test_tortls_tor_tls_new(void *data)
 {
+  (void) data;
     MOCK(tor_tls_cert_matches_key, mock_tls_cert_matches_key);
     crypto_pk_t *key1 = NULL, *key2 = NULL;
     key1 = pk_generate(2);
@@ -129,6 +132,7 @@ NS(logv)(int severity, log_domain_mask_t domain,
 static void
 test_tortls_tor_tls_get_error(void *data)
 {
+  (void) data;
     MOCK(tor_tls_cert_matches_key, mock_tls_cert_matches_key);
     crypto_pk_t *key1 = NULL, *key2 = NULL;
     key1 = pk_generate(2);
@@ -288,14 +292,14 @@ test_tortls_log_one_error(void *ignored)
   tt_str_op(mock_saved_log_at(0), OP_EQ, "TLS error: (null) (in (null):(null):---)\n");
 
   mock_clean_saved_logs();
-  tls->address = "127.hello";
+  tls->address = tor_strdup("127.hello");
   tor_tls_log_one_error(tls, 0, LOG_WARN, 0, NULL);
   tt_int_op(mock_saved_log_number(), OP_EQ, 1);
   tt_str_op(mock_saved_log_at(0), OP_EQ, "TLS error with 127.hello: (null) (in (null):(null):---)\n");
 
 
   mock_clean_saved_logs();
-  tls->address = "127.hello";
+  tls->address = tor_strdup("127.hello");
   tor_tls_log_one_error(tls, 0, LOG_WARN, 0, "blarg");
   tt_int_op(mock_saved_log_number(), OP_EQ, 1);
   tt_str_op(mock_saved_log_at(0), OP_EQ, "TLS error while blarg with 127.hello: (null) (in (null):(null):---)\n");
@@ -487,6 +491,7 @@ test_tortls_x509_cert_get_id_digests(void *ignored)
 static int
 fixed_pub_cmp(const EVP_PKEY *a, const EVP_PKEY *b)
 {
+  (void) a; (void) b;
   return 1;
 }
 
@@ -656,7 +661,7 @@ test_tortls_get_ciphersuite_name(void *ignored)
 }
 
 static SSL_CIPHER *
-get_cipher_by_name(char *name)
+get_cipher_by_name(const char *name)
 {
   int i;
   const SSL_METHOD *method = SSLv23_method();
@@ -664,7 +669,7 @@ get_cipher_by_name(char *name)
   for (i = 0; i < num; ++i) {
     const SSL_CIPHER *cipher = method->get_cipher(i);
     const char *ciphername = SSL_CIPHER_get_name(cipher);
-    if(!strcmp(ciphername, name)) {
+    if (!strcmp(ciphername, name)) {
       return (SSL_CIPHER *)cipher;
     }
   }
@@ -832,8 +837,11 @@ static X509 *fixed_try_to_extract_certs_from_tls_cert_out_result = NULL;
 static X509 *fixed_try_to_extract_certs_from_tls_id_cert_out_result = NULL;
 
 static void
-fixed_try_to_extract_certs_from_tls(int severity, tor_tls_t *tls, X509 **cert_out, X509 **id_cert_out)
+fixed_try_to_extract_certs_from_tls(int severity, tor_tls_t *tls,
+                                    X509 **cert_out, X509 **id_cert_out)
 {
+  (void) severity;
+  (void) tls;
   *cert_out = fixed_try_to_extract_certs_from_tls_cert_out_result;
   *id_cert_out = fixed_try_to_extract_certs_from_tls_id_cert_out_result;
 }
@@ -915,7 +923,7 @@ static X509 *
 read_cert_from(const char *str)
 {
   BIO *bio = BIO_new(BIO_s_mem());
-  BIO_write(bio, str, strlen(str));
+  BIO_write(bio, str, (int) strlen(str));
   X509 *res = PEM_read_bio_X509(bio, NULL, NULL, NULL);
   BIO_free(bio);
   return res;
@@ -1046,7 +1054,7 @@ static void
 test_tortls_get_forced_write_size(void *ignored)
 {
   (void)ignored;
-  int ret;
+  long ret;
   tor_tls_t *tls;
 
   tls = tor_malloc_zero(sizeof(tor_tls_t));
@@ -1655,12 +1663,12 @@ test_tortls_set_renegotiate_callback(void *ignored)
 {
   (void)ignored;
   tor_tls_t *tls;
-  char *arg = "hello";
+  const char *arg = "hello";
 
   tls = tor_malloc_zero(sizeof(tor_tls_t));
   tls->ssl = tor_malloc_zero(sizeof(SSL));
 
-  tor_tls_set_renegotiate_callback(tls, example_cb, arg);
+  tor_tls_set_renegotiate_callback(tls, example_cb, (void*)arg);
   tt_assert(tls->negotiated_callback == example_cb);
   tt_assert(tls->callback_arg == arg);
   tt_assert(!tls->got_renegotiate);
@@ -1668,7 +1676,7 @@ test_tortls_set_renegotiate_callback(void *ignored)
   /* Assumes V2_HANDSHAKE_SERVER */
   tt_assert(tls->ssl->info_callback == tor_tls_server_info_callback);
 
-  tor_tls_set_renegotiate_callback(tls, NULL, arg);
+  tor_tls_set_renegotiate_callback(tls, NULL, (void*)arg);
   tt_assert(tls->ssl->info_callback == tor_tls_debug_state_callback);
 
  done:
@@ -1848,12 +1856,16 @@ static int fixed_ssl_shutdown_result;
 static int
 fixed_ssl_read(SSL *s, void *buf, int len)
 {
+  (void)s;
+  (void)buf;
+  (void)len;
   return fixed_ssl_read_result[fixed_ssl_read_result_index++];
 }
 
 static int
 fixed_ssl_shutdown(SSL *s)
 {
+  (void)s;
   return fixed_ssl_shutdown_result;
 }
 
@@ -1878,6 +1890,7 @@ setting_version_and_state_ssl_shutdown(SSL *s)
 static int
 dummy_handshake_func(SSL *s)
 {
+  (void)s;
   return 1;
 }
 
@@ -2050,6 +2063,9 @@ static int fixed_ssl_write_result;
 static int
 fixed_ssl_write(SSL *s, const void *buf, int len)
 {
+  (void)s;
+  (void)buf;
+  (void)len;
   return fixed_ssl_write_result;
 }
 
@@ -2112,6 +2128,7 @@ static int fixed_ssl_renegotiate_result;
 static int
 fixed_ssl_renegotiate(SSL *s)
 {
+  (void) s;
   return fixed_ssl_renegotiate_result;
 }
 
@@ -2169,6 +2186,7 @@ static int fixed_ssl_connect_result;
 static int
 setting_error_ssl_accept(SSL *ssl)
 {
+  (void)ssl;
   ERR_put_error(ERR_LIB_BN, 2, -1, "somewhere.c", 99);
   ERR_put_error(ERR_LIB_SYS, 2, -1, "somewhere.c", 99);
   return fixed_ssl_accept_result;
@@ -2177,6 +2195,7 @@ setting_error_ssl_accept(SSL *ssl)
 static int
 setting_error_ssl_connect(SSL *ssl)
 {
+  (void)ssl;
   ERR_put_error(ERR_LIB_BN, 2, -1, "somewhere.c", 99);
   ERR_put_error(ERR_LIB_SYS, 2, -1, "somewhere.c", 99);
   return fixed_ssl_connect_result;
@@ -2185,6 +2204,7 @@ setting_error_ssl_connect(SSL *ssl)
 static int
 fixed_ssl_accept(SSL *ssl)
 {
+  (void) ssl;
   return fixed_ssl_accept_result;
 }
 
@@ -2349,7 +2369,10 @@ fixed_crypto_pk_new(void)
 static int
 fixed_crypto_pk_generate_key_with_bits(crypto_pk_t *env, int bits)
 {
-  return fixed_crypto_pk_generate_key_with_bits_result[fixed_crypto_pk_generate_key_with_bits_result_index++];
+  (void)env;
+  (void)bits;
+  return fixed_crypto_pk_generate_key_with_bits_result[
+                      fixed_crypto_pk_generate_key_with_bits_result_index++];
 }
 
 static X509 *
@@ -2359,12 +2382,19 @@ fixed_tor_tls_create_certificate(crypto_pk_t *rsa,
                                  const char *cname_sign,
                                  unsigned int cert_lifetime)
 {
-  return fixed_tor_tls_create_certificate_result[fixed_tor_tls_create_certificate_result_index++];
+  (void)rsa;
+  (void)rsa_sign;
+  (void)cname;
+  (void)cname_sign;
+  (void)cert_lifetime;
+  return fixed_tor_tls_create_certificate_result[
+                       fixed_tor_tls_create_certificate_result_index++];
 }
 
 static tor_x509_cert_t *
 fixed_tor_x509_cert_new(X509 *x509_cert)
 {
+  (void) x509_cert;
   return fixed_tor_x509_cert_new_result[fixed_tor_x509_cert_new_result_index++];
 }
 
@@ -2373,7 +2403,8 @@ test_tortls_context_new(void *ignored)
 {
   (void)ignored;
   tor_tls_context_t *ret;
-  crypto_pk_t *pk1, *pk2, *pk3, *pk4, *pk5, *pk6, *pk7, *pk8, *pk9, *pk10, *pk11, *pk12, *pk13, *pk14, *pk15, *pk16, *pk17, *pk18;
+  crypto_pk_t *pk1, *pk2, *pk3, *pk4, *pk5, *pk6, *pk7, *pk8, *pk9, *pk10,
+    *pk11, *pk12, *pk13, *pk14, *pk15, *pk16, *pk17, *pk18;
 
   pk1 = crypto_pk_new();
   pk2 = crypto_pk_new();
@@ -2545,12 +2576,17 @@ static int fixed_crypto_rand_result;
 static EVP_PKEY *
 fixed_crypto_pk_get_evp_pkey_(crypto_pk_t *env, int private)
 {
-  return fixed_crypto_pk_get_evp_pkey_result[fixed_crypto_pk_get_evp_pkey_result_index++];
+  (void) env;
+  (void) private;
+  return fixed_crypto_pk_get_evp_pkey_result[
+                               fixed_crypto_pk_get_evp_pkey_result_index++];
 }
 
 static int
 fixed_crypto_rand(char *to, size_t n)
 {
+  (void)to;
+  (void)n;
   return fixed_crypto_rand_result;
 }
 

@@ -156,6 +156,7 @@ STATIC int tor_tls_context_init_one(tor_tls_context_t **ppcontext,
                                     unsigned int key_lifetime,
                                     unsigned int flags,
                                     int is_client);
+STATIC void tls_log_errors(tor_tls_t *tls, int severity, int domain, const char *doing);
 #endif
 
 

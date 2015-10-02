@@ -16,6 +16,8 @@
 
 #include "orconfig.h"
 
+#define TORTLS_PRIVATE
+
 #include <assert.h>
 #ifdef _WIN32 /*wrkard for dtls1.h >= 0.9.8m of "#include <winsock.h>"*/
   #include <winsock2.h>
