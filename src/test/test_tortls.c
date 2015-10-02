@@ -5,6 +5,34 @@
 #define LOG_PRIVATE
 #include "orconfig.h"
 
+#ifdef __GNUC__
+#define GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__)
+#endif
+
+#if __GNUC__ && GCC_VERSION >= 402
+#if GCC_VERSION >= 406
+#pragma GCC diagnostic push
+#endif
+/* Some versions of OpenSSL declare SSL_get_selected_srtp_profile twice in
+ * srtp.h. Suppress the GCC warning so we can build with -Wredundant-decl. */
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+#endif
+
+#include <openssl/opensslv.h>
+
+#include <openssl/ssl.h>
+#include <openssl/ssl3.h>
+#include <openssl/err.h>
+#include <openssl/asn1t.h>
+
+#if __GNUC__ && GCC_VERSION >= 402
+#if GCC_VERSION >= 406
+#pragma GCC diagnostic pop
+#else
+#pragma GCC diagnostic warning "-Wredundant-decls"
+#endif
+#endif
+
 #include "or.h"
 #include "torlog.h"
 #include "config.h"
@@ -12,12 +40,6 @@
 
 #include "test.h"
 #include "log_test_helpers.h"
-
-#include <openssl/ssl.h>
-#include <openssl/ssl3.h>
-#include <openssl/err.h>
-#include <openssl/asn1t.h>
-
 #define NS_MODULE tortls
 
 extern tor_tls_context_t *server_tls_context;
