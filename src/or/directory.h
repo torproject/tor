@@ -127,6 +127,10 @@ STATIC int purpose_needs_anonymity(uint8_t dir_purpose,
                                    uint8_t router_purpose);
 STATIC dirinfo_type_t dir_fetch_type(int dir_purpose, int router_purpose,
                                      const char *resource);
+STATIC int directory_handle_command_get(dir_connection_t *conn,
+                                        const char *headers,
+                                        const char *req_body,
+                                        size_t req_body_len);
 #endif
 
 #endif

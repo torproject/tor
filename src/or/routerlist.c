@@ -5190,8 +5190,8 @@ hid_serv_acting_as_directory(void)
 
 /** Return true if this node is responsible for storing the descriptor ID
  * in <b>query</b> and false otherwise. */
-int
-hid_serv_responsible_for_desc_id(const char *query)
+MOCK_IMPL(int, hid_serv_responsible_for_desc_id,
+          (const char *query))
 {
   const routerinfo_t *me;
   routerstatus_t *last_rs;

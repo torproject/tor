@@ -626,8 +626,8 @@ static char *global_dirfrontpagecontents = NULL;
 static smartlist_t *configured_ports = NULL;
 
 /** Return the contents of our frontpage string, or NULL if not configured. */
-const char *
-get_dirportfrontpage(void)
+MOCK_IMPL(const char*,
+get_dirportfrontpage, (void))
 {
   return global_dirfrontpagecontents;
 }

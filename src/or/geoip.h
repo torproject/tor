@@ -18,6 +18,7 @@
 STATIC int geoip_parse_entry(const char *line, sa_family_t family);
 STATIC int geoip_get_country_by_ipv4(uint32_t ipaddr);
 STATIC int geoip_get_country_by_ipv6(const struct in6_addr *addr);
+STATIC void clear_geoip_db(void);
 #endif
 int should_record_bridge_info(const or_options_t *options);
 int geoip_load_file(sa_family_t family, const char *filename);

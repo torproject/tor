@@ -70,6 +70,7 @@ src_test_test_SOURCES = \
 	src/test/test_crypto.c \
 	src/test/test_data.c \
 	src/test/test_dir.c \
+	src/test/test_dir_handle_get.c \
 	src/test/test_entryconn.c \
 	src/test/test_entrynodes.c \
 	src/test/test_guardfraction.c \
@@ -99,7 +100,8 @@ src_test_test_SOURCES = \
 	src/test/test_util.c \
 	src/test/test_util_format.c \
 	src/test/test_helpers.c \
-        src/test/test_dns.c \
+	src/test/rend_test_helpers.c \
+	src/test/test_dns.c \
 	src/test/testing_common.c \
 	src/ext/tinytest.c
 

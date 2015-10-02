@@ -22,7 +22,7 @@ int server_identity_key_is_set(void);
 void set_client_identity_key(crypto_pk_t *k);
 crypto_pk_t *get_tlsclient_identity_key(void);
 int client_identity_key_is_set(void);
-authority_cert_t *get_my_v3_authority_cert(void);
+MOCK_DECL(authority_cert_t *, get_my_v3_authority_cert, (void));
 crypto_pk_t *get_my_v3_authority_signing_key(void);
 authority_cert_t *get_my_v3_legacy_cert(void);
 crypto_pk_t *get_my_v3_legacy_signing_key(void);
