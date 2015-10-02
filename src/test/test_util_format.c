@@ -121,13 +121,21 @@ test_util_format_base64_decode_nopad(void *ignored)
     src[i] = (char)i;
   }
 
-  /* XXXX Needs to test the success case */
-
   res = base64_decode_nopad(dst, 1, src, SIZE_T_CEILING);
   tt_int_op(res, OP_EQ, -1);
 
   res = base64_decode_nopad(dst, 1, src, 5);
   tt_int_op(res, OP_EQ, -1);
+
+  const char *s = "SGVsbG8gd29ybGQ";
+  res = base64_decode_nopad(dst, 1000, s, strlen(s));
+  tt_int_op(res, OP_EQ, 11);
+  tt_mem_op(dst, OP_EQ, "Hello world", 11);
+
+  s = "T3BhIG11bmRv";
+  res = base64_decode_nopad(dst, 9, s, strlen(s));
+  tt_int_op(res, OP_EQ, 9);
+  tt_mem_op(dst, OP_EQ, "Opa mundo", 9);
 
  done:
   tor_free(src);
@@ -150,13 +158,26 @@ test_util_format_base64_decode(void *ignored)
     src[i] = (char)i;
   }
 
-  /* XXXX Needs to test the success case */
-
   res = base64_decode(dst, 1, src, SIZE_T_CEILING);
   tt_int_op(res, OP_EQ, -1);
 
   res = base64_decode(dst, SIZE_T_CEILING+1, src, 10);
   tt_int_op(res, OP_EQ, -1);
+
+  const char *s = "T3BhIG11bmRv";
+  res = base64_decode(dst, 9, s, strlen(s));
+  tt_int_op(res, OP_EQ, 9);
+  tt_mem_op(dst, OP_EQ, "Opa mundo", 9);
+
+  memset(dst, 0, 1000);
+  res = base64_decode(dst, 100, s, strlen(s));
+  tt_int_op(res, OP_EQ, 9);
+  tt_mem_op(dst, OP_EQ, "Opa mundo", 9);
+
+  s = "SGVsbG8gd29ybGQ=";
+  res = base64_decode(dst, 100, s, strlen(s));
+  tt_int_op(res, OP_EQ, 11);
+  tt_mem_op(dst, OP_EQ, "Hello world", 11);
 
  done:
   tor_free(src);
@@ -179,8 +200,6 @@ test_util_format_base16_decode(void *ignored)
     src[i] = (char)i;
   }
 
-  /* XXXX Needs to test the success case */
-
   res = base16_decode(dst, 3, src, 3);
   tt_int_op(res, OP_EQ, -1);
 
@@ -188,6 +207,19 @@ test_util_format_base16_decode(void *ignored)
   tt_int_op(res, OP_EQ, -1);
 
   res = base16_decode(dst, SIZE_T_CEILING+2, src, 10);
+  tt_int_op(res, OP_EQ, -1);
+
+  res = base16_decode(dst, 1000, "", 0);
+  tt_int_op(res, OP_EQ, 0);
+
+  res = base16_decode(dst, 1000, "aabc", 4);
+  tt_int_op(res, OP_EQ, 0);
+  tt_mem_op(dst, OP_EQ, "\xaa\xbc", 2);
+
+  res = base16_decode(dst, 1000, "aabcd", 6);
+  tt_int_op(res, OP_EQ, -1);
+
+  res = base16_decode(dst, 1000, "axxx", 4);
   tt_int_op(res, OP_EQ, -1);
 
  done:
