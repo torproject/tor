@@ -27,6 +27,7 @@
 cscope.*
 # OSX junk
 *.dSYM
+.DS_Store
 
 # /
 /Makefile
