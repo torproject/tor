@@ -23,7 +23,7 @@ test_util_format_base64_encode(void *ignored)
   src = tor_malloc_zero(256);
   dst = tor_malloc_zero(1000);
 
-  for(i=0;i<256;i++) {
+  for (i=0;i<256;i++) {
     src[i] = (char)i;
   }
 
@@ -44,22 +44,28 @@ test_util_format_base64_encode(void *ignored)
 
   res = base64_encode(dst, 1000, src, 256, 0);
   tt_int_op(res, OP_EQ, 344);
-  tt_str_op(dst, OP_EQ, "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w==");
-
+  tt_str_op(dst, OP_EQ, "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh"
+            "8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZH"
+            "SElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3"
+            "BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeY"
+            "mZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wM"
+            "HCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp"
+            "6uvs7e7v8PHy8/T19vf4+fr7/P3+/w==");
 
   res = base64_encode(dst, 1000, src, 256, BASE64_ENCODE_MULTILINE);
   tt_int_op(res, OP_EQ, 350);
-  tt_str_op(dst, OP_EQ, "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4v\n"
-            "MDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5f\n"
-            "YGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6P\n"
-            "kJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/\n"
-            "wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v\n"
-            "8PHy8/T19vf4+fr7/P3+/w==\n");
+  tt_str_op(dst, OP_EQ,
+          "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4v\n"
+          "MDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5f\n"
+          "YGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6P\n"
+          "kJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/\n"
+          "wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v\n"
+          "8PHy8/T19vf4+fr7/P3+/w==\n");
 
   res = base64_encode(dst, 1000, src+1, 255, BASE64_ENCODE_MULTILINE);
   tt_int_op(res, OP_EQ, 346);
 
-  for(i = 0;i<50;i++) {
+  for (i = 0;i<50;i++) {
     src[i] = 0;
   }
   src[50] = 255;
@@ -94,7 +100,6 @@ test_util_format_base64_encode(void *ignored)
   res = base64_encode(dst, 1000, src+8, 46, BASE64_ENCODE_MULTILINE);
   tt_int_op(res, OP_EQ, 65);
 
-
  done:
   tor_free(src);
   tor_free(dst);
@@ -112,9 +117,11 @@ test_util_format_base64_decode_nopad(void *ignored)
   src = tor_malloc_zero(256);
   dst = tor_malloc_zero(1000);
 
-  for(i=0;i<256;i++) {
+  for (i=0;i<256;i++) {
     src[i] = (char)i;
   }
+
+  /* XXXX Needs to test the success case */
 
   res = base64_decode_nopad(dst, 1, src, SIZE_T_CEILING);
   tt_int_op(res, OP_EQ, -1);
@@ -126,7 +133,6 @@ test_util_format_base64_decode_nopad(void *ignored)
   tor_free(src);
   tor_free(dst);
 }
-
 
 static void
 test_util_format_base64_decode(void *ignored)
@@ -140,9 +146,11 @@ test_util_format_base64_decode(void *ignored)
   src = tor_malloc_zero(256);
   dst = tor_malloc_zero(1000);
 
-  for(i=0;i<256;i++) {
+  for (i=0;i<256;i++) {
     src[i] = (char)i;
   }
+
+  /* XXXX Needs to test the success case */
 
   res = base64_decode(dst, 1, src, SIZE_T_CEILING);
   tt_int_op(res, OP_EQ, -1);
@@ -154,8 +162,6 @@ test_util_format_base64_decode(void *ignored)
   tor_free(src);
   tor_free(dst);
 }
-
-
 
 static void
 test_util_format_base16_decode(void *ignored)
@@ -169,9 +175,11 @@ test_util_format_base16_decode(void *ignored)
   src = tor_malloc_zero(256);
   dst = tor_malloc_zero(1000);
 
-  for(i=0;i<256;i++) {
+  for (i=0;i<256;i++) {
     src[i] = (char)i;
   }
+
+  /* XXXX Needs to test the success case */
 
   res = base16_decode(dst, 3, src, 3);
   tt_int_op(res, OP_EQ, -1);
@@ -187,11 +195,12 @@ test_util_format_base16_decode(void *ignored)
   tor_free(dst);
 }
 
-
 struct testcase_t util_format_tests[] = {
   { "base64_encode", test_util_format_base64_encode, 0, NULL, NULL },
-  { "base64_decode_nopad", test_util_format_base64_decode_nopad, 0, NULL, NULL },
+  { "base64_decode_nopad", test_util_format_base64_decode_nopad, 0,
+    NULL, NULL },
   { "base64_decode", test_util_format_base64_decode, 0, NULL, NULL },
   { "base16_decode", test_util_format_base16_decode, 0, NULL, NULL },
   END_OF_TESTCASES
 };
+
