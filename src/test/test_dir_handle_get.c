@@ -402,6 +402,7 @@ NS(router_get_my_routerinfo)(void)
 static int
 NS(hid_serv_responsible_for_desc_id)(const char *id)
 {
+  (void)id;
   return hid_serv_responsible_for_desc_id_response;
 }
 
@@ -675,7 +676,7 @@ test_dir_handle_get_networkstatus_bridges_not_found_without_auth(void *data)
   /* SETUP */
   init_mock_options();
   mock_options->BridgeAuthoritativeDir = 1;
-  mock_options->BridgePassword_AuthDigest_ = "digest";
+  mock_options->BridgePassword_AuthDigest_ = tor_strdup("digest");
 
   conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
   TO_CONN(conn)->linked = 1;
@@ -925,8 +926,9 @@ test_dir_handle_get_server_descriptors_authority(void* data)
   mock_routerinfo->cache_info.send_unencrypted = 1;
 
   /* Setup descriptor */
-  int annotation_len = strstr(TEST_DESCRIPTOR, "router ") - TEST_DESCRIPTOR;
-  mock_routerinfo->cache_info.signed_descriptor_body = TEST_DESCRIPTOR;
+  long annotation_len = strstr(TEST_DESCRIPTOR, "router ") - TEST_DESCRIPTOR;
+  mock_routerinfo->cache_info.signed_descriptor_body =
+    tor_strdup(TEST_DESCRIPTOR);
   mock_routerinfo->cache_info.signed_descriptor_len = strlen(TEST_DESCRIPTOR);
   mock_routerinfo->cache_info.annotations_len = annotation_len;
 
@@ -989,8 +991,9 @@ test_dir_handle_get_server_descriptors_fp(void* data)
   mock_routerinfo->cache_info.send_unencrypted = 1;
 
   /* Setup descriptor */
-  int annotation_len = strstr(TEST_DESCRIPTOR, "router ") - TEST_DESCRIPTOR;
-  mock_routerinfo->cache_info.signed_descriptor_body = TEST_DESCRIPTOR;
+  long annotation_len = strstr(TEST_DESCRIPTOR, "router ") - TEST_DESCRIPTOR;
+  mock_routerinfo->cache_info.signed_descriptor_body =
+    tor_strdup(TEST_DESCRIPTOR);
   mock_routerinfo->cache_info.signed_descriptor_len = strlen(TEST_DESCRIPTOR);
   mock_routerinfo->cache_info.annotations_len = annotation_len;
 
@@ -1739,6 +1742,7 @@ NS_DECL(int, geoip_get_country_by_addr, (const tor_addr_t *addr));
 int
 NS(geoip_get_country_by_addr)(const tor_addr_t *addr)
 {
+  (void)addr;
   CALLED(geoip_get_country_by_addr)++;
   return 1;
 }
@@ -1765,7 +1769,7 @@ status_vote_current_consensus_ns_test(char **header, char **body,
   tt_str_op("ab", OP_EQ, geoip_get_country_name(1));
 
   conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
-  TO_CONN(conn)->address = "127.0.0.1";
+  TO_CONN(conn)->address = tor_strdup("127.0.0.1");
 
   tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
     GET("/tor/status-vote/current/consensus-ns"), NULL, 0));
@@ -2156,6 +2160,7 @@ dirvote_get_pending_consensus, (consensus_flavor_t flav));
 const char*
 NS(dirvote_get_pending_consensus)(consensus_flavor_t flav)
 {
+  (void)flav;
   return "pending consensus";
 }
 
