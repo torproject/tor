@@ -13,8 +13,8 @@
 
 #define NS_MODULE util_process
 
-static
-void temp_callback(int r, void *s)
+static void
+temp_callback(int r, void *s)
 {
   (void)r;
   (void)s;
@@ -33,12 +33,13 @@ test_util_process_set_waitpid_callback(void *ignored)
 
   res = set_waitpid_callback(pid, temp_callback, NULL);
   tt_assert(res);
-  tt_str_op(mock_saved_log_at(0), OP_EQ, "Replaced a waitpid monitor on pid 42. That should be impossible.\n");
+  tt_str_op(mock_saved_log_at(0), OP_EQ,
+            "Replaced a waitpid monitor on pid 42. That should be "
+            "impossible.\n");
 
  done:
   teardown_capture_of_logs(previous_log);
 }
-
 
 static void
 test_util_process_clear_waitpid_callback(void *ignored)
@@ -52,16 +53,20 @@ test_util_process_clear_waitpid_callback(void *ignored)
 
   res = set_waitpid_callback(pid, temp_callback, NULL);
   clear_waitpid_callback(res);
-  clear_waitpid_callback(res);
+  tt_int_op(mock_saved_log_number(), OP_EQ, 0);
 
-  // done:
+  clear_waitpid_callback(res);
+  tt_str_op(mock_saved_log_at(0), OP_EQ,
+            "Couldn't remove waitpid monitor for pid 43.\n");
+
+ done:
   teardown_capture_of_logs(previous_log);
 }
 
-
-
 struct testcase_t util_process_tests[] = {
-  { "set_waitpid_callback", test_util_process_set_waitpid_callback, 0, NULL, NULL },
-  { "clear_waitpid_callback", test_util_process_clear_waitpid_callback, 0, NULL, NULL },
+  { "set_waitpid_callback", test_util_process_set_waitpid_callback, 0,
+    NULL, NULL },
+  { "clear_waitpid_callback", test_util_process_clear_waitpid_callback, 0,
+    NULL, NULL },
   END_OF_TESTCASES
 };

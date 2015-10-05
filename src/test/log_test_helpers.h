@@ -15,12 +15,14 @@ typedef struct mock_saved_log_entry_t {
   struct mock_saved_log_entry_t *next;
 } mock_saved_log_entry_t;
 
-void mock_saving_logv(int severity, log_domain_mask_t domain, const char *funcname, const char *suffix, const char *format, va_list ap);
+void mock_saving_logv(int severity, log_domain_mask_t domain,
+                      const char *funcname, const char *suffix,
+                      const char *format, va_list ap);
 void mock_clean_saved_logs(void);
 const smartlist_t *mock_saved_logs(void);
 int setup_capture_of_logs(int new_level);
 void teardown_capture_of_logs(int prev);
-char *mock_saved_log_at(int ix);
+const char *mock_saved_log_at(int ix);
 int mock_saved_severity_at(int ix);
 int mock_saved_log_number(void);
 
