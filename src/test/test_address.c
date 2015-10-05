@@ -634,14 +634,14 @@ test_address_udp_socket_trick_blackbox(void *arg)
   return;
 }
 
-
 static void
 test_address_tor_addr_to_in6(void *ignored)
 {
   (void)ignored;
   tor_addr_t *a = tor_malloc_zero(sizeof(tor_addr_t));
   const struct in6_addr *res;
-  uint8_t expected[16] = {42, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+  uint8_t expected[16] = {42, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                          10, 11, 12, 13, 14, 15};
 
   a->family = AF_INET;
   res = tor_addr_to_in6(a);
@@ -698,7 +698,6 @@ test_address_tor_addr_to_ipv4n(void *ignored)
  done:
   (void)0;
 }
-
 
 static void
 test_address_tor_addr_to_mapped_ipv4h(void *ignored)
