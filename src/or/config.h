@@ -136,6 +136,16 @@ smartlist_t *get_options_from_transport_options_line(const char *line,
 smartlist_t *get_options_for_server_transport(const char *transport);
 
 #ifdef CONFIG_PRIVATE
+
+#define CL_PORT_NO_STREAM_OPTIONS (1u<<0)
+#define CL_PORT_WARN_NONLOCAL (1u<<1)
+#define CL_PORT_ALLOW_EXTRA_LISTENADDR (1u<<2)
+#define CL_PORT_SERVER_OPTIONS (1u<<3)
+#define CL_PORT_FORBID_NONLOCAL (1u<<4)
+#define CL_PORT_TAKES_HOSTNAMES (1u<<5)
+#define CL_PORT_IS_UNIXSOCKET (1u<<6)
+#define CL_PORT_DFLT_GROUP_WRITABLE (1u<<7)
+
 STATIC int options_act(const or_options_t *old_options);
 #ifdef TOR_UNIT_TESTS
 extern struct config_format_t options_format;

@@ -5809,14 +5809,6 @@ warn_nonlocal_controller_ports(smartlist_t *ports, unsigned forbid_nonlocal)
   } SMARTLIST_FOREACH_END(port);
 }
 
-#define CL_PORT_NO_STREAM_OPTIONS (1u<<0)
-#define CL_PORT_WARN_NONLOCAL (1u<<1)
-#define CL_PORT_ALLOW_EXTRA_LISTENADDR (1u<<2)
-#define CL_PORT_SERVER_OPTIONS (1u<<3)
-#define CL_PORT_FORBID_NONLOCAL (1u<<4)
-#define CL_PORT_TAKES_HOSTNAMES (1u<<5)
-#define CL_PORT_IS_UNIXSOCKET (1u<<6)
-#define CL_PORT_DFLT_GROUP_WRITABLE (1u<<7)
 
 #ifdef HAVE_SYS_UN_H
 
