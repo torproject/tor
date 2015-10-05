@@ -136,8 +136,10 @@ STATIC int tor_tls_client_is_using_v2_ciphers(const SSL *ssl);
 MOCK_DECL(STATIC void, try_to_extract_certs_from_tls,
           (int severity, tor_tls_t *tls, X509 **cert_out, X509 **id_cert_out));
 STATIC int dn_indicates_v3_cert(X509_NAME *name);
+#ifndef HAVE_SSL_SESSION_GET_MASTER_KEY
 STATIC size_t SSL_SESSION_get_master_key(SSL_SESSION *s, uint8_t *out,
                                          size_t len);
+#endif
 STATIC void tor_tls_debug_state_callback(const SSL *ssl, int type, int val);
 STATIC void tor_tls_server_info_callback(const SSL *ssl, int type, int val);
 STATIC int tor_tls_session_secret_cb(SSL *ssl, void *secret,
