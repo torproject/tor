@@ -5809,7 +5809,6 @@ warn_nonlocal_controller_ports(smartlist_t *ports, unsigned forbid_nonlocal)
   } SMARTLIST_FOREACH_END(port);
 }
 
-
 #ifdef HAVE_SYS_UN_H
 
 /** Parse the given <b>addrport</b> and set <b>path_out</b> if a Unix socket
@@ -7323,3 +7322,4 @@ init_cookie_authentication(const char *fname, const char *header,
   tor_free(cookie_file_str);
   return retval;
 }
+
