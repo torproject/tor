@@ -5,7 +5,8 @@
 
 /** TODO: Description */
 void
-generate_desc(int time_diff, rend_encoded_v2_service_descriptor_t **desc, char **service_id, int intro_points)
+generate_desc(int time_diff, rend_encoded_v2_service_descriptor_t **desc,
+              char **service_id, int intro_points)
 {
   rend_service_descriptor_t *generated = NULL;
   smartlist_t *descs = smartlist_new();
@@ -15,17 +16,18 @@ generate_desc(int time_diff, rend_encoded_v2_service_descriptor_t **desc, char *
   create_descriptor(&generated, service_id, intro_points);
   generated->timestamp = now;
 
-  rend_encode_v2_descriptors(descs, generated, now, 0, REND_NO_AUTH, NULL, NULL);
+  rend_encode_v2_descriptors(descs, generated, now, 0, REND_NO_AUTH, NULL,
+                             NULL);
   *desc = ((rend_encoded_v2_service_descriptor_t *)smartlist_get(descs, 0));
 
   smartlist_free(descs);
   rend_service_descriptor_free(generated);
 }
 
-
 /** TODO: Description */
 void
-create_descriptor(rend_service_descriptor_t **generated, char **service_id, int intro_points)
+create_descriptor(rend_service_descriptor_t **generated, char **service_id,
+                  int intro_points)
 {
   crypto_pk_t *pk1 = NULL;
   crypto_pk_t *pk2 = NULL;
