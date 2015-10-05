@@ -641,16 +641,17 @@ test_address_tor_addr_to_in6(void *ignored)
   (void)ignored;
   tor_addr_t *a = tor_malloc_zero(sizeof(tor_addr_t));
   const struct in6_addr *res;
+  uint8_t expected[16] = {42, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 
   a->family = AF_INET;
   res = tor_addr_to_in6(a);
   tt_assert(!res);
 
   a->family = AF_INET6;
-  a->addr.in6_addr.s6_addr[0] = 42;
+  memcpy(a->addr.in6_addr.s6_addr, expected, 16);
   res = tor_addr_to_in6(a);
   tt_assert(res);
-  tt_int_op(res->s6_addr[0], OP_EQ, 42);
+  tt_mem_op(res->s6_addr, OP_EQ, expected, 16);
 
  done:
   (void)0;
@@ -705,6 +706,7 @@ test_address_tor_addr_to_mapped_ipv4h(void *ignored)
   (void)ignored;
   tor_addr_t *a = tor_malloc_zero(sizeof(tor_addr_t));
   uint32_t res;
+  uint8_t toset[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 0, 0, 0, 42};
 
   a->family = AF_INET;
   res = tor_addr_to_mapped_ipv4h(a);
@@ -712,22 +714,7 @@ test_address_tor_addr_to_mapped_ipv4h(void *ignored)
 
   a->family = AF_INET6;
 
-  a->addr.in6_addr.s6_addr[0] = 0;
-  a->addr.in6_addr.s6_addr[1] = 0;
-  a->addr.in6_addr.s6_addr[2] = 0;
-  a->addr.in6_addr.s6_addr[3] = 0;
-  a->addr.in6_addr.s6_addr[4] = 0;
-  a->addr.in6_addr.s6_addr[5] = 0;
-  a->addr.in6_addr.s6_addr[6] = 0;
-  a->addr.in6_addr.s6_addr[7] = 0;
-  a->addr.in6_addr.s6_addr[8] = 0;
-  a->addr.in6_addr.s6_addr[9] = 0;
-  a->addr.in6_addr.s6_addr[10] = 255;
-  a->addr.in6_addr.s6_addr[11] = 255;
-  a->addr.in6_addr.s6_addr[12] = 0;
-  a->addr.in6_addr.s6_addr[13] = 0;
-  a->addr.in6_addr.s6_addr[14] = 0;
-  a->addr.in6_addr.s6_addr[15] = 42;
+  memcpy(a->addr.in6_addr.s6_addr, toset, 16);
   res = tor_addr_to_mapped_ipv4h(a);
   tt_assert(res);
   tt_int_op(res, OP_EQ, 42);
