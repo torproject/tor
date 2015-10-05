@@ -277,7 +277,7 @@ test_have_enough_mem_for_dircache(void *arg)
   return;
 }
 
-static char *fixed_get_uname_result = NULL;
+static const char *fixed_get_uname_result = NULL;
 
 static const char *
 fixed_get_uname(void)
@@ -316,7 +316,7 @@ typedef struct {
 } options_test_data_t;
 
 static options_test_data_t *
-get_options_test_data(char *conf)
+get_options_test_data(const char *conf)
 {
   config_line_t *cl=NULL;
   options_test_data_t *result = tor_malloc(sizeof(options_test_data_t));
