@@ -545,7 +545,6 @@ static const config_var_t testing_tor_network_defaults[] = {
 static char *get_windows_conf_root(void);
 #endif
 static int options_act_reversible(const or_options_t *old_options, char **msg);
-STATIC int options_act(const or_options_t *old_options);
 static int options_transition_allowed(const or_options_t *old,
                                       const or_options_t *new,
                                       char **msg);
