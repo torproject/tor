@@ -75,6 +75,11 @@
 #include "container.h"
 #include <string.h>
 
+#define X509_get_notBefore_const(cert) \
+  ((const ASN1_TIME*) X509_get_notBefore((X509 *)cert))
+#define X509_get_notAfter_const(cert) \
+  ((const ASN1_TIME*) X509_get_notAfter((X509 *)cert))
+
 /* Enable the "v2" TLS handshake.
  */
 #define V2_HANDSHAKE_SERVER
@@ -2203,7 +2208,7 @@ log_cert_lifetime(int severity, const X509 *cert, const char *problem)
   if (!(bio = BIO_new(BIO_s_mem()))) {
     log_warn(LD_GENERAL, "Couldn't allocate BIO!"); goto end;
   }
-  if (!(ASN1_TIME_print(bio, X509_get_notBefore(cert)))) {
+  if (!(ASN1_TIME_print(bio, X509_get_notBefore_const(cert)))) {
     tls_log_errors(NULL, LOG_WARN, LD_NET, "printing certificate lifetime");
     goto end;
   }
@@ -2211,7 +2216,7 @@ log_cert_lifetime(int severity, const X509 *cert, const char *problem)
   s1 = tor_strndup(buf->data, buf->length);
 
   (void)BIO_reset(bio);
-  if (!(ASN1_TIME_print(bio, X509_get_notAfter(cert)))) {
+  if (!(ASN1_TIME_print(bio, X509_get_notAfter_const(cert)))) {
     tls_log_errors(NULL, LOG_WARN, LD_NET, "printing certificate lifetime");
     goto end;
   }
@@ -2374,12 +2379,12 @@ check_cert_lifetime_internal(int severity, const X509 *cert,
   now = time(NULL);
 
   t = now + future_tolerance;
-  if (X509_cmp_time(X509_get_notBefore(cert), &t) > 0) {
+  if (X509_cmp_time(X509_get_notBefore_const(cert), &t) > 0) {
     log_cert_lifetime(severity, cert, "not yet valid");
     return -1;
   }
   t = now - past_tolerance;
-  if (X509_cmp_time(X509_get_notAfter(cert), &t) < 0) {
+  if (X509_cmp_time(X509_get_notAfter_const(cert), &t) < 0) {
     log_cert_lifetime(severity, cert, "already expired");
     return -1;
   }
