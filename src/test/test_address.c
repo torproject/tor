@@ -688,16 +688,20 @@ test_address_get_if_addrs_list_internal(void *arg)
   results = get_interface_address_list(LOG_ERR, 1);
 
   tt_assert(results != NULL);
-  /* Assume every system has at least 1 non-local non-multicast IPv4
-   * interface, even if it is an internal one */
-  tt_int_op(smartlist_len(results),>=,1);
+  /* When the network is down, a system might not have any non-local
+   * non-multicast addresseses, not even internal ones.
+   * Unit tests shouldn't fail because of this. */
+  tt_int_op(smartlist_len(results),>=,0);
 
   tt_assert(!smartlist_contains_localhost_tor_addr(results));
   tt_assert(!smartlist_contains_multicast_tor_addr(results));
   /* The list may or may not contain internal addresses */
 
-  tt_assert(smartlist_contains_ipv4_tor_addr(results));
-  tt_assert(!smartlist_contains_ipv6_tor_addr(results));
+  /* Allow unit tests to pass on IPv6-only machines */
+  if (smartlist_len(results) > 0) {
+    tt_assert(smartlist_contains_ipv4_tor_addr(results)
+              || smartlist_contains_ipv6_tor_addr(results));
+  }
 
  done:
   free_interface_address_list(results);
@@ -721,7 +725,10 @@ test_address_get_if_addrs_list_no_internal(void *arg)
   tt_assert(!smartlist_contains_multicast_tor_addr(results));
   tt_assert(!smartlist_contains_internal_tor_addr(results));
 
-    /* The list may or may not contain IPv4 addresses */
+  /* if there are any addresses, they must be IPv4 */
+  if (smartlist_len(results) > 0) {
+    tt_assert(smartlist_contains_ipv4_tor_addr(results));
+  }
   tt_assert(!smartlist_contains_ipv6_tor_addr(results));
 
  done:
@@ -746,8 +753,11 @@ test_address_get_if_addrs6_list_internal(void *arg)
   tt_assert(!smartlist_contains_multicast_tor_addr(results));
   /* The list may or may not contain internal addresses */
 
+  /* if there are any addresses, they must be IPv6 */
   tt_assert(!smartlist_contains_ipv4_tor_addr(results));
-  /* The list may or may not contain IPv6 addresses */
+  if (smartlist_len(results) > 0) {
+    tt_assert(smartlist_contains_ipv6_tor_addr(results));
+  }
 
  done:
   free_interface_address6_list(results);
@@ -772,7 +782,9 @@ test_address_get_if_addrs6_list_no_internal(void *arg)
   tt_assert(!smartlist_contains_internal_tor_addr(results));
 
   tt_assert(!smartlist_contains_ipv4_tor_addr(results));
-  /* The list may or may not contain IPv6 addresses */
+  if (smartlist_len(results) > 0) {
+    tt_assert(smartlist_contains_ipv6_tor_addr(results));
+  }
 
  done:
   free_interface_address6_list(results);
@@ -883,16 +895,18 @@ test_address_get_if_addrs(void *arg)
 
   rv = get_interface_address(LOG_ERR, &addr_h);
 
-  /* Assume every system has at least 1 non-local non-multicast IPv4
-   * interface, even if it is an internal one */
-  tt_assert(rv == 0);
-  tor_addr_from_ipv4h(&tor_addr, addr_h);
+  /* When the network is down, a system might not have any non-local
+   * non-multicast IPv4 addresses, not even internal ones.
+   * Unit tests shouldn't fail because of this. */
+  if (rv == 0) {
+    tor_addr_from_ipv4h(&tor_addr, addr_h);
 
-  tt_assert(!tor_addr_is_loopback(&tor_addr));
-  tt_assert(!tor_addr_is_multicast(&tor_addr));
-  /* The address may or may not be an internal address */
+    tt_assert(!tor_addr_is_loopback(&tor_addr));
+    tt_assert(!tor_addr_is_multicast(&tor_addr));
+    /* The address may or may not be an internal address */
 
-  tt_assert(tor_addr_is_v4(&tor_addr));
+    tt_assert(tor_addr_is_v4(&tor_addr));
+  }
 
  done:
   return;
