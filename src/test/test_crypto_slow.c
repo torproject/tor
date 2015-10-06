@@ -217,7 +217,7 @@ test_libscrypt_eq_openssl(void *arg)
   memset(buf2,0,64);
 
   N = 1048576;
-  maxmem = 2 * 1024 * 1024 * 1024; // 2 GB
+  maxmem = 2 * 1024 * 1024 * (uint64_t)1024; // 2 GB
 
   libscrypt_retval =
   libscrypt_scrypt((const uint8_t *)"pleaseletmein",
