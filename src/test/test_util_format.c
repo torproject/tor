@@ -112,10 +112,13 @@ test_util_format_base64_decode_nopad(void *ignored)
   int res;
   int i;
   char *src;
-  uint8_t *dst;
+  uint8_t *dst, *real_dst;
+  uint8_t expected[] = {0x65, 0x78, 0x61, 0x6D, 0x70, 0x6C, 0x65};
+  char real_src[] = "ZXhhbXBsZQ";
 
   src = tor_malloc_zero(256);
   dst = tor_malloc_zero(1000);
+  real_dst = tor_malloc_zero(10);
 
   for (i=0;i<256;i++) {
     src[i] = (char)i;
@@ -137,9 +140,14 @@ test_util_format_base64_decode_nopad(void *ignored)
   tt_int_op(res, OP_EQ, 9);
   tt_mem_op(dst, OP_EQ, "Opa mundo", 9);
 
+  res = base64_decode_nopad(real_dst, 10, real_src, 10);
+  tt_int_op(res, OP_EQ, 7);
+  tt_mem_op(real_dst, OP_EQ, expected, 7);
+
  done:
   tor_free(src);
   tor_free(dst);
+  tor_free(real_dst);
 }
 
 static void
@@ -149,10 +157,13 @@ test_util_format_base64_decode(void *ignored)
   int res;
   int i;
   char *src;
-  char *dst;
+  char *dst, *real_dst;
+  uint8_t expected[] = {0x65, 0x78, 0x61, 0x6D, 0x70, 0x6C, 0x65};
+  char real_src[] = "ZXhhbXBsZQ==";
 
   src = tor_malloc_zero(256);
   dst = tor_malloc_zero(1000);
+  real_dst = tor_malloc_zero(10);
 
   for (i=0;i<256;i++) {
     src[i] = (char)i;
@@ -179,9 +190,14 @@ test_util_format_base64_decode(void *ignored)
   tt_int_op(res, OP_EQ, 11);
   tt_mem_op(dst, OP_EQ, "Hello world", 11);
 
+  res = base64_decode(real_dst, 10, real_src, 10);
+  tt_int_op(res, OP_EQ, 7);
+  tt_mem_op(real_dst, OP_EQ, expected, 7);
+
  done:
   tor_free(src);
   tor_free(dst);
+  tor_free(real_dst);
 }
 
 static void
@@ -191,10 +207,13 @@ test_util_format_base16_decode(void *ignored)
   int res;
   int i;
   char *src;
-  char *dst;
+  char *dst, *real_dst;
+  char expected[] = {0x65, 0x78, 0x61, 0x6D, 0x70, 0x6C, 0x65};
+  char real_src[] = "6578616D706C65";
 
   src = tor_malloc_zero(256);
   dst = tor_malloc_zero(1000);
+  real_dst = tor_malloc_zero(10);
 
   for (i=0;i<256;i++) {
     src[i] = (char)i;
@@ -222,9 +241,14 @@ test_util_format_base16_decode(void *ignored)
   res = base16_decode(dst, 1000, "axxx", 4);
   tt_int_op(res, OP_EQ, -1);
 
+  res = base16_decode(real_dst, 10, real_src, 14);
+  tt_int_op(res, OP_EQ, 0);
+  tt_mem_op(real_dst, OP_EQ, expected, 7);
+
  done:
   tor_free(src);
   tor_free(dst);
+  tor_free(real_dst);
 }
 
 struct testcase_t util_format_tests[] = {
