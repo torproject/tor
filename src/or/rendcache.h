@@ -85,5 +85,29 @@ void rend_cache_intro_failure_note(rend_intro_point_failure_t failure,
                                    const char *service_id);
 void rend_cache_failure_purge(void);
 
+#ifdef RENDCACHE_PRIVATE
+
+STATIC size_t rend_cache_entry_allocation(const rend_cache_entry_t *e);
+STATIC void rend_cache_entry_free(rend_cache_entry_t *e);
+STATIC void rend_cache_failure_intro_entry_free(rend_cache_failure_intro_t
+                                                *entry);
+STATIC void rend_cache_failure_entry_free(rend_cache_failure_t *entry);
+STATIC int cache_failure_intro_lookup(const uint8_t *identity,
+                                      const char *service_id,
+                                      rend_cache_failure_intro_t
+                                      **intro_entry);
+STATIC void rend_cache_decrement_allocation(size_t n);
+STATIC void rend_cache_increment_allocation(size_t n);
+STATIC rend_cache_failure_intro_t *rend_cache_failure_intro_entry_new(
+                                      rend_intro_point_failure_t failure);
+STATIC rend_cache_failure_t *rend_cache_failure_entry_new(void);
+STATIC void rend_cache_failure_remove(rend_service_descriptor_t *desc);
+STATIC void cache_failure_intro_add(const uint8_t *identity,
+                                    const char *service_id,
+                                    rend_intro_point_failure_t failure);
+STATIC void validate_intro_point_failure(const rend_service_descriptor_t *desc,
+                                        const char *service_id);
+#endif
+
 #endif /* TOR_RENDCACHE_H */
 

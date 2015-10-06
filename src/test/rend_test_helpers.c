@@ -1,7 +1,10 @@
-#include "rend_test_helpers.h"
+/* Copyright (c) 2014-2015, The Tor Project, Inc. */
+/* See LICENSE for licensing information */
 
+#include "or.h"
 #include "test.h"
 #include "rendcommon.h"
+#include "rend_test_helpers.h"
 
 void
 generate_desc(int time_diff, rend_encoded_v2_service_descriptor_t **desc,
