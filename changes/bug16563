@@ -1,0 +1,6 @@
+  o Minor bugfixes (logging):
+    - In log messages that include a function name, use __FUNCTION__ instead
+      of __PRETTY_FUNCTION__.  In GCC, these are synonymous, but with clang
+      __PRETTY_FUNCTION__ has extra information we don't need.
+      Fixes bug 16563; bugfix on 0.0.2pre8. Fix by Tom van der Woerdt.
+      
