@@ -1834,7 +1834,8 @@ test_tortls_debug_state_callback(void *ignored)
   n = snprintf(buf, 1000, "SSL %p is now in state unknown"
                " state [type=32,val=45].\n", ssl);
   buf[n]='\0';
-  tt_str_op(mock_saved_log_at(0), OP_EQ, buf);
+  if (strcasecmp(mock_saved_log_at(0), buf))
+    tt_str_op(mock_saved_log_at(0), OP_EQ, buf);
 
  done:
   teardown_capture_of_logs(previous_log);
