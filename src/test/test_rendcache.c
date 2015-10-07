@@ -1138,7 +1138,7 @@ test_rend_cache_entry_allocation(void *data)
   // Handles a non-null argument
   e = tor_malloc_zero(sizeof(rend_cache_entry_t));
   ret = rend_cache_entry_allocation(e);
-  tt_int_op(ret, OP_EQ, 88);
+  tt_int_op(ret, OP_GT, sizeof(rend_cache_entry_t));
 
  done:
   (void)0;
