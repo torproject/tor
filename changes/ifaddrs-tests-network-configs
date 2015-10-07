@@ -1,0 +1,7 @@
+  o Minor fixes (unit tests, networking):
+    - Make get_ifaddrs_* unit tests more tolerant of different network
+      configurations:
+        - Don't assume every test box has an IPv4 address.
+        - Don't assume every test box has a non-localhost address.
+    - Closes ticket #17255. Patch by "teor".
+      Fix for unit tests released in 0.2.7.3.
