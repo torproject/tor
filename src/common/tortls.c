@@ -1941,25 +1941,9 @@ tor_tls_finish_handshake(tor_tls_t *tls)
       tls->wasV2Handshake = 0;
     }
   } else {
-#if 1111
-    /* XXXXXXXX remove v1 detection support, NM! */
-    /* If we got no ID cert, we're a v2 handshake. */
-    X509 *cert = SSL_get_peer_certificate(tls->ssl);
-    STACK_OF(X509) *chain = SSL_get_peer_cert_chain(tls->ssl);
-    int n_certs = sk_X509_num(chain);
-    if (n_certs > 1 || (n_certs == 1 && cert != sk_X509_value(chain, 0))) {
-      log_debug(LD_HANDSHAKE, "Server sent back multiple certificates; it "
-                "looks like a v1 handshake on %p", tls);
-      tls->wasV2Handshake = 0;
-    } else {
-      log_debug(LD_HANDSHAKE,
-                "Server sent back a single certificate; looks like "
-                "a v2 handshake on %p.", tls);
-      tls->wasV2Handshake = 1;
-    }
-    if (cert)
-      X509_free(cert);
-#endif
+    /* Client-side */
+    tls->wasV2Handshake = 1;
+    /* XXXX this can move, probably? -NM */
     if (SSL_set_cipher_list(tls->ssl, SERVER_CIPHER_LIST) == 0) {
       tls_log_errors(NULL, LOG_WARN, LD_HANDSHAKE, "re-setting ciphers");
       r = TOR_TLS_ERROR_MISC;

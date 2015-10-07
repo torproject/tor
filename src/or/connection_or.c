@@ -1783,11 +1783,10 @@ connection_tls_finish_handshake(or_connection_t *conn)
   circuit_build_times_network_is_live(get_circuit_build_times_mutable());
 
   if (tor_tls_used_v1_handshake(conn->tls)) {
+    tor_assert(!started_here);
     conn->link_proto = 1;
-    if (!started_here) {
-      connection_or_init_conn_from_address(conn, &conn->base_.addr,
-                                           conn->base_.port, digest_rcvd, 0);
-    }
+    connection_or_init_conn_from_address(conn, &conn->base_.addr,
+                                         conn->base_.port, digest_rcvd, 0);
     tor_tls_block_renegotiation(conn->tls);
     rep_hist_note_negotiated_link_proto(1, started_here);
     return connection_or_set_state_open(conn);
