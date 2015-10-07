@@ -29,7 +29,7 @@ def ossl(s):
 #####
 # Read the cpp file to understand what Ciphers map to what name :
 # Make "ciphers" a map from name used in the javascript to a cipher macro name
-fileA = open(ff('security/manager/ssl/src/nsNSSComponent.cpp'),'r')
+fileA = open(ff('security/manager/ssl/nsNSSComponent.cpp'),'r')
 
 # The input format is a file containing exactly one section of the form:
 # static CipherPref CipherPrefs[] = {
@@ -71,7 +71,7 @@ for line in cipherLines:
         assert not key_pending
         key_pending = m.group(1)
         continue
-    m = re.search(r'^\s*(\S+)(?:,\s*(true|false))?\s*}', line)
+    m = re.search(r'^\s*(\S+)(?:,\s*(true|false))+\s*}', line)
     if m:
         assert key_pending
         key = key_pending
@@ -107,7 +107,7 @@ fileC.close()
 # Build a map enabled_ciphers from javascript name to "true" or "false",
 # and an (unordered!) list of the macro names for those ciphers that are
 # enabled.
-fileB = open(ff('netwerk/base/public/security-prefs.js'), 'r')
+fileB = open(ff('netwerk/base/security-prefs.js'), 'r')
 
 enabled_ciphers = {}
 for line in fileB:
