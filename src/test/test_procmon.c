@@ -53,3 +53,4 @@ struct testcase_t procmon_tests[] = {
     TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
+

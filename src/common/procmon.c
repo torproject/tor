@@ -355,3 +355,4 @@ tor_process_monitor_free(tor_process_monitor_t *procmon)
 
   tor_free(procmon);
 }
+
