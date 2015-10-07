@@ -1128,7 +1128,7 @@ test_rend_cache_entry_allocation(void *data)
 {
   (void)data;
 
-  int ret;
+  size_t ret;
   rend_cache_entry_t *e;
 
   // Handles a null argument
