@@ -83,11 +83,6 @@
 #define X509_get_notAfter_const(cert) \
   ((const ASN1_TIME*) X509_get_notAfter((X509 *)cert))
 
-/* Enable the "v2" TLS handshake.
- */
-#define V2_HANDSHAKE_SERVER
-#define V2_HANDSHAKE_CLIENT
-
 /* Copied from or.h */
 #define LEGAL_NICKNAME_CHARACTERS \
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -1288,8 +1283,6 @@ tor_tls_get_ciphersuite_name(tor_tls_t *tls)
   return SSL_get_cipher(tls->ssl);
 }
 
-#ifdef V2_HANDSHAKE_SERVER
-
 /* Here's the old V2 cipher list we sent from 0.2.1.1-alpha up to
  * 0.2.3.17-beta. If a client is using this list, we can't believe the ciphers
  * that it claims to support.  We'll prune this list to remove the ciphers
@@ -1569,7 +1562,6 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
     }
   }
 }
-#endif
 
 /** Callback to get invoked on a server after we've read the list of ciphers
  * the client supports, but before we pick our own ciphersuite.
@@ -1679,12 +1671,9 @@ tor_tls_new(int sock, int isServer)
     log_warn(LD_NET, "Newly created BIO has read count %lu, write count %lu",
              result->last_read_count, result->last_write_count);
   }
-#ifdef V2_HANDSHAKE_SERVER
   if (isServer) {
     SSL_set_info_callback(result->ssl, tor_tls_server_info_callback);
-  } else
-#endif
-  {
+  } else {
     SSL_set_info_callback(result->ssl, tor_tls_debug_state_callback);
   }
 
@@ -1723,13 +1712,11 @@ tor_tls_set_renegotiate_callback(tor_tls_t *tls,
   tls->negotiated_callback = cb;
   tls->callback_arg = arg;
   tls->got_renegotiate = 0;
-#ifdef V2_HANDSHAKE_SERVER
   if (cb) {
     SSL_set_info_callback(tls->ssl, tor_tls_server_info_callback);
   } else {
     SSL_set_info_callback(tls->ssl, tor_tls_debug_state_callback);
   }
-#endif
 }
 
 /** If this version of openssl requires it, turn on renegotiation on
@@ -1816,7 +1803,6 @@ tor_tls_read,(tor_tls_t *tls, char *cp, size_t len))
   tor_assert(len<INT_MAX);
   r = SSL_read(tls->ssl, cp, (int)len);
   if (r > 0) {
-#ifdef V2_HANDSHAKE_SERVER
     if (tls->got_renegotiate) {
       /* Renegotiation happened! */
       log_info(LD_NET, "Got a TLS renegotiation from %s", ADDR(tls));
@@ -1824,7 +1810,6 @@ tor_tls_read,(tor_tls_t *tls, char *cp, size_t len))
         tls->negotiated_callback(tls, tls->callback_arg);
       tls->got_renegotiate = 0;
     }
-#endif
     return r;
   }
   err = tor_tls_get_error(tls, r, CATCH_ZERO, "reading", LOG_DEBUG, LD_NET);
@@ -1941,7 +1926,6 @@ tor_tls_finish_handshake(tor_tls_t *tls)
     SSL_set_info_callback(tls->ssl, NULL);
     SSL_set_verify(tls->ssl, SSL_VERIFY_PEER, always_accept_verify_cb);
     SSL_clear_mode(tls->ssl, SSL_MODE_NO_AUTO_CHAIN);
-#ifdef V2_HANDSHAKE_SERVER
     if (tor_tls_client_is_using_v2_ciphers(tls->ssl)) {
       /* This check is redundant, but back when we did it in the callback,
        * we might have not been able to look up the tor_tls_t if the code
@@ -1956,9 +1940,9 @@ tor_tls_finish_handshake(tor_tls_t *tls)
     } else {
       tls->wasV2Handshake = 0;
     }
-#endif
   } else {
-#ifdef V2_HANDSHAKE_CLIENT
+#if 1111
+    /* XXXXXXXX remove v1 detection support, NM! */
     /* If we got no ID cert, we're a v2 handshake. */
     X509 *cert = SSL_get_peer_certificate(tls->ssl);
     STACK_OF(X509) *chain = SSL_get_peer_cert_chain(tls->ssl);
@@ -2362,20 +2346,7 @@ check_no_tls_errors_(const char *fname, int line)
 int
 tor_tls_used_v1_handshake(tor_tls_t *tls)
 {
-#if defined(V2_HANDSHAKE_SERVER) && defined(V2_HANDSHAKE_CLIENT)
   return ! tls->wasV2Handshake;
-#else
-  if (tls->isServer) {
-# ifdef V2_HANDSHAKE_SERVER
-    return ! tls->wasV2Handshake;
-# endif
-  } else {
-# ifdef V2_HANDSHAKE_CLIENT
-    return ! tls->wasV2Handshake;
-# endif
-  }
-  return 1;
-#endif
 }
 
 /** Return the number of server handshakes that we've noticed doing on
