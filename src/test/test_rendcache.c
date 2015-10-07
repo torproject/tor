@@ -659,11 +659,11 @@ test_rend_cache_increment_allocation(void *data)
   // Test when there are too many allocations
   rend_cache_total_allocation = SIZE_MAX-1;
   rend_cache_increment_allocation(2);
-  tt_int_op(rend_cache_total_allocation, OP_EQ, SIZE_MAX);
+  tt_u64_op(rend_cache_total_allocation, OP_EQ, SIZE_MAX);
 
   // And again
   rend_cache_increment_allocation(2);
-  tt_int_op(rend_cache_total_allocation, OP_EQ, SIZE_MAX);
+  tt_u64_op(rend_cache_total_allocation, OP_EQ, SIZE_MAX);
 
  done:
   (void)0;
