@@ -86,6 +86,7 @@ src_test_test_SOURCES = \
 	src/test/test_oom.c \
 	src/test/test_options.c \
 	src/test/test_policy.c \
+	src/test/test_procmon.c \
 	src/test/test_pt.c \
 	src/test/test_relay.c \
 	src/test/test_relaycell.c \

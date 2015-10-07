@@ -192,7 +192,8 @@ tor_process_monitor_new(struct event_base *base,
                         tor_procmon_callback_t cb, void *cb_arg,
                         const char **msg)
 {
-  tor_process_monitor_t *procmon = tor_malloc(sizeof(tor_process_monitor_t));
+  tor_process_monitor_t *procmon = tor_malloc_zero(
+                                       sizeof(tor_process_monitor_t));
   struct parsed_process_specifier_t ppspec;
 
   tor_assert(msg != NULL);
@@ -354,4 +355,3 @@ tor_process_monitor_free(tor_process_monitor_t *procmon)
 
   tor_free(procmon);
 }
-

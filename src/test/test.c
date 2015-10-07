@@ -1151,6 +1151,7 @@ extern struct testcase_t nodelist_tests[];
 extern struct testcase_t oom_tests[];
 extern struct testcase_t options_tests[];
 extern struct testcase_t policy_tests[];
+extern struct testcase_t procmon_tests[];
 extern struct testcase_t pt_tests[];
 extern struct testcase_t relay_tests[];
 extern struct testcase_t relaycell_tests[];
@@ -1203,6 +1204,7 @@ struct testgroup_t testgroups[] = {
   { "oom/", oom_tests },
   { "options/", options_tests },
   { "policy/" , policy_tests },
+  { "procmon/", procmon_tests },
   { "pt/", pt_tests },
   { "relay/" , relay_tests },
   { "relaycell/", relaycell_tests },
@@ -1222,4 +1224,3 @@ struct testgroup_t testgroups[] = {
   { "dns/", dns_tests },
   END_OF_GROUPS
 };
-
