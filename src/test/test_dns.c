@@ -321,10 +321,144 @@ NS(test_main)(void *arg)
 
 #undef NS_SUBMODULE
 
+#define NS_SUBMODULE ASPECT(resolve_impl, addr_is_ip_no_need_to_resolve)
+
+/*
+ * Given that <b>exitconn->base_.address</b> is IP address string, we
+ * want dns_resolve_impl() to parse it and store in 
+ * <b>exitconn->base_.addr</b>. We expect dns_resolve_impl to return 1.
+ * Lastly, we want it to set the TTL value to default one for DNS queries.
+ */
+
+static void
+NS(test_main)(void *arg)
+{
+  int retval;
+  int made_pending;
+  const tor_addr_t *resolved_addr;
+  tor_addr_t addr_to_compare;
+
+  tor_addr_parse(&addr_to_compare, "8.8.8.8");
+
+  or_circuit_t *on_circ = tor_malloc_zero(sizeof(or_circuit_t));
+
+  edge_connection_t *exitconn = tor_malloc_zero(sizeof(edge_connection_t));
+  TO_CONN(exitconn)->type = CONN_TYPE_EXIT;
+  TO_CONN(exitconn)->magic = EDGE_CONNECTION_MAGIC;
+  TO_CONN(exitconn)->purpose = EXIT_PURPOSE_RESOLVE;
+  TO_CONN(exitconn)->state = EXIT_CONN_STATE_RESOLVING;
+  exitconn->base_.s = TOR_INVALID_SOCKET;
+
+  TO_CONN(exitconn)->address = tor_strdup("8.8.8.8"); 
+
+  retval = dns_resolve_impl(exitconn, 1, on_circ, NULL, &made_pending,
+                            NULL);
+
+  resolved_addr = &(exitconn->base_.addr);
+
+  tt_int_op(retval,==,1);
+  tt_assert(tor_addr_compare(resolved_addr, 
+            (const tor_addr_t *)&addr_to_compare, CMP_EXACT) == 0);
+  tt_int_op(exitconn->address_ttl,==,DEFAULT_DNS_TTL);
+  
+  done:
+  tor_free(on_circ);
+  tor_free(TO_CONN(exitconn)->address);
+  tor_free(exitconn);
+  return;
+}
+
+#undef NS_SUBMODULE
+
+#define NS_SUBMODULE ASPECT(resolve_impl, non_exit)
+
+static void
+NS(test_main)(void *arg)
+{
+  tt_skip();
+
+  done:
+  return;
+}
+
+#undef NS_SUBMODULE
+
+#define NS_SUBMODULE ASPECT(resolve_impl, addr_is_invalid_dest)
+
+static void
+NS(test_main)(void *arg)
+{
+  tt_skip();
+
+  done:
+  return;
+}
+
+#undef NS_SUBMODULE
+
+#define NS_SUBMODULE ASPECT(resolve_impl, malformed_ptr)
+
+static void
+NS(test_main)(void *arg)
+{
+  tt_skip();
+
+  done:
+  return;
+}
+
+#undef NS_SUBMODULE
+
+#define NS_SUBMODULE ASPECT(resolve_impl, cache_hit_pending)
+
+static void
+NS(test_main)(void *arg)
+{
+  tt_skip();
+
+  done:
+  return;
+}
+
+#undef NS_SUBMODULE
+
+#define NS_SUBMODULE ASPECT(resolve_impl, cache_hit_cached)
+
+static void
+NS(test_main)(void *arg)
+{
+  tt_skip();
+
+  done:
+  return;
+}
+
+#undef NS_SUBMODULE
+
+#define NS_SUBMODULE ASPECT(resolve_impl, cache_miss)
+
+static void
+NS(test_main)(void *arg)
+{
+  tt_skip();
+
+  done:
+  return;
+}
+
+#undef NS_SUBMODULE
+
 struct testcase_t dns_tests[] = {
    TEST_CASE(clip_ttl),
    TEST_CASE(expiry_ttl),
    TEST_CASE(resolve),
+   TEST_CASE_ASPECT(resolve_impl, addr_is_ip_no_need_to_resolve),
+   TEST_CASE_ASPECT(resolve_impl, non_exit),
+   TEST_CASE_ASPECT(resolve_impl, addr_is_invalid_dest),
+   TEST_CASE_ASPECT(resolve_impl, malformed_ptr),
+   TEST_CASE_ASPECT(resolve_impl, cache_hit_pending),
+   TEST_CASE_ASPECT(resolve_impl, cache_hit_cached),
+   TEST_CASE_ASPECT(resolve_impl, cache_miss),
    END_OF_TESTCASES
 };
 
