@@ -1464,11 +1464,10 @@ connection_tls_continue_handshake(or_connection_t *conn)
     case TOR_TLS_DONE:
       if (! tor_tls_used_v1_handshake(conn->tls)) {
         if (!tor_tls_is_server(conn->tls)) {
-          if (conn->base_.state == OR_CONN_STATE_TLS_HANDSHAKING) {
-            return connection_or_launch_v3_or_handshake(conn);
-          }
+          tor_assert(conn->base_.state == OR_CONN_STATE_TLS_HANDSHAKING);
+          return connection_or_launch_v3_or_handshake(conn);
         } else {
-          /* v2/v3 handshake, but not a client. */
+          /* v2/v3 handshake, but we are not a client. */
           log_debug(LD_OR, "Done with initial SSL handshake (server-side). "
                            "Expecting renegotiation or VERSIONS cell");
           tor_tls_set_renegotiate_callback(conn->tls,
@@ -1481,6 +1480,7 @@ connection_tls_continue_handshake(or_connection_t *conn)
           return 0;
         }
       }
+      tor_assert(!tor_tls_is_server(conn->tls));
       return connection_tls_finish_handshake(conn);
     case TOR_TLS_WANTWRITE:
       connection_start_writing(TO_CONN(conn));
@@ -1769,6 +1769,8 @@ connection_tls_finish_handshake(or_connection_t *conn)
   char digest_rcvd[DIGEST_LEN];
   int started_here = connection_or_nonopen_was_started_here(conn);
 
+  tor_assert(!started_here);
+
   log_debug(LD_HANDSHAKE,"%s tls handshake on %p with %s done, using "
             "ciphersuite %s. verifying.",
             started_here?"outgoing":"incoming",
@@ -1783,7 +1785,6 @@ connection_tls_finish_handshake(or_connection_t *conn)
   circuit_build_times_network_is_live(get_circuit_build_times_mutable());
 
   if (tor_tls_used_v1_handshake(conn->tls)) {
-    tor_assert(!started_here);
     conn->link_proto = 1;
     connection_or_init_conn_from_address(conn, &conn->base_.addr,
                                          conn->base_.port, digest_rcvd, 0);
@@ -1794,10 +1795,8 @@ connection_tls_finish_handshake(or_connection_t *conn)
     connection_or_change_state(conn, OR_CONN_STATE_OR_HANDSHAKING_V2);
     if (connection_init_or_handshake_state(conn, started_here) < 0)
       return -1;
-    if (!started_here) {
-      connection_or_init_conn_from_address(conn, &conn->base_.addr,
-                                           conn->base_.port, digest_rcvd, 0);
-    }
+    connection_or_init_conn_from_address(conn, &conn->base_.addr,
+                                         conn->base_.port, digest_rcvd, 0);
     return connection_or_send_versions(conn, 0);
   }
 }
