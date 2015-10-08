@@ -321,6 +321,22 @@ NS(test_main)(void *arg)
 
 #undef NS_SUBMODULE
 
+/** Create an <b>edge_connection_t</b> instance that is considered a
+ * valid exit connection by asserts in dns_resolve_impl.
+ */
+static edge_connection_t *
+create_valid_exitconn(void)
+{
+  edge_connection_t *exitconn = tor_malloc_zero(sizeof(edge_connection_t));
+  TO_CONN(exitconn)->type = CONN_TYPE_EXIT;
+  TO_CONN(exitconn)->magic = EDGE_CONNECTION_MAGIC;
+  TO_CONN(exitconn)->purpose = EXIT_PURPOSE_RESOLVE;
+  TO_CONN(exitconn)->state = EXIT_CONN_STATE_RESOLVING;
+  exitconn->base_.s = TOR_INVALID_SOCKET;
+
+  return exitconn;
+}
+
 #define NS_SUBMODULE ASPECT(resolve_impl, addr_is_ip_no_need_to_resolve)
 
 /*
@@ -342,12 +358,7 @@ NS(test_main)(void *arg)
 
   or_circuit_t *on_circ = tor_malloc_zero(sizeof(or_circuit_t));
 
-  edge_connection_t *exitconn = tor_malloc_zero(sizeof(edge_connection_t));
-  TO_CONN(exitconn)->type = CONN_TYPE_EXIT;
-  TO_CONN(exitconn)->magic = EDGE_CONNECTION_MAGIC;
-  TO_CONN(exitconn)->purpose = EXIT_PURPOSE_RESOLVE;
-  TO_CONN(exitconn)->state = EXIT_CONN_STATE_RESOLVING;
-  exitconn->base_.s = TOR_INVALID_SOCKET;
+  edge_connection_t *exitconn = create_valid_exitconn();
 
   TO_CONN(exitconn)->address = tor_strdup("8.8.8.8"); 
 
@@ -357,8 +368,7 @@ NS(test_main)(void *arg)
   resolved_addr = &(exitconn->base_.addr);
 
   tt_int_op(retval,==,1);
-  tt_assert(tor_addr_compare(resolved_addr, 
-            (const tor_addr_t *)&addr_to_compare, CMP_EXACT) == 0);
+  tt_assert(tor_addr_eq(resolved_addr, (const tor_addr_t *)&addr_to_compare));
   tt_int_op(exitconn->address_ttl,==,DEFAULT_DNS_TTL);
   
   done:
