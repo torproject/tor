@@ -1,7 +1,7 @@
 Hacking Tor: An Incomplete Guide
 ================================
 
-Getting started
+Important links
 ---------------
 
 For full information on how Tor is supposed to work, look at the files in
@@ -18,6 +18,9 @@ We talk about Tor on the tor-talk mailing list.  Design proposals and
 discussion belong on the tor-dev mailing list.  We hang around on
 irc.oftc.net, with general discussion happening on #tor and development
 happening on #tor-dev.
+
+For a nice quick-start guide to hacking on Tor, have a look at
+doc/GettingStarted.txt, included with the Tor distribution.
 
 How we use Git branches
 -----------------------
