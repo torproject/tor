@@ -1714,8 +1714,8 @@ router_compare_to_my_exit_policy(const tor_addr_t *addr, uint16_t port)
 
 /** Return true iff my exit policy is reject *:*.  Return -1 if we don't
  * have a descriptor */
-int
-router_my_exit_policy_is_reject_star(void)
+MOCK_IMPL(int,
+router_my_exit_policy_is_reject_star,(void))
 {
   if (!router_get_my_routerinfo()) /* make sure desc_routerinfo exists */
     return -1;

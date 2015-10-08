@@ -5,6 +5,7 @@
 
 #include "dns.h"
 #include "connection.h"
+#include "router.h"
 
 #define NS_MODULE dns
 
@@ -382,12 +383,38 @@ NS(test_main)(void *arg)
 
 #define NS_SUBMODULE ASPECT(resolve_impl, non_exit)
 
+/** Given that Tor instance is not configured as an exit node, we want
+ * dns_resolve_impl() to fail with return value -1.
+ */
+static int
+NS(router_my_exit_policy_is_reject_star)(void)
+{
+  return 1;
+}
+
 static void
 NS(test_main)(void *arg)
 {
-  tt_skip();
+  int retval;
+  int made_pending;
+
+  edge_connection_t *exitconn = create_valid_exitconn();
+  or_circuit_t *on_circ = tor_malloc_zero(sizeof(or_circuit_t));
+
+  TO_CONN(exitconn)->address = tor_strdup("torproject.org"); 
+
+  NS_MOCK(router_my_exit_policy_is_reject_star);
+
+  retval = dns_resolve_impl(exitconn, 1, on_circ, NULL, &made_pending,
+                            NULL);
+
+  tt_int_op(retval,==,-1);
 
   done:
+  tor_free(TO_CONN(exitconn)->address);
+  tor_free(exitconn);
+  tor_free(on_circ);
+  NS_UNMOCK(router_my_exit_policy_is_reject_star);
   return;
 }
 
