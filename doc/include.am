@@ -34,13 +34,14 @@ nodist_man1_MANS =
 doc_DATA =
 endif
 
-EXTRA_DIST+= doc/HACKING doc/asciidoc-helper.sh			\
+EXTRA_DIST+= doc/asciidoc-helper.sh			\
              $(html_in) $(man_in) $(txt_in)			\
              doc/state-contents.txt				\
              doc/torrc_format.txt 				\
 	     doc/TUNING						\
-	     doc/WritingTests.txt				\
-	     doc/GettingStarted.txt
+	     doc/HACKING/WritingTests.txt			\
+	     doc/HACKING/GettingStarted.txt			\
+	     doc/HACKING/HACKING_old
 
 docdir = @docdir@
 
