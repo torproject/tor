@@ -39,9 +39,11 @@ EXTRA_DIST+= doc/asciidoc-helper.sh			\
              doc/state-contents.txt				\
              doc/torrc_format.txt 				\
 	     doc/TUNING						\
-	     doc/HACKING/WritingTests.txt			\
+	     doc/HACKING/CodingStandards.txt			\
 	     doc/HACKING/GettingStarted.txt			\
-	     doc/HACKING/HACKING_old
+	     doc/HACKING/HelpfulTools.txt			\
+	     doc/HACKING/ReleasingTor.txt                       \
+	     doc/HACKING/WritingTests.txt
 
 docdir = @docdir@
 
