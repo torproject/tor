@@ -39,6 +39,7 @@ EXTRA_DIST+= doc/asciidoc-helper.sh			\
              doc/state-contents.txt				\
              doc/torrc_format.txt 				\
 	     doc/TUNING						\
+	     doc/HACKING/README.1st				\
 	     doc/HACKING/CodingStandards.txt			\
 	     doc/HACKING/GettingStarted.txt			\
 	     doc/HACKING/HelpfulTools.txt			\
