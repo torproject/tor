@@ -342,7 +342,7 @@ create_valid_exitconn(void)
 
 /*
  * Given that <b>exitconn->base_.address</b> is IP address string, we
- * want dns_resolve_impl() to parse it and store in 
+ * want dns_resolve_impl() to parse it and store in
  * <b>exitconn->base_.addr</b>. We expect dns_resolve_impl to return 1.
  * Lastly, we want it to set the TTL value to default one for DNS queries.
  */
@@ -361,7 +361,7 @@ NS(test_main)(void *arg)
 
   edge_connection_t *exitconn = create_valid_exitconn();
 
-  TO_CONN(exitconn)->address = tor_strdup("8.8.8.8"); 
+  TO_CONN(exitconn)->address = tor_strdup("8.8.8.8");
 
   retval = dns_resolve_impl(exitconn, 1, on_circ, NULL, &made_pending,
                             NULL);
@@ -371,7 +371,7 @@ NS(test_main)(void *arg)
   tt_int_op(retval,==,1);
   tt_assert(tor_addr_eq(resolved_addr, (const tor_addr_t *)&addr_to_compare));
   tt_int_op(exitconn->address_ttl,==,DEFAULT_DNS_TTL);
-  
+
   done:
   tor_free(on_circ);
   tor_free(TO_CONN(exitconn)->address);
@@ -401,7 +401,7 @@ NS(test_main)(void *arg)
   edge_connection_t *exitconn = create_valid_exitconn();
   or_circuit_t *on_circ = tor_malloc_zero(sizeof(or_circuit_t));
 
-  TO_CONN(exitconn)->address = tor_strdup("torproject.org"); 
+  TO_CONN(exitconn)->address = tor_strdup("torproject.org");
 
   NS_MOCK(router_my_exit_policy_is_reject_star);
 
