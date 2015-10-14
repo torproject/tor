@@ -122,20 +122,35 @@ using gcc, you should invoke the configure script with the option
 "--enable-gcc-warnings".  This will give a bunch of extra warning flags to
 the compiler, and help us find divergences from our preferred C style.
 
-Functions to use
-~~~~~~~~~~~~~~~~
+Functions to use; functions not to use.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 We have some wrapper functions like tor_malloc, tor_free, tor_strdup, and
 tor_gettimeofday; use them instead of their generic equivalents.  (They
 always succeed or exit.)
 
 You can get a full list of the compatibility functions that Tor provides by
-looking through src/common/util.h and src/common/compat.h.  You can see the
-available containers in src/common/containers.h.  You should probably
+looking through src/common/util*.h and src/common/compat*.h.  You can see the
+available containers in src/common/containers*.h.  You should probably
 familiarize yourself with these modules before you write too much code, or
 else you'll wind up reinventing the wheel.
 
-Use 'INLINE' instead of 'inline', so that we work properly on Windows.
+Use 'INLINE' instead of 'inline' -- it's a vestige of an old hack to make
+sure that we worked on MSVC6.
+
+We don't use strcat or strcpy or sprintf of any of those notoriously broken
+old C functions.  Use strlcat, strlcpy, or tor_snprintf/tor_asprintf instead.
+
+Functions not to write
+~~~~~~~~~~~~~~~~~~~~~~
+
+Try to never hand-write new code to parse or generate binary
+formats. Instead, use trunnel if at all possible.  See
+    https://gitweb.torproject.org/trunnel.git/tree
+for more information about trunnel.
+
+For information on adding new trunnel code to Tor, see src/trunnel/README
+
 
 Calling and naming conventions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
