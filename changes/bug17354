@@ -1,0 +1,4 @@
+  o Minor bugfixes (sandbox):
+    - Add the "hidserv-stats" filename to our sandbox filter for the
+      HiddenServiceStatistics option to work properly. Fixes bug 17354;
+      bugfix on tor-0.2.6.2-alpha~54^2~1. Patch from David Goulet.
