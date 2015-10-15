@@ -48,7 +48,7 @@
 #include <sys/epoll.h>
 #include <sys/prctl.h>
 #include <linux/futex.h>
-#include <bits/signum.h>
+#include <sys/file.h>
 
 #include <stdarg.h>
 #include <seccomp.h>
