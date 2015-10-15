@@ -3201,6 +3201,7 @@ sandbox_init_filter(void)
     RENAME_SUFFIX2("stats", "exit-stats", ".tmp");
     RENAME_SUFFIX2("stats", "buffer-stats", ".tmp");
     RENAME_SUFFIX2("stats", "conn-stats", ".tmp");
+    RENAME_SUFFIX2("stats", "hidserv-stats", ".tmp");
     RENAME_SUFFIX("hashed-fingerprint", ".tmp");
     RENAME_SUFFIX("router-stability", ".tmp");
 
