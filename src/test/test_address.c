@@ -1080,3 +1080,4 @@ struct testcase_t address_tests[] = {
   ADDRESS_TEST(tor_addr_eq_ipv4h, 0),
   END_OF_TESTCASES
 };
+
