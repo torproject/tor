@@ -1,0 +1,4 @@
+  o Minor bugfixes (compilation):
+    - Fix compilation of sandbox.c with musl-libc.
+      Fixes bug 17347; bugfix on 0.2.5.1-alpha.
+      Patch from 'jamestk'.
