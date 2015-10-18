@@ -2118,5 +2118,18 @@ assert_cache_ok_(void)
       }
     });
 }
+
 #endif
+
+cached_resolve_t
+*dns_get_cache_entry(cached_resolve_t *query)
+{
+  return HT_FIND(cache_map, &cache_root, query);
+}
+
+void
+dns_insert_cache_entry(cached_resolve_t *new_entry)
+{
+  HT_INSERT(cache_map, &cache_root, new_entry);
+}
 

@@ -513,12 +513,62 @@ NS(test_main)(void *arg)
 
 #define NS_SUBMODULE ASPECT(resolve_impl, cache_hit_pending)
 
+/* Given that there is already a pending resolve for the given address,
+ * we want dns_resolve_impl to append our exit connection to list
+ * of pending connections for the pending DNS request and return 0.
+ */
+
+static int
+NS(router_my_exit_policy_is_reject_star)(void)
+{
+  return 0;
+}
+
 static void
 NS(test_main)(void *arg)
 {
-  tt_skip();
+  int retval;
+  int made_pending = 0;
+
+  pending_connection_t *pending_conn = NULL;
+
+  edge_connection_t *exitconn = create_valid_exitconn();
+  or_circuit_t *on_circ = tor_malloc_zero(sizeof(or_circuit_t));
+
+  cached_resolve_t *cache_entry = tor_malloc_zero(sizeof(cached_resolve_t));
+  cache_entry->magic = CACHED_RESOLVE_MAGIC;
+  cache_entry->state = CACHE_STATE_PENDING;
+  cache_entry->minheap_idx = -1;
+  cache_entry->expire = time(NULL) + 60 * 60;
+
+  TO_CONN(exitconn)->address = tor_strdup("torproject.org");
+
+  strlcpy(cache_entry->address, TO_CONN(exitconn)->address,
+          sizeof(cache_entry->address));
+
+  NS_MOCK(router_my_exit_policy_is_reject_star);
+
+  dns_init();
+
+  dns_insert_cache_entry(cache_entry);
+
+  retval = dns_resolve_impl(exitconn, 1, on_circ, NULL, &made_pending,
+                            NULL);
+
+  tt_int_op(retval,==,0);
+  tt_int_op(made_pending,==,1);
+
+  pending_conn = cache_entry->pending_connections;
+
+  tt_assert(pending_conn != NULL);
+  tt_assert(pending_conn->conn == exitconn);
 
   done:
+  NS_UNMOCK(router_my_exit_policy_is_reject_star);
+  tor_free(on_circ);
+  tor_free(TO_CONN(exitconn)->address);
+  tor_free(cache_entry->pending_connections);
+  tor_free(cache_entry);
   return;
 }
 

@@ -42,6 +42,10 @@ uint8_t answer_type,const cached_resolve_t *resolved));
 
 MOCK_DECL(STATIC void,send_resolved_hostname_cell,(edge_connection_t *conn,
 const char *hostname));
+
+cached_resolve_t *dns_get_cache_entry(cached_resolve_t *query);
+void dns_insert_cache_entry(cached_resolve_t *new_entry);
+
 #endif
 
 #endif
