@@ -1,10 +1,3 @@
   o Minor bug fixes (addresses, testing):
-    - Handle errors in get_interface_address6_via_udp_socket_hack by
-      returning an empty list (no addresses found). This bug was triggered
-      in ElectroBSD/FreeBSD jails.
-    - Ensure that either a valid address is returned in address pointers,
-      or that the address data is zeroed on error.
-    - Ensure that free_interface_address6_list handles NULL lists.
     - Add unit tests for get_interface_address* failure cases.
-      Fixes bug #17173.
-      Patch by fk/teor, not in any released version of tor.
+      Fixes bug 17173; bugfix on 0.2.7.3-rc.  Patch by fk/teor.

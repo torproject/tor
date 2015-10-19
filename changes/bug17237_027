@@ -1,4 +1,3 @@
   o Minor features (compilation):
     - Repair compilation with the most recent (unreleased, alpha)
-      vesions of OpenSSL 1.1. Fixes the 0.2.7-related part of
-      ticket 17237.
+      vesions of OpenSSL 1.1. Fixes part of ticket 17237.
