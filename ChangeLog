@@ -1,3 +1,48 @@
+Changes in version 0.2.7.4-rc - 2015-10-20
+  Tor 0.2.7.4-rc is the second release candidate in the 0.2.7 servies.
+  It a few small bugfixes, notably fixes for compilation and portability
+  on different platforms. If no further significant bounds are found,
+  the next release will the the official stable release.
+
+  o Minor features (geoIP):
+    - Update geoip and geoip6 to the October 9 2015 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfixes (compilation):
+    - Repair compilation with the most recent (unreleased, alpha)
+      vesions of OpenSSL 1.1. Fixes part of ticket 17237.
+    - Fix an integer overflow warning in test_crypto_slow.c. Fixes bug
+      17251; bugfix on 0.2.7.2-alpha.
+    - Fix compilation of sandbox.c with musl-libc. Fixes bug 17347;
+      bugfix on 0.2.5.1-alpha. Patch from 'jamestk'.
+
+  o Minor bugfixes (portability):
+    - Use libexecinfo on FreeBSD, to enable backtrace support. Fixes
+      part of bug 17151; bugfix on 0.2.5.2-alpha. Patch from
+      Marcin Cieślak.
+
+  o Minor bugfixes (sandbox):
+    - Add the "hidserv-stats" filename to our sandbox filter for the
+      HiddenServiceStatistics option to work properly. Fixes bug 17354;
+      bugfix on tor-0.2.6.2-alpha~54^2~1. Patch from David Goulet.
+
+  o Minor bugfixes (testing):
+    - Add unit tests for get_interface_address* failure cases. Fixes bug
+      17173; bugfix on 0.2.7.3-rc. Patch by fk/teor.
+    - Fix breakage when running 'make check' with BSD make. Fixes bug
+      17154; bugfix on 0.2.7.3-rc. Patch by Marcin Cieślak.
+    - Make the get_ifaddrs_* unit tests more tolerant of different
+      network configurations. (Don't assume every test box has an IPv4
+      address, and Don't assume every test box has a non-localhost
+      address. Fixes bug 17255; bugfix on 0.2.7.3-rc. Patch by "teor".
+    - Skip backtrace tests when backtrace support is not compiled in.
+      Fixes part of bug 17151; bugfix on 0.2.7.1-alpha. Patch from
+      Marcin Cieślak.
+
+  o Documentation:
+    - Fix capitalization of SOCKS in sample torrc. Closes ticket 15609.
+
+
 Changes in version 0.2.7.3-rc - 2015-09-25
   Tor 0.2.7.3-rc is the first release candidate in the 0.2.7 series. It
   contains numerous usability fixes for Ed25519 keys, safeguards against
