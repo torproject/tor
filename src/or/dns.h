@@ -46,6 +46,11 @@ const char *hostname));
 cached_resolve_t *dns_get_cache_entry(cached_resolve_t *query);
 void dns_insert_cache_entry(cached_resolve_t *new_entry);
 
+MOCK_DECL(STATIC int,
+set_exitconn_info_from_resolve,(edge_connection_t *exitconn,
+                                const cached_resolve_t *resolve,
+                                char **hostname_out));
+
 #endif
 
 #endif

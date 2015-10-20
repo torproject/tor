@@ -111,9 +111,6 @@ static int launch_resolve(cached_resolve_t *resolve);
 static void add_wildcarded_test_address(const char *address);
 static int configure_nameservers(int force);
 static int answer_is_wildcarded(const char *ip);
-static int set_exitconn_info_from_resolve(edge_connection_t *exitconn,
-                                          const cached_resolve_t *resolve,
-                                          char **hostname_out);
 static int evdns_err_is_transient(int err);
 static void inform_pending_connections(cached_resolve_t *resolve);
 static void make_pending_resolve_cached(cached_resolve_t *cached);
@@ -859,10 +856,10 @@ dns_resolve_impl,(edge_connection_t *exitconn, int is_resolve,
  * Return -2 on a transient error, -1 on a permenent error, and 1 on
  * a successful lookup.
  */
-static int
-set_exitconn_info_from_resolve(edge_connection_t *exitconn,
-                               const cached_resolve_t *resolve,
-                               char **hostname_out)
+MOCK_IMPL(STATIC int,
+set_exitconn_info_from_resolve,(edge_connection_t *exitconn,
+                                const cached_resolve_t *resolve,
+                                char **hostname_out))
 {
   int ipv4_ok, ipv6_ok, answer_with_ipv4, r;
   uint32_t begincell_flags;

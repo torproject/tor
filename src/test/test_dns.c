@@ -576,12 +576,76 @@ NS(test_main)(void *arg)
 
 #define NS_SUBMODULE ASPECT(resolve_impl, cache_hit_cached)
 
+/* Given that a finished DNS resolve is available in our cache, we want
+ * dns_resolve_impl() return it to called via resolve_out and pass the
+ * handling to set_exitconn_info_from_resolve function.
+ */
+static int
+NS(router_my_exit_policy_is_reject_star)(void)
+{
+  return 0;
+}
+
+static edge_connection_t *last_exitconn = NULL;
+static cached_resolve_t *last_resolve = NULL;
+
+static int
+NS(set_exitconn_info_from_resolve)(edge_connection_t *exitconn,
+                                   const cached_resolve_t *resolve,
+                                   char **hostname_out)
+{
+  last_exitconn = exitconn;
+  last_resolve = (cached_resolve_t *)resolve;
+
+  return 0;
+}
+
 static void
 NS(test_main)(void *arg)
 {
-  tt_skip();
+  int retval;
+  int made_pending = 0;
+
+  edge_connection_t *exitconn = create_valid_exitconn();
+  or_circuit_t *on_circ = tor_malloc_zero(sizeof(or_circuit_t));
+
+  cached_resolve_t *resolve_out = NULL;
+
+  cached_resolve_t *cache_entry = tor_malloc_zero(sizeof(cached_resolve_t));
+  cache_entry->magic = CACHED_RESOLVE_MAGIC;
+  cache_entry->state = CACHE_STATE_CACHED;
+  cache_entry->minheap_idx = -1;
+  cache_entry->expire = time(NULL) + 60 * 60;
+
+  TO_CONN(exitconn)->address = tor_strdup("torproject.org");
+
+  strlcpy(cache_entry->address, TO_CONN(exitconn)->address,
+          sizeof(cache_entry->address));
+
+  NS_MOCK(router_my_exit_policy_is_reject_star);
+  NS_MOCK(set_exitconn_info_from_resolve);
+
+  dns_init();
+
+  dns_insert_cache_entry(cache_entry);
+
+  retval = dns_resolve_impl(exitconn, 1, on_circ, NULL, &made_pending,
+                            &resolve_out);
+
+  tt_int_op(retval,==,0);
+  tt_int_op(made_pending,==,0);
+  tt_assert(resolve_out == cache_entry);
+
+  tt_assert(last_exitconn == exitconn);
+  tt_assert(last_resolve == cache_entry);
 
   done:
+  NS_UNMOCK(router_my_exit_policy_is_reject_star);
+  NS_UNMOCK(set_exitconn_info_from_resolve);
+  tor_free(on_circ);
+  tor_free(TO_CONN(exitconn)->address);
+  tor_free(cache_entry->pending_connections);
+  tor_free(cache_entry);
   return;
 }
 
