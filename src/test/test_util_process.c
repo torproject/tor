@@ -24,21 +24,23 @@ static void
 test_util_process_set_waitpid_callback(void *ignored)
 {
   (void)ignored;
-  waitpid_callback_t *res;
+  waitpid_callback_t *res1 = NULL, *res2 = NULL;
   int previous_log = setup_capture_of_logs(LOG_WARN);
   pid_t pid = (pid_t)42;
 
-  res = set_waitpid_callback(pid, temp_callback, NULL);
-  tt_assert(res);
+  res1 = set_waitpid_callback(pid, temp_callback, NULL);
+  tt_assert(res1);
 
-  res = set_waitpid_callback(pid, temp_callback, NULL);
-  tt_assert(res);
+  res2 = set_waitpid_callback(pid, temp_callback, NULL);
+  tt_assert(res2);
   tt_str_op(mock_saved_log_at(0), OP_EQ,
             "Replaced a waitpid monitor on pid 42. That should be "
             "impossible.\n");
 
  done:
   teardown_capture_of_logs(previous_log);
+  clear_waitpid_callback(res1);
+  clear_waitpid_callback(res2);
 }
 
 static void
@@ -55,9 +57,12 @@ test_util_process_clear_waitpid_callback(void *ignored)
   clear_waitpid_callback(res);
   tt_int_op(mock_saved_log_number(), OP_EQ, 0);
 
+#if 0
+  /* No.  This is use-after-free.  We don't _do_ that. XXXX */
   clear_waitpid_callback(res);
   tt_str_op(mock_saved_log_at(0), OP_EQ,
             "Couldn't remove waitpid monitor for pid 43.\n");
+#endif
 
  done:
   teardown_capture_of_logs(previous_log);
