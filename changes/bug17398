@@ -1,0 +1,3 @@
+  o Minor bugfixes (memory leaks):
+    - Fix a memory leak in ed25519 batch signature checking.
+      Fixes bug 17398; bugfix on 0.2.6.1-alpha.
