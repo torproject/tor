@@ -353,7 +353,7 @@ cache_failure_intro_add(const uint8_t *identity, const char *service_id,
                         rend_intro_point_failure_t failure)
 {
   rend_cache_failure_t *fail_entry;
-  rend_cache_failure_intro_t *entry;
+  rend_cache_failure_intro_t *entry, *old_entry;
 
   /* Make sure we have a failure object for this service ID and if not,
    * create it with this new intro failure entry. */
@@ -364,7 +364,10 @@ cache_failure_intro_add(const uint8_t *identity, const char *service_id,
     strmap_set_lc(rend_cache_failure, service_id, fail_entry);
   }
   entry = rend_cache_failure_intro_entry_new(failure);
-  digestmap_set(fail_entry->intro_failures, (char *) identity, entry);
+  old_entry = digestmap_set(fail_entry->intro_failures,
+                            (char *) identity, entry);
+  /* This _should_ be NULL, but in case it isn't, free it. */
+  rend_cache_failure_intro_entry_free(old_entry);
 }
 
 /** Using a parsed descriptor <b>desc</b>, check if the introduction points
