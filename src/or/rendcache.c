@@ -122,6 +122,12 @@ rend_cache_failure_intro_entry_free(rend_cache_failure_intro_t *entry)
   tor_free(entry);
 }
 
+static void
+rend_cache_failure_intro_entry_free_(void *entry)
+{
+  rend_cache_failure_intro_entry_free_(entry);
+}
+
 /** Allocate a rend cache failure intro object and return it. <b>failure</b>
  * is set into the object. This function can not fail. */
 static rend_cache_failure_intro_t *
@@ -142,11 +148,9 @@ rend_cache_failure_entry_free(rend_cache_failure_t *entry)
   }
 
   /* Free and remove every intro failure object. */
-  DIGESTMAP_FOREACH_MODIFY(entry->intro_failures, key,
-                           rend_cache_failure_intro_t *, e) {
-    rend_cache_failure_intro_entry_free(e);
-    MAP_DEL_CURRENT(key);
-  } DIGESTMAP_FOREACH_END;
+  digestmap_free(entry->intro_failures,
+                 rend_cache_failure_intro_entry_free_);
+
   tor_free(entry);
 }
 
