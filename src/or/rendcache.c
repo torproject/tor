@@ -122,6 +122,12 @@ rend_cache_failure_intro_entry_free(rend_cache_failure_intro_t *entry)
   tor_free(entry);
 }
 
+static void
+rend_cache_failure_intro_entry_free_(void *entry)
+{
+  rend_cache_failure_intro_entry_free(entry);
+}
+
 /** Allocate a rend cache failure intro object and return it. <b>failure</b>
  * is set into the object. This function can not fail. */
 static rend_cache_failure_intro_t *
@@ -142,11 +148,9 @@ rend_cache_failure_entry_free(rend_cache_failure_t *entry)
   }
 
   /* Free and remove every intro failure object. */
-  DIGESTMAP_FOREACH_MODIFY(entry->intro_failures, key,
-                           rend_cache_failure_intro_t *, e) {
-    rend_cache_failure_intro_entry_free(e);
-    MAP_DEL_CURRENT(key);
-  } DIGESTMAP_FOREACH_END;
+  digestmap_free(entry->intro_failures,
+                 rend_cache_failure_intro_entry_free_);
+
   tor_free(entry);
 }
 
@@ -353,7 +357,7 @@ cache_failure_intro_add(const uint8_t *identity, const char *service_id,
                         rend_intro_point_failure_t failure)
 {
   rend_cache_failure_t *fail_entry;
-  rend_cache_failure_intro_t *entry;
+  rend_cache_failure_intro_t *entry, *old_entry;
 
   /* Make sure we have a failure object for this service ID and if not,
    * create it with this new intro failure entry. */
@@ -364,7 +368,10 @@ cache_failure_intro_add(const uint8_t *identity, const char *service_id,
     strmap_set_lc(rend_cache_failure, service_id, fail_entry);
   }
   entry = rend_cache_failure_intro_entry_new(failure);
-  digestmap_set(fail_entry->intro_failures, (char *) identity, entry);
+  old_entry = digestmap_set(fail_entry->intro_failures,
+                            (char *) identity, entry);
+  /* This _should_ be NULL, but in case it isn't, free it. */
+  rend_cache_failure_intro_entry_free(old_entry);
 }
 
 /** Using a parsed descriptor <b>desc</b>, check if the introduction points
@@ -400,9 +407,10 @@ validate_intro_point_failure(const rend_service_descriptor_t *desc,
       /* This intro point is in our cache, discard it from the descriptor
        * because chances are that it's unusable. */
       SMARTLIST_DEL_CURRENT(desc->intro_nodes, intro);
-      rend_intro_point_free(intro);
       /* Keep it for our new entry. */
       digestmap_set(new_entry->intro_failures, (char *) identity, ent_dup);
+      /* Only free it when we're done looking at it. */
+      rend_intro_point_free(intro);
       continue;
     }
   } SMARTLIST_FOREACH_END(intro);

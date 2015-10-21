@@ -260,6 +260,7 @@ ed25519_checksig_batch(int *okay_out,
     tor_free(ms);
     tor_free(lens);
     tor_free(pks);
+    tor_free(sigs);
     if (! okay_out)
       tor_free(oks);
   }
