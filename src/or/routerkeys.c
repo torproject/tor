@@ -836,6 +836,8 @@ load_ed_keys(const or_options_t *options, time_t now)
                       INIT_ED_KEY_INCLUDE_SIGNING_KEY_IN_CERT);
     char *fname =
       options_get_datadir_fname2(options, "keys", "ed25519_signing");
+    ed25519_keypair_free(sign);
+    tor_cert_free(sign_cert);
     sign = ed_key_init_from_file(fname,
                                  flags, LOG_WARN,
                                  sign_signing_key_with_id, now,
