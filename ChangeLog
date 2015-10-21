@@ -45,7 +45,7 @@ Changes in version 0.2.7.4-rc - 2015-10-21
   o Minor bugfixes (sandbox):
     - Add the "hidserv-stats" filename to our sandbox filter for the
       HiddenServiceStatistics option to work properly. Fixes bug 17354;
-      bugfix on tor-0.2.6.2-alpha~54^2~1. Patch from David Goulet.
+      bugfix on tor-0.2.6.2-alpha. Patch from David Goulet.
 
   o Minor bugfixes (testing):
     - Add unit tests for get_interface_address* failure cases. Fixes bug
@@ -54,7 +54,7 @@ Changes in version 0.2.7.4-rc - 2015-10-21
       17154; bugfix on 0.2.7.3-rc. Patch by Marcin Cieślak.
     - Make the get_ifaddrs_* unit tests more tolerant of different
       network configurations. (Don't assume every test box has an IPv4
-      address, and Don't assume every test box has a non-localhost
+      address, and don't assume every test box has a non-localhost
       address.) Fixes bug 17255; bugfix on 0.2.7.3-rc. Patch by "teor".
     - Skip backtrace tests when backtrace support is not compiled in.
       Fixes part of bug 17151; bugfix on 0.2.7.1-alpha. Patch from
