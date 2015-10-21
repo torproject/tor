@@ -73,6 +73,8 @@ thread_test_func_(void* _s)
     ++thread_fns_failed;
   tor_mutex_release(thread_test_mutex_);
 
+  tor_free(mycount);
+
   tor_mutex_release(m);
 
   spawn_exit();

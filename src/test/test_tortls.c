@@ -129,6 +129,9 @@ test_tortls_tor_tls_new(void *data)
   (void) data;
   MOCK(tor_tls_cert_matches_key, mock_tls_cert_matches_key);
   crypto_pk_t *key1 = NULL, *key2 = NULL;
+  SSL_METHOD *method = NULL;
+  SSL_CTX *ctx = NULL;
+
   key1 = pk_generate(2);
   key2 = pk_generate(3);
 
@@ -144,8 +147,8 @@ test_tortls_tor_tls_new(void *data)
   tt_assert(!tls);
 
 #ifndef OPENSSL_OPAQUE
-  SSL_METHOD *method = give_me_a_test_method();
-  SSL_CTX *ctx = SSL_CTX_new(method);
+  method = give_me_a_test_method();
+  ctx = SSL_CTX_new(method);
   method->num_ciphers = fake_num_ciphers;
   client_tls_context->ctx = ctx;
   tls = tor_tls_new(-1, 0);
@@ -157,6 +160,8 @@ test_tortls_tor_tls_new(void *data)
   crypto_pk_free(key1);
   crypto_pk_free(key2);
   tor_tls_free(tls);
+  tor_free(method);
+  tor_tls_free_all();
 }
 
 #define NS_MODULE tortls
@@ -2819,6 +2824,7 @@ test_tortls_cert_is_valid(void *ignored)
   scert = tor_malloc_zero(sizeof(tor_x509_cert_t));
   ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, 0);
   tt_int_op(ret, OP_EQ, 0);
+  tor_free(scert);
 
   cert = tor_x509_cert_new(read_cert_from(validCertString));
   scert = tor_x509_cert_new(read_cert_from(caCertString));
@@ -2830,6 +2836,7 @@ test_tortls_cert_is_valid(void *ignored)
   tor_x509_cert_free(scert);
   cert = tor_x509_cert_new(read_cert_from(validCertString));
   scert = tor_x509_cert_new(read_cert_from(caCertString));
+  ASN1_TIME_free(cert->cert->cert_info->validity->notAfter);
   cert->cert->cert_info->validity->notAfter =
     ASN1_TIME_set(NULL, time(NULL)-1000000);
   ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, 0);
@@ -2839,15 +2846,18 @@ test_tortls_cert_is_valid(void *ignored)
   tor_x509_cert_free(scert);
   cert = tor_x509_cert_new(read_cert_from(validCertString));
   scert = tor_x509_cert_new(read_cert_from(caCertString));
+  X509_PUBKEY_free(cert->cert->cert_info->key);
   cert->cert->cert_info->key = NULL;
   ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, 1);
   tt_int_op(ret, OP_EQ, 0);
 #endif
 
+#if 0
   tor_x509_cert_free(cert);
   tor_x509_cert_free(scert);
   cert = tor_x509_cert_new(read_cert_from(validCertString));
   scert = tor_x509_cert_new(read_cert_from(caCertString));
+  /* This doesn't actually change the key in the cert. XXXXXX */
   BN_one(EVP_PKEY_get1_RSA(X509_get_pubkey(cert->cert))->n);
   ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, 1);
   tt_int_op(ret, OP_EQ, 0);
@@ -2856,6 +2866,7 @@ test_tortls_cert_is_valid(void *ignored)
   tor_x509_cert_free(scert);
   cert = tor_x509_cert_new(read_cert_from(validCertString));
   scert = tor_x509_cert_new(read_cert_from(caCertString));
+  /* This doesn't actually change the key in the cert. XXXXXX */
   X509_get_pubkey(cert->cert)->type = EVP_PKEY_EC;
   ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, 1);
   tt_int_op(ret, OP_EQ, 0);
@@ -2864,6 +2875,7 @@ test_tortls_cert_is_valid(void *ignored)
   tor_x509_cert_free(scert);
   cert = tor_x509_cert_new(read_cert_from(validCertString));
   scert = tor_x509_cert_new(read_cert_from(caCertString));
+  /* This doesn't actually change the key in the cert. XXXXXX */
   X509_get_pubkey(cert->cert)->type = EVP_PKEY_EC;
   ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, 0);
   tt_int_op(ret, OP_EQ, 1);
@@ -2872,10 +2884,12 @@ test_tortls_cert_is_valid(void *ignored)
   tor_x509_cert_free(scert);
   cert = tor_x509_cert_new(read_cert_from(validCertString));
   scert = tor_x509_cert_new(read_cert_from(caCertString));
+  /* This doesn't actually change the key in the cert. XXXXXX */
   X509_get_pubkey(cert->cert)->type = EVP_PKEY_EC;
   X509_get_pubkey(cert->cert)->ameth = NULL;
   ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, 0);
   tt_int_op(ret, OP_EQ, 0);
+#endif
 
  done:
   tor_x509_cert_free(cert);
@@ -2913,7 +2927,7 @@ test_tortls_context_init_one(void *ignored)
 struct testcase_t tortls_tests[] = {
   LOCAL_TEST_CASE(errno_to_tls_error, 0),
   LOCAL_TEST_CASE(err_to_string, 0),
-  LOCAL_TEST_CASE(tor_tls_new, 0),
+  LOCAL_TEST_CASE(tor_tls_new, TT_FORK),
   LOCAL_TEST_CASE(tor_tls_get_error, 0),
   LOCAL_TEST_CASE(get_state_description, TT_FORK),
   LOCAL_TEST_CASE(get_by_ssl, TT_FORK),
