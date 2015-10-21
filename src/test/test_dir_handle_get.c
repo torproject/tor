@@ -2399,7 +2399,7 @@ test_dir_handle_get_status_vote_next_authority(void* data)
     tor_free(body);
     authority_cert_free(mock_cert); mock_cert = NULL;
     or_options_free(mock_options); mock_options = NULL;
-    
+
     clear_dir_servers();
     routerlist_free_all();
     dirvote_free_all();

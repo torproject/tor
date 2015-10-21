@@ -70,3 +70,4 @@ struct testcase_t util_process_tests[] = {
     NULL, NULL },
   END_OF_TESTCASES
 };
+
