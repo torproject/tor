@@ -897,6 +897,9 @@ test_tortls_classify_client_ciphers(void *ignored)
 
  done:
   sk_SSL_CIPHER_free(ciphers);
+  SSL_free(tls->ssl);
+  tor_free(tls);
+  SSL_CTX_free(ctx);
 }
 #endif
 
@@ -1299,6 +1302,7 @@ test_tortls_received_v3_certificate(void *ignored)
   tor_tls_t *tls;
   X509 *validCert = read_cert_from(validCertString);
   X509_NAME *subject=NULL, *issuer=NULL;
+  EVP_PKEY *key = NULL;
 
   tls = tor_malloc_zero(sizeof(tor_tls_t));
   tls->ssl = tor_malloc_zero(sizeof(SSL));
@@ -1354,7 +1358,7 @@ test_tortls_received_v3_certificate(void *ignored)
   ret = tor_tls_received_v3_certificate(tls);
   tt_int_op(ret, OP_EQ, 0);
 
-  EVP_PKEY *key = X509_get_pubkey(validCert);
+  key = X509_get_pubkey(validCert);
   key->type = 5;
   ret = tor_tls_received_v3_certificate(tls);
   tt_int_op(ret, OP_EQ, 1);
@@ -1370,6 +1374,9 @@ test_tortls_received_v3_certificate(void *ignored)
   tor_free(tls->ssl->session);
   tor_free(tls->ssl);
   tor_free(tls);
+  X509_free(validCert);
+  if (key)
+    EVP_PKEY_free(key);
 }
 #endif
 
