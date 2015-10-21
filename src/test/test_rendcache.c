@@ -439,6 +439,8 @@ test_rend_cache_lookup_v2_desc_as_dir(void *data)
   NS_UNMOCK(hid_serv_responsible_for_desc_id);
   tor_free(mock_routerinfo);
   rend_cache_free_all();
+  rend_encoded_v2_service_descriptor_free(desc_holder);
+  tor_free(service_id);
 }
 
 #undef NS_SUBMODULE
@@ -594,6 +596,8 @@ test_rend_cache_store_v2_desc_as_dir_with_different_time(void *data)
   SMARTLIST_FOREACH(descs, rend_encoded_v2_service_descriptor_t *, d,
                     rend_encoded_v2_service_descriptor_free(d));
   smartlist_free(descs);
+  rend_encoded_v2_service_descriptor_free(desc_holder_newer);
+  rend_encoded_v2_service_descriptor_free(desc_holder_older);
 }
 
 static void
@@ -1026,6 +1030,7 @@ test_rend_cache_purge(void *data)
   tt_int_op(strmap_size(rend_cache), OP_EQ, 0);
 
   // Deals with existing rend_cache
+  rend_cache_free_all();
   rend_cache_init();
 
   our_rend_cache = rend_cache;
@@ -1229,6 +1234,7 @@ test_rend_cache_failure_purge(void *data)
   (void)data;
 
   // Handles a null failure cache
+  strmap_free(rend_cache_failure, rend_cache_failure_entry_free_);
   rend_cache_failure = NULL;
 
   rend_cache_failure_purge();
@@ -1236,7 +1242,7 @@ test_rend_cache_failure_purge(void *data)
   tt_int_op(strmap_size(rend_cache_failure), OP_EQ, 0);
 
  done:
-  (void)0;
+  rend_cache_free_all();
 }
 
 static void

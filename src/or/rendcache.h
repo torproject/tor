@@ -107,6 +107,8 @@ STATIC void cache_failure_intro_add(const uint8_t *identity,
                                     rend_intro_point_failure_t failure);
 STATIC void validate_intro_point_failure(const rend_service_descriptor_t *desc,
                                         const char *service_id);
+
+STATIC void rend_cache_failure_entry_free_(void *entry);
 #endif
 
 #endif /* TOR_RENDCACHE_H */

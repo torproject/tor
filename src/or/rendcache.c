@@ -157,7 +157,7 @@ rend_cache_failure_entry_free(rend_cache_failure_t *entry)
 
 /** Helper: deallocate a rend_cache_failure_t. (Used with strmap_free(),
  * which requires a function pointer whose argument is void*). */
-static void
+STATIC void
 rend_cache_failure_entry_free_(void *entry)
 {
   rend_cache_failure_entry_free(entry);
