@@ -955,7 +955,7 @@ test_address_tor_addr_to_in6(void *ignored)
   tt_mem_op(res->s6_addr, OP_EQ, expected, 16);
 
  done:
-  (void)0;
+  tor_free(a);
 }
 
 static void
@@ -976,7 +976,7 @@ test_address_tor_addr_to_in(void *ignored)
   tt_int_op(res->s_addr, OP_EQ, 44);
 
  done:
-  (void)0;
+  tor_free(a);
 }
 
 static void
@@ -997,7 +997,7 @@ test_address_tor_addr_to_ipv4n(void *ignored)
   tt_int_op(res, OP_EQ, 43);
 
  done:
-  (void)0;
+  tor_free(a);
 }
 
 static void
@@ -1020,7 +1020,7 @@ test_address_tor_addr_to_mapped_ipv4h(void *ignored)
   tt_int_op(res, OP_EQ, 42);
 
  done:
-  (void)0;
+  tor_free(a);
 }
 
 static void
@@ -1044,7 +1044,7 @@ test_address_tor_addr_eq_ipv4h(void *ignored)
   tt_assert(res);
 
  done:
-  (void)0;
+  tor_free(a);
 }
 
 #define ADDRESS_TEST(name, flags) \

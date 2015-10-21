@@ -83,7 +83,7 @@ test_rend_cache_lookup_entry(void *data)
   tt_str_op(entry->desc, OP_EQ, desc_holder->desc_str);
 
  done:
-  tor_free(desc_holder);
+  rend_encoded_v2_service_descriptor_free(desc_holder);
   tor_free(entry);
   tor_free(service_id);
 }
@@ -164,7 +164,7 @@ test_rend_cache_store_v2_desc_as_client(void *data)
 
   // Test too old descriptor
   rend_cache_init();
-  tor_free(desc_holder);
+  rend_encoded_v2_service_descriptor_free(desc_holder);
   tor_free(service_id);
 
   generate_desc(TIME_IN_THE_PAST, &desc_holder, &service_id, 3);
@@ -179,7 +179,7 @@ test_rend_cache_store_v2_desc_as_client(void *data)
 
   // Test too new descriptor (in the future)
   rend_cache_init();
-  tor_free(desc_holder);
+  rend_encoded_v2_service_descriptor_free(desc_holder);
   tor_free(service_id);
 
   generate_desc(TIME_IN_THE_FUTURE, &desc_holder, &service_id, 3);
@@ -194,7 +194,7 @@ test_rend_cache_store_v2_desc_as_client(void *data)
 
   // Test when a descriptor is already in the cache
   rend_cache_init();
-  tor_free(desc_holder);
+  rend_encoded_v2_service_descriptor_free(desc_holder);
   tor_free(service_id);
   tor_free(entry);
 
@@ -218,7 +218,7 @@ test_rend_cache_store_v2_desc_as_client(void *data)
 
   // Test unsuccessful decrypting of introduction points
   rend_cache_init();
-  tor_free(desc_holder);
+  rend_encoded_v2_service_descriptor_free(desc_holder);
   tor_free(service_id);
 
   generate_desc(RECENT_TIME, &desc_holder, &service_id, 3);
@@ -236,7 +236,7 @@ test_rend_cache_store_v2_desc_as_client(void *data)
 
   // Test successful run when we have REND_BASIC_AUTH but not cookie
   rend_cache_init();
-  tor_free(desc_holder);
+  rend_encoded_v2_service_descriptor_free(desc_holder);
   tor_free(service_id);
 
   generate_desc(RECENT_TIME, &desc_holder, &service_id, 3);
@@ -251,7 +251,7 @@ test_rend_cache_store_v2_desc_as_client(void *data)
 
   // Test when we have no introduction points
   rend_cache_init();
-  tor_free(desc_holder);
+  rend_encoded_v2_service_descriptor_free(desc_holder);
   tor_free(service_id);
 
   generate_desc(RECENT_TIME, &desc_holder, &service_id, 0);
@@ -265,7 +265,7 @@ test_rend_cache_store_v2_desc_as_client(void *data)
 
   // Test when we have too many intro points
   rend_cache_init();
-  tor_free(desc_holder);
+  rend_encoded_v2_service_descriptor_free(desc_holder);
   tor_free(service_id);
 
   generate_desc(RECENT_TIME, &desc_holder, &service_id, MAX_INTRO_POINTS+1);
@@ -487,7 +487,7 @@ test_rend_cache_store_v2_desc_as_dir(void *data)
  done:
   NS_UNMOCK(router_get_my_routerinfo);
   NS_UNMOCK(hid_serv_responsible_for_desc_id);
-  tor_free(desc_holder);
+  rend_encoded_v2_service_descriptor_free(desc_holder);
   tor_free(service_id);
 }
 
