@@ -125,7 +125,7 @@ rend_cache_failure_intro_entry_free(rend_cache_failure_intro_t *entry)
 static void
 rend_cache_failure_intro_entry_free_(void *entry)
 {
-  rend_cache_failure_intro_entry_free_(entry);
+  rend_cache_failure_intro_entry_free(entry);
 }
 
 /** Allocate a rend cache failure intro object and return it. <b>failure</b>
