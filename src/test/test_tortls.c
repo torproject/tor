@@ -229,6 +229,7 @@ test_tortls_get_state_description(void *ignored)
   tor_tls_get_state_description(NULL, buf, 20);
   tt_str_op(buf, OP_EQ, "(No SSL object)");
 
+  SSL_free(tls->ssl);
   tls->ssl = NULL;
   tor_tls_get_state_description(tls, buf, 20);
   tt_str_op(buf, OP_EQ, "(No SSL object)");
@@ -2485,6 +2486,7 @@ test_tortls_finish_handshake(void *ignored)
 
   X509 *c1 = read_cert_from(validCertString);
   X509 *c2 = read_cert_from(caCertString);
+  SESS_CERT_local *sess = NULL;
 
   ctx = SSL_CTX_new(method);
 
@@ -2514,7 +2516,7 @@ test_tortls_finish_handshake(void *ignored)
 
   tls->isServer = 0;
 
-  SESS_CERT_local *sess = tor_malloc_zero(sizeof(SESS_CERT_local));
+  sess = tor_malloc_zero(sizeof(SESS_CERT_local));
   tls->ssl->session->sess_cert = (void *)sess;
   sess->cert_chain = sk_X509_new_null();
   sk_X509_push(sess->cert_chain, c1);
@@ -2541,10 +2543,16 @@ test_tortls_finish_handshake(void *ignored)
   tt_int_op(ret, OP_EQ, -9);
 
  done:
-  if (tls)
-    SSL_free(tls->ssl);
+  if (sess)
+    sk_X509_free(sess->cert_chain);
+  if (tls->ssl && tls->ssl->session) {
+    tor_free(tls->ssl->session->sess_cert);
+  }
+  SSL_free(tls->ssl);
   tor_free(tls);
   SSL_CTX_free(ctx);
+  tor_free(method);
+  X509_free(c1);
 }
 #endif
 
