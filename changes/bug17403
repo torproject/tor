@@ -1,3 +1,0 @@
-  o Minor bugfixes (memory leaks):
-    - Fix a memory leak when reading an expired signing key from disk.
-      Fixes bug 17403; bugfix on 0.2.7.2-rc.

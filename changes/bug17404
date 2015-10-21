@@ -1,6 +1,0 @@
-  o Major bugfixes (security, correctness):
-    - Fix a programming error that could cause us to read 4 bytes before
-      the beginning of an openssl string. This could be used to provoke
-      a crash on systems with an unusual malloc implementation, or
-      systems with unsual hardening installed. Fixes bug 17404; bugfix
-      on 0.2.3.6-alpha.
