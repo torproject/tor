@@ -132,11 +132,12 @@ test_tortls_tor_tls_new(void *data)
   key1 = pk_generate(2);
   key2 = pk_generate(3);
 
-  tor_tls_t *tls;
+  tor_tls_t *tls = NULL;
   tt_int_op(tor_tls_context_init(TOR_TLS_CTX_IS_PUBLIC_SERVER,
                                  key1, key2, 86400), OP_EQ, 0);
   tls = tor_tls_new(-1, 0);
   tt_want(tls);
+  tor_tls_free(tls); tls = NULL;
 
   client_tls_context->ctx = NULL;
   tls = tor_tls_new(-1, 0);
@@ -155,6 +156,7 @@ test_tortls_tor_tls_new(void *data)
   UNMOCK(tor_tls_cert_matches_key);
   crypto_pk_free(key1);
   crypto_pk_free(key2);
+  tor_tls_free(tls);
 }
 
 #define NS_MODULE tortls
@@ -185,7 +187,7 @@ test_tortls_tor_tls_get_error(void *data)
   key1 = pk_generate(2);
   key2 = pk_generate(3);
 
-  tor_tls_t *tls;
+  tor_tls_t *tls = NULL;
   tt_int_op(tor_tls_context_init(TOR_TLS_CTX_IS_PUBLIC_SERVER,
                                  key1, key2, 86400), OP_EQ, 0);
   tls = tor_tls_new(-1, 0);
@@ -200,6 +202,7 @@ test_tortls_tor_tls_get_error(void *data)
   NS_UNMOCK(logv);
   crypto_pk_free(key1);
   crypto_pk_free(key2);
+  tor_tls_free(tls);
 }
 
 static void
@@ -2784,19 +2787,26 @@ test_tortls_cert_new(void *ignored)
 
   ret = tor_x509_cert_new(cert);
   tt_assert(ret);
+  tor_x509_cert_free(ret);
 
+#if 0
+  cert = read_cert_from(validCertString);
+  /* XXX this doesn't do what you think: it alters a copy of the pubkey. */
   X509_get_pubkey(cert)->type = EVP_PKEY_DSA;
   ret = tor_x509_cert_new(cert);
   tt_assert(ret);
+#endif
 
 #ifndef OPENSSL_OPAQUE
+  cert = read_cert_from(validCertString);
+  X509_CINF_free(cert->cert_info);
   cert->cert_info = NULL;
   ret = tor_x509_cert_new(cert);
   tt_assert(ret);
 #endif
 
  done:
-  (void)0;
+  tor_x509_cert_free(ret);
 }
 
 static void
@@ -2804,7 +2814,7 @@ test_tortls_cert_is_valid(void *ignored)
 {
   (void)ignored;
   int ret;
-  tor_x509_cert_t *cert = NULL, *scert;
+  tor_x509_cert_t *cert = NULL, *scert = NULL;
 
   scert = tor_malloc_zero(sizeof(tor_x509_cert_t));
   ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, 0);
@@ -2816,6 +2826,8 @@ test_tortls_cert_is_valid(void *ignored)
   tt_int_op(ret, OP_EQ, 1);
 
 #ifndef OPENSSL_OPAQUE
+  tor_x509_cert_free(cert);
+  tor_x509_cert_free(scert);
   cert = tor_x509_cert_new(read_cert_from(validCertString));
   scert = tor_x509_cert_new(read_cert_from(caCertString));
   cert->cert->cert_info->validity->notAfter =
@@ -2823,6 +2835,8 @@ test_tortls_cert_is_valid(void *ignored)
   ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, 0);
   tt_int_op(ret, OP_EQ, 0);
 
+  tor_x509_cert_free(cert);
+  tor_x509_cert_free(scert);
   cert = tor_x509_cert_new(read_cert_from(validCertString));
   scert = tor_x509_cert_new(read_cert_from(caCertString));
   cert->cert->cert_info->key = NULL;
@@ -2830,24 +2844,32 @@ test_tortls_cert_is_valid(void *ignored)
   tt_int_op(ret, OP_EQ, 0);
 #endif
 
+  tor_x509_cert_free(cert);
+  tor_x509_cert_free(scert);
   cert = tor_x509_cert_new(read_cert_from(validCertString));
   scert = tor_x509_cert_new(read_cert_from(caCertString));
   BN_one(EVP_PKEY_get1_RSA(X509_get_pubkey(cert->cert))->n);
   ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, 1);
   tt_int_op(ret, OP_EQ, 0);
 
+  tor_x509_cert_free(cert);
+  tor_x509_cert_free(scert);
   cert = tor_x509_cert_new(read_cert_from(validCertString));
   scert = tor_x509_cert_new(read_cert_from(caCertString));
   X509_get_pubkey(cert->cert)->type = EVP_PKEY_EC;
   ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, 1);
   tt_int_op(ret, OP_EQ, 0);
 
+  tor_x509_cert_free(cert);
+  tor_x509_cert_free(scert);
   cert = tor_x509_cert_new(read_cert_from(validCertString));
   scert = tor_x509_cert_new(read_cert_from(caCertString));
   X509_get_pubkey(cert->cert)->type = EVP_PKEY_EC;
   ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, 0);
   tt_int_op(ret, OP_EQ, 1);
 
+  tor_x509_cert_free(cert);
+  tor_x509_cert_free(scert);
   cert = tor_x509_cert_new(read_cert_from(validCertString));
   scert = tor_x509_cert_new(read_cert_from(caCertString));
   X509_get_pubkey(cert->cert)->type = EVP_PKEY_EC;
@@ -2856,7 +2878,8 @@ test_tortls_cert_is_valid(void *ignored)
   tt_int_op(ret, OP_EQ, 0);
 
  done:
-  (void)0;
+  tor_x509_cert_free(cert);
+  tor_x509_cert_free(scert);
 }
 
 static void
@@ -2878,7 +2901,7 @@ test_tortls_context_init_one(void *ignored)
 }
 
 #define LOCAL_TEST_CASE(name, flags)                    \
-  { #name, test_tortls_##name, (flags), NULL, NULL }
+  { #name, test_tortls_##name, (flags|TT_FORK), NULL, NULL }
 
 #ifdef OPENSSL_OPAQUE
 #define INTRUSIVE_TEST_CASE(name, flags)        \
