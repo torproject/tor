@@ -205,7 +205,7 @@ test_rend_cache_store_v2_desc_as_client(void *data)
   rend_cache_init();
   rend_encoded_v2_service_descriptor_free(desc_holder);
   tor_free(service_id);
-  tor_free(entry);
+  rend_data_free(mock_rend_query);
 
   generate_desc(RECENT_TIME, &desc_holder, &service_id, 3);
   mock_rend_query = mock_rend_data(service_id);
@@ -230,6 +230,7 @@ test_rend_cache_store_v2_desc_as_client(void *data)
   rend_cache_init();
   rend_encoded_v2_service_descriptor_free(desc_holder);
   tor_free(service_id);
+  rend_data_free(mock_rend_query);
 
   generate_desc(RECENT_TIME, &desc_holder, &service_id, 3);
   mock_rend_query = mock_rend_data(service_id);
@@ -296,7 +297,6 @@ test_rend_cache_store_v2_desc_as_client(void *data)
 
  done:
   rend_encoded_v2_service_descriptor_free(desc_holder);
-  tor_free(entry);
   tor_free(service_id);
   rend_cache_free_all();
   rend_data_free(mock_rend_query);
@@ -606,8 +606,8 @@ test_rend_cache_store_v2_desc_as_dir_with_different_content(void *data)
   smartlist_t *descs = smartlist_new();
   time_t t;
   char *service_id = NULL;
-  rend_encoded_v2_service_descriptor_t *desc_holder_one;
-  rend_encoded_v2_service_descriptor_t *desc_holder_two;
+  rend_encoded_v2_service_descriptor_t *desc_holder_one = NULL;
+  rend_encoded_v2_service_descriptor_t *desc_holder_two = NULL;
 
   NS_MOCK(router_get_my_routerinfo);
   NS_MOCK(hid_serv_responsible_for_desc_id);
@@ -653,6 +653,8 @@ test_rend_cache_store_v2_desc_as_dir_with_different_content(void *data)
   SMARTLIST_FOREACH(descs, rend_encoded_v2_service_descriptor_t *, d,
                     rend_encoded_v2_service_descriptor_free(d));
   smartlist_free(descs);
+  rend_encoded_v2_service_descriptor_free(desc_holder_one);
+  rend_encoded_v2_service_descriptor_free(desc_holder_two);
 }
 
 #undef NS_SUBMODULE
