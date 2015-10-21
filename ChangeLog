@@ -1,4 +1,4 @@
-Changes in version 0.2.7.4-rc - 2015-10-20
+Changes in version 0.2.7.4-rc - 2015-10-21
   Tor 0.2.7.4-rc is the second release candidate in the 0.2.7 servies.
   It a few small bugfixes, notably fixes for compilation and portability
   on different platforms. If no further significant bounds are found,
