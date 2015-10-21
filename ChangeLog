@@ -38,9 +38,8 @@ Changes in version 0.2.7.4-rc - 2015-10-21
       bugfix on 0.2.5.1-alpha. Patch from 'jamestk'.
 
   o Minor bugfixes (portability):
-    - Use libexecinfo on FreeBSD, to enable backtrace support. Fixes
-      part of bug 17151; bugfix on 0.2.5.2-alpha. Patch from
-      Marcin Cieślak.
+    - Use libexecinfo on FreeBSD to enable backtrace support. Fixes part
+      of bug 17151; bugfix on 0.2.5.2-alpha. Patch from Marcin Cieślak.
 
   o Minor bugfixes (sandbox):
     - Add the "hidserv-stats" filename to our sandbox filter for the
