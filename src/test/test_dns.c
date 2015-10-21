@@ -653,12 +653,76 @@ NS(test_main)(void *arg)
 
 #define NS_SUBMODULE ASPECT(resolve_impl, cache_miss)
 
+/* Given that there are neither pending nor pre-cached resolve for a given
+ * address, we want dns_resolve_impl() to create a new cached_resolve_t
+ * object, mark it as pending, insert it into the cache, attach the exit
+ * connection to list of pending connections and call launch_resolve()
+ * with the cached_resolve_t object it created.
+ */
+static int
+NS(router_my_exit_policy_is_reject_star)(void)
+{
+  return 0;
+}
+
+static cached_resolve_t *last_launched_resolve = NULL;
+
+static int
+NS(launch_resolve)(cached_resolve_t *resolve)
+{
+  last_launched_resolve = resolve;
+
+  return 0;
+}
+
 static void
 NS(test_main)(void *arg)
 {
-  tt_skip();
+  int retval;
+  int made_pending = 0;
+
+  pending_connection_t *pending_conn = NULL;
+
+  edge_connection_t *exitconn = create_valid_exitconn();
+  or_circuit_t *on_circ = tor_malloc_zero(sizeof(or_circuit_t));
+
+  cached_resolve_t *cache_entry = NULL;
+  cached_resolve_t query;
+
+  TO_CONN(exitconn)->address = tor_strdup("torproject.org");
+
+  strlcpy(query.address, TO_CONN(exitconn)->address, sizeof(query.address));
+
+  NS_MOCK(router_my_exit_policy_is_reject_star);
+  NS_MOCK(launch_resolve);
+
+  dns_init();
+
+  retval = dns_resolve_impl(exitconn, 1, on_circ, NULL, &made_pending,
+                            NULL);
+
+  tt_int_op(retval,==,0);
+  tt_int_op(made_pending,==,1);
+
+  cache_entry = dns_get_cache_entry(&query);
+
+  tt_assert(cache_entry);
+
+  pending_conn = cache_entry->pending_connections;
+
+  tt_assert(pending_conn != NULL);
+  tt_assert(pending_conn->conn == exitconn);
+
+  tt_assert(last_launched_resolve == cache_entry);
+  tt_str_op(cache_entry->address,==,TO_CONN(exitconn)->address);
 
   done:
+  NS_UNMOCK(router_my_exit_policy_is_reject_star);
+  NS_UNMOCK(launch_resolve);
+  tor_free(on_circ);
+  tor_free(TO_CONN(exitconn)->address);
+  tor_free(cache_entry->pending_connections);
+  tor_free(cache_entry);
   return;
 }
 

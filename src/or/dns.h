@@ -51,6 +51,9 @@ set_exitconn_info_from_resolve,(edge_connection_t *exitconn,
                                 const cached_resolve_t *resolve,
                                 char **hostname_out));
 
+MOCK_DECL(STATIC int,
+launch_resolve,(cached_resolve_t *resolve));
+
 #endif
 
 #endif

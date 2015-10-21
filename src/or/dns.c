@@ -107,7 +107,6 @@ static void dns_found_answer(const char *address, uint8_t query_type,
                              const tor_addr_t *addr,
                              const char *hostname,
                              uint32_t ttl);
-static int launch_resolve(cached_resolve_t *resolve);
 static void add_wildcarded_test_address(const char *address);
 static int configure_nameservers(int force);
 static int answer_is_wildcarded(const char *ip);
@@ -1661,8 +1660,8 @@ launch_one_resolve(const char *address, uint8_t query_type,
 /** For eventdns: start resolving as necessary to find the target for
  * <b>exitconn</b>.  Returns -1 on error, -2 on transient error,
  * 0 on "resolve launched." */
-static int
-launch_resolve(cached_resolve_t *resolve)
+MOCK_IMPL(STATIC int,
+launch_resolve,(cached_resolve_t *resolve))
 {
   tor_addr_t a;
   int r;
