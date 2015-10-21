@@ -1,3 +1,0 @@
-  o Minor bug fixes (addresses, testing):
-    - Add unit tests for get_interface_address* failure cases.
-      Fixes bug 17173; bugfix on 0.2.7.3-rc.  Patch by fk/teor.

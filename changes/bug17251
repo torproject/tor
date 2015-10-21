@@ -1,3 +1,0 @@
-  o Minor bugfixes (compilation):
-    - Fix an integer overflow warning in test_crypto_slow.c.
-      Fixes bug 17251; bugfix on 0.2.7.2-alpha.

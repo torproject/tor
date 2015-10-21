@@ -1,7 +1,0 @@
-  o Minor bugfixes (portability):
-    - Use libexecinfo on FreeBSD, to enable backtrace support. Fixes part of
-      bug 17151; bugfix on 0.2.5.2-alpha. Patch from Marcin Cieślak.
-
-  o Minor bugfixes (testing):
-    - Skip backtrace tests when backtrace support is not compiled in. Fixes
-      part of bug 17151; bugfix on 0.2.7.1-alpha. Patch from Marcin Cieślak.
