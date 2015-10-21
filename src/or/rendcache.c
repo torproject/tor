@@ -416,9 +416,10 @@ validate_intro_point_failure(const rend_service_descriptor_t *desc,
       /* This intro point is in our cache, discard it from the descriptor
        * because chances are that it's unusable. */
       SMARTLIST_DEL_CURRENT(desc->intro_nodes, intro);
-      rend_intro_point_free(intro);
       /* Keep it for our new entry. */
       digestmap_set(new_entry->intro_failures, (char *) identity, ent_dup);
+      rend_intro_point_free(intro);
+
       continue;
     }
   } SMARTLIST_FOREACH_END(intro);

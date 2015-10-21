@@ -329,7 +329,9 @@ into test/slow if it genuinely needs to be run.
 Tests should not alter global state unless they run with TT_FORK: Tests
 should not require other tests to be run before or after them.
 
-Tests should not leak memory or other resources.
+Tests should not leak memory or other resources.  To find out if your tests
+are leaking memory, run them under valgrind (see HelpfulTools.txt for more
+information on how to do that).
 
 When possible, tests should not be over-fit to the implementation.  That is,
 the test should verify that the documented behavior is implemented, but
