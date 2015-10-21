@@ -267,6 +267,7 @@ test_tortls_get_state_description(void *ignored)
 
  done:
   SSL_CTX_free(ctx);
+  SSL_free(tls->ssl);
   tor_free(buf);
   tor_free(tls);
 }
@@ -354,6 +355,7 @@ test_tortls_log_one_error(void *ignored)
   tt_int_op(mock_saved_log_number(), OP_EQ, 1);
   tt_str_op(mock_saved_log_at(0), OP_EQ, "TLS error with 127.hello: (null) "
             "(in (null):(null):---)\n");
+  tor_free(tls->address);
 
   mock_clean_saved_logs();
   tls->address = tor_strdup("127.hello");
@@ -416,6 +418,10 @@ test_tortls_log_one_error(void *ignored)
   teardown_capture_of_logs(previous_log);
   SSL_free(ssl);
   SSL_CTX_free(ctx);
+  if (tls && tls->ssl)
+    SSL_free(tls->ssl);
+  if (tls)
+    tor_free(tls->address);
   tor_free(tls);
 }
 
@@ -503,7 +509,9 @@ test_tortls_get_error(void *ignored)
 
  done:
   teardown_capture_of_logs(previous_log);
+  SSL_free(tls->ssl);
   tor_free(tls);
+  SSL_CTX_free(ctx);
 }
 #endif
 
@@ -557,7 +565,8 @@ test_tortls_x509_cert_get_id_digests(void *ignored)
   tt_int_op(res->d[0][0], OP_EQ, 42);
 
  done:
-  (void)0;
+  tor_free(cert);
+  tor_free(d);
 }
 
 #ifndef OPENSSL_OPAQUE
@@ -569,13 +578,30 @@ fixed_pub_cmp(const EVP_PKEY *a, const EVP_PKEY *b)
 }
 
 static void
+fake_x509_free(X509 *cert)
+{
+  if (cert) {
+    if (cert->cert_info) {
+      if (cert->cert_info->key) {
+        if (cert->cert_info->key->pkey) {
+          tor_free(cert->cert_info->key->pkey);
+        }
+        tor_free(cert->cert_info->key);
+      }
+      tor_free(cert->cert_info);
+    }
+    tor_free(cert);
+  }
+}
+
+static void
 test_tortls_cert_matches_key(void *ignored)
 {
   (void)ignored;
   int res;
   tor_tls_t *tls;
   tor_x509_cert_t *cert;
-  X509 *one, *two;
+  X509 *one = NULL, *two = NULL;
   EVP_PKEY_ASN1_METHOD *meth = EVP_PKEY_asn1_new(999, 0, NULL, NULL);
   EVP_PKEY_asn1_set_public(meth, NULL, NULL, fixed_pub_cmp, NULL, NULL, NULL);
 
@@ -623,18 +649,22 @@ test_tortls_cert_matches_key(void *ignored)
 
  done:
   EVP_PKEY_asn1_free(meth);
+  tor_free(tls->ssl->session);
+  tor_free(tls->ssl);
   tor_free(tls);
   tor_free(cert);
+  fake_x509_free(one);
+  fake_x509_free(two);
 }
 
 static void
 test_tortls_cert_get_key(void *ignored)
 {
   (void)ignored;
-  tor_x509_cert_t *cert;
+  tor_x509_cert_t *cert = NULL;
   crypto_pk_t *res;
   cert = tor_malloc_zero(sizeof(tor_x509_cert_t));
-  X509 *key;
+  X509 *key = NULL;
   key = tor_malloc_zero(sizeof(X509));
   key->references = 1;
 
@@ -651,7 +681,8 @@ test_tortls_cert_get_key(void *ignored)
   tt_assert(!res);
 
  done:
-  (void)0;
+  fake_x509_free(key);
+  tor_free(cert);
 }
 #endif
 
@@ -731,7 +762,8 @@ test_tortls_get_ciphersuite_name(void *ignored)
   tt_str_op(ret, OP_EQ, "(NONE)");
 
  done:
-  (void)1;
+  tor_free(ctx->ssl);
+  tor_free(ctx);
 }
 
 static SSL_CIPHER *
@@ -863,7 +895,7 @@ test_tortls_classify_client_ciphers(void *ignored)
   tt_int_op(tls->client_cipher_list_type, OP_EQ, 2);
 
  done:
-  (void)1;
+  sk_SSL_CIPHER_free(ciphers);
 }
 #endif
 
@@ -874,8 +906,9 @@ test_tortls_client_is_using_v2_ciphers(void *ignored)
 
 #ifdef HAVE_SSL_GET_CLIENT_CIPHERS
   tt_skip();
+ done:
+  (void)1;
 #else
-
   int ret;
   SSL_CTX *ctx;
   SSL *ssl;
@@ -903,10 +936,10 @@ test_tortls_client_is_using_v2_ciphers(void *ignored)
   sess->ciphers = ciphers;
   ret = tor_tls_client_is_using_v2_ciphers(ssl);
   tt_int_op(ret, OP_EQ, 1);
-#endif
-
  done:
-  (void)1;
+  SSL_free(ssl);
+  SSL_CTX_free(ctx);
+#endif
 }
 
 #ifndef OPENSSL_OPAQUE
@@ -1596,6 +1629,7 @@ test_tortls_get_peer_cert(void *ignored)
   tor_free(tls->ssl->session);
   tor_free(tls->ssl);
   tor_free(tls);
+  X509_free(cert);
 }
 #endif
 
@@ -1625,6 +1659,7 @@ test_tortls_peer_has_cert(void *ignored)
   tor_free(tls->ssl->session);
   tor_free(tls->ssl);
   tor_free(tls);
+  X509_free(cert);
 }
 #endif
 
@@ -1707,6 +1742,7 @@ test_tortls_block_renegotiation(void *ignored)
   tt_assert(!(SSL_get_options(tls->ssl) & 0x0010));
 
  done:
+  tor_free(tls->ssl->s3);
   tor_free(tls->ssl);
   tor_free(tls);
 }
@@ -1743,6 +1779,7 @@ test_tortls_assert_renegotiation_unblocked(void *ignored)
   /* No assertion here - this test will fail if tor_assert is turned on
    * and things are bad. */
 
+  tor_free(tls->ssl);
   tor_free(tls);
 }
 #endif
@@ -1763,6 +1800,7 @@ test_tortls_set_logged_address(void *ignored)
   tt_str_op(tls->address, OP_EQ, "foo bar 2");
 
  done:
+  tor_free(tls->address);
   tor_free(tls);
 }
 
@@ -1802,17 +1840,17 @@ test_tortls_set_renegotiate_callback(void *ignored)
 #endif
 
 #ifndef OPENSSL_OPAQUE
+static SSL_CIPHER *fixed_cipher1 = NULL;
+static SSL_CIPHER *fixed_cipher2 = NULL;
 static const SSL_CIPHER *
 fake_get_cipher(unsigned ncipher)
 {
-  SSL_CIPHER *fixed = tor_malloc_zero(sizeof(SSL_CIPHER));
-  SSL_CIPHER *fixed2 = tor_malloc_zero(sizeof(SSL_CIPHER));
-  fixed2->id = 0xC00A;
+
   switch (ncipher) {
   case 1:
-    return fixed;
+    return fixed_cipher1;
   case 2:
-    return fixed2;
+    return fixed_cipher2;
   default:
     return NULL;
   }
@@ -1829,6 +1867,10 @@ test_tortls_find_cipher_by_id(void *ignored)
   SSL_CTX *ctx;
   const SSL_METHOD *m = TLSv1_method();
   SSL_METHOD *empty_method = tor_malloc_zero(sizeof(SSL_METHOD));
+
+  fixed_cipher1 = tor_malloc_zero(sizeof(SSL_CIPHER));
+  fixed_cipher2 = tor_malloc_zero(sizeof(SSL_CIPHER));
+  fixed_cipher2->id = 0xC00A;
 
   SSL_library_init();
   SSL_load_error_strings();
@@ -1881,6 +1923,7 @@ test_tortls_find_cipher_by_id(void *ignored)
   tor_free(empty_method);
   SSL_free(ssl);
   SSL_CTX_free(ctx);
+  tor_free(fixed_cipher1);
 }
 #endif
 
@@ -1907,6 +1950,8 @@ test_tortls_debug_state_callback(void *ignored)
 
  done:
   teardown_capture_of_logs(previous_log);
+  tor_free(buf);
+  tor_free(ssl);
 }
 #endif
 
@@ -1973,7 +2018,9 @@ test_tortls_server_info_callback(void *ignored)
 
  done:
   teardown_capture_of_logs(previous_log);
-  tor_free(ssl);
+  SSL_free(ssl);
+  SSL_CTX_free(ctx);
+  tor_free(tls);
 }
 #endif
 
@@ -2185,6 +2232,7 @@ test_tortls_read(void *ignored)
   teardown_capture_of_logs(previous_log);
   tor_free(tls->ssl);
   tor_free(tls);
+  tor_free(method);
 }
 
 static int fixed_ssl_write_result;
@@ -2249,6 +2297,7 @@ test_tortls_write(void *ignored)
   teardown_capture_of_logs(previous_log);
   tor_free(tls->ssl);
   tor_free(tls);
+  tor_free(method);
 }
 
 static int fixed_ssl_renegotiate_result;
@@ -2306,6 +2355,7 @@ test_tortls_renegotiate(void *ignored)
   SSL_free(tls->ssl);
   SSL_CTX_free(ctx);
   tor_free(tls);
+  tor_free(method);
 }
 #endif
 
@@ -2417,6 +2467,7 @@ test_tortls_handshake(void *ignored)
   SSL_free(tls->ssl);
   SSL_CTX_free(ctx);
   tor_free(tls);
+  tor_free(method);
 }
 #endif
 
@@ -2490,8 +2541,10 @@ test_tortls_finish_handshake(void *ignored)
   tt_int_op(ret, OP_EQ, -9);
 
  done:
-  SSL_CTX_free(ctx);
+  if (tls)
+    SSL_free(tls->ssl);
   tor_free(tls);
+  SSL_CTX_free(ctx);
 }
 #endif
 
@@ -2778,6 +2831,8 @@ test_tortls_create_certificate(void *ignored)
  done:
   UNMOCK(crypto_rand);
   UNMOCK(crypto_pk_get_evp_pkey_);
+  crypto_pk_free(pk1);
+  crypto_pk_free(pk2);
 }
 
 static void
