@@ -1,14 +1,16 @@
 Changes in version 0.2.7.4-rc - 2015-10-21
-  Tor 0.2.7.4-rc is the second release candidate in the 0.2.7 servies.
-  It a few small bugfixes, notably fixes for compilation and portability
-  on different platforms. If no further significant bounds are found,
-  the next release will the the official stable release.
+  Tor 0.2.7.4-rc is the second release candidate in the 0.2.7 series.
+  It fixes some important memory leaks, and a scary-looking (but mostly
+  harmless in practice) invalid-read bug.  It also has a few small
+  bugfixes, notably fixes for compilation and portability on different
+  platforms. If no further significant bounds are found, the next
+  release will the the official stable release.
 
   o Major bugfixes (security, correctness):
-    - Fix a programming error that could cause us to read 4 bytes before
-      the beginning of an openssl string. This could be used to provoke
-      a crash on systems with an unusual malloc implementation, or
-      systems with unsual hardening installed. Fixes bug 17404; bugfix
+    - Fix an error that could cause us to read 4 bytes before
+      the beginning of an openssl string. This bug could be used to
+      cause Tor to crash on systems with unusual malloc implementations, or
+      systems with unusual hardening installed. Fixes bug 17404; bugfix
       on 0.2.3.6-alpha.
 
   o Major bugfixes (correctness):
