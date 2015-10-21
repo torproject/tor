@@ -20,8 +20,12 @@ generate_desc(int time_diff, rend_encoded_v2_service_descriptor_t **desc,
 
   rend_encode_v2_descriptors(descs, generated, now, 0, REND_NO_AUTH, NULL,
                              NULL);
-  *desc = ((rend_encoded_v2_service_descriptor_t *)smartlist_get(descs, 0));
+  tor_assert(smartlist_len(descs) > 1);
+  *desc = smartlist_get(descs, 0);
+  smartlist_set(descs, 0, NULL);
 
+  SMARTLIST_FOREACH(descs, rend_encoded_v2_service_descriptor_t *, d,
+                    rend_encoded_v2_service_descriptor_free(d));
   smartlist_free(descs);
   rend_service_descriptor_free(generated);
 }
