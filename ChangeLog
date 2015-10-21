@@ -4,15 +4,15 @@ Changes in version 0.2.7.4-rc - 2015-10-21
   on different platforms. If no further significant bounds are found,
   the next release will the the official stable release.
 
-  o Major bugfixes (memory leaks):
-    - Fix a memory leak in ed25519 batch signature checking.
-      Fixes bug 17398; bugfix on 0.2.6.1-alpha.
-    - Fix a memory leak in rend_cache_failure_entry_free().
-      Fixes bug 17402; bugfix on 0.2.7.3-rc.
-
   o Major bugfixes (correctness):
-    - Fix a use-after-free bug in validate_intro_point_failure().
-      Fixes bug 17401; bugfix on 0.2.7.3-rc.
+    - Fix a use-after-free bug in validate_intro_point_failure(). Fixes
+      bug 17401; bugfix on 0.2.7.3-rc.
+
+  o Major bugfixes (memory leaks):
+    - Fix a memory leak in ed25519 batch signature checking. Fixes bug
+      17398; bugfix on 0.2.6.1-alpha.
+    - Fix a memory leak in rend_cache_failure_entry_free(). Fixes bug
+      17402; bugfix on 0.2.7.3-rc.
 
   o Minor features (geoIP):
     - Update geoip and geoip6 to the October 9 2015 Maxmind GeoLite2
