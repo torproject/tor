@@ -102,6 +102,7 @@ src_test_test_SOURCES = \
 	src/test/test_tortls.c \
 	src/test/test_util.c \
 	src/test/test_util_format.c \
+	src/test/test_util_process.c \
 	src/test/test_helpers.c \
 	src/test/test_dns.c \
 	src/test/testing_common.c \

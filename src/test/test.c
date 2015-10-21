@@ -1168,6 +1168,7 @@ extern struct testcase_t thread_tests[];
 extern struct testcase_t tortls_tests[];
 extern struct testcase_t util_tests[];
 extern struct testcase_t util_format_tests[];
+extern struct testcase_t util_process_tests[];
 extern struct testcase_t dns_tests[];
 
 struct testgroup_t testgroups[] = {
@@ -1220,8 +1221,8 @@ struct testgroup_t testgroups[] = {
   { "util/", util_tests },
   { "util/format/", util_format_tests },
   { "util/logging/", logging_tests },
+  { "util/process/", util_process_tests },
   { "util/thread/", thread_tests },
   { "dns/", dns_tests },
   END_OF_GROUPS
 };
-
