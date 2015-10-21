@@ -33,11 +33,13 @@ test_procmon_tor_process_monitor_new(void *ignored)
                                 NULL, NULL, &msg);
   tt_assert(res);
   tt_assert(!msg);
+  tor_process_monitor_free(res);
 
   res = tor_process_monitor_new(tor_libevent_get_base(), "44 hello", 0,
                                 NULL, NULL, &msg);
   tt_assert(res);
   tt_assert(!msg);
+  tor_process_monitor_free(res);
 
   res = tor_process_monitor_new(tor_libevent_get_base(), "45:hello", 0,
                                 NULL, NULL, &msg);
@@ -45,7 +47,7 @@ test_procmon_tor_process_monitor_new(void *ignored)
   tt_assert(!msg);
 
  done:
-  (void)0;
+  tor_process_monitor_free(res);
 }
 
 struct testcase_t procmon_tests[] = {
