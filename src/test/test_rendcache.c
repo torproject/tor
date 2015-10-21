@@ -533,6 +533,7 @@ test_rend_cache_store_v2_desc_as_dir(void *data)
   rend_encoded_v2_service_descriptor_free(desc_holder);
   tor_free(service_id);
   rend_cache_free_all();
+  tor_free(mock_routerinfo);
 }
 
 static void
@@ -598,6 +599,7 @@ test_rend_cache_store_v2_desc_as_dir_with_different_time(void *data)
   smartlist_free(descs);
   rend_encoded_v2_service_descriptor_free(desc_holder_newer);
   rend_encoded_v2_service_descriptor_free(desc_holder_older);
+  tor_free(mock_routerinfo);
 }
 
 static void
@@ -869,7 +871,7 @@ test_rend_cache_failure_entry_new(void *data)
   tt_int_op(digestmap_size(failure->intro_failures), OP_EQ, 0);
 
  done:
-  tor_free(failure);
+  rend_cache_failure_entry_free(failure);
 }
 
 static void
@@ -959,6 +961,8 @@ test_rend_cache_failure_remove(void *data)
   // There seems to not exist any way of getting rend_cache_failure_remove()
   // to fail because of a problem with rend_get_service_id from here
   rend_cache_free_all();
+
+  rend_service_descriptor_free(desc);
  /* done: */
  /*  (void)0; */
 }
@@ -1036,7 +1040,8 @@ test_rend_cache_purge(void *data)
   our_rend_cache = rend_cache;
   rend_cache_purge();
   tt_assert(rend_cache);
-  tt_assert(rend_cache == our_rend_cache);
+  tt_assert(strmap_size(rend_cache) == 0);
+  tt_assert(rend_cache != our_rend_cache);
 
  done:
   rend_cache_free_all();
@@ -1199,7 +1204,7 @@ test_rend_cache_entry_allocation(void *data)
   (void)data;
 
   size_t ret;
-  rend_cache_entry_t *e;
+  rend_cache_entry_t *e = NULL;
 
   // Handles a null argument
   ret = rend_cache_entry_allocation(NULL);
@@ -1211,7 +1216,7 @@ test_rend_cache_entry_allocation(void *data)
   tt_int_op(ret, OP_GT, sizeof(rend_cache_entry_t));
 
  done:
-  (void)0;
+  tor_free(e);
 }
 
 static void
