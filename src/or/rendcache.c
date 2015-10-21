@@ -418,8 +418,8 @@ validate_intro_point_failure(const rend_service_descriptor_t *desc,
       SMARTLIST_DEL_CURRENT(desc->intro_nodes, intro);
       /* Keep it for our new entry. */
       digestmap_set(new_entry->intro_failures, (char *) identity, ent_dup);
+      /* Only free it when we're done looking at it. */
       rend_intro_point_free(intro);
-
       continue;
     }
   } SMARTLIST_FOREACH_END(intro);
