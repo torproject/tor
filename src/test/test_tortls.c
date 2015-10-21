@@ -663,7 +663,7 @@ test_tortls_cert_get_key(void *ignored)
 {
   (void)ignored;
   tor_x509_cert_t *cert = NULL;
-  crypto_pk_t *res;
+  crypto_pk_t *res = NULL;
   cert = tor_malloc_zero(sizeof(tor_x509_cert_t));
   X509 *key = NULL;
   key = tor_malloc_zero(sizeof(X509));
@@ -684,6 +684,7 @@ test_tortls_cert_get_key(void *ignored)
  done:
   fake_x509_free(key);
   tor_free(cert);
+  crypto_pk_free(res);
 }
 #endif
 

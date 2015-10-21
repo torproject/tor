@@ -891,9 +891,12 @@ tor_tls_cert_is_valid(int severity,
 {
   check_no_tls_errors();
   EVP_PKEY *cert_key;
-  EVP_PKEY *signing_key = X509_get_pubkey(signing_cert->cert);
   int r, key_ok = 0;
 
+  if (!signing_cert)
+    goto bad;
+
+  EVP_PKEY *signing_key = X509_get_pubkey(signing_cert->cert);
   if (!signing_key)
     goto bad;
   r = X509_verify(cert->cert, signing_key);

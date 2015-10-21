@@ -30,8 +30,8 @@ mock_rend_data(const char *onion_address)
 {
   rend_data_t *rend_query = tor_malloc_zero(sizeof(rend_data_t));
 
-  strncpy(rend_query->onion_address, onion_address,
-          REND_SERVICE_ID_LEN_BASE32+1);
+  strlcpy(rend_query->onion_address, onion_address,
+          sizeof(rend_query->onion_address));
   rend_query->auth_type = REND_NO_AUTH;
   rend_query->hsdirs_fp = smartlist_new();
   smartlist_add(rend_query->hsdirs_fp, tor_memdup("aaaaaaaaaaaaaaaaaaaaaaaa",
@@ -1041,7 +1041,7 @@ test_rend_cache_purge(void *data)
   rend_cache_purge();
   tt_assert(rend_cache);
   tt_assert(strmap_size(rend_cache) == 0);
-  tt_assert(rend_cache != our_rend_cache);
+  tt_assert(rend_cache == our_rend_cache);
 
  done:
   rend_cache_free_all();
@@ -1244,6 +1244,7 @@ test_rend_cache_failure_purge(void *data)
 
   rend_cache_failure_purge();
 
+  tt_ptr_op(rend_cache_failure, OP_NE, NULL);
   tt_int_op(strmap_size(rend_cache_failure), OP_EQ, 0);
 
  done:
