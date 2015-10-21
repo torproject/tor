@@ -2523,7 +2523,7 @@ dn_indicates_v3_cert(X509_NAME *name)
     return 0;
   if (len < 4) {
     OPENSSL_free(s);
-    return 0;
+    return 1;
   }
   r = fast_memneq(s + len - 4, ".net", 4);
   OPENSSL_free(s);
