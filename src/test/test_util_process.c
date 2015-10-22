@@ -11,6 +11,7 @@
 
 #include "log_test_helpers.h"
 
+#ifndef _WIN32
 #define NS_MODULE util_process
 
 static void
@@ -67,12 +68,17 @@ test_util_process_clear_waitpid_callback(void *ignored)
  done:
   teardown_capture_of_logs(previous_log);
 }
+#endif /* _WIN32 */
+
+#ifdef _WIN32
+#define TEST(name) { #name, test_util_process_##name, 0, NULL, NULL }
+#else
+#define TEST(name) { #name, NULL, TT_SKIP, NULL, NULL }
+#endif
 
 struct testcase_t util_process_tests[] = {
-  { "set_waitpid_callback", test_util_process_set_waitpid_callback, 0,
-    NULL, NULL },
-  { "clear_waitpid_callback", test_util_process_clear_waitpid_callback, 0,
-    NULL, NULL },
+  TEST(set_waitpid_callback),
+  TEST(clear_waitpid_callback),
   END_OF_TESTCASES
 };
 
