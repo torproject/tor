@@ -70,7 +70,7 @@ test_util_process_clear_waitpid_callback(void *ignored)
 }
 #endif /* _WIN32 */
 
-#ifdef _WIN32
+#ifndef _WIN32
 #define TEST(name) { #name, test_util_process_##name, 0, NULL, NULL }
 #else
 #define TEST(name) { #name, NULL, TT_SKIP, NULL, NULL }
