@@ -141,6 +141,9 @@ sure that we worked on MSVC6.
 We don't use strcat or strcpy or sprintf of any of those notoriously broken
 old C functions.  Use strlcat, strlcpy, or tor_snprintf/tor_asprintf instead.
 
+We don't call memcmp() directly.  Use fast_memeq(), fast_memneq(),
+tor_memeq(), or tor_memneq() for most purposes.
+
 Functions not to write
 ~~~~~~~~~~~~~~~~~~~~~~
 

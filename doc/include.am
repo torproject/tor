@@ -43,6 +43,7 @@ EXTRA_DIST+= doc/asciidoc-helper.sh			\
 	     doc/HACKING/CodingStandards.txt			\
 	     doc/HACKING/GettingStarted.txt			\
 	     doc/HACKING/HelpfulTools.txt			\
+	     doc/HACKING/HowToReview.txt 			\
 	     doc/HACKING/ReleasingTor.txt                       \
 	     doc/HACKING/WritingTests.txt
 
