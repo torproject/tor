@@ -2864,6 +2864,7 @@ test_tortls_cert_new(void *ignored)
   ret = tor_x509_cert_new(cert);
   tt_assert(ret);
   tor_x509_cert_free(ret);
+  ret = NULL;
 
 #if 0
   cert = read_cert_from(validCertString);
