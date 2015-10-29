@@ -249,7 +249,7 @@ testsupport.h.
 
 === Okay but what should my tests actually do?
 
-We talk above  about "test coverage" -- making sure that your tests visit
+We talk above about "test coverage" -- making sure that your tests visit
 every line of code, or every branch of code.  But visiting the code isn't
 enough: we want to verify that it's correct.
 
@@ -359,7 +359,7 @@ same process as the Tor test program.  Reasons for doing this might include:
 
     * Testing the actual behavior of Tor when run from the command line
     * Testing that a crash-handler correctly logs a stack trace
-    * Verifying that a violating a sandbox or capability requirement will
+    * Verifying that violating a sandbox or capability requirement will
       actually crash the program.
     * Needing to run as root in order to test capability inheritance or
       user switching.
@@ -379,7 +379,7 @@ The 'stem' library includes extensive unit tests for the Tor controller
 protocol.
 
 For more information on writing new tests for stem, have a look around
-the tst/* directory in stem, and find a good example to emulate.  You
+the test/* directory in stem, and find a good example to emulate.  You
 might want to start with
 https://gitweb.torproject.org/stem.git/tree/test/integ/control/controller.py
 to improve Tor's test coverage.

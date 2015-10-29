@@ -25,7 +25,7 @@ memory?
 Do all the new functions, global variables, types, and structure members have
 documentation?
 
-Do all the the functions, global variables, types, and structure members with
+Do all the functions, global variables, types, and structure members with
 modified behavior have modified documentation?
 
 Do all the new torrc options have documentation?

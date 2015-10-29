@@ -29,7 +29,7 @@ file that comes with the Tor source for more information on building it,
 and any high-quality guide to C for information on programming.)
 
 I'm also going to assume that you know a little bit about how to use
-Git, or that you're able to fillow one of the several excellent guides
+Git, or that you're able to follow one of the several excellent guides
 at http://git-scm.org to learn.
 
 Most Tor developers develop using some Unix-based system, such as Linux,

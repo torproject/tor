@@ -70,7 +70,7 @@ git branches too.
    scripts/maint/updateVersions.pl to update version numbers in other
    places, and commit.  Then merge maint-0.2.x into release-0.2.x.
 
-   (NOTE: TO bump the version number, edit configure.ac, and then run
+   (NOTE: To bump the version number, edit configure.ac, and then run
    either make, or 'perl scripts/maint/updateVersions.pl', depending on
    your version.)
 
@@ -78,7 +78,7 @@ git branches too.
 a while to see if anybody has problems building it. Try to get Sebastian
 or somebody to try building it on Windows.
 
-6) Get at least two of weasel/arma/sebastian to put the new version number
+6) Get at least two of weasel/arma/Sebastian to put the new version number
 in their approved versions list.
 
 7) Sign the tarball, then sign and push the git tag:

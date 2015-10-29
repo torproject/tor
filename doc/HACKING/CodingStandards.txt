@@ -122,7 +122,7 @@ using gcc, you should invoke the configure script with the option
 "--enable-gcc-warnings".  This will give a bunch of extra warning flags to
 the compiler, and help us find divergences from our preferred C style.
 
-Functions to use; functions not to use.
+Functions to use; functions not to use
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 We have some wrapper functions like tor_malloc, tor_free, tor_strdup, and

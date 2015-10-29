@@ -46,7 +46,7 @@ The preprocessor define __clang_analyzer__ is used to work around instances
 where clang picks up behavior that we wish to permit.
 
 clang Runtime Sanitizers
-~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 To build the Tor codebase with the clang Address and Undefined Behavior
 sanitizers, see the file contrib/clang/sanitize_blacklist.txt.
@@ -100,7 +100,7 @@ To run all tests, including those based on Stem or Chutney:
    make test-full
 -----
 
-To run all tests, including those basedd on Stem or Chutney that require a
+To run all tests, including those based on Stem or Chutney that require a
 working connection to the internet:
 -----
    make test-full-online
@@ -247,7 +247,7 @@ to clutter the files with emacs stuff.
 
 
 Doxygen
-~~~~~~~~
+~~~~~~~
 
 We use the 'doxygen' utility to generate documentation from our
 source code. Here's how to use it:
@@ -256,7 +256,7 @@ source code. Here's how to use it:
          /**
           * \file filename.c
           * \brief Short description of the file.
-          **/
+          */
 
      (Doxygen will recognize any comment beginning with /** as special.)
 
