@@ -355,6 +355,8 @@ NS(test_main)(void *arg)
   const tor_addr_t *resolved_addr;
   tor_addr_t addr_to_compare;
 
+  (void)arg;
+
   tor_addr_parse(&addr_to_compare, "8.8.8.8");
 
   or_circuit_t *on_circ = tor_malloc_zero(sizeof(or_circuit_t));
@@ -401,6 +403,8 @@ NS(test_main)(void *arg)
   edge_connection_t *exitconn = create_valid_exitconn();
   or_circuit_t *on_circ = tor_malloc_zero(sizeof(or_circuit_t));
 
+  (void)arg;
+
   TO_CONN(exitconn)->address = tor_strdup("torproject.org");
 
   NS_MOCK(router_my_exit_policy_is_reject_star);
@@ -442,6 +446,8 @@ NS(test_main)(void *arg)
   edge_connection_t *exitconn = create_valid_exitconn();
   or_circuit_t *on_circ = tor_malloc_zero(sizeof(or_circuit_t));
 
+  (void)arg;
+
   NS_MOCK(router_my_exit_policy_is_reject_star);
 
   TO_CONN(exitconn)->address = tor_strdup("invalid#@!.org");
@@ -481,6 +487,8 @@ NS(test_main)(void *arg)
 
   edge_connection_t *exitconn = create_valid_exitconn();
   or_circuit_t *on_circ = tor_malloc_zero(sizeof(or_circuit_t));
+
+  (void)arg;
 
   TO_CONN(exitconn)->address = tor_strdup("127.0.0.1.in-addr.arpa");
 
@@ -541,6 +549,8 @@ NS(test_main)(void *arg)
   cache_entry->minheap_idx = -1;
   cache_entry->expire = time(NULL) + 60 * 60;
 
+  (void)arg;
+
   TO_CONN(exitconn)->address = tor_strdup("torproject.org");
 
   strlcpy(cache_entry->address, TO_CONN(exitconn)->address,
@@ -597,6 +607,8 @@ NS(set_exitconn_info_from_resolve)(edge_connection_t *exitconn,
   last_exitconn = exitconn;
   last_resolve = (cached_resolve_t *)resolve;
 
+  (void)hostname_out;
+
   return 0;
 }
 
@@ -616,6 +628,8 @@ NS(test_main)(void *arg)
   cache_entry->state = CACHE_STATE_CACHED;
   cache_entry->minheap_idx = -1;
   cache_entry->expire = time(NULL) + 60 * 60;
+
+  (void)arg;
 
   TO_CONN(exitconn)->address = tor_strdup("torproject.org");
 
@@ -688,6 +702,8 @@ NS(test_main)(void *arg)
 
   cached_resolve_t *cache_entry = NULL;
   cached_resolve_t query;
+
+  (void)arg;
 
   TO_CONN(exitconn)->address = tor_strdup("torproject.org");
 
