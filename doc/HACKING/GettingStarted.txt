@@ -1,9 +1,4 @@
 
-
-(DRAFT)
-
-
-
 Getting started in Tor development
 ==================================
 
@@ -189,6 +184,4 @@ Once you've reached this point, here's what you need to know.
      it integrated into mainline Tor.
 
 
-Where do I go from here?
-------------------------
 

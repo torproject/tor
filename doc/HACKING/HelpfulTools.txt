@@ -156,7 +156,7 @@ Profiling Tor with oprofile
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The oprofile tool runs (on Linux only!) to tell you what functions Tor is
-spending its CPU time in, so we can identify berformance pottlenecks.
+spending its CPU time in, so we can identify performance bottlenecks.
 
 Here are some basic instructions
 
