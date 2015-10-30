@@ -277,11 +277,12 @@ GENERAL OPTIONS
 [[ControlPort]] **ControlPort** __PORT__|**unix:**__path__|**auto** [__flags__]::
     If set, Tor will accept connections on this port and allow those
     connections to control the Tor process using the Tor Control Protocol
-    (described in control-spec.txt). Note: unless you also specify one or
-    more of **HashedControlPassword** or **CookieAuthentication**,
-    setting this option will cause Tor to allow any process on the local
-    host to control it. (Setting both authentication methods means either
-    method is sufficient to authenticate to Tor.) This
+    (described in control-spec.txt in
+    https://spec.torproject.org[torspec]). Note: unless you also
+    specify one or more of **HashedControlPassword** or
+    **CookieAuthentication**, setting this option will cause Tor to allow
+    any process on the local host to control it. (Setting both authentication
+    methods means eithermethod is sufficient to authenticate to Tor.) This
     option is required for many Tor controllers; most use the value of 9051.
     Set it to "auto" to have Tor pick a port for you. (Default: 0)
  +
@@ -1721,7 +1722,7 @@ is non-zero):
     Limits the max number of bytes sent and received within a set time period
     using a given calculation rule (see: AccountingStart, AccountingRule).
     Useful if you need to stay under a specific bandwidth. By default, the
-    number used for calculation is the max of either the bytes sent or 
+    number used for calculation is the max of either the bytes sent or
     received. For example, with AccountingMax set to 1 GByte, a server
     could send 900 MBytes and receive 800 MBytes and continue running.
     It will only hibernate once one of the two reaches 1 GByte. This can
@@ -1975,8 +1976,8 @@ on the public Tor network.
 [[V3AuthoritativeDirectory]] **V3AuthoritativeDirectory** **0**|**1**::
     When this option is set in addition to **AuthoritativeDirectory**, Tor
     generates version 3 network statuses and serves descriptors, etc as
-    described in doc/spec/dir-spec.txt (for Tor clients and servers running at
-    least 0.2.0.x).
+    described in dir-spec.txt file of https://spec.torproject.org/[torspec]
+    (for Tor clients and servers running atleast 0.2.0.x).
 
 [[VersioningAuthoritativeDirectory]] **VersioningAuthoritativeDirectory** **0**|**1**::
     When this option is set to 1, Tor adds information on which versions of
@@ -2552,9 +2553,9 @@ __DataDirectory__**/bw_accounting**::
 __DataDirectory__**/control_auth_cookie**::
     Used for cookie authentication with the controller. Location can be
     overridden by the CookieAuthFile config option. Regenerated on startup. See
-    control-spec.txt for details. Only used when cookie authentication is
-    enabled.
-
+    control-spec.txt in https://spec.torproject.org/[torspec] for details.
+    Only used when cookie authentication is enabled.
+ 
 __DataDirectory__**/lock**::
     This file is used to prevent two Tor instances from using same data
     directory. If access to this file is locked, data directory is already
@@ -2640,6 +2641,7 @@ SEE ALSO
 
 **https://www.torproject.org/**
 
+**torspec: https://spec.torproject.org **
 
 BUGS
 ----
