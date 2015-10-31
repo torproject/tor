@@ -1,3 +1,0 @@
-  o Minor bugfixes (testing):
-    - Fix breakage when running 'make check' with BSD make. Fixes bug
-      17154; bugfix on 0.2.7.3-rc. Patch by Marcin Cieślak.
