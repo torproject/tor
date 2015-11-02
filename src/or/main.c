@@ -1237,10 +1237,8 @@ CALLBACK(rotate_onion_key);
 CALLBACK(check_ed_keys);
 CALLBACK(launch_descriptor_fetches);
 CALLBACK(reset_descriptor_failures);
-CALLBACK(fetch_bridge_descriptors);
 CALLBACK(rotate_x509_certificate);
 CALLBACK(add_entropy);
-CALLBACK(enable_accounting);
 CALLBACK(launch_reachability_tests);
 CALLBACK(downrate_stability);
 CALLBACK(save_stability);
@@ -1254,16 +1252,11 @@ CALLBACK(retry_dns);
 CALLBACK(check_descriptor);
 CALLBACK(check_for_reachability_bw);
 CALLBACK(fetch_networkstatus);
-CALLBACK(dirvote_act);
-CALLBACK(expire_misc);
 CALLBACK(retry_listeners);
-CALLBACK(build_circuits);
 CALLBACK(expire_old_ciruits_serverside);
-CALLBACK(housekeeping);
 CALLBACK(check_dns_honesty);
 CALLBACK(write_bridge_ns);
 CALLBACK(check_fw_helper_app);
-CALLBACK(pt_configuration);
 CALLBACK(heartbeat);
 
 #undef CALLBACK
@@ -1274,10 +1267,8 @@ static periodic_event_item_t periodic_events[] = {
   CALLBACK(check_ed_keys),
   CALLBACK(launch_descriptor_fetches),
   CALLBACK(reset_descriptor_failures),
-  CALLBACK(fetch_bridge_descriptors),
   CALLBACK(rotate_x509_certificate),
   CALLBACK(add_entropy),
-  CALLBACK(enable_accounting),
   CALLBACK(launch_reachability_tests),
   CALLBACK(downrate_stability),
   CALLBACK(save_stability),
@@ -1291,16 +1282,11 @@ static periodic_event_item_t periodic_events[] = {
   CALLBACK(check_descriptor),
   CALLBACK(check_for_reachability_bw),
   CALLBACK(fetch_networkstatus),
-  CALLBACK(dirvote_act),
-  CALLBACK(expire_misc),
   CALLBACK(retry_listeners),
-  CALLBACK(build_circuits),
   CALLBACK(expire_old_ciruits_serverside),
-  CALLBACK(housekeeping),
   CALLBACK(check_dns_honesty),
   CALLBACK(write_bridge_ns),
   CALLBACK(check_fw_helper_app),
-  CALLBACK(pt_configuration),
   CALLBACK(heartbeat),
   END_OF_PERIODIC_EVENTS
 };
@@ -1423,6 +1409,8 @@ safe_timer_diff(time_t now, time_t next)
 static void
 run_scheduled_events(time_t now)
 {
+  const or_options_t *options = get_options();
+
   /* 0. See if we've been asked to shut down and our timeout has
    * expired; or if our bandwidth limits are exhausted and we
    * should hibernate; or if it's time to wake up from hibernation.
@@ -1439,6 +1427,85 @@ run_scheduled_events(time_t now)
 
   /* 0c. If we've deferred log messages for the controller, handle them now */
   flush_pending_log_callbacks();
+
+  if (options->UseBridges && !options->DisableNetwork) {
+    fetch_bridge_descriptors(options, now);
+  }
+
+  if (accounting_is_enabled(options)) {
+    accounting_run_housekeeping(now);
+  }
+
+  if (authdir_mode_v3(options)) {
+    dirvote_act(options, now);
+  }
+
+    /* 3a. Every second, we examine pending circuits and prune the
+   *    ones which have been pending for more than a few seconds.
+   *    We do this before step 4, so it can try building more if
+   *    it's not comfortable with the number of available circuits.
+   */
+  /* (If our circuit build timeout can ever become lower than a second (which
+   * it can't, currently), we should do this more often.) */
+  circuit_expire_building();
+
+  /* 3b. Also look at pending streams and prune the ones that 'began'
+   *     a long time ago but haven't gotten a 'connected' yet.
+   *     Do this before step 4, so we can put them back into pending
+   *     state to be picked up by the new circuit.
+   */
+  connection_ap_expire_beginning();
+
+  /* 3c. And expire connections that we've held open for too long.
+   */
+  connection_expire_held_open();
+
+  /* 4. Every second, we try a new circuit if there are no valid
+   *    circuits. Every NewCircuitPeriod seconds, we expire circuits
+   *    that became dirty more than MaxCircuitDirtiness seconds ago,
+   *    and we make a new circ if there are no clean circuits.
+   */
+  const int have_dir_info = router_have_minimum_dir_info();
+  if (have_dir_info && !net_is_disabled()) {
+    circuit_build_needed_circs(now);
+  } else {
+    circuit_expire_old_circs_as_needed(now);
+  }
+
+  /* 5. We do housekeeping for each connection... */
+  connection_or_set_bad_connections(NULL, 0);
+  int i;
+  for (i=0;i<smartlist_len(connection_array);i++) {
+    run_connection_housekeeping(i, now);
+  }
+
+  /* 6. And remove any marked circuits... */
+  circuit_close_all_marked();
+
+  /* 7. And upload service descriptors if necessary. */
+  if (have_completed_a_circuit() && !net_is_disabled()) {
+    rend_consider_services_upload(now);
+    rend_consider_descriptor_republication();
+  }
+
+  /* 8. and blow away any connections that need to die. have to do this now,
+   * because if we marked a conn for close and left its socket -1, then
+   * we'll pass it to poll/select and bad things will happen.
+   */
+  close_closeable_connections();
+
+  /* 8b. And if anything in our state is ready to get flushed to disk, we
+   * flush it. */
+  or_state_save(now);
+
+  /* 8c. Do channel cleanup just like for connections */
+  channel_run_cleanup();
+  channel_listener_run_cleanup();
+
+  /* 11b. check pending unconfigured managed proxies */
+  if (!net_is_disabled() && pt_proxies_configuration_pending())
+    pt_configure_remaining_proxies();
+
 }
 
 static int
@@ -1508,16 +1575,6 @@ reset_descriptor_failures_callback(time_t now, const or_options_t *options)
 }
 
 static int
-fetch_bridge_descriptors_callback(time_t now, const or_options_t *options)
-{
-  if (options->UseBridges && !options->DisableNetwork) {
-    fetch_bridge_descriptors(options, now);
-    return 1;
-  }
-  return -1;
-}
-
-static int
 rotate_x509_certificate_callback(time_t now, const or_options_t *options)
 {
   static int first = 1;
@@ -1554,18 +1611,6 @@ add_entropy_callback(time_t now, const or_options_t *options)
   /** How often do we add more entropy to OpenSSL's RNG pool? */
 #define ENTROPY_INTERVAL (60*60)
   return ENTROPY_INTERVAL;
-}
-
-static int
-enable_accounting_callback(time_t now, const or_options_t *options)
-{
-  /* 1c. If we have to change the accounting interval or record
-   * bandwidth used in this accounting interval, do so. */
-  if (accounting_is_enabled(options)) {
-    accounting_run_housekeeping(now);
-    return 1;
-  }
-  return -1;
 }
 
 static int
@@ -1728,7 +1773,7 @@ rend_cache_failure_clean_callback(time_t now, const or_options_t *options)
    * clean it as soon as we can since we want to make sure the client waits
    * as little as possible for reachability reasons. */
   rend_cache_failure_clean(now);
-  return 1;
+  return 30;
 }
 
 static int
@@ -1825,46 +1870,6 @@ fetch_networkstatus_callback(time_t now, const or_options_t *options)
 }
 
 static int
-dirvote_act_callback(time_t now, const or_options_t *options)
-{
-  /* 2c. Let directory voting happen. */
-  if (authdir_mode_v3(options)) {
-    dirvote_act(options, now);
-    return 1;
-  }
-  return -1;
-}
-
-static int
-expire_misc_callback(time_t now, const or_options_t *options)
-{
-  (void)now;
-  (void)options;
-
-  /* 3a. Every second, we examine pending circuits and prune the
-   *    ones which have been pending for more than a few seconds.
-   *    We do this before step 4, so it can try building more if
-   *    it's not comfortable with the number of available circuits.
-   */
-  /* (If our circuit build timeout can ever become lower than a second (which
-   * it can't, currently), we should do this more often.) */
-  circuit_expire_building();
-
-  /* 3b. Also look at pending streams and prune the ones that 'began'
-   *     a long time ago but haven't gotten a 'connected' yet.
-   *     Do this before step 4, so we can put them back into pending
-   *     state to be picked up by the new circuit.
-   */
-  connection_ap_expire_beginning();
-
-  /* 3c. And expire connections that we've held open for too long.
-   */
-  connection_expire_held_open();
-
-  return 1;
-}
-
-static int
 retry_listeners_callback(time_t now, const or_options_t *options)
 {
   (void)now;
@@ -1878,24 +1883,6 @@ retry_listeners_callback(time_t now, const or_options_t *options)
 }
 
 static int
-build_circuits_callback(time_t now, const or_options_t *options)
-{
-  (void)options;
-  /* 4. Every second, we try a new circuit if there are no valid
-   *    circuits. Every NewCircuitPeriod seconds, we expire circuits
-   *    that became dirty more than MaxCircuitDirtiness seconds ago,
-   *    and we make a new circ if there are no clean circuits.
-   */
-  const int have_dir_info = router_have_minimum_dir_info();
-  if (have_dir_info && !net_is_disabled()) {
-    circuit_build_needed_circs(now);
-  } else {
-    circuit_expire_old_circs_as_needed(now);
-  }
-  return 1;
-}
-
-static int
 expire_old_ciruits_serverside_callback(time_t now, const or_options_t *options)
 {
   (void)options;
@@ -1904,42 +1891,6 @@ expire_old_ciruits_serverside_callback(time_t now, const or_options_t *options)
   return 11;
 }
 
-static int
-housekeeping_callback(time_t now, const or_options_t *options)
-{
-  (void)options;
-  int i;
-  /* 5. We do housekeeping for each connection... */
-  connection_or_set_bad_connections(NULL, 0);
-  for (i=0;i<smartlist_len(connection_array);i++) {
-    run_connection_housekeeping(i, now);
-  }
-
-  /* 6. And remove any marked circuits... */
-  circuit_close_all_marked();
-
-  /* 7. And upload service descriptors if necessary. */
-  if (have_completed_a_circuit() && !net_is_disabled()) {
-    rend_consider_services_upload(now);
-    rend_consider_descriptor_republication();
-  }
-
-  /* 8. and blow away any connections that need to die. have to do this now,
-   * because if we marked a conn for close and left its socket -1, then
-   * we'll pass it to poll/select and bad things will happen.
-   */
-  close_closeable_connections();
-
-  /* 8b. And if anything in our state is ready to get flushed to disk, we
-   * flush it. */
-  or_state_save(now);
-
-  /* 8c. Do channel cleanup just like for connections */
-  channel_run_cleanup();
-  channel_listener_run_cleanup();
-
-  return 1;
-}
 
 static int
 check_dns_honesty_callback(time_t now, const or_options_t *options)
@@ -1999,26 +1950,17 @@ check_fw_helper_app_callback(time_t now, const or_options_t *options)
 }
 
 static int
-pt_configuration_callback(time_t now, const or_options_t *options)
-{
-  (void)now;
-  (void)options;
-  /* 11b. check pending unconfigured managed proxies */
-  if (!net_is_disabled() && pt_proxies_configuration_pending())
-    pt_configure_remaining_proxies();
-  return 1;
-}
-
-static int
 heartbeat_callback(time_t now, const or_options_t *options)
 {
   static int first = 1;
   /* 12. write the heartbeat message */
   if (first) {
-    first = 0;
+    first = 0; /* Skip the first one. */
   } else {
     log_heartbeat(now);
   }
+  /* XXXX This isn't such a good way to handle possible changes in the
+   * callback event */
   return options->HeartbeatPeriod;
 }
 
