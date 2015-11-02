@@ -1505,7 +1505,6 @@ run_scheduled_events(time_t now)
   /* 11b. check pending unconfigured managed proxies */
   if (!net_is_disabled() && pt_proxies_configuration_pending())
     pt_configure_remaining_proxies();
-
 }
 
 static int
@@ -1890,7 +1889,6 @@ expire_old_ciruits_serverside_callback(time_t now, const or_options_t *options)
   circuit_expire_old_circuits_serverside(now);
   return 11;
 }
-
 
 static int
 check_dns_honesty_callback(time_t now, const or_options_t *options)

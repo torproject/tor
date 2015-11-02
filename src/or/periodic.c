@@ -104,15 +104,3 @@ periodic_event_destroy(periodic_event_item_t *event)
   event->last_action_time = 0;
 }
 
-/** DOCDOC */
-void
-periodic_event_assert_in_range(periodic_event_item_t *ev,
-                               time_t start, time_t end)
-{
-  if (ev->last_action_time < start-1 || ev->last_action_time > end) {
-    log_err(LD_BUG, "[Refactor Bug] Missed an interval in a range,"
-            "Got %lu, wanted %lu <= x <= %lu.", ev->last_action_time,
-            start, end);
-    tor_assert(0);
-  }
-}

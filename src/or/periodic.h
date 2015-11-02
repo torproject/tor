@@ -13,7 +13,6 @@
 typedef int (*periodic_event_helper_t)(time_t now,
                                       const or_options_t *options);
 
-
 /** A single item for the periodic-events-function table. */
 typedef struct periodic_event_item_t {
   periodic_event_helper_t fn; /**< The function to run the event */
@@ -27,26 +26,6 @@ typedef struct periodic_event_item_t {
 #define PERIODIC_EVENT(fn) { fn##_callback, 0, 0, NULL, #fn }
 #define END_OF_PERIODIC_EVENTS { NULL, 0, 0, NULL, NULL }
 
-#if 0
-/** Refactor test, check the last_action_time was now or (now - delta - 1)
-* It returns an incremented <b>now</b> value and accounts for the current
-* implementation's off by one error in it's comparisons. */
-#define INCREMENT_DELTA_AND_TEST(id, now, delta) \
-  (now+delta);                                   \
-  STMT_BEGIN \
-    periodic_event_item_t *ev = &periodic_events[id]; \
-    if (ev->last_action_time != now - delta - 1 && \
-        ev->last_action_time != now) { \
-      log_err(LD_BUG, "[Refactor Bug] Missed an interval " \
-        "for %s, Got %lu, wanted %lu or %lu.", ev->name, \
-        ev->last_action_time, now, now-delta); \
-      tor_assert(0); \
-    } \
-    STMT_END
-#endif
-
-void periodic_event_assert_in_range(periodic_event_item_t *event,
-                                    time_t start, time_t end);
 void periodic_event_launch(periodic_event_item_t *event);
 void periodic_event_destroy(periodic_event_item_t *event);
 void periodic_event_reschedule(periodic_event_item_t *event);
