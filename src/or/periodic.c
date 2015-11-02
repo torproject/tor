@@ -2,8 +2,15 @@
 /* See LICENSE for licensing information */
 
 #include "or.h"
+#include "compat_libevent.h"
 #include "config.h"
 #include "periodic.h"
+
+#ifdef HAVE_EVENT2_EVENT_H
+#include <event2/event.h>
+#else
+#include <event.h>
+#endif
 
 static const int MAX_INTERVAL = 10 * 365 * 86400;
 
@@ -12,24 +19,21 @@ static void
 periodic_event_set_interval(periodic_event_item_t *event,
                             time_t next_interval)
 {
-  /** update the interval time if it's changed */
-  if (next_interval != event->interval) {
-    tor_assert(next_interval < MAX_INTERVAL);
-    struct timeval tv;
-    tv.tv_sec = next_interval;
-    tv.tv_usec = 0;
-    event->interval = (int)next_interval;
-    periodic_timer_update_interval(event->timer, &tv);
-  }
+  tor_assert(next_interval < MAX_INTERVAL);
+  struct timeval tv;
+  tv.tv_sec = next_interval;
+  tv.tv_usec = 0;
+  event_add(event->ev, &tv);
 }
 
 /** Wraps dispatches for periodic events, <b>data</b> will be a pointer to the
  * event that needs to be called */
 static void
-periodic_event_dispatch(periodic_timer_t *timer, void *data)
+periodic_event_dispatch(evutil_socket_t fd, short what, void *data)
 {
+  (void)fd;
+  (void)what;
   periodic_event_item_t *event = data;
-  tor_assert(timer == event->timer);
 
   time_t now = time(NULL);
   const or_options_t *options = get_options();
@@ -55,7 +59,8 @@ periodic_event_dispatch(periodic_timer_t *timer, void *data)
     next_interval = 1;
   }
 
-  periodic_event_set_interval(event, next_interval);
+  struct timeval tv = { next_interval , 0 };
+  event_add(event->ev, &tv);
 
   log_info(LD_GENERAL, "Dispatching %s", event->name);
 }
@@ -72,24 +77,19 @@ periodic_event_reschedule(periodic_event_item_t *event)
 void
 periodic_event_launch(periodic_event_item_t *event)
 {
-  if (event->timer) { /** Already setup? This is a bug */
+  if (event->ev) { /** Already setup? This is a bug */
     log_err(LD_BUG, "Initial dispatch should only be done once.");
     tor_assert(0);
   }
 
-  struct timeval interval;
-  interval.tv_sec = event->interval;
-  interval.tv_usec = 0;
-
-  periodic_timer_t *timer = periodic_timer_new(tor_libevent_get_base(),
-                                               &interval,
-                                               periodic_event_dispatch,
-                                               event);
-  tor_assert(timer);
-  event->timer = timer;
+  event->ev = tor_event_new(tor_libevent_get_base(),
+                            -1, 0,
+                            periodic_event_dispatch,
+                            event);
+  tor_assert(event->ev);
 
   // Initial dispatch
-  periodic_event_dispatch(timer, event);
+  periodic_event_dispatch(-1, EV_TIMEOUT, event);
 }
 
 /** DOCDOC */
@@ -98,9 +98,7 @@ periodic_event_destroy(periodic_event_item_t *event)
 {
   if (!event)
     return;
-  periodic_timer_free(event->timer);
-  event->timer = 0;
-  event->interval = 0;
+  tor_event_free(event->ev);
   event->last_action_time = 0;
 }
 

@@ -13,18 +13,19 @@
 typedef int (*periodic_event_helper_t)(time_t now,
                                       const or_options_t *options);
 
+struct event;
+
 /** A single item for the periodic-events-function table. */
 typedef struct periodic_event_item_t {
   periodic_event_helper_t fn; /**< The function to run the event */
-  int interval; /**< The interval for running the function (In seconds). */
   time_t last_action_time; /**< The last time the function did something */
-  periodic_timer_t *timer; /**< Timer object for this event */
+  struct event *ev; /**< Libevent callback we're using to implement this */
   const char *name; /**< Name of the function -- for debug */
 } periodic_event_item_t;
 
 /** events will get their interval from first execution */
-#define PERIODIC_EVENT(fn) { fn##_callback, 0, 0, NULL, #fn }
-#define END_OF_PERIODIC_EVENTS { NULL, 0, 0, NULL, NULL }
+#define PERIODIC_EVENT(fn) { fn##_callback, 0, NULL, #fn }
+#define END_OF_PERIODIC_EVENTS { NULL, 0, NULL, NULL }
 
 void periodic_event_launch(periodic_event_item_t *event);
 void periodic_event_destroy(periodic_event_item_t *event);
