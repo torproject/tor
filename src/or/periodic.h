@@ -25,6 +25,7 @@ typedef struct periodic_event_item_t {
 
 /** events will get their interval from first execution */
 #define PERIODIC_EVENT(fn) { fn##_callback, 0, 0, NULL, #fn }
+#define END_OF_PERIODIC_EVENTS { NULL, 0, 0, NULL, NULL }
 
 #if 0
 /** Refactor test, check the last_action_time was now or (now - delta - 1)

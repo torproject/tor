@@ -44,6 +44,7 @@
 #include "nodelist.h"
 #include "ntmain.h"
 #include "onion.h"
+#include "periodic.h"
 #include "policies.h"
 #include "transports.h"
 #include "relay.h"
@@ -1227,6 +1228,13 @@ get_signewnym_epoch(void)
   return newnym_epoch;
 }
 
+/** DOCDOC */
+static int periodic_events_initialized = 0;
+
+static periodic_event_item_t periodic_events[] = {
+  END_OF_PERIODIC_EVENTS
+};
+
 typedef struct {
   time_t last_rotated_x509_certificate;
   time_t check_v3_certificate;
@@ -1267,7 +1275,46 @@ static time_to_t time_to = {
 void
 reset_all_main_loop_timers(void)
 {
+  int i;
   memset(&time_to, 0, sizeof(time_to));
+  for (i = 0; periodic_events[i].name; ++i) {
+    periodic_event_reschedule(&periodic_events[i]);
+  }
+}
+
+/** DOCDOC */
+static void
+initialize_periodic_events_cb(evutil_socket_t fd, short events, void *data)
+{
+  (void) fd;
+  (void) events;
+  (void) data;
+  int i;
+  for (i = 0; periodic_events[i].name; ++i) {
+    periodic_event_launch(&periodic_events[i]);
+  }
+}
+
+/** DOCDOC */
+static void
+initialize_periodic_events(void)
+{
+  tor_assert(periodic_events_initialized == 0);
+  periodic_events_initialized = 1;
+
+  struct timeval one_second = { 1, 0 };
+  event_base_once(tor_libevent_get_base(), -1, 0,
+                  initialize_periodic_events_cb, NULL,
+                  &one_second);
+}
+
+static void
+teardown_periodic_events(void)
+{
+  int i;
+  for (i = 0; periodic_events[i].name; ++i) {
+    periodic_event_destroy(&periodic_events[i]);
+  }
 }
 
 /**
@@ -2144,6 +2191,10 @@ do_main_loop(void)
     tor_assert(second_timer);
   }
 
+  if (! periodic_events_initialized) {
+    initialize_periodic_events();
+  }
+
 #ifdef HAVE_SYSTEMD_209
   uint64_t watchdog_delay;
   /* set up systemd watchdog notification. */
@@ -2852,6 +2903,7 @@ tor_free_all(int postfork)
   smartlist_free(closeable_connection_lst);
   smartlist_free(active_linked_connection_lst);
   periodic_timer_free(second_timer);
+  teardown_periodic_events();
 #ifndef USE_BUFFEREVENTS
   periodic_timer_free(refill_timer);
 #endif
