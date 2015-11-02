@@ -128,13 +128,16 @@ complicated for options that are allowed to occur more than once: if you
 specify four SOCKSPorts in your configuration file, and one more SOCKSPort on
 the command line, the option on the command line will replace __all__ of the
 SOCKSPorts in the configuration file.  If this isn't what you want, prefix
-the option name with a plus sign, and it will be appended to the previous set
-of options instead.
+the option name with a plus sign (+), and it will be appended to the previous
+set of options instead.  For example, setting SOCKSPort 9100 will use only
+port 9100, but setting +SOCKSPort 9100 will use ports 9100 and 9050 (because
+this is the default).
 
 Alternatively, you might want to remove every instance of an option in the
 configuration file, and not replace it at all: you might want to say on the
 command line that you want no SOCKSPorts at all.  To do that, prefix the
-option name with a forward slash.
+option name with a forward slash (/).  You can use the plus sign (+) and the
+forward slash (/) in the configuration file and on the command line.
 
 GENERAL OPTIONS
 ---------------
@@ -2557,7 +2560,7 @@ __DataDirectory__**/control_auth_cookie**::
     overridden by the CookieAuthFile config option. Regenerated on startup. See
     control-spec.txt in https://spec.torproject.org/[torspec] for details.
     Only used when cookie authentication is enabled.
- 
+
 __DataDirectory__**/lock**::
     This file is used to prevent two Tor instances from using same data
     directory. If access to this file is locked, data directory is already
