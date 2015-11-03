@@ -111,6 +111,7 @@ test_dir_formats(void *arg)
   r1->cache_info.published_on = 0;
   r1->or_port = 9000;
   r1->dir_port = 9003;
+  r1->supports_tunnelled_dir_requests = 1;
   tor_addr_parse(&r1->ipv6_addr, "1:2:3:4::");
   r1->ipv6_orport = 9999;
   r1->onion_pkey = crypto_pk_dup_key(pk1);
@@ -155,6 +156,7 @@ test_dir_formats(void *arg)
   r2->cache_info.published_on = 5;
   r2->or_port = 9005;
   r2->dir_port = 0;
+  r2->supports_tunnelled_dir_requests = 1;
   r2->onion_pkey = crypto_pk_dup_key(pk2);
   curve25519_keypair_t r2_onion_keypair;
   curve25519_keypair_generate(&r2_onion_keypair, 0);
@@ -176,12 +178,9 @@ test_dir_formats(void *arg)
   options->ContactInfo = tor_strdup("Magri White "
                                     "<magri@elsewhere.example.com>");
 
-  options->ORPort_set = options->DirPort_set = options->AssumeReachable = 1;
   buf = router_dump_router_to_string(r1, pk2, NULL, NULL, NULL);
 
   tor_free(options->ContactInfo);
-  /* Reset for later */
-  options->ORPort_set = options->DirPort_set = options->AssumeReachable = 0;
   tt_assert(buf);
 
   strlcpy(buf2, "router Magri 192.168.0.1 9000 0 9003\n"
@@ -301,8 +300,6 @@ test_dir_formats(void *arg)
   strlcat(buf2, "tunnelled-dir-server\n", sizeof(buf2));
   strlcat(buf2, "router-sig-ed25519 ", sizeof(buf2));
 
-  options->ORPort_set = 1;
-  
   buf = router_dump_router_to_string(r2, pk1, pk2, &r2_onion_keypair, &kp2);
   tt_assert(buf);
   buf[strlen(buf2)] = '\0'; /* Don't compare the sig; it's never the same
@@ -314,7 +311,6 @@ test_dir_formats(void *arg)
   buf = router_dump_router_to_string(r2, pk1, NULL, NULL, NULL);
 
   /* Reset for later */
-  options->ORPort_set = 0;
   cp = buf;
   rp2 = router_parse_entry_from_string((const char*)cp,NULL,1,0,NULL,NULL);
   tt_assert(rp2);

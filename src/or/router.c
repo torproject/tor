@@ -1899,6 +1899,7 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
   ri->addr = addr;
   ri->or_port = router_get_advertised_or_port(options);
   ri->dir_port = router_get_advertised_dir_port(options, 0);
+  ri->supports_tunnelled_dir_requests = dir_server_mode(options);
   ri->cache_info.published_on = time(NULL);
   ri->onion_pkey = crypto_pk_dup_key(get_onion_key()); /* must invoke from
                                                         * main thread */
@@ -2675,7 +2676,7 @@ router_dump_router_to_string(routerinfo_t *router,
     tor_free(p6);
   }
 
-  if (dir_server_mode(options)) {
+  if (router->supports_tunnelled_dir_requests) {
     smartlist_add(chunks, tor_strdup("tunnelled-dir-server\n"));
   }
 
