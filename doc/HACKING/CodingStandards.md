@@ -1,16 +1,16 @@
 Coding conventions for Tor
---------------------------
+==========================
 
 tl;dr:
 
-    * Run configure with '--enable-gcc-warnings'
-    * Run 'make check-spaces' to catch whitespace errors
-    * Document your functions
-    * Write unit tests
-    * Add a file in 'changes' for your branch.
+   - Run configure with `--enable-gcc-warnings`
+   - Run `make check-spaces` to catch whitespace errors
+   - Document your functions
+   - Write unit tests
+   - Add a file in `changes` for your branch.
 
 Patch checklist
-~~~~~~~~~~~~~~~
+---------------
 
 If possible, send your patch as one of these (in descending order of
 preference)
@@ -21,16 +21,16 @@ preference)
 
 Did you remember...
 
-   - To build your code while configured with --enable-gcc-warnings?
-   - To run "make check-spaces" on your code?
-   - To run "make check-docs" to see whether all new options are on
+   - To build your code while configured with `--enable-gcc-warnings`?
+   - To run `make check-spaces` on your code?
+   - To run `make check-docs` to see whether all new options are on
      the manpage?
    - To write unit tests, as possible?
    - To base your code on the appropriate branch?
-   - To include a file in the "changes" directory as appropriate?
+   - To include a file in the `changes` directory as appropriate?
 
 How we use Git branches
------------------------
+=======================
 
 Each main development series (like 0.2.1, 0.2.2, etc) has its main work
 applied to a single branch.  At most one series can be the development series
@@ -54,13 +54,13 @@ you're working on a new feature, base it on the master branch.
 
 
 How we log changes
-------------------
+==================
 
 When you do a commit that needs a ChangeLog entry, add a new file to
-the "changes" toplevel subdirectory.  It should have the format of a
+the `changes` toplevel subdirectory.  It should have the format of a
 one-entry changelog section from the current ChangeLog file, as in
 
-  o Major bugfixes:
+- Major bugfixes:
     - Fix a potential buffer overflow. Fixes bug 99999; bugfix on
       0.3.1.4-beta.
 
@@ -69,110 +69,115 @@ are: Minor bugfixes, Major bugfixes, Minor features, Major features, Code
 simplifications and refactoring.  Then say what the change does.  If
 it's a bugfix, mention what bug it fixes and when the bug was
 introduced.  To find out which Git tag the change was introduced in,
-you can use "git describe --contains <sha1 of commit>".
+you can use `git describe --contains <sha1 of commit>`.
 
 If at all possible, try to create this file in the same commit where you are
 making the change.  Please give it a distinctive name that no other branch will
 use for the lifetime of your change. To verify the format of the changes file,
-you can use "make check-changes".
+you can use `make check-changes`.
 
 When we go to make a release, we will concatenate all the entries
 in changes to make a draft changelog, and clear the directory. We'll
 then edit the draft changelog into a nice readable format.
 
-What needs a changes file?::
-   A not-exhaustive list: Anything that might change user-visible
+What needs a changes file?
+   
+   * A not-exhaustive list: Anything that might change user-visible
    behavior. Anything that changes internals, documentation, or the build
    system enough that somebody could notice.  Big or interesting code
    rewrites.  Anything about which somebody might plausibly wonder "when
    did that happen, and/or why did we do that" 6 months down the line.
 
-Why use changes files instead of Git commit messages?::
-   Git commit messages are written for developers, not users, and they
+Why use changes files instead of Git commit messages?
+   
+   * Git commit messages are written for developers, not users, and they
    are nigh-impossible to revise after the fact.
 
-Why use changes files instead of entries in the ChangeLog?::
-   Having every single commit touch the ChangeLog file tended to create
+Why use changes files instead of entries in the ChangeLog?
+
+   * Having every single commit touch the ChangeLog file tended to create
    zillions of merge conflicts.
 
 Whitespace and C conformance
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------
 
-Invoke "make check-spaces" from time to time, so it can tell you about
+Invoke `make check-spaces` from time to time, so it can tell you about
 deviations from our C whitespace style.  Generally, we use:
 
-    - Unix-style line endings
-    - K&R-style indentation
-    - No space before newlines
-    - A blank line at the end of each file
-    - Never more than one blank line in a row
-    - Always spaces, never tabs
-    - No more than 79-columns per line.
-    - Two spaces per indent.
-    - A space between control keywords and their corresponding paren
-      "if (x)", "while (x)", and "switch (x)", never "if(x)", "while(x)", or
-      "switch(x)".
-    - A space between anything and an open brace.
-    - No space between a function name and an opening paren. "puts(x)", not
-      "puts (x)".
-    - Function declarations at the start of the line.
+   - Unix-style line endings
+   - K&R-style indentation
+   - No space before newlines
+   - A blank line at the end of each file
+   - Never more than one blank line in a row
+   - Always spaces, never tabs
+   - No more than 79-columns per line.
+   - Two spaces per indent.
+   - A space between control keywords and their corresponding paren
+     `if (x)`, `while (x)`, and `switch (x)`, never `if(x)`, `while(x)`, or
+     `switch(x)`.
+   - A space between anything and an open brace.
+   - No space between a function name and an opening paren. `puts(x)`, not
+     `puts (x)`.
+   - Function declarations at the start of the line.
 
 We try hard to build without warnings everywhere.  In particular, if you're
 using gcc, you should invoke the configure script with the option
-"--enable-gcc-warnings".  This will give a bunch of extra warning flags to
+`--enable-gcc-warnings`.  This will give a bunch of extra warning flags to
 the compiler, and help us find divergences from our preferred C style.
 
 Functions to use; functions not to use
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+--------------------------------------
 
-We have some wrapper functions like tor_malloc, tor_free, tor_strdup, and
-tor_gettimeofday; use them instead of their generic equivalents.  (They
+We have some wrapper functions like `tor_malloc`, `tor_free`, `tor_strdup`, and
+`tor_gettimeofday;` use them instead of their generic equivalents.  (They
 always succeed or exit.)
 
 You can get a full list of the compatibility functions that Tor provides by
-looking through src/common/util*.h and src/common/compat*.h.  You can see the
-available containers in src/common/containers*.h.  You should probably
+looking through `src/common/util*.h` and `src/common/compat*.h`.  You can see the
+available containers in `src/common/containers*.h`.  You should probably
 familiarize yourself with these modules before you write too much code, or
 else you'll wind up reinventing the wheel.
 
-Use 'INLINE' instead of 'inline' -- it's a vestige of an old hack to make
+Use `INLINE` instead of `inline` -- it's a vestige of an old hack to make
 sure that we worked on MSVC6.
 
-We don't use strcat or strcpy or sprintf of any of those notoriously broken
-old C functions.  Use strlcat, strlcpy, or tor_snprintf/tor_asprintf instead.
+We don't use `strcat` or `strcpy` or `sprintf` of any of those notoriously broken
+old C functions.  Use `strlcat`, `strlcpy`, or `tor_snprintf/tor_asprintf` instead.
 
-We don't call memcmp() directly.  Use fast_memeq(), fast_memneq(),
-tor_memeq(), or tor_memneq() for most purposes.
+We don't call `memcmp()` directly.  Use `fast_memeq()`, `fast_memneq()`,
+`tor_memeq()`, or `tor_memneq()` for most purposes.
 
 Functions not to write
-~~~~~~~~~~~~~~~~~~~~~~
+----------------------
 
 Try to never hand-write new code to parse or generate binary
-formats. Instead, use trunnel if at all possible.  See
+formats. Instead, use trunnel if at all possible.  See  
+
     https://gitweb.torproject.org/trunnel.git/tree
+
 for more information about trunnel.
 
 For information on adding new trunnel code to Tor, see src/trunnel/README
 
 
 Calling and naming conventions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+------------------------------
 
 Whenever possible, functions should return -1 on error and 0 on success.
 
 For multi-word identifiers, use lowercase words combined with
-underscores. (e.g., "multi_word_identifier").  Use ALL_CAPS for macros and
+underscores. (e.g., `multi_word_identifier`).  Use ALL_CAPS for macros and
 constants.
 
-Typenames should end with "_t".
+Typenames should end with `_t`.
 
 Function names should be prefixed with a module name or object name.  (In
 general, code to manipulate an object should be a module with the same name
 as the object, so it's hard to tell which convention is used.)
 
 Functions that do things should have imperative-verb names
-(e.g. buffer_clear, buffer_resize); functions that return booleans should
-have predicate names (e.g. buffer_is_empty, buffer_needs_resizing).
+(e.g. `buffer_clear`, `buffer_resize`); functions that return booleans should
+have predicate names (e.g. `buffer_is_empty`, `buffer_needs_resizing`).
 
 If you find that you have four or more possible return code values, it's
 probably time to create an enum.  If you find that you are passing three or
@@ -180,16 +185,16 @@ more flags to a function, it's probably time to create a flags argument that
 takes a bitfield.
 
 What To Optimize
-~~~~~~~~~~~~~~~~
+----------------
 
 Don't optimize anything if it's not in the critical path.  Right now, the
 critical path seems to be AES, logging, and the network itself.  Feel free to
 do your own profiling to determine otherwise.
 
 Log conventions
-~~~~~~~~~~~~~~~
+---------------
 
-https://www.torproject.org/docs/faq#LogLevel
+`https://www.torproject.org/docs/faq#LogLevel`
 
 No error or warning messages should be expected during normal OR or OP
 operation.
@@ -206,7 +211,7 @@ option (B).
 
 
 Doxygen comment conventions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+---------------------------
 
 Say what functions do as a series of one or more imperative sentences, as
 though you were telling somebody how to be the function.  In other words, DO

@@ -37,10 +37,11 @@ Getting your first patch into Tor
 
 Once you've reached this point, here's what you need to know.
 
-  1) Get the source.
+  1. Get the source.
 
      We keep our source under version control in Git.  To get the latest
-     version, run
+     version, run  
+         
          git clone https://git.torproject.org/git/tor
 
      This will give you a checkout of the master branch.  If you're
@@ -49,10 +50,11 @@ Once you've reached this point, here's what you need to know.
 
          git checkout maint-0.2.7
 
-  2) Find your way around the source
+  2. Find your way around the source
 
      Our overall code structure is explained in the "torguts" documents,
      currently at
+     
         git clone https://git.torproject.org/user/nickm/torguts.git
 
      Find a part of the code that looks interesting to you, and start
@@ -64,14 +66,14 @@ Once you've reached this point, here's what you need to know.
      If you see something that doesn't make sense, we love to get
      questions!
 
-  3) Find something cool to hack on.
+  3. Find something cool to hack on.
 
      You may already have a good idea of what you'd like to work on, or
      you might be looking for a way to contribute.
 
      Many people have gotten started by looking for an area where they
      personally felt Tor was underperforming, and investigating ways to
-     fix it.  If you're looking for ideas, you can head to our bug
+     fix it. If you're looking for ideas, you can head to our bug
      tracker at trac.torproject.org and look for tickets that have
      received the "easy" tag: these are ones that developers think would
      be pretty simple for a new person to work on.  For a bigger
@@ -86,11 +88,12 @@ Once you've reached this point, here's what you need to know.
      For your first patch, it is probably NOT a good idea to make
      something huge or invasive.  In particular, you should probably
      avoid:
-        * Major changes spread across many parts of the codebase.
-        * Major changes to programming practice or coding style.
-        * Huge new features or protocol changes.
+     
+       * Major changes spread across many parts of the codebase.
+       * Major changes to programming practice or coding style.
+       * Huge new features or protocol changes.
 
-  4) Meet the developers!
+  4. Meet the developers!
 
      We discuss stuff on the tor-dev mailing list and on the #tor-dev
      IRC channel on OFTC.  We're generally friendly and approachable,
@@ -103,7 +106,7 @@ Once you've reached this point, here's what you need to know.
      better.  The time might change in the future, but generally,
      there's no bad time to talk, and ask us about patch ideas.
 
-  5) Do you need to write a design proposal?
+  5. Do you need to write a design proposal?
 
      If your idea is very large, or it will require a change to Tor's
      protocols, there needs to be a written design proposal before it
@@ -116,7 +119,7 @@ Once you've reached this point, here's what you need to know.
      You might also like to look around the rest of that directory, to
      see more about open and past proposed changes to Tor's behavior.
 
-  6) Writing your patch
+  6. Writing your patch
 
      As you write your code, you'll probably want it to fit in with the
      standards of the rest of the Tor codebase so it will be easy for us
@@ -127,7 +130,7 @@ Once you've reached this point, here's what you need to know.
      components, remember to divide it into a series of Git commits.  A
      series of small changes is much easier to review than one big lump.
 
-  7) Testing your patch
+  7. Testing your patch
 
      We prefer that all new or modified code have unit tests for it to
      ensure that it runs correctly.  Also, all code should actually be
@@ -137,7 +140,7 @@ Once you've reached this point, here's what you need to know.
      in Tor.  If you'd like any help writing tests, just ask!  We're
      glad to help out.
 
-  8) Submitting your patch
+  8. Submitting your patch
 
      We review patches through tickets on our bugtracker at
      trac.torproject.org.  You can either upload your patches there, or
@@ -149,7 +152,7 @@ Once you've reached this point, here's what you need to know.
      you've done on trac, and then change the status of the ticket to
      needs_review.
 
-  9) Review, Revision, and Merge
+  9. Review, Revision, and Merge
 
      With any luck, somebody will review your patch soon!  If not, you
      can ask on the IRC channel; sometimes we get really busy and take
@@ -159,29 +162,29 @@ Once you've reached this point, here's what you need to know.
 
      When your patch is reviewed, one of these things will happen:
 
-          * The reviewer will say "looks good to me" and your
-            patch will get merged right into Tor.  [Assuming we're not
-            in the middle of a code-freeze window.  If the codebase is
-            frozen, your patch will go into the next release series.]
+       * The reviewer will say "looks good to me" and your
+         patch will get merged right into Tor.  [Assuming we're not
+         in the middle of a code-freeze window.  If the codebase is
+         frozen, your patch will go into the next release series.]
 
-          * OR the reviewer will say "looks good, just needs some small
-            changes!"  And then the reviewer will make those changes,
-            and merge the modified patch into Tor.
+       * OR the reviewer will say "looks good, just needs some small
+         changes!"  And then the reviewer will make those changes,
+         and merge the modified patch into Tor.
 
-          * OR the reviewer will say "Here are some questions and
-            comments," followed by a bunch of stuff that the reviewer
-            thinks should change in your code, or questions that the
-            reviewer has.
+       * OR the reviewer will say "Here are some questions and
+         comments," followed by a bunch of stuff that the reviewer
+         thinks should change in your code, or questions that the
+         reviewer has.
 
-            At this point, you might want to make the requested changes
-            yourself, and comment on the trac ticket once you have done
-            so.  Or if you disagree with any of the comments, you should
-            say so!  And if you won't have time to make some of the
-            changes, you should say that too, so that other developers
-            will be able to pick up the unfinished portion
-
-     Congratulations!  You have now written your first patch, and gotten
-     it integrated into mainline Tor.
+         At this point, you might want to make the requested changes
+         yourself, and comment on the trac ticket once you have done
+         so. Or if you disagree with any of the comments, you should
+         say so!  And if you won't have time to make some of the
+         changes, you should say that too, so that other developers
+         will be able to pick up the unfinished portion.
+         
+    Congratulations!  You have now written your first patch, and gotten
+    it integrated into mainline Tor.
 
 
 
