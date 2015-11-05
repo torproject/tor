@@ -4,7 +4,7 @@ of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
 Changes in version 0.2.7.5- 2015-11-??
-  XXXX WRITE A BLURB
+  XXXX WRITE A BLURB XXXX
 
   o Major features (controller):
     - Add the ADD_ONION and DEL_ONION commands that allow the creation
@@ -117,10 +117,6 @@ Changes in version 0.2.7.5- 2015-11-??
       connection was initialized. Fixes bug 16247; bugfix on
       0.2.6.3-alpha. Patch by "jojelino".
 
-  o Major bugfixes (correctness):
-    - Fix a use-after-free bug in validate_intro_point_failure(). Fixes
-      bug 17401; bugfix on 0.2.7.3-rc.
-
   o Major bugfixes (hidden service clients, stability, also in 0.2.6.10):
     - Stop refusing to store updated hidden service descriptors on a
       client. This reverts commit 9407040c59218 (which indeed fixed bug
@@ -147,10 +143,6 @@ Changes in version 0.2.7.5- 2015-11-??
   o Major bugfixes (memory leaks):
     - Fix a memory leak in ed25519 batch signature checking. Fixes bug
       17398; bugfix on 0.2.6.1-alpha.
-    - Fix a memory leak in rend_cache_failure_entry_free(). Fixes bug
-      17402; bugfix on 0.2.7.3-rc.
-    - Fix a memory leak when reading an expired signing key from disk.
-      Fixes bug 17403; bugfix on 0.2.7.2-rc.
 
   o Major bugfixes (open file limit):
     - The open file limit wasn't checked before calling
@@ -158,12 +150,6 @@ Changes in version 0.2.7.5- 2015-11-??
       limit. Now, before opening a new socket, Tor validates the open
       file limit just before, and if the max has been reached, return an
       error. Fixes bug 16288; bugfix on 0.1.1.1-alpha.
-
-  o Major bugfixes (relay, Ed25519):
-    - Avoid crashing on 'tor --keygen'. Fixes bug 16679; bugfix on
-      0.2.7.2-alpha. Reported by "s7r".
-    - Improve handling of expired signing keys with offline master keys.
-      Fixes bug 16685; bugfix on 0.2.7.2-alpha. Reported by "s7r".
 
   o Major bugfixes (security, correctness):
     - Fix an error that could cause us to read 4 bytes before the
@@ -218,9 +204,6 @@ Changes in version 0.2.7.5- 2015-11-??
       as torrc option. Resolves issue 14018.
 
   o Minor features (compilation):
-    - Fail during configure if we're trying to build against an OpenSSL
-      built without ECC support. Fixes bug 17109, bugfix on 0.2.7.1-alpha
-      which started requiring ECC.
     - Give a warning as early as possible when trying to build with an
       unsupported OpenSSL version. Closes ticket 16901.
 
@@ -344,7 +327,7 @@ Changes in version 0.2.7.5- 2015-11-??
       explicitly manage consensus flags in testing networks. Patch by
       "robgjansen", modified by "teor". Implements part of ticket 14882.
 
-  o Minor bug fixes (torrc exit policies):
+  o Minor bugfixes (torrc exit policies):
     - In each instance above, usage advice is provided to avoid the
       message. Resolves ticket 16069. Patch by "teor". Fixes part of bug
       16069; bugfix on 0.2.4.7-alpha.
@@ -362,21 +345,6 @@ Changes in version 0.2.7.5- 2015-11-??
       including any ExitPolicy lines after accept *:* or reject *:*.
       Related to ticket 16069.
 
-  o Minor bugfixes (authority):
-    - Don't assign "HSDir" to a router if it isn't Valid and Running.
-      Fixes bug 16524; bugfix on 0.2.7.2-alpha.
-    - Downgrade log messages about Ed25519 key issues if they are in old
-      cached router descriptors. Fixes part of bug 16286; bugfix
-      on 0.2.7.2-alpha.
-    - When we find an Ed25519 key issue in a cached descriptor, stop
-      saying the descriptor was just "uploaded". Fixes another part of
-      bug 16286; bugfix on 0.2.7.2-alpha.
-
-  o Minor bugfixes (build):
-    - Improve out-of-tree builds by making non-standard rules work and
-      clean up additional files and directories. Fixes bug 15053; bugfix
-      on 0.2.7.0-alpha.
-
   o Minor bugfixes (command-line interface):
     - When "--quiet" is provided along with "--validate-config", do not
       write anything to stdout on success. Fixes bug 14994; bugfix
@@ -385,8 +353,6 @@ Changes in version 0.2.7.5- 2015-11-??
       stderr, not stdout.
 
   o Minor bugfixes (compilation):
-    - Fix an integer overflow warning in test_crypto_slow.c. Fixes bug
-      17251; bugfix on 0.2.7.2-alpha.
     - Fix compilation of sandbox.c with musl-libc. Fixes bug 17347;
       bugfix on 0.2.5.1-alpha. Patch from 'jamestk'.
     - Repair compilation with the most recent (unreleased, alpha)
@@ -405,11 +371,6 @@ Changes in version 0.2.7.5- 2015-11-??
       has default fallback directories. Includes unit tests for
       consider_adding_dir_servers(). Fixes bug 15642; bugfix on
       90f6071d8dc0 in 0.2.4.7-alpha. Patch by "teor".
-
-  o Minor bugfixes (control port):
-    - Repair a warning and a spurious result when getting the maximum
-      number of file descriptors from the controller. Fixes bug 16697;
-      bugfix on 0.2.7.2-alpha.
 
   o Minor bugfixes (controller):
     - Add the descriptor ID in each HS_DESC control event. It was
@@ -449,24 +410,12 @@ Changes in version 0.2.7.5- 2015-11-??
     - Fix the usage message of tor-resolve(1) so that it no longer lists
       the removed -F option. Fixes bug 16913; bugfix on 0.2.2.28-beta.
 
-  o Minor bugfixes (Ed25519):
-    - Fix a memory leak when reading router descriptors with expired
-      Ed25519 certificates. Fixes bug 16539; bugfix on 0.2.7.2-alpha.
-
   o Minor bugfixes (hidden service):
     - Fix an out-of-bounds read when parsing invalid INTRODUCE2 cells on
       a client authorized hidden service. Fixes bug 15823; bugfix
       on 0.2.1.6-alpha.
     - Remove an extraneous newline character from the end of hidden
       service descriptors. Fixes bug 15296; bugfix on 0.2.0.10-alpha.
-
-  o Minor bugfixes (hidden services):
-    - Avoid crashing with a double-free bug when we create an ephemeral
-      hidden service but adding it fails for some reason. Fixes bug
-      16228; bugfix on 0.2.7.1-alpha.
-    - Fix a crash when reloading configuration while at least one
-      configured and one ephemeral hidden service exists. Fixes bug
-      16060; bugfix on 0.2.7.1-alpha.
 
   o Minor bugfixes (interface):
     - Print usage information for --dump-config when it is used without
@@ -479,8 +428,6 @@ Changes in version 0.2.7.5- 2015-11-??
       defined. Patch by "teor". Fixes bug 16515; bugfix on 0.2.3.1-alpha.
     - Allow bridge authorities to run correctly under the seccomp2
       sandbox. Fixes bug 16964; bugfix on 0.2.5.1-alpha.
-    - Allow routers with ed25519 keys to run correctly under the
-      seccomp2 sandbox. Fixes bug 16965; bugfix on 0.2.7.2-alpha.
 
   o Minor bugfixes (Linux seccomp2 sandbox, also in 0.2.6.10):
     - Allow pipe() and pipe2() syscalls in the seccomp2 sandbox: we need
@@ -515,12 +462,6 @@ Changes in version 0.2.7.5- 2015-11-??
   o Minor bugfixes (portability):
     - Check correctly for Windows socket errors in the workqueue
       backend. Fixes bug 16741; bugfix on 0.2.6.3-alpha.
-    - Fix the behavior of crypto_rand_time_range() when told to consider
-      times before 1970. (These times were possible when running in a
-      simulated network environment where time()'s output starts at
-      zero.) Fixes bug 16980; bugfix on 0.2.7.1-alpha.
-    - Restore correct operation of TLS client-cipher detection on
-      OpenSSL 1.1. Fixes bug 14047; bugfix on 0.2.7.2-alpha.
     - Try harder to normalize the exit status of the Tor process to the
       standard-provided range. Fixes bug 16975; bugfix on every version
       of Tor ever.
@@ -559,8 +500,6 @@ Changes in version 0.2.7.5- 2015-11-??
       Fixes bug 15604; bugfix on 0.2.2.35.
 
   o Minor bugfixes (systemd):
-    - Fix an accidental formatting error that broke the systemd
-      configuration file. Fixes bug 16152; bugfix on 0.2.7.1-alpha.
     - Tor's systemd unit file no longer contains extraneous spaces.
       These spaces would sometimes confuse tools like deb-systemd-
       helper. Fixes bug 16162; bugfix on 0.2.5.5-alpha.
@@ -575,43 +514,18 @@ Changes in version 0.2.7.5- 2015-11-??
       issue discovered by CJ Ess.
 
   o Minor bugfixes (testing):
-    - Add unit tests for get_interface_address* failure cases. Fixes bug
-      17173; bugfix on 0.2.7.3-rc. Patch by fk/teor.
     - Check for matching value in server response in ntor_ref.py. Fixes
       bug 15591; bugfix on 0.2.4.8-alpha. Reported and fixed
       by "joelanders".
-    - Fix breakage when running 'make check' with BSD make. Fixes bug
-      17154; bugfix on 0.2.7.3-rc. Patch by Marcin Cieślak.
-    - Make the get_ifaddrs_* unit tests more tolerant of different
-      network configurations. (Don't assume every test box has an IPv4
-      address, and don't assume every test box has a non-localhost
-      address.) Fixes bug 17255; bugfix on 0.2.7.3-rc. Patch by "teor".
     - Set the severity correctly when testing
       get_interface_addresses_ifaddrs() and
       get_interface_addresses_win32(), so that the tests fail gracefully
       instead of triggering an assertion. Fixes bug 15759; bugfix on
       0.2.6.3-alpha. Reported by Nicolas Derive.
-    - Skip backtrace tests when backtrace support is not compiled in.
-      Fixes part of bug 17151; bugfix on 0.2.7.1-alpha. Patch from
-      Marcin Cieślak.
-
-  o Minor bugfixes (tests):
-    - Use the configured Python executable when running test-stem-full.
-      Fixes bug 16470; bugfix on 0.2.7.1-alpha.
 
   o Minor bugfixes (tests, also in 0.2.6.9):
     - Fix a crash in the unit tests when built with MSVC2013. Fixes bug
       16030; bugfix on 0.2.6.2-alpha. Patch from "NewEraCracker".
-
-  o Minor bugfixes (threads, comments):
-    - Always initialize return value in compute_desc_id in rendcommon.c
-      Patch by "teor". Fixes part of bug 16115; bugfix on 0.2.7.1-alpha.
-    - Check for NULL values in getinfo_helper_onions(). Patch by "teor".
-      Fixes part of bug 16115; bugfix on 0.2.7.1-alpha.
-    - Remove undefined directive-in-macro in test_util_writepid clang
-      3.7 complains that using a preprocessor directive inside a macro
-      invocation in test_util_writepid in test_util.c is undefined.
-      Patch by "teor". Fixes part of bug 16115; bugfix on 0.2.7.1-alpha.
 
   o Code simplification and refactoring:
     - Change the function that's called when we need to retry all
