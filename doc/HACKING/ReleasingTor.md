@@ -68,6 +68,16 @@ Here are the steps Roger takes when putting out a new Tor release:
    to a release-0.2.x branch, manually commit the changelogs to the later
    git branches too.
 
+   If you're doing the first stable release in a series, you need to
+   create a ReleaseNotes for the series as a whole.  To get started
+   there, copy all of the Changelog entries from the series into a new
+   file, and run `./scripts/maint/sortChanges.py` on it.  That will
+   group them by category.  Then kill every bugfix entry for fixing
+   bugs that were introduced within that release series; those aren't
+   relevant changes since the last series.  At that point, it's time
+   to start sorting and condensing entries.  (Generally, we don't edit the
+   text of existing entries, though.)
+
 4. In `maint-0.2.x`, bump the version number in `configure.ac` and run
    `scripts/maint/updateVersions.pl` to update version numbers in other
    places, and commit.  Then merge `maint-0.2.x` into `release-0.2.x`.
