@@ -6,20 +6,20 @@ Here are the steps Roger takes when putting out a new Tor release:
 
 1. Use it for a while, as a client, as a relay, as a hidden service,
    and as a directory authority. See if it has any obvious bugs, and
-   resolve those.   
-   
+   resolve those.
+
    As applicable, merge the `maint-X` branch into the `release-X` branch.
 
 2. Gather the `changes/*` files into a changelog entry, rewriting many
    of them and reordering to focus on what users and funders would find
    interesting and understandable.
 
-   1. Make sure that everything that wants a bug number has one.   
+   1. Make sure that everything that wants a bug number has one.
       Make sure that everything which is a bugfix says what version
       it was a bugfix on.
-   
+
    2. Concatenate them.
-    
+
    3. Sort them by section. Within each section, sort by "version it's
       a bugfix on", else by numerical ticket order.
 
@@ -55,7 +55,7 @@ Here are the steps Roger takes when putting out a new Tor release:
       If a given changes stanza showed up in a different release (e.g.
       maint-0.2.1), be sure to make the stanzas identical (so people can
       distinguish if these are the same change).
-     
+
    5. Merge them in.
 
    6. Clean everything one last time.
@@ -94,7 +94,7 @@ Here are the steps Roger takes when putting out a new Tor release:
    in their approved versions list.
 
 7. Sign the tarball, then sign and push the git tag:
-   
+
         gpg -ba <the_tarball>
         git tag -u <keyid> tor-0.2.x.y-status
         git push origin tag tor-0.2.x.y-status
@@ -103,12 +103,12 @@ Here are the steps Roger takes when putting out a new Tor release:
    `/srv/dist-master.torproject.org/htdocs/` on dist-master. When you want
    it to go live, you run "static-update-component dist.torproject.org"
    on dist-master.
-    
+
    Edit `include/versions.wmi` and `Makefile` to note the new version.
 
 9. Email the packagers (cc'ing tor-assistants) that a new tarball is up.
    The current list of packagers is:
-   
+
        - {weasel,gk,mikeperry} at torproject dot org
        - {blueness} at gentoo dot org
        - {paul} at invizbox dot io

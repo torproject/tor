@@ -40,8 +40,8 @@ Once you've reached this point, here's what you need to know.
   1. Get the source.
 
      We keep our source under version control in Git.  To get the latest
-     version, run  
-         
+     version, run
+
          git clone https://git.torproject.org/git/tor
 
      This will give you a checkout of the master branch.  If you're
@@ -54,7 +54,7 @@ Once you've reached this point, here's what you need to know.
 
      Our overall code structure is explained in the "torguts" documents,
      currently at
-     
+
         git clone https://git.torproject.org/user/nickm/torguts.git
 
      Find a part of the code that looks interesting to you, and start
@@ -88,7 +88,7 @@ Once you've reached this point, here's what you need to know.
      For your first patch, it is probably NOT a good idea to make
      something huge or invasive.  In particular, you should probably
      avoid:
-     
+
        * Major changes spread across many parts of the codebase.
        * Major changes to programming practice or coding style.
        * Huge new features or protocol changes.
@@ -182,9 +182,6 @@ Once you've reached this point, here's what you need to know.
          say so!  And if you won't have time to make some of the
          changes, you should say that too, so that other developers
          will be able to pick up the unfinished portion.
-         
+
     Congratulations!  You have now written your first patch, and gotten
     it integrated into mainline Tor.
-
-
-

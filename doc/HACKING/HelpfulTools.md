@@ -101,7 +101,7 @@ working connection to the internet:
 
 Running gcov for unit test coverage
 -----------------------------------
- 
+
     ./configure --enable-coverage
     make
     make check
@@ -243,7 +243,7 @@ We use the 'doxygen' utility to generate documentation from our
 source code. Here's how to use it:
 
   1. Begin every file that should be documented with
-  
+
          /**
           * \file filename.c
           * \brief Short description of the file.
@@ -291,4 +291,3 @@ source code. Here's how to use it:
 
   6. See the Doxygen manual for more information; this summary just
      scratches the surface.
-

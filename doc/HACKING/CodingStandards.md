@@ -81,7 +81,7 @@ in changes to make a draft changelog, and clear the directory. We'll
 then edit the draft changelog into a nice readable format.
 
 What needs a changes file?
-   
+
    * A not-exhaustive list: Anything that might change user-visible
    behavior. Anything that changes internals, documentation, or the build
    system enough that somebody could notice.  Big or interesting code
@@ -89,7 +89,7 @@ What needs a changes file?
    did that happen, and/or why did we do that" 6 months down the line.
 
 Why use changes files instead of Git commit messages?
-   
+
    * Git commit messages are written for developers, not users, and they
    are nigh-impossible to revise after the fact.
 
@@ -151,7 +151,7 @@ Functions not to write
 ----------------------
 
 Try to never hand-write new code to parse or generate binary
-formats. Instead, use trunnel if at all possible.  See  
+formats. Instead, use trunnel if at all possible.  See
 
     https://gitweb.torproject.org/trunnel.git/tree
 
