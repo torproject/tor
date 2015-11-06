@@ -53,7 +53,8 @@
 extern tor_tls_context_t *server_tls_context;
 extern tor_tls_context_t *client_tls_context;
 
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0) \
+    && !defined(LIBRESSL_VERSION_NUMBER)
 #define OPENSSL_OPAQUE
 #endif
 
