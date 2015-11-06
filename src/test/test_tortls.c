@@ -55,6 +55,9 @@ extern tor_tls_context_t *client_tls_context;
 
 #if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
 #define OPENSSL_OPAQUE
+#define SSL_STATE_STR "before SSL initialization"
+#else
+#define SSL_STATE_STR "before/accept initialization"
 #endif
 
 #ifndef OPENSSL_OPAQUE
@@ -235,35 +238,35 @@ test_tortls_get_state_description(void *ignored)
 
   tls->ssl = SSL_new(ctx);
   tor_tls_get_state_description(tls, buf, 200);
-  tt_str_op(buf, OP_EQ, "before/accept initialization in HANDSHAKE");
+  tt_str_op(buf, OP_EQ, SSL_STATE_STR " in HANDSHAKE");
 
   tls->state = TOR_TLS_ST_OPEN;
   tor_tls_get_state_description(tls, buf, 200);
-  tt_str_op(buf, OP_EQ, "before/accept initialization in OPEN");
+  tt_str_op(buf, OP_EQ, SSL_STATE_STR " in OPEN");
 
   tls->state = TOR_TLS_ST_GOTCLOSE;
   tor_tls_get_state_description(tls, buf, 200);
-  tt_str_op(buf, OP_EQ, "before/accept initialization in GOTCLOSE");
+  tt_str_op(buf, OP_EQ, SSL_STATE_STR " in GOTCLOSE");
 
   tls->state = TOR_TLS_ST_SENTCLOSE;
   tor_tls_get_state_description(tls, buf, 200);
-  tt_str_op(buf, OP_EQ, "before/accept initialization in SENTCLOSE");
+  tt_str_op(buf, OP_EQ, SSL_STATE_STR " in SENTCLOSE");
 
   tls->state = TOR_TLS_ST_CLOSED;
   tor_tls_get_state_description(tls, buf, 200);
-  tt_str_op(buf, OP_EQ, "before/accept initialization in CLOSED");
+  tt_str_op(buf, OP_EQ, SSL_STATE_STR " in CLOSED");
 
   tls->state = TOR_TLS_ST_RENEGOTIATE;
   tor_tls_get_state_description(tls, buf, 200);
-  tt_str_op(buf, OP_EQ, "before/accept initialization in RENEGOTIATE");
+  tt_str_op(buf, OP_EQ, SSL_STATE_STR " in RENEGOTIATE");
 
   tls->state = TOR_TLS_ST_BUFFEREVENT;
   tor_tls_get_state_description(tls, buf, 200);
-  tt_str_op(buf, OP_EQ, "before/accept initialization");
+  tt_str_op(buf, OP_EQ, SSL_STATE_STR);
 
   tls->state = 7;
   tor_tls_get_state_description(tls, buf, 200);
-  tt_str_op(buf, OP_EQ, "before/accept initialization in unknown TLS state");
+  tt_str_op(buf, OP_EQ, SSL_STATE_STR " in unknown TLS state");
 
  done:
   SSL_CTX_free(ctx);
@@ -412,7 +415,7 @@ test_tortls_log_one_error(void *ignored)
   tor_tls_log_one_error(tls, 0, LOG_WARN, 0, NULL);
   tt_int_op(mock_saved_log_number(), OP_EQ, 1);
   tt_str_op(mock_saved_log_at(0), OP_EQ, "TLS error with 127.hello: (null)"
-            " (in (null):(null):before/accept initialization)\n");
+            " (in (null):(null):" SSL_STATE_STR ")\n");
 
  done:
   teardown_capture_of_logs(previous_log);
