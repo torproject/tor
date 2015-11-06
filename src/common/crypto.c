@@ -227,7 +227,11 @@ const char *
 crypto_openssl_get_version_str(void)
 {
   if (crypto_openssl_version_str == NULL) {
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
+    const char *raw_version = OpenSSL_version(OPENSSL_VERSION);
+#else
     const char *raw_version = SSLeay_version(SSLEAY_VERSION);
+#endif
     crypto_openssl_version_str = parse_openssl_version_str(raw_version);
   }
   return crypto_openssl_version_str;
@@ -251,11 +255,17 @@ crypto_openssl_get_header_version_str(void)
 static int
 crypto_force_rand_ssleay(void)
 {
-  if (RAND_get_rand_method() != RAND_SSLeay()) {
+  RAND_METHOD *default_method;
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
+  default_method = RAND_OpenSSL();
+#else
+  default_method = RAND_SSLeay();
+#endif
+  if (RAND_get_rand_method() != default_method) {
     log_notice(LD_CRYPTO, "It appears that one of our engines has provided "
                "a replacement the OpenSSL RNG. Resetting it to the default "
                "implementation.");
-    RAND_set_rand_method(RAND_SSLeay());
+    RAND_set_rand_method(default_method);
     return 1;
   }
   return 0;
@@ -291,16 +301,23 @@ crypto_early_init(void)
 
     setup_openssl_threading();
 
-    if (SSLeay() == OPENSSL_VERSION_NUMBER &&
-        !strcmp(SSLeay_version(SSLEAY_VERSION), OPENSSL_VERSION_TEXT)) {
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
+    unsigned long version_num = OpenSSL_version_num();
+    const char *version_str = OpenSSL_version(OPENSSL_VERSION);
+#else
+    unsigned long version_num = SSLeay();
+    const char *version_str = SSLeay_version(SSLEAY_VERSION);
+#endif
+    if (version_num == OPENSSL_VERSION_NUMBER &&
+        !strcmp(version_str, OPENSSL_VERSION_TEXT)) {
       log_info(LD_CRYPTO, "OpenSSL version matches version from headers "
-                 "(%lx: %s).", SSLeay(), SSLeay_version(SSLEAY_VERSION));
+                 "(%lx: %s).", version_num, version_str);
     } else {
       log_warn(LD_CRYPTO, "OpenSSL version from headers does not match the "
                "version we're running with. If you get weird crashes, that "
                "might be why. (Compiled with %lx: %s; running with %lx: %s).",
                (unsigned long)OPENSSL_VERSION_NUMBER, OPENSSL_VERSION_TEXT,
-               SSLeay(), SSLeay_version(SSLEAY_VERSION));
+               version_num, version_str);
     }
 
     crypto_force_rand_ssleay();
