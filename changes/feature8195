@@ -1,0 +1,6 @@
+  o Major features:
+    - When Tor is started as root on Linux and told to switch user ID, it
+      can now retain the capabilitity to bind to low ports.  By default,
+      Tor will do this only when it's switching user ID and some low
+      ports have been configured.  You can change this behavior with
+      the new option KeepCapabilities.  Closes ticket 8195.

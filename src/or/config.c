@@ -308,6 +308,7 @@ static config_var_t option_vars_[] = {
   V(Socks5ProxyUsername,         STRING,   NULL),
   V(Socks5ProxyPassword,         STRING,   NULL),
   V(KeepalivePeriod,             INTERVAL, "5 minutes"),
+  V(KeepCapabilities,            AUTOBOOL, "auto"),
   VAR("Log",                     LINELIST, Logs,             NULL),
   V(LogMessageDomains,           BOOL,     "0"),
   V(LogTimeGranularity,          MSEC_INTERVAL, "1 second"),
@@ -567,7 +568,8 @@ static int parse_ports(or_options_t *options, int validate_only,
                               char **msg_out, int *n_ports_out,
                               int *world_writable_control_socket);
 static int check_server_ports(const smartlist_t *ports,
-                              const or_options_t *options);
+                              const or_options_t *options,
+                              int *num_low_ports_out);
 
 static int validate_data_directory(or_options_t *options);
 static int write_configuration_file(const char *fname,
@@ -1045,6 +1047,9 @@ consider_adding_dir_servers(const or_options_t *options,
   return 0;
 }
 
+/* Helps determine flags to pass to switch_id. */
+static int have_low_ports = -1;
+
 /** Fetch the active option list, and take actions based on it. All of the
  * things we do should survive being done repeatedly.  If present,
  * <b>old_options</b> contains the previous value of the options.
@@ -1178,8 +1183,14 @@ options_act_reversible(const or_options_t *old_options, char **msg)
   }
 
   /* Setuid/setgid as appropriate */
+  tor_assert(have_low_ports != -1);
   if (options->User) {
-    if (switch_id(options->User) != 0) {
+    unsigned switch_id_flags = 0;
+    if (options->KeepCapabilities == 1 ||
+        (options->KeepCapabilities == -1 && have_low_ports)) {
+      switch_id_flags |= SWITCH_ID_KEEP_BINDLOW;
+    }
+    if (switch_id(options->User, switch_id_flags) != 0) {
       /* No need to roll back, since you can't change the value. */
       *msg = tor_strdup("Problem with User value. See logs for details.");
       goto done;
@@ -3997,6 +4008,12 @@ options_transition_allowed(const or_options_t *old,
     return -1;
   }
 
+  if (old->KeepCapabilities != new_val->KeepCapabilities) {
+    *msg = tor_strdup("While Tor is running, changing KeepCapabilities is "
+                      "not allowed.");
+    return -1;
+  }
+
   if (!opt_streq(old->SyslogIdentityTag, new_val->SyslogIdentityTag)) {
     *msg = tor_strdup("While Tor is running, changing "
                       "SyslogIdentityTag is not allowed.");
@@ -6535,10 +6552,13 @@ parse_ports(or_options_t *options, int validate_only,
     }
   }
 
-  if (check_server_ports(ports, options) < 0) {
+  int n_low_ports = 0;
+  if (check_server_ports(ports, options, &n_low_ports) < 0) {
     *msg = tor_strdup("Misconfigured server ports");
     goto err;
   }
+  if (have_low_ports < 0)
+    have_low_ports = (n_low_ports > 0);
 
   *n_ports_out = smartlist_len(ports);
 
@@ -6592,10 +6612,12 @@ parse_ports(or_options_t *options, int validate_only,
 }
 
 /** Given a list of <b>port_cfg_t</b> in <b>ports</b>, check them for internal
- * consistency and warn as appropriate. */
+ * consistency and warn as appropriate.  Set *<b>n_low_port</b> to the number
+ * of sub-1024 ports we will be binding. */
 static int
 check_server_ports(const smartlist_t *ports,
-                   const or_options_t *options)
+                   const or_options_t *options,
+                   int *n_low_ports_out)
 {
   int n_orport_advertised = 0;
   int n_orport_advertised_ipv4 = 0;
@@ -6658,15 +6680,23 @@ check_server_ports(const smartlist_t *ports,
     r = -1;
   }
 
-  if (n_low_port && options->AccountingMax) {
+  if (n_low_port && options->AccountingMax &&
+      (!have_capability_support() || options->KeepCapabilities == 0)) {
+    const char *extra = "";
+    if (options->KeepCapabilities == 0 && have_capability_support())
+      extra = ", and you have disabled KeepCapabilities.";
     log_warn(LD_CONFIG,
           "You have set AccountingMax to use hibernation. You have also "
-          "chosen a low DirPort or OrPort. This combination can make Tor stop "
+          "chosen a low DirPort or OrPort%s."
+          "This combination can make Tor stop "
           "working when it tries to re-attach the port after a period of "
           "hibernation. Please choose a different port or turn off "
           "hibernation unless you know this combination will work on your "
-          "platform.");
+          "platform.", extra);
   }
+
+  if (n_low_ports_out)
+    *n_low_ports_out = n_low_port;
 
   return r;
 }

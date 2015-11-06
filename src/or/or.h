@@ -4317,6 +4317,9 @@ typedef struct {
   int keygen_passphrase_fd;
   int change_key_passphrase;
   char *master_key_fname;
+
+  /** Autobool: Do we try to retain capabilities if we can? */
+  int KeepCapabilities;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
