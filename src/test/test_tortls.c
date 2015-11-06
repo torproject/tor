@@ -130,7 +130,6 @@ test_tortls_tor_tls_new(void *data)
   MOCK(tor_tls_cert_matches_key, mock_tls_cert_matches_key);
   crypto_pk_t *key1 = NULL, *key2 = NULL;
   SSL_METHOD *method = NULL;
-  SSL_CTX *ctx = NULL;
 
   key1 = pk_generate(2);
   key2 = pk_generate(3);
@@ -148,7 +147,7 @@ test_tortls_tor_tls_new(void *data)
 
 #ifndef OPENSSL_OPAQUE
   method = give_me_a_test_method();
-  ctx = SSL_CTX_new(method);
+  SSL_CTX *ctx = SSL_CTX_new(method);
   method->num_ciphers = fake_num_ciphers;
   client_tls_context->ctx = ctx;
   tls = tor_tls_new(-1, 0);
