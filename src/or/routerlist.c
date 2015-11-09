@@ -1363,10 +1363,10 @@ router_get_trusteddirserver_by_digest(const char *digest)
 dir_server_t *
 router_get_fallback_dirserver_by_digest(const char *digest)
 {
-  if (!trusted_dir_servers)
+  if (!fallback_dir_servers)
     return NULL;
 
-  SMARTLIST_FOREACH(trusted_dir_servers, dir_server_t *, ds,
+  SMARTLIST_FOREACH(fallback_dir_servers, dir_server_t *, ds,
      {
        if (tor_memeq(ds->digest, digest, DIGEST_LEN))
          return ds;
