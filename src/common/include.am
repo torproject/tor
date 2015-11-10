@@ -118,6 +118,7 @@ COMMONHEADERS = \
   src/common/ciphers.inc			\
   src/common/compat.h				\
   src/common/compat_libevent.h			\
+  src/common/compat_openssl.h			\
   src/common/compat_threads.h			\
   src/common/container.h			\
   src/common/crypto.h				\

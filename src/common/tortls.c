@@ -40,9 +40,6 @@
 #include <openssl/opensslv.h>
 #include "crypto.h"
 
-#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,0,0)
-#error "We require OpenSSL >= 1.0.0"
-#endif
 #ifdef OPENSSL_NO_EC
 #error "We require OpenSSL with ECC support"
 #endif
@@ -384,11 +381,7 @@ tor_tls_init(void)
 
 #if (SIZEOF_VOID_P >= 8 &&                              \
      OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,0,1))
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
     long version = OpenSSL_version_num();
-#else
-    long version = SSLeay();
-#endif
 
     /* LCOV_EXCL_START : we can't test these lines on the same machine */
     if (version >= OPENSSL_V_SERIES(1,0,1)) {
@@ -1536,16 +1529,9 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
   if (type != SSL_CB_ACCEPT_LOOP)
     return;
 
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
   OSSL_HANDSHAKE_STATE ssl_state = SSL_get_state(ssl);
-  if (ssl_state == TLS_ST_SW_SRVR_HELLO)
+  if (! STATE_IS_SW_SERVER_HELLO(ssl_state))
     return;
-#else
-  int ssl_state = SSL_state(ssl);
-  if ((ssl_state != SSL3_ST_SW_SRVR_HELLO_A) &&
-      (ssl_state != SSL3_ST_SW_SRVR_HELLO_B))
-    return;
-#endif
   tls = tor_tls_get_by_ssl(ssl);
   if (tls) {
     /* Check whether we're watching for renegotiates.  If so, this is one! */
@@ -1906,11 +1892,9 @@ tor_tls_handshake(tor_tls_t *tls)
   tor_assert(tls->state == TOR_TLS_ST_HANDSHAKE);
 
   check_no_tls_errors();
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
+
   OSSL_HANDSHAKE_STATE oldstate = SSL_get_state(tls->ssl);
-#else
-  int oldstate = SSL_state(tls->ssl);
-#endif
+
   if (tls->isServer) {
     log_debug(LD_HANDSHAKE, "About to call SSL_accept on %p (%s)", tls,
               SSL_state_string_long(tls->ssl));
@@ -1920,11 +1904,9 @@ tor_tls_handshake(tor_tls_t *tls)
               SSL_state_string_long(tls->ssl));
     r = SSL_connect(tls->ssl);
   }
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
+
   OSSL_HANDSHAKE_STATE newstate = SSL_get_state(tls->ssl);
-#else
-  int newstate = SSL_state(tls->ssl);
-#endif
+
   if (oldstate != newstate)
     log_debug(LD_HANDSHAKE, "After call, %p was in state %s",
               tls, SSL_state_string_long(tls->ssl));

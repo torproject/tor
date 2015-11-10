@@ -21,17 +21,12 @@
 #undef OCSP_RESPONSE
 #endif
 
-#include <openssl/opensslv.h>
-
 #define CRYPTO_PRIVATE
 #include "crypto.h"
+#include "compat_openssl.h"
 #include "crypto_curve25519.h"
 #include "crypto_ed25519.h"
 #include "crypto_format.h"
-
-#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,0,0)
-#error "We require OpenSSL >= 1.0.0"
-#endif
 
 #include <openssl/err.h>
 #include <openssl/rsa.h>
@@ -227,11 +222,7 @@ const char *
 crypto_openssl_get_version_str(void)
 {
   if (crypto_openssl_version_str == NULL) {
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
     const char *raw_version = OpenSSL_version(OPENSSL_VERSION);
-#else
-    const char *raw_version = SSLeay_version(SSLEAY_VERSION);
-#endif
     crypto_openssl_version_str = parse_openssl_version_str(raw_version);
   }
   return crypto_openssl_version_str;
@@ -256,11 +247,7 @@ static int
 crypto_force_rand_ssleay(void)
 {
   RAND_METHOD *default_method;
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
   default_method = RAND_OpenSSL();
-#else
-  default_method = RAND_SSLeay();
-#endif
   if (RAND_get_rand_method() != default_method) {
     log_notice(LD_CRYPTO, "It appears that one of our engines has provided "
                "a replacement the OpenSSL RNG. Resetting it to the default "
@@ -301,13 +288,8 @@ crypto_early_init(void)
 
     setup_openssl_threading();
 
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
     unsigned long version_num = OpenSSL_version_num();
     const char *version_str = OpenSSL_version(OPENSSL_VERSION);
-#else
-    unsigned long version_num = SSLeay();
-    const char *version_str = SSLeay_version(SSLEAY_VERSION);
-#endif
     if (version_num == OPENSSL_VERSION_NUMBER &&
         !strcmp(version_str, OPENSSL_VERSION_TEXT)) {
       log_info(LD_CRYPTO, "OpenSSL version matches version from headers "
@@ -421,11 +403,7 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
 void
 crypto_thread_cleanup(void)
 {
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
-  ERR_remove_thread_state(NULL);
-#else
-  ERR_remove_state(0);
-#endif
+  tor_ERR_remove_cur_thread_state();
 }
 
 /** used by tortls.c: wrap an RSA* in a crypto_pk_t. */
@@ -2712,11 +2690,7 @@ int
 crypto_global_cleanup(void)
 {
   EVP_cleanup();
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
-  ERR_remove_thread_state(NULL);
-#else
-  ERR_remove_state(0);
-#endif
+  tor_ERR_remove_cur_thread_state();
   ERR_free_strings();
 
   if (dh_param_p)

@@ -12,6 +12,7 @@
  **/
 
 #include "crypto.h"
+#include "compat_openssl.h"
 #include "compat.h"
 #include "testsupport.h"
 
