@@ -403,7 +403,7 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
 void
 crypto_thread_cleanup(void)
 {
-  tor_ERR_remove_cur_thread_state();
+  ERR_remove_thread_state(NULL);
 }
 
 /** used by tortls.c: wrap an RSA* in a crypto_pk_t. */
@@ -2690,7 +2690,7 @@ int
 crypto_global_cleanup(void)
 {
   EVP_cleanup();
-  tor_ERR_remove_cur_thread_state();
+  ERR_remove_thread_state(NULL);
   ERR_free_strings();
 
   if (dh_param_p)
