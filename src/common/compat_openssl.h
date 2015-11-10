@@ -7,7 +7,7 @@
 #ifndef TOR_COMPAT_OPENSSL_H
 #define TOR_COMPAT_OPENSSL_H
 
-#include <openssl/opensslv.h> 
+#include <openssl/opensslv.h>
 
 /**
  * \file compat_openssl.h
@@ -34,3 +34,4 @@
 #endif
 
 #endif
+
