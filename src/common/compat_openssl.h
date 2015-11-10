@@ -24,9 +24,6 @@
 #define OpenSSL_version(v) SSLeay_version(v)
 #define OpenSSL_version_num() SSLeay()
 #define RAND_OpenSSL() RAND_SSLeay()
-#ifndef SSL_get_state
-#define SSL_get_state(ssl) SSL_state(ssl)
-#endif
 #define STATE_IS_SW_SERVER_HELLO(st)       \
   (((st) == SSL3_ST_SW_SRVR_HELLO_A) ||    \
    ((st) == SSL3_ST_SW_SRVR_HELLO_B))
