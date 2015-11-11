@@ -1265,7 +1265,7 @@ test_rend_cache_validate_intro_point_failure(void *data)
   rend_service_descriptor_t *desc = NULL;
   char *service_id = NULL;
   rend_intro_point_t *intro = NULL;
-  const uint8_t *identity = NULL;
+  const char *identity = NULL;
   rend_cache_failure_t *failure;
   rend_cache_failure_intro_t *ip;
 
@@ -1275,11 +1275,11 @@ test_rend_cache_validate_intro_point_failure(void *data)
   desc->timestamp = time(NULL) + RECENT_TIME;
 
   intro = (rend_intro_point_t *)smartlist_get(desc->intro_nodes, 0);
-  identity = (uint8_t *) intro->extend_info->identity_digest;
+  identity = intro->extend_info->identity_digest;
 
   failure = rend_cache_failure_entry_new();
   ip = rend_cache_failure_intro_entry_new(INTRO_POINT_FAILURE_TIMEOUT);
-  digestmap_set(failure->intro_failures, (char *)identity, ip);
+  digestmap_set(failure->intro_failures, identity, ip);
   strmap_set_lc(rend_cache_failure, service_id, failure);
 
   // Test when we have an intro point in our cache
