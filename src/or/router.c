@@ -1099,10 +1099,25 @@ check_whether_dirport_reachable(void)
          can_reach_dir_port;
 }
 
-/** The lower threshold of remaining bandwidth required to advertise directory
- * services */
+/** The lower threshold of remaining bandwidth required to advertise (or
+ * automatically provide) directory services */
 /* XXX Should this be increased? */
 #define MIN_BW_TO_ADVERTISE_DIRSERVER 51200
+
+/** Return true iff we have enough configured bandwidth to cache directory
+ * information. */
+static int
+router_has_bandwidth_to_be_dirserver(const or_options_t *options)
+{
+  if (options->BandwidthRate < MIN_BW_TO_ADVERTISE_DIRSERVER) {
+    return 0;
+  }
+  if (options->RelayBandwidthRate > 0 &&
+      options->RelayBandwidthRate < MIN_BW_TO_ADVERTISE_DIRSERVER) {
+    return 0;
+  }
+  return 1;
+}
 
 /** Helper: Return 1 if we have sufficient resources for serving directory
  * requests, return 0 otherwise.
@@ -1144,9 +1159,7 @@ router_should_be_directory_server(const or_options_t *options, int dir_port)
       new_choice = 0;
       reason = "AccountingMax enabled";
     }
-  } else if (options->BandwidthRate < MIN_BW_TO_ADVERTISE_DIRSERVER ||
-             (options->RelayBandwidthRate > 0 &&
-              options->RelayBandwidthRate < MIN_BW_TO_ADVERTISE_DIRSERVER)) {
+  } else if (! router_has_bandwidth_to_be_dirserver(options)) {
     /* if we're advertising a small amount */
     new_choice = 0;
     reason = "BandwidthRate under 50KB";
@@ -1178,8 +1191,8 @@ dir_server_mode(const or_options_t *options)
 {
   if (!options->DirCache)
     return 0;
-  return (server_mode(options) || options->DirPort_set) &&
-          router_should_be_directory_server(options, 0);
+  return options->DirPort_set ||
+    (server_mode(options) && router_has_bandwidth_to_be_dirserver(options));
 }
 
 /** Look at a variety of factors, and return 0 if we don't want to
@@ -1899,7 +1912,8 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
   ri->addr = addr;
   ri->or_port = router_get_advertised_or_port(options);
   ri->dir_port = router_get_advertised_dir_port(options, 0);
-  ri->supports_tunnelled_dir_requests = dir_server_mode(options);
+  ri->supports_tunnelled_dir_requests = dir_server_mode(options) &&
+    router_should_be_directory_server(options, ri->dir_port);
   ri->cache_info.published_on = time(NULL);
   ri->onion_pkey = crypto_pk_dup_key(get_onion_key()); /* must invoke from
                                                         * main thread */
