@@ -1,0 +1,8 @@
+  o Code simplifications and unit tests:
+    - Handle edge cases in the laplace functions: avoid division by zero,
+      avoid taking the log of zero, and silence clang type conversion
+      warnings using round and trunc.  Add unit tests for edge cases with
+      maximal values.
+    - Consistently check for overflow in round_*_to_next_multiple_of
+      functions, and add unit tests with additional and maximal values.
+

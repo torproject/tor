@@ -488,42 +488,58 @@ round_to_power_of_2(uint64_t u64)
 }
 
 /** Return the lowest x such that x is at least <b>number</b>, and x modulo
- * <b>divisor</b> == 0. */
+ * <b>divisor</b> == 0.  If no such x can be expressed as an unsigned, return
+ * UINT_MAX */
 unsigned
 round_to_next_multiple_of(unsigned number, unsigned divisor)
 {
+  tor_assert(divisor > 0);
+  if (UINT_MAX - divisor + 1 < number)
+    return UINT_MAX;
   number += divisor - 1;
   number -= number % divisor;
   return number;
 }
 
 /** Return the lowest x such that x is at least <b>number</b>, and x modulo
- * <b>divisor</b> == 0. */
+ * <b>divisor</b> == 0. If no such x can be expressed as a uint32_t, return
+ * UINT32_MAX */
 uint32_t
 round_uint32_to_next_multiple_of(uint32_t number, uint32_t divisor)
 {
+  tor_assert(divisor > 0);
+  if (UINT32_MAX - divisor + 1 < number)
+    return UINT32_MAX;
+
   number += divisor - 1;
   number -= number % divisor;
   return number;
 }
 
 /** Return the lowest x such that x is at least <b>number</b>, and x modulo
- * <b>divisor</b> == 0. */
+ * <b>divisor</b> == 0. If no such x can be expressed as a uint64_t, return
+ * UINT64_MAX */
 uint64_t
 round_uint64_to_next_multiple_of(uint64_t number, uint64_t divisor)
 {
+  tor_assert(divisor > 0);
+  if (UINT64_MAX - divisor + 1 < number)
+    return UINT64_MAX;
   number += divisor - 1;
   number -= number % divisor;
   return number;
 }
 
 /** Return the lowest x in [INT64_MIN, INT64_MAX] such that x is at least
- * <b>number</b>, and x modulo <b>divisor</b> == 0. */
+ * <b>number</b>, and x modulo <b>divisor</b> == 0. If no such x can be
+ * expressed as an int64_t, return INT64_MAX */
 int64_t
 round_int64_to_next_multiple_of(int64_t number, int64_t divisor)
 {
   tor_assert(divisor > 0);
-  if (number >= 0 && INT64_MAX - divisor + 1 >= number)
+  if (INT64_MAX - divisor + 1 < number)
+    return INT64_MAX;
+  if (number >= 0)
     number += divisor - 1;
   number -= number % divisor;
   return number;
@@ -537,33 +553,44 @@ int64_t
 sample_laplace_distribution(double mu, double b, double p)
 {
   double result;
-
   tor_assert(p >= 0.0 && p < 1.0);
+
   /* This is the "inverse cumulative distribution function" from:
    * http://en.wikipedia.org/wiki/Laplace_distribution */
-  result =  mu - b * (p > 0.5 ? 1.0 : -1.0)
-                   * tor_mathlog(1.0 - 2.0 * fabs(p - 0.5));
-
-  if (result >= INT64_MAX)
-    return INT64_MAX;
-  else if (result <= INT64_MIN)
+  if (p <= 0.0) {
+    /* Avoid taking log(0.0) == -INFINITY, as some processors or compiler
+     * options can cause the program to trap. */
     return INT64_MIN;
-  else
-    return (int64_t) result;
+  }
+
+  result = mu - b * (p > 0.5 ? 1.0 : -1.0)
+                  * tor_mathlog(1.0 - 2.0 * fabs(p - 0.5));
+
+  return clamp_double_to_int64(result);
 }
 
-/** Add random noise between INT64_MIN and INT64_MAX coming from a
- * Laplace distribution with mu = 0 and b = <b>delta_f</b>/<b>epsilon</b>
- * to <b>signal</b> based on the provided <b>random</b> value in
- * [0.0, 1.0[. */
+/** Add random noise between INT64_MIN and INT64_MAX coming from a Laplace
+ * distribution with mu = 0 and b = <b>delta_f</b>/<b>epsilon</b> to
+ * <b>signal</b> based on the provided <b>random</b> value in [0.0, 1.0[.
+ * The epsilon value must be between ]0.0, 1.0]. delta_f must be greater
+ * than 0. */
 int64_t
 add_laplace_noise(int64_t signal, double random, double delta_f,
                   double epsilon)
 {
-  int64_t noise = sample_laplace_distribution(
-               0.0, /* just add noise, no further signal */
-               delta_f / epsilon, random);
+  int64_t noise;
 
+  /* epsilon MUST be between ]0.0, 1.0] */
+  tor_assert(epsilon > 0.0 && epsilon <= 1.0);
+  /* delta_f MUST be greater than 0. */
+  tor_assert(delta_f > 0.0);
+
+  /* Just add noise, no further signal */
+  noise = sample_laplace_distribution(0.0,
+                                      delta_f / epsilon,
+                                      random);
+
+  /* Clip (signal + noise) to [INT64_MIN, INT64_MAX] */
   if (noise > 0 && INT64_MAX - noise < signal)
     return INT64_MAX;
   else if (noise < 0 && INT64_MIN - noise > signal)
@@ -5385,3 +5412,36 @@ tor_weak_random_range(tor_weak_rng_t *rng, int32_t top)
   return result;
 }
 
+/** Cast a given double value to a int64_t. Return 0 if number is NaN.
+ * Returns either INT64_MIN or INT64_MAX if number is outside of the int64_t
+ * range. */
+int64_t clamp_double_to_int64(double number)
+{
+  int exp;
+
+  /* NaN is a special case that can't be used with the logic below. */
+  if (isnan(number)) {
+    return 0;
+  }
+
+  /* Time to validate if result can overflows a int64_t value. Fun with
+   * float! Find that exponent exp such that
+   *    number == x * 2^exp
+   * for some x with abs(x) in [0.5, 1.0). Note that this implies that the
+   * magnitude of number is strictly less than 2^exp.
+   *
+   * If number is infinite, the call to frexp is legal but the contents of
+   * exp are unspecified. */
+  frexp(number, &exp);
+
+  /* If the magnitude of number is strictly less than 2^63, the truncated
+   * version of number is guaranteed to be representable. The only
+   * representable integer for which this is not the case is INT64_MIN, but
+   * it is covered by the logic below. */
+  if (isfinite(number) && exp <= 63) {
+    return number;
+  }
+
+  /* Handle infinities and finite numbers with magnitude >= 2^63. */
+  return signbit(number) ? INT64_MIN : INT64_MAX;
+}

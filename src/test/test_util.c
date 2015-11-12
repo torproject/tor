@@ -19,6 +19,7 @@
 #endif
 #include <math.h>
 #include <ctype.h>
+#include <float.h>
 
 /* XXXX this is a minimal wrapper to make the unit tests compile with the
  * changed tor_timegm interface. */
@@ -4097,6 +4098,9 @@ test_util_round_to_next_multiple_of(void *arg)
   tt_u64_op(round_uint64_to_next_multiple_of(99,7), ==, 105);
   tt_u64_op(round_uint64_to_next_multiple_of(99,9), ==, 99);
 
+  tt_u64_op(round_uint64_to_next_multiple_of(UINT64_MAX,2), ==,
+            UINT64_MAX);
+
   tt_i64_op(round_int64_to_next_multiple_of(0,1), ==, 0);
   tt_i64_op(round_int64_to_next_multiple_of(0,7), ==, 0);
 
@@ -4110,7 +4114,27 @@ test_util_round_to_next_multiple_of(void *arg)
 
   tt_i64_op(round_int64_to_next_multiple_of(INT64_MIN,2), ==, INT64_MIN);
   tt_i64_op(round_int64_to_next_multiple_of(INT64_MAX,2), ==,
-                                            INT64_MAX-INT64_MAX%2);
+                                            INT64_MAX);
+
+  tt_int_op(round_uint32_to_next_multiple_of(0,1), ==, 0);
+  tt_int_op(round_uint32_to_next_multiple_of(0,7), ==, 0);
+
+  tt_int_op(round_uint32_to_next_multiple_of(99,1), ==, 99);
+  tt_int_op(round_uint32_to_next_multiple_of(99,7), ==, 105);
+  tt_int_op(round_uint32_to_next_multiple_of(99,9), ==, 99);
+
+  tt_int_op(round_uint32_to_next_multiple_of(UINT32_MAX,2), ==,
+            UINT32_MAX);
+
+  tt_uint_op(round_to_next_multiple_of(0,1), ==, 0);
+  tt_uint_op(round_to_next_multiple_of(0,7), ==, 0);
+
+  tt_uint_op(round_to_next_multiple_of(99,1), ==, 99);
+  tt_uint_op(round_to_next_multiple_of(99,7), ==, 105);
+  tt_uint_op(round_to_next_multiple_of(99,9), ==, 99);
+
+  tt_uint_op(round_to_next_multiple_of(UINT_MAX,2), ==,
+            UINT_MAX);
  done:
   ;
 }
@@ -4143,12 +4167,150 @@ test_util_laplace(void *arg)
    */
   tt_i64_op(INT64_MIN + 20, ==,
             add_laplace_noise(20, 0.0, delta_f, epsilon));
+
   tt_i64_op(-60, ==, add_laplace_noise(20, 0.1, delta_f, epsilon));
   tt_i64_op(-14, ==, add_laplace_noise(20, 0.25, delta_f, epsilon));
   tt_i64_op(20, ==, add_laplace_noise(20, 0.5, delta_f, epsilon));
   tt_i64_op(54, ==, add_laplace_noise(20, 0.75, delta_f, epsilon));
   tt_i64_op(100, ==, add_laplace_noise(20, 0.9, delta_f, epsilon));
   tt_i64_op(215, ==, add_laplace_noise(20, 0.99, delta_f, epsilon));
+
+  /* Test extreme values of signal with maximally negative values of noise
+   * 1.0000000000000002 is the smallest number > 1
+   * 0.0000000000000002 is the double epsilon (error when calculating near 1)
+   * this is approximately 1/(2^52)
+   * per https://en.wikipedia.org/wiki/Double_precision
+   * (let's not descend into the world of subnormals)
+   * >>> laplace.ppf([0, 0.0000000000000002], loc = 0, scale = 1)
+   * array([        -inf, -35.45506713])
+   */
+  const double noscale_df = 1.0, noscale_eps = 1.0;
+
+  tt_i64_op(INT64_MIN, ==,
+            add_laplace_noise(0, 0.0, noscale_df, noscale_eps));
+
+  /* is it clipped to INT64_MIN? */
+  tt_i64_op(INT64_MIN, ==,
+            add_laplace_noise(-1, 0.0, noscale_df, noscale_eps));
+  tt_i64_op(INT64_MIN, ==,
+            add_laplace_noise(INT64_MIN, 0.0,
+                              noscale_df, noscale_eps));
+  /* ... even when scaled? */
+  tt_i64_op(INT64_MIN, ==,
+            add_laplace_noise(0, 0.0, delta_f, epsilon));
+  tt_i64_op(INT64_MIN, ==,
+            add_laplace_noise(0, 0.0,
+                              DBL_MAX, 1));
+  tt_i64_op(INT64_MIN, ==,
+            add_laplace_noise(INT64_MIN, 0.0,
+                              DBL_MAX, 1));
+
+  /* does it play nice with INT64_MAX? */
+  tt_i64_op((INT64_MIN + INT64_MAX), ==,
+            add_laplace_noise(INT64_MAX, 0.0,
+                              noscale_df, noscale_eps));
+
+  /* do near-zero fractional values work? */
+  const double min_dbl_error = 0.0000000000000002;
+
+  tt_i64_op(-35, ==,
+            add_laplace_noise(0, min_dbl_error,
+                              noscale_df, noscale_eps));
+  tt_i64_op(INT64_MIN, ==,
+            add_laplace_noise(INT64_MIN, min_dbl_error,
+                              noscale_df, noscale_eps));
+  tt_i64_op((-35 + INT64_MAX), ==,
+            add_laplace_noise(INT64_MAX, min_dbl_error,
+                              noscale_df, noscale_eps));
+  tt_i64_op(INT64_MIN, ==,
+            add_laplace_noise(0, min_dbl_error,
+                              DBL_MAX, 1));
+  tt_i64_op((INT64_MAX + INT64_MIN), ==,
+            add_laplace_noise(INT64_MAX, min_dbl_error,
+                              DBL_MAX, 1));
+  tt_i64_op(INT64_MIN, ==,
+            add_laplace_noise(INT64_MIN, min_dbl_error,
+                              DBL_MAX, 1));
+
+  /* does it play nice with INT64_MAX? */
+  tt_i64_op((INT64_MAX - 35), ==,
+            add_laplace_noise(INT64_MAX, min_dbl_error,
+                              noscale_df, noscale_eps));
+
+  /* Test extreme values of signal with maximally positive values of noise
+   * 1.0000000000000002 is the smallest number > 1
+   * 0.9999999999999998 is the greatest number < 1 by calculation
+   * per https://en.wikipedia.org/wiki/Double_precision
+   * >>> laplace.ppf([1.0, 0.9999999999999998], loc = 0, scale = 1)
+   * array([inf,  35.35050621])
+   * but the function rejects p == 1.0, so we just use max_dbl_lt_one
+   */
+  const double max_dbl_lt_one = 0.9999999999999998;
+
+  /* do near-one fractional values work? */
+  tt_i64_op(35, ==,
+            add_laplace_noise(0, max_dbl_lt_one, noscale_df, noscale_eps));
+
+  /* is it clipped to INT64_MAX? */
+  tt_i64_op(INT64_MAX, ==,
+            add_laplace_noise(INT64_MAX - 35, max_dbl_lt_one,
+                              noscale_df, noscale_eps));
+  tt_i64_op(INT64_MAX, ==,
+            add_laplace_noise(INT64_MAX - 34, max_dbl_lt_one,
+                              noscale_df, noscale_eps));
+  tt_i64_op(INT64_MAX, ==,
+            add_laplace_noise(INT64_MAX, max_dbl_lt_one,
+                              noscale_df, noscale_eps));
+  /* ... even when scaled? */
+  tt_i64_op(INT64_MAX, ==,
+            add_laplace_noise(INT64_MAX, max_dbl_lt_one,
+                              delta_f, epsilon));
+  tt_i64_op((INT64_MIN + INT64_MAX), ==,
+            add_laplace_noise(INT64_MIN, max_dbl_lt_one,
+                              DBL_MAX, 1));
+  tt_i64_op(INT64_MAX, ==,
+            add_laplace_noise(INT64_MAX, max_dbl_lt_one,
+                              DBL_MAX, 1));
+  /* does it play nice with INT64_MIN? */
+  tt_i64_op((INT64_MIN + 35), ==,
+            add_laplace_noise(INT64_MIN, max_dbl_lt_one,
+                              noscale_df, noscale_eps));
+
+ done:
+  ;
+}
+
+static void
+test_util_clamp_double_to_int64(void *arg)
+{
+  (void)arg;
+
+  tt_i64_op(INT64_MIN, ==, clamp_double_to_int64(-INFINITY));
+  tt_i64_op(INT64_MIN, ==,
+            clamp_double_to_int64(-1.0 * pow(2.0, 64.0) - 1.0));
+  tt_i64_op(INT64_MIN, ==,
+            clamp_double_to_int64(-1.0 * pow(2.0, 63.0) - 1.0));
+  tt_i64_op(((uint64_t) -1) << 53, ==,
+            clamp_double_to_int64(-1.0 * pow(2.0, 53.0)));
+  tt_i64_op((((uint64_t) -1) << 53) + 1, ==,
+            clamp_double_to_int64(-1.0 * pow(2.0, 53.0) + 1.0));
+  tt_i64_op(-1, ==, clamp_double_to_int64(-1.0));
+  tt_i64_op(0, ==, clamp_double_to_int64(-0.9));
+  tt_i64_op(0, ==, clamp_double_to_int64(-0.1));
+  tt_i64_op(0, ==, clamp_double_to_int64(0.0));
+  tt_i64_op(0, ==, clamp_double_to_int64(NAN));
+  tt_i64_op(0, ==, clamp_double_to_int64(0.1));
+  tt_i64_op(0, ==, clamp_double_to_int64(0.9));
+  tt_i64_op(1, ==, clamp_double_to_int64(1.0));
+  tt_i64_op((((int64_t) 1) << 53) - 1, ==,
+            clamp_double_to_int64(pow(2.0, 53.0) - 1.0));
+  tt_i64_op(((int64_t) 1) << 53, ==,
+            clamp_double_to_int64(pow(2.0, 53.0)));
+  tt_i64_op(INT64_MAX, ==,
+            clamp_double_to_int64(pow(2.0, 63.0)));
+  tt_i64_op(INT64_MAX, ==,
+            clamp_double_to_int64(pow(2.0, 64.0)));
+  tt_i64_op(INT64_MAX, ==, clamp_double_to_int64(INFINITY));
 
  done:
   ;
@@ -4441,6 +4603,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(di_map, 0),
   UTIL_TEST(round_to_next_multiple_of, 0),
   UTIL_TEST(laplace, 0),
+  UTIL_TEST(clamp_double_to_int64, 0),
   UTIL_TEST(find_str_at_start_of_line, 0),
   UTIL_TEST(string_is_C_identifier, 0),
   UTIL_TEST(asprintf, 0),

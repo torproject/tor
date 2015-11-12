@@ -3026,21 +3026,21 @@ rep_hist_stored_maybe_new_hs(const crypto_pk_t *pubkey)
 
 /* The number of cells that are supposed to be hidden from the adversary
  * by adding noise from the Laplace distribution.  This value, divided by
- * EPSILON, is Laplace parameter b. */
+ * EPSILON, is Laplace parameter b. It must be greather than 0. */
 #define REND_CELLS_DELTA_F 2048
 /* Security parameter for obfuscating number of cells with a value between
- * 0 and 1.  Smaller values obfuscate observations more, but at the same
+ * ]0.0, 1.0]. Smaller values obfuscate observations more, but at the same
  * time make statistics less usable. */
 #define REND_CELLS_EPSILON 0.3
 /* The number of cells that are supposed to be hidden from the adversary
  * by rounding up to the next multiple of this number. */
 #define REND_CELLS_BIN_SIZE 1024
-/* The number of service identities that are supposed to be hidden from
- * the adversary by adding noise from the Laplace distribution.  This
- * value, divided by EPSILON, is Laplace parameter b. */
+/* The number of service identities that are supposed to be hidden from the
+ * adversary by adding noise from the Laplace distribution. This value,
+ * divided by EPSILON, is Laplace parameter b. It must be greater than 0. */
 #define ONIONS_SEEN_DELTA_F 8
 /* Security parameter for obfuscating number of service identities with a
- * value between 0 and 1.  Smaller values obfuscate observations more, but
+ * value between ]0.0, 1.0]. Smaller values obfuscate observations more, but
  * at the same time make statistics less usable. */
 #define ONIONS_SEEN_EPSILON 0.3
 /* The number of service identities that are supposed to be hidden from
