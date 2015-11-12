@@ -2892,6 +2892,14 @@ typedef struct circuit_t {
                               * where this circuit was marked.) */
   const char *marked_for_close_file; /**< For debugging: in which file was this
                                       * circuit marked for close? */
+  /** For what reason (See END_CIRC_REASON...) is this circuit being closed?
+   * This field is set in circuit_mark_for_close and used later in
+   * circuit_about_to_free. */
+  uint16_t marked_for_close_reason;
+  /** As marked_for_close_reason, but reflects the underlying reason for
+   * closing this circuit.
+   */
+  uint16_t marked_for_close_orig_reason;
 
   /** Unique ID for measuring tunneled network status requests. */
   uint64_t dirreq_id;
