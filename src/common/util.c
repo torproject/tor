@@ -487,48 +487,58 @@ round_to_power_of_2(uint64_t u64)
 }
 
 /** Return the lowest x such that x is at least <b>number</b>, and x modulo
- * <b>divisor</b> == 0. */
+ * <b>divisor</b> == 0.  If no such x can be expressed as an unsigned, return
+ * UINT_MAX */
 unsigned
 round_to_next_multiple_of(unsigned number, unsigned divisor)
 {
   tor_assert(divisor > 0);
-  if (UINT_MAX - divisor + 1 >= number)
-    number += divisor - 1;
+  if (UINT_MAX - divisor + 1 < number)
+    return UINT_MAX;
+  number += divisor - 1;
   number -= number % divisor;
   return number;
 }
 
 /** Return the lowest x such that x is at least <b>number</b>, and x modulo
- * <b>divisor</b> == 0. */
+ * <b>divisor</b> == 0. If no such x can be expressed as a uint32_t, return
+ * UINT32_MAX */
 uint32_t
 round_uint32_to_next_multiple_of(uint32_t number, uint32_t divisor)
 {
   tor_assert(divisor > 0);
-  if (UINT32_MAX - divisor + 1 >= number)
-    number += divisor - 1;
+  if (UINT32_MAX - divisor + 1 < number)
+    return UINT32_MAX;
+
+  number += divisor - 1;
   number -= number % divisor;
   return number;
 }
 
 /** Return the lowest x such that x is at least <b>number</b>, and x modulo
- * <b>divisor</b> == 0. */
+ * <b>divisor</b> == 0. If no such x can be expressed as a uint64_t, return
+ * UINT64_MAX */
 uint64_t
 round_uint64_to_next_multiple_of(uint64_t number, uint64_t divisor)
 {
   tor_assert(divisor > 0);
-  if (UINT64_MAX - divisor + 1 >= number)
-    number += divisor - 1;
+  if (UINT64_MAX - divisor + 1 < number)
+    return UINT64_MAX;
+  number += divisor - 1;
   number -= number % divisor;
   return number;
 }
 
 /** Return the lowest x in [INT64_MIN, INT64_MAX] such that x is at least
- * <b>number</b>, and x modulo <b>divisor</b> == 0. */
+ * <b>number</b>, and x modulo <b>divisor</b> == 0. If no such x can be
+ * expressed as an int64_t, return INT64_MAX */
 int64_t
 round_int64_to_next_multiple_of(int64_t number, int64_t divisor)
 {
   tor_assert(divisor > 0);
-  if (number >= 0 && INT64_MAX - divisor + 1 >= number)
+  if (INT64_MAX - divisor + 1 < number)
+    return INT64_MAX;
+  if (number >= 0)
     number += divisor - 1;
   number -= number % divisor;
   return number;
