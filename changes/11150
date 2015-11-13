@@ -1,0 +1,6 @@
+  o Removed features:
+    - Remove client-side support for connecting to Tor servers running
+      versions of Tor before 0.2.3.6-alpha. These servers didn't
+      support the v3 TLS handshake protocol, and are no longer allowed
+      on the Tor network.  Implements the client side of ticket
+      11150. Based on patches by Tom van der Woerdt.

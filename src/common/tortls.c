@@ -80,11 +80,6 @@
 #define X509_get_notAfter_const(cert) \
   ((const ASN1_TIME*) X509_get_notAfter((X509 *)cert))
 
-/* Enable the "v2" TLS handshake.
- */
-#define V2_HANDSHAKE_SERVER
-#define V2_HANDSHAKE_CLIENT
-
 /* Copied from or.h */
 #define LEGAL_NICKNAME_CHARACTERS \
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -1129,23 +1124,6 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
   * historically been chosen for fingerprinting resistance. */
   SSL_CTX_set_options(result->ctx, SSL_OP_CIPHER_SERVER_PREFERENCE);
 
-  /* Disable TLS1.1 and TLS1.2 if they exist.  We need to do this to
-   * workaround a bug present in all OpenSSL 1.0.1 versions (as of 1
-   * June 2012), wherein renegotiating while using one of these TLS
-   * protocols will cause the client to send a TLS 1.0 ServerHello
-   * rather than a ServerHello written with the appropriate protocol
-   * version.  Once some version of OpenSSL does TLS1.1 and TLS1.2
-   * renegotiation properly, we can turn them back on when built with
-   * that version. */
-#if OPENSSL_VERSION_NUMBER < OPENSSL_V(1,0,1,'e')
-#ifdef SSL_OP_NO_TLSv1_2
-  SSL_CTX_set_options(result->ctx, SSL_OP_NO_TLSv1_2);
-#endif
-#ifdef SSL_OP_NO_TLSv1_1
-  SSL_CTX_set_options(result->ctx, SSL_OP_NO_TLSv1_1);
-#endif
-#endif
-
   /* Disable TLS tickets if they're supported.  We never want to use them;
    * using them can make our perfect forward secrecy a little worse, *and*
    * create an opportunity to fingerprint us (since it's unusual to use them
@@ -1287,8 +1265,6 @@ tor_tls_get_ciphersuite_name(tor_tls_t *tls)
 {
   return SSL_get_cipher(tls->ssl);
 }
-
-#ifdef V2_HANDSHAKE_SERVER
 
 /* Here's the old V2 cipher list we sent from 0.2.1.1-alpha up to
  * 0.2.3.17-beta. If a client is using this list, we can't believe the ciphers
@@ -1567,7 +1543,6 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
     }
   }
 }
-#endif
 
 /** Callback to get invoked on a server after we've read the list of ciphers
  * the client supports, but before we pick our own ciphersuite.
@@ -1677,12 +1652,9 @@ tor_tls_new(int sock, int isServer)
     log_warn(LD_NET, "Newly created BIO has read count %lu, write count %lu",
              result->last_read_count, result->last_write_count);
   }
-#ifdef V2_HANDSHAKE_SERVER
   if (isServer) {
     SSL_set_info_callback(result->ssl, tor_tls_server_info_callback);
-  } else
-#endif
-  {
+  } else {
     SSL_set_info_callback(result->ssl, tor_tls_debug_state_callback);
   }
 
@@ -1721,13 +1693,11 @@ tor_tls_set_renegotiate_callback(tor_tls_t *tls,
   tls->negotiated_callback = cb;
   tls->callback_arg = arg;
   tls->got_renegotiate = 0;
-#ifdef V2_HANDSHAKE_SERVER
   if (cb) {
     SSL_set_info_callback(tls->ssl, tor_tls_server_info_callback);
   } else {
     SSL_set_info_callback(tls->ssl, tor_tls_debug_state_callback);
   }
-#endif
 }
 
 /** If this version of openssl requires it, turn on renegotiation on
@@ -1814,7 +1784,6 @@ tor_tls_read,(tor_tls_t *tls, char *cp, size_t len))
   tor_assert(len<INT_MAX);
   r = SSL_read(tls->ssl, cp, (int)len);
   if (r > 0) {
-#ifdef V2_HANDSHAKE_SERVER
     if (tls->got_renegotiate) {
       /* Renegotiation happened! */
       log_info(LD_NET, "Got a TLS renegotiation from %s", ADDR(tls));
@@ -1822,7 +1791,6 @@ tor_tls_read,(tor_tls_t *tls, char *cp, size_t len))
         tls->negotiated_callback(tls, tls->callback_arg);
       tls->got_renegotiate = 0;
     }
-#endif
     return r;
   }
   err = tor_tls_get_error(tls, r, CATCH_ZERO, "reading", LOG_DEBUG, LD_NET);
@@ -1943,7 +1911,6 @@ tor_tls_finish_handshake(tor_tls_t *tls)
     SSL_set_info_callback(tls->ssl, NULL);
     SSL_set_verify(tls->ssl, SSL_VERIFY_PEER, always_accept_verify_cb);
     SSL_clear_mode(tls->ssl, SSL_MODE_NO_AUTO_CHAIN);
-#ifdef V2_HANDSHAKE_SERVER
     if (tor_tls_client_is_using_v2_ciphers(tls->ssl)) {
       /* This check is redundant, but back when we did it in the callback,
        * we might have not been able to look up the tor_tls_t if the code
@@ -1958,26 +1925,10 @@ tor_tls_finish_handshake(tor_tls_t *tls)
     } else {
       tls->wasV2Handshake = 0;
     }
-#endif
   } else {
-#ifdef V2_HANDSHAKE_CLIENT
-    /* If we got no ID cert, we're a v2 handshake. */
-    X509 *cert = SSL_get_peer_certificate(tls->ssl);
-    STACK_OF(X509) *chain = SSL_get_peer_cert_chain(tls->ssl);
-    int n_certs = sk_X509_num(chain);
-    if (n_certs > 1 || (n_certs == 1 && cert != sk_X509_value(chain, 0))) {
-      log_debug(LD_HANDSHAKE, "Server sent back multiple certificates; it "
-                "looks like a v1 handshake on %p", tls);
-      tls->wasV2Handshake = 0;
-    } else {
-      log_debug(LD_HANDSHAKE,
-                "Server sent back a single certificate; looks like "
-                "a v2 handshake on %p.", tls);
-      tls->wasV2Handshake = 1;
-    }
-    if (cert)
-      X509_free(cert);
-#endif
+    /* Client-side */
+    tls->wasV2Handshake = 1;
+    /* XXXX this can move, probably? -NM */
     if (SSL_set_cipher_list(tls->ssl, SERVER_CIPHER_LIST) == 0) {
       tls_log_errors(NULL, LOG_WARN, LD_HANDSHAKE, "re-setting ciphers");
       r = TOR_TLS_ERROR_MISC;
@@ -1985,52 +1936,6 @@ tor_tls_finish_handshake(tor_tls_t *tls)
   }
   tls_log_errors(NULL, LOG_WARN, LD_NET, "finishing the handshake");
   return r;
-}
-
-#ifdef USE_BUFFEREVENTS
-/** Put <b>tls</b>, which must be a client connection, into renegotiation
- * mode. */
-int
-tor_tls_start_renegotiating(tor_tls_t *tls)
-{
-  int r = SSL_renegotiate(tls->ssl);
-  if (r <= 0) {
-    return tor_tls_get_error(tls, r, 0, "renegotiating", LOG_WARN,
-                             LD_HANDSHAKE);
-  }
-  return 0;
-}
-#endif
-
-/** Client only: Renegotiate a TLS session.  When finished, returns
- * TOR_TLS_DONE.  On failure, returns TOR_TLS_ERROR, TOR_TLS_WANTREAD, or
- * TOR_TLS_WANTWRITE.
- */
-int
-tor_tls_renegotiate(tor_tls_t *tls)
-{
-  int r;
-  tor_assert(tls);
-  /* We could do server-initiated renegotiation too, but that would be tricky.
-   * Instead of "SSL_renegotiate, then SSL_do_handshake until done" */
-  tor_assert(!tls->isServer);
-
-  check_no_tls_errors();
-  if (tls->state != TOR_TLS_ST_RENEGOTIATE) {
-    int r = SSL_renegotiate(tls->ssl);
-    if (r <= 0) {
-      return tor_tls_get_error(tls, r, 0, "renegotiating", LOG_WARN,
-                               LD_HANDSHAKE);
-    }
-    tls->state = TOR_TLS_ST_RENEGOTIATE;
-  }
-  r = SSL_do_handshake(tls->ssl);
-  if (r == 1) {
-    tls->state = TOR_TLS_ST_OPEN;
-    return TOR_TLS_DONE;
-  } else
-    return tor_tls_get_error(tls, r, 0, "renegotiating handshake", LOG_INFO,
-                             LD_HANDSHAKE);
 }
 
 /** Shut down an open tls connection <b>tls</b>.  When finished, returns
@@ -2410,117 +2315,7 @@ check_no_tls_errors_(const char *fname, int line)
 int
 tor_tls_used_v1_handshake(tor_tls_t *tls)
 {
-#if defined(V2_HANDSHAKE_SERVER) && defined(V2_HANDSHAKE_CLIENT)
   return ! tls->wasV2Handshake;
-#else
-  if (tls->isServer) {
-# ifdef V2_HANDSHAKE_SERVER
-    return ! tls->wasV2Handshake;
-# endif
-  } else {
-# ifdef V2_HANDSHAKE_CLIENT
-    return ! tls->wasV2Handshake;
-# endif
-  }
-  return 1;
-#endif
-}
-
-/** Return true iff <b>name</b> is a DN of a kind that could only
- * occur in a v3-handshake-indicating certificate */
-STATIC int
-dn_indicates_v3_cert(X509_NAME *name)
-{
-#ifdef DISABLE_V3_LINKPROTO_CLIENTSIDE
-  (void)name;
-  return 0;
-#else
-  X509_NAME_ENTRY *entry;
-  int n_entries;
-  ASN1_OBJECT *obj;
-  ASN1_STRING *str;
-  unsigned char *s;
-  int len, r;
-
-  n_entries = X509_NAME_entry_count(name);
-  if (n_entries != 1) {
-    return 1; /* More than one entry in the DN. */
-  }
-  entry = X509_NAME_get_entry(name, 0);
-
-  obj = X509_NAME_ENTRY_get_object(entry);
-  if (OBJ_obj2nid(obj) != OBJ_txt2nid("commonName")) {
-    return 1; /* The entry isn't a commonName. */
-  }
-
-  str = X509_NAME_ENTRY_get_data(entry);
-  len = ASN1_STRING_to_UTF8(&s, str);
-  if (len < 0) {
-    return 0;
-  }
-  if (len < 4) {
-    OPENSSL_free(s);
-    return 1;
-  }
-  r = fast_memneq(s + len - 4, ".net", 4);
-  OPENSSL_free(s);
-  return r;
-#endif
-}
-
-/** Return true iff the peer certificate we're received on <b>tls</b>
- * indicates that this connection should use the v3 (in-protocol)
- * authentication handshake.
- *
- * Only the connection initiator should use this, and only once the initial
- * handshake is done; the responder detects a v1 handshake by cipher types,
- * and a v3/v2 handshake by Versions cell vs renegotiation.
- */
-int
-tor_tls_received_v3_certificate(tor_tls_t *tls)
-{
-  check_no_tls_errors();
-
-  X509 *cert = SSL_get_peer_certificate(tls->ssl);
-  EVP_PKEY *key = NULL;
-  X509_NAME *issuer_name, *subject_name;
-  int is_v3 = 0;
-
-  if (!cert) {
-    log_warn(LD_BUG, "Called on a connection with no peer certificate");
-    goto done;
-  }
-
-  subject_name = X509_get_subject_name(cert);
-  issuer_name = X509_get_issuer_name(cert);
-
-  if (X509_name_cmp(subject_name, issuer_name) == 0) {
-    is_v3 = 1; /* purportedly self signed */
-    goto done;
-  }
-
-  if (dn_indicates_v3_cert(subject_name) ||
-      dn_indicates_v3_cert(issuer_name)) {
-    is_v3 = 1; /* DN is fancy */
-    goto done;
-  }
-
-  key = X509_get_pubkey(cert);
-  if (EVP_PKEY_bits(key) != 1024 ||
-      EVP_PKEY_type(key->type) != EVP_PKEY_RSA) {
-    is_v3 = 1; /* Key is fancy */
-    goto done;
-  }
-
- done:
-  tls_log_errors(tls, LOG_WARN, LD_NET, "checking for a v3 cert");
-
-  if (key)
-    EVP_PKEY_free(key);
-  if (cert)
-    X509_free(cert);
-
-  return is_v3;
 }
 
 /** Return the number of server handshakes that we've noticed doing on

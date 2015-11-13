@@ -1450,17 +1450,12 @@ connection_tls_continue_handshake(or_connection_t *conn)
 {
   int result;
   check_no_tls_errors();
- again:
-  if (conn->base_.state == OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING) {
-    // log_notice(LD_OR, "Renegotiate with %p", conn->tls);
-    result = tor_tls_renegotiate(conn->tls);
-    // log_notice(LD_OR, "Result: %d", result);
-  } else {
-    tor_assert(conn->base_.state == OR_CONN_STATE_TLS_HANDSHAKING);
-    // log_notice(LD_OR, "Continue handshake with %p", conn->tls);
-    result = tor_tls_handshake(conn->tls);
-    // log_notice(LD_OR, "Result: %d", result);
-  }
+
+  tor_assert(conn->base_.state == OR_CONN_STATE_TLS_HANDSHAKING);
+  // log_notice(LD_OR, "Continue handshake with %p", conn->tls);
+  result = tor_tls_handshake(conn->tls);
+  // log_notice(LD_OR, "Result: %d", result);
+
   switch (result) {
     CASE_TOR_TLS_ERROR_ANY:
     log_info(LD_OR,"tls error [%s]. breaking connection.",
@@ -1469,23 +1464,10 @@ connection_tls_continue_handshake(or_connection_t *conn)
     case TOR_TLS_DONE:
       if (! tor_tls_used_v1_handshake(conn->tls)) {
         if (!tor_tls_is_server(conn->tls)) {
-          if (conn->base_.state == OR_CONN_STATE_TLS_HANDSHAKING) {
-            if (tor_tls_received_v3_certificate(conn->tls)) {
-              log_info(LD_OR, "Client got a v3 cert!  Moving on to v3 "
-                       "handshake with ciphersuite %s",
-                       tor_tls_get_ciphersuite_name(conn->tls));
-              return connection_or_launch_v3_or_handshake(conn);
-            } else {
-              log_debug(LD_OR, "Done with initial SSL handshake (client-side)."
-                        " Requesting renegotiation.");
-              connection_or_change_state(conn,
-                  OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING);
-              goto again;
-            }
-          }
-          // log_notice(LD_OR,"Done. state was %d.", conn->base_.state);
+          tor_assert(conn->base_.state == OR_CONN_STATE_TLS_HANDSHAKING);
+          return connection_or_launch_v3_or_handshake(conn);
         } else {
-          /* v2/v3 handshake, but not a client. */
+          /* v2/v3 handshake, but we are not a client. */
           log_debug(LD_OR, "Done with initial SSL handshake (server-side). "
                            "Expecting renegotiation or VERSIONS cell");
           tor_tls_set_renegotiate_callback(conn->tls,
@@ -1498,6 +1480,7 @@ connection_tls_continue_handshake(or_connection_t *conn)
           return 0;
         }
       }
+      tor_assert(!tor_tls_is_server(conn->tls));
       return connection_tls_finish_handshake(conn);
     case TOR_TLS_WANTWRITE:
       connection_start_writing(TO_CONN(conn));
@@ -1533,22 +1516,8 @@ connection_or_handle_event_cb(struct bufferevent *bufev, short event,
     if (! tor_tls_used_v1_handshake(conn->tls)) {
       if (!tor_tls_is_server(conn->tls)) {
         if (conn->base_.state == OR_CONN_STATE_TLS_HANDSHAKING) {
-          if (tor_tls_received_v3_certificate(conn->tls)) {
-            log_info(LD_OR, "Client got a v3 cert!");
-            if (connection_or_launch_v3_or_handshake(conn) < 0)
-              connection_or_close_for_error(conn, 0);
-            return;
-          } else {
-            connection_or_change_state(conn,
-                OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING);
-            tor_tls_unblock_renegotiation(conn->tls);
-            if (bufferevent_ssl_renegotiate(conn->base_.bufev)<0) {
-              log_warn(LD_OR, "Start_renegotiating went badly.");
-              connection_or_close_for_error(conn, 0);
-            }
-            tor_tls_unblock_renegotiation(conn->tls);
-            return; /* ???? */
-          }
+          if (connection_or_launch_v3_or_handshake(conn) < 0)
+            connection_or_close_for_error(conn, 0);
         }
       } else {
         const int handshakes = tor_tls_get_num_server_handshakes(conn->tls);
@@ -1800,6 +1769,8 @@ connection_tls_finish_handshake(or_connection_t *conn)
   char digest_rcvd[DIGEST_LEN];
   int started_here = connection_or_nonopen_was_started_here(conn);
 
+  tor_assert(!started_here);
+
   log_debug(LD_HANDSHAKE,"%s tls handshake on %p with %s done, using "
             "ciphersuite %s. verifying.",
             started_here?"outgoing":"incoming",
@@ -1815,10 +1786,8 @@ connection_tls_finish_handshake(or_connection_t *conn)
 
   if (tor_tls_used_v1_handshake(conn->tls)) {
     conn->link_proto = 1;
-    if (!started_here) {
-      connection_or_init_conn_from_address(conn, &conn->base_.addr,
-                                           conn->base_.port, digest_rcvd, 0);
-    }
+    connection_or_init_conn_from_address(conn, &conn->base_.addr,
+                                         conn->base_.port, digest_rcvd, 0);
     tor_tls_block_renegotiation(conn->tls);
     rep_hist_note_negotiated_link_proto(1, started_here);
     return connection_or_set_state_open(conn);
@@ -1826,10 +1795,8 @@ connection_tls_finish_handshake(or_connection_t *conn)
     connection_or_change_state(conn, OR_CONN_STATE_OR_HANDSHAKING_V2);
     if (connection_init_or_handshake_state(conn, started_here) < 0)
       return -1;
-    if (!started_here) {
-      connection_or_init_conn_from_address(conn, &conn->base_.addr,
-                                           conn->base_.port, digest_rcvd, 0);
-    }
+    connection_or_init_conn_from_address(conn, &conn->base_.addr,
+                                         conn->base_.port, digest_rcvd, 0);
     return connection_or_send_versions(conn, 0);
   }
 }
@@ -1844,7 +1811,6 @@ static int
 connection_or_launch_v3_or_handshake(or_connection_t *conn)
 {
   tor_assert(connection_or_nonopen_was_started_here(conn));
-  tor_assert(tor_tls_received_v3_certificate(conn->tls));
 
   circuit_build_times_network_is_live(get_circuit_build_times_mutable());
 

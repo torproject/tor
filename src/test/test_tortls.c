@@ -1244,147 +1244,6 @@ test_tortls_used_v1_handshake(void *ignored)
 }
 
 static void
-test_tortls_dn_indicates_v3_cert(void *ignored)
-{
-  (void)ignored;
-  int ret;
-  X509_NAME *name;
-
-  name = X509_NAME_new();
-  X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC,
-                             (const unsigned char *)"US", -1, -1, 0);
-  X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC,
-                             (const unsigned char *)"Foobar", -1, -1, 0);
-  ret = dn_indicates_v3_cert(name);
-  tt_int_op(ret, OP_EQ, 1);
-
-  X509_NAME_free(name);
-  name = X509_NAME_new();
-  X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC,
-                             (const unsigned char *)"US", -1, -1, 0);
-  ret = dn_indicates_v3_cert(name);
-  tt_int_op(ret, OP_EQ, 1);
-
-  X509_NAME_free(name);
-  name = X509_NAME_new();
-  X509_NAME_add_entry_by_txt(name, "commonName", V_ASN1_REAL,
-                             (const unsigned char *)"123", -1, -1, 0);
-  ret = dn_indicates_v3_cert(name);
-  tt_int_op(ret, OP_EQ, 0);
-
-  X509_NAME_free(name);
-  name = X509_NAME_new();
-  X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_ASC,
-                           (const unsigned char *)"hello.com", -1, -1, 0);
-  ret = dn_indicates_v3_cert(name);
-  tt_int_op(ret, OP_EQ, 1);
-
-  X509_NAME_free(name);
-  name = X509_NAME_new();
-  X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_ASC,
-                           (const unsigned char *)"hello.net", -1, -1, 0);
-  ret = dn_indicates_v3_cert(name);
-  tt_int_op(ret, OP_EQ, 0);
-
-  X509_NAME_free(name);
-  name = X509_NAME_new();
-  X509_NAME_add_entry_by_txt(name, "commonName", MBSTRING_ASC,
-                           (const unsigned char *)"x.s", -1, -1, 0);
-  ret = dn_indicates_v3_cert(name);
-  tt_int_op(ret, OP_EQ, 1);
-
- done:
-  X509_NAME_free(name);
-}
-
-#ifndef OPENSSL_OPAQUE
-static void
-test_tortls_received_v3_certificate(void *ignored)
-{
-  (void)ignored;
-  int ret;
-  tor_tls_t *tls;
-  X509 *validCert = read_cert_from(validCertString);
-  X509_NAME *subject=NULL, *issuer=NULL;
-  EVP_PKEY *key = NULL;
-
-  tls = tor_malloc_zero(sizeof(tor_tls_t));
-  tls->ssl = tor_malloc_zero(sizeof(SSL));
-  tls->ssl->session = tor_malloc_zero(sizeof(SSL_SESSION));
-
-  ret = tor_tls_received_v3_certificate(tls);
-  tt_int_op(ret, OP_EQ, 0);
-
-  tls->ssl->session->peer = validCert;
-
-  subject = X509_NAME_new();
-  X509_NAME_add_entry_by_txt(subject, "commonName", MBSTRING_ASC,
-                           (const unsigned char *)"same.com", -1, -1, 0);
-  X509_set_subject_name(validCert, subject);
-
-  issuer = X509_NAME_new();
-  X509_NAME_add_entry_by_txt(issuer, "commonName", MBSTRING_ASC,
-                           (const unsigned char *)"same.com", -1, -1, 0);
-  X509_set_issuer_name(validCert, issuer);
-
-  ret = tor_tls_received_v3_certificate(tls);
-  tt_int_op(ret, OP_EQ, 1);
-
-  X509_NAME_free(subject);
-  subject = X509_NAME_new();
-  X509_NAME_add_entry_by_txt(subject, "commonName", MBSTRING_ASC,
-                           (const unsigned char *)"different.net", -1, -1, 0);
-  X509_set_subject_name(validCert, subject);
-
-  ret = tor_tls_received_v3_certificate(tls);
-  tt_int_op(ret, OP_EQ, 1);
-
-  X509_NAME_free(subject);
-  subject = X509_NAME_new();
-  X509_NAME_add_entry_by_txt(subject, "commonName", MBSTRING_ASC,
-                      (const unsigned char *)"same.com", -1, -1, 0);
-  X509_set_subject_name(validCert, subject);
-
-  X509_NAME_free(issuer);
-  issuer = X509_NAME_new();
-  X509_NAME_add_entry_by_txt(issuer, "commonName", MBSTRING_ASC,
-                       (const unsigned char *)"different.net", -1, -1, 0);
-  X509_set_issuer_name(validCert, issuer);
-
-  ret = tor_tls_received_v3_certificate(tls);
-  tt_int_op(ret, OP_EQ, 1);
-
-  X509_NAME_free(subject);
-  subject = X509_NAME_new();
-  X509_NAME_add_entry_by_txt(subject, "commonName", MBSTRING_ASC,
-                      (const unsigned char *)"different2.net", -1, -1, 0);
-  X509_set_subject_name(validCert, subject);
-  ret = tor_tls_received_v3_certificate(tls);
-  tt_int_op(ret, OP_EQ, 0);
-
-  key = X509_get_pubkey(validCert);
-  key->type = 5;
-  ret = tor_tls_received_v3_certificate(tls);
-  tt_int_op(ret, OP_EQ, 1);
-
-  key->type = 6;
-  key->ameth = NULL;
-  ret = tor_tls_received_v3_certificate(tls);
-  tt_int_op(ret, OP_EQ, 1);
-
- done:
-  X509_NAME_free(subject);
-  X509_NAME_free(issuer);
-  tor_free(tls->ssl->session);
-  tor_free(tls->ssl);
-  tor_free(tls);
-  X509_free(validCert);
-  if (key)
-    EVP_PKEY_free(key);
-}
-#endif
-
-static void
 test_tortls_get_num_server_handshakes(void *ignored)
 {
   (void)ignored;
@@ -2311,64 +2170,6 @@ test_tortls_write(void *ignored)
   tor_free(tls);
   tor_free(method);
 }
-
-static int fixed_ssl_renegotiate_result;
-
-static int
-fixed_ssl_renegotiate(SSL *s)
-{
-  (void) s;
-  return fixed_ssl_renegotiate_result;
-}
-
-static void
-test_tortls_renegotiate(void *ignored)
-{
-  (void)ignored;
-  int ret;
-  tor_tls_t *tls;
-  SSL_CTX *ctx;
-  SSL_METHOD *method = give_me_a_test_method();
-  int previous_log = setup_capture_of_logs(LOG_WARN);
-
-  SSL_library_init();
-  SSL_load_error_strings();
-
-  ctx = SSL_CTX_new(TLSv1_method());
-
-  tls = tor_malloc_zero(sizeof(tor_tls_t));
-  tls->ssl = SSL_new(ctx);
-  tls->state = TOR_TLS_ST_OPEN;
-
-  ret = tor_tls_renegotiate(tls);
-  tt_int_op(ret, OP_EQ, -9);
-
-  tls->ssl->method = method;
-  method->ssl_renegotiate = fixed_ssl_renegotiate;
-  fixed_ssl_renegotiate_result = 0;
-  ERR_clear_error();
-  ret = tor_tls_renegotiate(tls);
-  tt_int_op(ret, OP_EQ, -9);
-
-  ERR_clear_error();
-  tls->ssl->handshake_func = dummy_handshake_func;
-  tls->state = TOR_TLS_ST_RENEGOTIATE;
-  ret = tor_tls_renegotiate(tls);
-  tt_int_op(ret, OP_EQ, TOR_TLS_DONE);
-
-  ERR_clear_error();
-  tls->state = TOR_TLS_ST_OPEN;
-  fixed_ssl_renegotiate_result = -1;
-  ret = tor_tls_renegotiate(tls);
-  tt_int_op(ret, OP_EQ, -9);
-
- done:
-  teardown_capture_of_logs(previous_log);
-  SSL_free(tls->ssl);
-  SSL_CTX_free(ctx);
-  tor_free(tls);
-  tor_free(method);
-}
 #endif
 
 #ifndef OPENSSL_OPAQUE
@@ -2496,7 +2297,6 @@ test_tortls_finish_handshake(void *ignored)
   SSL_load_error_strings();
 
   X509 *c1 = read_cert_from(validCertString);
-  X509 *c2 = read_cert_from(caCertString);
   SESS_CERT_local *sess = NULL;
 
   ctx = SSL_CTX_new(method);
@@ -2537,18 +2337,6 @@ test_tortls_finish_handshake(void *ignored)
   tt_int_op(ret, OP_EQ, 0);
   tt_int_op(tls->wasV2Handshake, OP_EQ, 1);
 
-  tls->ssl->session->peer = c2;
-  tls->wasV2Handshake = 1;
-  ret = tor_tls_finish_handshake(tls);
-  tt_int_op(ret, OP_EQ, 0);
-  tt_int_op(tls->wasV2Handshake, OP_EQ, 0);
-
-  sk_X509_push(sess->cert_chain, c2);
-  tls->wasV2Handshake = 1;
-  ret = tor_tls_finish_handshake(tls);
-  tt_int_op(ret, OP_EQ, 0);
-  tt_int_op(tls->wasV2Handshake, OP_EQ, 0);
-
   method->num_ciphers = fake_num_ciphers;
   ret = tor_tls_finish_handshake(tls);
   tt_int_op(ret, OP_EQ, -9);
@@ -2563,7 +2351,6 @@ test_tortls_finish_handshake(void *ignored)
   tor_free(tls);
   SSL_CTX_free(ctx);
   tor_free(method);
-  X509_free(c1);
 }
 #endif
 
@@ -3025,8 +2812,6 @@ struct testcase_t tortls_tests[] = {
   LOCAL_TEST_CASE(get_forced_write_size, 0),
   LOCAL_TEST_CASE(get_write_overhead_ratio, TT_FORK),
   LOCAL_TEST_CASE(used_v1_handshake, TT_FORK),
-  LOCAL_TEST_CASE(dn_indicates_v3_cert, 0),
-  INTRUSIVE_TEST_CASE(received_v3_certificate, 0),
   LOCAL_TEST_CASE(get_num_server_handshakes, 0),
   LOCAL_TEST_CASE(server_got_renegotiate, 0),
   INTRUSIVE_TEST_CASE(SSL_SESSION_get_master_key, 0),
@@ -3037,7 +2822,6 @@ struct testcase_t tortls_tests[] = {
   INTRUSIVE_TEST_CASE(get_peer_cert, 0),
   INTRUSIVE_TEST_CASE(peer_has_cert, 0),
   INTRUSIVE_TEST_CASE(shutdown, 0),
-  INTRUSIVE_TEST_CASE(renegotiate, 0),
   INTRUSIVE_TEST_CASE(finish_handshake, 0),
   INTRUSIVE_TEST_CASE(handshake, 0),
   INTRUSIVE_TEST_CASE(write, 0),

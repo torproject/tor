@@ -136,7 +136,6 @@ STATIC int tor_tls_classify_client_ciphers(const SSL *ssl,
 STATIC int tor_tls_client_is_using_v2_ciphers(const SSL *ssl);
 MOCK_DECL(STATIC void, try_to_extract_certs_from_tls,
           (int severity, tor_tls_t *tls, X509 **cert_out, X509 **id_cert_out));
-STATIC int dn_indicates_v3_cert(X509_NAME *name);
 #ifndef HAVE_SSL_SESSION_GET_MASTER_KEY
 STATIC size_t SSL_SESSION_get_master_key(SSL_SESSION *s, uint8_t *out,
                                          size_t len);
@@ -196,7 +195,6 @@ MOCK_DECL(int, tor_tls_read, (tor_tls_t *tls, char *cp, size_t len));
 int tor_tls_write(tor_tls_t *tls, const char *cp, size_t n);
 int tor_tls_handshake(tor_tls_t *tls);
 int tor_tls_finish_handshake(tor_tls_t *tls);
-int tor_tls_renegotiate(tor_tls_t *tls);
 void tor_tls_unblock_renegotiation(tor_tls_t *tls);
 void tor_tls_block_renegotiation(tor_tls_t *tls);
 void tor_tls_assert_renegotiation_unblocked(tor_tls_t *tls);
@@ -214,7 +212,6 @@ int tor_tls_get_buffer_sizes(tor_tls_t *tls,
 MOCK_DECL(double, tls_get_write_overhead_ratio, (void));
 
 int tor_tls_used_v1_handshake(tor_tls_t *tls);
-int tor_tls_received_v3_certificate(tor_tls_t *tls);
 int tor_tls_get_num_server_handshakes(tor_tls_t *tls);
 int tor_tls_server_got_renegotiate(tor_tls_t *tls);
 MOCK_DECL(int,tor_tls_get_tlssecrets,(tor_tls_t *tls, uint8_t *secrets_out));
