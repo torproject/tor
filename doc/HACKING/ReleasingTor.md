@@ -114,7 +114,7 @@ Here are the steps Roger takes when putting out a new Tor release:
        - {paul} at invizbox dot io
        - {ondrej.mikle} at gmail dot com
        - {lfleischer} at archlinux dot org
-       - {tails-dev} at doum dot org
+       - {tails-dev} at boum dot org
 
 10. Add the version number to Trac.  To do this, go to Trac, log in,
     select "Admin" near the top of the screen, then select "Versions" from
