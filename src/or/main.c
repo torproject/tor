@@ -2505,6 +2505,11 @@ run_main_loop_once(void)
     }
   }
 
+  /* This should be pretty fast if nothing is pending.  BUT... watch out;
+   * we need to make sure it doesn't show up in the profiles.  five times a
+   * second would be enough, for instance. */
+  connection_ap_attach_pending();
+
   return 1;
 }
 

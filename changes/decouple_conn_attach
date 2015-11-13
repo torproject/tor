@@ -1,0 +1,6 @@
+  o Code simplification and refactorings:
+    - Decouple the list of streams needing to be attached to circuits
+      from the overall connection list. This change makes it possible to
+      attach streams quickly while both simplifying Tor's callgraph and
+      avoiding O(N) scans of the entire connection list.  Closes ticket
+      17590.

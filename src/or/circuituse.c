@@ -1123,7 +1123,7 @@ circuit_build_needed_circs(time_t now)
    * don't require an exit circuit, review in #13814.
    * This allows HSs to function in a consensus without exits. */
   if (router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN)
-    connection_ap_attach_pending();
+    connection_ap_rescan_and_attach_pending();
 
   /* make sure any hidden services have enough intro points
    * HS intro point streams only require an internal circuit */

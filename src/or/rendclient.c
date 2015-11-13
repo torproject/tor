@@ -1226,12 +1226,7 @@ rend_client_desc_trynow(const char *query)
       base_conn->timestamp_lastread = now;
       base_conn->timestamp_lastwritten = now;
 
-      if (connection_ap_handshake_attach_circuit(conn) < 0) {
-        /* it will never work */
-        log_warn(LD_REND,"Rendezvous attempt failed. Closing.");
-        if (!base_conn->marked_for_close)
-          connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
-      }
+      connection_ap_mark_as_pending_circuit(conn);
     } else { /* 404, or fetch didn't get that far */
       log_notice(LD_REND,"Closing stream for '%s.onion': hidden service is "
                  "unavailable (try again later).",
