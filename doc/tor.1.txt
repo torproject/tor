@@ -353,6 +353,11 @@ GENERAL OPTIONS
 [[DataDirectory]] **DataDirectory** __DIR__::
     Store working data in DIR (Default: @LOCALSTATEDIR@/lib/tor)
 
+[[DataDirectoryGroupReadable]] **DataDirectoryGroupReadable** **0**|**1**::
+    If this option is set to 0, don't allow the filesystem group to read the
+    DataDirectory. If the option is set to 1, make the DataDirectory readable
+    by the default GID. (Default: 0)
+
 [[FallbackDir]] **FallbackDir** __address__:__port__ orport=__port__ id=__fingerprint__ [weight=__num__]::
     When we're unable to connect to any directory cache for directory info
     (usually because we don't know about any yet) we try a FallbackDir.

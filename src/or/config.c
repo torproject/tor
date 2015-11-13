@@ -212,6 +212,7 @@ static config_var_t option_vars_[] = {
   V(CookieAuthFile,              STRING,   NULL),
   V(CountPrivateBandwidth,       BOOL,     "0"),
   V(DataDirectory,               FILENAME, NULL),
+  V(DataDirectoryGroupReadable,  BOOL,     "0"),
   V(DisableNetwork,              BOOL,     "0"),
   V(DirAllowPrivateAddresses,    BOOL,     "0"),
   V(TestingAuthDirTimeToLearnReachability, INTERVAL, "30 minutes"),
@@ -1186,15 +1187,29 @@ options_act_reversible(const or_options_t *old_options, char **msg)
   }
 
   /* Ensure data directory is private; create if possible. */
+  cpd_check_t cpd_group_opts = CPD_NONE;
+  if (options->DataDirectoryGroupReadable)
+      cpd_group_opts = CPD_GROUP_READ;
   if (check_private_dir(options->DataDirectory,
-                        running_tor ? CPD_CREATE : CPD_CHECK,
+                        running_tor ?
+                        CPD_CREATE|cpd_group_opts : CPD_CHECK|cpd_group_opts,
                         options->User)<0) {
     tor_asprintf(msg,
               "Couldn't access/create private data directory \"%s\"",
               options->DataDirectory);
+
     goto done;
     /* No need to roll back, since you can't change the value. */
   }
+
+#ifndef _WIN32
+  if (options->DataDirectoryGroupReadable) {
+    /* Only new dirs created get new opts, also enforce group read. */
+    if (chmod(options->DataDirectory, 0750)) {
+      log_warn(LD_FS,"Unable to make %s group-readable.", options->DataDirectory);
+    }
+  }
+#endif
 
   /* Bail out at this point if we're not going to be a client or server:
    * we don't run Tor itself. */

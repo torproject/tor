@@ -1,0 +1,3 @@
+  o Minor bug fixes:
+    - Introduce DataDirectoryGroupReadable boolean. If set to 1, the
+      DataDirectory will be made readable by the default GID.

@@ -3436,6 +3436,7 @@ typedef struct {
 
   char *DebugLogFile; /**< Where to send verbose log messages. */
   char *DataDirectory; /**< OR only: where to store long-term data. */
+  int DataDirectoryGroupReadable; /**< Boolean: Is the DataDirectory g+r? */
   char *Nickname; /**< OR only: nickname of this onion router. */
   char *Address; /**< OR only: configured address for this onion router. */
   char *PidFile; /**< Where to store PID of Tor process. */
