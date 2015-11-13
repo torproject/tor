@@ -44,8 +44,8 @@ static smartlist_t *global_circuitlist = NULL;
 /** A list of all the circuits in CIRCUIT_STATE_CHAN_WAIT. */
 static smartlist_t *circuits_pending_chans = NULL;
 
-/** A list of all the circuits that have been marked with circuit_mark_for_close
- * and which are waiting for circuit_about_to_free(). */
+/** A list of all the circuits that have been marked with
+ * circuit_mark_for_close and which are waiting for circuit_about_to_free. */
 static smartlist_t *circuits_pending_close = NULL;
 
 static void circuit_free_cpath_node(crypt_path_t *victim);
@@ -1860,7 +1860,6 @@ circuit_about_to_free(circuit_t *circ)
       connection_edge_destroy(circ->n_circ_id, conn);
     ocirc->p_streams = NULL;
   }
-
 }
 
 /** Given a marked circuit <b>circ</b>, aggressively free its cell queues to

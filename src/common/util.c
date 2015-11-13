@@ -5415,7 +5415,8 @@ tor_weak_random_range(tor_weak_rng_t *rng, int32_t top)
 /** Cast a given double value to a int64_t. Return 0 if number is NaN.
  * Returns either INT64_MIN or INT64_MAX if number is outside of the int64_t
  * range. */
-int64_t clamp_double_to_int64(double number)
+int64_t
+clamp_double_to_int64(double number)
 {
   int exp;
 
@@ -5445,3 +5446,4 @@ int64_t clamp_double_to_int64(double number)
   /* Handle infinities and finite numbers with magnitude >= 2^63. */
   return signbit(number) ? INT64_MIN : INT64_MAX;
 }
+
