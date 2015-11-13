@@ -1,19 +1,32 @@
-
 This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
 Changes in version 0.2.7.5 - 2015-11-1?
+  The Tor 0.2.7 release series is dedicated to the memory of Tor user
+  and privacy advocate Caspar Bowden (1961-2015). Caspar worked
+  tirelessly to advocate human rights regardless of national borders,
+  and oppose the encroachments of mass surveillance. He opposed national
+  exceptionalism; he brought clarity to legal and policy debates; he
+  understood and predicted the impact of mass surveillance on the world;
+  and he laid the groundwork for resisting it. While serving on the Tor
+  Project's board of directors, he brought us his uncompromising focus
+  on technical excellence in the service of humankind. Caspar was an
+  inimitable force for good and a wonderful friend. He was kind,
+  humorous, generous, gallant, and believed we should protect one
+  another without exception. We honor him here for his ideals, his
+  efforts, and his accomplishments. Please honor his memory with works
+  that would make him proud.
+
   Tor 0.2.7.5 is the first stable release in the Tor 0.2.7 series.
 
   The 0.2.7 series adds a more secure identity key type for relays,
   improves cryptography performance, resolves several longstanding
   hidden-service performance issues, improves controller support for
   hidden services, and includes small bugfixes and performance
-  improvements throughout the program.  This release series also
-  includes more tests than before, and significant simplifications
-  to which parts of Tor invoke which others.  For a full list of
-  changes, see below.
+  improvements throughout the program. This release series also includes
+  more tests than before, and significant simplifications to which parts
+  of Tor invoke which others. For a full list of changes, see below.
 
   o New system requirements:
     - Tor no longer includes workarounds to support Libevent versions
