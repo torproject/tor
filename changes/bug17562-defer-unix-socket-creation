@@ -1,0 +1,4 @@
+  o Minor bug fixes:
+    - Defer creation of Unix sockets until after setuid. This avoids needing
+      CAP_CHOWN and CAP_FOWNER when using systemd's CapabilityBoundingSet, or
+      chown and fowner when using SELinux.
