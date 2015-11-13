@@ -2159,7 +2159,7 @@ int
 crypto_expand_key_material_TAP(const uint8_t *key_in, size_t key_in_len,
                                uint8_t *key_out, size_t key_out_len)
 {
-  int i;
+  int i, r = -1;
   uint8_t *cp, *tmp = tor_malloc(key_in_len+1);
   uint8_t digest[DIGEST_LEN];
 
@@ -2171,19 +2171,16 @@ crypto_expand_key_material_TAP(const uint8_t *key_in, size_t key_in_len,
        ++i, cp += DIGEST_LEN) {
     tmp[key_in_len] = i;
     if (crypto_digest((char*)digest, (const char *)tmp, key_in_len+1))
-      goto err;
+      goto exit;
     memcpy(cp, digest, MIN(DIGEST_LEN, key_out_len-(cp-key_out)));
   }
-  memwipe(tmp, 0, key_in_len+1);
-  tor_free(tmp);
-  memwipe(digest, 0, sizeof(digest));
-  return 0;
 
- err:
+  r = 0;
+ exit:
   memwipe(tmp, 0, key_in_len+1);
   tor_free(tmp);
   memwipe(digest, 0, sizeof(digest));
-  return -1;
+  return r;
 }
 
 /** Expand some secret key material according to RFC5869, using SHA256 as the
