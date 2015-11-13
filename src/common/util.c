@@ -2143,7 +2143,7 @@ check_private_dir(const char *dirname, cpd_check_t check,
     return -1;
   }
   if ( (check & (CPD_GROUP_OK|CPD_GROUP_READ))
-       && (st.st_gid != running_gid) ) {
+       && (st.st_gid != running_gid) && (st.st_gid != 0)) {
     struct group *gr;
     char *process_groupname = NULL;
     gr = getgrgid(running_gid);
