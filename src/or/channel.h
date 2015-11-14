@@ -85,6 +85,9 @@ struct channel_s {
   /** Is there a pending netflow padding callback? */
   unsigned int pending_padding_callback:1;
 
+  /** Is our peer likely to consider this channel canonical? */
+  unsigned int is_canonical_to_peer:1;
+
   /** Has this channel ever been used for non-directory traffic?
    * Used to decide what channels to pad, and when. */
   channel_usage_info_t channel_usage;
@@ -599,9 +602,7 @@ channel_t * channel_get_for_extend(const char *rsa_id_digest,
                                    int *launch_out);
 
 /* Ask which of two channels is better for circuit-extension purposes */
-int channel_is_better(time_t now,
-                      channel_t *a, channel_t *b,
-                      int forgive_new_connections);
+int channel_is_better(channel_t *a, channel_t *b);
 
 /** Channel lookups
  */
@@ -684,6 +685,7 @@ void channel_listener_dump_statistics(channel_listener_t *chan_l,
                                       int severity);
 void channel_listener_dump_transport_statistics(channel_listener_t *chan_l,
                                                 int severity);
+void channel_check_for_duplicates(void);
 
 void channel_update_bad_for_new_circs(const char *digest, int force);
 

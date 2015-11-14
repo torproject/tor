@@ -739,6 +739,15 @@ channel_tls_matches_target_method(channel_t *chan,
     return 0;
   }
 
+  /* real_addr is the address this connection came from.
+   * base_.addr is updated by connection_or_init_conn_from_address()
+   * to be the address in the descriptor. It may be tempting to
+   * allow either address to be allowed, but if we did so, it would
+   * enable someone who steals a relay's keys to impersonate/MITM it
+   * from anywhere on the Internet! (Because they could make long-lived
+   * TLS connections from anywhere to all relays, and wait for them to
+   * be used for extends).
+   */
   return tor_addr_eq(&(tlschan->conn->real_addr), target);
 }
 
@@ -1667,6 +1676,7 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
   const uint8_t *cp, *end;
   uint8_t n_other_addrs;
   time_t now = time(NULL);
+  const routerinfo_t *me = router_get_my_routerinfo();
 
   long apparent_skew = 0;
   tor_addr_t my_apparent_addr = TOR_ADDR_NULL;
@@ -1745,8 +1755,20 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
 
   if (my_addr_type == RESOLVED_TYPE_IPV4 && my_addr_len == 4) {
     tor_addr_from_ipv4n(&my_apparent_addr, get_uint32(my_addr_ptr));
+
+    if (!get_options()->BridgeRelay && me &&
+        get_uint32(my_addr_ptr) == htonl(me->addr)) {
+      chan->base_.is_canonical_to_peer = 1;
+    }
+
   } else if (my_addr_type == RESOLVED_TYPE_IPV6 && my_addr_len == 16) {
     tor_addr_from_ipv6_bytes(&my_apparent_addr, (const char *) my_addr_ptr);
+
+    if (!get_options()->BridgeRelay && me &&
+        !tor_addr_is_null(&me->ipv6_addr) &&
+        tor_addr_eq(&my_apparent_addr, &me->ipv6_addr)) {
+      chan->base_.is_canonical_to_peer = 1;
+    }
   }
 
   n_other_addrs = (uint8_t) *cp++;
@@ -1762,12 +1784,32 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
       connection_or_close_for_error(chan->conn, 0);
       return;
     }
+    /* A relay can connect from anywhere and be canonical, so
+     * long as it tells you from where it came. This may be a bit
+     * concerning.. Luckily we have another check in
+     * channel_tls_matches_target_method() to ensure that extends
+     * only go to the IP they ask for.
+     *
+     * XXX: Bleh. That check is not used if the connection is canonical.
+     */
     if (tor_addr_eq(&addr, &(chan->conn->real_addr))) {
       connection_or_set_canonical(chan->conn, 1);
       break;
     }
     cp = next;
     --n_other_addrs;
+  }
+
+  if (me && !chan->base_.is_canonical_to_peer && chan->conn->is_canonical) {
+    log_info(LD_OR,
+             "We made a connection to a relay at %s (fp=%s) but we think "
+             "they will not consider this connection canonical. They "
+             "think we are at %s, but we think its %s.",
+             safe_str(chan->base_.get_remote_descr(&chan->base_, 0)),
+             safe_str(hex_str(chan->conn->identity_digest, DIGEST_LEN)),
+             safe_str(tor_addr_is_null(&my_apparent_addr) ?
+             "<none>" : fmt_and_decorate_addr(&my_apparent_addr)),
+             safe_str(fmt_addr32(me->addr)));
   }
 
   /* Act on apparent skew. */

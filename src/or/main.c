@@ -1189,6 +1189,7 @@ CALLBACK(write_bridge_ns);
 CALLBACK(check_fw_helper_app);
 CALLBACK(heartbeat);
 CALLBACK(reset_padding_counts);
+CALLBACK(check_canonical_channels);
 
 #undef CALLBACK
 
@@ -1221,6 +1222,7 @@ static periodic_event_item_t periodic_events[] = {
   CALLBACK(check_fw_helper_app),
   CALLBACK(heartbeat),
   CALLBACK(reset_padding_counts),
+  CALLBACK(check_canonical_channels),
   END_OF_PERIODIC_EVENTS
 };
 #undef CALLBACK
@@ -1726,9 +1728,17 @@ write_stats_file_callback(time_t now, const or_options_t *options)
   return safe_timer_diff(now, next_time_to_write_stats_files);
 }
 
-/**
- * Periodic callback: Write bridge statistics to disk if appropriate.
- */
+#define CHANNEL_CHECK_INTERVAL (60*60)
+static int
+check_canonical_channels_callback(time_t now, const or_options_t *options)
+{
+  (void)now;
+  if (public_server_mode(options))
+    channel_check_for_duplicates();
+
+  return CHANNEL_CHECK_INTERVAL;
+}
+
 static int
 reset_padding_counts_callback(time_t now, const or_options_t *options)
 {
@@ -1740,6 +1750,9 @@ reset_padding_counts_callback(time_t now, const or_options_t *options)
   return REPHIST_CELL_PADDING_COUNTS_INTERVAL;
 }
 
+/**
+ * Periodic callback: Write bridge statistics to disk if appropriate.
+ */
 static int
 record_bridge_stats_callback(time_t now, const or_options_t *options)
 {

@@ -1040,10 +1040,8 @@ connection_or_group_set_badness_(smartlist_t *group, int force)
     }
 
     if (!best ||
-        channel_is_better(now,
-                          TLS_CHAN_TO_BASE(or_conn->chan),
-                          TLS_CHAN_TO_BASE(best->chan),
-                          0)) {
+        channel_is_better(TLS_CHAN_TO_BASE(or_conn->chan),
+                          TLS_CHAN_TO_BASE(best->chan))) {
       best = or_conn;
     }
   } SMARTLIST_FOREACH_END(or_conn);
@@ -1071,11 +1069,9 @@ connection_or_group_set_badness_(smartlist_t *group, int force)
         or_conn->base_.state != OR_CONN_STATE_OPEN)
       continue;
     if (or_conn != best &&
-        channel_is_better(now,
-                          TLS_CHAN_TO_BASE(best->chan),
-                          TLS_CHAN_TO_BASE(or_conn->chan), 1)) {
-      /* This isn't the best conn, _and_ the best conn is better than it,
-         even when we're being forgiving. */
+        channel_is_better(TLS_CHAN_TO_BASE(best->chan),
+                          TLS_CHAN_TO_BASE(or_conn->chan))) {
+      /* This isn't the best conn, _and_ the best conn is better than it */
       if (best->is_canonical) {
         log_info(LD_OR,
                  "Marking OR conn to %s:%d as unsuitable for new circuits: "
