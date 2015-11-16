@@ -12,9 +12,13 @@
 #include <event.h>
 #endif
 
+/** We disable any interval greate than this number of seconds, on the ground
+ * that it is probably an absolute time mistakenly passed in as a relative time.
+ */
 static const int MAX_INTERVAL = 10 * 365 * 86400;
 
-/** DOCDOC */
+/** Set the event <b>event</b> to run in <b>next_interval</b> seconds from
+ * now. */
 static void
 periodic_event_set_interval(periodic_event_item_t *event,
                             time_t next_interval)
@@ -65,7 +69,7 @@ periodic_event_dispatch(evutil_socket_t fd, short what, void *data)
   log_info(LD_GENERAL, "Dispatching %s", event->name);
 }
 
-/** DOCDOC */
+/** Schedules <b>event</b> to run as soon as possible from now. */
 void
 periodic_event_reschedule(periodic_event_item_t *event)
 {
@@ -92,7 +96,7 @@ periodic_event_launch(periodic_event_item_t *event)
   periodic_event_dispatch(-1, EV_TIMEOUT, event);
 }
 
-/** DOCDOC */
+/** Release all storage associated with <b>event</b> */
 void
 periodic_event_destroy(periodic_event_item_t *event)
 {

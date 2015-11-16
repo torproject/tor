@@ -1228,9 +1228,11 @@ get_signewnym_epoch(void)
   return newnym_epoch;
 }
 
-/** DOCDOC */
+/** True iff we have initialized all the members of <b>periodic_events</b>.
+ * Used to prevent double-initialization. */
 static int periodic_events_initialized = 0;
 
+/* Declare all the timer callback functions... */
 #define CALLBACK(name) \
   static int name ## _callback(time_t, const or_options_t *)
 CALLBACK(rotate_onion_key);
@@ -1260,6 +1262,8 @@ CALLBACK(check_fw_helper_app);
 CALLBACK(heartbeat);
 
 #undef CALLBACK
+
+/* Now we declare an array of periodic_event_item_t for each periodic event */
 #define CALLBACK(name) PERIODIC_EVENT(name)
 
 static periodic_event_item_t periodic_events[] = {
@@ -1292,6 +1296,10 @@ static periodic_event_item_t periodic_events[] = {
 };
 #undef CALLBACK
 
+/* These are pointers to members of periodic_events[] that are used to
+ * implement particular callbacks.  We keep them separate here so that we
+ * can access them by name.  We also keep them inside periodic_events[]
+ * so that we can implement "reset all timers" in a reasaonable way. */
 static periodic_event_item_t *check_descriptor_event=NULL;
 static periodic_event_item_t *fetch_networkstatus_event=NULL;
 static periodic_event_item_t *launch_descriptor_fetches_event=NULL;
@@ -1311,7 +1319,9 @@ reset_all_main_loop_timers(void)
   }
 }
 
-/**DOCDOC*/
+/** Return the member of periodic_events[] whose name is <b>name</b>.
+ * Return NULL if no such event is found.
+ */
 static periodic_event_item_t *
 find_periodic_event(const char *name)
 {
@@ -1323,7 +1333,11 @@ find_periodic_event(const char *name)
   return NULL;
 }
 
-/** DOCDOC */
+/** Helper, run one second after setup:
+ * Initializes all members of periodic_events and starts them running.
+ *
+ * (We do this one second after setup for backward-compatibility reasons;
+ * it might not actually be necessary.) */
 static void
 initialize_periodic_events_cb(evutil_socket_t fd, short events, void *data)
 {
@@ -1336,7 +1350,8 @@ initialize_periodic_events_cb(evutil_socket_t fd, short events, void *data)
   }
 }
 
-/** DOCDOC */
+/** Set up all the members of periodic_events[], and configure them all to be
+ * launched from a callback. */
 static void
 initialize_periodic_events(void)
 {
