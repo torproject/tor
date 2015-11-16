@@ -1,0 +1,3 @@
+  o Minor bugfixes (tests):
+    - Fix a memory leak in the ntor test. Fixes bug 17778; bugfix on
+      0.2.4.8-alpha.
