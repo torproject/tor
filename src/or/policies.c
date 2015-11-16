@@ -2027,6 +2027,53 @@ compare_tor_addr_to_node_policy(const tor_addr_t *addr, uint16_t port,
   }
 }
 
+/**
+ * Given <b>policy_list</b>, a list of addr_policy_t, produce a string
+ * representation of the list.
+ * If <b>include_ipv4</b> is true, include IPv4 entries.
+ * If <b>include_ipv6</b> is true, include IPv6 entries.
+ */
+char *
+policy_dump_to_string(const smartlist_t *policy_list,
+                      int include_ipv4,
+                      int include_ipv6)
+{
+  smartlist_t *policy_string_list;
+  char *policy_string = NULL;
+
+  policy_string_list = smartlist_new();
+
+  SMARTLIST_FOREACH_BEGIN(policy_list, addr_policy_t *, tmpe) {
+    char *pbuf;
+    int bytes_written_to_pbuf;
+    if ((tor_addr_family(&tmpe->addr) == AF_INET6) && (!include_ipv6)) {
+      continue; /* Don't include IPv6 parts of address policy */
+    }
+    if ((tor_addr_family(&tmpe->addr) == AF_INET) && (!include_ipv4)) {
+      continue; /* Don't include IPv4 parts of address policy */
+    }
+
+    pbuf = tor_malloc(POLICY_BUF_LEN);
+    bytes_written_to_pbuf = policy_write_item(pbuf,POLICY_BUF_LEN, tmpe, 1);
+
+    if (bytes_written_to_pbuf < 0) {
+      log_warn(LD_BUG, "policy_dump_to_string ran out of room!");
+      tor_free(pbuf);
+      goto done;
+    }
+
+    smartlist_add(policy_string_list,pbuf);
+  } SMARTLIST_FOREACH_END(tmpe);
+
+  policy_string = smartlist_join_strings(policy_string_list, "\n", 0, NULL);
+
+done:
+  SMARTLIST_FOREACH(policy_string_list, char *, str, tor_free(str));
+  smartlist_free(policy_string_list);
+
+  return policy_string;
+}
+
 /** Implementation for GETINFO control command: knows the answer for questions
  * about "exit-policy/..." */
 int
