@@ -106,6 +106,7 @@ server1(int argc, char **argv)
  done:
   tor_free(keys);
   tor_free(hexkeys);
+  dimap_free(keymap, NULL);
   return result;
 }
 
