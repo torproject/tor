@@ -562,7 +562,6 @@ static char *get_bindaddr_from_transport_listen_line(const char *line,
 static int parse_dir_authority_line(const char *line,
                                  dirinfo_type_t required_type,
                                  int validate_only);
-static void port_cfg_free(port_cfg_t *port);
 static int parse_ports(or_options_t *options, int validate_only,
                               char **msg_out, int *n_ports_out,
                               int *world_writable_control_socket);
@@ -5737,7 +5736,7 @@ parse_dir_fallback_line(const char *line,
 }
 
 /** Allocate and return a new port_cfg_t with reasonable defaults. */
-static port_cfg_t *
+STATIC port_cfg_t *
 port_cfg_new(size_t namelen)
 {
   tor_assert(namelen <= SIZE_T_CEILING - sizeof(port_cfg_t) - 1);
@@ -5749,7 +5748,7 @@ port_cfg_new(size_t namelen)
 }
 
 /** Free all storage held in <b>port</b> */
-static void
+STATIC void
 port_cfg_free(port_cfg_t *port)
 {
   tor_free(port);
@@ -6673,8 +6672,8 @@ check_server_ports(const smartlist_t *ports,
 
 /** Return a list of port_cfg_t for client ports parsed from the
  * options. */
-const smartlist_t *
-get_configured_ports(void)
+MOCK_IMPL(const smartlist_t *,
+get_configured_ports,(void))
 {
   if (!configured_ports)
     configured_ports = smartlist_new();

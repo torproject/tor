@@ -76,7 +76,7 @@ int write_to_data_subdir(const char* subdir, const char* fname,
 
 int get_num_cpus(const or_options_t *options);
 
-const smartlist_t *get_configured_ports(void);
+MOCK_DECL(const smartlist_t *,get_configured_ports,(void));
 int get_first_advertised_port_by_type_af(int listener_type,
                                          int address_family);
 #define get_primary_or_port() \
@@ -140,6 +140,8 @@ smartlist_t *get_options_for_server_transport(const char *transport);
 extern struct config_format_t options_format;
 #endif
 
+STATIC port_cfg_t *port_cfg_new(size_t namelen);
+STATIC void port_cfg_free(port_cfg_t *port);
 STATIC void or_options_free(or_options_t *options);
 STATIC int options_validate(or_options_t *old_options,
                             or_options_t *options,

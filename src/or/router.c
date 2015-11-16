@@ -1922,7 +1922,7 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
     /* DNS is screwed up; don't claim to be an exit. */
     policies_exit_policy_append_reject_star(&ri->exit_policy);
   } else {
-    policies_parse_exit_policy_from_options(options,ri->addr,&ri->ipv6_addr,1,
+    policies_parse_exit_policy_from_options(options,ri->addr,&ri->ipv6_addr,
                                             &ri->exit_policy);
   }
   ri->policy_is_reject_star =

@@ -62,14 +62,18 @@ static const char *private_nets[] = {
   NULL
 };
 
-static int policies_parse_exit_policy_internal(config_line_t *cfg,
-                                               smartlist_t **dest,
-                                               int ipv6_exit,
-                                               int rejectprivate,
-                                               uint32_t local_address,
-                                               tor_addr_t *ipv6_local_address,
-                                               int reject_interface_addresses,
-                                               int add_default_policy);
+static int policies_parse_exit_policy_internal(
+                                        config_line_t *cfg,
+                                        smartlist_t **dest,
+                                        int ipv6_exit,
+                                        int rejectprivate,
+                                        uint32_t local_address,
+                                        const tor_addr_t *ipv6_local_address,
+                                        const tor_addr_t *ipv4_outbound_address,
+                                        const tor_addr_t *ipv6_outbound_address,
+                                        int reject_interface_addresses,
+                                        int reject_configured_port_addresses,
+                                        int add_default_policy);
 
 /** Replace all "private" entries in *<b>policy</b> with their expanded
  * equivalents. */
@@ -443,7 +447,7 @@ validate_addr_policies(const or_options_t *options, char **msg)
   smartlist_t *addr_policy=NULL;
   *msg = NULL;
 
-  if (policies_parse_exit_policy_from_options(options,0,NULL,0,&addr_policy)) {
+  if (policies_parse_exit_policy_from_options(options,0,NULL,&addr_policy)) {
     REJECT("Error in ExitPolicy entry.");
   }
 
@@ -993,16 +997,25 @@ exit_policy_remove_redundancies(smartlist_t *dest)
   }
 }
 
+/* Is addr public for the purposes of rejection? */
+static int
+tor_addr_is_public_for_reject(const tor_addr_t *addr)
+{
+  return !tor_addr_is_null(addr) && !tor_addr_is_internal(addr, 0);
+}
+
 /** Reject private helper for policies_parse_exit_policy_internal: rejects
  * publicly routable addresses on this exit relay.
  *
  * Add reject entries to the linked list *dest:
  *   - if local_address is non-zero, treat it as a host-order IPv4 address,
- *     and prepend an entry that rejects it as a destination.
- *   - if ipv6_local_address is non-NULL, prepend an entry that rejects it as
- *     a destination.
- *   - if reject_interface_addresses is true, prepend entries that reject each
+ *     and add an entry that rejects it as a destination.
+ *   - if ipv6_local_address, ipv4_outbound_address, or ipv6_outbound_address
+ *     are non-NULL, add entries that reject them as destinations.
+ *   - if reject_interface_addresses is true, add entries that reject each
  *     public IPv4 and IPv6 address of each interface on this machine.
+ *   - if reject_configured_port_addresses is true, add entries that reject
+ *     each IPv4 and IPv6 address configured for a port.
  *
  * IPv6 entries are only added if ipv6_exit is true. (All IPv6 addresses are
  * already blocked by policies_parse_exit_policy_internal if ipv6_exit is
@@ -1011,33 +1024,81 @@ exit_policy_remove_redundancies(smartlist_t *dest)
  * The list *dest is created as needed.
  */
 void
-policies_parse_exit_policy_reject_private(smartlist_t **dest,
-                                          int ipv6_exit,
-                                          uint32_t local_address,
-                                          tor_addr_t *ipv6_local_address,
-                                          int reject_interface_addresses)
+policies_parse_exit_policy_reject_private(
+                                      smartlist_t **dest,
+                                      int ipv6_exit,
+                                      uint32_t local_address,
+                                      const tor_addr_t *ipv6_local_address,
+                                      const tor_addr_t *ipv4_outbound_address,
+                                      const tor_addr_t *ipv6_outbound_address,
+                                      int reject_interface_addresses,
+                                      int reject_configured_port_addresses)
 {
   tor_assert(dest);
-  
+
   /* Reject our local IPv4 address */
   if (local_address) {
     tor_addr_t v4_local;
     tor_addr_from_ipv4h(&v4_local, local_address);
-    addr_policy_append_reject_addr(dest, &v4_local);
-    log_info(LD_CONFIG, "Adding a reject ExitPolicy 'reject %s:*' for our "
-             "published IPv4 address", fmt_addr32(local_address));
+    if (tor_addr_is_public_for_reject(&v4_local)) {
+      addr_policy_append_reject_addr(dest, &v4_local);
+      log_info(LD_CONFIG, "Adding a reject ExitPolicy 'reject %s:*' for our "
+               "published IPv4 address", fmt_addr32(local_address));
+    }
   }
 
-  /* Reject our local IPv6 address */
-  if (ipv6_exit && ipv6_local_address != NULL) {
-    if (tor_addr_is_v4(ipv6_local_address)) {
-      log_warn(LD_CONFIG, "IPv4 address '%s' provided as our IPv6 local "
-               "address", fmt_addr(ipv6_local_address));
-    } else {
-      addr_policy_append_reject_addr(dest, ipv6_local_address);
-      log_info(LD_CONFIG, "Adding a reject ExitPolicy 'reject [%s]:*' for "
-               "our published IPv6 address", fmt_addr(ipv6_local_address));
+  /* Reject the outbound IPv4 connection address */
+  if (ipv4_outbound_address
+      && tor_addr_is_public_for_reject(ipv4_outbound_address)) {
+    addr_policy_append_reject_addr(dest, ipv4_outbound_address);
+    log_info(LD_CONFIG, "Adding a reject ExitPolicy 'reject %s:*' for "
+             "our outbound IPv4 connection address",
+             fmt_addr(ipv4_outbound_address));
+  }
+
+  /* If we're not an IPv6 exit, all IPv6 addresses have already been rejected
+   * by policies_parse_exit_policy_internal */
+  if (ipv6_exit) {
+
+    /* Reject our local IPv6 address */
+    if (ipv6_local_address != NULL
+        && tor_addr_is_public_for_reject(ipv6_local_address)) {
+      if (tor_addr_is_v4(ipv6_local_address)) {
+        log_warn(LD_CONFIG, "IPv4 address '%s' provided as our IPv6 local "
+                 "address", fmt_addr(ipv6_local_address));
+      } else {
+        addr_policy_append_reject_addr(dest, ipv6_local_address);
+        log_info(LD_CONFIG, "Adding a reject ExitPolicy 'reject [%s]:*' for "
+                 "our published IPv6 address", fmt_addr(ipv6_local_address));
+      }
     }
+
+    /* Reject the outbound IPv6 connection address */
+    if (ipv6_outbound_address
+        && tor_addr_is_public_for_reject(ipv6_outbound_address)) {
+      addr_policy_append_reject_addr(dest, ipv6_outbound_address);
+      log_info(LD_CONFIG, "Adding a reject ExitPolicy 'reject [%s]:*' for "
+               "our outbound IPv6 connection address",
+               fmt_addr(ipv6_outbound_address));
+    }
+  }
+
+  /* Reject configured port addresses, if they are from public netblocks. */
+  if (reject_configured_port_addresses) {
+    const smartlist_t *port_addrs = get_configured_ports();
+
+    SMARTLIST_FOREACH_BEGIN(port_addrs, port_cfg_t *, port) {
+
+      /* Only reject IP addresses which are public */
+      if (!port->is_unix_addr && tor_addr_is_public_for_reject(&port->addr)) {
+
+        /* Reject IPv4 addresses. If we are an IPv6 exit, also reject IPv6
+         * addresses */
+        if (tor_addr_is_v4(&port->addr) || ipv6_exit) {
+          addr_policy_append_reject_addr(dest, &port->addr);
+        }
+      }
+    } SMARTLIST_FOREACH_END(port);
   }
 
   /* Reject local addresses from public netblocks on any interface. */
@@ -1074,8 +1135,8 @@ policies_parse_exit_policy_reject_private(smartlist_t **dest,
  *
  * If <b>rejectprivate</b> is true:
  *   - prepend "reject private:*" to the policy.
- *   - call policies_parse_exit_policy_reject_private to reject publicly
- *     routable addresses on this exit relay
+ *   - prepend entries that reject publicly routable addresses on this exit
+ *     relay by calling policies_parse_exit_policy_reject_private
  *
  * If cfg doesn't end in an absolute accept or reject and if
  * <b>add_default_policy</b> is true, add the default exit
@@ -1092,8 +1153,11 @@ policies_parse_exit_policy_internal(config_line_t *cfg, smartlist_t **dest,
                                     int ipv6_exit,
                                     int rejectprivate,
                                     uint32_t local_address,
-                                    tor_addr_t *ipv6_local_address,
+                                    const tor_addr_t *ipv6_local_address,
+                                    const tor_addr_t *ipv4_outbound_address,
+                                    const tor_addr_t *ipv6_outbound_address,
                                     int reject_interface_addresses,
+                                    int reject_configured_port_addresses,
                                     int add_default_policy)
 {
   if (!ipv6_exit) {
@@ -1103,9 +1167,13 @@ policies_parse_exit_policy_internal(config_line_t *cfg, smartlist_t **dest,
     /* Reject IPv4 and IPv6 reserved private netblocks */
     append_exit_policy_string(dest, "reject private:*");
     /* Reject IPv4 and IPv6 publicly routable addresses on this exit relay */
-    policies_parse_exit_policy_reject_private(dest, ipv6_exit, local_address,
-                                              ipv6_local_address,
-                                              reject_interface_addresses);
+    policies_parse_exit_policy_reject_private(
+                                            dest, ipv6_exit, local_address,
+                                            ipv6_local_address,
+                                            ipv4_outbound_address,
+                                            ipv6_outbound_address,
+                                            reject_interface_addresses,
+                                            reject_configured_port_addresses);
   }
   if (parse_addr_policy(cfg, dest, -1))
     return -1;
@@ -1202,8 +1270,9 @@ int
 policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
                            exit_policy_parser_cfg_t options,
                            uint32_t local_address,
-                           tor_addr_t *ipv6_local_address,
-                           int reject_interface_addresses)
+                           const tor_addr_t *ipv6_local_address,
+                           const tor_addr_t *ipv4_outbound_address,
+                           const tor_addr_t *ipv6_outbound_address)
 {
   int ipv6_enabled = (options & EXIT_POLICY_IPV6_ENABLED) ? 1 : 0;
   int reject_private = (options & EXIT_POLICY_REJECT_PRIVATE) ? 1 : 0;
@@ -1213,7 +1282,10 @@ policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
                                              reject_private,
                                              local_address,
                                              ipv6_local_address,
-                                             reject_interface_addresses,
+                                             ipv4_outbound_address,
+                                             ipv6_outbound_address,
+                                             reject_private,
+                                             reject_private,
                                              add_default);
 }
 
@@ -1241,8 +1313,7 @@ policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
 int
 policies_parse_exit_policy_from_options(const or_options_t *or_options,
                                         uint32_t local_address,
-                                        tor_addr_t *ipv6_local_address,
-                                        int reject_interface_addresses,
+                                        const tor_addr_t *ipv6_local_address,
                                         smartlist_t **result)
 {
   exit_policy_parser_cfg_t parser_cfg = 0;
@@ -1268,7 +1339,8 @@ policies_parse_exit_policy_from_options(const or_options_t *or_options,
   return policies_parse_exit_policy(or_options->ExitPolicy,result,
                                     parser_cfg,local_address,
                                     ipv6_local_address,
-                                    reject_interface_addresses);
+                                    &or_options->OutboundBindAddressIPv4_,
+                                    &or_options->OutboundBindAddressIPv6_);
 }
 
 /** Add "reject *:*" to the end of the policy in *<b>dest</b>, allocating
