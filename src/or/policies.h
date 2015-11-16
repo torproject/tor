@@ -44,7 +44,6 @@ addr_policy_t *addr_policy_get_canonical_entry(addr_policy_t *ent);
 int cmp_addr_policies(smartlist_t *a, smartlist_t *b);
 MOCK_DECL(addr_policy_result_t, compare_tor_addr_to_addr_policy,
     (const tor_addr_t *addr, uint16_t port, const smartlist_t *policy));
-
 addr_policy_result_t compare_tor_addr_to_node_policy(const tor_addr_t *addr,
                               uint16_t port, const node_t *node);
 
@@ -55,17 +54,11 @@ int policies_parse_exit_policy_from_options(
                                           smartlist_t **result);
 int policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
                                exit_policy_parser_cfg_t options,
-                               uint32_t local_address,
-                               const tor_addr_t *ipv6_local_address,
-                               const tor_addr_t *ipv4_outbound_address,
-                               const tor_addr_t *ipv6_outbound_address);
+                               const smartlist_t *configured_addresses);
 void policies_parse_exit_policy_reject_private(
                                       smartlist_t **dest,
                                       int ipv6_exit,
-                                      uint32_t local_address,
-                                      const tor_addr_t *ipv6_local_address,
-                                      const tor_addr_t *ipv4_outbound_address,
-                                      const tor_addr_t *ipv6_outbound_address,
+                                      const smartlist_t *configured_addresses,
                                       int reject_interface_addresses,
                                       int reject_configured_port_addresses);
 void policies_exit_policy_append_reject_star(smartlist_t **dest);
@@ -98,6 +91,10 @@ int short_policy_is_reject_star(const short_policy_t *policy);
 addr_policy_result_t compare_tor_addr_to_short_policy(
                           const tor_addr_t *addr, uint16_t port,
                           const short_policy_t *policy);
+
+#ifdef POLICIES_PRIVATE
+void append_exit_policy_string(smartlist_t **policy, const char *more);
+#endif
 
 #endif
 

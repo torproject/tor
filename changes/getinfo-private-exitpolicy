@@ -1,0 +1,6 @@
+  o Minor features (exit policies, controllers):
+    - Add controller getinfo exit-policy/reject-private/[default,relay]
+      for the reject rules added by ExitPolicyRejectPrivate. This makes
+      it easier for stem to display exit policies.
+    - Add unit tests for getinfo exit-policy/*.
+      Completes ticket #17183. Patch by "teor".

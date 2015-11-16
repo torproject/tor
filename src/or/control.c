@@ -2562,6 +2562,12 @@ static const getinfo_item_t getinfo_items[] = {
        "v3 Networkstatus consensus as retrieved from a DirPort."),
   ITEM("exit-policy/default", policies,
        "The default value appended to the configured exit policy."),
+  ITEM("exit-policy/reject-private/default", policies,
+       "The default rules appended to the configured exit policy by"
+       " ExitPolicyRejectPrivate."),
+  ITEM("exit-policy/reject-private/relay", policies,
+       "The relay-specific rules appended to the configured exit policy by"
+       " ExitPolicyRejectPrivate."),
   ITEM("exit-policy/full", policies, "The entire exit policy of onion router"),
   ITEM("exit-policy/ipv4", policies, "IPv4 parts of exit policy"),
   ITEM("exit-policy/ipv6", policies, "IPv6 parts of exit policy"),
