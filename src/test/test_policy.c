@@ -489,6 +489,127 @@ test_policies_general(void *arg)
   short_policy_free(short_parsed);
 }
 
+/** Helper: Check that policy_list contains address */
+static int
+test_policy_has_address_helper(const smartlist_t *policy_list,
+                               const tor_addr_t *addr)
+{
+  int found = 0;
+
+  tt_assert(policy_list);
+  tt_assert(addr);
+
+  SMARTLIST_FOREACH_BEGIN(policy_list, addr_policy_t*, p) {
+    if (tor_addr_eq(&p->addr, addr)) {
+      found = 1;
+    }
+  } SMARTLIST_FOREACH_END(p);
+
+  return found;
+
+ done:
+  return 0;
+}
+
+#define TEST_IPV4_ADDR (0x01020304)
+#define TEST_IPV6_ADDR ("2002::abcd")
+
+/** Run unit tests for rejecting the configured addresses on this exit relay
+ * using policies_parse_exit_policy_reject_private */
+static void
+test_policies_reject_exit_address(void *arg)
+{
+  smartlist_t *policy = NULL;
+  tor_addr_t ipv4_addr;
+  tor_addr_t ipv6_addr;
+  (void)arg;
+
+  tor_addr_from_ipv4h(&ipv4_addr, TEST_IPV4_ADDR);
+  tor_addr_parse(&ipv6_addr, TEST_IPV6_ADDR);
+
+  /* test that local_address is interpreted as an IPv4 host-order address and
+   * rejected on an IPv4-only exit */
+  policies_parse_exit_policy_reject_private(&policy, 0, TEST_IPV4_ADDR, NULL,
+                                            0);
+  tt_assert(policy);
+  tt_assert(smartlist_len(policy) == 1);
+  tt_assert(test_policy_has_address_helper(policy, &ipv4_addr));
+  addr_policy_list_free(policy);
+  policy = NULL;
+
+  /* test that local_address is interpreted as an IPv4 host-order address and
+   * rejected on an IPv4/IPv6 exit */
+  policies_parse_exit_policy_reject_private(&policy, 1, TEST_IPV4_ADDR, NULL,
+                                            0);
+  tt_assert(policy);
+  tt_assert(smartlist_len(policy) == 1);
+  tt_assert(test_policy_has_address_helper(policy, &ipv4_addr));
+  addr_policy_list_free(policy);
+  policy = NULL;
+
+  /* test that ipv6_local_address is rejected on an IPv4/IPv6 exit */
+  policies_parse_exit_policy_reject_private(&policy, 1, 0, &ipv6_addr, 0);
+  tt_assert(policy);
+  tt_assert(smartlist_len(policy) == 1);
+  tt_assert(test_policy_has_address_helper(policy, &ipv6_addr));
+  addr_policy_list_free(policy);
+  policy = NULL;
+
+  /* test that ipv6_local_address is NOT rejected on an IPv4-only exit
+   * (all IPv6 addresses are rejected by policies_parse_exit_policy_internal
+   * on IPv4-only exits, so policies_parse_exit_policy_reject_private doesn't
+   * need to do anything) */
+  policies_parse_exit_policy_reject_private(&policy, 0, 0, &ipv6_addr, 0);
+  tt_assert(policy == NULL);
+
+ done:
+  addr_policy_list_free(policy);
+}
+
+#undef TEST_IPV4_ADDR
+#undef TEST_IPV6_ADDR
+
+/** Run unit tests for rejecting publicly routable interface addresses on this
+ * exit relay using policies_parse_exit_policy_reject_private */
+static void
+test_policies_reject_interface_address(void *arg)
+{
+  smartlist_t *policy = NULL;
+  smartlist_t *public_ipv4_addrs =
+    get_interface_address6_list(LOG_INFO, AF_INET, 0);
+  smartlist_t *public_ipv6_addrs =
+    get_interface_address6_list(LOG_INFO, AF_INET6, 0);
+  (void)arg;
+
+  /* test that no addresses are rejected when none are supplied/requested */
+  policies_parse_exit_policy_reject_private(&policy, 0, 0, NULL, 0);
+  tt_assert(policy == NULL);
+
+  /* test that only IPv4 interface addresses are rejected on an IPv4-only exit
+   */
+  policies_parse_exit_policy_reject_private(&policy, 0, 0, NULL, 1);
+  if (policy) {
+    tt_assert(smartlist_len(policy) == smartlist_len(public_ipv4_addrs));
+    addr_policy_list_free(policy);
+    policy = NULL;
+  }
+
+  /* test that IPv4 and IPv6 interface addresses are rejected on an IPv4/IPv6
+   * exit */
+  policies_parse_exit_policy_reject_private(&policy, 0, 0, NULL, 1);
+  if (policy) {
+    tt_assert(smartlist_len(policy) == (smartlist_len(public_ipv4_addrs)
+                                        + smartlist_len(public_ipv6_addrs)));
+    addr_policy_list_free(policy);
+    policy = NULL;
+  }
+
+ done:
+  addr_policy_list_free(policy);
+  free_interface_address6_list(public_ipv4_addrs);
+  free_interface_address6_list(public_ipv6_addrs);
+}
+
 static void
 test_dump_exit_policy_to_string(void *arg)
 {
@@ -582,6 +703,8 @@ struct testcase_t policy_tests[] = {
   { "router_dump_exit_policy_to_string", test_dump_exit_policy_to_string, 0,
     NULL, NULL },
   { "general", test_policies_general, 0, NULL, NULL },
+  { "reject_exit_address", test_policies_reject_exit_address, 0, NULL, NULL },
+  { "reject_interface_address", test_policies_reject_interface_address, 0, NULL, NULL },
   END_OF_TESTCASES
 };
 
