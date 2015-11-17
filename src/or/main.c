@@ -1367,7 +1367,7 @@ initialize_periodic_events(void)
   NAMED_CALLBACK(check_dns_honesty);
 
   struct timeval one_second = { 1, 0 };
-  event_base_once(tor_libevent_get_base(), -1, 0,
+  event_base_once(tor_libevent_get_base(), -1, EV_TIMEOUT,
                   initialize_periodic_events_cb, NULL,
                   &one_second);
 }
