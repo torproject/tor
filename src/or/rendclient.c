@@ -52,7 +52,7 @@ rend_client_introcirc_has_opened(origin_circuit_t *circ)
   tor_assert(circ->cpath);
 
   log_info(LD_REND,"introcirc is open");
-  connection_ap_attach_pending();
+  connection_ap_attach_pending(1);
 }
 
 /** Send the establish-rendezvous cell along a rendezvous circuit. if
@@ -1107,7 +1107,7 @@ rend_client_rendezvous_acked(origin_circuit_t *circ, const uint8_t *request,
    * than trying to attach them all. See comments bug 743. */
   /* If we already have the introduction circuit built, make sure we send
    * the INTRODUCE cell _now_ */
-  connection_ap_attach_pending();
+  connection_ap_attach_pending(1);
   return 0;
 }
 

@@ -512,6 +512,8 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
 /* XXXXX Free this list on exit. */
 static smartlist_t *pending_entry_connections = NULL;
 
+static int untried_pending_connections = 0;
+
 /** Common code to connection_(ap|exit)_about_to_close. */
 static void
 connection_edge_about_to_close(edge_connection_t *edge_conn)
@@ -766,23 +768,30 @@ connection_ap_rescan_and_attach_pending(void)
                "in pending_entry_connections, but wasn't. No worries; "
                "adding it.",
                pending_entry_connections);
+      untried_pending_connections = 1;
       smartlist_add(pending_entry_connections, entry_conn);
     }
 
   } SMARTLIST_FOREACH_END(conn);
 
-  connection_ap_attach_pending();
+  connection_ap_attach_pending(1);
 }
 
 /** Tell any AP streams that are listed as waiting for a new circuit to try
  * again, either attaching to an available circ or launching a new one.
+ *
+ * If <b>retry</b> is false, only check the list if it contains at least one
+ * streams that we have not yet tried to attach to a circuit.
  */
 void
-connection_ap_attach_pending(void)
+connection_ap_attach_pending(int retry)
 {
   if (PREDICT_UNLIKELY(!pending_entry_connections)) {
     return;
   }
+
+  if (untried_pending_connections == 0 && !retry)
+    return;
 
   SMARTLIST_FOREACH_BEGIN(pending_entry_connections,
                           entry_connection_t *, entry_conn) {
@@ -811,6 +820,8 @@ connection_ap_attach_pending(void)
     }
 
   } SMARTLIST_FOREACH_END(entry_conn);
+
+  untried_pending_connections = 0;
 }
 
 /** Mark <b>entry_conn</b> as needing to get attached to a circuit.
@@ -838,6 +849,7 @@ connection_ap_mark_as_pending_circuit(entry_connection_t *entry_conn)
     return;
   }
 
+  untried_pending_connections = 1;
   smartlist_add(pending_entry_connections, entry_conn);
 }
 

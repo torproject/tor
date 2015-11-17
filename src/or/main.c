@@ -2505,10 +2505,10 @@ run_main_loop_once(void)
     }
   }
 
-  /* This should be pretty fast if nothing is pending.  BUT... watch out;
-   * we need to make sure it doesn't show up in the profiles.  five times a
-   * second would be enough, for instance. */
-  connection_ap_attach_pending();
+  /* This will be pretty fast if nothing new is pending. Note that this gets
+   * called once per libevent loop, which will make it happen once per group
+   * of events that fire, or once per second. */
+  connection_ap_attach_pending(0);
 
   return 1;
 }
