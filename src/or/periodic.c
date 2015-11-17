@@ -12,8 +12,9 @@
 #include <event.h>
 #endif
 
-/** We disable any interval greate than this number of seconds, on the ground
- * that it is probably an absolute time mistakenly passed in as a relative time.
+/** We disable any interval greater than this number of seconds, on the
+ * grounds that it is probably an absolute time mistakenly passed in as a
+ * relative time.
  */
 static const int MAX_INTERVAL = 10 * 365 * 86400;
 
@@ -41,6 +42,7 @@ periodic_event_dispatch(evutil_socket_t fd, short what, void *data)
 
   time_t now = time(NULL);
   const or_options_t *options = get_options();
+  log_debug(LD_GENERAL, "Dispatching %s", event->name);
   int r = event->fn(now, options);
   int next_interval = 0;
 
@@ -63,10 +65,10 @@ periodic_event_dispatch(evutil_socket_t fd, short what, void *data)
     next_interval = 1;
   }
 
+  log_debug(LD_GENERAL, "Scheduling %s for %d seconds", event->name,
+           next_interval);
   struct timeval tv = { next_interval , 0 };
   event_add(event->ev, &tv);
-
-  log_info(LD_GENERAL, "Dispatching %s", event->name);
 }
 
 /** Schedules <b>event</b> to run as soon as possible from now. */

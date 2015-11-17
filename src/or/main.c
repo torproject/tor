@@ -1455,7 +1455,7 @@ run_scheduled_events(time_t now)
     dirvote_act(options, now);
   }
 
-    /* 3a. Every second, we examine pending circuits and prune the
+  /* 3a. Every second, we examine pending circuits and prune the
    *    ones which have been pending for more than a few seconds.
    *    We do this before step 4, so it can try building more if
    *    it's not comfortable with the number of available circuits.
@@ -1545,7 +1545,7 @@ rotate_onion_key_callback(time_t now, const or_options_t *options)
       router_upload_dir_desc_to_dirservers(0);
     return MIN_ONION_KEY_LIFETIME;
   }
-  return -1;
+  return PERIODIC_EVENT_NO_UPDATE;
 }
 
 static int
@@ -1562,21 +1562,21 @@ check_ed_keys_callback(time_t now, const or_options_t *options)
     }
     return 30;
   }
-  return -1;
+  return PERIODIC_EVENT_NO_UPDATE;
 }
 
 static int
 launch_descriptor_fetches_callback(time_t now, const or_options_t *options)
 {
   if (should_delay_dir_fetches(options, NULL))
-    return -1;
+      return PERIODIC_EVENT_NO_UPDATE;
 
   update_all_descriptor_downloads(now);
   update_extrainfo_downloads(now);
   if (router_have_minimum_dir_info())
     return LAZY_DESCRIPTOR_RETRY_INTERVAL;
   else
-    return  GREEDY_DESCRIPTOR_RETRY_INTERVAL;
+    return GREEDY_DESCRIPTOR_RETRY_INTERVAL;
 }
 
 static int
@@ -1609,7 +1609,7 @@ rotate_x509_certificate_callback(time_t now, const or_options_t *options)
 
   /* We also make sure to rotate the TLS connections themselves if they've
    * been up for too long -- but that's done via is_bad_for_new_circs in
-   * connection_run_housekeeping() above. */
+   * run_connection_housekeeping() above. */
 
   return MAX_SSL_KEY_LIFETIME_INTERNAL;
 }
@@ -1763,7 +1763,7 @@ record_bridge_stats_callback(time_t now, const or_options_t *options)
      * next time bridge mode is turned on. */
     should_init_bridge_stats = 1;
   }
-  return -1;
+  return PERIODIC_EVENT_NO_UPDATE;
 }
 
 static int
@@ -1877,7 +1877,7 @@ fetch_networkstatus_callback(time_t now, const or_options_t *options)
 #define networkstatus_dl_check_interval(o) ((o)->TestingTorNetwork ? 1 : 60)
 
   if (should_delay_dir_fetches(options, NULL))
-    return -1;
+    return PERIODIC_EVENT_NO_UPDATE;
 
   update_networkstatus_downloads(now);
   return networkstatus_dl_check_interval(options);
@@ -1893,7 +1893,7 @@ retry_listeners_callback(time_t now, const or_options_t *options)
     retry_all_listeners(NULL, NULL, 0);
     return 60;
   }
-  return -1;
+  return PERIODIC_EVENT_NO_UPDATE;
 }
 
 static int
@@ -1914,7 +1914,7 @@ check_dns_honesty_callback(time_t now, const or_options_t *options)
   if (net_is_disabled() ||
       ! public_server_mode(options) ||
       router_my_exit_policy_is_reject_star())
-    return -1;
+    return PERIODIC_EVENT_NO_UPDATE;
 
   static int first_time = 1;
   if (first_time) {
@@ -1936,7 +1936,7 @@ write_bridge_ns_callback(time_t now, const or_options_t *options)
 #define BRIDGE_STATUSFILE_INTERVAL (30*60)
      return BRIDGE_STATUSFILE_INTERVAL;
   }
-  return -1;
+  return PERIODIC_EVENT_NO_UPDATE;
 }
 
 static int
@@ -1945,7 +1945,7 @@ check_fw_helper_app_callback(time_t now, const or_options_t *options)
   if (net_is_disabled() ||
       ! server_mode(options) ||
       ! options->PortForwarding) {
-    return -1;
+    return PERIODIC_EVENT_NO_UPDATE;
   }
   /* 11. check the port forwarding app */
 

@@ -4,12 +4,13 @@
 #ifndef TOR_PERIODIC_H
 #define TOR_PERIODIC_H
 
-/** Callback function for a periodic event to take action.
-* The return value influences the next time the function will get called.
-* Return -1 to not update <b>last_action_time</b> and be polled again in
-* the next second. If a positive value is returned it will update the
-* interval time. If the returned value is larger than <b>now</b> then it
-* is assumed to be a future time to poll again. */
+#define PERIODIC_EVENT_NO_UPDATE (-1)
+
+/** Callback function for a periodic event to take action.  The return value
+* influences the next time the function will get called.  Return
+* PERIODIC_EVENT_NO_UPDATE to not update <b>last_action_time</b> and be polled
+* again in the next second. If a positive value is returned it will update the
+* interval time. */
 typedef int (*periodic_event_helper_t)(time_t now,
                                       const or_options_t *options);
 
