@@ -102,6 +102,8 @@ int connection_edge_update_circuit_isolation(const entry_connection_t *conn,
 void circuit_clear_isolation(origin_circuit_t *circ);
 streamid_t get_unique_stream_id_by_circ(origin_circuit_t *circ);
 
+void connection_edge_free_all(void);
+
 /** @name Begin-cell flags
  *
  * These flags are used in RELAY_BEGIN cells to change the default behavior

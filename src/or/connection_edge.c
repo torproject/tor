@@ -509,7 +509,6 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
  * (Right now, we check in several places to make sure that this list is
  * correct.  When it's incorrect, we'll fix it, and log a BUG message.)
  */
-/* XXXXX Free this list on exit. */
 static smartlist_t *pending_entry_connections = NULL;
 
 static int untried_pending_connections = 0;
@@ -3591,3 +3590,11 @@ circuit_clear_isolation(origin_circuit_t *circ)
   circ->socks_username_len = circ->socks_password_len = 0;
 }
 
+/** Free all storage held in module-scoped variables for connection_edge.c */
+void
+connection_edge_free_all(void)
+{
+  untried_pending_connections = 0;
+  smartlist_free(pending_entry_connections);
+  pending_entry_connections = NULL;
+}

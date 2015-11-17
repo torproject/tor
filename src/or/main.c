@@ -3084,6 +3084,7 @@ tor_free_all(int postfork)
   channel_tls_free_all();
   channel_free_all();
   connection_free_all();
+  connection_edge_free_all();
   scheduler_free_all();
   memarea_clear_freelist();
   nodelist_free_all();
