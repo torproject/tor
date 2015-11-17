@@ -2201,8 +2201,10 @@ dns_servers_relaunch_checks(void)
 {
   if (server_mode(get_options())) {
     dns_reset_correctness_checks();
-    tor_assert(check_dns_honesty_event);
-    periodic_event_reschedule(check_dns_honesty_event);
+    if (periodic_events_initialized) {
+      tor_assert(check_dns_honesty_event);
+      periodic_event_reschedule(check_dns_honesty_event);
+    }
   }
 }
 
