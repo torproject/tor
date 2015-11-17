@@ -28,6 +28,7 @@
 #define ROUTER_PRIVATE
 #define CIRCUITSTATS_PRIVATE
 #define CIRCUITLIST_PRIVATE
+#define MAIN_PRIVATE
 #define STATEFILE_PRIVATE
 
 /*
@@ -50,6 +51,7 @@ double fabs(double x);
 #include "rendcache.h"
 #include "test.h"
 #include "torgzip.h"
+#include "main.h"
 #include "memarea.h"
 #include "onion.h"
 #include "onion_ntor.h"
@@ -317,6 +319,8 @@ test_circuit_timeout(void *arg)
   int i, runs;
   double close_ms;
   (void)arg;
+  initialize_periodic_events();
+
   circuit_build_times_init(&initial);
   circuit_build_times_init(&estimate);
   circuit_build_times_init(&final);
@@ -456,6 +460,7 @@ test_circuit_timeout(void *arg)
   circuit_build_times_free_timeouts(&estimate);
   circuit_build_times_free_timeouts(&final);
   or_state_free(state);
+  teardown_periodic_events();
 }
 
 /** Test encoding and parsing of rendezvous service descriptors. */

@@ -78,12 +78,11 @@ periodic_event_reschedule(periodic_event_item_t *event)
   periodic_event_set_interval(event, 1);
 }
 
-/** Handles initial dispatch for periodic events. It should happen 1 second
- * after the events are created to mimic behaviour before #3199's refactor */
+/** Initializes the libevent backend for a periodic event. */
 void
-periodic_event_launch(periodic_event_item_t *event)
+periodic_event_setup(periodic_event_item_t *event)
 {
-  if (event->ev) { /** Already setup? This is a bug */
+  if (event->ev) { /* Already setup? This is a bug */
     log_err(LD_BUG, "Initial dispatch should only be done once.");
     tor_assert(0);
   }
@@ -93,6 +92,17 @@ periodic_event_launch(periodic_event_item_t *event)
                             periodic_event_dispatch,
                             event);
   tor_assert(event->ev);
+}
+
+/** Handles initial dispatch for periodic events. It should happen 1 second
+ * after the events are created to mimic behaviour before #3199's refactor */
+void
+periodic_event_launch(periodic_event_item_t *event)
+{
+  if (! event->ev) { /* Not setup? This is a bug */
+    log_err(LD_BUG, "periodic_event_launch without periodic_event_setup");
+    tor_assert(0);
+  }
 
   // Initial dispatch
   periodic_event_dispatch(-1, EV_TIMEOUT, event);

@@ -29,6 +29,7 @@ typedef struct periodic_event_item_t {
 #define END_OF_PERIODIC_EVENTS { NULL, 0, NULL, NULL }
 
 void periodic_event_launch(periodic_event_item_t *event);
+void periodic_event_setup(periodic_event_item_t *event);
 void periodic_event_destroy(periodic_event_item_t *event);
 void periodic_event_reschedule(periodic_event_item_t *event);
 

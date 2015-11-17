@@ -1352,11 +1352,16 @@ initialize_periodic_events_cb(evutil_socket_t fd, short events, void *data)
 
 /** Set up all the members of periodic_events[], and configure them all to be
  * launched from a callback. */
-static void
+STATIC void
 initialize_periodic_events(void)
 {
   tor_assert(periodic_events_initialized == 0);
   periodic_events_initialized = 1;
+
+  int i;
+  for (i = 0; periodic_events[i].name; ++i) {
+    periodic_event_setup(&periodic_events[i]);
+  }
 
 #define NAMED_CALLBACK(name) \
   STMT_BEGIN name ## _event = find_periodic_event( #name ); STMT_END
@@ -1372,7 +1377,7 @@ initialize_periodic_events(void)
                   &one_second);
 }
 
-static void
+STATIC void
 teardown_periodic_events(void)
 {
   int i;
