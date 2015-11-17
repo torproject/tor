@@ -1,0 +1,7 @@
+  o Code simplificiation and refactoring:
+    - When a direct directory request fails immediately on launch,
+      instead of relaunching that request from inside the code that
+      launches it, instead mark the connection for teardown. This
+      change simplifies Tor's callback and prevents the directory-
+      request launching code from invoking itself recursively.
+      Closes ticket 17589.
