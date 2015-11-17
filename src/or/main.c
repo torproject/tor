@@ -1233,6 +1233,7 @@ get_signewnym_epoch(void)
 static int periodic_events_initialized = 0;
 
 /* Declare all the timer callback functions... */
+#undef CALLBACK
 #define CALLBACK(name) \
   static int name ## _callback(time_t, const or_options_t *)
 CALLBACK(rotate_onion_key);
