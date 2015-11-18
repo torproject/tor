@@ -1469,7 +1469,8 @@ get_interface_addresses_ioctl(int severity)
   int fd;
   smartlist_t *result = NULL;
 
-  /* This interface, AFAICT, only supports AF_INET addresses */
+  /* This interface, AFAICT, only supports AF_INET addresses,
+   * except on AIX. For Solaris, we could use SIOCGLIFCONF. */
   fd = socket(AF_INET, SOCK_DGRAM, 0);
   if (fd < 0) {
     tor_log(severity, LD_NET, "socket failed: %s", strerror(errno));
