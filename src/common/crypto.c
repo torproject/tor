@@ -1609,6 +1609,19 @@ crypto_digest256(char *digest, const char *m, size_t len,
   return (SHA256((const unsigned char*)m,len,(unsigned char*)digest) == NULL);
 }
 
+/** Compute a 512-bit digest of <b>len</b> bytes in data stored in <b>m</b>,
+ * using the algorithm <b>algorithm</b>.  Write the DIGEST_LEN512-byte result
+ * into <b>digest</b>.  Return 0 on success, -1 on failure. */
+int
+crypto_digest512(char *digest, const char *m, size_t len,
+                 digest_algorithm_t algorithm)
+{
+  tor_assert(m);
+  tor_assert(digest);
+  tor_assert(algorithm == DIGEST_SHA512);
+  return (SHA512((const unsigned char*)m,len,(unsigned char*)digest) == NULL);
+}
+
 /** Set the digests_t in <b>ds_out</b> to contain every digest on the
  * <b>len</b> bytes in <b>m</b> that we know how to compute.  Return 0 on
  * success, -1 on failure. */
@@ -1621,8 +1634,18 @@ crypto_digest_all(digests_t *ds_out, const char *m, size_t len)
   if (crypto_digest(ds_out->d[DIGEST_SHA1], m, len) < 0)
     return -1;
   for (i = DIGEST_SHA256; i < N_DIGEST_ALGORITHMS; ++i) {
-    if (crypto_digest256(ds_out->d[i], m, len, i) < 0)
-      return -1;
+      switch (i) {
+        case DIGEST_SHA256:
+          if (crypto_digest256(ds_out->d[i], m, len, i) < 0)
+            return -1;
+          break;
+        case DIGEST_SHA512:
+          if (crypto_digest512(ds_out->d[i], m, len, i) < 0)
+            return -1;
+          break;
+        default:
+          return -1;
+      }
   }
   return 0;
 }
@@ -1636,6 +1659,8 @@ crypto_digest_algorithm_get_name(digest_algorithm_t alg)
       return "sha1";
     case DIGEST_SHA256:
       return "sha256";
+    case DIGEST_SHA512:
+      return "sha512";
     default:
       tor_fragile_assert();
       return "??unknown_digest??";
@@ -1651,6 +1676,8 @@ crypto_digest_algorithm_parse_name(const char *name)
     return DIGEST_SHA1;
   else if (!strcmp(name, "sha256"))
     return DIGEST_SHA256;
+  else if (!strcmp(name, "sha512"))
+    return DIGEST_SHA512;
   else
     return -1;
 }
@@ -1660,6 +1687,7 @@ struct crypto_digest_t {
   union {
     SHA_CTX sha1; /**< state for SHA1 */
     SHA256_CTX sha2; /**< state for SHA256 */
+    SHA512_CTX sha512; /**< state for SHA512 */
   } d; /**< State for the digest we're using.  Only one member of the
         * union is usable, depending on the value of <b>algorithm</b>. */
   digest_algorithm_bitfield_t algorithm : 8; /**< Which algorithm is in use? */
@@ -1686,6 +1714,19 @@ crypto_digest256_new(digest_algorithm_t algorithm)
   tor_assert(algorithm == DIGEST_SHA256);
   r = tor_malloc(sizeof(crypto_digest_t));
   SHA256_Init(&r->d.sha2);
+  r->algorithm = algorithm;
+  return r;
+}
+
+/** Allocate and return a new digest object to compute 512-bit digests
+ * using <b>algorithm</b>. */
+crypto_digest_t *
+crypto_digest512_new(digest_algorithm_t algorithm)
+{
+  crypto_digest_t *r;
+  tor_assert(algorithm == DIGEST_SHA512);
+  r = tor_malloc(sizeof(crypto_digest_t));
+  SHA512_Init(&r->d.sha512);
   r->algorithm = algorithm;
   return r;
 }
@@ -1721,6 +1762,9 @@ crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
     case DIGEST_SHA256:
       SHA256_Update(&digest->d.sha2, (void*)data, len);
       break;
+    case DIGEST_SHA512:
+      SHA512_Update(&digest->d.sha512, (void*)data, len);
+      break;
     default:
       tor_fragile_assert();
       break;
@@ -1729,13 +1773,13 @@ crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
 
 /** Compute the hash of the data that has been passed to the digest
  * object; write the first out_len bytes of the result to <b>out</b>.
- * <b>out_len</b> must be \<= DIGEST256_LEN.
+ * <b>out_len</b> must be \<= DIGEST512_LEN.
  */
 void
 crypto_digest_get_digest(crypto_digest_t *digest,
                          char *out, size_t out_len)
 {
-  unsigned char r[DIGEST256_LEN];
+  unsigned char r[DIGEST512_LEN];
   crypto_digest_t tmpenv;
   tor_assert(digest);
   tor_assert(out);
@@ -1749,6 +1793,10 @@ crypto_digest_get_digest(crypto_digest_t *digest,
     case DIGEST_SHA256:
       tor_assert(out_len <= DIGEST256_LEN);
       SHA256_Final(r, &tmpenv.d.sha2);
+      break;
+    case DIGEST_SHA512:
+      tor_assert(out_len <= DIGEST512_LEN);
+      SHA512_Final(r, &tmpenv.d.sha512);
       break;
     default:
       log_warn(LD_BUG, "Called with unknown algorithm %d", digest->algorithm);
@@ -1791,7 +1839,7 @@ crypto_digest_assign(crypto_digest_t *into,
  * at <b>digest_out</b> to the hash of the concatenation of those strings,
  * plus the optional string <b>append</b>, computed with the algorithm
  * <b>alg</b>.
- * <b>out_len</b> must be \<= DIGEST256_LEN. */
+ * <b>out_len</b> must be \<= DIGEST512_LEN. */
 void
 crypto_digest_smartlist(char *digest_out, size_t len_out,
                         const smartlist_t *lst,
@@ -1806,7 +1854,7 @@ crypto_digest_smartlist(char *digest_out, size_t len_out,
  * optional string <b>prepend</b>, those strings,
  * and the optional string <b>append</b>, computed with the algorithm
  * <b>alg</b>.
- * <b>out_len</b> must be \<= DIGEST256_LEN. */
+ * <b>out_len</b> must be \<= DIGEST512_LEN. */
 void
 crypto_digest_smartlist_prefix(char *digest_out, size_t len_out,
                         const char *prepend,
@@ -1815,10 +1863,13 @@ crypto_digest_smartlist_prefix(char *digest_out, size_t len_out,
                         digest_algorithm_t alg)
 {
   crypto_digest_t *d;
-  if (alg == DIGEST_SHA1)
+  if (alg == DIGEST_SHA1) {
     d = crypto_digest_new();
-  else
+  } else if (alg == DIGEST_SHA512) {
+    d = crypto_digest512_new(alg);
+  } else {
     d = crypto_digest256_new(alg);
+  }
   if (prepend)
     crypto_digest_add_bytes(d, prepend, strlen(prepend));
   SMARTLIST_FOREACH(lst, const char *, cp,
