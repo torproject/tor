@@ -4342,9 +4342,14 @@ fd_is_nonblocking(tor_socket_t fd)
 }
 #endif
 
+#define ERRNO_IS_EPROTO(e)    (e == SOCK_ERRNO(EPROTONOSUPPORT))
+#define SOCK_ERR_IS_EPROTO(s) ERRNO_IS_EPROTO(tor_socket_errno(s))
+
+/* Test for tor_open_socket*, using IPv4 or IPv6 depending on arg. */
 static void
 test_util_socket(void *arg)
 {
+  const int domain = !strcmp(arg, "4") ? AF_INET : AF_INET6;
   tor_socket_t fd1 = TOR_INVALID_SOCKET;
   tor_socket_t fd2 = TOR_INVALID_SOCKET;
   tor_socket_t fd3 = TOR_INVALID_SOCKET;
@@ -4355,15 +4360,19 @@ test_util_socket(void *arg)
 
   (void)arg;
 
-  fd1 = tor_open_socket_with_extensions(AF_INET, SOCK_STREAM, 0, 0, 0);
-  fd2 = tor_open_socket_with_extensions(AF_INET, SOCK_STREAM, 0, 0, 1);
+  fd1 = tor_open_socket_with_extensions(domain, SOCK_STREAM, 0, 0, 0);
+  if (SOCK_ERR_IS_EPROTO(fd1)) {
+    /* Assume we're on an IPv4-only or IPv6-only system, and give up now. */
+    goto done;
+  }
+  fd2 = tor_open_socket_with_extensions(domain, SOCK_STREAM, 0, 0, 1);
   tt_assert(SOCKET_OK(fd1));
   tt_assert(SOCKET_OK(fd2));
   tt_int_op(get_n_open_sockets(), OP_EQ, n + 2);
-  //fd3 = tor_open_socket_with_extensions(AF_INET, SOCK_STREAM, 0, 1, 0);
-  //fd4 = tor_open_socket_with_extensions(AF_INET, SOCK_STREAM, 0, 1, 1);
-  fd3 = tor_open_socket(AF_INET, SOCK_STREAM, 0);
-  fd4 = tor_open_socket_nonblocking(AF_INET, SOCK_STREAM, 0);
+  //fd3 = tor_open_socket_with_extensions(domain, SOCK_STREAM, 0, 1, 0);
+  //fd4 = tor_open_socket_with_extensions(domain, SOCK_STREAM, 0, 1, 1);
+  fd3 = tor_open_socket(domain, SOCK_STREAM, 0);
+  fd4 = tor_open_socket_nonblocking(domain, SOCK_STREAM, 0);
   tt_assert(SOCKET_OK(fd3));
   tt_assert(SOCKET_OK(fd4));
   tt_int_op(get_n_open_sockets(), OP_EQ, n + 4);
@@ -4412,8 +4421,15 @@ test_util_socketpair(void *arg)
   int n = get_n_open_sockets();
   tor_socket_t fds[2] = {TOR_INVALID_SOCKET, TOR_INVALID_SOCKET};
   const int family = AF_UNIX;
+  int socketpair_result = 0;
 
-  tt_int_op(0, OP_EQ, tor_socketpair_fn(family, SOCK_STREAM, 0, fds));
+  socketpair_result = tor_socketpair_fn(family, SOCK_STREAM, 0, fds);
+  if (ersatz && ERRNO_IS_EPROTO(-socketpair_result)) {
+    /* Assume we're on an IPv6-only system, and give up now.
+     * (tor_ersatz_socketpair uses IPv4.) */
+    goto done;
+  }
+  tt_int_op(0, OP_EQ, socketpair_result);
   tt_assert(SOCKET_OK(fds[0]));
   tt_assert(SOCKET_OK(fds[1]));
   tt_int_op(get_n_open_sockets(), OP_EQ, n + 2);
@@ -4432,6 +4448,8 @@ test_util_socketpair(void *arg)
   if (SOCKET_OK(fds[1]))
     tor_close_socket(fds[1]);
 }
+
+#undef SOCKET_EPROTO
 
 static void
 test_util_max_mem(void *arg)
@@ -4636,7 +4654,10 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(write_chunks_to_file, 0),
   UTIL_TEST(mathlog, 0),
   UTIL_TEST(weak_random, 0),
-  UTIL_TEST(socket, TT_FORK),
+  { "socket_ipv4", test_util_socket, TT_FORK, &passthrough_setup,
+    (void*)"4" },
+  { "socket_ipv6", test_util_socket, TT_FORK,
+    &passthrough_setup, (void*)"6" },
   { "socketpair", test_util_socketpair, TT_FORK, &passthrough_setup,
     (void*)"0" },
   { "socketpair_ersatz", test_util_socketpair, TT_FORK,

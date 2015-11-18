@@ -119,6 +119,21 @@ smartlist_contains_internal_tor_addr(smartlist_t *smartlist)
 }
 
 /** Return 1 iff <b>smartlist</b> contains a tor_addr_t structure
+ * that is NULL or the null tor_addr_t. Otherwise, return 0.
+ */
+static int
+smartlist_contains_null_tor_addr(smartlist_t *smartlist)
+{
+  SMARTLIST_FOREACH_BEGIN(smartlist, tor_addr_t *, tor_addr) {
+    if (tor_addr == NULL || tor_addr_is_null(tor_addr)) {
+      return 1;
+    }
+  } SMARTLIST_FOREACH_END(tor_addr);
+
+  return 0;
+}
+
+/** Return 1 iff <b>smartlist</b> contains a tor_addr_t structure
  * that is an IPv4 address. Otherwise, return 0.
  */
 static int
@@ -268,8 +283,18 @@ test_address_get_if_addrs_ifaddrs(void *arg)
 
   results = get_interface_addresses_ifaddrs(LOG_ERR);
 
-  tt_int_op(smartlist_len(results),>=,1);
-  tt_assert(smartlist_contains_localhost_tor_addr(results));
+  tt_assert(results);
+  /* Some FreeBSD jails don't have localhost IP address. Instead, they only
+   * have the address assigned to the jail (whatever that may be).
+   * And a jail without a network connection might not have any addresses at
+   * all. */
+  tt_assert(!smartlist_contains_null_tor_addr(results));
+
+  /* If there are addresses, they must be IPv4 or IPv6 */
+  if (smartlist_len(results) > 0) {
+    tt_assert(smartlist_contains_ipv4_tor_addr(results)
+              || smartlist_contains_ipv6_tor_addr(results));
+  }
 
   done:
   SMARTLIST_FOREACH(results, tor_addr_t *, t, tor_free(t));
@@ -293,6 +318,13 @@ test_address_get_if_addrs_win32(void *arg)
 
   tt_int_op(smartlist_len(results),>=,1);
   tt_assert(smartlist_contains_localhost_tor_addr(results));
+  tt_assert(!smartlist_contains_null_tor_addr(results));
+
+  /* If there are addresses, they must be IPv4 or IPv6 */
+  if (smartlist_len(results) > 0) {
+    tt_assert(smartlist_contains_ipv4_tor_addr(results)
+              || smartlist_contains_ipv6_tor_addr(results));
+  }
 
   done:
   SMARTLIST_FOREACH(results, tor_addr_t *, t, tor_free(t));
@@ -481,10 +513,24 @@ test_address_get_if_addrs_ioctl(void *arg)
 
   result = get_interface_addresses_ioctl(LOG_ERR);
 
+  /* On an IPv6-only system, this will fail and return NULL
   tt_assert(result);
-  tt_int_op(smartlist_len(result),>=,1);
+  */
 
-  tt_assert(smartlist_contains_localhost_tor_addr(result));
+  /* Some FreeBSD jails don't have localhost IP address. Instead, they only
+   * have the address assigned to the jail (whatever that may be).
+   * And a jail without a network connection might not have any addresses at
+   * all. */
+  if (result) {
+    tt_assert(!smartlist_contains_null_tor_addr(result));
+
+    /* If there are addresses, they must be IPv4 or IPv6.
+     * (AIX supports IPv6 from SIOCGIFCONF.) */
+    if (smartlist_len(result) > 0) {
+      tt_assert(smartlist_contains_ipv4_tor_addr(result)
+                || smartlist_contains_ipv6_tor_addr(result));
+    }
+  }
 
   done:
   if (result) {
@@ -696,12 +742,13 @@ test_address_get_if_addrs_list_internal(void *arg)
   tt_assert(!smartlist_contains_localhost_tor_addr(results));
   tt_assert(!smartlist_contains_multicast_tor_addr(results));
   /* The list may or may not contain internal addresses */
+  tt_assert(!smartlist_contains_null_tor_addr(results));
 
-  /* Allow unit tests to pass on IPv6-only machines */
+  /* if there are any addresses, they must be IPv4 */
   if (smartlist_len(results) > 0) {
-    tt_assert(smartlist_contains_ipv4_tor_addr(results)
-              || smartlist_contains_ipv6_tor_addr(results));
+    tt_assert(smartlist_contains_ipv4_tor_addr(results));
   }
+  tt_assert(!smartlist_contains_ipv6_tor_addr(results));
 
  done:
   free_interface_address_list(results);
@@ -724,6 +771,7 @@ test_address_get_if_addrs_list_no_internal(void *arg)
   tt_assert(!smartlist_contains_localhost_tor_addr(results));
   tt_assert(!smartlist_contains_multicast_tor_addr(results));
   tt_assert(!smartlist_contains_internal_tor_addr(results));
+  tt_assert(!smartlist_contains_null_tor_addr(results));
 
   /* if there are any addresses, they must be IPv4 */
   if (smartlist_len(results) > 0) {
@@ -752,6 +800,7 @@ test_address_get_if_addrs6_list_internal(void *arg)
   tt_assert(!smartlist_contains_localhost_tor_addr(results));
   tt_assert(!smartlist_contains_multicast_tor_addr(results));
   /* The list may or may not contain internal addresses */
+  tt_assert(!smartlist_contains_null_tor_addr(results));
 
   /* if there are any addresses, they must be IPv6 */
   tt_assert(!smartlist_contains_ipv4_tor_addr(results));
@@ -780,7 +829,9 @@ test_address_get_if_addrs6_list_no_internal(void *arg)
   tt_assert(!smartlist_contains_localhost_tor_addr(results));
   tt_assert(!smartlist_contains_multicast_tor_addr(results));
   tt_assert(!smartlist_contains_internal_tor_addr(results));
+  tt_assert(!smartlist_contains_null_tor_addr(results));
 
+  /* if there are any addresses, they must be IPv6 */
   tt_assert(!smartlist_contains_ipv4_tor_addr(results));
   if (smartlist_len(results) > 0) {
     tt_assert(smartlist_contains_ipv6_tor_addr(results));
