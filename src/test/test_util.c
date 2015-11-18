@@ -20,6 +20,7 @@
 #include <math.h>
 #include <ctype.h>
 #include <float.h>
+#include <errno.h>
 
 /* XXXX this is a minimal wrapper to make the unit tests compile with the
  * changed tor_timegm interface. */
