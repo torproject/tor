@@ -4342,11 +4342,8 @@ fd_is_nonblocking(tor_socket_t fd)
 }
 #endif
 
-#ifdef EPROTONOSUPPORT
-#define SOCKET_EPROTO(s) (s == -EPROTONOSUPPORT)
-#else
-#define SOCKET_EPROTO(s) (0)
-#endif
+#define ERRNO_IS_EPROTO(e)    (e == SOCK_ERRNO(EPROTONOSUPPORT))
+#define SOCK_ERR_IS_EPROTO(s) ERRNO_IS_EPROTO(tor_socket_errno(s))
 
 /* Test for tor_open_socket*, using IPv4 or IPv6 depending on arg. */
 static void
@@ -4364,7 +4361,7 @@ test_util_socket(void *arg)
   (void)arg;
 
   fd1 = tor_open_socket_with_extensions(domain, SOCK_STREAM, 0, 0, 0);
-  if (SOCKET_EPROTO(fd1)) {
+  if (SOCK_ERR_IS_EPROTO(fd1)) {
     /* Assume we're on an IPv4-only or IPv6-only system, and give up now. */
     goto done;
   }
@@ -4427,7 +4424,7 @@ test_util_socketpair(void *arg)
   int socketpair_result = 0;
 
   socketpair_result = tor_socketpair_fn(family, SOCK_STREAM, 0, fds);
-  if (ersatz && SOCKET_EPROTO(socketpair_result)) {
+  if (ersatz && ERRNO_IS_EPROTO(-socketpair_result)) {
     /* Assume we're on an IPv6-only system, and give up now.
      * (tor_ersatz_socketpair uses IPv4.) */
     goto done;
