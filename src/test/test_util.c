@@ -20,7 +20,6 @@
 #include <math.h>
 #include <ctype.h>
 #include <float.h>
-#include <errno.h>
 
 /* XXXX this is a minimal wrapper to make the unit tests compile with the
  * changed tor_timegm interface. */
@@ -4344,7 +4343,7 @@ fd_is_nonblocking(tor_socket_t fd)
 #endif
 
 #ifdef EPROTONOSUPPORT
-#define SOCKET_EPROTO(s) (s == EPROTONOSUPPORT)
+#define SOCKET_EPROTO(s) (s == -EPROTONOSUPPORT)
 #else
 #define SOCKET_EPROTO(s) (0)
 #endif
