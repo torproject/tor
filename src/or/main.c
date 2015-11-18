@@ -2299,6 +2299,13 @@ do_main_loop(void)
 {
   time_t now;
 
+  /* initialize the periodic events first, so that code that depends on the
+   * events being present does not assert.
+   */
+  if (! periodic_events_initialized) {
+    initialize_periodic_events();
+  }
+
   /* initialize dns resolve map, spawn workers if needed */
   if (dns_init() < 0) {
     if (get_options()->ServerDNSAllowBrokenConfig)
@@ -2399,10 +2406,6 @@ do_main_loop(void)
                                       second_elapsed_callback,
                                       NULL);
     tor_assert(second_timer);
-  }
-
-  if (! periodic_events_initialized) {
-    initialize_periodic_events();
   }
 
 #ifdef HAVE_SYSTEMD_209
