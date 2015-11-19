@@ -503,6 +503,16 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
   return connection_edge_process_inbuf(edge_conn, 1);
 }
 
+/** A list of all the entry_connection_t * objects that are not marked
+ * for close, and are in AP_CONN_STATE_CIRCUIT_WAIT.
+ *
+ * (Right now, we check in several places to make sure that this list is
+ * correct.  When it's incorrect, we'll fix it, and log a BUG message.)
+ */
+static smartlist_t *pending_entry_connections = NULL;
+
+static int untried_pending_connections = 0;
+
 /** Common code to connection_(ap|exit)_about_to_close. */
 static void
 connection_edge_about_to_close(edge_connection_t *edge_conn)
@@ -514,6 +524,27 @@ connection_edge_about_to_close(edge_connection_t *edge_conn)
              conn->marked_for_close_file, conn->marked_for_close);
     tor_fragile_assert();
   }
+
+  if (TO_CONN(edge_conn)->type != CONN_TYPE_AP ||
+      PREDICT_UNLIKELY(NULL == pending_entry_connections))
+    return;
+
+  entry_connection_t *entry_conn = EDGE_TO_ENTRY_CONN(edge_conn);
+
+  if (TO_CONN(edge_conn)->state == AP_CONN_STATE_CIRCUIT_WAIT) {
+    smartlist_remove(pending_entry_connections, entry_conn);
+  }
+
+#if 1
+  /* Check to make sure that this isn't in pending_entry_connections if it
+   * didn't actually belong there. */
+  if (TO_CONN(edge_conn)->type == CONN_TYPE_AP &&
+      smartlist_contains(pending_entry_connections, entry_conn)) {
+    log_warn(LD_BUG, "What was %p doing in pending_entry_connections???",
+             entry_conn);
+    smartlist_remove(pending_entry_connections, entry_conn);
+  }
+#endif
 }
 
 /** Called when we're about to finally unlink and free an AP (client)
@@ -711,26 +742,114 @@ connection_ap_expire_beginning(void)
   } SMARTLIST_FOREACH_END(base_conn);
 }
 
-/** Tell any AP streams that are waiting for a new circuit to try again,
- * either attaching to an available circ or launching a new one.
+/**
+ * As connection_ap_attach_pending, but first scans the entire connection
+ * array to see if any elements are missing.
  */
 void
-connection_ap_attach_pending(void)
+connection_ap_rescan_and_attach_pending(void)
 {
   entry_connection_t *entry_conn;
   smartlist_t *conns = get_connection_array();
+
+  if (PREDICT_UNLIKELY(NULL == pending_entry_connections))
+    pending_entry_connections = smartlist_new();
+
   SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
     if (conn->marked_for_close ||
         conn->type != CONN_TYPE_AP ||
         conn->state != AP_CONN_STATE_CIRCUIT_WAIT)
       continue;
+
     entry_conn = TO_ENTRY_CONN(conn);
+    if (! smartlist_contains(pending_entry_connections, entry_conn)) {
+      log_warn(LD_BUG, "Found a connection %p that was supposed to be "
+               "in pending_entry_connections, but wasn't. No worries; "
+               "adding it.",
+               pending_entry_connections);
+      untried_pending_connections = 1;
+      smartlist_add(pending_entry_connections, entry_conn);
+    }
+
+  } SMARTLIST_FOREACH_END(conn);
+
+  connection_ap_attach_pending(1);
+}
+
+/** Tell any AP streams that are listed as waiting for a new circuit to try
+ * again, either attaching to an available circ or launching a new one.
+ *
+ * If <b>retry</b> is false, only check the list if it contains at least one
+ * streams that we have not yet tried to attach to a circuit.
+ */
+void
+connection_ap_attach_pending(int retry)
+{
+  if (PREDICT_UNLIKELY(!pending_entry_connections)) {
+    return;
+  }
+
+  if (untried_pending_connections == 0 && !retry)
+    return;
+
+  SMARTLIST_FOREACH_BEGIN(pending_entry_connections,
+                          entry_connection_t *, entry_conn) {
+    connection_t *conn = ENTRY_TO_CONN(entry_conn);
+    if (conn->marked_for_close) {
+      SMARTLIST_DEL_CURRENT(pending_entry_connections, entry_conn);
+      continue;
+    }
+    if (conn->state != AP_CONN_STATE_CIRCUIT_WAIT) {
+      log_warn(LD_BUG, "%p is no longer in circuit_wait. Why is it on "
+               "pending_entry_connections?", entry_conn);
+      SMARTLIST_DEL_CURRENT(pending_entry_connections, entry_conn);
+      continue;
+    }
+
     if (connection_ap_handshake_attach_circuit(entry_conn) < 0) {
       if (!conn->marked_for_close)
         connection_mark_unattached_ap(entry_conn,
                                       END_STREAM_REASON_CANT_ATTACH);
     }
-  } SMARTLIST_FOREACH_END(conn);
+
+    if (conn->marked_for_close ||
+        conn->type != CONN_TYPE_AP ||
+        conn->state != AP_CONN_STATE_CIRCUIT_WAIT) {
+      SMARTLIST_DEL_CURRENT(pending_entry_connections, entry_conn);
+    }
+
+  } SMARTLIST_FOREACH_END(entry_conn);
+
+  untried_pending_connections = 0;
+}
+
+/** Mark <b>entry_conn</b> as needing to get attached to a circuit.
+ *
+ * And <b>entry_conn</b> must be in AP_CONN_STATE_CIRCUIT_WAIT,
+ * should not already be pending a circuit.  The circuit will get
+ * launched or the connection will get attached the next time we
+ * call connection_ap_attach_pending().
+ */
+void
+connection_ap_mark_as_pending_circuit(entry_connection_t *entry_conn)
+{
+  connection_t *conn = ENTRY_TO_CONN(entry_conn);
+  tor_assert(conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
+  if (conn->marked_for_close)
+    return;
+
+  if (PREDICT_UNLIKELY(NULL == pending_entry_connections))
+    pending_entry_connections = smartlist_new();
+
+  if (PREDICT_UNLIKELY(smartlist_contains(pending_entry_connections,
+                                          entry_conn))) {
+    log_warn(LD_BUG, "What?? pending_entry_connections already contains %p!",
+             entry_conn);
+    return;
+  }
+
+  untried_pending_connections = 1;
+  smartlist_add(pending_entry_connections, entry_conn);
 }
 
 /** Tell any AP streams that are waiting for a one-hop tunnel to
@@ -851,12 +970,12 @@ connection_ap_detach_retriable(entry_connection_t *conn,
      * a tunneled directory connection, then just attach it. */
     ENTRY_TO_CONN(conn)->state = AP_CONN_STATE_CIRCUIT_WAIT;
     circuit_detach_stream(TO_CIRCUIT(circ),ENTRY_TO_EDGE_CONN(conn));
-    return connection_ap_handshake_attach_circuit(conn);
+    connection_ap_mark_as_pending_circuit(conn);
   } else {
     ENTRY_TO_CONN(conn)->state = AP_CONN_STATE_CONTROLLER_WAIT;
     circuit_detach_stream(TO_CIRCUIT(circ),ENTRY_TO_EDGE_CONN(conn));
-    return 0;
   }
+  return 0;
 }
 
 /** Check if <b>conn</b> is using a dangerous port. Then warn and/or
@@ -1454,10 +1573,12 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     /* If we were given a circuit to attach to, try to attach. Otherwise,
      * try to find a good one and attach to that. */
     int rv;
-    if (circ)
-      rv =  connection_ap_handshake_attach_chosen_circuit(conn, circ, cpath);
-    else
-      rv = connection_ap_handshake_attach_circuit(conn);
+    if (circ) {
+      rv = connection_ap_handshake_attach_chosen_circuit(conn, circ, cpath);
+    } else {
+      connection_ap_mark_as_pending_circuit(conn);
+      rv = 0;
+    }
 
     /* If the above function returned 0 then we're waiting for a circuit.
      * if it returned 1, we're attached.  Both are okay.  But if it returned
@@ -1564,11 +1685,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     /* We have the descriptor so launch a connection to the HS. */
     base_conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
     log_info(LD_REND, "Descriptor is here. Great.");
-    if (connection_ap_handshake_attach_circuit(conn) < 0) {
-      if (!base_conn->marked_for_close)
-        connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
-      return -1;
-    }
+    connection_ap_mark_as_pending_circuit(conn);
     return 0;
   }
 
@@ -2324,12 +2441,7 @@ connection_ap_make_link(connection_t *partner,
   control_event_stream_status(conn, STREAM_EVENT_NEW, 0);
 
   /* attaching to a dirty circuit is fine */
-  if (connection_ap_handshake_attach_circuit(conn) < 0) {
-    if (!base_conn->marked_for_close)
-      connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
-    return NULL;
-  }
-
+  connection_ap_mark_as_pending_circuit(conn);
   log_info(LD_APP,"... application connection created and linked.");
   return conn;
 }
@@ -3478,3 +3590,11 @@ circuit_clear_isolation(origin_circuit_t *circ)
   circ->socks_username_len = circ->socks_password_len = 0;
 }
 
+/** Free all storage held in module-scoped variables for connection_edge.c */
+void
+connection_edge_free_all(void)
+{
+  untried_pending_connections = 0;
+  smartlist_free(pending_entry_connections);
+  pending_entry_connections = NULL;
+}

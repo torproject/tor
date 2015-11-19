@@ -64,7 +64,9 @@ int connection_edge_is_rendezvous_stream(edge_connection_t *conn);
 int connection_ap_can_use_exit(const entry_connection_t *conn,
                                const node_t *exit);
 void connection_ap_expire_beginning(void);
-void connection_ap_attach_pending(void);
+void connection_ap_rescan_and_attach_pending(void);
+void connection_ap_attach_pending(int retry);
+void connection_ap_mark_as_pending_circuit(entry_connection_t *entry_conn);
 void connection_ap_fail_onehop(const char *failed_digest,
                                cpath_build_state_t *build_state);
 void circuit_discard_optional_exit_enclaves(extend_info_t *info);
@@ -99,6 +101,8 @@ int connection_edge_update_circuit_isolation(const entry_connection_t *conn,
                                              int dry_run);
 void circuit_clear_isolation(origin_circuit_t *circ);
 streamid_t get_unique_stream_id_by_circ(origin_circuit_t *circ);
+
+void connection_edge_free_all(void);
 
 /** @name Begin-cell flags
  *

@@ -2516,6 +2516,11 @@ run_main_loop_once(void)
     }
   }
 
+  /* This will be pretty fast if nothing new is pending. Note that this gets
+   * called once per libevent loop, which will make it happen once per group
+   * of events that fire, or once per second. */
+  connection_ap_attach_pending(0);
+
   return 1;
 }
 
@@ -3090,6 +3095,7 @@ tor_free_all(int postfork)
   channel_tls_free_all();
   channel_free_all();
   connection_free_all();
+  connection_edge_free_all();
   scheduler_free_all();
   memarea_clear_freelist();
   nodelist_free_all();

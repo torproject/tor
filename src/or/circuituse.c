@@ -1123,7 +1123,7 @@ circuit_build_needed_circs(time_t now)
    * don't require an exit circuit, review in #13814.
    * This allows HSs to function in a consensus without exits. */
   if (router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN)
-    connection_ap_attach_pending();
+    connection_ap_rescan_and_attach_pending();
 
   /* make sure any hidden services have enough intro points
    * HS intro point streams only require an internal circuit */
@@ -1475,7 +1475,7 @@ circuit_has_opened(origin_circuit_t *circ)
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
       rend_client_rendcirc_has_opened(circ);
       /* Start building an intro circ if we don't have one yet. */
-      connection_ap_attach_pending();
+      connection_ap_attach_pending(1);
       /* This isn't a call to circuit_try_attaching_streams because a
        * circuit in _C_ESTABLISH_REND state isn't connected to its
        * hidden service yet, thus we can't attach streams to it yet,
@@ -1537,14 +1537,14 @@ void
 circuit_try_attaching_streams(origin_circuit_t *circ)
 {
   /* Attach streams to this circuit if we can. */
-  connection_ap_attach_pending();
+  connection_ap_attach_pending(1);
 
   /* The call to circuit_try_clearing_isolation_state here will do
    * nothing and return 0 if we didn't attach any streams to circ
    * above. */
   if (circuit_try_clearing_isolation_state(circ)) {
     /* Maybe *now* we can attach some streams to this circuit. */
-    connection_ap_attach_pending();
+    connection_ap_attach_pending(1);
   }
 }
 

@@ -52,7 +52,7 @@ rend_client_introcirc_has_opened(origin_circuit_t *circ)
   tor_assert(circ->cpath);
 
   log_info(LD_REND,"introcirc is open");
-  connection_ap_attach_pending();
+  connection_ap_attach_pending(1);
 }
 
 /** Send the establish-rendezvous cell along a rendezvous circuit. if
@@ -1107,7 +1107,7 @@ rend_client_rendezvous_acked(origin_circuit_t *circ, const uint8_t *request,
    * than trying to attach them all. See comments bug 743. */
   /* If we already have the introduction circuit built, make sure we send
    * the INTRODUCE cell _now_ */
-  connection_ap_attach_pending();
+  connection_ap_attach_pending(1);
   return 0;
 }
 
@@ -1226,12 +1226,7 @@ rend_client_desc_trynow(const char *query)
       base_conn->timestamp_lastread = now;
       base_conn->timestamp_lastwritten = now;
 
-      if (connection_ap_handshake_attach_circuit(conn) < 0) {
-        /* it will never work */
-        log_warn(LD_REND,"Rendezvous attempt failed. Closing.");
-        if (!base_conn->marked_for_close)
-          connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
-      }
+      connection_ap_mark_as_pending_circuit(conn);
     } else { /* 404, or fetch didn't get that far */
       log_notice(LD_REND,"Closing stream for '%s.onion': hidden service is "
                  "unavailable (try again later).",
