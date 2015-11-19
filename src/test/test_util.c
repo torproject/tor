@@ -4425,6 +4425,11 @@ test_util_socketpair(void *arg)
    * Otherwise, we risk exposing a socketpair on a routable IP address. (Some
    * BSD jails use a routable address for localhost. Fortunately, they have
    * the real AF_UNIX socketpair.) */
+  if (-socketpair_result == SOCK_ERRNO(EINVAL)) {
+    /* In my testing, an IPv6-only FreeBSD jail without ::1 returned EINVAL.
+     * Assume we're on a machine without 127.0.0.1 or ::1 and give up now. */
+    goto done;
+  }
   tt_int_op(0, OP_EQ, socketpair_result);
   tt_assert(SOCKET_OK(fds[0]));
   tt_assert(SOCKET_OK(fds[1]));
