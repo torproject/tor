@@ -4342,9 +4342,6 @@ fd_is_nonblocking(tor_socket_t fd)
 }
 #endif
 
-#define ERRNO_IS_EPROTO(e)    (e == SOCK_ERRNO(EPROTONOSUPPORT))
-#define SOCK_ERR_IS_EPROTO(s) ERRNO_IS_EPROTO(tor_socket_errno(s))
-
 /* Test for tor_open_socket*, using IPv4 or IPv6 depending on arg. */
 static void
 test_util_socket(void *arg)
@@ -4361,7 +4358,7 @@ test_util_socket(void *arg)
   (void)arg;
 
   fd1 = tor_open_socket_with_extensions(domain, SOCK_STREAM, 0, 0, 0);
-  if (SOCK_ERR_IS_EPROTO(fd1)) {
+  if (tor_socket_errno(fd1) == SOCK_ERRNO(EPROTONOSUPPORT)) {
     /* Assume we're on an IPv4-only or IPv6-only system, and give up now. */
     goto done;
   }
@@ -4424,9 +4421,13 @@ test_util_socketpair(void *arg)
   int socketpair_result = 0;
 
   socketpair_result = tor_socketpair_fn(family, SOCK_STREAM, 0, fds);
-  if (ersatz && ERRNO_IS_EPROTO(-socketpair_result)) {
-    /* Assume we're on an IPv6-only system, and give up now.
-     * (tor_ersatz_socketpair uses IPv4.) */
+  /* If there is no 127.0.0.1 or ::1, tor_ersatz_socketpair will and must fail.
+   * Otherwise, we risk exposing a socketpair on a routable IP address. (Some
+   * BSD jails use a routable address for localhost. Fortunately, they have
+   * the real AF_UNIX socketpair.) */
+  if (-socketpair_result == SOCK_ERRNO(EINVAL)) {
+    /* In my testing, an IPv6-only FreeBSD jail without ::1 returned EINVAL.
+     * Assume we're on a machine without 127.0.0.1 or ::1 and give up now. */
     goto done;
   }
   tt_int_op(0, OP_EQ, socketpair_result);
@@ -4448,8 +4449,6 @@ test_util_socketpair(void *arg)
   if (SOCKET_OK(fds[1]))
     tor_close_socket(fds[1]);
 }
-
-#undef SOCKET_EPROTO
 
 static void
 test_util_max_mem(void *arg)

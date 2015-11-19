@@ -1,0 +1,5 @@
+  o Minor bugfix (IPv6 compatibility, unit tests):
+    - Make tor_ersatz_socketpair work on IPv6-only systems.
+      Fixes bug #17638; bugfix on a very early tor version,
+      earlier than 22dba27d8dd5 (23 Nov 2004) / svn:r2943.
+      Patch by "teor".
