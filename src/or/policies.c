@@ -8,6 +8,8 @@
  * \brief Code to parse and use address policies and exit policies.
  **/
 
+#define POLICIES_PRIVATE
+
 #include "or.h"
 #include "config.h"
 #include "dirserv.h"

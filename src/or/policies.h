@@ -93,7 +93,7 @@ addr_policy_result_t compare_tor_addr_to_short_policy(
                           const short_policy_t *policy);
 
 #ifdef POLICIES_PRIVATE
-void append_exit_policy_string(smartlist_t **policy, const char *more);
+STATIC void append_exit_policy_string(smartlist_t **policy, const char *more);
 #endif
 
 #endif

@@ -826,7 +826,7 @@ test_dump_exit_policy_to_string(void *arg)
 }
 
 static routerinfo_t *mock_desc_routerinfo = NULL;
-const routerinfo_t *mock_router_get_my_routerinfo(void)
+static const routerinfo_t *mock_router_get_my_routerinfo(void)
 {
   return mock_desc_routerinfo;
 }
