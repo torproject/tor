@@ -44,26 +44,34 @@ addr_policy_t *addr_policy_get_canonical_entry(addr_policy_t *ent);
 int cmp_addr_policies(smartlist_t *a, smartlist_t *b);
 MOCK_DECL(addr_policy_result_t, compare_tor_addr_to_addr_policy,
     (const tor_addr_t *addr, uint16_t port, const smartlist_t *policy));
-
 addr_policy_result_t compare_tor_addr_to_node_policy(const tor_addr_t *addr,
                               uint16_t port, const node_t *node);
 
-int policies_parse_exit_policy_from_options(const or_options_t *or_options,
-                                            uint32_t local_address,
-                                            tor_addr_t *ipv6_local_address,
-                                            int reject_interface_addresses,
-                                            smartlist_t **result);
+int policies_parse_exit_policy_from_options(
+                                          const or_options_t *or_options,
+                                          uint32_t local_address,
+                                          const tor_addr_t *ipv6_local_address,
+                                          smartlist_t **result);
 int policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
                                exit_policy_parser_cfg_t options,
-                               uint32_t local_address,
-                               tor_addr_t *ipv6_local_address,
-                               int reject_interface_addresses);
+                               const smartlist_t *configured_addresses);
+void policies_parse_exit_policy_reject_private(
+                                      smartlist_t **dest,
+                                      int ipv6_exit,
+                                      const smartlist_t *configured_addresses,
+                                      int reject_interface_addresses,
+                                      int reject_configured_port_addresses);
 void policies_exit_policy_append_reject_star(smartlist_t **dest);
 void addr_policy_append_reject_addr(smartlist_t **dest,
                                     const tor_addr_t *addr);
+void addr_policy_append_reject_addr_list(smartlist_t **dest,
+                                         const smartlist_t *addrs);
 void policies_set_node_exitpolicy_to_reject_all(node_t *exitrouter);
 int exit_policy_is_general_exit(smartlist_t *policy);
 int policy_is_reject_star(const smartlist_t *policy, sa_family_t family);
+char * policy_dump_to_string(const smartlist_t *policy_list,
+                             int include_ipv4,
+                             int include_ipv6);
 int getinfo_helper_policies(control_connection_t *conn,
                             const char *question, char **answer,
                             const char **errmsg);
@@ -83,6 +91,10 @@ int short_policy_is_reject_star(const short_policy_t *policy);
 addr_policy_result_t compare_tor_addr_to_short_policy(
                           const tor_addr_t *addr, uint16_t port,
                           const short_policy_t *policy);
+
+#ifdef POLICIES_PRIVATE
+void append_exit_policy_string(smartlist_t **policy, const char *more);
+#endif
 
 #endif
 

@@ -1571,7 +1571,7 @@ is non-zero):
     used with accept6/reject6.) +
  +
     Private addresses are rejected by default (at the beginning of your exit
-    policy), along with the configured primary public IPv4 and IPv6 addresses,
+    policy), along with any configured primary public IPv4 and IPv6 addresses,
     and any public IPv4 and IPv6 addresses on any interface on the relay.
     These private addresses are rejected unless you set the
     ExitPolicyRejectPrivate config option to 0. For example, once you've done
@@ -1609,10 +1609,13 @@ is non-zero):
     IPv4 and IPv6 addresses.
 
 [[ExitPolicyRejectPrivate]] **ExitPolicyRejectPrivate** **0**|**1**::
-    Reject all private (local) networks, along with your own configured public
-    IPv4 and IPv6 addresses, at the beginning of your exit policy. Also reject
-    any public IPv4 and IPv6 addresses on any interface on the relay. (If
-    IPv6Exit is not set, all IPv6 addresses will be rejected anyway.)
+    Reject all private (local) networks, along with any configured public
+    IPv4 and IPv6 addresses, at the beginning of your exit policy. (This
+    includes the IPv4 and IPv6 addresses advertised by the relay, any
+    OutboundBindAddress, and the bind addresses of any port options, such as
+    ORPort and DirPort.) This also rejects any public IPv4 and IPv6 addresses
+    on any interface on the relay. (If IPv6Exit is not set, all IPv6 addresses
+    will be rejected anyway.)
     See above entry on ExitPolicy.
     (Default: 1)
 

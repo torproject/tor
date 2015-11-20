@@ -1922,7 +1922,7 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
     /* DNS is screwed up; don't claim to be an exit. */
     policies_exit_policy_append_reject_star(&ri->exit_policy);
   } else {
-    policies_parse_exit_policy_from_options(options,ri->addr,&ri->ipv6_addr,1,
+    policies_parse_exit_policy_from_options(options,ri->addr,&ri->ipv6_addr,
                                             &ri->exit_policy);
   }
   ri->policy_is_reject_star =
@@ -2728,44 +2728,13 @@ router_dump_exit_policy_to_string(const routerinfo_t *router,
                                   int include_ipv4,
                                   int include_ipv6)
 {
-  smartlist_t *exit_policy_strings;
-  char *policy_string = NULL;
-
   if ((!router->exit_policy) || (router->policy_is_reject_star)) {
     return tor_strdup("reject *:*");
   }
 
-  exit_policy_strings = smartlist_new();
-
-  SMARTLIST_FOREACH_BEGIN(router->exit_policy, addr_policy_t *, tmpe) {
-    char *pbuf;
-    int bytes_written_to_pbuf;
-    if ((tor_addr_family(&tmpe->addr) == AF_INET6) && (!include_ipv6)) {
-      continue; /* Don't include IPv6 parts of address policy */
-    }
-    if ((tor_addr_family(&tmpe->addr) == AF_INET) && (!include_ipv4)) {
-      continue; /* Don't include IPv4 parts of address policy */
-    }
-
-    pbuf = tor_malloc(POLICY_BUF_LEN);
-    bytes_written_to_pbuf = policy_write_item(pbuf,POLICY_BUF_LEN, tmpe, 1);
-
-    if (bytes_written_to_pbuf < 0) {
-      log_warn(LD_BUG, "router_dump_exit_policy_to_string ran out of room!");
-      tor_free(pbuf);
-      goto done;
-    }
-
-    smartlist_add(exit_policy_strings,pbuf);
-  } SMARTLIST_FOREACH_END(tmpe);
-
-  policy_string = smartlist_join_strings(exit_policy_strings, "\n", 0, NULL);
-
- done:
-  SMARTLIST_FOREACH(exit_policy_strings, char *, str, tor_free(str));
-  smartlist_free(exit_policy_strings);
-
-  return policy_string;
+  return policy_dump_to_string(router->exit_policy,
+                               include_ipv4,
+                               include_ipv6);
 }
 
 /** Copy the primary (IPv4) OR port (IP address and TCP port) for
