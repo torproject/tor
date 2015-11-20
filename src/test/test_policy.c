@@ -681,7 +681,7 @@ test_policies_reject_port_address(void *arg)
   addr_policy_list_free(policy);
   policy = NULL;
 
-done:
+ done:
   addr_policy_list_free(policy);
   if (test_configured_ports) {
     SMARTLIST_FOREACH(test_configured_ports,
@@ -826,7 +826,8 @@ test_dump_exit_policy_to_string(void *arg)
 }
 
 static routerinfo_t *mock_desc_routerinfo = NULL;
-static const routerinfo_t *mock_router_get_my_routerinfo(void)
+static const routerinfo_t *
+mock_router_get_my_routerinfo(void)
 {
   return mock_desc_routerinfo;
 }
@@ -948,7 +949,7 @@ test_policies_getinfo_helper_policies(void *arg)
   tt_assert(strlen(answer) == ipv4_len + ipv6_len + 1);
   tor_free(answer);
 
-done:
+ done:
   tor_free(answer);
   UNMOCK(get_options);
   UNMOCK(router_get_my_routerinfo);
@@ -966,7 +967,8 @@ struct testcase_t policy_tests[] = {
   { "getinfo_helper_policies", test_policies_getinfo_helper_policies, 0, NULL,
     NULL },
   { "reject_exit_address", test_policies_reject_exit_address, 0, NULL, NULL },
-  { "reject_interface_address", test_policies_reject_interface_address, 0, NULL, NULL },
+  { "reject_interface_address", test_policies_reject_interface_address, 0,
+    NULL, NULL },
   { "reject_port_address", test_policies_reject_port_address, 0, NULL, NULL },
   END_OF_TESTCASES
 };

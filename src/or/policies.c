@@ -901,7 +901,6 @@ addr_policy_append_reject_addr(smartlist_t **dest, const tor_addr_t *addr)
   smartlist_add(*dest, add);
   log_debug(LD_CONFIG, "Adding a reject ExitPolicy 'reject %s:*'",
             fmt_addr(addr));
-
 }
 
 /* Is addr public for the purposes of rejection? */
@@ -1308,7 +1307,6 @@ policies_add_outbound_addresses_to_smartlist(smartlist_t *addr_list,
                                    &or_options->OutboundBindAddressIPv6_);
   }
 }
-
 
 /** Parse <b>ExitPolicy</b> member of <b>or_options</b> into <b>result</b>
  * smartlist.
@@ -2103,7 +2101,7 @@ policy_dump_to_string(const smartlist_t *policy_list,
 
   policy_string = smartlist_join_strings(policy_string_list, "\n", 0, NULL);
 
-done:
+ done:
   SMARTLIST_FOREACH(policy_string_list, char *, str, tor_free(str));
   smartlist_free(policy_string_list);
 

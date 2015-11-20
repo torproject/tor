@@ -1568,7 +1568,7 @@ tor_ersatz_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
     tor_addr_to_sockaddr(&listen_tor_addr,
                          0 /* kernel chooses port.  */,
                          &listen_addr,
-                         sizeof (listen_addr));
+                         sizeof(listen_addr));
     if (bind(listener, &listen_addr, sizeof (listen_addr)) == -1)
       goto tidy_up_and_fail;
     if (listen(listener, 1) == -1)
