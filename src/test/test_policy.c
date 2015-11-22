@@ -692,8 +692,44 @@ test_policies_reject_port_address(void *arg)
   UNMOCK(get_configured_ports);
 }
 
-#undef TEST_IPV4_ADDR
-#undef TEST_IPV6_ADDR
+smartlist_t *mock_ipv4_addrs = NULL;
+smartlist_t *mock_ipv6_addrs = NULL;
+
+/* mock get_interface_address6_list, returning a deep copy of the template
+ * address list ipv4_interface_address_list or ipv6_interface_address_list */
+static smartlist_t *
+mock_get_interface_address6_list(int severity,
+                            sa_family_t family,
+                            int include_internal)
+{
+  (void)severity;
+  (void)include_internal;
+  smartlist_t *clone_list = smartlist_new();
+  smartlist_t *template_list = NULL;
+
+  if (family == AF_INET) {
+    template_list = mock_ipv4_addrs;
+  } else if (family == AF_INET6) {
+    template_list = mock_ipv6_addrs;
+  } else {
+    return NULL;
+  }
+
+  tt_assert(template_list);
+
+  SMARTLIST_FOREACH_BEGIN(template_list, tor_addr_t *, src_addr) {
+    tor_addr_t *dest_addr = malloc(sizeof(tor_addr_t));
+    memset(dest_addr, 0, sizeof(*dest_addr));
+    tor_addr_copy_tight(dest_addr, src_addr);
+    smartlist_add(clone_list, dest_addr);
+  } SMARTLIST_FOREACH_END(src_addr);
+
+  return clone_list;
+
+ done:
+  free_interface_address6_list(clone_list);
+  return NULL;
+}
 
 /** Run unit tests for rejecting publicly routable interface addresses on this
  * exit relay using policies_parse_exit_policy_reject_private */
@@ -705,7 +741,43 @@ test_policies_reject_interface_address(void *arg)
     get_interface_address6_list(LOG_INFO, AF_INET, 0);
   smartlist_t *public_ipv6_addrs =
     get_interface_address6_list(LOG_INFO, AF_INET6, 0);
+  tor_addr_t ipv4_addr, ipv6_addr;
   (void)arg;
+
+  /* test that no addresses are rejected when none are supplied/requested */
+  policies_parse_exit_policy_reject_private(&policy, 0, NULL, 0, 0);
+  tt_assert(policy == NULL);
+
+  /* test that only IPv4 interface addresses are rejected on an IPv4-only exit
+   * (and allow for duplicates)
+   */
+  policies_parse_exit_policy_reject_private(&policy, 0, NULL, 1, 0);
+  if (policy) {
+    tt_assert(smartlist_len(policy) <= smartlist_len(public_ipv4_addrs));
+    addr_policy_list_free(policy);
+    policy = NULL;
+  }
+
+  /* test that IPv4 and IPv6 interface addresses are rejected on an IPv4/IPv6
+   * exit (and allow for duplicates) */
+  policies_parse_exit_policy_reject_private(&policy, 1, NULL, 1, 0);
+  if (policy) {
+    tt_assert(smartlist_len(policy) <= (smartlist_len(public_ipv4_addrs)
+                                        + smartlist_len(public_ipv6_addrs)));
+    addr_policy_list_free(policy);
+    policy = NULL;
+  }
+
+  /* Now do it all again, but mocked */
+  tor_addr_from_ipv4h(&ipv4_addr, TEST_IPV4_ADDR);
+  mock_ipv4_addrs = smartlist_new();
+  smartlist_add(mock_ipv4_addrs, (void *)&ipv4_addr);
+
+  tor_addr_parse(&ipv6_addr, TEST_IPV6_ADDR);
+  mock_ipv6_addrs = smartlist_new();
+  smartlist_add(mock_ipv6_addrs, (void *)&ipv6_addr);
+
+  MOCK(get_interface_address6_list, mock_get_interface_address6_list);
 
   /* test that no addresses are rejected when none are supplied/requested */
   policies_parse_exit_policy_reject_private(&policy, 0, NULL, 0, 0);
@@ -714,27 +786,34 @@ test_policies_reject_interface_address(void *arg)
   /* test that only IPv4 interface addresses are rejected on an IPv4-only exit
    */
   policies_parse_exit_policy_reject_private(&policy, 0, NULL, 1, 0);
-  if (policy) {
-    tt_assert(smartlist_len(policy) == smartlist_len(public_ipv4_addrs));
-    addr_policy_list_free(policy);
-    policy = NULL;
-  }
+  tt_assert(policy);
+  tt_assert(smartlist_len(policy) == smartlist_len(mock_ipv4_addrs));
+  addr_policy_list_free(policy);
+  policy = NULL;
 
   /* test that IPv4 and IPv6 interface addresses are rejected on an IPv4/IPv6
    * exit */
-  policies_parse_exit_policy_reject_private(&policy, 0, NULL, 1, 0);
-  if (policy) {
-    tt_assert(smartlist_len(policy) == (smartlist_len(public_ipv4_addrs)
-                                        + smartlist_len(public_ipv6_addrs)));
-    addr_policy_list_free(policy);
-    policy = NULL;
-  }
+  policies_parse_exit_policy_reject_private(&policy, 1, NULL, 1, 0);
+  tt_assert(policy);
+  tt_assert(smartlist_len(policy) == (smartlist_len(mock_ipv4_addrs)
+                                      + smartlist_len(mock_ipv6_addrs)));
+  addr_policy_list_free(policy);
+  policy = NULL;
 
  done:
   addr_policy_list_free(policy);
   free_interface_address6_list(public_ipv4_addrs);
   free_interface_address6_list(public_ipv6_addrs);
+
+  UNMOCK(get_interface_address6_list);
+  /* we don't use free_interface_address6_list on these lists because their
+   * address pointers are stack-based */
+  smartlist_free(mock_ipv4_addrs);
+  smartlist_free(mock_ipv6_addrs);
 }
+
+#undef TEST_IPV4_ADDR
+#undef TEST_IPV6_ADDR
 
 static void
 test_dump_exit_policy_to_string(void *arg)
