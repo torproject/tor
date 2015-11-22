@@ -2335,8 +2335,7 @@ crypto_strongest_rand(uint8_t *out, size_t out_len)
 }
 
 /** Seed OpenSSL's random number generator with bytes from the operating
- * system.  <b>startup</b> should be true iff we have just started Tor and
- * have not yet allocated a bunch of fds.  Return 0 on success, -1 on failure.
+ * system.  Return 0 on success, -1 on failure.
  */
 int
 crypto_seed_rng(void)
