@@ -2140,13 +2140,19 @@ getinfo_helper_policies(control_connection_t *conn,
   } else if (!strcmp(question, "exit-policy/reject-private/relay")) {
     const or_options_t *options = get_options();
     const routerinfo_t *me = router_get_my_routerinfo();
-    smartlist_t *private_policy_list = smartlist_new();
-    smartlist_t *configured_addresses = smartlist_new();
 
     if (!me) {
       *errmsg = "router_get_my_routerinfo returned NULL";
       return -1;
     }
+
+    if (!options->ExitPolicyRejectPrivate) {
+      *answer = tor_strdup("");
+      return 0;
+    }
+
+    smartlist_t *private_policy_list = smartlist_new();
+    smartlist_t *configured_addresses = smartlist_new();
 
     /* Add the configured addresses to the tor_addr_t* list */
     policies_add_ipv4h_to_smartlist(configured_addresses, me->addr);
@@ -2162,6 +2168,7 @@ getinfo_helper_policies(control_connection_t *conn,
     *answer = policy_dump_to_string(private_policy_list, 1, 1);
 
     addr_policy_list_free(private_policy_list);
+    addr_policy_list_free(configured_addresses);
   } else if (!strcmpstart(question, "exit-policy/")) {
     const routerinfo_t *me = router_get_my_routerinfo();
 
