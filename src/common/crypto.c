@@ -1332,7 +1332,7 @@ crypto_pk_get_all_digests(crypto_pk_t *pk, digests_t *digests_out)
 }
 
 /** Copy <b>in</b> to the <b>outlen</b>-byte buffer <b>out</b>, adding spaces
- * every four spaces. */
+ * every four characters. */
 void
 crypto_add_spaces_to_fp(char *out, size_t outlen, const char *in)
 {
