@@ -432,7 +432,8 @@ crypto_pk_get_rsa_(crypto_pk_t *env)
 }
 
 /** used by tortls.c: get an equivalent EVP_PKEY* for a crypto_pk_t.  Iff
- * private is set, include the private-key portion of the key. */
+ * private is set, include the private-key portion of the key. Return a valid
+ * pointer on success, and NULL on failure. */
 MOCK_IMPL(EVP_PKEY *,
           crypto_pk_get_evp_pkey_,(crypto_pk_t *env, int private))
 {
@@ -656,7 +657,8 @@ crypto_pk_read_private_key_from_filename(crypto_pk_t *env,
   return 0;
 }
 
-/** Helper function to implement crypto_pk_write_*_key_to_string. */
+/** Helper function to implement crypto_pk_write_*_key_to_string. Return 0 on
+ * success, -1 on failure. */
 static int
 crypto_pk_write_key_to_string_impl(crypto_pk_t *env, char **dest,
                                    size_t *len, int is_public)
@@ -897,7 +899,8 @@ crypto_pk_dup_key(crypto_pk_t *env)
   return env;
 }
 
-/** Make a real honest-to-goodness copy of <b>env</b>, and return it. */
+/** Make a real honest-to-goodness copy of <b>env</b>, and return it.
+ * Returns NULL on failure. */
 crypto_pk_t *
 crypto_pk_copy_full(crypto_pk_t *env)
 {
@@ -1189,7 +1192,8 @@ crypto_pk_public_hybrid_encrypt(crypto_pk_t *env,
   return -1;
 }
 
-/** Invert crypto_pk_public_hybrid_encrypt. */
+/** Invert crypto_pk_public_hybrid_encrypt. Returns the number of bytes
+ * written on success, -1 on failure. */
 int
 crypto_pk_private_hybrid_decrypt(crypto_pk_t *env,
                                  char *to,
@@ -1484,7 +1488,7 @@ crypto_cipher_get_key(crypto_cipher_t *env)
 
 /** Encrypt <b>fromlen</b> bytes from <b>from</b> using the cipher
  * <b>env</b>; on success, store the result to <b>to</b> and return 0.
- * On failure, return -1.
+ * Does not check for failure.
  */
 int
 crypto_cipher_encrypt(crypto_cipher_t *env, char *to,
@@ -1503,7 +1507,7 @@ crypto_cipher_encrypt(crypto_cipher_t *env, char *to,
 
 /** Decrypt <b>fromlen</b> bytes from <b>from</b> using the cipher
  * <b>env</b>; on success, store the result to <b>to</b> and return 0.
- * On failure, return -1.
+ * Does not check for failure.
  */
 int
 crypto_cipher_decrypt(crypto_cipher_t *env, char *to,
@@ -1519,7 +1523,7 @@ crypto_cipher_decrypt(crypto_cipher_t *env, char *to,
 }
 
 /** Encrypt <b>len</b> bytes on <b>from</b> using the cipher in <b>env</b>;
- * on success, return 0.  On failure, return -1.
+ * on success, return 0. Does not check for failure.
  */
 int
 crypto_cipher_crypt_inplace(crypto_cipher_t *env, char *buf, size_t len)
@@ -1591,7 +1595,7 @@ crypto_cipher_decrypt_with_iv(const char *key,
 
 /** Compute the SHA1 digest of the <b>len</b> bytes on data stored in
  * <b>m</b>.  Write the DIGEST_LEN byte result into <b>digest</b>.
- * Return 0 on success, -1 on failure.
+ * Return 0 on success, 1 on failure.
  */
 int
 crypto_digest(char *digest, const char *m, size_t len)
@@ -1603,7 +1607,7 @@ crypto_digest(char *digest, const char *m, size_t len)
 
 /** Compute a 256-bit digest of <b>len</b> bytes in data stored in <b>m</b>,
  * using the algorithm <b>algorithm</b>.  Write the DIGEST_LEN256-byte result
- * into <b>digest</b>.  Return 0 on success, -1 on failure. */
+ * into <b>digest</b>.  Return 0 on success, 1 on failure. */
 int
 crypto_digest256(char *digest, const char *m, size_t len,
                  digest_algorithm_t algorithm)
@@ -1836,7 +1840,7 @@ crypto_digest_smartlist_prefix(char *digest_out, size_t len_out,
 
 /** Compute the HMAC-SHA-256 of the <b>msg_len</b> bytes in <b>msg</b>, using
  * the <b>key</b> of length <b>key_len</b>.  Store the DIGEST256_LEN-byte
- * result in <b>hmac_out</b>.
+ * result in <b>hmac_out</b>. Asserts on failure.
  */
 void
 crypto_hmac_sha256(char *hmac_out,
@@ -1941,7 +1945,8 @@ init_dh_param(void)
  */
 #define DH_PRIVATE_KEY_BITS 320
 
-/** Allocate and return a new DH object for a key exchange.
+/** Allocate and return a new DH object for a key exchange. Returns NULL on
+ * failure.
  */
 crypto_dh_t *
 crypto_dh_new(int dh_type)
@@ -2196,7 +2201,7 @@ crypto_expand_key_material_TAP(const uint8_t *key_in, size_t key_in_len,
  * secret key material; the <b>salt_in_len</b> bytes at <b>salt_in</b> and the
  * <b>info_in_len</b> bytes in <b>info_in_len</b> are the algorithm's "salt"
  * and "info" parameters respectively.  On success, write <b>key_out_len</b>
- * bytes to <b>key_out</b> and return 0.  On failure, return -1.
+ * bytes to <b>key_out</b> and return 0.  Assert on failure.
  */
 int
 crypto_expand_key_material_rfc5869_sha256(
@@ -2280,7 +2285,7 @@ crypto_seed_weak_rng(tor_weak_rng_t *rng)
 }
 
 /** Try to get <b>out_len</b> bytes of the strongest entropy we can generate,
- * storing it into <b>out</b>.
+ * storing it into <b>out</b>. Return -1 on success, 0 on failure.
  */
 int
 crypto_strongest_rand(uint8_t *out, size_t out_len)
@@ -2373,7 +2378,7 @@ crypto_rand, (char *to, size_t n))
 }
 
 /** Write <b>n</b> bytes of strong random data to <b>to</b>. Return 0 on
- * success, -1 on failure.  Most callers will want crypto_rand instead.
+ * success, assert on failure.  Most callers will want crypto_rand instead.
  */
 int
 crypto_rand_unmocked(char *to, size_t n)
@@ -2410,8 +2415,8 @@ crypto_rand_int(unsigned int max)
   }
 }
 
-/** Return a pseudorandom integer, chosen uniformly from the values <i>i</i>
- * such that <b>min</b> &lt;= <i>i</i> &lt <b>max</b>.
+/** Return a pseudorandom integer, chosen uniformly from the values i such
+ * that min <= i < max.
  *
  * <b>min</b> MUST be in range [0, <b>max</b>).
  * <b>max</b> MUST be in range (min, INT_MAX].
@@ -2488,7 +2493,7 @@ crypto_rand_double(void)
 /** Generate and return a new random hostname starting with <b>prefix</b>,
  * ending with <b>suffix</b>, and containing no fewer than
  * <b>min_rand_len</b> and no more than <b>max_rand_len</b> random base32
- * characters between.
+ * characters. Does not check for failure.
  *
  * Clip <b>max_rand_len</b> to MAX_DNS_LABEL_SIZE.
  **/
@@ -2670,7 +2675,7 @@ tor_set_openssl_thread_id(CRYPTO_THREADID *threadid)
 
 /** @{ */
 /** Helper: Construct mutexes, and set callbacks to help OpenSSL handle being
- * multithreaded. */
+ * multithreaded. Returns 0. */
 static int
 setup_openssl_threading(void)
 {
@@ -2688,7 +2693,8 @@ setup_openssl_threading(void)
   return 0;
 }
 
-/** Uninitialize the crypto library. Return 0 on success, -1 on failure.
+/** Uninitialize the crypto library. Return 0 on success. Does not detect
+ * failure.
  */
 int
 crypto_global_cleanup(void)
