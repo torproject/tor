@@ -1906,11 +1906,14 @@ crypto_hmac_sha256(char *hmac_out,
                    const char *key, size_t key_len,
                    const char *msg, size_t msg_len)
 {
+  unsigned char *rv = NULL;
   /* If we've got OpenSSL >=0.9.8 we can use its hmac implementation. */
   tor_assert(key_len < INT_MAX);
   tor_assert(msg_len < INT_MAX);
-  HMAC(EVP_sha256(), key, (int)key_len, (unsigned char*)msg, (int)msg_len,
-       (unsigned char*)hmac_out, NULL);
+  tor_assert(hmac_out);
+  rv = HMAC(EVP_sha256(), key, (int)key_len, (unsigned char*)msg, (int)msg_len,
+            (unsigned char*)hmac_out, NULL);
+  tor_assert(rv);
 }
 
 /* DH */
