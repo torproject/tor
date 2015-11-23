@@ -969,7 +969,7 @@ geoip_get_dirreq_history(dirreq_type_t type)
                                                &ent->completion_time);
       if (time_diff == 0)
         time_diff = 1; /* Avoid DIV/0; "instant" answers are impossible
-                        * by law of nature or something, but a milisecond
+                        * by law of nature or something, but a millisecond
                         * is a bit greater than "instantly" */
       bytes_per_second = (uint32_t)(1000 * ent->response_size / time_diff);
       dltimes[ent_sl_idx] = bytes_per_second;

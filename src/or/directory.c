@@ -3398,7 +3398,7 @@ connection_dir_finished_flushing(dir_connection_t *conn)
   tor_assert(conn->base_.type == CONN_TYPE_DIR);
 
   /* Note that we have finished writing the directory response. For direct
-   * connections this means we're done, for tunneled connections its only
+   * connections this means we're done; for tunneled connections it's only
    * an intermediate step. */
   if (conn->dirreq_id)
     geoip_change_dirreq_state(conn->dirreq_id, DIRREQ_TUNNELED,
