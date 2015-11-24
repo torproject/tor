@@ -2449,7 +2449,7 @@ The following options are used for running a testing Tor network.
     authority on a testing network. Overrides the usual default lower bound
     of 4 KB. (Default: 0)
 
-[[TestingLinkCertLifetime]] **TestingLinkCertifetime** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**|**months**::
+[[TestingLinkCertLifetime]] **TestingLinkCertLifetime** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**|**months**::
     Overrides the default lifetime for the certificates used to authenticate
     our X509 link cert with our ed25519 signing key.
     (Default: 2 days)
