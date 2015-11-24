@@ -1611,7 +1611,7 @@ crypto_digest256(char *digest, const char *m, size_t len,
 
 /** Compute a 512-bit digest of <b>len</b> bytes in data stored in <b>m</b>,
  * using the algorithm <b>algorithm</b>.  Write the DIGEST_LEN512-byte result
- * into <b>digest</b>.  Return 0 on success, -1 on failure. */
+ * into <b>digest</b>.  Return 0 on success, 1 on failure. */
 int
 crypto_digest512(char *digest, const char *m, size_t len,
                  digest_algorithm_t algorithm)
@@ -1854,7 +1854,7 @@ crypto_digest_smartlist(char *digest_out, size_t len_out,
  * optional string <b>prepend</b>, those strings,
  * and the optional string <b>append</b>, computed with the algorithm
  * <b>alg</b>.
- * <b>out_len</b> must be \<= DIGEST512_LEN. */
+ * <b>len_out</b> must be \<= DIGEST512_LEN. */
 void
 crypto_digest_smartlist_prefix(char *digest_out, size_t len_out,
                         const char *prepend,
@@ -1862,13 +1862,24 @@ crypto_digest_smartlist_prefix(char *digest_out, size_t len_out,
                         const char *append,
                         digest_algorithm_t alg)
 {
-  crypto_digest_t *d;
-  if (alg == DIGEST_SHA1) {
-    d = crypto_digest_new();
-  } else if (alg == DIGEST_SHA512) {
-    d = crypto_digest512_new(alg);
-  } else {
-    d = crypto_digest256_new(alg);
+  crypto_digest_t *d = NULL;
+  switch (alg) {
+    case DIGEST_SHA1:
+      d = crypto_digest_new();
+      break;
+    case DIGEST_SHA256:
+      d = crypto_digest256_new(alg);
+      break;
+    case DIGEST_SHA512:
+      d = crypto_digest512_new(alg);
+      break;
+    default:
+      log_warn(LD_BUG, "Called with unknown algorithm %d", alg);
+      /* If fragile_assert is not enabled, wipe output and return
+       * without running any calculations */
+      memwipe(digest_out, 0xff, len_out);
+      tor_fragile_assert();
+      goto free;
   }
   if (prepend)
     crypto_digest_add_bytes(d, prepend, strlen(prepend));
@@ -1877,7 +1888,10 @@ crypto_digest_smartlist_prefix(char *digest_out, size_t len_out,
   if (append)
     crypto_digest_add_bytes(d, append, strlen(append));
   crypto_digest_get_digest(d, digest_out, len_out);
-  crypto_digest_free(d);
+
+ free:
+  if (d != NULL)
+    crypto_digest_free(d);
 }
 
 /** Compute the HMAC-SHA-256 of the <b>msg_len</b> bytes in <b>msg</b>, using
