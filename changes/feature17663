@@ -1,0 +1,2 @@
+  o Minor feature:
+    - Adds SHA512 support to crypto.c
