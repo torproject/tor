@@ -2654,7 +2654,7 @@ SEE ALSO
 BUGS
 ----
 
-Plenty, probably. Tor is still in development. Please report them.
+Plenty, probably. Tor is still in development. Please report them at https://trac.torproject.org/.
 
 AUTHORS
 -------
