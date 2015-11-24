@@ -2459,8 +2459,10 @@ The following options are used for running a testing Tor network.
     key.
     (Default: 2 days)
 
-[[TestingLinkKeySlop]] **TestingLinkKeySlop** __N__ **seconds**|**minutes**|**hours**::
-[[TestingAuthKeySlop]] **TestingAuthKeySlop** __N__ **seconds**|**minutes**|**hours**::
+[[TestingLinkKeySlop]] **TestingLinkKeySlop** __N__ **seconds**|**minutes**|**hours** +
+
+[[TestingAuthKeySlop]] **TestingAuthKeySlop** __N__ **seconds**|**minutes**|**hours** +
+
 [[TestingSigningKeySlop]] **TestingSigningKeySlop** __N__ **seconds**|**minutes**|**hours**::
     How early before the official expiration of a an Ed25519 signing key do
     we replace it and issue a new key?
