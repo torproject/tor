@@ -1936,11 +1936,6 @@ if DirPort is non-zero):
     to set up a separate webserver. There's a sample disclaimer in
     contrib/operator-tools/tor-exit-notice.html.
 
-[[HidServDirectoryV2]] **HidServDirectoryV2** **0**|**1**::
-    When this option is set, Tor accepts and serves v2 hidden service
-    descriptors. Setting DirPort is not required for this, because clients
-    connect via the ORPort by default. (Default: 1)
-
 [[DirPort]] **DirPort** \['address':]__PORT__|**auto** [_flags_]::
     If this option is nonzero, advertise the directory service on this port.
     Set it to "auto" to have Tor pick a port for you.  This option can occur
@@ -2151,11 +2146,6 @@ on the public Tor network.
     Tells an authority, or other node tracking node reliability and history,
     that fine-grained information about nodes can be discarded when it hasn't
     changed for a given amount of time.  (Default: 24 hours)
-
-[[VoteOnHidServDirectoriesV2]] **VoteOnHidServDirectoriesV2** **0**|**1**::
-    When this option is set in addition to **AuthoritativeDirectory**, Tor
-    votes on whether to accept relays as hidden service directories.
-    (Default: 1)
 
 [[AuthDirHasIPv6Connectivity]] **AuthDirHasIPv6Connectivity** **0**|**1**::
     Authoritative directories only. When set to 0, OR ports with an
@@ -2420,7 +2410,7 @@ The following options are used for running a testing Tor network.
     information on how to specify nodes.
  +
     In order for this option to have any effect, **TestingTorNetwork**
-    and **VoteOnHidServDirectoriesV2** both have to be set.
+    must be set.
 
 [[TestingDirAuthVoteHSDirIsStrict]] **TestingDirAuthVoteHSDirIsStrict** **0**|**1** ::
     If True (1), a node will never receive the HSDir flag unless it is specified
