@@ -221,7 +221,7 @@ GENERAL OPTIONS
     any pluggable transport proxy that tries to launch __transport__. +
     (Example: ServerTransportOptions obfs45 shared-secret=bridgepasswd cache=/var/lib/tor/cache)
 
-[[ExtORPort]] **ExtORPort** \['address':]__port__|**auto**
+[[ExtORPort]] **ExtORPort** \['address':]__port__|**auto**::
     Open this port to listen for Extended ORPort connections from your
     pluggable transports.
 
