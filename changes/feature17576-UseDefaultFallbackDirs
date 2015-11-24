@@ -1,0 +1,4 @@
+  o Minor feature (fallback directories):
+    - Add UseDefaultFallbackDirs, which enables any hard-coded fallback
+      directory mirrors. Default is 1, set it to 0 to disable fallbacks.
+      Implements ticket 17576. Patch by "teor".

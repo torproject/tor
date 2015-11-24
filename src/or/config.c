@@ -251,6 +251,7 @@ static config_var_t option_vars_[] = {
   V(ExtORPortCookieAuthFileGroupReadable, BOOL, "0"),
   V(ExtraInfoStatistics,         BOOL,     "1"),
   V(FallbackDir,                 LINELIST, NULL),
+  V(UseDefaultFallbackDirs,      BOOL,     "1"),
 
   OBSOLETE("FallbackNetworkstatusFile"),
   V(FascistFirewall,             BOOL,     "0"),
@@ -990,6 +991,7 @@ consider_adding_dir_servers(const or_options_t *options,
     !smartlist_len(router_get_fallback_dir_servers()) || !old_options ||
     !config_lines_eq(options->DirAuthorities, old_options->DirAuthorities) ||
     !config_lines_eq(options->FallbackDir, old_options->FallbackDir) ||
+    (options->UseDefaultFallbackDirs != old_options->UseDefaultFallbackDirs) ||
     !config_lines_eq(options->AlternateBridgeAuthority,
                      old_options->AlternateBridgeAuthority) ||
     !config_lines_eq(options->AlternateDirAuthority,
@@ -1018,8 +1020,8 @@ consider_adding_dir_servers(const or_options_t *options,
       type |= V3_DIRINFO | EXTRAINFO_DIRINFO | MICRODESC_DIRINFO;
       /* Only add the default fallback directories when the DirAuthorities,
        * AlternateDirAuthority, and FallbackDir directory config options
-       * are set to their defaults. */
-      if (!options->FallbackDir) {
+       * are set to their defaults, and when UseDefaultFallbackDirs is 1. */
+      if (!options->FallbackDir && options->UseDefaultFallbackDirs) {
         add_default_fallback_dir_servers();
       }
     }
@@ -3531,6 +3533,13 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (validate_addr_policies(options, msg) < 0)
     return -1;
+
+  /* If FallbackDir is set, we don't UseDefaultFallbackDirs */
+  if (options->UseDefaultFallbackDirs && options->FallbackDir) {
+    log_info(LD_CONFIG, "You have set UseDefaultFallbackDirs 1 and "
+             "FallbackDir(s). Ignoring UseDefaultFallbackDirs, and "
+             "using the FallbackDir(s) you have set.");
+  }
 
   if (validate_dir_servers(options, old_options) < 0)
     REJECT("Directory authority/fallback line did not parse. See logs "
