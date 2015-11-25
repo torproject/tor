@@ -967,6 +967,9 @@ AC_CHECK_HEADERS(net/pfvar.h, net_pfvar_found=1, net_pfvar_found=0,
 #endif
 #ifdef HAVE_NET_IF_H
 #include <net/if.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
 #endif])
 
 AC_CHECK_HEADERS(linux/if.h,[],[],
