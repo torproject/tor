@@ -1,0 +1,5 @@
+  o Minor bugfixes (compilation):
+
+    - Fix search for libevent libraries on OpenBSD (and similar systems
+      which install libevent 1 and libevent 2 in parallel). Resolves
+      ticket 16651.  Patch from "rubiate".
