@@ -98,8 +98,8 @@ COMMAND-LINE OPTIONS
 Other options can be specified on the command-line in the format "--option
 value", in the format "option value", or in a configuration file.  For
 instance, you can tell Tor to start listening for SOCKS connections on port
-9999 by passing --SOCKSPort 9999 or SOCKSPort 9999 to it on the command line,
-or by putting "SOCKSPort 9999" in the configuration file.  You will need to
+9999 by passing --SocksPort 9999 or SocksPort 9999 to it on the command line,
+or by putting "SocksPort 9999" in the configuration file.  You will need to
 quote options with spaces in them: if you want Tor to log all debugging
 messages to debug.log, you will probably need to say --Log 'debug file
 debug.log'.
@@ -125,17 +125,17 @@ the defaults file.
 
 This rule is simple for options that take a single value, but it can become
 complicated for options that are allowed to occur more than once: if you
-specify four SOCKSPorts in your configuration file, and one more SOCKSPort on
+specify four SocksPorts in your configuration file, and one more SocksPort on
 the command line, the option on the command line will replace __all__ of the
-SOCKSPorts in the configuration file.  If this isn't what you want, prefix
+SocksPorts in the configuration file.  If this isn't what you want, prefix
 the option name with a plus sign (+), and it will be appended to the previous
-set of options instead.  For example, setting SOCKSPort 9100 will use only
-port 9100, but setting +SOCKSPort 9100 will use ports 9100 and 9050 (because
+set of options instead.  For example, setting SocksPort 9100 will use only
+port 9100, but setting +SocksPort 9100 will use ports 9100 and 9050 (because
 this is the default).
 
 Alternatively, you might want to remove every instance of an option in the
 configuration file, and not replace it at all: you might want to say on the
-command line that you want no SOCKSPorts at all.  To do that, prefix the
+command line that you want no SocksPorts at all.  To do that, prefix the
 option name with a forward slash (/).  You can use the plus sign (+) and the
 forward slash (/) in the configuration file and on the command line.
 
@@ -221,7 +221,7 @@ GENERAL OPTIONS
     any pluggable transport proxy that tries to launch __transport__. +
     (Example: ServerTransportOptions obfs45 shared-secret=bridgepasswd cache=/var/lib/tor/cache)
 
-[[ExtORPort]] **ExtORPort** \['address':]__port__|**auto**
+[[ExtORPort]] **ExtORPort** \['address':]__port__|**auto**::
     Open this port to listen for Extended ORPort connections from your
     pluggable transports.
 
@@ -289,9 +289,9 @@ GENERAL OPTIONS
     any process on the local host to control it. (Setting both authentication
     methods means eithermethod is sufficient to authenticate to Tor.) This
     option is required for many Tor controllers; most use the value of 9051.
-    Set it to "auto" to have Tor pick a port for you. (Default: 0)
+    Set it to "auto" to have Tor pick a port for you. (Default: 0) +
  +
-    Recognized flags are::
+    Recognized flags are...
     **GroupWritable**;;
         Unix domain sockets only: makes the socket get created as
         group-writable.
@@ -968,7 +968,7 @@ The following options are useful only for clients (that is, if
     the same circuit. Currently, two addresses are "too close" if they lie in
     the same /16 range. (Default: 1)
 
-[[SOCKSPort]] **SOCKSPort** \['address':]__port__|**unix:**__path__|**auto** [_flags_] [_isolation flags_]::
+[[SocksPort]] **SocksPort** \['address':]__port__|**unix:**__path__|**auto** [_flags_] [_isolation flags_]::
     Open this port to listen for connections from SOCKS-speaking
     applications. Set this to 0 if you don't want to allow application
     connections via SOCKS. Set it to "auto" to have Tor pick a port for
@@ -983,7 +983,7 @@ The following options are useful only for clients (that is, if
         to use your computer as an open proxy. +
  +
     The _isolation flags_ arguments give Tor rules for which streams
-    received on this SOCKSPort are allowed to share circuits with one
+    received on this SocksPort are allowed to share circuits with one
     another.  Recognized isolation flags are:
     **IsolateClientAddr**;;
         Don't share circuits with streams from a different
@@ -1010,11 +1010,11 @@ The following options are useful only for clients (that is, if
         If no other isolation rules would prevent it, allow streams
         on this port to share circuits with streams from every other
         port with the same session group.  (By default, streams received
-        on different SOCKSPorts, TransPorts, etc are always isolated from one
+        on different SocksPorts, TransPorts, etc are always isolated from one
         another. This option overrides that behavior.)
 
-[[OtherSOCKSPortFlags]]::
-    Other recognized __flags__ for a SOCKSPort are:
+[[OtherSocksPortFlags]]::
+    Other recognized __flags__ for a SocksPort are:
     **NoIPv4Traffic**;;
         Tell exits to not connect to IPv4 addresses in response to SOCKS
         requests on this connection.
@@ -1066,14 +1066,14 @@ The following options are useful only for clients (that is, if
         authentication" when IsolateSOCKSAuth is disabled, or when this
         option is set.
 
-[[SOCKSListenAddress]] **SOCKSListenAddress** __IP__[:__PORT__]::
+[[SocksListenAddress]] **SocksListenAddress** __IP__[:__PORT__]::
     Bind to this address to listen for connections from Socks-speaking
     applications. (Default: 127.0.0.1) You can also specify a port (e.g.
     192.168.0.1:9100). This directive can be specified multiple times to bind
     to multiple addresses/ports.  (DEPRECATED: As of 0.2.3.x-alpha, you can
-    now use multiple SOCKSPort entries, and provide addresses for SOCKSPort
-    entries, so SOCKSListenAddress no longer has a purpose.  For backward
-    compatibility, SOCKSListenAddress is only allowed when SOCKSPort is just
+    now use multiple SocksPort entries, and provide addresses for SocksPort
+    entries, so SocksListenAddress no longer has a purpose.  For backward
+    compatibility, SocksListenAddress is only allowed when SocksPort is just
     a port number.)
 
 [[SocksPolicy]] **SocksPolicy** __policy__,__policy__,__...__::
@@ -1280,7 +1280,7 @@ The following options are useful only for clients (that is, if
     Use 0 if you don't want to allow NATD connections.  Set the port
     to "auto" to have Tor pick a port for you. This directive can be
     specified multiple times to bind to multiple addresses/ports.  See
-    SOCKSPort for an explanation of isolation flags. +
+    SocksPort for an explanation of isolation flags. +
  +
     This option is only for people who cannot use TransPort. (Default: 0)
 
@@ -1308,7 +1308,7 @@ The following options are useful only for clients (that is, if
     doesn't handle arbitrary DNS request types. Set the port to "auto" to
     have Tor pick a port for
     you. This directive can be specified multiple times to bind to multiple
-    addresses/ports. See SOCKSPort for an explanation of isolation
+    addresses/ports. See SocksPort for an explanation of isolation
     flags. (Default: 0)
 
 [[DNSListenAddress]] **DNSListenAddress** __IP__[:__PORT__]::
@@ -1936,11 +1936,6 @@ if DirPort is non-zero):
     to set up a separate webserver. There's a sample disclaimer in
     contrib/operator-tools/tor-exit-notice.html.
 
-[[HidServDirectoryV2]] **HidServDirectoryV2** **0**|**1**::
-    When this option is set, Tor accepts and serves v2 hidden service
-    descriptors. Setting DirPort is not required for this, because clients
-    connect via the ORPort by default. (Default: 1)
-
 [[DirPort]] **DirPort** \['address':]__PORT__|**auto** [_flags_]::
     If this option is nonzero, advertise the directory service on this port.
     Set it to "auto" to have Tor pick a port for you.  This option can occur
@@ -2001,7 +1996,7 @@ on the public Tor network.
     multiple times: the values from multiple lines are spliced together. When
     this is set then **VersioningAuthoritativeDirectory** should be set too.
 
-[[RecommendedPackageVersions]] **RecommendedPackageVersions** __PACKAGENAME__ __VERSION__ __URL__ __DIGESTTYPE__**=**__DIGEST__ ::
+[[RecommendedPackages]] **RecommendedPackages** __PACKAGENAME__ __VERSION__ __URL__ __DIGESTTYPE__**=**__DIGEST__ ::
     Adds "package" line to the directory authority's vote.  This information
     is used to vote on the correct URL and digest for the released versions
     of different Tor-related packages, so that the consensus can certify
@@ -2151,11 +2146,6 @@ on the public Tor network.
     Tells an authority, or other node tracking node reliability and history,
     that fine-grained information about nodes can be discarded when it hasn't
     changed for a given amount of time.  (Default: 24 hours)
-
-[[VoteOnHidServDirectoriesV2]] **VoteOnHidServDirectoriesV2** **0**|**1**::
-    When this option is set in addition to **AuthoritativeDirectory**, Tor
-    votes on whether to accept relays as hidden service directories.
-    (Default: 1)
 
 [[AuthDirHasIPv6Connectivity]] **AuthDirHasIPv6Connectivity** **0**|**1**::
     Authoritative directories only. When set to 0, OR ports with an
@@ -2420,7 +2410,7 @@ The following options are used for running a testing Tor network.
     information on how to specify nodes.
  +
     In order for this option to have any effect, **TestingTorNetwork**
-    and **VoteOnHidServDirectoriesV2** both have to be set.
+    must be set.
 
 [[TestingDirAuthVoteHSDirIsStrict]] **TestingDirAuthVoteHSDirIsStrict** **0**|**1** ::
     If True (1), a node will never receive the HSDir flag unless it is specified
@@ -2449,7 +2439,7 @@ The following options are used for running a testing Tor network.
     authority on a testing network. Overrides the usual default lower bound
     of 4 KB. (Default: 0)
 
-[[TestingLinkCertLifetime]] **TestingLinkCertifetime** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**|**months**::
+[[TestingLinkCertLifetime]] **TestingLinkCertLifetime** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**|**months**::
     Overrides the default lifetime for the certificates used to authenticate
     our X509 link cert with our ed25519 signing key.
     (Default: 2 days)
@@ -2459,8 +2449,10 @@ The following options are used for running a testing Tor network.
     key.
     (Default: 2 days)
 
-[[TestingLinkKeySlop]] **TestingLinkKeySlop** __N__ **seconds**|**minutes**|**hours**::
-[[TestingAuthKeySlop]] **TestingAuthKeySlop** __N__ **seconds**|**minutes**|**hours**::
+[[TestingLinkKeySlop]] **TestingLinkKeySlop** __N__ **seconds**|**minutes**|**hours** +
+
+[[TestingAuthKeySlop]] **TestingAuthKeySlop** __N__ **seconds**|**minutes**|**hours** +
+
 [[TestingSigningKeySlop]] **TestingSigningKeySlop** __N__ **seconds**|**minutes**|**hours**::
     How early before the official expiration of a an Ed25519 signing key do
     we replace it and issue a new key?
@@ -2654,7 +2646,7 @@ SEE ALSO
 BUGS
 ----
 
-Plenty, probably. Tor is still in development. Please report them.
+Plenty, probably. Tor is still in development. Please report them at https://trac.torproject.org/.
 
 AUTHORS
 -------
