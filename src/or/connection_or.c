@@ -2290,8 +2290,7 @@ connection_or_send_auth_challenge_cell(or_connection_t *conn)
 
   auth_challenge_cell_t *ac = auth_challenge_cell_new();
 
-  if (crypto_rand((char*)ac->challenge, sizeof(ac->challenge)) < 0)
-    goto done;
+  crypto_rand((char*)ac->challenge, sizeof(ac->challenge));
 
   auth_challenge_cell_add_methods(ac, AUTHTYPE_RSA_SHA256_TLSSECRET);
   auth_challenge_cell_set_n_methods(ac,

@@ -270,8 +270,7 @@ crypto_init_siphash_key(void)
   if (have_seeded_siphash)
     return 0;
 
-  if (crypto_rand((char*) &key, sizeof(key)) < 0)
-    return -1;
+  crypto_rand((char*) &key, sizeof(key));
   siphash_set_global_key(&key);
   have_seeded_siphash = 1;
   return 0;
@@ -2368,27 +2367,26 @@ crypto_seed_rng(void)
 /** Write <b>n</b> bytes of strong random data to <b>to</b>. Return 0 on
  * success, -1 on failure, with support for mocking for unit tests.
  */
-MOCK_IMPL(int,
+MOCK_IMPL(void,
 crypto_rand, (char *to, size_t n))
 {
-  return crypto_rand_unmocked(to, n);
+  crypto_rand_unmocked(to, n);
 }
 
 /** Write <b>n</b> bytes of strong random data to <b>to</b>. Return 0 on
  * success, -1 on failure.  Most callers will want crypto_rand instead.
  */
-int
+void
 crypto_rand_unmocked(char *to, size_t n)
 {
   int r;
   if (n == 0)
-    return 0;
+    return;
 
   tor_assert(n < INT_MAX);
   tor_assert(to);
   r = RAND_bytes((unsigned char*)to, (int)n);
   tor_assert(r >= 0);
-  return 0;
 }
 
 /** Return a pseudorandom integer, chosen uniformly from the values

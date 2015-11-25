@@ -193,8 +193,7 @@ handle_client_auth_nonce(const char *client_nonce, size_t client_nonce_len,
     return -1;
 
   /* Get our nonce */
-  if (crypto_rand(server_nonce, EXT_OR_PORT_AUTH_NONCE_LEN) < 0)
-    return -1;
+  crypto_rand(server_nonce, EXT_OR_PORT_AUTH_NONCE_LEN);
 
   { /* set up macs */
     size_t hmac_s_msg_len = strlen(EXT_OR_PORT_AUTH_SERVER_TO_CLIENT_CONST) +

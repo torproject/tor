@@ -601,8 +601,7 @@ tor_tls_create_certificate(crypto_pk_t *rsa,
     goto error;
 
   { /* our serial number is 8 random bytes. */
-    if (crypto_rand((char *)serial_tmp, sizeof(serial_tmp)) < 0)
-      goto error;
+    crypto_rand((char *)serial_tmp, sizeof(serial_tmp));
     if (!(serial_number = BN_bin2bn(serial_tmp, sizeof(serial_tmp), NULL)))
       goto error;
     if (!(BN_to_ASN1_INTEGER(serial_number, X509_get_serialNumber(x509))))
