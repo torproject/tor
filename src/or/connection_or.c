@@ -1480,7 +1480,7 @@ connection_tls_continue_handshake(or_connection_t *conn)
           return 0;
         }
       }
-      tor_assert(!tor_tls_is_server(conn->tls));
+      tor_assert(tor_tls_is_server(conn->tls));
       return connection_tls_finish_handshake(conn);
     case TOR_TLS_WANTWRITE:
       connection_start_writing(TO_CONN(conn));
