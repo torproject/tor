@@ -1389,7 +1389,10 @@ run_scheduled_events(time_t now)
   if (time_to.add_entropy < now) {
     if (time_to.add_entropy) {
       /* We already seeded once, so don't die on failure. */
-      crypto_seed_rng();
+      if (crypto_seed_rng() < 0) {
+        log_warn(LD_GENERAL, "Tried to re-seed RNG, but failed. We already "
+                 "seeded once, though, so we won't exit here.");
+      }
     }
 /** How often do we add more entropy to OpenSSL's RNG pool? */
 #define ENTROPY_INTERVAL (60*60)

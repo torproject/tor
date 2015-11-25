@@ -2358,7 +2358,7 @@ crypto_seed_rng(void)
 
   memwipe(buf, 0, sizeof(buf));
 
-  if (rand_poll_ok || load_entropy_ok)
+  if ((rand_poll_ok || load_entropy_ok) && RAND_status() == 1)
     return 0;
   else
     return -1;
@@ -2380,12 +2380,14 @@ int
 crypto_rand_unmocked(char *to, size_t n)
 {
   int r;
+  if (n == 0)
+    return 0;
+
   tor_assert(n < INT_MAX);
   tor_assert(to);
   r = RAND_bytes((unsigned char*)to, (int)n);
-  if (r == 0)
-    crypto_log_errors(LOG_WARN, "generating random data");
-  return (r == 1) ? 0 : -1;
+  tor_assert(r >= 0);
+  return 0;
 }
 
 /** Return a pseudorandom integer, chosen uniformly from the values

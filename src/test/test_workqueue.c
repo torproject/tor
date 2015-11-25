@@ -391,7 +391,10 @@ main(int argc, char **argv)
   init_logging(1);
   network_init();
   crypto_global_init(1, NULL, NULL);
-  crypto_seed_rng();
+  if (crypto_seed_rng() < 0) {
+    printf("Couldn't seed RNG; exiting.\n");
+    return 1;
+  }
 
   rq = replyqueue_new(as_flags);
   tor_assert(rq);
