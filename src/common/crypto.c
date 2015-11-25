@@ -322,7 +322,8 @@ int
 crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
 {
   if (!crypto_global_initialized_) {
-    crypto_early_init();
+    if (crypto_early_init() < 0)
+      return -1;
 
     crypto_global_initialized_ = 1;
 
