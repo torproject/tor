@@ -3816,7 +3816,7 @@ typedef struct {
                            * hibernate." */
   /** How do we determine when our AccountingMax has been reached?
    * "max" for when in or out reaches AccountingMax
-   * "sum for when in plus out reaches AccountingMax */
+   * "sum" for when in plus out reaches AccountingMax */
   char *AccountingRule_option;
   enum { ACCT_MAX, ACCT_SUM } AccountingRule;
 

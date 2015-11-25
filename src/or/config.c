@@ -5802,9 +5802,9 @@ warn_nonlocal_ext_orports(const smartlist_t *ports, const char *portname)
   } SMARTLIST_FOREACH_END(port);
 }
 
-/** Given a list of port_cfg_t in <b>ports</b>, warn any controller port there
- * is listening on any non-loopback address.  If <b>forbid_nonlocal</b> is
- * true, then emit a stronger warning and remove the port from the list.
+/** Given a list of port_cfg_t in <b>ports</b>, warn if any controller port
+ * there is listening on any non-loopback address.  If <b>forbid_nonlocal</b>
+ * is true, then emit a stronger warning and remove the port from the list.
  */
 static void
 warn_nonlocal_controller_ports(smartlist_t *ports, unsigned forbid_nonlocal)
