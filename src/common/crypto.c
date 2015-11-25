@@ -2364,8 +2364,11 @@ crypto_seed_rng(void)
     return -1;
 }
 
-/** Write <b>n</b> bytes of strong random data to <b>to</b>. Return 0 on
- * success, -1 on failure, with support for mocking for unit tests.
+/** Write <b>n</b> bytes of strong random data to <b>to</b>. Supports mocking
+ * for unit tests.
+ *
+ * This function is not allowed to fail; if it would fail to generate strong
+ * entropy, it must terminate the process instead.
  */
 MOCK_IMPL(void,
 crypto_rand, (char *to, size_t n))
@@ -2373,8 +2376,11 @@ crypto_rand, (char *to, size_t n))
   crypto_rand_unmocked(to, n);
 }
 
-/** Write <b>n</b> bytes of strong random data to <b>to</b>. Return 0 on
- * success, -1 on failure.  Most callers will want crypto_rand instead.
+/** Write <b>n</b> bytes of strong random data to <b>to</b>.  Most callers
+ * will want crypto_rand instead.
+ *
+ * This function is not allowed to fail; if it would fail to generate strong
+ * entropy, it must terminate the process instead.
  */
 void
 crypto_rand_unmocked(char *to, size_t n)
