@@ -319,6 +319,11 @@ test_circuit_timeout(void *arg)
   int i, runs;
   double close_ms;
   (void)arg;
+  tor_libevent_cfg cfg;
+
+  memset(&cfg, 0, sizeof(cfg));
+
+  tor_libevent_initialize(&cfg);
   initialize_periodic_events();
 
   circuit_build_times_init(&initial);
@@ -1114,7 +1119,7 @@ static struct testcase_t test_array[] = {
   { "bad_onion_handshake", test_bad_onion_handshake, 0, NULL, NULL },
   ENT(onion_queues),
   { "ntor_handshake", test_ntor_handshake, 0, NULL, NULL },
-  ENT(circuit_timeout),
+  FORK(circuit_timeout),
   FORK(rend_fns),
   ENT(geoip),
   FORK(geoip_with_pt),
