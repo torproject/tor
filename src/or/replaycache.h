@@ -26,7 +26,7 @@ struct replaycache_s {
   /*
    * Digest map: keys are digests, values are times the digest was last seen
    */
-  digestmap_t *digests_seen;
+  digest256map_t *digests_seen;
 };
 
 #endif /* REPLAYCACHE_PRIVATE */
