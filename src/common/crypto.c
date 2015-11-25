@@ -1890,8 +1890,7 @@ crypto_digest_smartlist_prefix(char *digest_out, size_t len_out,
   crypto_digest_get_digest(d, digest_out, len_out);
 
  free:
-  if (d != NULL)
-    crypto_digest_free(d);
+  crypto_digest_free(d);
 }
 
 /** Compute the HMAC-SHA-256 of the <b>msg_len</b> bytes in <b>msg</b>, using
