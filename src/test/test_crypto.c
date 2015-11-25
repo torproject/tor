@@ -302,6 +302,13 @@ test_crypto_sha(void *arg)
                        "96177A9CB410FF61F20015AD");
   tt_int_op(i, OP_EQ, 0);
 
+  /* Test SHA-512 with a test vector from the specification. */
+  i = crypto_digest512(data, "abc", 3, DIGEST_SHA512);
+  test_memeq_hex(data, "ddaf35a193617abacc417349ae20413112e6fa4e89a97"
+                       "ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3"
+                       "feebbd454d4423643ce80e2a9ac94fa54ca49f");
+  tt_int_op(i, OP_EQ, 0);
+
   /* Test HMAC-SHA256 with test cases from wikipedia and RFC 4231 */
 
   /* Case empty (wikipedia) */
@@ -409,6 +416,27 @@ test_crypto_sha(void *arg)
   tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST_LEN);
   crypto_digest_get_digest(d1, d_out1, sizeof(d_out1));
   crypto_digest256(d_out2, "abcdef", 6, DIGEST_SHA256);
+  tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST_LEN);
+  crypto_digest_free(d1);
+  crypto_digest_free(d2);
+
+  /* Incremental digest code with sha512 */
+  d1 = crypto_digest512_new(DIGEST_SHA512);
+  tt_assert(d1);
+  crypto_digest_add_bytes(d1, "abcdef", 6);
+  d2 = crypto_digest_dup(d1);
+  tt_assert(d2);
+  crypto_digest_add_bytes(d2, "ghijkl", 6);
+  crypto_digest_get_digest(d2, d_out1, sizeof(d_out1));
+  crypto_digest512(d_out2, "abcdefghijkl", 12, DIGEST_SHA512);
+  tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST_LEN);
+  crypto_digest_assign(d2, d1);
+  crypto_digest_add_bytes(d2, "mno", 3);
+  crypto_digest_get_digest(d2, d_out1, sizeof(d_out1));
+  crypto_digest512(d_out2, "abcdefmno", 9, DIGEST_SHA512);
+  tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST_LEN);
+  crypto_digest_get_digest(d1, d_out1, sizeof(d_out1));
+  crypto_digest512(d_out2, "abcdef", 6, DIGEST_SHA512);
   tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST_LEN);
 
  done:

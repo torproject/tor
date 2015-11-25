@@ -54,6 +54,8 @@
 /** Length of the output of our second (improved) message digests.  (For now
  * this is just sha256, but it could be any other 256-bit digest.) */
 #define DIGEST256_LEN 32
+/** Length of the output of our 64-bit optimized message digests (SHA512). */
+#define DIGEST512_LEN 64
 /** Length of our symmetric cipher's keys. */
 #define CIPHER_KEY_LEN 16
 /** Length of our symmetric cipher's IV. */
@@ -69,6 +71,9 @@
 /** Length of a sha256 message digest when encoded in base64 with trailing =
  * signs removed. */
 #define BASE64_DIGEST256_LEN 43
+/** Length of a sha512 message digest when encoded in base64 with trailing =
+ * signs removed. */
+#define BASE64_DIGEST512_LEN 86
 
 /** Constant used to indicate OAEP padding for public-key encryption */
 #define PK_PKCS1_OAEP_PADDING 60002
@@ -83,24 +88,27 @@
 #define HEX_DIGEST_LEN 40
 /** Length of hex encoding of SHA256 digest, not including final NUL. */
 #define HEX_DIGEST256_LEN 64
+/** Length of hex encoding of SHA512 digest, not including final NUL. */
+#define HEX_DIGEST512_LEN 128
 
 typedef enum {
   DIGEST_SHA1 = 0,
   DIGEST_SHA256 = 1,
+  DIGEST_SHA512 = 2,
 } digest_algorithm_t;
-#define  N_DIGEST_ALGORITHMS (DIGEST_SHA256+1)
+#define  N_DIGEST_ALGORITHMS (DIGEST_SHA512+1)
 #define digest_algorithm_bitfield_t ENUM_BF(digest_algorithm_t)
 
 /** A set of all the digests we know how to compute, taken on a single
- * string.  Any digests that are shorter than 256 bits are right-padded
+ * string.  Any digests that are shorter than 512 bits are right-padded
  * with 0 bits.
  *
- * Note that this representation wastes 12 bytes for the SHA1 case, so
+ * Note that this representation wastes 44 bytes for the SHA1 case, so
  * don't use it for anything where we need to allocate a whole bunch at
  * once.
  **/
 typedef struct {
-  char d[N_DIGEST_ALGORITHMS][DIGEST256_LEN];
+  char d[N_DIGEST_ALGORITHMS][DIGEST512_LEN];
 } digests_t;
 
 typedef struct crypto_pk_t crypto_pk_t;
@@ -207,6 +215,8 @@ int crypto_cipher_decrypt_with_iv(const char *key,
 int crypto_digest(char *digest, const char *m, size_t len);
 int crypto_digest256(char *digest, const char *m, size_t len,
                      digest_algorithm_t algorithm);
+int crypto_digest512(char *digest, const char *m, size_t len,
+                     digest_algorithm_t algorithm);
 int crypto_digest_all(digests_t *ds_out, const char *m, size_t len);
 struct smartlist_t;
 void crypto_digest_smartlist_prefix(char *digest_out, size_t len_out,
@@ -221,6 +231,7 @@ const char *crypto_digest_algorithm_get_name(digest_algorithm_t alg);
 int crypto_digest_algorithm_parse_name(const char *name);
 crypto_digest_t *crypto_digest_new(void);
 crypto_digest_t *crypto_digest256_new(digest_algorithm_t algorithm);
+crypto_digest_t *crypto_digest512_new(digest_algorithm_t algorithm);
 void crypto_digest_free(crypto_digest_t *digest);
 void crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
                              size_t len);
