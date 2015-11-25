@@ -1,0 +1,4 @@
+  o Minor bugfixes (hidden service)
+    - The wrong list was used when looking up expired intro points in a rend
+      service object causing what we think could be reachability issues and
+      triggering a BUG log. Fixes 16702; bugfix on tor-0.2.7.2-alpha.
