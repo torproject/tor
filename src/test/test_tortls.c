@@ -2579,7 +2579,6 @@ test_tortls_context_new(void *ignored)
 
 static int fixed_crypto_pk_get_evp_pkey_result_index = 0;
 static EVP_PKEY *fixed_crypto_pk_get_evp_pkey_result[5];
-static int fixed_crypto_rand_result;
 
 static EVP_PKEY *
 fixed_crypto_pk_get_evp_pkey_(crypto_pk_t *env, int private)
@@ -2590,13 +2589,6 @@ fixed_crypto_pk_get_evp_pkey_(crypto_pk_t *env, int private)
                                fixed_crypto_pk_get_evp_pkey_result_index++];
 }
 
-static int
-fixed_crypto_rand(char *to, size_t n)
-{
-  (void)to;
-  (void)n;
-  return fixed_crypto_rand_result;
-}
 
 static void
 test_tortls_create_certificate(void *ignored)
@@ -2626,16 +2618,7 @@ test_tortls_create_certificate(void *ignored)
   ret = tor_tls_create_certificate(pk1, pk2, "hello", "hello2", 1);
   tt_assert(!ret);
 
-  MOCK(crypto_rand, fixed_crypto_rand);
-  fixed_crypto_rand_result = -1;
-  fixed_crypto_pk_get_evp_pkey_result_index = 0;
-  fixed_crypto_pk_get_evp_pkey_result[0] = tor_malloc_zero(sizeof(EVP_PKEY));
-  fixed_crypto_pk_get_evp_pkey_result[1] = tor_malloc_zero(sizeof(EVP_PKEY));
-  ret = tor_tls_create_certificate(pk1, pk2, "hello", "hello2", 1);
-  tt_assert(!ret);
-
  done:
-  UNMOCK(crypto_rand);
   UNMOCK(crypto_pk_get_evp_pkey_);
   crypto_pk_free(pk1);
   crypto_pk_free(pk2);
