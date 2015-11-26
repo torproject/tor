@@ -269,11 +269,7 @@ rend_encrypt_v2_intro_points_basic(char **encrypted_out,
   tor_assert(client_cookies && smartlist_len(client_cookies) > 0);
 
   /* Generate session key. */
-  if (crypto_rand(session_key, CIPHER_KEY_LEN) < 0) {
-    log_warn(LD_REND, "Unable to generate random session key to encrypt "
-                      "introduction point string.");
-    goto done;
-  }
+  crypto_rand(session_key, CIPHER_KEY_LEN);
 
   /* Determine length of encrypted introduction points including session
    * keys. */
@@ -335,11 +331,7 @@ rend_encrypt_v2_intro_points_basic(char **encrypted_out,
            REND_BASIC_AUTH_CLIENT_MULTIPLE;
        i < REND_BASIC_AUTH_CLIENT_MULTIPLE - 1; i++) {
     client_part = tor_malloc_zero(REND_BASIC_AUTH_CLIENT_ENTRY_LEN);
-    if (crypto_rand(client_part, REND_BASIC_AUTH_CLIENT_ENTRY_LEN) < 0) {
-      log_warn(LD_REND, "Unable to generate fake client entry.");
-      tor_free(client_part);
-      goto done;
-    }
+    crypto_rand(client_part, REND_BASIC_AUTH_CLIENT_ENTRY_LEN);
     smartlist_add(encrypted_session_keys, client_part);
   }
   /* Sort smartlist and put elements in result in order. */

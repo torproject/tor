@@ -113,8 +113,7 @@ curve25519_rand_seckey_bytes(uint8_t *out, int extra_strong)
 {
   uint8_t k_tmp[CURVE25519_SECKEY_LEN];
 
-  if (crypto_rand((char*)out, CURVE25519_SECKEY_LEN) < 0)
-    return -1;
+  crypto_rand((char*)out, CURVE25519_SECKEY_LEN);
   if (extra_strong && !crypto_strongest_rand(k_tmp, CURVE25519_SECKEY_LEN)) {
     /* If they asked for extra-strong entropy and we have some, use it as an
      * HMAC key to improve not-so-good entropy rather than using it directly,

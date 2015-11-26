@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include "torint.h"
 #include "testsupport.h"
+#include "compat.h"
 
 /*
   Macro to create an arbitrary OpenSSL version number as used by
@@ -119,10 +120,10 @@ typedef struct crypto_dh_t crypto_dh_t;
 /* global state */
 const char * crypto_openssl_get_version_str(void);
 const char * crypto_openssl_get_header_version_str(void);
-int crypto_early_init(void);
+int crypto_early_init(void) ATTR_WUR;
 int crypto_global_init(int hardwareAccel,
                        const char *accelName,
-                       const char *accelPath);
+                       const char *accelPath) ATTR_WUR;
 void crypto_thread_cleanup(void);
 int crypto_global_cleanup(void);
 
@@ -269,9 +270,9 @@ int crypto_expand_key_material_rfc5869_sha256(
                                     uint8_t *key_out, size_t key_out_len);
 
 /* random numbers */
-int crypto_seed_rng(void);
-MOCK_DECL(int,crypto_rand,(char *to, size_t n));
-int crypto_rand_unmocked(char *to, size_t n);
+int crypto_seed_rng(void) ATTR_WUR;
+MOCK_DECL(void,crypto_rand,(char *to, size_t n));
+void crypto_rand_unmocked(char *to, size_t n);
 int crypto_strongest_rand(uint8_t *out, size_t out_len);
 int crypto_rand_int(unsigned int max);
 int crypto_rand_int_range(unsigned int min, unsigned int max);

@@ -65,11 +65,7 @@ rend_client_send_establish_rendezvous(origin_circuit_t *circ)
   tor_assert(circ->rend_data);
   log_info(LD_REND, "Sending an ESTABLISH_RENDEZVOUS cell");
 
-  if (crypto_rand(circ->rend_data->rend_cookie, REND_COOKIE_LEN) < 0) {
-    log_warn(LD_BUG, "Internal error: Couldn't produce random cookie.");
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
-    return -1;
-  }
+  crypto_rand(circ->rend_data->rend_cookie, REND_COOKIE_LEN);
 
   /* Set timestamp_dirty, because circuit_expire_building expects it,
    * and the rend cookie also means we've used the circ. */

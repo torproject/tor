@@ -118,6 +118,7 @@
 #define ATTR_CONST __attribute__((const))
 #define ATTR_MALLOC __attribute__((malloc))
 #define ATTR_NORETURN __attribute__((noreturn))
+#define ATTR_WUR __attribute__((warn_unused_result))
 /* Alas, nonnull is not at present a good idea for us.  We'd like to get
  * warnings when we pass NULL where we shouldn't (which nonnull does, albeit
  * spottily), but we don't want to tell the compiler to make optimizations
@@ -153,6 +154,7 @@
 #define ATTR_NORETURN
 #define ATTR_NONNULL(x)
 #define ATTR_UNUSED
+#define ATTR_WUR
 #define PREDICT_LIKELY(exp) (exp)
 #define PREDICT_UNLIKELY(exp) (exp)
 #endif

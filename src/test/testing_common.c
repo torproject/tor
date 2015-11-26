@@ -272,7 +272,10 @@ main(int c, const char **v)
     return 1;
   }
   crypto_set_tls_dh_prime();
-  crypto_seed_rng();
+  if (crypto_seed_rng() < 0) {
+    printf("Couldn't seed RNG; exiting.\n");
+    return 1;
+  }
   rep_hist_init();
   network_init();
   setup_directory();

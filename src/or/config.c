@@ -7335,8 +7335,7 @@ init_cookie_authentication(const char *fname, const char *header,
 
   /* Generate the cookie */
   *cookie_out = tor_malloc(cookie_len);
-  if (crypto_rand((char *)*cookie_out, cookie_len) < 0)
-    goto done;
+  crypto_rand((char *)*cookie_out, cookie_len);
 
   /* Create the string that should be written on the file. */
   memcpy(cookie_file_str, header, strlen(header));

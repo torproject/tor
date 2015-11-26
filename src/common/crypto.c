@@ -267,8 +267,7 @@ crypto_init_siphash_key(void)
   if (have_seeded_siphash)
     return 0;
 
-  if (crypto_rand((char*) &key, sizeof(key)) < 0)
-    return -1;
+  crypto_rand((char*) &key, sizeof(key));
   siphash_set_global_key(&key);
   have_seeded_siphash = 1;
   return 0;
@@ -321,7 +320,8 @@ int
 crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
 {
   if (!crypto_global_initialized_) {
-    crypto_early_init();
+    if (crypto_early_init() < 0)
+      return -1;
 
     crypto_global_initialized_ = 1;
 
@@ -2421,34 +2421,41 @@ crypto_seed_rng(void)
 
   memwipe(buf, 0, sizeof(buf));
 
-  if (rand_poll_ok || load_entropy_ok)
+  if ((rand_poll_ok || load_entropy_ok) && RAND_status() == 1)
     return 0;
   else
     return -1;
 }
 
-/** Write <b>n</b> bytes of strong random data to <b>to</b>. Return 0 on
- * success, -1 on failure, with support for mocking for unit tests.
+/** Write <b>n</b> bytes of strong random data to <b>to</b>. Supports mocking
+ * for unit tests.
+ *
+ * This function is not allowed to fail; if it would fail to generate strong
+ * entropy, it must terminate the process instead.
  */
-MOCK_IMPL(int,
+MOCK_IMPL(void,
 crypto_rand, (char *to, size_t n))
 {
-  return crypto_rand_unmocked(to, n);
+  crypto_rand_unmocked(to, n);
 }
 
-/** Write <b>n</b> bytes of strong random data to <b>to</b>. Return 0 on
- * success, assert on failure.  Most callers will want crypto_rand instead.
+/** Write <b>n</b> bytes of strong random data to <b>to</b>.  Most callers
+ * will want crypto_rand instead.
+ *
+ * This function is not allowed to fail; if it would fail to generate strong
+ * entropy, it must terminate the process instead.
  */
-int
+void
 crypto_rand_unmocked(char *to, size_t n)
 {
   int r;
+  if (n == 0)
+    return;
+
   tor_assert(n < INT_MAX);
   tor_assert(to);
   r = RAND_bytes((unsigned char*)to, (int)n);
-  if (r == 0)
-    crypto_log_errors(LOG_WARN, "generating random data");
-  return (r == 1) ? 0 : -1;
+  tor_assert(r >= 0);
 }
 
 /** Return a pseudorandom integer, chosen uniformly from the values

@@ -1616,7 +1616,6 @@ rotate_x509_certificate_callback(time_t now, const or_options_t *options)
   /* We also make sure to rotate the TLS connections themselves if they've
    * been up for too long -- but that's done via is_bad_for_new_circs in
    * run_connection_housekeeping() above. */
-
   return MAX_SSL_KEY_LIFETIME_INTERNAL;
 }
 
@@ -1626,7 +1625,10 @@ add_entropy_callback(time_t now, const or_options_t *options)
   (void)now;
   (void)options;
   /* We already seeded once, so don't die on failure. */
-  crypto_seed_rng();
+  if (crypto_seed_rng() < 0) {
+    log_warn(LD_GENERAL, "Tried to re-seed RNG, but failed. We already "
+             "seeded once, though, so we won't exit here.");
+  }
 
   /** How often do we add more entropy to OpenSSL's RNG pool? */
 #define ENTROPY_INTERVAL (60*60)
