@@ -1033,7 +1033,7 @@ test_policies_getinfo_helper_policies(void *arg)
   tor_free(answer);
   UNMOCK(get_options);
   UNMOCK(router_get_my_routerinfo);
-  smartlist_free(mock_my_routerinfo.exit_policy);
+  addr_policy_list_free(mock_my_routerinfo.exit_policy);
 }
 
 #undef DEFAULT_POLICY_STRING
