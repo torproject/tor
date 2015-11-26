@@ -800,8 +800,10 @@ connection_ap_attach_pending(int retry)
       continue;
     }
     if (conn->state != AP_CONN_STATE_CIRCUIT_WAIT) {
-      log_warn(LD_BUG, "%p is no longer in circuit_wait. Why is it on "
-               "pending_entry_connections?", entry_conn);
+      log_warn(LD_BUG, "%p is no longer in circuit_wait. Its current state "
+               "is %s. Why is it on pending_entry_connections?",
+               entry_conn,
+               conn_state_to_string(conn->type, conn->state));
       SMARTLIST_DEL_CURRENT(pending_entry_connections, entry_conn);
       continue;
     }
@@ -831,7 +833,8 @@ connection_ap_attach_pending(int retry)
  * call connection_ap_attach_pending().
  */
 void
-connection_ap_mark_as_pending_circuit(entry_connection_t *entry_conn)
+connection_ap_mark_as_pending_circuit_(entry_connection_t *entry_conn,
+                                       const char *fname, int lineno)
 {
   connection_t *conn = ENTRY_TO_CONN(entry_conn);
   tor_assert(conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
@@ -843,8 +846,9 @@ connection_ap_mark_as_pending_circuit(entry_connection_t *entry_conn)
 
   if (PREDICT_UNLIKELY(smartlist_contains(pending_entry_connections,
                                           entry_conn))) {
-    log_warn(LD_BUG, "What?? pending_entry_connections already contains %p!",
-             entry_conn);
+    log_warn(LD_BUG, "What?? pending_entry_connections already contains %p! "
+             "(called from %s:%d)",
+             entry_conn, fname, lineno);
     return;
   }
 
