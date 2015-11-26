@@ -511,14 +511,14 @@ if test "$enable_static_libevent" = "yes"; then
      TOR_LIBEVENT_LIBS="$TOR_LIBDIR_libevent/libevent.a $STATIC_LIBEVENT_FLAGS"
    fi
 else
-     if test x$ac_cv_header_event2_event_h = "xyes"; then
+     if test "x$ac_cv_header_event2_event_h" = "xyes"; then
        AC_SEARCH_LIBS(event_new, [event event_core])
        AC_SEARCH_LIBS(evdns_base_new, [event event_extra])
 
-       if test $ac_cv_search_event_new != "none required"; then
+       if test "$ac_cv_search_event_new" != "none required"; then
          TOR_LIBEVENT_LIBS="$ac_cv_search_event_new"
        fi
-       if test $ac_cv_search_evdns_base_new != "none required"; then
+       if test "$ac_cv_search_evdns_base_new" != "none required"; then
          TOR_LIBEVENT_LIBS="$ac_cv_search_evdns_base_new $TOR_LIBEVENT_LIBS"
        fi
      else
