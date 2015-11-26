@@ -2165,11 +2165,11 @@ getinfo_helper_policies(control_connection_t *conn,
     smartlist_t *private_policy_list = smartlist_new();
     smartlist_t *configured_addresses = smartlist_new();
 
-    /* Add the configured addresses to the tor_addr_t* list */
-    policies_add_ipv4h_to_smartlist(configured_addresses, me->addr);
-    policies_add_addr_to_smartlist(configured_addresses, &me->ipv6_addr);
-    policies_add_outbound_addresses_to_smartlist(configured_addresses,
-                                                 options);
+    /* Copy the configured addresses into the tor_addr_t* list */
+    policies_copy_ipv4h_to_smartlist(configured_addresses, me->addr);
+    policies_copy_addr_to_smartlist(configured_addresses, &me->ipv6_addr);
+    policies_copy_outbound_addresses_to_smartlist(configured_addresses,
+                                                  options);
 
     policies_parse_exit_policy_reject_private(
                                             &private_policy_list,
@@ -2179,7 +2179,7 @@ getinfo_helper_policies(control_connection_t *conn,
     *answer = policy_dump_to_string(private_policy_list, 1, 1);
 
     addr_policy_list_free(private_policy_list);
-    /* the addresses in configured_addresses are not ours to free */
+    SMARTLIST_FOREACH(configured_addresses, tor_addr_t *, a, tor_free(a));
     smartlist_free(configured_addresses);
   } else if (!strcmpstart(question, "exit-policy/")) {
     const routerinfo_t *me = router_get_my_routerinfo();
