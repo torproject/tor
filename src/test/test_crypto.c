@@ -287,7 +287,7 @@ test_crypto_sha(void *arg)
   char key[160];
   char digest[32];
   char data[50];
-  char d_out1[DIGEST_LEN], d_out2[DIGEST256_LEN];
+  char d_out1[DIGEST_LEN], d_out2[DIGEST512_LEN];
   char *mem_op_hex_tmp=NULL;
 
   /* Test SHA-1 with a test vector from the specification. */
