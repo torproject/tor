@@ -2168,7 +2168,8 @@ getinfo_helper_policies(control_connection_t *conn,
     *answer = policy_dump_to_string(private_policy_list, 1, 1);
 
     addr_policy_list_free(private_policy_list);
-    addr_policy_list_free(configured_addresses);
+    /* the addresses in configured_addresses are not ours to free */
+    smartlist_free(configured_addresses);
   } else if (!strcmpstart(question, "exit-policy/")) {
     const routerinfo_t *me = router_get_my_routerinfo();
 
