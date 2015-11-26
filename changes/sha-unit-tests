@@ -1,0 +1,5 @@
+  o Minor bugfixes (unit tests):
+    - Check the full results of SHA256 and SHA512 digests in the
+      unit tests.
+      Bugfix on a tor version before the refactoring in git commit
+      cea12251995d (23 Sep 2009). Patch by "teor".

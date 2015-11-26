@@ -284,10 +284,11 @@ test_crypto_sha(void *arg)
 {
   crypto_digest_t *d1 = NULL, *d2 = NULL;
   int i;
-  char key[160];
-  char digest[32];
-  char data[50];
-  char d_out1[DIGEST_LEN], d_out2[DIGEST512_LEN];
+#define RFC_4231_MAX_KEY_SIZE 131
+  char key[RFC_4231_MAX_KEY_SIZE];
+  char digest[DIGEST256_LEN];
+  char data[DIGEST512_LEN];
+  char d_out1[DIGEST512_LEN], d_out2[DIGEST512_LEN];
   char *mem_op_hex_tmp=NULL;
 
   /* Test SHA-1 with a test vector from the specification. */
@@ -385,15 +386,15 @@ test_crypto_sha(void *arg)
   d2 = crypto_digest_dup(d1);
   tt_assert(d2);
   crypto_digest_add_bytes(d2, "ghijkl", 6);
-  crypto_digest_get_digest(d2, d_out1, sizeof(d_out1));
+  crypto_digest_get_digest(d2, d_out1, DIGEST_LEN);
   crypto_digest(d_out2, "abcdefghijkl", 12);
   tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST_LEN);
   crypto_digest_assign(d2, d1);
   crypto_digest_add_bytes(d2, "mno", 3);
-  crypto_digest_get_digest(d2, d_out1, sizeof(d_out1));
+  crypto_digest_get_digest(d2, d_out1, DIGEST_LEN);
   crypto_digest(d_out2, "abcdefmno", 9);
   tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST_LEN);
-  crypto_digest_get_digest(d1, d_out1, sizeof(d_out1));
+  crypto_digest_get_digest(d1, d_out1, DIGEST_LEN);
   crypto_digest(d_out2, "abcdef", 6);
   tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST_LEN);
   crypto_digest_free(d1);
@@ -406,17 +407,17 @@ test_crypto_sha(void *arg)
   d2 = crypto_digest_dup(d1);
   tt_assert(d2);
   crypto_digest_add_bytes(d2, "ghijkl", 6);
-  crypto_digest_get_digest(d2, d_out1, sizeof(d_out1));
+  crypto_digest_get_digest(d2, d_out1, DIGEST256_LEN);
   crypto_digest256(d_out2, "abcdefghijkl", 12, DIGEST_SHA256);
-  tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST_LEN);
+  tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST256_LEN);
   crypto_digest_assign(d2, d1);
   crypto_digest_add_bytes(d2, "mno", 3);
-  crypto_digest_get_digest(d2, d_out1, sizeof(d_out1));
+  crypto_digest_get_digest(d2, d_out1, DIGEST256_LEN);
   crypto_digest256(d_out2, "abcdefmno", 9, DIGEST_SHA256);
-  tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST_LEN);
-  crypto_digest_get_digest(d1, d_out1, sizeof(d_out1));
+  tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST256_LEN);
+  crypto_digest_get_digest(d1, d_out1, DIGEST256_LEN);
   crypto_digest256(d_out2, "abcdef", 6, DIGEST_SHA256);
-  tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST_LEN);
+  tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST256_LEN);
   crypto_digest_free(d1);
   crypto_digest_free(d2);
 
@@ -427,17 +428,17 @@ test_crypto_sha(void *arg)
   d2 = crypto_digest_dup(d1);
   tt_assert(d2);
   crypto_digest_add_bytes(d2, "ghijkl", 6);
-  crypto_digest_get_digest(d2, d_out1, sizeof(d_out1));
+  crypto_digest_get_digest(d2, d_out1, DIGEST512_LEN);
   crypto_digest512(d_out2, "abcdefghijkl", 12, DIGEST_SHA512);
-  tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST_LEN);
+  tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST512_LEN);
   crypto_digest_assign(d2, d1);
   crypto_digest_add_bytes(d2, "mno", 3);
-  crypto_digest_get_digest(d2, d_out1, sizeof(d_out1));
+  crypto_digest_get_digest(d2, d_out1, DIGEST512_LEN);
   crypto_digest512(d_out2, "abcdefmno", 9, DIGEST_SHA512);
-  tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST_LEN);
-  crypto_digest_get_digest(d1, d_out1, sizeof(d_out1));
+  tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST512_LEN);
+  crypto_digest_get_digest(d1, d_out1, DIGEST512_LEN);
   crypto_digest512(d_out2, "abcdef", 6, DIGEST_SHA512);
-  tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST_LEN);
+  tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST512_LEN);
 
  done:
   if (d1)
