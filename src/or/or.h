@@ -4319,7 +4319,7 @@ typedef struct {
   char *master_key_fname;
 
   /** Autobool: Do we try to retain capabilities if we can? */
-  int KeepCapabilities;
+  int KeepBindCapabilities;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

@@ -601,9 +601,9 @@ GENERAL OPTIONS
 [[User]] **User** __UID__::
     On startup, setuid to this user and setgid to their primary group.
 
-[[KeepCapabilities]] **KeepCapabilities** **0**|**1**|**auto**::
+[[KeepBindCapabilities]] **KeepBindCapabilities** **0**|**1**|**auto**::
     On Linux, when we are started as root and we switch our identity using
-    the **User** option, the **KeepCapabilities** option tells us whether to
+    the **User** option, the **KeepBindCapabilities** option tells us whether to
     try to retain our ability to bind to low ports.  If this value is 1, we
     try to keep the capability; if it is 0 we do not; and if it is **auto**,
     we keep the capability only if we are configured to listen on a low port.

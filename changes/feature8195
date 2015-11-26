@@ -3,4 +3,4 @@
       can now retain the capabilitity to bind to low ports.  By default,
       Tor will do this only when it's switching user ID and some low
       ports have been configured.  You can change this behavior with
-      the new option KeepCapabilities.  Closes ticket 8195.
+      the new option KeepBindCapabilities.  Closes ticket 8195.

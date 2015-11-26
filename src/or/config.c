@@ -308,7 +308,7 @@ static config_var_t option_vars_[] = {
   V(Socks5ProxyUsername,         STRING,   NULL),
   V(Socks5ProxyPassword,         STRING,   NULL),
   V(KeepalivePeriod,             INTERVAL, "5 minutes"),
-  V(KeepCapabilities,            AUTOBOOL, "auto"),
+  V(KeepBindCapabilities,            AUTOBOOL, "auto"),
   VAR("Log",                     LINELIST, Logs,             NULL),
   V(LogMessageDomains,           BOOL,     "0"),
   V(LogTimeGranularity,          MSEC_INTERVAL, "1 second"),
@@ -1183,11 +1183,14 @@ options_act_reversible(const or_options_t *old_options, char **msg)
   }
 
   /* Setuid/setgid as appropriate */
-  tor_assert(have_low_ports != -1);
   if (options->User) {
+    tor_assert(have_low_ports != -1);
     unsigned switch_id_flags = 0;
-    if (options->KeepCapabilities == 1 ||
-        (options->KeepCapabilities == -1 && have_low_ports)) {
+    if (options->KeepBindCapabilities == 1) {
+      switch_id_flags |= SWITCH_ID_KEEP_BINDLOW;
+      switch_id_flags |= SWITCH_ID_WARN_IF_NO_CAPS;
+    }
+    if (options->KeepBindCapabilities == -1 && have_low_ports) {
       switch_id_flags |= SWITCH_ID_KEEP_BINDLOW;
     }
     if (switch_id(options->User, switch_id_flags) != 0) {
@@ -4008,8 +4011,8 @@ options_transition_allowed(const or_options_t *old,
     return -1;
   }
 
-  if (old->KeepCapabilities != new_val->KeepCapabilities) {
-    *msg = tor_strdup("While Tor is running, changing KeepCapabilities is "
+  if (old->KeepBindCapabilities != new_val->KeepBindCapabilities) {
+    *msg = tor_strdup("While Tor is running, changing KeepBindCapabilities is "
                       "not allowed.");
     return -1;
   }
@@ -6612,8 +6615,8 @@ parse_ports(or_options_t *options, int validate_only,
 }
 
 /** Given a list of <b>port_cfg_t</b> in <b>ports</b>, check them for internal
- * consistency and warn as appropriate.  Set *<b>n_low_port</b> to the number
- * of sub-1024 ports we will be binding. */
+ * consistency and warn as appropriate.  Set *<b>n_low_ports_out</b> to the
+ * number of sub-1024 ports we will be binding. */
 static int
 check_server_ports(const smartlist_t *ports,
                    const or_options_t *options,
@@ -6681,10 +6684,10 @@ check_server_ports(const smartlist_t *ports,
   }
 
   if (n_low_port && options->AccountingMax &&
-      (!have_capability_support() || options->KeepCapabilities == 0)) {
+      (!have_capability_support() || options->KeepBindCapabilities == 0)) {
     const char *extra = "";
-    if (options->KeepCapabilities == 0 && have_capability_support())
-      extra = ", and you have disabled KeepCapabilities.";
+    if (options->KeepBindCapabilities == 0 && have_capability_support())
+      extra = ", and you have disabled KeepBindCapabilities.";
     log_warn(LD_CONFIG,
           "You have set AccountingMax to use hibernation. You have also "
           "chosen a low DirPort or OrPort%s."

@@ -632,7 +632,10 @@ int tor_disable_debugger_attach(void);
 
 int have_capability_support(void);
 
-#define SWITCH_ID_KEEP_BINDLOW 1
+/** Flag for switch_id; see switch_id() for documentation */
+#define SWITCH_ID_KEEP_BINDLOW    (1<<0)
+/** Flag for switch_id; see switch_id() for documentation */
+#define SWITCH_ID_WARN_IF_NO_CAPS (1<<1)
 int switch_id(const char *user, unsigned flags);
 #ifdef HAVE_PWD_H
 char *get_user_homedir(const char *username);

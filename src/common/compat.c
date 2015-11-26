@@ -1997,8 +1997,11 @@ drop_capabilities(int pre_setuid)
 /** Call setuid and setgid to run as <b>user</b> and switch to their
  * primary group.  Return 0 on success.  On failure, log and return -1.
  *
- * If SWITCH_ID_KEEP_BINDLOW is set in 'flags', try to use the capabilitity
+ * If SWITCH_ID_KEEP_BINDLOW is set in 'flags', try to use the capability
  * system to retain the abilitity to bind low ports.
+ *
+ * If SWITCH_ID_WARN_IF_NO_CAPS is set in flags, also warn if we have
+ * don't have capability support.
  */
 int
 switch_id(const char *user, const unsigned flags)
@@ -2009,6 +2012,7 @@ switch_id(const char *user, const unsigned flags)
   gid_t old_gid;
   static int have_already_switched_id = 0;
   const int keep_bindlow = !!(flags & SWITCH_ID_KEEP_BINDLOW);
+  const int warn_if_no_caps = !!(flags & SWITCH_ID_WARN_IF_NO_CAPS);
 
   tor_assert(user);
 
@@ -2033,9 +2037,16 @@ switch_id(const char *user, const unsigned flags)
   }
 
 #ifdef HAVE_LINUX_CAPABILITIES
+  (void) warn_if_no_caps;
   if (keep_bindlow) {
     if (drop_capabilities(1))
       return -1;
+  }
+#else
+  (void) keep_bindlow;
+  if (warn_if_no_caps) {
+    log_warn(LD_CONFIG, "KeepBindCapabilities set, but no capability support "
+             "on this system.");
   }
 #endif
 
