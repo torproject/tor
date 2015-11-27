@@ -11,6 +11,9 @@
 #define CONNECTION_EDGE_PRIVATE
 
 #include "or.h"
+
+#include "backtrace.h"
+
 #include "addressmap.h"
 #include "buffers.h"
 #include "channel.h"
@@ -855,6 +858,7 @@ connection_ap_mark_as_pending_circuit_(entry_connection_t *entry_conn,
     log_warn(LD_BUG, "What?? pending_entry_connections already contains %p! "
              "(called from %s:%d)",
              entry_conn, fname, lineno);
+    log_backtrace(LOG_WARN, LD_BUG, "To debug, this may help.");
     return;
   }
 
