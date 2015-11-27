@@ -799,6 +799,12 @@ connection_ap_attach_pending(int retry)
       SMARTLIST_DEL_CURRENT(pending_entry_connections, entry_conn);
       continue;
     }
+    if (conn->magic != ENTRY_CONNECTION_MAGIC) {
+      log_warn(LD_BUG, "%p has impossible magic value %u",
+               entry_conn, (unsigned)conn->magic);
+      SMARTLIST_DEL_CURRENT(pending_entry_connections, entry_conn);
+      continue;
+    }
     if (conn->state != AP_CONN_STATE_CIRCUIT_WAIT) {
       log_warn(LD_BUG, "%p is no longer in circuit_wait. Its current state "
                "is %s. Why is it on pending_entry_connections?",
