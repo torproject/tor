@@ -1270,41 +1270,53 @@ policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
                                              add_default);
 }
 
-/** Helper function that adds addr to a smartlist as long as it is non-NULL
- * and not tor_addr_is_null(). */
+/** Helper function that adds a copy of addr to a smartlist as long as it is
+ * non-NULL and not tor_addr_is_null().
+ *
+ * The caller is responsible for freeing all the tor_addr_t* in the smartlist.
+ */
 static void
-policies_add_addr_to_smartlist(smartlist_t *addr_list, const tor_addr_t *addr)
+policies_copy_addr_to_smartlist(smartlist_t *addr_list, const tor_addr_t *addr)
 {
   if (addr && !tor_addr_is_null(addr)) {
-    smartlist_add(addr_list, (void *)addr);
+    tor_addr_t *addr_copy = tor_malloc(sizeof(tor_addr_t));
+    tor_addr_copy(addr_copy, addr);
+    smartlist_add(addr_list, addr_copy);
   }
 }
 
 /** Helper function that adds ipv4h_addr to a smartlist as a tor_addr_t *,
- * by converting it to a tor_addr_t and passing it to
- * policies_add_addr_to_smartlist. */
+ * as long as it is not tor_addr_is_null(), by converting it to a tor_addr_t
+ * and passing it to policies_add_addr_to_smartlist.
+ *
+ * The caller is responsible for freeing all the tor_addr_t* in the smartlist.
+ */
 static void
-policies_add_ipv4h_to_smartlist(smartlist_t *addr_list, uint32_t ipv4h_addr)
+policies_copy_ipv4h_to_smartlist(smartlist_t *addr_list, uint32_t ipv4h_addr)
 {
   if (ipv4h_addr) {
     tor_addr_t ipv4_tor_addr;
     tor_addr_from_ipv4h(&ipv4_tor_addr, ipv4h_addr);
-    policies_add_addr_to_smartlist(addr_list, (void *)&ipv4_tor_addr);
+    policies_copy_addr_to_smartlist(addr_list, &ipv4_tor_addr);
   }
 }
 
-/** Helper function that adds or_options->OutboundBindAddressIPv[4|6]_ to a
- * smartlist as a tor_addr_t *, as long as or_options is non-NULL,
- * by passing them to policies_add_addr_to_smartlist. */
+/** Helper function that adds copies of
+ * or_options->OutboundBindAddressIPv[4|6]_ to a smartlist as tor_addr_t *, as
+ * long as or_options is non-NULL, and the addresses are not
+ * tor_addr_is_null(), by passing them to policies_add_addr_to_smartlist.
+ *
+ * The caller is responsible for freeing all the tor_addr_t* in the smartlist.
+ */
 static void
-policies_add_outbound_addresses_to_smartlist(smartlist_t *addr_list,
-                                             const or_options_t *or_options)
+policies_copy_outbound_addresses_to_smartlist(smartlist_t *addr_list,
+                                              const or_options_t *or_options)
 {
   if (or_options) {
-    policies_add_addr_to_smartlist(addr_list,
-                                   &or_options->OutboundBindAddressIPv4_);
-    policies_add_addr_to_smartlist(addr_list,
-                                   &or_options->OutboundBindAddressIPv6_);
+    policies_copy_addr_to_smartlist(addr_list,
+                                    &or_options->OutboundBindAddressIPv4_);
+    policies_copy_addr_to_smartlist(addr_list,
+                                    &or_options->OutboundBindAddressIPv6_);
   }
 }
 
@@ -1361,17 +1373,16 @@ policies_parse_exit_policy_from_options(const or_options_t *or_options,
     parser_cfg |= EXIT_POLICY_ADD_DEFAULT;
   }
 
-  /* Add the configured addresses to the tor_addr_t* list */
-  policies_add_ipv4h_to_smartlist(configured_addresses, local_address);
-  policies_add_addr_to_smartlist(configured_addresses, ipv6_local_address);
-  policies_add_outbound_addresses_to_smartlist(configured_addresses,
-                                               or_options);
+  /* Copy the configured addresses into the tor_addr_t* list */
+  policies_copy_ipv4h_to_smartlist(configured_addresses, local_address);
+  policies_copy_addr_to_smartlist(configured_addresses, ipv6_local_address);
+  policies_copy_outbound_addresses_to_smartlist(configured_addresses,
+                                                or_options);
 
   rv = policies_parse_exit_policy(or_options->ExitPolicy, result, parser_cfg,
                                   configured_addresses);
 
-  /* We don't need to free the pointers in this list, they are either constant
-   * or locally scoped. */
+  SMARTLIST_FOREACH(configured_addresses, tor_addr_t *, a, tor_free(a));
   smartlist_free(configured_addresses);
 
   return rv;
@@ -2154,11 +2165,11 @@ getinfo_helper_policies(control_connection_t *conn,
     smartlist_t *private_policy_list = smartlist_new();
     smartlist_t *configured_addresses = smartlist_new();
 
-    /* Add the configured addresses to the tor_addr_t* list */
-    policies_add_ipv4h_to_smartlist(configured_addresses, me->addr);
-    policies_add_addr_to_smartlist(configured_addresses, &me->ipv6_addr);
-    policies_add_outbound_addresses_to_smartlist(configured_addresses,
-                                                 options);
+    /* Copy the configured addresses into the tor_addr_t* list */
+    policies_copy_ipv4h_to_smartlist(configured_addresses, me->addr);
+    policies_copy_addr_to_smartlist(configured_addresses, &me->ipv6_addr);
+    policies_copy_outbound_addresses_to_smartlist(configured_addresses,
+                                                  options);
 
     policies_parse_exit_policy_reject_private(
                                             &private_policy_list,
@@ -2168,7 +2179,7 @@ getinfo_helper_policies(control_connection_t *conn,
     *answer = policy_dump_to_string(private_policy_list, 1, 1);
 
     addr_policy_list_free(private_policy_list);
-    /* the addresses in configured_addresses are not ours to free */
+    SMARTLIST_FOREACH(configured_addresses, tor_addr_t *, a, tor_free(a));
     smartlist_free(configured_addresses);
   } else if (!strcmpstart(question, "exit-policy/")) {
     const routerinfo_t *me = router_get_my_routerinfo();
