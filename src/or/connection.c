@@ -1597,6 +1597,8 @@ connection_init_accepted_conn(connection_t *conn,
           break;
         case CONN_TYPE_AP_TRANS_LISTENER:
           TO_ENTRY_CONN(conn)->is_transparent_ap = 1;
+          /* XXXX028 -- is this correct still, with the addition of
+           * pending_entry_connections ? */
           conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
           return connection_ap_process_transparent(TO_ENTRY_CONN(conn));
         case CONN_TYPE_AP_NATD_LISTENER:

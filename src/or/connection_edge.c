@@ -771,7 +771,7 @@ connection_ap_rescan_and_attach_pending(void)
                "adding it.",
                pending_entry_connections);
       untried_pending_connections = 1;
-      smartlist_add(pending_entry_connections, entry_conn);
+      connection_ap_mark_as_pending_circuit(entry_conn);
     }
 
   } SMARTLIST_FOREACH_END(conn);
@@ -827,7 +827,10 @@ connection_ap_attach_pending(int retry)
         conn->type != CONN_TYPE_AP ||
         conn->state != AP_CONN_STATE_CIRCUIT_WAIT) {
       SMARTLIST_DEL_CURRENT(pending_entry_connections, entry_conn);
+      continue;
     }
+
+    tor_assert(conn->magic == ENTRY_CONNECTION_MAGIC);
 
   } SMARTLIST_FOREACH_END(entry_conn);
 
@@ -847,6 +850,7 @@ connection_ap_mark_as_pending_circuit_(entry_connection_t *entry_conn,
 {
   connection_t *conn = ENTRY_TO_CONN(entry_conn);
   tor_assert(conn->state == AP_CONN_STATE_CIRCUIT_WAIT);
+  tor_assert(conn->magic == ENTRY_CONNECTION_MAGIC);
   if (conn->marked_for_close)
     return;
 
@@ -864,6 +868,15 @@ connection_ap_mark_as_pending_circuit_(entry_connection_t *entry_conn,
 
   untried_pending_connections = 1;
   smartlist_add(pending_entry_connections, entry_conn);
+}
+
+/** Mark <b>entry_conn</b> as no longer waiting for a circuit. */
+void
+connection_ap_mark_as_non_pending_circuit(entry_connection_t *entry_conn)
+{
+  if (PREDICT_UNLIKELY(NULL == pending_entry_connections))
+    return;
+  smartlist_remove(pending_entry_connections, entry_conn);
 }
 
 /** Tell any AP streams that are waiting for a one-hop tunnel to
@@ -986,6 +999,7 @@ connection_ap_detach_retriable(entry_connection_t *conn,
     circuit_detach_stream(TO_CIRCUIT(circ),ENTRY_TO_EDGE_CONN(conn));
     connection_ap_mark_as_pending_circuit(conn);
   } else {
+    CONNECTION_AP_EXPECT_NONPENDING(conn);
     ENTRY_TO_CONN(conn)->state = AP_CONN_STATE_CONTROLLER_WAIT;
     circuit_detach_stream(TO_CIRCUIT(circ),ENTRY_TO_EDGE_CONN(conn));
   }
@@ -1038,6 +1052,7 @@ connection_ap_rewrite_and_attach_if_allowed(entry_connection_t *conn,
   const or_options_t *options = get_options();
 
   if (options->LeaveStreamsUnattached) {
+    CONNECTION_AP_EXPECT_NONPENDING(conn);
     ENTRY_TO_CONN(conn)->state = AP_CONN_STATE_CONTROLLER_WAIT;
     return 0;
   }
@@ -1689,6 +1704,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
      * Also, a fetch could have been requested if the onion address was not
      * found in the cache previously. */
     if (refetch_desc || !rend_client_any_intro_points_usable(entry)) {
+      connection_ap_mark_as_non_pending_circuit(conn);
       base_conn->state = AP_CONN_STATE_RENDDESC_WAIT;
       log_info(LD_REND, "Unknown descriptor %s. Fetching.",
           safe_str_client(rend_data->onion_address));

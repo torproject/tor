@@ -1304,6 +1304,7 @@ connection_edge_process_relay_cell_not_open(
              "Got 'connected' while not in state connect_wait. Dropping.");
       return 0;
     }
+    CONNECTION_AP_EXPECT_NONPENDING(entry_conn);
     conn->base_.state = AP_CONN_STATE_OPEN;
     log_info(LD_APP,"'connected' received for circid %u streamid %d "
              "after %d seconds.",

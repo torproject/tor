@@ -173,6 +173,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
       while ((conn = connection_get_by_type_state_rendquery(CONN_TYPE_AP,
                        AP_CONN_STATE_CIRCUIT_WAIT,
                        introcirc->rend_data->onion_address))) {
+        connection_ap_mark_as_non_pending_circuit(TO_ENTRY_CONN(conn));
         conn->state = AP_CONN_STATE_RENDDESC_WAIT;
       }
     }
@@ -1055,9 +1056,11 @@ rend_client_report_intro_point_failure(extend_info_t *failed_intro,
     rend_client_refetch_v2_renddesc(rend_query);
 
     /* move all pending streams back to renddesc_wait */
+    /* NOTE: We can now do this faster, if we use pending_entry_connections */
     while ((conn = connection_get_by_type_state_rendquery(CONN_TYPE_AP,
                                    AP_CONN_STATE_CIRCUIT_WAIT,
                                    rend_query->onion_address))) {
+      connection_ap_mark_as_non_pending_circuit(TO_ENTRY_CONN(conn));
       conn->state = AP_CONN_STATE_RENDDESC_WAIT;
     }
 

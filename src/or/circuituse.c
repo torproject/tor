@@ -1986,6 +1986,7 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
                  "No intro points for '%s': re-fetching service descriptor.",
                  safe_str_client(rend_data->onion_address));
         rend_client_refetch_v2_renddesc(rend_data);
+        connection_ap_mark_as_non_pending_circuit(conn);
         ENTRY_TO_CONN(conn)->state = AP_CONN_STATE_RENDDESC_WAIT;
         return 0;
       }

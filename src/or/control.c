@@ -3011,6 +3011,7 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
     edge_conn->end_reason = 0;
     if (tmpcirc)
       circuit_detach_stream(tmpcirc, edge_conn);
+    CONNECTION_AP_EXPECT_NONPENDING(ap_conn);
     TO_CONN(edge_conn)->state = AP_CONN_STATE_CONTROLLER_WAIT;
   }
 
