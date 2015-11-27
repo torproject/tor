@@ -1509,9 +1509,9 @@ tor_ersatz_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
     tor_socket_t acceptor = TOR_INVALID_SOCKET;
     tor_addr_t listen_tor_addr;
     struct sockaddr listen_addr;
-    in_port_t listen_port = 0;
+    uint16_t listen_port = 0;
     tor_addr_t connect_tor_addr;
-    in_port_t connect_port = 0;
+    uint16_t connect_port = 0;
     struct sockaddr  connect_addr;
     socklen_t size;
     int saved_errno = -1;
