@@ -1487,10 +1487,18 @@ tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
 
 #ifdef NEED_ERSATZ_SOCKETPAIR
 
-#define SIZEOF_SOCKADDR(domain) \
-  (domain == AF_INET ? sizeof(struct sockaddr_in) : \
-   (domain == AF_INET6 ? sizeof(struct sockaddr_in6) : \
-    ((size_t)0) /* unsupported, don't match any valid size */))
+static INLINE socklen_t
+SIZEOF_SOCKADDR(int domain)
+{
+  switch (domain) {
+    case AF_INET:
+      return sizeof(struct sockaddr_in);
+    case AF_INET6:
+      return sizeof(struct sockaddr_in6);
+    default:
+      return 0;
+  }
+}
 
 /**
  * Helper used to implement socketpair on systems that lack it, by
