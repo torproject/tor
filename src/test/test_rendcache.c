@@ -1024,24 +1024,22 @@ test_rend_cache_entry_free(void *data)
 static void
 test_rend_cache_purge(void *data)
 {
-  strmap_t *our_rend_cache;
-
   (void)data;
 
   // Deals with a NULL rend_cache
   rend_cache_purge();
   tt_assert(rend_cache);
-  tt_int_op(strmap_size(rend_cache), OP_EQ, 0);
+  tt_assert(strmap_size(rend_cache) == 0);
 
   // Deals with existing rend_cache
   rend_cache_free_all();
   rend_cache_init();
+  tt_assert(rend_cache);
+  tt_assert(strmap_size(rend_cache) == 0);
 
-  our_rend_cache = rend_cache;
   rend_cache_purge();
   tt_assert(rend_cache);
   tt_assert(strmap_size(rend_cache) == 0);
-  tt_assert(rend_cache == our_rend_cache);
 
  done:
   rend_cache_free_all();
