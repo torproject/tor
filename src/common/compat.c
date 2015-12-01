@@ -573,7 +573,9 @@ tor_vasprintf(char **strp, const char *fmt, va_list args)
   int len, r;
   va_list tmp_args;
   va_copy(tmp_args, args);
-  len = vsnprintf(buf, sizeof(buf), fmt, tmp_args);
+  /* vsnprintf() was properly checked but tor_vsnprintf() available so
+   * why not use it? */
+  len = tor_vsnprintf(buf, sizeof(buf), fmt, tmp_args);
   va_end(tmp_args);
   if (len < (int)sizeof(buf)) {
     *strp = tor_strdup(buf);
