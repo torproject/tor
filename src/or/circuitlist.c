@@ -911,6 +911,9 @@ circuit_free_all(void)
   smartlist_free(circuits_pending_chans);
   circuits_pending_chans = NULL;
 
+  smartlist_free(circuits_pending_close);
+  circuits_pending_close = NULL;
+
   {
     chan_circid_circuit_map_t **elt, **next, *c;
     for (elt = HT_START(chan_circid_map, &chan_circid_map);
