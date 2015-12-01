@@ -580,7 +580,8 @@ tor_vasprintf(char **strp, const char *fmt, va_list args)
     return len;
   }
   strp_tmp = tor_malloc(len+1);
-  r = vsnprintf(strp_tmp, len+1, fmt, args);
+  /* use of tor_vsnprintf() will ensure string is null terminated */
+  r = tor_vsnprintf(strp_tmp, len+1, fmt, args);
   if (r != len) {
     tor_free(strp_tmp);
     *strp = NULL;
