@@ -2873,6 +2873,9 @@ expand_filename(const char *filename)
 {
   tor_assert(filename);
 #ifdef _WIN32
+  /* Might consider using GetFullPathName() as described here:
+   * http://etutorials.org/Programming/secure+programming/Chapter+3.+Input+Validation/3.7+Validating+Filenames+and+Paths/
+   */
   return tor_strdup(filename);
 #else
   if (*filename == '~') {
