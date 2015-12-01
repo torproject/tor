@@ -206,7 +206,11 @@ tor_cert_checksig(tor_cert_t *cert,
     return -1;
   } else {
     cert->sig_ok = 1;
-    memcpy(cert->signing_key.pubkey, checkable.pubkey->pubkey, 32);
+    /* Only copy the checkable public key when it is different from the signing
+     * key of the certificate to avoid undefined behavior. */
+    if (cert->signing_key.pubkey != checkable.pubkey->pubkey) {
+      memcpy(cert->signing_key.pubkey, checkable.pubkey->pubkey, 32);
+    }
     cert->cert_valid = 1;
     return 0;
   }
