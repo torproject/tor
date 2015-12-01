@@ -500,8 +500,7 @@ connection_in_array(connection_t *conn)
   return smartlist_contains(connection_array, conn);
 }
 
-/** Set <b>*array</b> to an array of all connections, and <b>*n</b>
- * to the length of the array. <b>*array</b> and <b>*n</b> must not
+/** Set <b>*array</b> to an array of all connections. <b>*array</b> must not
  * be modified.
  */
 smartlist_t *
