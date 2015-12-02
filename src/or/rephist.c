@@ -148,7 +148,7 @@ get_link_history(const char *from_id, const char *to_id)
     return NULL;
   if (tor_digest_is_zero(to_id))
     return NULL;
-  lhist = (link_history_t*) digestmap_get(orhist->link_history_map, to_id);
+  lhist = digestmap_get(orhist->link_history_map, to_id);
   if (!lhist) {
     lhist = tor_malloc_zero(sizeof(link_history_t));
     rephist_total_alloc += sizeof(link_history_t);
@@ -1250,6 +1250,18 @@ bw_array_new(void)
   return b;
 }
 
+/** Free storage held by bandwidth array <b>b</b>. */
+static void
+bw_array_free(bw_array_t *b)
+{
+  if (!b) {
+    return;
+  }
+
+  rephist_total_alloc -= sizeof(bw_array_t);
+  tor_free(b);
+}
+
 /** Recent history of bandwidth observations for read operations. */
 static bw_array_t *read_array = NULL;
 /** Recent history of bandwidth observations for write operations. */
@@ -1266,10 +1278,11 @@ static bw_array_t *dir_write_array = NULL;
 static void
 bw_arrays_init(void)
 {
-  tor_free(read_array);
-  tor_free(write_array);
-  tor_free(dir_read_array);
-  tor_free(dir_write_array);
+  bw_array_free(read_array);
+  bw_array_free(write_array);
+  bw_array_free(dir_read_array);
+  bw_array_free(dir_write_array);
+
   read_array = bw_array_new();
   write_array = bw_array_new();
   dir_read_array = bw_array_new();
@@ -3172,10 +3185,19 @@ rep_hist_free_all(void)
 {
   hs_stats_free(hs_stats);
   digestmap_free(history_map, free_or_history);
-  tor_free(read_array);
-  tor_free(write_array);
-  tor_free(dir_read_array);
-  tor_free(dir_write_array);
+
+  bw_array_free(read_array);
+  read_array = NULL;
+
+  bw_array_free(write_array);
+  write_array = NULL;
+
+  bw_array_free(dir_read_array);
+  dir_read_array = NULL;
+
+  bw_array_free(dir_write_array);
+  dir_write_array = NULL;
+
   tor_free(exit_bytes_read);
   tor_free(exit_bytes_written);
   tor_free(exit_streams);
@@ -3190,5 +3212,8 @@ rep_hist_free_all(void)
   }
   rep_hist_desc_stats_term();
   total_descriptor_downloads = 0;
+
+  tor_assert(rephist_total_alloc == 0);
+  tor_assert(rephist_total_num == 0);
 }
 
