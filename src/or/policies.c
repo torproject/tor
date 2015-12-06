@@ -1124,54 +1124,12 @@ policies_parse_exit_policy_reject_private(
   "reject *:563,reject *:1214,reject *:4661-4666,"                  \
   "reject *:6346-6429,reject *:6699,reject *:6881-6999,accept *:*"
 
-/** Parse the exit policy <b>cfg</b> into the linked list *<b>dest</b>.
- *
- * If <b>ipv6_exit</b> is false, prepend "reject *6:*" to the policy.
- *
- * If <b>rejectprivate</b> is true:
- *   - prepend "reject private:*" to the policy.
- *   - prepend entries that reject publicly routable addresses on this exit
- *     relay by calling policies_parse_exit_policy_reject_private
- *
- * If cfg doesn't end in an absolute accept or reject and if
- * <b>add_default_policy</b> is true, add the default exit
- * policy afterwards.
- *
- * Return -1 if we can't parse cfg, else return 0.
- *
- * This function is used to parse the exit policy from our torrc. For
- * the functions used to parse the exit policy from a router descriptor,
- * see router_add_exit_policy.
+/**
+ * Iterates through *<b>dest</b> and logs a warning with first 
+ * redundant entry if found
  */
-static int
-policies_parse_exit_policy_internal(config_line_t *cfg,
-                                    smartlist_t **dest,
-                                    int ipv6_exit,
-                                    int rejectprivate,
-                                    const smartlist_t *configured_addresses,
-                                    int reject_interface_addresses,
-                                    int reject_configured_port_addresses,
-                                    int add_default_policy)
-{
-  if (!ipv6_exit) {
-    append_exit_policy_string(dest, "reject *6:*");
-  }
-  if (rejectprivate) {
-    /* Reject IPv4 and IPv6 reserved private netblocks */
-    append_exit_policy_string(dest, "reject private:*");
-    /* Reject IPv4 and IPv6 publicly routable addresses on this exit relay */
-    policies_parse_exit_policy_reject_private(
-                                            dest, ipv6_exit,
-                                            configured_addresses,
-                                            reject_interface_addresses,
-                                            reject_configured_port_addresses);
-  }
-  if (parse_addr_policy(cfg, dest, -1))
-    return -1;
-
-  /* Before we add the default policy and final rejects, check to see if
-   * there are any lines after accept *:* or reject *:*. These lines have no
-   * effect, and are most likely an error. */
+static void 
+policies_log_first_redundant_entry(smartlist_t** dest) {
   int found_final_effective_entry = 0;
   int first_redundant_entry = 0;
   for (int i = 0; i < smartlist_len(*dest); ++i) {
@@ -1227,6 +1185,57 @@ policies_parse_exit_policy_internal(config_line_t *cfg,
              "accept/reject *:* as the last entry in any exit policy.)",
              line);
   }
+}
+
+/** Parse the exit policy <b>cfg</b> into the linked list *<b>dest</b>.
+ *
+ * If <b>ipv6_exit</b> is false, prepend "reject *6:*" to the policy.
+ *
+ * If <b>rejectprivate</b> is true:
+ *   - prepend "reject private:*" to the policy.
+ *   - prepend entries that reject publicly routable addresses on this exit
+ *     relay by calling policies_parse_exit_policy_reject_private
+ *
+ * If cfg doesn't end in an absolute accept or reject and if
+ * <b>add_default_policy</b> is true, add the default exit
+ * policy afterwards.
+ *
+ * Return -1 if we can't parse cfg, else return 0.
+ *
+ * This function is used to parse the exit policy from our torrc. For
+ * the functions used to parse the exit policy from a router descriptor,
+ * see router_add_exit_policy.
+ */
+static int
+policies_parse_exit_policy_internal(config_line_t *cfg,
+                                    smartlist_t **dest,
+                                    int ipv6_exit,
+                                    int rejectprivate,
+                                    const smartlist_t *configured_addresses,
+                                    int reject_interface_addresses,
+                                    int reject_configured_port_addresses,
+                                    int add_default_policy)
+{
+  if (!ipv6_exit) {
+    append_exit_policy_string(dest, "reject *6:*");
+  }
+  if (rejectprivate) {
+    /* Reject IPv4 and IPv6 reserved private netblocks */
+    append_exit_policy_string(dest, "reject private:*");
+    /* Reject IPv4 and IPv6 publicly routable addresses on this exit relay */
+    policies_parse_exit_policy_reject_private(
+                                            dest, ipv6_exit,
+                                            configured_addresses,
+                                            reject_interface_addresses,
+                                            reject_configured_port_addresses);
+  }
+  if (parse_addr_policy(cfg, dest, -1))
+    return -1;
+
+  /* Before we add the default policy and final rejects, check to see if
+   * there are any lines after accept *:* or reject *:*. These lines have no
+   * effect, and are most likely an error. */
+   policies_log_first_redundant_entry(dest);
 
   if (add_default_policy) {
     append_exit_policy_string(dest, DEFAULT_EXIT_POLICY);
