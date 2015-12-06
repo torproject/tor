@@ -1350,7 +1350,7 @@ policies_parse_exit_policy_from_options(const or_options_t *or_options,
                                         smartlist_t **result)
 {
   exit_policy_parser_cfg_t parser_cfg = 0;
-  smartlist_t *configured_addresses;
+  smartlist_t *configured_addresses = NULL;
   int rv = 0;
 
   /* Short-circuit for non-exit relays */
