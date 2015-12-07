@@ -1708,9 +1708,12 @@ connection_connect_sockaddr(connection_t *conn,
 }
 
 /** Take conn, make a nonblocking socket; try to connect to
- * addr:port (they arrive in *host order*). If fail, return -1 and if
+ * addr:port (port arrives in *host order*). If fail, return -1 and if
  * applicable put your best guess about errno into *<b>socket_error</b>.
  * Else assign s to conn-\>s: if connected return 1, if EAGAIN return 0.
+ *
+ * addr:port can be different to conn->addr:conn->port if connecting through
+ * a proxy.
  *
  * address is used to make the logs useful.
  *
@@ -4212,7 +4215,8 @@ connection_write_to_buf_impl_,(const char *string, size_t len,
 }
 
 /** Return a connection with given type, address, port, and purpose;
- * or NULL if no such connection exists. */
+ * or NULL if no such connection exists (or if all such connections are marked
+ * for close). */
 connection_t *
 connection_get_by_type_addr_port_purpose(int type,
                                          const tor_addr_t *addr, uint16_t port,

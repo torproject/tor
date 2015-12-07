@@ -1781,9 +1781,9 @@ router_get_my_descriptor(void)
   const char *body;
   if (!router_get_my_routerinfo())
     return NULL;
-  /* Make sure this is nul-terminated. */
   tor_assert(desc_routerinfo->cache_info.saved_location == SAVED_NOWHERE);
   body = signed_descriptor_get_body(&desc_routerinfo->cache_info);
+  /* Make sure this is nul-terminated. */
   tor_assert(!body[desc_routerinfo->cache_info.signed_descriptor_len]);
   log_debug(LD_GENERAL,"my desc is '%s'", body);
   return body;
