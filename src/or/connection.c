@@ -1708,9 +1708,12 @@ connection_connect_sockaddr(connection_t *conn,
 }
 
 /** Take conn, make a nonblocking socket; try to connect to
- * addr:port (they arrive in *host order*). If fail, return -1 and if
+ * addr:port (port arrives in *host order*). If fail, return -1 and if
  * applicable put your best guess about errno into *<b>socket_error</b>.
  * Else assign s to conn-\>s: if connected return 1, if EAGAIN return 0.
+ *
+ * addr:port can be different to conn->addr:conn->port if connecting through
+ * a proxy.
  *
  * address is used to make the logs useful.
  *
