@@ -1460,6 +1460,11 @@ run_scheduled_events(time_t now)
     dirvote_act(options, now);
   }
 
+  /* 2d. Cleanup excess consensus bootstrap connections every second.
+   * connection_dir_close_consensus_conn_if_extra() will close connections
+   * that are clearly excess, but this check is more thorough. */
+  connection_dir_close_extra_consensus_conns();
+
   /* 3a. Every second, we examine pending circuits and prune the
    *    ones which have been pending for more than a few seconds.
    *    We do this before step 4, so it can try building more if

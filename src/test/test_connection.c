@@ -644,43 +644,59 @@ test_conn_download_status(void *arg)
   /* no connections, no excess, not downloading */
   tt_assert(networkstatus_consensus_has_excess_connections() == 0);
   tt_assert(networkstatus_consensus_is_downloading_usable_flavor() == 0);
+  tt_assert(connection_dir_avoid_extra_connection_for_purpose(
+                                                 TEST_CONN_RSRC_PURPOSE) == 0);
 
   /* one connection, no excess, not downloading */
   conn = test_conn_download_status_add_a_connection();
   tt_assert(networkstatus_consensus_has_excess_connections() == 0);
   tt_assert(networkstatus_consensus_is_downloading_usable_flavor() == 0);
+  tt_assert(connection_dir_avoid_extra_connection_for_purpose(
+                                                 TEST_CONN_RSRC_PURPOSE) == 0);
 
   /* one connection, no excess, but downloading */
   conn->base_.state = TEST_CONN_DL_STATE;
   tt_assert(networkstatus_consensus_has_excess_connections() == 0);
   tt_assert(networkstatus_consensus_is_downloading_usable_flavor() == 1);
+  tt_assert(connection_dir_avoid_extra_connection_for_purpose(
+                                                 TEST_CONN_RSRC_PURPOSE) == 1);
   conn->base_.state = TEST_CONN_STATE;
 
   /* two connections, excess, but not downloading */
   conn2 = test_conn_download_status_add_a_connection();
   tt_assert(networkstatus_consensus_has_excess_connections() == 1);
   tt_assert(networkstatus_consensus_is_downloading_usable_flavor() == 0);
+  tt_assert(connection_dir_avoid_extra_connection_for_purpose(
+                                                 TEST_CONN_RSRC_PURPOSE) == 0);
 
   /* two connections, excess, downloading */
   conn2->base_.state = TEST_CONN_DL_STATE;
   tt_assert(networkstatus_consensus_has_excess_connections() == 1);
   tt_assert(networkstatus_consensus_is_downloading_usable_flavor() == 1);
+  tt_assert(connection_dir_avoid_extra_connection_for_purpose(
+                                                 TEST_CONN_RSRC_PURPOSE) == 1);
   conn2->base_.state = TEST_CONN_STATE;
 
   /* more connections, excess, but not downloading */
   conn3 = test_conn_download_status_add_a_connection();
   tt_assert(networkstatus_consensus_has_excess_connections() == 1);
   tt_assert(networkstatus_consensus_is_downloading_usable_flavor() == 0);
+  tt_assert(connection_dir_avoid_extra_connection_for_purpose(
+                                                 TEST_CONN_RSRC_PURPOSE) == 0);
 
   /* more connections, excess, downloading */
   conn3->base_.state = TEST_CONN_DL_STATE;
   tt_assert(networkstatus_consensus_has_excess_connections() == 1);
   tt_assert(networkstatus_consensus_is_downloading_usable_flavor() == 1);
+  tt_assert(connection_dir_avoid_extra_connection_for_purpose(
+                                                 TEST_CONN_RSRC_PURPOSE) == 1);
 
   /* more connections, more downloading */
   conn2->base_.state = TEST_CONN_DL_STATE;
   tt_assert(networkstatus_consensus_has_excess_connections() == 1);
   tt_assert(networkstatus_consensus_is_downloading_usable_flavor() == 1);
+  tt_assert(connection_dir_avoid_extra_connection_for_purpose(
+                                                 TEST_CONN_RSRC_PURPOSE) == 1);
 
   /* now try closing the one that isn't downloading:
    * these tests won't work unless tor thinks it is bootstrapping */
@@ -689,22 +705,39 @@ test_conn_download_status(void *arg)
   tt_assert(connection_dir_count_by_purpose_and_resource(
                                                         TEST_CONN_RSRC_PURPOSE,
                                                         TEST_CONN_RSRC) == 3);
+  tt_assert(connection_dir_avoid_extra_connection_for_purpose(
+                                                 TEST_CONN_RSRC_PURPOSE) == 1);
   tt_assert(connection_dir_close_consensus_conn_if_extra(conn) == -1);
   tt_assert(connection_dir_count_by_purpose_and_resource(
                                                         TEST_CONN_RSRC_PURPOSE,
                                                         TEST_CONN_RSRC) == 2);
+  tt_assert(connection_dir_avoid_extra_connection_for_purpose(
+                                                 TEST_CONN_RSRC_PURPOSE) == 1);
 
-  /* now try closing one that is downloading - it stays open */
+  /* now try closing one that is already closed - nothing happens */
   tt_assert(connection_dir_close_consensus_conn_if_extra(conn) == 0);
   tt_assert(connection_dir_count_by_purpose_and_resource(
                                                         TEST_CONN_RSRC_PURPOSE,
                                                         TEST_CONN_RSRC) == 2);
+  tt_assert(connection_dir_avoid_extra_connection_for_purpose(
+                                                 TEST_CONN_RSRC_PURPOSE) == 1);
+
+
+  /* now try closing one that is downloading - it stays open */
+  tt_assert(connection_dir_close_consensus_conn_if_extra(conn2) == 0);
+  tt_assert(connection_dir_count_by_purpose_and_resource(
+                                                        TEST_CONN_RSRC_PURPOSE,
+                                                        TEST_CONN_RSRC) == 2);
+  tt_assert(connection_dir_avoid_extra_connection_for_purpose(
+                                                 TEST_CONN_RSRC_PURPOSE) == 1);
 
   /* now try closing all excess connections */
   connection_dir_close_extra_consensus_conns();
   tt_assert(connection_dir_count_by_purpose_and_resource(
                                                         TEST_CONN_RSRC_PURPOSE,
                                                         TEST_CONN_RSRC) == 1);
+  tt_assert(connection_dir_avoid_extra_connection_for_purpose(
+                                                 TEST_CONN_RSRC_PURPOSE) == 1);
 
  done:
   /* the teardown function removes all the connections */;

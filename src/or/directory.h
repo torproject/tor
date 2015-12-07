@@ -74,6 +74,9 @@ void directory_initiate_command(const tor_addr_t *addr,
                                 const char *resource,
                                 const char *payload, size_t payload_len,
                                 time_t if_modified_since);
+int connection_dir_avoid_extra_connection_for_purpose(unsigned int purpose);
+int connection_dir_close_consensus_conn_if_extra(dir_connection_t *conn);
+void connection_dir_close_extra_consensus_conns(void);
 
 #define DSR_HEX       (1<<0)
 #define DSR_BASE64    (1<<1)
@@ -139,6 +142,7 @@ STATIC int directory_handle_command_get(dir_connection_t *conn,
                                         const char *headers,
                                         const char *req_body,
                                         size_t req_body_len);
+int connection_dir_would_close_consensus_conn_helper(void);
 STATIC int download_status_schedule_get_delay(download_status_t *dls,
                                               const smartlist_t *schedule,
                                               time_t now);

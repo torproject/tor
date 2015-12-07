@@ -1310,6 +1310,40 @@ networkstatus_consensus_can_use_extra_fallbacks(const or_options_t *options)
               > smartlist_len(router_get_trusted_dir_servers())));
 }
 
+/* Check if there is more than 1 consensus connection retrieving the usable
+ * consensus flavor. If so, return 1, if not, return 0.
+ *
+ * During normal operation, Tor only makes one consensus download
+ * connection. But clients can make multiple simultaneous consensus
+ * connections to improve bootstrap speed and reliability.
+ *
+ * If there is more than one connection, we must have connections left
+ * over from bootstrapping. However, some of the connections may have
+ * completed and been cleaned up, so it is not sufficient to check the
+ * return value of this function to see if a client could make multiple
+ * bootstrap connections. Use
+ * networkstatus_consensus_can_use_multiple_directories()
+ * and networkstatus_consensus_is_boostrapping(). */
+int
+networkstatus_consensus_has_excess_connections(void)
+{
+  const char *usable_resource = networkstatus_get_flavor_name(
+                                                  usable_consensus_flavor());
+  const int consens_conn_usable_count =
+              connection_dir_count_by_purpose_and_resource(
+                                               DIR_PURPOSE_FETCH_CONSENSUS,
+                                               usable_resource);
+  /* The maximum number of connections we want downloading a usable consensus
+   * Always 1, whether bootstrapping or not. */
+  const int max_expected_consens_conn_usable_count = 1;
+
+  if (consens_conn_usable_count > max_expected_consens_conn_usable_count) {
+    return 1;
+  }
+
+  return 0;
+}
+
 /* Is tor currently downloading a consensus of the usable flavor? */
 int
 networkstatus_consensus_is_downloading_usable_flavor(void)

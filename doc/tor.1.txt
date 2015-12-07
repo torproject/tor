@@ -360,8 +360,11 @@ GENERAL OPTIONS
 
 [[FallbackDir]] **FallbackDir** __address__:__port__ orport=__port__ id=__fingerprint__ [weight=__num__]::
     When we're unable to connect to any directory cache for directory info
-    (usually because we don't know about any yet) we try a FallbackDir.
-    By default, the directory authorities are also FallbackDirs.
+    (usually because we don't know about any yet) we try a directory authority.
+    Clients also simultaneously try a FallbackDir, to avoid hangs on client
+    startup if a directory authority is down. Clients retry FallbackDirs more
+    often than directory authorities, to reduce the load on the directory
+    authorities.
 
 [[DirAuthority]] **DirAuthority** [__nickname__] [**flags**] __address__:__port__ __fingerprint__::
     Use a nonstandard authoritative directory server at the provided address
