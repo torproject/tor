@@ -1528,7 +1528,7 @@ get_interface_addresses_raw,(int severity))
 }
 
 /** Return true iff <b>a</b> is a multicast address.  */
-STATIC int
+int
 tor_addr_is_multicast(const tor_addr_t *a)
 {
   sa_family_t family = tor_addr_family(a);

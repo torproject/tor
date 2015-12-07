@@ -221,6 +221,7 @@ int tor_addr_is_internal_(const tor_addr_t *ip, int for_listening,
                           const char *filename, int lineno);
 #define tor_addr_is_internal(addr, for_listening) \
   tor_addr_is_internal_((addr), (for_listening), SHORT_FILE__, __LINE__)
+int tor_addr_is_multicast(const tor_addr_t *a);
 
 /** Longest length that can be required for a reverse lookup name. */
 /* 32 nybbles, 32 dots, 8 characters of "ip6.arpa", 1 NUL: 73 characters. */
@@ -311,7 +312,6 @@ tor_addr_port_t *tor_addr_port_new(const tor_addr_t *addr, uint16_t port);
 
 #ifdef ADDRESS_PRIVATE
 MOCK_DECL(smartlist_t *,get_interface_addresses_raw,(int severity));
-STATIC int tor_addr_is_multicast(const tor_addr_t *a);
 MOCK_DECL(int,get_interface_address6_via_udp_socket_hack,(int severity,
                                                           sa_family_t family,
                                                           tor_addr_t *addr));

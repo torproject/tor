@@ -907,7 +907,8 @@ addr_policy_append_reject_addr(smartlist_t **dest, const tor_addr_t *addr)
 static int
 tor_addr_is_public_for_reject(const tor_addr_t *addr)
 {
-  return !tor_addr_is_null(addr) && !tor_addr_is_internal(addr, 0);
+  return (!tor_addr_is_null(addr) && !tor_addr_is_internal(addr, 0)
+          && !tor_addr_is_multicast(addr));
 }
 
 /* Add "reject <b>addr</b>:*" to <b>dest</b>, creating the list as needed.
