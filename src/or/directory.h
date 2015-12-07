@@ -92,6 +92,8 @@ int router_supports_extrainfo(const char *identity_digest, int is_authority);
 time_t download_status_increment_failure(download_status_t *dls,
                                          int status_code, const char *item,
                                          int server, time_t now);
+time_t download_status_increment_attempt(download_status_t *dls,
+                                         const char *item,  time_t now);
 /** Increment the failure count of the download_status_t <b>dls</b>, with
  * the optional status code <b>sc</b>. */
 #define download_status_failed(dls, sc)                                 \
@@ -107,8 +109,9 @@ static INLINE int
 download_status_is_ready(download_status_t *dls, time_t now,
                          int max_failures)
 {
-  return (dls->n_download_failures <= max_failures
-          && dls->next_attempt_at <= now);
+  int under_failure_limit = (dls->n_download_failures <= max_failures
+                             && dls->n_download_attempts <= max_failures);
+  return (under_failure_limit && dls->next_attempt_at <= now);
 }
 
 static void download_status_mark_impossible(download_status_t *dl);
@@ -117,9 +120,12 @@ static INLINE void
 download_status_mark_impossible(download_status_t *dl)
 {
   dl->n_download_failures = IMPOSSIBLE_TO_DOWNLOAD;
+  dl->n_download_attempts = IMPOSSIBLE_TO_DOWNLOAD;
 }
 
 int download_status_get_n_failures(const download_status_t *dls);
+int download_status_get_n_attempts(const download_status_t *dls);
+time_t download_status_get_next_attempt_at(const download_status_t *dls);
 
 #ifdef TOR_UNIT_TESTS
 /* Used only by directory.c and test_dir.c */
@@ -133,6 +139,9 @@ STATIC int directory_handle_command_get(dir_connection_t *conn,
                                         const char *headers,
                                         const char *req_body,
                                         size_t req_body_len);
+STATIC int download_status_schedule_get_delay(download_status_t *dls,
+                                              const smartlist_t *schedule,
+                                              time_t now);
 #endif
 
 #endif

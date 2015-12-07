@@ -900,7 +900,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
       /* XXX - do we want certs from authorities or mirrors? - teor */
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
                                    resource, PDS_RETRY_IF_NO_SERVERS,
-                                   DL_WANT_FALLBACK);
+                                   DL_WANT_ANY_DIRSERVER);
       tor_free(resource);
     }
     /* else we didn't add any: they were all pending */
@@ -946,7 +946,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
       /* XXX - do we want certs from authorities or mirrors? - teor */
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
                                    resource, PDS_RETRY_IF_NO_SERVERS,
-                                   DL_WANT_FALLBACK);
+                                   DL_WANT_ANY_DIRSERVER);
       tor_free(resource);
     }
     /* else they were all pending */
@@ -4380,14 +4380,14 @@ MOCK_IMPL(STATIC void, initiate_descriptor_downloads,
   tor_free(cp);
 
   if (source) {
-    /* We know which authority we want. */
+    /* We know which authority or directory mirror we want. */
     directory_initiate_command_routerstatus(source, purpose,
                                             ROUTER_PURPOSE_GENERAL,
                                             DIRIND_ONEHOP,
                                             resource, NULL, 0, 0);
   } else {
     directory_get_from_dirserver(purpose, ROUTER_PURPOSE_GENERAL, resource,
-                                 pds_flags, DL_WANT_FALLBACK);
+                                 pds_flags, DL_WANT_ANY_DIRSERVER);
   }
   tor_free(resource);
 }
@@ -4669,9 +4669,14 @@ launch_dummy_descriptor_download_as_needed(time_t now,
       last_descriptor_download_attempted + DUMMY_DOWNLOAD_INTERVAL < now &&
       last_dummy_download + DUMMY_DOWNLOAD_INTERVAL < now) {
     last_dummy_download = now;
+    /* XX/teor - do we want an authority here, because they are less likely
+     * to give us the wrong address? (See #17782)
+     * I'm leaving the previous behaviour intact, because I don't like
+     * the idea of some relays contacting an authority every 20 minutes. */
     directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,
                                  ROUTER_PURPOSE_GENERAL, "authority.z",
-                                 PDS_RETRY_IF_NO_SERVERS, DL_WANT_FALLBACK);
+                                 PDS_RETRY_IF_NO_SERVERS,
+                                 DL_WANT_ANY_DIRSERVER);
   }
 }
 

@@ -2281,10 +2281,18 @@ The following options are used for running a testing Tor network.
        TestingClientDownloadSchedule 0, 0, 5, 10, 15, 20, 30, 60
        TestingServerConsensusDownloadSchedule 0, 0, 5, 10, 15, 20, 30, 60
        TestingClientConsensusDownloadSchedule 0, 0, 5, 10, 15, 20, 30, 60
+       TestingClientBootstrapConsensusAuthorityDownloadSchedule 0, 2,
+           4 (for 40 seconds), 8, 16, 32, 60
+       TestingClientBootstrapConsensusFallbackDownloadSchedule 0, 1,
+           4 (for 40 seconds), 8, 16, 32, 60
+       TestingClientBootstrapConsensusAuthorityOnlyDownloadSchedule 0, 1,
+           4 (for 40 seconds), 8, 16, 32, 60
        TestingBridgeDownloadSchedule 60, 30, 30, 60
        TestingClientMaxIntervalWithoutRequest 5 seconds
        TestingDirConnectionMaxStall 30 seconds
        TestingConsensusMaxDownloadTries 80
+       TestingClientBootstrapConsensusMaxDownloadTries 80
+       TestingClientBootstrapConsensusAuthorityOnlyMaxDownloadTries 80
        TestingDescriptorMaxDownloadTries 80
        TestingMicrodescMaxDownloadTries 80
        TestingCertMaxDownloadTries 80
@@ -2345,6 +2353,36 @@ The following options are used for running a testing Tor network.
     requires that **TestingTorNetwork** is set. (Default: 0, 0, 60, 300, 600,
     1800, 3600, 3600, 3600, 10800, 21600, 43200)
 
+[[TestingClientBootstrapConsensusAuthorityDownloadSchedule]] **TestingClientBootstrapConsensusAuthorityDownloadSchedule** __N__,__N__,__...__::
+    Schedule for when clients should download consensuses from authorities if
+    they are bootstrapping (that is, they don't have a usable, reasonably live
+    consensus). Only used by clients fetching from a list of fallback
+    directory mirrors. This schedule is advanced by (potentially concurrent)
+    connection attempts, unlike other schedules, which are advanced by
+    connection failures. Changing this schedule requires that
+    **TestingTorNetwork** is set. (Default: 10, 11, 3600, 10800, 25200, 54000,
+    111600, 262800)
+
+[[TestingClientBootstrapConsensusFallbackDownloadSchedule]] **TestingClientBootstrapConsensusFallbackDownloadSchedule** __N__,__N__,__...__::
+    Schedule for when clients should download consensuses from fallback
+    directory mirrors if they are bootstrapping (that is, they don't have a
+    usable, reasonably live consensus). Only used by clients fetching from a
+    list of fallback directory mirrors.  This schedule is advanced by
+    (potentially concurrent) connection attempts, unlike other schedules, which
+    are advanced by connection failures. Changing this schedule requires that
+    **TestingTorNetwork** is set. (Default: 0, 1, 4, 11, 3600, 10800, 25200,
+    54000, 111600, 262800)
+
+[[TestingClientBootstrapConsensusAuthorityOnlyDownloadSchedule]] **TestingClientBootstrapConsensusAuthorityOnlyDownloadSchedule** __N__,__N__,__...__::
+    Schedule for when clients should download consensuses from authorities if
+    they are bootstrapping (that is, they don't have a usable, reasonably live
+    consensus). Only used by clients which don't have or won't fetch from a
+    list of fallback directory mirrors. This schedule is advanced by
+    (potentially concurrent) connection attempts, unlike other schedules,
+    which are advanced by connection failures. Changing this schedule requires
+    that **TestingTorNetwork** is set. (Default: 0, 3, 7, 3600, 10800, 25200,
+    54000, 111600, 262800)
+
 [[TestingBridgeDownloadSchedule]] **TestingBridgeDownloadSchedule** __N__,__N__,__...__::
     Schedule for when clients should download bridge descriptors. Changing this
     requires that **TestingTorNetwork** is set. (Default: 3600, 900, 900, 3600)
@@ -2361,8 +2399,23 @@ The following options are used for running a testing Tor network.
     5 minutes)
 
 [[TestingConsensusMaxDownloadTries]] **TestingConsensusMaxDownloadTries** __NUM__::
-    Try this often to download a consensus before giving up. Changing
+    Try this many times to download a consensus before giving up. Changing
     this requires that **TestingTorNetwork** is set. (Default: 8)
+
+[[TestingClientBootstrapConsensusMaxDownloadTries]] **TestingClientBootstrapConsensusMaxDownloadTries** __NUM__::
+    Try this many times to download a consensus while bootstrapping using
+    fallback directory mirrors before giving up. Changing this requires that
+    **TestingTorNetwork** is set. (Default: 7)
+
+[[TestingClientBootstrapConsensusMaxDownloadTries]] **TestingClientBootstrapConsensusMaxDownloadTries** __NUM__::
+    Try this many times to download a consensus while bootstrapping using
+    only authorities before giving up. Changing this requires that
+    **TestingTorNetwork** is set. (Default: 4)
+
+[[TestingClientBootstrapConsensusMaxInProgressTries]] **TestingClientBootstrapConsensusMaxInProgressTries** __NUM__::
+    Try this many simultaneous connections to download a consensus before
+    waiting for one to complete, timeout, or error out. Changing this
+    requires that **TestingTorNetwork** is set. (Default: 4)
 
 [[TestingDescriptorMaxDownloadTries]] **TestingDescriptorMaxDownloadTries** __NUM__::
     Try this often to download a server descriptor before giving up.

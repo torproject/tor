@@ -475,10 +475,40 @@ static config_var_t option_vars_[] = {
   V(TestingClientConsensusDownloadSchedule, CSV_INTERVAL, "0, 0, 60, "
                                  "300, 600, 1800, 3600, 3600, 3600, "
                                  "10800, 21600, 43200"),
+  /* With the TestingClientBootstrapConsensus*Download* below:
+   * Clients with only authorities will try:
+   *  - 3 authorities over 10 seconds, then wait 60 minutes.
+   * Clients with authorities and fallbacks will try:
+   *  - 2 authorities and 4 fallbacks over 21 seconds, then wait 60 minutes.
+   * Clients will also retry when an application request arrives.
+   * After a number of failed reqests, clients retry every 3 days + 1 hour.
+   *
+   * Clients used to try 2 authorities over 10 seconds, then wait for
+   * 60 minutes or an application request.
+   *
+   * When clients have authorities and fallbacks available, they use these
+   * schedules: (we stagger the times to avoid thundering herds) */
+  V(TestingClientBootstrapConsensusAuthorityDownloadSchedule, CSV_INTERVAL,
+    "10, 11, 3600, 10800, 25200, 54000, 111600, 262800" /* 3 days + 1 hour */),
+  V(TestingClientBootstrapConsensusFallbackDownloadSchedule, CSV_INTERVAL,
+    "0, 1, 4, 11, 3600, 10800, 25200, 54000, 111600, 262800"),
+  /* When clients only have authorities available, they use this schedule: */
+  V(TestingClientBootstrapConsensusAuthorityOnlyDownloadSchedule, CSV_INTERVAL,
+    "0, 3, 7, 3600, 10800, 25200, 54000, 111600, 262800"),
+  /* We don't want to overwhelm slow networks (or mirrors whose replies are
+   * blocked), but we also don't want to fail if only some mirrors are
+   * blackholed. Clients will try 3 directories simultaneously.
+   * (Relays never use simultaneous connections.) */
+  V(TestingClientBootstrapConsensusMaxInProgressTries, UINT, "3"),
   V(TestingBridgeDownloadSchedule, CSV_INTERVAL, "3600, 900, 900, 3600"),
   V(TestingClientMaxIntervalWithoutRequest, INTERVAL, "10 minutes"),
   V(TestingDirConnectionMaxStall, INTERVAL, "5 minutes"),
   V(TestingConsensusMaxDownloadTries, UINT, "8"),
+  /* Since we try connections rapidly and simultaneously, we can afford
+   * to give up earlier. (This protects against overloading directories.) */
+  V(TestingClientBootstrapConsensusMaxDownloadTries, UINT, "7"),
+  /* We want to give up much earlier if we're only using authorities. */
+  V(TestingClientBootstrapConsensusAuthorityOnlyMaxDownloadTries, UINT, "4"),
   V(TestingDescriptorMaxDownloadTries, UINT, "8"),
   V(TestingMicrodescMaxDownloadTries, UINT, "8"),
   V(TestingCertMaxDownloadTries, UINT, "8"),
@@ -525,10 +555,18 @@ static const config_var_t testing_tor_network_defaults[] = {
                                  "15, 20, 30, 60"),
   V(TestingClientConsensusDownloadSchedule, CSV_INTERVAL, "0, 0, 5, 10, "
                                  "15, 20, 30, 60"),
+  V(TestingClientBootstrapConsensusAuthorityDownloadSchedule, CSV_INTERVAL,
+    "0, 2, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 16, 32, 60"),
+  V(TestingClientBootstrapConsensusFallbackDownloadSchedule, CSV_INTERVAL,
+    "0, 1, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 16, 32, 60"),
+  V(TestingClientBootstrapConsensusAuthorityOnlyDownloadSchedule, CSV_INTERVAL,
+    "0, 1, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 16, 32, 60"),
   V(TestingBridgeDownloadSchedule, CSV_INTERVAL, "60, 30, 30, 60"),
   V(TestingClientMaxIntervalWithoutRequest, INTERVAL, "5 seconds"),
   V(TestingDirConnectionMaxStall, INTERVAL, "30 seconds"),
   V(TestingConsensusMaxDownloadTries, UINT, "80"),
+  V(TestingClientBootstrapConsensusMaxDownloadTries, UINT, "80"),
+  V(TestingClientBootstrapConsensusAuthorityOnlyMaxDownloadTries, UINT, "80"),
   V(TestingDescriptorMaxDownloadTries, UINT, "80"),
   V(TestingMicrodescMaxDownloadTries, UINT, "80"),
   V(TestingCertMaxDownloadTries, UINT, "80"),
@@ -3749,10 +3787,16 @@ options_validate(or_options_t *old_options, or_options_t *options,
   CHECK_DEFAULT(TestingClientDownloadSchedule);
   CHECK_DEFAULT(TestingServerConsensusDownloadSchedule);
   CHECK_DEFAULT(TestingClientConsensusDownloadSchedule);
+  CHECK_DEFAULT(TestingClientBootstrapConsensusAuthorityDownloadSchedule);
+  CHECK_DEFAULT(TestingClientBootstrapConsensusFallbackDownloadSchedule);
+  CHECK_DEFAULT(TestingClientBootstrapConsensusAuthorityOnlyDownloadSchedule);
   CHECK_DEFAULT(TestingBridgeDownloadSchedule);
   CHECK_DEFAULT(TestingClientMaxIntervalWithoutRequest);
   CHECK_DEFAULT(TestingDirConnectionMaxStall);
   CHECK_DEFAULT(TestingConsensusMaxDownloadTries);
+  CHECK_DEFAULT(TestingClientBootstrapConsensusMaxDownloadTries);
+  CHECK_DEFAULT(TestingClientBootstrapConsensusAuthorityOnlyMaxDownloadTries);
+  CHECK_DEFAULT(TestingClientBootstrapConsensusMaxInProgressTries);
   CHECK_DEFAULT(TestingDescriptorMaxDownloadTries);
   CHECK_DEFAULT(TestingMicrodescMaxDownloadTries);
   CHECK_DEFAULT(TestingCertMaxDownloadTries);
@@ -3827,9 +3871,39 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->TestingConsensusMaxDownloadTries < 2) {
-    REJECT("TestingConsensusMaxDownloadTries must be greater than 1.");
+    REJECT("TestingConsensusMaxDownloadTries must be greater than 2.");
   } else if (options->TestingConsensusMaxDownloadTries > 800) {
     COMPLAIN("TestingConsensusMaxDownloadTries is insanely high.");
+  }
+
+  if (options->TestingClientBootstrapConsensusMaxDownloadTries < 2) {
+    REJECT("TestingClientBootstrapConsensusMaxDownloadTries must be greater "
+           "than 2."
+           );
+  } else if (options->TestingClientBootstrapConsensusMaxDownloadTries > 800) {
+    COMPLAIN("TestingClientBootstrapConsensusMaxDownloadTries is insanely "
+             "high.");
+  }
+
+  if (options->TestingClientBootstrapConsensusAuthorityOnlyMaxDownloadTries
+      < 2) {
+    REJECT("TestingClientBootstrapConsensusAuthorityOnlyMaxDownloadTries must "
+           "be greater than 2."
+           );
+  } else if (
+        options->TestingClientBootstrapConsensusAuthorityOnlyMaxDownloadTries
+        > 800) {
+    COMPLAIN("TestingClientBootstrapConsensusAuthorityOnlyMaxDownloadTries is "
+             "insanely high.");
+  }
+
+  if (options->TestingClientBootstrapConsensusMaxInProgressTries < 1) {
+    REJECT("TestingClientBootstrapConsensusMaxInProgressTries must be greater "
+           "than 0.");
+  } else if (options->TestingClientBootstrapConsensusMaxInProgressTries
+             > 100) {
+    COMPLAIN("TestingClientBootstrapConsensusMaxInProgressTries is insanely "
+             "high.");
   }
 
   if (options->TestingDescriptorMaxDownloadTries < 2) {

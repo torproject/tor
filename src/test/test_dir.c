@@ -3494,6 +3494,435 @@ test_dir_packages(void *arg)
   tor_free(res);
 }
 
+static void
+test_dir_download_status_schedule(void *arg)
+{
+  (void)arg;
+  download_status_t dls_failure = { 0, 0, 0, DL_SCHED_GENERIC,
+                                             DL_WANT_AUTHORITY,
+                                             DL_SCHED_INCREMENT_FAILURE };
+  download_status_t dls_attempt = { 0, 0, 0, DL_SCHED_CONSENSUS,
+                                             DL_WANT_ANY_DIRSERVER,
+                                             DL_SCHED_INCREMENT_ATTEMPT};
+  download_status_t dls_bridge  = { 0, 0, 0, DL_SCHED_BRIDGE,
+                                             DL_WANT_AUTHORITY,
+                                             DL_SCHED_INCREMENT_FAILURE};
+  int increment = -1;
+  int expected_increment = -1;
+  time_t current_time = time(NULL);
+  int delay1 = -1;
+  int delay2 = -1;
+  smartlist_t *schedule = smartlist_new();
+
+  /* Make a dummy schedule */
+  smartlist_add(schedule, (void *)&delay1);
+  smartlist_add(schedule, (void *)&delay2);
+
+  /* check a range of values */
+  delay1 = 1000;
+  increment = download_status_schedule_get_delay(&dls_failure,
+                                                 schedule,
+                                                 TIME_MIN);
+  expected_increment = delay1;
+  tt_assert(increment == expected_increment);
+  tt_assert(dls_failure.next_attempt_at == TIME_MIN + expected_increment);
+
+#if TIME_T_IS_SIGNED
+  delay1 = INT_MAX;
+  increment =  download_status_schedule_get_delay(&dls_failure,
+                                                  schedule,
+                                                  -1);
+  expected_increment = delay1;
+  tt_assert(increment == expected_increment);
+  tt_assert(dls_failure.next_attempt_at == TIME_MAX);
+#endif
+
+  delay1 = 0;
+  increment = download_status_schedule_get_delay(&dls_attempt,
+                                                 schedule,
+                                                 0);
+  expected_increment = delay1;
+  tt_assert(increment == expected_increment);
+  tt_assert(dls_attempt.next_attempt_at == 0 + expected_increment);
+
+  delay1 = 1000;
+  increment = download_status_schedule_get_delay(&dls_attempt,
+                                                 schedule,
+                                                 1);
+  expected_increment = delay1;
+  tt_assert(increment == expected_increment);
+  tt_assert(dls_attempt.next_attempt_at == 1 + expected_increment);
+
+  delay1 = INT_MAX;
+  increment = download_status_schedule_get_delay(&dls_bridge,
+                                                 schedule,
+                                                 current_time);
+  expected_increment = delay1;
+  tt_assert(increment == expected_increment);
+  tt_assert(dls_bridge.next_attempt_at == TIME_MAX);
+
+  delay1 = 1;
+  increment = download_status_schedule_get_delay(&dls_bridge,
+                                                 schedule,
+                                                 TIME_MAX);
+  expected_increment = delay1;
+  tt_assert(increment == expected_increment);
+  tt_assert(dls_bridge.next_attempt_at == TIME_MAX);
+
+  /* see what happens when we reach the end */
+  dls_attempt.n_download_attempts++;
+  dls_bridge.n_download_failures++;
+
+  delay2 = 100;
+  increment = download_status_schedule_get_delay(&dls_attempt,
+                                                 schedule,
+                                                 current_time);
+  expected_increment = delay2;
+  tt_assert(increment == expected_increment);
+  tt_assert(dls_attempt.next_attempt_at == current_time + delay2);
+
+  delay2 = 1;
+  increment = download_status_schedule_get_delay(&dls_bridge,
+                                                 schedule,
+                                                 current_time);
+  expected_increment = delay2;
+  tt_assert(increment == expected_increment);
+  tt_assert(dls_bridge.next_attempt_at == current_time + delay2);
+
+  /* see what happens when we try to go off the end */
+  dls_attempt.n_download_attempts++;
+  dls_bridge.n_download_failures++;
+
+  delay2 = 5;
+  increment = download_status_schedule_get_delay(&dls_attempt,
+                                                 schedule,
+                                                 current_time);
+  expected_increment = delay2;
+  tt_assert(increment == expected_increment);
+  tt_assert(dls_attempt.next_attempt_at == current_time + delay2);
+
+  delay2 = 17;
+  increment = download_status_schedule_get_delay(&dls_bridge,
+                                                 schedule,
+                                                 current_time);
+  expected_increment = delay2;
+  tt_assert(increment == expected_increment);
+  tt_assert(dls_bridge.next_attempt_at == current_time + delay2);
+
+  /* see what happens when we reach IMPOSSIBLE_TO_DOWNLOAD */
+  dls_attempt.n_download_attempts = IMPOSSIBLE_TO_DOWNLOAD;
+  dls_bridge.n_download_failures = IMPOSSIBLE_TO_DOWNLOAD;
+
+  delay2 = 35;
+  increment = download_status_schedule_get_delay(&dls_attempt,
+                                                 schedule,
+                                                 current_time);
+  expected_increment = INT_MAX;
+  tt_assert(increment == expected_increment);
+  tt_assert(dls_attempt.next_attempt_at == TIME_MAX);
+
+  delay2 = 99;
+  increment = download_status_schedule_get_delay(&dls_bridge,
+                                                 schedule,
+                                                 current_time);
+  expected_increment = INT_MAX;
+  tt_assert(increment == expected_increment);
+  tt_assert(dls_bridge.next_attempt_at == TIME_MAX);
+
+ done:
+  /* the pointers in schedule are allocated on the stack */
+  smartlist_free(schedule);
+}
+
+static void
+test_dir_download_status_increment(void *arg)
+{
+  (void)arg;
+  download_status_t dls_failure = { 0, 0, 0, DL_SCHED_GENERIC,
+    DL_WANT_AUTHORITY,
+    DL_SCHED_INCREMENT_FAILURE };
+  download_status_t dls_attempt = { 0, 0, 0, DL_SCHED_BRIDGE,
+    DL_WANT_ANY_DIRSERVER,
+    DL_SCHED_INCREMENT_ATTEMPT};
+  int delay0 = -1;
+  int delay1 = -1;
+  int delay2 = -1;
+  smartlist_t *schedule = smartlist_new();
+  or_options_t test_options;
+  time_t next_at = TIME_MAX;
+  time_t current_time = time(NULL);
+
+  /* Provide some values for the schedule */
+  delay0 = 10;
+  delay1 = 99;
+  delay2 = 20;
+
+  /* Make the schedule */
+  smartlist_add(schedule, (void *)&delay0);
+  smartlist_add(schedule, (void *)&delay1);
+  smartlist_add(schedule, (void *)&delay2);
+
+  /* Put it in the options */
+  mock_options = &test_options;
+  reset_options(mock_options, &mock_get_options_calls);
+  mock_options->TestingClientDownloadSchedule = schedule;
+  mock_options->TestingBridgeDownloadSchedule = schedule;
+
+  MOCK(get_options, mock_get_options);
+
+  /* Check that a failure reset works */
+  mock_get_options_calls = 0;
+  download_status_reset(&dls_failure);
+  /* we really want to test that it's equal to time(NULL) + delay0, but that's
+   * an unrealiable test, because time(NULL) might change. */
+  tt_assert(download_status_get_next_attempt_at(&dls_failure)
+            >= current_time + delay0);
+  tt_assert(download_status_get_next_attempt_at(&dls_failure)
+            != TIME_MAX);
+  tt_assert(download_status_get_n_failures(&dls_failure) == 0);
+  tt_assert(download_status_get_n_attempts(&dls_failure) == 0);
+  tt_assert(mock_get_options_calls >= 1);
+
+  /* avoid timing inconsistencies */
+  dls_failure.next_attempt_at = current_time + delay0;
+
+  /* check that a reset schedule becomes ready at the right time */
+  tt_assert(download_status_is_ready(&dls_failure,
+                                     current_time + delay0 - 1,
+                                     1) == 0);
+  tt_assert(download_status_is_ready(&dls_failure,
+                                     current_time + delay0,
+                                     1) == 1);
+  tt_assert(download_status_is_ready(&dls_failure,
+                                     current_time + delay0 + 1,
+                                     1) == 1);
+
+  /* Check that a failure increment works */
+  mock_get_options_calls = 0;
+  next_at = download_status_increment_failure(&dls_failure, 404, "test", 0,
+                                              current_time);
+  tt_assert(next_at == current_time + delay1);
+  tt_assert(download_status_get_n_failures(&dls_failure) == 1);
+  tt_assert(download_status_get_n_attempts(&dls_failure) == 1);
+  tt_assert(mock_get_options_calls >= 1);
+
+  /* check that an incremented schedule becomes ready at the right time */
+  tt_assert(download_status_is_ready(&dls_failure,
+                                     current_time + delay1 - 1,
+                                     1) == 0);
+  tt_assert(download_status_is_ready(&dls_failure,
+                                     current_time + delay1,
+                                     1) == 1);
+  tt_assert(download_status_is_ready(&dls_failure,
+                                     current_time + delay1 + 1,
+                                     1) == 1);
+
+  /* check that a schedule isn't ready if it's had too many failures */
+  tt_assert(download_status_is_ready(&dls_failure,
+                                     current_time + delay1 + 10,
+                                     0) == 0);
+
+  /* Check that failure increments don't happen on 503 for clients, but that
+   * attempt increments do. */
+  mock_get_options_calls = 0;
+  next_at = download_status_increment_failure(&dls_failure, 503, "test", 0,
+                                              current_time);
+  tt_assert(next_at == current_time + delay1);
+  tt_assert(download_status_get_n_failures(&dls_failure) == 1);
+  tt_assert(download_status_get_n_attempts(&dls_failure) == 2);
+  tt_assert(mock_get_options_calls >= 1);
+
+  /* Check that failure increments do happen on 503 for servers */
+  mock_get_options_calls = 0;
+  next_at = download_status_increment_failure(&dls_failure, 503, "test", 1,
+                                              current_time);
+  tt_assert(next_at == current_time + delay2);
+  tt_assert(download_status_get_n_failures(&dls_failure) == 2);
+  tt_assert(download_status_get_n_attempts(&dls_failure) == 3);
+  tt_assert(mock_get_options_calls >= 1);
+
+  /* Check what happens when we run off the end of the schedule */
+  mock_get_options_calls = 0;
+  next_at = download_status_increment_failure(&dls_failure, 404, "test", 0,
+                                              current_time);
+  tt_assert(next_at == current_time + delay2);
+  tt_assert(download_status_get_n_failures(&dls_failure) == 3);
+  tt_assert(download_status_get_n_attempts(&dls_failure) == 4);
+  tt_assert(mock_get_options_calls >= 1);
+
+  /* Check what happens when we hit the failure limit */
+  mock_get_options_calls = 0;
+  download_status_mark_impossible(&dls_failure);
+  next_at = download_status_increment_failure(&dls_failure, 404, "test", 0,
+                                              current_time);
+  tt_assert(next_at == TIME_MAX);
+  tt_assert(download_status_get_n_failures(&dls_failure)
+            == IMPOSSIBLE_TO_DOWNLOAD);
+  tt_assert(download_status_get_n_attempts(&dls_failure)
+            == IMPOSSIBLE_TO_DOWNLOAD);
+  tt_assert(mock_get_options_calls >= 1);
+
+  /* Check that a failure reset doesn't reset at the limit */
+  mock_get_options_calls = 0;
+  download_status_reset(&dls_failure);
+  tt_assert(download_status_get_next_attempt_at(&dls_failure)
+            == TIME_MAX);
+  tt_assert(download_status_get_n_failures(&dls_failure)
+            == IMPOSSIBLE_TO_DOWNLOAD);
+  tt_assert(download_status_get_n_attempts(&dls_failure)
+            == IMPOSSIBLE_TO_DOWNLOAD);
+  tt_assert(mock_get_options_calls == 0);
+
+  /* Check that a failure reset resets just before the limit */
+  mock_get_options_calls = 0;
+  dls_failure.n_download_failures = IMPOSSIBLE_TO_DOWNLOAD - 1;
+  dls_failure.n_download_attempts = IMPOSSIBLE_TO_DOWNLOAD - 1;
+  download_status_reset(&dls_failure);
+  /* we really want to test that it's equal to time(NULL) + delay0, but that's
+   * an unrealiable test, because time(NULL) might change. */
+  tt_assert(download_status_get_next_attempt_at(&dls_failure)
+            >= current_time + delay0);
+  tt_assert(download_status_get_next_attempt_at(&dls_failure)
+            != TIME_MAX);
+  tt_assert(download_status_get_n_failures(&dls_failure) == 0);
+  tt_assert(download_status_get_n_attempts(&dls_failure) == 0);
+  tt_assert(mock_get_options_calls >= 1);
+
+  /* Check that failure increments do happen on attempt-based schedules,
+   * but that the retry is set at the end of time */
+  mock_get_options_calls = 0;
+  next_at = download_status_increment_failure(&dls_attempt, 404, "test", 0,
+                                              current_time);
+  tt_assert(next_at == TIME_MAX);
+  tt_assert(download_status_get_n_failures(&dls_attempt) == 1);
+  tt_assert(download_status_get_n_attempts(&dls_attempt) == 0);
+  tt_assert(mock_get_options_calls == 0);
+
+  /* Check that an attempt reset works */
+  mock_get_options_calls = 0;
+  download_status_reset(&dls_attempt);
+  /* we really want to test that it's equal to time(NULL) + delay0, but that's
+   * an unrealiable test, because time(NULL) might change. */
+  tt_assert(download_status_get_next_attempt_at(&dls_attempt)
+            >= current_time + delay0);
+  tt_assert(download_status_get_next_attempt_at(&dls_attempt)
+            != TIME_MAX);
+  tt_assert(download_status_get_n_failures(&dls_attempt) == 0);
+  tt_assert(download_status_get_n_attempts(&dls_attempt) == 0);
+  tt_assert(mock_get_options_calls >= 1);
+
+  /* avoid timing inconsistencies */
+  dls_attempt.next_attempt_at = current_time + delay0;
+
+  /* check that a reset schedule becomes ready at the right time */
+  tt_assert(download_status_is_ready(&dls_attempt,
+                                     current_time + delay0 - 1,
+                                     1) == 0);
+  tt_assert(download_status_is_ready(&dls_attempt,
+                                     current_time + delay0,
+                                     1) == 1);
+  tt_assert(download_status_is_ready(&dls_attempt,
+                                     current_time + delay0 + 1,
+                                     1) == 1);
+
+  /* Check that an attempt increment works */
+  mock_get_options_calls = 0;
+  next_at = download_status_increment_attempt(&dls_attempt, "test",
+                                              current_time);
+  tt_assert(next_at == current_time + delay1);
+  tt_assert(download_status_get_n_failures(&dls_attempt) == 0);
+  tt_assert(download_status_get_n_attempts(&dls_attempt) == 1);
+  tt_assert(mock_get_options_calls >= 1);
+
+  /* check that an incremented schedule becomes ready at the right time */
+  tt_assert(download_status_is_ready(&dls_attempt,
+                                     current_time + delay1 - 1,
+                                     1) == 0);
+  tt_assert(download_status_is_ready(&dls_attempt,
+                                     current_time + delay1,
+                                     1) == 1);
+  tt_assert(download_status_is_ready(&dls_attempt,
+                                     current_time + delay1 + 1,
+                                     1) == 1);
+
+  /* check that a schedule isn't ready if it's had too many attempts */
+  tt_assert(download_status_is_ready(&dls_attempt,
+                                     current_time + delay1 + 10,
+                                     0) == 0);
+
+  /* Check what happens when we reach then run off the end of the schedule */
+  mock_get_options_calls = 0;
+  next_at = download_status_increment_attempt(&dls_attempt, "test",
+                                              current_time);
+  tt_assert(next_at == current_time + delay2);
+  tt_assert(download_status_get_n_failures(&dls_attempt) == 0);
+  tt_assert(download_status_get_n_attempts(&dls_attempt) == 2);
+  tt_assert(mock_get_options_calls >= 1);
+
+  mock_get_options_calls = 0;
+  next_at = download_status_increment_attempt(&dls_attempt, "test",
+                                              current_time);
+  tt_assert(next_at == current_time + delay2);
+  tt_assert(download_status_get_n_failures(&dls_attempt) == 0);
+  tt_assert(download_status_get_n_attempts(&dls_attempt) == 3);
+  tt_assert(mock_get_options_calls >= 1);
+
+  /* Check what happens when we hit the attempt limit */
+  mock_get_options_calls = 0;
+  download_status_mark_impossible(&dls_attempt);
+  next_at = download_status_increment_attempt(&dls_attempt, "test",
+                                              current_time);
+  tt_assert(next_at == TIME_MAX);
+  tt_assert(download_status_get_n_failures(&dls_attempt)
+            == IMPOSSIBLE_TO_DOWNLOAD);
+  tt_assert(download_status_get_n_attempts(&dls_attempt)
+            == IMPOSSIBLE_TO_DOWNLOAD);
+  tt_assert(mock_get_options_calls >= 1);
+
+  /* Check that an attempt reset doesn't reset at the limit */
+  mock_get_options_calls = 0;
+  download_status_reset(&dls_attempt);
+  tt_assert(download_status_get_next_attempt_at(&dls_attempt)
+            == TIME_MAX);
+  tt_assert(download_status_get_n_failures(&dls_attempt)
+            == IMPOSSIBLE_TO_DOWNLOAD);
+  tt_assert(download_status_get_n_attempts(&dls_attempt)
+            == IMPOSSIBLE_TO_DOWNLOAD);
+  tt_assert(mock_get_options_calls == 0);
+
+  /* Check that an attempt reset resets just before the limit */
+  mock_get_options_calls = 0;
+  dls_attempt.n_download_failures = IMPOSSIBLE_TO_DOWNLOAD - 1;
+  dls_attempt.n_download_attempts = IMPOSSIBLE_TO_DOWNLOAD - 1;
+  download_status_reset(&dls_attempt);
+  /* we really want to test that it's equal to time(NULL) + delay0, but that's
+   * an unrealiable test, because time(NULL) might change. */
+  tt_assert(download_status_get_next_attempt_at(&dls_attempt)
+            >= current_time + delay0);
+  tt_assert(download_status_get_next_attempt_at(&dls_attempt)
+            != TIME_MAX);
+  tt_assert(download_status_get_n_failures(&dls_attempt) == 0);
+  tt_assert(download_status_get_n_attempts(&dls_attempt) == 0);
+  tt_assert(mock_get_options_calls >= 1);
+
+  /* Check that attempt increments don't happen on failure-based schedules,
+   * and that the attempt is set at the end of time */
+  mock_get_options_calls = 0;
+  next_at = download_status_increment_attempt(&dls_failure, "test",
+                                              current_time);
+  tt_assert(next_at == TIME_MAX);
+  tt_assert(download_status_get_n_failures(&dls_failure) == 0);
+  tt_assert(download_status_get_n_attempts(&dls_failure) == 0);
+  tt_assert(mock_get_options_calls == 0);
+
+ done:
+  /* the pointers in schedule are allocated on the stack */
+  smartlist_free(schedule);
+  UNMOCK(get_options);
+  mock_options = NULL;
+  mock_get_options_calls = 0;
+}
+
 #define DIR_LEGACY(name)                                                   \
   { #name, test_dir_ ## name , TT_FORK, NULL, NULL }
 
@@ -3525,6 +3954,8 @@ struct testcase_t dir_tests[] = {
   DIR(purpose_needs_anonymity, 0),
   DIR(fetch_type, 0),
   DIR(packages, 0),
+  DIR(download_status_schedule, 0),
+  DIR(download_status_increment, 0),
   END_OF_TESTCASES
 };
 
