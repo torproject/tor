@@ -4215,7 +4215,8 @@ connection_write_to_buf_impl_,(const char *string, size_t len,
 }
 
 /** Return a connection with given type, address, port, and purpose;
- * or NULL if no such connection exists. */
+ * or NULL if no such connection exists (or if all such connections are marked
+ * for close). */
 connection_t *
 connection_get_by_type_addr_port_purpose(int type,
                                          const tor_addr_t *addr, uint16_t port,
