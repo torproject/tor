@@ -425,14 +425,17 @@ directory_pick_generic_dirserver(dirinfo_type_t type, int pds_flags,
  * Use <b>pds_flags</b> as arguments to router_pick_directory_server()
  * or router_pick_trusteddirserver().
  */
-MOCK_IMPL(void, directory_get_from_dirserver, (uint8_t dir_purpose,
-                                               uint8_t router_purpose,
-                                               const char *resource,
-                                               int pds_flags))
+MOCK_IMPL(void, directory_get_from_dirserver, (
+                            uint8_t dir_purpose,
+                            uint8_t router_purpose,
+                            const char *resource,
+                            int pds_flags,
+                            download_want_authority_t want_authority))
 {
   const routerstatus_t *rs = NULL;
   const or_options_t *options = get_options();
-  int prefer_authority = directory_fetches_from_authorities(options);
+  int prefer_authority = (directory_fetches_from_authorities(options)
+                          || want_authority == DL_WANT_AUTHORITY);
   int require_authority = 0;
   int get_via_tor = purpose_needs_anonymity(dir_purpose, router_purpose);
   dirinfo_type_t type = dir_fetch_type(dir_purpose, router_purpose, resource);

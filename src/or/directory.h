@@ -16,10 +16,12 @@ int directories_have_accepted_server_descriptor(void);
 void directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
                                   dirinfo_type_t type, const char *payload,
                                   size_t payload_len, size_t extrainfo_len);
-MOCK_DECL(void, directory_get_from_dirserver, (uint8_t dir_purpose,
-                                               uint8_t router_purpose,
-                                               const char *resource,
-                                               int pds_flags));
+MOCK_DECL(void, directory_get_from_dirserver, (
+                          uint8_t dir_purpose,
+                          uint8_t router_purpose,
+                          const char *resource,
+                          int pds_flags,
+                          download_want_authority_t want_authority));
 void directory_get_from_all_authorities(uint8_t dir_purpose,
                                         uint8_t router_purpose,
                                         const char *resource);

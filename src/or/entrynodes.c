@@ -2205,7 +2205,7 @@ fetch_bridge_descriptors(const or_options_t *options, time_t now)
         log_info(LD_DIR, "Fetching bridge info '%s' from bridge authority.",
                  resource);
         directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,
-                ROUTER_PURPOSE_BRIDGE, resource, 0);
+                ROUTER_PURPOSE_BRIDGE, resource, 0, DL_WANT_AUTHORITY);
       }
     }
   SMARTLIST_FOREACH_END(bridge);

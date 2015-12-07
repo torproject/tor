@@ -1955,6 +1955,15 @@ typedef enum {
 } download_schedule_t;
 #define download_schedule_bitfield_t ENUM_BF(download_schedule_t)
 
+/** Enumeration: do we want to try an authority or a fallback directory
+ * mirror for our download? */
+typedef enum {
+  DL_WANT_FALLBACK = 0,
+  DL_WANT_AUTHORITY = 1,
+} download_want_authority_t;
+#define download_want_authority_bitfield_t \
+                                        ENUM_BF(download_want_authority_t)
+
 /** Information about our plans for retrying downloads for a downloadable
  * object. */
 typedef struct download_status_t {
