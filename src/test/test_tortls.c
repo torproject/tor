@@ -2589,7 +2589,6 @@ fixed_crypto_pk_get_evp_pkey_(crypto_pk_t *env, int private)
                                fixed_crypto_pk_get_evp_pkey_result_index++];
 }
 
-
 static void
 test_tortls_create_certificate(void *ignored)
 {
