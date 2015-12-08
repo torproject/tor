@@ -1818,6 +1818,18 @@ find_rp_for_intro(const rend_intro_cell_t *intro,
     goto err;
   }
 
+  /* Make sure the RP we are being asked to connect to is _not_ a private
+   * address unless it's allowed. Let's avoid to build a circuit to our
+   * second middle node and fail right after when extending to the RP. */
+  if (!extend_info_addr_is_allowed(&rp->addr)) {
+    if (err_msg_out) {
+      tor_asprintf(&err_msg,
+                   "Relay IP in INTRODUCE2 cell is private address.");
+    }
+    extend_info_free(rp);
+    rp = NULL;
+    goto err;
+  }
   goto done;
 
  err:

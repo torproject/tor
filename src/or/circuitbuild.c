@@ -2403,3 +2403,18 @@ build_state_get_exit_nickname(cpath_build_state_t *state)
   return state->chosen_exit->nickname;
 }
 
+/** Return true iff the given address can be used to extend to. */
+int extend_info_addr_is_allowed(const tor_addr_t *addr)
+{
+  tor_assert(addr);
+
+  /* Check if we have a private address and if we can extend to it. */
+  if (tor_addr_is_internal(addr, 0) &&
+      !get_options()->ExtendAllowPrivateAddresses) {
+    goto disallow;
+  }
+  /* Allowed! */
+  return 1;
+ disallow:
+  return 0;
+}
