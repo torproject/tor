@@ -107,7 +107,9 @@ ed25519_secret_key_generate(ed25519_secret_key_t *seckey_out,
 {
   int r;
   uint8_t seed[32];
-  if (! extra_strong || crypto_strongest_rand(seed, sizeof(seed)) < 0)
+  if (extra_strong)
+    crypto_strongest_rand(seed, sizeof(seed));
+ else
     crypto_rand((char*)seed, sizeof(seed));
 
   r = get_ed_impl()->seckey_expand(seckey_out->seckey, seed);

@@ -148,8 +148,7 @@ ed25519_donna_seckey(unsigned char *sk)
 {
   ed25519_secret_key seed;
 
-  if (crypto_strongest_rand(seed, 32))
-    return -1;
+  crypto_strongest_rand(seed, 32);
 
   ed25519_extsk(sk, seed);
 

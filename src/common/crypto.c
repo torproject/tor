@@ -2280,10 +2280,13 @@ crypto_seed_weak_rng(tor_weak_rng_t *rng)
 }
 
 /** Try to get <b>out_len</b> bytes of the strongest entropy we can generate,
- * storing it into <b>out</b>.
+ * storing it into <b>out</b>.  Return 0 on success, -1 on failure.
+ *
+ * (You should almost never call this directly unless you are seeding a PRNG;
+ * use crypto_strongest_rand() instead.)
  */
-int
-crypto_strongest_rand(uint8_t *out, size_t out_len)
+static int
+crypto_strongest_rand_raw(uint8_t *out, size_t out_len)
 {
 #ifdef _WIN32
   static int provider_set = 0;
@@ -2334,6 +2337,41 @@ crypto_strongest_rand(uint8_t *out, size_t out_len)
 #endif
 }
 
+/** Try to get <b>out_len</b> bytes of the strongest entropy we can generate,
+ * storing it into <b>out</b>.
+ */
+void
+crypto_strongest_rand(uint8_t *out, size_t out_len)
+{
+  const unsigned DLEN = SHA512_DIGEST_LENGTH;
+  uint8_t inp[DLEN*2];
+  uint8_t tmp[DLEN];
+  tor_assert(out);
+  while (out_len) {
+    crypto_rand((char*) inp+DLEN, DLEN);
+    if (crypto_strongest_rand_raw(inp, DLEN) < 0) {
+      log_err(LD_CRYPTO, "Failed to load strong entropy when generating an "
+              "important key. Exiting.");
+      tor_assert(0);
+    }
+    if (out_len >= DLEN) {
+      SHA512(inp, sizeof(inp), out);
+      out += DLEN;
+      out_len -= DLEN;
+    } else {
+      SHA512(inp, sizeof(inp), tmp);
+      memcpy(out, tmp, out_len);
+      out += DLEN;
+      out_len -= DLEN;
+      break;
+    }
+  }
+  memwipe(tmp, 0, sizeof(tmp));
+  memwipe(inp, 0, sizeof(inp));
+
+}
+
+
 /** Seed OpenSSL's random number generator with bytes from the operating
  * system.  <b>startup</b> should be true iff we have just started Tor and
  * have not yet allocated a bunch of fds.  Return 0 on success, -1 on failure.
@@ -2351,7 +2389,7 @@ crypto_seed_rng(void)
   if (rand_poll_ok == 0)
     log_warn(LD_CRYPTO, "RAND_poll() failed.");
 
-  load_entropy_ok = !crypto_strongest_rand(buf, sizeof(buf));
+  load_entropy_ok = !crypto_strongest_rand_raw(buf, sizeof(buf));
   if (load_entropy_ok) {
     RAND_seed(buf, sizeof(buf));
   }

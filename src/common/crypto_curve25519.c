@@ -111,18 +111,11 @@ curve25519_public_key_is_ok(const curve25519_public_key_t *key)
 int
 curve25519_rand_seckey_bytes(uint8_t *out, int extra_strong)
 {
-  uint8_t k_tmp[CURVE25519_SECKEY_LEN];
+  if (extra_strong)
+    crypto_strongest_rand(out, CURVE25519_SECKEY_LEN);
+  else
+    crypto_rand((char*)out, CURVE25519_SECKEY_LEN);
 
-  crypto_rand((char*)out, CURVE25519_SECKEY_LEN);
-  if (extra_strong && !crypto_strongest_rand(k_tmp, CURVE25519_SECKEY_LEN)) {
-    /* If they asked for extra-strong entropy and we have some, use it as an
-     * HMAC key to improve not-so-good entropy rather than using it directly,
-     * just in case the extra-strong entropy is less amazing than we hoped. */
-    crypto_hmac_sha256((char*) out,
-                       (const char *)k_tmp, sizeof(k_tmp),
-                       (const char *)out, CURVE25519_SECKEY_LEN);
-  }
-  memwipe(k_tmp, 0, sizeof(k_tmp));
   return 0;
 }
 
