@@ -2029,9 +2029,10 @@ int
 check_private_dir(const char *dirname, cpd_check_t check,
                   const char *effective_user)
 {
+  int fd;
   int r;
   struct stat st;
-  char *f;
+  //char *f;
 #ifndef _WIN32
   unsigned unwanted_bits = 0;
   const struct passwd *pw = NULL;
@@ -2041,18 +2042,34 @@ check_private_dir(const char *dirname, cpd_check_t check,
   (void)effective_user;
 #endif
 
+  /*
+   * Goal is to harden the implementation by removing any
+   * potential for race between stat() and chmod().
+   * chmod() accepts filename as argument. If an attacker can move
+   * the file between stat() and chmod(), a potential race exists.
+   *
+   * Several suggestions taken from:
+   * https://developer.apple.com/library/mac/documentation/Security/Conceptual/SecureCodingGuide/Articles/RaceConditions.html
+   */
   tor_assert(dirname);
-  f = tor_strdup(dirname);
-  clean_name_for_stat(f);
-  log_debug(LD_FS, "stat()ing %s", f);
-  r = stat(sandbox_intern_string(f), &st);
-  tor_free(f);
-  if (r) {
+
+  /* Open directory. 
+   * O_NOFOLLOW to ensure that it does not follow symbolic links */
+  fd = open(sandbox_intern_string(dirname), O_NOFOLLOW);
+
+  /* Was there an error? Maybe the directory does not exist? */
+  if (fd == -1) {
+
     if (errno != ENOENT) {
+      /* Other directory error */
       log_warn(LD_FS, "Directory %s cannot be read: %s", dirname,
                strerror(errno));
       return -1;
     }
+
+    /* Received ENOENT: Directory does not exist */
+
+    /* Should we create the directory? */
     if (check & CPD_CREATE) {
       log_info(LD_GENERAL, "Creating directory %s", dirname);
 #if defined (_WIN32)
@@ -2064,23 +2081,51 @@ check_private_dir(const char *dirname, cpd_check_t check,
         r = mkdir(dirname, 0700);
       }
 #endif
+
+      /* check for mkdir() error */
       if (r) {
         log_warn(LD_FS, "Error creating directory %s: %s", dirname,
             strerror(errno));
         return -1;
       }
-    } else if (!(check & CPD_CHECK)) {
+
+      /* we just created the directory. try to open it again.
+       * permissions on the directory will be checked again below.*/
+      fd = open(sandbox_intern_string(dirname), O_NOFOLLOW);
+
+      if ( fd == -1 ) return -1;
+
+    } else if (!(check & CPD_CHECK)) { 
       log_warn(LD_FS, "Directory %s does not exist.", dirname);
       return -1;
     }
+
     /* XXXX In the case where check==CPD_CHECK, we should look at the
      * parent directory a little harder. */
     return 0;
   }
+
+  tor_assert(fd);
+
+  //f = tor_strdup(dirname);
+  //clean_name_for_stat(f);
+  log_debug(LD_FS, "stat()ing %s", dirname);
+  //r = stat(sandbox_intern_string(f), &st);
+  r = fstat(fd, &st);
+  if (r == -1) {
+      log_warn(LD_FS, "fstat() on directory %s failed.", dirname);
+      close(fd);
+      return -1;
+  }
+  //tor_free(f);
+
+  /* check that dirname is a directory */
   if (!(st.st_mode & S_IFDIR)) {
     log_warn(LD_FS, "%s is not a directory", dirname);
+    close(fd);
     return -1;
   }
+
 #ifndef _WIN32
   if (effective_user) {
     /* Look up the user and group information.
@@ -2097,7 +2142,6 @@ check_private_dir(const char *dirname, cpd_check_t check,
     running_uid = getuid();
     running_gid = getgid();
   }
-
   if (st.st_uid != running_uid) {
     const struct passwd *pw = NULL;
     char *process_ownername = NULL;
@@ -2113,6 +2157,7 @@ check_private_dir(const char *dirname, cpd_check_t check,
                          pw ? pw->pw_name : "<unknown>", (int)st.st_uid);
 
     tor_free(process_ownername);
+    close(fd);
     return -1;
   }
   if ( (check & (CPD_GROUP_OK|CPD_GROUP_READ))
@@ -2129,6 +2174,7 @@ check_private_dir(const char *dirname, cpd_check_t check,
              gr ?  gr->gr_name : "<unknown>", (int)st.st_gid);
 
     tor_free(process_groupname);
+    close(fd);
     return -1;
   }
   if (check & (CPD_GROUP_OK|CPD_GROUP_READ)) {
@@ -2141,6 +2187,7 @@ check_private_dir(const char *dirname, cpd_check_t check,
     if (check & CPD_CHECK_MODE_ONLY) {
       log_warn(LD_FS, "Permissions on directory %s are too permissive.",
                dirname);
+      close(fd);
       return -1;
     }
     log_warn(LD_FS, "Fixing permissions on directory %s", dirname);
@@ -2150,15 +2197,18 @@ check_private_dir(const char *dirname, cpd_check_t check,
       new_mode |= 0050; /* Group should have rx */
     }
     new_mode &= ~unwanted_bits; /* Clear the bits that we didn't want set...*/
-    if (chmod(dirname, new_mode)) {
+    if (fchmod(fd, new_mode)) {
       log_warn(LD_FS, "Could not chmod directory %s: %s", dirname,
                strerror(errno));
+      close(fd);
       return -1;
     } else {
+      close(fd);
       return 0;
     }
   }
 #endif
+  close(fd);
   return 0;
 }
 
