@@ -2351,7 +2351,7 @@ crypto_seed_weak_rng(tor_weak_rng_t *rng)
 }
 
 /** Try to get <b>out_len</b> bytes of the strongest entropy we can generate,
- * via system calls, storing it into <b>out</b>. Return -1 on success, 0 on
+ * via system calls, storing it into <b>out</b>. Return 0 on success, -1 on
  * failure.  A maximum request size of 256 bytes is imposed.
  */
 static int
@@ -2434,7 +2434,7 @@ crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
 
 /** Try to get <b>out_len</b> bytes of the strongest entropy we can generate,
  * via the per-platform fallback mechanism, storing it into <b>out</b>.
- * Return -1 on success, 0 on failure.  A maximum request size of 256 bytes
+ * Return 0 on success, -1 on failure.  A maximum request size of 256 bytes
  * is imposed.
  */
 static int
@@ -2472,7 +2472,7 @@ crypto_strongest_rand_fallback(uint8_t *out, size_t out_len)
 }
 
 /** Try to get <b>out_len</b> bytes of the strongest entropy we can generate,
- * storing it into <b>out</b>. Return -1 on success, 0 on failure.  A maximum
+ * storing it into <b>out</b>. Return 0 on success, -1 on failure.  A maximum
  * request size of 256 bytes is imposed.
  */
 int
