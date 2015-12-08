@@ -9,6 +9,7 @@
 #include "circuitstats.h"
 #include "config.h"
 #include "confparse.h"
+#include "connection.h"
 #include "entrynodes.h"
 #include "hibernate.h"
 #include "rephist.h"
@@ -374,17 +375,10 @@ or_state_load(void)
     log_info(LD_GENERAL, "Loaded state from \"%s\"", fname);
     /* Warn the user if their clock has been set backwards,
      * they could be tricked into using old consensuses */
-    if (new_state->LastWritten > time(NULL)) {
-      char last_written_str[ISO_TIME_LEN+1];
-      char now_str[ISO_TIME_LEN+1];
-      format_iso_time(last_written_str, new_state->LastWritten),
-      format_iso_time(now_str, time(NULL));
-      log_warn(LD_GENERAL, "Your system clock has been set back in time. "
-               "Tor needs an accurate clock to know when the consensus "
-               "expires. You might have an empty clock battery or bad NTP "
-               "server. Clock time is %s, state file time is %s.",
-               now_str, last_written_str);
-    }
+    time_t apparent_skew = new_state->LastWritten - time(NULL);
+    if (apparent_skew > 0)
+      clock_skew_warning(NULL, (long)apparent_skew, 1, LD_GENERAL,
+                         "local state file", fname);
   } else {
     log_info(LD_GENERAL, "Initialized state");
   }

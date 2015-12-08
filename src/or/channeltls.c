@@ -1663,30 +1663,9 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
 #define NETINFO_NOTICE_SKEW 3600
   if (labs(apparent_skew) > NETINFO_NOTICE_SKEW &&
       router_get_by_id_digest(chan->conn->identity_digest)) {
-    char dbuf[64];
-    int severity;
-    /*XXXX be smarter about when everybody says we are skewed. */
-    if (router_digest_is_trusted_dir(chan->conn->identity_digest))
-      severity = LOG_WARN;
-    else
-      severity = LOG_INFO;
-    format_time_interval(dbuf, sizeof(dbuf), apparent_skew);
-    log_fn(severity, LD_GENERAL,
-           "Received NETINFO cell with skewed time from "
-           "server at %s:%d.  It seems that our clock is %s by %s, or "
-           "that theirs is %s. Tor requires an accurate clock to work: "
-           "please check your time and date settings.",
-           chan->conn->base_.address,
-           (int)(chan->conn->base_.port),
-           apparent_skew > 0 ? "ahead" : "behind",
-           dbuf,
-           apparent_skew > 0 ? "behind" : "ahead");
-    if (severity == LOG_WARN) /* only tell the controller if an authority */
-      control_event_general_status(LOG_WARN,
-                          "CLOCK_SKEW SKEW=%ld SOURCE=OR:%s:%d",
-                          apparent_skew,
-                          chan->conn->base_.address,
-                          chan->conn->base_.port);
+    int trusted = router_digest_is_trusted_dir(chan->conn->identity_digest);
+    clock_skew_warning(TO_CONN(chan->conn), apparent_skew, trusted, LD_GENERAL,
+                       "NETINFO cell", "OR");
   }
 
   /* XXX maybe act on my_apparent_addr, if the source is sufficiently

@@ -1595,7 +1595,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   size_t body_len = 0, orig_len = 0;
   int status_code;
   time_t date_header = 0;
-  long delta;
+  long apparent_skew;
   compress_method_t compression;
   int plausible;
   int skewed = 0;
@@ -1654,28 +1654,15 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
      * and the date header.  (We used to check now-date_header, but that's
      * inaccurate if we spend a lot of time downloading.)
      */
-    delta = conn->base_.timestamp_lastwritten - date_header;
-    if (labs(delta)>ALLOW_DIRECTORY_TIME_SKEW) {
-      char dbuf[64];
+    apparent_skew = conn->base_.timestamp_lastwritten - date_header;
+    if (labs(apparent_skew)>ALLOW_DIRECTORY_TIME_SKEW) {
       int trusted = router_digest_is_trusted_dir(conn->identity_digest);
-      format_time_interval(dbuf, sizeof(dbuf), delta);
-      log_fn(trusted ? LOG_WARN : LOG_INFO,
-             LD_HTTP,
-             "Received directory with skewed time (server '%s:%d'): "
-             "It seems that our clock is %s by %s, or that theirs is %s. "
-             "Tor requires an accurate clock to work: please check your time, "
-             "timezone, and date settings.",
-             conn->base_.address, conn->base_.port,
-             delta>0 ? "ahead" : "behind", dbuf,
-             delta>0 ? "behind" : "ahead");
+      clock_skew_warning(TO_CONN(conn), apparent_skew, trusted, LD_HTTP,
+                         "directory", "DIRSERV");
       skewed = 1; /* don't check the recommended-versions line */
-      if (trusted)
-        control_event_general_status(LOG_WARN,
-                                 "CLOCK_SKEW SKEW=%ld SOURCE=DIRSERV:%s:%d",
-                                 delta, conn->base_.address, conn->base_.port);
     } else {
       log_debug(LD_HTTP, "Time on received directory is within tolerance; "
-                "we are %ld seconds skewed.  (That's okay.)", delta);
+                "we are %ld seconds skewed.  (That's okay.)", apparent_skew);
     }
   }
   (void) skewed; /* skewed isn't used yet. */

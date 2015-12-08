@@ -5018,3 +5018,33 @@ connection_free_all(void)
 #endif
 }
 
+/** Log a warning, and possibly emit a control event, that <b>received</b> came
+ * at a skewed time.  <b>trusted</b> indicates that the <b>source</b> was one
+ * that we had more faith in and therefore the warning level should have higher
+ * severity.
+ */
+void
+clock_skew_warning(const connection_t *conn, long apparent_skew, int trusted,
+                   log_domain_mask_t domain, const char *received,
+                   const char *source)
+{
+  char dbuf[64];
+  char *ext_source = NULL;
+  format_time_interval(dbuf, sizeof(dbuf), apparent_skew);
+  if (conn)
+    tor_asprintf(&ext_source, "%s:%s:%d", source, conn->address, conn->port);
+  else
+    ext_source = tor_strdup(source);
+  log_fn(trusted ? LOG_WARN : LOG_INFO, domain,
+         "Received %s with skewed time (%s): "
+         "It seems that our clock is %s by %s, or that theirs is %s%s. "
+         "Tor requires an accurate clock to work: please check your time, "
+         "timezone, and date settings.", received, ext_source,
+         apparent_skew > 0 ? "ahead" : "behind", dbuf,
+         apparent_skew > 0 ? "behind" : "ahead",
+         (!conn || trusted) ? "" : ", or they are sending us the wrong time");
+  if (trusted)
+    control_event_general_status(LOG_WARN, "CLOCK_SKEW SKEW=%ld SOURCE=%s",
+                                 apparent_skew, ext_source);
+  tor_free(ext_source);
+}

@@ -210,6 +210,10 @@ int connection_or_nonopen_was_started_here(or_connection_t *conn);
 void connection_dump_buffer_mem_stats(int severity);
 void remove_file_if_very_old(const char *fname, time_t now);
 
+void clock_skew_warning(const connection_t *conn, long apparent_skew,
+                        int trusted, log_domain_mask_t domain,
+                        const char *received, const char *source);
+
 #ifdef USE_BUFFEREVENTS
 int connection_type_uses_bufferevent(connection_t *conn);
 void connection_configure_bufferevent_callbacks(connection_t *conn);
