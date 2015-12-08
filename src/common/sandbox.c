@@ -199,6 +199,10 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(stat64),
 #endif
 
+#ifdef __NR_getrandom
+    SCMP_SYS(getrandom),
+#endif
+
     /*
      * These socket syscalls are not required on x86_64 and not supported with
      * some libseccomp versions (eg: 1.0.1)

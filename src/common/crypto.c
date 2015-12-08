@@ -43,6 +43,7 @@
 #include <ctype.h>
 #endif
 #ifdef HAVE_UNISTD_H
+#define _GNU_SOURCE
 #include <unistd.h>
 #endif
 #ifdef HAVE_FCNTL_H
@@ -50,6 +51,9 @@
 #endif
 #ifdef HAVE_SYS_FCNTL_H
 #include <sys/fcntl.h>
+#endif
+#ifdef HAVE_SYS_SYSCALL_H
+#include <sys/syscall.h>
 #endif
 
 #include "torlog.h"
@@ -67,6 +71,9 @@
 
 /** Longest recognized */
 #define MAX_DNS_LABEL_SIZE 63
+
+/** Largest strong entropy request */
+#define MAX_STRONGEST_RAND_SIZE 256
 
 /** Macro: is k a valid RSA public or private key? */
 #define PUBLIC_KEY_OK(k) ((k) && (k)->key && (k)->key->n)
@@ -2344,23 +2351,18 @@ crypto_seed_weak_rng(tor_weak_rng_t *rng)
 }
 
 /** Try to get <b>out_len</b> bytes of the strongest entropy we can generate,
- * storing it into <b>out</b>. Return -1 on success, 0 on failure.
+ * via system calls, storing it into <b>out</b>. Return -1 on success, 0 on
+ * failure.  A maximum request size of 256 bytes is imposed.
  */
-int
-crypto_strongest_rand(uint8_t *out, size_t out_len)
+static int
+crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
 {
-#ifdef _WIN32
+  tor_assert(out_len <= MAX_STRONGEST_RAND_SIZE);
+
+#if defined(_WIN32)
   static int provider_set = 0;
   static HCRYPTPROV provider;
-#else
-  static const char *filenames[] = {
-    "/dev/srandom", "/dev/urandom", "/dev/random", NULL
-  };
-  int fd, i;
-  size_t n;
-#endif
 
-#ifdef _WIN32
   if (!provider_set) {
     if (!CryptAcquireContext(&provider, NULL, NULL, PROV_RSA_FULL,
                              CRYPT_VERIFYCONTEXT)) {
@@ -2375,7 +2377,79 @@ crypto_strongest_rand(uint8_t *out, size_t out_len)
   }
 
   return 0;
+#elif defined(__linux__) && defined(SYS_getrandom)
+  static int getrandom_works = 1; /* Be optimitic about our chances... */
+
+  /* getrandom() isn't as straight foward as getentropy(), and has
+   * no glibc wrapper.
+   *
+   * As far as I can tell from getrandom(2) and the source code, the
+   * requests we issue will always succeed (though it will block on the
+   * call if /dev/urandom isn't seeded yet), since we are NOT specifying
+   * GRND_NONBLOCK and the request is <= 256 bytes.
+   *
+   * The manpage is unclear on what happens if a signal interrupts the call
+   * while the request is blocked due to lack of entropy....
+   *
+   * We optimistically assume that getrandom() is available and functional
+   * because it is the way of the future, and 2 branch mispredicts pale in
+   * comparision to the overheads involved with failing to open
+   * /dev/srandom followed by opening and reading from /dev/urandom.
+   */
+  if (PREDICT_LIKELY(getrandom_works)) {
+    int ret;
+    do {
+      /* A flag of '0' here means to read from '/dev/urandom', and to
+       * block if insufficient entropy is available to service the
+       * request.
+       */
+      ret = syscall(SYS_getrandom, out, out_len, 0);
+    } while (ret == -1 && ((errno == EINTR) ||(errno == EAGAIN)));
+
+    if (PREDICT_UNLIKELY(ret == -1)) {
+      tor_assert(errno != EAGAIN);
+      tor_assert(errno != EINTR);
+
+      /* Probably ENOSYS. */
+      log_warn(LD_CRYPTO, "Can't get entropy from getrandom().");
+      getrandom_works = 0; /* Don't bother trying again. */
+      return -1;
+    }
+
+    tor_assert(ret == (int)out_len);
+    return 0;
+  }
+
+  return -1; /* getrandom() previously failed unexpectedly. */
+#elif defined(HAVE_GETENTROPY)
+  /* getentropy() is what Linux's getrandom() wants to be when it grows up.
+   * the only gotcha is that requests are limited to 256 bytes.
+   */
+  return getentropy(out, out_len);
+#endif
+
+  /* This platform doesn't have a supported syscall based random. */
+  return -1;
+}
+
+/** Try to get <b>out_len</b> bytes of the strongest entropy we can generate,
+ * via the per-platform fallback mechanism, storing it into <b>out</b>.
+ * Return -1 on success, 0 on failure.  A maximum request size of 256 bytes
+ * is imposed.
+ */
+static int
+crypto_strongest_rand_fallback(uint8_t *out, size_t out_len)
+{
+#ifdef _WIN32
+  /* Windows exclusively uses crypto_strongest_rand_syscall(). */
+  return -1;
 #else
+  static const char *filenames[] = {
+    "/dev/srandom", "/dev/urandom", "/dev/random", NULL
+  };
+  int fd, i;
+  size_t n;
+
   for (i = 0; filenames[i]; ++i) {
     log_debug(LD_FS, "Opening %s for entropy", filenames[i]);
     fd = open(sandbox_intern_string(filenames[i]), O_RDONLY, 0);
@@ -2393,9 +2467,55 @@ crypto_strongest_rand(uint8_t *out, size_t out_len)
     return 0;
   }
 
-  log_warn(LD_CRYPTO, "Cannot get strong entropy: no entropy source found.");
   return -1;
 #endif
+}
+
+/** Try to get <b>out_len</b> bytes of the strongest entropy we can generate,
+ * storing it into <b>out</b>. Return -1 on success, 0 on failure.  A maximum
+ * request size of 256 bytes is imposed.
+ */
+int
+crypto_strongest_rand(uint8_t *out, size_t out_len)
+{
+  static const size_t sanity_min_size = 16;
+  static const int max_attempts = 3;
+  tor_assert(out_len <= MAX_STRONGEST_RAND_SIZE);
+
+  /* For buffers >= 16 bytes (128 bits), we sanity check the output by
+   * zero filling the buffer and ensuring that it actually was at least
+   * partially modified.
+   *
+   * Checking that any individual byte is non-zero seems like it would
+   * fail too often (p = out_len * 1/256) for comfort, but this is an
+   * "adjust according to taste" sort of check.
+   */
+  memwipe(out, 0, out_len);
+  for (int i = 0; i < max_attempts; i++) {
+    /* Try to use the syscall/OS favored mechanism to get strong entropy. */
+    if (crypto_strongest_rand_syscall(out, out_len) != 0) {
+      /* Try to use the less-favored mechanism to get strong entropy. */
+      if (crypto_strongest_rand_fallback(out, out_len) != 0) {
+        /* Welp, we tried.  Hopefully the calling code terminates the process
+         * since we're basically boned without good entropy.
+         */
+        log_warn(LD_CRYPTO,
+                 "Cannot get strong entropy: no entropy source found.");
+        return -1;
+      }
+    }
+
+    if ((out_len < sanity_min_size) || !tor_mem_is_zero((char*)out, out_len))
+      return 0;
+  }
+
+  /* We tried max_attempts times to fill a buffer >= 128 bits long,
+   * and each time it returned all '0's.  Either the system entropy
+   * source is busted, or the user should go out and buy a ticket to
+   * every lottery on the planet.
+   */
+  log_warn(LD_CRYPTO, "Strong OS entropy returned all zero buffer.");
+  return -1;
 }
 
 /** Seed OpenSSL's random number generator with bytes from the operating

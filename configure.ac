@@ -384,6 +384,7 @@ AC_CHECK_FUNCS(
         flock \
         ftime \
         getaddrinfo \
+        getentropy \
         getifaddrs \
         getpass \
         getrlimit \
@@ -951,6 +952,7 @@ AC_CHECK_HEADERS(
         sys/select.h \
         sys/socket.h \
 	sys/statvfs.h \
+        sys/syscall.h \
 	sys/sysctl.h \
         sys/syslimits.h \
         sys/time.h \
