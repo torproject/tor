@@ -2426,6 +2426,8 @@ crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
    * the only gotcha is that requests are limited to 256 bytes.
    */
   return getentropy(out, out_len);
+#else
+  (void) out;
 #endif
 
   /* This platform doesn't have a supported syscall based random. */
