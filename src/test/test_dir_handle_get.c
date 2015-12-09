@@ -1231,6 +1231,7 @@ test_dir_handle_get_server_keys_all(void* data)
   char *header = NULL;
   char *body = NULL;
   size_t body_used = 0;
+  const char digest[DIGEST_LEN] = "";
 
   dir_server_t *ds = NULL;
   (void) data;
@@ -1241,7 +1242,7 @@ test_dir_handle_get_server_keys_all(void* data)
   routerlist_free_all();
 
   /* create a trusted ds */
-  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, "", NULL,
+  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, digest, NULL,
                               V3_DIRINFO, 1.0);
   tt_assert(ds);
   dir_server_add(ds);
@@ -1390,6 +1391,7 @@ test_dir_handle_get_server_keys_fp(void* data)
   char *body = NULL;
   size_t body_used = 0;
   dir_server_t *ds = NULL;
+  const char digest[DIGEST_LEN] = "";
   (void) data;
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
@@ -1398,7 +1400,7 @@ test_dir_handle_get_server_keys_fp(void* data)
   routerlist_free_all();
 
   /* create a trusted ds */
-  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, "", NULL,
+  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, digest, NULL,
                               V3_DIRINFO, 1.0);
   tt_assert(ds);
   dir_server_add(ds);
@@ -1543,6 +1545,7 @@ test_dir_handle_get_server_keys_fpsk(void* data)
   char *body = NULL;
   size_t body_used = 0;
   dir_server_t *ds = NULL;
+  const char digest[DIGEST_LEN] = "";
   (void) data;
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
@@ -1551,7 +1554,7 @@ test_dir_handle_get_server_keys_fpsk(void* data)
   routerlist_free_all();
 
   /* create a trusted ds */
-  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, "", NULL,
+  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, digest, NULL,
                               V3_DIRINFO, 1.0);
   tt_assert(ds);
 
@@ -1600,13 +1603,14 @@ test_dir_handle_get_server_keys_busy(void* data)
   dir_connection_t *conn = NULL;
   char *header = NULL;
   dir_server_t *ds = NULL;
+  const char digest[DIGEST_LEN] = "";
   (void) data;
 
   clear_dir_servers();
   routerlist_free_all();
 
   /* create a trusted ds */
-  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, "", NULL,
+  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, digest, NULL,
                               V3_DIRINFO, 1.0);
   tt_assert(ds);
 
@@ -1994,13 +1998,14 @@ test_dir_handle_get_status_vote_d(void* data)
   char *header = NULL, *body = NULL;
   size_t body_used = 0;
   dir_server_t *ds = NULL;
+  const char digest[DIGEST_LEN] = "";
   (void) data;
 
   clear_dir_servers();
   dirvote_free_all();
 
   /* create a trusted ds */
-  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, "", NULL,
+  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, digest, NULL,
                               V3_DIRINFO, 1.0);
   tt_assert(ds);
   dir_server_add(ds);
@@ -2338,6 +2343,7 @@ test_dir_handle_get_status_vote_next_authority(void* data)
   int status_out = 0;
   size_t body_used = 0;
   dir_server_t *ds = NULL;
+  const char digest[DIGEST_LEN] = "";
   (void) data;
 
   clear_dir_servers();
@@ -2347,7 +2353,7 @@ test_dir_handle_get_status_vote_next_authority(void* data)
   mock_cert = authority_cert_parse_from_string(TEST_CERTIFICATE, NULL);
 
   /* create a trusted ds */
-  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, "", NULL,
+  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, digest, NULL,
                               V3_DIRINFO, 1.0);
   tt_assert(ds);
   dir_server_add(ds);
@@ -2413,6 +2419,7 @@ test_dir_handle_get_status_vote_current_authority(void* data)
   const char *msg_out = NULL;
   int status_out = 0;
   size_t body_used = 0;
+  const char digest[DIGEST_LEN] = "";
 
   dir_server_t *ds = NULL;
   (void) data;
@@ -2424,7 +2431,7 @@ test_dir_handle_get_status_vote_current_authority(void* data)
   mock_cert = authority_cert_parse_from_string(TEST_CERTIFICATE, NULL);
 
   /* create a trusted ds */
-  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, "", NULL,
+  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, digest, NULL,
                               V3_DIRINFO, 1.0);
   tt_assert(ds);
   dir_server_add(ds);

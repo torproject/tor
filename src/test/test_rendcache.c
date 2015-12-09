@@ -767,28 +767,31 @@ test_rend_cache_failure_intro_lookup(void *data)
   rend_cache_failure_t *failure;
   rend_cache_failure_intro_t *ip;
   rend_cache_failure_intro_t *entry;
+  const char key_ip_one[DIGEST_LEN] = "ip1";
+  const char key_ip_two[DIGEST_LEN] = "ip2";
+  const char key_foo[DIGEST_LEN] = "foo1";
 
   rend_cache_init();
 
   failure = rend_cache_failure_entry_new();
   ip = rend_cache_failure_intro_entry_new(INTRO_POINT_FAILURE_TIMEOUT);
-  digestmap_set(failure->intro_failures, "ip1", ip);
+  digestmap_set(failure->intro_failures, key_ip_one, ip);
   strmap_set_lc(rend_cache_failure, "foo1", failure);
 
   // Test not found
-  ret = cache_failure_intro_lookup((const uint8_t *)"foo1", "foo2", NULL);
+  ret = cache_failure_intro_lookup((const uint8_t *) key_foo, "foo2", NULL);
   tt_int_op(ret, OP_EQ, 0);
 
   // Test found with no intro failures in it
-  ret = cache_failure_intro_lookup((const uint8_t *)"ip2", "foo1", NULL);
+  ret = cache_failure_intro_lookup((const uint8_t *) key_ip_two, "foo1", NULL);
   tt_int_op(ret, OP_EQ, 0);
 
   // Test found
-  ret = cache_failure_intro_lookup((const uint8_t *)"ip1", "foo1", NULL);
+  ret = cache_failure_intro_lookup((const uint8_t *) key_ip_one, "foo1", NULL);
   tt_int_op(ret, OP_EQ, 1);
 
   // Test found and asking for entry
-  cache_failure_intro_lookup((const uint8_t *)"ip1", "foo1", &entry);
+  cache_failure_intro_lookup((const uint8_t *) key_ip_one, "foo1", &entry);
   tt_assert(entry);
   tt_assert(entry == ip);
 
@@ -892,6 +895,9 @@ test_rend_cache_failure_clean(void *data)
   rend_cache_failure_t *failure;
   rend_cache_failure_intro_t *ip_one, *ip_two;
 
+  const char key_one[DIGEST_LEN] = "ip1";
+  const char key_two[DIGEST_LEN] = "ip2";
+
   (void)data;
 
   rend_cache_init();
@@ -909,7 +915,7 @@ test_rend_cache_failure_clean(void *data)
   // Test with one new intro point
   failure = rend_cache_failure_entry_new();
   ip_one = rend_cache_failure_intro_entry_new(INTRO_POINT_FAILURE_TIMEOUT);
-  digestmap_set(failure->intro_failures, "ip1", ip_one);
+  digestmap_set(failure->intro_failures, key_one, ip_one);
   strmap_set_lc(rend_cache_failure, "foo1", failure);
   rend_cache_failure_clean(time(NULL));
   tt_int_op(strmap_size(rend_cache_failure), OP_EQ, 1);
@@ -919,7 +925,7 @@ test_rend_cache_failure_clean(void *data)
   failure = rend_cache_failure_entry_new();
   ip_one = rend_cache_failure_intro_entry_new(INTRO_POINT_FAILURE_TIMEOUT);
   ip_one->created_ts = time(NULL) - 7*60;
-  digestmap_set(failure->intro_failures, "ip1", ip_one);
+  digestmap_set(failure->intro_failures, key_one, ip_one);
   strmap_set_lc(rend_cache_failure, "foo1", failure);
   rend_cache_failure_clean(time(NULL));
   tt_int_op(strmap_size(rend_cache_failure), OP_EQ, 0);
@@ -929,10 +935,10 @@ test_rend_cache_failure_clean(void *data)
   failure = rend_cache_failure_entry_new();
   ip_one = rend_cache_failure_intro_entry_new(INTRO_POINT_FAILURE_TIMEOUT);
   ip_one->created_ts = time(NULL) - 7*60;
-  digestmap_set(failure->intro_failures, "ip1", ip_one);
+  digestmap_set(failure->intro_failures, key_one, ip_one);
   ip_two = rend_cache_failure_intro_entry_new(INTRO_POINT_FAILURE_TIMEOUT);
   ip_two->created_ts = time(NULL) - 2*60;
-  digestmap_set(failure->intro_failures, "ip2", ip_two);
+  digestmap_set(failure->intro_failures, key_two, ip_two);
   strmap_set_lc(rend_cache_failure, "foo1", failure);
   rend_cache_failure_clean(time(NULL));
   tt_int_op(strmap_size(rend_cache_failure), OP_EQ, 1);
@@ -1051,25 +1057,26 @@ test_rend_cache_failure_intro_add(void *data)
   (void)data;
   rend_cache_failure_t *fail_entry;
   rend_cache_failure_intro_t *entry;
+  const char identity[DIGEST_LEN] = "foo1";
 
   rend_cache_init();
 
   // Adds non-existing entry
-  cache_failure_intro_add((const uint8_t *)"foo1", "foo2",
+  cache_failure_intro_add((const uint8_t *) identity, "foo2",
                           INTRO_POINT_FAILURE_TIMEOUT);
   fail_entry = strmap_get_lc(rend_cache_failure, "foo2");
   tt_assert(fail_entry);
   tt_int_op(digestmap_size(fail_entry->intro_failures), OP_EQ, 1);
-  entry = digestmap_get(fail_entry->intro_failures, "foo1");
+  entry = digestmap_get(fail_entry->intro_failures, identity);
   tt_assert(entry);
 
   // Adds existing entry
-  cache_failure_intro_add((const uint8_t *)"foo1", "foo2",
+  cache_failure_intro_add((const uint8_t *) identity, "foo2",
                           INTRO_POINT_FAILURE_TIMEOUT);
   fail_entry = strmap_get_lc(rend_cache_failure, "foo2");
   tt_assert(fail_entry);
   tt_int_op(digestmap_size(fail_entry->intro_failures), OP_EQ, 1);
-  entry = digestmap_get(fail_entry->intro_failures, "foo1");
+  entry = digestmap_get(fail_entry->intro_failures, identity);
   tt_assert(entry);
 
  done:
@@ -1082,22 +1089,23 @@ test_rend_cache_intro_failure_note(void *data)
   (void)data;
   rend_cache_failure_t *fail_entry;
   rend_cache_failure_intro_t *entry;
+  const char key[DIGEST_LEN] = "foo1";
 
   rend_cache_init();
 
   // Test not found
   rend_cache_intro_failure_note(INTRO_POINT_FAILURE_TIMEOUT,
-                                (const uint8_t *)"foo1", "foo2");
+                                (const uint8_t *) key, "foo2");
   fail_entry = strmap_get_lc(rend_cache_failure, "foo2");
   tt_assert(fail_entry);
   tt_int_op(digestmap_size(fail_entry->intro_failures), OP_EQ, 1);
-  entry = digestmap_get(fail_entry->intro_failures, "foo1");
+  entry = digestmap_get(fail_entry->intro_failures, key);
   tt_assert(entry);
   tt_int_op(entry->failure_type, OP_EQ, INTRO_POINT_FAILURE_TIMEOUT);
 
   // Test found
   rend_cache_intro_failure_note(INTRO_POINT_FAILURE_UNREACHABLE,
-                                (const uint8_t *)"foo1", "foo2");
+                                (const uint8_t *) key, "foo2");
   tt_int_op(entry->failure_type, OP_EQ, INTRO_POINT_FAILURE_UNREACHABLE);
 
  done:
@@ -1121,6 +1129,7 @@ test_rend_cache_clean_v2_descs_as_dir(void *data)
   time_t now;
   rend_service_descriptor_t *desc;
   now = time(NULL);
+  const char key[DIGEST_LEN] = "abcde";
 
   (void)data;
 
@@ -1138,7 +1147,7 @@ test_rend_cache_clean_v2_descs_as_dir(void *data)
   desc->timestamp = now;
   desc->pk = pk_generate(0);
   e->parsed = desc;
-  digestmap_set(rend_cache_v2_dir, "abcde", e);
+  digestmap_set(rend_cache_v2_dir, key, e);
 
   hid_serv_responsible_for_desc_id_response = 1;
   rend_cache_clean_v2_descs_as_dir(now, 0);
@@ -1157,7 +1166,7 @@ test_rend_cache_clean_v2_descs_as_dir(void *data)
   desc->timestamp = now;
   desc->pk = pk_generate(0);
   e->parsed = desc;
-  digestmap_set(rend_cache_v2_dir, "abcde", e);
+  digestmap_set(rend_cache_v2_dir, key, e);
 
   hid_serv_responsible_for_desc_id_response = 0;
   rend_cache_clean_v2_descs_as_dir(now, 0);
@@ -1170,7 +1179,7 @@ test_rend_cache_clean_v2_descs_as_dir(void *data)
   desc->timestamp = now;
   desc->pk = pk_generate(0);
   e->parsed = desc;
-  digestmap_set(rend_cache_v2_dir, "abcde", e);
+  digestmap_set(rend_cache_v2_dir, key, e);
 
   hid_serv_responsible_for_desc_id_response = 1;
   rend_cache_clean_v2_descs_as_dir(now, 0);
@@ -1183,7 +1192,7 @@ test_rend_cache_clean_v2_descs_as_dir(void *data)
   desc->timestamp = now;
   desc->pk = pk_generate(0);
   e->parsed = desc;
-  digestmap_set(rend_cache_v2_dir, "abcde", e);
+  digestmap_set(rend_cache_v2_dir, key, e);
 
   hid_serv_responsible_for_desc_id_response = 1;
   rend_cache_clean_v2_descs_as_dir(now, 20000);
@@ -1256,7 +1265,7 @@ test_rend_cache_validate_intro_point_failure(void *data)
   rend_service_descriptor_t *desc = NULL;
   char *service_id = NULL;
   rend_intro_point_t *intro = NULL;
-  const uint8_t *identity = NULL;
+  const char *identity = NULL;
   rend_cache_failure_t *failure;
   rend_cache_failure_intro_t *ip;
 
@@ -1266,11 +1275,11 @@ test_rend_cache_validate_intro_point_failure(void *data)
   desc->timestamp = time(NULL) + RECENT_TIME;
 
   intro = (rend_intro_point_t *)smartlist_get(desc->intro_nodes, 0);
-  identity = (uint8_t *) intro->extend_info->identity_digest;
+  identity = intro->extend_info->identity_digest;
 
   failure = rend_cache_failure_entry_new();
   ip = rend_cache_failure_intro_entry_new(INTRO_POINT_FAILURE_TIMEOUT);
-  digestmap_set(failure->intro_failures, (char *)identity, ip);
+  digestmap_set(failure->intro_failures, identity, ip);
   strmap_set_lc(rend_cache_failure, service_id, failure);
 
   // Test when we have an intro point in our cache

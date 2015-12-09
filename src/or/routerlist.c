@@ -4034,9 +4034,9 @@ router_exit_policy_rejects_all(const routerinfo_t *router)
 }
 
 /** Create an directory server at <b>address</b>:<b>port</b>, with OR identity
- * key <b>digest</b>.  If <b>address</b> is NULL, add ourself.  If
- * <b>is_authority</b>, this is a directory authority.  Return the new
- * directory server entry on success or NULL on failure. */
+ * key <b>digest</b> which has DIGEST_LEN bytes.  If <b>address</b> is NULL,
+ * add ourself.  If <b>is_authority</b>, this is a directory authority.  Return
+ * the new directory server entry on success or NULL on failure. */
 static dir_server_t *
 dir_server_new(int is_authority,
                const char *nickname,
@@ -4050,6 +4050,8 @@ dir_server_new(int is_authority,
   dir_server_t *ent;
   uint32_t a;
   char *hostname_ = NULL;
+
+  tor_assert(digest);
 
   if (weight < 0)
     return NULL;
