@@ -501,7 +501,7 @@ AC_CHECK_MEMBERS([struct event.min_heap_idx], , ,
 
 AC_CHECK_HEADERS(event2/event.h event2/dns.h event2/bufferevent_ssl.h)
 
-LIBS="$save_LIBS"
+LIBS="$STATIC_LIBEVENT_FLAGS $TOR_LIB_WS32 $save_LIBS"
 
 AM_CONDITIONAL(USE_EXTERNAL_EVDNS, test x$ac_cv_header_event2_dns_h = xyes)
 
