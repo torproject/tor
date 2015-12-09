@@ -2397,13 +2397,14 @@ crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
    * /dev/srandom followed by opening and reading from /dev/urandom.
    */
   if (PREDICT_LIKELY(getrandom_works)) {
-    int ret;
+    long ret;
+    /* A flag of '0' here means to read from '/dev/urandom', and to
+     * block if insufficient entropy is available to service the
+     * request.
+     */
+    const unsigned int flags = 0;
     do {
-      /* A flag of '0' here means to read from '/dev/urandom', and to
-       * block if insufficient entropy is available to service the
-       * request.
-       */
-      ret = syscall(SYS_getrandom, out, out_len, 0);
+      ret = syscall(SYS_getrandom, out, out_len, flags);
     } while (ret == -1 && ((errno == EINTR) ||(errno == EAGAIN)));
 
     if (PREDICT_UNLIKELY(ret == -1)) {
@@ -2416,7 +2417,7 @@ crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
       return -1;
     }
 
-    tor_assert(ret == (int)out_len);
+    tor_assert(ret == (long)out_len);
     return 0;
   }
 
