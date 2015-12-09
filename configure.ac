@@ -513,8 +513,8 @@ if test "$enable_static_libevent" = "yes"; then
    fi
 else
      if test "x$ac_cv_header_event2_event_h" = "xyes"; then
-       AC_SEARCH_LIBS(event_new, [event event_core])
-       AC_SEARCH_LIBS(evdns_base_new, [event event_extra])
+       AC_SEARCH_LIBS(event_new, [event event_core], , AC_MSG_ERROR("libevent2 is installed but linking it failed while searching for event_new"))
+       AC_SEARCH_LIBS(evdns_base_new, [event event_extra], , AC_MSG_ERROR("libevent2 is installed but linking it failed while searching for evdns_base_new"))
 
        if test "$ac_cv_search_event_new" != "none required"; then
          TOR_LIBEVENT_LIBS="$ac_cv_search_event_new"
