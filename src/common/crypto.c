@@ -2445,6 +2445,8 @@ crypto_strongest_rand_fallback(uint8_t *out, size_t out_len)
 {
 #ifdef _WIN32
   /* Windows exclusively uses crypto_strongest_rand_syscall(). */
+  (void)out;
+  (void)out_len;
   return -1;
 #else
   static const char *filenames[] = {
