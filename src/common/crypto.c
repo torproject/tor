@@ -2344,14 +2344,18 @@ void
 crypto_strongest_rand(uint8_t *out, size_t out_len)
 {
   const unsigned DLEN = SHA512_DIGEST_LENGTH;
+  /* We're going to hash DLEN bytes from the system RNG together with some
+   * bytes from the openssl PRNG, in order to yield DLEN bytes.
+   */
   uint8_t inp[DLEN*2];
   uint8_t tmp[DLEN];
   tor_assert(out);
   while (out_len) {
-    crypto_rand((char*) inp+DLEN, DLEN);
-    if (crypto_strongest_rand_raw(inp, DLEN) < 0) {
+    crypto_rand((char*) inp, DLEN);
+    if (crypto_strongest_rand_raw(inp+DLEN, DLEN) < 0) {
       log_err(LD_CRYPTO, "Failed to load strong entropy when generating an "
               "important key. Exiting.");
+      /* Die with an assertion so we get a stack trace. */
       tor_assert(0);
     }
     if (out_len >= DLEN) {
@@ -2368,9 +2372,7 @@ crypto_strongest_rand(uint8_t *out, size_t out_len)
   }
   memwipe(tmp, 0, sizeof(tmp));
   memwipe(inp, 0, sizeof(inp));
-
 }
-
 
 /** Seed OpenSSL's random number generator with bytes from the operating
  * system.  <b>startup</b> should be true iff we have just started Tor and
@@ -2430,6 +2432,9 @@ crypto_rand_unmocked(char *to, size_t n)
   tor_assert(n < INT_MAX);
   tor_assert(to);
   r = RAND_bytes((unsigned char*)to, (int)n);
+  /* We consider a PRNG failure non-survivable. Let's assert so that we get a
+   * stack trace about where it happened.
+   */
   tor_assert(r >= 0);
 }
 
