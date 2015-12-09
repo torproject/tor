@@ -1898,9 +1898,11 @@ is non-zero):
     (Default: 1)
 
 [[ExtendAllowPrivateAddresses]] **ExtendAllowPrivateAddresses** **0**|**1**::
-    When this option is enabled, Tor routers allow EXTEND request to
-    localhost, RFC1918 addresses, and so on. This can create security issues;
-    you should probably leave it off. (Default: 0)
+    When this option is enabled, Tor will connect to localhost, RFC1918
+    addresses, and so on. In particular, Tor will make direct connections, and
+    Tor routers allow EXTEND requests, to these private addresses. This can
+    create security issues; you should probably leave it off.
+    (Default: 0)
 
 [[MaxMemInQueues]] **MaxMemInQueues**  __N__ **bytes**|**KB**|**MB**|**GB**::
     This option configures a threshold above which Tor will assume that it
