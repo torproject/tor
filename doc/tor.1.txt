@@ -1801,7 +1801,7 @@ is non-zero):
 [[ServerDNSTestAddresses]] **ServerDNSTestAddresses** __address__,__address__,__...__::
     When we're detecting DNS hijacking, make sure that these __valid__ addresses
     aren't getting redirected. If they are, then our DNS is completely useless,
-    and we'll reset our exit policy to "reject *:*". This option only affects
+    and we'll reset our exit policy to "reject \*:*". This option only affects
     name lookups that your server does on behalf of clients. (Default:
     "www.google.com, www.mit.edu, www.yahoo.com, www.slashdot.org")
 
