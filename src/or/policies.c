@@ -1129,12 +1129,10 @@ policies_log_first_redundant_entry(const smartlist_t *policy)
   int found_final_effective_entry = 0;
   int first_redundant_entry = 0;
   tor_assert(policy);
-  for (int i = 0; i < smartlist_len(policy); ++i) {
+  SMARTLIST_FOREACH_BEGIN(policy, const addr_policy_t *, p) {
     sa_family_t family;
-    addr_policy_t *p;
     int found_ipv4_wildcard = 0, found_ipv6_wildcard = 0;
-
-    p = smartlist_get(policy, i);
+    const int i = p_sl_idx;
 
     /* Look for accept/reject *[4|6|]:* entires */
     if (p->prt_min <= 1 && p->prt_max == 65535 && p->maskbits == 0) {
@@ -1162,10 +1160,11 @@ policies_log_first_redundant_entry(const smartlist_t *policy)
       }
       break;
     }
-  }
+  } SMARTLIST_FOREACH_END(p);
+
   /* Work out if there are redundant trailing entries in the policy list */
   if (found_final_effective_entry && first_redundant_entry > 0) {
-    addr_policy_t *p;
+    const addr_policy_t *p;
     /* Longest possible policy is
      * "accept6 ffff:ffff:..255/128:10000-65535",
      * which contains a max-length IPv6 address, plus 24 characters. */
@@ -1504,7 +1503,7 @@ policy_is_reject_star(const smartlist_t *policy, sa_family_t family)
 /** Write a single address policy to the buf_len byte buffer at buf.  Return
  * the number of characters written, or -1 on failure. */
 int
-policy_write_item(char *buf, size_t buflen, addr_policy_t *policy,
+policy_write_item(char *buf, size_t buflen, const addr_policy_t *policy,
                   int format_for_desc)
 {
   size_t written = 0;
