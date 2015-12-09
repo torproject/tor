@@ -1120,6 +1120,70 @@ policies_parse_exit_policy_reject_private(
   }
 }
 
+/**
+ * Iterate through <b>policy</b> looking for redundant entries. Log a
+ * warning message with the first redundant entry, if any is found.
+ */
+static void
+policies_log_first_redundant_entry(const smartlist_t *policy)
+{
+  int found_final_effective_entry = 0;
+  int first_redundant_entry = 0;
+  tor_assert(policy);
+  SMARTLIST_FOREACH_BEGIN(policy, const addr_policy_t *, p) {
+    sa_family_t family;
+    int found_ipv4_wildcard = 0, found_ipv6_wildcard = 0;
+    const int i = p_sl_idx;
+
+    /* Look for accept/reject *[4|6|]:* entires */
+    if (p->prt_min <= 1 && p->prt_max == 65535 && p->maskbits == 0) {
+      family = tor_addr_family(&p->addr);
+      /* accept/reject *:* may have already been expanded into
+       * accept/reject *4:*,accept/reject *6:*
+       * But handle both forms.
+       */
+      if (family == AF_INET || family == AF_UNSPEC) {
+        found_ipv4_wildcard = 1;
+      }
+      if (family == AF_INET6 || family == AF_UNSPEC) {
+        found_ipv6_wildcard = 1;
+      }
+    }
+
+    /* We also find accept *4:*,reject *6:* ; and
+     * accept *4:*,<other policies>,accept *6:* ; and similar.
+     * That's ok, because they make any subsequent entries redundant. */
+    if (found_ipv4_wildcard && found_ipv6_wildcard) {
+      found_final_effective_entry = 1;
+      /* if we're not on the final entry in the list */
+      if (i < smartlist_len(policy) - 1) {
+        first_redundant_entry = i + 1;
+      }
+      break;
+    }
+  } SMARTLIST_FOREACH_END(p);
+
+  /* Work out if there are redundant trailing entries in the policy list */
+  if (found_final_effective_entry && first_redundant_entry > 0) {
+    const addr_policy_t *p;
+    /* Longest possible policy is
+     * "accept6 ffff:ffff:..255/128:10000-65535",
+     * which contains a max-length IPv6 address, plus 24 characters. */
+    char line[TOR_ADDR_BUF_LEN + 32];
+
+    tor_assert(first_redundant_entry < smartlist_len(policy));
+    p = smartlist_get(policy, first_redundant_entry);
+    /* since we've already parsed the policy into an addr_policy_t struct,
+     * we might not log exactly what the user typed in */
+    policy_write_item(line, TOR_ADDR_BUF_LEN + 32, p, 0);
+    log_warn(LD_DIR, "Exit policy '%s' and all following policies are "
+             "redundant, as it follows accept/reject *:* rules for both "
+             "IPv4 and IPv6. They will be removed from the exit policy. (Use "
+             "accept/reject *:* as the last entry in any exit policy.)",
+             line);
+  }
+}
+
 #define DEFAULT_EXIT_POLICY                                         \
   "reject *:25,reject *:119,reject *:135-139,reject *:445,"         \
   "reject *:563,reject *:1214,reject *:4661-4666,"                  \
@@ -1173,61 +1237,7 @@ policies_parse_exit_policy_internal(config_line_t *cfg,
   /* Before we add the default policy and final rejects, check to see if
    * there are any lines after accept *:* or reject *:*. These lines have no
    * effect, and are most likely an error. */
-  int found_final_effective_entry = 0;
-  int first_redundant_entry = 0;
-  for (int i = 0; i < smartlist_len(*dest); ++i) {
-    sa_family_t family;
-    addr_policy_t *p;
-    int found_ipv4_wildcard = 0, found_ipv6_wildcard = 0;
-
-    p = smartlist_get(*dest, i);
-
-    /* Look for accept/reject *[4|6|]:* entires */
-    if (p->prt_min <= 1 && p->prt_max == 65535 && p->maskbits == 0) {
-      family = tor_addr_family(&p->addr);
-      /* accept/reject *:* may have already been expanded into
-       * accept/reject *4:*,accept/reject *6:*
-       * But handle both forms.
-       */
-      if (family == AF_INET || family == AF_UNSPEC) {
-        found_ipv4_wildcard = 1;
-      }
-      if (family == AF_INET6 || family == AF_UNSPEC) {
-        found_ipv6_wildcard = 1;
-      }
-    }
-
-    /* We also find accept *4:*,reject *6:* ; and
-     * accept *4:*,<other policies>,accept *6:* ; and similar.
-     * That's ok, because they make any subsequent entries redundant. */
-    if (found_ipv4_wildcard && found_ipv6_wildcard) {
-      found_final_effective_entry = 1;
-      /* if we're not on the final entry in the list */
-      if (i < smartlist_len(*dest) - 1) {
-        first_redundant_entry = i + 1;
-      }
-      break;
-    }
-  }
-  /* Work out if there are redundant trailing entries in the policy list */
-  if (found_final_effective_entry && first_redundant_entry > 0) {
-    addr_policy_t *p;
-    /* Longest possible policy is
-     * "accept6 ffff:ffff:..255/128:10000-65535",
-     * which contains a max-length IPv6 address, plus 24 characters. */
-    char line[TOR_ADDR_BUF_LEN + 32];
-
-    tor_assert(first_redundant_entry < smartlist_len(*dest));
-    p = smartlist_get(*dest, first_redundant_entry);
-    /* since we've already parsed the policy into an addr_policy_t struct,
-     * we might not log exactly what the user typed in */
-    policy_write_item(line, TOR_ADDR_BUF_LEN + 32, p, 0);
-    log_warn(LD_DIR, "Exit policy '%s' and all following policies are "
-             "redundant, as it follows accept/reject *:* rules for both "
-             "IPv4 and IPv6. They will be removed from the exit policy. (Use "
-             "accept/reject *:* as the last entry in any exit policy.)",
-             line);
-  }
+  policies_log_first_redundant_entry(*dest);
 
   if (add_default_policy) {
     append_exit_policy_string(dest, DEFAULT_EXIT_POLICY);
@@ -1494,7 +1504,7 @@ policy_is_reject_star(const smartlist_t *policy, sa_family_t family)
 /** Write a single address policy to the buf_len byte buffer at buf.  Return
  * the number of characters written, or -1 on failure. */
 int
-policy_write_item(char *buf, size_t buflen, addr_policy_t *policy,
+policy_write_item(char *buf, size_t buflen, const addr_policy_t *policy,
                   int format_for_desc)
 {
   size_t written = 0;

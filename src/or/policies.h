@@ -75,7 +75,7 @@ char * policy_dump_to_string(const smartlist_t *policy_list,
 int getinfo_helper_policies(control_connection_t *conn,
                             const char *question, char **answer,
                             const char **errmsg);
-int policy_write_item(char *buf, size_t buflen, addr_policy_t *item,
+int policy_write_item(char *buf, size_t buflen, const addr_policy_t *item,
                       int format_for_desc);
 
 void addr_policy_list_free(smartlist_t *p);
