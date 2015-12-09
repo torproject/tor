@@ -1120,21 +1120,21 @@ policies_parse_exit_policy_reject_private(
 }
 
 /**
- * Iterates through <b>dest</b> and logs a warning with first
- * redundant entry if found
+ * Iterate through <b>policy</b> looking for redundant entries. Log a
+ * warning message with the first redundant entry, if any is found.
  */
 static void
-policies_log_first_redundant_entry(const smartlist_t* dest)
+policies_log_first_redundant_entry(const smartlist_t *policy)
 {
   int found_final_effective_entry = 0;
   int first_redundant_entry = 0;
-  tor_assert(dest);
-  for (int i = 0; i < smartlist_len(dest); ++i) {
+  tor_assert(policy);
+  for (int i = 0; i < smartlist_len(policy); ++i) {
     sa_family_t family;
     addr_policy_t *p;
     int found_ipv4_wildcard = 0, found_ipv6_wildcard = 0;
 
-    p = smartlist_get(dest, i);
+    p = smartlist_get(policy, i);
 
     /* Look for accept/reject *[4|6|]:* entires */
     if (p->prt_min <= 1 && p->prt_max == 65535 && p->maskbits == 0) {
@@ -1157,7 +1157,7 @@ policies_log_first_redundant_entry(const smartlist_t* dest)
     if (found_ipv4_wildcard && found_ipv6_wildcard) {
       found_final_effective_entry = 1;
       /* if we're not on the final entry in the list */
-      if (i < smartlist_len(dest) - 1) {
+      if (i < smartlist_len(policy) - 1) {
         first_redundant_entry = i + 1;
       }
       break;
@@ -1171,8 +1171,8 @@ policies_log_first_redundant_entry(const smartlist_t* dest)
      * which contains a max-length IPv6 address, plus 24 characters. */
     char line[TOR_ADDR_BUF_LEN + 32];
 
-    tor_assert(first_redundant_entry < smartlist_len(dest));
-    p = smartlist_get(dest, first_redundant_entry);
+    tor_assert(first_redundant_entry < smartlist_len(policy));
+    p = smartlist_get(policy, first_redundant_entry);
     /* since we've already parsed the policy into an addr_policy_t struct,
      * we might not log exactly what the user typed in */
     policy_write_item(line, TOR_ADDR_BUF_LEN + 32, p, 0);
@@ -1237,7 +1237,7 @@ policies_parse_exit_policy_internal(config_line_t *cfg,
   /* Before we add the default policy and final rejects, check to see if
    * there are any lines after accept *:* or reject *:*. These lines have no
    * effect, and are most likely an error. */
-   policies_log_first_redundant_entry(*dest);
+  policies_log_first_redundant_entry(*dest);
 
   if (add_default_policy) {
     append_exit_policy_string(dest, DEFAULT_EXIT_POLICY);
