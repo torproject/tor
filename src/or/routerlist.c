@@ -4051,6 +4051,8 @@ dir_server_new(int is_authority,
   uint32_t a;
   char *hostname_ = NULL;
 
+  tor_assert(digest);
+
   if (weight < 0)
     return NULL;
 
