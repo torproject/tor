@@ -1,0 +1,3 @@
+  o Minor bugfixes (compilation):
+    - Replace usage of 'INLINE' with 'inline'. Fixes bug 17804; bugfix
+      on tor-0.0.2pre8.
