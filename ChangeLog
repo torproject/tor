@@ -1,3 +1,67 @@
+Changes in version 0.2.7.6 - 2015-12-10
+  Tor version 0.2.7.6 fixes a major bug in entry guard selection, as
+  well as a minor bug in hidden service reliability.
+
+  o Major bugfixes (guard selection):
+    - Actually look at the Guard flag when selecting a new directory
+      guard. When we implemented the directory guard design, we
+      accidentally started treating all relays as if they have the Guard
+      flag during guard selection, leading to weaker anonymity and worse
+      performance. Fixes bug 17772; bugfix on 0.2.4.8-alpha. Discovered
+      by Mohsen Imani.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the December 1 2015 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfixes (compilation):
+    - When checking for net/pfvar.h, include netinet/in.h if possible.
+      This fixes transparent proxy detection on OpenBSD. Fixes bug
+      17551; bugfix on 0.1.2.1-alpha. Patch from "rubiate".
+    - Fix a compilation warning with Clang 3.6: Do not check the
+      presence of an address which can never be NULL. Fixes bug 17781.
+
+  o Minor bugfixes (correctness):
+    - When displaying an IPv6 exit policy, include the mask bits
+      correctly even when the number is greater than 31. Fixes bug
+      16056; bugfix on 0.2.4.7-alpha. Patch from "gturner".
+    - The wrong list was used when looking up expired intro points in a
+      rend service object, causing what we think could be reachability
+      issues for hidden services, and triggering a BUG log. Fixes bug
+      16702; bugfix on 0.2.7.2-alpha.
+    - Fix undefined behavior in the tor_cert_checksig function. Fixes
+      bug 17722; bugfix on 0.2.7.2-alpha.
+
+
+Changes in version 0.2.7.5 - 2015-11-20
+  The Tor 0.2.7 release series is dedicated to the memory of Tor user
+  and privacy advocate Caspar Bowden (1961-2015). Caspar worked
+  tirelessly to advocate human rights regardless of national borders,
+  and oppose the encroachments of mass surveillance. He opposed national
+  exceptionalism, he brought clarity to legal and policy debates, he
+  understood and predicted the impact of mass surveillance on the world,
+  and he laid the groundwork for resisting it. While serving on the Tor
+  Project's board of directors, he brought us his uncompromising focus
+  on technical excellence in the service of humankind. Caspar was an
+  inimitable force for good and a wonderful friend. He was kind,
+  humorous, generous, gallant, and believed we should protect one
+  another without exception. We honor him here for his ideals, his
+  efforts, and his accomplishments. Please honor his memory with works
+  that would make him proud.
+
+  Tor 0.2.7.5 is the first stable release in the Tor 0.2.7 series.
+
+  The 0.2.7 series adds a more secure identity key type for relays,
+  improves cryptography performance, resolves several longstanding
+  hidden-service performance issues, improves controller support for
+  hidden services, and includes small bugfixes and performance
+  improvements throughout the program. This release series also includes
+  more tests than before, and significant simplifications to which parts
+  of Tor invoke which others.
+
+  (This release contains no code changes since 0.2.7.4-rc.)
+
+
 Changes in version 0.2.7.4-rc - 2015-10-21
   Tor 0.2.7.4-rc is the second release candidate in the 0.2.7 series. It
   fixes some important memory leaks, and a scary-looking (but mostly

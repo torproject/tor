@@ -86,9 +86,9 @@ Here are the steps Roger takes when putting out a new Tor release:
    either `make`, or `perl scripts/maint/updateVersions.pl`, depending on
    your version.)
 
-5. Make dist, put the tarball up somewhere, and tell `#tor` about it. Wait
-   a while to see if anybody has problems building it. Try to get Sebastian
-   or somebody to try building it on Windows.
+5. Make distcheck, put the tarball up somewhere, and tell `#tor` about
+   it. Wait a while to see if anybody has problems building it. Try to
+   get Sebastian or somebody to try building it on Windows.
 
 6. Get at least two of weasel/arma/Sebastian to put the new version number
    in their approved versions list.
@@ -123,7 +123,7 @@ Here are the steps Roger takes when putting out a new Tor release:
     0.2.2.23-alpha" (or whatever the version is), and we select the date as
     the date in the ChangeLog.
 
-11. Forward-port the ChangeLog.
+11. Forward-port the ChangeLog (and ReleaseNotes if appropriate).
 
 12. Wait up to a day or two (for a development release), or until most
     packages are up (for a stable release), and mail the release blurb and
