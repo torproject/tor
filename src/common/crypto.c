@@ -2529,7 +2529,7 @@ crypto_strongest_rand_raw(uint8_t *out, size_t out_len)
 void
 crypto_strongest_rand(uint8_t *out, size_t out_len)
 {
-  const unsigned DLEN = SHA512_DIGEST_LENGTH;
+#define DLEN SHA512_DIGEST_LENGTH
   /* We're going to hash DLEN bytes from the system RNG together with some
    * bytes from the openssl PRNG, in order to yield DLEN bytes.
    */
@@ -2558,6 +2558,7 @@ crypto_strongest_rand(uint8_t *out, size_t out_len)
   }
   memwipe(tmp, 0, sizeof(tmp));
   memwipe(inp, 0, sizeof(inp));
+#undef DLEN
 }
 
 /** Seed OpenSSL's random number generator with bytes from the operating
