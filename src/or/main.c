@@ -1609,7 +1609,7 @@ rotate_x509_certificate_callback(time_t now, const or_options_t *options)
   log_info(LD_GENERAL,"Rotating tls context.");
   if (router_initialize_tls_context() < 0) {
     log_warn(LD_BUG, "Error reinitializing TLS context");
-    /* XXX is it a bug here, that we just keep going? -RD */
+    tor_assert(0);
   }
 
   /* We also make sure to rotate the TLS connections themselves if they've
