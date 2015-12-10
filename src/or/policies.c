@@ -628,7 +628,7 @@ typedef struct policy_map_ent_t {
 static HT_HEAD(policy_map, policy_map_ent_t) policy_root = HT_INITIALIZER();
 
 /** Return true iff a and b are equal. */
-static INLINE int
+static inline int
 policy_eq(policy_map_ent_t *a, policy_map_ent_t *b)
 {
   return cmp_single_addr_policy(a->policy, b->policy) == 0;

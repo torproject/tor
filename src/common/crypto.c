@@ -112,7 +112,7 @@ static int tor_check_dh_key(int severity, BIGNUM *bn);
 
 /** Return the number of bytes added by padding method <b>padding</b>.
  */
-static INLINE int
+static inline int
 crypto_get_rsa_padding_overhead(int padding)
 {
   switch (padding)
@@ -124,7 +124,7 @@ crypto_get_rsa_padding_overhead(int padding)
 
 /** Given a padding method <b>padding</b>, return the correct OpenSSL constant.
  */
-static INLINE int
+static inline int
 crypto_get_rsa_padding(int padding)
 {
   switch (padding)

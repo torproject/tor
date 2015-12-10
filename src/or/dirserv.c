@@ -797,7 +797,7 @@ list_single_server_status(const routerinfo_t *desc, int is_live)
 }
 
 /* DOCDOC running_long_enough_to_decide_unreachable */
-static INLINE int
+static inline int
 running_long_enough_to_decide_unreachable(void)
 {
   return time_of_process_start
@@ -1302,7 +1302,7 @@ static uint32_t guard_bandwidth_excluding_exits_kb = 0;
 
 /** Helper: estimate the uptime of a router given its stated uptime and the
  * amount of time since it last stated its stated uptime. */
-static INLINE long
+static inline long
 real_uptime(const routerinfo_t *router, time_t now)
 {
   if (now < router->cache_info.published_on)

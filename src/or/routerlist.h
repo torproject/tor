@@ -109,7 +109,7 @@ static int WRA_NEVER_DOWNLOADABLE(was_router_added_t s);
  * was added. It might still be necessary to check whether the descriptor
  * generator should be notified.
  */
-static INLINE int
+static inline int
 WRA_WAS_ADDED(was_router_added_t s) {
   return s == ROUTER_ADDED_SUCCESSFULLY || s == ROUTER_ADDED_NOTIFY_GENERATOR;
 }
@@ -120,7 +120,7 @@ WRA_WAS_ADDED(was_router_added_t s) {
  * - it was outdated.
  * - its certificates were expired.
  */
-static INLINE int WRA_WAS_OUTDATED(was_router_added_t s)
+static inline int WRA_WAS_OUTDATED(was_router_added_t s)
 {
   return (s == ROUTER_WAS_TOO_OLD ||
           s == ROUTER_IS_ALREADY_KNOWN ||
@@ -130,13 +130,13 @@ static INLINE int WRA_WAS_OUTDATED(was_router_added_t s)
 }
 /** Return true iff the outcome code in <b>s</b> indicates that the descriptor
  * was flat-out rejected. */
-static INLINE int WRA_WAS_REJECTED(was_router_added_t s)
+static inline int WRA_WAS_REJECTED(was_router_added_t s)
 {
   return (s == ROUTER_AUTHDIR_REJECTS);
 }
 /** Return true iff the outcome code in <b>s</b> indicates that the descriptor
  * was flat-out rejected. */
-static INLINE int WRA_NEVER_DOWNLOADABLE(was_router_added_t s)
+static inline int WRA_NEVER_DOWNLOADABLE(was_router_added_t s)
 {
   return (s == ROUTER_AUTHDIR_REJECTS ||
           s == ROUTER_BAD_EI ||

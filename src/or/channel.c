@@ -127,13 +127,13 @@ typedef struct channel_idmap_entry_s {
   TOR_LIST_HEAD(channel_list_s, channel_s) channel_list;
 } channel_idmap_entry_t;
 
-static INLINE unsigned
+static inline unsigned
 channel_idmap_hash(const channel_idmap_entry_t *ent)
 {
   return (unsigned) siphash24g(ent->digest, DIGEST_LEN);
 }
 
-static INLINE int
+static inline int
 channel_idmap_eq(const channel_idmap_entry_t *a,
                   const channel_idmap_entry_t *b)
 {

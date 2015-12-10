@@ -19,7 +19,7 @@ typedef enum rend_intro_point_failure_t {
 } rend_intro_point_failure_t;
 
 /** Free all storage associated with <b>data</b> */
-static INLINE void
+static inline void
 rend_data_free(rend_data_t *data)
 {
   if (!data) {

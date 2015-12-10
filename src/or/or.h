@@ -915,18 +915,18 @@ typedef enum {
 #define VAR_CELL_MAX_HEADER_SIZE 7
 
 static int get_cell_network_size(int wide_circ_ids);
-static INLINE int get_cell_network_size(int wide_circ_ids)
+static inline int get_cell_network_size(int wide_circ_ids)
 {
   return wide_circ_ids ? CELL_MAX_NETWORK_SIZE : CELL_MAX_NETWORK_SIZE - 2;
 }
 static int get_var_cell_header_size(int wide_circ_ids);
-static INLINE int get_var_cell_header_size(int wide_circ_ids)
+static inline int get_var_cell_header_size(int wide_circ_ids)
 {
   return wide_circ_ids ? VAR_CELL_MAX_HEADER_SIZE :
     VAR_CELL_MAX_HEADER_SIZE - 2;
 }
 static int get_circ_id_size(int wide_circ_ids);
-static INLINE int get_circ_id_size(int wide_circ_ids)
+static inline int get_circ_id_size(int wide_circ_ids)
 {
   return wide_circ_ids ? 4 : 2;
 }
@@ -1799,38 +1799,38 @@ static control_connection_t *TO_CONTROL_CONN(connection_t *);
  * invalid. */
 static listener_connection_t *TO_LISTENER_CONN(connection_t *);
 
-static INLINE or_connection_t *TO_OR_CONN(connection_t *c)
+static inline or_connection_t *TO_OR_CONN(connection_t *c)
 {
   tor_assert(c->magic == OR_CONNECTION_MAGIC);
   return DOWNCAST(or_connection_t, c);
 }
-static INLINE dir_connection_t *TO_DIR_CONN(connection_t *c)
+static inline dir_connection_t *TO_DIR_CONN(connection_t *c)
 {
   tor_assert(c->magic == DIR_CONNECTION_MAGIC);
   return DOWNCAST(dir_connection_t, c);
 }
-static INLINE edge_connection_t *TO_EDGE_CONN(connection_t *c)
+static inline edge_connection_t *TO_EDGE_CONN(connection_t *c)
 {
   tor_assert(c->magic == EDGE_CONNECTION_MAGIC ||
              c->magic == ENTRY_CONNECTION_MAGIC);
   return DOWNCAST(edge_connection_t, c);
 }
-static INLINE entry_connection_t *TO_ENTRY_CONN(connection_t *c)
+static inline entry_connection_t *TO_ENTRY_CONN(connection_t *c)
 {
   tor_assert(c->magic == ENTRY_CONNECTION_MAGIC);
   return (entry_connection_t*) SUBTYPE_P(c, entry_connection_t, edge_.base_);
 }
-static INLINE entry_connection_t *EDGE_TO_ENTRY_CONN(edge_connection_t *c)
+static inline entry_connection_t *EDGE_TO_ENTRY_CONN(edge_connection_t *c)
 {
   tor_assert(c->base_.magic == ENTRY_CONNECTION_MAGIC);
   return (entry_connection_t*) SUBTYPE_P(c, entry_connection_t, edge_);
 }
-static INLINE control_connection_t *TO_CONTROL_CONN(connection_t *c)
+static inline control_connection_t *TO_CONTROL_CONN(connection_t *c)
 {
   tor_assert(c->magic == CONTROL_CONNECTION_MAGIC);
   return DOWNCAST(control_connection_t, c);
 }
-static INLINE listener_connection_t *TO_LISTENER_CONN(connection_t *c)
+static inline listener_connection_t *TO_LISTENER_CONN(connection_t *c)
 {
   tor_assert(c->magic == LISTENER_CONNECTION_MAGIC);
   return DOWNCAST(listener_connection_t, c);
@@ -3289,27 +3289,27 @@ static const origin_circuit_t *CONST_TO_ORIGIN_CIRCUIT(const circuit_t *);
 /** Return 1 iff <b>node</b> has Exit flag and no BadExit flag.
  * Otherwise, return 0.
  */
-static INLINE int node_is_good_exit(const node_t *node)
+static inline int node_is_good_exit(const node_t *node)
 {
   return node->is_exit && ! node->is_bad_exit;
 }
 
-static INLINE or_circuit_t *TO_OR_CIRCUIT(circuit_t *x)
+static inline or_circuit_t *TO_OR_CIRCUIT(circuit_t *x)
 {
   tor_assert(x->magic == OR_CIRCUIT_MAGIC);
   return DOWNCAST(or_circuit_t, x);
 }
-static INLINE const or_circuit_t *CONST_TO_OR_CIRCUIT(const circuit_t *x)
+static inline const or_circuit_t *CONST_TO_OR_CIRCUIT(const circuit_t *x)
 {
   tor_assert(x->magic == OR_CIRCUIT_MAGIC);
   return DOWNCAST(or_circuit_t, x);
 }
-static INLINE origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *x)
+static inline origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *x)
 {
   tor_assert(x->magic == ORIGIN_CIRCUIT_MAGIC);
   return DOWNCAST(origin_circuit_t, x);
 }
-static INLINE const origin_circuit_t *CONST_TO_ORIGIN_CIRCUIT(
+static inline const origin_circuit_t *CONST_TO_ORIGIN_CIRCUIT(
     const circuit_t *x)
 {
   tor_assert(x->magic == ORIGIN_CIRCUIT_MAGIC);
@@ -4398,7 +4398,7 @@ typedef struct {
 /** Change the next_write time of <b>state</b> to <b>when</b>, unless the
  * state is already scheduled to be written to disk earlier than <b>when</b>.
  */
-static INLINE void or_state_mark_dirty(or_state_t *state, time_t when)
+static inline void or_state_mark_dirty(or_state_t *state, time_t when)
 {
   if (state->next_write > when)
     state->next_write = when;

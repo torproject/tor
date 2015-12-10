@@ -57,13 +57,13 @@ typedef struct nodelist_t {
 
 } nodelist_t;
 
-static INLINE unsigned int
+static inline unsigned int
 node_id_hash(const node_t *node)
 {
   return (unsigned) siphash24g(node->identity, DIGEST_LEN);
 }
 
-static INLINE unsigned int
+static inline unsigned int
 node_id_eq(const node_t *node1, const node_t *node2)
 {
   return tor_memeq(node1->identity, node2->identity, DIGEST_LEN);
@@ -291,7 +291,7 @@ nodelist_set_consensus(networkstatus_t *ns)
 }
 
 /** Helper: return true iff a node has a usable amount of information*/
-static INLINE int
+static inline int
 node_is_usable(const node_t *node)
 {
   return (node->rs) || (node->ri);
@@ -1021,7 +1021,7 @@ nodelist_refresh_countries(void)
 
 /** Return true iff router1 and router2 have similar enough network addresses
  * that we should treat them as being in the same family */
-static INLINE int
+static inline int
 addrs_in_same_network_family(const tor_addr_t *a1,
                              const tor_addr_t *a2)
 {
@@ -1045,7 +1045,7 @@ node_nickname_matches(const node_t *node, const char *nickname)
 }
 
 /** Return true iff <b>node</b> is named by some nickname in <b>lst</b>. */
-static INLINE int
+static inline int
 node_in_nickname_smartlist(const smartlist_t *lst, const node_t *node)
 {
   if (!lst) return 0;

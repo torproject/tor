@@ -47,14 +47,14 @@ struct microdesc_cache_t {
 static microdesc_cache_t *get_microdesc_cache_noload(void);
 
 /** Helper: computes a hash of <b>md</b> to place it in a hash table. */
-static INLINE unsigned int
+static inline unsigned int
 microdesc_hash_(microdesc_t *md)
 {
   return (unsigned) siphash24g(md->digest, sizeof(md->digest));
 }
 
 /** Helper: compares <b>a</b> and </b> for equality for hash-table purposes. */
-static INLINE int
+static inline int
 microdesc_eq_(microdesc_t *a, microdesc_t *b)
 {
   return tor_memeq(a->digest, b->digest, DIGEST256_LEN);

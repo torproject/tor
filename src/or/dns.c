@@ -134,7 +134,7 @@ static int dns_is_broken_for_ipv6 = 0;
 
 /** Function to compare hashed resolves on their addresses; used to
  * implement hash tables. */
-static INLINE int
+static inline int
 cached_resolves_eq(cached_resolve_t *a, cached_resolve_t *b)
 {
   /* make this smarter one day? */
@@ -143,7 +143,7 @@ cached_resolves_eq(cached_resolve_t *a, cached_resolve_t *b)
 }
 
 /** Hash function for cached_resolve objects */
-static INLINE unsigned int
+static inline unsigned int
 cached_resolve_hash(cached_resolve_t *a)
 {
   return (unsigned) siphash24g((const uint8_t*)a->address, strlen(a->address));
@@ -1126,7 +1126,7 @@ dns_cancel_pending_resolve,(const char *address))
 
 /** Return true iff <b>address</b> is one of the addresses we use to verify
  * that well-known sites aren't being hijacked by our DNS servers. */
-static INLINE int
+static inline int
 is_test_address(const char *address)
 {
   const or_options_t *options = get_options();

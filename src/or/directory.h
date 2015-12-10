@@ -101,7 +101,7 @@ static int download_status_is_ready(download_status_t *dls, time_t now,
                                     int max_failures);
 /** Return true iff, as of <b>now</b>, the resource tracked by <b>dls</b> is
  * ready to get its download reattempted. */
-static INLINE int
+static inline int
 download_status_is_ready(download_status_t *dls, time_t now,
                          int max_failures)
 {
@@ -111,7 +111,7 @@ download_status_is_ready(download_status_t *dls, time_t now,
 
 static void download_status_mark_impossible(download_status_t *dl);
 /** Mark <b>dl</b> as never downloadable. */
-static INLINE void
+static inline void
 download_status_mark_impossible(download_status_t *dl)
 {
   dl->n_download_failures = IMPOSSIBLE_TO_DOWNLOAD;

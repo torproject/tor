@@ -192,7 +192,7 @@ static void flush_queued_events_cb(evutil_socket_t fd, short what, void *arg);
 
 /** Given a control event code for a message event, return the corresponding
  * log severity. */
-static INLINE int
+static inline int
 event_to_log_severity(int event)
 {
   switch (event) {
@@ -206,7 +206,7 @@ event_to_log_severity(int event)
 }
 
 /** Given a log severity, return the corresponding control event code. */
-static INLINE int
+static inline int
 log_severity_to_event(int severity)
 {
   switch (severity) {
@@ -325,7 +325,7 @@ control_event_is_interesting(int event)
 /** Append a NUL-terminated string <b>s</b> to the end of
  * <b>conn</b>-\>outbuf.
  */
-static INLINE void
+static inline void
 connection_write_str_to_buf(const char *s, control_connection_t *conn)
 {
   size_t len = strlen(s);
@@ -428,7 +428,7 @@ read_escaped_data(const char *data, size_t len, char **out)
 /** If the first <b>in_len_max</b> characters in <b>start</b> contain a
  * double-quoted string with escaped characters, return the length of that
  * string (as encoded, including quotes).  Otherwise return -1. */
-static INLINE int
+static inline int
 get_escaped_string_length(const char *start, size_t in_len_max,
                           int *chars_out)
 {

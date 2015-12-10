@@ -482,7 +482,7 @@ static HT_HEAD(clientmap, clientmap_entry_t) client_history =
      HT_INITIALIZER();
 
 /** Hashtable helper: compute a hash of a clientmap_entry_t. */
-static INLINE unsigned
+static inline unsigned
 clientmap_entry_hash(const clientmap_entry_t *a)
 {
   unsigned h = (unsigned) tor_addr_hash(&a->addr);
@@ -493,7 +493,7 @@ clientmap_entry_hash(const clientmap_entry_t *a)
   return h;
 }
 /** Hashtable helper: compare two clientmap_entry_t values for equality. */
-static INLINE int
+static inline int
 clientmap_entries_eq(const clientmap_entry_t *a, const clientmap_entry_t *b)
 {
   if (strcmp_opt(a->transport_name, b->transport_name))

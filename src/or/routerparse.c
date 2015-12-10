@@ -2061,7 +2061,7 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
  * object (starting with "r " at the start of a line).  If none is found,
  * return the start of the directory footer, or the next directory signature.
  * If none is found, return the end of the string. */
-static INLINE const char *
+static inline const char *
 find_start_of_next_routerstatus(const char *s)
 {
   const char *eos, *footer, *sig;
@@ -3930,7 +3930,7 @@ token_clear(directory_token_t *tok)
  * Return <b>tok</b> on success, or a new ERR_ token if the token didn't
  * conform to the syntax we wanted.
  **/
-static INLINE directory_token_t *
+static inline directory_token_t *
 token_check_object(memarea_t *area, const char *kwd,
                    directory_token_t *tok, obj_syntax o_syn)
 {
@@ -3995,7 +3995,7 @@ token_check_object(memarea_t *area, const char *kwd,
  * number of parsed elements into the n_args field of <b>tok</b>.  Allocate
  * all storage in <b>area</b>.  Return the number of arguments parsed, or
  * return -1 if there was an insanely high number of arguments. */
-static INLINE int
+static inline int
 get_token_arguments(memarea_t *area, directory_token_t *tok,
                     const char *s, const char *eol)
 {

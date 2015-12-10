@@ -490,7 +490,7 @@ reset_accounting(time_t now)
 }
 
 /** Return true iff we should save our bandwidth usage to disk. */
-static INLINE int
+static inline int
 time_to_record_bandwidth_usage(time_t now)
 {
   /* Note every 600 sec */

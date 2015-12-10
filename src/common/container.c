@@ -60,7 +60,7 @@ smartlist_clear(smartlist_t *sl)
 }
 
 /** Make sure that <b>sl</b> can hold at least <b>size</b> entries. */
-static INLINE void
+static inline void
 smartlist_ensure_capacity(smartlist_t *sl, int size)
 {
 #if SIZEOF_SIZE_T > SIZEOF_INT
@@ -867,7 +867,7 @@ smartlist_sort_pointers(smartlist_t *sl)
 /** Helper. <b>sl</b> may have at most one violation of the heap property:
  * the item at <b>idx</b> may be greater than one or both of its children.
  * Restore the heap property. */
-static INLINE void
+static inline void
 smartlist_heapify(smartlist_t *sl,
                   int (*compare)(const void *a, const void *b),
                   int idx_field_offset,
@@ -1068,35 +1068,35 @@ DEFINE_MAP_STRUCTS(digestmap_t, char key[DIGEST_LEN], digestmap_);
 DEFINE_MAP_STRUCTS(digest256map_t, uint8_t key[DIGEST256_LEN], digest256map_);
 
 /** Helper: compare strmap_entry_t objects by key value. */
-static INLINE int
+static inline int
 strmap_entries_eq(const strmap_entry_t *a, const strmap_entry_t *b)
 {
   return !strcmp(a->key, b->key);
 }
 
 /** Helper: return a hash value for a strmap_entry_t. */
-static INLINE unsigned int
+static inline unsigned int
 strmap_entry_hash(const strmap_entry_t *a)
 {
   return (unsigned) siphash24g(a->key, strlen(a->key));
 }
 
 /** Helper: compare digestmap_entry_t objects by key value. */
-static INLINE int
+static inline int
 digestmap_entries_eq(const digestmap_entry_t *a, const digestmap_entry_t *b)
 {
   return tor_memeq(a->key, b->key, DIGEST_LEN);
 }
 
 /** Helper: return a hash value for a digest_map_t. */
-static INLINE unsigned int
+static inline unsigned int
 digestmap_entry_hash(const digestmap_entry_t *a)
 {
   return (unsigned) siphash24g(a->key, DIGEST_LEN);
 }
 
 /** Helper: compare digestmap_entry_t objects by key value. */
-static INLINE int
+static inline int
 digest256map_entries_eq(const digest256map_entry_t *a,
                         const digest256map_entry_t *b)
 {
@@ -1104,7 +1104,7 @@ digest256map_entries_eq(const digest256map_entry_t *a,
 }
 
 /** Helper: return a hash value for a digest_map_t. */
-static INLINE unsigned int
+static inline unsigned int
 digest256map_entry_hash(const digest256map_entry_t *a)
 {
   return (unsigned) siphash24g(a->key, DIGEST256_LEN);
@@ -1127,49 +1127,49 @@ HT_GENERATE2(digest256map_impl, digest256map_entry_t, node,
              digest256map_entry_hash,
              digest256map_entries_eq, 0.6, tor_reallocarray_, tor_free_)
 
-static INLINE void
+static inline void
 strmap_entry_free(strmap_entry_t *ent)
 {
   tor_free(ent->key);
   tor_free(ent);
 }
-static INLINE void
+static inline void
 digestmap_entry_free(digestmap_entry_t *ent)
 {
   tor_free(ent);
 }
-static INLINE void
+static inline void
 digest256map_entry_free(digest256map_entry_t *ent)
 {
   tor_free(ent);
 }
 
-static INLINE void
+static inline void
 strmap_assign_tmp_key(strmap_entry_t *ent, const char *key)
 {
   ent->key = (char*)key;
 }
-static INLINE void
+static inline void
 digestmap_assign_tmp_key(digestmap_entry_t *ent, const char *key)
 {
   memcpy(ent->key, key, DIGEST_LEN);
 }
-static INLINE void
+static inline void
 digest256map_assign_tmp_key(digest256map_entry_t *ent, const uint8_t *key)
 {
   memcpy(ent->key, key, DIGEST256_LEN);
 }
-static INLINE void
+static inline void
 strmap_assign_key(strmap_entry_t *ent, const char *key)
 {
   ent->key = tor_strdup(key);
 }
-static INLINE void
+static inline void
 digestmap_assign_key(digestmap_entry_t *ent, const char *key)
 {
   memcpy(ent->key, key, DIGEST_LEN);
 }
-static INLINE void
+static inline void
 digest256map_assign_key(digest256map_entry_t *ent, const uint8_t *key)
 {
   memcpy(ent->key, key, DIGEST256_LEN);

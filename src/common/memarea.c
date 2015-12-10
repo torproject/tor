@@ -61,7 +61,7 @@
 #endif
 
 /** Increment <b>ptr</b> until it is aligned to MEMAREA_ALIGN. */
-static INLINE void *
+static inline void *
 realign_pointer(void *ptr)
 {
   uintptr_t x = (uintptr_t)ptr;

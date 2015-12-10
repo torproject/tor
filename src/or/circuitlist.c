@@ -71,7 +71,7 @@ typedef struct chan_circid_circuit_map_t {
 /** Helper for hash tables: compare the channel and circuit ID for a and
  * b, and return less than, equal to, or greater than zero appropriately.
  */
-static INLINE int
+static inline int
 chan_circid_entries_eq_(chan_circid_circuit_map_t *a,
                         chan_circid_circuit_map_t *b)
 {
@@ -80,7 +80,7 @@ chan_circid_entries_eq_(chan_circid_circuit_map_t *a,
 
 /** Helper: return a hash based on circuit ID and the pointer value of
  * chan in <b>a</b>. */
-static INLINE unsigned int
+static inline unsigned int
 chan_circid_entry_hash_(chan_circid_circuit_map_t *a)
 {
   /* Try to squeze the siphash input into 8 bytes to save any extra siphash
@@ -1049,7 +1049,7 @@ circuit_get_by_global_id(uint32_t id)
  * If <b>found_entry_out</b> is provided, set it to true if we have a
  * placeholder entry for circid/chan, and leave it unset otherwise.
  */
-static INLINE circuit_t *
+static inline circuit_t *
 circuit_get_by_circid_channel_impl(circid_t circ_id, channel_t *chan,
                                    int *found_entry_out)
 {

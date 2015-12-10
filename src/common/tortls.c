@@ -143,7 +143,7 @@ tor_tls_allocate_tor_tls_object_ex_data_index(void)
 
 /** Helper: given a SSL* pointer, return the tor_tls_t object using that
  * pointer. */
-STATIC INLINE tor_tls_t *
+STATIC inline tor_tls_t *
 tor_tls_get_by_ssl(const SSL *ssl)
 {
   tor_tls_t *result = SSL_get_ex_data(ssl, tor_tls_object_ex_data_index);

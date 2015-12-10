@@ -73,13 +73,13 @@ typedef struct tor_addr_port_t
 
 #define TOR_ADDR_NULL {AF_UNSPEC, {0}}
 
-static INLINE const struct in6_addr *tor_addr_to_in6(const tor_addr_t *a);
-static INLINE uint32_t tor_addr_to_ipv4n(const tor_addr_t *a);
-static INLINE uint32_t tor_addr_to_ipv4h(const tor_addr_t *a);
-static INLINE uint32_t tor_addr_to_mapped_ipv4h(const tor_addr_t *a);
-static INLINE sa_family_t tor_addr_family(const tor_addr_t *a);
-static INLINE const struct in_addr *tor_addr_to_in(const tor_addr_t *a);
-static INLINE int tor_addr_eq_ipv4h(const tor_addr_t *a, uint32_t u);
+static inline const struct in6_addr *tor_addr_to_in6(const tor_addr_t *a);
+static inline uint32_t tor_addr_to_ipv4n(const tor_addr_t *a);
+static inline uint32_t tor_addr_to_ipv4h(const tor_addr_t *a);
+static inline uint32_t tor_addr_to_mapped_ipv4h(const tor_addr_t *a);
+static inline sa_family_t tor_addr_family(const tor_addr_t *a);
+static inline const struct in_addr *tor_addr_to_in(const tor_addr_t *a);
+static inline int tor_addr_eq_ipv4h(const tor_addr_t *a, uint32_t u);
 
 socklen_t tor_addr_to_sockaddr(const tor_addr_t *a, uint16_t port,
                                struct sockaddr *sa_out, socklen_t len);
@@ -91,7 +91,7 @@ char *tor_sockaddr_to_str(const struct sockaddr *sa);
 
 /** Return an in6_addr* equivalent to <b>a</b>, or NULL if <b>a</b> is not
  * an IPv6 address. */
-static INLINE const struct in6_addr *
+static inline const struct in6_addr *
 tor_addr_to_in6(const tor_addr_t *a)
 {
   return a->family == AF_INET6 ? &a->addr.in6_addr : NULL;
@@ -115,14 +115,14 @@ tor_addr_to_in6(const tor_addr_t *a)
 
 /** Return an IPv4 address in network order for <b>a</b>, or 0 if
  * <b>a</b> is not an IPv4 address. */
-static INLINE uint32_t
+static inline uint32_t
 tor_addr_to_ipv4n(const tor_addr_t *a)
 {
   return a->family == AF_INET ? a->addr.in_addr.s_addr : 0;
 }
 /** Return an IPv4 address in host order for <b>a</b>, or 0 if
  * <b>a</b> is not an IPv4 address. */
-static INLINE uint32_t
+static inline uint32_t
 tor_addr_to_ipv4h(const tor_addr_t *a)
 {
   return ntohl(tor_addr_to_ipv4n(a));
@@ -131,7 +131,7 @@ tor_addr_to_ipv4h(const tor_addr_t *a)
  * 0 if <b>a</b> is not an IPv6 address.
  *
  * (Does not check whether the address is really a mapped address */
-static INLINE uint32_t
+static inline uint32_t
 tor_addr_to_mapped_ipv4h(const tor_addr_t *a)
 {
   if (a->family == AF_INET6) {
@@ -149,21 +149,21 @@ tor_addr_to_mapped_ipv4h(const tor_addr_t *a)
 }
 /** Return the address family of <b>a</b>.  Possible values are:
  * AF_INET6, AF_INET, AF_UNSPEC. */
-static INLINE sa_family_t
+static inline sa_family_t
 tor_addr_family(const tor_addr_t *a)
 {
   return a->family;
 }
 /** Return an in_addr* equivalent to <b>a</b>, or NULL if <b>a</b> is not
  * an IPv4 address. */
-static INLINE const struct in_addr *
+static inline const struct in_addr *
 tor_addr_to_in(const tor_addr_t *a)
 {
   return a->family == AF_INET ? &a->addr.in_addr : NULL;
 }
 /** Return true iff <b>a</b> is an IPv4 address equal to the host-ordered
  * address in <b>u</b>. */
-static INLINE int
+static inline int
 tor_addr_eq_ipv4h(const tor_addr_t *a, uint32_t u)
 {
   return a->family == AF_INET ? (tor_addr_to_ipv4h(a) == u) : 0;
@@ -289,7 +289,7 @@ char *tor_dup_ip(uint32_t addr) ATTR_MALLOC;
 MOCK_DECL(int,get_interface_address,(int severity, uint32_t *addr));
 /** Free a smartlist of IP addresses returned by get_interface_address_list.
  */
-static INLINE void
+static inline void
 free_interface_address_list(smartlist_t *addrs)
 {
   free_interface_address6_list(addrs);
@@ -302,7 +302,7 @@ free_interface_address_list(smartlist_t *addrs)
  * Returns NULL on failure.
  * Use free_interface_address_list to free the returned list.
  */
-static INLINE smartlist_t *
+static inline smartlist_t *
 get_interface_address_list(int severity, int include_internal)
 {
   return get_interface_address6_list(severity, AF_INET, include_internal);

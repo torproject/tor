@@ -271,7 +271,7 @@ evaluate_ctr_for_aes(void)
  * Helper function: set <b>cipher</b>'s internal buffer to the encrypted
  * value of the current counter.
  */
-static INLINE void
+static inline void
 aes_fill_buf_(aes_cnt_cipher_t *cipher)
 {
   /* We don't currently use OpenSSL's counter mode implementation because:

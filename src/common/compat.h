@@ -290,7 +290,7 @@ const void *tor_memmem(const void *haystack, size_t hlen, const void *needle,
                        size_t nlen) ATTR_NONNULL((1,3));
 static const void *tor_memstr(const void *haystack, size_t hlen,
                            const char *needle) ATTR_NONNULL((1,3));
-static INLINE const void *
+static inline const void *
 tor_memstr(const void *haystack, size_t hlen, const char *needle)
 {
   return tor_memmem(haystack, hlen, needle, strlen(needle));
@@ -301,7 +301,7 @@ tor_memstr(const void *haystack, size_t hlen, const char *needle)
 #define DECLARE_CTYPE_FN(name)                                          \
   static int TOR_##name(char c);                                        \
   extern const uint32_t TOR_##name##_TABLE[];                           \
-  static INLINE int TOR_##name(char c) {                                \
+  static inline int TOR_##name(char c) {                                \
     uint8_t u = c;                                                      \
     return !!(TOR_##name##_TABLE[(u >> 5) & 7] & (1u << (u & 31)));     \
   }
@@ -615,7 +615,7 @@ void set_uint64(void *cp, uint64_t v) ATTR_NONNULL((1));
 /* These uint8 variants are defined to make the code more uniform. */
 #define get_uint8(cp) (*(const uint8_t*)(cp))
 static void set_uint8(void *cp, uint8_t v);
-static INLINE void
+static inline void
 set_uint8(void *cp, uint8_t v)
 {
   *(uint8_t*)cp = v;

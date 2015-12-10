@@ -920,7 +920,7 @@ parse_possibly_bad_iso_time(const char *s, time_t *time_out)
  * that's about as much before <b>now</b> as <b>t</b> was before
  * <b>stored_at</b>.
  */
-static INLINE time_t
+static inline time_t
 correct_time(time_t t, time_t now, time_t stored_at, time_t started_measuring)
 {
   if (t < started_measuring - 24*60*60*365)
@@ -1190,7 +1190,7 @@ commit_max(bw_array_t *b)
 }
 
 /** Shift the current observation time of <b>b</b> forward by one second. */
-static INLINE void
+static inline void
 advance_obs(bw_array_t *b)
 {
   int nextidx;
@@ -1216,7 +1216,7 @@ advance_obs(bw_array_t *b)
 
 /** Add <b>n</b> bytes to the number of bytes in <b>b</b> for second
  * <b>when</b>. */
-static INLINE void
+static inline void
 add_obs(bw_array_t *b, time_t when, uint64_t n)
 {
   if (when < b->cur_obs_time)

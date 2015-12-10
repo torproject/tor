@@ -105,7 +105,7 @@
 static process_environment_t *
 create_managed_proxy_environment(const managed_proxy_t *mp);
 
-static INLINE int proxy_configuration_finished(const managed_proxy_t *mp);
+static inline int proxy_configuration_finished(const managed_proxy_t *mp);
 
 static void handle_finished_proxy(managed_proxy_t *mp);
 static void parse_method_error(const char *line, int is_server_method);
@@ -713,7 +713,7 @@ register_client_proxy(const managed_proxy_t *mp)
 }
 
 /** Register the transports of managed proxy <b>mp</b>. */
-static INLINE void
+static inline void
 register_proxy(const managed_proxy_t *mp)
 {
   if (mp->is_server)
@@ -828,7 +828,7 @@ handle_finished_proxy(managed_proxy_t *mp)
 
 /** Return true if the configuration of the managed proxy <b>mp</b> is
     finished. */
-static INLINE int
+static inline int
 proxy_configuration_finished(const managed_proxy_t *mp)
 {
   return (mp->conf_state == PT_PROTO_CONFIGURED ||

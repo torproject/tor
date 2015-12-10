@@ -1078,7 +1078,7 @@ static int n_sockets_open = 0;
 static tor_mutex_t *socket_accounting_mutex = NULL;
 
 /** Helper: acquire the socket accounting lock. */
-static INLINE void
+static inline void
 socket_accounting_lock(void)
 {
   if (PREDICT_UNLIKELY(!socket_accounting_mutex))
@@ -1087,7 +1087,7 @@ socket_accounting_lock(void)
 }
 
 /** Helper: release the socket accounting lock. */
-static INLINE void
+static inline void
 socket_accounting_unlock(void)
 {
   tor_mutex_release(socket_accounting_mutex);
@@ -1163,7 +1163,7 @@ tor_close_socket(tor_socket_t s)
 #ifdef DEBUG_SOCKET_COUNTING
 /** Helper: if DEBUG_SOCKET_COUNTING is enabled, remember that <b>s</b> is
  * now an open socket. */
-static INLINE void
+static inline void
 mark_socket_open(tor_socket_t s)
 {
   /* XXXX This bitarray business will NOT work on windows: sockets aren't
@@ -1487,7 +1487,7 @@ tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
 
 #ifdef NEED_ERSATZ_SOCKETPAIR
 
-static INLINE socklen_t
+static inline socklen_t
 SIZEOF_SOCKADDR(int domain)
 {
   switch (domain) {

@@ -531,7 +531,7 @@ channel_t * channel_next_with_digest(channel_t *chan);
                                         CHANNEL_IS_OPEN(chan) || \
                                         CHANNEL_IS_MAINT(chan))
 
-static INLINE int
+static inline int
 channel_is_in_state(channel_t *chan, channel_state_t state)
 {
   return chan->state == state;

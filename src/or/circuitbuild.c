@@ -745,7 +745,7 @@ inform_testing_reachability(void)
 
 /** Return true iff we should send a create_fast cell to start building a given
  * circuit */
-static INLINE int
+static inline int
 should_use_create_fast_for_circuit(origin_circuit_t *circ)
 {
   const or_options_t *options = get_options();

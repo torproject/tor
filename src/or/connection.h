@@ -146,12 +146,12 @@ static void connection_write_to_buf(const char *string, size_t len,
 /* DOCDOC connection_write_to_buf_zlib */
 static void connection_write_to_buf_zlib(const char *string, size_t len,
                                          dir_connection_t *conn, int done);
-static INLINE void
+static inline void
 connection_write_to_buf(const char *string, size_t len, connection_t *conn)
 {
   connection_write_to_buf_impl_(string, len, conn, 0);
 }
-static INLINE void
+static inline void
 connection_write_to_buf_zlib(const char *string, size_t len,
                              dir_connection_t *conn, int done)
 {
@@ -163,7 +163,7 @@ static size_t connection_get_inbuf_len(connection_t *conn);
 /* DOCDOC connection_get_outbuf_len */
 static size_t connection_get_outbuf_len(connection_t *conn);
 
-static INLINE size_t
+static inline size_t
 connection_get_inbuf_len(connection_t *conn)
 {
   IF_HAS_BUFFEREVENT(conn, {
@@ -173,7 +173,7 @@ connection_get_inbuf_len(connection_t *conn)
   }
 }
 
-static INLINE size_t
+static inline size_t
 connection_get_outbuf_len(connection_t *conn)
 {
   IF_HAS_BUFFEREVENT(conn, {

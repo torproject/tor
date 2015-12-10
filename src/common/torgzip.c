@@ -91,7 +91,7 @@ tor_zlib_get_header_version_str(void)
 }
 
 /** Return the 'bits' value to tell zlib to use <b>method</b>.*/
-static INLINE int
+static inline int
 method_bits(compress_method_t method, zlib_compression_level_t level)
 {
   /* Bits+16 means "use gzip" in zlib >= 1.2 */
@@ -104,7 +104,7 @@ method_bits(compress_method_t method, zlib_compression_level_t level)
   }
 }
 
-static INLINE int
+static inline int
 get_memlevel(zlib_compression_level_t level)
 {
   switch (level) {

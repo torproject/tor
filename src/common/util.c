@@ -207,7 +207,7 @@ tor_malloc_zero_(size_t size DMALLOC_PARAMS)
 #define SQRT_SIZE_MAX_P1 (((size_t)1) << (sizeof(size_t)*4))
 
 /** Return non-zero if and only if the product of the arguments is exact. */
-static INLINE int
+static inline int
 size_mul_check(const size_t x, const size_t y)
 {
   /* This first check is equivalent to
@@ -4451,7 +4451,7 @@ tor_get_exit_code(process_handle_t *process_handle,
 /** Helper: return the number of characters in <b>s</b> preceding the first
  * occurrence of <b>ch</b>. If <b>ch</b> does not occur in <b>s</b>, return
  * the length of <b>s</b>. Should be equivalent to strspn(s, "ch"). */
-static INLINE size_t
+static inline size_t
 str_num_before(const char *s, char ch)
 {
   const char *cp = strchr(s, ch);

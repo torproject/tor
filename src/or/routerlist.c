@@ -278,7 +278,7 @@ trusted_dirs_reload_certs(void)
 
 /** Helper: return true iff we already have loaded the exact cert
  * <b>cert</b>. */
-static INLINE int
+static inline int
 already_have_cert(authority_cert_t *cert)
 {
   cert_list_t *cl = get_cert_list(cert->cache_info.identity_digest);
@@ -985,7 +985,7 @@ router_should_rebuild_store(desc_store_t *store)
 
 /** Return the desc_store_t in <b>rl</b> that should be used to store
  * <b>sd</b>. */
-static INLINE desc_store_t *
+static inline desc_store_t *
 desc_get_store(routerlist_t *rl, const signed_descriptor_t *sd)
 {
   if (sd->is_extrainfo)
@@ -1897,7 +1897,7 @@ scale_array_elements_to_u64(u64_dbl_t *entries, int n_entries,
 #if SIZEOF_VOID_P == 8
 #define gt_i64_timei(a,b) ((a) > (b))
 #else
-static INLINE int
+static inline int
 gt_i64_timei(uint64_t a, uint64_t b)
 {
   int64_t diff = (int64_t) (b - a);
@@ -1975,7 +1975,7 @@ bridge_get_advertised_bandwidth_bounded(routerinfo_t *router)
 
 /** Return bw*1000, unless bw*1000 would overflow, in which case return
  * INT32_MAX. */
-static INLINE int32_t
+static inline int32_t
 kb_to_bytes(uint32_t bw)
 {
   return (bw > (INT32_MAX/1000)) ? INT32_MAX : bw*1000;
@@ -2790,7 +2790,7 @@ dump_routerlist_mem_usage(int severity)
  * in <b>sl</b> at position <b>idx</b>. Otherwise, search <b>sl</b> for
  * <b>ri</b>.  Return the index of <b>ri</b> in <b>sl</b>, or -1 if <b>ri</b>
  * is not in <b>sl</b>. */
-static INLINE int
+static inline int
 routerlist_find_elt_(smartlist_t *sl, void *ri, int idx)
 {
   if (idx < 0) {

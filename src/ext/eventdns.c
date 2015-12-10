@@ -805,7 +805,7 @@ reply_handle(struct evdns_request *const req, u16 flags, u32 ttl, struct reply *
 	}
 }
 
-static INLINE int
+static inline int
 name_parse(u8 *packet, int length, int *idx, char *name_out, size_t name_out_len) {
 	int name_end = -1;
 	int j = *idx;

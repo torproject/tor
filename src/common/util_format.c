@@ -465,7 +465,7 @@ base16_encode(char *dest, size_t destlen, const char *src, size_t srclen)
 }
 
 /** Helper: given a hex digit, return its value, or -1 if it isn't hex. */
-static INLINE int
+static inline int
 hex_decode_digit_(char c)
 {
   switch (c) {
