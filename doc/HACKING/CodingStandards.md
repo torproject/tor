@@ -138,9 +138,6 @@ available containers in `src/common/containers*.h`.  You should probably
 familiarize yourself with these modules before you write too much code, or
 else you'll wind up reinventing the wheel.
 
-Use `INLINE` instead of `inline` -- it's a vestige of an old hack to make
-sure that we worked on MSVC6.
-
 We don't use `strcat` or `strcpy` or `sprintf` of any of those notoriously broken
 old C functions.  Use `strlcat`, `strlcpy`, or `tor_snprintf/tor_asprintf` instead.
 
