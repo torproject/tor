@@ -75,9 +75,7 @@
 
 /* inline is __inline on windows. */
 #ifdef _WIN32
-#define INLINE __inline
-#else
-#define INLINE inline
+#define inline __inline
 #endif
 
 /* Try to get a reasonable __func__ substitute in place. */
