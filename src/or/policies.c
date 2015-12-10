@@ -1391,9 +1391,9 @@ policy_write_item(char *buf, size_t buflen, addr_policy_t *policy,
   if (result < 0)
     return -1;
   written += strlen(buf);
-  /* If the maskbits is 32 we don't need to give it.  If the mask is 0,
-   * we already wrote "*". */
-  if (policy->maskbits < 32 && policy->maskbits > 0) {
+  /* If the maskbits is 32 (IPv4) or 128 (IPv6) we don't need to give it.  If
+     the mask is 0, we already wrote "*". */
+  if (policy->maskbits < (is_ip6?128:32) && policy->maskbits > 0) {
     if (tor_snprintf(buf+written, buflen-written, "/%d", policy->maskbits)<0)
       return -1;
     written += strlen(buf+written);

@@ -1,0 +1,4 @@
+  o Minor bugfixes (compilation):
+    - When checking for net/pfvar.h, include netinet/in.h if possible.
+      This fixes transparent proxy detection on OpenBSD. Fixes bug
+      17551; bugfix on 0.1.2.1-alpha. Patch from "rubiate".
