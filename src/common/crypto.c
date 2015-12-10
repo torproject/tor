@@ -2817,7 +2817,11 @@ memwipe(void *mem, uint8_t byte, size_t sz)
    * variable.  It's an elaborate ruse to trick the compiler into not
    * optimizing out the "wipe this memory" code.  Read it if you like zany
    * programming tricks! In later versions of Tor, we should look for better
-   * not-optimized-out memory wiping stuff. */
+   * not-optimized-out memory wiping stuff...
+   *
+   * ...or maybe not.  In practice, there are pure-asm implementations of
+   * OPENSSL_cleanse() on most platforms, which ought to do the job.
+   **/
   OPENSSL_cleanse(mem, sz);
   /* Just in case some caller of memwipe() is relying on getting a buffer
    * filled with a particular value, fill the buffer.
