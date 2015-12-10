@@ -1362,12 +1362,17 @@ router_get_trusteddirserver_by_digest(const char *digest)
 }
 
 /** Return the dir_server_t for the fallback dirserver whose identity
- * key hashes to <b>digest</b>, or NULL if no such authority is known.
+ * key hashes to <b>digest</b>, or NULL if no such fallback is in the list of
+ * fallback_dir_servers. (fallback_dir_servers is affected by the FallbackDir
+ * and UseDefaultFallbackDirs torrc options.)
  */
 dir_server_t *
 router_get_fallback_dirserver_by_digest(const char *digest)
 {
   if (!fallback_dir_servers)
+    return NULL;
+
+  if (!digest)
     return NULL;
 
   SMARTLIST_FOREACH(fallback_dir_servers, dir_server_t *, ds,
@@ -1377,6 +1382,17 @@ router_get_fallback_dirserver_by_digest(const char *digest)
      });
 
   return NULL;
+}
+
+/** Return 1 if any fallback dirserver's identity key hashes to <b>digest</b>,
+ * or 0 if no such fallback is in the list of fallback_dir_servers.
+ * (fallback_dir_servers is affected by the FallbackDir and
+ * UseDefaultFallbackDirs torrc options.)
+ */
+int
+router_digest_is_fallback_dir(const char *digest)
+{
+  return (router_get_fallback_dirserver_by_digest(digest) != NULL);
 }
 
 /** Return the dir_server_t for the directory authority whose

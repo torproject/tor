@@ -50,6 +50,7 @@ const routerstatus_t *router_pick_directory_server(dirinfo_type_t type,
 dir_server_t *router_get_trusteddirserver_by_digest(const char *d);
 dir_server_t *router_get_fallback_dirserver_by_digest(
                                                    const char *digest);
+int router_digest_is_fallback_dir(const char *digest);
 dir_server_t *trusteddirserver_get_by_v3_auth_digest(const char *d);
 const routerstatus_t *router_pick_trusteddirserver(dirinfo_type_t type,
                                                    int flags);
