@@ -7,7 +7,7 @@ Changes in version 0.2.7.6 - 2015-12-10
       guard. When we implemented the directory guard design, we
       accidentally started treating all relays as if they have the Guard
       flag during guard selection, leading to weaker anonymity and worse
-      performance. Fixes bug 17222; bugfix on 0.2.4.8-alpha. Discovered
+      performance. Fixes bug 17722; bugfix on 0.2.4.8-alpha. Discovered
       by Mohsen Imani.
 
   o Minor features (geoip):
