@@ -2480,7 +2480,7 @@ crypto_strongest_rand_fallback(uint8_t *out, size_t out_len)
  * storing it into <b>out</b>. Return 0 on success, -1 on failure.  A maximum
  * request size of 256 bytes is imposed.
  */
-int
+static int
 crypto_strongest_rand_raw(uint8_t *out, size_t out_len)
 {
   static const size_t sanity_min_size = 16;
