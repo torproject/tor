@@ -1,3 +1,0 @@
-  o Compilation fixes:
-    - Fix a compilation warning with Clang 3.6: Do not check the
-      presence of an address which can never be NULL. Fixes bug 17781.

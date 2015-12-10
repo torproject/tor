@@ -1,3 +1,0 @@
-  o Documentation:
-    - Note that HiddenServicePorts can take a unix domain socket.
-      Closes ticket 17364.

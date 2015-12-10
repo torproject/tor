@@ -1,4 +1,0 @@
-  o Minor bugfixes (relay, IPv6):
-    - When displaying an IPv6 exit policy, include the mask bits correctly
-      even when the number is greater than 31. Fixes bug 16056; bugfix on
-      0.2.4.7-alpha. Patch from "gturner".

@@ -1,3 +1,0 @@
-  o Minor bugfixes (code correctness)
-    - Fix undefined behavior in the tor_cert_checksig function. Fixes bug
-      17722; bugfix on tor-0.2.7.2-alpha.
