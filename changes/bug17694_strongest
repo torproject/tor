@@ -1,0 +1,6 @@
+  o Minor features (security):
+    - Never use the system entropy output directly for anything besides
+      seeding the PRNG.  When we want to generate important keys, instead
+      of using system entropy directly, hash it with the PRNG stream.
+      This may help resist certain attacks based on broken OS entropy
+      implementations. Closes part of ticket 17694.

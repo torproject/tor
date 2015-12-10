@@ -2481,7 +2481,7 @@ crypto_strongest_rand_fallback(uint8_t *out, size_t out_len)
  * request size of 256 bytes is imposed.
  */
 int
-crypto_strongest_rand(uint8_t *out, size_t out_len)
+crypto_strongest_rand_raw(uint8_t *out, size_t out_len)
 {
   static const size_t sanity_min_size = 16;
   static const int max_attempts = 3;
@@ -2523,6 +2523,43 @@ crypto_strongest_rand(uint8_t *out, size_t out_len)
   return -1;
 }
 
+/** Try to get <b>out_len</b> bytes of the strongest entropy we can generate,
+ * storing it into <b>out</b>.
+ */
+void
+crypto_strongest_rand(uint8_t *out, size_t out_len)
+{
+  const unsigned DLEN = SHA512_DIGEST_LENGTH;
+  /* We're going to hash DLEN bytes from the system RNG together with some
+   * bytes from the openssl PRNG, in order to yield DLEN bytes.
+   */
+  uint8_t inp[DLEN*2];
+  uint8_t tmp[DLEN];
+  tor_assert(out);
+  while (out_len) {
+    crypto_rand((char*) inp, DLEN);
+    if (crypto_strongest_rand_raw(inp+DLEN, DLEN) < 0) {
+      log_err(LD_CRYPTO, "Failed to load strong entropy when generating an "
+              "important key. Exiting.");
+      /* Die with an assertion so we get a stack trace. */
+      tor_assert(0);
+    }
+    if (out_len >= DLEN) {
+      SHA512(inp, sizeof(inp), out);
+      out += DLEN;
+      out_len -= DLEN;
+    } else {
+      SHA512(inp, sizeof(inp), tmp);
+      memcpy(out, tmp, out_len);
+      out += DLEN;
+      out_len -= DLEN;
+      break;
+    }
+  }
+  memwipe(tmp, 0, sizeof(tmp));
+  memwipe(inp, 0, sizeof(inp));
+}
+
 /** Seed OpenSSL's random number generator with bytes from the operating
  * system.  Return 0 on success, -1 on failure.
  */
@@ -2539,7 +2576,7 @@ crypto_seed_rng(void)
   if (rand_poll_ok == 0)
     log_warn(LD_CRYPTO, "RAND_poll() failed.");
 
-  load_entropy_ok = !crypto_strongest_rand(buf, sizeof(buf));
+  load_entropy_ok = !crypto_strongest_rand_raw(buf, sizeof(buf));
   if (load_entropy_ok) {
     RAND_seed(buf, sizeof(buf));
   }
@@ -2580,6 +2617,9 @@ crypto_rand_unmocked(char *to, size_t n)
   tor_assert(n < INT_MAX);
   tor_assert(to);
   r = RAND_bytes((unsigned char*)to, (int)n);
+  /* We consider a PRNG failure non-survivable. Let's assert so that we get a
+   * stack trace about where it happened.
+   */
   tor_assert(r >= 0);
 }
 
