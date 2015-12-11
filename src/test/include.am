@@ -1,8 +1,8 @@
 AM_TESTS_ENVIRONMENT = \
-	export PYTHON=@PYTHON@; \
-	export SHELL=@SHELL@; \
-	export abs_top_srcdir=@abs_top_srcdir@; \
-	export builddir=@builddir@; \
+	export PYTHON="$(PYTHON)"; \
+	export SHELL="$(SHELL)"; \
+	export abs_top_srcdir="$(abs_top_srcdir)"; \
+	export builddir="$(builddir)"; \
 	export TESTING_TOR_BINARY="$(TESTING_TOR_BINARY)";
 
 TESTSCRIPTS = src/test/test_zero_length_keys.sh
