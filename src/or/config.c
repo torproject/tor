@@ -1205,7 +1205,8 @@ options_act_reversible(const or_options_t *old_options, char **msg)
   if (options->DataDirectoryGroupReadable) {
     /* Only new dirs created get new opts, also enforce group read. */
     if (chmod(options->DataDirectory, 0750)) {
-      log_warn(LD_FS,"Unable to make %s group-readable.", options->DataDirectory);
+      log_warn(LD_FS,"Unable to make %s group-readable: %s",
+               options->DataDirectory, strerror(errno));
     }
   }
 #endif
