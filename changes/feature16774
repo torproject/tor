@@ -1,0 +1,3 @@
+  o Minor enhancement:
+    - Adds FallbackDir entries to 'GETINFO config/defaults'. Closes ticket
+      #16774 and 17817. Patch by George Tankersley.
