@@ -2551,8 +2551,6 @@ crypto_strongest_rand(uint8_t *out, size_t out_len)
     } else {
       SHA512(inp, sizeof(inp), tmp);
       memcpy(out, tmp, out_len);
-      out += DLEN;
-      out_len -= DLEN;
       break;
     }
   }
