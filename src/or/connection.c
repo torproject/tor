@@ -5056,3 +5056,4 @@ clock_skew_warning(const connection_t *conn, long apparent_skew, int trusted,
                                  apparent_skew, ext_source);
   tor_free(ext_source);
 }
+
