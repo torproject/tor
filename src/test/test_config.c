@@ -1444,6 +1444,176 @@ test_config_resolve_my_address(void *arg)
   UNMOCK(tor_gethostname);
 }
 
+static void
+test_config_adding_trusted_dir_server(void *arg)
+{
+  (void)arg;
+
+  const char digest[DIGEST_LEN] = "";
+  dir_server_t *ds = NULL;
+  tor_addr_port_t ipv6;
+  int rv = -1;
+
+  clear_dir_servers();
+  routerlist_free_all();
+
+  /* create a trusted ds without an IPv6 address and port */
+  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, NULL, digest,
+                              NULL, V3_DIRINFO, 1.0);
+  tt_assert(ds);
+  dir_server_add(ds);
+  tt_assert(get_n_authorities(V3_DIRINFO) == 1);
+  tt_assert(smartlist_len(router_get_fallback_dir_servers()) == 1);
+
+  /* create a trusted ds with an IPv6 address and port */
+  rv = tor_addr_port_parse(LOG_WARN, "[::1]:9061", &ipv6.addr, &ipv6.port, -1);
+  tt_assert(rv == 0);
+  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, &ipv6, digest,
+                              NULL, V3_DIRINFO, 1.0);
+  tt_assert(ds);
+  dir_server_add(ds);
+  tt_assert(get_n_authorities(V3_DIRINFO) == 2);
+  tt_assert(smartlist_len(router_get_fallback_dir_servers()) == 2);
+
+ done:
+  clear_dir_servers();
+  routerlist_free_all();
+}
+
+static void
+test_config_adding_fallback_dir_server(void *arg)
+{
+  (void)arg;
+
+  const char digest[DIGEST_LEN] = "";
+  dir_server_t *ds = NULL;
+  tor_addr_t ipv4;
+  tor_addr_port_t ipv6;
+  int rv = -1;
+
+  clear_dir_servers();
+  routerlist_free_all();
+
+  rv = tor_addr_parse(&ipv4, "127.0.0.1");
+  tt_assert(rv == AF_INET);
+
+  /* create a trusted ds without an IPv6 address and port */
+  ds = fallback_dir_server_new(&ipv4, 9059, 9060, NULL, digest, 1.0);
+  tt_assert(ds);
+  dir_server_add(ds);
+  tt_assert(smartlist_len(router_get_fallback_dir_servers()) == 1);
+
+  /* create a trusted ds with an IPv6 address and port */
+  rv = tor_addr_port_parse(LOG_WARN, "[::1]:9061", &ipv6.addr, &ipv6.port, -1);
+  tt_assert(rv == 0);
+  ds = fallback_dir_server_new(&ipv4, 9059, 9060, &ipv6, digest, 1.0);
+  tt_assert(ds);
+  dir_server_add(ds);
+  tt_assert(smartlist_len(router_get_fallback_dir_servers()) == 2);
+
+ done:
+  clear_dir_servers();
+  routerlist_free_all();
+}
+
+/* No secrets here:
+ * v3ident is `echo "onion" | shasum | cut -d" " -f1 | tr "a-f" "A-F"`
+ * fingerprint is `echo "unionem" | shasum | cut -d" " -f1 | tr "a-f" "A-F"`
+ * with added spaces
+ */
+#define TEST_DIR_AUTH_LINE_START                                        \
+                    "foobar orport=12345 "                              \
+                    "v3ident=14C131DFC5C6F93646BE72FA1401C02A8DF2E8B4 "
+#define TEST_DIR_AUTH_LINE_END                                          \
+                    "1.2.3.4:54321 "                                    \
+                    "FDB2 FBD2 AAA5 25FA 2999 E617 5091 5A32 C777 3B17"
+#define TEST_DIR_AUTH_IPV6_FLAG                                         \
+                    "ipv6=[feed::beef]:9 "
+
+static void
+test_config_parsing_trusted_dir_server(void *arg)
+{
+  (void)arg;
+  int rv = -1;
+
+  /* parse a trusted dir server without an IPv6 address and port */
+  rv = parse_dir_authority_line(TEST_DIR_AUTH_LINE_START
+                                TEST_DIR_AUTH_LINE_END,
+                                V3_DIRINFO, 1);
+  tt_assert(rv == 0);
+
+  /* parse a trusted dir server with an IPv6 address and port */
+  rv = parse_dir_authority_line(TEST_DIR_AUTH_LINE_START
+                                TEST_DIR_AUTH_IPV6_FLAG
+                                TEST_DIR_AUTH_LINE_END,
+                                V3_DIRINFO, 1);
+  tt_assert(rv == 0);
+
+  /* Since we are only validating, there is no cleanup. */
+ done:
+  ;
+}
+
+#undef TEST_DIR_AUTH_LINE_START
+#undef TEST_DIR_AUTH_LINE_END
+#undef TEST_DIR_AUTH_IPV6_FLAG
+
+/* No secrets here:
+ * id is `echo "syn-propanethial-S-oxide" | shasum | cut -d" " -f1`
+ */
+#define TEST_DIR_FALLBACK_LINE                                     \
+                    "1.2.3.4:54321 orport=12345 "                  \
+                    "id=50e643986f31ea1235bcc1af17a1c5c5cfc0ee54 "
+#define TEST_DIR_FALLBACK_IPV6_FLAG                                \
+                    "ipv6=[2015:c0de::deed]:9"
+
+static void
+test_config_parsing_fallback_dir_server(void *arg)
+{
+  (void)arg;
+  int rv = -1;
+
+  /* parse a trusted dir server without an IPv6 address and port */
+  rv = parse_dir_fallback_line(TEST_DIR_FALLBACK_LINE, 1);
+  tt_assert(rv == 0);
+
+  /* parse a trusted dir server with an IPv6 address and port */
+  rv = parse_dir_fallback_line(TEST_DIR_FALLBACK_LINE
+                               TEST_DIR_FALLBACK_IPV6_FLAG,
+                               1);
+  tt_assert(rv == 0);
+
+  /* Since we are only validating, there is no cleanup. */
+ done:
+  ;
+}
+
+#undef TEST_DIR_FALLBACK_LINE
+#undef TEST_DIR_FALLBACK_IPV6_FLAG
+
+static void
+test_config_adding_default_trusted_dir_servers(void *arg)
+{
+  (void)arg;
+
+  clear_dir_servers();
+  routerlist_free_all();
+
+  /* Assume we only have one bridge authority */
+  add_default_trusted_dir_authorities(BRIDGE_DIRINFO);
+  tt_assert(get_n_authorities(BRIDGE_DIRINFO) == 1);
+  tt_assert(smartlist_len(router_get_fallback_dir_servers()) == 1);
+
+  /* Assume we have nine V3 authorities */
+  add_default_trusted_dir_authorities(V3_DIRINFO);
+  tt_assert(get_n_authorities(V3_DIRINFO) == 9);
+  tt_assert(smartlist_len(router_get_fallback_dir_servers()) == 10);
+
+ done:
+  clear_dir_servers();
+  routerlist_free_all();
+}
+
 static int n_add_default_fallback_dir_servers_known_default = 0;
 
 /**
@@ -3213,6 +3383,11 @@ test_config_adding_dir_servers(void *arg)
   { #name, test_config_ ## name, flags, NULL, NULL }
 
 struct testcase_t config_tests[] = {
+  CONFIG_TEST(adding_trusted_dir_server, TT_FORK),
+  CONFIG_TEST(adding_fallback_dir_server, TT_FORK),
+  CONFIG_TEST(parsing_trusted_dir_server, 0),
+  CONFIG_TEST(parsing_fallback_dir_server, 0),
+  CONFIG_TEST(adding_default_trusted_dir_servers, TT_FORK),
   CONFIG_TEST(adding_dir_servers, TT_FORK),
   CONFIG_TEST(resolve_my_address, TT_FORK),
   CONFIG_TEST(addressmap, 0),

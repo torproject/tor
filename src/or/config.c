@@ -560,9 +560,6 @@ static int options_transition_affects_descriptor(
 static int check_nickname_list(char **lst, const char *name, char **msg);
 static char *get_bindaddr_from_transport_listen_line(const char *line,
                                                      const char *transport);
-static int parse_dir_authority_line(const char *line,
-                                 dirinfo_type_t required_type,
-                                 int validate_only);
 static int parse_ports(or_options_t *options, int validate_only,
                               char **msg_out, int *n_ports_out,
                               int *world_writable_control_socket);
@@ -897,7 +894,7 @@ static const char *default_authorities[] = {
  * but only add them insofar as they share bits with <b>type</b>.
  * Each authority's bits are restricted to the bits shared with <b>type</b>.
  * If <b>type</b> is ALL_DIRINFO or NO_DIRINFO (zero), add all authorities. */
-static void
+STATIC void
 add_default_trusted_dir_authorities(dirinfo_type_t type)
 {
   int i;
@@ -5531,7 +5528,7 @@ get_options_for_server_transport(const char *transport)
  * (minus whatever bits it's missing) as a valid authority.
  * Return 0 on success or filtering out by type,
  * or -1 if the line isn't well-formed or if we can't add it. */
-static int
+STATIC int
 parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
                          int validate_only)
 {
@@ -5600,7 +5597,8 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
         log_warn(LD_CONFIG, "Redundant ipv6 addr/port on DirAuthority line");
       } else {
         if (tor_addr_port_parse(LOG_WARN, flag+strlen("ipv6="),
-                                &ipv6_addrport.addr, &ipv6_addrport.port) < 0
+                                &ipv6_addrport.addr, &ipv6_addrport.port,
+                                -1) < 0
             || tor_addr_family(&ipv6_addrport.addr) != AF_INET6) {
           log_warn(LD_CONFIG, "Bad ipv6 addr/port %s on DirAuthority line",
                    escaped(flag));
@@ -5712,7 +5710,8 @@ parse_dir_fallback_line(const char *line,
         log_warn(LD_CONFIG, "Redundant ipv6 addr/port on FallbackDir line");
       } else {
         if (tor_addr_port_parse(LOG_WARN, cp+strlen("ipv6="),
-                                &ipv6_addrport.addr, &ipv6_addrport.port) < 0
+                                &ipv6_addrport.addr, &ipv6_addrport.port,
+                                -1) < 0
             || tor_addr_family(&ipv6_addrport.addr) != AF_INET6) {
           log_warn(LD_CONFIG, "Bad ipv6 addr/port %s on FallbackDir line",
                    escaped(cp));

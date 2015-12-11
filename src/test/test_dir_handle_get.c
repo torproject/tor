@@ -1242,8 +1242,8 @@ test_dir_handle_get_server_keys_all(void* data)
   routerlist_free_all();
 
   /* create a trusted ds */
-  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, digest, NULL,
-                              V3_DIRINFO, 1.0);
+  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, NULL, digest,
+                              NULL, V3_DIRINFO, 1.0);
   tt_assert(ds);
   dir_server_add(ds);
 
@@ -1400,8 +1400,8 @@ test_dir_handle_get_server_keys_fp(void* data)
   routerlist_free_all();
 
   /* create a trusted ds */
-  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, digest, NULL,
-                              V3_DIRINFO, 1.0);
+  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, NULL, digest,
+                              NULL, V3_DIRINFO, 1.0);
   tt_assert(ds);
   dir_server_add(ds);
 
@@ -1554,8 +1554,8 @@ test_dir_handle_get_server_keys_fpsk(void* data)
   routerlist_free_all();
 
   /* create a trusted ds */
-  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, digest, NULL,
-                              V3_DIRINFO, 1.0);
+  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, NULL, digest,
+                              NULL, V3_DIRINFO, 1.0);
   tt_assert(ds);
 
   /* ds v3_identity_digest is the certificate's identity_key */
@@ -1610,8 +1610,8 @@ test_dir_handle_get_server_keys_busy(void* data)
   routerlist_free_all();
 
   /* create a trusted ds */
-  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, digest, NULL,
-                              V3_DIRINFO, 1.0);
+  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, NULL, digest,
+                              NULL, V3_DIRINFO, 1.0);
   tt_assert(ds);
 
   /* ds v3_identity_digest is the certificate's identity_key */
@@ -2005,8 +2005,8 @@ test_dir_handle_get_status_vote_d(void* data)
   dirvote_free_all();
 
   /* create a trusted ds */
-  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, digest, NULL,
-                              V3_DIRINFO, 1.0);
+  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, NULL, digest,
+                              NULL, V3_DIRINFO, 1.0);
   tt_assert(ds);
   dir_server_add(ds);
 
@@ -2353,8 +2353,8 @@ test_dir_handle_get_status_vote_next_authority(void* data)
   mock_cert = authority_cert_parse_from_string(TEST_CERTIFICATE, NULL);
 
   /* create a trusted ds */
-  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, digest, NULL,
-                              V3_DIRINFO, 1.0);
+  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, NULL, digest,
+                              NULL, V3_DIRINFO, 1.0);
   tt_assert(ds);
   dir_server_add(ds);
 
@@ -2431,8 +2431,8 @@ test_dir_handle_get_status_vote_current_authority(void* data)
   mock_cert = authority_cert_parse_from_string(TEST_CERTIFICATE, NULL);
 
   /* create a trusted ds */
-  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, digest, NULL,
-                              V3_DIRINFO, 1.0);
+  ds = trusted_dir_server_new("ds", "127.0.0.1", 9059, 9060, NULL, digest,
+                              NULL, V3_DIRINFO, 1.0);
   tt_assert(ds);
   dir_server_add(ds);
 
