@@ -73,8 +73,6 @@ dist-rpm: dist-gzip
 	echo "RPM build finished";						\
 	#end of dist-rpm
 
-dist: check
-
 doxygen:
 	doxygen && cd doc/doxygen/latex && make
 
