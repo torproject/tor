@@ -2333,7 +2333,7 @@ typedef struct microdesc_t {
   curve25519_public_key_t *onion_curve25519_pkey;
   /** Ed25519 identity key, if included. */
   ed25519_public_key_t *ed25519_identity_pkey;
-  /** As routerinfo_t.ipv6_add */
+  /** As routerinfo_t.ipv6_addr */
   tor_addr_t ipv6_addr;
   /** As routerinfo_t.ipv6_orport */
   uint16_t ipv6_orport;
@@ -2351,7 +2351,7 @@ typedef struct microdesc_t {
  * Specifically, a node_t is a Tor router as we are using it: a router that
  * we are considering for circuits, connections, and so on.  A node_t is a
  * thin wrapper around the routerstatus, routerinfo, and microdesc for a
- * single wrapper, and provides a consistent interface for all of them.
+ * single router, and provides a consistent interface for all of them.
  *
  * Also, a node_t has mutable state.  While a routerinfo, a routerstatus,
  * and a microdesc have[*] only the information read from a router
