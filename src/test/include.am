@@ -1,4 +1,7 @@
-AM_TESTS_ENVIRONMENT = \
+# When the day comes that Tor requires Automake >= 1.12 change
+# TESTS_ENVIRONMENT to AM_TESTS_ENVIRONMENT because the former is reserved for
+# users while the later is reserved for developers.
+TESTS_ENVIRONMENT = \
 	export PYTHON="$(PYTHON)"; \
 	export SHELL="$(SHELL)"; \
 	export abs_top_srcdir="$(abs_top_srcdir)"; \
