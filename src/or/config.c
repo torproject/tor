@@ -191,9 +191,11 @@ static config_var_t option_vars_[] = {
   V(ClientDNSRejectInternalAddresses, BOOL,"1"),
   V(ClientOnly,                  BOOL,     "0"),
   V(ClientPreferIPv6ORPort,      BOOL,     "0"),
+  V(ClientPreferIPv6DirPort,     BOOL,     "0"),
   V(ClientRejectInternalAddresses, BOOL,   "1"),
   V(ClientTransportPlugin,       LINELIST, NULL),
   V(ClientUseIPv6,               BOOL,     "0"),
+  V(ClientUseIPv4,               BOOL,     "1"),
   V(ConsensusParams,             STRING,   NULL),
   V(ConnLimit,                   UINT,     "1000"),
   V(ConnDirectionStatistics,     BOOL,     "0"),
@@ -3071,6 +3073,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
     }
   }
 
+  /* Terminate Reachable*Addresses with reject *, but check if it has an
+   * IPv6 entry on the way through */
+  int reachable_knows_ipv6 = 0;
   for (i=0; i<3; i++) {
     config_line_t **linep =
       (i==0) ? &options->ReachableAddresses :
@@ -3080,7 +3085,19 @@ options_validate(or_options_t *old_options, or_options_t *options,
       continue;
     /* We need to end with a reject *:*, not an implicit accept *:* */
     for (;;) {
-      if (!strcmp((*linep)->value, "reject *:*")) /* already there */
+      /* Check if the policy has an IPv6 entry, or uses IPv4-specific
+       * policies (and therefore we assume it's aware of IPv6). */
+      if (!strcmpstart((*linep)->value, "accept6") ||
+          !strcmpstart((*linep)->value, "reject6") ||
+          !strstr((*linep)->value, "*6") ||
+          strchr((*linep)->value, '[') ||
+          !strcmpstart((*linep)->value, "accept4") ||
+          !strcmpstart((*linep)->value, "reject4") ||
+          !strstr((*linep)->value, "*4"))
+        reachable_knows_ipv6 = 1;
+       /* already has a reject all */
+      if (!strcmp((*linep)->value, "reject *:*") ||
+          !strcmp((*linep)->value, "reject *"))
         break;
       linep = &((*linep)->next);
       if (!*linep) {
@@ -3095,13 +3112,41 @@ options_validate(or_options_t *old_options, or_options_t *options,
     }
   }
 
-  if ((options->ReachableAddresses ||
+  if (options->ClientUseIPv6 &&
+      (options->ReachableAddresses ||
        options->ReachableORAddresses ||
        options->ReachableDirAddresses) &&
+      !reachable_knows_ipv6)
+    log_warn(LD_CONFIG, "You have set ClientUseIPv6 1 and at least one of "
+             "ReachableAddresses, ReachableORAddresses, or "
+             "ReachableDirAddresses, but without any IPv6-specific rules. "
+             "Tor won't connect to any IPv6 addresses, unless a rule accepts "
+             "them. (Use 'accept6 *:*' or 'reject6 *:*' as the last rule to "
+             "disable this warning.)");
+
+  if ((options->ReachableAddresses ||
+       options->ReachableORAddresses ||
+       options->ReachableDirAddresses ||
+       options->ClientUseIPv4 == 0) &&
       server_mode(options))
     REJECT("Servers must be able to freely connect to the rest "
            "of the Internet, so they must not set Reachable*Addresses "
-           "or FascistFirewall.");
+           "or FascistFirewall or FirewallPorts or ClientUseIPv4 0.");
+
+  /* We check if Reachable*Addresses blocks all addresses in
+   * parse_reachable_addresses(). */
+  if (options->ClientUseIPv4 == 0 && options->ClientUseIPv6 == 0)
+    REJECT("Tor cannot connect to the Internet if ClientUseIPv4 is 0 and "
+           "ClientUseIPv6 is 0. Please set at least one of these options "
+           "to 1.");
+
+  if (options->ClientUseIPv6 == 0 && options->ClientPreferIPv6ORPort == 1)
+    log_warn(LD_CONFIG, "ClientPreferIPv6ORPort 1 is ignored unless "
+             "ClientUseIPv6 is also 1.");
+
+  if (options->ClientUseIPv6 == 0 && options->ClientPreferIPv6DirPort == 1)
+    log_warn(LD_CONFIG, "ClientPreferIPv6DirPort 1 is ignored unless "
+             "ClientUseIPv6 is also 1.");
 
   if (options->UseBridges &&
       server_mode(options))

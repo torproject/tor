@@ -313,7 +313,6 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
   SMARTLIST_FOREACH_BEGIN(dirservers, dir_server_t *, ds) {
       routerstatus_t *rs = &(ds->fake_status);
       size_t upload_len = payload_len;
-      tor_addr_t ds_addr;
 
       if ((type & ds->type) == 0)
         continue;
@@ -344,11 +343,12 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
         log_info(LD_DIR, "Uploading an extrainfo too (length %d)",
                  (int) extrainfo_len);
       }
-      tor_addr_from_ipv4h(&ds_addr, ds->addr);
       if (purpose_needs_anonymity(dir_purpose, router_purpose)) {
         indirection = DIRIND_ANONYMOUS;
-      } else if (!fascist_firewall_allows_address_dir(&ds_addr,ds->dir_port)) {
-        if (fascist_firewall_allows_address_or(&ds_addr,ds->or_port))
+      } else if (!fascist_firewall_allows_dir_server(ds,
+                                                     FIREWALL_DIR_CONNECTION,
+                                                     0)) {
+        if (fascist_firewall_allows_dir_server(ds, FIREWALL_OR_CONNECTION, 0))
           indirection = DIRIND_ONEHOP;
         else
           indirection = DIRIND_ANONYMOUS;

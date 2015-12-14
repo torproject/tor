@@ -2161,14 +2161,12 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
      * family. */
     nodelist_add_node_and_family(excluded, node);
   }
-  if (firewall_is_fascist_or()) {
-    /* Exclude all ORs that we can't reach through our firewall */
-    smartlist_t *nodes = nodelist_get_list();
-    SMARTLIST_FOREACH(nodes, const node_t *, node, {
-      if (!fascist_firewall_allows_node(node))
-        smartlist_add(excluded, (void*)node);
-    });
-  }
+  /* Exclude all ORs that we can't reach through our firewall */
+  smartlist_t *nodes = nodelist_get_list();
+  SMARTLIST_FOREACH(nodes, const node_t *, node, {
+    if (!fascist_firewall_allows_node(node, FIREWALL_OR_CONNECTION, 0))
+      smartlist_add(excluded, (void*)node);
+  });
   /* and exclude current entry guards and their families,
    * unless we're in a test network, and excluding guards
    * would exclude all nodes (i.e. we're in an incredibly small tor network,

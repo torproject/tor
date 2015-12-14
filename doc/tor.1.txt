@@ -367,6 +367,7 @@ GENERAL OPTIONS
     authorities.
     By default, the directory authorities are also FallbackDirs. Specifying a
     FallbackDir replaces Tor's default hard-coded FallbackDirs (if any).
+    (See the **DirAuthority** entry for an explanation of each flag.)
 
 [[UseDefaultFallbackDirs]] **UseDefaultFallbackDirs** **0**|**1**::
     Use Tor's default hard-coded FallbackDirs (if any). (When a
@@ -390,6 +391,10 @@ GENERAL OPTIONS
     if an "ipv6=__address__:__orport__" flag is present, then the directory
     authority is listening for IPv6 connections on the indicated IPv6 address
     and OR Port. +
+ +
+    Tor will contact the authority at __address__:__port__ (the DirPort) to
+    download directory documents. If an IPv6 address is supplied, Tor will
+    also download directory documents at the IPv6 address on the DirPort. +
  +
     If no **DirAuthority** line is given, Tor will use the default directory
     authorities. NOTE: this option is intended for setting up a private Tor
@@ -1483,17 +1488,31 @@ The following options are useful only for clients (that is, if
     If no defaults are available there, these options default to 20, .80,
     .60, and 100, respectively.
 
+[[ClientUseIPv4]] **ClientUseIPv4** **0**|**1**::
+    If this option is set to 0, Tor will avoid connecting to directory servers
+    and entry nodes over IPv4. Note that clients with an IPv4
+    address in a **Bridge**, proxy, or pluggable transport line will try
+    connecting over IPv4 even if **ClientUseIPv4** is set to 0. (Default: 1)
+
 [[ClientUseIPv6]] **ClientUseIPv6** **0**|**1**::
-    If this option is set to 1, Tor might connect to entry nodes over
-    IPv6. Note that clients configured with an IPv6 address in a
-    **Bridge** line will try connecting over IPv6 even if
-    **ClientUseIPv6** is set to 0. (Default: 0)
+    If this option is set to 1, Tor might connect to directory servers or
+    entry nodes over IPv6. Note that clients configured with an IPv6 address
+    in a **Bridge**, proxy, or pluggable transport line will try connecting
+    over IPv6 even if **ClientUseIPv6** is set to 0. (Default: 0)
+
+[[ClientPreferIPv6DirPort]] **ClientPreferIPv6DirPort** **0**|**1**::
+    If this option is set to 1, Tor prefers a directory port with an IPv6
+    address over one with IPv4, for direct connections, if a given directory
+    server has both. (Tor also prefers an IPv6 DirPort if IPv4Client is set to
+    0.) Other things may influence the choice. This option breaks a tie to the
+    favor of IPv6. (Default: 0)
 
 [[ClientPreferIPv6ORPort]] **ClientPreferIPv6ORPort** **0**|**1**::
     If this option is set to 1, Tor prefers an OR port with an IPv6
-    address over one with IPv4 if a given entry node has both. Other
-    things may influence the choice. This option breaks a tie to the
-    favor of IPv6. (Default: 0)
+    address over one with IPv4 if a given entry node has both. (Tor also
+    prefers an IPv6 ORPort if IPv4Client is set to 0.) Other things may
+    influence the choice. This option breaks a tie to the favor of IPv6.
+    (Default: 0)
 
 [[PathsNeededToBuildCircuits]] **PathsNeededToBuildCircuits** __NUM__::
     Tor clients don't build circuits for user traffic until they know

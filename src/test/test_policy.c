@@ -1127,6 +1127,449 @@ test_policies_getinfo_helper_policies(void *arg)
 #undef TEST_IPV4_ADDR
 #undef TEST_IPV6_ADDR
 
+#define TEST_IPV4_ADDR_STR "1.2.3.4"
+#define TEST_IPV6_ADDR_STR "[1002::4567]"
+#define REJECT_IPv4_FINAL_STR "reject 0.0.0.0/0:*"
+#define REJECT_IPv6_FINAL_STR "reject [::]/0:*"
+
+#define OTHER_IPV4_ADDR_STR "6.7.8.9"
+#define OTHER_IPV6_ADDR_STR "[afff::]"
+
+/** Run unit tests for fascist_firewall_allows_address */
+static void
+test_policies_fascist_firewall_allows_address(void *arg)
+{
+  (void)arg;
+  tor_addr_t ipv4_addr, ipv6_addr, r_ipv4_addr, r_ipv6_addr;
+  tor_addr_t n_ipv4_addr, n_ipv6_addr;
+  const uint16_t port = 1234;
+  smartlist_t *policy = NULL;
+  smartlist_t *e_policy = NULL;
+  addr_policy_t *item = NULL;
+  int malformed_list = 0;
+
+  /* Setup the options and the items in the policies */
+  memset(&mock_options, 0, sizeof(or_options_t));
+  MOCK(get_options, mock_get_options);
+
+  policy = smartlist_new();
+  item = router_parse_addr_policy_item_from_string("accept "
+                                                   TEST_IPV4_ADDR_STR ":*",
+                                                   ADDR_POLICY_ACCEPT,
+                                                   &malformed_list);
+  tt_assert(item);
+  tt_assert(!malformed_list);
+  smartlist_add(policy, item);
+  item = router_parse_addr_policy_item_from_string("accept "
+                                                   TEST_IPV6_ADDR_STR,
+                                                   ADDR_POLICY_ACCEPT,
+                                                   &malformed_list);
+  tt_assert(item);
+  tt_assert(!malformed_list);
+  smartlist_add(policy, item);
+  /* Normally, policy_expand_unspec would do this for us */
+  item = router_parse_addr_policy_item_from_string(REJECT_IPv4_FINAL_STR,
+                                                   ADDR_POLICY_ACCEPT,
+                                                   &malformed_list);
+  tt_assert(item);
+  tt_assert(!malformed_list);
+  smartlist_add(policy, item);
+  item = router_parse_addr_policy_item_from_string(REJECT_IPv6_FINAL_STR,
+                                                   ADDR_POLICY_ACCEPT,
+                                                   &malformed_list);
+  tt_assert(item);
+  tt_assert(!malformed_list);
+  smartlist_add(policy, item);
+  item = NULL;
+
+  e_policy = smartlist_new();
+
+  /*
+  char *polstr = policy_dump_to_string(policy, 1, 1);
+  printf("%s\n", polstr);
+  tor_free(polstr);
+   */
+
+  /* Parse the addresses */
+  tor_addr_parse(&ipv4_addr, TEST_IPV4_ADDR_STR);
+  tor_addr_parse(&ipv6_addr, TEST_IPV6_ADDR_STR);
+  tor_addr_parse(&r_ipv4_addr, OTHER_IPV4_ADDR_STR);
+  tor_addr_parse(&r_ipv6_addr, OTHER_IPV6_ADDR_STR);
+  tor_addr_make_null(&n_ipv4_addr, AF_INET);
+  tor_addr_make_null(&n_ipv6_addr, AF_INET6);
+
+  /* Test the function's address matching with IPv4 and IPv6 on */
+  memset(&mock_options, 0, sizeof(or_options_t));
+  mock_options.ClientUseIPv4 = 1;
+  mock_options.ClientUseIPv6 = 1;
+  mock_options.UseBridges = 0;
+
+  tt_assert(fascist_firewall_allows_address(&ipv4_addr, port, policy, 0, 0)
+            == 1);
+  tt_assert(fascist_firewall_allows_address(&ipv6_addr, port, policy, 0, 0)
+            == 1);
+  tt_assert(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 0, 0)
+            == 0);
+  tt_assert(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 0, 0)
+            == 0);
+
+  /* Preferring IPv4 */
+  tt_assert(fascist_firewall_allows_address(&ipv4_addr, port, policy, 1, 0)
+            == 1);
+  tt_assert(fascist_firewall_allows_address(&ipv6_addr, port, policy, 1, 0)
+            == 0);
+  tt_assert(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 1, 0)
+            == 0);
+  tt_assert(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 1, 0)
+            == 0);
+
+  /* Preferring IPv6 */
+  tt_assert(fascist_firewall_allows_address(&ipv4_addr, port, policy, 1, 1)
+            == 0);
+  tt_assert(fascist_firewall_allows_address(&ipv6_addr, port, policy, 1, 1)
+            == 1);
+  tt_assert(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 1, 1)
+            == 0);
+  tt_assert(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 1, 1)
+            == 0);
+
+  /* Test the function's address matching with UseBridges on */
+  memset(&mock_options, 0, sizeof(or_options_t));
+  mock_options.ClientUseIPv4 = 0;
+  mock_options.ClientUseIPv6 = 0;
+  mock_options.UseBridges = 1;
+
+  tt_assert(fascist_firewall_allows_address(&ipv4_addr, port, policy, 0, 0)
+            == 1);
+  tt_assert(fascist_firewall_allows_address(&ipv6_addr, port, policy, 0, 0)
+            == 1);
+  tt_assert(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 0, 0)
+            == 0);
+  tt_assert(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 0, 0)
+            == 0);
+
+  /* Test the function's address matching with IPv4 on */
+  memset(&mock_options, 0, sizeof(or_options_t));
+  mock_options.ClientUseIPv4 = 1;
+  mock_options.ClientUseIPv6 = 0;
+  mock_options.UseBridges = 0;
+
+  tt_assert(fascist_firewall_allows_address(&ipv4_addr, port, policy, 0, 0)
+            == 1);
+  tt_assert(fascist_firewall_allows_address(&ipv6_addr, port, policy, 0, 0)
+            == 0);
+  tt_assert(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 0, 0)
+            == 0);
+  tt_assert(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 0, 0)
+            == 0);
+
+  /* Test the function's address matching with IPv6 on */
+  memset(&mock_options, 0, sizeof(or_options_t));
+  mock_options.ClientUseIPv4 = 0;
+  mock_options.ClientUseIPv6 = 1;
+  mock_options.UseBridges = 0;
+
+  tt_assert(fascist_firewall_allows_address(&ipv4_addr, port, policy, 0, 0)
+            == 0);
+  tt_assert(fascist_firewall_allows_address(&ipv6_addr, port, policy, 0, 0)
+            == 1);
+  tt_assert(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 0, 0)
+            == 0);
+  tt_assert(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 0, 0)
+            == 0);
+
+  /* Test the function's address matching with everything off */
+  memset(&mock_options, 0, sizeof(or_options_t));
+  mock_options.ClientUseIPv4 = 0;
+  mock_options.ClientUseIPv6 = 0;
+  mock_options.UseBridges = 0;
+
+  tt_assert(fascist_firewall_allows_address(&ipv4_addr, port, policy, 0, 0)
+            == 0);
+  tt_assert(fascist_firewall_allows_address(&ipv6_addr, port, policy, 0, 0)
+            == 0);
+  tt_assert(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 0, 0)
+            == 0);
+  tt_assert(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 0, 0)
+            == 0);
+
+  /* Test the function's address matching for unusual inputs */
+  memset(&mock_options, 0, sizeof(or_options_t));
+  mock_options.ClientUseIPv4 = 1;
+  mock_options.ClientUseIPv6 = 1;
+  mock_options.UseBridges = 1;
+
+  /* NULL and tor_addr_is_null addresses are rejected */
+  tt_assert(fascist_firewall_allows_address(NULL, port, policy, 0, 0) == 0);
+  tt_assert(fascist_firewall_allows_address(&n_ipv4_addr, port, policy, 0, 0)
+            == 0);
+  tt_assert(fascist_firewall_allows_address(&n_ipv6_addr, port, policy, 0, 0)
+            == 0);
+
+  /* zero ports are rejected */
+  tt_assert(fascist_firewall_allows_address(&ipv4_addr, 0, policy, 0, 0)
+            == 0);
+  tt_assert(fascist_firewall_allows_address(&ipv6_addr, 0, policy, 0, 0)
+            == 0);
+
+  /* NULL and empty policies accept everything */
+  tt_assert(fascist_firewall_allows_address(&ipv4_addr, port, NULL, 0, 0)
+            == 1);
+  tt_assert(fascist_firewall_allows_address(&ipv6_addr, port, NULL, 0, 0)
+            == 1);
+  tt_assert(fascist_firewall_allows_address(&ipv4_addr, port, e_policy, 0, 0)
+            == 1);
+  tt_assert(fascist_firewall_allows_address(&ipv6_addr, port, e_policy, 0, 0)
+            == 1);
+
+ done:
+  addr_policy_free(item);
+  addr_policy_list_free(policy);
+  addr_policy_list_free(e_policy);
+  UNMOCK(get_options);
+}
+
+#undef REJECT_IPv4_FINAL_STR
+#undef REJECT_IPv6_FINAL_STR
+#undef OTHER_IPV4_ADDR_STR
+#undef OTHER_IPV6_ADDR_STR
+
+#define TEST_IPV4_OR_PORT  1234
+#define TEST_IPV4_DIR_PORT 2345
+#define TEST_IPV6_OR_PORT  61234
+#define TEST_IPV6_DIR_PORT 62345
+
+/** Run unit tests for fascist_firewall_choose_address */
+static void
+test_policies_fascist_firewall_choose_address(void *arg)
+{
+  (void)arg;
+  tor_addr_port_t ipv4_or_ap, ipv4_dir_ap, ipv6_or_ap, ipv6_dir_ap;
+  tor_addr_port_t n_ipv4_ap, n_ipv6_ap;
+
+  /* Setup the options */
+  memset(&mock_options, 0, sizeof(or_options_t));
+  MOCK(get_options, mock_get_options);
+
+  /* Parse the addresses */
+  tor_addr_parse(&ipv4_or_ap.addr, TEST_IPV4_ADDR_STR);
+  ipv4_or_ap.port = TEST_IPV4_OR_PORT;
+  tor_addr_parse(&ipv4_dir_ap.addr, TEST_IPV4_ADDR_STR);
+  ipv4_dir_ap.port = TEST_IPV4_DIR_PORT;
+
+  tor_addr_parse(&ipv6_or_ap.addr, TEST_IPV6_ADDR_STR);
+  ipv6_or_ap.port = TEST_IPV6_OR_PORT;
+  tor_addr_parse(&ipv6_dir_ap.addr, TEST_IPV6_ADDR_STR);
+  ipv6_dir_ap.port = TEST_IPV6_DIR_PORT;
+
+  tor_addr_make_null(&n_ipv4_ap.addr, AF_INET);
+  n_ipv4_ap.port = 0;
+  tor_addr_make_null(&n_ipv6_ap.addr, AF_INET6);
+  n_ipv6_ap.port = 0;
+
+  /* Choose an address with IPv4 and IPv6 on */
+  memset(&mock_options, 0, sizeof(or_options_t));
+  mock_options.ClientUseIPv4 = 1;
+  mock_options.ClientUseIPv6 = 1;
+  mock_options.UseBridges = 0;
+
+  /* Preferring IPv4 */
+  mock_options.ClientPreferIPv6ORPort = 0;
+  mock_options.ClientPreferIPv6DirPort = 0;
+  tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,
+                                                 FIREWALL_OR_CONNECTION, 0)
+            == &ipv4_or_ap);
+  tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,
+                                                 FIREWALL_OR_CONNECTION, 1)
+            == &ipv4_or_ap);
+  tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &ipv6_dir_ap, 0,
+                                                 FIREWALL_DIR_CONNECTION, 0)
+            == &ipv4_dir_ap);
+  tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &ipv6_dir_ap, 0,
+                                                 FIREWALL_DIR_CONNECTION, 1)
+            == &ipv4_dir_ap);
+
+  /* Preferring IPv6 */
+  mock_options.ClientPreferIPv6ORPort = 1;
+  mock_options.ClientPreferIPv6DirPort = 1;
+  tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,
+                                                 FIREWALL_OR_CONNECTION, 0)
+            == &ipv6_or_ap);
+  tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,
+                                                 FIREWALL_OR_CONNECTION, 1)
+            == &ipv6_or_ap);
+  tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &ipv6_dir_ap, 0,
+                                                 FIREWALL_DIR_CONNECTION, 0)
+            == &ipv6_dir_ap);
+  tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &ipv6_dir_ap, 0,
+                                                 FIREWALL_DIR_CONNECTION, 1)
+            == &ipv6_dir_ap);
+
+  /* Preferring IPv4 OR / IPv6 Dir */
+  mock_options.ClientPreferIPv6ORPort = 0;
+  mock_options.ClientPreferIPv6DirPort = 1;
+  tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,
+                                                 FIREWALL_OR_CONNECTION, 0)
+            == &ipv4_or_ap);
+  tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,
+                                                 FIREWALL_OR_CONNECTION, 1)
+            == &ipv4_or_ap);
+  tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &ipv6_dir_ap, 0,
+                                                 FIREWALL_DIR_CONNECTION, 0)
+            == &ipv6_dir_ap);
+  tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &ipv6_dir_ap, 0,
+                                                 FIREWALL_DIR_CONNECTION, 1)
+            == &ipv6_dir_ap);
+
+  /* Preferring IPv6 OR / IPv4 Dir */
+  mock_options.ClientPreferIPv6ORPort = 1;
+  mock_options.ClientPreferIPv6DirPort = 0;
+  tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,
+                                                 FIREWALL_OR_CONNECTION, 0)
+            == &ipv6_or_ap);
+  tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,
+                                                 FIREWALL_OR_CONNECTION, 1)
+            == &ipv6_or_ap);
+  tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &ipv6_dir_ap, 0,
+                                                 FIREWALL_DIR_CONNECTION, 0)
+            == &ipv4_dir_ap);
+  tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &ipv6_dir_ap, 0,
+                                                 FIREWALL_DIR_CONNECTION, 1)
+            == &ipv4_dir_ap);
+
+  /* Choose an address with UseBridges on */
+  memset(&mock_options, 0, sizeof(or_options_t));
+  mock_options.UseBridges = 1;
+
+  for (mock_options.ClientUseIPv4 = 0; mock_options.ClientUseIPv4 <= 1;
+       mock_options.ClientUseIPv4++) {
+    for (mock_options.ClientUseIPv6 = 0; mock_options.ClientUseIPv6 <= 1;
+         mock_options.ClientUseIPv6++) {
+      for (mock_options.ClientPreferIPv6ORPort = 0;
+           mock_options.ClientPreferIPv6ORPort <= 1;
+           mock_options.ClientPreferIPv6ORPort++) {
+        for (mock_options.ClientPreferIPv6DirPort = 0;
+             mock_options.ClientPreferIPv6DirPort <= 1;
+             mock_options.ClientPreferIPv6DirPort++) {
+          /* This (ab)uses the actual enum values */
+          tt_assert(FIREWALL_OR_CONNECTION < FIREWALL_DIR_CONNECTION);
+          for (firewall_connection_t fw_connection = FIREWALL_OR_CONNECTION;
+               fw_connection <= FIREWALL_DIR_CONNECTION; fw_connection++) {
+            for (int pref_only = 0; pref_only <= 1; pref_only++) {
+
+              /* Ignoring all other settings, want_a should choose the address
+               * for bridge clients */
+              tt_assert(fascist_firewall_choose_address(&ipv4_or_ap,
+                                                             &ipv6_or_ap, 1,
+                                                             fw_connection,
+                                                             pref_only)
+                        == &ipv4_or_ap);
+              tt_assert(fascist_firewall_choose_address(&ipv4_or_ap,
+                                                             &ipv6_or_ap, 0,
+                                                             fw_connection,
+                                                             pref_only)
+                        == &ipv6_or_ap);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /* Choose an address with IPv4 on */
+  memset(&mock_options, 0, sizeof(or_options_t));
+  mock_options.ClientUseIPv4 = 1;
+  mock_options.ClientUseIPv6 = 0;
+  mock_options.UseBridges = 0;
+
+  tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,
+                                                 FIREWALL_OR_CONNECTION, 0)
+            == &ipv4_or_ap);
+  tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,
+                                                 FIREWALL_OR_CONNECTION, 1)
+            == &ipv4_or_ap);
+  tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &ipv6_dir_ap, 0,
+                                                 FIREWALL_DIR_CONNECTION, 0)
+            == &ipv4_dir_ap);
+  tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &ipv6_dir_ap, 0,
+                                                 FIREWALL_DIR_CONNECTION, 1)
+            == &ipv4_dir_ap);
+
+  /* Choose an address with IPv6 on */
+  memset(&mock_options, 0, sizeof(or_options_t));
+  mock_options.ClientUseIPv4 = 0;
+  mock_options.ClientUseIPv6 = 1;
+  mock_options.UseBridges = 0;
+
+  tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,
+                                                 FIREWALL_OR_CONNECTION, 0)
+            == &ipv6_or_ap);
+  tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,
+                                                 FIREWALL_OR_CONNECTION, 1)
+            == &ipv6_or_ap);
+  tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &ipv6_dir_ap, 0,
+                                                 FIREWALL_DIR_CONNECTION, 0)
+            == &ipv6_dir_ap);
+  tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &ipv6_dir_ap, 0,
+                                                 FIREWALL_DIR_CONNECTION, 1)
+            == &ipv6_dir_ap);
+
+  /* Choose an address with everything off */
+  memset(&mock_options, 0, sizeof(or_options_t));
+  mock_options.ClientUseIPv4 = 0;
+  mock_options.ClientUseIPv6 = 0;
+  mock_options.UseBridges = 0;
+
+  tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,
+                                                 FIREWALL_OR_CONNECTION, 0)
+            == NULL);
+  tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,
+                                                 FIREWALL_OR_CONNECTION, 1)
+            == NULL);
+  tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &ipv6_dir_ap, 0,
+                                                 FIREWALL_DIR_CONNECTION, 0)
+            == NULL);
+  tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &ipv6_dir_ap, 0,
+                                                 FIREWALL_DIR_CONNECTION, 1)
+            == NULL);
+
+  /* Choose from unusual inputs */
+  memset(&mock_options, 0, sizeof(or_options_t));
+  mock_options.ClientUseIPv4 = 1;
+  mock_options.ClientUseIPv6 = 1;
+  mock_options.UseBridges = 1;
+
+  tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &n_ipv6_ap, 0,
+                                                 FIREWALL_OR_CONNECTION, 0)
+            == &ipv4_or_ap);
+  tt_assert(fascist_firewall_choose_address(&n_ipv4_ap, &ipv6_or_ap, 0,
+                                                 FIREWALL_OR_CONNECTION, 0)
+            == &ipv6_or_ap);
+  tt_assert(fascist_firewall_choose_address(&n_ipv4_ap, &n_ipv6_ap, 0,
+                                                 FIREWALL_OR_CONNECTION, 0)
+            == NULL);
+
+  tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &n_ipv6_ap, 0,
+                                                 FIREWALL_DIR_CONNECTION, 0)
+            == &ipv4_dir_ap);
+  tt_assert(fascist_firewall_choose_address(&n_ipv4_ap, &ipv6_dir_ap, 0,
+                                                 FIREWALL_DIR_CONNECTION, 0)
+            == &ipv6_dir_ap);
+  tt_assert(fascist_firewall_choose_address(&n_ipv4_ap, &n_ipv6_ap, 0,
+                                                 FIREWALL_DIR_CONNECTION, 0)
+            == NULL);
+
+ done:
+  UNMOCK(get_options);
+}
+
+#undef TEST_IPV4_ADDR_STR
+#undef TEST_IPV6_ADDR_STR
+#undef TEST_IPV4_OR_PORT
+#undef TEST_IPV4_DIR_PORT
+#undef TEST_IPV6_OR_PORT
+#undef TEST_IPV6_DIR_PORT
+
 struct testcase_t policy_tests[] = {
   { "router_dump_exit_policy_to_string", test_dump_exit_policy_to_string, 0,
     NULL, NULL },
@@ -1137,6 +1580,10 @@ struct testcase_t policy_tests[] = {
   { "reject_interface_address", test_policies_reject_interface_address, 0,
     NULL, NULL },
   { "reject_port_address", test_policies_reject_port_address, 0, NULL, NULL },
+  { "fascist_firewall_allows_address",
+    test_policies_fascist_firewall_allows_address, 0, NULL, NULL },
+  { "fascist_firewall_choose_address",
+    test_policies_fascist_firewall_choose_address, 0, NULL, NULL },
   END_OF_TESTCASES
 };
 

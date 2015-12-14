@@ -1,0 +1,9 @@
+  o Minor feature (IPv6):
+    - Add ClientUseIPv4, which is set to 1 by default. If set to 0, tor
+      avoids using IPv4 for client OR and directory connections.
+    - Add ClientPreferIPv6DirPort, which is set to 0 by default. If set
+      to 1, tor prefers IPv6 directory addresses.
+    - Try harder to fulfil IP version restrictions ClientUseIPv4 0 and
+      ClientUseIPv6 0; and the preferences ClientPreferIPv6ORPort and
+      ClientPreferIPv6DirPort.
+      Closes ticket 17840; patch by "teor".
