@@ -8,14 +8,16 @@ TESTS_ENVIRONMENT = \
 	export builddir="$(builddir)"; \
 	export TESTING_TOR_BINARY="$(TESTING_TOR_BINARY)";
 
-TESTSCRIPTS = src/test/test_zero_length_keys.sh
+TESTSCRIPTS = src/test/test_zero_length_keys.sh \
+	src/test/test_switch_id.sh
 
 if USEPYTHON
 TESTSCRIPTS += src/test/test_ntor.sh src/test/test_bt.sh
 endif
 
 TESTS += src/test/test src/test/test-slow src/test/test-memwipe \
-	src/test/test_workqueue src/test/test_keygen.sh $(TESTSCRIPTS)
+	src/test/test_workqueue src/test/test_keygen.sh \
+	$(TESTSCRIPTS)
 
 # These flavors are run using automake's test-driver and test-network.sh
 TEST_CHUTNEY_FLAVORS = basic-min bridges-min hs-min bridges+hs
@@ -37,7 +39,8 @@ noinst_PROGRAMS+= \
 	src/test/test-slow \
 	src/test/test-memwipe \
 	src/test/test-child \
-	src/test/test_workqueue
+	src/test/test_workqueue \
+	src/test/test-switch-id
 endif
 
 src_test_AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
@@ -135,6 +138,14 @@ src_test_test_workqueue_SOURCES = \
 	src/test/test_workqueue.c
 src_test_test_workqueue_CPPFLAGS= $(src_test_AM_CPPFLAGS)
 src_test_test_workqueue_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
+
+src_test_test_switch_id_SOURCES = \
+	src/test/test_switch_id.c
+src_test_test_switch_id_CPPFLAGS= $(src_test_AM_CPPFLAGS)
+src_test_test_switch_id_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
+src_test_test_switch_id_LDADD = \
+	src/common/libor-testing.a \
+	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@
 
 src_test_test_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
         @TOR_LDFLAGS_libevent@

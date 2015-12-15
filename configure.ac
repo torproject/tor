@@ -712,6 +712,19 @@ else
 fi
 AC_SUBST(TOR_ZLIB_LIBS)
 
+dnl ----------------------------------------------------------------------
+dnl Check if libcap is available for capabilities.
+
+tor_cap_pkg_debian="libcap2"
+tor_cap_pkg_redhat="libcap"
+tor_cap_devpkg_debian="libcap-dev"
+tor_cap_devpkg_redhat="libcap-devel"
+
+AC_CHECK_LIB([cap], [cap_init], [],
+  AC_MSG_NOTICE([Libcap was not found. Capabilities will not be usable.])
+)
+AC_CHECK_FUNCS(cap_set_proc)
+
 dnl ---------------------------------------------------------------------
 dnl Now that we know about our major libraries, we can check for compiler
 dnl and linker hardening options.  We need to do this with the libraries known,
@@ -719,7 +732,7 @@ dnl since sometimes the linker will like an option but not be willing to
 dnl use it with a build of a library.
 
 all_ldflags_for_check="$TOR_LDFLAGS_zlib $TOR_LDFLAGS_openssl $TOR_LDFLAGS_libevent"
-all_libs_for_check="$TOR_ZLIB_LIBS $TOR_LIB_MATH $TOR_LIBEVENT_LIBS $TOR_OPENSSL_LIBS $TOR_SYSTEMD_LIBS $TOR_LIB_WS32 $TOR_LIB_GDI"
+all_libs_for_check="$TOR_ZLIB_LIBS $TOR_LIB_MATH $TOR_LIBEVENT_LIBS $TOR_OPENSSL_LIBS $TOR_SYSTEMD_LIBS $TOR_LIB_WS32 $TOR_LIB_GDI $TOR_CAP_LIBS"
 
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
 #if !defined(__clang__)
@@ -912,6 +925,7 @@ AC_CHECK_HEADERS(
         fcntl.h \
         signal.h \
         string.h \
+	sys/capability.h \
         sys/fcntl.h \
         sys/stat.h \
         sys/time.h \

@@ -625,7 +625,18 @@ typedef unsigned long rlim_t;
 int get_max_sockets(void);
 int set_max_file_descriptors(rlim_t limit, int *max);
 int tor_disable_debugger_attach(void);
-int switch_id(const char *user);
+
+#if defined(HAVE_SYS_CAPABILITY_H) && defined(HAVE_CAP_SET_PROC)
+#define HAVE_LINUX_CAPABILITIES
+#endif
+
+int have_capability_support(void);
+
+/** Flag for switch_id; see switch_id() for documentation */
+#define SWITCH_ID_KEEP_BINDLOW    (1<<0)
+/** Flag for switch_id; see switch_id() for documentation */
+#define SWITCH_ID_WARN_IF_NO_CAPS (1<<1)
+int switch_id(const char *user, unsigned flags);
 #ifdef HAVE_PWD_H
 char *get_user_homedir(const char *username);
 #endif

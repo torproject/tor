@@ -71,6 +71,9 @@
 #ifdef HAVE_SYS_STATVFS_H
 #include <sys/statvfs.h>
 #endif
+#ifdef HAVE_SYS_CAPABILITY_H
+#include <sys/capability.h>
+#endif
 
 #ifdef _WIN32
 #include <conio.h>
@@ -1966,17 +1969,99 @@ tor_getpwuid(uid_t uid)
 }
 #endif
 
+/** Return true iff we were compiled with capability support, and capabilities
+ * seem to work. **/
+int
+have_capability_support(void)
+{
+#ifdef HAVE_LINUX_CAPABILITIES
+  cap_t caps = cap_get_proc();
+  if (caps == NULL)
+    return 0;
+  cap_free(caps);
+  return 1;
+#else
+  return 0;
+#endif
+}
+
+#ifdef HAVE_LINUX_CAPABILITIES
+/** Helper. Drop all capabilities but a small set, and set PR_KEEPCAPS as
+ * appropriate.
+ *
+ * If pre_setuid, retain only CAP_NET_BIND_SERVICE, CAP_SETUID, and
+ * CAP_SETGID, and use PR_KEEPCAPS to ensure that capabilities persist across
+ * setuid().
+ *
+ * If not pre_setuid, retain only CAP_NET_BIND_SERVICE, and disable
+ * PR_KEEPCAPS.
+ *
+ * Return 0 on success, and -1 on failure.
+ */
+static int
+drop_capabilities(int pre_setuid)
+{
+  /* We keep these three capabilities, and these only, as we setuid.
+   * After we setuid, we drop all but the first. */
+  const cap_value_t caplist[] = {
+    CAP_NET_BIND_SERVICE, CAP_SETUID, CAP_SETGID
+  };
+  const char *where = pre_setuid ? "pre-setuid" : "post-setuid";
+  const int n_effective = pre_setuid ? 3 : 1;
+  const int n_permitted = pre_setuid ? 3 : 1;
+  const int n_inheritable = 1;
+  const int keepcaps = pre_setuid ? 1 : 0;
+
+  /* Sets whether we keep capabilities across a setuid. */
+  if (prctl(PR_SET_KEEPCAPS, keepcaps) < 0) {
+    log_warn(LD_CONFIG, "Unable to call prctl() %s: %s",
+             where, strerror(errno));
+    return -1;
+  }
+
+  cap_t caps = cap_get_proc();
+  if (!caps) {
+    log_warn(LD_CONFIG, "Unable to call cap_get_proc() %s: %s",
+             where, strerror(errno));
+    return -1;
+  }
+  cap_clear(caps);
+
+  cap_set_flag(caps, CAP_EFFECTIVE, n_effective, caplist, CAP_SET);
+  cap_set_flag(caps, CAP_PERMITTED, n_permitted, caplist, CAP_SET);
+  cap_set_flag(caps, CAP_INHERITABLE, n_inheritable, caplist, CAP_SET);
+
+  int r = cap_set_proc(caps);
+  cap_free(caps);
+  if (r < 0) {
+    log_warn(LD_CONFIG, "No permission to set capabilities %s: %s",
+             where, strerror(errno));
+    return -1;
+  }
+
+  return 0;
+}
+#endif
+
 /** Call setuid and setgid to run as <b>user</b> and switch to their
  * primary group.  Return 0 on success.  On failure, log and return -1.
+ *
+ * If SWITCH_ID_KEEP_BINDLOW is set in 'flags', try to use the capability
+ * system to retain the abilitity to bind low ports.
+ *
+ * If SWITCH_ID_WARN_IF_NO_CAPS is set in flags, also warn if we have
+ * don't have capability support.
  */
 int
-switch_id(const char *user)
+switch_id(const char *user, const unsigned flags)
 {
 #ifndef _WIN32
   const struct passwd *pw = NULL;
   uid_t old_uid;
   gid_t old_gid;
   static int have_already_switched_id = 0;
+  const int keep_bindlow = !!(flags & SWITCH_ID_KEEP_BINDLOW);
+  const int warn_if_no_caps = !!(flags & SWITCH_ID_WARN_IF_NO_CAPS);
 
   tor_assert(user);
 
@@ -1999,6 +2084,20 @@ switch_id(const char *user)
     log_warn(LD_CONFIG, "Error setting configured user: %s not found", user);
     return -1;
   }
+
+#ifdef HAVE_LINUX_CAPABILITIES
+  (void) warn_if_no_caps;
+  if (keep_bindlow) {
+    if (drop_capabilities(1))
+      return -1;
+  }
+#else
+  (void) keep_bindlow;
+  if (warn_if_no_caps) {
+    log_warn(LD_CONFIG, "KeepBindCapabilities set, but no capability support "
+             "on this system.");
+  }
+#endif
 
   /* Properly switch egid,gid,euid,uid here or bail out */
   if (setgroups(1, &pw->pw_gid)) {
@@ -2053,6 +2152,12 @@ switch_id(const char *user)
 
   /* We've properly switched egid, gid, euid, uid, and supplementary groups if
    * we're here. */
+#ifdef HAVE_LINUX_CAPABILITIES
+  if (keep_bindlow) {
+    if (drop_capabilities(0))
+      return -1;
+  }
+#endif
 
 #if !defined(CYGWIN) && !defined(__CYGWIN__)
   /* If we tried to drop privilege to a group/user other than root, attempt to
@@ -2100,6 +2205,7 @@ switch_id(const char *user)
 
 #else
   (void)user;
+  (void)flags;
 
   log_warn(LD_CONFIG,
            "User specified but switching users is unsupported on your OS.");
