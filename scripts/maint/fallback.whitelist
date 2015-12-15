@@ -1,0 +1,13 @@
+# updateFallbackDirs.py directory mirror whitelist
+#
+# Format:
+# IPv4:DirPort orport=<ORPort> id=<ID> [ ipv6=<IPv6>:<IPv6 ORPort> ]
+#
+# All attributes must match for the directory mirror to be included.
+# If the fallback has an ipv6 key, the whitelist line must also have
+# it, and vice versa, otherwise they don't match.
+# (The blacklist overrides the whitelist.)
+
+# If a relay operator wants their relay to be a FallbackDir,
+# enter the following information here:
+# <IPv4>:<DirPort> orport=<ORPort> id=<ID> [ ipv6=<IPv6>:<IPv6 ORPort> ]

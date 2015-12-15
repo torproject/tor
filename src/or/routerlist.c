@@ -1299,8 +1299,8 @@ router_get_fallback_dir_servers(void)
 /** Try to find a running dirserver that supports operations of <b>type</b>.
  *
  * If there are no running dirservers in our routerlist and the
- * <b>PDS_RETRY_IF_NO_SERVERS</b> flag is set, set all the authoritative ones
- * as running again, and pick one.
+ * <b>PDS_RETRY_IF_NO_SERVERS</b> flag is set, set all the fallback ones
+ * (including authorities) as running again, and pick one.
  *
  * If the <b>PDS_IGNORE_FASCISTFIREWALL</b> flag is set, then include
  * dirservers that we can't reach.
@@ -1308,8 +1308,9 @@ router_get_fallback_dir_servers(void)
  * If the <b>PDS_ALLOW_SELF</b> flag is not set, then don't include ourself
  * (if we're a dirserver).
  *
- * Don't pick an authority if any non-authority is viable; try to avoid using
- * servers that have returned 503 recently.
+ * Don't pick a fallback directory mirror if any non-fallback is viable;
+ * (the fallback directory mirrors include the authorities)
+ * try to avoid using servers that have returned 503 recently.
  */
 const routerstatus_t *
 router_pick_directory_server(dirinfo_type_t type, int flags)
@@ -1336,7 +1337,7 @@ router_pick_directory_server(dirinfo_type_t type, int flags)
   log_info(LD_DIR,
            "No reachable router entries for dirservers. "
            "Trying them all again.");
-  /* mark all authdirservers as up again */
+  /* mark all fallback directory mirrors as up again */
   mark_all_dirservers_up(fallback_dir_servers);
   /* try again */
   choice = router_pick_directory_server_impl(type, flags, NULL);

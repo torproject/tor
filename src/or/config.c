@@ -960,6 +960,7 @@ add_default_fallback_dir_servers,(void))
 {
   int i;
   const char *fallback[] = {
+#include "fallback_dirs.inc"
     NULL
   };
   for (i=0; fallback[i]; i++) {
