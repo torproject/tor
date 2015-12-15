@@ -4321,7 +4321,6 @@ connection_get_by_type_state_rendquery(int type, int state,
     }                                          \
   STMT_END
 
-
 /** Return a directory connection (if any one exists) that is fetching
  * the item described by <b>purpose</b>/<b>resource</b>, otherwise return NULL.
  */

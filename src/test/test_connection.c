@@ -722,7 +722,6 @@ test_conn_download_status(void *arg)
   tt_assert(connection_dir_avoid_extra_connection_for_purpose(
                                                  TEST_CONN_RSRC_PURPOSE) == 1);
 
-
   /* now try closing one that is downloading - it stays open */
   tt_assert(connection_dir_close_consensus_conn_if_extra(conn2) == 0);
   tt_assert(connection_dir_count_by_purpose_and_resource(
