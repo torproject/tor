@@ -3697,6 +3697,7 @@ router_parse_addr_policy_item_from_string,(const char *s, int assume_action,
   memarea_t *area = NULL;
 
   tor_assert(malformed_list);
+  *malformed_list = 0;
 
   s = eat_whitespace(s);
   if ((*s == '*' || TOR_ISDIGIT(*s)) && assume_action >= 0) {
