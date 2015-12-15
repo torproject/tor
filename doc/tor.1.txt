@@ -358,7 +358,7 @@ GENERAL OPTIONS
     DataDirectory. If the option is set to 1, make the DataDirectory readable
     by the default GID. (Default: 0)
 
-[[FallbackDir]] **FallbackDir** __address__:__port__ orport=__port__ id=__fingerprint__ [weight=__num__]::
+[[FallbackDir]] **FallbackDir** __address__:__port__ orport=__port__ id=__fingerprint__ [weight=__num__] [ipv6=__address__:__orport__]::
     When we're unable to connect to any directory cache for directory info
     (usually because we don't know about any yet) we try a directory authority.
     Clients also simultaneously try a FallbackDir, to avoid hangs on client
@@ -384,9 +384,12 @@ GENERAL OPTIONS
     "bridge" flag is set. If a flag "orport=**port**" is given, Tor will use the
     given port when opening encrypted tunnels to the dirserver. If a flag
     "weight=**num**" is given, then the directory server is chosen randomly
-    with probability proportional to that weight (default 1.0). Lastly, if a
+    with probability proportional to that weight (default 1.0). If a
     flag "v3ident=**fp**" is given, the dirserver is a v3 directory authority
-    whose v3 long-term signing key has the fingerprint **fp**. +
+    whose v3 long-term signing key has the fingerprint **fp**. Lastly,
+    if an "ipv6=__address__:__orport__" flag is present, then the directory
+    authority is listening for IPv6 connections on the indicated IPv6 address
+    and OR Port. +
  +
     If no **DirAuthority** line is given, Tor will use the default directory
     authorities. NOTE: this option is intended for setting up a private Tor

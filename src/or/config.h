@@ -152,10 +152,12 @@ STATIC int parse_transport_line(const or_options_t *options,
                                 int server);
 STATIC int consider_adding_dir_servers(const or_options_t *options,
                                        const or_options_t *old_options);
+STATIC void add_default_trusted_dir_authorities(dirinfo_type_t type);
 MOCK_DECL(STATIC void, add_default_fallback_dir_servers, (void));
-STATIC int
-parse_dir_fallback_line(const char *line,
-                        int validate_only);
+STATIC int parse_dir_authority_line(const char *line,
+                                    dirinfo_type_t required_type,
+                                    int validate_only);
+STATIC int parse_dir_fallback_line(const char *line, int validate_only);
 #endif
 
 #endif

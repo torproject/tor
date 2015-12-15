@@ -1026,6 +1026,7 @@ init_keys(void)
     ds = trusted_dir_server_new(options->Nickname, NULL,
                                 router_get_advertised_dir_port(options, 0),
                                 router_get_advertised_or_port(options),
+                                NULL,
                                 digest,
                                 v3_digest,
                                 type, 0.0);
