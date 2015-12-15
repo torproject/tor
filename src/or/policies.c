@@ -696,6 +696,10 @@ compare_known_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port,
   /* We know the address and port, and we know the policy, so we can just
    * compute an exact match. */
   SMARTLIST_FOREACH_BEGIN(policy, addr_policy_t *, tmpe) {
+    if (tmpe->addr.family == AF_UNSPEC) {
+      log_warn(LD_BUG, "Policy contains an AF_UNSPEC address, which only "
+               "matches other AF_UNSPEC addresses.");
+    }
     /* Address is known */
     if (!tor_addr_compare_masked(addr, &tmpe->addr, tmpe->maskbits,
                                  CMP_EXACT)) {
@@ -723,6 +727,10 @@ compare_known_tor_addr_to_addr_policy_noport(const tor_addr_t *addr,
   int maybe_accept = 0, maybe_reject = 0;
 
   SMARTLIST_FOREACH_BEGIN(policy, addr_policy_t *, tmpe) {
+    if (tmpe->addr.family == AF_UNSPEC) {
+      log_warn(LD_BUG, "Policy contains an AF_UNSPEC address, which only "
+               "matches other AF_UNSPEC addresses.");
+    }
     if (!tor_addr_compare_masked(addr, &tmpe->addr, tmpe->maskbits,
                                  CMP_EXACT)) {
       if (tmpe->prt_min <= 1 && tmpe->prt_max >= 65535) {
@@ -762,6 +770,10 @@ compare_unknown_tor_addr_to_addr_policy(uint16_t port,
   int maybe_accept = 0, maybe_reject = 0;
 
   SMARTLIST_FOREACH_BEGIN(policy, addr_policy_t *, tmpe) {
+    if (tmpe->addr.family == AF_UNSPEC) {
+      log_warn(LD_BUG, "Policy contains an AF_UNSPEC address, which only "
+               "matches other AF_UNSPEC addresses.");
+    }
     if (tmpe->prt_min <= port && port <= tmpe->prt_max) {
       if (tmpe->maskbits == 0) {
         /* Definitely matches, since it covers all addresses. */
