@@ -312,7 +312,7 @@ test_conn_download_status_setup(const struct testcase_t *tc)
   (void)tc;
 
   /* Don't return NULL, that causes the test to fail */
-  return "ok";
+  return (void*)"ok";
 }
 
 static int

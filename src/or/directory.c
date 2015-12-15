@@ -3441,7 +3441,7 @@ connection_dir_finished_flushing(dir_connection_t *conn)
 /* A helper function for connection_dir_close_consensus_conn_if_extra()
  * and connection_dir_close_extra_consensus_conns() that returns 0 if
  * we can't have, or don't want to close, excess consensus connections. */
-int
+STATIC int
 connection_dir_would_close_consensus_conn_helper(void)
 {
   const or_options_t *options = get_options();

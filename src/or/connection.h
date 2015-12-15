@@ -216,7 +216,7 @@ smartlist_t *connection_dir_list_by_purpose_resource_and_state(
 
 /** Return a count of directory connections that are fetching the item
  * described by <b>purpose</b>/<b>resource</b>. */
-static INLINE int
+static inline int
 connection_dir_count_by_purpose_and_resource(
                                              int purpose,
                                              const char *resource)
@@ -229,7 +229,7 @@ connection_dir_count_by_purpose_and_resource(
 
 /** Return a count of directory connections that are fetching the item
  * described by <b>purpose</b>/<b>resource</b>/<b>state</b>. */
-static INLINE int
+static inline int
 connection_dir_count_by_purpose_resource_and_state(
                                                    int purpose,
                                                    const char *resource,
