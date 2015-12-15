@@ -1602,7 +1602,7 @@ sigsys_debugging(int nr, siginfo_t *info, void *void_context)
   const char *syscall_name;
   int syscall;
 #ifdef USE_BACKTRACE
-  int depth;
+  size_t depth;
   int n_fds, i;
   const int *fds = NULL;
 #endif

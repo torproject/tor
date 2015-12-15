@@ -13,7 +13,7 @@ void clean_up_backtrace_handler(void);
 #ifdef EXPOSE_CLEAN_BACKTRACE
 #if defined(HAVE_EXECINFO_H) && defined(HAVE_BACKTRACE) && \
   defined(HAVE_BACKTRACE_SYMBOLS_FD) && defined(HAVE_SIGACTION)
-void clean_backtrace(void **stack, int depth, const ucontext_t *ctx);
+void clean_backtrace(void **stack, size_t depth, const ucontext_t *ctx);
 #endif
 #endif
 

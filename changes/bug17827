@@ -1,0 +1,3 @@
+  o Minor bugfixes (compilation):
+    - Fix backtrace compilation on FreeBSD. Fixes bug 17827; bugfix on
+      tor-0.2.5.2-alpha.
