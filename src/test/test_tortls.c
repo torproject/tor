@@ -145,6 +145,7 @@ test_tortls_tor_tls_new(void *data)
   tt_want(tls);
   tor_tls_free(tls); tls = NULL;
 
+  SSL_CTX_free(client_tls_context->ctx);
   client_tls_context->ctx = NULL;
   tls = tor_tls_new(-1, 0);
   tt_assert(!tls);
@@ -1140,6 +1141,7 @@ test_tortls_check_lifetime(void *ignored)
   tor_free(tls->ssl->session);
   tor_free(tls->ssl);
   tor_free(tls);
+  X509_free(validCert);
 }
 #endif
 
@@ -1465,6 +1467,7 @@ test_tortls_try_to_extract_certs_from_tls(void *ignored)
   tt_assert(id_cert);
 
  done:
+  sk_X509_free(sess->cert_chain);
   tor_free(sess);
   tor_free(tls->ssl->session);
   tor_free(tls->ssl);
@@ -2166,6 +2169,7 @@ test_tortls_write(void *ignored)
 
  done:
   teardown_capture_of_logs(previous_log);
+  BIO_free(tls->ssl->rbio);
   tor_free(tls->ssl);
   tor_free(tls);
   tor_free(method);

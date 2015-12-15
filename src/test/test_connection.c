@@ -501,21 +501,26 @@ test_conn_get_rend(void *arg)
   ;
 }
 
-#define sl_is_conn_assert(sl, conn) \
-  do { \
-    tt_assert(smartlist_len((sl)) == 1); \
-    tt_assert(smartlist_get((sl), 0) == (conn)); \
+#define sl_is_conn_assert(sl_input, conn) \
+  do {                                               \
+    the_sl = (sl_input);                             \
+    tt_assert(smartlist_len((the_sl)) == 1);         \
+    tt_assert(smartlist_get((the_sl), 0) == (conn)); \
+    smartlist_free(the_sl); the_sl = NULL;           \
   } while (0)
 
-#define sl_no_conn_assert(sl) \
-  do { \
-    tt_assert(smartlist_len((sl)) == 0); \
+#define sl_no_conn_assert(sl_input)          \
+  do {                                       \
+    the_sl = (sl_input);                     \
+    tt_assert(smartlist_len((the_sl)) == 0); \
+    smartlist_free(the_sl); the_sl = NULL;   \
   } while (0)
 
 static void
 test_conn_get_rsrc(void *arg)
 {
   dir_connection_t *conn = DOWNCAST(dir_connection_t, arg);
+  smartlist_t *the_sl = NULL;
   tt_assert(conn);
   assert_connection_ok(&conn->base_, time(NULL));
 
@@ -630,7 +635,7 @@ test_conn_get_rsrc(void *arg)
             == 0);
 
  done:
-  ;
+  smartlist_free(the_sl);
 }
 
 static void

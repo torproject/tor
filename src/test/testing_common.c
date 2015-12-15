@@ -297,6 +297,7 @@ main(int c, const char **v)
   tor_free_all(0);
   dmalloc_log_unfreed();
 #endif
+  crypto_global_cleanup();
 
   if (have_failed)
     return 1;
