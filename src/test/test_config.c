@@ -1471,6 +1471,7 @@ add_default_fallback_dir_servers_known_default(void)
   n_add_default_fallback_dir_servers_known_default++;
 }
 
+/* Test all the different combinations of adding dir servers */
 static void
 test_config_adding_dir_servers(void *arg)
 {
@@ -1529,7 +1530,7 @@ test_config_adding_dir_servers(void *arg)
 
   /* There are 16 different cases, covering each combination of set/NULL for:
    * DirAuthorities, AlternateBridgeAuthority, AlternateDirAuthority &
-   * FallbackDir.
+   * FallbackDir. (We always set UseDefaultFallbackDirs to 1.)
    * But validate_dir_servers() ensures that:
    *   "You cannot set both DirAuthority and Alternate*Authority."
    * This reduces the number of cases to 10.
@@ -1542,8 +1543,6 @@ test_config_adding_dir_servers(void *arg)
    *   FallbackDir set
    * The valid cases are cases 0-9 counting using this method, as every case
    * greater than or equal to 10 = 1010 is invalid.
-   *
-   * After #15642 - Disable default fallback dirs when any custom dirs set
    *
    * 1. Outcome: Use Set Directory Authorities
    *   - No Default Authorities
@@ -1581,20 +1580,6 @@ test_config_adding_dir_servers(void *arg)
    *  Cases expected to yield this outcome:
    *    0 (DirAuthorities, AlternateBridgeAuthority, AlternateDirAuthority
    *       and FallbackDir are all NULL)
-   *
-   * Before #15642 but after #13163 - Stop using default authorities when both
-   * Alternate Dir and Bridge Authority are set
-   * (#13163 was committed in 0.2.6 as c1dd43d823c7)
-   *
-   * The behaviour is different in the following cases
-   * where FallbackDir is NULL:
-   *  2, 6, 8
-   *
-   * In these cases, the Default Fallback Directories are applied, even when
-   * DirAuthorities or AlternateDirAuthority are set.
-   *
-   * However, as the list of default fallback directories is currently empty,
-   * this change doesn't modify any user-visible behaviour.
    */
 
   /*
@@ -1628,6 +1613,7 @@ test_config_adding_dir_servers(void *arg)
     options->AlternateBridgeAuthority = NULL;
     options->AlternateDirAuthority = NULL;
     options->FallbackDir = NULL;
+    options->UseDefaultFallbackDirs = 1;
 
     /* parse options - ensure we always update by passing NULL old_options */
     consider_adding_dir_servers(options, NULL);
@@ -1703,6 +1689,7 @@ test_config_adding_dir_servers(void *arg)
     options->AlternateBridgeAuthority = NULL;
     options->AlternateDirAuthority = NULL;
     options->FallbackDir = test_fallback_directory;
+    options->UseDefaultFallbackDirs = 1;
 
     /* parse options - ensure we always update by passing NULL old_options */
     consider_adding_dir_servers(options, NULL);
@@ -1840,6 +1827,7 @@ test_config_adding_dir_servers(void *arg)
     options->AlternateBridgeAuthority = NULL;
     options->AlternateDirAuthority = NULL;
     options->FallbackDir = NULL;
+    options->UseDefaultFallbackDirs = 1;
 
     /* parse options - ensure we always update by passing NULL old_options */
     consider_adding_dir_servers(options, NULL);
@@ -1977,6 +1965,7 @@ test_config_adding_dir_servers(void *arg)
     options->AlternateBridgeAuthority = test_alt_bridge_authority;
     options->AlternateDirAuthority = test_alt_dir_authority;
     options->FallbackDir = test_fallback_directory;
+    options->UseDefaultFallbackDirs = 1;
 
     /* parse options - ensure we always update by passing NULL old_options */
     consider_adding_dir_servers(options, NULL);
@@ -2115,6 +2104,7 @@ test_config_adding_dir_servers(void *arg)
     options->AlternateBridgeAuthority = test_alt_bridge_authority;
     options->AlternateDirAuthority = test_alt_dir_authority;
     options->FallbackDir = NULL;
+    options->UseDefaultFallbackDirs = 1;
 
     /* parse options - ensure we always update by passing NULL old_options */
     consider_adding_dir_servers(options, NULL);
@@ -2263,6 +2253,7 @@ test_config_adding_dir_servers(void *arg)
     options->AlternateBridgeAuthority = test_alt_bridge_authority;
     options->AlternateDirAuthority = NULL;
     options->FallbackDir = test_fallback_directory;
+    options->UseDefaultFallbackDirs = 1;
 
     /* parse options - ensure we always update by passing NULL old_options */
     consider_adding_dir_servers(options, NULL);
@@ -2413,6 +2404,7 @@ test_config_adding_dir_servers(void *arg)
     options->AlternateBridgeAuthority = test_alt_bridge_authority;
     options->AlternateDirAuthority = NULL;
     options->FallbackDir = NULL;
+    options->UseDefaultFallbackDirs = 1;
 
     /* parse options - ensure we always update by passing NULL old_options */
     consider_adding_dir_servers(options, NULL);
@@ -2572,6 +2564,7 @@ test_config_adding_dir_servers(void *arg)
     options->AlternateBridgeAuthority = NULL;
     options->AlternateDirAuthority = test_alt_dir_authority;
     options->FallbackDir = test_fallback_directory;
+    options->UseDefaultFallbackDirs = 1;
 
     /* parse options - ensure we always update by passing NULL old_options */
     consider_adding_dir_servers(options, NULL);
@@ -2725,6 +2718,7 @@ test_config_adding_dir_servers(void *arg)
     options->AlternateBridgeAuthority = NULL;
     options->AlternateDirAuthority = test_alt_dir_authority;
     options->FallbackDir = NULL;
+    options->UseDefaultFallbackDirs = 1;
 
     /* parse options - ensure we always update by passing NULL old_options */
     consider_adding_dir_servers(options, NULL);
@@ -2887,6 +2881,7 @@ test_config_adding_dir_servers(void *arg)
     options->AlternateBridgeAuthority = NULL;
     options->AlternateDirAuthority = NULL;
     options->FallbackDir = test_fallback_directory;
+    options->UseDefaultFallbackDirs = 1;
 
     /* parse options - ensure we always update by passing NULL old_options */
     consider_adding_dir_servers(options, NULL);
@@ -3046,6 +3041,7 @@ test_config_adding_dir_servers(void *arg)
     options->AlternateBridgeAuthority = NULL;
     options->AlternateDirAuthority = NULL;
     options->FallbackDir = NULL;
+    options->UseDefaultFallbackDirs = 1;
 
     /* parse options - ensure we always update by passing NULL old_options */
     consider_adding_dir_servers(options, NULL);
@@ -3209,11 +3205,51 @@ test_config_adding_dir_servers(void *arg)
   UNMOCK(add_default_fallback_dir_servers);
 }
 
+static void
+test_config_default_dir_servers(void *arg)
+{
+  or_options_t *opts = NULL;
+  (void)arg;
+  int trusted_count = 0;
+  int fallback_count = 0;
+
+  opts = tor_malloc_zero(sizeof(or_options_t));
+  opts->UseDefaultFallbackDirs = 0;
+  consider_adding_dir_servers(opts, opts);
+  trusted_count = smartlist_len(router_get_trusted_dir_servers());
+  fallback_count = smartlist_len(router_get_fallback_dir_servers());
+  or_options_free(opts);
+  opts = NULL;
+
+  /* assume a release will never go out with less than 7 authorities */
+  tt_assert(trusted_count >= 7);
+  /* if we disable the default fallbacks, there must not be any extra */
+  tt_assert(fallback_count == trusted_count);
+
+  opts = tor_malloc_zero(sizeof(or_options_t));
+  opts->UseDefaultFallbackDirs = 1;
+  consider_adding_dir_servers(opts, opts);
+  trusted_count = smartlist_len(router_get_trusted_dir_servers());
+  fallback_count = smartlist_len(router_get_fallback_dir_servers());
+  or_options_free(opts);
+  opts = NULL;
+
+  /* assume a release will never go out with less than 7 authorities */
+  tt_assert(trusted_count >= 7);
+  /* XX/teor - allow for default fallbacks to be added without breaking
+   * the unit tests. Set a minimum fallback count once the list is stable. */
+  tt_assert(fallback_count >= trusted_count);
+
+ done:
+  or_options_free(opts);
+}
+
 #define CONFIG_TEST(name, flags)                          \
   { #name, test_config_ ## name, flags, NULL, NULL }
 
 struct testcase_t config_tests[] = {
   CONFIG_TEST(adding_dir_servers, TT_FORK),
+  CONFIG_TEST(default_dir_servers, TT_FORK),
   CONFIG_TEST(resolve_my_address, TT_FORK),
   CONFIG_TEST(addressmap, 0),
   CONFIG_TEST(parse_bridge_line, 0),

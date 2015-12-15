@@ -3758,6 +3758,8 @@ typedef struct {
 
   /** List of fallback directory servers */
   config_line_t *FallbackDir;
+  /** Whether to use the default hard-coded FallbackDirs */
+  int UseDefaultFallbackDirs;
 
   /** Weight to apply to all directory authority rates if considering them
    * along with fallbackdirs */
