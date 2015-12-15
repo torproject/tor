@@ -1618,13 +1618,18 @@ connection_init_accepted_conn(connection_t *conn,
   return 0;
 }
 
-static int
-connection_connect_sockaddr(connection_t *conn,
+/** Take conn, make a nonblocking socket; try to connect to
+ * sa, binding to bindaddr if sa is not localhost. If fail, return -1 and if
+ * applicable put your best guess about errno into *<b>socket_error</b>.
+ * If connected return 1, if EAGAIN return 0.
+ */
+MOCK_IMPL(STATIC int,
+connection_connect_sockaddr,(connection_t *conn,
                             const struct sockaddr *sa,
                             socklen_t sa_len,
                             const struct sockaddr *bindaddr,
                             socklen_t bindaddr_len,
-                            int *socket_error)
+                            int *socket_error))
 {
   tor_socket_t s;
   int inprogress = 0;
@@ -4222,6 +4227,19 @@ connection_write_to_buf_impl_,(const char *string, size_t len,
   }
 }
 
+/** Return a connection_t * from get_connection_array() that satisfies test on
+ * var, and that is not marked for close. */
+#define CONN_GET_TEMPLATE(var, test)               \
+  STMT_BEGIN                                       \
+    smartlist_t *conns = get_connection_array();   \
+    SMARTLIST_FOREACH(conns, connection_t *, var,  \
+    {                                              \
+      if (var && (test) && !var->marked_for_close) \
+        return var;                                \
+    });                                            \
+    return NULL;                                   \
+  STMT_END
+
 /** Return a connection with given type, address, port, and purpose;
  * or NULL if no such connection exists (or if all such connections are marked
  * for close). */
@@ -4230,17 +4248,11 @@ connection_get_by_type_addr_port_purpose(int type,
                                          const tor_addr_t *addr, uint16_t port,
                                          int purpose)
 {
-  smartlist_t *conns = get_connection_array();
-  SMARTLIST_FOREACH(conns, connection_t *, conn,
-  {
-    if (conn->type == type &&
+  CONN_GET_TEMPLATE(conn,
+       (conn->type == type &&
         tor_addr_eq(&conn->addr, addr) &&
         conn->port == port &&
-        conn->purpose == purpose &&
-        !conn->marked_for_close)
-      return conn;
-  });
-  return NULL;
+        conn->purpose == purpose));
 }
 
 /** Return the stream with id <b>id</b> if it is not already marked for
@@ -4249,13 +4261,7 @@ connection_get_by_type_addr_port_purpose(int type,
 connection_t *
 connection_get_by_global_id(uint64_t id)
 {
-  smartlist_t *conns = get_connection_array();
-  SMARTLIST_FOREACH(conns, connection_t *, conn,
-  {
-    if (conn->global_identifier == id)
-      return conn;
-  });
-  return NULL;
+  CONN_GET_TEMPLATE(conn, conn->global_identifier == id);
 }
 
 /** Return a connection of type <b>type</b> that is not marked for close.
@@ -4263,13 +4269,7 @@ connection_get_by_global_id(uint64_t id)
 connection_t *
 connection_get_by_type(int type)
 {
-  smartlist_t *conns = get_connection_array();
-  SMARTLIST_FOREACH(conns, connection_t *, conn,
-  {
-    if (conn->type == type && !conn->marked_for_close)
-      return conn;
-  });
-  return NULL;
+  CONN_GET_TEMPLATE(conn, conn->type == type);
 }
 
 /** Return a connection of type <b>type</b> that is in state <b>state</b>,
@@ -4278,13 +4278,7 @@ connection_get_by_type(int type)
 connection_t *
 connection_get_by_type_state(int type, int state)
 {
-  smartlist_t *conns = get_connection_array();
-  SMARTLIST_FOREACH(conns, connection_t *, conn,
-  {
-    if (conn->type == type && conn->state == state && !conn->marked_for_close)
-      return conn;
-  });
-  return NULL;
+  CONN_GET_TEMPLATE(conn, conn->type == type && conn->state == state);
 }
 
 /** Return a connection of type <b>type</b> that has rendquery equal
@@ -4295,55 +4289,142 @@ connection_t *
 connection_get_by_type_state_rendquery(int type, int state,
                                        const char *rendquery)
 {
-  smartlist_t *conns = get_connection_array();
-
   tor_assert(type == CONN_TYPE_DIR ||
              type == CONN_TYPE_AP || type == CONN_TYPE_EXIT);
   tor_assert(rendquery);
 
-  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
-    if (conn->type == type &&
-        !conn->marked_for_close &&
-        (!state || state == conn->state)) {
-      if (type == CONN_TYPE_DIR &&
+  CONN_GET_TEMPLATE(conn,
+       (conn->type == type &&
+        (!state || state == conn->state)) &&
+        (
+         (type == CONN_TYPE_DIR &&
           TO_DIR_CONN(conn)->rend_data &&
           !rend_cmp_service_ids(rendquery,
                                 TO_DIR_CONN(conn)->rend_data->onion_address))
-        return conn;
-      else if (CONN_IS_EDGE(conn) &&
+         ||
+              (CONN_IS_EDGE(conn) &&
                TO_EDGE_CONN(conn)->rend_data &&
                !rend_cmp_service_ids(rendquery,
                             TO_EDGE_CONN(conn)->rend_data->onion_address))
-        return conn;
-    }
-  } SMARTLIST_FOREACH_END(conn);
-  return NULL;
+         ));
+}
+
+#define CONN_FIRST_AND_FREE_TEMPLATE(sl)       \
+  STMT_BEGIN                                   \
+    if (smartlist_len(sl) > 0) {               \
+      void *first_item = smartlist_get(sl, 0); \
+      smartlist_free(sl);                      \
+      return first_item;                       \
+    } else {                                   \
+      smartlist_free(sl);                      \
+      return NULL;                             \
+    }                                          \
+  STMT_END
+
+
+/** Return a directory connection (if any one exists) that is fetching
+ * the item described by <b>purpose</b>/<b>resource</b>, otherwise return NULL.
+ */
+dir_connection_t *
+connection_dir_get_by_purpose_and_resource(
+                                           int purpose,
+                                           const char *resource)
+{
+  smartlist_t *conns = connection_dir_list_by_purpose_and_resource(
+                                                          purpose,
+                                                          resource);
+  CONN_FIRST_AND_FREE_TEMPLATE(conns);
+}
+
+/** Return a new smartlist of dir_connection_t * from get_connection_array()
+ * that satisfy conn_test on connection_t *conn_var, and dirconn_test on
+ * dir_connection_t *dirconn_var. conn_var must be of CONN_TYPE_DIR and not
+ * marked for close to be included in the list. */
+#define DIR_CONN_LIST_TEMPLATE(conn_var, conn_test,             \
+                               dirconn_var, dirconn_test)       \
+  STMT_BEGIN                                                    \
+    smartlist_t *conns = get_connection_array();                \
+    smartlist_t *dir_conns = smartlist_new();                   \
+    SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn_var) {  \
+      if (conn_var && (conn_test)                               \
+          && conn_var->type == CONN_TYPE_DIR                    \
+          && !conn_var->marked_for_close) {                     \
+        dir_connection_t *dirconn_var = TO_DIR_CONN(conn_var);  \
+        if (dirconn_var && (dirconn_test)) {                    \
+          smartlist_add(dir_conns, dirconn_var);                \
+        }                                                       \
+      }                                                         \
+    } SMARTLIST_FOREACH_END(conn_var);                          \
+    return dir_conns;                                           \
+  STMT_END
+
+/** Return a list of directory connections that are fetching the item
+ * described by <b>purpose</b>/<b>resource</b>. If there are none,
+ * return an empty list. This list must be freed using smartlist_free,
+ * but the pointers in it must not be freed.
+ * Note that this list should not be cached, as the pointers in it can be
+ * freed if their connections close. */
+smartlist_t *
+connection_dir_list_by_purpose_and_resource(
+                                            int purpose,
+                                            const char *resource)
+{
+  DIR_CONN_LIST_TEMPLATE(conn,
+                         conn->purpose == purpose,
+                         dirconn,
+                         0 == strcmp_opt(resource,
+                                         dirconn->requested_resource));
 }
 
 /** Return a directory connection (if any one exists) that is fetching
- * the item described by <b>state</b>/<b>resource</b> */
+ * the item described by <b>purpose</b>/<b>resource</b>/<b>state</b>,
+ * otherwise return NULL. */
 dir_connection_t *
-connection_dir_get_by_purpose_and_resource(int purpose,
-                                           const char *resource)
+connection_dir_get_by_purpose_resource_and_state(
+                                                 int purpose,
+                                                 const char *resource,
+                                                 int state)
 {
-  smartlist_t *conns = get_connection_array();
+  smartlist_t *conns =
+    connection_dir_list_by_purpose_resource_and_state(
+                                                      purpose,
+                                                      resource,
+                                                      state);
+  CONN_FIRST_AND_FREE_TEMPLATE(conns);
+}
 
-  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
-    dir_connection_t *dirconn;
-    if (conn->type != CONN_TYPE_DIR || conn->marked_for_close ||
-        conn->purpose != purpose)
-      continue;
-    dirconn = TO_DIR_CONN(conn);
-    if (dirconn->requested_resource == NULL) {
-      if (resource == NULL)
-        return dirconn;
-    } else if (resource) {
-      if (0 == strcmp(resource, dirconn->requested_resource))
-        return dirconn;
-    }
-  } SMARTLIST_FOREACH_END(conn);
+#undef CONN_FIRST_AND_FREE_TEMPLATE
 
-  return NULL;
+/** Return a list of directory connections that are fetching the item
+ * described by <b>purpose</b>/<b>resource</b>/<b>state</b>. If there are
+ * none, return an empty list. This list must be freed using smartlist_free,
+ * but the pointers in it must not be freed.
+ * Note that this list should not be cached, as the pointers in it can be
+ * freed if their connections close. */
+smartlist_t *
+connection_dir_list_by_purpose_resource_and_state(
+                                                  int purpose,
+                                                  const char *resource,
+                                                  int state)
+{
+  DIR_CONN_LIST_TEMPLATE(conn,
+                         conn->purpose == purpose && conn->state == state,
+                         dirconn,
+                         0 == strcmp_opt(resource,
+                                         dirconn->requested_resource));
+}
+
+#undef DIR_CONN_LIST_TEMPLATE
+
+/** Return an arbitrary active OR connection that isn't <b>this_conn</b>.
+ *
+ * We use this to guess if we should tell the controller that we
+ * didn't manage to connect to any of our bridges. */
+static connection_t *
+connection_get_another_active_or_conn(const or_connection_t *this_conn)
+{
+  CONN_GET_TEMPLATE(conn,
+                    conn != TO_CONN(this_conn) && conn->type == CONN_TYPE_OR);
 }
 
 /** Return 1 if there are any active OR connections apart from
@@ -4354,22 +4435,17 @@ connection_dir_get_by_purpose_and_resource(int purpose,
 int
 any_other_active_or_conns(const or_connection_t *this_conn)
 {
-  smartlist_t *conns = get_connection_array();
-  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
-    if (conn == TO_CONN(this_conn)) { /* don't consider this conn */
-      continue;
-    }
-
-    if (conn->type == CONN_TYPE_OR &&
-        !conn->marked_for_close) {
-      log_debug(LD_DIR, "%s: Found an OR connection: %s",
-                __func__, conn->address);
-      return 1;
-    }
-  } SMARTLIST_FOREACH_END(conn);
+  connection_t *conn = connection_get_another_active_or_conn(this_conn);
+  if (conn != NULL) {
+    log_debug(LD_DIR, "%s: Found an OR connection: %s",
+              __func__, conn->address);
+    return 1;
+  }
 
   return 0;
 }
+
+#undef CONN_GET_TEMPLATE
 
 /** Return 1 if <b>conn</b> is a listener conn, else return 0. */
 int

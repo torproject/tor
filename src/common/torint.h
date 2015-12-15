@@ -336,6 +336,32 @@ typedef uint32_t uintptr_t;
 #endif /* time_t_is_signed */
 #endif /* ifndef(TIME_MAX) */
 
+#ifndef TIME_MIN
+
+#ifdef TIME_T_IS_SIGNED
+
+#if (SIZEOF_TIME_T == SIZEOF_INT)
+#define TIME_MIN ((time_t)INT_MIN)
+#elif (SIZEOF_TIME_T == SIZEOF_LONG)
+#define TIME_MIN ((time_t)LONG_MIN)
+#elif (SIZEOF_TIME_T == 8)
+#define TIME_MIN ((time_t)INT64_MIN)
+#else
+#error "Can't define (signed) TIME_MIN"
+#endif
+
+#else
+/* Unsigned case */
+#if (SIZEOF_TIME_T == 4)
+#define TIME_MIN ((time_t)UINT32_MIN)
+#elif (SIZEOF_TIME_T == 8)
+#define TIME_MIN ((time_t)UINT64_MIN)
+#else
+#error "Can't define (unsigned) TIME_MIN"
+#endif
+#endif /* time_t_is_signed */
+#endif /* ifndef(TIME_MIN) */
+
 #ifndef SIZE_MAX
 #if (SIZEOF_SIZE_T == 4)
 #define SIZE_MAX UINT32_MAX

@@ -1460,6 +1460,11 @@ run_scheduled_events(time_t now)
     dirvote_act(options, now);
   }
 
+  /* 2d. Cleanup excess consensus bootstrap connections every second.
+   * connection_dir_close_consensus_conn_if_extra() will close connections
+   * that are clearly excess, but this check is more thorough. */
+  connection_dir_close_extra_consensus_conns();
+
   /* 3a. Every second, we examine pending circuits and prune the
    *    ones which have been pending for more than a few seconds.
    *    We do this before step 4, so it can try building more if
@@ -1876,18 +1881,29 @@ check_for_reachability_bw_callback(time_t now, const or_options_t *options)
 static int
 fetch_networkstatus_callback(time_t now, const or_options_t *options)
 {
-  /* 2c. Every minute (or every second if TestingTorNetwork), check
-   * whether we want to download any networkstatus documents. */
+  /* 2c. Every minute (or every second if TestingTorNetwork, or during
+   * client bootstrap), check whether we want to download any networkstatus
+   * documents. */
 
   /* How often do we check whether we should download network status
    * documents? */
-#define networkstatus_dl_check_interval(o) ((o)->TestingTorNetwork ? 1 : 60)
+  const int we_are_bootstrapping = networkstatus_consensus_is_boostrapping(
+                                                                        now);
+  const int prefer_mirrors = !directory_fetches_from_authorities(
+                                                              get_options());
+  int networkstatus_dl_check_interval = 60;
+  /* check more often when testing, or when bootstrapping from mirrors
+   * (connection limits prevent too many connections being made) */
+  if (options->TestingTorNetwork
+      || (we_are_bootstrapping && prefer_mirrors)) {
+    networkstatus_dl_check_interval = 1;
+  }
 
   if (should_delay_dir_fetches(options, NULL))
     return PERIODIC_EVENT_NO_UPDATE;
 
   update_networkstatus_downloads(now);
-  return networkstatus_dl_check_interval(options);
+  return networkstatus_dl_check_interval;
 }
 
 static int

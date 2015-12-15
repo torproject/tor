@@ -897,8 +897,10 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
 
     if (smartlist_len(fps) > 1) {
       resource = smartlist_join_strings(fps, "", 0, NULL);
+      /* XXX - do we want certs from authorities or mirrors? - teor */
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
-                                   resource, PDS_RETRY_IF_NO_SERVERS);
+                                   resource, PDS_RETRY_IF_NO_SERVERS,
+                                   DL_WANT_ANY_DIRSERVER);
       tor_free(resource);
     }
     /* else we didn't add any: they were all pending */
@@ -941,8 +943,10 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
 
     if (smartlist_len(fp_pairs) > 1) {
       resource = smartlist_join_strings(fp_pairs, "", 0, NULL);
+      /* XXX - do we want certs from authorities or mirrors? - teor */
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
-                                   resource, PDS_RETRY_IF_NO_SERVERS);
+                                   resource, PDS_RETRY_IF_NO_SERVERS,
+                                   DL_WANT_ANY_DIRSERVER);
       tor_free(resource);
     }
     /* else they were all pending */
@@ -1358,12 +1362,17 @@ router_get_trusteddirserver_by_digest(const char *digest)
 }
 
 /** Return the dir_server_t for the fallback dirserver whose identity
- * key hashes to <b>digest</b>, or NULL if no such authority is known.
+ * key hashes to <b>digest</b>, or NULL if no such fallback is in the list of
+ * fallback_dir_servers. (fallback_dir_servers is affected by the FallbackDir
+ * and UseDefaultFallbackDirs torrc options.)
  */
 dir_server_t *
 router_get_fallback_dirserver_by_digest(const char *digest)
 {
   if (!fallback_dir_servers)
+    return NULL;
+
+  if (!digest)
     return NULL;
 
   SMARTLIST_FOREACH(fallback_dir_servers, dir_server_t *, ds,
@@ -1373,6 +1382,17 @@ router_get_fallback_dirserver_by_digest(const char *digest)
      });
 
   return NULL;
+}
+
+/** Return 1 if any fallback dirserver's identity key hashes to <b>digest</b>,
+ * or 0 if no such fallback is in the list of fallback_dir_servers.
+ * (fallback_dir_servers is affected by the FallbackDir and
+ * UseDefaultFallbackDirs torrc options.)
+ */
+int
+router_digest_is_fallback_dir(const char *digest)
+{
+  return (router_get_fallback_dirserver_by_digest(digest) != NULL);
 }
 
 /** Return the dir_server_t for the directory authority whose
@@ -4376,14 +4396,14 @@ MOCK_IMPL(STATIC void, initiate_descriptor_downloads,
   tor_free(cp);
 
   if (source) {
-    /* We know which authority we want. */
+    /* We know which authority or directory mirror we want. */
     directory_initiate_command_routerstatus(source, purpose,
                                             ROUTER_PURPOSE_GENERAL,
                                             DIRIND_ONEHOP,
                                             resource, NULL, 0, 0);
   } else {
     directory_get_from_dirserver(purpose, ROUTER_PURPOSE_GENERAL, resource,
-                                 pds_flags);
+                                 pds_flags, DL_WANT_ANY_DIRSERVER);
   }
   tor_free(resource);
 }
@@ -4665,9 +4685,14 @@ launch_dummy_descriptor_download_as_needed(time_t now,
       last_descriptor_download_attempted + DUMMY_DOWNLOAD_INTERVAL < now &&
       last_dummy_download + DUMMY_DOWNLOAD_INTERVAL < now) {
     last_dummy_download = now;
+    /* XX/teor - do we want an authority here, because they are less likely
+     * to give us the wrong address? (See #17782)
+     * I'm leaving the previous behaviour intact, because I don't like
+     * the idea of some relays contacting an authority every 20 minutes. */
     directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,
                                  ROUTER_PURPOSE_GENERAL, "authority.z",
-                                 PDS_RETRY_IF_NO_SERVERS);
+                                 PDS_RETRY_IF_NO_SERVERS,
+                                 DL_WANT_ANY_DIRSERVER);
   }
 }
 

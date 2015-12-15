@@ -14,7 +14,8 @@ LIBS = ..\..\..\build-alpha\lib\libevent.lib \
 TEST_OBJECTS = test.obj test_addr.obj test_channel.obj test_channeltls.obj \
         test_containers.obj \
 	test_controller_events.obj test_crypto.obj test_data.obj test_dir.obj \
-	test_checkdir.obj test_microdesc.obj test_pt.obj test_util.obj test_config.obj \
+	test_checkdir.obj test_microdesc.obj test_pt.obj test_util.obj \
+        test_config.obj test_connection.obj \
 	test_cell_formats.obj test_relay.obj test_replay.obj \
 	test_scheduler.obj test_introduce.obj test_hs.obj tinytest.obj
 

@@ -16,10 +16,12 @@ int directories_have_accepted_server_descriptor(void);
 void directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
                                   dirinfo_type_t type, const char *payload,
                                   size_t payload_len, size_t extrainfo_len);
-MOCK_DECL(void, directory_get_from_dirserver, (uint8_t dir_purpose,
-                                               uint8_t router_purpose,
-                                               const char *resource,
-                                               int pds_flags));
+MOCK_DECL(void, directory_get_from_dirserver, (
+                          uint8_t dir_purpose,
+                          uint8_t router_purpose,
+                          const char *resource,
+                          int pds_flags,
+                          download_want_authority_t want_authority));
 void directory_get_from_all_authorities(uint8_t dir_purpose,
                                         uint8_t router_purpose,
                                         const char *resource);
@@ -72,6 +74,9 @@ void directory_initiate_command(const tor_addr_t *addr,
                                 const char *resource,
                                 const char *payload, size_t payload_len,
                                 time_t if_modified_since);
+int connection_dir_avoid_extra_connection_for_purpose(unsigned int purpose);
+int connection_dir_close_consensus_conn_if_extra(dir_connection_t *conn);
+void connection_dir_close_extra_consensus_conns(void);
 
 #define DSR_HEX       (1<<0)
 #define DSR_BASE64    (1<<1)
@@ -90,6 +95,8 @@ int router_supports_extrainfo(const char *identity_digest, int is_authority);
 time_t download_status_increment_failure(download_status_t *dls,
                                          int status_code, const char *item,
                                          int server, time_t now);
+time_t download_status_increment_attempt(download_status_t *dls,
+                                         const char *item,  time_t now);
 /** Increment the failure count of the download_status_t <b>dls</b>, with
  * the optional status code <b>sc</b>. */
 #define download_status_failed(dls, sc)                                 \
@@ -105,8 +112,9 @@ static inline int
 download_status_is_ready(download_status_t *dls, time_t now,
                          int max_failures)
 {
-  return (dls->n_download_failures <= max_failures
-          && dls->next_attempt_at <= now);
+  int under_failure_limit = (dls->n_download_failures <= max_failures
+                             && dls->n_download_attempts <= max_failures);
+  return (under_failure_limit && dls->next_attempt_at <= now);
 }
 
 static void download_status_mark_impossible(download_status_t *dl);
@@ -115,9 +123,12 @@ static inline void
 download_status_mark_impossible(download_status_t *dl)
 {
   dl->n_download_failures = IMPOSSIBLE_TO_DOWNLOAD;
+  dl->n_download_attempts = IMPOSSIBLE_TO_DOWNLOAD;
 }
 
 int download_status_get_n_failures(const download_status_t *dls);
+int download_status_get_n_attempts(const download_status_t *dls);
+time_t download_status_get_next_attempt_at(const download_status_t *dls);
 
 #ifdef TOR_UNIT_TESTS
 /* Used only by directory.c and test_dir.c */
@@ -131,6 +142,10 @@ STATIC int directory_handle_command_get(dir_connection_t *conn,
                                         const char *headers,
                                         const char *req_body,
                                         size_t req_body_len);
+int connection_dir_would_close_consensus_conn_helper(void);
+STATIC int download_status_schedule_get_delay(download_status_t *dls,
+                                              const smartlist_t *schedule,
+                                              time_t now);
 #endif
 
 #endif
