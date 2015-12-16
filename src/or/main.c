@@ -225,11 +225,13 @@ set_buffer_lengths_to_zero(tor_socket_t s)
 {
   int zero = 0;
   int r = 0;
-  if (setsockopt(s, SOL_SOCKET, SO_SNDBUF, (void*)&zero, sizeof(zero))) {
+  if (setsockopt(s, SOL_SOCKET, SO_SNDBUF, (void*)&zero,
+                 (socklen_t)sizeof(zero))) {
     log_warn(LD_NET, "Unable to clear SO_SNDBUF");
     r = -1;
   }
-  if (setsockopt(s, SOL_SOCKET, SO_RCVBUF, (void*)&zero, sizeof(zero))) {
+  if (setsockopt(s, SOL_SOCKET, SO_RCVBUF, (void*)&zero,
+                 (socklen_t)sizeof(zero))) {
     log_warn(LD_NET, "Unable to clear SO_RCVBUF");
     r = -1;
   }

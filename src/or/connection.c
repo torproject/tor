@@ -1139,7 +1139,8 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     if (options->TransProxyType_parsed == TPT_TPROXY &&
         type == CONN_TYPE_AP_TRANS_LISTENER) {
       int one = 1;
-      if (setsockopt(s, SOL_IP, IP_TRANSPARENT, &one, sizeof(one)) < 0) {
+      if (setsockopt(s, SOL_IP, IP_TRANSPARENT, (void*)&one,
+                     (socklen_t)sizeof(one)) < 0) {
         const char *extra = "";
         int e = tor_socket_errno(s);
         if (e == EPERM)
@@ -1162,7 +1163,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
       /* We need to set IPV6_V6ONLY so that this socket can't get used for
        * IPv4 connections. */
       if (setsockopt(s,IPPROTO_IPV6, IPV6_V6ONLY,
-                     (void*)&one, sizeof(one)) < 0) {
+                     (void*)&one, (socklen_t)sizeof(one)) < 0) {
         int e = tor_socket_errno(s);
         log_warn(LD_NET, "Error setting IPV6_V6ONLY flag: %s",
                  tor_socket_strerror(e));
