@@ -3668,10 +3668,10 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
  *
  * Returns NULL on policy errors.
  *
- * If there is a policy error, malformed_list is set to true if the entire
- * policy list should be discarded. Otherwise, it is set to false, and only
- * this item should be ignored - the rest of the policy list can continue to
- * be processed and used.
+ * Set *<b>malformed_list>/b> to true if the entire policy list should be
+ * discarded. Otherwise, set it to false, and only this item should be ignored
+ * on error - the rest of the policy list can continue to be processed and
+ * used.
  *
  * The addr_policy_t returned by this function can have its address set to
  * AF_UNSPEC for '*'.  Use policy_expand_unspec() to turn this into a pair
