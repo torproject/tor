@@ -185,7 +185,8 @@ tor_cond_init(tor_cond_t *cond)
     return -1;
   }
 
-#if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_MONOTONIC)
+#if defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_MONOTONIC) \
+  && defined(HAVE_PTHREAD_CONDATTR_SETCLOCK)
   /* Use monotonic time so when we timedwait() on it, any clock adjustment
    * won't affect the timeout value. */
   if (pthread_condattr_setclock(&condattr, CLOCK_MONOTONIC)) {
