@@ -1135,7 +1135,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
                tor_socket_strerror(errno));
     }
 
-#if defined USE_TRANSPARENT && defined(IP_TRANSPARENT)
+#if defined(USE_TRANSPARENT) && defined(IP_TRANSPARENT)
     if (options->TransProxyType_parsed == TPT_TPROXY &&
         type == CONN_TYPE_AP_TRANS_LISTENER) {
       int one = 1;
