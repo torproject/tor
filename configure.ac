@@ -422,6 +422,7 @@ AC_CHECK_FUNCS(
 if test "$bwin32" != true; then
   AC_CHECK_HEADERS(pthread.h)
   AC_CHECK_FUNCS(pthread_create)
+  AC_CHECK_FUNCS(pthread_condattr_setclock)
 fi
 
 if test "$bwin32" = true; then
