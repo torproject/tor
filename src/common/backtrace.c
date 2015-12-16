@@ -96,7 +96,7 @@ log_backtrace(int severity, int domain, const char *msg)
   tor_mutex_acquire(&cb_buf_mutex);
 
   depth = backtrace(cb_buf, MAX_DEPTH);
-  symbols = backtrace_symbols(cb_buf, depth);
+  symbols = backtrace_symbols(cb_buf, (int)depth);
 
   tor_log(severity, domain, "%s. Stack trace:", msg);
   if (!symbols) {
@@ -139,7 +139,7 @@ crash_handler(int sig, siginfo_t *si, void *ctx_)
 
   n_fds = tor_log_get_sigsafe_err_fds(&fds);
   for (i=0; i < n_fds; ++i)
-    backtrace_symbols_fd(cb_buf, depth, fds[i]);
+    backtrace_symbols_fd(cb_buf, (int)depth, fds[i]);
 
   abort();
 }
@@ -175,7 +175,7 @@ install_bt_handler(void)
      * reads won't be denied by the sandbox code */
     char **symbols;
     size_t depth = backtrace(cb_buf, MAX_DEPTH);
-    symbols = backtrace_symbols(cb_buf, depth);
+    symbols = backtrace_symbols(cb_buf, (int) depth);
     if (symbols)
       free(symbols);
   }
