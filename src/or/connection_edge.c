@@ -780,6 +780,15 @@ connection_ap_rescan_and_attach_pending(void)
   connection_ap_attach_pending(1);
 }
 
+#ifdef DEBUGGING_17659
+#define UNMARK() do {                           \
+    entry_conn->marked_pending_circ_line = 0;   \
+    entry_conn->marked_pending_circ_file = 0;   \
+  } while (0)
+#else
+#define UNMARK() do { } while (0)
+#endif
+
 /** Tell any AP streams that are listed as waiting for a new circuit to try
  * again, either attaching to an available circ or launching a new one.
  *
@@ -801,12 +810,14 @@ connection_ap_attach_pending(int retry)
     connection_t *conn = ENTRY_TO_CONN(entry_conn);
     tor_assert(conn && entry_conn);
     if (conn->marked_for_close) {
+      UNMARK();
       SMARTLIST_DEL_CURRENT(pending_entry_connections, entry_conn);
       continue;
     }
     if (conn->magic != ENTRY_CONNECTION_MAGIC) {
-      log_warn(LD_BUG, "%p has impossible magic value %u",
+      log_warn(LD_BUG, "%p has impossible magic value %u.",
                entry_conn, (unsigned)conn->magic);
+      UNMARK();
       SMARTLIST_DEL_CURRENT(pending_entry_connections, entry_conn);
       continue;
     }
@@ -815,6 +826,7 @@ connection_ap_attach_pending(int retry)
                "is %s. Why is it on pending_entry_connections?",
                entry_conn,
                conn_state_to_string(conn->type, conn->state));
+      UNMARK();
       SMARTLIST_DEL_CURRENT(pending_entry_connections, entry_conn);
       continue;
     }
@@ -828,6 +840,7 @@ connection_ap_attach_pending(int retry)
     if (conn->marked_for_close ||
         conn->type != CONN_TYPE_AP ||
         conn->state != AP_CONN_STATE_CIRCUIT_WAIT) {
+      UNMARK();
       SMARTLIST_DEL_CURRENT(pending_entry_connections, entry_conn);
       continue;
     }
@@ -862,11 +875,22 @@ connection_ap_mark_as_pending_circuit_(entry_connection_t *entry_conn,
   if (PREDICT_UNLIKELY(smartlist_contains(pending_entry_connections,
                                           entry_conn))) {
     log_warn(LD_BUG, "What?? pending_entry_connections already contains %p! "
-             "(called from %s:%d)",
+             "(Called from %s:%d.)",
              entry_conn, fname, lineno);
-    log_backtrace(LOG_WARN, LD_BUG, "To debug, this may help.");
+#ifdef DEBUGGING_17659
+    const char *f2 = entry_conn->marked_pending_circ_file;
+    log_warn(LD_BUG, "(Previously called from %s:%d.)\n",
+             f2 ? f2 : "<NULL>",
+             entry_conn->marked_pending_circ_line);
+#endif
+    log_backtrace(LOG_WARN, LD_BUG, "To debug, this may help");
     return;
   }
+
+#ifdef DEBUGGING_17659
+  entry_conn->marked_pending_circ_line = (uint16_t) lineno;
+  entry_conn->marked_pending_circ_file = fname;
+#endif
 
   untried_pending_connections = 1;
   smartlist_add(pending_entry_connections, entry_conn);
@@ -878,6 +902,7 @@ connection_ap_mark_as_non_pending_circuit(entry_connection_t *entry_conn)
 {
   if (PREDICT_UNLIKELY(NULL == pending_entry_connections))
     return;
+  UNMARK();
   smartlist_remove(pending_entry_connections, entry_conn);
 }
 

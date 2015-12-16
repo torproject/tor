@@ -1646,6 +1646,13 @@ typedef struct entry_connection_t {
    * request that we're going to try to answer.  */
   struct evdns_server_request *dns_server_request;
 
+#define DEBUGGING_17659
+
+#ifdef DEBUGGING_17659
+  uint16_t marked_pending_circ_line;
+  const char *marked_pending_circ_file;
+#endif
+
 #define NUM_CIRCUITS_LAUNCHED_THRESHOLD 10
   /** Number of times we've launched a circuit to handle this stream. If
     * it gets too high, that could indicate an inconsistency between our
