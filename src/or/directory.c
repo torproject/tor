@@ -3673,8 +3673,7 @@ connection_dir_finished_connecting(dir_connection_t *conn)
 static const smartlist_t *
 find_dl_schedule(download_status_t *dls, const or_options_t *options)
 {
-  /* XX/teor Replace with dir_server_mode from #12538 */
-  const int dir_server = options->DirPort_set;
+  const int dir_server = dir_server_mode(options);
   const int multi_d = networkstatus_consensus_can_use_multiple_directories(
                                                                     options);
   const int we_are_bootstrapping = networkstatus_consensus_is_boostrapping(
