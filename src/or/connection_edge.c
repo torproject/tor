@@ -765,6 +765,7 @@ connection_ap_rescan_and_attach_pending(void)
       continue;
 
     entry_conn = TO_ENTRY_CONN(conn);
+    tor_assert(entry_conn);
     if (! smartlist_contains(pending_entry_connections, entry_conn)) {
       log_warn(LD_BUG, "Found a connection %p that was supposed to be "
                "in pending_entry_connections, but wasn't. No worries; "
@@ -798,6 +799,7 @@ connection_ap_attach_pending(int retry)
   SMARTLIST_FOREACH_BEGIN(pending_entry_connections,
                           entry_connection_t *, entry_conn) {
     connection_t *conn = ENTRY_TO_CONN(entry_conn);
+    tor_assert(conn && entry_conn);
     if (conn->marked_for_close) {
       SMARTLIST_DEL_CURRENT(pending_entry_connections, entry_conn);
       continue;
