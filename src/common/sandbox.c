@@ -1630,7 +1630,7 @@ sigsys_debugging(int nr, siginfo_t *info, void *void_context)
 #ifdef USE_BACKTRACE
   n_fds = tor_log_get_sigsafe_err_fds(&fds);
   for (i=0; i < n_fds; ++i)
-    backtrace_symbols_fd(syscall_cb_buf, depth, fds[i]);
+    backtrace_symbols_fd(syscall_cb_buf, (int)depth, fds[i]);
 #endif
 
 #if defined(DEBUGGING_CLOSE)
