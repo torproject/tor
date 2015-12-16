@@ -2207,8 +2207,7 @@ switch_id(const char *user, const unsigned flags)
   (void)user;
   (void)flags;
 
-  log_warn(LD_CONFIG,
-           "User specified but switching users is unsupported on your OS.");
+  log_warn(LD_CONFIG, "Switching users is unsupported on your OS.");
   return -1;
 #endif
 }
