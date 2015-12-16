@@ -1739,21 +1739,23 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
       result = &selection->fake_status;
   }
 
-  if (n_busy_out)
-    *n_busy_out = n_busy;
-
   smartlist_free(direct);
   smartlist_free(tunnel);
   smartlist_free(overloaded_direct);
   smartlist_free(overloaded_tunnel);
 
-  if (result == NULL && try_excluding && !options->StrictNodes && n_excluded) {
+  if (result == NULL && try_excluding && !options->StrictNodes && n_excluded
+      && !n_busy) {
     /* If we got no result, and we are excluding nodes, and StrictNodes is
      * not set, try again without excluding nodes. */
     try_excluding = 0;
     n_excluded = 0;
+    n_busy = 0;
     goto retry_without_exclude;
   }
+
+  if (n_busy_out)
+    *n_busy_out = n_busy;
 
   return result;
 }

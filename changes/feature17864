@@ -1,0 +1,5 @@
+  o Minor feature (directory downloads):
+    - Wait for busy authorities and fallbacks to become non-busy when
+      bootstrapping. (A similar change was made in 6c443e987d for
+      directory servers chosen from the consensus.)
+      Closes ticket 17864; patch by "teor".
