@@ -1,0 +1,6 @@
+  o Minor feature (IPv6):
+    - Add address policy assume_action support for IPv6 addresses.
+    - Limit IPv6 mask bits to 128.
+    - Warn when comparing against an AF_UNSPEC address in a policy,
+      it's almost always a bug.
+      Closes ticket 17863; patch by "teor".

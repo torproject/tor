@@ -270,6 +270,93 @@ test_policies_general(void *arg)
   addr_policy_list_free(policy);
   policy = NULL;
 
+  /* make sure assume_action works */
+  malformed_list = 0;
+  p = router_parse_addr_policy_item_from_string("127.0.0.1",
+                                                ADDR_POLICY_ACCEPT,
+                                                &malformed_list);
+  tt_assert(p);
+  addr_policy_free(p);
+  tt_assert(!malformed_list);
+
+  p = router_parse_addr_policy_item_from_string("127.0.0.1:*",
+                                                ADDR_POLICY_ACCEPT,
+                                                &malformed_list);
+  tt_assert(p);
+  addr_policy_free(p);
+  tt_assert(!malformed_list);
+
+  p = router_parse_addr_policy_item_from_string("[::]",
+                                                ADDR_POLICY_ACCEPT,
+                                                &malformed_list);
+  tt_assert(p);
+  addr_policy_free(p);
+  tt_assert(!malformed_list);
+
+  p = router_parse_addr_policy_item_from_string("[::]:*",
+                                                ADDR_POLICY_ACCEPT,
+                                                &malformed_list);
+  tt_assert(p);
+  addr_policy_free(p);
+  tt_assert(!malformed_list);
+
+  p = router_parse_addr_policy_item_from_string("[face::b]",
+                                                ADDR_POLICY_ACCEPT,
+                                                &malformed_list);
+  tt_assert(p);
+  addr_policy_free(p);
+  tt_assert(!malformed_list);
+
+  p = router_parse_addr_policy_item_from_string("[b::aaaa]",
+                                                ADDR_POLICY_ACCEPT,
+                                                &malformed_list);
+  tt_assert(p);
+  addr_policy_free(p);
+  tt_assert(!malformed_list);
+
+  p = router_parse_addr_policy_item_from_string("*",
+                                                ADDR_POLICY_ACCEPT,
+                                                &malformed_list);
+  tt_assert(p);
+  addr_policy_free(p);
+  tt_assert(!malformed_list);
+
+  p = router_parse_addr_policy_item_from_string("*4",
+                                                ADDR_POLICY_ACCEPT,
+                                                &malformed_list);
+  tt_assert(p);
+  addr_policy_free(p);
+  tt_assert(!malformed_list);
+
+  p = router_parse_addr_policy_item_from_string("*6",
+                                                ADDR_POLICY_ACCEPT,
+                                                &malformed_list);
+  tt_assert(p);
+  addr_policy_free(p);
+  tt_assert(!malformed_list);
+
+  /* These are all ambiguous IPv6 addresses, it's good that we reject them */
+  p = router_parse_addr_policy_item_from_string("acce::abcd",
+                                                ADDR_POLICY_ACCEPT,
+                                                &malformed_list);
+  tt_assert(!p);
+  tt_assert(malformed_list);
+  malformed_list = 0;
+
+  p = router_parse_addr_policy_item_from_string("7:1234",
+                                                ADDR_POLICY_ACCEPT,
+                                                &malformed_list);
+  tt_assert(!p);
+  tt_assert(malformed_list);
+  malformed_list = 0;
+
+  p = router_parse_addr_policy_item_from_string("::",
+                                                ADDR_POLICY_ACCEPT,
+                                                &malformed_list);
+  tt_assert(!p);
+  tt_assert(malformed_list);
+  malformed_list = 0;
+
   /* make sure compacting logic works. */
   policy = NULL;
   line.key = (char*)"foo";

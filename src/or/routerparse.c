@@ -3684,8 +3684,8 @@ router_parse_addr_policy_item_from_string,(const char *s, int assume_action,
   directory_token_t *tok = NULL;
   const char *cp, *eos;
   /* Longest possible policy is
-   * "accept6 ffff:ffff:..255/128:10000-65535",
-   * which contains a max-length IPv6 address, plus 24 characters.
+   * "accept6 [ffff:ffff:..255]/128:10000-65535",
+   * which contains a max-length IPv6 address, plus 26 characters.
    * But note that there can be an arbitrary amount of space between the
    * accept and the address:mask/port element.
    * We don't need to multiply TOR_ADDR_BUF_LEN by 2, as there is only one
@@ -3697,9 +3697,12 @@ router_parse_addr_policy_item_from_string,(const char *s, int assume_action,
   memarea_t *area = NULL;
 
   tor_assert(malformed_list);
+  *malformed_list = 0;
 
   s = eat_whitespace(s);
-  if ((*s == '*' || TOR_ISDIGIT(*s)) && assume_action >= 0) {
+  /* We can only do assume_action on []-quoted IPv6, as "a" (accept)
+   * and ":" (port separator) are ambiguous */
+  if ((*s == '*' || *s == '[' || TOR_ISDIGIT(*s)) && assume_action >= 0) {
     if (tor_snprintf(line, sizeof(line), "%s %s",
                assume_action == ADDR_POLICY_ACCEPT?"accept":"reject", s)<0) {
       log_warn(LD_DIR, "Policy %s is too long.", escaped(s));
