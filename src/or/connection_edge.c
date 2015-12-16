@@ -538,6 +538,8 @@ connection_ap_about_to_close(entry_connection_t *entry_conn)
   edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(entry_conn);
   connection_t *conn = ENTRY_TO_CONN(entry_conn);
 
+  connection_edge_about_to_close(edge_conn);
+
   if (entry_conn->socks_request->has_finished == 0) {
     /* since conn gets removed right after this function finishes,
      * there's no point trying to send back a reply at this point. */
