@@ -75,6 +75,13 @@ check_can_bind_low_ports(void)
 int
 main(int argc, char **argv)
 {
+#if defined(_WIN32)
+  (void) argc;
+  (void) argv;
+
+  fprintf(stderr, "This test is not supported on your OS.\n");
+  return 1;
+#else
   const char *testname;
   if (argc != 3) {
     fprintf(stderr, "I want 2 arguments: a username and a command.\n");
@@ -177,5 +184,6 @@ main(int argc, char **argv)
   }
 
   return (okay ? 0 : 1);
+#endif
 }
 
