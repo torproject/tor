@@ -62,7 +62,11 @@ check_can_bind_low_ports(void)
     } else if (errno == EACCES || errno == EPERM) {
       /* Got a permission-denied error. */
       return 0;
+#if defined(_WIN32)
+    } else if (errno == WSAEADDRINUSE) {
+#else
     } else if (errno == EADDRINUSE) {
+#endif
       /* Huh; somebody is using that port. */
     } else {
       perror("bind");
