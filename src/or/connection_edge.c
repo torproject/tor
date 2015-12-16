@@ -527,27 +527,6 @@ connection_edge_about_to_close(edge_connection_t *edge_conn)
              conn->marked_for_close_file, conn->marked_for_close);
     tor_fragile_assert();
   }
-
-  if (TO_CONN(edge_conn)->type != CONN_TYPE_AP ||
-      PREDICT_UNLIKELY(NULL == pending_entry_connections))
-    return;
-
-  entry_connection_t *entry_conn = EDGE_TO_ENTRY_CONN(edge_conn);
-
-  if (TO_CONN(edge_conn)->state == AP_CONN_STATE_CIRCUIT_WAIT) {
-    smartlist_remove(pending_entry_connections, entry_conn);
-  }
-
-#if 1
-  /* Check to make sure that this isn't in pending_entry_connections if it
-   * didn't actually belong there. */
-  if (TO_CONN(edge_conn)->type == CONN_TYPE_AP &&
-      smartlist_contains(pending_entry_connections, entry_conn)) {
-    log_warn(LD_BUG, "What was %p doing in pending_entry_connections???",
-             entry_conn);
-    smartlist_remove(pending_entry_connections, entry_conn);
-  }
-#endif
 }
 
 /** Called when we're about to finally unlink and free an AP (client)
@@ -577,6 +556,22 @@ connection_ap_about_to_close(entry_connection_t *entry_conn)
              conn->marked_for_close_file, conn->marked_for_close);
     dnsserv_reject_request(entry_conn);
   }
+
+  if (TO_CONN(edge_conn)->state == AP_CONN_STATE_CIRCUIT_WAIT) {
+    smartlist_remove(pending_entry_connections, entry_conn);
+  }
+
+#if 1
+  /* Check to make sure that this isn't in pending_entry_connections if it
+   * didn't actually belong there. */
+  if (TO_CONN(edge_conn)->type == CONN_TYPE_AP &&
+      smartlist_contains(pending_entry_connections, entry_conn)) {
+    log_warn(LD_BUG, "What was %p doing in pending_entry_connections???",
+             entry_conn);
+    smartlist_remove(pending_entry_connections, entry_conn);
+  }
+#endif
+
   control_event_stream_bandwidth(edge_conn);
   control_event_stream_status(entry_conn, STREAM_EVENT_CLOSED,
                               edge_conn->end_reason);
