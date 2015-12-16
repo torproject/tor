@@ -1154,12 +1154,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
 
 #ifdef IPV6_V6ONLY
     if (listensockaddr->sa_family == AF_INET6) {
-#ifdef _WIN32
-      /* In Redmond, this kind of thing passes for standards-conformance. */
-      DWORD one = 1;
-#else
       int one = 1;
-#endif
       /* We need to set IPV6_V6ONLY so that this socket can't get used for
        * IPv4 connections. */
       if (setsockopt(s,IPPROTO_IPV6, IPV6_V6ONLY,
