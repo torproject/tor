@@ -14,8 +14,6 @@
 #define TEST_SETUID_KEEPCAPS         4
 #define TEST_SETUID_STRICT           5
 
-static const char *username;
-
 static const struct {
   const char *name;
   int test_id;
@@ -29,6 +27,7 @@ static const struct {
   { NULL, 0 }
 };
 
+#if !defined(_WIN32)
 /* 0 on no, 1 on yes, -1 on failure. */
 static int
 check_can_bind_low_ports(void)
@@ -63,11 +62,7 @@ check_can_bind_low_ports(void)
     } else if (errno == EACCES || errno == EPERM) {
       /* Got a permission-denied error. */
       return 0;
-#if defined(_WIN32)
-    } else if (errno == WSAEADDRINUSE) {
-#else
     } else if (errno == EADDRINUSE) {
-#endif
       /* Huh; somebody is using that port. */
     } else {
       perror("bind");
@@ -76,6 +71,7 @@ check_can_bind_low_ports(void)
 
   return -1;
 }
+#endif
 
 int
 main(int argc, char **argv)
@@ -87,6 +83,7 @@ main(int argc, char **argv)
   fprintf(stderr, "This test is not supported on your OS.\n");
   return 77;
 #else
+  const char *username;
   const char *testname;
   if (argc != 3) {
     fprintf(stderr, "I want 2 arguments: a username and a command.\n");
