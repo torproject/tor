@@ -800,20 +800,23 @@ connection_ap_attach_pending(int retry)
   if (untried_pending_connections == 0 && !retry)
     return;
 
-  SMARTLIST_FOREACH_BEGIN(pending_entry_connections,
+  /* Don't allow modifications to pending_entry_connections while we are
+   * iterating over it. */
+  smartlist_t *pending = pending_entry_connections;
+  pending_entry_connections = smartlist_new();
+
+  SMARTLIST_FOREACH_BEGIN(pending,
                           entry_connection_t *, entry_conn) {
     connection_t *conn = ENTRY_TO_CONN(entry_conn);
     tor_assert(conn && entry_conn);
     if (conn->marked_for_close) {
       UNMARK();
-      SMARTLIST_DEL_CURRENT(pending_entry_connections, entry_conn);
       continue;
     }
     if (conn->magic != ENTRY_CONNECTION_MAGIC) {
       log_warn(LD_BUG, "%p has impossible magic value %u.",
                entry_conn, (unsigned)conn->magic);
       UNMARK();
-      SMARTLIST_DEL_CURRENT(pending_entry_connections, entry_conn);
       continue;
     }
     if (conn->state != AP_CONN_STATE_CIRCUIT_WAIT) {
@@ -822,7 +825,6 @@ connection_ap_attach_pending(int retry)
                entry_conn,
                conn_state_to_string(conn->type, conn->state));
       UNMARK();
-      SMARTLIST_DEL_CURRENT(pending_entry_connections, entry_conn);
       continue;
     }
 
@@ -832,18 +834,19 @@ connection_ap_attach_pending(int retry)
                                       END_STREAM_REASON_CANT_ATTACH);
     }
 
-    if (conn->marked_for_close ||
-        conn->type != CONN_TYPE_AP ||
-        conn->state != AP_CONN_STATE_CIRCUIT_WAIT) {
-      UNMARK();
-      SMARTLIST_DEL_CURRENT(pending_entry_connections, entry_conn);
-      continue;
+    if (! conn->marked_for_close &&
+        conn->type == CONN_TYPE_AP &&
+        conn->state == AP_CONN_STATE_CIRCUIT_WAIT) {
+      if (!smartlist_contains(pending_entry_connections, entry_conn)) {
+        smartlist_add(pending_entry_connections, entry_conn);
+        continue;
+      }
     }
 
-    tor_assert(conn->magic == ENTRY_CONNECTION_MAGIC);
-
+    UNMARK();
   } SMARTLIST_FOREACH_END(entry_conn);
 
+  smartlist_free(pending);
   untried_pending_connections = 0;
 }
 
