@@ -3462,6 +3462,9 @@ sandbox_init_filter(void)
                          ".tmp");
     OPEN_DATADIR2_SUFFIX("keys", "ed25519_master_id_public_key", ".tmp");
     OPEN_DATADIR2_SUFFIX("keys", "ed25519_signing_secret_key", ".tmp");
+    OPEN_DATADIR2_SUFFIX("keys", "ed25519_signing_secret_key_encrypted",
+                         ".tmp");
+    OPEN_DATADIR2_SUFFIX("keys", "ed25519_signing_public_key", ".tmp");
     OPEN_DATADIR2_SUFFIX("keys", "ed25519_signing_cert", ".tmp");
 
     OPEN_DATADIR2_SUFFIX("stats", "bridge-stats", ".tmp");
