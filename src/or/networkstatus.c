@@ -1286,14 +1286,14 @@ networkstatus_consensus_is_boostrapping(time_t now)
 }
 
 /** Check if we can use multiple directories for a consensus download.
- * Only clients (including bridges, but excluding bridge clients) benefit
+ * Only clients (including bridge relays, which act like clients) benefit
  * from multiple simultaneous consensus downloads. */
 int
 networkstatus_consensus_can_use_multiple_directories(
                                                   const or_options_t *options)
 {
   /* If we are a client, bridge, bridge client, or hidden service */
-  return (!directory_fetches_from_authorities(options));
+  return !public_server_mode(options);
 }
 
 /** Check if we can use fallback directory mirrors for a consensus download.
