@@ -1457,8 +1457,8 @@ static int server_is_advertised=0;
 
 /** Return true iff we have published our descriptor lately.
  */
-int
-advertised_server_mode(void)
+MOCK_IMPL(int,
+advertised_server_mode,(void))
 {
   return server_is_advertised;
 }
@@ -1820,8 +1820,8 @@ static int router_guess_address_from_dir_headers(uint32_t *guess);
  * it's configured in torrc, or because we've learned it from
  * dirserver headers. Place the answer in *<b>addr</b> and return
  * 0 on success, else return -1 if we have no guess. */
-int
-router_pick_published_address(const or_options_t *options, uint32_t *addr)
+MOCK_IMPL(int,
+router_pick_published_address,(const or_options_t *options, uint32_t *addr))
 {
   *addr = get_last_resolved_addr();
   if (!*addr &&

@@ -19,6 +19,8 @@
 #include "transports.h"
 #include "routerlist.h"
 #include "networkstatus.h"
+#include "router.h"
+#include "dirserv.h"
 
 static void
 test_config_addressmap(void *arg)
@@ -3450,22 +3452,74 @@ test_config_default_dir_servers(void *arg)
   or_options_free(opts);
 }
 
+static int mock_router_pick_published_address_result = 0;
+
+static int
+mock_router_pick_published_address(const or_options_t *options, uint32_t *addr)
+{
+  (void)options;
+  (void)addr;
+  return mock_router_pick_published_address_result;
+}
+
+static int mock_router_my_exit_policy_is_reject_star_result = 0;
+
+static int
+mock_router_my_exit_policy_is_reject_star(void)
+{
+  return mock_router_my_exit_policy_is_reject_star_result;
+}
+
+static int mock_advertised_server_mode_result = 0;
+
+static int
+mock_advertised_server_mode(void)
+{
+  return mock_advertised_server_mode_result;
+}
+
+static routerinfo_t *mock_router_get_my_routerinfo_result = NULL;
+
+static const routerinfo_t *
+mock_router_get_my_routerinfo(void)
+{
+  return mock_router_get_my_routerinfo_result;
+}
+
 static void
-test_config_use_multiple_directories(void *arg)
+test_config_directory_fetch(void *arg)
 {
   (void)arg;
 
+  /* Test Setup */
   or_options_t *options = tor_malloc_zero(sizeof(or_options_t));
+  routerinfo_t routerinfo;
+  memset(&routerinfo, 0, sizeof(routerinfo));
+  mock_router_pick_published_address_result = -1;
+  mock_router_my_exit_policy_is_reject_star_result = 1;
+  mock_advertised_server_mode_result = 0;
+  mock_router_get_my_routerinfo_result = NULL;
+  MOCK(router_pick_published_address, mock_router_pick_published_address);
+  MOCK(router_my_exit_policy_is_reject_star,
+       mock_router_my_exit_policy_is_reject_star);
+  MOCK(advertised_server_mode, mock_advertised_server_mode);
+  MOCK(router_get_my_routerinfo, mock_router_get_my_routerinfo);
 
   /* Clients can use multiple directory mirrors for bootstrap */
   memset(options, 0, sizeof(or_options_t));
   options->ClientOnly = 1;
+  tt_assert(server_mode(options) == 0);
+  tt_assert(public_server_mode(options) == 0);
+  tt_assert(directory_fetches_from_authorities(options) == 0);
   tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
             == 1);
 
   /* Bridge Clients can use multiple directory mirrors for bootstrap */
   memset(options, 0, sizeof(or_options_t));
   options->UseBridges = 1;
+  tt_assert(server_mode(options) == 0);
+  tt_assert(public_server_mode(options) == 0);
+  tt_assert(directory_fetches_from_authorities(options) == 0);
   tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
             == 1);
 
@@ -3473,23 +3527,130 @@ test_config_use_multiple_directories(void *arg)
    * directory mirrors for bootstrap */
   memset(options, 0, sizeof(or_options_t));
   options->BridgeRelay = 1;
+  options->ORPort_set = 1;
+  tt_assert(server_mode(options) == 1);
+  tt_assert(public_server_mode(options) == 0);
+  tt_assert(directory_fetches_from_authorities(options) == 0);
   tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
             == 1);
 
-  /* Clients set to FetchDirInfoEarly must fetch it from the authorities */
+  /* Clients set to FetchDirInfoEarly must fetch it from the authorities,
+   * but can use multiple authorities for bootstrap */
   memset(options, 0, sizeof(or_options_t));
   options->FetchDirInfoEarly = 1;
+  tt_assert(server_mode(options) == 0);
+  tt_assert(public_server_mode(options) == 0);
+  tt_assert(directory_fetches_from_authorities(options) == 1);
+  tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
+            == 1);
+
+  /* OR servers only fetch the consensus from the authorities when they don't
+   * know their own address, but never use multiple directories for bootstrap
+   */
+  memset(options, 0, sizeof(or_options_t));
+  options->ORPort_set = 1;
+
+  mock_router_pick_published_address_result = -1;
+  tt_assert(server_mode(options) == 1);
+  tt_assert(public_server_mode(options) == 1);
+  tt_assert(directory_fetches_from_authorities(options) == 1);
   tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
             == 0);
 
-  /* OR servers must fetch the consensus from the authorities */
+  mock_router_pick_published_address_result = 0;
+  tt_assert(server_mode(options) == 1);
+  tt_assert(public_server_mode(options) == 1);
+  tt_assert(directory_fetches_from_authorities(options) == 0);
+  tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
+            == 0);
+
+  /* Exit OR servers only fetch the consensus from the authorities when they
+   * refuse unknown exits, but never use multiple directories for bootstrap
+   */
   memset(options, 0, sizeof(or_options_t));
   options->ORPort_set = 1;
+  options->ExitRelay = 1;
+  mock_router_pick_published_address_result = 0;
+  mock_router_my_exit_policy_is_reject_star_result = 0;
+  mock_advertised_server_mode_result = 1;
+  mock_router_get_my_routerinfo_result = &routerinfo;
+
+  options->RefuseUnknownExits = 1;
+  tt_assert(server_mode(options) == 1);
+  tt_assert(public_server_mode(options) == 1);
+  tt_assert(directory_fetches_from_authorities(options) == 1);
+  tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
+            == 0);
+
+  options->RefuseUnknownExits = 0;
+  mock_router_pick_published_address_result = 0;
+  tt_assert(server_mode(options) == 1);
+  tt_assert(public_server_mode(options) == 1);
+  tt_assert(directory_fetches_from_authorities(options) == 0);
+  tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
+            == 0);
+
+  /* Dir servers fetch the consensus from the authorities, unless they are not
+   * advertising themselves (hibernating) or have no routerinfo or are not
+   * advertising their dirport, and never use multiple directories for
+   * bootstrap. This only applies if they are also OR servers.
+   * (We don't care much about the behaviour of non-OR directory servers.) */
+  memset(options, 0, sizeof(or_options_t));
+  options->DirPort_set = 1;
+  options->ORPort_set = 1;
+  mock_router_pick_published_address_result = 0;
+  mock_router_my_exit_policy_is_reject_star_result = 1;
+
+  mock_advertised_server_mode_result = 1;
+  routerinfo.dir_port = 1;
+  mock_router_get_my_routerinfo_result = &routerinfo;
+  tt_assert(server_mode(options) == 1);
+  tt_assert(public_server_mode(options) == 1);
+  tt_assert(directory_fetches_from_authorities(options) == 1);
+  tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
+            == 0);
+
+  mock_advertised_server_mode_result = 0;
+  routerinfo.dir_port = 1;
+  mock_router_get_my_routerinfo_result = &routerinfo;
+  tt_assert(server_mode(options) == 1);
+  tt_assert(public_server_mode(options) == 1);
+  tt_assert(directory_fetches_from_authorities(options) == 0);
+  tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
+            == 0);
+
+  mock_advertised_server_mode_result = 1;
+  mock_router_get_my_routerinfo_result = NULL;
+  tt_assert(server_mode(options) == 1);
+  tt_assert(public_server_mode(options) == 1);
+  tt_assert(directory_fetches_from_authorities(options) == 0);
+  tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
+            == 0);
+
+  mock_advertised_server_mode_result = 1;
+  routerinfo.dir_port = 0;
+  mock_router_get_my_routerinfo_result = &routerinfo;
+  tt_assert(server_mode(options) == 1);
+  tt_assert(public_server_mode(options) == 1);
+  tt_assert(directory_fetches_from_authorities(options) == 0);
+  tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
+            == 0);
+
+  mock_advertised_server_mode_result = 1;
+  routerinfo.dir_port = 1;
+  mock_router_get_my_routerinfo_result = &routerinfo;
+  tt_assert(server_mode(options) == 1);
+  tt_assert(public_server_mode(options) == 1);
+  tt_assert(directory_fetches_from_authorities(options) == 1);
   tt_assert(networkstatus_consensus_can_use_multiple_directories(options)
             == 0);
 
  done:
   tor_free(options);
+  UNMOCK(router_pick_published_address);
+  UNMOCK(router_get_my_routerinfo);
+  UNMOCK(advertised_server_mode);
+  UNMOCK(router_my_exit_policy_is_reject_star);
 }
 
 static void
@@ -3539,7 +3700,7 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(check_or_create_data_subdir, TT_FORK),
   CONFIG_TEST(write_to_data_subdir, TT_FORK),
   CONFIG_TEST(fix_my_family, 0),
-  CONFIG_TEST(use_multiple_directories, 0),
+  CONFIG_TEST(directory_fetch, 0),
   END_OF_TESTCASES
 };
 
