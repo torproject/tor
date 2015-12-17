@@ -67,7 +67,7 @@ uint16_t router_get_advertised_dir_port(const or_options_t *options,
 
 MOCK_DECL(int, server_mode, (const or_options_t *options));
 MOCK_DECL(int, public_server_mode, (const or_options_t *options));
-int advertised_server_mode(void);
+MOCK_DECL(int, advertised_server_mode, (void));
 int proxy_mode(const or_options_t *options);
 void consider_publishable_server(int force);
 int should_refuse_unknown_exits(const or_options_t *options);
@@ -89,7 +89,8 @@ int router_digest_is_me(const char *digest);
 const uint8_t *router_get_my_id_digest(void);
 int router_extrainfo_digest_is_me(const char *digest);
 int router_is_me(const routerinfo_t *router);
-int router_pick_published_address(const or_options_t *options, uint32_t *addr);
+MOCK_DECL(int,router_pick_published_address,(const or_options_t *options,
+                                             uint32_t *addr));
 int router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e);
 int router_rebuild_descriptor(int force);
 char *router_dump_router_to_string(routerinfo_t *router,
