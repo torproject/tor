@@ -85,7 +85,7 @@ main(int argc, char **argv)
   (void) argv;
 
   fprintf(stderr, "This test is not supported on your OS.\n");
-  return 1;
+  return 77;
 #else
   const char *testname;
   if (argc != 3) {
