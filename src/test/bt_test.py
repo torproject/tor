@@ -15,6 +15,7 @@ OK
 
 """
 
+from __future__ import print_function
 import sys
 
 
@@ -37,6 +38,8 @@ for I in range(len(LINES)):
     if matches(LINES[I:], FUNCNAMES):
         print("OK")
         sys.exit(0)
-else:
-    print("BAD")
-    sys.exit(1)
+
+for l in LINES:
+    print("{}".format(l), end="")
+
+sys.exit(1)
