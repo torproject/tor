@@ -115,6 +115,10 @@ streamid_t get_unique_stream_id_by_circ(origin_circuit_t *circ);
 
 void connection_edge_free_all(void);
 
+void connection_ap_warn_and_unmark_if_pending_circ(
+                                             entry_connection_t *entry_conn,
+                                             const char *where);
+
 /** @name Begin-cell flags
  *
  * These flags are used in RELAY_BEGIN cells to change the default behavior

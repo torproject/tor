@@ -566,11 +566,9 @@ connection_ap_about_to_close(entry_connection_t *entry_conn)
 #if 1
   /* Check to make sure that this isn't in pending_entry_connections if it
    * didn't actually belong there. */
-  if (TO_CONN(edge_conn)->type == CONN_TYPE_AP &&
-      smartlist_contains(pending_entry_connections, entry_conn)) {
-    log_warn(LD_BUG, "What was %p doing in pending_entry_connections???",
-             entry_conn);
-    smartlist_remove(pending_entry_connections, entry_conn);
+  if (TO_CONN(edge_conn)->type == CONN_TYPE_AP) {
+    connection_ap_warn_and_unmark_if_pending_circ(entry_conn,
+                                                  "about_to_close");
   }
 #endif
 
@@ -901,6 +899,19 @@ connection_ap_mark_as_non_pending_circuit(entry_connection_t *entry_conn)
     return;
   UNMARK();
   smartlist_remove(pending_entry_connections, entry_conn);
+}
+
+/** DOCDOC */
+void
+connection_ap_warn_and_unmark_if_pending_circ(entry_connection_t *entry_conn,
+                                              const char *where)
+{
+  if (pending_entry_connections &&
+      smartlist_contains(pending_entry_connections, entry_conn)) {
+    log_warn(LD_BUG, "What was %p doing in pending_entry_connections in %s?",
+             entry_conn, where);
+    connection_ap_mark_as_non_pending_circuit(entry_conn);
+  }
 }
 
 /** Tell any AP streams that are waiting for a one-hop tunnel to

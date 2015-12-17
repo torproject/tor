@@ -678,6 +678,13 @@ connection_free,(connection_t *conn))
   if (conn->type == CONN_TYPE_CONTROL) {
     connection_control_closed(TO_CONTROL_CONN(conn));
   }
+#if 1
+  /* DEBUGGING */
+  if (conn->type == CONN_TYPE_AP) {
+    connection_ap_warn_and_unmark_if_pending_circ(TO_ENTRY_CONN(conn),
+                                                  "connection_free");
+  }
+#endif
   connection_unregister_events(conn);
   connection_free_(conn);
 }
