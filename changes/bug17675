@@ -1,0 +1,4 @@
+  o Minor bugfixes (linux seccomp2 sandbox):
+    - Fix a crash when using offline master ed25519 keys with the
+      Linux seccomp2 sandbox enabled. Fixes bug 17675; bugfix on
+      0.2.7.3-alpha.
