@@ -215,9 +215,10 @@ int
 configure_backtrace_handler(const char *tor_version)
 {
   tor_free(bt_version);
-  if (!tor_version)
-    tor_version = "";
-  tor_asprintf(&bt_version, "Tor %s", tor_version);
+  if (tor_version)
+    tor_asprintf(&bt_version, "Tor %s", tor_version);
+  else
+    tor_asprintf(&bt_version, "Tor");
 
   return install_bt_handler();
 }
