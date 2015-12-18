@@ -738,7 +738,8 @@ NS(test_main)(void *arg)
   NS_UNMOCK(launch_resolve);
   tor_free(on_circ);
   tor_free(TO_CONN(exitconn)->address);
-  tor_free(cache_entry->pending_connections);
+  if (cache_entry)
+    tor_free(cache_entry->pending_connections);
   tor_free(cache_entry);
   tor_free(exitconn);
   return;
