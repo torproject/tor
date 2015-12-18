@@ -1128,7 +1128,9 @@ test_tortls_check_lifetime(void *ignored)
   ret = tor_tls_check_lifetime(LOG_WARN, tls, 0, 0);
   tt_int_op(ret, OP_EQ, 0);
 
+  ASN1_STRING_free(validCert->cert_info->validity->notBefore);
   validCert->cert_info->validity->notBefore = ASN1_TIME_set(NULL, now-10);
+  ASN1_STRING_free(validCert->cert_info->validity->notAfter);
   validCert->cert_info->validity->notAfter = ASN1_TIME_set(NULL, now+60);
 
   ret = tor_tls_check_lifetime(LOG_WARN, tls, 0, -1000);
@@ -1454,17 +1456,21 @@ test_tortls_try_to_extract_certs_from_tls(void *ignored)
   try_to_extract_certs_from_tls(LOG_WARN, tls, &cert, &id_cert);
   tt_assert(cert == c1);
   tt_assert(!id_cert);
+  X509_free(cert); /* decrease refcnt */
 
   sess->cert_chain = sk_X509_new_null();
   try_to_extract_certs_from_tls(LOG_WARN, tls, &cert, &id_cert);
   tt_assert(cert == c1);
   tt_assert(!id_cert);
+  X509_free(cert); /* decrease refcnt */
 
   sk_X509_push(sess->cert_chain, c1);
   sk_X509_push(sess->cert_chain, c2);
   try_to_extract_certs_from_tls(LOG_WARN, tls, &cert, &id_cert);
   tt_assert(cert == c1);
   tt_assert(id_cert);
+  X509_free(cert); /* decrease refcnt */
+  X509_free(id_cert); /* decrease refcnt */
 
  done:
   sk_X509_free(sess->cert_chain);
@@ -1472,6 +1478,8 @@ test_tortls_try_to_extract_certs_from_tls(void *ignored)
   tor_free(tls->ssl->session);
   tor_free(tls->ssl);
   tor_free(tls);
+  X509_free(c1);
+  X509_free(c2);
 }
 #endif
 
