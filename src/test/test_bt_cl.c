@@ -119,6 +119,7 @@ main(int argc, char **argv)
   printf("%d\n", we_weave(2));
 
   clean_up_backtrace_handler();
+  logs_free_all();
 
   return 0;
 }
