@@ -1778,7 +1778,7 @@ pick_tor2web_rendezvous_node(router_crn_flags_t flags,
   router_add_running_nodes_to_smartlist(all_live_nodes,
                                         allow_invalid,
                                         0, 0, 0,
-                                        need_desc);
+                                        need_desc, 0);
 
   /* Filter all_live_nodes to only add live *and* whitelisted RPs to
    * the list whitelisted_live_rps. */
@@ -2144,7 +2144,9 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
   const node_t *choice;
   smartlist_t *excluded;
   const or_options_t *options = get_options();
-  router_crn_flags_t flags = CRN_NEED_GUARD|CRN_NEED_DESC;
+  /* If possible, choose an entry server with a preferred address,
+   * otherwise, choose one with an allowed address */
+  router_crn_flags_t flags = CRN_NEED_GUARD|CRN_NEED_DESC|CRN_PREF_ADDR;
   const node_t *node;
 
   if (state && options->UseEntryGuards &&
@@ -2161,12 +2163,6 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
      * family. */
     nodelist_add_node_and_family(excluded, node);
   }
-  /* Exclude all ORs that we can't reach through our firewall */
-  smartlist_t *nodes = nodelist_get_list();
-  SMARTLIST_FOREACH(nodes, const node_t *, node, {
-    if (!fascist_firewall_allows_node(node, FIREWALL_OR_CONNECTION, 0))
-      smartlist_add(excluded, (void*)node);
-  });
   /* and exclude current entry guards and their families,
    * unless we're in a test network, and excluding guards
    * would exclude all nodes (i.e. we're in an incredibly small tor network,
@@ -2332,8 +2328,9 @@ extend_info_from_node(const node_t *node, int for_direct_connect)
   if (node->ri == NULL && (node->rs == NULL || node->md == NULL))
     return NULL;
 
+  /* Choose a preferred address first, but fall back to an allowed address*/
   if (for_direct_connect)
-    node_get_pref_orport(node, &ap);
+    fascist_firewall_choose_address_node(node, FIREWALL_OR_CONNECTION, 0, &ap);
   else
     node_get_prim_orport(node, &ap);
 

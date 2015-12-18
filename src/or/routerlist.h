@@ -61,7 +61,8 @@ void router_reset_status_download_failures(void);
 int routers_have_same_or_addrs(const routerinfo_t *r1, const routerinfo_t *r2);
 void router_add_running_nodes_to_smartlist(smartlist_t *sl, int allow_invalid,
                                            int need_uptime, int need_capacity,
-                                           int need_guard, int need_desc);
+                                           int need_guard, int need_desc,
+                                           int pref_addr);
 
 const routerinfo_t *routerlist_find_my_routerinfo(void);
 uint32_t router_get_advertised_bandwidth(const routerinfo_t *router);

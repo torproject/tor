@@ -5221,7 +5221,9 @@ typedef enum {
   CRN_ALLOW_INVALID = 1<<3,
   /* XXXX not used, apparently. */
   CRN_WEIGHT_AS_EXIT = 1<<5,
-  CRN_NEED_DESC = 1<<6
+  CRN_NEED_DESC = 1<<6,
+  /* On clients, only provide nodes that satisfy ClientPreferIPv6OR */
+  CRN_PREF_ADDR = 1<<7
 } router_crn_flags_t;
 
 /** Return value for router_add_to_routerlist() and dirserv_add_descriptor() */

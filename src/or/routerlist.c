@@ -1826,7 +1826,8 @@ routerlist_add_node_and_family(smartlist_t *sl, const routerinfo_t *router)
 void
 router_add_running_nodes_to_smartlist(smartlist_t *sl, int allow_invalid,
                                       int need_uptime, int need_capacity,
-                                      int need_guard, int need_desc)
+                                      int need_guard, int need_desc,
+                                      int pref_addr)
 { /* XXXX MOVE */
   SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), const node_t *, node) {
     if (!node->is_running ||
@@ -1837,6 +1838,9 @@ router_add_running_nodes_to_smartlist(smartlist_t *sl, int allow_invalid,
     if (node->ri && node->ri->purpose != ROUTER_PURPOSE_GENERAL)
       continue;
     if (node_is_unreliable(node, need_uptime, need_capacity, need_guard))
+      continue;
+    /* Choose a node with a preferred OR address */
+    if (!fascist_firewall_allows_node(node, FIREWALL_OR_CONNECTION, pref_addr))
       continue;
 
     smartlist_add(sl, (void *)node);
@@ -2299,6 +2303,10 @@ node_sl_choose_by_bandwidth(const smartlist_t *sl,
  * If <b>CRN_NEED_DESC</b> is set in flags, we only consider nodes that
  * have a routerinfo or microdescriptor -- that is, enough info to be
  * used to build a circuit.
+ * If <b>CRN_PREF_ADDR</b> is set in flags, we only consider nodes that
+ * have an address that is preferred by the ClientPreferIPv6ORPort setting
+ * (regardless of this flag, we exclude nodes that aren't allowed by the
+ * firewall, including ClientUseIPv4 0 and ClientUseIPv6 0).
  */
 const node_t *
 router_choose_random_node(smartlist_t *excludedsmartlist,
@@ -2311,6 +2319,7 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
   const int allow_invalid = (flags & CRN_ALLOW_INVALID) != 0;
   const int weight_for_exit = (flags & CRN_WEIGHT_AS_EXIT) != 0;
   const int need_desc = (flags & CRN_NEED_DESC) != 0;
+  const int pref_addr = (flags & CRN_PREF_ADDR) != 0;
 
   smartlist_t *sl=smartlist_new(),
     *excludednodes=smartlist_new();
@@ -2336,7 +2345,7 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
 
   router_add_running_nodes_to_smartlist(sl, allow_invalid,
                                         need_uptime, need_capacity,
-                                        need_guard, need_desc);
+                                        need_guard, need_desc, pref_addr);
   log_debug(LD_CIRC,
            "We found %d running nodes.",
             smartlist_len(sl));
@@ -2365,7 +2374,7 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
   choice = node_sl_choose_by_bandwidth(sl, rule);
 
   smartlist_free(sl);
-  if (!choice && (need_uptime || need_capacity || need_guard)) {
+  if (!choice && (need_uptime || need_capacity || need_guard || pref_addr)) {
     /* try once more -- recurse but with fewer restrictions. */
     log_info(LD_CIRC,
              "We couldn't find any live%s%s%s routers; falling back "
@@ -2373,7 +2382,8 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
              need_capacity?", fast":"",
              need_uptime?", stable":"",
              need_guard?", guard":"");
-    flags &= ~ (CRN_NEED_UPTIME|CRN_NEED_CAPACITY|CRN_NEED_GUARD);
+    flags &= ~ (CRN_NEED_UPTIME|CRN_NEED_CAPACITY|CRN_NEED_GUARD|
+                CRN_PREF_ADDR);
     choice = router_choose_random_node(
                      excludedsmartlist, excludedset, flags);
   }
