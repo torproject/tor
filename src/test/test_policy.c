@@ -1021,6 +1021,8 @@ test_policies_getinfo_helper_policies(void *arg)
   const char *errmsg = NULL;
   routerinfo_t mock_my_routerinfo;
 
+  memset(&mock_my_routerinfo, 0, sizeof(mock_my_routerinfo));
+
   rv = getinfo_helper_policies(NULL, "exit-policy/default", &answer, &errmsg);
   tt_assert(rv == 0);
   tt_assert(answer != NULL);
