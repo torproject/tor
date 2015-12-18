@@ -222,6 +222,7 @@ static config_var_t option_vars_[] = {
   V(DirPortFrontPage,            FILENAME, NULL),
   VAR("DirReqStatistics",        BOOL,     DirReqStatistics_option, "1"),
   VAR("DirAuthority",            LINELIST, DirAuthorities, NULL),
+  V(DirCache,                    BOOL,     "1"),
   V(DirAuthorityFallbackRate,    DOUBLE,   "1.0"),
   V(DisableAllSwap,              BOOL,     "0"),
   V(DisableDebuggerAttachment,   BOOL,     "1"),
@@ -3457,6 +3458,24 @@ options_validate(or_options_t *old_options, or_options_t *options,
       REJECT("AccountingRule must be 'sum' or 'max'");
   }
 
+  if (options->DirPort_set && !options->DirCache) {
+    REJECT("DirPort configured but DirCache disabled. DirPort requires "
+           "DirCache.");
+  }
+
+  if (options->BridgeRelay && !options->DirCache) {
+    REJECT("We're a bridge but DirCache is disabled. BridgeRelay requires "
+           "DirCache.");
+  }
+
+  if (server_mode(options)) {
+    char *msg = NULL;
+    if (have_enough_mem_for_dircache(options, 0, &msg)) {
+      log_warn(LD_CONFIG, "%s", msg);
+      tor_free(msg);
+    }
+  }
+
   if (options->HTTPProxy) { /* parse it now */
     if (tor_addr_port_lookup(options->HTTPProxy,
                         &options->HTTPProxyAddr, &options->HTTPProxyPort) < 0)
@@ -4065,6 +4084,48 @@ compute_real_max_mem_in_queues(const uint64_t val, int log_guess)
   }
 }
 
+/* If we have less than 300 MB suggest disabling dircache */
+#define DIRCACHE_MIN_MB_BANDWIDTH 300
+#define DIRCACHE_MIN_BANDWIDTH (DIRCACHE_MIN_MB_BANDWIDTH*ONE_MEGABYTE)
+#define STRINGIFY(val) #val
+
+/** Create a warning message for emitting if we are a dircache but may not have
+ * enough system memory, or if we are not a dircache but probably should be.
+ * Return -1 when a message is returned in *msg*, else return 0. */
+STATIC int
+have_enough_mem_for_dircache(const or_options_t *options, size_t total_mem,
+                             char **msg)
+{
+  *msg = NULL;
+  if (total_mem == 0) {
+    if (get_total_system_memory(&total_mem) < 0)
+      total_mem = options->MaxMemInQueues;
+  }
+  if (options->DirCache) {
+    if (total_mem < DIRCACHE_MIN_BANDWIDTH) {
+      if (options->BridgeRelay) {
+        *msg = strdup("Running a Bridge with less than "
+                      STRINGIFY(DIRCACHE_MIN_MB_BANDWIDTH) " MB of memory is "
+                      "not recommended.");
+      } else {
+        *msg = strdup("Being a directory cache (default) with less than "
+                      STRINGIFY(DIRCACHE_MIN_MB_BANDWIDTH) " MB of memory is "
+                      "not recommended and may consume most of the available "
+                      "resources, consider disabling this functionality by "
+                      "setting the DirCache option to 0.");
+      }
+    }
+  } else {
+    if (total_mem >= DIRCACHE_MIN_BANDWIDTH) {
+      *msg = strdup("DirCache is disabled and we are configured as a "
+               "relay. This may disqualify us from becoming a guard in the "
+               "future.");
+    }
+  }
+  return *msg == NULL ? 0 : -1;
+}
+#undef STRINGIFY
+
 /** Helper: return true iff s1 and s2 are both NULL, or both non-NULL
  * equal strings. */
 static int
@@ -4253,7 +4314,8 @@ options_transition_affects_descriptor(const or_options_t *old_options,
       !opt_streq(old_options->MyFamily, new_options->MyFamily) ||
       !opt_streq(old_options->AccountingStart, new_options->AccountingStart) ||
       old_options->AccountingMax != new_options->AccountingMax ||
-      public_server_mode(old_options) != public_server_mode(new_options))
+      public_server_mode(old_options) != public_server_mode(new_options) ||
+      old_options->DirCache != new_options->DirCache)
     return 1;
 
   return 0;

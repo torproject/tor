@@ -1987,6 +1987,12 @@ if DirPort is non-zero):
     except that port specifiers are ignored. Any address not matched by
     some entry in the policy is accepted.
 
+[[DirCache]] **DirCache** **0**|**1**::
+    When this option is set, Tor caches all current directory documents and
+    accepts client requests for them. Setting DirPort is not required for this,
+    because clients connect via the ORPort by default. Setting either DirPort
+    or BridgeRelay and setting DirCache to 0 is not supported.  (Default: 1)
+
 
 DIRECTORY AUTHORITY SERVER OPTIONS
 ----------------------------------

@@ -79,6 +79,7 @@ src_test_test_SOURCES = \
 	src/test/test_crypto.c \
 	src/test/test_data.c \
 	src/test/test_dir.c \
+	src/test/test_dir_common.c \
 	src/test/test_dir_handle_get.c \
 	src/test/test_entryconn.c \
 	src/test/test_entrynodes.c \

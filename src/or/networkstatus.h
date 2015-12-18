@@ -114,6 +114,10 @@ int networkstatus_get_weight_scale_param(networkstatus_t *ns);
 
 #ifdef NETWORKSTATUS_PRIVATE
 STATIC void vote_routerstatus_free(vote_routerstatus_t *rs);
+#ifdef TOR_UNIT_TESTS
+STATIC int networkstatus_set_current_consensus_from_ns(networkstatus_t *c,
+                                                const char *flavor);
+#endif // TOR_UNIT_TESTS
 #endif
 
 #endif

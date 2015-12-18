@@ -1091,13 +1091,13 @@ directory_fetches_from_authorities(const or_options_t *options)
     return 1; /* we don't know our IP address; ask an authority. */
   refuseunknown = ! router_my_exit_policy_is_reject_star() &&
     should_refuse_unknown_exits(options);
-  if (!options->DirPort_set && !refuseunknown)
+  if (!dir_server_mode(options) && !refuseunknown)
     return 0;
   if (!server_mode(options) || !advertised_server_mode())
     return 0;
   me = router_get_my_routerinfo();
-  if (!me || (!me->dir_port && !refuseunknown))
-    return 0; /* if dirport not advertised, return 0 too */
+  if (!me || (!me->supports_tunnelled_dir_requests && !refuseunknown))
+    return 0; /* if we don't service directory requests, return 0 too */
   return 1;
 }
 
@@ -1128,7 +1128,7 @@ directory_fetches_dir_info_later(const or_options_t *options)
 int
 directory_caches_unknown_auth_certs(const or_options_t *options)
 {
-  return options->DirPort_set || options->BridgeRelay;
+  return dir_server_mode(options) || options->BridgeRelay;
 }
 
 /** Return 1 if we want to keep descriptors, networkstatuses, etc around
@@ -1137,7 +1137,7 @@ directory_caches_unknown_auth_certs(const or_options_t *options)
 int
 directory_caches_dir_info(const or_options_t *options)
 {
-  if (options->BridgeRelay || options->DirPort_set)
+  if (options->BridgeRelay || dir_server_mode(options))
     return 1;
   if (!server_mode(options) || !advertised_server_mode())
     return 0;
@@ -1153,7 +1153,7 @@ directory_caches_dir_info(const or_options_t *options)
 int
 directory_permits_begindir_requests(const or_options_t *options)
 {
-  return options->BridgeRelay != 0 || options->DirPort_set;
+  return options->BridgeRelay != 0 || dir_server_mode(options);
 }
 
 /** Return 1 if we have no need to fetch new descriptors. This generally
@@ -1350,8 +1350,9 @@ dirserv_thinks_router_is_unreliable(time_t now,
 }
 
 /** Return true iff <b>router</b> should be assigned the "HSDir" flag.
+ *
  * Right now this means it advertises support for it, it has a high uptime,
- * it has a DirPort open, it has the Stable and Fast flag and it's currently
+ * it's a directory cache, it has the Stable and Fast flags, and it's currently
  * considered Running.
  *
  * This function needs to be called after router-\>is_running has
@@ -1378,7 +1379,8 @@ dirserv_thinks_router_is_hs_dir(const routerinfo_t *router,
   else
     uptime = real_uptime(router, now);
 
-  return (router->wants_to_be_hs_dir && router->dir_port &&
+  return (router->wants_to_be_hs_dir &&
+          router->supports_tunnelled_dir_requests &&
           node->is_stable && node->is_fast &&
           uptime >= get_options()->MinUptimeHidServDirectoryV2 &&
           router_is_active(router, node, now));
@@ -1921,7 +1923,7 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
                    rs->is_hs_dir?" HSDir":"",
                    rs->is_flagged_running?" Running":"",
                    rs->is_stable?" Stable":"",
-                   (rs->dir_port!=0)?" V2Dir":"",
+                   rs->is_v2_dir?" V2Dir":"",
                    rs->is_valid?" Valid":"");
 
   /* length of "opt v \n" */
@@ -2185,6 +2187,7 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   strlcpy(rs->nickname, ri->nickname, sizeof(rs->nickname));
   rs->or_port = ri->or_port;
   rs->dir_port = ri->dir_port;
+  rs->is_v2_dir = ri->supports_tunnelled_dir_requests;
   if (options->AuthDirHasIPv6Connectivity == 1 &&
       !tor_addr_is_null(&ri->ipv6_addr) &&
       node->last_reachable6 >= now - REACHABLE_TIMEOUT) {

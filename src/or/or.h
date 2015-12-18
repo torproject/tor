@@ -2147,6 +2147,11 @@ typedef struct {
    * tests for it. */
   unsigned int needs_retest_if_added:1;
 
+  /** True iff this router included "tunnelled-dir-server" in its descriptor,
+   * implying it accepts tunnelled directory requests, or it advertised
+   * dir_port > 0. */
+  unsigned int supports_tunnelled_dir_requests:1;
+
 /** Tor can use this router for general positions in circuits; we got it
  * from a directory server as usual, or we're an authority and a server
  * uploaded it. */
@@ -2224,6 +2229,9 @@ typedef struct routerstatus_t {
                                * an exit node. */
   unsigned int is_hs_dir:1; /**< True iff this router is a v2-or-later hidden
                              * service directory. */
+  unsigned int is_v2_dir:1; /** True iff this router publishes an open DirPort
+                             * or it claims to accept tunnelled dir requests.
+                             */
   /** True iff we know version info for this router. (i.e., a "v" entry was
    * included.)  We'll replace all these with a big tor_version_t or a char[]
    * if the number of traits we care about ever becomes incredibly big. */
@@ -3960,6 +3968,10 @@ typedef struct {
 
   /** Should we fetch our dir info at the start of the consensus period? */
   int FetchDirInfoExtraEarly;
+
+  int DirCache; /**< Cache all directory documents and accept requests via
+                 * tunnelled dir conns from clients. If 1, enabled (default);
+                 * If 0, disabled. */
 
   char *VirtualAddrNetworkIPv4; /**< Address and mask to hand out for virtual
                                  * MAPADDRESS requests for IPv4 addresses */
