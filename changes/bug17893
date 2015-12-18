@@ -1,0 +1,4 @@
+  o Minor features (build):
+    - Since our build process now uses 'make distcheck', we no longer force
+      "make dist" to depend on "make check". Closes ticket 17893;
+      patch from "cypherpunks."
