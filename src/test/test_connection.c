@@ -182,14 +182,13 @@ test_conn_get_basic_teardown(const struct testcase_t *tc, void *arg)
       conn->linked_conn->write_event = NULL;
     }
 
-    connection_free(conn->linked_conn);
-    conn->linked_conn = NULL;
-
-    conn->linked_conn->linked_conn = NULL;
     if (!conn->linked_conn->marked_for_close) {
       connection_close_immediate(conn->linked_conn);
       connection_mark_for_close(conn->linked_conn);
     }
+    conn->linked_conn->linked_conn = NULL;
+    connection_free(conn->linked_conn);
+    conn->linked_conn = NULL;
   }
 
   /* We didn't set the events up properly, so we can't use event_del() in
