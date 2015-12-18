@@ -117,6 +117,7 @@ typedef struct {
 typedef struct crypto_pk_t crypto_pk_t;
 typedef struct crypto_cipher_t crypto_cipher_t;
 typedef struct crypto_digest_t crypto_digest_t;
+typedef struct crypto_xof_t crypto_xof_t;
 typedef struct crypto_dh_t crypto_dh_t;
 
 /* global state */
@@ -246,6 +247,10 @@ void crypto_digest_assign(crypto_digest_t *into,
 void crypto_hmac_sha256(char *hmac_out,
                         const char *key, size_t key_len,
                         const char *msg, size_t msg_len);
+crypto_xof_t *crypto_xof_new(void);
+void crypto_xof_add_bytes(crypto_xof_t *xof, const uint8_t *data, size_t len);
+void crypto_xof_squeeze_bytes(crypto_xof_t *xof, uint8_t *out, size_t len);
+void crypto_xof_free(crypto_xof_t *xof);
 
 /* Key negotiation */
 #define DH_TYPE_CIRCUIT 1

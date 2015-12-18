@@ -721,6 +721,72 @@ test_crypto_sha3(void *arg)
   tor_free(mem_op_hex_tmp);
 }
 
+/** Run unit tests for our XOF. */
+static void
+test_crypto_sha3_xof(void *arg)
+{
+  uint8_t msg[255];
+  uint8_t out[512];
+  crypto_xof_t *xof;
+  char *mem_op_hex_tmp=NULL;
+
+  (void)arg;
+
+  /* SHAKE256 test vector (Len = 2040) from the Keccak Code Package. */
+  base16_decode((char *)msg, 255,
+                "3A3A819C48EFDE2AD914FBF00E18AB6BC4F14513AB27D0C178A188B61431"
+                "E7F5623CB66B23346775D386B50E982C493ADBBFC54B9A3CD383382336A1"
+                "A0B2150A15358F336D03AE18F666C7573D55C4FD181C29E6CCFDE63EA35F"
+                "0ADF5885CFC0A3D84A2B2E4DD24496DB789E663170CEF74798AA1BBCD457"
+                "4EA0BBA40489D764B2F83AADC66B148B4A0CD95246C127D5871C4F114186"
+                "90A5DDF01246A0C80A43C70088B6183639DCFDA4125BD113A8F49EE23ED3"
+                "06FAAC576C3FB0C1E256671D817FC2534A52F5B439F72E424DE376F4C565"
+                "CCA82307DD9EF76DA5B7C4EB7E085172E328807C02D011FFBF33785378D7"
+                "9DC266F6A5BE6BB0E4A92ECEEBAEB1", 510);
+  const char *squeezed_hex =
+                "8A5199B4A7E133E264A86202720655894D48CFF344A928CF8347F48379CE"
+                "F347DFC5BCFFAB99B27B1F89AA2735E23D30088FFA03B9EDB02B9635470A"
+                "B9F1038985D55F9CA774572DD006470EA65145469609F9FA0831BF1FFD84"
+                "2DC24ACADE27BD9816E3B5BF2876CB112232A0EB4475F1DFF9F5C713D9FF"
+                "D4CCB89AE5607FE35731DF06317949EEF646E9591CF3BE53ADD6B7DD2B60"
+                "96E2B3FB06E662EC8B2D77422DAAD9463CD155204ACDBD38E319613F39F9"
+                "9B6DFB35CA9365160066DB19835888C2241FF9A731A4ACBB5663727AAC34"
+                "A401247FBAA7499E7D5EE5B69D31025E63D04C35C798BCA1262D5673A9CF"
+                "0930B5AD89BD485599DC184528DA4790F088EBD170B635D9581632D2FF90"
+                "DB79665CED430089AF13C9F21F6D443A818064F17AEC9E9C5457001FA8DC"
+                "6AFBADBE3138F388D89D0E6F22F66671255B210754ED63D81DCE75CE8F18"
+                "9B534E6D6B3539AA51E837C42DF9DF59C71E6171CD4902FE1BDC73FB1775"
+                "B5C754A1ED4EA7F3105FC543EE0418DAD256F3F6118EA77114A16C15355B"
+                "42877A1DB2A7DF0E155AE1D8670ABCEC3450F4E2EEC9838F895423EF63D2"
+                "61138BAAF5D9F104CB5A957AEA06C0B9B8C78B0D441796DC0350DDEABB78"
+                "A33B6F1F9E68EDE3D1805C7B7E2CFD54E0FAD62F0D8CA67A775DC4546AF9"
+                "096F2EDB221DB42843D65327861282DC946A0BA01A11863AB2D1DFD16E39"
+                "73D4";
+
+  /* Test oneshot absorb/squeeze. */
+  xof = crypto_xof_new();
+  tt_assert(xof);
+  crypto_xof_add_bytes(xof, msg, sizeof(msg));
+  crypto_xof_squeeze_bytes(xof, out, sizeof(out));
+  test_memeq_hex(out, squeezed_hex);
+  crypto_xof_free(xof);
+  memset(out, 0, sizeof(out));
+
+  /* Test incremental absorb/squeeze. */
+  xof = crypto_xof_new();
+  tt_assert(xof);
+  for (size_t i = 0; i < sizeof(msg); i++)
+    crypto_xof_add_bytes(xof, msg + i, 1);
+  for (size_t i = 0; i < sizeof(out); i++)
+    crypto_xof_squeeze_bytes(xof, out + i, 1);
+  test_memeq_hex(out, squeezed_hex);
+
+done:
+  if (xof)
+    crypto_xof_free(xof);
+  tor_free(mem_op_hex_tmp);
+}
+
 /** Run unit tests for our public key crypto functions */
 static void
 test_crypto_pk(void *arg)
@@ -2224,6 +2290,7 @@ struct testcase_t crypto_tests[] = {
   { "pk_base64", test_crypto_pk_base64, TT_FORK, NULL, NULL },
   CRYPTO_LEGACY(digests),
   { "sha3", test_crypto_sha3, TT_FORK, NULL, NULL},
+  { "sha3_xof", test_crypto_sha3_xof, TT_FORK, NULL, NULL},
   CRYPTO_LEGACY(dh),
   { "aes_iv_AES", test_crypto_aes_iv, TT_FORK, &passthrough_setup,
     (void*)"aes" },
