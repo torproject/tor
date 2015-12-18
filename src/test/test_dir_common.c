@@ -143,6 +143,7 @@ dir_common_gen_routerstatus_for_v3ns(int idx, time_t now)
       rs->addr = 0xC0000203;
       rs->or_port = 500;
       rs->dir_port = 1999;
+      rs->is_v2_dir = 1;
       /* Running flag (and others) cleared */
       break;
     case 4:

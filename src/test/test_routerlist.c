@@ -241,6 +241,8 @@ test_router_pick_directory_server_impl(void *arg)
   node_router2 = node_get_mutable_by_id(router2_id);
   node_router3 = node_get_mutable_by_id(router3_id);
 
+  node_router1->is_possible_guard = 1;
+
   node_router1->is_running = 0;
   node_router3->is_running = 0;
   rs = router_pick_directory_server_impl(V3_DIRINFO, flags, NULL);
