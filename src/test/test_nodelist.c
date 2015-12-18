@@ -85,7 +85,7 @@ test_nodelist_node_is_dir(void *arg)
 
   rs.is_v2_dir = 0;
   rs.dir_port = 1;
-  tt_assert(node_is_dir(&node));
+  tt_assert(! node_is_dir(&node));
 
   node.rs = NULL;
   tt_assert(!node_is_dir(&node));
@@ -94,10 +94,10 @@ test_nodelist_node_is_dir(void *arg)
   tt_assert(node_is_dir(&node));
   ri.supports_tunnelled_dir_requests = 0;
   ri.dir_port = 1;
-  tt_assert(node_is_dir(&node));
+  tt_assert(! node_is_dir(&node));
 
-  done:
-    return;
+ done:
+  return;
 }
 
 #define NODE(name, flags) \
