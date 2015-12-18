@@ -8,10 +8,8 @@
  */
 #include "keccak-tiny.h"
 
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include "crypto.h"
 
 /******** The Keccak-f[1600] permutation ********/
 
@@ -168,7 +166,7 @@ keccak_finalize(keccak_state *s)
   // Xor in the last block.
   xorin(s->a, s->block, s->offset);
 
-  memset_s(s->block, sizeof(s->block), 0, sizeof(s->block));
+  memwipe(s->block, 0, sizeof(s->block));
   s->finalized = 1;
   s->offset = s->rate;
 }
@@ -310,7 +308,7 @@ keccak_clone(keccak_state *out, const keccak_state *in)
 void
 keccak_cleanse(keccak_state *s)
 {
-  memset_s(s, sizeof(keccak_state), 0, sizeof(keccak_state));
+  memwipe(s, 0, sizeof(keccak_state));
 }
 
 /** The sponge-based hash construction. **/

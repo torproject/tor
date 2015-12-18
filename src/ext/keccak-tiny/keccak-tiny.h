@@ -1,8 +1,8 @@
 #ifndef KECCAK_FIPS202_H
 #define KECCAK_FIPS202_H
-#define __STDC_WANT_LIB_EXT1__ 1
-#include <stdint.h>
-#include <stdlib.h>
+
+#include <stddef.h>
+#include "torint.h"
 
 #define KECCAK_MAX_RATE 200
 
