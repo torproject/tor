@@ -3575,6 +3575,8 @@ test_config_directory_fetch(void *arg)
   mock_advertised_server_mode_result = 1;
   mock_router_get_my_routerinfo_result = &routerinfo;
 
+  routerinfo.supports_tunnelled_dir_requests = 1;
+
   options->RefuseUnknownExits = 1;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
@@ -3598,6 +3600,7 @@ test_config_directory_fetch(void *arg)
   memset(options, 0, sizeof(or_options_t));
   options->DirPort_set = 1;
   options->ORPort_set = 1;
+  options->DirCache = 1;
   mock_router_pick_published_address_result = 0;
   mock_router_my_exit_policy_is_reject_star_result = 1;
 
@@ -3629,6 +3632,7 @@ test_config_directory_fetch(void *arg)
 
   mock_advertised_server_mode_result = 1;
   routerinfo.dir_port = 0;
+  routerinfo.supports_tunnelled_dir_requests = 0;
   mock_router_get_my_routerinfo_result = &routerinfo;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
@@ -3638,6 +3642,7 @@ test_config_directory_fetch(void *arg)
 
   mock_advertised_server_mode_result = 1;
   routerinfo.dir_port = 1;
+  routerinfo.supports_tunnelled_dir_requests = 1;
   mock_router_get_my_routerinfo_result = &routerinfo;
   tt_assert(server_mode(options) == 1);
   tt_assert(public_server_mode(options) == 1);
