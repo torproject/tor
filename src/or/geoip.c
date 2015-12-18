@@ -1279,6 +1279,8 @@ geoip_dirreq_stats_write(time_t now)
 
   /* Generate history string .*/
   str = geoip_format_dirreq_stats(now);
+  if (! str)
+    goto done;
 
   /* Write dirreq-stats string to disk. */
   if (!check_or_create_data_subdir("stats")) {
