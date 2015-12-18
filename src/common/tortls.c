@@ -1310,6 +1310,7 @@ find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m, uint16_t cipher)
 {
   const SSL_CIPHER *c;
 #ifdef HAVE_SSL_CIPHER_FIND
+  (void) m;
   {
     unsigned char cipherid[3];
     tor_assert(ssl);
