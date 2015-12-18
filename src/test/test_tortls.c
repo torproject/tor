@@ -2680,7 +2680,12 @@ test_tortls_cert_is_valid(void *ignored)
   scert = tor_malloc_zero(sizeof(tor_x509_cert_t));
   ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, 0);
   tt_int_op(ret, OP_EQ, 0);
+
+  cert = tor_malloc_zero(sizeof(tor_x509_cert_t));
+  ret = tor_tls_cert_is_valid(LOG_WARN, cert, scert, 0);
+  tt_int_op(ret, OP_EQ, 0);
   tor_free(scert);
+  tor_free(cert);
 
   cert = tor_x509_cert_new(read_cert_from(validCertString));
   scert = tor_x509_cert_new(read_cert_from(caCertString));
