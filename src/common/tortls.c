@@ -1352,11 +1352,11 @@ find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m, uint16_t cipher)
     return 0;
   }
 #endif
-#endif
   (void) ssl;
   (void) m;
   (void) cipher;
   return 1; /* No way to search */
+#endif
 }
 
 /** Remove from v2_cipher_list every cipher that we don't support, so that
