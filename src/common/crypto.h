@@ -96,8 +96,10 @@ typedef enum {
   DIGEST_SHA1 = 0,
   DIGEST_SHA256 = 1,
   DIGEST_SHA512 = 2,
+  DIGEST_SHA3_256 = 3,
+  DIGEST_SHA3_512 = 4,
 } digest_algorithm_t;
-#define  N_DIGEST_ALGORITHMS (DIGEST_SHA512+1)
+#define  N_DIGEST_ALGORITHMS (DIGEST_SHA3_512+1)
 #define digest_algorithm_bitfield_t ENUM_BF(digest_algorithm_t)
 
 /** A set of all the digests we know how to compute, taken on a single

@@ -150,8 +150,9 @@ src_test_test_switch_id_LDADD = \
 src_test_test_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
         @TOR_LDFLAGS_libevent@
 src_test_test_LDADD = src/or/libtor-testing.a src/common/libor-testing.a \
-	src/common/libor-crypto-testing.a $(LIBDONNA) src/common/libor.a \
-	src/common/libor-event-testing.a src/trunnel/libor-trunnel-testing.a \
+	src/common/libor-crypto-testing.a $(LIBKECCAK_TINY) $(LIBDONNA) \
+	src/common/libor.a src/common/libor-event-testing.a \
+	src/trunnel/libor-trunnel-testing.a \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
 	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@ \
 	@TOR_SYSTEMD_LIBS@
@@ -169,7 +170,7 @@ src_test_test_memwipe_LDFLAGS = $(src_test_test_LDFLAGS)
 src_test_bench_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
         @TOR_LDFLAGS_libevent@
 src_test_bench_LDADD = src/or/libtor.a src/common/libor.a \
-	src/common/libor-crypto.a $(LIBDONNA) \
+	src/common/libor-crypto.a $(LIBKECCAK_TINY) $(LIBDONNA) \
 	src/common/libor-event.a src/trunnel/libor-trunnel.a \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
 	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@ \
@@ -179,7 +180,7 @@ src_test_test_workqueue_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
         @TOR_LDFLAGS_libevent@
 src_test_test_workqueue_LDADD = src/or/libtor-testing.a \
 	src/common/libor-testing.a \
-	src/common/libor-crypto-testing.a $(LIBDONNA) \
+	src/common/libor-crypto-testing.a $(LIBKECCAK_TINY) $(LIBDONNA) \
 	src/common/libor-event-testing.a \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ @TOR_LIBEVENT_LIBS@ \
 	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@
@@ -201,7 +202,7 @@ noinst_PROGRAMS+= src/test/test-ntor-cl
 src_test_test_ntor_cl_SOURCES  = src/test/test_ntor_cl.c
 src_test_test_ntor_cl_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@
 src_test_test_ntor_cl_LDADD = src/or/libtor.a src/common/libor.a \
-	src/common/libor-crypto.a $(LIBDONNA) \
+	src/common/libor-crypto.a $(LIBKECCAK_TINY) $(LIBDONNA) \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@ \
 	@TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@ @CURVE25519_LIBS@
 src_test_test_ntor_cl_AM_CPPFLAGS =	       \
