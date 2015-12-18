@@ -231,9 +231,10 @@ test_conn_get_rend_setup(const struct testcase_t *tc)
 
   /* TODO: use directory_initiate_command_rend() to do this - maybe? */
   conn->rend_data = tor_malloc_zero(sizeof(rend_data_t));
+  tor_assert(strlen(TEST_CONN_REND_ADDR) == REND_SERVICE_ID_LEN_BASE32);
   memcpy(conn->rend_data->onion_address,
          TEST_CONN_REND_ADDR,
-         REND_SERVICE_ADDRESS_LEN+1);
+         REND_SERVICE_ID_LEN_BASE32+1);
   conn->rend_data->hsdirs_fp = smartlist_new();
   conn->base_.purpose = TEST_CONN_REND_PURPOSE;
 
