@@ -143,6 +143,7 @@ src_test_test_switch_id_SOURCES = \
 	src/test/test_switch_id.c
 src_test_test_switch_id_CPPFLAGS= $(src_test_AM_CPPFLAGS)
 src_test_test_switch_id_CFLAGS = $(AM_CFLAGS) $(TEST_CFLAGS)
+src_test_test_switch_id_LDFLAGS = @TOR_LDFLAGS_zlib@
 src_test_test_switch_id_LDADD = \
 	src/common/libor-testing.a \
 	@TOR_ZLIB_LIBS@ @TOR_LIB_MATH@
