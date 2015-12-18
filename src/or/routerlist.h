@@ -243,6 +243,8 @@ MOCK_DECL(STATIC was_router_added_t, extrainfo_insert,
 MOCK_DECL(STATIC void, initiate_descriptor_downloads,
           (const routerstatus_t *source, int purpose, smartlist_t *digests,
            int lo, int hi, int pds_flags));
+STATIC int router_is_already_dir_fetching(const tor_addr_port_t *ap,
+                                          int serverdesc, int microdesc);
 
 #endif
 
