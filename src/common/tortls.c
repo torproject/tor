@@ -1322,7 +1322,8 @@ find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m, uint16_t cipher)
       tor_assert((SSL_CIPHER_get_id(c) & 0xffff) == cipher);
     return c != NULL;
   }
-#elif defined(HAVE_STRUCT_SSL_METHOD_ST_GET_CIPHER_BY_CHAR)
+#else
+#if defined(HAVE_STRUCT_SSL_METHOD_ST_GET_CIPHER_BY_CHAR)
   if (m && m->get_cipher_by_char) {
     unsigned char cipherid[3];
     set_uint16(cipherid, htons(cipher));
@@ -1333,7 +1334,7 @@ find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m, uint16_t cipher)
     if (c)
       tor_assert((c->id & 0xffff) == cipher);
     return c != NULL;
-  } else
+  }
 #endif
 #if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,1,0)
   if (m && m->get_cipher && m->num_ciphers) {
@@ -1350,6 +1351,7 @@ find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m, uint16_t cipher)
     }
     return 0;
   }
+#endif
 #endif
   (void) ssl;
   (void) m;
