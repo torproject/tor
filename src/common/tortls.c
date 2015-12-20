@@ -1324,7 +1324,8 @@ find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m, uint16_t cipher)
     return c != NULL;
   }
 #else
-#if defined(HAVE_STRUCT_SSL_METHOD_ST_GET_CIPHER_BY_CHAR)
+
+# if defined(HAVE_STRUCT_SSL_METHOD_ST_GET_CIPHER_BY_CHAR)
   if (m && m->get_cipher_by_char) {
     unsigned char cipherid[3];
     set_uint16(cipherid, htons(cipher));
@@ -1336,8 +1337,8 @@ find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m, uint16_t cipher)
       tor_assert((c->id & 0xffff) == cipher);
     return c != NULL;
   }
-#endif
-#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,1,0)
+# endif
+# if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,1,0)
   if (m && m->get_cipher && m->num_ciphers) {
     /* It would seem that some of the "let's-clean-up-openssl" forks have
      * removed the get_cipher_by_char function.  Okay, so now you get a
@@ -1352,7 +1353,7 @@ find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m, uint16_t cipher)
     }
     return 0;
   }
-#endif
+# endif
   (void) ssl;
   (void) m;
   (void) cipher;

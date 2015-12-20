@@ -480,11 +480,13 @@ test_crypto_sha3(void *arg)
 
   /* Len = 24, Msg = 1F877C */
   const uint8_t keccak_kat_msg24[] = { 0x1f, 0x87, 0x7c };
-  i = crypto_digest256(data, (const char*)keccak_kat_msg24, 3, DIGEST_SHA3_256);
+  i = crypto_digest256(data, (const char*)keccak_kat_msg24, 3,
+                       DIGEST_SHA3_256);
   test_memeq_hex(data, "BC22345E4BD3F792A341CF18AC0789F1"
                        "C9C966712A501B19D1B6632CCD408EC5");
   tt_int_op(i, OP_EQ, 0);
-  i = crypto_digest512(data, (const char*)keccak_kat_msg24, 3, DIGEST_SHA3_512);
+  i = crypto_digest512(data, (const char*)keccak_kat_msg24, 3,
+                       DIGEST_SHA3_512);
   test_memeq_hex(data, "CB20DCF54955F8091111688BECCEF48C"
                        "1A2F0D0608C3A575163751F002DB30F4"
                        "0F2F671834B22D208591CFAF1F5ECFE4"
@@ -508,11 +510,13 @@ test_crypto_sha3(void *arg)
     0x76, 0x3D, 0x52, 0xDB, 0x98, 0xD9, 0x49, 0xD3, 0xB0, 0xFE,
     0xD6, 0xA8, 0x05, 0x2F, 0xBB,
   };
-  i = crypto_digest256(data, (const char*)keccak_kat_msg1080, 135, DIGEST_SHA3_256);
+  i = crypto_digest256(data, (const char*)keccak_kat_msg1080, 135,
+                       DIGEST_SHA3_256);
   test_memeq_hex(data, "A19EEE92BB2097B64E823D597798AA18"
                        "BE9B7C736B8059ABFD6779AC35AC81B5");
   tt_int_op(i, OP_EQ, 0);
-  i = crypto_digest512(data, (const char*)keccak_kat_msg1080, 135, DIGEST_SHA3_512);
+  i = crypto_digest512(data, (const char*)keccak_kat_msg1080, 135,
+                       DIGEST_SHA3_512);
   test_memeq_hex(data, "7575A1FB4FC9A8F9C0466BD5FCA496D1"
                        "CB78696773A212A5F62D02D14E3259D1"
                        "92A87EBA4407DD83893527331407B6DA"
@@ -536,11 +540,13 @@ test_crypto_sha3(void *arg)
     0x87, 0xC8, 0xB9, 0x27, 0xF5, 0xB0, 0x8B, 0xEB, 0x37, 0x67,
     0x4C, 0x6F, 0x8E, 0x38, 0x0C, 0x04,
   };
-  i = crypto_digest256(data, (const char*)keccak_kat_msg1088, 136, DIGEST_SHA3_256);
+  i = crypto_digest256(data, (const char*)keccak_kat_msg1088, 136,
+                       DIGEST_SHA3_256);
   test_memeq_hex(data, "DF673F4105379FF6B755EEAB20CEB0DC"
                        "77B5286364FE16C59CC8A907AFF07732");
   tt_int_op(i, OP_EQ, 0);
-  i = crypto_digest512(data, (const char*)keccak_kat_msg1088, 136, DIGEST_SHA3_512);
+  i = crypto_digest512(data, (const char*)keccak_kat_msg1088, 136,
+                       DIGEST_SHA3_512);
   test_memeq_hex(data, "2E293765022D48996CE8EFF0BE54E87E"
                        "FB94A14C72DE5ACD10D0EB5ECE029CAD"
                        "FA3BA17A40B2FFA2163991B17786E51C"
@@ -564,11 +570,13 @@ test_crypto_sha3(void *arg)
     0xB5, 0x67, 0x7D, 0x92, 0x6D, 0xAC, 0x57, 0xB3, 0xF2, 0x2D,
     0xA8, 0x73, 0xC6, 0x01, 0x01, 0x6A, 0x0D,
   };
-  i = crypto_digest256(data, (const char*)keccak_kat_msg1096, 137, DIGEST_SHA3_256);
+  i = crypto_digest256(data, (const char*)keccak_kat_msg1096, 137,
+                       DIGEST_SHA3_256);
   test_memeq_hex(data, "D52432CF3B6B4B949AA848E058DCD62D"
                        "735E0177279222E7AC0AF8504762FAA0");
   tt_int_op(i, OP_EQ, 0);
-  i = crypto_digest512(data, (const char*)keccak_kat_msg1096, 137, DIGEST_SHA3_512);
+  i = crypto_digest512(data, (const char*)keccak_kat_msg1096, 137,
+                       DIGEST_SHA3_512);
   test_memeq_hex(data, "BE8E14B6757FFE53C9B75F6DDE9A7B6C"
                        "40474041DE83D4A60645A826D7AF1ABE"
                        "1EEFCB7B74B62CA6A514E5F2697D585B"
@@ -593,13 +601,15 @@ test_crypto_sha3(void *arg)
     0x4B, 0xA0, 0x80, 0x1A, 0x12, 0x94, 0xCD, 0x8D, 0x7E, 0x66,
     0xDF, 0xAF, 0xEC,
   };
-  i = crypto_digest512(data, (const char*)keccak_kat_msg1144, 143, DIGEST_SHA3_512);
+  i = crypto_digest512(data, (const char*)keccak_kat_msg1144, 143,
+                       DIGEST_SHA3_512);
   test_memeq_hex(data, "3A8E938C45F3F177991296B24565D9A6"
                        "605516615D96A062C8BE53A0D6C5A648"
                        "7BE35D2A8F3CF6620D0C2DBA2C560D68"
                        "295F284BE7F82F3B92919033C9CE5D80");
   tt_int_op(i, OP_EQ, 0);
-  i = crypto_digest256(data, (const char*)keccak_kat_msg1144, 143, DIGEST_SHA3_256);
+  i = crypto_digest256(data, (const char*)keccak_kat_msg1144, 143,
+                       DIGEST_SHA3_256);
   test_memeq_hex(data, "E58A947E98D6DD7E932D2FE02D9992E6"
                        "118C0C2C606BDCDA06E7943D2C95E0E5");
   tt_int_op(i, OP_EQ, 0);
@@ -622,13 +632,15 @@ test_crypto_sha3(void *arg)
     0xB3, 0x3D, 0x42, 0x60, 0x43, 0x9C, 0xBA, 0x73, 0xA9, 0x47,
     0x9E, 0xE0, 0x0C, 0x63,
   };
-  i = crypto_digest512(data, (const char*)keccak_kat_msg1152, 144, DIGEST_SHA3_512);
+  i = crypto_digest512(data, (const char*)keccak_kat_msg1152, 144,
+                       DIGEST_SHA3_512);
   test_memeq_hex(data, "FE45289874879720CE2A844AE34BB735"
                        "22775DCB6019DCD22B8885994672A088"
                        "9C69E8115C641DC8B83E39F7311815A1"
                        "64DC46E0BA2FCA344D86D4BC2EF2532C");
   tt_int_op(i, OP_EQ, 0);
-  i = crypto_digest256(data, (const char*)keccak_kat_msg1152, 144, DIGEST_SHA3_256);
+  i = crypto_digest256(data, (const char*)keccak_kat_msg1152, 144,
+                       DIGEST_SHA3_256);
   test_memeq_hex(data, "A936FB9AF87FB67857B3EAD5C76226AD"
                        "84DA47678F3C2FFE5A39FDB5F7E63FFB");
   tt_int_op(i, OP_EQ, 0);
@@ -651,13 +663,15 @@ test_crypto_sha3(void *arg)
     0xC1, 0xDB, 0xB3, 0xB5, 0xC7, 0x87, 0x1A, 0x11, 0xF5, 0x53,
     0x70, 0x11, 0x04, 0x4C, 0x53,
   };
-  i = crypto_digest512(data, (const char*)keccak_kat_msg1160, 145, DIGEST_SHA3_512);
+  i = crypto_digest512(data, (const char*)keccak_kat_msg1160, 145,
+                       DIGEST_SHA3_512);
   test_memeq_hex(data, "AFF61C6E11B98E55AC213B1A0BC7DE04"
                        "05221AC5EFB1229842E4614F4A029C9B"
                        "D14A0ED7FD99AF3681429F3F309FDB53"
                        "166AA9A3CD9F1F1223D04B4A9015E94A");
   tt_int_op(i, OP_EQ, 0);
-  i = crypto_digest256(data, (const char*)keccak_kat_msg1160, 145, DIGEST_SHA3_256);
+  i = crypto_digest256(data, (const char*)keccak_kat_msg1160, 145,
+                       DIGEST_SHA3_256);
   test_memeq_hex(data, "3A654B88F88086C2751EDAE6D3924814"
                        "3CF6235C6B0B7969342C45A35194B67E");
   tt_int_op(i, OP_EQ, 0);
@@ -816,7 +830,7 @@ test_crypto_sha3_xof(void *arg)
     crypto_xof_squeeze_bytes(xof, out + i, 1);
   test_memeq_hex(out, squeezed_hex);
 
-done:
+ done:
   if (xof)
     crypto_xof_free(xof);
   tor_free(mem_op_hex_tmp);

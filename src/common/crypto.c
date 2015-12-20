@@ -1620,9 +1620,10 @@ crypto_digest256(char *digest, const char *m, size_t len,
   tor_assert(digest);
   tor_assert(algorithm == DIGEST_SHA256 || algorithm == DIGEST_SHA3_256);
   if (algorithm == DIGEST_SHA256)
-    return (SHA256((const unsigned char*)m,len,(unsigned char*)digest) == NULL);
+    return (SHA256((const uint8_t*)m,len,(uint8_t*)digest) == NULL);
   else
-    return (sha3_256((uint8_t *)digest, DIGEST256_LEN, (const uint8_t *)m, len) == -1);
+    return (sha3_256((uint8_t *)digest, DIGEST256_LEN,(const uint8_t *)m, len)
+            == -1);
 }
 
 /** Compute a 512-bit digest of <b>len</b> bytes in data stored in <b>m</b>,
@@ -1636,9 +1637,11 @@ crypto_digest512(char *digest, const char *m, size_t len,
   tor_assert(digest);
   tor_assert(algorithm == DIGEST_SHA512 || algorithm == DIGEST_SHA3_512);
   if (algorithm == DIGEST_SHA512)
-    return (SHA512((const unsigned char*)m,len,(unsigned char*)digest) == NULL);
+    return (SHA512((const unsigned char*)m,len,(unsigned char*)digest)
+            == NULL);
   else
-    return (sha3_512((uint8_t*)digest, DIGEST512_LEN, (const uint8_t*)m, len) == -1);
+    return (sha3_512((uint8_t*)digest, DIGEST512_LEN, (const uint8_t*)m, len)
+            == -1);
 }
 
 /** Set the digests_t in <b>ds_out</b> to contain every digest on the
