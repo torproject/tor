@@ -456,6 +456,7 @@ test_crypto_sha3(void *arg)
   char data[DIGEST512_LEN];
   char d_out1[DIGEST512_LEN], d_out2[DIGEST512_LEN];
   char *mem_op_hex_tmp=NULL;
+  char *large = NULL;
 
   (void)arg;
 
@@ -712,12 +713,46 @@ test_crypto_sha3(void *arg)
   crypto_digest_get_digest(d1, d_out1, DIGEST512_LEN);
   crypto_digest512(d_out2, "abcdef", 6, DIGEST_SHA3_512);
   tt_mem_op(d_out1,OP_EQ, d_out2, DIGEST512_LEN);
+  crypto_digest_free(d1);
+
+  /* Attempt to exercise the incremental hashing code by creating a randomized
+   * 100 KiB buffer, and hashing rand[1, 5 * Rate] bytes at a time.  SHA3-512
+   * is used because it has a lowest rate of the family (the code is common,
+   * but the slower rate exercises more of it).
+   */
+  const size_t bufsz = 100 * 1024;
+  size_t j = 0;
+  large = tor_malloc(bufsz);
+  crypto_rand(large, bufsz);
+  d1 = crypto_digest512_new(DIGEST_SHA3_512); /* Running digest. */
+  while (j < bufsz) {
+    /* Pick how much data to add to the running digest. */
+    size_t incr = (size_t)crypto_rand_int_range(1, 72 * 5);
+    incr = MIN(bufsz - j, incr);
+
+    /* Add the data, and calculate the hash. */
+    crypto_digest_add_bytes(d1, large + j, incr);
+    crypto_digest_get_digest(d1, d_out1, DIGEST512_LEN);
+
+    /* One-shot hash the buffer up to the data that was just added,
+     * and ensure that the values match up.
+     *
+     * XXX/yawning: If this actually fails, it'll be rather difficult to
+     * reproduce.  Improvements welcome.
+     */
+    i = crypto_digest512(d_out2, large, j + incr, DIGEST_SHA3_512);
+    tt_int_op(i, OP_EQ, 0);
+    tt_mem_op(d_out1, OP_EQ, d_out2, DIGEST512_LEN);
+
+    j += incr;
+  }
 
  done:
   if (d1)
     crypto_digest_free(d1);
   if (d2)
     crypto_digest_free(d2);
+  tor_free(large);
   tor_free(mem_op_hex_tmp);
 }
 
