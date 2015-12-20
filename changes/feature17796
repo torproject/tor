@@ -1,0 +1,6 @@
+  o Minor features (crypto):
+    - When allocating a digest state object, allocate no more space than we
+      actually need.  Previously, we were allocating as much space as the
+      state for the largest algorithm would need.  This change saves up to
+      672 bytes per circuit.  Closes ticket 17796.
+
