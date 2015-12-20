@@ -154,6 +154,8 @@ uptime-*.json
 /src/ext/ed25519/ref10/libed25519_ref10.lib
 /src/ext/ed25519/donna/libed25519_donna.a
 /src/ext/ed25519/donna/libed25519_donna.lib
+/src/ext/keccak-tiny/libkeccak-tiny.a
+/src/ext/keccak-tiny/libkeccak-tiny.lib
 
 # /src/or/
 /src/or/Makefile
