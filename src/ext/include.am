@@ -143,6 +143,8 @@ src_ext_keccak_tiny_libkeccak_tiny_a_SOURCES= \
 LIBKECCAK_TINY_HDRS = \
 	src/ext/keccak-tiny/keccak-tiny.h
 
+noinst_HEADERS += $(LIBKECCAK_TINY_HDRS)
+
 LIBKECCAK_TINY=src/ext/keccak-tiny/libkeccak-tiny.a
 noinst_LIBRARIES += $(LIBKECCAK_TINY)
 
