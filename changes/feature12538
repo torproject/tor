@@ -1,0 +1,6 @@
+  o Minor features (directory system):
+    Previously only relays who explicitly opened a directory port (DirPort)
+    accepted directory requests from clients.  Now all relays, with and without
+    a DirPort, who do not disable the DirCache option accept and serve
+    directory requests sent (tunnelled) through their ORPort.
+    Closes ticket 12538.

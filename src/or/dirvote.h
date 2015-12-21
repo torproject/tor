@@ -177,6 +177,7 @@ STATIC char *format_networkstatus_vote(crypto_pk_t *private_key,
 STATIC char *dirvote_compute_params(smartlist_t *votes, int method,
                              int total_authorities);
 STATIC char *compute_consensus_package_lines(smartlist_t *votes);
+STATIC char *make_consensus_method_list(int low, int high, const char *sep);
 #endif
 
 #endif

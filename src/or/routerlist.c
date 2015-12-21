@@ -67,8 +67,6 @@ typedef struct cert_list_t cert_list_t;
 static int compute_weighted_bandwidths(const smartlist_t *sl,
                                        bandwidth_weight_rule_t rule,
                                        u64_dbl_t **bandwidths_out);
-static const routerstatus_t *router_pick_directory_server_impl(
-                              dirinfo_type_t auth, int flags, int *n_busy_out);
 static const routerstatus_t *router_pick_trusteddirserver_impl(
                 const smartlist_t *sourcelist, dirinfo_type_t auth,
                 int flags, int *n_busy_out);
@@ -1472,7 +1470,7 @@ router_pick_dirserver_generic(smartlist_t *sourcelist,
  * directories that we excluded for no other reason than
  * PDS_NO_EXISTING_SERVERDESC_FETCH or PDS_NO_EXISTING_MICRODESC_FETCH.
  */
-static const routerstatus_t *
+STATIC const routerstatus_t *
 router_pick_directory_server_impl(dirinfo_type_t type, int flags,
                                   int *n_busy_out)
 {
@@ -1512,7 +1510,7 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
     if (!status)
       continue;
 
-    if (!node->is_running || !status->dir_port || !node->is_valid)
+    if (!node->is_running || !node_is_dir(node) || !node->is_valid)
       continue;
     if (requireother && router_digest_is_me(node->identity))
       continue;
@@ -3238,7 +3236,11 @@ routerlist_reparse_old(routerlist_t *rl, signed_descriptor_t *sd)
   return ri;
 }
 
-/** Free all memory held by the routerlist module. */
+/** Free all memory held by the routerlist module.
+ * Note: Calling routerlist_free_all() should always be paired with
+ * a call to nodelist_free_all(). These should only be called during
+ * cleanup.
+ */
 void
 routerlist_free_all(void)
 {
@@ -4902,7 +4904,9 @@ router_differences_are_cosmetic(const routerinfo_t *r1, const routerinfo_t *r2)
       (r1->contact_info && r2->contact_info &&
        strcasecmp(r1->contact_info, r2->contact_info)) ||
       r1->is_hibernating != r2->is_hibernating ||
-      cmp_addr_policies(r1->exit_policy, r2->exit_policy))
+      cmp_addr_policies(r1->exit_policy, r2->exit_policy) ||
+      (r1->supports_tunnelled_dir_requests !=
+       r2->supports_tunnelled_dir_requests))
     return 0;
   if ((r1->declared_family == NULL) != (r2->declared_family == NULL))
     return 0;
