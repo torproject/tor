@@ -4102,7 +4102,7 @@ have_enough_mem_for_dircache(const or_options_t *options, size_t total_mem,
   if (total_mem == 0) {
     if (get_total_system_memory(&total_mem) < 0) {
       total_mem = options->MaxMemInQueues >= SIZE_MAX ?
-        SIZE_MAX : options->MaxMemInQueues;
+        SIZE_MAX : (size_t)options->MaxMemInQueues;
     }
   }
   if (options->DirCache) {
