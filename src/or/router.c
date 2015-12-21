@@ -3350,28 +3350,16 @@ router_free_all(void)
 
 /** Return a smartlist of tor_addr_port_t's with all the OR ports of
     <b>ri</b>. Note that freeing of the items in the list as well as
-    the smartlist itself is the callers responsibility.
-
-    XXX duplicating code from node_get_all_orports(). */
+    the smartlist itself is the callers responsibility. */
 smartlist_t *
 router_get_all_orports(const routerinfo_t *ri)
 {
-  smartlist_t *sl = smartlist_new();
   tor_assert(ri);
-
-  if (ri->addr != 0) {
-    tor_addr_port_t *ap = tor_malloc(sizeof(tor_addr_port_t));
-    tor_addr_from_ipv4h(&ap->addr, ri->addr);
-    ap->port = ri->or_port;
-    smartlist_add(sl, ap);
-  }
-  if (!tor_addr_is_null(&ri->ipv6_addr)) {
-    tor_addr_port_t *ap = tor_malloc(sizeof(tor_addr_port_t));
-    tor_addr_copy(&ap->addr, &ri->ipv6_addr);
-    ap->port = ri->or_port;
-    smartlist_add(sl, ap);
-  }
-
-  return sl;
+  node_t fake_node;
+  memset(&fake_node, 0, sizeof(fake_node));
+  /* we don't modify ri, fake_node is passed as a const node_t *
+   */
+  fake_node.ri = (routerinfo_t *)ri;
+  return node_get_all_orports(&fake_node);
 }
 
