@@ -193,6 +193,7 @@ noinst_HEADERS+= \
 	src/test/rend_test_helpers.h \
 	src/test/test.h \
 	src/test/test_helpers.h \
+	src/test/test_dir_common.h \
 	src/test/test_descriptors.inc \
 	src/test/example_extrainfo.inc \
 	src/test/failing_routerdescs.inc \

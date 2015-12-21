@@ -4097,9 +4097,13 @@ have_enough_mem_for_dircache(const or_options_t *options, size_t total_mem,
                              char **msg)
 {
   *msg = NULL;
+  /* XXX We should possibly be looking at MaxMemInQueues here
+   * unconditionally.  Or we should believe total_mem unconditionally. */
   if (total_mem == 0) {
-    if (get_total_system_memory(&total_mem) < 0)
-      total_mem = options->MaxMemInQueues;
+    if (get_total_system_memory(&total_mem) < 0) {
+      total_mem = options->MaxMemInQueues >= SIZE_MAX ?
+        SIZE_MAX : options->MaxMemInQueues;
+    }
   }
   if (options->DirCache) {
     if (total_mem < DIRCACHE_MIN_BANDWIDTH) {
