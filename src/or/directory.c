@@ -4,6 +4,7 @@
 /* See LICENSE for licensing information */
 
 #include "or.h"
+#include "backtrace.h"
 #include "buffers.h"
 #include "circuitbuild.h"
 #include "config.h"
@@ -692,11 +693,13 @@ directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
 
   /* We rejected both addresses. This isn't great. */
   if (!have_or && !have_dir) {
-    log_info(LD_DIR, "Rejected both the OR and Dir address when launching a "
-             "directory connection to: IPv4 %s OR %d Dir %d IPv6 %s OR %d "
-             "Dir %d", fmt_addr32(status->addr), status->or_port,
+    log_warn(LD_BUG, "Rejected all OR and Dir addresses from %s when "
+             "launching a directory connection to: IPv4 %s OR %d Dir %d "
+             "IPv6 %s OR %d Dir %d", routerstatus_describe(status),
+             fmt_addr32(status->addr), status->or_port,
              status->dir_port, fmt_addr(&status->ipv6_addr),
              status->ipv6_orport, status->dir_port);
+    log_backtrace(LOG_WARN, LD_BUG, "Addresses came from");
     return;
   }
 
@@ -1050,10 +1053,13 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
   if (or_connection && (!or_addr_port->port
                         || tor_addr_is_null(&or_addr_port->addr))) {
     log_warn(LD_DIR, "Cannot make an OR connection without an OR port.");
+    log_backtrace(LOG_WARN, LD_BUG, "Address came from");
     return;
   } else if (!or_connection && (!dir_addr_port->port
                                 || tor_addr_is_null(&dir_addr_port->addr))) {
     log_warn(LD_DIR, "Cannot make a Dir connection without a Dir port.");
+    log_backtrace(LOG_WARN, LD_BUG, "Address came from");
+
     return;
   }
 
