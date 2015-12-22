@@ -1731,6 +1731,7 @@ crypto_digest_algorithm_get_length(digest_algorithm_t alg)
       return DIGEST512_LEN;
     default:
       tor_assert(0);
+      return 0; /* Unreachable */
   }
 }
 
