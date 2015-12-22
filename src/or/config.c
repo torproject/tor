@@ -6366,7 +6366,7 @@ parse_port_config(smartlist_t *out,
         }
         port = ptmp;
       } else {
-        log_warn(LD_CONFIG, "Couldn't parse address '%s' for %sPort",
+        log_warn(LD_CONFIG, "Couldn't parse address %s for %sPort",
                  escaped(addrport), portname);
         goto err;
       }
