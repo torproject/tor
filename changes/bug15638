@@ -1,0 +1,2 @@
+  o Documentation:
+    - Document the minimum HeartbeatPeriod value. Closes ticket 15638.

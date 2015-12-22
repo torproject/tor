@@ -1750,7 +1750,8 @@ is non-zero):
     Log a heartbeat message every **HeartbeatPeriod** seconds. This is
     a log level __notice__ message, designed to let you know your Tor
     server is still alive and doing useful things. Settings this
-    to 0 will disable the heartbeat. (Default: 6 hours)
+    to 0 will disable the heartbeat. Otherwise, it must be at least 30
+    minutes. (Default: 6 hours)
 
 [[AccountingMax]] **AccountingMax** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**|**KBits**|**MBits**|**GBits**|**TBytes**::
     Limits the max number of bytes sent and received within a set time period
