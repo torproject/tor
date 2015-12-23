@@ -1130,7 +1130,6 @@ AC_CHECK_MEMBERS([struct in6_addr.s6_addr32, struct in6_addr.s6_addr16, struct s
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #endif
-#endif
 ])
 
 AC_CHECK_TYPES([rlim_t], , ,
