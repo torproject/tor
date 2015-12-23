@@ -96,6 +96,28 @@ get_ed_impl(void)
   return ed25519_impl;
 }
 
+#ifdef TOR_UNIT_TESTS
+static const ed25519_impl_t *saved_ed25519_impl = NULL;
+void
+crypto_ed25519_testing_force_impl(const char *name)
+{
+  tor_assert(saved_ed25519_impl == NULL);
+  saved_ed25519_impl = ed25519_impl;
+  if (! strcmp(name, "donna")) {
+    ed25519_impl = &impl_donna;
+  } else {
+    tor_assert(!strcmp(name, "ref10"));
+    ed25519_impl = &impl_ref10;
+  }
+}
+void
+crypto_ed25519_testing_restore_impl(void)
+{
+  ed25519_impl = saved_ed25519_impl;
+  saved_ed25519_impl = NULL;
+}
+#endif
+
 /**
  * Initialize a new ed25519 secret key in <b>seckey_out</b>.  If
  * <b>extra_strong</b>, take the RNG inputs directly from the operating

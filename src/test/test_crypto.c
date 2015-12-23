@@ -1688,6 +1688,25 @@ test_crypto_curve25519_persist(void *arg)
   tor_free(tag);
 }
 
+static void *
+ed25519_testcase_setup(const struct testcase_t *testcase)
+{
+  crypto_ed25519_testing_force_impl(testcase->setup_data);
+  return testcase->setup_data;
+}
+static int
+ed25519_testcase_cleanup(const struct testcase_t *testcase, void *ptr)
+{
+  (void)testcase;
+  (void)ptr;
+  crypto_ed25519_testing_restore_impl();
+  return 1;
+}
+static const struct testcase_setup_t ed25519_test_setup = {
+  ed25519_testcase_setup, ed25519_testcase_cleanup
+};
+
+
 static void
 test_crypto_ed25519_simple(void *arg)
 {
@@ -2327,6 +2346,14 @@ test_crypto_failure_modes(void *arg)
 #define CRYPTO_LEGACY(name)                                            \
   { #name, test_crypto_ ## name , 0, NULL, NULL }
 
+#define ED25519_TEST_ONE(name, fl, which)                               \
+  { #name "/ed25519_" which, test_crypto_ed25519_ ## name, (fl),        \
+    &ed25519_test_setup, (void*)which }
+
+#define ED25519_TEST(name, fl)                  \
+  ED25519_TEST_ONE(name, (fl), "donna"),        \
+  ED25519_TEST_ONE(name, (fl), "ref10")
+
 struct testcase_t crypto_tests[] = {
   CRYPTO_LEGACY(formats),
   CRYPTO_LEGACY(rng),
@@ -2355,14 +2382,13 @@ struct testcase_t crypto_tests[] = {
   { "curve25519_wrappers", test_crypto_curve25519_wrappers, 0, NULL, NULL },
   { "curve25519_encode", test_crypto_curve25519_encode, 0, NULL, NULL },
   { "curve25519_persist", test_crypto_curve25519_persist, 0, NULL, NULL },
-  { "ed25519_simple", test_crypto_ed25519_simple, 0, NULL, NULL },
-  { "ed25519_test_vectors", test_crypto_ed25519_test_vectors, 0, NULL, NULL },
-  { "ed25519_encode", test_crypto_ed25519_encode, 0, NULL, NULL },
-  { "ed25519_convert", test_crypto_ed25519_convert, 0, NULL, NULL },
-  { "ed25519_blinding", test_crypto_ed25519_blinding, 0, NULL, NULL },
-  { "ed25519_testvectors", test_crypto_ed25519_testvectors, 0, NULL, NULL },
-  { "ed25519_fuzz_donna", test_crypto_ed25519_fuzz_donna, TT_FORK, NULL,
-    NULL },
+  ED25519_TEST(simple, 0),
+  ED25519_TEST(test_vectors, 0),
+  ED25519_TEST(encode, 0),
+  ED25519_TEST(convert, 0),
+  ED25519_TEST(blinding, 0),
+  ED25519_TEST(testvectors, 0),
+  ED25519_TEST(fuzz_donna, TT_FORK),
   { "siphash", test_crypto_siphash, 0, NULL, NULL },
   { "failure_modes", test_crypto_failure_modes, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
