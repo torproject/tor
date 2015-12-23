@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Add an #endif to configure.ac so that we correctly detect
+      the presence of in6_addr.s6_addr32. Fixes bug 17923; bugfix on
+      0.2.0.13-alpha.
