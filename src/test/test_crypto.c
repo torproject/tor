@@ -5,6 +5,7 @@
 
 #include "orconfig.h"
 #define CRYPTO_CURVE25519_PRIVATE
+#define CRYPTO_PRIVATE
 #include "or.h"
 #include "test.h"
 #include "aes.h"
@@ -15,6 +16,7 @@
 #include "ed25519_vectors.inc"
 
 #include <openssl/evp.h>
+#include <openssl/rand.h>
 
 extern const char AUTHORITY_SIGNKEY_3[];
 extern const char AUTHORITY_SIGNKEY_A_DIGEST[];
@@ -127,6 +129,32 @@ test_crypto_rng_range(void *arg)
   /* These fail with probability 1/10^603. */
   tt_assert(got_smallest);
   tt_assert(got_largest);
+ done:
+  ;
+}
+
+/* Test for rectifying openssl RAND engine. */
+static void
+test_crypto_rng_engine(void *arg)
+{
+  (void)arg;
+  RAND_METHOD dummy_method;
+  memset(&dummy_method, 0, sizeof(dummy_method));
+
+  /* We should be a no-op if we're already on RAND_OpenSSL */
+  tt_int_op(0, ==, crypto_force_rand_ssleay());
+  tt_assert(RAND_get_rand_method() == RAND_OpenSSL());
+
+  /* We should correct the method if it's a dummy. */
+  RAND_set_rand_method(&dummy_method);
+  tt_assert(RAND_get_rand_method() == &dummy_method);
+  tt_int_op(1, ==, crypto_force_rand_ssleay());
+  tt_assert(RAND_get_rand_method() == RAND_OpenSSL());
+
+  /* Make sure we aren't calling dummy_method */
+  crypto_rand((void *) &dummy_method, sizeof(dummy_method));
+  crypto_rand((void *) &dummy_method, sizeof(dummy_method));
+
  done:
   ;
 }
@@ -2358,6 +2386,7 @@ struct testcase_t crypto_tests[] = {
   CRYPTO_LEGACY(formats),
   CRYPTO_LEGACY(rng),
   { "rng_range", test_crypto_rng_range, 0, NULL, NULL },
+  { "rng_engine", test_crypto_rng_engine, TT_FORK, NULL, NULL },
   { "aes_AES", test_crypto_aes, TT_FORK, &passthrough_setup, (void*)"aes" },
   { "aes_EVP", test_crypto_aes, TT_FORK, &passthrough_setup, (void*)"evp" },
   CRYPTO_LEGACY(sha),

@@ -252,7 +252,7 @@ crypto_openssl_get_header_version_str(void)
 
 /** Make sure that openssl is using its default PRNG. Return 1 if we had to
  * adjust it; 0 otherwise. */
-static int
+STATIC int
 crypto_force_rand_ssleay(void)
 {
   RAND_METHOD *default_method;
