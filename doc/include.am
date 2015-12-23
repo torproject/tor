@@ -90,5 +90,5 @@ doc/tor-gencert.1: doc/tor-gencert.1.in
 doc/tor-resolve.1: doc/tor-resolve.1.in
 doc/torify.1: doc/torify.1.in
 
-CLEANFILES+= $(asciidoc_product) config.log
+CLEANFILES+= $(asciidoc_product)
 DISTCLEANFILES+= $(html_in) $(man_in)

@@ -1,0 +1,4 @@
+  o Minor bugfixes (makefile):
+    - Remove config.log only from make distclean, not from 
+      make clean. Fixes bug 17924; bugfix on 0.2.4.1-alpha.
+
