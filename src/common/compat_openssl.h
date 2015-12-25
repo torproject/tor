@@ -19,7 +19,8 @@
 #error "We require OpenSSL >= 1.0.0"
 #endif
 
-#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,1,0)
+#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,1,0) || \
+   defined(LIBRESSL_VERSION_NUMBER)
 #define OPENSSL_VERSION SSLEAY_VERSION
 #define OpenSSL_version(v) SSLeay_version(v)
 #define OpenSSL_version_num() SSLeay()
