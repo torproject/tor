@@ -25,6 +25,9 @@
 int
 tor_memcmp(const void *a, const void *b, size_t len)
 {
+#ifdef HAVE_TIMINGSAFE_MEMCMP
+  return timingsafe_memcmp(a, b, len);
+#else
   const uint8_t *x = a;
   const uint8_t *y = b;
   size_t i = len;
@@ -83,6 +86,7 @@ tor_memcmp(const void *a, const void *b, size_t len)
   }
 
   return retval;
+#endif /* timingsafe_memcmp */
 }
 
 /**

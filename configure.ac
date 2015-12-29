@@ -381,6 +381,7 @@ AC_CHECK_FUNCS(
         backtrace_symbols_fd \
         clock_gettime \
 	eventfd \
+	timingsafe_memcmp \
         flock \
         ftime \
         getaddrinfo \
