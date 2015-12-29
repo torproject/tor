@@ -1737,15 +1737,49 @@ crypto_digest_algorithm_get_length(digest_algorithm_t alg)
 
 /** Intermediate information about the digest of a stream of data. */
 struct crypto_digest_t {
+  digest_algorithm_t algorithm; /**< Which algorithm is in use? */
+   /** State for the digest we're using.  Only one member of the
+    * union is usable, depending on the value of <b>algorithm</b>. Note also
+    * that space for other members might not even be allocated!
+    */
   union {
     SHA_CTX sha1; /**< state for SHA1 */
     SHA256_CTX sha2; /**< state for SHA256 */
     SHA512_CTX sha512; /**< state for SHA512 */
     keccak_state sha3; /**< state for SHA3-[256,512] */
-  } d; /**< State for the digest we're using.  Only one member of the
-        * union is usable, depending on the value of <b>algorithm</b>. */
-  digest_algorithm_bitfield_t algorithm : 8; /**< Which algorithm is in use? */
+  } d;
 };
+
+/**
+ * Return the number of bytes we need to malloc in order to get a
+ * crypto_digest_t for <b>alg</b>, or the number of bytes we need to wipe
+ * when we free one.
+ */
+static size_t
+crypto_digest_alloc_bytes(digest_algorithm_t alg)
+{
+  /* Helper: returns the number of bytes in the 'f' field of 'st' */
+#define STRUCT_FIELD_SIZE(st, f) (sizeof( ((st*)0)->f ))
+  /* Gives the length of crypto_digest_t through the end of the field 'd' */
+#define END_OF_FIELD(f) (STRUCT_OFFSET(crypto_digest_t, f) + \
+                         STRUCT_FIELD_SIZE(crypto_digest_t, f))
+  switch (alg) {
+    case DIGEST_SHA1:
+      return END_OF_FIELD(d.sha1);
+    case DIGEST_SHA256:
+      return END_OF_FIELD(d.sha2);
+    case DIGEST_SHA512:
+      return END_OF_FIELD(d.sha512);
+    case DIGEST_SHA3_256:
+    case DIGEST_SHA3_512:
+      return END_OF_FIELD(d.sha3);
+    default:
+      tor_assert(0);
+      return 0;
+  }
+#undef END_OF_FIELD
+#undef STRUCT_FIELD_SIZE
+}
 
 /** Allocate and return a new digest object to compute SHA1 digests.
  */
@@ -1753,7 +1787,7 @@ crypto_digest_t *
 crypto_digest_new(void)
 {
   crypto_digest_t *r;
-  r = tor_malloc(sizeof(crypto_digest_t));
+  r = tor_malloc(crypto_digest_alloc_bytes(DIGEST_SHA1));
   SHA1_Init(&r->d.sha1);
   r->algorithm = DIGEST_SHA1;
   return r;
@@ -1766,7 +1800,7 @@ crypto_digest256_new(digest_algorithm_t algorithm)
 {
   crypto_digest_t *r;
   tor_assert(algorithm == DIGEST_SHA256 || algorithm == DIGEST_SHA3_256);
-  r = tor_malloc(sizeof(crypto_digest_t));
+  r = tor_malloc(crypto_digest_alloc_bytes(algorithm));
   if (algorithm == DIGEST_SHA256)
     SHA256_Init(&r->d.sha2);
   else
@@ -1782,7 +1816,7 @@ crypto_digest512_new(digest_algorithm_t algorithm)
 {
   crypto_digest_t *r;
   tor_assert(algorithm == DIGEST_SHA512 || algorithm == DIGEST_SHA3_512);
-  r = tor_malloc(sizeof(crypto_digest_t));
+  r = tor_malloc(crypto_digest_alloc_bytes(algorithm));
   if (algorithm == DIGEST_SHA512)
     SHA512_Init(&r->d.sha512);
   else
@@ -1798,7 +1832,8 @@ crypto_digest_free(crypto_digest_t *digest)
 {
   if (!digest)
     return;
-  memwipe(digest, 0, sizeof(crypto_digest_t));
+  size_t bytes = crypto_digest_alloc_bytes(digest->algorithm);
+  memwipe(digest, 0, bytes);
   tor_free(digest);
 }
 
@@ -1857,8 +1892,9 @@ crypto_digest_get_digest(crypto_digest_t *digest,
     return;
   }
 
+  const size_t alloc_bytes = crypto_digest_alloc_bytes(digest->algorithm);
   /* memcpy into a temporary ctx, since SHA*_Final clears the context */
-  memcpy(&tmpenv, digest, sizeof(crypto_digest_t));
+  memcpy(&tmpenv, digest, alloc_bytes);
   switch (digest->algorithm) {
     case DIGEST_SHA1:
       SHA1_Final(r, &tmpenv.d.sha1);
@@ -1874,12 +1910,7 @@ crypto_digest_get_digest(crypto_digest_t *digest,
       log_warn(LD_BUG, "Handling unexpected algorithm %d", digest->algorithm);
       tor_assert(0); /* This is fatal, because it should never happen. */
     default:
-      log_warn(LD_BUG, "Called with unknown algorithm %d", digest->algorithm);
-      /* If fragile_assert is not enabled, then we should at least not
-       * leak anything. */
-      memwipe(r, 0xff, sizeof(r));
-      memwipe(&tmpenv, 0, sizeof(crypto_digest_t));
-      tor_fragile_assert();
+      tor_assert(0); /* Unreachable. */
       break;
   }
   memcpy(out, r, out_len);
@@ -1892,15 +1923,14 @@ crypto_digest_get_digest(crypto_digest_t *digest,
 crypto_digest_t *
 crypto_digest_dup(const crypto_digest_t *digest)
 {
-  crypto_digest_t *r;
   tor_assert(digest);
-  r = tor_malloc(sizeof(crypto_digest_t));
-  memcpy(r,digest,sizeof(crypto_digest_t));
-  return r;
+  const size_t alloc_bytes = crypto_digest_alloc_bytes(digest->algorithm);
+  return tor_memdup(digest, alloc_bytes);
 }
 
 /** Replace the state of the digest object <b>into</b> with the state
- * of the digest object <b>from</b>.
+ * of the digest object <b>from</b>.  Requires that 'into' and 'from'
+ * have the same digest type.
  */
 void
 crypto_digest_assign(crypto_digest_t *into,
@@ -1908,7 +1938,9 @@ crypto_digest_assign(crypto_digest_t *into,
 {
   tor_assert(into);
   tor_assert(from);
-  memcpy(into,from,sizeof(crypto_digest_t));
+  tor_assert(into->algorithm == from->algorithm);
+  const size_t alloc_bytes = crypto_digest_alloc_bytes(from->algorithm);
+  memcpy(into,from,alloc_bytes);
 }
 
 /** Given a list of strings in <b>lst</b>, set the <b>len_out</b>-byte digest
