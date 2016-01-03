@@ -220,7 +220,7 @@ test_address_ifaddrs_to_smartlist(void *arg)
    ifa_ipv6->ifa_dstaddr = NULL;
    ifa_ipv6->ifa_data = NULL;
 
-   smartlist = ifaddrs_to_smartlist(ifa);
+   smartlist = ifaddrs_to_smartlist(ifa, AF_UNSPEC);
 
    tt_assert(smartlist);
    tt_assert(smartlist_len(smartlist) == 3);
@@ -281,7 +281,7 @@ test_address_get_if_addrs_ifaddrs(void *arg)
 
   (void)arg;
 
-  results = get_interface_addresses_ifaddrs(LOG_ERR);
+  results = get_interface_addresses_ifaddrs(LOG_ERR, AF_UNSPEC);
 
   tt_assert(results);
   /* Some FreeBSD jails don't have localhost IP address. Instead, they only
@@ -314,7 +314,7 @@ test_address_get_if_addrs_win32(void *arg)
 
   (void)arg;
 
-  results = get_interface_addresses_win32(LOG_ERR);
+  results = get_interface_addresses_win32(LOG_ERR, AF_UNSPEC);
 
   tt_int_op(smartlist_len(results),>=,1);
   tt_assert(smartlist_contains_localhost_tor_addr(results));
@@ -511,7 +511,7 @@ test_address_get_if_addrs_ioctl(void *arg)
 
   (void)arg;
 
-  result = get_interface_addresses_ioctl(LOG_ERR);
+  result = get_interface_addresses_ioctl(LOG_ERR, AF_INET);
 
   /* On an IPv6-only system, this will fail and return NULL
   tt_assert(result);
@@ -845,9 +845,10 @@ test_address_get_if_addrs6_list_no_internal(void *arg)
 static int called_get_interface_addresses_raw = 0;
 
 static smartlist_t *
-mock_get_interface_addresses_raw_fail(int severity)
+mock_get_interface_addresses_raw_fail(int severity, sa_family_t family)
 {
   (void)severity;
+  (void)family;
 
   called_get_interface_addresses_raw++;
   return smartlist_new();
