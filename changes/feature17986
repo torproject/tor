@@ -1,0 +1,3 @@
+  o Minor features:
+    - Use SecureMemoryWipe() function to securely clean memory on
+      Windows. Implements feature 17986.

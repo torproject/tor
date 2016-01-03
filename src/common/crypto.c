@@ -2960,6 +2960,16 @@ memwipe(void *mem, uint8_t byte, size_t sz)
    * have this function call "memset".  A smart compiler could inline it, then
    * eliminate dead memsets, and declare itself to be clever. */
 
+#ifdef _WIN32
+  /* Here's what you do on windows. */
+  SecureZeroMemory(mem,sz);
+#elif defined(HAVE_EXPLICIT_BZERO)
+  /* The BSDs provide this. */
+  explicit_bzero(mem, sz);
+#elif defined(HAVE_MEMSET_S)
+  /* This is in the C99 standard. */
+  memset_s(mem, sz, 0, sz);
+#else
   /* This is a slow and ugly function from OpenSSL that fills 'mem' with junk
    * based on the pointer value, then uses that junk to update a global
    * variable.  It's an elaborate ruse to trick the compiler into not
@@ -2971,11 +2981,6 @@ memwipe(void *mem, uint8_t byte, size_t sz)
    * OPENSSL_cleanse() on most platforms, which ought to do the job.
    **/
 
-#ifdef HAVE_EXPLICIT_BZERO
-  explicit_bzero(mem, sz);
-#elif HAVE_MEMSET_S
-  memset_s( mem, sz, 0, sz );
-#else
   OPENSSL_cleanse(mem, sz);
 #endif
 
