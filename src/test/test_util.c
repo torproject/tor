@@ -14,6 +14,9 @@
 #include "memarea.h"
 #include "util_process.h"
 
+#ifdef HAVE_PWD_H
+#include <pwd.h>
+#endif
 #ifdef HAVE_SYS_UTIME_H
 #include <sys/utime.h>
 #endif
@@ -4626,6 +4629,44 @@ test_util_touch_file(void *arg)
   ;
 }
 
+#ifndef _WIN32
+static void
+test_util_pwdb(void *arg)
+{
+  (void) arg;
+  const struct passwd *me = NULL, *me2, *me3;
+  char *name = NULL;
+  char *dir = NULL;
+
+  /* Uncached case. */
+  /* Let's assume that we exist. */
+  me = tor_getpwuid(getuid());
+  tt_assert(me != NULL);
+  name = tor_strdup(me->pw_name);
+
+  /* Uncached case */
+  me2 = tor_getpwnam(name);
+  tt_assert(me2 != NULL);
+  tt_int_op(me2->pw_uid, OP_EQ, getuid());
+
+  /* Cached case */
+  me3 = tor_getpwuid(getuid());
+  tt_assert(me3 != NULL);
+  tt_str_op(me3->pw_name, OP_EQ, name);
+
+  me3 = tor_getpwnam(name);
+  tt_assert(me3 != NULL);
+  tt_int_op(me3->pw_uid, OP_EQ, getuid());
+
+  dir = get_user_homedir(name);
+  tt_assert(dir != NULL);
+
+ done:
+  tor_free(name);
+  tor_free(dir);
+}
+#endif
+
 #define UTIL_LEGACY(name)                                               \
   { #name, test_util_ ## name , 0, NULL, NULL }
 
@@ -4710,6 +4751,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(writepid, 0),
   UTIL_TEST(get_avail_disk_space, 0),
   UTIL_TEST(touch_file, 0),
+  UTIL_TEST_NO_WIN(pwdb, TT_FORK),
   END_OF_TESTCASES
 };
 
