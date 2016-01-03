@@ -391,6 +391,7 @@ AC_CHECK_FUNCS(
         getrlimit \
         gettimeofday \
         gmtime_r \
+	htonll \
         inet_aton \
         ioctl \
         issetugid \
