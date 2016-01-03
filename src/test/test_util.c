@@ -4322,12 +4322,6 @@ test_util_clamp_double_to_int64(void *arg)
   ;
 }
 
-#define UTIL_LEGACY(name)                                               \
-  { #name, test_util_ ## name , 0, NULL, NULL }
-
-#define UTIL_TEST(name, flags)                          \
-  { #name, test_util_ ## name, flags, NULL, NULL }
-
 #ifdef FD_CLOEXEC
 #define CAN_CHECK_CLOEXEC
 static int
@@ -4632,6 +4626,22 @@ test_util_touch_file(void *arg)
   ;
 }
 
+#define UTIL_LEGACY(name)                                               \
+  { #name, test_util_ ## name , 0, NULL, NULL }
+
+#define UTIL_TEST(name, flags)                          \
+  { #name, test_util_ ## name, flags, NULL, NULL }
+
+#ifdef _WIN32
+#define UTIL_TEST_NO_WIN(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
+#define UTIL_TEST_WIN_ONLY(n, f) UTIL_TEST(n, (f))
+#define UTIL_LEGACY_NO_WIN(n) UTIL_NO_WIN(n)
+#else
+#define UTIL_TEST_NO_WIN(n, f) UTIL_TEST(n, (f))
+#define UTIL_TEST_WIN_ONLY(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
+#define UTIL_LEGACY_NO_WIN(n) UTIL_LEGACY(n)
+#endif
+
 struct testcase_t util_tests[] = {
   UTIL_LEGACY(time),
   UTIL_TEST(parse_http_time, 0),
@@ -4639,9 +4649,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(config_line_quotes),
   UTIL_LEGACY(config_line_comment_character),
   UTIL_LEGACY(config_line_escaped_content),
-#ifndef _WIN32
-  UTIL_LEGACY(expand_filename),
-#endif
+  UTIL_LEGACY_NO_WIN(expand_filename),
   UTIL_LEGACY(escape_string_socks),
   UTIL_LEGACY(string_is_key_value),
   UTIL_LEGACY(strmisc),
@@ -4666,13 +4674,9 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(listdir, 0),
   UTIL_TEST(parent_dir, 0),
   UTIL_TEST(ftruncate, 0),
-#ifdef _WIN32
-  UTIL_TEST(load_win_lib, 0),
-#endif
-#ifndef _WIN32
-  UTIL_TEST(exit_status, 0),
-  UTIL_TEST(fgets_eagain, 0),
-#endif
+  UTIL_TEST_WIN_ONLY(load_win_lib, 0),
+  UTIL_TEST_NO_WIN(exit_status, 0),
+  UTIL_TEST_NO_WIN(fgets_eagain, 0),
   UTIL_TEST(format_hex_number, 0),
   UTIL_TEST(format_dec_number, 0),
   UTIL_TEST(join_win_cmdline, 0),
