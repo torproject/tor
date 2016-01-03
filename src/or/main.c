@@ -1301,7 +1301,7 @@ static periodic_event_item_t periodic_events[] = {
 /* These are pointers to members of periodic_events[] that are used to
  * implement particular callbacks.  We keep them separate here so that we
  * can access them by name.  We also keep them inside periodic_events[]
- * so that we can implement "reset all timers" in a reasaonable way. */
+ * so that we can implement "reset all timers" in a reasonable way. */
 static periodic_event_item_t *check_descriptor_event=NULL;
 static periodic_event_item_t *fetch_networkstatus_event=NULL;
 static periodic_event_item_t *launch_descriptor_fetches_event=NULL;
