@@ -497,11 +497,14 @@ MOCK_IMPL(void, directory_get_from_dirserver, (
       const node_t *node = choose_random_dirguard(type);
       if (node && node->ri) {
         /* every bridge has a routerinfo. */
-        tor_addr_t addr;
         routerinfo_t *ri = node->ri;
-        node_get_addr(node, &addr);
-        directory_initiate_command(&addr,
-                                   ri->or_port, 0/*no dirport*/,
+        /* clients always make OR connections to bridges */
+        tor_addr_port_t or_ap;
+        /* we are willing to use a non-preferred address if we need to */
+        fascist_firewall_choose_address_node(node, FIREWALL_OR_CONNECTION, 0,
+                                             &or_ap);
+        directory_initiate_command(&or_ap.addr, or_ap.port,
+                                   NULL, 0, /*no dirport*/
                                    ri->cache_info.identity_digest,
                                    dir_purpose,
                                    router_purpose,
@@ -610,6 +613,80 @@ dirind_is_anon(dir_indirection_t ind)
   return ind == DIRIND_ANON_DIRPORT || ind == DIRIND_ANONYMOUS;
 }
 
+/* Choose reachable OR and Dir addresses and ports from status, copying them
+ * into use_or_ap and use_dir_ap. If indirection is anonymous, then we're
+ * connecting via another relay, so choose the primary IPv4 address and ports.
+ *
+ * status should have at least one reachable address, if we can't choose a
+ * reachable address, warn and return -1. Otherwise, return 0.
+ */
+static int
+directory_choose_address_routerstatus(const routerstatus_t *status,
+                                      dir_indirection_t indirection,
+                                      tor_addr_port_t *use_or_ap,
+                                      tor_addr_port_t *use_dir_ap)
+{
+  tor_assert(status != NULL);
+  tor_assert(use_or_ap != NULL);
+  tor_assert(use_dir_ap != NULL);
+
+  const int anonymized_connection = dirind_is_anon(indirection);
+  int have_or = 0, have_dir = 0;
+
+  /* We expect status to have at least one reachable address if we're
+   * connecting to it directly.
+   *
+   * Therefore, we can simply use the other address if the one we want isn't
+   * allowed by the firewall.
+   *
+   * (When Tor uploads and downloads a hidden service descriptor, it uses
+   * DIRIND_ANONYMOUS, except for Tor2Web, which uses DIRIND_ONEHOP.
+   * So this code will only modify the address for Tor2Web's HS descriptor
+   * fetches. Even Single Onion Servers (NYI) use DIRIND_ANONYMOUS, to avoid
+   * HSDirs denying service by rejecting descriptors.)
+   */
+
+  /* Initialise the OR / Dir addresses */
+  tor_addr_make_null(&use_or_ap->addr, AF_UNSPEC);
+  use_or_ap->port = 0;
+  tor_addr_make_null(&use_dir_ap->addr, AF_UNSPEC);
+  use_dir_ap->port = 0;
+
+  if (anonymized_connection) {
+    /* Use the primary (IPv4) OR address if we're making an indirect
+     * connection. */
+    tor_addr_from_ipv4h(&use_or_ap->addr, status->addr);
+    use_or_ap->port = status->or_port;
+    have_or = 1;
+  } else {
+    /* We use an IPv6 address if we have one and we prefer it.
+     * Use the preferred address and port if they are reachable, otherwise,
+     * use the alternate address and port (if any).
+     */
+    have_or = fascist_firewall_choose_address_rs(status,
+                                                 FIREWALL_OR_CONNECTION, 0,
+                                                 use_or_ap);
+  }
+
+  have_dir = fascist_firewall_choose_address_rs(status,
+                                                FIREWALL_DIR_CONNECTION, 0,
+                                                use_dir_ap);
+
+  /* We rejected both addresses. This isn't great. */
+  if (!have_or && !have_dir) {
+    log_warn(LD_BUG, "Rejected all OR and Dir addresses from %s when "
+             "launching a directory connection to: IPv4 %s OR %d Dir %d "
+             "IPv6 %s OR %d Dir %d", routerstatus_describe(status),
+             fmt_addr32(status->addr), status->or_port,
+             status->dir_port, fmt_addr(&status->ipv6_addr),
+             status->ipv6_orport, status->dir_port);
+    log_backtrace(LOG_WARN, LD_BUG, "Addresses came from");
+    return -1;
+  }
+
+  return 0;
+}
+
 /** Same as directory_initiate_command_routerstatus(), but accepts
  * rendezvous data to fetch a hidden service descriptor. */
 void
@@ -627,7 +704,8 @@ directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
   const node_t *node;
   tor_addr_port_t use_or_ap, use_dir_ap;
   const int anonymized_connection = dirind_is_anon(indirection);
-  int have_or = 0, have_dir = 0;
+
+  tor_assert(status != NULL);
 
   node = node_get_by_id(status->identity_digest);
 
@@ -654,57 +732,16 @@ directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
    * selection uses the preference in ClientPreferIPv6{OR,Dir}Port, if
    * possible. (If UseBridges is set, clients ignore all these settings.)
    *
-   * Now we use a similar process to select an address for the relay,
-   * but simply use the other address if the one we want isn't allowed by
-   * the firewall.
-   *
-   * (When Tor uploads and downloads a hidden service descriptor, it uses
-   * DIRIND_ANONYMOUS, except for Tor2Web, which uses DIRIND_ONEHOP.
-   * So this code will only modify the address for Tor2Web's HS descriptor
-   * fetches. Even Single Onion Servers (NYI) use DIRIND_ANONYMOUS, to avoid
-   * HSDirs denying service by rejecting descriptors.)
+   * Now choose an address that we can use to connect to the directory server.
    */
-
-  /* Initialise the OR / Dir addresses */
-  tor_addr_make_null(&use_or_ap.addr, AF_UNSPEC);
-  use_or_ap.port = 0;
-  tor_addr_make_null(&use_dir_ap.addr, AF_UNSPEC);
-  use_dir_ap.port = 0;
-
-  if (anonymized_connection) {
-    /* Use the primary (IPv4) OR address if we're making an indirect
-     * connection. */
-    tor_addr_from_ipv4h(&use_or_ap.addr, status->addr);
-    use_or_ap.port = status->or_port;
-    have_or = 1;
-  } else {
-    /* We use an IPv6 address if we have one and we prefer it.
-     * Use the preferred address and port if they are reachable, otherwise,
-     * use the alternate address and port (if any).
-     */
-    have_or = fascist_firewall_choose_address_rs(status,
-                                                 FIREWALL_OR_CONNECTION, 0,
-                                                 &use_or_ap);
-  }
-
-  have_dir = fascist_firewall_choose_address_rs(status,
-                                                FIREWALL_DIR_CONNECTION, 0,
-                                                &use_dir_ap);
-
-  /* We rejected both addresses. This isn't great. */
-  if (!have_or && !have_dir) {
-    log_warn(LD_BUG, "Rejected all OR and Dir addresses from %s when "
-             "launching a directory connection to: IPv4 %s OR %d Dir %d "
-             "IPv6 %s OR %d Dir %d", routerstatus_describe(status),
-             fmt_addr32(status->addr), status->or_port,
-             status->dir_port, fmt_addr(&status->ipv6_addr),
-             status->ipv6_orport, status->dir_port);
-    log_backtrace(LOG_WARN, LD_BUG, "Addresses came from");
+  if (directory_choose_address_routerstatus(status, indirection, &use_or_ap,
+                                            &use_dir_ap) < 0) {
     return;
   }
 
-  /* XX/teor - we don't retry the alternate OR/Dir address if this one fails.
-   * (See #6772.) Instead, we'll retry another directory on failure. */
+  /* We don't retry the alternate OR/Dir address for the same directory if
+   * the address we choose fails (#6772).
+   * Instead, we'll retry another directory on failure. */
 
   directory_initiate_command_rend(&use_or_ap, &use_dir_ap,
                                   status->identity_digest,
@@ -941,41 +978,42 @@ directory_command_should_use_begindir(const or_options_t *options,
 }
 
 /** Helper for directory_initiate_command_rend: send the
- * command to a server whose address is <b>_addr</b>, whose OR port is
- * <b>or_port</b>, whose directory port is <b>dir_port</b>, whose identity key
- * digest is <b>digest</b>, with purposes <b>dir_purpose</b> and
+ * command to a server whose OR address/port is <b>or_addr</b>/<b>or_port</b>,
+ * whose directory address/port is <b>dir_addr</b>/<b>dir_port</b>, whose
+ * identity key digest is <b>digest</b>, with purposes <b>dir_purpose</b> and
  * <b>router_purpose</b>, making an (in)direct connection as specified in
  * <b>indirection</b>, with command <b>resource</b>, <b>payload</b> of
  * <b>payload_len</b>, and asking for a result only <b>if_modified_since</b>.
  */
 void
-directory_initiate_command(const tor_addr_t *_addr,
-                           uint16_t or_port, uint16_t dir_port,
+directory_initiate_command(const tor_addr_t *or_addr, uint16_t or_port,
+                           const tor_addr_t *dir_addr, uint16_t dir_port,
                            const char *digest,
                            uint8_t dir_purpose, uint8_t router_purpose,
                            dir_indirection_t indirection, const char *resource,
                            const char *payload, size_t payload_len,
                            time_t if_modified_since)
 {
-  /* Assume _addr applies to both the ORPort and the DirPort, but use the
-   * null tor_addr if ORPort or DirPort are 0. */
   tor_addr_port_t or_ap, dir_ap;
 
-  if (or_port) {
-    tor_addr_copy(&or_ap.addr, _addr);
+  /* Use the null tor_addr and 0 port if the address or port isn't valid. */
+  if (tor_addr_port_is_valid(or_addr, or_port, 0)) {
+    tor_addr_copy(&or_ap.addr, or_addr);
+    or_ap.port = or_port;
   } else {
-    /* the family doesn't matter here, so make it the same as _addr */
-    tor_addr_make_null(&or_ap.addr, tor_addr_family(_addr));
+    /* the family doesn't matter here, so make it IPv4 */
+    tor_addr_make_null(&or_ap.addr, AF_INET);
+    or_port = 0;
   }
-  or_ap.port = or_port;
 
-  if (dir_port) {
-    tor_addr_copy(&dir_ap.addr, _addr);
+  if (tor_addr_port_is_valid(dir_addr, dir_port, 0)) {
+    tor_addr_copy(&dir_ap.addr, dir_addr);
+    dir_ap.port = dir_port;
   } else {
-    /* the family doesn't matter here, so make it the same as _addr */
-    tor_addr_make_null(&dir_ap.addr, tor_addr_family(_addr));
+    /* the family doesn't matter here, so make it IPv4 */
+    tor_addr_make_null(&dir_ap.addr, AF_INET);
+    dir_port = 0;
   }
-  dir_ap.port = dir_port;
 
   directory_initiate_command_rend(&or_ap, &dir_ap,
                              digest, dir_purpose,

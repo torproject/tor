@@ -1244,14 +1244,15 @@ consider_testing_reachability(int test_or, int test_dir)
     extend_info_free(ei);
   }
 
+  /* XXX IPv6 self testing */
   tor_addr_from_ipv4h(&addr, me->addr);
   if (test_dir && !check_whether_dirport_reachable() &&
       !connection_get_by_type_addr_port_purpose(
                 CONN_TYPE_DIR, &addr, me->dir_port,
                 DIR_PURPOSE_FETCH_SERVERDESC)) {
     /* ask myself, via tor, for my server descriptor. */
-    directory_initiate_command(&addr,
-                               me->or_port, me->dir_port,
+    directory_initiate_command(&addr, me->or_port,
+                               &addr, me->dir_port,
                                me->cache_info.identity_digest,
                                DIR_PURPOSE_FETCH_SERVERDESC,
                                ROUTER_PURPOSE_GENERAL,

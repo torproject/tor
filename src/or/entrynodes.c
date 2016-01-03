@@ -2117,8 +2117,17 @@ launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
     return;
   }
 
-  directory_initiate_command(&bridge->addr,
-                             bridge->port, 0/*no dirport*/,
+  /* Until we get a descriptor for the bridge, we only know one address for
+   * it. If we  */
+  if (!fascist_firewall_allows_address_addr(&bridge->addr, bridge->port,
+                                            FIREWALL_OR_CONNECTION, 0)) {
+    log_notice(LD_CONFIG, "Tried to fetch a descriptor directly from a bridge, "
+               "but that bridge is not reachable through our firewall.");
+    return;
+  }
+
+  directory_initiate_command(&bridge->addr, bridge->port,
+                             NULL, 0, /*no dirport*/
                              bridge->identity,
                              DIR_PURPOSE_FETCH_SERVERDESC,
                              ROUTER_PURPOSE_BRIDGE,
