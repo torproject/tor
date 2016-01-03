@@ -87,7 +87,7 @@ get_entry_guards(void)
 
 /** Check whether the entry guard <b>e</b> is usable, given the directory
  * authorities' opinion about the router (stored in <b>ri</b>) and the user's
- * configuration (in <b>options</b>). Set <b>e</b>-&gt;bad_since
+ * configuration (in <b>options</b>). Set <b>e</b>->bad_since
  * accordingly. Return true iff the entry guard's status changes.
  *
  * If it's not usable, set *<b>reason</b> to a static string explaining why.
@@ -117,6 +117,9 @@ entry_guard_set_status(entry_guard_t *e, const node_t *node,
     *reason = "not recommended as a guard";
   else if (routerset_contains_node(options->ExcludeNodes, node))
     *reason = "excluded";
+  /* We only care about OR connection connectivity for entry guards. */
+  else if (!fascist_firewall_allows_node(node, FIREWALL_OR_CONNECTION, 0))
+    *reason = "unreachable by config";
   else if (e->path_bias_disabled)
     *reason = "path-biased";
 
