@@ -107,6 +107,11 @@ test_choose_random_entry_no_guards(void *arg)
   chosen_entry = choose_random_entry(NULL);
   tt_assert(chosen_entry);
 
+  /* And with the preference on auto */
+  mocked_options.ClientPreferIPv6ORPort = -1;
+  chosen_entry = choose_random_entry(NULL);
+  tt_assert(chosen_entry);
+
   /* Check that we don't get a guard if it doesn't pass mandatory address
    * settings */
   memset(&mocked_options, 0, sizeof(mocked_options));
@@ -124,6 +129,21 @@ test_choose_random_entry_no_guards(void *arg)
   mocked_options.ClientUseIPv4 = 1;
   mocked_options.ClientUseIPv6 = 1;
   mocked_options.ClientPreferIPv6ORPort = 1;
+
+  chosen_entry = choose_random_entry(NULL);
+  tt_assert(chosen_entry);
+
+  /* Check that we get a guard if it passes preferred address settings when
+   * they're auto */
+  memset(&mocked_options, 0, sizeof(mocked_options));
+  mocked_options.ClientUseIPv4 = 1;
+  mocked_options.ClientPreferIPv6ORPort = -1;
+
+  chosen_entry = choose_random_entry(NULL);
+  tt_assert(chosen_entry);
+
+  /* And with IPv6 active */
+  mocked_options.ClientUseIPv6 = 1;
 
   chosen_entry = choose_random_entry(NULL);
   tt_assert(chosen_entry);
@@ -166,6 +186,11 @@ test_choose_random_entry_one_possible_guard(void *arg)
   chosen_entry = choose_random_entry(NULL);
   tt_ptr_op(chosen_entry, OP_EQ, the_guard);
 
+  /* And with the preference on auto */
+  mocked_options.ClientPreferIPv6ORPort = -1;
+  chosen_entry = choose_random_entry(NULL);
+  tt_ptr_op(chosen_entry, OP_EQ, the_guard);
+
   /* Check that we don't get a guard if it doesn't pass mandatory address
    * settings */
   memset(&mocked_options, 0, sizeof(mocked_options));
@@ -189,6 +214,21 @@ test_choose_random_entry_one_possible_guard(void *arg)
   /* We disable the guard check and the preferred address check at the same
    * time, so we can't be sure we get the guard */
   tt_assert(chosen_entry);
+
+  /* Check that we get the guard if it passes preferred address settings when
+   * they're auto */
+  memset(&mocked_options, 0, sizeof(mocked_options));
+  mocked_options.ClientUseIPv4 = 1;
+  mocked_options.ClientPreferIPv6ORPort = -1;
+
+  chosen_entry = choose_random_entry(NULL);
+  tt_ptr_op(chosen_entry, OP_EQ, the_guard);
+
+  /* and with IPv6 active */
+  mocked_options.ClientUseIPv6 = 1;
+
+  chosen_entry = choose_random_entry(NULL);
+  tt_ptr_op(chosen_entry, OP_EQ, the_guard);
 
  done:
   memset(&mocked_options, 0, sizeof(mocked_options));
@@ -722,8 +762,9 @@ test_node_preferred_orport(void *arg)
 
   /* Setup options */
   memset(&mocked_options, 0, sizeof(mocked_options));
-  /* We don't test ClientPreferIPv6ORPort here, because it's only used in
-   * nodelist_set_consensus to setup each node_t. */
+  /* We don't test ClientPreferIPv6ORPort here, because it's used in
+   * nodelist_set_consensus to setup node.ipv6_preferred, which we set
+   * directly. */
   MOCK(get_options, mock_get_options);
 
   /* Setup IP addresses */

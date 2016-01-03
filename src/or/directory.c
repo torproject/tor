@@ -730,7 +730,8 @@ directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
    * directory server, we have selected a server that has at least one address
    * allowed by ClientUseIPv4/6 and Reachable{"",OR,Dir}Addresses. This
    * selection uses the preference in ClientPreferIPv6{OR,Dir}Port, if
-   * possible. (If UseBridges is set, clients ignore all these settings.)
+   * possible. (If UseBridges is set, clients always use IPv6, and prefer it
+   * by default.)
    *
    * Now choose an address that we can use to connect to the directory server.
    */
@@ -1069,6 +1070,15 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
 
   log_debug(LD_DIR, "anonymized %d, use_begindir %d.",
             anonymized_connection, use_begindir);
+
+  if (!dir_port && !use_begindir) {
+    char ipaddr[TOR_ADDR_BUF_LEN];
+    tor_addr_to_str(ipaddr, &addr, TOR_ADDR_BUF_LEN, 0);
+    log_warn(LD_BUG, "Cannot use directory server without dirport or "
+                     "begindir! Address: %s, DirPort: %d, Connection Port: %d",
+                     escaped_safe_str_client(ipaddr), dir_port, port);
+    return;
+  }
 
   log_debug(LD_DIR, "Initiating %s", dir_conn_purpose_to_string(dir_purpose));
 

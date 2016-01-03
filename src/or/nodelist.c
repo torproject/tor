@@ -214,76 +214,6 @@ nodelist_add_microdesc(microdesc_t *md)
   return node;
 }
 
-/** Do we prefer to connect to IPv6, ignoring ClientPreferIPv6ORPort and
- * ClientPreferIPv6DirPort?
- * If we're unsure, return -1, otherwise, return 1 for IPv6 and 0 for IPv4.
- */
-static int
-nodelist_prefer_ipv6(const or_options_t *options)
-{
-  /*
-   Cheap implementation of config options ClientUseIPv4 & ClientUseIPv6 --
-   If we're a server, use IPv4.
-   If we're a client running with bridges, use IPv6.
-   Otherwise, use IPv6 if we can and it's preferred, or if IPv4 is disabled.
-   See #4455 and #17840 for more on this subject.
-   */
-
-  /* Servers prefer IPv4 */
-  if (server_mode(options)) {
-    return 0;
-  }
-
-  /* Bridge clients prefer IPv6 */
-  if (options->UseBridges) {
-    return 1;
-  }
-
-  if (!options->ClientUseIPv4) {
-    return 1;
-  }
-
-  return -1;
-}
-
-/** Do we prefer to connect to IPv6 ORPorts?
- */
-int
-nodelist_prefer_ipv6_orport(const or_options_t *options)
-{
-  int pref_ipv6 = nodelist_prefer_ipv6(options);
-
-  if (pref_ipv6 >= 0) {
-    return pref_ipv6;
-  }
-
-  /* We prefer IPv6 ORPorts if the option is set */
-  if (options->ClientUseIPv6 && options->ClientPreferIPv6ORPort) {
-    return 1;
-  }
-
-  return 0;
-}
-
-/** Do we prefer to connect to IPv6 DirPorts?
- */
-int
-nodelist_prefer_ipv6_dirport(const or_options_t *options)
-{
-  int pref_ipv6 = nodelist_prefer_ipv6(options);
-
-  if (pref_ipv6 >= 0) {
-    return pref_ipv6;
-  }
-
-  /* We prefer IPv6 DirPorts if the option is set */
-  if (options->ClientUseIPv6 && options->ClientPreferIPv6DirPort) {
-    return 1;
-  }
-
-  return 0;
-}
-
 /** Tell the nodelist that the current usable consensus is <b>ns</b>.
  * This makes the nodelist change all of the routerstatus entries for
  * the nodes, drop nodes that no longer have enough info to get used,
@@ -330,7 +260,7 @@ nodelist_set_consensus(networkstatus_t *ns)
       node->is_bad_exit = rs->is_bad_exit;
       node->is_hs_dir = rs->is_hs_dir;
       node->ipv6_preferred = 0;
-      if (nodelist_prefer_ipv6_orport(options) &&
+      if (fascist_firewall_prefer_ipv6_orport(options) &&
           (tor_addr_is_null(&rs->ipv6_addr) == 0 ||
            (node->md && tor_addr_is_null(&node->md->ipv6_addr) == 0)))
         node->ipv6_preferred = 1;
@@ -916,9 +846,13 @@ node_get_addr(const node_t *node, tor_addr_t *addr_out)
 uint32_t
 node_get_prim_addr_ipv4h(const node_t *node)
 {
-  if (node->ri) {
+  /* Don't check the ORPort or DirPort, as this function isn't port-specific,
+   * and the node might have a valid IPv4 address, yet have a zero
+   * ORPort or DirPort.
+   */
+  if (node->ri && tor_addr_is_valid_ipv4h(node->ri->addr, 0)) {
     return node->ri->addr;
-  } else if (node->rs) {
+  } else if (node->rs && tor_addr_is_valid_ipv4h(node->rs->addr, 0)) {
     return node->rs->addr;
   }
   return 0;
@@ -994,18 +928,42 @@ node_get_declared_family(const node_t *node)
     return NULL;
 }
 
-/* Does this node have a valid IPv6 address? */
-static int
+/* Does this node have a valid IPv6 address?
+ * Prefer node_has_ipv6_orport() or node_has_ipv6_dirport() for
+ * checking specific ports. */
+int
 node_has_ipv6_addr(const node_t *node)
 {
-  if (node->ri)
-    return !tor_addr_is_null(&node->ri->ipv6_addr);
-  if (node->md)
-    return !tor_addr_is_null(&node->md->ipv6_addr);
-  if (node->rs)
-    return !tor_addr_is_null(&node->rs->ipv6_addr);
+  /* Don't check the ORPort or DirPort, as this function isn't port-specific,
+   * and the node might have a valid IPv6 address, yet have a zero
+   * ORPort or DirPort.
+   */
+  if (node->ri && tor_addr_is_valid(&node->ri->ipv6_addr, 0))
+    return 1;
+  if (node->rs && tor_addr_is_valid(&node->rs->ipv6_addr, 0))
+    return 1;
+  if (node->md && tor_addr_is_valid(&node->md->ipv6_addr, 0))
+    return 1;
 
   return 0;
+}
+
+/* Does this node have a valid IPv6 ORPort? */
+int
+node_has_ipv6_orport(const node_t *node)
+{
+  tor_addr_port_t ipv6_orport;
+  node_get_pref_ipv6_orport(node, &ipv6_orport);
+  return tor_addr_port_is_valid_ap(&ipv6_orport, 0);
+}
+
+/* Does this node have a valid IPv6 DirPort? */
+int
+node_has_ipv6_dirport(const node_t *node)
+{
+  tor_addr_port_t ipv6_dirport;
+  node_get_pref_ipv6_dirport(node, &ipv6_dirport);
+  return tor_addr_port_is_valid_ap(&ipv6_dirport, 0);
 }
 
 /** Return 1 if we prefer the IPv6 address and OR TCP port of
@@ -1028,20 +986,18 @@ node_ipv6_or_preferred(const node_t *node)
   tor_addr_port_t ipv4_addr;
   node_assert_ok(node);
 
-  if (!options->ClientUseIPv6) {
+  if (!fascist_firewall_use_ipv6(options)) {
     return 0;
   } else if (node->ipv6_preferred || node_get_prim_orport(node, &ipv4_addr)
-      || nodelist_prefer_ipv6_orport(get_options())) {
-    return node_has_ipv6_addr(node);
+      || fascist_firewall_prefer_ipv6_orport(get_options())) {
+    return node_has_ipv6_orport(node);
   }
   return 0;
 }
 
 #define RETURN_IPV4_AP(r, port_field, ap_out) \
   STMT_BEGIN \
-    if (r) { \
-      if ((r)->addr == 0 || (r)->port_field == 0) \
-        return -1; \
+    if (r && tor_addr_port_is_valid_ipv4h((r)->addr, (r)->port_field, 0)) { \
       tor_addr_from_ipv4h(&(ap_out)->addr, (r)->addr); \
       (ap_out)->port = (r)->port_field; \
       return 0; \
@@ -1091,16 +1047,16 @@ node_get_pref_ipv6_orport(const node_t *node, tor_addr_port_t *ap_out)
    * fascist_firewall_* functions. Also check if the address or port are valid,
    * and try another alternative if they are not. */
 
-  if (node->ri && node->ri->ipv6_orport
-      && !tor_addr_is_null(&node->ri->ipv6_addr)) {
+  if (node->ri && tor_addr_port_is_valid(&node->ri->ipv6_addr,
+                                         node->ri->ipv6_orport, 0)) {
     tor_addr_copy(&ap_out->addr, &node->ri->ipv6_addr);
     ap_out->port = node->ri->ipv6_orport;
-  } else if (node->rs && node->rs->ipv6_orport
-             && !tor_addr_is_null(&node->rs->ipv6_addr)) {
+  } else if (node->rs && tor_addr_port_is_valid(&node->rs->ipv6_addr,
+                                                 node->rs->ipv6_orport, 0)) {
     tor_addr_copy(&ap_out->addr, &node->rs->ipv6_addr);
     ap_out->port = node->rs->ipv6_orport;
-  } else if (node->md && node->md->ipv6_orport
-             && !tor_addr_is_null(&node->md->ipv6_addr)) {
+  } else if (node->md && tor_addr_port_is_valid(&node->md->ipv6_addr,
+                                                 node->md->ipv6_orport, 0)) {
     tor_addr_copy(&ap_out->addr, &node->md->ipv6_addr);
     ap_out->port = node->md->ipv6_orport;
   } else {
@@ -1129,11 +1085,11 @@ node_ipv6_dir_preferred(const node_t *node)
   tor_addr_port_t ipv4_addr;
   node_assert_ok(node);
 
-  if (!options->ClientUseIPv6) {
+  if (!fascist_firewall_use_ipv6(options)) {
     return 0;
   } else if (node->ipv6_preferred || node_get_prim_dirport(node, &ipv4_addr)
-      || nodelist_prefer_ipv6_dirport(get_options())) {
-    return node_has_ipv6_addr(node);
+      || fascist_firewall_prefer_ipv6_dirport(get_options())) {
+    return node_has_ipv6_dirport(node);
   }
   return 0;
 }
@@ -1183,12 +1139,12 @@ node_get_pref_ipv6_dirport(const node_t *node, tor_addr_port_t *ap_out)
    * they are not. Note that microdescriptors have no dir_port. */
 
   /* Assume IPv4 and IPv6 dirports are the same */
-  if (node->ri && node->ri->dir_port
-      && !tor_addr_is_null(&node->ri->ipv6_addr)) {
+  if (node->ri && tor_addr_port_is_valid(&node->ri->ipv6_addr,
+                                         node->ri->dir_port, 0)) {
     tor_addr_copy(&ap_out->addr, &node->ri->ipv6_addr);
     ap_out->port = node->ri->dir_port;
-  } else if (node->rs && node->rs->dir_port
-             && !tor_addr_is_null(&node->rs->ipv6_addr)) {
+  } else if (node->rs && tor_addr_port_is_valid(&node->rs->ipv6_addr,
+                                                node->rs->dir_port, 0)) {
     tor_addr_copy(&ap_out->addr, &node->rs->ipv6_addr);
     ap_out->port = node->rs->dir_port;
   } else {

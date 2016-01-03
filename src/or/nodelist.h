@@ -21,8 +21,6 @@ MOCK_DECL(const node_t *, node_get_by_id, (const char *identity_digest));
 const node_t *node_get_by_hex_id(const char *identity_digest);
 node_t *nodelist_set_routerinfo(routerinfo_t *ri, routerinfo_t **ri_old_out);
 node_t *nodelist_add_microdesc(microdesc_t *md);
-int nodelist_prefer_ipv6_orport(const or_options_t *options);
-int nodelist_prefer_ipv6_dirport(const or_options_t *options);
 void nodelist_set_consensus(networkstatus_t *ns);
 
 void nodelist_remove_microdesc(const char *identity_digest, microdesc_t *md);
@@ -58,6 +56,9 @@ long node_get_declared_uptime(const node_t *node);
 time_t node_get_published_on(const node_t *node);
 const smartlist_t *node_get_declared_family(const node_t *node);
 
+int node_has_ipv6_addr(const node_t *node);
+int node_has_ipv6_orport(const node_t *node);
+int node_has_ipv6_dirport(const node_t *node);
 /* Deprecated - use node_ipv6_or_preferred or node_ipv6_dir_preferred */
 #define node_ipv6_preferred(node) node_ipv6_or_preferred(node)
 int node_ipv6_or_preferred(const node_t *node);
