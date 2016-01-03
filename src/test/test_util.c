@@ -14,6 +14,12 @@
 #include "memarea.h"
 #include "util_process.h"
 
+#ifdef HAVE_SYS_UTIME_H
+#include <sys/utime.h>
+#endif
+#ifdef HAVE_UTIME_H
+#include <utime.h>
+#endif
 #ifdef _WIN32
 #include <tchar.h>
 #endif
@@ -4599,6 +4605,33 @@ test_util_get_avail_disk_space(void *arg)
   ;
 }
 
+static void
+test_util_touch_file(void *arg)
+{
+  (void) arg;
+  const char *fname = get_fname("touch");
+
+  const time_t now = time(NULL);
+  struct stat st;
+  write_bytes_to_file(fname, "abc", 3, 1);
+  tt_int_op(0, OP_EQ, stat(fname, &st));
+  tt_i64_op(st.st_mtime, OP_GE, now);
+
+  const time_t five_sec_ago = now - 5;
+  struct utimbuf u = { five_sec_ago, five_sec_ago };
+  tt_int_op(0, OP_EQ, utime(fname, &u));
+  tt_int_op(0, OP_EQ, stat(fname, &st));
+  tt_i64_op(st.st_mtime, OP_EQ, five_sec_ago);
+
+  /* Finally we can touch the file */
+  tt_int_op(0, OP_EQ, touch_file(fname));
+  tt_int_op(0, OP_EQ, stat(fname, &st));
+  tt_i64_op(st.st_mtime, OP_GE, now);
+
+ done:
+  ;
+}
+
 struct testcase_t util_tests[] = {
   UTIL_LEGACY(time),
   UTIL_TEST(parse_http_time, 0),
@@ -4672,6 +4705,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(ipv4_validation, 0),
   UTIL_TEST(writepid, 0),
   UTIL_TEST(get_avail_disk_space, 0),
+  UTIL_TEST(touch_file, 0),
   END_OF_TESTCASES
 };
 
