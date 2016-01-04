@@ -3454,8 +3454,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
       options->AccountingRule = ACCT_SUM;
     else if (!strcmp(options->AccountingRule_option, "max"))
       options->AccountingRule = ACCT_MAX;
+    else if (!strcmp(options->AccountingRule_option, "in"))
+      options->AccountingRule = ACCT_IN;
+    else if (!strcmp(options->AccountingRule_option, "out"))
+      options->AccountingRule = ACCT_OUT;
     else
-      REJECT("AccountingRule must be 'sum' or 'max'");
+      REJECT("AccountingRule must be 'sum', 'max', 'in', or 'out'");
   }
 
   if (options->DirPort_set && !options->DirCache) {
