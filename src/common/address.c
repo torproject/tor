@@ -1473,10 +1473,13 @@ get_interface_addresses_ioctl(int severity, sa_family_t family)
   /* This interface, AFAICT, only supports AF_INET addresses,
    * except on AIX. For Solaris, we could use SIOCGLIFCONF. */
 
-  /* FIXME: for now, we bail out if family is not AF_INET since
+  /* Bail out if family is neither AF_INET nor AF_UNSPEC since
    * ioctl() technique supports non-IPv4 interface addresses on
-   * a small number of niche systems only. */
-  if (family != AF_INET)
+   * a small number of niche systems only. If family is AF_UNSPEC,
+   * fall back to getting AF_INET addresses only. */
+  if (family == AF_UNSPEC)
+    family = AF_INET;
+  else if (family != AF_INET)
     return NULL;
 
   fd = socket(family, SOCK_DGRAM, 0);
