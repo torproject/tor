@@ -1547,8 +1547,9 @@ tor_addr_is_multicast(const tor_addr_t *a)
 }
 
 /** Attempt to retrieve IP address of current host by utilizing some
- * UDP socket trickery. Only look for address of given <b>family</b>.
- * Set result to *<b>addr</b>. Return 0 on success, -1 on failure.
+ * UDP socket trickery. Only look for address of given <b>family</b>
+ * (only AF_INET and AF_INET6 are supported). Set result to *<b>addr</b>.
+ * Return 0 on success, -1 on failure.
  */
 MOCK_IMPL(int,
 get_interface_address6_via_udp_socket_hack,(int severity,
@@ -1720,15 +1721,27 @@ MOCK_IMPL(smartlist_t *,get_interface_address6_list,(int severity,
   }
 
   /* Okay, the smart way is out. */
-  if (get_interface_address6_via_udp_socket_hack(severity,family,&addr))
-     return smartlist_new();
-  if (!include_internal && tor_addr_is_internal(&addr, 0)) {
-    return smartlist_new();
-  } else {
-    addrs = smartlist_new();
-    smartlist_add(addrs, tor_dup_addr(&addr));
-    return addrs;
+  addrs = smartlist_new();
+
+  if (family == AF_INET || family == AF_UNSPEC) {
+    if (get_interface_address6_via_udp_socket_hack(severity,AF_INET,
+                                                   &addr) == 0) {
+      if (include_internal || !tor_addr_is_internal(&addr, 0)) {
+        smartlist_add(addrs, tor_dup_addr(&addr));
+      }
+    }
   }
+
+  if (family == AF_INET6 || family == AF_UNSPEC) {
+    if (get_interface_address6_via_udp_socket_hack(severity,AF_INET6,
+                                                   &addr) == 0) {
+      if (include_internal || !tor_addr_is_internal(&addr, 0)) {
+        smartlist_add(addrs, tor_dup_addr(&addr));
+      }
+    }
+  }
+
+  return addrs;
 }
 
 /* ======
