@@ -381,6 +381,7 @@ AC_CHECK_FUNCS(
         backtrace_symbols_fd \
         clock_gettime \
 	eventfd \
+	explicit_bzero \
 	timingsafe_memcmp \
         flock \
         ftime \
@@ -399,6 +400,7 @@ AC_CHECK_FUNCS(
         localtime_r \
         lround \
         memmem \
+        memset_s \
 	pipe \
 	pipe2 \
         prctl \

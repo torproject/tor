@@ -2970,7 +2970,15 @@ memwipe(void *mem, uint8_t byte, size_t sz)
    * ...or maybe not.  In practice, there are pure-asm implementations of
    * OPENSSL_cleanse() on most platforms, which ought to do the job.
    **/
+
+#ifdef HAVE_EXPLICIT_BZERO
+  explicit_bzero(mem, sz);
+#elif HAVE_MEMSET_S
+  memset_s( mem, sz, 0, sz );
+#else
   OPENSSL_cleanse(mem, sz);
+#endif
+
   /* Just in case some caller of memwipe() is relying on getting a buffer
    * filled with a particular value, fill the buffer.
    *

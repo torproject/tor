@@ -1,0 +1,7 @@
+  o Minor enhancement (security):
+    - Use explicit_bzero when present
+      from <logan@hackers.mu>.
+    - Use memset_s when present
+      from <selven@hackers.mu>
+
+    625538405474972d627b26d7a250ea36 (:
