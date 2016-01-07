@@ -3421,9 +3421,11 @@ test_config_default_dir_servers(void *arg)
   int trusted_count = 0;
   int fallback_count = 0;
 
+  /* new set of options should stop fallback parsing */
   opts = tor_malloc_zero(sizeof(or_options_t));
   opts->UseDefaultFallbackDirs = 0;
-  consider_adding_dir_servers(opts, opts);
+  /* set old_options to NULL to force dir update */
+  consider_adding_dir_servers(opts, NULL);
   trusted_count = smartlist_len(router_get_trusted_dir_servers());
   fallback_count = smartlist_len(router_get_fallback_dir_servers());
   or_options_free(opts);
