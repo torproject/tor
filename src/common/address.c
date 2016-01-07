@@ -1784,7 +1784,7 @@ tor_addr_port_parse(int severity, const char *addrport,
 }
 
 /** Given an address of the form "host[:port]", try to divide it into its host
- * ane port portions, setting *<b>address_out</b> to a newly allocated string
+ * and port portions, setting *<b>address_out</b> to a newly allocated string
  * holding the address portion and *<b>port_out</b> to the port (or 0 if no
  * port is given).  Return 0 on success, -1 on failure. */
 int
