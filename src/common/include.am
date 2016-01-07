@@ -78,7 +78,10 @@ LIBOR_A_SOURCES = \
   $(threads_impl_source)				\
   $(readpassphrase_source)
 
-src/common/log.o: micro-revision.i
+src/common/src_common_libor_testing_a-log.o \
+  src/common/src_common_libor_testing_a-log.obj \
+  src/common/log.o \
+  src/common/log.obj : micro-revision.i
 
 LIBOR_CRYPTO_A_SOURCES = \
   src/common/aes.c		\
