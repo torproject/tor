@@ -4676,7 +4676,7 @@ test_util_pwdb(void *arg)
 #ifdef _WIN32
 #define UTIL_TEST_NO_WIN(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
 #define UTIL_TEST_WIN_ONLY(n, f) UTIL_TEST(n, (f))
-#define UTIL_LEGACY_NO_WIN(n) UTIL_NO_WIN(n)
+#define UTIL_LEGACY_NO_WIN(n) UTIL_TEST_NO_WIN(n)
 #else
 #define UTIL_TEST_NO_WIN(n, f) UTIL_TEST(n, (f))
 #define UTIL_TEST_WIN_ONLY(n, f) { #n, NULL, TT_SKIP, NULL, NULL }
