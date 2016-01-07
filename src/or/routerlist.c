@@ -1459,8 +1459,14 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags)
     if ((type & MICRODESC_DIRINFO) && !is_trusted &&
         !node->rs->version_supports_microdesc_cache)
       continue;
-    if (for_guard && node->using_as_guard)
-      continue; /* Don't make the same node a guard twice. */
+    /* Don't make the same node a guard twice */
+    if (for_guard && node->using_as_guard) {
+      continue;
+    }
+    /* Ensure that a directory guard is actually a guard node. */
+    if (for_guard && !node->is_possible_guard) {
+      continue;
+    }
     if (try_excluding &&
         routerset_contains_routerstatus(options->ExcludeNodes, status,
                                         country)) {
