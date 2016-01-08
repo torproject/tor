@@ -5,6 +5,7 @@
 
 #include "orconfig.h"
 #define CRYPTO_CURVE25519_PRIVATE
+#define CRYPTO_PRIVATE
 #include "or.h"
 #include "test.h"
 #include "aes.h"
@@ -15,6 +16,7 @@
 #include "ed25519_vectors.inc"
 
 #include <openssl/evp.h>
+#include <openssl/rand.h>
 
 extern const char AUTHORITY_SIGNKEY_3[];
 extern const char AUTHORITY_SIGNKEY_A_DIGEST[];
@@ -127,6 +129,32 @@ test_crypto_rng_range(void *arg)
   /* These fail with probability 1/10^603. */
   tt_assert(got_smallest);
   tt_assert(got_largest);
+ done:
+  ;
+}
+
+/* Test for rectifying openssl RAND engine. */
+static void
+test_crypto_rng_engine(void *arg)
+{
+  (void)arg;
+  RAND_METHOD dummy_method;
+  memset(&dummy_method, 0, sizeof(dummy_method));
+
+  /* We should be a no-op if we're already on RAND_OpenSSL */
+  tt_int_op(0, ==, crypto_force_rand_ssleay());
+  tt_assert(RAND_get_rand_method() == RAND_OpenSSL());
+
+  /* We should correct the method if it's a dummy. */
+  RAND_set_rand_method(&dummy_method);
+  tt_assert(RAND_get_rand_method() == &dummy_method);
+  tt_int_op(1, ==, crypto_force_rand_ssleay());
+  tt_assert(RAND_get_rand_method() == RAND_OpenSSL());
+
+  /* Make sure we aren't calling dummy_method */
+  crypto_rand((void *) &dummy_method, sizeof(dummy_method));
+  crypto_rand((void *) &dummy_method, sizeof(dummy_method));
+
  done:
   ;
 }
@@ -1688,6 +1716,25 @@ test_crypto_curve25519_persist(void *arg)
   tor_free(tag);
 }
 
+static void *
+ed25519_testcase_setup(const struct testcase_t *testcase)
+{
+  crypto_ed25519_testing_force_impl(testcase->setup_data);
+  return testcase->setup_data;
+}
+static int
+ed25519_testcase_cleanup(const struct testcase_t *testcase, void *ptr)
+{
+  (void)testcase;
+  (void)ptr;
+  crypto_ed25519_testing_restore_impl();
+  return 1;
+}
+static const struct testcase_setup_t ed25519_test_setup = {
+  ed25519_testcase_setup, ed25519_testcase_cleanup
+};
+
+
 static void
 test_crypto_ed25519_simple(void *arg)
 {
@@ -2327,10 +2374,19 @@ test_crypto_failure_modes(void *arg)
 #define CRYPTO_LEGACY(name)                                            \
   { #name, test_crypto_ ## name , 0, NULL, NULL }
 
+#define ED25519_TEST_ONE(name, fl, which)                               \
+  { #name "/ed25519_" which, test_crypto_ed25519_ ## name, (fl),        \
+    &ed25519_test_setup, (void*)which }
+
+#define ED25519_TEST(name, fl)                  \
+  ED25519_TEST_ONE(name, (fl), "donna"),        \
+  ED25519_TEST_ONE(name, (fl), "ref10")
+
 struct testcase_t crypto_tests[] = {
   CRYPTO_LEGACY(formats),
   CRYPTO_LEGACY(rng),
   { "rng_range", test_crypto_rng_range, 0, NULL, NULL },
+  { "rng_engine", test_crypto_rng_engine, TT_FORK, NULL, NULL },
   { "aes_AES", test_crypto_aes, TT_FORK, &passthrough_setup, (void*)"aes" },
   { "aes_EVP", test_crypto_aes, TT_FORK, &passthrough_setup, (void*)"evp" },
   CRYPTO_LEGACY(sha),
@@ -2355,14 +2411,13 @@ struct testcase_t crypto_tests[] = {
   { "curve25519_wrappers", test_crypto_curve25519_wrappers, 0, NULL, NULL },
   { "curve25519_encode", test_crypto_curve25519_encode, 0, NULL, NULL },
   { "curve25519_persist", test_crypto_curve25519_persist, 0, NULL, NULL },
-  { "ed25519_simple", test_crypto_ed25519_simple, 0, NULL, NULL },
-  { "ed25519_test_vectors", test_crypto_ed25519_test_vectors, 0, NULL, NULL },
-  { "ed25519_encode", test_crypto_ed25519_encode, 0, NULL, NULL },
-  { "ed25519_convert", test_crypto_ed25519_convert, 0, NULL, NULL },
-  { "ed25519_blinding", test_crypto_ed25519_blinding, 0, NULL, NULL },
-  { "ed25519_testvectors", test_crypto_ed25519_testvectors, 0, NULL, NULL },
-  { "ed25519_fuzz_donna", test_crypto_ed25519_fuzz_donna, TT_FORK, NULL,
-    NULL },
+  ED25519_TEST(simple, 0),
+  ED25519_TEST(test_vectors, 0),
+  ED25519_TEST(encode, 0),
+  ED25519_TEST(convert, 0),
+  ED25519_TEST(blinding, 0),
+  ED25519_TEST(testvectors, 0),
+  ED25519_TEST(fuzz_donna, TT_FORK),
   { "siphash", test_crypto_siphash, 0, NULL, NULL },
   { "failure_modes", test_crypto_failure_modes, TT_FORK, NULL, NULL },
   END_OF_TESTCASES

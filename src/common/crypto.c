@@ -252,7 +252,7 @@ crypto_openssl_get_header_version_str(void)
 
 /** Make sure that openssl is using its default PRNG. Return 1 if we had to
  * adjust it; 0 otherwise. */
-static int
+STATIC int
 crypto_force_rand_ssleay(void)
 {
   RAND_METHOD *default_method;
@@ -3018,6 +3018,10 @@ openssl_locking_cb_(int mode, int n, const char *file, int line)
     tor_mutex_release(openssl_mutexes_[n]);
 }
 
+#if 0
+/* This code is disabled, because OpenSSL never actually uses these callbacks.
+ */
+
 /** OpenSSL helper type: wraps a Tor mutex so that OpenSSL can use it
  * as a lock. */
 struct CRYPTO_dynlock_value {
@@ -3062,6 +3066,7 @@ openssl_dynlock_destroy_cb_(struct CRYPTO_dynlock_value *v,
   tor_mutex_free(v->lock);
   tor_free(v);
 }
+#endif
 
 static void
 tor_set_openssl_thread_id(CRYPTO_THREADID *threadid)
@@ -3083,9 +3088,11 @@ setup_openssl_threading(void)
     openssl_mutexes_[i] = tor_mutex_new();
   CRYPTO_set_locking_callback(openssl_locking_cb_);
   CRYPTO_THREADID_set_callback(tor_set_openssl_thread_id);
+#if 0
   CRYPTO_set_dynlock_create_callback(openssl_dynlock_create_cb_);
   CRYPTO_set_dynlock_lock_callback(openssl_dynlock_lock_cb_);
   CRYPTO_set_dynlock_destroy_callback(openssl_dynlock_destroy_cb_);
+#endif
   return 0;
 }
 

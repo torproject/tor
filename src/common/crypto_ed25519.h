@@ -111,5 +111,10 @@ int ed25519_pubkey_eq(const ed25519_public_key_t *key1,
 void ed25519_set_impl_params(int use_donna);
 void ed25519_init(void);
 
+#ifdef TOR_UNIT_TESTS
+void crypto_ed25519_testing_force_impl(const char *name);
+void crypto_ed25519_testing_restore_impl(void);
+#endif
+
 #endif
 

@@ -1,0 +1,3 @@
+  o Removed code:
+    - Remove code for OpenSSL dynamic locks; OpenSSL doesn't use them.
+      Closes ticket 17926.
