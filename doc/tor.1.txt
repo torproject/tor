@@ -1773,12 +1773,14 @@ is non-zero):
     of the time, which is more useful than a set of slow servers that are
     always "available".
 
-[[AccountingRule]] **AccountingRule** **sum**|**max**::
+[[AccountingRule]] **AccountingRule** **sum**|**max**|**in**|**out**::
     How we determine when our AccountingMax has been reached (when we
     should hibernate) during a time interval. Set to "max" to calculate
     using the higher of either the sent or received bytes (this is the
     default functionality). Set to "sum" to calculate using the sent
-    plus received bytes. (Default: max)
+    plus received bytes. Set to "in" to calculate using only the
+    received bytes. Set to "out" to calculate using only the sent bytes.
+    (Default: max)
 
 [[AccountingStart]] **AccountingStart** **day**|**week**|**month** [__day__] __HH:MM__::
     Specify how long accounting periods last. If **month** is given, each

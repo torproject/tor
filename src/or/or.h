@@ -3893,9 +3893,11 @@ typedef struct {
                            * hibernate." */
   /** How do we determine when our AccountingMax has been reached?
    * "max" for when in or out reaches AccountingMax
-   * "sum" for when in plus out reaches AccountingMax */
+   * "sum" for when in plus out reaches AccountingMax
+   * "in"  for when in reaches AccountingMax
+   * "out" for when out reaches AccountingMax */
   char *AccountingRule_option;
-  enum { ACCT_MAX, ACCT_SUM } AccountingRule;
+  enum { ACCT_MAX, ACCT_SUM, ACCT_IN, ACCT_OUT } AccountingRule;
 
   /** Base64-encoded hash of accepted passwords for the control system. */
   config_line_t *HashedControlPassword;

@@ -19,6 +19,7 @@ MOCK_DECL(int, accounting_is_enabled, (const or_options_t *options));
 int accounting_get_interval_length(void);
 MOCK_DECL(time_t, accounting_get_end_time, (void));
 void configure_accounting(time_t now);
+uint64_t get_accounting_bytes(void);
 void accounting_run_housekeeping(time_t now);
 void accounting_add_bytes(size_t n_read, size_t n_written, int seconds);
 int accounting_record_bandwidth_usage(time_t now, or_state_t *state);
