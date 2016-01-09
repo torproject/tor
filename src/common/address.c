@@ -1285,6 +1285,9 @@ ifaddrs_to_smartlist(const struct ifaddrs *ifa, sa_family_t family)
       continue;
     if (!i->ifa_addr)
       continue;
+    if (i->ifa_addr->sa_family != AF_INET &&
+        i->ifa_addr->sa_family != AF_INET6)
+      continue;
     if (family != AF_UNSPEC && i->ifa_addr->sa_family != family)
       continue;
     if (tor_addr_from_sockaddr(&tmp, i->ifa_addr, NULL) < 0)
