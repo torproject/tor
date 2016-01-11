@@ -19,8 +19,14 @@
 #error "We require OpenSSL >= 1.0.0"
 #endif
 
-#if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,1,0) || \
-   defined(LIBRESSL_VERSION_NUMBER)
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0) && \
+   ! defined(LIBRESSL_VERSION_NUMBER)
+/* We define this macro if we're trying to build with the majorly refactored
+ * API in OpenSSL 1.1 */
+#define OPENSSL_1_1_API
+#endif
+
+#ifndef OPENSSL_1_1_API
 #define OPENSSL_VERSION SSLEAY_VERSION
 #define OpenSSL_version(v) SSLeay_version(v)
 #define OpenSSL_version_num() SSLeay()

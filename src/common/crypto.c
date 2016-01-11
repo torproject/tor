@@ -2960,9 +2960,11 @@ memwipe(void *mem, uint8_t byte, size_t sz)
    * have this function call "memset".  A smart compiler could inline it, then
    * eliminate dead memsets, and declare itself to be clever. */
 
-#ifdef _WIN32
+#if defined(SecureZeroMemory) || defined(HAVE_SECUREZEROMEMORY)
   /* Here's what you do on windows. */
   SecureZeroMemory(mem,sz);
+#elif defined(HAVE_RTLSECUREZEROMEMORY)
+  RtlSecureZeroMemory(mem,sz);
 #elif defined(HAVE_EXPLICIT_BZERO)
   /* The BSDs provide this. */
   explicit_bzero(mem, sz);

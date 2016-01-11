@@ -376,6 +376,8 @@ AM_CONDITIONAL(THREADS_PTHREADS, test "$bwin32" = "false")
 
 AC_CHECK_FUNCS(
         _NSGetEnviron \
+	RtlSecureZeroMemory \
+	SecureZeroMemory \
         accept4 \
         backtrace \
         backtrace_symbols_fd \
