@@ -5587,3 +5587,24 @@ clamp_double_to_int64(double number)
   return signbit(number) ? INT64_MIN : INT64_MAX;
 }
 
+/** Return a uint64_t value from <b>a</b> in network byte order. */
+uint64_t
+tor_htonll(uint64_t a)
+{
+#ifdef WORDS_BIGENDIAN
+  /* Big endian. */
+  return a;
+#else /* WORDS_BIGENDIAN */
+  /* Little endian. The worst... */
+  return htonl((uint32_t)(a>>32)) |
+    (((uint64_t)htonl((uint32_t)a))<<32);
+#endif /* WORDS_BIGENDIAN */
+}
+
+/** Return a uint64_t value from <b>a</b> in host byte order. */
+uint64_t
+tor_ntohll(uint64_t a)
+{
+  return tor_htonll(a);
+}
+
