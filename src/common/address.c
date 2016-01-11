@@ -1274,7 +1274,7 @@ typedef ULONG (WINAPI *GetAdaptersAddresses_fn_t)(
  * into smartlist of <b>tor_addr_t</b> structures.
  */
 STATIC smartlist_t *
-ifaddrs_to_smartlist(const struct ifaddrs *ifa)
+ifaddrs_to_smartlist(const struct ifaddrs *ifa, sa_family_t family)
 {
   smartlist_t *result = smartlist_new();
   const struct ifaddrs *i;
@@ -1287,6 +1287,8 @@ ifaddrs_to_smartlist(const struct ifaddrs *ifa)
       continue;
     if (i->ifa_addr->sa_family != AF_INET &&
         i->ifa_addr->sa_family != AF_INET6)
+      continue;
+    if (family != AF_UNSPEC && i->ifa_addr->sa_family != family)
       continue;
     if (tor_addr_from_sockaddr(&tmp, i->ifa_addr, NULL) < 0)
       continue;
@@ -1301,7 +1303,7 @@ ifaddrs_to_smartlist(const struct ifaddrs *ifa)
  * <b>tor_addr_t</b> structures.
  */
 STATIC smartlist_t *
-get_interface_addresses_ifaddrs(int severity)
+get_interface_addresses_ifaddrs(int severity, sa_family_t family)
 {
 
   /* Most free Unixy systems provide getifaddrs, which gives us a linked list
@@ -1314,7 +1316,7 @@ get_interface_addresses_ifaddrs(int severity)
     return NULL;
   }
 
-  result = ifaddrs_to_smartlist(ifa);
+  result = ifaddrs_to_smartlist(ifa, family);
 
   freeifaddrs(ifa);
 
@@ -1356,7 +1358,7 @@ ip_adapter_addresses_to_smartlist(const IP_ADAPTER_ADDRESSES *addresses)
  * <b>tor_addr_t</b>  structures.
  */
 STATIC smartlist_t *
-get_interface_addresses_win32(int severity)
+get_interface_addresses_win32(int severity, sa_family_t family)
 {
 
   /* Windows XP began to provide GetAdaptersAddresses. Windows 2000 had a
@@ -1390,7 +1392,7 @@ get_interface_addresses_win32(int severity)
   /* Guess how much space we need. */
   size = 15*1024;
   addresses = tor_malloc(size);
-  res = fn(AF_UNSPEC, FLAGS, NULL, addresses, &size);
+  res = fn(family, FLAGS, NULL, addresses, &size);
   if (res == ERROR_BUFFER_OVERFLOW) {
     /* we didn't guess that we needed enough space; try again */
     tor_free(addresses);
@@ -1464,7 +1466,7 @@ ifreq_to_smartlist(char *buf, size_t buflen)
  * <b>tor_addr_t</b> structures.
  */
 STATIC smartlist_t *
-get_interface_addresses_ioctl(int severity)
+get_interface_addresses_ioctl(int severity, sa_family_t family)
 {
   /* Some older unixy systems make us use ioctl(SIOCGIFCONF) */
   struct ifconf ifc;
@@ -1473,7 +1475,17 @@ get_interface_addresses_ioctl(int severity)
 
   /* This interface, AFAICT, only supports AF_INET addresses,
    * except on AIX. For Solaris, we could use SIOCGLIFCONF. */
-  fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+  /* Bail out if family is neither AF_INET nor AF_UNSPEC since
+   * ioctl() technique supports non-IPv4 interface addresses on
+   * a small number of niche systems only. If family is AF_UNSPEC,
+   * fall back to getting AF_INET addresses only. */
+  if (family == AF_UNSPEC)
+    family = AF_INET;
+  else if (family != AF_INET)
+    return NULL;
+
+  fd = socket(family, SOCK_DGRAM, 0);
   if (fd < 0) {
     tor_log(severity, LD_NET, "socket failed: %s", strerror(errno));
     goto done;
@@ -1508,21 +1520,23 @@ get_interface_addresses_ioctl(int severity)
 /** Try to ask our network interfaces what addresses they are bound to.
  * Return a new smartlist of tor_addr_t on success, and NULL on failure.
  * (An empty smartlist indicates that we successfully learned that we have no
- * addresses.)  Log failure messages at <b>severity</b>. */
+ * addresses.)  Log failure messages at <b>severity</b>. Only return the
+ * interface addresses of requested <b>family</b> and ignore the addresses
+ * of other address families. */
 MOCK_IMPL(smartlist_t *,
-get_interface_addresses_raw,(int severity))
+get_interface_addresses_raw,(int severity, sa_family_t family))
 {
   smartlist_t *result = NULL;
 #if defined(HAVE_IFADDRS_TO_SMARTLIST)
-  if ((result = get_interface_addresses_ifaddrs(severity)))
+  if ((result = get_interface_addresses_ifaddrs(severity, family)))
     return result;
 #endif
 #if defined(HAVE_IP_ADAPTER_TO_SMARTLIST)
-  if ((result = get_interface_addresses_win32(severity)))
+  if ((result = get_interface_addresses_win32(severity, family)))
     return result;
 #endif
 #if defined(HAVE_IFCONF_TO_SMARTLIST)
-  if ((result = get_interface_addresses_ioctl(severity)))
+  if ((result = get_interface_addresses_ioctl(severity, family)))
     return result;
 #endif
   (void) severity;
@@ -1687,15 +1701,9 @@ MOCK_IMPL(smartlist_t *,get_interface_address6_list,(int severity,
   tor_addr_t addr;
 
   /* Try to do this the smart way if possible. */
-  if ((addrs = get_interface_addresses_raw(severity))) {
+  if ((addrs = get_interface_addresses_raw(severity, family))) {
     SMARTLIST_FOREACH_BEGIN(addrs, tor_addr_t *, a)
     {
-      if (family != AF_UNSPEC && family != tor_addr_family(a)) {
-        SMARTLIST_DEL_CURRENT(addrs, a);
-        tor_free(a);
-        continue;
-      }
-
       if (tor_addr_is_loopback(a) ||
           tor_addr_is_multicast(a)) {
         SMARTLIST_DEL_CURRENT(addrs, a);
