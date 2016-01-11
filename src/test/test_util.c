@@ -4612,18 +4612,23 @@ test_util_touch_file(void *arg)
   struct stat st;
   write_bytes_to_file(fname, "abc", 3, 1);
   tt_int_op(0, OP_EQ, stat(fname, &st));
-  tt_i64_op(st.st_mtime, OP_GE, now);
+  /* A subtle point: the filesystem time is not necessarily equal to the
+   * system clock time, since one can be using a monotonic clock, or coarse
+   * monotonic clock, or whatever.  So we might wind up with an mtime a few
+   * microseconds ago.  Let's just give it a lot of wiggle room. */
+  tt_i64_op(st.st_mtime, OP_GE, now - 1);
 
   const time_t five_sec_ago = now - 5;
   struct utimbuf u = { five_sec_ago, five_sec_ago };
   tt_int_op(0, OP_EQ, utime(fname, &u));
   tt_int_op(0, OP_EQ, stat(fname, &st));
+  /* Let's hope that utime/stat give the same second as a round-trip? */
   tt_i64_op(st.st_mtime, OP_EQ, five_sec_ago);
 
   /* Finally we can touch the file */
   tt_int_op(0, OP_EQ, touch_file(fname));
   tt_int_op(0, OP_EQ, stat(fname, &st));
-  tt_i64_op(st.st_mtime, OP_GE, now);
+  tt_i64_op(st.st_mtime, OP_GE, now-1);
 
  done:
   ;
