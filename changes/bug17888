@@ -1,0 +1,6 @@
+  o Minor fixes (fallback directories):
+    - When selecting exits as fallback directories, don't reduce
+      their weights. (Several operators report having exits with
+      spare capacity.) 
+      Closes ticket #17888. Patch by "teor". Not in any released
+      version of tor.
