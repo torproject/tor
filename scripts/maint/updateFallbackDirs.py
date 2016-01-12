@@ -27,7 +27,7 @@ import dateutil.parser
 #from bson import json_util
 
 import logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 ## Top-Level Configuration
 
@@ -579,9 +579,15 @@ class Candidate(object):
                      %(p, which))
       for v in reversed(h['values']):
         if (this_ts <= newest):
+          agt1 = now - this_ts
+          agt2 = interval
+          agetmp1 = (agt1.microseconds + (agt1.seconds + agt1.days * 24 * 3600)
+                     * 10**6) / 10**6
+          agetmp2 = (agt2.microseconds + (agt2.seconds + agt2.days * 24 * 3600)
+                     * 10**6) / 10**6
           generic_history.append(
-            { 'age': (now - this_ts).total_seconds(),
-              'length': interval.total_seconds(),
+            { 'age': agetmp1,
+              'length': agetmp2,
               'value': v
             })
           newest = this_ts
@@ -599,6 +605,8 @@ class Candidate(object):
   def _avg_generic_history(generic_history):
     a = []
     for i in generic_history:
+      if i['age'] > (ADDRESS_AND_PORT_STABLE_DAYS * 24 * 3600):
+        continue
       if (i['length'] is not None
           and i['age'] is not None
           and i['value'] is not None):
@@ -608,7 +616,11 @@ class Candidate(object):
     sv = math.fsum(map(lambda x: x[0], a))
     sw = math.fsum(map(lambda x: x[1], a))
 
-    return sv/sw
+    if sw == 0.0:
+      svw = 0.0
+    else:
+      svw = sv/sw
+    return svw
 
   def _add_generic_history(self, history):
     periods = r['read_history'].keys()
@@ -659,10 +671,6 @@ class Candidate(object):
       logging.debug('%s not a candidate: running avg too low (%lf)',
                     self._fpr, self._running)
       return False
-    if self._guard < CUTOFF_GUARD:
-      logging.debug('%s not a candidate: guard avg too low (%lf)',
-                    self._fpr, self._guard)
-      return False
     if self._v2dir < CUTOFF_V2DIR:
       logging.debug('%s not a candidate: v2dir avg too low (%lf)',
                     self._fpr, self._v2dir)
@@ -674,6 +682,10 @@ class Candidate(object):
     # if the relay doesn't report a version, also exclude the relay
     if (not self._data.has_key('recommended_version')
         or not self._data['recommended_version']):
+      return False
+    if self._guard < CUTOFF_GUARD:
+      logging.debug('%s not a candidate: guard avg too low (%lf)',
+                    self._fpr, self._guard)
       return False
     return True
 
