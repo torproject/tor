@@ -1,0 +1,6 @@
+  o Minor fixes (fallback directories):
+    - Allow cached or outdated Onionoo data to be used to choose
+      fallback directories, as long as it's less than a day old.
+      Modify last modified date checks in preparation for Onionoo change
+      #16907. Closes ticket #17887. Patch by "teor". Not in any released
+      version of tor.
