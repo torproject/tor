@@ -1,0 +1,3 @@
+  o Minor bigfixes (IPv6):
+    - Update the limits in max_dl_per_request for IPv6 address
+      length. Closes ticket 17573.
