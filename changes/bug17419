@@ -1,0 +1,4 @@
+
+  o Minor bugfixes:
+    - When logging a malformed hostname received through socks4, scrub it
+      if SafeLogging says we should. Fixes bug 17419; bugfix on 0.1.1.16-rc.
