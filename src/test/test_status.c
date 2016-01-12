@@ -714,9 +714,11 @@ NS(logv)(int severity, log_domain_mask_t domain,
       tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* acc_used */
       tt_str_op(va_arg(ap, char *), OP_EQ, "0 kB");  /* acc_max */
       tt_str_op(va_arg(ap, char *), OP_EQ, "max");  /* acc_rule */
-      /* format_local_iso_time uses local tz, just check mins and secs. */
-      tt_ptr_op(strstr(va_arg(ap, char *), ":01:00"),
-                OP_NE, NULL); /* end_buf */
+      /* format_local_iso_time uses local tz, so we can't just compare
+       * the string against a constant */
+      char datetime[ISO_TIME_LEN+1];
+      format_local_iso_time(datetime, 60);
+      tt_str_op(va_arg(ap, char *), OP_EQ, datetime); /* end_buf */
       tt_str_op(va_arg(ap, char *), OP_EQ, "0:01 hours");   /* remaining */
       break;
     case 2:
