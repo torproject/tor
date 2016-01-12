@@ -98,7 +98,7 @@ MIN_FALLBACK_COUNT = 100
 ## Fallback Weight Settings
 
 # Any fallback with the Exit flag has its weight multipled by this fraction
-EXIT_WEIGHT_FRACTION = 0.2
+EXIT_WEIGHT_FRACTION = 1.0
 
 # If True, emit a C #error if we can't satisfy various constraints
 # If False, emit a C comment instead
