@@ -1,0 +1,5 @@
+  o Minor bugfix (testing):
+    - The test for log_heartbeat was incorrectly failing in timezones
+      with non-integer offsets. Instead of comparing the end of the
+      time string against a constant, compare it to the output of
+      format_local_iso_time when given the correct input.
