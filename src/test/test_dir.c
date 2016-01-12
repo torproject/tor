@@ -6,6 +6,7 @@
 #include "orconfig.h"
 #include <math.h>
 
+#define CONFIG_PRIVATE
 #define DIRSERV_PRIVATE
 #define DIRVOTE_PRIVATE
 #define ROUTER_PRIVATE
@@ -15,6 +16,7 @@
 #define RELAY_PRIVATE
 
 #include "or.h"
+#include "confparse.h"
 #include "config.h"
 #include "crypto_ed25519.h"
 #include "directory.h"
@@ -587,6 +589,7 @@ test_dir_extrainfo_parsing(void *arg)
 #undef CHECK_FAIL
 
  done:
+  escaped(NULL);
   memarea_clear_freelist();
   extrainfo_free(ei);
   routerinfo_free(ri);
@@ -3527,20 +3530,31 @@ static void
 test_dir_authdir_type_to_string(void *data)
 {
   (void)data;
+  char *res;
 
-  tt_str_op(authdir_type_to_string(NO_DIRINFO), OP_EQ,
+  tt_str_op(res = authdir_type_to_string(NO_DIRINFO), OP_EQ,
             "[Not an authority]");
-  tt_str_op(authdir_type_to_string(EXTRAINFO_DIRINFO), OP_EQ,
-            "[Not an authority]");
-  tt_str_op(authdir_type_to_string(MICRODESC_DIRINFO), OP_EQ,
-            "[Not an authority]");
+  tor_free(res);
 
-  tt_str_op(authdir_type_to_string(V3_DIRINFO), OP_EQ, "V3");
-  tt_str_op(authdir_type_to_string(BRIDGE_DIRINFO), OP_EQ, "Bridge");
-  tt_str_op(authdir_type_to_string(
+  tt_str_op(res = authdir_type_to_string(EXTRAINFO_DIRINFO), OP_EQ,
+            "[Not an authority]");
+  tor_free(res);
+
+  tt_str_op(res = authdir_type_to_string(MICRODESC_DIRINFO), OP_EQ,
+            "[Not an authority]");
+  tor_free(res);
+
+  tt_str_op(res = authdir_type_to_string(V3_DIRINFO), OP_EQ, "V3");
+  tor_free(res);
+
+  tt_str_op(res = authdir_type_to_string(BRIDGE_DIRINFO), OP_EQ, "Bridge");
+  tor_free(res);
+
+  tt_str_op(res = authdir_type_to_string(
             V3_DIRINFO | BRIDGE_DIRINFO | EXTRAINFO_DIRINFO), OP_EQ,
             "V3, Bridge");
-  done: ;
+  done:
+  tor_free(res);
 }
 
 static void
@@ -3644,7 +3658,7 @@ test_dir_should_use_directory_guards(void *data)
 
   done:
     NS_UNMOCK(public_server_mode);
-    tor_free(options);
+    or_options_free(options);
     tor_free(errmsg);
 }
 
