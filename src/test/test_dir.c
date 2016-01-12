@@ -3761,6 +3761,14 @@ NS(directory_initiate_command_routerstatus)(const routerstatus_t *status,
                                             size_t payload_len,
                                             time_t if_modified_since)
 {
+  (void)status;
+  (void)dir_purpose;
+  (void)router_purpose;
+  (void)indirection;
+  (void)resource;
+  (void)payload;
+  (void)payload_len;
+  (void)if_modified_since;
   CALLED(directory_initiate_command_routerstatus)++;
 }
 
@@ -3863,4 +3871,3 @@ struct testcase_t dir_tests[] = {
   DIR(find_dl_schedule_and_len, 0),
   END_OF_TESTCASES
 };
-
