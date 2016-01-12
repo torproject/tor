@@ -3,3 +3,4 @@
       with non-integer offsets. Instead of comparing the end of the
       time string against a constant, compare it to the output of
       format_local_iso_time when given the correct input.
+      Fixes bug 18039.
