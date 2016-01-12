@@ -50,6 +50,7 @@ setup_log_callback(void)
   lst.masks[LOG_WARN - LOG_ERR] = ~0;
   lst.masks[LOG_NOTICE - LOG_ERR] = ~0;
   add_callback_log(&lst, log_cback);
+  mark_logs_temp();
 }
 
 static char *
@@ -200,7 +201,7 @@ test_options_validate(void *arg)
            "We're a bridge but DirCache is disabled.");
 
   clear_log_messages();
-  remove_log_callback();
+  close_temp_logs();
   return;
 }
 
