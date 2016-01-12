@@ -889,6 +889,29 @@ add_temp_log(int min_severity)
   UNLOCK_LOGS();
 }
 
+#define CALLBACK_FILENAME "<callback>"
+
+/**
+ * Removes the latest log handler added, if that log handler is a callback
+ * handler.
+ */
+void
+remove_log_callback(void)
+{
+  if(logfiles && !strcmp(logfiles->filename, CALLBACK_FILENAME)) {
+    logfile_t *lf = logfiles;
+
+    LOCK_LOGS();
+    logfiles = lf->next;
+    log_global_min_severity_ = get_min_log_level();
+    UNLOCK_LOGS();
+
+    tor_free(lf->filename);
+    tor_free(lf->severities);
+    tor_free(lf);
+  }
+}
+
 /**
  * Add a log handler to send messages in <b>severity</b>
  * to the function <b>cb</b>.
@@ -900,7 +923,7 @@ add_callback_log(const log_severity_list_t *severity, log_callback cb)
   lf = tor_malloc_zero(sizeof(logfile_t));
   lf->fd = -1;
   lf->severities = tor_memdup(severity, sizeof(log_severity_list_t));
-  lf->filename = tor_strdup("<callback>");
+  lf->filename = tor_strdup(CALLBACK_FILENAME);
   lf->callback = cb;
   lf->next = logfiles;
 
@@ -1378,4 +1401,3 @@ truncate_logs(void)
     }
   }
 }
-

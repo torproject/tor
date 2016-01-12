@@ -138,6 +138,7 @@ int add_file_log(const log_severity_list_t *severity, const char *filename,
 int add_syslog_log(const log_severity_list_t *severity,
                    const char* syslog_identity_tag);
 #endif
+void remove_log_callback(void);
 int add_callback_log(const log_severity_list_t *severity, log_callback cb);
 void logs_set_domain_logging(int enabled);
 int get_min_log_level(void);
@@ -241,4 +242,3 @@ MOCK_DECL(STATIC void, logv, (int severity, log_domain_mask_t domain,
 
 # define TOR_TORLOG_H
 #endif
-

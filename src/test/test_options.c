@@ -200,6 +200,7 @@ test_options_validate(void *arg)
            "We're a bridge but DirCache is disabled.");
 
   clear_log_messages();
+  remove_log_callback();
   return;
 }
 
