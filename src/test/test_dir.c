@@ -21,6 +21,7 @@
 #include "dirserv.h"
 #include "dirvote.h"
 #include "hibernate.h"
+#include "memarea.h"
 #include "networkstatus.h"
 #include "router.h"
 #include "routerkeys.h"
@@ -483,6 +484,7 @@ test_dir_routerinfo_parsing(void *arg)
 #undef CHECK_FAIL
 #undef CHECK_OK
  done:
+  memarea_clear_freelist();
   routerinfo_free(ri);
 }
 
@@ -585,6 +587,7 @@ test_dir_extrainfo_parsing(void *arg)
 #undef CHECK_FAIL
 
  done:
+  memarea_clear_freelist();
   extrainfo_free(ei);
   routerinfo_free(ri);
   digestmap_free((digestmap_t*)map, routerinfo_free_wrapper_);
