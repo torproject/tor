@@ -200,8 +200,8 @@ test_options_validate(void *arg)
   WANT_ERR("BridgeRelay 1\nDirCache 0",
            "We're a bridge but DirCache is disabled.");
 
-  clear_log_messages();
   close_temp_logs();
+  clear_log_messages();
   return;
 }
 
