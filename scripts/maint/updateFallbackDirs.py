@@ -91,7 +91,7 @@ PERMITTED_BADEXIT = .00
 FALLBACK_PROPORTION_OF_GUARDS = None if OUTPUT_CANDIDATES else 0.2
 
 # Limit the number of fallbacks (eliminating lowest by weight)
-MAX_FALLBACK_COUNT = 500
+MAX_FALLBACK_COUNT = None if OUTPUT_CANDIDATES else 500
 # Emit a C #error if the number of fallbacks is below
 MIN_FALLBACK_COUNT = 100
 
@@ -1010,7 +1010,8 @@ class CandidateList(dict):
   # starting with the lowest-weighted fallbacks
   # total_weight should be recalculated after calling this
   def exclude_excess_fallbacks(self):
-    self.fallbacks = self.fallbacks[:MAX_FALLBACK_COUNT]
+    if MAX_FALLBACK_COUNT is not None:
+      self.fallbacks = self.fallbacks[:MAX_FALLBACK_COUNT]
 
   # Clamp the weight of all fallbacks to MAX_WEIGHT_FRACTION * total_weight
   # fallbacks are kept sorted, but since excessive weights are reduced to
@@ -1081,15 +1082,15 @@ class CandidateList(dict):
     else:
       fallback_proportion = ' (%d * %f)'%(guard_count,
                                           FALLBACK_PROPORTION_OF_GUARDS)
-    s += 'Final Count:  %d (Eligible %d, Usable %d, Target %d%s, '%(
+    s += 'Final Count:  %d (Eligible %d, Usable %d, Target %d%s'%(
             min(max_count, fallback_count),
             eligible_count,
             fallback_count,
             target_count,
             fallback_proportion)
-    s += 'Clamped to %d)'%(
-            MAX_FALLBACK_COUNT)
-    s += '\n'
+    if MAX_FALLBACK_COUNT is not None:
+      s += ', Clamped to %d'%(MAX_FALLBACK_COUNT)
+    s += ')\n'
     if fallback_count < MIN_FALLBACK_COUNT:
       s += '*/'
       s += '\n'
@@ -1159,13 +1160,16 @@ def list_fallbacks():
 
   guard_count = candidates.count_guards()
   if FALLBACK_PROPORTION_OF_GUARDS is None:
-    target_count = MAX_FALLBACK_COUNT
+    target_count = guard_count
   else:
     target_count = int(guard_count * FALLBACK_PROPORTION_OF_GUARDS)
   # the maximum number of fallbacks is the least of:
   # - the target fallback count (FALLBACK_PROPORTION_OF_GUARDS * guard count)
   # - the maximum fallback count (MAX_FALLBACK_COUNT)
-  max_count = min(target_count, MAX_FALLBACK_COUNT)
+  if MAX_FALLBACK_COUNT is None:
+    max_count = guard_count
+  else:
+    max_count = min(target_count, MAX_FALLBACK_COUNT)
 
   candidates.compute_fallbacks()
 
