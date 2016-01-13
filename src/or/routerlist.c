@@ -4440,15 +4440,15 @@ static int
 max_dl_per_request(const or_options_t *options, int purpose)
 {
   /* Since squid does not like URLs >= 4096 bytes we limit it to 96.
-   *   4096 - strlen(http://ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
-   *                 /tor/server/d/.z) == 4034
-   *   4034/41 (40 for the hash and 1 for the + that separates them) => 98
+   *   4096 - strlen(http://[ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff]:65535
+   *                 /tor/server/d/.z) == 4026
+   *   4026/41 (40 for the hash and 1 for the + that separates them) => 98
    *   So use 96 because it's a nice number.
    *
    * For microdescriptors, the calculation is
-   *   4096 - strlen(http://ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
-   *                 /tor/micro/d/.z) == 4035
-   *   4035/44 (43 for the hash and 1 for the - that separates them) => 91
+   *   4096 - strlen(http://[ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff]:65535
+   *                 /tor/micro/d/.z) == 4027
+   *   4027/44 (43 for the hash and 1 for the - that separates them) => 91
    *   So use 90 because it's a nice number.
    */
   int max = 96;
