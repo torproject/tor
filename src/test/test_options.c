@@ -306,7 +306,10 @@ fixed_get_uname(void)
 }
 
 #define TEST_OPTIONS_OLD_VALUES   "TestingV3AuthInitialVotingInterval 1800\n" \
-  "TestingV3AuthInitialVoteDelay 300\n" \
+  "TestingClientBootstrapConsensusMaxDownloadTries 7\n" \
+  "TestingClientBootstrapConsensusAuthorityOnlyMaxDownloadTries 4\n" \
+  "TestingClientBootstrapConsensusMaxInProgressTries 3\n" \
+  "TestingV3AuthInitialVoteDelay 300\n"   \
   "TestingV3AuthInitialDistDelay 300\n" \
   "TestingClientMaxIntervalWithoutRequest 600\n" \
   "TestingDirConnectionMaxStall 600\n" \
@@ -1997,7 +2000,8 @@ test_options_validate__publish_server_descriptor(void *ignored)
   char *msg;
   int previous_log = setup_capture_of_logs(LOG_WARN);
   options_test_data_t *tdata = get_options_test_data(
-             "PublishServerDescriptor bridge\n" TEST_OPTIONS_DEFAULT_VALUES);
+             "PublishServerDescriptor bridge\n" TEST_OPTIONS_DEFAULT_VALUES
+                                                     );
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -2652,7 +2656,7 @@ test_options_validate__accounting(void *ignored)
                                 );
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "AccountingRule must be 'sum' or 'max'");
+  tt_str_op(msg, OP_EQ, "AccountingRule must be 'sum', 'max', 'in', or 'out'");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -3332,6 +3336,7 @@ test_options_validate__families(void *ignored)
                                 "BandwidthRate 51300\n"
                                 "BandwidthBurst 51300\n"
                                 "MaxAdvertisedBandwidth 25700\n"
+                                "DirCache 1\n"
                                 );
   mock_clean_saved_logs();
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
@@ -3675,6 +3680,7 @@ test_options_validate__constrained_sockets(void *ignored)
                                 "ConstrainedSockets 1\n"
                                 "ConstrainedSockSize 2048\n"
                                 "DirPort 999\n"
+                                "DirCache 1\n"
                                 );
   mock_clean_saved_logs();
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
@@ -4048,8 +4054,9 @@ test_options_validate__testing_options(void *ignored)
                       "is way too low.");
   TEST_TESTING_OPTION(TestingDirConnectionMaxStall, 1, 3601,
                       "is way too low.");
+  // TODO: I think this points to a bug/regression in options_validate
   TEST_TESTING_OPTION(TestingConsensusMaxDownloadTries, 1, 801,
-                      "must be greater than 1.");
+                      "must be greater than 2.");
   TEST_TESTING_OPTION(TestingDescriptorMaxDownloadTries, 1, 801,
                       "must be greater than 1.");
   TEST_TESTING_OPTION(TestingMicrodescMaxDownloadTries, 1, 801,
