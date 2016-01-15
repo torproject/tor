@@ -601,7 +601,7 @@ typedef enum {
 } socks5_reply_status_t;
 
 /* ===== OS compatibility */
-const char *get_uname(void);
+MOCK_DECL(const char *, get_uname, (void));
 
 uint16_t get_uint16(const void *cp) ATTR_NONNULL((1));
 uint32_t get_uint32(const void *cp) ATTR_NONNULL((1));
@@ -708,4 +708,3 @@ ssize_t tor_getpass(const char *prompt, char *output, size_t buflen);
 #include "compat_threads.h"
 
 #endif
-

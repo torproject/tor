@@ -1378,4 +1378,3 @@ truncate_logs(void)
     }
   }
 }
-
