@@ -143,7 +143,7 @@ purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose)
 
 /** Return a newly allocated string describing <b>auth</b>. Only describes
  * authority features. */
-static char *
+STATIC char *
 authdir_type_to_string(dirinfo_type_t auth)
 {
   char *result;
@@ -162,7 +162,7 @@ authdir_type_to_string(dirinfo_type_t auth)
 }
 
 /** Return a string describing a given directory connection purpose. */
-static const char *
+STATIC const char *
 dir_conn_purpose_to_string(int purpose)
 {
   switch (purpose)
@@ -370,7 +370,7 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
 
 /** Return true iff, according to the values in <b>options</b>, we should be
  * using directory guards for direct downloads of directory information. */
-static int
+STATIC int
 should_use_directory_guards(const or_options_t *options)
 {
   /* Public (non-bridge) servers never use directory guards. */
@@ -669,15 +669,15 @@ directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
  * When fetching a rendezvous descriptor, <b>resource</b> is the service ID we
  * want to fetch.
  */
-void
-directory_initiate_command_routerstatus(const routerstatus_t *status,
-                                        uint8_t dir_purpose,
-                                        uint8_t router_purpose,
-                                        dir_indirection_t indirection,
-                                        const char *resource,
-                                        const char *payload,
-                                        size_t payload_len,
-                                        time_t if_modified_since)
+MOCK_IMPL(void, directory_initiate_command_routerstatus,
+                (const routerstatus_t *status,
+                 uint8_t dir_purpose,
+                 uint8_t router_purpose,
+                 dir_indirection_t indirection,
+                 const char *resource,
+                 const char *payload,
+                 size_t payload_len,
+                 time_t if_modified_since))
 {
   directory_initiate_command_routerstatus_rend(status, dir_purpose,
                                           router_purpose,
@@ -2601,7 +2601,7 @@ client_likes_consensus(networkstatus_t *v, const char *want_url)
 
 /** Return the compression level we should use for sending a compressed
  * response of size <b>n_bytes</b>. */
-static zlib_compression_level_t
+STATIC zlib_compression_level_t
 choose_compression_level(ssize_t n_bytes)
 {
   if (! have_been_under_memory_pressure()) {
@@ -3670,7 +3670,7 @@ connection_dir_finished_connecting(dir_connection_t *conn)
  * Then return a list of int pointers defining download delays in seconds.
  * Helper function for download_status_increment_failure(),
  * download_status_reset(), and download_status_increment_attempt(). */
-static const smartlist_t *
+STATIC const smartlist_t *
 find_dl_schedule(download_status_t *dls, const or_options_t *options)
 {
   const int dir_server = dir_server_mode(options);
