@@ -1819,7 +1819,8 @@ test_a_networkstatus(
   tt_str_op(cp,OP_EQ, "Authority:Exit:Fast:Guard:Running:Stable:V2Dir:Valid");
   tor_free(cp);
   tt_int_op(smartlist_len(v1->routerstatus_list),OP_EQ, n_vrs);
-  tor_free(vote);
+  networkstatus_vote_free(vote);
+  vote = NULL;
 
   if (vote_tweaks) params_tweaked += vote_tweaks(v1, 1, now);
 
@@ -1852,7 +1853,8 @@ test_a_networkstatus(
     tt_assert(vrs);
     vrs_test(vrs, 2, now);
   }
-  tor_free(vote);
+  networkstatus_vote_free(vote);
+  vote = NULL;
 
   /* Generate the third vote with a legacy id. */
   tt_assert(!dir_common_construct_vote_3(&vote, cert3, sign_skey_3, vrs_gen,
@@ -2094,32 +2096,19 @@ test_a_networkstatus(
   tor_free(consensus_text);
   tor_free(consensus_text_md);
 
-  if (vote)
-    networkstatus_vote_free(vote);
-  if (v1)
-    networkstatus_vote_free(v1);
-  if (v2)
-    networkstatus_vote_free(v2);
-  if (v3)
-    networkstatus_vote_free(v3);
-  if (con)
-    networkstatus_vote_free(con);
-  if (con_md)
-    networkstatus_vote_free(con_md);
-  if (sign_skey_1)
-    crypto_pk_free(sign_skey_1);
-  if (sign_skey_2)
-    crypto_pk_free(sign_skey_2);
-  if (sign_skey_3)
-    crypto_pk_free(sign_skey_3);
-  if (sign_skey_leg1)
-    crypto_pk_free(sign_skey_leg1);
-  if (cert1)
-    authority_cert_free(cert1);
-  if (cert2)
-    authority_cert_free(cert2);
-  if (cert3)
-    authority_cert_free(cert3);
+  networkstatus_vote_free(vote);
+  networkstatus_vote_free(v1);
+  networkstatus_vote_free(v2);
+  networkstatus_vote_free(v3);
+  networkstatus_vote_free(con);
+  networkstatus_vote_free(con_md);
+  crypto_pk_free(sign_skey_1);
+  crypto_pk_free(sign_skey_2);
+  crypto_pk_free(sign_skey_3);
+  crypto_pk_free(sign_skey_leg1);
+  authority_cert_free(cert1);
+  authority_cert_free(cert2);
+  authority_cert_free(cert3);
 
   tor_free(consensus_text2);
   tor_free(consensus_text3);
@@ -2127,18 +2116,13 @@ test_a_networkstatus(
   tor_free(consensus_text_md3);
   tor_free(detached_text1);
   tor_free(detached_text2);
-  if (con2)
-    networkstatus_vote_free(con2);
-  if (con3)
-    networkstatus_vote_free(con3);
-  if (con_md2)
-    networkstatus_vote_free(con_md2);
-  if (con_md3)
-    networkstatus_vote_free(con_md3);
-  if (dsig1)
-    ns_detached_signatures_free(dsig1);
-  if (dsig2)
-    ns_detached_signatures_free(dsig2);
+
+  networkstatus_vote_free(con2);
+  networkstatus_vote_free(con3);
+  networkstatus_vote_free(con_md2);
+  networkstatus_vote_free(con_md3);
+  ns_detached_signatures_free(dsig1);
+  ns_detached_signatures_free(dsig2);
 }
 
 /** Run unit tests for generating and parsing V3 consensus networkstatus

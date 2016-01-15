@@ -362,7 +362,8 @@ dir_common_construct_vote_2(networkstatus_t **vote, authority_cert_t *cert,
    */
   smartlist_add((*vote)->voters, voter);
   (*vote)->cert = authority_cert_dup(cert);
-  (*vote)->net_params = smartlist_new();
+  if (! (*vote)->net_params)
+    (*vote)->net_params = smartlist_new();
   smartlist_split_string((*vote)->net_params,
                          "bar=2000000000 circuitwindow=20",
                          NULL, 0, 0);
