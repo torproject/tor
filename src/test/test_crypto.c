@@ -1734,7 +1734,6 @@ static const struct testcase_setup_t ed25519_test_setup = {
   ed25519_testcase_setup, ed25519_testcase_cleanup
 };
 
-
 static void
 test_crypto_ed25519_simple(void *arg)
 {

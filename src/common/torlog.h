@@ -241,3 +241,4 @@ MOCK_DECL(STATIC void, logv, (int severity, log_domain_mask_t domain,
 
 # define TOR_TORLOG_H
 #endif
+

@@ -4289,3 +4289,4 @@ struct testcase_t options_tests[] = {
   LOCAL_VALIDATE_TEST(accel),
   END_OF_TESTCASES              /*  */
 };
+

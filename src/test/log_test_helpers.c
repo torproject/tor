@@ -108,3 +108,4 @@ mock_saving_logv(int severity, log_domain_mask_t domain,
     saved_logs = smartlist_new();
   smartlist_add(saved_logs, e);
 }
+
