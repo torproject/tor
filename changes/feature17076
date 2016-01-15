@@ -1,0 +1,3 @@
+  o Testing:
+    - New tests for options_validate.  Closes ticket 17076. Patch from
+      Ola Bini.
