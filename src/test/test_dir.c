@@ -3885,7 +3885,8 @@ test_dir_should_not_init_request_to_ourselves(void *data)
 
   set_server_identity_key(key);
   crypto_pk_get_digest(key, (char*) &digest);
-  ourself = trusted_dir_server_new("ourself", "127.0.0.1", 9059, 9060, digest,
+  ourself = trusted_dir_server_new("ourself", "127.0.0.1", 9059, 9060,
+                                   NULL, digest,
                                    NULL, V3_DIRINFO, 1.0);
 
   tt_assert(ourself);
@@ -3919,7 +3920,7 @@ test_dir_should_not_init_request_to_dir_auths_without_v3_info(void *data)
   clear_dir_servers();
   routerlist_free_all();
 
-  ds = trusted_dir_server_new("ds", "10.0.0.1", 9059, 9060,
+  ds = trusted_dir_server_new("ds", "10.0.0.1", 9059, 9060, NULL,
                               "12345678901234567890", NULL, dirinfo_type, 1.0);
   tt_assert(ds);
   dir_server_add(ds);
@@ -3948,7 +3949,7 @@ test_dir_should_init_request_to_dir_auths(void *data)
   clear_dir_servers();
   routerlist_free_all();
 
-  ds = trusted_dir_server_new("ds", "10.0.0.1", 9059, 9060,
+  ds = trusted_dir_server_new("ds", "10.0.0.1", 9059, 9060, NULL,
                               "12345678901234567890", NULL, V3_DIRINFO, 1.0);
   tt_assert(ds);
   dir_server_add(ds);
@@ -4013,7 +4014,7 @@ test_dir_choose_compression_level(void* data)
 }
 
 static void
-test_dir_find_dl_schedule_and_len(void* data)
+test_dir_find_dl_schedule(void* data)
 {
   download_status_t dls;
   smartlist_t server, client, server_cons, client_cons, bridge;
@@ -4030,19 +4031,32 @@ test_dir_find_dl_schedule_and_len(void* data)
   mock_options->TestingBridgeDownloadSchedule = &bridge;
 
   dls.schedule = DL_SCHED_GENERIC;
-  tt_ptr_op(find_dl_schedule_and_len(&dls, 0), OP_EQ, &client);
-  tt_ptr_op(find_dl_schedule_and_len(&dls, 1), OP_EQ, &server);
+  mock_options->ClientOnly = 1;
+  tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ, &client);
+  mock_options->ClientOnly = 0;
+  mock_options->DirPort_set = 1;
+  mock_options->ORPort_set = 1;
+  mock_options->DirCache = 1;
+  tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ, &server);
 
+#if 0
   dls.schedule = DL_SCHED_CONSENSUS;
-  tt_ptr_op(find_dl_schedule_and_len(&dls, 0), OP_EQ, &client_cons);
-  tt_ptr_op(find_dl_schedule_and_len(&dls, 1), OP_EQ, &server_cons);
+  mock_options->ClientOnly = 1;
+  mock_options->DirCache = 0;
+  tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ, &client_cons);
+  mock_options->ClientOnly = 0;
+  mock_options->DirCache = 1;
+  tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ, &server_cons);
+#endif
 
   dls.schedule = DL_SCHED_BRIDGE;
-  tt_ptr_op(find_dl_schedule_and_len(&dls, 0), OP_EQ, &bridge);
-  tt_ptr_op(find_dl_schedule_and_len(&dls, 1), OP_EQ, &bridge);
+  mock_options->ClientOnly = 1;
+  tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ, &bridge);
+  mock_options->ClientOnly = 0;
+  tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ, &bridge);
 
-  done:
-    UNMOCK(get_options);
+ done:
+  UNMOCK(get_options);
 }
 
 #define DIR_LEGACY(name)                                                   \
@@ -4085,7 +4099,7 @@ struct testcase_t dir_tests[] = {
   DIR(should_not_init_request_to_dir_auths_without_v3_info, 0),
   DIR(should_init_request_to_dir_auths, 0),
   DIR(choose_compression_level, 0),
-  DIR(find_dl_schedule_and_len, 0),
+  DIR(find_dl_schedule, 0),
   END_OF_TESTCASES
 };
 
