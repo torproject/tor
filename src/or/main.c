@@ -1718,8 +1718,9 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
     if (me && !check_whether_orport_reachable()) {
       char *address = tor_dup_ip(me->addr);
       log_warn(LD_CONFIG,"Your server (%s:%d) has not managed to confirm that "
-               "its ORPort is reachable. Please check your firewalls, ports, "
-               "address, /etc/hosts file, etc.",
+               "its ORPort is reachable. Relays do not publish descriptors "
+               "until their ORPort and DirPort are reachable. Please check "
+               "your firewalls, ports, address, /etc/hosts file, etc.",
                address, me->or_port);
       control_event_server_status(LOG_WARN,
                                   "REACHABILITY_FAILED ORADDRESS=%s:%d",
@@ -1731,8 +1732,9 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
       char *address = tor_dup_ip(me->addr);
       log_warn(LD_CONFIG,
                "Your server (%s:%d) has not managed to confirm that its "
-               "DirPort is reachable. Please check your firewalls, ports, "
-               "address, /etc/hosts file, etc.",
+               "DirPort is reachable. Relays do not publish descriptors "
+               "until their ORPort and DirPort are reachable. Please check "
+               "your firewalls, ports, address, /etc/hosts file, etc.",
                address, me->dir_port);
       control_event_server_status(LOG_WARN,
                                   "REACHABILITY_FAILED DIRADDRESS=%s:%d",
