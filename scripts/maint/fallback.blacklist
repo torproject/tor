@@ -17,3 +17,25 @@
 # If a relay operator doesn't want their relay to be a FallbackDir,
 # enter the following information here:
 # <IPv4>:<DirPort> orport=<ORPort> id=<ID> ipv6=<IPv6>:<IPv6 ORPort>
+
+# https://lists.torproject.org/pipermail/tor-relays/2015-December/008364.html
+87.181.248.227:9030 orport=443 id=8827944C4BDCBDAC9079803F47823403C11A9B7A
+
+# https://lists.torproject.org/pipermail/tor-relays/2015-December/008368.html
+149.18.2.82:9030 orport=9001 id=953DB709F2A2DECC8D7560661F934E64411444F7
+
+# https://lists.torproject.org/pipermail/tor-relays/2015-December/008384.html
+80.82.215.199:80 orport=443 id=3BEFAB76461B6B99DCF34C285E933562F5712AE4 ipv6=[2001:4ba0:cafe:a18::1]:443
+
+# https://lists.torproject.org/pipermail/tor-relays/2016-January/008515.html
+# later opt-out in
+# https://lists.torproject.org/pipermail/tor-relays/2016-January/008521.html
+5.9.158.75:80 orport=443 id=F1BE15429B3CE696D6807F4D4A58B1BFEC45C822 ipv6=[2a01:4f8:190:514a::2]:443
+
+# Email sent directly to teor, verified using relay contact info
+5.34.183.168:80 orport=443 id=601C92108A568742A7A6D9473FE3A414F7149070
+217.12.199.208:8080 orport=22 id=BCFB0933367D626715DA32A147F417194A5D48D6
+
+# https://lists.torproject.org/pipermail/tor-relays/2016-January/008555.html
+62.210.207.124:9030 orport=9001 id=58938B1A5C4029B4415D38A4F36B7724273F4755 ipv6=[2001:bc8:31eb:100::1]:9001
+62.210.207.124:9130 orport=9101 id=338D0AB6DBAB7B529B9C91B2FD770658000693C4 ipv6=[2001:bc8:31eb:100::1]:9101

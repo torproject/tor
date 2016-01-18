@@ -1,0 +1,7 @@
+  o Minor fixes (fallback directories):
+    - Fix a display issue in updateFallbackDirs.py output.
+      Patch by "teor". Not in any released version of tor.
+
+  o Minor features (fallback directories):
+    - Add default fallback directories for the 0.2.8 alpha releases.
+      Patch by "teor".
