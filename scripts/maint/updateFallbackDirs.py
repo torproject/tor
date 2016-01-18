@@ -1230,8 +1230,8 @@ def list_fallbacks():
     max_weight = max_weight_fb.fallback_weight_fraction(total_weight)
     if  max_weight > TARGET_MAX_WEIGHT_FRACTION:
       error_str  = 'Maximum fallback weight: %.3f%% exceeds target %.3f%%. '%(
-                                                    max_weight,
-                                                    TARGET_MAX_WEIGHT_FRACTION)
+                                              max_weight*100.0,
+                                              TARGET_MAX_WEIGHT_FRACTION*100.0)
       error_str += 'Try decreasing REWEIGHTING_FUDGE_FACTOR.'
       if STRICT_FALLBACK_WEIGHTS:
         print '#error ' + error_str
