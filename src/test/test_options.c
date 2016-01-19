@@ -3221,6 +3221,7 @@ test_options_validate__control(void *ignored)
             "controller as soon as possible.\n");
   tor_free(msg);
 
+#ifdef HAVE_SYS_UN_H
   free_options_test_data(tdata);
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
                                 "ControlSocket unix:/tmp WorldWritable\n"
@@ -3282,6 +3283,7 @@ test_options_validate__control(void *ignored)
             "can reconfigure your Tor.  That's bad!  You should upgrade your "
             "Tor controller as soon as possible.\n");
   tor_free(msg);
+#endif
 
   free_options_test_data(tdata);
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
