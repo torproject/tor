@@ -1267,7 +1267,8 @@ router_orport_found_reachable(void)
     char *address = tor_dup_ip(me->addr);
     log_notice(LD_OR,"Self-testing indicates your ORPort is reachable from "
                "the outside. Excellent.%s",
-               get_options()->PublishServerDescriptor_ != NO_DIRINFO ?
+               get_options()->PublishServerDescriptor_ != NO_DIRINFO
+               && check_whether_dirport_reachable() ?
                  " Publishing server descriptor." : "");
     can_reach_or_port = 1;
     mark_my_descriptor_dirty("ORPort found reachable");
@@ -1291,7 +1292,10 @@ router_dirport_found_reachable(void)
   if (!can_reach_dir_port && me) {
     char *address = tor_dup_ip(me->addr);
     log_notice(LD_DIRSERV,"Self-testing indicates your DirPort is reachable "
-               "from the outside. Excellent.");
+               "from the outside. Excellent.%s",
+               get_options()->PublishServerDescriptor_ != NO_DIRINFO
+               && check_whether_orport_reachable() ?
+               " Publishing server descriptor." : "");
     can_reach_dir_port = 1;
     if (decide_to_advertise_dirport(get_options(), me->dir_port)) {
       mark_my_descriptor_dirty("DirPort found reachable");
@@ -1494,7 +1498,8 @@ proxy_mode(const or_options_t *options)
  * and
  * - We have ORPort set
  * and
- * - We believe we are reachable from the outside; or
+ * - We believe both our ORPort and DirPort (if present) are reachable from
+ *   the outside; or
  * - We are an authoritative directory server.
  */
 static int
@@ -1513,7 +1518,7 @@ decide_if_publishable_server(void)
   if (!router_get_advertised_or_port(options))
     return 0;
 
-  return check_whether_orport_reachable();
+  return check_whether_orport_reachable() && check_whether_dirport_reachable();
 }
 
 /** Initiate server descriptor upload as reasonable (if server is publishable,
