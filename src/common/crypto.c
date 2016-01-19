@@ -2990,9 +2990,11 @@ secret_to_key(char *key_out, size_t key_out_len, const char *secret,
 void
 memwipe(void *mem, uint8_t byte, size_t sz)
 {
-  if (mem == NULL || sz == 0) {
+  if (sz == 0) {
     return;
   }
+  /* If sz is nonzero, then mem must not be NULL. */
+  tor_assert(mem != NULL);
 
   /* Data this large is likely to be an underflow. */
   tor_assert(sz < SIZE_T_CEILING);
