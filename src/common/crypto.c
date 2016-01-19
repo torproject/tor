@@ -2957,9 +2957,11 @@ smartlist_shuffle(smartlist_t *sl)
 void
 memwipe(void *mem, uint8_t byte, size_t sz)
 {
-  if (mem == NULL || sz == 0) {
+  if (sz == 0) {
     return;
   }
+  /* If sz is nonzero, then mem must not be NULL. */
+  tor_assert(mem != NULL);
 
   /* Data this large is likely to be an underflow. */
   tor_assert(sz < SIZE_T_CEILING);
