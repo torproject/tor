@@ -2939,6 +2939,7 @@ smartlist_shuffle(smartlist_t *sl)
 /**
  * Destroy the <b>sz</b> bytes of data stored at <b>mem</b>, setting them to
  * the value <b>byte</b>.
+ * If <b>mem</b> is NULL or <b>sz</b> is zero, nothing happens.
  *
  * This function is preferable to memset, since many compilers will happily
  * optimize out memset() when they can convince themselves that the data being
@@ -2956,6 +2957,13 @@ smartlist_shuffle(smartlist_t *sl)
 void
 memwipe(void *mem, uint8_t byte, size_t sz)
 {
+  if (mem == NULL || sz == 0) {
+    return;
+  }
+
+  /* Data this large is likely to be an underflow. */
+  tor_assert(sz < SIZE_T_CEILING);
+
   /* Because whole-program-optimization exists, we may not be able to just
    * have this function call "memset".  A smart compiler could inline it, then
    * eliminate dead memsets, and declare itself to be clever. */
