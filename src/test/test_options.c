@@ -2308,7 +2308,7 @@ test_options_validate__bandwidth(void *ignored)
                                 "RelayBandwidthRate 1000\n");
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
-  tt_int_op(tdata->opt->RelayBandwidthBurst, OP_EQ, 1000);
+  tt_u64_op(tdata->opt->RelayBandwidthBurst, OP_EQ, 1000);
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -2316,7 +2316,7 @@ test_options_validate__bandwidth(void *ignored)
                                 "RelayBandwidthBurst 1001\n");
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
-  tt_int_op(tdata->opt->RelayBandwidthRate, OP_EQ, 1001);
+  tt_u64_op(tdata->opt->RelayBandwidthRate, OP_EQ, 1001);
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -2347,7 +2347,7 @@ test_options_validate__bandwidth(void *ignored)
                                 );
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
-  tt_int_op(tdata->opt->BandwidthRate, OP_EQ, 1001);
+  tt_u64_op(tdata->opt->BandwidthRate, OP_EQ, 1001);
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -2359,7 +2359,7 @@ test_options_validate__bandwidth(void *ignored)
                                 );
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
-  tt_int_op(tdata->opt->BandwidthBurst, OP_EQ, 1001);
+  tt_u64_op(tdata->opt->BandwidthBurst, OP_EQ, 1001);
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -3221,6 +3221,7 @@ test_options_validate__control(void *ignored)
             "controller as soon as possible.\n");
   tor_free(msg);
 
+#ifdef HAVE_SYS_UN_H
   free_options_test_data(tdata);
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
                                 "ControlSocket unix:/tmp WorldWritable\n"
@@ -3282,6 +3283,7 @@ test_options_validate__control(void *ignored)
             "can reconfigure your Tor.  That's bad!  You should upgrade your "
             "Tor controller as soon as possible.\n");
   tor_free(msg);
+#endif
 
   free_options_test_data(tdata);
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
