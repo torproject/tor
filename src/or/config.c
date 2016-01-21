@@ -590,7 +590,6 @@ static const config_var_t testing_tor_network_defaults[] = {
 static char *get_windows_conf_root(void);
 #endif
 static int options_act_reversible(const or_options_t *old_options, char **msg);
-static int options_act(const or_options_t *old_options);
 static int options_transition_allowed(const or_options_t *old,
                                       const or_options_t *new,
                                       char **msg);
@@ -671,9 +670,9 @@ get_dirportfrontpage, (void))
   return global_dirfrontpagecontents;
 }
 
-/** Return the currently configured options. */
-or_options_t *
-get_options_mutable(void)
+/** Returns the currently configured options. */
+MOCK_IMPL(or_options_t *,
+get_options_mutable, (void))
 {
   tor_assert(global_options);
   return global_options;
@@ -833,7 +832,6 @@ config_free_all(void)
 
   tor_free(torrc_fname);
   tor_free(torrc_defaults_fname);
-  tor_free(the_tor_version);
   tor_free(global_dirfrontpagecontents);
 
   tor_free(the_short_tor_version);
@@ -1446,7 +1444,7 @@ options_transition_requires_fresh_tls_context(const or_options_t *old_options,
  * Note: We haven't moved all the "act on new configuration" logic
  * here yet.  Some is still in do_hup() and other places.
  */
-static int
+STATIC int
 options_act(const or_options_t *old_options)
 {
   config_line_t *cl;
@@ -1468,10 +1466,12 @@ options_act(const or_options_t *old_options)
     if (options->DisableDebuggerAttachment && !disabled_debugger_attach &&
         running_tor) {
       int ok = tor_disable_debugger_attach();
+      /* LCOV_EXCL_START the warned_debugger_attach is 0 can't reach inside. */
       if (warned_debugger_attach && ok == 1) {
         log_notice(LD_CONFIG, "Disabled attaching debuggers for unprivileged "
                    "users.");
       }
+      /* LCOV_EXCL_STOP */
       disabled_debugger_attach = (ok == 1);
     } else if (!options->DisableDebuggerAttachment &&
                !warned_debugger_attach) {
@@ -1498,12 +1498,14 @@ options_act(const or_options_t *old_options)
 #endif
 
 #ifdef ENABLE_TOR2WEB_MODE
+/* LCOV_EXCL_START */
   if (!options->Tor2webMode) {
     log_err(LD_CONFIG, "This copy of Tor was compiled to run in "
             "'tor2web mode'. It can only be run with the Tor2webMode torrc "
             "option enabled.");
     return -1;
   }
+/* LCOV_EXCL_STOP */
 #else
   if (options->Tor2webMode) {
     log_err(LD_CONFIG, "This copy of Tor was not compiled to run in "
@@ -1767,8 +1769,8 @@ options_act(const or_options_t *old_options)
     if (revise_trackexithosts)
       addressmap_clear_excluded_trackexithosts(options);
 
-    if (!options->AutomapHostsOnResolve) {
-      if (old_options->AutomapHostsOnResolve)
+    if (!options->AutomapHostsOnResolve &&
+        old_options->AutomapHostsOnResolve) {
         revise_automap_entries = 1;
     } else {
       if (!smartlist_strings_eq(old_options->AutomapHostsSuffixes,
@@ -1907,8 +1909,8 @@ options_act(const or_options_t *old_options)
       print_notice = 1;
     }
     if (print_notice)
-      log_notice(LD_CONFIG, "Configured to measure statistics. Look for "
-                 "the *-stats files that will first be written to the "
+        log_notice(LD_CONFIG, "Configured to measure statistics. Look for "
+                "the *-stats files that will first be written to the "
                  "data directory in 24 hours from now.");
   }
 
@@ -6072,15 +6074,6 @@ warn_nonlocal_controller_ports(smartlist_t *ports, unsigned forbid_nonlocal)
   } SMARTLIST_FOREACH_END(port);
 }
 
-#define CL_PORT_NO_STREAM_OPTIONS (1u<<0)
-#define CL_PORT_WARN_NONLOCAL (1u<<1)
-#define CL_PORT_ALLOW_EXTRA_LISTENADDR (1u<<2)
-#define CL_PORT_SERVER_OPTIONS (1u<<3)
-#define CL_PORT_FORBID_NONLOCAL (1u<<4)
-#define CL_PORT_TAKES_HOSTNAMES (1u<<5)
-#define CL_PORT_IS_UNIXSOCKET (1u<<6)
-#define CL_PORT_DFLT_GROUP_WRITABLE (1u<<7)
-
 #ifdef HAVE_SYS_UN_H
 
 /** Parse the given <b>addrport</b> and set <b>path_out</b> if a Unix socket
@@ -6168,7 +6161,7 @@ config_parse_unix_port(const char *addrport, char **path_out)
  * <b>out</b> for every port that the client should listen on.  Return 0
  * on success, -1 on failure.
  */
-static int
+STATIC int
 parse_port_config(smartlist_t *out,
                   const config_line_t *ports,
                   const config_line_t *listenaddrs,
