@@ -1623,6 +1623,30 @@ router_picked_poor_directory_log(const routerstatus_t *rs)
     }                                                                         \
   STMT_END
 
+/* When iterating through the routerlist, can OR address/port preference
+ * and reachability checks be skipped?
+ */
+static int
+router_skip_or_reachability(const or_options_t *options, int try_ip_pref)
+{
+  /* Servers always have and prefer IPv4.
+   * And if clients are checking against the firewall for reachability only,
+   * but there's no firewall, don't bother checking */
+  return server_mode(options) || (!try_ip_pref && !firewall_is_fascist_or());
+}
+
+/* When iterating through the routerlist, can Dir address/port preference
+ * and reachability checks be skipped?
+ */
+static int
+router_skip_dir_reachability(const or_options_t *options, int try_ip_pref)
+{
+  /* Servers always have and prefer IPv4.
+   * And if clients are checking against the firewall for reachability only,
+   * but there's no firewall, don't bother checking */
+  return server_mode(options) || (!try_ip_pref && !firewall_is_fascist_dir());
+}
+
 /** Pick a random running valid directory server/mirror from our
  * routerlist.  Arguments are as for router_pick_directory_server(), except:
  *
@@ -1660,6 +1684,9 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
   trusted_tunnel = smartlist_new();
   overloaded_direct = smartlist_new();
   overloaded_tunnel = smartlist_new();
+
+  const int skip_or = router_skip_or_reachability(options, try_ip_pref);
+  const int skip_dir = router_skip_dir_reachability(options, try_ip_pref);
 
   /* Find all the running dirservers we know about. */
   SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), const node_t *, node) {
@@ -1704,18 +1731,20 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
 
     is_overloaded = status->last_dir_503_at + DIR_503_TIMEOUT > now;
 
-    /* We use an IPv6 address if we have one and we prefer it.
+    /* Clients use IPv6 addresses if the server has one and the client
+     * prefers IPv6.
      * Add the router if its preferred address and port are reachable.
      * If we don't get any routers, we'll try again with the non-preferred
      * address for each router (if any). (To ensure correct load-balancing
      * we try routers that only have one address both times.)
      */
-    if (!fascistfirewall ||
+    if (!fascistfirewall || skip_or ||
         fascist_firewall_allows_rs(status, FIREWALL_OR_CONNECTION,
                                    try_ip_pref))
       smartlist_add(is_trusted ? trusted_tunnel :
                     is_overloaded ? overloaded_tunnel : tunnel, (void*)node);
-    else if (fascist_firewall_allows_rs(status, FIREWALL_DIR_CONNECTION,
+    else if (skip_dir ||
+             fascist_firewall_allows_rs(status, FIREWALL_DIR_CONNECTION,
                                         try_ip_pref))
       smartlist_add(is_trusted ? trusted_direct :
                     is_overloaded ? overloaded_direct : direct, (void*)node);
@@ -1820,6 +1849,9 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
   overloaded_direct = smartlist_new();
   overloaded_tunnel = smartlist_new();
 
+  const int skip_or = router_skip_or_reachability(options, try_ip_pref);
+  const int skip_dir = router_skip_dir_reachability(options, try_ip_pref);
+
   SMARTLIST_FOREACH_BEGIN(sourcelist, const dir_server_t *, d)
     {
       int is_overloaded =
@@ -1845,17 +1877,19 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
         continue;
       }
 
-      /* We use an IPv6 address if we have one and we prefer it.
+      /* Clients use IPv6 addresses if the server has one and the client
+       * prefers IPv6.
        * Add the router if its preferred address and port are reachable.
        * If we don't get any routers, we'll try again with the non-preferred
        * address for each router (if any). (To ensure correct load-balancing
        * we try routers that only have one address both times.)
        */
-      if (!fascistfirewall ||
+      if (!fascistfirewall || skip_or ||
           fascist_firewall_allows_dir_server(d, FIREWALL_OR_CONNECTION,
                                              try_ip_pref))
         smartlist_add(is_overloaded ? overloaded_tunnel : tunnel, (void*)d);
-      else if (fascist_firewall_allows_dir_server(d, FIREWALL_DIR_CONNECTION,
+      else if (skip_dir ||
+               fascist_firewall_allows_dir_server(d, FIREWALL_DIR_CONNECTION,
                                                   try_ip_pref))
         smartlist_add(is_overloaded ? overloaded_direct : direct, (void*)d);
       else if (!tor_addr_is_null(&d->ipv6_addr))
@@ -1965,7 +1999,10 @@ router_add_running_nodes_to_smartlist(smartlist_t *sl, int allow_invalid,
                                       int need_uptime, int need_capacity,
                                       int need_guard, int need_desc,
                                       int pref_addr)
-{ /* XXXX MOVE */
+{
+  const int check_reach = !router_skip_or_reachability(get_options(),
+                                                       pref_addr);
+  /* XXXX MOVE */
   SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), const node_t *, node) {
     if (!node->is_running ||
         (!node->is_valid && !allow_invalid))
@@ -1977,7 +2014,9 @@ router_add_running_nodes_to_smartlist(smartlist_t *sl, int allow_invalid,
     if (node_is_unreliable(node, need_uptime, need_capacity, need_guard))
       continue;
     /* Choose a node with an OR address that matches the firewall rules */
-    if (!fascist_firewall_allows_node(node, FIREWALL_OR_CONNECTION, pref_addr))
+    if (check_reach && !fascist_firewall_allows_node(node,
+                                                     FIREWALL_OR_CONNECTION,
+                                                     pref_addr))
       continue;
 
     smartlist_add(sl, (void *)node);

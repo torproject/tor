@@ -323,6 +323,8 @@ firewall_is_fascist_impl(void)
 
 /** Return true iff the firewall options, including ClientUseIPv4 0 and
  * ClientUseIPv6 0, might block any OR address:port combination.
+ * Address preferences may still change which address is selected even if
+ * this function returns false.
  */
 int
 firewall_is_fascist_or(void)
@@ -332,6 +334,8 @@ firewall_is_fascist_or(void)
 
 /** Return true iff the firewall options, including ClientUseIPv4 0 and
  * ClientUseIPv6 0, might block any Dir address:port combination.
+ * Address preferences may still change which address is selected even if
+ * this function returns false.
  */
 int
 firewall_is_fascist_dir(void)
