@@ -1732,8 +1732,7 @@ connection_connect_log_client_use_ip_version(const connection_t *conn)
 
   /* Only clients care about ClientUseIPv4/6, bail out early on servers, and
    * on connections we don't care about */
-  if (server_mode(options) || !conn
-      || conn->type == CONN_TYPE_EXIT) {
+  if (server_mode(options) || !conn || conn->type == CONN_TYPE_EXIT) {
     return;
   }
 
