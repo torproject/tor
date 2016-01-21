@@ -307,18 +307,36 @@ parse_reachable_addresses(void)
   return ret;
 }
 
-/** Return true iff the firewall options, including ClientUseIPv4 0 and
- * ClientUseIPv6 0, might block any address:port combination.
- */
-int
-firewall_is_fascist_or(void)
+/* Return true iff ClientUseIPv4 0 or ClientUseIPv6 0 might block any OR or Dir
+ * address:port combination. */
+static int
+firewall_is_fascist_impl(void)
 {
   const or_options_t *options = get_options();
   /* Assume every non-bridge relay has an IPv4 address.
    * Clients which use bridges may only know the IPv6 address of their
    * bridge. */
-  return (reachable_or_addr_policy != NULL || options->ClientUseIPv4 == 0
-          || (options->ClientUseIPv6 == 0 && options->UseBridges == 1));
+  return (options->ClientUseIPv4 == 0
+          || (!fascist_firewall_use_ipv6(options)
+              && options->UseBridges == 1));
+}
+
+/** Return true iff the firewall options, including ClientUseIPv4 0 and
+ * ClientUseIPv6 0, might block any OR address:port combination.
+ */
+int
+firewall_is_fascist_or(void)
+{
+  return (reachable_or_addr_policy != NULL || firewall_is_fascist_impl());
+}
+
+/** Return true iff the firewall options, including ClientUseIPv4 0 and
+ * ClientUseIPv6 0, might block any Dir address:port combination.
+ */
+int
+firewall_is_fascist_dir(void)
+{
+  return (reachable_dir_addr_policy != NULL || firewall_is_fascist_impl());
 }
 
 /** Return true iff <b>policy</b> (possibly NULL) will allow a
