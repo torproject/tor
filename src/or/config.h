@@ -171,8 +171,6 @@ STATIC int parse_dir_authority_line(const char *line,
 STATIC int parse_dir_fallback_line(const char *line, int validate_only);
 STATIC int have_enough_mem_for_dircache(const or_options_t *options,
                                         size_t total_mem, char **msg);
-STATIC int parse_dir_fallback_line(const char *line,
-                                   int validate_only);
 STATIC int parse_port_config(smartlist_t *out,
                   const config_line_t *ports,
                   const config_line_t *listenaddrs,
