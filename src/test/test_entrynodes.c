@@ -215,20 +215,23 @@ test_choose_random_entry_one_possible_guard(void *arg)
    * time, so we can't be sure we get the guard */
   tt_assert(chosen_entry);
 
-  /* Check that we get the guard if it passes preferred address settings when
-   * they're auto */
+  /* Check that we get a node if it is allowed but not preferred when settings
+   * are auto */
   memset(&mocked_options, 0, sizeof(mocked_options));
   mocked_options.ClientUseIPv4 = 1;
   mocked_options.ClientPreferIPv6ORPort = -1;
 
   chosen_entry = choose_random_entry(NULL);
-  tt_ptr_op(chosen_entry, OP_EQ, the_guard);
+
+  /* We disable the guard check and the preferred address check at the same
+   * time, so we can't be sure we get the guard */
+  tt_assert(chosen_entry);
 
   /* and with IPv6 active */
   mocked_options.ClientUseIPv6 = 1;
 
   chosen_entry = choose_random_entry(NULL);
-  tt_ptr_op(chosen_entry, OP_EQ, the_guard);
+  tt_assert(chosen_entry);
 
  done:
   memset(&mocked_options, 0, sizeof(mocked_options));

@@ -420,11 +420,13 @@ fascist_firewall_allows_address(const tor_addr_t *addr,
 }
 
 /** Is this client configured to use IPv6?
- * Clients use IPv6 if ClientUseIPv6 is 1, or UseBridges is 1.
  */
 int fascist_firewall_use_ipv6(const or_options_t *options)
 {
-  return (options->ClientUseIPv6 == 1 || options->UseBridges == 1);
+  /* Clients use IPv6 if it's set, or they use bridges, or they don't use
+   * IPv4 */
+  return (options->ClientUseIPv6 == 1 || options->UseBridges == 1
+          || options->ClientUseIPv4 == 0);
 }
 
 /** Do we prefer to connect to IPv6, ignoring ClientPreferIPv6ORPort and

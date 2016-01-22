@@ -1310,7 +1310,8 @@ test_policies_fascist_firewall_allows_address(void *arg)
   tt_assert(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 0, 0)
             == 0);
 
-  /* Test the function's address matching with everything off */
+  /* Test the function's address matching with ClientUseIPv4 0.
+   * This means "use IPv6" regardless of the other settings. */
   memset(&mock_options, 0, sizeof(or_options_t));
   mock_options.ClientUseIPv4 = 0;
   mock_options.ClientUseIPv6 = 0;
@@ -1319,7 +1320,7 @@ test_policies_fascist_firewall_allows_address(void *arg)
   tt_assert(fascist_firewall_allows_address(&ipv4_addr, port, policy, 0, 0)
             == 0);
   tt_assert(fascist_firewall_allows_address(&ipv6_addr, port, policy, 0, 0)
-            == 0);
+            == 1);
   tt_assert(fascist_firewall_allows_address(&r_ipv4_addr, port, policy, 0, 0)
             == 0);
   tt_assert(fascist_firewall_allows_address(&r_ipv6_addr, port, policy, 0, 0)
@@ -1596,7 +1597,8 @@ test_policies_fascist_firewall_choose_address(void *arg)
                                                  FIREWALL_DIR_CONNECTION, 1)
             == &ipv6_dir_ap);
 
-  /* Choose an address with everything off */
+  /* Choose an address with ClientUseIPv4 0.
+   * This means "use IPv6" regardless of the other settings. */
   memset(&mock_options, 0, sizeof(or_options_t));
   mock_options.ClientUseIPv4 = 0;
   mock_options.ClientUseIPv6 = 0;
@@ -1604,16 +1606,16 @@ test_policies_fascist_firewall_choose_address(void *arg)
 
   tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,
                                                  FIREWALL_OR_CONNECTION, 0)
-            == NULL);
+            == &ipv6_or_ap);
   tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,
                                                  FIREWALL_OR_CONNECTION, 1)
-            == NULL);
+            == &ipv6_or_ap);
   tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &ipv6_dir_ap, 0,
                                                  FIREWALL_DIR_CONNECTION, 0)
-            == NULL);
+            == &ipv6_dir_ap);
   tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &ipv6_dir_ap, 0,
                                                  FIREWALL_DIR_CONNECTION, 1)
-            == NULL);
+            == &ipv6_dir_ap);
 
   /* Choose from unusual inputs */
   memset(&mock_options, 0, sizeof(or_options_t));
