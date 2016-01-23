@@ -34,11 +34,14 @@ struct channel_s {
   /** Magic number for type-checking cast macros */
   uint32_t magic;
 
+  /** List entry for hashtable for global-identifier lookup. */
+  HT_ENTRY(channel_s) gidmap_node;
+
   /** Current channel state */
   channel_state_t state;
 
   /** Globally unique ID number for a channel over the lifetime of a Tor
-   * process.
+   * process.  This may not be 0.
    */
   uint64_t global_identifier;
 

@@ -84,6 +84,27 @@ static smartlist_t *active_listeners = NULL;
 /* All channel_listener_t instances in LISTENING state */
 static smartlist_t *finished_listeners = NULL;
 
+
+/** Map from channel->global_identifier to channel.  Contains the same
+ * elements as all_channels. */
+HT_HEAD(channel_gid_map, channel_s) channel_gid_map = HT_INITIALIZER();
+
+static unsigned
+channel_id_hash(const channel_t *chan)
+{
+  return (unsigned) chan->global_identifier;
+}
+static int
+channel_id_eq(const channel_t *a, const channel_t *b)
+{
+  return a->global_identifier == b->global_identifier;
+}
+HT_PROTOTYPE(channel_gid_map, channel_s, gidmap_node,
+             channel_id_hash, channel_id_eq);
+HT_GENERATE2(channel_gid_map, channel_s, gidmap_node,
+             channel_id_hash, channel_id_eq,
+             0.6, tor_reallocarray_, tor_free_);
+
 /* Counter for ID numbers */
 static uint64_t n_channels_allocated = 0;
 /*
@@ -429,6 +450,7 @@ void
 channel_register(channel_t *chan)
 {
   tor_assert(chan);
+  tor_assert(chan->global_identifier);
 
   /* No-op if already registered */
   if (chan->registered) return;
@@ -443,6 +465,8 @@ channel_register(channel_t *chan)
   /* Make sure we have all_channels, then add it */
   if (!all_channels) all_channels = smartlist_new();
   smartlist_add(all_channels, chan);
+  channel_t *oldval = HT_REPLACE(channel_gid_map, &channel_gid_map, chan);
+  tor_assert(! oldval);
 
   /* Is it finished? */
   if (CHANNEL_FINISHED(chan)) {
@@ -498,7 +522,9 @@ channel_unregister(channel_t *chan)
   }
 
   /* Get it out of all_channels */
- if (all_channels) smartlist_remove(all_channels, chan);
+  if (all_channels) smartlist_remove(all_channels, chan);
+  channel_t *oldval = HT_REMOVE(channel_gid_map, &channel_gid_map, chan);
+  tor_assert(oldval == NULL || oldval == chan);
 
   /* Mark it as unregistered */
   chan->registered = 0;
@@ -533,7 +559,7 @@ channel_listener_register(channel_listener_t *chan_l)
             channel_listener_state_to_string(chan_l->state),
             chan_l->state);
 
-  /* Make sure we have all_channels, then add it */
+  /* Make sure we have all_listeners, then add it */
   if (!all_listeners) all_listeners = smartlist_new();
   smartlist_add(all_listeners, chan_l);
 
@@ -578,7 +604,7 @@ channel_listener_unregister(channel_listener_t *chan_l)
     if (active_listeners) smartlist_remove(active_listeners, chan_l);
   }
 
-  /* Get it out of all_channels */
+  /* Get it out of all_listeners */
  if (all_listeners) smartlist_remove(all_listeners, chan_l);
 
   /* Mark it as unregistered */
@@ -719,15 +745,13 @@ channel_remove_from_digest_map(channel_t *chan)
 channel_t *
 channel_find_by_global_id(uint64_t global_identifier)
 {
+  channel_t lookup;
   channel_t *rv = NULL;
 
-  if (all_channels && smartlist_len(all_channels) > 0) {
-    SMARTLIST_FOREACH_BEGIN(all_channels, channel_t *, curr) {
-      if (curr->global_identifier == global_identifier) {
-        rv = curr;
-        break;
-      }
-    } SMARTLIST_FOREACH_END(curr);
+  lookup.global_identifier = global_identifier;
+  rv = HT_FIND(channel_gid_map, &channel_gid_map, &lookup);
+  if (rv) {
+    tor_assert(rv->global_identifier == global_identifier);
   }
 
   return rv;
@@ -822,7 +846,7 @@ channel_init(channel_t *chan)
   tor_assert(chan);
 
   /* Assign an ID and bump the counter */
-  chan->global_identifier = n_channels_allocated++;
+  chan->global_identifier = ++n_channels_allocated;
 
   /* Init timestamp */
   chan->timestamp_last_had_circuits = time(NULL);
@@ -861,7 +885,7 @@ channel_init_listener(channel_listener_t *chan_l)
   tor_assert(chan_l);
 
   /* Assign an ID and bump the counter */
-  chan_l->global_identifier = n_channels_allocated++;
+  chan_l->global_identifier = ++n_channels_allocated;
 
   /* Timestamp it */
   channel_listener_timestamp_created(chan_l);
@@ -3231,6 +3255,11 @@ channel_free_all(void)
             "Freeing channel_identity_map");
   /* Geez, anything still left over just won't die ... let it leak then */
   HT_CLEAR(channel_idmap, &channel_identity_map);
+
+  /* Same with channel_gid_map */
+  log_debug(LD_CHANNEL,
+            "Freeing channel_gid_map");
+  HT_CLEAR(channel_gid_map, &channel_gid_map);
 
   log_debug(LD_CHANNEL,
             "Done cleaning up after channels");
