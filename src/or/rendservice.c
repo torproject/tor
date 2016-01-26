@@ -1676,7 +1676,7 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
   /* help predict this next time */
   rep_hist_note_used_internal(now, circ_needs_uptime, 1);
 
-  /* Launch a circuit to alice's chosen rendezvous point.
+  /* Launch a circuit to the client's chosen rendezvous point.
    */
   for (i=0;i<MAX_REND_FAILURES;i++) {
     int flags = CIRCLAUNCH_NEED_CAPACITY | CIRCLAUNCH_IS_INTERNAL;
@@ -2970,7 +2970,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   /* Append the cpath entry. */
   hop->state = CPATH_STATE_OPEN;
   /* set the windows to default. these are the windows
-   * that bob thinks alice has.
+   * that the service thinks the client has.
    */
   hop->package_window = circuit_initial_package_window();
   hop->deliver_window = CIRCWINDOW_START;

@@ -1581,7 +1581,7 @@ connection_or_nonopen_was_started_here(or_connection_t *conn)
 }
 
 /** <b>Conn</b> just completed its handshake. Return 0 if all is well, and
- * return -1 if he is lying, broken, or otherwise something is wrong.
+ * return -1 if they are lying, broken, or otherwise something is wrong.
  *
  * If we initiated this connection (<b>started_here</b> is true), make sure
  * the other side sent a correctly formed certificate. If I initiated the
@@ -1754,7 +1754,7 @@ connection_or_client_used(or_connection_t *conn)
  *
  * Make sure we are happy with the person we just handshaked with.
  *
- * If he initiated the connection, make sure he's not already connected,
+ * If they initiated the connection, make sure they're not already connected,
  * then initialize conn from the information in router.
  *
  * If all is successful, call circuit_n_conn_done() to handle events

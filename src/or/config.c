@@ -1517,7 +1517,7 @@ options_act(const or_options_t *old_options)
 #endif
 
   /* If we are a bridge with a pluggable transport proxy but no
-     Extended ORPort, inform the user that she is missing out. */
+     Extended ORPort, inform the user that they are missing out. */
   if (server_mode(options) && options->ServerTransportPlugin &&
       !options->ExtORPort_lines) {
     log_notice(LD_CONFIG, "We use pluggable transports but the Extended "

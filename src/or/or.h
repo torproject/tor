@@ -458,9 +458,11 @@ typedef enum {
 #define CIRCUIT_PURPOSE_OR_MIN_ 1
 /** OR-side circuit purpose: normal circuit, at OR. */
 #define CIRCUIT_PURPOSE_OR 1
-/** OR-side circuit purpose: At OR, from Bob, waiting for intro from Alices. */
+/** OR-side circuit purpose: At OR, from the service, waiting for intro from
+ * clients. */
 #define CIRCUIT_PURPOSE_INTRO_POINT 2
-/** OR-side circuit purpose: At OR, from Alice, waiting for Bob. */
+/** OR-side circuit purpose: At OR, from the client, waiting for the service.
+ */
 #define CIRCUIT_PURPOSE_REND_POINT_WAITING 3
 /** OR-side circuit purpose: At OR, both circuits have this purpose. */
 #define CIRCUIT_PURPOSE_REND_ESTABLISHED 4
@@ -479,43 +481,47 @@ typedef enum {
  *     to becoming open, or they are open and have sent the
  *     establish_rendezvous cell but haven't received an ack.
  *   circuits that are c_rend_ready are open and have received a
- *     rend ack, but haven't heard from bob yet. if they have a
+ *     rend ack, but haven't heard from the service yet. if they have a
  *     buildstate->pending_final_cpath then they're expecting a
- *     cell from bob, else they're not.
+ *     cell from the service, else they're not.
  *   circuits that are c_rend_ready_intro_acked are open, and
  *     some intro circ has sent its intro and received an ack.
  *   circuits that are c_rend_joined are open, have heard from
- *     bob, and are talking to him.
+ *     the service, and are talking to it.
  */
 /** Client-side circuit purpose: Normal circuit, with cpath. */
 #define CIRCUIT_PURPOSE_C_GENERAL 5
-/** Client-side circuit purpose: at Alice, connecting to intro point. */
+/** Client-side circuit purpose: at the client, connecting to intro point. */
 #define CIRCUIT_PURPOSE_C_INTRODUCING 6
-/** Client-side circuit purpose: at Alice, sent INTRODUCE1 to intro point,
+/** Client-side circuit purpose: at the client, sent INTRODUCE1 to intro point,
  * waiting for ACK/NAK. */
 #define CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT 7
-/** Client-side circuit purpose: at Alice, introduced and acked, closing. */
+/** Client-side circuit purpose: at the client, introduced and acked, closing.
+ */
 #define CIRCUIT_PURPOSE_C_INTRODUCE_ACKED 8
-/** Client-side circuit purpose: at Alice, waiting for ack. */
+/** Client-side circuit purpose: at the client, waiting for ack. */
 #define CIRCUIT_PURPOSE_C_ESTABLISH_REND 9
-/** Client-side circuit purpose: at Alice, waiting for Bob. */
+/** Client-side circuit purpose: at the client, waiting for the service. */
 #define CIRCUIT_PURPOSE_C_REND_READY 10
-/** Client-side circuit purpose: at Alice, waiting for Bob, INTRODUCE
- * has been acknowledged. */
+/** Client-side circuit purpose: at the client, waiting for the service,
+ * INTRODUCE has been acknowledged. */
 #define CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED 11
-/** Client-side circuit purpose: at Alice, rendezvous established. */
+/** Client-side circuit purpose: at the client, rendezvous established. */
 #define CIRCUIT_PURPOSE_C_REND_JOINED 12
 /** This circuit is used for build time measurement only */
 #define CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT 13
 #define CIRCUIT_PURPOSE_C_MAX_ 13
-/** Hidden-service-side circuit purpose: at Bob, waiting for introductions. */
+/** Hidden-service-side circuit purpose: at the service, waiting for
+ * introductions. */
 #define CIRCUIT_PURPOSE_S_ESTABLISH_INTRO 14
-/** Hidden-service-side circuit purpose: at Bob, successfully established
- * intro. */
+/** Hidden-service-side circuit purpose: at the service, successfully
+ * established intro. */
 #define CIRCUIT_PURPOSE_S_INTRO 15
-/** Hidden-service-side circuit purpose: at Bob, connecting to rend point. */
+/** Hidden-service-side circuit purpose: at the service, connecting to rend
+ * point. */
 #define CIRCUIT_PURPOSE_S_CONNECT_REND 16
-/** Hidden-service-side circuit purpose: at Bob, rendezvous established. */
+/** Hidden-service-side circuit purpose: at the service, rendezvous
+ * established. */
 #define CIRCUIT_PURPOSE_S_REND_JOINED 17
 /** A testing circuit; not meant to be used for actual traffic. */
 #define CIRCUIT_PURPOSE_TESTING 18

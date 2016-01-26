@@ -715,7 +715,7 @@ connection_dir_request_failed(dir_connection_t *conn)
     return; /* this was a test fetch. don't retry. */
   }
   if (!entry_list_is_constrained(get_options()))
-    router_set_status(conn->identity_digest, 0); /* don't try him again */
+    router_set_status(conn->identity_digest, 0); /* don't try this one again */
   if (conn->base_.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
              conn->base_.purpose == DIR_PURPOSE_FETCH_EXTRAINFO) {
     log_info(LD_DIR, "Giving up on serverdesc/extrainfo fetch from "
