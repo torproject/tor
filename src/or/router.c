@@ -2375,7 +2375,7 @@ router_new_address_suggestion(const char *suggestion,
   if (tor_addr_eq(&d_conn->base_.addr, &addr)) {
     /* Don't believe anybody who says our IP is their IP. */
     log_debug(LD_DIR, "A directory server told us our IP address is %s, "
-              "but he's just reporting his own IP address. Ignoring.",
+              "but they are just reporting their own IP address. Ignoring.",
               suggestion);
     return;
   }
