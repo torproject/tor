@@ -1642,7 +1642,7 @@ circuit_build_failed(origin_circuit_t *circ)
       /* Don't increment failure count, since the client may have picked
        * the rendezvous point maliciously */
       log_info(LD_REND,
-               "Couldn't connect to Alice's chosen rend point %s "
+               "Couldn't connect to the client's chosen rend point %s "
                "(%s hop failed).",
                escaped(build_state_get_exit_nickname(circ->build_state)),
                failed_at_last_hop?"last":"non-last");
