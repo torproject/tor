@@ -2241,7 +2241,7 @@ consider_recording_trackhost(const entry_connection_t *conn,
   char fp[HEX_DIGEST_LEN+1];
 
   /* Search the addressmap for this conn's destination. */
-  /* If he's not in the address map.. */
+  /* If they're not in the address map.. */
   if (!options->TrackHostExits ||
       addressmap_have_mapping(conn->socks_request->address,
                               options->TrackHostExitsExpire))

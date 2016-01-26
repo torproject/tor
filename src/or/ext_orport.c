@@ -151,7 +151,7 @@ init_ext_or_cookie_authentication(int is_enabled)
 }
 
 /** Read data from <b>conn</b> and see if the client sent us the
- *  authentication type that she prefers to use in this session.
+ *  authentication type that they prefer to use in this session.
  *
  *  Return -1 if we received corrupted data or if we don't support the
  *  authentication type. Return 0 if we need more data in

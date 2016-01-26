@@ -833,7 +833,7 @@ connection_ap_process_end_not_open(
             }
           }
         }
-        /* check if he *ought* to have allowed it */
+        /* check if the exit *ought* to have allowed it */
 
         adjust_exit_policy_from_exitpolicy_failure(circ,
                                                    conn,

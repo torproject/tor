@@ -1152,7 +1152,7 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
   } else {
     /* Try to have at least 2 choices available. This way we don't
      * get stuck with a single live-but-crummy entry and just keep
-     * using him.
+     * using it.
      * (We might get 2 live-but-crummy entry guards, but so be it.) */
     preferred_min = 2;
   }

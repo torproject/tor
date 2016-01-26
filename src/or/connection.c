@@ -1440,7 +1440,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
   if (!SOCKET_OK(news)) { /* accept() error */
     int e = tor_socket_errno(conn->s);
     if (ERRNO_IS_ACCEPT_EAGAIN(e)) {
-      return 0; /* he hung up before we could accept(). that's fine. */
+      return 0; /* they hung up before we could accept(). that's fine. */
     } else if (ERRNO_IS_RESOURCE_LIMIT(e)) {
       warn_too_many_conns();
       return 0;

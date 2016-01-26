@@ -1100,7 +1100,7 @@ parse_smethod_line(const char *line, managed_proxy_t *mp)
 
   smartlist_add(mp->transports, transport);
 
-  /* For now, notify the user so that he knows where the server
+  /* For now, notify the user so that they know where the server
      transport is listening. */
   log_info(LD_CONFIG, "Server transport %s at %s:%d.",
            method_name, address, (int)port);
