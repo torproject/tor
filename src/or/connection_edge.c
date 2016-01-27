@@ -2951,8 +2951,8 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       return 0;
     }
     /* Make sure to get the 'real' address of the previous hop: the
-     * caller might want to know whether his IP address has changed, and
-     * we might already have corrected base_.addr[ess] for the relay's
+     * caller might want to know whether the remote IP address has changed,
+     * and we might already have corrected base_.addr[ess] for the relay's
      * canonical IP address. */
     if (or_circ && or_circ->p_chan)
       address = tor_strdup(channel_get_actual_remote_address(or_circ->p_chan));

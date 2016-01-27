@@ -3135,7 +3135,7 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
  * router listening at <b>address</b>:<b>or_port</b>, and has yielded
  * a certificate with digest <b>digest_rcvd</b>.
  *
- * Inform the reachability checker that we could get to this guy.
+ * Inform the reachability checker that we could get to this relay.
  */
 void
 dirserv_orconn_tls_done(const tor_addr_t *addr,

@@ -3238,7 +3238,7 @@ test_dir_packages(void *arg)
   ADD(4, "clownshoes 22alpha4 http://quumble.example.cam/ blake2=fooa");
   ADD(5, "clownshoes 22alpha4 http://quumble.example.cam/ blake2=fooa");
 
-  /* Five votes for A ... all from the same guy.  Three for B. */
+  /* Five votes for A ... all from the same authority.  Three for B. */
   ADD(0, "cbc 99.1.11.1.1 http://example.com/cbc/ cubehash=ahooy sha512=m");
   ADD(1, "cbc 99.1.11.1.1 http://example.com/cbc/ cubehash=ahooy sha512=m");
   ADD(3, "cbc 99.1.11.1.1 http://example.com/cbc/ cubehash=ahooy sha512=m");

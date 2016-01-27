@@ -3606,7 +3606,7 @@ connection_read_to_buf(connection_t *conn, ssize_t *max_to_read,
   }
 
   /* Call even if result is 0, since the global read bucket may
-   * have reached 0 on a different conn, and this guy needs to
+   * have reached 0 on a different conn, and this connection needs to
    * know to stop reading. */
   connection_consider_empty_read_buckets(conn);
   if (n_written > 0 && connection_is_writing(conn))
@@ -4102,7 +4102,7 @@ connection_handle_write_impl(connection_t *conn, int force)
   }
 
   /* Call even if result is 0, since the global write bucket may
-   * have reached 0 on a different conn, and this guy needs to
+   * have reached 0 on a different conn, and this connection needs to
    * know to stop writing. */
   connection_consider_empty_write_buckets(conn);
   if (n_read > 0 && connection_is_reading(conn))

@@ -1585,7 +1585,7 @@ connection_or_nonopen_was_started_here(or_connection_t *conn)
  *
  * If we initiated this connection (<b>started_here</b> is true), make sure
  * the other side sent a correctly formed certificate. If I initiated the
- * connection, make sure it's the right guy.
+ * connection, make sure it's the right relay by checking the certificate.
  *
  * Otherwise (if we _didn't_ initiate this connection), it's okay for
  * the certificate to be weird or absent.
@@ -1601,7 +1601,7 @@ connection_or_nonopen_was_started_here(or_connection_t *conn)
  * 1) Set conn->circ_id_type according to tor-spec.txt.
  * 2) If we're an authdirserver and we initiated the connection: drop all
  *    descriptors that claim to be on that IP/port but that aren't
- *    this guy; and note that this guy is reachable.
+ *    this relay; and note that this relay is reachable.
  * 3) If this is a bridge and we didn't configure its identity
  *    fingerprint, remember the keyid we just learned.
  */

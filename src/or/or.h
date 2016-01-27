@@ -1308,7 +1308,7 @@ typedef struct connection_t {
                               * marked.) */
   const char *marked_for_close_file; /**< For debugging: in which file were
                                       * we marked for close? */
-  char *address; /**< FQDN (or IP) of the guy on the other end.
+  char *address; /**< FQDN (or IP) of the other end.
                   * strdup into this, because free_connection() frees it. */
   /** Another connection that's connected to this one in lieu of a socket. */
   struct connection_t *linked_conn;
