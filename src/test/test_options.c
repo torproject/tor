@@ -915,7 +915,7 @@ test_options_validate__authdir(void *ignored)
 
  done:
   teardown_capture_of_logs(previous_log);
-  sandbox_free_getaddrinfo_cache();
+  //  sandbox_free_getaddrinfo_cache();
   free_options_test_data(tdata);
   tor_free(msg);
 }
@@ -3088,7 +3088,7 @@ test_options_validate__proxy(void *ignored)
   free_options_test_data(tdata);
   memarea_clear_freelist();
   policies_free_all();
-  sandbox_free_getaddrinfo_cache();
+  // sandbox_free_getaddrinfo_cache();
   tor_free(msg);
 }
 
