@@ -106,6 +106,10 @@ Here are the steps Roger takes when putting out a new Tor release:
 
    Edit `include/versions.wmi` and `Makefile` to note the new version.
 
+   (NOTE: Due to #17805, there can only be one stable version listed at
+   once.  Nonetheless, do not call your version "alpha" if it is stable,
+   or people will get confused.)
+
 9. Email the packagers (cc'ing tor-assistants) that a new tarball is up.
    The current list of packagers is:
 
