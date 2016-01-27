@@ -100,8 +100,10 @@ typedef enum {
   DIGEST_SHA3_512 = 4,
 } digest_algorithm_t;
 #define  N_DIGEST_ALGORITHMS (DIGEST_SHA3_512+1)
+#define  N_COMMON_DIGEST_ALGORITHMS (DIGEST_SHA256+1)
 
-/** A set of all the digests we know how to compute, taken on a single
+
+/** A set of all the digests we commonly compute, taken on a single
  * string.  Any digests that are shorter than 512 bits are right-padded
  * with 0 bits.
  *
@@ -110,7 +112,7 @@ typedef enum {
  * once.
  **/
 typedef struct {
-  char d[N_DIGEST_ALGORITHMS][DIGEST512_LEN];
+  char d[N_COMMON_DIGEST_ALGORITHMS][DIGEST256_LEN];
 } digests_t;
 
 typedef struct crypto_pk_t crypto_pk_t;

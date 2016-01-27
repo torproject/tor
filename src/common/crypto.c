@@ -1655,7 +1655,7 @@ crypto_digest_all(digests_t *ds_out, const char *m, size_t len)
   memset(ds_out, 0, sizeof(*ds_out));
   if (crypto_digest(ds_out->d[DIGEST_SHA1], m, len) < 0)
     return -1;
-  for (i = DIGEST_SHA256; i < N_DIGEST_ALGORITHMS; ++i) {
+  for (i = DIGEST_SHA256; i < N_COMMON_DIGEST_ALGORITHMS; ++i) {
       switch (i) {
         case DIGEST_SHA256: /* FALLSTHROUGH */
         case DIGEST_SHA3_256:
@@ -1664,6 +1664,7 @@ crypto_digest_all(digests_t *ds_out, const char *m, size_t len)
           break;
         case DIGEST_SHA512:
         case DIGEST_SHA3_512: /* FALLSTHROUGH */
+          tor_assert(0); /* These won't fit. */
           if (crypto_digest512(ds_out->d[i], m, len, i) < 0)
             return -1;
           break;
