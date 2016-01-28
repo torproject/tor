@@ -327,6 +327,7 @@ fixed_get_uname(void)
   "V3AuthVoteDelay 20\n"                                                \
   "V3AuthDistDelay 20\n"                                                \
   "V3AuthNIntervalsValid 3\n"                                           \
+  "ClientUseIPv4 1\n"                                                     \
   "VirtualAddrNetworkIPv4 127.192.0.0/10\n"                             \
   "VirtualAddrNetworkIPv6 [FE80::]/10\n"                                \
   "SchedulerHighWaterMark__ 42\n"                                       \
@@ -1698,6 +1699,10 @@ test_options_validate__reachable_addresses(void *ignored)
   tt_str_op(tdata->opt->ReachableAddresses->value, OP_EQ, "*:82");
   tor_free(msg);
 
+#define SERVERS_REACHABLE_MSG "Servers must be able to freely connect to" \
+  " the rest of the Internet, so they must not set Reachable*Addresses or" \
+  " FascistFirewall or FirewallPorts or ClientUseIPv4 0."
+
   free_options_test_data(tdata);
   tdata = get_options_test_data("ReachableAddresses *:82\n"
                                 "ORListenAddress 127.0.0.1:5555\n"
@@ -1709,9 +1714,7 @@ test_options_validate__reachable_addresses(void *ignored)
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "Servers must be able to freely connect to the rest of"
-            " the Internet, so they must not set Reachable*Addresses or"
-            " FascistFirewall.");
+  tt_str_op(msg, OP_EQ, SERVERS_REACHABLE_MSG);
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -1725,9 +1728,7 @@ test_options_validate__reachable_addresses(void *ignored)
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "Servers must be able to freely connect to the rest of"
-            " the Internet, so they must not set Reachable*Addresses or"
-            " FascistFirewall.");
+  tt_str_op(msg, OP_EQ, SERVERS_REACHABLE_MSG);
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -1741,9 +1742,7 @@ test_options_validate__reachable_addresses(void *ignored)
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "Servers must be able to freely connect to the rest of"
-            " the Internet, so they must not set Reachable*Addresses or"
-            " FascistFirewall.");
+  tt_str_op(msg, OP_EQ, SERVERS_REACHABLE_MSG);
   tor_free(msg);
 
  done:
@@ -1760,6 +1759,7 @@ test_options_validate__use_bridges(void *ignored)
   char *msg;
   options_test_data_t *tdata = get_options_test_data(
                                    "UseBridges 1\n"
+                                   "ClientUseIPv4 1\n"
                                    "ORListenAddress 127.0.0.1:5555\n"
                                    "ORPort 955\n"
                                    "MaxClientCircuitsPending 1\n"
