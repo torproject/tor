@@ -338,22 +338,47 @@ typedef struct {
   or_options_t *def_opt;
 } options_test_data_t;
 
+static void free_options_test_data(options_test_data_t *td);
+
 static options_test_data_t *
 get_options_test_data(const char *conf)
 {
+  int rv = -1;
+  char *msg = NULL;
   config_line_t *cl=NULL;
   options_test_data_t *result = tor_malloc(sizeof(options_test_data_t));
   result->opt = options_new();
   result->old_opt = options_new();
   result->def_opt = options_new();
-  config_get_lines(conf, &cl, 1);
-  config_assign(&options_format, result->opt, cl, 0, 0, NULL);
+  rv = config_get_lines(conf, &cl, 1);
+  tt_assert(rv == 0);
+  rv = config_assign(&options_format, result->opt, cl, 0, 0, &msg);
+  if (msg) {
+    /* Display the parse error message by comparing it with an empty string */
+    tt_str_op(msg, OP_EQ, "");
+  }
+  tt_assert(rv == 0);
   config_free_lines(cl);
   result->opt->LogTimeGranularity = 1;
   result->opt->TokenBucketRefillInterval = 1;
-  config_get_lines(TEST_OPTIONS_OLD_VALUES, &cl, 1);
-  config_assign(&options_format, result->def_opt, cl, 0, 0, NULL);
+  rv = config_get_lines(TEST_OPTIONS_OLD_VALUES, &cl, 1);
+  tt_assert(rv == 0);
+  rv = config_assign(&options_format, result->def_opt, cl, 0, 0, &msg);
+  if (msg) {
+    /* Display the parse error message by comparing it with an empty string */
+    tt_str_op(msg, OP_EQ, "");
+  }
+  tt_assert(rv == 0);
+
+done:
   config_free_lines(cl);
+  if (rv != 0) {
+    free_options_test_data(result);
+    result = NULL;
+    /* Callers expect a non-NULL result, so just die if we can't provide one.
+     */
+    tor_assert(0);
+  }
   return result;
 }
 
