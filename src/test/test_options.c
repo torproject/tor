@@ -1770,6 +1770,104 @@ test_options_validate__reachable_addresses(void *ignored)
   tt_str_op(msg, OP_EQ, SERVERS_REACHABLE_MSG);
   tor_free(msg);
 
+  free_options_test_data(tdata);
+  tdata = get_options_test_data("ClientUseIPv4 0\n"
+                                "ORListenAddress 127.0.0.1:5555\n"
+                                "ORPort 955\n"
+                                "MaxClientCircuitsPending 1\n"
+                                "ConnLimit 1\n"
+                                "SchedulerHighWaterMark__ 42\n"
+                                "SchedulerLowWaterMark__ 10\n");
+
+  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
+  tt_int_op(ret, OP_EQ, -1);
+  tt_str_op(msg, OP_EQ, SERVERS_REACHABLE_MSG);
+  tor_free(msg);
+
+  /* Test IPv4-only clients setting IPv6 preferences */
+
+#define WARN_PLEASE_USE_IPV6_OR_LOG_MSG \
+        "ClientPreferIPv6ORPort 1 is ignored unless tor is using IPv6. " \
+        "Please set ClientUseIPv6 1, ClientUseIPv4 0, or configure bridges.\n"
+
+#define WARN_PLEASE_USE_IPV6_DIR_LOG_MSG \
+        "ClientPreferIPv6DirPort 1 is ignored unless tor is using IPv6. " \
+        "Please set ClientUseIPv6 1, ClientUseIPv4 0, or configure bridges.\n"
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
+                                "ClientUseIPv4 1\n"
+                                "ClientUseIPv6 0\n"
+                                "UseBridges 0\n"
+                                "ClientPreferIPv6ORPort 1\n");
+
+  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
+  tt_int_op(ret, OP_EQ, 0);
+  expect_log_msg(WARN_PLEASE_USE_IPV6_OR_LOG_MSG);
+  tor_free(msg);
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
+                                "ClientUseIPv4 1\n"
+                                "ClientUseIPv6 0\n"
+                                "UseBridges 0\n"
+                                "ClientPreferIPv6DirPort 1\n");
+
+  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
+  tt_int_op(ret, OP_EQ, 0);
+  expect_log_msg(WARN_PLEASE_USE_IPV6_DIR_LOG_MSG);
+  tor_free(msg);
+
+  /* Now test an IPv4/IPv6 client setting IPv6 preferences */
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
+                                "ClientUseIPv4 1\n"
+                                "ClientUseIPv6 1\n"
+                                "ClientPreferIPv6ORPort 1\n"
+                                "ClientPreferIPv6DirPort 1\n");
+
+  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_ptr_op(msg, OP_EQ, NULL);
+
+  /* Now test an IPv6 client setting IPv6 preferences */
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
+                                "ClientUseIPv6 1\n"
+                                "ClientPreferIPv6ORPort 1\n"
+                                "ClientPreferIPv6DirPort 1\n");
+
+  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_ptr_op(msg, OP_EQ, NULL);
+
+  /* And an implicit (IPv4 disabled) IPv6 client setting IPv6 preferences */
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
+                                "ClientUseIPv4 0\n"
+                                "ClientPreferIPv6ORPort 1\n"
+                                "ClientPreferIPv6DirPort 1\n");
+
+  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_ptr_op(msg, OP_EQ, NULL);
+
+  /* And an implicit (bridge) client setting IPv6 preferences */
+
+  free_options_test_data(tdata);
+  tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
+                                "UseBridges 1\n"
+                                "Bridge 127.0.0.1:12345\n"
+                                "ClientPreferIPv6ORPort 1\n"
+                                "ClientPreferIPv6DirPort 1\n");
+
+  ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_ptr_op(msg, OP_EQ, NULL);
+
  done:
   teardown_capture_of_logs(previous_log);
   free_options_test_data(tdata);
