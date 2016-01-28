@@ -95,8 +95,7 @@ COMMAND-LINE OPTIONS
     which tells Tor to only send warnings and errors to the console, or with
     the **--quiet** option, which tells Tor not to log to the console at all.
 
-[[opt-keygen]] **--keygen** [**--newpass**]
-
+[[opt-keygen]] **--keygen** [**--newpass**]::
    Running "tor --keygen" creates a new ed25519 master identity key for a
    relay, or only a fresh temporary signing key and certificate, if you
    already have a master key.  Optionally you can encrypt the master identity
