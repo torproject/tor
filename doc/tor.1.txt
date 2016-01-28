@@ -95,6 +95,30 @@ COMMAND-LINE OPTIONS
     which tells Tor to only send warnings and errors to the console, or with
     the **--quiet** option, which tells Tor not to log to the console at all.
 
+[[opt-keygen]] **--keygen** [**--newpass**]
+
+   Running "tor --keygen" creates a new ed25519 master identity key for a
+   relay, or only a fresh temporary signing key and certificate, if you
+   already have a master key.  Optionally you can encrypt the master identity
+   key with a passphrase: Tor will ask you for one. If you don't want to
+   encrypt the master key, just don't enter any passphrase when asked. +
+ +
+   The **--newpass** option should be used with --keygen only when you need
+   to add, change, or remove a passphrase on an existing ed25519 master
+   identity key. You will be prompted for the old passphase (if any),
+   and the new passphrase (if any). +
+ +
+   When generating a master key, you will probably want to use
+   **--DataDirectory** to control where the keys
+   and certificates will be stored, and **--SigningKeyLifetime** to
+   control their lifetimes.  Their behavior is as documented in the
+   server options section below.  (You must have write access to the specified
+   DataDirectory.) +
+ +
+   To use the generated files, you must copy them to the DataDirectory/keys
+   directory of your Tor daemon, and make sure that they are owned by the
+   user actually running the Tor daemon on your system.
+
 Other options can be specified on the command-line in the format "--option
 value", in the format "option value", or in a configuration file.  For
 instance, you can tell Tor to start listening for SOCKS connections on port
@@ -1952,8 +1976,9 @@ is non-zero):
 
 [[OfflineMasterKey]] **OfflineMasterKey** **0**|**1**::
     If non-zero, the Tor relay will never generate or load its master secret
-    key.  Instead, you'll have to use "tor --keygen" to manage the master
-    secret key. (Default: 0)
+    key.  Instead, you'll have to use "tor --keygen" to manage the permanent
+    ed25519 master identity key, as well as the corresponding temporary
+    signing keys and certificates. (Default: 0)
 
 DIRECTORY SERVER OPTIONS
 ------------------------
