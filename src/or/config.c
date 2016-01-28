@@ -190,10 +190,12 @@ static config_var_t option_vars_[] = {
   V(CircuitPriorityHalflife,     DOUBLE,  "-100.0"), /*negative:'Use default'*/
   V(ClientDNSRejectInternalAddresses, BOOL,"1"),
   V(ClientOnly,                  BOOL,     "0"),
-  V(ClientPreferIPv6ORPort,      BOOL,     "0"),
+  V(ClientPreferIPv6ORPort,      AUTOBOOL, "auto"),
+  V(ClientPreferIPv6DirPort,     AUTOBOOL, "auto"),
   V(ClientRejectInternalAddresses, BOOL,   "1"),
   V(ClientTransportPlugin,       LINELIST, NULL),
   V(ClientUseIPv6,               BOOL,     "0"),
+  V(ClientUseIPv4,               BOOL,     "1"),
   V(ConsensusParams,             STRING,   NULL),
   V(ConnLimit,                   UINT,     "1000"),
   V(ConnDirectionStatistics,     BOOL,     "0"),
@@ -3078,6 +3080,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
     }
   }
 
+  /* Terminate Reachable*Addresses with reject *
+   */
   for (i=0; i<3; i++) {
     config_line_t **linep =
       (i==0) ? &options->ReachableAddresses :
@@ -3087,8 +3091,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
       continue;
     /* We need to end with a reject *:*, not an implicit accept *:* */
     for (;;) {
-      if (!strcmp((*linep)->value, "reject *:*")) /* already there */
-        break;
       linep = &((*linep)->next);
       if (!*linep) {
         *linep = tor_malloc_zero(sizeof(config_line_t));
@@ -3104,11 +3106,29 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if ((options->ReachableAddresses ||
        options->ReachableORAddresses ||
-       options->ReachableDirAddresses) &&
+       options->ReachableDirAddresses ||
+       options->ClientUseIPv4 == 0) &&
       server_mode(options))
     REJECT("Servers must be able to freely connect to the rest "
            "of the Internet, so they must not set Reachable*Addresses "
-           "or FascistFirewall.");
+           "or FascistFirewall or FirewallPorts or ClientUseIPv4 0.");
+
+  /* We check if Reachable*Addresses blocks all addresses in
+   * parse_reachable_addresses(). */
+
+#define WARN_PLEASE_USE_IPV6_LOG_MSG \
+        "ClientPreferIPv6%sPort 1 is ignored unless tor is using IPv6. " \
+        "Please set ClientUseIPv6 1, ClientUseIPv4 0, or configure bridges."
+
+  if (!fascist_firewall_use_ipv6(options)
+      && options->ClientPreferIPv6ORPort == 1)
+    log_warn(LD_CONFIG, WARN_PLEASE_USE_IPV6_LOG_MSG, "OR");
+
+  if (!fascist_firewall_use_ipv6(options)
+      && options->ClientPreferIPv6DirPort == 1)
+    log_warn(LD_CONFIG, WARN_PLEASE_USE_IPV6_LOG_MSG, "Dir");
+
+#undef WARN_PLEASE_USE_IPV6_LOG_MSG
 
   if (options->UseBridges &&
       server_mode(options))

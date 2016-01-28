@@ -19,6 +19,7 @@
  */
 #define TOR_CHANNEL_INTERNAL_
 #define CONNECTION_PRIVATE
+#include "backtrace.h"
 #include "channel.h"
 #include "channeltls.h"
 #include "circuitbuild.h"
@@ -37,6 +38,7 @@
 #include "ext_orport.h"
 #include "geoip.h"
 #include "main.h"
+#include "nodelist.h"
 #include "policies.h"
 #include "reasons.h"
 #include "relay.h"
@@ -44,6 +46,7 @@
 #include "rendcommon.h"
 #include "rephist.h"
 #include "router.h"
+#include "routerlist.h"
 #include "transports.h"
 #include "routerparse.h"
 #include "transports.h"
@@ -1715,6 +1718,67 @@ connection_connect_sockaddr,(connection_t *conn,
   return inprogress ? 0 : 1;
 }
 
+/* Log a message if connection attempt is made when IPv4 or IPv6 is disabled.
+ * Log a less severe message if we couldn't conform to ClientPreferIPv6ORPort
+ * or ClientPreferIPv6ORPort. */
+static void
+connection_connect_log_client_use_ip_version(const connection_t *conn)
+{
+  const or_options_t *options = get_options();
+
+  /* Only clients care about ClientUseIPv4/6, bail out early on servers, and
+   * on connections we don't care about */
+  if (server_mode(options) || !conn || conn->type == CONN_TYPE_EXIT) {
+    return;
+  }
+
+  /* We're only prepared to log OR and DIR connections here */
+  if (conn->type != CONN_TYPE_OR && conn->type != CONN_TYPE_DIR) {
+    return;
+  }
+
+  const int must_ipv4 = !fascist_firewall_use_ipv6(options);
+  const int must_ipv6 = (options->ClientUseIPv4 == 0);
+  const int pref_ipv6 = (conn->type == CONN_TYPE_OR
+                         ? fascist_firewall_prefer_ipv6_orport(options)
+                         : fascist_firewall_prefer_ipv6_dirport(options));
+  tor_addr_t real_addr;
+  tor_addr_make_null(&real_addr, AF_UNSPEC);
+
+  /* OR conns keep the original address in real_addr, as addr gets overwritten
+   * with the descriptor address */
+  if (conn->type == CONN_TYPE_OR) {
+    const or_connection_t *or_conn = TO_OR_CONN((connection_t *)conn);
+    tor_addr_copy(&real_addr, &or_conn->real_addr);
+  } else if (conn->type == CONN_TYPE_DIR) {
+    tor_addr_copy(&real_addr, &conn->addr);
+  }
+
+  /* Check if we broke a mandatory address family restriction */
+  if ((must_ipv4 && tor_addr_family(&real_addr) == AF_INET6)
+      || (must_ipv6 && tor_addr_family(&real_addr) == AF_INET)) {
+    log_warn(LD_BUG, "%s connection to %s violated ClientUseIPv%s 0.",
+             conn->type == CONN_TYPE_OR ? "OR" : "Dir",
+             fmt_addr(&real_addr),
+             options->ClientUseIPv4 == 0 ? "4" : "6");
+    log_backtrace(LOG_WARN, LD_BUG, "Address came from");
+  }
+
+  /* Check if we couldn't satisfy an address family preference */
+  if ((!pref_ipv6 && tor_addr_family(&real_addr) == AF_INET6)
+      || (pref_ipv6 && tor_addr_family(&real_addr) == AF_INET)) {
+    log_info(LD_NET, "Connection to %s doesn't satisfy ClientPreferIPv6%sPort "
+             "%d, with ClientUseIPv4 %d, and fascist_firewall_use_ipv6 %d "
+             "(ClientUseIPv6 %d and UseBridges %d).",
+             fmt_addr(&real_addr),
+             conn->type == CONN_TYPE_OR ? "OR" : "Dir",
+             conn->type == CONN_TYPE_OR ? options->ClientPreferIPv6ORPort
+                                        : options->ClientPreferIPv6DirPort,
+             options->ClientUseIPv4, fascist_firewall_use_ipv6(options),
+             options->ClientUseIPv6, options->UseBridges);
+  }
+}
+
 /** Take conn, make a nonblocking socket; try to connect to
  * addr:port (port arrives in *host order*). If fail, return -1 and if
  * applicable put your best guess about errno into *<b>socket_error</b>.
@@ -1738,6 +1802,10 @@ connection_connect(connection_t *conn, const char *address,
   int dest_addr_len, bind_addr_len = 0;
   const or_options_t *options = get_options();
   int protocol_family;
+
+  /* Log if we didn't stick to ClientUseIPv4/6 or ClientPreferIPv6OR/DirPort
+   */
+  connection_connect_log_client_use_ip_version(conn);
 
   if (tor_addr_family(addr) == AF_INET6)
     protocol_family = PF_INET6;
@@ -4246,10 +4314,10 @@ connection_write_to_buf_impl_,(const char *string, size_t len,
 /** Return a connection with given type, address, port, and purpose;
  * or NULL if no such connection exists (or if all such connections are marked
  * for close). */
-connection_t *
-connection_get_by_type_addr_port_purpose(int type,
+MOCK_IMPL(connection_t *,
+connection_get_by_type_addr_port_purpose,(int type,
                                          const tor_addr_t *addr, uint16_t port,
-                                         int purpose)
+                                         int purpose))
 {
   CONN_GET_TEMPLATE(conn,
        (conn->type == type &&

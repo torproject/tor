@@ -267,6 +267,27 @@ void tor_addr_from_in6(tor_addr_t *dest, const struct in6_addr *in6);
 int tor_addr_is_null(const tor_addr_t *addr);
 int tor_addr_is_loopback(const tor_addr_t *addr);
 
+int tor_addr_is_valid(const tor_addr_t *addr, int for_listening);
+int tor_addr_is_valid_ipv4n(uint32_t v4n_addr, int for_listening);
+#define tor_addr_is_valid_ipv4h(v4h_addr, for_listening) \
+        tor_addr_is_valid_ipv4n(htonl(v4h_addr), (for_listening))
+int tor_port_is_valid(uint16_t port, int for_listening);
+/* Are addr and port both valid? */
+#define tor_addr_port_is_valid(addr, port, for_listening) \
+        (tor_addr_is_valid((addr), (for_listening)) &&    \
+         tor_port_is_valid((port), (for_listening)))
+/* Are ap->addr and ap->port both valid? */
+#define tor_addr_port_is_valid_ap(ap, for_listening) \
+        tor_addr_port_is_valid(&(ap)->addr, (ap)->port, (for_listening))
+/* Are the network-order v4addr and port both valid? */
+#define tor_addr_port_is_valid_ipv4n(v4n_addr, port, for_listening) \
+        (tor_addr_is_valid_ipv4n((v4n_addr), (for_listening)) &&    \
+         tor_port_is_valid((port), (for_listening)))
+/* Are the host-order v4addr and port both valid? */
+#define tor_addr_port_is_valid_ipv4h(v4h_addr, port, for_listening) \
+        (tor_addr_is_valid_ipv4h((v4h_addr), (for_listening)) &&    \
+         tor_port_is_valid((port), (for_listening)))
+
 int tor_addr_port_split(int severity, const char *addrport,
                         char **address_out, uint16_t *port_out);
 

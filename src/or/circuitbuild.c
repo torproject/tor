@@ -1778,7 +1778,7 @@ pick_tor2web_rendezvous_node(router_crn_flags_t flags,
   router_add_running_nodes_to_smartlist(all_live_nodes,
                                         allow_invalid,
                                         0, 0, 0,
-                                        need_desc);
+                                        need_desc, 0);
 
   /* Filter all_live_nodes to only add live *and* whitelisted RPs to
    * the list whitelisted_live_rps. */
@@ -2144,7 +2144,9 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
   const node_t *choice;
   smartlist_t *excluded;
   const or_options_t *options = get_options();
-  router_crn_flags_t flags = CRN_NEED_GUARD|CRN_NEED_DESC;
+  /* If possible, choose an entry server with a preferred address,
+   * otherwise, choose one with an allowed address */
+  router_crn_flags_t flags = CRN_NEED_GUARD|CRN_NEED_DESC|CRN_PREF_ADDR;
   const node_t *node;
 
   if (state && options->UseEntryGuards &&
@@ -2160,14 +2162,6 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
     /* Exclude the exit node from the state, if we have one.  Also exclude its
      * family. */
     nodelist_add_node_and_family(excluded, node);
-  }
-  if (firewall_is_fascist_or()) {
-    /* Exclude all ORs that we can't reach through our firewall */
-    smartlist_t *nodes = nodelist_get_list();
-    SMARTLIST_FOREACH(nodes, const node_t *, node, {
-      if (!fascist_firewall_allows_node(node))
-        smartlist_add(excluded, (void*)node);
-    });
   }
   /* and exclude current entry guards and their families,
    * unless we're in a test network, and excluding guards
@@ -2247,9 +2241,11 @@ onion_extend_cpath(origin_circuit_t *circ)
     if (r) {
       /* If we're a client, use the preferred address rather than the
          primary address, for potentially connecting to an IPv6 OR
-         port. */
-      info = extend_info_from_node(r, server_mode(get_options()) == 0);
-      tor_assert(info);
+         port. Servers always want the primary (IPv4) address. */
+      int client = (server_mode(get_options()) == 0);
+      info = extend_info_from_node(r, client);
+      /* Clients can fail to find an allowed address */
+      tor_assert(info || client);
     }
   } else {
     const node_t *r =
@@ -2324,33 +2320,43 @@ extend_info_new(const char *nickname, const char *digest,
  * <b>for_direct_connect</b> is true, in which case the preferred
  * address is used instead. May return NULL if there is not enough
  * info about <b>node</b> to extend to it--for example, if there is no
- * routerinfo_t or microdesc_t.
+ * routerinfo_t or microdesc_t, or if for_direct_connect is true and none of
+ * the node's addresses are allowed by tor's firewall and IP version config.
  **/
 extend_info_t *
 extend_info_from_node(const node_t *node, int for_direct_connect)
 {
   tor_addr_port_t ap;
+  int valid_addr = 0;
 
   if (node->ri == NULL && (node->rs == NULL || node->md == NULL))
     return NULL;
 
+  /* Choose a preferred address first, but fall back to an allowed address.
+   * choose_address returns 1 on success, but get_prim_orport returns 0. */
   if (for_direct_connect)
-    node_get_pref_orport(node, &ap);
+    valid_addr = fascist_firewall_choose_address_node(node,
+                                                      FIREWALL_OR_CONNECTION,
+                                                      0, &ap);
   else
-    node_get_prim_orport(node, &ap);
+    valid_addr = !node_get_prim_orport(node, &ap);
 
-  log_debug(LD_CIRC, "using %s for %s",
-            fmt_addrport(&ap.addr, ap.port),
-            node->ri ? node->ri->nickname : node->rs->nickname);
+  if (valid_addr)
+    log_debug(LD_CIRC, "using %s for %s",
+              fmt_addrport(&ap.addr, ap.port),
+              node->ri ? node->ri->nickname : node->rs->nickname);
+  else
+    log_warn(LD_CIRC, "Could not choose valid address for %s",
+              node->ri ? node->ri->nickname : node->rs->nickname);
 
-  if (node->ri)
+  if (valid_addr && node->ri)
     return extend_info_new(node->ri->nickname,
                              node->identity,
                              node->ri->onion_pkey,
                              node->ri->onion_curve25519_pkey,
                              &ap.addr,
                              ap.port);
-  else if (node->rs && node->md)
+  else if (valid_addr && node->rs && node->md)
     return extend_info_new(node->rs->nickname,
                              node->identity,
                              node->md->onion_pkey,

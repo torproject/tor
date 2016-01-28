@@ -908,6 +908,59 @@ tor_addr_is_loopback(const tor_addr_t *addr)
   }
 }
 
+/* Is addr valid?
+ * Checks that addr is non-NULL and not tor_addr_is_null().
+ * If for_listening is true, IPv4 addr 0.0.0.0 is allowed.
+ * It means "bind to all addresses on the local machine". */
+int
+tor_addr_is_valid(const tor_addr_t *addr, int for_listening)
+{
+  /* NULL addresses are invalid regardless of for_listening */
+  if (addr == NULL) {
+    return 0;
+  }
+
+  /* Only allow IPv4 0.0.0.0 for_listening. */
+  if (for_listening && addr->family == AF_INET
+      && tor_addr_to_ipv4h(addr) == 0) {
+    return 1;
+  }
+
+  /* Otherwise, the address is valid if it's not tor_addr_is_null() */
+  return !tor_addr_is_null(addr);
+}
+
+/* Is the network-order IPv4 address v4n_addr valid?
+ * Checks that addr is not zero.
+ * Except if for_listening is true, where IPv4 addr 0.0.0.0 is allowed. */
+int
+tor_addr_is_valid_ipv4n(uint32_t v4n_addr, int for_listening)
+{
+  /* Any IPv4 address is valid with for_listening. */
+  if (for_listening) {
+    return 1;
+  }
+
+  /* Otherwise, zero addresses are invalid. */
+  return v4n_addr != 0;
+}
+
+/* Is port valid?
+ * Checks that port is not 0.
+ * Except if for_listening is true, where port 0 is allowed.
+ * It means "OS chooses a port". */
+int
+tor_port_is_valid(uint16_t port, int for_listening)
+{
+  /* Any port value is valid with for_listening. */
+  if (for_listening) {
+    return 1;
+  }
+
+  /* Otherwise, zero ports are invalid. */
+  return port != 0;
+}
+
 /** Set <b>dest</b> to equal the IPv4 address in <b>v4addr</b> (given in
  * network order). */
 void
