@@ -26,6 +26,7 @@ void teardown_capture_of_logs(int prev);
 const char *mock_saved_log_at(int ix);
 int mock_saved_severity_at(int ix);
 int mock_saved_log_number(void);
+int mock_saved_log_has_message(const char *msg);
 
 #endif
 
