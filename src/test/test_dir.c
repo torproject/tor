@@ -3312,7 +3312,6 @@ test_dir_download_status_schedule(void *arg)
   tt_assert(increment == expected_increment);
   tt_assert(dls_failure.next_attempt_at == TIME_MIN + expected_increment);
 
-#if TIME_T_IS_SIGNED
   delay1 = INT_MAX;
   increment =  download_status_schedule_get_delay(&dls_failure,
                                                   schedule,
@@ -3320,7 +3319,6 @@ test_dir_download_status_schedule(void *arg)
   expected_increment = delay1;
   tt_assert(increment == expected_increment);
   tt_assert(dls_failure.next_attempt_at == TIME_MAX);
-#endif
 
   delay1 = 0;
   increment = download_status_schedule_get_delay(&dls_attempt,

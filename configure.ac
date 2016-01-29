@@ -1176,7 +1176,7 @@ AC_CHECK_TYPES([rlim_t], , ,
 ])
 
 AX_CHECK_SIGN([time_t],
-       [ AC_DEFINE(TIME_T_IS_SIGNED, 1, [Define if time_t is signed]) ],
+       [ : ],
        [ : ], [
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -1190,7 +1190,7 @@ AX_CHECK_SIGN([time_t],
 ])
 
 if test "$ax_cv_decl_time_t_signed" = no; then
-  AC_MSG_WARN([You have an unsigned time_t; some things will probably break. Please tell the Tor developers about your interesting platform.])
+  AC_MSG_ERROR([You have an unsigned time_t; Tor does not support that. Please tell the Tor developers about your interesting platform.])
 fi
 
 AX_CHECK_SIGN([size_t],

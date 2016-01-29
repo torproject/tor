@@ -1,0 +1,5 @@
+  o Removed platform support:
+    - Tor no longer attempts to support platforms where the "time_t" type
+      is unsigned.  (To the best of our knowledge, only OpenVMS does this,
+      and Tor has never actually built on OpenVMS.)  Closes ticket 18184.
+

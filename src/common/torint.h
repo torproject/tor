@@ -312,8 +312,6 @@ typedef uint32_t uintptr_t;
 
 #ifndef TIME_MAX
 
-#ifdef TIME_T_IS_SIGNED
-
 #if (SIZEOF_TIME_T == SIZEOF_INT)
 #define TIME_MAX ((time_t)INT_MAX)
 #elif (SIZEOF_TIME_T == SIZEOF_LONG)
@@ -321,24 +319,12 @@ typedef uint32_t uintptr_t;
 #elif (SIZEOF_TIME_T == 8)
 #define TIME_MAX ((time_t)INT64_MAX)
 #else
-#error "Can't define (signed) TIME_MAX"
+#error "Can't define TIME_MAX"
 #endif
 
-#else
-/* Unsigned case */
-#if (SIZEOF_TIME_T == 4)
-#define TIME_MAX ((time_t)UINT32_MAX)
-#elif (SIZEOF_TIME_T == 8)
-#define TIME_MAX ((time_t)UINT64_MAX)
-#else
-#error "Can't define (unsigned) TIME_MAX"
-#endif
-#endif /* time_t_is_signed */
 #endif /* ifndef(TIME_MAX) */
 
 #ifndef TIME_MIN
-
-#ifdef TIME_T_IS_SIGNED
 
 #if (SIZEOF_TIME_T == SIZEOF_INT)
 #define TIME_MIN ((time_t)INT_MIN)
@@ -347,19 +333,9 @@ typedef uint32_t uintptr_t;
 #elif (SIZEOF_TIME_T == 8)
 #define TIME_MIN ((time_t)INT64_MIN)
 #else
-#error "Can't define (signed) TIME_MIN"
+#error "Can't define TIME_MIN"
 #endif
 
-#else
-/* Unsigned case */
-#if (SIZEOF_TIME_T == 4)
-#define TIME_MIN ((time_t)UINT32_MIN)
-#elif (SIZEOF_TIME_T == 8)
-#define TIME_MIN ((time_t)UINT64_MIN)
-#else
-#error "Can't define (unsigned) TIME_MIN"
-#endif
-#endif /* time_t_is_signed */
 #endif /* ifndef(TIME_MIN) */
 
 #ifndef SIZE_MAX
