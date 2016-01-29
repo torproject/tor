@@ -83,6 +83,23 @@ mock_saved_logs(void)
   return saved_logs;
 }
 
+int
+mock_saved_log_has_message(const char *msg)
+{
+  int has_msg = 0;
+  if (saved_logs) {
+    SMARTLIST_FOREACH(saved_logs, mock_saved_log_entry_t *, m,
+                      {
+                        if (msg && m->generated_msg &&
+                            !strcmp(msg, m->generated_msg)) {
+                          has_msg = 1;
+                        }
+                      });
+  }
+
+  return has_msg;
+}
+
 void
 mock_saving_logv(int severity, log_domain_mask_t domain,
                  const char *funcname, const char *suffix,
