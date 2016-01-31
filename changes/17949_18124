@@ -1,0 +1,10 @@
+  o Minor features (platform compatibility):
+    - Change network interface lookup code to make it possible
+      to specifically ask either for loopback or for general
+      purpose interfaces. Now get_interface_address6{_list}()
+      refrain from returning loopback interfaces and 
+      get_loopback_address6{_list}() exclusively search for
+      them. Resolves ticket 17949.
+    - Refrain from getting network interface names on Windows
+      as Tor does not use them for anything. Resolves ticket
+      18124.
