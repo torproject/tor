@@ -1808,9 +1808,10 @@ test_tortls_debug_state_callback(void *ignored)
 
   tor_tls_debug_state_callback(ssl, 32, 45);
 
-  n = snprintf(buf, 1000, "SSL %p is now in state unknown"
+  n = tor_snprintf(buf, 1000, "SSL %p is now in state unknown"
                " state [type=32,val=45].\n", ssl);
-  buf[n]='\0';
+  /* tor's snprintf returns -1 on error */
+  tt_int_op(n, OP_NE, -1);
   expect_log_msg(buf);
 
  done:
