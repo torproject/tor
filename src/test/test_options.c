@@ -392,14 +392,6 @@ free_options_test_data(options_test_data_t *td)
   tor_free(td);
 }
 
-#define expect_log_msg(str) \
-  tt_assert_msg(mock_saved_log_has_message(str), \
-                "expected log to contain " # str);
-
-#define expect_no_log_msg(str)                      \
-  tt_assert_msg(!mock_saved_log_has_message(str), \
-                "expected log to not contain " # str);
-
 static void
 test_options_validate__uname_for_server(void *ignored)
 {
@@ -436,7 +428,7 @@ test_options_validate__uname_for_server(void *ignored)
   fixed_get_uname_result = "Windows 2000";
   mock_clean_saved_logs();
   options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
+  expect_log_entry();
   tor_free(msg);
 
  done:
@@ -992,9 +984,9 @@ test_options_validate__relay_with_hidden_services(void *ignored)
 /*   options_test_data_t *tdata = get_options_test_data(""); */
 /*   ret = options_validate(tdata->old_opt, tdata->opt, */
 /*                          tdata->def_opt, 0, &msg); */
-/*   tt_str_op(mock_saved_log_at(0), OP_EQ, */
-/*           "SocksPort, TransPort, NATDPort, DNSPort, and ORPort are all " */
-/*           "undefined, and there aren't any hidden services configured. " */
+/*   expect_log_msg("SocksPort, TransPort, NATDPort, DNSPort, and ORPort " */
+/*           "are all undefined, and there aren't any hidden services " */
+/*           "configured. " */
 /*           " Tor will still run, but probably won't do anything.\n"); */
 /*  done: */
 /*   teardown_capture_of_logs(previous_log); */
@@ -1230,8 +1222,7 @@ test_options_validate__scheduler(void *ignored)
   /* ret = options_validate(tdata->old_opt, tdata->opt, */
   /*                        tdata->def_opt, 0, &msg); */
   /* tt_int_op(ret, OP_EQ, -1); */
-  /* tt_str_op(mock_saved_log_at(1), OP_EQ, */
-  /*           "Bad SchedulerLowWaterMark__ option\n"); */
+  /* expect_log_msg("Bad SchedulerLowWaterMark__ option\n"); */
 
   free_options_test_data(tdata);
   tdata = get_options_test_data("SchedulerLowWaterMark__ 42\n"
@@ -1513,7 +1504,7 @@ test_options_validate__paths_needed(void *ignored)
   tt_int_op(ret, OP_EQ, -1);
   tt_assert(tdata->opt->PathsNeededToBuildCircuits > 0.90 &&
             tdata->opt->PathsNeededToBuildCircuits < 0.92);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 0);
+  expect_no_log_entry();
   tor_free(msg);
 
  done:
@@ -1684,7 +1675,7 @@ test_options_validate__reachable_addresses(void *ignored)
   tdata->opt->FirewallPorts = smartlist_new();
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 4);
+  expect_log_entry();
   tt_str_op(tdata->opt->ReachableDirAddresses->value, OP_EQ, "*:81");
   tt_str_op(tdata->opt->ReachableORAddresses->value, OP_EQ, "*:444");
   tor_free(msg);
@@ -1719,7 +1710,7 @@ test_options_validate__reachable_addresses(void *ignored)
 
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 4);
+  expect_log_entry();
   tt_str_op(tdata->opt->ReachableAddresses->value, OP_EQ, "*:82");
   tor_free(msg);
 

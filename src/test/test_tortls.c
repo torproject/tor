@@ -344,79 +344,67 @@ test_tortls_log_one_error(void *ignored)
   int previous_log = setup_capture_of_logs(LOG_INFO);
 
   tor_tls_log_one_error(NULL, 0, LOG_WARN, 0, "something");
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ, "TLS error while something: "
+  expect_log_msg("TLS error while something: "
             "(null) (in (null):(null):---)\n");
 
   mock_clean_saved_logs();
   tor_tls_log_one_error(tls, 0, LOG_WARN, 0, NULL);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ, "TLS error: (null) "
+  expect_log_msg("TLS error: (null) "
             "(in (null):(null):---)\n");
 
   mock_clean_saved_logs();
   tls->address = tor_strdup("127.hello");
   tor_tls_log_one_error(tls, 0, LOG_WARN, 0, NULL);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ, "TLS error with 127.hello: (null) "
-            "(in (null):(null):---)\n");
+  expect_log_msg("TLS error with 127.hello: "
+            "(null) (in (null):(null):---)\n");
   tor_free(tls->address);
 
   mock_clean_saved_logs();
   tls->address = tor_strdup("127.hello");
   tor_tls_log_one_error(tls, 0, LOG_WARN, 0, "blarg");
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ, "TLS error while blarg with "
+  expect_log_msg("TLS error while blarg with "
             "127.hello: (null) (in (null):(null):---)\n");
 
   mock_clean_saved_logs();
   tor_tls_log_one_error(tls, ERR_PACK(1, 2, 3), LOG_WARN, 0, NULL);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ, "TLS error with 127.hello: "
+  expect_log_msg("TLS error with 127.hello: "
             "BN lib (in unknown library:(null):---)\n");
 
   mock_clean_saved_logs();
   tor_tls_log_one_error(tls, ERR_PACK(1, 2, SSL_R_HTTP_REQUEST),
                         LOG_WARN, 0, NULL);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_int_op(mock_saved_severity_at(0), OP_EQ, LOG_INFO);
+  expect_log_severity(LOG_INFO);
 
   mock_clean_saved_logs();
   tor_tls_log_one_error(tls, ERR_PACK(1, 2, SSL_R_HTTPS_PROXY_REQUEST),
                         LOG_WARN, 0, NULL);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_int_op(mock_saved_severity_at(0), OP_EQ, LOG_INFO);
+  expect_log_severity(LOG_INFO);
 
   mock_clean_saved_logs();
   tor_tls_log_one_error(tls, ERR_PACK(1, 2, SSL_R_RECORD_LENGTH_MISMATCH),
                         LOG_WARN, 0, NULL);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_int_op(mock_saved_severity_at(0), OP_EQ, LOG_INFO);
+  expect_log_severity(LOG_INFO);
 
   mock_clean_saved_logs();
   tor_tls_log_one_error(tls, ERR_PACK(1, 2, SSL_R_RECORD_TOO_LARGE),
                         LOG_WARN, 0, NULL);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_int_op(mock_saved_severity_at(0), OP_EQ, LOG_INFO);
+  expect_log_severity(LOG_INFO);
 
   mock_clean_saved_logs();
   tor_tls_log_one_error(tls, ERR_PACK(1, 2, SSL_R_UNKNOWN_PROTOCOL),
                         LOG_WARN, 0, NULL);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_int_op(mock_saved_severity_at(0), OP_EQ, LOG_INFO);
+  expect_log_severity(LOG_INFO);
 
   mock_clean_saved_logs();
   tor_tls_log_one_error(tls, ERR_PACK(1, 2, SSL_R_UNSUPPORTED_PROTOCOL),
                         LOG_WARN, 0, NULL);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_int_op(mock_saved_severity_at(0), OP_EQ, LOG_INFO);
+  expect_log_severity(LOG_INFO);
 
   tls->ssl = SSL_new(ctx);
 
   mock_clean_saved_logs();
   tor_tls_log_one_error(tls, 0, LOG_WARN, 0, NULL);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ, "TLS error with 127.hello: (null)"
+  expect_log_msg("TLS error with 127.hello: (null)"
             " (in (null):(null):" SSL_STATE_STR ")\n");
 
  done:
@@ -450,27 +438,25 @@ test_tortls_get_error(void *ignored)
 
   ret = tor_tls_get_error(tls, 0, 0, "something", LOG_WARN, 0);
   tt_int_op(ret, OP_EQ, TOR_TLS_ERROR_IO);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ, "TLS error: unexpected close while"
+  expect_log_msg("TLS error: unexpected close while"
             " something (before/accept initialization)\n");
 
   mock_clean_saved_logs();
   ret = tor_tls_get_error(tls, 2, 0, "something", LOG_WARN, 0);
   tt_int_op(ret, OP_EQ, 0);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 0);
+  expect_no_log_entry();
 
   mock_clean_saved_logs();
   ret = tor_tls_get_error(tls, 0, 1, "something", LOG_WARN, 0);
   tt_int_op(ret, OP_EQ, -11);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 0);
+  expect_no_log_entry();
 
   mock_clean_saved_logs();
   ERR_clear_error();
   ERR_put_error(ERR_LIB_BN, 2, -1, "somewhere.c", 99);
   ret = tor_tls_get_error(tls, 0, 0, "something", LOG_WARN, 0);
   tt_int_op(ret, OP_EQ, TOR_TLS_ERROR_MISC);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ, "TLS error while something: (null)"
+  expect_log_msg("TLS error while something: (null)"
             " (in bignum routines:(null):before/accept initialization)\n");
 
   mock_clean_saved_logs();
@@ -479,7 +465,7 @@ test_tortls_get_error(void *ignored)
   SSL_get_rbio(tls->ssl)->flags = BIO_FLAGS_READ;
   ret = tor_tls_get_error(tls, -1, 0, "something", LOG_WARN, 0);
   tt_int_op(ret, OP_EQ, TOR_TLS_WANTREAD);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 0);
+  expect_no_log_entry();
 
   mock_clean_saved_logs();
   ERR_clear_error();
@@ -487,7 +473,7 @@ test_tortls_get_error(void *ignored)
   SSL_get_rbio(tls->ssl)->flags = BIO_FLAGS_WRITE;
   ret = tor_tls_get_error(tls, -1, 0, "something", LOG_WARN, 0);
   tt_int_op(ret, OP_EQ, TOR_TLS_WANTWRITE);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 0);
+  expect_no_log_entry();
 
   mock_clean_saved_logs();
   ERR_clear_error();
@@ -496,20 +482,18 @@ test_tortls_get_error(void *ignored)
   tls->ssl->s3->warn_alert =SSL_AD_CLOSE_NOTIFY;
   ret = tor_tls_get_error(tls, 0, 0, "something", LOG_WARN, 0);
   tt_int_op(ret, OP_EQ, TOR_TLS_CLOSE);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
+  expect_log_entry();
 
   mock_clean_saved_logs();
   ret = tor_tls_get_error(tls, 0, 2, "something", LOG_WARN, 0);
   tt_int_op(ret, OP_EQ, -10);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 0);
+  expect_no_log_entry();
 
   mock_clean_saved_logs();
   ERR_put_error(ERR_LIB_SYS, 2, -1, "somewhere.c", 99);
   ret = tor_tls_get_error(tls, -1, 0, "something", LOG_WARN, 0);
   tt_int_op(ret, OP_EQ, -9);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 2);
-  tt_str_op(mock_saved_log_at(1), OP_EQ,
-            "TLS error while something: (null) (in system library:"
+  expect_log_msg("TLS error while something: (null) (in system library:"
             "connect:before/accept initialization)\n");
 
  done:
@@ -1823,12 +1807,11 @@ test_tortls_debug_state_callback(void *ignored)
   ssl = tor_malloc_zero(sizeof(SSL));
 
   tor_tls_debug_state_callback(ssl, 32, 45);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
+
   n = snprintf(buf, 1000, "SSL %p is now in state unknown"
                " state [type=32,val=45].\n", ssl);
   buf[n]='\0';
-  if (strcasecmp(mock_saved_log_at(0), buf))
-    tt_str_op(mock_saved_log_at(0), OP_EQ, buf);
+  expect_log_msg(buf);
 
  done:
   teardown_capture_of_logs(previous_log);
@@ -1864,21 +1847,17 @@ test_tortls_server_info_callback(void *ignored)
   SSL_set_state(ssl, SSL3_ST_SW_SRVR_HELLO_A);
   mock_clean_saved_logs();
   tor_tls_server_info_callback(ssl, SSL_CB_ACCEPT_LOOP, 0);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ,
-            "Couldn't look up the tls for an SSL*. How odd!\n");
+  expect_log_msg("Couldn't look up the tls for an SSL*. How odd!\n");
 
   SSL_set_state(ssl, SSL3_ST_SW_SRVR_HELLO_B);
   mock_clean_saved_logs();
   tor_tls_server_info_callback(ssl, SSL_CB_ACCEPT_LOOP, 0);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ,
-            "Couldn't look up the tls for an SSL*. How odd!\n");
+  expect_log_msg("Couldn't look up the tls for an SSL*. How odd!\n");
 
   SSL_set_state(ssl, 99);
   mock_clean_saved_logs();
   tor_tls_server_info_callback(ssl, SSL_CB_ACCEPT_LOOP, 0);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 0);
+  expect_no_log_entry();
 
   SSL_set_ex_data(tls->ssl, tor_tls_object_ex_data_index, tls);
   SSL_set_state(ssl, SSL3_ST_SW_SRVR_HELLO_B);
@@ -2255,18 +2234,15 @@ test_tortls_handshake(void *ignored)
   tls->state = TOR_TLS_ST_HANDSHAKE;
   ret = tor_tls_handshake(tls);
   tt_int_op(ret, OP_EQ, TOR_TLS_ERROR_MISC);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 2);
+  expect_log_entry();
   /* This fails on jessie.  Investigate why! */
 #if 0
-  tt_str_op(mock_saved_log_at(0), OP_EQ,
-            "TLS error while handshaking: (null) (in bignum routines:"
+  expect_log_msg("TLS error while handshaking: (null) (in bignum routines:"
             "(null):SSLv3 write client hello B)\n");
-  tt_str_op(mock_saved_log_at(1), OP_EQ,
-            "TLS error while handshaking: (null) (in system library:"
+  expect_log_msg("TLS error while handshaking: (null) (in system library:"
             "connect:SSLv3 write client hello B)\n");
 #endif
-  tt_int_op(mock_saved_severity_at(0), OP_EQ, LOG_INFO);
-  tt_int_op(mock_saved_severity_at(1), OP_EQ, LOG_INFO);
+  expect_log_severity(LOG_INFO);
 
   tls->isServer = 0;
   method->ssl_connect = setting_error_ssl_connect;
@@ -2276,16 +2252,15 @@ test_tortls_handshake(void *ignored)
   tls->state = TOR_TLS_ST_HANDSHAKE;
   ret = tor_tls_handshake(tls);
   tt_int_op(ret, OP_EQ, TOR_TLS_ERROR_MISC);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 2);
+  expect_log_entry();
 #if 0
   /* See above */
-  tt_str_op(mock_saved_log_at(0), OP_EQ, "TLS error while handshaking: "
+  expect_log_msg("TLS error while handshaking: "
             "(null) (in bignum routines:(null):SSLv3 write client hello B)\n");
-  tt_str_op(mock_saved_log_at(1), OP_EQ, "TLS error while handshaking: "
+  expect_log_msg("TLS error while handshaking: "
             "(null) (in system library:connect:SSLv3 write client hello B)\n");
 #endif
-  tt_int_op(mock_saved_severity_at(0), OP_EQ, LOG_WARN);
-  tt_int_op(mock_saved_severity_at(1), OP_EQ, LOG_WARN);
+  expect_log_severity(LOG_WARN);
 
  done:
   teardown_capture_of_logs(previous_log);

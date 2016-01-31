@@ -35,48 +35,6 @@ mock_clean_saved_logs(void)
   saved_logs = NULL;
 }
 
-static mock_saved_log_entry_t *
-mock_get_log_entry(int ix)
-{
-  int saved_log_count = mock_saved_log_number();
-  if (ix < 0) {
-    ix = saved_log_count + ix;
-  }
-
-  if (saved_log_count <= ix)
-    return NULL;
-
-  return smartlist_get(saved_logs, ix);
-}
-
-const char *
-mock_saved_log_at(int ix)
-{
-  mock_saved_log_entry_t *ent = mock_get_log_entry(ix);
-  if (ent)
-    return ent->generated_msg;
-  else
-    return "";
-}
-
-int
-mock_saved_severity_at(int ix)
-{
-  mock_saved_log_entry_t *ent = mock_get_log_entry(ix);
-  if (ent)
-    return ent->severity;
-  else
-    return -1;
-}
-
-int
-mock_saved_log_number(void)
-{
-  if (!saved_logs)
-    return 0;
-  return smartlist_len(saved_logs);
-}
-
 const smartlist_t *
 mock_saved_logs(void)
 {
@@ -98,6 +56,33 @@ mock_saved_log_has_message(const char *msg)
   }
 
   return has_msg;
+}
+
+/* Do the saved logs have any messages with severity? */
+int
+mock_saved_log_has_severity(int severity)
+{
+  int has_sev = 0;
+  if (saved_logs) {
+    SMARTLIST_FOREACH(saved_logs, mock_saved_log_entry_t *, m,
+                      {
+                        if (m->severity == severity) {
+                          has_sev = 1;
+                        }
+                      });
+  }
+
+  return has_sev;
+}
+
+/* Do the saved logs have any messages? */
+int
+mock_saved_log_has_entry(void)
+{
+  if (saved_logs) {
+    return smartlist_len(saved_logs) > 0;
+  }
+  return 0;
 }
 
 void

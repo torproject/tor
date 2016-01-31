@@ -23,10 +23,33 @@ void mock_clean_saved_logs(void);
 const smartlist_t *mock_saved_logs(void);
 int setup_capture_of_logs(int new_level);
 void teardown_capture_of_logs(int prev);
-const char *mock_saved_log_at(int ix);
-int mock_saved_severity_at(int ix);
-int mock_saved_log_number(void);
 int mock_saved_log_has_message(const char *msg);
+int mock_saved_log_has_severity(int severity);
+int mock_saved_log_has_entry(void);
+
+#define expect_log_msg(str) \
+  tt_assert_msg(mock_saved_log_has_message(str), \
+                "expected log to contain " # str);
+
+#define expect_no_log_msg(str) \
+  tt_assert_msg(!mock_saved_log_has_message(str), \
+                "expected log to not contain " # str);
+
+#define expect_log_severity(severity) \
+  tt_assert_msg(mock_saved_log_has_severity(severity), \
+                "expected log to contain severity " # severity);
+
+#define expect_no_log_severity(severity) \
+  tt_assert_msg(!mock_saved_log_has_severity(severity), \
+                "expected log to not contain severity " # severity);
+
+#define expect_log_entry() \
+  tt_assert_msg(mock_saved_log_has_entry(), \
+                "expected log to contain entries");
+
+#define expect_no_log_entry() \
+  tt_assert_msg(!mock_saved_log_has_entry(), \
+                "expected log to not contain entries");
 
 #endif
 
