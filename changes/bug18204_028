@@ -1,0 +1,3 @@
+  o Testing:
+    - Treat backtrace test failures as expected on FreeBSD until we
+      solve bug 17808. Closes ticket 18204.
