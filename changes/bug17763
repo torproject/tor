@@ -1,5 +1,0 @@
-  o Minor bug fixes (exit policies):
-    - Consistently ignore multicast addresses when automatically
-      generating reject private exit policies.
-      Closes ticket 17763. Bug fix on 10a6390deb3c9,
-      not in any released version of Tor. Patch by "teor".

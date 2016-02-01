@@ -1,4 +1,0 @@
-  o Minor bug fixes (unit tests, hidden services):
-    - Avoid relying on malloc internals in test_rend_cache_purge.
-      Closes ticket 17724. Bug fix on ade5005853c1 and 5e9f2384cf0f,
-      not in any released version of Tor. Patch by "teor".

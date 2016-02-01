@@ -1,6 +1,0 @@
-  o Minor bugfixes (tests):
-    - Fix buffer over-reads in the directory tests. Fixes bug 17776; not in any
-      released version of Tor.
-    - Fix buffer over-reads in the rendcache tests. Fixes bug 17776; not in any
-      released version of Tor.
-

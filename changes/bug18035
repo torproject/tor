@@ -1,6 +1,0 @@
-  o Minor fixes (fallback directories):
-    - Work around an issue where OnionOO supplies the entire history,
-      rather than the requested 120 days. Activate debug logging by
-      default. Fix other minor calculation and compatibility issues.
-      Closes ticket #18035. Patch by "starlight", merge fixes by
-      "teor". Not in any released version of tor.
