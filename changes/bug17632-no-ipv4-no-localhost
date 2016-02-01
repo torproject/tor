@@ -1,7 +1,5 @@
   o Minor bugfix (unit tests):
     - Make unit tests pass on IPv6-only systems, and systems without
       localhost addresses (like some FreeBSD jails).
-      Fixes bug #17632; bugfix on unit tests in 0.2.7.3-rc.
-      c464a367728d was a partial fix for this issue in #17255;
-      it was released in unit tests in 0.2.7.4-rc.
+      Fixes bug 17632; bugfix on 0.2.7.3-rc.
       Patch by "teor".

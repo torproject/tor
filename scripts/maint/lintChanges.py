@@ -7,6 +7,20 @@ import re
 import os
 
 
+KNOWN_GROUPS=set([
+    "Minor bugfix",
+    "Minor bugfixes",
+    "Major bugfix",
+    "Major bugfixes",
+    "Minor feature",
+    "Minor features",
+    "Major feature",
+    "Major features",
+    "Testing",
+    "Documentation",
+    "Code simplification and refactoring",
+    "Removed features"])
+
 def lintfile(fname):
     have_warned = []
 
@@ -31,8 +45,16 @@ def lintfile(fname):
     lines = contents.split("\n")
     isBug = ("bug" in lines[0] or "fix" in lines[0])
 
-    if not re.match(r'^[ ]{2}o (.*)', contents):
+    m = re.match(r'^[ ]{2}o ([^\(:]*)([^:]*):', contents)
+    if not m:
         warn("header not in format expected")
+    elif m.group(1).strip() not in KNOWN_GROUPS:
+        warn("Weird header: %r"%m.group(1))
+    elif ( ("bugfix" in m.group(1) or "feature" in m.group(1)) and
+           ("Removed" not in m.group(1)) and
+           '(' not in m.group(2)):
+        warn("Missing subcategory on %s"%m.group(1))
+
 
     contents = " ".join(contents.split())
 

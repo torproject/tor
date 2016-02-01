@@ -1,3 +1,5 @@
-  o Minor bug fixes:
+  o Minor features (unix permissions):
     - Introduce DataDirectoryGroupReadable boolean. If set to 1, the
       DataDirectory will be made readable by the default GID.
+      Implements part of ticket 17562. Patch from Jamie Nguyen.
+

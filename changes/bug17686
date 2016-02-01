@@ -1,4 +1,4 @@
-  o Minor features:
+  o Minor features (security):
     - Adjust Tor's use of OpenSSL's RNG APIs so that they absolutely,
       positively are not allowed to fail. Previously we depended on
       internals about OpenSSL behavior. Closes ticket 17686.

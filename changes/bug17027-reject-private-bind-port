@@ -1,7 +1,5 @@
-  o Minor bug fixes (security, exit policies):
+  o Minor bugfixes (security, exit policies):
     - ExitPolicyRejectPrivate rejects more private addresses by default:
       * the relay's outbound bind addresses (if configured), and
       * the relay's configured port addresses (such as ORPort and DirPort).
-      Resolves ticket 17027. Patch by "teor".
-      Patch on 42b8fb5a1523 (11 Nov 2007), released in 0.2.0.11-alpha,
-      and on 0.2.7.3-rc.
+      Fixes bug 17027; bugfix on 0.2.0.11-alpha. Patch by "teor".

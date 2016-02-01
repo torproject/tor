@@ -11,9 +11,9 @@
        and port for a while now (120 days), and have been running, a guard,
        and a v2 directory mirror for most of that time."
       We exclude BadExits and tor versions that aren't recommended.
-      We include an IPv6 address for each FallbackDir (#8374).
-      (Tor might not use IPv6 fallbacks until #6027 is merged.)
+      We include an IPv6 address for each FallbackDir (see ticket 8374).
+      (Tor might not use IPv6 fallbacks until ticket the code for ticket6027 is merged.)
       The unit test ensures that we successfully load all included
       default fallback directories.
-      Closes ticket #15775. Patch by "teor".
+      Closes ticket 15775. Patch by "teor".
       OnionOO script by "weasel", "teor", "gsathya", and "karsten".

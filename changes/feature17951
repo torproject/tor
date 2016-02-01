@@ -1,4 +1,4 @@
-  o Minor features:
+  o Minor features (relay, address discovery):
     - When get_interface_address6_list(.,AF_UNSPEC,.) is called and fails
       to enumerate interface addresses using the platform-specific API,
       have it rely on the UDP socket fallback technique to try and find

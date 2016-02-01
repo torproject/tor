@@ -1,4 +1,4 @@
-  o Minor bugfixes:
+  o Minor bugfixes (client, correctness):
     - When closing an entry connection, generate a warning if we should
       have sent an end cell for it but we haven't.  Fixes bug 17876;
       bugfix on 0.2.3.2-alpha.

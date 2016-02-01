@@ -1,7 +1,7 @@
-  o Minor fixes (relays):
+  o Minor bugfixes (relays):
     - Check that both the ORPort and DirPort (if present) are reachable
       before publishing a relay descriptor. Otherwise, relays publish a
       descriptor with DirPort 0 when the DirPort reachability test takes
       longer than the ORPort reachability test.
-      Closes bug #18050. Reported by "starlight", patch by "teor".
-      Bugfix on 0.1.0.1-rc, commit a1f1fa6ab on 27 Feb 2005.
+      Fixes bug 18050; bugfix on 0.1.0.1-rc.
+      Reported by "starlight", patch by "teor".

@@ -1,3 +1,3 @@
-  o Code simplifications and refactorings:
+  o Code simplification and refactoring:
     - Clean up a little duplicated code in crypto_expand_key_material_TAP.
       Closes ticket 17587; patch from "pfrankw".

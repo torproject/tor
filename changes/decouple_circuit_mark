@@ -3,4 +3,4 @@
        a new function run periodically before connections are freed.
        This change removes more than half of the functions currently
        in the "blob".
-       Closes ticket #17218.
+       Closes ticket 17218.

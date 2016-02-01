@@ -1,9 +1,9 @@
-  o Minor enhancement (accounting):
+  o Minor features (accounting):
     - Added two modes to AccountingRule in torrc for
       limiting just input or just output.
       Closes ticket 15989; patch from "unixninja92".
 
-  o Minor bugfixe (accounting):
+  o Minor bugfixes (accounting):
     - The max bandwidth when using AccountRule sum
       is now correctly logged. Fixes bug 18024; bugfix on 0.2.6.1-alpha.
       Patch from "unixninja92".

@@ -1,4 +1,4 @@
-  o Minor features:
+  o Minor features (security):
     - Set unused entires in a smartlist to NULL. This helped catch a
       (harmless) bug, and shouldn't affect performance too much.
       Implements ticket 17026.

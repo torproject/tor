@@ -1,4 +1,4 @@
-  o Code simplificiation and refactoring:
+  o Code simplification and refactoring:
     - When a direct directory request fails immediately on launch,
       instead of relaunching that request from inside the code that
       launches it, instead mark the connection for teardown. This

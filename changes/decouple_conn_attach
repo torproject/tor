@@ -1,4 +1,4 @@
-  o Code simplification and refactorings:
+  o Code simplification and refactoring:
     - Decouple the list of streams needing to be attached to circuits
       from the overall connection list. This change makes it possible to
       attach streams quickly while both simplifying Tor's callgraph and

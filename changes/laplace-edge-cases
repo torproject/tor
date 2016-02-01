@@ -1,8 +1,9 @@
-  o Code simplifications and unit tests:
+  o Minor bugfixes (statistics code):
     - Handle edge cases in the laplace functions: avoid division by zero,
       avoid taking the log of zero, and silence clang type conversion
       warnings using round and trunc.  Add unit tests for edge cases with
-      maximal values.
+      maximal values. Fixes part of bug 13192; bugfix on 0.2.6.2-alpha.
     - Consistently check for overflow in round_*_to_next_multiple_of
       functions, and add unit tests with additional and maximal values.
+      Fixes part of bug 13192; bugfix on 0.2.2.1-alpha.
 

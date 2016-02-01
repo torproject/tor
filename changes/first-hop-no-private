@@ -2,7 +2,5 @@
     - Refuse connection requests to private OR addresses unless
       ExtendAllowPrivateAddresses is set. Previously, tor would
       connect, then refuse to send any cells to a private address.
-      Fixes bugs 17674 and 8976; bugfix on b7c172c9ec76 (28 Aug 2012)
-      Original bug 6710, released in 0.2.3.21-rc and an 0.2.2 maint
-      release.
+      Fixes bugs 17674 and 8976; bugfix on 0.2.3.21-rc.
       Patch by "teor".
