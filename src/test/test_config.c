@@ -4427,10 +4427,14 @@ test_config_parse_port_config__ports__ports_given(void *data)
   ret = parse_port_config(slout, config_port_valid, NULL, "DNS",
                           CONN_TYPE_AP_LISTENER, "127.0.0.46", 0,
                           CL_PORT_DFLT_GROUP_WRITABLE);
+#ifdef _WIN32
+  tt_int_op(ret, OP_EQ, -1);
+#else
   tt_int_op(ret, OP_EQ, 0);
   tt_int_op(smartlist_len(slout), OP_EQ, 1);
   port_cfg = (port_cfg_t *)smartlist_get(slout, 0);
   tt_int_op(port_cfg->is_group_writable, OP_EQ, 1);
+#endif
 
  done:
   smartlist_free(slout);
