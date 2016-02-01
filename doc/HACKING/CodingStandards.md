@@ -80,6 +80,11 @@ When we go to make a release, we will concatenate all the entries
 in changes to make a draft changelog, and clear the directory. We'll
 then edit the draft changelog into a nice readable format.
 
+To make sure that stuff is in the right format, we use
+scripts/maint/lintChanges.py to check the changes files for
+(superficial) validity.  You can run this script on your own changes
+files!
+
 What needs a changes file?
 
    * A not-exhaustive list: Anything that might change user-visible
