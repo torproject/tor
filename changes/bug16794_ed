@@ -1,3 +1,0 @@
-  o Testing:
-    - Always test both ed25519 backends, so that we can be sure that
-      our batch-open replacement code works. Part of ticket 16794.

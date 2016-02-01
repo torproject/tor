@@ -1,3 +1,0 @@
-  o Minor bugfixes (compilation):
-    - Isolate environment variables meant for tests from the rest of the
-      build system. Fixes bug 17818; bugfix on tor-0.2.7.3-rc.

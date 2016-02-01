@@ -1,4 +1,0 @@
-  o Minor bugfix (crypto):
-    - Check the return value of HMAC and assert on failure.
-      Fixes bug 17658; bugfix on 0.2.3.6-alpha.
-      Patch by "teor".

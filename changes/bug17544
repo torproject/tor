@@ -1,4 +1,0 @@
-  o Minor bugfix (SipHash-2-4 performance):
-    - Improve performance when hashing non-multiple of 8 sized buffers,
-      based on Andrew Moon's Public Domain SipHash-2-4 implementation.
-      Fixes bug 17544; bugfix on 0.2.5.3-alpha.

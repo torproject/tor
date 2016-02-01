@@ -1,3 +1,0 @@
-  o Minor bugfixes (TLS context):
-    - Assert when the TLS contexts fail to initialize. Fixes bug 17683;
-      bugfix on 0.0.6.

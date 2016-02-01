@@ -1,4 +1,0 @@
-  o Minor features (fallback directories):
-    - Add a set of default fallback directories for the 0.2.8 alpha releases.
-      Closes ticket 17158.
-      Patch by "teor".

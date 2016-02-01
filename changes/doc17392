@@ -1,4 +1,0 @@
-  o Documentation:
-    - Mention torspec URL in the manpage and point the reader to it
-      whenever we mention a document that belongs in torspce.
-      Fixes issue 17392.

@@ -1,3 +1,0 @@
-  o Minor feature (crypto):
-    - Add SHA512 support to crypto.c. Closes ticket 17663; patch from
-      George Tankersley.

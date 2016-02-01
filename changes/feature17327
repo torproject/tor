@@ -1,5 +1,0 @@
-  o Minor feature (IPv6):
-    - Add a flag ipv6=address:orport to the DirAuthority and FallbackDir torrc
-      options. Add hard-coded ipv6 addresses for directory authorities with
-      ipv6 lines in their descriptors.
-      Closes ticket 17327; patch from Nick Mathewson / "teor".

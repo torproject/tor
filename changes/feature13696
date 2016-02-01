@@ -1,3 +1,0 @@
-  o Minor features (security, cryptography):
-    - Use modern system calls to generate strong entropy on platforms that
-      provide them. Closes ticket 13696.

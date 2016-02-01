@@ -1,9 +1,0 @@
-  o Major features (consensus downloads):
-    - Schedule multiple in-progress consensus downloads during client
-      bootstrap. Use the first one that starts downloading, close the
-      rest. This reduces failures when authorities are slow or down.
-      Together with the code for feature 15775, it reduces failures due to fallback churn.
-      Implements ticket 4483 (reduce failures when authorities are down).
-      Patch by "teor".
-      Implements IPv4 portions of proposal 210 by "mikeperry" and
-      "teor".

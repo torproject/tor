@@ -1,5 +1,0 @@
-  o Minor bugfix (fallback directories):
-    - Mark fallbacks as "too busy" when they return a 503 response,
-      rather than just marking authorities.
-      Fixes bug 17572; bugfix on 5c51b3f1f0d4 released in 0.2.4.7-alpha.
-      Patch by "teor".

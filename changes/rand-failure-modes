@@ -1,5 +1,0 @@
-  o Minor features (unit tests, random number generation):
-    - Add unit tests that check for common RNG failure modes, such as
-      returning all zeroes, identical values, or incrementing values
-      (OpenSSL's rand_predictable feature).
-      Patch by "teor".

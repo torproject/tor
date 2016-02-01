@@ -1,5 +1,0 @@
-  o Minor features (relay, address discovery):
-    - Add a family argument to get_interface_addresses_raw() and
-      subfunctions to make network interface address interogation more
-      efficient. Now Tor can specifically ask for IPv4, IPv6 or both
-      types of interfaces from the operating system. Resolves ticket 17950.

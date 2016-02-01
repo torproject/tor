@@ -1,3 +1,0 @@
-  o Testing:
-    - More unit tests for util_format.c. Closes ticket 17084.
-      Patch from Ola Bini.

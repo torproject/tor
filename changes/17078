@@ -1,3 +1,0 @@
-  o Testing:
-    - More unit tests for procmon.c. Closes ticket 17078.
-      Patch from Ola Bini.

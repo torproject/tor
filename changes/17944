@@ -1,3 +1,0 @@
-  o Minor features (portability):
-    - Use timingsafe_memcmp() where available. Closes ticket 17944;
-      patch from <logan@hackers.mu>.

@@ -1,3 +1,0 @@
-  o Testing:
-    - New tests for directory.c functions. Closes ticket 17003.  Patch
-      from Ola Bini.

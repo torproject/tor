@@ -1,3 +1,0 @@
-  o Minor bugfixes (logging):
-    - Remove needless quotes from a log message about unparseable addresses.
-      Fixes bug 17843; bugfix on 0.2.3.3-alpha.

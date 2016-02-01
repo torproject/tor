@@ -1,4 +1,0 @@
-  o Minor bugfixes (code correctness):
-    - Assert that allocated memory held by the reputation code is freed
-      according to its internal counters. Fixes bug 17753; bugfix on
-      tor-0.1.1.1-alpha.

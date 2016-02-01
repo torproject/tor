@@ -1,4 +1,0 @@
-  o Minor features (replaycache):
-    - The replay cache now uses SHA256 instead of SHA1.
-      Implements feature 8961.
-      Patch by "teor", issue reported by "rransom".

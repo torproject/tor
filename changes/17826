@@ -1,5 +1,0 @@
-  o Minor bugfixes (build):
-    - Mark all object files that include micro-revision.i as depending on
-      it, so as to make our build more reliable with parallel builds.
-      Fixes bug 17826; bugfix on 0.2.5.1-alpha.
-      

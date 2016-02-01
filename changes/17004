@@ -1,3 +1,0 @@
-  o Testing:
-    - Unit tests for directory_handle_command_get. Closes ticket 17004.
-      Patch from Reinaldo de Souza Jr.

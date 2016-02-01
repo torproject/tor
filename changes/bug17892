@@ -1,4 +1,0 @@
-  o Minor features (testing):
-    - Log more information when the backtrace tests fail.
-      Closes ticket 17892. Patch from "cypherpunks."
-

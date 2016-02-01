@@ -1,6 +1,0 @@
-  o Minor bugfix (relays, hidden services):
-    - Refuse connection requests to private OR addresses unless
-      ExtendAllowPrivateAddresses is set. Previously, tor would
-      connect, then refuse to send any cells to a private address.
-      Fixes bugs 17674 and 8976; bugfix on 0.2.3.21-rc.
-      Patch by "teor".

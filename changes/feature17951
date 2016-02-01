@@ -1,6 +1,0 @@
-  o Minor features (relay, address discovery):
-    - When get_interface_address6_list(.,AF_UNSPEC,.) is called and fails
-      to enumerate interface addresses using the platform-specific API,
-      have it rely on the UDP socket fallback technique to try and find
-      out what IP addresses (both IPv4 and IPv6) our machine has. Resolves
-      ticket 17951.

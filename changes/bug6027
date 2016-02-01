@@ -1,4 +1,0 @@
-  o Minor features (IPv6 support):
-    - Allow users to configure directory authorities and fallback
-      directory servers with IPv6 addresses and ORPorts.  Resolves
-      ticket 6027.

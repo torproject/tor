@@ -1,3 +1,0 @@
-  o Minor bugfixes (routersets, IPv6):
-    - routerset_parse now accepts IPv6 literal addresses.
-      Fixes bug 17060; bugfix on 0.2.1.3-alpha. Patch by "teor".

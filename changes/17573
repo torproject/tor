@@ -1,4 +1,0 @@
-  o Minor bugfixes (IPv6):
-    - Update the limits in max_dl_per_request for IPv6 address
-      length. Fixes bug 17573; bugfix on 0.2.1.5-alpha.
-

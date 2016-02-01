@@ -1,5 +1,0 @@
-  o Minor features (security, clock):
-    - Warn when the system clock is set back in time (when the
-      state file was last written in the future). Tor doesn't know
-      that consensuses have expired if the clock is in the past.
-      Patch by "teor". Implements ticket 17188.

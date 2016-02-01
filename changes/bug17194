@@ -1,7 +1,0 @@
-  o Minor feature (logging):
-    - When logging to syslog, allow a tag to be added to the syslog
-      identity ("Tor"), i.e. the string prepended to every log message.
-      The tag can be configured by setting SyslogIdentityTag and defaults
-      to none.  Setting it to "foo" will cause logs to be tagged as
-      "Tor-foo". Closes ticket 17194.
-

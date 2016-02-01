@@ -1,7 +1,0 @@
-  o Minor features (unix permissions):
-    - If any directory created by Tor is marked as group readable, the
-      filesystem group is allowed to be either the default GID or the root
-      user. Allowing root to read the DataDirectory prevents the need for
-      CAP_READ_SEARCH when using systemd's CapabilityBoundingSet, or
-      dac_read_search when using SELinux.
-      Implements part of ticket 17562. Patch from Jamie Nguyen.

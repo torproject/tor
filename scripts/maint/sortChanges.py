@@ -16,10 +16,36 @@ def fetch(fn):
         s = "%s\n" % s.rstrip()
         return s
 
+CSR='Code simplification and refactoring'
+
+REPLACEMENTS = {
+    # plurals
+    'Minor bugfix' : 'Minor bugfixes',
+    'Major bugfix' : 'Major bugfixes',
+    'Minor feature' : 'Minor features',
+    'Major feature' : 'Major features',
+    'Removed feature' : 'Removed features',
+    'Code simplification and refactorings' : CSR,
+    'Code simplifications and refactoring' : CSR,
+    'Code simplifications and refactorings' : CSR,
+
+    # wrong words
+    'Minor fix' : 'Minor bugfixes',
+    'Major fix' : 'Major bugfixes',
+    'Minor fixes' : 'Minor bugfixes',
+    'Major fixes' : 'Major bugfixes',
+    'Minor enhancement' : 'Minor features',
+    'Minor enhancements' : 'Minor features',
+    'Major enhancement' : 'Major features',
+    'Major enhancements' : 'Major features',
+}
+
 def score(s,fname=None):
     m = re.match(r'^ +o ([^\n]*)\n(.*)', s, re.M|re.S)
     if not m:
         print >>sys.stderr, "Can't score %r from %s"%(s,fname)
+    heading = m.group(1)
+    heading = REPLACEMENTS.get(heading, heading)
     lw = m.group(1).lower()
     if lw.startswith("major feature"):
         score = 0
@@ -36,7 +62,7 @@ def score(s,fname=None):
     else:
         score = 100
 
-    return (score, lw, m.group(1), m.group(2))
+    return (score, lw, heading, m.group(2))
 
 def splitChanges(s):
     this_entry = []

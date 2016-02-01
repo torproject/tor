@@ -1,4 +1,0 @@
-  o Minor feature (refactoring):
-    - Move logging of redundant policy entries in
-      policies_parse_exit_policy_internal into its own function.
-      Closes ticket 17608; patch from "juce".

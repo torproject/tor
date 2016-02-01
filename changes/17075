@@ -1,3 +1,0 @@
-  o Testing:
-    - More unit tests for compat_libevent.c. Closes ticket 17075.
-      Patch from Ola Bini.

@@ -1,6 +1,0 @@
-  o Minor features (security):
-    - Use explicit_bzero or memset_s when present. Previously, we'd use
-      OpenSSL's OPENSSL_cleanse() function.
-      Closes ticket 7419; patches from <logan@hackers.mu> and <selven@hackers.mu>.
-
-

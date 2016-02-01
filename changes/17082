@@ -1,3 +1,0 @@
-  o Testing:
-    - More unit tests for tortls.c. Closes ticket 17082.
-      Patch from Ola Bini.

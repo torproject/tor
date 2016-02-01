@@ -1,3 +1,0 @@
-  o Testing:
-    - Cover dns_resolve_impl() in dns.c with unit tests. Implements a
-      portion of ticket 16831.
