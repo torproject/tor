@@ -269,8 +269,10 @@ test_address_get_if_addrs_ifaddrs(void *arg)
   results = get_interface_addresses_ifaddrs(LOG_ERR);
 
   tt_int_op(smartlist_len(results),>=,1);
+#ifndef __FreeBSD__
+  /* FreeBSD doesn't have a localhost in jails sometimes. */
   tt_assert(smartlist_contains_localhost_tor_addr(results));
-
+#endif
   done:
   SMARTLIST_FOREACH(results, tor_addr_t *, t, tor_free(t));
   smartlist_free(results);
@@ -484,8 +486,10 @@ test_address_get_if_addrs_ioctl(void *arg)
   tt_assert(result);
   tt_int_op(smartlist_len(result),>=,1);
 
+#ifndef __FreeBSD__
+  /* FreeBSD doesn't have a localhost in jails sometimes. */
   tt_assert(smartlist_contains_localhost_tor_addr(result));
-
+#endif
   done:
   if (result) {
     SMARTLIST_FOREACH(result, tor_addr_t *, t, tor_free(t));
