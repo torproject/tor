@@ -34,8 +34,7 @@ test_util_process_set_waitpid_callback(void *ignored)
 
   res2 = set_waitpid_callback(pid, temp_callback, NULL);
   tt_assert(res2);
-  tt_str_op(mock_saved_log_at(0), OP_EQ,
-            "Replaced a waitpid monitor on pid 42. That should be "
+  expect_log_msg("Replaced a waitpid monitor on pid 42. That should be "
             "impossible.\n");
 
  done:
@@ -56,13 +55,12 @@ test_util_process_clear_waitpid_callback(void *ignored)
 
   res = set_waitpid_callback(pid, temp_callback, NULL);
   clear_waitpid_callback(res);
-  tt_int_op(mock_saved_log_number(), OP_EQ, 0);
+  expect_no_log_entry();
 
 #if 0
   /* No.  This is use-after-free.  We don't _do_ that. XXXX */
   clear_waitpid_callback(res);
-  tt_str_op(mock_saved_log_at(0), OP_EQ,
-            "Couldn't remove waitpid monitor for pid 43.\n");
+  expect_log_msg("Couldn't remove waitpid monitor for pid 43.\n");
 #endif
 
  done:

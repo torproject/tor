@@ -30,38 +30,28 @@ test_compat_libevent_logging_callback(void *ignored)
   int previous_log = setup_capture_of_logs(LOG_DEBUG);
 
   libevent_logging_callback(_EVENT_LOG_DEBUG, "hello world");
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ,
-            "Message from libevent: hello world\n");
-  tt_int_op(mock_saved_severity_at(0), OP_EQ, LOG_DEBUG);
+  expect_log_msg("Message from libevent: hello world\n");
+  expect_log_severity(LOG_DEBUG);
 
   mock_clean_saved_logs();
   libevent_logging_callback(_EVENT_LOG_MSG, "hello world another time");
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ,
-            "Message from libevent: hello world another time\n");
-  tt_int_op(mock_saved_severity_at(0), OP_EQ, LOG_INFO);
+  expect_log_msg("Message from libevent: hello world another time\n");
+  expect_log_severity(LOG_INFO);
 
   mock_clean_saved_logs();
   libevent_logging_callback(_EVENT_LOG_WARN, "hello world a third time");
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ,
-            "Warning from libevent: hello world a third time\n");
-  tt_int_op(mock_saved_severity_at(0), OP_EQ, LOG_WARN);
+  expect_log_msg("Warning from libevent: hello world a third time\n");
+  expect_log_severity(LOG_WARN);
 
   mock_clean_saved_logs();
   libevent_logging_callback(_EVENT_LOG_ERR, "hello world a fourth time");
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ,
-            "Error from libevent: hello world a fourth time\n");
-  tt_int_op(mock_saved_severity_at(0), OP_EQ, LOG_ERR);
+  expect_log_msg("Error from libevent: hello world a fourth time\n");
+  expect_log_severity(LOG_ERR);
 
   mock_clean_saved_logs();
   libevent_logging_callback(42, "hello world a fifth time");
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ,
-            "Message [42] from libevent: hello world a fifth time\n");
-  tt_int_op(mock_saved_severity_at(0), OP_EQ, LOG_WARN);
+  expect_log_msg("Message [42] from libevent: hello world a fifth time\n");
+  expect_log_severity(LOG_WARN);
 
   mock_clean_saved_logs();
   libevent_logging_callback(_EVENT_LOG_DEBUG,
@@ -78,8 +68,7 @@ test_compat_libevent_logging_callback(void *ignored)
                             "012345678901234567890123456789"
                             "012345678901234567890123456789"
                             );
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ, "Message from libevent: "
+  expect_log_msg("Message from libevent: "
                             "012345678901234567890123456789"
                             "012345678901234567890123456789"
                             "012345678901234567890123456789"
@@ -92,25 +81,22 @@ test_compat_libevent_logging_callback(void *ignored)
                             "012345678901234567890123456789"
                             "012345678901234567890123456789"
             "012345678901234567890123456789\n");
-  tt_int_op(mock_saved_severity_at(0), OP_EQ, LOG_DEBUG);
+  expect_log_severity(LOG_DEBUG);
 
   mock_clean_saved_logs();
   libevent_logging_callback(42, "xxx\n");
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ, "Message [42] from libevent: xxx\n");
-  tt_int_op(mock_saved_severity_at(0), OP_EQ, LOG_WARN);
+  expect_log_msg("Message [42] from libevent: xxx\n");
+  expect_log_severity(LOG_WARN);
 
   suppress_libevent_log_msg("something");
   mock_clean_saved_logs();
   libevent_logging_callback(_EVENT_LOG_MSG, "hello there");
-  tt_int_op(mock_saved_log_number(), OP_EQ, 1);
-  tt_str_op(mock_saved_log_at(0), OP_EQ,
-            "Message from libevent: hello there\n");
-  tt_int_op(mock_saved_severity_at(0), OP_EQ, LOG_INFO);
+  expect_log_msg("Message from libevent: hello there\n");
+  expect_log_severity(LOG_INFO);
 
   mock_clean_saved_logs();
   libevent_logging_callback(_EVENT_LOG_MSG, "hello there something else");
-  tt_int_op(mock_saved_log_number(), OP_EQ, 0);
+  expect_no_log_msg("hello there something else");
 
   // No way of verifying the result of this, it seems =/
   configure_libevent_logging();
