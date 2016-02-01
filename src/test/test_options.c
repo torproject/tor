@@ -370,7 +370,7 @@ get_options_test_data(const char *conf)
   }
   tt_assert(rv == 0);
 
-done:
+ done:
   config_free_lines(cl);
   if (rv != 0) {
     free_options_test_data(result);
@@ -1475,7 +1475,8 @@ test_options_validate__paths_needed(void *ignored)
   tt_int_op(ret, OP_EQ, -1);
   tt_assert(tdata->opt->PathsNeededToBuildCircuits > 0.24 &&
             tdata->opt->PathsNeededToBuildCircuits < 0.26);
-  expect_log_msg("PathsNeededToBuildCircuits is too low. Increasing to 0.25\n");
+  expect_log_msg("PathsNeededToBuildCircuits is too low. "
+                 "Increasing to 0.25\n");
   tor_free(msg);
 
   free_options_test_data(tdata);
