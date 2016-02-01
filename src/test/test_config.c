@@ -3958,12 +3958,16 @@ test_config_parse_port_config__ports__ports_given(void *data)
   smartlist_clear(slout);
   ret = parse_port_config(slout, config_port_valid, NULL, "DNS",
                           CONN_TYPE_AP_LISTENER, NULL, 0, 0);
+#ifdef _WIN32
+  tt_int_op(ret, OP_EQ, -1);
+#else
   tt_int_op(ret, OP_EQ, 0);
   tt_int_op(smartlist_len(slout), OP_EQ, 1);
   port_cfg = (port_cfg_t *)smartlist_get(slout, 0);
   tt_int_op(port_cfg->port, OP_EQ, 0);
   tt_int_op(port_cfg->is_unix_addr, OP_EQ, 1);
   tt_str_op(port_cfg->unix_addr, OP_EQ, "/tmp/foo/bar");
+#endif
 
   // Test failure if we have no ipv4 and no ipv6 (for unix domain sockets,
   // this makes no sense - it should be fixed)
@@ -3984,11 +3988,15 @@ test_config_parse_port_config__ports__ports_given(void *data)
   ret = parse_port_config(slout, config_port_valid, NULL, "DNS",
                           CONN_TYPE_AP_LISTENER, NULL, 0,
                           CL_PORT_TAKES_HOSTNAMES);
+#ifdef _WIN32
+  tt_int_op(ret, OP_EQ, -1);
+#else
   tt_int_op(ret, OP_EQ, 0);
   tt_int_op(smartlist_len(slout), OP_EQ, 1);
   port_cfg = (port_cfg_t *)smartlist_get(slout, 0);
   tt_int_op(port_cfg->entry_cfg.ipv4_traffic, OP_EQ, 0);
   tt_int_op(port_cfg->entry_cfg.ipv6_traffic, OP_EQ, 1);
+#endif
 
   // Test success with both ipv4 and ipv6 (for unix domain sockets,
   // this makes no sense - it should be fixed)
@@ -3999,11 +4007,15 @@ test_config_parse_port_config__ports__ports_given(void *data)
   ret = parse_port_config(slout, config_port_valid, NULL, "DNS",
                           CONN_TYPE_AP_LISTENER, NULL, 0,
                           CL_PORT_TAKES_HOSTNAMES);
+#ifdef _WIN32
+  tt_int_op(ret, OP_EQ, -1);
+#else
   tt_int_op(ret, OP_EQ, 0);
   tt_int_op(smartlist_len(slout), OP_EQ, 1);
   port_cfg = (port_cfg_t *)smartlist_get(slout, 0);
   tt_int_op(port_cfg->entry_cfg.ipv4_traffic, OP_EQ, 1);
   tt_int_op(port_cfg->entry_cfg.ipv6_traffic, OP_EQ, 1);
+#endif
 
   // Test failure if we specify world writable for an IP Port
   tor_free(config_port_invalid);
