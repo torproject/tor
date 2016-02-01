@@ -311,7 +311,7 @@ test_router_pick_directory_server_impl(void *arg)
   node_router3->rs->last_dir_503_at = 0;
 
   /* Set a Fascist firewall */
-  flags &= ! PDS_IGNORE_FASCISTFIREWALL;
+  flags &= ~ PDS_IGNORE_FASCISTFIREWALL;
   policy_line = tor_malloc_zero(sizeof(config_line_t));
   policy_line->key = tor_strdup("ReachableORAddresses");
   policy_line->value = tor_strdup("accept *:442, reject *:*");
