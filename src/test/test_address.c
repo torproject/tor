@@ -532,7 +532,7 @@ test_address_get_if_addrs_ioctl(void *arg)
     }
   }
 
-  done:
+ done:
   if (result) {
     SMARTLIST_FOREACH(result, tor_addr_t *, t, tor_free(t));
     smartlist_free(result);
