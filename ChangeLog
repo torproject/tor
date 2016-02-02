@@ -1,6 +1,17 @@
 Changes in version 0.2.8.1-alpha - 2016-02-0?
   XXXX Blurb goes here XXXX
 
+  o Major key updates:
+    - Update the V3 identity key for dannenberg: it was changed on 18
+      November 2015. Closes task 17906. Patch by "teor".
+
+ o Removed features:
+    - Remove client-side support for connecting to Tor servers running
+      versions of Tor before 0.2.3.6-alpha. These servers didn't support
+      the v3 TLS handshake protocol, and are no longer allowed on the
+      Tor network. Implements the client side of ticket 11150. Based on
+      patches by Tom van der Woerdt.
+
   o Major features (security, Linux):
     - When Tor is started as root on Linux and told to switch user ID,
       it can now retain the capabilitity to bind to low ports. By
@@ -8,7 +19,7 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       some low ports have been configured. You can change this behavior
       with the new option KeepBindCapabilities. Closes ticket 8195.
 
-  o Major features (consensus downloads):
+  o Major features (directory system):
     - Schedule multiple in-progress consensus downloads during client
       bootstrap. Use the first one that starts downloading, close the
       rest. This reduces failures when authorities are slow or down.
@@ -16,25 +27,17 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       to fallback churn. Implements ticket 4483 (reduce failures when
       authorities are down). Patch by "teor". Implements IPv4 portions
       of proposal 210 by "mikeperry" and "teor".
-
-  o Major features (directory mirrors):
     - Include an opt-in trial list of default fallback directories in
       add_default_fallback_dir_servers(). Doing this should improve
       client reliability and initial bootstrap performance, and reduce
       load on the directory authorities. Closes ticket 15775. Patch by
       "teor". OnionOO script by "weasel", "teor", "gsathya",
       and "karsten".
-
-  o Major features (directory system):
     - Previously only relays who explicitly opened a directory port
       (DirPort) accepted directory requests from clients. Now all
       relays, with and without a DirPort, who do not disable the
       DirCache option accept and serve directory requests sent
       (tunnelled) through their ORPort. Closes ticket 12538.
-
-  o Major key updates:
-    - Update the V3 identity key for dannenberg: it was changed on 18
-      November 2015. Closes task 17906. Patch by "teor".
 
   o Minor features (security, clock):
     - Warn when the system clock is set back in time (when the state
@@ -104,6 +107,9 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       we actually need. Previously, we were allocating as much space as
       the state for the largest algorithm would need. This change saves
       up to 672 bytes per circuit. Closes ticket 17796.
+    - Improve performance when hashing non-multiple of 8 sized buffers,
+      based on Andrew Moon's Public Domain SipHash-2-4 implementation.
+      Fixes bug 17544; bugfix on 0.2.5.3-alpha.
 
   o Minor features (directory downloads):
     - Wait for busy authorities and fallbacks to become non-busy when
@@ -162,11 +168,6 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
     - The replay cache now uses SHA256 instead of SHA1. Implements
       feature 8961. Patch by "teor", issue reported by "rransom".
 
-  o Minor features (SipHash-2-4 performance):
-    - Improve performance when hashing non-multiple of 8 sized buffers,
-      based on Andrew Moon's Public Domain SipHash-2-4 implementation.
-      Fixes bug 17544; bugfix on 0.2.5.3-alpha.
-
   o Minor features (unix file permissions):
     - Defer creation of Unix sockets until after setuid. This avoids
       needing CAP_CHOWN and CAP_FOWNER when using systemd's
@@ -187,11 +188,6 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       logged. Fixes bug 18024; bugfix on 0.2.6.1-alpha. Patch
       from "unixninja92".
 
-  o Minor bugfixes (build):
-    - Mark all object files that include micro-revision.i as depending
-      on it, so as to make our build more reliable with parallel builds.
-      Fixes bug 17826; bugfix on 0.2.5.1-alpha.
-
   o Minor bugfixes (code correctness):
     - When closing an entry connection, generate a warning if we should
       have sent an end cell for it but we haven't. Fixes bug 17876;
@@ -199,8 +195,13 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
     - Assert that allocated memory held by the reputation code is freed
       according to its internal counters. Fixes bug 17753; bugfix
       on tor-0.1.1.1-alpha.
+    - Assert when the TLS contexts fail to initialize. Fixes bug 17683;
+      bugfix on 0.0.6.
 
   o Minor bugfixes (compilation):
+    - Mark all object files that include micro-revision.i as depending
+      on it, so as to make our build more reliable with parallel builds.
+      Fixes bug 17826; bugfix on 0.2.5.1-alpha.
     - Don't try to use the pthrad_condattr_setclock() function unless it
       actually exists. Fixes compilation on NetBSD-6.x. Fixes bug 17819;
       bugfix on 0.2.6.3-alpha.
@@ -291,10 +292,6 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
     - Check the full results of SHA256 and SHA512 digests in the unit
       tests. Bugfix on 0.2.2.4-alpha. Patch by "teor".
 
-  o Minor bugfixes (TLS context):
-    - Assert when the TLS contexts fail to initialize. Fixes bug 17683;
-      bugfix on 0.0.6.
-
   o Code simplification and refactoring:
     - Move logging of redundant policy entries in
       policies_parse_exit_policy_internal into its own function. Closes
@@ -329,13 +326,6 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
     - Mention torspec URL in the manpage and point the reader to it
       whenever we mention a document that belongs in torspce. Fixes
       issue 17392.
-
-  o Removed features:
-    - Remove client-side support for connecting to Tor servers running
-      versions of Tor before 0.2.3.6-alpha. These servers didn't support
-      the v3 TLS handshake protocol, and are no longer allowed on the
-      Tor network. Implements the client side of ticket 11150. Based on
-      patches by Tom van der Woerdt.
 
   o Testing:
     - Add unit tests that check for common RNG failure modes, such as
