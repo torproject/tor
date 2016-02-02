@@ -2409,7 +2409,7 @@ int extend_info_addr_is_allowed(const tor_addr_t *addr)
   tor_assert(addr);
 
   /* Check if we have a private address and if we can extend to it. */
-  if (tor_addr_is_internal(addr, 0) &&
+  if ((tor_addr_is_internal(addr, 0) || tor_addr_is_multicast(addr)) &&
       !get_options()->ExtendAllowPrivateAddresses) {
     goto disallow;
   }
