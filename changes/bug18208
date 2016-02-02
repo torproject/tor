@@ -1,0 +1,5 @@
+  o Minor bug fixes (exit policies, security):
+    - Refresh an exit relay's exit policy when interface addresses change.
+      Previously, tor only refreshed the exit policy when the configured
+      external address changed.
+      Closes ticket 18208 on tor 0.2.7.3. Patch by "teor".

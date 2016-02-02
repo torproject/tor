@@ -2195,7 +2195,10 @@ got_libevent_error(void)
 void
 ip_address_changed(int at_interface)
 {
-  int server = server_mode(get_options());
+  const or_options_t *options = get_options();
+  int server = server_mode(options);
+  int exit_reject_private = (server && options->ExitRelay
+                             && options->ExitPolicyRejectPrivate);
 
   if (at_interface) {
     if (! server) {
@@ -2209,8 +2212,13 @@ ip_address_changed(int at_interface)
         reset_bandwidth_test();
       stats_n_seconds_working = 0;
       router_reset_reachability();
-      mark_my_descriptor_dirty("IP address changed");
     }
+  }
+
+  /* Exit relays incorporate interface addresses in their exit policies when
+   * ExitPolicyRejectPrivate is set */
+  if (exit_reject_private || (server && !at_interface)) {
+    mark_my_descriptor_dirty("IP address changed");
   }
 
   dns_servers_relaunch_checks();
