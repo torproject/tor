@@ -18,21 +18,9 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
 
   o Major features (directory mirrors):
     - Include an opt-in trial list of Default Fallback Directories in
-      add_default_fallback_dir_servers().
-      "Tor has included a feature to fetch the initial consensus from nodes
-       other than the authorities for a while now. We just haven't shipped a
-       list of alternate locations for clients to go to yet.
-       Reasons why we might want to ship tor with a list of additional places
-       where clients can find the consensus is that it makes authority
-       reachability and BW less important.
-       We want them to have been around and using their current key, address,
-       and port for a while now (120 days), and have been running, a guard,
-       and a v2 directory mirror for most of that time."
-      We exclude BadExits and tor versions that aren't recommended.
-      We include an IPv6 address for each FallbackDir (see ticket 8374).
-      (Tor might not use IPv6 fallbacks until ticket the code for ticket6027 is merged.)
-      The unit test ensures that we successfully load all included
-      default fallback directories.
+      add_default_fallback_dir_servers().  Doing this should improve
+      client reliability and initial bootstrap performance, and reduce
+      load on the directory authorities.
       Closes ticket 15775. Patch by "teor".
       OnionOO script by "weasel", "teor", "gsathya", and "karsten".
 
@@ -111,11 +99,11 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       672 bytes per circuit.  Closes ticket 17796.
 
   o Minor features (directory system):
-    Previously only relays who explicitly opened a directory port (DirPort)
-    accepted directory requests from clients.  Now all relays, with and without
-    a DirPort, who do not disable the DirCache option accept and serve
-    directory requests sent (tunnelled) through their ORPort.
-    Closes ticket 12538.
+    - Previously only relays who explicitly opened a directory port (DirPort)
+      accepted directory requests from clients.  Now all relays, with and without
+      a DirPort, who do not disable the DirCache option accept and serve
+      directory requests sent (tunnelled) through their ORPort.
+      Closes ticket 12538.
 
   o Minor features (exit policies, controllers):
     - Add controller getinfo exit-policy/reject-private/[default,relay]
@@ -367,11 +355,11 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       unit tests. Bugfix on 0.2.2.4-alpha. Patch by "teor".
 
   o Code simplification and refactoring:
-     - Extract the more complicated parts of circuit_mark_for_close into
-       a new function run periodically before connections are freed.
-       This change removes more than half of the functions currently
-       in the "blob".
-       Closes ticket 17218.
+    - Extract the more complicated parts of circuit_mark_for_close into
+      a new function run periodically before connections are freed.
+      This change removes more than half of the functions currently
+      in the "blob".
+      Closes ticket 17218.
     - Clean up a little duplicated code in crypto_expand_key_material_TAP.
       Closes ticket 17587; patch from "pfrankw".
     - Decouple the list of streams needing to be attached to circuits
