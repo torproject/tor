@@ -1,16 +1,12 @@
 Changes in version 0.2.8.1-alpha - 2016-02-0?
   XXXX Blurb goes here XXXX
 
-  o Removed features:
-    - Remove client-side support for connecting to Tor servers running
-      versions of Tor before 0.2.3.6-alpha. These servers didn't support
-      the v3 TLS handshake protocol, and are no longer allowed on the
-      Tor network. Implements the client side of ticket 11150. Based on
-      patches by Tom van der Woerdt.
-
-  o Major key updates:
-    - Update the V3 identity key for dannenberg: it was changed on 18
-      November 2015. Closes task 17906. Patch by "teor".
+  o Major features (security, Linux):
+    - When Tor is started as root on Linux and told to switch user ID,
+      it can now retain the capabilitity to bind to low ports. By
+      default, Tor will do this only when it's switching user ID and
+      some low ports have been configured. You can change this behavior
+      with the new option KeepBindCapabilities. Closes ticket 8195.
 
   o Major features (consensus downloads):
     - Schedule multiple in-progress consensus downloads during client
@@ -29,24 +25,29 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       "teor". OnionOO script by "weasel", "teor", "gsathya",
       and "karsten".
 
-  o Major features (security, Linux):
-    - When Tor is started as root on Linux and told to switch user ID,
-      it can now retain the capabilitity to bind to low ports. By
-      default, Tor will do this only when it's switching user ID and
-      some low ports have been configured. You can change this behavior
-      with the new option KeepBindCapabilities. Closes ticket 8195.
+  o Major features (directory system):
+    - Previously only relays who explicitly opened a directory port
+      (DirPort) accepted directory requests from clients. Now all
+      relays, with and without a DirPort, who do not disable the
+      DirCache option accept and serve directory requests sent
+      (tunnelled) through their ORPort. Closes ticket 12538.
 
-  o Minor features (security, RNG):
-    - Adjust Tor's use of OpenSSL's RNG APIs so that they absolutely,
-      positively are not allowed to fail. Previously we depended on
-      internals about OpenSSL behavior. Closes ticket 17686.
-    - Never use the system entropy output directly for anything besides
-      seeding the PRNG. When we want to generate important keys, instead
-      of using system entropy directly, hash it with the PRNG stream.
-      This may help resist certain attacks based on broken OS entropy
-      implementations. Closes part of ticket 17694.
-    - Use modern system calls to generate strong entropy on platforms
-      that provide them. Closes ticket 13696.
+  o Major key updates:
+    - Update the V3 identity key for dannenberg: it was changed on 18
+      November 2015. Closes task 17906. Patch by "teor".
+
+  o Minor features (security, clock):
+    - Warn when the system clock is set back in time (when the state
+      file was last written in the future). Tor doesn't know that
+      consensuses have expired if the clock is in the past. Patch by
+      "teor". Implements ticket 17188.
+
+  o Minor features (security, exit policies):
+    - ExitPolicyRejectPrivate rejects more private addresses by default.
+      Specifically, it rejects the relay's outbound bind addresses (if
+      configured), and the relay's configured port addresses (such as
+      ORPort and DirPort). Fixes bug 17027; bugfix on 0.2.0.11-alpha.
+      Patch by "teor".
 
   o Minor features (security, memory erasure):
     - Set unused entires in a smartlist to NULL. This helped catch
@@ -62,53 +63,17 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       bugfix on 0.2.3.25 and 0.2.4.6-alpha. Reported by "gk", patch
       by "teor".
 
-  o Minor features (security, clock):
-    - Warn when the system clock is set back in time (when the state
-      file was last written in the future). Tor doesn't know that
-      consensuses have expired if the clock is in the past. Patch by
-      "teor". Implements ticket 17188.
-
-  o Minor features (crypto):
-    - Add SHA512 support to crypto.c. Closes ticket 17663; patch from
-      George Tankersley.
-    - Add SHA3 and SHAKE support to crypto.c. Closes ticket 17783.
-    - When allocating a digest state object, allocate no more space than
-      we actually need. Previously, we were allocating as much space as
-      the state for the largest algorithm would need. This change saves
-      up to 672 bytes per circuit. Closes ticket 17796.
-
-  o Minor features (directory downloads):
-    - Wait for busy authorities and fallbacks to become non-busy when
-      bootstrapping. (A similar change was made in 6c443e987d for
-      directory servers chosen from the consensus.) Closes ticket 17864;
-      patch by "teor".
-    - Add UseDefaultFallbackDirs, which enables any hard-coded fallback
-      directory mirrors. Default is 1, set it to 0 to disable fallbacks.
-      Implements ticket 17576. Patch by "teor".
-
-  o Minor features (IPv6):
-    - Add a flag ipv6=address:orport to the DirAuthority and FallbackDir
-      torrc options. Add hard-coded ipv6 addresses for directory
-      authorities with ipv6 lines in their descriptors. Closes ticket
-      17327; patch from Nick Mathewson / "teor".
-    - Add address policy assume_action support for IPv6 addresses.
-    - Limit IPv6 mask bits to 128.
-    - Warn when comparing against an AF_UNSPEC address in a policy, it's
-      almost always a bug. Closes ticket 17863; patch by "teor".
-    - Allow users to configure directory authorities and fallback
-      directory servers with IPv6 addresses and ORPorts. Resolves
-      ticket 6027.
-    - routerset_parse now accepts IPv6 literal addresses. Fixes bug
-      17060; bugfix on 0.2.1.3-alpha. Patch by "teor".
-    - Make tor_ersatz_socketpair work on IPv6-only systems. Fixes bug
-      17638; bugfix on 0.0.2pre8. Patch by "teor".
-
-  o Minor features (logging):
-    - When logging to syslog, allow a tag to be added to the syslog
-      identity (the string prepended to every log message).
-      The tag can be configured with SyslogIdentityTag and
-      defaults to none. Setting it to "foo" will cause logs to be tagged
-      as "Tor-foo". Closes ticket 17194.
+  o Minor features (security, RNG):
+    - Adjust Tor's use of OpenSSL's RNG APIs so that they absolutely,
+      positively are not allowed to fail. Previously we depended on
+      internals about OpenSSL behavior. Closes ticket 17686.
+    - Never use the system entropy output directly for anything besides
+      seeding the PRNG. When we want to generate important keys, instead
+      of using system entropy directly, hash it with the PRNG stream.
+      This may help resist certain attacks based on broken OS entropy
+      implementations. Closes part of ticket 17694.
+    - Use modern system calls to generate strong entropy on platforms
+      that provide them. Closes ticket 13696.
 
   o Minor features (accounting):
     - Added two modes to AccountingRule in torrc for limiting just input
@@ -131,16 +96,51 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       for the reject rules added by ExitPolicyRejectPrivate. This makes
       it easier for stem to display exit policies.
 
-  o Major features (directory system):
-    - Previously only relays who explicitly opened a directory port
-      (DirPort) accepted directory requests from clients. Now all
-      relays, with and without a DirPort, who do not disable the
-      DirCache option accept and serve directory requests sent
-      (tunnelled) through their ORPort. Closes ticket 12538.
+  o Minor features (crypto):
+    - Add SHA512 support to crypto.c. Closes ticket 17663; patch from
+      George Tankersley.
+    - Add SHA3 and SHAKE support to crypto.c. Closes ticket 17783.
+    - When allocating a digest state object, allocate no more space than
+      we actually need. Previously, we were allocating as much space as
+      the state for the largest algorithm would need. This change saves
+      up to 672 bytes per circuit. Closes ticket 17796.
+
+  o Minor features (directory downloads):
+    - Wait for busy authorities and fallbacks to become non-busy when
+      bootstrapping. (A similar change was made in 6c443e987d for
+      directory servers chosen from the consensus.) Closes ticket 17864;
+      patch by "teor".
+    - Add UseDefaultFallbackDirs, which enables any hard-coded fallback
+      directory mirrors. Default is 1, set it to 0 to disable fallbacks.
+      Implements ticket 17576. Patch by "teor".
 
   o Minor features (geoip):
     - Update geoip and geoip6 to the January 5 2016 Maxmind GeoLite2
       Country database.
+
+  o Minor features (IPv6):
+    - Add a flag ipv6=address:orport to the DirAuthority and FallbackDir
+      torrc options. Add hard-coded ipv6 addresses for directory
+      authorities with ipv6 lines in their descriptors. Closes ticket
+      17327; patch from Nick Mathewson / "teor".
+    - Add address policy assume_action support for IPv6 addresses.
+    - Limit IPv6 mask bits to 128.
+    - Warn when comparing against an AF_UNSPEC address in a policy, it's
+      almost always a bug. Closes ticket 17863; patch by "teor".
+    - Allow users to configure directory authorities and fallback
+      directory servers with IPv6 addresses and ORPorts. Resolves
+      ticket 6027.
+    - routerset_parse now accepts IPv6 literal addresses. Fixes bug
+      17060; bugfix on 0.2.1.3-alpha. Patch by "teor".
+    - Make tor_ersatz_socketpair work on IPv6-only systems. Fixes bug
+      17638; bugfix on 0.0.2pre8. Patch by "teor".
+
+  o Minor features (logging):
+    - When logging to syslog, allow a tag to be added to the syslog
+      identity (the string prepended to every log message). The tag can
+      be configured with SyslogIdentityTag and defaults to none. Setting
+      it to "foo" will cause logs to be tagged as "Tor-foo". Closes
+      ticket 17194.
 
   o Minor features (portability):
     - Use timingsafe_memcmp() where available. Closes ticket 17944;
@@ -162,6 +162,11 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
     - The replay cache now uses SHA256 instead of SHA1. Implements
       feature 8961. Patch by "teor", issue reported by "rransom".
 
+  o Minor features (SipHash-2-4 performance):
+    - Improve performance when hashing non-multiple of 8 sized buffers,
+      based on Andrew Moon's Public Domain SipHash-2-4 implementation.
+      Fixes bug 17544; bugfix on 0.2.5.3-alpha.
+
   o Minor features (unix file permissions):
     - Defer creation of Unix sockets until after setuid. This avoids
       needing CAP_CHOWN and CAP_FOWNER when using systemd's
@@ -176,47 +181,6 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
     - Introduce DataDirectoryGroupReadable boolean. If set to 1, the
       DataDirectory will be made readable by the default GID. Implements
       part of ticket 17562. Patch from Jamie Nguyen.
-
-  o Minor features (security, exit policies):
-    - ExitPolicyRejectPrivate rejects more private addresses by default.
-      Specifically, it rejects the relay's outbound bind addresses (if
-      configured), and the relay's configured port addresses (such as
-      ORPort and DirPort). Fixes bug 17027; bugfix on 0.2.0.11-alpha.
-      Patch by "teor".
-
-  o Minor bugfixes (crypto):
-    - Check the return value of HMAC() and assert on failure. Fixes bug
-      17658; bugfix on 0.2.3.6-alpha. Patch by "teor".
-
-  o Minor bugfixes (fallback directories):
-    - Mark fallbacks as "too busy" when they return a 503 response,
-      rather than just marking authorities. Fixes bug 17572; bugfix on
-      0.2.4.7-alpha. Patch by "teor".
-
-  o Minor bugfixes (relays, hidden services):
-    - Refuse connection requests to private OR addresses unless
-      ExtendAllowPrivateAddresses is set. Previously, tor would connect,
-      then refuse to send any cells to a private address. Fixes bugs
-      17674 and 8976; bugfix on 0.2.3.21-rc. Patch by "teor".
-
-  o Minor features (SipHash-2-4 performance):
-    - Improve performance when hashing non-multiple of 8 sized buffers,
-      based on Andrew Moon's Public Domain SipHash-2-4 implementation.
-      Fixes bug 17544; bugfix on 0.2.5.3-alpha.
-
-  o Minor bugfixes (testing):
-    - The test for log_heartbeat was incorrectly failing in timezones
-      with non-integer offsets. Instead of comparing the end of the time
-      string against a constant, compare it to the output of
-      format_local_iso_time when given the correct input. Fixes bug
-      18039; bugfix on 0.2.5.4-alpha.
-    - Make unit tests pass on IPv6-only systems, and systems without
-      localhost addresses (like some FreeBSD jails). Fixes bug 17632;
-      bugfix on 0.2.7.3-rc. Patch by "teor".
-    - Fix a memory leak in the ntor test. Fixes bug 17778; bugfix
-      on 0.2.4.8-alpha.
-    - Check the full results of SHA256 and SHA512 digests in the unit
-      tests. Bugfix on 0.2.2.4-alpha. Patch by "teor".
 
   o Minor bugfixes (accounting):
     - The max bandwidth when using 'AccountRule sum' is now correctly
@@ -254,6 +218,15 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
     - Remove config.log only from make distclean, not from make clean.
       Fixes bug 17924; bugfix on 0.2.4.1-alpha.
 
+  o Minor bugfixes (crypto):
+    - Check the return value of HMAC() and assert on failure. Fixes bug
+      17658; bugfix on 0.2.3.6-alpha. Patch by "teor".
+
+  o Minor bugfixes (fallback directories):
+    - Mark fallbacks as "too busy" when they return a 503 response,
+      rather than just marking authorities. Fixes bug 17572; bugfix on
+      0.2.4.7-alpha. Patch by "teor".
+
   o Minor bugfixes (IPv6):
     - Update the limits in max_dl_per_request for IPv6 address length.
       Fixes bug 17573; bugfix on 0.2.1.5-alpha.
@@ -283,6 +256,12 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       longer than the ORPort reachability test. Fixes bug 18050; bugfix
       on 0.1.0.1-rc. Reported by "starlight", patch by "teor".
 
+  o Minor bugfixes (relays, hidden services):
+    - Refuse connection requests to private OR addresses unless
+      ExtendAllowPrivateAddresses is set. Previously, tor would connect,
+      then refuse to send any cells to a private address. Fixes bugs
+      17674 and 8976; bugfix on 0.2.3.21-rc. Patch by "teor".
+
   o Minor bugfixes (safe logging):
     - When logging a malformed hostname received through socks4, scrub
       it if SafeLogging says we should. Fixes bug 17419; bugfix
@@ -297,6 +276,20 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       conversion warnings using round and trunc. Add unit tests for edge
       cases with maximal values. Fixes part of bug 13192; bugfix
       on 0.2.6.2-alpha.
+
+  o Minor bugfixes (testing):
+    - The test for log_heartbeat was incorrectly failing in timezones
+      with non-integer offsets. Instead of comparing the end of the time
+      string against a constant, compare it to the output of
+      format_local_iso_time when given the correct input. Fixes bug
+      18039; bugfix on 0.2.5.4-alpha.
+    - Make unit tests pass on IPv6-only systems, and systems without
+      localhost addresses (like some FreeBSD jails). Fixes bug 17632;
+      bugfix on 0.2.7.3-rc. Patch by "teor".
+    - Fix a memory leak in the ntor test. Fixes bug 17778; bugfix
+      on 0.2.4.8-alpha.
+    - Check the full results of SHA256 and SHA512 digests in the unit
+      tests. Bugfix on 0.2.2.4-alpha. Patch by "teor".
 
   o Minor bugfixes (TLS context):
     - Assert when the TLS contexts fail to initialize. Fixes bug 17683;
@@ -337,6 +330,13 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       whenever we mention a document that belongs in torspce. Fixes
       issue 17392.
 
+  o Removed features:
+    - Remove client-side support for connecting to Tor servers running
+      versions of Tor before 0.2.3.6-alpha. These servers didn't support
+      the v3 TLS handshake protocol, and are no longer allowed on the
+      Tor network. Implements the client side of ticket 11150. Based on
+      patches by Tom van der Woerdt.
+
   o Testing:
     - Add unit tests that check for common RNG failure modes, such as
       returning all zeroes, identical values, or incrementing values
@@ -348,8 +348,9 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
     - Cover dns_resolve_impl() in dns.c with unit tests. Implements a
       portion of ticket 16831.
     - More unit tests for compat_libevent.c, procmon.c, tortls.c,
-      util_format.c, directory.c, and options_validate.c. Closes tickets 17075,
-      17082, 17084, 17003, and 17076 respectively. Patches from Ola Bini.
+      util_format.c, directory.c, and options_validate.c. Closes tickets
+      17075, 17082, 17084, 17003, and 17076 respectively. Patches from
+      Ola Bini.
     - Unit tests for directory_handle_command_get. Closes ticket 17004.
       Patch from Reinaldo de Souza Jr.
 
