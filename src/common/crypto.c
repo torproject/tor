@@ -2084,6 +2084,71 @@ static BIGNUM *dh_param_p_tls = NULL;
 /** Shared G parameter for our DH key exchanges. */
 static BIGNUM *dh_param_g = NULL;
 
+/** Validate a given set of Diffie-Hellman parameters.  This is moderately
+ * computationally expensive (milliseconds), so should only be called when
+ * the DH parameters change. Returns 0 on success, * -1 on failure.
+ */
+static int
+crypto_validate_dh_params(const BIGNUM *p, const BIGNUM *g)
+{
+  DH *dh = NULL;
+  int ret = -1;
+
+  /* Copy into a temporary DH object. */
+  if (!(dh = DH_new()))
+      goto out;
+  if (!(dh->p = BN_dup(p)))
+    goto out;
+  if (!(dh->g = BN_dup(g)))
+    goto out;
+
+  /* Perform the validation. */
+  int codes = 0;
+  if (!DH_check(dh, &codes))
+    goto out;
+  if (BN_is_word(dh->g, DH_GENERATOR_2)) {
+    /* Per https://wiki.openssl.org/index.php/Diffie-Hellman_parameters
+     *
+     * OpenSSL checks the prime is congruent to 11 when g = 2; while the
+     * IETF's primes are congruent to 23 when g = 2.
+     */
+    BN_ULONG residue = BN_mod_word(dh->p, 24);
+    if (residue == 11 || residue == 23)
+      codes &= ~DH_NOT_SUITABLE_GENERATOR;
+  }
+  if (codes != 0) /* Specifics on why the params suck is irrelevant. */
+    goto out;
+
+  /* Things are probably not evil. */
+  ret = 0;
+
+ out:
+  if (dh)
+    DH_free(dh);
+  return ret;
+}
+
+/** Set the global Diffie-Hellman generator, used for both TLS and internal
+ * DH stuff.
+ */
+static void
+crypto_set_dh_generator(void)
+{
+  BIGNUM *generator;
+  int r;
+
+  if (dh_param_g)
+    return;
+
+  generator = BN_new();
+  tor_assert(generator);
+
+  r = BN_set_word(generator, DH_GENERATOR);
+  tor_assert(r);
+
+  dh_param_g = generator;
+}
+
 /** Set the global TLS Diffie-Hellman modulus.  Use the Apache mod_ssl DH
  * modulus. */
 void
@@ -2116,6 +2181,8 @@ crypto_set_tls_dh_prime(void)
   tor_assert(tls_prime);
 
   dh_param_p_tls = tls_prime;
+  crypto_set_dh_generator();
+  tor_assert(0 == crypto_validate_dh_params(dh_param_p_tls, dh_param_g));
 }
 
 /** Initialize dh_param_p and dh_param_g if they are not already
@@ -2123,18 +2190,13 @@ crypto_set_tls_dh_prime(void)
 static void
 init_dh_param(void)
 {
-  BIGNUM *circuit_dh_prime, *generator;
+  BIGNUM *circuit_dh_prime;
   int r;
   if (dh_param_p && dh_param_g)
     return;
 
   circuit_dh_prime = BN_new();
-  generator = BN_new();
-  tor_assert(circuit_dh_prime && generator);
-
-  /* Set our generator for all DH parameters */
-  r = BN_set_word(generator, DH_GENERATOR);
-  tor_assert(r);
+  tor_assert(circuit_dh_prime);
 
   /* This is from rfc2409, section 6.2.  It's a safe prime, and
      supposedly it equals:
@@ -2150,7 +2212,8 @@ init_dh_param(void)
 
   /* Set the new values as the global DH parameters. */
   dh_param_p = circuit_dh_prime;
-  dh_param_g = generator;
+  crypto_set_dh_generator();
+  tor_assert(0 == crypto_validate_dh_params(dh_param_p, dh_param_g));
 
   if (!dh_param_p_tls) {
     crypto_set_tls_dh_prime();
