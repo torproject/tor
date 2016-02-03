@@ -147,8 +147,14 @@ test_crypto_rng_engine(void *arg)
 
   /* We should correct the method if it's a dummy. */
   RAND_set_rand_method(&dummy_method);
+#ifdef LIBRESSL_VERSION_NUMBER
+  /* On libressl, you can't override the RNG. */
+  tt_assert(RAND_get_rand_method() == RAND_OpenSSL());
+  tt_int_op(0, ==, crypto_force_rand_ssleay());
+#else
   tt_assert(RAND_get_rand_method() == &dummy_method);
   tt_int_op(1, ==, crypto_force_rand_ssleay());
+#endif
   tt_assert(RAND_get_rand_method() == RAND_OpenSSL());
 
   /* Make sure we aren't calling dummy_method */
@@ -1108,6 +1114,11 @@ test_crypto_digests(void *arg)
   crypto_pk_free(k);
 }
 
+#ifndef OPENSSL_1_1_API
+#define EVP_ENCODE_CTX_new() tor_malloc_zero(sizeof(EVP_ENCODE_CTX))
+#define EVP_ENCODE_CTX_free(ctx) tor_free(ctx)
+#endif
+
 /** Encode src into dest with OpenSSL's EVP Encode interface, returning the
  * length of the encoded data in bytes.
  */
@@ -1115,12 +1126,13 @@ static int
 base64_encode_evp(char *dest, char *src, size_t srclen)
 {
   const unsigned char *s = (unsigned char*)src;
-  EVP_ENCODE_CTX ctx;
+  EVP_ENCODE_CTX *ctx = EVP_ENCODE_CTX_new();
   int len, ret;
 
-  EVP_EncodeInit(&ctx);
-  EVP_EncodeUpdate(&ctx, (unsigned char *)dest, &len, s, (int)srclen);
-  EVP_EncodeFinal(&ctx, (unsigned char *)(dest + len), &ret);
+  EVP_EncodeInit(ctx);
+  EVP_EncodeUpdate(ctx, (unsigned char *)dest, &len, s, (int)srclen);
+  EVP_EncodeFinal(ctx, (unsigned char *)(dest + len), &ret);
+  EVP_ENCODE_CTX_free(ctx);
   return ret+ len;
 }
 

@@ -35,9 +35,11 @@
   (((st) == SSL3_ST_SW_SRVR_HELLO_A) ||    \
    ((st) == SSL3_ST_SW_SRVR_HELLO_B))
 #define OSSL_HANDSHAKE_STATE int
+#define CONST_IF_OPENSSL_1_1_API
 #else
 #define STATE_IS_SW_SERVER_HELLO(st) \
   ((st) == TLS_ST_SW_SRVR_HELLO)
+#define CONST_IF_OPENSSL_1_1_API const
 #endif
 
 #endif

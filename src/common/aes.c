@@ -81,47 +81,46 @@
 
 #ifdef USE_EVP_AES_CTR
 
-struct aes_cnt_cipher {
-  EVP_CIPHER_CTX evp;
-};
+/* We don't actually define the struct here. */
 
 aes_cnt_cipher_t *
 aes_new_cipher(const char *key, const char *iv)
 {
-  aes_cnt_cipher_t *cipher;
-  cipher = tor_malloc_zero(sizeof(aes_cnt_cipher_t));
-  EVP_EncryptInit(&cipher->evp, EVP_aes_128_ctr(),
+  EVP_CIPHER_CTX *cipher = EVP_CIPHER_CTX_new();
+  EVP_EncryptInit(cipher, EVP_aes_128_ctr(),
                   (const unsigned char*)key, (const unsigned char *)iv);
-  return cipher;
+  return (aes_cnt_cipher_t *) cipher;
 }
 void
-aes_cipher_free(aes_cnt_cipher_t *cipher)
+aes_cipher_free(aes_cnt_cipher_t *cipher_)
 {
-  if (!cipher)
+  if (!cipher_)
     return;
-  EVP_CIPHER_CTX_cleanup(&cipher->evp);
-  memwipe(cipher, 0, sizeof(aes_cnt_cipher_t));
-  tor_free(cipher);
+  EVP_CIPHER_CTX *cipher = (EVP_CIPHER_CTX *) cipher_;
+  EVP_CIPHER_CTX_cleanup(cipher);
+  EVP_CIPHER_CTX_free(cipher);
 }
 void
-aes_crypt(aes_cnt_cipher_t *cipher, const char *input, size_t len,
+aes_crypt(aes_cnt_cipher_t *cipher_, const char *input, size_t len,
           char *output)
 {
   int outl;
+  EVP_CIPHER_CTX *cipher = (EVP_CIPHER_CTX *) cipher_;
 
   tor_assert(len < INT_MAX);
 
-  EVP_EncryptUpdate(&cipher->evp, (unsigned char*)output,
+  EVP_EncryptUpdate(cipher, (unsigned char*)output,
                     &outl, (const unsigned char *)input, (int)len);
 }
 void
-aes_crypt_inplace(aes_cnt_cipher_t *cipher, char *data, size_t len)
+aes_crypt_inplace(aes_cnt_cipher_t *cipher_, char *data, size_t len)
 {
   int outl;
+  EVP_CIPHER_CTX *cipher = (EVP_CIPHER_CTX *) cipher_;
 
   tor_assert(len < INT_MAX);
 
-  EVP_EncryptUpdate(&cipher->evp, (unsigned char*)data,
+  EVP_EncryptUpdate(cipher, (unsigned char*)data,
                     &outl, (unsigned char*)data, (int)len);
 }
 int
