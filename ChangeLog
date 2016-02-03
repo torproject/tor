@@ -6,8 +6,9 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
   subsystem.
 
   o Major key updates:
-    - Update the V3 identity key for dannenberg: it was changed on 18
-      November 2015. Closes task 17906. Patch by "teor".
+    - Update the V3 identity key for the dannenberg directory authority:
+      it was changed on 18 November 2015. Closes task 17906. Patch by
+      "teor".
 
   o Removed features:
     - Remove client-side support for connecting to Tor servers running
@@ -17,55 +18,57 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       patches by Tom van der Woerdt.
 
   o Major features (security, Linux):
-    - When Tor is started as root on Linux and told to switch user ID,
-      it can now retain the capabilitity to bind to low ports. By
+    - When Tor starts as root on Linux and is told to switch user ID,
+      it can now retain the capability to bind to low ports. By
       default, Tor will do this only when it's switching user ID and
       some low ports have been configured. You can change this behavior
       with the new option KeepBindCapabilities. Closes ticket 8195.
 
   o Major features (directory system):
-    - Schedule multiple in-progress consensus downloads during client
-      bootstrap. Use the first one that starts downloading, close the
-      rest. This reduces failures when authorities are slow or down.
-      Together with the code for feature 15775, it reduces failures due
-      to fallback churn. Implements ticket 4483 (reduce failures when
-      authorities are down). Patch by "teor". Implements IPv4 portions
+    - When bootstrapping we not launch multiple consensus downloads
+      at a time, use the first one that starts downloading, and close the
+      rest. This reduces failures when authorities or fallback directories are slow or down.
+      Together with the code for feature 15775, this feature should reduces failures due
+      to fallback churn. Implements ticket 4483.
+      Patch by "teor". Implements IPv4 portions
       of proposal 210 by "mikeperry" and "teor".
-    - Include an opt-in trial list of default fallback directories in
-      add_default_fallback_dir_servers(). Doing this should improve
-      client reliability and initial bootstrap performance, and reduce
+    - Include a trial list of default fallback directories, based
+      on an opt-in survey of suitable relays. Doing this should make
+      clients bootstrap more quickly and reliably, and reduce the
       load on the directory authorities. Closes ticket 15775. Patch by
-      "teor". OnionOO script by "weasel", "teor", "gsathya",
+      "teor". Candidates identified using an OnionOO script by "weasel", "teor", "gsathya",
       and "karsten".
-    - Previously only relays who explicitly opened a directory port
+    - Previously only relays that explicitly opened a directory port
       (DirPort) accepted directory requests from clients. Now all
-      relays, with and without a DirPort, who do not disable the
-      DirCache option accept and serve directory requests sent
-      (tunnelled) through their ORPort. Closes ticket 12538.
+      relays, with and without a DirPort,
+      accept and serve tunneled directory requests that they
+      receive through their ORPort.  You can disable this behavior using
+      the new DirCache option.
+      Closes ticket 12538.
 
   o Minor features (security, clock):
-    - Warn when the system clock is set back in time (when the state
+    - Warn when the system clock appears to move back in time (when the state
       file was last written in the future). Tor doesn't know that
       consensuses have expired if the clock is in the past. Patch by
       "teor". Implements ticket 17188.
 
   o Minor features (security, exit policies):
-    - ExitPolicyRejectPrivate rejects more private addresses by default.
-      Specifically, it rejects the relay's outbound bind addresses (if
+    - ExitPolicyRejectPrivate now rejects more private addresses by default.
+      Specifically, it now rejects the relay's outbound bind addresses (if
       configured), and the relay's configured port addresses (such as
       ORPort and DirPort). Fixes bug 17027; bugfix on 0.2.0.11-alpha.
       Patch by "teor".
 
   o Minor features (security, memory erasure):
-    - Set unused entires in a smartlist to NULL. This helped catch
+    - Set the unused entires in a smartlist to NULL. This helped catch
       a (harmless) bug, and shouldn't affect performance too much.
       Implements ticket 17026.
     - Use SecureMemoryWipe() function to securely clean memory on
-      Windows. Implements feature 17986.
+      Windows. Previously we'd use OpenSSL's OPENSSL_cleanse() function. Implements feature 17986.
     - Use explicit_bzero or memset_s when present. Previously, we'd use
       OpenSSL's OPENSSL_cleanse() function. Closes ticket 7419; patches
       from <logan@hackers.mu> and <selven@hackers.mu>.
-    - Make memwipe() do nothing when passed a NULL pointer or zero size.
+    - Make memwipe() do nothing when passed a NULL pointer or buffer of zero size.
       Check size argument to memwipe() for underflow. Fixes bug 18089;
       bugfix on 0.2.3.25 and 0.2.4.6-alpha. Reported by "gk", patch
       by "teor".
@@ -73,25 +76,27 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
   o Minor features (security, RNG):
     - Adjust Tor's use of OpenSSL's RNG APIs so that they absolutely,
       positively are not allowed to fail. Previously we depended on
-      internals about OpenSSL behavior. Closes ticket 17686.
+      internal details of OpenSSL's behavior. Closes ticket 17686.
     - Never use the system entropy output directly for anything besides
       seeding the PRNG. When we want to generate important keys, instead
-      of using system entropy directly, hash it with the PRNG stream.
+      of using system entropy directly, we now hash it with the PRNG stream.
       This may help resist certain attacks based on broken OS entropy
       implementations. Closes part of ticket 17694.
-    - Use modern system calls to generate strong entropy on platforms
-      that provide them. Closes ticket 13696.
+    - Use modern system calls (like getentropy() or getrandom()) to generate strong entropy on platforms
+      that have them. Closes ticket 13696.
 
   o Minor features (accounting):
-    - Added two modes to AccountingRule in torrc for limiting just input
-      or just output. Closes ticket 15989; patch from "unixninja92".
+    - Added two modes to AccountingRule in torrc for limiting just the
+      number of bytes sent ("AccountingRule out") or the number of bytes
+      received ("AccountingRule in").
+      Closes ticket 15989; patch from "unixninja92".
 
   o Minor features (build):
     - Since our build process now uses 'make distcheck', we no longer
       force "make dist" to depend on "make check". Closes ticket 17893;
       patch from "cypherpunks."
     - Repair some compilation issues with some recent (unreleased,
-      alpha) vesions of OpenSSL 1.1. Closes ticket 17549.
+      alpha) versions of OpenSSL 1.1. Closes ticket 17549.
 
   o Minor features (controller):
     - Adds FallbackDir entries to 'GETINFO config/defaults'. Closes
