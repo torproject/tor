@@ -1600,12 +1600,19 @@ test_tortls_block_renegotiation(void *ignored)
   tls = tor_malloc_zero(sizeof(tor_tls_t));
   tls->ssl = tor_malloc_zero(sizeof(SSL));
   tls->ssl->s3 = tor_malloc_zero(sizeof(SSL3_STATE));
-  tls->ssl->s3->flags = 0x0010;
+#ifndef SUPPORT_UNSAFE_RENEGOTIATION_FLAG
+#define SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION 0
+#endif
+
+  tls->ssl->s3->flags = SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION;
 
   tor_tls_block_renegotiation(tls);
 
-  tt_assert(!(SSL_get_options(tls->ssl) & 0x0010));
-
+#ifndef OPENSSL_1_1_API
+  tt_assert(!(tls->ssl->s3->flags &
+              SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION));
+#endif
+  
  done:
   tor_free(tls->ssl->s3);
   tor_free(tls->ssl);
@@ -1622,7 +1629,9 @@ test_tortls_unblock_renegotiation(void *ignored)
   tls->ssl = tor_malloc_zero(sizeof(SSL));
   tor_tls_unblock_renegotiation(tls);
 
-  tt_assert(SSL_get_options(tls->ssl) & 0x00040000L);
+  tt_uint_op(SSL_get_options(tls->ssl) &
+             SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION, OP_EQ,
+             SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION);
 
  done:
   tor_free(tls->ssl);
@@ -1906,6 +1915,7 @@ fixed_ssl_shutdown(SSL *s)
   return fixed_ssl_shutdown_result;
 }
 
+#ifndef LIBRESSL_VERSION_NUMBER
 static int fixed_ssl_state_to_set;
 static tor_tls_t *fixed_tls;
 
@@ -1923,6 +1933,7 @@ setting_version_and_state_ssl_shutdown(SSL *s)
   s->version = SSL2_VERSION;
   return fixed_ssl_shutdown_result;
 }
+#endif
 
 static int
 dummy_handshake_func(SSL *s)
@@ -1956,6 +1967,7 @@ test_tortls_shutdown(void *ignored)
   ret = tor_tls_shutdown(tls);
   tt_int_op(ret, OP_EQ, -9);
 
+#ifndef LIBRESSL_VERSION_NUMBER
   tls->ssl->handshake_func = dummy_handshake_func;
 
   fixed_ssl_read_result_index = 0;
@@ -2017,6 +2029,7 @@ test_tortls_shutdown(void *ignored)
   method->ssl_shutdown = setting_version_and_state_ssl_shutdown;
   ret = tor_tls_shutdown(tls);
   tt_int_op(ret, OP_EQ, TOR_TLS_ERROR_MISC);
+#endif
 
  done:
   teardown_capture_of_logs(previous_log);
@@ -2079,6 +2092,7 @@ test_tortls_read(void *ignored)
   ret = tor_tls_read(tls, buf, 10);
   tt_int_op(negotiated_callback_called, OP_EQ, 1);
 
+#ifndef LIBRESSL_VERSION_NUMBER
   fixed_ssl_read_result_index = 0;
   fixed_ssl_read_result[0] = 0;
   tls->ssl->version = SSL2_VERSION;
@@ -2086,7 +2100,7 @@ test_tortls_read(void *ignored)
   ret = tor_tls_read(tls, buf, 10);
   tt_int_op(ret, OP_EQ, TOR_TLS_CLOSE);
   tt_int_op(tls->state, OP_EQ, TOR_TLS_ST_CLOSED);
-
+#endif
   // TODO: fill up
 
  done:

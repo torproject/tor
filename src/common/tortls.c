@@ -1338,7 +1338,7 @@ find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m, uint16_t cipher)
     return c != NULL;
   }
 # endif
-# if OPENSSL_VERSION_NUMBER < OPENSSL_V_SERIES(1,1,0)
+# ifndef OPENSSL_1_1_API
   if (m && m->get_cipher && m->num_ciphers) {
     /* It would seem that some of the "let's-clean-up-openssl" forks have
      * removed the get_cipher_by_char function.  Okay, so now you get a
