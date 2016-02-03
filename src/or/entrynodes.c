@@ -2240,6 +2240,7 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
    *   does so through an address from any source other than node_get_addr().
    */
   tor_addr_t addr;
+  const or_options_t *options = get_options();
 
   if (node->ri) {
     routerinfo_t *ri = node->ri;
@@ -2272,9 +2273,15 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
       }
     }
 
-    /* Mark which address to use based on which bridge_t we got. */
-    node->ipv6_preferred = (tor_addr_family(&bridge->addr) == AF_INET6 &&
-                            !tor_addr_is_null(&node->ri->ipv6_addr));
+    if (options->ClientPreferIPv6ORPort == -1) {
+      /* Mark which address to use based on which bridge_t we got. */
+      node->ipv6_preferred = (tor_addr_family(&bridge->addr) == AF_INET6 &&
+                              !tor_addr_is_null(&node->ri->ipv6_addr));
+    } else {
+      /* Mark which address to use based on user preference */
+      node->ipv6_preferred = (fascist_firewall_prefer_ipv6_orport(options) &&
+                              !tor_addr_is_null(&node->ri->ipv6_addr));
+    }
 
     /* XXXipv6 we lack support for falling back to another address for
        the same relay, warn the user */
@@ -2283,10 +2290,13 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
       node_get_pref_orport(node, &ap);
       log_notice(LD_CONFIG,
                  "Bridge '%s' has both an IPv4 and an IPv6 address.  "
-                 "Will prefer using its %s address (%s).",
+                 "Will prefer using its %s address (%s) based on %s.",
                  ri->nickname,
-                 tor_addr_family(&ap.addr) == AF_INET6 ? "IPv6" : "IPv4",
-                 fmt_addrport(&ap.addr, ap.port));
+                 node->ipv6_preferred ? "IPv6" : "IPv4",
+                 fmt_addrport(&ap.addr, ap.port),
+                 options->ClientPreferIPv6ORPort == -1 ?
+                 "the configured Bridge address" :
+                 "ClientPreferIPv6ORPort");
     }
   }
   if (node->rs) {

@@ -981,10 +981,6 @@ node_has_ipv6_dirport(const node_t *node)
  *  i) the node_t says that it prefers IPv6
  *  or
  *  ii) the router has no IPv4 OR address.
- *  or
- *  iii) our preference is for IPv6 addresses.
- *  (This extra step is needed in case our preferences have changed since
- *  node->ipv6_preferred was set at the time the consensus was loaded.)
  */
 int
 node_ipv6_or_preferred(const node_t *node)
@@ -993,10 +989,12 @@ node_ipv6_or_preferred(const node_t *node)
   tor_addr_port_t ipv4_addr;
   node_assert_ok(node);
 
+  /* XX/teor - node->ipv6_preferred is set from
+   * fascist_firewall_prefer_ipv6_orport() each time the consensus is loaded.
+   */
   if (!fascist_firewall_use_ipv6(options)) {
     return 0;
-  } else if (node->ipv6_preferred || node_get_prim_orport(node, &ipv4_addr)
-      || fascist_firewall_prefer_ipv6_orport(get_options())) {
+  } else if (node->ipv6_preferred || node_get_prim_orport(node, &ipv4_addr)) {
     return node_has_ipv6_orport(node);
   }
   return 0;
@@ -1077,13 +1075,9 @@ node_get_pref_ipv6_orport(const node_t *node, tor_addr_port_t *ap_out)
  *
  *  We prefer the IPv6 address if the router has an IPv6 address,
  *  and we can use IPv6 addresses, and:
- *  i) the node_t says that it prefers IPv6
+ *  i) the router has no IPv4 Dir address.
  *  or
- *  ii) the router has no IPv4 Dir address.
- *  or
- *  iii) our preference is for IPv6 addresses.
- *  (This extra step is needed in case our preferences have changed since
- *  node->ipv6_preferred was set at the time the consensus was loaded.)
+ *  ii) our preference is for IPv6 Dir addresses.
  */
 int
 node_ipv6_dir_preferred(const node_t *node)
@@ -1092,9 +1086,13 @@ node_ipv6_dir_preferred(const node_t *node)
   tor_addr_port_t ipv4_addr;
   node_assert_ok(node);
 
+  /* node->ipv6_preferred is set from fascist_firewall_prefer_ipv6_orport(),
+   * so we can't use it to determine DirPort IPv6 preference.
+   * This means that bridge clients will use IPv4 DirPorts by default.
+   */
   if (!fascist_firewall_use_ipv6(options)) {
     return 0;
-  } else if (node->ipv6_preferred || node_get_prim_dirport(node, &ipv4_addr)
+  } else if (node_get_prim_dirport(node, &ipv4_addr)
       || fascist_firewall_prefer_ipv6_dirport(get_options())) {
     return node_has_ipv6_dirport(node);
   }

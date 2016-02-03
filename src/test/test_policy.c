@@ -1510,21 +1510,25 @@ test_policies_fascist_firewall_choose_address(void *arg)
                                             FIREWALL_DIR_CONNECTION, 1)
             == &ipv4_dir_ap);
 
-  /* Auto (Preferring IPv6 for bridge clients) */
+  /* Auto:
+   * - bridge clients prefer the configured bridge OR address,
+   * - other clients prefer IPv4 OR by default,
+   * - all clients prefer IPv4 Dir by default.
+   */
   mock_options.ClientPreferIPv6ORPort = -1;
   mock_options.ClientPreferIPv6DirPort = -1;
   tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,
                                             FIREWALL_OR_CONNECTION, 0)
-            == &ipv6_or_ap);
+            == &ipv4_or_ap);
   tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,
                                             FIREWALL_OR_CONNECTION, 1)
-            == &ipv6_or_ap);
+            == &ipv4_or_ap);
   tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &ipv6_dir_ap, 0,
                                             FIREWALL_DIR_CONNECTION, 0)
-            == &ipv6_dir_ap);
+            == &ipv4_dir_ap);
   tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &ipv6_dir_ap, 0,
                                             FIREWALL_DIR_CONNECTION, 1)
-            == &ipv6_dir_ap);
+            == &ipv4_dir_ap);
 
   /* Preferring IPv6 */
   mock_options.ClientPreferIPv6ORPort = 1;
@@ -1544,22 +1548,23 @@ test_policies_fascist_firewall_choose_address(void *arg)
 
 
   /* In the default configuration (Auto / IPv6 off), bridge clients should
-   * still use and prefer IPv6 regardless of ClientUseIPv6. */
+   * still use IPv6, and only prefer it for bridges configured with an IPv6
+   * address, regardless of ClientUseIPv6. */
   mock_options.ClientUseIPv6 = 0;
   mock_options.ClientPreferIPv6ORPort = -1;
   mock_options.ClientPreferIPv6DirPort = -1;
   tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,
                                             FIREWALL_OR_CONNECTION, 0)
-            == &ipv6_or_ap);
+            == &ipv4_or_ap);
   tt_assert(fascist_firewall_choose_address(&ipv4_or_ap, &ipv6_or_ap, 0,
                                             FIREWALL_OR_CONNECTION, 1)
-            == &ipv6_or_ap);
+            == &ipv4_or_ap);
   tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &ipv6_dir_ap, 0,
                                             FIREWALL_DIR_CONNECTION, 0)
-            == &ipv6_dir_ap);
+            == &ipv4_dir_ap);
   tt_assert(fascist_firewall_choose_address(&ipv4_dir_ap, &ipv6_dir_ap, 0,
                                             FIREWALL_DIR_CONNECTION, 1)
-            == &ipv6_dir_ap);
+            == &ipv4_dir_ap);
 
   /* Choose an address with IPv4 on */
   memset(&mock_options, 0, sizeof(or_options_t));
