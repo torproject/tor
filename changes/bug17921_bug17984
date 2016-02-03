@@ -1,0 +1,4 @@
+  o Minor features (compilation):
+    - Tor builds successfully with the unreleased OpenSSL 1.1 alpha
+      releases, and with the latest LibreSSL. Closes tickets 17921 and
+      17984.

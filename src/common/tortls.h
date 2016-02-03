@@ -143,9 +143,10 @@ STATIC size_t SSL_SESSION_get_master_key(SSL_SESSION *s, uint8_t *out,
 STATIC void tor_tls_debug_state_callback(const SSL *ssl, int type, int val);
 STATIC void tor_tls_server_info_callback(const SSL *ssl, int type, int val);
 STATIC int tor_tls_session_secret_cb(SSL *ssl, void *secret,
-                                     int *secret_len,
-                                     STACK_OF(SSL_CIPHER) *peer_ciphers,
-                                     SSL_CIPHER **cipher, void *arg);
+                            int *secret_len,
+                            STACK_OF(SSL_CIPHER) *peer_ciphers,
+                            CONST_IF_OPENSSL_1_1_API SSL_CIPHER **cipher,
+                            void *arg);
 STATIC int find_cipher_by_id(const SSL *ssl, const SSL_METHOD *m,
                              uint16_t cipher);
 MOCK_DECL(STATIC X509*, tor_tls_create_certificate,(crypto_pk_t *rsa,

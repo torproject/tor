@@ -1347,11 +1347,10 @@ test_tortls_get_buffer_sizes(void *ignored)
   tls->ssl->s3->wbuf.offset = 0;
   tls->ssl->s3->wbuf.left = 43;
 
+  ret = tor_tls_get_buffer_sizes(tls, &rbuf_c, &rbuf_b, &wbuf_c, &wbuf_b);
 #if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0)
-  ret = tor_tls_get_buffer_sizes(NULL, NULL, NULL, NULL, NULL);
   tt_int_op(ret, OP_EQ, -1);
 #else
-  ret = tor_tls_get_buffer_sizes(tls, &rbuf_c, &rbuf_b, &wbuf_c, &wbuf_b);
   tt_int_op(ret, OP_EQ, 0);
   tt_int_op(rbuf_c, OP_EQ, 0);
   tt_int_op(wbuf_c, OP_EQ, 0);
@@ -2594,14 +2593,14 @@ test_tortls_create_certificate(void *ignored)
   tt_assert(!ret);
 
   fixed_crypto_pk_get_evp_pkey_result_index = 0;
-  fixed_crypto_pk_get_evp_pkey_result[0] = tor_malloc_zero(sizeof(EVP_PKEY));
+  fixed_crypto_pk_get_evp_pkey_result[0] = EVP_PKEY_new();
   fixed_crypto_pk_get_evp_pkey_result[1] = NULL;
   ret = tor_tls_create_certificate(pk1, pk2, "hello", "hello2", 1);
   tt_assert(!ret);
 
   fixed_crypto_pk_get_evp_pkey_result_index = 0;
-  fixed_crypto_pk_get_evp_pkey_result[0] = tor_malloc_zero(sizeof(EVP_PKEY));
-  fixed_crypto_pk_get_evp_pkey_result[1] = tor_malloc_zero(sizeof(EVP_PKEY));
+  fixed_crypto_pk_get_evp_pkey_result[0] = EVP_PKEY_new();
+  fixed_crypto_pk_get_evp_pkey_result[1] = EVP_PKEY_new();
   ret = tor_tls_create_certificate(pk1, pk2, "hello", "hello2", 1);
   tt_assert(!ret);
 

@@ -373,8 +373,12 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
          used by Tor and the set of algorithms available in the engine */
       log_engine("RSA", ENGINE_get_default_RSA());
       log_engine("DH", ENGINE_get_default_DH());
+#ifdef OPENSSL_1_1_API
+      log_engine("EC", ENGINE_get_default_EC());
+#else
       log_engine("ECDH", ENGINE_get_default_ECDH());
       log_engine("ECDSA", ENGINE_get_default_ECDSA());
+#endif
       log_engine("RAND", ENGINE_get_default_RAND());
       log_engine("RAND (which we will not use)", ENGINE_get_default_RAND());
       log_engine("SHA1", ENGINE_get_digest_engine(NID_sha1));

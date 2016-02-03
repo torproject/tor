@@ -911,7 +911,7 @@ tor_tls_cert_is_valid(int severity,
   } else if (cert_key) {
     int min_bits = 1024;
 #ifdef EVP_PKEY_EC
-    if (EVP_PKEY_type(cert_key->type) == EVP_PKEY_EC)
+    if (EVP_PKEY_base_id(cert_key) == EVP_PKEY_EC)
       min_bits = 128;
 #endif
     if (EVP_PKEY_bits(cert_key) >= min_bits)
@@ -1414,7 +1414,7 @@ tor_tls_classify_client_ciphers(const SSL *ssl,
   /* Now we need to see if there are any ciphers whose presence means we're
    * dealing with an updated Tor. */
   for (i = 0; i < sk_SSL_CIPHER_num(peer_ciphers); ++i) {
-    SSL_CIPHER *cipher = sk_SSL_CIPHER_value(peer_ciphers, i);
+    const SSL_CIPHER *cipher = sk_SSL_CIPHER_value(peer_ciphers, i);
     const char *ciphername = SSL_CIPHER_get_name(cipher);
     if (strcmp(ciphername, TLS1_TXT_DHE_RSA_WITH_AES_128_SHA) &&
         strcmp(ciphername, TLS1_TXT_DHE_RSA_WITH_AES_256_SHA) &&
@@ -1431,7 +1431,7 @@ tor_tls_classify_client_ciphers(const SSL *ssl,
   {
     const uint16_t *v2_cipher = v2_cipher_list;
     for (i = 0; i < sk_SSL_CIPHER_num(peer_ciphers); ++i) {
-      SSL_CIPHER *cipher = sk_SSL_CIPHER_value(peer_ciphers, i);
+      const SSL_CIPHER *cipher = sk_SSL_CIPHER_value(peer_ciphers, i);
       uint16_t id = SSL_CIPHER_get_id(cipher) & 0xffff;
       if (id == 0x00ff) /* extended renegotiation indicator. */
         continue;
@@ -1453,7 +1453,7 @@ tor_tls_classify_client_ciphers(const SSL *ssl,
     smartlist_t *elts = smartlist_new();
     char *s;
     for (i = 0; i < sk_SSL_CIPHER_num(peer_ciphers); ++i) {
-      SSL_CIPHER *cipher = sk_SSL_CIPHER_value(peer_ciphers, i);
+      const SSL_CIPHER *cipher = sk_SSL_CIPHER_value(peer_ciphers, i);
       const char *ciphername = SSL_CIPHER_get_name(cipher);
       smartlist_add(elts, (char*)ciphername);
     }
@@ -1562,7 +1562,8 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
 STATIC int
 tor_tls_session_secret_cb(SSL *ssl, void *secret, int *secret_len,
                           STACK_OF(SSL_CIPHER) *peer_ciphers,
-                          SSL_CIPHER **cipher, void *arg)
+                          CONST_IF_OPENSSL_1_1_API SSL_CIPHER **cipher,
+                          void *arg)
 {
   (void) secret;
   (void) secret_len;
@@ -1733,8 +1734,13 @@ tor_tls_block_renegotiation(tor_tls_t *tls)
 void
 tor_tls_assert_renegotiation_unblocked(tor_tls_t *tls)
 {
+#if defined(SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION) && \
+  SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION != 0
   long options = SSL_get_options(tls->ssl);
   tor_assert(0 != (options & SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION));
+#else
+  (void) tls;
+#endif
 }
 
 /** Return whether this tls initiated the connect (client) or

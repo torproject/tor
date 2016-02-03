@@ -13,7 +13,6 @@
  * \brief Headers for aes.c
  */
 
-struct aes_cnt_cipher;
 typedef struct aes_cnt_cipher aes_cnt_cipher_t;
 
 aes_cnt_cipher_t* aes_new_cipher(const char *key, const char *iv);
