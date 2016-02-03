@@ -458,6 +458,13 @@ fascist_firewall_prefer_ipv6_impl(const or_options_t *options)
 int
 fascist_firewall_prefer_ipv6_orport(const or_options_t *options)
 {
+  /* node->ipv6_preferred is set from fascist_firewall_prefer_ipv6_orport()
+   * each time the consensus is loaded.
+   * If our preferences change, we will only reset ipv6_preferred on the node
+   * when the next consensus is loaded. But the consensus is realoded when the
+   * configuration changes after a HUP. So as long as the result of this
+   * function only depends on Tor's options, everything should work ok.
+   */
   int pref_ipv6 = fascist_firewall_prefer_ipv6_impl(options);
 
   if (pref_ipv6 >= 0) {
@@ -466,11 +473,6 @@ fascist_firewall_prefer_ipv6_orport(const or_options_t *options)
 
   /* We can use both IPv4 and IPv6 - which do we prefer? */
   if (options->ClientPreferIPv6ORPort == 1) {
-    return 1;
-  }
-
-  /* For bridge clients, ClientPreferIPv6ORPort auto means "prefer IPv6". */
-  if (options->UseBridges && options->ClientPreferIPv6ORPort != 0) {
     return 1;
   }
 
@@ -490,12 +492,6 @@ fascist_firewall_prefer_ipv6_dirport(const or_options_t *options)
 
   /* We can use both IPv4 and IPv6 - which do we prefer? */
   if (options->ClientPreferIPv6DirPort == 1) {
-    return 1;
-  }
-
-  /* For bridge clients, ClientPreferIPv6ORPort auto means "prefer IPv6".
-   * XX/teor - do bridge clients ever use a DirPort? */
-  if (options->UseBridges && options->ClientPreferIPv6DirPort != 0) {
     return 1;
   }
 

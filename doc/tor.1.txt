@@ -1504,17 +1504,17 @@ The following options are useful only for clients (that is, if
     If this option is set to 1, Tor prefers a directory port with an IPv6
     address over one with IPv4, for direct connections, if a given directory
     server has both. (Tor also prefers an IPv6 DirPort if IPv4Client is set to
-    0.) If this option is set to auto, Tor bridge clients prefer IPv6, and
-    other clients prefer IPv4. Other things may influence the choice. This
-    option breaks a tie to the favor of IPv6. (Default: auto)
+    0.) If this option is set to auto, clients prefer IPv4. Other things may
+    influence the choice. This option breaks a tie to the favor of IPv6.
+    (Default: auto)
 
 [[ClientPreferIPv6ORPort]] **ClientPreferIPv6ORPort** **0**|**1**|**auto**::
     If this option is set to 1, Tor prefers an OR port with an IPv6
     address over one with IPv4 if a given entry node has both. (Tor also
     prefers an IPv6 ORPort if IPv4Client is set to 0.) If this option is set
-    to auto, Tor bridge clients prefer IPv6, and other clients prefer IPv4.
-    Other things may influence the choice. This option breaks a tie to the
-    favor of IPv6. (Default: auto)
+    to auto, Tor bridge clients prefer the configured bridge address, and
+    other clients prefer IPv4. Other things may influence the choice. This
+    option breaks a tie to the favor of IPv6. (Default: auto)
 
 [[PathsNeededToBuildCircuits]] **PathsNeededToBuildCircuits** __NUM__::
     Tor clients don't build circuits for user traffic until they know
