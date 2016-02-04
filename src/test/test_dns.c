@@ -490,7 +490,7 @@ NS(test_main)(void *arg)
 
   (void)arg;
 
-  TO_CONN(exitconn)->address = tor_strdup("127.0.0.1.in-addr.arpa");
+  TO_CONN(exitconn)->address = tor_strdup("1.0.0.127.in-addr.arpa");
 
   NS_MOCK(router_my_exit_policy_is_reject_star);
 
