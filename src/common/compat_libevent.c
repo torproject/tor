@@ -247,6 +247,7 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
 MOCK_IMPL(struct event_base *,
 tor_libevent_get_base, (void))
 {
+  tor_assert(the_event_base != NULL);
   return the_event_base;
 }
 
