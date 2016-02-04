@@ -12,13 +12,13 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       new option KeepBindCapabilities. Closes ticket 8195.
 
   o Major features (directory system):
-    - When bootstrapping multiple consensus downloads at a
-      time, use the first one that starts downloading, and close the
-      rest. This reduces failures when authorities or fallback
-      directories are slow or down. Together with the code for feature
-      15775, this feature should reduces failures due to fallback churn.
-      Implements ticket 4483. Patch by "teor". Implements IPv4 portions
-      of proposal 210 by "mikeperry" and "teor".
+    - When bootstrapping multiple consensus downloads at a time, use the
+      first one that starts downloading, and close the rest. This
+      reduces failures when authorities or fallback directories are slow
+      or down. Together with the code for feature 15775, this feature
+      should reduces failures due to fallback churn. Implements ticket
+      4483. Patch by "teor". Implements IPv4 portions of proposal 210 by
+      "mikeperry" and "teor".
     - Include a trial list of default fallback directories, based on an
       opt-in survey of suitable relays. Doing this should make clients
       bootstrap more quickly and reliably, and reduce the load on the
