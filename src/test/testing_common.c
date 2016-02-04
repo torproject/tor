@@ -238,6 +238,11 @@ main(int c, const char **v)
   update_approx_time(time(NULL));
   options = options_new();
   tor_threads_init();
+
+  struct tor_libevent_cfg cfg;
+  memset(&cfg, 0, sizeof(cfg));
+  tor_libevent_initialize(&cfg);
+
   control_initialize_event_queue();
   init_logging(1);
   configure_backtrace_handler(get_version());

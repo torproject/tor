@@ -319,11 +319,7 @@ test_circuit_timeout(void *arg)
   int i, runs;
   double close_ms;
   (void)arg;
-  tor_libevent_cfg cfg;
 
-  memset(&cfg, 0, sizeof(cfg));
-
-  tor_libevent_initialize(&cfg);
   initialize_periodic_events();
 
   circuit_build_times_init(&initial);
