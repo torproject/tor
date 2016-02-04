@@ -12,7 +12,7 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       new option KeepBindCapabilities. Closes ticket 8195.
 
   o Major features (directory system):
-    - When bootstrapping we not launch multiple consensus downloads at a
+    - When bootstrapping multiple consensus downloads at a
       time, use the first one that starts downloading, and close the
       rest. This reduces failures when authorities or fallback
       directories are slow or down. Together with the code for feature
@@ -51,7 +51,7 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       0.2.0.11-alpha. Patch by "teor".
 
   o Minor features (security, memory erasure):
-    - Set the unused entires in a smartlist to NULL. This helped catch
+    - Set the unused entries in a smartlist to NULL. This helped catch
       a (harmless) bug, and shouldn't affect performance too much.
       Implements ticket 17026.
     - Use SecureMemoryWipe() function to securely clean memory on
