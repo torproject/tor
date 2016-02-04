@@ -86,26 +86,29 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       that have them. Closes ticket 13696.
 
   o Minor features (accounting):
-    - Added two modes to AccountingRule in torrc for limiting just the
-      number of bytes sent ("AccountingRule out") or the number of bytes
+    - Added two modes to the AccountingRule option: One for limiting only
+      the number of bytes sent ("AccountingRule out"), and one for
+      limiting only the number of bytes
       received ("AccountingRule in").
       Closes ticket 15989; patch from "unixninja92".
 
   o Minor features (build):
-    - Since our build process now uses 'make distcheck', we no longer
+    - Since our build process now uses "make distcheck", we no longer
       force "make dist" to depend on "make check". Closes ticket 17893;
       patch from "cypherpunks."
-    - Repair some compilation issues with some recent (unreleased,
-      alpha) versions of OpenSSL 1.1. Closes ticket 17549.
+    - Tor now builds successfully with the recent OpenSSL 1.1
+      development branch, and with the latest LibreSSL. Closes tickets
+      17549, 17921, and 17984.
 
   o Minor features (controller):
-    - Adds FallbackDir entries to 'GETINFO config/defaults'. Closes
+    - Adds the FallbackDir entries to 'GETINFO config/defaults'. Closes
       tickets 16774 and 17817. Patch by George Tankersley.
-    - New "GETINFO hs/service/desc/id/" command to retrieve a hidden
+    - New 'GETINFO hs/service/desc/id/' command to retrieve a hidden
       service descriptor from a service's local hidden service
       descriptor cache. Closes ticket 14846.
-    - Add controller getinfo exit-policy/reject-private/[default,relay]
-      for the reject rules added by ExitPolicyRejectPrivate. This makes
+    - Add  'GETINFO exit-policy/reject-private/[default,relay]', so
+      controllers can examine the
+      the reject rules added by ExitPolicyRejectPrivate. This makes
       it easier for stem to display exit policies.
 
   o Minor features (crypto):
@@ -113,20 +116,20 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       George Tankersley.
     - Add SHA3 and SHAKE support to crypto.c. Closes ticket 17783.
     - When allocating a digest state object, allocate no more space than
-      we actually need. Previously, we were allocating as much space as
+      we actually need. Previously, we would allocate as much space as
       the state for the largest algorithm would need. This change saves
       up to 672 bytes per circuit. Closes ticket 17796.
     - Improve performance when hashing non-multiple of 8 sized buffers,
-      based on Andrew Moon's Public Domain SipHash-2-4 implementation.
+      based on Andrew Moon's public domain SipHash-2-4 implementation.
       Fixes bug 17544; bugfix on 0.2.5.3-alpha.
 
   o Minor features (directory downloads):
-    - Wait for busy authorities and fallbacks to become non-busy when
+    - Wait for busy authorities and fallback directories to become non-busy when
       bootstrapping. (A similar change was made in 6c443e987d for
-      directory servers chosen from the consensus.) Closes ticket 17864;
+      directory caches chosen from the consensus.) Closes ticket 17864;
       patch by "teor".
     - Add UseDefaultFallbackDirs, which enables any hard-coded fallback
-      directory mirrors. Default is 1, set it to 0 to disable fallbacks.
+      directory mirrors. The default is 1; set it to 0 to disable fallbacks.
       Implements ticket 17576. Patch by "teor".
 
   o Minor features (geoip):
