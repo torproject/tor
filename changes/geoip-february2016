@@ -1,0 +1,4 @@
+  o Minor features:
+    - Update geoip and geoip6 to the February 2 2016 Maxmind GeoLite2
+      Country database.
+
