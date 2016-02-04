@@ -137,10 +137,10 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       Country database.
 
   o Minor features (IPv6):
-    - Add a flag ipv6=address:orport to the DirAuthority and FallbackDir
-      torrc options. Add hard-coded ipv6 addresses for directory
-      authorities with ipv6 lines in their descriptors. Closes ticket
-      17327; patch from Nick Mathewson / "teor".
+    - Add an argument 'ipv6=address:orport' to the DirAuthority and FallbackDir
+      torrc options, to specify an IPv6 address for an authority or fallback directory. Add hard-coded ipv6 addresses for directory
+      authorities that have them. Closes ticket
+      17327; patch from Nick Mathewson and "teor".
     - Add address policy assume_action support for IPv6 addresses.
     - Limit IPv6 mask bits to 128.
     - Warn when comparing against an AF_UNSPEC address in a policy, it's
@@ -191,7 +191,7 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       need for CAP_READ_SEARCH when using systemd's
       CapabilityBoundingSet, or dac_read_search when using SELinux.
       Implements part of ticket 17562. Patch from Jamie Nguyen.
-    - Introduce DataDirectoryGroupReadable boolean. If set to 1, the
+    - Introduce a new DataDirectoryGroupReadable option. If it is set to 1, the
       DataDirectory will be made readable by the default GID. Implements
       part of ticket 17562. Patch from Jamie Nguyen.
 
@@ -212,17 +212,17 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
 
   o Minor bugfixes (compilation):
     - Mark all object files that include micro-revision.i as depending
-      on it, so as to make our build more reliable with parallel builds.
+      on it, so as to make parallel builds more reliable.
       Fixes bug 17826; bugfix on 0.2.5.1-alpha.
-    - Don't try to use the pthrad_condattr_setclock() function unless it
+    - Don't try to use the pthread_condattr_setclock() function unless it
       actually exists. Fixes compilation on NetBSD-6.x. Fixes bug 17819;
       bugfix on 0.2.6.3-alpha.
     - Fix backtrace compilation on FreeBSD. Fixes bug 17827; bugfix
       on tor-0.2.5.2-alpha.
     - Fix compilation of sandbox.c with musl-libc. Fixes bug 17347;
       bugfix on 0.2.5.1-alpha. Patch from 'jamestk'.
-    - Fix search for libevent libraries on OpenBSD (and similar systems
-      which install libevent 1 and libevent 2 in parallel). Fixes bug
+    - Fix search for libevent libraries on OpenBSD (and other systems
+      that install libevent 1 and libevent 2 in parallel). Fixes bug
       16651; bugfix on 0.1.0.7-rc. Patch from "rubiate".
     - Isolate environment variables meant for tests from the rest of the
       build system. Fixes bug 17818; bugfix on tor-0.2.7.3-rc.
@@ -308,25 +308,25 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
     - Move logging of redundant policy entries in
       policies_parse_exit_policy_internal into its own function. Closes
       ticket 17608; patch from "juce".
-    - Extract the more complicated parts of circuit_mark_for_close into
-      a new function run periodically before connections are freed. This
+    - Extract the more complicated parts of circuit_mark_for_close() into
+      a new function that we run periodically before circuits are freed. This
       change removes more than half of the functions currently in the
       "blob". Closes ticket 17218.
     - Clean up a little duplicated code in
-      crypto_expand_key_material_TAP. Closes ticket 17587; patch
+      crypto_expand_key_material_TAP(). Closes ticket 17587; patch
       from "pfrankw".
-    - Decouple the list of streams needing to be attached to circuits
+    - Decouple the list of streams waiting to be attached to circuits
       from the overall connection list. This change makes it possible to
-      attach streams quickly while both simplifying Tor's callgraph and
+      attach streams quickly while simplifying Tor's callgraph and
       avoiding O(N) scans of the entire connection list. Closes
       ticket 17590.
     - When a direct directory request fails immediately on launch,
       instead of relaunching that request from inside the code that
       launches it, instead mark the connection for teardown. This change
-      simplifies Tor's callback and prevents the directory- request
+      simplifies Tor's callback and prevents the directory-request
       launching code from invoking itself recursively. Closes
       ticket 17589
-    - Remove code for OpenSSL dynamic locks; OpenSSL doesn't use them.
+    - Remove code for configuring OpenSSL dynamic locks; OpenSSL doesn't use them.
       Closes ticket 17926.
 
   o Documentation:
@@ -340,7 +340,7 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       issue 17392.
 
   o Testing:
-    - Add unit tests that check for common RNG failure modes, such as
+    - Add unit tests to check for common RNG failure modes, such as
       returning all zeroes, identical values, or incrementing values
       (OpenSSL's rand_predictable feature). Patch by "teor".
     - Log more information when the backtrace tests fail. Closes ticket
