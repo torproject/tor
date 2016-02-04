@@ -2,76 +2,68 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
   Tor 0.2.8.1-alpha is the first alpha release in its series. It
   includes numerous small features and bugfixes against previous Tor
   versions, and numerous small infrastructure improvements. The most
-  notable features are a set of improvements to the directory
-  subsystem.
+  notable features are a set of improvements to the directory subsystem.
+
+  o Major features (security, Linux):
+    - When Tor starts as root on Linux and is told to switch user ID, it
+      can now retain the capability to bind to low ports. By default,
+      Tor will do this only when it's switching user ID and some low
+      ports have been configured. You can change this behavior with the
+      new option KeepBindCapabilities. Closes ticket 8195.
+
+  o Major features (directory system):
+    - When bootstrapping we not launch multiple consensus downloads at a
+      time, use the first one that starts downloading, and close the
+      rest. This reduces failures when authorities or fallback
+      directories are slow or down. Together with the code for feature
+      15775, this feature should reduces failures due to fallback churn.
+      Implements ticket 4483. Patch by "teor". Implements IPv4 portions
+      of proposal 210 by "mikeperry" and "teor".
+    - Include a trial list of default fallback directories, based on an
+      opt-in survey of suitable relays. Doing this should make clients
+      bootstrap more quickly and reliably, and reduce the load on the
+      directory authorities. Closes ticket 15775. Patch by "teor".
+      Candidates identified using an OnionOO script by "weasel", "teor",
+      "gsathya", and "karsten".
+    - Previously only relays that explicitly opened a directory port
+      (DirPort) accepted directory requests from clients. Now all
+      relays, with and without a DirPort, accept and serve tunneled
+      directory requests that they receive through their ORPort. You can
+      disable this behavior using the new DirCache option. Closes
+      ticket 12538.
 
   o Major key updates:
     - Update the V3 identity key for the dannenberg directory authority:
-      it was changed on 18 November 2015. Closes task 17906. Patch by
-      "teor".
-
-  o Removed features:
-    - Remove client-side support for connecting to Tor servers running
-      versions of Tor before 0.2.3.6-alpha. These servers didn't support
-      the v3 TLS handshake protocol, and are no longer allowed on the
-      Tor network. Implements the client side of ticket 11150. Based on
-      patches by Tom van der Woerdt.
-
-  o Major features (security, Linux):
-    - When Tor starts as root on Linux and is told to switch user ID,
-      it can now retain the capability to bind to low ports. By
-      default, Tor will do this only when it's switching user ID and
-      some low ports have been configured. You can change this behavior
-      with the new option KeepBindCapabilities. Closes ticket 8195.
-
-  o Major features (directory system):
-    - When bootstrapping we not launch multiple consensus downloads
-      at a time, use the first one that starts downloading, and close the
-      rest. This reduces failures when authorities or fallback directories are slow or down.
-      Together with the code for feature 15775, this feature should reduces failures due
-      to fallback churn. Implements ticket 4483.
-      Patch by "teor". Implements IPv4 portions
-      of proposal 210 by "mikeperry" and "teor".
-    - Include a trial list of default fallback directories, based
-      on an opt-in survey of suitable relays. Doing this should make
-      clients bootstrap more quickly and reliably, and reduce the
-      load on the directory authorities. Closes ticket 15775. Patch by
-      "teor". Candidates identified using an OnionOO script by "weasel", "teor", "gsathya",
-      and "karsten".
-    - Previously only relays that explicitly opened a directory port
-      (DirPort) accepted directory requests from clients. Now all
-      relays, with and without a DirPort,
-      accept and serve tunneled directory requests that they
-      receive through their ORPort.  You can disable this behavior using
-      the new DirCache option.
-      Closes ticket 12538.
+      it was changed on 18 November 2015. Closes task 17906. Patch
+      by "teor".
 
   o Minor features (security, clock):
-    - Warn when the system clock appears to move back in time (when the state
-      file was last written in the future). Tor doesn't know that
+    - Warn when the system clock appears to move back in time (when the
+      state file was last written in the future). Tor doesn't know that
       consensuses have expired if the clock is in the past. Patch by
       "teor". Implements ticket 17188.
 
   o Minor features (security, exit policies):
-    - ExitPolicyRejectPrivate now rejects more private addresses by default.
-      Specifically, it now rejects the relay's outbound bind addresses (if
-      configured), and the relay's configured port addresses (such as
-      ORPort and DirPort). Fixes bug 17027; bugfix on 0.2.0.11-alpha.
-      Patch by "teor".
+    - ExitPolicyRejectPrivate now rejects more private addresses by
+      default. Specifically, it now rejects the relay's outbound bind
+      addresses (if configured), and the relay's configured port
+      addresses (such as ORPort and DirPort). Fixes bug 17027; bugfix on
+      0.2.0.11-alpha. Patch by "teor".
 
   o Minor features (security, memory erasure):
     - Set the unused entires in a smartlist to NULL. This helped catch
       a (harmless) bug, and shouldn't affect performance too much.
       Implements ticket 17026.
     - Use SecureMemoryWipe() function to securely clean memory on
-      Windows. Previously we'd use OpenSSL's OPENSSL_cleanse() function. Implements feature 17986.
+      Windows. Previously we'd use OpenSSL's OPENSSL_cleanse() function.
+      Implements feature 17986.
     - Use explicit_bzero or memset_s when present. Previously, we'd use
       OpenSSL's OPENSSL_cleanse() function. Closes ticket 7419; patches
       from <logan@hackers.mu> and <selven@hackers.mu>.
-    - Make memwipe() do nothing when passed a NULL pointer or buffer of zero size.
-      Check size argument to memwipe() for underflow. Fixes bug 18089;
-      bugfix on 0.2.3.25 and 0.2.4.6-alpha. Reported by "gk", patch
-      by "teor".
+    - Make memwipe() do nothing when passed a NULL pointer or buffer of
+      zero size. Check size argument to memwipe() for underflow. Fixes
+      bug 18089; bugfix on 0.2.3.25 and 0.2.4.6-alpha. Reported by "gk",
+      patch by "teor".
 
   o Minor features (security, RNG):
     - Adjust Tor's use of OpenSSL's RNG APIs so that they absolutely,
@@ -79,17 +71,17 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       internal details of OpenSSL's behavior. Closes ticket 17686.
     - Never use the system entropy output directly for anything besides
       seeding the PRNG. When we want to generate important keys, instead
-      of using system entropy directly, we now hash it with the PRNG stream.
-      This may help resist certain attacks based on broken OS entropy
-      implementations. Closes part of ticket 17694.
-    - Use modern system calls (like getentropy() or getrandom()) to generate strong entropy on platforms
-      that have them. Closes ticket 13696.
+      of using system entropy directly, we now hash it with the PRNG
+      stream. This may help resist certain attacks based on broken OS
+      entropy implementations. Closes part of ticket 17694.
+    - Use modern system calls (like getentropy() or getrandom()) to
+      generate strong entropy on platforms that have them. Closes
+      ticket 13696.
 
   o Minor features (accounting):
-    - Added two modes to the AccountingRule option: One for limiting only
-      the number of bytes sent ("AccountingRule out"), and one for
-      limiting only the number of bytes
-      received ("AccountingRule in").
+    - Added two modes to the AccountingRule option: One for limiting
+      only the number of bytes sent ("AccountingRule out"), and one for
+      limiting only the number of bytes received ("AccountingRule in").
       Closes ticket 15989; patch from "unixninja92".
 
   o Minor features (build):
@@ -106,10 +98,10 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
     - New 'GETINFO hs/service/desc/id/' command to retrieve a hidden
       service descriptor from a service's local hidden service
       descriptor cache. Closes ticket 14846.
-    - Add  'GETINFO exit-policy/reject-private/[default,relay]', so
-      controllers can examine the
-      the reject rules added by ExitPolicyRejectPrivate. This makes
-      it easier for stem to display exit policies.
+    - Add 'GETINFO exit-policy/reject-private/[default,relay]', so
+      controllers can examine the the reject rules added by
+      ExitPolicyRejectPrivate. This makes it easier for stem to display
+      exit policies.
 
   o Minor features (crypto):
     - Add SHA512 support to crypto.c. Closes ticket 17663; patch from
@@ -124,23 +116,24 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       Fixes bug 17544; bugfix on 0.2.5.3-alpha.
 
   o Minor features (directory downloads):
-    - Wait for busy authorities and fallback directories to become non-busy when
-      bootstrapping. (A similar change was made in 6c443e987d for
-      directory caches chosen from the consensus.) Closes ticket 17864;
-      patch by "teor".
+    - Wait for busy authorities and fallback directories to become non-
+      busy when bootstrapping. (A similar change was made in 6c443e987d
+      for directory caches chosen from the consensus.) Closes ticket
+      17864; patch by "teor".
     - Add UseDefaultFallbackDirs, which enables any hard-coded fallback
-      directory mirrors. The default is 1; set it to 0 to disable fallbacks.
-      Implements ticket 17576. Patch by "teor".
+      directory mirrors. The default is 1; set it to 0 to disable
+      fallbacks. Implements ticket 17576. Patch by "teor".
 
   o Minor features (geoip):
     - Update geoip and geoip6 to the January 5 2016 Maxmind GeoLite2
       Country database.
 
   o Minor features (IPv6):
-    - Add an argument 'ipv6=address:orport' to the DirAuthority and FallbackDir
-      torrc options, to specify an IPv6 address for an authority or fallback directory. Add hard-coded ipv6 addresses for directory
-      authorities that have them. Closes ticket
-      17327; patch from Nick Mathewson and "teor".
+    - Add an argument 'ipv6=address:orport' to the DirAuthority and
+      FallbackDir torrc options, to specify an IPv6 address for an
+      authority or fallback directory. Add hard-coded ipv6 addresses for
+      directory authorities that have them. Closes ticket 17327; patch
+      from Nick Mathewson and "teor".
     - Add address policy assume_action support for IPv6 addresses.
     - Limit IPv6 mask bits to 128.
     - Warn when comparing against an AF_UNSPEC address in a policy, it's
@@ -191,9 +184,9 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       need for CAP_READ_SEARCH when using systemd's
       CapabilityBoundingSet, or dac_read_search when using SELinux.
       Implements part of ticket 17562. Patch from Jamie Nguyen.
-    - Introduce a new DataDirectoryGroupReadable option. If it is set to 1, the
-      DataDirectory will be made readable by the default GID. Implements
-      part of ticket 17562. Patch from Jamie Nguyen.
+    - Introduce a new DataDirectoryGroupReadable option. If it is set to
+      1, the DataDirectory will be made readable by the default GID.
+      Implements part of ticket 17562. Patch from Jamie Nguyen.
 
   o Minor bugfixes (accounting):
     - The max bandwidth when using 'AccountRule sum' is now correctly
@@ -212,11 +205,11 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
 
   o Minor bugfixes (compilation):
     - Mark all object files that include micro-revision.i as depending
-      on it, so as to make parallel builds more reliable.
-      Fixes bug 17826; bugfix on 0.2.5.1-alpha.
-    - Don't try to use the pthread_condattr_setclock() function unless it
-      actually exists. Fixes compilation on NetBSD-6.x. Fixes bug 17819;
-      bugfix on 0.2.6.3-alpha.
+      on it, so as to make parallel builds more reliable. Fixes bug
+      17826; bugfix on 0.2.5.1-alpha.
+    - Don't try to use the pthread_condattr_setclock() function unless
+      it actually exists. Fixes compilation on NetBSD-6.x. Fixes bug
+      17819; bugfix on 0.2.6.3-alpha.
     - Fix backtrace compilation on FreeBSD. Fixes bug 17827; bugfix
       on tor-0.2.5.2-alpha.
     - Fix compilation of sandbox.c with musl-libc. Fixes bug 17347;
@@ -308,10 +301,10 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
     - Move logging of redundant policy entries in
       policies_parse_exit_policy_internal into its own function. Closes
       ticket 17608; patch from "juce".
-    - Extract the more complicated parts of circuit_mark_for_close() into
-      a new function that we run periodically before circuits are freed. This
-      change removes more than half of the functions currently in the
-      "blob". Closes ticket 17218.
+    - Extract the more complicated parts of circuit_mark_for_close()
+      into a new function that we run periodically before circuits are
+      freed. This change removes more than half of the functions
+      currently in the "blob". Closes ticket 17218.
     - Clean up a little duplicated code in
       crypto_expand_key_material_TAP(). Closes ticket 17587; patch
       from "pfrankw".
@@ -326,8 +319,8 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
       simplifies Tor's callback and prevents the directory-request
       launching code from invoking itself recursively. Closes
       ticket 17589
-    - Remove code for configuring OpenSSL dynamic locks; OpenSSL doesn't use them.
-      Closes ticket 17926.
+    - Remove code for configuring OpenSSL dynamic locks; OpenSSL doesn't
+      use them. Closes ticket 17926.
 
   o Documentation:
     - Add a description of the correct use of the '--keygen' command-
@@ -338,6 +331,13 @@ Changes in version 0.2.8.1-alpha - 2016-02-0?
     - Mention torspec URL in the manpage and point the reader to it
       whenever we mention a document that belongs in torspce. Fixes
       issue 17392.
+
+  o Removed features:
+    - Remove client-side support for connecting to Tor servers running
+      versions of Tor before 0.2.3.6-alpha. These servers didn't support
+      the v3 TLS handshake protocol, and are no longer allowed on the
+      Tor network. Implements the client side of ticket 11150. Based on
+      patches by Tom van der Woerdt.
 
   o Testing:
     - Add unit tests to check for common RNG failure modes, such as
