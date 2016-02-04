@@ -1,0 +1,4 @@
+  o Code simplification and refactoring:
+    - Quote all the string interpolations in configure.ac -- even
+      those which we are pretty sure can't contain spaces. Closes
+      ticket 17744. Patch from "zerosion".

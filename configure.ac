@@ -14,8 +14,8 @@ AC_CANONICAL_HOST
 
 PKG_PROG_PKG_CONFIG
 
-if test -f /etc/redhat-release ; then
-  if test -f /usr/kerberos/include ; then
+if test -f "/etc/redhat-release"; then
+  if test -f "/usr/kerberos/include"; then
     CPPFLAGS="$CPPFLAGS -I/usr/kerberos/include"
   fi
 fi
@@ -46,14 +46,15 @@ AC_ARG_ENABLE(asserts-in-tests,
 AC_ARG_ENABLE(system-torrc,
    AS_HELP_STRING(--disable-system-torrc, [don't look for a system-wide torrc file]))
 
-if test x$enable_coverage != xyes -a x$enable_asserts_in_tests = xno ; then
+if test "x$enable_coverage" != "xyes" -a "x$enable_asserts_in_tests" = "xno" ; then
     AC_MSG_ERROR([Can't disable assertions outside of coverage build])
 fi
 
-
+AM_CONDITIONAL(UNITTESTS_ENABLED, test "x$enable_unittests" != "xno")
+AM_CONDITIONAL(COVERAGE_ENABLED, test "x$enable_coverage" = "xyes")
 AM_CONDITIONAL(UNITTESTS_ENABLED, test x$enable_unittests != xno)
 AM_CONDITIONAL(COVERAGE_ENABLED, test x$enable_coverage = xyes)
-AM_CONDITIONAL(DISABLE_ASSERTS_IN_UNIT_TESTS, test x$enable_asserts_in_tests = xno)
+AM_CONDITIONAL(DISABLE_ASSERTS_IN_UNIT_TESTS, test "x$enable_asserts_in_tests" = "xno")
 
 if test "$enable_static_tor" = "yes"; then
   enable_static_libevent="yes";
@@ -67,8 +68,8 @@ if test "$enable_system_torrc" = "no"; then
             [Defined if we're not going to look for a torrc in SYSCONF])
 fi
 
-AM_CONDITIONAL(USE_OPENBSD_MALLOC, test x$enable_openbsd_malloc = xyes)
-if test x$enable_instrument_downloads = xyes; then
+AM_CONDITIONAL(USE_OPENBSD_MALLOC, test "x$enable_openbsd_malloc" = "xyes")
+if test "x$enable_instrument_downloads" = "xyes"; then
   AC_DEFINE(INSTRUMENT_DOWNLOADS, 1,
             [Defined if we want to keep track of how much of each kind of resource we download.])
 fi
@@ -76,16 +77,16 @@ fi
 AC_ARG_ENABLE(transparent,
      AS_HELP_STRING(--disable-transparent, [disable transparent proxy support]),
      [case "${enableval}" in
-        yes) transparent=true ;;
-        no)  transparent=false ;;
+        "yes") transparent=true ;;
+        "no")  transparent=false ;;
         *) AC_MSG_ERROR(bad value for --enable-transparent) ;;
       esac], [transparent=true])
 
 AC_ARG_ENABLE(asciidoc,
      AS_HELP_STRING(--disable-asciidoc, [don't use asciidoc (disables building of manpages)]),
      [case "${enableval}" in
-        yes) asciidoc=true ;;
-        no)  asciidoc=false ;;
+        "yes") asciidoc=true ;;
+        "no")  asciidoc=false ;;
         *) AC_MSG_ERROR(bad value for --disable-asciidoc) ;;
       esac], [asciidoc=true])
 
@@ -93,22 +94,22 @@ AC_ARG_ENABLE(asciidoc,
 AC_ARG_ENABLE(systemd,
       AS_HELP_STRING(--enable-systemd, [enable systemd notification support]),
       [case "${enableval}" in
-        yes) systemd=true ;;
-        no)  systemd=false ;;
+        "yes") systemd=true ;;
+        "no")  systemd=false ;;
         * ) AC_MSG_ERROR(bad value for --enable-systemd) ;;
       esac], [systemd=auto])
 
 
 
 # systemd support
-if test x$enable_systemd = xno ; then
+if test "x$enable_systemd" = "xno"; then
     have_systemd=no;
 else
     PKG_CHECK_MODULES(SYSTEMD,
         [libsystemd-daemon],
         have_systemd=yes,
         have_systemd=no)
-    if test x$have_systemd=xno; then
+    if test "x$have_systemd" = "xno"; then
         AC_MSG_NOTICE([Okay, checking for systemd a different way...])
         PKG_CHECK_MODULES(SYSTEMD,
             [libsystemd],
@@ -117,7 +118,7 @@ else
     fi
 fi
 
-if test x$have_systemd = xyes; then
+if test "x$have_systemd" = "xyes"; then
     AC_DEFINE(HAVE_SYSTEMD,1,[Have systemd])
     TOR_SYSTEMD_CFLAGS="${SYSTEMD_CFLAGS}"
     TOR_SYSTEMD_LIBS="${SYSTEMD_LIBS}"
@@ -127,11 +128,11 @@ fi
 AC_SUBST(TOR_SYSTEMD_CFLAGS)
 AC_SUBST(TOR_SYSTEMD_LIBS)
 
-if test x$enable_systemd = xyes -a x$have_systemd != xyes ; then
+if test "x$enable_systemd" = "xyes" -a "x$have_systemd" != "xyes" ; then
     AC_MSG_ERROR([Explicitly requested systemd support, but systemd not found])
 fi
 
-case $host in
+case "$host" in
    *-*-solaris* )
      AC_DEFINE(_REENTRANT, 1, [Define on some platforms to activate x_r() functions in time.h])
      ;;
@@ -164,7 +165,7 @@ fi
 # Tor2web mode flag
 AC_ARG_ENABLE(tor2web-mode,
      AS_HELP_STRING(--enable-tor2web-mode, [support tor2web non-anonymous mode]),
-[if test x$enableval = xyes; then
+[if test "x$enableval" = "xyes"; then
     CFLAGS="$CFLAGS -D ENABLE_TOR2WEB_MODE=1"
 fi])
 
@@ -192,10 +193,10 @@ dnl because that will find any cc on the system, not only the cross-compiler,
 dnl and then verify that a binary built with this compiler runs on the
 dnl build system. It will then come to the false conclusion that we're not
 dnl cross-compiling.
-if test x$enable_tool_name_check != xno; then
-    if test x$ac_tool_warned = xyes; then
+if test "x$enable_tool_name_check" != "xno"; then
+    if test "x$ac_tool_warned" = "xyes"; then
         AC_MSG_ERROR([We are cross compiling but could not find a properly named toolchain. Do you have your cross-compiling toolchain in PATH? (You can --disable-tool-name-check to ignore this.)])
-	elif test "x$ac_ct_AR" != x -a x$cross_compiling = xmaybe; then
+	elif test "x$ac_ct_AR" != "x" -a "x$cross_compiling" = "xmaybe"; then
 		AC_MSG_ERROR([We think we are cross compiling but could not find a properly named toolchain. Do you have your cross-compiling toolchain in PATH? (You can --disable-tool-name-check to ignore this.)])
 	fi
 fi
@@ -214,11 +215,11 @@ dnl check for asciidoc and a2x
 AC_PATH_PROG([ASCIIDOC], [asciidoc], none)
 AC_PATH_PROGS([A2X], [a2x a2x.py], none)
 
-AM_CONDITIONAL(USE_ASCIIDOC, test x$asciidoc = xtrue)
+AM_CONDITIONAL(USE_ASCIIDOC, test "x$asciidoc" = "xtrue")
 
-AM_CONDITIONAL(USE_FW_HELPER, test x$natpmp = xtrue || test x$upnp = xtrue)
-AM_CONDITIONAL(NAT_PMP, test x$natpmp = xtrue)
-AM_CONDITIONAL(MINIUPNPC, test x$upnp = xtrue)
+AM_CONDITIONAL(USE_FW_HELPER, test "x$natpmp" = "xtrue" || test "x$upnp" = "xtrue")
+AM_CONDITIONAL(NAT_PMP, test "x$natpmp" = "xtrue")
+AM_CONDITIONAL(MINIUPNPC, test "x$upnp" = "xtrue")
 AM_PROG_CC_C_O
 AC_PROG_CC_C99
 
@@ -244,7 +245,7 @@ AC_C_FLEXIBLE_ARRAY_MEMBER
 ]),
   [tor_cv_c_flexarray=yes],
   [tor_cv_c_flexarray=no])])
- if test $tor_cv_flexarray = yes ; then
+ if test "$tor_cv_flexarray" = "yes"; then
    AC_DEFINE([FLEXIBLE_ARRAY_MEMBER], [], [Define to nothing if C supports flexible array members, and to 1 if it does not.])
  else
    AC_DEFINE([FLEXIBLE_ARRAY_MEMBER], [1], [Define to nothing if C supports flexible array members, and to 1 if it does not.])
@@ -311,7 +312,7 @@ bwin32=false; AC_MSG_RESULT([no]),
 bwin32=cross; AC_MSG_RESULT([cross])
 )
 
-if test "$bwin32" = cross; then
+if test "$bwin32" = "cross"; then
 AC_MSG_CHECKING([for win32 (cross)])
 AC_COMPILE_IFELSE([AC_LANG_SOURCE([
 #ifdef _WIN32
@@ -345,7 +346,7 @@ AH_BOTTOM([
 ])
 
 
-AM_CONDITIONAL(BUILD_NT_SERVICES, test x$bwin32 = xtrue)
+AM_CONDITIONAL(BUILD_NT_SERVICES, test "x$bwin32" = "xtrue")
 
 dnl Enable C99 when compiling with MIPSpro
 AC_MSG_CHECKING([for MIPSpro compiler])
@@ -358,7 +359,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM(, [
 bmipspro=false; AC_MSG_RESULT(no),
 bmipspro=true; AC_MSG_RESULT(yes))
 
-if test "$bmipspro" = true; then
+if test "$bmipspro" = "true"; then
   CFLAGS="$CFLAGS -c99"
 fi
 
@@ -433,13 +434,13 @@ AC_CHECK_FUNCS(
 	_vscprintf
 )
 
-if test "$bwin32" != true; then
+if test "$bwin32" != "true"; then
   AC_CHECK_HEADERS(pthread.h)
   AC_CHECK_FUNCS(pthread_create)
   AC_CHECK_FUNCS(pthread_condattr_setclock)
 fi
 
-if test "$bwin32" = true; then
+if test "$bwin32" = "true"; then
   AC_CHECK_DECLS([SecureZeroMemory, _getwch], , , [
 #include <windows.h>
 #include <conio.h>
@@ -447,12 +448,13 @@ if test "$bwin32" = true; then
                  ])
 fi
 
-AM_CONDITIONAL(BUILD_READPASSPHRASE_C, test x$ac_cv_func_readpassphrase = xno && test $bwin32 = false)
+AM_CONDITIONAL(BUILD_READPASSPHRASE_C,
+  test "x$ac_cv_func_readpassphrase" = "xno" && test "$bwin32" = "false")
 
 dnl ------------------------------------------------------
 dnl Where do you live, libevent?  And how do we call you?
 
-if test "$bwin32" = true; then
+if test "$bwin32" = "true"; then
   TOR_LIB_WS32=-lws2_32
   TOR_LIB_IPHLPAPI=-liphlpapi
   # Some of the cargo-cults recommend -lwsock32 as well, but I don't
@@ -475,7 +477,7 @@ dnl On Gnu/Linux or any place we require it, we'll add librt to the Libevent
 dnl linking for static builds.
 STATIC_LIBEVENT_FLAGS=""
 if test "$enable_static_libevent" = "yes"; then
-    if test "$have_rt" = yes; then
+    if test "$have_rt" = "yes"; then
       STATIC_LIBEVENT_FLAGS=" -lrt "
     fi
 fi
@@ -518,7 +520,8 @@ AC_CHECK_HEADERS(event2/event.h event2/dns.h event2/bufferevent_ssl.h)
 
 LIBS="$STATIC_LIBEVENT_FLAGS $TOR_LIB_WS32 $save_LIBS"
 
-AM_CONDITIONAL(USE_EXTERNAL_EVDNS, test x$ac_cv_header_event2_dns_h = xyes)
+AM_CONDITIONAL(USE_EXTERNAL_EVDNS,
+  test "x$ac_cv_header_event2_dns_h" = "xyes")
 
 if test "$enable_static_libevent" = "yes"; then
    if test "$tor_cv_library_libevent_dir" = "(system)"; then
@@ -548,8 +551,8 @@ CPPFLAGS="$save_CPPFLAGS"
 
 dnl This isn't the best test for Libevent 2.0.3-alpha.  Once it's released,
 dnl we can do much better.
-if test "$enable_bufferevents" = "yes" ; then
-  if test "$ac_cv_header_event2_bufferevent_ssl_h" != "yes" ; then
+if test "$enable_bufferevents" = "yes"; then
+  if test "$ac_cv_header_event2_bufferevent_ssl_h" != "yes"; then
     AC_MSG_ERROR([You've asked for bufferevent support, but you're using a version of Libevent without SSL support.  This won't work.  We need Libevent 2.0.8-rc or later, and you don't seem to even have Libevent 2.0.3-alpha.])
   else
 
@@ -567,7 +570,7 @@ int x = 1;
 #endif
   ])], [event_version_number_works=yes; AC_MSG_RESULT([yes]) ],
      [event_version_number_works=no;  AC_MSG_RESULT([no])])
-    if test "$event_version_number_works" != 'yes'; then
+    if test "$event_version_number_works" != "yes"; then
       AC_MSG_WARN([Version detection on Libevent seems broken.  Your Libevent installation is probably screwed up or very old.])
     else
       AC_MSG_CHECKING([whether Libevent is new enough for bufferevents])
@@ -627,7 +630,7 @@ ALT_openssl_WITHVAL=""
 AC_ARG_WITH(ssl-dir,
   AS_HELP_STRING(--with-ssl-dir=PATH, [obsolete alias for --with-openssl-dir]),
   [
-      if test "x$withval" != xno && test "x$withval" != "x" ; then
+      if test "x$withval" != "xno" && test "x$withval" != "x"; then
          ALT_openssl_WITHVAL="$withval"
       fi
   ])
@@ -754,9 +757,9 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
 #error
 #endif])], have_clang=yes, have_clang=no)
 
-if test x$enable_gcc_hardening != xno; then
+if test "x$enable_gcc_hardening" != "xno"; then
     CFLAGS="$CFLAGS -D_FORTIFY_SOURCE=2"
-    if test x$have_clang = xyes; then
+    if test "x$have_clang" = "xyes"; then
         TOR_CHECK_CFLAGS(-Qunused-arguments)
     fi
     TOR_CHECK_CFLAGS(-fstack-protector-all, also_link)
@@ -779,13 +782,13 @@ m4_ifdef([AS_VAR_IF],[
     fi
 fi
 
-if test x$enable_expensive_hardening = xyes ; then
+if test "x$enable_expensive_hardening" = "xyes"; then
    TOR_CHECK_CFLAGS([-fsanitize=address])
    TOR_CHECK_CFLAGS([-fsanitize=undefined])
    TOR_CHECK_CFLAGS([-fno-omit-frame-pointer])
 fi
 
-if test x$enable_linker_hardening != xno; then
+if test "x$enable_linker_hardening" != "xno"; then
     TOR_CHECK_LDFLAGS(-z relro -z now, "$all_ldflags_for_check", "$all_libs_for_check")
 fi
 
@@ -799,7 +802,7 @@ saved_CFLAGS="$CFLAGS"
 TOR_CHECK_CFLAGS(-fomit-frame-pointer)
 F_OMIT_FRAME_POINTER=''
 if test "$saved_CFLAGS" != "$CFLAGS"; then
-  if test x$enable_expensive_hardening != xyes ; then
+  if test "x$enable_expensive_hardening" != "xyes"; then
     F_OMIT_FRAME_POINTER='-fomit-frame-pointer'
   fi
 fi
@@ -908,10 +911,10 @@ AC_CACHE_CHECK([for nacl compiled with a fast curve25519 implementation],
  dnl Okay, now we need to figure out which one to actually use. Fall back
  dnl to curve25519-donna.c
 
- if test x$tor_cv_can_use_curve25519_donna_c64 != xno; then
+ if test "x$tor_cv_can_use_curve25519_donna_c64" != "xno"; then
    build_curve25519_donna_c64=yes
    use_curve25519_donna=yes
- elif test x$tor_cv_can_use_curve25519_nacl = xyes; then
+ elif test "x$tor_cv_can_use_curve25519_nacl" = "xyes"; then
    use_curve25519_nacl=yes
    CURVE25519_LIBS=-lnacl
  else
@@ -919,16 +922,18 @@ AC_CACHE_CHECK([for nacl compiled with a fast curve25519 implementation],
    use_curve25519_donna=yes
  fi
 
-if test x$use_curve25519_donna = xyes; then
+if test "x$use_curve25519_donna" = "xyes"; then
   AC_DEFINE(USE_CURVE25519_DONNA, 1,
             [Defined if we should use an internal curve25519_donna{,_c64} implementation])
 fi
-if test x$use_curve25519_nacl = xyes; then
+if test "x$use_curve25519_nacl" = "xyes"; then
   AC_DEFINE(USE_CURVE25519_NACL, 1,
             [Defined if we should use a curve25519 from nacl])
 fi
-AM_CONDITIONAL(BUILD_CURVE25519_DONNA, test x$build_curve25519_donna = xyes)
-AM_CONDITIONAL(BUILD_CURVE25519_DONNA_C64, test x$build_curve25519_donna_c64 = xyes)
+AM_CONDITIONAL(BUILD_CURVE25519_DONNA,
+  test "x$build_curve25519_donna" = "xyes")
+AM_CONDITIONAL(BUILD_CURVE25519_DONNA_C64,
+  test "x$build_curve25519_donna_c64" = "xyes")
 AC_SUBST(CURVE25519_LIBS)
 
 dnl Make sure to enable support for large off_t if available.
@@ -1068,20 +1073,20 @@ AC_CHECK_HEADERS(linux/netfilter_ipv6/ip6_tables.h,
 #include <linux/if.h>
 #endif])
 
-if test x$transparent = xtrue ; then
+if test "x$transparent" = "xtrue"; then
    transparent_ok=0
-   if test x$net_if_found = x1 && test x$net_pfvar_found = x1 ; then
+   if test "x$net_if_found" = "x1" && test "x$net_pfvar_found" = "x1"; then
      transparent_ok=1
    fi
-   if test x$linux_netfilter_ipv4 = x1 ; then
+   if test "x$linux_netfilter_ipv4" = "x1"; then
      transparent_ok=1
    fi
-   if test x$linux_netfilter_ipv6_ip6_tables = x1 ; then
+   if test "x$linux_netfilter_ipv6_ip6_tables" = "x1"; then
      transparent_ok=1
    fi
-   if test x$transparent_ok = x1 ; then
+   if test "x$transparent_ok" = "x1"; then
      AC_DEFINE(USE_TRANSPARENT, 1, "Define to enable transparent proxy support")
-     case $host in
+     case "$host" in
        *-*-openbsd* | *-*-bitrig*)
          AC_DEFINE(OPENBSD, 1, "Define to handle pf on OpenBSD properly") ;;
      esac
@@ -1197,7 +1202,7 @@ AX_CHECK_SIGN([time_t],
 #endif
 ])
 
-if test "$ax_cv_decl_time_t_signed" = no; then
+if test "$ax_cv_decl_time_t_signed" = "no"; then
   AC_MSG_ERROR([You have an unsigned time_t; Tor does not support that. Please tell the Tor developers about your interesting platform.])
 fi
 
@@ -1209,7 +1214,7 @@ AX_CHECK_SIGN([size_t],
 #endif
 ])
 
-if test "$ax_cv_decl_size_t_signed" = yes; then
+if test "$ax_cv_decl_size_t_signed" = "yes"; then
   AC_MSG_ERROR([You have a signed size_t; that's grossly nonconformant.])
 fi
 
@@ -1244,12 +1249,12 @@ return memcmp(&p1,&p2,sizeof(char*))?1:0; }]])],
        [tor_cv_null_is_zero=no],
        [tor_cv_null_is_zero=cross])])
 
-if test "$tor_cv_null_is_zero" = cross ; then
+if test "$tor_cv_null_is_zero" = "cross"; then
   # Cross-compiling; let's hope that the target isn't raving mad.
   AC_MSG_NOTICE([Cross-compiling: we'll assume that NULL is represented as a sequence of 0-valued bytes.])
 fi
 
-if test "$tor_cv_null_is_zero" != no; then
+if test "$tor_cv_null_is_zero" != "no"; then
   AC_DEFINE([NULL_REP_IS_ZERO_BYTES], 1,
             [Define to 1 iff memset(0) sets pointers to NULL])
 fi
@@ -1268,12 +1273,12 @@ return memcmp(&d1,&d2,sizeof(d1))?1:0; }]])],
        [tor_cv_dbl0_is_zero=no],
        [tor_cv_dbl0_is_zero=cross])])
 
-if test "$tor_cv_dbl0_is_zero" = cross ; then
+if test "$tor_cv_dbl0_is_zero" = "cross"; then
   # Cross-compiling; let's hope that the target isn't raving mad.
   AC_MSG_NOTICE([Cross-compiling: we'll assume that 0.0 can be represented as a sequence of 0-valued bytes.])
 fi
 
-if test "$tor_cv_dbl0_is_zero" != no; then
+if test "$tor_cv_dbl0_is_zero" != "no"; then
   AC_DEFINE([DOUBLE_0_REP_IS_ZERO_BYTES], 1,
             [Define to 1 iff memset(0) sets doubles to 0.0])
 fi
@@ -1292,12 +1297,12 @@ int main () { return malloc(0)?0:1; }]])],
        [tor_cv_malloc_zero_works=no],
        [tor_cv_malloc_zero_works=cross])])
 
-if test "$tor_cv_malloc_zero_works" = cross; then
+if test "$tor_cv_malloc_zero_works" = "cross"; then
   # Cross-compiling; let's hope that the target isn't raving mad.
   AC_MSG_NOTICE([Cross-compiling: we'll assume that we need to check malloc() arguments for 0.])
 fi
 
-if test "$tor_cv_malloc_zero_works" = yes; then
+if test "$tor_cv_malloc_zero_works" = "yes"; then
   AC_DEFINE([MALLOC_ZERO_WORKS], 1,
             [Define to 1 iff malloc(0) returns a pointer])
 fi
@@ -1311,14 +1316,15 @@ return problem ? 1 : 0; }]])],
        [tor_cv_twos_complement=no],
        [tor_cv_twos_complement=cross])])
 
-if test "$tor_cv_twos_complement" = cross ; then
+if test "$tor_cv_twos_complement" = "cross"; then
   # Cross-compiling; let's hope that the target isn't raving mad.
   AC_MSG_NOTICE([Cross-compiling: we'll assume that negative integers are represented with two's complement.])
 fi
 
-if test "$tor_cv_twos_complement" != no ; then
+if test "$tor_cv_twos_complement" != "no"; then
   AC_DEFINE([USING_TWOS_COMPLEMENT], 1,
-            [Define to 1 iff we represent negative integers with two's complement])
+            [Define to 1 iff we represent negative integers with
+             two's complement])
 fi
 
 # What does shifting a negative value do?
@@ -1329,12 +1335,12 @@ AC_CACHE_CHECK([whether right-shift on negative values does sign-extension], tor
        [tor_cv_sign_extend=no],
        [tor_cv_sign_extend=cross])])
 
-if test "$tor_cv_sign_extend" = cross ; then
+if test "$tor_cv_sign_extend" = "cross"; then
   # Cross-compiling; let's hope that the target isn't raving mad.
   AC_MSG_NOTICE([Cross-compiling: we'll assume that right-shifting negative integers causes sign-extension])
 fi
 
-if test "$tor_cv_sign_extend" != no ; then
+if test "$tor_cv_sign_extend" != "no"; then
   AC_DEFINE([RSHIFT_DOES_SIGN_EXTEND], 1,
             [Define to 1 iff right-shifting a negative value performs sign-extension])
 fi
@@ -1363,18 +1369,18 @@ AC_ARG_WITH(tcmalloc,
 AS_HELP_STRING(--with-tcmalloc, [use tcmalloc memory allocation library]),
 [ tcmalloc=yes ], [ tcmalloc=no ])
 
-if test x$tcmalloc = xyes ; then
+if test "x$tcmalloc" = "xyes"; then
    LDFLAGS="-ltcmalloc $LDFLAGS"
 fi
 
 using_custom_malloc=no
-if test x$enable_openbsd_malloc = xyes ; then
+if test "x$enable_openbsd_malloc" = "xyes"; then
    using_custom_malloc=yes
 fi
-if test x$tcmalloc = xyes ; then
+if test "x$tcmalloc" = "xyes"; then
    using_custom_malloc=yes
 fi
-if test $using_custom_malloc = no ; then
+if test "$using_custom_malloc" = "no"; then
    AC_CHECK_FUNCS(mallinfo)
 fi
 
@@ -1491,20 +1497,20 @@ int main(int c, char **v) { char **t = environ; }])],
   tor_cv_have_environ_declared=yes,
   tor_cv_have_environ_declared=no))
 
-if test "$tor_cv_have_func_macro" = 'yes'; then
+if test "$tor_cv_have_func_macro" = "yes"; then
   AC_DEFINE(HAVE_MACRO__func__, 1, [Defined if the compiler supports __func__])
 fi
 
-if test "$tor_cv_have_FUNC_macro" = 'yes'; then
+if test "$tor_cv_have_FUNC_macro" = "yes"; then
   AC_DEFINE(HAVE_MACRO__FUNC__, 1, [Defined if the compiler supports __FUNC__])
 fi
 
-if test "$tor_cv_have_FUNCTION_macro" = 'yes'; then
+if test "$tor_cv_have_FUNCTION_macro" = "yes"; then
   AC_DEFINE(HAVE_MACRO__FUNCTION__, 1,
            [Defined if the compiler supports __FUNCTION__])
 fi
 
-if test "$tor_cv_have_environ_declared" = 'yes'; then
+if test "$tor_cv_have_environ_declared" = "yes"; then
   AC_DEFINE(HAVE_EXTERN_ENVIRON_DECLARED, 1,
            [Defined if we have extern char **environ already declared])
 fi
@@ -1540,7 +1546,7 @@ AC_SUBST(BINDIR)
 LOCALSTATEDIR=`eval echo $localstatedir`
 AC_SUBST(LOCALSTATEDIR)
 
-if test "$bwin32" = true; then
+if test "$bwin32" = "true"; then
   # Test if the linker supports the --nxcompat and --dynamicbase options
   # for Windows
   save_LDFLAGS="$LDFLAGS"
@@ -1556,7 +1562,7 @@ fi
 
 # Set CFLAGS _after_ all the above checks, since our warnings are stricter
 # than autoconf's macros like.
-if test "$GCC" = yes; then
+if test "$GCC" = "yes"; then
   # Disable GCC's strict aliasing checks.  They are an hours-to-debug
   # accident waiting to happen.
   CFLAGS="$CFLAGS -Wall -fno-strict-aliasing"
@@ -1579,7 +1585,8 @@ esac
 
 # Add some more warnings which we use in development but not in the
 # released versions.  (Some relevant gcc versions can't handle these.)
-if test x$enable_gcc_warnings = xyes || test x$enable_gcc_warnings_advisory = xyes; then
+if test "x$enable_gcc_warnings" = "xyes" ||
+  test "x$enable_gcc_warnings_advisory" = "xyes"; then
 
   AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
 #if !defined(__GNUC__) || (__GNUC__ < 4)
@@ -1608,7 +1615,7 @@ if test x$enable_gcc_warnings = xyes || test x$enable_gcc_warnings_advisory = xy
                     have_shorten64_flag=no)
   CFLAGS="$save_CFLAGS"
 
-  case $host in
+  case "$host" in
     *-*-openbsd* | *-*-bitrig*)
       # Some OpenBSD versions (like 4.8) have -Wsystem-headers by default.
       # That's fine, except that the headers don't pass -Wredundant-decls.
@@ -1623,18 +1630,18 @@ if test x$enable_gcc_warnings = xyes || test x$enable_gcc_warnings_advisory = xy
   CFLAGS="$CFLAGS -Wwrite-strings -Wmissing-declarations -Wredundant-decls"
   CFLAGS="$CFLAGS -Wnested-externs -Wbad-function-cast -Wswitch-enum"
 
-  if test x$enable_gcc_warnings = xyes; then
+  if test "x$enable_gcc_warnings" = "xyes"; then
     CFLAGS="$CFLAGS -Werror"
   fi
 
   # Disabled, so we can use mallinfo(): -Waggregate-return
 
-  if test x$have_gcc4 = xyes ; then
+  if test "x$have_gcc4" = "xyes"; then
     # These warnings break gcc 3.3.5 and work on gcc 4.0.2
     CFLAGS="$CFLAGS -Winit-self -Wmissing-field-initializers -Wold-style-definition"
   fi
 
-  if test x$have_gcc42 = xyes ; then
+  if test "x$have_gcc42" = "xyes"; then
     # These warnings break gcc 4.0.2 and work on gcc 4.2
     # XXXX020 See if any of these work with earlier versions.
     CFLAGS="$CFLAGS -Waddress -Wmissing-noreturn -Wstrict-overflow=1"
@@ -1642,24 +1649,24 @@ if test x$enable_gcc_warnings = xyes || test x$enable_gcc_warnings_advisory = xy
     # We used to use -Wstrict-overflow=5, but that breaks us heavily under 4.3.
   fi
 
-  if test x$have_gcc42 = xyes && test x$have_clang = xno; then
+  if test "x$have_gcc42" = "xyes" && test "x$have_clang" = "xno"; then
     # These warnings break gcc 4.0.2 and clang, but work on gcc 4.2
     CFLAGS="$CFLAGS -Wnormalized=id -Woverride-init"
   fi
 
-  if test x$have_gcc43 = xyes ; then
+  if test "x$have_gcc43" = "xyes"; then
     # These warnings break gcc 4.2 and work on gcc 4.3
     # XXXX020 See if any of these work with earlier versions.
     CFLAGS="$CFLAGS -Wextra -Warray-bounds"
   fi
 
-  if test x$have_gcc46 = xyes ; then
+  if test "x$have_gcc46" = "xyes"; then
     # This warning was added in gcc 4.3, but it appears to generate
     # spurious warnings in gcc 4.4.  I don't know if it works in 4.5.
     CFLAGS="$CFLAGS -Wlogical-op"
   fi
 
-  if test x$have_shorten64_flag = xyes ; then
+  if test "x$have_shorten64_flag" = "xyes"; then
     CFLAGS="$CFLAGS -Wshorten-64-to-32"
   fi
 
@@ -1669,7 +1676,7 @@ if test x$enable_gcc_warnings = xyes || test x$enable_gcc_warnings_advisory = xy
 # CFLAGS="$CFLAGS -Winline"
 fi
 
-if test "$enable_coverage" = yes && test "$have_clang" = "no"; then
+if test "$enable_coverage" = "yes" && test "$have_clang" = "no"; then
    case "$host_os" in
     darwin*)
       AC_MSG_WARN([Tried to enable coverage on OSX without using the clang compiler. This might not work! If coverage fails, use CC=clang when configuring with --enable-profiling.])
@@ -1692,7 +1699,7 @@ AC_CONFIG_FILES([
         scripts/maint/updateVersions.pl
 ])
 
-if test x$asciidoc = xtrue && test "$ASCIIDOC" = "none" ; then
+if test "x$asciidoc" = "xtrue" && test "$ASCIIDOC" = "none"; then
   regular_mans="doc/tor doc/tor-gencert doc/tor-resolve doc/torify"
   for file in $regular_mans ; do
     if ! [[ -f "$srcdir/$file.1.in" ]] || ! [[ -f "$srcdir/$file.html.in" ]] ; then
