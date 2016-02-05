@@ -490,7 +490,8 @@ logv,(int severity, log_domain_mask_t domain, const char *funcname,
   assert(log_mutex_initialized);
   LOCK_LOGS();
 
-  if ((! (domain & LD_NOCB)) && smartlist_len(pending_cb_messages))
+  if ((! (domain & LD_NOCB)) && pending_cb_messages
+      && smartlist_len(pending_cb_messages))
     flush_pending_log_callbacks();
 
   if (queue_startup_messages &&
@@ -945,7 +946,7 @@ flush_pending_log_callbacks(void)
   smartlist_t *messages, *messages_tmp;
 
   LOCK_LOGS();
-  if (0 == smartlist_len(pending_cb_messages)) {
+  if (!pending_cb_messages || 0 == smartlist_len(pending_cb_messages)) {
     UNLOCK_LOGS();
     return;
   }
