@@ -149,10 +149,14 @@ static int pretty_fn_has_parens = 0;
 
 /** Lock the log_mutex to prevent others from changing the logfile_t list */
 #define LOCK_LOGS() STMT_BEGIN                                          \
+  tor_assert(log_mutex_initialized);                                    \
   tor_mutex_acquire(&log_mutex);                                        \
   STMT_END
 /** Unlock the log_mutex */
-#define UNLOCK_LOGS() STMT_BEGIN tor_mutex_release(&log_mutex); STMT_END
+#define UNLOCK_LOGS() STMT_BEGIN                                        \
+  tor_assert(log_mutex_initialized);                                    \
+  tor_mutex_release(&log_mutex);                                        \
+  STMT_END
 
 /** What's the lowest log level anybody cares about?  Checking this lets us
  * bail out early from log_debug if we aren't debugging.  */
@@ -482,6 +486,8 @@ logv,(int severity, log_domain_mask_t domain, const char *funcname,
   /* check that severity is sane.  Overrunning the masks array leads to
    * interesting and hard to diagnose effects */
   assert(severity >= LOG_ERR && severity <= LOG_DEBUG);
+  /* check that we've initialised the log mutex before we try to lock it */
+  assert(log_mutex_initialized);
   LOCK_LOGS();
 
   if ((! (domain & LD_NOCB)) && smartlist_len(pending_cb_messages))
