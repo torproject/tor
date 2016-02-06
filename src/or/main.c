@@ -191,32 +191,6 @@ int quiet_level = 0;
  *
  ****************************************************************************/
 
-#if 0 && defined(USE_BUFFEREVENTS)
-static void
-free_old_inbuf(connection_t *conn)
-{
-  if (! conn->inbuf)
-    return;
-
-  tor_assert(conn->outbuf);
-  tor_assert(buf_datalen(conn->inbuf) == 0);
-  tor_assert(buf_datalen(conn->outbuf) == 0);
-  buf_free(conn->inbuf);
-  buf_free(conn->outbuf);
-  conn->inbuf = conn->outbuf = NULL;
-
-  if (conn->read_event) {
-    event_del(conn->read_event);
-    tor_event_free(conn->read_event);
-  }
-  if (conn->write_event) {
-    event_del(conn->read_event);
-    tor_event_free(conn->write_event);
-  }
-  conn->read_event = conn->write_event = NULL;
-}
-#endif
-
 #if defined(_WIN32) && defined(USE_BUFFEREVENTS)
 /** Remove the kernel-space send and receive buffers for <b>s</b>. For use
  * with IOCP only. */
@@ -946,18 +920,6 @@ conn_close_if_marked(int i)
            * would make much more sense to react in
            * connection_handle_read_impl, or to just stop reading in
            * mark_and_flush */
-#if 0
-#define MARKED_READING_RATE 180
-          static ratelim_t marked_read_lim = RATELIM_INIT(MARKED_READING_RATE);
-          char *m;
-          if ((m = rate_limit_log(&marked_read_lim, now))) {
-            log_warn(LD_BUG, "Marked connection (fd %d, type %s, state %s) "
-                     "is still reading; that shouldn't happen.%s",
-                     (int)conn->s, conn_type_to_string(conn->type),
-                     conn_state_to_string(conn->type, conn->state), m);
-            tor_free(m);
-          }
-#endif
           conn->read_blocked_on_bw = 1;
           connection_stop_reading(conn);
         }
