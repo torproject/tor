@@ -1,7 +1,8 @@
   o Code simplification and refactoring:
     - Remove specialized code for non-inplace AES_CTR.  99% of our AES
       is inplace, so there's no need to have a separate implementation
-      for the non-inplace code. Closes ticket 18258.
+      for the non-inplace code. Closes ticket 18258. Patch from
+      Malek.
 
   o New requirements:
     - Tor no longer supports versions of OpenSSL with a broken
