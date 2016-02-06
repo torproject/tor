@@ -148,7 +148,9 @@ tor_addr_make_af_unix(tor_addr_t *a)
 }
 
 /** Set the tor_addr_t in <b>a</b> to contain the socket address contained in
- * <b>sa</b>. Return 0 on success and -1 on failure. */
+ * <b>sa</b>.  IF <b>port_out</b> is non-NULL and <b>sa</b> contains a port,
+ * set *<b>port_out</b> to that port. Return 0 on success and -1 on
+ * failure. */
 int
 tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa,
                        uint16_t *port_out)
