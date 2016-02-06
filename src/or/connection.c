@@ -2398,7 +2398,7 @@ retry_listener_ports(smartlist_t *old_conns,
     /* We don't need to be root to create a UNIX socket, so defer until after
      * setuid. */
     const or_options_t *options = get_options();
-    if (port->is_unix_addr && !geteuid() && strcmp(options->User, "root"))
+    if (port->is_unix_addr && !geteuid() && (options->User) && strcmp(options->User, "root"))
       continue;
 #endif
 
