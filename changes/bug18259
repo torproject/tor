@@ -1,0 +1,4 @@
+  o Code simplification and refactoring:
+    - Simplify return types for some crypto functions that can't
+      actually fail. Patch from Hassan Alsibyani. Closes ticket
+      18259.
