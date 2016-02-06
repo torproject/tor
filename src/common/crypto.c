@@ -1509,7 +1509,8 @@ crypto_cipher_encrypt(crypto_cipher_t *env, char *to,
   tor_assert(to);
   tor_assert(fromlen < SIZE_T_CEILING);
 
-  aes_crypt(env->cipher, from, fromlen, to);
+  memcpy(to, from, fromlen);
+  aes_crypt_inplace(env->cipher, to, fromlen);
   return 0;
 }
 
@@ -1526,7 +1527,8 @@ crypto_cipher_decrypt(crypto_cipher_t *env, char *to,
   tor_assert(to);
   tor_assert(fromlen < SIZE_T_CEILING);
 
-  aes_crypt(env->cipher, from, fromlen, to);
+  memcpy(to, from, fromlen);
+  aes_crypt_inplace(env->cipher, to, fromlen);
   return 0;
 }
 
@@ -3154,4 +3156,3 @@ crypto_global_cleanup(void)
 }
 
 /** @} */
-
