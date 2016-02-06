@@ -1,0 +1,11 @@
+  o Code simplification and refactoring:
+    - Remove specialized code for non-inplace AES_CTR.  99% of our AES
+      is inplace, so there's no need to have a separate implementation
+      for the non-inplace code. Closes ticket 18258.
+
+  o New requirements:
+    - Tor no longer supports versions of OpenSSL with a broken
+      implementation of counter mode.  (This bug was present in OpenSSL
+      1.0.0, and was fixed in OpenSSL 1.0.0a.) Tor still detects, but
+      no longer runs with, these versions.
+     
