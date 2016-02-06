@@ -148,20 +148,15 @@ relay_digest_matches(crypto_digest_t *digest, cell_t *cell)
  *
  * If <b>encrypt_mode</b> is 1 then encrypt, else decrypt.
  *
- * Return -1 if the crypto fails, else return 0.
+ * Returns 0.
  */
 static int
 relay_crypt_one_payload(crypto_cipher_t *cipher, uint8_t *in,
                         int encrypt_mode)
 {
-  int r;
   (void)encrypt_mode;
-  r = crypto_cipher_crypt_inplace(cipher, (char*) in, CELL_PAYLOAD_SIZE);
+  crypto_cipher_crypt_inplace(cipher, (char*) in, CELL_PAYLOAD_SIZE);
 
-  if (r) {
-    log_warn(LD_BUG,"Error during relay encryption");
-    return -1;
-  }
   return 0;
 }
 

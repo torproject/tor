@@ -1531,14 +1531,13 @@ crypto_cipher_decrypt(crypto_cipher_t *env, char *to,
 }
 
 /** Encrypt <b>len</b> bytes on <b>from</b> using the cipher in <b>env</b>;
- * on success, return 0. Does not check for failure.
+ * on success. Does not check for failure.
  */
-int
+void
 crypto_cipher_crypt_inplace(crypto_cipher_t *env, char *buf, size_t len)
 {
   tor_assert(len < SIZE_T_CEILING);
   aes_crypt_inplace(env->cipher, buf, len);
-  return 0;
 }
 
 /** Encrypt <b>fromlen</b> bytes (at least 1) from <b>from</b> with the key in
