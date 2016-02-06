@@ -1612,7 +1612,7 @@ test_tortls_block_renegotiation(void *ignored)
   tt_assert(!(tls->ssl->s3->flags &
               SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION));
 #endif
-  
+
  done:
   tor_free(tls->ssl->s3);
   tor_free(tls->ssl);
