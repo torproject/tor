@@ -3103,7 +3103,7 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
                                          DSR_HEX|DSR_SORT_UNIQ);
     SMARTLIST_FOREACH_BEGIN(digests, const char *, d) {
          if (router_digest_is_me(d)) {
-           /* make sure desc_routerinfo exists */
+           /* calling router_get_my_routerinfo() to make sure desc_routerinfo exists */
            const routerinfo_t *ri = router_get_my_routerinfo();
            if (ri)
              smartlist_add(descs_out, (void*) &(ri->cache_info));

@@ -1747,14 +1747,14 @@ router_compare_to_my_exit_policy(const tor_addr_t *addr, uint16_t port)
   if (tor_addr_is_null(addr))
     return -1;
 
-  /* look at desc_routerinfo->exit_policy for both the v4 and the v6
-   * policies.  The exit_policy field in desc_routerinfo is a bit unusual,
+  /* look at router_get_my_routerinfo()->exit_policy for both the v4 and the v6
+   * policies.  The exit_policy field in router_get_my_routerinfo() is a bit unusual,
    * in that it contains IPv6 and IPv6 entries.  We don't want to look
-   * at desc_routerinfio->ipv6_exit_policy, since that's a port summary. */
+   * at router_get_my_routerinfo()->ipv6_exit_policy, since that's a port summary. */
   if ((tor_addr_family(addr) == AF_INET ||
        tor_addr_family(addr) == AF_INET6)) {
     return compare_tor_addr_to_addr_policy(addr, port,
-                    desc_routerinfo->exit_policy) != ADDR_POLICY_ACCEPTED;
+                    router_get_my_routerinfo()->exit_policy) != ADDR_POLICY_ACCEPTED;
 #if 0
   } else if (tor_addr_family(addr) == AF_INET6) {
     return get_options()->IPv6Exit &&
@@ -1775,7 +1775,7 @@ router_my_exit_policy_is_reject_star,(void))
   if (!router_get_my_routerinfo()) /* make sure desc_routerinfo exists */
     return -1;
 
-  return desc_routerinfo->policy_is_reject_star;
+  return router_get_my_routerinfo()->policy_is_reject_star;
 }
 
 /** Return true iff I'm a server and <b>digest</b> is equal to
@@ -1836,10 +1836,10 @@ router_get_my_descriptor(void)
   const char *body;
   if (!router_get_my_routerinfo())
     return NULL;
-  tor_assert(desc_routerinfo->cache_info.saved_location == SAVED_NOWHERE);
-  body = signed_descriptor_get_body(&desc_routerinfo->cache_info);
+  tor_assert(router_get_my_routerinfo()->cache_info.saved_location == SAVED_NOWHERE);
+  body = signed_descriptor_get_body(&router_get_my_routerinfo()->cache_info);
   /* Make sure this is nul-terminated. */
-  tor_assert(!body[desc_routerinfo->cache_info.signed_descriptor_len]);
+  tor_assert(!body[router_get_my_routerinfo()->cache_info.signed_descriptor_len]);
   log_debug(LD_GENERAL,"my desc is '%s'", body);
   return body;
 }
@@ -2242,10 +2242,10 @@ check_descriptor_bandwidth_changed(time_t now)
 {
   static time_t last_changed = 0;
   uint64_t prev, cur;
-  if (!desc_routerinfo)
+  if (!router_get_my_routerinfo())
     return;
 
-  prev = desc_routerinfo->bandwidthcapacity;
+  prev = router_get_my_routerinfo()->bandwidthcapacity;
   cur = we_are_hibernating() ? 0 : rep_hist_bandwidth_assess();
   if ((prev != cur && (!prev || !cur)) ||
       cur > prev*2 ||
@@ -2299,11 +2299,11 @@ check_descriptor_ipaddress_changed(time_t now)
 
   (void) now;
 
-  if (!desc_routerinfo)
+  if (router_get_my_routerinfo() == NULL)
     return;
 
   /* XXXX ipv6 */
-  prev = desc_routerinfo->addr;
+  prev = router_get_my_routerinfo()->addr;
   if (resolve_my_address(LOG_INFO, options, &cur, &method, &hostname) < 0) {
     log_info(LD_CONFIG,"options->Address didn't resolve into an IP.");
     return;
