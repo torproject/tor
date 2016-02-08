@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - When generating a URL for a directory server on an IPv6 address,
+      wrap the IPv6 address in square brackets. Fixes bug 18051;
+      bugfix on ?. Patch from Malek.
