@@ -1739,7 +1739,7 @@ router_upload_dir_desc_to_dirservers(int force)
 int
 router_compare_to_my_exit_policy(const tor_addr_t *addr, uint16_t port)
 {
-  routerinfo_t *me = router_get_my_routerinfo();
+  const routerinfo_t *me = router_get_my_routerinfo();
   if (!me) /* make sure routerinfo exists */
     return -1;
 
@@ -1836,7 +1836,7 @@ const char *
 router_get_my_descriptor(void)
 {
   const char *body;
-  routerinfo_t *me = router_get_my_routerinfo();
+  const routerinfo_t *me = router_get_my_routerinfo();
   if (! me)
     return NULL;
   tor_assert(me->cache_info.saved_location == SAVED_NOWHERE);
