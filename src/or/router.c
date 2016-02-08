@@ -1739,7 +1739,8 @@ router_upload_dir_desc_to_dirservers(int force)
 int
 router_compare_to_my_exit_policy(const tor_addr_t *addr, uint16_t port)
 {
-  if (!router_get_my_routerinfo()) /* make sure desc_routerinfo exists */
+  routerinfo_t *me = router_get_my_routerinfo();
+  if (!me) /* make sure routerinfo exists */
     return -1;
 
   /* make sure it's resolved to something. this way we can't get a
@@ -1747,20 +1748,21 @@ router_compare_to_my_exit_policy(const tor_addr_t *addr, uint16_t port)
   if (tor_addr_is_null(addr))
     return -1;
 
-  /* look at router_get_my_routerinfo()->exit_policy for both the v4 and the v6
-   * policies.  The exit_policy field in router_get_my_routerinfo() is a bit unusual,
-   * in that it contains IPv6 and IPv6 entries.  We don't want to look
-   * at router_get_my_routerinfo()->ipv6_exit_policy, since that's a port summary. */
+  /* look at router_get_my_routerinfo()->exit_policy for both the v4 and the
+   * v6 policies.  The exit_policy field in router_get_my_routerinfo() is a
+   * bit unusual, in that it contains IPv6 and IPv6 entries.  We don't want to
+   * look at router_get_my_routerinfo()->ipv6_exit_policy, since that's a port
+   * summary. */
   if ((tor_addr_family(addr) == AF_INET ||
        tor_addr_family(addr) == AF_INET6)) {
     return compare_tor_addr_to_addr_policy(addr, port,
-                    router_get_my_routerinfo()->exit_policy) != ADDR_POLICY_ACCEPTED;
+                               me->exit_policy) != ADDR_POLICY_ACCEPTED;
 #if 0
   } else if (tor_addr_family(addr) == AF_INET6) {
     return get_options()->IPv6Exit &&
       desc_routerinfo->ipv6_exit_policy &&
       compare_tor_addr_to_short_policy(addr, port,
-                  desc_routerinfo->ipv6_exit_policy) != ADDR_POLICY_ACCEPTED;
+                               me->ipv6_exit_policy) != ADDR_POLICY_ACCEPTED;
 #endif
   } else {
     return -1;
@@ -1772,7 +1774,7 @@ router_compare_to_my_exit_policy(const tor_addr_t *addr, uint16_t port)
 MOCK_IMPL(int,
 router_my_exit_policy_is_reject_star,(void))
 {
-  if (!router_get_my_routerinfo()) /* make sure desc_routerinfo exists */
+  if (!router_get_my_routerinfo()) /* make sure routerinfo exists */
     return -1;
 
   return router_get_my_routerinfo()->policy_is_reject_star;
@@ -1834,12 +1836,13 @@ const char *
 router_get_my_descriptor(void)
 {
   const char *body;
-  if (!router_get_my_routerinfo())
+  routerinfo_t *me = router_get_my_routerinfo();
+  if (! me)
     return NULL;
-  tor_assert(router_get_my_routerinfo()->cache_info.saved_location == SAVED_NOWHERE);
-  body = signed_descriptor_get_body(&router_get_my_routerinfo()->cache_info);
+  tor_assert(me->cache_info.saved_location == SAVED_NOWHERE);
+  body = signed_descriptor_get_body(&me->cache_info);
   /* Make sure this is nul-terminated. */
-  tor_assert(!body[router_get_my_routerinfo()->cache_info.signed_descriptor_len]);
+  tor_assert(!body[me->cache_info.signed_descriptor_len]);
   log_debug(LD_GENERAL,"my desc is '%s'", body);
   return body;
 }
