@@ -21,33 +21,46 @@
 #include <string.h>
 #include <stdlib.h>
 
-/** Implements base32 encoding as in RFC 4648.  Limitation: Requires
- * that srclen*8 is a multiple of 5.
- */
+
+/* Return the base32 encoded size in bytes using the source length srclen.
+ * The NUL terminated byte is added as well since every base32 encoding
+ * requires enough space for it. */
+size_t
+base32_encoded_size(size_t srclen)
+{
+  size_t enclen;
+  enclen = CEIL_DIV(srclen*8, 5) + 1;
+  tor_assert(enclen < INT_MAX && enclen > srclen);
+  return enclen;
+}
+
+/** Implements base32 encoding as in RFC 4648. */
 void
 base32_encode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
   unsigned int i, v, u;
-  size_t nbits = srclen * 8, bit;
+  size_t nbits = srclen * 8;
+  size_t bit;
 
   tor_assert(srclen < SIZE_T_CEILING/8);
-  tor_assert((nbits%5) == 0); /* We need an even multiple of 5 bits. */
-  tor_assert((nbits/5)+1 <= destlen); /* We need enough space. */
+  /* We need enough space for the encoded data and the extra NUL byte. */
+  tor_assert(base32_encoded_size(srclen) <= destlen);
   tor_assert(destlen < SIZE_T_CEILING);
 
   for (i=0,bit=0; bit < nbits; ++i, bit+=5) {
     /* set v to the 16-bit value starting at src[bits/8], 0-padded. */
     v = ((uint8_t)src[bit/8]) << 8;
-    if (bit+5<nbits) v += (uint8_t)src[(bit/8)+1];
-    /* set u to the 5-bit value at the bit'th bit of src. */
+    if (bit+5<nbits)
+      v += (uint8_t)src[(bit/8)+1];
+    /* set u to the 5-bit value at the bit'th bit of buf. */
     u = (v >> (11-(bit%8))) & 0x1F;
     dest[i] = BASE32_CHARS[u];
   }
   dest[i] = '\0';
 }
 
-/** Implements base32 decoding as in RFC 4648.  Limitation: Requires
- * that srclen*5 is a multiple of 8. Returns 0 if successful, -1 otherwise.
+/** Implements base32 decoding as in RFC 4648.
+ * Returns 0 if successful, -1 otherwise.
  */
 int
 base32_decode(char *dest, size_t destlen, const char *src, size_t srclen)
@@ -57,10 +70,9 @@ base32_decode(char *dest, size_t destlen, const char *src, size_t srclen)
   unsigned int i;
   size_t nbits, j, bit;
   char *tmp;
-  nbits = srclen * 5;
+  nbits = ((srclen * 5) / 8) * 8;
 
   tor_assert(srclen < SIZE_T_CEILING / 5);
-  tor_assert((nbits%8) == 0); /* We need an even multiple of 8 bits. */
   tor_assert((nbits/8) <= destlen); /* We need enough space. */
   tor_assert(destlen < SIZE_T_CEILING);
 
