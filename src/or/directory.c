@@ -1203,7 +1203,7 @@ directory_send_command(dir_connection_t *conn,
     conn->requested_resource = tor_strdup(resource);
 
   /* decorate the ip address if it is ipv6 */
-  if(strchr(conn->base_.address, ':')) {
+  if (strchr(conn->base_.address, ':')) {
     copy_ipv6_address(decorated_address, conn->base_.address,
                       sizeof(decorated_address), 1);
   } else {
@@ -4185,3 +4185,4 @@ dir_split_resource_into_fingerprints(const char *resource,
   smartlist_free(fp_tmp);
   return 0;
 }
+
