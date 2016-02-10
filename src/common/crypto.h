@@ -102,7 +102,6 @@ typedef enum {
 #define  N_DIGEST_ALGORITHMS (DIGEST_SHA3_512+1)
 #define  N_COMMON_DIGEST_ALGORITHMS (DIGEST_SHA256+1)
 
-
 /** A set of all the digests we commonly compute, taken on a single
  * string.  Any digests that are shorter than 512 bits are right-padded
  * with 0 bits.
@@ -193,7 +192,8 @@ int crypto_pk_private_hybrid_decrypt(crypto_pk_t *env, char *to,
 int crypto_pk_asn1_encode(crypto_pk_t *pk, char *dest, size_t dest_len);
 crypto_pk_t *crypto_pk_asn1_decode(const char *str, size_t len);
 int crypto_pk_get_digest(const crypto_pk_t *pk, char *digest_out);
-int crypto_pk_get_common_digests(crypto_pk_t *pk, common_digests_t *digests_out);
+int crypto_pk_get_common_digests(crypto_pk_t *pk,
+                                 common_digests_t *digests_out);
 int crypto_pk_get_fingerprint(crypto_pk_t *pk, char *fp_out,int add_space);
 int crypto_pk_get_hashed_fingerprint(crypto_pk_t *pk, char *fp_out);
 

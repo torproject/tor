@@ -237,8 +237,10 @@ tor_x509_cert_t *tor_x509_cert_decode(const uint8_t *certificate,
                             size_t certificate_len);
 void tor_x509_cert_get_der(const tor_x509_cert_t *cert,
                       const uint8_t **encoded_out, size_t *size_out);
-const common_digests_t *tor_x509_cert_get_id_digests(const tor_x509_cert_t *cert);
-const common_digests_t *tor_x509_cert_get_cert_digests(const tor_x509_cert_t *cert);
+const common_digests_t *tor_x509_cert_get_id_digests(
+                      const tor_x509_cert_t *cert);
+const common_digests_t *tor_x509_cert_get_cert_digests(
+                      const tor_x509_cert_t *cert);
 int tor_tls_get_my_certs(int server,
                          const tor_x509_cert_t **link_cert_out,
                          const tor_x509_cert_t **id_cert_out);

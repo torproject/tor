@@ -1819,7 +1819,8 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
 
     chan->conn->handshake_state->authenticated = 1;
     {
-      const common_digests_t *id_digests = tor_x509_cert_get_id_digests(id_cert);
+      const common_digests_t *id_digests =
+        tor_x509_cert_get_id_digests(id_cert);
       crypto_pk_t *identity_rcvd;
       if (!id_digests)
         ERR("Couldn't compute digests for key in ID cert");

@@ -2002,8 +2002,10 @@ test_a_networkstatus(
     tt_mem_op(&con->digests,OP_EQ, &con2->digests, sizeof(common_digests_t));
     tt_mem_op(&con->digests,OP_EQ, &con3->digests, sizeof(common_digests_t));
 
-    tt_mem_op(&con_md->digests,OP_EQ, &con_md2->digests, sizeof(common_digests_t));
-    tt_mem_op(&con_md->digests,OP_EQ, &con_md3->digests, sizeof(common_digests_t));
+    tt_mem_op(&con_md->digests,OP_EQ, &con_md2->digests,
+              sizeof(common_digests_t));
+    tt_mem_op(&con_md->digests,OP_EQ, &con_md3->digests,
+              sizeof(common_digests_t));
 
     /* Extract a detached signature from con3. */
     detached_text1 = get_detached_sigs(con3, con_md3);
