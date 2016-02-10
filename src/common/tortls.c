@@ -691,7 +691,7 @@ MOCK_IMPL(STATIC tor_x509_cert_t *,
   if ((pkey = X509_get_pubkey(x509_cert)) &&
       (rsa = EVP_PKEY_get1_RSA(pkey))) {
     crypto_pk_t *pk = crypto_new_pk_from_rsa_(rsa);
-    crypto_pk_get_all_digests(pk, &cert->pkey_digests);
+    crypto_pk_get_common_digests(pk, &cert->pkey_digests);
     cert->pkey_digests_set = 1;
     crypto_pk_free(pk);
     EVP_PKEY_free(pkey);

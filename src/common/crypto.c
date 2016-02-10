@@ -1323,7 +1323,7 @@ crypto_pk_get_digest(const crypto_pk_t *pk, char *digest_out)
 /** Compute all digests of the DER encoding of <b>pk</b>, and store them
  * in <b>digests_out</b>.  Return 0 on success, -1 on failure. */
 int
-crypto_pk_get_all_digests(crypto_pk_t *pk, common_digests_t *digests_out)
+crypto_pk_get_common_digests(crypto_pk_t *pk, common_digests_t *digests_out)
 {
   unsigned char *buf = NULL;
   int len;
@@ -1650,28 +1650,13 @@ crypto_digest512(char *digest, const char *m, size_t len,
 int
 crypto_common_digests(common_digests_t *ds_out, const char *m, size_t len)
 {
-  int i;
   tor_assert(ds_out);
   memset(ds_out, 0, sizeof(*ds_out));
   if (crypto_digest(ds_out->d[DIGEST_SHA1], m, len) < 0)
     return -1;
-  for (i = DIGEST_SHA256; i < N_COMMON_DIGEST_ALGORITHMS; ++i) {
-      switch (i) {
-        case DIGEST_SHA256: /* FALLSTHROUGH */
-        case DIGEST_SHA3_256:
-          if (crypto_digest256(ds_out->d[i], m, len, i) < 0)
-            return -1;
-          break;
-        case DIGEST_SHA512:
-        case DIGEST_SHA3_512: /* FALLSTHROUGH */
-          tor_assert(0); /* These won't fit. */
-          if (crypto_digest512(ds_out->d[i], m, len, i) < 0)
-            return -1;
-          break;
-        default:
-          return -1;
-      }
-  }
+  if (crypto_digest256(ds_out->d[DIGEST_SHA256], m, len, DIGEST_SHA256) < 0)
+    return -1;
+
   return 0;
 }
 
