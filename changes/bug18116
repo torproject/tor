@@ -1,0 +1,3 @@
+  o Major bugfixes:
+    - Correctly handle detaching circuits from cmuxes when doing
+      circuit_free_all() on shutdown again; fixes bug #18116.

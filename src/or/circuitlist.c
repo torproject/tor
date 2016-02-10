@@ -53,6 +53,7 @@ static void cpath_ref_decref(crypt_path_reference_t *cpath_ref);
 //static void circuit_set_rend_token(or_circuit_t *circ, int is_rend_circ,
 //                                   const uint8_t *token);
 static void circuit_clear_rend_token(or_circuit_t *circ);
+static void circuit_about_to_free_terminal(circuit_t *circ);
 static void circuit_about_to_free(circuit_t *circ);
 
 /********* END VARIABLES ************/
@@ -901,6 +902,7 @@ circuit_free_all(void)
       }
     }
     tmp->global_circuitlist_idx = -1;
+    circuit_about_to_free_terminal(tmp);
     circuit_free(tmp);
     SMARTLIST_DEL_CURRENT(lst, tmp);
   } SMARTLIST_FOREACH_END(tmp);
@@ -1742,6 +1744,32 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
     circuits_pending_close = smartlist_new();
 
   smartlist_add(circuits_pending_close, circ);
+}
+
+/** Called immediately before freeing a marked circuit <b>circ</b> from
+ * circuit_free_all() while shutting down Tor; this is a safe-at-shutdown
+ * version of circuit_about_to_free().  It's important that it at least
+ * do circuitmux_detach_circuit() when appropriate.
+ */
+static void
+circuit_about_to_free_terminal(circuit_t *circ)
+{
+
+  if (circ->n_chan) {
+    circuit_clear_cell_queue(circ, circ->n_chan);
+    circuitmux_detach_circuit(circ->n_chan->cmux, circ);
+    circuit_set_n_circid_chan(circ, 0, NULL);
+  }
+
+  if (! CIRCUIT_IS_ORIGIN(circ)) {
+    or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
+
+    if (or_circ->p_chan) {
+      circuit_clear_cell_queue(circ, or_circ->p_chan);
+      circuitmux_detach_circuit(or_circ->p_chan->cmux, circ);
+      circuit_set_p_circid_chan(or_circ, 0, NULL);
+    }
+  }
 }
 
 /** Called immediately before freeing a marked circuit <b>circ</b>.
