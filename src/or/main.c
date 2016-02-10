@@ -1376,11 +1376,23 @@ reschedule_directory_downloads(void)
   periodic_event_reschedule(launch_descriptor_fetches_event);
 }
 
+#define LONGEST_TIMER_PERIOD (30 * 86400)
+/** Helper: Return the number of seconds between <b>now</b> and <b>next</b>,
+ * clipped to the range [1 second, LONGEST_TIMER_PERIOD]. */
 static inline int
 safe_timer_diff(time_t now, time_t next)
 {
   if (next > now) {
-    tor_assert(next - now <= INT_MAX);
+    /* There were no computers at signed TIME_MIN (1902 on 32-bit systems),
+     * and nothing that could run Tor. It's a bug if 'next' is around then.
+     * On 64-bit systems with signed TIME_MIN, TIME_MIN is before the Big
+     * Bang. We cannot extrapolate past a singularity, but there was probably
+     * nothing that could run Tor then, either.
+     **/
+    tor_assert(next > TIME_MIN + LONGEST_TIMER_PERIOD);
+
+    if (next - LONGEST_TIMER_PERIOD > now)
+      return LONGEST_TIMER_PERIOD;
     return (int)(next - now);
   } else {
     return 1;
