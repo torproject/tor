@@ -41,11 +41,19 @@ AC_ARG_ENABLE(unittests,
    AS_HELP_STRING(--disable-unittests, [don't build unit tests for Tor. Risky!]))
 AC_ARG_ENABLE(coverage,
    AS_HELP_STRING(--enable-coverage, [enable coverage support in the unit-test build]))
+AC_ARG_ENABLE(asserts-in-tests,
+   AS_HELP_STRING(--disable-asserts-in-tests, [disable tor_assert() calls in the unit tests, for branch coverage]))
 AC_ARG_ENABLE(system-torrc,
    AS_HELP_STRING(--disable-system-torrc, [don't look for a system-wide torrc file]))
 
+if test x$enable_coverage != xyes -a x$enable_asserts_in_tests = xno ; then
+    AC_MSG_ERROR([Can't disable assertions outside of coverage build])
+fi
+
+
 AM_CONDITIONAL(UNITTESTS_ENABLED, test x$enable_unittests != xno)
 AM_CONDITIONAL(COVERAGE_ENABLED, test x$enable_coverage = xyes)
+AM_CONDITIONAL(DISABLE_ASSERTS_IN_UNIT_TESTS, test x$enable_asserts_in_tests = xno)
 
 if test "$enable_static_tor" = "yes"; then
   enable_static_libevent="yes";

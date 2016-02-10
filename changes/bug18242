@@ -1,0 +1,6 @@
+  o Minor bugfixes (testing):
+    - We no longer disable assertions in the unit tests when coverage
+      is enabled. Instead, we require you to say --disable-asserts-in-tests
+      to the configure script if you need assertions disabled in the
+      unit tests (for example, if you want to perform branch coverage).
+      Fixes bug 18242; bugfix on 0.2.7.1-alpha.

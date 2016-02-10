@@ -128,8 +128,8 @@ test_rend_cache_store_v2_desc_as_client(void *data)
 
   // Test bad base32 failure
   // This causes an assertion failure if we're running with assertions.
-  // But when doing coverage, we can test it.
-#ifdef TOR_COVERAGE
+  // But when building without asserts, we can test it.
+#ifdef DISABLE_ASSERTS_IN_UNIT_TESTS
   ret = rend_cache_store_v2_desc_as_client(desc_holder->desc_str,
                    "!xqunszqnaolrrfmtzgaki7mxelgvkj", mock_rend_query, NULL);
   tt_int_op(ret, OP_EQ, RCS_BADDESC);

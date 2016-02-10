@@ -45,9 +45,10 @@
 #error "Sorry; we don't support building with NDEBUG."
 #endif
 
-/* Don't use assertions during coverage. It leads to tons of unreached
- * branches which in reality are only assertions we didn't hit. */
-#ifdef TOR_COVERAGE
+/* Sometimes we don't want to use assertions during branch coverage tests; it
+ * leads to tons of unreached branches which in reality are only assertions we
+ * didn't hit. */
+#if defined(TOR_UNIT_TESTS) && defined(DISABLE_ASSERTS_IN_UNIT_TESTS)
 #define tor_assert(a) STMT_BEGIN                                        \
   (void)(a);                                                            \
   STMT_END
