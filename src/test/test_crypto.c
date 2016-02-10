@@ -1084,7 +1084,7 @@ test_crypto_digests(void *arg)
 {
   crypto_pk_t *k = NULL;
   ssize_t r;
-  digests_t pkey_digests;
+  common_digests_t pkey_digests;
   char digest[DIGEST_LEN];
 
   (void)arg;

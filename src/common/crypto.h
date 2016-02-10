@@ -113,7 +113,7 @@ typedef enum {
  **/
 typedef struct {
   char d[N_COMMON_DIGEST_ALGORITHMS][DIGEST256_LEN];
-} digests_t;
+} common_digests_t;
 
 typedef struct crypto_pk_t crypto_pk_t;
 typedef struct crypto_cipher_t crypto_cipher_t;
@@ -193,7 +193,7 @@ int crypto_pk_private_hybrid_decrypt(crypto_pk_t *env, char *to,
 int crypto_pk_asn1_encode(crypto_pk_t *pk, char *dest, size_t dest_len);
 crypto_pk_t *crypto_pk_asn1_decode(const char *str, size_t len);
 int crypto_pk_get_digest(const crypto_pk_t *pk, char *digest_out);
-int crypto_pk_get_all_digests(crypto_pk_t *pk, digests_t *digests_out);
+int crypto_pk_get_all_digests(crypto_pk_t *pk, common_digests_t *digests_out);
 int crypto_pk_get_fingerprint(crypto_pk_t *pk, char *fp_out,int add_space);
 int crypto_pk_get_hashed_fingerprint(crypto_pk_t *pk, char *fp_out);
 
@@ -222,7 +222,7 @@ int crypto_digest256(char *digest, const char *m, size_t len,
                      digest_algorithm_t algorithm);
 int crypto_digest512(char *digest, const char *m, size_t len,
                      digest_algorithm_t algorithm);
-int crypto_digest_all(digests_t *ds_out, const char *m, size_t len);
+int crypto_common_digests(common_digests_t *ds_out, const char *m, size_t len);
 struct smartlist_t;
 void crypto_digest_smartlist_prefix(char *digest_out, size_t len_out,
                                     const char *prepend,

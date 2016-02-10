@@ -82,8 +82,8 @@ struct tor_x509_cert_t {
   uint8_t *encoded;
   size_t encoded_len;
   unsigned pkey_digests_set : 1;
-  digests_t cert_digests;
-  digests_t pkey_digests;
+  common_digests_t cert_digests;
+  common_digests_t pkey_digests;
 };
 
 /** Holds a SSL object and its associated data.  Members are only
@@ -237,8 +237,8 @@ tor_x509_cert_t *tor_x509_cert_decode(const uint8_t *certificate,
                             size_t certificate_len);
 void tor_x509_cert_get_der(const tor_x509_cert_t *cert,
                       const uint8_t **encoded_out, size_t *size_out);
-const digests_t *tor_x509_cert_get_id_digests(const tor_x509_cert_t *cert);
-const digests_t *tor_x509_cert_get_cert_digests(const tor_x509_cert_t *cert);
+const common_digests_t *tor_x509_cert_get_id_digests(const tor_x509_cert_t *cert);
+const common_digests_t *tor_x509_cert_get_cert_digests(const tor_x509_cert_t *cert);
 int tor_tls_get_my_certs(int server,
                          const tor_x509_cert_t **link_cert_out,
                          const tor_x509_cert_t **id_cert_out);
