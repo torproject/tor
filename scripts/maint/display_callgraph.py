@@ -4,6 +4,8 @@ import cPickle
 
 data = cPickle.load(open("callgraph.pkl"))
 
+# data = data['modItems']
+
 callgraph = data['callgraph']
 closure = data['closure']
 sccs = data['sccs']

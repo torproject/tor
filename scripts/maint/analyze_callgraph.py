@@ -9,19 +9,28 @@ import os
 class Parser:
   def __init__(self):
     self.calls = {}
+    self.definedIn = {}
 
   def enter_func(self, name):
-    if self.infunc and not self.extern:
+    if self.infunc and not self.extern and self.calledfns:
+      if self.infunc in self.definedIn:
+        #print "{}: {} or {}?".format(
+        #  self.infunc, self.definedIn[self.infunc], self.module)
+        self.definedIn[self.infunc] = 'nil'
+      else:
+        self.definedIn[self.infunc] = self.module
       self.calls.setdefault(self.infunc, set()).update( self.calledfns )
 
     self.calledfns = set()
     self.infunc = name
     self.extern = False
 
-  def parse_callgraph_file(self, inp):
+  def parse_callgraph_file(self, inp, module):
     self.infunc = None
     self.extern = False
     self.calledfns = set()
+    self.module = module
+
     for line in inp:
        m = re.match(r"Call graph node for function: '([^']+)'", line)
        if m:
@@ -189,13 +198,27 @@ def connection_bottlenecks(callgraph):
 if __name__ == '__main__':
     p = Parser()
     for fname in sys.argv[1:]:
+      modname = re.sub(r'.*/', '', fname).replace('.callgraph', '.c')
       with open(fname, 'r') as f:
-        p.parse_callgraph_file(f)
+        p.parse_callgraph_file(f, modname)
 
-    sys.stdout.flush
+    sys.stdout.flush()
 
     print "Building callgraph"
     callgraph = p.extract_callgraph()
+    inModule = p.definedIn
+
+    print "Deriving module callgraph"
+    modCallgraph = {}
+    for fn in callgraph:
+      fnMod = inModule[fn]
+      for called in callgraph[fn]:
+        try:
+          calledMod = inModule[called]
+        except KeyError:
+            continue
+        modCallgraph.setdefault(fnMod, set()).add(calledMod)
+    del modCallgraph['nil']
 
     print "Finding strongly connected components"
     sccs = strongly_connected_components(callgraph)
@@ -206,11 +229,28 @@ if __name__ == '__main__':
     print "Finding bottlenecks..."
     bottlenecks = connection_bottlenecks(callgraph)
 
+    print "Finding module SCCs"
+    modSCCS = strongly_connected_components(modCallgraph)
+
+    print "Finding module TC"
+    modTC = transitive_closure(modCallgraph)
+
+    print "Finding module bottlenecks"
+    modB = connection_bottlenecks(modCallgraph)
+
     data = {
       'callgraph' : callgraph,
       'sccs' : sccs,
       'closure' : closure,
-      'bottlenecks' : bottlenecks }
+      'bottlenecks' : bottlenecks,
+      'modules' : p.definedIn,
+      'modItems' : {
+        'callgraph' : modCallgraph,
+        'sccs' : modSCCS,
+        'closure' : modTC,
+        'bottlenecks' : modB,
+      }
+    }
 
     with open('callgraph.pkl', 'w') as f:
       cPickle.dump(data, f)
