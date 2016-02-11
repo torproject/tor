@@ -206,6 +206,48 @@ For example, `crypto_curve25519.h` contains:
 The `crypto_curve25519.c` file and the `test_crypto.c` file both define
 `CRYPTO_CURVE25519_PRIVATE`, so they can see this declaration.
 
+### STOP!  Does this test really test?
+
+When writing tests, it's not enough to just generate coverage on all the
+lines of the code that you're testing:  It's important to make sure that
+the test _really tests_ the code.
+
+For example, here is a _bad_ test for the unlink() function (which is
+supposed to remove a file).
+
+    static void
+    test_unlink_badly(void *arg)
+    {
+      (void) arg;
+      int r;
+
+      const char *fname = get_fname("tmpfile");
+
+      /* If the file isn't there, unlink returns -1 and sets ENOENT */
+      r = unlink(fname);
+      tt_int_op(n, OP_EQ, -1);
+      tt_int_op(errno, OP_EQ, ENOENT);
+
+      /* If the file DOES exist, unlink returns 0. */
+      write_str_to_file(fname, "hello world", 0);
+      r = unlink(fnme);
+      tt_int_op(r, OP_EQ, 0);
+
+    done:
+      tor_free(contents);
+    }
+
+
+This test might get very high coverage on unlink().  So why is it a
+bad test? Because it doesn't check that unlink() *actually removes the
+named file*!
+
+Remember, the purpose of a test is to succeed if the code does what
+it's supposed to do, and fail otherwise.  Try to design your tests so
+that they check for the code's intended and documented functionality
+as much as possible.
+
+
 ### Mock functions for testing in isolation
 
 Often we want to test that a function works right, but the function to
