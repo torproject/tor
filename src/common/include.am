@@ -129,6 +129,7 @@ COMMONHEADERS = \
   src/common/crypto_pwbox.h			\
   src/common/crypto_s2k.h			\
   src/common/di_ops.h				\
+  src/common/handles.h				\
   src/common/memarea.h				\
   src/common/linux_syscalls.inc			\
   src/common/procmon.h				\
