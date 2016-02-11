@@ -1,0 +1,5 @@
+  o Minor features (robustness):
+    - Exit immediately with an error message if the code attempts to
+      use libevent without having initialized it. This should resolve
+      some frequently-made mistakes in our unit tests. Closes ticket
+      18241.
