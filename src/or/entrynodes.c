@@ -2124,8 +2124,9 @@ launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
    * it. If we  */
   if (!fascist_firewall_allows_address_addr(&bridge->addr, bridge->port,
                                             FIREWALL_OR_CONNECTION, 0)) {
-    log_notice(LD_CONFIG, "Tried to fetch a descriptor directly from a bridge, "
-               "but that bridge is not reachable through our firewall.");
+    log_notice(LD_CONFIG, "Tried to fetch a descriptor directly from a "
+               "bridge, but that bridge is not reachable through our "
+               "firewall.");
     return;
   }
 

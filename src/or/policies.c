@@ -421,7 +421,8 @@ fascist_firewall_allows_address(const tor_addr_t *addr,
 
 /** Is this client configured to use IPv6?
  */
-int fascist_firewall_use_ipv6(const or_options_t *options)
+int
+fascist_firewall_use_ipv6(const or_options_t *options)
 {
   /* Clients use IPv6 if it's set, or they use bridges, or they don't use
    * IPv4 */
@@ -513,14 +514,14 @@ fascist_firewall_allows_address_addr(const tor_addr_t *addr, uint16_t port,
 
   if (fw_connection == FIREWALL_OR_CONNECTION) {
     return fascist_firewall_allows_address(addr, port,
-                                        reachable_or_addr_policy,
-                                        pref_only,
-                                        fascist_firewall_prefer_ipv6_orport(options));
+                               reachable_or_addr_policy,
+                               pref_only,
+                               fascist_firewall_prefer_ipv6_orport(options));
   } else if (fw_connection == FIREWALL_DIR_CONNECTION) {
     return fascist_firewall_allows_address(addr, port,
-                                        reachable_dir_addr_policy,
-                                        pref_only,
-                                        fascist_firewall_prefer_ipv6_dirport(options));
+                               reachable_dir_addr_policy,
+                               pref_only,
+                               fascist_firewall_prefer_ipv6_dirport(options));
   } else {
     log_warn(LD_BUG, "Bad firewall_connection_t value %d.",
              fw_connection);

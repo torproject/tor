@@ -4092,8 +4092,8 @@ typedef struct {
   int ClientUseIPv6;
   /** If true, prefer an IPv6 OR port over an IPv4 one for entry node
    * connections. If auto, bridge clients prefer IPv6, and other clients
-   * prefer IPv4. Use fascist_firewall_prefer_ipv6_orport() instead of accessing
-   * this value directly. */
+   * prefer IPv4. Use fascist_firewall_prefer_ipv6_orport() instead of
+   * accessing this value directly. */
   int ClientPreferIPv6ORPort;
   /** If true, prefer an IPv6 directory port over an IPv4 one for direct
    * directory connections. If auto, bridge clients prefer IPv6, and other

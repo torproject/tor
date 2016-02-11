@@ -1546,7 +1546,6 @@ test_policies_fascist_firewall_choose_address(void *arg)
                                             FIREWALL_DIR_CONNECTION, 1)
             == &ipv6_dir_ap);
 
-
   /* In the default configuration (Auto / IPv6 off), bridge clients should
    * still use IPv6, and only prefer it for bridges configured with an IPv6
    * address, regardless of ClientUseIPv6. */
