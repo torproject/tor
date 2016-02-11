@@ -58,11 +58,16 @@ smartlist_clear(smartlist_t *sl)
   sl->num_used = 0;
 }
 
+#if SIZE_MAX < INT_MAX
+#error "We don't support systems where size_t is smaller than int."
+#endif
+
 /** Make sure that <b>sl</b> can hold at least <b>size</b> entries. */
 static INLINE void
 smartlist_ensure_capacity(smartlist_t *sl, size_t size)
 {
-#if SIZEOF_SIZE_T > SIZEOF_INT
+  /* Set MAX_CAPACITY to MIN(INT_MAX, SIZE_MAX / sizeof(void*)) */
+#if (SIZE_MAX/SIZEOF_VOID_P) > INT_MAX
 #define MAX_CAPACITY (INT_MAX)
 #else
 #define MAX_CAPACITY (int)((SIZE_MAX / (sizeof(void*))))
