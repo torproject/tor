@@ -1,0 +1,7 @@
+  o Major bugfixes (security, pointers):
+
+    - Avoid a difficult-to-trigger heap corruption attack when extending
+      a smartlist to contain over 16GB of pointers. Fixes bug #18162;
+      bugfix on Tor 0.1.1.11-alpha, which fixed a related bug
+      incompletely. Reported by Guido Vranken.
+

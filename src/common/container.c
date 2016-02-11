@@ -58,31 +58,33 @@ smartlist_clear(smartlist_t *sl)
   sl->num_used = 0;
 }
 
+#if SIZE_MAX < INT_MAX
+#error "We don't support systems where size_t is smaller than int."
+#endif
+
 /** Make sure that <b>sl</b> can hold at least <b>size</b> entries. */
 static INLINE void
-smartlist_ensure_capacity(smartlist_t *sl, int size)
+smartlist_ensure_capacity(smartlist_t *sl, size_t size)
 {
-#if SIZEOF_SIZE_T > SIZEOF_INT
+  /* Set MAX_CAPACITY to MIN(INT_MAX, SIZE_MAX / sizeof(void*)) */
+#if (SIZE_MAX/SIZEOF_VOID_P) > INT_MAX
 #define MAX_CAPACITY (INT_MAX)
 #else
 #define MAX_CAPACITY (int)((SIZE_MAX / (sizeof(void*))))
-#define ASSERT_CAPACITY
 #endif
-  if (size > sl->capacity) {
-    int higher = sl->capacity;
+
+  tor_assert(size <= MAX_CAPACITY);
+
+  if (size > (size_t) sl->capacity) {
+    size_t higher = (size_t) sl->capacity;
     if (PREDICT_UNLIKELY(size > MAX_CAPACITY/2)) {
-#ifdef ASSERT_CAPACITY
-      /* We don't include this assertion when MAX_CAPACITY == INT_MAX,
-       * since int size; (size <= INT_MAX) makes analysis tools think we're
-       * doing something stupid. */
-      tor_assert(size <= MAX_CAPACITY);
-#endif
       higher = MAX_CAPACITY;
     } else {
       while (size > higher)
         higher *= 2;
     }
-    sl->capacity = higher;
+    tor_assert(higher <= INT_MAX); /* Redundant */
+    sl->capacity = (int) higher;
     sl->list = tor_reallocarray(sl->list, sizeof(void *),
                                 ((size_t)sl->capacity));
   }
@@ -94,7 +96,7 @@ smartlist_ensure_capacity(smartlist_t *sl, int size)
 void
 smartlist_add(smartlist_t *sl, void *element)
 {
-  smartlist_ensure_capacity(sl, sl->num_used+1);
+  smartlist_ensure_capacity(sl, ((size_t) sl->num_used)+1);
   sl->list[sl->num_used++] = element;
 }
 
@@ -102,11 +104,12 @@ smartlist_add(smartlist_t *sl, void *element)
 void
 smartlist_add_all(smartlist_t *s1, const smartlist_t *s2)
 {
-  int new_size = s1->num_used + s2->num_used;
-  tor_assert(new_size >= s1->num_used); /* check for overflow. */
+  size_t new_size = (size_t)s1->num_used + (size_t)s2->num_used;
+  tor_assert(new_size >= (size_t) s1->num_used); /* check for overflow. */
   smartlist_ensure_capacity(s1, new_size);
   memcpy(s1->list + s1->num_used, s2->list, s2->num_used*sizeof(void*));
-  s1->num_used = new_size;
+  tor_assert(new_size <= INT_MAX); /* redundant. */
+  s1->num_used = (int) new_size;
 }
 
 /** Remove all elements E from sl such that E==element.  Preserve
@@ -362,7 +365,7 @@ smartlist_insert(smartlist_t *sl, int idx, void *val)
   if (idx == sl->num_used) {
     smartlist_add(sl, val);
   } else {
-    smartlist_ensure_capacity(sl, sl->num_used+1);
+    smartlist_ensure_capacity(sl, ((size_t) sl->num_used)+1);
     /* Move other elements away */
     if (idx < sl->num_used)
       memmove(sl->list + idx + 1, sl->list + idx,
