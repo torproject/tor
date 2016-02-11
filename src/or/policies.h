@@ -22,13 +22,55 @@
 #define EXIT_POLICY_REJECT_PRIVATE (1 << 1)
 #define EXIT_POLICY_ADD_DEFAULT    (1 << 2)
 
+typedef enum firewall_connection_t {
+  FIREWALL_OR_CONNECTION      = 0,
+  FIREWALL_DIR_CONNECTION     = 1
+} firewall_connection_t;
+
 typedef int exit_policy_parser_cfg_t;
 
 int firewall_is_fascist_or(void);
-int fascist_firewall_allows_address_or(const tor_addr_t *addr, uint16_t port);
-int fascist_firewall_allows_or(const routerinfo_t *ri);
-int fascist_firewall_allows_node(const node_t *node);
-int fascist_firewall_allows_address_dir(const tor_addr_t *addr, uint16_t port);
+int firewall_is_fascist_dir(void);
+int fascist_firewall_use_ipv6(const or_options_t *options);
+int fascist_firewall_prefer_ipv6_orport(const or_options_t *options);
+int fascist_firewall_prefer_ipv6_dirport(const or_options_t *options);
+
+int fascist_firewall_allows_address_addr(const tor_addr_t *addr, uint16_t port,
+                                         firewall_connection_t fw_connection,
+                                         int pref_only);
+int fascist_firewall_allows_address_ap(const tor_addr_port_t *ap,
+                                       firewall_connection_t fw_connection,
+                                       int pref_only);
+int fascist_firewall_allows_address_ipv4h(uint32_t ipv4h_or_addr,
+                                          uint16_t ipv4_or_port,
+                                          firewall_connection_t fw_connection,
+                                          int pref_only);
+int fascist_firewall_allows_rs(const routerstatus_t *rs,
+                               firewall_connection_t fw_connection,
+                               int pref_only);
+int fascist_firewall_allows_node(const node_t *node,
+                                 firewall_connection_t fw_connection,
+                                 int pref_only);
+int fascist_firewall_allows_dir_server(const dir_server_t *ds,
+                                       firewall_connection_t fw_connection,
+                                       int pref_only);
+
+const tor_addr_port_t * fascist_firewall_choose_address(
+                                          const tor_addr_port_t *a,
+                                          const tor_addr_port_t *b,
+                                          int want_a,
+                                          firewall_connection_t fw_connection,
+                                          int pref_only);
+int fascist_firewall_choose_address_rs(const routerstatus_t *rs,
+                                       firewall_connection_t fw_connection,
+                                       int pref_only, tor_addr_port_t* ap);
+int fascist_firewall_choose_address_node(const node_t *node,
+                                         firewall_connection_t fw_connection,
+                                         int pref_only, tor_addr_port_t* ap);
+int fascist_firewall_choose_address_dir_server(const dir_server_t *ds,
+                                          firewall_connection_t fw_connection,
+                                           int pref_only, tor_addr_port_t* ap);
+
 int dir_policy_permits_address(const tor_addr_t *addr);
 int socks_policy_permits_address(const tor_addr_t *addr);
 int authdir_policy_permits_address(uint32_t addr, uint16_t port);
@@ -94,6 +136,10 @@ addr_policy_result_t compare_tor_addr_to_short_policy(
 
 #ifdef POLICIES_PRIVATE
 STATIC void append_exit_policy_string(smartlist_t **policy, const char *more);
+STATIC int fascist_firewall_allows_address(const tor_addr_t *addr,
+                                           uint16_t port,
+                                           smartlist_t *firewall_policy,
+                                           int pref_only, int pref_ipv6);
 #endif
 
 #endif

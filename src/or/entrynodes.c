@@ -87,7 +87,7 @@ get_entry_guards(void)
 
 /** Check whether the entry guard <b>e</b> is usable, given the directory
  * authorities' opinion about the router (stored in <b>ri</b>) and the user's
- * configuration (in <b>options</b>). Set <b>e</b>-&gt;bad_since
+ * configuration (in <b>options</b>). Set <b>e</b>->bad_since
  * accordingly. Return true iff the entry guard's status changes.
  *
  * If it's not usable, set *<b>reason</b> to a static string explaining why.
@@ -117,6 +117,9 @@ entry_guard_set_status(entry_guard_t *e, const node_t *node,
     *reason = "not recommended as a guard";
   else if (routerset_contains_node(options->ExcludeNodes, node))
     *reason = "excluded";
+  /* We only care about OR connection connectivity for entry guards. */
+  else if (!fascist_firewall_allows_node(node, FIREWALL_OR_CONNECTION, 0))
+    *reason = "unreachable by config";
   else if (e->path_bias_disabled)
     *reason = "path-biased";
 
@@ -268,7 +271,7 @@ entry_is_live(const entry_guard_t *e, entry_is_live_flags_t flags,
     *msg = "not fast/stable";
     return NULL;
   }
-  if (!fascist_firewall_allows_node(node)) {
+  if (!fascist_firewall_allows_node(node, FIREWALL_OR_CONNECTION, 0)) {
     *msg = "unreachable by config";
     return NULL;
   }
@@ -918,7 +921,8 @@ entry_guards_set_from_config(const or_options_t *options)
     } else if (routerset_contains_node(options->ExcludeNodes, node)) {
       SMARTLIST_DEL_CURRENT(entry_nodes, node);
       continue;
-    } else if (!fascist_firewall_allows_node(node)) {
+    } else if (!fascist_firewall_allows_node(node, FIREWALL_OR_CONNECTION,
+                                             0)) {
       SMARTLIST_DEL_CURRENT(entry_nodes, node);
       continue;
     } else if (! node->is_possible_guard) {
@@ -2116,8 +2120,17 @@ launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
     return;
   }
 
-  directory_initiate_command(&bridge->addr,
-                             bridge->port, 0/*no dirport*/,
+  /* Until we get a descriptor for the bridge, we only know one address for
+   * it. If we  */
+  if (!fascist_firewall_allows_address_addr(&bridge->addr, bridge->port,
+                                            FIREWALL_OR_CONNECTION, 0)) {
+    log_notice(LD_CONFIG, "Tried to fetch a descriptor directly from a bridge, "
+               "but that bridge is not reachable through our firewall.");
+    return;
+  }
+
+  directory_initiate_command(&bridge->addr, bridge->port,
+                             NULL, 0, /*no dirport*/
                              bridge->identity,
                              DIR_PURPOSE_FETCH_SERVERDESC,
                              ROUTER_PURPOSE_BRIDGE,
@@ -2178,7 +2191,8 @@ fetch_bridge_descriptors(const or_options_t *options, time_t now)
                 !options->UpdateBridgesFromAuthority, !num_bridge_auths);
 
       if (ask_bridge_directly &&
-          !fascist_firewall_allows_address_or(&bridge->addr, bridge->port)) {
+          !fascist_firewall_allows_address_addr(&bridge->addr, bridge->port,
+                                                FIREWALL_OR_CONNECTION, 0)) {
         log_notice(LD_DIR, "Bridge at '%s' isn't reachable by our "
                    "firewall policy. %s.",
                    fmt_addrport(&bridge->addr, bridge->port),
@@ -2226,6 +2240,7 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
    *   does so through an address from any source other than node_get_addr().
    */
   tor_addr_t addr;
+  const or_options_t *options = get_options();
 
   if (node->ri) {
     routerinfo_t *ri = node->ri;
@@ -2258,9 +2273,15 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
       }
     }
 
-    /* Mark which address to use based on which bridge_t we got. */
-    node->ipv6_preferred = (tor_addr_family(&bridge->addr) == AF_INET6 &&
-                            !tor_addr_is_null(&node->ri->ipv6_addr));
+    if (options->ClientPreferIPv6ORPort == -1) {
+      /* Mark which address to use based on which bridge_t we got. */
+      node->ipv6_preferred = (tor_addr_family(&bridge->addr) == AF_INET6 &&
+                              !tor_addr_is_null(&node->ri->ipv6_addr));
+    } else {
+      /* Mark which address to use based on user preference */
+      node->ipv6_preferred = (fascist_firewall_prefer_ipv6_orport(options) &&
+                              !tor_addr_is_null(&node->ri->ipv6_addr));
+    }
 
     /* XXXipv6 we lack support for falling back to another address for
        the same relay, warn the user */
@@ -2269,10 +2290,13 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
       node_get_pref_orport(node, &ap);
       log_notice(LD_CONFIG,
                  "Bridge '%s' has both an IPv4 and an IPv6 address.  "
-                 "Will prefer using its %s address (%s).",
+                 "Will prefer using its %s address (%s) based on %s.",
                  ri->nickname,
-                 tor_addr_family(&ap.addr) == AF_INET6 ? "IPv6" : "IPv4",
-                 fmt_addrport(&ap.addr, ap.port));
+                 node->ipv6_preferred ? "IPv6" : "IPv4",
+                 fmt_addrport(&ap.addr, ap.port),
+                 options->ClientPreferIPv6ORPort == -1 ?
+                 "the configured Bridge address" :
+                 "ClientPreferIPv6ORPort");
     }
   }
   if (node->rs) {
