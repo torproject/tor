@@ -53,7 +53,7 @@ static void cpath_ref_decref(crypt_path_reference_t *cpath_ref);
 //static void circuit_set_rend_token(or_circuit_t *circ, int is_rend_circ,
 //                                   const uint8_t *token);
 static void circuit_clear_rend_token(or_circuit_t *circ);
-static void circuit_about_to_free_terminal(circuit_t *circ);
+static void circuit_about_to_free_atexit(circuit_t *circ);
 static void circuit_about_to_free(circuit_t *circ);
 
 /********* END VARIABLES ************/
@@ -902,7 +902,7 @@ circuit_free_all(void)
       }
     }
     tmp->global_circuitlist_idx = -1;
-    circuit_about_to_free_terminal(tmp);
+    circuit_about_to_free_atexit(tmp);
     circuit_free(tmp);
     SMARTLIST_DEL_CURRENT(lst, tmp);
   } SMARTLIST_FOREACH_END(tmp);
@@ -1752,7 +1752,7 @@ circuit_mark_for_close_, (circuit_t *circ, int reason, int line,
  * do circuitmux_detach_circuit() when appropriate.
  */
 static void
-circuit_about_to_free_terminal(circuit_t *circ)
+circuit_about_to_free_atexit(circuit_t *circ)
 {
 
   if (circ->n_chan) {
