@@ -1703,19 +1703,21 @@ exit_policy_remove_redundancies(smartlist_t *dest)
 /** Reject private helper for policies_parse_exit_policy_internal: rejects
  * publicly routable addresses on this exit relay.
  *
- * Add reject entries to the linked list *dest:
- *   - if configured_addresses is non-NULL, add entries that reject each
- *     tor_addr_t* in the list as a destination.
- *   - if reject_interface_addresses is true, add entries that reject each
+ * Add reject entries to the linked list *<b>dest</b>:
+ * <ul>
+ * <li>if configured_addresses is non-NULL, add entries that reject each
+ *     tor_addr_t in the list as a destination.
+ * <li>if reject_interface_addresses is true, add entries that reject each
  *     public IPv4 and IPv6 address of each interface on this machine.
- *   - if reject_configured_port_addresses is true, add entries that reject
+ * <li>if reject_configured_port_addresses is true, add entries that reject
  *     each IPv4 and IPv6 address configured for a port.
+ * </ul>
  *
  * IPv6 entries are only added if ipv6_exit is true. (All IPv6 addresses are
  * already blocked by policies_parse_exit_policy_internal if ipv6_exit is
  * false.)
  *
- * The list *dest is created as needed.
+ * The list in <b>dest</b> is created as needed.
  */
 void
 policies_parse_exit_policy_reject_private(

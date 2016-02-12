@@ -2693,7 +2693,7 @@ options_validate_cb(void *old_options, void *options, void *default_options,
 
 /** Log a warning message iff <b>filepath</b> is not absolute.
  * Warning message must contain option name <b>option</b> and
- * an absolute path that <b>filepath<b> will resolve to.
+ * an absolute path that <b>filepath</b> will resolve to.
  *
  * In case <b>filepath</b> is absolute, do nothing.
  */
