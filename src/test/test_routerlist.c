@@ -434,8 +434,10 @@ test_routerlist_router_is_already_dir_fetching(void *arg)
 
  done:
   /* If a connection is never set up, connection_free chokes on it. */
-  buf_free(mocked_connection->inbuf);
-  buf_free(mocked_connection->outbuf);
+  if (mocked_connection) {
+    buf_free(mocked_connection->inbuf);
+    buf_free(mocked_connection->outbuf);
+  }
   tor_free(mocked_connection);
   UNMOCK(connection_get_by_type_addr_port_purpose);
 }
