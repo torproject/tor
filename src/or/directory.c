@@ -1004,7 +1004,7 @@ directory_initiate_command(const tor_addr_t *or_addr, uint16_t or_port,
   } else {
     /* the family doesn't matter here, so make it IPv4 */
     tor_addr_make_null(&or_ap.addr, AF_INET);
-    or_port = 0;
+    or_ap.port = or_port = 0;
   }
 
   if (tor_addr_port_is_valid(dir_addr, dir_port, 0)) {
@@ -1013,7 +1013,7 @@ directory_initiate_command(const tor_addr_t *or_addr, uint16_t or_port,
   } else {
     /* the family doesn't matter here, so make it IPv4 */
     tor_addr_make_null(&dir_ap.addr, AF_INET);
-    dir_port = 0;
+    dir_ap.port = dir_port = 0;
   }
 
   directory_initiate_command_rend(&or_ap, &dir_ap,
