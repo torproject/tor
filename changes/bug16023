@@ -1,0 +1,4 @@
+  o Minor feature (hidden service, control port)
+    - Add the onion address to the HS_DESC event for the UPLOADED action
+      both on success or failure. It was previously hardcoded with UNKNOWN.
+      Fixes #16023;

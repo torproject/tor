@@ -2364,16 +2364,21 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   if (conn->base_.purpose == DIR_PURPOSE_UPLOAD_RENDDESC_V2) {
     #define SEND_HS_DESC_UPLOAD_FAILED_EVENT(reason) ( \
       control_event_hs_descriptor_upload_failed(conn->identity_digest, \
+                                                conn->rend_data->onion_address, \
                                                 reason) )
     log_info(LD_REND,"Uploaded rendezvous descriptor (status %d "
              "(%s))",
              status_code, escaped(reason));
+    /* Without the rend data, we'll have a problem identifying what has been
+     * uploaded for which service. */
+    tor_assert(conn->rend_data);
     switch (status_code) {
       case 200:
         log_info(LD_REND,
                  "Uploading rendezvous descriptor: finished with status "
                  "200 (%s)", escaped(reason));
-        control_event_hs_descriptor_uploaded(conn->identity_digest);
+        control_event_hs_descriptor_uploaded(conn->identity_digest,
+                                             conn->rend_data->onion_address);
         rend_service_desc_has_uploaded(conn->rend_data);
         break;
       case 400:
