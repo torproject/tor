@@ -1,0 +1,4 @@
+  o Minor bugfixes (containers):
+    - If we somehow attempt to construct a heap with more than
+      1073741822 elements, avoid an integer overflow when maintaining
+      the heap property.  Fixes bug 18296; bugfix on 0.1.2.1-alpha.

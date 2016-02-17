@@ -840,9 +840,17 @@ smartlist_sort_pointers(smartlist_t *sl)
  *
  * For a 1-indexed array, we would use LEFT_CHILD[x] = 2*x and RIGHT_CHILD[x]
  *   = 2*x + 1.  But this is C, so we have to adjust a little. */
-//#define LEFT_CHILD(i)  ( ((i)+1)*2 - 1)
-//#define RIGHT_CHILD(i) ( ((i)+1)*2 )
-//#define PARENT(i)      ( ((i)+1)/2 - 1)
+
+/* MAX_PARENT_IDX is the largest IDX in the smartlist which might have
+ * children whose indices fit inside an int.
+ * LEFT_CHILD(MAX_PARENT_IDX) == INT_MAX-2;
+ * RIGHT_CHILD(MAX_PARENT_IDX) == INT_MAX-1;
+ * LEFT_CHILD(MAX_PARENT_IDX + 1) == INT_MAX // impossible, see max list size.
+ */
+#define MAX_PARENT_IDX ((INT_MAX - 2) / 2)
+/* If this is true, then i is small enough to potentially have children
+ * in the smartlist, and it is save to use LEFT_CHILD/RIGHT_CHILD on it. */
+#define IDX_MAY_HAVE_CHILDREN(i) ((i) <= MAX_PARENT_IDX)
 #define LEFT_CHILD(i)  ( 2*(i) + 1 )
 #define RIGHT_CHILD(i) ( 2*(i) + 2 )
 #define PARENT(i)      ( ((i)-1) / 2 )
@@ -876,6 +884,14 @@ smartlist_heapify(smartlist_t *sl,
                   int idx)
 {
   while (1) {
+    if (! IDX_MAY_HAVE_CHILDREN(idx)) {
+      /* idx is so large that it cannot have any children, since doing so
+       * would mean the smartlist was over-capacity. Therefore it cannot
+       * violate the heap property by being greater than a child (since it
+       * doesn't have any). */
+      return;
+    }
+
     int left_idx = LEFT_CHILD(idx);
     int best_idx;
 
