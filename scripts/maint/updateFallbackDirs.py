@@ -79,7 +79,11 @@ MAX_LIST_FILE_SIZE = 1024 * 1024
 
 ## Eligibility Settings
 
-ADDRESS_AND_PORT_STABLE_DAYS = 120
+# Reduced due to a bug in tor where a relay submits a 0 DirPort when restarted
+# This causes OnionOO to (correctly) reset its stability timer
+# This issue is fixed in 0.2.7.7 and master.
+# Until then, the CUTOFFs below ensure a decent level of stability.
+ADDRESS_AND_PORT_STABLE_DAYS = 7
 # What time-weighted-fraction of these flags must FallbackDirs
 # Equal or Exceed?
 CUTOFF_RUNNING = .95
@@ -109,7 +113,7 @@ FALLBACK_PROPORTION_OF_GUARDS = None if OUTPUT_CANDIDATES else 0.2
 # Limit the number of fallbacks (eliminating lowest by weight)
 MAX_FALLBACK_COUNT = None if OUTPUT_CANDIDATES else 500
 # Emit a C #error if the number of fallbacks is below
-MIN_FALLBACK_COUNT = 100
+MIN_FALLBACK_COUNT = 50
 
 ## Fallback Weight Settings
 
