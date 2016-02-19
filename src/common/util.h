@@ -29,6 +29,9 @@
 #ifndef O_TEXT
 #define O_TEXT 0
 #endif
+#ifndef O_NOFOLLOW
+#define O_NOFOLLOW 0
+#endif
 
 /* Replace assert() with a variant that sends failures to the log before
  * calling assert() normally.
