@@ -45,6 +45,7 @@ void rend_intro_point_free(rend_intro_point_t *intro);
 
 int rend_valid_service_id(const char *query);
 int rend_valid_descriptor_id(const char *query);
+int rend_valid_client_name(const char *client_name);
 int rend_encode_v2_descriptors(smartlist_t *descs_out,
                                rend_service_descriptor_t *desc, time_t now,
                                uint8_t period, rend_auth_type_t auth_type,

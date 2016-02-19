@@ -750,6 +750,22 @@ rend_valid_descriptor_id(const char *query)
   return 0;
 }
 
+/** Return true iff <b>client_name</b> is a syntactically valid name
+ * for rendezvous client authentication. */
+int
+rend_valid_client_name(const char *client_name)
+{
+  size_t len = strlen(client_name);
+  if (len < 1 || len > REND_CLIENTNAME_MAX_LEN) {
+    return 0;
+  }
+  if (strspn(client_name, REND_LEGAL_CLIENTNAME_CHARACTERS) != len) {
+    return 0;
+  }
+
+  return 1;
+}
+
 /** Called when we get a rendezvous-related relay cell on circuit
  * <b>circ</b>.  Dispatch on rendezvous relay command. */
 void

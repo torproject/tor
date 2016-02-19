@@ -672,22 +672,12 @@ rend_config_services(const or_options_t *options, int validate_only)
       SMARTLIST_FOREACH_BEGIN(clients, const char *, client_name)
       {
         rend_authorized_client_t *client;
-        size_t len = strlen(client_name);
-        if (len < 1 || len > REND_CLIENTNAME_MAX_LEN) {
+        if (!rend_valid_client_name(client_name)) {
           log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains an "
-                              "illegal client name: '%s'. Length must be "
-                              "between 1 and %d characters.",
+                              "illegal client name: '%s'. Names must be "
+                              "between 1 and %d characters and contain "
+                              "only [A-Za-z0-9+_-].",
                    client_name, REND_CLIENTNAME_MAX_LEN);
-          SMARTLIST_FOREACH(clients, char *, cp, tor_free(cp));
-          smartlist_free(clients);
-          rend_service_free(service);
-          return -1;
-        }
-        if (strspn(client_name, REND_LEGAL_CLIENTNAME_CHARACTERS) != len) {
-          log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains an "
-                              "illegal client name: '%s'. Valid "
-                              "characters are [A-Za-z0-9+_-].",
-                   client_name);
           SMARTLIST_FOREACH(clients, char *, cp, tor_free(cp));
           smartlist_free(clients);
           rend_service_free(service);
