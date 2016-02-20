@@ -972,7 +972,7 @@ directory_command_should_use_begindir(const or_options_t *options,
     return 0;
   if (indirection == DIRIND_ONEHOP)
     if (!fascist_firewall_allows_address_addr(addr, or_port,
-                                              FIREWALL_OR_CONNECTION, 0) ||
+                                              FIREWALL_OR_CONNECTION, 0, 0) ||
         directory_fetches_from_authorities(options))
       return 0; /* We're firewalled or are acting like a relay -- also no. */
   return 1;

@@ -981,6 +981,9 @@ node_has_ipv6_dirport(const node_t *node)
  *  i) the node_t says that it prefers IPv6
  *  or
  *  ii) the router has no IPv4 OR address.
+ *
+ * If you don't have a node, consider looking it up.
+ * If there is no node, use fascist_firewall_prefer_ipv6_orport().
  */
 int
 node_ipv6_or_preferred(const node_t *node)
@@ -1078,6 +1081,8 @@ node_get_pref_ipv6_orport(const node_t *node, tor_addr_port_t *ap_out)
  *  i) the router has no IPv4 Dir address.
  *  or
  *  ii) our preference is for IPv6 Dir addresses.
+ *
+ * If there is no node, use fascist_firewall_prefer_ipv6_dirport().
  */
 int
 node_ipv6_dir_preferred(const node_t *node)

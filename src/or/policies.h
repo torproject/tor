@@ -38,7 +38,7 @@ int fascist_firewall_prefer_ipv6_dirport(const or_options_t *options);
 int fascist_firewall_allows_address_addr(const tor_addr_t *addr,
                                          uint16_t port,
                                          firewall_connection_t fw_connection,
-                                         int pref_only);
+                                         int pref_only, int pref_ipv6);
 
 int fascist_firewall_allows_rs(const routerstatus_t *rs,
                                firewall_connection_t fw_connection,
@@ -58,7 +58,7 @@ int fascist_firewall_choose_address_node(const node_t *node,
                                          int pref_only, tor_addr_port_t* ap);
 int fascist_firewall_choose_address_dir_server(const dir_server_t *ds,
                                           firewall_connection_t fw_connection,
-                                           int pref_only, tor_addr_port_t* ap);
+                                          int pref_only, tor_addr_port_t* ap);
 
 int dir_policy_permits_address(const tor_addr_t *addr);
 int socks_policy_permits_address(const tor_addr_t *addr);
@@ -134,7 +134,7 @@ STATIC const tor_addr_port_t * fascist_firewall_choose_address(
                                           const tor_addr_port_t *b,
                                           int want_a,
                                           firewall_connection_t fw_connection,
-                                          int pref_only);
+                                          int pref_only, int pref_ipv6);
 
 #endif
 
