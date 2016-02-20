@@ -883,22 +883,6 @@ fascist_firewall_choose_address_ipv4h(uint32_t ipv4h_addr,
                                               fw_connection, pref_only, ap);
 }
 
-#define IPV6_OR_LOOKUP(r, identity_digest, ipv6_or_ap) \
-  STMT_BEGIN \
-    if (!(r)->ipv6_orport || tor_addr_is_null(&(r)->ipv6_addr)) { \
-      const node_t *node = node_get_by_id((identity_digest)); \
-      if (node) { \
-        node_get_pref_ipv6_orport(node, &(ipv6_or_ap)); \
-      } else { \
-        tor_addr_make_null(&(ipv6_or_ap).addr, AF_INET6); \
-        (ipv6_or_ap).port = 0; \
-      } \
-    } else { \
-      tor_addr_copy(&(ipv6_or_ap).addr, &(r)->ipv6_addr); \
-      (ipv6_or_ap).port = (r)->ipv6_orport; \
-    } \
-  STMT_END
-
 /** Copy an address and port from <b>rs</b> into <b>ap</b> that we think our
  * firewall will let us connect to. Uses ipv4h_addr/ipv6_addr and
  * ipv4_orport/ipv6_orport/ReachableORAddresses or
@@ -922,7 +906,18 @@ fascist_firewall_choose_address_rs(const routerstatus_t *rs,
   /* Don't do the lookup if the IPv6 address/port in rs is OK.
    * If it's OK, assume the dir_port is also OK. */
   tor_addr_port_t ipv6_or_ap;
-  IPV6_OR_LOOKUP(rs, rs->identity_digest, ipv6_or_ap);
+  if (!rs->ipv6_orport || tor_addr_is_null(&rs->ipv6_addr)) {
+    const node_t *node = node_get_by_id(rs->identity_digest);
+    if (node) {
+      node_get_pref_ipv6_orport(node, &ipv6_or_ap);
+    } else {
+      tor_addr_make_null(&ipv6_or_ap.addr, AF_INET6);
+      ipv6_or_ap.port = 0;
+    }
+  } else {
+    tor_addr_copy(&ipv6_or_ap.addr, &rs->ipv6_addr);
+    ipv6_or_ap.port = rs->ipv6_orport;
+  }
 
   /* Assume IPv4 and IPv6 DirPorts are the same.
    * Assume the IPv6 OR and Dir addresses are the same. */
