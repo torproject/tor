@@ -1,0 +1,5 @@
+  o Major bug fixes (relays, bridge clients):
+    - Ensure relays always allow IPv4 OR and Dir connections.
+      Ensure bridge clients use the address configured in the bridge line.
+      Fixes bug 18348; bugfix on 0.2.8.1-alpha.
+      Reported by sysrqb, patch by teor.
