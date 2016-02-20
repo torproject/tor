@@ -1566,14 +1566,14 @@ router_picked_poor_directory_log(const routerstatus_t *rs)
   } else if (!fascist_firewall_allows_rs(rs, FIREWALL_OR_CONNECTION, 1)
              && !fascist_firewall_allows_rs(rs, FIREWALL_DIR_CONNECTION, 1)
              ) {
-    log_warn(LD_BUG, "Selected a directory %s with non-preferred OR and Dir "
+    log_info(LD_BUG, "Selected a directory %s with non-preferred OR and Dir "
              "addresses for launching a connection: "
              "IPv4 %s OR %d Dir %d IPv6 %s OR %d Dir %d",
              routerstatus_describe(rs),
              fmt_addr32(rs->addr), rs->or_port,
              rs->dir_port, fmt_addr(&rs->ipv6_addr),
              rs->ipv6_orport, rs->dir_port);
-    log_backtrace(LOG_WARN, LD_BUG, "Node search initiated by");
+    log_backtrace(LOG_INFO, LD_BUG, "Node search initiated by");
   }
 }
 
