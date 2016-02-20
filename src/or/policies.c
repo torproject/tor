@@ -408,12 +408,11 @@ fascist_firewall_allows_address(const tor_addr_t *addr,
     if (tor_addr_family(addr) == AF_INET &&
         (!options->ClientUseIPv4 || (pref_only && pref_ipv6)))
       return 0;
-
-    /* Bridges can always use IPv6 */
-    if (tor_addr_family(addr) == AF_INET6 &&
-        (!fascist_firewall_use_ipv6(options) || (pref_only && !pref_ipv6)))
-      return 0;
   }
+
+  if (tor_addr_family(addr) == AF_INET6 &&
+      (!fascist_firewall_use_ipv6(options) || (pref_only && !pref_ipv6)))
+    return 0;
 
   return addr_policy_permits_tor_addr(addr, port,
                                       firewall_policy);
