@@ -399,20 +399,26 @@ fascist_firewall_allows_address(const tor_addr_t *addr,
                                 int pref_only, int pref_ipv6)
 {
   const or_options_t *options = get_options();
+  const int client_mode = !server_mode(options);
 
   if (!addr || tor_addr_is_null(addr) || !port) {
     return 0;
   }
 
-  if (!server_mode(options)) {
-    if (tor_addr_family(addr) == AF_INET &&
-        (!options->ClientUseIPv4 || (pref_only && pref_ipv6)))
-      return 0;
+  /* Clients stop using IPv4 if it's disabled. In most cases, clients also
+   * stop using IPv4 if it's not preferred.
+   * Servers must have IPv4 enabled and preferred. */
+  if (tor_addr_family(addr) == AF_INET && client_mode &&
+      (!options->ClientUseIPv4 || (pref_only && pref_ipv6))) {
+    return 0;
   }
 
+  /* Clients and Servers won't use IPv6 unless it's enabled (and in most
+   * cases, IPv6 must also be preferred before it will be used). */
   if (tor_addr_family(addr) == AF_INET6 &&
-      (!fascist_firewall_use_ipv6(options) || (pref_only && !pref_ipv6)))
+      (!fascist_firewall_use_ipv6(options) || (pref_only && !pref_ipv6))) {
     return 0;
+  }
 
   return addr_policy_permits_tor_addr(addr, port,
                                       firewall_policy);
