@@ -540,7 +540,7 @@ fascist_firewall_allows_address_addr(const tor_addr_t *addr, uint16_t port,
  * If pref_only, return false if addr is not in the client's preferred address
  * family.
  */
-int
+static int
 fascist_firewall_allows_address_ap(const tor_addr_port_t *ap,
                                    firewall_connection_t fw_connection,
                                    int pref_only)
@@ -556,7 +556,7 @@ fascist_firewall_allows_address_ap(const tor_addr_port_t *ap,
  * fw_connection.
  * If pref_only, return false if addr is not in the client's preferred address
  * family. */
-int
+static int
 fascist_firewall_allows_address_ipv4h(uint32_t ipv4h_or_addr,
                                           uint16_t ipv4_or_port,
                                           firewall_connection_t fw_connection,
@@ -784,7 +784,7 @@ fascist_firewall_choose_address_impl(const tor_addr_port_t *a,
  *    choose one based on want_a and return it.
  *  - Otherwise, return whichever is preferred.
  * Otherwise, return NULL. */
-const tor_addr_port_t *
+STATIC const tor_addr_port_t *
 fascist_firewall_choose_address(const tor_addr_port_t *a,
                                 const tor_addr_port_t *b,
                                 int want_a,
