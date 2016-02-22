@@ -1,0 +1,7 @@
+  o Minor bugfixes:
+    - Count receipt of new microdescriptors as progress towards
+      bootstrapping. Now, when a user who has set EntryNodes finishes
+      bootstrapping, Tor automatically repopulates the guard set based
+      on this new directory information. Fixes bug 16825; bugfix on
+      0.2.3.1-alpha.
+
