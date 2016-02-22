@@ -4295,7 +4295,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   tt_int_op(port_cfg->entry_cfg.ipv6_traffic, OP_EQ, 0);
 
   // Test failure for a SessionGroup argument with invalid value
-  config_free_lines(config_port_invalid); config_port_invalid = NULL;
+  config_free_lines(config_port_valid); config_port_valid = NULL;
   smartlist_clear(slout);
   config_port_invalid = mock_config_line("DNSPort", "42 SessionGroup=invalid");
   ret = parse_port_config(slout, config_port_invalid, NULL, "DNS", 0,
