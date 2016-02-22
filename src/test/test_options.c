@@ -242,6 +242,7 @@ test_have_enough_mem_for_dircache(void *arg)
   }
   tor_free(msg);
 
+  config_free_lines(cl); cl = NULL;
   configuration = "ORPort 8080\nDirCache 1\nBridgeRelay 1";
   r = config_get_lines(configuration, &cl, 1);
   tt_int_op(r, OP_EQ, 0);
@@ -264,6 +265,7 @@ test_have_enough_mem_for_dircache(void *arg)
   }
   tor_free(msg);
 
+  config_free_lines(cl); cl = NULL;
   configuration = "ORPort 8080\nDirCache 0";
   r = config_get_lines(configuration, &cl, 1);
   tt_int_op(r, OP_EQ, 0);
@@ -293,7 +295,7 @@ test_have_enough_mem_for_dircache(void *arg)
     tor_free(msg);
   tor_free(dflt);
   or_options_free(opt);
-  tor_free(cl);
+  config_free_lines(cl);
   return;
 }
 
