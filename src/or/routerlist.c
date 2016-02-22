@@ -4452,7 +4452,7 @@ clear_dir_servers(void)
 /** For every current directory connection whose purpose is <b>purpose</b>,
  * and where the resource being downloaded begins with <b>prefix</b>, split
  * rest of the resource into base16 fingerprints (or base64 fingerprints if
- * purpose==DIR_PURPPOSE_FETCH_MICRODESC), decode them, and set the
+ * purpose==DIR_PURPOSE_FETCH_MICRODESC), decode them, and set the
  * corresponding elements of <b>result</b> to a nonzero value.
  */
 static void
