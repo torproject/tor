@@ -1,0 +1,5 @@
+  o Minor bugfixes (code correctness):
+    - Update to the latest version of Trunnel, which tries harder
+      to avoid generating code that can invoke memcpy(p,NULL,0).
+      Bug found by clang address sanitizer. Fixes bug 18373. Bugfix
+      on 0.2.7.2-alpha.
