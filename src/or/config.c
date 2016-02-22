@@ -6373,6 +6373,7 @@ parse_port_config(smartlist_t *out,
         tor_free(addrtmp);
         goto err;
       }
+      tor_free(addrtmp);
     } else {
       /* Try parsing integer port before address, because, who knows?
          "9050" might be a valid address. */
