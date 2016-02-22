@@ -159,7 +159,7 @@ dircollator_collate(dircollator_t *dc, int consensus_method)
   tor_assert(!dc->is_collated);
   dc->all_rsa_sha1_lst = smartlist_new();
 
-  if (consensus_method < MIN_METHOD_FOR_ED25519_ID_VOTING + 10/*XXX*/)
+  if (consensus_method < MIN_METHOD_FOR_ED25519_ID_VOTING)
     dircollator_collate_by_rsa(dc);
   else
     dircollator_collate_by_ed25519(dc);

@@ -1,0 +1,6 @@
+  o Major bugfixes:
+    - Actually enable Ed25519-based directory collation.
+      Previously, the code had been written, but some debugging code that had
+      accidentally been left in the codebase made it stay turned off.
+      Fixes bug 17702; bugfix on 0.2.7.2-alpha.
+
