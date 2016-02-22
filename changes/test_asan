@@ -1,0 +1,3 @@
+  o Testing:
+    - Fix several warnings from clang's address sanitizer produced in the
+      unit tests.

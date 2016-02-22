@@ -2255,7 +2255,6 @@ status_vote_next_consensus_signatures_test(char **header, char **body,
 static void
 test_dir_handle_get_status_vote_next_consensus_signatures_not_found(void* data)
 {
-  dir_connection_t *conn = NULL;
   char *header = NULL, *body = NULL;
   size_t body_used;
   (void) data;
@@ -2266,7 +2265,6 @@ test_dir_handle_get_status_vote_next_consensus_signatures_not_found(void* data)
   tt_str_op(NOT_FOUND, OP_EQ, header);
 
   done:
-    connection_free_(TO_CONN(conn));
     tor_free(header);
     tor_free(body);
 }
@@ -2308,7 +2306,6 @@ test_dir_handle_get_status_vote_next_consensus_signatures(void* data)
 static void
 test_dir_handle_get_status_vote_next_consensus_signatures_busy(void* data)
 {
-  dir_connection_t *conn = NULL;
   char *header = NULL, *body = NULL;
   size_t body_used;
   (void) data;
@@ -2328,7 +2325,6 @@ test_dir_handle_get_status_vote_next_consensus_signatures_busy(void* data)
   done:
     UNMOCK(get_options);
     NS_UNMOCK(dirvote_get_pending_detached_signatures);
-    connection_free_(TO_CONN(conn));
     tor_free(header);
     tor_free(body);
     or_options_free(mock_options); mock_options = NULL;
