@@ -4364,7 +4364,8 @@ test_util_socket(void *arg)
   (void)arg;
 
   fd1 = tor_open_socket_with_extensions(domain, SOCK_STREAM, 0, 0, 0);
-  if (SOCK_ERR_IS_EPROTO(fd1)) {
+  int err = tor_socket_errno(fd1);
+  if (fd1 < 0 && err == SOCK_ERRNO(EPROTONOSUPPORT)) {
     /* Assume we're on an IPv4-only or IPv6-only system, and give up now. */
     goto done;
   }
