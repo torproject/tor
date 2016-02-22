@@ -292,7 +292,7 @@ test_have_enough_mem_for_dircache(void *arg)
   if (msg)
     tor_free(msg);
   tor_free(dflt);
-  tor_free(opt);
+  or_options_free(opt);
   tor_free(cl);
   return;
 }

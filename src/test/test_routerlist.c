@@ -130,7 +130,6 @@ construct_consensus(const char **consensus_text_md)
   crypto_pk_t *sign_skey_leg=NULL;
   time_t now = time(NULL);
   smartlist_t *votes = NULL;
-  addr_policy_t *pol1 = NULL, *pol2 = NULL, *pol3 = NULL;
   int n_vrs;
 
   tt_assert(!dir_common_authority_pk_init(&cert1, &cert2, &cert3,
@@ -141,15 +140,16 @@ construct_consensus(const char **consensus_text_md)
   dir_common_construct_vote_1(&vote, cert1, sign_skey_1,
                               &dir_common_gen_routerstatus_for_v3ns,
                               &v1, &n_vrs, now, 1);
-
+  networkstatus_vote_free(vote);
   tt_assert(v1);
   tt_int_op(n_vrs, ==, 4);
   tt_int_op(smartlist_len(v1->routerstatus_list), ==, 4);
 
+
   dir_common_construct_vote_2(&vote, cert2, sign_skey_2,
                               &dir_common_gen_routerstatus_for_v3ns,
                               &v2, &n_vrs, now, 1);
-
+  networkstatus_vote_free(vote);
   tt_assert(v2);
   tt_int_op(n_vrs, ==, 4);
   tt_int_op(smartlist_len(v2->routerstatus_list), ==, 4);
@@ -161,7 +161,7 @@ construct_consensus(const char **consensus_text_md)
   tt_assert(v3);
   tt_int_op(n_vrs, ==, 4);
   tt_int_op(smartlist_len(v3->routerstatus_list), ==, 4);
-
+  networkstatus_vote_free(vote);
   votes = smartlist_new();
   smartlist_add(votes, v1);
   smartlist_add(votes, v2);
@@ -177,16 +177,10 @@ construct_consensus(const char **consensus_text_md)
   tt_assert(*consensus_text_md);
 
  done:
-  if (vote)
-    tor_free(vote);
-  if (voter)
-    tor_free(voter);
-  if (pol1)
-    tor_free(pol1);
-  if (pol2)
-    tor_free(pol2);
-  if (pol3)
-    tor_free(pol3);
+  tor_free(voter);
+  networkstatus_vote_free(v1);
+  networkstatus_vote_free(v2);
+  networkstatus_vote_free(v3);
 }
 
 static void
