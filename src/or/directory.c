@@ -1764,7 +1764,7 @@ load_downloaded_routers(const char *body, smartlist_t *which,
 
   added = router_load_routers_from_string(body, NULL, SAVED_NOWHERE, which,
                                   descriptor_digests, buf);
-  if (general)
+  if (added && general)
     control_event_bootstrap(BOOTSTRAP_STATUS_LOADING_DESCRIPTORS,
                             count_loading_descriptors_progress());
   return added;
@@ -2166,10 +2166,11 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         /* Mark remaining ones as failed. */
         dir_microdesc_download_failed(which, status_code);
       }
-      control_event_bootstrap(BOOTSTRAP_STATUS_LOADING_DESCRIPTORS,
-                              count_loading_descriptors_progress());
-      if (mds && smartlist_len(mds))
+      if (mds && smartlist_len(mds)) {
+        control_event_bootstrap(BOOTSTRAP_STATUS_LOADING_DESCRIPTORS,
+                                count_loading_descriptors_progress());
         directory_info_has_arrived(now, 0, 1);
+      }
       SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
       smartlist_free(which);
       smartlist_free(mds);
