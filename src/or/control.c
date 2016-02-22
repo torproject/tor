@@ -6384,6 +6384,7 @@ control_event_hs_descriptor_receive_end(const char *action,
  */
 void
 control_event_hs_descriptor_upload_end(const char *action,
+                                       const char *onion_address,
                                        const char *id_digest,
                                        const char *reason)
 {
@@ -6400,8 +6401,9 @@ control_event_hs_descriptor_upload_end(const char *action,
   }
 
   send_control_event(EVENT_HS_DESC,
-                     "650 HS_DESC %s UNKNOWN UNKNOWN %s%s\r\n",
+                     "650 HS_DESC %s %s UNKNOWN %s%s\r\n",
                      action,
+                     rend_hsaddress_str_or_unknown(onion_address),
                      node_describe_longname_by_id(id_digest),
                      reason_field ? reason_field : "");
 
@@ -6431,14 +6433,17 @@ control_event_hs_descriptor_received(const char *onion_address,
  * called when we successfully uploaded a hidden service descriptor.
  */
 void
-control_event_hs_descriptor_uploaded(const char *id_digest)
+control_event_hs_descriptor_uploaded(const char *id_digest,
+                                     const char *onion_address)
 {
   if (!id_digest) {
     log_warn(LD_BUG, "Called with id_digest==%p",
              id_digest);
     return;
   }
-  control_event_hs_descriptor_upload_end("UPLOADED", id_digest, NULL);
+
+  control_event_hs_descriptor_upload_end("UPLOADED", onion_address,
+                                         id_digest, NULL);
 }
 
 /** Send HS_DESC event to inform controller that query <b>rend_query</b>
@@ -6500,6 +6505,7 @@ control_event_hs_descriptor_content(const char *onion_address,
  */
 void
 control_event_hs_descriptor_upload_failed(const char *id_digest,
+                                          const char *onion_address,
                                           const char *reason)
 {
   if (!id_digest) {
@@ -6507,7 +6513,7 @@ control_event_hs_descriptor_upload_failed(const char *id_digest,
              id_digest);
     return;
   }
-  control_event_hs_descriptor_upload_end("UPLOAD_FAILED",
+  control_event_hs_descriptor_upload_end("UPLOAD_FAILED", onion_address,
                                          id_digest, reason);
 }
 
