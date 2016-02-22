@@ -2126,6 +2126,44 @@ get_possible_sybil_list(const smartlist_t *routers)
   return omit_as_sybil;
 }
 
+/** If there are entries in <b>routers</b> with exactly the same ed25519 keys,
+ * remove the older one.  May alter the order of the list. */
+static void
+routers_make_ed_keys_unique(smartlist_t *routers)
+{
+  routerinfo_t *ri2;
+  digest256map_t *by_ed_key = digest256map_new();
+
+  SMARTLIST_FOREACH_BEGIN(routers, routerinfo_t *, ri) {
+    ri->omit_from_vote = 0;
+    if (ri->signing_key_cert == NULL)
+      continue; /* No ed key */
+    const uint8_t *pk = ri->signing_key_cert->signing_key.pubkey;
+    if ((ri2 = digest256map_get(by_ed_key, pk))) {
+      /* Duplicate; must omit one.  Set the omit_from_vote flag in whichever
+       * one has the earlier published_on. */
+      if (ri2->cache_info.published_on < ri->cache_info.published_on) {
+        digest256map_set(by_ed_key, pk, ri);
+        ri2->omit_from_vote = 1;
+      } else {
+        ri->omit_from_vote = 1;
+      }
+    } else {
+      /* Add to map */
+      digest256map_set(by_ed_key, pk, ri);
+    }
+  } SMARTLIST_FOREACH_END(ri);
+
+  digest256map_free(by_ed_key, NULL);
+
+  /* Now remove every router where the omit_from_vote flag got set. */
+  SMARTLIST_FOREACH_BEGIN(routers, const routerinfo_t *, ri) {
+    if (ri->omit_from_vote) {
+      SMARTLIST_DEL_CURRENT(routers, ri);
+    }
+  } SMARTLIST_FOREACH_END(ri);
+}
+
 /** Extract status information from <b>ri</b> and from other authority
  * functions and store it in <b>rs</b>>.
  *
@@ -2815,6 +2853,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
 
   routers = smartlist_new();
   smartlist_add_all(routers, rl->routers);
+  routers_make_ed_keys_unique(routers);
   routers_sort_by_identity(routers);
   omit_as_sybil = get_possible_sybil_list(routers);
 

@@ -1,0 +1,7 @@
+  o Major bugfixes:
+    - When generating a vote with keypinning disabled, never include two
+      entries for the same ed25519 identity.  This bug was causing
+      authorities to generate votes that they could not parse when a router
+      violated key pinning by changing its RSA identity but keeping its
+      Ed25519 identity.  Fixes bug 17668; fixes part of bug 18318.  Bugfix on
+      0.2.7.2-alpha.

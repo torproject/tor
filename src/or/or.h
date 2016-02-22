@@ -2081,6 +2081,10 @@ typedef struct {
    * tests for it. */
   unsigned int needs_retest_if_added:1;
 
+  /** Used during voting to indicate that we should not include an entry for
+   * this routerinfo. Used only during voting. */
+  unsigned int omit_from_vote:1;
+
 /** Tor can use this router for general positions in circuits; we got it
  * from a directory server as usual, or we're an authority and a server
  * uploaded it. */
