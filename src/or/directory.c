@@ -1764,7 +1764,7 @@ load_downloaded_routers(const char *body, smartlist_t *which,
 
   added = router_load_routers_from_string(body, NULL, SAVED_NOWHERE, which,
                                   descriptor_digests, buf);
-  if (general)
+  if (added && general)
     control_event_bootstrap(BOOTSTRAP_STATUS_LOADING_DESCRIPTORS,
                             count_loading_descriptors_progress());
   return added;
@@ -1965,7 +1965,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     routers_update_all_from_networkstatus(now, 3);
     update_microdescs_from_networkstatus(now);
     update_microdesc_downloads(now);
-    directory_info_has_arrived(now, 0);
+    directory_info_has_arrived(now, 0, 0);
     log_info(LD_DIR, "Successfully loaded consensus.");
   }
 
@@ -2001,7 +2001,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
          * ones got flushed to disk so it's safe to call this on them */
         connection_dir_download_cert_failed(conn, status_code);
       } else {
-        directory_info_has_arrived(now, 0);
+        directory_info_has_arrived(now, 0, 0);
         log_info(LD_DIR, "Successfully loaded certificates from fetch.");
       }
     } else {
@@ -2115,7 +2115,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         if (load_downloaded_routers(body, which, descriptor_digests,
                                 conn->router_purpose,
                                 conn->base_.address))
-          directory_info_has_arrived(now, 0);
+          directory_info_has_arrived(now, 0, 0);
       }
     }
     if (which) { /* mark remaining ones as failed */
@@ -2166,8 +2166,11 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         /* Mark remaining ones as failed. */
         dir_microdesc_download_failed(which, status_code);
       }
-      control_event_bootstrap(BOOTSTRAP_STATUS_LOADING_DESCRIPTORS,
-                              count_loading_descriptors_progress());
+      if (mds && smartlist_len(mds)) {
+        control_event_bootstrap(BOOTSTRAP_STATUS_LOADING_DESCRIPTORS,
+                                count_loading_descriptors_progress());
+        directory_info_has_arrived(now, 0, 1);
+      }
       SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
       smartlist_free(which);
       smartlist_free(mds);

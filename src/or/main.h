@@ -48,7 +48,7 @@ MOCK_DECL(void,connection_start_writing,(connection_t *conn));
 void connection_stop_reading_from_linked_conn(connection_t *conn);
 
 void directory_all_unreachable(time_t now);
-void directory_info_has_arrived(time_t now, int from_cache);
+void directory_info_has_arrived(time_t now, int from_cache, int suppress_logs);
 
 void ip_address_changed(int at_interface);
 void dns_servers_relaunch_checks(void);
