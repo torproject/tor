@@ -81,6 +81,8 @@ dircollator_add_routerstatus(dircollator_t *dc,
 {
   const char *id = vrs->status.identity_digest;
 
+  vrs->ed25519_reflects_consensus = 0;
+
   (void) vote;
   vote_routerstatus_t **vrs_lst = digestmap_get(dc->by_rsa_sha1, id);
   if (NULL == vrs_lst) {
@@ -92,7 +94,7 @@ dircollator_add_routerstatus(dircollator_t *dc,
 
   const uint8_t *ed = vrs->ed25519_id;
 
-  if (tor_mem_is_zero((char*)ed, DIGEST256_LEN))
+  if (! vrs->has_ed25519_listing)
     return;
 
   ddmap_entry_t search, *found;
