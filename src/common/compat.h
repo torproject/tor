@@ -42,6 +42,15 @@
 #include <netinet6/in6.h>
 #endif
 
+#if defined(__has_feature)
+#  if __has_feature(address_sanitizer)
+/* Some of the fancy glibc strcmp() macros include references to memory that
+ * clang rejects because it is off the end of a less-than-3. Clang hates this,
+ * even though those references never actually happen. */
+#    undef strcmp
+#  endif
+#endif
+
 #include <stdio.h>
 #include <errno.h>
 
