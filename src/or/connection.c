@@ -1763,6 +1763,13 @@ connection_connect_log_client_use_ip_version(const connection_t *conn)
     log_backtrace(LOG_WARN, LD_BUG, "Address came from");
   }
 
+  /* Bridges are allowed to break IPv4/IPv6 ORPort preferences to connect to
+   * the node's configured address when ClientPreferIPv6ORPort is auto */
+  if (options->UseBridges && conn->type == CONN_TYPE_OR
+      && options->ClientPreferIPv6ORPort == -1) {
+    return;
+  }
+
   /* Check if we couldn't satisfy an address family preference */
   if ((!pref_ipv6 && tor_addr_family(&real_addr) == AF_INET6)
       || (pref_ipv6 && tor_addr_family(&real_addr) == AF_INET)) {

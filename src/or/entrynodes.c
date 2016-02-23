@@ -2121,9 +2121,9 @@ launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
   }
 
   /* Until we get a descriptor for the bridge, we only know one address for
-   * it. If we  */
+   * it. */
   if (!fascist_firewall_allows_address_addr(&bridge->addr, bridge->port,
-                                            FIREWALL_OR_CONNECTION, 0)) {
+                                            FIREWALL_OR_CONNECTION, 0, 0)) {
     log_notice(LD_CONFIG, "Tried to fetch a descriptor directly from a "
                "bridge, but that bridge is not reachable through our "
                "firewall.");
@@ -2193,7 +2193,8 @@ fetch_bridge_descriptors(const or_options_t *options, time_t now)
 
       if (ask_bridge_directly &&
           !fascist_firewall_allows_address_addr(&bridge->addr, bridge->port,
-                                                FIREWALL_OR_CONNECTION, 0)) {
+                                                FIREWALL_OR_CONNECTION, 0,
+                                                0)) {
         log_notice(LD_DIR, "Bridge at '%s' isn't reachable by our "
                    "firewall policy. %s.",
                    fmt_addrport(&bridge->addr, bridge->port),
