@@ -145,7 +145,6 @@ construct_consensus(const char **consensus_text_md)
   tt_int_op(n_vrs, ==, 4);
   tt_int_op(smartlist_len(v1->routerstatus_list), ==, 4);
 
-
   dir_common_construct_vote_2(&vote, cert2, sign_skey_2,
                               &dir_common_gen_routerstatus_for_v3ns,
                               &v2, &n_vrs, now, 1);

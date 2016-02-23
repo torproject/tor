@@ -2363,9 +2363,10 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
 
   if (conn->base_.purpose == DIR_PURPOSE_UPLOAD_RENDDESC_V2) {
     #define SEND_HS_DESC_UPLOAD_FAILED_EVENT(reason) ( \
-      control_event_hs_descriptor_upload_failed(conn->identity_digest, \
-                                                conn->rend_data->onion_address, \
-                                                reason) )
+      control_event_hs_descriptor_upload_failed( \
+        conn->identity_digest, \
+        conn->rend_data->onion_address, \
+        reason) )
     log_info(LD_REND,"Uploaded rendezvous descriptor (status %d "
              "(%s))",
              status_code, escaped(reason));

@@ -2080,7 +2080,7 @@ check_private_dir(const char *dirname, cpd_check_t check,
    */
   tor_assert(dirname);
 
-  /* Open directory. 
+  /* Open directory.
    * O_NOFOLLOW to ensure that it does not follow symbolic links */
   fd = open(sandbox_intern_string(dirname), O_NOFOLLOW);
 
@@ -2122,7 +2122,7 @@ check_private_dir(const char *dirname, cpd_check_t check,
 
       if ( fd == -1 ) return -1;
 
-    } else if (!(check & CPD_CHECK)) { 
+    } else if (!(check & CPD_CHECK)) {
       log_warn(LD_FS, "Directory %s does not exist.", dirname);
       return -1;
     }
