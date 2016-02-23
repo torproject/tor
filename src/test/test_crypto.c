@@ -1090,7 +1090,7 @@ test_crypto_digests(void *arg)
 {
   crypto_pk_t *k = NULL;
   ssize_t r;
-  digests_t pkey_digests;
+  common_digests_t pkey_digests;
   char digest[DIGEST_LEN];
 
   (void)arg;
@@ -1104,7 +1104,7 @@ test_crypto_digests(void *arg)
   tt_mem_op(hex_str(digest, DIGEST_LEN),OP_EQ,
              AUTHORITY_SIGNKEY_A_DIGEST, HEX_DIGEST_LEN);
 
-  r = crypto_pk_get_all_digests(k, &pkey_digests);
+  r = crypto_pk_get_common_digests(k, &pkey_digests);
 
   tt_mem_op(hex_str(pkey_digests.d[DIGEST_SHA1], DIGEST_LEN),OP_EQ,
              AUTHORITY_SIGNKEY_A_DIGEST, HEX_DIGEST_LEN);

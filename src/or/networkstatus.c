@@ -1526,7 +1526,7 @@ networkstatus_set_current_consensus(const char *consensus,
   const unsigned dl_certs = !(flags & NSSET_DONT_DOWNLOAD_CERTS);
   const unsigned accept_obsolete = flags & NSSET_ACCEPT_OBSOLETE;
   const unsigned require_flavor = flags & NSSET_REQUIRE_FLAVOR;
-  const digests_t *current_digests = NULL;
+  const common_digests_t *current_digests = NULL;
   consensus_waiting_for_certs_t *waiting = NULL;
   time_t current_valid_after = 0;
   int free_consensus = 1; /* Free 'c' at the end of the function */

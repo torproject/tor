@@ -1764,7 +1764,7 @@ static void
 status_vote_current_consensus_ns_test(char **header, char **body,
                                       size_t *body_len)
 {
-  digests_t digests;
+  common_digests_t digests;
   dir_connection_t *conn = NULL;
 
   #define NETWORK_STATUS "some network status string"

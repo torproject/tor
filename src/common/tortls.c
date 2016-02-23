@@ -685,13 +685,13 @@ MOCK_IMPL(STATIC tor_x509_cert_t *,
 
   cert->cert = x509_cert;
 
-  crypto_digest_all(&cert->cert_digests,
+  crypto_common_digests(&cert->cert_digests,
                     (char*)cert->encoded, cert->encoded_len);
 
   if ((pkey = X509_get_pubkey(x509_cert)) &&
       (rsa = EVP_PKEY_get1_RSA(pkey))) {
     crypto_pk_t *pk = crypto_new_pk_from_rsa_(rsa);
-    crypto_pk_get_all_digests(pk, &cert->pkey_digests);
+    crypto_pk_get_common_digests(pk, &cert->pkey_digests);
     cert->pkey_digests_set = 1;
     crypto_pk_free(pk);
     EVP_PKEY_free(pkey);
@@ -754,7 +754,7 @@ tor_x509_cert_get_der(const tor_x509_cert_t *cert,
 
 /** Return a set of digests for the public key in <b>cert</b>, or NULL if this
  * cert's public key is not one we know how to take the digest of. */
-const digests_t *
+const common_digests_t *
 tor_x509_cert_get_id_digests(const tor_x509_cert_t *cert)
 {
   if (cert->pkey_digests_set)
@@ -764,7 +764,7 @@ tor_x509_cert_get_id_digests(const tor_x509_cert_t *cert)
 }
 
 /** Return a set of digests for the public key in <b>cert</b>. */
-const digests_t *
+const common_digests_t *
 tor_x509_cert_get_cert_digests(const tor_x509_cert_t *cert)
 {
   return &cert->cert_digests;

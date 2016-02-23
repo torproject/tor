@@ -538,7 +538,7 @@ static int router_get_hash_impl(const char *s, size_t s_len, char *digest,
                                 char end_char,
                                 digest_algorithm_t alg);
 static int router_get_hashes_impl(const char *s, size_t s_len,
-                                  digests_t *digests,
+                                  common_digests_t *digests,
                                   const char *start_str, const char *end_str,
                                   char end_char);
 static void token_clear(directory_token_t *tok);
@@ -638,7 +638,7 @@ router_get_router_hash(const char *s, size_t s_len, char *digest)
 /** Set <b>digests</b> to all the digests of the consensus document in
  * <b>s</b> */
 int
-router_get_networkstatus_v3_hashes(const char *s, digests_t *digests)
+router_get_networkstatus_v3_hashes(const char *s, common_digests_t *digests)
 {
   return router_get_hashes_impl(s,strlen(s),digests,
                                 "network-status-version",
@@ -2847,7 +2847,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   smartlist_t *rs_tokens = NULL, *footer_tokens = NULL;
   networkstatus_voter_info_t *voter = NULL;
   networkstatus_t *ns = NULL;
-  digests_t ns_digests;
+  common_digests_t ns_digests;
   const char *cert, *end_of_header, *end_of_footer, *s_dup = s;
   directory_token_t *tok;
   int ok;
@@ -3443,15 +3443,16 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   return ns;
 }
 
-/** Return the digests_t that holds the digests of the
+/** Return the common_digests_t that holds the digests of the
  * <b>flavor_name</b>-flavored networkstatus according to the detached
- * signatures document <b>sigs</b>, allocating a new digests_t as neeeded. */
-static digests_t *
+ * signatures document <b>sigs</b>, allocating a new common_digests_t as
+ * neeeded. */
+static common_digests_t *
 detached_get_digests(ns_detached_signatures_t *sigs, const char *flavor_name)
 {
-  digests_t *d = strmap_get(sigs->digests, flavor_name);
+  common_digests_t *d = strmap_get(sigs->digests, flavor_name);
   if (!d) {
-    d = tor_malloc_zero(sizeof(digests_t));
+    d = tor_malloc_zero(sizeof(common_digests_t));
     strmap_set(sigs->digests, flavor_name, d);
   }
   return d;
@@ -3459,7 +3460,7 @@ detached_get_digests(ns_detached_signatures_t *sigs, const char *flavor_name)
 
 /** Return the list of signatures of the <b>flavor_name</b>-flavored
  * networkstatus according to the detached signatures document <b>sigs</b>,
- * allocating a new digests_t as neeeded. */
+ * allocating a new common_digests_t as neeeded. */
 static smartlist_t *
 detached_get_signatures(ns_detached_signatures_t *sigs,
                         const char *flavor_name)
@@ -3481,7 +3482,7 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
    * networkstatus_parse_vote_from_string(). */
   directory_token_t *tok;
   memarea_t *area = NULL;
-  digests_t *digests;
+  common_digests_t *digests;
 
   smartlist_t *tokens = smartlist_new();
   ns_detached_signatures_t *sigs =
@@ -4444,7 +4445,7 @@ router_get_hash_impl(const char *s, size_t s_len, char *digest,
 
 /** As router_get_hash_impl, but compute all hashes. */
 static int
-router_get_hashes_impl(const char *s, size_t s_len, digests_t *digests,
+router_get_hashes_impl(const char *s, size_t s_len, common_digests_t *digests,
                        const char *start_str,
                        const char *end_str, char end_c)
 {
@@ -4453,7 +4454,7 @@ router_get_hashes_impl(const char *s, size_t s_len, digests_t *digests,
                                   &start,&end)<0)
     return -1;
 
-  if (crypto_digest_all(digests, start, end-start)) {
+  if (crypto_common_digests(digests, start, end-start)) {
     log_warn(LD_BUG,"couldn't compute digests");
     return -1;
   }

@@ -2114,7 +2114,7 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
 
   /** Make sure all the digests we know match, and at least one matches. */
   {
-    digests_t *digests = strmap_get(sigs->digests, flavor);
+    common_digests_t *digests = strmap_get(sigs->digests, flavor);
     int n_matches = 0;
     int alg;
     if (!digests) {

@@ -1999,11 +1999,13 @@ test_a_networkstatus(
     tt_assert(con_md3);
 
     /* All three should have the same digest. */
-    tt_mem_op(&con->digests,OP_EQ, &con2->digests, sizeof(digests_t));
-    tt_mem_op(&con->digests,OP_EQ, &con3->digests, sizeof(digests_t));
+    tt_mem_op(&con->digests,OP_EQ, &con2->digests, sizeof(common_digests_t));
+    tt_mem_op(&con->digests,OP_EQ, &con3->digests, sizeof(common_digests_t));
 
-    tt_mem_op(&con_md->digests,OP_EQ, &con_md2->digests, sizeof(digests_t));
-    tt_mem_op(&con_md->digests,OP_EQ, &con_md3->digests, sizeof(digests_t));
+    tt_mem_op(&con_md->digests,OP_EQ, &con_md2->digests,
+              sizeof(common_digests_t));
+    tt_mem_op(&con_md->digests,OP_EQ, &con_md3->digests,
+              sizeof(common_digests_t));
 
     /* Extract a detached signature from con3. */
     detached_text1 = get_detached_sigs(con3, con_md3);
@@ -2017,7 +2019,7 @@ test_a_networkstatus(
     tt_int_op(dsig1->fresh_until,OP_EQ, con3->fresh_until);
     tt_int_op(dsig1->valid_until,OP_EQ, con3->valid_until);
     {
-      digests_t *dsig_digests = strmap_get(dsig1->digests, "ns");
+      common_digests_t *dsig_digests = strmap_get(dsig1->digests, "ns");
       tt_assert(dsig_digests);
       tt_mem_op(dsig_digests->d[DIGEST_SHA1], OP_EQ,
                 con3->digests.d[DIGEST_SHA1], DIGEST_LEN);

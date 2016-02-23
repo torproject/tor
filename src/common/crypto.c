@@ -1327,7 +1327,7 @@ crypto_pk_get_digest(const crypto_pk_t *pk, char *digest_out)
 /** Compute all digests of the DER encoding of <b>pk</b>, and store them
  * in <b>digests_out</b>.  Return 0 on success, -1 on failure. */
 int
-crypto_pk_get_all_digests(crypto_pk_t *pk, digests_t *digests_out)
+crypto_pk_get_common_digests(crypto_pk_t *pk, common_digests_t *digests_out)
 {
   unsigned char *buf = NULL;
   int len;
@@ -1335,7 +1335,7 @@ crypto_pk_get_all_digests(crypto_pk_t *pk, digests_t *digests_out)
   len = i2d_RSAPublicKey(pk->key, &buf);
   if (len < 0 || buf == NULL)
     return -1;
-  if (crypto_digest_all(digests_out, (char*)buf, len) < 0) {
+  if (crypto_common_digests(digests_out, (char*)buf, len) < 0) {
     OPENSSL_free(buf);
     return -1;
   }
@@ -1649,33 +1649,19 @@ crypto_digest512(char *digest, const char *m, size_t len,
             == -1);
 }
 
-/** Set the digests_t in <b>ds_out</b> to contain every digest on the
+/** Set the common_digests_t in <b>ds_out</b> to contain every digest on the
  * <b>len</b> bytes in <b>m</b> that we know how to compute.  Return 0 on
  * success, -1 on failure. */
 int
-crypto_digest_all(digests_t *ds_out, const char *m, size_t len)
+crypto_common_digests(common_digests_t *ds_out, const char *m, size_t len)
 {
-  int i;
   tor_assert(ds_out);
   memset(ds_out, 0, sizeof(*ds_out));
   if (crypto_digest(ds_out->d[DIGEST_SHA1], m, len) < 0)
     return -1;
-  for (i = DIGEST_SHA256; i < N_DIGEST_ALGORITHMS; ++i) {
-      switch (i) {
-        case DIGEST_SHA256: /* FALLSTHROUGH */
-        case DIGEST_SHA3_256:
-          if (crypto_digest256(ds_out->d[i], m, len, i) < 0)
-            return -1;
-          break;
-        case DIGEST_SHA512:
-        case DIGEST_SHA3_512: /* FALLSTHROUGH */
-          if (crypto_digest512(ds_out->d[i], m, len, i) < 0)
-            return -1;
-          break;
-        default:
-          return -1;
-      }
-  }
+  if (crypto_digest256(ds_out->d[DIGEST_SHA256], m, len, DIGEST_SHA256) < 0)
+    return -1;
+
   return 0;
 }
 
