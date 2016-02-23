@@ -1742,7 +1742,7 @@ struct crypto_digest_t {
  * when we free one.
  */
 static size_t
-crypto_common_digestsoc_bytes(digest_algorithm_t alg)
+crypto_digest_alloc_bytes(digest_algorithm_t alg)
 {
   /* Helper: returns the number of bytes in the 'f' field of 'st' */
 #define STRUCT_FIELD_SIZE(st, f) (sizeof( ((st*)0)->f ))
@@ -1773,7 +1773,7 @@ crypto_digest_t *
 crypto_digest_new(void)
 {
   crypto_digest_t *r;
-  r = tor_malloc(crypto_common_digestsoc_bytes(DIGEST_SHA1));
+  r = tor_malloc(crypto_digest_alloc_bytes(DIGEST_SHA1));
   SHA1_Init(&r->d.sha1);
   r->algorithm = DIGEST_SHA1;
   return r;
@@ -1786,7 +1786,7 @@ crypto_digest256_new(digest_algorithm_t algorithm)
 {
   crypto_digest_t *r;
   tor_assert(algorithm == DIGEST_SHA256 || algorithm == DIGEST_SHA3_256);
-  r = tor_malloc(crypto_common_digestsoc_bytes(algorithm));
+  r = tor_malloc(crypto_digest_alloc_bytes(algorithm));
   if (algorithm == DIGEST_SHA256)
     SHA256_Init(&r->d.sha2);
   else
@@ -1802,7 +1802,7 @@ crypto_digest512_new(digest_algorithm_t algorithm)
 {
   crypto_digest_t *r;
   tor_assert(algorithm == DIGEST_SHA512 || algorithm == DIGEST_SHA3_512);
-  r = tor_malloc(crypto_common_digestsoc_bytes(algorithm));
+  r = tor_malloc(crypto_digest_alloc_bytes(algorithm));
   if (algorithm == DIGEST_SHA512)
     SHA512_Init(&r->d.sha512);
   else
@@ -1818,7 +1818,7 @@ crypto_digest_free(crypto_digest_t *digest)
 {
   if (!digest)
     return;
-  size_t bytes = crypto_common_digestsoc_bytes(digest->algorithm);
+  size_t bytes = crypto_digest_alloc_bytes(digest->algorithm);
   memwipe(digest, 0, bytes);
   tor_free(digest);
 }
@@ -1878,7 +1878,7 @@ crypto_digest_get_digest(crypto_digest_t *digest,
     return;
   }
 
-  const size_t alloc_bytes = crypto_common_digestsoc_bytes(digest->algorithm);
+  const size_t alloc_bytes = crypto_digest_alloc_bytes(digest->algorithm);
   /* memcpy into a temporary ctx, since SHA*_Final clears the context */
   memcpy(&tmpenv, digest, alloc_bytes);
   switch (digest->algorithm) {
@@ -1910,7 +1910,7 @@ crypto_digest_t *
 crypto_digest_dup(const crypto_digest_t *digest)
 {
   tor_assert(digest);
-  const size_t alloc_bytes = crypto_common_digestsoc_bytes(digest->algorithm);
+  const size_t alloc_bytes = crypto_digest_alloc_bytes(digest->algorithm);
   return tor_memdup(digest, alloc_bytes);
 }
 
@@ -1925,7 +1925,7 @@ crypto_digest_assign(crypto_digest_t *into,
   tor_assert(into);
   tor_assert(from);
   tor_assert(into->algorithm == from->algorithm);
-  const size_t alloc_bytes = crypto_common_digestsoc_bytes(from->algorithm);
+  const size_t alloc_bytes = crypto_digest_alloc_bytes(from->algorithm);
   memcpy(into,from,alloc_bytes);
 }
 
