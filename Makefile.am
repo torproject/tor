@@ -4,8 +4,9 @@
 # See LICENSE for licensing information
 
 # "foreign" means we don't follow GNU package layout standards
-# 1.9 means we require automake vesion 1.9
-AUTOMAKE_OPTIONS = foreign 1.9 subdir-objects
+# 1.11 means we require automake vesion 1.11
+# "subdir-objects" means put .o files in the same directory as the .c files
+AUTOMAKE_OPTIONS = foreign 1.11 subdir-objects
 
 ACLOCAL_AMFLAGS = -I m4
 

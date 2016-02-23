@@ -1,0 +1,10 @@
+  o Minor features (compilation):
+    - Note our minimum required autoconf/automake versions in the
+      appropriate locations. Closes ticket 17732.
+
+  o Dependency updates:
+    - Tor now uses Autoconf version 2.63 or later, and Automake 1.11 or later
+      (released in 2008 and 2009 respectively).  If you are building Tor from
+      the git repository instead of from the source distribution, and your
+      tools are older than this, you will need to upgrade.
+      Closes ticket 17732.
