@@ -30,7 +30,7 @@ extern const char AUTHORITY_SIGNKEY_2[];
 extern const char AUTHORITY_CERT_3[];
 extern const char AUTHORITY_SIGNKEY_3[];
 
-void construct_consensus(const char **consensus_text_md);
+void construct_consensus(char **consensus_text_md);
 
 /* 4 digests + 3 sep + pre + post + NULL */
 static char output[4*BASE64_DIGEST256_LEN+3+2+2+1];
@@ -120,7 +120,7 @@ test_routerlist_launch_descriptor_downloads(void *arg)
 }
 
 void
-construct_consensus(const char **consensus_text_md)
+construct_consensus(char **consensus_text_md)
 {
   networkstatus_t *vote = NULL;
   networkstatus_t *v1 = NULL, *v2 = NULL, *v3 = NULL;
@@ -180,6 +180,14 @@ construct_consensus(const char **consensus_text_md)
   networkstatus_vote_free(v1);
   networkstatus_vote_free(v2);
   networkstatus_vote_free(v3);
+  smartlist_free(votes);
+  authority_cert_free(cert1);
+  authority_cert_free(cert2);
+  authority_cert_free(cert3);
+  crypto_pk_free(sign_skey_1);
+  crypto_pk_free(sign_skey_2);
+  crypto_pk_free(sign_skey_3);
+  crypto_pk_free(sign_skey_leg);
 }
 
 static void
@@ -188,7 +196,7 @@ test_router_pick_directory_server_impl(void *arg)
   (void)arg;
 
   networkstatus_t *con_md = NULL;
-  const char *consensus_text_md = NULL;
+  char *consensus_text_md = NULL;
   int flags = PDS_IGNORE_FASCISTFIREWALL|PDS_RETRY_IF_NO_SERVERS;
   or_options_t *options = get_options_mutable();
   const routerstatus_t *rs = NULL;
@@ -363,6 +371,8 @@ test_router_pick_directory_server_impl(void *arg)
   if (options->ReachableORAddresses ||
       options->ReachableDirAddresses)
     policies_free_all();
+  tor_free(consensus_text_md);
+  networkstatus_vote_free(con_md);
 }
 
 connection_t *mocked_connection = NULL;
