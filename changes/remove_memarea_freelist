@@ -1,0 +1,4 @@
+  o Removed code:
+    - We no longer maintain an internal freelist in memarea.c. Allocators
+      should be good enough to make this code unnecessary, and it's doubtful
+      that it ever had any performance benefit.

@@ -497,7 +497,6 @@ test_dir_routerinfo_parsing(void *arg)
 #undef CHECK_FAIL
 #undef CHECK_OK
  done:
-  memarea_clear_freelist();
   routerinfo_free(ri);
 }
 
@@ -601,7 +600,6 @@ test_dir_extrainfo_parsing(void *arg)
 
  done:
   escaped(NULL);
-  memarea_clear_freelist();
   extrainfo_free(ei);
   routerinfo_free(ri);
   digestmap_free((digestmap_t*)map, routerinfo_free_wrapper_);

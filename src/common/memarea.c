@@ -105,56 +105,32 @@ struct memarea_t {
   memarea_chunk_t *first; /**< Top of the chunk stack: never NULL. */
 };
 
-/** How many chunks will we put into the freelist before freeing them? */
-#define MAX_FREELIST_LEN 4
-/** The number of memarea chunks currently in our freelist. */
-static int freelist_len=0;
-/** A linked list of unused memory area chunks.  Used to prevent us from
- * spinning in malloc/free loops. */
-static memarea_chunk_t *freelist = NULL;
-
 /** Helper: allocate a new memarea chunk of around <b>chunk_size</b> bytes. */
 static memarea_chunk_t *
-alloc_chunk(size_t sz, int freelist_ok)
+alloc_chunk(size_t sz)
 {
   tor_assert(sz < SIZE_T_CEILING);
-  if (freelist && freelist_ok) {
-    memarea_chunk_t *res = freelist;
-    freelist = res->next_chunk;
-    res->next_chunk = NULL;
-    --freelist_len;
-    CHECK_SENTINEL(res);
-    return res;
-  } else {
-    size_t chunk_size = freelist_ok ? CHUNK_SIZE : sz;
-    memarea_chunk_t *res;
-    chunk_size += SENTINEL_LEN;
-    res = tor_malloc(chunk_size);
-    res->next_chunk = NULL;
-    res->mem_size = chunk_size - CHUNK_HEADER_SIZE - SENTINEL_LEN;
-    res->next_mem = res->U_MEM;
-    tor_assert(res->next_mem+res->mem_size+SENTINEL_LEN ==
-               ((char*)res)+chunk_size);
-    tor_assert(realign_pointer(res->next_mem) == res->next_mem);
-    SET_SENTINEL(res);
-    return res;
-  }
+
+  size_t chunk_size = sz < CHUNK_SIZE ? CHUNK_SIZE : sz;
+  memarea_chunk_t *res;
+  chunk_size += SENTINEL_LEN;
+  res = tor_malloc(chunk_size);
+  res->next_chunk = NULL;
+  res->mem_size = chunk_size - CHUNK_HEADER_SIZE - SENTINEL_LEN;
+  res->next_mem = res->U_MEM;
+  tor_assert(res->next_mem+res->mem_size+SENTINEL_LEN ==
+             ((char*)res)+chunk_size);
+  tor_assert(realign_pointer(res->next_mem) == res->next_mem);
+  SET_SENTINEL(res);
+  return res;
 }
 
-/** Release <b>chunk</b> from a memarea, either by adding it to the freelist
- * or by freeing it if the freelist is already too big. */
+/** Release <b>chunk</b> from a memarea. */
 static void
 chunk_free_unchecked(memarea_chunk_t *chunk)
 {
   CHECK_SENTINEL(chunk);
-  if (freelist_len < MAX_FREELIST_LEN) {
-    ++freelist_len;
-    chunk->next_chunk = freelist;
-    freelist = chunk;
-    chunk->next_mem = chunk->U_MEM;
-  } else {
-    tor_free(chunk);
-  }
+  tor_free(chunk);
 }
 
 /** Allocate and return new memarea. */
@@ -162,7 +138,7 @@ memarea_t *
 memarea_new(void)
 {
   memarea_t *head = tor_malloc(sizeof(memarea_t));
-  head->first = alloc_chunk(CHUNK_SIZE, 1);
+  head->first = alloc_chunk(CHUNK_SIZE);
   return head;
 }
 
@@ -197,19 +173,6 @@ memarea_clear(memarea_t *area)
   area->first->next_mem = area->first->U_MEM;
 }
 
-/** Remove all unused memarea chunks from the internal freelist. */
-void
-memarea_clear_freelist(void)
-{
-  memarea_chunk_t *chunk, *next;
-  freelist_len = 0;
-  for (chunk = freelist; chunk; chunk = next) {
-    next = chunk->next_chunk;
-    tor_free(chunk);
-  }
-  freelist = NULL;
-}
-
 /** Return true iff <b>p</b> is in a range that has been returned by an
  * allocation from <b>area</b>. */
 int
@@ -241,12 +204,12 @@ memarea_alloc(memarea_t *area, size_t sz)
     if (sz+CHUNK_HEADER_SIZE >= CHUNK_SIZE) {
       /* This allocation is too big.  Stick it in a special chunk, and put
        * that chunk second in the list. */
-      memarea_chunk_t *new_chunk = alloc_chunk(sz+CHUNK_HEADER_SIZE, 0);
+      memarea_chunk_t *new_chunk = alloc_chunk(sz+CHUNK_HEADER_SIZE);
       new_chunk->next_chunk = chunk->next_chunk;
       chunk->next_chunk = new_chunk;
       chunk = new_chunk;
     } else {
-      memarea_chunk_t *new_chunk = alloc_chunk(CHUNK_SIZE, 1);
+      memarea_chunk_t *new_chunk = alloc_chunk(CHUNK_SIZE);
       new_chunk->next_chunk = chunk;
       area->first = chunk = new_chunk;
     }

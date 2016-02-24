@@ -3100,7 +3100,6 @@ tor_free_all(int postfork)
   connection_free_all();
   connection_edge_free_all();
   scheduler_free_all();
-  memarea_clear_freelist();
   nodelist_free_all();
   microdesc_free_all();
   ext_orport_free_all();
