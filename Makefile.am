@@ -139,10 +139,10 @@ need-stem-path:
 		exit 1; \
 	fi
 
-test-stem: need-stem-path $(TESTING_TOR_BINARY)
+test-stem: need-stem-path all
 	@$(PYTHON) "$$STEM_SOURCE_DIR"/run_tests.py --tor $(TESTING_TOR_BINARY) --all --log notice --target RUN_ALL;
 
-test-stem-full: need-stem-path $(TESTING_TOR_BINARY)
+test-stem-full: need-stem-path all
 	@$(PYTHON) "$$STEM_SOURCE_DIR"/run_tests.py --tor $(TESTING_TOR_BINARY) --all --log notice --target RUN_ALL,ONLINE -v;
 
 test-full: need-stem-path need-chutney-path check test-network test-stem
