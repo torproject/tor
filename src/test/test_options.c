@@ -210,7 +210,7 @@ test_have_enough_mem_for_dircache(void *arg)
 {
   (void)arg;
   or_options_t *opt=NULL;
-  or_options_t *dflt;
+  or_options_t *dflt=NULL;
   config_line_t *cl=NULL;
   char *msg=NULL;;
   int r;
@@ -292,7 +292,7 @@ test_have_enough_mem_for_dircache(void *arg)
  done:
   if (msg)
     tor_free(msg);
-  tor_free(dflt);
+  or_options_free(dflt);
   or_options_free(opt);
   config_free_lines(cl);
   return;
