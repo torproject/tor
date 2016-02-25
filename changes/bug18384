@@ -1,0 +1,5 @@
+  o Minor bugfixes (crypto, static analysis):
+    - Silence spurious clang-scan warnings in the ed25519_donna code
+      by explicitly initialising some objects.
+      Fixes bug 18384; bugfix on 0f3eeca9 in 0.2.7.2-alpha.
+      Patch by "teor".
