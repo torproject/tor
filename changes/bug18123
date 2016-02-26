@@ -1,0 +1,4 @@
+  o Minor bugfixes (security, win32):
+    - Set SO_EXCLUSIVEADDRUSE on Win32 to avoid a local port-stealing
+      attack.
+      Fixes bug 18123; bugfix on all tor versions. Patch by "teor".

@@ -1061,6 +1061,31 @@ make_socket_reuseable(tor_socket_t sock)
 #endif
 }
 
+#ifdef _WIN32
+/** Tell the Windows TCP stack to prevent other applications from receiving
+ * traffic from tor's open ports. Return 0 on success, -1 on failure. */
+static int
+make_win32_socket_exclusive(tor_socket_t sock)
+{
+#ifdef SO_EXCLUSIVEADDRUSE
+  int one=1;
+
+  /* Any socket that sets REUSEADDR on win32 can bind to a port _even when
+   * somebody else already has it bound_, and _even if the original socket
+   * didn't set REUSEADDR_. Use EXCLUSIVEADDRUSE to prevent this port-stealing
+   * on win32. */
+  if (setsockopt(sock, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (void*) &one,
+                 (socklen_t)sizeof(one))) {
+    return -1;
+  }
+  return 0;
+#else
+  (void) sock;
+  return 0;
+#endif
+}
+#endif
+
 /** Max backlog to pass to listen.  We start at */
 static int listen_limit = INT_MAX;
 
@@ -1136,6 +1161,14 @@ connection_listener_new(const struct sockaddr *listensockaddr,
                conn_type_to_string(type),
                tor_socket_strerror(errno));
     }
+
+#ifdef _WIN32
+    if (make_win32_socket_exclusive(s) < 0) {
+      log_warn(LD_NET, "Error setting SO_EXCLUSIVEADDRUSE flag on %s: %s",
+               conn_type_to_string(type),
+               tor_socket_strerror(errno));
+    }
+#endif
 
 #if defined(USE_TRANSPARENT) && defined(IP_TRANSPARENT)
     if (options->TransProxyType_parsed == TPT_TPROXY &&
