@@ -3,11 +3,6 @@
 # Copyright (c) 2007-2015, The Tor Project, Inc.
 # See LICENSE for licensing information
 
-# "foreign" means we don't follow GNU package layout standards
-# 1.11 means we require automake vesion 1.11
-# "subdir-objects" means put .o files in the same directory as the .c files
-AUTOMAKE_OPTIONS = foreign 1.11 subdir-objects
-
 ACLOCAL_AMFLAGS = -I m4
 
 noinst_LIBRARIES=

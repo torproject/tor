@@ -7,7 +7,12 @@ AC_PREREQ([2.63])
 AC_INIT([tor],[0.2.8.1-alpha-dev])
 AC_CONFIG_SRCDIR([src/or/main.c])
 AC_CONFIG_MACRO_DIR([m4])
-AM_INIT_AUTOMAKE
+
+# "foreign" means we don't follow GNU package layout standards
+# "1.11" means we require automake version 1.11 or newer
+# "subdir-objects" means put .o files in the same directory as the .c files
+AM_INIT_AUTOMAKE([foreign 1.11 subdir-objects])
+
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_CONFIG_HEADERS([orconfig.h])
 
