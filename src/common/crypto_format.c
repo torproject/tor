@@ -4,7 +4,11 @@
  * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-/* Formatting and parsing code for crypto-related data structures. */
+/**
+ * \file crypto_format.c
+ *
+ * \brief Formatting and parsing code for crypto-related data structures.
+ */
 
 #include "orconfig.h"
 #ifdef HAVE_SYS_STAT_H

@@ -3,6 +3,13 @@
  * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file compat_pthreads.c
+ *
+ * \brief Implementation for the pthreads-based multithreading backend
+ * functions.
+ */
+
 #define _GNU_SOURCE
 
 #include "orconfig.h"

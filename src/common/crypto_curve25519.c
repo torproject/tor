@@ -1,7 +1,11 @@
 /* Copyright (c) 2012-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-/* Wrapper code for a curve25519 implementation. */
+/**
+ * \file crypto_curve25519.c
+ *
+ * \brief Wrapper code for a curve25519 implementation.
+ */
 
 #define CRYPTO_CURVE25519_PRIVATE
 #include "orconfig.h"

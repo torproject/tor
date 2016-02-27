@@ -1,7 +1,11 @@
 /* Copyright (c) 2013-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-/* Wrapper code for an ed25519 implementation. */
+/**
+ * \file crypto_ed25519.c
+ *
+ * \brief Wrapper code for an ed25519 implementation.
+ */
 
 #include "orconfig.h"
 #ifdef HAVE_SYS_STAT_H

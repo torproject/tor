@@ -3,6 +3,13 @@
  * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file compat_winthreads.c
+ *
+ * \brief Implementation for the windows-based multithreading backend
+ * functions.
+ */
+
 #ifdef _WIN32
 
 #include "compat.h"

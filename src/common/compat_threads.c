@@ -3,6 +3,14 @@
  * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file compat_threads.c
+ *
+ * \brief Cross-platform threading and inter-thread communication logic.
+ *  (Platform-specific parts are written in the other compat_*threads
+ *  modules.)
+ */
+
 #define _GNU_SOURCE
 
 #include "orconfig.h"

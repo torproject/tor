@@ -4,6 +4,12 @@
  * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file crypto_s2k.c
+ *
+ * \brief Functions for deriving keys from human-readable passphrases.
+ */
+
 #define CRYPTO_S2K_PRIVATE
 
 #include "crypto.h"
