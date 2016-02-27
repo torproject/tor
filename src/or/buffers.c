@@ -8,7 +8,8 @@
  * \file buffers.c
  * \brief Implements a generic interface buffer.  Buffers are
  * fairly opaque string holders that can read to or flush from:
- * memory, file descriptors, or TLS connections.
+ * memory, file descriptors, or TLS connections.  Buffers are implemented
+ * as linked lists of memory chunks.
  **/
 #define BUFFERS_PRIVATE
 #include "or.h"

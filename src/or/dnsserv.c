@@ -2,7 +2,8 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file dnsserv.c \brief Implements client-side DNS proxy server code.  Note:
+ * \file dnsserv.c
+ * \brief Implements client-side DNS proxy server code.  Note:
  * this is the DNS Server code, not the Server DNS code.  Confused?  This code
  * runs on client-side, and acts as a DNS server.  The code in dns.c, on the
  * other hand, runs on Tor servers, and acts as a DNS client.

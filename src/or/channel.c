@@ -3,7 +3,11 @@
 
 /**
  * \file channel.c
- * \brief OR-to-OR channel abstraction layer
+ *
+ * \brief OR/OP-to-OR channel abstraction layer. A channel's job is to
+ * transfer cells from Tor instance to Tor instance.
+ * Currently, there is only one implementation of the channel abstraction: in
+ * channeltls.c.
  **/
 
 /*

@@ -1,6 +1,14 @@
 /* Copyright (c) 2014, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file routerkeys.c
+ *
+ * \brief Functions and structures to handle generating and maintaining the
+ *  set of keypairs necessary to be an OR. (Some of the code in router.c
+ *  belongs here.)
+ */
+
 #include "or.h"
 #include "config.h"
 #include "router.h"

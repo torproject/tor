@@ -4,6 +4,13 @@
  * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file confparse.c
+ *
+ * \brief Back-end for parsing and generating key-value files, used to
+ *   implement the torrc file format and the state file.
+ */
+
 #include "or.h"
 #include "confparse.h"
 #include "routerset.h"

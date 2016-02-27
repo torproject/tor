@@ -4,6 +4,13 @@
  * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file circuitstats.c
+ *
+ * \brief Maintains and analyzes statistics about circuit built times, so we
+ * can tell how long we may need to wait for a fast circuit to be constructed.
+ */
+
 #define CIRCUITSTATS_PRIVATE
 
 #include "or.h"

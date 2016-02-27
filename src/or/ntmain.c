@@ -3,6 +3,12 @@
  * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file ntmain.c
+ *
+ * \brief Entry points for running/configuring Tor as Windows Service.
+ */
+
 #ifdef _WIN32
 
 #include "or.h"

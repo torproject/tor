@@ -1,6 +1,14 @@
 /* Copyright (c) 2013-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file fp_pair.c
+ *
+ * \brief Manages data structures for associating pairs of fingerprints. Used
+ * to handle combinations of identity/signing-key fingerprints for
+ * authorities.
+ **/
+
 #include "or.h"
 #include "fp_pair.h"
 

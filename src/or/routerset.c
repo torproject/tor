@@ -4,6 +4,13 @@
  * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file routerset.c
+ *
+ * \brief Functions and structures to handle set-type selection of routers
+ *  by name, ID, address, etc.
+ */
+
 #define ROUTERSET_PRIVATE
 
 #include "or.h"

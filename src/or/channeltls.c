@@ -3,7 +3,9 @@
 
 /**
  * \file channeltls.c
- * \brief channel_t concrete subclass using or_connection_t
+ *
+ * \brief A concrete subclass of channel_t using or_connection_t to transfer
+ * cells between Tor instances.
  **/
 
 /*

@@ -1,6 +1,12 @@
 /* Copyright (c) 2012-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file onion_ntor.c
+ *
+ * \brief Implementation for the ntor handshake.
+ */
+
 #include "orconfig.h"
 
 #define ONION_NTOR_PRIVATE

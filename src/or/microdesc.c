@@ -1,6 +1,13 @@
 /* Copyright (c) 2009-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file microdesc.c
+ *
+ * \brief Implements microdescriptors -- an abbreviated description of
+ *  less-frequently-changing router information.
+ */
+
 #include "or.h"
 #include "circuitbuild.h"
 #include "config.h"

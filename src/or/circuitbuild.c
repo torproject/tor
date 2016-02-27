@@ -6,7 +6,9 @@
 
 /**
  * \file circuitbuild.c
- * \brief The actual details of building circuits.
+ *
+ * \brief Implements the details of building circuits (by chosing paths,
+ * constructing/sending create/extend cells, and so on).
  **/
 
 #define CIRCUITBUILD_PRIVATE

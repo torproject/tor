@@ -4,6 +4,15 @@
  * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file addressmap.c
+ *
+ * \brief The addressmap module manages the processes by which we rewrite
+ * addresses in client requess.  It handles the MapAddress controller and
+ * torrc commands, and the TrackHostExits feature, and the client-side DNS
+ * cache (deprecated).
+ */
+
 #define ADDRESSMAP_PRIVATE
 
 #include "or.h"

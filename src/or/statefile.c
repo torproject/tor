@@ -4,6 +4,13 @@
  * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file statefile.c
+ *
+ * \brief Handles parsing and encoding the persistent 'state' file that carries
+ *  miscellaneous persistent state between Tor invocations.
+ */
+
 #define STATEFILE_PRIVATE
 #include "or.h"
 #include "circuitstats.h"

@@ -4,6 +4,14 @@
  * Copyright (c) 2007-2015, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file nodelist.c
+ *
+ * \brief Structures and functions for tracking what we know about the routers
+ *   on the Tor network, and correlating information from networkstatus,
+ *   routerinfo, and microdescs.
+ */
+
 #include "or.h"
 #include "address.h"
 #include "config.h"

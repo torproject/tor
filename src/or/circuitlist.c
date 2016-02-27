@@ -6,7 +6,8 @@
 
 /**
  * \file circuitlist.c
- * \brief Manage the global circuit list.
+ *
+ * \brief Manage the global circuit list, and looking up circuits within it.
  **/
 #define CIRCUITLIST_PRIVATE
 #include "or.h"
