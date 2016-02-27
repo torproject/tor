@@ -2056,13 +2056,13 @@ int
 check_private_dir(const char *dirname, cpd_check_t check,
                   const char *effective_user)
 {
-  int fd;
   int r;
   struct stat st;
 
   tor_assert(dirname);
 
 #ifndef _WIN32
+  int fd;
   unsigned unwanted_bits = 0;
   const struct passwd *pw = NULL;
   uid_t running_uid;
