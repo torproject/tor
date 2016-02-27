@@ -26,10 +26,16 @@ import dateutil.parser
 # bson_lazy provides bson
 #from bson import json_util
 
+from stem.descriptor.remote import DescriptorDownloader
+
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
 ## Top-Level Configuration
+
+# Perform DirPort checks over IPv6?
+# If you know IPv6 works for you, set this to True
+PERFORM_IPV6_DIRPORT_CHECKS = False
 
 # Output all candidate fallbacks, or only output selected fallbacks?
 OUTPUT_CANDIDATES = False
@@ -83,6 +89,16 @@ CUTOFF_GUARD = .95
 # Equal or Fall Under?
 # .00 means no bad exits
 PERMITTED_BADEXIT = .00
+
+# Clients will time out after 30 seconds trying to download a consensus
+# So allow fallback directories half that to deliver a consensus
+# The exact download times might change based on the network connection
+# running this script, but only by a few seconds
+# There is also about a second of python overhead
+CONSENSUS_DOWNLOAD_SPEED_MAX = 15.0
+# If the relay fails a consensus check, retry the download
+# This avoids delisting a relay due to transient network conditions
+CONSENSUS_DOWNLOAD_RETRY = True
 
 ## List Length Limits
 
@@ -802,7 +818,57 @@ class Candidate(object):
   def original_fallback_weight_fraction(self, total_weight):
     return float(self.original_consensus_weight()) / total_weight
 
-  def fallbackdir_line(self, total_weight, original_total_weight):
+  @staticmethod
+  def fallback_consensus_dl_speed(dirip, dirport, nickname, max_time):
+    downloader = DescriptorDownloader()
+    start = datetime.datetime.utcnow()
+    # there appears to be about 1 second of overhead when comparing stem's
+    # internal trace time and the elapsed time calculated here
+    downloader.get_consensus(endpoints = [(dirip, dirport)]).run()
+    elapsed = (datetime.datetime.utcnow() - start).total_seconds()
+    if elapsed > max_time:
+      status = 'too slow'
+    else:
+      status = 'ok'
+    logging.debug(('Consensus download: %0.2fs %s from %s (%s:%d), '
+                   + 'max download time %0.2fs.') % (elapsed, status,
+                                                     nickname, dirip, dirport,
+                                                     max_time))
+    return elapsed
+
+  def fallback_consensus_dl_check(self):
+    ipv4_speed = Candidate.fallback_consensus_dl_speed(self.dirip,
+                                                self.dirport,
+                                                self._data['nickname'],
+                                                CONSENSUS_DOWNLOAD_SPEED_MAX)
+    if self.ipv6addr is not None and PERFORM_IPV6_DIRPORT_CHECKS:
+      # Clients assume the IPv6 DirPort is the same as the IPv4 DirPort
+      ipv6_speed = Candidate.fallback_consensus_dl_speed(self.ipv6addr,
+                                                self.dirport,
+                                                self._data['nickname'],
+                                                CONSENSUS_DOWNLOAD_SPEED_MAX)
+    else:
+      ipv6_speed = None
+    # Now retry the relay if it took too long the first time
+    if (ipv4_speed > CONSENSUS_DOWNLOAD_SPEED_MAX
+        and CONSENSUS_DOWNLOAD_RETRY):
+      ipv4_speed = Candidate.fallback_consensus_dl_speed(self.dirip,
+                                                self.dirport,
+                                                self._data['nickname'],
+                                                CONSENSUS_DOWNLOAD_SPEED_MAX)
+    if (self.ipv6addr is not None and PERFORM_IPV6_DIRPORT_CHECKS
+        and ipv6_speed > CONSENSUS_DOWNLOAD_SPEED_MAX
+        and CONSENSUS_DOWNLOAD_RETRY):
+      ipv6_speed = Candidate.fallback_consensus_dl_speed(self.ipv6addr,
+                                                self.dirport,
+                                                self._data['nickname'],
+                                                CONSENSUS_DOWNLOAD_SPEED_MAX)
+
+    return (ipv4_speed <= CONSENSUS_DOWNLOAD_SPEED_MAX
+            and (not PERFORM_IPV6_DIRPORT_CHECKS
+                 or ipv6_speed <= CONSENSUS_DOWNLOAD_SPEED_MAX))
+
+  def fallbackdir_line(self, total_weight, original_total_weight, dl_speed_ok):
     # /*
     # nickname
     # flags
@@ -813,6 +879,7 @@ class Candidate(object):
     # "address:dirport orport=port id=fingerprint"
     # "[ipv6=addr:orport]"
     # "weight=num",
+    #
     # Multiline C comment
     s = '/*'
     s += '\n'
@@ -839,6 +906,10 @@ class Candidate(object):
       s += '\n'
     s += '*/'
     s += '\n'
+    # Comment out the fallback directory entry if it's too slow
+    # See the debug output for which address and port is failing
+    if not dl_speed_ok:
+      s += '/* Consensus download failed or was too slow:\n'
     # Multi-Line C string with trailing comma (part of a string list)
     # This makes it easier to diff the file, and remove IPv6 lines using grep
     # Integers don't need escaping
@@ -852,6 +923,9 @@ class Candidate(object):
             cleanse_c_string(self.ipv6addr), cleanse_c_string(self.ipv6orport))
       s += '\n'
     s += '" weight=%d",'%(weight)
+    if not dl_speed_ok:
+      s += '\n'
+      s += '*/'
     return s
 
 ## Fallback Candidate List Class
@@ -1249,7 +1323,8 @@ def list_fallbacks():
     print describe_fetch_source(s)
 
   for x in candidates.fallbacks[:max_count]:
-    print x.fallbackdir_line(total_weight, pre_clamp_total_weight)
+    dl_speed_ok = x.fallback_consensus_dl_check()
+    print x.fallbackdir_line(total_weight, pre_clamp_total_weight, dl_speed_ok)
     #print json.dumps(candidates[x]._data, sort_keys=True, indent=4,
     #                  separators=(',', ': '), default=json_util.default)
 
