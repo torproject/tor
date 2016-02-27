@@ -2059,15 +2059,14 @@ check_private_dir(const char *dirname, cpd_check_t check,
   int fd;
   int r;
   struct stat st;
-  //char *f;
+
+  tor_assert(dirname);
+
 #ifndef _WIN32
   unsigned unwanted_bits = 0;
   const struct passwd *pw = NULL;
   uid_t running_uid;
   gid_t running_gid;
-#else
-  (void)effective_user;
-#endif
 
   /*
    * Goal is to harden the implementation by removing any
@@ -2078,7 +2077,6 @@ check_private_dir(const char *dirname, cpd_check_t check,
    * Several suggestions taken from:
    * https://developer.apple.com/library/mac/documentation/Security/Conceptual/SecureCodingGuide/Articles/RaceConditions.html
    */
-  tor_assert(dirname);
 
   /* Open directory.
    * O_NOFOLLOW to ensure that it does not follow symbolic links */
@@ -2099,15 +2097,11 @@ check_private_dir(const char *dirname, cpd_check_t check,
     /* Should we create the directory? */
     if (check & CPD_CREATE) {
       log_info(LD_GENERAL, "Creating directory %s", dirname);
-#if defined (_WIN32)
-      r = mkdir(dirname);
-#else
       if (check & CPD_GROUP_READ) {
         r = mkdir(dirname, 0750);
       } else {
         r = mkdir(dirname, 0700);
       }
-#endif
 
       /* check for mkdir() error */
       if (r) {
@@ -2153,7 +2147,6 @@ check_private_dir(const char *dirname, cpd_check_t check,
     return -1;
   }
 
-#ifndef _WIN32
   if (effective_user) {
     /* Look up the user and group information.
      * If we have a problem, bail out. */
@@ -2234,8 +2227,42 @@ check_private_dir(const char *dirname, cpd_check_t check,
       return 0;
     }
   }
-#endif
   close(fd);
+#else
+  /* Win32 case: we can't open() a directory. */
+  (void)effective_user;
+
+  char *f = tor_strdup(dirname);
+  clean_name_for_stat(f);
+  log_debug(LD_FS, "stat()ing %s", f);
+  r = stat(sandbox_intern_string(f), &st);
+  tor_free(f);
+  if (r) {
+    if (errno != ENOENT) {
+      log_warn(LD_FS, "Directory %s cannot be read: %s", dirname,
+               strerror(errno));
+      return -1;
+    }
+    if (check & CPD_CREATE) {
+      log_info(LD_GENERAL, "Creating directory %s", dirname);
+      r = mkdir(dirname);
+      if (r) {
+        log_warn(LD_FS, "Error creating directory %s: %s", dirname,
+                 strerror(errno));
+        return -1;
+      }
+    } else if (!(check & CPD_CHECK)) {
+      log_warn(LD_FS, "Directory %s does not exist.", dirname);
+      return -1;
+    }
+    return 0;
+  }
+  if (!(st.st_mode & S_IFDIR)) {
+    log_warn(LD_FS, "%s is not a directory", dirname);
+    return -1;
+  }
+
+#endif
   return 0;
 }
 
