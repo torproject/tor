@@ -360,6 +360,7 @@ def onionoo_fetch(what, **kwargs):
     # Check for freshness
     if last_mod < required_freshness:
       if last_mod_date is not None:
+        # This check sometimes fails transiently, retry the script if it does
         date_message = "Outdated data: last updated " + last_mod_date
       else:
         date_message = "No data: never downloaded "
@@ -406,7 +407,7 @@ def fetch(what, **kwargs):
 ## Fallback Candidate Class
 
 class Candidate(object):
-  CUTOFF_ADDRESS_AND_PORT_STABLE = (datetime.datetime.now()
+  CUTOFF_ADDRESS_AND_PORT_STABLE = (datetime.datetime.utcnow()
                             - datetime.timedelta(ADDRESS_AND_PORT_STABLE_DAYS))
 
   def __init__(self, details):
@@ -599,7 +600,7 @@ class Candidate(object):
 
     periods = history.keys()
     periods.sort(key = lambda x: history[x]['interval'])
-    now = datetime.datetime.now()
+    now = datetime.datetime.utcnow()
     newest = now
     for p in periods:
       h = history[p]
