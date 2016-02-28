@@ -2482,6 +2482,11 @@ The following options are used for running a testing Tor network.
     fallback directory mirrors before giving up. Changing this requires that
     **TestingTorNetwork** is set. (Default: 7)
 
+[[TestingClientBootstrapConsensusAuthorityOnlyMaxDownloadTries]] **TestingClientBootstrapConsensusAuthorityOnlyMaxDownloadTries** __NUM__::
+    Try this many times to download a consensus while bootstrapping using
+    authorities before giving up. Changing this requires that
+    **TestingTorNetwork** is set. (Default: 4)
+
 [[TestingClientBootstrapConsensusMaxInProgressTries]] **TestingClientBootstrapConsensusMaxInProgressTries** __NUM__::
     Try this many simultaneous connections to download a consensus before
     waiting for one to complete, timeout, or error out. Changing this
