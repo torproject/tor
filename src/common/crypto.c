@@ -7,7 +7,8 @@
 /**
  * \file crypto.c
  * \brief Wrapper functions to present a consistent interface to
- * public-key and symmetric cryptography operations from OpenSSL.
+ * public-key and symmetric cryptography operations from OpenSSL and
+ * other places.
  **/
 
 #include "orconfig.h"
