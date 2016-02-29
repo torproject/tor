@@ -2861,7 +2861,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
       options->TransProxyType_parsed = TPT_TPROXY;
 #endif
     } else if (!strcasecmp(options->TransProxyType, "ipfw")) {
-#if !defined(__FreeBSD__) && !defined( DARWIN )
+#if !defined(__FreeBSD_kernel__) && !defined( DARWIN )
       /* Earlier versions of OS X have ipfw */
       REJECT("ipfw is a FreeBSD-specific"
              "and OS X/Darwin-specific feature.");

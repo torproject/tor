@@ -1058,7 +1058,7 @@ test_options_validate__transproxy(void *ignored)
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
 
-#if !defined(__FreeBSD__) && !defined( DARWIN )
+#if !defined(__FreeBSD_kernel__) && !defined( DARWIN )
   tt_str_op(msg, OP_EQ, "ipfw is a FreeBSD-specificand OS X/Darwin-specific "
             "feature.");
 #else
@@ -1086,7 +1086,7 @@ test_options_validate__transproxy(void *ignored)
   tt_int_op(ret, OP_EQ, -1);
   tt_assert(!msg);
 #endif
-#if defined(__FreeBSD__) || defined( DARWIN )
+#if defined(__FreeBSD_kernel__) || defined( DARWIN )
   tdata = get_options_test_data("TransProxyType ipfw\n"
                                 "TransPort 127.0.0.1:123\n");
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
