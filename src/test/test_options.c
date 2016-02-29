@@ -1078,6 +1078,7 @@ test_options_validate__transproxy(void *ignored)
 
   // Test trans proxy success
   free_options_test_data(tdata);
+  tdata = NULL;
 
 #if defined(linux)
   tdata = get_options_test_data("TransProxyType tproxy\n"
