@@ -1,0 +1,9 @@
+  o Minor features:
+    - Since some operating systems do not consider the actual modes on a
+      UNIX domain socket itself, tor does not allow creating such a
+      socket in a directory that is group or world accessible if it is
+      supposed to be private.  Likewise, it will not allow only group
+      accessible sockets in a world accessible directory.
+      However, on some operating systems this is unnecessary, so
+      add a per-socket option called RelaxDirModeCheck.
+      Fixes bug 18458.  Patch by weasel.
