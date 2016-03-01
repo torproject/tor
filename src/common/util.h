@@ -357,12 +357,13 @@ file_status_t file_status(const char *filename);
 /** Possible behaviors for check_private_dir() on encountering a nonexistent
  * directory; see that function's documentation for details. */
 typedef unsigned int cpd_check_t;
-#define CPD_NONE 0
-#define CPD_CREATE 1
-#define CPD_CHECK 2
-#define CPD_GROUP_OK 4
-#define CPD_GROUP_READ 8
-#define CPD_CHECK_MODE_ONLY 16
+#define CPD_NONE                 0
+#define CPD_CREATE               (1u << 0)
+#define CPD_CHECK                (1u << 1)
+#define CPD_GROUP_OK             (1u << 2)
+#define CPD_GROUP_READ           (1u << 3)
+#define CPD_CHECK_MODE_ONLY      (1u << 4)
+#define CPD_RELAX_DIRMODE_CHECK  (1u << 5)
 int check_private_dir(const char *dirname, cpd_check_t check,
                       const char *effective_user);
 

@@ -1014,6 +1014,10 @@ check_location_for_unix_socket(const or_options_t *options, const char *path,
     flags |= CPD_GROUP_OK;
   }
 
+  if (port->relax_dirmode_check) {
+    flags |= CPD_RELAX_DIRMODE_CHECK;
+  }
+
   if (check_private_dir(p, flags, options->User) < 0) {
     char *escpath, *escdir;
     escpath = esc_for_log(path);
