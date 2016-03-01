@@ -1953,7 +1953,7 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
           log_warn(LD_CONFIG,
                    "Unable to use configured IPv6 address \"%s\" in a "
                    "descriptor. Skipping it. "
-                   "Try specifying a globally reachable address explicitly. ",
+                   "Try specifying a globally reachable address explicitly.",
                    tor_addr_to_str(addrbuf, &p->addr, sizeof(addrbuf), 1));
         }
       }
