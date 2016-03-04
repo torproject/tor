@@ -1525,6 +1525,7 @@ get_interface_addresses_ioctl(int severity, sa_family_t family)
 {
   /* Some older unixy systems make us use ioctl(SIOCGIFCONF) */
   struct ifconf ifc;
+  ifc.ifc_buf = NULL;
   int fd;
   smartlist_t *result = NULL;
 
@@ -1547,7 +1548,6 @@ get_interface_addresses_ioctl(int severity, sa_family_t family)
   }
 
   int mult = 1;
-  ifc.ifc_buf = NULL;
   do {
     mult *= 2;
     ifc.ifc_len = mult * IFREQ_SIZE;

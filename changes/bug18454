@@ -1,0 +1,8 @@
+  o Minor bugfixes (memory safety):
+    - Avoid freeing an uninitialised pointer when opening a socket fails
+      in get_interface_addresses_ioctl.
+      Fixes bug 18454; bugfix on 9f06ec0c in tor-0.2.3.11-alpha.
+      Reported by "toralf" and "cypherpunks", patch by "teor".
+    - Correctly duplicate addresses in get_interface_address6_list.
+      Fixes bug 18454; bugfix on 110765f5 in tor-0.2.8.1-alpha.
+      Reported by "toralf", patch by "cypherpunks".
