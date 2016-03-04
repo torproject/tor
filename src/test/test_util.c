@@ -690,7 +690,7 @@ test_util_time(void *arg)
 
   /* Test format_iso_time */
 
-  tv.tv_sec = (time_t)1326296338;
+  tv.tv_sec = (time_t)1326296338UL;
   tv.tv_usec = 3060;
   format_iso_time(timestr, (time_t)tv.tv_sec);
   tt_str_op("2012-01-11 15:38:58",OP_EQ, timestr);
