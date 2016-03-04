@@ -1790,7 +1790,7 @@ MOCK_IMPL(smartlist_t *,get_interface_address6_list,(int severity,
     if (get_interface_address6_via_udp_socket_hack(severity,AF_INET,
                                                    &addr) == 0) {
       if (include_internal || !tor_addr_is_internal(&addr, 0)) {
-        smartlist_add(addrs, tor_dup_addr(&addr));
+        smartlist_add(addrs, tor_memdup(&addr, sizeof(addr)));
       }
     }
   }
@@ -1799,7 +1799,7 @@ MOCK_IMPL(smartlist_t *,get_interface_address6_list,(int severity,
     if (get_interface_address6_via_udp_socket_hack(severity,AF_INET6,
                                                    &addr) == 0) {
       if (include_internal || !tor_addr_is_internal(&addr, 0)) {
-        smartlist_add(addrs, tor_dup_addr(&addr));
+        smartlist_add(addrs, tor_memdup(&addr, sizeof(addr)));
       }
     }
   }
