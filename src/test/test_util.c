@@ -328,6 +328,25 @@ test_util_time(void *arg)
   tor_gmtime_r(&t_res, &b_time);
   TM_EQUAL(a_time, b_time);
 
+  /* This value is in range with 32 bit and 64 bit time_t */
+  a_time.tm_year = 2037-1900;
+  t_res = 2115180895UL;
+  tt_int_op(t_res, OP_EQ, tor_timegm(&a_time));
+  tor_gmtime_r(&t_res, &b_time);
+  TM_EQUAL(a_time, b_time);
+
+  /* This value is out of range with 32 bit time_t, but in range for 64 bit
+   * time_t */
+  a_time.tm_year = 2039-1900;
+#if SIZEOF_TIME_T == 4
+  tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+#elif SIZEOF_TIME_T == 8
+  t_res = 2178252895UL;
+  tt_int_op(t_res, OP_EQ, tor_timegm(&a_time));
+  tor_gmtime_r(&t_res, &b_time);
+  TM_EQUAL(a_time, b_time);
+#endif
+
   /* Test tor_timegm out of range */
 
   /* year */
@@ -548,6 +567,37 @@ test_util_time(void *arg)
   i = parse_rfc1123_time(timestr, &t_res);
   tt_int_op(0,OP_EQ, i);
   tt_int_op(t_res,OP_EQ, (time_t)1091580502UL);
+
+  /* This value is in range with 32 bit and 64 bit time_t */
+  format_rfc1123_time(timestr, (time_t)2080000000UL);
+  tt_str_op("Fri, 30 Nov 2035 01:46:40 GMT",OP_EQ, timestr);
+
+  t_res = 0;
+  i = parse_rfc1123_time(timestr, &t_res);
+  tt_int_op(0,OP_EQ, i);
+  tt_int_op(t_res,OP_EQ, (time_t)2080000000UL);
+
+  /* This value is out of range with 32 bit time_t, but in range for 64 bit
+   * time_t */
+  format_rfc1123_time(timestr, (time_t)2150000000UL);
+#if SIZEOF_TIME_T == 4
+  /* format_rfc1123_time should indicate failure on overflow, but it doesn't
+   * yet. Hopefully #18480 will improve the failure semantics in this case.
+  tt_str_op("Wed, 17 Feb 2038 06:13:20 GMT",OP_EQ, timestr);
+   */
+
+  t_res = 0;
+  i = parse_rfc1123_time(timestr, &t_res);
+  tt_int_op(-1,OP_EQ, i);
+#elif SIZEOF_TIME_T == 8
+  tt_str_op("Wed, 17 Feb 2038 06:13:20 GMT",OP_EQ, timestr);
+
+  t_res = 0;
+  i = parse_rfc1123_time(timestr, &t_res);
+  tt_int_op(0,OP_EQ, i);
+  tt_int_op(t_res,OP_EQ, (time_t)2150000000UL);
+#endif
+
   /* The timezone doesn't matter */
   t_res = 0;
   tt_int_op(0,OP_EQ,
@@ -595,6 +645,24 @@ test_util_time(void *arg)
   i = parse_iso_time("2004-8-4 0:48:22", &t_res);
   tt_int_op(0,OP_EQ, i);
   tt_int_op(t_res,OP_EQ, (time_t)1091580502UL);
+
+  /* This value is in range with 32 bit and 64 bit time_t */
+  t_res = 0;
+  i = parse_iso_time("2035-11-30 01:46:40", &t_res);
+  tt_int_op(0,OP_EQ, i);
+  tt_int_op(t_res,OP_EQ, (time_t)2080000000UL);
+
+  /* This value is out of range with 32 bit time_t, but in range for 64 bit
+   * time_t */
+  t_res = 0;
+  i = parse_iso_time("2038-02-17 06:13:20", &t_res);
+#if SIZEOF_TIME_T == 4
+  tt_int_op(-1,OP_EQ, i);
+#elif SIZEOF_TIME_T == 8
+  tt_int_op(0,OP_EQ, i);
+  tt_int_op(t_res,OP_EQ, (time_t)2150000000UL);
+#endif
+
   tt_int_op(-1,OP_EQ, parse_iso_time("2004-08-zz 99-99x99", &t_res));
   tt_int_op(-1,OP_EQ, parse_iso_time("2011-03-32 00:00:00", &t_res));
   tt_int_op(-1,OP_EQ, parse_iso_time("2011-03-30 24:00:00", &t_res));
@@ -638,6 +706,25 @@ test_util_time(void *arg)
   format_iso_time_nospace_usec(timestr, &tv);
   tt_str_op("2012-01-11T15:38:58.003060",OP_EQ, timestr);
   tt_int_op(strlen(timestr),OP_EQ, ISO_TIME_USEC_LEN);
+
+  tv.tv_usec = 0;
+  /* This value is in range with 32 bit and 64 bit time_t */
+  tv.tv_sec = (time_t)2080000000UL;
+  format_iso_time(timestr, (time_t)tv.tv_sec);
+  tt_str_op("2035-11-30 01:46:40",OP_EQ, timestr);
+
+  /* This value is out of range with 32 bit time_t, but in range for 64 bit
+   * time_t */
+  tv.tv_sec = (time_t)2150000000UL;
+  format_iso_time(timestr, (time_t)tv.tv_sec);
+#if SIZEOF_TIME_T == 4
+  /* format_iso_time should indicate failure on overflow, but it doesn't yet.
+   * Hopefully #18480 will improve the failure semantics in this case.
+   tt_str_op("2038-02-17 06:13:20",OP_EQ, timestr);
+   */
+#elif SIZEOF_TIME_T == 8
+  tt_str_op("2038-02-17 06:13:20",OP_EQ, timestr);
+#endif
 
  done:
   ;
@@ -712,6 +799,26 @@ test_util_parse_http_time(void *arg)
   tt_int_op(0,OP_EQ,parse_http_time("Mon, 31 Dec 2012 00:00:00 GMT", &a_time));
   tt_int_op((time_t)1356912000UL,OP_EQ, tor_timegm(&a_time));
   T("2012-12-31 00:00:00");
+
+  /* This value is in range with 32 bit and 64 bit time_t */
+  tt_int_op(0,OP_EQ,parse_http_time("Fri, 30 Nov 2035 01:46:40 GMT", &a_time));
+  tt_int_op((time_t)2080000000UL,OP_EQ, tor_timegm(&a_time));
+  T("2035-11-30 01:46:40");
+
+  /* This value is out of range with 32 bit time_t, but in range for 64 bit
+   * time_t */
+#if SIZEOF_TIME_T == 4
+  /* parse_http_time should indicate failure on overflow, but it doesn't yet.
+   * Hopefully #18480 will improve the failure semantics in this case. */
+  tt_int_op(0,OP_EQ,parse_http_time("Wed, 17 Feb 2038 06:13:20 GMT", &a_time));
+  tt_int_op((time_t)-1,OP_EQ, tor_timegm(&a_time));
+#elif SIZEOF_TIME_T == 8
+  tt_int_op(0,OP_EQ,parse_http_time("Wed, 17 Feb 2038 06:13:20 GMT", &a_time));
+  tt_int_op((time_t)2150000000UL,OP_EQ, tor_timegm(&a_time));
+  T("2038-02-17 06:13:20");
+#endif
+
+
   tt_int_op(-1,OP_EQ, parse_http_time("2004-08-zz 99-99x99 GMT", &a_time));
   tt_int_op(-1,OP_EQ, parse_http_time("2011-03-32 00:00:00 GMT", &a_time));
   tt_int_op(-1,OP_EQ, parse_http_time("2011-03-30 24:00:00 GMT", &a_time));
