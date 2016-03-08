@@ -64,19 +64,13 @@ int rend_cache_lookup_entry(const char *query, int version,
 int rend_cache_lookup_v2_desc_as_service(const char *query,
                                          rend_cache_entry_t **entry_out);
 int rend_cache_lookup_v2_desc_as_dir(const char *query, const char **desc);
-/** Return value from rend_cache_store_v2_desc_as_{dir,client}. */
-typedef enum {
-  RCS_BADDESC = -1, /**< This descriptor is no good. */
-  RCS_OKAY = 0 /**< All worked as expected */
-} rend_cache_store_status_t;
 
-rend_cache_store_status_t rend_cache_store_v2_desc_as_dir(const char *desc);
-rend_cache_store_status_t rend_cache_store_v2_desc_as_service(
-                                                const char *desc);
-rend_cache_store_status_t rend_cache_store_v2_desc_as_client(const char *desc,
-                                                const char *desc_id_base32,
-                                                const rend_data_t *rend_query,
-                                                rend_cache_entry_t **entry);
+int rend_cache_store_v2_desc_as_dir(const char *desc);
+int rend_cache_store_v2_desc_as_service(const char *desc);
+int rend_cache_store_v2_desc_as_client(const char *desc,
+                                       const char *desc_id_base32,
+                                       const rend_data_t *rend_query,
+                                       rend_cache_entry_t **entry);
 size_t rend_cache_get_total_allocation(void);
 
 void rend_cache_intro_failure_note(rend_intro_point_failure_t failure,

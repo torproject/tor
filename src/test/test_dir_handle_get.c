@@ -427,7 +427,7 @@ test_dir_handle_get_rendezvous2_on_encrypted_conn_success(void *data)
   generate_desc(RECENT_TIME, &desc_holder, &service_id, 3);
 
   tt_int_op(rend_cache_store_v2_desc_as_dir(desc_holder->desc_str),
-            OP_EQ, RCS_OKAY);
+            OP_EQ, 0);
 
   base32_encode(desc_id_base32, sizeof(desc_id_base32), desc_holder->desc_id,
                 DIGEST_LEN);

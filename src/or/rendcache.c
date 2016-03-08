@@ -622,9 +622,9 @@ rend_cache_lookup_v2_desc_as_dir(const char *desc_id, const char **desc)
  * If we have a newer descriptor with the same ID, ignore this one.
  * If we have an older descriptor with the same ID, replace it.
  *
- * Return an appropriate rend_cache_store_status_t.
+ * Return 0 on success, or -1 if we couldn't parse any of them.
  */
-rend_cache_store_status_t
+int
 rend_cache_store_v2_desc_as_dir(const char *desc)
 {
   const or_options_t *options = get_options();
@@ -717,11 +717,11 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
   }
   if (!number_parsed) {
     log_info(LD_REND, "Could not parse any descriptor.");
-    return RCS_BADDESC;
+    return -1;
   }
   log_info(LD_REND, "Parsed %d and added %d descriptor%s.",
            number_parsed, number_stored, number_stored != 1 ? "s" : "");
-  return RCS_OKAY;
+  return 0;
 }
 
 /** Parse the v2 service descriptor in <b>desc</b> and store it to the
@@ -731,9 +731,9 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
 * If we have a newer descriptor with the same ID, ignore this one.
 * If we have an older descriptor with the same ID, replace it.
 *
-* Return an appropriate rend_cache_store_status_t.
+* Return 0 on success, or -1 if we couldn't understand the descriptor.
 */
-rend_cache_store_status_t
+int
 rend_cache_store_v2_desc_as_service(const char *desc)
 {
   rend_service_descriptor_t *parsed = NULL;
@@ -744,7 +744,7 @@ rend_cache_store_v2_desc_as_service(const char *desc)
   const char *next_desc;
   char service_id[REND_SERVICE_ID_LEN_BASE32+1];
   rend_cache_entry_t *e;
-  rend_cache_store_status_t retval = RCS_BADDESC;
+  int retval = -1;
   tor_assert(rend_cache_local_service);
   tor_assert(desc);
 
@@ -787,10 +787,10 @@ rend_cache_store_v2_desc_as_service(const char *desc)
   rend_cache_increment_allocation(rend_cache_entry_allocation(e));
   log_debug(LD_REND,"Successfully stored rend desc '%s', len %d.",
             safe_str_client(service_id), (int)encoded_size);
-  return RCS_OKAY;
+  return 0;
 
  okay:
-  retval = RCS_OKAY;
+  retval = 0;
 
  err:
   rend_service_descriptor_free(parsed);
@@ -811,10 +811,10 @@ rend_cache_store_v2_desc_as_service(const char *desc)
  * If the descriptor's descriptor ID doesn't match <b>desc_id_base32</b>,
  * reject it.
  *
- * Return an appropriate rend_cache_store_status_t. If entry is not NULL,
- * set it with the cache entry pointer of the descriptor.
+ * Return 0 on success, or -1 if we rejected the descriptor.
+ * If entry is not NULL, set it with the cache entry pointer of the descriptor.
  */
-rend_cache_store_status_t
+int
 rend_cache_store_v2_desc_as_client(const char *desc,
                                    const char *desc_id_base32,
                                    const rend_data_t *rend_query,
@@ -846,7 +846,7 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   char service_id[REND_SERVICE_ID_LEN_BASE32+1];
   char want_desc_id[DIGEST_LEN];
   rend_cache_entry_t *e;
-  rend_cache_store_status_t retval = RCS_BADDESC;
+  int retval = -1;
   tor_assert(rend_cache);
   tor_assert(desc);
   tor_assert(desc_id_base32);
@@ -993,13 +993,13 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   if (entry) {
     *entry = e;
   }
-  return RCS_OKAY;
+  return 0;
 
  okay:
   if (entry) {
     *entry = e;
   }
-  retval = RCS_OKAY;
+  retval = 0;
 
  err:
   rend_service_descriptor_free(parsed);
