@@ -410,6 +410,557 @@ ed25519_cert_extension_parse(ed25519_cert_extension_t **output, const uint8_t *i
   }
   return result;
 }
+link_specifier_t *
+link_specifier_new(void)
+{
+  link_specifier_t *val = trunnel_calloc(1, sizeof(link_specifier_t));
+  if (NULL == val)
+    return NULL;
+  return val;
+}
+
+/** Release all storage held inside 'obj', but do not free 'obj'.
+ */
+static void
+link_specifier_clear(link_specifier_t *obj)
+{
+  (void) obj;
+  TRUNNEL_DYNARRAY_WIPE(&obj->un_unrecognized);
+  TRUNNEL_DYNARRAY_CLEAR(&obj->un_unrecognized);
+}
+
+void
+link_specifier_free(link_specifier_t *obj)
+{
+  if (obj == NULL)
+    return;
+  link_specifier_clear(obj);
+  trunnel_memwipe(obj, sizeof(link_specifier_t));
+  trunnel_free_(obj);
+}
+
+uint8_t
+link_specifier_get_ls_type(link_specifier_t *inp)
+{
+  return inp->ls_type;
+}
+int
+link_specifier_set_ls_type(link_specifier_t *inp, uint8_t val)
+{
+  inp->ls_type = val;
+  return 0;
+}
+uint8_t
+link_specifier_get_ls_len(link_specifier_t *inp)
+{
+  return inp->ls_len;
+}
+int
+link_specifier_set_ls_len(link_specifier_t *inp, uint8_t val)
+{
+  inp->ls_len = val;
+  return 0;
+}
+uint32_t
+link_specifier_get_un_ipv4_addr(link_specifier_t *inp)
+{
+  return inp->un_ipv4_addr;
+}
+int
+link_specifier_set_un_ipv4_addr(link_specifier_t *inp, uint32_t val)
+{
+  inp->un_ipv4_addr = val;
+  return 0;
+}
+uint16_t
+link_specifier_get_un_ipv4_port(link_specifier_t *inp)
+{
+  return inp->un_ipv4_port;
+}
+int
+link_specifier_set_un_ipv4_port(link_specifier_t *inp, uint16_t val)
+{
+  inp->un_ipv4_port = val;
+  return 0;
+}
+size_t
+link_specifier_getlen_un_ipv6_addr(const link_specifier_t *inp)
+{
+  (void)inp;  return 16;
+}
+
+uint8_t
+link_specifier_get_un_ipv6_addr(const link_specifier_t *inp, size_t idx)
+{
+  trunnel_assert(idx < 16);
+  return inp->un_ipv6_addr[idx];
+}
+
+int
+link_specifier_set_un_ipv6_addr(link_specifier_t *inp, size_t idx, uint8_t elt)
+{
+  trunnel_assert(idx < 16);
+  inp->un_ipv6_addr[idx] = elt;
+  return 0;
+}
+
+uint8_t *
+link_specifier_getarray_un_ipv6_addr(link_specifier_t *inp)
+{
+  return inp->un_ipv6_addr;
+}
+uint16_t
+link_specifier_get_un_ipv6_port(link_specifier_t *inp)
+{
+  return inp->un_ipv6_port;
+}
+int
+link_specifier_set_un_ipv6_port(link_specifier_t *inp, uint16_t val)
+{
+  inp->un_ipv6_port = val;
+  return 0;
+}
+size_t
+link_specifier_getlen_un_legacy_id(const link_specifier_t *inp)
+{
+  (void)inp;  return 20;
+}
+
+uint8_t
+link_specifier_get_un_legacy_id(const link_specifier_t *inp, size_t idx)
+{
+  trunnel_assert(idx < 20);
+  return inp->un_legacy_id[idx];
+}
+
+int
+link_specifier_set_un_legacy_id(link_specifier_t *inp, size_t idx, uint8_t elt)
+{
+  trunnel_assert(idx < 20);
+  inp->un_legacy_id[idx] = elt;
+  return 0;
+}
+
+uint8_t *
+link_specifier_getarray_un_legacy_id(link_specifier_t *inp)
+{
+  return inp->un_legacy_id;
+}
+size_t
+link_specifier_getlen_un_ed25519_id(const link_specifier_t *inp)
+{
+  (void)inp;  return 32;
+}
+
+uint8_t
+link_specifier_get_un_ed25519_id(const link_specifier_t *inp, size_t idx)
+{
+  trunnel_assert(idx < 32);
+  return inp->un_ed25519_id[idx];
+}
+
+int
+link_specifier_set_un_ed25519_id(link_specifier_t *inp, size_t idx, uint8_t elt)
+{
+  trunnel_assert(idx < 32);
+  inp->un_ed25519_id[idx] = elt;
+  return 0;
+}
+
+uint8_t *
+link_specifier_getarray_un_ed25519_id(link_specifier_t *inp)
+{
+  return inp->un_ed25519_id;
+}
+size_t
+link_specifier_getlen_un_unrecognized(const link_specifier_t *inp)
+{
+  return TRUNNEL_DYNARRAY_LEN(&inp->un_unrecognized);
+}
+
+uint8_t
+link_specifier_get_un_unrecognized(link_specifier_t *inp, size_t idx)
+{
+  return TRUNNEL_DYNARRAY_GET(&inp->un_unrecognized, idx);
+}
+
+int
+link_specifier_set_un_unrecognized(link_specifier_t *inp, size_t idx, uint8_t elt)
+{
+  TRUNNEL_DYNARRAY_SET(&inp->un_unrecognized, idx, elt);
+  return 0;
+}
+int
+link_specifier_add_un_unrecognized(link_specifier_t *inp, uint8_t elt)
+{
+  TRUNNEL_DYNARRAY_ADD(uint8_t, &inp->un_unrecognized, elt, {});
+  return 0;
+ trunnel_alloc_failed:
+  TRUNNEL_SET_ERROR_CODE(inp);
+  return -1;
+}
+
+uint8_t *
+link_specifier_getarray_un_unrecognized(link_specifier_t *inp)
+{
+  return inp->un_unrecognized.elts_;
+}
+int
+link_specifier_setlen_un_unrecognized(link_specifier_t *inp, size_t newlen)
+{
+  uint8_t *newptr;
+  newptr = trunnel_dynarray_setlen(&inp->un_unrecognized.allocated_,
+                 &inp->un_unrecognized.n_, inp->un_unrecognized.elts_, newlen,
+                 sizeof(inp->un_unrecognized.elts_[0]), (trunnel_free_fn_t) NULL,
+                 &inp->trunnel_error_code_);
+  if (newptr == NULL)
+    goto trunnel_alloc_failed;
+  inp->un_unrecognized.elts_ = newptr;
+  return 0;
+ trunnel_alloc_failed:
+  TRUNNEL_SET_ERROR_CODE(inp);
+  return -1;
+}
+const char *
+link_specifier_check(const link_specifier_t *obj)
+{
+  if (obj == NULL)
+    return "Object was NULL";
+  if (obj->trunnel_error_code_)
+    return "A set function failed on this object";
+  switch (obj->ls_type) {
+
+    case LS_IPV4:
+      break;
+
+    case LS_IPV6:
+      break;
+
+    case LS_LEGACY_ID:
+      break;
+
+    case LS_ED25519_ID:
+      break;
+
+    default:
+      break;
+  }
+  return NULL;
+}
+
+ssize_t
+link_specifier_encoded_len(const link_specifier_t *obj)
+{
+  ssize_t result = 0;
+
+  if (NULL != link_specifier_check(obj))
+     return -1;
+
+
+  /* Length of u8 ls_type */
+  result += 1;
+
+  /* Length of u8 ls_len */
+  result += 1;
+  switch (obj->ls_type) {
+
+    case LS_IPV4:
+
+      /* Length of u32 un_ipv4_addr */
+      result += 4;
+
+      /* Length of u16 un_ipv4_port */
+      result += 2;
+      break;
+
+    case LS_IPV6:
+
+      /* Length of u8 un_ipv6_addr[16] */
+      result += 16;
+
+      /* Length of u16 un_ipv6_port */
+      result += 2;
+      break;
+
+    case LS_LEGACY_ID:
+
+      /* Length of u8 un_legacy_id[20] */
+      result += 20;
+      break;
+
+    case LS_ED25519_ID:
+
+      /* Length of u8 un_ed25519_id[32] */
+      result += 32;
+      break;
+
+    default:
+
+      /* Length of u8 un_unrecognized[] */
+      result += TRUNNEL_DYNARRAY_LEN(&obj->un_unrecognized);
+      break;
+  }
+  return result;
+}
+int
+link_specifier_clear_errors(link_specifier_t *obj)
+{
+  int r = obj->trunnel_error_code_;
+  obj->trunnel_error_code_ = 0;
+  return r;
+}
+ssize_t
+link_specifier_encode(uint8_t *output, const size_t avail, const link_specifier_t *obj)
+{
+  ssize_t result = 0;
+  size_t written = 0;
+  uint8_t *ptr = output;
+  const char *msg;
+#ifdef TRUNNEL_CHECK_ENCODED_LEN
+  const ssize_t encoded_len = link_specifier_encoded_len(obj);
+#endif
+
+  uint8_t *backptr_ls_len = NULL;
+
+  if (NULL != (msg = link_specifier_check(obj)))
+    goto check_failed;
+
+#ifdef TRUNNEL_CHECK_ENCODED_LEN
+  trunnel_assert(encoded_len >= 0);
+#endif
+
+  /* Encode u8 ls_type */
+  trunnel_assert(written <= avail);
+  if (avail - written < 1)
+    goto truncated;
+  trunnel_set_uint8(ptr, (obj->ls_type));
+  written += 1; ptr += 1;
+
+  /* Encode u8 ls_len */
+  backptr_ls_len = ptr;
+  trunnel_assert(written <= avail);
+  if (avail - written < 1)
+    goto truncated;
+  trunnel_set_uint8(ptr, (obj->ls_len));
+  written += 1; ptr += 1;
+  {
+    size_t written_before_union = written;
+
+    /* Encode union un[ls_type] */
+    trunnel_assert(written <= avail);
+    switch (obj->ls_type) {
+
+      case LS_IPV4:
+
+        /* Encode u32 un_ipv4_addr */
+        trunnel_assert(written <= avail);
+        if (avail - written < 4)
+          goto truncated;
+        trunnel_set_uint32(ptr, trunnel_htonl(obj->un_ipv4_addr));
+        written += 4; ptr += 4;
+
+        /* Encode u16 un_ipv4_port */
+        trunnel_assert(written <= avail);
+        if (avail - written < 2)
+          goto truncated;
+        trunnel_set_uint16(ptr, trunnel_htons(obj->un_ipv4_port));
+        written += 2; ptr += 2;
+        break;
+
+      case LS_IPV6:
+
+        /* Encode u8 un_ipv6_addr[16] */
+        trunnel_assert(written <= avail);
+        if (avail - written < 16)
+          goto truncated;
+        memcpy(ptr, obj->un_ipv6_addr, 16);
+        written += 16; ptr += 16;
+
+        /* Encode u16 un_ipv6_port */
+        trunnel_assert(written <= avail);
+        if (avail - written < 2)
+          goto truncated;
+        trunnel_set_uint16(ptr, trunnel_htons(obj->un_ipv6_port));
+        written += 2; ptr += 2;
+        break;
+
+      case LS_LEGACY_ID:
+
+        /* Encode u8 un_legacy_id[20] */
+        trunnel_assert(written <= avail);
+        if (avail - written < 20)
+          goto truncated;
+        memcpy(ptr, obj->un_legacy_id, 20);
+        written += 20; ptr += 20;
+        break;
+
+      case LS_ED25519_ID:
+
+        /* Encode u8 un_ed25519_id[32] */
+        trunnel_assert(written <= avail);
+        if (avail - written < 32)
+          goto truncated;
+        memcpy(ptr, obj->un_ed25519_id, 32);
+        written += 32; ptr += 32;
+        break;
+
+      default:
+
+        /* Encode u8 un_unrecognized[] */
+        {
+          size_t elt_len = TRUNNEL_DYNARRAY_LEN(&obj->un_unrecognized);
+          trunnel_assert(written <= avail);
+          if (avail - written < elt_len)
+            goto truncated;
+          if (elt_len)
+            memcpy(ptr, obj->un_unrecognized.elts_, elt_len);
+          written += elt_len; ptr += elt_len;
+        }
+        break;
+    }
+    /* Write the length field back to ls_len */
+    trunnel_assert(written >= written_before_union);
+#if UINT8_MAX < SIZE_MAX
+    if (written - written_before_union > UINT8_MAX)
+      goto check_failed;
+#endif
+    trunnel_set_uint8(backptr_ls_len, (written - written_before_union));
+  }
+
+
+  trunnel_assert(ptr == output + written);
+#ifdef TRUNNEL_CHECK_ENCODED_LEN
+  {
+    trunnel_assert(encoded_len >= 0);
+    trunnel_assert((size_t)encoded_len == written);
+  }
+
+#endif
+
+  return written;
+
+ truncated:
+  result = -2;
+  goto fail;
+ check_failed:
+  (void)msg;
+  result = -1;
+  goto fail;
+ fail:
+  trunnel_assert(result < 0);
+  return result;
+}
+
+/** As link_specifier_parse(), but do not allocate the output object.
+ */
+static ssize_t
+link_specifier_parse_into(link_specifier_t *obj, const uint8_t *input, const size_t len_in)
+{
+  const uint8_t *ptr = input;
+  size_t remaining = len_in;
+  ssize_t result = 0;
+  (void)result;
+
+  /* Parse u8 ls_type */
+  CHECK_REMAINING(1, truncated);
+  obj->ls_type = (trunnel_get_uint8(ptr));
+  remaining -= 1; ptr += 1;
+
+  /* Parse u8 ls_len */
+  CHECK_REMAINING(1, truncated);
+  obj->ls_len = (trunnel_get_uint8(ptr));
+  remaining -= 1; ptr += 1;
+  {
+    size_t remaining_after;
+    CHECK_REMAINING(obj->ls_len, truncated);
+    remaining_after = remaining - obj->ls_len;
+    remaining = obj->ls_len;
+
+    /* Parse union un[ls_type] */
+    switch (obj->ls_type) {
+
+      case LS_IPV4:
+
+        /* Parse u32 un_ipv4_addr */
+        CHECK_REMAINING(4, fail);
+        obj->un_ipv4_addr = trunnel_ntohl(trunnel_get_uint32(ptr));
+        remaining -= 4; ptr += 4;
+
+        /* Parse u16 un_ipv4_port */
+        CHECK_REMAINING(2, fail);
+        obj->un_ipv4_port = trunnel_ntohs(trunnel_get_uint16(ptr));
+        remaining -= 2; ptr += 2;
+        break;
+
+      case LS_IPV6:
+
+        /* Parse u8 un_ipv6_addr[16] */
+        CHECK_REMAINING(16, fail);
+        memcpy(obj->un_ipv6_addr, ptr, 16);
+        remaining -= 16; ptr += 16;
+
+        /* Parse u16 un_ipv6_port */
+        CHECK_REMAINING(2, fail);
+        obj->un_ipv6_port = trunnel_ntohs(trunnel_get_uint16(ptr));
+        remaining -= 2; ptr += 2;
+        break;
+
+      case LS_LEGACY_ID:
+
+        /* Parse u8 un_legacy_id[20] */
+        CHECK_REMAINING(20, fail);
+        memcpy(obj->un_legacy_id, ptr, 20);
+        remaining -= 20; ptr += 20;
+        break;
+
+      case LS_ED25519_ID:
+
+        /* Parse u8 un_ed25519_id[32] */
+        CHECK_REMAINING(32, fail);
+        memcpy(obj->un_ed25519_id, ptr, 32);
+        remaining -= 32; ptr += 32;
+        break;
+
+      default:
+
+        /* Parse u8 un_unrecognized[] */
+        TRUNNEL_DYNARRAY_EXPAND(uint8_t, &obj->un_unrecognized, remaining, {});
+        obj->un_unrecognized.n_ = remaining;
+        if (remaining)
+          memcpy(obj->un_unrecognized.elts_, ptr, remaining);
+        ptr += remaining; remaining -= remaining;
+        break;
+    }
+    if (remaining != 0)
+      goto fail;
+    remaining = remaining_after;
+  }
+  trunnel_assert(ptr + remaining == input + len_in);
+  return len_in - remaining;
+
+ truncated:
+  return -2;
+ trunnel_alloc_failed:
+  return -1;
+ fail:
+  result = -1;
+  return result;
+}
+
+ssize_t
+link_specifier_parse(link_specifier_t **output, const uint8_t *input, const size_t len_in)
+{
+  ssize_t result;
+  *output = link_specifier_new();
+  if (NULL == *output)
+    return -1;
+  result = link_specifier_parse_into(*output, input, len_in);
+  if (result < 0) {
+    link_specifier_free(*output);
+    *output = NULL;
+  }
+  return result;
+}
 ed25519_cert_t *
 ed25519_cert_new(void)
 {
@@ -883,6 +1434,286 @@ ed25519_cert_parse(ed25519_cert_t **output, const uint8_t *input, const size_t l
   result = ed25519_cert_parse_into(*output, input, len_in);
   if (result < 0) {
     ed25519_cert_free(*output);
+    *output = NULL;
+  }
+  return result;
+}
+link_specifier_list_t *
+link_specifier_list_new(void)
+{
+  link_specifier_list_t *val = trunnel_calloc(1, sizeof(link_specifier_list_t));
+  if (NULL == val)
+    return NULL;
+  return val;
+}
+
+/** Release all storage held inside 'obj', but do not free 'obj'.
+ */
+static void
+link_specifier_list_clear(link_specifier_list_t *obj)
+{
+  (void) obj;
+  {
+
+    unsigned idx;
+    for (idx = 0; idx < TRUNNEL_DYNARRAY_LEN(&obj->spec); ++idx) {
+      link_specifier_free(TRUNNEL_DYNARRAY_GET(&obj->spec, idx));
+    }
+  }
+  TRUNNEL_DYNARRAY_WIPE(&obj->spec);
+  TRUNNEL_DYNARRAY_CLEAR(&obj->spec);
+}
+
+void
+link_specifier_list_free(link_specifier_list_t *obj)
+{
+  if (obj == NULL)
+    return;
+  link_specifier_list_clear(obj);
+  trunnel_memwipe(obj, sizeof(link_specifier_list_t));
+  trunnel_free_(obj);
+}
+
+uint8_t
+link_specifier_list_get_n_spec(link_specifier_list_t *inp)
+{
+  return inp->n_spec;
+}
+int
+link_specifier_list_set_n_spec(link_specifier_list_t *inp, uint8_t val)
+{
+  inp->n_spec = val;
+  return 0;
+}
+size_t
+link_specifier_list_getlen_spec(const link_specifier_list_t *inp)
+{
+  return TRUNNEL_DYNARRAY_LEN(&inp->spec);
+}
+
+struct link_specifier_st *
+link_specifier_list_get_spec(link_specifier_list_t *inp, size_t idx)
+{
+  return TRUNNEL_DYNARRAY_GET(&inp->spec, idx);
+}
+
+int
+link_specifier_list_set_spec(link_specifier_list_t *inp, size_t idx, struct link_specifier_st * elt)
+{
+  link_specifier_t *oldval = TRUNNEL_DYNARRAY_GET(&inp->spec, idx);
+  if (oldval && oldval != elt)
+    link_specifier_free(oldval);
+  return link_specifier_list_set0_spec(inp, idx, elt);
+}
+int
+link_specifier_list_set0_spec(link_specifier_list_t *inp, size_t idx, struct link_specifier_st * elt)
+{
+  TRUNNEL_DYNARRAY_SET(&inp->spec, idx, elt);
+  return 0;
+}
+int
+link_specifier_list_add_spec(link_specifier_list_t *inp, struct link_specifier_st * elt)
+{
+#if SIZE_MAX >= UINT8_MAX
+  if (inp->spec.n_ == UINT8_MAX)
+    goto trunnel_alloc_failed;
+#endif
+  TRUNNEL_DYNARRAY_ADD(struct link_specifier_st *, &inp->spec, elt, {});
+  return 0;
+ trunnel_alloc_failed:
+  TRUNNEL_SET_ERROR_CODE(inp);
+  return -1;
+}
+
+struct link_specifier_st * *
+link_specifier_list_getarray_spec(link_specifier_list_t *inp)
+{
+  return inp->spec.elts_;
+}
+int
+link_specifier_list_setlen_spec(link_specifier_list_t *inp, size_t newlen)
+{
+  struct link_specifier_st * *newptr;
+#if UINT8_MAX < SIZE_MAX
+  if (newlen > UINT8_MAX)
+    goto trunnel_alloc_failed;
+#endif
+  newptr = trunnel_dynarray_setlen(&inp->spec.allocated_,
+                 &inp->spec.n_, inp->spec.elts_, newlen,
+                 sizeof(inp->spec.elts_[0]), (trunnel_free_fn_t) link_specifier_free,
+                 &inp->trunnel_error_code_);
+  if (newptr == NULL)
+    goto trunnel_alloc_failed;
+  inp->spec.elts_ = newptr;
+  return 0;
+ trunnel_alloc_failed:
+  TRUNNEL_SET_ERROR_CODE(inp);
+  return -1;
+}
+const char *
+link_specifier_list_check(const link_specifier_list_t *obj)
+{
+  if (obj == NULL)
+    return "Object was NULL";
+  if (obj->trunnel_error_code_)
+    return "A set function failed on this object";
+  {
+    const char *msg;
+
+    unsigned idx;
+    for (idx = 0; idx < TRUNNEL_DYNARRAY_LEN(&obj->spec); ++idx) {
+      if (NULL != (msg = link_specifier_check(TRUNNEL_DYNARRAY_GET(&obj->spec, idx))))
+        return msg;
+    }
+  }
+  if (TRUNNEL_DYNARRAY_LEN(&obj->spec) != obj->n_spec)
+    return "Length mismatch for spec";
+  return NULL;
+}
+
+ssize_t
+link_specifier_list_encoded_len(const link_specifier_list_t *obj)
+{
+  ssize_t result = 0;
+
+  if (NULL != link_specifier_list_check(obj))
+     return -1;
+
+
+  /* Length of u8 n_spec */
+  result += 1;
+
+  /* Length of struct link_specifier spec[n_spec] */
+  {
+
+    unsigned idx;
+    for (idx = 0; idx < TRUNNEL_DYNARRAY_LEN(&obj->spec); ++idx) {
+      result += link_specifier_encoded_len(TRUNNEL_DYNARRAY_GET(&obj->spec, idx));
+    }
+  }
+  return result;
+}
+int
+link_specifier_list_clear_errors(link_specifier_list_t *obj)
+{
+  int r = obj->trunnel_error_code_;
+  obj->trunnel_error_code_ = 0;
+  return r;
+}
+ssize_t
+link_specifier_list_encode(uint8_t *output, const size_t avail, const link_specifier_list_t *obj)
+{
+  ssize_t result = 0;
+  size_t written = 0;
+  uint8_t *ptr = output;
+  const char *msg;
+#ifdef TRUNNEL_CHECK_ENCODED_LEN
+  const ssize_t encoded_len = link_specifier_list_encoded_len(obj);
+#endif
+
+  if (NULL != (msg = link_specifier_list_check(obj)))
+    goto check_failed;
+
+#ifdef TRUNNEL_CHECK_ENCODED_LEN
+  trunnel_assert(encoded_len >= 0);
+#endif
+
+  /* Encode u8 n_spec */
+  trunnel_assert(written <= avail);
+  if (avail - written < 1)
+    goto truncated;
+  trunnel_set_uint8(ptr, (obj->n_spec));
+  written += 1; ptr += 1;
+
+  /* Encode struct link_specifier spec[n_spec] */
+  {
+
+    unsigned idx;
+    for (idx = 0; idx < TRUNNEL_DYNARRAY_LEN(&obj->spec); ++idx) {
+      trunnel_assert(written <= avail);
+      result = link_specifier_encode(ptr, avail - written, TRUNNEL_DYNARRAY_GET(&obj->spec, idx));
+      if (result < 0)
+        goto fail; /* XXXXXXX !*/
+      written += result; ptr += result;
+    }
+  }
+
+
+  trunnel_assert(ptr == output + written);
+#ifdef TRUNNEL_CHECK_ENCODED_LEN
+  {
+    trunnel_assert(encoded_len >= 0);
+    trunnel_assert((size_t)encoded_len == written);
+  }
+
+#endif
+
+  return written;
+
+ truncated:
+  result = -2;
+  goto fail;
+ check_failed:
+  (void)msg;
+  result = -1;
+  goto fail;
+ fail:
+  trunnel_assert(result < 0);
+  return result;
+}
+
+/** As link_specifier_list_parse(), but do not allocate the output
+ * object.
+ */
+static ssize_t
+link_specifier_list_parse_into(link_specifier_list_t *obj, const uint8_t *input, const size_t len_in)
+{
+  const uint8_t *ptr = input;
+  size_t remaining = len_in;
+  ssize_t result = 0;
+  (void)result;
+
+  /* Parse u8 n_spec */
+  CHECK_REMAINING(1, truncated);
+  obj->n_spec = (trunnel_get_uint8(ptr));
+  remaining -= 1; ptr += 1;
+
+  /* Parse struct link_specifier spec[n_spec] */
+  TRUNNEL_DYNARRAY_EXPAND(link_specifier_t *, &obj->spec, obj->n_spec, {});
+  {
+    link_specifier_t * elt;
+    unsigned idx;
+    for (idx = 0; idx < obj->n_spec; ++idx) {
+      result = link_specifier_parse(&elt, ptr, remaining);
+      if (result < 0)
+        goto relay_fail;
+      trunnel_assert((size_t)result <= remaining);
+      remaining -= result; ptr += result;
+      TRUNNEL_DYNARRAY_ADD(link_specifier_t *, &obj->spec, elt, {link_specifier_free(elt);});
+    }
+  }
+  trunnel_assert(ptr + remaining == input + len_in);
+  return len_in - remaining;
+
+ truncated:
+  return -2;
+ relay_fail:
+  trunnel_assert(result < 0);
+  return result;
+ trunnel_alloc_failed:
+  return -1;
+}
+
+ssize_t
+link_specifier_list_parse(link_specifier_list_t **output, const uint8_t *input, const size_t len_in)
+{
+  ssize_t result;
+  *output = link_specifier_list_new();
+  if (NULL == *output)
+    return -1;
+  result = link_specifier_list_parse_into(*output, input, len_in);
+  if (result < 0) {
+    link_specifier_list_free(*output);
     *output = NULL;
   }
   return result;

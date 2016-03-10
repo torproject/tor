@@ -55,6 +55,7 @@ struct auth02_cell {
   u8 rand[24];
   u8 sig[64];
 }
+*/
 
 const LS_IPV4 = 0x00;
 const LS_IPV6 = 0x01;
@@ -73,4 +74,8 @@ struct link_specifier {
     default: u8 unrecognized[];
   };
 }
-*/
+
+struct link_specifier_list {
+  u8 n_spec;
+  struct link_specifier spec[n_spec];
+}
