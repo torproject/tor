@@ -42,7 +42,7 @@ Here's a workaround:
 Before even building the source RPM, install fedora-packager and instruct
 the build system to use rpmbuild-md5 like this:
 
-yum install fedora-packager
+dnf install fedora-packager
 export RPMBUILD=rpmbuild-md5
 
 Then proceed as usual to create the source RPM and binary RPMs:

@@ -1,0 +1,4 @@
+  o Documentation:
+    - Change build messages to refer to "Fedora" instead of "Fedora Core",
+      and "dnf" instead of "yum". Closes tickets 18459 and 18426.
+      Patches from "icanhasaccount" and "cypherpunks".
