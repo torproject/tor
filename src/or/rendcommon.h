@@ -59,7 +59,6 @@ void rend_get_descriptor_id_bytes(char *descriptor_id_out,
                                   const char *secret_id_part);
 int hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
 				                                         const char *id);
-int hid_serv_acting_as_directory(void);
 
 rend_data_t *rend_data_dup(const rend_data_t *data);
 rend_data_t *rend_data_client_create(const char *onion_address,

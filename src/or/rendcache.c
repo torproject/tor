@@ -641,12 +641,6 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
   time_t now = time(NULL);
   tor_assert(rend_cache_v2_dir);
   tor_assert(desc);
-  if (!hid_serv_acting_as_directory()) {
-    /* Cannot store descs, because we are (currently) not acting as
-     * hidden service directory. */
-    log_info(LD_REND, "Cannot store descs: Not acting as hs dir");
-    return RCS_NOTDIR;
-  }
   while (rend_parse_v2_service_descriptor(&parsed, desc_id, &intro_content,
                                           &intro_size, &encoded_size,
                                           &next_desc, current_desc, 1) >= 0) {

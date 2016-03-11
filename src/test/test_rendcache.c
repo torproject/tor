@@ -454,11 +454,6 @@ test_rend_cache_store_v2_desc_as_dir(void *data)
 
   rend_cache_init();
 
-  // Test when we are not an HS dir
-  mock_routerinfo = NULL;
-  ret = rend_cache_store_v2_desc_as_dir("");
-  tt_int_op(ret, OP_EQ, RCS_NOTDIR);
-
   // Test when we can't parse the descriptor
   mock_routerinfo = tor_malloc(sizeof(routerinfo_t));
   ret = rend_cache_store_v2_desc_as_dir("unparseable");

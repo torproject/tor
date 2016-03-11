@@ -972,14 +972,3 @@ hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
   return smartlist_len(responsible_dirs) ? 0 : -1;
 }
 
-/** Return true if this node is currently acting as hidden service
- * directory, false otherwise. */
-int
-hid_serv_acting_as_directory(void)
-{
-  const routerinfo_t *me = router_get_my_routerinfo();
-  if (!me)
-    return 0;
-  return 1;
-}
-

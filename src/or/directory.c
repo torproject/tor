@@ -2301,7 +2301,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                                   conn->requested_resource, conn->rend_data,
                                   &entry)) {
           case RCS_BADDESC:
-          case RCS_NOTDIR: /* Impossible */
             log_warn(LD_REND,"Fetching v2 rendezvous descriptor failed. "
                      "Retrying at another directory.");
             /* We'll retry when connection_about_to_close_connection()
@@ -3428,13 +3427,6 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
   if (connection_dir_is_encrypted(conn) &&
       !strcmpstart(url,"/tor/rendezvous2/publish")) {
     switch (rend_cache_store_v2_desc_as_dir(body)) {
-      case RCS_NOTDIR:
-        log_info(LD_REND, "Rejected v2 rend descriptor (length %d) from %s "
-                 "since we're not currently a hidden service directory.",
-                 (int)body_len, conn->base_.address);
-        write_http_status_line(conn, 503, "Currently not acting as v2 "
-                               "hidden service directory");
-        break;
       case RCS_BADDESC:
         log_warn(LD_REND, "Rejected v2 rend descriptor (length %d) from %s.",
                  (int)body_len, conn->base_.address);

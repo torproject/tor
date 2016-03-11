@@ -462,8 +462,6 @@ test_dir_handle_get_rendezvous2_on_encrypted_conn_success(void *data)
   done:
     UNMOCK(connection_write_to_buf_impl_);
     NS_UNMOCK(router_get_my_routerinfo);
-    tor_free(mock_routerinfo->cache_info.signed_descriptor_body);
-    tor_free(mock_routerinfo);
 
     connection_free_(TO_CONN(conn));
     tor_free(header);

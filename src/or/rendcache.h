@@ -66,7 +66,6 @@ int rend_cache_lookup_v2_desc_as_service(const char *query,
 int rend_cache_lookup_v2_desc_as_dir(const char *query, const char **desc);
 /** Return value from rend_cache_store_v2_desc_as_{dir,client}. */
 typedef enum {
-  RCS_NOTDIR = -2, /**< We're not a directory */
   RCS_BADDESC = -1, /**< This descriptor is no good. */
   RCS_OKAY = 0 /**< All worked as expected */
 } rend_cache_store_status_t;
