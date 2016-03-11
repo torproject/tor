@@ -1525,6 +1525,7 @@ get_interface_addresses_ioctl(int severity, sa_family_t family)
 {
   /* Some older unixy systems make us use ioctl(SIOCGIFCONF) */
   struct ifconf ifc;
+  ifc.ifc_buf = NULL;
   int fd;
   smartlist_t *result = NULL;
 
@@ -1547,7 +1548,6 @@ get_interface_addresses_ioctl(int severity, sa_family_t family)
   }
 
   int mult = 1;
-  ifc.ifc_buf = NULL;
   do {
     mult *= 2;
     ifc.ifc_len = mult * IFREQ_SIZE;
@@ -1790,7 +1790,7 @@ MOCK_IMPL(smartlist_t *,get_interface_address6_list,(int severity,
     if (get_interface_address6_via_udp_socket_hack(severity,AF_INET,
                                                    &addr) == 0) {
       if (include_internal || !tor_addr_is_internal(&addr, 0)) {
-        smartlist_add(addrs, tor_dup_addr(&addr));
+        smartlist_add(addrs, tor_memdup(&addr, sizeof(addr)));
       }
     }
   }
@@ -1799,7 +1799,7 @@ MOCK_IMPL(smartlist_t *,get_interface_address6_list,(int severity,
     if (get_interface_address6_via_udp_socket_hack(severity,AF_INET6,
                                                    &addr) == 0) {
       if (include_internal || !tor_addr_is_internal(&addr, 0)) {
-        smartlist_add(addrs, tor_dup_addr(&addr));
+        smartlist_add(addrs, tor_memdup(&addr, sizeof(addr)));
       }
     }
   }
