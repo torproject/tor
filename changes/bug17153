@@ -1,0 +1,4 @@
+  o Minor bugfixes (test networks, IPv6):
+    - Allow internal IPv6 addresses in descriptors in test networks.
+      Fixes bug 17153; bugfix on 6b4af1071 in 0.2.3.16-alpha.
+      Patch by "teor", reported by "karsten".
