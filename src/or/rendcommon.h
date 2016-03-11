@@ -53,7 +53,6 @@ int rend_encode_v2_descriptors(smartlist_t *descs_out,
 int rend_compute_v2_desc_id(char *desc_id_out, const char *service_id,
                             const char *descriptor_cookie,
                             time_t now, uint8_t replica);
-int rend_id_is_in_interval(const char *a, const char *b, const char *c);
 void rend_get_descriptor_id_bytes(char *descriptor_id_out,
                                   const char *service_id,
                                   const char *secret_id_part);
