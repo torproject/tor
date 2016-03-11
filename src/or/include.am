@@ -60,6 +60,7 @@ LIBTOR_A_SOURCES = \
 	src/or/shared_random.c			\
 	src/or/shared_random_state.c		\
 	src/or/transports.c				\
+	src/or/parsecommon.c			\
 	src/or/periodic.c				\
 	src/or/policies.c				\
 	src/or/reasons.c				\
@@ -172,6 +173,7 @@ ORHEADERS = \
 	src/or/shared_random.h			\
 	src/or/shared_random_state.h		\
 	src/or/transports.h				\
+	src/or/parsecommon.h			\
 	src/or/periodic.h				\
 	src/or/policies.h				\
 	src/or/reasons.h				\
