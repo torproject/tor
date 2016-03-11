@@ -1,7 +1,6 @@
   o Removed features:
     - Streamline relay-side hsdir handling: when relays consider whether
       to accept an uploaded hidden service descriptor, they no longer
-      check whether directory authorities think they deserve the HSDir
-      flag, or whether they are one of the relays in the network that is
+      check whether they are one of the relays in the network that is
       "supposed" to handle that descriptor. Implements ticket 18332.
 
