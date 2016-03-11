@@ -1,0 +1,6 @@
+  o Minor features (build):
+    - Detect systems with FreeBSD-derived kernels (such as GNU/kFreeBSD) as
+      having possible IPfW support. Closes ticket 18448. Patch from
+      Steven Chamberlain.
+
+

@@ -1058,7 +1058,7 @@ test_options_validate__transproxy(void *ignored)
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
 
-#if !defined(__FreeBSD_kernel__) && !defined( DARWIN )
+#ifndef KERNEL_MAY_SUPPORT_IPFW
   tt_str_op(msg, OP_EQ, "ipfw is a FreeBSD-specificand OS X/Darwin-specific "
             "feature.");
 #else

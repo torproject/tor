@@ -14,6 +14,10 @@
 
 #include "testsupport.h"
 
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(DARWIN)
+#define KERNEL_MAY_SUPPORT_IPFW
+#endif
+
 MOCK_DECL(const char*, get_dirportfrontpage, (void));
 MOCK_DECL(const or_options_t *, get_options, (void));
 MOCK_DECL(or_options_t *, get_options_mutable, (void));
