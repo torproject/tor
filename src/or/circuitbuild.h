@@ -53,6 +53,7 @@ extend_info_t *extend_info_new(const char *nickname, const char *digest,
 extend_info_t *extend_info_from_node(const node_t *r, int for_direct_connect);
 extend_info_t *extend_info_dup(extend_info_t *info);
 void extend_info_free(extend_info_t *info);
+int extend_info_addr_is_allowed(const tor_addr_t *addr);
 const node_t *build_state_get_exit_node(cpath_build_state_t *state);
 const char *build_state_get_exit_nickname(cpath_build_state_t *state);
 

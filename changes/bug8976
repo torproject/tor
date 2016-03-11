@@ -1,0 +1,5 @@
+  o Minor bugfixes (security, hidden services):
+    - Prevent hidden services connecting to client-supplied rendezvous
+      addresses that are reserved as internal or multicast.
+      Fixes bug 8976; bugfix on b7c172c9e in tor-0.2.3.21.
+      Patch by "dgoulet" and "teor".
