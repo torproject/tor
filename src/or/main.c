@@ -567,6 +567,35 @@ connection_is_reading(connection_t *conn)
     (conn->read_event && event_pending(conn->read_event, EV_READ, NULL));
 }
 
+static int
+connection_check_event(connection_t *conn, struct event *ev)
+{
+  int bad;
+
+  if (conn->type == CONN_TYPE_AP && TO_EDGE_CONN(conn)->is_dns_request) {
+    bad = ev != NULL;
+  } else {
+    bad = ev == NULL;
+  }
+
+  if (bad) {
+    log_warn(LD_BUG, "Event missing on connection %p [%s;%s]. "
+             "socket=%d. linked=%d. "
+             "is_dns_request=%d. Marked_for_close=%s:%d",
+             conn,
+             conn_type_to_string(conn->type),
+             conn_state_to_string(conn->type, conn->state),
+             (int)conn->s, (int)conn->linked,
+             (conn->type == CONN_TYPE_AP && TO_EDGE_CONN(conn)->is_dns_request),
+             conn->marked_for_close_file ? conn->marked_for_close_file : "-",
+             conn->marked_for_close
+             );
+    log_backtrace(LOG_WARN, LD_BUG, "Backtrace attached.");
+    return -1;
+  }
+  return 0;
+}
+
 /** Tell the main loop to stop notifying <b>conn</b> of any read events. */
 MOCK_IMPL(void,
 connection_stop_reading,(connection_t *conn))
@@ -578,13 +607,9 @@ connection_stop_reading,(connection_t *conn))
       return;
   });
 
-  /* if dummy conn then no socket and no event, nothing to do here */
-  if (conn->type == CONN_TYPE_AP && TO_EDGE_CONN(conn)->is_dns_request) {
-    tor_assert(!conn->read_event);
+  if (connection_check_event(conn, conn->read_event) < 0) {
     return;
   }
-
-  tor_assert(conn->read_event);
 
   if (conn->linked) {
     conn->reading_from_linked_conn = 0;
@@ -609,13 +634,9 @@ connection_start_reading,(connection_t *conn))
       return;
   });
 
-  /* if dummy conn then no socket and no event, nothing to do here */
-  if (conn->type == CONN_TYPE_AP && TO_EDGE_CONN(conn)->is_dns_request) {
-    tor_assert(!conn->read_event);
+  if (connection_check_event(conn, conn->read_event) < 0) {
     return;
   }
-
-  tor_assert(conn->read_event);
 
   if (conn->linked) {
     conn->reading_from_linked_conn = 1;
@@ -655,7 +676,9 @@ connection_stop_writing,(connection_t *conn))
       return;
   });
 
-  tor_assert(conn->write_event);
+  if (connection_check_event(conn, conn->write_event) < 0) {
+    return;
+  }
 
   if (conn->linked) {
     conn->writing_to_linked_conn = 0;
@@ -681,7 +704,9 @@ connection_start_writing,(connection_t *conn))
       return;
   });
 
-  tor_assert(conn->write_event);
+  if (connection_check_event(conn, conn->write_event) < 0) {
+    return;
+  }
 
   if (conn->linked) {
     conn->writing_to_linked_conn = 1;
