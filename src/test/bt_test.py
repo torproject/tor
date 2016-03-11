@@ -39,7 +39,15 @@ for I in range(len(LINES)):
         print("OK")
         sys.exit(0)
 
+print("BAD")
+
 for l in LINES:
     print("{}".format(l), end="")
+
+if sys.platform.startswith('freebsd'):
+    # See bug #17808 if you know how to fix this.
+    print("Test failed; but FreeBSD is known to have backtrace problems.\n"
+          "Treating as 'SKIP'.")
+    sys.exit(77)
 
 sys.exit(1)
