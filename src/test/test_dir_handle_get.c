@@ -389,10 +389,8 @@ test_dir_handle_get_rendezvous2_not_found(void *data)
 }
 
 NS_DECL(const routerinfo_t *, router_get_my_routerinfo, (void));
-NS_DECL(int, hid_serv_responsible_for_desc_id, (const char *id));
 
 static routerinfo_t *mock_routerinfo;
-static int hid_serv_responsible_for_desc_id_response;
 
 static const routerinfo_t *
 NS(router_get_my_routerinfo)(void)
@@ -402,13 +400,6 @@ NS(router_get_my_routerinfo)(void)
   }
 
   return mock_routerinfo;
-}
-
-static int
-NS(hid_serv_responsible_for_desc_id)(const char *id)
-{
-  (void)id;
-  return hid_serv_responsible_for_desc_id_response;
 }
 
 static void
@@ -428,10 +419,8 @@ test_dir_handle_get_rendezvous2_on_encrypted_conn_success(void *data)
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
   NS_MOCK(router_get_my_routerinfo);
-  NS_MOCK(hid_serv_responsible_for_desc_id);
 
   rend_cache_init();
-  hid_serv_responsible_for_desc_id_response = 1;
 
   /* create a valid rend service descriptor */
   #define RECENT_TIME -10
@@ -473,7 +462,6 @@ test_dir_handle_get_rendezvous2_on_encrypted_conn_success(void *data)
   done:
     UNMOCK(connection_write_to_buf_impl_);
     NS_UNMOCK(router_get_my_routerinfo);
-    NS_UNMOCK(hid_serv_responsible_for_desc_id);
     tor_free(mock_routerinfo->cache_info.signed_descriptor_body);
     tor_free(mock_routerinfo);
 

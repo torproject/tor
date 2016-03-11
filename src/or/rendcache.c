@@ -483,8 +483,7 @@ rend_cache_clean_v2_descs_as_dir(time_t now, size_t force_remove)
       digestmap_iter_get(iter, &key, &val);
       ent = val;
       if (ent->parsed->timestamp < cutoff ||
-          ent->last_served < last_served_cutoff ||
-          !hid_serv_responsible_for_desc_id(key)) {
+          ent->last_served < last_served_cutoff) {
         char key_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
         base32_encode(key_base32, sizeof(key_base32), key, DIGEST_LEN);
         log_info(LD_REND, "Removing descriptor with ID '%s' from cache",
@@ -657,14 +656,6 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
     /* For pretty log statements. */
     base32_encode(desc_id_base32, sizeof(desc_id_base32),
                   desc_id, DIGEST_LEN);
-    /* Is desc ID in the range that we are (directly or indirectly) responsible
-     * for? */
-    if (!hid_serv_responsible_for_desc_id(desc_id)) {
-      log_info(LD_REND, "Service descriptor with desc ID %s is not in "
-               "interval that we are responsible for.",
-               safe_str_client(desc_id_base32));
-      goto skip;
-    }
     /* Is descriptor too old? */
     if (parsed->timestamp < now - REND_CACHE_MAX_AGE-REND_CACHE_MAX_SKEW) {
       log_info(LD_REND, "Service descriptor with desc ID %s is too old.",

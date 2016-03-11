@@ -983,29 +983,3 @@ hid_serv_acting_as_directory(void)
   return 1;
 }
 
-/** Return true if this node is responsible for storing the descriptor ID
- * in <b>query</b> and false otherwise. */
-MOCK_IMPL(int, hid_serv_responsible_for_desc_id,
-          (const char *query))
-{
-  const routerinfo_t *me;
-  routerstatus_t *last_rs;
-  const char *my_id, *last_id;
-  int result;
-  smartlist_t *responsible;
-  if (!hid_serv_acting_as_directory())
-    return 0;
-  if (!(me = router_get_my_routerinfo()))
-    return 0; /* This is redundant, but let's be paranoid. */
-  my_id = me->cache_info.identity_digest;
-  responsible = smartlist_new();
-  if (hid_serv_get_responsible_directories(responsible, query) < 0) {
-    smartlist_free(responsible);
-    return 0;
-  }
-  last_rs = smartlist_get(responsible, smartlist_len(responsible)-1);
-  last_id = last_rs->identity_digest;
-  result = rend_id_is_in_interval(my_id, query, last_id);
-  smartlist_free(responsible);
-  return result;
-}
