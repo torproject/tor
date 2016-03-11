@@ -517,6 +517,12 @@ connection_stop_reading(connection_t *conn)
       return;
   });
 
+  /* if dummy conn then no socket and no event, nothing to do here */
+  if (conn->type == CONN_TYPE_AP && TO_EDGE_CONN(conn)->is_dns_request) {
+    tor_assert(!conn->read_event);
+    return;
+  }
+
   tor_assert(conn->read_event);
 
   if (conn->linked) {
@@ -541,6 +547,12 @@ connection_start_reading(connection_t *conn)
       bufferevent_enable(conn->bufev, EV_READ);
       return;
   });
+
+  /* if dummy conn then no socket and no event, nothing to do here */
+  if (conn->type == CONN_TYPE_AP && TO_EDGE_CONN(conn)->is_dns_request) {
+    tor_assert(!conn->read_event);
+    return;
+  }
 
   tor_assert(conn->read_event);
 
