@@ -1,0 +1,4 @@
+  o Minor bugfixes (build):
+    - Do not link the unit tests against both the testing and non-testing
+      versions of the static libraries. Fixes bug 18490; bugfix on
+      0.2.7.1-alpha.
