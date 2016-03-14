@@ -49,6 +49,7 @@
 #include "routerlist.h"
 #include "transports.h"
 #include "routerparse.h"
+#include "sandbox.h"
 #include "transports.h"
 
 #ifdef USE_BUFFEREVENTS
@@ -1291,7 +1292,8 @@ connection_listener_new(const struct sockaddr *listensockaddr,
       } else if (fstat(s, &st) == 0 &&
                  st.st_uid == pw->pw_uid && st.st_gid == pw->pw_gid) {
         /* No change needed */
-      } else if (chown(address, pw->pw_uid, pw->pw_gid) < 0) {
+      } else if (chown(sandbox_intern_string(address),
+                       pw->pw_uid, pw->pw_gid) < 0) {
         log_warn(LD_NET,"Unable to chown() %s socket: %s.",
                  address, strerror(errno));
         goto err;
@@ -1317,7 +1319,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
        * platforms. */
       if (fstat(s, &st) == 0 && (st.st_mode & 0777) == mode) {
         /* no change needed */
-      } else if (chmod(address, mode) < 0) {
+      } else if (chmod(sandbox_intern_string(address), mode) < 0) {
         log_warn(LD_FS,"Unable to make %s %s.", address, status);
         goto err;
       }
