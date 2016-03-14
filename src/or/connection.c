@@ -1283,10 +1283,14 @@ connection_listener_new(const struct sockaddr *listensockaddr,
 #ifdef HAVE_PWD_H
     if (options->User) {
       pw = tor_getpwnam(options->User);
+      struct stat st;
       if (pw == NULL) {
         log_warn(LD_NET,"Unable to chown() %s socket: user %s not found.",
                  address, options->User);
         goto err;
+      } else if (fstat(s, &st) == 0 &&
+                 st.st_uid == pw->pw_uid && st.st_gid == pw->pw_gid) {
+        /* No change needed */
       } else if (chown(address, pw->pw_uid, pw->pw_gid) < 0) {
         log_warn(LD_NET,"Unable to chown() %s socket: %s.",
                  address, strerror(errno));
@@ -1298,6 +1302,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     {
       unsigned mode;
       const char *status;
+      struct stat st;
       if (port_cfg->is_world_writable) {
         mode = 0666;
         status = "world-writable";
@@ -1310,7 +1315,9 @@ connection_listener_new(const struct sockaddr *listensockaddr,
       }
       /* We need to use chmod; fchmod doesn't work on sockets on all
        * platforms. */
-      if (chmod(address, mode) < 0) {
+      if (fstat(s, &st) == 0 && (st.st_mode & 0777) == mode) {
+        /* no change needed */
+      } else if (chmod(address, mode) < 0) {
         log_warn(LD_FS,"Unable to make %s %s.", address, status);
         goto err;
       }
