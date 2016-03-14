@@ -506,14 +506,24 @@ connection_is_reading(connection_t *conn)
     (conn->read_event && event_pending(conn->read_event, EV_READ, NULL));
 }
 
+/** Check whether <b>conn</b> is correct in having (or not having) a
+ * read/write event (passed in <b>ev</b). On success, return 0. On failure,
+ * log a warning and return -1. */
 static int
 connection_check_event(connection_t *conn, struct event *ev)
 {
   int bad;
 
   if (conn->type == CONN_TYPE_AP && TO_EDGE_CONN(conn)->is_dns_request) {
+    /* DNS requests which we launch through the dnsserv.c module do not have
+     * any underlying socket or any underlying linked connection, so they
+     * shouldn't have any attached events either.
+     */
     bad = ev != NULL;
   } else {
+    /* Everytyhing else should have an underlying socket, or a linked
+     * connection (which is also tracked with a read_event/write_event pair).
+     */
     bad = ev == NULL;
   }
 
