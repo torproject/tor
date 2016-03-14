@@ -1,0 +1,4 @@
+  o Minor bugfixes (sandbox):
+    - Allow the setrlimit syscall, and the prlimit and prlimit64 syscalls,
+      which some libc implementations
+      use under the hood.  Fixes bug 15221.  Bugfix on 0.2.5.1-alpha.
