@@ -6577,7 +6577,7 @@ parse_port_config(smartlist_t *out,
 
     if ( has_used_unix_socket_only_option && ! unix_socket_path) {
       log_warn(LD_CONFIG, "You have a %sPort entry with GroupWritable, "
-               "WorldWritable, or StrictDirModes, but it is not a unix socket.", portname);
+               "WorldWritable, or RelaxDirModeCheck, but it is not a unix socket.", portname);
       goto err;
     }
 
