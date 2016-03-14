@@ -892,7 +892,6 @@ rend_client_fetch_v2_desc(rend_data_t *query, smartlist_t *hsdirs)
 void
 rend_client_refetch_v2_renddesc(rend_data_t *rend_query)
 {
-  int ret;
   rend_cache_entry_t *e = NULL;
 
   tor_assert(rend_query);
@@ -912,11 +911,10 @@ rend_client_refetch_v2_renddesc(rend_data_t *rend_query)
   log_debug(LD_REND, "Fetching v2 rendezvous descriptor for service %s",
             safe_str_client(rend_query->onion_address));
 
-  ret = rend_client_fetch_v2_desc(rend_query, NULL);
-  if (ret <= 0) {
-    /* Close pending connections on error or if no hsdir can be found. */
-    rend_client_desc_trynow(rend_query->onion_address);
-  }
+  rend_client_fetch_v2_desc(rend_query, NULL);
+  /* We don't need to look the error code because either on failure or
+   * success, the necessary steps to continue the HS connection will be
+   * triggered once the descriptor arrives or if all fetch failed. */
   return;
 }
 
