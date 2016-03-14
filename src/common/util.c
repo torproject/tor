@@ -2114,7 +2114,10 @@ check_private_dir(const char *dirname, cpd_check_t check,
        * permissions on the directory will be checked again below.*/
       fd = open(sandbox_intern_string(dirname), O_NOFOLLOW);
 
-      if ( fd == -1 ) return -1;
+      if (fd == -1)
+        return -1;
+      else
+        close(fd);
 
     } else if (!(check & CPD_CHECK)) {
       log_warn(LD_FS, "Directory %s does not exist.", dirname);
@@ -2126,7 +2129,7 @@ check_private_dir(const char *dirname, cpd_check_t check,
     return 0;
   }
 
-  tor_assert(fd);
+  tor_assert(fd >= 0);
 
   //f = tor_strdup(dirname);
   //clean_name_for_stat(f);
