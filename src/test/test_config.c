@@ -4038,6 +4038,13 @@ test_config_parse_port_config__ports__ports_given(void *data)
                           "127.0.0.3", 0, 0);
   tt_int_op(ret, OP_EQ, -1);
 
+  // Test failure if we specify group writable for an IP Port
+  config_free_lines(config_port_invalid); config_port_invalid = NULL;
+  config_port_invalid = mock_config_line("DNSPort", "42 RelaxDirModeCheck");
+  ret = parse_port_config(NULL, config_port_invalid, NULL, "DNS", 0,
+                          "127.0.0.3", 0, 0);
+  tt_int_op(ret, OP_EQ, -1);
+
   // Test success with only a port (this will fail without a default address)
   config_free_lines(config_port_valid); config_port_valid = NULL;
   config_port_valid = mock_config_line("DNSPort", "42");

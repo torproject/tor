@@ -3456,6 +3456,7 @@ typedef struct port_cfg_t {
 
   unsigned is_group_writable : 1;
   unsigned is_world_writable : 1;
+  unsigned relax_dirmode_check : 1;
 
   entry_port_cfg_t entry_cfg;
 

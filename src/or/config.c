@@ -6325,7 +6325,8 @@ parse_port_config(smartlist_t *out,
       ipv4_traffic = 1, ipv6_traffic = 0, prefer_ipv6 = 0,
       cache_ipv4 = 1, use_cached_ipv4 = 0,
       cache_ipv6 = 0, use_cached_ipv6 = 0,
-      prefer_ipv6_automap = 1, world_writable = 0, group_writable = 0;
+      prefer_ipv6_automap = 1, world_writable = 0, group_writable = 0, relax_dirmode_check = 0,
+      has_used_unix_socket_only_option = 0;
 
     smartlist_split_string(elts, ports->value, NULL,
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
@@ -6478,9 +6479,15 @@ parse_port_config(smartlist_t *out,
 
         if (!strcasecmp(elt, "GroupWritable")) {
           group_writable = !no;
+          has_used_unix_socket_only_option = 1;
           continue;
         } else if (!strcasecmp(elt, "WorldWritable")) {
           world_writable = !no;
+          has_used_unix_socket_only_option = 1;
+          continue;
+        } else if (!strcasecmp(elt, "RelaxDirModeCheck")) {
+          relax_dirmode_check = !no;
+          has_used_unix_socket_only_option = 1;
           continue;
         }
 
@@ -6568,9 +6575,9 @@ parse_port_config(smartlist_t *out,
       goto err;
     }
 
-    if ( (world_writable || group_writable) && ! unix_socket_path) {
-      log_warn(LD_CONFIG, "You have a %sPort entry with GroupWritable "
-               "or WorldWritable set, but it is not a unix socket.", portname);
+    if ( has_used_unix_socket_only_option && ! unix_socket_path) {
+      log_warn(LD_CONFIG, "You have a %sPort entry with GroupWritable, "
+               "WorldWritable, or RelaxDirModeCheck, but it is not a unix socket.", portname);
       goto err;
     }
 
@@ -6596,6 +6603,7 @@ parse_port_config(smartlist_t *out,
       cfg->type = listener_type;
       cfg->is_world_writable = world_writable;
       cfg->is_group_writable = group_writable;
+      cfg->relax_dirmode_check = relax_dirmode_check;
       cfg->entry_cfg.isolation_flags = isolation;
       cfg->entry_cfg.session_group = sessiongroup;
       cfg->server_cfg.no_advertise = no_advertise;

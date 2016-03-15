@@ -321,6 +321,9 @@ GENERAL OPTIONS
     **WorldWritable**;;
         Unix domain sockets only: makes the socket get created as
         world-writable.
+    **RelaxDirModeCheck**;;
+        Unix domain sockets only: Do not insist that the directory
+        that holds the socket be read-restricted.
 
 [[ControlListenAddress]] **ControlListenAddress** __IP__[:__PORT__]::
     Bind the controller listener to this address. If you specify a port, bind

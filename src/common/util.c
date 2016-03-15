@@ -2063,7 +2063,6 @@ check_private_dir(const char *dirname, cpd_check_t check,
 
 #ifndef _WIN32
   int fd;
-  unsigned unwanted_bits = 0;
   const struct passwd *pw = NULL;
   uid_t running_uid;
   gid_t running_gid;
@@ -2200,12 +2199,17 @@ check_private_dir(const char *dirname, cpd_check_t check,
     close(fd);
     return -1;
   }
+  unsigned unwanted_bits = 0;
   if (check & (CPD_GROUP_OK|CPD_GROUP_READ)) {
     unwanted_bits = 0027;
   } else {
     unwanted_bits = 0077;
   }
-  if ((st.st_mode & unwanted_bits) != 0) {
+  unsigned check_bits_filter = ~0;
+  if (check & CPD_RELAX_DIRMODE_CHECK) {
+    check_bits_filter = 0022;
+  }
+  if ((st.st_mode & unwanted_bits & check_bits_filter) != 0) {
     unsigned new_mode;
     if (check & CPD_CHECK_MODE_ONLY) {
       log_warn(LD_FS, "Permissions on directory %s are too permissive.",
