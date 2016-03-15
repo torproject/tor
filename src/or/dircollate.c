@@ -303,6 +303,7 @@ dircollator_collate_by_ed25519(dircollator_t *dc)
 int
 dircollator_n_routers(dircollator_t *dc)
 {
+  tor_assert(dc->is_collated);
   return smartlist_len(dc->all_rsa_sha1_lst);
 }
 
@@ -317,6 +318,7 @@ dircollator_n_routers(dircollator_t *dc)
 vote_routerstatus_t **
 dircollator_get_votes_for_router(dircollator_t *dc, int idx)
 {
+  tor_assert(dc->is_collated);
   tor_assert(idx < smartlist_len(dc->all_rsa_sha1_lst));
   return digestmap_get(dc->by_collated_rsa_sha1,
                        smartlist_get(dc->all_rsa_sha1_lst, idx));
