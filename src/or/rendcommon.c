@@ -1009,3 +1009,4 @@ MOCK_IMPL(int, hid_serv_responsible_for_desc_id,
   smartlist_free(responsible);
   return result;
 }
+

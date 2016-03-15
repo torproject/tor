@@ -58,7 +58,7 @@ void rend_get_descriptor_id_bytes(char *descriptor_id_out,
                                   const char *service_id,
                                   const char *secret_id_part);
 int hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
-				                                         const char *id);
+                                         const char *id);
 int hid_serv_acting_as_directory(void);
 MOCK_DECL(int, hid_serv_responsible_for_desc_id, (const char *id));
 

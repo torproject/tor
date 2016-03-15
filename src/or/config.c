@@ -6325,7 +6325,8 @@ parse_port_config(smartlist_t *out,
       ipv4_traffic = 1, ipv6_traffic = 0, prefer_ipv6 = 0,
       cache_ipv4 = 1, use_cached_ipv4 = 0,
       cache_ipv6 = 0, use_cached_ipv6 = 0,
-      prefer_ipv6_automap = 1, world_writable = 0, group_writable = 0, relax_dirmode_check = 0,
+      prefer_ipv6_automap = 1, world_writable = 0, group_writable = 0,
+      relax_dirmode_check = 0,
       has_used_unix_socket_only_option = 0;
 
     smartlist_split_string(elts, ports->value, NULL,
@@ -6577,7 +6578,8 @@ parse_port_config(smartlist_t *out,
 
     if ( has_used_unix_socket_only_option && ! unix_socket_path) {
       log_warn(LD_CONFIG, "You have a %sPort entry with GroupWritable, "
-               "WorldWritable, or RelaxDirModeCheck, but it is not a unix socket.", portname);
+               "WorldWritable, or RelaxDirModeCheck, but it is not a "
+               "unix socket.", portname);
       goto err;
     }
 

@@ -2074,7 +2074,8 @@ check_private_dir(const char *dirname, cpd_check_t check,
    * the file between stat() and chmod(), a potential race exists.
    *
    * Several suggestions taken from:
-   * https://developer.apple.com/library/mac/documentation/Security/Conceptual/SecureCodingGuide/Articles/RaceConditions.html
+   * https://developer.apple.com/library/mac/documentation/
+   *     Security/Conceptual/SecureCodingGuide/Articles/RaceConditions.html
    */
 
   /* Open directory.
@@ -2985,7 +2986,8 @@ expand_filename(const char *filename)
   tor_assert(filename);
 #ifdef _WIN32
   /* Might consider using GetFullPathName() as described here:
-   * http://etutorials.org/Programming/secure+programming/Chapter+3.+Input+Validation/3.7+Validating+Filenames+and+Paths/
+   * http://etutorials.org/Programming/secure+programming/
+   *     Chapter+3.+Input+Validation/3.7+Validating+Filenames+and+Paths/
    */
   return tor_strdup(filename);
 #else

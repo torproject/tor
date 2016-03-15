@@ -2420,7 +2420,8 @@ build_state_get_exit_nickname(cpath_build_state_t *state)
 }
 
 /** Return true iff the given address can be used to extend to. */
-int extend_info_addr_is_allowed(const tor_addr_t *addr)
+int
+extend_info_addr_is_allowed(const tor_addr_t *addr)
 {
   tor_assert(addr);
 
@@ -2434,3 +2435,4 @@ int extend_info_addr_is_allowed(const tor_addr_t *addr)
  disallow:
   return 0;
 }
+

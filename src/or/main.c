@@ -572,7 +572,8 @@ connection_check_event(connection_t *conn, struct event *ev)
              conn_type_to_string(conn->type),
              conn_state_to_string(conn->type, conn->state),
              (int)conn->s, (int)conn->linked,
-             (conn->type == CONN_TYPE_AP && TO_EDGE_CONN(conn)->is_dns_request),
+             (conn->type == CONN_TYPE_AP &&
+                               TO_EDGE_CONN(conn)->is_dns_request),
              conn->marked_for_close_file ? conn->marked_for_close_file : "-",
              conn->marked_for_close
              );
