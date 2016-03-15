@@ -3312,6 +3312,13 @@ do_dump_config(void)
 static void
 init_addrinfo(void)
 {
+  if (! server_mode(get_options()) ||
+      (get_options()->Address && strlen(get_options()->Address) > 0)) {
+    /* We don't need to seed our own hostname, because we won't be calling
+     * resolve_my_address on it.
+     */
+    return;
+  }
   char hname[256];
 
   // host name to sandbox
