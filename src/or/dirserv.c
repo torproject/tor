@@ -1422,7 +1422,7 @@ router_counts_toward_thresholds(const node_t *node, time_t now,
  *
  * Also, set the is_exit flag of each router appropriately. */
 static void
-dirserv_compute_performance_thresholds(routerlist_t *rl,
+dirserv_compute_performance_thresholds(const smartlist_t *routers,
                                        digestmap_t *omit_as_sybil)
 {
   int n_active, n_active_nonexit, n_familiar;
@@ -1450,18 +1450,18 @@ dirserv_compute_performance_thresholds(routerlist_t *rl,
    * sort them and use that to compute thresholds. */
   n_active = n_active_nonexit = 0;
   /* Uptime for every active router. */
-  uptimes = tor_calloc(smartlist_len(rl->routers), sizeof(uint32_t));
+  uptimes = tor_calloc(smartlist_len(routers), sizeof(uint32_t));
   /* Bandwidth for every active router. */
-  bandwidths_kb = tor_calloc(smartlist_len(rl->routers), sizeof(uint32_t));
+  bandwidths_kb = tor_calloc(smartlist_len(routers), sizeof(uint32_t));
   /* Bandwidth for every active non-exit router. */
   bandwidths_excluding_exits_kb =
-    tor_calloc(smartlist_len(rl->routers), sizeof(uint32_t));
+    tor_calloc(smartlist_len(routers), sizeof(uint32_t));
   /* Weighted mean time between failure for each active router. */
-  mtbfs = tor_calloc(smartlist_len(rl->routers), sizeof(double));
+  mtbfs = tor_calloc(smartlist_len(routers), sizeof(double));
   /* Time-known for each active router. */
-  tks = tor_calloc(smartlist_len(rl->routers), sizeof(long));
+  tks = tor_calloc(smartlist_len(routers), sizeof(long));
   /* Weighted fractional uptime for each active router. */
-  wfus = tor_calloc(smartlist_len(rl->routers), sizeof(double));
+  wfus = tor_calloc(smartlist_len(routers), sizeof(double));
 
   nodelist_assert_ok();
 
@@ -1596,11 +1596,11 @@ dirserv_compute_performance_thresholds(routerlist_t *rl,
  * networkstatus_getinfo_by_purpose().
  */
 void
-dirserv_compute_bridge_flag_thresholds(routerlist_t *rl)
+dirserv_compute_bridge_flag_thresholds(const smartlist_t *routers)
 {
 
   digestmap_t *omit_as_sybil = digestmap_new();
-  dirserv_compute_performance_thresholds(rl, omit_as_sybil);
+  dirserv_compute_performance_thresholds(routers, omit_as_sybil);
   digestmap_free(omit_as_sybil, NULL);
 }
 
@@ -1753,16 +1753,13 @@ dirserv_get_bandwidth_for_router_kb(const routerinfo_t *ri)
  * how many measured bandwidths we know.  This is used to decide whether we
  * ever trust advertised bandwidths for purposes of assigning flags. */
 static void
-dirserv_count_measured_bws(routerlist_t *rl)
+dirserv_count_measured_bws(const smartlist_t *routers)
 {
   /* Initialize this first */
   routers_with_measured_bw = 0;
 
-  tor_assert(rl);
-  tor_assert(rl->routers);
-
   /* Iterate over the routerlist and count measured bandwidths */
-  SMARTLIST_FOREACH_BEGIN(rl->routers, routerinfo_t *, ri) {
+  SMARTLIST_FOREACH_BEGIN(routers, const routerinfo_t *, ri) {
     /* Check if we know a measured bandwidth for this one */
     if (dirserv_has_measured_bw(ri->cache_info.identity_digest)) {
       ++routers_with_measured_bw;
@@ -2854,6 +2851,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
   routers = smartlist_new();
   smartlist_add_all(routers, rl->routers);
   routers_make_ed_keys_unique(routers);
+  /* After this point, don't use rl->routers; use 'routers' instead. */
   routers_sort_by_identity(routers);
   omit_as_sybil = get_possible_sybil_list(routers);
 
@@ -2864,9 +2862,9 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
 
   /* Count how many have measured bandwidths so we know how to assign flags;
    * this must come before dirserv_compute_performance_thresholds() */
-  dirserv_count_measured_bws(rl);
+  dirserv_count_measured_bws(routers);
 
-  dirserv_compute_performance_thresholds(rl, omit_as_sybil);
+  dirserv_compute_performance_thresholds(routers, omit_as_sybil);
 
   routerstatuses = smartlist_new();
   microdescriptors = smartlist_new();

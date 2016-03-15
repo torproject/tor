@@ -1701,7 +1701,7 @@ networkstatus_dump_bridge_status_to_file(time_t now)
   char published[ISO_TIME_LEN+1];
 
   format_iso_time(published, now);
-  dirserv_compute_bridge_flag_thresholds(rl);
+  dirserv_compute_bridge_flag_thresholds(rl->routers);
   thresholds = dirserv_get_flag_thresholds_line();
   tor_asprintf(&published_thresholds_and_status,
                "published %s\nflag-thresholds %s\n%s",
