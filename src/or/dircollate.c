@@ -22,8 +22,8 @@ static void dircollator_collate_by_ed25519(dircollator_t *dc);
 typedef struct ddmap_entry_s {
   HT_ENTRY(ddmap_entry_s) node;
   uint8_t d[DIGEST_LEN + DIGEST256_LEN];
-  /* The i'th member of this array corresponds to the vote_routerstatus_t (if
-   * any) received for this digest pair from the n'th voter. */
+  /* The nth member of this array corresponds to the vote_routerstatus_t (if
+   * any) received for this digest pair from the nth voter. */
   vote_routerstatus_t *vrs_lst[FLEXIBLE_ARRAY_MEMBER];
 } ddmap_entry_t;
 
