@@ -2124,7 +2124,8 @@ get_possible_sybil_list(const smartlist_t *routers)
 }
 
 /** If there are entries in <b>routers</b> with exactly the same ed25519 keys,
- * remove the older one.  May alter the order of the list. */
+ * remove the older one.  If they are exactly the same age, remove the one
+ * with the greater descriptor digest. May alter the order of the list. */
 static void
 routers_make_ed_keys_unique(smartlist_t *routers)
 {
@@ -2139,7 +2140,12 @@ routers_make_ed_keys_unique(smartlist_t *routers)
     if ((ri2 = digest256map_get(by_ed_key, pk))) {
       /* Duplicate; must omit one.  Set the omit_from_vote flag in whichever
        * one has the earlier published_on. */
-      if (ri2->cache_info.published_on < ri->cache_info.published_on) {
+      const time_t ri_pub = ri->cache_info.published_on;
+      const time_t ri2_pub = ri2->cache_info.published_on;
+      if (ri2_pub < ri_pub ||
+          (ri2_pub == ri_pub &&
+           memcmp(ri->cache_info.signed_descriptor_digest,
+                  ri2->cache_info.signed_descriptor_digest,DIGEST_LEN)<0)) {
         digest256map_set(by_ed_key, pk, ri);
         ri2->omit_from_vote = 1;
       } else {
