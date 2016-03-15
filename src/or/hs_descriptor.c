@@ -6,6 +6,9 @@
  * \brief Handle hidden service descriptor encoding/decoding.
  **/
 
+/* For unit tests.*/
+#define HS_DESCRIPTOR_PRIVATE
+
 #include "hs_descriptor.h"
 
 #include "or.h"
@@ -132,7 +135,7 @@ desc_encrypted_data_free_contents(hs_desc_encrypted_data_t *desc)
 
 /* Encode the ed25519 certificate <b>cert</b> and put the newly allocated
  * string in <b>cert_str_out</b>. Return 0 on success else a negative value. */
-static int
+STATIC int
 encode_cert(const tor_cert_t *cert, char **cert_str_out)
 {
   int ret = -1;
@@ -172,7 +175,7 @@ err:
 /* Encode the given link specifier objects into a newly allocated string.
  * This can't fail so caller can always assume a valid string being
  * returned. */
-static char *
+STATIC char *
 encode_link_specifiers(const smartlist_t *specs)
 {
   char *encoded_b64 = NULL;
@@ -528,7 +531,7 @@ compute_padded_plaintext_length(size_t plaintext_len)
 /* Given a buffer, pad it up to the encrypted section padding requirement. Set
  * the newly allocated string in padded_out and return the length of the
  * padded buffer. */
-static size_t
+STATIC size_t
 build_plaintext_padding(const char *plaintext, size_t plaintext_len,
                         uint8_t **padded_out)
 {
@@ -842,7 +845,7 @@ rsa_ed25519_crosscert_check(const uint8_t *crosscert,
 
 /* Given an encoded string of the link specifiers, return a newly allocated
  * list of decoded link specifiers. Return NULL on error. */
-static smartlist_t *
+STATIC smartlist_t *
 decode_link_specifiers(const char *encoded)
 {
   int decoded_len;
@@ -981,7 +984,7 @@ decode_create2_list(hs_desc_encrypted_data_t *desc, const char *list)
  * included and if the that key was actually used to sign the certificate.
  *
  * Return 1 iff if all conditions pass or 0 if one of them fails. */
-static int
+STATIC int
 cert_is_valid(tor_cert_t *cert, uint8_t type, const char *log_obj_type)
 {
   tor_assert(log_obj_type);
@@ -1051,7 +1054,7 @@ cert_parse_and_validate(tor_cert_t **cert_out, const char *data,
 
 /* Return true iff the given length of the encrypted data of a descriptor
  * passes validation. */
-static int
+STATIC int
 encrypted_data_length_is_valid(size_t len)
 {
   /* Check for the minimum length possible. */
@@ -1191,7 +1194,7 @@ done:
  * introduction point from that section. Return a newly allocated introduction
  * point object containing the decoded data. Return NULL if the section can't
  * be decoded. */
-static hs_desc_intro_point_t *
+STATIC hs_desc_intro_point_t *
 decode_introduction_point(const hs_descriptor_t *desc, const char *start)
 {
   hs_desc_intro_point_t *ip = NULL;
@@ -1331,7 +1334,7 @@ decode_introduction_point(const hs_descriptor_t *desc, const char *start)
  * point object have been added to the desc_enc, they should be considered
  * invalid. One single bad encoded introduction point will make this function
  * return an error. */
-static int
+STATIC int
 decode_intro_points(const hs_descriptor_t *desc,
                     hs_desc_encrypted_data_t *desc_enc,
                     const char *data)
@@ -1401,7 +1404,7 @@ decode_intro_points(const hs_descriptor_t *desc,
 }
 /* Return 1 iff the given base64 encoded signature in b64_sig from the encoded
  * descriptor in encoded_desc validates the descriptor content. */
-static int
+STATIC int
 desc_sig_is_valid(const char *b64_sig, const ed25519_keypair_t *signing_kp,
                   const char *encoded_desc, size_t encoded_len)
 {
