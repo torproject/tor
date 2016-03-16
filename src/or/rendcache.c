@@ -623,6 +623,8 @@ rend_cache_lookup_v2_desc_as_dir(const char *desc_id, const char **desc)
  * If we have an older descriptor with the same ID, replace it.
  *
  * Return 0 on success, or -1 if we couldn't parse any of them.
+ *
+ * We should only call this function for public (e.g. non bridge) relays.
  */
 int
 rend_cache_store_v2_desc_as_dir(const char *desc)

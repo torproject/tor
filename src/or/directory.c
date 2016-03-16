@@ -3412,6 +3412,13 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
 
   conn->base_.state = DIR_CONN_STATE_SERVER_WRITING;
 
+  if (!public_server_mode(options)) {
+    log_info(LD_DIR, "Rejected dir post request from %s "
+             "since we're not a public relay.", conn->base_.address);
+    write_http_status_line(conn, 503, "Not acting as a public relay");
+    goto done;
+  }
+
   if (parse_http_url(headers, &url) < 0) {
     write_http_status_line(conn, 400, "Bad request");
     return 0;

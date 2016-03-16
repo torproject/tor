@@ -4,3 +4,7 @@
       check whether they are one of the relays in the network that is
       "supposed" to handle that descriptor. Implements ticket 18332.
 
+  o Minor bugfixes:
+    - Bridges now refuse "rendezvous2" (hidden service descriptor)
+      publish attempts. Suggested by ticket 18332.
+
