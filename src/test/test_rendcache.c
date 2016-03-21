@@ -91,7 +91,7 @@ test_rend_cache_lookup_entry(void *data)
 static void
 test_rend_cache_store_v2_desc_as_client(void *data)
 {
-  rend_cache_store_status_t ret;
+  int ret;
   rend_data_t *mock_rend_query;
   char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
   rend_cache_entry_t *entry = NULL;
@@ -112,7 +112,7 @@ test_rend_cache_store_v2_desc_as_client(void *data)
                                            desc_id_base32, mock_rend_query,
                                            &entry);
 
-  tt_int_op(ret, OP_EQ, RCS_OKAY);
+  tt_int_op(ret, OP_EQ, 0);
   tt_assert(entry);
   tt_int_op(entry->len, OP_EQ, strlen(desc_holder->desc_str));
   tt_str_op(entry->desc, OP_EQ, desc_holder->desc_str);
@@ -124,7 +124,7 @@ test_rend_cache_store_v2_desc_as_client(void *data)
    /*                   desc_holder->desc_str, */
    /*                   "3TOOLONG3TOOLONG3TOOLONG3TOOLONG3TOOLONG3TOOLONG", */
    /*                   &mock_rend_query, NULL); */
-  /* tt_int_op(ret, OP_EQ, RCS_BADDESC); */
+  /* tt_int_op(ret, OP_EQ, -1); */
 
   // Test bad base32 failure
   // This causes an assertion failure if we're running with assertions.
@@ -132,13 +132,13 @@ test_rend_cache_store_v2_desc_as_client(void *data)
 #ifdef DISABLE_ASSERTS_IN_UNIT_TESTS
   ret = rend_cache_store_v2_desc_as_client(desc_holder->desc_str,
                    "!xqunszqnaolrrfmtzgaki7mxelgvkj", mock_rend_query, NULL);
-  tt_int_op(ret, OP_EQ, RCS_BADDESC);
+  tt_int_op(ret, OP_EQ, -1);
 #endif
 
   // Test invalid descriptor
   ret = rend_cache_store_v2_desc_as_client("invalid descriptor",
              "3xqunszqnaolrrfmtzgaki7mxelgvkje", mock_rend_query, NULL);
-  tt_int_op(ret, OP_EQ, RCS_BADDESC);
+  tt_int_op(ret, OP_EQ, -1);
 
   // TODO: it doesn't seem to be possible to test invalid service ID condition.
   // that means it is likely not possible to have that condition without
@@ -152,7 +152,7 @@ test_rend_cache_store_v2_desc_as_client(void *data)
   ret = rend_cache_store_v2_desc_as_client(desc_holder->desc_str,
                                            desc_id_base32,
                                            mock_rend_query, NULL);
-  tt_int_op(ret, OP_EQ, RCS_BADDESC);
+  tt_int_op(ret, OP_EQ, -1);
   rend_cache_free_all();
   rend_data_free(mock_rend_query);
 
@@ -163,7 +163,7 @@ test_rend_cache_store_v2_desc_as_client(void *data)
   ret = rend_cache_store_v2_desc_as_client(desc_holder->desc_str,
                                            desc_id_base32, mock_rend_query,
                                            NULL);
-  tt_int_op(ret, OP_EQ, RCS_BADDESC);
+  tt_int_op(ret, OP_EQ, -1);
   desc_id_base32[0]--;
   rend_cache_free_all();
 
@@ -181,7 +181,7 @@ test_rend_cache_store_v2_desc_as_client(void *data)
   ret = rend_cache_store_v2_desc_as_client(desc_holder->desc_str,
                                            desc_id_base32,
                                            mock_rend_query, NULL);
-  tt_int_op(ret, OP_EQ, RCS_BADDESC);
+  tt_int_op(ret, OP_EQ, -1);
   rend_cache_free_all();
 
   // Test too new descriptor (in the future)
@@ -198,7 +198,7 @@ test_rend_cache_store_v2_desc_as_client(void *data)
   ret = rend_cache_store_v2_desc_as_client(desc_holder->desc_str,
                                            desc_id_base32, mock_rend_query,
                                            NULL);
-  tt_int_op(ret, OP_EQ, RCS_BADDESC);
+  tt_int_op(ret, OP_EQ, -1);
   rend_cache_free_all();
 
   // Test when a descriptor is already in the cache
@@ -217,12 +217,12 @@ test_rend_cache_store_v2_desc_as_client(void *data)
   ret = rend_cache_store_v2_desc_as_client(desc_holder->desc_str,
                                            desc_id_base32, mock_rend_query,
                                            NULL);
-  tt_int_op(ret, OP_EQ, RCS_OKAY);
+  tt_int_op(ret, OP_EQ, 0);
 
   ret = rend_cache_store_v2_desc_as_client(desc_holder->desc_str,
                                            desc_id_base32, mock_rend_query,
                                            &entry);
-  tt_int_op(ret, OP_EQ, RCS_OKAY);
+  tt_int_op(ret, OP_EQ, 0);
   tt_assert(entry);
   rend_cache_free_all();
 
@@ -243,7 +243,7 @@ test_rend_cache_store_v2_desc_as_client(void *data)
   ret = rend_cache_store_v2_desc_as_client(desc_holder->desc_str,
                                            desc_id_base32, mock_rend_query,
                                            NULL);
-  tt_int_op(ret, OP_EQ, RCS_OKAY);
+  tt_int_op(ret, OP_EQ, 0);
   rend_cache_free_all();
 
   // Test successful run when we have REND_BASIC_AUTH but not cookie
@@ -260,7 +260,7 @@ test_rend_cache_store_v2_desc_as_client(void *data)
   ret = rend_cache_store_v2_desc_as_client(desc_holder->desc_str,
                                            desc_id_base32, mock_rend_query,
                                            NULL);
-  tt_int_op(ret, OP_EQ, RCS_OKAY);
+  tt_int_op(ret, OP_EQ, 0);
 
   rend_cache_free_all();
 
@@ -277,7 +277,7 @@ test_rend_cache_store_v2_desc_as_client(void *data)
   ret = rend_cache_store_v2_desc_as_client(desc_holder->desc_str,
                                            desc_id_base32, mock_rend_query,
                                            NULL);
-  tt_int_op(ret, OP_EQ, RCS_BADDESC);
+  tt_int_op(ret, OP_EQ, -1);
   rend_cache_free_all();
 
   // Test when we have too many intro points
@@ -293,7 +293,7 @@ test_rend_cache_store_v2_desc_as_client(void *data)
   ret = rend_cache_store_v2_desc_as_client(desc_holder->desc_str,
                                            desc_id_base32, mock_rend_query,
                                            NULL);
-  tt_int_op(ret, OP_EQ, RCS_BADDESC);
+  tt_int_op(ret, OP_EQ, -1);
 
  done:
   rend_encoded_v2_service_descriptor_free(desc_holder);
@@ -305,7 +305,7 @@ test_rend_cache_store_v2_desc_as_client(void *data)
 static void
 test_rend_cache_store_v2_desc_as_client_with_different_time(void *data)
 {
-  rend_cache_store_status_t ret;
+  int ret;
   rend_data_t *mock_rend_query;
   char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
   rend_service_descriptor_t *generated = NULL;
@@ -350,7 +350,7 @@ test_rend_cache_store_v2_desc_as_client_with_different_time(void *data)
   ret = rend_cache_store_v2_desc_as_client(desc_holder_older->desc_str,
                                            desc_id_base32, mock_rend_query,
                                            NULL);
-  tt_int_op(ret, OP_EQ, RCS_OKAY);
+  tt_int_op(ret, OP_EQ, 0);
 
   rend_cache_free_all();
 
@@ -361,7 +361,7 @@ test_rend_cache_store_v2_desc_as_client_with_different_time(void *data)
   ret = rend_cache_store_v2_desc_as_client(desc_holder_newer->desc_str,
                                            desc_id_base32, mock_rend_query,
                                            NULL);
-  tt_int_op(ret, OP_EQ, RCS_OKAY);
+  tt_int_op(ret, OP_EQ, 0);
 
  done:
   rend_encoded_v2_service_descriptor_free(desc_holder_newer);
@@ -377,10 +377,8 @@ test_rend_cache_store_v2_desc_as_client_with_different_time(void *data)
 
 #define NS_SUBMODULE lookup_v2_desc_as_dir
 NS_DECL(const routerinfo_t *, router_get_my_routerinfo, (void));
-NS_DECL(int, hid_serv_responsible_for_desc_id, (const char *id));
 
 static routerinfo_t *mock_routerinfo;
-static int hid_serv_responsible_for_desc_id_response;
 
 static const routerinfo_t *
 NS(router_get_my_routerinfo)(void)
@@ -390,13 +388,6 @@ NS(router_get_my_routerinfo)(void)
   }
 
   return mock_routerinfo;
-}
-
-static int
-NS(hid_serv_responsible_for_desc_id)(const char *id)
-{
-  (void)id;
-  return hid_serv_responsible_for_desc_id_response;
 }
 
 static void
@@ -411,7 +402,6 @@ test_rend_cache_lookup_v2_desc_as_dir(void *data)
   (void)data;
 
   NS_MOCK(router_get_my_routerinfo);
-  NS_MOCK(hid_serv_responsible_for_desc_id);
 
   rend_cache_init();
 
@@ -425,7 +415,6 @@ test_rend_cache_lookup_v2_desc_as_dir(void *data)
   tt_int_op(ret, OP_EQ, 0);
 
   // Test existing descriptor
-  hid_serv_responsible_for_desc_id_response = 1;
   generate_desc(RECENT_TIME, &desc_holder, &service_id, 3);
   rend_cache_store_v2_desc_as_dir(desc_holder->desc_str);
   base32_encode(desc_id_base32, sizeof(desc_id_base32), desc_holder->desc_id,
@@ -436,7 +425,6 @@ test_rend_cache_lookup_v2_desc_as_dir(void *data)
 
  done:
   NS_UNMOCK(router_get_my_routerinfo);
-  NS_UNMOCK(hid_serv_responsible_for_desc_id);
   tor_free(mock_routerinfo);
   rend_cache_free_all();
   rend_encoded_v2_service_descriptor_free(desc_holder);
@@ -447,7 +435,6 @@ test_rend_cache_lookup_v2_desc_as_dir(void *data)
 
 #define NS_SUBMODULE store_v2_desc_as_dir
 NS_DECL(const routerinfo_t *, router_get_my_routerinfo, (void));
-NS_DECL(int, hid_serv_responsible_for_desc_id, (const char *id));
 
 static const routerinfo_t *
 NS(router_get_my_routerinfo)(void)
@@ -455,51 +442,27 @@ NS(router_get_my_routerinfo)(void)
   return mock_routerinfo;
 }
 
-static int
-NS(hid_serv_responsible_for_desc_id)(const char *id)
-{
-  (void)id;
-  return hid_serv_responsible_for_desc_id_response;
-}
-
 static void
 test_rend_cache_store_v2_desc_as_dir(void *data)
 {
   (void)data;
-  rend_cache_store_status_t ret;
+  int ret;
   rend_encoded_v2_service_descriptor_t *desc_holder = NULL;
   char *service_id = NULL;
 
   NS_MOCK(router_get_my_routerinfo);
-  NS_MOCK(hid_serv_responsible_for_desc_id);
 
   rend_cache_init();
 
-  // Test when we are not an HS dir
-  mock_routerinfo = NULL;
-  ret = rend_cache_store_v2_desc_as_dir("");
-  tt_int_op(ret, OP_EQ, RCS_NOTDIR);
-
   // Test when we can't parse the descriptor
   mock_routerinfo = tor_malloc(sizeof(routerinfo_t));
-  hid_serv_responsible_for_desc_id_response = 1;
   ret = rend_cache_store_v2_desc_as_dir("unparseable");
-  tt_int_op(ret, OP_EQ, RCS_BADDESC);
-
-  // Test when we are not responsible for an HS
-  hid_serv_responsible_for_desc_id_response = 0;
-  generate_desc(RECENT_TIME, &desc_holder, &service_id, 3);
-  ret = rend_cache_store_v2_desc_as_dir(desc_holder->desc_str);
-  tt_int_op(ret, OP_EQ, RCS_OKAY);
-
-  rend_encoded_v2_service_descriptor_free(desc_holder);
-  tor_free(service_id);
+  tt_int_op(ret, OP_EQ, -1);
 
   // Test when we have an old descriptor
-  hid_serv_responsible_for_desc_id_response = 1;
   generate_desc(TIME_IN_THE_PAST, &desc_holder, &service_id, 3);
   ret = rend_cache_store_v2_desc_as_dir(desc_holder->desc_str);
-  tt_int_op(ret, OP_EQ, RCS_OKAY);
+  tt_int_op(ret, OP_EQ, 0);
 
   rend_encoded_v2_service_descriptor_free(desc_holder);
   tor_free(service_id);
@@ -507,7 +470,7 @@ test_rend_cache_store_v2_desc_as_dir(void *data)
   // Test when we have a descriptor in the future
   generate_desc(TIME_IN_THE_FUTURE, &desc_holder, &service_id, 3);
   ret = rend_cache_store_v2_desc_as_dir(desc_holder->desc_str);
-  tt_int_op(ret, OP_EQ, RCS_OKAY);
+  tt_int_op(ret, OP_EQ, 0);
 
   rend_encoded_v2_service_descriptor_free(desc_holder);
   tor_free(service_id);
@@ -515,7 +478,7 @@ test_rend_cache_store_v2_desc_as_dir(void *data)
   // Test when two descriptors
   generate_desc(TIME_IN_THE_FUTURE, &desc_holder, &service_id, 3);
   ret = rend_cache_store_v2_desc_as_dir(desc_holder->desc_str);
-  tt_int_op(ret, OP_EQ, RCS_OKAY);
+  tt_int_op(ret, OP_EQ, 0);
 
   rend_encoded_v2_service_descriptor_free(desc_holder);
   tor_free(service_id);
@@ -525,11 +488,10 @@ test_rend_cache_store_v2_desc_as_dir(void *data)
   generate_desc(RECENT_TIME, &desc_holder, &service_id, 3);
   get_options_mutable()->HiddenServiceStatistics = 1;
   ret = rend_cache_store_v2_desc_as_dir(desc_holder->desc_str);
-  tt_int_op(ret, OP_EQ, RCS_OKAY);
+  tt_int_op(ret, OP_EQ, 0);
 
  done:
   NS_UNMOCK(router_get_my_routerinfo);
-  NS_UNMOCK(hid_serv_responsible_for_desc_id);
   rend_encoded_v2_service_descriptor_free(desc_holder);
   tor_free(service_id);
   rend_cache_free_all();
@@ -541,7 +503,7 @@ test_rend_cache_store_v2_desc_as_dir_with_different_time(void *data)
 {
   (void)data;
 
-  rend_cache_store_status_t ret;
+  int ret;
   rend_service_descriptor_t *generated = NULL;
   smartlist_t *descs = smartlist_new();
   time_t t;
@@ -550,7 +512,6 @@ test_rend_cache_store_v2_desc_as_dir_with_different_time(void *data)
   rend_encoded_v2_service_descriptor_t *desc_holder_older;
 
   NS_MOCK(router_get_my_routerinfo);
-  NS_MOCK(hid_serv_responsible_for_desc_id);
 
   rend_cache_init();
 
@@ -577,20 +538,18 @@ test_rend_cache_store_v2_desc_as_dir_with_different_time(void *data)
 
   // Test when we have a newer descriptor stored
   mock_routerinfo = tor_malloc(sizeof(routerinfo_t));
-  hid_serv_responsible_for_desc_id_response = 1;
   rend_cache_store_v2_desc_as_dir(desc_holder_newer->desc_str);
   ret = rend_cache_store_v2_desc_as_dir(desc_holder_older->desc_str);
-  tt_int_op(ret, OP_EQ, RCS_OKAY);
+  tt_int_op(ret, OP_EQ, 0);
 
   // Test when we have an old descriptor stored
   rend_cache_purge();
   rend_cache_store_v2_desc_as_dir(desc_holder_older->desc_str);
   ret = rend_cache_store_v2_desc_as_dir(desc_holder_newer->desc_str);
-  tt_int_op(ret, OP_EQ, RCS_OKAY);
+  tt_int_op(ret, OP_EQ, 0);
 
  done:
   NS_UNMOCK(router_get_my_routerinfo);
-  NS_UNMOCK(hid_serv_responsible_for_desc_id);
   rend_cache_free_all();
   rend_service_descriptor_free(generated);
   tor_free(service_id);
@@ -607,7 +566,7 @@ test_rend_cache_store_v2_desc_as_dir_with_different_content(void *data)
 {
   (void)data;
 
-  rend_cache_store_status_t ret;
+  int ret;
   rend_service_descriptor_t *generated = NULL;
   smartlist_t *descs = smartlist_new();
   time_t t;
@@ -616,7 +575,6 @@ test_rend_cache_store_v2_desc_as_dir_with_different_content(void *data)
   rend_encoded_v2_service_descriptor_t *desc_holder_two = NULL;
 
   NS_MOCK(router_get_my_routerinfo);
-  NS_MOCK(hid_serv_responsible_for_desc_id);
 
   rend_cache_init();
 
@@ -645,14 +603,12 @@ test_rend_cache_store_v2_desc_as_dir_with_different_content(void *data)
 
   // Test when we have another descriptor stored, with a different descriptor
   mock_routerinfo = tor_malloc(sizeof(routerinfo_t));
-  hid_serv_responsible_for_desc_id_response = 1;
   rend_cache_store_v2_desc_as_dir(desc_holder_one->desc_str);
   ret = rend_cache_store_v2_desc_as_dir(desc_holder_two->desc_str);
-  tt_int_op(ret, OP_EQ, RCS_OKAY);
+  tt_int_op(ret, OP_EQ, 0);
 
  done:
   NS_UNMOCK(router_get_my_routerinfo);
-  NS_UNMOCK(hid_serv_responsible_for_desc_id);
   rend_cache_free_all();
   rend_service_descriptor_free(generated);
   tor_free(service_id);
@@ -1113,14 +1069,6 @@ test_rend_cache_intro_failure_note(void *data)
 }
 
 #define NS_SUBMODULE clean_v2_descs_as_dir
-NS_DECL(int, hid_serv_responsible_for_desc_id, (const char *id));
-
-static int
-NS(hid_serv_responsible_for_desc_id)(const char *id)
-{
-  (void)id;
-  return hid_serv_responsible_for_desc_id_response;
-}
 
 static void
 test_rend_cache_clean_v2_descs_as_dir(void *data)
@@ -1133,7 +1081,6 @@ test_rend_cache_clean_v2_descs_as_dir(void *data)
 
   (void)data;
 
-  NS_MOCK(hid_serv_responsible_for_desc_id);
   rend_cache_init();
 
   // Test running with an empty cache
@@ -1149,26 +1096,11 @@ test_rend_cache_clean_v2_descs_as_dir(void *data)
   e->parsed = desc;
   digestmap_set(rend_cache_v2_dir, key, e);
 
-  hid_serv_responsible_for_desc_id_response = 1;
   rend_cache_clean_v2_descs_as_dir(now, 0);
   tt_int_op(digestmap_size(rend_cache_v2_dir), OP_EQ, 1);
 
   // Test with one old entry
   desc->timestamp = now - (REND_CACHE_MAX_AGE + REND_CACHE_MAX_SKEW + 1000);
-  rend_cache_clean_v2_descs_as_dir(now, 0);
-  tt_int_op(digestmap_size(rend_cache_v2_dir), OP_EQ, 0);
-
-  // Test with one entry that is not under the responsibility of this
-  // hidden service
-  e = tor_malloc_zero(sizeof(rend_cache_entry_t));
-  e->last_served = now;
-  desc = tor_malloc_zero(sizeof(rend_service_descriptor_t));
-  desc->timestamp = now;
-  desc->pk = pk_generate(0);
-  e->parsed = desc;
-  digestmap_set(rend_cache_v2_dir, key, e);
-
-  hid_serv_responsible_for_desc_id_response = 0;
   rend_cache_clean_v2_descs_as_dir(now, 0);
   tt_int_op(digestmap_size(rend_cache_v2_dir), OP_EQ, 0);
 
@@ -1181,7 +1113,6 @@ test_rend_cache_clean_v2_descs_as_dir(void *data)
   e->parsed = desc;
   digestmap_set(rend_cache_v2_dir, key, e);
 
-  hid_serv_responsible_for_desc_id_response = 1;
   rend_cache_clean_v2_descs_as_dir(now, 0);
   tt_int_op(digestmap_size(rend_cache_v2_dir), OP_EQ, 0);
 
@@ -1194,12 +1125,10 @@ test_rend_cache_clean_v2_descs_as_dir(void *data)
   e->parsed = desc;
   digestmap_set(rend_cache_v2_dir, key, e);
 
-  hid_serv_responsible_for_desc_id_response = 1;
   rend_cache_clean_v2_descs_as_dir(now, 20000);
   tt_int_op(digestmap_size(rend_cache_v2_dir), OP_EQ, 1);
 
  done:
-  NS_UNMOCK(hid_serv_responsible_for_desc_id);
   rend_cache_free_all();
 }
 

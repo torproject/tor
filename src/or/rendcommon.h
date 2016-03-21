@@ -53,14 +53,11 @@ int rend_encode_v2_descriptors(smartlist_t *descs_out,
 int rend_compute_v2_desc_id(char *desc_id_out, const char *service_id,
                             const char *descriptor_cookie,
                             time_t now, uint8_t replica);
-int rend_id_is_in_interval(const char *a, const char *b, const char *c);
 void rend_get_descriptor_id_bytes(char *descriptor_id_out,
                                   const char *service_id,
                                   const char *secret_id_part);
 int hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
                                          const char *id);
-int hid_serv_acting_as_directory(void);
-MOCK_DECL(int, hid_serv_responsible_for_desc_id, (const char *id));
 
 rend_data_t *rend_data_dup(const rend_data_t *data);
 rend_data_t *rend_data_client_create(const char *onion_address,
