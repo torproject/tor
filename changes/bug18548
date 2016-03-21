@@ -1,0 +1,12 @@
+  o Minor bugfixes (linux seccomp2 sandbox):
+    - Avoid a 10-second delay when starting as a client with Sandbox 1
+      enabled and no DNS resolvers configured.  This should help TAILS
+      start up faster. Fixes bug 18548; bugfix on 0.2.5.1-alpha.
+
+
+  o Minor features (linux seccomp2 sandbox):
+    - Detect and reject attempts to change our Address with Sandbox 1
+      enabled. Changing Address with Sandbox turned on would never
+      actually work, but previously it would fail in strange and
+      confusing ways.  Found while fixing 18548.
+

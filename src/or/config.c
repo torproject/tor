@@ -4267,6 +4267,7 @@ options_transition_allowed(const or_options_t *old,
       }                                                                 \
     } while (0)
 
+    SB_NOCHANGE_STR(Address);
     SB_NOCHANGE_STR(PidFile);
     SB_NOCHANGE_STR(ServerDNSResolvConfFile);
     SB_NOCHANGE_STR(DirPortFrontPage);
