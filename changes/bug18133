@@ -1,0 +1,4 @@
+  o Minor bugfixes (logging):
+    - When we can't generate a signing key because OfflineMasterKey is set,
+      do not imply that we should have been able to load it.
+      Fixes bug 18133; bugfix on 0.2.7.2-alpha.
