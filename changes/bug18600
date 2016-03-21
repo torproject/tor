@@ -1,0 +1,3 @@
+  o Minor bugfixes (logging):
+    - Scrub service in from "unrecognized service ID" log messages.
+      Fixes bug 18600; bugfix on 0.2.4.11-alpha.
