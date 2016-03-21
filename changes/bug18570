@@ -1,0 +1,7 @@
+  o Minor bugfixes (correctness):
+    - Fix a bad memory handling bug that would occur if we had queued
+      a cell on a channel's incoming queue. Fortunately, we can't actually
+      queue a cell like that as our code is constructed today, but it's best
+      to avoid this kind of error, even if there isn't any code that triggers
+      it today. Fixes bug 18570; bugfix on 0.2.4.4-alpha.
+
