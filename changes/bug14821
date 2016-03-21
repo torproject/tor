@@ -1,4 +1,4 @@
   o Major bugfixes (compilation):
-    - Correctly repair hardened builds under the clang compiler. Previously,
+    - Repair hardened builds under the clang compiler. Previously,
       our use of _FORTIFY_SOURCE would conflict with clang's address
-      sanitizer. Closes ticket 14821.
+      sanitizer. Fixes bug 14821; bugfix on 0.2.5.4-alpha.
