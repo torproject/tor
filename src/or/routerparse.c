@@ -2862,7 +2862,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
                       (ns_type == NS_TYPE_CONSENSUS) ?
                       networkstatus_consensus_token_table :
                       networkstatus_token_table, 0)) {
-    log_warn(LD_DIR, "Error tokenizing network-status vote header");
+    log_warn(LD_DIR, "Error tokenizing network-status header");
     goto err;
   }
 
@@ -3085,7 +3085,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
           base16_decode(voter->identity_digest, sizeof(voter->identity_digest),
                         tok->args[1], HEX_DIGEST_LEN) < 0) {
         log_warn(LD_DIR, "Error decoding identity digest %s in "
-                 "network-status vote.", escaped(tok->args[1]));
+                 "network-status document.", escaped(tok->args[1]));
         goto err;
       }
       if (ns->type != NS_TYPE_CONSENSUS &&
@@ -3144,7 +3144,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     voter = NULL;
   }
   if (smartlist_len(ns->voters) == 0) {
-    log_warn(LD_DIR, "Missing dir-source elements in a vote networkstatus.");
+    log_warn(LD_DIR, "Missing dir-source elements in a networkstatus.");
     goto err;
   } else if (ns->type != NS_TYPE_CONSENSUS && smartlist_len(ns->voters) != 1) {
     log_warn(LD_DIR, "Too many dir-source elements in a vote networkstatus.");
@@ -3205,8 +3205,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     }
     if (fast_memcmp(rs1->identity_digest, rs2->identity_digest, DIGEST_LEN)
         >= 0) {
-      log_warn(LD_DIR, "Vote networkstatus entries not sorted by identity "
-               "digest");
+      log_warn(LD_DIR, "Networkstatus entries not sorted by identity digest");
       goto err;
     }
   }
@@ -3319,12 +3318,12 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
         base16_decode(declared_identity, sizeof(declared_identity),
                       id_hexdigest, HEX_DIGEST_LEN) < 0) {
       log_warn(LD_DIR, "Error decoding declared identity %s in "
-               "network-status vote.", escaped(id_hexdigest));
+               "network-status document.", escaped(id_hexdigest));
       goto err;
     }
     if (!(v = networkstatus_get_voter_by_id(ns, declared_identity))) {
-      log_warn(LD_DIR, "ID on signature on network-status vote does not match "
-               "any declared directory source.");
+      log_warn(LD_DIR, "ID on signature on network-status document does "
+               "not match any declared directory source.");
       goto err;
     }
     sig = tor_malloc_zero(sizeof(document_signature_t));
@@ -3334,7 +3333,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
         base16_decode(sig->signing_key_digest, sizeof(sig->signing_key_digest),
                       sk_hexdigest, HEX_DIGEST_LEN) < 0) {
       log_warn(LD_DIR, "Error decoding declared signing key digest %s in "
-               "network-status vote.", escaped(sk_hexdigest));
+               "network-status document.", escaped(sk_hexdigest));
       tor_free(sig);
       goto err;
     }
@@ -3353,8 +3352,8 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       /* We already parsed a vote with this algorithm from this voter. Use the
          first one. */
       log_fn(LOG_PROTOCOL_WARN, LD_DIR, "We received a networkstatus "
-             "that contains two votes from the same voter with the same "
-             "algorithm. Ignoring the second vote.");
+             "that contains two signatures from the same voter with the same "
+             "algorithm. Ignoring the second signature.");
       tor_free(sig);
       continue;
     }
@@ -3362,7 +3361,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     if (ns->type != NS_TYPE_CONSENSUS) {
       if (check_signature_token(ns_digests.d[DIGEST_SHA1], DIGEST_LEN,
                                 tok, ns->cert->signing_key, 0,
-                                "network-status vote")) {
+                                "network-status document")) {
         tor_free(sig);
         goto err;
       }
@@ -3381,7 +3380,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   } SMARTLIST_FOREACH_END(_tok);
 
   if (! n_signatures) {
-    log_warn(LD_DIR, "No signatures on networkstatus vote.");
+    log_warn(LD_DIR, "No signatures on networkstatus document.");
     goto err;
   } else if (ns->type == NS_TYPE_VOTE && n_signatures != 1) {
     log_warn(LD_DIR, "Received more than one signature on a "

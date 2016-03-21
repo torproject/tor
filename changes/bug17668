@@ -1,0 +1,5 @@
+  o Major bugfixes (voting):
+    - When collating votes by Ed25519 identities, authorities now
+      include a "NoEdConsensus" flag if the ed25519 value (or lack thereof)
+      for a server does not reflect the majority consensus. Related to bug
+      17668; bugfix on 0.2.7.2-alpha.
