@@ -558,6 +558,13 @@ compute_consensus_method(smartlist_t *votes)
 static int
 consensus_method_is_supported(int method)
 {
+  if (method == MIN_METHOD_FOR_ED25519_ID_IN_MD) {
+    /* This method was broken due to buggy code accidently left in
+     * dircollate.c; do not actually use it.
+     */
+    return 0;
+  }
+
   return (method >= MIN_SUPPORTED_CONSENSUS_METHOD) &&
     (method <= MAX_SUPPORTED_CONSENSUS_METHOD);
 }
@@ -1235,6 +1242,9 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_free(combined_server_versions);
     smartlist_free(combined_client_versions);
 
+    if (consensus_method >= MIN_METHOD_FOR_ED25519_ID_VOTING)
+      smartlist_add(flags, tor_strdup("NoEdConsensus"));
+
     smartlist_sort_strings(flags);
     smartlist_uniq_strings(flags);
 
@@ -1532,6 +1542,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
       num_bandwidths = 0;
       num_mbws = 0;
       num_guardfraction_inputs = 0;
+      int ed_consensus = 0;
+      const uint8_t *ed_consensus_val = NULL;
 
       /* Okay, go through all the entries for this digest. */
       for (int voter_idx = 0; voter_idx < smartlist_len(votes); ++voter_idx) {
@@ -1573,12 +1585,31 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
         if (rs->status.has_bandwidth)
           bandwidths_kb[num_bandwidths++] = rs->status.bandwidth_kb;
+
+        /* Count number for which ed25519 is canonical. */
+        if (rs->ed25519_reflects_consensus) {
+          ++ed_consensus;
+          if (ed_consensus_val) {
+            tor_assert(fast_memeq(ed_consensus_val, rs->ed25519_id,
+                                  ED25519_PUBKEY_LEN));
+          } else {
+            ed_consensus_val = rs->ed25519_id;
+          }
+        }
       }
 
       /* We don't include this router at all unless more than half of
        * the authorities we believe in list it. */
       if (n_listing <= total_authorities/2)
         continue;
+
+      if (ed_consensus > 0) {
+        tor_assert(consensus_method >= MIN_METHOD_FOR_ED25519_ID_VOTING);
+        if (ed_consensus <= total_authorities / 2) {
+          log_warn(LD_BUG, "Not enough entries had ed_consensus set; how "
+                   "can we have a consensus of %d?", ed_consensus);
+        }
+      }
 
       /* The clangalyzer can't figure out that this will never be NULL
        * if n_listing is at least 1 */
@@ -1632,6 +1663,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
             smartlist_add(chosen_flags, (char*)fl);
         } else if (!strcmp(fl, "Unnamed")) {
           if (is_unnamed)
+            smartlist_add(chosen_flags, (char*)fl);
+        } else if (!strcmp(fl, "NoEdConsensus") &&
+                   consensus_method >= MIN_METHOD_FOR_ED25519_ID_VOTING) {
+          if (ed_consensus <= total_authorities/2)
             smartlist_add(chosen_flags, (char*)fl);
         } else {
           if (flag_counts[fl_sl_idx] > n_flag_voters[fl_sl_idx]/2) {
