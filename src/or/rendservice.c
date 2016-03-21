@@ -2717,7 +2717,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
                 circuit->rend_data->rend_pk_digest);
   if (!service) {
     log_warn(LD_REND, "Unrecognized service ID %s on introduction circuit %u.",
-             serviceid, (unsigned)circuit->base_.n_circ_id);
+             safe_str_client(serviceid), (unsigned)circuit->base_.n_circ_id);
     reason = END_CIRC_REASON_NOSUCHSERVICE;
     goto err;
   }
