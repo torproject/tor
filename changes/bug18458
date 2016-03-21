@@ -1,4 +1,4 @@
-  o Minor features:
+  o Minor features (unix domain sockets):
     - Since some operating systems do not consider the actual modes on a
       UNIX domain socket itself, tor does not allow creating such a
       socket in a directory that is group or world accessible if it is
@@ -6,4 +6,4 @@
       accessible sockets in a world accessible directory.
       However, on some operating systems this is unnecessary, so
       add a per-socket option called RelaxDirModeCheck.
-      Fixes bug 18458.  Patch by weasel.
+      Closes ticket 18458.  Patch by weasel.

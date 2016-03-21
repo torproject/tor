@@ -1,5 +1,5 @@
   o Major bugfixes (dns proxy mode, crash):
-    - Avoid crashing when running as a DNS proxy. Closes bug 16248; bugfix on
+    - Avoid crashing when running as a DNS proxy. Fixes bug 16248; bugfix on
       0.2.0.1-alpha. Patch from 'cypherpunks'.
 
   o Minor features (bug-resistance):

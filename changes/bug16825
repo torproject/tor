@@ -1,4 +1,4 @@
-  o Minor bugfixes:
+  o Minor bugfixes (client):
     - Count receipt of new microdescriptors as progress towards
       bootstrapping. Now, when a user who has set EntryNodes finishes
       bootstrapping, Tor automatically repopulates the guard set based

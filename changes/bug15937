@@ -1,7 +1,7 @@
-  o Minor bug fix (hidden service client):
+  o Minor bugfixes (hidden service client):
     - Seven very fast consecutive requests to the same .onion address
       triggers 7 descriptor fetches. The first six each pick a directory
       (there are 6 overall) and the seventh one wasn't able to pick one
       which was triggering a close on all current directory connections. It
       has been fixed by not closing them if we have pending directory fetch.
-      Fixes #15937; Bugfix on tor-0.2.7.1-alpha.
+      Fixes bug 15937; bugfix on tor-0.2.7.1-alpha.

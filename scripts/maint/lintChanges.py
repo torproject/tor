@@ -16,6 +16,7 @@ KNOWN_GROUPS=set([
     "Minor features",
     "Major feature",
     "Major features",
+    "New system requirements",
     "Testing",
     "Documentation",
     "Code simplification and refactoring",
