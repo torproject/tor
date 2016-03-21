@@ -2656,6 +2656,11 @@ channel_process_cells(channel_t *chan)
   /*
    * Process cells until we're done or find one we have no current handler
    * for.
+   *
+   * We must free the cells here after calling the handler, since custody
+   * of the buffer was given to the channel layer when they were queued;
+   * see comments on memory management in channel_queue_cell() and in
+   * channel_queue_var_cell() below.
    */
   while (NULL != (q = TOR_SIMPLEQ_FIRST(&chan->incoming_queue))) {
     tor_assert(q);
@@ -2673,6 +2678,7 @@ channel_process_cells(channel_t *chan)
                 q->u.fixed.cell, chan,
                 U64_PRINTF_ARG(chan->global_identifier));
       chan->cell_handler(chan, q->u.fixed.cell);
+      tor_free(q->u.fixed.cell);
       tor_free(q);
     } else if (q->type == CELL_QUEUE_VAR &&
                chan->var_cell_handler) {
@@ -2685,6 +2691,7 @@ channel_process_cells(channel_t *chan)
                 q->u.var.var_cell, chan,
                 U64_PRINTF_ARG(chan->global_identifier));
       chan->var_cell_handler(chan, q->u.var.var_cell);
+      tor_free(q->u.var.var_cell);
       tor_free(q);
     } else {
       /* Can't handle this one */
@@ -2705,6 +2712,7 @@ channel_queue_cell(channel_t *chan, cell_t *cell)
 {
   int need_to_queue = 0;
   cell_queue_entry_t *q;
+  cell_t *cell_copy = NULL;
 
   tor_assert(chan);
   tor_assert(cell);
@@ -2732,8 +2740,19 @@ channel_queue_cell(channel_t *chan, cell_t *cell)
               U64_PRINTF_ARG(chan->global_identifier));
     chan->cell_handler(chan, cell);
   } else {
-    /* Otherwise queue it and then process the queue if possible. */
-    q = cell_queue_entry_new_fixed(cell);
+    /*
+     * Otherwise queue it and then process the queue if possible.
+     *
+     * We queue a copy, not the original pointer - it might have been on the
+     * stack in connection_or_process_cells_from_inbuf() (or another caller
+     * if we ever have a subclass other than channel_tls_t), or be freed
+     * there after we return.  This is the uncommon case; the non-copying
+     * fast path occurs in the if (!need_to_queue) case above when the
+     * upper layer has installed cell handlers.
+     */
+    cell_copy = tor_malloc_zero(sizeof(cell_t));
+    memcpy(cell_copy, cell, sizeof(cell_t));
+    q = cell_queue_entry_new_fixed(cell_copy);
     log_debug(LD_CHANNEL,
               "Queueing incoming cell_t %p for channel %p "
               "(global ID " U64_FORMAT ")",
@@ -2759,6 +2778,7 @@ channel_queue_var_cell(channel_t *chan, var_cell_t *var_cell)
 {
   int need_to_queue = 0;
   cell_queue_entry_t *q;
+  var_cell_t *cell_copy = NULL;
 
   tor_assert(chan);
   tor_assert(var_cell);
@@ -2787,8 +2807,18 @@ channel_queue_var_cell(channel_t *chan, var_cell_t *var_cell)
               U64_PRINTF_ARG(chan->global_identifier));
     chan->var_cell_handler(chan, var_cell);
   } else {
-    /* Otherwise queue it and then process the queue if possible. */
-    q = cell_queue_entry_new_var(var_cell);
+    /*
+     * Otherwise queue it and then process the queue if possible.
+     *
+     * We queue a copy, not the original pointer - it might have been on the
+     * stack in connection_or_process_cells_from_inbuf() (or another caller
+     * if we ever have a subclass other than channel_tls_t), or be freed
+     * there after we return.  This is the uncommon case; the non-copying
+     * fast path occurs in the if (!need_to_queue) case above when the
+     * upper layer has installed cell handlers.
+     */
+    cell_copy = var_cell_copy(var_cell);
+    q = cell_queue_entry_new_var(cell_copy);
     log_debug(LD_CHANNEL,
               "Queueing incoming var_cell_t %p for channel %p "
               "(global ID " U64_FORMAT ")",

@@ -488,6 +488,28 @@ var_cell_new(uint16_t payload_len)
   return cell;
 }
 
+/**
+ * Copy a var_cell_t
+ */
+
+var_cell_t *
+var_cell_copy(const var_cell_t *src)
+{
+  var_cell_t *copy = NULL;
+  size_t size = 0;
+
+  if (src != NULL) {
+    size = STRUCT_OFFSET(var_cell_t, payload) + src->payload_len;
+    copy = tor_malloc_zero(size);
+    copy->payload_len = src->payload_len;
+    copy->command = src->command;
+    copy->circ_id = src->circ_id;
+    memcpy(copy->payload, src->payload, copy->payload_len);
+  }
+
+  return copy;
+}
+
 /** Release all space held by <b>cell</b>. */
 void
 var_cell_free(var_cell_t *cell)
@@ -2025,6 +2047,19 @@ static int
 connection_or_process_cells_from_inbuf(or_connection_t *conn)
 {
   var_cell_t *var_cell;
+
+  /*
+   * Note on memory management for incoming cells: below the channel layer,
+   * we shouldn't need to consider its internal queueing/copying logic.  It
+   * is safe to pass cells to it on the stack or on the heap, but in the
+   * latter case we must be sure we free them later.
+   *
+   * The incoming cell queue code in channel.c will (in the common case)
+   * decide it can pass them to the upper layer immediately, in which case
+   * those functions may run directly on the cell pointers we pass here, or
+   * it may decide to queue them, in which case it will allocate its own
+   * buffer and copy the cell.
+   */
 
   while (1) {
     log_debug(LD_OR,
