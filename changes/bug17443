@@ -1,0 +1,5 @@
+  o Minor bugfixes (tor-gencert):
+    - Correctly handle the case where an authority operator enters a
+      passphrase but sends an EOF before sending a newline.
+      Fixes bug 17443; bugfix on 0.2.0.20-rc. Found by "junglefowl".
+

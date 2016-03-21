@@ -96,14 +96,21 @@ load_passphrase(void)
 {
   char *cp;
   char buf[1024]; /* "Ought to be enough for anybody." */
+  memset(buf, 0, sizeof(buf)); /* should be needless */
   ssize_t n = read_all(passphrase_fd, buf, sizeof(buf), 0);
   if (n < 0) {
     log_err(LD_GENERAL, "Couldn't read from passphrase fd: %s",
             strerror(errno));
     return -1;
   }
+  /* We'll take everything from the buffer except for optional terminating
+   * newline. */
   cp = memchr(buf, '\n', n);
-  passphrase_len = cp-buf;
+  if (cp == NULL) {
+    passphrase_len = n;
+  } else {
+    passphrase_len = cp-buf;
+  }
   passphrase = tor_strndup(buf, passphrase_len);
   memwipe(buf, 0, sizeof(buf));
   return 0;
