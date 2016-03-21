@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - When logging information about an unparseable networkstatus vote or
+      consensus, do not say "vote" when we mean consensus. Fixes bug
+      18368; bugfix on 0.2.0.8-alpha.
+

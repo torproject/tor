@@ -2158,6 +2158,10 @@ typedef struct {
    * dir_port > 0. */
   unsigned int supports_tunnelled_dir_requests:1;
 
+  /** Used during voting to indicate that we should not include an entry for
+   * this routerinfo. Used only during voting. */
+  unsigned int omit_from_vote:1;
+
 /** Tor can use this router for general positions in circuits; we got it
  * from a directory server as usual, or we're an authority and a server
  * uploaded it. */
@@ -2454,8 +2458,13 @@ typedef struct vote_routerstatus_t {
   char *version; /**< The version that the authority says this router is
                   * running. */
   unsigned int has_measured_bw:1; /**< The vote had a measured bw */
-  unsigned int has_ed25519_listing:1; /** DOCDOC */
-  unsigned int ed25519_reflects_consensus:1; /** DOCDOC */
+  /** True iff the vote included an entry for ed25519 ID, or included
+   * "id ed25519 none" to indicate that there was no ed25519 ID. */
+  unsigned int has_ed25519_listing:1;
+  /** True if the Ed25519 listing here is the consensus-opinion for the
+   * Ed25519 listing; false if there was no consensus on Ed25519 key status,
+   * or if this VRS doesn't reflect it. */
+  unsigned int ed25519_reflects_consensus:1;
   uint32_t measured_bw_kb; /**< Measured bandwidth (capacity) of the router */
   /** The hash or hashes that the authority claims this microdesc has. */
   vote_microdesc_hash_t *microdesc;
