@@ -1,0 +1,4 @@
+  o Documentation:
+    - Add a description of the correct use of the '--keygen' command-line
+      option. Closes ticket 17583; based on text by 's7r'.
+
