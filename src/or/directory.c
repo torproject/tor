@@ -2305,7 +2305,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
            * cleans this dir conn up. */
           SEND_HS_DESC_FAILED_EVENT("BAD_DESC");
           SEND_HS_DESC_FAILED_CONTENT();
-          break;
         } else {
           char service_id[REND_SERVICE_ID_LEN_BASE32 + 1];
           /* Should never be NULL here if we found the descriptor. */
@@ -2325,7 +2324,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
           conn->base_.purpose = DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2;
           rend_client_desc_trynow(service_id);
           memwipe(service_id, 0, sizeof(service_id));
-          break;
         }
         break;
       }
