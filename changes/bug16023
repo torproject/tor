@@ -1,4 +1,0 @@
-  o Minor bugfixes (hidden service, control port):
-    - Add the onion address to the HS_DESC event for the UPLOADED action
-      both on success or failure. It was previously hardcoded with UNKNOWN.
-      Fixes bug 16023; bugfix on 0.2.7.2-alpha.

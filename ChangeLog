@@ -1,3 +1,259 @@
+Changes in version 0.2.8.2-rc - 2016-03-??
+  Tor 0.2.8.1-alpha is the first release candidate in its series.
+  XXXX write more here XXXX
+
+  o New system requirements:
+    - Tor no longer supports versions of OpenSSL with a broken
+      implementation of counter mode.  (This bug was present in OpenSSL
+      1.0.0, and was fixed in OpenSSL 1.0.0a.) Tor still detects, but
+      no longer runs with, these versions.
+    - Tor no longer attempts to support platforms where the "time_t" type
+      is unsigned.  (To the best of our knowledge, only OpenVMS does this,
+      and Tor has never actually built on OpenVMS.)  Closes ticket 18184.
+
+  o Removed features:
+    - Streamline relay-side hsdir handling: when relays consider whether
+      to accept an uploaded hidden service descriptor, they no longer
+      check whether they are one of the relays in the network that is
+      "supposed" to handle that descriptor. Implements ticket 18332.
+    - We no longer maintain an internal freelist in memarea.c. Allocators
+      should be good enough to make this code unnecessary, and it's doubtful
+      that it ever had any performance benefit.
+
+  o Major bugfixes (dns proxy mode, crash):
+    - Avoid crashing when running as a DNS proxy. Fixes bug 16248; bugfix on
+      0.2.0.1-alpha. Patch from 'cypherpunks'.
+
+  o Major bugfixes (security, pointers):
+    - Avoid a difficult-to-trigger heap corruption attack when extending
+      a smartlist to contain over 16GB of pointers. Fixes bug 18162;
+      bugfix on Tor 0.1.1.11-alpha, which fixed a related bug
+      incompletely. Reported by Guido Vranken.
+
+  o Major bugfixes (compilation):
+    - Repair hardened builds under the clang compiler. Previously,
+      our use of _FORTIFY_SOURCE would conflict with clang's address
+      sanitizer. Fixes bug 14821; bugfix on 0.2.5.4-alpha.
+
+  o Major bugfixes (crash on shutdown):
+    - Correctly handle detaching circuits from cmuxes when doing
+      circuit_free_all() on shutdown.  Fixes bug 18116; bugfix on
+      0.2.8.1-alpha.
+
+  o Major bugfixes (relays, bridge clients):
+    - Ensure relays always allow IPv4 OR and Dir connections.
+      Ensure bridge clients use the address configured in the bridge line.
+      Fixes bug 18348; bugfix on 0.2.8.1-alpha.
+      Reported by sysrqb, patch by teor.
+
+  o Minor feature (IPv6):
+    - Add ClientPreferIPv6DirPort, which is set to 0 by default. If set
+      to 1, tor prefers IPv6 directory addresses.
+    - Add ClientUseIPv4, which is set to 1 by default. If set to 0, tor
+      avoids using IPv4 for client OR and directory connections.
+    - Try harder to fulfil IP version restrictions ClientUseIPv4 0 and
+      ClientUseIPv6 0; and the preferences ClientPreferIPv6ORPort and
+      ClientPreferIPv6DirPort.
+      Closes ticket 17840; patch by "teor".
+
+  o Minor features (bug-resistance):
+    - Make Tor survive errors involving connections without a corresponding
+      event object. Previously we'd fail with an assertion; now we produce a
+      log message. Related to bug 16248.
+
+  o Minor features (build):
+    - Detect systems with FreeBSD-derived kernels (such as GNU/kFreeBSD) as
+      having possible IPfW support. Closes ticket 18448. Patch from
+      Steven Chamberlain.
+
+  o Minor features (code hardening):
+    - Use tor_snprintf() and tor_vsnprintf() even in external and
+      low-level code, to harden against accidental failures to NUL-
+      terminate. Part of ticket 17852. Patch from 'jsturgix'. Found
+      with Flawfinder.
+
+  o Minor features (compilation):
+    - Note our minimum required autoconf/automake versions in the
+      appropriate locations. Closes ticket 17732.
+
+  o Minor features (crypto):
+    - Fix a segfault during startup:  If unix socket was configured as
+      listener (such as a ControlSocket or a SocksPort unix socket), and
+      tor was started as root but not configured to switch to another
+      user, tor would segfault while trying to string compare a NULL
+      value.  Fixes bug 18261; bugfix on 0.2.8.1-alpha. Patch by weasel.
+    - Validate the Diffie-Hellman hard coded parameters and ensure that
+      p is a safe prime, and g is suitable. Closes ticket 18221.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the March 3 2016 Maxmind GeoLite2
+      Country database.
+
+  o Minor features (robustness):
+    - Exit immediately with an error message if the code attempts to
+      use libevent without having initialized it. This should resolve
+      some frequently-made mistakes in our unit tests. Closes ticket
+      18241.
+
+  o Minor features (unix domain sockets):
+    - Since some operating systems do not consider the actual modes on a
+      UNIX domain socket itself, tor does not allow creating such a
+      socket in a directory that is group or world accessible if it is
+      supposed to be private.  Likewise, it will not allow only group
+      accessible sockets in a world accessible directory.
+      However, on some operating systems this is unnecessary, so
+      add a per-socket option called RelaxDirModeCheck.
+      Closes ticket 18458.  Patch by weasel.
+
+  o Minor features:
+    - Update geoip and geoip6 to the February 2 2016 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfixes (build):
+    - Do not link the unit tests against both the testing and non-testing
+      versions of the static libraries. Fixes bug 18490; bugfix on
+      0.2.7.1-alpha.
+
+  o Minor bugfixes (client):
+    - Count receipt of new microdescriptors as progress towards
+      bootstrapping. Now, when a user who has set EntryNodes finishes
+      bootstrapping, Tor automatically repopulates the guard set based
+      on this new directory information. Fixes bug 16825; bugfix on
+      0.2.3.1-alpha.
+
+  o Minor bugfixes (code correctness):
+    - Update to the latest version of Trunnel, which tries harder
+      to avoid generating code that can invoke memcpy(p,NULL,0).
+      Bug found by clang address sanitizer. Fixes bug 18373; bugfix
+      on 0.2.7.2-alpha.
+
+  o Minor bugfixes (configuration):
+    - Fix a tiny memory leak when parsing a port configuration ending in
+      ":auto". Fixes bug 18374; bugfix on 0.2.3.3-alpha.
+
+  o Minor bugfixes (containers):
+    - If we somehow attempt to construct a heap with more than
+      1073741822 elements, avoid an integer overflow when maintaining
+      the heap property.  Fixes bug 18296; bugfix on 0.1.2.1-alpha.
+
+  o Minor bugfixes (correctness):
+    - Fix a bad memory handling bug that would occur if we had queued
+      a cell on a channel's incoming queue. Fortunately, we can't actually
+      queue a cell like that as our code is constructed today, but it's best
+      to avoid this kind of error, even if there isn't any code that triggers
+      it today. Fixes bug 18570; bugfix on 0.2.4.4-alpha.
+
+  o Minor bugfixes (crypto, static analysis):
+    - Silence spurious clang-scan warnings in the ed25519_donna code
+      by explicitly initialising some objects.
+      Fixes bug 18384; bugfix on 0f3eeca9 in 0.2.7.2-alpha.
+      Patch by "teor".
+
+  o Minor bugfixes (directory):
+    - When generating a URL for a directory server on an IPv6 address,
+      wrap the IPv6 address in square brackets. Fixes bug 18051;
+      bugfix on 0.2.3.9-alpha. Patch from Malek.
+
+  o Minor bugfixes (exit policies, security):
+    - Refresh an exit relay's exit policy when interface addresses change.
+      Previously, tor only refreshed the exit policy when the configured
+      external address changed.
+      Fixes bug 18208; bugfix on tor 0.2.7.3. Patch by "teor".
+
+  o Minor bugfixes (hidden service client):
+    - Seven very fast consecutive requests to the same .onion address
+      triggers 7 descriptor fetches. The first six each pick a directory
+      (there are 6 overall) and the seventh one wasn't able to pick one
+      which was triggering a close on all current directory connections. It
+      has been fixed by not closing them if we have pending directory fetch.
+      Fixes bug 15937; bugfix on tor-0.2.7.1-alpha.
+
+  o Minor bugfixes (hidden service, control port):
+    - Add the onion address to the HS_DESC event for the UPLOADED action
+      both on success or failure. It was previously hardcoded with UNKNOWN.
+      Fixes bug 16023; bugfix on 0.2.7.2-alpha.
+
+  o Minor bugfixes (logging):
+    - Scrub service in from "unrecognized service ID" log messages.
+      Fixes bug 18600; bugfix on 0.2.4.11-alpha.
+
+  o Minor bugfixes (memory safety):
+    - Avoid freeing an uninitialised pointer when opening a socket fails
+      in get_interface_addresses_ioctl.
+      Fixes bug 18454; bugfix on 9f06ec0c in tor-0.2.3.11-alpha.
+      Reported by "toralf" and "cypherpunks", patch by "teor".
+    - Correctly duplicate addresses in get_interface_address6_list.
+      Fixes bug 18454; bugfix on 110765f5 in tor-0.2.8.1-alpha.
+      Reported by "toralf", patch by "cypherpunks".
+
+  o Minor bugfixes (private directory):
+    - Prevent a race condition when creating private directories.
+      Fixes part of bug 17852; bugfix on 0.2pre13. Part of ticket
+      17852. Patch from 'jsturgix'. Found with Flawfinder.
+
+  o Minor bugfixes (sandbox):
+    - Allow the setrlimit syscall, and the prlimit and prlimit64 syscalls,
+      which some libc implementations
+      use under the hood.  Fixes bug 15221; bugfix on 0.2.5.1-alpha.
+
+  o Minor bugfixes (security, hidden services):
+    - Prevent hidden services connecting to client-supplied rendezvous
+      addresses that are reserved as internal or multicast.
+      Fixes bug 8976; bugfix on b7c172c9e in tor-0.2.3.21.
+      Patch by "dgoulet" and "teor".
+
+  o Minor bugfixes (security, win32):
+    - Set SO_EXCLUSIVEADDRUSE on Win32 to avoid a local port-stealing
+      attack.
+      Fixes bug 18123; bugfix on all tor versions. Patch by "teor".
+
+  o Minor bugfixes (test networks, IPv6):
+    - Allow internal IPv6 addresses in descriptors in test networks.
+      Fixes bug 17153; bugfix on 6b4af1071 in 0.2.3.16-alpha.
+      Patch by "teor", reported by "karsten".
+
+  o Minor bugfixes (testing):
+    - We no longer disable assertions in the unit tests when coverage
+      is enabled. Instead, we require you to say --disable-asserts-in-tests
+      to the configure script if you need assertions disabled in the
+      unit tests (for example, if you want to perform branch coverage).
+      Fixes bug 18242; bugfix on 0.2.7.1-alpha.
+
+  o Minor bugfixes:
+    - Bridges now refuse "rendezvous2" (hidden service descriptor)
+      publish attempts. Suggested by ticket 18332.
+
+  o Code simplification and refactoring:
+    - Quote all the string interpolations in configure.ac -- even
+      those which we are pretty sure can't contain spaces. Closes
+      ticket 17744. Patch from "zerosion".
+    - Remove specialized code for non-inplace AES_CTR.  99% of our AES
+      is inplace, so there's no need to have a separate implementation
+      for the non-inplace code. Closes ticket 18258. Patch from
+      Malek.
+    - Simplify return types for some crypto functions that can't
+      actually fail. Patch from Hassan Alsibyani. Closes ticket
+      18259.
+
+  o Dependency updates:
+    - Tor now uses Autoconf version 2.63 or later, and Automake 1.11 or later
+      (released in 2008 and 2009 respectively).  If you are building Tor from
+      the git repository instead of from the source distribution, and your
+      tools are older than this, you will need to upgrade.
+      Closes ticket 17732.
+
+  o Documentation:
+    - Change build messages to refer to "Fedora" instead of "Fedora Core",
+      and "dnf" instead of "yum". Closes tickets 18459 and 18426.
+      Patches from "icanhasaccount" and "cypherpunks".
+
+  o Testing:
+    - Fix several warnings from clang's address sanitizer produced in the
+      unit tests.
+    - Treat backtrace test failures as expected on FreeBSD until we
+      solve bug 17808. Closes ticket 18204.
+
+
 Changes in version 0.2.8.1-alpha - 2016-02-04
   Tor 0.2.8.1-alpha is the first alpha release in its series. It
   includes numerous small features and bugfixes against previous Tor

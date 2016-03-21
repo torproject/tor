@@ -1,4 +1,0 @@
-  o Major bugfixes (crash on shutdown):
-    - Correctly handle detaching circuits from cmuxes when doing
-      circuit_free_all() on shutdown.  Fixes bug 18116; bugfix on
-      0.2.8.1-alpha.

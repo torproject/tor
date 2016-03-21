@@ -1,3 +1,0 @@
-  o Minor bugfixes (configuration):
-    - Fix a tiny memory leak when parsing a port configuration ending in
-      ":auto". Fixes bug 18374; bugfix on 0.2.3.3-alpha.

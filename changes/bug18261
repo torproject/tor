@@ -1,6 +1,0 @@
-  o Minor features (crypto):
-    - Fix a segfault during startup:  If unix socket was configured as
-      listener (such as a ControlSocket or a SocksPort unix socket), and
-      tor was started as root but not configured to switch to another
-      user, tor would segfault while trying to string compare a NULL
-      value.  Fixes bug 18261; bugfix on 0.2.8.1-alpha. Patch by weasel.

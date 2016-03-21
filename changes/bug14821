@@ -1,4 +1,0 @@
-  o Major bugfixes (compilation):
-    - Repair hardened builds under the clang compiler. Previously,
-      our use of _FORTIFY_SOURCE would conflict with clang's address
-      sanitizer. Fixes bug 14821; bugfix on 0.2.5.4-alpha.
