@@ -255,7 +255,7 @@ test_dir_handle_get_bytes_txt(void *data)
   tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
   tt_assert(strstr(header, "Pragma: no-cache\r\n"));
 
-  sprintf(buff, "Content-Length: %ld\r\n", (long) body_len);
+  tor_snprintf(buff, sizeof(buff), "Content-Length: %ld\r\n", (long) body_len);
   tt_assert(strstr(header, buff));
 
   tt_int_op(body_used, OP_EQ, strlen(body));
