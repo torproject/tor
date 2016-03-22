@@ -1885,6 +1885,21 @@ sandbox_cfg_allow_stat_filename(sandbox_cfg_t **cfg, char *file)
 }
 
 int
+sandbox_cfg_allow_chown_filename(sandbox_cfg_t **cfg, char *file)
+{
+  (void)cfg; (void)file;
+  return 0;
+}
+
+
+int
+sandbox_cfg_allow_chmod_filename(sandbox_cfg_t **cfg, char *file)
+{
+  (void)cfg; (void)file;
+  return 0;
+}
+
+int
 sandbox_cfg_allow_rename(sandbox_cfg_t **cfg, char *file1, char *file2)
 {
   (void)cfg; (void)file1; (void)file2;
