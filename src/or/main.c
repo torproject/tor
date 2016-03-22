@@ -3482,6 +3482,20 @@ sandbox_init_filter(void)
     }
   }
 
+  SMARTLIST_FOREACH_BEGIN(get_configured_ports(), port_cfg_t *, port) {
+    if (!port->is_unix_addr)
+      continue;
+    /* When we open an AF_UNIX address, we want permission to open the
+     * directory that holds it. */
+    char *dirname = tor_strdup(port->unix_addr);
+    if (get_parent_directory(dirname) == 0) {
+      OPEN(dirname);
+    }
+    tor_free(dirname);
+    sandbox_cfg_allow_chmod_filename(&cfg, tor_strdup(port->unix_addr));
+    sandbox_cfg_allow_chown_filename(&cfg, tor_strdup(port->unix_addr));
+  } SMARTLIST_FOREACH_END(port);
+
   if (options->DirPortFrontPage) {
     sandbox_cfg_allow_open_filename(&cfg,
                                     tor_strdup(options->DirPortFrontPage));
