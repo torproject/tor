@@ -1,4 +1,4 @@
-  o Major bugfixes:
+  o Major bugfixes (voting):
     - When generating a vote with keypinning disabled, never include two
       entries for the same ed25519 identity.  This bug was causing
       authorities to generate votes that they could not parse when a router

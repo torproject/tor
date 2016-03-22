@@ -1,4 +1,4 @@
-  o Major bugfixes:
+  o Major bugfixes (voting):
     - Actually enable Ed25519-based directory collation.
       Previously, the code had been written, but some debugging code that had
       accidentally been left in the codebase made it stay turned off.
