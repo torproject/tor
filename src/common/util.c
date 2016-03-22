@@ -2157,6 +2157,7 @@ check_private_dir(const char *dirname, cpd_check_t check,
     if (pw == NULL) {
       log_warn(LD_CONFIG, "Error setting configured user: %s not found",
                effective_user);
+      close(fd);
       return -1;
     }
     running_uid = pw->pw_uid;
