@@ -1560,9 +1560,13 @@ router_picked_poor_directory_log(const routerstatus_t *rs)
   /* We couldn't find a node, or the one we have doesn't fit our preferences.
    * This might be a bug. */
   if (!rs) {
-    log_warn(LD_BUG, "Firewall denied all OR and Dir addresses for all relays "
+    static int logged_backtrace = 0;
+    log_info(LD_BUG, "Firewall denied all OR and Dir addresses for all relays "
              "when searching for a directory.");
-    log_backtrace(LOG_WARN, LD_BUG, "Node search initiated by");
+    if (!logged_backtrace) {
+      log_backtrace(LOG_INFO, LD_BUG, "Node search initiated by");
+      logged_backtrace = 1;
+    }
   } else if (!fascist_firewall_allows_rs(rs, FIREWALL_OR_CONNECTION, 1)
              && !fascist_firewall_allows_rs(rs, FIREWALL_DIR_CONNECTION, 1)
              ) {
@@ -1573,7 +1577,6 @@ router_picked_poor_directory_log(const routerstatus_t *rs)
              fmt_addr32(rs->addr), rs->or_port,
              rs->dir_port, fmt_addr(&rs->ipv6_addr),
              rs->ipv6_orport, rs->dir_port);
-    log_backtrace(LOG_INFO, LD_BUG, "Node search initiated by");
   }
 }
 
