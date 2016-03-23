@@ -38,9 +38,21 @@ Changes in version 0.2.8.2-rc - 2016-03-??
       Fixes bug 18348; bugfix on 0.2.8.1-alpha. Reported by sysrqb,
       patch by teor.
 
-  o Minor features:
-    - Update geoip and geoip6 to the February 2 2016 Maxmind GeoLite2
-      Country database.
+  o Major bugfixes (voting):
+    - Actually enable Ed25519-based directory collation. Previously, the
+      code had been written, but some debugging code that had
+      accidentally been left in the codebase made it stay turned off.
+      Fixes bug 17702; bugfix on 0.2.7.2-alpha.
+    - When collating votes by Ed25519 identities, authorities now
+      include a "NoEdConsensus" flag if the ed25519 value (or lack
+      thereof) for a server does not reflect the majority consensus.
+      Related to bug 17668; bugfix on 0.2.7.2-alpha.
+    - When generating a vote with keypinning disabled, never include two
+      entries for the same ed25519 identity. This bug was causing
+      authorities to generate votes that they could not parse when a
+      router violated key pinning by changing its RSA identity but
+      keeping its Ed25519 identity. Fixes bug 17668; fixes part of bug
+      18318. Bugfix on 0.2.7.2-alpha.
 
   o Minor feature (IPv6):
     - Add ClientPreferIPv6DirPort, which is set to 0 by default. If set
@@ -83,6 +95,12 @@ Changes in version 0.2.8.2-rc - 2016-03-??
   o Minor features (geoip):
     - Update geoip and geoip6 to the March 3 2016 Maxmind GeoLite2
       Country database.
+
+  o Minor features (linux seccomp2 sandbox):
+    - Detect and reject attempts to change our Address with "Sandbox 1"
+      enabled. Changing Address with Sandbox turned on would never
+      actually work, but previously it would fail in strange and
+      confusing ways. Found while fixing 18548.
 
   o Minor features (robustness):
     - Exit immediately with an error message if the code attempts to use
@@ -177,7 +195,20 @@ Changes in version 0.2.8.2-rc - 2016-03-??
       both on success or failure. It was previously hardcoded with
       UNKNOWN. Fixes bug 16023; bugfix on 0.2.7.2-alpha.
 
+  o Minor bugfixes (linux seccomp2 sandbox):
+    - Avoid a 10-second delay when starting as a client with "Sandbox 1"
+      enabled and no DNS resolvers configured. This should help TAILS
+      start up faster. Fixes bug 18548; bugfix on 0.2.5.1-alpha.
+    - Fix the sandbox's interoprability with unix sockets under setuid.
+      Fixes bug 18253; bugfix on 0.2.8.1-alpha.
+    - Allow the setrlimit syscall, and the prlimit and prlimit64
+      syscalls, which some libc implementations use under the hood.
+      Fixes bug 15221; bugfix on 0.2.5.1-alpha.
+
   o Minor bugfixes (logging):
+    - When logging information about an unparseable networkstatus vote
+      or consensus, do not say "vote" when we mean consensus. Fixes bug
+      18368; bugfix on 0.2.0.8-alpha.
     - Scrub service in from "unrecognized service ID" log messages.
       Fixes bug 18600; bugfix on 0.2.4.11-alpha.
 
@@ -195,11 +226,6 @@ Changes in version 0.2.8.2-rc - 2016-03-??
       part of bug 17852; bugfix on 0.2pre13. Part of ticket 17852. Patch
       from 'jsturgix'. Found with Flawfinder.
 
-  o Minor bugfixes (sandbox):
-    - Allow the setrlimit syscall, and the prlimit and prlimit64
-      syscalls, which some libc implementations use under the hood.
-      Fixes bug 15221; bugfix on 0.2.5.1-alpha.
-
   o Minor bugfixes (test networks, IPv6):
     - Allow internal IPv6 addresses in descriptors in test networks.
       Fixes bug 17153; bugfix on 6b4af1071 in 0.2.3.16-alpha. Patch by
@@ -211,6 +237,11 @@ Changes in version 0.2.8.2-rc - 2016-03-??
       to the configure script if you need assertions disabled in the
       unit tests (for example, if you want to perform branch coverage).
       Fixes bug 18242; bugfix on 0.2.7.1-alpha.
+
+  o Minor bugfixes (tor-gencert):
+    - Correctly handle the case where an authority operator enters a
+      passphrase but sends an EOF before sending a newline. Fixes bug
+      17443; bugfix on 0.2.0.20-rc. Found by "junglefowl".
 
   o Code simplification and refactoring:
     - Quote all the string interpolations in configure.ac -- even those

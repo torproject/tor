@@ -1,3 +1,0 @@
-  o Minor bugfixes (linux seccomp2 sandbox):
-    - Fix the sandbox's interoprability with unix sockets under setuid.
-      Fixes bug 18253; bugfix on 0.2.8.1-alpha.
