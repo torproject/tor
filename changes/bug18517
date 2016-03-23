@@ -1,0 +1,6 @@
+  o Major bugfixes (bridges, pluggable transports):
+    - Modify the check for OR connections to private addresses.
+      Allow bridges on private addresses, including pluggable transports
+      that ignore the (potentially private) address in the bridge line.
+      Fixes bug 18517; bugfix on 23b088907f in tor-0.2.8.1-alpha.
+      Reported by "gk", patch by "teor".

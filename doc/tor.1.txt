@@ -747,9 +747,12 @@ The following options are useful only for clients (that is, if
     fingerprint to look up the bridge descriptor at the bridge authority, if
     it's provided and if UpdateBridgesFromAuthority is set too.  +
  +
-    If "transport" is provided, and matches to a ClientTransportPlugin
-    line, we use that pluggable transports proxy to transfer data to
-    the bridge.
+    If "transport" is provided, it must match a ClientTransportPlugin line. We
+    then use that pluggable transport's proxy to transfer data to the bridge,
+    rather than connecting to the bridge directly. Some transports use a
+    transport-specific method to work out the remote address to connect to.
+    These transports typically ignore the "IP:ORPort" specified in the bridge
+    line.
 
 [[LearnCircuitBuildTimeout]] **LearnCircuitBuildTimeout** **0**|**1**::
     If 0, CircuitBuildTimeout adaptive learning is disabled. (Default: 1)
@@ -1974,10 +1977,12 @@ is non-zero):
     (Default: 1)
 
 [[ExtendAllowPrivateAddresses]] **ExtendAllowPrivateAddresses** **0**|**1**::
-    When this option is enabled, Tor will connect to localhost, RFC1918
-    addresses, and so on. In particular, Tor will make direct connections, and
-    Tor routers allow EXTEND requests, to these private addresses. This can
-    create security issues; you should probably leave it off.
+    When this option is enabled, Tor will connect to relays on localhost,
+    RFC1918 addresses, and so on. In particular, Tor will make direct OR
+    connections, and Tor routers allow EXTEND requests, to these private
+    addresses. (Tor will always allow connections to bridges, proxies, and
+    pluggable transports configured on private addresses.) Enabling this
+    option can create security issues; you should probably leave it off.
     (Default: 0)
 
 [[MaxMemInQueues]] **MaxMemInQueues**  __N__ **bytes**|**KB**|**MB**|**GB**::

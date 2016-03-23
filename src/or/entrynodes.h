@@ -127,6 +127,9 @@ int getinfo_helper_entry_guards(control_connection_t *conn,
 void mark_bridge_list(void);
 void sweep_bridge_list(void);
 
+int addr_is_a_configured_bridge(const tor_addr_t *addr, uint16_t port,
+                                const char *digest);
+int extend_info_is_a_configured_bridge(const extend_info_t *ei);
 int routerinfo_is_a_configured_bridge(const routerinfo_t *ri);
 int node_is_a_configured_bridge(const node_t *node);
 void learned_router_identity(const tor_addr_t *addr, uint16_t port,
