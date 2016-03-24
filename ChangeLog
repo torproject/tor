@@ -1,6 +1,6 @@
 Changes in version 0.2.8.2-alpha - 2016-03-??
-  Tor 0.2.8.2-alpha is the second alpha in its series. XXXX
-  write more here XXXX
+  Tor 0.2.8.2-alpha is the second alpha in its series. XXXX write more
+  here XXXX
 
   o New system requirements:
     - Tor no longer supports versions of OpenSSL with a broken
@@ -17,6 +17,13 @@ Changes in version 0.2.8.2-alpha - 2016-03-??
       a smartlist to contain over 16GB of pointers. Fixes bug 18162;
       bugfix on Tor 0.1.1.11-alpha, which fixed a related bug
       incompletely. Reported by Guido Vranken.
+
+  o Major bugfixes (bridges, pluggable transports):
+    - Modify the check for OR connections to private addresses. Allow
+      bridges on private addresses, including pluggable transports that
+      ignore the (potentially private) address in the bridge line. Fixes
+      bug 18517; bugfix on 0.2.8.1-alpha. Reported by "gk", patch
+      by "teor".
 
   o Major bugfixes (compilation):
     - Repair hardened builds under the clang compiler. Previously, our
@@ -182,6 +189,12 @@ Changes in version 0.2.8.2-alpha - 2016-03-??
       wrap the IPv6 address in square brackets. Fixes bug 18051; bugfix
       on 0.2.3.9-alpha. Patch from Malek.
 
+  o Minor bugfixes (fallback directory mirrors):
+    - When requesting extrainfo descriptors from a trusted directory
+      server, check whether it is an authority or a fallback directory
+      which supports extrainfo descriptors. Fixes bug 18489; bugfix on
+      0.2.4.7-alpha. Reported by "atagar", patch by "teor".
+
   o Minor bugfixes (hidden service client):
     - Seven very fast consecutive requests to the same .onion address
       triggers 7 descriptor fetches. The first six each pick a directory
@@ -211,6 +224,10 @@ Changes in version 0.2.8.2-alpha - 2016-03-??
       18368; bugfix on 0.2.0.8-alpha.
     - Scrub service in from "unrecognized service ID" log messages.
       Fixes bug 18600; bugfix on 0.2.4.11-alpha.
+    - Downgrade logs and backtraces about IP versions to info-level.
+      Only log backtraces once each time tor runs. Assists in diagnosing
+      bug 18351; bugfix on 0.2.8.1-alpha. Reported by "sysrqb" and
+      "Christian", patch by "teor".
 
   o Minor bugfixes (memory safety):
     - Avoid freeing an uninitialised pointer when opening a socket fails
@@ -237,6 +254,11 @@ Changes in version 0.2.8.2-alpha - 2016-03-??
       to the configure script if you need assertions disabled in the
       unit tests (for example, if you want to perform branch coverage).
       Fixes bug 18242; bugfix on 0.2.7.1-alpha.
+
+  o Minor bugfixes (time parsing):
+    - Avoid overflow in tor_timegm when parsing dates in and after 2038
+      on platforms with 32-bit time_t. Fixes bug 18479; bugfix on
+      0.0.2pre14. Patch by "teor".
 
   o Minor bugfixes (tor-gencert):
     - Correctly handle the case where an authority operator enters a

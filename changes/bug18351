@@ -1,6 +1,0 @@
-  o Minor bugfixes (logging):
-    - Downgrade logs and backtraces about IP versions to
-      info-level. Only log backtraces once each time tor runs.
-      Assists in diagnosing bug 18351; bugfix on c3cc8e16e in
-      tor-0.2.8.1-alpha.
-      Reported by "sysrqb" and "Christian", patch by "teor".
