@@ -1199,9 +1199,7 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
                               conn->base_.address, conn->base_.port,
                               digest,
                               SESSION_GROUP_DIRCONN, iso_flags,
-                    /* XXX dirconn_direct is misleading below. we should use
-                     * !anonymized_connection, since that's what we mean. */
-                              use_begindir, conn->dirconn_direct);
+                              use_begindir, !anonymized_connection);
     if (!linked_conn) {
       log_warn(LD_NET,"Making tunnel to dirserver failed.");
       connection_mark_for_close(TO_CONN(conn));
