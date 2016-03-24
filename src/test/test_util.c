@@ -581,10 +581,10 @@ test_util_time(void *arg)
    * time_t */
   format_rfc1123_time(timestr, (time_t)2150000000UL);
 #if SIZEOF_TIME_T == 4
-  /* format_rfc1123_time should indicate failure on overflow, but it doesn't
-   * yet. Hopefully #18480 will improve the failure semantics in this case.
-  tt_str_op("Wed, 17 Feb 2038 06:13:20 GMT",OP_EQ, timestr);
-   */
+  /* Wrapping around will have made it this. */
+  tt_str_op("Sat, 11 Jan 1902 23:45:04 GMT",OP_EQ, timestr);
+  /* Make sure that the right date doesn't parse. */
+  strlcpy(timestr, "Wed, 17 Feb 2038 06:13:20 GMT", sizeof(timestr));
 
   t_res = 0;
   i = parse_rfc1123_time(timestr, &t_res);
