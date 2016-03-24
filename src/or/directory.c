@@ -1065,8 +1065,16 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
   const int use_begindir = directory_command_should_use_begindir(options,
                                      &or_addr_port->addr, or_addr_port->port,
                                      router_purpose, indirection);
+  /* Is it an anonymous connection? Be careful, it could be either an OR or
+   * directory connection. */
   const int anonymized_connection = dirind_is_anon(indirection);
-  const int or_connection = use_begindir || anonymized_connection;
+  /* Is it a connection to our DirPort? */
+  const int dir_connection = (indirection == DIRIND_ANON_DIRPORT ||
+                              indirection == DIRIND_DIRECT_CONN);
+  /* It's an OR connection if we should use BEGIN_DIR or if it's an
+   * anonymized connection but obviously not a directory connection. */
+  const int or_connection = (use_begindir ||
+                             (anonymized_connection && !dir_connection));
 
   tor_addr_t addr;
   tor_addr_copy(&addr, &(or_connection ? or_addr_port : dir_addr_port)->addr);
@@ -1096,7 +1104,7 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
 
   /* ensure that we don't make direct connections when a SOCKS server is
    * configured. */
-  if (!or_connection && !options->HTTPProxy &&
+  if (dir_connection && !options->HTTPProxy &&
       (options->Socks4Proxy || options->Socks5Proxy)) {
     log_warn(LD_DIR, "Cannot connect to a directory server through a "
                      "SOCKS proxy!");
@@ -1113,7 +1121,7 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
       logged_backtrace = 1;
     }
     return;
-  } else if (!or_connection && (!dir_addr_port->port
+  } else if (dir_connection && (!dir_addr_port->port
                                 || tor_addr_is_null(&dir_addr_port->addr))) {
     static int logged_backtrace = 0;
     log_warn(LD_DIR, "Cannot make an outgoing Dir connection without a Dir "
@@ -1153,7 +1161,7 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
   if (rend_query)
     conn->rend_data = rend_data_dup(rend_query);
 
-  if (!or_connection) {
+  if (dir_connection && !anonymized_connection) {
     /* then we want to connect to dirport directly */
 
     if (options->HTTPProxy) {
