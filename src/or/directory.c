@@ -1085,17 +1085,6 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
   log_debug(LD_DIR, "anonymized %d, use_begindir %d.",
             anonymized_connection, use_begindir);
 
-  /* XXX This clause is redundant with the "addr, port is viable" check below.
-   * We should remove it. */
-  if (!dir_port && !use_begindir) {
-    char ipaddr[TOR_ADDR_BUF_LEN];
-    tor_addr_to_str(ipaddr, &addr, TOR_ADDR_BUF_LEN, 0);
-    log_warn(LD_BUG, "Cannot use directory server without dirport or "
-                     "begindir! Address: %s, DirPort: %d, Connection Port: %d",
-                     escaped_safe_str_client(ipaddr), dir_port, port);
-    return;
-  }
-
   log_debug(LD_DIR, "Initiating %s", dir_conn_purpose_to_string(dir_purpose));
 
 #ifndef NON_ANONYMOUS_MODE_ENABLED
