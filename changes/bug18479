@@ -1,0 +1,5 @@
+  o Minor bugfixes (time parsing):
+    - Avoid overflow in tor_timegm when parsing dates in and after 2038
+      on platforms with 32-bit time_t.
+      Fixes bug 18479; bugfix on 3c4b4c8ca in tor-0.0.2pre14.
+      Patch by "teor".
