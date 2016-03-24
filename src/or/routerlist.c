@@ -1857,11 +1857,13 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
       if (!d->is_running) continue;
       if ((type & d->type) == 0)
         continue;
+      int is_trusted_extrainfo = router_digest_is_trusted_dir_type(
+                                 d->digest, EXTRAINFO_DIRINFO);
       if ((type & EXTRAINFO_DIRINFO) &&
-          !router_supports_extrainfo(d->digest, 1))
+          !router_supports_extrainfo(d->digest, is_trusted_extrainfo))
         continue;
       if (requireother && me && router_digest_is_me(d->digest))
-          continue;
+        continue;
       if (try_excluding &&
           routerset_contains_routerstatus(options->ExcludeNodes,
                                           &d->fake_status, -1)) {
