@@ -1159,6 +1159,7 @@ extern struct testcase_t oom_tests[];
 extern struct testcase_t options_tests[];
 extern struct testcase_t policy_tests[];
 extern struct testcase_t procmon_tests[];
+extern struct testcase_t pubsub_tests[];
 extern struct testcase_t pt_tests[];
 extern struct testcase_t relay_tests[];
 extern struct testcase_t relaycell_tests[];
@@ -1230,6 +1231,7 @@ struct testgroup_t testgroups[] = {
   { "util/format/", util_format_tests },
   { "util/logging/", logging_tests },
   { "util/process/", util_process_tests },
+  { "util/pubsub/", pubsub_tests },
   { "util/thread/", thread_tests },
   { "dns/", dns_tests },
   END_OF_GROUPS
