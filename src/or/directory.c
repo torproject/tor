@@ -672,15 +672,20 @@ directory_choose_address_routerstatus(const routerstatus_t *status,
                                                 FIREWALL_DIR_CONNECTION, 0,
                                                 use_dir_ap);
 
-  /* We rejected both addresses. This isn't great. */
+  /* We rejected all addresses in the relay's status. This means we can't
+   * connect to it. */
   if (!have_or && !have_dir) {
-    log_warn(LD_BUG, "Rejected all OR and Dir addresses from %s when "
-             "launching a directory connection to: IPv4 %s OR %d Dir %d "
-             "IPv6 %s OR %d Dir %d", routerstatus_describe(status),
+    static int logged_backtrace = 0;
+    log_info(LD_BUG, "Rejected all OR and Dir addresses from %s when "
+             "launching an outgoing directory connection to: IPv4 %s OR %d "
+             "Dir %d IPv6 %s OR %d Dir %d", routerstatus_describe(status),
              fmt_addr32(status->addr), status->or_port,
              status->dir_port, fmt_addr(&status->ipv6_addr),
              status->ipv6_orport, status->dir_port);
-    log_backtrace(LOG_WARN, LD_BUG, "Addresses came from");
+    if (!logged_backtrace) {
+      log_backtrace(LOG_INFO, LD_BUG, "Addresses came from");
+      logged_backtrace = 1;
+    }
     return -1;
   }
 
@@ -1100,14 +1105,23 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
 
   if (or_connection && (!or_addr_port->port
                         || tor_addr_is_null(&or_addr_port->addr))) {
-    log_warn(LD_DIR, "Cannot make an OR connection without an OR port.");
-    log_backtrace(LOG_WARN, LD_BUG, "Address came from");
+    static int logged_backtrace = 0;
+    log_warn(LD_DIR, "Cannot make an outgoing OR connection without an OR "
+             "port.");
+    if (!logged_backtrace) {
+      log_backtrace(LOG_INFO, LD_BUG, "Address came from");
+      logged_backtrace = 1;
+    }
     return;
   } else if (!or_connection && (!dir_addr_port->port
                                 || tor_addr_is_null(&dir_addr_port->addr))) {
-    log_warn(LD_DIR, "Cannot make a Dir connection without a Dir port.");
-    log_backtrace(LOG_WARN, LD_BUG, "Address came from");
-
+    static int logged_backtrace = 0;
+    log_warn(LD_DIR, "Cannot make an outgoing Dir connection without a Dir "
+             "port.");
+    if (!logged_backtrace) {
+      log_backtrace(LOG_INFO, LD_BUG, "Address came from");
+      logged_backtrace = 1;
+    }
     return;
   }
 
