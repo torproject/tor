@@ -1079,8 +1079,6 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
   tor_addr_t addr;
   tor_addr_copy(&addr, &(use_begindir ? or_addr_port : dir_addr_port)->addr);
   uint16_t port = (use_begindir ? or_addr_port : dir_addr_port)->port;
-  /* XXX dir_port is redundant and we can get rid of it. Just use port. */
-  uint16_t dir_port = dir_addr_port->port;
 
   log_debug(LD_DIR, "anonymized %d, use_begindir %d.",
             anonymized_connection, use_begindir);
@@ -1150,11 +1148,11 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
 
     if (options->HTTPProxy) {
       tor_addr_copy(&addr, &options->HTTPProxyAddr);
-      dir_port = options->HTTPProxyPort;
+      port = options->HTTPProxyPort;
     }
 
     switch (connection_connect(TO_CONN(conn), conn->base_.address, &addr,
-                               dir_port, &socket_error)) {
+                               port, &socket_error)) {
       case -1:
         connection_mark_for_close(TO_CONN(conn));
         return;
