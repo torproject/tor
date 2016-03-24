@@ -1794,7 +1794,7 @@ connection_connect_log_client_use_ip_version(const connection_t *conn)
   if ((must_ipv4 && tor_addr_family(&real_addr) == AF_INET6)
       || (must_ipv6 && tor_addr_family(&real_addr) == AF_INET)) {
     static int logged_backtrace = 0;
-    log_info(LD_BUG, "%s connection to %s violated ClientUseIPv%s 0.",
+    log_info(LD_BUG, "Outgoing %s connection to %s violated ClientUseIPv%s 0.",
              conn->type == CONN_TYPE_OR ? "OR" : "Dir",
              fmt_addr(&real_addr),
              options->ClientUseIPv4 == 0 ? "4" : "6");
@@ -1814,9 +1814,10 @@ connection_connect_log_client_use_ip_version(const connection_t *conn)
   /* Check if we couldn't satisfy an address family preference */
   if ((!pref_ipv6 && tor_addr_family(&real_addr) == AF_INET6)
       || (pref_ipv6 && tor_addr_family(&real_addr) == AF_INET)) {
-    log_info(LD_NET, "Connection to %s doesn't satisfy ClientPreferIPv6%sPort "
-             "%d, with ClientUseIPv4 %d, and fascist_firewall_use_ipv6 %d "
-             "(ClientUseIPv6 %d and UseBridges %d).",
+    log_info(LD_NET, "Outgoing connection to %s doesn't satisfy "
+             "ClientPreferIPv6%sPort %d, with ClientUseIPv4 %d, and "
+             "fascist_firewall_use_ipv6 %d (ClientUseIPv6 %d and UseBridges "
+             "%d).",
              fmt_addr(&real_addr),
              conn->type == CONN_TYPE_OR ? "OR" : "Dir",
              conn->type == CONN_TYPE_OR ? options->ClientPreferIPv6ORPort
