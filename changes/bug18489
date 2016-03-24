@@ -1,0 +1,6 @@
+  o Minor bugfixes (fallback directory mirrors):
+    - When requesting extrainfo descriptors from a trusted directory
+      server, check whether it is an authority or a fallback directory
+      which supports extrainfo descriptors.
+      Fixes bug 18489; bugfix on 90f6071d8d in tor-0.2.4.7-alpha.
+      Reported by "atagar", patch by "teor".
