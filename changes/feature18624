@@ -1,0 +1,7 @@
+  o Minor features:
+    - Directory authorities now only give the Guard flag to a relay if
+      they are also giving it the Stable flag. This change allows us to
+      simplify path selection for clients, and it should have minimal
+      effect in practice since >99% of Guards already have the Stable
+      flag. Implements ticket 18624.
+
