@@ -1861,7 +1861,7 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
           !router_supports_extrainfo(d->digest, 1))
         continue;
       if (requireother && me && router_digest_is_me(d->digest))
-          continue;
+        continue;
       if (try_excluding &&
           routerset_contains_routerstatus(options->ExcludeNodes,
                                           &d->fake_status, -1)) {
