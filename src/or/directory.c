@@ -1062,36 +1062,26 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
   dir_connection_t *conn;
   const or_options_t *options = get_options();
   int socket_error = 0;
+  /* Should the connection be to a relay's OR port (and inside that we will
+   * send our directory request)? */
   const int use_begindir = directory_command_should_use_begindir(options,
                                      &or_addr_port->addr, or_addr_port->port,
                                      router_purpose, indirection);
-  /* Is it an anonymous connection? Be careful, it could be either an OR or
-   * directory connection. */
+  /* Will the connection go via a three-hop Tor circuit? Note that this
+   * is separate from whether it will use_begindir. */
   const int anonymized_connection = dirind_is_anon(indirection);
-  /* Is it a connection to our DirPort? */
-  const int dir_connection = (indirection == DIRIND_ANON_DIRPORT ||
-                              indirection == DIRIND_DIRECT_CONN);
-  /* It's an OR connection if we should use BEGIN_DIR or if it's an
-   * anonymized connection but obviously not a directory connection. */
-  const int or_connection = (use_begindir ||
-                             (anonymized_connection && !dir_connection));
 
+  /* What is the address we want to make the directory request to? If
+   * we're making a begindir request this is the ORPort of the relay
+   * we're contacting; if not a begindir request, this is its DirPort.
+   * Note that if anonymized_connection is true, we won't be initiating
+   * a connection directly to this address. */
   tor_addr_t addr;
-  tor_addr_copy(&addr, &(or_connection ? or_addr_port : dir_addr_port)->addr);
-  uint16_t port = (or_connection ? or_addr_port : dir_addr_port)->port;
-  uint16_t dir_port = dir_addr_port->port;
+  tor_addr_copy(&addr, &(use_begindir ? or_addr_port : dir_addr_port)->addr);
+  uint16_t port = (use_begindir ? or_addr_port : dir_addr_port)->port;
 
   log_debug(LD_DIR, "anonymized %d, use_begindir %d.",
             anonymized_connection, use_begindir);
-
-  if (!dir_port && !use_begindir) {
-    char ipaddr[TOR_ADDR_BUF_LEN];
-    tor_addr_to_str(ipaddr, &addr, TOR_ADDR_BUF_LEN, 0);
-    log_warn(LD_BUG, "Cannot use directory server without dirport or "
-                     "begindir! Address: %s, DirPort: %d, Connection Port: %d",
-                     escaped_safe_str_client(ipaddr), dir_port, port);
-    return;
-  }
 
   log_debug(LD_DIR, "Initiating %s", dir_conn_purpose_to_string(dir_purpose));
 
@@ -1104,28 +1094,20 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
 
   /* ensure that we don't make direct connections when a SOCKS server is
    * configured. */
-  if (dir_connection && !options->HTTPProxy &&
+  if (!anonymized_connection && !use_begindir && !options->HTTPProxy &&
       (options->Socks4Proxy || options->Socks5Proxy)) {
     log_warn(LD_DIR, "Cannot connect to a directory server through a "
                      "SOCKS proxy!");
     return;
   }
 
-  if (or_connection && (!or_addr_port->port
-                        || tor_addr_is_null(&or_addr_port->addr))) {
+  /* Make sure that the destination addr and port we picked is viable. */
+  if (!port || tor_addr_is_null(&addr)) {
     static int logged_backtrace = 0;
-    log_warn(LD_DIR, "Cannot make an outgoing OR connection without an OR "
-             "port.");
-    if (!logged_backtrace) {
-      log_backtrace(LOG_INFO, LD_BUG, "Address came from");
-      logged_backtrace = 1;
-    }
-    return;
-  } else if (dir_connection && (!dir_addr_port->port
-                                || tor_addr_is_null(&dir_addr_port->addr))) {
-    static int logged_backtrace = 0;
-    log_warn(LD_DIR, "Cannot make an outgoing Dir connection without a Dir "
-             "port.");
+    log_warn(LD_DIR,
+             "Cannot make an outgoing %sconnection without %sPort.",
+             use_begindir ? "begindir " : "",
+             use_begindir ? "an OR" : "a Dir");
     if (!logged_backtrace) {
       log_backtrace(LOG_INFO, LD_BUG, "Address came from");
       logged_backtrace = 1;
@@ -1161,16 +1143,16 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
   if (rend_query)
     conn->rend_data = rend_data_dup(rend_query);
 
-  if (dir_connection && !anonymized_connection) {
+  if (!anonymized_connection && !use_begindir) {
     /* then we want to connect to dirport directly */
 
     if (options->HTTPProxy) {
       tor_addr_copy(&addr, &options->HTTPProxyAddr);
-      dir_port = options->HTTPProxyPort;
+      port = options->HTTPProxyPort;
     }
 
     switch (connection_connect(TO_CONN(conn), conn->base_.address, &addr,
-                               dir_port, &socket_error)) {
+                               port, &socket_error)) {
       case -1:
         connection_mark_for_close(TO_CONN(conn));
         return;
@@ -1190,8 +1172,12 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
         /* writable indicates finish, readable indicates broken link,
            error indicates broken link in windowsland. */
     }
-  } else { /* we want to connect via a tor connection */
+  } else {
+    /* We will use a Tor circuit (maybe 1-hop, maybe 3-hop, maybe with
+     * begindir, maybe not with begindir) */
+
     entry_connection_t *linked_conn;
+
     /* Anonymized tunneled connections can never share a circuit.
      * One-hop directory connections can share circuits with each other
      * but nothing else. */
@@ -1213,7 +1199,7 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
                               conn->base_.address, conn->base_.port,
                               digest,
                               SESSION_GROUP_DIRCONN, iso_flags,
-                              use_begindir, conn->dirconn_direct);
+                              use_begindir, !anonymized_connection);
     if (!linked_conn) {
       log_warn(LD_NET,"Making tunnel to dirserver failed.");
       connection_mark_for_close(TO_CONN(conn));
@@ -1225,6 +1211,8 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
       connection_mark_for_close(TO_CONN(conn));
       return;
     }
+    /* XXX the below line is suspicious and uncommented. does it close all
+     * consensus fetches if we've already bootstrapped? investigate. */
     if (connection_dir_close_consensus_conn_if_extra(conn)) {
       return;
     }
