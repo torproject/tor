@@ -1528,11 +1528,14 @@ tor_timegm(const struct tm *tm, time_t *time_out)
   seconds = minutes*60 + tm->tm_sec;
   /* Check that "seconds" will fit in a time_t. On platforms where time_t is
    * 32-bit, this check will fail for dates in and after 2038.
-   * "seconds" can't be negative, because "year" >= 1970. */
+   *
+   * We already know that "seconds" can't be negative because "year" >= 1970 */
+#if SIZEOF_TIME_T < 8
   if (seconds < TIME_MIN || seconds > TIME_MAX) {
     log_warn(LD_BUG, "Result does not fit in tor_timegm");
     return -1;
   }
+#endif
   *time_out = (time_t)seconds;
   return 0;
 }
