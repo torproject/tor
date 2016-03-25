@@ -473,19 +473,18 @@ TOR_SEARCH_LIBRARY(libevent, $trylibeventdir, [-levent $STATIC_LIBEVENT_FLAGS $T
 #ifdef _WIN32
 #include <winsock2.h>
 #endif
-#include <stdlib.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <event.h>], [
 #ifdef _WIN32
 #include <winsock2.h>
 #endif
-void exit(int); void *event_init(void);],
+void *event_init(void);],
     [
 #ifdef _WIN32
 {WSADATA d; WSAStartup(0x101,&d); }
 #endif
-event_init(); exit(0);
+event_init();
 ], [--with-libevent-dir], [/opt/libevent])
 
 dnl Now check for particular libevent functions.
@@ -611,7 +610,7 @@ AC_ARG_WITH(ssl-dir,
 TOR_SEARCH_LIBRARY(openssl, $tryssldir, [-lssl -lcrypto $TOR_LIB_GDI],
     [#include <openssl/rand.h>],
     [void RAND_add(const void *buf, int num, double entropy);],
-    [RAND_add((void*)0,0,0); exit(0);], [],
+    [RAND_add((void*)0,0,0);], [],
     [/usr/local/openssl /usr/lib/openssl /usr/local/ssl /usr/lib/ssl /usr/local /usr/athena /opt/openssl])
 
 dnl XXXX check for OPENSSL_VERSION_NUMBER == SSLeay()
@@ -688,7 +687,7 @@ tor_zlib_devpkg_debian="zlib1g-dev"
 TOR_SEARCH_LIBRARY(zlib, $tryzlibdir, [-lz],
     [#include <zlib.h>],
     [const char * zlibVersion(void);],
-    [zlibVersion(); exit(0);], [--with-zlib-dir],
+    [zlibVersion();], [--with-zlib-dir],
     [/opt/zlib])
 
 if test "$enable_static_zlib" = "yes"; then
