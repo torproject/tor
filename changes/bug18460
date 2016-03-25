@@ -1,0 +1,4 @@
+  o Minor bugfixes (statistics):
+    - Include consensus downloads via IPv6 in directory-request statistics.
+      Fixes bug 18480; bugfix on 4741aa4 in 0.2.3.14-alpha.
+
