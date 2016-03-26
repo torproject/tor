@@ -923,7 +923,7 @@ load_ed_keys(const or_options_t *options, time_t now)
   return -1;
 }
 
-/**DOCDOC*/
+/* DOCDOC */
 int
 generate_ed_link_cert(const or_options_t *options, time_t now)
 {

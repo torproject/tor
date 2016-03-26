@@ -904,7 +904,7 @@ connection_ap_mark_as_non_pending_circuit(entry_connection_t *entry_conn)
   smartlist_remove(pending_entry_connections, entry_conn);
 }
 
-/** DOCDOC */
+/* DOCDOC */
 void
 connection_ap_warn_and_unmark_if_pending_circ(entry_connection_t *entry_conn,
                                               const char *where)

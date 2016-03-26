@@ -152,7 +152,7 @@ int sandbox_cfg_allow_open_filename(sandbox_cfg_t **cfg, char *file);
 int sandbox_cfg_allow_chmod_filename(sandbox_cfg_t **cfg, char *file);
 int sandbox_cfg_allow_chown_filename(sandbox_cfg_t **cfg, char *file);
 
-/**DOCDOC*/
+/* DOCDOC */
 int sandbox_cfg_allow_rename(sandbox_cfg_t **cfg, char *file1, char *file2);
 
 /**

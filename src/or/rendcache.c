@@ -53,7 +53,7 @@ STATIC digestmap_t *rend_cache_v2_dir = NULL;
  * only rely on the usability of intro points from an internal state. */
 STATIC strmap_t *rend_cache_failure = NULL;
 
-/** DOCDOC */
+/* DOCDOC */
 STATIC size_t rend_cache_total_allocation = 0;
 
 /** Initializes the service descriptor cache.
@@ -78,7 +78,7 @@ rend_cache_entry_allocation(const rend_cache_entry_t *e)
   return sizeof(*e) + e->len + sizeof(*e->parsed);
 }
 
-/** DOCDOC */
+/* DOCDOC */
 size_t
 rend_cache_get_total_allocation(void)
 {

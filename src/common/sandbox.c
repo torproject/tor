@@ -1082,7 +1082,7 @@ sandbox_intern_string(const char *str)
   return str;
 }
 
-/** DOCDOC */
+/* DOCDOC */
 static int
 prot_strings_helper(strmap_t *locations,
                     char **pr_mem_next_p,

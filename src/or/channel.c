@@ -2868,7 +2868,7 @@ channel_assert_counter_consistency(void)
       (n_channel_bytes_in_queues + n_channel_bytes_passed_to_lower_layer));
 }
 
-/** DOCDOC */
+/* DOCDOC */
 static int
 is_destroy_cell(channel_t *chan,
                 const cell_queue_entry_t *q, circid_t *circid_out)

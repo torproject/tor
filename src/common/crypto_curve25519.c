@@ -157,7 +157,7 @@ curve25519_keypair_generate(curve25519_keypair_t *keypair_out,
   return 0;
 }
 
-/** DOCDOC */
+/* DOCDOC */
 int
 curve25519_keypair_write_to_file(const curve25519_keypair_t *keypair,
                                  const char *fname,
@@ -180,7 +180,7 @@ curve25519_keypair_write_to_file(const curve25519_keypair_t *keypair,
   return r;
 }
 
-/** DOCDOC */
+/* DOCDOC */
 int
 curve25519_keypair_read_from_file(curve25519_keypair_t *keypair_out,
                                   char **tag_out,

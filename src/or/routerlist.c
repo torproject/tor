@@ -662,7 +662,7 @@ static const char *BAD_SIGNING_KEYS[] = {
   NULL,
 };
 
-/** DOCDOC */
+/* DOCDOC */
 int
 authority_cert_is_blacklisted(const authority_cert_t *cert)
 {

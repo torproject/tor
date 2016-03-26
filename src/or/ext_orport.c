@@ -178,7 +178,7 @@ connection_ext_or_auth_neg_auth_type(connection_t *conn)
   return 1;
 }
 
-/** DOCDOC */
+/* DOCDOC */
 STATIC int
 handle_client_auth_nonce(const char *client_nonce, size_t client_nonce_len,
                          char **client_hash_out,

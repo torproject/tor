@@ -182,7 +182,7 @@ struct channel_s {
    * space should we use?
    */
   circ_id_type_bitfield_t circ_id_type:2;
-  /** DOCDOC*/
+  /* DOCDOC */
   unsigned wide_circ_ids:1;
 
   /** For how many circuits are we n_chan?  What about p_chan? */

@@ -1674,7 +1674,7 @@ circuit_launch(uint8_t purpose, int flags)
   return circuit_launch_by_extend_info(purpose, NULL, flags);
 }
 
-/** DOCDOC */
+/* DOCDOC */
 static int
 have_enough_path_info(int need_exit)
 {

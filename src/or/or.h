@@ -1358,7 +1358,7 @@ typedef struct listener_connection_t {
  * in the v3 handshake.  The subject key must be a 1024-bit RSA key; it
  * must be signed by the identity key */
 #define OR_CERT_TYPE_AUTH_1024 3
-/** DOCDOC */
+/* DOCDOC */
 #define OR_CERT_TYPE_RSA_ED_CROSSCERT 7
 /**@}*/
 
@@ -3789,7 +3789,7 @@ typedef struct {
                              * and try a new circuit if the stream has been
                              * waiting for this many seconds. If zero, use
                              * our default internal timeout schedule. */
-  int MaxOnionQueueDelay; /**<DOCDOC*/
+  int MaxOnionQueueDelay; /*< DOCDOC */
   int NewCircuitPeriod; /**< How long do we use a circuit before building
                          * a new one? */
   int MaxCircuitDirtiness; /**< Never use circs that were first used more than
