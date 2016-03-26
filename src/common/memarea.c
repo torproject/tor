@@ -21,6 +21,8 @@
  * value. */
 #define MEMAREA_ALIGN SIZEOF_VOID_P
 
+/** A value which, when masked out of a pointer, produces a maximally aligned
+ * pointer. */
 #if MEMAREA_ALIGN == 4
 #define MEMAREA_ALIGN_MASK 3lu
 #elif MEMAREA_ALIGN == 8
@@ -31,6 +33,7 @@
 
 #if defined(__GNUC__) && defined(FLEXIBLE_ARRAY_MEMBER)
 #define USE_ALIGNED_ATTRIBUTE
+/** Name for the 'memory' member of a memory chunk. */
 #define U_MEM mem
 #else
 #define U_MEM u.mem
@@ -83,12 +86,14 @@ typedef struct memarea_chunk_t {
                    * greater than or equal to mem+mem_size, this chunk is
                    * full. */
 #ifdef USE_ALIGNED_ATTRIBUTE
+  /** Actual content of the memory chunk. */
   char mem[FLEXIBLE_ARRAY_MEMBER] __attribute__((aligned(MEMAREA_ALIGN)));
 #else
   union {
     char mem[1]; /**< Memory space in this chunk.  */
     void *void_for_alignment_; /**< Dummy; used to make sure mem is aligned. */
-  } u;
+  } u; /**< Union used to enforce alignment when we don't have support for
+        * doing it right. */
 #endif
 } memarea_chunk_t;
 
