@@ -791,7 +791,7 @@ The following options are useful only for clients (that is, if
 [[ExcludeNodes]] **ExcludeNodes** __node__,__node__,__...__::
     A list of identity fingerprints, country codes, and address
     patterns of nodes to avoid when building a circuit. Country codes are
-    2-letter ISA3166 codes, and must
+    2-letter ISO3166 codes, and must
     be wrapped in braces; fingerprints may be preceded by a dollar sign.
     (Example:
     ExcludeNodes ABCD1234CDEF5678ABCD1234CDEF5678ABCD1234, \{cc}, 255.254.0.0/8) +
