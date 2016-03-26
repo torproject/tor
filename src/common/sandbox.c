@@ -1891,7 +1891,6 @@ sandbox_cfg_allow_chown_filename(sandbox_cfg_t **cfg, char *file)
   return 0;
 }
 
-
 int
 sandbox_cfg_allow_chmod_filename(sandbox_cfg_t **cfg, char *file)
 {

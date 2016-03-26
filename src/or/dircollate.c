@@ -34,7 +34,8 @@ ddmap_entry_free(ddmap_entry_t *e)
   tor_free(e);
 }
 
-/** Return a new empty ddmap_entry, with <b>n_votes</b> elements in vrs_list. */
+/** Return a new empty ddmap_entry, with <b>n_votes</b> elements in
+ * vrs_list. */
 static ddmap_entry_t *
 ddmap_entry_new(int n_votes)
 {

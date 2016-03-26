@@ -1822,7 +1822,8 @@ get_configured_bridge_by_addr_port_digest(const tor_addr_t *addr,
  * bridge with no known digest whose address matches <b>addr</b>:<b>port</b>,
  * return 1.  Else return 0. If <b>digest</b> is NULL, check for
  * address/port matches only. */
-int addr_is_a_configured_bridge(const tor_addr_t *addr,
+int
+addr_is_a_configured_bridge(const tor_addr_t *addr,
                                 uint16_t port,
                                 const char *digest)
 {
@@ -1834,7 +1835,8 @@ int addr_is_a_configured_bridge(const tor_addr_t *addr,
  * <b>ei->identity_digest</b>, or a bridge with no known digest whose address
  * matches <b>ei->addr</b>:<b>ei->port</b>, return 1.  Else return 0.
  * If <b>ei->onion_key</b> is NULL, check for address/port matches only. */
-int extend_info_is_a_configured_bridge(const extend_info_t *ei)
+int
+extend_info_is_a_configured_bridge(const extend_info_t *ei)
 {
   const char *digest = ei->onion_key ? ei->identity_digest : NULL;
   return addr_is_a_configured_bridge(&ei->addr, ei->port, digest);

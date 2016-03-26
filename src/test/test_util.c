@@ -821,7 +821,6 @@ test_util_parse_http_time(void *arg)
   T("2038-02-17 06:13:20");
 #endif
 
-
   tt_int_op(-1,OP_EQ, parse_http_time("2004-08-zz 99-99x99 GMT", &a_time));
   tt_int_op(-1,OP_EQ, parse_http_time("2011-03-32 00:00:00 GMT", &a_time));
   tt_int_op(-1,OP_EQ, parse_http_time("2011-03-30 24:00:00 GMT", &a_time));
