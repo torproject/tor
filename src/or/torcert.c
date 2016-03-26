@@ -107,7 +107,7 @@ tor_cert_create(const ed25519_keypair_t *signing_key,
                             now, lifetime, flags);
 }
 
-/** Release all storage held for <b>cert</>. */
+/** Release all storage held for <b>cert</b>. */
 void
 tor_cert_free(tor_cert_t *cert)
 {

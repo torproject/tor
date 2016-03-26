@@ -544,7 +544,7 @@ connection_is_reading(connection_t *conn)
 }
 
 /** Check whether <b>conn</b> is correct in having (or not having) a
- * read/write event (passed in <b>ev</b). On success, return 0. On failure,
+ * read/write event (passed in <b>ev</b>). On success, return 0. On failure,
  * log a warning and return -1. */
 static int
 connection_check_event(connection_t *conn, struct event *ev)

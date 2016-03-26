@@ -414,7 +414,7 @@ ed25519_seckey_write_to_file(const ed25519_secret_key_t *seckey,
 
 /**
  * Read seckey unencrypted from <b>filename</b>, storing it into
- * <b>seckey_out</b>.  Set *<b>tag_out</> to the tag it was marked with.
+ * <b>seckey_out</b>.  Set *<b>tag_out</b> to the tag it was marked with.
  * Return 0 on success, -1 on failure.
  */
 int

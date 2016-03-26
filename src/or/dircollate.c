@@ -225,12 +225,12 @@ dircollator_collate_by_rsa(dircollator_t *dc)
  * entry in <b>dc</b> by ed25519 key and by RSA key.
  *
  * The rule is, approximately:
- *    If a <ed,rsa> identity is listed by more than half of authorities,
- *    include it.  And include all <rsa>-only votes about that node as
+ *    If a (ed,rsa) identity is listed by more than half of authorities,
+ *    include it.  And include all (rsa)-only votes about that node as
  *    matching.
  *
- *    Otherwise, if an <*,rsa> or <rsa> identity is listed by more than
- *    half of the authorities, and no <ed,rsa> pair for the same RSA key
+ *    Otherwise, if an (*,rsa) or (rsa) identity is listed by more than
+ *    half of the authorities, and no (ed,rsa) pair for the same RSA key
  *    has been already been included based on the rule above, include
  *    that RSA identity.
  */

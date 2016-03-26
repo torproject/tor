@@ -60,7 +60,8 @@ microdesc_hash_(microdesc_t *md)
   return (unsigned) siphash24g(md->digest, sizeof(md->digest));
 }
 
-/** Helper: compares <b>a</b> and </b> for equality for hash-table purposes. */
+/** Helper: compares <b>a</b> and <b>b</b> for equality for hash-table
+ * purposes. */
 static inline int
 microdesc_eq_(microdesc_t *a, microdesc_t *b)
 {
