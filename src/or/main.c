@@ -1485,8 +1485,14 @@ run_scheduled_events(time_t now)
   }
 
   /* 2d. Cleanup excess consensus bootstrap connections every second.
-   * connection_dir_close_consensus_conn_if_extra() will close connections
-   * that are clearly excess, but this check is more thorough. */
+   * connection_dir_close_consensus_conn_if_extra() closes some connections
+   * that are clearly excess, but this check is more thorough.
+   * This only closes connections if there is more than one consensus
+   * connection, and at least one of those connections is already downloading
+   * (during bootstrap), or connecting (just after the bootstrap consensus is
+   * downloaded).
+   * It won't close any consensus connections initiated after bootstrap,
+   * because those attempts are made one at a time. */
   connection_dir_close_extra_consensus_conns();
 
   /* 3a. Every second, we examine pending circuits and prune the
