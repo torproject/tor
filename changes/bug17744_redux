@@ -1,0 +1,5 @@
+  o Minor bugfixes (build):
+    - Remove a pair of redundant AM_CONDITIONAL declarations from
+      configure.ac. Fixes one final case of bug 17744; bugfix on
+      0.2.8.2-alpha.
+
