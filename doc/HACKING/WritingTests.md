@@ -417,17 +417,49 @@ makefile exports them.
 Writing integration tests with Stem
 -----------------------------------
 
-The 'stem' library includes extensive unit tests for the Tor controller
-protocol.
-
-For more information on writing new tests for stem, have a look around
-the `test/*` directory in stem, and find a good example to emulate.  You
-might want to start with
-`https://gitweb.torproject.org/stem.git/tree/test/integ/control/controller.py`
-to improve Tor's test coverage.
-
+The 'stem' library includes extensive tests for the Tor controller protocol.
 You can run stem tests from tor with `make test-stem`, or see
 `https://stem.torproject.org/faq.html#how-do-i-run-the-tests`.
+
+To see what tests are available, have a look around the `test/*` directory in
+stem. The first thing you'll notice is that there are both `unit` and `integ`
+tests. The former are for tests of the facilities provided by stem itself that
+can be tested on their own, without the need to hook up a tor process. These
+are less relevant, unless you want to develop a new stem feature. The latter,
+however, are a very useful tool to write tests for controller features. They
+provide a default environment with a connected tor instance that can be
+modified and queried. Adding more integration tests is a great way to increase
+the test coverage inside Tor, especially for controller features.
+
+Let's assume you actually want to write a test for a previously untested
+controller feature. I'm picking the `exit-policy/*` GETINFO queries. Since
+these are a controller feature that we want to write an integration test for,
+the right file to modify is
+`https://gitweb.torproject.org/stem.git/tree/test/integ/control/controller.py`.
+
+First off we notice that there is an integration test called
+`test_get_exit_policy()` that's already written. This exercises the interaction
+of stem's `Controller.get_exit_policy()` method, and is not relevant for our
+test since there are no stem methods to make use of all `exit-policy/*`
+queries (if there were, likely they'd be tested already. Maybe you want to
+write a stem feature, but I chose to just add tests).
+
+Our test requires a tor controller connection, so we'll use the
+`@require_controller` annotation for our `test_exit_policy()` method. We need a
+controller instance, which we get from
+`test.runner.get_runner().get_tor_controller()`. The attached Tor instance is
+configured as a client, but the exit-policy GETINFO queries need a relay to
+work, so we have to change the config (using `controller.set_options()`). This
+is OK for us to do, we just have to remember to set DisableNetwork so we don't
+actually start an exit relay and also to undo the changes we made (by calling
+`controller.reset_conf()` at the end of our test). Additionally, we have to
+configure a static Address for Tor to use, because it refuses to build a
+descriptor when it can't guess a suitable IP address. Unfortunately, these
+kinds of tripwires are everywhere. Don't forget to file appropriate tickets if
+you notice any strange behaviour that seems totally unreasonable.
+
+Check out the `test_exit_policy()` function in abovementioned file to see the
+final implementation for this test.
 
 System testing with Chutney
 ---------------------------
