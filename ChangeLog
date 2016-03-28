@@ -1,8 +1,8 @@
 Changes in version 0.2.8.2-alpha - 2016-03-28
   Tor 0.2.8.2-alpha is the second alpha in its series. It fixes numerous
   bugs in earlier versions of Tor, including some that prevented
-  authorities using Tor 0.2.7.x from running correctly. IPv6 and directory
-  support should also be much improved.
+  authorities using Tor 0.2.7.x from running correctly. IPv6 and
+  directory support should also be much improved.
 
   o New system requirements:
     - Tor no longer supports versions of OpenSSL with a broken
@@ -213,8 +213,8 @@ Changes in version 0.2.8.2-alpha - 2016-03-28
       directory (there are 6 overall) and the seventh one would fail
       because no directories were left, thereby triggering a close on
       all current directory connections asking for the hidden service.
-      The solution here is to not close the connections if we
-      have pending directory fetches. Fixes bug 15937; bugfix
+      The solution here is to not close the connections if we have
+      pending directory fetches. Fixes bug 15937; bugfix
       on tor-0.2.7.1-alpha.
 
   o Minor bugfixes (hidden service, control port):
