@@ -4,13 +4,42 @@ Putting out a new release
 
 Here are the steps Roger takes when putting out a new Tor release:
 
+=== 0. Preliminaries
+
+1. Get at least two of weasel/arma/Sebastian to put the new version number
+   in their approved versions list.
+
+
+=== I. Make sure it works
+
 1. Use it for a while, as a client, as a relay, as a hidden service,
    and as a directory authority. See if it has any obvious bugs, and
    resolve those.
 
    As applicable, merge the `maint-X` branch into the `release-X` branch.
 
-2. Gather the `changes/*` files into a changelog entry, rewriting many
+2. Are all of the jenkins builders happy?  See jenkins.torproject.org.
+
+   What about the bsd buildbots?
+         See http://buildbot.pixelminers.net/builders/
+
+   What about Coverity Scan?
+
+   Is make check-spaces happy?
+
+   Does 'make distcheck' compain?
+
+   How about 'make test-stem' and 'make test-network'?
+
+       - Are all those tests still happy with --enable-expensive-hardening ?
+
+   Any memory leaks?
+
+
+=== II. Write a changelog.
+
+
+1. Gather the `changes/*` files into a changelog entry, rewriting many
    of them and reordering to focus on what users and funders would find
    interesting and understandable.
 
@@ -62,13 +91,13 @@ Here are the steps Roger takes when putting out a new Tor release:
 
    7. Run `./scripts/maint/format_changelog.py` to make it prettier.
 
-3. Compose a short release blurb to highlight the user-facing
+2. Compose a short release blurb to highlight the user-facing
    changes. Insert said release blurb into the ChangeLog stanza. If it's
    a stable release, add it to the ReleaseNotes file too. If we're adding
    to a release-0.2.x branch, manually commit the changelogs to the later
    git branches too.
 
-   If you're doing the first stable release in a series, you need to
+3.  If you're doing the first stable release in a series, you need to
    create a ReleaseNotes for the series as a whole.  To get started
    there, copy all of the Changelog entries from the series into a new
    file, and run `./scripts/maint/sortChanges.py` on it.  That will
@@ -78,7 +107,10 @@ Here are the steps Roger takes when putting out a new Tor release:
    to start sorting and condensing entries.  (Generally, we don't edit the
    text of existing entries, though.)
 
-4. In `maint-0.2.x`, bump the version number in `configure.ac` and run
+
+=== III. Making the source release.
+
+1. In `maint-0.2.x`, bump the version number in `configure.ac` and run
    `scripts/maint/updateVersions.pl` to update version numbers in other
    places, and commit.  Then merge `maint-0.2.x` into `release-0.2.x`.
 
@@ -86,20 +118,19 @@ Here are the steps Roger takes when putting out a new Tor release:
    either `make`, or `perl scripts/maint/updateVersions.pl`, depending on
    your version.)
 
-5. Make distcheck, put the tarball up somewhere, and tell `#tor` about
+2. Make distcheck, put the tarball up somewhere, and tell `#tor` about
    it. Wait a while to see if anybody has problems building it. Try to
    get Sebastian or somebody to try building it on Windows.
 
-6. Get at least two of weasel/arma/Sebastian to put the new version number
-   in their approved versions list.
+=== IV. Commit, upload, announce
 
-7. Sign the tarball, then sign and push the git tag:
+1. Sign the tarball, then sign and push the git tag:
 
         gpg -ba <the_tarball>
         git tag -u <keyid> tor-0.2.x.y-status
         git push origin tag tor-0.2.x.y-status
 
-8. scp the tarball and its sig to the dist website, i.e.
+2. scp the tarball and its sig to the dist website, i.e.
    `/srv/dist-master.torproject.org/htdocs/` on dist-master. When you want
    it to go live, you run "static-update-component dist.torproject.org"
    on dist-master.
@@ -110,7 +141,7 @@ Here are the steps Roger takes when putting out a new Tor release:
    once.  Nonetheless, do not call your version "alpha" if it is stable,
    or people will get confused.)
 
-9. Email the packagers (cc'ing tor-assistants) that a new tarball is up.
+3. Email the packagers (cc'ing tor-assistants) that a new tarball is up.
    The current list of packagers is:
 
        - {weasel,gk,mikeperry} at torproject dot org
@@ -120,24 +151,29 @@ Here are the steps Roger takes when putting out a new Tor release:
        - {lfleischer} at archlinux dot org
        - {tails-dev} at boum dot org
 
-10. Add the version number to Trac.  To do this, go to Trac, log in,
+4. Add the version number to Trac.  To do this, go to Trac, log in,
     select "Admin" near the top of the screen, then select "Versions" from
     the menu on the left.  At the right, there will be an "Add version"
     box.  By convention, we enter the version in the form "Tor:
     0.2.2.23-alpha" (or whatever the version is), and we select the date as
     the date in the ChangeLog.
 
-11. Forward-port the ChangeLog (and ReleaseNotes if appropriate).
-
-12. Wait up to a day or two (for a development release), or until most
+5. Wait up to a day or two (for a development release), or until most
     packages are up (for a stable release), and mail the release blurb and
     changelog to tor-talk or tor-announce.
 
    (We might be moving to faster announcements, but don't announce until
    the website is at least updated.)
 
-13. If it's a stable release, bump the version number in the `maint-x.y.z`
+
+=== V. Aftermath and cleanup
+
+1. If it's a stable release, bump the version number in the `maint-x.y.z`
     branch to "newversion-dev", and do a `merge -s ours` merge to avoid
     taking that change into master.  Do a similar `merge -s theirs`
     merge to get the change (and only that change) into release.  (Some
     of the build scripts require that maint merge cleanly into release.)
+
+2. Forward-port the ChangeLog (and ReleaseNotes if appropriate).
+
+
