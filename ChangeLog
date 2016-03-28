@@ -1,7 +1,7 @@
 Changes in version 0.2.8.2-alpha - 2016-03-28
   Tor 0.2.8.2-alpha is the second alpha in its series. It fixes numerous
   bugs in earlier versions of Tor, including some that prevented
-  authorities using Tor 0.2.7 from running correctly. IPv6 and directory
+  authorities using Tor 0.2.7.x from running correctly. IPv6 and directory
   support should also be much improved.
 
   o New system requirements:
@@ -38,7 +38,7 @@ Changes in version 0.2.8.2-alpha - 2016-03-28
       sanitizer. Fixes bug 14821; bugfix on 0.2.5.4-alpha.
 
   o Major bugfixes (crash on shutdown):
-    - Fix a segfault during startup: If Unix domain socket was
+    - Fix a segfault during startup: If a Unix domain socket was
       configured as listener (such as a ControlSocket or a SocksPort
       "unix:" socket), and tor was started as root but not configured to
       switch to another user, tor would segfault while trying to string
@@ -120,9 +120,9 @@ Changes in version 0.2.8.2-alpha - 2016-03-28
       to 1, tor prefers IPv6 directory addresses.
     - Add ClientUseIPv4, which is set to 1 by default. If set to 0, tor
       avoids using IPv4 for client OR and directory connections.
-    - Try harder to fulfil IP version restrictions ClientUseIPv4 0 and
-      ClientUseIPv6 0; and the preferences ClientPreferIPv6ORPort and
-      ClientPreferIPv6DirPort. Closes ticket 17840; patch by "teor".
+    - Try harder to obey the IP version restrictions "ClientUseIPv4 0",
+      "ClientUseIPv6 0", "ClientPreferIPv6ORPort", and
+      "ClientPreferIPv6DirPort". Closes ticket 17840; patch by "teor".
 
   o Minor features (linux seccomp2 sandbox):
     - Reject attempts to change our Address with "Sandbox 1" enabled.
@@ -213,8 +213,8 @@ Changes in version 0.2.8.2-alpha - 2016-03-28
       directory (there are 6 overall) and the seventh one would fail
       because no directories were left, thereby triggering a close on
       all current directory connections asking for the hidden service.
-      The solution here is to not close the directory connections if we
-      have pending directory fetch. Fixes bug 15937; bugfix
+      The solution here is to not close the connections if we
+      have pending directory fetches. Fixes bug 15937; bugfix
       on tor-0.2.7.1-alpha.
 
   o Minor bugfixes (hidden service, control port):
