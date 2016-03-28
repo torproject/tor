@@ -1,5 +1,0 @@
-  o Minor bugfixes (build):
-    - Avoid spurious failures from configure files related
-      to calling exit(0) in TOR_SEARCH_LIBRARY.
-      Fixes bug 18625; bugfix on 0.2.0.1-alpha.
-      Patch from "cypherpunks".

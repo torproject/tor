@@ -1,3 +1,0 @@
-  o Minor bugfixes (assert on exit):
-    - Fix an assert-on-exit bug related to counting memory usage
-      in rephist.c. Fixes bug 18651; bugfix on 0.2.8.1-alpha.
