@@ -1,4 +1,4 @@
-Changes in version 0.2.8.2-alpha - 2016-03-??
+Changes in version 0.2.8.2-alpha - 2016-03-28
   Tor 0.2.8.2-alpha is the second alpha in its series. It fixes numerous
   bugs in earlier versions of Tor, including some that prevented
   authorities using Tor 0.2.7 from running correctly. IPv6 and directory
