@@ -36,6 +36,12 @@ Changes in version 0.2.8.2-alpha - 2016-03-28
       use of _FORTIFY_SOURCE would conflict with clang's address
       sanitizer. Fixes bug 14821; bugfix on 0.2.5.4-alpha.
 
+  o Major bugfixes (crash on shutdown):
+    - Correctly handle detaching circuits from muxes when shutting down.
+      Fixes bug 18116; bugfix on 0.2.8.1-alpha.
+    - Fix an assert-on-exit bug related to counting memory usage in
+      rephist.c. Fixes bug 18651; bugfix on 0.2.8.1-alpha.
+
   o Major bugfixes (crash on startup):
     - Fix a segfault during startup: If a Unix domain socket was
       configured as listener (such as a ControlSocket or a SocksPort
@@ -43,12 +49,6 @@ Changes in version 0.2.8.2-alpha - 2016-03-28
       switch to another user, tor would segfault while trying to string
       compare a NULL value. Fixes bug 18261; bugfix on 0.2.8.1-alpha.
       Patch by weasel.
-
-  o Major bugfixes (crash on shutdown):
-    - Correctly handle detaching circuits from muxes when shutting down.
-      Fixes bug 18116; bugfix on 0.2.8.1-alpha.
-    - Fix an assert-on-exit bug related to counting memory usage in
-      rephist.c. Fixes bug 18651; bugfix on 0.2.8.1-alpha.
 
   o Major bugfixes (dns proxy mode, crash):
     - Avoid crashing when running as a DNS proxy. Fixes bug 16248;
@@ -62,10 +62,10 @@ Changes in version 0.2.8.2-alpha - 2016-03-28
 
   o Major bugfixes (voting):
     - Actually enable support for authorities to match routers by their
-      Ed25519 identities. Previously, the
-      code had been written, but some debugging code that had
-      accidentally been left in the codebase made it stay turned off.
-      Fixes bug 17702; bugfix on 0.2.7.2-alpha.
+      Ed25519 identities. Previously, the code had been written, but
+      some debugging code that had accidentally been left in the
+      codebase made it stay turned off. Fixes bug 17702; bugfix
+      on 0.2.7.2-alpha.
     - When collating votes by Ed25519 identities, authorities now
       include a "NoEdConsensus" flag if the ed25519 value (or lack
       thereof) for a server does not reflect the majority consensus.
@@ -79,7 +79,8 @@ Changes in version 0.2.8.2-alpha - 2016-03-28
 
   o Minor features (security, win32):
     - Set SO_EXCLUSIVEADDRUSE on Win32 to avoid a local port-stealing
-      attack. Fixes bug 18123; bugfix on all tor versions. Patch by teor.
+      attack. Fixes bug 18123; bugfix on all tor versions. Patch
+      by teor.
 
   o Minor features (bug-resistance):
     - Make Tor survive errors involving connections without a
@@ -93,8 +94,9 @@ Changes in version 0.2.8.2-alpha - 2016-03-28
 
   o Minor features (code hardening):
     - Use tor_snprintf() and tor_vsnprintf() even in external and low-
-      level code, to harden against accidental failures to NUL-terminate.
-      Part of ticket 17852. Patch from jsturgix. Found with Flawfinder.
+      level code, to harden against accidental failures to NUL-
+      terminate. Part of ticket 17852. Patch from jsturgix. Found
+      with Flawfinder.
 
   o Minor features (crypto):
     - Validate the hard-coded Diffie-Hellman parameters and ensure that
@@ -152,9 +154,9 @@ Changes in version 0.2.8.2-alpha - 2016-03-28
       8976; bugfix on 0.2.3.21-rc. Patch by dgoulet and teor.
 
   o Minor bugfixes (build):
-    - Do not link the unit tests against both the testing and non-testing
-      versions of the static libraries. Fixes bug 18490; bugfix on
-      0.2.7.1-alpha.
+    - Do not link the unit tests against both the testing and non-
+      testing versions of the static libraries. Fixes bug 18490; bugfix
+      on 0.2.7.1-alpha.
     - Avoid spurious failures from configure files related to calling
       exit(0) in TOR_SEARCH_LIBRARY. Fixes bug 18625; bugfix on
       0.2.0.1-alpha. Patch from "cypherpunks".
@@ -170,8 +172,9 @@ Changes in version 0.2.8.2-alpha - 2016-03-28
 
   o Minor bugfixes (code correctness):
     - Update to the latest version of Trunnel, which tries harder to
-      avoid generating code that can invoke memcpy(p,NULL,0). Bug found by
-      clang address sanitizer. Fixes bug 18373; bugfix on 0.2.7.2-alpha.
+      avoid generating code that can invoke memcpy(p,NULL,0). Bug found
+      by clang address sanitizer. Fixes bug 18373; bugfix
+      on 0.2.7.2-alpha.
 
   o Minor bugfixes (configuration):
     - Fix a tiny memory leak when parsing a port configuration ending in
@@ -244,10 +247,11 @@ Changes in version 0.2.8.2-alpha - 2016-03-28
   o Minor bugfixes (memory safety):
     - Avoid freeing an uninitialized pointer when opening a socket fails
       in get_interface_addresses_ioctl(). Fixes bug 18454; bugfix on
-      0.2.3.11-alpha. Reported by toralf and "cypherpunks", patch by teor.
+      0.2.3.11-alpha. Reported by toralf and "cypherpunks", patch
+      by teor.
     - Correctly duplicate addresses in get_interface_address6_list().
-      Fixes bug 18454; bugfix on 0.2.8.1-alpha. Reported
-      by toralf, patch by "cypherpunks".
+      Fixes bug 18454; bugfix on 0.2.8.1-alpha. Reported by toralf,
+      patch by "cypherpunks".
     - Fix a memory leak in tor-gencert. Fixes part of bug 18672; bugfix
       on 0.2.0.1-alpha.
     - Fix a memory leak in "tor --list-fingerprint". Fixes part of bug
@@ -255,13 +259,13 @@ Changes in version 0.2.8.2-alpha - 2016-03-28
 
   o Minor bugfixes (private directory):
     - Prevent a race condition when creating private directories. Fixes
-      part of bug 17852; bugfix on 0.0.2pre13. Part of ticket 17852. Patch
-      from jsturgix. Found with Flawfinder.
+      part of bug 17852; bugfix on 0.0.2pre13. Part of ticket 17852.
+      Patch from jsturgix. Found with Flawfinder.
 
   o Minor bugfixes (test networks, IPv6):
     - Allow internal IPv6 addresses in descriptors in test networks.
-      Fixes bug 17153; bugfix on 0.2.3.16-alpha. Patch by
-      teor, reported by karsten.
+      Fixes bug 17153; bugfix on 0.2.3.16-alpha. Patch by teor, reported
+      by karsten.
 
   o Minor bugfixes (testing):
     - We no longer disable assertions in the unit tests when coverage is
