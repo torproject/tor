@@ -3245,6 +3245,7 @@ do_list_fingerprint(void)
   char buf[FINGERPRINT_LEN+1];
   crypto_pk_t *k;
   const char *nickname = get_options()->Nickname;
+  sandbox_disable_getaddrinfo_cache();
   if (!server_mode(get_options())) {
     log_err(LD_GENERAL,
             "Clients don't have long-term identity keys. Exiting.");

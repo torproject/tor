@@ -255,6 +255,10 @@ Changes in version 0.2.8.2-alpha - 2016-03-28
     - Correctly duplicate addresses in get_interface_address6_list.
       Fixes bug 18454; bugfix on 110765f5 in tor-0.2.8.1-alpha. Reported
       by "toralf", patch by "cypherpunks".
+    - Fix a memory leak in tor-gencert. Fixes part of bug 18672; bugfix on
+      0.2.0.1-alpha.
+    - Fix a memory leak in "tor --list-figngerprint". Fixes part of bug
+      18672; bugfix on 0.2.0.1-alpha.
 
   o Minor bugfixes (private directory):
     - Prevent a race condition when creating private directories. Fixes
