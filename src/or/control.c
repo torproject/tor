@@ -4971,7 +4971,7 @@ sum_up_cell_stats_by_command(circuit_t *circ, cell_stats_t *cell_stats)
 {
   memset(cell_stats, 0, sizeof(cell_stats_t));
   SMARTLIST_FOREACH_BEGIN(circ->testing_cell_stats,
-                          testing_cell_stats_entry_t *, ent) {
+                          const testing_cell_stats_entry_t *, ent) {
     tor_assert(ent->command <= CELL_COMMAND_MAX_);
     if (!ent->removed && !ent->exitward) {
       cell_stats->added_cells_appward[ent->command] += 1;
@@ -4984,10 +4984,8 @@ sum_up_cell_stats_by_command(circuit_t *circ, cell_stats_t *cell_stats)
       cell_stats->removed_cells_exitward[ent->command] += 1;
       cell_stats->total_time_exitward[ent->command] += ent->waiting_time * 10;
     }
-    tor_free(ent);
   } SMARTLIST_FOREACH_END(ent);
-  smartlist_free(circ->testing_cell_stats);
-  circ->testing_cell_stats = NULL;
+  circuit_clear_testing_cell_stats(circ);
 }
 
 /** Helper: append a cell statistics string to <code>event_parts</code>,

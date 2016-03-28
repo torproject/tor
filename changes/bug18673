@@ -1,0 +1,4 @@
+  o Minor bugfixes (memory leak):
+    - Fix a small memory leak that would occur when the
+      TestingEnableCellStatsEvent option was turned on.  Fixes bug 18673;
+      bugfix on 0.2.5.2-alpha.
