@@ -245,7 +245,10 @@ if test "$cross_compiling" != yes; then
        LDFLAGS="$tor_tryextra $orig_LDFLAGS"
      fi
      AC_RUN_IFELSE([AC_LANG_PROGRAM([$5], [$6])],
-                   [runnable=yes], [runnable=no])
+                   [runnable=yes], [runnable=no],
+                   [AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[]])],
+                                   [runnable=yes],
+                                   [runnable=no])])
      if test "$runnable" = yes; then
         tor_cv_library_$1_linker_option=$tor_tryextra
         break
