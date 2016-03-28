@@ -756,6 +756,18 @@ or_circuit_new(circid_t p_circ_id, channel_t *p_chan)
   return circ;
 }
 
+/** Free all storage held in circ->testing_cell_stats */
+void
+circuit_clear_testing_cell_stats(circuit_t *circ)
+{
+  if (!circ)
+    return;
+  SMARTLIST_FOREACH(circ->testing_cell_stats, testing_cell_stats_entry_t *,
+                    ent, tor_free(ent));
+  smartlist_free(circ->testing_cell_stats);
+  circ->testing_cell_stats = NULL;
+}
+
 /** Deallocate space associated with circ.
  */
 STATIC void
@@ -766,6 +778,8 @@ circuit_free(circuit_t *circ)
   int should_free = 1;
   if (!circ)
     return;
+
+  circuit_clear_testing_cell_stats(circ);
 
   if (CIRCUIT_IS_ORIGIN(circ)) {
     origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
