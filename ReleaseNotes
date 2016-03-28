@@ -187,7 +187,7 @@ Changes in version 0.2.7.5 - 2015-11-20
     - Revert commit that made directory authorities assign the HSDir
       flag to relay without a DirPort; this was bad because such relays
       can't handle BEGIN_DIR cells. Fixes bug 15850; bugfix
-      on tor-0.2.6.3-alpha.
+      on 0.2.6.3-alpha.
     - When cannibalizing a circuit for an introduction point, always
       extend to the chosen exit node (creating a 4 hop circuit).
       Previously Tor would use the current circuit exit node, which
@@ -435,7 +435,7 @@ Changes in version 0.2.7.5 - 2015-11-20
       sandbox. Fixes bug 16964; bugfix on 0.2.5.1-alpha.
     - Add the "hidserv-stats" filename to our sandbox filter for the
       HiddenServiceStatistics option to work properly. Fixes bug 17354;
-      bugfix on tor-0.2.6.2-alpha. Patch from David Goulet.
+      bugfix on 0.2.6.2-alpha. Patch from David Goulet.
 
   o Minor bugfixes (Linux seccomp2 sandbox, also in 0.2.6.10):
     - Allow pipe() and pipe2() syscalls in the seccomp2 sandbox: we need
@@ -602,7 +602,7 @@ Changes in version 0.2.7.5 - 2015-11-20
   o Removed code:
     - Remove `USE_OPENSSL_BASE64` and the corresponding fallback code
       and always use the internal Base64 decoder. The internal decoder
-      has been part of tor since tor-0.2.0.10-alpha, and no one should
+      has been part of tor since 0.2.0.10-alpha, and no one should
       be using the OpenSSL one. Part of ticket 15652.
     - Remove the 'tor_strclear()' function; use memwipe() instead.
       Closes ticket 14922.
@@ -802,7 +802,7 @@ Changes in version 0.2.6.8 - 2015-05-21
     - Revert commit that made directory authorities assign the HSDir
       flag to relay without a DirPort; this was bad because such relays
       can't handle BEGIN_DIR cells. Fixes bug 15850; bugfix
-      on tor-0.2.6.3-alpha.
+      on 0.2.6.3-alpha.
 
   o Minor bugfixes (hidden service, backport from 0.2.7.1-alpha):
     - Fix an out-of-bounds read when parsing invalid INTRODUCE2 cells on
@@ -6960,7 +6960,7 @@ Changes in version 0.2.2.32 - 2011-08-27
       negative number if given a value above INT_MAX+1. Found by George
       Kadianakis. Fixes bug 3306; bugfix on 0.2.2pre14.
     - Fix a potential null-pointer dereference while computing a
-      consensus. Bugfix on tor-0.2.0.3-alpha, found with the help of
+      consensus. Bugfix on 0.2.0.3-alpha, found with the help of
       clang's analyzer.
     - If we fail to compute the identity digest of a v3 legacy keypair,
       warn, and don't use a buffer-full of junk instead. Bugfix on
