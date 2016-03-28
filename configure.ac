@@ -58,8 +58,6 @@ fi
 
 AM_CONDITIONAL(UNITTESTS_ENABLED, test "x$enable_unittests" != "xno")
 AM_CONDITIONAL(COVERAGE_ENABLED, test "x$enable_coverage" = "xyes")
-AM_CONDITIONAL(UNITTESTS_ENABLED, test x$enable_unittests != xno)
-AM_CONDITIONAL(COVERAGE_ENABLED, test x$enable_coverage = xyes)
 AM_CONDITIONAL(DISABLE_ASSERTS_IN_UNIT_TESTS, test "x$enable_asserts_in_tests" = "xno")
 
 if test "$enable_static_tor" = "yes"; then
