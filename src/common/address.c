@@ -1172,7 +1172,7 @@ tor_addr_hash(const tor_addr_t *addr)
 
 /** Return a newly allocated string with a representation of <b>addr</b>. */
 char *
-tor_dup_addr(const tor_addr_t *addr)
+tor_addr_to_str_dup(const tor_addr_t *addr)
 {
   char buf[TOR_ADDR_BUF_LEN];
   if (tor_addr_to_str(buf, addr, sizeof(buf), 0)) {

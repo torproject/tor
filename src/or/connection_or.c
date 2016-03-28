@@ -934,7 +934,7 @@ connection_or_init_conn_from_address(or_connection_t *conn,
     }
     conn->nickname = tor_strdup(node_get_nickname(r));
     tor_free(conn->base_.address);
-    conn->base_.address = tor_dup_addr(&node_ap.addr);
+    conn->base_.address = tor_addr_to_str_dup(&node_ap.addr);
   } else {
     conn->nickname = tor_malloc(HEX_DIGEST_LEN+2);
     conn->nickname[0] = '$';
@@ -942,7 +942,7 @@ connection_or_init_conn_from_address(or_connection_t *conn,
                   conn->identity_digest, DIGEST_LEN);
 
     tor_free(conn->base_.address);
-    conn->base_.address = tor_dup_addr(addr);
+    conn->base_.address = tor_addr_to_str_dup(addr);
   }
 
   /*

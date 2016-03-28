@@ -3510,7 +3510,7 @@ channel_dump_statistics, (channel_t *chan, int severity))
   have_remote_addr = channel_get_addr_if_possible(chan, &remote_addr);
   if (have_remote_addr) {
     char *actual = tor_strdup(channel_get_actual_remote_descr(chan));
-    remote_addr_str = tor_dup_addr(&remote_addr);
+    remote_addr_str = tor_addr_to_str_dup(&remote_addr);
     tor_log(severity, LD_GENERAL,
         " * Channel " U64_FORMAT " says its remote address"
         " is %s, and gives a canonical description of \"%s\" and an "

@@ -4280,7 +4280,7 @@ dir_server_new(int is_authority,
     return NULL;
 
   if (!hostname)
-    hostname_ = tor_dup_addr(addr);
+    hostname_ = tor_addr_to_str_dup(addr);
   else
     hostname_ = tor_strdup(hostname);
 

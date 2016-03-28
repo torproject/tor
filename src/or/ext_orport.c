@@ -461,8 +461,8 @@ connection_ext_or_handle_cmd_useraddr(connection_t *conn,
     return -1;
 
   { /* do some logging */
-    char *old_address = tor_dup_addr(&conn->addr);
-    char *new_address = tor_dup_addr(&addr);
+    char *old_address = tor_addr_to_str_dup(&conn->addr);
+    char *new_address = tor_addr_to_str_dup(&addr);
 
     log_debug(LD_NET, "Received USERADDR."
              "We rewrite our address from '%s:%u' to '%s:%u'.",
@@ -478,7 +478,7 @@ connection_ext_or_handle_cmd_useraddr(connection_t *conn,
   if (conn->address) {
     tor_free(conn->address);
   }
-  conn->address = tor_dup_addr(&addr);
+  conn->address = tor_addr_to_str_dup(&addr);
 
   return 0;
 }

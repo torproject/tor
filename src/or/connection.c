@@ -1564,7 +1564,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     /* remember the remote address */
     tor_addr_copy(&newconn->addr, &addr);
     newconn->port = port;
-    newconn->address = tor_dup_addr(&addr);
+    newconn->address = tor_addr_to_str_dup(&addr);
 
     if (new_type == CONN_TYPE_AP && conn->socket_family != AF_UNIX) {
       log_info(LD_NET, "New SOCKS connection opened from %s.",
@@ -2538,7 +2538,7 @@ retry_listener_ports(smartlist_t *old_conns,
                                            real_port,
                                            listensockaddr,
                                            sizeof(struct sockaddr_storage));
-      address = tor_dup_addr(&port->addr);
+      address = tor_addr_to_str_dup(&port->addr);
     }
 
     if (listensockaddr) {

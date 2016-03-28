@@ -554,7 +554,7 @@ channel_tls_get_remote_descr_method(channel_t *chan, int flags)
         break;
       case GRD_FLAG_ORIGINAL:
         /* Actual address with port */
-        addr_str = tor_dup_addr(&(tlschan->conn->real_addr));
+        addr_str = tor_addr_to_str_dup(&(tlschan->conn->real_addr));
         tor_snprintf(buf, MAX_DESCR_LEN + 1,
                      "%s:%u", addr_str, conn->port);
         tor_free(addr_str);
@@ -567,7 +567,7 @@ channel_tls_get_remote_descr_method(channel_t *chan, int flags)
         break;
       case GRD_FLAG_ORIGINAL|GRD_FLAG_ADDR_ONLY:
         /* Actual address, no port */
-        addr_str = tor_dup_addr(&(tlschan->conn->real_addr));
+        addr_str = tor_addr_to_str_dup(&(tlschan->conn->real_addr));
         strlcpy(buf, addr_str, sizeof(buf));
         tor_free(addr_str);
         answer = buf;

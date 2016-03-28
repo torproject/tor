@@ -1126,7 +1126,7 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
   /* set up conn so it's got all the data we need to remember */
   tor_addr_copy(&conn->base_.addr, &addr);
   conn->base_.port = port;
-  conn->base_.address = tor_dup_addr(&addr);
+  conn->base_.address = tor_addr_to_str_dup(&addr);
   memcpy(conn->identity_digest, digest, DIGEST_LEN);
 
   conn->base_.purpose = dir_purpose;

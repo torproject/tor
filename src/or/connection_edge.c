@@ -2433,7 +2433,7 @@ connection_ap_handshake_send_resolve(entry_connection_t *ap_conn)
 
   if (!base_conn->address) {
     /* This might be unnecessary. XXXX */
-    base_conn->address = tor_dup_addr(&base_conn->addr);
+    base_conn->address = tor_addr_to_str_dup(&base_conn->addr);
   }
   base_conn->state = AP_CONN_STATE_RESOLVE_WAIT;
   log_info(LD_APP,"Address sent for resolve, ap socket "TOR_SOCKET_T_FORMAT

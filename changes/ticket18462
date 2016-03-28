@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Rename tor_dup_addr() to tor_addr_to_str_dup() to avoid confusion.
+      Closes ticket #18462; patch from "icanhasaccount".
