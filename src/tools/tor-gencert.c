@@ -402,6 +402,7 @@ key_to_string(EVP_PKEY *key)
   b = BIO_new(BIO_s_mem());
   if (!PEM_write_bio_RSAPublicKey(b, rsa)) {
     crypto_log_errors(LOG_WARN, "writing public key to string");
+    RSA_free(rsa);
     return NULL;
   }
 
@@ -413,6 +414,7 @@ key_to_string(EVP_PKEY *key)
   result[buf->length] = 0;
   BUF_MEM_free(buf);
 
+  RSA_free(rsa);
   return result;
 }
 
@@ -488,10 +490,13 @@ generate_certificate(void)
   tor_free(signing);
 
   /* Append a cross-certification */
+  RSA *rsa = EVP_PKEY_get1_RSA(signing_key);
   r = RSA_private_encrypt(DIGEST_LEN, (unsigned char*)id_digest,
                           (unsigned char*)signature,
-                          EVP_PKEY_get1_RSA(signing_key),
+                          rsa,
                           RSA_PKCS1_PADDING);
+  RSA_free(rsa);
+
   signed_len = strlen(buf);
   base64_encode(buf+signed_len, sizeof(buf)-signed_len, signature, r,
                 BASE64_ENCODE_MULTILINE);
@@ -503,10 +508,12 @@ generate_certificate(void)
   signed_len = strlen(buf);
   SHA1((const unsigned char*)buf,signed_len,(unsigned char*)digest);
 
+  rsa = EVP_PKEY_get1_RSA(identity_key);
   r = RSA_private_encrypt(DIGEST_LEN, (unsigned char*)digest,
                           (unsigned char*)signature,
-                          EVP_PKEY_get1_RSA(identity_key),
+                          rsa,
                           RSA_PKCS1_PADDING);
+  RSA_free(rsa);
   strlcat(buf, "-----BEGIN SIGNATURE-----\n", sizeof(buf));
   signed_len = strlen(buf);
   base64_encode(buf+signed_len, sizeof(buf)-signed_len, signature, r,
