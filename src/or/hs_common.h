@@ -3,7 +3,7 @@
 
 /**
  * \file hs_common.h
- * \brief Header file for hs_common.c.
+ * \brief Header file containing common data for the whole HS subsytem.
  **/
 
 #ifndef TOR_HS_COMMON_H

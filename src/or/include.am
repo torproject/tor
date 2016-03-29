@@ -48,6 +48,7 @@ LIBTOR_A_SOURCES = \
 	src/or/entrynodes.c				\
 	src/or/ext_orport.c				\
 	src/or/hibernate.c				\
+	src/or/hs_cache.c				\
 	src/or/hs_common.c				\
 	src/or/hs_descriptor.c				\
 	src/or/keypin.c					\
@@ -159,6 +160,7 @@ ORHEADERS = \
 	src/or/geoip.h					\
 	src/or/entrynodes.h				\
 	src/or/hibernate.h				\
+	src/or/hs_cache.h				\
 	src/or/hs_common.h				\
 	src/or/hs_descriptor.h				\
 	src/or/keypin.h					\

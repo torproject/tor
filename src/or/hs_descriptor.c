@@ -1918,3 +1918,15 @@ hs_descriptor_free(hs_descriptor_t *desc)
   desc_encrypted_data_free_contents(&desc->encrypted_data);
   tor_free(desc);
 }
+
+/* Return the size in bytes of the given plaintext data object. A sizeof() is
+ * not enough because the object contains pointers and the encrypted blob.
+ * This is particularly useful for our OOM subsystem that tracks the HSDir
+ * cache size for instance. */
+size_t
+hs_desc_plaintext_obj_size(const hs_desc_plaintext_data_t *data)
+{
+  tor_assert(data);
+  return (sizeof(*data) + sizeof(*data->signing_key_cert) +
+          data->encrypted_blob_size);
+}

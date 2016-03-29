@@ -1072,9 +1072,10 @@ static void
 test_rend_cache_clean_v2_descs_as_dir(void *data)
 {
   rend_cache_entry_t *e;
-  time_t now;
+  time_t now, cutoff;
   rend_service_descriptor_t *desc;
   now = time(NULL);
+  cutoff = now - (REND_CACHE_MAX_AGE + REND_CACHE_MAX_SKEW);
   const char key[DIGEST_LEN] = "abcde";
 
   (void)data;
@@ -1082,7 +1083,7 @@ test_rend_cache_clean_v2_descs_as_dir(void *data)
   rend_cache_init();
 
   // Test running with an empty cache
-  rend_cache_clean_v2_descs_as_dir(now, 0);
+  rend_cache_clean_v2_descs_as_dir(cutoff);
   tt_int_op(digestmap_size(rend_cache_v2_dir), OP_EQ, 0);
 
   // Test with only one new entry
@@ -1094,37 +1095,14 @@ test_rend_cache_clean_v2_descs_as_dir(void *data)
   e->parsed = desc;
   digestmap_set(rend_cache_v2_dir, key, e);
 
-  rend_cache_clean_v2_descs_as_dir(now, 0);
+  /* Set the cutoff to minus 10 seconds. */
+  rend_cache_clean_v2_descs_as_dir(cutoff - 10);
   tt_int_op(digestmap_size(rend_cache_v2_dir), OP_EQ, 1);
 
   // Test with one old entry
-  desc->timestamp = now - (REND_CACHE_MAX_AGE + REND_CACHE_MAX_SKEW + 1000);
-  rend_cache_clean_v2_descs_as_dir(now, 0);
+  desc->timestamp = cutoff - 1000;
+  rend_cache_clean_v2_descs_as_dir(cutoff);
   tt_int_op(digestmap_size(rend_cache_v2_dir), OP_EQ, 0);
-
-  // Test with one entry that has an old last served
-  e = tor_malloc_zero(sizeof(rend_cache_entry_t));
-  e->last_served = now - (REND_CACHE_MAX_AGE + REND_CACHE_MAX_SKEW + 1000);
-  desc = tor_malloc_zero(sizeof(rend_service_descriptor_t));
-  desc->timestamp = now;
-  desc->pk = pk_generate(0);
-  e->parsed = desc;
-  digestmap_set(rend_cache_v2_dir, key, e);
-
-  rend_cache_clean_v2_descs_as_dir(now, 0);
-  tt_int_op(digestmap_size(rend_cache_v2_dir), OP_EQ, 0);
-
-  // Test a run through asking for a large force_remove
-  e = tor_malloc_zero(sizeof(rend_cache_entry_t));
-  e->last_served = now;
-  desc = tor_malloc_zero(sizeof(rend_service_descriptor_t));
-  desc->timestamp = now;
-  desc->pk = pk_generate(0);
-  e->parsed = desc;
-  digestmap_set(rend_cache_v2_dir, key, e);
-
-  rend_cache_clean_v2_descs_as_dir(now, 20000);
-  tt_int_op(digestmap_size(rend_cache_v2_dir), OP_EQ, 1);
 
  done:
   rend_cache_free_all();

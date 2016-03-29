@@ -207,6 +207,8 @@ int hs_desc_decode_plaintext(const char *encoded,
 int hs_desc_decode_encrypted(const hs_descriptor_t *desc,
                              hs_desc_encrypted_data_t *desc_out);
 
+size_t hs_desc_plaintext_obj_size(const hs_desc_plaintext_data_t *data);
+
 #ifdef HS_DESCRIPTOR_PRIVATE
 
 /* Encoding. */

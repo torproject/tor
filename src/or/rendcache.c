@@ -86,7 +86,7 @@ rend_cache_get_total_allocation(void)
 }
 
 /** Decrement the total bytes attributed to the rendezvous cache by n. */
-STATIC void
+void
 rend_cache_decrement_allocation(size_t n)
 {
   static int have_underflowed = 0;
@@ -103,7 +103,7 @@ rend_cache_decrement_allocation(size_t n)
 }
 
 /** Increase the total bytes attributed to the rendezvous cache by n. */
-STATIC void
+void
 rend_cache_increment_allocation(size_t n)
 {
   static int have_overflowed = 0;
@@ -462,45 +462,36 @@ rend_cache_intro_failure_note(rend_intro_point_failure_t failure,
 }
 
 /** Remove all old v2 descriptors and those for which this hidden service
- * directory is not responsible for any more.
- *
- * If at all possible, remove at least <b>force_remove</b> bytes of data.
- */
-void
-rend_cache_clean_v2_descs_as_dir(time_t now, size_t force_remove)
+ * directory is not responsible for any more. The cutoff is the time limit for
+ * which we want to keep the cache entry. In other words, any entry created
+ * before will be removed. */
+size_t
+rend_cache_clean_v2_descs_as_dir(time_t cutoff)
 {
   digestmap_iter_t *iter;
-  time_t cutoff = now - REND_CACHE_MAX_AGE - REND_CACHE_MAX_SKEW;
-  const int LAST_SERVED_CUTOFF_STEP = 1800;
-  time_t last_served_cutoff = cutoff;
   size_t bytes_removed = 0;
-  do {
-    for (iter = digestmap_iter_init(rend_cache_v2_dir);
-         !digestmap_iter_done(iter); ) {
-      const char *key;
-      void *val;
-      rend_cache_entry_t *ent;
-      digestmap_iter_get(iter, &key, &val);
-      ent = val;
-      if (ent->parsed->timestamp < cutoff ||
-          ent->last_served < last_served_cutoff) {
-        char key_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
-        base32_encode(key_base32, sizeof(key_base32), key, DIGEST_LEN);
-        log_info(LD_REND, "Removing descriptor with ID '%s' from cache",
-                 safe_str_client(key_base32));
-        bytes_removed += rend_cache_entry_allocation(ent);
-        iter = digestmap_iter_next_rmv(rend_cache_v2_dir, iter);
-        rend_cache_entry_free(ent);
-      } else {
-        iter = digestmap_iter_next(rend_cache_v2_dir, iter);
-      }
-    }
 
-    /* In case we didn't remove enough bytes, advance the cutoff a little. */
-    last_served_cutoff += LAST_SERVED_CUTOFF_STEP;
-    if (last_served_cutoff > now)
-      break;
-  } while (bytes_removed < force_remove);
+  for (iter = digestmap_iter_init(rend_cache_v2_dir);
+       !digestmap_iter_done(iter); ) {
+    const char *key;
+    void *val;
+    rend_cache_entry_t *ent;
+    digestmap_iter_get(iter, &key, &val);
+    ent = val;
+    if (ent->parsed->timestamp < cutoff) {
+      char key_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
+      base32_encode(key_base32, sizeof(key_base32), key, DIGEST_LEN);
+      log_info(LD_REND, "Removing descriptor with ID '%s' from cache",
+               safe_str_client(key_base32));
+      bytes_removed += rend_cache_entry_allocation(ent);
+      iter = digestmap_iter_next_rmv(rend_cache_v2_dir, iter);
+      rend_cache_entry_free(ent);
+    } else {
+      iter = digestmap_iter_next(rend_cache_v2_dir, iter);
+    }
+  }
+
+  return bytes_removed;
 }
 
 /** Lookup in the client cache the given service ID <b>query</b> for
