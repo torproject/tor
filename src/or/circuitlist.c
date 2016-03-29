@@ -760,7 +760,7 @@ or_circuit_new(circid_t p_circ_id, channel_t *p_chan)
 void
 circuit_clear_testing_cell_stats(circuit_t *circ)
 {
-  if (!circ)
+  if (!circ || !circ->testing_cell_stats)
     return;
   SMARTLIST_FOREACH(circ->testing_cell_stats, testing_cell_stats_entry_t *,
                     ent, tor_free(ent));
