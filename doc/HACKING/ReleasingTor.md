@@ -6,8 +6,8 @@ Here are the steps Roger takes when putting out a new Tor release:
 
 === 0. Preliminaries
 
-1. Get at least two of weasel/arma/Sebastian to put the new version number
-   in their approved versions list.
+1. Get at least two of weasel/arma/Sebastian/Sina to put the new
+   version number in their approved versions list.
 
 
 === I. Make sure it works
