@@ -527,7 +527,7 @@ onion_skin_server_handshake(int type,
  * <b>rend_authenticator_out</b> to the "KH" field that can be used to
  * establish introduction points at this hop, and return 0. On failure,
  * return -1, and set *msg_out to an error message if this is worth
- * complaining to the usre about. */
+ * complaining to the user about. */
 int
 onion_skin_client_handshake(int type,
                       const onion_handshake_state_t *handshake_state,
