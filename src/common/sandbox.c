@@ -177,11 +177,20 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(mmap),
 #endif
     SCMP_SYS(munmap),
+#ifdef __NR_prlimit
+    SCMP_SYS(prlimit),
+#endif
+#ifdef __NR_prlimit64
+    SCMP_SYS(prlimit64),
+#endif
     SCMP_SYS(read),
     SCMP_SYS(rt_sigreturn),
     SCMP_SYS(sched_getaffinity),
     SCMP_SYS(sendmsg),
     SCMP_SYS(set_robust_list),
+#ifdef __NR_setrlimit
+    SCMP_SYS(setrlimit),
+#endif
 #ifdef __NR_sigreturn
     SCMP_SYS(sigreturn),
 #endif
