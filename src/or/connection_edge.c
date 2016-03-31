@@ -1227,7 +1227,7 @@ connection_ap_handshake_rewrite(entry_connection_t *conn,
     }
 
     /* Hang on, did we find an answer saying that this is a reverse lookup for
-     * an internal address?  If so, we should reject it if we're condigured to
+     * an internal address?  If so, we should reject it if we're configured to
      * do so. */
     if (options->ClientDNSRejectInternalAddresses) {
       /* Don't let people try to do a reverse lookup on 10.0.0.1. */
