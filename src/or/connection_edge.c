@@ -1466,8 +1466,8 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     /* If we're running in Tor2webMode, we don't allow anything BUT .onion
      * addresses. */
     if (options->Tor2webMode) {
-      log_warn(LD_APP, "Refusing to connect to non-hidden-service hostname %s "
-               "because tor2web mode is enabled.",
+      log_warn(LD_APP, "Refusing to connect to non-hidden-service hostname "
+               "or IP address %s because tor2web mode is enabled.",
                safe_str_client(socks->address));
       connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
       return -1;
