@@ -3961,7 +3961,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   // Test valid unix domain
   SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
   smartlist_clear(slout);
-  ret = parse_port_config(slout, config_port_valid, NULL, "DNS",
+  ret = parse_port_config(slout, config_port_valid, NULL, "SOCKS",
                           CONN_TYPE_AP_LISTENER, NULL, 0, 0);
 #ifdef _WIN32
   tt_int_op(ret, OP_EQ, -1);
@@ -3985,7 +3985,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   config_port_invalid = mock_config_line("SOCKSPort",
                                          "unix:/tmp/foo/bar NoIPv4Traffic "
                                          "NoOnionTraffic");
-  ret = parse_port_config(NULL, config_port_invalid, NULL, "DNS",
+  ret = parse_port_config(NULL, config_port_invalid, NULL, "SOCKS",
                           CONN_TYPE_AP_LISTENER, NULL, 0,
                           CL_PORT_TAKES_HOSTNAMES);
   tt_int_op(ret, OP_EQ, -1);
@@ -4035,9 +4035,9 @@ test_config_parse_port_config__ports__ports_given(void *data)
   config_free_lines(config_port_valid); config_port_valid = NULL;
   SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
   smartlist_clear(slout);
-  config_port_valid = mock_config_line("DNSPort", "unix:/tmp/foo/bar "
+  config_port_valid = mock_config_line("SOCKSPort", "unix:/tmp/foo/bar "
                                        "NoDNSRequest NoIPv4Traffic");
-  ret = parse_port_config(slout, config_port_valid, NULL, "DNS",
+  ret = parse_port_config(slout, config_port_valid, NULL, "SOCKS",
                           CONN_TYPE_AP_LISTENER, NULL, 0,
                           CL_PORT_TAKES_HOSTNAMES);
 #ifdef _WIN32
@@ -4056,9 +4056,9 @@ test_config_parse_port_config__ports__ports_given(void *data)
   config_free_lines(config_port_valid); config_port_valid = NULL;
   SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
   smartlist_clear(slout);
-  config_port_valid = mock_config_line("DNSPort", "unix:/tmp/foo/bar "
+  config_port_valid = mock_config_line("SOCKSPort", "unix:/tmp/foo/bar "
                                        "OnionTrafficOnly");
-  ret = parse_port_config(slout, config_port_valid, NULL, "DNS",
+  ret = parse_port_config(slout, config_port_valid, NULL, "SOCKS",
                           CONN_TYPE_AP_LISTENER, NULL, 0,
                           CL_PORT_TAKES_HOSTNAMES);
 #ifdef _WIN32
@@ -4077,9 +4077,9 @@ test_config_parse_port_config__ports__ports_given(void *data)
   config_free_lines(config_port_valid); config_port_valid = NULL;
   SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
   smartlist_clear(slout);
-  config_port_valid = mock_config_line("DNSPort", "unix:/tmp/foo/bar "
+  config_port_valid = mock_config_line("SOCKSPort", "unix:/tmp/foo/bar "
                                        "NoIPv4Traffic IPv6Traffic");
-  ret = parse_port_config(slout, config_port_valid, NULL, "DNS",
+  ret = parse_port_config(slout, config_port_valid, NULL, "SOCKS",
                           CONN_TYPE_AP_LISTENER, NULL, 0,
                           CL_PORT_TAKES_HOSTNAMES);
 #ifdef _WIN32
@@ -4096,9 +4096,9 @@ test_config_parse_port_config__ports__ports_given(void *data)
   config_free_lines(config_port_valid); config_port_valid = NULL;
   SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
   smartlist_clear(slout);
-  config_port_valid = mock_config_line("DNSPort", "unix:/tmp/foo/bar "
+  config_port_valid = mock_config_line("SOCKSPort", "unix:/tmp/foo/bar "
                                        "IPv4Traffic IPv6Traffic");
-  ret = parse_port_config(slout, config_port_valid, NULL, "DNS",
+  ret = parse_port_config(slout, config_port_valid, NULL, "SOCKS",
                           CONN_TYPE_AP_LISTENER, NULL, 0,
                           CL_PORT_TAKES_HOSTNAMES);
 #ifdef _WIN32
@@ -4240,8 +4240,8 @@ test_config_parse_port_config__ports__ports_given(void *data)
   config_free_lines(config_port_valid); config_port_valid = NULL;
   SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
   smartlist_clear(slout);
-  config_port_valid = mock_config_line("DNSPort", "42 IPv6Traffic PreferIPv6");
-  ret = parse_port_config(slout, config_port_valid, NULL, "DNS",
+  config_port_valid = mock_config_line("SOCKSPort", "42 IPv6Traffic PreferIPv6");
+  ret = parse_port_config(slout, config_port_valid, NULL, "SOCKS",
                           CONN_TYPE_AP_LISTENER, "127.0.0.42", 0,
                           CL_PORT_TAKES_HOSTNAMES);
   tt_int_op(ret, OP_EQ, 0);
@@ -4379,7 +4379,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   // Test success with warn non-local control
   SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
   smartlist_clear(slout);
-  ret = parse_port_config(slout, config_port_valid, NULL, "DNS",
+  ret = parse_port_config(slout, config_port_valid, NULL, "Control",
                           CONN_TYPE_CONTROL_LISTENER, "127.0.0.42", 0,
                           CL_PORT_WARN_NONLOCAL);
   tt_int_op(ret, OP_EQ, 0);
@@ -4387,7 +4387,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   // Test success with warn non-local listener
   SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
   smartlist_clear(slout);
-  ret = parse_port_config(slout, config_port_valid, NULL, "DNS",
+  ret = parse_port_config(slout, config_port_valid, NULL, "ExtOR",
                           CONN_TYPE_EXT_OR_LISTENER, "127.0.0.42", 0,
                           CL_PORT_WARN_NONLOCAL);
   tt_int_op(ret, OP_EQ, 0);
@@ -4559,8 +4559,8 @@ test_config_parse_port_config__ports__ports_given(void *data)
   config_free_lines(config_port_valid); config_port_valid = NULL;
   SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
   smartlist_clear(slout);
-  config_port_valid = mock_config_line("DNSPort", "unix:/tmp/somewhere");
-  ret = parse_port_config(slout, config_port_valid, NULL, "DNS",
+  config_port_valid = mock_config_line("SOCKSPort", "unix:/tmp/somewhere");
+  ret = parse_port_config(slout, config_port_valid, NULL, "SOCKS",
                           CONN_TYPE_AP_LISTENER, "127.0.0.46", 0,
                           CL_PORT_DFLT_GROUP_WRITABLE);
 #ifdef _WIN32
