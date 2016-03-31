@@ -3952,7 +3952,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   tt_int_op(ret, OP_EQ, -1);
 
   // Test error when encounters a unix domain specification but the listener
-  // doesnt support domain sockets
+  // doesn't support domain sockets
   config_port_valid = mock_config_line("DNSPort", "unix:/tmp/foo/bar");
   ret = parse_port_config(NULL, config_port_valid, NULL, "DNS",
                           CONN_TYPE_AP_DNS_LISTENER, NULL, 0, 0);
@@ -3972,20 +3972,108 @@ test_config_parse_port_config__ports__ports_given(void *data)
   tt_int_op(port_cfg->port, OP_EQ, 0);
   tt_int_op(port_cfg->is_unix_addr, OP_EQ, 1);
   tt_str_op(port_cfg->unix_addr, OP_EQ, "/tmp/foo/bar");
+  /* Test entry port defaults as initialised in parse_port_config */
+  tt_int_op(port_cfg->entry_cfg.dns_request, OP_EQ, 1);
+  tt_int_op(port_cfg->entry_cfg.ipv4_traffic, OP_EQ, 1);
+  tt_int_op(port_cfg->entry_cfg.onion_traffic, OP_EQ, 1);
+  tt_int_op(port_cfg->entry_cfg.cache_ipv4_answers, OP_EQ, 1);
+  tt_int_op(port_cfg->entry_cfg.prefer_ipv6_virtaddr, OP_EQ, 1);
 #endif
 
-  // Test failure if we have no ipv4 and no ipv6 (for unix domain sockets,
-  // this makes no sense - it should be fixed)
+  // Test failure if we have no ipv4 and no ipv6 and no onion (DNS only)
   config_free_lines(config_port_invalid); config_port_invalid = NULL;
-  config_port_invalid = mock_config_line("DNSPort",
-                                         "unix:/tmp/foo/bar NoIPv4Traffic");
+  config_port_invalid = mock_config_line("SOCKSPort",
+                                         "unix:/tmp/foo/bar NoIPv4Traffic "
+                                         "NoOnionTraffic");
   ret = parse_port_config(NULL, config_port_invalid, NULL, "DNS",
                           CONN_TYPE_AP_LISTENER, NULL, 0,
                           CL_PORT_TAKES_HOSTNAMES);
   tt_int_op(ret, OP_EQ, -1);
 
-  // Test success with no ipv4 but take ipv6 (for unix domain sockets, this
-  // makes no sense - it should be fixed)
+  // Test failure if we have no DNS and we're a DNSPort
+  config_free_lines(config_port_invalid); config_port_invalid = NULL;
+  config_port_invalid = mock_config_line("DNSPort",
+                                         "127.0.0.1:80 NoDNSRequest");
+  ret = parse_port_config(NULL, config_port_invalid, NULL, "DNS",
+                          CONN_TYPE_AP_DNS_LISTENER, NULL, 0,
+                          CL_PORT_TAKES_HOSTNAMES);
+  tt_int_op(ret, OP_EQ, -1);
+
+  // If we're a DNSPort, DNS only is ok
+  // Use a port because DNSPort doesn't support sockets
+  config_free_lines(config_port_valid); config_port_valid = NULL;
+  SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
+  smartlist_clear(slout);
+  config_port_valid = mock_config_line("DNSPort", "127.0.0.1:80 "
+                                       "NoIPv4Traffic NoOnionTraffic");
+  ret = parse_port_config(slout, config_port_valid, NULL, "DNS",
+                          CONN_TYPE_AP_DNS_LISTENER, NULL, 0,
+                          CL_PORT_TAKES_HOSTNAMES);
+#ifdef _WIN32
+  tt_int_op(ret, OP_EQ, -1);
+#else
+  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(smartlist_len(slout), OP_EQ, 1);
+  port_cfg = (port_cfg_t *)smartlist_get(slout, 0);
+  tt_int_op(port_cfg->entry_cfg.dns_request, OP_EQ, 1);
+  tt_int_op(port_cfg->entry_cfg.ipv4_traffic, OP_EQ, 0);
+  tt_int_op(port_cfg->entry_cfg.ipv6_traffic, OP_EQ, 0);
+  tt_int_op(port_cfg->entry_cfg.onion_traffic, OP_EQ, 0);
+#endif
+
+  // Test failure if we have DNS but no ipv4 and no ipv6
+  config_free_lines(config_port_invalid); config_port_invalid = NULL;
+  config_port_invalid = mock_config_line("SOCKSPort",
+                                         "unix:/tmp/foo/bar NoIPv4Traffic");
+  ret = parse_port_config(NULL, config_port_invalid, NULL, "SOCKS",
+                          CONN_TYPE_AP_LISTENER, NULL, 0,
+                          CL_PORT_TAKES_HOSTNAMES);
+  tt_int_op(ret, OP_EQ, -1);
+
+  // Test success with no DNS, no ipv4, no ipv6 (only onion, using separate
+  // options)
+  config_free_lines(config_port_valid); config_port_valid = NULL;
+  SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
+  smartlist_clear(slout);
+  config_port_valid = mock_config_line("DNSPort", "unix:/tmp/foo/bar "
+                                       "NoDNSRequest NoIPv4Traffic");
+  ret = parse_port_config(slout, config_port_valid, NULL, "DNS",
+                          CONN_TYPE_AP_LISTENER, NULL, 0,
+                          CL_PORT_TAKES_HOSTNAMES);
+#ifdef _WIN32
+  tt_int_op(ret, OP_EQ, -1);
+#else
+  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(smartlist_len(slout), OP_EQ, 1);
+  port_cfg = (port_cfg_t *)smartlist_get(slout, 0);
+  tt_int_op(port_cfg->entry_cfg.dns_request, OP_EQ, 0);
+  tt_int_op(port_cfg->entry_cfg.ipv4_traffic, OP_EQ, 0);
+  tt_int_op(port_cfg->entry_cfg.ipv6_traffic, OP_EQ, 0);
+  tt_int_op(port_cfg->entry_cfg.onion_traffic, OP_EQ, 1);
+#endif
+
+  // Test success with OnionTrafficOnly (no DNS, no ipv4, no ipv6)
+  config_free_lines(config_port_valid); config_port_valid = NULL;
+  SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
+  smartlist_clear(slout);
+  config_port_valid = mock_config_line("DNSPort", "unix:/tmp/foo/bar "
+                                       "OnionTrafficOnly");
+  ret = parse_port_config(slout, config_port_valid, NULL, "DNS",
+                          CONN_TYPE_AP_LISTENER, NULL, 0,
+                          CL_PORT_TAKES_HOSTNAMES);
+#ifdef _WIN32
+  tt_int_op(ret, OP_EQ, -1);
+#else
+  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(smartlist_len(slout), OP_EQ, 1);
+  port_cfg = (port_cfg_t *)smartlist_get(slout, 0);
+  tt_int_op(port_cfg->entry_cfg.dns_request, OP_EQ, 0);
+  tt_int_op(port_cfg->entry_cfg.ipv4_traffic, OP_EQ, 0);
+  tt_int_op(port_cfg->entry_cfg.ipv6_traffic, OP_EQ, 0);
+  tt_int_op(port_cfg->entry_cfg.onion_traffic, OP_EQ, 1);
+#endif
+
+  // Test success with no ipv4 but take ipv6
   config_free_lines(config_port_valid); config_port_valid = NULL;
   SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
   smartlist_clear(slout);
@@ -4004,8 +4092,7 @@ test_config_parse_port_config__ports__ports_given(void *data)
   tt_int_op(port_cfg->entry_cfg.ipv6_traffic, OP_EQ, 1);
 #endif
 
-  // Test success with both ipv4 and ipv6 (for unix domain sockets,
-  // this makes no sense - it should be fixed)
+  // Test success with both ipv4 and ipv6
   config_free_lines(config_port_valid); config_port_valid = NULL;
   SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
   smartlist_clear(slout);

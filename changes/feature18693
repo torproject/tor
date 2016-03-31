@@ -1,0 +1,5 @@
+  o Minor feature (port flags):
+    - Add *Port flags NoDNSRequest and NoOnionTraffic, and
+      the synthetic flag OnionTrafficOnly, which is equivalent to
+      NoDNSRequest, NoIPv4Traffic, and NoIPv6Traffic.
+      Closes enhancement 18693; patch by "teor".
