@@ -1708,6 +1708,14 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     /* If we get here, it's a request for a .onion address! */
     tor_assert(!automap);
 
+    /* If .onion address requests are disabled, refuse the request */
+    if (!conn->entry_cfg.onion_traffic) {
+      log_warn(LD_APP, "Onion address %s requested from a port with .onion "
+                       "disabled", safe_str_client(socks->address));
+      connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
+      return -1;
+    }
+
     /* Check whether it's RESOLVE or RESOLVE_PTR.  We don't handle those
      * for hidden service addresses. */
     if (SOCKS_COMMAND_IS_RESOLVE(socks->command)) {
