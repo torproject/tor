@@ -428,7 +428,7 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
               "can enter the passphrase.",
               secret_fname);
     } else if (offline_secret) {
-            tor_log(severity, LD_OR, "We wanted to load a secret key from %s, "
+      tor_log(severity, LD_OR, "We wanted to load a secret key from %s, "
               "but you're keeping it offline. (OfflineMasterKey is set.)",
               secret_fname);
     } else {
