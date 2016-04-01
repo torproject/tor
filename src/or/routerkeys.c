@@ -435,6 +435,10 @@ ed_key_init_from_file(const char *fname, uint32_t flags,
               "but it was encrypted. Try 'tor --keygen' instead, so you "
               "can enter the passphrase.",
               secret_fname);
+    } else if (offline_secret) {
+      tor_log(severity, LD_OR, "We wanted to load a secret key from %s, "
+              "but you're keeping it offline. (OfflineMasterKey is set.)",
+              secret_fname);
     } else {
       tor_log(severity, LD_OR, "We needed to load a secret key from %s, "
               "but couldn't find it. %s", secret_fname,
