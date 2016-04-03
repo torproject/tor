@@ -22,6 +22,7 @@
 /* for the correct alias to struct stat */
 #include <sys/stat.h>
 #endif
+#include "util_bug.h"
 
 #ifndef O_BINARY
 #define O_BINARY 0
@@ -32,41 +33,6 @@
 #ifndef O_NOFOLLOW
 #define O_NOFOLLOW 0
 #endif
-
-/* Replace assert() with a variant that sends failures to the log before
- * calling assert() normally.
- */
-#ifdef NDEBUG
-/* Nobody should ever want to build with NDEBUG set.  99% of our asserts will
- * be outside the critical path anyway, so it's silly to disable bug-checking
- * throughout the entire program just because a few asserts are slowing you
- * down.  Profile, optimize the critical path, and keep debugging on.
- *
- * And I'm not just saying that because some of our asserts check
- * security-critical properties.
- */
-#error "Sorry; we don't support building with NDEBUG."
-#endif
-
-/* Sometimes we don't want to use assertions during branch coverage tests; it
- * leads to tons of unreached branches which in reality are only assertions we
- * didn't hit. */
-#if defined(TOR_UNIT_TESTS) && defined(DISABLE_ASSERTS_IN_UNIT_TESTS)
-#define tor_assert(a) STMT_BEGIN                                        \
-  (void)(a);                                                            \
-  STMT_END
-#else
-/** Like assert(3), but send assertion failures to the log as well as to
- * stderr. */
-#define tor_assert(expr) STMT_BEGIN                                     \
-  if (PREDICT_UNLIKELY(!(expr))) {                                      \
-    tor_assertion_failed_(SHORT_FILE__, __LINE__, __func__, #expr);     \
-    abort();                                                            \
-  } STMT_END
-#endif
-
-void tor_assertion_failed_(const char *fname, unsigned int line,
-                           const char *func, const char *expr);
 
 /* If we're building with dmalloc, we want all of our memory allocation
  * functions to take an extra file/line pair of arguments.  If not, not.
@@ -80,11 +46,6 @@ void tor_assertion_failed_(const char *fname, unsigned int line,
 #define DMALLOC_PARAMS
 #define DMALLOC_ARGS
 #endif
-
-/** Define this if you want Tor to crash when any problem comes up,
- * so you can get a coredump and track things down. */
-// #define tor_fragile_assert() tor_assert(0)
-#define tor_fragile_assert()
 
 /* Memory management */
 void *tor_malloc_(size_t size DMALLOC_PARAMS) ATTR_MALLOC;
