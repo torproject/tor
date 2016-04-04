@@ -2274,8 +2274,18 @@ tor_tls_get_n_raw_bytes(tor_tls_t *tls, size_t *n_read, size_t *n_written)
    * save the original BIO for  tls->ssl in the tor_tls_t structure, but
    * that would be tempting fate. */
   wbio = SSL_get_wbio(tls->ssl);
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_VER(1,1,0,0,5)
+  /* BIO structure is opaque as of OpenSSL 1.1.0-pre5-dev.  Again, not
+   * supposed to use this form of the version macro, but the OpenSSL developers
+   * introduced major API changes in the pre-release stage.
+   */
+  if (BIO_method_type(wbio) == BIO_TYPE_BUFFER &&
+        (tmpbio = BIO_next(wbio)) != NULL)
+    wbio = tmpbio;
+#else
   if (wbio->method == BIO_f_buffer() && (tmpbio = BIO_next(wbio)) != NULL)
     wbio = tmpbio;
+#endif
   w = BIO_number_written(wbio);
 
   /* We are ok with letting these unsigned ints go "negative" here:
