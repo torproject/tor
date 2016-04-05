@@ -72,6 +72,16 @@
 #define DISABLE_ENGINES
 #endif
 
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_VER(1,1,0,0,4)
+/* OpenSSL as of 1.1.0-pre4 has an "new" thread API, which doesn't require
+ * seting up various callbacks.
+ *
+ * Note: Yes, using OPENSSL_VER is naughty, but theis was introduced in the
+ * pre-release series.
+ */
+#define NEW_THREAD_API
+#endif
+
 /** Longest recognized */
 #define MAX_DNS_LABEL_SIZE 63
 
@@ -83,10 +93,12 @@
 /** Macro: is k a valid RSA private key? */
 #define PRIVATE_KEY_OK(k) ((k) && (k)->key && (k)->key->p)
 
+#ifndef NEW_THREAD_API
 /** A number of preallocated mutexes for use by OpenSSL. */
 static tor_mutex_t **openssl_mutexes_ = NULL;
 /** How many mutexes have we allocated for use by OpenSSL? */
 static int n_openssl_mutexes_ = 0;
+#endif
 
 /** A public key, or a public/private key-pair. */
 struct crypto_pk_t
@@ -417,7 +429,11 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
 void
 crypto_thread_cleanup(void)
 {
+#ifdef NEW_THREAD_API
+  ERR_remove_thread_state();
+#else
   ERR_remove_thread_state(NULL);
+#endif
 }
 
 /** used by tortls.c: wrap an RSA* in a crypto_pk_t. */
@@ -3068,6 +3084,7 @@ memwipe(void *mem, uint8_t byte, size_t sz)
  OpenSSL library with thread support enabled.
 #endif
 
+#ifndef NEW_THREAD_API
 /** Helper: OpenSSL uses this callback to manipulate mutexes. */
 static void
 openssl_locking_cb_(int mode, int n, const char *file, int line)
@@ -3084,6 +3101,13 @@ openssl_locking_cb_(int mode, int n, const char *file, int line)
   else
     tor_mutex_release(openssl_mutexes_[n]);
 }
+
+static void
+tor_set_openssl_thread_id(CRYPTO_THREADID *threadid)
+{
+  CRYPTO_THREADID_set_numeric(threadid, tor_get_thread_id());
+}
+#endif
 
 #if 0
 /* This code is disabled, because OpenSSL never actually uses these callbacks.
@@ -3135,18 +3159,13 @@ openssl_dynlock_destroy_cb_(struct CRYPTO_dynlock_value *v,
 }
 #endif
 
-static void
-tor_set_openssl_thread_id(CRYPTO_THREADID *threadid)
-{
-  CRYPTO_THREADID_set_numeric(threadid, tor_get_thread_id());
-}
-
 /** @{ */
 /** Helper: Construct mutexes, and set callbacks to help OpenSSL handle being
  * multithreaded. Returns 0. */
 static int
 setup_openssl_threading(void)
 {
+#ifndef NEW_THREAD_API
   int i;
   int n = CRYPTO_num_locks();
   n_openssl_mutexes_ = n;
@@ -3155,6 +3174,7 @@ setup_openssl_threading(void)
     openssl_mutexes_[i] = tor_mutex_new();
   CRYPTO_set_locking_callback(openssl_locking_cb_);
   CRYPTO_THREADID_set_callback(tor_set_openssl_thread_id);
+#endif
 #if 0
   CRYPTO_set_dynlock_create_callback(openssl_dynlock_create_cb_);
   CRYPTO_set_dynlock_lock_callback(openssl_dynlock_lock_cb_);
@@ -3170,7 +3190,11 @@ int
 crypto_global_cleanup(void)
 {
   EVP_cleanup();
+#ifdef NEW_THREAD_API
+  ERR_remove_thread_state();
+#else
   ERR_remove_thread_state(NULL);
+#endif
   ERR_free_strings();
 
   if (dh_param_p)
@@ -3187,6 +3211,7 @@ crypto_global_cleanup(void)
   CONF_modules_unload(1);
   CRYPTO_cleanup_all_ex_data();
 
+#ifndef NEW_THREAD_API
   if (n_openssl_mutexes_) {
     int n = n_openssl_mutexes_;
     tor_mutex_t **ms = openssl_mutexes_;
@@ -3198,6 +3223,7 @@ crypto_global_cleanup(void)
     }
     tor_free(ms);
   }
+#endif
 
   tor_free(crypto_openssl_version_str);
   tor_free(crypto_openssl_header_version_str);
