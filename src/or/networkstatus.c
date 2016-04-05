@@ -802,10 +802,10 @@ consensus_max_download_tries(const or_options_t *options,
 
   if (we_are_bootstrapping) {
     if (use_fallbacks) {
-      return options->TestingClientBootstrapConsensusMaxDownloadTries;
+      return options->ClientBootstrapConsensusMaxDownloadTries;
     } else {
       return
-      options->TestingClientBootstrapConsensusAuthorityOnlyMaxDownloadTries;
+      options->ClientBootstrapConsensusAuthorityOnlyMaxDownloadTries;
     }
   }
 
@@ -850,7 +850,7 @@ update_consensus_networkstatus_downloads(time_t now)
     /* Check if we already have enough connections in progress */
     if (we_are_bootstrapping) {
       max_in_progress_conns =
-        options->TestingClientBootstrapConsensusMaxInProgressTries;
+        options->ClientBootstrapConsensusMaxInProgressTries;
     }
     if (connection_dir_count_by_purpose_and_resource(
                                                   DIR_PURPOSE_FETCH_CONSENSUS,
