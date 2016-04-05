@@ -3214,7 +3214,7 @@ rep_hist_free_all(void)
   rep_hist_desc_stats_term();
   total_descriptor_downloads = 0;
 
-  tor_assert(rephist_total_alloc == 0);
-  tor_assert(rephist_total_num == 0);
+  tor_assert_nonfatal(rephist_total_alloc == 0);
+  tor_assert_nonfatal_once(rephist_total_num == 0);
 }
 

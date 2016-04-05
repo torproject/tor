@@ -1643,8 +1643,8 @@ rotate_x509_certificate_callback(time_t now, const or_options_t *options)
    * TLS context. */
   log_info(LD_GENERAL,"Rotating tls context.");
   if (router_initialize_tls_context() < 0) {
-    log_warn(LD_BUG, "Error reinitializing TLS context");
-    tor_assert(0);
+    log_err(LD_BUG, "Error reinitializing TLS context");
+    tor_assert_unreached();
   }
 
   /* We also make sure to rotate the TLS connections themselves if they've
@@ -2563,9 +2563,7 @@ run_main_loop_once(void)
         return -1;
 #endif
     } else {
-      if (ERRNO_IS_EINPROGRESS(e))
-        log_warn(LD_BUG,
-                 "libevent call returned EINPROGRESS? Please report.");
+      tor_assert_nonfatal_once(! ERRNO_IS_EINPROGRESS(e));
       log_debug(LD_NET,"libevent call interrupted.");
       /* You can't trust the results of this poll(). Go back to the
        * top of the big for loop. */
