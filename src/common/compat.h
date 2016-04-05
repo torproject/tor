@@ -430,7 +430,7 @@ typedef int socklen_t;
 
 #ifdef _WIN32
 /* XXX Actually, this should arguably be SOCKET; we use intptr_t here so that
- * any inadvertant checks for the socket being <= 0 or > 0 will probably
+ * any inadvertent checks for the socket being <= 0 or > 0 will probably
  * still work. */
 #define tor_socket_t intptr_t
 #define TOR_SOCKET_T_FORMAT INTPTR_T_FORMAT

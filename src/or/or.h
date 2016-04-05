@@ -1294,21 +1294,26 @@ typedef struct connection_t {
 
   time_t timestamp_created; /**< When was this connection_t created? */
 
-  /* XXXX_IP6 make this IPv6-capable */
   int socket_family; /**< Address family of this connection's socket.  Usually
-                      * AF_INET, but it can also be AF_UNIX, or in the future
-                      * AF_INET6 */
-  tor_addr_t addr; /**< IP of the other side of the connection; used to
-                    * identify routers, along with port. */
-  uint16_t port; /**< If non-zero, port on the other end
-                  * of the connection. */
+                      * AF_INET, but it can also be AF_UNIX, or AF_INET6 */
+  tor_addr_t addr; /**< IP that socket "s" is directly connected to;
+                    * may be the IP address for a proxy or pluggable transport,
+                    * see "address" for the address of the final destination.
+                    */
+  uint16_t port; /**< If non-zero, port that socket "s" is directly connected
+                  * to; may be the port for a proxy or pluggable transport,
+                  * see "address" for the port at the final destination. */
   uint16_t marked_for_close; /**< Should we close this conn on the next
                               * iteration of the main loop? (If true, holds
                               * the line number where this connection was
                               * marked.) */
   const char *marked_for_close_file; /**< For debugging: in which file were
                                       * we marked for close? */
-  char *address; /**< FQDN (or IP) of the other end.
+  char *address; /**< FQDN (or IP) and port of the final destination for this
+                  * connection; this is always the remote address, it is
+                  * passed to a proxy or pluggable transport if one in use.
+                  * See "addr" and "port" for the address that socket "s" is
+                  * directly connected to.
                   * strdup into this, because free_connection() frees it. */
   /** Another connection that's connected to this one in lieu of a socket. */
   struct connection_t *linked_conn;
