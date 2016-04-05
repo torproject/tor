@@ -72,11 +72,12 @@
 #define DISABLE_ENGINES
 #endif
 
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_VER(1,1,0,0,4)
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_VER(1,1,0,0,4) && \
+  !defined(LIBRESSL_VERSION_NUMBER)
 /* OpenSSL as of 1.1.0-pre4 has an "new" thread API, which doesn't require
  * seting up various callbacks.
  *
- * Note: Yes, using OPENSSL_VER is naughty, but theis was introduced in the
+ * Note: Yes, using OPENSSL_VER is naughty, but this was introduced in the
  * pre-release series.
  */
 #define NEW_THREAD_API
