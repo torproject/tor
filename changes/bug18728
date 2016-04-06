@@ -1,0 +1,4 @@
+  o Minor bugfixes (build):
+    - Resolve warnings when building on systems that are concerned with
+      signed char. Fixes bug 18728; bugfix on 0.2.7.2-alpha and 
+      0.2.6.1-alpha.

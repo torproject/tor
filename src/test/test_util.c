@@ -2297,7 +2297,8 @@ test_util_sscanf(void *arg)
 }
 
 #define tt_char_op(a,op,b) tt_assert_op_type(a,op,b,char,"%c")
-#define tt_ci_char_op(a,op,b) tt_char_op(tolower(a),op,tolower(b))
+#define tt_ci_char_op(a,op,b) \
+  tt_char_op(TOR_TOLOWER((int)a),op,TOR_TOLOWER((int)b))
 
 #ifndef HAVE_STRNLEN
 static size_t
