@@ -48,7 +48,7 @@ periodic_event_dispatch(evutil_socket_t fd, short what, void *data)
 
   time_t now = time(NULL);
   const or_options_t *options = get_options();
-  log_debug(LD_GENERAL, "Dispatching %s", event->name);
+//  log_debug(LD_GENERAL, "Dispatching %s", event->name);
   int r = event->fn(now, options);
   int next_interval = 0;
 
@@ -71,8 +71,8 @@ periodic_event_dispatch(evutil_socket_t fd, short what, void *data)
     next_interval = 1;
   }
 
-  log_debug(LD_GENERAL, "Scheduling %s for %d seconds", event->name,
-           next_interval);
+//  log_debug(LD_GENERAL, "Scheduling %s for %d seconds", event->name,
+//           next_interval);
   struct timeval tv = { next_interval , 0 };
   event_add(event->ev, &tv);
 }
