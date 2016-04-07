@@ -1,0 +1,3 @@
+  o Minor features (logging):
+    - Provide a more useful warning message when configured with an
+      invalid Nickname. Closes ticket 18300; patch from "icanhasaccount".

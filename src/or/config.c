@@ -2796,7 +2796,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
   } else {
     if (!is_legal_nickname(options->Nickname)) {
       tor_asprintf(msg,
-          "Nickname '%s' is wrong length or contains illegal characters.",
+          "Nickname '%s', nicknames must be between 1 and 19 characters "
+          "inclusive, and must contain only the characters [a-zA-Z0-9].",
           options->Nickname);
       return -1;
     }
