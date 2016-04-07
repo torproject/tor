@@ -1,0 +1,4 @@
+  o Minor bugfixes (assert, portability):
+    - Fix an assertion failure in memarea.c on systems where "long" is
+      shorter than the size of a pointer.
+      Fixes bug 18716; bugfix on 0.2.1.1-alpha
