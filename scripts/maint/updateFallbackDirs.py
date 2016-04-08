@@ -112,6 +112,42 @@ CUTOFF_GUARD = .95
 # .00 means no bad exits
 PERMITTED_BADEXIT = .00
 
+# older entries' weights are adjusted with ALPHA^(age in days)
+AGE_ALPHA = 0.99
+
+# this factor is used to scale OnionOO entries to [0,1]
+ONIONOO_SCALE_ONE = 999.
+
+## Fallback Count Limits
+
+# The target for these parameters is 20% of the guards in the network
+# This is around 200 as of October 2015
+_FB_POG = 0.2
+FALLBACK_PROPORTION_OF_GUARDS = None if OUTPUT_CANDIDATES else _FB_POG
+
+# We want exactly 100 fallbacks for the initial release
+# This gives us scope to add extra fallbacks to the list as needed
+# Limit the number of fallbacks (eliminating lowest by advertised bandwidth)
+MAX_FALLBACK_COUNT = None if OUTPUT_CANDIDATES else 100
+# Emit a C #error if the number of fallbacks is below
+MIN_FALLBACK_COUNT = 100
+
+## Fallback Bandwidth Requirements
+
+# Any fallback with the Exit flag has its bandwidth multipled by this fraction
+# to make sure we aren't further overloading exits
+# (Set to 1.0, because we asked that only lightly loaded exits opt-in,
+# and the extra load really isn't that much for large relays.)
+EXIT_BANDWIDTH_FRACTION = 1.0
+
+# If a single fallback's bandwidth is too low, it's pointless adding it
+# We expect fallbacks to handle an extra 30 kilobytes per second of traffic
+# Make sure they can support a hundred times the expected extra load
+# (Use 102.4 to make it come out nicely in MB/s)
+# We convert this to a consensus weight before applying the filter,
+# because all the bandwidth amounts are specified by the relay
+MIN_BANDWIDTH = 102.4 * 30.0 * 1024.0
+
 # Clients will time out after 30 seconds trying to download a consensus
 # So allow fallback directories half that to deliver a consensus
 # The exact download times might change based on the network connection
@@ -122,44 +158,20 @@ CONSENSUS_DOWNLOAD_SPEED_MAX = 15.0
 # This avoids delisting a relay due to transient network conditions
 CONSENSUS_DOWNLOAD_RETRY = True
 
-## List Length Limits
-
-# The target for these parameters is 20% of the guards in the network
-# This is around 200 as of October 2015
-_FB_POG = 0.2
-FALLBACK_PROPORTION_OF_GUARDS = None if OUTPUT_CANDIDATES else _FB_POG
-
-# We want exactly 100 fallbacks for the initial release
-# Limit the number of fallbacks (eliminating lowest by weight)
-MAX_FALLBACK_COUNT = None if OUTPUT_CANDIDATES else 100
-# Emit a C #error if the number of fallbacks is below
-MIN_FALLBACK_COUNT = 100
-
-## Fallback Weight Settings
-
-# Any fallback with the Exit flag has its consensus weight multipled by this
-EXIT_WEIGHT_FRACTION = 1.0
-
-# If a single fallback's consensus weight is too low, it's pointless adding it
-# We expect fallbacks to handle an extra 30 kilobytes per second of traffic
-# Make sure they support a hundred times that
-MIN_CONSENSUS_WEIGHT = 30.0 * 100.0
+## Fallback Weights for Client Selection
 
 # All fallback weights are equal, and set to the value below
 # Authorities are weighted 1.0 by default
 # Clients use these weights to select fallbacks and authorities at random
 # If there are 100 fallbacks and 9 authorities:
-#  - each fallback is chosen with probability 10/(1000 + 9) ~= 0.99%
-#  - each authority is chosen with probability 1/(1000 + 9) ~= 0.09%
+#  - each fallback is chosen with probability 10.0/(10.0*100 + 1.0*9) ~= 0.99%
+#  - each authority is chosen with probability 1.0/(10.0*100 + 1.0*9) ~= 0.09%
+# A client choosing a bootstrap directory server will choose a fallback for
+# 10.0/(10.0*100 + 1.0*9) * 100 = 99.1% of attempts, and an authority for
+# 1.0/(10.0*100 + 1.0*9) * 9 = 0.9% of attempts.
+# (This disregards the bootstrap schedules, where clients start by choosing
+# from fallbacks & authoritites, then later choose from only authorities.)
 FALLBACK_OUTPUT_WEIGHT = 10.0
-
-## Other Configuration Parameters
-
-# older entries' weights are adjusted with ALPHA^(age in days)
-AGE_ALPHA = 0.99
-
-# this factor is used to scale OnionOO entries to [0,1]
-ONIONOO_SCALE_ONE = 999.
 
 ## Parsing Functions
 
@@ -448,6 +460,11 @@ class Candidate(object):
       details['contact'] = None
     if not 'flags' in details or details['flags'] is None:
       details['flags'] = []
+    if (not 'advertised_bandwidth' in details
+        or details['advertised_bandwidth'] is None):
+      # relays without advertised bandwdith have it calculated from their
+      # consensus weight
+      details['advertised_bandwidth'] = 0
     details['last_changed_address_or_port'] = parse_ts(
                                       details['last_changed_address_or_port'])
     self._data = details
@@ -462,10 +479,6 @@ class Candidate(object):
     self._compute_ipv6addr()
     if self.ipv6addr is None:
       logging.debug("Failed to get an ipv6 address for %s."%(self._fpr,))
-    # Reduce the weight of exits to EXIT_WEIGHT_FRACTION * consensus_weight
-    if self.is_exit():
-      exit_weight = self._data['consensus_weight'] * EXIT_WEIGHT_FRACTION
-      self._data['consensus_weight'] = exit_weight
 
   def _stable_sort_or_addresses(self):
     # replace self._data['or_addresses'] with a stable ordering,
@@ -754,11 +767,9 @@ class Candidate(object):
       logging.info('%s not a candidate: guard avg too low (%lf)',
                    self._fpr, self._guard)
       return False
-    if (MIN_CONSENSUS_WEIGHT is not None
-        and self._data['consensus_weight'] < MIN_CONSENSUS_WEIGHT):
-      logging.info('%s not a candidate: consensus weight %.0f too low, must ' +
-                   'be at least %.0f', self._fpr,
-                   self._data['consensus_weight'], MIN_CONSENSUS_WEIGHT)
+    if (not self._data.has_key('consensus_weight')
+        or self._data['consensus_weight'] < 1):
+      logging.info('%s not a candidate: consensus weight invalid', self._fpr)
       return False
     return True
 
@@ -888,6 +899,30 @@ class Candidate(object):
                             'gained an' if has_ipv6 else 'lost its former',
                             ipv6 if has_ipv6 else value)
     return False
+
+  def cw_to_bw_factor(self):
+    # any relays with a missing or zero consensus weight are not candidates
+    # any relays with a missing advertised bandwidth have it set to zero
+    return self._data['advertised_bandwidth'] / self._data['consensus_weight']
+
+  # since advertised_bandwidth is reported by the relay, it can be gamed
+  # to avoid this, use the median consensus weight to bandwidth factor to
+  # estimate this relay's measured bandwidth, and make that the upper limit
+  def measured_bandwidth(self, median_cw_to_bw_factor):
+    cw_to_bw= median_cw_to_bw_factor
+    # Reduce exit bandwidth to make sure we're not overloading them
+    if self.is_exit():
+      cw_to_bw *= EXIT_BANDWIDTH_FRACTION
+    measured_bandwidth = self._data['consensus_weight'] * cw_to_bw
+    if self._data['advertised_bandwidth'] != 0:
+      # limit advertised bandwidth (if available) to measured bandwidth
+      return min(measured_bandwidth, self._data['advertised_bandwidth'])
+    else:
+      return measured_bandwidth
+
+  def set_measured_bandwidth(self, median_cw_to_bw_factor):
+    self._data['measured_bandwidth'] = self.measured_bandwidth(
+                                                      median_cw_to_bw_factor)
 
   def is_exit(self):
     return 'Exit' in self._data['flags']
@@ -1056,8 +1091,8 @@ class CandidateList(dict):
     logging.debug('Loading details document.')
     d = fetch('details',
         fields=('fingerprint,nickname,contact,last_changed_address_or_port,' +
-                'consensus_weight,or_addresses,dir_address,' +
-                'recommended_version,flags'))
+                'consensus_weight,advertised_bandwidth,or_addresses,' +
+                'dir_address,recommended_version,flags'))
     logging.debug('Loading details document done.')
 
     if not 'relays' in d: raise Exception("No relays found in document.")
@@ -1083,15 +1118,24 @@ class CandidateList(dict):
         guard_count += 1
     return guard_count
 
-  # Find fallbacks that fit the uptime, stability, and flags criteria
+  # Find fallbacks that fit the uptime, stability, and flags criteria,
+  # and make an array of them in self.fallbacks
   def compute_fallbacks(self):
     self.fallbacks = map(lambda x: self[x],
-                      sorted(
-                        filter(lambda x: self[x].is_candidate(),
-                               self.keys()),
-                        key=lambda x: self[x]._data['consensus_weight'],
+                         filter(lambda x: self[x].is_candidate(),
+                                self.keys()))
+
+  # sort fallbacks by their consensus weight to advertised bandwidth factor,
+  # lowest to highest
+  # used to find the median cw_to_bw_factor()
+  def sort_fallbacks_by_cw_to_bw_factor(self):
+    self.fallbacks.sort(key=lambda x: self[x].cw_to_bw_factor())
+
+  # sort fallbacks by their measured bandwidth, highest to lowest
+  # calculate_measured_bandwidth before calling this
+  def sort_fallbacks_by_measured_bandwidth(self):
+    self.fallbacks.sort(key=lambda x: self[x].self._data['measured_bandwidth'],
                         reverse=True)
-                      )
 
   @staticmethod
   def load_relaylist(file_name):
@@ -1194,13 +1238,64 @@ class CandidateList(dict):
     return '/* Whitelist & blacklist excluded %d of %d candidates. */'%(
                                                 excluded_count, initial_count)
 
-  def fallback_min_weight(self):
+  # calculate each fallback's measured bandwidth based on the median
+  # consensus weight to advertised bandwdith ratio
+  def calculate_measured_bandwidth(self):
+    self.sort_fallbacks_by_cw_to_bw_factor()
+    median_fallback = self.fallback_median(True)
+    median_cw_to_bw_factor = median_fallback.cw_to_bw_factor()
+    for f in self.fallbacks:
+      f.set_measured_bandwidth(median_cw_to_bw_factor)
+
+  # remove relays with low measured bandwidth from the fallback list
+  # calculate_measured_bandwidth for each relay before calling this
+  def remove_low_bandwidth_relays(self):
+    if MIN_BANDWIDTH is None:
+      return
+    above_min_bw_fallbacks = []
+    for f in self.fallbacks:
+      if f._data['measured_bandwidth'] >= MIN_BANDWIDTH:
+        above_min_bw_fallbacks.append(f)
+      else:
+        # the bandwidth we log here is limited by the relay's consensus weight
+        # as well as its adverttised bandwidth. See set_measured_bandwidth
+        # for details
+        logging.info('%s not a candidate: bandwidth %.1fMB/s too low, must ' +
+                     'be at least %.1fMB/s', f._fpr,
+                     f._data['measured_bandwidth']/(1024.0*1024.0),
+                     MIN_BANDWIDTH/(1024.0*1024.0))
+    self.fallbacks = above_min_bw_fallbacks
+
+  # the minimum fallback in the list
+  # call one of the sort_fallbacks_* functions before calling this
+  def fallback_min(self):
     if len(self.fallbacks) > 0:
       return self.fallbacks[-1]
     else:
       return None
 
-  def fallback_max_weight(self):
+  # the median fallback in the list
+  # call one of the sort_fallbacks_* functions before calling this
+  def fallback_median(self, require_advertised_bandwidth):
+    # use the low-median when there are an evan number of fallbacks,
+    # for consistency with the bandwidth authorities
+    if len(self.fallbacks) > 0:
+      median_position = (len(self.fallbacks) - 1) / 2
+      if not require_advertised_bandwidth:
+        return self.fallbacks[median_position]
+      # if we need advertised_bandwidth but this relay doesn't have it,
+      # move to a fallback with greater consensus weight until we find one
+      while not self.fallbacks[median_position]._data['advertised_bandwidth']:
+        median_position += 1
+        if median_position >= len(self.fallbacks):
+          return None
+      return self.fallbacks[median_position]
+    else:
+      return None
+
+  # the maximum fallback in the list
+  # call one of the sort_fallbacks_* functions before calling this
+  def fallback_max(self):
     if len(self.fallbacks) > 0:
       return self.fallbacks[0]
     else:
@@ -1211,7 +1306,7 @@ class CandidateList(dict):
     # Report:
     #  whether we checked consensus download times
     #  the number of fallback directories (and limits/exclusions, if relevant)
-    #  min & max fallback weights
+    #  min & max fallback bandwidths
     #  #error if below minimum count
     if PERFORM_IPV4_DIRPORT_CHECKS or PERFORM_IPV6_DIRPORT_CHECKS:
       s = '/* Checked %s%s%s DirPorts served a consensus within %.1fs. */'%(
@@ -1243,11 +1338,12 @@ class CandidateList(dict):
       s += 'Excluded:     %d (Eligible Count Exceeded Target Count)'%(
                                               eligible_count - fallback_count)
       s += '\n'
-    min_fb = self.fallback_min_weight()
-    min_weight = min_fb._data['consensus_weight']
-    max_fb = self.fallback_max_weight()
-    max_weight = max_fb._data['consensus_weight']
-    s += 'Consensus Weight Range: %d - %d'%(min_weight, max_weight)
+    min_fb = self.fallback_min()
+    min_bw = min_fb._data['measured_bandwidth']
+    max_fb = self.fallback_max()
+    max_bw = max_fb._data['measured_bandwidth']
+    s += 'Bandwidth Range: %.1f - %.1f MB/s'%(min_bw/(1024.0*1024.0),
+                                              max_bw/(1024.0*1024.0))
     s += '\n'
     s += '*/'
     if fallback_count < MIN_FALLBACK_COUNT:
@@ -1292,6 +1388,14 @@ def list_fallbacks():
   excluded_count = candidates.apply_filter_lists()
   print candidates.summarise_filters(initial_count, excluded_count)
   eligible_count = len(candidates.fallbacks)
+
+  # calculate the measured bandwidth of each relay,
+  # then remove low-bandwidth relays
+  candidates.calculate_measured_bandwidth()
+  candidates.remove_low_bandwidth_relays()
+  # make sure the list is sorted by bandwidth when we output it
+  # so that we include the active fallbacks with the greatest bandwidth
+  candidates.sort_fallbacks_by_measured_bandwidth()
 
   # print the raw fallback list
   #for x in candidates.fallbacks:
