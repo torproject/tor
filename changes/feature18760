@@ -1,0 +1,6 @@
+  o Minor features:
+    - When the directory authorities refuse a bad relay's descriptor,
+      encourage the relay operator to contact us. Many relay operators
+      won't notice this line in their logs, but it's a win if even a
+      few learn why we don't like what their relay was doing. Resolves
+      ticket 18760.
