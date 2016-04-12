@@ -755,6 +755,11 @@ dnl use it with a build of a library.
 all_ldflags_for_check="$TOR_LDFLAGS_zlib $TOR_LDFLAGS_openssl $TOR_LDFLAGS_libevent"
 all_libs_for_check="$TOR_ZLIB_LIBS $TOR_LIB_MATH $TOR_LIBEVENT_LIBS $TOR_OPENSSL_LIBS $TOR_SYSTEMD_LIBS $TOR_LIB_WS32 $TOR_LIB_GDI $TOR_CAP_LIBS"
 
+CFLAGS_FTRAPV=
+CFLAGS_FWRAPV=
+CFLAGS_ASAN=
+CFLAGS_UBSAN=
+
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
 #if !defined(__clang__)
 #error
@@ -777,19 +782,31 @@ m4_ifdef([AS_VAR_IF],[
     AS_VAR_POPDEF([can_link])
     AS_VAR_POPDEF([can_compile])
     TOR_CHECK_CFLAGS(-Wstack-protector)
-    TOR_CHECK_CFLAGS(-fwrapv)
     TOR_CHECK_CFLAGS(--param ssp-buffer-size=1)
     if test "$bwin32" = "false"; then
        TOR_CHECK_CFLAGS(-fPIE)
        TOR_CHECK_LDFLAGS(-pie, "$all_ldflags_for_check", "$all_libs_for_check")
     fi
+    TOR_TRY_COMPILE_WITH_CFLAGS(-ftrapv, , CFLAGS_FTRAPV="-ftrapv", /bin/true)
+    TOR_TRY_COMPILE_WITH_CFLAGS(-fwrapv, , CFLAGS_FWRAPV="-fwrapv", /bin/true)
 fi
 
 if test "x$enable_expensive_hardening" = "xyes"; then
-   TOR_CHECK_CFLAGS([-fsanitize=address])
-   TOR_CHECK_CFLAGS([-fsanitize=undefined])
+   TOR_TRY_COMPILE_WITH_CFLAGS([-fsanitize=address], , CFLAGS_ASAN="-fsanitize=address", /bin/true)
+   TOR_TRY_COMPILE_WITH_CFLAGS([-fsanitize=undefined], , CFLAGS_UBSAN="-fsanitize=undefined", /bin/true)
    TOR_CHECK_CFLAGS([-fno-omit-frame-pointer])
 fi
+
+CFLAGS_BUGTRAP="$CFLAGS_FTRAPV $CFLAGS_ASAN $CFLAGS_UBSAN"
+CFLAGS_CONSTTIME="$CFLAGS_FWRAPV"
+
+dnl These cflags add bunches of branches, and we haven't been able to
+dnl persuade ourselves that they're suitable for code that needs to be
+dnl constant time.
+AC_SUBST(CFLAGS_BUGTRAP)
+dnl These cflags are variant ones sutable for code that needs to be
+dnl constant-time.
+AC_SUBST(CFLAGS_CONSTTIME)
 
 if test "x$enable_linker_hardening" != "xno"; then
     TOR_CHECK_LDFLAGS(-z relro -z now, "$all_ldflags_for_check", "$all_libs_for_check")

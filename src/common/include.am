@@ -1,12 +1,14 @@
 
 noinst_LIBRARIES += \
 	src/common/libor.a \
+        src/common/libor-ctime.a \
 	src/common/libor-crypto.a \
 	src/common/libor-event.a
 
 if UNITTESTS_ENABLED
 noinst_LIBRARIES += \
 	src/common/libor-testing.a \
+        src/common/libor-ctime-testing.a \
 	src/common/libor-crypto-testing.a \
 	src/common/libor-event-testing.a
 endif
@@ -27,12 +29,14 @@ src_common_libcurve25519_donna_a_CFLAGS=
 if BUILD_CURVE25519_DONNA
 src_common_libcurve25519_donna_a_SOURCES=\
 	src/ext/curve25519_donna/curve25519-donna.c
+# See bug 13538 -- this code is known to have signed overflow issues.
 src_common_libcurve25519_donna_a_CFLAGS+=\
-	@F_OMIT_FRAME_POINTER@
+	@F_OMIT_FRAME_POINTER@ @CFLAGS_CONSTTIME@
 noinst_LIBRARIES+=src/common/libcurve25519_donna.a
 LIBDONNA=src/common/libcurve25519_donna.a
 else
 if BUILD_CURVE25519_DONNA_C64
+src_common_libcurve25519_donna_a_CFLAGS+=@CFLAGS_CONSTTIME@
 src_common_libcurve25519_donna_a_SOURCES=\
 	src/ext/curve25519_donna/curve25519-donna-c64.c
 noinst_LIBRARIES+=src/common/libcurve25519_donna.a
@@ -58,13 +62,21 @@ else
 readpassphrase_source=
 endif
 
+LIBOR_CTIME_A_SOURCES = \
+   src/ext/csiphash.c   \
+   src/common/di_ops.c
+
+src_common_libor_ctime_a_SOURCES = $(LIBOR_CTIME_A_SOURCES)
+src_common_libor_ctime_testing_a_SOURCES = $(LIBOR_CTIME_A_SOURCES)
+src_common_libor_ctime_a_CFLAGS = @CFLAGS_CONSTTIME@
+src_common_libor_ctime_testing_a_CFLAGS = @CFLAGS_CONSTTIME@ $(TEST_CFLAGS)
+
 LIBOR_A_SOURCES = \
   src/common/address.c					\
   src/common/backtrace.c				\
   src/common/compat.c					\
   src/common/compat_threads.c				\
   src/common/container.c				\
-  src/common/di_ops.c					\
   src/common/log.c					\
   src/common/memarea.c					\
   src/common/util.c					\
@@ -72,7 +84,6 @@ LIBOR_A_SOURCES = \
   src/common/util_process.c				\
   src/common/sandbox.c					\
   src/common/workqueue.c				\
-  src/ext/csiphash.c					\
   src/ext/trunnel/trunnel.c				\
   $(libor_extra_source)					\
   $(threads_impl_source)				\

@@ -132,6 +132,9 @@ uptime-*.json
 /src/common/libor.a
 /src/common/libor-testing.a
 /src/common/libor.lib
+/src/common/libor-ctime.a
+/src/common/libor-ctime-testing.a
+/src/common/libor-ctime.lib
 /src/common/libor-crypto.a
 /src/common/libor-crypto-testing.a
 /src/common/libor-crypto.lib
