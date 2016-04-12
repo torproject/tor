@@ -26,7 +26,7 @@ tor_assertion_failed_(const char *fname, unsigned int line,
   log_backtrace(LOG_ERR, LD_BUG, buf);
 }
 
-
+/** Helper for tor_assert_nonfatal: report the assertion failure. */
 void
 tor_bug_occurred_(const char *fname, unsigned int line,
                   const char *func, const char *expr,
@@ -50,3 +50,4 @@ tor_bug_occurred_(const char *fname, unsigned int line,
   }
   log_backtrace(LOG_WARN, LD_BUG, buf);
 }
+
