@@ -24,9 +24,9 @@
 /** A value which, when masked out of a pointer, produces a maximally aligned
  * pointer. */
 #if MEMAREA_ALIGN == 4
-#define MEMAREA_ALIGN_MASK 3lu
+#define MEMAREA_ALIGN_MASK ((uintptr_t)3)
 #elif MEMAREA_ALIGN == 8
-#define MEMAREA_ALIGN_MASK 7lu
+#define MEMAREA_ALIGN_MASK ((uintptr_t)7)
 #else
 #error "void* is neither 4 nor 8 bytes long. I don't know how to align stuff."
 #endif

@@ -307,9 +307,9 @@ fixed_get_uname(void)
 }
 
 #define TEST_OPTIONS_OLD_VALUES   "TestingV3AuthInitialVotingInterval 1800\n" \
-  "TestingClientBootstrapConsensusMaxDownloadTries 7\n" \
-  "TestingClientBootstrapConsensusAuthorityOnlyMaxDownloadTries 4\n" \
-  "TestingClientBootstrapConsensusMaxInProgressTries 3\n" \
+  "ClientBootstrapConsensusMaxDownloadTries 7\n" \
+  "ClientBootstrapConsensusAuthorityOnlyMaxDownloadTries 4\n" \
+  "ClientBootstrapConsensusMaxInProgressTries 3\n" \
   "TestingV3AuthInitialVoteDelay 300\n"   \
   "TestingV3AuthInitialDistDelay 300\n" \
   "TestingClientMaxIntervalWithoutRequest 600\n" \

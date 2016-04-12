@@ -3896,17 +3896,17 @@ find_dl_schedule(download_status_t *dls, const or_options_t *options)
           if (!use_fallbacks) {
             /* A bootstrapping client without extra fallback directories */
             return
-         options->TestingClientBootstrapConsensusAuthorityOnlyDownloadSchedule;
+             options->ClientBootstrapConsensusAuthorityOnlyDownloadSchedule;
           } else if (dls->want_authority) {
             /* A bootstrapping client with extra fallback directories, but
              * connecting to an authority */
             return
-             options->TestingClientBootstrapConsensusAuthorityDownloadSchedule;
+             options->ClientBootstrapConsensusAuthorityDownloadSchedule;
           } else {
             /* A bootstrapping client connecting to extra fallback directories
              */
             return
-              options->TestingClientBootstrapConsensusFallbackDownloadSchedule;
+              options->ClientBootstrapConsensusFallbackDownloadSchedule;
           }
         } else {
           return options->TestingClientConsensusDownloadSchedule;
