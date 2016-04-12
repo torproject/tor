@@ -102,6 +102,39 @@
    : 0)
 #endif
 
+#ifdef __GNUC__
+#define IF_BUG_ONCE__(cond,var)                                         \
+  if (({                                                                \
+      static int var = 0;                                               \
+      int bool_result = (cond);                                         \
+      if (bool_result && !var) {                                        \
+        var = 1;                                                        \
+        tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__, #cond, 1);  \
+      }                                                                 \
+      var; }))
+#else
+#define IF_BUG_ONCE__(cond,var)                                         \
+  static int var = 0;                                                   \
+  if ((cond) ?                                                          \
+      (var ? 1 :                                                        \
+       (var=1,                                                          \
+        tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__, #cond, 1),  \
+        1))                                                             \
+      : 0)
+#endif
+#define IF_BUG_ONCE_VARNAME_(a)               \
+  warning_logged_on_ ## a ## __
+#define IF_BUG_ONCE_VARNAME__(a)              \
+  IF_BUG_ONCE_VARNAME_(a)
+
+/** This macro behaves as 'if (bug(x))', except that it only logs its
+ * warning once, no matter how many times it triggers.
+ */
+
+#define IF_BUG_ONCE(cond)                                       \
+  IF_BUG_ONCE__((cond),                                         \
+                IF_BUG_ONCE_VARNAME__(__LINE__))
+
 /** Define this if you want Tor to crash when any problem comes up,
  * so you can get a coredump and track things down. */
 // #define tor_fragile_assert() tor_assert_unreached(0)
