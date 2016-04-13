@@ -3648,7 +3648,7 @@ connection_dir_would_close_consensus_conn_helper(void)
    * consensus, and we are still bootstrapping (that is, we have no usable
    * consensus), we don't want to close any until one starts downloading. */
   if (!networkstatus_consensus_is_downloading_usable_flavor()
-      && networkstatus_consensus_is_boostrapping(time(NULL))) {
+      && networkstatus_consensus_is_bootstrapping(time(NULL))) {
     return 0;
   }
 
@@ -3682,7 +3682,7 @@ connection_dir_avoid_extra_connection_for_purpose(unsigned int purpose)
    * bootstrapping (that is, we have no usable consensus), we can be sure that
    * any further connections would be excess. */
   if (networkstatus_consensus_is_downloading_usable_flavor()
-      && networkstatus_consensus_is_boostrapping(time(NULL))) {
+      && networkstatus_consensus_is_bootstrapping(time(NULL))) {
     return 1;
   }
 
@@ -3723,12 +3723,12 @@ connection_dir_close_consensus_conn_if_extra(dir_connection_t *conn)
     return 0;
   }
 
-  const int we_are_bootstrapping = networkstatus_consensus_is_boostrapping(
+  const int we_are_bootstrapping = networkstatus_consensus_is_bootstrapping(
                                                                   time(NULL));
 
   /* We don't want to check other connections to see if they are downloading,
    * as this is prone to race-conditions. So leave it for
-   * connection_dir_consider_close_extra_consensus_conns() to clean up.
+   * connection_dir_close_extra_consensus_conns(() to clean up.
    *
    * But if conn has just started connecting, or we have a consensus already,
    * we can be sure it's not needed any more. */
@@ -3768,7 +3768,7 @@ connection_dir_close_extra_consensus_conns(void)
     return;
   }
 
-  int we_are_bootstrapping = networkstatus_consensus_is_boostrapping(
+  int we_are_bootstrapping = networkstatus_consensus_is_bootstrapping(
                                                                   time(NULL));
 
   const char *usable_resource = networkstatus_get_flavor_name(
@@ -3877,7 +3877,7 @@ find_dl_schedule(download_status_t *dls, const or_options_t *options)
   const int dir_server = dir_server_mode(options);
   const int multi_d = networkstatus_consensus_can_use_multiple_directories(
                                                                     options);
-  const int we_are_bootstrapping = networkstatus_consensus_is_boostrapping(
+  const int we_are_bootstrapping = networkstatus_consensus_is_bootstrapping(
                                                                  time(NULL));
   const int use_fallbacks = networkstatus_consensus_can_use_extra_fallbacks(
                                                                     options);

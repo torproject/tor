@@ -1917,7 +1917,7 @@ fetch_networkstatus_callback(time_t now, const or_options_t *options)
 
   /* How often do we check whether we should download network status
    * documents? */
-  const int we_are_bootstrapping = networkstatus_consensus_is_boostrapping(
+  const int we_are_bootstrapping = networkstatus_consensus_is_bootstrapping(
                                                                         now);
   const int prefer_mirrors = !directory_fetches_from_authorities(
                                                               get_options());

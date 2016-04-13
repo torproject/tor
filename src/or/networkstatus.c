@@ -819,7 +819,7 @@ update_consensus_networkstatus_downloads(time_t now)
 {
   int i;
   const or_options_t *options = get_options();
-  const int we_are_bootstrapping = networkstatus_consensus_is_boostrapping(
+  const int we_are_bootstrapping = networkstatus_consensus_is_bootstrapping(
                                                                         now);
   const int use_multi_conn =
     networkstatus_consensus_can_use_multiple_directories(options);
@@ -875,12 +875,13 @@ update_consensus_networkstatus_downloads(time_t now)
                                                    resource,
                                                    DIR_CONN_STATE_CONNECTING);
 
-      if (i == usable_consensus_flavor()
-          && connect_consens_conn_count < consens_conn_count) {
+      /* If not all connections are "connecting", then some are
+       * downloading. We want to have at most one downloading at a time. */
+      if (connect_consens_conn_count < consens_conn_count) {
         continue;
       }
 
-      /* Make multiple connections for a bootstrap consensus download */
+      /* Make multiple connections for a bootstrap consensus download. */
       update_consensus_bootstrap_multiple_downloads(now, options,
                                                     we_are_bootstrapping);
     } else {
@@ -954,7 +955,7 @@ update_consensus_bootstrap_attempt_downloads(
  * connections.
  * Only call when bootstrapping, and when we want to make additional
  * connections. Only nodes that satisfy
- * networkstatus_consensus_can_use_multiple_directories make additonal
+ * networkstatus_consensus_can_use_multiple_directories make additional
  * connections.
  */
 static void
@@ -969,7 +970,7 @@ update_consensus_bootstrap_multiple_downloads(time_t now,
     return;
   }
 
-  /* If we've managed to validate a usable consensus, don't make additonal
+  /* If we've managed to validate a usable consensus, don't make additional
    * connections. */
   if (!we_are_bootstrapping) {
     return;
@@ -1277,7 +1278,7 @@ networkstatus_get_reasonably_live_consensus(time_t now, int flavor)
  *  only using the authorities and fallback directory mirrors to download the
  * consensus flavour we'll use. */
 int
-networkstatus_consensus_is_boostrapping(time_t now)
+networkstatus_consensus_is_bootstrapping(time_t now)
 {
   /* If we don't have a consensus, we must still be bootstrapping */
   return !networkstatus_get_reasonably_live_consensus(
@@ -1327,7 +1328,7 @@ networkstatus_consensus_can_use_extra_fallbacks(const or_options_t *options)
  * return value of this function to see if a client could make multiple
  * bootstrap connections. Use
  * networkstatus_consensus_can_use_multiple_directories()
- * and networkstatus_consensus_is_boostrapping(). */
+ * and networkstatus_consensus_is_bootstrapping(). */
 int
 networkstatus_consensus_has_excess_connections(void)
 {
