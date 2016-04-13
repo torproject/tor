@@ -134,7 +134,7 @@ crypto_get_rsa_padding_overhead(int padding)
   switch (padding)
     {
     case RSA_PKCS1_OAEP_PADDING: return PKCS1_OAEP_PADDING_OVERHEAD;
-    default: tor_assert(0); return -1;
+    default: tor_assert(0); return -1; // LCOV_EXCL_LINE
     }
 }
 
@@ -146,7 +146,7 @@ crypto_get_rsa_padding(int padding)
   switch (padding)
     {
     case PK_PKCS1_OAEP_PADDING: return RSA_PKCS1_OAEP_PADDING;
-    default: tor_assert(0); return -1;
+    default: tor_assert(0); return -1; // LCOV_EXCL_LINE
     }
 }
 
@@ -1739,8 +1739,8 @@ crypto_digest_algorithm_get_length(digest_algorithm_t alg)
     case DIGEST_SHA3_512:
       return DIGEST512_LEN;
     default:
-      tor_assert(0);
-      return 0; /* Unreachable */
+      tor_assert(0);              // LCOV_EXCL_LINE
+      return 0; /* Unreachable */ // LCOV_EXCL_LINE
   }
 }
 
@@ -1783,8 +1783,8 @@ crypto_digest_alloc_bytes(digest_algorithm_t alg)
     case DIGEST_SHA3_512:
       return END_OF_FIELD(d.sha3);
     default:
-      tor_assert(0);
-      return 0;
+      tor_assert(0); // LCOV_EXCL_LINE
+      return 0;      // LCOV_EXCL_LINE
   }
 #undef END_OF_FIELD
 #undef STRUCT_FIELD_SIZE
@@ -1914,6 +1914,7 @@ crypto_digest_get_digest(crypto_digest_t *digest,
     case DIGEST_SHA512:
       SHA512_Final(r, &tmpenv.d.sha512);
       break;
+//LCOV_EXCL_START
     case DIGEST_SHA3_256: /* FALLSTHROUGH */
     case DIGEST_SHA3_512:
       log_warn(LD_BUG, "Handling unexpected algorithm %d", digest->algorithm);
@@ -1921,6 +1922,7 @@ crypto_digest_get_digest(crypto_digest_t *digest,
     default:
       tor_assert(0); /* Unreachable. */
       break;
+//LCOV_EXCL_STOP
   }
   memcpy(out, r, out_len);
   memwipe(r, 0, sizeof(r));
@@ -2760,10 +2762,12 @@ crypto_strongest_rand(uint8_t *out, size_t out_len)
   while (out_len) {
     crypto_rand((char*) inp, DLEN);
     if (crypto_strongest_rand_raw(inp+DLEN, DLEN) < 0) {
+      // LCOV_EXCL_START
       log_err(LD_CRYPTO, "Failed to load strong entropy when generating an "
               "important key. Exiting.");
       /* Die with an assertion so we get a stack trace. */
       tor_assert(0);
+      // LCOV_EXCL_STOP
     }
     if (out_len >= DLEN) {
       SHA512(inp, sizeof(inp), out);
