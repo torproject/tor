@@ -166,10 +166,7 @@ EXTRA_DIST += \
 	timeouts/lua/timeout-lua.c		\
 	timeouts/Makefile			\
 	timeouts/Rules.shrc			\
-	timeouts/test-timeout.c
+	timeouts/test-timeout.c			\
+	timeouts/timeout-bitops.c
 
-# XXXX Once we use timeouts, include this in an actual library.
-EXTRA_DIST += \
-	timeouts/timeout-bitops.c		\
-	timeout.c
 

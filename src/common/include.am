@@ -96,7 +96,8 @@ LIBOR_CRYPTO_A_SOURCES = \
 
 LIBOR_EVENT_A_SOURCES = \
 	src/common/compat_libevent.c \
-	src/common/procmon.c
+	src/common/procmon.c         \
+	src/ext/timeouts/timeout.c
 
 src_common_libor_a_SOURCES = $(LIBOR_A_SOURCES)
 src_common_libor_crypto_a_SOURCES = $(LIBOR_CRYPTO_A_SOURCES)
