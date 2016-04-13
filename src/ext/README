@@ -73,3 +73,7 @@ readpassphrase.[ch]
 
     Portable readpassphrase implementation from OpenSSH portable, version
     6.8p1.
+
+timeouts/
+
+    William Ahern's hierarchical timer-wheel implementation. MIT license.

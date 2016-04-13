@@ -10,6 +10,8 @@ EXTHEADERS = \
   src/ext/tor_readpassphrase.h \
   src/ext/strlcat.c	\
   src/ext/strlcpy.c	\
+  src/ext/timeouts/timeout.h \
+  src/ext/timeouts/timeout-debug.h \
   src/ext/tinytest_macros.h \
   src/ext/tor_queue.h	\
   src/ext/siphash.h
@@ -147,4 +149,27 @@ noinst_HEADERS += $(LIBKECCAK_TINY_HDRS)
 
 LIBKECCAK_TINY=src/ext/keccak-tiny/libkeccak-tiny.a
 noinst_LIBRARIES += $(LIBKECCAK_TINY)
+
+EXTRA_DIST += \
+	timeouts/bench/bench-add.lua 		\
+	timeouts/bench/bench-aux.lua		\
+	timeouts/bench/bench.c			\
+	timeouts/bench/bench-del.lua		\
+	timeouts/bench/bench-expire.lua		\
+	timeouts/bench/bench.h			\
+	timeouts/bench/bench-heap.c		\
+	timeouts/bench/bench-llrb.c		\
+	timeouts/bench/bench.plt		\
+	timeouts/bench/bench-wheel.c		\
+	timeouts/bench/Rules.mk			\
+	timeouts/lua/Rules.mk			\
+	timeouts/lua/timeout-lua.c		\
+	timeouts/Makefile			\
+	timeouts/Rules.shrc			\
+	timeouts/test-timeout.c
+
+# XXXX Once we use timeouts, include this in an actual library.
+EXTRA_DIST += \
+	timeouts/timeout-bitops.c		\
+	timeout.c
 
