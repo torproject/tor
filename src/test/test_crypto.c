@@ -65,6 +65,27 @@ test_crypto_dh(void *arg)
   crypto_dh_free(dh2);
 }
 
+static void
+test_crypto_openssl_version(void *arg)
+{
+  (void)arg;
+  const char *version = crypto_openssl_get_version_str();
+  const char *h_version = crypto_openssl_get_header_version_str();
+
+  tt_assert(version);
+  tt_assert(h_version);
+  tt_assert(!strcmpstart(version, h_version)); /* "-fips" suffix, etc */
+  tt_assert(!strstr(version, "OpenSSL"));
+  int a=-1,b=-1,c=-1;
+  sscanf(version, "%d.%d.%d", &a,&b,&c);
+  tt_int_op(a, OP_GE, 0);
+  tt_int_op(b, OP_GE, 0);
+  tt_int_op(c, OP_GE, 0);
+
+ done:
+  ;
+}
+
 /** Run unit tests for our random number generation function and its wrappers.
  */
 static void
@@ -1148,6 +1169,31 @@ test_crypto_digests(void *arg)
              AUTHORITY_SIGNKEY_A_DIGEST256, HEX_DIGEST256_LEN);
  done:
   crypto_pk_free(k);
+}
+
+static void
+test_crypto_digest_names(void *arg)
+{
+  static const struct {
+    int a; const char *n;
+  } names[] = {
+    { DIGEST_SHA1, "sha1" },
+    { DIGEST_SHA256, "sha256" },
+    { DIGEST_SHA512, "sha512" },
+    { DIGEST_SHA3_256, "sha3-256" },
+    { DIGEST_SHA3_512, "sha3-512" },
+    { -1, NULL }
+  };
+  (void)arg;
+
+  int i;
+  for (i = 0; names[i].n; ++i) {
+    tt_str_op(names[i].n, OP_EQ,crypto_digest_algorithm_get_name(names[i].a));
+    tt_int_op(names[i].a, OP_EQ,crypto_digest_algorithm_parse_name(names[i].n));
+  }
+  tt_int_op(-1, OP_EQ, crypto_digest_algorithm_parse_name("TimeCubeHash-4444"));
+ done:
+  ;
 }
 
 #ifndef OPENSSL_1_1_API
@@ -2434,6 +2480,7 @@ struct testcase_t crypto_tests[] = {
   CRYPTO_LEGACY(rng),
   { "rng_range", test_crypto_rng_range, 0, NULL, NULL },
   { "rng_engine", test_crypto_rng_engine, TT_FORK, NULL, NULL },
+  { "openssl_version", test_crypto_openssl_version, TT_FORK, NULL, NULL },
   { "aes_AES", test_crypto_aes, TT_FORK, &passthrough_setup, (void*)"aes" },
   { "aes_EVP", test_crypto_aes, TT_FORK, &passthrough_setup, (void*)"evp" },
   CRYPTO_LEGACY(sha),
@@ -2441,6 +2488,7 @@ struct testcase_t crypto_tests[] = {
   { "pk_fingerprints", test_crypto_pk_fingerprints, TT_FORK, NULL, NULL },
   { "pk_base64", test_crypto_pk_base64, TT_FORK, NULL, NULL },
   CRYPTO_LEGACY(digests),
+  { "digest_names", test_crypto_digest_names, 0, NULL, NULL },
   { "sha3", test_crypto_sha3, TT_FORK, NULL, NULL},
   { "sha3_xof", test_crypto_sha3_xof, TT_FORK, NULL, NULL},
   CRYPTO_LEGACY(dh),
