@@ -705,7 +705,7 @@ test_conn_download_status(void *arg)
 
   /* now try closing the one that isn't downloading:
    * these tests won't work unless tor thinks it is bootstrapping */
-  tt_assert(networkstatus_consensus_is_boostrapping(time(NULL)));
+  tt_assert(networkstatus_consensus_is_bootstrapping(time(NULL)));
 
   tt_assert(connection_dir_count_by_purpose_and_resource(
                                                         TEST_CONN_RSRC_PURPOSE,
