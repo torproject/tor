@@ -1219,11 +1219,6 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
         conn->base_.state = DIR_CONN_STATE_CLIENT_SENDING;
         /* fall through */
       case 0:
-        /* Close this connection if there's another consensus connection
-         * downloading (during bootstrap), or connecting (after bootstrap). */
-        if (connection_dir_close_consensus_conn_if_extra(conn)) {
-          return;
-        }
         /* queue the command on the outbuf */
         directory_send_command(conn, dir_purpose, 1, resource,
                                payload, payload_len,
@@ -1269,11 +1264,6 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
     if (connection_add(TO_CONN(conn)) < 0) {
       log_warn(LD_NET,"Unable to add connection for link to dirserver.");
       connection_mark_for_close(TO_CONN(conn));
-      return;
-    }
-    /* Close this connection if there's another consensus connection
-     * downloading (during bootstrap), or connecting (after bootstrap). */
-    if (connection_dir_close_consensus_conn_if_extra(conn)) {
       return;
     }
     conn->base_.state = DIR_CONN_STATE_CLIENT_SENDING;
@@ -3686,41 +3676,6 @@ connection_dir_finished_flushing(dir_connection_t *conn)
   return 0;
 }
 
-/* A helper function for connection_dir_close_consensus_conn_if_extra()
- * that returns 0 if
- * we can't have, or don't want to close, excess consensus connections. */
-STATIC int
-connection_dir_would_close_consensus_conn_helper(void)
-{
-  const or_options_t *options = get_options();
-
-  /* we're only interested in closing excess connections if we could
-   * have created any in the first place */
-  if (!networkstatus_consensus_can_use_multiple_directories(options)) {
-    return 0;
-  }
-
-  /* We want to close excess connections downloading a consensus.
-   * If there aren't any excess, we don't have anything to close. */
-  if (!networkstatus_consensus_has_excess_connections()) {
-    return 0;
-  }
-
-  /* If we have excess connections, but none of them are downloading a
-   * consensus, and we are still bootstrapping (that is, we have no usable
-   * consensus), we don't want to close any until one starts downloading. */
-  if (!networkstatus_consensus_is_downloading_usable_flavor()
-      && networkstatus_consensus_is_bootstrapping(time(NULL))) {
-    return 0;
-  }
-
-  /* If we have just stopped bootstrapping (that is, just parsed a consensus),
-   * we might still have some excess connections hanging around. So we still
-   * have to check if we want to close any, even if we've stopped
-   * bootstrapping. */
-  return 1;
-}
-
 /* Check if we would close excess consensus connections. If we would, any
  * new consensus connection would become excess immediately, so return 1.
  * Otherwise, return 0. */
@@ -3746,59 +3701,6 @@ connection_dir_avoid_extra_connection_for_purpose(unsigned int purpose)
   if (networkstatus_consensus_is_downloading_usable_flavor()
       && networkstatus_consensus_is_bootstrapping(time(NULL))) {
     return 1;
-  }
-
-  return 0;
-}
-
-/* Check if we have more than one consensus download connection attempt, and
- * close conn:
- * - if we don't have a consensus, and we're downloading a consensus, and conn
- *   is not downloading a consensus yet;
- * - if we do have a consensus, and there's more than one consensus connection.
- *
- * Post-bootstrap consensus connection attempts are initiated one at a time.
- * So this function won't close any consensus connection attempts that
- * are initiated after bootstrap.
- */
-int
-connection_dir_close_consensus_conn_if_extra(dir_connection_t *conn)
-{
-  tor_assert(conn);
-  tor_assert(conn->base_.type == CONN_TYPE_DIR);
-
-  /* We're not interested in connections that aren't fetching a consensus. */
-  if (conn->base_.purpose != DIR_PURPOSE_FETCH_CONSENSUS) {
-    return 0;
-  }
-
-  /* The connection has already been closed */
-  if (conn->base_.marked_for_close) {
-    return 0;
-  }
-
-  /* Only close this connection if there's another consensus connection
-   * downloading (during bootstrap), or connecting (after bootstrap).
-   * Post-bootstrap consensus connection attempts won't be closed, because
-   * they only occur one at a time. */
-  if (!connection_dir_would_close_consensus_conn_helper()) {
-    return 0;
-  }
-
-  const int we_are_bootstrapping = networkstatus_consensus_is_bootstrapping(
-                                                                  time(NULL));
-
-  /* We don't want to check other connections to see if they are downloading,
-   * as this is prone to race-conditions. So leave it for
-   * connection_dir_close_extra_consensus_conns(() to clean up.
-   *
-   * But if conn has just started connecting, or we have a consensus already,
-   * we can be sure it's not needed any more. */
-  if (!we_are_bootstrapping
-      || conn->base_.state == DIR_CONN_STATE_CONNECTING) {
-    connection_close_immediate(&conn->base_);
-    connection_mark_for_close(&conn->base_);
-    return -1;
   }
 
   return 0;
@@ -3846,12 +3748,6 @@ connection_dir_finished_connecting(dir_connection_t *conn)
 
   log_debug(LD_HTTP,"Dir connection to router %s:%u established.",
             conn->base_.address,conn->base_.port);
-
-  /* Close this connection if there's another consensus connection
-   * downloading (during bootstrap), or connecting (after bootstrap). */
-  if (connection_dir_close_consensus_conn_if_extra(conn)) {
-    return -1;
-  }
 
   /* start flushing conn */
   conn->base_.state = DIR_CONN_STATE_CLIENT_SENDING;
