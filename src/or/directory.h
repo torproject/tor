@@ -80,7 +80,6 @@ void directory_initiate_command(const tor_addr_t *or_addr, uint16_t or_port,
                                 time_t if_modified_since);
 int connection_dir_avoid_extra_connection_for_purpose(unsigned int purpose);
 int connection_dir_close_consensus_conn_if_extra(dir_connection_t *conn);
-void connection_dir_close_extra_consensus_conns(void);
 
 #define DSR_HEX       (1<<0)
 #define DSR_BASE64    (1<<1)

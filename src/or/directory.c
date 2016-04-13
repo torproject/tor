@@ -96,6 +96,9 @@ static void directory_initiate_command_rend(
                                           time_t if_modified_since,
                                           const rend_data_t *rend_query);
 
+static void connection_dir_close_consensus_fetches(
+                   dir_connection_t *except_this_one, const char *resource);
+
 /********* START VARIABLES **********/
 
 /** How far in the future do we allow a directory server to tell us it is
@@ -2028,6 +2031,10 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       networkstatus_consensus_download_failed(0, flavname);
       return -1;
     }
+
+    /* If we launched other fetches for this consensus, cancel them. */
+    connection_dir_close_consensus_fetches(conn, flavname);
+
     /* launches router downloads as needed */
     routers_update_all_from_networkstatus(now, 3);
     update_microdescs_from_networkstatus(now);
@@ -3680,7 +3687,7 @@ connection_dir_finished_flushing(dir_connection_t *conn)
 }
 
 /* A helper function for connection_dir_close_consensus_conn_if_extra()
- * and connection_dir_close_extra_consensus_conns() that returns 0 if
+ * that returns 0 if
  * we can't have, or don't want to close, excess consensus connections. */
 STATIC int
 connection_dir_would_close_consensus_conn_helper(void)
@@ -3797,103 +3804,33 @@ connection_dir_close_consensus_conn_if_extra(dir_connection_t *conn)
   return 0;
 }
 
-/* Clean up excess consensus download connection attempts.
- * During bootstrap, or when the bootstrap consensus has just been downloaded,
- * if we have more than one active consensus connection:
- * - if we don't have a consensus, and we're downloading a consensus, keep an
- *   earlier connection, or a connection to a fallback directory, and close
- *   all other connections;
- * - if we have just downloaded the bootstrap consensus, and have other
- *   consensus connections left over, close all of them.
+/* We just got a new consensus! If there are other in-progress requests
+ * for this consensus flavor (for example because we launched several in
+ * parallel), cancel them.
  *
- * Post-bootstrap consensus connection attempts are initiated one at a time.
- * So this function won't close any consensus connection attempts that
- * are initiated after bootstrap.
+ * We do this check here (not just in
+ * connection_ap_handshake_attach_circuit()) to handle the edge case where
+ * a consensus fetch begins and ends before some other one tries to attach to
+ * a circuit, in which case the other one won't know that we're all happy now.
+ *
+ * Don't mark the conn that just gave us the consensus -- otherwise we
+ * would end up double-marking it when it cleans itself up.
  */
-void
-connection_dir_close_extra_consensus_conns(void)
+static void
+connection_dir_close_consensus_fetches(dir_connection_t *except_this_one,
+                                       const char *resource)
 {
-  /* Only cleanup connections if there is more than one consensus connection,
-   * and at least one of those connections is already downloading
-   * (during bootstrap), or connecting (just after the bootstrap consensus is
-   * downloaded).
-   * Post-bootstrap consensus connection attempts won't be cleaned up, because
-   * they only occur one at a time. */
-  if (!connection_dir_would_close_consensus_conn_helper()) {
-    return;
-  }
-
-  int we_are_bootstrapping = networkstatus_consensus_is_bootstrapping(
-                                                                  time(NULL));
-
-  const char *usable_resource = networkstatus_get_flavor_name(
-                                                  usable_consensus_flavor());
-  smartlist_t *consens_usable_conns =
-                 connection_dir_list_by_purpose_and_resource(
-                                                  DIR_PURPOSE_FETCH_CONSENSUS,
-                                                  usable_resource);
-
-  /* If we want to keep a connection that's downloading, find a connection to
-   * keep, favouring:
-   * - connections opened earlier (they are likely to have progressed further)
-   * - connections to fallbacks (to reduce the load on authorities) */
-  dir_connection_t *kept_download_conn = NULL;
-  int kept_is_authority = 0;
-  if (we_are_bootstrapping) {
-    SMARTLIST_FOREACH_BEGIN(consens_usable_conns,
-                            dir_connection_t *, d) {
-      tor_assert(d);
-      int d_is_authority = router_digest_is_trusted_dir(d->identity_digest);
-      /* keep the first connection that is past the connecting state, but
-       * prefer fallbacks. */
-      if (d->base_.state != DIR_CONN_STATE_CONNECTING) {
-        if (!kept_download_conn || (kept_is_authority && !d_is_authority)) {
-          kept_download_conn = d;
-          kept_is_authority = d_is_authority;
-          /* we've found the earliest fallback, and want to keep it regardless
-           * of any other connections */
-          if (!kept_is_authority)
-            break;
-        }
-      }
-    } SMARTLIST_FOREACH_END(d);
-  }
-
-  SMARTLIST_FOREACH_BEGIN(consens_usable_conns,
-                          dir_connection_t *, d) {
-    tor_assert(d);
-    /* don't close this connection if it's the one we want to keep */
-    if (kept_download_conn && d == kept_download_conn)
+  smartlist_t *conns_to_close =
+    connection_dir_list_by_purpose_and_resource(DIR_PURPOSE_FETCH_CONSENSUS,
+                                                resource);
+  SMARTLIST_FOREACH_BEGIN(conns_to_close, dir_connection_t *, d) {
+    if (d == except_this_one)
       continue;
-    /* mark all other connections for close */
-    if (!d->base_.marked_for_close) {
-      connection_close_immediate(&d->base_);
-      connection_mark_for_close(&d->base_);
-    }
+    log_info(LD_DIR, "Closing consensus fetch (to %s) since one "
+             "has just arrived.", TO_CONN(d)->address);
+    connection_mark_for_close(TO_CONN(d));
   } SMARTLIST_FOREACH_END(d);
-
-  smartlist_free(consens_usable_conns);
-  consens_usable_conns = NULL;
-
-  /* make sure we've closed all excess connections */
-  const int final_connecting_conn_count =
-              connection_dir_count_by_purpose_resource_and_state(
-                                                DIR_PURPOSE_FETCH_CONSENSUS,
-                                                usable_resource,
-                                                DIR_CONN_STATE_CONNECTING);
-  if (final_connecting_conn_count > 0) {
-    log_warn(LD_BUG, "Expected 0 consensus connections connecting after "
-             "cleanup, got %d.", final_connecting_conn_count);
-  }
-  const int expected_final_conn_count = (we_are_bootstrapping ? 1 : 0);
-  const int final_conn_count =
-              connection_dir_count_by_purpose_and_resource(
-                                                DIR_PURPOSE_FETCH_CONSENSUS,
-                                                usable_resource);
-  if (final_conn_count > expected_final_conn_count) {
-    log_warn(LD_BUG, "Expected %d consensus connections after cleanup, got "
-             "%d.", expected_final_conn_count, final_connecting_conn_count);
-  }
+  smartlist_free(conns_to_close);
 }
 
 /** Connected handler for directory connections: begin sending data to the
