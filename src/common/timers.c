@@ -79,11 +79,22 @@ static struct event *global_timer_event = NULL;
 /** We need to choose this value carefully.  Because we're using timer wheels,
  * it actually costs us to have extra resolution we don't use.  So for now,
  * I'm going to define our resolution as .1 msec, and hope that's good enough.
+ *
+ * Note that two of the most popular libevent backends (epoll without timerfd,
+ * and windows select), simply can't support sub-millisecond resolution,
+ * do this is optimistic for a lot of users.
  */
 #define USEC_PER_TICK 100
 
 /** One million microseconds in a second */
 #define USEC_PER_SEC 1000000
+
+/** Check at least once every N seconds. */
+#define MIN_CHECK_SECONDS 3600
+
+/** Check at least once every N ticks. */
+#define MIN_CHECK_TICKS \
+  (((timeout_t)MIN_CHECK_SECONDS) * (1000000 / USEC_PER_TICK))
 
 /**
  * Convert the timeval in <b>tv</b> to a timeout_t, and return it.
@@ -135,8 +146,10 @@ libevent_timer_reschedule(void)
   tor_gettimeofday_cached_monotonic(&now);
   timer_advance_to_cur_time(&now);
 
-  const timeout_t delay = timeouts_timeout(global_timeouts);
+  timeout_t delay = timeouts_timeout(global_timeouts);
   struct timeval d;
+  if (delay > MIN_CHECK_TICKS)
+    delay = MIN_CHECK_TICKS;
   timeout_to_tv(delay, &d);
   event_add(global_timer_event, &d);
 }
@@ -153,6 +166,7 @@ libevent_timer_callback(evutil_socket_t fd, short what, void *arg)
   (void)arg;
 
   struct timeval now;
+  tor_gettimeofday_cache_clear();
   tor_gettimeofday_cached_monotonic(&now);
   timer_advance_to_cur_time(&now);
 
@@ -187,6 +201,8 @@ timers_initialize(void)
                               -1, 0, libevent_timer_callback, NULL);
   tor_assert(timer_event);
   global_timer_event = timer_event;
+
+  libevent_timer_reschedule();
 }
 
 /**
@@ -253,12 +269,15 @@ timer_schedule(tor_timer_t *t, const struct timeval *tv)
   tor_gettimeofday_cached_monotonic(&now);
   timer_advance_to_cur_time(&now);
 
+  /* Take the old timeout value. */
+  timeout_t to = timeouts_timeout(global_timeouts);
+
   timeouts_add(global_timeouts, t, when);
 
   /* Should we update the libevent timer? */
   if (to <= when) {
     return; /* we're already going to fire before this timer would trigger. */
-
+  }
   libevent_timer_reschedule();
 }
 
