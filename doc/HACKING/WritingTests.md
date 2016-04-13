@@ -109,6 +109,19 @@ To count new or modified uncovered lines in D2, you can run:
 
     ./scripts/test/cov-diff ${D1} ${D2}" | grep '^+ *\#' | wc -l
 
+### Marking lines as unreachable by tests
+
+You can mark a specific line as unreachable by using the special
+string LCOV_EXCL_LINE.  You can mark a range of lines as unreachable
+with LCOV_EXCL_START... LCOV_EXCL_STOP.  Note that older versions of
+lcov don't understand these lines.
+
+You can post-process .gcov files to make these lines 'unreached' by
+running ./scripts/test/cov-exclude on them.
+
+Note: you should never do this unless the line is meant to 100%
+unreachable by actual code.
+
 
 What kinds of test should I write?
 ----------------------------------
