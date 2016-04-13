@@ -73,6 +73,7 @@ test_crypto_rng(void *arg)
   int i, j, allok;
   char data1[100], data2[100];
   double d;
+  char *h=NULL;
 
   /* Try out RNG. */
   (void)arg;
@@ -104,9 +105,16 @@ test_crypto_rng(void *arg)
       allok = 0;
     tor_free(host);
   }
+
+  /* Make sure crypto_random_hostname clips its inputs properly. */
+  h = crypto_random_hostname(20000, 9000, "www.", ".onion");
+  tt_assert(! strcmpstart(h,"www."));
+  tt_assert(! strcmpend(h,".onion"));
+  tt_int_op(63+4+6, OP_EQ, strlen(h));
+
   tt_assert(allok);
  done:
-  ;
+  tor_free(h);
 }
 
 static void
@@ -125,8 +133,36 @@ test_crypto_rng_range(void *arg)
     if (x == 8)
       got_largest = 1;
   }
-
   /* These fail with probability 1/10^603. */
+  tt_assert(got_smallest);
+  tt_assert(got_largest);
+
+  got_smallest = got_largest = 0;
+  const uint64_t ten_billion = 10 * ((uint64_t)1000000000000);
+  for (i = 0; i < 1000; ++i) {
+    uint64_t x = crypto_rand_uint64_range(ten_billion, ten_billion+10);
+    tt_u64_op(x, OP_GE, ten_billion);
+    tt_u64_op(x, OP_LT, ten_billion+10);
+    if (x == ten_billion)
+      got_smallest = 1;
+    if (x == ten_billion+9)
+      got_largest = 1;
+  }
+
+  tt_assert(got_smallest);
+  tt_assert(got_largest);
+
+  const time_t now = time(NULL);
+  for (i = 0; i < 2000; ++i) {
+    time_t x = crypto_rand_time_range(now, now+60);
+    tt_i64_op(x, OP_GE, now);
+    tt_i64_op(x, OP_LT, now+60);
+    if (x == now)
+      got_smallest = 1;
+    if (x == now+59)
+      got_largest = 1;
+  }
+
   tt_assert(got_smallest);
   tt_assert(got_largest);
  done:
