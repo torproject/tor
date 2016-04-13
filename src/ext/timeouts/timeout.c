@@ -467,6 +467,9 @@ TIMEOUT_PUBLIC void timeouts_update(struct timeouts *T, abstime_t curtime) {
 	return;
 } /* timeouts_update() */
 
+TIMEOUT_PUBLIC timeout_t timeouts_get_curtime(struct timeouts *T) {
+	return T->curtime;
+} /* timeouts_get_curtime() */
 
 TIMEOUT_PUBLIC void timeouts_step(struct timeouts *T, reltime_t elapsed) {
 	timeouts_update(T, T->curtime + elapsed);

@@ -177,6 +177,9 @@ TIMEOUT_PUBLIC void timeouts_update(struct timeouts *, timeout_t);
 TIMEOUT_PUBLIC void timeouts_step(struct timeouts *, timeout_t);
 /* step timing wheel by relative time */
 
+TIMEOUT_PUBLIC timeout_t timeouts_get_curtime(struct timeouts *);
+/* Return the current tick. */
+
 TIMEOUT_PUBLIC timeout_t timeouts_timeout(struct timeouts *);
 /* return interval to next required update */
 
