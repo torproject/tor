@@ -23,6 +23,9 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  * ==========================================================================
  */
+#ifdef HAVE_CONFIG_H
+#include "orconfig.h"
+#endif
 #include <limits.h>    /* CHAR_BIT */
 
 #include <stddef.h>    /* NULL */
@@ -38,6 +41,10 @@
 #include <sys/queue.h> /* TAILQ(3) */
 
 #include "timeout.h"
+
+#ifndef TIMEOUT_DEBUG
+#define TIMEOUT_DEBUG 0
+#endif
 
 #if TIMEOUT_DEBUG - 0
 #include "timeout-debug.h"

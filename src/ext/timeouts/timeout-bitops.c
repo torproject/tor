@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <limits.h>
 #ifdef _MSC_VER
 #include <intrin.h>     /* _BitScanForward, _BitScanReverse */
 #endif
@@ -7,12 +8,16 @@
  * you want them to be fast. */
 #if defined(__GNUC__) && !defined(TIMEOUT_DISABLE_GNUC_BITOPS)
 
+#ifndef LONG_BIT
+#define LONG_BIT (SIZEOF_LONG*CHAR_BIT)
+#endif
+
 /* On GCC and clang and some others, we can use __builtin functions. They
  * are not defined for n==0, but timeout.s never calls them with n==0. */
 
 #define ctz64(n) __builtin_ctzll(n)
 #define clz64(n) __builtin_clzll(n)
-#if LONG_BITS == 32
+#if LONG_BIT == 32
 #define ctz32(n) __builtin_ctzl(n)
 #define clz32(n) __builtin_clzl(n)
 #else
