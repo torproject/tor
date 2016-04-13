@@ -1369,15 +1369,6 @@ networkstatus_consensus_is_already_downloading(const char *resource)
   return answer;
 }
 
-/* Is tor currently downloading a consensus of the usable flavor? */
-int
-networkstatus_consensus_is_downloading_usable_flavor(void)
-{
-  const char *resource =
-    networkstatus_get_flavor_name(usable_consensus_flavor());
-  return networkstatus_consensus_is_already_downloading(resource);
-}
-
 /** Given two router status entries for the same router identity, return 1 if
  * if the contents have changed between them. Otherwise, return 0. */
 static int

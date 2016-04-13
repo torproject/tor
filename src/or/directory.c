@@ -1173,12 +1173,6 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
     return;
   }
 
-  /* ensure we don't make excess connections when we're already downloading
-   * a consensus during bootstrap */
-  if (connection_dir_avoid_extra_connection_for_purpose(dir_purpose)) {
-    return;
-  }
-
   conn = dir_connection_new(tor_addr_family(&addr));
 
   /* set up conn so it's got all the data we need to remember */
@@ -3676,36 +3670,6 @@ connection_dir_finished_flushing(dir_connection_t *conn)
   return 0;
 }
 
-/* Check if we would close excess consensus connections. If we would, any
- * new consensus connection would become excess immediately, so return 1.
- * Otherwise, return 0. */
-int
-connection_dir_avoid_extra_connection_for_purpose(unsigned int purpose)
-{
-  const or_options_t *options = get_options();
-
-  /* We're not interested in connections that aren't fetching a consensus. */
-  if (purpose != DIR_PURPOSE_FETCH_CONSENSUS) {
-    return 0;
-  }
-
-  /* we're only interested in avoiding excess connections if we could
-   * have created any in the first place */
-  if (!networkstatus_consensus_can_use_multiple_directories(options)) {
-    return 0;
-  }
-
-  /* If there are connections downloading a consensus, and we are still
-   * bootstrapping (that is, we have no usable consensus), we can be sure that
-   * any further connections would be excess. */
-  if (networkstatus_consensus_is_downloading_usable_flavor()
-      && networkstatus_consensus_is_bootstrapping(time(NULL))) {
-    return 1;
-  }
-
-  return 0;
-}
-
 /* We just got a new consensus! If there are other in-progress requests
  * for this consensus flavor (for example because we launched several in
  * parallel), cancel them.
@@ -3736,8 +3700,7 @@ connection_dir_close_consensus_fetches(dir_connection_t *except_this_one,
 }
 
 /** Connected handler for directory connections: begin sending data to the
- * server, and return 0, or, if the connection is an excess bootstrap
- * connection, close all excess bootstrap connections.
+ * server, and return 0.
  * Only used when connections don't immediately connect. */
 int
 connection_dir_finished_connecting(dir_connection_t *conn)
