@@ -865,21 +865,8 @@ update_consensus_networkstatus_downloads(time_t now)
         && i == usable_consensus_flavor()) {
 
       /* Check if we're already downloading a usable consensus */
-      int consens_conn_count =
-        connection_dir_count_by_purpose_and_resource(
-                                                   DIR_PURPOSE_FETCH_CONSENSUS,
-                                                   resource);
-      int connect_consens_conn_count =
-        connection_dir_count_by_purpose_resource_and_state(
-                                                   DIR_PURPOSE_FETCH_CONSENSUS,
-                                                   resource,
-                                                   DIR_CONN_STATE_CONNECTING);
-
-      /* If not all connections are "connecting", then some are
-       * downloading. We want to have at most one downloading at a time. */
-      if (connect_consens_conn_count < consens_conn_count) {
+      if (networkstatus_consensus_is_already_downloading(resource))
         continue;
-      }
 
       /* Make multiple connections for a bootstrap consensus download. */
       update_consensus_bootstrap_multiple_downloads(now, options,
