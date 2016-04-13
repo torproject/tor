@@ -10,11 +10,13 @@ EXTHEADERS = \
   src/ext/tor_readpassphrase.h \
   src/ext/strlcat.c	\
   src/ext/strlcpy.c	\
-  src/ext/timeouts/timeout.h \
-  src/ext/timeouts/timeout-debug.h \
   src/ext/tinytest_macros.h \
   src/ext/tor_queue.h	\
-  src/ext/siphash.h
+  src/ext/siphash.h \
+  src/ext/timeouts/timeout.h \
+  src/ext/timeouts/timeout-debug.h \
+  src/ext/timeouts/timeout-bitops.c \
+  src/ext/timeouts/timeout.c
 
 noinst_HEADERS+= $(EXTHEADERS)
 
@@ -166,7 +168,5 @@ EXTRA_DIST += \
 	timeouts/lua/timeout-lua.c		\
 	timeouts/Makefile			\
 	timeouts/Rules.shrc			\
-	timeouts/test-timeout.c			\
-	timeouts/timeout-bitops.c
-
+	timeouts/test-timeout.c
 
