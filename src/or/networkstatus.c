@@ -1349,27 +1349,46 @@ networkstatus_consensus_has_excess_connections(void)
   return 0;
 }
 
+/* Is there a consensus fetch for flavor <b>resource</b> that's far
+ * enough along to be attached to a circuit? */
+int
+networkstatus_consensus_is_already_downloading(const char *resource)
+{
+  int answer = 0;
+
+  /* First, get a list of all the dir conns that are fetching a consensus,
+   * fetching *this* consensus, and are in state "reading" (meaning they
+   * have already flushed their request onto the socks connection). */
+  smartlist_t *fetching_conns =
+    connection_dir_list_by_purpose_resource_and_state(
+      DIR_PURPOSE_FETCH_CONSENSUS, resource, DIR_CONN_STATE_CLIENT_READING);
+
+  /* Then, walk through each conn, to see if its linked socks connection
+   * is in an attached state. We have to check this separately, since with
+   * the optimistic data feature, fetches can send their request to the
+   * socks connection and go into state 'reading', even before they're
+   * attached to any circuit. */
+  SMARTLIST_FOREACH_BEGIN(fetching_conns, dir_connection_t *, dirconn) {
+    /* Do any of these other dir conns have a linked socks conn that is
+     * attached to a circuit already? */
+    connection_t *base = TO_CONN(dirconn);
+    if (base->linked_conn &&
+        base->linked_conn->type == CONN_TYPE_AP &&
+        !AP_CONN_STATE_IS_UNATTACHED(base->linked_conn->state))
+      answer = 1;
+  } SMARTLIST_FOREACH_END(dirconn);
+  smartlist_free(fetching_conns);
+
+  return answer;
+}
+
 /* Is tor currently downloading a consensus of the usable flavor? */
 int
 networkstatus_consensus_is_downloading_usable_flavor(void)
 {
-  const char *usable_resource = networkstatus_get_flavor_name(
-                                                  usable_consensus_flavor());
-  const int consens_conn_usable_count =
-              connection_dir_count_by_purpose_and_resource(
-                                               DIR_PURPOSE_FETCH_CONSENSUS,
-                                               usable_resource);
-
-  const int connect_consens_conn_usable_count =
-              connection_dir_count_by_purpose_resource_and_state(
-                                                DIR_PURPOSE_FETCH_CONSENSUS,
-                                                usable_resource,
-                                                DIR_CONN_STATE_CONNECTING);
-  if (connect_consens_conn_usable_count < consens_conn_usable_count) {
-    return 1;
-  }
-
-  return 0;
+  const char *resource =
+    networkstatus_get_flavor_name(usable_consensus_flavor());
+  return networkstatus_consensus_is_already_downloading(resource);
 }
 
 /** Given two router status entries for the same router identity, return 1 if

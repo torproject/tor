@@ -2355,6 +2355,25 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
     /* we're a general conn */
     origin_circuit_t *circ=NULL;
 
+    /* Are we linked to a dir conn that aims to fetch a consensus?
+     * We check here because this conn might no longer be needed. */
+    if (base_conn->linked_conn &&
+        base_conn->linked_conn->type == CONN_TYPE_DIR &&
+        base_conn->linked_conn->purpose == DIR_PURPOSE_FETCH_CONSENSUS) {
+
+      /* Yes we are. Is there a consensus fetch farther along than us? */
+      if (networkstatus_consensus_is_already_downloading(
+            TO_DIR_CONN(base_conn->linked_conn)->requested_resource)) {
+        /* We're doing the "multiple consensus fetch attempts" game from
+         * proposal 210, and we're late to the party. Just close this conn.
+         * The circuit and TLS conn that we made will time out after a while
+         * if nothing else wants to use them. */
+        log_info(LD_DIR, "Closing extra consensus fetch (to %s) since one "
+                 "is already downloading.", base_conn->linked_conn->address);
+        return -1;
+      }
+    }
+
     if (conn->chosen_exit_name) {
       const node_t *node = node_get_by_nickname(conn->chosen_exit_name, 1);
       int opt = conn->chosen_exit_optional;
