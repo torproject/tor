@@ -665,9 +665,7 @@ connection_free,(connection_t *conn))
     return;
   tor_assert(!connection_is_on_closeable_list(conn));
   tor_assert(!connection_in_array(conn));
-  if (conn->linked_conn) {
-    log_err(LD_BUG, "Called with conn->linked_conn still set.");
-    tor_fragile_assert();
+  if (BUG(conn->linked_conn)) {
     conn->linked_conn->linked_conn = NULL;
     if (! conn->linked_conn->marked_for_close &&
         conn->linked_conn->reading_from_linked_conn)
@@ -3644,7 +3642,7 @@ connection_read_to_buf(connection_t *conn, ssize_t *max_to_read,
        * take us over our read allotment, but really we shouldn't be
        * believing that SSL bytes are the same as TCP bytes anyway. */
       int r2 = read_to_buf_tls(or_conn->tls, pending, conn->inbuf);
-      if (r2<0) {
+      if (BUG(r2<0)) {
         log_warn(LD_BUG, "apparently, reading pending bytes can fail.");
         return -1;
       }

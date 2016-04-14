@@ -103,7 +103,7 @@ policy_expand_private(smartlist_t **policy)
        if (tor_addr_parse_mask_ports(private_nets[i], 0,
                                &newpolicy.addr,
                                &newpolicy.maskbits, &port_min, &port_max)<0) {
-         tor_assert(0);
+         tor_assert_unreached();
        }
        smartlist_add(tmp, addr_policy_get_canonical_entry(&newpolicy));
      }

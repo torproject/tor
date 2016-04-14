@@ -105,23 +105,6 @@
 #endif
 
 /* =====
- * Assertion helper.
- * ===== */
-/** Helper for tor_assert: report the assertion failure. */
-void
-tor_assertion_failed_(const char *fname, unsigned int line,
-                      const char *func, const char *expr)
-{
-  char buf[256];
-  log_err(LD_BUG, "%s:%u: %s: Assertion %s failed; aborting.",
-          fname, line, func, expr);
-  tor_snprintf(buf, sizeof(buf),
-               "Assertion %s failed in %s at %s:%u",
-               expr, func, fname, line);
-  log_backtrace(LOG_ERR, LD_BUG, buf);
-}
-
-/* =====
  * Memory management
  * ===== */
 #ifdef USE_DMALLOC
