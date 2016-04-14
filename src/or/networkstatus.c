@@ -121,8 +121,7 @@ static int have_warned_about_new_version = 0;
 static void routerstatus_list_update_named_server_map(void);
 static void update_consensus_bootstrap_multiple_downloads(
                                                   time_t now,
-                                                  const or_options_t *options,
-                                                  int we_are_bootstrapping);
+                                                  const or_options_t *options);
 
 /** Forget that we've warned about anything networkstatus-related, so we will
  * give fresh warnings if the same behavior happens again. */
@@ -869,8 +868,7 @@ update_consensus_networkstatus_downloads(time_t now)
         continue;
 
       /* Make multiple connections for a bootstrap consensus download. */
-      update_consensus_bootstrap_multiple_downloads(now, options,
-                                                    we_are_bootstrapping);
+      update_consensus_bootstrap_multiple_downloads(now, options);
     } else {
       /* Check if we failed downloading a consensus too recently */
       int max_dl_tries = consensus_max_download_tries(options,
@@ -909,12 +907,10 @@ static void
 update_consensus_bootstrap_attempt_downloads(
                                       time_t now,
                                       const or_options_t *options,
-                                      int we_are_bootstrapping,
                                       download_status_t *dls,
                                       download_want_authority_t want_authority)
 {
-  int max_dl_tries = consensus_max_download_tries(options,
-                                                  we_are_bootstrapping);
+  int max_dl_tries = consensus_max_download_tries(options, 1);
   const char *resource = networkstatus_get_flavor_name(
                                                   usable_consensus_flavor());
 
@@ -947,19 +943,12 @@ update_consensus_bootstrap_attempt_downloads(
  */
 static void
 update_consensus_bootstrap_multiple_downloads(time_t now,
-                                              const or_options_t *options,
-                                              int we_are_bootstrapping)
+                                              const or_options_t *options)
 {
   const int usable_flavor = usable_consensus_flavor();
 
   /* make sure we can use multiple connections */
   if (!networkstatus_consensus_can_use_multiple_directories(options)) {
-    return;
-  }
-
-  /* If we've managed to validate a usable consensus, don't make additional
-   * connections. */
-  if (!we_are_bootstrapping) {
     return;
   }
 
@@ -981,8 +970,7 @@ update_consensus_bootstrap_multiple_downloads(time_t now,
 
     if (!check_consensus_waiting_for_certs(usable_flavor, now, dls_f)) {
       /* During bootstrap, DL_WANT_ANY_DIRSERVER means "use fallbacks". */
-      update_consensus_bootstrap_attempt_downloads(now, options,
-                                                   we_are_bootstrapping, dls_f,
+      update_consensus_bootstrap_attempt_downloads(now, options, dls_f,
                                                    DL_WANT_ANY_DIRSERVER);
     }
   }
@@ -992,8 +980,7 @@ update_consensus_bootstrap_multiple_downloads(time_t now,
     &consensus_bootstrap_dl_status[CONSENSUS_BOOTSTRAP_SOURCE_AUTHORITY];
 
   if (!check_consensus_waiting_for_certs(usable_flavor, now, dls_a)) {
-    update_consensus_bootstrap_attempt_downloads(now, options,
-                                                 we_are_bootstrapping, dls_a,
+    update_consensus_bootstrap_attempt_downloads(now, options, dls_a,
                                                  DL_WANT_AUTHORITY);
   }
 }
