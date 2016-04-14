@@ -871,8 +871,7 @@ update_consensus_networkstatus_downloads(time_t now)
       update_consensus_bootstrap_multiple_downloads(now, options);
     } else {
       /* Check if we failed downloading a consensus too recently */
-      int max_dl_tries = consensus_max_download_tries(options,
-                                                      we_are_bootstrapping);
+      int max_dl_tries = consensus_max_download_tries(options, 0);
 
       /* Let's make sure we remembered to update consensus_dl_status */
       tor_assert(consensus_dl_status[i].schedule == DL_SCHED_CONSENSUS);
