@@ -64,7 +64,7 @@
 #define tor_assert_nonfatal_unreached_once() tor_assert(0)
 #define tor_assert_nonfatal_once(cond) tor_assert((cond))
 #define BUG(cond)                                                       \
-  ((cond) ?                                                             \
+  (PREDICT_UNLIKELY(cond) ?                                             \
    (tor_assertion_failed_(SHORT_FILE__,__LINE__,__func__,#cond), abort(), 1) \
    : 0)
 #elif defined(TOR_UNIT_TESTS) && defined(DISABLE_ASSERTS_IN_UNIT_TESTS)
@@ -72,7 +72,7 @@
 #define tor_assert_nonfatal(cond) ((void)(cond))
 #define tor_assert_nonfatal_unreached_once() STMT_NIL
 #define tor_assert_nonfatal_once(cond) ((void)(cond))
-#define BUG(cond) ((cond) ? 1 : 0)
+#define BUG(cond) (PREDICT_UNLIKELY(cond) ? 1 : 0)
 #else /* Normal case, !ALL_BUGS_ARE_FATAL, !DISABLE_ASSERTS_IN_UNIT_TESTS */
 #define tor_assert_nonfatal_unreached() STMT_BEGIN                      \
   tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__, NULL, 0);         \
@@ -97,7 +97,7 @@
   }                                                                     \
   STMT_END
 #define BUG(cond)                                                       \
-  ((cond) ?                                                             \
+  (PREDICT_UNLIKELY(cond) ?                                             \
    (tor_bug_occurred_(SHORT_FILE__,__LINE__,__func__,#cond,0), 1)       \
    : 0)
 #endif
@@ -107,15 +107,15 @@
   if (({                                                                \
       static int var = 0;                                               \
       int bool_result = (cond);                                         \
-      if (bool_result && !var) {                                        \
+      if (PREDICT_UNLIKELY(bool_result) && !var) {                      \
         var = 1;                                                        \
         tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__, #cond, 1);  \
       }                                                                 \
-      var; }))
+      PREDICT_UNLIKELY(bool_result); }))
 #else
 #define IF_BUG_ONCE__(cond,var)                                         \
   static int var = 0;                                                   \
-  if ((cond) ?                                                          \
+  if (PREDICT_UNLIKELY(cond)) ?                                         \
       (var ? 1 :                                                        \
        (var=1,                                                          \
         tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__, #cond, 1),  \
