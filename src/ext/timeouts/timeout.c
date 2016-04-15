@@ -300,7 +300,7 @@ TIMEOUT_PUBLIC void timeouts_del(struct timeouts *T, struct timeout *to) {
 
 		if (to->pending != &T->expired && TAILQ_EMPTY(to->pending)) {
 			ptrdiff_t index = to->pending - &T->wheel[0][0];
-			int wheel = index / WHEEL_LEN;
+			int wheel = (int) (index / WHEEL_LEN);
 			int slot = index % WHEEL_LEN;
 
 			T->pending[wheel] &= ~(WHEEL_C(1) << slot);
@@ -435,7 +435,7 @@ TIMEOUT_PUBLIC void timeouts_update(struct timeouts *T, abstime_t curtime) {
 			pending = rotl(((UINT64_C(1) << _elapsed) - 1), oslot);
 
 			nslot = WHEEL_MASK & (curtime >> (wheel * WHEEL_BIT));
-			pending |= rotr(rotl(((WHEEL_C(1) << _elapsed) - 1), nslot), _elapsed);
+			pending |= rotr(rotl(((WHEEL_C(1) << _elapsed) - 1), nslot), (int)_elapsed);
 			pending |= WHEEL_C(1) << nslot;
 		}
 
