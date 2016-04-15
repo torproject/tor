@@ -806,48 +806,48 @@ class Candidate(object):
           ipv6 address and port (if present)
         If the fallback has an ipv6 key, the whitelist line must also have
         it, and vice versa, otherwise they don't match. """
+    ipv6 = None
+    if self.has_ipv6():
+      ipv6 = '%s:%d'%(self.ipv6addr, self.ipv6orport)
     for entry in relaylist:
-      if  entry['id'] != self._fpr:
-        # can't log here, every relay's fingerprint is compared to the entry
+      if entry['id'] != self._fpr:
+        # can't log here unless we match an IP and port, because every relay's
+        # fingerprint is compared to every entry's fingerprint
+        if entry['ipv4'] == self.dirip and int(entry['orport']) == self.orport:
+          logging.warning('%s excluded: has OR %s:%d changed fingerprint to ' +
+                          '%s?', entry['id'], self.dirip, self.orport,
+                          self._fpr)
+        if self.has_ipv6() and entry.has_key('ipv6') and entry['ipv6'] == ipv6:
+          logging.warning('%s excluded: has OR %s changed fingerprint to ' +
+                          '%s?', entry['id'], ipv6, self._fpr)
         continue
       if entry['ipv4'] != self.dirip:
-        logging.info('%s is not in the whitelist: fingerprint matches, but ' +
-                     'IPv4 (%s) does not match entry IPv4 (%s)',
-                     self._fpr, self.dirip, entry['ipv4'])
+        logging.warning('%s excluded: has it changed IPv4 from %s to %s?',
+                        self._fpr, entry['ipv4'], self.dirip)
         continue
       if int(entry['dirport']) != self.dirport:
-        logging.info('%s is not in the whitelist: fingerprint matches, but ' +
-                     'DirPort (%d) does not match entry DirPort (%d)',
-                     self._fpr, self.dirport, int(entry['dirport']))
+        logging.warning('%s excluded: has it changed DirPort from %s:%d to ' +
+                        '%s:%d?', self._fpr, self.dirip, int(entry['dirport']),
+                        self.dirip, self.dirport)
         continue
       if int(entry['orport']) != self.orport:
-        logging.info('%s is not in the whitelist: fingerprint matches, but ' +
-                     'ORPort (%d) does not match entry ORPort (%d)',
-                     self._fpr, self.orport, int(entry['orport']))
+        logging.warning('%s excluded: has it changed ORPort from %s:%d to ' +
+                        '%s:%d?', self._fpr, self.dirip, int(entry['orport']),
+                        self.dirip, self.orport)
         continue
-      ipv6 = None
-      if self.has_ipv6():
-        ipv6 = '%s:%d'%(self.ipv6addr, self.ipv6orport)
       if entry.has_key('ipv6') and self.has_ipv6():
         # if both entry and fallback have an ipv6 address, compare them
         if entry['ipv6'] != ipv6:
-          logging.info('%s is not in the whitelist: fingerprint matches, ' +
-                       'but IPv6 (%s) does not match entry IPv6 (%s)',
-                       self._fpr, ipv6, entry['ipv6'])
+          logging.warning('%s excluded: has it changed IPv6 ORPort from %s ' +
+                          'to %s?', self._fpr, entry['ipv6'], ipv6)
           continue
       # if the fallback has an IPv6 address but the whitelist entry
       # doesn't, or vice versa, the whitelist entry doesn't match
       elif entry.has_key('ipv6') and not self.has_ipv6():
-        logging.info('%s is not in the whitelist: fingerprint matches, but ' +
-                     'it has no IPv6, and entry has IPv6 (%s)', self._fpr,
-                     entry['ipv6'])
         logging.warning('%s excluded: has it lost its former IPv6 address %s?',
                         self._fpr, entry['ipv6'])
         continue
       elif not entry.has_key('ipv6') and self.has_ipv6():
-        logging.info('%s is not in the whitelist: fingerprint matches, but ' +
-                     'it has IPv6 (%s), and entry has no IPv6', self._fpr,
-                     ipv6)
         logging.warning('%s excluded: has it gained an IPv6 address %s?',
                         self._fpr, ipv6)
         continue

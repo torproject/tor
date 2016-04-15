@@ -1,8 +1,9 @@
   o Minor enhancements (fallback directory mirrors):
     - Give each fallback the same weight for client selection.
       Restrict fallbacks to one per operator.
+      Report fallback directory detail changes when rebuilding list.
       Add new fallback directory mirrors to the whitelist.
       Update fallback directories based on the latest OnionOO data.
       Many other minor simplifications and fixes.
-      Closes tasks 17158, 17905, 18749, and bug 18689 on
-      tor 0.2.8.1-alpha; patch by "teor".
+      Closes tasks 17158, 17905, 18749, bug 18689, and fixes part of
+      bug 18812 on tor 0.2.8.1-alpha; patch by "teor".
