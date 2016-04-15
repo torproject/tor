@@ -107,7 +107,7 @@ chunk_repack(chunk_t *chunk)
 /** Keep track of total size of allocated chunks for consistency asserts */
 static size_t total_bytes_allocated_in_chunks = 0;
 static void
-chunk_free_unchecked(chunk_t *chunk)
+buf_chunk_free_unchecked(chunk_t *chunk)
 {
   if (!chunk)
     return;
@@ -228,7 +228,7 @@ buf_pullup(buf_t *buf, size_t bytes)
       dest->next = src->next;
       if (buf->tail == src)
         buf->tail = dest;
-      chunk_free_unchecked(src);
+      buf_chunk_free_unchecked(src);
     } else {
       memcpy(CHUNK_WRITE_PTR(dest), src->data, n);
       dest->datalen += n;
@@ -274,7 +274,7 @@ buf_remove_from_front(buf_t *buf, size_t n)
       buf->head = victim->next;
       if (buf->tail == victim)
         buf->tail = NULL;
-      chunk_free_unchecked(victim);
+      buf_chunk_free_unchecked(victim);
     }
   }
   check();
@@ -314,7 +314,7 @@ buf_clear(buf_t *buf)
   buf->datalen = 0;
   for (chunk = buf->head; chunk; chunk = next) {
     next = chunk->next;
-    chunk_free_unchecked(chunk);
+    buf_chunk_free_unchecked(chunk);
   }
   buf->head = buf->tail = NULL;
 }
