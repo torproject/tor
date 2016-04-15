@@ -186,14 +186,16 @@ libevent_timer_callback(evutil_socket_t fd, short what, void *arg)
 void
 timers_initialize(void)
 {
-  if (global_timeouts)
-    return;
+  if (BUG(global_timeouts))
+    return; // LCOV_EXCL_LINE
 
   timeout_error_t err;
   global_timeouts = timeouts_open(0, &err);
   if (!global_timeouts) {
+    // LCOV_EXCL_START -- this can only fail on malloc failure.
     log_err(LD_BUG, "Unable to open timer backend: %s", strerror(err));
     tor_assert(0);
+    // LCOV_EXCL_STOP
   }
 
   struct event *timer_event;
