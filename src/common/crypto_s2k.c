@@ -57,7 +57,8 @@
 #define SCRYPT_KEY_LEN 32
 
 /** Given an algorithm ID (one of S2K_TYPE_*), return the length of the
- * specifier part of it, without the prefix type byte. */
+ * specifier part of it, without the prefix type byte.  Return -1 if it is not
+ * a valid algorithm ID. */
 static int
 secret_to_key_spec_len(uint8_t type)
 {
@@ -86,7 +87,8 @@ secret_to_key_key_len(uint8_t type)
     case S2K_TYPE_SCRYPT:
       return DIGEST256_LEN;
     default:
-      return -1;
+      tor_fragile_assert(); // LCOV_EXCL_LINE
+      return -1;            // LCOV_EXCL_LINE
   }
 }
 
