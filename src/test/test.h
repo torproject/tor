@@ -73,7 +73,7 @@
     {print_ = (I64_PRINTF_TYPE) value_;}, {}, TT_EXIT_TEST_FUNCTION)
 
 const char *get_fname(const char *name);
-crypto_pk_t *pk_generate(int idx);
+struct crypto_pk_t *pk_generate(int idx);
 
 #define US2_CONCAT_2__(a, b) a ## __ ## b
 #define US_CONCAT_2__(a, b) a ## _ ## b
