@@ -1131,8 +1131,11 @@ directory_caches_unknown_auth_certs(const or_options_t *options)
   return dir_server_mode(options) || options->BridgeRelay;
 }
 
-/** Return 1 if we want to keep descriptors, networkstatuses, etc around
- * and we're willing to serve them to others. Else return 0.
+/** Return 1 if we want to keep descriptors, networkstatuses, etc around.
+ * Else return 0.
+ * Check get_options()->DirPort_set and directory_permits_begindir_requests()
+ * to see if we are willing to serve these directory documents to others via
+ * the DirPort and begindir over ORPort, respectively.
  */
 int
 directory_caches_dir_info(const or_options_t *options)

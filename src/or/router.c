@@ -1148,10 +1148,11 @@ router_should_be_directory_server(const or_options_t *options, int dir_port)
                        "seconds long. Raising to 1.");
       interval_length = 1;
     }
-    log_info(LD_GENERAL, "Calculating whether to disable dirport: effective "
+    log_info(LD_GENERAL, "Calculating whether to advertise %s: effective "
                          "bwrate: %u, AccountingMax: "U64_FORMAT", "
-                         "accounting interval length %d", effective_bw,
-                         U64_PRINTF_ARG(options->AccountingMax),
+                         "accounting interval length %d",
+                         dir_port ? "dirport" : "begindir",
+                         effective_bw, U64_PRINTF_ARG(options->AccountingMax),
                          interval_length);
 
     acc_bytes = options->AccountingMax;
@@ -1218,6 +1219,7 @@ decide_to_advertise_dirport(const or_options_t *options, uint16_t dir_port)
     return dir_port;
   if (net_is_disabled())
     return 0;
+  /* redundant - if DirPort is unreachable, we don't publish a descriptor */
   if (!check_whether_dirport_reachable())
     return 0;
   if (!router_get_advertised_dir_port(options, dir_port))
@@ -1227,6 +1229,39 @@ decide_to_advertise_dirport(const or_options_t *options, uint16_t dir_port)
    * might find surprising. router_should_be_directory_server()
    * considers config options that make us choose not to publish. */
   return router_should_be_directory_server(options, dir_port) ? dir_port : 0;
+}
+
+/** Look at a variety of factors, and return 0 if we don't want to
+ * advertise the fact that we support begindir requests, else return 1.
+ *
+ * Log a helpful message if we change our mind about whether to advertise
+ * support for begindir.
+ */
+static int
+decide_to_advertise_begindir(const or_options_t *options,
+                             int supports_tunnelled_dir_requests)
+{
+  /* Part one: reasons to publish or not publish that aren't
+   * worth mentioning to the user, either because they're obvious
+   * or because they're normal behavior. */
+
+  /* short circuit the rest of the function */
+  if (!supports_tunnelled_dir_requests)
+    return 0;
+  if (authdir_mode(options)) /* always publish */
+    return 1;
+  if (net_is_disabled())
+    return 0;
+  /* redundant - if ORPort is unreachable, we don't publish a descriptor */
+  if (!check_whether_orport_reachable())
+    return 0;
+  if (!router_get_advertised_or_port(options))
+    return 0;
+
+  /* Part two: reasons to publish or not publish that the user
+   * might find surprising. router_should_be_directory_server()
+   * considers config options that make us choose not to publish. */
+  return router_should_be_directory_server(options, 0);
 }
 
 /** Allocate and return a new extend_info_t that can be used to build
@@ -1924,8 +1959,8 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
   ri->addr = addr;
   ri->or_port = router_get_advertised_or_port(options);
   ri->dir_port = router_get_advertised_dir_port(options, 0);
-  ri->supports_tunnelled_dir_requests = dir_server_mode(options) &&
-    router_should_be_directory_server(options, ri->dir_port);
+  ri->supports_tunnelled_dir_requests =
+    directory_permits_begindir_requests(options);
   ri->cache_info.published_on = time(NULL);
   ri->onion_pkey = crypto_pk_dup_key(get_onion_key()); /* must invoke from
                                                         * main thread */
@@ -2706,7 +2741,8 @@ router_dump_router_to_string(routerinfo_t *router,
     tor_free(p6);
   }
 
-  if (router->supports_tunnelled_dir_requests) {
+  if (decide_to_advertise_begindir(options,
+                                   router->supports_tunnelled_dir_requests)) {
     smartlist_add(chunks, tor_strdup("tunnelled-dir-server\n"));
   }
 
