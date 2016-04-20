@@ -74,7 +74,6 @@ LIBOR_A_SOURCES = \
   src/common/sandbox.c					\
   src/common/workqueue.c				\
   src/ext/csiphash.c					\
-  src/ext/trunnel/trunnel.c				\
   $(libor_extra_source)					\
   $(threads_impl_source)				\
   $(readpassphrase_source)
@@ -90,7 +89,6 @@ LIBOR_CRYPTO_A_SOURCES = \
   src/common/crypto_format.c	\
   src/common/torgzip.c		\
   src/common/tortls.c		\
-  src/trunnel/pwbox.c		\
   src/common/crypto_curve25519.c \
   src/common/crypto_ed25519.c
 
