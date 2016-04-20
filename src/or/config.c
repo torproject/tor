@@ -4343,8 +4343,10 @@ options_transition_affects_descriptor(const or_options_t *old_options,
       !opt_streq(old_options->MyFamily, new_options->MyFamily) ||
       !opt_streq(old_options->AccountingStart, new_options->AccountingStart) ||
       old_options->AccountingMax != new_options->AccountingMax ||
+      old_options->AccountingRule != new_options->AccountingRule ||
       public_server_mode(old_options) != public_server_mode(new_options) ||
-      old_options->DirCache != new_options->DirCache)
+      old_options->DirCache != new_options->DirCache ||
+      old_options->AssumeReachable != new_options->AssumeReachable)
     return 1;
 
   return 0;
