@@ -83,7 +83,7 @@ main(int argc, char **argv)
 
   event_base_loop(tor_libevent_get_base(), 0);
 
-  uint64_t total_difference = 0;
+  int64_t total_difference = 0;
   uint64_t total_square_difference = 0;
   tor_assert(n_fired == n_active_timers);
   for (i = 0; i < N_TIMERS; ++i) {
@@ -92,11 +92,11 @@ main(int argc, char **argv)
       continue;
     }
     tor_assert(fired[i] == 1);
-    uint64_t diff = difference[i].tv_usec + difference[i].tv_sec * 1000000;
+    int64_t diff = difference[i].tv_usec + difference[i].tv_sec * 1000000;
     total_difference += diff;
     total_square_difference += diff*diff;
   }
-  const uint64_t mean_diff = total_difference / n_active_timers;
+  const int64_t mean_diff = total_difference / n_active_timers;
   printf("mean difference: "U64_FORMAT" usec\n",
          U64_PRINTF_ARG(mean_diff));
 
@@ -105,11 +105,16 @@ main(int argc, char **argv)
   const double stddev = sqrt(mean_sq - sq_mean);
   printf("standard deviation: %lf usec\n", stddev);
 
-  if (mean_diff > 500*1000 || stddev > 500*1000) {
+#define MAX_DIFF_USEC (500*1000)
+#define MAX_STDDEV_USEC (500*1000)
+#define ODD_DIFF_USEC (2000)
+#define ODD_STDDEV_USEC (2000)
+
+  if (mean_diff < 0 || mean_diff > MAX_DIFF_USEC || stddev > MAX_STDDEV_USEC) {
     printf("Either your system is under ridiculous load, or the "
            "timer backend is broken.\n");
     ret = 1;
-  } else if (mean_diff > 2000 || stddev > 2000) {
+  } else if (mean_diff > ODD_DIFF_USEC || stddev > ODD_STDDEV_USEC) {
     printf("Either your system is a bit slow or the "
            "timer backend is odd.\n");
     ret = 0;
