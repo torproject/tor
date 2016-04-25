@@ -47,10 +47,6 @@
 #include "routerset.h"
 #include "crypto.h"
 
-#ifndef MIN
-#define MIN(a,b) ((a)<(b)?(a):(b))
-#endif
-
 static channel_t * channel_connect_for_circuit(const tor_addr_t *addr,
                                                uint16_t port,
                                                const char *id_digest);

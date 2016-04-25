@@ -2384,8 +2384,6 @@ tor_check_dh_key(int severity, BIGNUM *bn)
   return -1;
 }
 
-#undef MIN
-#define MIN(a,b) ((a)<(b)?(a):(b))
 /** Given a DH key exchange object, and our peer's value of g^y (as a
  * <b>pubkey_len</b>-byte value in <b>pubkey</b>) generate
  * <b>secret_bytes_out</b> bytes of shared key material and write them

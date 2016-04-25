@@ -1,0 +1,2 @@
+  o Code simplification and refactoring:
+    - Remove redundant declarations of the MIN macro. Closes ticket 18889.

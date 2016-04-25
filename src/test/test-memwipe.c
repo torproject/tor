@@ -6,9 +6,6 @@
 #include "crypto.h"
 #include "compat.h"
 
-#undef MIN
-#define MIN(a,b) ( ((a)<(b)) ? (a) : (b) )
-
 static unsigned fill_a_buffer_memset(void) __attribute__((noinline));
 static unsigned fill_a_buffer_memwipe(void) __attribute__((noinline));
 static unsigned fill_a_buffer_nothing(void) __attribute__((noinline));
