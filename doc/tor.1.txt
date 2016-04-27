@@ -961,12 +961,12 @@ The following options are useful only for clients (that is, if
     When a request for address arrives to Tor, it will transform to newaddress
     before processing it. For example, if you always want connections to
     www.example.com to exit via __torserver__ (where __torserver__ is the
-    nickname of the server), use "MapAddress www.example.com
+    fingerprint of the server), use "MapAddress www.example.com
     www.example.com.torserver.exit". If the value is prefixed with a
     "\*.", matches an entire domain. For example, if you
     always want connections to example.com and any if its subdomains
     to exit via
-    __torserver__ (where __torserver__ is the nickname of the server), use
+    __torserver__ (where __torserver__ is the fingerprint of the server), use
     "MapAddress \*.example.com \*.example.com.torserver.exit". (Note the
     leading "*." in each part of the directive.) You can also redirect all
     subdomains of a domain to a single address. For example, "MapAddress

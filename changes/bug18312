@@ -1,0 +1,4 @@
+  o Documentation:
+    - Stop recommending use of nicknames to identify relays in our
+      MapAddress documentation. Closes ticket 18312.
+
