@@ -67,7 +67,7 @@ typedef struct cert_list_t cert_list_t;
 /* static function prototypes */
 static int compute_weighted_bandwidths(const smartlist_t *sl,
                                        bandwidth_weight_rule_t rule,
-                                       u64_dbl_t **bandwidths_out);
+                                       double **bandwidths_out);
 static const routerstatus_t *router_pick_trusteddirserver_impl(
                 const smartlist_t *sourcelist, dirinfo_type_t auth,
                 int flags, int *n_busy_out);
@@ -1799,20 +1799,23 @@ dirserver_choose_by_weight(const smartlist_t *servers, double authority_weight)
 {
   int n = smartlist_len(servers);
   int i;
-  u64_dbl_t *weights;
+  double *weights_dbl;
+  uint64_t *weights_u64;
   const dir_server_t *ds;
 
-  weights = tor_calloc(n, sizeof(u64_dbl_t));
+  weights_dbl = tor_calloc(n, sizeof(double));
+  weights_u64 = tor_calloc(n, sizeof(uint64_t));
   for (i = 0; i < n; ++i) {
     ds = smartlist_get(servers, i);
-    weights[i].dbl = ds->weight;
+    weights_dbl[i] = ds->weight;
     if (ds->is_authority)
-      weights[i].dbl *= authority_weight;
+      weights_dbl[i] *= authority_weight;
   }
 
-  scale_array_elements_to_u64(weights, n, NULL);
-  i = choose_array_element_by_weight(weights, n);
-  tor_free(weights);
+  scale_array_elements_to_u64(weights_u64, weights_dbl, n, NULL);
+  i = choose_array_element_by_weight(weights_u64, n);
+  tor_free(weights_dbl);
+  tor_free(weights_u64);
   return (i < 0) ? NULL : smartlist_get(servers, i);
 }
 
@@ -2075,7 +2078,8 @@ router_get_advertised_bandwidth_capped(const routerinfo_t *router)
  * much of the range of uint64_t. If <b>total_out</b> is provided, set it to
  * the sum of all elements in the array _before_ scaling. */
 STATIC void
-scale_array_elements_to_u64(u64_dbl_t *entries, int n_entries,
+scale_array_elements_to_u64(uint64_t *entries_out, const double *entries_in,
+                            int n_entries,
                             uint64_t *total_out)
 {
   double total = 0.0;
@@ -2085,13 +2089,13 @@ scale_array_elements_to_u64(u64_dbl_t *entries, int n_entries,
 #define SCALE_TO_U64_MAX ((int64_t) (INT64_MAX / 4))
 
   for (i = 0; i < n_entries; ++i)
-    total += entries[i].dbl;
+    total += entries_in[i];
 
   if (total > 0.0)
     scale_factor = SCALE_TO_U64_MAX / total;
 
   for (i = 0; i < n_entries; ++i)
-    entries[i].u64 = tor_llround(entries[i].dbl * scale_factor);
+    entries_out[i] = tor_llround(entries_in[i] * scale_factor);
 
   if (total_out)
     *total_out = (uint64_t) total;
@@ -2119,7 +2123,7 @@ gt_i64_timei(uint64_t a, uint64_t b)
  * an index at random. Return -1 on error.
  */
 STATIC int
-choose_array_element_by_weight(const u64_dbl_t *entries, int n_entries)
+choose_array_element_by_weight(const uint64_t *entries, int n_entries)
 {
   int i, i_chosen=-1, n_chosen=0;
   uint64_t total_so_far = 0;
@@ -2127,7 +2131,7 @@ choose_array_element_by_weight(const u64_dbl_t *entries, int n_entries)
   uint64_t total = 0;
 
   for (i = 0; i < n_entries; ++i)
-    total += entries[i].u64;
+    total += entries[i];
 
   if (n_entries < 1)
     return -1;
@@ -2140,7 +2144,7 @@ choose_array_element_by_weight(const u64_dbl_t *entries, int n_entries)
   rand_val = crypto_rand_uint64(total);
 
   for (i = 0; i < n_entries; ++i) {
-    total_so_far += entries[i].u64;
+    total_so_far += entries[i];
     if (gt_i64_timei(total_so_far, rand_val)) {
       i_chosen = i;
       n_chosen++;
@@ -2206,17 +2210,21 @@ static const node_t *
 smartlist_choose_node_by_bandwidth_weights(const smartlist_t *sl,
                                            bandwidth_weight_rule_t rule)
 {
-  u64_dbl_t *bandwidths=NULL;
+  double *bandwidths_dbl=NULL;
+  uint64_t *bandwidths_u64=NULL;
 
-  if (compute_weighted_bandwidths(sl, rule, &bandwidths) < 0)
+  if (compute_weighted_bandwidths(sl, rule, &bandwidths_dbl) < 0)
     return NULL;
 
-  scale_array_elements_to_u64(bandwidths, smartlist_len(sl), NULL);
+  bandwidths_u64 = tor_calloc(smartlist_len(sl), sizeof(uint64_t));
+  scale_array_elements_to_u64(bandwidths_u64, bandwidths_dbl,
+                              smartlist_len(sl), NULL);
 
   {
-    int idx = choose_array_element_by_weight(bandwidths,
+    int idx = choose_array_element_by_weight(bandwidths_u64,
                                              smartlist_len(sl));
-    tor_free(bandwidths);
+    tor_free(bandwidths_dbl);
+    tor_free(bandwidths_u64);
     return idx < 0 ? NULL : smartlist_get(sl, idx);
   }
 }
@@ -2229,14 +2237,14 @@ smartlist_choose_node_by_bandwidth_weights(const smartlist_t *sl,
 static int
 compute_weighted_bandwidths(const smartlist_t *sl,
                             bandwidth_weight_rule_t rule,
-                            u64_dbl_t **bandwidths_out)
+                            double **bandwidths_out)
 {
   int64_t weight_scale;
   double Wg = -1, Wm = -1, We = -1, Wd = -1;
   double Wgb = -1, Wmb = -1, Web = -1, Wdb = -1;
   uint64_t weighted_bw = 0;
   guardfraction_bandwidth_t guardfraction_bw;
-  u64_dbl_t *bandwidths;
+  double *bandwidths;
 
   /* Can't choose exit and guard at same time */
   tor_assert(rule == NO_WEIGHTING ||
@@ -2318,7 +2326,7 @@ compute_weighted_bandwidths(const smartlist_t *sl,
   Web /= weight_scale;
   Wdb /= weight_scale;
 
-  bandwidths = tor_calloc(smartlist_len(sl), sizeof(u64_dbl_t));
+  bandwidths = tor_calloc(smartlist_len(sl), sizeof(double));
 
   // Cycle through smartlist and total the bandwidth.
   static int warned_missing_bw = 0;
@@ -2405,7 +2413,7 @@ compute_weighted_bandwidths(const smartlist_t *sl,
       final_weight = weight*this_bw;
     }
 
-    bandwidths[node_sl_idx].dbl = final_weight + 0.5;
+    bandwidths[node_sl_idx] = final_weight + 0.5;
   } SMARTLIST_FOREACH_END(node);
 
   log_debug(LD_CIRC, "Generated weighted bandwidths for rule %s based "
@@ -2426,7 +2434,7 @@ double
 frac_nodes_with_descriptors(const smartlist_t *sl,
                             bandwidth_weight_rule_t rule)
 {
-  u64_dbl_t *bandwidths = NULL;
+  double *bandwidths = NULL;
   double total, present;
 
   if (smartlist_len(sl) == 0)
@@ -2443,7 +2451,7 @@ frac_nodes_with_descriptors(const smartlist_t *sl,
 
   total = present = 0.0;
   SMARTLIST_FOREACH_BEGIN(sl, const node_t *, node) {
-    const double bw = bandwidths[node_sl_idx].dbl;
+    const double bw = bandwidths[node_sl_idx];
     total += bw;
     if (node_has_descriptor(node))
       present += bw;
