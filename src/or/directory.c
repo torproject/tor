@@ -630,6 +630,7 @@ directory_choose_address_routerstatus(const routerstatus_t *status,
   tor_assert(use_or_ap != NULL);
   tor_assert(use_dir_ap != NULL);
 
+  const or_options_t *options = get_options();
   int have_or = 0, have_dir = 0;
 
   /* We expect status to have at least one reachable address if we're
@@ -671,10 +672,11 @@ directory_choose_address_routerstatus(const routerstatus_t *status,
   }
 
   /* DirPort connections
-   * DIRIND_ONEHOP uses ORPort, but may fall back to the DirPort */
+   * DIRIND_ONEHOP uses ORPort, but may fall back to the DirPort on relays */
   if (indirection == DIRIND_DIRECT_CONN ||
       indirection == DIRIND_ANON_DIRPORT ||
-      indirection == DIRIND_ONEHOP) {
+      (indirection == DIRIND_ONEHOP
+       && !directory_must_use_begindir(options))) {
     have_dir = fascist_firewall_choose_address_rs(status,
                                                   FIREWALL_DIR_CONNECTION, 0,
                                                   use_dir_ap);
