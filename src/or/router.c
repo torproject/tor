@@ -1079,24 +1079,51 @@ router_reset_reachability(void)
   can_reach_or_port = can_reach_dir_port = 0;
 }
 
-/** Return 1 if ORPort is known reachable; else return 0. */
+/**  Return 1 if we won't do reachability checks, because:
+ *   - AssumeReachable is set, or
+ *   - the network is disabled.
+ * Otherwise, return 0.
+ */
+static int
+router_reachability_checks_disabled(const or_options_t *options)
+{
+  return options->AssumeReachable ||
+         net_is_disabled();
+}
+
+/** Return 0 if we need to do an ORPort reachability check, because:
+ *   - no reachability check has been done yet, or
+ *   - we've initiated reachability checks, but none have succeeded.
+ *  Return 1 if we don't need to do an ORPort reachability check, because:
+ *   - we've seen a successful reachability check, or
+ *   - AssumeReachable is set, or
+ *   - the network is disabled.
+ */
 int
 check_whether_orport_reachable(void)
 {
   const or_options_t *options = get_options();
-  return options->AssumeReachable ||
-         net_is_disabled() ||
+  int reach_checks_disabled = router_reachability_checks_disabled(options);
+  return reach_checks_disabled ||
          can_reach_or_port;
 }
 
-/** Return 1 if we don't have a dirport configured, or if it's reachable. */
+/** Return 0 if we need to do a DirPort reachability check, because:
+ *   - no reachability check has been done yet, or
+ *   - we've initiated reachability checks, but none have succeeded.
+ *  Return 1 if we don't need to do a DirPort reachability check, because:
+ *   - we've seen a successful reachability check, or
+ *   - there is no DirPort set, or
+ *   - AssumeReachable is set, or
+ *   - the network is disabled.
+ */
 int
 check_whether_dirport_reachable(void)
 {
   const or_options_t *options = get_options();
-  return !options->DirPort_set ||
-         options->AssumeReachable ||
-         net_is_disabled() ||
+  int reach_checks_disabled = router_reachability_checks_disabled(options) ||
+                              !options->DirPort_set;
+  return reach_checks_disabled ||
          can_reach_dir_port;
 }
 
