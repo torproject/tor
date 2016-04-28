@@ -1,7 +1,8 @@
   o Major bugfixes (directory mirrors):
     - Fix broken DirPort self-checks. Decide to advertise begindir
       support the same way we decide to advertise DirPorts.
-      Include additional config options in the list that might
-      change the content of a relay's descriptor.
+      Add additional config options that might change the content of
+      a relay's descriptor.
+      Avoid checking ORPort reachability when the network is disabled.
       Resolves #18616, bugfix on 0c8e042c30946faa in #12538 in
       0.2.8.1-alpha. Patch by "teor".
