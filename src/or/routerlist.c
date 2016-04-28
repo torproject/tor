@@ -1689,6 +1689,7 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
 
   const int skip_or = router_skip_or_reachability(options, try_ip_pref);
   const int skip_dir = router_skip_dir_reachability(options, try_ip_pref);
+  const int must_have_or = directory_must_use_begindir(options);
 
   /* Find all the running dirservers we know about. */
   SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), const node_t *, node) {
@@ -1745,9 +1746,9 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
                                    try_ip_pref))
       smartlist_add(is_trusted ? trusted_tunnel :
                     is_overloaded ? overloaded_tunnel : tunnel, (void*)node);
-    else if (skip_dir ||
+    else if (!must_have_or && (skip_dir ||
              fascist_firewall_allows_rs(status, FIREWALL_DIR_CONNECTION,
-                                        try_ip_pref))
+                                        try_ip_pref)))
       smartlist_add(is_trusted ? trusted_direct :
                     is_overloaded ? overloaded_direct : direct, (void*)node);
     else if (!tor_addr_is_null(&status->ipv6_addr))
@@ -1853,6 +1854,7 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
 
   const int skip_or = router_skip_or_reachability(options, try_ip_pref);
   const int skip_dir = router_skip_dir_reachability(options, try_ip_pref);
+  const int must_have_or = directory_must_use_begindir(options);
 
   SMARTLIST_FOREACH_BEGIN(sourcelist, const dir_server_t *, d)
     {
@@ -1892,9 +1894,9 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
           fascist_firewall_allows_dir_server(d, FIREWALL_OR_CONNECTION,
                                              try_ip_pref))
         smartlist_add(is_overloaded ? overloaded_tunnel : tunnel, (void*)d);
-      else if (skip_dir ||
+      else if (!must_have_or && (skip_dir ||
                fascist_firewall_allows_dir_server(d, FIREWALL_DIR_CONNECTION,
-                                                  try_ip_pref))
+                                                  try_ip_pref)))
         smartlist_add(is_overloaded ? overloaded_direct : direct, (void*)d);
       else if (!tor_addr_is_null(&d->ipv6_addr))
         ++n_not_preferred;
