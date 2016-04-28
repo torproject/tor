@@ -1228,6 +1228,43 @@ dir_server_mode(const or_options_t *options)
 }
 
 /** Look at a variety of factors, and return 0 if we don't want to
+ * advertise the fact that we have a DirPort open or begindir support, else
+ * return 1.
+ *
+ * Where dir_port or supports_tunnelled_dir_requests are not relevant, they
+ * must be 0.
+ *
+ * Log a helpful message if we change our mind about whether to publish.
+ */
+static int
+decide_to_advertise_dir_impl(const or_options_t *options,
+                             uint16_t dir_port,
+                             int supports_tunnelled_dir_requests)
+{
+  /* Part one: reasons to publish or not publish that aren't
+   * worth mentioning to the user, either because they're obvious
+   * or because they're normal behavior. */
+
+  /* short circuit the rest of the function */
+  if (!dir_port && !supports_tunnelled_dir_requests)
+    return 0;
+  if (authdir_mode(options)) /* always publish */
+    return 1;
+  if (net_is_disabled())
+    return 0;
+  if (dir_port && !router_get_advertised_dir_port(options, dir_port))
+    return 0;
+  if (supports_tunnelled_dir_requests &&
+      !router_get_advertised_or_port(options))
+    return 0;
+
+  /* Part two: reasons to publish or not publish that the user
+   * might find surprising. router_should_be_directory_server()
+   * considers config options that make us choose not to publish. */
+  return router_should_be_directory_server(options, dir_port);
+}
+
+/** Look at a variety of factors, and return 0 if we don't want to
  * advertise the fact that we have a DirPort open, else return the
  * DirPort we want to advertise.
  *
@@ -1237,23 +1274,8 @@ dir_server_mode(const or_options_t *options)
 static int
 decide_to_advertise_dirport(const or_options_t *options, uint16_t dir_port)
 {
-  /* Part one: reasons to publish or not publish that aren't
-   * worth mentioning to the user, either because they're obvious
-   * or because they're normal behavior. */
-
-  if (!dir_port) /* short circuit the rest of the function */
-    return 0;
-  if (authdir_mode(options)) /* always publish */
-    return dir_port;
-  if (net_is_disabled())
-    return 0;
-  if (!router_get_advertised_dir_port(options, dir_port))
-    return 0;
-
-  /* Part two: reasons to publish or not publish that the user
-   * might find surprising. router_should_be_directory_server()
-   * considers config options that make us choose not to publish. */
-  return router_should_be_directory_server(options, dir_port) ? dir_port : 0;
+  /* supports_tunnelled_dir_requests is not relevant, pass 0 */
+  return decide_to_advertise_dir_impl(options, dir_port, 0) ? dir_port : 0;
 }
 
 /** Look at a variety of factors, and return 0 if we don't want to
@@ -1266,24 +1288,9 @@ static int
 decide_to_advertise_begindir(const or_options_t *options,
                              int supports_tunnelled_dir_requests)
 {
-  /* Part one: reasons to publish or not publish that aren't
-   * worth mentioning to the user, either because they're obvious
-   * or because they're normal behavior. */
-
-  /* short circuit the rest of the function */
-  if (!supports_tunnelled_dir_requests)
-    return 0;
-  if (authdir_mode(options)) /* always publish */
-    return 1;
-  if (net_is_disabled())
-    return 0;
-  if (!router_get_advertised_or_port(options))
-    return 0;
-
-  /* Part two: reasons to publish or not publish that the user
-   * might find surprising. router_should_be_directory_server()
-   * considers config options that make us choose not to publish. */
-  return router_should_be_directory_server(options, 0);
+  /* dir_port is not relevant, pass 0 */
+  return decide_to_advertise_dir_impl(options, 0,
+                                      supports_tunnelled_dir_requests);
 }
 
 /** Allocate and return a new extend_info_t that can be used to build
