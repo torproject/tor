@@ -1,0 +1,4 @@
+  o Minor features (clients):
+    - Make clients, onion services, and bridge relays always
+      use an encrypted begindir connection for directory requests.
+      Resolves #18483. Patch by "teor".
