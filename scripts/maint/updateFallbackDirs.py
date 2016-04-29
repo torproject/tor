@@ -219,8 +219,7 @@ def cleanse_unprintable(raw_string):
   # Remove all unprintable characters
   cleansed_string = ''
   for c in raw_string:
-    if (c in string.ascii_letters or c in string.digits
-        or c in string.punctuation or c in string.whitespace):
+    if c in string.printable:
       cleansed_string += c
   return cleansed_string
 
