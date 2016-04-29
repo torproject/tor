@@ -1,6 +1,13 @@
 #!/usr/bin/python
 
 # Usage: scripts/maint/updateFallbackDirs.py > src/or/fallback_dirs.inc
+#
+# This script should be run from a stable, reliable network connection,
+# with no other network activity (and not over tor).
+# If this is not possible, please disable:
+# PERFORM_IPV4_DIRPORT_CHECKS and PERFORM_IPV6_DIRPORT_CHECKS
+#
+# Needs dateutil (and potentially other python packages)
 # Needs stem available in your PYTHONPATH, or just ln -s ../stem/stem .
 # Optionally uses ipaddress (python 3 builtin) or py2-ipaddress (package)
 # for netblock analysis, in PYTHONPATH, or just
@@ -1061,7 +1068,7 @@ class Candidate(object):
     downloader = DescriptorDownloader()
     start = datetime.datetime.utcnow()
     # some directory mirrors respond to requests in ways that hang python
-    # sockets, which is why we long this line here
+    # sockets, which is why we log this line here
     logging.info('Initiating consensus download from %s (%s:%d).', nickname,
                  dirip, dirport)
     # there appears to be about 1 second of overhead when comparing stem's
