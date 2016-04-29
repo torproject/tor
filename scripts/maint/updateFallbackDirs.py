@@ -42,7 +42,7 @@ from stem.descriptor.remote import DescriptorDownloader
 
 import logging
 # INFO tells you why each relay was included or excluded
-# WARN tells you about potential misconfigurations
+# WARN tells you about potential misconfigurations and relay detail changes
 logging.basicConfig(level=logging.WARNING)
 logging.root.name = ''
 # INFO tells you about each consensus download attempt
@@ -58,7 +58,9 @@ try:
   HAVE_IPADDRESS = True
 except ImportError:
   # if this happens, we avoid doing netblock analysis
-  logging.warning('Unable to import ipaddress, please install py2-ipaddress')
+  logging.warning('Unable to import ipaddress, please install py2-ipaddress.' +
+                  ' A fallback list will be created, but optional netblock' +
+                  ' analysis will not be performed.')
 
 ## Top-Level Configuration
 
@@ -309,11 +311,11 @@ def write_to_file(str, file_name, max_len):
     with open(file_name, 'w') as f:
       f.write(str[0:max_len])
   except EnvironmentError, error:
-    logging.warning('Writing file %s failed: %d: %s'%
-                    (file_name,
-                     error.errno,
-                     error.strerror)
-                    )
+    logging.error('Writing file %s failed: %d: %s'%
+                  (file_name,
+                   error.errno,
+                   error.strerror)
+                  )
 
 def read_from_file(file_name, max_len):
   try:
@@ -679,8 +681,8 @@ class Candidate(object):
       this_ts = parse_ts(h['last'])
 
       if (len(h['values']) != h['count']):
-        logging.warn('Inconsistent value count in %s document for %s'
-                     %(p, which))
+        logging.warning('Inconsistent value count in %s document for %s'
+                        %(p, which))
       for v in reversed(h['values']):
         if (this_ts <= newest):
           agt1 = now - this_ts
@@ -698,8 +700,8 @@ class Candidate(object):
         this_ts -= interval
 
       if (this_ts + interval != parse_ts(h['first'])):
-        logging.warn('Inconsistent time information in %s document for %s'
-                     %(p, which))
+        logging.warning('Inconsistent time information in %s document for %s'
+                        %(p, which))
 
     #print json.dumps(generic_history, sort_keys=True,
     #                  indent=4, separators=(',', ': '))
@@ -999,10 +1001,10 @@ class Candidate(object):
     if a.version != b.version:
       raise Exception('Mismatching IP versions in %s and %s'%(ip_a, ip_b))
     if mask_bits > a.max_prefixlen:
-      logging.warning('Bad IP mask %d for %s and %s'%(mask_bits, ip_a, ip_b))
+      logging.error('Bad IP mask %d for %s and %s'%(mask_bits, ip_a, ip_b))
       mask_bits = a.max_prefixlen
     if mask_bits < 0:
-      logging.warning('Bad IP mask %d for %s and %s'%(mask_bits, ip_a, ip_b))
+      logging.error('Bad IP mask %d for %s and %s'%(mask_bits, ip_a, ip_b))
       mask_bits = 0
     a_net = ipaddress.ip_network('%s/%d'%(ip_a, mask_bits), strict=False)
     return b in a_net
@@ -1081,7 +1083,7 @@ class Candidate(object):
                                retries = 0,
                                fall_back_to_authority = False).run()
     except Exception, stem_error:
-      logging.debug('Unable to retrieve a consensus from %s: %s', nickname,
+      logging.info('Unable to retrieve a consensus from %s: %s', nickname,
                     stem_error)
       status = 'error: "%s"' % (stem_error)
       level = logging.WARNING
@@ -1384,7 +1386,7 @@ class CandidateList(dict):
       elif in_blacklist:
         # exclude
         excluded_count += 1
-        logging.debug('Excluding %s: in blacklist.', f._fpr)
+        logging.info('Excluding %s: in blacklist.', f._fpr)
       else:
         if INCLUDE_UNLISTED_ENTRIES:
           # include
@@ -1498,10 +1500,10 @@ class CandidateList(dict):
         if f.has_ipv6():
           ip_list.append(f.ipv6addr)
       elif not CandidateList.allow(f.dirip, ip_list):
-        logging.debug('Eliminated %s: already have fallback on IPv4 %s'%(
+        logging.info('Eliminated %s: already have fallback on IPv4 %s'%(
                                                           f._fpr, f.dirip))
       elif f.has_ipv6() and not CandidateList.allow(f.ipv6addr, ip_list):
-        logging.debug('Eliminated %s: already have fallback on IPv6 %s'%(
+        logging.info('Eliminated %s: already have fallback on IPv6 %s'%(
                                                           f._fpr, f.ipv6addr))
     original_count = len(self.fallbacks)
     self.fallbacks = ip_limit_fallbacks
@@ -1521,7 +1523,7 @@ class CandidateList(dict):
         contact_limit_fallbacks.append(f)
         contact_list.append(f._data['contact'])
       else:
-        logging.debug(('Eliminated %s: already have fallback on ' +
+        logging.info(('Eliminated %s: already have fallback on ' +
                        'ContactInfo %s')%(f._fpr, f._data['contact']))
     original_count = len(self.fallbacks)
     self.fallbacks = contact_limit_fallbacks
@@ -1544,7 +1546,7 @@ class CandidateList(dict):
       else:
         # technically, we already have a fallback with this fallback in its
         # effective family
-        logging.debug('Eliminated %s: already have fallback in effective ' +
+        logging.info('Eliminated %s: already have fallback in effective ' +
                       'family'%(f._fpr))
     original_count = len(self.fallbacks)
     self.fallbacks = family_limit_fallbacks
@@ -1884,6 +1886,8 @@ def list_fallbacks():
   """ Fetches required onionoo documents and evaluates the
       fallback directory criteria for each of the relays """
 
+  logging.warning('Downloading and parsing Onionoo data. ' +
+                  'This may take some time.')
   # find relays that could be fallbacks
   candidates = CandidateList()
   candidates.add_relays()
@@ -1938,6 +1942,9 @@ def list_fallbacks():
   # can serve a consensus, in favour of one that can't
   # but given it takes up to 15 seconds to check each consensus download,
   # the risk is worth it
+  if PERFORM_IPV4_DIRPORT_CHECKS or PERFORM_IPV6_DIRPORT_CHECKS:
+    logging.warning('Checking consensus download speeds. ' +
+                    'This may take some time.')
   failed_count = candidates.perform_download_consensus_checks(max_count)
 
   # analyse and log interesting diversity metrics
