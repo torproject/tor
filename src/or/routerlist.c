@@ -1740,13 +1740,13 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
      * we try routers that only have one address both times.)
      */
     if (!fascistfirewall || skip_or_fw ||
-        fascist_firewall_allows_rs(status, FIREWALL_OR_CONNECTION,
-                                   try_ip_pref))
+        fascist_firewall_allows_node(node, FIREWALL_OR_CONNECTION,
+                                     try_ip_pref))
       smartlist_add(is_trusted ? trusted_tunnel :
                     is_overloaded ? overloaded_tunnel : tunnel, (void*)node);
     else if (!must_have_or && (skip_dir_fw ||
-             fascist_firewall_allows_rs(status, FIREWALL_DIR_CONNECTION,
-                                        try_ip_pref)))
+             fascist_firewall_allows_node(node, FIREWALL_DIR_CONNECTION,
+                                          try_ip_pref)))
       smartlist_add(is_trusted ? trusted_direct :
                     is_overloaded ? overloaded_direct : direct, (void*)node);
   } SMARTLIST_FOREACH_END(node);
