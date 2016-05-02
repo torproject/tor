@@ -1,0 +1,5 @@
+  o Minor bugfixes (build):
+    - Make the test-stem and test-network targets depend only on the
+      tor binary to be tested. Previously, they depended on "make all".
+      Fixes bug 18240; bugfix on 0.2.8.2-alpha.
+      Based on a patch from "cypherpunks".
