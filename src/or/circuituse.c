@@ -1067,7 +1067,7 @@ circuit_predict_and_launch_new(void)
   if (rep_hist_get_predicted_internal(now, &hidserv_needs_uptime,
                                       &hidserv_needs_capacity) &&
       ((num_uptime_internal<2 && hidserv_needs_uptime) ||
-        num_internal<2)
+        num_internal<3)
         && router_have_consensus_path() != CONSENSUS_PATH_UNKNOWN) {
     if (hidserv_needs_uptime)
       flags |= CIRCLAUNCH_NEED_UPTIME;
