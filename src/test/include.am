@@ -170,9 +170,9 @@ src_test_test_slow_LDADD = $(src_test_test_LDADD)
 src_test_test_slow_LDFLAGS = $(src_test_test_LDFLAGS)
 
 src_test_test_memwipe_CPPFLAGS = $(src_test_test_CPPFLAGS)
-src_test_test_memwipe_CFLAGS = $(src_test_test_CFLAGS)
+src_test_test_memwipe_CFLAGS = $(TEST_CFLAGS)
 src_test_test_memwipe_LDADD = $(src_test_test_LDADD)
-src_test_test_memwipe_LDFLAGS = $(src_test_test_LDFLAGS)
+src_test_test_memwipe_LDFLAGS = $(src_test_test_LDFLAGS) @CFLAGS_BUGTRAP@
 
 src_test_bench_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
         @TOR_LDFLAGS_libevent@
