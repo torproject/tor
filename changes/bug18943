@@ -1,0 +1,6 @@
+  o Major bugfixes (crypto, portability):
+    - The SHA3 and SHAKE routines now produce the correct output on
+      Big Endian systems, unbreaking the unit tests.  No code calls
+      either algorithm family yet, so this is primarily a build fix.
+      Closes ticket 18943.
+
