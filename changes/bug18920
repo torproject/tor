@@ -1,0 +1,5 @@
+  o Minor bugfixes (controller, microdescriptors):
+    - Make GETINFO dir/status-vote/current/consensus conform to the control
+      specification by returning "551 Could not open cached consensus..."
+      when not caching consensuses.
+      Fixes bug 18920; bugfix on 0.2.2.6-alpha.
