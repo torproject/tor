@@ -170,7 +170,7 @@ make_specifier(uint8_t *spec_out, uint8_t type, unsigned flags)
       spec_out[SCRYPT_SPEC_LEN-1] = (3u << 4) | (1u << 0);
       break;
     default:
-      tor_fragile_assert();
+      tor_fragile_assert(); // LCOV_EXCL_LINE - we should have returned above.
       return S2K_BAD_ALGORITHM;
   }
 
