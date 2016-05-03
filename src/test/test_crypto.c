@@ -2487,6 +2487,54 @@ test_crypto_ed25519_fuzz_donna(void *arg)
 }
 
 static void
+test_crypto_ed25519_storage(void *arg)
+{
+  (void)arg;
+  ed25519_keypair_t *keypair = NULL;
+  ed25519_public_key_t pub;
+  ed25519_secret_key_t sec;
+  char *fname_1 = tor_strdup(get_fname("ed_seckey_1"));
+  char *fname_2 = tor_strdup(get_fname("ed_pubkey_2"));
+  char *contents = NULL;
+  char *tag = NULL;
+
+  keypair = tor_malloc_zero(sizeof(ed25519_keypair_t));
+  tt_int_op(0,OP_EQ,ed25519_keypair_generate(keypair, 0));
+  tt_int_op(0,OP_EQ,
+            ed25519_seckey_write_to_file(&keypair->seckey, fname_1, "foo"));
+  tt_int_op(0,OP_EQ,
+            ed25519_pubkey_write_to_file(&keypair->pubkey, fname_2, "bar"));
+
+  tt_int_op(-1, OP_EQ, ed25519_pubkey_read_from_file(&pub, &tag, fname_1));
+  tt_ptr_op(tag, OP_EQ, NULL);
+  tt_int_op(-1, OP_EQ, ed25519_seckey_read_from_file(&sec, &tag, fname_2));
+  tt_ptr_op(tag, OP_EQ, NULL);
+
+  tt_int_op(0, OP_EQ, ed25519_pubkey_read_from_file(&pub, &tag, fname_2));
+  tt_str_op(tag, OP_EQ, "bar");
+  tor_free(tag);
+  tt_int_op(0, OP_EQ, ed25519_seckey_read_from_file(&sec, &tag, fname_1));
+  tt_str_op(tag, OP_EQ, "foo");
+  tor_free(tag);
+
+  /* whitebox test: truncated keys. */
+  tt_int_op(0, ==, truncate(fname_1, 40));
+  tt_int_op(0, ==, truncate(fname_2, 40));
+  tt_int_op(-1, OP_EQ, ed25519_pubkey_read_from_file(&pub, &tag, fname_2));
+  tt_ptr_op(tag, OP_EQ, NULL);
+  tor_free(tag);
+  tt_int_op(-1, OP_EQ, ed25519_seckey_read_from_file(&sec, &tag, fname_1));
+  tt_ptr_op(tag, OP_EQ, NULL);
+
+ done:
+  tor_free(fname_1);
+  tor_free(fname_2);
+  tor_free(contents);
+  tor_free(tag);
+  ed25519_keypair_free(keypair);
+}
+
+static void
 test_crypto_siphash(void *arg)
 {
   /* From the reference implementation, taking
@@ -2738,6 +2786,7 @@ struct testcase_t crypto_tests[] = {
   ED25519_TEST(blinding, 0),
   ED25519_TEST(testvectors, 0),
   ED25519_TEST(fuzz_donna, TT_FORK),
+  { "ed25519_storage", test_crypto_ed25519_storage, 0, NULL, NULL },
   { "siphash", test_crypto_siphash, 0, NULL, NULL },
   { "failure_modes", test_crypto_failure_modes, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
