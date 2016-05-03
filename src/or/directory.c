@@ -30,6 +30,7 @@
 #include "routerlist.h"
 #include "routerparse.h"
 #include "routerset.h"
+#include "shared_random.h"
 
 #if defined(EXPORTMALLINFO) && defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
 #ifndef OPENBSD
@@ -2026,6 +2027,10 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     update_microdescs_from_networkstatus(now);
     update_microdesc_downloads(now);
     directory_info_has_arrived(now, 0, 0);
+    if (authdir_mode_v3(get_options())) {
+      sr_act_post_consensus(
+                   networkstatus_get_latest_consensus_by_flavor(FLAV_NS));
+    }
     log_info(LD_DIR, "Successfully loaded consensus.");
   }
 

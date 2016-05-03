@@ -1160,6 +1160,27 @@ sr_state_delete_commits(void)
   state_query(SR_STATE_ACTION_DEL_ALL, SR_STATE_OBJ_COMMIT, NULL, NULL);
 }
 
+/* Copy the reveal information from <b>commit</b> into <b>saved_commit</b>.
+ * This <b>saved_commit</b> MUST come from our current SR state. Once modified,
+ * the disk state is updated. */
+void
+sr_state_copy_reveal_info(sr_commit_t *saved_commit, const sr_commit_t *commit)
+{
+  tor_assert(saved_commit);
+  tor_assert(commit);
+
+  saved_commit->reveal_ts = commit->reveal_ts;
+  memcpy(saved_commit->random_number, commit->random_number,
+         sizeof(saved_commit->random_number));
+
+  strlcpy(saved_commit->encoded_reveal, commit->encoded_reveal,
+          sizeof(saved_commit->encoded_reveal));
+  state_query(SR_STATE_ACTION_SAVE, 0, NULL, NULL);
+  log_debug(LD_DIR, "SR: Reveal value learned %s (for commit %s) from %s",
+            saved_commit->encoded_reveal, saved_commit->encoded_commit,
+            saved_commit->rsa_identity_fpr);
+}
+
 /* Set the fresh SRV flag from our state. This doesn't need to trigger a
  * disk state synchronization so we directly change the state. */
 void
@@ -1200,6 +1221,14 @@ sr_state_save(void)
 {
   /* Query a SAVE action on our current state so it's synced and saved. */
   state_query(SR_STATE_ACTION_SAVE, 0, NULL, NULL);
+}
+
+/* Return 1 iff the state has been initialized that is it exists in memory.
+ * Return 0 otherwise. */
+int
+sr_state_is_initialized(void)
+{
+  return sr_state == NULL ? 0 : 1;
 }
 
 /* Initialize the disk and memory state.

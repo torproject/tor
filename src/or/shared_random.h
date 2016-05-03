@@ -101,6 +101,9 @@ typedef struct sr_commit_t {
 
 int sr_init(int save_to_disk);
 void sr_save_and_cleanup(void);
+void sr_act_post_consensus(const networkstatus_t *consensus);
+void sr_handle_received_commits(smartlist_t *commits,
+                                crypto_pk_t *voter_key);
 sr_commit_t *sr_parse_commit(const smartlist_t *args);
 sr_srv_t *sr_parse_srv(const smartlist_t *args);
 char *sr_get_string_for_vote(void);
@@ -125,8 +128,21 @@ STATIC int reveal_decode(const char *encoded, sr_commit_t *commit);
 
 STATIC int commit_has_reveal_value(const sr_commit_t *commit);
 
+STATIC int verify_commit_and_reveal(const sr_commit_t *commit);
+
 STATIC sr_srv_t *get_majority_srv_from_votes(const smartlist_t *votes,
                                              int current);
+
+STATIC void save_commit_to_state(sr_commit_t *commit);
+STATIC sr_srv_t *srv_dup(const sr_srv_t *orig);
+STATIC int commitments_are_the_same(const sr_commit_t *commit_one,
+                                    const sr_commit_t *commit_two);
+STATIC int commit_is_authoritative(const sr_commit_t *commit,
+                                   const char *voter_key);
+STATIC int should_keep_commit(const sr_commit_t *commit,
+                              const char *voter_key,
+                              sr_phase_t phase);
+STATIC void save_commit_during_reveal_phase(const sr_commit_t *commit);
 
 #endif /* SHARED_RANDOM_PRIVATE */
 

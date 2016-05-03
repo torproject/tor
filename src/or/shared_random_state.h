@@ -116,6 +116,7 @@ unsigned int sr_state_srv_is_fresh(void);
 void sr_state_set_fresh_srv(void);
 void sr_state_unset_fresh_srv(void);
 int sr_state_init(int save_to_disk, int read_from_disk);
+int sr_state_is_initialized(void);
 void sr_state_save(void);
 void sr_state_free(void);
 
