@@ -2269,10 +2269,13 @@ crypto_dh_new(int dh_type)
 
   return res;
  err:
+  /* LCOV_EXCL_START
+   * This error condition is only reached when an allocation fails */
   crypto_log_errors(LOG_WARN, "creating DH object");
   if (res->dh) DH_free(res->dh); /* frees p and g too */
   tor_free(res);
   return NULL;
+  /* LCOV_EXCL_STOP */
 }
 
 /** Return a copy of <b>dh</b>, sharing its internal state. */
@@ -2304,10 +2307,15 @@ crypto_dh_generate_public(crypto_dh_t *dh)
 {
  again:
   if (!DH_generate_key(dh->dh)) {
+    /* LCOV_EXCL_START
+     * To test this we would need some way to tell openssl to break DH. */
     crypto_log_errors(LOG_WARN, "generating DH key");
     return -1;
+    /* LCOV_EXCL_STOP */
   }
   if (tor_check_dh_key(LOG_WARN, dh->dh->pub_key)<0) {
+    /* LCOV_EXCL_START
+     * If this happens, then openssl's DH implementation is busted. */
     log_warn(LD_CRYPTO, "Weird! Our own DH key was invalid.  I guess once-in-"
              "the-universe chances really do happen.  Trying again.");
     /* Free and clear the keys, so OpenSSL will actually try again. */
@@ -2315,6 +2323,7 @@ crypto_dh_generate_public(crypto_dh_t *dh)
     BN_clear_free(dh->dh->priv_key);
     dh->dh->pub_key = dh->dh->priv_key = NULL;
     goto again;
+    /* LCOV_EXCL_STOP */
   }
   return 0;
 }

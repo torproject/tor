@@ -27,6 +27,7 @@ static void
 test_crypto_dh(void *arg)
 {
   crypto_dh_t *dh1 = crypto_dh_new(DH_TYPE_CIRCUIT);
+  crypto_dh_t *dh1_dup = NULL;
   crypto_dh_t *dh2 = crypto_dh_new(DH_TYPE_CIRCUIT);
   char p1[DH_BYTES];
   char p2[DH_BYTES];
@@ -41,6 +42,9 @@ test_crypto_dh(void *arg)
   memset(p1, 0, DH_BYTES);
   memset(p2, 0, DH_BYTES);
   tt_mem_op(p1,OP_EQ, p2, DH_BYTES);
+
+  tt_int_op(-1, OP_EQ, crypto_dh_get_public(dh1, p1, 6)); /* too short */
+
   tt_assert(! crypto_dh_get_public(dh1, p1, DH_BYTES));
   tt_mem_op(p1,OP_NE, p2, DH_BYTES);
   tt_assert(! crypto_dh_get_public(dh2, p2, DH_BYTES));
@@ -54,6 +58,12 @@ test_crypto_dh(void *arg)
   tt_int_op(s1len,OP_EQ, s2len);
   tt_mem_op(s1,OP_EQ, s2, s1len);
 
+
+  /* test dh_dup; make sure it works the same. */
+  dh1_dup = crypto_dh_dup(dh1);
+  s1len = crypto_dh_compute_secret(LOG_WARN, dh1_dup, p2, DH_BYTES, s1, 50);
+  tt_mem_op(s1,OP_EQ, s2, s1len);
+
   {
     /* XXXX Now fabricate some bad values and make sure they get caught,
      * Check 0, 1, N-1, >= N, etc.
@@ -63,6 +73,7 @@ test_crypto_dh(void *arg)
  done:
   crypto_dh_free(dh1);
   crypto_dh_free(dh2);
+  crypto_dh_free(dh1_dup);
 }
 
 static void
