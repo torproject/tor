@@ -433,6 +433,7 @@ ed25519_seckey_read_from_file(ed25519_secret_key_t *seckey_out,
     errno = EINVAL;
   }
 
+  tor_free(*tag_out);
   return -1;
 }
 
@@ -472,6 +473,7 @@ ed25519_pubkey_read_from_file(ed25519_public_key_t *pubkey_out,
     errno = EINVAL;
   }
 
+  tor_free(*tag_out);
   return -1;
 }
 
