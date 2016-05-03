@@ -101,13 +101,15 @@ typedef struct sr_commit_t {
 
 int sr_init(int save_to_disk);
 void sr_save_and_cleanup(void);
+sr_commit_t *sr_parse_commit(const smartlist_t *args);
+sr_srv_t *sr_parse_srv(const smartlist_t *args);
+char *sr_get_string_for_vote(void);
+char *sr_get_string_for_consensus(const smartlist_t *votes);
 void sr_commit_free(sr_commit_t *commit);
 void sr_srv_encode(char *dst, const sr_srv_t *srv);
 
 /* Private methods (only used by shared_random_state.c): */
 
-sr_commit_t *sr_parse_commit(const smartlist_t *args);
-sr_srv_t *sr_parse_srv(const smartlist_t *args);
 void sr_compute_srv(void);
 sr_commit_t *sr_generate_our_commit(time_t timestamp,
                                     const authority_cert_t *my_rsa_cert);
@@ -122,6 +124,9 @@ STATIC int commit_decode(const char *encoded, sr_commit_t *commit);
 STATIC int reveal_decode(const char *encoded, sr_commit_t *commit);
 
 STATIC int commit_has_reveal_value(const sr_commit_t *commit);
+
+STATIC sr_srv_t *get_majority_srv_from_votes(const smartlist_t *votes,
+                                             int current);
 
 #endif /* SHARED_RANDOM_PRIVATE */
 

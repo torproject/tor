@@ -32,7 +32,9 @@
 #include "router.h"
 #include "routerlist.h"
 #include "routerparse.h"
+#include "shared_random.h"
 #include "transports.h"
+#include "torcert.h"
 
 /** Map from lowercase nickname to identity digest of named server, if any. */
 static strmap_t *named_server_map = NULL;
@@ -319,6 +321,14 @@ networkstatus_vote_free(networkstatus_t *ns)
   }
 
   digestmap_free(ns->desc_digest_map, NULL);
+
+  if (ns->sr_info.commits) {
+    SMARTLIST_FOREACH(ns->sr_info.commits, sr_commit_t *, c,
+                      sr_commit_free(c));
+    smartlist_free(ns->sr_info.commits);
+  }
+  tor_free(ns->sr_info.previous_srv);
+  tor_free(ns->sr_info.current_srv);
 
   memwipe(ns, 11, sizeof(*ns));
   tor_free(ns);

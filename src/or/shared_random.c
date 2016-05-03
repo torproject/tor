@@ -14,11 +14,18 @@
 #include "shared_random.h"
 #include "config.h"
 #include "confparse.h"
+#include "dirvote.h"
 #include "networkstatus.h"
 #include "routerkeys.h"
 #include "router.h"
 #include "routerlist.h"
 #include "shared_random_state.h"
+
+/* String prefix of shared random values in votes/consensuses. */
+static const char previous_srv_str[] = "shared-rand-previous-value";
+static const char current_srv_str[] = "shared-rand-current-value";
+static const char commit_ns_str[] = "shared-rand-commit";
+static const char sr_flag_ns_str[] = "shared-rand-participate";
 
 /* Allocate a new commit object and initializing it with <b>identity</b>
  * that MUST be provided. The digest algorithm is set to the default one
@@ -307,6 +314,216 @@ compare_reveal_(const void **_a, const void **_b)
                      sizeof(a->hashed_reveal));
 }
 
+/* Given <b>commit</b> give the line that we should place in our votes.
+ * It's the responsibility of the caller to free the string. */
+static char *
+get_vote_line_from_commit(const sr_commit_t *commit, sr_phase_t phase)
+{
+  char *vote_line = NULL;
+
+  switch (phase) {
+  case SR_PHASE_COMMIT:
+    tor_asprintf(&vote_line, "%s %s %s %s\n",
+                 commit_ns_str,
+                 crypto_digest_algorithm_get_name(commit->alg),
+                 commit->rsa_identity_fpr,
+                 commit->encoded_commit);
+    break;
+  case SR_PHASE_REVEAL:
+  {
+    /* Send a reveal value for this commit if we have one. */
+    const char *reveal_str = commit->encoded_reveal;
+    if (tor_mem_is_zero(commit->encoded_reveal,
+                        sizeof(commit->encoded_reveal))) {
+      reveal_str = "";
+    }
+    tor_asprintf(&vote_line, "%s %s %s %s %s\n",
+                 commit_ns_str,
+                 crypto_digest_algorithm_get_name(commit->alg),
+                 commit->rsa_identity_fpr,
+                 commit->encoded_commit, reveal_str);
+    break;
+  }
+  default:
+    tor_assert(0);
+  }
+
+  log_debug(LD_DIR, "SR: Commit vote line: %s", vote_line);
+  return vote_line;
+}
+
+/* Return a heap allocated string that contains the given <b>srv</b> string
+ * representation formatted for a networkstatus document using the
+ * <b>key</b> as the start of the line. This doesn't return NULL. */
+static char *
+srv_to_ns_string(const sr_srv_t *srv, const char *key)
+{
+  char *srv_str;
+  char srv_hash_encoded[SR_SRV_VALUE_BASE64_LEN + 1];
+  tor_assert(srv);
+  tor_assert(key);
+
+  sr_srv_encode(srv_hash_encoded, srv);
+  tor_asprintf(&srv_str, "%s %d %s\n", key,
+               srv->num_reveals, srv_hash_encoded);
+  log_debug(LD_DIR, "SR: Consensus SRV line: %s", srv_str);
+  return srv_str;
+}
+
+/* Given the previous SRV and the current SRV, return a heap allocated
+ * string with their data that could be put in a vote or a consensus. Caller
+ * must free the returned string.  Return NULL if no SRVs were provided. */
+static char *
+get_ns_str_from_sr_values(const sr_srv_t *prev_srv, const sr_srv_t *cur_srv)
+{
+  smartlist_t *chunks = NULL;
+  char *srv_str;
+
+  if (!prev_srv && !cur_srv) {
+    return NULL;
+  }
+
+  chunks = smartlist_new();
+
+  if (prev_srv) {
+    char *srv_line = srv_to_ns_string(prev_srv, previous_srv_str);
+    smartlist_add(chunks, srv_line);
+  }
+
+  if (cur_srv) {
+    char *srv_line = srv_to_ns_string(cur_srv, current_srv_str);
+    smartlist_add(chunks, srv_line);
+  }
+
+  /* Join the line(s) here in one string to return. */
+  srv_str = smartlist_join_strings(chunks, "", 0, NULL);
+  SMARTLIST_FOREACH(chunks, char *, s, tor_free(s));
+  smartlist_free(chunks);
+
+  return srv_str;
+}
+
+/* Return the number of required participants of the SR protocol. This is
+ * based on a consensus params. */
+static int
+get_n_voters_for_srv_agreement(void)
+{
+  int num_dirauths = get_n_authorities(V3_DIRINFO);
+  /* If the params is not found, default value should always be the maximum
+   * number of trusted authorities. Let's not take any chances. */
+  return networkstatus_get_param(NULL, "AuthDirNumSRVAgreements",
+                                 num_dirauths, 1, num_dirauths);
+}
+
+/* Return 1 if we should we keep an SRV voted by <b>n_agreements</b> auths.
+ * Return 0 if we should ignore it. */
+static int
+should_keep_srv(int n_agreements)
+{
+  /* Check if the most popular SRV has reached majority. */
+  int n_voters = get_n_authorities(V3_DIRINFO);
+  int votes_required_for_majority = (n_voters / 2) + 1;
+
+  /* We need at the very least majority to keep a value. */
+  if (n_agreements < votes_required_for_majority) {
+    log_notice(LD_DIR, "SR: SRV didn't reach majority [%d/%d]!",
+               n_agreements, votes_required_for_majority);
+    return 0;
+  }
+
+  /* When we just computed a new SRV, we need to have super majority in order
+   * to keep it. */
+  if (sr_state_srv_is_fresh()) {
+    /* Check if we have super majority for this new SRV value. */
+    int num_required_agreements = get_n_voters_for_srv_agreement();
+
+    if (n_agreements < num_required_agreements) {
+      log_notice(LD_DIR, "SR: New SRV didn't reach agreement [%d/%d]!",
+                 n_agreements, num_required_agreements);
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+/* Helper: compare two DIGEST256_LEN digests. */
+static int
+compare_srvs_(const void **_a, const void **_b)
+{
+  const sr_srv_t *a = *_a, *b = *_b;
+  return tor_memcmp(a->value, b->value, sizeof(a->value));
+}
+
+/* Return the most frequent member of the sorted list of DIGEST256_LEN
+ * digests in <b>sl</b> with the count of that most frequent element. */
+static sr_srv_t *
+smartlist_get_most_frequent_srv(const smartlist_t *sl, int *count_out)
+{
+  return smartlist_get_most_frequent_(sl, compare_srvs_, count_out);
+}
+
+/* Using a list of <b>votes</b>, return the SRV object from them that has
+ * been voted by the majority of dirauths. If <b>current</b> is set, we look
+ * for the current SRV value else the previous one. The returned pointer is
+ * an object located inside a vote. NULL is returned if no appropriate value
+ * could be found. */
+STATIC sr_srv_t *
+get_majority_srv_from_votes(const smartlist_t *votes, int current)
+{
+  int count = 0;
+  sr_srv_t *most_frequent_srv = NULL;
+  sr_srv_t *the_srv = NULL;
+  smartlist_t *srv_list;
+
+  tor_assert(votes);
+
+  srv_list = smartlist_new();
+
+  /* Walk over votes and register any SRVs found. */
+  SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, v) {
+    sr_srv_t *srv_tmp = NULL;
+
+    if (!v->sr_info.participate) {
+      /* Ignore vote that do not participate. */
+      continue;
+    }
+    /* Do we want previous or current SRV? */
+    srv_tmp = current ? v->sr_info.current_srv : v->sr_info.previous_srv;
+    if (!srv_tmp) {
+      continue;
+    }
+
+    smartlist_add(srv_list, srv_tmp);
+  } SMARTLIST_FOREACH_END(v);
+
+  most_frequent_srv = smartlist_get_most_frequent_srv(srv_list, &count);
+  if (!most_frequent_srv) {
+    goto end;
+  }
+
+  /* Was this SRV voted by enough auths for us to keep it? */
+  if (!should_keep_srv(count)) {
+    goto end;
+  }
+
+  /* We found an SRV that we can use! Habemus SRV! */
+  the_srv = most_frequent_srv;
+
+  {
+    /* Debugging */
+    char encoded[SR_SRV_VALUE_BASE64_LEN + 1];
+    sr_srv_encode(encoded, the_srv);
+    log_debug(LD_DIR, "SR: Chosen SRV by majority: %s (%d votes)", encoded,
+              count);
+  }
+
+ end:
+  /* We do not free any sr_srv_t values, we don't have the ownership. */
+  smartlist_free(srv_list);
+  return the_srv;
+}
+
 /* Encode the given shared random value and put it in dst. Destination
  * buffer must be at least SR_SRV_VALUE_BASE64_LEN plus the NULL byte. */
 void
@@ -569,6 +786,90 @@ sr_parse_commit(const smartlist_t *args)
 
  error:
   sr_commit_free(commit);
+  return NULL;
+}
+
+/* Return a heap-allocated string containing commits that should be put in
+ * the votes. It's the responsibility of the caller to free the string.
+ * This always return a valid string, either empty or with line(s). */
+char *
+sr_get_string_for_vote(void)
+{
+  char *vote_str = NULL;
+  digestmap_t *state_commits;
+  smartlist_t *chunks = smartlist_new();
+  const or_options_t *options = get_options();
+
+  /* Are we participating in the protocol? */
+  if (!options->AuthDirSharedRandomness) {
+    goto end;
+  }
+
+  log_debug(LD_DIR, "SR: Preparing our vote info:");
+
+  /* First line, put in the vote the participation flag. */
+  {
+    char *sr_flag_line;
+    tor_asprintf(&sr_flag_line, "%s\n", sr_flag_ns_str);
+    smartlist_add(chunks, sr_flag_line);
+  }
+
+  /* In our vote we include every commitment in our permanent state. */
+  state_commits = sr_state_get_commits();
+  DIGESTMAP_FOREACH(state_commits, key, const sr_commit_t *, commit) {
+    char *line = get_vote_line_from_commit(commit, sr_state_get_phase());
+    smartlist_add(chunks, line);
+  } DIGESTMAP_FOREACH_END;
+
+  /* Add the SRV value(s) if any. */
+  {
+    char *srv_lines = get_ns_str_from_sr_values(sr_state_get_previous_srv(),
+                                                sr_state_get_current_srv());
+    if (srv_lines) {
+      smartlist_add(chunks, srv_lines);
+    }
+  }
+
+ end:
+  vote_str = smartlist_join_strings(chunks, "", 0, NULL);
+  SMARTLIST_FOREACH(chunks, char *, s, tor_free(s));
+  smartlist_free(chunks);
+  return vote_str;
+}
+
+/* Return a heap-allocated string that should be put in the consensus and
+ * contains the shared randomness values. It's the responsibility of the
+ * caller to free the string. NULL is returned if no SRV(s) available.
+ *
+ * This is called when a consensus (any flavor) is bring created thus it
+ * should NEVER change the state nor the state should be changed in between
+ * consensus creation. */
+char *
+sr_get_string_for_consensus(const smartlist_t *votes)
+{
+  char *srv_str;
+  const or_options_t *options = get_options();
+
+  tor_assert(votes);
+
+  /* Not participating, avoid returning anything. */
+  if (!options->AuthDirSharedRandomness) {
+    log_info(LD_DIR, "SR: Support disabled (AuthDirSharedRandomness %d)",
+             options->AuthDirSharedRandomness);
+    goto end;
+  }
+
+  /* Check the votes and figure out if SRVs should be included in the final
+   * consensus. */
+  sr_srv_t *prev_srv = get_majority_srv_from_votes(votes, 0);
+  sr_srv_t *cur_srv = get_majority_srv_from_votes(votes, 1);
+  srv_str = get_ns_str_from_sr_values(prev_srv, cur_srv);
+  if (!srv_str) {
+    goto end;
+  }
+
+  return srv_str;
+ end:
   return NULL;
 }
 

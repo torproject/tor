@@ -55,7 +55,7 @@
 #define MIN_SUPPORTED_CONSENSUS_METHOD 13
 
 /** The highest consensus method that we currently support. */
-#define MAX_SUPPORTED_CONSENSUS_METHOD 22
+#define MAX_SUPPORTED_CONSENSUS_METHOD 23
 
 /** Lowest consensus method where microdesc consensuses omit any entry
  * with no microdesc. */
@@ -90,9 +90,14 @@
  * ed25519 identities in microdescriptors. (Broken; see
  * consensus_method_is_supported() for more info.) */
 #define MIN_METHOD_FOR_ED25519_ID_IN_MD 21
+
 /** Lowest consensus method where authorities vote on ed25519 ids and ensure
  * ed25519 id consistency. */
 #define MIN_METHOD_FOR_ED25519_ID_VOTING 22
+
+/** Lowest consensus method where authorities may include a shared random
+ * value(s). */
+#define MIN_METHOD_FOR_SHARED_RANDOM 23
 
 /** Default bandwidth to clip unmeasured bandwidths to using method >=
  * MIN_METHOD_TO_CLIP_UNMEASURED_BW.  (This is not a consensus method; do not
