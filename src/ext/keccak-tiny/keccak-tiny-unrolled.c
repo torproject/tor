@@ -11,6 +11,29 @@
 #include <string.h>
 #include "crypto.h"
 
+/******** Endianness conversion helpers ********/
+
+static inline uint64_t
+loadu64le(const unsigned char *x) {
+  uint64_t r = 0;
+  size_t i;
+
+  for (i = 0; i < 8; ++i) {
+    r |= (uint64_t)x[i] << 8 * i;
+  }
+  return r;
+}
+
+static inline void
+storeu64le(uint8_t *x, uint64_t u) {
+  size_t i;
+
+  for(i=0; i<8; ++i) {
+    x[i] = u;
+    u >>= 8;
+  }
+}
+
 /******** The Keccak-f[1600] permutation ********/
 
 /*** Constants. ***/
@@ -80,24 +103,26 @@ static inline void keccakf(void* state) {
 
 /*** Some helper macros. ***/
 
-#define _(S) do { S } while (0)
-#define FOR(i, ST, L, S) \
-  _(for (size_t i = 0; i < L; i += ST) { S; })
-#define mkapply_ds(NAME, S)                                          \
-  static inline void NAME(uint8_t* dst,                              \
-                          const uint8_t* src,                        \
-                          size_t len) {                              \
-    FOR(i, 1, len, S);                                               \
+// `xorin` modified to handle Big Endian systems, `buf` being unaligned on
+// systems that care about such things.  Assumes that len is a multiple of 8,
+// which is always true for the rates we use, and the modified finalize.
+static inline void
+xorin8(uint8_t *dst, const uint8_t *src, size_t len) {
+  uint64_t* a = (uint64_t*)dst; // Always aligned.
+  for (size_t i = 0; i < len; i += 8) {
+    a[i/8] ^= loadu64le(src + i);
   }
-#define mkapply_sd(NAME, S)                                          \
-  static inline void NAME(const uint8_t* src,                        \
-                          uint8_t* dst,                              \
-                          size_t len) {                              \
-    FOR(i, 1, len, S);                                               \
-  }
+}
 
-mkapply_ds(xorin, dst[i] ^= src[i])  // xorin
-mkapply_sd(setout, dst[i] = src[i])  // setout
+// `setout` likewise modified to handle Big Endian systems.  Assumes that len
+// is a multiple of 8, which is true for every rate we use.
+static inline void
+setout8(const uint8_t *src, uint8_t *dst, size_t len) {
+  const uint64_t *si = (const uint64_t*)src; // Always aligned.
+  for (size_t i = 0; i < len; i+= 8) {
+    storeu64le(dst+i, si[i/8]);
+  }
+}
 
 #define P keccakf
 #define Plen KECCAK_MAX_RATE
@@ -118,7 +143,7 @@ static inline void
 keccak_absorb_blocks(keccak_state *s, const uint8_t *buf, size_t nr_blocks)
 {
   size_t blen = nr_blocks * s->rate;
-  foldP(buf, blen, xorin);
+  foldP(buf, blen, xorin8);
 }
 
 static int
@@ -161,10 +186,14 @@ static void
 keccak_finalize(keccak_state *s)
 {
   // Xor in the DS and pad frame.
-  s->a[s->offset] ^= s->delim;
-  s->a[s->rate - 1] ^= 0x80;
+  s->block[s->offset++] = s->delim; // DS.
+  for (size_t i = s->offset; i < s->rate; i++) {
+    s->block[i] = 0;
+  }
+  s->block[s->rate - 1] |= 0x80; // Pad frame.
+
   // Xor in the last block.
-  xorin(s->a, s->block, s->offset);
+  xorin8(s->a, s->block, s->rate);
 
   memwipe(s->block, 0, sizeof(s->block));
   s->finalized = 1;
@@ -176,7 +205,7 @@ keccak_squeeze_blocks(keccak_state *s, uint8_t *out, size_t nr_blocks)
 {
   for (size_t n = 0; n < nr_blocks; n++) {
     keccakf(s->a);
-    setout(s->a, out, s->rate);
+    setout8(s->a, out, s->rate);
     out += s->rate;
   }
 }
@@ -321,6 +350,7 @@ static inline int hash(uint8_t* out, size_t outlen,
 
   int ret = 0;
   keccak_state s;
+  keccak_cleanse(&s);
 
   switch (delim) {
     case KECCAK_DELIM_DIGEST:
