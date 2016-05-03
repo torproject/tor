@@ -369,6 +369,41 @@ test_crypto_aes(void *arg)
   tor_free(data3);
 }
 
+static void
+test_crypto_aes_ctr_testvec(void *arg)
+{
+  (void)arg;
+  char *mem_op_hex_tmp=NULL;
+
+  /* from NIST SP800-38a, section F.5 */
+  const char key16[] = "2b7e151628aed2a6abf7158809cf4f3c";
+  const char ctr16[] = "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff";
+  const char plaintext16[] =
+    "6bc1bee22e409f96e93d7e117393172a"
+    "ae2d8a571e03ac9c9eb76fac45af8e51"
+    "30c81c46a35ce411e5fbc1191a0a52ef"
+    "f69f2445df4f9b17ad2b417be66c3710";
+  const char ciphertext16[] =
+    "874d6191b620e3261bef6864990db6ce"
+    "9806f66b7970fdff8617187bb9fffdff"
+    "5ae4df3edbd5d35e5b4f09020db03eab"
+    "1e031dda2fbe03d1792170a0f3009cee";
+
+  char key[16];
+  char iv[16];
+  char plaintext[16*4];
+  base16_decode(key, sizeof(key), key16, strlen(key16));
+  base16_decode(iv, sizeof(iv), ctr16, strlen(ctr16));
+  base16_decode(plaintext, sizeof(plaintext), plaintext16, strlen(plaintext16));
+
+  crypto_cipher_t *c = crypto_cipher_new_with_iv(key, iv);
+  crypto_cipher_crypt_inplace(c, plaintext, sizeof(plaintext));
+  test_memeq_hex(plaintext, ciphertext16);
+
+ done:
+  tor_free(mem_op_hex_tmp);
+}
+
 /** Run unit tests for our SHA-1 functionality */
 static void
 test_crypto_sha(void *arg)
@@ -2524,6 +2559,7 @@ struct testcase_t crypto_tests[] = {
   { "openssl_version", test_crypto_openssl_version, TT_FORK, NULL, NULL },
   { "aes_AES", test_crypto_aes, TT_FORK, &passthrough_setup, (void*)"aes" },
   { "aes_EVP", test_crypto_aes, TT_FORK, &passthrough_setup, (void*)"evp" },
+  { "aes_ctr_testvec", test_crypto_aes_ctr_testvec, 0, NULL, NULL },
   CRYPTO_LEGACY(sha),
   CRYPTO_LEGACY(pk),
   { "pk_fingerprints", test_crypto_pk_fingerprints, TT_FORK, NULL, NULL },
