@@ -171,13 +171,9 @@ crypto_log_errors(int severity, const char *doing)
     if (!msg) msg = "(null)";
     if (!lib) lib = "(null)";
     if (!func) func = "(null)";
-    if (doing) {
-      tor_log(severity, LD_CRYPTO, "crypto error while %s: %s (in %s:%s)",
+    if (BUG(!doing)) doing = "(null)";
+    tor_log(severity, LD_CRYPTO, "crypto error while %s: %s (in %s:%s)",
               doing, msg, lib, func);
-    } else {
-      tor_log(severity, LD_CRYPTO, "crypto error: %s (in %s:%s)",
-              msg, lib, func);
-    }
   }
 }
 
