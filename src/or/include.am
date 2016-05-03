@@ -62,6 +62,8 @@ LIBTOR_A_SOURCES = \
 	src/or/onion.c					\
 	src/or/onion_fast.c				\
 	src/or/onion_tap.c				\
+	src/or/shared_random.c			\
+	src/or/shared_random_state.c		\
 	src/or/transports.c				\
 	src/or/periodic.c				\
 	src/or/policies.c				\
@@ -173,6 +175,8 @@ ORHEADERS = \
 	src/or/onion_ntor.h				\
 	src/or/onion_tap.h				\
 	src/or/or.h					\
+	src/or/shared_random.h			\
+	src/or/shared_random_state.h		\
 	src/or/transports.h				\
 	src/or/periodic.h				\
 	src/or/policies.h				\

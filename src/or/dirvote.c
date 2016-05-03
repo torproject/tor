@@ -2511,49 +2511,59 @@ dirvote_get_start_of_next_interval(time_t now, int interval, int offset)
   return next;
 }
 
-/** Scheduling information for a voting interval. */
-static struct {
-  /** When do we generate and distribute our vote for this interval? */
-  time_t voting_starts;
-  /** When do we send an HTTP request for any votes that we haven't
-   * been posted yet?*/
-  time_t fetch_missing_votes;
-  /** When do we give up on getting more votes and generate a consensus? */
-  time_t voting_ends;
-  /** When do we send an HTTP request for any signatures we're expecting to
-   * see on the consensus? */
-  time_t fetch_missing_signatures;
-  /** When do we publish the consensus? */
-  time_t interval_starts;
+/* Using the time <b>now</b>, return the next voting valid-after time. */
+time_t
+get_next_valid_after_time(time_t now)
+{
+  time_t next_valid_after_time;
+  const or_options_t *options = get_options();
+  voting_schedule_t *new_voting_schedule =
+    get_voting_schedule(options, now, LOG_INFO);
+  tor_assert(new_voting_schedule);
 
-  /* True iff we have generated and distributed our vote. */
-  int have_voted;
-  /* True iff we've requested missing votes. */
-  int have_fetched_missing_votes;
-  /* True iff we have built a consensus and sent the signatures around. */
-  int have_built_consensus;
-  /* True iff we've fetched missing signatures. */
-  int have_fetched_missing_signatures;
-  /* True iff we have published our consensus. */
-  int have_published_consensus;
-} voting_schedule = {0,0,0,0,0,0,0,0,0,0};
+  next_valid_after_time = new_voting_schedule->interval_starts;
+  tor_free(new_voting_schedule);
+
+  return next_valid_after_time;
+}
+
+static voting_schedule_t voting_schedule = {0};
 
 /** Set voting_schedule to hold the timing for the next vote we should be
  * doing. */
 void
 dirvote_recalculate_timing(const or_options_t *options, time_t now)
 {
+  voting_schedule_t *new_voting_schedule;
+
+  if (!authdir_mode_v3(options)) {
+    return;
+  }
+
+  /* get the new voting schedule */
+  new_voting_schedule = get_voting_schedule(options, now, LOG_NOTICE);
+  tor_assert(new_voting_schedule);
+
+  /* Fill in the global static struct now */
+  memcpy(&voting_schedule, new_voting_schedule, sizeof(voting_schedule));
+  tor_free(new_voting_schedule);
+}
+
+/* Populate and return a new voting_schedule_t that can be used to schedule
+ * voting. The object is allocated on the heap and it's the responsibility of
+ * the caller to free it. Can't fail. */
+voting_schedule_t *
+get_voting_schedule(const or_options_t *options, time_t now, int severity)
+{
   int interval, vote_delay, dist_delay;
   time_t start;
   time_t end;
   networkstatus_t *consensus;
+  voting_schedule_t *new_voting_schedule;
 
-  if (!authdir_mode_v3(options))
-    return;
+  new_voting_schedule = tor_malloc_zero(sizeof(voting_schedule_t));
 
   consensus = networkstatus_get_live_consensus(now);
-
-  memset(&voting_schedule, 0, sizeof(voting_schedule));
 
   if (consensus) {
     interval = (int)( consensus->fresh_until - consensus->valid_after );
@@ -2570,7 +2580,7 @@ dirvote_recalculate_timing(const or_options_t *options, time_t now)
   if (vote_delay + dist_delay > interval/2)
     vote_delay = dist_delay = interval / 4;
 
-  start = voting_schedule.interval_starts =
+  start = new_voting_schedule->interval_starts =
     dirvote_get_start_of_next_interval(now,interval,
                                       options->TestingV3AuthVotingStartOffset);
   end = dirvote_get_start_of_next_interval(start+1, interval,
@@ -2578,18 +2588,20 @@ dirvote_recalculate_timing(const or_options_t *options, time_t now)
 
   tor_assert(end > start);
 
-  voting_schedule.fetch_missing_signatures = start - (dist_delay/2);
-  voting_schedule.voting_ends = start - dist_delay;
-  voting_schedule.fetch_missing_votes = start - dist_delay - (vote_delay/2);
-  voting_schedule.voting_starts = start - dist_delay - vote_delay;
+  new_voting_schedule->fetch_missing_signatures = start - (dist_delay/2);
+  new_voting_schedule->voting_ends = start - dist_delay;
+  new_voting_schedule->fetch_missing_votes = start - dist_delay - (vote_delay/2);
+  new_voting_schedule->voting_starts = start - dist_delay - vote_delay;
 
   {
     char tbuf[ISO_TIME_LEN+1];
-    format_iso_time(tbuf, voting_schedule.interval_starts);
-    log_notice(LD_DIR,"Choosing expected valid-after time as %s: "
-               "consensus_set=%d, interval=%d",
-               tbuf, consensus?1:0, interval);
+    format_iso_time(tbuf, new_voting_schedule->interval_starts);
+    tor_log(severity, LD_DIR,"Choosing expected valid-after time as %s: "
+            "consensus_set=%d, interval=%d",
+            tbuf, consensus?1:0, interval);
   }
+
+  return new_voting_schedule;
 }
 
 /** Entry point: Take whatever voting actions are pending as of <b>now</b>. */

@@ -121,12 +121,44 @@ void ns_detached_signatures_free(ns_detached_signatures_t *s);
 authority_cert_t *authority_cert_dup(authority_cert_t *cert);
 
 /* vote scheduling */
+
+/** Scheduling information for a voting interval. */
+typedef struct {
+  /** When do we generate and distribute our vote for this interval? */
+  time_t voting_starts;
+  /** When do we send an HTTP request for any votes that we haven't
+   * been posted yet?*/
+  time_t fetch_missing_votes;
+  /** When do we give up on getting more votes and generate a consensus? */
+  time_t voting_ends;
+  /** When do we send an HTTP request for any signatures we're expecting to
+   * see on the consensus? */
+  time_t fetch_missing_signatures;
+  /** When do we publish the consensus? */
+  time_t interval_starts;
+
+  /* True iff we have generated and distributed our vote. */
+  int have_voted;
+  /* True iff we've requested missing votes. */
+  int have_fetched_missing_votes;
+  /* True iff we have built a consensus and sent the signatures around. */
+  int have_built_consensus;
+  /* True iff we've fetched missing signatures. */
+  int have_fetched_missing_signatures;
+  /* True iff we have published our consensus. */
+  int have_published_consensus;
+} voting_schedule_t;
+
+voting_schedule_t *get_voting_schedule(const or_options_t *options,
+                                       time_t now, int severity);
+
 void dirvote_get_preferred_voting_intervals(vote_timing_t *timing_out);
 time_t dirvote_get_start_of_next_interval(time_t now,
                                           int interval,
                                           int offset);
 void dirvote_recalculate_timing(const or_options_t *options, time_t now);
 void dirvote_act(const or_options_t *options, time_t now);
+time_t get_next_valid_after_time(time_t now);
 
 /* invoked on timers and by outside triggers. */
 struct pending_vote_t * dirvote_add_vote(const char *vote_body,
