@@ -2639,6 +2639,7 @@ crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
     } while (ret == -1 && ((errno == EINTR) ||(errno == EAGAIN)));
 
     if (PREDICT_UNLIKELY(ret == -1)) {
+      /* LCOV_EXCL_START we can't actually make the syscall fail in testing. */
       tor_assert(errno != EAGAIN);
       tor_assert(errno != EINTR);
 
@@ -2646,6 +2647,7 @@ crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
       log_warn(LD_CRYPTO, "Can't get entropy from getrandom().");
       getrandom_works = 0; /* Don't bother trying again. */
       return -1;
+      /* LCOV_EXCL_STOP */
     }
 
     tor_assert(ret == (long)out_len);
@@ -2699,10 +2701,13 @@ crypto_strongest_rand_fallback(uint8_t *out, size_t out_len)
     n = read_all(fd, (char*)out, out_len, 0);
     close(fd);
     if (n != out_len) {
+      /* LCOV_EXCL_START
+       * We can't make /dev/foorandom actually fail. */
       log_warn(LD_CRYPTO,
                "Error reading from entropy source (read only %lu bytes).",
                (unsigned long)n);
       return -1;
+      /* LCOV_EXCL_STOP */
     }
 
     return 0;
@@ -2815,7 +2820,7 @@ crypto_seed_rng(void)
    * functions.  If one succeeds, we'll accept the RNG as seeded. */
   rand_poll_ok = RAND_poll();
   if (rand_poll_ok == 0)
-    log_warn(LD_CRYPTO, "RAND_poll() failed.");
+    log_warn(LD_CRYPTO, "RAND_poll() failed."); // LCOV_EXCL_LINE
 
   load_entropy_ok = !crypto_strongest_rand_raw(buf, sizeof(buf));
   if (load_entropy_ok) {
