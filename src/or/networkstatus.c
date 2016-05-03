@@ -1191,8 +1191,8 @@ consensus_is_waiting_for_certs(void)
 
 /** Return the most recent consensus that we have downloaded, or NULL if we
  * don't have one. */
-networkstatus_t *
-networkstatus_get_latest_consensus(void)
+MOCK_IMPL(networkstatus_t *,
+networkstatus_get_latest_consensus,(void))
 {
   return current_consensus;
 }
@@ -1214,8 +1214,8 @@ networkstatus_get_latest_consensus_by_flavor,(consensus_flavor_t f))
 
 /** Return the most recent consensus that we have downloaded, or NULL if it is
  * no longer live. */
-networkstatus_t *
-networkstatus_get_live_consensus(time_t now)
+MOCK_IMPL(networkstatus_t *,
+networkstatus_get_live_consensus,(time_t now))
 {
   if (current_consensus &&
       current_consensus->valid_after <= now &&

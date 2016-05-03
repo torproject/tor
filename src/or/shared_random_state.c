@@ -1291,3 +1291,22 @@ sr_state_init(int save_to_disk, int read_from_disk)
  error:
   return -1;
 }
+
+#ifdef TOR_UNIT_TESTS
+
+/* Set the current phase of the protocol. Used only by unit tests. */
+void
+set_sr_phase(sr_phase_t phase)
+{
+  tor_assert(sr_state);
+  sr_state->phase = phase;
+}
+
+/* Get the SR state. Used only by unit tests */
+sr_state_t *
+get_sr_state(void)
+{
+  return sr_state;
+}
+
+#endif /* TOR_UNIT_TESTS */
