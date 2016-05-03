@@ -22,6 +22,9 @@
 /* Default filename of the shared random state on disk. */
 static const char default_fname[] = "sr-state";
 
+/* String representation of a protocol phase. */
+static const char *phase_str[] = { "unknown", "commit", "reveal" };
+
 /* Our shared random protocol state. There is only one possible state per
  * protocol run so this is the global state which is reset at every run once
  * the shared random value has been computed. */
@@ -87,6 +90,25 @@ static const config_format_t state_format = {
   disk_state_validate_cb,
   &state_extra_var,
 };
+
+/* Return a string representation of a protocol phase. */
+STATIC const char *
+get_phase_str(sr_phase_t phase)
+{
+  const char *the_string = NULL;
+
+  switch (phase) {
+  case SR_PHASE_COMMIT:
+  case SR_PHASE_REVEAL:
+    the_string = phase_str[phase];
+    break;
+  default:
+    /* Unknown phase shouldn't be possible. */
+    tor_assert(0);
+  }
+
+  return the_string;
+}
 
 /* Return the voting interval of the tor vote subsystem. */
 static int
@@ -554,7 +576,7 @@ disk_state_put_commit_line(const sr_commit_t *commit, config_line_t *line)
 static void
 disk_state_put_srv_line(const sr_srv_t *srv, config_line_t *line)
 {
-  char encoded[HEX_DIGEST256_LEN + 1];
+  char encoded[SR_SRV_VALUE_BASE64_LEN + 1];
 
   tor_assert(line);
 
@@ -563,8 +585,7 @@ disk_state_put_srv_line(const sr_srv_t *srv, config_line_t *line)
   if (srv == NULL) {
     return;
   }
-  base16_encode(encoded, sizeof(encoded), (const char *) srv->value,
-                sizeof(srv->value));
+  sr_srv_encode(encoded, srv);
   tor_asprintf(&line->value, "%d %s", srv->num_reveals, encoded);
 }
 
@@ -748,6 +769,82 @@ disk_state_save_to_disk(void)
   return ret;
 }
 
+/* Reset our state to prepare for a new protocol run. Once this returns, all
+ * commits in the state will be removed and freed. */
+STATIC void
+reset_state_for_new_protocol_run(time_t valid_after)
+{
+  tor_assert(sr_state);
+
+  /* Keep counters in track */
+  sr_state->n_reveal_rounds = 0;
+  sr_state->n_commit_rounds = 0;
+  sr_state->n_protocol_runs++;
+
+  /* Reset valid-until */
+  sr_state->valid_until = get_state_valid_until_time(valid_after);
+  sr_state->valid_after = valid_after;
+
+  /* We are in a new protocol run so cleanup commits. */
+  sr_state_delete_commits();
+}
+
+/* Rotate SRV value by freeing the previous value, assigning the current
+ * value to the previous one and nullifying the current one. */
+STATIC void
+state_rotate_srv(void)
+{
+  /* Get a pointer to the previous SRV so we can free it after rotation. */
+  sr_srv_t *previous_srv = sr_state_get_previous_srv();
+  /* Set previous SRV with the current one. */
+  sr_state_set_previous_srv(sr_state_get_current_srv());
+  /* Nullify the current srv. */
+  sr_state_set_current_srv(NULL);
+  tor_free(previous_srv);
+}
+
+/* This is the first round of the new protocol run starting at
+ * <b>valid_after</b>. Do the necessary housekeeping. */
+STATIC void
+new_protocol_run(time_t valid_after)
+{
+  sr_commit_t *our_commitment = NULL;
+
+  /* Only compute the srv at the end of the reveal phase. */
+  if (sr_state->phase == SR_PHASE_REVEAL) {
+    /* We are about to compute a new shared random value that will be set in
+     * our state as the current value so rotate values. */
+    state_rotate_srv();
+    /* Compute the shared randomness value of the day. */
+    sr_compute_srv();
+  }
+
+  /* Prepare for the new protocol run by reseting the state */
+  reset_state_for_new_protocol_run(valid_after);
+
+  /* Do some logging */
+  log_info(LD_DIR, "SR: Protocol run #%" PRIu64 " starting!",
+           sr_state->n_protocol_runs);
+
+  /* Generate fresh commitments for this protocol run */
+  our_commitment = sr_generate_our_commit(valid_after,
+                                          get_my_v3_authority_cert());
+  if (our_commitment) {
+    /* Add our commitment to our state. In case we are unable to create one
+     * (highly unlikely), we won't vote for this protocol run since our
+     * commitment won't be in our state. */
+    sr_state_add_commit(our_commitment);
+  }
+}
+
+/* Return 1 iff the <b>next_phase</b> is a phase transition from the current
+ * phase that is it's different. */
+STATIC int
+is_phase_transition(sr_phase_t next_phase)
+{
+  return sr_state->phase != next_phase;
+}
+
 /* Helper function: return a commit using the RSA fingerprint of the
  * authority or NULL if no such commit is known. */
 static sr_commit_t *
@@ -756,7 +853,6 @@ state_query_get_commit(const char *rsa_fpr)
   tor_assert(rsa_fpr);
   return digestmap_get(sr_state->commits, rsa_fpr);
 }
-
 /* Helper function: This handles the GET state action using an
  * <b>obj_type</b> and <b>data</b> needed for the action. */
 static void *
@@ -941,6 +1037,20 @@ sr_state_set_current_srv(const sr_srv_t *srv)
               NULL);
 }
 
+/* Clean all the SRVs in our state. */
+void
+sr_state_clean_srvs(void)
+{
+  sr_srv_t *previous_srv = sr_state_get_previous_srv();
+  sr_srv_t *current_srv = sr_state_get_current_srv();
+
+  tor_free(previous_srv);
+  sr_state_set_previous_srv(NULL);
+
+  tor_free(current_srv);
+  sr_state_set_current_srv(NULL);
+}
+
 /* Return a pointer to the commits map from our state. CANNOT be NULL. */
 digestmap_t *
 sr_state_get_commits(void)
@@ -950,6 +1060,68 @@ sr_state_get_commits(void)
               NULL, (void *) &commits);
   tor_assert(commits);
   return commits;
+}
+
+/* Update the current SR state as needed for the upcoming voting round at
+ * <b>valid_after</b>. */
+void
+sr_state_update(time_t valid_after)
+{
+  sr_phase_t next_phase;
+
+  tor_assert(sr_state);
+
+  /* Don't call this function twice in the same voting period. */
+  if (valid_after <= sr_state->valid_after) {
+    log_info(LD_DIR, "SR: Asked to update state twice. Ignoring.");
+    return;
+  }
+
+  /* Get phase of upcoming round. */
+  next_phase = get_sr_protocol_phase(valid_after);
+
+  /* If we are transitioning to a new protocol phase, prepare the stage. */
+  if (is_phase_transition(next_phase)) {
+    if (next_phase == SR_PHASE_COMMIT) {
+      /* Going into commit phase means we are starting a new protocol run. */
+      new_protocol_run(valid_after);
+    }
+    /* Set the new phase for this round */
+    sr_state->phase = next_phase;
+  } else if (sr_state->phase == SR_PHASE_COMMIT &&
+             digestmap_size(sr_state->commits) == 0) {
+    /* We are _NOT_ in a transition phase so if we are in the commit phase
+     * and have no commit, generate one. Chances are that we are booting up
+     * so let's have a commit in our state for the next voting period. */
+    sr_commit_t *our_commit =
+      sr_generate_our_commit(valid_after, get_my_v3_authority_cert());
+    if (our_commit) {
+      /* Add our commitment to our state. In case we are unable to create one
+       * (highly unlikely), we won't vote for this protocol run since our
+       * commitment won't be in our state. */
+      sr_state_add_commit(our_commit);
+    }
+  }
+
+  sr_state_set_valid_after(valid_after);
+
+  /* Count the current round */
+  if (sr_state->phase == SR_PHASE_COMMIT) {
+    /* invariant check: we've not entered reveal phase yet */
+    tor_assert(sr_state->n_reveal_rounds == 0);
+    sr_state->n_commit_rounds++;
+  } else {
+    sr_state->n_reveal_rounds++;
+  }
+
+  { /* Debugging. */
+    char tbuf[ISO_TIME_LEN + 1];
+    format_iso_time(tbuf, valid_after);
+    log_info(LD_DIR, "SR: State prepared for new voting period (%s). "
+             "Current phase is %s (%d/%d).",
+             tbuf, get_phase_str(sr_state->phase),
+             sr_state->n_commit_rounds, sr_state->n_reveal_rounds);
+  }
 }
 
 /* Return commit object from the given authority digest <b>identity</b>.
@@ -1078,6 +1250,12 @@ sr_state_init(int save_to_disk, int read_from_disk)
       /* Big problem. Not possible. */
       tor_assert(0);
     }
+  }
+  /* We have a state in memory, let's make sure it's updated for the current
+   * and next voting round. */
+  {
+    time_t valid_after = get_next_valid_after_time(now);
+    sr_state_update(valid_after);
   }
   return 0;
 

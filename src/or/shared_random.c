@@ -37,6 +37,35 @@ commit_new(const char *rsa_identity_fpr)
   return commit;
 }
 
+/* Issue a log message describing <b>commit</b>. */
+static void
+commit_log(const sr_commit_t *commit)
+{
+  tor_assert(commit);
+
+  log_debug(LD_DIR, "SR: Commit from %s", commit->rsa_identity_fpr);
+
+  if (commit->commit_ts >= 0) {
+    log_debug(LD_DIR, "SR: Commit: [TS: %ld] [Encoded: %s]",
+              commit->commit_ts, commit->encoded_commit);
+  }
+
+  if (commit->reveal_ts >= 0) {
+    log_debug(LD_DIR, "SR: Reveal: [TS: %ld] [Encoded: %s]",
+              commit->reveal_ts, safe_str(commit->encoded_reveal));
+  } else {
+    log_debug(LD_DIR, "SR: Reveal: UNKNOWN");
+  }
+}
+
+/* Return true iff the commit contains an encoded reveal value. */
+STATIC int
+commit_has_reveal_value(const sr_commit_t *commit)
+{
+  return !tor_mem_is_zero(commit->encoded_reveal,
+                          sizeof(commit->encoded_reveal));
+}
+
 /* Parse the encoded commit. The format is:
  *    base64-encode( TIMESTAMP || H(REVEAL) )
  *
@@ -144,11 +173,157 @@ reveal_decode(const char *encoded, sr_commit_t *commit)
   return -1;
 }
 
+
+/* Encode a reveal element using a given commit object to dst which is a
+ * buffer large enough to put the base64-encoded reveal construction. The
+ * format is as follow:
+ *     REVEAL = base64-encode( TIMESTAMP || H(RN) )
+ * Return base64 encoded length on success else a negative value.
+ */
+STATIC int
+reveal_encode(const sr_commit_t *commit, char *dst, size_t len)
+{
+  int ret;
+  size_t offset = 0;
+  char buf[SR_REVEAL_LEN] = {0};
+
+  tor_assert(commit);
+  tor_assert(dst);
+
+  set_uint64(buf, tor_htonll(commit->reveal_ts));
+  offset += sizeof(uint64_t);
+  memcpy(buf + offset, commit->random_number,
+         sizeof(commit->random_number));
+
+  /* Let's clean the buffer and then b64 encode it. */
+  memset(dst, 0, len);
+  ret = base64_encode(dst, len, buf, sizeof(buf), 0);
+  /* Wipe this buffer because it contains our random value. */
+  memwipe(buf, 0, sizeof(buf));
+  return ret;
+}
+
+/* Encode the given commit object to dst which is a buffer large enough to
+ * put the base64-encoded commit. The format is as follow:
+ *     COMMIT = base64-encode( TIMESTAMP || H(H(RN)) )
+ * Return base64 encoded length on success else a negative value.
+ */
+STATIC int
+commit_encode(const sr_commit_t *commit, char *dst, size_t len)
+{
+  size_t offset = 0;
+  char buf[SR_COMMIT_LEN] = {0};
+
+  tor_assert(commit);
+  tor_assert(dst);
+
+  /* First is the timestamp (8 bytes). */
+  set_uint64(buf, tor_htonll((uint64_t) commit->commit_ts));
+  offset += sizeof(uint64_t);
+  /* and then the hashed reveal. */
+  memcpy(buf + offset, commit->hashed_reveal,
+         sizeof(commit->hashed_reveal));
+
+  /* Clean the buffer and then b64 encode it. */
+  memset(dst, 0, len);
+  return base64_encode(dst, len, buf, sizeof(buf), 0);
+}
+
 /* Cleanup both our global state and disk state. */
 static void
 sr_cleanup(void)
 {
   sr_state_free();
+}
+
+/* Using <b>commit</b>, return a newly allocated string containing the commit
+ * information that should be used during SRV calculation. It's the caller
+ * responsibility to free the memory. Return NULL if this is not a commit to be
+ * used for SRV calculation. */
+static char *
+get_srv_element_from_commit(const sr_commit_t *commit)
+{
+  char *element;
+  tor_assert(commit);
+
+  if (!commit_has_reveal_value(commit)) {
+    return NULL;
+  }
+
+  tor_asprintf(&element, "%s%s", commit->rsa_identity_fpr,
+               commit->encoded_reveal);
+  return element;
+}
+
+/* Return a srv object that is built with the construction:
+ *    SRV = SHA3-256("shared-random" | INT_8(reveal_num) |
+ *                   INT_8(version) | HASHED_REVEALS | previous_SRV)
+ * This function cannot fail. */
+static sr_srv_t *
+generate_srv(const char *hashed_reveals, uint8_t reveal_num,
+             const sr_srv_t *previous_srv)
+{
+  char msg[DIGEST256_LEN + SR_SRV_MSG_LEN] = {0};
+  size_t offset = 0;
+  sr_srv_t *srv;
+
+  tor_assert(hashed_reveals);
+
+  /* Add the invariant token. */
+  memcpy(msg, SR_SRV_TOKEN, SR_SRV_TOKEN_LEN);
+  offset += SR_SRV_TOKEN_LEN;
+  set_uint8(msg + offset, reveal_num);
+  offset += 1;
+  set_uint8(msg + offset, SR_PROTO_VERSION);
+  offset += 1;
+  memcpy(msg + offset, hashed_reveals, DIGEST256_LEN);
+  offset += DIGEST256_LEN;
+  if (previous_srv != NULL) {
+    memcpy(msg + offset, previous_srv->value, sizeof(previous_srv->value));
+  }
+
+  /* Ok we have our message and key for the HMAC computation, allocate our
+   * srv object and do the last step. */
+  srv = tor_malloc_zero(sizeof(*srv));
+  crypto_digest256((char *) srv->value, msg, sizeof(msg), SR_DIGEST_ALG);
+  srv->num_reveals = reveal_num;
+
+  {
+    /* Debugging. */
+    char srv_hash_encoded[SR_SRV_VALUE_BASE64_LEN + 1];
+    sr_srv_encode(srv_hash_encoded, srv);
+    log_debug(LD_DIR, "SR: Generated SRV: %s", srv_hash_encoded);
+  }
+  return srv;
+}
+
+/* Compare reveal values and return the result. This should exclusively be
+ * used by smartlist_sort(). */
+static int
+compare_reveal_(const void **_a, const void **_b)
+{
+  const sr_commit_t *a = *_a, *b = *_b;
+  return fast_memcmp(a->hashed_reveal, b->hashed_reveal,
+                     sizeof(a->hashed_reveal));
+}
+
+/* Encode the given shared random value and put it in dst. Destination
+ * buffer must be at least SR_SRV_VALUE_BASE64_LEN plus the NULL byte. */
+void
+sr_srv_encode(char *dst, const sr_srv_t *srv)
+{
+  int ret;
+  /* Extra byte for the NULL terminated char. */
+  char buf[SR_SRV_VALUE_BASE64_LEN + 1];
+
+  tor_assert(dst);
+  tor_assert(srv);
+
+  ret = base64_encode(buf, sizeof(buf), (const char *) srv->value,
+                      sizeof(srv->value), 0);
+  /* Always expect the full length without the NULL byte. */
+  tor_assert(ret == (sizeof(buf) - 1));
+  strlcpy(dst, buf, sizeof(buf));
 }
 
 /* Free a commit object. */
@@ -163,6 +338,123 @@ sr_commit_free(sr_commit_t *commit)
   tor_free(commit);
 }
 
+/* Generate the commitment/reveal value for the protocol run starting at
+ * <b>timestamp</b>. <b>my_rsa_cert</b> is our authority RSA certificate. */
+sr_commit_t *
+sr_generate_our_commit(time_t timestamp, const authority_cert_t *my_rsa_cert)
+{
+  sr_commit_t *commit = NULL;
+  char fingerprint[FINGERPRINT_LEN+1];
+
+  tor_assert(my_rsa_cert);
+
+  /* Get our RSA identity fingerprint */
+  if (crypto_pk_get_fingerprint(my_rsa_cert->identity_key,
+                                fingerprint, 0) < 0) {
+    goto error;
+  }
+
+  /* New commit with our identity key. */
+  commit = commit_new(fingerprint);
+
+  /* Generate the reveal random value */
+  crypto_strongest_rand(commit->random_number,
+                        sizeof(commit->random_number));
+  commit->commit_ts = commit->reveal_ts = timestamp;
+
+  /* Now get the base64 blob that corresponds to our reveal */
+  if (reveal_encode(commit, commit->encoded_reveal,
+                    sizeof(commit->encoded_reveal)) < 0) {
+    log_err(LD_DIR, "SR: Unable to encode our reveal value!");
+    goto error;
+  }
+
+  /* Now let's create the commitment */
+  tor_assert(commit->alg == SR_DIGEST_ALG);
+  /* The invariant length is used here since the encoded reveal variable
+   * has an extra byte added for the NULL terminated byte. */
+  if (crypto_digest256(commit->hashed_reveal, commit->encoded_reveal,
+                       SR_REVEAL_BASE64_LEN, commit->alg)) {
+    goto error;
+  }
+
+  /* Now get the base64 blob that corresponds to our commit. */
+  if (commit_encode(commit, commit->encoded_commit,
+                    sizeof(commit->encoded_commit)) < 0) {
+    log_err(LD_DIR, "SR: Unable to encode our commit value!");
+    goto error;
+  }
+
+  log_debug(LD_DIR, "SR: Generated our commitment:");
+  commit_log(commit);
+  return commit;
+
+ error:
+  sr_commit_free(commit);
+  return NULL;
+}
+
+/* Compute the shared random value based on the active commits in our state. */
+void
+sr_compute_srv(void)
+{
+  size_t reveal_num = 0;
+  char *reveals = NULL;
+  smartlist_t *chunks, *commits;
+  digestmap_t *state_commits;
+
+  /* Computing a shared random value in the commit phase is very wrong. This
+   * should only happen at the very end of the reveal phase when a new
+   * protocol run is about to start. */
+  tor_assert(sr_state_get_phase() == SR_PHASE_REVEAL);
+  state_commits = sr_state_get_commits();
+
+  commits = smartlist_new();
+  chunks = smartlist_new();
+
+  /* We must make a list of commit ordered by authority fingerprint in
+   * ascending order as specified by proposal 250. */
+  DIGESTMAP_FOREACH(state_commits, key, sr_commit_t *, c) {
+    smartlist_add(commits, c);
+  } DIGESTMAP_FOREACH_END;
+  smartlist_sort(commits, compare_reveal_);
+
+  /* Now for each commit for that sorted list in ascending order, we'll
+   * build the element for each authority that needs to go into the srv
+   * computation. */
+  SMARTLIST_FOREACH_BEGIN(commits, const sr_commit_t *, c) {
+    char *element = get_srv_element_from_commit(c);
+    if (element) {
+      smartlist_add(chunks, element);
+      reveal_num++;
+    }
+  } SMARTLIST_FOREACH_END(c);
+  smartlist_free(commits);
+
+  {
+    /* Join all reveal values into one giant string that we'll hash so we
+     * can generated our shared random value. */
+    sr_srv_t *current_srv;
+    char hashed_reveals[DIGEST256_LEN];
+    reveals = smartlist_join_strings(chunks, "", 0, NULL);
+    SMARTLIST_FOREACH(chunks, char *, s, tor_free(s));
+    smartlist_free(chunks);
+    if (crypto_digest256(hashed_reveals, reveals, strlen(reveals),
+                         SR_DIGEST_ALG)) {
+      goto end;
+    }
+    tor_assert(reveal_num < UINT8_MAX);
+    current_srv = generate_srv(hashed_reveals, (uint8_t) reveal_num,
+                               sr_state_get_previous_srv());
+    sr_state_set_current_srv(current_srv);
+    /* We have a fresh SRV, flag our state. */
+    sr_state_set_fresh_srv();
+  }
+
+ end:
+  tor_free(reveals);
+}
+
 /* Parse a list of arguments from a SRV value either from a vote, consensus
  * or from our disk state and return a newly allocated srv object. NULL is
  * returned on error.
@@ -174,7 +466,7 @@ sr_srv_t *
 sr_parse_srv(const smartlist_t *args)
 {
   char *value;
-  int num_reveals, ok;
+  int num_reveals, ok, ret;
   sr_srv_t *srv = NULL;
 
   tor_assert(args);
@@ -189,13 +481,24 @@ sr_parse_srv(const smartlist_t *args)
   if (!ok) {
     goto end;
   }
-  srv = tor_malloc_zero(sizeof(*srv));
-  srv->num_reveals = num_reveals;
-
   /* Second and last argument is the shared random value it self. */
   value = smartlist_get(args, 1);
-  base16_decode((char *) srv->value, sizeof(srv->value), value,
-                HEX_DIGEST256_LEN);
+  if (strlen(value) != SR_SRV_VALUE_BASE64_LEN) {
+    goto end;
+  }
+
+  srv = tor_malloc_zero(sizeof(*srv));
+  srv->num_reveals = num_reveals;
+  /* We substract one byte from the srclen because the function ignores the
+   * '=' character in the given buffer. This is broken but it's a documented
+   * behavior of the implementation. */
+  ret = base64_decode((char *) srv->value, sizeof(srv->value), value,
+                      SR_SRV_VALUE_BASE64_LEN - 1);
+  if (ret != sizeof(srv->value)) {
+    tor_free(srv);
+    srv = NULL;
+    goto end;
+  }
  end:
   return srv;
 }

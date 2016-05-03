@@ -42,6 +42,11 @@
  * Formula is taken from base64_encode_size. This adds up to 56 bytes. */
 #define SR_REVEAL_BASE64_LEN \
   (((SR_REVEAL_LEN - 1) / 3) * 4 + 4)
+/* Length of base64 encoded shared random value. It's 32 bytes long so 44
+ * bytes from the base64_encode_size formula. That includes the '='
+ * character at the end. */
+#define SR_SRV_VALUE_BASE64_LEN \
+  (((DIGEST256_LEN - 1) / 3) * 4 + 4)
 
 /* Protocol phase. */
 typedef enum {
@@ -97,17 +102,26 @@ typedef struct sr_commit_t {
 int sr_init(int save_to_disk);
 void sr_save_and_cleanup(void);
 void sr_commit_free(sr_commit_t *commit);
+void sr_srv_encode(char *dst, const sr_srv_t *srv);
 
 /* Private methods (only used by shared_random_state.c): */
 
 sr_commit_t *sr_parse_commit(const smartlist_t *args);
 sr_srv_t *sr_parse_srv(const smartlist_t *args);
+void sr_compute_srv(void);
+sr_commit_t *sr_generate_our_commit(time_t timestamp,
+                                    const authority_cert_t *my_rsa_cert);
 
 #ifdef SHARED_RANDOM_PRIVATE
 
+/* Encode */
+STATIC int reveal_encode(const sr_commit_t *commit, char *dst, size_t len);
+STATIC int commit_encode(const sr_commit_t *commit, char *dst, size_t len);
 /* Decode. */
 STATIC int commit_decode(const char *encoded, sr_commit_t *commit);
 STATIC int reveal_decode(const char *encoded, sr_commit_t *commit);
+
+STATIC int commit_has_reveal_value(const sr_commit_t *commit);
 
 #endif /* SHARED_RANDOM_PRIVATE */
 
