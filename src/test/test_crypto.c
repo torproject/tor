@@ -190,6 +190,67 @@ test_crypto_rng_range(void *arg)
   ;
 }
 
+extern int break_strongest_rng_fallback;
+extern int break_strongest_rng_syscall;
+
+static void
+test_crypto_rng_strongest(void *arg)
+{
+  const char *how = arg;
+  int broken = 0;
+
+  if (how == NULL) {
+    ;
+  } else if (!strcmp(how, "nosyscall")) {
+    break_strongest_rng_syscall = 1;
+  } else if (!strcmp(how, "nofallback")) {
+    break_strongest_rng_fallback = 1;
+  } else if (!strcmp(how, "broken")) {
+    broken = break_strongest_rng_syscall = break_strongest_rng_fallback = 1;
+  }
+
+#define N 128
+  uint8_t combine_and[N];
+  uint8_t combine_or[N];
+  int i, j;
+
+  memset(combine_and, 0xff, N);
+  memset(combine_or, 0, N);
+
+  for (i = 0; i < 100; ++i) { /* 2^-100 chances just don't happen. */
+    uint8_t output[N];
+    memset(output, 0, N);
+    if (how == NULL) {
+      /* this one can't fail. */
+      crypto_strongest_rand(output, sizeof(output));
+    } else {
+      int r = crypto_strongest_rand_raw(output, sizeof(output));
+      if (r == -1) {
+        if (broken) {
+          goto done; /* we're fine. */
+        }
+        /* This function is allowed to break, but only if it always breaks. */
+        tt_int_op(i, OP_EQ, 0);
+        tt_skip();
+      } else {
+        tt_assert(! broken);
+      }
+    }
+    for (j = 0; j < N; ++j) {
+      combine_and[j] &= output[j];
+      combine_or[j] |= output[j];
+    }
+  }
+
+  for (j = 0; j < N; ++j) {
+    tt_int_op(combine_and[j], OP_EQ, 0);
+    tt_int_op(combine_or[j], OP_EQ, 0xff);
+  }
+ done:
+  ;
+#undef N
+}
+
 /* Test for rectifying openssl RAND engine. */
 static void
 test_crypto_rng_engine(void *arg)
@@ -2750,6 +2811,13 @@ struct testcase_t crypto_tests[] = {
   CRYPTO_LEGACY(rng),
   { "rng_range", test_crypto_rng_range, 0, NULL, NULL },
   { "rng_engine", test_crypto_rng_engine, TT_FORK, NULL, NULL },
+  { "rng_strongest", test_crypto_rng_strongest, TT_FORK, NULL, NULL },
+  { "rng_strongest_nosyscall", test_crypto_rng_strongest, TT_FORK,
+    &passthrough_setup, (void*)"nosyscall" },
+  { "rng_strongest_nofallback", test_crypto_rng_strongest, TT_FORK,
+    &passthrough_setup, (void*)"nofallback" },
+  { "rng_strongest_broken", test_crypto_rng_strongest, TT_FORK,
+    &passthrough_setup, (void*)"broken" },
   { "openssl_version", test_crypto_openssl_version, TT_FORK, NULL, NULL },
   { "aes_AES", test_crypto_aes, TT_FORK, &passthrough_setup, (void*)"aes" },
   { "aes_EVP", test_crypto_aes, TT_FORK, &passthrough_setup, (void*)"evp" },

@@ -317,6 +317,7 @@ void crypto_add_spaces_to_fp(char *out, size_t outlen, const char *in);
 
 #ifdef CRYPTO_PRIVATE
 STATIC int crypto_force_rand_ssleay(void);
+STATIC int crypto_strongest_rand_raw(uint8_t *out, size_t out_len);
 #endif
 
 #endif

@@ -2571,6 +2571,11 @@ crypto_seed_weak_rng(tor_weak_rng_t *rng)
   tor_init_weak_random(rng, seed);
 }
 
+#ifdef TOR_UNIT_TESTS
+int break_strongest_rng_syscall = 0;
+int break_strongest_rng_fallback = 0;
+#endif
+
 /** Try to get <b>out_len</b> bytes of the strongest entropy we can generate,
  * via system calls, storing it into <b>out</b>. Return 0 on success, -1 on
  * failure.  A maximum request size of 256 bytes is imposed.
@@ -2579,6 +2584,11 @@ static int
 crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
 {
   tor_assert(out_len <= MAX_STRONGEST_RAND_SIZE);
+
+#ifdef TOR_UNIT_TESTS
+  if (break_strongest_rng_syscall)
+    return -1;
+#endif
 
 #if defined(_WIN32)
   static int provider_set = 0;
@@ -2664,6 +2674,11 @@ crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
 static int
 crypto_strongest_rand_fallback(uint8_t *out, size_t out_len)
 {
+#ifdef TOR_UNIT_TESTS
+  if (break_strongest_rng_fallback)
+    return -1;
+#endif
+
 #ifdef _WIN32
   /* Windows exclusively uses crypto_strongest_rand_syscall(). */
   (void)out;
@@ -2701,7 +2716,7 @@ crypto_strongest_rand_fallback(uint8_t *out, size_t out_len)
  * storing it into <b>out</b>. Return 0 on success, -1 on failure.  A maximum
  * request size of 256 bytes is imposed.
  */
-static int
+STATIC int
 crypto_strongest_rand_raw(uint8_t *out, size_t out_len)
 {
   static const size_t sanity_min_size = 16;
@@ -2735,13 +2750,17 @@ crypto_strongest_rand_raw(uint8_t *out, size_t out_len)
       return 0;
   }
 
-  /* We tried max_attempts times to fill a buffer >= 128 bits long,
+  /* LCOV_EXCL_START
+   *
+   * We tried max_attempts times to fill a buffer >= 128 bits long,
    * and each time it returned all '0's.  Either the system entropy
    * source is busted, or the user should go out and buy a ticket to
    * every lottery on the planet.
    */
   log_warn(LD_CRYPTO, "Strong OS entropy returned all zero buffer.");
+
   return -1;
+  /* LCOV_EXCL_STOP */
 }
 
 /** Try to get <b>out_len</b> bytes of the strongest entropy we can generate,
