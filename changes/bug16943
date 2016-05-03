@@ -1,0 +1,8 @@
+  o Major features (dirauths, security, hidden services):
+    - Directory authorities can now perform the shared randomness protocol
+      specified by proposal 250. Using this protocol, directory authorities can
+      generate a global fresh random number every day. In the future, this
+      global randomness will be used by hidden services to select their
+      responsible HSDirs. This release only implements the directory authority
+      feature; the hidden service side will be implemented in the future as
+      part of proposal 224 . Resolves ticket #16943 and proposal 250.
