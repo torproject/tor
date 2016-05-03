@@ -1624,11 +1624,97 @@ test_crypto_hkdf_sha256(void *arg)
                  "b206fa34e5bc78d063fc291501beec53b36e5a0e434561200c"
                  "5f8bd13e0f88b3459600b4dc21d69363e2895321c06184879d"
                  "94b18f078411be70b767c7fc40679a9440a0c95ea83a23efbf");
-
  done:
   tor_free(mem_op_hex_tmp);
 #undef EXPAND
 }
+
+static void
+test_crypto_hkdf_sha256_testvecs(void *arg)
+{
+  (void) arg;
+  /* Test vectors from RFC5869, sections A.1 through A.3 */
+  const struct {
+    const char *ikm16, *salt16, *info16;
+    int L;
+    const char *okm16;
+  } vecs[] = {
+    { /* from A.1 */
+      "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+      "000102030405060708090a0b0c",
+      "f0f1f2f3f4f5f6f7f8f9",
+      42,
+      "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf"
+        "34007208d5b887185865"
+    },
+    { /* from A.2 */
+      "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+        "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"
+        "404142434445464748494a4b4c4d4e4f",
+      "606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f"
+        "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f"
+        "a0a1a2a3a4a5a6a7a8a9aaabacadaeaf",
+      "b0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecf"
+        "d0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeef"
+        "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
+      82,
+      "b11e398dc80327a1c8e7f78c596a49344f012eda2d4efad8a050cc4c19afa97c"
+      "59045a99cac7827271cb41c65e590e09da3275600c2f09b8367793a9aca3db71"
+      "cc30c58179ec3e87c14c01d5c1f3434f1d87"
+    },
+    { /* from A.3 */
+      "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+      "",
+      "",
+      42,
+      "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d"
+        "9d201395faa4b61a96c8",
+    },
+    { NULL, NULL, NULL, -1, NULL }
+  };
+
+  int i;
+  char *ikm = NULL;
+  char *salt = NULL;
+  char *info = NULL;
+  char *okm = NULL;
+  char *mem_op_hex_tmp = NULL;
+
+  for (i = 0; vecs[i].ikm16; ++i) {
+    size_t ikm_len = strlen(vecs[i].ikm16)/2;
+    size_t salt_len = strlen(vecs[i].salt16)/2;
+    size_t info_len = strlen(vecs[i].info16)/2;
+    size_t okm_len = vecs[i].L;
+
+    ikm = tor_malloc(ikm_len);
+    salt = tor_malloc(salt_len);
+    info = tor_malloc(info_len);
+    okm = tor_malloc(okm_len);
+
+    base16_decode(ikm, ikm_len, vecs[i].ikm16, strlen(vecs[i].ikm16));
+    base16_decode(salt, salt_len, vecs[i].salt16, strlen(vecs[i].salt16));
+    base16_decode(info, info_len, vecs[i].info16, strlen(vecs[i].info16));
+
+    int r = crypto_expand_key_material_rfc5869_sha256(
+              (const uint8_t*)ikm, ikm_len,
+              (const uint8_t*)salt, salt_len,
+              (const uint8_t*)info, info_len,
+              (uint8_t*)okm, okm_len);
+    tt_int_op(r, OP_EQ, 0);
+    test_memeq_hex(okm, vecs[i].okm16);
+    tor_free(ikm);
+    tor_free(salt);
+    tor_free(info);
+    tor_free(okm);
+  }
+ done:
+  tor_free(ikm);
+  tor_free(salt);
+  tor_free(info);
+  tor_free(okm);
+  tor_free(mem_op_hex_tmp);
+}
+
 
 static void
 test_crypto_curve25519_impl(void *arg)
@@ -2636,6 +2722,7 @@ struct testcase_t crypto_tests[] = {
   CRYPTO_LEGACY(base32_decode),
   { "kdf_TAP", test_crypto_kdf_TAP, 0, NULL, NULL },
   { "hkdf_sha256", test_crypto_hkdf_sha256, 0, NULL, NULL },
+  { "hkdf_sha256_testvecs", test_crypto_hkdf_sha256_testvecs, 0, NULL, NULL },
   { "curve25519_impl", test_crypto_curve25519_impl, 0, NULL, NULL },
   { "curve25519_impl_hibit", test_crypto_curve25519_impl, 0, NULL, (void*)"y"},
   { "curve25516_testvec", test_crypto_curve25519_testvec, 0, NULL, NULL },
