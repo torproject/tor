@@ -65,9 +65,71 @@ test_crypto_dh(void *arg)
   tt_mem_op(s1,OP_EQ, s2, s1len);
 
   {
-    /* XXXX Now fabricate some bad values and make sure they get caught,
-     * Check 0, 1, N-1, >= N, etc.
-     */
+    /* Now fabricate some bad values and make sure they get caught. */
+
+    /* 1 and 0 should both fail. */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, "\x01", 1, s1, 50);
+    tt_int_op(-1, OP_EQ, s1len);
+
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, "\x00", 1, s1, 50);
+    tt_int_op(-1, OP_EQ, s1len);
+
+    memset(p1, 0, DH_BYTES); /* 0 with padding. */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    tt_int_op(-1, OP_EQ, s1len);
+
+    p1[DH_BYTES-1] = 1; /* 1 with padding*/
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    tt_int_op(-1, OP_EQ, s1len);
+
+    /* 2 is okay, though weird. */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, "\x02", 1, s1, 50);
+    tt_int_op(50, OP_EQ, s1len);
+
+    const char P[] =
+      "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"
+      "8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"
+      "302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"
+      "A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE6"
+      "49286651ECE65381FFFFFFFFFFFFFFFF";
+
+    /* p-1, p, and so on are not okay. */
+    base16_decode(p1, sizeof(p1), P, strlen(P));
+
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    tt_int_op(-1, OP_EQ, s1len);
+
+    p1[DH_BYTES-1] = 0xFE; /* p-1 */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    tt_int_op(-1, OP_EQ, s1len);
+
+    p1[DH_BYTES-1] = 0xFD; /* p-2 works fine */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    tt_int_op(50, OP_EQ, s1len);
+
+    const char P_plus_one[] =
+      "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"
+      "8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"
+      "302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"
+      "A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE6"
+      "49286651ECE653820000000000000000";
+
+    base16_decode(p1, sizeof(p1), P_plus_one, strlen(P_plus_one));
+
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    tt_int_op(-1, OP_EQ, s1len);
+
+    p1[DH_BYTES-1] = 0x01; /* p+2 */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    tt_int_op(-1, OP_EQ, s1len);
+
+    p1[DH_BYTES-1] = 0xff; /* p+256 */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    tt_int_op(-1, OP_EQ, s1len);
+
+    memset(p1, 0xff, sizeof(DH_BYTES)), /* 2^1024-1 */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    tt_int_op(-1, OP_EQ, s1len);
   }
 
  done:
