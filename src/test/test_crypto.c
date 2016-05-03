@@ -1687,6 +1687,47 @@ test_crypto_curve25519_basepoint(void *arg)
 }
 
 static void
+test_crypto_curve25519_testvec(void *arg)
+{
+  (void)arg;
+  char *mem_op_hex_tmp = NULL;
+
+  /* From RFC 7748, section 6.1 */
+  /* Alice's private key, a: */
+  const char a16[] =
+    "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a";
+  /* Alice's public key, X25519(a, 9): */
+  const char a_pub16[] =
+    "8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a";
+  /* Bob's private key, b: */
+  const char b16[] =
+    "5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb";
+  /* Bob's public key, X25519(b, 9): */
+  const char b_pub16[] =
+    "de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f";
+  /* Their shared secret, K: */
+  const char k16[] =
+    "4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742";
+
+  uint8_t a[32], b[32], a_pub[32], b_pub[32], k1[32], k2[32];
+  base16_decode((char*)a, sizeof(a), a16, strlen(a16));
+  base16_decode((char*)b, sizeof(b), b16, strlen(b16));
+  curve25519_basepoint_impl(a_pub, a);
+  curve25519_basepoint_impl(b_pub, b);
+  curve25519_impl(k1, a, b_pub);
+  curve25519_impl(k2, b, a_pub);
+
+  test_memeq_hex(a, a16);
+  test_memeq_hex(b, b16);
+  test_memeq_hex(a_pub, a_pub16);
+  test_memeq_hex(b_pub, b_pub16);
+  test_memeq_hex(k1, k16);
+  test_memeq_hex(k2, k16);
+ done:
+  tor_free(mem_op_hex_tmp);
+}
+
+static void
 test_crypto_curve25519_wrappers(void *arg)
 {
   curve25519_public_key_t pubkey1, pubkey2;
@@ -2501,6 +2542,7 @@ struct testcase_t crypto_tests[] = {
   { "hkdf_sha256", test_crypto_hkdf_sha256, 0, NULL, NULL },
   { "curve25519_impl", test_crypto_curve25519_impl, 0, NULL, NULL },
   { "curve25519_impl_hibit", test_crypto_curve25519_impl, 0, NULL, (void*)"y"},
+  { "curve25516_testvec", test_crypto_curve25519_testvec, 0, NULL, NULL },
   { "curve25519_basepoint",
     test_crypto_curve25519_basepoint, TT_FORK, NULL, NULL },
   { "curve25519_wrappers", test_crypto_curve25519_wrappers, 0, NULL, NULL },
