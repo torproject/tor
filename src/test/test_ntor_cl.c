@@ -153,7 +153,10 @@ main(int argc, char **argv)
   if (argc < 2) {
     fprintf(stderr, "I need arguments. Read source for more info.\n");
     return 1;
-  } else if (!strcmp(argv[1], "client1")) {
+  }
+
+  curve25519_init();
+  if (!strcmp(argv[1], "client1")) {
     return client1(argc, argv);
   } else if (!strcmp(argv[1], "server1")) {
     return server1(argc, argv);
