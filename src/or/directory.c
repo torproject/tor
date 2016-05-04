@@ -630,7 +630,6 @@ directory_choose_address_routerstatus(const routerstatus_t *status,
   tor_assert(use_or_ap != NULL);
   tor_assert(use_dir_ap != NULL);
 
-  const int anonymized_connection = dirind_is_anon(indirection);
   int have_or = 0, have_dir = 0;
 
   /* We expect status to have at least one reachable address if we're
@@ -652,13 +651,16 @@ directory_choose_address_routerstatus(const routerstatus_t *status,
   tor_addr_make_null(&use_dir_ap->addr, AF_UNSPEC);
   use_dir_ap->port = 0;
 
-  if (anonymized_connection) {
-    /* Use the primary (IPv4) OR address if we're making an indirect
-     * connection. */
-    tor_addr_from_ipv4h(&use_or_ap->addr, status->addr);
-    use_or_ap->port = status->or_port;
-    have_or = 1;
-  } else {
+  /* ORPort connections */
+  if (indirection == DIRIND_ANONYMOUS) {
+    if (status->addr) {
+      /* Since we're going to build a 3-hop circuit and ask the 2nd relay
+       * to extend to this address, always use the primary (IPv4) OR address */
+      tor_addr_from_ipv4h(&use_or_ap->addr, status->addr);
+      use_or_ap->port = status->or_port;
+      have_or = 1;
+    }
+  } else if (indirection == DIRIND_ONEHOP) {
     /* We use an IPv6 address if we have one and we prefer it.
      * Use the preferred address and port if they are reachable, otherwise,
      * use the alternate address and port (if any).
@@ -668,9 +670,15 @@ directory_choose_address_routerstatus(const routerstatus_t *status,
                                                  use_or_ap);
   }
 
-  have_dir = fascist_firewall_choose_address_rs(status,
-                                                FIREWALL_DIR_CONNECTION, 0,
-                                                use_dir_ap);
+  /* DirPort connections
+   * DIRIND_ONEHOP uses ORPort, but may fall back to the DirPort */
+  if (indirection == DIRIND_DIRECT_CONN ||
+      indirection == DIRIND_ANON_DIRPORT ||
+      indirection == DIRIND_ONEHOP) {
+    have_dir = fascist_firewall_choose_address_rs(status,
+                                                  FIREWALL_DIR_CONNECTION, 0,
+                                                  use_dir_ap);
+  }
 
   /* We rejected all addresses in the relay's status. This means we can't
    * connect to it. */
