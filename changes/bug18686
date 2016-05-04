@@ -1,0 +1,5 @@
+  o Minor bugfixes (pluggable transports):
+    - Avoid reporting a spurious error when we decide that we don't
+      need to terminate a pluggable transport because it has already
+      exited. Fixes bug 18686; bugfix on 0.2.5.5-alpha.
+
