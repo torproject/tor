@@ -1506,8 +1506,8 @@ networkstatus_set_current_consensus_from_ns(networkstatus_t *c,
  * consensus, even if it comes from many days in the past.
  *
  * If source_dir is non-NULL, it's the identity digest for a directory that
- * we've just successfully retrieved a consensus from, so try it first to
- * fetch any missing certificates.
+ * we've just successfully retrieved a consensus or certificates from, so try
+ * it first to fetch any missing certificates.
  *
  * Return 0 on success, <0 on failure.  On failure, caller should increment
  * the failure count as appropriate.
@@ -1802,9 +1802,14 @@ networkstatus_set_current_consensus(const char *consensus,
 }
 
 /** Called when we have gotten more certificates: see whether we can
- * now verify a pending consensus. */
+ * now verify a pending consensus.
+ *
+ * If source_dir is non-NULL, it's the identity digest for a directory that
+ * we've just successfully retrieved certificates from, so try it first to
+ * fetch any missing certificates.
+ */
 void
-networkstatus_note_certs_arrived(void)
+networkstatus_note_certs_arrived(const char *source_dir)
 {
   int i;
   for (i=0; i<N_CONSENSUS_FLAVORS; ++i) {
@@ -1817,7 +1822,7 @@ networkstatus_note_certs_arrived(void)
                                  waiting_body,
                                  networkstatus_get_flavor_name(i),
                                  NSSET_WAS_WAITING_FOR_CERTS,
-                                 NULL)) {
+                                 source_dir)) {
         tor_free(waiting_body);
       }
     }

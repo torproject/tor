@@ -87,7 +87,7 @@ int networkstatus_set_current_consensus(const char *consensus,
                                         const char *flavor,
                                         unsigned flags,
                                         const char *source_dir);
-void networkstatus_note_certs_arrived(void);
+void networkstatus_note_certs_arrived(const char *source_dir);
 void routers_update_all_from_networkstatus(time_t now, int dir_version);
 void routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
                                                         int reset_failures);

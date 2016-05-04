@@ -1,4 +1,5 @@
   o Minor bugfix (bootstrap):
-    - Remember the directory we fetched the consensus from, and use
-      it to fetch authority certificates as well.
+    - Remember the directory we fetched the consensus or previous
+      certificates from, and use it to fetch future authority
+      certificates.
       Resolves ticket 18963; fix on #4483 in 0.2.8.1-alpha.

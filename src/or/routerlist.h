@@ -29,7 +29,7 @@ int trusted_dirs_reload_certs(void);
 #define TRUSTED_DIRS_CERTS_SRC_FROM_VOTE 4
 
 int trusted_dirs_load_certs_from_string(const char *contents, int source,
-                                        int flush);
+                                        int flush, const char *source_dir);
 void trusted_dirs_flush_certs_to_disk(void);
 authority_cert_t *authority_cert_get_newest_by_id(const char *id_digest);
 authority_cert_t *authority_cert_get_by_sk_digest(const char *sk_digest);
