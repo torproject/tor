@@ -938,6 +938,10 @@ crypto_pk_copy_full(crypto_pk_t *env)
     new_key = RSAPublicKey_dup(env->key);
   }
   if (!new_key) {
+    /* LCOV_EXCL_START
+     *
+     * We can't cause RSA*Key_dup() to fail, so we can't really test this.
+     */
     log_err(LD_CRYPTO, "Unable to duplicate a %s key: openssl failed.",
             privatekey?"private":"public");
     crypto_log_errors(LOG_ERR,
@@ -945,6 +949,7 @@ crypto_pk_copy_full(crypto_pk_t *env)
                       "Duplicating a public key");
     tor_fragile_assert();
     return NULL;
+    /* LCOV_EXCL_STOP */
   }
 
   return crypto_new_pk_from_rsa_(new_key);
@@ -1695,8 +1700,10 @@ crypto_digest_algorithm_get_name(digest_algorithm_t alg)
     case DIGEST_SHA3_512:
       return "sha3-512";
     default:
+      // LCOV_EXCL_START
       tor_fragile_assert();
       return "??unknown_digest??";
+      // LCOV_EXCL_STOP
   }
 }
 
@@ -1886,8 +1893,10 @@ crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
       keccak_digest_update(&digest->d.sha3, (const uint8_t *)data, len);
       break;
     default:
+      /* LCOV_EXCL_START */
       tor_fragile_assert();
       break;
+      /* LCOV_EXCL_STOP */
   }
 }
 
@@ -1929,10 +1938,10 @@ crypto_digest_get_digest(crypto_digest_t *digest,
 //LCOV_EXCL_START
     case DIGEST_SHA3_256: /* FALLSTHROUGH */
     case DIGEST_SHA3_512:
-      log_warn(LD_BUG, "Handling unexpected algorithm %d", digest->algorithm);
-      tor_assert(0); /* This is fatal, because it should never happen. */
     default:
-      tor_assert(0); /* Unreachable. */
+      log_warn(LD_BUG, "Handling unexpected algorithm %d", digest->algorithm);
+      /* This is fatal, because it should never happen. */
+      tor_assert_unreached();
       break;
 //LCOV_EXCL_STOP
   }
