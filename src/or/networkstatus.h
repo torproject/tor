@@ -85,7 +85,8 @@ int networkstatus_consensus_is_downloading_usable_flavor(void);
 #define NSSET_REQUIRE_FLAVOR 16
 int networkstatus_set_current_consensus(const char *consensus,
                                         const char *flavor,
-                                        unsigned flags);
+                                        unsigned flags,
+                                        const char *source_dir);
 void networkstatus_note_certs_arrived(void);
 void routers_update_all_from_networkstatus(time_t now, int dir_version);
 void routers_update_status_from_consensus_networkstatus(smartlist_t *routers,

@@ -2019,7 +2019,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     }
     log_info(LD_DIR,"Received consensus directory (size %d) from server "
              "'%s:%d'", (int)body_len, conn->base_.address, conn->base_.port);
-    if ((r=networkstatus_set_current_consensus(body, flavname, 0))<0) {
+    if ((r=networkstatus_set_current_consensus(body, flavname, 0,
+                                               conn->identity_digest))<0) {
       log_fn(r<-1?LOG_WARN:LOG_INFO, LD_DIR,
              "Unable to load %s consensus directory downloaded from "
              "server '%s:%d'. I'll try again soon.",

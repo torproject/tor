@@ -174,7 +174,7 @@ router_reload_consensus_networkstatus(void)
     }
     s = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
     if (s) {
-      if (networkstatus_set_current_consensus(s, flavor, flags) < -1) {
+      if (networkstatus_set_current_consensus(s, flavor, flags, NULL) < -1) {
         log_warn(LD_FS, "Couldn't load consensus %s networkstatus from \"%s\"",
                  flavor, filename);
       }
@@ -192,7 +192,8 @@ router_reload_consensus_networkstatus(void)
     s = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
     if (s) {
       if (networkstatus_set_current_consensus(s, flavor,
-                                     flags|NSSET_WAS_WAITING_FOR_CERTS)) {
+                                     flags|NSSET_WAS_WAITING_FOR_CERTS,
+                                     NULL)) {
       log_info(LD_FS, "Couldn't load consensus %s networkstatus from \"%s\"",
                flavor, filename);
     }
@@ -1200,13 +1201,13 @@ update_certificate_downloads(time_t now)
   for (i = 0; i < N_CONSENSUS_FLAVORS; ++i) {
     if (consensus_waiting_for_certs[i].consensus)
       authority_certs_fetch_missing(consensus_waiting_for_certs[i].consensus,
-                                    now);
+                                    now, NULL);
   }
 
   if (current_ns_consensus)
-    authority_certs_fetch_missing(current_ns_consensus, now);
+    authority_certs_fetch_missing(current_ns_consensus, now, NULL);
   if (current_md_consensus)
-    authority_certs_fetch_missing(current_md_consensus, now);
+    authority_certs_fetch_missing(current_md_consensus, now, NULL);
 }
 
 /** Return 1 if we have a consensus but we don't have enough certificates
@@ -1504,6 +1505,10 @@ networkstatus_set_current_consensus_from_ns(networkstatus_t *c,
  * If flags & NSSET_ACCEPT_OBSOLETE, then we should be willing to take this
  * consensus, even if it comes from many days in the past.
  *
+ * If source_dir is non-NULL, it's the identity digest for a directory that
+ * we've just successfully retrieved a consensus from, so try it first to
+ * fetch any missing certificates.
+ *
  * Return 0 on success, <0 on failure.  On failure, caller should increment
  * the failure count as appropriate.
  *
@@ -1513,7 +1518,8 @@ networkstatus_set_current_consensus_from_ns(networkstatus_t *c,
 int
 networkstatus_set_current_consensus(const char *consensus,
                                     const char *flavor,
-                                    unsigned flags)
+                                    unsigned flags,
+                                    const char *source_dir)
 {
   networkstatus_t *c=NULL;
   int r, result = -1;
@@ -1635,7 +1641,7 @@ networkstatus_set_current_consensus(const char *consensus,
           write_str_to_file(unverified_fname, consensus, 0);
         }
         if (dl_certs)
-          authority_certs_fetch_missing(c, now);
+          authority_certs_fetch_missing(c, now, source_dir);
         /* This case is not a success or a failure until we get the certs
          * or fail to get the certs. */
         result = 0;
@@ -1673,7 +1679,7 @@ networkstatus_set_current_consensus(const char *consensus,
 
   /* Are we missing any certificates at all? */
   if (r != 1 && dl_certs)
-    authority_certs_fetch_missing(c, now);
+    authority_certs_fetch_missing(c, now, source_dir);
 
   if (flav == usable_consensus_flavor()) {
     notify_control_networkstatus_changed(current_consensus, c);
@@ -1810,7 +1816,8 @@ networkstatus_note_certs_arrived(void)
       if (!networkstatus_set_current_consensus(
                                  waiting_body,
                                  networkstatus_get_flavor_name(i),
-                                 NSSET_WAS_WAITING_FOR_CERTS)) {
+                                 NSSET_WAS_WAITING_FOR_CERTS,
+                                 NULL)) {
         tor_free(waiting_body);
       }
     }
