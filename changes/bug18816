@@ -1,0 +1,4 @@
+  o Minor bugfix (bootstrap):
+    - Consistently use the consensus download schedule for
+      authority certificates.
+      Resolves ticket 18816; fix on fddb814fe in 0.2.4.13-alpha.

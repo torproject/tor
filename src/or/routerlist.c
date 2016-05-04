@@ -148,6 +148,22 @@ get_n_authorities(dirinfo_type_t type)
   return n;
 }
 
+/** Initialise schedule, want_authority, and increment on in the download
+ * status dlstatus, then call download_status_reset() on it.
+ * It is safe to call this function or download_status_reset() multiple times
+ * on a new dlstatus. But it should *not* be called after a dlstatus has been
+ * used to count download attempts or failures. */
+static void
+download_status_cert_init(download_status_t *dlstatus)
+{
+  dlstatus->schedule = DL_SCHED_CONSENSUS;
+  dlstatus->want_authority = DL_WANT_ANY_DIRSERVER;
+  dlstatus->increment_on = DL_SCHED_INCREMENT_FAILURE;
+
+  /* Use the new schedule to set next_attempt_at */
+  download_status_reset(dlstatus);
+}
+
 /** Reset the download status of a specified element in a dsmap */
 static void
 download_status_reset_by_sk_in_cl(cert_list_t *cl, const char *digest)
@@ -168,6 +184,7 @@ download_status_reset_by_sk_in_cl(cert_list_t *cl, const char *digest)
     /* Insert before we reset */
     dlstatus = tor_malloc_zero(sizeof(*dlstatus));
     dsmap_set(cl->dl_status_map, digest, dlstatus);
+    download_status_cert_init(dlstatus);
   }
   tor_assert(dlstatus);
   /* Go ahead and reset it */
@@ -206,7 +223,7 @@ download_status_is_ready_by_sk_in_cl(cert_list_t *cl,
      * too.
      */
     dlstatus = tor_malloc_zero(sizeof(*dlstatus));
-    download_status_reset(dlstatus);
+    download_status_cert_init(dlstatus);
     dsmap_set(cl->dl_status_map, digest, dlstatus);
     rv = 1;
   }
@@ -225,7 +242,7 @@ get_cert_list(const char *id_digest)
   cl = digestmap_get(trusted_dir_certs, id_digest);
   if (!cl) {
     cl = tor_malloc_zero(sizeof(cert_list_t));
-    cl->dl_status_by_id.schedule = DL_SCHED_CONSENSUS;
+    download_status_cert_init(&cl->dl_status_by_id);
     cl->certs = smartlist_new();
     cl->dl_status_map = dsmap_new();
     digestmap_set(trusted_dir_certs, id_digest, cl);
