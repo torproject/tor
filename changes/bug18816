@@ -1,4 +1,6 @@
   o Minor bugfix (bootstrap):
     - Consistently use the consensus download schedule for
       authority certificates.
+    - When downloading authority certificates fails, switch from
+      using a fallback to using an authority.
       Resolves ticket 18816; fix on fddb814fe in 0.2.4.13-alpha.
