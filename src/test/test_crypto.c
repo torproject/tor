@@ -58,7 +58,6 @@ test_crypto_dh(void *arg)
   tt_int_op(s1len,OP_EQ, s2len);
   tt_mem_op(s1,OP_EQ, s2, s1len);
 
-
   /* test dh_dup; make sure it works the same. */
   dh1_dup = crypto_dh_dup(dh1);
   s1len = crypto_dh_compute_secret(LOG_WARN, dh1_dup, p2, DH_BYTES, s1, 50);
@@ -130,6 +129,19 @@ test_crypto_dh(void *arg)
     memset(p1, 0xff, sizeof(DH_BYTES)), /* 2^1024-1 */
     s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
     tt_int_op(-1, OP_EQ, s1len);
+  }
+
+  {
+    /* provoke an error in the openssl DH_compute_key function; make sure we
+     * survive. */
+    tt_assert(! crypto_dh_get_public(dh1, p1, DH_BYTES));
+
+    crypto_dh_free(dh2);
+    dh2= crypto_dh_new(DH_TYPE_CIRCUIT); /* no private key set */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh2,
+                                     p1, DH_BYTES,
+                                     s1, 50);
+    tt_int_op(s1len, OP_EQ, -1);
   }
 
  done:

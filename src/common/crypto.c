@@ -2165,9 +2165,14 @@ crypto_set_tls_dh_prime(void)
   int r;
 
   /* If the space is occupied, free the previous TLS DH prime */
-  if (dh_param_p_tls) {
+  if (BUG(dh_param_p_tls)) {
+    /* LCOV_EXCL_START
+     *
+     * We shouldn't be calling this twice.
+     */
     BN_clear_free(dh_param_p_tls);
     dh_param_p_tls = NULL;
+    /* LCOV_EXCL_STOP */
   }
 
   tls_prime = BN_new();
@@ -2199,8 +2204,8 @@ init_dh_param(void)
 {
   BIGNUM *circuit_dh_prime;
   int r;
-  if (dh_param_p && dh_param_g)
-    return;
+  if (BUG(dh_param_p && dh_param_g))
+    return; // LCOV_EXCL_LINE This function isn't supposed to be called twice.
 
   circuit_dh_prime = BN_new();
   tor_assert(circuit_dh_prime);
@@ -2366,8 +2371,8 @@ tor_check_dh_key(int severity, BIGNUM *bn)
   tor_assert(bn);
   x = BN_new();
   tor_assert(x);
-  if (!dh_param_p)
-    init_dh_param();
+  if (BUG(!dh_param_p))
+    init_dh_param(); //LCOV_EXCL_LINE we already checked whether we did this.
   BN_set_word(x, 1);
   if (BN_cmp(bn,x)<=0) {
     log_fn(severity, LD_CRYPTO, "DH key must be at least 2.");
