@@ -3928,8 +3928,13 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
 /* Maximum number of file descriptors, if we cannot get it via sysconf() */
 #define DEFAULT_MAX_FD 256
 
-/** Terminate the process of <b>process_handle</b>.
- *  Code borrowed from Python's os.kill. */
+/** Terminate the process of <b>process_handle</b>, if that process has not
+ * already exited.
+ *
+ * Return 0 if we succeeded in terminating the process (or if the process
+ * already exited), and -1 if we tried to kill the process but failed.
+ *
+ * Based on code originally borrowed from Python's os.kill. */
 int
 tor_terminate_process(process_handle_t *process_handle)
 {
@@ -3949,7 +3954,7 @@ tor_terminate_process(process_handle_t *process_handle)
   }
 #endif
 
-  return -1;
+  return 0; /* We didn't need to kill the process, so report success */
 }
 
 /** Return the Process ID of <b>process_handle</b>. */
