@@ -1786,16 +1786,46 @@ crypto_digest_alloc_bytes(digest_algorithm_t alg)
 #undef STRUCT_FIELD_SIZE
 }
 
+/**
+ * Internal function: create and return a new digest object for 'algorithm'.
+ * Does not typecheck the algorithm.
+ */
+static crypto_digest_t *
+crypto_digest_new_internal(digest_algorithm_t algorithm)
+{
+  crypto_digest_t *r = tor_malloc(crypto_digest_alloc_bytes(algorithm));
+  r->algorithm = algorithm;
+
+  switch (algorithm)
+    {
+    case DIGEST_SHA1:
+      SHA1_Init(&r->d.sha1);
+      break;
+    case DIGEST_SHA256:
+      SHA256_Init(&r->d.sha2);
+      break;
+    case DIGEST_SHA512:
+      SHA512_Init(&r->d.sha512);
+      break;
+    case DIGEST_SHA3_256:
+      keccak_digest_init(&r->d.sha3, 256);
+      break;
+    case DIGEST_SHA3_512:
+      keccak_digest_init(&r->d.sha3, 512);
+      break;
+    default:
+      tor_assert_unreached();
+    }
+
+  return r;
+}
+
 /** Allocate and return a new digest object to compute SHA1 digests.
  */
 crypto_digest_t *
 crypto_digest_new(void)
 {
-  crypto_digest_t *r;
-  r = tor_malloc(crypto_digest_alloc_bytes(DIGEST_SHA1));
-  SHA1_Init(&r->d.sha1);
-  r->algorithm = DIGEST_SHA1;
-  return r;
+  return crypto_digest_new_internal(DIGEST_SHA1);
 }
 
 /** Allocate and return a new digest object to compute 256-bit digests
@@ -1803,15 +1833,8 @@ crypto_digest_new(void)
 crypto_digest_t *
 crypto_digest256_new(digest_algorithm_t algorithm)
 {
-  crypto_digest_t *r;
   tor_assert(algorithm == DIGEST_SHA256 || algorithm == DIGEST_SHA3_256);
-  r = tor_malloc(crypto_digest_alloc_bytes(algorithm));
-  if (algorithm == DIGEST_SHA256)
-    SHA256_Init(&r->d.sha2);
-  else
-    keccak_digest_init(&r->d.sha3, 256);
-  r->algorithm = algorithm;
-  return r;
+  return crypto_digest_new_internal(algorithm);
 }
 
 /** Allocate and return a new digest object to compute 512-bit digests
@@ -1819,15 +1842,8 @@ crypto_digest256_new(digest_algorithm_t algorithm)
 crypto_digest_t *
 crypto_digest512_new(digest_algorithm_t algorithm)
 {
-  crypto_digest_t *r;
   tor_assert(algorithm == DIGEST_SHA512 || algorithm == DIGEST_SHA3_512);
-  r = tor_malloc(crypto_digest_alloc_bytes(algorithm));
-  if (algorithm == DIGEST_SHA512)
-    SHA512_Init(&r->d.sha512);
-  else
-    keccak_digest_init(&r->d.sha3, 512);
-  r->algorithm = algorithm;
-  return r;
+  return crypto_digest_new_internal(algorithm);
 }
 
 /** Deallocate a digest object.
@@ -1977,27 +1993,7 @@ crypto_digest_smartlist_prefix(char *digest_out, size_t len_out,
                         const char *append,
                         digest_algorithm_t alg)
 {
-  crypto_digest_t *d = NULL;
-  switch (alg) {
-    case DIGEST_SHA1:
-      d = crypto_digest_new();
-      break;
-    case DIGEST_SHA256: /* FALLSTHROUGH */
-    case DIGEST_SHA3_256:
-      d = crypto_digest256_new(alg);
-      break;
-    case DIGEST_SHA512: /* FALLSTHROUGH */
-    case DIGEST_SHA3_512:
-      d = crypto_digest512_new(alg);
-      break;
-    default:
-      log_warn(LD_BUG, "Called with unknown algorithm %d", alg);
-      /* If fragile_assert is not enabled, wipe output and return
-       * without running any calculations */
-      memwipe(digest_out, 0xff, len_out);
-      tor_fragile_assert();
-      goto free;
-  }
+  crypto_digest_t *d = crypto_digest_new_internal(alg);
   if (prepend)
     crypto_digest_add_bytes(d, prepend, strlen(prepend));
   SMARTLIST_FOREACH(lst, const char *, cp,
@@ -2005,8 +2001,6 @@ crypto_digest_smartlist_prefix(char *digest_out, size_t len_out,
   if (append)
     crypto_digest_add_bytes(d, append, strlen(append));
   crypto_digest_get_digest(d, digest_out, len_out);
-
- free:
   crypto_digest_free(d);
 }
 
