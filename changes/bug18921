@@ -1,0 +1,4 @@
+  o Major bugfixes (IPv6 bridges):
+    - Fix directory address selection for IPv6 bridges.
+      Resolves #18921, bugfix on #17840 in 0.2.8.1-alpha.
+      Patch by "teor".
