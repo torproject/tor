@@ -1,0 +1,6 @@
+  o Major bugfixes (DNS proxy):
+    - Stop a crash that could occur when a client running with DNSPort
+      received a query with multiple address types, where the first
+      address type was not supported. Found and fixed by Scott Dial.
+      Fixes bug 18710; bugfix on 0.2.5.4-alpha.
+
