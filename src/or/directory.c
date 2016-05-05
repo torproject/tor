@@ -630,6 +630,7 @@ directory_choose_address_routerstatus(const routerstatus_t *status,
   tor_assert(use_or_ap != NULL);
   tor_assert(use_dir_ap != NULL);
 
+  const or_options_t *options = get_options();
   int have_or = 0, have_dir = 0;
 
   /* We expect status to have at least one reachable address if we're
@@ -671,10 +672,11 @@ directory_choose_address_routerstatus(const routerstatus_t *status,
   }
 
   /* DirPort connections
-   * DIRIND_ONEHOP uses ORPort, but may fall back to the DirPort */
+   * DIRIND_ONEHOP uses ORPort, but may fall back to the DirPort on relays */
   if (indirection == DIRIND_DIRECT_CONN ||
       indirection == DIRIND_ANON_DIRPORT ||
-      indirection == DIRIND_ONEHOP) {
+      (indirection == DIRIND_ONEHOP
+       && !directory_must_use_begindir(options))) {
     have_dir = fascist_firewall_choose_address_rs(status,
                                                   FIREWALL_DIR_CONNECTION, 0,
                                                   use_dir_ap);
@@ -964,6 +966,16 @@ connection_dir_download_cert_failed(dir_connection_t *conn, int status)
   update_certificate_downloads(time(NULL));
 }
 
+/* Should this tor instance only use begindir for all its directory requests?
+ */
+int
+directory_must_use_begindir(const or_options_t *options)
+{
+  /* Clients, onion services, and bridges must use begindir,
+   * relays and authorities do not have to */
+  return !public_server_mode(options);
+}
+
 /** Evaluate the situation and decide if we should use an encrypted
  * "begindir-style" connection for this directory request.
  * 1) If or_port is 0, or it's a direct conn and or_port is firewalled
@@ -971,23 +983,48 @@ connection_dir_download_cert_failed(dir_connection_t *conn, int status)
  * 2) If we prefer to avoid begindir conns, and we're not fetching or
  *    publishing a bridge relay descriptor, no.
  * 3) Else yes.
+ * If returning 0, return in *reason why we can't use begindir.
+ * reason must not be NULL.
  */
 static int
 directory_command_should_use_begindir(const or_options_t *options,
                                       const tor_addr_t *addr,
                                       int or_port, uint8_t router_purpose,
-                                      dir_indirection_t indirection)
+                                      dir_indirection_t indirection,
+                                      const char **reason)
 {
   (void) router_purpose;
-  if (!or_port)
+  tor_assert(reason);
+  *reason = NULL;
+
+  /* Reasons why we can't possibly use begindir */
+  if (!or_port) {
+    *reason = "directory with unknown ORPort";
     return 0; /* We don't know an ORPort -- no chance. */
-  if (indirection == DIRIND_DIRECT_CONN || indirection == DIRIND_ANON_DIRPORT)
+  }
+  if (indirection == DIRIND_DIRECT_CONN ||
+      indirection == DIRIND_ANON_DIRPORT) {
+    *reason = "DirPort connection";
     return 0;
-  if (indirection == DIRIND_ONEHOP)
+  }
+  if (indirection == DIRIND_ONEHOP) {
+    /* We're firewalled and want a direct OR connection */
     if (!fascist_firewall_allows_address_addr(addr, or_port,
-                                              FIREWALL_OR_CONNECTION, 0, 0) ||
-        directory_fetches_from_authorities(options))
-      return 0; /* We're firewalled or are acting like a relay -- also no. */
+                                              FIREWALL_OR_CONNECTION, 0, 0)) {
+      *reason = "ORPort not reachable";
+      return 0;
+    }
+  }
+  /* Reasons why we want to avoid using begindir */
+  if (indirection == DIRIND_ONEHOP) {
+    if (!directory_must_use_begindir(options)) {
+      *reason = "in relay mode";
+      return 0;
+    }
+  }
+  /* DIRIND_ONEHOP on a client, or DIRIND_ANONYMOUS
+   */
+  *reason = "(using begindir)";
   return 1;
 }
 
@@ -1070,11 +1107,13 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
   dir_connection_t *conn;
   const or_options_t *options = get_options();
   int socket_error = 0;
+  const char *begindir_reason = NULL;
   /* Should the connection be to a relay's OR port (and inside that we will
    * send our directory request)? */
   const int use_begindir = directory_command_should_use_begindir(options,
                                      &or_addr_port->addr, or_addr_port->port,
-                                     router_purpose, indirection);
+                                     router_purpose, indirection,
+                                     &begindir_reason);
   /* Will the connection go via a three-hop Tor circuit? Note that this
    * is separate from whether it will use_begindir. */
   const int anonymized_connection = dirind_is_anon(indirection);
@@ -1099,6 +1138,14 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
 #else
   (void)is_sensitive_dir_purpose;
 #endif
+
+  /* use encrypted begindir connections for everything except relays
+   * this provides better protection for directory fetches */
+  if (!use_begindir && directory_must_use_begindir(options)) {
+    log_warn(LD_BUG, "Client could not use begindir connection: %s",
+             begindir_reason ? begindir_reason : "(NULL)");
+    return;
+  }
 
   /* ensure that we don't make direct connections when a SOCKS server is
    * configured. */
