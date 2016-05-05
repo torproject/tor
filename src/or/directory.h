@@ -28,8 +28,8 @@ void directory_get_from_all_authorities(uint8_t dir_purpose,
 
 /** Enumeration of ways to connect to a directory server */
 typedef enum {
-  /** Default: connect over a one-hop Tor circuit but fall back to direct
-   * connection */
+  /** Default: connect over a one-hop Tor circuit. Relays fall back to direct
+   * DirPort connections, clients, onion services, and bridges do not */
   DIRIND_ONEHOP=0,
   /** Connect over a multi-hop anonymizing Tor circuit */
   DIRIND_ANONYMOUS=1,
@@ -38,6 +38,8 @@ typedef enum {
   /** Connect over a multi-hop anonymizing Tor circuit to our dirport */
   DIRIND_ANON_DIRPORT,
 } dir_indirection_t;
+
+int directory_must_use_begindir(const or_options_t *options);
 
 MOCK_DECL(void, directory_initiate_command_routerstatus,
                 (const routerstatus_t *status,
