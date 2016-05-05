@@ -1597,11 +1597,10 @@ router_picked_poor_directory_log(const routerstatus_t *rs)
   STMT_BEGIN                                                                  \
     if (result == NULL && try_ip_pref && options->ClientUseIPv4               \
         && fascist_firewall_use_ipv6(options) && !server_mode(options)        \
-        && n_not_preferred && !n_busy) {                                      \
+        && !n_busy) {                                                         \
       n_excluded = 0;                                                         \
       n_busy = 0;                                                             \
       try_ip_pref = 0;                                                        \
-      n_not_preferred = 0;                                                    \
       goto retry_label;                                                       \
     }                                                                         \
   STMT_END                                                                    \
@@ -1620,7 +1619,6 @@ router_picked_poor_directory_log(const routerstatus_t *rs)
       n_excluded = 0;                                                         \
       n_busy = 0;                                                             \
       try_ip_pref = 1;                                                        \
-      n_not_preferred = 0;                                                    \
       goto retry_label;                                                       \
     }                                                                         \
   STMT_END
@@ -1673,7 +1671,7 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
   const int no_microdesc_fetching = (flags & PDS_NO_EXISTING_MICRODESC_FETCH);
   const int for_guard = (flags & PDS_FOR_GUARD);
   int try_excluding = 1, n_excluded = 0, n_busy = 0;
-  int try_ip_pref = 1, n_not_preferred = 0;
+  int try_ip_pref = 1;
 
   if (!consensus)
     return NULL;
@@ -1750,8 +1748,6 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
                                         try_ip_pref))
       smartlist_add(is_trusted ? trusted_direct :
                     is_overloaded ? overloaded_direct : direct, (void*)node);
-    else if (!tor_addr_is_null(&status->ipv6_addr))
-      ++n_not_preferred;
   } SMARTLIST_FOREACH_END(node);
 
   if (smartlist_len(tunnel)) {
@@ -1839,7 +1835,7 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
   smartlist_t *pick_from;
   int n_busy = 0;
   int try_excluding = 1, n_excluded = 0;
-  int try_ip_pref = 1, n_not_preferred = 0;
+  int try_ip_pref = 1;
 
   if (!sourcelist)
     return NULL;
@@ -1896,8 +1892,6 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
                fascist_firewall_allows_dir_server(d, FIREWALL_DIR_CONNECTION,
                                                   try_ip_pref))
         smartlist_add(is_overloaded ? overloaded_direct : direct, (void*)d);
-      else if (!tor_addr_is_null(&d->ipv6_addr))
-        ++n_not_preferred;
     }
   SMARTLIST_FOREACH_END(d);
 

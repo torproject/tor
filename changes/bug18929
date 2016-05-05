@@ -1,0 +1,5 @@
+  o Minor bugfixes (IPv6):
+    - Make directory node selection more reliable, mainly for
+      IPv6-only clients and clients with few reachable addresses.
+      Resolves #18929, bugfix on #17840 in 0.2.8.1-alpha.
+      Patch by "teor".
