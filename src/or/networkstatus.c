@@ -1347,8 +1347,10 @@ networkstatus_consensus_is_already_downloading(const char *resource)
     connection_t *base = TO_CONN(dirconn);
     if (base->linked_conn &&
         base->linked_conn->type == CONN_TYPE_AP &&
-        !AP_CONN_STATE_IS_UNATTACHED(base->linked_conn->state))
+        !AP_CONN_STATE_IS_UNATTACHED(base->linked_conn->state)) {
       answer = 1;
+      break; /* stop looping, because we know the answer will be yes */
+    }
   } SMARTLIST_FOREACH_END(dirconn);
   smartlist_free(fetching_conns);
 
