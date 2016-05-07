@@ -2112,7 +2112,7 @@ choose_good_middle_server(uint8_t purpose,
              purpose <= CIRCUIT_PURPOSE_MAX_);
 
   log_debug(LD_CIRC, "Contemplating intermediate hop %d: random choice.",
-            cur_len);
+            cur_len+1);
   excluded = smartlist_new();
   if ((r = build_state_get_exit_node(state))) {
     nodelist_add_node_and_family(excluded, r);
@@ -2263,7 +2263,7 @@ onion_extend_cpath(origin_circuit_t *circ)
 
   if (!info) {
     log_warn(LD_CIRC,"Failed to find node for hop %d of our path. Discarding "
-             "this circuit.", cur_len);
+             "this circuit.", cur_len+1);
     return -1;
   }
 
