@@ -7037,6 +7037,87 @@ get_first_advertised_port_by_type_af(int listener_type, int address_family)
   return 0;
 }
 
+/** Return the first advertised address of type <b>listener_type</b> in
+ * <b>address_family</b>. Returns NULL if there is no advertised address,
+ * and when passed AF_UNSPEC. */
+const tor_addr_t *
+get_first_advertised_addr_by_type_af(int listener_type, int address_family)
+{
+  if (address_family == AF_UNSPEC)
+    return NULL;
+  if (!configured_ports)
+    return NULL;
+  SMARTLIST_FOREACH_BEGIN(configured_ports, const port_cfg_t *, cfg) {
+    if (cfg->type == listener_type &&
+        !cfg->server_cfg.no_advertise) {
+      if ((address_family == AF_INET && port_binds_ipv4(cfg)) ||
+          (address_family == AF_INET6 && port_binds_ipv6(cfg))) {
+        return &cfg->addr;
+      }
+    }
+  } SMARTLIST_FOREACH_END(cfg);
+  return NULL;
+}
+
+/** Return 1 if a port exists of type <b>listener_type</b> on <b>addr</b> and
+ * <b>port</b>. If <b>check_wildcard</b> is true, INADDR[6]_ANY and AF_UNSPEC
+ * addresses match any address of the appropriate family; and port -1 matches
+ * any port.
+ * To match auto ports, pass CFG_PORT_AUTO. (Does not match on the actual
+ * automatically chosen listener ports.) */
+int
+port_exists_by_type_addr_port(int listener_type, const tor_addr_t *addr,
+                              int port, int check_wildcard)
+{
+  if (!configured_ports || !addr)
+    return 0;
+  SMARTLIST_FOREACH_BEGIN(configured_ports, const port_cfg_t *, cfg) {
+    if (cfg->type == listener_type) {
+      if (cfg->port == port || (check_wildcard && port == -1)) {
+        /* Exact match */
+        if (tor_addr_eq(&cfg->addr, addr)) {
+          return 1;
+        }
+        /* Skip wildcard matches if we're not doing them */
+        if (!check_wildcard) {
+          continue;
+        }
+        /* Wildcard matches IPv4 */
+        const int cfg_v4 = port_binds_ipv4(cfg);
+        const int cfg_any_v4 = tor_addr_is_null(&cfg->addr) && cfg_v4;
+        const int addr_v4 = tor_addr_family(addr) == AF_INET ||
+                            tor_addr_family(addr) == AF_UNSPEC;
+        const int addr_any_v4 = tor_addr_is_null(&cfg->addr) && addr_v4;
+        if ((cfg_any_v4 && addr_v4) || (cfg_v4 && addr_any_v4)) {
+          return 1;
+        }
+        /* Wildcard matches IPv6 */
+        const int cfg_v6 = port_binds_ipv6(cfg);
+        const int cfg_any_v6 = tor_addr_is_null(&cfg->addr) && cfg_v6;
+        const int addr_v6 = tor_addr_family(addr) == AF_INET6 ||
+                            tor_addr_family(addr) == AF_UNSPEC;
+        const int addr_any_v6 = tor_addr_is_null(&cfg->addr) && addr_v6;
+        if ((cfg_any_v6 && addr_v6) || (cfg_v6 && addr_any_v6)) {
+          return 1;
+        }
+      }
+    }
+  } SMARTLIST_FOREACH_END(cfg);
+  return 0;
+}
+
+/* Like port_exists_by_type_addr_port, but accepts a host-order IPv4 address
+ * instead. */
+int
+port_exists_by_type_addr32h_port(int listener_type, uint32_t addr_ipv4h,
+                                 int port, int check_wildcard)
+{
+  tor_addr_t ipv4;
+  tor_addr_from_ipv4h(&ipv4, addr_ipv4h);
+  return port_exists_by_type_addr_port(listener_type, &ipv4, port,
+                                       check_wildcard);
+}
+
 /** Adjust the value of options->DataDirectory, or fill it in if it's
  * absent. Return 0 on success, -1 on failure. */
 static int

@@ -87,6 +87,12 @@ int get_first_advertised_port_by_type_af(int listener_type,
   (get_first_advertised_port_by_type_af(CONN_TYPE_OR_LISTENER, AF_INET))
 #define get_primary_dir_port() \
   (get_first_advertised_port_by_type_af(CONN_TYPE_DIR_LISTENER, AF_INET))
+const tor_addr_t *get_first_advertised_addr_by_type_af(int listener_type,
+                                                       int address_family);
+int port_exists_by_type_addr_port(int listener_type, const tor_addr_t *addr,
+                                  int port, int check_wildcard);
+int port_exists_by_type_addr32h_port(int listener_type, uint32_t addr_ipv4h,
+                                     int port, int check_wildcard);
 
 char *get_first_listener_addrport_string(int listener_type);
 

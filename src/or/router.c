@@ -1896,6 +1896,85 @@ router_pick_published_address,(const or_options_t *options, uint32_t *addr))
   return 0;
 }
 
+/* Tor relays only have one IPv4 address in the descriptor, which is derived
+ * from the Address torrc option, or guessed using various methods in
+ * router_pick_published_address().
+ * Warn the operator if there is no ORPort on the descriptor address
+ * ipv4h_desc_addr.
+ * Warn the operator if there is no DirPort on the descriptor address.
+ * This catches a few common config errors:
+ *  - operators who expect ORPorts and DirPorts to be advertised on the
+ *    ports' listen addresses, rather than the torrc Address (or guessed
+ *    addresses in the absence of an Address config). This includes
+ *    operators who attempt to put their ORPort and DirPort on different
+ *    addresses;
+ *  - discrepancies between guessed addresses and configured listen
+ *    addresses (when the Address option isn't set).
+ * If a listener is listening on all IPv4 addresses, it is assumed that it
+ * is listening on the configured Address, and no messages are logged.
+ * If an operators has specified NoAdvertise ORPorts in a NAT setting,
+ * no messages are logged, unless they have specified other advertised
+ * addresses.
+ * The message tells operators to configure an ORPort and DirPort that match
+ * the Address (using NoListen if needed).
+ */
+static void
+router_check_descriptor_address_consistency(uint32_t ipv4h_desc_addr)
+{
+
+  /* The first configured ORPort and DirPort, which may be CFG_AUTO_PORT. */
+  int orport_v4_cfg = get_first_advertised_port_by_type_af(
+                                                        CONN_TYPE_OR_LISTENER,
+                                                        AF_INET);
+  int dirport_v4_cfg = get_first_advertised_port_by_type_af(
+                                                        CONN_TYPE_DIR_LISTENER,
+                                                        AF_INET);
+
+  if (orport_v4_cfg != 0 &&
+      !port_exists_by_type_addr32h_port(CONN_TYPE_OR_LISTENER,
+                                        ipv4h_desc_addr, orport_v4_cfg, 1)) {
+      const tor_addr_t *port_addr = get_first_advertised_addr_by_type_af(
+                                                        CONN_TYPE_OR_LISTENER,
+                                                        AF_INET);
+      tor_addr_t desc_addr;
+      char port_addr_str[TOR_ADDR_BUF_LEN];
+      char desc_addr_str[TOR_ADDR_BUF_LEN];
+
+      tor_addr_to_str(port_addr_str, port_addr, TOR_ADDR_BUF_LEN, 0);
+
+      tor_addr_from_ipv4h(&desc_addr, ipv4h_desc_addr);
+      tor_addr_to_str(desc_addr_str, &desc_addr, TOR_ADDR_BUF_LEN, 0);
+
+      log_warn(LD_CONFIG, "The configured IPv4 ORPort address %s does not "
+               "match the address %s in the descriptor. Please configure "
+               "matching IPv4 addresses for the Address and ORPort options. "
+               "Use NoListen on the ORPort if you are behind a NAT.",
+               port_addr_str, desc_addr_str);
+    }
+
+  if (dirport_v4_cfg != 0 &&
+      !port_exists_by_type_addr32h_port(CONN_TYPE_DIR_LISTENER,
+                                        ipv4h_desc_addr, dirport_v4_cfg, 1)) {
+      const tor_addr_t *port_addr = get_first_advertised_addr_by_type_af(
+                                                        CONN_TYPE_DIR_LISTENER,
+                                                        AF_INET);
+      tor_addr_t desc_addr;
+      char port_addr_str[TOR_ADDR_BUF_LEN];
+      char desc_addr_str[TOR_ADDR_BUF_LEN];
+
+      tor_addr_to_str(port_addr_str, port_addr, TOR_ADDR_BUF_LEN, 0);
+
+      tor_addr_from_ipv4h(&desc_addr, ipv4h_desc_addr);
+      tor_addr_to_str(desc_addr_str, &desc_addr, TOR_ADDR_BUF_LEN, 0);
+
+      log_warn(LD_CONFIG, "The configured IPv4 DirPort address %s does not "
+               "match the address %s in the descriptor. Please configure "
+               "matching IPv4 addresses for the Address and DirPort options. "
+               "Use NoListen on the DirPort if you are behind a NAT.",
+               port_addr_str, desc_addr_str);
+    }
+}
+
 /** Build a fresh routerinfo, signed server descriptor, and extra-info document
  * for this OR. Set r to the generated routerinfo, e to the generated
  * extra-info document. Return 0 on success, -1 on temporary error. Failure to
@@ -1917,6 +1996,10 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
     log_warn(LD_CONFIG, "Don't know my address while generating descriptor");
     return -1;
   }
+
+  /* Log a message if the address in the descriptor doesn't match the ORPort
+   * and DirPort addresses configured by the operator. */
+  router_check_descriptor_address_consistency(addr);
 
   ri = tor_malloc_zero(sizeof(routerinfo_t));
   ri->cache_info.routerlist_index = -1;
