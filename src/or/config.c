@@ -6841,6 +6841,22 @@ parse_ports(or_options_t *options, int validate_only,
   return retval;
 }
 
+/* Does port bind to IPv4? */
+static int port_binds_ipv4(const port_cfg_t *port)
+{
+  return tor_addr_family(&port->addr) == AF_INET ||
+         (tor_addr_family(&port->addr) == AF_UNSPEC
+          && !port->server_cfg.bind_ipv6_only);
+}
+
+/* Does port bind to IPv6? */
+static int port_binds_ipv6(const port_cfg_t *port)
+{
+  return tor_addr_family(&port->addr) == AF_INET6 ||
+         (tor_addr_family(&port->addr) == AF_UNSPEC
+          && !port->server_cfg.bind_ipv4_only);
+}
+
 /** Given a list of <b>port_cfg_t</b> in <b>ports</b>, check them for internal
  * consistency and warn as appropriate.  Set *<b>n_low_ports_out</b> to the
  * number of sub-1024 ports we will be binding. */
@@ -6866,9 +6882,7 @@ check_server_ports(const smartlist_t *ports,
     } else if (port->type == CONN_TYPE_OR_LISTENER) {
       if (! port->server_cfg.no_advertise) {
         ++n_orport_advertised;
-        if (tor_addr_family(&port->addr) == AF_INET ||
-            (tor_addr_family(&port->addr) == AF_UNSPEC &&
-                !port->server_cfg.bind_ipv6_only))
+        if (port_binds_ipv4(port))
           ++n_orport_advertised_ipv4;
       }
       if (! port->server_cfg.no_listen)
@@ -7002,20 +7016,20 @@ get_first_listener_addrport_string(int listener_type)
 }
 
 /** Return the first advertised port of type <b>listener_type</b> in
-    <b>address_family</b>.  */
+ * <b>address_family</b>. Returns 0 when no port is found, and when passed
+ * AF_UNSPEC. */
 int
 get_first_advertised_port_by_type_af(int listener_type, int address_family)
 {
+  if (address_family == AF_UNSPEC)
+    return 0;
   if (!configured_ports)
     return 0;
   SMARTLIST_FOREACH_BEGIN(configured_ports, const port_cfg_t *, cfg) {
     if (cfg->type == listener_type &&
-        !cfg->server_cfg.no_advertise &&
-        (tor_addr_family(&cfg->addr) == address_family ||
-         tor_addr_family(&cfg->addr) == AF_UNSPEC)) {
-      if (tor_addr_family(&cfg->addr) != AF_UNSPEC ||
-          (address_family == AF_INET && !cfg->server_cfg.bind_ipv6_only) ||
-          (address_family == AF_INET6 && !cfg->server_cfg.bind_ipv4_only)) {
+        !cfg->server_cfg.no_advertise) {
+      if ((address_family == AF_INET && port_binds_ipv4(cfg)) ||
+          (address_family == AF_INET6 && port_binds_ipv6(cfg))) {
         return cfg->port;
       }
     }
