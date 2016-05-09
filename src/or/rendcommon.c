@@ -720,6 +720,22 @@ rend_valid_descriptor_id(const char *query)
   return 0;
 }
 
+/** Return true iff <b>client_name</b> is a syntactically valid name
+ * for rendezvous client authentication. */
+int
+rend_valid_client_name(const char *client_name)
+{
+  size_t len = strlen(client_name);
+  if (len < 1 || len > REND_CLIENTNAME_MAX_LEN) {
+    return 0;
+  }
+  if (strspn(client_name, REND_LEGAL_CLIENTNAME_CHARACTERS) != len) {
+    return 0;
+  }
+
+  return 1;
+}
+
 /** Called when we get a rendezvous-related relay cell on circuit
  * <b>circ</b>.  Dispatch on rendezvous relay command. */
 void
@@ -940,4 +956,115 @@ hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
    * directories, be happy if we got any. */
   return smartlist_len(responsible_dirs) ? 0 : -1;
 }
+
+/* Length of the 'extended' auth cookie used to encode auth type before
+ * base64 encoding. */
+#define REND_DESC_COOKIE_LEN_EXT (REND_DESC_COOKIE_LEN + 1)
+/* Length of the zero-padded auth cookie when base64 encoded. These two
+ * padding bytes always (A=) are stripped off of the returned cookie. */
+#define REND_DESC_COOKIE_LEN_EXT_BASE64 (REND_DESC_COOKIE_LEN_BASE64 + 2)
+
+/** Encode a client authorization descriptor cookie.
+ * The result of this function is suitable for use in the HidServAuth
+ * option.  The trailing padding characters are removed, and the
+ * auth type is encoded into the cookie.
+ *
+ * Returns a new base64-encoded cookie. This function cannot fail.
+ * The caller is responsible for freeing the returned value.
+ */
+char *
+rend_auth_encode_cookie(const uint8_t *cookie_in, rend_auth_type_t auth_type)
+{
+  uint8_t extended_cookie[REND_DESC_COOKIE_LEN_EXT];
+  char *cookie_out = tor_malloc_zero(REND_DESC_COOKIE_LEN_EXT_BASE64 + 1);
+  int re;
+
+  tor_assert(cookie_in);
+
+  memcpy(extended_cookie, cookie_in, REND_DESC_COOKIE_LEN);
+  extended_cookie[REND_DESC_COOKIE_LEN] = ((int)auth_type - 1) << 4;
+  re = base64_encode(cookie_out, REND_DESC_COOKIE_LEN_EXT_BASE64 + 1,
+                     (const char *) extended_cookie, REND_DESC_COOKIE_LEN_EXT,
+                     0);
+  tor_assert(re == REND_DESC_COOKIE_LEN_EXT_BASE64);
+
+  /* Remove the trailing 'A='.  Auth type is encoded in the high bits
+   * of the last byte, so the last base64 character will always be zero
+   * (A).  This is subtly different behavior from base64_encode_nopad. */
+  cookie_out[REND_DESC_COOKIE_LEN_BASE64] = '\0';
+  memwipe(extended_cookie, 0, sizeof(extended_cookie));
+  return cookie_out;
+}
+
+/** Decode a base64-encoded client authorization descriptor cookie.
+ * The descriptor_cookie can be truncated to REND_DESC_COOKIE_LEN_BASE64
+ * characters (as given to clients), or may include the two padding
+ * characters (as stored by the service).
+ *
+ * The result is stored in REND_DESC_COOKIE_LEN bytes of cookie_out.
+ * The rend_auth_type_t decoded from the cookie is stored in the
+ * optional auth_type_out parameter.
+ *
+ * Return 0 on success, or -1 on error.  The caller is responsible for
+ * freeing the returned err_msg.
+ */
+int
+rend_auth_decode_cookie(const char *cookie_in, uint8_t *cookie_out,
+                        rend_auth_type_t *auth_type_out, char **err_msg_out)
+{
+  uint8_t descriptor_cookie_decoded[REND_DESC_COOKIE_LEN_EXT + 1] = { 0 };
+  char descriptor_cookie_base64ext[REND_DESC_COOKIE_LEN_EXT_BASE64 + 1];
+  const char *descriptor_cookie = cookie_in;
+  char *err_msg = NULL;
+  int auth_type_val = 0;
+  int res = -1;
+  int decoded_len;
+
+  size_t len = strlen(descriptor_cookie);
+  if (len == REND_DESC_COOKIE_LEN_BASE64) {
+    /* Add a trailing zero byte to make base64-decoding happy. */
+    tor_snprintf(descriptor_cookie_base64ext,
+                 sizeof(descriptor_cookie_base64ext),
+                 "%sA=", descriptor_cookie);
+    descriptor_cookie = descriptor_cookie_base64ext;
+  } else if (len != REND_DESC_COOKIE_LEN_EXT_BASE64) {
+    tor_asprintf(&err_msg, "Authorization cookie has wrong length: %s",
+                 escaped(cookie_in));
+    goto err;
+  }
+
+  decoded_len = base64_decode((char *) descriptor_cookie_decoded,
+                              sizeof(descriptor_cookie_decoded),
+                              descriptor_cookie,
+                              REND_DESC_COOKIE_LEN_EXT_BASE64);
+  if (decoded_len != REND_DESC_COOKIE_LEN &&
+      decoded_len != REND_DESC_COOKIE_LEN_EXT) {
+    tor_asprintf(&err_msg, "Authorization cookie has invalid characters: %s",
+                 escaped(cookie_in));
+    goto err;
+  }
+
+  if (auth_type_out) {
+    auth_type_val = (descriptor_cookie_decoded[REND_DESC_COOKIE_LEN] >> 4) + 1;
+    if (auth_type_val < 1 || auth_type_val > 2) {
+      tor_asprintf(&err_msg, "Authorization cookie type is unknown: %s",
+                   escaped(cookie_in));
+      goto err;
+    }
+    *auth_type_out = auth_type_val == 1 ? REND_BASIC_AUTH : REND_STEALTH_AUTH;
+  }
+
+  memcpy(cookie_out, descriptor_cookie_decoded, REND_DESC_COOKIE_LEN);
+  res = 0;
+ err:
+  if (err_msg_out) {
+    *err_msg_out = err_msg;
+  } else {
+    tor_free(err_msg);
+  }
+  memwipe(descriptor_cookie_decoded, 0, sizeof(descriptor_cookie_decoded));
+  memwipe(descriptor_cookie_base64ext, 0, sizeof(descriptor_cookie_base64ext));
+  return res;
+}
+
 

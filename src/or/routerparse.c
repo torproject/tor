@@ -5371,6 +5371,7 @@ rend_parse_client_keys(strmap_t *parsed_clients, const char *ckstr)
   directory_token_t *tok;
   const char *current_entry = NULL;
   memarea_t *area = NULL;
+  char *err_msg = NULL;
   if (!ckstr || strlen(ckstr) == 0)
     return -1;
   tokens = smartlist_new();
@@ -5380,8 +5381,6 @@ rend_parse_client_keys(strmap_t *parsed_clients, const char *ckstr)
   current_entry = eat_whitespace(ckstr);
   while (!strcmpstart(current_entry, "client-name ")) {
     rend_authorized_client_t *parsed_entry;
-    size_t len;
-    char descriptor_cookie_tmp[REND_DESC_COOKIE_LEN+2];
     /* Determine end of string. */
     const char *eos = strstr(current_entry, "\nclient-name ");
     if (!eos)
@@ -5410,12 +5409,10 @@ rend_parse_client_keys(strmap_t *parsed_clients, const char *ckstr)
     tor_assert(tok == smartlist_get(tokens, 0));
     tor_assert(tok->n_args == 1);
 
-    len = strlen(tok->args[0]);
-    if (len < 1 || len > 19 ||
-      strspn(tok->args[0], REND_LEGAL_CLIENTNAME_CHARACTERS) != len) {
+    if (!rend_valid_client_name(tok->args[0])) {
       log_warn(LD_CONFIG, "Illegal client name: %s. (Length must be "
-               "between 1 and 19, and valid characters are "
-               "[A-Za-z0-9+-_].)", tok->args[0]);
+               "between 1 and %d, and valid characters are "
+               "[A-Za-z0-9+-_].)", tok->args[0], REND_CLIENTNAME_MAX_LEN);
       goto err;
     }
     /* Check if client name is duplicate. */
@@ -5437,23 +5434,13 @@ rend_parse_client_keys(strmap_t *parsed_clients, const char *ckstr)
     /* Parse descriptor cookie. */
     tok = find_by_keyword(tokens, C_DESCRIPTOR_COOKIE);
     tor_assert(tok->n_args == 1);
-    if (strlen(tok->args[0]) != REND_DESC_COOKIE_LEN_BASE64 + 2) {
-      log_warn(LD_REND, "Descriptor cookie has illegal length: %s",
-               escaped(tok->args[0]));
+    if (rend_auth_decode_cookie(tok->args[0], parsed_entry->descriptor_cookie,
+                                NULL, &err_msg) < 0) {
+      tor_assert(err_msg);
+      log_warn(LD_REND, "%s", err_msg);
+      tor_free(err_msg);
       goto err;
     }
-    /* The size of descriptor_cookie_tmp needs to be REND_DESC_COOKIE_LEN+2,
-     * because a base64 encoding of length 24 does not fit into 16 bytes in all
-     * cases. */
-    if (base64_decode(descriptor_cookie_tmp, sizeof(descriptor_cookie_tmp),
-                      tok->args[0], strlen(tok->args[0]))
-        != REND_DESC_COOKIE_LEN) {
-      log_warn(LD_REND, "Descriptor cookie contains illegal characters: "
-               "%s", escaped(tok->args[0]));
-      goto err;
-    }
-    memcpy(parsed_entry->descriptor_cookie, descriptor_cookie_tmp,
-           REND_DESC_COOKIE_LEN);
   }
   result = strmap_size(parsed_clients);
   goto done;

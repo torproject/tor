@@ -435,6 +435,67 @@ test_hs_rend_data(void *arg)
   rend_data_free(client_dup);
 }
 
+/* Test encoding and decoding service authorization cookies */
+static void
+test_hs_auth_cookies(void *arg)
+{
+#define TEST_COOKIE_RAW ((const uint8_t *) "abcdefghijklmnop")
+#define TEST_COOKIE_ENCODED "YWJjZGVmZ2hpamtsbW5vcA"
+#define TEST_COOKIE_ENCODED_STEALTH "YWJjZGVmZ2hpamtsbW5vcB"
+#define TEST_COOKIE_ENCODED_INVALID "YWJjZGVmZ2hpamtsbW5vcD"
+
+  char *encoded_cookie;
+  uint8_t raw_cookie[REND_DESC_COOKIE_LEN];
+  rend_auth_type_t auth_type;
+  char *err_msg;
+  int re;
+
+  (void)arg;
+
+  /* Test that encoding gives the expected result */
+  encoded_cookie = rend_auth_encode_cookie(TEST_COOKIE_RAW, REND_BASIC_AUTH);
+  tt_str_op(encoded_cookie, OP_EQ, TEST_COOKIE_ENCODED);
+  tor_free(encoded_cookie);
+
+  encoded_cookie = rend_auth_encode_cookie(TEST_COOKIE_RAW, REND_STEALTH_AUTH);
+  tt_str_op(encoded_cookie, OP_EQ, TEST_COOKIE_ENCODED_STEALTH);
+  tor_free(encoded_cookie);
+
+  /* Decoding should give the original value */
+  re = rend_auth_decode_cookie(TEST_COOKIE_ENCODED, raw_cookie, &auth_type,
+                               &err_msg);
+  tt_assert(!re);
+  tt_assert(!err_msg);
+  tt_mem_op(raw_cookie, OP_EQ, TEST_COOKIE_RAW, REND_DESC_COOKIE_LEN);
+  tt_int_op(auth_type, OP_EQ, REND_BASIC_AUTH);
+  memset(raw_cookie, 0, sizeof(raw_cookie));
+
+  re = rend_auth_decode_cookie(TEST_COOKIE_ENCODED_STEALTH, raw_cookie,
+                               &auth_type, &err_msg);
+  tt_assert(!re);
+  tt_assert(!err_msg);
+  tt_mem_op(raw_cookie, OP_EQ, TEST_COOKIE_RAW, REND_DESC_COOKIE_LEN);
+  tt_int_op(auth_type, OP_EQ, REND_STEALTH_AUTH);
+  memset(raw_cookie, 0, sizeof(raw_cookie));
+
+  /* Decoding with padding characters should also work */
+  re = rend_auth_decode_cookie(TEST_COOKIE_ENCODED "==", raw_cookie, NULL,
+                               &err_msg);
+  tt_assert(!re);
+  tt_assert(!err_msg);
+  tt_mem_op(raw_cookie, OP_EQ, TEST_COOKIE_RAW, REND_DESC_COOKIE_LEN);
+
+  /* Decoding with an unknown type should fail */
+  re = rend_auth_decode_cookie(TEST_COOKIE_ENCODED_INVALID, raw_cookie,
+                               &auth_type, &err_msg);
+  tt_int_op(re, OP_LT, 0);
+  tt_assert(err_msg);
+  tor_free(err_msg);
+
+ done:
+  return;
+}
+
 struct testcase_t hs_tests[] = {
   { "hs_rend_data", test_hs_rend_data, TT_FORK,
     NULL, NULL },
@@ -444,6 +505,8 @@ struct testcase_t hs_tests[] = {
     NULL, NULL },
   { "pick_bad_tor2web_rendezvous_node",
     test_pick_bad_tor2web_rendezvous_node, TT_FORK,
+    NULL, NULL },
+  { "hs_auth_cookies", test_hs_auth_cookies, TT_FORK,
     NULL, NULL },
   END_OF_TESTCASES
 };

@@ -1466,12 +1466,10 @@ rend_parse_service_authorization(const or_options_t *options,
   strmap_t *parsed = strmap_new();
   smartlist_t *sl = smartlist_new();
   rend_service_authorization_t *auth = NULL;
-  char descriptor_cookie_tmp[REND_DESC_COOKIE_LEN+2];
-  char descriptor_cookie_base64ext[REND_DESC_COOKIE_LEN_BASE64+2+1];
+  char *err_msg = NULL;
 
   for (line = options->HidServAuth; line; line = line->next) {
     char *onion_address, *descriptor_cookie;
-    int auth_type_val = 0;
     auth = NULL;
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c););
     smartlist_clear(sl);
@@ -1500,31 +1498,13 @@ rend_parse_service_authorization(const or_options_t *options,
     }
     /* Parse descriptor cookie. */
     descriptor_cookie = smartlist_get(sl, 1);
-    if (strlen(descriptor_cookie) != REND_DESC_COOKIE_LEN_BASE64) {
-      log_warn(LD_CONFIG, "Authorization cookie has wrong length: '%s'",
-               descriptor_cookie);
+    if (rend_auth_decode_cookie(descriptor_cookie, auth->descriptor_cookie,
+                                &auth->auth_type, &err_msg) < 0) {
+      tor_assert(err_msg);
+      log_warn(LD_CONFIG, "%s", err_msg);
+      tor_free(err_msg);
       goto err;
     }
-    /* Add trailing zero bytes (AA) to make base64-decoding happy. */
-    tor_snprintf(descriptor_cookie_base64ext,
-                 REND_DESC_COOKIE_LEN_BASE64+2+1,
-                 "%sAA", descriptor_cookie);
-    if (base64_decode(descriptor_cookie_tmp, sizeof(descriptor_cookie_tmp),
-                      descriptor_cookie_base64ext,
-                      strlen(descriptor_cookie_base64ext)) < 0) {
-      log_warn(LD_CONFIG, "Decoding authorization cookie failed: '%s'",
-               descriptor_cookie);
-      goto err;
-    }
-    auth_type_val = (((uint8_t)descriptor_cookie_tmp[16]) >> 4) + 1;
-    if (auth_type_val < 1 || auth_type_val > 2) {
-      log_warn(LD_CONFIG, "Authorization cookie has unknown authorization "
-                          "type encoded.");
-      goto err;
-    }
-    auth->auth_type = auth_type_val == 1 ? REND_BASIC_AUTH : REND_STEALTH_AUTH;
-    memcpy(auth->descriptor_cookie, descriptor_cookie_tmp,
-           REND_DESC_COOKIE_LEN);
     if (strmap_get(parsed, auth->onion_address)) {
       log_warn(LD_CONFIG, "Duplicate authorization for the same hidden "
                           "service.");
@@ -1547,8 +1527,6 @@ rend_parse_service_authorization(const or_options_t *options,
   } else {
     strmap_free(parsed, rend_service_authorization_strmap_item_free);
   }
-  memwipe(descriptor_cookie_tmp, 0, sizeof(descriptor_cookie_tmp));
-  memwipe(descriptor_cookie_base64ext, 0, sizeof(descriptor_cookie_base64ext));
   return res;
 }
 

@@ -154,10 +154,61 @@ test_rend_service_parse_port_config(void *arg)
   tor_free(err_msg);
 }
 
+static void
+test_add_onion_helper_clientauth(void *arg)
+{
+  rend_authorized_client_t *client = NULL;
+  char *err_msg = NULL;
+  int created = 0;
+
+  (void)arg;
+
+  /* Test "ClientName" only. */
+  client = add_onion_helper_clientauth("alice", &created, &err_msg);
+  tt_assert(client);
+  tt_assert(created);
+  tt_assert(!err_msg);
+  rend_authorized_client_free(client);
+
+  /* Test "ClientName:Blob" */
+  client = add_onion_helper_clientauth("alice:475hGBHPlq7Mc0cRZitK/B",
+                                       &created, &err_msg);
+  tt_assert(client);
+  tt_assert(!created);
+  tt_assert(!err_msg);
+  rend_authorized_client_free(client);
+
+  /* Test invalid client names */
+  client = add_onion_helper_clientauth("no*asterisks*allowed", &created,
+                                       &err_msg);
+  tt_assert(!client);
+  tt_assert(err_msg);
+  tor_free(err_msg);
+
+  /* Test invalid auth cookie */
+  client = add_onion_helper_clientauth("alice:12345", &created, &err_msg);
+  tt_assert(!client);
+  tt_assert(err_msg);
+  tor_free(err_msg);
+
+  /* Test invalid syntax */
+  client = add_onion_helper_clientauth(":475hGBHPlq7Mc0cRZitK/B", &created,
+                                       &err_msg);
+  tt_assert(!client);
+  tt_assert(err_msg);
+  tor_free(err_msg);
+
+ done:
+  rend_authorized_client_free(client);
+  tor_free(err_msg);
+}
+
 struct testcase_t controller_tests[] = {
   { "add_onion_helper_keyarg", test_add_onion_helper_keyarg, 0, NULL, NULL },
   { "rend_service_parse_port_config", test_rend_service_parse_port_config, 0,
     NULL, NULL },
+  { "add_onion_helper_clientauth", test_add_onion_helper_clientauth, 0, NULL,
+    NULL },
   END_OF_TESTCASES
 };
 
