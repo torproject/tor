@@ -1,0 +1,4 @@
+  o Minor features (controller):
+    - Add support for configuring basic client authorization on hidden
+      services created with the ADD_ONION control command.
+      Implements ticket 15588. Patch by "special".
