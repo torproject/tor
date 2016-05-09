@@ -12,7 +12,11 @@ EXTHEADERS = \
   src/ext/strlcpy.c	\
   src/ext/tinytest_macros.h \
   src/ext/tor_queue.h	\
-  src/ext/siphash.h
+  src/ext/siphash.h \
+  src/ext/timeouts/timeout.h \
+  src/ext/timeouts/timeout-debug.h \
+  src/ext/timeouts/timeout-bitops.c \
+  src/ext/timeouts/timeout.c
 
 noinst_HEADERS+= $(EXTHEADERS)
 
@@ -147,4 +151,22 @@ noinst_HEADERS += $(LIBKECCAK_TINY_HDRS)
 
 LIBKECCAK_TINY=src/ext/keccak-tiny/libkeccak-tiny.a
 noinst_LIBRARIES += $(LIBKECCAK_TINY)
+
+EXTRA_DIST += \
+	timeouts/bench/bench-add.lua 		\
+	timeouts/bench/bench-aux.lua		\
+	timeouts/bench/bench.c			\
+	timeouts/bench/bench-del.lua		\
+	timeouts/bench/bench-expire.lua		\
+	timeouts/bench/bench.h			\
+	timeouts/bench/bench-heap.c		\
+	timeouts/bench/bench-llrb.c		\
+	timeouts/bench/bench.plt		\
+	timeouts/bench/bench-wheel.c		\
+	timeouts/bench/Rules.mk			\
+	timeouts/lua/Rules.mk			\
+	timeouts/lua/timeout-lua.c		\
+	timeouts/Makefile			\
+	timeouts/Rules.shrc			\
+	timeouts/test-timeout.c
 
