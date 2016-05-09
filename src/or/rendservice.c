@@ -1208,10 +1208,10 @@ rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
       memcpy(client->descriptor_cookie, parsed->descriptor_cookie,
              REND_DESC_COOKIE_LEN);
     } else {
-      crypto_rand(client->descriptor_cookie, REND_DESC_COOKIE_LEN);
+      crypto_rand((char *) client->descriptor_cookie, REND_DESC_COOKIE_LEN);
     }
     if (base64_encode(desc_cook_out, 3*REND_DESC_COOKIE_LEN_BASE64+1,
-                      client->descriptor_cookie,
+                      (char *) client->descriptor_cookie,
                       REND_DESC_COOKIE_LEN, 0) < 0) {
       log_warn(LD_BUG, "Could not base64-encode descriptor cookie.");
       goto err;
