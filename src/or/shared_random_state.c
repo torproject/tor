@@ -218,14 +218,14 @@ commit_add_to_state(sr_commit_t *commit, sr_state_t *state)
   tor_assert(commit);
   tor_assert(state);
 
-  saved_commit = digestmap_set(state->commits, commit->rsa_identity_fpr,
+  saved_commit = digestmap_set(state->commits, commit->rsa_identity,
                                commit);
   if (saved_commit != NULL) {
     /* This means we already have that commit in our state so adding twice
      * the same commit is either a code flow error, a corrupted disk state
      * or some new unknown issue. */
     log_warn(LD_DIR, "SR: Commit from %s exists in our state while "
-                     "adding it: '%s'", commit->rsa_identity_fpr,
+                     "adding it: '%s'", sr_commit_get_rsa_fpr(commit),
                      commit->encoded_commit);
     sr_commit_free(saved_commit);
   }
@@ -562,7 +562,7 @@ disk_state_put_commit_line(const sr_commit_t *commit, config_line_t *line)
   }
   tor_asprintf(&line->value, "%s %s %s%s",
                crypto_digest_algorithm_get_name(commit->alg),
-               commit->rsa_identity_fpr,
+               sr_commit_get_rsa_fpr(commit),
                commit->encoded_commit,
                reveal_str != NULL ? reveal_str : "");
   if (reveal_str != NULL) {
@@ -1124,17 +1124,17 @@ sr_state_update(time_t valid_after)
   }
 }
 
-/* Return commit object from the given authority digest <b>identity</b>.
+/* Return commit object from the given authority digest <b>rsa_identity</b>.
  * Return NULL if not found. */
 sr_commit_t *
-sr_state_get_commit(const char *rsa_fpr)
+sr_state_get_commit(const char *rsa_identity)
 {
   sr_commit_t *commit;
 
-  tor_assert(rsa_fpr);
+  tor_assert(rsa_identity);
 
   state_query(SR_STATE_ACTION_GET, SR_STATE_OBJ_COMMIT,
-              (void *) rsa_fpr, (void *) &commit);
+              (void *) rsa_identity, (void *) &commit);
   return commit;
 }
 
@@ -1150,7 +1150,7 @@ sr_state_add_commit(sr_commit_t *commit)
               (void *) commit, NULL);
 
   log_debug(LD_DIR, "SR: Commit from %s has been added to our state.",
-           commit->rsa_identity_fpr);
+            sr_commit_get_rsa_fpr(commit));
 }
 
 /* Remove all commits from our state. */
@@ -1178,7 +1178,7 @@ sr_state_copy_reveal_info(sr_commit_t *saved_commit, const sr_commit_t *commit)
   state_query(SR_STATE_ACTION_SAVE, 0, NULL, NULL);
   log_debug(LD_DIR, "SR: Reveal value learned %s (for commit %s) from %s",
             saved_commit->encoded_reveal, saved_commit->encoded_commit,
-            saved_commit->rsa_identity_fpr);
+            sr_commit_get_rsa_fpr(saved_commit));
 }
 
 /* Set the fresh SRV flag from our state. This doesn't need to trigger a

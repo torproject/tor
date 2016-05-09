@@ -331,7 +331,7 @@ test_sr_commit(void *arg)
     sr_commit_t *parsed_commit;
     smartlist_add(args,
                tor_strdup(crypto_digest_algorithm_get_name(our_commit->alg)));
-    smartlist_add(args, our_commit->rsa_identity_fpr);
+    smartlist_add(args, tor_strdup(sr_commit_get_rsa_fpr(our_commit)));
     smartlist_add(args, our_commit->encoded_commit);
     smartlist_add(args, our_commit->encoded_reveal);
     parsed_commit = sr_parse_commit(args);
@@ -480,7 +480,7 @@ test_vote(void *arg)
     tt_assert(our_commit);
     sr_state_add_commit(our_commit);
     /* Make sure it's there. */
-    saved_commit = sr_state_get_commit(our_commit->rsa_identity_fpr);
+    saved_commit = sr_state_get_commit(our_commit->rsa_identity);
     tt_assert(saved_commit);
   }
 
@@ -508,8 +508,10 @@ test_vote(void *arg)
     tt_str_op(smartlist_get(tokens, 0), OP_EQ, "shared-rand-commit");
     tt_str_op(smartlist_get(tokens, 1), OP_EQ,
               crypto_digest_algorithm_get_name(DIGEST_SHA3_256));
-    tt_str_op(smartlist_get(tokens, 2), OP_EQ,
-              our_commit->rsa_identity_fpr);
+    char digest[DIGEST_LEN];
+    base16_decode(digest, sizeof(digest), smartlist_get(tokens, 2),
+                  HEX_DIGEST_LEN);
+    tt_mem_op(digest, ==, our_commit->rsa_identity, sizeof(digest));
     tt_str_op(smartlist_get(tokens, 3), OP_EQ, our_commit->encoded_commit);
     tt_str_op(smartlist_get(tokens, 4), OP_EQ, our_commit->encoded_reveal);
 
@@ -664,9 +666,7 @@ test_sr_setup_commits(void)
     tt_assert(commit_a);
 
     /* Do some surgery on the commit */
-    strlcpy(commit_a->rsa_identity_fpr,
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            sizeof(commit_a->rsa_identity_fpr));
+    memset(commit_a->rsa_identity, 'A', sizeof(commit_a->rsa_identity));
     strlcpy(commit_a->encoded_reveal,
             "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
             sizeof(commit_a->encoded_reveal));
@@ -680,9 +680,7 @@ test_sr_setup_commits(void)
     tt_assert(commit_b);
 
     /* Do some surgery on the commit */
-    strlcpy(commit_b->rsa_identity_fpr,
-            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-            sizeof(commit_b->rsa_identity_fpr));
+    memset(commit_b->rsa_identity, 'B', sizeof(commit_b->rsa_identity));
     strlcpy(commit_b->encoded_reveal,
             "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
           sizeof(commit_b->encoded_reveal));
@@ -696,9 +694,7 @@ test_sr_setup_commits(void)
     tt_assert(commit_c);
 
     /* Do some surgery on the commit */
-    strlcpy(commit_c->rsa_identity_fpr,
-            "ccccccccccccccccccccccccccccccccccccccccccccccccc",
-            sizeof(commit_c->rsa_identity_fpr));
+    memset(commit_c->rsa_identity, 'C', sizeof(commit_c->rsa_identity));
     strlcpy(commit_c->encoded_reveal,
             "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
             sizeof(commit_c->encoded_reveal));
@@ -712,9 +708,7 @@ test_sr_setup_commits(void)
     tt_assert(commit_d);
 
     /* Do some surgery on the commit */
-    strlcpy(commit_d->rsa_identity_fpr,
-            "ddddddddddddddddddddddddddddddddddddddddddddddddd",
-            sizeof(commit_d->rsa_identity_fpr));
+    memset(commit_d->rsa_identity, 'D', sizeof(commit_d->rsa_identity));
     strlcpy(commit_d->encoded_reveal,
             "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD",
             sizeof(commit_d->encoded_reveal));
@@ -946,17 +940,17 @@ test_utils(void *arg)
   /* Testing commit_is_authoritative(). */
   {
     crypto_pk_t *k = crypto_pk_new();
-    char fp[FINGERPRINT_LEN + 1];
+    char digest[DIGEST_LEN];
     sr_commit_t commit;
 
     tt_assert(!crypto_pk_generate_key(k));
 
-    tt_int_op(0, ==, crypto_pk_get_fingerprint(k, fp, 0));
-    memcpy(fp, commit.rsa_identity_fpr, sizeof(fp));
-    tt_int_op(commit_is_authoritative(&commit, fp), ==, 1);
+    tt_int_op(0, ==, crypto_pk_get_digest(k, digest));
+    memcpy(commit.rsa_identity, digest, sizeof(commit.rsa_identity));
+    tt_int_op(commit_is_authoritative(&commit, digest), ==, 1);
     /* Change the pubkey. */
-    memset(commit.rsa_identity_fpr, 0, sizeof(commit.rsa_identity_fpr));
-    tt_int_op(commit_is_authoritative(&commit, fp), ==, 0);
+    memset(commit.rsa_identity, 0, sizeof(commit.rsa_identity));
+    tt_int_op(commit_is_authoritative(&commit, digest), ==, 0);
   }
 
   /* Testing get_phase_str(). */
@@ -1105,17 +1099,17 @@ test_keep_commit(void *arg)
   tt_int_op(should_keep_commit(commit, fp, SR_PHASE_COMMIT), ==, 0);
   /* This should NOT be kept because it has a reveal value in it. */
   tt_assert(commit_has_reveal_value(commit));
-  tt_int_op(should_keep_commit(commit, commit->rsa_identity_fpr,
+  tt_int_op(should_keep_commit(commit, commit->rsa_identity,
                                SR_PHASE_COMMIT), ==, 0);
   /* Add it to the state which should return to not keep it. */
   sr_state_add_commit(commit);
-  tt_int_op(should_keep_commit(commit, commit->rsa_identity_fpr,
+  tt_int_op(should_keep_commit(commit, commit->rsa_identity,
                                SR_PHASE_COMMIT), ==, 0);
   /* Remove it from state so we can continue our testing. */
-  digestmap_remove(state->commits, commit->rsa_identity_fpr);
+  digestmap_remove(state->commits, commit->rsa_identity);
   /* Let's remove our reveal value which should make it OK to keep it. */
   memset(commit->encoded_reveal, 0, sizeof(commit->encoded_reveal));
-  tt_int_op(should_keep_commit(commit, commit->rsa_identity_fpr,
+  tt_int_op(should_keep_commit(commit, commit->rsa_identity,
                                SR_PHASE_COMMIT), ==, 1);
 
   /* Let's reset our commit and go into REVEAL phase. */
@@ -1130,14 +1124,14 @@ test_keep_commit(void *arg)
   /* We should never keep a commit from a non authoritative authority. */
   tt_int_op(should_keep_commit(commit, fp, SR_PHASE_REVEAL), ==, 0);
   /* We shouldn't accept a commit that is not in our state. */
-  tt_int_op(should_keep_commit(commit, commit->rsa_identity_fpr,
+  tt_int_op(should_keep_commit(commit, commit->rsa_identity,
                                SR_PHASE_REVEAL), ==, 0);
   /* Important to add the commit _without_ the reveal here. */
   sr_state_add_commit(dup_commit);
   tt_int_op(digestmap_size(state->commits), ==, 1);
   /* Our commit should be valid that is authoritative, contains a reveal, be
    * in the state and commitment and reveal values match. */
-  tt_int_op(should_keep_commit(commit, commit->rsa_identity_fpr,
+  tt_int_op(should_keep_commit(commit, commit->rsa_identity,
                                SR_PHASE_REVEAL), ==, 1);
   /* The commit shouldn't be kept if it's not verified that is no matchin
    * hashed reveal. */
@@ -1147,17 +1141,17 @@ test_keep_commit(void *arg)
     memcpy(place_holder.hashed_reveal, commit->hashed_reveal,
            sizeof(place_holder.hashed_reveal));
     memset(commit->hashed_reveal, 0, sizeof(commit->hashed_reveal));
-    tt_int_op(should_keep_commit(commit, commit->rsa_identity_fpr,
+    tt_int_op(should_keep_commit(commit, commit->rsa_identity,
                                  SR_PHASE_REVEAL), ==, 0);
     memcpy(commit->hashed_reveal, place_holder.hashed_reveal,
            sizeof(commit->hashed_reveal));
   }
   /* We shouldn't keep a commit that has no reveal. */
-  tt_int_op(should_keep_commit(dup_commit, dup_commit->rsa_identity_fpr,
+  tt_int_op(should_keep_commit(dup_commit, dup_commit->rsa_identity,
                                SR_PHASE_REVEAL), ==, 0);
   /* We must not keep a commit that is not the same from the commit phase. */
   memset(commit->encoded_commit, 0, sizeof(commit->encoded_commit));
-  tt_int_op(should_keep_commit(commit, commit->rsa_identity_fpr,
+  tt_int_op(should_keep_commit(commit, commit->rsa_identity,
                                SR_PHASE_REVEAL), ==, 0);
 
  done:

@@ -71,8 +71,8 @@ typedef struct sr_commit_t {
 
   /* Commit owner info */
 
-  /* The RSA identity fingerprint of the authority. */
-  char rsa_identity_fpr[FINGERPRINT_LEN + 1];
+  /* The RSA identity key of the authority. */
+  char rsa_identity[DIGEST_LEN];
 
   /* Commitment information */
 
@@ -112,11 +112,16 @@ void sr_commit_free(sr_commit_t *commit);
 void sr_srv_encode(char *dst, const sr_srv_t *srv);
 
 /* Private methods (only used by shared_random_state.c): */
+static inline
+const char *sr_commit_get_rsa_fpr(const sr_commit_t *commit)
+{
+  return hex_str((const char *) commit->rsa_identity,
+                 sizeof(commit->rsa_identity));
+}
 
 void sr_compute_srv(void);
 sr_commit_t *sr_generate_our_commit(time_t timestamp,
                                     const authority_cert_t *my_rsa_cert);
-
 #ifdef SHARED_RANDOM_PRIVATE
 
 /* Encode */
