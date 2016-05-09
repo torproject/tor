@@ -104,7 +104,7 @@ test-network: need-chutney-path all
 test-network-all: need-chutney-path all test-driver
 	mkdir -p $(TEST_NETWORK_ALL_LOG_DIR)
 	@flavors="$(TEST_CHUTNEY_FLAVORS)"; \
-	if ping6 -q -o ::1 >/dev/null 2>&1; then \
+	if ping6 -q -c 1 -o ::1 >/dev/null 2>&1; then \
 		echo "ping6 ::1 succeeded, running IPv6 flavors: $(TEST_CHUTNEY_FLAVORS_IPV6)."; \
 		flavors="$$flavors $(TEST_CHUTNEY_FLAVORS_IPV6)"; \
 	else \
