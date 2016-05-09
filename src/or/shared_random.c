@@ -144,18 +144,10 @@ commit_log(const sr_commit_t *commit)
   tor_assert(commit);
 
   log_debug(LD_DIR, "SR: Commit from %s", commit->rsa_identity_fpr);
-
-  if (commit->commit_ts >= 0) {
-    log_debug(LD_DIR, "SR: Commit: [TS: %ld] [Encoded: %s]",
-              commit->commit_ts, commit->encoded_commit);
-  }
-
-  if (commit->reveal_ts >= 0) {
-    log_debug(LD_DIR, "SR: Reveal: [TS: %ld] [Encoded: %s]",
-              commit->reveal_ts, safe_str(commit->encoded_reveal));
-  } else {
-    log_debug(LD_DIR, "SR: Reveal: UNKNOWN");
-  }
+  log_debug(LD_DIR, "SR: Commit: [TS: %" PRIu64 "] [Encoded: %s]",
+            commit->commit_ts, commit->encoded_commit);
+  log_debug(LD_DIR, "SR: Reveal: [TS: %" PRIu64 "] [Encoded: %s]",
+            commit->reveal_ts, safe_str(commit->encoded_reveal));
 }
 
 /* Make sure that the commitment and reveal information in <b>commit</b>
@@ -172,8 +164,9 @@ verify_commit_and_reveal(const sr_commit_t *commit)
 
   /* Check that the timestamps match. */
   if (commit->commit_ts != commit->reveal_ts) {
-    log_warn(LD_BUG, "SR: Commit timestamp %ld doesn't match reveal "
-                     "timestamp %ld", commit->commit_ts, commit->reveal_ts);
+    log_warn(LD_BUG, "SR: Commit timestamp %" PRIu64 " doesn't match reveal "
+                     "timestamp %" PRIu64, commit->commit_ts,
+             commit->reveal_ts);
     goto invalid;
   }
 
@@ -261,7 +254,7 @@ commit_decode(const char *encoded, sr_commit_t *commit)
   }
 
   /* First is the timestamp (8 bytes). */
-  commit->commit_ts = (time_t) tor_ntohll(get_uint64(b64_decoded));
+  commit->commit_ts = tor_ntohll(get_uint64(b64_decoded));
   offset += sizeof(uint64_t);
   /* Next is hashed reveal. */
   memcpy(commit->hashed_reveal, b64_decoded + offset,
@@ -313,7 +306,7 @@ reveal_decode(const char *encoded, sr_commit_t *commit)
     goto error;
   }
 
-  commit->reveal_ts = (time_t) tor_ntohll(get_uint64(b64_decoded));
+  commit->reveal_ts = tor_ntohll(get_uint64(b64_decoded));
   /* Copy the last part, the random value. */
   memcpy(commit->random_number, b64_decoded + 8,
          sizeof(commit->random_number));
@@ -371,7 +364,7 @@ commit_encode(const sr_commit_t *commit, char *dst, size_t len)
   tor_assert(dst);
 
   /* First is the timestamp (8 bytes). */
-  set_uint64(buf, tor_htonll((uint64_t) commit->commit_ts));
+  set_uint64(buf, tor_htonll(commit->commit_ts));
   offset += sizeof(uint64_t);
   /* and then the hashed reveal. */
   memcpy(buf + offset, commit->hashed_reveal,

@@ -77,7 +77,7 @@ typedef struct sr_commit_t {
   /* Commitment information */
 
   /* Timestamp of reveal. Correspond to TIMESTAMP. */
-  time_t reveal_ts;
+  uint64_t reveal_ts;
   /* H(REVEAL) as found in COMMIT message. */
   char hashed_reveal[DIGEST256_LEN];
   /* Base64 encoded COMMIT. We use this to put it in our vote. */
@@ -90,7 +90,7 @@ typedef struct sr_commit_t {
    * avoiding possible information leaks of our PRNG. */
   uint8_t random_number[SR_RANDOM_NUMBER_LEN];
   /* Timestamp of commit. Correspond to TIMESTAMP. */
-  time_t commit_ts;
+  uint64_t commit_ts;
   /* This is the whole reveal message. We use it during verification */
   char encoded_reveal[SR_REVEAL_BASE64_LEN + 1];
 } sr_commit_t;
