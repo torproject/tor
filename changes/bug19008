@@ -1,0 +1,3 @@
+  o Major bugfixes (testing):
+    - Fix a bug that would block 'make test-network-all' on systems
+      where IPv6 packets were lost. Fixes bug 19008; bugfix on tor-0.2.7.3-rc.
