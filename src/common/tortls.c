@@ -2448,6 +2448,28 @@ tor_tls_get_tlssecrets,(tor_tls_t *tls, uint8_t *secrets_out))
   return 0;
 }
 
+/** Using the RFC5705 key material exporting construction, and the
+ * provided <b>context</b> (<b>context_len</b> bytes long) and
+ * <b>label</b> (a NUL-terminated string), compute a 32-byte secret in
+ * <b>secrets_out</b> that only the parties to this TLS session can
+ * compute.  Return 0 on success and -1 on failure.
+ */
+MOCK_IMPL(int,
+tor_tls_export_key_material,(tor_tls_t *tls, uint8_t *secrets_out,
+                             const uint8_t *context,
+                             size_t context_len,
+                             const char *label))
+{
+  tor_assert(tls);
+  tor_assert(tls->ssl);
+
+  int r = SSL_export_keying_material(tls->ssl,
+                                     secrets_out, DIGEST256_LEN,
+                                     label, strlen(label),
+                                     context, context_len, 1);
+  return (r == 1) ? 0 : -1;
+}
+
 /** Examine the amount of memory used and available for buffers in <b>tls</b>.
  * Set *<b>rbuf_capacity</b> to the amount of storage allocated for the read
  * buffer and *<b>rbuf_bytes</b> to the amount actually used.

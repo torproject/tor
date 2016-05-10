@@ -2318,15 +2318,34 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
   auth1_t *auth = NULL;
   auth_ctx_t *ctx = auth_ctx_new();
   int result;
+  int old_tlssecrets_algorithm = 0;
+  const char *authtype_str = NULL;
+
+  int is_ed = 0;
+  const int authtype = 1; /* XXXX this should be an argument. */
 
   /* assert state is reasonable XXXX */
-
-  ctx->is_ed = 0;
+  switch (authtype) {
+  case AUTHTYPE_RSA_SHA256_TLSSECRET:
+    authtype_str = "AUTH0001";
+    old_tlssecrets_algorithm = 1;
+    break;
+  case AUTHTYPE_RSA_SHA256_RFC5705:
+    authtype_str = "AUTH0002";
+    break;
+  case AUTHTYPE_ED25519_SHA256_RFC5705:
+    authtype_str = "AUTH0003";
+    is_ed = 1;
+    break;
+  default:
+    tor_assert(0);
+    break;
+  }
 
   auth = auth1_new();
 
   /* Type: 8 bytes. */
-  memcpy(auth1_getarray_type(auth), "AUTH0001", 8);
+  memcpy(auth1_getarray_type(auth), authtype_str, 8);
 
   {
     const tor_x509_cert_t *id_cert=NULL, *link_cert=NULL;
@@ -2380,7 +2399,8 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
       cert = freecert;
     }
     if (!cert) {
-      log_warn(LD_OR, "Unable to find cert when making AUTH1 data.");
+      log_warn(LD_OR, "Unable to find cert when making %s data.",
+               authtype_str);
       goto err;
     }
 
@@ -2392,7 +2412,16 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
   }
 
   /* HMAC of clientrandom and serverrandom using master key : 32 octets */
-  tor_tls_get_tlssecrets(conn->tls, auth->tlssecrets);
+  if (old_tlssecrets_algorithm) {
+    tor_tls_get_tlssecrets(conn->tls, auth->tlssecrets);
+  } else {
+    char label[128];
+    tor_snprintf(label, sizeof(label),
+                 "EXPORTER FOR TOR TLS CLIENT BINDING %s", authtype_str);
+    tor_tls_export_key_material(conn->tls, auth->tlssecrets,
+                                auth->cid, sizeof(auth->cid),
+                                label);
+  }
 
   /* 8 octets were reserved for the current time, but we're trying to get out
    * of the habit of sending time around willynilly.  Fortunately, nothing

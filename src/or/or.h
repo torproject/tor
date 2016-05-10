@@ -1348,13 +1348,34 @@ typedef struct listener_connection_t {
 #define OR_CERT_TYPE_RSA_ED_CROSSCERT 7
 /**@}*/
 
-/** The one currently supported type of AUTHENTICATE cell.  It contains
+/** The first supported type of AUTHENTICATE cell.  It contains
  * a bunch of structures signed with an RSA1024 key.  The signed
  * structures include a HMAC using negotiated TLS secrets, and a digest
  * of all cells sent or received before the AUTHENTICATE cell (including
  * the random server-generated AUTH_CHALLENGE cell).
  */
 #define AUTHTYPE_RSA_SHA256_TLSSECRET 1
+/** As AUTHTYPE_RSA_SHA256_TLSSECRET, but instead of using the
+ * negotiated TLS secrets, uses exported keying material from the TLS
+ * session as described in RFC 5705.
+ *
+ * Not used by today's tors, since everything that supports this
+ * also supports ED25519_SHA3_5705, which is better.
+ **/
+#define AUTHTYPE_RSA_SHA256_RFC5705 2
+/** As AUTHTYPE_RSA_SHA256_RFC5705, but uses an Ed25519 identity key to
+ * authenticate.  */
+#define AUTHTYPE_ED25519_SHA256_RFC5705 3
+/*
+ * NOTE: authchallenge_type_is_better() relies on these AUTHTYPE codes
+ * being sorted in order of preference.  If we someday add one with
+ * a higher numerical value that we don't like as much, we should revise
+ * authchallenge_type_is_better().
+ */
+
+
+
+
 
 /** The length of the part of the AUTHENTICATE cell body that the client and
  * server can generate independently (when using RSA_SHA256_TLSSECRET). It

@@ -226,6 +226,11 @@ int tor_tls_used_v1_handshake(tor_tls_t *tls);
 int tor_tls_get_num_server_handshakes(tor_tls_t *tls);
 int tor_tls_server_got_renegotiate(tor_tls_t *tls);
 MOCK_DECL(int,tor_tls_get_tlssecrets,(tor_tls_t *tls, uint8_t *secrets_out));
+MOCK_DECL(int,tor_tls_export_key_material,(
+                     tor_tls_t *tls, uint8_t *secrets_out,
+                     const uint8_t *context,
+                     size_t context_len,
+                     const char *label));
 
 /* Log and abort if there are unhandled TLS errors in OpenSSL's error stack.
  */
