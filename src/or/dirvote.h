@@ -210,9 +210,13 @@ document_signature_t *voter_get_sig_by_algorithm(
                            digest_algorithm_t alg);
 
 #ifdef DIRVOTE_PRIVATE
+STATIC int32_t dirvote_get_intermediate_param_value(
+                                   const smartlist_t *param_list,
+                                   const char *keyword,
+                                   int32_t default_val);
 STATIC char *format_networkstatus_vote(crypto_pk_t *private_key,
                                  networkstatus_t *v3_ns);
-STATIC char *dirvote_compute_params(smartlist_t *votes, int method,
+STATIC smartlist_t *dirvote_compute_params(smartlist_t *votes, int method,
                              int total_authorities);
 STATIC char *compute_consensus_package_lines(smartlist_t *votes);
 STATIC char *make_consensus_method_list(int low, int high, const char *sep);

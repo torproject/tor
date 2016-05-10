@@ -618,15 +618,47 @@ compute_consensus_versions_list(smartlist_t *lst, int n_versioning)
   return result;
 }
 
+/** Given a list of K=V values, return the int32_t value corresponding to
+ * KEYWORD=, or default_val if no such value exists, or if the value is
+ * corrupt.
+ */
+STATIC int32_t
+dirvote_get_intermediate_param_value(const smartlist_t *param_list,
+                                     const char *keyword,
+                                     int32_t default_val)
+{
+  unsigned int n_found = 0;
+  int32_t value = default_val;
+
+  SMARTLIST_FOREACH_BEGIN(param_list, const char *, k_v_pair) {
+    if (!strcmpstart(k_v_pair, keyword) && k_v_pair[strlen(keyword)] == '=') {
+      const char *integer_str = &k_v_pair[strlen(keyword)+1];
+      int ok;
+      value = (int32_t)
+        tor_parse_long(integer_str, 10, INT32_MIN, INT32_MAX, &ok, NULL);
+      if (BUG(! ok))
+        return default_val;
+      ++n_found;
+    }
+  } SMARTLIST_FOREACH_END(k_v_pair);
+
+  if (n_found == 1)
+    return value;
+  else if (BUG(n_found > 1))
+    return default_val;
+  else
+    return default_val;
+}
+
 /** Minimum number of directory authorities voting for a parameter to
  * include it in the consensus, if consensus method 12 or later is to be
  * used. See proposal 178 for details. */
 #define MIN_VOTES_FOR_PARAM 3
 
-/** Helper: given a list of valid networkstatus_t, return a new string
+/** Helper: given a list of valid networkstatus_t, return a new smartlist
  * containing the contents of the consensus network parameter set.
  */
-STATIC char *
+STATIC smartlist_t *
 dirvote_compute_params(smartlist_t *votes, int method, int total_authorities)
 {
   int i;
@@ -635,7 +667,6 @@ dirvote_compute_params(smartlist_t *votes, int method, int total_authorities)
   int cur_param_len;
   const char *cur_param;
   const char *eq;
-  char *result;
 
   const int n_votes = smartlist_len(votes);
   smartlist_t *output;
@@ -657,8 +688,7 @@ dirvote_compute_params(smartlist_t *votes, int method, int total_authorities)
 
   if (smartlist_len(param_list) == 0) {
     tor_free(vals);
-    smartlist_free(param_list);
-    return NULL;
+    return param_list;
   }
 
   smartlist_sort_strings(param_list);
@@ -706,12 +736,9 @@ dirvote_compute_params(smartlist_t *votes, int method, int total_authorities)
     }
   } SMARTLIST_FOREACH_END(param);
 
-  result = smartlist_join_strings(output, " ", 0, NULL);
-  SMARTLIST_FOREACH(output, char *, cp, tor_free(cp));
-  smartlist_free(output);
   smartlist_free(param_list);
   tor_free(vals);
-  return result;
+  return output;
 }
 
 #define RANGE_CHECK(a,b,c,d,e,f,g,mx) \
@@ -1158,6 +1185,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
   char *packages = NULL;
   int added_weights = 0;
   dircollator_t *collator = NULL;
+  smartlist_t *param_list = NULL;
+
   tor_assert(flavor == FLAV_NS || flavor == FLAV_MICRODESC);
   tor_assert(total_authorities >= smartlist_len(votes));
   tor_assert(total_authorities > 0);
@@ -1302,9 +1331,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
     tor_free(flaglist);
   }
 
-  params = dirvote_compute_params(votes, consensus_method,
-                                  total_authorities);
-  if (params) {
+  param_list = dirvote_compute_params(votes, consensus_method,
+                                      total_authorities);
+  if (smartlist_len(param_list)) {
+    params = smartlist_join_strings(param_list, " ", 0, NULL);
     smartlist_add(chunks, tor_strdup("params "));
     smartlist_add(chunks, params);
     smartlist_add(chunks, tor_strdup("\n"));
@@ -1369,7 +1399,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
   if (consensus_method >= MIN_METHOD_TO_CLIP_UNMEASURED_BW) {
     char *max_unmeasured_param = NULL;
-    /* XXXX Extract this code into a common function */
+    /* XXXX Extract this code into a common function.  Or don't!  see #19011 */
     if (params) {
       if (strcmpstart(params, "maxunmeasuredbw=") == 0)
         max_unmeasured_param = params;
@@ -1924,7 +1954,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     // Parse params, extract BW_WEIGHT_SCALE if present
     // DO NOT use consensus_param_bw_weight_scale() in this code!
     // The consensus is not formed yet!
-    /* XXXX Extract this code into a common function */
+    /* XXXX Extract this code into a common function. Or not: #19011. */
     if (params) {
       if (strcmpstart(params, "bwweightscale=") == 0)
         bw_weight_param = params;
@@ -2044,6 +2074,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
   smartlist_free(flags);
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_free(chunks);
+  SMARTLIST_FOREACH(param_list, char *, cp, tor_free(cp));
+  smartlist_free(param_list);
 
   return result;
 }

@@ -1436,6 +1436,19 @@ test_dir_measured_bw_kb_cache(void *arg)
   return;
 }
 
+static char *
+my_dirvote_compute_params(smartlist_t *votes, int method, int total_authorities)
+{
+  smartlist_t *s = dirvote_compute_params(votes, method, total_authorities);
+  tor_assert(s);
+  char *res = smartlist_join_strings(s, " ", 0, NULL);
+  SMARTLIST_FOREACH(s, char *, cp, tor_free(cp));
+  smartlist_free(s);
+  return res;
+}
+
+#define dirvote_compute_params my_dirvote_compute_params
+
 static void
 test_dir_param_voting(void *arg)
 {
@@ -4298,6 +4311,7 @@ struct testcase_t dir_tests[] = {
   DIR_LEGACY(measured_bw_kb),
   DIR_LEGACY(measured_bw_kb_cache),
   DIR_LEGACY(param_voting),
+  DIR(param_voting_lookup, 0),
   DIR_LEGACY(v3_networkstatus),
   DIR(random_weighted, 0),
   DIR(scale_bw, 0),
