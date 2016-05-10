@@ -75,7 +75,6 @@ int networkstatus_consensus_can_use_multiple_directories(
                                                 const or_options_t *options);
 int networkstatus_consensus_can_use_extra_fallbacks(
                                                 const or_options_t *options);
-int networkstatus_consensus_has_excess_connections(void);
 int networkstatus_consensus_is_already_downloading(const char *resource);
 
 #define NSSET_FROM_CACHE 1
