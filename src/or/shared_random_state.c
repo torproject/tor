@@ -410,6 +410,9 @@ disk_state_parse_commits(sr_state_t *state,
        * fingerprint that we don't know about so it shouldn't be used. */
       continue;
     }
+    /* We consider parseable commit from our disk state to be valid because
+     * they need to be in the first place to get in there. */
+    commit->valid = 1;
     /* Add commit to our state pointer. */
     commit_add_to_state(commit, state);
 

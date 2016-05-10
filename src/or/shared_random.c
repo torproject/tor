@@ -700,6 +700,8 @@ save_commit_to_state(sr_commit_t *commit)
 {
   sr_phase_t phase = sr_state_get_phase();
 
+  ASSERT_COMMIT_VALID(commit);
+
   switch (phase) {
   case SR_PHASE_COMMIT:
     /* During commit phase, just save any new authoritative commit */
@@ -914,6 +916,8 @@ sr_generate_our_commit(time_t timestamp, const authority_cert_t *my_rsa_cert)
 
   log_debug(LD_DIR, "SR: Generated our commitment:");
   commit_log(commit);
+  /* Our commit better be valid :). */
+  commit->valid = 1;
   return commit;
 
  error:
@@ -942,6 +946,8 @@ sr_compute_srv(void)
   /* We must make a list of commit ordered by authority fingerprint in
    * ascending order as specified by proposal 250. */
   DIGESTMAP_FOREACH(state_commits, key, sr_commit_t *, c) {
+    /* Extra safety net, make sure we have valid commit before using it. */
+    ASSERT_COMMIT_VALID(c);
     smartlist_add(commits, c);
   } DIGESTMAP_FOREACH_END;
   smartlist_sort(commits, compare_reveal_);
@@ -1130,6 +1136,9 @@ sr_handle_received_commits(smartlist_t *commits, crypto_pk_t *voter_key)
       sr_commit_free(commit);
       continue;
     }
+    /* Ok, we have a valid commit now that we are about to put in our state.
+     * so flag it valid from now on. */
+    commit->valid = 1;
     /* Everything lines up: save this commit to state then! */
     save_commit_to_state(commit);
   } SMARTLIST_FOREACH_END(commit);

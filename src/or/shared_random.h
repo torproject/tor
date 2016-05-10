@@ -48,6 +48,9 @@
 #define SR_SRV_VALUE_BASE64_LEN \
   (((DIGEST256_LEN - 1) / 3) * 4 + 4)
 
+/* Assert if commit valid flag is not set. */
+#define ASSERT_COMMIT_VALID(c) tor_assert((c)->valid)
+
 /* Protocol phase. */
 typedef enum {
   /* Commitment phase */
@@ -68,6 +71,8 @@ typedef struct sr_srv_t {
 typedef struct sr_commit_t {
   /* Hashing algorithm used. */
   digest_algorithm_t alg;
+  /* Indicate if this commit has been verified thus valid. */
+  unsigned int valid:1;
 
   /* Commit owner info */
 
