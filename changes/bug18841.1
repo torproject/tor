@@ -1,0 +1,7 @@
+  o Major bugfixes (compilation):
+    - Correctly detect compiler flags on systems where _FORTIFY_SOURCE
+      is predefined. Previously, our use of -D_FORTIFY_SOURCE would
+      cause a compiler warning, thereby making other checks fail.
+      Fixes one case of bug 18841; bugfix on 0.2.3.17-beta. Patch from
+      "trudokal".
+
