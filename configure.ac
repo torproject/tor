@@ -761,7 +761,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
 #endif])], have_clang=yes, have_clang=no)
 
 if test "x$enable_gcc_hardening" != "xno"; then
-    CFLAGS="$CFLAGS -D_FORTIFY_SOURCE=2"
+    CFLAGS="$CFLAGS -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2"
     if test "x$have_clang" = "xyes"; then
         TOR_CHECK_CFLAGS(-Qunused-arguments)
     fi
