@@ -2854,18 +2854,84 @@ choose_compression_level(ssize_t n_bytes)
   }
 }
 
+/** Information passed to handle a GET request. */
+typedef struct get_handler_args_t {
+  /** True if the client asked for compressed data. */
+  int compressed;
+  /** If nonzero, the time included an if-modified-since header with this
+   * value. */
+  time_t if_modified_since;
+  /** String containing the requested URL or resource. */
+  const char *url;
+  /** String containing the HTTP headers */
+  const char *headers;
+} get_handler_args_t;
+
+/** Entry for handling an HTTP GET request.
+ *
+ * This entry matches a request if "string" is equal to the requested
+ * resource, or if "is_prefix" is true and "string" is a prefix of the
+ * requested resource.
+ *
+ * The 'handler' function is called to handle the request.  It receives
+ * an arguments structure, and must return 0 on success or -1 if we should
+ * close the connection.
+ **/
+typedef struct url_table_ent_s {
+  const char *string;
+  int is_prefix;
+  int (*handler)(dir_connection_t *conn, const get_handler_args_t *args);
+} url_table_ent_t;
+
+static int handle_get_frontpage(dir_connection_t *conn,
+                                const get_handler_args_t *args);
+static int handle_get_current_consensus(dir_connection_t *conn,
+                                const get_handler_args_t *args);
+static int handle_get_status_vote(dir_connection_t *conn,
+                                const get_handler_args_t *args);
+static int handle_get_microdesc(dir_connection_t *conn,
+                                const get_handler_args_t *args);
+static int handle_get_descriptor(dir_connection_t *conn,
+                                const get_handler_args_t *args);
+static int handle_get_keys(dir_connection_t *conn,
+                                const get_handler_args_t *args);
+static int handle_get_rendezvous2(dir_connection_t *conn,
+                                const get_handler_args_t *args);
+static int handle_get_bytes(dir_connection_t *conn,
+                                const get_handler_args_t *args);
+static int handle_get_robots(dir_connection_t *conn,
+                                const get_handler_args_t *args);
+static int handle_get_networkstatus_bridges(dir_connection_t *conn,
+                                const get_handler_args_t *args);
+
+/** Table for handling GET requests. */
+static const url_table_ent_t url_table[] = {
+  { "/tor/", 0, handle_get_frontpage },
+  { "/tor/status-vote/current/consensus", 1, handle_get_current_consensus },
+  { "/tor/status-vote/current/", 1, handle_get_status_vote },
+  { "/tor/status-vote/next/", 1, handle_get_status_vote },
+  { "/tor/micro/d/", 1, handle_get_microdesc },
+  { "/tor/server/", 1, handle_get_descriptor },
+  { "/tor/extra/", 1, handle_get_descriptor },
+  { "/tor/keys/", 1, handle_get_keys },
+  { "/tor/rendezvous2/", 1, handle_get_rendezvous2 },
+  { "/tor/bytes.txt", 0, handle_get_bytes },
+  { "/tor/robots.txt", 0, handle_get_robots },
+  { "/tor/networkstatus-bridges", 0, handle_get_networkstatus_bridges },
+  { NULL, 0, NULL },
+};
+
 /** Helper function: called when a dirserver gets a complete HTTP GET
  * request.  Look for a request for a directory or for a rendezvous
  * service descriptor.  On finding one, write a response into
- * conn-\>outbuf.  If the request is unrecognized, send a 400.
- * Always return 0. */
+ * conn-\>outbuf.  If the request is unrecognized, send a 404.
+ * Return 0 if we handled this successfully, or -1 if we need to close
+ * the connection. */
 STATIC int
 directory_handle_command_get(dir_connection_t *conn, const char *headers,
                              const char *req_body, size_t req_body_len)
 {
-  size_t dlen;
   char *url, *url_mem, *header;
-  const or_options_t *options = get_options();
   time_t if_modified_since = 0;
   int compressed;
   size_t url_len;
@@ -2905,10 +2971,46 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     url_len -= 2;
   }
 
-  if (!strcmp(url,"/tor/")) {
+  get_handler_args_t args;
+  args.url = url;
+  args.headers = headers;
+  args.if_modified_since = if_modified_since;
+  args.compressed = compressed;
+
+  int i, result = -1;
+  for (i = 0; url_table[i].string; ++i) {
+    int match;
+    if (url_table[i].is_prefix) {
+      match = !strcmpstart(url, url_table[i].string);
+    } else {
+      match = !strcmp(url, url_table[i].string);
+    }
+    if (match) {
+      result = url_table[i].handler(conn, &args);
+      goto done;
+    }
+  }
+
+  /* we didn't recognize the url */
+  write_http_status_line(conn, 404, "Not found");
+  result = 0;
+
+ done:
+  tor_free(url_mem);
+  return result;
+}
+
+/** Helper function for GET / or GET /tor/
+ */
+static int
+handle_get_frontpage(dir_connection_t *conn, const get_handler_args_t *args)
+{
+  const char *url = args->url;
+  {
     const char *frontpage = get_dirportfrontpage();
 
     if (frontpage) {
+      size_t dlen;
       dlen = strlen(frontpage);
       /* Let's return a disclaimer page (users shouldn't use V1 anymore,
          and caches don't fetch '/', so this is safe). */
@@ -2919,12 +3021,24 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       write_http_response_header_impl(conn, dlen, "text/html", "identity",
                                       NULL, DIRPORTFRONTPAGE_CACHE_LIFETIME);
       connection_write_to_buf(frontpage, dlen, TO_CONN(conn));
-      goto done;
+    } else {
+      write_http_status_line(conn, 404, "Not found");
     }
-    /* if no disclaimer file, fall through and continue */
   }
+  return 0;
+}
 
-  if (!strcmpstart(url, "/tor/status-vote/current/consensus")) {
+/** Helper function for GET /tor/status-vote/current/consensus
+ */
+static int
+handle_get_current_consensus(dir_connection_t *conn,
+                             const get_handler_args_t *args)
+{
+  const char *url = args->url;
+  const int compressed = args->compressed;
+  const time_t if_modified_since = args->if_modified_since;
+
+  {
     /* v3 network status fetch. */
     smartlist_t *dir_fps = smartlist_new();
     const char *request_type = NULL;
@@ -3001,7 +3115,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       goto done;
     }
 
-    dlen = dirserv_estimate_data_size(dir_fps, 0, compressed);
+    size_t dlen = dirserv_estimate_data_size(dir_fps, 0, compressed);
     if (global_write_bucket_low(TO_CONN(conn), dlen, 2)) {
       log_debug(LD_DIRSERV,
                "Client asked for network status lists, but we've been "
@@ -3045,11 +3159,18 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     goto done;
   }
 
-  if (!strcmpstart(url,"/tor/status-vote/current/") ||
-      !strcmpstart(url,"/tor/status-vote/next/")) {
-    /* XXXX If-modified-since is only implemented for the current
-     * consensus: that's probably fine, since it's the only vote document
-     * people fetch much. */
+ done:
+  return 0;
+}
+
+/** Helper function for GET /tor/status-vote/{current,next}/...
+ */
+static int
+handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
+{
+  const char *url = args->url;
+  const int compressed = args->compressed;
+  {
     int current;
     ssize_t body_len = 0;
     ssize_t estimated_len = 0;
@@ -3145,8 +3266,18 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     smartlist_free(dir_items);
     goto done;
   }
+ done:
+  return 0;
+}
 
-  if (!strcmpstart(url, "/tor/micro/d/")) {
+/** Helper function for GET /tor/micro/d/...
+ */
+static int
+handle_get_microdesc(dir_connection_t *conn, const get_handler_args_t *args)
+{
+  const char *url = args->url;
+  const int compressed = args->compressed;
+  {
     smartlist_t *fps = smartlist_new();
 
     dir_split_resource_into_fingerprints(url+strlen("/tor/micro/d/"),
@@ -3159,7 +3290,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       smartlist_free(fps);
       goto done;
     }
-    dlen = dirserv_estimate_microdesc_size(fps, compressed);
+    size_t dlen = dirserv_estimate_microdesc_size(fps, compressed);
     if (global_write_bucket_low(TO_CONN(conn), dlen, 2)) {
       log_info(LD_DIRSERV,
                "Client asked for server descriptors, but we've been "
@@ -3182,9 +3313,22 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     goto done;
   }
 
+ done:
+  return 0;
+}
+
+/** Helper function for GET /tor/{server,extra}/...
+ */
+static int
+handle_get_descriptor(dir_connection_t *conn, const get_handler_args_t *args)
+{
+  const char *url = args->url;
+  const int compressed = args->compressed;
+  const or_options_t *options = get_options();
   if (!strcmpstart(url,"/tor/server/") ||
       (!options->BridgeAuthoritativeDir &&
        !options->BridgeRelay && !strcmpstart(url,"/tor/extra/"))) {
+    size_t dlen;
     int res;
     const char *msg;
     const char *request_type = NULL;
@@ -3251,8 +3395,19 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     }
     goto done;
   }
+ done:
+ return 0;
+}
 
-  if (!strcmpstart(url,"/tor/keys/")) {
+/** Helper function for GET /tor/keys/...
+ */
+static int
+handle_get_keys(dir_connection_t *conn, const get_handler_args_t *args)
+{
+  const char *url = args->url;
+  const int compressed = args->compressed;
+  const time_t if_modified_since = args->if_modified_since;
+  {
     smartlist_t *certs = smartlist_new();
     ssize_t len = -1;
     if (!strcmp(url, "/tor/keys/all")) {
@@ -3337,9 +3492,17 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     smartlist_free(certs);
     goto done;
   }
+ done:
+  return 0;
+}
 
-  if (connection_dir_is_encrypted(conn) &&
-       !strcmpstart(url,"/tor/rendezvous2/")) {
+/** Helper function for GET /tor/rendezvous2/
+ */
+static int
+handle_get_rendezvous2(dir_connection_t *conn, const get_handler_args_t *args)
+{
+  const char *url = args->url;
+  if (connection_dir_is_encrypted(conn)) {
     /* Handle v2 rendezvous descriptor fetch request. */
     const char *descp;
     const char *query = url + strlen("/tor/rendezvous2/");
@@ -3362,16 +3525,30 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       write_http_status_line(conn, 400, "Bad request");
     }
     goto done;
+  } else {
+    /* Not encrypted! */
+    write_http_status_line(conn, 404, "Not found");
   }
+ done:
+  return 0;
+}
 
+/** Helper function for GET /tor/networkstatus-bridges
+ */
+static int
+handle_get_networkstatus_bridges(dir_connection_t *conn,
+                                 const get_handler_args_t *args)
+{
+  const char *headers = args->headers;
+
+  const or_options_t *options = get_options();
   if (options->BridgeAuthoritativeDir &&
       options->BridgePassword_AuthDigest_ &&
-      connection_dir_is_encrypted(conn) &&
-      !strcmp(url,"/tor/networkstatus-bridges")) {
+      connection_dir_is_encrypted(conn)) {
     char *status;
     char digest[DIGEST256_LEN];
 
-    header = http_get_header(headers, "Authorization: Basic ");
+    char *header = http_get_header(headers, "Authorization: Basic ");
     if (header)
       crypto_digest256(digest, header, strlen(header), DIGEST_SHA256);
 
@@ -3387,75 +3564,43 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
 
     /* all happy now. send an answer. */
     status = networkstatus_getinfo_by_purpose("bridge", time(NULL));
-    dlen = strlen(status);
+    size_t dlen = strlen(status);
     write_http_response_header(conn, dlen, 0, 0);
     connection_write_to_buf(status, dlen, TO_CONN(conn));
     tor_free(status);
     goto done;
   }
+ done:
+  return 0;
+}
 
-  if (!strcmpstart(url,"/tor/bytes.txt")) {
+/** Helper function for GET /tor/bytes.txt
+ */
+static int
+handle_get_bytes(dir_connection_t *conn, const get_handler_args_t *args)
+{
+  (void)args;
+  {
     char *bytes = directory_dump_request_log();
     size_t len = strlen(bytes);
     write_http_response_header(conn, len, 0, 0);
     connection_write_to_buf(bytes, len, TO_CONN(conn));
     tor_free(bytes);
-    goto done;
   }
+  return 0;
+}
 
-  if (!strcmp(url,"/tor/robots.txt")) { /* /robots.txt will have been
-                                           rewritten to /tor/robots.txt */
-    char robots[] = "User-agent: *\r\nDisallow: /\r\n";
+/** Helper function for GET robots.txt or /tor/robots.txt */
+static int
+handle_get_robots(dir_connection_t *conn, const get_handler_args_t *args)
+{
+  (void)args;
+  {
+    const char robots[] = "User-agent: *\r\nDisallow: /\r\n";
     size_t len = strlen(robots);
     write_http_response_header(conn, len, 0, ROBOTS_CACHE_LIFETIME);
     connection_write_to_buf(robots, len, TO_CONN(conn));
-    goto done;
   }
-
-#if defined(EXPORTMALLINFO) && defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
-#define ADD_MALLINFO_LINE(x) do {                               \
-    smartlist_add_asprintf(lines, "%s %d\n", #x, mi.x);        \
-  }while(0);
-
-  if (!strcmp(url,"/tor/mallinfo.txt") &&
-      (tor_addr_eq_ipv4h(&conn->base_.addr, 0x7f000001ul))) {
-    char *result;
-    size_t len;
-    struct mallinfo mi;
-    smartlist_t *lines;
-
-    memset(&mi, 0, sizeof(mi));
-    mi = mallinfo();
-    lines = smartlist_new();
-
-    ADD_MALLINFO_LINE(arena)
-    ADD_MALLINFO_LINE(ordblks)
-    ADD_MALLINFO_LINE(smblks)
-    ADD_MALLINFO_LINE(hblks)
-    ADD_MALLINFO_LINE(hblkhd)
-    ADD_MALLINFO_LINE(usmblks)
-    ADD_MALLINFO_LINE(fsmblks)
-    ADD_MALLINFO_LINE(uordblks)
-    ADD_MALLINFO_LINE(fordblks)
-    ADD_MALLINFO_LINE(keepcost)
-
-    result = smartlist_join_strings(lines, "", 0, NULL);
-    SMARTLIST_FOREACH(lines, char *, cp, tor_free(cp));
-    smartlist_free(lines);
-
-    len = strlen(result);
-    write_http_response_header(conn, len, 0, 0);
-    connection_write_to_buf(result, len, TO_CONN(conn));
-    tor_free(result);
-    goto done;
-  }
-#endif
-
-  /* we didn't recognize the url */
-  write_http_status_line(conn, 404, "Not found");
-
- done:
-  tor_free(url_mem);
   return 0;
 }
 
