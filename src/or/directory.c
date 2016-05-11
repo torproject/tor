@@ -2924,8 +2924,9 @@ static const url_table_ent_t url_table[] = {
 /** Helper function: called when a dirserver gets a complete HTTP GET
  * request.  Look for a request for a directory or for a rendezvous
  * service descriptor.  On finding one, write a response into
- * conn-\>outbuf.  If the request is unrecognized, send a 400.
- * Always return 0. */
+ * conn-\>outbuf.  If the request is unrecognized, send a 404.
+ * Return 0 if we handled this successfully, or -1 if we need to close
+ * the connection. */
 STATIC int
 directory_handle_command_get(dir_connection_t *conn, const char *headers,
                              const char *req_body, size_t req_body_len)
