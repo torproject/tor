@@ -1,0 +1,3 @@
+  o Minor feature (logging):
+    - When rejecting a misformed INTRODUCE2 cell, only log at PROTOCOL_WARN
+      severity. Closes ticket 18761.

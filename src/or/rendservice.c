@@ -1441,6 +1441,7 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
   int status = 0, result;
   const or_options_t *options = get_options();
   char *err_msg = NULL;
+  int err_msg_severity = LOG_WARN;
   const char *stage_descr = NULL;
   int reason = END_CIRC_REASON_TORPROTOCOL;
   /* Service/circuit/key stuff we can learn before parsing */
@@ -1592,8 +1593,10 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
 
   /* Find the rendezvous point */
   rp = find_rp_for_intro(parsed_req, &err_msg);
-  if (!rp)
+  if (!rp) {
+    err_msg_severity = LOG_PROTOCOL_WARN;
     goto log_error;
+  }
 
   /* Check if we'd refuse to talk to this router */
   if (options->StrictNodes &&
@@ -1731,7 +1734,7 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
     }
   }
 
-  log_warn(LD_REND, "%s on circ %u", err_msg,
+  log_fn(err_msg_severity, LD_REND, "%s on circ %u", err_msg,
            (unsigned)circuit->base_.n_circ_id);
  err:
   status = -1;
@@ -1793,7 +1796,7 @@ find_rp_for_intro(const rend_intro_cell_t *intro,
     if (!rp) {
       if (err_msg_out) {
         tor_asprintf(&err_msg,
-                     "Could build extend_info_t for router %s named "
+                     "Couldn't build extend_info_t for router %s named "
                      "in INTRODUCE2 cell",
                      escaped_safe_str_client(rp_nickname));
       }
@@ -1829,8 +1832,10 @@ find_rp_for_intro(const rend_intro_cell_t *intro,
   goto done;
 
  err:
-  if (err_msg_out) *err_msg_out = err_msg;
-  else tor_free(err_msg);
+  if (err_msg_out)
+    *err_msg_out = err_msg;
+  else
+    tor_free(err_msg);
 
  done:
   return rp;
