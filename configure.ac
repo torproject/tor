@@ -1016,12 +1016,7 @@ AC_CHECK_HEADERS(
         sys/time.h \
         sys/types.h \
         time.h \
-        unistd.h
- , , AC_MSG_WARN(Some headers were not found, compilation may fail.  If compilation succeeds, please send your orconfig.h to the developers so we can fix this warning.))
-
-dnl These headers are not essential
-
-AC_CHECK_HEADERS(
+        unistd.h \
         arpa/inet.h \
         crt_externs.h \
         execinfo.h \
