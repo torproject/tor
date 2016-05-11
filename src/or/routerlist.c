@@ -913,7 +913,8 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
 
     if (smartlist_len(fps) > 1) {
       resource = smartlist_join_strings(fps, "", 0, NULL);
-      /* XXX - do we want certs from authorities or mirrors? - teor */
+      /* We want certs from mirrors, because they will almost always succeed.
+       */
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
                                    resource, PDS_RETRY_IF_NO_SERVERS,
                                    DL_WANT_ANY_DIRSERVER);
@@ -959,7 +960,8 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
 
     if (smartlist_len(fp_pairs) > 1) {
       resource = smartlist_join_strings(fp_pairs, "", 0, NULL);
-      /* XXX - do we want certs from authorities or mirrors? - teor */
+      /* We want certs from mirrors, because they will almost always succeed.
+       */
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
                                    resource, PDS_RETRY_IF_NO_SERVERS,
                                    DL_WANT_ANY_DIRSERVER);
