@@ -1724,8 +1724,6 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
   } else if (!strcmp(question, "limits/max-mem-in-queues")) {
     tor_asprintf(answer, U64_FORMAT,
                  U64_PRINTF_ARG(get_options()->MaxMemInQueues));
-  } else if (!strcmp(question, "dir-usage")) {
-    *answer = directory_dump_request_log();
   } else if (!strcmp(question, "fingerprint")) {
     crypto_pk_t *server_key;
     if (!server_mode(get_options())) {
@@ -2558,7 +2556,6 @@ static const getinfo_item_t getinfo_items[] = {
        "Username under which the tor process is running."),
   ITEM("process/descriptor-limit", misc, "File descriptor limit."),
   ITEM("limits/max-mem-in-queues", misc, "Actual limit on memory in queues"),
-  ITEM("dir-usage", misc, "Breakdown of bytes transferred over DirPort."),
   PREFIX("desc-annotations/id/", dir, "Router annotations by hexdigest."),
   PREFIX("dir/server/", dir,"Router descriptors as retrieved from a DirPort."),
   PREFIX("dir/status/", dir,

@@ -17,9 +17,7 @@
 #if defined(__clang_analyzer__) || defined(__COVERITY__)
 /* If we're building for a static analysis, turn on all the off-by-default
  * features. */
-#ifndef INSTRUMENT_DOWNLOADS
-#define INSTRUMENT_DOWNLOADS 1
-#endif
+/* XXX029 Nothing left here? Take out or leave in? */
 #endif
 
 #ifdef HAVE_UNISTD_H

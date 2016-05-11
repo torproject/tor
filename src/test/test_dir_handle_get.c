@@ -224,51 +224,6 @@ test_dir_handle_get_robots_txt(void *data)
     tor_free(body);
 }
 
-static void
-test_dir_handle_get_bytes_txt(void *data)
-{
-  dir_connection_t *conn = NULL;
-  char *header = NULL;
-  char *body = NULL;
-  size_t body_used = 0, body_len = 0;
-  char buff[30];
-  char *exp_body = NULL;
-  (void) data;
-
-  exp_body = directory_dump_request_log();
-  body_len = strlen(exp_body);
-
-  MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
-
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
-
-  tt_int_op(directory_handle_command_get(conn, GET("/tor/bytes.txt"), NULL, 0),
-            OP_EQ, 0);
-  fetch_from_buf_http(TO_CONN(conn)->outbuf, &header, MAX_HEADERS_SIZE,
-                      &body, &body_used, body_len+1, 0);
-
-  tt_assert(header);
-  tt_assert(body);
-
-  tt_ptr_op(strstr(header, "HTTP/1.0 200 OK\r\n"), OP_EQ, header);
-  tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
-  tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
-  tt_assert(strstr(header, "Pragma: no-cache\r\n"));
-
-  tor_snprintf(buff, sizeof(buff), "Content-Length: %ld\r\n", (long) body_len);
-  tt_assert(strstr(header, buff));
-
-  tt_int_op(body_used, OP_EQ, strlen(body));
-  tt_str_op(body, OP_EQ, exp_body);
-
-  done:
-    UNMOCK(connection_write_to_buf_impl_);
-    connection_free_(TO_CONN(conn));
-    tor_free(header);
-    tor_free(body);
-    tor_free(exp_body);
-}
-
 #define RENDEZVOUS2_GET(descid) GET("/tor/rendezvous2/" descid)
 static void
 test_dir_handle_get_rendezvous2_not_found_if_not_encrypted(void *data)
@@ -2484,7 +2439,6 @@ struct testcase_t dir_handle_get_tests[] = {
   DIR_HANDLE_CMD(v1_command_not_found, 0),
   DIR_HANDLE_CMD(v1_command, 0),
   DIR_HANDLE_CMD(robots_txt, 0),
-  DIR_HANDLE_CMD(bytes_txt, 0),
   DIR_HANDLE_CMD(rendezvous2_not_found_if_not_encrypted, 0),
   DIR_HANDLE_CMD(rendezvous2_not_found, 0),
   DIR_HANDLE_CMD(rendezvous2_on_encrypted_conn_with_invalid_desc_id, 0),

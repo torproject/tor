@@ -73,10 +73,6 @@ if test "$enable_system_torrc" = "no"; then
 fi
 
 AM_CONDITIONAL(USE_OPENBSD_MALLOC, test "x$enable_openbsd_malloc" = "xyes")
-if test "x$enable_instrument_downloads" = "xyes"; then
-  AC_DEFINE(INSTRUMENT_DOWNLOADS, 1,
-            [Defined if we want to keep track of how much of each kind of resource we download.])
-fi
 
 AC_ARG_ENABLE(transparent,
      AS_HELP_STRING(--disable-transparent, [disable transparent proxy support]),

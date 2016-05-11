@@ -884,14 +884,12 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
        */
       circuit_pick_create_handshake(&cc.cell_type, &cc.handshake_type,
                                     circ->cpath->extend_info);
-      note_request("cell: create", 1);
     } else {
       /* We are not an OR, and we're building the first hop of a circuit to a
        * new OR: we can be speedy and use CREATE_FAST to save an RSA operation
        * and a DH operation. */
       cc.cell_type = CELL_CREATE_FAST;
       cc.handshake_type = ONION_HANDSHAKE_TYPE_FAST;
-      note_request("cell: create fast", 1);
     }
 
     len = onion_skin_create(cc.handshake_type,
@@ -1024,7 +1022,6 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     ec.create_cell.handshake_len = len;
 
     log_info(LD_CIRC,"Sending extend relay cell.");
-    note_request("cell: extend", 1);
     {
       uint8_t command = 0;
       uint16_t payload_len=0;
