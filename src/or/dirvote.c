@@ -3040,6 +3040,26 @@ dirvote_compute_consensuses(void)
   if (!pending_vote_list)
     pending_vote_list = smartlist_new();
 
+  /* write the votes out to disk early, so we have them even if we abort
+   * the consensus process below. */
+  votes = smartlist_new();
+  votestrings = smartlist_new();
+  SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, v,
+    {
+      sized_chunk_t *c = tor_malloc(sizeof(sized_chunk_t));
+      c->bytes = v->vote_body->dir;
+      c->len = v->vote_body->dir_len;
+      smartlist_add(votestrings, c); /* collect strings to write to disk */
+
+      smartlist_add(votes, v->vote); /* collect votes to compute consensus */
+    });
+
+  votefile = get_datadir_fname("v3-status-votes");
+  write_chunks_to_file(votefile, votestrings, 0, 0);
+  tor_free(votefile);
+  SMARTLIST_FOREACH(votestrings, sized_chunk_t *, c, tor_free(c));
+  smartlist_free(votestrings);
+
   n_voters = get_n_authorities(V3_DIRINFO);
   n_votes = smartlist_len(pending_vote_list);
   if (n_votes <= n_voters/2) {
@@ -3065,24 +3085,6 @@ dirvote_compute_consensuses(void)
     log_warn(LD_DIR, "Can't generate consensus without a certificate.");
     goto err;
   }
-
-  votes = smartlist_new();
-  votestrings = smartlist_new();
-  SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, v,
-    {
-      sized_chunk_t *c = tor_malloc(sizeof(sized_chunk_t));
-      c->bytes = v->vote_body->dir;
-      c->len = v->vote_body->dir_len;
-      smartlist_add(votestrings, c); /* collect strings to write to disk */
-
-      smartlist_add(votes, v->vote); /* collect votes to compute consensus */
-    });
-
-  votefile = get_datadir_fname("v3-status-votes");
-  write_chunks_to_file(votefile, votestrings, 0, 0);
-  tor_free(votefile);
-  SMARTLIST_FOREACH(votestrings, sized_chunk_t *, c, tor_free(c));
-  smartlist_free(votestrings);
 
   {
     char legacy_dbuf[DIGEST_LEN];
