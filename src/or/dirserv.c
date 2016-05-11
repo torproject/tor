@@ -349,7 +349,7 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
 
   if (result & FP_REJECT) {
     if (msg)
-      *msg = "Fingerprint is marked rejected";
+      *msg = "Fingerprint is marked rejected -- please contact us?";
     return FP_REJECT;
   } else if (result & FP_INVALID) {
     if (msg)
@@ -367,7 +367,7 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
     log_fn(severity, LD_DIRSERV, "Rejecting '%s' because of address '%s'",
                nickname, fmt_addr32(addr));
     if (msg)
-      *msg = "Authdir is rejecting routers in this range.";
+      *msg = "Suspicious relay address range -- please contact us?";
     return FP_REJECT;
   }
   if (!authdir_policy_valid_address(addr, or_port)) {
