@@ -97,6 +97,7 @@
 #include "router.h"
 #include "routerlist.h"
 #include "shared_random_state.h"
+#include "util.h"
 
 /* String prefix of shared random values in votes/consensuses. */
 static const char previous_srv_str[] = "shared-rand-previous-value";
@@ -461,8 +462,9 @@ get_vote_line_from_commit(const sr_commit_t *commit, sr_phase_t phase)
 
   switch (phase) {
   case SR_PHASE_COMMIT:
-    tor_asprintf(&vote_line, "%s %s %s %s\n",
+    tor_asprintf(&vote_line, "%s %u %s %s %s\n",
                  commit_ns_str,
+                 SR_PROTO_VERSION,
                  crypto_digest_algorithm_get_name(commit->alg),
                  sr_commit_get_rsa_fpr(commit),
                  commit->encoded_commit);
@@ -475,8 +477,9 @@ get_vote_line_from_commit(const sr_commit_t *commit, sr_phase_t phase)
                         sizeof(commit->encoded_reveal))) {
       reveal_str = "";
     }
-    tor_asprintf(&vote_line, "%s %s %s %s %s\n",
+    tor_asprintf(&vote_line, "%s %u %s %s %s %s\n",
                  commit_ns_str,
+                 SR_PROTO_VERSION,
                  crypto_digest_algorithm_get_name(commit->alg),
                  sr_commit_get_rsa_fpr(commit),
                  commit->encoded_commit, reveal_str);
@@ -1040,22 +1043,33 @@ sr_parse_srv(const smartlist_t *args)
  * allocated commit object. NULL is returned on error.
  *
  * The commit's data is in <b>args</b> and the order matters very much:
- *  algname, RSA fingerprint, commit value[, reveal value]
+ *  version, algname, RSA fingerprint, commit value[, reveal value]
  */
 sr_commit_t *
 sr_parse_commit(const smartlist_t *args)
 {
+  uint32_t version;
   char *value, digest[DIGEST_LEN];
   digest_algorithm_t alg;
   const char *rsa_identity_fpr;
   sr_commit_t *commit = NULL;
 
-  if (smartlist_len(args) < 3) {
+  if (smartlist_len(args) < 4) {
     goto error;
   }
 
-  /* First argument is the algorithm. */
+  /* First is the version number of the SR protocol which indicates at which
+   * version that commit was created. */
   value = smartlist_get(args, 0);
+  version = (uint32_t) tor_parse_ulong(value, 10, 1, UINT32_MAX, NULL, NULL);
+  if (version > SR_PROTO_VERSION) {
+    log_info(LD_DIR, "SR: Commit version %" PRIu32 " (%s) is not supported.",
+             version, escaped(value));
+    goto error;
+  }
+
+  /* Second is the algorithm. */
+  value = smartlist_get(args, 1);
   alg = crypto_digest_algorithm_parse_name(value);
   if (alg != SR_DIGEST_ALG) {
     log_warn(LD_BUG, "SR: Commit algorithm %s is not recognized.",
@@ -1063,9 +1077,9 @@ sr_parse_commit(const smartlist_t *args)
     goto error;
   }
 
-  /* Second argument is the RSA fingerprint of the auth and turn it into a
+  /* Third argument is the RSA fingerprint of the auth and turn it into a
    * digest value. */
-  rsa_identity_fpr = smartlist_get(args, 1);
+  rsa_identity_fpr = smartlist_get(args, 2);
   if (base16_decode(digest, DIGEST_LEN, rsa_identity_fpr,
                     HEX_DIGEST_LEN) < 0) {
     log_warn(LD_DIR, "SR: RSA fingerprint '%s' not decodable",
@@ -1085,15 +1099,15 @@ sr_parse_commit(const smartlist_t *args)
   /* Allocate commit since we have a valid identity now. */
   commit = commit_new(digest);
 
-  /* Third argument is the commitment value base64-encoded. */
-  value = smartlist_get(args, 2);
+  /* Fourth argument is the commitment value base64-encoded. */
+  value = smartlist_get(args, 3);
   if (commit_decode(value, commit) < 0) {
     goto error;
   }
 
-  /* (Optional) Fourth argument is the revealed value. */
-  if (smartlist_len(args) > 3) {
-    value = smartlist_get(args, 3);
+  /* (Optional) Fifth argument is the revealed value. */
+  if (smartlist_len(args) > 4) {
+    value = smartlist_get(args, 4);
     if (reveal_decode(value, commit) < 0) {
       goto error;
     }

@@ -563,7 +563,8 @@ disk_state_put_commit_line(const sr_commit_t *commit, config_line_t *line)
     /* Add extra whitespace so we can format the line correctly. */
     tor_asprintf(&reveal_str, " %s", commit->encoded_reveal);
   }
-  tor_asprintf(&line->value, "%s %s %s%s",
+  tor_asprintf(&line->value, "%u %s %s %s%s",
+               SR_PROTO_VERSION,
                crypto_digest_algorithm_get_name(commit->alg),
                sr_commit_get_rsa_fpr(commit),
                commit->encoded_commit,
