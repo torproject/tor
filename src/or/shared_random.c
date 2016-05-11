@@ -951,6 +951,16 @@ sr_compute_srv(void)
   DIGESTMAP_FOREACH(state_commits, key, sr_commit_t *, c) {
     /* Extra safety net, make sure we have valid commit before using it. */
     ASSERT_COMMIT_VALID(c);
+    /* Let's not use a commit from an authority that we don't know. It's
+     * possible that an authority could be removed during a protocol run so
+     * that commit value should never be used in the SRV computation. */
+    if (trusteddirserver_get_by_v3_auth_digest(c->rsa_identity) == NULL) {
+      log_warn(LD_DIR, "SR: Fingerprint %s is not from a recognized "
+               "authority. Discarding commit for the SRV computation.",
+               sr_commit_get_rsa_fpr(c));
+      continue;
+    }
+    /* We consider this commit valid. */
     smartlist_add(commits, c);
   } DIGESTMAP_FOREACH_END;
   smartlist_sort(commits, compare_reveal_);
