@@ -2702,6 +2702,61 @@ __DataDirectory__**/lock**::
 __DataDirectory__**/keys/***::
     Only used by servers. Holds identity keys and onion keys.
 
+__DataDirectory__**/keys/authority_identity_key**::
+    A directory authority's master identity key, used to authenticate its
+    signing key. Tor doesn't use this while it's running. The tor-gencert
+    program uses this. If you're running an authority, you should keep this
+    key offline, and not actually put it here.
+
+__DataDirectory__**/keys/authority_certificate**::
+    A directory authority's certificate, which authenticates the authority's
+    current vote- and consensus-signing key using its master identity key.
+    Only directory authorities use this file.
+
+__DataDirectory__**/keys/authority_signing_key**::
+    A directory authority's signing key, used to sign votes and consensuses.
+    Only directory authorities use this file.  Corresponds to the
+    **authority_certificate** cert.
+
+__DataDirectory__**/keys/legacy_certificate**::
+    As authority_certificate: used only when V3AuthUseLegacyKey is set.
+    See documentation for V3AuthUseLegacyKey.
+
+__DataDirectory__**/keys/legacy_signing_key**::
+    As authority_signing_key: used only when V3AuthUseLegacyKey is set.
+    See documentation for V3AuthUseLegacyKey.
+
+__DataDirectory__**/keys/secret_id_key**::
+    A relay's RSA1024 permanent identity key, including private and public
+    components.  Used to sign router descriptors, and to sign other keys.
+
+__DataDirectory__**/keys/ed25519_master_id_public_key**::
+    The public part of a relay's Ed25519 permanent identity key.
+
+__DataDirectory__**/keys/ed25519_master_id_secret_key**::
+    The private part of a relay's Ed25519 permanent identity key.  This key
+    is used to sign the medium-term ed25519 signing key.  This file can be
+    kept offline, or kept encrypted. If so, Tor will not be able to generate
+    new signing keys itself; you'll need to use tor --keygen yourself to do
+    so.
+
+__DataDirectory__**/keys/ed25519_signing_secret_key**::
+    The private and public components of a relay's medium-term Ed25519 signing
+    key. This key is authenticated by the Ed25519 master key, in turn
+    authenticates other keys (and router descriptors).
+
+__DataDirectory__**/keys/ed25519_signing_cert**::
+    The certificate which authenticates "ed25519_signing_secret_key" as
+    having been signed by the Ed25519 master key.
+
+__DataDirectory__**/keys/secret_onion_key**::
+    A relay's RSA1024 short-term onion key. Used to decrypt old-style ("TAP")
+    circuit extension requests.
+
+__DataDirectory__**/keys/secret_onion_key_ntor**::
+    A relay's Curve25519 short-term onion key. Used to handle modern ("ntor")
+    circuit extension requests.
+
 __DataDirectory__**/fingerprint**::
     Only used by servers. Holds the fingerprint of the server's identity key.
 
