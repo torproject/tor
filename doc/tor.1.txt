@@ -2703,18 +2703,18 @@ __DataDirectory__**/keys/***::
     Only used by servers. Holds identity keys and onion keys.
 
 __DataDirectory__**/keys/authority_identity_key**::
-    A directory authority's master identity key, used to authenticate its
+    A v3 directory authority's master identity key, used to authenticate its
     signing key. Tor doesn't use this while it's running. The tor-gencert
     program uses this. If you're running an authority, you should keep this
     key offline, and not actually put it here.
 
 __DataDirectory__**/keys/authority_certificate**::
-    A directory authority's certificate, which authenticates the authority's
+    A v3 directory authority's certificate, which authenticates the authority's
     current vote- and consensus-signing key using its master identity key.
     Only directory authorities use this file.
 
 __DataDirectory__**/keys/authority_signing_key**::
-    A directory authority's signing key, used to sign votes and consensuses.
+    A v3 directory authority's signing key, used to sign votes and consensuses.
     Only directory authorities use this file.  Corresponds to the
     **authority_certificate** cert.
 
@@ -2765,9 +2765,8 @@ __DataDirectory__**/hashed-fingerprint**::
     identity key. (That is, the hash of the hash of the identity key.)
 
 __DataDirectory__**/v3-status-votes**::
-    Only for authoritative directory servers. This file contains status votes
-    from all the authoritative directory servers and is used to generate the
-    network consensus document.
+    Only for v3 authoritative directory servers. This file contains
+    status votes from all the authoritative directory servers.
 
 __DataDirectory__**/unverified-consensus**::
     This file contains a network consensus document that has been downloaded,
