@@ -153,20 +153,20 @@ LIBKECCAK_TINY=src/ext/keccak-tiny/libkeccak-tiny.a
 noinst_LIBRARIES += $(LIBKECCAK_TINY)
 
 EXTRA_DIST += \
-	timeouts/bench/bench-add.lua 		\
-	timeouts/bench/bench-aux.lua		\
-	timeouts/bench/bench.c			\
-	timeouts/bench/bench-del.lua		\
-	timeouts/bench/bench-expire.lua		\
-	timeouts/bench/bench.h			\
-	timeouts/bench/bench-heap.c		\
-	timeouts/bench/bench-llrb.c		\
-	timeouts/bench/bench.plt		\
-	timeouts/bench/bench-wheel.c		\
-	timeouts/bench/Rules.mk			\
-	timeouts/lua/Rules.mk			\
-	timeouts/lua/timeout-lua.c		\
-	timeouts/Makefile			\
-	timeouts/Rules.shrc			\
-	timeouts/test-timeout.c
+	src/ext/timeouts/bench/bench-add.lua 		\
+	src/ext/timeouts/bench/bench-aux.lua		\
+	src/ext/timeouts/bench/bench.c			\
+	src/ext/timeouts/bench/bench-del.lua		\
+	src/ext/timeouts/bench/bench-expire.lua		\
+	src/ext/timeouts/bench/bench.h			\
+	src/ext/timeouts/bench/bench-heap.c		\
+	src/ext/timeouts/bench/bench-llrb.c		\
+	src/ext/timeouts/bench/bench.plt		\
+	src/ext/timeouts/bench/bench-wheel.c		\
+	src/ext/timeouts/bench/Rules.mk			\
+	src/ext/timeouts/lua/Rules.mk			\
+	src/ext/timeouts/lua/timeout-lua.c		\
+	src/ext/timeouts/Makefile			\
+	src/ext/timeouts/Rules.shrc			\
+	src/ext/timeouts/test-timeout.c
 
