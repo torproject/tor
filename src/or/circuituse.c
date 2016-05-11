@@ -1677,7 +1677,7 @@ circuit_launch(uint8_t purpose, int flags)
 /* Do we have enough descriptors to build paths?
  * If need_exit is true, return 1 if we can build exit paths.
  * (We need at least one Exit in the consensus to build exit paths.)
- * If need_exit is false, return 0 if we can build internal paths.
+ * If need_exit is false, return 1 if we can build internal paths.
  */
 static int
 have_enough_path_info(int need_exit)

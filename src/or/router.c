@@ -1549,9 +1549,9 @@ proxy_mode(const or_options_t *options)
  * and
  * - We have ORPort set
  * and
- * - We believe both our ORPort and DirPort (if present) are reachable from
+ * - We believe our ORPort and DirPort (if present) are reachable from
  *   the outside; or
- * - We believe both our ORPort is reachable from the outside, and we can't
+ * - We believe our ORPort is reachable from the outside, and we can't
  *   check our DirPort because the consensus has no exits; or
  * - We are an authoritative directory server.
  */
@@ -1570,14 +1570,15 @@ decide_if_publishable_server(void)
     return 1;
   if (!router_get_advertised_or_port(options))
     return 0;
-  /* If there are no exits in the consensus, but have enough descriptors to
-   * build internal paths, we can't possibly verify our DirPort.
-   * This only happens in small networks without exits. */
-  if (router_have_consensus_path() == CONSENSUS_PATH_INTERNAL)
-    return check_whether_orport_reachable();
-
-  /* If there are exits in the consensus, use an exit to check our DirPort. */
-  return check_whether_orport_reachable() && check_whether_dirport_reachable();
+  if (!check_whether_orport_reachable())
+    return 0;
+  if (router_have_consensus_path() == CONSENSUS_PATH_INTERNAL) {
+    /* All set: there are no exits in the consensus (maybe this is a tiny
+     * test network), so we can't check our DirPort reachability. */
+    return 1;
+  } else {
+    return check_whether_dirport_reachable();
+  }
 }
 
 /** Initiate server descriptor upload as reasonable (if server is publishable,
