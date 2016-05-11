@@ -100,6 +100,7 @@ src_test_test_SOURCES = \
 	src/test/test_policy.c \
 	src/test/test_procmon.c \
 	src/test/test_pt.c \
+	src/test/test_pubsub.c \
 	src/test/test_relay.c \
 	src/test/test_relaycell.c \
 	src/test/test_rendcache.c \
