@@ -3060,7 +3060,7 @@ digit_to_num(char d)
  * success, store the result in <b>out</b>, advance bufp to the next
  * character, and return 0.  On failure, return -1. */
 static int
-scan_unsigned(const char **bufp, unsigned long *out, int width, int base)
+scan_unsigned(const char **bufp, unsigned long *out, int width, unsigned base)
 {
   unsigned long result = 0;
   int scanned_so_far = 0;
@@ -3073,7 +3073,7 @@ scan_unsigned(const char **bufp, unsigned long *out, int width, int base)
 
   while (**bufp && (hex?TOR_ISXDIGIT(**bufp):TOR_ISDIGIT(**bufp))
          && scanned_so_far < width) {
-    int digit = hex?hex_decode_digit(*(*bufp)++):digit_to_num(*(*bufp)++);
+    unsigned digit = hex?hex_decode_digit(*(*bufp)++):digit_to_num(*(*bufp)++);
     // Check for overflow beforehand, without actually causing any overflow
     // This preserves functionality on compilers that don't wrap overflow
     // (i.e. that trap or optimise away overflow)
@@ -3119,14 +3119,15 @@ scan_signed(const char **bufp, long *out, int width)
   if (neg && result > 0) {
     if (result > ((unsigned long)LONG_MAX) + 1)
       return -1; /* Underflow */
-    // Avoid overflow on the cast to signed long when result is LONG_MIN
-    // by subtracting 1 from the unsigned long positive value,
-    // then, after it has been cast to signed and negated,
-    // subtracting the original 1 (the double-subtraction is intentional).
-    // Otherwise, the cast to signed could cause a temporary long
-    // to equal LONG_MAX + 1, which is undefined.
-    // We avoid underflow on the subtraction by treating -0 as positive.
-    *out = (-(long)(result - 1)) - 1;
+    else if (result == ((unsigned long)LONG_MAX) + 1)
+      *out = LONG_MIN;
+    else {
+      /* We once had a far more clever no-overflow conversion here, but
+       * some versions of GCC apparently ran it into the ground.  Now
+       * we just check for LONG_MIN explicitly.
+       */
+      *out = -(long)result;
+    }
   } else {
     if (result > LONG_MAX)
       return -1; /* Overflow */
