@@ -787,13 +787,13 @@ m4_ifdef([AS_VAR_IF],[
        TOR_CHECK_CFLAGS(-fPIE)
        TOR_CHECK_LDFLAGS(-pie, "$all_ldflags_for_check", "$all_libs_for_check")
     fi
-    TOR_TRY_COMPILE_WITH_CFLAGS(-ftrapv, , CFLAGS_FTRAPV="-ftrapv", /bin/true)
-    TOR_TRY_COMPILE_WITH_CFLAGS(-fwrapv, , CFLAGS_FWRAPV="-fwrapv", /bin/true)
+    TOR_TRY_COMPILE_WITH_CFLAGS(-ftrapv, , CFLAGS_FTRAPV="-ftrapv", true)
+    TOR_TRY_COMPILE_WITH_CFLAGS(-fwrapv, , CFLAGS_FWRAPV="-fwrapv", true)
 fi
 
 if test "x$enable_expensive_hardening" = "xyes"; then
-   TOR_TRY_COMPILE_WITH_CFLAGS([-fsanitize=address], , CFLAGS_ASAN="-fsanitize=address", /bin/true)
-   TOR_TRY_COMPILE_WITH_CFLAGS([-fsanitize=undefined], , CFLAGS_UBSAN="-fsanitize=undefined", /bin/true)
+   TOR_TRY_COMPILE_WITH_CFLAGS([-fsanitize=address], , CFLAGS_ASAN="-fsanitize=address", true)
+   TOR_TRY_COMPILE_WITH_CFLAGS([-fsanitize=undefined], , CFLAGS_UBSAN="-fsanitize=undefined", true)
    TOR_CHECK_CFLAGS([-fno-omit-frame-pointer])
 fi
 
