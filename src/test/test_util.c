@@ -4819,7 +4819,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(memarea),
   UTIL_LEGACY(control_formats),
   UTIL_LEGACY(mmap),
-  UTIL_LEGACY(sscanf),
+  UTIL_TEST(sscanf, TT_FORK),
   UTIL_LEGACY(format_time_interval),
   UTIL_LEGACY(path_is_relative),
   UTIL_LEGACY(strtok),
