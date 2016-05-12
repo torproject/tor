@@ -1,14 +1,14 @@
 
 noinst_LIBRARIES += \
 	src/common/libor.a \
-        src/common/libor-ctime.a \
+	src/common/libor-ctime.a \
 	src/common/libor-crypto.a \
 	src/common/libor-event.a
 
 if UNITTESTS_ENABLED
 noinst_LIBRARIES += \
 	src/common/libor-testing.a \
-        src/common/libor-ctime-testing.a \
+	src/common/libor-ctime-testing.a \
 	src/common/libor-crypto-testing.a \
 	src/common/libor-event-testing.a
 endif
