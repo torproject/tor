@@ -2149,56 +2149,57 @@ test_dir_scale_bw(void *testdata)
                   1.0/7,
                   12.0,
                   24.0 };
-  u64_dbl_t vals[8];
+  double vals_dbl[8];
+  uint64_t vals_u64[8];
   uint64_t total;
   int i;
 
   (void) testdata;
 
   for (i=0; i<8; ++i)
-    vals[i].dbl = v[i];
+    vals_dbl[i] = v[i];
 
-  scale_array_elements_to_u64(vals, 8, &total);
+  scale_array_elements_to_u64(vals_u64, vals_dbl, 8, &total);
 
   tt_int_op((int)total, OP_EQ, 48);
   total = 0;
   for (i=0; i<8; ++i) {
-    total += vals[i].u64;
+    total += vals_u64[i];
   }
   tt_assert(total >= (U64_LITERAL(1)<<60));
   tt_assert(total <= (U64_LITERAL(1)<<62));
 
   for (i=0; i<8; ++i) {
     /* vals[2].u64 is the scaled value of 1.0 */
-    double ratio = ((double)vals[i].u64) / vals[2].u64;
+    double ratio = ((double)vals_u64[i]) / vals_u64[2];
     tt_double_op(fabs(ratio - v[i]), OP_LT, .00001);
   }
 
   /* test handling of no entries */
   total = 1;
-  scale_array_elements_to_u64(vals, 0, &total);
+  scale_array_elements_to_u64(vals_u64, vals_dbl, 0, &total);
   tt_assert(total == 0);
 
   /* make sure we don't read the array when we have no entries
    * may require compiler flags to catch NULL dereferences */
   total = 1;
-  scale_array_elements_to_u64(NULL, 0, &total);
+  scale_array_elements_to_u64(NULL, NULL, 0, &total);
   tt_assert(total == 0);
 
-  scale_array_elements_to_u64(NULL, 0, NULL);
+  scale_array_elements_to_u64(NULL, NULL, 0, NULL);
 
   /* test handling of zero totals */
   total = 1;
-  vals[0].dbl = 0.0;
-  scale_array_elements_to_u64(vals, 1, &total);
+  vals_dbl[0] = 0.0;
+  scale_array_elements_to_u64(vals_u64, vals_dbl, 1, &total);
   tt_assert(total == 0);
-  tt_assert(vals[0].u64 == 0);
+  tt_assert(vals_u64[0] == 0);
 
-  vals[0].dbl = 0.0;
-  vals[1].dbl = 0.0;
-  scale_array_elements_to_u64(vals, 2, NULL);
-  tt_assert(vals[0].u64 == 0);
-  tt_assert(vals[1].u64 == 0);
+  vals_dbl[0] = 0.0;
+  vals_dbl[1] = 0.0;
+  scale_array_elements_to_u64(vals_u64, vals_dbl, 2, NULL);
+  tt_assert(vals_u64[0] == 0);
+  tt_assert(vals_u64[1] == 0);
 
  done:
   ;
@@ -2209,7 +2210,7 @@ test_dir_random_weighted(void *testdata)
 {
   int histogram[10];
   uint64_t vals[10] = {3,1,2,4,6,0,7,5,8,9}, total=0;
-  u64_dbl_t inp[10];
+  uint64_t inp_u64[10];
   int i, choice;
   const int n = 50000;
   double max_sq_error;
@@ -2219,12 +2220,12 @@ test_dir_random_weighted(void *testdata)
    * in a scrambled order to make sure we don't depend on order. */
   memset(histogram,0,sizeof(histogram));
   for (i=0; i<10; ++i) {
-    inp[i].u64 = vals[i];
+    inp_u64[i] = vals[i];
     total += vals[i];
   }
   tt_u64_op(total, OP_EQ, 45);
   for (i=0; i<n; ++i) {
-    choice = choose_array_element_by_weight(inp, 10);
+    choice = choose_array_element_by_weight(inp_u64, 10);
     tt_int_op(choice, OP_GE, 0);
     tt_int_op(choice, OP_LT, 10);
     histogram[choice]++;
@@ -2251,16 +2252,16 @@ test_dir_random_weighted(void *testdata)
 
   /* Now try a singleton; do we choose it? */
   for (i = 0; i < 100; ++i) {
-    choice = choose_array_element_by_weight(inp, 1);
+    choice = choose_array_element_by_weight(inp_u64, 1);
     tt_int_op(choice, OP_EQ, 0);
   }
 
   /* Now try an array of zeros.  We should choose randomly. */
   memset(histogram,0,sizeof(histogram));
   for (i = 0; i < 5; ++i)
-    inp[i].u64 = 0;
+    inp_u64[i] = 0;
   for (i = 0; i < n; ++i) {
-    choice = choose_array_element_by_weight(inp, 5);
+    choice = choose_array_element_by_weight(inp_u64, 5);
     tt_int_op(choice, OP_GE, 0);
     tt_int_op(choice, OP_LT, 5);
     histogram[choice]++;

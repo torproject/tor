@@ -217,17 +217,10 @@ int hex_digest_nickname_matches(const char *hexdigest,
                                 const char *nickname, int is_named);
 
 #ifdef ROUTERLIST_PRIVATE
-/** Helper type for choosing routers by bandwidth: contains a union of
- * double and uint64_t. Before we call scale_array_elements_to_u64, it holds
- * a double; after, it holds a uint64_t. */
-typedef union u64_dbl_t {
-  uint64_t u64;
-  double dbl;
-} u64_dbl_t;
-
-STATIC int choose_array_element_by_weight(const u64_dbl_t *entries,
+STATIC int choose_array_element_by_weight(const uint64_t *entries,
                                           int n_entries);
-STATIC void scale_array_elements_to_u64(u64_dbl_t *entries, int n_entries,
+STATIC void scale_array_elements_to_u64(uint64_t *entries_out,
+                                        const double *entries_in, int n_entries,
                                         uint64_t *total_out);
 STATIC const routerstatus_t *router_pick_directory_server_impl(
                                            dirinfo_type_t auth, int flags,
