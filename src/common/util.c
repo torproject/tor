@@ -3273,8 +3273,10 @@ tor_vsscanf(const char *buf, const char *pattern, va_list ap)
           *out = lng;
         } else {
           int *out = va_arg(ap, int *);
+#if LONG_MAX > INT_MAX
           if (lng < INT_MIN || lng > INT_MAX)
             return n_matched;
+#endif
           *out = (int)lng;
         }
         ++pattern;
