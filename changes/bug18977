@@ -1,0 +1,4 @@
+  o Minor bugfixes (time handling):
+    - When correcting a corrupt 'struct tm' value, fill in the tm_wday
+      field. Otherwise, our unit tests crash on Windows.
+      Fixes bug 18977; bugfix on 0.2.2.25-alpha.
