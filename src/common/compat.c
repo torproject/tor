@@ -2923,6 +2923,7 @@ correct_tm(int islocal, const time_t *timep, struct tm *resultbuf,
       r->tm_mon = 11;
       r->tm_mday = 31;
       r->tm_yday = 364;
+      r->tm_wday = 6;
       r->tm_hour = 23;
       r->tm_min = 59;
       r->tm_sec = 59;
@@ -2931,6 +2932,7 @@ correct_tm(int islocal, const time_t *timep, struct tm *resultbuf,
       r->tm_mon = 0;
       r->tm_mday = 1;
       r->tm_yday = 0;
+      r->tm_wday = 0;
       r->tm_hour = 0;
       r->tm_min = 0;
       r->tm_sec = 0;
@@ -2948,6 +2950,7 @@ correct_tm(int islocal, const time_t *timep, struct tm *resultbuf,
       r->tm_mon = 0;
       r->tm_mday = 1;
       r->tm_yday = 0;
+      r->tm_wday = 0;
       r->tm_hour = 0;
       r->tm_min = 0 ;
       r->tm_sec = 0;
@@ -2961,6 +2964,7 @@ correct_tm(int islocal, const time_t *timep, struct tm *resultbuf,
       r->tm_mon = 11;
       r->tm_mday = 31;
       r->tm_yday = 364;
+      r->tm_wday = 6;
       r->tm_hour = 23;
       r->tm_min = 59;
       r->tm_sec = 59;
