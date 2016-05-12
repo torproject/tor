@@ -31,7 +31,7 @@
 
 #include <inttypes.h>   /* PRIu64 PRIx64 PRIX64 uint64_t */
 
-#include <sys/queue.h>  /* TAILQ(3) */
+#include "tor_queue.h"  /* TAILQ(3) */
 
 
 /*
@@ -121,7 +121,7 @@ struct timeout {
 	struct timeout_list *pending;
 	/* timeout list if pending on wheel or expiry queue */
 
-	TAILQ_ENTRY(timeout) tqe;
+	TOR_TAILQ_ENTRY(timeout) tqe;
 	/* entry member for struct timeout_list lists */
 
 #ifndef TIMEOUT_DISABLE_CALLBACKS
