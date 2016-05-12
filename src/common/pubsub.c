@@ -48,7 +48,7 @@ pubsub_subscribe_(pubsub_topic_t *topic,
   if (subscribe_flags & SUBSCRIBE_ATSTART) {
     tor_assert(topic->n_events_fired == 0);
   }
-  pubsub_subscriber_t *r = tor_malloc_zero(sizeof(r));
+  pubsub_subscriber_t *r = tor_malloc_zero(sizeof(*r));
   r->priority = priority;
   r->subscriber_flags = subscribe_flags;
   r->fn = fn;
