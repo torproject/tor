@@ -24,6 +24,18 @@ get_my_v3_authority_cert_m(void)
   return mock_cert;
 }
 
+static dir_server_t ds;
+
+static dir_server_t *
+trusteddirserver_get_by_v3_auth_digest_m(const char *digest)
+{
+  (void) digest;
+  /* The shared random code only need to know if a valid pointer to a dir
+   * server object has been found so this is safe because it won't use the
+   * pointer at all never. */
+  return &ds;
+}
+
 /* Setup a minimal dirauth environment by initializing the SR state and
  * making sure the options are set to be an authority directory. */
 static void
@@ -265,6 +277,9 @@ test_sr_commit(void *arg)
 
   (void) arg;
 
+  MOCK(trusteddirserver_get_by_v3_auth_digest,
+       trusteddirserver_get_by_v3_auth_digest_m);
+
   {  /* Setup a minimal dirauth environment for this test  */
     or_options_t *options = get_options_mutable();
 
@@ -329,6 +344,7 @@ test_sr_commit(void *arg)
    * takes from a vote line and see if we can parse it correctly. */
   {
     sr_commit_t *parsed_commit;
+    smartlist_add(args, tor_strdup("1"));
     smartlist_add(args,
                tor_strdup(crypto_digest_algorithm_get_name(our_commit->alg)));
     smartlist_add(args, tor_strdup(sr_commit_get_rsa_fpr(our_commit)));
@@ -336,10 +352,13 @@ test_sr_commit(void *arg)
     smartlist_add(args, our_commit->encoded_reveal);
     parsed_commit = sr_parse_commit(args);
     tt_assert(parsed_commit);
-    /* That parsed commit should be _EXACTLY_ like our original commit. */
+    /* That parsed commit should be _EXACTLY_ like our original commit (we
+     * have to explicitly set the valid flag though). */
+    parsed_commit->valid = 1;
     tt_mem_op(parsed_commit, OP_EQ, our_commit, sizeof(*parsed_commit));
     /* Cleanup */
     tor_free(smartlist_get(args, 0)); /* strdup here. */
+    tor_free(smartlist_get(args, 1)); /* strdup here. */
     smartlist_clear(args);
     sr_commit_free(parsed_commit);
   }
@@ -347,6 +366,7 @@ test_sr_commit(void *arg)
  done:
   smartlist_free(args);
   sr_commit_free(our_commit);
+  UNMOCK(trusteddirserver_get_by_v3_auth_digest);
 }
 
 /* Test the encoding and decoding function for commit and reveal values. */
@@ -464,6 +484,9 @@ test_vote(void *arg)
 
   (void) arg;
 
+  MOCK(trusteddirserver_get_by_v3_auth_digest,
+       trusteddirserver_get_by_v3_auth_digest_m);
+
   {  /* Setup a minimal dirauth environment for this test  */
     init_authority_state();
     /* Set ourself in reveal phase so we can parse the reveal value in the
@@ -499,21 +522,23 @@ test_vote(void *arg)
     tt_str_op(smartlist_get(chunks, 0), OP_EQ, "shared-rand-participate");
     /* Get our commitment line and will validate it agains our commit. The
      * format is as follow:
-     * "shared-rand-commitment" SP identity SP algname SP COMMIT [SP REVEAL] NL
+     * "shared-rand-commitment" SP version SP algname SP identity
+     *                          SP COMMIT [SP REVEAL] NL
      */
     char *commit_line = smartlist_get(chunks, 1);
     tt_assert(commit_line);
     ret = smartlist_split_string(tokens, commit_line, " ", 0, 0);
-    tt_int_op(ret, ==, 5);
+    tt_int_op(ret, ==, 6);
     tt_str_op(smartlist_get(tokens, 0), OP_EQ, "shared-rand-commit");
-    tt_str_op(smartlist_get(tokens, 1), OP_EQ,
+    tt_str_op(smartlist_get(tokens, 1), OP_EQ, "1");
+    tt_str_op(smartlist_get(tokens, 2), OP_EQ,
               crypto_digest_algorithm_get_name(DIGEST_SHA3_256));
     char digest[DIGEST_LEN];
-    base16_decode(digest, sizeof(digest), smartlist_get(tokens, 2),
+    base16_decode(digest, sizeof(digest), smartlist_get(tokens, 3),
                   HEX_DIGEST_LEN);
     tt_mem_op(digest, ==, our_commit->rsa_identity, sizeof(digest));
-    tt_str_op(smartlist_get(tokens, 3), OP_EQ, our_commit->encoded_commit);
-    tt_str_op(smartlist_get(tokens, 4), OP_EQ, our_commit->encoded_reveal);
+    tt_str_op(smartlist_get(tokens, 4), OP_EQ, our_commit->encoded_commit);
+    tt_str_op(smartlist_get(tokens, 5), OP_EQ, our_commit->encoded_reveal);
 
     /* Finally, does this vote line creates a valid commit object? */
     smartlist_t *args = smartlist_new();
@@ -521,8 +546,12 @@ test_vote(void *arg)
     smartlist_add(args, smartlist_get(tokens, 2));
     smartlist_add(args, smartlist_get(tokens, 3));
     smartlist_add(args, smartlist_get(tokens, 4));
+    smartlist_add(args, smartlist_get(tokens, 5));
     sr_commit_t *parsed_commit = sr_parse_commit(args);
     tt_assert(parsed_commit);
+    /* Set valid flag explicitly here to compare since it's not set by
+     * simply parsing the commit. */
+    parsed_commit->valid = 1;
     tt_mem_op(parsed_commit, ==, our_commit, sizeof(*our_commit));
 
     /* minor cleanup */
@@ -565,20 +594,22 @@ test_vote(void *arg)
 
  done:
   sr_commit_free(our_commit);
+  UNMOCK(trusteddirserver_get_by_v3_auth_digest);
 }
 
 const char *sr_state_str = "Version 1\n"
-  "ValidUntil 2666-04-20 07:16:00\n"
-  "ValidAfter 2666-04-19 07:16:00\n"
-  "Commit sha3-256 FA3CEC2C99DC68D3166B9B6E4FA21A4026C2AB1C "
+  "TorVersion 0.2.9.0-alpha-dev\n"
+  "ValidAfter 2037-04-19 07:16:00\n"
+  "ValidUntil 2037-04-20 07:16:00\n"
+  "Commit 1 sha3-256 FA3CEC2C99DC68D3166B9B6E4FA21A4026C2AB1C "
       "7M8GdubCAAdh7WUG0DiwRyxTYRKji7HATa7LLJEZ/UAAAAAAVmfUSg== "
       "AAAAAFZn1EojfIheIw42bjK3VqkpYyjsQFSbv/dxNna3Q8hUEPKpOw==\n"
-  "Commit sha3-256 41E89EDFBFBA44983E21F18F2230A4ECB5BFB543 "
+  "Commit 1 sha3-256 41E89EDFBFBA44983E21F18F2230A4ECB5BFB543 "
      "17aUsYuMeRjd2N1r8yNyg7aHqRa6gf4z7QPoxxAZbp0AAAAAVmfUSg==\n"
-  "Commit sha3-256 36637026573A04110CF3E6B1D201FB9A98B88734 "
+  "Commit 1 sha3-256 36637026573A04110CF3E6B1D201FB9A98B88734 "
      "DDDYtripvdOU+XPEUm5xpU64d9IURSds1xSwQsgeB8oAAAAAVmfUSg==\n"
-  "SharedRandCurrentValue 3 8dWeW12KEzTGEiLGgO1UVJ7Z91CekoRcxt6Q9KhnOFI=\n"
-  "SharedRandPreviousValue 4 qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqo=\n";
+  "SharedRandPreviousValue 4 qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqo=\n"
+  "SharedRandCurrentValue 3 8dWeW12KEzTGEiLGgO1UVJ7Z91CekoRcxt6Q9KhnOFI=\n";
 
 /** Create an SR disk state, parse it and validate that the parsing went
  *  well. Yes! */
@@ -591,6 +622,9 @@ test_state_load_from_disk(void *arg)
   sr_state_t *the_sr_state = NULL;
 
   (void) arg;
+
+  MOCK(trusteddirserver_get_by_v3_auth_digest,
+       trusteddirserver_get_by_v3_auth_digest_m);
 
   /* First try with a nonexistent path. */
   ret = disk_state_load_from_disk_impl("NONEXISTENTNONEXISTENT");
@@ -608,7 +642,7 @@ test_state_load_from_disk(void *arg)
 
   /* Try to load the directory itself. Should fail. */
   ret = disk_state_load_from_disk_impl(dir);
-  tt_assert(ret == -EINVAL);
+  tt_assert(ret == -EISDIR);
 
   /* State should be non-existent at this point. */
   the_sr_state = get_sr_state();
@@ -634,6 +668,7 @@ test_state_load_from_disk(void *arg)
  done:
   tor_free(dir);
   tor_free(sr_state_path);
+  UNMOCK(trusteddirserver_get_by_v3_auth_digest);
 }
 
 /** Generate three specially crafted commits (based on the test
@@ -757,6 +792,9 @@ test_sr_compute_srv(void *arg)
   MOCK(trusteddirserver_get_by_v3_auth_digest,
        trusteddirserver_get_by_v3_auth_digest_m);
 
+  MOCK(trusteddirserver_get_by_v3_auth_digest,
+       trusteddirserver_get_by_v3_auth_digest_m);
+
   init_authority_state();
 
   /* Setup the commits for this unittest */
@@ -778,7 +816,7 @@ test_sr_compute_srv(void *arg)
             SRV_TEST_VECTOR);
 
  done:
-  ;
+  UNMOCK(trusteddirserver_get_by_v3_auth_digest);
 }
 
 /** Return a minimal vote document with a current SRV value set to
