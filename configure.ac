@@ -1004,59 +1004,57 @@ AC_SUBST(CURVE25519_LIBS)
 dnl Make sure to enable support for large off_t if available.
 AC_SYS_LARGEFILE
 
-AC_CHECK_HEADERS(
-        assert.h \
-        errno.h \
-        fcntl.h \
-        signal.h \
-        string.h \
-	sys/capability.h \
-        sys/fcntl.h \
-        sys/stat.h \
-        sys/time.h \
-        sys/types.h \
-        time.h \
-        unistd.h \
-        arpa/inet.h \
-        crt_externs.h \
-        execinfo.h \
-        grp.h \
-        ifaddrs.h \
-        inttypes.h \
-        limits.h \
-        linux/types.h \
-        machine/limits.h \
-        malloc.h \
-        malloc/malloc.h \
-        malloc_np.h \
-        netdb.h \
-        netinet/in.h \
-        netinet/in6.h \
-        pwd.h \
-	readpassphrase.h \
-        stdint.h \
-	sys/eventfd.h \
-        sys/file.h \
-        sys/ioctl.h \
-        sys/limits.h \
-        sys/mman.h \
-        sys/param.h \
-        sys/prctl.h \
-        sys/resource.h \
-        sys/select.h \
-        sys/socket.h \
-	sys/statvfs.h \
-        sys/syscall.h \
-	sys/sysctl.h \
-        sys/syslimits.h \
-        sys/time.h \
-        sys/types.h \
-        sys/un.h \
-        sys/utime.h \
-        sys/wait.h \
-        syslog.h \
-        utime.h
-)
+AC_CHECK_HEADERS([assert.h \
+                  errno.h \
+                  fcntl.h \
+                  signal.h \
+                  string.h \
+                  sys/capability.h \
+                  sys/fcntl.h \
+                  sys/stat.h \
+                  sys/time.h \
+                  sys/types.h \
+                  time.h \
+                  unistd.h \
+                  arpa/inet.h \
+                  crt_externs.h \
+                  execinfo.h \
+                  grp.h \
+                  ifaddrs.h \
+                  inttypes.h \
+                  limits.h \
+                  linux/types.h \
+                  machine/limits.h \
+                  malloc.h \
+                  malloc/malloc.h \
+                  malloc_np.h \
+                  netdb.h \
+                  netinet/in.h \
+                  netinet/in6.h \
+                  pwd.h \
+                  readpassphrase.h \
+                  stdint.h \
+                  sys/eventfd.h \
+                  sys/file.h \
+                  sys/ioctl.h \
+                  sys/limits.h \
+                  sys/mman.h \
+                  sys/param.h \
+                  sys/prctl.h \
+                  sys/resource.h \
+                  sys/select.h \
+                  sys/socket.h \
+                  sys/statvfs.h \
+                  sys/syscall.h \
+                  sys/sysctl.h \
+                  sys/syslimits.h \
+                  sys/time.h \
+                  sys/types.h \
+                  sys/un.h \
+                  sys/utime.h \
+                  sys/wait.h \
+                  syslog.h \
+                  utime.h])
 
 AC_CHECK_HEADERS(sys/param.h)
 
