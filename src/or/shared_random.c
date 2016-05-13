@@ -779,6 +779,15 @@ smartlist_get_most_frequent_srv(const smartlist_t *sl, int *count_out)
   return smartlist_get_most_frequent_(sl, compare_srvs_, count_out);
 }
 
+/** Compare two SRVs. Used in smartlist sorting. */
+static int
+compare_srv_(const void **_a, const void **_b)
+{
+  const sr_srv_t *a = *_a, *b = *_b;
+  return fast_memcmp(a->value, b->value,
+                     sizeof(a->value));
+}
+
 /* Using a list of <b>votes</b>, return the SRV object from them that has
  * been voted by the majority of dirauths. If <b>current</b> is set, we look
  * for the current SRV value else the previous one. The returned pointer is
@@ -813,6 +822,7 @@ get_majority_srv_from_votes(const smartlist_t *votes, int current)
     smartlist_add(srv_list, srv_tmp);
   } SMARTLIST_FOREACH_END(v);
 
+  smartlist_sort(srv_list, compare_srv_);
   most_frequent_srv = smartlist_get_most_frequent_srv(srv_list, &count);
   if (!most_frequent_srv) {
     goto end;

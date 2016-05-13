@@ -844,13 +844,17 @@ test_sr_get_majority_srv_from_votes(void *arg)
   { /* Now put in 8 more votes. Let SRV_1 have majority. */
     int i;
     /* Now 7 votes believe in SRV_1 */
-    for (i = 0; i < 6; i++) {
+    for (i = 0; i < 3; i++) {
       networkstatus_t *vote = get_test_vote_with_curr_srv(SRV_1);
       smartlist_add(votes, vote);
     }
     /* and 2 votes believe in SRV_2 */
     for (i = 0; i < 2; i++) {
       networkstatus_t *vote = get_test_vote_with_curr_srv(SRV_2);
+      smartlist_add(votes, vote);
+    }
+    for (i = 0; i < 3; i++) {
+      networkstatus_t *vote = get_test_vote_with_curr_srv(SRV_1);
       smartlist_add(votes, vote);
     }
 
