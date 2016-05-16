@@ -65,8 +65,10 @@ STATIC int
 curve25519_basepoint_impl(uint8_t *output, const uint8_t *secret)
 {
   int r = 0;
-  if (PREDICT_UNLIKELY(curve25519_use_ed == -1)) {
+  if (BUG(curve25519_use_ed == -1)) {
+    /* LCOV_EXCL_START - Only reached if we forgot to call curve25519_init() */
     pick_curve25519_basepoint_impl();
+    /* LCOV_EXCL_STOP */
   }
 
   /* TODO: Someone should benchmark curved25519_scalarmult_basepoint versus
@@ -290,10 +292,13 @@ pick_curve25519_basepoint_impl(void)
   if (curve25519_basepoint_spot_check() == 0)
     return;
 
-  log_warn(LD_CRYPTO, "The ed25519-based curve25519 basepoint "
+  /* LCOV_EXCL_START
+   * only reachable if our basepoint implementation broken */
+  log_warn(LD_BUG|LD_CRYPTO, "The ed25519-based curve25519 basepoint "
            "multiplication seems broken; using the curve25519 "
            "implementation.");
   curve25519_use_ed = 0;
+  /* LCOV_EXCL_STOP */
 }
 
 /** Initialize the curve25519 implementations. This is necessary if you're

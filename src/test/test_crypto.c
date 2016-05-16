@@ -27,6 +27,7 @@ static void
 test_crypto_dh(void *arg)
 {
   crypto_dh_t *dh1 = crypto_dh_new(DH_TYPE_CIRCUIT);
+  crypto_dh_t *dh1_dup = NULL;
   crypto_dh_t *dh2 = crypto_dh_new(DH_TYPE_CIRCUIT);
   char p1[DH_BYTES];
   char p2[DH_BYTES];
@@ -41,6 +42,9 @@ test_crypto_dh(void *arg)
   memset(p1, 0, DH_BYTES);
   memset(p2, 0, DH_BYTES);
   tt_mem_op(p1,OP_EQ, p2, DH_BYTES);
+
+  tt_int_op(-1, OP_EQ, crypto_dh_get_public(dh1, p1, 6)); /* too short */
+
   tt_assert(! crypto_dh_get_public(dh1, p1, DH_BYTES));
   tt_mem_op(p1,OP_NE, p2, DH_BYTES);
   tt_assert(! crypto_dh_get_public(dh2, p2, DH_BYTES));
@@ -54,15 +58,117 @@ test_crypto_dh(void *arg)
   tt_int_op(s1len,OP_EQ, s2len);
   tt_mem_op(s1,OP_EQ, s2, s1len);
 
+  /* test dh_dup; make sure it works the same. */
+  dh1_dup = crypto_dh_dup(dh1);
+  s1len = crypto_dh_compute_secret(LOG_WARN, dh1_dup, p2, DH_BYTES, s1, 50);
+  tt_mem_op(s1,OP_EQ, s2, s1len);
+
   {
-    /* XXXX Now fabricate some bad values and make sure they get caught,
-     * Check 0, 1, N-1, >= N, etc.
-     */
+    /* Now fabricate some bad values and make sure they get caught. */
+
+    /* 1 and 0 should both fail. */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, "\x01", 1, s1, 50);
+    tt_int_op(-1, OP_EQ, s1len);
+
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, "\x00", 1, s1, 50);
+    tt_int_op(-1, OP_EQ, s1len);
+
+    memset(p1, 0, DH_BYTES); /* 0 with padding. */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    tt_int_op(-1, OP_EQ, s1len);
+
+    p1[DH_BYTES-1] = 1; /* 1 with padding*/
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    tt_int_op(-1, OP_EQ, s1len);
+
+    /* 2 is okay, though weird. */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, "\x02", 1, s1, 50);
+    tt_int_op(50, OP_EQ, s1len);
+
+    const char P[] =
+      "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"
+      "8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"
+      "302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"
+      "A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE6"
+      "49286651ECE65381FFFFFFFFFFFFFFFF";
+
+    /* p-1, p, and so on are not okay. */
+    base16_decode(p1, sizeof(p1), P, strlen(P));
+
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    tt_int_op(-1, OP_EQ, s1len);
+
+    p1[DH_BYTES-1] = 0xFE; /* p-1 */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    tt_int_op(-1, OP_EQ, s1len);
+
+    p1[DH_BYTES-1] = 0xFD; /* p-2 works fine */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    tt_int_op(50, OP_EQ, s1len);
+
+    const char P_plus_one[] =
+      "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"
+      "8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"
+      "302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"
+      "A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE6"
+      "49286651ECE653820000000000000000";
+
+    base16_decode(p1, sizeof(p1), P_plus_one, strlen(P_plus_one));
+
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    tt_int_op(-1, OP_EQ, s1len);
+
+    p1[DH_BYTES-1] = 0x01; /* p+2 */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    tt_int_op(-1, OP_EQ, s1len);
+
+    p1[DH_BYTES-1] = 0xff; /* p+256 */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    tt_int_op(-1, OP_EQ, s1len);
+
+    memset(p1, 0xff, sizeof(DH_BYTES)), /* 2^1024-1 */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
+    tt_int_op(-1, OP_EQ, s1len);
+  }
+
+  {
+    /* provoke an error in the openssl DH_compute_key function; make sure we
+     * survive. */
+    tt_assert(! crypto_dh_get_public(dh1, p1, DH_BYTES));
+
+    crypto_dh_free(dh2);
+    dh2= crypto_dh_new(DH_TYPE_CIRCUIT); /* no private key set */
+    s1len = crypto_dh_compute_secret(LOG_WARN, dh2,
+                                     p1, DH_BYTES,
+                                     s1, 50);
+    tt_int_op(s1len, OP_EQ, -1);
   }
 
  done:
   crypto_dh_free(dh1);
   crypto_dh_free(dh2);
+  crypto_dh_free(dh1_dup);
+}
+
+static void
+test_crypto_openssl_version(void *arg)
+{
+  (void)arg;
+  const char *version = crypto_openssl_get_version_str();
+  const char *h_version = crypto_openssl_get_header_version_str();
+
+  tt_assert(version);
+  tt_assert(h_version);
+  tt_assert(!strcmpstart(version, h_version)); /* "-fips" suffix, etc */
+  tt_assert(!strstr(version, "OpenSSL"));
+  int a=-1,b=-1,c=-1;
+  sscanf(version, "%d.%d.%d", &a,&b,&c);
+  tt_int_op(a, OP_GE, 0);
+  tt_int_op(b, OP_GE, 0);
+  tt_int_op(c, OP_GE, 0);
+
+ done:
+  ;
 }
 
 /** Run unit tests for our random number generation function and its wrappers.
@@ -73,6 +179,7 @@ test_crypto_rng(void *arg)
   int i, j, allok;
   char data1[100], data2[100];
   double d;
+  char *h=NULL;
 
   /* Try out RNG. */
   (void)arg;
@@ -104,9 +211,16 @@ test_crypto_rng(void *arg)
       allok = 0;
     tor_free(host);
   }
+
+  /* Make sure crypto_random_hostname clips its inputs properly. */
+  h = crypto_random_hostname(20000, 9000, "www.", ".onion");
+  tt_assert(! strcmpstart(h,"www."));
+  tt_assert(! strcmpend(h,".onion"));
+  tt_int_op(63+4+6, OP_EQ, strlen(h));
+
   tt_assert(allok);
  done:
-  ;
+  tor_free(h);
 }
 
 static void
@@ -125,12 +239,101 @@ test_crypto_rng_range(void *arg)
     if (x == 8)
       got_largest = 1;
   }
-
   /* These fail with probability 1/10^603. */
+  tt_assert(got_smallest);
+  tt_assert(got_largest);
+
+  got_smallest = got_largest = 0;
+  const uint64_t ten_billion = 10 * ((uint64_t)1000000000000);
+  for (i = 0; i < 1000; ++i) {
+    uint64_t x = crypto_rand_uint64_range(ten_billion, ten_billion+10);
+    tt_u64_op(x, OP_GE, ten_billion);
+    tt_u64_op(x, OP_LT, ten_billion+10);
+    if (x == ten_billion)
+      got_smallest = 1;
+    if (x == ten_billion+9)
+      got_largest = 1;
+  }
+
+  tt_assert(got_smallest);
+  tt_assert(got_largest);
+
+  const time_t now = time(NULL);
+  for (i = 0; i < 2000; ++i) {
+    time_t x = crypto_rand_time_range(now, now+60);
+    tt_i64_op(x, OP_GE, now);
+    tt_i64_op(x, OP_LT, now+60);
+    if (x == now)
+      got_smallest = 1;
+    if (x == now+59)
+      got_largest = 1;
+  }
+
   tt_assert(got_smallest);
   tt_assert(got_largest);
  done:
   ;
+}
+
+extern int break_strongest_rng_fallback;
+extern int break_strongest_rng_syscall;
+
+static void
+test_crypto_rng_strongest(void *arg)
+{
+  const char *how = arg;
+  int broken = 0;
+
+  if (how == NULL) {
+    ;
+  } else if (!strcmp(how, "nosyscall")) {
+    break_strongest_rng_syscall = 1;
+  } else if (!strcmp(how, "nofallback")) {
+    break_strongest_rng_fallback = 1;
+  } else if (!strcmp(how, "broken")) {
+    broken = break_strongest_rng_syscall = break_strongest_rng_fallback = 1;
+  }
+
+#define N 128
+  uint8_t combine_and[N];
+  uint8_t combine_or[N];
+  int i, j;
+
+  memset(combine_and, 0xff, N);
+  memset(combine_or, 0, N);
+
+  for (i = 0; i < 100; ++i) { /* 2^-100 chances just don't happen. */
+    uint8_t output[N];
+    memset(output, 0, N);
+    if (how == NULL) {
+      /* this one can't fail. */
+      crypto_strongest_rand(output, sizeof(output));
+    } else {
+      int r = crypto_strongest_rand_raw(output, sizeof(output));
+      if (r == -1) {
+        if (broken) {
+          goto done; /* we're fine. */
+        }
+        /* This function is allowed to break, but only if it always breaks. */
+        tt_int_op(i, OP_EQ, 0);
+        tt_skip();
+      } else {
+        tt_assert(! broken);
+      }
+    }
+    for (j = 0; j < N; ++j) {
+      combine_and[j] &= output[j];
+      combine_or[j] |= output[j];
+    }
+  }
+
+  for (j = 0; j < N; ++j) {
+    tt_int_op(combine_and[j], OP_EQ, 0);
+    tt_int_op(combine_or[j], OP_EQ, 0xff);
+  }
+ done:
+  ;
+#undef N
 }
 
 /* Test for rectifying openssl RAND engine. */
@@ -310,6 +513,41 @@ test_crypto_aes(void *arg)
   tor_free(data1);
   tor_free(data2);
   tor_free(data3);
+}
+
+static void
+test_crypto_aes_ctr_testvec(void *arg)
+{
+  (void)arg;
+  char *mem_op_hex_tmp=NULL;
+
+  /* from NIST SP800-38a, section F.5 */
+  const char key16[] = "2b7e151628aed2a6abf7158809cf4f3c";
+  const char ctr16[] = "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff";
+  const char plaintext16[] =
+    "6bc1bee22e409f96e93d7e117393172a"
+    "ae2d8a571e03ac9c9eb76fac45af8e51"
+    "30c81c46a35ce411e5fbc1191a0a52ef"
+    "f69f2445df4f9b17ad2b417be66c3710";
+  const char ciphertext16[] =
+    "874d6191b620e3261bef6864990db6ce"
+    "9806f66b7970fdff8617187bb9fffdff"
+    "5ae4df3edbd5d35e5b4f09020db03eab"
+    "1e031dda2fbe03d1792170a0f3009cee";
+
+  char key[16];
+  char iv[16];
+  char plaintext[16*4];
+  base16_decode(key, sizeof(key), key16, strlen(key16));
+  base16_decode(iv, sizeof(iv), ctr16, strlen(ctr16));
+  base16_decode(plaintext, sizeof(plaintext), plaintext16, strlen(plaintext16));
+
+  crypto_cipher_t *c = crypto_cipher_new_with_iv(key, iv);
+  crypto_cipher_crypt_inplace(c, plaintext, sizeof(plaintext));
+  test_memeq_hex(plaintext, ciphertext16);
+
+ done:
+  tor_free(mem_op_hex_tmp);
 }
 
 /** Run unit tests for our SHA-1 functionality */
@@ -1114,6 +1352,31 @@ test_crypto_digests(void *arg)
   crypto_pk_free(k);
 }
 
+static void
+test_crypto_digest_names(void *arg)
+{
+  static const struct {
+    int a; const char *n;
+  } names[] = {
+    { DIGEST_SHA1, "sha1" },
+    { DIGEST_SHA256, "sha256" },
+    { DIGEST_SHA512, "sha512" },
+    { DIGEST_SHA3_256, "sha3-256" },
+    { DIGEST_SHA3_512, "sha3-512" },
+    { -1, NULL }
+  };
+  (void)arg;
+
+  int i;
+  for (i = 0; names[i].n; ++i) {
+    tt_str_op(names[i].n, OP_EQ,crypto_digest_algorithm_get_name(names[i].a));
+    tt_int_op(names[i].a, OP_EQ,crypto_digest_algorithm_parse_name(names[i].n));
+  }
+  tt_int_op(-1, OP_EQ, crypto_digest_algorithm_parse_name("TimeCubeHash-4444"));
+ done:
+  ;
+}
+
 #ifndef OPENSSL_1_1_API
 #define EVP_ENCODE_CTX_new() tor_malloc_zero(sizeof(EVP_ENCODE_CTX))
 #define EVP_ENCODE_CTX_free(ctx) tor_free(ctx)
@@ -1507,11 +1770,97 @@ test_crypto_hkdf_sha256(void *arg)
                  "b206fa34e5bc78d063fc291501beec53b36e5a0e434561200c"
                  "5f8bd13e0f88b3459600b4dc21d69363e2895321c06184879d"
                  "94b18f078411be70b767c7fc40679a9440a0c95ea83a23efbf");
-
  done:
   tor_free(mem_op_hex_tmp);
 #undef EXPAND
 }
+
+static void
+test_crypto_hkdf_sha256_testvecs(void *arg)
+{
+  (void) arg;
+  /* Test vectors from RFC5869, sections A.1 through A.3 */
+  const struct {
+    const char *ikm16, *salt16, *info16;
+    int L;
+    const char *okm16;
+  } vecs[] = {
+    { /* from A.1 */
+      "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+      "000102030405060708090a0b0c",
+      "f0f1f2f3f4f5f6f7f8f9",
+      42,
+      "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf"
+        "34007208d5b887185865"
+    },
+    { /* from A.2 */
+      "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+        "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"
+        "404142434445464748494a4b4c4d4e4f",
+      "606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f"
+        "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f"
+        "a0a1a2a3a4a5a6a7a8a9aaabacadaeaf",
+      "b0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecf"
+        "d0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeef"
+        "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
+      82,
+      "b11e398dc80327a1c8e7f78c596a49344f012eda2d4efad8a050cc4c19afa97c"
+      "59045a99cac7827271cb41c65e590e09da3275600c2f09b8367793a9aca3db71"
+      "cc30c58179ec3e87c14c01d5c1f3434f1d87"
+    },
+    { /* from A.3 */
+      "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+      "",
+      "",
+      42,
+      "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d"
+        "9d201395faa4b61a96c8",
+    },
+    { NULL, NULL, NULL, -1, NULL }
+  };
+
+  int i;
+  char *ikm = NULL;
+  char *salt = NULL;
+  char *info = NULL;
+  char *okm = NULL;
+  char *mem_op_hex_tmp = NULL;
+
+  for (i = 0; vecs[i].ikm16; ++i) {
+    size_t ikm_len = strlen(vecs[i].ikm16)/2;
+    size_t salt_len = strlen(vecs[i].salt16)/2;
+    size_t info_len = strlen(vecs[i].info16)/2;
+    size_t okm_len = vecs[i].L;
+
+    ikm = tor_malloc(ikm_len);
+    salt = tor_malloc(salt_len);
+    info = tor_malloc(info_len);
+    okm = tor_malloc(okm_len);
+
+    base16_decode(ikm, ikm_len, vecs[i].ikm16, strlen(vecs[i].ikm16));
+    base16_decode(salt, salt_len, vecs[i].salt16, strlen(vecs[i].salt16));
+    base16_decode(info, info_len, vecs[i].info16, strlen(vecs[i].info16));
+
+    int r = crypto_expand_key_material_rfc5869_sha256(
+              (const uint8_t*)ikm, ikm_len,
+              (const uint8_t*)salt, salt_len,
+              (const uint8_t*)info, info_len,
+              (uint8_t*)okm, okm_len);
+    tt_int_op(r, OP_EQ, 0);
+    test_memeq_hex(okm, vecs[i].okm16);
+    tor_free(ikm);
+    tor_free(salt);
+    tor_free(info);
+    tor_free(okm);
+  }
+ done:
+  tor_free(ikm);
+  tor_free(salt);
+  tor_free(info);
+  tor_free(okm);
+  tor_free(mem_op_hex_tmp);
+}
+
 
 static void
 test_crypto_curve25519_impl(void *arg)
@@ -1602,6 +1951,47 @@ test_crypto_curve25519_basepoint(void *arg)
 
  done:
   ;
+}
+
+static void
+test_crypto_curve25519_testvec(void *arg)
+{
+  (void)arg;
+  char *mem_op_hex_tmp = NULL;
+
+  /* From RFC 7748, section 6.1 */
+  /* Alice's private key, a: */
+  const char a16[] =
+    "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a";
+  /* Alice's public key, X25519(a, 9): */
+  const char a_pub16[] =
+    "8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a";
+  /* Bob's private key, b: */
+  const char b16[] =
+    "5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb";
+  /* Bob's public key, X25519(b, 9): */
+  const char b_pub16[] =
+    "de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f";
+  /* Their shared secret, K: */
+  const char k16[] =
+    "4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742";
+
+  uint8_t a[32], b[32], a_pub[32], b_pub[32], k1[32], k2[32];
+  base16_decode((char*)a, sizeof(a), a16, strlen(a16));
+  base16_decode((char*)b, sizeof(b), b16, strlen(b16));
+  curve25519_basepoint_impl(a_pub, a);
+  curve25519_basepoint_impl(b_pub, b);
+  curve25519_impl(k1, a, b_pub);
+  curve25519_impl(k2, b, a_pub);
+
+  test_memeq_hex(a, a16);
+  test_memeq_hex(b, b16);
+  test_memeq_hex(a_pub, a_pub16);
+  test_memeq_hex(b_pub, b_pub16);
+  test_memeq_hex(k1, k16);
+  test_memeq_hex(k2, k16);
+ done:
+  tor_free(mem_op_hex_tmp);
 }
 
 static void
@@ -1896,7 +2286,67 @@ test_crypto_ed25519_test_vectors(void *arg)
         "1fbc1e08682f2cc0c92efe8f4985dec61dcbd54d4b94a22547d24451271c8b00",
       "0a688e79be24f866286d4646b5d81c"
     },
-
+    /* These come from draft-irtf-cfrg-eddsa-05 section 7.1 */
+    {
+      "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+      "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+      "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e06522490155"
+        "5fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b",
+      ""
+    },
+    {
+      "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb",
+      "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c",
+      "92a009a9f0d4cab8720e820b5f642540a2b27b5416503f8fb3762223ebdb69da"
+        "085ac1e43e15996e458f3613d0f11d8c387b2eaeb4302aeeb00d291612bb0c00",
+      "72"
+    },
+    {
+      "f5e5767cf153319517630f226876b86c8160cc583bc013744c6bf255f5cc0ee5",
+      "278117fc144c72340f67d0f2316e8386ceffbf2b2428c9c51fef7c597f1d426e",
+      "0aab4c900501b3e24d7cdf4663326a3a87df5e4843b2cbdb67cbf6e460fec350"
+        "aa5371b1508f9f4528ecea23c436d94b5e8fcd4f681e30a6ac00a9704a188a03",
+      "08b8b2b733424243760fe426a4b54908632110a66c2f6591eabd3345e3e4eb98"
+        "fa6e264bf09efe12ee50f8f54e9f77b1e355f6c50544e23fb1433ddf73be84d8"
+        "79de7c0046dc4996d9e773f4bc9efe5738829adb26c81b37c93a1b270b20329d"
+        "658675fc6ea534e0810a4432826bf58c941efb65d57a338bbd2e26640f89ffbc"
+        "1a858efcb8550ee3a5e1998bd177e93a7363c344fe6b199ee5d02e82d522c4fe"
+        "ba15452f80288a821a579116ec6dad2b3b310da903401aa62100ab5d1a36553e"
+        "06203b33890cc9b832f79ef80560ccb9a39ce767967ed628c6ad573cb116dbef"
+        "efd75499da96bd68a8a97b928a8bbc103b6621fcde2beca1231d206be6cd9ec7"
+        "aff6f6c94fcd7204ed3455c68c83f4a41da4af2b74ef5c53f1d8ac70bdcb7ed1"
+        "85ce81bd84359d44254d95629e9855a94a7c1958d1f8ada5d0532ed8a5aa3fb2"
+        "d17ba70eb6248e594e1a2297acbbb39d502f1a8c6eb6f1ce22b3de1a1f40cc24"
+        "554119a831a9aad6079cad88425de6bde1a9187ebb6092cf67bf2b13fd65f270"
+        "88d78b7e883c8759d2c4f5c65adb7553878ad575f9fad878e80a0c9ba63bcbcc"
+        "2732e69485bbc9c90bfbd62481d9089beccf80cfe2df16a2cf65bd92dd597b07"
+        "07e0917af48bbb75fed413d238f5555a7a569d80c3414a8d0859dc65a46128ba"
+        "b27af87a71314f318c782b23ebfe808b82b0ce26401d2e22f04d83d1255dc51a"
+        "ddd3b75a2b1ae0784504df543af8969be3ea7082ff7fc9888c144da2af58429e"
+        "c96031dbcad3dad9af0dcbaaaf268cb8fcffead94f3c7ca495e056a9b47acdb7"
+        "51fb73e666c6c655ade8297297d07ad1ba5e43f1bca32301651339e22904cc8c"
+        "42f58c30c04aafdb038dda0847dd988dcda6f3bfd15c4b4c4525004aa06eeff8"
+        "ca61783aacec57fb3d1f92b0fe2fd1a85f6724517b65e614ad6808d6f6ee34df"
+        "f7310fdc82aebfd904b01e1dc54b2927094b2db68d6f903b68401adebf5a7e08"
+        "d78ff4ef5d63653a65040cf9bfd4aca7984a74d37145986780fc0b16ac451649"
+        "de6188a7dbdf191f64b5fc5e2ab47b57f7f7276cd419c17a3ca8e1b939ae49e4"
+        "88acba6b965610b5480109c8b17b80e1b7b750dfc7598d5d5011fd2dcc5600a3"
+        "2ef5b52a1ecc820e308aa342721aac0943bf6686b64b2579376504ccc493d97e"
+        "6aed3fb0f9cd71a43dd497f01f17c0e2cb3797aa2a2f256656168e6c496afc5f"
+        "b93246f6b1116398a346f1a641f3b041e989f7914f90cc2c7fff357876e506b5"
+        "0d334ba77c225bc307ba537152f3f1610e4eafe595f6d9d90d11faa933a15ef1"
+        "369546868a7f3a45a96768d40fd9d03412c091c6315cf4fde7cb68606937380d"
+        "b2eaaa707b4c4185c32eddcdd306705e4dc1ffc872eeee475a64dfac86aba41c"
+        "0618983f8741c5ef68d3a101e8a3b8cac60c905c15fc910840b94c00a0b9d0"
+    },
+    {
+      "833fe62409237b9d62ec77587520911e9a759cec1d19755b7da901b96dca3d42",
+      "ec172b93ad5e563bf4932c70e1245034c35467ef2efd4d64ebf819683467e2bf",
+      "dc2a4459e7369633a52b1bf277839a00201009a3efbf3ecb69bea2186c26b589"
+        "09351fc9ac90b3ecfdfbc7c66431e0303dca179c138ac17ad9bef1177331a704",
+      "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a"
+        "2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f"
+    },
     { NULL, NULL, NULL, NULL}
   };
 
@@ -2183,6 +2633,54 @@ test_crypto_ed25519_fuzz_donna(void *arg)
 }
 
 static void
+test_crypto_ed25519_storage(void *arg)
+{
+  (void)arg;
+  ed25519_keypair_t *keypair = NULL;
+  ed25519_public_key_t pub;
+  ed25519_secret_key_t sec;
+  char *fname_1 = tor_strdup(get_fname("ed_seckey_1"));
+  char *fname_2 = tor_strdup(get_fname("ed_pubkey_2"));
+  char *contents = NULL;
+  char *tag = NULL;
+
+  keypair = tor_malloc_zero(sizeof(ed25519_keypair_t));
+  tt_int_op(0,OP_EQ,ed25519_keypair_generate(keypair, 0));
+  tt_int_op(0,OP_EQ,
+            ed25519_seckey_write_to_file(&keypair->seckey, fname_1, "foo"));
+  tt_int_op(0,OP_EQ,
+            ed25519_pubkey_write_to_file(&keypair->pubkey, fname_2, "bar"));
+
+  tt_int_op(-1, OP_EQ, ed25519_pubkey_read_from_file(&pub, &tag, fname_1));
+  tt_ptr_op(tag, OP_EQ, NULL);
+  tt_int_op(-1, OP_EQ, ed25519_seckey_read_from_file(&sec, &tag, fname_2));
+  tt_ptr_op(tag, OP_EQ, NULL);
+
+  tt_int_op(0, OP_EQ, ed25519_pubkey_read_from_file(&pub, &tag, fname_2));
+  tt_str_op(tag, OP_EQ, "bar");
+  tor_free(tag);
+  tt_int_op(0, OP_EQ, ed25519_seckey_read_from_file(&sec, &tag, fname_1));
+  tt_str_op(tag, OP_EQ, "foo");
+  tor_free(tag);
+
+  /* whitebox test: truncated keys. */
+  tt_int_op(0, ==, truncate(fname_1, 40));
+  tt_int_op(0, ==, truncate(fname_2, 40));
+  tt_int_op(-1, OP_EQ, ed25519_pubkey_read_from_file(&pub, &tag, fname_2));
+  tt_ptr_op(tag, OP_EQ, NULL);
+  tor_free(tag);
+  tt_int_op(-1, OP_EQ, ed25519_seckey_read_from_file(&sec, &tag, fname_1));
+  tt_ptr_op(tag, OP_EQ, NULL);
+
+ done:
+  tor_free(fname_1);
+  tor_free(fname_2);
+  tor_free(contents);
+  tor_free(tag);
+  ed25519_keypair_free(keypair);
+}
+
+static void
 test_crypto_siphash(void *arg)
 {
   /* From the reference implementation, taking
@@ -2398,13 +2896,23 @@ struct testcase_t crypto_tests[] = {
   CRYPTO_LEGACY(rng),
   { "rng_range", test_crypto_rng_range, 0, NULL, NULL },
   { "rng_engine", test_crypto_rng_engine, TT_FORK, NULL, NULL },
+  { "rng_strongest", test_crypto_rng_strongest, TT_FORK, NULL, NULL },
+  { "rng_strongest_nosyscall", test_crypto_rng_strongest, TT_FORK,
+    &passthrough_setup, (void*)"nosyscall" },
+  { "rng_strongest_nofallback", test_crypto_rng_strongest, TT_FORK,
+    &passthrough_setup, (void*)"nofallback" },
+  { "rng_strongest_broken", test_crypto_rng_strongest, TT_FORK,
+    &passthrough_setup, (void*)"broken" },
+  { "openssl_version", test_crypto_openssl_version, TT_FORK, NULL, NULL },
   { "aes_AES", test_crypto_aes, TT_FORK, &passthrough_setup, (void*)"aes" },
   { "aes_EVP", test_crypto_aes, TT_FORK, &passthrough_setup, (void*)"evp" },
+  { "aes_ctr_testvec", test_crypto_aes_ctr_testvec, 0, NULL, NULL },
   CRYPTO_LEGACY(sha),
   CRYPTO_LEGACY(pk),
   { "pk_fingerprints", test_crypto_pk_fingerprints, TT_FORK, NULL, NULL },
   { "pk_base64", test_crypto_pk_base64, TT_FORK, NULL, NULL },
   CRYPTO_LEGACY(digests),
+  { "digest_names", test_crypto_digest_names, 0, NULL, NULL },
   { "sha3", test_crypto_sha3, TT_FORK, NULL, NULL},
   { "sha3_xof", test_crypto_sha3_xof, TT_FORK, NULL, NULL},
   CRYPTO_LEGACY(dh),
@@ -2415,8 +2923,10 @@ struct testcase_t crypto_tests[] = {
   CRYPTO_LEGACY(base32_decode),
   { "kdf_TAP", test_crypto_kdf_TAP, 0, NULL, NULL },
   { "hkdf_sha256", test_crypto_hkdf_sha256, 0, NULL, NULL },
+  { "hkdf_sha256_testvecs", test_crypto_hkdf_sha256_testvecs, 0, NULL, NULL },
   { "curve25519_impl", test_crypto_curve25519_impl, 0, NULL, NULL },
   { "curve25519_impl_hibit", test_crypto_curve25519_impl, 0, NULL, (void*)"y"},
+  { "curve25516_testvec", test_crypto_curve25519_testvec, 0, NULL, NULL },
   { "curve25519_basepoint",
     test_crypto_curve25519_basepoint, TT_FORK, NULL, NULL },
   { "curve25519_wrappers", test_crypto_curve25519_wrappers, 0, NULL, NULL },
@@ -2429,6 +2939,7 @@ struct testcase_t crypto_tests[] = {
   ED25519_TEST(blinding, 0),
   ED25519_TEST(testvectors, 0),
   ED25519_TEST(fuzz_donna, TT_FORK),
+  { "ed25519_storage", test_crypto_ed25519_storage, 0, NULL, NULL },
   { "siphash", test_crypto_siphash, 0, NULL, NULL },
   { "failure_modes", test_crypto_failure_modes, TT_FORK, NULL, NULL },
   END_OF_TESTCASES

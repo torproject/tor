@@ -171,13 +171,9 @@ crypto_log_errors(int severity, const char *doing)
     if (!msg) msg = "(null)";
     if (!lib) lib = "(null)";
     if (!func) func = "(null)";
-    if (doing) {
-      tor_log(severity, LD_CRYPTO, "crypto error while %s: %s (in %s:%s)",
+    if (BUG(!doing)) doing = "(null)";
+    tor_log(severity, LD_CRYPTO, "crypto error while %s: %s (in %s:%s)",
               doing, msg, lib, func);
-    } else {
-      tor_log(severity, LD_CRYPTO, "crypto error: %s (in %s:%s)",
-              msg, lib, func);
-    }
   }
 }
 
@@ -942,6 +938,10 @@ crypto_pk_copy_full(crypto_pk_t *env)
     new_key = RSAPublicKey_dup(env->key);
   }
   if (!new_key) {
+    /* LCOV_EXCL_START
+     *
+     * We can't cause RSA*Key_dup() to fail, so we can't really test this.
+     */
     log_err(LD_CRYPTO, "Unable to duplicate a %s key: openssl failed.",
             privatekey?"private":"public");
     crypto_log_errors(LOG_ERR,
@@ -949,6 +949,7 @@ crypto_pk_copy_full(crypto_pk_t *env)
                       "Duplicating a public key");
     tor_fragile_assert();
     return NULL;
+    /* LCOV_EXCL_STOP */
   }
 
   return crypto_new_pk_from_rsa_(new_key);
@@ -1699,8 +1700,10 @@ crypto_digest_algorithm_get_name(digest_algorithm_t alg)
     case DIGEST_SHA3_512:
       return "sha3-512";
     default:
+      // LCOV_EXCL_START
       tor_fragile_assert();
       return "??unknown_digest??";
+      // LCOV_EXCL_STOP
   }
 }
 
@@ -1790,16 +1793,46 @@ crypto_digest_alloc_bytes(digest_algorithm_t alg)
 #undef STRUCT_FIELD_SIZE
 }
 
+/**
+ * Internal function: create and return a new digest object for 'algorithm'.
+ * Does not typecheck the algorithm.
+ */
+static crypto_digest_t *
+crypto_digest_new_internal(digest_algorithm_t algorithm)
+{
+  crypto_digest_t *r = tor_malloc(crypto_digest_alloc_bytes(algorithm));
+  r->algorithm = algorithm;
+
+  switch (algorithm)
+    {
+    case DIGEST_SHA1:
+      SHA1_Init(&r->d.sha1);
+      break;
+    case DIGEST_SHA256:
+      SHA256_Init(&r->d.sha2);
+      break;
+    case DIGEST_SHA512:
+      SHA512_Init(&r->d.sha512);
+      break;
+    case DIGEST_SHA3_256:
+      keccak_digest_init(&r->d.sha3, 256);
+      break;
+    case DIGEST_SHA3_512:
+      keccak_digest_init(&r->d.sha3, 512);
+      break;
+    default:
+      tor_assert_unreached();
+    }
+
+  return r;
+}
+
 /** Allocate and return a new digest object to compute SHA1 digests.
  */
 crypto_digest_t *
 crypto_digest_new(void)
 {
-  crypto_digest_t *r;
-  r = tor_malloc(crypto_digest_alloc_bytes(DIGEST_SHA1));
-  SHA1_Init(&r->d.sha1);
-  r->algorithm = DIGEST_SHA1;
-  return r;
+  return crypto_digest_new_internal(DIGEST_SHA1);
 }
 
 /** Allocate and return a new digest object to compute 256-bit digests
@@ -1807,15 +1840,8 @@ crypto_digest_new(void)
 crypto_digest_t *
 crypto_digest256_new(digest_algorithm_t algorithm)
 {
-  crypto_digest_t *r;
   tor_assert(algorithm == DIGEST_SHA256 || algorithm == DIGEST_SHA3_256);
-  r = tor_malloc(crypto_digest_alloc_bytes(algorithm));
-  if (algorithm == DIGEST_SHA256)
-    SHA256_Init(&r->d.sha2);
-  else
-    keccak_digest_init(&r->d.sha3, 256);
-  r->algorithm = algorithm;
-  return r;
+  return crypto_digest_new_internal(algorithm);
 }
 
 /** Allocate and return a new digest object to compute 512-bit digests
@@ -1823,15 +1849,8 @@ crypto_digest256_new(digest_algorithm_t algorithm)
 crypto_digest_t *
 crypto_digest512_new(digest_algorithm_t algorithm)
 {
-  crypto_digest_t *r;
   tor_assert(algorithm == DIGEST_SHA512 || algorithm == DIGEST_SHA3_512);
-  r = tor_malloc(crypto_digest_alloc_bytes(algorithm));
-  if (algorithm == DIGEST_SHA512)
-    SHA512_Init(&r->d.sha512);
-  else
-    keccak_digest_init(&r->d.sha3, 512);
-  r->algorithm = algorithm;
-  return r;
+  return crypto_digest_new_internal(algorithm);
 }
 
 /** Deallocate a digest object.
@@ -1874,8 +1893,10 @@ crypto_digest_add_bytes(crypto_digest_t *digest, const char *data,
       keccak_digest_update(&digest->d.sha3, (const uint8_t *)data, len);
       break;
     default:
+      /* LCOV_EXCL_START */
       tor_fragile_assert();
       break;
+      /* LCOV_EXCL_STOP */
   }
 }
 
@@ -1917,10 +1938,10 @@ crypto_digest_get_digest(crypto_digest_t *digest,
 //LCOV_EXCL_START
     case DIGEST_SHA3_256: /* FALLSTHROUGH */
     case DIGEST_SHA3_512:
-      log_warn(LD_BUG, "Handling unexpected algorithm %d", digest->algorithm);
-      tor_assert(0); /* This is fatal, because it should never happen. */
     default:
-      tor_assert(0); /* Unreachable. */
+      log_warn(LD_BUG, "Handling unexpected algorithm %d", digest->algorithm);
+      /* This is fatal, because it should never happen. */
+      tor_assert_unreached();
       break;
 //LCOV_EXCL_STOP
   }
@@ -1981,27 +2002,7 @@ crypto_digest_smartlist_prefix(char *digest_out, size_t len_out,
                         const char *append,
                         digest_algorithm_t alg)
 {
-  crypto_digest_t *d = NULL;
-  switch (alg) {
-    case DIGEST_SHA1:
-      d = crypto_digest_new();
-      break;
-    case DIGEST_SHA256: /* FALLSTHROUGH */
-    case DIGEST_SHA3_256:
-      d = crypto_digest256_new(alg);
-      break;
-    case DIGEST_SHA512: /* FALLSTHROUGH */
-    case DIGEST_SHA3_512:
-      d = crypto_digest512_new(alg);
-      break;
-    default:
-      log_warn(LD_BUG, "Called with unknown algorithm %d", alg);
-      /* If fragile_assert is not enabled, wipe output and return
-       * without running any calculations */
-      memwipe(digest_out, 0xff, len_out);
-      tor_fragile_assert();
-      goto free;
-  }
+  crypto_digest_t *d = crypto_digest_new_internal(alg);
   if (prepend)
     crypto_digest_add_bytes(d, prepend, strlen(prepend));
   SMARTLIST_FOREACH(lst, const char *, cp,
@@ -2009,8 +2010,6 @@ crypto_digest_smartlist_prefix(char *digest_out, size_t len_out,
   if (append)
     crypto_digest_add_bytes(d, append, strlen(append));
   crypto_digest_get_digest(d, digest_out, len_out);
-
- free:
   crypto_digest_free(d);
 }
 
@@ -2169,9 +2168,14 @@ crypto_set_tls_dh_prime(void)
   int r;
 
   /* If the space is occupied, free the previous TLS DH prime */
-  if (dh_param_p_tls) {
+  if (BUG(dh_param_p_tls)) {
+    /* LCOV_EXCL_START
+     *
+     * We shouldn't be calling this twice.
+     */
     BN_clear_free(dh_param_p_tls);
     dh_param_p_tls = NULL;
+    /* LCOV_EXCL_STOP */
   }
 
   tls_prime = BN_new();
@@ -2203,8 +2207,8 @@ init_dh_param(void)
 {
   BIGNUM *circuit_dh_prime;
   int r;
-  if (dh_param_p && dh_param_g)
-    return;
+  if (BUG(dh_param_p && dh_param_g))
+    return; // LCOV_EXCL_LINE This function isn't supposed to be called twice.
 
   circuit_dh_prime = BN_new();
   tor_assert(circuit_dh_prime);
@@ -2269,10 +2273,13 @@ crypto_dh_new(int dh_type)
 
   return res;
  err:
+  /* LCOV_EXCL_START
+   * This error condition is only reached when an allocation fails */
   crypto_log_errors(LOG_WARN, "creating DH object");
   if (res->dh) DH_free(res->dh); /* frees p and g too */
   tor_free(res);
   return NULL;
+  /* LCOV_EXCL_STOP */
 }
 
 /** Return a copy of <b>dh</b>, sharing its internal state. */
@@ -2304,10 +2311,15 @@ crypto_dh_generate_public(crypto_dh_t *dh)
 {
  again:
   if (!DH_generate_key(dh->dh)) {
+    /* LCOV_EXCL_START
+     * To test this we would need some way to tell openssl to break DH. */
     crypto_log_errors(LOG_WARN, "generating DH key");
     return -1;
+    /* LCOV_EXCL_STOP */
   }
   if (tor_check_dh_key(LOG_WARN, dh->dh->pub_key)<0) {
+    /* LCOV_EXCL_START
+     * If this happens, then openssl's DH implementation is busted. */
     log_warn(LD_CRYPTO, "Weird! Our own DH key was invalid.  I guess once-in-"
              "the-universe chances really do happen.  Trying again.");
     /* Free and clear the keys, so OpenSSL will actually try again. */
@@ -2315,6 +2327,7 @@ crypto_dh_generate_public(crypto_dh_t *dh)
     BN_clear_free(dh->dh->priv_key);
     dh->dh->pub_key = dh->dh->priv_key = NULL;
     goto again;
+    /* LCOV_EXCL_STOP */
   }
   return 0;
 }
@@ -2361,8 +2374,8 @@ tor_check_dh_key(int severity, BIGNUM *bn)
   tor_assert(bn);
   x = BN_new();
   tor_assert(x);
-  if (!dh_param_p)
-    init_dh_param();
+  if (BUG(!dh_param_p))
+    init_dh_param(); //LCOV_EXCL_LINE we already checked whether we did this.
   BN_set_word(x, 1);
   if (BN_cmp(bn,x)<=0) {
     log_fn(severity, LD_CRYPTO, "DH key must be at least 2.");
@@ -2571,6 +2584,11 @@ crypto_seed_weak_rng(tor_weak_rng_t *rng)
   tor_init_weak_random(rng, seed);
 }
 
+#ifdef TOR_UNIT_TESTS
+int break_strongest_rng_syscall = 0;
+int break_strongest_rng_fallback = 0;
+#endif
+
 /** Try to get <b>out_len</b> bytes of the strongest entropy we can generate,
  * via system calls, storing it into <b>out</b>. Return 0 on success, -1 on
  * failure.  A maximum request size of 256 bytes is imposed.
@@ -2579,6 +2597,11 @@ static int
 crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
 {
   tor_assert(out_len <= MAX_STRONGEST_RAND_SIZE);
+
+#ifdef TOR_UNIT_TESTS
+  if (break_strongest_rng_syscall)
+    return -1;
+#endif
 
 #if defined(_WIN32)
   static int provider_set = 0;
@@ -2629,6 +2652,7 @@ crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
     } while (ret == -1 && ((errno == EINTR) ||(errno == EAGAIN)));
 
     if (PREDICT_UNLIKELY(ret == -1)) {
+      /* LCOV_EXCL_START we can't actually make the syscall fail in testing. */
       tor_assert(errno != EAGAIN);
       tor_assert(errno != EINTR);
 
@@ -2636,6 +2660,7 @@ crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
       log_warn(LD_CRYPTO, "Can't get entropy from getrandom().");
       getrandom_works = 0; /* Don't bother trying again. */
       return -1;
+      /* LCOV_EXCL_STOP */
     }
 
     tor_assert(ret == (long)out_len);
@@ -2664,6 +2689,11 @@ crypto_strongest_rand_syscall(uint8_t *out, size_t out_len)
 static int
 crypto_strongest_rand_fallback(uint8_t *out, size_t out_len)
 {
+#ifdef TOR_UNIT_TESTS
+  if (break_strongest_rng_fallback)
+    return -1;
+#endif
+
 #ifdef _WIN32
   /* Windows exclusively uses crypto_strongest_rand_syscall(). */
   (void)out;
@@ -2684,10 +2714,13 @@ crypto_strongest_rand_fallback(uint8_t *out, size_t out_len)
     n = read_all(fd, (char*)out, out_len, 0);
     close(fd);
     if (n != out_len) {
+      /* LCOV_EXCL_START
+       * We can't make /dev/foorandom actually fail. */
       log_warn(LD_CRYPTO,
                "Error reading from entropy source (read only %lu bytes).",
                (unsigned long)n);
       return -1;
+      /* LCOV_EXCL_STOP */
     }
 
     return 0;
@@ -2701,7 +2734,7 @@ crypto_strongest_rand_fallback(uint8_t *out, size_t out_len)
  * storing it into <b>out</b>. Return 0 on success, -1 on failure.  A maximum
  * request size of 256 bytes is imposed.
  */
-static int
+STATIC int
 crypto_strongest_rand_raw(uint8_t *out, size_t out_len)
 {
   static const size_t sanity_min_size = 16;
@@ -2735,13 +2768,17 @@ crypto_strongest_rand_raw(uint8_t *out, size_t out_len)
       return 0;
   }
 
-  /* We tried max_attempts times to fill a buffer >= 128 bits long,
+  /* LCOV_EXCL_START
+   *
+   * We tried max_attempts times to fill a buffer >= 128 bits long,
    * and each time it returned all '0's.  Either the system entropy
    * source is busted, or the user should go out and buy a ticket to
    * every lottery on the planet.
    */
   log_warn(LD_CRYPTO, "Strong OS entropy returned all zero buffer.");
+
   return -1;
+  /* LCOV_EXCL_STOP */
 }
 
 /** Try to get <b>out_len</b> bytes of the strongest entropy we can generate,
@@ -2796,7 +2833,7 @@ crypto_seed_rng(void)
    * functions.  If one succeeds, we'll accept the RNG as seeded. */
   rand_poll_ok = RAND_poll();
   if (rand_poll_ok == 0)
-    log_warn(LD_CRYPTO, "RAND_poll() failed.");
+    log_warn(LD_CRYPTO, "RAND_poll() failed."); // LCOV_EXCL_LINE
 
   load_entropy_ok = !crypto_strongest_rand_raw(buf, sizeof(buf));
   if (load_entropy_ok) {

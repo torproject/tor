@@ -94,8 +94,8 @@ static const ed25519_impl_t *ed25519_impl = NULL;
 static inline const ed25519_impl_t *
 get_ed_impl(void)
 {
-  if (PREDICT_UNLIKELY(ed25519_impl == NULL)) {
-    pick_ed25519_impl();
+  if (BUG(ed25519_impl == NULL)) {
+    pick_ed25519_impl(); // LCOV_EXCL_LINE - We always call ed25519_init().
   }
   return ed25519_impl;
 }
@@ -433,6 +433,7 @@ ed25519_seckey_read_from_file(ed25519_secret_key_t *seckey_out,
     errno = EINVAL;
   }
 
+  tor_free(*tag_out);
   return -1;
 }
 
@@ -472,6 +473,7 @@ ed25519_pubkey_read_from_file(ed25519_public_key_t *pubkey_out,
     errno = EINVAL;
   }
 
+  tor_free(*tag_out);
   return -1;
 }
 
@@ -594,9 +596,12 @@ pick_ed25519_impl(void)
   if (ed25519_impl_spot_check() == 0)
     return;
 
+  /* LCOV_EXCL_START
+   * unreachable unless ed25519_donna is broken */
   log_warn(LD_CRYPTO, "The Ed25519-donna implementation seems broken; using "
            "the ref10 implementation.");
   ed25519_impl = &impl_ref10;
+  /* LCOV_EXCL_STOP */
 }
 
 /* Initialize the Ed25519 implementation. This is neccessary if you're
