@@ -242,6 +242,8 @@ main(int c, const char **v)
   options = options_new();
   tor_threads_init();
 
+  network_init();
+
   struct tor_libevent_cfg cfg;
   memset(&cfg, 0, sizeof(cfg));
   tor_libevent_initialize(&cfg);
@@ -284,7 +286,6 @@ main(int c, const char **v)
     return 1;
   }
   rep_hist_init();
-  network_init();
   setup_directory();
   options_init(options);
   options->DataDirectory = tor_strdup(temp_dir);
