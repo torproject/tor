@@ -1322,6 +1322,29 @@ test_crypto_pk_base64(void *arg)
   tor_free(encoded);
 }
 
+#ifdef HAVE_TRUNCATE
+#define do_truncate truncate
+#else
+static int
+do_truncate(const char *fname, size_t len)
+{
+  struct stat st;
+  char *bytes;
+
+  bytes = read_file_to_str(fname, RFTS_BIN, &st);
+  if (!bytes)
+    return -1;
+  /* This cast isn't so great, but it should be safe given the actual files
+   * and lengths we're using. */
+  if (st.st_size < (off_t)len)
+    len = MIN(len, (size_t)st.st_size);
+
+  int r = write_bytes_to_file(fname, bytes, len, 1);
+  tor_free(bytes);
+  return r;
+}
+#endif
+
 /** Sanity check for crypto pk digests  */
 static void
 test_crypto_digests(void *arg)
@@ -2664,8 +2687,8 @@ test_crypto_ed25519_storage(void *arg)
   tor_free(tag);
 
   /* whitebox test: truncated keys. */
-  tt_int_op(0, ==, truncate(fname_1, 40));
-  tt_int_op(0, ==, truncate(fname_2, 40));
+  tt_int_op(0, ==, do_truncate(fname_1, 40));
+  tt_int_op(0, ==, do_truncate(fname_2, 40));
   tt_int_op(-1, OP_EQ, ed25519_pubkey_read_from_file(&pub, &tag, fname_2));
   tt_ptr_op(tag, OP_EQ, NULL);
   tor_free(tag);

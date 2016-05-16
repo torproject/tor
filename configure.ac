@@ -432,6 +432,7 @@ AC_CHECK_FUNCS(
         strtoull \
         sysconf \
 	sysctl \
+	truncate \
         uname \
 	usleep \
         vasprintf \
