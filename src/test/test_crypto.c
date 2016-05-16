@@ -548,6 +548,7 @@ test_crypto_aes_ctr_testvec(void *arg)
 
  done:
   tor_free(mem_op_hex_tmp);
+  crypto_cipher_free(c);
 }
 
 /** Run unit tests for our SHA-1 functionality */
