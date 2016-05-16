@@ -787,14 +787,29 @@ m4_ifdef([AS_VAR_IF],[
        TOR_CHECK_CFLAGS(-fPIE)
        TOR_CHECK_LDFLAGS(-pie, "$all_ldflags_for_check", "$all_libs_for_check")
     fi
-    TOR_TRY_COMPILE_WITH_CFLAGS(-ftrapv, , CFLAGS_FTRAPV="-ftrapv", true)
-    TOR_TRY_COMPILE_WITH_CFLAGS(-fwrapv, , CFLAGS_FWRAPV="-fwrapv", true)
+    TOR_TRY_COMPILE_WITH_CFLAGS(-ftrapv, also_link, CFLAGS_FTRAPV="-ftrapv", true)
+    TOR_TRY_COMPILE_WITH_CFLAGS(-fwrapv, also_link, CFLAGS_FWRAPV="-fwrapv", true)
+    if test "$tor_cv_cflags__ftrapv" = "yes" && test "$tor_can_link__ftrapv" != "yes"; then
+      AC_MSG_WARN([The compiler supports -ftrapv, but for some reason I was not able to link with -ftrapv. Are you missing run-time support? Run-time hardening will not work as well as it should.])
+    fi
 fi
 
 if test "x$enable_expensive_hardening" = "xyes"; then
-   TOR_TRY_COMPILE_WITH_CFLAGS([-fsanitize=address], , CFLAGS_ASAN="-fsanitize=address", true)
-   TOR_TRY_COMPILE_WITH_CFLAGS([-fsanitize=undefined], , CFLAGS_UBSAN="-fsanitize=undefined", true)
-   TOR_CHECK_CFLAGS([-fno-omit-frame-pointer])
+   if test "$tor_cv_cflags__ftrapv" != "yes"; then
+     AC_MSG_ERROR([You requested expensive hardening, but the compiler does not seem to support -ftrapv.])
+   fi
+
+   TOR_TRY_COMPILE_WITH_CFLAGS([-fsanitize=address], also_link, CFLAGS_ASAN="-fsanitize=address", true)
+    if test "$tor_cv_cflags__fsanitize_address" = "yes" && test "$tor_can_link__fsanitize_address" != "yes"; then
+      AC_MSG_ERROR([The compiler supports -fsanitize=address, but for some reason I was not able to link when using it. Are you missing run-time support? With GCC you need libubsan.so, and with Clang you need libclang_rt.ubsan*])
+    fi
+
+   TOR_TRY_COMPILE_WITH_CFLAGS([-fsanitize=undefined], also_link, CFLAGS_UBSAN="-fsanitize=undefined", true)
+    if test "$tor_cv_cflags__fsanitize_address" = "yes" && test "$tor_can_link__fsanitize_address" != "yes"; then
+      AC_MSG_ERROR([The compiler supports -fsanitize=undefined, but for some reason I was not able to link when using it. Are you missing run-time support? With GCC you need libasan.so, and with Clang you need libclang_rt.ubsan*])
+    fi
+
+TOR_CHECK_CFLAGS([-fno-omit-frame-pointer])
 fi
 
 CFLAGS_BUGTRAP="$CFLAGS_FTRAPV $CFLAGS_ASAN $CFLAGS_UBSAN"
