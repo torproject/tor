@@ -1079,7 +1079,7 @@ router_reset_reachability(void)
   can_reach_or_port = can_reach_dir_port = 0;
 }
 
-/**  Return 1 if we won't do reachability checks, because:
+/** Return 1 if we won't do reachability checks, because:
  *   - AssumeReachable is set, or
  *   - the network is disabled.
  * Otherwise, return 0.
@@ -1100,9 +1100,8 @@ router_reachability_checks_disabled(const or_options_t *options)
  *   - the network is disabled.
  */
 int
-check_whether_orport_reachable(void)
+check_whether_orport_reachable(const or_options_t *options)
 {
-  const or_options_t *options = get_options();
   int reach_checks_disabled = router_reachability_checks_disabled(options);
   return reach_checks_disabled ||
          can_reach_or_port;
@@ -1118,9 +1117,8 @@ check_whether_orport_reachable(void)
  *   - the network is disabled.
  */
 int
-check_whether_dirport_reachable(void)
+check_whether_dirport_reachable(const or_options_t *options)
 {
-  const or_options_t *options = get_options();
   int reach_checks_disabled = router_reachability_checks_disabled(options) ||
                               !options->DirPort_set;
   return reach_checks_disabled ||
@@ -1258,18 +1256,14 @@ decide_to_advertise_dir_impl(const or_options_t *options,
       !router_get_advertised_or_port(options))
     return 0;
 
-  /* Part two: reasons to publish or not publish that the user
-   * might find surprising. router_should_be_directory_server()
-   * considers config options that make us choose not to publish. */
+  /* Part two: consider config options that could make us choose to
+   * publish or not publish that the user might find surprising. */
   return router_should_be_directory_server(options, dir_port);
 }
 
-/** Look at a variety of factors, and return 0 if we don't want to
+/** Front-end to decide_to_advertise_dir_impl(): return 0 if we don't want to
  * advertise the fact that we have a DirPort open, else return the
  * DirPort we want to advertise.
- *
- * Log a helpful message if we change our mind about whether to publish
- * a DirPort.
  */
 static int
 decide_to_advertise_dirport(const or_options_t *options, uint16_t dir_port)
@@ -1278,11 +1272,8 @@ decide_to_advertise_dirport(const or_options_t *options, uint16_t dir_port)
   return decide_to_advertise_dir_impl(options, dir_port, 0) ? dir_port : 0;
 }
 
-/** Look at a variety of factors, and return 0 if we don't want to
+/** Front-end to decide_to_advertise_dir_impl(): return 0 if we don't want to
  * advertise the fact that we support begindir requests, else return 1.
- *
- * Log a helpful message if we change our mind about whether to advertise
- * support for begindir.
  */
 static int
 decide_to_advertise_begindir(const or_options_t *options,
@@ -1324,9 +1315,9 @@ void
 consider_testing_reachability(int test_or, int test_dir)
 {
   const routerinfo_t *me = router_get_my_routerinfo();
-  int orport_reachable = check_whether_orport_reachable();
-  tor_addr_t addr;
   const or_options_t *options = get_options();
+  int orport_reachable = check_whether_orport_reachable(options);
+  tor_addr_t addr;
   if (!me)
     return;
 
@@ -1359,7 +1350,7 @@ consider_testing_reachability(int test_or, int test_dir)
 
   /* XXX IPv6 self testing */
   tor_addr_from_ipv4h(&addr, me->addr);
-  if (test_dir && !check_whether_dirport_reachable() &&
+  if (test_dir && !check_whether_dirport_reachable(options) &&
       !connection_get_by_type_addr_port_purpose(
                 CONN_TYPE_DIR, &addr, me->dir_port,
                 DIR_PURPOSE_FETCH_SERVERDESC)) {
@@ -1378,18 +1369,19 @@ void
 router_orport_found_reachable(void)
 {
   const routerinfo_t *me = router_get_my_routerinfo();
+  const or_options_t *options = get_options();
   if (!can_reach_or_port && me) {
     char *address = tor_dup_ip(me->addr);
     log_notice(LD_OR,"Self-testing indicates your ORPort is reachable from "
                "the outside. Excellent.%s",
-               get_options()->PublishServerDescriptor_ != NO_DIRINFO
-               && check_whether_dirport_reachable() ?
+               options->PublishServerDescriptor_ != NO_DIRINFO
+               && check_whether_dirport_reachable(options) ?
                  " Publishing server descriptor." : "");
     can_reach_or_port = 1;
     mark_my_descriptor_dirty("ORPort found reachable");
     /* This is a significant enough change to upload immediately,
      * at least in a test network */
-    if (get_options()->TestingTorNetwork == 1) {
+    if (options->TestingTorNetwork == 1) {
       reschedule_descriptor_update_check();
     }
     control_event_server_status(LOG_NOTICE,
@@ -1404,19 +1396,20 @@ void
 router_dirport_found_reachable(void)
 {
   const routerinfo_t *me = router_get_my_routerinfo();
+  const or_options_t *options = get_options();
   if (!can_reach_dir_port && me) {
     char *address = tor_dup_ip(me->addr);
     log_notice(LD_DIRSERV,"Self-testing indicates your DirPort is reachable "
                "from the outside. Excellent.%s",
-               get_options()->PublishServerDescriptor_ != NO_DIRINFO
-               && check_whether_orport_reachable() ?
+               options->PublishServerDescriptor_ != NO_DIRINFO
+               && check_whether_orport_reachable(options) ?
                " Publishing server descriptor." : "");
     can_reach_dir_port = 1;
-    if (decide_to_advertise_dirport(get_options(), me->dir_port)) {
+    if (decide_to_advertise_dirport(options, me->dir_port)) {
       mark_my_descriptor_dirty("DirPort found reachable");
       /* This is a significant enough change to upload immediately,
        * at least in a test network */
-      if (get_options()->TestingTorNetwork == 1) {
+      if (options->TestingTorNetwork == 1) {
         reschedule_descriptor_update_check();
       }
     }
@@ -1633,7 +1626,8 @@ decide_if_publishable_server(void)
   if (!router_get_advertised_or_port(options))
     return 0;
 
-  return check_whether_orport_reachable() && check_whether_dirport_reachable();
+  return check_whether_orport_reachable(options) &&
+         check_whether_dirport_reachable(options);
 }
 
 /** Initiate server descriptor upload as reasonable (if server is publishable,
