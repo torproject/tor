@@ -1,4 +1,5 @@
   o Minor features (build):
-    - Tor now again builds with the recent OpenSSL 1.1 development branch
-      (tested against 1.1.0-pre4 and 1.1.0-pre5-dev).
+    - Tor now builds again with the recent OpenSSL 1.1 development branch
+      (tested against 1.1.0-pre4 and 1.1.0-pre5-dev). Closes ticket 18286.
+
 

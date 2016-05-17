@@ -1,5 +1,5 @@
   o Minor bugfixes (small networks):
     - Allow directories in small networks to bootstrap by
       skipping DirPort checks when the consensus has no exits.
-      Resolves #19003, bugfix on #18050 in 0.2.8.1-alpha.
+      Fixes bug 19003; bugfix on 0.2.8.1-alpha.
       Patch by teor.

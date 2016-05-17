@@ -1,3 +1,3 @@
-  o Minor logging changes:
+  o Minor features (logging):
     - Stop blasting twelve lines per second from periodic_event_dispatch()
       at loglevel debug. Resolves ticket 18729; fix on 0.2.8.1-alpha.
