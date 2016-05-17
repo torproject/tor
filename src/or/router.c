@@ -1911,6 +1911,7 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
     return -1;
   }
   ri->signing_key_cert = tor_cert_dup(get_master_signing_key_cert());
+  ri->cache_info.signing_key_cert = tor_cert_dup(get_master_signing_key_cert());
 
   get_platform_str(platform, sizeof(platform));
   ri->platform = tor_strdup(platform);
@@ -2003,6 +2004,8 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
   strlcpy(ei->nickname, get_options()->Nickname, sizeof(ei->nickname));
   ei->cache_info.published_on = ri->cache_info.published_on;
   ei->signing_key_cert = tor_cert_dup(get_master_signing_key_cert());
+  ei->cache_info.signing_key_cert = tor_cert_dup(get_master_signing_key_cert());
+
   memcpy(ei->cache_info.identity_digest, ri->cache_info.identity_digest,
          DIGEST_LEN);
   if (extrainfo_dump_to_string(&ei->cache_info.signed_descriptor_body,
