@@ -4926,9 +4926,9 @@ routerinfo_incompatible_with_extrainfo(const routerinfo_t *ri,
   /* Set digest256_matches to 1 if the digest is correct, or if no
    * digest256 was in the ri. */
   digest256_matches = tor_memeq(ei->digest256,
-                                ri->extra_info_digest256, DIGEST256_LEN);
+                                ri->cache_info.extra_info_digest256, DIGEST256_LEN);
   digest256_matches |=
-    tor_mem_is_zero(ri->extra_info_digest256, DIGEST256_LEN);
+    tor_mem_is_zero(ri->cache_info.extra_info_digest256, DIGEST256_LEN);
 
   /* The identity must match exactly to have been generated at the same time
    * by the same router. */

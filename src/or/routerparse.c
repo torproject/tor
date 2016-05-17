@@ -1597,7 +1597,7 @@ router_parse_entry_from_string(const char *s, const char *end,
     }
 
     if (tok->n_args >= 2) {
-      if (digest256_from_base64(router->extra_info_digest256, tok->args[1])
+      if (digest256_from_base64(router->cache_info.extra_info_digest256, tok->args[1])
           < 0) {
         log_warn(LD_DIR, "Invalid extra info digest256 %s",
                  escaped(tok->args[1]));

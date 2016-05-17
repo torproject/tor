@@ -2028,7 +2028,7 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
     memcpy(ri->cache_info.extra_info_digest,
            ei->cache_info.signed_descriptor_digest,
            DIGEST_LEN);
-    memcpy(ri->extra_info_digest256,
+    memcpy(ri->cache_info.extra_info_digest256,
            ei->digest256,
            DIGEST256_LEN);
   } else {
@@ -2543,9 +2543,9 @@ router_dump_router_to_string(routerinfo_t *router,
     char extra_info_digest[HEX_DIGEST_LEN+1];
     base16_encode(extra_info_digest, sizeof(extra_info_digest),
                   router->cache_info.extra_info_digest, DIGEST_LEN);
-    if (!tor_digest256_is_zero(router->extra_info_digest256)) {
+    if (!tor_digest256_is_zero(router->cache_info.extra_info_digest256)) {
       char d256_64[BASE64_DIGEST256_LEN+1];
-      digest256_to_base64(d256_64, router->extra_info_digest256);
+      digest256_to_base64(d256_64, router->cache_info.extra_info_digest256);
       tor_asprintf(&extra_info_line, "extra-info-digest %s %s\n",
                    extra_info_digest, d256_64);
     } else {

@@ -1993,6 +1993,8 @@ typedef struct signed_descriptor_t {
   time_t published_on;
   /** For routerdescs only: digest of the corresponding extrainfo. */
   char extra_info_digest[DIGEST_LEN];
+  /** For routerdescs only: A SHA256-digest of the extrainfo (if any) */
+  char extra_info_digest256[DIGEST256_LEN];
   /** For routerdescs only: Status of downloading the corresponding
    * extrainfo. */
   download_status_t ei_dl_status;
@@ -2024,8 +2026,6 @@ typedef int16_t country_t;
 /** Information about another onion router in the network. */
 typedef struct {
   signed_descriptor_t cache_info;
-  /** A SHA256-digest of the extrainfo (if any) */
-  char extra_info_digest256[DIGEST256_LEN];
   char *nickname; /**< Human-readable OR name. */
 
   uint32_t addr; /**< IPv4 address of OR, in host order. */
