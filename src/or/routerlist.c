@@ -2900,7 +2900,7 @@ extrainfo_insert,(routerlist_t *rl, extrainfo_t *ei, int warn_if_incompatible))
                      "Mismatch in digest in extrainfo map.");
     goto done;
   }
-  if (routerinfo_incompatible_with_extrainfo(ri, ei, sd,
+  if (routerinfo_incompatible_with_extrainfo(ri->identity_pkey, ei, sd,
                                              &compatibility_error_msg)) {
     char d1[HEX_DIGEST_LEN+1], d2[HEX_DIGEST_LEN+1];
     r = (ri->cache_info.extrainfo_is_bogus) ?
@@ -4901,9 +4901,9 @@ router_differences_are_cosmetic(const routerinfo_t *r1, const routerinfo_t *r2)
 /** Check whether <b>sd</b> describes a router descriptor compatible with the
  * extrainfo document <b>ei</b>.
  *
- * <b>ri</b> (which must also be provided) is the full routerinfo corresponding
- * to the same router -- but note that it might not refer to the same specific
- * descriptor as sd.
+ * <b>identity_pkey</b> (which must also be provided) is RSA1024 identity key
+ * for the router. We use it to check the signature of the extrainfo document,
+ * if it has not already been checked.
  *
  * If no router is compatible with <b>ei</b>, <b>ei</b> should be
  * dropped.  Return 0 for "compatible", return 1 for "reject, and inform
@@ -4915,16 +4915,15 @@ router_differences_are_cosmetic(const routerinfo_t *r1, const routerinfo_t *r2)
  * but the extrainfo was nonetheless incompatible.
  **/
 int
-routerinfo_incompatible_with_extrainfo(const routerinfo_t *ri,
+routerinfo_incompatible_with_extrainfo(const crypto_pk_t *identity_pkey,
                                        extrainfo_t *ei,
                                        signed_descriptor_t *sd,
                                        const char **msg)
 {
   int digest_matches, digest256_matches, r=1;
-  tor_assert(ri);
+  tor_assert(identity_pkey);
+  tor_assert(sd);
   tor_assert(ei);
-  if (!sd)
-    sd = (signed_descriptor_t*)&ri->cache_info;
 
   if (ei->bad_sig) {
     if (msg) *msg = "Extrainfo signature was bad, or signed with wrong key.";
@@ -4942,7 +4941,7 @@ routerinfo_incompatible_with_extrainfo(const routerinfo_t *ri,
 
   /* The identity must match exactly to have been generated at the same time
    * by the same router. */
-  if (tor_memneq(ri->cache_info.identity_digest,
+  if (tor_memneq(sd->identity_digest,
                  ei->cache_info.identity_digest,
                  DIGEST_LEN)) {
     if (msg) *msg = "Extrainfo nickname or identity did not match routerinfo";
@@ -4956,7 +4955,7 @@ routerinfo_incompatible_with_extrainfo(const routerinfo_t *ri,
 
   if (ei->pending_sig) {
     char signed_digest[128];
-    if (crypto_pk_public_checksig(ri->identity_pkey,
+    if (crypto_pk_public_checksig(identity_pkey,
                        signed_digest, sizeof(signed_digest),
                        ei->pending_sig, ei->pending_sig_len) != DIGEST_LEN ||
         tor_memneq(signed_digest, ei->cache_info.signed_descriptor_digest,
@@ -4967,7 +4966,7 @@ routerinfo_incompatible_with_extrainfo(const routerinfo_t *ri,
       goto err; /* Bad signature, or no match. */
     }
 
-    ei->cache_info.send_unencrypted = ri->cache_info.send_unencrypted;
+    ei->cache_info.send_unencrypted = sd->send_unencrypted;
     tor_free(ei->pending_sig);
   }
 

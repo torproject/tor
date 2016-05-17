@@ -2072,7 +2072,8 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
                          ri->cache_info.signed_descriptor_digest);
 
   if (ei) {
-    tor_assert(! routerinfo_incompatible_with_extrainfo(ri, ei, NULL, NULL));
+    tor_assert(! routerinfo_incompatible_with_extrainfo(ri->identity_pkey, ei,
+                                                        &ri->cache_info, NULL));
   }
 
   *r = ri;
