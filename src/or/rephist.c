@@ -1867,14 +1867,17 @@ any_predicted_circuits(time_t now)
 int
 rep_hist_circbuilding_dormant(time_t now)
 {
+  const or_options_t *options = get_options();
+
   if (any_predicted_circuits(now))
     return 0;
 
   /* see if we'll still need to build testing circuits */
-  if (server_mode(get_options()) &&
-      (!check_whether_orport_reachable() || !circuit_enough_testing_circs()))
+  if (server_mode(options) &&
+      (!check_whether_orport_reachable(options) ||
+       !circuit_enough_testing_circs()))
     return 0;
-  if (!check_whether_dirport_reachable())
+  if (!check_whether_dirport_reachable(options))
     return 0;
 
   return 1;

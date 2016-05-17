@@ -1426,7 +1426,7 @@ static void
 circuit_testing_opened(origin_circuit_t *circ)
 {
   if (have_performed_bandwidth_test ||
-      !check_whether_orport_reachable()) {
+      !check_whether_orport_reachable(get_options())) {
     /* either we've already done everything we want with testing circuits,
      * or this testing circuit became open due to a fluke, e.g. we picked
      * a last hop where we already had the connection open due to an
@@ -1443,7 +1443,8 @@ circuit_testing_opened(origin_circuit_t *circ)
 static void
 circuit_testing_failed(origin_circuit_t *circ, int at_last_hop)
 {
-  if (server_mode(get_options()) && check_whether_orport_reachable())
+  const or_options_t *options = get_options();
+  if (server_mode(options) && check_whether_orport_reachable(options))
     return;
 
   log_info(LD_GENERAL,

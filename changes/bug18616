@@ -1,0 +1,14 @@
+  o Major bugfixes (directory mirrors):
+    - Decide whether to advertise begindir support the same way we decide
+      whether to advertise our DirPort. These decisions being out of sync
+      led to surprising behavior like advertising begindir support when
+      our hibernation config options made us not advertise a DirPort.
+      Resolves bug 18616; bugfix on 0.2.8.1-alpha. Patch by teor.
+
+  o Minor bugfixes:
+    - Consider more config options when relays decide whether to regenerate
+      their descriptor. Fixes more of bug 12538; bugfix on 0.2.8.1-alpha.
+    - Resolve some edge cases where we might launch an ORPort reachability
+      check even when DisableNetwork is set. Noticed while fixing bug
+      18616; bugfix on 0.2.3.9-alpha.
+

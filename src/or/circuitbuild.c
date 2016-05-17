@@ -980,7 +980,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
         }
         control_event_client_status(LOG_NOTICE, "CIRCUIT_ESTABLISHED");
         clear_broken_connection_map(1);
-        if (server_mode(options) && !check_whether_orport_reachable()) {
+        if (server_mode(options) && !check_whether_orport_reachable(options)) {
           inform_testing_reachability();
           consider_testing_reachability(1, 1);
         }

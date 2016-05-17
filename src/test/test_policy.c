@@ -716,10 +716,9 @@ test_policies_reject_exit_address(void *arg)
 }
 
 static smartlist_t *test_configured_ports = NULL;
-const smartlist_t *mock_get_configured_ports(void);
 
 /** Returns test_configured_ports */
-const smartlist_t *
+static const smartlist_t *
 mock_get_configured_ports(void)
 {
   return test_configured_ports;

@@ -39,8 +39,8 @@ int router_initialize_tls_context(void);
 int init_keys(void);
 int init_keys_client(void);
 
-int check_whether_orport_reachable(void);
-int check_whether_dirport_reachable(void);
+int check_whether_orport_reachable(const or_options_t *options);
+int check_whether_dirport_reachable(const or_options_t *options);
 int dir_server_mode(const or_options_t *options);
 void consider_testing_reachability(int test_or, int test_dir);
 void router_orport_found_reachable(void);

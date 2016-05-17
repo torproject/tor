@@ -1079,23 +1079,49 @@ router_reset_reachability(void)
   can_reach_or_port = can_reach_dir_port = 0;
 }
 
-/** Return 1 if ORPort is known reachable; else return 0. */
-int
-check_whether_orport_reachable(void)
+/** Return 1 if we won't do reachability checks, because:
+ *   - AssumeReachable is set, or
+ *   - the network is disabled.
+ * Otherwise, return 0.
+ */
+static int
+router_reachability_checks_disabled(const or_options_t *options)
 {
-  const or_options_t *options = get_options();
   return options->AssumeReachable ||
+         net_is_disabled();
+}
+
+/** Return 0 if we need to do an ORPort reachability check, because:
+ *   - no reachability check has been done yet, or
+ *   - we've initiated reachability checks, but none have succeeded.
+ *  Return 1 if we don't need to do an ORPort reachability check, because:
+ *   - we've seen a successful reachability check, or
+ *   - AssumeReachable is set, or
+ *   - the network is disabled.
+ */
+int
+check_whether_orport_reachable(const or_options_t *options)
+{
+  int reach_checks_disabled = router_reachability_checks_disabled(options);
+  return reach_checks_disabled ||
          can_reach_or_port;
 }
 
-/** Return 1 if we don't have a dirport configured, or if it's reachable. */
+/** Return 0 if we need to do a DirPort reachability check, because:
+ *   - no reachability check has been done yet, or
+ *   - we've initiated reachability checks, but none have succeeded.
+ *  Return 1 if we don't need to do a DirPort reachability check, because:
+ *   - we've seen a successful reachability check, or
+ *   - there is no DirPort set, or
+ *   - AssumeReachable is set, or
+ *   - the network is disabled.
+ */
 int
-check_whether_dirport_reachable(void)
+check_whether_dirport_reachable(const or_options_t *options)
 {
-  const or_options_t *options = get_options();
-  return !options->DirPort_set ||
-         options->AssumeReachable ||
-         net_is_disabled() ||
+  int reach_checks_disabled = router_reachability_checks_disabled(options) ||
+                              !options->DirPort_set;
+  return reach_checks_disabled ||
          can_reach_dir_port;
 }
 
@@ -1148,10 +1174,11 @@ router_should_be_directory_server(const or_options_t *options, int dir_port)
                        "seconds long. Raising to 1.");
       interval_length = 1;
     }
-    log_info(LD_GENERAL, "Calculating whether to disable dirport: effective "
+    log_info(LD_GENERAL, "Calculating whether to advertise %s: effective "
                          "bwrate: %u, AccountingMax: "U64_FORMAT", "
-                         "accounting interval length %d", effective_bw,
-                         U64_PRINTF_ARG(options->AccountingMax),
+                         "accounting interval length %d",
+                         dir_port ? "dirport" : "begindir",
+                         effective_bw, U64_PRINTF_ARG(options->AccountingMax),
                          interval_length);
 
     acc_bytes = options->AccountingMax;
@@ -1199,34 +1226,62 @@ dir_server_mode(const or_options_t *options)
 }
 
 /** Look at a variety of factors, and return 0 if we don't want to
- * advertise the fact that we have a DirPort open, else return the
- * DirPort we want to advertise.
+ * advertise the fact that we have a DirPort open or begindir support, else
+ * return 1.
  *
- * Log a helpful message if we change our mind about whether to publish
- * a DirPort.
+ * Where dir_port or supports_tunnelled_dir_requests are not relevant, they
+ * must be 0.
+ *
+ * Log a helpful message if we change our mind about whether to publish.
  */
 static int
-decide_to_advertise_dirport(const or_options_t *options, uint16_t dir_port)
+decide_to_advertise_dir_impl(const or_options_t *options,
+                             uint16_t dir_port,
+                             int supports_tunnelled_dir_requests)
 {
   /* Part one: reasons to publish or not publish that aren't
    * worth mentioning to the user, either because they're obvious
    * or because they're normal behavior. */
 
-  if (!dir_port) /* short circuit the rest of the function */
+  /* short circuit the rest of the function */
+  if (!dir_port && !supports_tunnelled_dir_requests)
     return 0;
   if (authdir_mode(options)) /* always publish */
-    return dir_port;
+    return 1;
   if (net_is_disabled())
     return 0;
-  if (!check_whether_dirport_reachable())
+  if (dir_port && !router_get_advertised_dir_port(options, dir_port))
     return 0;
-  if (!router_get_advertised_dir_port(options, dir_port))
+  if (supports_tunnelled_dir_requests &&
+      !router_get_advertised_or_port(options))
     return 0;
 
-  /* Part two: reasons to publish or not publish that the user
-   * might find surprising. router_should_be_directory_server()
-   * considers config options that make us choose not to publish. */
-  return router_should_be_directory_server(options, dir_port) ? dir_port : 0;
+  /* Part two: consider config options that could make us choose to
+   * publish or not publish that the user might find surprising. */
+  return router_should_be_directory_server(options, dir_port);
+}
+
+/** Front-end to decide_to_advertise_dir_impl(): return 0 if we don't want to
+ * advertise the fact that we have a DirPort open, else return the
+ * DirPort we want to advertise.
+ */
+static int
+decide_to_advertise_dirport(const or_options_t *options, uint16_t dir_port)
+{
+  /* supports_tunnelled_dir_requests is not relevant, pass 0 */
+  return decide_to_advertise_dir_impl(options, dir_port, 0) ? dir_port : 0;
+}
+
+/** Front-end to decide_to_advertise_dir_impl(): return 0 if we don't want to
+ * advertise the fact that we support begindir requests, else return 1.
+ */
+static int
+decide_to_advertise_begindir(const or_options_t *options,
+                             int supports_tunnelled_dir_requests)
+{
+  /* dir_port is not relevant, pass 0 */
+  return decide_to_advertise_dir_impl(options, 0,
+                                      supports_tunnelled_dir_requests);
 }
 
 /** Allocate and return a new extend_info_t that can be used to build
@@ -1260,9 +1315,9 @@ void
 consider_testing_reachability(int test_or, int test_dir)
 {
   const routerinfo_t *me = router_get_my_routerinfo();
-  int orport_reachable = check_whether_orport_reachable();
-  tor_addr_t addr;
   const or_options_t *options = get_options();
+  int orport_reachable = check_whether_orport_reachable(options);
+  tor_addr_t addr;
   if (!me)
     return;
 
@@ -1295,7 +1350,7 @@ consider_testing_reachability(int test_or, int test_dir)
 
   /* XXX IPv6 self testing */
   tor_addr_from_ipv4h(&addr, me->addr);
-  if (test_dir && !check_whether_dirport_reachable() &&
+  if (test_dir && !check_whether_dirport_reachable(options) &&
       !connection_get_by_type_addr_port_purpose(
                 CONN_TYPE_DIR, &addr, me->dir_port,
                 DIR_PURPOSE_FETCH_SERVERDESC)) {
@@ -1314,18 +1369,19 @@ void
 router_orport_found_reachable(void)
 {
   const routerinfo_t *me = router_get_my_routerinfo();
+  const or_options_t *options = get_options();
   if (!can_reach_or_port && me) {
     char *address = tor_dup_ip(me->addr);
     log_notice(LD_OR,"Self-testing indicates your ORPort is reachable from "
                "the outside. Excellent.%s",
-               get_options()->PublishServerDescriptor_ != NO_DIRINFO
-               && check_whether_dirport_reachable() ?
+               options->PublishServerDescriptor_ != NO_DIRINFO
+               && check_whether_dirport_reachable(options) ?
                  " Publishing server descriptor." : "");
     can_reach_or_port = 1;
     mark_my_descriptor_dirty("ORPort found reachable");
     /* This is a significant enough change to upload immediately,
      * at least in a test network */
-    if (get_options()->TestingTorNetwork == 1) {
+    if (options->TestingTorNetwork == 1) {
       reschedule_descriptor_update_check();
     }
     control_event_server_status(LOG_NOTICE,
@@ -1340,19 +1396,20 @@ void
 router_dirport_found_reachable(void)
 {
   const routerinfo_t *me = router_get_my_routerinfo();
+  const or_options_t *options = get_options();
   if (!can_reach_dir_port && me) {
     char *address = tor_dup_ip(me->addr);
     log_notice(LD_DIRSERV,"Self-testing indicates your DirPort is reachable "
                "from the outside. Excellent.%s",
-               get_options()->PublishServerDescriptor_ != NO_DIRINFO
-               && check_whether_orport_reachable() ?
+               options->PublishServerDescriptor_ != NO_DIRINFO
+               && check_whether_orport_reachable(options) ?
                " Publishing server descriptor." : "");
     can_reach_dir_port = 1;
-    if (decide_to_advertise_dirport(get_options(), me->dir_port)) {
+    if (decide_to_advertise_dirport(options, me->dir_port)) {
       mark_my_descriptor_dirty("DirPort found reachable");
       /* This is a significant enough change to upload immediately,
        * at least in a test network */
-      if (get_options()->TestingTorNetwork == 1) {
+      if (options->TestingTorNetwork == 1) {
         reschedule_descriptor_update_check();
       }
     }
@@ -1570,14 +1627,14 @@ decide_if_publishable_server(void)
     return 1;
   if (!router_get_advertised_or_port(options))
     return 0;
-  if (!check_whether_orport_reachable())
+  if (!check_whether_orport_reachable(options))
     return 0;
   if (router_have_consensus_path() == CONSENSUS_PATH_INTERNAL) {
     /* All set: there are no exits in the consensus (maybe this is a tiny
      * test network), so we can't check our DirPort reachability. */
     return 1;
   } else {
-    return check_whether_dirport_reachable();
+    return check_whether_dirport_reachable(options);
   }
 }
 
@@ -1933,8 +1990,8 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
   ri->addr = addr;
   ri->or_port = router_get_advertised_or_port(options);
   ri->dir_port = router_get_advertised_dir_port(options, 0);
-  ri->supports_tunnelled_dir_requests = dir_server_mode(options) &&
-    router_should_be_directory_server(options, ri->dir_port);
+  ri->supports_tunnelled_dir_requests =
+    directory_permits_begindir_requests(options);
   ri->cache_info.published_on = time(NULL);
   ri->onion_pkey = crypto_pk_dup_key(get_onion_key()); /* must invoke from
                                                         * main thread */
@@ -2715,7 +2772,8 @@ router_dump_router_to_string(routerinfo_t *router,
     tor_free(p6);
   }
 
-  if (router->supports_tunnelled_dir_requests) {
+  if (decide_to_advertise_begindir(options,
+                                   router->supports_tunnelled_dir_requests)) {
     smartlist_add(chunks, tor_strdup("tunnelled-dir-server\n"));
   }
 
