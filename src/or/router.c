@@ -1054,7 +1054,8 @@ init_keys(void)
     log_info(LD_DIR, "adding my own v3 cert");
     if (trusted_dirs_load_certs_from_string(
                       cert->cache_info.signed_descriptor_body,
-                      TRUSTED_DIRS_CERTS_SRC_SELF, 0)<0) {
+                      TRUSTED_DIRS_CERTS_SRC_SELF, 0,
+                      NULL)<0) {
       log_warn(LD_DIR, "Unable to parse my own v3 cert! Failing.");
       return -1;
     }

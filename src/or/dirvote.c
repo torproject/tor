@@ -2916,7 +2916,8 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
     /* Hey, it's a new cert! */
     trusted_dirs_load_certs_from_string(
                                vote->cert->cache_info.signed_descriptor_body,
-                               TRUSTED_DIRS_CERTS_SRC_FROM_VOTE, 1 /*flush*/);
+                               TRUSTED_DIRS_CERTS_SRC_FROM_VOTE, 1 /*flush*/,
+                               NULL);
     if (!authority_cert_get_by_digests(vote->cert->cache_info.identity_digest,
                                        vote->cert->signing_key_digest)) {
       log_warn(LD_BUG, "We added a cert, but still couldn't find it.");
@@ -3373,7 +3374,7 @@ dirvote_publish_consensus(void)
       continue;
     }
 
-    if (networkstatus_set_current_consensus(pending->body, name, 0))
+    if (networkstatus_set_current_consensus(pending->body, name, 0, NULL))
       log_warn(LD_DIR, "Error publishing %s consensus", name);
     else
       log_notice(LD_DIR, "Published %s consensus", name);

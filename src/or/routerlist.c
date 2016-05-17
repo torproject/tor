@@ -287,7 +287,7 @@ trusted_dirs_reload_certs(void)
     return 0;
   r = trusted_dirs_load_certs_from_string(
         contents,
-        TRUSTED_DIRS_CERTS_SRC_FROM_STORE, 1);
+        TRUSTED_DIRS_CERTS_SRC_FROM_STORE, 1, NULL);
   tor_free(contents);
   return r;
 }
@@ -317,16 +317,21 @@ already_have_cert(authority_cert_t *cert)
  * or TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_SK_DIGEST.  If <b>flush</b> is true, we
  * need to flush any changed certificates to disk now.  Return 0 on success,
  * -1 if any certs fail to parse.
+ *
+ * If source_dir is non-NULL, it's the identity digest for a directory that
+ * we've just successfully retrieved certificates from, so try it first to
+ * fetch any missing certificates.
  */
 
 int
 trusted_dirs_load_certs_from_string(const char *contents, int source,
-                                    int flush)
+                                    int flush, const char *source_dir)
 {
   dir_server_t *ds;
   const char *s, *eos;
   int failure_code = 0;
   int from_store = (source == TRUSTED_DIRS_CERTS_SRC_FROM_STORE);
+  int added_trusted_cert = 0;
 
   for (s = contents; *s; s = eos) {
     authority_cert_t *cert = authority_cert_parse_from_string(s, &eos);
@@ -386,6 +391,7 @@ trusted_dirs_load_certs_from_string(const char *contents, int source,
     }
 
     if (ds) {
+      added_trusted_cert = 1;
       log_info(LD_DIR, "Adding %s certificate for directory authority %s with "
                "signing key %s", from_store ? "cached" : "downloaded",
                ds->nickname, hex_str(cert->signing_key_digest,DIGEST_LEN));
@@ -430,8 +436,15 @@ trusted_dirs_load_certs_from_string(const char *contents, int source,
     trusted_dirs_flush_certs_to_disk();
 
   /* call this even if failure_code is <0, since some certs might have
-   * succeeded. */
-  networkstatus_note_certs_arrived();
+   * succeeded, but only pass source_dir if there were no failures,
+   * and at least one more authority certificate was added to the store.
+   * This avoids retrying a directory that's serving bad or entirely duplicate
+   * certificates. */
+  if (failure_code == 0 && added_trusted_cert) {
+    networkstatus_note_certs_arrived(source_dir);
+  } else {
+    networkstatus_note_certs_arrived(NULL);
+  }
 
   return failure_code;
 }
@@ -718,9 +731,14 @@ authority_cert_dl_looks_uncertain(const char *id_digest)
  * <b>status</b>.  Additionally, try to have a non-expired certificate for
  * every V3 authority in trusted_dir_servers.  Don't fetch certificates we
  * already have.
+ *
+ * If dir_hint is non-NULL, it's the identity digest for a directory that
+ * we've just successfully retrieved a consensus or certificates from, so try
+ * it first to fetch any missing certificates.
  **/
 void
-authority_certs_fetch_missing(networkstatus_t *status, time_t now)
+authority_certs_fetch_missing(networkstatus_t *status, time_t now,
+                              const char *dir_hint)
 {
   /*
    * The pending_id digestmap tracks pending certificate downloads by
@@ -884,6 +902,37 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
     } SMARTLIST_FOREACH_END(voter);
   }
 
+  /* Look up the routerstatus for the dir_hint  */
+  const routerstatus_t *rs = NULL;
+
+  /* If we still need certificates, try the directory that just successfully
+   * served us a consensus or certificates.
+   * As soon as the directory fails to provide additional certificates, we try
+   * another, randomly selected directory. This avoids continual retries.
+   * (We only ever have one outstanding request per certificate.)
+   *
+   * Bridge clients won't find their bridges using this hint, so they will
+   * fall back to using directory_get_from_dirserver, which selects a bridge.
+   */
+  if (dir_hint) {
+    /* First try the consensus routerstatus, then the fallback
+     * routerstatus */
+    rs = router_get_consensus_status_by_id(dir_hint);
+    if (!rs) {
+      /* This will also find authorities */
+      const dir_server_t *ds = router_get_fallback_dirserver_by_digest(
+                                                                    dir_hint);
+      if (ds) {
+        rs = &ds->fake_status;
+      }
+    }
+
+    if (!rs) {
+      log_warn(LD_BUG, "Directory %s delivered a consensus, but a "
+               "routerstatus could not be found for it.", dir_hint);
+    }
+  }
+
   /* Do downloads by identity digest */
   if (smartlist_len(missing_id_digests) > 0) {
     int need_plus = 0;
@@ -913,11 +962,25 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
 
     if (smartlist_len(fps) > 1) {
       resource = smartlist_join_strings(fps, "", 0, NULL);
-      /* We want certs from mirrors, because they will almost always succeed.
-       */
-      directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
-                                   resource, PDS_RETRY_IF_NO_SERVERS,
-                                   DL_WANT_ANY_DIRSERVER);
+
+      /* If we've just downloaded a consensus from a directory, re-use that
+       * directory */
+      if (rs) {
+        /* Certificate fetches are one-hop, unless AllDirActionsPrivate is 1 */
+        int get_via_tor = get_options()->AllDirActionsPrivate;
+        const dir_indirection_t indirection = get_via_tor ? DIRIND_ANONYMOUS
+                                                          : DIRIND_ONEHOP;
+        directory_initiate_command_routerstatus(rs,
+                                                DIR_PURPOSE_FETCH_CERTIFICATE,
+                                                0, indirection, resource, NULL,
+                                                0, 0);
+      } else {
+        /* Otherwise, we want certs from a random fallback or directory
+         * mirror, because they will almost always succeed. */
+        directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
+                                     resource, PDS_RETRY_IF_NO_SERVERS,
+                                     DL_WANT_ANY_DIRSERVER);
+      }
       tor_free(resource);
     }
     /* else we didn't add any: they were all pending */
@@ -960,11 +1023,25 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
 
     if (smartlist_len(fp_pairs) > 1) {
       resource = smartlist_join_strings(fp_pairs, "", 0, NULL);
-      /* We want certs from mirrors, because they will almost always succeed.
-       */
-      directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
-                                   resource, PDS_RETRY_IF_NO_SERVERS,
-                                   DL_WANT_ANY_DIRSERVER);
+
+      /* If we've just downloaded a consensus from a directory, re-use that
+       * directory */
+      if (rs) {
+        /* Certificate fetches are one-hop, unless AllDirActionsPrivate is 1 */
+        int get_via_tor = get_options()->AllDirActionsPrivate;
+        const dir_indirection_t indirection = get_via_tor ? DIRIND_ANONYMOUS
+                                                          : DIRIND_ONEHOP;
+        directory_initiate_command_routerstatus(rs,
+                                                DIR_PURPOSE_FETCH_CERTIFICATE,
+                                                0, indirection, resource, NULL,
+                                                0, 0);
+      } else {
+        /* Otherwise, we want certs from a random fallback or directory
+         * mirror, because they will almost always succeed. */
+        directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
+                                     resource, PDS_RETRY_IF_NO_SERVERS,
+                                     DL_WANT_ANY_DIRSERVER);
+      }
       tor_free(resource);
     }
     /* else they were all pending */

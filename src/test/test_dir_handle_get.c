@@ -1237,7 +1237,7 @@ test_dir_handle_get_server_keys_all(void* data)
   base16_decode(ds->v3_identity_digest, DIGEST_LEN,
                 TEST_CERT_IDENT_KEY, HEX_DIGEST_LEN);
   tt_int_op(0, OP_EQ, trusted_dirs_load_certs_from_string(TEST_CERTIFICATE,
-    TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST, 1));
+    TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST, 1, NULL));
 
   conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
 
@@ -1396,7 +1396,7 @@ test_dir_handle_get_server_keys_fp(void* data)
                 TEST_CERT_IDENT_KEY, HEX_DIGEST_LEN);
 
   tt_int_op(0, OP_EQ, trusted_dirs_load_certs_from_string(TEST_CERTIFICATE,
-    TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST, 1));
+    TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST, 1, NULL));
 
   conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
   char req[71];
@@ -1468,7 +1468,7 @@ test_dir_handle_get_server_keys_sk(void* data)
   routerlist_free_all();
 
   tt_int_op(0, OP_EQ, trusted_dirs_load_certs_from_string(TEST_CERTIFICATE,
-    TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST, 1));
+    TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST, 1, NULL));
 
   conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
   char req[71];
@@ -1550,7 +1550,7 @@ test_dir_handle_get_server_keys_fpsk(void* data)
   dir_server_add(ds);
 
   tt_int_op(0, OP_EQ, trusted_dirs_load_certs_from_string(TEST_CERTIFICATE,
-    TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST, 1));
+    TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST, 1, NULL));
 
   conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
 
@@ -1606,7 +1606,7 @@ test_dir_handle_get_server_keys_busy(void* data)
   dir_server_add(ds);
 
   tt_int_op(0, OP_EQ, trusted_dirs_load_certs_from_string(TEST_CERTIFICATE,
-    TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST, 1));
+    TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST, 1, NULL));
 
   MOCK(get_options, mock_get_options);
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
@@ -2344,7 +2344,7 @@ test_dir_handle_get_status_vote_next_authority(void* data)
   base16_decode(ds->v3_identity_digest, DIGEST_LEN,
                 TEST_CERT_IDENT_KEY, HEX_DIGEST_LEN);
   tt_int_op(0, OP_EQ, trusted_dirs_load_certs_from_string(TEST_CERTIFICATE,
-    TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST, 1));
+    TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST, 1, NULL));
 
   init_mock_options();
   mock_options->AuthoritativeDir = 1;
@@ -2423,7 +2423,7 @@ test_dir_handle_get_status_vote_current_authority(void* data)
                 TEST_CERT_IDENT_KEY, HEX_DIGEST_LEN);
 
   tt_int_op(0, OP_EQ, trusted_dirs_load_certs_from_string(TEST_CERTIFICATE,
-    TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST, 1));
+    TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST, 1, NULL));
 
   init_mock_options();
   mock_options->AuthoritativeDir = 1;

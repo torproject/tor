@@ -2019,7 +2019,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     }
     log_info(LD_DIR,"Received consensus directory (size %d) from server "
              "'%s:%d'", (int)body_len, conn->base_.address, conn->base_.port);
-    if ((r=networkstatus_set_current_consensus(body, flavname, 0))<0) {
+    if ((r=networkstatus_set_current_consensus(body, flavname, 0,
+                                               conn->identity_digest))<0) {
       log_fn(r<-1?LOG_WARN:LOG_INFO, LD_DIR,
              "Unable to load %s consensus directory downloaded from "
              "server '%s:%d'. I'll try again soon.",
@@ -2062,7 +2063,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     }
 
     if (src_code != -1) {
-      if (trusted_dirs_load_certs_from_string(body, src_code, 1)<0) {
+      if (trusted_dirs_load_certs_from_string(body, src_code, 1,
+                                              conn->identity_digest)<0) {
         log_warn(LD_DIR, "Unable to parse fetched certificates");
         /* if we fetched more than one and only some failed, the successful
          * ones got flushed to disk so it's safe to call this on them */
