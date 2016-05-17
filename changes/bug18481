@@ -2,4 +2,4 @@
     - Turn all TestingClientBootstrap* into non-testing torrc options. This
       changes simply renames them by removing "Testing" in front of them and
       they do not require TestingTorNetwork to be enabled anymore. Fixes
-      #18481; bugfix on tor-0.2.8.1-alpha.
+      bug 18481; bugfix on 0.2.8.1-alpha.
