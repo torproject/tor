@@ -1205,10 +1205,20 @@ sr_get_string_for_vote(void)
 
   /* In our vote we include every commitment in our permanent state. */
   state_commits = sr_state_get_commits();
+  smartlist_t *state_commit_vote_lines = smartlist_new();
   DIGESTMAP_FOREACH(state_commits, key, const sr_commit_t *, commit) {
     char *line = get_vote_line_from_commit(commit, sr_state_get_phase());
-    smartlist_add(chunks, line);
+    smartlist_add(state_commit_vote_lines, line);
   } DIGESTMAP_FOREACH_END;
+
+  /* Sort the commit strings by version (string, not numeric), algorithm,
+   * and fingerprint. This makes sure the commit lines in votes are in a
+   * recognisable, stable order. */
+  smartlist_sort_strings(state_commit_vote_lines);
+
+  /* Now add the sorted list of commits to the vote */
+  smartlist_add_all(chunks, state_commit_vote_lines);
+  smartlist_free(state_commit_vote_lines);
 
   /* Add the SRV value(s) if any. */
   {
