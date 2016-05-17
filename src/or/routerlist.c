@@ -4949,7 +4949,7 @@ routerinfo_incompatible_with_extrainfo(const routerinfo_t *ri,
     goto err; /* different servers */
   }
 
-  if (! tor_cert_opt_eq(ri->signing_key_cert, ei->signing_key_cert)) {
+  if (! tor_cert_opt_eq(sd->signing_key_cert, ei->signing_key_cert)) {
     if (msg) *msg = "Extrainfo signing key cert didn't match routerinfo";
     goto err; /* different servers */
   }
