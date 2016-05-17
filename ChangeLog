@@ -1,5 +1,5 @@
-Changes in version 0.2.8.3-?? - 2016-05-??
-  Tor 0.2.8.3-?? resolves several bugs, most of them introduced over the
+Changes in version 0.2.8.3-alpha - 2016-05-??
+  Tor 0.2.8.3-alpha resolves several bugs, most of them introduced over the
   course of the 0.2.8 development cycle. It improves the behavior of
   directory clients, fixes several crash bugs, fixes a gap in compiler
   hardening, and allows the full integration test suite to run on
