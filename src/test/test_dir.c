@@ -85,6 +85,15 @@ test_dir_nicknames(void *arg)
   ;
 }
 
+static smartlist_t *mocked_configured_ports = NULL;
+
+/** Returns mocked_configured_ports */
+static const smartlist_t *
+mock_get_configured_ports(void)
+{
+  return mocked_configured_ports;
+}
+
 /** Run unit tests for router descriptor generation logic. */
 static void
 test_dir_formats(void *arg)
@@ -104,6 +113,7 @@ test_dir_formats(void *arg)
   or_options_t *options = get_options_mutable();
   const addr_policy_t *p;
   time_t now = time(NULL);
+  port_cfg_t orport, dirport;
 
   (void)arg;
   pk1 = pk_generate(0);
@@ -185,8 +195,30 @@ test_dir_formats(void *arg)
   /* XXXX025 router_dump_to_string should really take this from ri.*/
   options->ContactInfo = tor_strdup("Magri White "
                                     "<magri@elsewhere.example.com>");
+  /* Skip reachability checks for DirPort and tunnelled-dir-server */
+  options->AssumeReachable = 1;
+
+  /* Fake just enough of an ORPort and DirPort to get by */
+  MOCK(get_configured_ports, mock_get_configured_ports);
+  mocked_configured_ports = smartlist_new();
+
+  memset(&orport, 0, sizeof(orport));
+  orport.type = CONN_TYPE_OR_LISTENER;
+  orport.addr.family = AF_INET;
+  orport.port = 9000;
+  smartlist_add(mocked_configured_ports, &orport);
+
+  memset(&dirport, 0, sizeof(dirport));
+  dirport.type = CONN_TYPE_DIR_LISTENER;
+  dirport.addr.family = AF_INET;
+  dirport.port = 9003;
+  smartlist_add(mocked_configured_ports, &dirport);
 
   buf = router_dump_router_to_string(r1, pk2, NULL, NULL, NULL);
+
+  UNMOCK(get_configured_ports);
+  smartlist_free(mocked_configured_ports);
+  mocked_configured_ports = NULL;
 
   tor_free(options->ContactInfo);
   tt_assert(buf);
@@ -308,6 +340,16 @@ test_dir_formats(void *arg)
   strlcat(buf2, "tunnelled-dir-server\n", sizeof(buf2));
   strlcat(buf2, "router-sig-ed25519 ", sizeof(buf2));
 
+  /* Fake just enough of an ORPort to get by */
+  MOCK(get_configured_ports, mock_get_configured_ports);
+  mocked_configured_ports = smartlist_new();
+
+  memset(&orport, 0, sizeof(orport));
+  orport.type = CONN_TYPE_OR_LISTENER;
+  orport.addr.family = AF_INET;
+  orport.port = 9005;
+  smartlist_add(mocked_configured_ports, &orport);
+
   buf = router_dump_router_to_string(r2, pk1, pk2, &r2_onion_keypair, &kp2);
   tt_assert(buf);
   buf[strlen(buf2)] = '\0'; /* Don't compare the sig; it's never the same
@@ -317,6 +359,10 @@ test_dir_formats(void *arg)
   tor_free(buf);
 
   buf = router_dump_router_to_string(r2, pk1, NULL, NULL, NULL);
+
+  UNMOCK(get_configured_ports);
+  smartlist_free(mocked_configured_ports);
+  mocked_configured_ports = NULL;
 
   /* Reset for later */
   cp = buf;
