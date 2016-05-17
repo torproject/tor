@@ -691,12 +691,14 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
 static was_router_added_t
 dirserv_add_extrainfo(extrainfo_t *ei, const char **msg)
 {
-  const routerinfo_t *ri;
+  routerinfo_t *ri;
   int r;
   tor_assert(msg);
   *msg = NULL;
 
-  ri = router_get_by_id_digest(ei->cache_info.identity_digest);
+  /* Needs to be mutable so routerinfo_incompatible_with_extrainfo
+   * can mess with some of the flags in ri->cache_info. */
+  ri = router_get_mutable_by_digest(ei->cache_info.identity_digest);
   if (!ri) {
     *msg = "No corresponding router descriptor for extra-info descriptor";
     extrainfo_free(ei);
@@ -716,7 +718,8 @@ dirserv_add_extrainfo(extrainfo_t *ei, const char **msg)
     return ROUTER_BAD_EI;
   }
 
-  if ((r = routerinfo_incompatible_with_extrainfo(ri, ei, NULL, msg))) {
+  if ((r = routerinfo_incompatible_with_extrainfo(ri->identity_pkey, ei,
+                                                  &ri->cache_info, msg))) {
     extrainfo_free(ei);
     return r < 0 ? ROUTER_IS_ALREADY_KNOWN : ROUTER_BAD_EI;
   }

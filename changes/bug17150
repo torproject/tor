@@ -1,0 +1,7 @@
+  o Minor bugfixes (directory warnings):
+    - When fetching extrainfo documents, compare their SHA256 digests
+      and Ed25519 signing key certificates
+      with the routerinfo that led us to fetch them, rather than
+      with the most recent routerinfo. Otherwise we generate many
+      spurious warnings about mismatches. Fixes bug 17150; bugfix
+      on 0.2.7.2-alpha.

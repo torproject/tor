@@ -2065,6 +2065,10 @@ typedef struct signed_descriptor_t {
   time_t published_on;
   /** For routerdescs only: digest of the corresponding extrainfo. */
   char extra_info_digest[DIGEST_LEN];
+  /** For routerdescs only: A SHA256-digest of the extrainfo (if any) */
+  char extra_info_digest256[DIGEST256_LEN];
+  /** Certificate for ed25519 signing key. */
+  struct tor_cert_st *signing_key_cert;
   /** For routerdescs only: Status of downloading the corresponding
    * extrainfo. */
   download_status_t ei_dl_status;
@@ -2096,8 +2100,6 @@ typedef int16_t country_t;
 /** Information about another onion router in the network. */
 typedef struct {
   signed_descriptor_t cache_info;
-  /** A SHA256-digest of the extrainfo (if any) */
-  char extra_info_digest256[DIGEST256_LEN];
   char *nickname; /**< Human-readable OR name. */
 
   uint32_t addr; /**< IPv4 address of OR, in host order. */
@@ -2115,7 +2117,8 @@ typedef struct {
   crypto_pk_t *identity_pkey;  /**< Public RSA key for signing. */
   /** Public curve25519 key for onions */
   curve25519_public_key_t *onion_curve25519_pkey;
-  /** Certificate for ed25519 signing key */
+  /** Certificate for ed25519 signing key
+   * (XXXX duplicated in cache_info.) */
   struct tor_cert_st *signing_key_cert;
   /** What's the earliest expiration time on all the certs in this
    * routerinfo? */
@@ -2192,7 +2195,8 @@ typedef struct extrainfo_t {
   uint8_t digest256[DIGEST256_LEN];
   /** The router's nickname. */
   char nickname[MAX_NICKNAME_LEN+1];
-  /** Certificate for ed25519 signing key */
+  /** Certificate for ed25519 signing key
+   * (XXXX duplicated in cache_info.) */
   struct tor_cert_st *signing_key_cert;
   /** True iff we found the right key for this extra-info, verified the
    * signature, and found it to be bad. */
