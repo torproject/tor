@@ -4343,8 +4343,10 @@ options_transition_affects_descriptor(const or_options_t *old_options,
       !opt_streq(old_options->MyFamily, new_options->MyFamily) ||
       !opt_streq(old_options->AccountingStart, new_options->AccountingStart) ||
       old_options->AccountingMax != new_options->AccountingMax ||
+      old_options->AccountingRule != new_options->AccountingRule ||
       public_server_mode(old_options) != public_server_mode(new_options) ||
-      old_options->DirCache != new_options->DirCache)
+      old_options->DirCache != new_options->DirCache ||
+      old_options->AssumeReachable != new_options->AssumeReachable)
     return 1;
 
   return 0;
@@ -7005,9 +7007,8 @@ get_first_listener_addrport_string(int listener_type)
 int
 get_first_advertised_port_by_type_af(int listener_type, int address_family)
 {
-  if (!configured_ports)
-    return 0;
-  SMARTLIST_FOREACH_BEGIN(configured_ports, const port_cfg_t *, cfg) {
+  const smartlist_t *conf_ports = get_configured_ports();
+  SMARTLIST_FOREACH_BEGIN(conf_ports, const port_cfg_t *, cfg) {
     if (cfg->type == listener_type &&
         !cfg->server_cfg.no_advertise &&
         (tor_addr_family(&cfg->addr) == address_family ||

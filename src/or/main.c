@@ -2094,7 +2094,7 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
         TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT) {
     /* every 20 minutes, check and complain if necessary */
     const routerinfo_t *me = router_get_my_routerinfo();
-    if (me && !check_whether_orport_reachable()) {
+    if (me && !check_whether_orport_reachable(options)) {
       char *address = tor_dup_ip(me->addr);
       log_warn(LD_CONFIG,"Your server (%s:%d) has not managed to confirm that "
                "its ORPort is reachable. Relays do not publish descriptors "
@@ -2107,7 +2107,7 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
       tor_free(address);
     }
 
-    if (me && !check_whether_dirport_reachable()) {
+    if (me && !check_whether_dirport_reachable(options)) {
       char *address = tor_dup_ip(me->addr);
       log_warn(LD_CONFIG,
                "Your server (%s:%d) has not managed to confirm that its "
