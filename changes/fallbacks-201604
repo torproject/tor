@@ -1,9 +1,0 @@
-  o Minor features (fallback directory mirrors):
-    - Give each fallback the same weight for client selection;
-      restrict fallbacks to one per operator;
-      report fallback directory detail changes when rebuilding list;
-      add new fallback directory mirrors to the whitelist;
-      update fallback directories based on the latest OnionOO data;
-      and any other minor simplifications and fixes.
-      Closes tasks 17158, 17905, 18749, bug 18689, and fixes part of
-      bug 18812 on 0.2.8.1-alpha; patch by "teor".
