@@ -4896,13 +4896,21 @@ router_differences_are_cosmetic(const routerinfo_t *r1, const routerinfo_t *r2)
   return 1;
 }
 
-/** Check whether <b>ri</b> (a.k.a. sd) is a router compatible with the
- * extrainfo document
- * <b>ei</b>.  If no router is compatible with <b>ei</b>, <b>ei</b> should be
+/** Check whether <b>sd</b> describes a router descriptor compatible with the
+ * extrainfo document <b>ei</b>.
+ *
+ * <b>ri</b> (which must also be provided) is the full routerinfo corresponding
+ * to the same router -- but note that it might not refer to the same specific
+ * descriptor as sd.
+ *
+ * If no router is compatible with <b>ei</b>, <b>ei</b> should be
  * dropped.  Return 0 for "compatible", return 1 for "reject, and inform
  * whoever uploaded <b>ei</b>, and return -1 for "reject silently.".  If
  * <b>msg</b> is present, set *<b>msg</b> to a description of the
  * incompatibility (if any).
+ *
+ * Set the extrainfo_is_bogus field in <b>sd</b> if the digests matched
+ * but the extrainfo was nonetheless incompatible.
  **/
 int
 routerinfo_incompatible_with_extrainfo(const routerinfo_t *ri,
