@@ -1,5 +1,9 @@
 Changes in version 0.2.8.3-?? - 2016-05-??
-  xxx blurb goes here xxx
+  Tor 0.2.8.3-?? resolves several bugs, most of them introduced over the
+  course of the 0.2.8 development cycle. It improves the behavior of
+  directory clients, fixes several crash bugs, fixes a gap in compiler
+  hardening, and allows the full integration test suite to run on
+  more platforms.
 
   o Major bugfixes (security, client, DNS proxy):
     - Stop a crash that could occur when a client running with DNSPort
@@ -57,7 +61,7 @@ Changes in version 0.2.8.3-?? - 2016-05-??
   o Minor bugfixes (assert, portability):
     - Fix an assertion failure in memarea.c on systems where "long" is
       shorter than the size of a pointer. Fixes bug 18716; bugfix
-      on 0.2.1.1-alpha
+      on 0.2.1.1-alpha.
 
   o Minor bugfixes (bootstrap):
     - Consistently use the consensus download schedule for authority
@@ -88,9 +92,8 @@ Changes in version 0.2.8.3-?? - 2016-05-??
 
   o Minor bugfixes (crypto, portability):
     - The SHA3 and SHAKE routines now produce the correct output on Big
-      Endian systems, unbreaking the unit tests. No code calls either
-      algorithm family yet, so this is primarily a build fix. Fixes bug
-      18943; bugfix on 0.2.8.1-alpha.
+      Endian systems. No code calls either algorithm yet, so this is
+      primarily a build fix. Fixes bug 18943; bugfix on 0.2.8.1-alpha.
     - Tor now builds again with the recent OpenSSL 1.1 development
       branch (tested against 1.1.0-pre4 and 1.1.0-pre5-dev). Closes
       ticket 18286.
