@@ -192,7 +192,7 @@ void update_extrainfo_downloads(time_t now);
 void router_reset_descriptor_download_failures(void);
 int router_differences_are_cosmetic(const routerinfo_t *r1,
                                     const routerinfo_t *r2);
-int routerinfo_incompatible_with_extrainfo(const routerinfo_t *ri,
+int routerinfo_incompatible_with_extrainfo(const crypto_pk_t *ri,
                                            extrainfo_t *ei,
                                            signed_descriptor_t *sd,
                                            const char **msg);
