@@ -437,7 +437,7 @@ generate_srv(const char *hashed_reveals, uint8_t reveal_num,
   {
     /* Debugging. */
     char srv_hash_encoded[SR_SRV_VALUE_BASE64_LEN + 1];
-    sr_srv_encode(srv_hash_encoded, srv);
+    sr_srv_encode(srv_hash_encoded, sizeof(srv_hash_encoded), srv);
     log_debug(LD_DIR, "SR: Generated SRV: %s", srv_hash_encoded);
   }
   return srv;
@@ -504,7 +504,7 @@ srv_to_ns_string(const sr_srv_t *srv, const char *key)
   tor_assert(srv);
   tor_assert(key);
 
-  sr_srv_encode(srv_hash_encoded, srv);
+  sr_srv_encode(srv_hash_encoded, sizeof(srv_hash_encoded), srv);
   tor_asprintf(&srv_str, "%s %d %s\n", key,
                srv->num_reveals, srv_hash_encoded);
   log_debug(LD_DIR, "SR: Consensus SRV line: %s", srv_str);
@@ -839,7 +839,7 @@ get_majority_srv_from_votes(const smartlist_t *votes, int current)
   {
     /* Debugging */
     char encoded[SR_SRV_VALUE_BASE64_LEN + 1];
-    sr_srv_encode(encoded, the_srv);
+    sr_srv_encode(encoded, sizeof(encoded), the_srv);
     log_debug(LD_DIR, "SR: Chosen SRV by majority: %s (%d votes)", encoded,
               count);
   }
@@ -853,7 +853,7 @@ get_majority_srv_from_votes(const smartlist_t *votes, int current)
 /* Encode the given shared random value and put it in dst. Destination
  * buffer must be at least SR_SRV_VALUE_BASE64_LEN plus the NULL byte. */
 void
-sr_srv_encode(char *dst, const sr_srv_t *srv)
+sr_srv_encode(char *dst, size_t dst_len, const sr_srv_t *srv)
 {
   int ret;
   /* Extra byte for the NULL terminated char. */
@@ -861,12 +861,14 @@ sr_srv_encode(char *dst, const sr_srv_t *srv)
 
   tor_assert(dst);
   tor_assert(srv);
+  tor_assert(dst_len >= sizeof(buf));
 
   ret = base64_encode(buf, sizeof(buf), (const char *) srv->value,
                       sizeof(srv->value), 0);
   /* Always expect the full length without the NULL byte. */
   tor_assert(ret == (sizeof(buf) - 1));
-  strlcpy(dst, buf, sizeof(buf));
+  tor_assert(ret <= (int) dst_len);
+  strlcpy(dst, buf, dst_len);
 }
 
 /* Free a commit object. */

@@ -589,7 +589,7 @@ disk_state_put_srv_line(const sr_srv_t *srv, config_line_t *line)
   if (srv == NULL) {
     return;
   }
-  sr_srv_encode(encoded, srv);
+  sr_srv_encode(encoded, sizeof(encoded), srv);
   tor_asprintf(&line->value, "%d %s", srv->num_reveals, encoded);
 }
 
