@@ -77,3 +77,10 @@ readpassphrase.[ch]
 timeouts/
 
     William Ahern's hierarchical timer-wheel implementation. MIT license.
+
+mulodi/
+
+    Contains an overflow-checking 64-bit signed integer multiply
+    from LLVM's compiler_rt.  For some reason, this is missing from
+    32-bit libclang in many places. Dual licensed MIT-license and
+    BSD-like license; see mulodi/LICENSE.TXT.
