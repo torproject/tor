@@ -257,11 +257,11 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
     return FP_REJECT;
   }
 
-  if (router->signing_key_cert) {
+  if (router->cache_info.signing_key_cert) {
     /* This has an ed25519 identity key. */
     if (KEYPIN_MISMATCH ==
         keypin_check((const uint8_t*)router->cache_info.identity_digest,
-                     router->signing_key_cert->signing_key.pubkey)) {
+                     router->cache_info.signing_key_cert->signing_key.pubkey)) {
       log_fn(severity, LD_DIR,
              "Descriptor from router %s has an Ed25519 key, "
                "but the <rsa,ed25519> keys don't match what they were before.",
@@ -629,10 +629,10 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
 
   /* Do keypinning again ... this time, to add the pin if appropriate */
   int keypin_status;
-  if (ri->signing_key_cert) {
+  if (ri->cache_info.signing_key_cert) {
     keypin_status = keypin_check_and_add(
       (const uint8_t*)ri->cache_info.identity_digest,
-      ri->signing_key_cert->signing_key.pubkey,
+      ri->cache_info.signing_key_cert->signing_key.pubkey,
       ! key_pinning);
   } else {
     keypin_status = keypin_check_lone_rsa(
@@ -2142,9 +2142,9 @@ routers_make_ed_keys_unique(smartlist_t *routers)
 
   SMARTLIST_FOREACH_BEGIN(routers, routerinfo_t *, ri) {
     ri->omit_from_vote = 0;
-    if (ri->signing_key_cert == NULL)
+    if (ri->cache_info.signing_key_cert == NULL)
       continue; /* No ed key */
-    const uint8_t *pk = ri->signing_key_cert->signing_key.pubkey;
+    const uint8_t *pk = ri->cache_info.signing_key_cert->signing_key.pubkey;
     if ((ri2 = digest256map_get(by_ed_key, pk))) {
       /* Duplicate; must omit one.  Set the omit_from_vote flag in whichever
        * one has the earlier published_on. */
@@ -2897,8 +2897,8 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
       set_routerstatus_from_routerinfo(rs, node, ri, now,
                                        listbadexits);
 
-      if (ri->signing_key_cert) {
-        memcpy(vrs->ed25519_id, ri->signing_key_cert->signing_key.pubkey,
+      if (ri->cache_info.signing_key_cert) {
+        memcpy(vrs->ed25519_id, ri->cache_info.signing_key_cert->signing_key.pubkey,
                ED25519_PUBKEY_LEN);
       }
 

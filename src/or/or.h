@@ -2117,9 +2117,6 @@ typedef struct {
   crypto_pk_t *identity_pkey;  /**< Public RSA key for signing. */
   /** Public curve25519 key for onions */
   curve25519_public_key_t *onion_curve25519_pkey;
-  /** Certificate for ed25519 signing key
-   * (XXXX duplicated in cache_info.) */
-  struct tor_cert_st *signing_key_cert;
   /** What's the earliest expiration time on all the certs in this
    * routerinfo? */
   time_t cert_expiration_time;
@@ -2195,9 +2192,6 @@ typedef struct extrainfo_t {
   uint8_t digest256[DIGEST256_LEN];
   /** The router's nickname. */
   char nickname[MAX_NICKNAME_LEN+1];
-  /** Certificate for ed25519 signing key
-   * (XXXX duplicated in cache_info.) */
-  struct tor_cert_st *signing_key_cert;
   /** True iff we found the right key for this extra-info, verified the
    * signature, and found it to be bad. */
   unsigned int bad_sig : 1;

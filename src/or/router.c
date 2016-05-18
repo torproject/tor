@@ -2036,7 +2036,6 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
     routerinfo_free(ri);
     return -1;
   }
-  ri->signing_key_cert = tor_cert_dup(get_master_signing_key_cert());
   ri->cache_info.signing_key_cert = tor_cert_dup(get_master_signing_key_cert());
 
   get_platform_str(platform, sizeof(platform));
@@ -2129,7 +2128,6 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
   ei->cache_info.is_extrainfo = 1;
   strlcpy(ei->nickname, get_options()->Nickname, sizeof(ei->nickname));
   ei->cache_info.published_on = ri->cache_info.published_on;
-  ei->signing_key_cert = tor_cert_dup(get_master_signing_key_cert());
   ei->cache_info.signing_key_cert = tor_cert_dup(get_master_signing_key_cert());
 
   memcpy(ei->cache_info.identity_digest, ri->cache_info.identity_digest,
@@ -2528,7 +2526,8 @@ router_dump_router_to_string(routerinfo_t *router,
   const or_options_t *options = get_options();
   smartlist_t *chunks = NULL;
   char *output = NULL;
-  const int emit_ed_sigs = signing_keypair && router->signing_key_cert;
+  const int emit_ed_sigs = signing_keypair &&
+    router->cache_info.signing_key_cert;
   char *ed_cert_line = NULL;
   char *rsa_tap_cc_line = NULL;
   char *ntor_cc_line = NULL;
@@ -2540,12 +2539,12 @@ router_dump_router_to_string(routerinfo_t *router,
     goto err;
   }
   if (emit_ed_sigs) {
-    if (!router->signing_key_cert->signing_key_included ||
-        !ed25519_pubkey_eq(&router->signing_key_cert->signed_key,
+    if (!router->cache_info.signing_key_cert->signing_key_included ||
+        !ed25519_pubkey_eq(&router->cache_info.signing_key_cert->signed_key,
                            &signing_keypair->pubkey)) {
       log_warn(LD_BUG, "Tried to sign a router descriptor with a mismatched "
                "ed25519 key chain %d",
-               router->signing_key_cert->signing_key_included);
+               router->cache_info.signing_key_cert->signing_key_included);
       goto err;
     }
   }
@@ -2561,14 +2560,14 @@ router_dump_router_to_string(routerinfo_t *router,
     char ed_cert_base64[256];
     char ed_fp_base64[ED25519_BASE64_LEN+1];
     if (base64_encode(ed_cert_base64, sizeof(ed_cert_base64),
-                      (const char*)router->signing_key_cert->encoded,
-                      router->signing_key_cert->encoded_len,
+                      (const char*)router->cache_info.signing_key_cert->encoded,
+                      router->cache_info.signing_key_cert->encoded_len,
                       BASE64_ENCODE_MULTILINE) < 0) {
       log_err(LD_BUG,"Couldn't base64-encode signing key certificate!");
       goto err;
     }
     if (ed25519_public_to_base64(ed_fp_base64,
-                                 &router->signing_key_cert->signing_key)<0) {
+                       &router->cache_info.signing_key_cert->signing_key)<0) {
       log_err(LD_BUG,"Couldn't base64-encode identity key\n");
       goto err;
     }
@@ -2595,13 +2594,13 @@ router_dump_router_to_string(routerinfo_t *router,
   }
 
   /* Cross-certify with RSA key */
-  if (tap_key && router->signing_key_cert &&
-      router->signing_key_cert->signing_key_included) {
+  if (tap_key && router->cache_info.signing_key_cert &&
+      router->cache_info.signing_key_cert->signing_key_included) {
     char buf[256];
     int tap_cc_len = 0;
     uint8_t *tap_cc =
       make_tap_onion_key_crosscert(tap_key,
-                                   &router->signing_key_cert->signing_key,
+                                   &router->cache_info.signing_key_cert->signing_key,
                                    router->identity_pkey,
                                    &tap_cc_len);
     if (!tap_cc) {
@@ -2625,16 +2624,16 @@ router_dump_router_to_string(routerinfo_t *router,
   }
 
   /* Cross-certify with onion keys */
-  if (ntor_keypair && router->signing_key_cert &&
-      router->signing_key_cert->signing_key_included) {
+  if (ntor_keypair && router->cache_info.signing_key_cert &&
+      router->cache_info.signing_key_cert->signing_key_included) {
     int sign = 0;
     char buf[256];
     /* XXXX Base the expiration date on the actual onion key expiration time?*/
     tor_cert_t *cert =
       make_ntor_onion_key_crosscert(ntor_keypair,
-                                &router->signing_key_cert->signing_key,
-                                router->cache_info.published_on,
-                                MIN_ONION_KEY_LIFETIME, &sign);
+                         &router->cache_info.signing_key_cert->signing_key,
+                         router->cache_info.published_on,
+                         MIN_ONION_KEY_LIFETIME, &sign);
     if (!cert) {
       log_warn(LD_BUG,"make_ntor_onion_key_crosscert failed!");
       goto err;
@@ -2981,7 +2980,8 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   time_t now = time(NULL);
   smartlist_t *chunks = smartlist_new();
   extrainfo_t *ei_tmp = NULL;
-  const int emit_ed_sigs = signing_keypair && extrainfo->signing_key_cert;
+  const int emit_ed_sigs = signing_keypair &&
+    extrainfo->cache_info.signing_key_cert;
   char *ed_cert_line = NULL;
 
   base16_encode(identity, sizeof(identity),
@@ -2989,19 +2989,19 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   format_iso_time(published, extrainfo->cache_info.published_on);
   bandwidth_usage = rep_hist_get_bandwidth_lines();
   if (emit_ed_sigs) {
-    if (!extrainfo->signing_key_cert->signing_key_included ||
-        !ed25519_pubkey_eq(&extrainfo->signing_key_cert->signed_key,
+    if (!extrainfo->cache_info.signing_key_cert->signing_key_included ||
+        !ed25519_pubkey_eq(&extrainfo->cache_info.signing_key_cert->signed_key,
                            &signing_keypair->pubkey)) {
       log_warn(LD_BUG, "Tried to sign a extrainfo descriptor with a "
                "mismatched ed25519 key chain %d",
-               extrainfo->signing_key_cert->signing_key_included);
+               extrainfo->cache_info.signing_key_cert->signing_key_included);
       goto err;
     }
     char ed_cert_base64[256];
     if (base64_encode(ed_cert_base64, sizeof(ed_cert_base64),
-                      (const char*)extrainfo->signing_key_cert->encoded,
-                      extrainfo->signing_key_cert->encoded_len,
-                      BASE64_ENCODE_MULTILINE) < 0) {
+                 (const char*)extrainfo->cache_info.signing_key_cert->encoded,
+                 extrainfo->cache_info.signing_key_cert->encoded_len,
+                 BASE64_ENCODE_MULTILINE) < 0) {
       log_err(LD_BUG,"Couldn't base64-encode signing key certificate!");
       goto err;
     }

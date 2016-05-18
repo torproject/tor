@@ -483,7 +483,7 @@ test_md_generate(void *arg)
   md = dirvote_create_microdescriptor(ri, 21);
   tt_str_op(md->body, ==, test_md2_21);
   tt_assert(ed25519_pubkey_eq(md->ed25519_identity_pkey,
-                              &ri->signing_key_cert->signing_key));
+                              &ri->cache_info.signing_key_cert->signing_key));
 
  done:
   microdesc_free(md);
