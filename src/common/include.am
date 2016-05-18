@@ -62,7 +62,14 @@ else
 readpassphrase_source=
 endif
 
+if ADD_MULODI4
+mulodi4_source=src/ext/mulodi/mulodi4.c
+else
+mulodi4_source=
+endif
+
 LIBOR_CTIME_A_SRC = \
+   $(mulodi4_source) \
    src/ext/csiphash.c   \
    src/common/di_ops.c
 

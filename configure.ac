@@ -801,6 +801,46 @@ fi
 CFLAGS_BUGTRAP="$CFLAGS_FTRAPV $CFLAGS_ASAN $CFLAGS_UBSAN"
 CFLAGS_CONSTTIME="$CFLAGS_FWRAPV"
 
+if test "$have_clang" = "yes"; then
+  saved_CFLAGS="$CFLAGS"
+  CFLAGS="$CFLAGS $CFLAGS_FTRAPV"
+  AC_MSG_CHECKING([whether clang -ftrapv can link a 64-bit int multiply])
+  AC_LINK_IFELSE([
+      AC_LANG_SOURCE([[
+          #include <stdint.h>
+          #include <stdlib.h>
+	  int main(int argc, char **argv)
+	  {
+            int64_t x = ((int64_t)atoi(argv[1])) * (int64_t)atoi(argv[2])
+	                * (int64_t)argv[3];
+	    return x == 9;
+	  } ]])],
+	  [ftrapv_can_link=yes; AC_MSG_RESULT([yes])],
+	  [ftrapv_can_link=no; AC_MSG_RESULT([no])])
+  mulodi_fixes_ftrapv=no
+  if test "$ftrapv_can_link" = "no"; then
+    AC_MSG_CHECKING([whether defining __mulodi4 fixes that])
+    AC_LINK_IFELSE([
+      AC_LANG_SOURCE([[
+          #include <stdint.h>
+          #include <stdlib.h>
+	  int64_t __mulodi4(int64_t a, int64_t b, int *overflow) {
+             *overflow=0;
+	     return a;
+          }
+	  int main(int argc, char **argv)
+	  {
+            int64_t x = ((int64_t)atoi(argv[1])) * (int64_t)atoi(argv[2])
+	                * (int64_t)argv[3];
+	    return x == 9;
+	  } ]])],
+	  [mulodi_fixes_ftrapv=yes; AC_MSG_RESULT([yes])],
+	  [mulodi_fixes_ftrapv=no; AC_MSG_RESULT([no])])
+  fi
+  AM_CONDITIONAL(ADD_MULODI4, test "$mulodi_fixes_ftrapv" = "yes")
+  CFLAGS="$saved_CFLAGS"
+fi
+
 dnl These cflags add bunches of branches, and we haven't been able to
 dnl persuade ourselves that they're suitable for code that needs to be
 dnl constant time.
