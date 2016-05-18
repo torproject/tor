@@ -791,26 +791,6 @@ check_consensus_waiting_for_certs(int flavor, time_t now,
   return 0;
 }
 
-/* Return the maximum download tries for a consensus, based on options and
- * whether we_are_bootstrapping. */
-static int
-consensus_max_download_tries(const or_options_t *options,
-                                        int we_are_bootstrapping)
-{
-  int use_fallbacks = networkstatus_consensus_can_use_extra_fallbacks(options);
-
-  if (we_are_bootstrapping) {
-    if (use_fallbacks) {
-      return options->ClientBootstrapConsensusMaxDownloadTries;
-    } else {
-      return
-      options->ClientBootstrapConsensusAuthorityOnlyMaxDownloadTries;
-    }
-  }
-
-  return options->TestingConsensusMaxDownloadTries;
-}
-
 /** If we want to download a fresh consensus, launch a new download as
  * appropriate. */
 static void
@@ -871,7 +851,7 @@ update_consensus_networkstatus_downloads(time_t now)
       update_consensus_bootstrap_multiple_downloads(now, options);
     } else {
       /* Check if we failed downloading a consensus too recently */
-      int max_dl_tries = consensus_max_download_tries(options, 0);
+      int max_dl_tries = options->TestingConsensusMaxDownloadTries;
 
       /* Let's make sure we remembered to update consensus_dl_status */
       tor_assert(consensus_dl_status[i].schedule == DL_SCHED_CONSENSUS);
@@ -909,7 +889,13 @@ update_consensus_bootstrap_attempt_downloads(
                                       download_status_t *dls,
                                       download_want_authority_t want_authority)
 {
-  int max_dl_tries = consensus_max_download_tries(options, 1);
+  int use_fallbacks = networkstatus_consensus_can_use_extra_fallbacks(options);
+  int max_dl_tries = options->ClientBootstrapConsensusMaxDownloadTries;
+  if (!use_fallbacks) {
+    max_dl_tries =
+              options->ClientBootstrapConsensusAuthorityOnlyMaxDownloadTries;
+  }
+
   const char *resource = networkstatus_get_flavor_name(
                                                   usable_consensus_flavor());
 
