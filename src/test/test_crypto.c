@@ -126,7 +126,7 @@ test_crypto_dh(void *arg)
     s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
     tt_int_op(-1, OP_EQ, s1len);
 
-    memset(p1, 0xff, sizeof(DH_BYTES)), /* 2^1024-1 */
+    memset(p1, 0xff, DH_BYTES), /* 2^1024-1 */
     s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p1, DH_BYTES, s1, 50);
     tt_int_op(-1, OP_EQ, s1len);
   }
