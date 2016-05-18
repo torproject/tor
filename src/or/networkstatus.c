@@ -1247,16 +1247,30 @@ networkstatus_get_reasonably_live_consensus(time_t now, int flavor)
     return NULL;
 }
 
-/** Check if we're bootstrapping a consensus download. This means that we are
- *  only using the authorities and fallback directory mirrors to download the
- * consensus flavour we'll use. */
+/** Check if we need to download a consensus during tor's bootstrap phase.
+ * If we have no consensus, or our consensus is unusably old, return 1.
+ * As soon as we have received a consensus, return 0, even if we don't have
+ * enough certificates to validate it. */
 int
 networkstatus_consensus_is_bootstrapping(time_t now)
 {
-  /* If we don't have a consensus, we must still be bootstrapping */
-  return !networkstatus_get_reasonably_live_consensus(
-                                                  now,
-                                                  usable_consensus_flavor());
+  /* If we have a validated, reasonably live consensus, we're not
+   * bootstrapping a consensus at all. */
+  if (networkstatus_get_reasonably_live_consensus(
+                                                now,
+                                                usable_consensus_flavor())) {
+    return 0;
+  }
+
+  /* If we have a consensus, but we're waiting for certificates,
+   * we're not waiting for a consensus download while bootstrapping. */
+  if (consensus_is_waiting_for_certs()) {
+    return 0;
+  }
+
+  /* If we have no consensus, or our consensus is very old, we are
+   * bootstrapping, and we need to download a consensus. */
+  return 1;
 }
 
 /** Check if we can use multiple directories for a consensus download.
