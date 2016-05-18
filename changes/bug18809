@@ -1,0 +1,14 @@
+  o Major bugfixes (bootstrap):
+    - Check if bootstrap consensus downloads are still needed
+      when the linked connection attaches. This prevents tor
+      making unnecessary begindir-style connections, which are
+      the only directory connections tor clients make since
+      #18483 was merged.
+    - Fix some edge cases where consensus download connections
+      may not have been closed, even though they were not needed.
+    - Make relays retry consensus downloads the correct number of
+      times, rather than the more aggresive client retry count.
+    - Stop downloading consensuses when we have a consensus,
+      even if we don't have all the certificates for it yet.
+      Closes ticket 18943, bugfix on #4483 in 0.2.8.1-alpha,
+      patches by arma and teor.
