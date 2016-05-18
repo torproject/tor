@@ -261,7 +261,7 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
     /* This has an ed25519 identity key. */
     if (KEYPIN_MISMATCH ==
         keypin_check((const uint8_t*)router->cache_info.identity_digest,
-                     router->cache_info.signing_key_cert->signing_key.pubkey)) {
+                   router->cache_info.signing_key_cert->signing_key.pubkey)) {
       log_fn(severity, LD_DIR,
              "Descriptor from router %s has an Ed25519 key, "
                "but the <rsa,ed25519> keys don't match what they were before.",
@@ -2898,7 +2898,8 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
                                        listbadexits);
 
       if (ri->cache_info.signing_key_cert) {
-        memcpy(vrs->ed25519_id, ri->cache_info.signing_key_cert->signing_key.pubkey,
+        memcpy(vrs->ed25519_id,
+               ri->cache_info.signing_key_cert->signing_key.pubkey,
                ED25519_PUBKEY_LEN);
       }
 

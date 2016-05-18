@@ -5215,7 +5215,8 @@ routerinfo_incompatible_with_extrainfo(const crypto_pk_t *identity_pkey,
     goto err; /* different servers */
   }
 
-  if (! tor_cert_opt_eq(sd->signing_key_cert,ei->cache_info.signing_key_cert)) {
+  if (! tor_cert_opt_eq(sd->signing_key_cert,
+                        ei->cache_info.signing_key_cert)) {
     if (msg) *msg = "Extrainfo signing key cert didn't match routerinfo";
     goto err; /* different servers */
   }

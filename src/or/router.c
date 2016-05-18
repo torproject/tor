@@ -2036,7 +2036,8 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
     routerinfo_free(ri);
     return -1;
   }
-  ri->cache_info.signing_key_cert = tor_cert_dup(get_master_signing_key_cert());
+  ri->cache_info.signing_key_cert =
+    tor_cert_dup(get_master_signing_key_cert());
 
   get_platform_str(platform, sizeof(platform));
   ri->platform = tor_strdup(platform);
@@ -2560,9 +2561,9 @@ router_dump_router_to_string(routerinfo_t *router,
     char ed_cert_base64[256];
     char ed_fp_base64[ED25519_BASE64_LEN+1];
     if (base64_encode(ed_cert_base64, sizeof(ed_cert_base64),
-                      (const char*)router->cache_info.signing_key_cert->encoded,
-                      router->cache_info.signing_key_cert->encoded_len,
-                      BASE64_ENCODE_MULTILINE) < 0) {
+                    (const char*)router->cache_info.signing_key_cert->encoded,
+                    router->cache_info.signing_key_cert->encoded_len,
+                    BASE64_ENCODE_MULTILINE) < 0) {
       log_err(LD_BUG,"Couldn't base64-encode signing key certificate!");
       goto err;
     }
@@ -2600,9 +2601,9 @@ router_dump_router_to_string(routerinfo_t *router,
     int tap_cc_len = 0;
     uint8_t *tap_cc =
       make_tap_onion_key_crosscert(tap_key,
-                                   &router->cache_info.signing_key_cert->signing_key,
-                                   router->identity_pkey,
-                                   &tap_cc_len);
+                            &router->cache_info.signing_key_cert->signing_key,
+                            router->identity_pkey,
+                            &tap_cc_len);
     if (!tap_cc) {
       log_warn(LD_BUG,"make_tap_onion_key_crosscert failed!");
       goto err;

@@ -1405,7 +1405,8 @@ router_parse_entry_from_string(const char *s, const char *end,
         log_warn(LD_DIR, "Couldn't parse ed25519 cert");
         goto err;
       }
-      router->cache_info.signing_key_cert = cert; /* makes sure it gets freed.*/
+      /* makes sure it gets freed. */
+      router->cache_info.signing_key_cert = cert;
 
       if (cert->cert_type != CERT_TYPE_ID_SIGNING ||
           ! cert->signing_key_included) {
@@ -1600,8 +1601,8 @@ router_parse_entry_from_string(const char *s, const char *end,
     }
 
     if (tok->n_args >= 2) {
-      if (digest256_from_base64(router->cache_info.extra_info_digest256, tok->args[1])
-          < 0) {
+      if (digest256_from_base64(router->cache_info.extra_info_digest256,
+                                tok->args[1]) < 0) {
         log_warn(LD_DIR, "Invalid extra info digest256 %s",
                  escaped(tok->args[1]));
       }
