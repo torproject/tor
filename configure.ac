@@ -801,6 +801,7 @@ fi
 CFLAGS_BUGTRAP="$CFLAGS_FTRAPV $CFLAGS_ASAN $CFLAGS_UBSAN"
 CFLAGS_CONSTTIME="$CFLAGS_FWRAPV"
 
+mulodi_fixes_ftrapv=no
 if test "$have_clang" = "yes"; then
   saved_CFLAGS="$CFLAGS"
   CFLAGS="$CFLAGS $CFLAGS_FTRAPV"
@@ -817,7 +818,6 @@ if test "$have_clang" = "yes"; then
 	  } ]])],
 	  [ftrapv_can_link=yes; AC_MSG_RESULT([yes])],
 	  [ftrapv_can_link=no; AC_MSG_RESULT([no])])
-  mulodi_fixes_ftrapv=no
   if test "$ftrapv_can_link" = "no"; then
     AC_MSG_CHECKING([whether defining __mulodi4 fixes that])
     AC_LINK_IFELSE([
@@ -837,9 +837,10 @@ if test "$have_clang" = "yes"; then
 	  [mulodi_fixes_ftrapv=yes; AC_MSG_RESULT([yes])],
 	  [mulodi_fixes_ftrapv=no; AC_MSG_RESULT([no])])
   fi
-  AM_CONDITIONAL(ADD_MULODI4, test "$mulodi_fixes_ftrapv" = "yes")
   CFLAGS="$saved_CFLAGS"
 fi
+
+AM_CONDITIONAL(ADD_MULODI4, test "$mulodi_fixes_ftrapv" = "yes")
 
 dnl These cflags add bunches of branches, and we haven't been able to
 dnl persuade ourselves that they're suitable for code that needs to be
