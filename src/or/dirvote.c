@@ -3528,10 +3528,11 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
     char idbuf[ED25519_BASE64_LEN+1];
     const char *keytype;
     if (consensus_method >= MIN_METHOD_FOR_ED25519_ID_IN_MD &&
-        ri->signing_key_cert &&
-        ri->signing_key_cert->signing_key_included) {
+        ri->cache_info.signing_key_cert &&
+        ri->cache_info.signing_key_cert->signing_key_included) {
       keytype = "ed25519";
-      ed25519_public_to_base64(idbuf, &ri->signing_key_cert->signing_key);
+      ed25519_public_to_base64(idbuf,
+                               &ri->cache_info.signing_key_cert->signing_key);
     } else {
       keytype = "rsa1024";
       digest_to_base64(idbuf, ri->cache_info.identity_digest);

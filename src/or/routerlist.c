@@ -2897,7 +2897,6 @@ routerinfo_free(routerinfo_t *router)
   tor_free(router->onion_curve25519_pkey);
   if (router->identity_pkey)
     crypto_pk_free(router->identity_pkey);
-  tor_cert_free(router->signing_key_cert);
   tor_cert_free(router->cache_info.signing_key_cert);
   if (router->declared_family) {
     SMARTLIST_FOREACH(router->declared_family, char *, s, tor_free(s));
@@ -2917,7 +2916,6 @@ extrainfo_free(extrainfo_t *extrainfo)
 {
   if (!extrainfo)
     return;
-  tor_cert_free(extrainfo->signing_key_cert);
   tor_cert_free(extrainfo->cache_info.signing_key_cert);
   tor_free(extrainfo->cache_info.signed_descriptor_body);
   tor_free(extrainfo->pending_sig);
@@ -5217,7 +5215,8 @@ routerinfo_incompatible_with_extrainfo(const crypto_pk_t *identity_pkey,
     goto err; /* different servers */
   }
 
-  if (! tor_cert_opt_eq(sd->signing_key_cert, ei->signing_key_cert)) {
+  if (! tor_cert_opt_eq(sd->signing_key_cert,
+                        ei->cache_info.signing_key_cert)) {
     if (msg) *msg = "Extrainfo signing key cert didn't match routerinfo";
     goto err; /* different servers */
   }
