@@ -4438,32 +4438,6 @@ connection_get_by_type_state_rendquery(int type, int state,
          ));
 }
 
-#define CONN_FIRST_AND_FREE_TEMPLATE(sl)       \
-  STMT_BEGIN                                   \
-    if (smartlist_len(sl) > 0) {               \
-      void *first_item = smartlist_get(sl, 0); \
-      smartlist_free(sl);                      \
-      return first_item;                       \
-    } else {                                   \
-      smartlist_free(sl);                      \
-      return NULL;                             \
-    }                                          \
-  STMT_END
-
-/** Return a directory connection (if any one exists) that is fetching
- * the item described by <b>purpose</b>/<b>resource</b>, otherwise return NULL.
- */
-dir_connection_t *
-connection_dir_get_by_purpose_and_resource(
-                                           int purpose,
-                                           const char *resource)
-{
-  smartlist_t *conns = connection_dir_list_by_purpose_and_resource(
-                                                          purpose,
-                                                          resource);
-  CONN_FIRST_AND_FREE_TEMPLATE(conns);
-}
-
 /** Return a new smartlist of dir_connection_t * from get_connection_array()
  * that satisfy conn_test on connection_t *conn_var, and dirconn_test on
  * dir_connection_t *dirconn_var. conn_var must be of CONN_TYPE_DIR and not
@@ -4503,25 +4477,6 @@ connection_dir_list_by_purpose_and_resource(
                          0 == strcmp_opt(resource,
                                          dirconn->requested_resource));
 }
-
-/** Return a directory connection (if any one exists) that is fetching
- * the item described by <b>purpose</b>/<b>resource</b>/<b>state</b>,
- * otherwise return NULL. */
-dir_connection_t *
-connection_dir_get_by_purpose_resource_and_state(
-                                                 int purpose,
-                                                 const char *resource,
-                                                 int state)
-{
-  smartlist_t *conns =
-    connection_dir_list_by_purpose_resource_and_state(
-                                                      purpose,
-                                                      resource,
-                                                      state);
-  CONN_FIRST_AND_FREE_TEMPLATE(conns);
-}
-
-#undef CONN_FIRST_AND_FREE_TEMPLATE
 
 /** Return a list of directory connections that are fetching the item
  * described by <b>purpose</b>/<b>resource</b>/<b>state</b>. If there are
