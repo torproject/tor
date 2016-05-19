@@ -1,6 +1,6 @@
 Changes in version 0.2.8.3-alpha - 2016-05-??
-  Tor 0.2.8.3-alpha resolves several bugs, most of them introduced over the
-  course of the 0.2.8 development cycle. It improves the behavior of
+  Tor 0.2.8.3-alpha resolves several bugs, most of them introduced over
+  the course of the 0.2.8 development cycle. It improves the behavior of
   directory clients, fixes several crash bugs, fixes a gap in compiler
   hardening, and allows the full integration test suite to run on
   more platforms.
@@ -22,6 +22,21 @@ Changes in version 0.2.8.3-alpha - 2016-05-??
     - Fix a crash and out-of-bounds write during authority voting, when
       the list of relays includes duplicate ed25519 identity keys. Fixes
       bug 19032; bugfix on 0.2.8.2-alpha.
+
+  o Major bugfixes (client, bootstrapping):
+    - Check if bootstrap consensus downloads are still needed when the
+      linked connection attaches. This prevents tor making unnecessary
+      begindir-style connections, which are the only directory
+      connections tor clients make since the fix for 18483 was merged.
+    - Fix some edge cases where consensus download connections may not
+      have been closed, even though they were not needed. Related to fix
+      for 18809.
+    - Make relays retry consensus downloads the correct number of times,
+      rather than the more aggressive client retry count. Fixes part of
+      ticket 18809.
+    - Stop downloading consensuses when we have a consensus, even if we
+      don't have all the certificates for it yet. Fixes bug 18809;
+      bugfix on 0.2.8.1-alpha. Patches by arma and teor.
 
   o Major bugfixes (directory mirrors):
     - Decide whether to advertise begindir support in the the same way
@@ -97,6 +112,13 @@ Changes in version 0.2.8.3-alpha - 2016-05-??
     - Tor now builds again with the recent OpenSSL 1.1 development
       branch (tested against 1.1.0-pre4 and 1.1.0-pre5-dev). Closes
       ticket 18286.
+
+  o Minor bugfixes (directories):
+    - When fetching extrainfo documents, compare their SHA256 digests
+      and Ed25519 signing key certificates with the routerinfo that led
+      us to fetch them, rather than with the most recent routerinfo.
+      Otherwise we generate many spurious warnings about mismatches.
+      Fixes bug 17150; bugfix on 0.2.7.2-alpha.
 
   o Minor bugfixes (logging):
     - When we can't generate a signing key because OfflineMasterKey is
