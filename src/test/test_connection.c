@@ -652,12 +652,8 @@ test_conn_download_status(void *arg)
 {
   dir_connection_t *conn = NULL;
   dir_connection_t *conn2 = NULL;
-  dir_connection_t *conn3 = NULL;
   dir_connection_t *conn4 = NULL;
   connection_t *ap_conn = NULL;
-  connection_t *ap_conn2 = NULL;
-  /* we never create an ap_conn for conn3 */
-  connection_t *ap_conn4 = NULL;
 
   consensus_flavor_t usable_flavor = (consensus_flavor_t)arg;
 
@@ -760,7 +756,8 @@ test_conn_download_status(void *arg)
   conn->base_.state = TEST_CONN_STATE;
 
   /* more connections, all not downloading */
-  conn3 = test_conn_download_status_add_a_connection(res);
+  /* ignore the return value, it's free'd using the connection list */
+  (void)test_conn_download_status_add_a_connection(res);
   tt_assert(networkstatus_consensus_is_already_downloading(res) == 0);
   tt_assert(networkstatus_consensus_is_already_downloading(other_res) == 0);
   tt_assert(connection_dir_count_by_purpose_and_resource(
@@ -784,8 +781,9 @@ test_conn_download_status(void *arg)
   /* more connections, two downloading (should never happen, but needs
    * to be tested for completeness) */
   conn2->base_.state = TEST_CONN_DL_STATE;
-  ap_conn2 = test_conn_get_linked_connection(TO_CONN(conn2),
-                                             TEST_CONN_ATTACHED_STATE);
+  /* ignore the return value, it's free'd using the connection list */
+  (void)test_conn_get_linked_connection(TO_CONN(conn2),
+                                        TEST_CONN_ATTACHED_STATE);
   tt_assert(networkstatus_consensus_is_already_downloading(res) == 1);
   tt_assert(networkstatus_consensus_is_already_downloading(other_res) == 0);
   tt_assert(connection_dir_count_by_purpose_and_resource(
@@ -823,8 +821,9 @@ test_conn_download_status(void *arg)
    * cache directory documents), both flavors downloading
    */
   conn4->base_.state = TEST_CONN_DL_STATE;
-  ap_conn4 = test_conn_get_linked_connection(TO_CONN(conn4),
-                                             TEST_CONN_ATTACHED_STATE);
+  /* ignore the return value, it's free'd using the connection list */
+  (void)test_conn_get_linked_connection(TO_CONN(conn4),
+                                        TEST_CONN_ATTACHED_STATE);
   tt_assert(networkstatus_consensus_is_already_downloading(res) == 1);
   tt_assert(networkstatus_consensus_is_already_downloading(other_res) == 1);
   tt_assert(connection_dir_count_by_purpose_and_resource(
@@ -833,10 +832,9 @@ test_conn_download_status(void *arg)
   tt_assert(connection_dir_count_by_purpose_and_resource(
                                                         TEST_CONN_RSRC_PURPOSE,
                                                         other_res) == 1);
-  conn4->base_.state = TEST_CONN_STATE;
 
  done:
-  /* the teardown function removes all the connections */;
+  /* the teardown function removes all the connections in the global list*/;
 }
 
 #define CONNECTION_TESTCASE(name, fork, setup)                           \
