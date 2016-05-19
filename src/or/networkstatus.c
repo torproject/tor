@@ -1237,7 +1237,11 @@ networkstatus_get_reasonably_live_consensus(time_t now, int flavor)
 /** Check if we need to download a consensus during tor's bootstrap phase.
  * If we have no consensus, or our consensus is unusably old, return 1.
  * As soon as we have received a consensus, return 0, even if we don't have
- * enough certificates to validate it. */
+ * enough certificates to validate it.
+ * If a fallback directory gives us a consensus we can never get certs for,
+ * check_consensus_waiting_for_certs() will wait 20 minutes before failing
+ * the cert downloads. After that, a new consensus will be fetched from a
+ * randomly chosen fallback. */
 MOCK_IMPL(int,
 networkstatus_consensus_is_bootstrapping,(time_t now))
 {
