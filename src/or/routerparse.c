@@ -1406,6 +1406,7 @@ router_parse_entry_from_string(const char *s, const char *end,
         goto err;
       }
       router->signing_key_cert = cert; /* makes sure it gets freed. */
+      router->cache_info.signing_key_cert = tor_cert_dup(cert);
 
       if (cert->cert_type != CERT_TYPE_ID_SIGNING ||
           ! cert->signing_key_included) {
@@ -1600,7 +1601,7 @@ router_parse_entry_from_string(const char *s, const char *end,
     }
 
     if (tok->n_args >= 2) {
-      if (digest256_from_base64(router->extra_info_digest256, tok->args[1])
+      if (digest256_from_base64(router->cache_info.extra_info_digest256, tok->args[1])
           < 0) {
         log_warn(LD_DIR, "Invalid extra info digest256 %s",
                  escaped(tok->args[1]));
@@ -1787,6 +1788,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
         goto err;
       }
       extrainfo->signing_key_cert = cert; /* makes sure it gets freed. */
+      extrainfo->cache_info.signing_key_cert = tor_cert_dup(cert);
       if (cert->cert_type != CERT_TYPE_ID_SIGNING ||
           ! cert->signing_key_included) {
         log_warn(LD_DIR, "Invalid form for ed25519 cert");

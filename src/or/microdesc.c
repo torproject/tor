@@ -955,8 +955,8 @@ we_fetch_router_descriptors(const or_options_t *options)
 }
 
 /** Return the consensus flavor we actually want to use to build circuits. */
-int
-usable_consensus_flavor(void)
+MOCK_IMPL(int,
+usable_consensus_flavor,(void))
 {
   if (we_use_microdescriptors_for_circuits(get_options())) {
     return FLAV_MICRODESC;

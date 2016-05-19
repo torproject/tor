@@ -2037,6 +2037,7 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
     return -1;
   }
   ri->signing_key_cert = tor_cert_dup(get_master_signing_key_cert());
+  ri->cache_info.signing_key_cert = tor_cert_dup(get_master_signing_key_cert());
 
   get_platform_str(platform, sizeof(platform));
   ri->platform = tor_strdup(platform);
@@ -2129,6 +2130,8 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
   strlcpy(ei->nickname, get_options()->Nickname, sizeof(ei->nickname));
   ei->cache_info.published_on = ri->cache_info.published_on;
   ei->signing_key_cert = tor_cert_dup(get_master_signing_key_cert());
+  ei->cache_info.signing_key_cert = tor_cert_dup(get_master_signing_key_cert());
+
   memcpy(ei->cache_info.identity_digest, ri->cache_info.identity_digest,
          DIGEST_LEN);
   if (extrainfo_dump_to_string(&ei->cache_info.signed_descriptor_body,
@@ -2154,7 +2157,7 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
     memcpy(ri->cache_info.extra_info_digest,
            ei->cache_info.signed_descriptor_digest,
            DIGEST_LEN);
-    memcpy(ri->extra_info_digest256,
+    memcpy(ri->cache_info.extra_info_digest256,
            ei->digest256,
            DIGEST256_LEN);
   } else {
@@ -2195,7 +2198,8 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
                          ri->cache_info.signed_descriptor_digest);
 
   if (ei) {
-    tor_assert(! routerinfo_incompatible_with_extrainfo(ri, ei, NULL, NULL));
+    tor_assert(! routerinfo_incompatible_with_extrainfo(ri->identity_pkey, ei,
+                                                        &ri->cache_info, NULL));
   }
 
   *r = ri;
@@ -2669,9 +2673,9 @@ router_dump_router_to_string(routerinfo_t *router,
     char extra_info_digest[HEX_DIGEST_LEN+1];
     base16_encode(extra_info_digest, sizeof(extra_info_digest),
                   router->cache_info.extra_info_digest, DIGEST_LEN);
-    if (!tor_digest256_is_zero(router->extra_info_digest256)) {
+    if (!tor_digest256_is_zero(router->cache_info.extra_info_digest256)) {
       char d256_64[BASE64_DIGEST256_LEN+1];
-      digest256_to_base64(d256_64, router->extra_info_digest256);
+      digest256_to_base64(d256_64, router->cache_info.extra_info_digest256);
       tor_asprintf(&extra_info_line, "extra-info-digest %s %s\n",
                    extra_info_digest, d256_64);
     } else {
