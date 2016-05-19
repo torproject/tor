@@ -192,13 +192,6 @@ MOCK_DECL(connection_t *,connection_get_by_type_addr_port_purpose,(int type,
 connection_t *connection_get_by_type_state(int type, int state);
 connection_t *connection_get_by_type_state_rendquery(int type, int state,
                                                      const char *rendquery);
-dir_connection_t *connection_dir_get_by_purpose_and_resource(
-                                                  int purpose,
-                                                  const char *resource);
-dir_connection_t *connection_dir_get_by_purpose_resource_and_state(
-                                                  int purpose,
-                                                  const char *resource,
-                                                  int state);
 smartlist_t *connection_dir_list_by_purpose_and_resource(
                                                   int purpose,
                                                   const char *resource);

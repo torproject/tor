@@ -15,6 +15,7 @@
 #include "container.h"
 #include "directory.h"
 #include "dirvote.h"
+#include "microdesc.h"
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "policies.h"
@@ -190,6 +191,14 @@ construct_consensus(char **consensus_text_md)
   crypto_pk_free(sign_skey_leg);
 }
 
+static int mock_usable_consensus_flavor_value = FLAV_NS;
+
+static int
+mock_usable_consensus_flavor(void)
+{
+  return mock_usable_consensus_flavor_value;
+}
+
 static void
 test_router_pick_directory_server_impl(void *arg)
 {
@@ -209,6 +218,22 @@ test_router_pick_directory_server_impl(void *arg)
 
   (void)arg;
 
+  MOCK(usable_consensus_flavor, mock_usable_consensus_flavor);
+
+  /* With no consensus, we must be bootstrapping, regardless of time or flavor
+   */
+  mock_usable_consensus_flavor_value = FLAV_NS;
+  tt_assert(networkstatus_consensus_is_bootstrapping(now));
+  tt_assert(networkstatus_consensus_is_bootstrapping(now + 2000));
+  tt_assert(networkstatus_consensus_is_bootstrapping(now + 2*24*60*60));
+  tt_assert(networkstatus_consensus_is_bootstrapping(now - 2*24*60*60));
+
+  mock_usable_consensus_flavor_value = FLAV_MICRODESC;
+  tt_assert(networkstatus_consensus_is_bootstrapping(now));
+  tt_assert(networkstatus_consensus_is_bootstrapping(now + 2000));
+  tt_assert(networkstatus_consensus_is_bootstrapping(now + 2*24*60*60));
+  tt_assert(networkstatus_consensus_is_bootstrapping(now - 2*24*60*60));
+
   /* No consensus available, fail early */
   rs = router_pick_directory_server_impl(V3_DIRINFO, (const int) 0, NULL);
   tt_assert(rs == NULL);
@@ -223,6 +248,28 @@ test_router_pick_directory_server_impl(void *arg)
   tt_int_op(smartlist_len(con_md->routerstatus_list), ==, 3);
   tt_assert(!networkstatus_set_current_consensus_from_ns(con_md,
                                                  "microdesc"));
+
+  /* If the consensus time or flavor doesn't match, we are still
+   * bootstrapping */
+  mock_usable_consensus_flavor_value = FLAV_NS;
+  tt_assert(networkstatus_consensus_is_bootstrapping(now));
+  tt_assert(networkstatus_consensus_is_bootstrapping(now + 2000));
+  tt_assert(networkstatus_consensus_is_bootstrapping(now + 2*24*60*60));
+  tt_assert(networkstatus_consensus_is_bootstrapping(now - 2*24*60*60));
+
+  /* With a valid consensus for the current time and flavor, we stop
+   * bootstrapping, even if we have no certificates */
+  mock_usable_consensus_flavor_value = FLAV_MICRODESC;
+  tt_assert(!networkstatus_consensus_is_bootstrapping(now + 2000));
+  tt_assert(!networkstatus_consensus_is_bootstrapping(con_md->valid_after));
+  tt_assert(!networkstatus_consensus_is_bootstrapping(con_md->valid_until));
+  tt_assert(!networkstatus_consensus_is_bootstrapping(con_md->valid_until
+                                                      + 24*60*60));
+  /* These times are outside the test validity period */
+  tt_assert(networkstatus_consensus_is_bootstrapping(now));
+  tt_assert(networkstatus_consensus_is_bootstrapping(now + 2*24*60*60));
+  tt_assert(networkstatus_consensus_is_bootstrapping(now - 2*24*60*60));
+
   nodelist_set_consensus(con_md);
   nodelist_assert_ok();
 
@@ -362,6 +409,7 @@ test_router_pick_directory_server_impl(void *arg)
   node_router1->rs->last_dir_503_at = 0;
 
  done:
+  UNMOCK(usable_consensus_flavor);
   if (router1_id)
     tor_free(router1_id);
   if (router2_id)
