@@ -160,15 +160,15 @@ test_dir_formats(void *arg)
   ed25519_secret_key_from_seed(&kp2.seckey,
                           (const uint8_t*)"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
   ed25519_public_key_generate(&kp2.pubkey, &kp2.seckey);
-  r2->signing_key_cert = tor_cert_create(&kp1,
+  r2->cache_info.signing_key_cert = tor_cert_create(&kp1,
                                          CERT_TYPE_ID_SIGNING,
                                          &kp2.pubkey,
                                          now, 86400,
                                          CERT_FLAG_INCLUDE_SIGNING_KEY);
   char cert_buf[256];
   base64_encode(cert_buf, sizeof(cert_buf),
-                (const char*)r2->signing_key_cert->encoded,
-                r2->signing_key_cert->encoded_len,
+                (const char*)r2->cache_info.signing_key_cert->encoded,
+                r2->cache_info.signing_key_cert->encoded_len,
                 BASE64_ENCODE_MULTILINE);
   r2->platform = tor_strdup(platform);
   r2->cache_info.published_on = 5;
@@ -279,7 +279,8 @@ test_dir_formats(void *arg)
   strlcat(buf2, "master-key-ed25519 ", sizeof(buf2));
   {
     char k[ED25519_BASE64_LEN+1];
-    tt_assert(ed25519_public_to_base64(k, &r2->signing_key_cert->signing_key)
+    tt_assert(ed25519_public_to_base64(k,
+                                &r2->cache_info.signing_key_cert->signing_key)
               >= 0);
     strlcat(buf2, k, sizeof(buf2));
     strlcat(buf2, "\n", sizeof(buf2));
