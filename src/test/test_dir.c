@@ -4213,7 +4213,7 @@ test_dir_find_dl_schedule(void* data)
 
 /* where arg is a string constant */
 #define DIR_ARG(name,flags,arg)                      \
-  { #name "_" arg, test_dir_##name, (flags), &passthrough_setup, arg }
+  { #name "_" arg, test_dir_##name, (flags), &passthrough_setup, (void*) arg }
 
 struct testcase_t dir_tests[] = {
   DIR_LEGACY(nicknames),
