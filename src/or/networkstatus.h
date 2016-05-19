@@ -70,11 +70,11 @@ MOCK_DECL(networkstatus_t *,networkstatus_get_latest_consensus_by_flavor,
 networkstatus_t *networkstatus_get_live_consensus(time_t now);
 networkstatus_t *networkstatus_get_reasonably_live_consensus(time_t now,
                                                              int flavor);
-int networkstatus_consensus_is_bootstrapping(time_t now);
+MOCK_DECL(int, networkstatus_consensus_is_bootstrapping,(time_t now));
 int networkstatus_consensus_can_use_multiple_directories(
                                                 const or_options_t *options);
-int networkstatus_consensus_can_use_extra_fallbacks(
-                                                const or_options_t *options);
+MOCK_DECL(int, networkstatus_consensus_can_use_extra_fallbacks,(
+                                                const or_options_t *options));
 int networkstatus_consensus_is_already_downloading(const char *resource);
 
 #define NSSET_FROM_CACHE 1

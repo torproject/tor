@@ -3995,12 +3995,56 @@ test_dir_choose_compression_level(void* data)
   done: ;
 }
 
+static int mock_networkstatus_consensus_is_bootstrapping_value = 0;
+static int
+mock_networkstatus_consensus_is_bootstrapping(time_t now)
+{
+  (void)now;
+  return mock_networkstatus_consensus_is_bootstrapping_value;
+}
+
+static int mock_networkstatus_consensus_can_use_extra_fallbacks_value = 0;
+static int
+mock_networkstatus_consensus_can_use_extra_fallbacks(
+                                                  const or_options_t *options)
+{
+  (void)options;
+  return mock_networkstatus_consensus_can_use_extra_fallbacks_value;
+}
+
+/* data is a 2 character nul-terminated string.
+ * If data[0] is 'b', set bootstrapping, anything else means not bootstrapping
+ * If data[1] is 'f', set extra fallbacks, anything else means no extra
+ * fallbacks.
+ */
 static void
 test_dir_find_dl_schedule(void* data)
 {
+  const char *str = (const char *)data;
+
+  tt_assert(strlen(data) == 2);
+
+  if (str[0] == 'b') {
+    mock_networkstatus_consensus_is_bootstrapping_value = 1;
+  } else {
+    mock_networkstatus_consensus_is_bootstrapping_value = 0;
+  }
+
+  if (str[1] == 'f') {
+    mock_networkstatus_consensus_can_use_extra_fallbacks_value = 1;
+  } else {
+    mock_networkstatus_consensus_can_use_extra_fallbacks_value = 0;
+  }
+
+  MOCK(networkstatus_consensus_is_bootstrapping,
+       mock_networkstatus_consensus_is_bootstrapping);
+  MOCK(networkstatus_consensus_can_use_extra_fallbacks,
+       mock_networkstatus_consensus_can_use_extra_fallbacks);
+
   download_status_t dls;
-  smartlist_t server, client, server_cons, client_cons, bridge;
-  (void)data;
+  smartlist_t server, client, server_cons, client_cons;
+  smartlist_t client_boot_auth_only_cons, client_boot_auth_cons;
+  smartlist_t client_boot_fallback_cons, bridge;
 
   mock_options = malloc(sizeof(or_options_t));
   reset_options(mock_options, &mock_get_options_calls);
@@ -4010,42 +4054,120 @@ test_dir_find_dl_schedule(void* data)
   mock_options->TestingClientDownloadSchedule = &client;
   mock_options->TestingServerConsensusDownloadSchedule = &server_cons;
   mock_options->TestingClientConsensusDownloadSchedule = &client_cons;
+  mock_options->ClientBootstrapConsensusAuthorityOnlyDownloadSchedule =
+    &client_boot_auth_only_cons;
+  mock_options->ClientBootstrapConsensusAuthorityDownloadSchedule =
+    &client_boot_auth_cons;
+  mock_options->ClientBootstrapConsensusFallbackDownloadSchedule =
+    &client_boot_fallback_cons;
   mock_options->TestingBridgeDownloadSchedule = &bridge;
 
   dls.schedule = DL_SCHED_GENERIC;
+  /* client */
   mock_options->ClientOnly = 1;
   tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ, &client);
   mock_options->ClientOnly = 0;
+
+  /* dir mode */
   mock_options->DirPort_set = 1;
-  mock_options->ORPort_set = 1;
   mock_options->DirCache = 1;
   tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ, &server);
-
-#if 0
-  dls.schedule = DL_SCHED_CONSENSUS;
-  mock_options->ClientOnly = 1;
+  mock_options->DirPort_set = 0;
   mock_options->DirCache = 0;
-  tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ, &client_cons);
-  mock_options->ClientOnly = 0;
-  mock_options->DirCache = 1;
+
+  dls.schedule = DL_SCHED_CONSENSUS;
+  /* public server mode */
+  mock_options->ORPort_set = 1;
   tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ, &server_cons);
-#endif
+  mock_options->ORPort_set = 0;
+
+  /* client and bridge modes */
+  if (networkstatus_consensus_is_bootstrapping(time(NULL))) {
+    if (networkstatus_consensus_can_use_extra_fallbacks(mock_options)) {
+      dls.want_authority = 1;
+      /* client */
+      mock_options->ClientOnly = 1;
+      tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ,
+                &client_boot_auth_cons);
+      mock_options->ClientOnly = 0;
+
+      /* bridge relay */
+      mock_options->ORPort_set = 1;
+      mock_options->BridgeRelay = 1;
+      tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ,
+                &client_boot_auth_cons);
+      mock_options->ORPort_set = 0;
+      mock_options->BridgeRelay = 0;
+
+      dls.want_authority = 0;
+      /* client */
+      mock_options->ClientOnly = 1;
+      tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ,
+                &client_boot_fallback_cons);
+      mock_options->ClientOnly = 0;
+
+      /* bridge relay */
+      mock_options->ORPort_set = 1;
+      mock_options->BridgeRelay = 1;
+      tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ,
+                &client_boot_fallback_cons);
+      mock_options->ORPort_set = 0;
+      mock_options->BridgeRelay = 0;
+
+    } else {
+      /* dls.want_authority is ignored */
+      /* client */
+      mock_options->ClientOnly = 1;
+      tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ,
+                &client_boot_auth_only_cons);
+      mock_options->ClientOnly = 0;
+
+      /* bridge relay */
+      mock_options->ORPort_set = 1;
+      mock_options->BridgeRelay = 1;
+      tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ,
+                &client_boot_auth_only_cons);
+      mock_options->ORPort_set = 0;
+      mock_options->BridgeRelay = 0;
+    }
+  } else {
+    /* client */
+    mock_options->ClientOnly = 1;
+    tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ,
+              &client_cons);
+    mock_options->ClientOnly = 0;
+
+    /* bridge relay */
+    mock_options->ORPort_set = 1;
+    mock_options->BridgeRelay = 1;
+    tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ,
+              &client_cons);
+    mock_options->ORPort_set = 0;
+    mock_options->BridgeRelay = 0;
+  }
 
   dls.schedule = DL_SCHED_BRIDGE;
+  /* client */
   mock_options->ClientOnly = 1;
-  tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ, &bridge);
-  mock_options->ClientOnly = 0;
   tt_ptr_op(find_dl_schedule(&dls, mock_options), OP_EQ, &bridge);
 
  done:
+  UNMOCK(networkstatus_consensus_is_bootstrapping);
+  UNMOCK(networkstatus_consensus_can_use_extra_fallbacks);
   UNMOCK(get_options);
+  free(mock_options);
+  mock_options = NULL;
 }
 
-#define DIR_LEGACY(name)                                                   \
+#define DIR_LEGACY(name)                             \
   { #name, test_dir_ ## name , TT_FORK, NULL, NULL }
 
 #define DIR(name,flags)                              \
   { #name, test_dir_##name, (flags), NULL, NULL }
+
+/* where arg is a string constant */
+#define DIR_ARG(name,flags,arg)                      \
+  { #name "_" arg, test_dir_##name, (flags), &passthrough_setup, arg }
 
 struct testcase_t dir_tests[] = {
   DIR_LEGACY(nicknames),
@@ -4081,7 +4203,10 @@ struct testcase_t dir_tests[] = {
   DIR(should_not_init_request_to_dir_auths_without_v3_info, 0),
   DIR(should_init_request_to_dir_auths, 0),
   DIR(choose_compression_level, 0),
-  DIR(find_dl_schedule, 0),
+  DIR_ARG(find_dl_schedule, TT_FORK, "bf"),
+  DIR_ARG(find_dl_schedule, TT_FORK, "ba"),
+  DIR_ARG(find_dl_schedule, TT_FORK, "cf"),
+  DIR_ARG(find_dl_schedule, TT_FORK, "ca"),
   END_OF_TESTCASES
 };
 

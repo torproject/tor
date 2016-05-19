@@ -1237,8 +1237,8 @@ networkstatus_get_reasonably_live_consensus(time_t now, int flavor)
  * If we have no consensus, or our consensus is unusably old, return 1.
  * As soon as we have received a consensus, return 0, even if we don't have
  * enough certificates to validate it. */
-int
-networkstatus_consensus_is_bootstrapping(time_t now)
+MOCK_IMPL(int,
+networkstatus_consensus_is_bootstrapping,(time_t now))
 {
   /* If we have a validated, reasonably live consensus, we're not
    * bootstrapping a consensus at all. */
@@ -1273,8 +1273,8 @@ networkstatus_consensus_can_use_multiple_directories(
 /** Check if we can use fallback directory mirrors for a consensus download.
  * If we have fallbacks and don't want to fetch from the authorities,
  * we can use them. */
-int
-networkstatus_consensus_can_use_extra_fallbacks(const or_options_t *options)
+MOCK_IMPL(int,
+networkstatus_consensus_can_use_extra_fallbacks,(const or_options_t *options))
 {
   /* The list length comparisons are a quick way to check if we have any
    * non-authority fallback directories. If we ever have any authorities that
