@@ -812,7 +812,7 @@ if test "$have_clang" = "yes"; then
 	  int main(int argc, char **argv)
 	  {
             int64_t x = ((int64_t)atoi(argv[1])) * (int64_t)atoi(argv[2])
-	                * (int64_t)argv[3];
+	                * (int64_t)atoi(argv[3]);
 	    return x == 9;
 	  } ]])],
 	  [ftrapv_can_link=yes; AC_MSG_RESULT([yes])],
@@ -831,7 +831,7 @@ if test "$have_clang" = "yes"; then
 	  int main(int argc, char **argv)
 	  {
             int64_t x = ((int64_t)atoi(argv[1])) * (int64_t)atoi(argv[2])
-	                * (int64_t)argv[3];
+	                * (int64_t)atoi(argv[3]);
 	    return x == 9;
 	  } ]])],
 	  [mulodi_fixes_ftrapv=yes; AC_MSG_RESULT([yes])],
