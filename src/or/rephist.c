@@ -2933,7 +2933,7 @@ static time_t start_of_hs_stats_interval;
  *  information needed. */
 typedef struct hs_stats_t {
   /** How many relay cells have we seen as rendezvous points? */
-  int64_t rp_relay_cells_seen;
+  uint64_t rp_relay_cells_seen;
 
   /** Set of unique public key digests we've seen this stat period
    * (could also be implemented as sorted smartlist). */
@@ -3074,16 +3074,20 @@ rep_hist_format_hs_stats(time_t now)
   int64_t obfuscated_cells_seen;
   int64_t obfuscated_onions_seen;
 
-  obfuscated_cells_seen = round_int64_to_next_multiple_of(
-                          hs_stats->rp_relay_cells_seen,
-                          REND_CELLS_BIN_SIZE);
-  obfuscated_cells_seen = add_laplace_noise(obfuscated_cells_seen,
+  uint64_t rounded_cells_seen
+    = round_uint64_to_next_multiple_of(hs_stats->rp_relay_cells_seen,
+                                       REND_CELLS_BIN_SIZE);
+  rounded_cells_seen = MIN(rounded_cells_seen, INT64_MAX);
+  obfuscated_cells_seen = add_laplace_noise((int64_t)rounded_cells_seen,
                           crypto_rand_double(),
                           REND_CELLS_DELTA_F, REND_CELLS_EPSILON);
-  obfuscated_onions_seen = round_int64_to_next_multiple_of(digestmap_size(
-                           hs_stats->onions_seen_this_period),
-                           ONIONS_SEEN_BIN_SIZE);
-  obfuscated_onions_seen = add_laplace_noise(obfuscated_onions_seen,
+
+  int64_t rounded_onions_seen =
+    round_uint64_to_next_multiple_of((size_t)digestmap_size(
+                                        hs_stats->onions_seen_this_period),
+                                     ONIONS_SEEN_BIN_SIZE);
+  rounded_onions_seen = MIN(rounded_onions_seen, INT64_MAX);
+  obfuscated_onions_seen = add_laplace_noise((int64_t)rounded_onions_seen,
                            crypto_rand_double(), ONIONS_SEEN_DELTA_F,
                            ONIONS_SEEN_EPSILON);
 
