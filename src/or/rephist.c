@@ -3082,7 +3082,7 @@ rep_hist_format_hs_stats(time_t now)
                           crypto_rand_double(),
                           REND_CELLS_DELTA_F, REND_CELLS_EPSILON);
 
-  int64_t rounded_onions_seen =
+  uint64_t rounded_onions_seen =
     round_uint64_to_next_multiple_of((size_t)digestmap_size(
                                         hs_stats->onions_seen_this_period),
                                      ONIONS_SEEN_BIN_SIZE);
