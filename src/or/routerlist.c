@@ -2932,6 +2932,7 @@ signed_descriptor_free(signed_descriptor_t *sd)
     return;
 
   tor_free(sd->signed_descriptor_body);
+  tor_cert_free(sd->signing_key_cert);
 
   memset(sd, 99, sizeof(signed_descriptor_t)); /* Debug bad mem usage */
   tor_free(sd);
@@ -2949,6 +2950,7 @@ signed_descriptor_from_routerinfo(routerinfo_t *ri)
   memcpy(sd, &(ri->cache_info), sizeof(signed_descriptor_t));
   sd->routerlist_index = -1;
   ri->cache_info.signed_descriptor_body = NULL;
+  ri->cache_info.signing_key_cert = NULL;
   routerinfo_free(ri);
   return sd;
 }
