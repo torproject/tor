@@ -4223,21 +4223,6 @@ test_util_round_to_next_multiple_of(void *arg)
   tt_u64_op(round_uint64_to_next_multiple_of(UINT64_MAX,2), ==,
             UINT64_MAX);
 
-  tt_i64_op(round_int64_to_next_multiple_of(0,1), ==, 0);
-  tt_i64_op(round_int64_to_next_multiple_of(0,7), ==, 0);
-
-  tt_i64_op(round_int64_to_next_multiple_of(99,1), ==, 99);
-  tt_i64_op(round_int64_to_next_multiple_of(99,7), ==, 105);
-  tt_i64_op(round_int64_to_next_multiple_of(99,9), ==, 99);
-
-  tt_i64_op(round_int64_to_next_multiple_of(-99,1), ==, -99);
-  tt_i64_op(round_int64_to_next_multiple_of(-99,7), ==, -98);
-  tt_i64_op(round_int64_to_next_multiple_of(-99,9), ==, -99);
-
-  tt_i64_op(round_int64_to_next_multiple_of(INT64_MIN,2), ==, INT64_MIN);
-  tt_i64_op(round_int64_to_next_multiple_of(INT64_MAX,2), ==,
-                                            INT64_MAX);
-
   tt_int_op(round_uint32_to_next_multiple_of(0,1), ==, 0);
   tt_int_op(round_uint32_to_next_multiple_of(0,7), ==, 0);
 

@@ -513,21 +513,6 @@ round_uint64_to_next_multiple_of(uint64_t number, uint64_t divisor)
   return number;
 }
 
-/** Return the lowest x in [INT64_MIN, INT64_MAX] such that x is at least
- * <b>number</b>, and x modulo <b>divisor</b> == 0. If no such x can be
- * expressed as an int64_t, return INT64_MAX */
-int64_t
-round_int64_to_next_multiple_of(int64_t number, int64_t divisor)
-{
-  tor_assert(divisor > 0);
-  if (INT64_MAX - divisor + 1 < number)
-    return INT64_MAX;
-  if (number >= 0)
-    number += divisor - 1;
-  number -= number % divisor;
-  return number;
-}
-
 /** Transform a random value <b>p</b> from the uniform distribution in
  * [0.0, 1.0[ into a Laplace distributed value with location parameter
  * <b>mu</b> and scale parameter <b>b</b>. Truncate the final result
