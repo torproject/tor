@@ -18,6 +18,8 @@
 #define COMPILER_RT_ABI
 #define di_int int64_t
 #include "torint.h"
+
+di_int __mulodi4(di_int a, di_int b, int* overflow);
 #endif
 
 /* Returns: a * b */
