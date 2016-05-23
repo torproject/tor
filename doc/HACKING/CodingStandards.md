@@ -3,7 +3,7 @@ Coding conventions for Tor
 
 tl;dr:
 
-   - Run configure with `--enable-gcc-warnings`
+   - Run configure with `--enable-fatal-warnings`
    - Run `make check-spaces` to catch whitespace errors
    - Document your functions
    - Write unit tests
@@ -21,7 +21,7 @@ preference)
 
 Did you remember...
 
-   - To build your code while configured with `--enable-gcc-warnings`?
+   - To build your code while configured with `--enable-fatal-warnings`?
    - To run `make check-spaces` on your code?
    - To run `make check-docs` to see whether all new options are on
      the manpage?
@@ -125,10 +125,10 @@ deviations from our C whitespace style.  Generally, we use:
      `puts (x)`.
    - Function declarations at the start of the line.
 
-We try hard to build without warnings everywhere.  In particular, if you're
-using gcc, you should invoke the configure script with the option
-`--enable-gcc-warnings`.  This will give a bunch of extra warning flags to
-the compiler, and help us find divergences from our preferred C style.
+We try hard to build without warnings everywhere.  In particular, if
+you're using gcc, you should invoke the configure script with the
+option `--enable-fatal-warnings`.  This will tell the compiler
+to make all warnings into errors.
 
 Functions to use; functions not to use
 --------------------------------------
