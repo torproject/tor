@@ -1727,7 +1727,7 @@ crypto_digest_algorithm_parse_name(const char *name)
 }
 
 /** Given an algorithm, return the digest length in bytes. */
-static inline size_t
+size_t
 crypto_digest_algorithm_get_length(digest_algorithm_t alg)
 {
   switch (alg) {

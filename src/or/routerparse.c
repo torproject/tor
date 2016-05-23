@@ -3531,10 +3531,8 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
       continue;
     }
 
-    expected_length =
-      (alg == DIGEST_SHA1) ? HEX_DIGEST_LEN : HEX_DIGEST256_LEN;
-    digest_length =
-      (alg == DIGEST_SHA1) ? DIGEST_LEN : DIGEST256_LEN;
+    digest_length = crypto_digest_algorithm_get_length(alg);
+    expected_length = digest_length * 2; /* hex encoding */
 
     if (strlen(hexdigest) != expected_length) {
       log_warn(LD_DIR, "Wrong length on consensus-digest in detached "
