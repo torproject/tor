@@ -3508,7 +3508,7 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
     digest_algorithm_t alg;
     const char *flavor;
     const char *hexdigest;
-    size_t expected_length;
+    size_t expected_length, digest_length;
 
     tok = _tok;
 
@@ -3533,6 +3533,8 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
 
     expected_length =
       (alg == DIGEST_SHA1) ? HEX_DIGEST_LEN : HEX_DIGEST256_LEN;
+    digest_length =
+      (alg == DIGEST_SHA1) ? DIGEST_LEN : DIGEST256_LEN;
 
     if (strlen(hexdigest) != expected_length) {
       log_warn(LD_DIR, "Wrong length on consensus-digest in detached "
@@ -3541,12 +3543,12 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
     }
     digests = detached_get_digests(sigs, flavor);
     tor_assert(digests);
-    if (!tor_mem_is_zero(digests->d[alg], DIGEST256_LEN)) {
+    if (!tor_mem_is_zero(digests->d[alg], digest_length)) {
       log_warn(LD_DIR, "Multiple digests for %s with %s on detached "
                "signatures document", flavor, algname);
       continue;
     }
-    if (base16_decode(digests->d[alg], DIGEST256_LEN,
+    if (base16_decode(digests->d[alg], digest_length,
                       hexdigest, strlen(hexdigest)) < 0) {
       log_warn(LD_DIR, "Bad encoding on consensus-digest in detached "
                "networkstatus signatures");
