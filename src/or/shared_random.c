@@ -599,6 +599,16 @@ should_keep_commit(const sr_commit_t *commit, const char *voter_key,
     goto ignore;
   }
 
+  /* Let's make sure, for extra safety, that this fingerprint is known to
+   * us. Even though this comes from a vote, doesn't hurt to be
+   * extracareful. */
+  if (trusteddirserver_get_by_v3_auth_digest(commit->rsa_identity) == NULL) {
+    log_warn(LD_DIR, "SR: Fingerprint %s is not from a recognized "
+                     "authority. Discarding commit.",
+             escaped(commit->rsa_identity));
+    goto ignore;
+  }
+
   /* Check if the authority that voted for <b>commit</b> has already posted
    * a commit before. */
   saved_commit = sr_state_get_commit(commit->rsa_identity);
@@ -1105,15 +1115,6 @@ sr_parse_commit(const smartlist_t *args)
   if (base16_decode(digest, DIGEST_LEN, rsa_identity_fpr,
                     HEX_DIGEST_LEN) < 0) {
     log_warn(LD_DIR, "SR: RSA fingerprint %s not decodable",
-             escaped(rsa_identity_fpr));
-    goto error;
-  }
-  /* Let's make sure, for extra safety, that this fingerprint is known to
-   * us. Even though this comes from a vote, doesn't hurt to be
-   * extracareful. */
-  if (trusteddirserver_get_by_v3_auth_digest(digest) == NULL) {
-    log_warn(LD_DIR, "SR: Fingerprint %s is not from a recognized "
-                     "authority. Discarding commit.",
              escaped(rsa_identity_fpr));
     goto error;
   }

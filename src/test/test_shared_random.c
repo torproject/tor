@@ -277,9 +277,6 @@ test_sr_commit(void *arg)
 
   (void) arg;
 
-  MOCK(trusteddirserver_get_by_v3_auth_digest,
-       trusteddirserver_get_by_v3_auth_digest_m);
-
   {  /* Setup a minimal dirauth environment for this test  */
     or_options_t *options = get_options_mutable();
 
@@ -366,7 +363,6 @@ test_sr_commit(void *arg)
  done:
   smartlist_free(args);
   sr_commit_free(our_commit);
-  UNMOCK(trusteddirserver_get_by_v3_auth_digest);
 }
 
 /* Test the encoding and decoding function for commit and reveal values. */
@@ -1121,6 +1117,9 @@ test_keep_commit(void *arg)
 
   (void) arg;
 
+  MOCK(trusteddirserver_get_by_v3_auth_digest,
+       trusteddirserver_get_by_v3_auth_digest_m);
+
   {  /* Setup a minimal dirauth environment for this test  */
     crypto_pk_t *k = crypto_pk_new();
     /* Have a key that is not the one from our commit. */
@@ -1199,6 +1198,7 @@ test_keep_commit(void *arg)
  done:
   sr_commit_free(commit);
   sr_commit_free(dup_commit);
+  UNMOCK(trusteddirserver_get_by_v3_auth_digest);
 }
 
 static void
