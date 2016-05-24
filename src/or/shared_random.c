@@ -438,7 +438,7 @@ generate_srv(const char *hashed_reveals, uint8_t reveal_num,
     /* Debugging. */
     char srv_hash_encoded[SR_SRV_VALUE_BASE64_LEN + 1];
     sr_srv_encode(srv_hash_encoded, sizeof(srv_hash_encoded), srv);
-    log_debug(LD_DIR, "SR: Generated SRV: %s", srv_hash_encoded);
+    log_info(LD_DIR, "SR: Generated SRV: %s", srv_hash_encoded);
   }
   return srv;
 }
@@ -617,7 +617,15 @@ should_keep_commit(const sr_commit_t *commit, const char *voter_key,
   case SR_PHASE_COMMIT:
     /* Already having a commit for an authority so ignore this one. */
     if (saved_commit) {
-      log_debug(LD_DIR, "SR: Ignoring known commit during COMMIT phase.");
+      /*  Receiving known commits should happen naturally since commit phase
+          lasts multiple rounds. However if the commitment value changes
+          during commit phase, it might be a bug so log more loudly. */
+      if (!commitments_are_the_same(commit, saved_commit)) {
+        log_info(LD_DIR, "SR: Received altered commit from %s in commit phase.",
+                 sr_commit_get_rsa_fpr(commit));
+      } else {
+        log_debug(LD_DIR, "SR: Ignoring known commit during commit phase.");
+      }
       goto ignore;
     }
 

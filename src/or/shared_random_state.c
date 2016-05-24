@@ -720,7 +720,7 @@ disk_state_load_from_disk_impl(const char *fname)
   state_set(parsed_state);
   disk_state_set(disk_state);
   tor_free(content);
-  log_notice(LD_DIR, "SR: State loaded successfully from file %s", fname);
+  log_info(LD_DIR, "SR: State loaded successfully from file %s", fname);
   return 0;
 
  error:
@@ -1121,8 +1121,8 @@ sr_state_update(time_t valid_after)
   { /* Debugging. */
     char tbuf[ISO_TIME_LEN + 1];
     format_iso_time(tbuf, valid_after);
-    log_info(LD_DIR, "SR: State prepared for new voting period (%s). "
-             "Current phase is %s (%d commit & %d reveal rounds).",
+    log_info(LD_DIR, "SR: State prepared for upcoming voting period (%s). "
+             "Upcoming phase is %s (counters: %d commit & %d reveal rounds).",
              tbuf, get_phase_str(sr_state->phase),
              sr_state->n_commit_rounds, sr_state->n_reveal_rounds);
   }
