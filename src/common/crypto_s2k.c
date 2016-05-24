@@ -19,7 +19,7 @@
 
 #include <openssl/evp.h>
 
-#ifdef HAVE_LIBSCRYPT_H
+#if defined(HAVE_LIBSCRYPT_H) && defined(HAVE_LIBSCRYPT_SCRYPT)
 #define HAVE_SCRYPT
 #include <libscrypt.h>
 #endif
