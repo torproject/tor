@@ -585,8 +585,10 @@ MOCK_IMPL(int,
 {
   tor_assert(env);
 
-  if (env->key)
+  if (env->key) {
     RSA_free(env->key);
+    env->key = NULL;
+  }
 
   {
     BIGNUM *e = BN_new();

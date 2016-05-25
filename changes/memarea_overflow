@@ -1,0 +1,7 @@
+  o Minor bugfixes (pointer arithmetic):
+    - Fix a bug in memarea_alloc() that could have resulted in remote heap
+      write access, if Tor had ever passed an unchecked size to
+      memarea_alloc().  Fortunately, all the sizes we pass to memarea_alloc()
+      are pre-checked to be less than 128 kilobytes. Fixes bug 19150; bugfix
+      on 0.2.1.1-alpha. Bug found by Guido Vranken.
+
