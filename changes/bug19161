@@ -1,0 +1,3 @@
+  o Minor bugfixes (compilation):
+    - When libscrypt.h is found, but no libscrypt library can be linked,
+      treat libscrypt as absent. Fixes bug 19161; bugfix on 0.2.6.1-alpha.
