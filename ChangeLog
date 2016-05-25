@@ -1,4 +1,4 @@
-Changes in version 0.2.8.3-alpha - 2016-05-??
+Changes in version 0.2.8.3-alpha - 2016-05-2?
   Tor 0.2.8.3-alpha resolves several bugs, most of them introduced over
   the course of the 0.2.8 development cycle. It improves the behavior of
   directory clients, fixes several crash bugs, fixes a gap in compiler
@@ -51,6 +51,15 @@ Changes in version 0.2.8.3-alpha - 2016-05-??
       IPv6 bridges. Fixes bug 18921; bugfix on 0.2.8.1-alpha. Patch
       by "teor".
 
+  o Major bugfixes (key management):
+    - If OpenSSL fails to generate an RSA key, do not retain a dangling
+      pointer to the previous (uninitialized) key value. The impact here
+      should be limited to a difficult-to-trigger crash, if OpenSSL is
+      running an engine that makes key generation failures possible, or
+      if OpenSSL runs out of memory. Fixes bug 19152; bugfix on
+      0.2.1.10-alpha. Found by Yuan Jochen Kang, Suman Jana, and
+      Baishakhi Ray.
+
   o Major bugfixes (testing):
     - Fix a bug that would block 'make test-network-all' on systems where
       IPv6 packets were lost. Fixes bug 19008; bugfix on tor-0.2.7.3-rc.
@@ -89,6 +98,9 @@ Changes in version 0.2.8.3-alpha - 2016-05-??
     - Resolve warnings when building on systems that are concerned with
       signed char. Fixes bug 18728; bugfix on 0.2.7.2-alpha
       and 0.2.6.1-alpha.
+    - When libscrypt.h is found, but no libscrypt library can be linked,
+      treat libscrypt as absent. Fixes bug 19161; bugfix
+      on 0.2.6.1-alpha.
 
   o Minor bugfixes (client):
     - Turn all TestingClientBootstrap* into non-testing torrc options.
@@ -133,6 +145,14 @@ Changes in version 0.2.8.3-alpha - 2016-05-??
     - Avoid reporting a spurious error when we decide that we don't need
       to terminate a pluggable transport because it has already exited.
       Fixes bug 18686; bugfix on 0.2.5.5-alpha.
+
+  o Minor bugfixes (pointer arithmetic):
+    - Fix a bug in memarea_alloc() that could have resulted in remote
+      heap write access, if Tor had ever passed an unchecked size to
+      memarea_alloc(). Fortunately, all the sizes we pass to
+      memarea_alloc() are pre-checked to be less than 128 kilobytes.
+      Fixes bug 19150; bugfix on 0.2.1.1-alpha. Bug found by
+      Guido Vranken.
 
   o Minor bugfixes (relays):
     - Consider more config options when relays decide whether to
