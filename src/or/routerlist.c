@@ -2938,6 +2938,19 @@ signed_descriptor_free(signed_descriptor_t *sd)
   tor_free(sd);
 }
 
+/** Copy src into dest, and steal all references inside src so that when
+ * we free src, we don't mess up dest. */
+static void
+signed_descriptor_move(signed_descriptor_t *dest,
+                       signed_descriptor_t *src)
+{
+  tor_assert(dest != src);
+  memcpy(dest, src, sizeof(signed_descriptor_t));
+  src->signed_descriptor_body = NULL;
+  src->signing_key_cert = NULL;
+  dest->routerlist_index = -1;
+}
+
 /** Extract a signed_descriptor_t from a general routerinfo, and free the
  * routerinfo.
  */
@@ -2947,10 +2960,7 @@ signed_descriptor_from_routerinfo(routerinfo_t *ri)
   signed_descriptor_t *sd;
   tor_assert(ri->purpose == ROUTER_PURPOSE_GENERAL);
   sd = tor_malloc_zero(sizeof(signed_descriptor_t));
-  memcpy(sd, &(ri->cache_info), sizeof(signed_descriptor_t));
-  sd->routerlist_index = -1;
-  ri->cache_info.signed_descriptor_body = NULL;
-  ri->cache_info.signing_key_cert = NULL;
+  signed_descriptor_move(sd, &ri->cache_info);
   routerinfo_free(ri);
   return sd;
 }
@@ -3436,9 +3446,7 @@ routerlist_reparse_old(routerlist_t *rl, signed_descriptor_t *sd)
                          0, 1, NULL, NULL);
   if (!ri)
     return NULL;
-  memcpy(&ri->cache_info, sd, sizeof(signed_descriptor_t));
-  sd->signed_descriptor_body = NULL; /* Steal reference. */
-  ri->cache_info.routerlist_index = -1;
+  signed_descriptor_move(&ri->cache_info, sd);
 
   routerlist_remove_old(rl, sd, -1);
 
