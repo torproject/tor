@@ -259,11 +259,11 @@ ed25519_checksig_batch(int *okay_out,
     int *oks;
     int all_ok;
 
-    ms = tor_malloc(sizeof(uint8_t*)*n_checkable);
-    lens = tor_malloc(sizeof(size_t)*n_checkable);
-    pks = tor_malloc(sizeof(uint8_t*)*n_checkable);
-    sigs = tor_malloc(sizeof(uint8_t*)*n_checkable);
-    oks = okay_out ? okay_out : tor_malloc(sizeof(int)*n_checkable);
+    ms = tor_calloc(n_checkable, sizeof(uint8_t*));
+    lens = tor_calloc(n_checkable, sizeof(size_t));
+    pks = tor_calloc(n_checkable, sizeof(uint8_t*));
+    sigs = tor_calloc(n_checkable, sizeof(uint8_t*));
+    oks = okay_out ? okay_out : tor_calloc(n_checkable, sizeof(int));
 
     for (i = 0; i < n_checkable; ++i) {
       ms[i] = checkable[i].msg;
