@@ -2545,7 +2545,7 @@ get_next_valid_after_time(time_t now)
   return next_valid_after_time;
 }
 
-static voting_schedule_t voting_schedule = {0};
+static voting_schedule_t voting_schedule;
 
 /** Set voting_schedule to hold the timing for the next vote we should be
  * doing. */
