@@ -3019,6 +3019,30 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
   return any_failed ? NULL : pending_vote;
 }
 
+/* Write the votes in <b>pending_vote_list</b> to disk. */
+static void
+write_v3_votes_to_disk(const smartlist_t *pending_vote_list)
+{
+  smartlist_t *votestrings = smartlist_new();
+  char *votefile = NULL;
+
+  SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, v,
+    {
+      sized_chunk_t *c = tor_malloc(sizeof(sized_chunk_t));
+      c->bytes = v->vote_body->dir;
+      c->len = v->vote_body->dir_len;
+      smartlist_add(votestrings, c); /* collect strings to write to disk */
+    });
+
+  votefile = get_datadir_fname("v3-status-votes");
+  write_chunks_to_file(votefile, votestrings, 0, 0);
+  log_debug(LD_DIR, "Wrote votes to disk (%s)!", votefile);
+
+  tor_free(votefile);
+  SMARTLIST_FOREACH(votestrings, sized_chunk_t *, c, tor_free(c));
+  smartlist_free(votestrings);
+}
+
 /** Try to compute a v3 networkstatus consensus from the currently pending
  * votes.  Return 0 on success, -1 on failure.  Store the consensus in
  * pending_consensus: it won't be ready to be published until we have
@@ -3028,8 +3052,8 @@ dirvote_compute_consensuses(void)
 {
   /* Have we got enough votes to try? */
   int n_votes, n_voters, n_vote_running = 0;
-  smartlist_t *votes = NULL, *votestrings = NULL;
-  char *consensus_body = NULL, *signatures = NULL, *votefile;
+  smartlist_t *votes = NULL;
+  char *consensus_body = NULL, *signatures = NULL;
   networkstatus_t *consensus = NULL;
   authority_cert_t *my_cert;
   pending_consensus_t pending[N_CONSENSUS_FLAVORS];
@@ -3040,26 +3064,17 @@ dirvote_compute_consensuses(void)
   if (!pending_vote_list)
     pending_vote_list = smartlist_new();
 
-  /* write the votes out to disk early, so we have them even if we abort
-   * the consensus process below. */
+  /* Write votes to disk */
+  write_v3_votes_to_disk(pending_vote_list);
+
+  /* Setup votes smartlist */
   votes = smartlist_new();
-  votestrings = smartlist_new();
   SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, v,
     {
-      sized_chunk_t *c = tor_malloc(sizeof(sized_chunk_t));
-      c->bytes = v->vote_body->dir;
-      c->len = v->vote_body->dir_len;
-      smartlist_add(votestrings, c); /* collect strings to write to disk */
-
       smartlist_add(votes, v->vote); /* collect votes to compute consensus */
     });
 
-  votefile = get_datadir_fname("v3-status-votes");
-  write_chunks_to_file(votefile, votestrings, 0, 0);
-  tor_free(votefile);
-  SMARTLIST_FOREACH(votestrings, sized_chunk_t *, c, tor_free(c));
-  smartlist_free(votestrings);
-
+  /* See if consensus managed to achieve majority */
   n_voters = get_n_authorities(V3_DIRINFO);
   n_votes = smartlist_len(pending_vote_list);
   if (n_votes <= n_voters/2) {
