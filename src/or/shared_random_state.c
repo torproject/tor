@@ -60,7 +60,7 @@ disk_state_validate_cb(void *old_state, void *state, void *default_state,
 
 /* Array of variables that are saved to disk as a persistent state. */
 static config_var_t state_vars[] = {
-  V(Version,                    INT, "0"),
+  V(Version,                    UINT, "0"),
   V(TorVersion,                 STRING, NULL),
   V(ValidAfter,                 ISOTIME, NULL),
   V(ValidUntil,                 ISOTIME, NULL),
@@ -590,7 +590,7 @@ disk_state_put_srv_line(const sr_srv_t *srv, config_line_t *line)
     return;
   }
   sr_srv_encode(encoded, sizeof(encoded), srv);
-  tor_asprintf(&line->value, "%d %s", srv->num_reveals, encoded);
+  tor_asprintf(&line->value, "%" PRIu64 " %s", srv->num_reveals, encoded);
 }
 
 /* Reset disk state that is free allocated memory and zeroed the object. */

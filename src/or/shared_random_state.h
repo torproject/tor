@@ -36,7 +36,7 @@ typedef struct sr_state_t {
   /* Filename of the state file on disk. */
   char *fname;
   /* Version of the protocol. */
-  uint8_t version;
+  uint32_t version;
   /* The valid-after of the voting period we have prepared the state for. */
   time_t valid_after;
   /* Until when is this state valid? */
@@ -76,7 +76,7 @@ typedef struct sr_state_t {
 typedef struct sr_disk_state_t {
   uint32_t magic_;
   /* Version of the protocol. */
-  int Version;
+  uint32_t Version;
   /* Version of our running tor. */
   char *TorVersion;
   /* Creation time of this state */

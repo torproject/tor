@@ -788,9 +788,6 @@ test_sr_compute_srv(void *arg)
   MOCK(trusteddirserver_get_by_v3_auth_digest,
        trusteddirserver_get_by_v3_auth_digest_m);
 
-  MOCK(trusteddirserver_get_by_v3_auth_digest,
-       trusteddirserver_get_by_v3_auth_digest_m);
-
   init_authority_state();
 
   /* Setup the commits for this unittest */

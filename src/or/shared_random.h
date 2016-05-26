@@ -30,9 +30,9 @@
  * timestamp and the hashed random number. This adds up to 40 bytes. */
 #define SR_REVEAL_LEN (sizeof(uint64_t) + DIGEST256_LEN)
 /* Size of SRV message length. The construction is has follow:
- *  "shared-random" | INT_8(reveal_num) | INT_8(version) | PREV_SRV */
+ *  "shared-random" | INT_8(reveal_num) | INT_4(version) | PREV_SRV */
 #define SR_SRV_MSG_LEN \
-  (SR_SRV_TOKEN_LEN + 1 + 1 + DIGEST256_LEN)
+  (SR_SRV_TOKEN_LEN + sizeof(uint64_t) + sizeof(uint32_t) + DIGEST256_LEN)
 
 /* Length of base64 encoded commit NOT including the NULL terminated byte.
  * Formula is taken from base64_encode_size. */
@@ -62,7 +62,7 @@ typedef enum {
 /* A shared random value (SRV). */
 typedef struct sr_srv_t {
   /* The number of reveal values used to derive this SRV. */
-  int num_reveals;
+  uint64_t num_reveals;
   /* The actual value. This is the stored result of SHA3-256. */
   uint8_t value[DIGEST256_LEN];
 } sr_srv_t;
