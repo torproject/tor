@@ -1,4 +1,4 @@
-Changes in version 0.2.8.3-alpha - 2016-05-2?
+Changes in version 0.2.8.3-alpha - 2016-05-26
   Tor 0.2.8.3-alpha resolves several bugs, most of them introduced over
   the course of the 0.2.8 development cycle. It improves the behavior of
   directory clients, fixes several crash bugs, fixes a gap in compiler
@@ -63,6 +63,8 @@ Changes in version 0.2.8.3-alpha - 2016-05-2?
   o Major bugfixes (testing):
     - Fix a bug that would block 'make test-network-all' on systems where
       IPv6 packets were lost. Fixes bug 19008; bugfix on tor-0.2.7.3-rc.
+    - Avoid "WSANOTINITIALISED" warnings in the unit tests. Fixes bug 18668;
+      bugfix on 0.2.8.1-alpha.
 
   o Minor features (clients):
     - Make clients, onion services, and bridge relays always use an
