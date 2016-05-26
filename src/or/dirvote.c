@@ -1341,8 +1341,16 @@ networkstatus_compute_consensus(smartlist_t *votes,
   }
 
   if (consensus_method >= MIN_METHOD_FOR_SHARED_RANDOM) {
+    int num_dirauth = get_n_authorities(V3_DIRINFO);
+    /* Default value of this is 2/3 of the total number of authorities. For
+     * instance, if we have 9 dirauth, the default value is 6. The following
+     * calculation will round it down. */
+    int32_t num_srv_agreements =
+      dirvote_get_intermediate_param_value(param_list,
+                                           "AuthDirNumSRVAgreements",
+                                           (num_dirauth * 2) / 3);
     /* Add the shared random value. */
-    char *srv_lines = sr_get_string_for_consensus(votes);
+    char *srv_lines = sr_get_string_for_consensus(votes, num_srv_agreements);
     if (srv_lines != NULL) {
       smartlist_add(chunks, srv_lines);
     }

@@ -830,14 +830,6 @@ get_test_vote_with_curr_srv(const char *srv)
   return vote;
 }
 
-/* Mock function to return the value located in the options instead of the
- * consensus so we can modify it at will. */
-static networkstatus_t *
-mock_networkstatus_get_latest_consensus(void)
-{
-  return mock_consensus;
-}
-
 /* Test the function that picks the right SRV given a bunch of votes. Make sure
  * that the function returns an SRV iff the majority/agreement requirements are
  * met. */
@@ -894,31 +886,13 @@ test_sr_get_majority_srv_from_votes(void *arg)
 
   /* Now we achieve majority for SRV_1, but not the AuthDirNumSRVAgreements
      requirement. So still not picking an SRV. */
+  set_num_srv_agreements(8);
   chosen_srv = get_majority_srv_from_votes(votes, 1);
   tt_assert(!chosen_srv);
 
   /* We will now lower the AuthDirNumSRVAgreements requirement by tweaking the
-   * consensus parameter and we will try again.  This time it should work. */
-  {
-    char *my_net_params;
-    /* Set a dummy consensus parameter in every vote */
-    SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, vote) {
-      vote->net_params = smartlist_new();
-      smartlist_split_string(vote->net_params,
-                             "AuthDirNumSRVAgreements=7", NULL, 0, 0);
-    } SMARTLIST_FOREACH_END(vote);
-
-    /* Pretend you are making a consensus out of the votes */
-    mock_consensus = tor_malloc_zero(sizeof(networkstatus_t));
-    mock_consensus->net_params = smartlist_new();
-    my_net_params = dirvote_compute_params(votes, 66, smartlist_len(votes));
-    smartlist_split_string(mock_consensus->net_params, my_net_params, " ",
-                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  }
-
-  /* Use our fake consensus for finding consensus parameters. */
-  MOCK(networkstatus_get_latest_consensus,
-       mock_networkstatus_get_latest_consensus);
+   * consensus parameter and we will try again. This time it should work. */
+  set_num_srv_agreements(7);
   chosen_srv = get_majority_srv_from_votes(votes, 1);
   tt_assert(chosen_srv);
   tt_int_op(chosen_srv->num_reveals, ==, 42);
@@ -928,8 +902,6 @@ test_sr_get_majority_srv_from_votes(void *arg)
   SMARTLIST_FOREACH(votes, networkstatus_t *, vote,
                     networkstatus_vote_free(vote));
   smartlist_free(votes);
-  networkstatus_vote_free(mock_consensus);
-  UNMOCK(networkstatus_get_latest_consensus);
 }
 
 static void

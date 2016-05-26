@@ -105,6 +105,12 @@ static const char current_srv_str[] = "shared-rand-current-value";
 static const char commit_ns_str[] = "shared-rand-commit";
 static const char sr_flag_ns_str[] = "shared-rand-participate";
 
+/* The value of the consensus param AuthDirNumSRVAgreements found in the
+ * vote. This is set once the consensus creation subsystem requests the
+ * SRV(s) that should be put in the consensus. We use this value to decide
+ * if we keep or not an SRV. */
+static int32_t num_srv_agreements_from_vote;
+
 /* Return a heap allocated copy of the SRV <b>orig</b>. */
 STATIC sr_srv_t *
 srv_dup(const sr_srv_t *orig)
@@ -737,18 +743,6 @@ save_commit_to_state(sr_commit_t *commit)
   }
 }
 
-/* Return the number of required participants of the SR protocol. This is based
- * on a consensus params. */
-static int
-get_n_voters_for_srv_agreement(void)
-{
-  int num_dirauths = get_n_authorities(V3_DIRINFO);
-  /* If the params is not found, default value should always be the maximum
-   * number of trusted authorities. Let's not take any chances. */
-  return networkstatus_get_param(NULL, "AuthDirNumSRVAgreements",
-                                 num_dirauths, 1, num_dirauths);
-}
-
 /* Return 1 if we should we keep an SRV voted by <b>n_agreements</b> auths.
  * Return 0 if we should ignore it. */
 static int
@@ -769,11 +763,9 @@ should_keep_srv(int n_agreements)
    * to keep it. */
   if (sr_state_srv_is_fresh()) {
     /* Check if we have super majority for this new SRV value. */
-    int num_required_agreements = get_n_voters_for_srv_agreement();
-
-    if (n_agreements < num_required_agreements) {
+    if (n_agreements < num_srv_agreements_from_vote) {
       log_notice(LD_DIR, "SR: New SRV didn't reach agreement [%d/%d]!",
-                 n_agreements, num_required_agreements);
+                 n_agreements, num_srv_agreements_from_vote);
       return 0;
     }
   }
@@ -1253,9 +1245,14 @@ sr_get_string_for_vote(void)
  *
  * This is called when a consensus (any flavor) is bring created thus it
  * should NEVER change the state nor the state should be changed in between
- * consensus creation. */
+ * consensus creation.
+ *
+ * <b>num_srv_agreements</b> is taken from the votes thus the voted value
+ * that should be used.
+ * */
 char *
-sr_get_string_for_consensus(const smartlist_t *votes)
+sr_get_string_for_consensus(const smartlist_t *votes,
+                            int32_t num_srv_agreements)
 {
   char *srv_str;
   const or_options_t *options = get_options();
@@ -1268,6 +1265,9 @@ sr_get_string_for_consensus(const smartlist_t *votes)
              options->AuthDirSharedRandomness);
     goto end;
   }
+
+  /* Set the global value of AuthDirNumSRVAgreements found in the votes. */
+  num_srv_agreements_from_vote = num_srv_agreements;
 
   /* Check the votes and figure out if SRVs should be included in the final
    * consensus. */
@@ -1340,3 +1340,15 @@ sr_save_and_cleanup(void)
   sr_state_save();
   sr_cleanup();
 }
+
+#ifdef TOR_UNIT_TESTS
+
+/* Set the global value of number of SRV agreements so the test can play
+ * along by calling specific functions that don't parse the votes prior for
+ * the AuthDirNumSRVAgreements value. */
+void set_num_srv_agreements(int32_t value)
+{
+  num_srv_agreements_from_vote = value;
+}
+
+#endif /* TOR_UNIT_TESTS */

@@ -112,7 +112,8 @@ void sr_handle_received_commits(smartlist_t *commits,
 sr_commit_t *sr_parse_commit(const smartlist_t *args);
 sr_srv_t *sr_parse_srv(const smartlist_t *args);
 char *sr_get_string_for_vote(void);
-char *sr_get_string_for_consensus(const smartlist_t *votes);
+char *sr_get_string_for_consensus(const smartlist_t *votes,
+                                  int32_t num_srv_agreements);
 void sr_commit_free(sr_commit_t *commit);
 void sr_srv_encode(char *dst, size_t dst_len, const sr_srv_t *srv);
 
@@ -155,5 +156,11 @@ STATIC int should_keep_commit(const sr_commit_t *commit,
 STATIC void save_commit_during_reveal_phase(const sr_commit_t *commit);
 
 #endif /* SHARED_RANDOM_PRIVATE */
+
+#ifdef TOR_UNIT_TESTS
+
+void set_num_srv_agreements(int32_t value);
+
+#endif /* TOR_UNIT_TESTS */
 
 #endif /* TOR_SHARED_RANDOM_H */
