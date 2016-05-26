@@ -2130,7 +2130,8 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
   ei->cache_info.is_extrainfo = 1;
   strlcpy(ei->nickname, get_options()->Nickname, sizeof(ei->nickname));
   ei->cache_info.published_on = ri->cache_info.published_on;
-  ei->cache_info.signing_key_cert = tor_cert_dup(get_master_signing_key_cert());
+  ei->cache_info.signing_key_cert =
+    tor_cert_dup(get_master_signing_key_cert());
 
   memcpy(ei->cache_info.identity_digest, ri->cache_info.identity_digest,
          DIGEST_LEN);
@@ -2198,8 +2199,9 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
                          ri->cache_info.signed_descriptor_digest);
 
   if (ei) {
-    tor_assert(! routerinfo_incompatible_with_extrainfo(ri->identity_pkey, ei,
-                                                        &ri->cache_info, NULL));
+    tor_assert(!
+          routerinfo_incompatible_with_extrainfo(ri->identity_pkey, ei,
+                                                 &ri->cache_info, NULL));
   }
 
   *r = ri;
