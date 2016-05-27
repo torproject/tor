@@ -2875,23 +2875,21 @@ static int
 handle_get_frontpage(dir_connection_t *conn, const get_handler_args_t *args)
 {
   (void) args; /* unused */
-  {
-    const char *frontpage = get_dirportfrontpage();
+  const char *frontpage = get_dirportfrontpage();
 
-    if (frontpage) {
-      size_t dlen;
-      dlen = strlen(frontpage);
-      /* Let's return a disclaimer page (users shouldn't use V1 anymore,
-         and caches don't fetch '/', so this is safe). */
+  if (frontpage) {
+    size_t dlen;
+    dlen = strlen(frontpage);
+    /* Let's return a disclaimer page (users shouldn't use V1 anymore,
+       and caches don't fetch '/', so this is safe). */
 
-      /* [We don't check for write_bucket_low here, since we want to serve
-       *  this page no matter what.] */
-      write_http_response_header_impl(conn, dlen, "text/html", "identity",
-                                      NULL, DIRPORTFRONTPAGE_CACHE_LIFETIME);
-      connection_write_to_buf(frontpage, dlen, TO_CONN(conn));
-    } else {
-      write_http_status_line(conn, 404, "Not found");
-    }
+    /* [We don't check for write_bucket_low here, since we want to serve
+     *  this page no matter what.] */
+    write_http_response_header_impl(conn, dlen, "text/html", "identity",
+                                    NULL, DIRPORTFRONTPAGE_CACHE_LIFETIME);
+    connection_write_to_buf(frontpage, dlen, TO_CONN(conn));
+  } else {
+    write_http_status_line(conn, 404, "Not found");
   }
   return 0;
 }
