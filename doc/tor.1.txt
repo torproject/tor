@@ -2103,8 +2103,7 @@ on the public Tor network.
     server. Instead of caching the directory, it generates its own list of
     good servers, signs it, and sends that to the clients. Unless the clients
     already have you listed as a trusted directory, you probably do not want
-    to set this option. Please coordinate with the other admins at
-    tor-ops@torproject.org if you think you should be a directory.
+    to set this option.
 
 [[V3AuthoritativeDirectory]] **V3AuthoritativeDirectory** **0**|**1**::
     When this option is set in addition to **AuthoritativeDirectory**, Tor
