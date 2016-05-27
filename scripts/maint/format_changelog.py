@@ -398,16 +398,24 @@ class ChangeLog(object):
         self.dumpEndOfSections()
         self.dumpEndOfChangelog()
 
+# Let's turn bugs to html.
+BUG_PAT = re.compile('(bug|ticket|feature)\s+(\d{4,5})', re.I)
+def bug_html(m):
+    return "%s <a href='https://trac.torproject.org/projects/tor/ticket/%s'>%s</a>" % (m.group(1), m.group(2), m.group(2))
+
 class HTMLChangeLog(ChangeLog):
     def __init__(self, *args, **kwargs):
         ChangeLog.__init__(self, *args, **kwargs)
 
     def htmlText(self, graf):
+        output = []
         for line in graf:
             line = line.rstrip().replace("&","&amp;")
             line = line.rstrip().replace("<","&lt;").replace(">","&gt;")
-            sys.stdout.write(line.strip())
-            sys.stdout.write(" ")
+            output.append(line.strip())
+        output = " ".join(output)
+        output = BUG_PAT.sub(bug_html, output)
+        sys.stdout.write(output)
 
     def htmlPar(self, graf):
         sys.stdout.write("<p>")
