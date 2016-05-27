@@ -106,6 +106,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     SMARTLIST_FOREACH(v3_ns->package_lines, const char *, p,
                       if (validate_recommended_package_line(p))
                         smartlist_add_asprintf(tmp, "package %s\n", p));
+    smartlist_sort_strings(tmp);
     packages = smartlist_join_strings(tmp, "", 0, NULL);
     SMARTLIST_FOREACH(tmp, char *, cp, tor_free(cp));
     smartlist_free(tmp);
