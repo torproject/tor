@@ -80,7 +80,6 @@ static void dir_routerdesc_download_failed(smartlist_t *failed,
                                            int was_descriptor_digests);
 static void dir_microdesc_download_failed(smartlist_t *failed,
                                           int status_code);
-static void note_client_request(int purpose, int compressed, size_t bytes);
 static int client_likes_consensus(networkstatus_t *v, const char *want_url);
 
 static void directory_initiate_command_rend(
@@ -1839,7 +1838,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   char *body;
   char *headers;
   char *reason = NULL;
-  size_t body_len = 0, orig_len = 0;
+  size_t body_len = 0;
   int status_code;
   time_t date_header = 0;
   long apparent_skew;
@@ -1849,7 +1848,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   int allow_partial = (conn->base_.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
                        conn->base_.purpose == DIR_PURPOSE_FETCH_EXTRAINFO ||
                        conn->base_.purpose == DIR_PURPOSE_FETCH_MICRODESC);
-  int was_compressed = 0;
   time_t now = time(NULL);
   int src_code;
 
@@ -1868,7 +1866,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       return -1;
     /* case 1, fall through */
   }
-  orig_len = body_len;
 
   if (parse_http_response(headers, &status_code, &date_header,
                           &compression, &reason) < 0) {
@@ -1986,7 +1983,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       tor_free(body);
       body = new_body;
       body_len = new_len;
-      was_compressed = 1;
     }
   }
 
@@ -2452,7 +2448,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         break;
     }
   }
-  note_client_request(conn->base_.purpose, was_compressed, orig_len);
   tor_free(body); tor_free(headers); tor_free(reason);
   return 0;
 }
@@ -2653,129 +2648,6 @@ write_http_response_header(dir_connection_t *conn, ssize_t length,
                              cache_lifetime);
 }
 
-#if defined(INSTRUMENT_DOWNLOADS) || defined(RUNNING_DOXYGEN)
-/* DOCDOC */
-typedef struct request_t {
-  uint64_t bytes; /**< How many bytes have we transferred? */
-  uint64_t count; /**< How many requests have we made? */
-} request_t;
-
-/** Map used to keep track of how much data we've up/downloaded in what kind
- * of request.  Maps from request type to pointer to request_t. */
-static strmap_t *request_map = NULL;
-
-/** Record that a client request of <b>purpose</b> was made, and that
- * <b>bytes</b> bytes of possibly <b>compressed</b> data were sent/received.
- * Used to keep track of how much we've up/downloaded in what kind of
- * request. */
-static void
-note_client_request(int purpose, int compressed, size_t bytes)
-{
-  char *key;
-  const char *kind = NULL;
-  switch (purpose) {
-    case DIR_PURPOSE_FETCH_CONSENSUS:     kind = "dl/consensus"; break;
-    case DIR_PURPOSE_FETCH_CERTIFICATE:   kind = "dl/cert"; break;
-    case DIR_PURPOSE_FETCH_STATUS_VOTE:   kind = "dl/vote"; break;
-    case DIR_PURPOSE_FETCH_DETACHED_SIGNATURES: kind = "dl/detached_sig";
-         break;
-    case DIR_PURPOSE_FETCH_SERVERDESC:    kind = "dl/server"; break;
-    case DIR_PURPOSE_FETCH_EXTRAINFO:     kind = "dl/extra"; break;
-    case DIR_PURPOSE_UPLOAD_DIR:          kind = "dl/ul-dir"; break;
-    case DIR_PURPOSE_UPLOAD_VOTE:         kind = "dl/ul-vote"; break;
-    case DIR_PURPOSE_UPLOAD_SIGNATURES:   kind = "dl/ul-sig"; break;
-    case DIR_PURPOSE_FETCH_RENDDESC_V2:   kind = "dl/rend2"; break;
-    case DIR_PURPOSE_UPLOAD_RENDDESC_V2:  kind = "dl/ul-rend2"; break;
-  }
-  if (kind) {
-    tor_asprintf(&key, "%s%s", kind, compressed?".z":"");
-  } else {
-    tor_asprintf(&key, "unknown purpose (%d)%s",
-                 purpose, compressed?".z":"");
-  }
-  note_request(key, bytes);
-  tor_free(key);
-}
-
-/** Helper: initialize the request map to instrument downloads. */
-static void
-ensure_request_map_initialized(void)
-{
-  if (!request_map)
-    request_map = strmap_new();
-}
-
-/** Called when we just transmitted or received <b>bytes</b> worth of data
- * because of a request of type <b>key</b> (an arbitrary identifier): adds
- * <b>bytes</b> to the total associated with key. */
-void
-note_request(const char *key, size_t bytes)
-{
-  request_t *r;
-  ensure_request_map_initialized();
-
-  r = strmap_get(request_map, key);
-  if (!r) {
-    r = tor_malloc_zero(sizeof(request_t));
-    strmap_set(request_map, key, r);
-  }
-  r->bytes += bytes;
-  r->count++;
-}
-
-/** Return a newly allocated string holding a summary of bytes used per
- * request type. */
-char *
-directory_dump_request_log(void)
-{
-  smartlist_t *lines;
-  char *result;
-  strmap_iter_t *iter;
-
-  ensure_request_map_initialized();
-
-  lines = smartlist_new();
-
-  for (iter = strmap_iter_init(request_map);
-       !strmap_iter_done(iter);
-       iter = strmap_iter_next(request_map, iter)) {
-    const char *key;
-    void *val;
-    request_t *r;
-    strmap_iter_get(iter, &key, &val);
-    r = val;
-    smartlist_add_asprintf(lines, "%s  "U64_FORMAT"  "U64_FORMAT"\n",
-                 key, U64_PRINTF_ARG(r->bytes), U64_PRINTF_ARG(r->count));
-  }
-  smartlist_sort_strings(lines);
-  result = smartlist_join_strings(lines, "", 0, NULL);
-  SMARTLIST_FOREACH(lines, char *, cp, tor_free(cp));
-  smartlist_free(lines);
-  return result;
-}
-#else
-static void
-note_client_request(int purpose, int compressed, size_t bytes)
-{
-  (void)purpose;
-  (void)compressed;
-  (void)bytes;
-}
-
-void
-note_request(const char *key, size_t bytes)
-{
-  (void)key;
-  (void)bytes;
-}
-
-char *
-directory_dump_request_log(void)
-{
-  return tor_strdup("Not supported.");
-}
-#endif
-
 /** Decide whether a client would accept the consensus we have.
  *
  * Clients can say they only want a consensus if it's signed by more
@@ -2890,8 +2762,6 @@ static int handle_get_keys(dir_connection_t *conn,
                                 const get_handler_args_t *args);
 static int handle_get_rendezvous2(dir_connection_t *conn,
                                 const get_handler_args_t *args);
-static int handle_get_bytes(dir_connection_t *conn,
-                                const get_handler_args_t *args);
 static int handle_get_robots(dir_connection_t *conn,
                                 const get_handler_args_t *args);
 static int handle_get_networkstatus_bridges(dir_connection_t *conn,
@@ -2908,7 +2778,6 @@ static const url_table_ent_t url_table[] = {
   { "/tor/extra/", 1, handle_get_descriptor },
   { "/tor/keys/", 1, handle_get_keys },
   { "/tor/rendezvous2/", 1, handle_get_rendezvous2 },
-  { "/tor/bytes.txt", 0, handle_get_bytes },
   { "/tor/robots.txt", 0, handle_get_robots },
   { "/tor/networkstatus-bridges", 0, handle_get_networkstatus_bridges },
   { NULL, 0, NULL },
@@ -2998,25 +2867,22 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
 static int
 handle_get_frontpage(dir_connection_t *conn, const get_handler_args_t *args)
 {
-  const char *url = args->url;
-  {
-    const char *frontpage = get_dirportfrontpage();
+  (void) args; /* unused */
+  const char *frontpage = get_dirportfrontpage();
 
-    if (frontpage) {
-      size_t dlen;
-      dlen = strlen(frontpage);
-      /* Let's return a disclaimer page (users shouldn't use V1 anymore,
-         and caches don't fetch '/', so this is safe). */
+  if (frontpage) {
+    size_t dlen;
+    dlen = strlen(frontpage);
+    /* Let's return a disclaimer page (users shouldn't use V1 anymore,
+       and caches don't fetch '/', so this is safe). */
 
-      /* [We don't check for write_bucket_low here, since we want to serve
-       *  this page no matter what.] */
-      note_request(url, dlen);
-      write_http_response_header_impl(conn, dlen, "text/html", "identity",
-                                      NULL, DIRPORTFRONTPAGE_CACHE_LIFETIME);
-      connection_write_to_buf(frontpage, dlen, TO_CONN(conn));
-    } else {
-      write_http_status_line(conn, 404, "Not found");
-    }
+    /* [We don't check for write_bucket_low here, since we want to serve
+     *  this page no matter what.] */
+    write_http_response_header_impl(conn, dlen, "text/html", "identity",
+                                    NULL, DIRPORTFRONTPAGE_CACHE_LIFETIME);
+    connection_write_to_buf(frontpage, dlen, TO_CONN(conn));
+  } else {
+    write_http_status_line(conn, 404, "Not found");
   }
   return 0;
 }
@@ -3034,7 +2900,6 @@ handle_get_current_consensus(dir_connection_t *conn,
   {
     /* v3 network status fetch. */
     smartlist_t *dir_fps = smartlist_new();
-    const char *request_type = NULL;
     long lifetime = NETWORKSTATUS_CACHE_LIFETIME;
 
     if (1) {
@@ -3083,7 +2948,6 @@ handle_get_current_consensus(dir_connection_t *conn,
         tor_free(flavor);
         smartlist_add(dir_fps, fp);
       }
-      request_type = compressed?"v3.z":"v3";
       lifetime = (v && v->fresh_until > now) ? v->fresh_until - now : 0;
     }
 
@@ -3138,8 +3002,6 @@ handle_get_current_consensus(dir_connection_t *conn,
       }
     }
 
-    // note_request(request_type,dlen);
-    (void) request_type;
     write_http_response_header(conn, -1, compressed,
                                smartlist_len(dir_fps) == 1 ? lifetime : 0);
     conn->fingerprint_stack = dir_fps;
@@ -3324,7 +3186,6 @@ handle_get_descriptor(dir_connection_t *conn, const get_handler_args_t *args)
     size_t dlen;
     int res;
     const char *msg;
-    const char *request_type = NULL;
     int cache_lifetime = 0;
     int is_extra = !strcmpstart(url,"/tor/extra/");
     url += is_extra ? strlen("/tor/extra/") : strlen("/tor/server/");
@@ -3335,24 +3196,16 @@ handle_get_descriptor(dir_connection_t *conn, const get_handler_args_t *args)
                                           is_extra);
 
     if (!strcmpstart(url, "fp/")) {
-      request_type = compressed?"/tor/server/fp.z":"/tor/server/fp";
       if (smartlist_len(conn->fingerprint_stack) == 1)
         cache_lifetime = ROUTERDESC_CACHE_LIFETIME;
     } else if (!strcmpstart(url, "authority")) {
-      request_type = compressed?"/tor/server/authority.z":
-        "/tor/server/authority";
       cache_lifetime = ROUTERDESC_CACHE_LIFETIME;
     } else if (!strcmpstart(url, "all")) {
-      request_type = compressed?"/tor/server/all.z":"/tor/server/all";
       cache_lifetime = FULL_DIR_CACHE_LIFETIME;
     } else if (!strcmpstart(url, "d/")) {
-      request_type = compressed?"/tor/server/d.z":"/tor/server/d";
       if (smartlist_len(conn->fingerprint_stack) == 1)
         cache_lifetime = ROUTERDESC_BY_DIGEST_CACHE_LIFETIME;
-    } else {
-      request_type = "/tor/server/?";
     }
-    (void) request_type; /* usable for note_request. */
     if (!strcmpstart(url, "d/"))
       conn->dir_spool_src =
         is_extra ? DIR_SPOOL_EXTRA_BY_DIGEST : DIR_SPOOL_SERVER_BY_DIGEST;
@@ -3564,22 +3417,6 @@ handle_get_networkstatus_bridges(dir_connection_t *conn,
     goto done;
   }
  done:
-  return 0;
-}
-
-/** Helper function for GET /tor/bytes.txt
- */
-static int
-handle_get_bytes(dir_connection_t *conn, const get_handler_args_t *args)
-{
-  (void)args;
-  {
-    char *bytes = directory_dump_request_log();
-    size_t len = strlen(bytes);
-    write_http_response_header(conn, len, 0, 0);
-    connection_write_to_buf(bytes, len, TO_CONN(conn));
-    tor_free(bytes);
-  }
   return 0;
 }
 
