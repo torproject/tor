@@ -143,9 +143,11 @@ case "$host" in
 esac
 
 AC_ARG_ENABLE(gcc-warnings,
-     AS_HELP_STRING(--enable-gcc-warnings, [enable verbose warnings]))
+     AS_HELP_STRING(--enable-gcc-warnings, [deprecated alias for enable-fatal-warnings]))
+AC_ARG_ENABLE(fatal-warnings,
+     AS_HELP_STRING(--enable-fatal-warnings, [tell the compiler to treat all warnings as errors.]))
 AC_ARG_ENABLE(gcc-warnings-advisory,
-     AS_HELP_STRING(--enable-gcc-warnings-advisory, [enable verbose warnings, excluding -Werror]))
+     AS_HELP_STRING(--disable-gcc-warnings-advisory, [disable the regular verbose warnings]))
 
 dnl Others suggest '/gs /safeseh /nxcompat /dynamicbase' for non-gcc on Windows
 AC_ARG_ENABLE(gcc-hardening,
@@ -1636,6 +1638,12 @@ else
   enable_gcc_warnings_advisory=no
 fi
 
+# Warnings implies advisory-warnings and -Werror.
+if test "$enable_gcc_warnings" = "yes"; then
+  enable_gcc_warnings_advisory=yes
+  enable_fatal_warnings=yes
+fi
+
 # OS X Lion started deprecating the system openssl. Let's just disable
 # all deprecation warnings on OS X. Also, to potentially make the binary
 # a little smaller, let's enable dead_strip.
@@ -1648,8 +1656,7 @@ esac
 
 # Add some more warnings which we use in development but not in the
 # released versions.  (Some relevant gcc versions can't handle these.)
-if test "x$enable_gcc_warnings" = "xyes" ||
-  test "x$enable_gcc_warnings_advisory" = "xyes"; then
+if test "x$enable_gcc_warnings_advisory" != "xno"; then
 
   AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
 #if !defined(__GNUC__) || (__GNUC__ < 4)
@@ -1671,7 +1678,6 @@ if test "x$enable_gcc_warnings" = "xyes" ||
 #error
 #endif])], have_gcc46=yes, have_gcc46=no)
 
-
   save_CFLAGS="$CFLAGS"
   CFLAGS="$CFLAGS -Wshorten-64-to-32"
   AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [])], have_shorten64_flag=yes,
@@ -1692,10 +1698,6 @@ if test "x$enable_gcc_warnings" = "xyes" ||
   CFLAGS="$CFLAGS -Wredundant-decls -Wchar-subscripts -Wcomment -Wformat=2"
   CFLAGS="$CFLAGS -Wwrite-strings -Wmissing-declarations -Wredundant-decls"
   CFLAGS="$CFLAGS -Wnested-externs -Wbad-function-cast -Wswitch-enum"
-
-  if test "x$enable_gcc_warnings" = "xyes"; then
-    CFLAGS="$CFLAGS -Werror"
-  fi
 
   # Disabled, so we can use mallinfo(): -Waggregate-return
 
@@ -1733,7 +1735,11 @@ if test "x$enable_gcc_warnings" = "xyes" ||
     CFLAGS="$CFLAGS -Wshorten-64-to-32"
   fi
 
-
+  if test "x$enable_fatal_warnings" = "xyes"; then
+    # I'd like to use TOR_CHECK_CFLAGS here, but I can't, since the
+    # default autoconf programs are full of errors.
+    CFLAGS="$CFLAGS -Werror"
+  fi
 
 ##This will break the world on some 64-bit architectures
 # CFLAGS="$CFLAGS -Winline"

@@ -1,0 +1,5 @@
+  o Minor features (compilation):
+    - Our big list of extra GCC warnings is now enabled by default when
+      building with GCC (or with anything like Clang that claims to be
+      GCC-compatible). To make all warnings into fatal compilation errors,
+      pass --enable-fatal-warnings to configure. Closes ticket 19044.

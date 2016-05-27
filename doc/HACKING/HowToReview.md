@@ -15,7 +15,7 @@ Top-level smell-checks
 
 (Difficulty: easy)
 
-- Does it compile with `--enable-gcc-warnings`?
+- Does it compile with `--enable-fatal-warnings`?
 
 - Does `make check-spaces` pass?
 
