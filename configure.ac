@@ -1698,8 +1698,7 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
   CFLAGS="$CFLAGS -Wredundant-decls -Wchar-subscripts -Wcomment -Wformat=2"
   CFLAGS="$CFLAGS -Wwrite-strings -Wmissing-declarations -Wredundant-decls"
   CFLAGS="$CFLAGS -Wnested-externs -Wbad-function-cast -Wswitch-enum"
-
-  # Disabled, so we can use mallinfo(): -Waggregate-return
+  CFLAGS="$CFLAGS -Waggregate-return"
 
   if test "x$have_gcc4" = "xyes"; then
     # These warnings break gcc 3.3.5 and work on gcc 4.0.2
