@@ -1678,6 +1678,31 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
 #error
 #endif])], have_gcc46=yes, have_gcc46=no)
 
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
+#if !defined(__GNUC__) || (__GNUC__ < 4) || (__GNUC__ == 4 && __GNUC_MINOR__ < 7)
+#error
+#endif])], have_gcc47=yes, have_gcc47=no)
+
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
+#if !defined(__GNUC__) || (__GNUC__ < 4) || (__GNUC__ == 4 && __GNUC_MINOR__ < 8)
+#error
+#endif])], have_gcc48=yes, have_gcc48=no)
+
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
+#if !defined(__GNUC__) || (__GNUC__ < 4) || (__GNUC__ == 4 && __GNUC_MINOR__ < 9)
+#error
+#endif])], have_gcc49=yes, have_gcc49=no)
+
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
+#if !defined(__GNUC__) || (__GNUC__ < 5)
+#error
+#endif])], have_gcc5=yes, have_gcc5=no)
+
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
+#if !defined(__GNUC__) || (__GNUC__ < 6)
+#error
+#endif])], have_gcc6=yes, have_gcc5=no)
+
   save_CFLAGS="$CFLAGS"
   CFLAGS="$CFLAGS -Wshorten-64-to-32"
   AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [])], have_shorten64_flag=yes,
@@ -1698,7 +1723,8 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
   CFLAGS="$CFLAGS -Wredundant-decls -Wchar-subscripts -Wcomment -Wformat=2"
   CFLAGS="$CFLAGS -Wwrite-strings -Wmissing-declarations -Wredundant-decls"
   CFLAGS="$CFLAGS -Wnested-externs -Wbad-function-cast -Wswitch-enum"
-  CFLAGS="$CFLAGS -Waggregate-return"
+  CFLAGS="$CFLAGS -Waggregate-return -Wpacked -Wunused"
+  CFLAGS="$CFLAGS -Wunused-parameter"
 
   if test "x$have_gcc4" = "xyes"; then
     # These warnings break gcc 3.3.5 and work on gcc 4.0.2
@@ -1728,6 +1754,28 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
     # This warning was added in gcc 4.3, but it appears to generate
     # spurious warnings in gcc 4.4.  I don't know if it works in 4.5.
     CFLAGS="$CFLAGS -Wlogical-op"
+    # and these should be just fine in gcc 4.6
+    CFLAGS="$CFLAGS -Wmissing-format-attribute -Wsuggest-attribute=noreturn -Wsync-nand -Wtrampolines -Wunused-but-set-parameter -Wunused-but-set-variable -Wvariadic-macros"
+  fi
+
+  if test "x$have_gcc47" = "xyes"; then
+     CFLAGS="$CFLAGS -Wunused-local-typedefs"
+  fi
+
+  if test "x$have_gcc48" = "xyes"; then
+     CFLAGS="$CFLAGS -Wsuggest-attribute=format"
+  fi
+
+  if test "x$have_gcc49" = "xyes"; then
+     CFLAGS="$CFLAGS -Wdate-time"
+  fi
+
+  if test "x$have_gcc5" = "xyes"; then
+     CFLAGS="$CFLAGS -Wc99-c11-compat -Wshift-count-negative -Wshift-count-overflow -Wsizeof-array-argument -Wswitch-bool"
+  fi
+
+ if test "x$have_gcc6" = "xyes"; then
+     CFLAGS="$CFLAGS -Wignored-attributes -Wshift-negative-value -Wshift-overflow=2"
   fi
 
   if test "x$have_shorten64_flag" = "xyes"; then
