@@ -1778,6 +1778,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
      CFLAGS="$CFLAGS -Wignored-attributes -Wshift-negative-value -Wshift-overflow=2"
      CFLAGS="$CFLAGS -Wnull-dereference"
      CFLAGS="$CFLAGS -Wduplicated-cond"
+     CFLAGS="$CFLAGS -Wunused-const-variable=2"
   fi
 
   if test "x$have_shorten64_flag" = "xyes"; then
