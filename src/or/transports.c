@@ -1363,7 +1363,7 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
       }
     }
 
-    /* XXX024 Remove the '=' here once versions of obfsproxy which
+    /* XXXX Remove the '=' here once versions of obfsproxy which
      * assert that this env var exists are sufficiently dead.
      *
      * (If we remove this line entirely, some joker will stick this

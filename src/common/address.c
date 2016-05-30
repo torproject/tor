@@ -1809,7 +1809,7 @@ MOCK_IMPL(smartlist_t *,get_interface_address6_list,(int severity,
 
 /* ======
  * IPv4 helpers
- * XXXX024 IPv6 deprecate some of these.
+ * XXXX IPv6 deprecate some of these.
  */
 
 /** Given an address of the form "ip:port", try to divide it into its

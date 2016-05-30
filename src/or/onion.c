@@ -51,7 +51,7 @@ static int ol_entries[MAX_ONION_HANDSHAKE_TYPE+1];
 static int num_ntors_per_tap(void);
 static void onion_queue_entry_remove(onion_queue_t *victim);
 
-/* XXXX024 Check lengths vs MAX_ONIONSKIN_{CHALLENGE,REPLY}_LEN.
+/* XXXX Check lengths vs MAX_ONIONSKIN_{CHALLENGE,REPLY}_LEN.
  *
  * (By which I think I meant, "make sure that no
  * X_ONIONSKIN_CHALLENGE/REPLY_LEN is greater than

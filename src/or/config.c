@@ -99,7 +99,7 @@ static config_abbrev_t option_abbrevs_[] = {
   { "BandwidthRateBytes", "BandwidthRate", 0, 0},
   { "BandwidthBurstBytes", "BandwidthBurst", 0, 0},
   { "DirFetchPostPeriod", "StatusFetchPeriod", 0, 0},
-  { "DirServer", "DirAuthority", 0, 0}, /* XXXX024 later, make this warn? */
+  { "DirServer", "DirAuthority", 0, 0}, /* XXXX later, make this warn? */
   { "MaxConn", "ConnLimit", 0, 1},
   { "MaxMemInCellQueues", "MaxMemInQueues", 0, 0},
   { "ORBindAddress", "ORListenAddress", 0, 0},
@@ -2004,11 +2004,6 @@ static const struct {
   { "--list-fingerprint",     TAKES_NO_ARGUMENT },
   { "--keygen",               TAKES_NO_ARGUMENT },
   { "--newpass",              TAKES_NO_ARGUMENT },
-#if 0
-/* XXXX028: This is not working yet in 0.2.7, so disabling with the
- * minimal code modification. */
-  { "--master-key",           ARGUMENT_NECESSARY },
-#endif
   { "--no-passphrase",        TAKES_NO_ARGUMENT },
   { "--passphrase-fd",        ARGUMENT_NECESSARY },
   { "--verify-config",        TAKES_NO_ARGUMENT },
@@ -2489,7 +2484,6 @@ is_local_addr, (const tor_addr_t *addr))
   if (get_options()->EnforceDistinctSubnets == 0)
     return 0;
   if (tor_addr_family(addr) == AF_INET) {
-    /*XXXX023 IP6 what corresponds to an /24? */
     uint32_t ip = tor_addr_to_ipv4h(addr);
 
     /* It's possible that this next check will hit before the first time
@@ -5031,7 +5025,7 @@ config_register_addressmaps(const or_options_t *options)
 
 /** As addressmap_register(), but detect the wildcarded status of "from" and
  * "to", and do not steal a reference to <b>to</b>. */
-/* XXXX024 move to connection_edge.c */
+/* XXXX move to connection_edge.c */
 int
 addressmap_register_auto(const char *from, const char *to,
                          time_t expires,
@@ -7572,7 +7566,7 @@ static void
 config_maybe_load_geoip_files_(const or_options_t *options,
                                const or_options_t *old_options)
 {
-  /* XXXX024 Reload GeoIPFile on SIGHUP. -NM */
+  /* XXXX Reload GeoIPFile on SIGHUP. -NM */
 
   if (options->GeoIPFile &&
       ((!old_options || !opt_streq(old_options->GeoIPFile,

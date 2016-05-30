@@ -203,7 +203,7 @@ circuit_is_better(const origin_circuit_t *oa, const origin_circuit_t *ob,
             timercmp(&a->timestamp_began, &b->timestamp_began, OP_GT))
           return 1;
         if (ob->build_state->is_internal)
-          /* XXX023 what the heck is this internal thing doing here. I
+          /* XXXX++ what the heck is this internal thing doing here. I
            * think we can get rid of it. circuit_is_acceptable() already
            * makes sure that is_internal is exactly what we need it to
            * be. -RD */
@@ -222,7 +222,7 @@ circuit_is_better(const origin_circuit_t *oa, const origin_circuit_t *ob,
       break;
   }
 
-  /* XXXX023 Maybe this check should get a higher priority to avoid
+  /* XXXX Maybe this check should get a higher priority to avoid
    *   using up circuits too rapidly. */
 
   a_bits = connection_edge_update_circuit_isolation(conn,
@@ -1936,8 +1936,8 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
         return -1;
       }
     } else {
-      /* XXXX024 Duplicates checks in connection_ap_handshake_attach_circuit:
-       * refactor into a single function? */
+      /* XXXX Duplicates checks in connection_ap_handshake_attach_circuit:
+       * refactor into a single function. */
       const node_t *node = node_get_by_nickname(conn->chosen_exit_name, 1);
       int opt = conn->chosen_exit_optional;
       if (node && !connection_ap_can_use_exit(conn, node)) {
@@ -2416,7 +2416,7 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
     /* find the circuit that we should use, if there is one. */
     retval = circuit_get_open_circ_or_launch(
         conn, CIRCUIT_PURPOSE_C_GENERAL, &circ);
-    if (retval < 1) // XXX023 if we totally fail, this still returns 0 -RD
+    if (retval < 1) // XXXX++ if we totally fail, this still returns 0 -RD
       return retval;
 
     log_debug(LD_APP|LD_CIRC,
@@ -2591,7 +2591,7 @@ mark_circuit_unusable_for_new_conns(origin_circuit_t *circ)
   const or_options_t *options = get_options();
   tor_assert(circ);
 
-  /* XXXX025 This is a kludge; we're only keeping it around in case there's
+  /* XXXX This is a kludge; we're only keeping it around in case there's
    * something that doesn't check unusable_for_new_conns, and to avoid
    * deeper refactoring of our expiration logic. */
   if (! circ->base_.timestamp_dirty)

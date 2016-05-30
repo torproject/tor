@@ -823,7 +823,7 @@ running_long_enough_to_decide_unreachable(void)
 void
 dirserv_set_router_is_running(routerinfo_t *router, time_t now)
 {
-  /*XXXX024 This function is a mess.  Separate out the part that calculates
+  /*XXXX This function is a mess.  Separate out the part that calculates
     whether it's reachable and the part that tells rephist that the router was
     unreachable.
    */
@@ -1241,7 +1241,7 @@ dirserv_thinks_router_is_unreliable(time_t now,
 {
   if (need_uptime) {
     if (!enough_mtbf_info) {
-      /* XXX024 Once most authorities are on v3, we should change the rule from
+      /* XXXX We should change the rule from
        * "use uptime if we don't have mtbf data" to "don't advertise Stable on
        * v3 if we don't have enough mtbf data."  Or maybe not, since if we ever
        * hit a point where we need to reset a lot of authorities at once,
@@ -3252,7 +3252,7 @@ lookup_cached_dir_by_fp(const char *fp)
     d = strmap_get(cached_consensuses, "ns");
   } else if (memchr(fp, '\0', DIGEST_LEN) && cached_consensuses &&
            (d = strmap_get(cached_consensuses, fp))) {
-    /* this here interface is a nasty hack XXXX024 */;
+    /* this here interface is a nasty hack XXXX */;
   }
   return d;
 }

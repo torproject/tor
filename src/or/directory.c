@@ -494,8 +494,9 @@ MOCK_IMPL(void, directory_get_from_dirserver, (
        * sort of dir fetch we'll be doing, so it won't return a bridge
        * that can't answer our question.
        */
-      /* XXX024 Not all bridges handle conditional consensus downloading,
-       * so, for now, never assume the server supports that. -PP */
+      /* XXX+++++ Not all bridges handle conditional consensus downloading,
+       * so, for now, never assume the server supports that. -PP
+       * Is that assumption still so in 2016? -NM */
       const node_t *node = choose_random_dirguard(type);
       if (node && node->ri) {
         /* every bridge has a routerinfo. */
@@ -2247,7 +2248,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                        ds->nickname);
               /* XXXX use this information; be sure to upload next one
                * sooner. -NM */
-              /* XXXX023 On further thought, the task above implies that we're
+              /* XXXX++ On further thought, the task above implies that we're
                * basing our regenerate-descriptor time on when we uploaded the
                * last descriptor, not on the published time of the last
                * descriptor.  If those are different, that's a bad thing to
@@ -3031,7 +3032,7 @@ handle_get_status_vote(dir_connection_t *conn, const get_handler_args_t *args)
     ssize_t estimated_len = 0;
     smartlist_t *items = smartlist_new();
     smartlist_t *dir_items = smartlist_new();
-    int lifetime = 60; /* XXXX023 should actually use vote intervals. */
+    int lifetime = 60; /* XXXX?? should actually use vote intervals. */
     url += strlen("/tor/status-vote/");
     current = !strcmpstart(url, "current/");
     url = strchr(url, '/');

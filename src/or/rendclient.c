@@ -510,7 +510,7 @@ lookup_last_hid_serv_request(routerstatus_t *hs_dir,
   tor_snprintf(hsdir_desc_comb_id, sizeof(hsdir_desc_comb_id), "%s%s",
                hsdir_id_base32,
                desc_id_base32);
-  /* XXX023 tor_assert(strlen(hsdir_desc_comb_id) ==
+  /* XXX++?? tor_assert(strlen(hsdir_desc_comb_id) ==
                        LAST_HID_SERV_REQUEST_KEY_LEN); */
   if (set) {
     time_t *oldptr;
@@ -572,7 +572,7 @@ purge_hid_serv_from_last_hid_serv_requests(const char *desc_id)
     const char *key;
     void *val;
     strmap_iter_get(iter, &key, &val);
-    /* XXX023 tor_assert(strlen(key) == LAST_HID_SERV_REQUEST_KEY_LEN); */
+    /* XXX++?? tor_assert(strlen(key) == LAST_HID_SERV_REQUEST_KEY_LEN); */
     if (tor_memeq(key + LAST_HID_SERV_REQUEST_KEY_LEN -
                   REND_DESC_ID_V2_LEN_BASE32,
                   desc_id_base32,
@@ -1099,7 +1099,7 @@ rend_client_rendezvous_acked(origin_circuit_t *circ, const uint8_t *request,
    * service and never reply to the client's rend requests */
   pathbias_mark_use_success(circ);
 
-  /* XXXX This is a pretty brute-force approach. It'd be better to
+  /* XXXX++ This is a pretty brute-force approach. It'd be better to
    * attach only the connections that are waiting on this circuit, rather
    * than trying to attach them all. See comments bug 743. */
   /* If we already have the introduction circuit built, make sure we send

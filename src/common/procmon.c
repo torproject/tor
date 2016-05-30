@@ -116,11 +116,11 @@ struct tor_process_monitor_t {
    * periodically check whether the process we have a handle to has
    * ended. */
   HANDLE hproc;
-  /* XXX023 We can and should have Libevent watch hproc for us,
-   * if/when some version of Libevent 2.x can be told to do so. */
+  /* XXXX We should have Libevent watch hproc for us,
+   * if/when some version of Libevent can be told to do so. */
 #endif
 
-  /* XXX023 On Linux, we can and should receive the 22nd
+  /* XXXX On Linux, we can and should receive the 22nd
    * (space-delimited) field (‘starttime’) of /proc/$PID/stat from the
    * owning controller and store it, and poll once in a while to see
    * whether it has changed -- if so, the kernel has *definitely*
@@ -130,7 +130,8 @@ struct tor_process_monitor_t {
    * systems whose admins have mounted procfs, or the start-time field
    * of the process-information structure returned by kvmgetprocs() on
    * any system.  The latter is ickier. */
-  /* XXX023 On FreeBSD (and possibly other kqueue systems), we can and
+
+  /* XXXX On FreeBSD (and possibly other kqueue systems), we can and
    * should arrange to receive EVFILT_PROC NOTE_EXIT notifications for
    * pid, so we don't have to do such a heavyweight poll operation in
    * order to avoid the PID-reassignment race condition.  (We would

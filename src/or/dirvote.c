@@ -3534,7 +3534,7 @@ dirvote_create_microdescriptor(const routerinfo_t *ri, int consensus_method)
 
   if (consensus_method >= MIN_METHOD_FOR_P6_LINES &&
       ri->ipv6_exit_policy) {
-    /* XXXX024 This doesn't match proposal 208, which says these should
+    /* XXXX+++ This doesn't match proposal 208, which says these should
      * be taken unchanged from the routerinfo.  That's bogosity, IMO:
      * the proposal should have said to do this instead.*/
     char *p6 = write_short_policy(ri->ipv6_exit_policy);

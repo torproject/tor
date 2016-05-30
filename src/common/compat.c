@@ -15,7 +15,8 @@
 /* This is required on rh7 to make strptime not complain.
  * We also need it to make memmem get defined (where available)
  */
-/* XXXX024 We should just  use AC_USE_SYSTEM_EXTENSIONS in our autoconf,
+
+/* XXXX We should just  use AC_USE_SYSTEM_EXTENSIONS in our autoconf,
  * and get this (and other important stuff!) automatically. Once we do that,
  * make sure to also change the extern char **environ detection in
  * configure.ac, because whether that is declared or not depends on whether

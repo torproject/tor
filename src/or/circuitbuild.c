@@ -805,6 +805,7 @@ circuit_pick_create_handshake(uint8_t *cell_type_out,
                               uint16_t *handshake_type_out,
                               const extend_info_t *ei)
 {
+  /* XXXX029 Remove support for deciding to use TAP. */
   if (!tor_mem_is_zero((const char*)ei->curve25519_onion_key.public_key,
                        CURVE25519_PUBKEY_LEN) &&
       circuits_can_use_ntor()) {
@@ -831,9 +832,8 @@ circuit_pick_extend_handshake(uint8_t *cell_type_out,
 {
   uint8_t t;
   circuit_pick_create_handshake(&t, handshake_type_out, ei);
-  /* XXXX024 The check for whether the node has a curve25519 key is a bad
-   * proxy for whether it can do extend2 cells; once a version that
-   * handles extend2 cells is out, remove it. */
+
+  /* XXXX029 Remove support for deciding to use TAP. */
   if (node_prev &&
       *handshake_type_out != ONION_HANDSHAKE_TYPE_TAP &&
       (node_has_curve25519_onion_key(node_prev) ||
@@ -2139,7 +2139,6 @@ choose_good_middle_server(uint8_t purpose,
  * If <b>state</b> is NULL, we're choosing a router to serve as an entry
  * guard, not for any particular circuit.
  */
-/* XXXX024 I'd like to have this be static again, but entrynodes.c needs it. */
 const node_t *
 choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
 {
@@ -2172,7 +2171,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
    * This is an incomplete fix, but is no worse than the previous behaviour,
    * and only applies to minimal, testing tor networks
    * (so it's no less secure) */
-  /*XXXX025 use the using_as_guard flag to accomplish this.*/
+  /*XXXX++ use the using_as_guard flag to accomplish this.*/
   if (options->UseEntryGuards
       && (!options->TestingTorNetwork ||
          smartlist_len(nodelist_get_list()) > smartlist_len(get_entry_guards())

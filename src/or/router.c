@@ -1538,7 +1538,7 @@ MOCK_IMPL(int,
 server_mode,(const or_options_t *options))
 {
   if (options->ClientOnly) return 0;
-  /* XXXX024 I believe we can kill off ORListenAddress here.*/
+  /* XXXX I believe we can kill off ORListenAddress here.*/
   return (options->ORPort_set || options->ORListenAddress);
 }
 

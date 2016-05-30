@@ -1,4 +1,4 @@
-/* Copyright (c) 2001 Matej Pfajfar.
+ /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2016, The Tor Project, Inc. */
@@ -919,7 +919,7 @@ connection_ap_warn_and_unmark_if_pending_circ(entry_connection_t *entry_conn,
 
 /** Tell any AP streams that are waiting for a one-hop tunnel to
  * <b>failed_digest</b> that they are going to fail. */
-/* XXX024 We should get rid of this function, and instead attach
+/* XXXX We should get rid of this function, and instead attach
  * one-hop streams to circ->p_streams so they get marked in
  * circuit_mark_for_close like normal p_streams. */
 void
@@ -1442,7 +1442,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
       return -1;
     }
-    /* XXXX024-1090 Should we also allow foo.bar.exit if ExitNodes is set and
+    /* XXXX-1090 Should we also allow foo.bar.exit if ExitNodes is set and
        Bar is not listed in it?  I say yes, but our revised manpage branch
        implies no. */
   }
@@ -2290,7 +2290,7 @@ connection_ap_handshake_send_begin(entry_connection_t *ap_conn)
 
   edge_conn->stream_id = get_unique_stream_id_by_circ(circ);
   if (edge_conn->stream_id==0) {
-    /* XXXX024 Instead of closing this stream, we should make it get
+    /* XXXX+ Instead of closing this stream, we should make it get
      * retried on another circuit. */
     connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
 
@@ -2382,7 +2382,7 @@ connection_ap_handshake_send_resolve(entry_connection_t *ap_conn)
 
   edge_conn->stream_id = get_unique_stream_id_by_circ(circ);
   if (edge_conn->stream_id==0) {
-    /* XXXX024 Instead of closing this stream, we should make it get
+    /* XXXX+ Instead of closing this stream, we should make it get
      * retried on another circuit. */
     connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
 

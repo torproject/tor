@@ -98,7 +98,7 @@ static int get_proxy_type(void);
 /** The last addresses that our network interface seemed to have been
  * binding to.  We use this as one way to detect when our IP changes.
  *
- * XXX024 We should really use the entire list of interfaces here.
+ * XXXX+ We should really use the entire list of interfaces here.
  **/
 static tor_addr_t *last_interface_ipv4 = NULL;
 /* DOCDOC last_interface_ipv6 */
@@ -2932,7 +2932,7 @@ static void
 record_num_bytes_transferred(connection_t *conn,
                              time_t now, size_t num_read, size_t num_written)
 {
-  /* XXX024 check if this is necessary */
+  /* XXXX check if this is necessary */
   if (num_written >= INT_MAX || num_read >= INT_MAX) {
     log_err(LD_BUG, "Value out of range. num_read=%lu, num_written=%lu, "
              "connection type=%s, state=%s",
@@ -3759,7 +3759,7 @@ evbuffer_inbuf_callback(struct evbuffer *buf,
     connection_consider_empty_read_buckets(conn);
     if (conn->type == CONN_TYPE_AP) {
       edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-      /*XXXX024 check for overflow*/
+      /*XXXX++ check for overflow*/
       edge_conn->n_read += (int)info->n_added;
     }
   }
@@ -3780,7 +3780,7 @@ evbuffer_outbuf_callback(struct evbuffer *buf,
     connection_consider_empty_write_buckets(conn);
     if (conn->type == CONN_TYPE_AP) {
       edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-      /*XXXX024 check for overflow*/
+      /*XXXX++ check for overflow*/
       edge_conn->n_written += (int)info->n_deleted;
     }
   }
@@ -4139,7 +4139,7 @@ connection_handle_write_impl(connection_t *conn, int force)
     or_conn->bytes_xmitted += result;
     or_conn->bytes_xmitted_by_tls += n_written;
     /* So we notice bytes were written even on error */
-    /* XXXX024 This cast is safe since we can never write INT_MAX bytes in a
+    /* XXXX This cast is safe since we can never write INT_MAX bytes in a
      * single set of TLS operations. But it looks kinda ugly. If we refactor
      * the *_buf_tls functions, we should make them return ssize_t or size_t
      * or something. */

@@ -962,7 +962,7 @@ conn_close_if_marked(int i)
           connection_stop_writing(conn);
         }
         if (connection_is_reading(conn)) {
-          /* XXXX024 We should make this code unreachable; if a connection is
+          /* XXXX+ We should make this code unreachable; if a connection is
            * marked for close and flushing, there is no point in reading to it
            * at all. Further, checking at this point is a bit of a hack: it
            * would make much more sense to react in

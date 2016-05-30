@@ -192,7 +192,7 @@ test_dir_formats(void *arg)
   tt_assert(!crypto_pk_write_public_key_to_string(pk2 , &pk2_str,
                                                     &pk2_str_len));
 
-  /* XXXX025 router_dump_to_string should really take this from ri.*/
+  /* XXXX+++ router_dump_to_string should really take this from ri.*/
   options->ContactInfo = tor_strdup("Magri White "
                                     "<magri@elsewhere.example.com>");
   /* Skip reachability checks for DirPort and tunnelled-dir-server */

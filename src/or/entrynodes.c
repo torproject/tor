@@ -722,8 +722,9 @@ entry_guards_compute_status(const or_options_t *options, time_t now)
  *
  * If <b>mark_relay_status</b>, also call router_set_status() on this
  * relay.
- *
- * XXX024 change succeeded and mark_relay_status into 'int flags'.
+ */
+/* XXX We could change succeeded and mark_relay_status into 'int flags'.
+ * Too many boolean arguments is a recipe for confusion.
  */
 int
 entry_guard_register_connect_status(const char *digest, int succeeded,
@@ -1466,7 +1467,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
     }
     entry_guards = new_entry_guards;
     entry_guards_dirty = 0;
-    /* XXX024 hand new_entry_guards to this func, and move it up a
+    /* XXX hand new_entry_guards to this func, and move it up a
      * few lines, so we don't have to re-dirty it */
     if (remove_obsolete_entry_guards(now))
       entry_guards_dirty = 1;

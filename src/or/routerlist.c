@@ -3758,7 +3758,7 @@ router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
   was_router_added_t inserted;
   (void)from_fetch;
   if (msg) *msg = NULL;
-  /*XXXX023 Do something with msg */
+  /*XXXX Do something with msg */
 
   inserted = extrainfo_insert(router_get_routerlist(), ei, !from_cache);
 
@@ -4971,7 +4971,7 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
 
 /** How often should we launch a server/authority request to be sure of getting
  * a guess for our IP? */
-/*XXXX024 this info should come from netinfo cells or something, or we should
+/*XXXX+ this info should come from netinfo cells or something, or we should
  * do this only when we aren't seeing incoming data. see bug 652. */
 #define DUMMY_DOWNLOAD_INTERVAL (20*60)
 
@@ -4982,7 +4982,7 @@ launch_dummy_descriptor_download_as_needed(time_t now,
                                            const or_options_t *options)
 {
   static time_t last_dummy_download = 0;
-  /* XXXX024 we could be smarter here; see notes on bug 652. */
+  /* XXXX+ we could be smarter here; see notes on bug 652. */
   /* If we're a server that doesn't have a configured address, we rely on
    * directory fetches to learn when our address changes.  So if we haven't
    * tried to get any routerdescs in a long time, try a dummy fetch now. */
