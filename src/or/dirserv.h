@@ -47,8 +47,6 @@ enum was_router_added_t dirserv_add_descriptor(routerinfo_t *ri,
 void dirserv_set_router_is_running(routerinfo_t *router, time_t now);
 int list_server_status_v1(smartlist_t *routers, char **router_status_out,
                           int for_controller);
-int dirserv_dump_directory_to_string(char **dir_out,
-                                     crypto_pk_t *private_key);
 char *dirserv_get_flag_thresholds_line(void);
 void dirserv_compute_bridge_flag_thresholds(void);
 
