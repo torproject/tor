@@ -2240,7 +2240,7 @@ connection_send_socks5_connect(connection_t *conn)
   } else { /* AF_INET6 */
     buf[3] = 4;
     reqsize += 16;
-    memcpy(buf + 4, tor_addr_to_in6(&conn->addr), 16);
+    memcpy(buf + 4, tor_addr_to_in6_addr8(&conn->addr), 16);
     memcpy(buf + 20, &port, 2);
   }
 

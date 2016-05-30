@@ -28,6 +28,9 @@ int a_tangled_web(int x) NOINLINE;
 int we_weave(int x) NOINLINE;
 static void abort_handler(int s) NORETURN;
 
+#if GCC_VERSION >= 601
+DISABLE_GCC_WARNING(null-dereference)
+#endif
 int
 crash(int x)
 {
@@ -47,6 +50,9 @@ crash(int x)
   crashtype *= x;
   return crashtype;
 }
+#if GCC_VERSION >= 601
+ENABLE_GCC_WARNING(null-dereference)
+#endif
 
 int
 oh_what(int x)

@@ -131,7 +131,8 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
 #endif
     sin6->sin6_family = AF_INET6;
     sin6->sin6_port = htons(port);
-    memcpy(&sin6->sin6_addr, tor_addr_to_in6(a), sizeof(struct in6_addr));
+    memcpy(&sin6->sin6_addr, tor_addr_to_in6_assert(a),
+           sizeof(struct in6_addr));
     return sizeof(struct sockaddr_in6);
   } else {
     return 0;

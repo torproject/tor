@@ -1776,6 +1776,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
 
  if test "x$have_gcc6" = "xyes"; then
      CFLAGS="$CFLAGS -Wignored-attributes -Wshift-negative-value -Wshift-overflow=2"
+     CFLAGS="$CFLAGS -Wnull-dereference"
   fi
 
   if test "x$have_shorten64_flag" = "xyes"; then

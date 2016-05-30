@@ -80,9 +80,9 @@ geoip_add_entry(const tor_addr_t *low, const tor_addr_t *high,
   intptr_t idx;
   void *idxplus1_;
 
-  if (tor_addr_family(low) != tor_addr_family(high))
+  IF_BUG_ONCE(tor_addr_family(low) != tor_addr_family(high))
     return;
-  if (tor_addr_compare(high, low, CMP_EXACT) < 0)
+  IF_BUG_ONCE(tor_addr_compare(high, low, CMP_EXACT) < 0)
     return;
 
   idxplus1_ = strmap_get_lc(country_idxplus1_by_lc_code, country);
@@ -110,8 +110,8 @@ geoip_add_entry(const tor_addr_t *low, const tor_addr_t *high,
     smartlist_add(geoip_ipv4_entries, ent);
   } else if (tor_addr_family(low) == AF_INET6) {
     geoip_ipv6_entry_t *ent = tor_malloc_zero(sizeof(geoip_ipv6_entry_t));
-    ent->ip_low = *tor_addr_to_in6(low);
-    ent->ip_high = *tor_addr_to_in6(high);
+    ent->ip_low = *tor_addr_to_in6_assert(low);
+    ent->ip_high = *tor_addr_to_in6_assert(high);
     ent->country = idx;
     smartlist_add(geoip_ipv6_entries, ent);
   }
