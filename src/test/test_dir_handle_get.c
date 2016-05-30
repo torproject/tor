@@ -38,7 +38,15 @@
 #include <dirent.h>
 #endif
 
+#if GCC_VERSION >= 406
+DISABLE_GCC_WARNING(overlength-strings)
+/* We allow huge string constants in the unit tests, but not in the code
+ * at large. */
+#endif
 #include "vote_descriptors.inc"
+#if GCC_VERSION >= 406
+ENABLE_GCC_WARNING(overlength-strings)
+#endif
 
 #define NS_MODULE dir_handle_get
 

@@ -16,7 +16,15 @@
 #include "test.h"
 #include "test_helpers.h"
 
+#if GCC_VERSION >= 406
+DISABLE_GCC_WARNING(overlength-strings)
+/* We allow huge string constants in the unit tests, but not in the code
+ * at large. */
+#endif
 #include "test_descriptors.inc"
+#if GCC_VERSION >= 406
+ENABLE_GCC_WARNING(overlength-strings)
+#endif
 
 /* Return a statically allocated string representing yesterday's date
  * in ISO format. We use it so that state file items are not found to
