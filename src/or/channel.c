@@ -4524,7 +4524,7 @@ channel_update_xmit_queue_size(channel_t *chan)
   /* Next, adjust by the overhead factor, if any is available */
   if (chan->get_overhead_estimate) {
     overhead = chan->get_overhead_estimate(chan);
-    if (overhead >= 1.0f) {
+    if (overhead >= 1.0) {
       queued = (uint64_t)(queued * overhead);
     } else {
       /* Ignore silly overhead factors */

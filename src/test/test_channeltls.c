@@ -206,31 +206,31 @@ test_channeltls_overhead_estimate(void *arg)
   ch = channel_tls_connect(&test_addr, 567, test_digest);
   tt_assert(ch != NULL);
 
-  /* First case: silly low ratios should get clamped to 1.0f */
+  /* First case: silly low ratios should get clamped to 1.0 */
   tlschan = BASE_CHAN_TO_TLS(ch);
   tt_assert(tlschan != NULL);
   tlschan->conn->bytes_xmitted = 128;
   tlschan->conn->bytes_xmitted_by_tls = 64;
   r = ch->get_overhead_estimate(ch);
-  tt_assert(fabs(r - 1.0f) < 1E-12);
+  tt_assert(fabs(r - 1.0) < 1E-12);
 
   tlschan->conn->bytes_xmitted_by_tls = 127;
   r = ch->get_overhead_estimate(ch);
-  tt_assert(fabs(r - 1.0f) < 1E-12);
+  tt_assert(fabs(r - 1.0) < 1E-12);
 
   /* Now middle of the range */
   tlschan->conn->bytes_xmitted_by_tls = 192;
   r = ch->get_overhead_estimate(ch);
-  tt_assert(fabs(r - 1.5f) < 1E-12);
+  tt_assert(fabs(r - 1.5) < 1E-12);
 
-  /* Now above the 2.0f clamp */
+  /* Now above the 2.0 clamp */
   tlschan->conn->bytes_xmitted_by_tls = 257;
   r = ch->get_overhead_estimate(ch);
-  tt_assert(fabs(r - 2.0f) < 1E-12);
+  tt_assert(fabs(r - 2.0) < 1E-12);
 
   tlschan->conn->bytes_xmitted_by_tls = 512;
   r = ch->get_overhead_estimate(ch);
-  tt_assert(fabs(r - 2.0f) < 1E-12);
+  tt_assert(fabs(r - 2.0) < 1E-12);
 
  done:
   if (ch) {

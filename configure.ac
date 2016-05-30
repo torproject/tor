@@ -1756,6 +1756,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
     CFLAGS="$CFLAGS -Wlogical-op"
     # and these should be just fine in gcc 4.6
     CFLAGS="$CFLAGS -Wmissing-format-attribute -Wsuggest-attribute=noreturn -Wsync-nand -Wtrampolines -Wunused-but-set-parameter -Wunused-but-set-variable -Wvariadic-macros"
+    CFLAGS="$CFLAGS -Wdouble-promotion"
   fi
 
   if test "x$have_gcc47" = "xyes"; then

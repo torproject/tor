@@ -462,7 +462,8 @@ channel_tls_get_overhead_estimate_method(channel_t *chan)
      * Never estimate more than 2.0; otherwise we get silly large estimates
      * at the very start of a new TLS connection.
      */
-    if (overhead > 2.0f) overhead = 2.0f;
+    if (overhead > 2.0)
+      overhead = 2.0;
   }
 
   log_debug(LD_CHANNEL,
