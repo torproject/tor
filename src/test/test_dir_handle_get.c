@@ -393,7 +393,7 @@ test_dir_handle_get_rendezvous2_on_encrypted_conn_success(void *data)
   TO_CONN(conn)->linked = 1;
   tt_assert(connection_dir_is_encrypted(conn));
 
-  sprintf(req, RENDEZVOUS2_GET("%s"), desc_id_base32);
+  tor_snprintf(req, sizeof(req), RENDEZVOUS2_GET("%s"), desc_id_base32);
 
   tt_int_op(directory_handle_command_get(conn, req, NULL, 0), OP_EQ, 0);
 
@@ -408,7 +408,7 @@ test_dir_handle_get_rendezvous2_on_encrypted_conn_success(void *data)
   tt_assert(strstr(header, "Content-Type: text/plain\r\n"));
   tt_assert(strstr(header, "Content-Encoding: identity\r\n"));
   tt_assert(strstr(header, "Pragma: no-cache\r\n"));
-  sprintf(buff, "Content-Length: %ld\r\n", (long) body_len);
+  tor_snprintf(buff, sizeof(buff), "Content-Length: %ld\r\n", (long) body_len);
   tt_assert(strstr(header, buff));
 
   tt_int_op(body_used, OP_EQ, strlen(body));
@@ -520,7 +520,7 @@ test_dir_handle_get_micro_d(void *data)
   /* Make the request */
   conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
 
-  sprintf(path, MICRODESC_GET("%s"), digest_base64);
+  tor_snprintf(path, sizeof(path), MICRODESC_GET("%s"), digest_base64);
   tt_int_op(directory_handle_command_get(conn, path, NULL, 0), OP_EQ, 0);
 
   fetch_from_buf_http(TO_CONN(conn)->outbuf, &header, MAX_HEADERS_SIZE,
@@ -590,7 +590,7 @@ test_dir_handle_get_micro_d_server_busy(void *data)
   /* Make the request */
   conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
 
-  sprintf(path, MICRODESC_GET("%s"), digest_base64);
+  tor_snprintf(path, sizeof(path), MICRODESC_GET("%s"), digest_base64);
   tt_int_op(directory_handle_command_get(conn, path, NULL, 0), OP_EQ, 0);
 
   fetch_from_buf_http(TO_CONN(conn)->outbuf, &header, MAX_HEADERS_SIZE,
@@ -952,7 +952,8 @@ test_dir_handle_get_server_descriptors_fp(void* data)
                                    DIGEST_LEN);
 
   char req[155];
-  sprintf(req, SERVER_DESC_GET("fp/%s+" HEX1 "+" HEX2), hex_digest);
+  tor_snprintf(req, sizeof(req), SERVER_DESC_GET("fp/%s+" HEX1 "+" HEX2),
+               hex_digest);
   tt_int_op(directory_handle_command_get(conn, req, NULL, 0), OP_EQ, 0);
 
   //TODO: Is this a BUG?
@@ -1011,8 +1012,9 @@ test_dir_handle_get_server_descriptors_d(void* data)
 
   conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
 
-  char req_header[155];
-  sprintf(req_header, SERVER_DESC_GET("d/%s+" HEX1 "+" HEX2), hex_digest);
+  char req_header[155]; /* XXX Why 155? What kind of number is that?? */
+  tor_snprintf(req_header, sizeof(req_handler),
+               SERVER_DESC_GET("d/%s+" HEX1 "+" HEX2), hex_digest);
   tt_int_op(directory_handle_command_get(conn, req_header, NULL, 0), OP_EQ, 0);
 
   //TODO: Is this a BUG?
@@ -1080,8 +1082,9 @@ test_dir_handle_get_server_descriptors_busy(void* data)
 
   #define HEX1 "Fe0daff89127389bc67558691231234551193EEE"
   #define HEX2 "Deadbeef99999991111119999911111111f00ba4"
-  char req_header[155];
-  sprintf(req_header, SERVER_DESC_GET("d/%s+" HEX1 "+" HEX2), hex_digest);
+  char req_header[155]; /* XXX 155? Why 155? */
+  tor_snprintf(req_header, sizeof(req_header),
+               SERVER_DESC_GET("d/%s+" HEX1 "+" HEX2), hex_digest);
   tt_int_op(directory_handle_command_get(conn, req_header, NULL, 0), OP_EQ, 0);
 
   fetch_from_buf_http(TO_CONN(conn)->outbuf, &header, MAX_HEADERS_SIZE,
@@ -1355,7 +1358,8 @@ test_dir_handle_get_server_keys_fp(void* data)
 
   conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
   char req[71];
-  sprintf(req, GET("/tor/keys/fp/%s"), TEST_CERT_IDENT_KEY);
+  tor_snprintf(req, (sizeof(req),
+                     GET("/tor/keys/fp/%s"), TEST_CERT_IDENT_KEY);
   tt_int_op(directory_handle_command_get(conn, req, NULL, 0), OP_EQ, 0);
 
   fetch_from_buf_http(TO_CONN(conn)->outbuf, &header, MAX_HEADERS_SIZE,
@@ -1427,7 +1431,8 @@ test_dir_handle_get_server_keys_sk(void* data)
 
   conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
   char req[71];
-  sprintf(req, GET("/tor/keys/sk/%s"), TEST_SIGNING_KEY);
+  tor_snprintf(req, sizeof(req),
+               GET("/tor/keys/sk/%s"), TEST_SIGNING_KEY);
   tt_int_op(directory_handle_command_get(conn, req, NULL, 0), OP_EQ, 0);
 
   fetch_from_buf_http(TO_CONN(conn)->outbuf, &header, MAX_HEADERS_SIZE,
@@ -1510,8 +1515,9 @@ test_dir_handle_get_server_keys_fpsk(void* data)
   conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
 
   char req[115];
-  sprintf(req, GET("/tor/keys/fp-sk/%s-%s"),
-          TEST_CERT_IDENT_KEY, TEST_SIGNING_KEY);
+  tor_snprintf(req, sizeof(req),
+               GET("/tor/keys/fp-sk/%s-%s"),
+               TEST_CERT_IDENT_KEY, TEST_SIGNING_KEY);
 
   tt_int_op(directory_handle_command_get(conn, req, NULL, 0), OP_EQ, 0);
 
@@ -1572,7 +1578,7 @@ test_dir_handle_get_server_keys_busy(void* data)
 
   conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
   char req[71];
-  sprintf(req, GET("/tor/keys/fp/%s"), TEST_CERT_IDENT_KEY);
+  tor_snprintf(req, sizeof(req), GET("/tor/keys/fp/%s"), TEST_CERT_IDENT_KEY);
   tt_int_op(directory_handle_command_get(conn, req, NULL, 0), OP_EQ, 0);
 
   fetch_from_buf_http(TO_CONN(conn)->outbuf, &header, MAX_HEADERS_SIZE,
