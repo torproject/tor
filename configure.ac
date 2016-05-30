@@ -1701,7 +1701,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
 #if !defined(__GNUC__) || (__GNUC__ < 6)
 #error
-#endif])], have_gcc6=yes, have_gcc5=no)
+#endif])], have_gcc6=yes, have_gcc6=no)
 
   save_CFLAGS="$CFLAGS"
   CFLAGS="$CFLAGS -Wshorten-64-to-32"
@@ -1734,9 +1734,13 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
   if test "x$have_gcc42" = "xyes"; then
     # These warnings break gcc 4.0.2 and work on gcc 4.2
     # XXXX020 See if any of these work with earlier versions.
-    CFLAGS="$CFLAGS -Waddress -Wmissing-noreturn -Wstrict-overflow=1"
+    CFLAGS="$CFLAGS -Waddress -Wmissing-noreturn"
+  fi
 
+  if test "x$have_gcc42" = "xyes" && test "x$have_gcc5" != "xyes"; then
+    CFLAGS="$CFLAGS -Wstrict-overflow=1"
     # We used to use -Wstrict-overflow=5, but that breaks us heavily under 4.3.
+    # Save it for GCC 5 where they improved the testing.
   fi
 
   if test "x$have_gcc42" = "xyes" && test "x$have_clang" = "xno"; then
@@ -1775,6 +1779,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
 
   if test "x$have_gcc5" = "xyes"; then
      CFLAGS="$CFLAGS -Wc99-c11-compat -Wshift-count-negative -Wshift-count-overflow -Wsizeof-array-argument -Wswitch-bool"
+    CFLAGS="$CFLAGS -Wstrict-overflow=2"
   fi
 
  if test "x$have_gcc6" = "xyes"; then
