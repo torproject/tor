@@ -1013,7 +1013,7 @@ test_dir_handle_get_server_descriptors_d(void* data)
   conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
 
   char req_header[155]; /* XXX Why 155? What kind of number is that?? */
-  tor_snprintf(req_header, sizeof(req_handler),
+  tor_snprintf(req_header, sizeof(req_header),
                SERVER_DESC_GET("d/%s+" HEX1 "+" HEX2), hex_digest);
   tt_int_op(directory_handle_command_get(conn, req_header, NULL, 0), OP_EQ, 0);
 
@@ -1358,7 +1358,7 @@ test_dir_handle_get_server_keys_fp(void* data)
 
   conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
   char req[71];
-  tor_snprintf(req, (sizeof(req),
+  tor_snprintf(req, sizeof(req),
                      GET("/tor/keys/fp/%s"), TEST_CERT_IDENT_KEY);
   tt_int_op(directory_handle_command_get(conn, req, NULL, 0), OP_EQ, 0);
 
