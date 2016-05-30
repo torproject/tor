@@ -8,6 +8,7 @@
 #ifdef _WIN32
 #include <winsock2.h>
 #endif
+#include <math.h>
 
 #ifdef __GNUC__
 #define GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__)
@@ -1194,17 +1195,17 @@ test_tortls_get_write_overhead_ratio(void *ignored)
 
   total_bytes_written_over_tls = 0;
   ret = tls_get_write_overhead_ratio();
-  tt_int_op(ret, OP_EQ, 1.0);
+  tt_double_op(fabs(ret - 1.0), OP_LT, 1E-12);
 
   total_bytes_written_by_tls = 10;
   total_bytes_written_over_tls = 1;
   ret = tls_get_write_overhead_ratio();
-  tt_int_op(ret, OP_EQ, 10.0);
+  tt_double_op(fabs(ret - 10.0), OP_LT, 1E-12);
 
   total_bytes_written_by_tls = 10;
   total_bytes_written_over_tls = 2;
   ret = tls_get_write_overhead_ratio();
-  tt_int_op(ret, OP_EQ, 5.0);
+  tt_double_op(fabs(ret - 5.0), OP_LT, 1E-12);
 
  done:
   (void)0;

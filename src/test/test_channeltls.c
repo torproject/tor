@@ -185,7 +185,7 @@ test_channeltls_overhead_estimate(void *arg)
   const char test_digest[DIGEST_LEN] = {
     0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
     0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14 };
-  float r;
+  double r;
   channel_tls_t *tlschan = NULL;
 
   (void)arg;
@@ -212,25 +212,25 @@ test_channeltls_overhead_estimate(void *arg)
   tlschan->conn->bytes_xmitted = 128;
   tlschan->conn->bytes_xmitted_by_tls = 64;
   r = ch->get_overhead_estimate(ch);
-  tt_assert(fabsf(r - 1.0f) < 1E-12);
+  tt_assert(fabs(r - 1.0f) < 1E-12);
 
   tlschan->conn->bytes_xmitted_by_tls = 127;
   r = ch->get_overhead_estimate(ch);
-  tt_assert(fabsf(r - 1.0f) < 1E-12);
+  tt_assert(fabs(r - 1.0f) < 1E-12);
 
   /* Now middle of the range */
   tlschan->conn->bytes_xmitted_by_tls = 192;
   r = ch->get_overhead_estimate(ch);
-  tt_assert(fabsf(r - 1.5f) < 1E-12);
+  tt_assert(fabs(r - 1.5f) < 1E-12);
 
   /* Now above the 2.0f clamp */
   tlschan->conn->bytes_xmitted_by_tls = 257;
   r = ch->get_overhead_estimate(ch);
-  tt_assert(fabsf(r - 2.0f) < 1E-12);
+  tt_assert(fabs(r - 2.0f) < 1E-12);
 
   tlschan->conn->bytes_xmitted_by_tls = 512;
   r = ch->get_overhead_estimate(ch);
-  tt_assert(fabsf(r - 2.0f) < 1E-12);
+  tt_assert(fabs(r - 2.0f) < 1E-12);
 
  done:
   if (ch) {

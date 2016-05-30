@@ -1472,24 +1472,24 @@ test_util_strmisc(void *arg)
 
   {
   /* Test parse_double */
-  double d = tor_parse_double("10", 0, UINT64_MAX,&i,NULL);
+  double d = tor_parse_double("10", 0, (double)UINT64_MAX,&i,NULL);
   tt_int_op(1,OP_EQ, i);
   tt_assert(DBL_TO_U64(d) == 10);
-  d = tor_parse_double("0", 0, UINT64_MAX,&i,NULL);
+  d = tor_parse_double("0", 0, (double)UINT64_MAX,&i,NULL);
   tt_int_op(1,OP_EQ, i);
   tt_assert(DBL_TO_U64(d) == 0);
-  d = tor_parse_double(" ", 0, UINT64_MAX,&i,NULL);
+  d = tor_parse_double(" ", 0, (double)UINT64_MAX,&i,NULL);
   tt_int_op(0,OP_EQ, i);
-  d = tor_parse_double(".0a", 0, UINT64_MAX,&i,NULL);
+  d = tor_parse_double(".0a", 0, (double)UINT64_MAX,&i,NULL);
   tt_int_op(0,OP_EQ, i);
-  d = tor_parse_double(".0a", 0, UINT64_MAX,&i,&cp);
+  d = tor_parse_double(".0a", 0, (double)UINT64_MAX,&i,&cp);
   tt_int_op(1,OP_EQ, i);
-  d = tor_parse_double("-.0", 0, UINT64_MAX,&i,NULL);
+  d = tor_parse_double("-.0", 0, (double)UINT64_MAX,&i,NULL);
   tt_int_op(1,OP_EQ, i);
   tt_assert(DBL_TO_U64(d) == 0);
   d = tor_parse_double("-10", -100.0, 100.0,&i,NULL);
   tt_int_op(1,OP_EQ, i);
-  tt_int_op(-10.0,OP_EQ, d);
+  tt_double_op(fabs(d - -10.0),OP_LT, 1E-12);
   }
 
   {

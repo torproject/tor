@@ -5530,7 +5530,7 @@ clamp_double_to_int64(double number)
    * representable integer for which this is not the case is INT64_MIN, but
    * it is covered by the logic below. */
   if (isfinite(number) && exp <= 63) {
-    return number;
+    return (int64_t)number;
   }
 
   /* Handle infinities and finite numbers with magnitude >= 2^63. */

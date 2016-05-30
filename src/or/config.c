@@ -5782,7 +5782,7 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
     } else if (!strcmpstart(flag, "weight=")) {
       int ok;
       const char *wstring = flag + strlen("weight=");
-      weight = tor_parse_double(wstring, 0, UINT64_MAX, &ok, NULL);
+      weight = tor_parse_double(wstring, 0, (double)UINT64_MAX, &ok, NULL);
       if (!ok) {
         log_warn(LD_CONFIG, "Invalid weight '%s' on DirAuthority line.",flag);
         weight=1.0;
@@ -5926,7 +5926,7 @@ parse_dir_fallback_line(const char *line,
     } else if (!strcmpstart(cp, "weight=")) {
       int ok;
       const char *wstring = cp + strlen("weight=");
-      weight = tor_parse_double(wstring, 0, UINT64_MAX, &ok, NULL);
+      weight = tor_parse_double(wstring, 0, (double)UINT64_MAX, &ok, NULL);
       if (!ok) {
         log_warn(LD_CONFIG, "Invalid weight '%s' on FallbackDir line.", cp);
         weight=1.0;

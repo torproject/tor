@@ -2178,7 +2178,7 @@ scale_array_elements_to_u64(uint64_t *entries_out, const double *entries_in,
   double scale_factor = 0.0;
   int i;
   /* big, but far away from overflowing an int64_t */
-#define SCALE_TO_U64_MAX ((int64_t) (INT64_MAX / 4))
+#define SCALE_TO_U64_MAX ((double) (INT64_MAX / 4))
 
   for (i = 0; i < n_entries; ++i)
     total += entries_in[i];

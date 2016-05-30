@@ -1768,6 +1768,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
 
   if test "x$have_gcc49" = "xyes"; then
      CFLAGS="$CFLAGS -Wdate-time"
+     CFLAGS="$CFLAGS -Wfloat-conversion"
   fi
 
   if test "x$have_gcc5" = "xyes"; then
