@@ -30,7 +30,6 @@ fi
 # the += operator on it in src/or/Makefile.am
 CPPFLAGS="$CPPFLAGS -I\${top_srcdir}/src/common"
 
-#XXXX020 We should make these enabled or not, before 0.2.0.x-final
 AC_ARG_ENABLE(openbsd-malloc,
    AS_HELP_STRING(--enable-openbsd-malloc, [use malloc code from OpenBSD.  Linux only]))
 AC_ARG_ENABLE(static-openssl,
@@ -1710,7 +1709,6 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
 
   if test "x$have_gcc42" = "xyes"; then
     # These warnings break gcc 4.0.2 and work on gcc 4.2
-    # XXXX020 See if any of these work with earlier versions.
     CFLAGS="$CFLAGS -Waddress -Wmissing-noreturn -Wstrict-overflow=1"
 
     # We used to use -Wstrict-overflow=5, but that breaks us heavily under 4.3.
@@ -1723,7 +1721,6 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
 
   if test "x$have_gcc43" = "xyes"; then
     # These warnings break gcc 4.2 and work on gcc 4.3
-    # XXXX020 See if any of these work with earlier versions.
     CFLAGS="$CFLAGS -Wextra -Warray-bounds"
   fi
 
