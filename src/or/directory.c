@@ -16,6 +16,7 @@
 #include "dirvote.h"
 #include "entrynodes.h"
 #include "geoip.h"
+#include "hs_common.h"
 #include "main.h"
 #include "microdesc.h"
 #include "networkstatus.h"
@@ -2346,7 +2347,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                                          conn->identity_digest, \
                                          reason) )
     #define SEND_HS_DESC_FAILED_CONTENT() ( \
-      control_event_hs_descriptor_content(conn->rend_data->onion_address, \
+      control_event_hs_descriptor_content(rend_data_get_address(conn->rend_data), \
                                           conn->requested_resource, \
                                           conn->identity_digest, \
                                           NULL) )
@@ -2422,7 +2423,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     #define SEND_HS_DESC_UPLOAD_FAILED_EVENT(reason) ( \
       control_event_hs_descriptor_upload_failed( \
         conn->identity_digest, \
-        conn->rend_data->onion_address, \
+        rend_data_get_address(conn->rend_data), \
         reason) )
     log_info(LD_REND,"Uploaded rendezvous descriptor (status %d "
              "(%s))",
@@ -2436,7 +2437,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                  "Uploading rendezvous descriptor: finished with status "
                  "200 (%s)", escaped(reason));
         control_event_hs_descriptor_uploaded(conn->identity_digest,
-                                             conn->rend_data->onion_address);
+                                    rend_data_get_address(conn->rend_data));
         rend_service_desc_has_uploaded(conn->rend_data);
         break;
       case 400:
@@ -2547,7 +2548,8 @@ connection_dir_about_to_close(dir_connection_t *dir_conn)
    * refetching is unnecessary.) */
   if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC_V2 &&
       dir_conn->rend_data &&
-      strlen(dir_conn->rend_data->onion_address) == REND_SERVICE_ID_LEN_BASE32)
+      strlen(rend_data_get_address(dir_conn->rend_data)) ==
+             REND_SERVICE_ID_LEN_BASE32)
     rend_client_refetch_v2_renddesc(dir_conn->rend_data);
 }
 

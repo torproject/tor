@@ -38,6 +38,7 @@
 #include "ext_orport.h"
 #include "geoip.h"
 #include "main.h"
+#include "hs_common.h"
 #include "nodelist.h"
 #include "policies.h"
 #include "reasons.h"
@@ -4082,12 +4083,12 @@ connection_get_by_type_state_rendquery(int type, int state,
          (type == CONN_TYPE_DIR &&
           TO_DIR_CONN(conn)->rend_data &&
           !rend_cmp_service_ids(rendquery,
-                                TO_DIR_CONN(conn)->rend_data->onion_address))
+                    rend_data_get_address(TO_DIR_CONN(conn)->rend_data)))
          ||
               (CONN_IS_EDGE(conn) &&
                TO_EDGE_CONN(conn)->rend_data &&
                !rend_cmp_service_ids(rendquery,
-                            TO_EDGE_CONN(conn)->rend_data->onion_address))
+                    rend_data_get_address(TO_EDGE_CONN(conn)->rend_data)))
          ));
 }
 

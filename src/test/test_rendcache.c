@@ -10,6 +10,7 @@
 #include "router.h"
 #include "routerlist.h"
 #include "config.h"
+#include "hs_common.h"
 #include <openssl/rsa.h>
 #include "rend_test_helpers.h"
 
@@ -23,15 +24,16 @@ static const int TIME_IN_THE_FUTURE = REND_CACHE_MAX_SKEW + 60;
 static rend_data_t *
 mock_rend_data(const char *onion_address)
 {
-  rend_data_t *rend_query = tor_malloc_zero(sizeof(rend_data_t));
+  rend_data_v2_t *v2_data = tor_malloc_zero(sizeof(*v2_data));
+  rend_data_t *rend_query = &v2_data->base_;
+  rend_query->version = 2;
 
-  strlcpy(rend_query->onion_address, onion_address,
-          sizeof(rend_query->onion_address));
-  rend_query->auth_type = REND_NO_AUTH;
+  strlcpy(v2_data->onion_address, onion_address,
+          sizeof(v2_data->onion_address));
+  v2_data->auth_type = REND_NO_AUTH;
   rend_query->hsdirs_fp = smartlist_new();
   smartlist_add(rend_query->hsdirs_fp, tor_memdup("aaaaaaaaaaaaaaaaaaaaaaaa",
                                                  DIGEST_LEN));
-
   return rend_query;
 }
 
@@ -143,7 +145,8 @@ test_rend_cache_store_v2_desc_as_client(void *data)
 
   // Test mismatch between service ID and onion address
   rend_cache_init();
-  strncpy(mock_rend_query->onion_address, "abc", REND_SERVICE_ID_LEN_BASE32+1);
+  strncpy(TO_REND_DATA_V2(mock_rend_query)->onion_address, "abc",
+          REND_SERVICE_ID_LEN_BASE32+1);
   ret = rend_cache_store_v2_desc_as_client(desc_holder->desc_str,
                                            desc_id_base32,
                                            mock_rend_query, NULL);
@@ -229,9 +232,9 @@ test_rend_cache_store_v2_desc_as_client(void *data)
 
   generate_desc(RECENT_TIME, &desc_holder, &service_id, 3);
   mock_rend_query = mock_rend_data(service_id);
-  mock_rend_query->auth_type = REND_BASIC_AUTH;
+  TO_REND_DATA_V2(mock_rend_query)->auth_type = REND_BASIC_AUTH;
   client_cookie[0] = 'A';
-  memcpy(mock_rend_query->descriptor_cookie, client_cookie,
+  memcpy(TO_REND_DATA_V2(mock_rend_query)->descriptor_cookie, client_cookie,
          REND_DESC_COOKIE_LEN);
   base32_encode(desc_id_base32, sizeof(desc_id_base32), desc_holder->desc_id,
                 DIGEST_LEN);
@@ -249,7 +252,7 @@ test_rend_cache_store_v2_desc_as_client(void *data)
 
   generate_desc(RECENT_TIME, &desc_holder, &service_id, 3);
   mock_rend_query = mock_rend_data(service_id);
-  mock_rend_query->auth_type = REND_BASIC_AUTH;
+  TO_REND_DATA_V2(mock_rend_query)->auth_type = REND_BASIC_AUTH;
   base32_encode(desc_id_base32, sizeof(desc_id_base32), desc_holder->desc_id,
                 DIGEST_LEN);
   ret = rend_cache_store_v2_desc_as_client(desc_holder->desc_str,

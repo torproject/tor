@@ -29,6 +29,7 @@
 #include "dnsserv.h"
 #include "dirserv.h"
 #include "hibernate.h"
+#include "hs_common.h"
 #include "main.h"
 #include "nodelist.h"
 #include "policies.h"
@@ -1707,21 +1708,22 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     if (rend_data == NULL) {
       return -1;
     }
+    const char *onion_address = rend_data_get_address(rend_data);
     log_info(LD_REND,"Got a hidden service request for ID '%s'",
-             safe_str_client(rend_data->onion_address));
+             safe_str_client(onion_address));
 
     /* Lookup the given onion address. If invalid, stop right now else we
      * might have it in the cache or not, it will be tested later on. */
     unsigned int refetch_desc = 0;
     rend_cache_entry_t *entry = NULL;
     const int rend_cache_lookup_result =
-      rend_cache_lookup_entry(rend_data->onion_address, -1, &entry);
+      rend_cache_lookup_entry(onion_address, -1, &entry);
     if (rend_cache_lookup_result < 0) {
       switch (-rend_cache_lookup_result) {
       case EINVAL:
         /* We should already have rejected this address! */
         log_warn(LD_BUG,"Invalid service name '%s'",
-            safe_str_client(rend_data->onion_address));
+                 safe_str_client(onion_address));
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
         return -1;
       case ENOENT:
@@ -1745,7 +1747,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       connection_ap_mark_as_non_pending_circuit(conn);
       base_conn->state = AP_CONN_STATE_RENDDESC_WAIT;
       log_info(LD_REND, "Unknown descriptor %s. Fetching.",
-          safe_str_client(rend_data->onion_address));
+               safe_str_client(onion_address));
       rend_client_refetch_v2_renddesc(rend_data);
       return 0;
     }

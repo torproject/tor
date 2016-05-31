@@ -13,6 +13,7 @@
 #include "test.h"
 #include "control.h"
 #include "config.h"
+#include "hs_common.h"
 #include "rendcommon.h"
 #include "routerset.h"
 #include "circuitbuild.h"
@@ -134,7 +135,7 @@ test_hs_desc_event(void *arg)
   #define STR_DESC_ID_BASE32 "hba3gmcgpfivzfhx5rtfqkfdhv65yrj3"
 
   int ret;
-  rend_data_t rend_query;
+  rend_data_v2_t rend_query;
   const char *expected_msg;
   char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
 
@@ -146,12 +147,13 @@ test_hs_desc_event(void *arg)
 
   /* setup rend_query struct */
   memset(&rend_query, 0, sizeof(rend_query));
+  rend_query.base_.version = 2;
   strncpy(rend_query.onion_address, STR_HS_ADDR,
           REND_SERVICE_ID_LEN_BASE32+1);
   rend_query.auth_type = REND_NO_AUTH;
-  rend_query.hsdirs_fp = smartlist_new();
-  smartlist_add(rend_query.hsdirs_fp, tor_memdup(HSDIR_EXIST_ID,
-                                                 DIGEST_LEN));
+  rend_query.base_.hsdirs_fp = smartlist_new();
+  smartlist_add(rend_query.base_.hsdirs_fp, tor_memdup(HSDIR_EXIST_ID,
+                                                       DIGEST_LEN));
 
   /* Compute descriptor ID for replica 0, should be STR_DESC_ID_BASE32. */
   ret = rend_compute_v2_desc_id(rend_query.descriptor_id[0],
@@ -165,7 +167,7 @@ test_hs_desc_event(void *arg)
             sizeof(desc_id_base32));
 
   /* test request event */
-  control_event_hs_descriptor_requested(&rend_query, HSDIR_EXIST_ID,
+  control_event_hs_descriptor_requested(&rend_query.base_, HSDIR_EXIST_ID,
                                         STR_DESC_ID_BASE32);
   expected_msg = "650 HS_DESC REQUESTED "STR_HS_ADDR" NO_AUTH "\
                   STR_HSDIR_EXIST_LONGNAME " " STR_DESC_ID_BASE32 "\r\n";
@@ -176,7 +178,7 @@ test_hs_desc_event(void *arg)
   /* test received event */
   rend_query.auth_type = REND_BASIC_AUTH;
   control_event_hs_descriptor_received(rend_query.onion_address,
-                                       &rend_query, HSDIR_EXIST_ID);
+                                       &rend_query.base_, HSDIR_EXIST_ID);
   expected_msg = "650 HS_DESC RECEIVED "STR_HS_ADDR" BASIC_AUTH "\
                   STR_HSDIR_EXIST_LONGNAME " " STR_DESC_ID_BASE32"\r\n";
   tt_assert(received_msg);
@@ -185,7 +187,7 @@ test_hs_desc_event(void *arg)
 
   /* test failed event */
   rend_query.auth_type = REND_STEALTH_AUTH;
-  control_event_hs_descriptor_failed(&rend_query,
+  control_event_hs_descriptor_failed(&rend_query.base_,
                                      HSDIR_NONE_EXIST_ID,
                                      "QUERY_REJECTED");
   expected_msg = "650 HS_DESC FAILED "STR_HS_ADDR" STEALTH_AUTH "\
@@ -196,7 +198,7 @@ test_hs_desc_event(void *arg)
 
   /* test invalid auth type */
   rend_query.auth_type = 999;
-  control_event_hs_descriptor_failed(&rend_query,
+  control_event_hs_descriptor_failed(&rend_query.base_,
                                      HSDIR_EXIST_ID,
                                      "QUERY_REJECTED");
   expected_msg = "650 HS_DESC FAILED "STR_HS_ADDR" UNKNOWN "\
@@ -219,8 +221,8 @@ test_hs_desc_event(void *arg)
   tt_str_op(received_msg, OP_EQ, exp_msg);
   tor_free(received_msg);
   tor_free(exp_msg);
-  SMARTLIST_FOREACH(rend_query.hsdirs_fp, char *, d, tor_free(d));
-  smartlist_free(rend_query.hsdirs_fp);
+  SMARTLIST_FOREACH(rend_query.base_.hsdirs_fp, char *, d, tor_free(d));
+  smartlist_free(rend_query.base_.hsdirs_fp);
 
  done:
   UNMOCK(queue_control_event_string);
@@ -320,42 +322,45 @@ test_hs_rend_data(void *arg)
   client = rend_data_client_create(STR_HS_ADDR, desc_id, client_cookie,
                                    REND_NO_AUTH);
   tt_assert(client);
-  tt_int_op(client->auth_type, ==, REND_NO_AUTH);
-  tt_str_op(client->onion_address, OP_EQ, STR_HS_ADDR);
-  tt_mem_op(client->desc_id_fetch, OP_EQ, desc_id, sizeof(desc_id));
-  tt_mem_op(client->descriptor_cookie, OP_EQ, client_cookie,
+  rend_data_v2_t *client_v2 = TO_REND_DATA_V2(client);
+  tt_int_op(client_v2->auth_type, ==, REND_NO_AUTH);
+  tt_str_op(client_v2->onion_address, OP_EQ, STR_HS_ADDR);
+  tt_mem_op(client_v2->desc_id_fetch, OP_EQ, desc_id, sizeof(desc_id));
+  tt_mem_op(client_v2->descriptor_cookie, OP_EQ, client_cookie,
             sizeof(client_cookie));
   tt_assert(client->hsdirs_fp);
   tt_int_op(smartlist_len(client->hsdirs_fp), ==, 0);
   for (rep = 0; rep < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; rep++) {
-    int ret = rend_compute_v2_desc_id(desc_id, client->onion_address,
-                                      client->descriptor_cookie, now, rep);
+    int ret = rend_compute_v2_desc_id(desc_id, client_v2->onion_address,
+                                      client_v2->descriptor_cookie, now, rep);
     /* That shouldn't never fail. */
     tt_int_op(ret, ==, 0);
-    tt_mem_op(client->descriptor_id[rep], OP_EQ, desc_id, sizeof(desc_id));
+    tt_mem_op(client_v2->descriptor_id[rep], OP_EQ, desc_id,
+              sizeof(desc_id));
   }
   /* The rest should be zeroed because this is a client request. */
-  tt_int_op(tor_digest_is_zero(client->rend_pk_digest), ==, 1);
+  tt_int_op(tor_digest_is_zero(client_v2->rend_pk_digest), ==, 1);
   tt_int_op(tor_digest_is_zero(client->rend_cookie), ==, 1);
 
   /* Test dup(). */
   client_dup = rend_data_dup(client);
   tt_assert(client_dup);
-  tt_int_op(client_dup->auth_type, ==, client->auth_type);
-  tt_str_op(client_dup->onion_address, OP_EQ, client->onion_address);
-  tt_mem_op(client_dup->desc_id_fetch, OP_EQ, client->desc_id_fetch,
-            sizeof(client_dup->desc_id_fetch));
-  tt_mem_op(client_dup->descriptor_cookie, OP_EQ, client->descriptor_cookie,
-            sizeof(client_dup->descriptor_cookie));
+  rend_data_v2_t *client_dup_v2 = TO_REND_DATA_V2(client_dup);
+  tt_int_op(client_dup_v2->auth_type, ==, client_v2->auth_type);
+  tt_str_op(client_dup_v2->onion_address, OP_EQ, client_v2->onion_address);
+  tt_mem_op(client_dup_v2->desc_id_fetch, OP_EQ, client_v2->desc_id_fetch,
+            sizeof(client_dup_v2->desc_id_fetch));
+  tt_mem_op(client_dup_v2->descriptor_cookie, OP_EQ, client_v2->descriptor_cookie,
+            sizeof(client_dup_v2->descriptor_cookie));
 
   tt_assert(client_dup->hsdirs_fp);
   tt_int_op(smartlist_len(client_dup->hsdirs_fp), ==, 0);
   for (rep = 0; rep < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; rep++) {
-    tt_mem_op(client_dup->descriptor_id[rep], OP_EQ,
-              client->descriptor_id[rep], DIGEST_LEN);
+    tt_mem_op(client_dup_v2->descriptor_id[rep], OP_EQ,
+              client_v2->descriptor_id[rep], DIGEST_LEN);
   }
   /* The rest should be zeroed because this is a client request. */
-  tt_int_op(tor_digest_is_zero(client_dup->rend_pk_digest), ==, 1);
+  tt_int_op(tor_digest_is_zero(client_dup_v2->rend_pk_digest), ==, 1);
   tt_int_op(tor_digest_is_zero(client_dup->rend_cookie), ==, 1);
   rend_data_free(client);
   client = NULL;
@@ -371,18 +376,19 @@ test_hs_rend_data(void *arg)
    * zeroed out. */
   client = rend_data_client_create(NULL, desc_id, NULL, REND_BASIC_AUTH);
   tt_assert(client);
-  tt_int_op(client->auth_type, ==, REND_BASIC_AUTH);
-  tt_int_op(strlen(client->onion_address), ==, 0);
-  tt_mem_op(client->desc_id_fetch, OP_EQ, desc_id, sizeof(desc_id));
-  tt_int_op(tor_mem_is_zero(client->descriptor_cookie,
-                            sizeof(client->descriptor_cookie)), ==, 1);
+  client_v2 = TO_REND_DATA_V2(client);
+  tt_int_op(client_v2->auth_type, ==, REND_BASIC_AUTH);
+  tt_int_op(strlen(client_v2->onion_address), ==, 0);
+  tt_mem_op(client_v2->desc_id_fetch, OP_EQ, desc_id, sizeof(desc_id));
+  tt_int_op(tor_mem_is_zero(client_v2->descriptor_cookie,
+                            sizeof(client_v2->descriptor_cookie)), ==, 1);
   tt_assert(client->hsdirs_fp);
   tt_int_op(smartlist_len(client->hsdirs_fp), ==, 0);
   for (rep = 0; rep < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; rep++) {
-    tt_int_op(tor_digest_is_zero(client->descriptor_id[rep]), ==, 1);
+    tt_int_op(tor_digest_is_zero(client_v2->descriptor_id[rep]), ==, 1);
   }
   /* The rest should be zeroed because this is a client request. */
-  tt_int_op(tor_digest_is_zero(client->rend_pk_digest), ==, 1);
+  tt_int_op(tor_digest_is_zero(client_v2->rend_pk_digest), ==, 1);
   tt_int_op(tor_digest_is_zero(client->rend_cookie), ==, 1);
   rend_data_free(client);
   client = NULL;
@@ -396,37 +402,39 @@ test_hs_rend_data(void *arg)
   service = rend_data_service_create(STR_HS_ADDR, rend_pk_digest,
                                      rend_cookie, REND_NO_AUTH);
   tt_assert(service);
-  tt_int_op(service->auth_type, ==, REND_NO_AUTH);
-  tt_str_op(service->onion_address, OP_EQ, STR_HS_ADDR);
-  tt_mem_op(service->rend_pk_digest, OP_EQ, rend_pk_digest,
+  rend_data_v2_t *service_v2 = TO_REND_DATA_V2(service);
+  tt_int_op(service_v2->auth_type, ==, REND_NO_AUTH);
+  tt_str_op(service_v2->onion_address, OP_EQ, STR_HS_ADDR);
+  tt_mem_op(service_v2->rend_pk_digest, OP_EQ, rend_pk_digest,
             sizeof(rend_pk_digest));
   tt_mem_op(service->rend_cookie, OP_EQ, rend_cookie, sizeof(rend_cookie));
   tt_assert(service->hsdirs_fp);
   tt_int_op(smartlist_len(service->hsdirs_fp), ==, 0);
   for (rep = 0; rep < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; rep++) {
-    tt_int_op(tor_digest_is_zero(service->descriptor_id[rep]), ==, 1);
+    tt_int_op(tor_digest_is_zero(service_v2->descriptor_id[rep]), ==, 1);
   }
   /* The rest should be zeroed because this is a service request. */
-  tt_int_op(tor_digest_is_zero(service->descriptor_cookie), ==, 1);
-  tt_int_op(tor_digest_is_zero(service->desc_id_fetch), ==, 1);
+  tt_int_op(tor_digest_is_zero(service_v2->descriptor_cookie), ==, 1);
+  tt_int_op(tor_digest_is_zero(service_v2->desc_id_fetch), ==, 1);
 
   /* Test dup(). */
   service_dup = rend_data_dup(service);
+  rend_data_v2_t *service_dup_v2 = TO_REND_DATA_V2(service_dup);
   tt_assert(service_dup);
-  tt_int_op(service_dup->auth_type, ==, service->auth_type);
-  tt_str_op(service_dup->onion_address, OP_EQ, service->onion_address);
-  tt_mem_op(service_dup->rend_pk_digest, OP_EQ, service->rend_pk_digest,
-            sizeof(service_dup->rend_pk_digest));
+  tt_int_op(service_dup_v2->auth_type, ==, service_v2->auth_type);
+  tt_str_op(service_dup_v2->onion_address, OP_EQ, service_v2->onion_address);
+  tt_mem_op(service_dup_v2->rend_pk_digest, OP_EQ, service_v2->rend_pk_digest,
+            sizeof(service_dup_v2->rend_pk_digest));
   tt_mem_op(service_dup->rend_cookie, OP_EQ, service->rend_cookie,
             sizeof(service_dup->rend_cookie));
   tt_assert(service_dup->hsdirs_fp);
   tt_int_op(smartlist_len(service_dup->hsdirs_fp), ==, 0);
   for (rep = 0; rep < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; rep++) {
-    tt_int_op(tor_digest_is_zero(service_dup->descriptor_id[rep]), ==, 1);
+    tt_int_op(tor_digest_is_zero(service_dup_v2->descriptor_id[rep]), ==, 1);
   }
   /* The rest should be zeroed because this is a service request. */
-  tt_int_op(tor_digest_is_zero(service_dup->descriptor_cookie), ==, 1);
-  tt_int_op(tor_digest_is_zero(service_dup->desc_id_fetch), ==, 1);
+  tt_int_op(tor_digest_is_zero(service_dup_v2->descriptor_cookie), ==, 1);
+  tt_int_op(tor_digest_is_zero(service_dup_v2->desc_id_fetch), ==, 1);
 
  done:
   rend_data_free(service);

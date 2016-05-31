@@ -33,6 +33,7 @@
 #include "entrynodes.h"
 #include "geoip.h"
 #include "hibernate.h"
+#include "hs_common.h"
 #include "main.h"
 #include "networkstatus.h"
 #include "nodelist.h"
@@ -2515,7 +2516,7 @@ circuit_describe_status_for_controller(origin_circuit_t *circ)
 
   if (circ->rend_data != NULL) {
     smartlist_add_asprintf(descparts, "REND_QUERY=%s",
-                 circ->rend_data->onion_address);
+                           rend_data_get_address(circ->rend_data));
   }
 
   {
@@ -6810,8 +6811,10 @@ control_event_hs_descriptor_requested(const rend_data_t *rend_query,
 
   send_control_event(EVENT_HS_DESC,
                      "650 HS_DESC REQUESTED %s %s %s %s\r\n",
-                     rend_hsaddress_str_or_unknown(rend_query->onion_address),
-                     rend_auth_type_to_string(rend_query->auth_type),
+                     rend_hsaddress_str_or_unknown(
+                          rend_data_get_address(rend_query)),
+                     rend_auth_type_to_string(
+                          TO_REND_DATA_V2(rend_query)->auth_type),
                      node_describe_longname_by_id(id_digest),
                      desc_id_base32);
 }
@@ -6827,11 +6830,12 @@ get_desc_id_from_query(const rend_data_t *rend_data, const char *hsdir_fp)
 {
   int replica;
   const char *desc_id = NULL;
+  const rend_data_v2_t *rend_data_v2 = TO_REND_DATA_V2(rend_data);
 
   /* Possible if the fetch was done using a descriptor ID. This means that
    * the HSFETCH command was used. */
-  if (!tor_digest_is_zero(rend_data->desc_id_fetch)) {
-    desc_id = rend_data->desc_id_fetch;
+  if (!tor_digest_is_zero(rend_data_v2->desc_id_fetch)) {
+    desc_id = rend_data_v2->desc_id_fetch;
     goto end;
   }
 
@@ -6839,7 +6843,7 @@ get_desc_id_from_query(const rend_data_t *rend_data, const char *hsdir_fp)
    * is the one associated with the HSDir fingerprint. */
   for (replica = 0; replica < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS;
        replica++) {
-    const char *digest = rend_data->descriptor_id[replica];
+    const char *digest = rend_data_get_desc_id(rend_data, replica, NULL);
 
     SMARTLIST_FOREACH_BEGIN(rend_data->hsdirs_fp, char *, fingerprint) {
       if (tor_memcmp(fingerprint, hsdir_fp, DIGEST_LEN) == 0) {
@@ -6948,7 +6952,8 @@ control_event_hs_descriptor_receive_end(const char *action,
                      "650 HS_DESC %s %s %s %s%s%s\r\n",
                      action,
                      rend_hsaddress_str_or_unknown(onion_address),
-                     rend_auth_type_to_string(rend_data->auth_type),
+                     rend_auth_type_to_string(
+                          TO_REND_DATA_V2(rend_data)->auth_type),
                      node_describe_longname_by_id(id_digest),
                      desc_id_field ? desc_id_field : "",
                      reason_field ? reason_field : "");
@@ -7045,7 +7050,7 @@ control_event_hs_descriptor_failed(const rend_data_t *rend_data,
     return;
   }
   control_event_hs_descriptor_receive_end("FAILED",
-                                          rend_data->onion_address,
+                                          rend_data_get_address(rend_data),
                                           rend_data, id_digest, reason);
 }
 

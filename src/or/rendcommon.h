@@ -18,19 +18,6 @@ typedef enum rend_intro_point_failure_t {
   INTRO_POINT_FAILURE_UNREACHABLE = 2,
 } rend_intro_point_failure_t;
 
-/** Free all storage associated with <b>data</b> */
-static inline void
-rend_data_free(rend_data_t *data)
-{
-  if (!data) {
-    return;
-  }
-  /* Cleanup the HSDir identity digest. */
-  SMARTLIST_FOREACH(data->hsdirs_fp, char *, d, tor_free(d));
-  smartlist_free(data->hsdirs_fp);
-  tor_free(data);
-}
-
 int rend_cmp_service_ids(const char *one, const char *two);
 
 void rend_process_relay_cell(circuit_t *circ, const crypt_path_t *layer_hint,
@@ -60,15 +47,8 @@ void rend_get_descriptor_id_bytes(char *descriptor_id_out,
 int hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
                                          const char *id);
 
-rend_data_t *rend_data_dup(const rend_data_t *data);
-rend_data_t *rend_data_client_create(const char *onion_address,
-                                     const char *desc_id,
-                                     const char *cookie,
-                                     rend_auth_type_t auth_type);
-rend_data_t *rend_data_service_create(const char *onion_address,
-                                      const char *pk_digest,
-                                      const uint8_t *cookie,
-                                      rend_auth_type_t auth_type);
+int rend_circuit_pk_digest_eq(const origin_circuit_t *ocirc,
+                              const uint8_t *digest);
 
 char *rend_auth_encode_cookie(const uint8_t *cookie_in,
                               rend_auth_type_t auth_type);

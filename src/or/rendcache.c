@@ -849,6 +849,8 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   char want_desc_id[DIGEST_LEN];
   rend_cache_entry_t *e;
   int retval = -1;
+  rend_data_v2_t *rend_data = TO_REND_DATA_V2(rend_query);
+
   tor_assert(rend_cache);
   tor_assert(desc);
   tor_assert(desc_id_base32);
@@ -874,11 +876,11 @@ rend_cache_store_v2_desc_as_client(const char *desc,
     log_warn(LD_REND, "Couldn't compute service ID.");
     goto err;
   }
-  if (rend_query->onion_address[0] != '\0' &&
-      strcmp(rend_query->onion_address, service_id)) {
+  if (rend_data->onion_address[0] != '\0' &&
+      strcmp(rend_data->onion_address, service_id)) {
     log_warn(LD_REND, "Received service descriptor for service ID %s; "
              "expected descriptor for service ID %s.",
-             service_id, safe_str(rend_query->onion_address));
+             service_id, safe_str(rend_data->onion_address));
     goto err;
   }
   if (tor_memneq(desc_id, want_desc_id, DIGEST_LEN)) {
@@ -890,14 +892,14 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   /* Decode/decrypt introduction points. */
   if (intro_content && intro_size > 0) {
     int n_intro_points;
-    if (rend_query->auth_type != REND_NO_AUTH &&
-        !tor_mem_is_zero(rend_query->descriptor_cookie,
-                         sizeof(rend_query->descriptor_cookie))) {
+    if (rend_data->auth_type != REND_NO_AUTH &&
+        !tor_mem_is_zero(rend_data->descriptor_cookie,
+                         sizeof(rend_data->descriptor_cookie))) {
       char *ipos_decrypted = NULL;
       size_t ipos_decrypted_size;
       if (rend_decrypt_introduction_points(&ipos_decrypted,
                                            &ipos_decrypted_size,
-                                           rend_query->descriptor_cookie,
+                                           rend_data->descriptor_cookie,
                                            intro_content,
                                            intro_size) < 0) {
         log_warn(LD_REND, "Failed to decrypt introduction points. We are "

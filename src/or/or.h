@@ -114,6 +114,9 @@
 #define NON_ANONYMOUS_MODE_ENABLED 1
 #endif
 
+/** Helper macro: Given a pointer to to.base_, of type from*, return &to. */
+#define DOWNCAST(to, ptr) ((to*)SUBTYPE_P(ptr, to, base_))
+
 /** Length of longest allowable configured nickname. */
 #define MAX_NICKNAME_LEN 19
 /** Length of a router identity encoded as a hexadecimal digest, plus
@@ -779,6 +782,24 @@ typedef struct rend_service_authorization_t {
  * establishment. Not all fields contain data depending on where this struct
  * is used. */
 typedef struct rend_data_t {
+  /* Hidden service protocol version of this base object. */
+  uint32_t version;
+
+  /** List of HSDir fingerprints on which this request has been sent to. This
+   * contains binary identity digest of the directory of size DIGEST_LEN. */
+  smartlist_t *hsdirs_fp;
+
+  /** Rendezvous cookie used by both, client and service. */
+  char rend_cookie[REND_COOKIE_LEN];
+
+  /** Number of streams associated with this rendezvous circuit. */
+  int nr_streams;
+} rend_data_t;
+
+typedef struct rend_data_v2_t {
+  /* Rendezvous base data. */
+  rend_data_t base_;
+
   /** Onion address (without the .onion part) that a client requests. */
   char onion_address[REND_SERVICE_ID_LEN_BASE32+1];
 
@@ -800,17 +821,16 @@ typedef struct rend_data_t {
 
   /** Hash of the hidden service's PK used by a service. */
   char rend_pk_digest[DIGEST_LEN];
+} rend_data_v2_t;
 
-  /** Rendezvous cookie used by both, client and service. */
-  char rend_cookie[REND_COOKIE_LEN];
-
-  /** List of HSDir fingerprints on which this request has been sent to.
-   * This contains binary identity digest of the directory. */
-  smartlist_t *hsdirs_fp;
-
-  /** Number of streams associated with this rendezvous circuit. */
-  int nr_streams;
-} rend_data_t;
+/* From a base rend_data_t object <b>d</d>, return the v2 object. */
+static inline
+rend_data_v2_t *TO_REND_DATA_V2(const rend_data_t *d)
+{
+  tor_assert(d);
+  tor_assert(d->version == 2);
+  return DOWNCAST(rend_data_v2_t, d);
+}
 
 /** Time interval for tracking replays of DH public keys received in
  * INTRODUCE2 cells.  Used only to avoid launching multiple
@@ -1759,8 +1779,6 @@ typedef struct control_connection_t {
 
 /** Cast a connection_t subtype pointer to a connection_t **/
 #define TO_CONN(c) (&(((c)->base_)))
-/** Helper macro: Given a pointer to to.base_, of type from*, return &to. */
-#define DOWNCAST(to, ptr) ((to*)SUBTYPE_P(ptr, to, base_))
 
 /** Cast a entry_connection_t subtype pointer to a edge_connection_t **/
 #define ENTRY_TO_EDGE_CONN(c) (&(((c))->edge_))

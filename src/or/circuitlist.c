@@ -23,6 +23,7 @@
 #include "connection_or.h"
 #include "control.h"
 #include "main.h"
+#include "hs_common.h"
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "onion.h"
@@ -1311,9 +1312,11 @@ circuit_get_ready_rend_circ_by_rend_data(const rend_data_t *rend_data)
     if (!circ->marked_for_close &&
         circ->purpose == CIRCUIT_PURPOSE_C_REND_READY) {
       origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
-      if (ocirc->rend_data &&
-          !rend_cmp_service_ids(rend_data->onion_address,
-                                ocirc->rend_data->onion_address) &&
+      if (ocirc->rend_data == NULL) {
+        continue;
+      }
+      if (!rend_cmp_service_ids(rend_data_get_address(rend_data),
+                                rend_data_get_address(ocirc->rend_data)) &&
           tor_memeq(ocirc->rend_data->rend_cookie,
                     rend_data->rend_cookie,
                     REND_COOKIE_LEN))
@@ -1325,13 +1328,14 @@ circuit_get_ready_rend_circ_by_rend_data(const rend_data_t *rend_data)
 }
 
 /** Return the first circuit originating here in global_circuitlist after
- * <b>start</b> whose purpose is <b>purpose</b>, and where
- * <b>digest</b> (if set) matches the rend_pk_digest field. Return NULL if no
- * circuit is found.  If <b>start</b> is NULL, begin at the start of the list.
+ * <b>start</b> whose purpose is <b>purpose</b>, and where <b>digest</b> (if
+ * set) matches the private key digest of the rend data associated with the
+ * circuit. Return NULL if no circuit is found. If <b>start</b> is NULL,
+ * begin at the start of the list.
  */
 origin_circuit_t *
 circuit_get_next_by_pk_and_purpose(origin_circuit_t *start,
-                                   const char *digest, uint8_t purpose)
+                                   const uint8_t *digest, uint8_t purpose)
 {
   int idx;
   smartlist_t *lst = circuit_get_global_list();
@@ -1343,17 +1347,23 @@ circuit_get_next_by_pk_and_purpose(origin_circuit_t *start,
 
   for ( ; idx < smartlist_len(lst); ++idx) {
     circuit_t *circ = smartlist_get(lst, idx);
+    origin_circuit_t *ocirc;
 
     if (circ->marked_for_close)
       continue;
     if (circ->purpose != purpose)
       continue;
+    /* At this point we should be able to get a valid origin circuit because
+     * the origin purpose we are looking for matches this circuit. */
+    if (BUG(!CIRCUIT_PURPOSE_IS_ORIGIN(circ->purpose))) {
+      break;
+    }
+    ocirc = TO_ORIGIN_CIRCUIT(circ);
     if (!digest)
-      return TO_ORIGIN_CIRCUIT(circ);
-    else if (TO_ORIGIN_CIRCUIT(circ)->rend_data &&
-             tor_memeq(TO_ORIGIN_CIRCUIT(circ)->rend_data->rend_pk_digest,
-                     digest, DIGEST_LEN))
-      return TO_ORIGIN_CIRCUIT(circ);
+      return ocirc;
+    if (rend_circuit_pk_digest_eq(ocirc, digest)) {
+      return ocirc;
+    }
   }
   return NULL;
 }
@@ -1831,7 +1841,7 @@ circuit_about_to_free(circuit_t *circ)
     if (orig_reason != END_CIRC_REASON_IP_NOW_REDUNDANT) {
       /* treat this like getting a nack from it */
       log_info(LD_REND, "Failed intro circ %s to %s (awaiting ack). %s",
-          safe_str_client(ocirc->rend_data->onion_address),
+          safe_str_client(rend_data_get_address(ocirc->rend_data)),
           safe_str_client(build_state_get_exit_nickname(ocirc->build_state)),
           timed_out ? "Recording timeout." : "Removing from descriptor.");
       rend_client_report_intro_point_failure(ocirc->build_state->chosen_exit,
@@ -1848,7 +1858,7 @@ circuit_about_to_free(circuit_t *circ)
         log_info(LD_REND, "Failed intro circ %s to %s "
             "(building circuit to intro point). "
             "Marking intro point as possibly unreachable.",
-            safe_str_client(ocirc->rend_data->onion_address),
+            safe_str_client(rend_data_get_address(ocirc->rend_data)),
             safe_str_client(build_state_get_exit_nickname(
                                               ocirc->build_state)));
         rend_client_report_intro_point_failure(ocirc->build_state->chosen_exit,
