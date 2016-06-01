@@ -75,7 +75,7 @@ dnl 1:flags
 dnl 2:also try to link (yes: non-empty string)
 dnl   will set yes or no in $tor_can_link_$1 (as modified by AS_VAR_PUSHDEF)
 AC_DEFUN([TOR_CHECK_CFLAGS], [
-  TOR_TRY_COMPILE_WITH_CFLAGS($1, $2, CFLAGS="$CFLAGS $1", /bin/true)
+  TOR_TRY_COMPILE_WITH_CFLAGS($1, $2, CFLAGS="$CFLAGS $1", true)
 ])
 
 dnl 1:flags

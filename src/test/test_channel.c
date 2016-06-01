@@ -1584,7 +1584,7 @@ test_channel_queue_size(void *arg)
   /* One cell, times an overhead factor of 1.0 */
   tt_u64_op(ch->bytes_queued_for_xmit, ==, 512);
   /* Try a different overhead factor */
-  test_overhead_estimate = 0.5f;
+  test_overhead_estimate = 0.5;
   /* This one should be ignored since it's below 1.0 */
   channel_update_xmit_queue_size(ch);
   tt_u64_op(ch->bytes_queued_for_xmit, ==, 512);

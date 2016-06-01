@@ -30,6 +30,9 @@
 #include <ctype.h>
 #include <float.h>
 
+#define INFINITY_DBL ((double)INFINITY)
+#define NAN_DBL ((double)NAN)
+
 /* XXXX this is a minimal wrapper to make the unit tests compile with the
  * changed tor_timegm interface. */
 static time_t
@@ -4392,7 +4395,7 @@ test_util_clamp_double_to_int64(void *arg)
 {
   (void)arg;
 
-  tt_i64_op(INT64_MIN, ==, clamp_double_to_int64(-INFINITY));
+  tt_i64_op(INT64_MIN, ==, clamp_double_to_int64(-INFINITY_DBL));
   tt_i64_op(INT64_MIN, ==,
             clamp_double_to_int64(-1.0 * pow(2.0, 64.0) - 1.0));
   tt_i64_op(INT64_MIN, ==,
@@ -4405,7 +4408,7 @@ test_util_clamp_double_to_int64(void *arg)
   tt_i64_op(0, ==, clamp_double_to_int64(-0.9));
   tt_i64_op(0, ==, clamp_double_to_int64(-0.1));
   tt_i64_op(0, ==, clamp_double_to_int64(0.0));
-  tt_i64_op(0, ==, clamp_double_to_int64(NAN));
+  tt_i64_op(0, ==, clamp_double_to_int64(NAN_DBL));
   tt_i64_op(0, ==, clamp_double_to_int64(0.1));
   tt_i64_op(0, ==, clamp_double_to_int64(0.9));
   tt_i64_op(1, ==, clamp_double_to_int64(1.0));
@@ -4417,7 +4420,7 @@ test_util_clamp_double_to_int64(void *arg)
             clamp_double_to_int64(pow(2.0, 63.0)));
   tt_i64_op(INT64_MAX, ==,
             clamp_double_to_int64(pow(2.0, 64.0)));
-  tt_i64_op(INT64_MAX, ==, clamp_double_to_int64(INFINITY));
+  tt_i64_op(INT64_MAX, ==, clamp_double_to_int64(INFINITY_DBL));
 
  done:
   ;

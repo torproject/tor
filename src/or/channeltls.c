@@ -445,7 +445,7 @@ channel_tls_free_method(channel_t *chan)
 static double
 channel_tls_get_overhead_estimate_method(channel_t *chan)
 {
-  double overhead = 1.0f;
+  double overhead = 1.0;
   channel_tls_t *tlschan = BASE_CHAN_TO_TLS(chan);
 
   tor_assert(tlschan);
