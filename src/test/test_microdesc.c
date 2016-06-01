@@ -490,7 +490,7 @@ test_md_generate(void *arg)
   routerinfo_free(ri);
 }
 
-#if GCC_VERSION >= 406
+#ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
 DISABLE_GCC_WARNING(overlength-strings)
 /* We allow huge string constants in the unit tests, but not in the code
  * at large. */
@@ -650,7 +650,7 @@ static const char MD_PARSE_TEST_DATA[] =
   "id rsa1024 2A8wYpHxnkKJ92orocvIQBzeHlE\n"
   "p6 allow 80\n"
   ;
-#if GCC_VERSION >= 406
+#ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
 ENABLE_GCC_WARNING(overlength-strings)
 #endif
 

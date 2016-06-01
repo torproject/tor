@@ -2683,7 +2683,7 @@ options_validate_cb(void *old_options, void *options, void *default_options,
 
 #define REJECT(arg) \
   STMT_BEGIN *msg = tor_strdup(arg); return -1; STMT_END
-#ifdef __GNUC__
+#if defined(__GNUC__) && __GNUC__ <= 3
 #define COMPLAIN(args...) \
   STMT_BEGIN log_warn(LD_CONFIG, args); STMT_END
 #else

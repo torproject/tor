@@ -1656,58 +1656,11 @@ esac
 
 # Add some more warnings which we use in development but not in the
 # released versions.  (Some relevant gcc versions can't handle these.)
+#
+# Note that we have to do this near the end  of the autoconf process, or
+# else we may run into problems when these warnings hit on the testing C
+# programs that autoconf wants to build.
 if test "x$enable_gcc_warnings_advisory" != "xno"; then
-
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
-#if !defined(__GNUC__) || (__GNUC__ < 4)
-#error
-#endif])], have_gcc4=yes, have_gcc4=no)
-
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
-#if !defined(__GNUC__) || (__GNUC__ < 4) || (__GNUC__ == 4 && __GNUC_MINOR__ < 2)
-#error
-#endif])], have_gcc42=yes, have_gcc42=no)
-
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
-#if !defined(__GNUC__) || (__GNUC__ < 4) || (__GNUC__ == 4 && __GNUC_MINOR__ < 3)
-#error
-#endif])], have_gcc43=yes, have_gcc43=no)
-
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
-#if !defined(__GNUC__) || (__GNUC__ < 4) || (__GNUC__ == 4 && __GNUC_MINOR__ < 6)
-#error
-#endif])], have_gcc46=yes, have_gcc46=no)
-
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
-#if !defined(__GNUC__) || (__GNUC__ < 4) || (__GNUC__ == 4 && __GNUC_MINOR__ < 7)
-#error
-#endif])], have_gcc47=yes, have_gcc47=no)
-
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
-#if !defined(__GNUC__) || (__GNUC__ < 4) || (__GNUC__ == 4 && __GNUC_MINOR__ < 8)
-#error
-#endif])], have_gcc48=yes, have_gcc48=no)
-
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
-#if !defined(__GNUC__) || (__GNUC__ < 4) || (__GNUC__ == 4 && __GNUC_MINOR__ < 9)
-#error
-#endif])], have_gcc49=yes, have_gcc49=no)
-
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
-#if !defined(__GNUC__) || (__GNUC__ < 5)
-#error
-#endif])], have_gcc5=yes, have_gcc5=no)
-
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
-#if !defined(__GNUC__) || (__GNUC__ < 6)
-#error
-#endif])], have_gcc6=yes, have_gcc6=no)
-
-  save_CFLAGS="$CFLAGS"
-  CFLAGS="$CFLAGS -Wshorten-64-to-32"
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [])], have_shorten64_flag=yes,
-                    have_shorten64_flag=no)
-  CFLAGS="$save_CFLAGS"
 
   case "$host" in
     *-*-openbsd* | *-*-bitrig*)
@@ -1718,79 +1671,67 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
       CFLAGS="$CFLAGS -Wno-system-headers" ;;
   esac
 
+
   CFLAGS="$CFLAGS -W -Wfloat-equal -Wundef -Wpointer-arith"
   CFLAGS="$CFLAGS -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings"
   CFLAGS="$CFLAGS -Wredundant-decls -Wchar-subscripts -Wcomment -Wformat=2"
-  CFLAGS="$CFLAGS -Wwrite-strings -Wmissing-declarations -Wredundant-decls"
+  CFLAGS="$CFLAGS -Wwrite-strings -Wmissing-declarations"
   CFLAGS="$CFLAGS -Wnested-externs -Wbad-function-cast -Wswitch-enum"
   CFLAGS="$CFLAGS -Waggregate-return -Wpacked -Wunused"
   CFLAGS="$CFLAGS -Wunused-parameter"
 
-  if test "x$have_gcc4" = "xyes"; then
-    # These warnings break gcc 3.3.5 and work on gcc 4.0.2
-    CFLAGS="$CFLAGS -Winit-self -Wmissing-field-initializers -Wold-style-definition"
-  fi
+  # GCC4.3 users once report trouble with -Wstrict-overflow=5.  GCC5 users
+  # have it work better.
+  # CFLAGS="$CFLAGS -Wstrict-overflow=1"
 
-  if test "x$have_gcc42" = "xyes"; then
-    # These warnings break gcc 4.0.2 and work on gcc 4.2
-    # XXXX020 See if any of these work with earlier versions.
-    CFLAGS="$CFLAGS -Waddress -Wmissing-noreturn"
-  fi
+  # This warning was added in gcc 4.3, but it appears to generate
+  # spurious warnings in gcc 4.4.  I don't know if it works in 4.5.
+  #CFLAGS="$CFLAGS -Wlogical-op"
 
-  if test "x$have_gcc42" = "xyes" && test "x$have_gcc5" != "xyes"; then
-    CFLAGS="$CFLAGS -Wstrict-overflow=1"
-    # We used to use -Wstrict-overflow=5, but that breaks us heavily under 4.3.
-    # Save it for GCC 5 where they improved the testing.
-  fi
+  m4_foreach_w([warning_flag], [
+     -Waddress
+     -Warray-bounds
+     -Wc99-c11-compat
+     -Wdate-time
+     -Wdouble-promotion
+     -Wduplicated-cond
+     -Wextra
+     -Wfloat-conversion
+     -Wignored-attributes
+     -Winit-self
+     -Wlogical-op
+     -Wmissing-field-initializers
+     -Wmissing-format-attribute
+     -Wmissing-noreturn
+     -Wnormalized=id
+     -Wnull-dereference
+     -Wold-style-definition
+     -Woverlength-strings
+     -Woverride-init
+     -Wshift-count-negative
+     -Wshift-count-overflow
+     -Wshift-negative-value
+     -Wshift-overflow=2
+     -Wshorten-64-to-32
+     -Wsizeof-array-argument
+     -Wstrict-overflow=2
+     -Wsuggest-attribute=format
+     -Wsuggest-attribute=noreturn
+     -Wswitch-bool
+     -Wsync-nand
+     -Wtrampolines
+     -Wunused-but-set-parameter
+     -Wunused-but-set-variable
+     -Wunused-const-variable=2
+     -Wunused-local-typedefs
+     -Wvariadic-macros
+  ], [ TOR_CHECK_CFLAGS([warning_flag]) ])
 
-  if test "x$have_gcc42" = "xyes" && test "x$have_clang" = "xno"; then
-    # These warnings break gcc 4.0.2 and clang, but work on gcc 4.2
-    CFLAGS="$CFLAGS -Wnormalized=id -Woverride-init"
+  if test "$tor_cv_cflags__Wnull_dereference" = "yes"; then
+    AC_DEFINE([HAVE_CFLAG_WNULL_DEREFERENCE], 1, [True if we have -Wnull-dereference])
   fi
-
-  if test "x$have_gcc43" = "xyes"; then
-    # These warnings break gcc 4.2 and work on gcc 4.3
-    # XXXX020 See if any of these work with earlier versions.
-    CFLAGS="$CFLAGS -Wextra -Warray-bounds"
-  fi
-
-  if test "x$have_gcc46" = "xyes"; then
-    # This warning was added in gcc 4.3, but it appears to generate
-    # spurious warnings in gcc 4.4.  I don't know if it works in 4.5.
-    CFLAGS="$CFLAGS -Wlogical-op"
-    # and these should be just fine in gcc 4.6
-    CFLAGS="$CFLAGS -Wmissing-format-attribute -Wsuggest-attribute=noreturn -Wsync-nand -Wtrampolines -Wunused-but-set-parameter -Wunused-but-set-variable -Wvariadic-macros"
-    CFLAGS="$CFLAGS -Wdouble-promotion"
-    CFLAGS="$CFLAGS -Woverlength-strings"
-  fi
-
-  if test "x$have_gcc47" = "xyes"; then
-     CFLAGS="$CFLAGS -Wunused-local-typedefs"
-  fi
-
-  if test "x$have_gcc48" = "xyes"; then
-     CFLAGS="$CFLAGS -Wsuggest-attribute=format"
-  fi
-
-  if test "x$have_gcc49" = "xyes"; then
-     CFLAGS="$CFLAGS -Wdate-time"
-     CFLAGS="$CFLAGS -Wfloat-conversion"
-  fi
-
-  if test "x$have_gcc5" = "xyes"; then
-     CFLAGS="$CFLAGS -Wc99-c11-compat -Wshift-count-negative -Wshift-count-overflow -Wsizeof-array-argument -Wswitch-bool"
-    CFLAGS="$CFLAGS -Wstrict-overflow=2"
-  fi
-
- if test "x$have_gcc6" = "xyes"; then
-     CFLAGS="$CFLAGS -Wignored-attributes -Wshift-negative-value -Wshift-overflow=2"
-     CFLAGS="$CFLAGS -Wnull-dereference"
-     CFLAGS="$CFLAGS -Wduplicated-cond"
-     CFLAGS="$CFLAGS -Wunused-const-variable=2"
-  fi
-
-  if test "x$have_shorten64_flag" = "xyes"; then
-    CFLAGS="$CFLAGS -Wshorten-64-to-32"
+  if test "$tor_cv_cflags__Woverlength_strings" = "yes"; then
+    AC_DEFINE([HAVE_CFLAG_WOVERLENGTH_STRINGS], 1, [True if we have -Woverlength-strings])
   fi
 
   if test "x$enable_fatal_warnings" = "xyes"; then
@@ -1799,8 +1740,6 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
     CFLAGS="$CFLAGS -Werror"
   fi
 
-##This will break the world on some 64-bit architectures
-# CFLAGS="$CFLAGS -Winline"
 fi
 
 if test "$enable_coverage" = "yes" && test "$have_clang" = "no"; then

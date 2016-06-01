@@ -26,11 +26,9 @@
 
 #include "compat.h"
 
-#if GCC_VERSION >= 402
 /* Some versions of OpenSSL declare SSL_get_selected_srtp_profile twice in
  * srtp.h. Suppress the GCC warning so we can build with -Wredundant-decl. */
 DISABLE_GCC_WARNING(redundant-decls)
-#endif
 
 #include <openssl/opensslv.h>
 #include "crypto.h"
@@ -48,9 +46,7 @@ DISABLE_GCC_WARNING(redundant-decls)
 #include <openssl/bn.h>
 #include <openssl/rsa.h>
 
-#if GCC_VERSION >= 402
 ENABLE_GCC_WARNING(redundant-decls)
-#endif
 
 #ifdef USE_BUFFEREVENTS
 #include <event2/bufferevent_ssl.h>

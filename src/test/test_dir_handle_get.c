@@ -38,13 +38,13 @@
 #include <dirent.h>
 #endif
 
-#if GCC_VERSION >= 406
+#ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
 DISABLE_GCC_WARNING(overlength-strings)
 /* We allow huge string constants in the unit tests, but not in the code
  * at large. */
 #endif
 #include "vote_descriptors.inc"
-#if GCC_VERSION >= 406
+#ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
 ENABLE_GCC_WARNING(overlength-strings)
 #endif
 
