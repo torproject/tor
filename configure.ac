@@ -1671,15 +1671,6 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
       CFLAGS="$CFLAGS -Wno-system-headers" ;;
   esac
 
-
-  CFLAGS="$CFLAGS -W -Wfloat-equal -Wundef -Wpointer-arith"
-  CFLAGS="$CFLAGS -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings"
-  CFLAGS="$CFLAGS -Wredundant-decls -Wchar-subscripts -Wcomment -Wformat=2"
-  CFLAGS="$CFLAGS -Wwrite-strings -Wmissing-declarations"
-  CFLAGS="$CFLAGS -Wnested-externs -Wbad-function-cast -Wswitch-enum"
-  CFLAGS="$CFLAGS -Waggregate-return -Wpacked -Wunused"
-  CFLAGS="$CFLAGS -Wunused-parameter"
-
   # GCC4.3 users once report trouble with -Wstrict-overflow=5.  GCC5 users
   # have it work better.
   # CFLAGS="$CFLAGS -Wstrict-overflow=1"
@@ -1705,7 +1696,6 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
      -Wmissing-noreturn
      -Wnormalized=id
      -Wnull-dereference
-     -Wold-style-definition
      -Woverlength-strings
      -Woverride-init
      -Wshift-count-negative
@@ -1726,6 +1716,17 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
      -Wunused-local-typedefs
      -Wvariadic-macros
   ], [ TOR_CHECK_CFLAGS([warning_flag]) ])
+
+  CFLAGS="$CFLAGS -W -Wfloat-equal -Wundef -Wpointer-arith"
+  CFLAGS="$CFLAGS -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings"
+  CFLAGS="$CFLAGS -Wredundant-decls -Wchar-subscripts -Wcomment -Wformat=2"
+  CFLAGS="$CFLAGS -Wwrite-strings"
+  CFLAGS="$CFLAGS -Wnested-externs -Wbad-function-cast -Wswitch-enum"
+  CFLAGS="$CFLAGS -Waggregate-return -Wpacked -Wunused"
+  CFLAGS="$CFLAGS -Wunused-parameter "
+  # These interfere with building main() { return 0; }, which autoconf
+  # likes to use as its default program.
+  CFLAGS="$CFLAGS -Wold-style-definition -Wmissing-declarations"
 
   if test "$tor_cv_cflags__Wnull_dereference" = "yes"; then
     AC_DEFINE([HAVE_CFLAG_WNULL_DEREFERENCE], 1, [True if we have -Wnull-dereference])
