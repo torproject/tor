@@ -1681,40 +1681,221 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
 
   m4_foreach_w([warning_flag], [
      -Waddress
+     -Waddress-of-array-temporary
+     -Waddress-of-temporary
+     -Wambiguous-macro
+     -Wanonymous-pack-parens
+     -Warc
+     -Warc-abi
+     -Warc-bridge-casts-disallowed-in-nonarc
+     -Warc-maybe-repeated-use-of-weak
+     -Warc-performSelector-leaks
+     -Warc-repeated-use-of-weak
      -Warray-bounds
+     -Warray-bounds-pointer-arithmetic
+     -Wasm
+     -Wasm-operand-widths
+     -Watomic-properties
+     -Watomic-property-with-user-defined-accessor
+     -Wauto-import
+     -Wauto-storage-class
+     -Wauto-var-id
+     -Wavailability
+     -Wbackslash-newline-escape
+     -Wbad-array-new-length
+     -Wbind-to-temporary-copy
+     -Wbitfield-constant-conversion
+     -Wbool-conversion
+     -Wbool-conversion
+     -Wbool-conversions
+     -Wbuiltin-requires-header
+     -Wc11-extensions
      -Wc99-c11-compat
+     -Wchar-align
+     -Wcompare-distinct-pointer-types
+     -Wcomplex-component-init
+     -Wconditional-type-mismatch
+     -Wconfig-macros
+     -Wconstant-conversion
+     -Wconstant-logical-operand
+     -Wconstexpr-not-const
+     -Wcustom-atomic-properties
+     -Wdangling-field
+     -Wdangling-initializer-list
      -Wdate-time
+     -Wdelegating-ctor-cycles
+     -Wdeprecated-implementations
+     -Wdeprecated-register
+     -Wdirect-ivar-access
+     -Wdiscard-qual
+     -Wdistributed-object-modifiers
+     -Wdivision-by-zero
+     -Wdollar-in-identifier-extension
      -Wdouble-promotion
+     -Wduplicate-decl-specifier
+     -Wduplicate-enum
+     -Wduplicate-method-arg
+     -Wduplicate-method-match
      -Wduplicated-cond
+     -Wdynamic-class-memaccess
+     -Wembedded-directive
+     -Wempty-translation-unit
+     -Wenum-conversion
+     -Wexit-time-destructors
+     -Wexplicit-ownership-type
+     -Wextern-initializer
      -Wextra
+     -Wextra-tokens
+     -Wflexible-array-extensions
      -Wfloat-conversion
+     -Wformat-non-iso
+     -Wfour-char-constants
+     -Wgcc-compat
+     -Wglobal-constructors
+     -Wgnu-array-member-paren-init
+     -Wgnu-designator
+     -Wgnu-static-float-init
+     -Wgnu-static-float-init
+     -Wheader-guard
+     -Wheader-hygiene
+     -Widiomatic-parentheses
      -Wignored-attributes
+     -Wimplicit-atomic-properties
+     -Wimplicit-conversion-floating-point-to-bool
+     -Wimplicit-exception-spec-mismatch
+     -Wimplicit-fallthrough
+     -Wimplicit-fallthrough-per-function
+     -Wimplicit-retain-self
+     -Wimport-preprocessor-directive-pedantic
+     -Wincompatible-library-redeclaration
+     -Wincompatible-pointer-types-discards-qualifiers
+     -Wincomplete-implementation
+     -Wincomplete-module
+     -Wincomplete-umbrella
      -Winit-self
+     -Wint-conversions
+     -Wint-to-void-pointer-cast
+     -Winteger-overflow
+     -Winvalid-constexpr
+     -Winvalid-iboutlet
+     -Winvalid-noreturn
+     -Winvalid-pp-token
+     -Winvalid-source-encoding
+     -Winvalid-token-paste
+     -Wknr-promoted-parameter
+     -Wlanguage-extension-token
+     -Wlarge-by-value-copy
+     -Wliteral-conversion
+     -Wliteral-range
+     -Wlocal-type-template-args
      -Wlogical-op
+     -Wloop-analysis
+     -Wmain-return-type
+     -Wmalformed-warning-check
+     -Wmethod-signatures
+     -Wmicrosoft
+     -Wmicrosoft-exists
+     -Wmismatched-parameter-types
+     -Wmismatched-return-types
      -Wmissing-field-initializers
      -Wmissing-format-attribute
      -Wmissing-noreturn
+     -Wmissing-selector-name
+     -Wmissing-sysroot
+     -Wmodule-conflict
+     -Wnested-anon-types
+     -Wnewline-eof
+     -Wnon-literal-null-conversion
+     -Wnon-pod-varargs
+     -Wnonportable-cfstrings
      -Wnormalized=id
+     -Wnull-arithmetic
+     -Wnull-character
+     -Wnull-conversion
+     -Wnull-conversion
      -Wnull-dereference
+     -Wout-of-line-declaration
+     -Wover-aligned
      -Woverlength-strings
      -Woverride-init
+     -Woverriding-method-mismatch
+     -Wpointer-type-mismatch
+     -Wpredefined-identifier-outside-function
+     -Wprotocol-property-synthesis-ambiguity
+     -Wreadonly-iboutlet-property
+     -Wreadonly-setter-attrs
+     -Wreceiver-expr
+     -Wreceiver-forward-class
+     -Wreceiver-is-weak
+     -Wreinterpret-base-class
+     -Wrequires-super-attribute
+     -Wreserved-user-defined-literal
+     -Wreturn-stack-address
+     -Wsection
+     -Wselector-type-mismatch
+     -Wsentinel
+     -Wserialized-diagnostics
      -Wshift-count-negative
      -Wshift-count-overflow
      -Wshift-negative-value
      -Wshift-overflow=2
+     -Wshift-sign-overflow
+     -Wshorten-64-to-32
      -Wshorten-64-to-32
      -Wsizeof-array-argument
+     -Wsource-uses-openmp
+     -Wstatic-float-init
+     -Wstatic-in-inline
+     -Wstatic-local-in-inline
      -Wstrict-overflow=2
+     -Wstring-compare
+     -Wstrlcpy-strlcat-size
+     -Wstrncat-size
      -Wsuggest-attribute=format
      -Wsuggest-attribute=noreturn
+     -Wsuper-class-method-mismatch
      -Wswitch-bool
      -Wsync-nand
+     -Wtautological-constant-out-of-range-compare
+     -Wtentative-definition-incomplete-type
+     -Wthread-safety
+     -Wthread-safety-analysis
+     -Wthread-safety-attributes
+     -Wthread-safety-beta
+     -Wthread-safety-precise
      -Wtrampolines
+     -Wtype-safety
+     -Wtypedef-redefinition
+     -Wtypename-missing
+     -Wundefined-inline
+     -Wundefined-internal
+     -Wundefined-reinterpret-cast
+     -Wunicode
+     -Wunicode-whitespace
+     -Wunknown-warning-option
+     -Wunnamed-type-template-args
+     -Wunneeded-member-function
+     -Wunsequenced
+     -Wunsupported-visibility
      -Wunused-but-set-parameter
      -Wunused-but-set-variable
+     -Wunused-command-line-argument
      -Wunused-const-variable=2
+     -Wunused-exception-parameter
      -Wunused-local-typedefs
+     -Wunused-member-function
+     -Wunused-sanitize-argument
+     -Wunused-volatile-lvalue
+     -Wuser-defined-literals
      -Wvariadic-macros
+     -Wvector-conversion
+     -Wvector-conversions
+     -Wvexing-parse
+     -Wvisibility
+     -Wvla-extension
+     -Wvla-extension
+     -Wzero-length-array
+     -Wzero-length-array
   ], [ TOR_CHECK_CFLAGS([warning_flag]) ])
 
   CFLAGS="$CFLAGS -W -Wfloat-equal -Wundef -Wpointer-arith"
