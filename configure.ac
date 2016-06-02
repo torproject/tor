@@ -1851,6 +1851,7 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
      -Wstatic-local-in-inline
      -Wstrict-overflow=2
      -Wstring-compare
+     -Wstring-conversion
      -Wstrlcpy-strlcat-size
      -Wstrncat-size
      -Wsuggest-attribute=format
