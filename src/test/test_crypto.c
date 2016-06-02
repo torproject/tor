@@ -162,7 +162,7 @@ test_crypto_openssl_version(void *arg)
   tt_assert(!strcmpstart(version, h_version)); /* "-fips" suffix, etc */
   tt_assert(!strstr(version, "OpenSSL"));
   int a=-1,b=-1,c=-1;
-  sscanf(version, "%d.%d.%d", &a,&b,&c);
+  tor_sscanf(version, "%d.%d.%d", &a,&b,&c);
   tt_int_op(a, OP_GE, 0);
   tt_int_op(b, OP_GE, 0);
   tt_int_op(c, OP_GE, 0);
