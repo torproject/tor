@@ -4664,7 +4664,7 @@ test_util_writepid(void *arg)
   contents = read_file_to_str(fname, 0, NULL);
   tt_assert(contents);
 
-  int n = sscanf(contents, "%lu\n%c", &pid, &c);
+  int n = tor_sscanf(contents, "%lu\n%c", &pid, &c);
   tt_int_op(n, OP_EQ, 1);
 
 #ifdef _WIN32
