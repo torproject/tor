@@ -34,8 +34,6 @@ hibernating, phase 2:
 #include "router.h"
 #include "statefile.h"
 
-extern long stats_n_seconds_working; /* published uptime */
-
 /** Are we currently awake, asleep, running out of bandwidth, or shutting
  * down? */
 static hibernate_state_t hibernate_state = HIBERNATE_STATE_INITIAL;

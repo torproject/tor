@@ -695,9 +695,9 @@ test_buffers_zlib_fin_at_chunk_end(void *arg)
   tor_free(msg);
 }
 
-const uint8_t *tls_read_ptr;
-int n_remaining;
-int next_reply_val[16];
+static const uint8_t *tls_read_ptr;
+static int n_remaining;
+static int next_reply_val[16];
 
 static int
 mock_tls_read(tor_tls_t *tls, char *cp, size_t len)

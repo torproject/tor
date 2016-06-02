@@ -12,7 +12,7 @@
 
 #define ROUTERSET_PRIVATE
 #include "routerset.h"
-
+#include "main.h"
 #include "log_test_helpers.h"
 
 #include "sandbox.h"
@@ -571,8 +571,6 @@ test_options_validate__contactinfo(void *ignored)
   free_options_test_data(tdata);
   tor_free(msg);
 }
-
-extern int quiet_level;
 
 static void
 test_options_validate__logs(void *ignored)

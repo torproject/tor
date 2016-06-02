@@ -1124,62 +1124,6 @@ static struct testcase_t test_array[] = {
   END_OF_TESTCASES
 };
 
-extern struct testcase_t accounting_tests[];
-extern struct testcase_t addr_tests[];
-extern struct testcase_t address_tests[];
-extern struct testcase_t buffer_tests[];
-extern struct testcase_t cell_format_tests[];
-extern struct testcase_t cell_queue_tests[];
-extern struct testcase_t channel_tests[];
-extern struct testcase_t channeltls_tests[];
-extern struct testcase_t checkdir_tests[];
-extern struct testcase_t circuitlist_tests[];
-extern struct testcase_t circuitmux_tests[];
-extern struct testcase_t compat_libevent_tests[];
-extern struct testcase_t config_tests[];
-extern struct testcase_t connection_tests[];
-extern struct testcase_t container_tests[];
-extern struct testcase_t controller_tests[];
-extern struct testcase_t controller_event_tests[];
-extern struct testcase_t crypto_tests[];
-extern struct testcase_t dir_tests[];
-extern struct testcase_t dir_handle_get_tests[];
-extern struct testcase_t entryconn_tests[];
-extern struct testcase_t entrynodes_tests[];
-extern struct testcase_t guardfraction_tests[];
-extern struct testcase_t extorport_tests[];
-extern struct testcase_t hs_tests[];
-extern struct testcase_t introduce_tests[];
-extern struct testcase_t keypin_tests[];
-extern struct testcase_t link_handshake_tests[];
-extern struct testcase_t logging_tests[];
-extern struct testcase_t microdesc_tests[];
-extern struct testcase_t nodelist_tests[];
-extern struct testcase_t oom_tests[];
-extern struct testcase_t options_tests[];
-extern struct testcase_t policy_tests[];
-extern struct testcase_t procmon_tests[];
-extern struct testcase_t pubsub_tests[];
-extern struct testcase_t pt_tests[];
-extern struct testcase_t relay_tests[];
-extern struct testcase_t relaycell_tests[];
-extern struct testcase_t rend_cache_tests[];
-extern struct testcase_t replaycache_tests[];
-extern struct testcase_t router_tests[];
-extern struct testcase_t routerkeys_tests[];
-extern struct testcase_t routerlist_tests[];
-extern struct testcase_t routerset_tests[];
-extern struct testcase_t scheduler_tests[];
-extern struct testcase_t socks_tests[];
-extern struct testcase_t status_tests[];
-extern struct testcase_t thread_tests[];
-extern struct testcase_t tortls_tests[];
-extern struct testcase_t util_tests[];
-extern struct testcase_t util_format_tests[];
-extern struct testcase_t util_process_tests[];
-extern struct testcase_t dns_tests[];
-extern struct testcase_t handle_tests[];
-
 struct testgroup_t testgroups[] = {
   { "", test_array },
   { "accounting/", accounting_tests },

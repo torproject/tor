@@ -125,7 +125,7 @@ tor_event_free(struct event *ev)
 #endif
 
 /** Global event base for use by the main thread. */
-struct event_base *the_event_base = NULL;
+static struct event_base *the_event_base = NULL;
 
 /* This is what passes for version detection on OSX.  We set
  * MACOSX_KQUEUE_IS_BROKEN to true iff we're on a version of OSX before

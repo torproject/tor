@@ -2683,9 +2683,6 @@ get_uptime,(void))
   return stats_n_seconds_working;
 }
 
-extern uint64_t rephist_total_alloc;
-extern uint32_t rephist_total_num;
-
 /**
  * Write current memory usage information to the log.
  */

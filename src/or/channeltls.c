@@ -22,6 +22,7 @@
 #include "channeltls.h"
 #include "circuitmux.h"
 #include "circuitmux_ewma.h"
+#include "command.h"
 #include "config.h"
 #include "connection.h"
 #include "connection_or.h"
@@ -51,7 +52,7 @@ uint64_t stats_n_authenticate_cells_processed = 0;
 uint64_t stats_n_authorize_cells_processed = 0;
 
 /** Active listener, if any */
-channel_listener_t *channel_tls_listener = NULL;
+static channel_listener_t *channel_tls_listener = NULL;
 
 /* channel_tls_t method declarations */
 

@@ -24,13 +24,6 @@
 #include "test.h"
 #include "test_dir_common.h"
 
-extern const char AUTHORITY_CERT_1[];
-extern const char AUTHORITY_SIGNKEY_1[];
-extern const char AUTHORITY_CERT_2[];
-extern const char AUTHORITY_SIGNKEY_2[];
-extern const char AUTHORITY_CERT_3[];
-extern const char AUTHORITY_SIGNKEY_3[];
-
 void construct_consensus(char **consensus_text_md);
 
 /* 4 digests + 3 sep + pre + post + NULL */
@@ -423,7 +416,7 @@ test_router_pick_directory_server_impl(void *arg)
   networkstatus_vote_free(con_md);
 }
 
-connection_t *mocked_connection = NULL;
+static connection_t *mocked_connection = NULL;
 
 /* Mock connection_get_by_type_addr_port_purpose by returning
  * mocked_connection. */

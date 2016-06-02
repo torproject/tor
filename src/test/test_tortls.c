@@ -51,9 +51,6 @@
 #include "log_test_helpers.h"
 #define NS_MODULE tortls
 
-extern tor_tls_context_t *server_tls_context;
-extern tor_tls_context_t *client_tls_context;
-
 #if OPENSSL_VERSION_NUMBER >= OPENSSL_V_SERIES(1,1,0) \
     && !defined(LIBRESSL_VERSION_NUMBER)
 #define OPENSSL_OPAQUE
@@ -277,8 +274,6 @@ test_tortls_get_state_description(void *ignored)
   tor_free(buf);
   tor_free(tls);
 }
-
-extern int tor_tls_object_ex_data_index;
 
 static void
 test_tortls_get_by_ssl(void *ignored)
@@ -790,8 +785,6 @@ get_cipher_by_id(uint16_t id)
   return NULL;
 }
 
-extern uint16_t v2_cipher_list[];
-
 static void
 test_tortls_classify_client_ciphers(void *ignored)
 {
@@ -1183,9 +1176,6 @@ test_tortls_get_forced_write_size(void *ignored)
  done:
   tor_free(tls);
 }
-
-extern uint64_t total_bytes_written_over_tls;
-extern uint64_t total_bytes_written_by_tls;
 
 static void
 test_tortls_get_write_overhead_ratio(void *ignored)

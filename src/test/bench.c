@@ -3,6 +3,7 @@
  * Copyright (c) 2007-2016, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+extern const char tor_git_revision[];
 /* Ordinarily defined in tor_main.c; this bit is just here to provide one
  * since we're not linking to tor_main.c */
 const char tor_git_revision[] = "";

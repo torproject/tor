@@ -20,9 +20,6 @@
 #include "test.h"
 #include "fakechans.h"
 
-/* This comes from channel.c */
-extern uint64_t estimated_total_queue_size;
-
 static int test_chan_accept_cells = 0;
 static int test_chan_fixed_cells_recved = 0;
 static cell_t * test_chan_last_seen_fixed_cell_ptr = NULL;

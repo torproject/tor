@@ -469,6 +469,10 @@ void channel_notify_flushed(channel_t *chan);
 /* Handle stuff we need to do on open like notifying circuits */
 void channel_do_open_actions(channel_t *chan);
 
+#ifdef TOR_UNIT_TESTS
+extern uint64_t estimated_total_queue_size;
+#endif
+
 #endif
 
 /* Helper functions to perform operations on channels */

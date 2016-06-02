@@ -122,7 +122,7 @@ STATIC uint64_t estimated_total_queue_size = 0;
  * If more than one channel exists, follow the next_with_same_id pointer
  * as a linked list.
  */
-HT_HEAD(channel_idmap, channel_idmap_entry_s) channel_identity_map =
+static HT_HEAD(channel_idmap, channel_idmap_entry_s) channel_identity_map =
   HT_INITIALIZER();
 
 typedef struct channel_idmap_entry_s {

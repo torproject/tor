@@ -1803,6 +1803,7 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
      -Wmissing-noreturn
      -Wmissing-selector-name
      -Wmissing-sysroot
+     -Wmissing-variable-declarations
      -Wmodule-conflict
      -Wnested-anon-types
      -Wnewline-eof

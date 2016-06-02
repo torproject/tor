@@ -778,8 +778,8 @@ test_policies_reject_port_address(void *arg)
   UNMOCK(get_configured_ports);
 }
 
-smartlist_t *mock_ipv4_addrs = NULL;
-smartlist_t *mock_ipv6_addrs = NULL;
+static smartlist_t *mock_ipv4_addrs = NULL;
+static smartlist_t *mock_ipv6_addrs = NULL;
 
 /* mock get_interface_address6_list, returning a deep copy of the template
  * address list ipv4_interface_address_list or ipv6_interface_address_list */

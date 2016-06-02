@@ -3,6 +3,8 @@
  * Copyright (c) 2007-2016, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+extern const char tor_git_revision[];
+
 /* Ordinarily defined in tor_main.c; this bit is just here to provide one
  * since we're not linking to tor_main.c */
 const char tor_git_revision[] = "";
@@ -214,8 +216,6 @@ passthrough_test_cleanup(const struct testcase_t *testcase, void *ptr)
 const struct testcase_setup_t passthrough_setup = {
   passthrough_test_setup, passthrough_test_cleanup
 };
-
-extern struct testgroup_t testgroups[];
 
 /** Main entry point for unit test code: parse the command line, and run
  * some unit tests. */

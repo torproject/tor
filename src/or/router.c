@@ -40,8 +40,6 @@
  * and uploading server descriptors, retrying OR connections.
  **/
 
-extern long stats_n_seconds_working;
-
 /************************************************************/
 
 /*****

@@ -65,9 +65,6 @@
 #include <systemd/sd-daemon.h>
 #endif
 
-/* From main.c */
-extern int quiet_level;
-
 /* Prefix used to indicate a Unix socket in a FooPort configuration. */
 static const char unix_socket_prefix[] = "unix:";
 

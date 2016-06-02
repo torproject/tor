@@ -75,6 +75,14 @@ int tor_main(int argc, char *argv[]);
 int do_main_loop(void);
 int tor_init(int argc, char **argv);
 
+extern time_t time_of_process_start;
+extern long stats_n_seconds_working;
+extern int quiet_level;
+extern int global_read_bucket;
+extern int global_write_bucket;
+extern int global_relayed_read_bucket;
+extern int global_relayed_write_bucket;
+
 #ifdef MAIN_PRIVATE
 STATIC void init_connection_lists(void);
 STATIC void close_closeable_connections(void);

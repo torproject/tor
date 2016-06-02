@@ -19,6 +19,7 @@
 #include "dirvote.h"
 #include "hibernate.h"
 #include "keypin.h"
+#include "main.h"
 #include "microdesc.h"
 #include "networkstatus.h"
 #include "nodelist.h"
@@ -43,10 +44,6 @@
 /** If we're a cache, keep this many networkstatuses around from non-trusted
  * directory authorities. */
 #define MAX_UNTRUSTED_NETWORKSTATUSES 16
-
-extern time_t time_of_process_start; /* from main.c */
-
-extern long stats_n_seconds_working; /* from main.c */
 
 /** Total number of routers with measured bandwidth; this is set by
  * dirserv_count_measured_bws() before the loop in
