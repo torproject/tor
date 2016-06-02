@@ -1745,6 +1745,7 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
      -Wexplicit-ownership-type
      -Wextern-initializer
      -Wextra
+     -Wextra-semi
      -Wextra-tokens
      -Wflexible-array-extensions
      -Wfloat-conversion

@@ -145,9 +145,9 @@ channel_idmap_eq(const channel_idmap_entry_t *a,
 }
 
 HT_PROTOTYPE(channel_idmap, channel_idmap_entry_s, node, channel_idmap_hash,
-             channel_idmap_eq);
+             channel_idmap_eq)
 HT_GENERATE2(channel_idmap, channel_idmap_entry_s, node, channel_idmap_hash,
-             channel_idmap_eq, 0.5,  tor_reallocarray_, tor_free_);
+             channel_idmap_eq, 0.5,  tor_reallocarray_, tor_free_)
 
 static cell_queue_entry_t * cell_queue_entry_dup(cell_queue_entry_t *q);
 #if 0

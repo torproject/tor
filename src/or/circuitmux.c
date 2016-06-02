@@ -362,7 +362,7 @@ HT_HEAD(chanid_circid_muxinfo_map, chanid_circid_muxinfo_t);
 
 /* Emit a bunch of hash table stuff */
 HT_PROTOTYPE(chanid_circid_muxinfo_map, chanid_circid_muxinfo_t, node,
-             chanid_circid_entry_hash, chanid_circid_entries_eq);
+             chanid_circid_entry_hash, chanid_circid_entries_eq)
 HT_GENERATE2(chanid_circid_muxinfo_map, chanid_circid_muxinfo_t, node,
              chanid_circid_entry_hash, chanid_circid_entries_eq, 0.6,
              tor_reallocarray_, tor_free_)

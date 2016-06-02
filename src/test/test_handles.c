@@ -12,8 +12,8 @@ typedef struct demo_t {
   int val;
 } demo_t;
 
-HANDLE_DECL(demo, demo_t, static);
-HANDLE_IMPL(demo, demo_t, static);
+HANDLE_DECL(demo, demo_t, static)
+HANDLE_IMPL(demo, demo_t, static)
 
 static demo_t *
 demo_new(int val)

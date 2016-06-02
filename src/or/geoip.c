@@ -504,7 +504,7 @@ clientmap_entries_eq(const clientmap_entry_t *a, const clientmap_entry_t *b)
 }
 
 HT_PROTOTYPE(clientmap, clientmap_entry_t, node, clientmap_entry_hash,
-             clientmap_entries_eq);
+             clientmap_entries_eq)
 HT_GENERATE2(clientmap, clientmap_entry_t, node, clientmap_entry_hash,
              clientmap_entries_eq, 0.6, tor_reallocarray_, tor_free_)
 
@@ -718,7 +718,7 @@ dirreq_map_ent_hash(const dirreq_map_entry_t *entry)
 }
 
 HT_PROTOTYPE(dirreqmap, dirreq_map_entry_t, node, dirreq_map_ent_hash,
-             dirreq_map_ent_eq);
+             dirreq_map_ent_eq)
 HT_GENERATE2(dirreqmap, dirreq_map_entry_t, node, dirreq_map_ent_hash,
              dirreq_map_ent_eq, 0.6, tor_reallocarray_, tor_free_)
 

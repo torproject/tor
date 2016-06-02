@@ -77,7 +77,7 @@ node_id_eq(const node_t *node1, const node_t *node2)
   return tor_memeq(node1->identity, node2->identity, DIGEST_LEN);
 }
 
-HT_PROTOTYPE(nodelist_map, node_t, ht_ent, node_id_hash, node_id_eq);
+HT_PROTOTYPE(nodelist_map, node_t, ht_ent, node_id_hash, node_id_eq)
 HT_GENERATE2(nodelist_map, node_t, ht_ent, node_id_hash, node_id_eq,
              0.6, tor_reallocarray_, tor_free_)
 
