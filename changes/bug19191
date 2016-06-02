@@ -1,0 +1,5 @@
+  o Minor bugfixes (downloading):
+    - Predict more correctly whether we'll be downloading over HTTP when we
+      determine the maximum length of a URL. This should avoid a "BUG"
+      warning about the Squid HTTP proxy and its URL limits. Fixes bug 19191;
+      bugfix on ?????.
