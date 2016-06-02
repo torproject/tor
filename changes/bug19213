@@ -1,0 +1,3 @@
+  o Minor bugfixes (compilation):
+    - Cause the unit tests to compile correctly on mingw64 versions
+      that lack sscanf. Fixes bug 19213. Bugfix on 0.2.7.1-alpha.
