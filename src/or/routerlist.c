@@ -4730,7 +4730,7 @@ max_dl_per_request(const or_options_t *options, int purpose)
   }
   /* If we're going to tunnel our connections, we can ask for a lot more
    * in a request. */
-  if (!directory_fetches_from_authorities(options)) {
+  if (directory_must_use_begindir(options)) {
     max = 500;
   }
   return max;
