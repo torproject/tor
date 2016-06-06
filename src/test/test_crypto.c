@@ -156,12 +156,13 @@ test_crypto_openssl_version(void *arg)
   (void)arg;
   const char *version = crypto_openssl_get_version_str();
   const char *h_version = crypto_openssl_get_header_version_str();
-
   tt_assert(version);
   tt_assert(h_version);
   tt_assert(!strcmpstart(version, h_version)); /* "-fips" suffix, etc */
   tt_assert(!strstr(version, "OpenSSL"));
   int a=-1,b=-1,c=-1;
+  if (!strcmpstart(version, "LibreSSL") || !strcmpstart(version, "BoringSSL"))
+    return;
   int r = tor_sscanf(version, "%d.%d.%d", &a,&b,&c);
   tt_int_op(r, OP_EQ, 3);
   tt_int_op(a, OP_GE, 0);
