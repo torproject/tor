@@ -76,6 +76,14 @@ static const node_t *choose_random_entry_impl(cpath_build_state_t *state,
                                               int *n_options_out);
 static int num_bridges_usable(void);
 
+/* Default number of entry guards in the case where the NumEntryGuards
+ * consensus parameter is not set */
+#define DEFAULT_N_GUARDS 1
+/* Minimum and maximum number of entry guards (in case the NumEntryGuards
+ * consensus parameter is set). */
+#define MIN_N_GUARDS 1
+#define MAX_N_GUARDS 10
+
 /** Return the list of entry guards, creating it if necessary. */
 const smartlist_t *
 get_entry_guards(void)
@@ -488,7 +496,8 @@ decide_num_guards(const or_options_t *options, int for_directory)
     return options->NumEntryGuards;
 
   /* Use the value from the consensus, or 3 if no guidance. */
-  return networkstatus_get_param(NULL, "NumEntryGuards", 3, 1, 10);
+  return networkstatus_get_param(NULL, "NumEntryGuards", DEFAULT_N_GUARDS,
+                                 MIN_N_GUARDS, MAX_N_GUARDS);
 }
 
 /** If the use of entry guards is configured, choose more entry guards
