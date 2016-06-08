@@ -158,9 +158,11 @@ tor_gzip_compress(char **out, size_t *out_len,
                    method_bits(method, HIGH_COMPRESSION),
                    get_memlevel(HIGH_COMPRESSION),
                    Z_DEFAULT_STRATEGY) != Z_OK) {
+    //LCOV_EXCL_START -- we can only provoke failure by giving junk arguments.
     log_warn(LD_GENERAL, "Error from deflateInit2: %s",
              stream->msg?stream->msg:"<no message>");
     goto err;
+    //LCOV_EXCL_STOP
   }
 
   /* Guess 50% compression. */
@@ -214,8 +216,11 @@ tor_gzip_compress(char **out, size_t *out_len,
   tor_assert(stream->total_out >= 0);
 #endif
   if (deflateEnd(stream)!=Z_OK) {
+    // LCOV_EXCL_START -- unreachable if we handled the zlib structure right
+    tor_assert_nonfatal_unreached();
     log_warn(LD_BUG, "Error freeing gzip structures");
     goto err;
+    // LCOV_EXCL_STOP
   }
   tor_free(stream);
 
@@ -274,9 +279,11 @@ tor_gzip_uncompress(char **out, size_t *out_len,
 
   if (inflateInit2(stream,
                    method_bits(method, HIGH_COMPRESSION)) != Z_OK) {
+    // LCOV_EXCL_START -- can only hit this if we give bad inputs.
     log_warn(LD_GENERAL, "Error from inflateInit2: %s",
              stream->msg?stream->msg:"<no message>");
     goto err;
+    // LCOV_EXCL_STOP
   }
 
   out_size = in_len * 2;  /* guess 50% compression. */
@@ -434,10 +441,10 @@ tor_zlib_new(int compress, compress_method_t method,
    if (deflateInit2(&out->stream, Z_BEST_COMPRESSION, Z_DEFLATED,
                     bits, memlevel,
                     Z_DEFAULT_STRATEGY) != Z_OK)
-     goto err;
+     goto err; // LCOV_EXCL_LINE
  } else {
    if (inflateInit2(&out->stream, bits) != Z_OK)
-     goto err;
+     goto err; // LCOV_EXCL_LINE
  }
  out->allocation = tor_zlib_state_size_precalc(!compress, bits, memlevel);
 
