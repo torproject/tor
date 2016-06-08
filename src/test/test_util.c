@@ -1737,7 +1737,8 @@ test_util_gzip(void *arg)
   (void)arg;
   buf1 = tor_strdup("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ");
   tt_assert(detect_compression_method(buf1, strlen(buf1)) == UNKNOWN_METHOD);
-  if (is_gzip_supported()) {
+
+  if (1) {
     tt_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
                                    GZIP_METHOD));
     tt_assert(buf2);

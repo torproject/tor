@@ -46,33 +46,15 @@
 
 #include <zlib.h>
 
+#if defined ZLIB_VERNUM && ZLIB_VERNUM < 0x1200
+#error "We require zlib version 1.2 or later."
+#endif
+
 static size_t tor_zlib_state_size_precalc(int inflate,
                                           int windowbits, int memlevel);
 
 /** Total number of bytes allocated for zlib state */
 static size_t total_zlib_allocation = 0;
-
-/** Set to 1 if zlib is a version that supports gzip; set to 0 if it doesn't;
- * set to -1 if we haven't checked yet. */
-static int gzip_is_supported = -1;
-
-/** Return true iff we support gzip-based compression.  Otherwise, we need to
- * use zlib. */
-int
-is_gzip_supported(void)
-{
-  if (gzip_is_supported >= 0)
-    return gzip_is_supported;
-
-  if (!strcmpstart(ZLIB_VERSION, "0.") ||
-      !strcmpstart(ZLIB_VERSION, "1.0") ||
-      !strcmpstart(ZLIB_VERSION, "1.1"))
-    gzip_is_supported = 0;
-  else
-    gzip_is_supported = 1;
-
-  return gzip_is_supported;
-}
 
 /** Return a string representation of the version of the currently running
  * version of zlib. */
@@ -164,12 +146,6 @@ tor_gzip_compress(char **out, size_t *out_len,
   tor_assert(in_len < UINT_MAX);
 
   *out = NULL;
-
-  if (method == GZIP_METHOD && !is_gzip_supported()) {
-    /* Old zlib version don't support gzip in deflateInit2 */
-    log_warn(LD_BUG, "Gzip not supported with zlib %s", ZLIB_VERSION);
-    goto err;
-  }
 
   stream = tor_malloc_zero(sizeof(struct z_stream_s));
   stream->zalloc = Z_NULL;
@@ -290,12 +266,6 @@ tor_gzip_uncompress(char **out, size_t *out_len,
   tor_assert(out_len);
   tor_assert(in);
   tor_assert(in_len < UINT_MAX);
-
-  if (method == GZIP_METHOD && !is_gzip_supported()) {
-    /* Old zlib version don't support gzip in inflateInit2 */
-    log_warn(LD_BUG, "Gzip not supported with zlib %s", ZLIB_VERSION);
-    return -1;
-  }
 
   *out = NULL;
 
@@ -450,12 +420,6 @@ tor_zlib_new(int compress, compress_method_t method,
 {
   tor_zlib_state_t *out;
   int bits, memlevel;
-
-  if (method == GZIP_METHOD && !is_gzip_supported()) {
-    /* Old zlib version don't support gzip in inflateInit2 */
-    log_warn(LD_BUG, "Gzip not supported with zlib %s", ZLIB_VERSION);
-    return NULL;
- }
 
  if (! compress) {
    /* use this setting for decompression, since we might have the
