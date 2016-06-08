@@ -213,10 +213,6 @@ tor_gzip_compress(char **out, size_t *out_len,
    *    the newly unsigned field isn't negative." */
   tor_assert(stream->total_out >= 0);
 #endif
-  if (((size_t)stream->total_out) > out_size + 4097) {
-    /* If we're wasting more than 4k, don't. */
-    *out = tor_realloc(*out, stream->total_out + 1);
-  }
   if (deflateEnd(stream)!=Z_OK) {
     log_warn(LD_BUG, "Error freeing gzip structures");
     goto err;
