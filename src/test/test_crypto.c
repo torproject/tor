@@ -542,7 +542,8 @@ test_crypto_aes_ctr_testvec(void *arg)
   char plaintext[16*4];
   base16_decode(key, sizeof(key), key16, strlen(key16));
   base16_decode(iv, sizeof(iv), ctr16, strlen(ctr16));
-  base16_decode(plaintext, sizeof(plaintext), plaintext16, strlen(plaintext16));
+  base16_decode(plaintext, sizeof(plaintext),
+                plaintext16, strlen(plaintext16));
 
   crypto_cipher_t *c = crypto_cipher_new_with_iv(key, iv);
   crypto_cipher_crypt_inplace(c, plaintext, sizeof(plaintext));
@@ -1396,9 +1397,11 @@ test_crypto_digest_names(void *arg)
   int i;
   for (i = 0; names[i].n; ++i) {
     tt_str_op(names[i].n, OP_EQ,crypto_digest_algorithm_get_name(names[i].a));
-    tt_int_op(names[i].a, OP_EQ,crypto_digest_algorithm_parse_name(names[i].n));
+    tt_int_op(names[i].a,
+              OP_EQ,crypto_digest_algorithm_parse_name(names[i].n));
   }
-  tt_int_op(-1, OP_EQ, crypto_digest_algorithm_parse_name("TimeCubeHash-4444"));
+  tt_int_op(-1, OP_EQ,
+            crypto_digest_algorithm_parse_name("TimeCubeHash-4444"));
  done:
   ;
 }
@@ -1886,7 +1889,6 @@ test_crypto_hkdf_sha256_testvecs(void *arg)
   tor_free(okm);
   tor_free(mem_op_hex_tmp);
 }
-
 
 static void
 test_crypto_curve25519_impl(void *arg)

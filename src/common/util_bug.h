@@ -104,14 +104,14 @@
 
 #ifdef __GNUC__
 #define IF_BUG_ONCE__(cond,var)                                         \
-  if (({                                                                \
+  if (( {                                                                \
       static int var = 0;                                               \
       int bool_result = (cond);                                         \
       if (PREDICT_UNLIKELY(bool_result) && !var) {                      \
         var = 1;                                                        \
         tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__, #cond, 1);  \
       }                                                                 \
-      PREDICT_UNLIKELY(bool_result); }))
+      PREDICT_UNLIKELY(bool_result); } ))
 #else
 #define IF_BUG_ONCE__(cond,var)                                         \
   static int var = 0;                                                   \

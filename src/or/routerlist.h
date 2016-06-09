@@ -221,7 +221,8 @@ int hex_digest_nickname_matches(const char *hexdigest,
 STATIC int choose_array_element_by_weight(const uint64_t *entries,
                                           int n_entries);
 STATIC void scale_array_elements_to_u64(uint64_t *entries_out,
-                                        const double *entries_in, int n_entries,
+                                        const double *entries_in,
+                                        int n_entries,
                                         uint64_t *total_out);
 STATIC const routerstatus_t *router_pick_directory_server_impl(
                                            dirinfo_type_t auth, int flags,

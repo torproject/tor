@@ -1067,4 +1067,3 @@ rend_auth_decode_cookie(const char *cookie_in, uint8_t *cookie_out,
   return res;
 }
 
-

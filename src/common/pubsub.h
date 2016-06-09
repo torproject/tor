@@ -21,7 +21,9 @@
  *                                       unsigned priority);
  *     int T_unsubscribe(const T_subscriber_t *)
  *
- * Elsewhere you can say DECLARE_NOTIFY_PUBSUB_TOPIC(static, T), which declares:
+ * Elsewhere you can say DECLARE_NOTIFY_PUBSUB_TOPIC(static, T), which
+ * declares:
+ *
  *    static int T_notify(T_event_data_t *, unsigned notify_flags);
  *    static void T_clear(void);
  *
