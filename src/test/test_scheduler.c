@@ -24,12 +24,6 @@
 #include "test.h"
 #include "fakechans.h"
 
-/* Statics in scheduler.c exposed to the test suite */
-extern smartlist_t *channels_pending;
-extern struct event *run_sched_ev;
-extern uint64_t queue_heuristic;
-extern time_t queue_heuristic_timestamp;
-
 /* Event base for scheduelr tests */
 static struct event_base *mock_event_base = NULL;
 

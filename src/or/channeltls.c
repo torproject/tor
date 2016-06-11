@@ -22,6 +22,7 @@
 #include "channeltls.h"
 #include "circuitmux.h"
 #include "circuitmux_ewma.h"
+#include "command.h"
 #include "config.h"
 #include "connection.h"
 #include "connection_or.h"
@@ -51,7 +52,7 @@ uint64_t stats_n_authenticate_cells_processed = 0;
 uint64_t stats_n_authorize_cells_processed = 0;
 
 /** Active listener, if any */
-channel_listener_t *channel_tls_listener = NULL;
+static channel_listener_t *channel_tls_listener = NULL;
 
 /* channel_tls_t method declarations */
 
@@ -445,7 +446,7 @@ channel_tls_free_method(channel_t *chan)
 static double
 channel_tls_get_overhead_estimate_method(channel_t *chan)
 {
-  double overhead = 1.0f;
+  double overhead = 1.0;
   channel_tls_t *tlschan = BASE_CHAN_TO_TLS(chan);
 
   tor_assert(tlschan);
@@ -462,7 +463,8 @@ channel_tls_get_overhead_estimate_method(channel_t *chan)
      * Never estimate more than 2.0; otherwise we get silly large estimates
      * at the very start of a new TLS connection.
      */
-    if (overhead > 2.0f) overhead = 2.0f;
+    if (overhead > 2.0)
+      overhead = 2.0;
   }
 
   log_debug(LD_CHANNEL,
@@ -797,6 +799,7 @@ static int
 channel_tls_write_packed_cell_method(channel_t *chan,
                                      packed_cell_t *packed_cell)
 {
+  tor_assert(chan);
   channel_tls_t *tlschan = BASE_CHAN_TO_TLS(chan);
   size_t cell_network_size = get_cell_network_size(chan->wide_circ_ids);
   int written = 0;

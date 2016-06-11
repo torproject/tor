@@ -39,21 +39,21 @@
 #define DEFAULT_LIFETIME 12
 
 /* These globals are set via command line options. */
-char *identity_key_file = NULL;
-char *signing_key_file = NULL;
-char *certificate_file = NULL;
-int reuse_signing_key = 0;
-int verbose = 0;
-int make_new_id = 0;
-int months_lifetime = DEFAULT_LIFETIME;
-int passphrase_fd = -1;
-char *address = NULL;
+static char *identity_key_file = NULL;
+static char *signing_key_file = NULL;
+static char *certificate_file = NULL;
+static int reuse_signing_key = 0;
+static int verbose = 0;
+static int make_new_id = 0;
+static int months_lifetime = DEFAULT_LIFETIME;
+static int passphrase_fd = -1;
+static char *address = NULL;
 
-char *passphrase = NULL;
-size_t passphrase_len = 0;
+static char *passphrase = NULL;
+static size_t passphrase_len = 0;
 
-EVP_PKEY *identity_key = NULL;
-EVP_PKEY *signing_key = NULL;
+static EVP_PKEY *identity_key = NULL;
+static EVP_PKEY *signing_key = NULL;
 
 /** Write a usage message for tor-gencert to stderr. */
 static void

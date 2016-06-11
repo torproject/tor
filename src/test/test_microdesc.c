@@ -490,6 +490,11 @@ test_md_generate(void *arg)
   routerinfo_free(ri);
 }
 
+#ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
+DISABLE_GCC_WARNING(overlength-strings)
+/* We allow huge string constants in the unit tests, but not in the code
+ * at large. */
+#endif
 /* Taken at random from my ~/.tor/cached-microdescs file and then
  * hand-munged */
 static const char MD_PARSE_TEST_DATA[] =
@@ -645,6 +650,9 @@ static const char MD_PARSE_TEST_DATA[] =
   "id rsa1024 2A8wYpHxnkKJ92orocvIQBzeHlE\n"
   "p6 allow 80\n"
   ;
+#ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
+ENABLE_GCC_WARNING(overlength-strings)
+#endif
 
 /** More tests for parsing different kinds of microdescriptors, and getting
  * invalid digests trackd from them. */

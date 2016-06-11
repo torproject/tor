@@ -342,6 +342,7 @@ tor_free_(void *mem)
   tor_free(mem);
 }
 
+DISABLE_GCC_WARNING(aggregate-return)
 /** Call the platform malloc info function, and dump the results to the log at
  * level <b>severity</b>.  If no such function exists, do nothing. */
 void
@@ -369,6 +370,7 @@ tor_log_mallinfo(int severity)
                       );
 #endif
 }
+ENABLE_GCC_WARNING(aggregate-return)
 
 /* =====
  * Math
@@ -5528,7 +5530,7 @@ clamp_double_to_int64(double number)
    * representable integer for which this is not the case is INT64_MIN, but
    * it is covered by the logic below. */
   if (isfinite(number) && exp <= 63) {
-    return number;
+    return (int64_t)number;
   }
 
   /* Handle infinities and finite numbers with magnitude >= 2^63. */

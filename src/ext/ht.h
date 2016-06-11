@@ -203,6 +203,7 @@ ht_string_hash(const char *s)
       name##_HT_GROW(head, head->hth_n_entries+1);                      \
     HT_SET_HASH_(elm, field, hashfn);                                   \
     p = name##_HT_FIND_P_(head, elm);                                   \
+    HT_ASSERT_(p != NULL); /* this holds because we called HT_GROW */   \
     r = *p;                                                             \
     *p = elm;                                                           \
     if (r && (r!=elm)) {                                                \
@@ -470,6 +471,7 @@ ht_string_hash(const char *s)
       name##_HT_GROW(var##_head_, var##_head_->hth_n_entries+1);        \
     HT_SET_HASH_((elm), field, hashfn);                                 \
     var = name##_HT_FIND_P_(var##_head_, (elm));                        \
+    HT_ASSERT_(var); /* Holds because we called HT_GROW */              \
     if (*var) {                                                         \
       y;                                                                \
     } else {                                                            \

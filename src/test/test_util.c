@@ -30,6 +30,9 @@
 #include <ctype.h>
 #include <float.h>
 
+#define INFINITY_DBL ((double)INFINITY)
+#define NAN_DBL ((double)NAN)
+
 /* XXXX this is a minimal wrapper to make the unit tests compile with the
  * changed tor_timegm interface. */
 static time_t
@@ -1472,24 +1475,24 @@ test_util_strmisc(void *arg)
 
   {
   /* Test parse_double */
-  double d = tor_parse_double("10", 0, UINT64_MAX,&i,NULL);
+  double d = tor_parse_double("10", 0, (double)UINT64_MAX,&i,NULL);
   tt_int_op(1,OP_EQ, i);
   tt_assert(DBL_TO_U64(d) == 10);
-  d = tor_parse_double("0", 0, UINT64_MAX,&i,NULL);
+  d = tor_parse_double("0", 0, (double)UINT64_MAX,&i,NULL);
   tt_int_op(1,OP_EQ, i);
   tt_assert(DBL_TO_U64(d) == 0);
-  d = tor_parse_double(" ", 0, UINT64_MAX,&i,NULL);
+  d = tor_parse_double(" ", 0, (double)UINT64_MAX,&i,NULL);
   tt_int_op(0,OP_EQ, i);
-  d = tor_parse_double(".0a", 0, UINT64_MAX,&i,NULL);
+  d = tor_parse_double(".0a", 0, (double)UINT64_MAX,&i,NULL);
   tt_int_op(0,OP_EQ, i);
-  d = tor_parse_double(".0a", 0, UINT64_MAX,&i,&cp);
+  d = tor_parse_double(".0a", 0, (double)UINT64_MAX,&i,&cp);
   tt_int_op(1,OP_EQ, i);
-  d = tor_parse_double("-.0", 0, UINT64_MAX,&i,NULL);
+  d = tor_parse_double("-.0", 0, (double)UINT64_MAX,&i,NULL);
   tt_int_op(1,OP_EQ, i);
   tt_assert(DBL_TO_U64(d) == 0);
   d = tor_parse_double("-10", -100.0, 100.0,&i,NULL);
   tt_int_op(1,OP_EQ, i);
-  tt_int_op(-10.0,OP_EQ, d);
+  tt_double_op(fabs(d - -10.0),OP_LT, 1E-12);
   }
 
   {
@@ -4392,7 +4395,7 @@ test_util_clamp_double_to_int64(void *arg)
 {
   (void)arg;
 
-  tt_i64_op(INT64_MIN, ==, clamp_double_to_int64(-INFINITY));
+  tt_i64_op(INT64_MIN, ==, clamp_double_to_int64(-INFINITY_DBL));
   tt_i64_op(INT64_MIN, ==,
             clamp_double_to_int64(-1.0 * pow(2.0, 64.0) - 1.0));
   tt_i64_op(INT64_MIN, ==,
@@ -4405,7 +4408,7 @@ test_util_clamp_double_to_int64(void *arg)
   tt_i64_op(0, ==, clamp_double_to_int64(-0.9));
   tt_i64_op(0, ==, clamp_double_to_int64(-0.1));
   tt_i64_op(0, ==, clamp_double_to_int64(0.0));
-  tt_i64_op(0, ==, clamp_double_to_int64(NAN));
+  tt_i64_op(0, ==, clamp_double_to_int64(NAN_DBL));
   tt_i64_op(0, ==, clamp_double_to_int64(0.1));
   tt_i64_op(0, ==, clamp_double_to_int64(0.9));
   tt_i64_op(1, ==, clamp_double_to_int64(1.0));
@@ -4417,7 +4420,7 @@ test_util_clamp_double_to_int64(void *arg)
             clamp_double_to_int64(pow(2.0, 63.0)));
   tt_i64_op(INT64_MAX, ==,
             clamp_double_to_int64(pow(2.0, 64.0)));
-  tt_i64_op(INT64_MAX, ==, clamp_double_to_int64(INFINITY));
+  tt_i64_op(INT64_MAX, ==, clamp_double_to_int64(INFINITY_DBL));
 
  done:
   ;

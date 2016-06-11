@@ -47,7 +47,7 @@ typedef struct tweakset_t {
 } tweakset_t;
 
 /** The tweaks to be used with our handshake. */
-const tweakset_t proto1_tweaks = {
+static const tweakset_t proto1_tweaks = {
 #define PROTOID "ntor-curve25519-sha256-1"
 #define PROTOID_LEN 24
   PROTOID ":mac",

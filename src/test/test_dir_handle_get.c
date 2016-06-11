@@ -38,7 +38,15 @@
 #include <dirent.h>
 #endif
 
+#ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
+DISABLE_GCC_WARNING(overlength-strings)
+/* We allow huge string constants in the unit tests, but not in the code
+ * at large. */
+#endif
 #include "vote_descriptors.inc"
+#ifdef HAVE_CFLAG_WOVERLENGTH_STRINGS
+ENABLE_GCC_WARNING(overlength-strings)
+#endif
 
 #define NS_MODULE dir_handle_get
 
@@ -1162,8 +1170,6 @@ test_dir_handle_get_server_keys_all_not_found(void* data)
 
 #define TEST_CERTIFICATE AUTHORITY_CERT_3
 #define TEST_SIGNING_KEY AUTHORITY_SIGNKEY_A_DIGEST
-extern const char AUTHORITY_CERT_3[];
-extern const char AUTHORITY_SIGNKEY_A_DIGEST[];
 
 static const char TEST_CERT_IDENT_KEY[] =
   "D867ACF56A9D229B35C25F0090BC9867E906BE69";

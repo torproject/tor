@@ -82,6 +82,44 @@
 #define CHECK_SCANF(formatIdx, firstArg)
 #endif
 
+/* What GCC do we have? */
+#ifdef __GNUC__
+#define GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__)
+#else
+#define GCC_VERSION 0
+#endif
+
+/* Temporarily enable and disable warnings. */
+#ifdef __GNUC__
+#  define PRAGMA_STRINGIFY_(s) #s
+#  define PRAGMA_JOIN_STRINGIFY_(a,b) PRAGMA_STRINGIFY_(a ## b)
+/* Support for macro-generated pragmas (c99) */
+#  define PRAGMA_(x) _Pragma (#x)
+#  ifdef __clang__
+#    define PRAGMA_DIAGNOSTIC_(x) PRAGMA_(clang diagnostic x)
+#  else
+#    define PRAGMA_DIAGNOSTIC_(x) PRAGMA_(GCC diagnostic x)
+#  endif
+#  if defined(__clang__) || GCC_VERSION >= 406
+/* we have push/pop support */
+#    define DISABLE_GCC_WARNING(warning) \
+          PRAGMA_DIAGNOSTIC_(push) \
+          PRAGMA_DIAGNOSTIC_(ignored PRAGMA_JOIN_STRINGIFY_(-W,warning))
+#    define ENABLE_GCC_WARNING(warning) \
+          PRAGMA_DIAGNOSTIC_(pop)
+#  else
+/* older version of gcc: no push/pop support. */
+#    define DISABLE_GCC_WARNING(warning) \
+         PRAGMA_DIAGNOSTIC_(ignored PRAGMA_JOIN_STRINGIFY_(-W,warning))
+#    define ENABLE_GCC_WARNING(warning) \
+         PRAGMA_DIAGNOSTIC_(warning PRAGMA_JOIN_STRINGIFY_(-W,warning))
+#  endif
+#else /* ifdef __GNUC__ */
+/* not gcc at all */
+# define DISABLE_GCC_WARNING(warning)
+# define ENABLE_GCC_WARNING(warning)
+#endif
+
 /* inline is __inline on windows. */
 #ifdef _WIN32
 #define inline __inline

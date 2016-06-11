@@ -20,11 +20,6 @@ static const int TIME_IN_THE_PAST = -(REND_CACHE_MAX_AGE + \
                                       REND_CACHE_MAX_SKEW + 10);
 static const int TIME_IN_THE_FUTURE = REND_CACHE_MAX_SKEW + 10;
 
-extern strmap_t *rend_cache;
-extern digestmap_t *rend_cache_v2_dir;
-extern strmap_t *rend_cache_failure;
-extern size_t rend_cache_total_allocation;
-
 static rend_data_t *
 mock_rend_data(const char *onion_address)
 {

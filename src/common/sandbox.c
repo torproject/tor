@@ -1443,7 +1443,7 @@ static HT_HEAD(getaddrinfo_cache, cached_getaddrinfo_item_t)
 
 HT_PROTOTYPE(getaddrinfo_cache, cached_getaddrinfo_item_t, node,
              cached_getaddrinfo_item_hash,
-             cached_getaddrinfo_items_eq);
+             cached_getaddrinfo_items_eq)
 HT_GENERATE2(getaddrinfo_cache, cached_getaddrinfo_item_t, node,
              cached_getaddrinfo_item_hash,
              cached_getaddrinfo_items_eq,

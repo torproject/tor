@@ -2240,7 +2240,7 @@ connection_send_socks5_connect(connection_t *conn)
   } else { /* AF_INET6 */
     buf[3] = 4;
     reqsize += 16;
-    memcpy(buf + 4, tor_addr_to_in6(&conn->addr), 16);
+    memcpy(buf + 4, tor_addr_to_in6_addr8(&conn->addr), 16);
     memcpy(buf + 20, &port, 2);
   }
 
@@ -2697,8 +2697,6 @@ connection_is_rate_limited(connection_t *conn)
 #ifdef USE_BUFFEREVENTS
 static struct bufferevent_rate_limit_group *global_rate_limit = NULL;
 #else
-extern int global_read_bucket, global_write_bucket;
-extern int global_relayed_read_bucket, global_relayed_write_bucket;
 
 /** Did either global write bucket run dry last second? If so,
  * we are likely to run dry again this second, so be stingy with the

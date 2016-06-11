@@ -18,10 +18,6 @@
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 
-extern const char AUTHORITY_SIGNKEY_3[];
-extern const char AUTHORITY_SIGNKEY_A_DIGEST[];
-extern const char AUTHORITY_SIGNKEY_A_DIGEST256[];
-
 /** Run unit tests for Diffie-Hellman functionality. */
 static void
 test_crypto_dh(void *arg)
@@ -276,9 +272,6 @@ test_crypto_rng_range(void *arg)
  done:
   ;
 }
-
-extern int break_strongest_rng_fallback;
-extern int break_strongest_rng_syscall;
 
 static void
 test_crypto_rng_strongest(void *arg)

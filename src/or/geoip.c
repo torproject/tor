@@ -80,9 +80,9 @@ geoip_add_entry(const tor_addr_t *low, const tor_addr_t *high,
   intptr_t idx;
   void *idxplus1_;
 
-  if (tor_addr_family(low) != tor_addr_family(high))
+  IF_BUG_ONCE(tor_addr_family(low) != tor_addr_family(high))
     return;
-  if (tor_addr_compare(high, low, CMP_EXACT) < 0)
+  IF_BUG_ONCE(tor_addr_compare(high, low, CMP_EXACT) < 0)
     return;
 
   idxplus1_ = strmap_get_lc(country_idxplus1_by_lc_code, country);
@@ -110,8 +110,8 @@ geoip_add_entry(const tor_addr_t *low, const tor_addr_t *high,
     smartlist_add(geoip_ipv4_entries, ent);
   } else if (tor_addr_family(low) == AF_INET6) {
     geoip_ipv6_entry_t *ent = tor_malloc_zero(sizeof(geoip_ipv6_entry_t));
-    ent->ip_low = *tor_addr_to_in6(low);
-    ent->ip_high = *tor_addr_to_in6(high);
+    ent->ip_low = *tor_addr_to_in6_assert(low);
+    ent->ip_high = *tor_addr_to_in6_assert(high);
     ent->country = idx;
     smartlist_add(geoip_ipv6_entries, ent);
   }
@@ -504,7 +504,7 @@ clientmap_entries_eq(const clientmap_entry_t *a, const clientmap_entry_t *b)
 }
 
 HT_PROTOTYPE(clientmap, clientmap_entry_t, node, clientmap_entry_hash,
-             clientmap_entries_eq);
+             clientmap_entries_eq)
 HT_GENERATE2(clientmap, clientmap_entry_t, node, clientmap_entry_hash,
              clientmap_entries_eq, 0.6, tor_reallocarray_, tor_free_)
 
@@ -718,7 +718,7 @@ dirreq_map_ent_hash(const dirreq_map_entry_t *entry)
 }
 
 HT_PROTOTYPE(dirreqmap, dirreq_map_entry_t, node, dirreq_map_ent_hash,
-             dirreq_map_ent_eq);
+             dirreq_map_ent_eq)
 HT_GENERATE2(dirreqmap, dirreq_map_entry_t, node, dirreq_map_ent_hash,
              dirreq_map_ent_eq, 0.6, tor_reallocarray_, tor_free_)
 

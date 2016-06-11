@@ -270,7 +270,7 @@ log_tor_version(logfile_t *lf, int reset)
   return 0;
 }
 
-const char bug_suffix[] = " (on Tor " VERSION
+static const char bug_suffix[] = " (on Tor " VERSION
 #ifndef _MSC_VER
   " "
 #include "micro-revision.i"

@@ -1238,7 +1238,7 @@ config_parse_units(const char *val, struct unit_table_t *u, int *ok)
 
   v = tor_parse_uint64(val, 10, 0, UINT64_MAX, ok, &cp);
   if (!*ok || (cp && *cp == '.')) {
-    d = tor_parse_double(val, 0, UINT64_MAX, ok, &cp);
+    d = tor_parse_double(val, 0, (double)UINT64_MAX, ok, &cp);
     if (!*ok)
       goto done;
     use_float = 1;
@@ -1255,7 +1255,7 @@ config_parse_units(const char *val, struct unit_table_t *u, int *ok)
   for ( ;u->unit;++u) {
     if (!strcasecmp(u->unit, cp)) {
       if (use_float)
-        v = u->multiplier * d;
+        v = (uint64_t)(u->multiplier * d);
       else
         v *= u->multiplier;
       *ok = 1;

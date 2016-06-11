@@ -1657,33 +1657,11 @@ esac
 
 # Add some more warnings which we use in development but not in the
 # released versions.  (Some relevant gcc versions can't handle these.)
+#
+# Note that we have to do this near the end  of the autoconf process, or
+# else we may run into problems when these warnings hit on the testing C
+# programs that autoconf wants to build.
 if test "x$enable_gcc_warnings_advisory" != "xno"; then
-
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
-#if !defined(__GNUC__) || (__GNUC__ < 4)
-#error
-#endif])], have_gcc4=yes, have_gcc4=no)
-
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
-#if !defined(__GNUC__) || (__GNUC__ < 4) || (__GNUC__ == 4 && __GNUC_MINOR__ < 2)
-#error
-#endif])], have_gcc42=yes, have_gcc42=no)
-
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
-#if !defined(__GNUC__) || (__GNUC__ < 4) || (__GNUC__ == 4 && __GNUC_MINOR__ < 3)
-#error
-#endif])], have_gcc43=yes, have_gcc43=no)
-
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
-#if !defined(__GNUC__) || (__GNUC__ < 4) || (__GNUC__ == 4 && __GNUC_MINOR__ < 6)
-#error
-#endif])], have_gcc46=yes, have_gcc46=no)
-
-  save_CFLAGS="$CFLAGS"
-  CFLAGS="$CFLAGS -Wshorten-64-to-32"
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [])], have_shorten64_flag=yes,
-                    have_shorten64_flag=no)
-  CFLAGS="$save_CFLAGS"
 
   case "$host" in
     *-*-openbsd* | *-*-bitrig*)
@@ -1694,44 +1672,249 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
       CFLAGS="$CFLAGS -Wno-system-headers" ;;
   esac
 
+  # GCC4.3 users once report trouble with -Wstrict-overflow=5.  GCC5 users
+  # have it work better.
+  # CFLAGS="$CFLAGS -Wstrict-overflow=1"
+
+  # This warning was added in gcc 4.3, but it appears to generate
+  # spurious warnings in gcc 4.4.  I don't know if it works in 4.5.
+  #CFLAGS="$CFLAGS -Wlogical-op"
+
+  m4_foreach_w([warning_flag], [
+     -Waddress
+     -Waddress-of-array-temporary
+     -Waddress-of-temporary
+     -Wambiguous-macro
+     -Wanonymous-pack-parens
+     -Warc
+     -Warc-abi
+     -Warc-bridge-casts-disallowed-in-nonarc
+     -Warc-maybe-repeated-use-of-weak
+     -Warc-performSelector-leaks
+     -Warc-repeated-use-of-weak
+     -Warray-bounds
+     -Warray-bounds-pointer-arithmetic
+     -Wasm
+     -Wasm-operand-widths
+     -Watomic-properties
+     -Watomic-property-with-user-defined-accessor
+     -Wauto-import
+     -Wauto-storage-class
+     -Wauto-var-id
+     -Wavailability
+     -Wbackslash-newline-escape
+     -Wbad-array-new-length
+     -Wbind-to-temporary-copy
+     -Wbitfield-constant-conversion
+     -Wbool-conversion
+     -Wbool-conversion
+     -Wbool-conversions
+     -Wbuiltin-requires-header
+     -Wc11-extensions
+     -Wc99-c11-compat
+     -Wchar-align
+     -Wcompare-distinct-pointer-types
+     -Wcomplex-component-init
+     -Wconditional-type-mismatch
+     -Wconfig-macros
+     -Wconstant-conversion
+     -Wconstant-logical-operand
+     -Wconstexpr-not-const
+     -Wcustom-atomic-properties
+     -Wdangling-field
+     -Wdangling-initializer-list
+     -Wdate-time
+     -Wdelegating-ctor-cycles
+     -Wdeprecated-implementations
+     -Wdeprecated-register
+     -Wdirect-ivar-access
+     -Wdiscard-qual
+     -Wdistributed-object-modifiers
+     -Wdivision-by-zero
+     -Wdollar-in-identifier-extension
+     -Wdouble-promotion
+     -Wduplicate-decl-specifier
+     -Wduplicate-enum
+     -Wduplicate-method-arg
+     -Wduplicate-method-match
+     -Wduplicated-cond
+     -Wdynamic-class-memaccess
+     -Wembedded-directive
+     -Wempty-translation-unit
+     -Wenum-conversion
+     -Wexit-time-destructors
+     -Wexplicit-ownership-type
+     -Wextern-initializer
+     -Wextra
+     -Wextra-semi
+     -Wextra-tokens
+     -Wflexible-array-extensions
+     -Wfloat-conversion
+     -Wformat-non-iso
+     -Wfour-char-constants
+     -Wgcc-compat
+     -Wglobal-constructors
+     -Wgnu-array-member-paren-init
+     -Wgnu-designator
+     -Wgnu-static-float-init
+     -Wgnu-static-float-init
+     -Wheader-guard
+     -Wheader-hygiene
+     -Widiomatic-parentheses
+     -Wignored-attributes
+     -Wimplicit-atomic-properties
+     -Wimplicit-conversion-floating-point-to-bool
+     -Wimplicit-exception-spec-mismatch
+     -Wimplicit-fallthrough
+     -Wimplicit-fallthrough-per-function
+     -Wimplicit-retain-self
+     -Wimport-preprocessor-directive-pedantic
+     -Wincompatible-library-redeclaration
+     -Wincompatible-pointer-types-discards-qualifiers
+     -Wincomplete-implementation
+     -Wincomplete-module
+     -Wincomplete-umbrella
+     -Winit-self
+     -Wint-conversions
+     -Wint-to-void-pointer-cast
+     -Winteger-overflow
+     -Winvalid-constexpr
+     -Winvalid-iboutlet
+     -Winvalid-noreturn
+     -Winvalid-pp-token
+     -Winvalid-source-encoding
+     -Winvalid-token-paste
+     -Wknr-promoted-parameter
+     -Wlanguage-extension-token
+     -Wlarge-by-value-copy
+     -Wliteral-conversion
+     -Wliteral-range
+     -Wlocal-type-template-args
+     -Wlogical-op
+     -Wloop-analysis
+     -Wmain-return-type
+     -Wmalformed-warning-check
+     -Wmethod-signatures
+     -Wmicrosoft
+     -Wmicrosoft-exists
+     -Wmismatched-parameter-types
+     -Wmismatched-return-types
+     -Wmissing-field-initializers
+     -Wmissing-format-attribute
+     -Wmissing-noreturn
+     -Wmissing-selector-name
+     -Wmissing-sysroot
+     -Wmissing-variable-declarations
+     -Wmodule-conflict
+     -Wnested-anon-types
+     -Wnewline-eof
+     -Wnon-literal-null-conversion
+     -Wnon-pod-varargs
+     -Wnonportable-cfstrings
+     -Wnormalized=id
+     -Wnull-arithmetic
+     -Wnull-character
+     -Wnull-conversion
+     -Wnull-conversion
+     -Wnull-dereference
+     -Wout-of-line-declaration
+     -Wover-aligned
+     -Woverlength-strings
+     -Woverride-init
+     -Woverriding-method-mismatch
+     -Wpointer-type-mismatch
+     -Wpredefined-identifier-outside-function
+     -Wprotocol-property-synthesis-ambiguity
+     -Wreadonly-iboutlet-property
+     -Wreadonly-setter-attrs
+     -Wreceiver-expr
+     -Wreceiver-forward-class
+     -Wreceiver-is-weak
+     -Wreinterpret-base-class
+     -Wrequires-super-attribute
+     -Wreserved-user-defined-literal
+     -Wreturn-stack-address
+     -Wsection
+     -Wselector-type-mismatch
+     -Wsentinel
+     -Wserialized-diagnostics
+     -Wshift-count-negative
+     -Wshift-count-overflow
+     -Wshift-negative-value
+     -Wshift-overflow=2
+     -Wshift-sign-overflow
+     -Wshorten-64-to-32
+     -Wshorten-64-to-32
+     -Wsizeof-array-argument
+     -Wsource-uses-openmp
+     -Wstatic-float-init
+     -Wstatic-in-inline
+     -Wstatic-local-in-inline
+     -Wstrict-overflow=2
+     -Wstring-compare
+     -Wstring-conversion
+     -Wstrlcpy-strlcat-size
+     -Wstrncat-size
+     -Wsuggest-attribute=format
+     -Wsuggest-attribute=noreturn
+     -Wsuper-class-method-mismatch
+     -Wswitch-bool
+     -Wsync-nand
+     -Wtautological-constant-out-of-range-compare
+     -Wtentative-definition-incomplete-type
+     -Wthread-safety
+     -Wthread-safety-analysis
+     -Wthread-safety-attributes
+     -Wthread-safety-beta
+     -Wthread-safety-precise
+     -Wtrampolines
+     -Wtype-safety
+     -Wtypedef-redefinition
+     -Wtypename-missing
+     -Wundefined-inline
+     -Wundefined-internal
+     -Wundefined-reinterpret-cast
+     -Wunicode
+     -Wunicode-whitespace
+     -Wunknown-warning-option
+     -Wunnamed-type-template-args
+     -Wunneeded-member-function
+     -Wunsequenced
+     -Wunsupported-visibility
+     -Wunused-but-set-parameter
+     -Wunused-but-set-variable
+     -Wunused-command-line-argument
+     -Wunused-const-variable=2
+     -Wunused-exception-parameter
+     -Wunused-local-typedefs
+     -Wunused-member-function
+     -Wunused-sanitize-argument
+     -Wunused-volatile-lvalue
+     -Wuser-defined-literals
+     -Wvariadic-macros
+     -Wvector-conversion
+     -Wvector-conversions
+     -Wvexing-parse
+     -Wvisibility
+     -Wvla-extension
+     -Wvla-extension
+     -Wzero-length-array
+     -Wzero-length-array
+  ], [ TOR_CHECK_CFLAGS([warning_flag]) ])
+
   CFLAGS="$CFLAGS -W -Wfloat-equal -Wundef -Wpointer-arith"
   CFLAGS="$CFLAGS -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings"
   CFLAGS="$CFLAGS -Wredundant-decls -Wchar-subscripts -Wcomment -Wformat=2"
-  CFLAGS="$CFLAGS -Wwrite-strings -Wmissing-declarations -Wredundant-decls"
+  CFLAGS="$CFLAGS -Wwrite-strings"
   CFLAGS="$CFLAGS -Wnested-externs -Wbad-function-cast -Wswitch-enum"
+  CFLAGS="$CFLAGS -Waggregate-return -Wpacked -Wunused"
+  CFLAGS="$CFLAGS -Wunused-parameter "
+  # These interfere with building main() { return 0; }, which autoconf
+  # likes to use as its default program.
+  CFLAGS="$CFLAGS -Wold-style-definition -Wmissing-declarations"
 
-  # Disabled, so we can use mallinfo(): -Waggregate-return
-
-  if test "x$have_gcc4" = "xyes"; then
-    # These warnings break gcc 3.3.5 and work on gcc 4.0.2
-    CFLAGS="$CFLAGS -Winit-self -Wmissing-field-initializers -Wold-style-definition"
-  fi
-
-  if test "x$have_gcc42" = "xyes"; then
-    # These warnings break gcc 4.0.2 and work on gcc 4.2
-    CFLAGS="$CFLAGS -Waddress -Wmissing-noreturn -Wstrict-overflow=1"
-
-    # We used to use -Wstrict-overflow=5, but that breaks us heavily under 4.3.
-  fi
-
-  if test "x$have_gcc42" = "xyes" && test "x$have_clang" = "xno"; then
-    # These warnings break gcc 4.0.2 and clang, but work on gcc 4.2
-    CFLAGS="$CFLAGS -Wnormalized=id -Woverride-init"
-  fi
-
-  if test "x$have_gcc43" = "xyes"; then
-    # These warnings break gcc 4.2 and work on gcc 4.3
-    CFLAGS="$CFLAGS -Wextra -Warray-bounds"
-  fi
-
-  if test "x$have_gcc46" = "xyes"; then
-    # This warning was added in gcc 4.3, but it appears to generate
-    # spurious warnings in gcc 4.4.  I don't know if it works in 4.5.
-    CFLAGS="$CFLAGS -Wlogical-op"
-  fi
-
-  if test "x$have_shorten64_flag" = "xyes"; then
-    CFLAGS="$CFLAGS -Wshorten-64-to-32"
+  if test "$tor_cv_cflags__Wnull_dereference" = "yes"; then
+    AC_DEFINE([HAVE_CFLAG_WNULL_DEREFERENCE], 1, [True if we have -Wnull-dereference])
   fi
 
   if test "x$enable_fatal_warnings" = "xyes"; then
@@ -1740,8 +1923,6 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
     CFLAGS="$CFLAGS -Werror"
   fi
 
-##This will break the world on some 64-bit architectures
-# CFLAGS="$CFLAGS -Winline"
 fi
 
 if test "$enable_coverage" = "yes" && test "$have_clang" = "no"; then

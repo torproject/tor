@@ -65,9 +65,6 @@
 #include <systemd/sd-daemon.h>
 #endif
 
-/* From main.c */
-extern int quiet_level;
-
 /* Prefix used to indicate a Unix socket in a FooPort configuration. */
 static const char unix_socket_prefix[] = "unix:";
 
@@ -2677,7 +2674,7 @@ options_validate_cb(void *old_options, void *options, void *default_options,
 
 #define REJECT(arg) \
   STMT_BEGIN *msg = tor_strdup(arg); return -1; STMT_END
-#ifdef __GNUC__
+#if defined(__GNUC__) && __GNUC__ <= 3
 #define COMPLAIN(args...) \
   STMT_BEGIN log_warn(LD_CONFIG, args); STMT_END
 #else
@@ -5776,7 +5773,7 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
     } else if (!strcmpstart(flag, "weight=")) {
       int ok;
       const char *wstring = flag + strlen("weight=");
-      weight = tor_parse_double(wstring, 0, UINT64_MAX, &ok, NULL);
+      weight = tor_parse_double(wstring, 0, (double)UINT64_MAX, &ok, NULL);
       if (!ok) {
         log_warn(LD_CONFIG, "Invalid weight '%s' on DirAuthority line.",flag);
         weight=1.0;
@@ -5920,7 +5917,7 @@ parse_dir_fallback_line(const char *line,
     } else if (!strcmpstart(cp, "weight=")) {
       int ok;
       const char *wstring = cp + strlen("weight=");
-      weight = tor_parse_double(wstring, 0, UINT64_MAX, &ok, NULL);
+      weight = tor_parse_double(wstring, 0, (double)UINT64_MAX, &ok, NULL);
       if (!ok) {
         log_warn(LD_CONFIG, "Invalid weight '%s' on FallbackDir line.", cp);
         weight=1.0;

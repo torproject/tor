@@ -74,6 +74,7 @@ typedef struct tor_addr_port_t
 #define TOR_ADDR_NULL {AF_UNSPEC, {0}}
 
 static inline const struct in6_addr *tor_addr_to_in6(const tor_addr_t *a);
+static inline const struct in6_addr *tor_addr_to_in6_assert(const tor_addr_t *a);
 static inline uint32_t tor_addr_to_ipv4n(const tor_addr_t *a);
 static inline uint32_t tor_addr_to_ipv4h(const tor_addr_t *a);
 static inline uint32_t tor_addr_to_mapped_ipv4h(const tor_addr_t *a);
@@ -97,21 +98,30 @@ tor_addr_to_in6(const tor_addr_t *a)
   return a->family == AF_INET6 ? &a->addr.in6_addr : NULL;
 }
 
+/** As tor_addr_to_in6, but assert that the address truly is an IPv6 address. */
+static inline const struct in6_addr *
+tor_addr_to_in6_assert(const tor_addr_t *a)
+{
+  tor_assert(a->family == AF_INET6);
+  return &a->addr.in6_addr;
+}
+
 /** Given an IPv6 address <b>x</b>, yield it as an array of uint8_t.
  *
  * Requires that <b>x</b> is actually an IPv6 address.
  */
-#define tor_addr_to_in6_addr8(x) tor_addr_to_in6(x)->s6_addr
+#define tor_addr_to_in6_addr8(x) tor_addr_to_in6_assert(x)->s6_addr
+
 /** Given an IPv6 address <b>x</b>, yield it as an array of uint16_t.
  *
  * Requires that <b>x</b> is actually an IPv6 address.
  */
-#define tor_addr_to_in6_addr16(x) S6_ADDR16(*tor_addr_to_in6(x))
+#define tor_addr_to_in6_addr16(x) S6_ADDR16(*tor_addr_to_in6_assert(x))
 /** Given an IPv6 address <b>x</b>, yield it as an array of uint32_t.
  *
  * Requires that <b>x</b> is actually an IPv6 address.
  */
-#define tor_addr_to_in6_addr32(x) S6_ADDR32(*tor_addr_to_in6(x))
+#define tor_addr_to_in6_addr32(x) S6_ADDR32(*tor_addr_to_in6_assert(x))
 
 /** Return an IPv4 address in network order for <b>a</b>, or 0 if
  * <b>a</b> is not an IPv4 address. */

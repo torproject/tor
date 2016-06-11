@@ -176,7 +176,7 @@ void log_fn_ratelim_(struct ratelim_t *ratelim, int severity,
                      const char *format, ...)
   CHECK_PRINTF(5,6);
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) && __GNUC__ <= 3
 
 /* These are the GCC varidaic macros, so that older versions of GCC don't
  * break. */

@@ -164,7 +164,17 @@ STATIC int tor_tls_context_init_one(tor_tls_context_t **ppcontext,
                                     int is_client);
 STATIC void tls_log_errors(tor_tls_t *tls, int severity, int domain,
                            const char *doing);
+
+#ifdef TOR_UNIT_TESTS
+extern int tor_tls_object_ex_data_index;
+extern tor_tls_context_t *server_tls_context;
+extern tor_tls_context_t *client_tls_context;
+extern uint16_t v2_cipher_list[];
+extern uint64_t total_bytes_written_over_tls;
+extern uint64_t total_bytes_written_by_tls;
 #endif
+
+#endif /* endif TORTLS_PRIVATE */
 
 const char *tor_tls_err_to_string(int err);
 void tor_tls_get_state_description(tor_tls_t *tls, char *buf, size_t sz);

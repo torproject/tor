@@ -109,7 +109,7 @@ HT_GENERATE2(chan_circid_map, chan_circid_circuit_map_t, node,
  * used to improve performance when many cells arrive in a row from the
  * same circuit.
  */
-chan_circid_circuit_map_t *_last_circid_chan_ent = NULL;
+static chan_circid_circuit_map_t *_last_circid_chan_ent = NULL;
 
 /** Implementation helper for circuit_set_{p,n}_circid_channel: A circuit ID
  * and/or channel for circ has just changed from <b>old_chan, old_id</b>
