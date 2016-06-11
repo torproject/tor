@@ -1,0 +1,4 @@
+  o Major bugfixes (user interface):
+    - Correctly give a warning in the cases where a relay is specified by
+      nickname, and one such relay is found, but it is not officially Named.
+      Fixes bug 19203; bugfix on 0.2.3.1-alpha.

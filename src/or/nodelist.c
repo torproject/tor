@@ -594,10 +594,10 @@ node_get_by_nickname,(const char *nickname, int warn_if_unnamed))
                  "but none is listed as Named in the directory consensus. "
                  "Choosing one arbitrarily.", nickname);
       }
-    } else if (smartlist_len(matches)>1 && warn_if_unnamed) {
+    } else if (smartlist_len(matches)==1 && warn_if_unnamed) {
       char fp[HEX_DIGEST_LEN+1];
       node_t *node = smartlist_get(matches, 0);
-      if (node->name_lookup_warned) {
+      if (! node->name_lookup_warned) {
         base16_encode(fp, sizeof(fp), node->identity, DIGEST_LEN);
         log_warn(LD_CONFIG,
                  "You specified a server \"%s\" by name, but the directory "
