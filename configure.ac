@@ -1916,6 +1916,9 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
   if test "$tor_cv_cflags__Wnull_dereference" = "yes"; then
     AC_DEFINE([HAVE_CFLAG_WNULL_DEREFERENCE], 1, [True if we have -Wnull-dereference])
   fi
+  if test "$tor_cv_cflags__Woverlength_strings" = "yes"; then
+    AC_DEFINE([HAVE_CFLAG_WOVERLENGTH_STRINGS], 1, [True if we have -Woverlength-strings])
+  fi
 
   if test "x$enable_fatal_warnings" = "xyes"; then
     # I'd like to use TOR_CHECK_CFLAGS here, but I can't, since the
