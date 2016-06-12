@@ -1987,6 +1987,15 @@ typedef enum {
 #define download_schedule_increment_bitfield_t \
                                         ENUM_BF(download_schedule_increment_t)
 
+/** Enumeration: do we want to use the random exponential backoff
+ * mechanism? */
+typedef enum {
+  DL_SCHED_DETERMINISTIC = 0,
+  DL_SCHED_RANDOM_EXPONENTIAL = 1,
+} download_schedule_backoff_t;
+#define download_schedule_backoff_bitfield_t \
+                                        ENUM_BF(download_schedule_backoff_t)
+
 /** Information about our plans for retrying downloads for a downloadable
  * directory object.
  * Each type of downloadable directory object has a corresponding retry
@@ -2033,6 +2042,13 @@ typedef struct download_status_t {
   download_schedule_increment_bitfield_t increment_on : 1; /**< does this
                                         * schedule increment on each attempt,
                                         * or after each failure? */
+  download_schedule_backoff_bitfield_t backoff : 1; /**< do we use the
+                                        * deterministic schedule, or random
+                                        * exponential backoffs? */
+  uint8_t last_backoff_position; /**< number of attempts/failures, depending
+                                  * on increment_on, when we last recalculated
+                                  * the delay. */
+  int last_delay_used; /**< last delay used for random exponential backoff */
 } download_status_t;
 
 /** If n_download_failures is this high, the download can never happen. */

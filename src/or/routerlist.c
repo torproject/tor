@@ -159,6 +159,9 @@ download_status_cert_init(download_status_t *dlstatus)
   dlstatus->schedule = DL_SCHED_CONSENSUS;
   dlstatus->want_authority = DL_WANT_ANY_DIRSERVER;
   dlstatus->increment_on = DL_SCHED_INCREMENT_FAILURE;
+  dlstatus->backoff = DL_SCHED_DETERMINISTIC;
+  dlstatus->last_backoff_position = 0;
+  dlstatus->last_delay_used = 0;
 
   /* Use the new schedule to set next_attempt_at */
   download_status_reset(dlstatus);

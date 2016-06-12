@@ -146,6 +146,7 @@ STATIC int directory_handle_command_get(dir_connection_t *conn,
                                         size_t req_body_len);
 STATIC int download_status_schedule_get_delay(download_status_t *dls,
                                               const smartlist_t *schedule,
+                                              int min_delay, int max_delay,
                                               time_t now);
 
 STATIC char* authdir_type_to_string(dirinfo_type_t auth);
@@ -154,6 +155,9 @@ STATIC int should_use_directory_guards(const or_options_t *options);
 STATIC zlib_compression_level_t choose_compression_level(ssize_t n_bytes);
 STATIC const smartlist_t *find_dl_schedule(download_status_t *dls,
                                            const or_options_t *options);
+STATIC void find_dl_min_and_max_delay(download_status_t *dls,
+                                      const or_options_t *options,
+                                      int *min, int *max);
 #endif
 
 #endif
