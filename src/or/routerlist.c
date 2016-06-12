@@ -322,7 +322,6 @@ already_have_cert(authority_cert_t *cert)
  * we've just successfully retrieved certificates from, so try it first to
  * fetch any missing certificates.
  */
-
 int
 trusted_dirs_load_certs_from_string(const char *contents, int source,
                                     int flush, const char *source_dir)

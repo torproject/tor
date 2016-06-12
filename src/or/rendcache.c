@@ -956,25 +956,25 @@ rend_cache_store_v2_desc_as_client(const char *desc,
    * avoid an evil HSDir serving old descriptor. We validate if the
    * timestamp is greater than and not equal because it's a rounded down
    * timestamp to the hour so if the descriptor changed in the same hour,
-   * the rend cache failure will tells us if we have a new descriptor. */
+   * the rend cache failure will tell us if we have a new descriptor. */
   if (e && e->parsed->timestamp > parsed->timestamp) {
     log_info(LD_REND, "We already have a new enough service descriptor for "
              "service ID %s with the same desc ID and version.",
              safe_str_client(service_id));
     goto okay;
   }
-  /* Lookup our failure cache for intro point that might be unsuable. */
+  /* Lookup our failure cache for intro point that might be unusable. */
   validate_intro_point_failure(parsed, service_id);
-  /* It's now possible that our intro point list is empty, this means that
+  /* It's now possible that our intro point list is empty, which means that
    * this descriptor is useless to us because intro points have all failed
    * somehow before. Discard the descriptor. */
   if (smartlist_len(parsed->intro_nodes) == 0) {
-    log_info(LD_REND, "Service descriptor with service ID %s, every "
-             "intro points are unusable. Discarding it.",
+    log_info(LD_REND, "Service descriptor with service ID %s has no "
+             "usable intro points. Discarding it.",
              safe_str_client(service_id));
     goto err;
   }
-  /* Now either purge the current one and replace it's content or create a
+  /* Now either purge the current one and replace its content or create a
    * new one and add it to the rend cache. */
   if (!e) {
     e = tor_malloc_zero(sizeof(rend_cache_entry_t));

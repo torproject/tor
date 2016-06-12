@@ -727,6 +727,10 @@ directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
 
   node = node_get_by_id(status->identity_digest);
 
+  /* XXX The below check is wrong: !node means it's not in the consensus,
+   * but we haven't checked if we have a descriptor for it -- and also,
+   * we only care about the descriptor if it's a begindir-style anonymized
+   * connection. */
   if (!node && anonymized_connection) {
     log_info(LD_DIR, "Not sending anonymized request to directory '%s'; we "
              "don't have its router descriptor.",
@@ -744,7 +748,7 @@ directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
     return;
   }
 
-  /* At this point, if we are a clients making a direct connection to a
+  /* At this point, if we are a client making a direct connection to a
    * directory server, we have selected a server that has at least one address
    * allowed by ClientUseIPv4/6 and Reachable{"",OR,Dir}Addresses. This
    * selection uses the preference in ClientPreferIPv6{OR,Dir}Port, if
