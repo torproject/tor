@@ -39,8 +39,8 @@ typedef struct onion_queue_t {
 /** Array of queues of circuits waiting for CPU workers. An element is NULL
  * if that queue is empty.*/
 static TOR_TAILQ_HEAD(onion_queue_head_t, onion_queue_t)
-              ol_list[MAX_ONION_HANDSHAKE_TYPE+1] = {
-  TOR_TAILQ_HEAD_INITIALIZER(ol_list[0]), /* tap */
+              ol_list[MAX_ONION_HANDSHAKE_TYPE+1] =
+{ TOR_TAILQ_HEAD_INITIALIZER(ol_list[0]), /* tap */
   TOR_TAILQ_HEAD_INITIALIZER(ol_list[1]), /* fast */
   TOR_TAILQ_HEAD_INITIALIZER(ol_list[2]), /* ntor */
 };

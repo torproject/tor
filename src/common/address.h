@@ -74,7 +74,8 @@ typedef struct tor_addr_port_t
 #define TOR_ADDR_NULL {AF_UNSPEC, {0}}
 
 static inline const struct in6_addr *tor_addr_to_in6(const tor_addr_t *a);
-static inline const struct in6_addr *tor_addr_to_in6_assert(const tor_addr_t *a);
+static inline const struct in6_addr *tor_addr_to_in6_assert(
+    const tor_addr_t *a);
 static inline uint32_t tor_addr_to_ipv4n(const tor_addr_t *a);
 static inline uint32_t tor_addr_to_ipv4h(const tor_addr_t *a);
 static inline uint32_t tor_addr_to_mapped_ipv4h(const tor_addr_t *a);
@@ -98,7 +99,8 @@ tor_addr_to_in6(const tor_addr_t *a)
   return a->family == AF_INET6 ? &a->addr.in6_addr : NULL;
 }
 
-/** As tor_addr_to_in6, but assert that the address truly is an IPv6 address. */
+/** As tor_addr_to_in6, but assert that the address truly is an IPv6
+ * address. */
 static inline const struct in6_addr *
 tor_addr_to_in6_assert(const tor_addr_t *a)
 {
