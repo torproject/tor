@@ -3333,13 +3333,16 @@ test_dir_download_status_schedule(void *arg)
   (void)arg;
   download_status_t dls_failure = { 0, 0, 0, DL_SCHED_GENERIC,
                                              DL_WANT_AUTHORITY,
-                                             DL_SCHED_INCREMENT_FAILURE };
+                                             DL_SCHED_INCREMENT_FAILURE,
+                                             DL_SCHED_DETERMINISTIC, 0, 0 };
   download_status_t dls_attempt = { 0, 0, 0, DL_SCHED_CONSENSUS,
                                              DL_WANT_ANY_DIRSERVER,
-                                             DL_SCHED_INCREMENT_ATTEMPT};
+                                             DL_SCHED_INCREMENT_ATTEMPT,
+                                             DL_SCHED_DETERMINISTIC, 0, 0 };
   download_status_t dls_bridge  = { 0, 0, 0, DL_SCHED_BRIDGE,
                                              DL_WANT_AUTHORITY,
-                                             DL_SCHED_INCREMENT_FAILURE};
+                                             DL_SCHED_INCREMENT_FAILURE,
+                                             DL_SCHED_DETERMINISTIC, 0, 0 };
   int increment = -1;
   int expected_increment = -1;
   time_t current_time = time(NULL);
@@ -3355,6 +3358,7 @@ test_dir_download_status_schedule(void *arg)
   delay1 = 1000;
   increment = download_status_schedule_get_delay(&dls_failure,
                                                  schedule,
+                                                 0, INT_MAX,
                                                  TIME_MIN);
   expected_increment = delay1;
   tt_assert(increment == expected_increment);
@@ -3363,6 +3367,7 @@ test_dir_download_status_schedule(void *arg)
   delay1 = INT_MAX;
   increment =  download_status_schedule_get_delay(&dls_failure,
                                                   schedule,
+                                                  0, INT_MAX,
                                                   -1);
   expected_increment = delay1;
   tt_assert(increment == expected_increment);
@@ -3371,6 +3376,7 @@ test_dir_download_status_schedule(void *arg)
   delay1 = 0;
   increment = download_status_schedule_get_delay(&dls_attempt,
                                                  schedule,
+                                                 0, INT_MAX,
                                                  0);
   expected_increment = delay1;
   tt_assert(increment == expected_increment);
@@ -3379,6 +3385,7 @@ test_dir_download_status_schedule(void *arg)
   delay1 = 1000;
   increment = download_status_schedule_get_delay(&dls_attempt,
                                                  schedule,
+                                                 0, INT_MAX,
                                                  1);
   expected_increment = delay1;
   tt_assert(increment == expected_increment);
@@ -3387,6 +3394,7 @@ test_dir_download_status_schedule(void *arg)
   delay1 = INT_MAX;
   increment = download_status_schedule_get_delay(&dls_bridge,
                                                  schedule,
+                                                 0, INT_MAX,
                                                  current_time);
   expected_increment = delay1;
   tt_assert(increment == expected_increment);
@@ -3395,6 +3403,7 @@ test_dir_download_status_schedule(void *arg)
   delay1 = 1;
   increment = download_status_schedule_get_delay(&dls_bridge,
                                                  schedule,
+                                                 0, INT_MAX,
                                                  TIME_MAX);
   expected_increment = delay1;
   tt_assert(increment == expected_increment);
@@ -3407,6 +3416,7 @@ test_dir_download_status_schedule(void *arg)
   delay2 = 100;
   increment = download_status_schedule_get_delay(&dls_attempt,
                                                  schedule,
+                                                 0, INT_MAX,
                                                  current_time);
   expected_increment = delay2;
   tt_assert(increment == expected_increment);
@@ -3415,6 +3425,7 @@ test_dir_download_status_schedule(void *arg)
   delay2 = 1;
   increment = download_status_schedule_get_delay(&dls_bridge,
                                                  schedule,
+                                                 0, INT_MAX,
                                                  current_time);
   expected_increment = delay2;
   tt_assert(increment == expected_increment);
@@ -3427,6 +3438,7 @@ test_dir_download_status_schedule(void *arg)
   delay2 = 5;
   increment = download_status_schedule_get_delay(&dls_attempt,
                                                  schedule,
+                                                 0, INT_MAX,
                                                  current_time);
   expected_increment = delay2;
   tt_assert(increment == expected_increment);
@@ -3435,6 +3447,7 @@ test_dir_download_status_schedule(void *arg)
   delay2 = 17;
   increment = download_status_schedule_get_delay(&dls_bridge,
                                                  schedule,
+                                                 0, INT_MAX,
                                                  current_time);
   expected_increment = delay2;
   tt_assert(increment == expected_increment);
@@ -3447,6 +3460,7 @@ test_dir_download_status_schedule(void *arg)
   delay2 = 35;
   increment = download_status_schedule_get_delay(&dls_attempt,
                                                  schedule,
+                                                 0, INT_MAX,
                                                  current_time);
   expected_increment = INT_MAX;
   tt_assert(increment == expected_increment);
@@ -3455,6 +3469,7 @@ test_dir_download_status_schedule(void *arg)
   delay2 = 99;
   increment = download_status_schedule_get_delay(&dls_bridge,
                                                  schedule,
+                                                 0, INT_MAX,
                                                  current_time);
   expected_increment = INT_MAX;
   tt_assert(increment == expected_increment);
@@ -3466,15 +3481,58 @@ test_dir_download_status_schedule(void *arg)
 }
 
 static void
+test_dir_download_status_random_backoff(void *arg)
+{
+  download_status_t dls_random =
+    { 0, 0, 0, DL_SCHED_GENERIC, DL_WANT_AUTHORITY,
+               DL_SCHED_INCREMENT_FAILURE, DL_SCHED_RANDOM_EXPONENTIAL, 0, 0 };
+  int increment = -1;
+  int old_increment;
+  time_t current_time = time(NULL);
+  const int min_delay = 0;
+  const int max_delay = 1000000;
+
+  (void)arg;
+
+  /* Check the random backoff cases */
+  old_increment = 0;
+  do {
+    increment = download_status_schedule_get_delay(&dls_random,
+                                                   NULL,
+                                                   min_delay, max_delay,
+                                                   current_time);
+    /* Test */
+    tt_int_op(increment, OP_GE, min_delay);
+    tt_int_op(increment, OP_LE, max_delay);
+    tt_int_op(increment, OP_GE, old_increment);
+    /* We at most double, and maybe add one */
+    tt_int_op(increment, OP_LE, 2 * old_increment + 1);
+
+    /* Advance */
+    current_time += increment;
+    ++(dls_random.n_download_attempts);
+    ++(dls_random.n_download_failures);
+
+    /* Try another maybe */
+    old_increment = increment;
+  } while (increment < max_delay);
+
+ done:
+  return;
+}
+
+static void
 test_dir_download_status_increment(void *arg)
 {
   (void)arg;
   download_status_t dls_failure = { 0, 0, 0, DL_SCHED_GENERIC,
     DL_WANT_AUTHORITY,
-    DL_SCHED_INCREMENT_FAILURE };
+    DL_SCHED_INCREMENT_FAILURE,
+    DL_SCHED_DETERMINISTIC, 0, 0 };
   download_status_t dls_attempt = { 0, 0, 0, DL_SCHED_BRIDGE,
     DL_WANT_ANY_DIRSERVER,
-    DL_SCHED_INCREMENT_ATTEMPT};
+    DL_SCHED_INCREMENT_ATTEMPT,
+    DL_SCHED_DETERMINISTIC, 0, 0 };
   int delay0 = -1;
   int delay1 = -1;
   int delay2 = -1;
@@ -4243,6 +4301,7 @@ struct testcase_t dir_tests[] = {
   DIR(fetch_type, 0),
   DIR(packages, 0),
   DIR(download_status_schedule, 0),
+  DIR(download_status_random_backoff, 0),
   DIR(download_status_increment, 0),
   DIR(authdir_type_to_string, 0),
   DIR(conn_purpose_to_string, 0),
