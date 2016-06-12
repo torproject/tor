@@ -159,7 +159,7 @@ download_status_cert_init(download_status_t *dlstatus)
   dlstatus->schedule = DL_SCHED_CONSENSUS;
   dlstatus->want_authority = DL_WANT_ANY_DIRSERVER;
   dlstatus->increment_on = DL_SCHED_INCREMENT_FAILURE;
-  dlstatus->backoff = DL_SCHED_DETERMINISTIC;
+  dlstatus->backoff = DL_SCHED_RANDOM_EXPONENTIAL;
   dlstatus->last_backoff_position = 0;
   dlstatus->last_delay_used = 0;
 
