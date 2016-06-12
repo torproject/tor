@@ -2032,6 +2032,7 @@ bridge_add_from_config(bridge_line_t *bridge_line)
   if (bridge_line->transport_name)
     b->transport_name = bridge_line->transport_name;
   b->fetch_status.schedule = DL_SCHED_BRIDGE;
+  b->fetch_status.backoff = DL_SCHED_RANDOM_EXPONENTIAL;
   b->socks_args = bridge_line->socks_args;
   if (!bridge_list)
     bridge_list = smartlist_new();
