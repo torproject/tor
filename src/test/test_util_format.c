@@ -289,6 +289,96 @@ test_util_format_base16_decode(void *ignored)
   tor_free(real_dst);
 }
 
+static void
+test_util_format_base32_encode(void *arg)
+{
+  (void) arg;
+  size_t real_dstlen = 32;
+  char *dst = tor_malloc_zero(real_dstlen);
+
+  /* Basic use case that doesn't require a source length correction. */
+  {
+    /* Length of 10 bytes. */
+    const char *src = "blahbleh12";
+    size_t srclen = strlen(src);
+    /* Expected result encoded base32. This was created using python as
+     * such (and same goes for all test case.):
+     *
+     *  b = bytes("blahbleh12", 'utf-8')
+     *  base64.b32encode(b)
+     *  (result in lower case)
+     */
+    const char *expected = "mjwgc2dcnrswqmjs";
+
+    base32_encode(dst, base32_encoded_size(srclen), src, srclen);
+    tt_mem_op(expected, OP_EQ, dst, strlen(expected));
+    /* Encode but to a larger size destination. */
+    memset(dst, 0, real_dstlen);
+    base32_encode(dst, real_dstlen, src, srclen);
+    tt_mem_op(expected, OP_EQ, dst, strlen(expected));
+  }
+
+
+  /* Non multiple of 5 for the source buffer length. */
+  {
+    /* Length of 8 bytes. */
+    const char *expected = "mjwgc2dcnrswq";
+    const char *src = "blahbleh";
+    size_t srclen = strlen(src);
+
+    memset(dst, 0, real_dstlen);
+    base32_encode(dst, base32_encoded_size(srclen), src, srclen);
+    tt_mem_op(expected, OP_EQ, dst, strlen(expected));
+  }
+
+ done:
+  tor_free(dst);
+}
+
+static void
+test_util_format_base32_decode(void *arg)
+{
+  (void) arg;
+  int ret;
+  size_t real_dstlen = 32;
+  char *dst = tor_malloc_zero(real_dstlen);
+
+  /* Basic use case. */
+  {
+    /* Length of 10 bytes. */
+    const char *expected = "blahbleh12";
+    /* Expected result encoded base32. */
+    const char *src = "mjwgc2dcnrswqmjs";
+
+    ret = base32_decode(dst, strlen(expected), src, strlen(src));
+    tt_int_op(ret, ==, 0);
+    tt_str_op(expected, OP_EQ, dst);
+  }
+
+  /* Non multiple of 5 for the source buffer length. */
+  {
+    /* Length of 8 bytes. */
+    const char *expected = "blahbleh";
+    const char *src = "mjwgc2dcnrswq";
+
+    ret = base32_decode(dst, strlen(expected), src, strlen(src));
+    tt_int_op(ret, ==, 0);
+    tt_mem_op(expected, OP_EQ, dst, strlen(expected));
+  }
+
+  /* Invalid values. */
+  {
+    /* Invalid character '#'. */
+    ret = base32_decode(dst, real_dstlen, "#abcde", 6);
+    tt_int_op(ret, ==, -1);
+    /* Make sure the destination buffer has been zeroed even on error. */
+    tt_int_op(tor_mem_is_zero(dst, real_dstlen), ==, 1);
+  }
+
+done:
+  tor_free(dst);
+}
+
 struct testcase_t util_format_tests[] = {
   { "unaligned_accessors", test_util_format_unaligned_accessors, 0,
     NULL, NULL },
@@ -297,6 +387,10 @@ struct testcase_t util_format_tests[] = {
     NULL, NULL },
   { "base64_decode", test_util_format_base64_decode, 0, NULL, NULL },
   { "base16_decode", test_util_format_base16_decode, 0, NULL, NULL },
+  { "base32_encode", test_util_format_base32_encode, 0,
+    NULL, NULL },
+  { "base32_decode", test_util_format_base32_decode, 0,
+    NULL, NULL },
   END_OF_TESTCASES
 };
 
