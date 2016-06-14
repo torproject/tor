@@ -9,6 +9,10 @@ Changes in version 0.2.8.4-rc - 2016-06-15
       by nickname, and one such relay is found, but it is not officially
       Named. Fixes bug 19203; bugfix on 0.2.3.1-alpha.
 
+  o Minor features (build):
+    - Tor now builds once again with the recent OpenSSL 1.1 development
+      branch (tested against 1.1.0-pre5 and 1.1.0-pre6-dev).
+
   o Minor features (geoip):
     - Update geoip and geoip6 to the June 7 2016 Maxmind GeoLite2
       Country database.
