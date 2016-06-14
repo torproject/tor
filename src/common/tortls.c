@@ -904,7 +904,11 @@ tor_tls_cert_is_valid(int severity,
   cert_key = X509_get_pubkey(cert->cert);
   if (check_rsa_1024 && cert_key) {
     RSA *rsa = EVP_PKEY_get1_RSA(cert_key);
+#ifdef OPENSSL_1_1_API
+    if (rsa && RSA_bits(rsa) == 1024)
+#else
     if (rsa && BN_num_bits(rsa->n) == 1024)
+#endif
       key_ok = 1;
     if (rsa)
       RSA_free(rsa);
