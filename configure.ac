@@ -1707,7 +1707,6 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
      -Wbind-to-temporary-copy
      -Wbitfield-constant-conversion
      -Wbool-conversion
-     -Wbool-conversion
      -Wbool-conversions
      -Wbuiltin-requires-header
      -Wchar-align
@@ -1754,7 +1753,6 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
      -Wglobal-constructors
      -Wgnu-array-member-paren-init
      -Wgnu-designator
-     -Wgnu-static-float-init
      -Wgnu-static-float-init
      -Wheader-guard
      -Wheader-hygiene
@@ -1813,7 +1811,6 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
      -Wnull-arithmetic
      -Wnull-character
      -Wnull-conversion
-     -Wnull-conversion
      -Wnull-dereference
      -Wout-of-line-declaration
      -Wover-aligned
@@ -1841,7 +1838,6 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
      -Wshift-negative-value
      -Wshift-overflow=2
      -Wshift-sign-overflow
-     -Wshorten-64-to-32
      -Wshorten-64-to-32
      -Wsizeof-array-argument
      -Wsource-uses-openmp
@@ -1895,8 +1891,6 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
      -Wvexing-parse
      -Wvisibility
      -Wvla-extension
-     -Wvla-extension
-     -Wzero-length-array
      -Wzero-length-array
   ], [ TOR_CHECK_CFLAGS([warning_flag]) ])
 
