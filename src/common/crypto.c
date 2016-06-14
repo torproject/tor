@@ -72,13 +72,18 @@
 #define DISABLE_ENGINES
 #endif
 
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_VER(1,1,0,0,4) && \
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_VER(1,1,0,0,5) && \
   !defined(LIBRESSL_VERSION_NUMBER)
-/* OpenSSL as of 1.1.0-pre4 has an "new" thread API, which doesn't require
+/* OpenSSL as of 1.1.0pre4 has an "new" thread API, which doesn't require
  * seting up various callbacks.
  *
- * Note: Yes, using OPENSSL_VER is naughty, but this was introduced in the
- * pre-release series.
+ * OpenSSL 1.1.0pre4 has a messed up `ERR_remove_thread_state()` prototype,
+ * while the previous one was restored in pre5, and the function made a no-op
+ * (along with a deprecated annotation, which produces a compiler warning).
+ *
+ * While it is possible to support all three versions of the thread API,
+ * a version that existed only for one snapshot pre-release is kind of
+ * pointless, so let's not.
  */
 #define NEW_THREAD_API
 #endif
@@ -88,11 +93,6 @@
 
 /** Largest strong entropy request */
 #define MAX_STRONGEST_RAND_SIZE 256
-
-/** Macro: is k a valid RSA public or private key? */
-#define PUBLIC_KEY_OK(k) ((k) && (k)->key && (k)->key->n)
-/** Macro: is k a valid RSA private key? */
-#define PRIVATE_KEY_OK(k) ((k) && (k)->key && (k)->key->p)
 
 #ifndef NEW_THREAD_API
 /** A number of preallocated mutexes for use by OpenSSL. */
@@ -426,10 +426,26 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
 void
 crypto_thread_cleanup(void)
 {
-#ifdef NEW_THREAD_API
-  ERR_remove_thread_state();
-#else
+#ifndef NEW_THREAD_API
   ERR_remove_thread_state(NULL);
+#endif
+}
+
+/** used internally: quicly validate a crypto_pk_t object as a private key.
+ * Return 1 iff the public key is valid, 0 if obviously invalid.
+ */
+static int
+crypto_pk_private_ok(const crypto_pk_t *k)
+{
+#ifdef OPENSSL_1_1_API
+  if (!k || !k->key)
+    return 0;
+
+  BIGNUM *p, *q;
+  RSA_get0_factors(k->key, &p, &q);
+  return p != NULL; /* XXX/yawning: Should we check q? */
+#else
+  return k && k->key && k->key->p;
 #endif
 }
 
@@ -795,7 +811,7 @@ crypto_pk_write_private_key_to_filename(crypto_pk_t *env,
   char *s;
   int r;
 
-  tor_assert(PRIVATE_KEY_OK(env));
+  tor_assert(crypto_pk_private_ok(env));
 
   if (!(bio = BIO_new(BIO_s_mem())))
     return -1;
@@ -837,7 +853,7 @@ int
 crypto_pk_key_is_private(const crypto_pk_t *key)
 {
   tor_assert(key);
-  return PRIVATE_KEY_OK(key);
+  return crypto_pk_private_ok(key);
 }
 
 /** Return true iff <b>env</b> contains a public key whose public exponent
@@ -849,7 +865,15 @@ crypto_pk_public_exponent_ok(crypto_pk_t *env)
   tor_assert(env);
   tor_assert(env->key);
 
-  return BN_is_word(env->key->e, 65537);
+  BIGNUM *e;
+
+#ifdef OPENSSL_1_1_API
+  BIGNUM *n, *d;
+  RSA_get0_key(env->key, &n, &e, &d);
+#else
+  e = env->key->e;
+#endif
+  return BN_is_word(e, 65537);
 }
 
 /** Compare the public-key components of a and b.  Return less than 0
@@ -870,12 +894,27 @@ crypto_pk_cmp_keys(const crypto_pk_t *a, const crypto_pk_t *b)
   if (an_argument_is_null)
     return result;
 
-  tor_assert(PUBLIC_KEY_OK(a));
-  tor_assert(PUBLIC_KEY_OK(b));
-  result = BN_cmp((a->key)->n, (b->key)->n);
+  BIGNUM *a_n, *a_e;
+  BIGNUM *b_n, *b_e;
+
+#ifdef OPENSSL_1_1_API
+  BIGNUM *a_d, *b_d;
+  RSA_get0_key(a->key, &a_n, &a_e, &a_d);
+  RSA_get0_key(b->key, &b_n, &b_e, &b_d);
+#else
+  a_n = a->key->n;
+  a_e = a->key->e;
+  b_n = b->key->n;
+  b_e = b->key->e;
+#endif
+
+  tor_assert(a_n != NULL && a_e != NULL);
+  tor_assert(b_n != NULL && b_e != NULL);
+
+  result = BN_cmp(a_n, b_n);
   if (result)
     return result;
-  return BN_cmp((a->key)->e, (b->key)->e);
+  return BN_cmp(a_e, b_e);
 }
 
 /** Compare the public-key components of a and b.  Return non-zero iff
@@ -906,9 +945,20 @@ crypto_pk_num_bits(crypto_pk_t *env)
 {
   tor_assert(env);
   tor_assert(env->key);
-  tor_assert(env->key->n);
 
+#ifdef OPENSSL_1_1_API
+  /* It's so stupid that there's no other way to check that n is valid
+   * before calling RSA_bits().
+   */
+  BIGNUM *n, *e, *d;
+  RSA_get0_key(env->key, &n, &e, &d);
+  tor_assert(n != NULL);
+
+  return RSA_bits(env->key);
+#else
+  tor_assert(env->key->n);
   return BN_num_bits(env->key->n);
+#endif
 }
 
 /** Increase the reference count of <b>env</b>, and return it.
@@ -933,7 +983,7 @@ crypto_pk_copy_full(crypto_pk_t *env)
   tor_assert(env);
   tor_assert(env->key);
 
-  if (PRIVATE_KEY_OK(env)) {
+  if (crypto_pk_private_ok(env)) {
     new_key = RSAPrivateKey_dup(env->key);
     privatekey = 1;
   } else {
@@ -1007,7 +1057,7 @@ crypto_pk_private_decrypt(crypto_pk_t *env, char *to,
   tor_assert(env->key);
   tor_assert(fromlen<INT_MAX);
   tor_assert(tolen >= crypto_pk_keysize(env));
-  if (!env->key->p)
+  if (!crypto_pk_key_is_private(env))
     /* Not a private key */
     return -1;
 
@@ -1113,7 +1163,7 @@ crypto_pk_private_sign(const crypto_pk_t *env, char *to, size_t tolen,
   tor_assert(to);
   tor_assert(fromlen < INT_MAX);
   tor_assert(tolen >= crypto_pk_keysize(env));
-  if (!env->key->p)
+  if (!crypto_pk_key_is_private(env))
     /* Not a private key */
     return -1;
 
@@ -2106,25 +2156,35 @@ crypto_validate_dh_params(const BIGNUM *p, const BIGNUM *g)
   DH *dh = NULL;
   int ret = -1;
 
-  /* Copy into a temporary DH object. */
+  /* Copy into a temporary DH object, just so that DH_check() can be called. */
   if (!(dh = DH_new()))
       goto out;
+#ifdef OPENSSL_1_1_API
+  BIGNUM *dh_p, *dh_g;
+  if (!(dh_p = BN_dup(p)))
+    goto out;
+  if (!(dh_g = BN_dup(g)))
+    goto out;
+  if (!DH_set0_pqg(dh, dh_p, NULL, dh_g))
+    goto out;
+#else
   if (!(dh->p = BN_dup(p)))
     goto out;
   if (!(dh->g = BN_dup(g)))
     goto out;
+#endif
 
   /* Perform the validation. */
   int codes = 0;
   if (!DH_check(dh, &codes))
     goto out;
-  if (BN_is_word(dh->g, DH_GENERATOR_2)) {
+  if (BN_is_word(g, DH_GENERATOR_2)) {
     /* Per https://wiki.openssl.org/index.php/Diffie-Hellman_parameters
      *
      * OpenSSL checks the prime is congruent to 11 when g = 2; while the
      * IETF's primes are congruent to 23 when g = 2.
      */
-    BN_ULONG residue = BN_mod_word(dh->p, 24);
+    BN_ULONG residue = BN_mod_word(p, 24);
     if (residue == 11 || residue == 23)
       codes &= ~DH_NOT_SUITABLE_GENERATOR;
   }
@@ -2260,6 +2320,30 @@ crypto_dh_new(int dh_type)
   if (!(res->dh = DH_new()))
     goto err;
 
+#ifdef OPENSSL_1_1_API
+  BIGNUM *dh_p = NULL, *dh_g = NULL;
+
+  if (dh_type == DH_TYPE_TLS) {
+    dh_p = BN_dup(dh_param_p_tls);
+  } else {
+    dh_p = BN_dup(dh_param_p);
+  }
+  if (!dh_p)
+    goto err;
+
+  dh_g = BN_dup(dh_param_g);
+  if (!dh_g) {
+    BN_free(dh_p);
+    goto err;
+  }
+
+  if (!DH_set0_pqg(res->dh, dh_p, NULL, dh_g)) {
+    goto err;
+  }
+
+  if (!DH_set_length(res->dh, DH_PRIVATE_KEY_BITS))
+    goto err;
+#else
   if (dh_type == DH_TYPE_TLS) {
     if (!(res->dh->p = BN_dup(dh_param_p_tls)))
       goto err;
@@ -2272,6 +2356,7 @@ crypto_dh_new(int dh_type)
     goto err;
 
   res->dh->length = DH_PRIVATE_KEY_BITS;
+#endif
 
   return res;
  err:
@@ -2311,7 +2396,9 @@ crypto_dh_get_bytes(crypto_dh_t *dh)
 int
 crypto_dh_generate_public(crypto_dh_t *dh)
 {
+#ifndef OPENSSL_1_1_API
  again:
+#endif
   if (!DH_generate_key(dh->dh)) {
     /* LCOV_EXCL_START
      * To test this we would need some way to tell openssl to break DH. */
@@ -2319,6 +2406,19 @@ crypto_dh_generate_public(crypto_dh_t *dh)
     return -1;
     /* LCOV_EXCL_STOP */
   }
+#ifdef OPENSSL_1_1_API
+  /* OpenSSL 1.1.x doesn't appear to let you regenerate a DH key, without
+   * recreating the DH object.  I have no idea what sort of aliasing madness
+   * can occur here, so do the check, and just bail on failure.
+   */
+  BIGNUM *pub_key, *priv_key;
+  DH_get0_key(dh->dh, &pub_key, &priv_key);
+  if (tor_check_dh_key(LOG_WARN, pub_key)<0) {
+    log_warn(LD_CRYPTO, "Weird! Our own DH key was invalid.  I guess once-in-"
+             "the-universe chances really do happen.  Treating as a failure.");
+    return -1;
+  }
+#else
   if (tor_check_dh_key(LOG_WARN, dh->dh->pub_key)<0) {
     /* LCOV_EXCL_START
      * If this happens, then openssl's DH implementation is busted. */
@@ -2331,6 +2431,7 @@ crypto_dh_generate_public(crypto_dh_t *dh)
     goto again;
     /* LCOV_EXCL_STOP */
   }
+#endif
   return 0;
 }
 
@@ -2343,13 +2444,30 @@ crypto_dh_get_public(crypto_dh_t *dh, char *pubkey, size_t pubkey_len)
 {
   int bytes;
   tor_assert(dh);
-  if (!dh->dh->pub_key) {
+
+  BIGNUM *dh_pub;
+
+#ifdef OPENSSL_1_1_API
+  BIGNUM *dh_priv;
+  DH_get0_key(dh->dh, &dh_pub, &dh_priv);
+#else
+  dh_pub = dh->dh->pub_key;
+#endif
+
+  if (!dh_pub) {
     if (crypto_dh_generate_public(dh)<0)
       return -1;
+    else {
+#ifdef OPENSSL_1_1_API
+      DH_get0_key(dh->dh, &dh_pub, &dh_priv);
+#else
+      dh_pub = dh->dh->pub_key;
+#endif
+    }
   }
 
-  tor_assert(dh->dh->pub_key);
-  bytes = BN_num_bytes(dh->dh->pub_key);
+  tor_assert(dh_pub);
+  bytes = BN_num_bytes(dh_pub);
   tor_assert(bytes >= 0);
   if (pubkey_len < (size_t)bytes) {
     log_warn(LD_CRYPTO,
@@ -2359,7 +2477,7 @@ crypto_dh_get_public(crypto_dh_t *dh, char *pubkey, size_t pubkey_len)
   }
 
   memset(pubkey, 0, pubkey_len);
-  BN_bn2bin(dh->dh->pub_key, (unsigned char*)(pubkey+(pubkey_len-bytes)));
+  BN_bn2bin(dh_pub, (unsigned char*)(pubkey+(pubkey_len-bytes)));
 
   return 0;
 }
@@ -3232,9 +3350,7 @@ int
 crypto_global_cleanup(void)
 {
   EVP_cleanup();
-#ifdef NEW_THREAD_API
-  ERR_remove_thread_state();
-#else
+#ifndef NEW_THREAD_API
   ERR_remove_thread_state(NULL);
 #endif
   ERR_free_strings();

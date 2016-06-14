@@ -381,10 +381,12 @@ test_tortls_log_one_error(void *ignored)
                         LOG_WARN, 0, NULL);
   expect_log_severity(LOG_INFO);
 
+#ifndef OPENSSL_1_1_API
   mock_clean_saved_logs();
   tor_tls_log_one_error(tls, ERR_PACK(1, 2, SSL_R_RECORD_TOO_LARGE),
                         LOG_WARN, 0, NULL);
   expect_log_severity(LOG_INFO);
+#endif
 
   mock_clean_saved_logs();
   tor_tls_log_one_error(tls, ERR_PACK(1, 2, SSL_R_UNKNOWN_PROTOCOL),
@@ -679,7 +681,7 @@ test_tortls_get_my_client_auth_key(void *ignored)
   crypto_pk_t *ret;
   crypto_pk_t *expected;
   tor_tls_context_t *ctx;
-  RSA *k = tor_malloc_zero(sizeof(RSA));
+  RSA *k = RSA_new();
 
   ctx = tor_malloc_zero(sizeof(tor_tls_context_t));
   expected = crypto_new_pk_from_rsa_(k);
@@ -694,8 +696,8 @@ test_tortls_get_my_client_auth_key(void *ignored)
   tt_assert(ret == expected);
 
  done:
+  RSA_free(k);
   tor_free(expected);
-  tor_free(k);
   tor_free(ctx);
 }
 
