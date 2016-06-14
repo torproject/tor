@@ -228,7 +228,9 @@ tor_tls_log_one_error(tor_tls_t *tls, unsigned long err,
     case SSL_R_HTTP_REQUEST:
     case SSL_R_HTTPS_PROXY_REQUEST:
     case SSL_R_RECORD_LENGTH_MISMATCH:
+#ifndef OPENSSL_1_1_API
     case SSL_R_RECORD_TOO_LARGE:
+#endif
     case SSL_R_UNKNOWN_PROTOCOL:
     case SSL_R_UNSUPPORTED_PROTOCOL:
       severity = LOG_INFO;
