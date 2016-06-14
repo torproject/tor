@@ -10,18 +10,12 @@
 #endif
 #include <math.h>
 
-#ifdef __GNUC__
-#define GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__)
-#endif
+#include "compat.h"
 
-#if __GNUC__ && GCC_VERSION >= 402
-#if GCC_VERSION >= 406
-#pragma GCC diagnostic push
-#endif
+
 /* Some versions of OpenSSL declare SSL_get_selected_srtp_profile twice in
  * srtp.h. Suppress the GCC warning so we can build with -Wredundant-decl. */
-#pragma GCC diagnostic ignored "-Wredundant-decls"
-#endif
+DISABLE_GCC_WARNING(redundant-decls)
 
 #include <openssl/opensslv.h>
 
@@ -34,13 +28,7 @@
 #include <openssl/evp.h>
 #include <openssl/bn.h>
 
-#if __GNUC__ && GCC_VERSION >= 402
-#if GCC_VERSION >= 406
-#pragma GCC diagnostic pop
-#else
-#pragma GCC diagnostic warning "-Wredundant-decls"
-#endif
-#endif
+ENABLE_GCC_WARNING(redundant-decls)
 
 #include "or.h"
 #include "torlog.h"
