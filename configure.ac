@@ -1710,7 +1710,6 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
      -Wbool-conversion
      -Wbool-conversions
      -Wbuiltin-requires-header
-     -Wc99-c11-compat
      -Wchar-align
      -Wcompare-distinct-pointer-types
      -Wcomplex-component-init
