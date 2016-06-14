@@ -72,13 +72,18 @@
 #define DISABLE_ENGINES
 #endif
 
-#if OPENSSL_VERSION_NUMBER >= OPENSSL_VER(1,1,0,0,4) && \
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_VER(1,1,0,0,5) && \
   !defined(LIBRESSL_VERSION_NUMBER)
-/* OpenSSL as of 1.1.0-pre4 has an "new" thread API, which doesn't require
+/* OpenSSL as of 1.1.0pre4 has an "new" thread API, which doesn't require
  * seting up various callbacks.
  *
- * Note: Yes, using OPENSSL_VER is naughty, but this was introduced in the
- * pre-release series.
+ * OpenSSL 1.1.0pre4 has a messed up `ERR_remove_thread_state()` prototype,
+ * while the previous one was restored in pre5, and the function made a no-op
+ * (along with a deprecated annotation, which produces a compiler warning).
+ *
+ * While it is possible to support all three versions of the thread API,
+ * a version that existed only for one snapshot pre-release is kind of
+ * pointless, so let's not.
  */
 #define NEW_THREAD_API
 #endif
@@ -430,9 +435,7 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
 void
 crypto_thread_cleanup(void)
 {
-#ifdef NEW_THREAD_API
-  ERR_remove_thread_state();
-#else
+#ifndef NEW_THREAD_API
   ERR_remove_thread_state(NULL);
 #endif
 }
@@ -3193,9 +3196,7 @@ int
 crypto_global_cleanup(void)
 {
   EVP_cleanup();
-#ifdef NEW_THREAD_API
-  ERR_remove_thread_state();
-#else
+#ifndef NEW_THREAD_API
   ERR_remove_thread_state(NULL);
 #endif
   ERR_free_strings();
