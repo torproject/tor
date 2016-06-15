@@ -147,7 +147,6 @@ Here are the steps Roger takes when putting out a new Tor release:
        - {weasel,gk,mikeperry} at torproject dot org
        - {blueness} at gentoo dot org
        - {paul} at invizbox dot io
-       - {ondrej.mikle} at gmail dot com
        - {lfleischer} at archlinux dot org
        - {tails-dev} at boum dot org
 
