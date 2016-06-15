@@ -526,8 +526,10 @@ tor_asprintf(char **strp, const char *fmt, ...)
   r = tor_vasprintf(strp, fmt, args);
   va_end(args);
   if (!*strp || r < 0) {
+    /* LCOV_EXCL_START */
     log_err(LD_BUG, "Internal error in asprintf");
     tor_assert(0);
+    /* LCOV_EXCL_STOP */
   }
   return r;
 }
@@ -2976,11 +2978,12 @@ correct_tm(int islocal, const time_t *timep, struct tm *resultbuf,
 
   /* If we get here, then gmtime/localtime failed without getting an extreme
    * value for *timep */
-
+  /* LCOV_EXCL_START */
   tor_fragile_assert();
   r = resultbuf;
   memset(resultbuf, 0, sizeof(struct tm));
   outcome="can't recover";
+  /* LCOV_EXCL_STOP */
  done:
   log_warn(LD_BUG, "%s("I64_FORMAT") failed with error %s: %s",
            islocal?"localtime":"gmtime",

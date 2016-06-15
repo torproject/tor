@@ -2790,9 +2790,11 @@ unescape_string(const char *s, char **result, size_t *size_out)
         if (size_out) *size_out = out - *result;
         return cp+1;
       case '\0':
+        /* LCOV_EXCL_START */
         tor_fragile_assert();
         tor_free(*result);
         return NULL;
+        /* LCOV_EXCL_STOP */
       case '\\':
         switch (cp[1])
           {

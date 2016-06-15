@@ -249,7 +249,7 @@ base64_encode(char *dest, size_t destlen, const char *src, size_t srclen,
     break;
   default:
     /* Something went catastrophically wrong. */
-    tor_fragile_assert();
+    tor_fragile_assert(); // LCOV_EXCL_LINE
     return -1;
   }
 

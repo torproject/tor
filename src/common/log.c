@@ -75,7 +75,7 @@ sev_to_string(int severity)
     case LOG_ERR:     return "err";
     default:          /* Call assert, not tor_assert, since tor_assert
                        * calls log on failure. */
-                      assert(0); return "UNKNOWN";
+                      assert(0); return "UNKNOWN"; // LCOV_EXCL_LINE
   }
 }
 
@@ -95,7 +95,7 @@ should_log_function_name(log_domain_mask_t domain, int severity)
       return (domain & (LD_BUG|LD_NOFUNCNAME)) == LD_BUG;
     default:
       /* Call assert, not tor_assert, since tor_assert calls log on failure. */
-      assert(0); return 0;
+      assert(0); return 0; // LCOV_EXCL_LINE
   }
 }
 

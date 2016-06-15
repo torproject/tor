@@ -335,7 +335,7 @@ tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr)
       } else if (ent->h_addrtype == AF_INET6) {
         tor_addr_from_in6(addr, (struct in6_addr*) ent->h_addr);
       } else {
-        tor_assert(0); /* gethostbyname() returned a bizarre addrtype */
+        tor_assert(0); // LCOV_EXCL_LINE: gethostbyname() returned bizarre type
       }
       return 0;
     }
@@ -906,8 +906,10 @@ tor_addr_is_loopback(const tor_addr_t *addr)
     case AF_UNSPEC:
       return 0;
     default:
+      /* LCOV_EXCL_START */
       tor_fragile_assert();
       return 0;
+      /* LCOV_EXCL_STOP */
   }
 }
 
@@ -1028,7 +1030,7 @@ tor_addr_copy_tight(tor_addr_t *dest, const tor_addr_t *src)
     case AF_UNSPEC:
       break;
     default:
-      tor_fragile_assert();
+      tor_fragile_assert(); // LCOV_EXCL_LINE
     }
 }
 
@@ -1097,6 +1099,7 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
       case AF_INET6: {
         if (mbits > 128)
           mbits = 128;
+
         const uint8_t *a1 = tor_addr_to_in6_addr8(addr1);
         const uint8_t *a2 = tor_addr_to_in6_addr8(addr2);
         const int bytes = mbits >> 3;
@@ -1112,8 +1115,10 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
         }
       }
       default:
+        /* LCOV_EXCL_START */
         tor_fragile_assert();
         return 0;
+        /* LCOV_EXCL_STOP */
     }
   } else if (how == CMP_EXACT) {
     /* Unequal families and an exact comparison?  Stop now! */
@@ -1166,8 +1171,10 @@ tor_addr_hash(const tor_addr_t *addr)
   case AF_INET6:
     return siphash24g(&addr->addr.in6_addr.s6_addr, 16);
   default:
+    /* LCOV_EXCL_START */
     tor_fragile_assert();
     return 0;
+    /* LCOV_EXCL_END */
   }
 }
 

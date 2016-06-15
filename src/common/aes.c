@@ -283,7 +283,7 @@ aes_set_key(aes_cnt_cipher_t *cipher, const char *key, int key_bits)
       case 128: c = EVP_aes_128_ecb(); break;
       case 192: c = EVP_aes_192_ecb(); break;
       case 256: c = EVP_aes_256_ecb(); break;
-      default: tor_assert(0);
+      default: tor_assert(0); // LCOV_EXCL_LINE
     }
     EVP_EncryptInit(&cipher->key.evp, c, (const unsigned char*)key, NULL);
     cipher->using_evp = 1;
