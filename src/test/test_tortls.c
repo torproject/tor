@@ -12,7 +12,6 @@
 
 #include "compat.h"
 
-
 /* Some versions of OpenSSL declare SSL_get_selected_srtp_profile twice in
  * srtp.h. Suppress the GCC warning so we can build with -Wredundant-decl. */
 DISABLE_GCC_WARNING(redundant-decls)
