@@ -895,17 +895,17 @@ rend_client_refetch_v2_renddesc(rend_data_t *rend_query)
   rend_cache_entry_t *e = NULL;
 
   tor_assert(rend_query);
-  /* Are we configured to fetch descriptors? */
-  if (!get_options()->FetchHidServDescriptors) {
-    log_warn(LD_REND, "We received an onion address for a v2 rendezvous "
-        "service descriptor, but are not fetching service descriptors.");
-    return;
-  }
   /* Before fetching, check if we already have a usable descriptor here. */
   if (rend_cache_lookup_entry(rend_query->onion_address, -1, &e) == 0 &&
       rend_client_any_intro_points_usable(e)) {
     log_info(LD_REND, "We would fetch a v2 rendezvous descriptor, but we "
                       "already have a usable descriptor here. Not fetching.");
+    return;
+  }
+  /* Are we configured to fetch descriptors? */
+  if (!get_options()->FetchHidServDescriptors) {
+    log_warn(LD_REND, "We received an onion address for a v2 rendezvous "
+        "service descriptor, but are not fetching service descriptors.");
     return;
   }
   log_debug(LD_REND, "Fetching v2 rendezvous descriptor for service %s",

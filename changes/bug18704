@@ -1,0 +1,5 @@
+  o Major bugfixes (hidden service client)
+    - With FetchHidServDescriptors set to 0, there is no descriptor fetch
+      (which is intended) but also no descriptor cache lookup was done
+      making any Tor client not working with this option unset. Resolves
+      ticket #18704. Patch by "twim"; Bugfix on tor-0.2.0.20-rc.
