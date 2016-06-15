@@ -29,6 +29,19 @@
 #include "crypto_ed25519.h"
 #include "crypto_format.h"
 
+#ifdef __GNUC__
+#define GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__)
+#endif
+
+#if __GNUC__ && GCC_VERSION >= 402
+#if GCC_VERSION >= 406
+#pragma GCC diagnostic push
+#endif
+/* Some versions of OpenSSL declare X509_STORE_CTX_set_verify_cb twice.
+ * Suppress the GCC warning so we can build with -Wredundant-decl. */
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+#endif
+
 #include <openssl/err.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
@@ -39,6 +52,14 @@
 #include <openssl/dh.h>
 #include <openssl/conf.h>
 #include <openssl/hmac.h>
+
+#if __GNUC__ && GCC_VERSION >= 402
+#if GCC_VERSION >= 406
+#pragma GCC diagnostic pop
+#else
+#pragma GCC diagnostic warning "-Wredundant-decls"
+#endif
+#endif
 
 #ifdef HAVE_CTYPE_H
 #include <ctype.h>
