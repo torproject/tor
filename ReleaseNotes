@@ -46,12 +46,6 @@ Changes in version 0.2.8.??? - 2015-0?-??
       ports have been configured. You can change this behavior with the
       new option KeepBindCapabilities. Closes ticket 8195.
 
-  o Major bugfixes (bridges, pluggable transports):
-    - Modify the check for OR connections to private addresses. Allow
-      bridges on private addresses, including pluggable transports that
-      ignore the (potentially private) address in the bridge line. Fixes
-      bug 18517; bugfix on 0.2.8.1-alpha. Reported by gk, patch by teor.
-
   o Major bugfixes (client, bootstrapping):
     - Check if bootstrap consensus downloads are still needed when the
       linked connection attaches. This prevents tor making unnecessary
@@ -63,45 +57,15 @@ Changes in version 0.2.8.??? - 2015-0?-??
     - Make relays retry consensus downloads the correct number of times,
       rather than the more aggressive client retry count. Fixes part of
       ticket 18809.
-    - Stop downloading consensuses when we have a consensus, even if we
-      don't have all the certificates for it yet. Fixes bug 18809;
-      bugfix on 0.2.8.1-alpha. Patches by arma and teor.
 
   o Major bugfixes (compilation):
     - Repair hardened builds under the clang compiler. Previously, our
       use of _FORTIFY_SOURCE would conflict with clang's address
       sanitizer. Fixes bug 14821; bugfix on 0.2.5.4-alpha.
 
-  o Major bugfixes (crash on shutdown):
-    - Correctly handle detaching circuits from muxes when shutting down.
-      Fixes bug 18116; bugfix on 0.2.8.1-alpha.
-    - Fix an assert-on-exit bug related to counting memory usage in
-      rephist.c. Fixes bug 18651; bugfix on 0.2.8.1-alpha.
-
-  o Major bugfixes (crash on startup):
-    - Fix a segfault during startup: If a Unix domain socket was
-      configured as listener (such as a ControlSocket or a SocksPort
-      "unix:" socket), and tor was started as root but not configured to
-      switch to another user, tor would segfault while trying to string
-      compare a NULL value. Fixes bug 18261; bugfix on 0.2.8.1-alpha.
-      Patch by weasel.
-
-  o Major bugfixes (directory mirrors):
-    - Decide whether to advertise begindir support in the the same way
-      we decide whether to advertise our DirPort. Allowing these
-      decisions to become out-of-sync led to surprising behavior like
-      advertising begindir support when hibernation made us not
-      advertise a DirPort. Resolves bug 18616; bugfix on 0.2.8.1-alpha.
-      Patch by teor.
-
   o Major bugfixes (dns proxy mode, crash):
     - Avoid crashing when running as a DNS proxy. Fixes bug 16248;
       bugfix on 0.2.0.1-alpha. Patch from "cypherpunks".
-
-  o Major bugfixes (IPv6 bridges, client):
-    - Actually use IPv6 addresses when selecting directory addresses for
-      IPv6 bridges. Fixes bug 18921; bugfix on 0.2.8.1-alpha. Patch
-      by "teor".
 
   o Major bugfixes (key management):
     - If OpenSSL fails to generate an RSA key, do not retain a dangling
@@ -111,12 +75,6 @@ Changes in version 0.2.8.??? - 2015-0?-??
       if OpenSSL runs out of memory. Fixes bug 19152; bugfix on
       0.2.1.10-alpha. Found by Yuan Jochen Kang, Suman Jana, and
       Baishakhi Ray.
-
-  o Major bugfixes (relays, bridge clients):
-    - Ensure relays always allow IPv4 OR and Dir connections. Ensure
-      bridge clients use the address configured in the bridge line.
-      Fixes bug 18348; bugfix on 0.2.8.1-alpha. Reported by sysrqb,
-      patch by teor.
 
   o Major bugfixes (security, client, DNS proxy):
     - Stop a crash that could occur when a client running with DNSPort
@@ -131,11 +89,6 @@ Changes in version 0.2.8.??? - 2015-0?-??
       needlessly disabling compiler-hardening support. Fixes one case of
       bug 18841; bugfix on 0.2.3.17-beta. Patch from "trudokal".
 
-  o Major bugfixes (security, directory authorities):
-    - Fix a crash and out-of-bounds write during authority voting, when
-      the list of relays includes duplicate ed25519 identity keys. Fixes
-      bug 19032; bugfix on 0.2.8.2-alpha.
-
   o Major bugfixes (security, pointers):
     - Avoid a difficult-to-trigger heap corruption attack when extending
       a smartlist to contain over 16GB of pointers. Fixes bug 18162;
@@ -143,8 +96,6 @@ Changes in version 0.2.8.??? - 2015-0?-??
       Reported by Guido Vranken.
 
   o Major bugfixes (testing):
-    - Avoid "WSANOTINITIALISED" warnings in the unit tests. Fixes bug 18668;
-      bugfix on 0.2.8.1-alpha.
     - Fix a bug that would block 'make test-network-all' on systems where
       IPv6 packets were lost. Fixes bug 19008; bugfix on tor-0.2.7.3-rc.
 
@@ -245,14 +196,6 @@ Changes in version 0.2.8.??? - 2015-0?-??
       for directory caches chosen from the consensus.) Closes ticket
       17864; patch by "teor".
 
-  o Minor features (fallback directory mirrors):
-    - Give each fallback the same weight for client selection; restrict
-      fallbacks to one per operator; report fallback directory detail
-      changes when rebuilding list; add new fallback directory mirrors
-      to the whitelist; update fallback directories based on the latest
-      OnionOO data; and any other minor simplifications and fixes.
-      Closes tasks 17158, 17905, 18749, bug 18689, and fixes part of bug
-      18812 on 0.2.8.1-alpha; patch by "teor".
 
   o Minor features (geoip):
     - Update geoip and geoip6 to the January 5 2016 Maxmind GeoLite2
@@ -424,9 +367,6 @@ Changes in version 0.2.8.??? - 2015-0?-??
     - Do not link the unit tests against both the testing and non-
       testing versions of the static libraries. Fixes bug 18490; bugfix
       on 0.2.7.1-alpha.
-    - Remove a pair of redundant AM_CONDITIONAL declarations from
-      configure.ac. Fixes one final case of bug 17744; bugfix
-      on 0.2.8.2-alpha.
     - Resolve warnings when building on systems that are concerned with
       signed char. Fixes bug 18728; bugfix on 0.2.7.2-alpha
       and 0.2.6.1-alpha.
@@ -436,15 +376,6 @@ Changes in version 0.2.8.??? - 2015-0?-??
     - When libscrypt.h is found, but no libscrypt library can be linked,
       treat libscrypt as absent. Fixes bug 19161; bugfix
       on 0.2.6.1-alpha.
-
-  o Minor bugfixes (client):
-    - Make directory node selection more reliable, mainly for IPv6-only
-      clients and clients with few reachable addresses. Fixes bug 18929;
-      bugfix on 0.2.8.1-alpha. Patch by "teor".
-    - Turn all TestingClientBootstrap* into non-testing torrc options.
-      This changes simply renames them by removing "Testing" in front of
-      them and they do not require TestingTorNetwork to be enabled
-      anymore. Fixes bug 18481; bugfix on 0.2.8.1-alpha.
 
   o Minor bugfixes (client, bootstrap):
     - Count receipt of new microdescriptors as progress towards
@@ -516,9 +447,6 @@ Changes in version 0.2.8.??? - 2015-0?-??
       17658; bugfix on 0.2.3.6-alpha. Patch by "teor".
 
   o Minor bugfixes (crypto, portability):
-    - The SHA3 and SHAKE routines now produce the correct output on Big
-      Endian systems. No code calls either algorithm yet, so this is
-      primarily a build fix. Fixes bug 18943; bugfix on 0.2.8.1-alpha.
     - Tor now builds again with the recent OpenSSL 1.1 development
       branch (tested against 1.1.0-pre4 and 1.1.0-pre5-dev). Closes
       ticket 18286.
@@ -591,14 +519,8 @@ Changes in version 0.2.8.??? - 2015-0?-??
       start up faster. Fixes bug 18548; bugfix on 0.2.5.1-alpha.
     - Fix a crash when using offline master ed25519 keys with the Linux
       seccomp2 sandbox enabled. Fixes bug 17675; bugfix on 0.2.7.3-rc.
-    - Fix the sandbox's interoperability with unix domain sockets under
-      setuid. Fixes bug 18253; bugfix on 0.2.8.1-alpha.
 
   o Minor bugfixes (logging):
-    - Downgrade logs and backtraces about IP versions to info-level.
-      Only log backtraces once each time tor runs. Assists in diagnosing
-      bug 18351; bugfix on 0.2.8.1-alpha. Reported by sysrqb and
-      Christian, patch by teor.
     - In log messages that include a function name, use __FUNCTION__
       instead of __PRETTY_FUNCTION__. In GCC, these are synonymous, but
       with clang __PRETTY_FUNCTION__ has extra information we don't
@@ -608,13 +530,9 @@ Changes in version 0.2.8.??? - 2015-0?-??
       addresses. Fixes bug 17843; bugfix on 0.2.3.3-alpha.
     - Scrub service name in "unrecognized service ID" log messages.
       Fixes bug 18600; bugfix on 0.2.4.11-alpha.
-    - Stop periodic_event_dispatch() from blasting twelve lines per
-      second at loglevel debug. Fixes bug 18729; fix on 0.2.8.1-alpha.
     - When logging information about an unparsable networkstatus vote or
       consensus, do not say "vote" when we mean consensus. Fixes bug
       18368; bugfix on 0.2.0.8-alpha.
-    - When rejecting a misformed INTRODUCE2 cell, only log at
-      PROTOCOL_WARN severity. Fixes bug 18761; bugfix on 0.2.8.2-alpha.
     - When we can't generate a signing key because OfflineMasterKey is
       set, do not imply that we should have been able to load it. Fixes
       bug 18133; bugfix on 0.2.7.2-alpha.
@@ -624,9 +542,6 @@ Changes in version 0.2.8.??? - 2015-0?-??
       in get_interface_addresses_ioctl(). Fixes bug 18454; bugfix on
       0.2.3.11-alpha. Reported by toralf and "cypherpunks", patch
       by teor.
-    - Correctly duplicate addresses in get_interface_address6_list().
-      Fixes bug 18454; bugfix on 0.2.8.1-alpha. Reported by toralf,
-      patch by "cypherpunks".
     - Fix a memory leak in "tor --list-fingerprint". Fixes part of bug
       18672; bugfix on 0.2.5.1-alpha.
     - Fix a memory leak in tor-gencert. Fixes part of bug 18672; bugfix
@@ -661,9 +576,6 @@ Changes in version 0.2.8.??? - 2015-0?-??
       descriptor with DirPort 0 when the DirPort reachability test takes
       longer than the ORPort reachability test. Fixes bug 18050; bugfix
       on 0.1.0.1-rc. Reported by "starlight", patch by "teor".
-    - Consider more config options when relays decide whether to
-      regenerate their descriptor. Fixes more of bug 12538; bugfix
-      on 0.2.8.1-alpha.
     - Resolve some edge cases where we might launch an ORPort
       reachability check even when DisableNetwork is set. Noticed while
       fixing bug 18616; bugfix on 0.2.3.9-alpha.
@@ -704,9 +616,6 @@ Changes in version 0.2.8.??? - 2015-0?-??
       by karsten.
 
   o Minor bugfixes (testing):
-    - Allow directories in small networks to bootstrap by skipping
-      DirPort checks when the consensus has no exits. Fixes bug 19003;
-      bugfix on 0.2.8.1-alpha. Patch by teor.
     - Check the full results of SHA256 and SHA512 digests in the unit
       tests. Bugfix on 0.2.2.4-alpha. Patch by "teor".
     - Fix a memory leak in the ntor test. Fixes bug 17778; bugfix
