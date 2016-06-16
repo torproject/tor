@@ -1921,6 +1921,8 @@ rate_limit_log(ratelim_t *lim, time_t now)
       return tor_strdup("");
     } else {
       char *cp=NULL;
+      /* XXXX this is not exactly correct: the messages could have occurred
+       * any time between the old value of lim->allowed and now. */
       tor_asprintf(&cp,
                    " [%d similar message(s) suppressed in last %d seconds]",
                    n-1, lim->rate);
