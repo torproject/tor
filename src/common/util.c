@@ -2823,7 +2823,7 @@ unescape_string(const char *s, char **result, size_t *size_out)
         if (size_out) *size_out = out - *result;
         return cp+1;
       case '\0':
-        /* LCOV_EXCL_START */
+        /* LCOV_EXCL_START -- we caught this in parse_config_from_line. */
         tor_fragile_assert();
         tor_free(*result);
         return NULL;
@@ -2841,8 +2841,12 @@ unescape_string(const char *s, char **result, size_t *size_out)
               x1 = hex_decode_digit(cp[2]);
               x2 = hex_decode_digit(cp[3]);
               if (x1 == -1 || x2 == -1) {
-                  tor_free(*result);
-                  return NULL;
+                /* LCOV_EXCL_START */
+                /* we caught this above in the initial loop. */
+                tor_assert_nonfatal_unreached();
+                tor_free(*result);
+                return NULL;
+                /* LCOV_EXCL_STOP */
               }
 
               *out++ = ((x1<<4) + x2);
@@ -2868,7 +2872,11 @@ unescape_string(const char *s, char **result, size_t *size_out)
             cp += 2;
             break;
           default:
+            /* LCOV_EXCL_START */
+            /* we caught this above in the initial loop. */
+            tor_assert_nonfatal_unreached();
             tor_free(*result); return NULL;
+            /* LCOV_EXCL_STOP */
           }
         break;
       default:

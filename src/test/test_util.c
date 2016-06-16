@@ -1228,6 +1228,41 @@ test_util_config_line_escaped_content(void *arg)
   tt_ptr_op(str,OP_EQ, NULL);
   tor_free(k); tor_free(v);
 
+  /* more things to try. */
+  /* Bad hex: */
+  strlcpy(buf1, "Foo \"\\x9g\"\n", sizeof(buf1));
+  strlcpy(buf2, "Foo \"\\xg0\"\n", sizeof(buf2));
+  strlcpy(buf3, "Foo \"\\xf\"\n", sizeof(buf3));
+  /* bad escape */
+  strlcpy(buf4, "Foo \"\\q\"\n", sizeof(buf4));
+  /* missing endquote */
+  strlcpy(buf5, "Foo \"hello\n", sizeof(buf5));
+
+  str=buf1;
+  str = parse_config_line_from_str(str, &k, &v);
+  tt_ptr_op(str,OP_EQ, NULL);
+  tor_free(k); tor_free(v);
+
+  str=buf2;
+  str = parse_config_line_from_str(str, &k, &v);
+  tt_ptr_op(str,OP_EQ, NULL);
+  tor_free(k); tor_free(v);
+
+  str=buf3;
+  str = parse_config_line_from_str(str, &k, &v);
+  tt_ptr_op(str,OP_EQ, NULL);
+  tor_free(k); tor_free(v);
+
+  str=buf4;
+  str = parse_config_line_from_str(str, &k, &v);
+  tt_ptr_op(str,OP_EQ, NULL);
+  tor_free(k); tor_free(v);
+
+  str=buf5;
+  str = parse_config_line_from_str(str, &k, &v);
+  tt_ptr_op(str,OP_EQ, NULL);
+  tor_free(k); tor_free(v);
+
  done:
   tor_free(k);
   tor_free(v);
