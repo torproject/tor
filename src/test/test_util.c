@@ -2845,18 +2845,39 @@ test_util_memarea(void *arg)
   p1 = memarea_alloc(area, 1);
   tt_ptr_op(p1,OP_EQ, p1_orig);
   memarea_clear(area);
+  size_t total = 0, initial_allocation, allocation2, dummy;
+  memarea_get_stats(area, &initial_allocation, &dummy);
 
   /* Check for running over an area's size. */
   for (i = 0; i < 512; ++i) {
-    p1 = memarea_alloc(area, crypto_rand_int(5)+1);
+    size_t n = crypto_rand_int(6);
+    p1 = memarea_alloc(area, n);
+    total += n;
     tt_assert(memarea_owns_ptr(area, p1));
   }
   memarea_assert_ok(area);
+  memarea_get_stats(area, &allocation2, &dummy);
   /* Make sure we can allocate a too-big object. */
   p1 = memarea_alloc_zero(area, 9000);
   p2 = memarea_alloc_zero(area, 16);
+  total += 9000;
+  total += 16;
   tt_assert(memarea_owns_ptr(area, p1));
   tt_assert(memarea_owns_ptr(area, p2));
+
+  /* Now test stats... */
+  size_t allocated = 0, used = 0;
+  memarea_get_stats(area, &allocated, &used);
+  tt_int_op(used, OP_LE, allocated);
+  tt_int_op(used, OP_GE, total); /* not EQ, because of alignment and headers*/
+  tt_int_op(allocated, OP_GT, allocation2);
+
+  tt_int_op(allocation2, OP_GT, initial_allocation);
+
+  memarea_clear(area);
+  memarea_get_stats(area, &allocated, &used);
+  tt_int_op(used, OP_LT, 128); /* Not 0, because of header */
+  tt_int_op(allocated, OP_EQ, initial_allocation);
 
  done:
   memarea_drop_all(area);
