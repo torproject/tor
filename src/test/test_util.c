@@ -889,106 +889,106 @@ test_util_config_line(void *arg)
           , sizeof(buf));
   str = buf;
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "k");
   tt_str_op(v,OP_EQ, "v");
   tor_free(k); tor_free(v);
   tt_assert(!strcmpstart(str, "key    value with"));
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "key");
   tt_str_op(v,OP_EQ, "value with spaces");
   tor_free(k); tor_free(v);
   tt_assert(!strcmpstart(str, "keykey"));
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "keykey");
   tt_str_op(v,OP_EQ, "val");
   tor_free(k); tor_free(v);
   tt_assert(!strcmpstart(str, "k2\n"));
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "k2");
   tt_str_op(v,OP_EQ, "");
   tor_free(k); tor_free(v);
   tt_assert(!strcmpstart(str, "k3 \n"));
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "k3");
   tt_str_op(v,OP_EQ, "");
   tor_free(k); tor_free(v);
   tt_assert(!strcmpstart(str, "#comment"));
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "k4");
   tt_str_op(v,OP_EQ, "");
   tor_free(k); tor_free(v);
   tt_assert(!strcmpstart(str, "k5#abc"));
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "k5");
   tt_str_op(v,OP_EQ, "");
   tor_free(k); tor_free(v);
   tt_assert(!strcmpstart(str, "k6"));
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "k6");
   tt_str_op(v,OP_EQ, "val");
   tor_free(k); tor_free(v);
   tt_assert(!strcmpstart(str, "kseven"));
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "kseven");
   tt_str_op(v,OP_EQ, "a quoted \'string");
   tor_free(k); tor_free(v);
   tt_assert(!strcmpstart(str, "k8 "));
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "k8");
   tt_str_op(v,OP_EQ, "a quoted\n\"str\\ing\t\x01\x01\x01\"");
   tor_free(k); tor_free(v);
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "k9");
   tt_str_op(v,OP_EQ, "a line that spans two lines.");
   tor_free(k); tor_free(v);
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "k10");
   tt_str_op(v,OP_EQ, "more than one continuation");
   tor_free(k); tor_free(v);
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "k11");
   tt_str_op(v,OP_EQ, "continuation at the start");
   tor_free(k); tor_free(v);
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "k12");
   tt_str_op(v,OP_EQ, "line with a embedded");
   tor_free(k); tor_free(v);
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "k13");
   tt_str_op(v,OP_EQ, "continuation at the very start");
   tor_free(k); tor_free(v);
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "k14");
   tt_str_op(v,OP_EQ, "a line that has a comment and" );
   tor_free(k); tor_free(v);
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "k15");
   tt_str_op(v,OP_EQ, "this should be the next new line");
   tor_free(k); tor_free(v);
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "k16");
   tt_str_op(v,OP_EQ, "a line that has a comment and" );
   tor_free(k); tor_free(v);
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "k17");
   tt_str_op(v,OP_EQ, "this should be the next new line");
   tor_free(k); tor_free(v);
@@ -1023,30 +1023,30 @@ test_util_config_line_quotes(void *arg)
           , sizeof(buf4));
   str = buf1;
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "kTrailingSpace");
   tt_str_op(v,OP_EQ, "quoted value");
   tor_free(k); tor_free(v);
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_ptr_op(str,OP_EQ, NULL);
   tor_free(k); tor_free(v);
 
   str = buf2;
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_ptr_op(str,OP_EQ, NULL);
   tor_free(k); tor_free(v);
 
   str = buf3;
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_ptr_op(str,OP_EQ, NULL);
   tor_free(k); tor_free(v);
 
   str = buf4;
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_ptr_op(str,OP_EQ, NULL);
   tor_free(k); tor_free(v);
 
@@ -1070,12 +1070,12 @@ test_util_config_line_comment_character(void *arg)
           , sizeof(buf));
   str = buf;
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "k1");
   tt_str_op(v,OP_EQ, "# in quotes");
   tor_free(k); tor_free(v);
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "k2");
   tt_str_op(v,OP_EQ, "some value");
   tor_free(k); tor_free(v);
@@ -1083,7 +1083,7 @@ test_util_config_line_comment_character(void *arg)
   tt_str_op(str,OP_EQ, "k3 /home/user/myTorNetwork#2\n");
 
 #if 0
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   test_streq(k, "k3");
   test_streq(v, "/home/user/myTorNetwork#2");
   tor_free(k); tor_free(v);
@@ -1140,57 +1140,57 @@ test_util_config_line_escaped_content(void *arg)
 
   str = buf1;
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "HexadecimalLower");
   tt_str_op(v,OP_EQ, "*");
   tor_free(k); tor_free(v);
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "HexadecimalUpper");
   tt_str_op(v,OP_EQ, "*");
   tor_free(k); tor_free(v);
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "HexadecimalUpperX");
   tt_str_op(v,OP_EQ, "*");
   tor_free(k); tor_free(v);
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "Octal");
   tt_str_op(v,OP_EQ, "*");
   tor_free(k); tor_free(v);
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "Newline");
   tt_str_op(v,OP_EQ, "\n");
   tor_free(k); tor_free(v);
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "Tab");
   tt_str_op(v,OP_EQ, "\t");
   tor_free(k); tor_free(v);
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "CarriageReturn");
   tt_str_op(v,OP_EQ, "\r");
   tor_free(k); tor_free(v);
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "DoubleQuote");
   tt_str_op(v,OP_EQ, "\"");
   tor_free(k); tor_free(v);
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "SimpleQuote");
   tt_str_op(v,OP_EQ, "'");
   tor_free(k); tor_free(v);
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "Backslash");
   tt_str_op(v,OP_EQ, "\\");
   tor_free(k); tor_free(v);
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_str_op(k,OP_EQ, "Mix");
   tt_str_op(v,OP_EQ, "This is a \"star\":\t'*'\nAnd second line");
   tor_free(k); tor_free(v);
@@ -1198,33 +1198,33 @@ test_util_config_line_escaped_content(void *arg)
 
   str = buf2;
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_ptr_op(str,OP_EQ, NULL);
   tor_free(k); tor_free(v);
 
   str = buf3;
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_ptr_op(str,OP_EQ, NULL);
   tor_free(k); tor_free(v);
 
   str = buf4;
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_ptr_op(str,OP_EQ, NULL);
   tor_free(k); tor_free(v);
 
 #if 0
   str = buf5;
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_ptr_op(str, OP_EQ, NULL);
   tor_free(k); tor_free(v);
 #endif
 
   str = buf6;
 
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_ptr_op(str,OP_EQ, NULL);
   tor_free(k); tor_free(v);
 
@@ -1239,27 +1239,27 @@ test_util_config_line_escaped_content(void *arg)
   strlcpy(buf5, "Foo \"hello\n", sizeof(buf5));
 
   str=buf1;
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_ptr_op(str,OP_EQ, NULL);
   tor_free(k); tor_free(v);
 
   str=buf2;
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_ptr_op(str,OP_EQ, NULL);
   tor_free(k); tor_free(v);
 
   str=buf3;
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_ptr_op(str,OP_EQ, NULL);
   tor_free(k); tor_free(v);
 
   str=buf4;
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_ptr_op(str,OP_EQ, NULL);
   tor_free(k); tor_free(v);
 
   str=buf5;
-  str = parse_config_line_from_str(str, &k, &v);
+  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_ptr_op(str,OP_EQ, NULL);
   tor_free(k); tor_free(v);
 
