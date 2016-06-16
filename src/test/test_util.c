@@ -2876,7 +2876,7 @@ test_util_memarea(void *arg)
   memarea_get_stats(area, &initial_allocation, &dummy);
 
   /* Check for running over an area's size. */
-  for (i = 0; i < 512; ++i) {
+  for (i = 0; i < 4096; ++i) {
     size_t n = crypto_rand_int(6);
     p1 = memarea_alloc(area, n);
     total += n;
