@@ -1629,11 +1629,16 @@ parse_rfc1123_time(const char *buf, time_t *t)
   tm.tm_sec = (int)tm_sec;
 
   if (tm.tm_year < 1970) {
+    /* LCOV_EXCL_START
+     * XXXX I think this is dead code; we already checked for
+     *      invalid_year above. */
+    tor_assert_nonfatal_unreached();
     char *esc = esc_for_log(buf);
     log_warn(LD_GENERAL,
              "Got invalid RFC1123 time %s. (Before 1970)", esc);
     tor_free(esc);
     return -1;
+    /* LCOV_EXCL_STOP */
   }
   tm.tm_year -= 1900;
 
@@ -1717,10 +1722,15 @@ parse_iso_time_(const char *cp, time_t *t, int strict)
   st_tm.tm_wday = 0; /* Should be ignored. */
 
   if (st_tm.tm_year < 70) {
+    /* LCOV_EXCL_START
+     * XXXX I think this is dead code; we already checked for
+     *      year < 1970 above. */
+    tor_assert_nonfatal_unreached();
     char *esc = esc_for_log(cp);
     log_warn(LD_GENERAL, "Got invalid ISO time %s. (Before 1970)", esc);
     tor_free(esc);
     return -1;
+    /* LCOV_EXCL_STOP */
   }
   return tor_timegm(&st_tm, t);
 }
