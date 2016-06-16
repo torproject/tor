@@ -1,0 +1,4 @@
+  o Minor bugfixes (testing):
+    - Fix the test-network-all target on out-of-tree builds by using the
+      correct path to the test driver script. Fixes bug #19421; bugfix on
+      0.2.7.3-rc.
