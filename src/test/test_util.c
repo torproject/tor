@@ -1586,6 +1586,17 @@ test_util_strmisc(void *arg)
   tt_str_op("\"z\\001abc\\277d\"",OP_EQ,  escaped("z\001abc\277d"));
   tt_str_op("\"z\\336\\255 ;foo\"",OP_EQ, escaped("z\xde\xad\x20;foo"));
 
+  /* Other cases of esc_for_log{,_len} */
+  cp_tmp = esc_for_log(NULL);
+  tt_str_op(cp_tmp, OP_EQ, "(null)");
+  tor_free(cp_tmp);
+  cp_tmp = esc_for_log_len("abcdefg", 3);
+  tt_str_op(cp_tmp, OP_EQ, "\"abc\"");
+  tor_free(cp_tmp);
+  cp_tmp = esc_for_log_len("abcdefg", 100);
+  tt_str_op(cp_tmp, OP_EQ, "\"abcdefg\"");
+  tor_free(cp_tmp);
+
   /* Test strndup and memdup */
   {
     const char *s = "abcdefghijklmnopqrstuvwxyz";
