@@ -3795,7 +3795,7 @@ format_number_sigsafe(unsigned long x, char *buf, int buf_len,
 
   /* NOT tor_assert; see above. */
   if (cp != buf) {
-    abort();
+    abort(); // LCOV_EXCL_LINE
   }
 
   return len;
