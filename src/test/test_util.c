@@ -1040,15 +1040,19 @@ test_util_config_line_quotes(void *arg)
 
   str = buf3;
 
-  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
+  const char *err = NULL;
+  str = parse_config_line_from_str_verbose(str, &k, &v, &err);
   tt_ptr_op(str,OP_EQ, NULL);
   tor_free(k); tor_free(v);
+  tt_str_op(err, OP_EQ, "Invalid escape sequence in quoted string");
 
   str = buf4;
 
-  str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
+  err = NULL;
+  str = parse_config_line_from_str_verbose(str, &k, &v, &err);
   tt_ptr_op(str,OP_EQ, NULL);
   tor_free(k); tor_free(v);
+  tt_str_op(err, OP_EQ, "Invalid escape sequence in quoted string");
 
  done:
   tor_free(k);
@@ -1237,6 +1241,8 @@ test_util_config_line_escaped_content(void *arg)
   strlcpy(buf4, "Foo \"\\q\"\n", sizeof(buf4));
   /* missing endquote */
   strlcpy(buf5, "Foo \"hello\n", sizeof(buf5));
+  /* extra stuff */
+  strlcpy(buf6, "Foo \"hello\" world\n", sizeof(buf6));
 
   str=buf1;
   str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
@@ -1259,9 +1265,17 @@ test_util_config_line_escaped_content(void *arg)
   tor_free(k); tor_free(v);
 
   str=buf5;
+
   str = parse_config_line_from_str_verbose(str, &k, &v, NULL);
   tt_ptr_op(str,OP_EQ, NULL);
   tor_free(k); tor_free(v);
+
+  str=buf6;
+  const char *err = NULL;
+  str = parse_config_line_from_str_verbose(str, &k, &v, &err);
+  tt_ptr_op(str,OP_EQ, NULL);
+  tor_free(k); tor_free(v);
+  tt_str_op(err,OP_EQ, "Excess data after quoted string");
 
  done:
   tor_free(k);
