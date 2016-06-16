@@ -634,9 +634,16 @@ test_util_time(void *arg)
             parse_rfc1123_time("Wed, 30 Ene 2011 23:59:59 GMT", &t_res));
   tt_int_op(-1,OP_EQ,
             parse_rfc1123_time("Wed, 30 Mar 2011 23:59:59 GM", &t_res));
+  tt_int_op(-1,OP_EQ,
+            parse_rfc1123_time("Wed, 30 Mar 1900 23:59:59 GMT", &t_res));
 
+  /* Leap year. */
   tt_int_op(-1,OP_EQ,
             parse_rfc1123_time("Wed, 29 Feb 2011 16:00:00 GMT", &t_res));
+  tt_int_op(0,OP_EQ,
+            parse_rfc1123_time("Wed, 29 Feb 2012 16:00:00 GMT", &t_res));
+
+  /* Leap second plus one */
   tt_int_op(-1,OP_EQ,
             parse_rfc1123_time("Wed, 30 Mar 2011 23:59:61 GMT", &t_res));
 
@@ -4815,6 +4822,36 @@ test_util_pwdb(void *arg)
 }
 #endif
 
+static void
+test_util_calloc_check(void *arg)
+{
+  (void) arg;
+  /* Easy cases that are good. */
+  tt_assert(size_mul_check__(0,0));
+  tt_assert(size_mul_check__(0,100));
+  tt_assert(size_mul_check__(100,0));
+  tt_assert(size_mul_check__(100,100));
+
+  /* Harder cases that are still good. */
+  tt_assert(size_mul_check__(SIZE_MAX, 1));
+  tt_assert(size_mul_check__(1, SIZE_MAX));
+  tt_assert(size_mul_check__(SIZE_MAX / 10, 9));
+  tt_assert(size_mul_check__(11, SIZE_MAX / 12));
+  const size_t sqrt_size_max_p1 = ((size_t)1) << (sizeof(size_t) * 4);
+  tt_assert(size_mul_check__(sqrt_size_max_p1, sqrt_size_max_p1 - 1));
+
+  /* Cases that overflow */
+  tt_assert(! size_mul_check__(SIZE_MAX, 2));
+  tt_assert(! size_mul_check__(2, SIZE_MAX));
+  tt_assert(! size_mul_check__(SIZE_MAX / 10, 11));
+  tt_assert(! size_mul_check__(11, SIZE_MAX / 10));
+  tt_assert(! size_mul_check__(SIZE_MAX / 8, 9));
+  tt_assert(! size_mul_check__(sqrt_size_max_p1, sqrt_size_max_p1));
+
+ done:
+  ;
+}
+
 #define UTIL_LEGACY(name)                                               \
   { #name, test_util_ ## name , 0, NULL, NULL }
 
@@ -4900,6 +4937,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(get_avail_disk_space, 0),
   UTIL_TEST(touch_file, 0),
   UTIL_TEST_NO_WIN(pwdb, TT_FORK),
+  UTIL_TEST(calloc_check, 0),
   END_OF_TESTCASES
 };
 

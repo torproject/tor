@@ -206,6 +206,15 @@ size_mul_check(const size_t x, const size_t y)
           x <= SIZE_MAX / y);
 }
 
+#ifdef TOR_UNIT_TESTS
+/** Exposed for unit tests only */
+int
+size_mul_check__(const size_t x, const size_t y)
+{
+  return size_mul_check(x,y);
+}
+#endif
+
 /** Allocate a chunk of <b>nmemb</b>*<b>size</b> bytes of memory, fill
  * the memory with zero bytes, and return a pointer to the result.
  * Log and terminate the process on error.  (Same as
