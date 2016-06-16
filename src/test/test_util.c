@@ -286,12 +286,12 @@ test_util_time(void *arg)
   end.tv_usec = 0;
 
   tt_int_op(995000L,OP_EQ, tv_udiff(&start, &end));
-  // tt_int_op(996L,OP_EQ, tv_mdiff(&start, &end)); // XXXX fails
+  tt_int_op(995L,OP_EQ, tv_mdiff(&start, &end));
 
   end.tv_sec = 4;
 
   tt_int_op(-1005000L,OP_EQ, tv_udiff(&start, &end));
-  // tt_int_op(-1005L,OP_EQ, tv_udiff(&start, &end)); // XXXX Fails
+  tt_int_op(-1005L,OP_EQ, tv_mdiff(&start, &end));
 
   end.tv_sec = TIME_MAX;
   tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&start, &end));
