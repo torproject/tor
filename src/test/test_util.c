@@ -293,7 +293,12 @@ test_util_time(void *arg)
   tt_int_op(-1005000L,OP_EQ, tv_udiff(&start, &end));
   tt_int_op(-1005L,OP_EQ, tv_mdiff(&start, &end));
 
+#ifdef _WIN32
+  /* Would you believe that tv_sec is a long on windows? Of course you would.*/
+  end.tv_sec = LONG_MAX;
+#else
   end.tv_sec = TIME_MAX;
+#endif
   tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&start, &end));
   tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&start, &end));
 
