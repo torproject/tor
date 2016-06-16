@@ -228,8 +228,10 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
 #endif
 
   if (!the_event_base) {
+    /* LCOV_EXCL_START */
     log_err(LD_GENERAL, "Unable to initialize Libevent: cannot continue.");
     exit(1);
+    /* LCOV_EXCL_STOP */
   }
 
   /* Making this a NOTICE for now so we can link bugs to a libevent versions

@@ -155,11 +155,13 @@ tor_malloc_(size_t size DMALLOC_PARAMS)
 #endif
 
   if (PREDICT_UNLIKELY(result == NULL)) {
+    /* LCOV_EXCL_START */
     log_err(LD_MM,"Out of memory on malloc(). Dying.");
     /* If these functions die within a worker process, they won't call
      * spawn_exit, but that's ok, since the parent will run out of memory soon
      * anyway. */
     exit(1);
+    /* LCOV_EXCL_STOP */
   }
   return result;
 }
@@ -243,8 +245,10 @@ tor_realloc_(void *ptr, size_t size DMALLOC_PARAMS)
 #endif
 
   if (PREDICT_UNLIKELY(result == NULL)) {
+    /* LCOV_EXCL_START */
     log_err(LD_MM,"Out of memory on realloc(). Dying.");
     exit(1);
+    /* LCOV_EXCL_STOP */
   }
   return result;
 }
@@ -279,8 +283,10 @@ tor_strdup_(const char *s DMALLOC_PARAMS)
   dup = strdup(s);
 #endif
   if (PREDICT_UNLIKELY(dup == NULL)) {
+    /* LCOV_EXCL_START */
     log_err(LD_MM,"Out of memory on strdup(). Dying.");
     exit(1);
+    /* LCOV_EXCL_STOP */
   }
   return dup;
 }
@@ -3470,13 +3476,17 @@ start_daemon(void)
   start_daemon_called = 1;
 
   if (pipe(daemon_filedes)) {
+    /* LCOV_EXCL_START */
     log_err(LD_GENERAL,"pipe failed; exiting. Error was %s", strerror(errno));
     exit(1);
+    /* LCOV_EXCL_STOP */
   }
   pid = fork();
   if (pid < 0) {
+    /* LCOV_EXCL_START */
     log_err(LD_GENERAL,"fork failed. Exiting.");
     exit(1);
+    /* LCOV_EXCL_STOP */
   }
   if (pid) {  /* Parent */
     int ok;
@@ -3538,8 +3548,10 @@ finish_daemon(const char *desired_cwd)
 
   nullfd = tor_open_cloexec("/dev/null", O_RDWR, 0);
   if (nullfd < 0) {
+    /* LCOV_EXCL_START */
     log_err(LD_GENERAL,"/dev/null can't be opened. Exiting.");
     exit(1);
+    /* LCOV_EXCL_STOP */
   }
   /* close fds linking to invoking terminal, but
    * close usual incoming fds, but redirect them somewhere
@@ -3548,8 +3560,10 @@ finish_daemon(const char *desired_cwd)
   if (dup2(nullfd,0) < 0 ||
       dup2(nullfd,1) < 0 ||
       dup2(nullfd,2) < 0) {
+    /* LCOV_EXCL_START */
     log_err(LD_GENERAL,"dup2 failed. Exiting.");
     exit(1);
+    /* LCOV_EXCL_STOP */
   }
   if (nullfd > 2)
     close(nullfd);
@@ -4324,7 +4338,7 @@ tor_spawn_background(const char *const filename, const char **argv,
 
     _exit(255);
     /* Never reached, but avoids compiler warning */
-    return status;
+    return status; // LCOV_EXCL_LINE
   }
 
   /* In parent */

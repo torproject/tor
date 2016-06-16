@@ -2876,18 +2876,22 @@ tor_gettimeofday(struct timeval *timeval)
   /* number of 100-nsec units since Jan 1, 1601 */
   GetSystemTimeAsFileTime(&ft.ft_ft);
   if (ft.ft_64 < EPOCH_BIAS) {
+    /* LCOV_EXCL_START */
     log_err(LD_GENERAL,"System time is before 1970; failing.");
     exit(1);
+    /* LCOV_EXCL_STOP */
   }
   ft.ft_64 -= EPOCH_BIAS;
   timeval->tv_sec = (unsigned) (ft.ft_64 / UNITS_PER_SEC);
   timeval->tv_usec = (unsigned) ((ft.ft_64 / UNITS_PER_USEC) % USEC_PER_SEC);
 #elif defined(HAVE_GETTIMEOFDAY)
   if (gettimeofday(timeval, NULL)) {
+    /* LCOV_EXCL_START */
     log_err(LD_GENERAL,"gettimeofday failed.");
     /* If gettimeofday dies, we have either given a bad timezone (we didn't),
        or segfaulted.*/
     exit(1);
+    /* LCOV_EXCL_STOP */
   }
 #elif defined(HAVE_FTIME)
   struct timeb tb;
