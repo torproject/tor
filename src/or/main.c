@@ -3146,6 +3146,7 @@ tor_free_all(int postfork)
   scheduler_free_all();
   nodelist_free_all();
   microdesc_free_all();
+  routerparse_free_all();
   ext_orport_free_all();
   control_free_all();
   sandbox_free_getaddrinfo_cache();

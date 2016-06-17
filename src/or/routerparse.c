@@ -587,6 +587,99 @@ static int check_signature_token(const char *digest,
 
 /** Last time we dumped a descriptor to disk. */
 static time_t last_desc_dumped = 0;
+/** List of dumped descriptors for FIFO cleanup purposes */
+static smartlist_t *descs_dumped = NULL;
+/** Total size of dumped descriptors for FIFO cleanup */
+static size_t len_descs_dumped = 0;
+
+typedef struct {
+  char *filename;
+  size_t len;
+  time_t timestamp;
+} dumped_desc_t;
+
+/** Dump desc FIFO/cleanup; take ownership of the given filename, add it to
+ * the FIFO, and clean up the oldest entries to the extent they exceed the
+ * configured cap. */
+static void
+dump_desc_fifo_add_and_clean(char *filename, size_t len, time_t now)
+{
+  dumped_desc_t *ent = NULL, *tmp;
+  size_t max_len;
+
+  if (descs_dumped == NULL) {
+    /* We better have no length, then */
+    tor_assert(len_descs_dumped == 0);
+    /* Make a smartlist */
+    descs_dumped = smartlist_new();
+  }
+
+  /* Make a new entry to put this one in */
+  ent = tor_malloc_zero(sizeof(*ent));
+  ent->filename = filename;
+  ent->len = len;
+  ent->timestamp = now;
+
+  /* Do we need to do some cleanup? */
+  if (get_options()->DetailedLogForUnparseableDescriptors > 0) {
+    max_len = get_options()->DetailedLogForUnparseableDescriptors;
+    /* Iterate over the list until we've freed enough space */
+    while (len_descs_dumped + len > max_len &&
+           smartlist_len(descs_dumped) > 0) {
+      /* Get the oldest thing on the list */
+      tmp = (dumped_desc_t *)(smartlist_get(descs_dumped, 0));
+      /*
+       * Check if it matches the filename we just added, so we don't
+       * delete something we just emitted if we get repeated identical
+       * descriptors.
+       */
+      if (strcmp(tmp->filename, filename) != 0) {
+        /* Delete it and adjust the length counter */
+        unlink(tmp->filename);
+        tor_assert(len_descs_dumped >= tmp->len);
+        len_descs_dumped -= tmp->len;
+        log_info(LD_DIR, "Deleting old unparseable descriptor dump %s due to "
+                "space limits", tmp->filename);
+      } else {
+        /*
+         * Don't delete, but do adjust the counter since we will bump it
+         * later
+         */
+        tor_assert(len_descs_dumped >= tmp->len);
+        len_descs_dumped -= tmp->len;
+        log_info(LD_DIR, "Replacing old descriptor dump %s with new identical"
+                 " one",  tmp->filename);
+      }
+      /* Free it and remove it from the list */
+      smartlist_del_keeporder(descs_dumped, 0);
+      tor_free(tmp->filename);
+      tor_free(tmp);
+    }
+  }
+
+  /* Append our entry to the end of the list and bump the counter */
+  smartlist_add(descs_dumped, ent);
+  len_descs_dumped += len;
+}
+
+/** Clean up on exit; just memory, leave the dumps behind
+ */
+static void
+dump_desc_fifo_cleanup(void)
+{
+  if (descs_dumped) {
+    /* Free each descriptor */
+    SMARTLIST_FOREACH_BEGIN(descs_dumped, dumped_desc_t *, ent) {
+      tor_assert(ent);
+      tor_free(ent->filename);
+      tor_free(ent);
+    } SMARTLIST_FOREACH_END(ent);
+    /* Free the list */
+    smartlist_free(descs_dumped);
+    descs_dumped = NULL;
+    len_descs_dumped = 0;
+  }
+}
 
 /** For debugging purposes, dump unparseable descriptor *<b>desc</b> of
  * type *<b>type</b> to file $DATADIR/unparseable-desc. Do not write more
@@ -598,19 +691,112 @@ dump_desc(const char *desc, const char *type)
   time_t now = time(NULL);
   tor_assert(desc);
   tor_assert(type);
-  if (!last_desc_dumped || last_desc_dumped + 60 < now) {
-    char *debugfile = get_datadir_fname("unparseable-desc");
-    size_t filelen = 50 + strlen(type) + strlen(desc);
-    char *content = tor_malloc_zero(filelen);
-    tor_snprintf(content, filelen, "Unable to parse descriptor of type "
-                 "%s:\n%s", type, desc);
-    write_str_to_file(debugfile, content, 1);
-    log_info(LD_DIR, "Unable to parse descriptor of type %s. See file "
-             "unparseable-desc in data directory for details.", type);
-    tor_free(content);
-    tor_free(debugfile);
-    last_desc_dumped = now;
+  /* Are we dumping this one to a file? */
+  int dumping_this_one;
+  /*
+   * Are we including the hash in the filename and using the
+   * FIFO mechanism?
+   */
+  int dumping_by_hash;
+  /* Emit an "Unable to parse descriptor..." prefix? */
+  int emit_prefix;
+  size_t len;
+  /* The SHA256 of the string */
+  uint8_t digest_sha256[DIGEST256_LEN];
+  char digest_sha256_hex[HEX_DIGEST256_LEN+1];
+  /* Filename to log it to */
+  char *debugfile, *debugfile_base;
+  /* Expected length of file */
+  size_t filelen;
+  /* File content */
+  char *content;
+
+  /* Get the hash for logging purposes anyway */
+  len = strlen(desc);
+  if (crypto_digest256((char *)digest_sha256, desc, len,
+                       DIGEST_SHA256) != 0) {
+    log_info(LD_DIR,
+             "Unable to parse descriptor of type %s, and unable to even hash"
+             " it!", type);
+    goto err;
   }
+
+  base16_encode(digest_sha256_hex, sizeof(digest_sha256_hex),
+                (const char *)digest_sha256, sizeof(digest_sha256));
+
+  if (get_options()->DetailedLogForUnparseableDescriptors > 0) {
+    /* Okay, we're logging to a fresh file named by hash for each one */
+    dumping_by_hash = 1;
+    dumping_this_one = 1;
+    /*
+     * Detailed logging mechanism will mention type and hash in the main log;
+     * don't clutter up the files with anything but the exact dump.
+     */
+    emit_prefix = 0;
+    tor_asprintf(&debugfile_base, "unparseable-desc.%s", digest_sha256_hex);
+    debugfile = get_datadir_fname(debugfile_base);
+  } else if (!last_desc_dumped || last_desc_dumped + 60 < now) {
+    /* Simple mechanism, check so we don't dump too often */
+    dumping_by_hash = 0;
+    dumping_this_one = 1;
+    emit_prefix = 1;
+    debugfile_base = tor_strdup("unparseable-desc");
+    debugfile = get_datadir_fname(debugfile_base);
+  } else {
+    /* No logging of the full descriptor this time */
+    dumping_by_hash = 0;
+    dumping_this_one = 0;
+    emit_prefix = 1;
+    debugfile_base = NULL;
+    debugfile = NULL;
+  }
+
+  if (dumping_this_one) {
+    if (emit_prefix) filelen = 50 + strlen(type) + len;
+    else filelen = len;
+
+    /* Get content pointing at what we're writing */
+    if (emit_prefix) {
+      content = tor_malloc_zero(filelen);
+      tor_snprintf(content, filelen, "Unable to parse descriptor of type "
+                   "%s:\n%s", type, desc);
+    } else {
+      content = tor_strdup(desc);
+    }
+
+    /* Write it, and tell the main log about it */
+    write_str_to_file(debugfile, content, 1);
+    log_info(LD_DIR,
+             "Unable to parse descriptor of type %s with hash %s and length "
+             "%lu. See file %s in data directory for details.",
+             type, digest_sha256_hex, (unsigned long)len, debugfile_base);
+
+    /* Free our in-memory copy if necessary */
+    tor_free(content);
+
+    last_desc_dumped = now;
+
+    /* Give it to the FIFO and clean up as needed, if we're using one */
+    if (dumping_by_hash) {
+      dump_desc_fifo_add_and_clean(debugfile, filelen, now);
+      /* Since we handed ownership over, don't free debugfile later */
+      debugfile = NULL;
+    }
+  } else {
+    /* Just log that it happened without dumping */
+    log_info(LD_DIR,
+             "Unable to parse descriptor of type %s with hash %s and length "
+             "%lu. Descriptor not dumped since we just dumped one %u seconds "
+             "ago.",
+             type, digest_sha256_hex, (unsigned long)len,
+             (unsigned int)(now - last_desc_dumped));
+  }
+
+  if (debugfile_base != NULL) tor_free(debugfile_base);
+  if (debugfile != NULL) tor_free(debugfile);
+
+ err:
+  return;
 }
 
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the directory in
@@ -5466,5 +5652,12 @@ rend_parse_client_keys(strmap_t *parsed_clients, const char *ckstr)
   if (area)
     memarea_drop_all(area);
   return result;
+}
+
+/** Clean up all data structures used by routerparse.c at exit */
+void
+routerparse_free_all(void)
+{
+  dump_desc_fifo_cleanup();
 }
 

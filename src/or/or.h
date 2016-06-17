@@ -4498,6 +4498,11 @@ typedef struct {
 
   /** Autobool: Do we try to retain capabilities if we can? */
   int KeepBindCapabilities;
+
+  /** If > 0, maximum total size of unparseable descriptors to log
+   * during the lifetime of this Tor process.
+   */
+  uint64_t DetailedLogForUnparseableDescriptors;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

@@ -212,6 +212,7 @@ static config_var_t option_vars_[] = {
   V(CountPrivateBandwidth,       BOOL,     "0"),
   V(DataDirectory,               FILENAME, NULL),
   V(DataDirectoryGroupReadable,  BOOL,     "0"),
+  V(DetailedLogForUnparseableDescriptors, MEMUNIT, "0 bytes"),
   V(DisableNetwork,              BOOL,     "0"),
   V(DirAllowPrivateAddresses,    BOOL,     "0"),
   V(TestingAuthDirTimeToLearnReachability, INTERVAL, "30 minutes"),
