@@ -1,0 +1,4 @@
+  o Bugfixes:
+    - When dumping unparseable router descriptors, optionally store them in
+      separate filenames by hash, up to a configurable limit.
+      Fixes bug 18322; bugfix on ???.
