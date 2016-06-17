@@ -873,7 +873,7 @@ connection_dir_retry_bridges(smartlist_t *descs)
   char digest[DIGEST_LEN];
   SMARTLIST_FOREACH(descs, const char *, cp,
   {
-    if (base16_decode(digest, DIGEST_LEN, cp, strlen(cp))<0) {
+    if (base16_decode(digest, DIGEST_LEN, cp, strlen(cp)) != DIGEST_LEN) {
       log_warn(LD_BUG, "Malformed fingerprint in list: %s",
               escaped(cp));
       continue;
@@ -2682,7 +2682,8 @@ client_likes_consensus(networkstatus_t *v, const char *want_url)
     if (want_len > DIGEST_LEN)
       want_len = DIGEST_LEN;
 
-    if (base16_decode(want_digest, DIGEST_LEN, d, want_len*2) < 0) {
+    if (base16_decode(want_digest, DIGEST_LEN, d, want_len*2)
+                      != (int) want_len) {
       log_fn(LOG_PROTOCOL_WARN, LD_DIR,
              "Failed to decode requested authority digest %s.", escaped(d));
       continue;
@@ -3990,7 +3991,7 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
   }
   SMARTLIST_FOREACH_BEGIN(failed, const char *, cp) {
     download_status_t *dls = NULL;
-    if (base16_decode(digest, DIGEST_LEN, cp, strlen(cp)) < 0) {
+    if (base16_decode(digest, DIGEST_LEN, cp, strlen(cp)) != DIGEST_LEN) {
       log_warn(LD_BUG, "Malformed fingerprint in list: %s", escaped(cp));
       continue;
     }
@@ -4087,9 +4088,10 @@ dir_split_resource_into_fingerprint_pairs(const char *res,
              "Skipping digest pair %s with missing dash.", escaped(cp));
     } else {
       fp_pair_t pair;
-      if (base16_decode(pair.first, DIGEST_LEN, cp, HEX_DIGEST_LEN)<0 ||
-          base16_decode(pair.second,
-                        DIGEST_LEN, cp+HEX_DIGEST_LEN+1, HEX_DIGEST_LEN)<0) {
+      if (base16_decode(pair.first, DIGEST_LEN,
+                        cp, HEX_DIGEST_LEN) != DIGEST_LEN ||
+          base16_decode(pair.second,DIGEST_LEN,
+                        cp+HEX_DIGEST_LEN+1, HEX_DIGEST_LEN) != DIGEST_LEN) {
         log_info(LD_DIR, "Skipping non-decodable digest pair %s", escaped(cp));
       } else {
         smartlist_add(pairs_result, tor_memdup(&pair, sizeof(pair)));
@@ -4167,8 +4169,9 @@ dir_split_resource_into_fingerprints(const char *resource,
       }
       d = tor_malloc_zero(digest_len);
       if (decode_hex ?
-          (base16_decode(d, digest_len, cp, hex_digest_len)<0) :
-          (base64_decode(d, digest_len, cp, base64_digest_len)<0)) {
+          (base16_decode(d, digest_len, cp, hex_digest_len) != digest_len) :
+          (base64_decode(d, digest_len, cp, base64_digest_len)
+                         != digest_len)) {
           log_info(LD_DIR, "Skipping non-decodable digest %s", escaped(cp));
           smartlist_del_keeporder(fp_tmp, i--);
           goto again;

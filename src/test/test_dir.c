@@ -580,7 +580,7 @@ test_dir_extrainfo_parsing(void *arg)
     crypto_pk_t *pk = ri->identity_pkey = crypto_pk_new();              \
     tt_assert(! crypto_pk_read_public_key_from_string(pk,               \
                                       name##_KEY, strlen(name##_KEY))); \
-    tt_int_op(0,OP_EQ,base16_decode(d, 20, name##_FP, strlen(name##_FP))); \
+    tt_int_op(20,OP_EQ,base16_decode(d, 20, name##_FP, strlen(name##_FP))); \
     digestmap_set((digestmap_t*)map, d, ri);                            \
     ri = NULL;                                                          \
   } while (0)

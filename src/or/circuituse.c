@@ -2028,7 +2028,8 @@ circuit_get_open_circ_or_launch(entry_connection_t *conn,
             char *hexdigest = conn->chosen_exit_name+1;
             tor_addr_t addr;
             if (strlen(hexdigest) < HEX_DIGEST_LEN ||
-                base16_decode(digest,DIGEST_LEN,hexdigest,HEX_DIGEST_LEN)<0) {
+                base16_decode(digest,DIGEST_LEN,
+                              hexdigest,HEX_DIGEST_LEN) != DIGEST_LEN) {
               log_info(LD_DIR, "Broken exit digest on tunnel conn. Closing.");
               return -1;
             }

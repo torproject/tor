@@ -516,18 +516,21 @@ hex_decode_digit(char c)
   return hex_decode_digit_(c);
 }
 
-/** Given a hexadecimal string of <b>srclen</b> bytes in <b>src</b>, decode it
- * and store the result in the <b>destlen</b>-byte buffer at <b>dest</b>.
- * Return 0 on success, -1 on failure. */
+/** Given a hexadecimal string of <b>srclen</b> bytes in <b>src</b>, decode
+ * it and store the result in the <b>destlen</b>-byte buffer at <b>dest</b>.
+ * Return the number of bytes decoded on success, -1 on failure. If
+ * <b>destlen</b> is greater than INT_MAX or less than half of
+ * <b>srclen</b>, -1 is returned. */
 int
 base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
   const char *end;
-
+  char *dest_orig = dest;
   int v1,v2;
+
   if ((srclen % 2) != 0)
     return -1;
-  if (destlen < srclen/2 || destlen > SIZE_T_CEILING)
+  if (destlen < srclen/2 || destlen > INT_MAX)
     return -1;
 
   memset(dest, 0, destlen);
@@ -542,6 +545,9 @@ base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
     ++dest;
     src+=2;
   }
-  return 0;
+
+  tor_assert((dest-dest_orig) <= (ptrdiff_t) destlen);
+
+  return (int) (dest-dest_orig);
 }
 

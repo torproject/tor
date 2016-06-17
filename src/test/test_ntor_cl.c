@@ -21,7 +21,7 @@
   } STMT_END
 #define BASE16(idx, var, n) STMT_BEGIN {                                \
     const char *s = argv[(idx)];                                        \
-    if (base16_decode((char*)var, n, s, strlen(s)) < 0 ) {              \
+    if (base16_decode((char*)var, n, s, strlen(s)) < (int)n ) {              \
       fprintf(stderr, "couldn't decode argument %d (%s)\n",idx,s);      \
       return 1;                                                         \
     }                                                                   \

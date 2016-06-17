@@ -5330,7 +5330,7 @@ parse_bridge_line(const char *line)
       goto err;
     }
     if (base16_decode(bridge_line->digest, DIGEST_LEN,
-                      fingerprint, HEX_DIGEST_LEN)<0) {
+                      fingerprint, HEX_DIGEST_LEN) != DIGEST_LEN) {
       log_warn(LD_CONFIG, "Unable to decode Bridge key digest.");
       goto err;
     }
@@ -5781,7 +5781,8 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
     } else if (!strcasecmpstart(flag, "v3ident=")) {
       char *idstr = flag + strlen("v3ident=");
       if (strlen(idstr) != HEX_DIGEST_LEN ||
-          base16_decode(v3_digest, DIGEST_LEN, idstr, HEX_DIGEST_LEN)<0) {
+          base16_decode(v3_digest, DIGEST_LEN,
+                        idstr, HEX_DIGEST_LEN) != DIGEST_LEN) {
         log_warn(LD_CONFIG, "Bad v3 identity digest '%s' on DirAuthority line",
                  flag);
       } else {
@@ -5830,7 +5831,8 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
              fingerprint, (int)strlen(fingerprint));
     goto err;
   }
-  if (base16_decode(digest, DIGEST_LEN, fingerprint, HEX_DIGEST_LEN)<0) {
+  if (base16_decode(digest, DIGEST_LEN,
+                    fingerprint, HEX_DIGEST_LEN) != DIGEST_LEN) {
     log_warn(LD_CONFIG, "Unable to decode DirAuthority key digest.");
     goto err;
   }
@@ -5898,8 +5900,8 @@ parse_dir_fallback_line(const char *line,
       orport = (int)tor_parse_long(cp+strlen("orport="), 10,
                                    1, 65535, &ok, NULL);
     } else if (!strcmpstart(cp, "id=")) {
-      ok = !base16_decode(id, DIGEST_LEN,
-                          cp+strlen("id="), strlen(cp)-strlen("id="));
+      ok = base16_decode(id, DIGEST_LEN, cp+strlen("id="),
+                         strlen(cp)-strlen("id=")) == DIGEST_LEN;
     } else if (!strcasecmpstart(cp, "ipv6=")) {
       if (ipv6_addrport_ptr) {
         log_warn(LD_CONFIG, "Redundant ipv6 addr/port on FallbackDir line");

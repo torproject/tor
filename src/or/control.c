@@ -1211,7 +1211,8 @@ decode_hashed_passwords(config_line_t *passwords)
     const char *hashed = cl->value;
 
     if (!strcmpstart(hashed, "16:")) {
-      if (base16_decode(decoded, sizeof(decoded), hashed+3, strlen(hashed+3))<0
+      if (base16_decode(decoded, sizeof(decoded), hashed+3, strlen(hashed+3))
+                        != S2K_RFC2440_SPECIFIER_LEN + DIGEST_LEN
           || strlen(hashed+3) != (S2K_RFC2440_SPECIFIER_LEN+DIGEST_LEN)*2) {
         goto err;
       }
@@ -1262,7 +1263,8 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
     tor_assert(i>0);
     password_len = i/2;
     password = tor_malloc(password_len + 1);
-    if (base16_decode(password, password_len+1, body, i)<0) {
+    if (base16_decode(password, password_len+1, body, i)
+                      != (int) (password_len+1)) {
       connection_write_str_to_buf(
             "551 Invalid hexadecimal encoding.  Maybe you tried a plain text "
             "password?  If so, the standard requires that you put it in "
@@ -2026,7 +2028,8 @@ getinfo_helper_dir(control_connection_t *control_conn,
     if (strlen(question) == HEX_DIGEST_LEN) {
       char d[DIGEST_LEN];
       signed_descriptor_t *sd = NULL;
-      if (base16_decode(d, sizeof(d), question, strlen(question))==0) {
+      if (base16_decode(d, sizeof(d), question, strlen(question))
+                        != sizeof(d)) {
         /* XXXX this test should move into extrainfo_get_by_descriptor_digest,
          * but I don't want to risk affecting other parts of the code,
          * especially since the rules for using our own extrainfo (including
@@ -3442,7 +3445,8 @@ handle_control_authchallenge(control_connection_t *conn, uint32_t len,
     client_nonce = tor_malloc_zero(client_nonce_len);
 
     if (base16_decode(client_nonce, client_nonce_len,
-                      cp, client_nonce_encoded_len) < 0) {
+                      cp, client_nonce_encoded_len)
+                      != (int) client_nonce_len) {
       connection_write_str_to_buf("513 Invalid base16 client nonce\r\n",
                                   conn);
       connection_mark_for_close(TO_CONN(conn));

@@ -270,7 +270,7 @@ test_util_format_base16_decode(void *ignored)
   tt_int_op(res, OP_EQ, 0);
 
   res = base16_decode(dst, 1000, "aabc", 4);
-  tt_int_op(res, OP_EQ, 0);
+  tt_int_op(res, OP_EQ, 2);
   tt_mem_op(dst, OP_EQ, "\xaa\xbc", 2);
 
   res = base16_decode(dst, 1000, "aabcd", 6);
@@ -280,7 +280,7 @@ test_util_format_base16_decode(void *ignored)
   tt_int_op(res, OP_EQ, -1);
 
   res = base16_decode(real_dst, 10, real_src, 14);
-  tt_int_op(res, OP_EQ, 0);
+  tt_int_op(res, OP_EQ, 7);
   tt_mem_op(real_dst, OP_EQ, expected, 7);
 
  done:

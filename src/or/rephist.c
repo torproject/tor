@@ -1074,7 +1074,8 @@ rep_hist_load_mtbf_data(time_t now)
       if (mtbf_idx > i)
         i = mtbf_idx;
     }
-    if (base16_decode(digest, DIGEST_LEN, hexbuf, HEX_DIGEST_LEN) < 0) {
+    if (base16_decode(digest, DIGEST_LEN,
+                      hexbuf, HEX_DIGEST_LEN) != DIGEST_LEN) {
       log_warn(LD_HIST, "Couldn't hex string %s", escaped(hexbuf));
       continue;
     }

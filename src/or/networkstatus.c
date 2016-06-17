@@ -2216,7 +2216,7 @@ getinfo_helper_networkstatus(control_connection_t *conn,
     if (*q == '$')
       ++q;
 
-    if (base16_decode(d, DIGEST_LEN, q, strlen(q))) {
+    if (base16_decode(d, DIGEST_LEN, q, strlen(q)) != DIGEST_LEN) {
       *errmsg = "Data not decodeable as hex";
       return -1;
     }
