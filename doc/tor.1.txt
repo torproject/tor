@@ -384,6 +384,13 @@ GENERAL OPTIONS
     DataDirectory. If the option is set to 1, make the DataDirectory readable
     by the default GID. (Default: 0)
 
+[[DetailedLogForUnparseableDescriptors]] **DetailedLogForUnparseableDescriptors** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**::
+    If this is not zero, log unparseable descriptors (e.g. for votes,
+    consensuses) in separate files by hash, up to the specified size in total.
+    Note that only files logged during the lifetime of this Tor process count
+    toward the total; this is intended to be used to debug problems without
+    opening live servers to resource exhaustion attacks. (Default: 0)
+
 [[FallbackDir]] **FallbackDir** __address__:__port__ orport=__port__ id=__fingerprint__ [weight=__num__] [ipv6=__address__:__orport__]::
     When we're unable to connect to any directory cache for directory info
     (usually because we don't know about any yet) we try a directory authority.
