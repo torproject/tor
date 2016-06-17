@@ -10,8 +10,6 @@
  * functions.
  */
 
-#define _GNU_SOURCE
-
 #include "orconfig.h"
 #include <pthread.h>
 #include <signal.h>

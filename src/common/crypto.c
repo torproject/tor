@@ -56,7 +56,6 @@ ENABLE_GCC_WARNING(redundant-decls)
 #include <ctype.h>
 #endif
 #ifdef HAVE_UNISTD_H
-#define _GNU_SOURCE
 #include <unistd.h>
 #endif
 #ifdef HAVE_FCNTL_H

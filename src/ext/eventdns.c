@@ -50,9 +50,6 @@
 #endif
 #endif
 
-/* #define _POSIX_C_SOURCE 200507 */
-#define _GNU_SOURCE
-
 #ifdef DNS_USE_CPU_CLOCK_FOR_ID
 #ifdef DNS_USE_OPENSSL_FOR_ID
 #error Multiple id options selected

@@ -11,8 +11,6 @@
  *  modules.)
  */
 
-#define _GNU_SOURCE
-
 #include "orconfig.h"
 #include <stdlib.h>
 #include "compat.h"

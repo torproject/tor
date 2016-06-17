@@ -16,6 +16,7 @@ AM_INIT_AUTOMAKE([foreign 1.11 subdir-objects])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_CONFIG_HEADERS([orconfig.h])
 
+AC_USE_SYSTEM_EXTENSIONS
 AC_CANONICAL_HOST
 
 PKG_PROG_PKG_CONFIG
@@ -1552,9 +1553,6 @@ int main(int c, char **v) { puts(__FUNCTION__); }])],
 AC_CACHE_CHECK([whether we have extern char **environ already declared],
   tor_cv_have_environ_declared,
   AC_COMPILE_IFELSE([AC_LANG_SOURCE([
-/* We define _GNU_SOURCE here because it is also defined in compat.c.
- * Without it environ doesn't get declared. */
-#define _GNU_SOURCE
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif

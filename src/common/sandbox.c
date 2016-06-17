@@ -39,8 +39,6 @@
 
 #if defined(USE_LIBSECCOMP)
 
-#define _GNU_SOURCE
-
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <sys/types.h>

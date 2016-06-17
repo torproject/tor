@@ -12,18 +12,6 @@
  * the platform.
  **/
 
-/* This is required on rh7 to make strptime not complain.
- * We also need it to make memmem get defined (where available)
- */
-
-/* XXXX We should just  use AC_USE_SYSTEM_EXTENSIONS in our autoconf,
- * and get this (and other important stuff!) automatically. Once we do that,
- * make sure to also change the extern char **environ detection in
- * configure.ac, because whether that is declared or not depends on whether
- * we have _GNU_SOURCE defined! Maybe that means that once we take this out,
- * we can also take out the configure check. */
-#define _GNU_SOURCE
-
 #define COMPAT_PRIVATE
 #include "compat.h"
 

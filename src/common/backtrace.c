@@ -13,9 +13,6 @@
  * detect crashes.
  */
 
-#define __USE_GNU
-#define _GNU_SOURCE 1
-
 #include "orconfig.h"
 #include "compat.h"
 #include "util.h"

@@ -9,10 +9,6 @@
  * process control.
  **/
 
-/* This is required on rh7 to make strptime not complain.
- */
-#define _GNU_SOURCE
-
 #include "orconfig.h"
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
