@@ -1,0 +1,6 @@
+  o Major bugfixes (user interface):
+    - Fix an integer overflow in the rate-limiter that caused displaying of
+      wrong number of suppressed messages (if there are too many of them).
+      If the number of messages hits the limit of messages per interval the
+      rate-limiter drops a warning and doesn't count any further.
+      Fixes bug 19435.

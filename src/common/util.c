@@ -1983,7 +1983,9 @@ update_approx_time(time_t now)
 
 /** If the rate-limiter <b>lim</b> is ready at <b>now</b>, return the number
  * of calls to rate_limit_is_ready (including this one!) since the last time
- * rate_limit_is_ready returned nonzero.  Otherwise return 0. */
+ * rate_limit_is_ready returned nonzero.  Otherwise return 0.
+ * If the call number hits <b>RATELIM_TOOMANY</b> limit, drop a warning
+ * about this event and stop counting. */
 static int
 rate_limit_is_ready(ratelim_t *lim, time_t now)
 {
@@ -1993,7 +1995,15 @@ rate_limit_is_ready(ratelim_t *lim, time_t now)
     lim->n_calls_since_last_time = 0;
     return res;
   } else {
-    ++lim->n_calls_since_last_time;
+    if (lim->n_calls_since_last_time < RATELIM_TOOMANY) {
+      ++lim->n_calls_since_last_time;
+    } else if (lim->n_calls_since_last_time == RATELIM_TOOMANY) {
+      log_warn(LD_GENERAL,
+        "Enormously large number of messages (%d). It's probably a bug.",
+        RATELIM_TOOMANY);
+      ++lim->n_calls_since_last_time;
+    }
+
     return 0;
   }
 }
