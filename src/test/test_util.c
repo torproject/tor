@@ -1501,6 +1501,11 @@ test_util_strmisc(void *arg)
   tt_int_op(-50L,OP_EQ, tor_parse_long("-50 plus garbage",10,-100,100,&i,&cp));
   tt_int_op(1,OP_EQ, i);
   tt_str_op(cp,OP_EQ, " plus garbage");
+  /* Illogical min max */
+  tt_int_op(0L,OP_EQ,  tor_parse_long("10",10,50,4,&i,NULL));
+  tt_int_op(0,OP_EQ, i);
+  tt_int_op(0L,OP_EQ,   tor_parse_long("-50",10,100,-100,&i,NULL));
+  tt_int_op(0,OP_EQ, i);
   /* Out of bounds */
   tt_int_op(0L,OP_EQ,  tor_parse_long("10",10,50,100,&i,NULL));
   tt_int_op(0,OP_EQ, i);

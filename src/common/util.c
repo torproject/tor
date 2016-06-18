@@ -1111,6 +1111,9 @@ tor_digest256_is_zero(const char *digest)
   /* Were there unexpected unconverted characters? */   \
   if (!next && *endptr)                                 \
     goto err;                                           \
+  /* Illogical (max, min) inputs? */                    \
+  if (max < min)                                        \
+    goto err;                                           \
   /* Is r within limits? */                             \
   if (r < min || r > max)                               \
     goto err;                                           \
