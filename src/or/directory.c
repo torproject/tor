@@ -3784,6 +3784,52 @@ find_dl_min_and_max_delay(download_status_t *dls, const or_options_t *options,
   *max = *((int *)((smartlist_get(schedule, smartlist_len(schedule) - 1))));
 }
 
+/** Advance one delay step.  The algorithm is to use the previous delay to
+ * compute an increment.  Consuming one byte of entropy per step, we use 7
+ * bits to construct an increment between 0 and (127/128)*delay by adding
+ * right-shifted copies of delay, controlled by each bit.  Then, to prevent
+ * getting stuck at zero if we start from zero, we use one last bit to add
+ * 1 with probability 50%.  Finally, we add the increment to the original
+ * delay, clamp the value <= max_delay, and return it.
+ */
+STATIC int
+next_random_exponential_delay(int delay, int max_delay)
+{
+  int delay_increment, i;
+  uint8_t entropy;
+
+  /*
+   * Backoff step: we want to multiply by something ~1.5, and then add
+   * 1 with non-zero probability so we can't get stuck at zero even if
+   * we start out with zero delay.  To do this, pick a uint8_t of
+   * entropy in the range [0,255], and use it to construct an
+   * increment.
+   */
+  delay_increment = 0;
+  /* Get a byte of entropy */
+  crypto_rand((char *)(&entropy), sizeof(entropy));
+  /* Clamp it just to be sure */
+  entropy &= 0xff;
+  /* If we have non-zero delay; otherwise this is a no-op */
+  if (delay > 0) {
+    /* Use the low 7 bits for the increment */
+    for (i = 0; i < 7; ++i) {
+      if (entropy & (0x1 << i)) delay_increment += (delay >> (i + 1));
+    }
+  }
+  /*
+   * Using the remaining bit of entropy, add 1 with probability 50% so
+   * we can't get stuck at 0
+   */
+  if (entropy & 0x80) delay_increment += 1;
+  /* Increment delay, make sure to saturate if we would wrap around */
+  if (delay_increment < max_delay - delay) delay += delay_increment;
+  else delay = max_delay;
+
+  /* Return the updated delay */
+  return delay;
+}
+
 /** Find the current delay for dls based on schedule or min_delay/
  * max_delay if we're using exponential backoff.  If dls->backoff is
  * DL_SCHED_RANDOM_EXPONENTIAL, we must have 0 <= min_delay <= max_delay <=
@@ -3807,12 +3853,10 @@ download_status_schedule_get_delay(download_status_t *dls,
               max_delay <= INT_MAX));
 
   int delay = INT_MAX;
-  int delay_increment, i;
   uint8_t dls_schedule_position = (dls->increment_on
                                    == DL_SCHED_INCREMENT_ATTEMPT
                                    ? dls->n_download_attempts
                                    : dls->n_download_failures);
-  uint8_t entropy;
 
   if (dls->backoff == DL_SCHED_DETERMINISTIC) {
     if (dls_schedule_position < smartlist_len(schedule))
@@ -3832,36 +3876,13 @@ download_status_schedule_get_delay(download_status_t *dls,
       delay = dls->last_delay_used;
 
       while (dls->last_backoff_position < dls_schedule_position) {
-        /*
-         * Backoff step: we want to multiply by something ~1.5, and then add
-         * 1 with non-zero probability so we can't get stuck at zero even if
-         * we start out with zero delay.  To do this, pick a uint8_t of
-         * entropy in the range [0,255], and use it to construct an
-         * increment.
-         */
-        delay_increment = 0;
-        /* Get a byte of entropy */
-        crypto_rand((char *)(&entropy), sizeof(entropy));
-        /* Clamp it just to be sure */
-        entropy &= 0xff;
-        /* If we have non-zero delay; otherwise this is a no-op */
-        if (delay > 0) {
-          /* Use the low 7 bits for the increment */
-          for (i = 0; i < 7; ++i) {
-            if (entropy & (0x1 << i)) delay_increment += (delay >> (i + 1));
-          }
-        }
-        /*
-         * Using the remaining bit of entropy, add 1 with probability 50% so
-         * we can't get stuck at 0
-         */
-        if (entropy & 0x80) delay_increment += 1;
-        /* Increment delay, make sure to saturate if we would wrap around */
-        if (delay_increment < max_delay - delay) delay += delay_increment;
-        else delay = max_delay;
+        /* Do one increment step */
+        delay = next_random_exponential_delay(delay, max_delay);
+        /* Update our position */
         ++(dls->last_backoff_position);
       }
     } else {
+      /* If we're just starting out, use the minimum delay */
       delay = min_delay;
     }
 

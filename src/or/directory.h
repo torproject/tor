@@ -158,6 +158,8 @@ STATIC const smartlist_t *find_dl_schedule(download_status_t *dls,
 STATIC void find_dl_min_and_max_delay(download_status_t *dls,
                                       const or_options_t *options,
                                       int *min, int *max);
+STATIC int next_random_exponential_delay(int delay, int max_delay);
+
 #endif
 
 #endif
