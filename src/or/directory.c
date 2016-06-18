@@ -3784,8 +3784,11 @@ find_dl_min_and_max_delay(download_status_t *dls, const or_options_t *options,
   *max = *((int *)((smartlist_get(schedule, smartlist_len(schedule) - 1))));
 }
 
-/* Find the current delay for dls based on schedule.
- * Set dls->next_attempt_at based on now, and return the delay.
+/** Find the current delay for dls based on schedule or min_delay/
+ * max_delay if we're using exponential backoff.  If dls->backoff is
+ * DL_SCHED_RANDOM_EXPONENTIAL, we must have 0 <= min_delay <= max_delay <=
+ * INT_MAX, but schedule may be set to NULL; otherwise schedule is required.
+ * This function sets dls->next_attempt_at based on now, and returns the delay.
  * Helper for download_status_increment_failure and
  * download_status_increment_attempt. */
 STATIC int
