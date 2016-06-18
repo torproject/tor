@@ -21,7 +21,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-
 /* Return the base32 encoded size in bytes using the source length srclen.
  * The NUL terminated byte is added as well since every base32 encoding
  * requires enough space for it. */

@@ -318,7 +318,6 @@ test_util_format_base32_encode(void *arg)
     tt_mem_op(expected, OP_EQ, dst, strlen(expected));
   }
 
-
   /* Non multiple of 5 for the source buffer length. */
   {
     /* Length of 8 bytes. */
@@ -375,7 +374,7 @@ test_util_format_base32_decode(void *arg)
     tt_int_op(tor_mem_is_zero(dst, real_dstlen), ==, 1);
   }
 
-done:
+ done:
   tor_free(dst);
 }
 
