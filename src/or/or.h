@@ -2047,8 +2047,10 @@ typedef struct download_status_t {
                                         * exponential backoffs? */
   uint8_t last_backoff_position; /**< number of attempts/failures, depending
                                   * on increment_on, when we last recalculated
-                                  * the delay. */
-  int last_delay_used; /**< last delay used for random exponential backoff */
+                                  * the delay.  Only updated if backoff
+                                  * == 1. */
+  int last_delay_used; /**< last delay used for random exponential backoff;
+                        * only updated if backoff == 1 */
 } download_status_t;
 
 /** If n_download_failures is this high, the download can never happen. */
