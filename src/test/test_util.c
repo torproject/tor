@@ -1821,22 +1821,21 @@ test_util_gzip(void *arg)
   (void)arg;
   buf1 = tor_strdup("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ");
   tt_assert(detect_compression_method(buf1, strlen(buf1)) == UNKNOWN_METHOD);
-  if (is_gzip_supported()) {
-    tt_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
-                                   GZIP_METHOD));
-    tt_assert(buf2);
-    tt_assert(len1 < strlen(buf1));
-    tt_assert(detect_compression_method(buf2, len1) == GZIP_METHOD);
 
-    tt_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1,
-                                     GZIP_METHOD, 1, LOG_INFO));
-    tt_assert(buf3);
-    tt_int_op(strlen(buf1) + 1,OP_EQ, len2);
-    tt_str_op(buf1,OP_EQ, buf3);
+  tt_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
+                               GZIP_METHOD));
+  tt_assert(buf2);
+  tt_assert(len1 < strlen(buf1));
+  tt_assert(detect_compression_method(buf2, len1) == GZIP_METHOD);
 
-    tor_free(buf2);
-    tor_free(buf3);
-  }
+  tt_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1,
+                                 GZIP_METHOD, 1, LOG_INFO));
+  tt_assert(buf3);
+  tt_int_op(strlen(buf1) + 1,OP_EQ, len2);
+  tt_str_op(buf1,OP_EQ, buf3);
+
+  tor_free(buf2);
+  tor_free(buf3);
 
   tt_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
                                  ZLIB_METHOD));
@@ -1918,6 +1917,53 @@ test_util_gzip(void *arg)
   tor_free(buf2);
   tor_free(buf3);
   tor_free(buf1);
+}
+
+static void
+test_util_gzip_compression_bomb(void *arg)
+{
+  /* A 'compression bomb' is a very small object that uncompresses to a huge
+   * one. Most compression formats support them, but they can be a DOS vector.
+   * In Tor we try not to generate them, and we don't accept them.
+   */
+  (void) arg;
+  size_t one_million = 1<<20;
+  char *one_mb = tor_malloc_zero(one_million);
+  char *result = NULL;
+  size_t result_len = 0;
+  tor_zlib_state_t *state = NULL;
+
+  /* Make sure we can't produce a compression bomb */
+  tt_int_op(-1, OP_EQ, tor_gzip_compress(&result, &result_len,
+                                         one_mb, one_million,
+                                         ZLIB_METHOD));
+
+  /* Here's a compression bomb that we made manually. */
+  const char compression_bomb[1039] =
+    { 0x78, 0xDA, 0xED, 0xC1, 0x31, 0x01, 0x00, 0x00, 0x00, 0xC2,
+      0xA0, 0xF5, 0x4F, 0x6D, 0x08, 0x5F, 0xA0 /* .... */ };
+  tt_int_op(-1, OP_EQ, tor_gzip_uncompress(&result, &result_len,
+                                           compression_bomb, 1039,
+                                           ZLIB_METHOD, 0, LOG_WARN));
+
+
+  /* Now try streaming that. */
+  state = tor_zlib_new(0, ZLIB_METHOD, HIGH_COMPRESSION);
+  tor_zlib_output_t r;
+  const char *inp = compression_bomb;
+  size_t inlen = 1039;
+  do {
+    char *outp = one_mb;
+    size_t outleft = 4096; /* small on purpose */
+    r = tor_zlib_process(state, &outp, &outleft, &inp, &inlen, 0);
+    tt_int_op(inlen, OP_NE, 0);
+  } while (r == TOR_ZLIB_BUF_FULL);
+
+  tt_int_op(r, OP_EQ, TOR_ZLIB_ERR);
+
+ done:
+  tor_free(one_mb);
+  tor_zlib_free(state);
 }
 
 /** Run unit tests for mmap() wrapper functionality. */
@@ -4935,6 +4981,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(strmisc),
   UTIL_LEGACY(pow2),
   UTIL_LEGACY(gzip),
+  UTIL_LEGACY(gzip_compression_bomb),
   UTIL_LEGACY(datadir),
   UTIL_LEGACY(memarea),
   UTIL_LEGACY(control_formats),

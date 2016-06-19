@@ -1,0 +1,4 @@
+  o New system requirements:
+    - We now require zlib version 1.2 or later. (Back when we started,
+      zlib 1.1 and zlib 1.0 were still found in the wild. 1.2 was released in
+      2003. We recommend the latest version.)

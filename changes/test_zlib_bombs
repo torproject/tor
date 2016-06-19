@@ -1,0 +1,3 @@
+  o Testing:
+    - We now have unit tests for our code to reject zlib "compression bombs".
+      (Fortunately, the code works fine.)
