@@ -1112,7 +1112,7 @@ tor_digest256_is_zero(const char *digest)
   if (!next && *endptr)                                 \
     goto err;                                           \
   /* Illogical (max, min) inputs? */                    \
-  if (max < min)                                        \
+  if (BUG(max < min))                                   \
     goto err;                                           \
   /* Is r within limits? */                             \
   if (r < min || r > max)                               \
