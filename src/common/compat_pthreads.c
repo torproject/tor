@@ -102,11 +102,13 @@ void
 tor_mutex_init(tor_mutex_t *mutex)
 {
   if (PREDICT_UNLIKELY(!threads_initialized))
-    tor_threads_init();
+    tor_threads_init(); // LCOV_EXCL_LINE
   const int err = pthread_mutex_init(&mutex->mutex, &attr_recursive);
   if (PREDICT_UNLIKELY(err)) {
+    // LCOV_EXCL_START
     log_err(LD_GENERAL, "Error %d creating a mutex.", err);
-    tor_fragile_assert();
+    tor_assert_unreached();
+    // LCOV_EXCL_STOP
   }
 }
 
@@ -116,12 +118,14 @@ void
 tor_mutex_init_nonrecursive(tor_mutex_t *mutex)
 {
   int err;
-  if (PREDICT_UNLIKELY(!threads_initialized))
-    tor_threads_init();
+  if (!threads_initialized)
+    tor_threads_init(); // LCOV_EXCL_LINE
   err = pthread_mutex_init(&mutex->mutex, NULL);
   if (PREDICT_UNLIKELY(err)) {
+    // LCOV_EXCL_START
     log_err(LD_GENERAL, "Error %d creating a mutex.", err);
-    tor_fragile_assert();
+    tor_assert_unreached();
+    // LCOV_EXCL_STOP
   }
 }
 
@@ -133,8 +137,10 @@ tor_mutex_acquire(tor_mutex_t *m)
   tor_assert(m);
   err = pthread_mutex_lock(&m->mutex);
   if (PREDICT_UNLIKELY(err)) {
+    // LCOV_EXCL_START
     log_err(LD_GENERAL, "Error %d locking a mutex.", err);
-    tor_fragile_assert();
+    tor_assert_unreached();
+    // LCOV_EXCL_STOP
   }
 }
 /** Release the lock <b>m</b> so another thread can have it. */
@@ -145,8 +151,10 @@ tor_mutex_release(tor_mutex_t *m)
   tor_assert(m);
   err = pthread_mutex_unlock(&m->mutex);
   if (PREDICT_UNLIKELY(err)) {
+    // LCOV_EXCL_START
     log_err(LD_GENERAL, "Error %d unlocking a mutex.", err);
-    tor_fragile_assert();
+    tor_assert_unreached();
+    // LCOV_EXCL_STOP
   }
 }
 /** Clean up the mutex <b>m</b> so that it no longer uses any system
@@ -159,8 +167,10 @@ tor_mutex_uninit(tor_mutex_t *m)
   tor_assert(m);
   err = pthread_mutex_destroy(&m->mutex);
   if (PREDICT_UNLIKELY(err)) {
+    // LCOV_EXCL_START
     log_err(LD_GENERAL, "Error %d destroying a mutex.", err);
-    tor_fragile_assert();
+    tor_assert_unreached();
+    // LCOV_EXCL_STOP
   }
 }
 /** Return an integer representing this thread. */
@@ -210,8 +220,10 @@ void
 tor_cond_uninit(tor_cond_t *cond)
 {
   if (pthread_cond_destroy(&cond->cond)) {
+    // LCOV_EXCL_START
     log_warn(LD_GENERAL,"Error freeing condition: %s", strerror(errno));
     return;
+    // LCOV_EXCL_STOP
   }
 }
 /** Wait until one of the tor_cond_signal functions is called on <b>cond</b>.
@@ -232,7 +244,7 @@ tor_cond_wait(tor_cond_t *cond, tor_mutex_t *mutex, const struct timeval *tv)
         /* EINTR should be impossible according to POSIX, but POSIX, like the
          * Pirate's Code, is apparently treated "more like what you'd call
          * guidelines than actual rules." */
-        continue;
+        continue; // LCOV_EXCL_LINE
       }
       return r ? -1 : 0;
     }
