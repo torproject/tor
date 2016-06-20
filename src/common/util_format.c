@@ -46,6 +46,9 @@ base32_encode(char *dest, size_t destlen, const char *src, size_t srclen)
   tor_assert(base32_encoded_size(srclen) <= destlen);
   tor_assert(destlen < SIZE_T_CEILING);
 
+  /* Make sure we leave no uninitialized data in the destination buffer. */
+  memset(dest, 0, destlen);
+
   for (i=0,bit=0; bit < nbits; ++i, bit+=5) {
     /* set v to the 16-bit value starting at src[bits/8], 0-padded. */
     v = ((uint8_t)src[bit/8]) << 8;
@@ -75,6 +78,7 @@ base32_decode(char *dest, size_t destlen, const char *src, size_t srclen)
   tor_assert((nbits/8) <= destlen); /* We need enough space. */
   tor_assert(destlen < SIZE_T_CEILING);
 
+  /* Make sure we leave no uninitialized data in the destination buffer. */
   memset(dest, 0, destlen);
 
   /* Convert base32 encoded chars to the 5-bit values that they represent. */
@@ -197,7 +201,8 @@ base64_encode(char *dest, size_t destlen, const char *src, size_t srclen,
   if (enclen > INT_MAX)
     return -1;
 
-  memset(dest, 0, enclen);
+  /* Make sure we leave no uninitialized data in the destination buffer. */
+  memset(dest, 0, destlen);
 
   /* XXX/Yawning: If this ends up being too slow, this can be sped up
    * by separating the multiline format case and the normal case, and
@@ -398,6 +403,7 @@ base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
   if (destlen > SIZE_T_CEILING)
     return -1;
 
+  /* Make sure we leave no uninitialized data in the destination buffer. */
   memset(dest, 0, destlen);
 
   /* Iterate over all the bytes in src.  Each one will add 0 or 6 bits to the
@@ -472,6 +478,9 @@ base16_encode(char *dest, size_t destlen, const char *src, size_t srclen)
   tor_assert(destlen >= srclen*2+1);
   tor_assert(destlen < SIZE_T_CEILING);
 
+  /* Make sure we leave no uninitialized data in the destination buffer. */
+  memset(dest, 0, destlen);
+
   cp = dest;
   end = src+srclen;
   while (src<end) {
@@ -532,6 +541,7 @@ base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
   if (destlen < srclen/2 || destlen > INT_MAX)
     return -1;
 
+  /* Make sure we leave no uninitialized data in the destination buffer. */
   memset(dest, 0, destlen);
 
   end = src+srclen;
