@@ -1145,14 +1145,12 @@ tor_close_socket(tor_socket_t s)
       --n_sockets_open;
 #else
     if (r != EBADF)
-      --n_sockets_open;
+      --n_sockets_open; // LCOV_EXCL_LINE -- EIO and EINTR too hard to force.
 #endif
     r = -1;
   }
 
-  if (n_sockets_open < 0)
-    log_warn(LD_BUG, "Our socket count is below zero: %d. Please submit a "
-             "bug report.", n_sockets_open);
+  tor_assert_nonfatal(n_sockets_open >= 0);
   socket_accounting_unlock();
   return r;
 }
@@ -1932,7 +1930,7 @@ tor_getpwnam(const char *username)
     return NULL;
 
   if (! strcmp(username, passwd_cached->pw_name))
-    return passwd_cached;
+    return passwd_cached; // LCOV_EXCL_LINE - would need to make getpwnam flaky
 
   return NULL;
 }
@@ -1958,7 +1956,7 @@ tor_getpwuid(uid_t uid)
     return NULL;
 
   if (uid == passwd_cached->pw_uid)
-    return passwd_cached;
+    return passwd_cached; // LCOV_EXCL_LINE - would need to make getpwnam flaky
 
   return NULL;
 }
@@ -2750,7 +2748,9 @@ MOCK_IMPL(const char *, get_uname, (void))
       }
 #endif
 #else
+        /* LCOV_EXCL_START -- can't provoke uname failure */
         strlcpy(uname_result, "Unknown platform", sizeof(uname_result));
+        /* LCOV_EXCL_STOP */
 #endif
       }
     uname_result_is_set = 1;
@@ -2824,11 +2824,14 @@ compute_num_cpus(void)
   if (num_cpus == -2) {
     num_cpus = compute_num_cpus_impl();
     tor_assert(num_cpus != -2);
-    if (num_cpus > MAX_DETECTABLE_CPUS)
+    if (num_cpus > MAX_DETECTABLE_CPUS) {
+      /* LCOV_EXCL_START */
       log_notice(LD_GENERAL, "Wow!  I detected that you have %d CPUs. I "
                  "will not autodetect any more than %d, though.  If you "
                  "want to configure more, set NumCPUs in your torrc",
                  num_cpus, MAX_DETECTABLE_CPUS);
+      /* LCOV_EXCL_STOP */
+    }
   }
   return num_cpus;
 }
@@ -3358,9 +3361,11 @@ get_total_system_memory_impl(void)
   return result * 1024;
 
  err:
+  /* LCOV_EXCL_START Can't reach this unless proc is broken. */
   tor_free(s);
   close(fd);
   return 0;
+  /* LCOV_EXCL_STOP */
 #elif defined (_WIN32)
   /* Windows has MEMORYSTATUSEX; pretty straightforward. */
   MEMORYSTATUSEX ms;
@@ -3409,6 +3414,7 @@ get_total_system_memory(size_t *mem_out)
   static size_t mem_cached=0;
   uint64_t m = get_total_system_memory_impl();
   if (0 == m) {
+    /* LCOV_EXCL_START -- can't make this happen without mocking. */
     /* We couldn't find our memory total */
     if (0 == mem_cached) {
       /* We have no cached value either */
@@ -3418,6 +3424,7 @@ get_total_system_memory(size_t *mem_out)
 
     *mem_out = mem_cached;
     return 0;
+    /* LCOV_EXCL_STOP */
   }
 
 #if SIZE_MAX != UINT64_MAX

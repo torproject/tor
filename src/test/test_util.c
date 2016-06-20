@@ -1951,7 +1951,6 @@ test_util_gzip_compression_bomb(void *arg)
                                            compression_bomb, 1039,
                                            ZLIB_METHOD, 0, LOG_WARN));
 
-
   /* Now try streaming that. */
   state = tor_zlib_new(0, ZLIB_METHOD, HIGH_COMPRESSION);
   tor_zlib_output_t r;
@@ -3398,6 +3397,21 @@ test_util_ftruncate(void *ptr)
   if (fd >= 0)
     close(fd);
   tor_free(buf);
+}
+
+static void
+test_util_num_cpus(void *arg)
+{
+  (void)arg;
+  int num = compute_num_cpus();
+  if (num < 0)
+    tt_skip();
+
+  tt_int_op(num, OP_GE, 1);
+  tt_int_op(num, OP_LE, 16);
+
+ done:
+  ;
 }
 
 #ifdef _WIN32
@@ -4921,6 +4935,35 @@ test_util_pwdb(void *arg)
   dir = get_user_homedir(name);
   tt_assert(dir != NULL);
 
+  /* Try failing cases.  First find a user that doesn't exist by name */
+  char rand[4];
+  char badname[9];
+  int i, found=0;
+  for (i = 0; i < 100; ++i) {
+    crypto_rand(rand, sizeof(rand));
+    base16_encode(badname, sizeof(badname), rand, sizeof(rand));
+    if (tor_getpwnam(badname) == NULL) {
+      found = 1;
+      break;
+    }
+  }
+  tt_assert(found);
+  tor_free(dir);
+  dir = get_user_homedir(badname);
+  tt_assert(dir == NULL);
+
+  /* Now try to find a user that doesn't exist by ID. */
+  found = 0;
+  for (i = 0; i < 1000; ++i) {
+    uid_t u;
+    crypto_rand((char*)&u, sizeof(u));
+    if (tor_getpwuid(u) == NULL) {
+      found = 1;
+      break;
+    }
+  }
+  tt_assert(found);
+
  done:
   tor_free(name);
   tor_free(dir);
@@ -5006,6 +5049,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(listdir, 0),
   UTIL_TEST(parent_dir, 0),
   UTIL_TEST(ftruncate, 0),
+  UTIL_TEST(num_cpus, 0),
   UTIL_TEST_WIN_ONLY(load_win_lib, 0),
   UTIL_TEST_NO_WIN(exit_status, 0),
   UTIL_TEST_NO_WIN(fgets_eagain, 0),
