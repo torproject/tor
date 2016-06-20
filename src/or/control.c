@@ -1264,7 +1264,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
     password_len = i/2;
     password = tor_malloc(password_len + 1);
     if (base16_decode(password, password_len+1, body, i)
-                      != (int) (password_len+1)) {
+                      != (int) password_len) {
       connection_write_str_to_buf(
             "551 Invalid hexadecimal encoding.  Maybe you tried a plain text "
             "password?  If so, the standard requires that you put it in "
