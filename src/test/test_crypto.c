@@ -1521,7 +1521,7 @@ test_crypto_formats(void *arg)
 
   strlcpy(data1, "f0d678affc000100", 1024);
   i = base16_decode(data2, 8, data1, 16);
-  tt_int_op(i,OP_EQ, 0);
+  tt_int_op(i,OP_EQ, 8);
   tt_mem_op(data2,OP_EQ, "\xf0\xd6\x78\xaf\xfc\x00\x01\x00",8);
 
   /* now try some failing base16 decodes */
@@ -2537,8 +2537,9 @@ test_crypto_ed25519_testvectors(void *arg)
 #define DECODE(p,s) base16_decode((char*)(p),sizeof(p),(s),strlen(s))
 #define EQ(a,h) test_memeq_hex((const char*)(a), (h))
 
-    tt_int_op(0, OP_EQ, DECODE(sk, ED25519_SECRET_KEYS[i]));
-    tt_int_op(0, OP_EQ, DECODE(blinding_param, ED25519_BLINDING_PARAMS[i]));
+    tt_int_op(sizeof(sk), OP_EQ, DECODE(sk, ED25519_SECRET_KEYS[i]));
+    tt_int_op(sizeof(blinding_param), OP_EQ, DECODE(blinding_param,
+              ED25519_BLINDING_PARAMS[i]));
 
     tt_int_op(0, OP_EQ, ed25519_secret_key_from_seed(&esk, sk));
     EQ(esk.seckey, ED25519_EXPANDED_SECRET_KEYS[i]);

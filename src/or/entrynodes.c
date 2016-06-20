@@ -1253,7 +1253,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
       } else {
         strlcpy(node->nickname, smartlist_get(args,0), MAX_NICKNAME_LEN+1);
         if (base16_decode(node->identity, DIGEST_LEN, smartlist_get(args,1),
-                          strlen(smartlist_get(args,1)))<0) {
+                          strlen(smartlist_get(args,1))) != DIGEST_LEN) {
           *msg = tor_strdup("Unable to parse entry nodes: "
                             "Bad hex digest for EntryGuard");
         }
@@ -1309,8 +1309,9 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
         log_warn(LD_BUG, "EntryGuardAddedBy line is not long enough.");
         continue;
       }
-      if (base16_decode(d, sizeof(d), line->value, HEX_DIGEST_LEN)<0 ||
-          line->value[HEX_DIGEST_LEN] != ' ') {
+      if (base16_decode(d, sizeof(d),
+                        line->value, HEX_DIGEST_LEN) != sizeof(d) ||
+                        line->value[HEX_DIGEST_LEN] != ' ') {
         log_warn(LD_BUG, "EntryGuardAddedBy line %s does not begin with "
                  "hex digest", escaped(line->value));
         continue;

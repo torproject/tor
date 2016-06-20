@@ -40,7 +40,7 @@ gen_vote_routerstatus_for_tests(const char *digest_in_hex, int is_guard)
     tt_int_op(strlen(digest_in_hex), ==, HEX_DIGEST_LEN);
     retval = base16_decode(digest_tmp, sizeof(digest_tmp),
                            digest_in_hex, HEX_DIGEST_LEN);
-    tt_int_op(retval, ==, 0);
+    tt_int_op(retval, ==, sizeof(digest_tmp));
     memcpy(rs->identity_digest, digest_tmp, DIGEST_LEN);
   }
 

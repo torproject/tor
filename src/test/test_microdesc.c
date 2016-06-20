@@ -783,7 +783,8 @@ test_md_reject_cache(void *arg)
   mc = get_microdesc_cache();
 #define ADD(hex)                                                        \
   do {                                                                  \
-    tt_int_op(0,OP_EQ,base16_decode(buf,sizeof(buf),hex,strlen(hex)));     \
+    tt_int_op(sizeof(buf),OP_EQ,base16_decode(buf,sizeof(buf),          \
+                hex,strlen(hex)));\
     smartlist_add(wanted, tor_memdup(buf, DIGEST256_LEN));              \
   } while (0)
 
