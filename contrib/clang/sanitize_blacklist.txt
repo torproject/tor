@@ -2,6 +2,17 @@
 # syntax specified in http://clang.llvm.org/docs/SanitizerSpecialCaseList.html
 # for more info see http://clang.llvm.org/docs/AddressSanitizer.html
 
+#
+# Tor notes: This file is obsolete!
+#
+# It was necessary in order to apply the sanitizers to all of tor.  But
+# we don't believe that's a good idea: some parts of tor need constant-time
+# behavior that is hard to guarantee with these sanitizers.
+#
+# If you need this behavior, then please consider --enable-expensive-hardening,
+# and report bugs as needed.
+#
+
 # usage:
 # 1. configure tor build:
 #    ./configure \
