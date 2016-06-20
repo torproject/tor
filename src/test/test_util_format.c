@@ -263,7 +263,7 @@ test_util_format_base16_decode(void *ignored)
   res = base16_decode(dst, 1, src, 10);
   tt_int_op(res, OP_EQ, -1);
 
-  res = base16_decode(dst, SIZE_T_CEILING+2, src, 10);
+  res = base16_decode(dst, ((size_t)INT_MAX)+1, src, 10);
   tt_int_op(res, OP_EQ, -1);
 
   res = base16_decode(dst, 1000, "", 0);
