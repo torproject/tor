@@ -2341,28 +2341,15 @@ get_parent_directory(char *fname)
 static char *
 alloc_getcwd(void)
 {
-    int saved_errno = errno;
-/* We use this as a starting path length. Not too large seems sane. */
-#define START_PATH_LENGTH 128
-/* Nobody has a maxpath longer than this, as far as I know.  And if they
- * do, they shouldn't. */
-#define MAX_SANE_PATH_LENGTH 4096
-    size_t path_length = START_PATH_LENGTH;
-    char *path = tor_malloc(path_length);
+#ifdef PATH_MAX
+#define MAX_CWD PATH_MAX
+#else
+#define MAX_CWD 4096
+#endif
 
-    errno = 0;
-    while (getcwd(path, path_length) == NULL) {
-      if (errno == ERANGE && path_length < MAX_SANE_PATH_LENGTH) {
-        path_length*=2;
-        path = tor_realloc(path, path_length);
-      } else {
-        tor_free(path);
-        path = NULL;
-        break;
-      }
-    }
-    errno = saved_errno;
-    return path;
+  char path_buf[MAX_CWD];
+  char *path = getcwd(path_buf, sizeof(path_buf));
+  return path ? tor_strdup(path) : NULL;
 }
 #endif
 
@@ -2393,11 +2380,13 @@ make_path_absolute(char *fname)
       tor_asprintf(&absfname, "%s/%s", path, fname);
       tor_free(path);
     } else {
+      /* LCOV_EXCL_START Can't make getcwd fail. */
       /* If getcwd failed, the best we can do here is keep using the
        * relative path.  (Perhaps / isn't readable by this UID/GID.) */
       log_warn(LD_GENERAL, "Unable to find current working directory: %s",
                strerror(errno));
       absfname = tor_strdup(fname);
+      /* LCOV_EXCL_STOP */
     }
   }
   return absfname;
