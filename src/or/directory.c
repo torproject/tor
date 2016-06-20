@@ -3785,49 +3785,38 @@ find_dl_min_and_max_delay(download_status_t *dls, const or_options_t *options,
 }
 
 /** Advance one delay step.  The algorithm is to use the previous delay to
- * compute an increment.  Consuming one byte of entropy per step, we use 7
- * bits to construct an increment between 0 and (127/128)*delay by adding
- * right-shifted copies of delay, controlled by each bit.  Then, to prevent
- * getting stuck at zero if we start from zero, we use one last bit to add
- * 1 with probability 50%.  Finally, we add the increment to the original
- * delay, clamp the value <= max_delay, and return it.
+ * compute an increment, we construct a value uniformly at random between
+ * delay and MAX(delay*2,delay+1).  We then clamp that value to be no larger
+ * than max_delay, and return it.
+ *
+ * Requires that delay is less than INT_MAX, and delay is in [0,max_delay].
  */
 STATIC int
 next_random_exponential_delay(int delay, int max_delay)
 {
-  int delay_increment, i;
-  uint8_t entropy;
+  /* Check preconditions */
+  if (BUG(delay > max_delay))
+    delay = max_delay;
+  if (BUG(delay == INT_MAX))
+    delay -= 1; /* prevent overflow */
+  if (BUG(delay < 0))
+    delay = 0;
 
-  /*
-   * Backoff step: we want to multiply by something ~1.5, and then add
-   * 1 with non-zero probability so we can't get stuck at zero even if
-   * we start out with zero delay.  To do this, pick a uint8_t of
-   * entropy in the range [0,255], and use it to construct an
-   * increment.
-   */
-  delay_increment = 0;
-  /* Get a byte of entropy */
-  crypto_rand((char *)(&entropy), sizeof(entropy));
-  /* Clamp it just to be sure */
-  entropy &= 0xff;
-  /* If we have non-zero delay; otherwise this is a no-op */
-  if (delay > 0) {
-    /* Use the low 7 bits for the increment */
-    for (i = 0; i < 7; ++i) {
-      if (entropy & (0x1 << i)) delay_increment += (delay >> (i + 1));
-    }
-  }
-  /*
-   * Using the remaining bit of entropy, add 1 with probability 50% so
-   * we can't get stuck at 0
-   */
-  if (entropy & 0x80) delay_increment += 1;
-  /* Increment delay, make sure to saturate if we would wrap around */
-  if (delay_increment < max_delay - delay) delay += delay_increment;
-  else delay = max_delay;
+  /* How much are we willing to add to the delay? */
+  int max_increment;
 
-  /* Return the updated delay */
-  return delay;
+  if (delay)
+    max_increment = delay; /* no more than double. */
+  else
+    max_increment = 1; /* we're always willing to slow down a little. */
+
+  /* the + 1 here is so that we include the end of the interval */
+  int increment = crypto_rand_int(max_increment+1);
+
+  if (increment < max_delay - delay)
+    return delay + increment;
+  else
+    return max_delay;
 }
 
 /** Find the current delay for dls based on schedule or min_delay/
