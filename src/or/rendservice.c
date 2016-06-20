@@ -3465,8 +3465,6 @@ rend_service_desc_has_uploaded(const rend_data_t *rend_data)
 
   service = rend_service_get_by_service_id(rend_data->onion_address);
   if (service == NULL) {
-    log_warn(LD_REND, "Service %s not found after descriptor upload",
-             safe_str_client(rend_data->onion_address));
     return;
   }
 
