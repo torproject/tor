@@ -1909,6 +1909,10 @@ def list_fallbacks():
   prefilter_fallbacks = copy.copy(candidates.fallbacks)
 
   # filter with the whitelist and blacklist
+  # if a relay has changed IPv4 address or ports recently, it will be excluded
+  # as ineligible before we call apply_filter_lists, and so there will be no
+  # warning that the details have changed from those in the whitelist.
+  # instead, there will be an info-level log during the eligibility check.
   initial_count = len(candidates.fallbacks)
   excluded_count = candidates.apply_filter_lists()
   print candidates.summarise_filters(initial_count, excluded_count)
