@@ -120,12 +120,16 @@ URL: https:onionoo.torproject.orguptime?first_seen_days=7-&flag=V2Dir&type=relay
 " weight=10",
 "192.87.28.82:9030 orport=9001 id=844AE9CAD04325E955E2BE1521563B79FE7094B7"
 " weight=10",
+/* Fallback was on 0.2.8.2-alpha list, but changed address before 0.2.8.5
 "84.219.173.60:9030 orport=443 id=855BC2DABE24C861CD887DB9B2E950424B49FC34"
 " weight=10",
+*/
 "163.172.138.22:80 orport=443 id=8664DC892540F3C789DB37008236C096C871734D"
 " weight=10",
+/* Fallback was on 0.2.8.2-alpha list, but downloads were slow before 0.2.8.5
 "185.96.88.29:80 orport=443 id=86C281AD135058238D7A337D546C902BE8505DDE"
 " weight=10",
+*/
 "93.180.156.84:9030 orport=9001 id=8844D87E9B038BE3270938F05AF797E1D3C74C0F"
 " weight=10",
 "178.217.184.32:9030 orport=443 id=8B7F47AE1A5D954A3E58ACDE0865D09DBA5B738D"
@@ -140,9 +144,11 @@ URL: https:onionoo.torproject.orguptime?first_seen_days=7-&flag=V2Dir&type=relay
 " weight=10",
 "91.219.237.244:80 orport=443 id=92ECC9E0E2AF81BB954719B189AC362E254AD4A5"
 " weight=10",
+/* Fallback was on 0.2.8.2-alpha list, but changed fingerprint before 0.2.8.5
 "46.101.102.71:80 orport=443 id=9504CB22EEB25D344DE63CB7A6F2C46F895C3686"
 " ipv6=[2a03:b0c0:3:d0::2ed:7001]:9050"
 " weight=10",
+*/
 "85.214.206.219:9030 orport=9001 id=98F8D5F359949E41DE8DF3DBB1975A86E96A84A0"
 " weight=10",
 "81.7.10.93:31336 orport=31337 id=99E246DB480B313A3012BC3363093CC26CD209C7"
@@ -177,8 +183,10 @@ URL: https:onionoo.torproject.orguptime?first_seen_days=7-&flag=V2Dir&type=relay
 " weight=10",
 "193.11.114.46:9032 orport=9003 id=B83DC1558F0D34353BB992EF93AFEAFDB226A73E"
 " weight=10",
+/* Fallback was on 0.2.8.2-alpha list, but downloads were slow before 0.2.8.5
 "178.62.36.64:9030 orport=9001 id=B87C84E38DAECFFFFDE98E5AEE5786AFDC748F2C"
 " weight=10",
+*/
 "197.231.221.211:9030 orport=9001 id=BC630CBBB518BE7E9F4E09712AB0269E9DC7D626"
 " weight=10",
 "198.96.155.3:8080 orport=5001 id=BCEDF6C193AA687AE471B8A22EBF6BC57C2D285E"

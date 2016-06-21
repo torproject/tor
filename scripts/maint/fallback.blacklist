@@ -205,3 +205,17 @@
 
 # Email sent directly to teor, verified using relay contact info
 88.190.208.4:30555 orport=30556 id=030A6EB24725C05D8E0FCE21923CBA5223E75E0E
+
+# Fallback was on 0.2.8.2-alpha list, but changed fingerprint before 0.2.8.5
+46.101.102.71:80 orport=443 id=9504CB22EEB25D344DE63CB7A6F2C46F895C3686 ipv6=[2a03:b0c0:3:d0::2ed:7001]:9050
+# Also blacklist anything with the new fingerprint
+id=9C8A123081EFBE022EF795630F447839DDFDDDEC
+
+# Fallbacks were on 0.2.8.2-alpha list, but downloads were slow before 0.2.8.5
+185.96.88.29:80 orport=443 id=86C281AD135058238D7A337D546C902BE8505DDE
+178.62.36.64:9030 orport=9001 id=B87C84E38DAECFFFFDE98E5AEE5786AFDC748F2C
+
+# Fallback was on 0.2.8.2-alpha list, but changed address before 0.2.8.5
+84.219.173.60:9030 orport=443 id=855BC2DABE24C861CD887DB9B2E950424B49FC34
+# Also blacklist anything with the new address
+84.216.235.55:9030 orport=443
