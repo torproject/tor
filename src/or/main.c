@@ -2071,14 +2071,19 @@ heartbeat_callback(time_t now, const or_options_t *options)
     return PERIODIC_EVENT_NO_UPDATE;
   }
 
-  /* Write the heartbeat message */
+  /* Skip the first one. */
   if (first) {
-    first = 0; /* Skip the first one. */
-  } else {
-    log_heartbeat(now);
+    first = 0;
+    return options->HeartbeatPeriod;
   }
 
-  return options->HeartbeatPeriod;
+  /* Write the heartbeat message */
+  int r = log_heartbeat(now);
+  if (r == 0) {
+    return options->HeartbeatPeriod;
+  }
+
+  return PERIODIC_EVENT_NO_UPDATE;
 }
 
 #define CDM_CLEAN_CALLBACK_INTERVAL 600
