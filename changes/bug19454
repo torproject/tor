@@ -1,0 +1,3 @@
+  o Minor bugfixes (heartbeat):
+    - Fix regression that crashes Tor when disabling heartbeats. Fixes bug
+      19454; bugfix on tor-0.2.8.1-alpha. Reported by "kubaku".
