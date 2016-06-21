@@ -1,0 +1,6 @@
+  o Minor bugfixes (user interface):
+    - Remove a warning message "Service [scrubbed] not found after
+      descriptor upload". This message appears when one uses HSPOST control
+      command to upload a service descriptor. Since there is only a descriptor
+      and no service, showing this message is pointless and confusing.
+      Fixes bug 19464; bugfix on 0.2.7.2-alpha.
