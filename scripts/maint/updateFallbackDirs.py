@@ -1408,7 +1408,11 @@ class CandidateList(dict):
   def calculate_measured_bandwidth(self):
     self.sort_fallbacks_by_cw_to_bw_factor()
     median_fallback = self.fallback_median(True)
-    median_cw_to_bw_factor = median_fallback.cw_to_bw_factor()
+    if median_fallback is not None:
+      median_cw_to_bw_factor = median_fallback.cw_to_bw_factor()
+    else:
+      # this will never be used, because there are no fallbacks
+      median_cw_to_bw_factor = None
     for f in self.fallbacks:
       f.set_measured_bandwidth(median_cw_to_bw_factor)
 
@@ -1593,7 +1597,11 @@ class CandidateList(dict):
   # return a string that describes a/b as a percentage
   @staticmethod
   def describe_percentage(a, b):
-    return '%d/%d = %.0f%%'%(a, b, (a*100.0)/b)
+    if b != 0:
+      return '%d/%d = %.0f%%'%(a, b, (a*100.0)/b)
+    else:
+      # technically, 0/0 is undefined, but 0.0% is a sensible result
+      return '%d/%d = %.0f%%'%(a, b, 0.0)
 
   # return a dictionary of lists of fallbacks by IPv4 netblock
   # the dictionary is keyed by the fingerprint of an arbitrary fallback
