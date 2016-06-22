@@ -40,8 +40,10 @@ URL: https:onionoo.torproject.orguptime?first_seen_days=7-&flag=V2Dir&type=relay
 " weight=10",
 "185.61.138.18:8080 orport=4443 id=2541759BEC04D37811C2209A88E863320271EC9C"
 " weight=10",
+/* Fallback was on 0.2.8.2-alpha list, but went down before 0.2.8.5
 "51.254.215.121:80 orport=443 id=262B66AD25C79588AD1FC8ED0E966395B47E5C1D"
 " weight=10",
+*/
 "194.150.168.79:11112 orport=11111 id=29F1020B94BE25E6BE1AD13E93CE19D2131B487C"
 " weight=10",
 "144.76.26.175:9012 orport=9011 id=2BA2C8E96B2590E1072AECE2BDB5C48921BF8510"
@@ -90,8 +92,10 @@ URL: https:onionoo.torproject.orguptime?first_seen_days=7-&flag=V2Dir&type=relay
 " weight=10",
 "78.142.142.246:80 orport=443 id=5A5E03355C1908EBF424CAF1F3ED70782C0D2F74"
 " weight=10",
+/* Fallback was on 0.2.8.2-alpha list, but went down before 0.2.8.5
 "185.100.85.138:80 orport=46356 id=5C4DF16A0029CC4F67D3E127356E68F219269859"
 " weight=10",
+*/
 "178.16.208.62:80 orport=443 id=5CF8AFA5E4B0BB88942A44A3F3AAE08C3BDFD60B"
 " ipv6=[2a00:1c20:4089:1234:a6a4:2926:d0af:dfee]:443"
 " weight=10",
@@ -207,9 +211,11 @@ URL: https:onionoo.torproject.orguptime?first_seen_days=7-&flag=V2Dir&type=relay
 "178.62.199.226:80 orport=443 id=CBEFF7BA4A4062045133C053F2D70524D8BBE5BE"
 " ipv6=[2a03:b0c0:2:d0::b7:5001]:443"
 " weight=10",
+/* Fallback was on 0.2.8.2-alpha list, but went down before 0.2.8.5
 "81.7.17.171:80 orport=443 id=CFECDDCA990E3EF7B7EC958B22441386B6B8D820"
 " ipv6=[2a02:180:1:1::517:11ab]:443"
 " weight=10",
+*/
 "134.119.3.164:9030 orport=9001 id=D1B8AAA98C65F3DF7D8BB3AF881CAEB84A33D8EE"
 " weight=10",
 "185.13.38.75:9030 orport=9001 id=D2A1703758A0FBBA026988B92C2F88BAB59F9361"
