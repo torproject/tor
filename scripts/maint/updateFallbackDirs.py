@@ -1408,7 +1408,11 @@ class CandidateList(dict):
   def calculate_measured_bandwidth(self):
     self.sort_fallbacks_by_cw_to_bw_factor()
     median_fallback = self.fallback_median(True)
-    median_cw_to_bw_factor = median_fallback.cw_to_bw_factor()
+    if median_fallback is not None:
+      median_cw_to_bw_factor = median_fallback.cw_to_bw_factor()
+    else:
+      # this will never be used, because there are no fallbacks
+      median_cw_to_bw_factor = None
     for f in self.fallbacks:
       f.set_measured_bandwidth(median_cw_to_bw_factor)
 
@@ -1593,7 +1597,11 @@ class CandidateList(dict):
   # return a string that describes a/b as a percentage
   @staticmethod
   def describe_percentage(a, b):
-    return '%d/%d = %.0f%%'%(a, b, (a*100.0)/b)
+    if b != 0:
+      return '%d/%d = %.0f%%'%(a, b, (a*100.0)/b)
+    else:
+      # technically, 0/0 is undefined, but 0.0% is a sensible result
+      return '%d/%d = %.0f%%'%(a, b, 0.0)
 
   # return a dictionary of lists of fallbacks by IPv4 netblock
   # the dictionary is keyed by the fingerprint of an arbitrary fallback
@@ -1909,6 +1917,10 @@ def list_fallbacks():
   prefilter_fallbacks = copy.copy(candidates.fallbacks)
 
   # filter with the whitelist and blacklist
+  # if a relay has changed IPv4 address or ports recently, it will be excluded
+  # as ineligible before we call apply_filter_lists, and so there will be no
+  # warning that the details have changed from those in the whitelist.
+  # instead, there will be an info-level log during the eligibility check.
   initial_count = len(candidates.fallbacks)
   excluded_count = candidates.apply_filter_lists()
   print candidates.summarise_filters(initial_count, excluded_count)

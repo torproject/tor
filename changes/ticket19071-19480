@@ -1,0 +1,10 @@
+  o Minor bugfixes (fallback directory selection):
+    - Avoid errors during fallback selection if there are no eligible
+      fallbacks. Fixes bug 19480; bugfix on ba76910 and 78ec782 in
+      0.2.8.3-alpha. Patch by teor.
+  o Minor features (fallback directory list):
+    - Update hard-coded fallback list to remove unsuitable fallbacks.
+      Resolves ticket 19071. Patch by teor.
+    - Update fallback whitelist and blacklist based on relay operator
+      emails. Blacklist unsuitable fallbacks. Resolves ticket 19071.
+      Patch by teor.
