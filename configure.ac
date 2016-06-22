@@ -72,14 +72,6 @@ fi
 
 AM_CONDITIONAL(USE_OPENBSD_MALLOC, test "x$enable_openbsd_malloc" = "xyes")
 
-AC_ARG_ENABLE(transparent,
-     AS_HELP_STRING(--disable-transparent, [disable transparent proxy support]),
-     [case "${enableval}" in
-        "yes") transparent=true ;;
-        "no")  transparent=false ;;
-        *) AC_MSG_ERROR(bad value for --enable-transparent) ;;
-      esac], [transparent=true])
-
 AC_ARG_ENABLE(asciidoc,
      AS_HELP_STRING(--disable-asciidoc, [don't use asciidoc (disables building of manpages)]),
      [case "${enableval}" in
@@ -1140,26 +1132,24 @@ AC_CHECK_HEADERS(linux/netfilter_ipv6/ip6_tables.h,
 #include <linux/if.h>
 #endif])
 
-if test "x$transparent" = "xtrue"; then
-   transparent_ok=0
-   if test "x$net_if_found" = "x1" && test "x$net_pfvar_found" = "x1"; then
-     transparent_ok=1
-   fi
-   if test "x$linux_netfilter_ipv4" = "x1"; then
-     transparent_ok=1
-   fi
-   if test "x$linux_netfilter_ipv6_ip6_tables" = "x1"; then
-     transparent_ok=1
-   fi
-   if test "x$transparent_ok" = "x1"; then
-     AC_DEFINE(USE_TRANSPARENT, 1, "Define to enable transparent proxy support")
-     case "$host" in
-       *-*-openbsd* | *-*-bitrig*)
-         AC_DEFINE(OPENBSD, 1, "Define to handle pf on OpenBSD properly") ;;
-     esac
-   else
-     AC_MSG_NOTICE([Transparent proxy support enabled, but missing headers.])
-   fi
+transparent_ok=0
+if test "x$net_if_found" = "x1" && test "x$net_pfvar_found" = "x1"; then
+  transparent_ok=1
+fi
+if test "x$linux_netfilter_ipv4" = "x1"; then
+  transparent_ok=1
+fi
+if test "x$linux_netfilter_ipv6_ip6_tables" = "x1"; then
+  transparent_ok=1
+fi
+if test "x$transparent_ok" = "x1"; then
+  AC_DEFINE(USE_TRANSPARENT, 1, "Define to enable transparent proxy support")
+  case "$host" in
+    *-*-openbsd* | *-*-bitrig*)
+      AC_DEFINE(OPENBSD, 1, "Define to handle pf on OpenBSD properly") ;;
+  esac
+else
+  AC_MSG_NOTICE([Transparent proxy support enabled, but missing headers.])
 fi
 
 AC_CHECK_MEMBERS([struct timeval.tv_sec], , ,
