@@ -164,9 +164,11 @@ URL: https:onionoo.torproject.orguptime?first_seen_days=7-&flag=V2Dir&type=relay
 " weight=10",
 "192.34.63.137:9030 orport=443 id=ABCB4965F1FEE193602B50A365425105C889D3F8"
 " weight=10",
+/* Fallback was on 0.2.8.2-alpha list, but had low uptime before 0.2.8.5
 "195.154.164.243:80 orport=443 id=AC66FFA4AB35A59EBBF5BF4C70008BF24D8A7A5C"
 " ipv6=[2001:bc8:399f:f000::1]:993"
 " weight=10",
+*/
 "86.59.119.88:80 orport=443 id=ACD889D86E02EDDAB1AFD81F598C0936238DC6D0"
 " weight=10",
 "163.172.131.88:80 orport=443 id=AD253B49E303C6AB1E048B014392AC569E8A7DAE"
@@ -214,8 +216,10 @@ URL: https:onionoo.torproject.orguptime?first_seen_days=7-&flag=V2Dir&type=relay
 " weight=10",
 "37.187.115.157:9030 orport=9001 id=D5039E1EBFD96D9A3F9846BF99EC9F75EDDE902A"
 " weight=10",
+/* Fallback was on 0.2.8.2-alpha list, but lost Guard flag before 0.2.8.5
 "185.14.185.240:9030 orport=443 id=D62FB817B0288085FAC38A6DC8B36DCD85B70260"
 " weight=10",
+*/
 "37.221.162.226:9030 orport=9001 id=D64366987CB39F61AD21DBCF8142FA0577B92811"
 " weight=10",
 "193.35.52.53:9030 orport=9001 id=DAA39FC00B196B353C2A271459C305C429AF09E4"
