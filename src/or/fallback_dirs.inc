@@ -136,8 +136,10 @@ URL: https:onionoo.torproject.orguptime?first_seen_days=7-&flag=V2Dir&type=relay
 */
 "93.180.156.84:9030 orport=9001 id=8844D87E9B038BE3270938F05AF797E1D3C74C0F"
 " weight=10",
+/* Fallback was on 0.2.8.2-alpha list, but DirPort changed before 0.2.8.5
 "178.217.184.32:9030 orport=443 id=8B7F47AE1A5D954A3E58ACDE0865D09DBA5B738D"
 " weight=10",
+*/
 "151.80.42.103:9030 orport=9001 id=9007C1D8E4F03D506A4A011B907A9E8D04E3C605"
 " ipv6=[2001:41d0:e:f67::114]:9001"
 " weight=10",
