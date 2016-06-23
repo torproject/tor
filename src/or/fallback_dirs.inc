@@ -1,3 +1,4 @@
+/* To comment-out entries in this file, use C comments, and add * to the start of each line. (stem finds fallback entries using " at the start of a line.) */
 /* Whitelist & blacklist excluded 1273 of 1553 candidates. */
 /* Checked IPv4 DirPorts served a consensus within 15.0s. */
 /*
@@ -41,9 +42,9 @@ URL: https:onionoo.torproject.orguptime?first_seen_days=7-&flag=V2Dir&type=relay
 "185.61.138.18:8080 orport=4443 id=2541759BEC04D37811C2209A88E863320271EC9C"
 " weight=10",
 /* Fallback was on 0.2.8.2-alpha list, but went down before 0.2.8.5
-"51.254.215.121:80 orport=443 id=262B66AD25C79588AD1FC8ED0E966395B47E5C1D"
-" weight=10",
-*/
+ * "51.254.215.121:80 orport=443 id=262B66AD25C79588AD1FC8ED0E966395B47E5C1D"
+ * " weight=10",
+ */
 "194.150.168.79:11112 orport=11111 id=29F1020B94BE25E6BE1AD13E93CE19D2131B487C"
 " weight=10",
 "144.76.26.175:9012 orport=9011 id=2BA2C8E96B2590E1072AECE2BDB5C48921BF8510"
@@ -93,9 +94,9 @@ URL: https:onionoo.torproject.orguptime?first_seen_days=7-&flag=V2Dir&type=relay
 "78.142.142.246:80 orport=443 id=5A5E03355C1908EBF424CAF1F3ED70782C0D2F74"
 " weight=10",
 /* Fallback was on 0.2.8.2-alpha list, but went down before 0.2.8.5
-"185.100.85.138:80 orport=46356 id=5C4DF16A0029CC4F67D3E127356E68F219269859"
-" weight=10",
-*/
+ * "185.100.85.138:80 orport=46356 id=5C4DF16A0029CC4F67D3E127356E68F219269859"
+ * " weight=10",
+ */
 "178.16.208.62:80 orport=443 id=5CF8AFA5E4B0BB88942A44A3F3AAE08C3BDFD60B"
 " ipv6=[2a00:1c20:4089:1234:a6a4:2926:d0af:dfee]:443"
 " weight=10",
@@ -125,21 +126,21 @@ URL: https:onionoo.torproject.orguptime?first_seen_days=7-&flag=V2Dir&type=relay
 "192.87.28.82:9030 orport=9001 id=844AE9CAD04325E955E2BE1521563B79FE7094B7"
 " weight=10",
 /* Fallback was on 0.2.8.2-alpha list, but changed address before 0.2.8.5
-"84.219.173.60:9030 orport=443 id=855BC2DABE24C861CD887DB9B2E950424B49FC34"
-" weight=10",
-*/
+ * "84.219.173.60:9030 orport=443 id=855BC2DABE24C861CD887DB9B2E950424B49FC34"
+ * " weight=10",
+ */
 "163.172.138.22:80 orport=443 id=8664DC892540F3C789DB37008236C096C871734D"
 " weight=10",
 /* Fallback was on 0.2.8.2-alpha list, but downloads were slow before 0.2.8.5
-"185.96.88.29:80 orport=443 id=86C281AD135058238D7A337D546C902BE8505DDE"
-" weight=10",
-*/
+ * "185.96.88.29:80 orport=443 id=86C281AD135058238D7A337D546C902BE8505DDE"
+ * " weight=10",
+ */
 "93.180.156.84:9030 orport=9001 id=8844D87E9B038BE3270938F05AF797E1D3C74C0F"
 " weight=10",
 /* Fallback was on 0.2.8.2-alpha list, but DirPort changed before 0.2.8.5
-"178.217.184.32:9030 orport=443 id=8B7F47AE1A5D954A3E58ACDE0865D09DBA5B738D"
-" weight=10",
-*/
+ * "178.217.184.32:9030 orport=443 id=8B7F47AE1A5D954A3E58ACDE0865D09DBA5B738D"
+ * " weight=10",
+ */
 "151.80.42.103:9030 orport=9001 id=9007C1D8E4F03D506A4A011B907A9E8D04E3C605"
 " ipv6=[2001:41d0:e:f67::114]:9001"
 " weight=10",
@@ -151,10 +152,10 @@ URL: https:onionoo.torproject.orguptime?first_seen_days=7-&flag=V2Dir&type=relay
 "91.219.237.244:80 orport=443 id=92ECC9E0E2AF81BB954719B189AC362E254AD4A5"
 " weight=10",
 /* Fallback was on 0.2.8.2-alpha list, but changed fingerprint before 0.2.8.5
-"46.101.102.71:80 orport=443 id=9504CB22EEB25D344DE63CB7A6F2C46F895C3686"
-" ipv6=[2a03:b0c0:3:d0::2ed:7001]:9050"
-" weight=10",
-*/
+ * "46.101.102.71:80 orport=443 id=9504CB22EEB25D344DE63CB7A6F2C46F895C3686"
+ * " ipv6=[2a03:b0c0:3:d0::2ed:7001]:9050"
+ * " weight=10",
+ */
 "85.214.206.219:9030 orport=9001 id=98F8D5F359949E41DE8DF3DBB1975A86E96A84A0"
 " weight=10",
 "81.7.10.93:31336 orport=31337 id=99E246DB480B313A3012BC3363093CC26CD209C7"
@@ -171,10 +172,10 @@ URL: https:onionoo.torproject.orguptime?first_seen_days=7-&flag=V2Dir&type=relay
 "192.34.63.137:9030 orport=443 id=ABCB4965F1FEE193602B50A365425105C889D3F8"
 " weight=10",
 /* Fallback was on 0.2.8.2-alpha list, but had low uptime before 0.2.8.5
-"195.154.164.243:80 orport=443 id=AC66FFA4AB35A59EBBF5BF4C70008BF24D8A7A5C"
-" ipv6=[2001:bc8:399f:f000::1]:993"
-" weight=10",
-*/
+ * "195.154.164.243:80 orport=443 id=AC66FFA4AB35A59EBBF5BF4C70008BF24D8A7A5C"
+ * " ipv6=[2001:bc8:399f:f000::1]:993"
+ * " weight=10",
+ */
 "86.59.119.88:80 orport=443 id=ACD889D86E02EDDAB1AFD81F598C0936238DC6D0"
 " weight=10",
 "163.172.131.88:80 orport=443 id=AD253B49E303C6AB1E048B014392AC569E8A7DAE"
@@ -192,9 +193,9 @@ URL: https:onionoo.torproject.orguptime?first_seen_days=7-&flag=V2Dir&type=relay
 "193.11.114.46:9032 orport=9003 id=B83DC1558F0D34353BB992EF93AFEAFDB226A73E"
 " weight=10",
 /* Fallback was on 0.2.8.2-alpha list, but downloads were slow before 0.2.8.5
-"178.62.36.64:9030 orport=9001 id=B87C84E38DAECFFFFDE98E5AEE5786AFDC748F2C"
-" weight=10",
-*/
+ * "178.62.36.64:9030 orport=9001 id=B87C84E38DAECFFFFDE98E5AEE5786AFDC748F2C"
+ * " weight=10",
+ */
 "197.231.221.211:9030 orport=9001 id=BC630CBBB518BE7E9F4E09712AB0269E9DC7D626"
 " weight=10",
 "198.96.155.3:8080 orport=5001 id=BCEDF6C193AA687AE471B8A22EBF6BC57C2D285E"
@@ -214,10 +215,10 @@ URL: https:onionoo.torproject.orguptime?first_seen_days=7-&flag=V2Dir&type=relay
 " ipv6=[2a03:b0c0:2:d0::b7:5001]:443"
 " weight=10",
 /* Fallback was on 0.2.8.2-alpha list, but went down before 0.2.8.5
-"81.7.17.171:80 orport=443 id=CFECDDCA990E3EF7B7EC958B22441386B6B8D820"
-" ipv6=[2a02:180:1:1::517:11ab]:443"
-" weight=10",
-*/
+ * "81.7.17.171:80 orport=443 id=CFECDDCA990E3EF7B7EC958B22441386B6B8D820"
+ * " ipv6=[2a02:180:1:1::517:11ab]:443"
+ * " weight=10",
+ */
 "134.119.3.164:9030 orport=9001 id=D1B8AAA98C65F3DF7D8BB3AF881CAEB84A33D8EE"
 " weight=10",
 "185.13.38.75:9030 orport=9001 id=D2A1703758A0FBBA026988B92C2F88BAB59F9361"
@@ -225,9 +226,9 @@ URL: https:onionoo.torproject.orguptime?first_seen_days=7-&flag=V2Dir&type=relay
 "37.187.115.157:9030 orport=9001 id=D5039E1EBFD96D9A3F9846BF99EC9F75EDDE902A"
 " weight=10",
 /* Fallback was on 0.2.8.2-alpha list, but lost Guard flag before 0.2.8.5
-"185.14.185.240:9030 orport=443 id=D62FB817B0288085FAC38A6DC8B36DCD85B70260"
-" weight=10",
-*/
+ * "185.14.185.240:9030 orport=443 id=D62FB817B0288085FAC38A6DC8B36DCD85B70260"
+ * " weight=10",
+ */
 "37.221.162.226:9030 orport=9001 id=D64366987CB39F61AD21DBCF8142FA0577B92811"
 " weight=10",
 "193.35.52.53:9030 orport=9001 id=DAA39FC00B196B353C2A271459C305C429AF09E4"
