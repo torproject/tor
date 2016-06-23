@@ -1,0 +1,3 @@
+  o Bugfixes (downloading):
+    - Use random exponential backoffs when retrying downloads from the dir
+      servers. Fixes bug 15942; bugfix on ?????.
