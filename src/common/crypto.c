@@ -145,7 +145,7 @@ struct crypto_dh_t {
 };
 
 static int setup_openssl_threading(void);
-static int tor_check_dh_key(int severity, BIGNUM *bn);
+static int tor_check_dh_key(int severity, const BIGNUM *bn);
 
 /** Return the number of bytes added by padding method <b>padding</b>.
  */
@@ -466,7 +466,7 @@ crypto_pk_private_ok(const crypto_pk_t *k)
   if (!k || !k->key)
     return 0;
 
-  BIGNUM *p, *q;
+  const BIGNUM *p, *q;
   RSA_get0_factors(k->key, &p, &q);
   return p != NULL; /* XXX/yawning: Should we check q? */
 #else
@@ -890,10 +890,10 @@ crypto_pk_public_exponent_ok(crypto_pk_t *env)
   tor_assert(env);
   tor_assert(env->key);
 
-  BIGNUM *e;
+  const BIGNUM *e;
 
 #ifdef OPENSSL_1_1_API
-  BIGNUM *n, *d;
+  const BIGNUM *n, *d;
   RSA_get0_key(env->key, &n, &e, &d);
 #else
   e = env->key->e;
@@ -919,11 +919,11 @@ crypto_pk_cmp_keys(const crypto_pk_t *a, const crypto_pk_t *b)
   if (an_argument_is_null)
     return result;
 
-  BIGNUM *a_n, *a_e;
-  BIGNUM *b_n, *b_e;
+  const BIGNUM *a_n, *a_e;
+  const BIGNUM *b_n, *b_e;
 
 #ifdef OPENSSL_1_1_API
-  BIGNUM *a_d, *b_d;
+  const BIGNUM *a_d, *b_d;
   RSA_get0_key(a->key, &a_n, &a_e, &a_d);
   RSA_get0_key(b->key, &b_n, &b_e, &b_d);
 #else
@@ -975,7 +975,7 @@ crypto_pk_num_bits(crypto_pk_t *env)
   /* It's so stupid that there's no other way to check that n is valid
    * before calling RSA_bits().
    */
-  BIGNUM *n, *e, *d;
+  const BIGNUM *n, *e, *d;
   RSA_get0_key(env->key, &n, &e, &d);
   tor_assert(n != NULL);
 
@@ -2420,7 +2420,7 @@ crypto_dh_generate_public(crypto_dh_t *dh)
    * recreating the DH object.  I have no idea what sort of aliasing madness
    * can occur here, so do the check, and just bail on failure.
    */
-  BIGNUM *pub_key, *priv_key;
+  const BIGNUM *pub_key, *priv_key;
   DH_get0_key(dh->dh, &pub_key, &priv_key);
   if (tor_check_dh_key(LOG_WARN, pub_key)<0) {
     log_warn(LD_CRYPTO, "Weird! Our own DH key was invalid.  I guess once-in-"
@@ -2451,10 +2451,10 @@ crypto_dh_get_public(crypto_dh_t *dh, char *pubkey, size_t pubkey_len)
   int bytes;
   tor_assert(dh);
 
-  BIGNUM *dh_pub;
+  const BIGNUM *dh_pub;
 
 #ifdef OPENSSL_1_1_API
-  BIGNUM *dh_priv;
+  const BIGNUM *dh_priv;
   DH_get0_key(dh->dh, &dh_pub, &dh_priv);
 #else
   dh_pub = dh->dh->pub_key;
@@ -2493,7 +2493,7 @@ crypto_dh_get_public(crypto_dh_t *dh, char *pubkey, size_t pubkey_len)
  * See http://www.cl.cam.ac.uk/ftp/users/rja14/psandqs.ps.gz for some tips.
  */
 static int
-tor_check_dh_key(int severity, BIGNUM *bn)
+tor_check_dh_key(int severity, const BIGNUM *bn)
 {
   BIGNUM *x;
   char *s;
