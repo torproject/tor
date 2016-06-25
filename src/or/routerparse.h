@@ -92,6 +92,7 @@ STATIC int routerstatus_parse_guardfraction(const char *guardfraction_str,
                                             networkstatus_t *vote,
                                             vote_routerstatus_t *vote_rs,
                                             routerstatus_t *rs);
+STATIC void dump_desc(const char *desc, const char *type);
 #endif
 
 #define ED_DESC_SIGNATURE_PREFIX "Tor router descriptor signature v1"

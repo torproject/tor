@@ -309,6 +309,8 @@ const char *stream_status_to_string(enum stream_status stream_status);
 
 enum stream_status get_string_from_pipe(FILE *stream, char *buf, size_t count);
 
+MOCK_DECL(int,tor_unlink,(const char *pathname));
+
 /** Return values from file_status(); see that function's documentation
  * for details. */
 typedef enum { FN_ERROR, FN_NOENT, FN_FILE, FN_DIR, FN_EMPTY } file_status_t;
@@ -338,7 +340,8 @@ FILE *start_writing_to_stdio_file(const char *fname, int open_flags, int mode,
 FILE *fdopen_file(open_file_t *file_data);
 int finish_writing_to_file(open_file_t *file_data);
 int abort_writing_to_file(open_file_t *file_data);
-int write_str_to_file(const char *fname, const char *str, int bin);
+MOCK_DECL(int,
+write_str_to_file,(const char *fname, const char *str, int bin));
 MOCK_DECL(int,
 write_bytes_to_file,(const char *fname, const char *str, size_t len,
                      int bin));

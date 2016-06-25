@@ -2013,6 +2013,16 @@ clean_name_for_stat(char *name)
 #endif
 }
 
+/** Wrapper for unlink() to make it mockable for the test suite; returns 0
+ * if unlinking the file succeeded, -1 and sets errno if unlinking fails.
+ */
+
+MOCK_IMPL(int,
+tor_unlink,(const char *pathname))
+{
+  return unlink(pathname);
+}
+
 /** Return:
  * FN_ERROR if filename can't be read, is NULL, or is zero-length,
  * FN_NOENT if it doesn't exist,
@@ -2306,8 +2316,8 @@ check_private_dir(const char *dirname, cpd_check_t check,
  * function, and all other functions in util.c that create files, create them
  * with mode 0600.
  */
-int
-write_str_to_file(const char *fname, const char *str, int bin)
+MOCK_IMPL(int,
+write_str_to_file,(const char *fname, const char *str, int bin))
 {
 #ifdef _WIN32
   if (!bin && strchr(str, '\r')) {

@@ -646,7 +646,7 @@ dump_desc_fifo_add_and_clean(char *filename, const uint8_t *digest_sha256,
      */
     if (strcmp(tmp->filename, filename) != 0) {
       /* Delete it and adjust the length counter */
-      unlink(tmp->filename);
+      tor_unlink(tmp->filename);
       tor_assert(len_descs_dumped >= tmp->len);
       len_descs_dumped -= tmp->len;
       log_info(LD_DIR,
@@ -736,7 +736,7 @@ dump_desc_fifo_cleanup(void)
  * type *<b>type</b> to file $DATADIR/unparseable-desc. Do not write more
  * than one descriptor to disk per minute. If there is already such a
  * file in the data directory, overwrite it. */
-static void
+STATIC void
 dump_desc(const char *desc, const char *type)
 {
   tor_assert(desc);
