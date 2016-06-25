@@ -119,8 +119,10 @@ COMMAND-LINE OPTIONS
    user actually running the Tor daemon on your system.
 
 **--passphrase-fd** __FILEDES__::
-    Filedescriptor to read the passphrase from. Ends at the first NUL or
-    newline. Default: read from the terminal.
+    Filedescriptor to read the passphrase from.  Note that unlike with the
+    tor-gencert program, the entire file contents are read and used as
+    the passphrase, including any trailing newlines.
+    Default: read from the terminal.
 
 
 Other options can be specified on the command-line in the format "--option
