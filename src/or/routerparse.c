@@ -585,27 +585,39 @@ static int check_signature_token(const char *digest,
 #define DUMP_AREA(a,name) STMT_NIL
 #endif
 
-/** Last time we dumped a descriptor to disk. */
-static time_t last_desc_dumped = 0;
+/* Dump mechanism for unparseable descriptors */
+
 /** List of dumped descriptors for FIFO cleanup purposes */
 static smartlist_t *descs_dumped = NULL;
 /** Total size of dumped descriptors for FIFO cleanup */
 static size_t len_descs_dumped = 0;
 
+/*
+ * One entry in the list of dumped descriptors; filename dumped to, length
+ * and SHA-256.
+ */
+
 typedef struct {
   char *filename;
   size_t len;
-  time_t timestamp;
+  uint8_t digest_sha256[DIGEST256_LEN];
 } dumped_desc_t;
 
 /** Dump desc FIFO/cleanup; take ownership of the given filename, add it to
  * the FIFO, and clean up the oldest entries to the extent they exceed the
- * configured cap. */
+ * configured cap.  If any old entries with a matching hash existed, they
+ * just got overwritten right before this was called and we should adjust
+ * the total size counter without deleting them.
+ */
 static void
-dump_desc_fifo_add_and_clean(char *filename, size_t len, time_t now)
+dump_desc_fifo_add_and_clean(char *filename, const uint8_t *digest_sha256,
+                             size_t len)
 {
   dumped_desc_t *ent = NULL, *tmp;
   size_t max_len;
+
+  tor_assert(filename != NULL);
+  tor_assert(digest_sha256 != NULL);
 
   if (descs_dumped == NULL) {
     /* We better have no length, then */
@@ -618,48 +630,87 @@ dump_desc_fifo_add_and_clean(char *filename, size_t len, time_t now)
   ent = tor_malloc_zero(sizeof(*ent));
   ent->filename = filename;
   ent->len = len;
-  ent->timestamp = now;
+  memcpy(ent->digest_sha256, digest_sha256, DIGEST256_LEN);
 
   /* Do we need to do some cleanup? */
-  if (get_options()->DetailedLogForUnparseableDescriptors > 0) {
-    max_len = get_options()->DetailedLogForUnparseableDescriptors;
-    /* Iterate over the list until we've freed enough space */
-    while (len_descs_dumped + len > max_len &&
-           smartlist_len(descs_dumped) > 0) {
-      /* Get the oldest thing on the list */
-      tmp = (dumped_desc_t *)(smartlist_get(descs_dumped, 0));
+  max_len = get_options()->MaxUnparseableDescSizeToLog;
+  /* Iterate over the list until we've freed enough space */
+  while (len_descs_dumped + len > max_len &&
+         smartlist_len(descs_dumped) > 0) {
+    /* Get the oldest thing on the list */
+    tmp = (dumped_desc_t *)(smartlist_get(descs_dumped, 0));
+
+    /*
+     * Check if it matches the filename we just added, so we don't delete
+     * something we just emitted if we get repeated identical descriptors.
+     */
+    if (strcmp(tmp->filename, filename) != 0) {
+      /* Delete it and adjust the length counter */
+      unlink(tmp->filename);
+      tor_assert(len_descs_dumped >= tmp->len);
+      len_descs_dumped -= tmp->len;
+      log_info(LD_DIR,
+               "Deleting old unparseable descriptor dump %s due to "
+               "space limits",
+               tmp->filename);
+    } else {
       /*
-       * Check if it matches the filename we just added, so we don't
-       * delete something we just emitted if we get repeated identical
-       * descriptors.
+       * Don't delete, but do adjust the counter since we will bump it
+       * later
        */
-      if (strcmp(tmp->filename, filename) != 0) {
-        /* Delete it and adjust the length counter */
-        unlink(tmp->filename);
-        tor_assert(len_descs_dumped >= tmp->len);
-        len_descs_dumped -= tmp->len;
-        log_info(LD_DIR, "Deleting old unparseable descriptor dump %s due to "
-                "space limits", tmp->filename);
-      } else {
-        /*
-         * Don't delete, but do adjust the counter since we will bump it
-         * later
-         */
-        tor_assert(len_descs_dumped >= tmp->len);
-        len_descs_dumped -= tmp->len;
-        log_info(LD_DIR, "Replacing old descriptor dump %s with new identical"
-                 " one",  tmp->filename);
-      }
-      /* Free it and remove it from the list */
-      smartlist_del_keeporder(descs_dumped, 0);
-      tor_free(tmp->filename);
-      tor_free(tmp);
+      tor_assert(len_descs_dumped >= tmp->len);
+      len_descs_dumped -= tmp->len;
+      log_info(LD_DIR,
+               "Replacing old descriptor dump %s with new identical one",
+               tmp->filename);
     }
+
+    /* Free it and remove it from the list */
+    smartlist_del_keeporder(descs_dumped, 0);
+    tor_free(tmp->filename);
+    tor_free(tmp);
   }
 
   /* Append our entry to the end of the list and bump the counter */
   smartlist_add(descs_dumped, ent);
   len_descs_dumped += len;
+}
+
+/** Check if we already have a descriptor for this hash and move it to the
+ * head of the queue if so.  Return 1 if one existed and 0 otherwise.
+ */
+static int
+dump_desc_fifo_bump_hash(const uint8_t *digest_sha256)
+{
+  dumped_desc_t *match = NULL;
+
+  tor_assert(digest_sha256);
+
+  if (descs_dumped) {
+    /* Find a match if one exists */
+    SMARTLIST_FOREACH_BEGIN(descs_dumped, dumped_desc_t *, ent) {
+      if (ent &&
+          memcmp(ent->digest_sha256, digest_sha256, DIGEST256_LEN) == 0) {
+        /*
+         * Save a pointer to the match and remove it from its current
+         * position.
+         */
+        match = ent;
+        SMARTLIST_DEL_CURRENT_KEEPORDER(descs_dumped, ent);
+        break;
+      }
+    } SMARTLIST_FOREACH_END(ent);
+
+    if (match) {
+      /* Add it back at the end of the list */
+      smartlist_add(descs_dumped, match);
+
+      /* Indicate we found one */
+      return 1;
+    }
+  }
+
+  return 0;
 }
 
 /** Clean up on exit; just memory, leave the dumps behind
@@ -688,28 +739,14 @@ dump_desc_fifo_cleanup(void)
 static void
 dump_desc(const char *desc, const char *type)
 {
-  time_t now = time(NULL);
   tor_assert(desc);
   tor_assert(type);
-  /* Are we dumping this one to a file? */
-  int dumping_this_one;
-  /*
-   * Are we including the hash in the filename and using the
-   * FIFO mechanism?
-   */
-  int dumping_by_hash;
-  /* Emit an "Unable to parse descriptor..." prefix? */
-  int emit_prefix;
   size_t len;
   /* The SHA256 of the string */
   uint8_t digest_sha256[DIGEST256_LEN];
   char digest_sha256_hex[HEX_DIGEST256_LEN+1];
   /* Filename to log it to */
   char *debugfile, *debugfile_base;
-  /* Expected length of file */
-  size_t filelen;
-  /* File content */
-  char *content;
 
   /* Get the hash for logging purposes anyway */
   len = strlen(desc);
@@ -724,76 +761,46 @@ dump_desc(const char *desc, const char *type)
   base16_encode(digest_sha256_hex, sizeof(digest_sha256_hex),
                 (const char *)digest_sha256, sizeof(digest_sha256));
 
-  if (get_options()->DetailedLogForUnparseableDescriptors > 0) {
-    /* Okay, we're logging to a fresh file named by hash for each one */
-    dumping_by_hash = 1;
-    dumping_this_one = 1;
-    /*
-     * Detailed logging mechanism will mention type and hash in the main log;
-     * don't clutter up the files with anything but the exact dump.
-     */
-    emit_prefix = 0;
-    tor_asprintf(&debugfile_base, "unparseable-desc.%s", digest_sha256_hex);
-    debugfile = get_datadir_fname(debugfile_base);
-  } else if (!last_desc_dumped || last_desc_dumped + 60 < now) {
-    /* Simple mechanism, check so we don't dump too often */
-    dumping_by_hash = 0;
-    dumping_this_one = 1;
-    emit_prefix = 1;
-    debugfile_base = tor_strdup("unparseable-desc");
-    debugfile = get_datadir_fname(debugfile_base);
-  } else {
-    /* No logging of the full descriptor this time */
-    dumping_by_hash = 0;
-    dumping_this_one = 0;
-    emit_prefix = 1;
-    debugfile_base = NULL;
-    debugfile = NULL;
-  }
+  /*
+   * We mention type and hash in the main log; don't clutter up the files
+   * with anything but the exact dump.
+   */
+  tor_asprintf(&debugfile_base, "unparseable-desc.%s", digest_sha256_hex);
+  debugfile = get_datadir_fname(debugfile_base);
 
-  if (dumping_this_one) {
-    if (emit_prefix) filelen = 50 + strlen(type) + len;
-    else filelen = len;
+  if (len <= get_options()->MaxUnparseableDescSizeToLog) {
+    if (!dump_desc_fifo_bump_hash(digest_sha256)) {
+      /* Write it, and tell the main log about it */
+      write_str_to_file(debugfile, desc, 1);
+      log_info(LD_DIR,
+               "Unable to parse descriptor of type %s with hash %s and "
+               "length %lu. See file %s in data directory for details.",
+               type, digest_sha256_hex, (unsigned long)len, debugfile_base);
 
-    /* Get content pointing at what we're writing */
-    if (emit_prefix) {
-      content = tor_malloc_zero(filelen);
-      tor_snprintf(content, filelen, "Unable to parse descriptor of type "
-                   "%s:\n%s", type, desc);
-    } else {
-      content = tor_strdup(desc);
-    }
-
-    /* Write it, and tell the main log about it */
-    write_str_to_file(debugfile, content, 1);
-    log_info(LD_DIR,
-             "Unable to parse descriptor of type %s with hash %s and length "
-             "%lu. See file %s in data directory for details.",
-             type, digest_sha256_hex, (unsigned long)len, debugfile_base);
-
-    /* Free our in-memory copy if necessary */
-    tor_free(content);
-
-    last_desc_dumped = now;
-
-    /* Give it to the FIFO and clean up as needed, if we're using one */
-    if (dumping_by_hash) {
-      dump_desc_fifo_add_and_clean(debugfile, filelen, now);
+      dump_desc_fifo_add_and_clean(debugfile, digest_sha256, len);
       /* Since we handed ownership over, don't free debugfile later */
       debugfile = NULL;
+    } else {
+      /* We already had one with this hash dumped */
+      log_info(LD_DIR,
+               "Unable to parse descriptor of type %s with hash %s and "
+               "length %lu. Descriptor not dumped because one with that hash "
+               "has already been dumped.",
+               type, digest_sha256_hex, (unsigned long)len);
+      /* We do have to free debugfile in this case */
     }
   } else {
     /* Just log that it happened without dumping */
     log_info(LD_DIR,
              "Unable to parse descriptor of type %s with hash %s and length "
-             "%lu. Descriptor not dumped since we just dumped one %u seconds "
-             "ago.",
-             type, digest_sha256_hex, (unsigned long)len,
-             (unsigned int)(now - last_desc_dumped));
+             "%lu. Descriptor not dumped because it exceeds maximum log size "
+             "all by itself.",
+             type, digest_sha256_hex, (unsigned long)len);
+    /* We do have to free debugfile in this case */
   }
 
-  if (debugfile_base != NULL) tor_free(debugfile_base);
-  if (debugfile != NULL) tor_free(debugfile);
+  tor_free(debugfile_base);
+  tor_free(debugfile);
 
  err:
   return;
