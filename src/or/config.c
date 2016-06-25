@@ -7229,10 +7229,10 @@ init_libevent(const or_options_t *options)
  *
  * Note: Consider using the get_datadir_fname* macros in or.h.
  */
-char *
-options_get_datadir_fname2_suffix(const or_options_t *options,
-                                  const char *sub1, const char *sub2,
-                                  const char *suffix)
+MOCK_IMPL(char *,
+options_get_datadir_fname2_suffix,(const or_options_t *options,
+                                   const char *sub1, const char *sub2,
+                                   const char *suffix))
 {
   char *fname = NULL;
   size_t len;
