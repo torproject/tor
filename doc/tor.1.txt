@@ -384,13 +384,6 @@ GENERAL OPTIONS
     DataDirectory. If the option is set to 1, make the DataDirectory readable
     by the default GID. (Default: 0)
 
-[[DetailedLogForUnparseableDescriptors]] **DetailedLogForUnparseableDescriptors** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**::
-    If this is not zero, log unparseable descriptors (e.g. for votes,
-    consensuses) in separate files by hash, up to the specified size in total.
-    Note that only files logged during the lifetime of this Tor process count
-    toward the total; this is intended to be used to debug problems without
-    opening live servers to resource exhaustion attacks. (Default: 0)
-
 [[FallbackDir]] **FallbackDir** __address__:__port__ orport=__port__ id=__fingerprint__ [weight=__num__] [ipv6=__address__:__orport__]::
     When we're unable to connect to any directory cache for directory info
     (usually because we don't know about any yet) we try a directory authority.
@@ -601,6 +594,13 @@ GENERAL OPTIONS
     If 1, Tor includes message domains with each log message.  Every log
     message currently has at least one domain; most currently have exactly
     one.  This doesn't affect controller log messages. (Default: 0)
+
+[[MaxUnparseableDescSizeToLog]] **MaxUnparseableDescSizeToLog** __N__ **bytes**|**KBytes**|**MBytes**|**GBytes**::
+    Unparseable descriptors (e.g. for votes, consensuses, routers) are logged
+    in separate files by hash, up to the specified size in total.  Note that
+    only files logged during the lifetime of this Tor process count toward the
+    total; this is intended to be used to debug problems without opening live
+    servers to resource exhaustion attacks. (Default: 10 MB)
 
 [[OutboundBindAddress]] **OutboundBindAddress** __IP__::
     Make all outbound connections originate from the IP address specified. This
