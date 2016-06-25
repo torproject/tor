@@ -6,8 +6,10 @@
 
 #ifdef TOR_UNIT_TESTS
 #define STATIC
+#define EXTERN(type, name) extern type name;
 #else
 #define STATIC static
+#define EXTERN(type, name)
 #endif
 
 /** Quick and dirty macros to implement test mocking.
