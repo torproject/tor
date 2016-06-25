@@ -588,9 +588,9 @@ static int check_signature_token(const char *digest,
 /* Dump mechanism for unparseable descriptors */
 
 /** List of dumped descriptors for FIFO cleanup purposes */
-static smartlist_t *descs_dumped = NULL;
+STATIC smartlist_t *descs_dumped = NULL;
 /** Total size of dumped descriptors for FIFO cleanup */
-static size_t len_descs_dumped = 0;
+STATIC size_t len_descs_dumped = 0;
 
 /*
  * One entry in the list of dumped descriptors; filename dumped to, length
@@ -715,7 +715,7 @@ dump_desc_fifo_bump_hash(const uint8_t *digest_sha256)
 
 /** Clean up on exit; just memory, leave the dumps behind
  */
-static void
+STATIC void
 dump_desc_fifo_cleanup(void)
 {
   if (descs_dumped) {

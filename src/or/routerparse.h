@@ -88,11 +88,14 @@ int rend_parse_client_keys(strmap_t *parsed_clients, const char *str);
 void routerparse_free_all(void);
 
 #ifdef ROUTERPARSE_PRIVATE
+EXTERN(size_t, len_descs_dumped);
+EXTERN(smartlist_t *, descs_dumped);
 STATIC int routerstatus_parse_guardfraction(const char *guardfraction_str,
                                             networkstatus_t *vote,
                                             vote_routerstatus_t *vote_rs,
                                             routerstatus_t *rs);
 STATIC void dump_desc(const char *desc, const char *type);
+STATIC void dump_desc_fifo_cleanup(void);
 #endif
 
 #define ED_DESC_SIGNATURE_PREFIX "Tor router descriptor signature v1"
