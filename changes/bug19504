@@ -1,0 +1,3 @@
+  o Minor bugfixes (documentation):
+    - Document the --passphrase-fd option in the tor manpage.
+      Fixes bug 19504.
