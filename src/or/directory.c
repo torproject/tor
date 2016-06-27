@@ -3839,8 +3839,7 @@ download_status_schedule_get_delay(download_status_t *dls,
              schedule != NULL);
   /* If we're using random exponential backoff, we do need min/max delay */
   tor_assert(dls->backoff != DL_SCHED_RANDOM_EXPONENTIAL ||
-             (min_delay >= 0 && max_delay >= min_delay &&
-              max_delay <= INT_MAX));
+             (min_delay >= 0 && max_delay >= min_delay));
 
   int delay = INT_MAX;
   uint8_t dls_schedule_position = (dls->increment_on
