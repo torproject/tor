@@ -3208,10 +3208,11 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       if ((rs = routerstatus_parse_entry_from_string(rs_area, &s, rs_tokens,
                                                      NULL, NULL,
                                                      ns->consensus_method,
-                                                     flav)))
+                                                     flav))) {
         /* Use exponential-backoff scheduling when downloading microdescs */
         rs->dl_status.backoff = DL_SCHED_RANDOM_EXPONENTIAL;
         smartlist_add(ns->routerstatus_list, rs);
+      }
     }
   }
   for (i = 1; i < smartlist_len(ns->routerstatus_list); ++i) {
