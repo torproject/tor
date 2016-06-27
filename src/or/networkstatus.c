@@ -1179,6 +1179,52 @@ consensus_is_waiting_for_certs(void)
     ? 1 : 0;
 }
 
+/** Look up the currently active (depending on bootstrap status) download
+ * status for this consensus flavor and return a pointer to it.
+ */
+download_status_t *
+networkstatus_get_dl_status_by_flavor(consensus_flavor_t flavor)
+{
+  download_status_t *dl = NULL;
+  const int we_are_bootstrapping =
+    networkstatus_consensus_is_bootstrapping(time(NULL));
+
+  if (flavor <= N_CONSENSUS_FLAVORS) {
+    dl = &((we_are_bootstrapping ?
+           consensus_bootstrap_dl_status : consensus_dl_status)[flavor]);
+  }
+
+  return dl;
+}
+
+/** Look up the bootstrap download status for this consensus flavor
+ * and return a pointer to it. */
+download_status_t *
+networkstatus_get_dl_status_by_flavor_bootstrap(consensus_flavor_t flavor)
+{
+  download_status_t *dl = NULL;
+
+  if (flavor <= N_CONSENSUS_FLAVORS) {
+    dl = &(consensus_bootstrap_dl_status[flavor]);
+  }
+
+  return dl;
+}
+
+/** Look up the running (non-bootstrap) download status for this consensus
+ * flavor and return a pointer to it. */
+download_status_t *
+networkstatus_get_dl_status_by_flavor_running(consensus_flavor_t flavor)
+{
+  download_status_t *dl = NULL;
+
+  if (flavor <= N_CONSENSUS_FLAVORS) {
+    dl = &(consensus_dl_status[flavor]);
+  }
+
+  return dl;
+}
+
 /** Return the most recent consensus that we have downloaded, or NULL if we
  * don't have one. */
 networkstatus_t *

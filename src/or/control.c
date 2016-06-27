@@ -190,6 +190,8 @@ static void set_cached_network_liveness(int liveness);
 
 static void flush_queued_events_cb(evutil_socket_t fd, short what, void *arg);
 
+static char * download_status_to_string(const download_status_t *dl);
+
 /** Given a control event code for a message event, return the corresponding
  * log severity. */
 static inline int
@@ -2051,6 +2053,166 @@ getinfo_helper_dir(control_connection_t *control_conn,
   return 0;
 }
 
+/** Turn a download_status_t into a human-readable description in a newly
+ * allocated string. */
+
+static char *
+download_status_to_string(const download_status_t *dl)
+{
+  char *rv = NULL, *tmp;
+  char tbuf[ISO_TIME_LEN+1];
+  const char *schedule_str, *want_authority_str;
+  const char *increment_on_str, *backoff_str;
+
+  if (dl) {
+    /* Get some substrings of the eventual output ready */
+    format_iso_time(tbuf, dl->next_attempt_at);
+
+    switch (dl->schedule) {
+      case DL_SCHED_GENERIC:
+        schedule_str = "DL_SCHED_GENERIC";
+        break;
+      case DL_SCHED_CONSENSUS:
+        schedule_str = "DL_SCHED_CONSENSUS";
+        break;
+      case DL_SCHED_BRIDGE:
+        schedule_str = "DL_SCHED_BRIDGE";
+        break;
+      default:
+        schedule_str = "unknown";
+        break;
+    }
+
+    switch (dl->want_authority) {
+      case DL_WANT_ANY_DIRSERVER:
+        want_authority_str = "DL_WANT_ANY_DIRSERVER";
+        break;
+      case DL_WANT_AUTHORITY:
+        want_authority_str = "DL_WANT_AUTHORITY";
+        break;
+      default:
+        want_authority_str = "unknown";
+        break;
+    }
+
+    switch (dl->increment_on) {
+      case DL_SCHED_INCREMENT_FAILURE:
+        increment_on_str = "DL_SCHED_INCREMENT_FAILURE";
+        break;
+      case DL_SCHED_INCREMENT_ATTEMPT:
+        increment_on_str = "DL_SCHED_INCREMENT_ATTEMPT";
+        break;
+      default:
+        increment_on_str = "unknown";
+        break;
+    }
+
+    switch (dl->backoff) {
+      case DL_SCHED_DETERMINISTIC:
+        backoff_str = "DL_SCHED_DETERMINISTIC";
+        break;
+      case DL_SCHED_RANDOM_EXPONENTIAL:
+        backoff_str = "DL_SCHED_RANDOM_EXPONENTIAL";
+        break;
+      default:
+        backoff_str = "unknown";
+        break;
+    }
+
+    /* Now assemble them */
+    tor_asprintf(&tmp,
+                 "next-attempt-at %s\n"
+                 "n-download-failures %u\n"
+                 "n-download-attempts %u\n"
+                 "schedule %s\n"
+                 "want-authority %s\n"
+                 "increment-on %s\n"
+                 "backoff %s\n",
+                 tbuf,
+                 dl->n_download_failures,
+                 dl->n_download_attempts,
+                 schedule_str,
+                 want_authority_str,
+                 increment_on_str,
+                 backoff_str);
+
+    if (dl->backoff == DL_SCHED_RANDOM_EXPONENTIAL) {
+      /* Additional fields become relevant in random-exponential mode */
+      tor_asprintf(&rv,
+                   "%s"
+                   "last-backoff-position %u\n"
+                   "last-delay-used %d\n",
+                   tmp,
+                   dl->last_backoff_position,
+                   dl->last_delay_used);
+      tor_free(tmp);
+    } else {
+      /* That was it */
+      rv = tmp;
+    }
+  }
+
+  return rv;
+}
+
+/** Implementation helper for GETINFO: knows the answers for questions about
+ * download status information. */
+static int
+getinfo_helper_downloads(control_connection_t *control_conn,
+                   const char *question, char **answer,
+                   const char **errmsg)
+{
+  const char *flavor;
+  download_status_t *dl_to_emit = NULL;
+
+  /* Assert args are sane */
+  tor_assert(control_conn != NULL);
+  tor_assert(question != NULL);
+  tor_assert(answer != NULL);
+  tor_assert(errmsg != NULL);
+
+  /* We check for this later to see if we should supply a default */
+  *errmsg = NULL;
+
+  /* Are we after networkstatus downloads? */
+  if (!strcmpstart(question, "downloads/networkstatus/")) {
+    flavor = question + strlen("downloads/networkstatus/");
+    /*
+     * We get the one for the current bootstrapped status by default, or
+     * take an extra /bootstrap or /running suffix
+     */
+    if (strcmp(flavor, "ns") == 0) {
+      dl_to_emit = networkstatus_get_dl_status_by_flavor(FLAV_NS);
+    } else if (strcmp(flavor, "ns/bootstrap") == 0) {
+      dl_to_emit = networkstatus_get_dl_status_by_flavor_bootstrap(FLAV_NS);
+    } else if (strcmp(flavor, "ns/running") == 0 ) {
+      dl_to_emit = networkstatus_get_dl_status_by_flavor_running(FLAV_NS);
+    } else if (strcmp(flavor, "microdesc") == 0) {
+      dl_to_emit = networkstatus_get_dl_status_by_flavor(FLAV_MICRODESC);
+    } else if (strcmp(flavor, "microdesc/bootstrap") == 0) {
+      dl_to_emit =
+        networkstatus_get_dl_status_by_flavor_bootstrap(FLAV_MICRODESC);
+    } else if (strcmp(flavor, "microdesc/running") == 0) {
+      dl_to_emit =
+        networkstatus_get_dl_status_by_flavor_running(FLAV_MICRODESC);
+    } else {
+      *errmsg = "Unknown flavor";
+    }
+  }
+
+  if (dl_to_emit) {
+    *answer = download_status_to_string(dl_to_emit);
+
+    return 0;
+  } else {
+    if (!(*errmsg)) {
+      *errmsg = "Unknown error";
+    }
+
+    return -1;
+  }
+}
+
 /** Allocate and return a description of <b>circ</b>'s current status,
  * including its path (if any). */
 static char *
@@ -2490,6 +2652,20 @@ static const getinfo_item_t getinfo_items[] = {
   DOC("config/defaults",
       "List of default values for configuration options. "
       "See also config/names"),
+  PREFIX("downloads/networkstatus/", downloads,
+         "Download statuses for networkstatus objects"),
+  DOC("downloads/networkstatus/ns",
+      "Download status for current-mode networkstatus download"),
+  DOC("downloads/networkstatus/ns/bootstrap",
+      "Download status for bootstrap-time networkstatus download"),
+  DOC("downloads/networkstatus/ns/running",
+      "Download status for run-time networkstatus download"),
+  DOC("downloads/networkstatus/microdesc",
+      "Download status for current-mode microdesc download"),
+  DOC("downloads/networkstatus/microdesc/bootstrap",
+      "Download status for bootstrap-time microdesc download"),
+  DOC("downloads/networkstatus/microdesc/running",
+      "Download status for run-time microdesc download"),
   ITEM("info/names", misc,
        "List of GETINFO options, types, and documentation."),
   ITEM("events/names", misc,
