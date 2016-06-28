@@ -1698,9 +1698,14 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
  * or renegotiation.  For v3 handshakes, this is right after we get a
  * certificate chain in a CERTS cell.
  *
- * If we want any particular ID before, record the one we got.
+ * If we did not know the ID before, record the one we got.
  *
- * If we wanted an ID, but we didn't get it, log a warning and return -1.
+ * If we wanted an ID, but we didn't get the one we expected, log a message
+ * and return -1.
+ * On relays:
+ *  - log a protocol warning whenever the fingerprints don't match;
+ * On clients:
+ *  - if a relay's fingerprint doesn't match, log a warning;
  *
  * If we're testing reachability, remember what we learned.
  *
@@ -1711,7 +1716,6 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
                                      const uint8_t *peer_id)
 {
   const or_options_t *options = get_options();
-  int severity = server_mode(options) ? LOG_PROTOCOL_WARN : LOG_WARN;
 
   if (tor_digest_is_zero(conn->identity_digest)) {
     connection_or_set_identity_digest(conn, (const char*)peer_id);
@@ -1736,6 +1740,15 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
     base16_encode(seen, sizeof(seen), (const char*)peer_id, DIGEST_LEN);
     base16_encode(expected, sizeof(expected), conn->identity_digest,
                   DIGEST_LEN);
+    int severity;
+
+    if (server_mode(options)) {
+      severity = LOG_PROTOCOL_WARN;
+    } else {
+      /* a relay has changed its fingerprint from the one in the consensus */
+      severity = LOG_WARN;
+    }
+
     log_fn(severity, LD_HANDSHAKE,
            "Tried connecting to router at %s:%d, but identity key was not "
            "as expected: wanted %s but got %s.",
