@@ -5,6 +5,9 @@
   o Minor features (fallback directory list):
     - Update hard-coded fallback list to remove unsuitable fallbacks.
       Resolves ticket 19071. Patch by teor.
+    - Add a comment to the generated list that explains how to comment-out
+      unsuitable fallbacks in a way that's compatible with the stem fallback
+      parser.
     - Update fallback whitelist and blacklist based on relay operator
       emails. Blacklist unsuitable fallbacks. Resolves ticket 19071.
       Patch by teor.

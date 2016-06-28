@@ -1828,20 +1828,25 @@ class CandidateList(dict):
 
   def summarise_fallbacks(self, eligible_count, operator_count, failed_count,
                           guard_count, target_count):
+    s = ''
+    s += '/* To comment-out entries in this file, use C comments, and add *'
+    s += ' to the start of each line. (stem finds fallback entries using "'
+    s += ' at the start of a line.) */'
+    s += '\n'
     # Report:
     #  whether we checked consensus download times
     #  the number of fallback directories (and limits/exclusions, if relevant)
     #  min & max fallback bandwidths
     #  #error if below minimum count
     if PERFORM_IPV4_DIRPORT_CHECKS or PERFORM_IPV6_DIRPORT_CHECKS:
-      s = '/* Checked %s%s%s DirPorts served a consensus within %.1fs. */'%(
+      s += '/* Checked %s%s%s DirPorts served a consensus within %.1fs. */'%(
             'IPv4' if PERFORM_IPV4_DIRPORT_CHECKS else '',
             ' and ' if (PERFORM_IPV4_DIRPORT_CHECKS
                         and PERFORM_IPV6_DIRPORT_CHECKS) else '',
             'IPv6' if PERFORM_IPV6_DIRPORT_CHECKS else '',
             CONSENSUS_DOWNLOAD_SPEED_MAX)
     else:
-      s = '/* Did not check IPv4 or IPv6 DirPort consensus downloads. */'
+      s += '/* Did not check IPv4 or IPv6 DirPort consensus downloads. */'
     s += '\n'
     # Multiline C comment with #error if things go bad
     s += '/*'
