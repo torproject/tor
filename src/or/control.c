@@ -2307,6 +2307,52 @@ getinfo_helper_downloads_cert(const char *fp_sk_req,
   }
 }
 
+/** Handle the routerdesc download cases for getinfo_helper_downloads() */
+static void
+getinfo_helper_downloads_desc(const char *desc_req,
+                              download_status_t **dl_to_emit,
+                              smartlist_t **digest_list,
+                              const char **errmsg)
+{
+  char desc_digest[DIGEST_LEN];
+  /*
+   * Two cases to handle here:
+   *
+   * Case 1: desc_req = "descs"
+   *   - Emit a list of all router descriptor digests, which we get by
+   *     calling router_get_descriptor_digests(); this can return NULL
+   *     if we have no current ns-flavor consensus.
+   *
+   * Case 2: desc_req = <fp>
+   *   - Check on the specified fingerprint and emit its download_status_t
+   *     using router_get_dl_status_by_descriptor_digest().
+   */
+
+  if (strcmp(desc_req, "descs") == 0) {
+    *digest_list = router_get_descriptor_digests();
+    if (!(*digest_list)) {
+      *errmsg = "We don't seem to have a networkstatus-flavored consensus";
+    }
+    /*
+     * Microdescs don't use the download_status_t mechanism, so we don't
+     * answer queries about their downloads here; see microdesc.c.
+     */
+  } else if (strlen(desc_req) == HEX_DIGEST_LEN) {
+    if (base16_decode(desc_digest, DIGEST_LEN,
+                      desc_req, strlen(desc_req)) == DIGEST_LEN) {
+      /* Okay we got a digest-shaped thing; try asking for it */
+      *dl_to_emit = router_get_dl_status_by_descriptor_digest(desc_digest);
+      if (!(*dl_to_emit)) {
+        *errmsg = "No such descriptor digest found";
+      }
+    } else {
+      *errmsg = "That didn't look like a digest";
+    }
+  } else {
+    *errmsg = "Unknown router descriptor download status query";
+  }
+}
+
 /** Implementation helper for GETINFO: knows the answers for questions about
  * download status information. */
 static int
@@ -2334,6 +2380,10 @@ getinfo_helper_downloads(control_connection_t *control_conn,
   } else if (!strcmpstart(question, "downloads/cert/")) {
     getinfo_helper_downloads_cert(
         question + strlen("downloads/cert/"),
+        &dl_to_emit, &digest_list, errmsg);
+  } else if (!strcmpstart(question, "downloads/desc/")) {
+    getinfo_helper_downloads_desc(
+        question + strlen("downloads/desc/"),
         &dl_to_emit, &digest_list, errmsg);
   } else {
     *errmsg = "Unknown download status query";
@@ -2826,6 +2876,12 @@ static const getinfo_item_t getinfo_items[] = {
   DOC("downloads/cert/fp/<fp>/<sk>",
       "Download status for <fp> with signing key <sk>; corresponds "
       "to /fp-sk/ URLs on directory server."),
+  PREFIX("downloads/desc/", downloads,
+         "Download statuses for router descriptors, by descriptor digest"),
+  DOC("downloads/desc/descs",
+      "Return a list of known router descriptor digests"),
+  DOC("downloads/desc/<desc>",
+      "Return a download status for a given descriptor digest"),
   ITEM("info/names", misc,
        "List of GETINFO options, types, and documentation."),
   ITEM("events/names", misc,

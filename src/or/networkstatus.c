@@ -659,6 +659,43 @@ router_get_consensus_status_by_descriptor_digest(networkstatus_t *consensus,
                                                           consensus, digest);
 }
 
+/** Return a smartlist of all router descriptor digests in a consensus */
+static smartlist_t *
+router_get_descriptor_digests_in_consensus(networkstatus_t *consensus)
+{
+  smartlist_t *result = smartlist_new();
+  digestmap_iter_t *i;
+  const char *digest;
+  void *rs;
+  char *digest_tmp;
+
+  for (i = digestmap_iter_init(consensus->desc_digest_map);
+       !(digestmap_iter_done(i));
+       i = digestmap_iter_next(consensus->desc_digest_map, i)) {
+    digestmap_iter_get(i, &digest, &rs);
+    digest_tmp = tor_malloc(DIGEST_LEN);
+    memcpy(digest_tmp, digest, DIGEST_LEN);
+    smartlist_add(result, digest_tmp);
+  }
+
+  return result;
+}
+
+/** Return a smartlist of all router descriptor digests in the current
+ * consensus */
+smartlist_t *
+router_get_descriptor_digests(void)
+{
+  smartlist_t *result = NULL;
+
+  if (current_ns_consensus) {
+    result =
+      router_get_descriptor_digests_in_consensus(current_ns_consensus);
+  }
+
+  return result;
+}
+
 /** Given the digest of a router descriptor, return its current download
  * status, or NULL if the digest is unrecognized. */
 MOCK_IMPL(download_status_t *,
