@@ -1,0 +1,4 @@
+  o Minor bugfixes (bootstrap):
+    - When a fallback changes its fingerprint from the hard-coded
+      fingerprint, log a less severe, more explanatory log message.
+      Fixes bug 18812; bugfix on 0.2.8.1-alpha. Patch by teor.
