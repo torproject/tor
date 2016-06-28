@@ -38,14 +38,17 @@ routerstatus_t *networkstatus_vote_find_mutable_entry(networkstatus_t *ns,
 int networkstatus_vote_find_entry_idx(networkstatus_t *ns,
                                       const char *digest, int *found_out);
 
-download_status_t * networkstatus_get_dl_status_by_flavor(
-                                            consensus_flavor_t flavor);
-download_status_t * networkstatus_get_dl_status_by_flavor_bootstrap(
-                                            consensus_flavor_t flavor);
-download_status_t * networkstatus_get_dl_status_by_flavor_running(
-                                            consensus_flavor_t flavor);
+MOCK_DECL(download_status_t *,
+  networkstatus_get_dl_status_by_flavor,
+  (consensus_flavor_t flavor));
+MOCK_DECL(download_status_t *,
+  networkstatus_get_dl_status_by_flavor_bootstrap,
+  (consensus_flavor_t flavor));
+MOCK_DECL(download_status_t *,
+  networkstatus_get_dl_status_by_flavor_running,
+  (consensus_flavor_t flavor));
 
-smartlist_t * router_get_descriptor_digests(void);
+MOCK_DECL(smartlist_t *, router_get_descriptor_digests, (void));
 MOCK_DECL(download_status_t *,router_get_dl_status_by_descriptor_digest,
           (const char *d));
 

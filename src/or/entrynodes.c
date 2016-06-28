@@ -2425,8 +2425,8 @@ num_bridges_usable(void)
 }
 
 /** Return a smartlist containing all bridge identity digests */
-smartlist_t *
-list_bridge_identities(void)
+MOCK_IMPL(smartlist_t *,
+list_bridge_identities, (void))
 {
   smartlist_t *result = NULL;
   char *digest_tmp;
@@ -2445,8 +2445,8 @@ list_bridge_identities(void)
 }
 
 /** Get the download status for a bridge descriptor given its identity */
-download_status_t *
-get_bridge_dl_status_by_id(const char *digest)
+MOCK_IMPL(download_status_t *,
+get_bridge_dl_status_by_id, (const char *digest))
 {
   download_status_t *dl = NULL;
 

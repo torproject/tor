@@ -257,8 +257,8 @@ get_cert_list(const char *id_digest)
  * of download_status_t objects; used by controller GETINFO queries.
  */
 
-smartlist_t *
-list_authority_ids_with_downloads(void)
+MOCK_IMPL(smartlist_t *,
+list_authority_ids_with_downloads, (void))
 {
   smartlist_t *ids = smartlist_new();
   digestmap_iter_t *i;
@@ -288,8 +288,8 @@ list_authority_ids_with_downloads(void)
 /** Given an authority ID digest, return a pointer to the default download
  * status, or NULL if there is no such entry in trusted_dir_certs */
 
-download_status_t *
-id_only_download_status_for_authority_id(const char *digest)
+MOCK_IMPL(download_status_t *,
+id_only_download_status_for_authority_id, (const char *digest))
 {
   download_status_t *dl = NULL;
   cert_list_t *cl;
@@ -308,8 +308,8 @@ id_only_download_status_for_authority_id(const char *digest)
  * for which download_status_t is potentially queryable, or NULL if no such
  * authority ID digest is known. */
 
-smartlist_t *
-list_sk_digests_for_authority_id(const char *digest)
+MOCK_IMPL(smartlist_t *,
+list_sk_digests_for_authority_id, (const char *digest))
 {
   smartlist_t *sks = NULL;
   cert_list_t *cl;
@@ -342,9 +342,9 @@ list_sk_digests_for_authority_id(const char *digest)
 /** Given an authority ID digest and a signing key digest, return the
  * download_status_t or NULL if none exists. */
 
-download_status_t *
-download_status_for_authority_id_and_sk(const char *id_digest,
-                                        const char *sk_digest)
+MOCK_IMPL(download_status_t *,
+  download_status_for_authority_id_and_sk,
+  (const char *id_digest, const char *sk_digest))
 {
   download_status_t *dl = NULL;
   cert_list_t *cl = NULL;

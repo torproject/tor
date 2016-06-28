@@ -2179,7 +2179,7 @@ download_status_to_string(const download_status_t *dl)
 }
 
 /** Handle the consensus download cases for getinfo_helper_downloads() */
-static void
+STATIC void
 getinfo_helper_downloads_networkstatus(const char *flavor,
                                        download_status_t **dl_to_emit,
                                        const char **errmsg)
@@ -2208,7 +2208,7 @@ getinfo_helper_downloads_networkstatus(const char *flavor,
 }
 
 /** Handle the cert download cases for getinfo_helper_downloads() */
-static void
+STATIC void
 getinfo_helper_downloads_cert(const char *fp_sk_req,
                               download_status_t **dl_to_emit,
                               smartlist_t **digest_list,
@@ -2308,7 +2308,7 @@ getinfo_helper_downloads_cert(const char *fp_sk_req,
 }
 
 /** Handle the routerdesc download cases for getinfo_helper_downloads() */
-static void
+STATIC void
 getinfo_helper_downloads_desc(const char *desc_req,
                               download_status_t **dl_to_emit,
                               smartlist_t **digest_list,
@@ -2354,7 +2354,7 @@ getinfo_helper_downloads_desc(const char *desc_req,
 }
 
 /** Handle the bridge download cases for getinfo_helper_downloads() */
-static void
+STATIC void
 getinfo_helper_downloads_bridge(const char *bridge_req,
                                 download_status_t **dl_to_emit,
                                 smartlist_t **digest_list,
@@ -2397,7 +2397,7 @@ getinfo_helper_downloads_bridge(const char *bridge_req,
 
 /** Implementation helper for GETINFO: knows the answers for questions about
  * download status information. */
-static int
+STATIC int
 getinfo_helper_downloads(control_connection_t *control_conn,
                    const char *question, char **answer,
                    const char **errmsg)

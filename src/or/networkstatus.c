@@ -683,8 +683,8 @@ router_get_descriptor_digests_in_consensus(networkstatus_t *consensus)
 
 /** Return a smartlist of all router descriptor digests in the current
  * consensus */
-smartlist_t *
-router_get_descriptor_digests(void)
+MOCK_IMPL(smartlist_t *,
+router_get_descriptor_digests,(void))
 {
   smartlist_t *result = NULL;
 
@@ -1219,8 +1219,8 @@ consensus_is_waiting_for_certs(void)
 /** Look up the currently active (depending on bootstrap status) download
  * status for this consensus flavor and return a pointer to it.
  */
-download_status_t *
-networkstatus_get_dl_status_by_flavor(consensus_flavor_t flavor)
+MOCK_IMPL(download_status_t *,
+networkstatus_get_dl_status_by_flavor,(consensus_flavor_t flavor))
 {
   download_status_t *dl = NULL;
   const int we_are_bootstrapping =
@@ -1236,8 +1236,8 @@ networkstatus_get_dl_status_by_flavor(consensus_flavor_t flavor)
 
 /** Look up the bootstrap download status for this consensus flavor
  * and return a pointer to it. */
-download_status_t *
-networkstatus_get_dl_status_by_flavor_bootstrap(consensus_flavor_t flavor)
+MOCK_IMPL(download_status_t *,
+networkstatus_get_dl_status_by_flavor_bootstrap,(consensus_flavor_t flavor))
 {
   download_status_t *dl = NULL;
 
@@ -1250,8 +1250,8 @@ networkstatus_get_dl_status_by_flavor_bootstrap(consensus_flavor_t flavor)
 
 /** Look up the running (non-bootstrap) download status for this consensus
  * flavor and return a pointer to it. */
-download_status_t *
-networkstatus_get_dl_status_by_flavor_running(consensus_flavor_t flavor)
+MOCK_IMPL(download_status_t *,
+networkstatus_get_dl_status_by_flavor_running,(consensus_flavor_t flavor))
 {
   download_status_t *dl = NULL;
 
