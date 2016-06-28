@@ -31,6 +31,7 @@
 #include "geoip.h"
 #include "main.h"
 #include "link_handshake.h"
+#include "microdesc.h"
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "reasons.h"
@@ -1698,9 +1699,17 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
  * or renegotiation.  For v3 handshakes, this is right after we get a
  * certificate chain in a CERTS cell.
  *
- * If we want any particular ID before, record the one we got.
+ * If we did not know the ID before, record the one we got.
  *
- * If we wanted an ID, but we didn't get it, log a warning and return -1.
+ * If we wanted an ID, but we didn't get the one we expected, log a message
+ * and return -1.
+ * On relays:
+ *  - log a protocol warning whenever the fingerprints don't match;
+ * On clients:
+ *  - if a relay's fingerprint doesn't match, log a warning;
+ *  - if we don't have updated relay fingerprints from a recent consensus, and
+ *    a fallback directory mirror's hard-coded fingerprint has changed, log an
+ *    info explaining that we will try another fallback.
  *
  * If we're testing reachability, remember what we learned.
  *
@@ -1711,7 +1720,6 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
                                      const uint8_t *peer_id)
 {
   const or_options_t *options = get_options();
-  int severity = server_mode(options) ? LOG_PROTOCOL_WARN : LOG_WARN;
 
   if (tor_digest_is_zero(conn->identity_digest)) {
     connection_or_set_identity_digest(conn, (const char*)peer_id);
@@ -1736,10 +1744,43 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
     base16_encode(seen, sizeof(seen), (const char*)peer_id, DIGEST_LEN);
     base16_encode(expected, sizeof(expected), conn->identity_digest,
                   DIGEST_LEN);
+    const int using_hardcoded_fingerprints =
+      !networkstatus_get_reasonably_live_consensus(time(NULL),
+                                                   usable_consensus_flavor());
+    const int is_fallback_fingerprint = router_digest_is_fallback_dir(
+                                                   conn->identity_digest);
+    const int is_authority_fingerprint = router_digest_is_trusted_dir(
+                                                   conn->identity_digest);
+    int severity;
+    const char *extra_log = "";
+
+    if (server_mode(options)) {
+      severity = LOG_PROTOCOL_WARN;
+    } else {
+      if (using_hardcoded_fingerprints) {
+        /* We need to do the checks in this order, because the list of
+         * fallbacks includes the list of authorities */
+        if (is_authority_fingerprint) {
+          severity = LOG_WARN;
+        } else if (is_fallback_fingerprint) {
+          /* we expect a small number of fallbacks to change from their
+           * hard-coded fingerprints over the life of a release */
+          severity = LOG_INFO;
+          extra_log = " Tor will try a different fallback.";
+        } else {
+          /* it's a bridge, it's either a misconfiguration, or unexpected */
+          severity = LOG_WARN;
+        }
+      } else {
+        /* a relay has changed its fingerprint from the one in the consensus */
+        severity = LOG_WARN;
+      }
+    }
+
     log_fn(severity, LD_HANDSHAKE,
            "Tried connecting to router at %s:%d, but identity key was not "
-           "as expected: wanted %s but got %s.",
-           conn->base_.address, conn->base_.port, expected, seen);
+           "as expected: wanted %s but got %s.%s",
+           conn->base_.address, conn->base_.port, expected, seen, extra_log);
     entry_guard_register_connect_status(conn->identity_digest, 0, 1,
                                         time(NULL));
     control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED,
