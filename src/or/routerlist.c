@@ -1463,6 +1463,7 @@ router_get_trusteddirserver_by_digest(const char *digest)
  * key hashes to <b>digest</b>, or NULL if no such fallback is in the list of
  * fallback_dir_servers. (fallback_dir_servers is affected by the FallbackDir
  * and UseDefaultFallbackDirs torrc options.)
+ * The list of fallback directories includes the list of authorities.
  */
 dir_server_t *
 router_get_fallback_dirserver_by_digest(const char *digest)
@@ -1486,6 +1487,7 @@ router_get_fallback_dirserver_by_digest(const char *digest)
  * or 0 if no such fallback is in the list of fallback_dir_servers.
  * (fallback_dir_servers is affected by the FallbackDir and
  * UseDefaultFallbackDirs torrc options.)
+ * The list of fallback directories includes the list of authorities.
  */
 int
 router_digest_is_fallback_dir(const char *digest)
