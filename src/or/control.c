@@ -2353,6 +2353,48 @@ getinfo_helper_downloads_desc(const char *desc_req,
   }
 }
 
+/** Handle the bridge download cases for getinfo_helper_downloads() */
+static void
+getinfo_helper_downloads_bridge(const char *bridge_req,
+                                download_status_t **dl_to_emit,
+                                smartlist_t **digest_list,
+                                const char **errmsg)
+{
+  char bridge_digest[DIGEST_LEN];
+  /*
+   * Two cases to handle here:
+   *
+   * Case 1: bridge_req = "bridges"
+   *   - Emit a list of all bridge identity digests, which we get by
+   *     calling list_bridge_identities(); this can return NULL if we are
+   *     not using bridges.
+   *
+   * Case 2: bridge_req = <fp>
+   *   - Check on the specified fingerprint and emit its download_status_t
+   *     using get_bridge_dl_status_by_id().
+   */
+
+  if (strcmp(bridge_req, "bridges") == 0) {
+    *digest_list = list_bridge_identities();
+    if (!(*digest_list)) {
+      *errmsg = "We don't seem to be using bridges";
+    }
+  } else if (strlen(bridge_req) == HEX_DIGEST_LEN) {
+    if (base16_decode(bridge_digest, DIGEST_LEN,
+                      bridge_req, strlen(bridge_req)) == DIGEST_LEN) {
+      /* Okay we got a digest-shaped thing; try asking for it */
+      *dl_to_emit = get_bridge_dl_status_by_id(bridge_digest);
+      if (!(*dl_to_emit)) {
+        *errmsg = "No such bridge identity digest found";
+      }
+    } else {
+      *errmsg = "That didn't look like a digest";
+    }
+  } else {
+    *errmsg = "Unknown bridge descriptor download status query";
+  }
+}
+
 /** Implementation helper for GETINFO: knows the answers for questions about
  * download status information. */
 static int
@@ -2377,13 +2419,20 @@ getinfo_helper_downloads(control_connection_t *control_conn,
     getinfo_helper_downloads_networkstatus(
         question + strlen("downloads/networkstatus/"),
         &dl_to_emit, errmsg);
+  /* Certificates? */
   } else if (!strcmpstart(question, "downloads/cert/")) {
     getinfo_helper_downloads_cert(
         question + strlen("downloads/cert/"),
         &dl_to_emit, &digest_list, errmsg);
+  /* Router descriptors? */
   } else if (!strcmpstart(question, "downloads/desc/")) {
     getinfo_helper_downloads_desc(
         question + strlen("downloads/desc/"),
+        &dl_to_emit, &digest_list, errmsg);
+  /* Bridge descriptors? */
+  } else if (!strcmpstart(question, "downloads/bridge/")) {
+    getinfo_helper_downloads_bridge(
+        question + strlen("downloads/bridge/"),
         &dl_to_emit, &digest_list, errmsg);
   } else {
     *errmsg = "Unknown download status query";
@@ -2882,6 +2931,14 @@ static const getinfo_item_t getinfo_items[] = {
       "Return a list of known router descriptor digests"),
   DOC("downloads/desc/<desc>",
       "Return a download status for a given descriptor digest"),
+  PREFIX("downloads/bridge/", downloads,
+         "Download statuses for bridge descriptors, by bridge identity "
+         "digest"),
+  DOC("downloads/bridge/bridges",
+      "Return a list of configured bridge identity digests with download "
+      "statuses"),
+  DOC("downloads/bridge/<desc>",
+      "Return a download status for a given bridge identity digest"),
   ITEM("info/names", misc,
        "List of GETINFO options, types, and documentation."),
   ITEM("events/names", misc,

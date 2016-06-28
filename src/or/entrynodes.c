@@ -2424,6 +2424,44 @@ num_bridges_usable(void)
   return n_options;
 }
 
+/** Return a smartlist containing all bridge identity digests */
+smartlist_t *
+list_bridge_identities(void)
+{
+  smartlist_t *result = NULL;
+  char *digest_tmp;
+
+  if (get_options()->UseBridges && bridge_list) {
+    result = smartlist_new();
+
+    SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, b) {
+      digest_tmp = tor_malloc(DIGEST_LEN);
+      memcpy(digest_tmp, b->identity, DIGEST_LEN);
+      smartlist_add(result, digest_tmp);
+    } SMARTLIST_FOREACH_END(b);
+  }
+
+  return result;
+}
+
+/** Get the download status for a bridge descriptor given its identity */
+download_status_t *
+get_bridge_dl_status_by_id(const char *digest)
+{
+  download_status_t *dl = NULL;
+
+  if (digest && get_options()->UseBridges && bridge_list) {
+    SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, b) {
+      if (memcmp(digest, b->identity, DIGEST_LEN) == 0) {
+        dl = &(b->fetch_status);
+        break;
+      }
+    } SMARTLIST_FOREACH_END(b);
+  }
+
+  return dl;
+}
+
 /** Return 1 if we have at least one descriptor for an entry guard
  * (bridge or member of EntryNodes) and all descriptors we know are
  * down. Else return 0. If <b>act</b> is 1, then mark the down guards
