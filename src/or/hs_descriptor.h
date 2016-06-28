@@ -22,6 +22,9 @@
 /* The latest descriptor format version we support. */
 #define HS_DESC_SUPPORTED_FORMAT_VERSION_MAX 3
 
+/* Maximum lifetime of a descriptor in seconds. The value is set at 12 hours
+ * which is 720 minutes or 43200 seconds. */
+#define HS_DESC_MAX_LIFETIME (12 * 60 * 60)
 /* Lifetime of certificate in the descriptor. This defines the lifetime of the
  * descriptor signing key and the cross certification cert of that key. */
 #define HS_DESC_CERT_LIFETIME (24 * 60 * 60)
@@ -45,6 +48,22 @@
  * triggered if we are above it. */
 /* Once padded, this is the maximum length in bytes for the plaintext. */
 #define HS_DESC_PADDED_PLAINTEXT_MAX_LEN 8192
+/* Minimum length in bytes of the encrypted portion of the descriptor. */
+#define HS_DESC_ENCRYPTED_MIN_LEN \
+  HS_DESC_ENCRYPTED_SALT_LEN + \
+  HS_DESC_PLAINTEXT_PADDING_MULTIPLE + DIGEST256_LEN
+/* Maximum length in bytes of a full hidden service descriptor. */
+#define HS_DESC_MAX_LEN 32768 // XXX justify
+/* The minimum amount of fields a descriptor should contain. The parsing of
+ * the fields are version specific so the only required field, as a generic
+ * view of a descriptor, is 1 that is the version field. */
+#define HS_DESC_PLAINTEXT_MIN_FIELDS 1
+
+/* Type of authentication in the descriptor. */
+typedef enum {
+  HS_DESC_AUTH_PASSWORD = 1,
+  HS_DESC_AUTH_ED25519  = 2,
+} hs_desc_auth_type_t;
 
 /* Type of encryption key in the descriptor. */
 typedef enum {
@@ -91,6 +110,10 @@ typedef struct hs_desc_intro_point_t {
      * Mutually exclusive with enc_key. */
     crypto_pk_t *legacy;
   } enc_key;
+
+  /* True iff the introduction point has passed the cross certification. Upon
+   * decoding an intro point, this must be true. */
+  unsigned int cross_certified : 1;
 } hs_desc_intro_point_t;
 
 /* The encrypted data section of a descriptor. Obviously the data in this is
@@ -133,6 +156,12 @@ typedef struct hs_desc_plaintext_data_t {
    * the descriptor has changed. This avoids leaking whether the descriptor
    * has changed. Spec specifies this as a 8 bytes positive integer. */
   uint64_t revision_counter;
+
+  /* Decoding only: The base64-decoded encrypted blob from the descriptor */
+  uint8_t *encrypted_blob;
+
+  /* Decoding only: Size of the encrypted_blob */
+  size_t encrypted_blob_size;
 } hs_desc_plaintext_data_t;
 
 /* Service descriptor in its decoded form. */
@@ -163,7 +192,19 @@ hs_desc_is_supported_version(uint32_t version)
 
 /* Public API. */
 
+void hs_descriptor_free(hs_descriptor_t *desc);
+void hs_desc_plaintext_data_free(hs_desc_plaintext_data_t *desc);
+void hs_desc_encrypted_data_free(hs_desc_encrypted_data_t *desc);
+
 int hs_desc_encode_descriptor(const hs_descriptor_t *desc,
                               char **encoded_out);
+
+int hs_desc_decode_descriptor(const char *encoded,
+                              const uint8_t *subcredential,
+                              hs_descriptor_t **desc_out);
+int hs_desc_decode_plaintext(const char *encoded,
+                             hs_desc_plaintext_data_t *plaintext);
+int hs_desc_decode_encrypted(const hs_descriptor_t *desc,
+                             hs_desc_encrypted_data_t *desc_out);
 
 #endif /* TOR_HS_DESCRIPTOR_H */

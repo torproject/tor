@@ -10,24 +10,125 @@
 
 #include "or.h"
 #include "ed25519_cert.h" /* Trunnel interface. */
+#include "parsecommon.h"
+#include "rendcache.h"
 
 /* Constant string value used for the descriptor format. */
-static const char *str_hs_desc = "hs-descriptor";
-static const char *str_desc_cert = "descriptor-signing-key-cert";
-static const char *str_rev_counter = "revision-counter";
-static const char *str_encrypted = "encrypted";
-static const char *str_signature = "signature";
-static const char *str_lifetime = "descriptor-lifetime";
+#define str_hs_desc "hs-descriptor"
+#define str_desc_cert "descriptor-signing-key-cert"
+#define str_rev_counter "revision-counter"
+#define str_encrypted "encrypted"
+#define str_signature "signature"
+#define str_lifetime "descriptor-lifetime"
 /* Constant string value for the encrypted part of the descriptor. */
-static const char *str_create2_formats = "create2-formats";
-static const char *str_auth_required = "authentication-required";
-static const char *str_intro_point = "introduction-point";
-static const char *str_ip_auth_key = "auth-key";
-static const char *str_ip_enc_key = "enc-key";
-static const char *str_ip_enc_key_cert = "enc-key-certification";
+#define str_create2_formats "create2-formats"
+#define str_auth_required "authentication-required"
+#define str_intro_point "introduction-point"
+#define str_ip_auth_key "auth-key"
+#define str_ip_enc_key "enc-key"
+#define str_ip_enc_key_cert "enc-key-certification"
+#define str_intro_point_start "\n" str_intro_point " "
 /* Constant string value for the construction to encrypt the encrypted data
  * section. */
-static const char *str_enc_hsdir_data = "hsdir-encrypted-data";
+#define str_enc_hsdir_data "hsdir-encrypted-data"
+/* Prefix required to compute/verify HS desc signatures */
+#define str_desc_sig_prefix "Tor onion service descriptor sig v3"
+
+/* Authentication supported types. */
+static const struct {
+  hs_desc_auth_type_t type;
+  const char *identifier;
+} auth_types[] = {
+  { HS_DESC_AUTH_PASSWORD, "password" },
+  { HS_DESC_AUTH_ED25519, "ed25519" },
+  /* Indicate end of array. */
+  { 0, NULL }
+};
+
+/* Descriptor ruleset. */
+static token_rule_t hs_desc_v3_token_table[] = {
+  T1_START(str_hs_desc, R_HS_DESCRIPTOR, EQ(1), NO_OBJ),
+  T1(str_lifetime, R3_DESC_LIFETIME, EQ(1), NO_OBJ),
+  T1(str_desc_cert, R3_DESC_SIGNING_CERT, NO_ARGS, NEED_OBJ),
+  T1(str_rev_counter, R3_REVISION_COUNTER, EQ(1), NO_OBJ),
+  T1(str_encrypted, R3_ENCRYPTED, NO_ARGS, NEED_OBJ),
+  T1_END(str_signature, R3_SIGNATURE, EQ(1), NO_OBJ),
+  END_OF_TABLE
+};
+
+/* Descriptor ruleset for the encrypted section. */
+static token_rule_t hs_desc_encrypted_v3_token_table[] = {
+  T1_START(str_create2_formats, R3_CREATE2_FORMATS, CONCAT_ARGS, NO_OBJ),
+  T01(str_auth_required, R3_AUTHENTICATION_REQUIRED, ARGS, NO_OBJ),
+  END_OF_TABLE
+};
+
+/* Descriptor ruleset for the introduction points section. */
+static token_rule_t hs_desc_intro_point_v3_token_table[] = {
+  T1_START(str_intro_point, R3_INTRODUCTION_POINT, EQ(1), NO_OBJ),
+  T1(str_ip_auth_key, R3_INTRO_AUTH_KEY, NO_ARGS, NEED_OBJ),
+  T1(str_ip_enc_key, R3_INTRO_ENC_KEY, ARGS, OBJ_OK),
+  T1_END(str_ip_enc_key_cert, R3_INTRO_ENC_KEY_CERTIFICATION,
+         NO_ARGS, NEED_OBJ),
+  END_OF_TABLE
+};
+
+/* Free a descriptor intro point object. */
+static void
+desc_intro_point_free(hs_desc_intro_point_t *ip)
+{
+  if (!ip) {
+    return;
+  }
+  if (ip->link_specifiers) {
+    SMARTLIST_FOREACH(ip->link_specifiers, hs_desc_link_specifier_t *,
+                      ls, tor_free(ls));
+    smartlist_free(ip->link_specifiers);
+  }
+  tor_cert_free(ip->auth_key_cert);
+  if (ip->enc_key_type == HS_DESC_KEY_TYPE_LEGACY) {
+    crypto_pk_free(ip->enc_key.legacy);
+  }
+  tor_free(ip);
+}
+
+/* Free the content of the plaintext section of a descriptor. */
+static void
+desc_plaintext_data_free_contents(hs_desc_plaintext_data_t *desc)
+{
+  if (!desc) {
+    return;
+  }
+
+  if (desc->encrypted_blob) {
+    tor_free(desc->encrypted_blob);
+  }
+  tor_cert_free(desc->signing_key_cert);
+
+  memwipe(desc, 0, sizeof(*desc));
+}
+
+/* Free the content of the encrypted section of a descriptor. */
+static void
+desc_encrypted_data_free_contents(hs_desc_encrypted_data_t *desc)
+{
+  if (!desc) {
+    return;
+  }
+
+  if (desc->auth_types) {
+    SMARTLIST_FOREACH(desc->auth_types, char *, a, tor_free(a));
+    smartlist_free(desc->auth_types);
+  }
+  if (desc->intro_points) {
+    SMARTLIST_FOREACH(desc->intro_points, hs_desc_intro_point_t *, ip,
+                      desc_intro_point_free(ip));
+    smartlist_free(desc->intro_points);
+  }
+  memwipe(desc, 0, sizeof(*desc));
+}
+
+/* === ENCODING === */
 
 /* Encode the ed25519 certificate <b>cert</b> and put the newly allocated
  * string in <b>cert_str_out</b>. Return 0 on success else a negative value. */
@@ -689,11 +790,12 @@ desc_encode_v3(const hs_descriptor_t *desc, char **encoded_out)
 
   /* Sign all fields of the descriptor with our short term signing key. */
   {
-    /* XXX: Add signature prefix. */
     ed25519_signature_t sig;
     char ed_sig_b64[ED25519_SIG_BASE64_LEN + 1];
-    if (ed25519_sign(&sig, (const uint8_t *) encoded_str, encoded_len,
-                     &desc->plaintext_data.signing_kp) < 0) {
+    if (ed25519_sign_prefixed(&sig,
+                              (const uint8_t *) encoded_str, encoded_len,
+                              str_desc_sig_prefix,
+                              &desc->plaintext_data.signing_kp) < 0) {
       log_warn(LD_BUG, "Can't sign encoded HS descriptor!");
       tor_free(encoded_str);
       goto err;
@@ -711,16 +813,1025 @@ desc_encode_v3(const hs_descriptor_t *desc, char **encoded_out)
   encoded_str = smartlist_join_strings(lines, "\n", 1, NULL);
   *encoded_out = encoded_str;
 
-  /* XXX: Decode the generated descriptor as an extra validation. */
-
   /* XXX: Trigger a control port event. */
 
   /* Success! */
   ret = 0;
 
- err:
+err:
   SMARTLIST_FOREACH(lines, char *, l, tor_free(l));
   smartlist_free(lines);
+  return ret;
+}
+
+/* === DECODING === */
+
+/* XXX: Stub until this function is upstream. */
+static int
+rsa_ed25519_crosscert_check(const uint8_t *crosscert,
+                            const size_t crosscert_len,
+                            const crypto_pk_t *rsa_id_key,
+                            const ed25519_public_key_t *master_key)
+{
+  (void) crosscert;
+  (void) crosscert_len;
+  (void) rsa_id_key;
+  (void) master_key;
+  return 0;
+}
+
+/* Given an encoded string of the link specifiers, return a newly allocated
+ * list of decoded link specifiers. Return NULL on error. */
+static smartlist_t *
+decode_link_specifiers(const char *encoded)
+{
+  int decoded_len;
+  size_t encoded_len, i;
+  uint8_t *decoded;
+  smartlist_t *results = NULL;
+  link_specifier_list_t *specs = NULL;
+
+  tor_assert(encoded);
+
+  encoded_len = strlen(encoded);
+  decoded = tor_malloc(encoded_len);
+  decoded_len = base64_decode((char *) decoded, encoded_len, encoded,
+                              encoded_len);
+  if (decoded_len < 0) {
+    goto err;
+  }
+
+  if (link_specifier_list_parse(&specs, decoded,
+                                (size_t) decoded_len) < decoded_len) {
+    goto err;
+  }
+  tor_assert(specs);
+  results = smartlist_new();
+
+  for (i = 0; i < link_specifier_list_getlen_spec(specs); i++) {
+    hs_desc_link_specifier_t *hs_spec;
+    link_specifier_t *ls = link_specifier_list_get_spec(specs, i);
+    tor_assert(ls);
+
+    hs_spec = tor_malloc_zero(sizeof(*hs_spec));
+    hs_spec->type = link_specifier_get_ls_type(ls);
+    switch (hs_spec->type) {
+    case LS_IPV4:
+      tor_addr_from_ipv4h(&hs_spec->u.ap.addr,
+                          link_specifier_get_un_ipv4_addr(ls));
+      hs_spec->u.ap.port = link_specifier_get_un_ipv4_port(ls);
+      break;
+    case LS_IPV6:
+      tor_addr_from_ipv6_bytes(&hs_spec->u.ap.addr, (const char *)
+                               link_specifier_getarray_un_ipv6_addr(ls));
+      hs_spec->u.ap.port = link_specifier_get_un_ipv6_port(ls);
+      break;
+    case LS_LEGACY_ID:
+      /* Both are known at compile time so let's make sure they are the same
+       * else we can copy memory out of bound. */
+      tor_assert(link_specifier_getlen_un_legacy_id(ls) ==
+                 sizeof(hs_spec->u.legacy_id));
+      memcpy(hs_spec->u.legacy_id, link_specifier_getarray_un_legacy_id(ls),
+             sizeof(hs_spec->u.legacy_id));
+      break;
+    default:
+      goto err;
+    }
+
+    smartlist_add(results, hs_spec);
+  }
+
+  goto done;
+ err:
+  if (results) {
+    SMARTLIST_FOREACH(results, hs_desc_link_specifier_t *, s, tor_free(s));
+    smartlist_free(results);
+    results = NULL;
+  }
+ done:
+  link_specifier_list_free(specs);
+  tor_free(decoded);
+  return results;
+}
+
+/* Given a list of authentication types, decode it and put it in the encrypted
+ * data section. Return 1 if we at least know one of the type or 0 if we know
+ * none of them. */
+static int
+decode_auth_type(hs_desc_encrypted_data_t *desc, const char *list)
+{
+  int match = 0;
+
+  tor_assert(desc);
+  tor_assert(list);
+
+  desc->auth_types = smartlist_new();
+  smartlist_split_string(desc->auth_types, list, " ", 0, 0);
+
+  /* Validate the types that we at least know about one. */
+  SMARTLIST_FOREACH_BEGIN(desc->auth_types, const char *, auth) {
+    for (int idx = 0; auth_types[idx].identifier; idx++) {
+      if (!strncmp(auth, auth_types[idx].identifier,
+                   strlen(auth_types[idx].identifier))) {
+        match = 1;
+        break;
+      }
+    }
+  } SMARTLIST_FOREACH_END(auth);
+
+  return match;
+}
+
+/* Parse a space-delimited list of integers representing CREATE2 formats into
+ * the bitfield in hs_desc_encrypted_data_t. Ignore unrecognized values. */
+static void
+decode_create2_list(hs_desc_encrypted_data_t *desc, const char *list)
+{
+  smartlist_t *tokens;
+
+  tor_assert(desc);
+  tor_assert(list);
+
+  tokens = smartlist_new();
+  smartlist_split_string(tokens, list, " ", 0, 0);
+
+  SMARTLIST_FOREACH_BEGIN(tokens, char *, s) {
+    int ok;
+    unsigned long type = tor_parse_ulong(s, 10, 1, UINT16_MAX, &ok, NULL);
+    if (!ok) {
+      log_warn(LD_REND, "Unparseable value %s in create2 list", escaped(s));
+      continue;
+    }
+    switch (type) {
+    case ONION_HANDSHAKE_TYPE_NTOR:
+      desc->create2_ntor = 1;
+      break;
+    default:
+      /* We deliberately ignore unsupported handshake types */
+      continue;
+    }
+  } SMARTLIST_FOREACH_END(s);
+
+  SMARTLIST_FOREACH(tokens, char *, s, tor_free(s));
+  smartlist_free(tokens);
+}
+
+/* Given a certificate, validate the certificate for certain conditions which
+ * are if the given type matches the cert's one, if the signing key is
+ * included and if the that key was actually used to sign the certificate.
+ *
+ * Return 1 iff if all conditions pass or 0 if one of them fails. */
+static int
+cert_is_valid(tor_cert_t *cert, uint8_t type, const char *log_obj_type)
+{
+  tor_assert(log_obj_type);
+
+  if (cert == NULL) {
+    log_warn(LD_REND, "Certificate for %s couldn't be parsed.", log_obj_type);
+    goto err;
+  }
+  if (cert->cert_type != type) {
+    log_warn(LD_REND, "Invalid cert type %02x for %s.", cert->cert_type,
+             log_obj_type);
+    goto err;
+  }
+  /* All certificate must have its signing key included. */
+  if (!cert->signing_key_included) {
+    log_warn(LD_REND, "Signing key is NOT included for %s.", log_obj_type);
+    goto err;
+  }
+  /* The following will not only check if the signature matches but also the
+   * expiration date and overall validity. */
+  if (tor_cert_checksig(cert, &cert->signing_key, time(NULL)) < 0) {
+    log_warn(LD_REND, "Invalid signature for %s.", log_obj_type);
+    goto err;
+  }
+
+  return 1;
+ err:
+  return 0;
+}
+
+/* Given some binary data, try to parse it to get a certificate object. If we
+ * have a valid cert, validate it using the given wanted type. On error, print
+ * a log using the err_msg has the certificate identifier adding semantic to
+ * the log and cert_out is set to NULL. On success, 0 is returned and cert_out
+ * points to a newly allocated certificate object. */
+static int
+cert_parse_and_validate(tor_cert_t **cert_out, const char *data,
+                        size_t data_len, unsigned int cert_type_wanted,
+                        const char *err_msg)
+{
+  tor_cert_t *cert;
+
+  tor_assert(cert_out);
+  tor_assert(data);
+  tor_assert(err_msg);
+
+  /* Parse certificate. */
+  cert = tor_cert_parse((const uint8_t *) data, data_len);
+  if (!cert) {
+    log_warn(LD_REND, "Certificate for %s couldn't be parsed.", err_msg);
+    goto err;
+  }
+
+  /* Validate certificate. */
+  if (!cert_is_valid(cert, cert_type_wanted, err_msg)) {
+    goto err;
+  }
+
+  *cert_out = cert;
+  return 0;
+
+ err:
+  tor_cert_free(cert);
+  *cert_out = NULL;
+  return -1;
+}
+
+/* Return true iff the given length of the encrypted data of a descriptor
+ * passes validation. */
+static int
+encrypted_data_length_is_valid(size_t len)
+{
+  /* Check for the minimum length possible. */
+  if (len < HS_DESC_ENCRYPTED_MIN_LEN) {
+    log_warn(LD_REND, "Length of descriptor's encrypted data is too small. "
+                      "Got %lu but minimum value is %d",
+             len, HS_DESC_ENCRYPTED_MIN_LEN);
+    goto err;
+  }
+
+  /* Encrypted data has the salt and MAC concatenated to it so remove those
+   * from the validation calculation. */
+  len -= HS_DESC_ENCRYPTED_SALT_LEN + DIGEST256_LEN;
+
+  /* Check that it's aligned on the block size of the crypto algorithm. */
+  if (len % HS_DESC_PLAINTEXT_PADDING_MULTIPLE) {
+    log_warn(LD_REND, "Length of descriptor's encrypted data is invalid. "
+                      "Got %lu which is not a multiple of %d.",
+             len, HS_DESC_PLAINTEXT_PADDING_MULTIPLE);
+    goto err;
+  }
+
+  /* XXX: Check maximum size. Will strongly depends on the maximum intro point
+   * allowed we decide on and probably if they will all have to use the legacy
+   * key which is bigger than the ed25519 key. */
+
+  return 1;
+ err:
+  return 0;
+}
+
+/* Decrypt the encrypted section of the descriptor using the given descriptor
+ * object desc. A newly allocated NUL terminated string is put in
+ * decrypted_out. Return the length of decrypted_out on success else 0 is
+ * returned and decrypted_out is set to NULL. */
+static size_t
+desc_decrypt_data_v3(const hs_descriptor_t *desc, char **decrypted_out)
+{
+  uint8_t *decrypted = NULL;
+  uint8_t secret_key[CIPHER_KEY_LEN], secret_iv[CIPHER_IV_LEN];
+  uint8_t mac_key[DIGEST256_LEN], our_mac[DIGEST256_LEN];
+  const uint8_t *salt, *encrypted, *desc_mac;
+  size_t encrypted_len, result_len = 0;
+
+  tor_assert(decrypted_out);
+  tor_assert(desc);
+  tor_assert(desc->plaintext_data.encrypted_blob);
+
+  /* Construction is as follow: SALT | ENCRYPTED_DATA | MAC */
+  if (!encrypted_data_length_is_valid(
+                desc->plaintext_data.encrypted_blob_size)) {
+    goto err;
+  }
+
+  /* Start of the blob thus the salt. */
+  salt = desc->plaintext_data.encrypted_blob;
+  /* Next is the encrypted data. */
+  encrypted = desc->plaintext_data.encrypted_blob +
+    HS_DESC_ENCRYPTED_SALT_LEN;
+  encrypted_len = desc->plaintext_data.encrypted_blob_size -
+    (HS_DESC_ENCRYPTED_SALT_LEN + DIGEST256_LEN);
+
+  /* At the very end is the MAC. Make sure it's of the right size. */
+  {
+    desc_mac = encrypted + encrypted_len;
+    size_t desc_mac_size = desc->plaintext_data.encrypted_blob_size -
+                           (desc_mac - desc->plaintext_data.encrypted_blob);
+    if (desc_mac_size != DIGEST256_LEN) {
+      log_warn(LD_REND, "Service descriptor MAC length of encrypted data "
+                        "is invalid (%lu, expected %u)",
+               desc_mac_size, DIGEST256_LEN);
+      goto err;
+    }
+  }
+
+  /* KDF construction resulting in a key from which the secret key, IV and MAC
+   * key are extracted which is what we need for the decryption. */
+  build_secret_key_iv_mac(desc, salt, HS_DESC_ENCRYPTED_SALT_LEN,
+                          secret_key, sizeof(secret_key),
+                          secret_iv, sizeof(secret_iv),
+                          mac_key, sizeof(mac_key));
+
+  /* Build MAC. */
+  build_mac(mac_key, sizeof(mac_key), salt, HS_DESC_ENCRYPTED_SALT_LEN,
+            encrypted, encrypted_len, our_mac, sizeof(our_mac));
+  memwipe(mac_key, 0, sizeof(mac_key));
+  /* Verify MAC; MAC is H(mac_key || salt || encrypted)
+   *
+   * This is a critical check that is making sure the computed MAC matches the
+   * one in the descriptor. */
+  if (!tor_memeq(our_mac, desc_mac, sizeof(our_mac))) {
+    log_warn(LD_REND, "Encrypted service descriptor MAC check failed");
+    goto err;
+  }
+
+  {
+    /* Decrypt. Here we are assured that the encrypted length is valid for
+     * decryption. */
+    crypto_cipher_t *cipher;
+    cipher = crypto_cipher_new_with_iv((const char *) secret_key,
+                                       (const char *) secret_iv);
+    /* Extra byte for the NUL terminated byte. */
+    decrypted = tor_malloc_zero(encrypted_len + 1);
+    crypto_cipher_decrypt(cipher, (char *) decrypted,
+                          (const char *) encrypted, encrypted_len);
+    crypto_cipher_free(cipher);
+  }
+
+  {
+    /* Adjust length to remove NULL padding bytes */
+    uint8_t *end = memchr(decrypted, 0, encrypted_len);
+    result_len = encrypted_len;
+    if (end) {
+      result_len = end - decrypted;
+    }
+  }
+
+  /* Make sure to NUL terminate the string. */
+  decrypted[encrypted_len] = '\0';
+  *decrypted_out = (char *) decrypted;
+  goto done;
+
+err:
+  if (decrypted) {
+    tor_free(decrypted);
+  }
+  *decrypted_out = NULL;
+  result_len = 0;
+
+done:
+  memwipe(secret_key, 0, sizeof(secret_key));
+  memwipe(secret_iv, 0, sizeof(secret_iv));
+  return result_len;
+}
+
+/* Given the start of a section and the end of it, decode a single
+ * introduction point from that section. Return a newly allocated introduction
+ * point object containing the decoded data. Return NULL if the section can't
+ * be decoded. */
+static hs_desc_intro_point_t *
+decode_introduction_point(const hs_descriptor_t *desc, const char *start)
+{
+  hs_desc_intro_point_t *ip = NULL;
+  memarea_t *area = NULL;
+  smartlist_t *tokens = NULL;
+  tor_cert_t *cross_cert = NULL;
+  const directory_token_t *tok;
+
+  tor_assert(desc);
+  tor_assert(start);
+
+  area = memarea_new();
+  tokens = smartlist_new();
+  if (tokenize_string(area, start, start + strlen(start),
+                      tokens, hs_desc_intro_point_v3_token_table, 0) < 0) {
+    log_warn(LD_REND, "Introduction point is not parseable");
+    goto err;
+  }
+
+  /* Ok we seem to have a well formed section containing enough tokens to
+   * parse. Allocate our IP object and try to populate it. */
+  ip = tor_malloc_zero(sizeof(hs_desc_intro_point_t));
+
+  /* "introduction-point" SP link-specifiers NL */
+  tok = find_by_keyword(tokens, R3_INTRODUCTION_POINT);
+  tor_assert(tok->n_args == 1);
+  ip->link_specifiers = decode_link_specifiers(tok->args[0]);
+  if (!ip->link_specifiers) {
+    log_warn(LD_REND, "Introduction point has invalid link specifiers");
+    goto err;
+  }
+
+  /* "auth-key" NL certificate NL */
+  tok = find_by_keyword(tokens, R3_INTRO_AUTH_KEY);
+  tor_assert(tok->object_body);
+  if (strcmp(tok->object_type, "ED25519 CERT")) {
+    log_warn(LD_REND, "Unexpected object type for introduction auth key");
+    goto err;
+  }
+
+  /* Parse cert and do some validation. */
+  if (cert_parse_and_validate(&ip->auth_key_cert, tok->object_body,
+                              tok->object_size, CERT_TYPE_HS_IP_AUTH,
+                              "introduction point auth-key") < 0) {
+    goto err;
+  }
+
+  /* Exactly one "enc-key" ... */
+  tok = find_by_keyword(tokens, R3_INTRO_ENC_KEY);
+  if (!strcmp(tok->args[0], "ntor")) {
+    /* "enc-key" SP "ntor" SP key NL */
+    if (tok->n_args != 2 || tok->object_body) {
+      log_warn(LD_REND, "Introduction point ntor encryption key is invalid");
+      goto err;
+    }
+
+    if (curve25519_public_from_base64(&ip->enc_key.curve25519.pubkey,
+                                      tok->args[1]) < 0) {
+      log_warn(LD_REND, "Introduction point ntor encryption key is invalid");
+      goto err;
+    }
+    ip->enc_key_type = HS_DESC_KEY_TYPE_CURVE25519;
+  } else if (!strcmp(tok->args[0], "legacy")) {
+    /* "enc-key" SP "legacy" NL key NL */
+    if (!tok->key) {
+      log_warn(LD_REND, "Introduction point legacy encryption key is "
+               "invalid");
+      goto err;
+    }
+    ip->enc_key.legacy = crypto_pk_dup_key(tok->key);
+    ip->enc_key_type = HS_DESC_KEY_TYPE_LEGACY;
+  } else {
+    /* Unknown key type so we can't use that introduction point. */
+    log_warn(LD_REND, "Introduction point encryption key is unrecognized.");
+    goto err;
+  }
+
+  /* "enc-key-certification" NL certificate NL */
+  tok = find_by_keyword(tokens, R3_INTRO_ENC_KEY_CERTIFICATION);
+  tor_assert(tok->object_body);
+  /* Do the cross certification. */
+  switch (ip->enc_key_type) {
+  case HS_DESC_KEY_TYPE_CURVE25519:
+  {
+    if (strcmp(tok->object_type, "ED25519 CERT")) {
+      log_warn(LD_REND, "Introduction point ntor encryption key "
+                        "cross-certification has an unknown format.");
+      goto err;
+    }
+    if (cert_parse_and_validate(&cross_cert, tok->object_body,
+                       tok->object_size, CERT_TYPE_HS_IP_ENC,
+                       "introduction point enc-key-certification") < 0) {
+      goto err;
+    }
+    break;
+  }
+  case HS_DESC_KEY_TYPE_LEGACY:
+    if (strcmp(tok->object_type, "CROSSCERT")) {
+      log_warn(LD_REND, "Introduction point legacy encryption key "
+                        "cross-certification has an unknown format.");
+      goto err;
+    }
+    if (rsa_ed25519_crosscert_check((const uint8_t *) tok->object_body,
+          tok->object_size, ip->enc_key.legacy,
+          &desc->plaintext_data.signing_key_cert->signing_key)) {
+      log_warn(LD_REND, "Unable to cross certify the introduction point "
+                        "legacy encryption key.");
+      goto err;
+    }
+    break;
+  default:
+    tor_assert(0);
+    break;
+  }
+  /* It is successfully cross certified. Flag the object. */
+  ip->cross_certified = 1;
+  goto done;
+
+ err:
+  desc_intro_point_free(ip);
+  ip = NULL;
+
+ done:
+  tor_cert_free(cross_cert);
+  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
+  smartlist_free(tokens);
+  memarea_drop_all(area);
+
+  return ip;
+}
+
+/* Given a descriptor string at <b>data</b>, decode all possible introduction points
+ * that we can find. Add the introduction point object to desc_enc as we find
+ * them. Return 0 on success.
+ *
+ * On error, a negative value is returned. It is possible that some intro
+ * point object have been added to the desc_enc, they should be considered
+ * invalid. One single bad encoded introduction point will make this function
+ * return an error. */
+static int
+decode_intro_points(const hs_descriptor_t *desc,
+                    hs_desc_encrypted_data_t *desc_enc,
+                    const char *data)
+{
+  int retval = -1;
+  smartlist_t *chunked_desc = smartlist_new();
+  smartlist_t *intro_points = smartlist_new();
+
+  tor_assert(desc);
+  tor_assert(desc_enc);
+  tor_assert(data);
+  tor_assert(desc_enc->intro_points);
+
+  /* Take the desc string, and extract the intro point substrings out of it */
+  {
+    /* Split the descriptor string using the intro point header as delimiter */
+    smartlist_split_string(chunked_desc, data, str_intro_point_start, 0, 0);
+
+    /* Check if there are actually any intro points included. The first chunk
+     * should be other descriptor fields (e.g. create2-formats), so it's not an
+     * intro point. */
+    if (smartlist_len(chunked_desc) < 2) {
+      goto done;
+    }
+  }
+
+  /* Take the intro point substrings, and prepare them for parsing */
+  {
+    int i = 0;
+    /* Prepend the introduction-point header to all the chunks, since
+       smartlist_split_string() devoured it. */
+    SMARTLIST_FOREACH_BEGIN(chunked_desc, char *, chunk) {
+      /* Ignore first chunk. It's other descriptor fields. */
+      if (i++ == 0) {
+        continue;
+      }
+
+      smartlist_add_asprintf(intro_points, "%s %s", str_intro_point, chunk);
+    } SMARTLIST_FOREACH_END(chunk);
+  }
+
+  /* Parse the intro points! */
+  SMARTLIST_FOREACH_BEGIN(intro_points, const char *, intro_point) {
+    hs_desc_intro_point_t *ip = decode_introduction_point(desc, intro_point);
+    if (!ip) {
+      /* Malformed introduction point section. Stop right away, this
+       * descriptor shouldn't be used. */
+      goto err;
+    }
+    smartlist_add(desc_enc->intro_points, ip);
+  } SMARTLIST_FOREACH_END(intro_point);
+
+ done:
+  retval = 0;
+
+ err:
+  if (chunked_desc) {
+    SMARTLIST_FOREACH(chunked_desc, char *, a, tor_free(a));
+    smartlist_free(chunked_desc);
+  }
+  if (intro_points) {
+    SMARTLIST_FOREACH(intro_points, char *, a, tor_free(a));
+    smartlist_free(intro_points);
+  }
+
+  return retval;
+}
+/* Return 1 iff the given base64 encoded signature in b64_sig from the encoded
+ * descriptor in encoded_desc validates the descriptor content. */
+static int
+desc_sig_is_valid(const char *b64_sig, const ed25519_keypair_t *signing_kp,
+                  const char *encoded_desc, size_t encoded_len)
+{
+  int ret = 0;
+  ed25519_signature_t sig;
+  const char *sig_start;
+
+  tor_assert(b64_sig);
+  tor_assert(signing_kp);
+  tor_assert(encoded_desc);
+  /* Verifying nothing won't end well :). */
+  tor_assert(encoded_len > 0);
+
+  /* Signature length check. */
+  if (strlen(b64_sig) != ED25519_SIG_BASE64_LEN) {
+    log_warn(LD_REND, "Service descriptor has an invalid signature length."
+                      "Exptected %d but got %lu",
+             ED25519_SIG_BASE64_LEN, strlen(b64_sig));
+    goto err;
+  }
+
+  /* First, convert base64 blob to an ed25519 signature. */
+  if (ed25519_signature_from_base64(&sig, b64_sig) != 0) {
+    log_warn(LD_REND, "Service descriptor does not contain a valid "
+                      "signature");
+    goto err;
+  }
+
+  /* Find the start of signature. */
+  sig_start = tor_memstr(encoded_desc, encoded_len, "\n" str_signature);
+  /* Getting here means the token parsing worked for the signature so if we
+   * can't find the start of the signature, we have a code flow issue. */
+  if (BUG(!sig_start)) {
+    goto err;
+  }
+  /* Skip newline, it has to go in the signature check. */
+  sig_start++;
+
+  /* Validate signature with the full body of the descriptor. */
+  if (ed25519_checksig_prefixed(&sig,
+                                (const uint8_t *) encoded_desc,
+                                sig_start - encoded_desc,
+                                str_desc_sig_prefix,
+                                &signing_kp->pubkey) != 0) {
+    log_warn(LD_REND, "Invalid signature on service descriptor");
+    goto err;
+  }
+  /* Valid signature! All is good. */
+  ret = 1;
+
+err:
+  return ret;
+}
+
+/* Decode descriptor plaintext data for version 3. Given a list of tokens, an
+ * allocated plaintext object that will be populated and the encoded
+ * descriptor with its length. The last one is needed for signature
+ * verification. Unknown tokens are simply ignored so this won't error on
+ * unknowns but requires that all v3 token be present and valid.
+ *
+ * Return 0 on success else a negative value. */
+static int
+desc_decode_plaintext_v3(smartlist_t *tokens,
+                         hs_desc_plaintext_data_t *desc,
+                         const char *encoded_desc, size_t encoded_len)
+{
+  int ok;
+  directory_token_t *tok;
+
+  tor_assert(tokens);
+  tor_assert(desc);
+  /* Version higher could still use this function to decode most of the
+   * descriptor and then they decode the extra part. */
+  tor_assert(desc->version >= 3);
+
+  /* Descriptor lifetime parsing. */
+  tok = find_by_keyword(tokens, R3_DESC_LIFETIME);
+  tor_assert(tok->n_args == 1);
+  desc->lifetime_sec = (uint32_t) tor_parse_ulong(tok->args[0], 10, 0,
+                                                  UINT32_MAX, &ok, NULL);
+  if (!ok) {
+    log_warn(LD_REND, "Service descriptor lifetime value is invalid");
+    goto err;
+  }
+  /* Put it from minute to second. */
+  desc->lifetime_sec *= 60;
+  if (desc->lifetime_sec > HS_DESC_MAX_LIFETIME) {
+    log_warn(LD_REND, "Service descriptor lifetime is too big. "
+                      "Got %" PRIu32 " but max is %d",
+             desc->lifetime_sec, HS_DESC_MAX_LIFETIME);
+    goto err;
+  }
+
+  /* Descriptor signing certificate. */
+  tok = find_by_keyword(tokens, R3_DESC_SIGNING_CERT);
+  tor_assert(tok->object_body);
+  /* Expecting a prop220 cert with the signing key extension, which contains
+   * the blinded public key. */
+  if (strcmp(tok->object_type, "ED25519 CERT") != 0) {
+    log_warn(LD_REND, "Service descriptor signing cert wrong type (%s)",
+             escaped(tok->object_type));
+    goto err;
+  }
+  if (cert_parse_and_validate(&desc->signing_key_cert, tok->object_body,
+                              tok->object_size, CERT_TYPE_HS_DESC_SIGN,
+                              "service descriptor signing key") < 0) {
+    goto err;
+  }
+
+  /* Copy the public keys into signing_kp and blinded_kp */
+  memcpy(&desc->signing_kp.pubkey, &desc->signing_key_cert->signed_key,
+         sizeof(ed25519_public_key_t));
+  memcpy(&desc->blinded_kp.pubkey, &desc->signing_key_cert->signing_key,
+         sizeof(ed25519_public_key_t));
+
+  /* Extract revision counter value. */
+  tok = find_by_keyword(tokens, R3_REVISION_COUNTER);
+  tor_assert(tok->n_args == 1);
+  desc->revision_counter = tor_parse_uint64(tok->args[0], 10, 0,
+                                            UINT64_MAX, &ok, NULL);
+  if (!ok) {
+    log_warn(LD_REND, "Service descriptor revision-counter is invalid");
+    goto err;
+  }
+
+  /* Extract the encrypted data section. */
+  tok = find_by_keyword(tokens, R3_ENCRYPTED);
+  tor_assert(tok->object_body);
+  if (strcmp(tok->object_type, "MESSAGE") != 0) {
+    log_warn(LD_REND, "Service descriptor encrypted data section is invalid");
+    goto err;
+  }
+  /* Make sure the length of the encrypted blob is valid. */
+  if (!encrypted_data_length_is_valid(tok->object_size)) {
+    goto err;
+  }
+
+  /* Copy the encrypted blob to the descriptor object so we can handle it
+   * latter if needed. */
+  desc->encrypted_blob = tor_memdup(tok->object_body, tok->object_size);
+  desc->encrypted_blob_size = tok->object_size;
+
+  /* Extract signature and verify it. */
+  tok = find_by_keyword(tokens, R3_SIGNATURE);
+  tor_assert(tok->n_args == 1);
+  /* First arg here is the actual encoded signature. */
+  if (!desc_sig_is_valid(tok->args[0], &desc->signing_kp,
+                         encoded_desc, encoded_len)) {
+    goto err;
+  }
+
+  return 0;
+err:
+  return -1;
+}
+
+/* Decode the version 3 encrypted section of the given descriptor desc. The
+ * desc_encrypted_out will be populated with the decoded data. Return 0 on
+ * success else -1. */
+static int
+desc_decode_encrypted_v3(const hs_descriptor_t *desc,
+                         hs_desc_encrypted_data_t *desc_encrypted_out)
+{
+  int result = -1;
+  char *message = NULL;
+  size_t message_len;
+  memarea_t *area = NULL;
+  directory_token_t *tok;
+  smartlist_t *tokens = NULL;
+
+  tor_assert(desc);
+  tor_assert(desc_encrypted_out);
+
+  /* Decrypt the encrypted data that is located in the plaintext section in
+   * the descriptor as a blob of bytes. The following functions will use the
+   * keys found in the same section. */
+  message_len = desc_decrypt_data_v3(desc, &message);
+  if (!message_len) {
+    log_warn(LD_REND, "Service descriptor decryption failed.");
+    goto err;
+  }
+  tor_assert(message);
+
+  area = memarea_new();
+  tokens = smartlist_new();
+  if (tokenize_string(area, message, message + message_len,
+                      tokens, hs_desc_encrypted_v3_token_table, 0) < 0) {
+    log_warn(LD_REND, "Encrypted service descriptor is not parseable.");
+    goto err;
+  }
+
+  /* CREATE2 supported cell format. It's mandatory. */
+  tok = find_by_keyword(tokens, R3_CREATE2_FORMATS);
+  tor_assert(tok);
+  decode_create2_list(desc_encrypted_out, tok->args[0]);
+  /* Must support ntor according to the specification */
+  if (!desc_encrypted_out->create2_ntor) {
+    log_warn(LD_REND, "Service create2-formats does not include ntor.");
+    goto err;
+  }
+
+  /* Authentication type. It's optional but only once. */
+  tok = find_opt_by_keyword(tokens, R3_AUTHENTICATION_REQUIRED);
+  if (tok) {
+    if (!decode_auth_type(desc_encrypted_out, tok->args[0])) {
+      log_warn(LD_REND, "Service descriptor authentication type has "
+                        "invalid entry(ies).");
+      goto err;
+    }
+  }
+  /* Initialize the descriptor's introduction point list before we start
+   * decoding. Having 0 intro point is valid. Then decode them all. */
+  desc_encrypted_out->intro_points = smartlist_new();
+  if (decode_intro_points(desc, desc_encrypted_out, message) < 0) {
+    goto err;
+  }
+  /* Validation of maximum introduction points allowed. */
+  if (smartlist_len(desc_encrypted_out->intro_points) > MAX_INTRO_POINTS) {
+    log_warn(LD_REND, "Service descriptor contains too many introduction "
+                      "points. Maximum allowed is %d but we have %d",
+             MAX_INTRO_POINTS,
+             smartlist_len(desc_encrypted_out->intro_points));
+    goto err;
+  }
+
+  /* NOTE: Unknown fields are allowed because this function could be used to
+   * decode other descriptor version. */
+
+  result = 0;
+  goto done;
+
+ err:
+  tor_assert(result < 0);
+  desc_encrypted_data_free_contents(desc_encrypted_out);
+
+ done:
+  if (tokens) {
+    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
+    smartlist_free(tokens);
+  }
+  if (area) {
+    memarea_drop_all(area);
+  }
+  if (message) {
+    tor_free(message);
+  }
+  return result;
+}
+
+/* Table of encrypted decode function version specific. The function are
+ * indexed by the version number so v3 callback is at index 3 in the array. */
+static int
+  (*decode_encrypted_handlers[])(
+      const hs_descriptor_t *desc,
+      hs_desc_encrypted_data_t *desc_encrypted) =
+{
+  /* v0 */ NULL, /* v1 */ NULL, /* v2 */ NULL,
+  desc_decode_encrypted_v3,
+};
+
+/* Decode the encrypted data section of the given descriptor and store the
+ * data in the given encrypted data object. Return 0 on success else a
+ * negative value on error. */
+int
+hs_desc_decode_encrypted(const hs_descriptor_t *desc,
+                         hs_desc_encrypted_data_t *desc_encrypted)
+{
+  int ret;
+  uint32_t version;
+
+  tor_assert(desc);
+  /* Ease our life a bit. */
+  version = desc->plaintext_data.version;
+  tor_assert(desc_encrypted);
+  /* Calling this function without an encrypted blob to parse is a code flow
+   * error. The plaintext parsing should never succeed in the first place
+   * without an encrypted section. */
+  tor_assert(desc->plaintext_data.encrypted_blob);
+  /* Let's make sure we have a supported version as well. By correctly parsing
+   * the plaintext, this should not fail. */
+  if (BUG(!hs_desc_is_supported_version(version))) {
+    ret = -1;
+    goto err;
+  }
+  /* Extra precaution. Having no handler for the supported version should
+   * never happened else we forgot to add it but we bumped the version. */
+  tor_assert(ARRAY_LENGTH(decode_encrypted_handlers) >= version);
+  tor_assert(decode_encrypted_handlers[version]);
+
+  /* Run the version specific plaintext decoder. */
+  ret = decode_encrypted_handlers[version](desc, desc_encrypted);
+  if (ret < 0) {
+    goto err;
+  }
+
+ err:
+  return ret;
+}
+
+/* Table of plaintext decode function version specific. The function are
+ * indexed by the version number so v3 callback is at index 3 in the array. */
+static int
+  (*decode_plaintext_handlers[])(
+      smartlist_t *tokens,
+      hs_desc_plaintext_data_t *desc,
+      const char *encoded_desc,
+      size_t encoded_len) =
+{
+  /* v0 */ NULL, /* v1 */ NULL, /* v2 */ NULL,
+  desc_decode_plaintext_v3,
+};
+
+/* Fully decode the given descriptor plaintext and store the data in the
+ * plaintext data object. Returns 0 on success else a negative value. */
+int
+hs_desc_decode_plaintext(const char *encoded,
+                         hs_desc_plaintext_data_t *plaintext)
+{
+  int ok = 0, ret = -1;
+  memarea_t *area = NULL;
+  smartlist_t *tokens = NULL;
+  size_t encoded_len;
+  directory_token_t *tok;
+
+  tor_assert(encoded);
+  tor_assert(plaintext);
+
+  encoded_len = strlen(encoded);
+  if (encoded_len >= HS_DESC_MAX_LEN) {
+    log_warn(LD_REND, "Service descriptor is too big (%lu bytes)",
+             encoded_len);
+    goto err;
+  }
+
+  area = memarea_new();
+  tokens = smartlist_new();
+  /* Tokenize the descriptor so we can start to parse it. */
+  if (tokenize_string(area, encoded, encoded + encoded_len, tokens,
+                      hs_desc_v3_token_table, 0) < 0) {
+    log_warn(LD_REND, "Service descriptor is not parseable");
+    goto err;
+  }
+
+  /* Get the version of the descriptor which is the first mandatory field of
+   * the descriptor. From there, we'll decode the right descriptor version. */
+  tok = find_by_keyword(tokens, R_HS_DESCRIPTOR);
+  tor_assert(tok->n_args == 1);
+  plaintext->version = (uint32_t) tor_parse_ulong(tok->args[0], 10, 0,
+                                                  UINT32_MAX, &ok, NULL);
+  if (!ok) {
+    log_warn(LD_REND, "Service descriptor has unparseable version %s",
+             escaped(tok->args[0]));
+    goto err;
+  }
+  if (!hs_desc_is_supported_version(plaintext->version)) {
+    log_warn(LD_REND, "Service descriptor has unsupported version %" PRIu32,
+             plaintext->version);
+    goto err;
+  }
+  /* Extra precaution. Having no handler for the supported version should
+   * never happened else we forgot to add it but we bumped the version. */
+  tor_assert(ARRAY_LENGTH(decode_plaintext_handlers) >= plaintext->version);
+  tor_assert(decode_plaintext_handlers[plaintext->version]);
+
+  /* Run the version specific plaintext decoder. */
+  ret = decode_plaintext_handlers[plaintext->version](tokens, plaintext,
+                                                      encoded, encoded_len);
+  if (ret < 0) {
+    goto err;
+  }
+  /* Success. Descriptor has been populated with the data. */
+  ret = 0;
+
+err:
+  if (tokens) {
+    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
+    smartlist_free(tokens);
+  }
+  if (area) {
+    memarea_drop_all(area);
+  }
+  return ret;
+}
+
+/* Fully decode an encoded descriptor and set a newly allocated descriptor
+ * object in desc_out. Subcredentials are used if not NULL else it's ignored.
+ *
+ * Return 0 on success. A negative value is returned on error and desc_out is
+ * set to NULL. */
+int
+hs_desc_decode_descriptor(const char *encoded,
+                          const uint8_t *subcredential,
+                          hs_descriptor_t **desc_out)
+{
+  int ret;
+  hs_descriptor_t *desc;
+
+  tor_assert(encoded);
+
+  desc = tor_malloc_zero(sizeof(hs_descriptor_t));
+
+  /* Subcredentials are optional. */
+  if (subcredential) {
+    memcpy(desc->subcredential, subcredential, sizeof(desc->subcredential));
+  }
+
+  ret = hs_desc_decode_plaintext(encoded, &desc->plaintext_data);
+  if (ret < 0) {
+    goto err;
+  }
+
+  ret = hs_desc_decode_encrypted(desc, &desc->encrypted_data);
+  if (ret < 0) {
+    goto err;
+  }
+
+  if (desc_out) {
+    *desc_out = desc;
+  } else {
+    hs_descriptor_free(desc);
+  }
+  return ret;
+
+ err:
+  hs_descriptor_free(desc);
+  if (desc_out) {
+    *desc_out = NULL;
+  }
+
+  tor_assert(ret < 0);
   return ret;
 }
 
@@ -740,7 +1851,7 @@ static int
  * string.
  *
  * Return 0 on success and encoded_out is a valid pointer. On error, -1 is
- * returned and encoded_out is untouched. */
+ * returned and encoded_out is set to NULL. */
 int
 hs_desc_encode_descriptor(const hs_descriptor_t *desc, char **encoded_out)
 {
@@ -763,6 +1874,44 @@ hs_desc_encode_descriptor(const hs_descriptor_t *desc, char **encoded_out)
     goto err;
   }
 
- err:
+  /* Try to decode what we just encoded. Symmetry is nice! */
+  ret = hs_desc_decode_descriptor(*encoded_out, desc->subcredential, NULL);
+  if (BUG(ret < 0)) {
+    goto err;
+  }
+
+  return 0;
+
+err:
+  *encoded_out = NULL;
   return ret;
+}
+
+/* Free the descriptor plaintext data object. */
+void
+hs_desc_plaintext_data_free(hs_desc_plaintext_data_t *desc)
+{
+  desc_plaintext_data_free_contents(desc);
+  tor_free(desc);
+}
+
+/* Free the descriptor encrypted data object. */
+void
+hs_desc_encrypted_data_free(hs_desc_encrypted_data_t *desc)
+{
+  desc_encrypted_data_free_contents(desc);
+  tor_free(desc);
+}
+
+/* Free the given descriptor object. */
+void
+hs_descriptor_free(hs_descriptor_t *desc)
+{
+  if (!desc) {
+    return;
+  }
+
+  desc_plaintext_data_free_contents(&desc->plaintext_data);
+  desc_encrypted_data_free_contents(&desc->encrypted_data);
+  tor_free(desc);
 }
