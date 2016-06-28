@@ -2053,6 +2053,29 @@ getinfo_helper_dir(control_connection_t *control_conn,
   return 0;
 }
 
+/** Turn a smartlist of digests into a human-readable list of hex strings */
+
+static char *
+digest_list_to_string(smartlist_t *sl)
+{
+  int len;
+  char *result, *s;
+
+  /* Allow for newlines, and a \0 at the end */
+  len = smartlist_len(sl) * (HEX_DIGEST_LEN + 1) + 1;
+  result = tor_malloc_zero(len);
+
+  s = result;
+  SMARTLIST_FOREACH_BEGIN(sl, char *, digest) {
+    base16_encode(s, HEX_DIGEST_LEN + 1, digest, DIGEST_LEN);
+    s[HEX_DIGEST_LEN] = '\n';
+    s += HEX_DIGEST_LEN + 1;
+  } SMARTLIST_FOREACH_END(digest);
+  *s = '\0';
+
+  return result;
+}
+
 /** Turn a download_status_t into a human-readable description in a newly
  * allocated string. */
 
@@ -2155,6 +2178,135 @@ download_status_to_string(const download_status_t *dl)
   return rv;
 }
 
+/** Handle the consensus download cases for getinfo_helper_downloads() */
+static void
+getinfo_helper_downloads_networkstatus(const char *flavor,
+                                       download_status_t **dl_to_emit,
+                                       const char **errmsg)
+{
+  /*
+   * We get the one for the current bootstrapped status by default, or
+   * take an extra /bootstrap or /running suffix
+   */
+  if (strcmp(flavor, "ns") == 0) {
+    *dl_to_emit = networkstatus_get_dl_status_by_flavor(FLAV_NS);
+  } else if (strcmp(flavor, "ns/bootstrap") == 0) {
+    *dl_to_emit = networkstatus_get_dl_status_by_flavor_bootstrap(FLAV_NS);
+  } else if (strcmp(flavor, "ns/running") == 0 ) {
+    *dl_to_emit = networkstatus_get_dl_status_by_flavor_running(FLAV_NS);
+  } else if (strcmp(flavor, "microdesc") == 0) {
+    *dl_to_emit = networkstatus_get_dl_status_by_flavor(FLAV_MICRODESC);
+  } else if (strcmp(flavor, "microdesc/bootstrap") == 0) {
+    *dl_to_emit =
+      networkstatus_get_dl_status_by_flavor_bootstrap(FLAV_MICRODESC);
+  } else if (strcmp(flavor, "microdesc/running") == 0) {
+    *dl_to_emit =
+      networkstatus_get_dl_status_by_flavor_running(FLAV_MICRODESC);
+  } else {
+    *errmsg = "Unknown flavor";
+  }
+}
+
+/** Handle the cert download cases for getinfo_helper_downloads() */
+static void
+getinfo_helper_downloads_cert(const char *fp_sk_req,
+                              download_status_t **dl_to_emit,
+                              smartlist_t **digest_list,
+                              const char **errmsg)
+{
+  const char *sk_req;
+  char id_digest[DIGEST_LEN];
+  char sk_digest[DIGEST_LEN];
+
+  /*
+   * We have to handle four cases; fp_sk_req is the request with
+   * a prefix of "downloads/cert/" snipped off.
+   *
+   * Case 1: fp_sk_req = "fps"
+   *  - We should emit a digest_list with a list of all the identity
+   *    fingerprints that can be queried for certificate download status;
+   *    get it by calling list_authority_ids_with_downloads().
+   *
+   * Case 2: fp_sk_req = "fp/<fp>" for some fingerprint fp
+   *  - We want the default certificate for this identity fingerprint's
+   *    download status; this is the download we get from URLs starting
+   *    in /fp/ on the directory server.  We can get it with
+   *    id_only_download_status_for_authority_id().
+   *
+   * Case 3: fp_sk_req = "fp/<fp>/sks" for some fingerprint fp
+   *  - We want a list of all signing key digests for this identity
+   *    fingerprint which can be queried for certificate download status.
+   *    Get it with list_sk_digests_for_authority_id().
+   *
+   * Case 4: fp_sk_req = "fp/<fp>/<sk>" for some fingerprint fp and
+   *         signing key digest sk
+   *   - We want the download status for the certificate for this specific
+   *     signing key and fingerprint.  These correspond to the ones we get
+   *     from URLs starting in /fp-sk/ on the directory server.  Get it with
+   *     list_sk_digests_for_authority_id().
+   */
+
+  if (strcmp(fp_sk_req, "fps") == 0) {
+    *digest_list = list_authority_ids_with_downloads();
+    if (!(*digest_list)) {
+      *errmsg = "Failed to get list of authority identity digests (!)";
+    }
+  } else if (!strcmpstart(fp_sk_req, "fp/")) {
+    fp_sk_req += strlen("fp/");
+    /* Okay, look for another / to tell the fp from fp-sk cases */
+    sk_req = strchr(fp_sk_req, '/');
+    if (sk_req) {
+      /* okay, split it here and try to parse <fp> */
+      if (base16_decode(id_digest, DIGEST_LEN,
+                        fp_sk_req, sk_req - fp_sk_req) == DIGEST_LEN) {
+        /* Skip past the '/' */
+        ++sk_req;
+        if (strcmp(sk_req, "sks") == 0) {
+          /* We're asking for the list of signing key fingerprints */
+          *digest_list = list_sk_digests_for_authority_id(id_digest);
+          if (!(*digest_list)) {
+            *errmsg = "Failed to get list of signing key digests for this "
+                      "authority identity digest";
+          }
+        } else {
+          /* We've got a signing key digest */
+          if (base16_decode(sk_digest, DIGEST_LEN,
+                            sk_req, strlen(sk_req)) == DIGEST_LEN) {
+            *dl_to_emit =
+              download_status_for_authority_id_and_sk(id_digest, sk_digest);
+            if (!(*dl_to_emit)) {
+              *errmsg = "Failed to get download status for this identity/"
+                        "signing key digest pair";
+            }
+          } else {
+            *errmsg = "That didn't look like a signing key digest";
+          }
+        }
+      } else {
+        *errmsg = "That didn't look like an identity digest";
+      }
+    } else {
+      /* We're either in downloads/certs/fp/<fp>, or we can't parse <fp> */
+      if (strlen(fp_sk_req) == HEX_DIGEST_LEN) {
+        if (base16_decode(id_digest, DIGEST_LEN,
+                          fp_sk_req, strlen(fp_sk_req)) == DIGEST_LEN) {
+          *dl_to_emit = id_only_download_status_for_authority_id(id_digest);
+          if (!(*dl_to_emit)) {
+            *errmsg = "Failed to get download status for this authority "
+                      "identity digest";
+          }
+        } else {
+          *errmsg = "That didn't look like a digest";
+        }
+      } else {
+        *errmsg = "That didn't look like a digest";
+      }
+    }
+  } else {
+    *errmsg = "Unknown certificate download status query";
+  }
+}
+
 /** Implementation helper for GETINFO: knows the answers for questions about
  * download status information. */
 static int
@@ -2162,8 +2314,8 @@ getinfo_helper_downloads(control_connection_t *control_conn,
                    const char *question, char **answer,
                    const char **errmsg)
 {
-  const char *flavor;
   download_status_t *dl_to_emit = NULL;
+  smartlist_t *digest_list = NULL;
 
   /* Assert args are sane */
   tor_assert(control_conn != NULL);
@@ -2176,32 +2328,25 @@ getinfo_helper_downloads(control_connection_t *control_conn,
 
   /* Are we after networkstatus downloads? */
   if (!strcmpstart(question, "downloads/networkstatus/")) {
-    flavor = question + strlen("downloads/networkstatus/");
-    /*
-     * We get the one for the current bootstrapped status by default, or
-     * take an extra /bootstrap or /running suffix
-     */
-    if (strcmp(flavor, "ns") == 0) {
-      dl_to_emit = networkstatus_get_dl_status_by_flavor(FLAV_NS);
-    } else if (strcmp(flavor, "ns/bootstrap") == 0) {
-      dl_to_emit = networkstatus_get_dl_status_by_flavor_bootstrap(FLAV_NS);
-    } else if (strcmp(flavor, "ns/running") == 0 ) {
-      dl_to_emit = networkstatus_get_dl_status_by_flavor_running(FLAV_NS);
-    } else if (strcmp(flavor, "microdesc") == 0) {
-      dl_to_emit = networkstatus_get_dl_status_by_flavor(FLAV_MICRODESC);
-    } else if (strcmp(flavor, "microdesc/bootstrap") == 0) {
-      dl_to_emit =
-        networkstatus_get_dl_status_by_flavor_bootstrap(FLAV_MICRODESC);
-    } else if (strcmp(flavor, "microdesc/running") == 0) {
-      dl_to_emit =
-        networkstatus_get_dl_status_by_flavor_running(FLAV_MICRODESC);
-    } else {
-      *errmsg = "Unknown flavor";
-    }
+    getinfo_helper_downloads_networkstatus(
+        question + strlen("downloads/networkstatus/"),
+        &dl_to_emit, errmsg);
+  } else if (!strcmpstart(question, "downloads/cert/")) {
+    getinfo_helper_downloads_cert(
+        question + strlen("downloads/cert/"),
+        &dl_to_emit, &digest_list, errmsg);
+  } else {
+    *errmsg = "Unknown download status query";
   }
 
   if (dl_to_emit) {
     *answer = download_status_to_string(dl_to_emit);
+
+    return 0;
+  } else if (digest_list) {
+    *answer = digest_list_to_string(digest_list);
+    SMARTLIST_FOREACH(digest_list, void *, s, tor_free(s));
+    smartlist_free(digest_list);
 
     return 0;
   } else {
@@ -2666,6 +2811,21 @@ static const getinfo_item_t getinfo_items[] = {
       "Download status for bootstrap-time microdesc download"),
   DOC("downloads/networkstatus/microdesc/running",
       "Download status for run-time microdesc download"),
+  PREFIX("downloads/cert/", downloads,
+         "Download statuses for certificates, by id fingerprint and "
+         "signing key"),
+  DOC("downloads/cert/fps",
+      "List of authority fingerprints for which any download statuses "
+      "exist"),
+  DOC("downloads/cert/fp/<fp>",
+      "Download status for <fp> with the default signing key; corresponds "
+      "to /fp/ URLs on directory server."),
+  DOC("downloads/cert/fp/<fp>/sks",
+      "List of signing keys for which specific download statuses are "
+      "available for this id fingerprint"),
+  DOC("downloads/cert/fp/<fp>/<sk>",
+      "Download status for <fp> with signing key <sk>; corresponds "
+      "to /fp-sk/ URLs on directory server."),
   ITEM("info/names", misc,
        "List of GETINFO options, types, and documentation."),
   ITEM("events/names", misc,

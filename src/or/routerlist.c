@@ -253,6 +253,112 @@ get_cert_list(const char *id_digest)
   return cl;
 }
 
+/** Return a list of authority ID digests with potentially enumerable lists
+ * of download_status_t objects; used by controller GETINFO queries.
+ */
+
+smartlist_t *
+list_authority_ids_with_downloads(void)
+{
+  smartlist_t *ids = smartlist_new();
+  digestmap_iter_t *i;
+  const char *digest;
+  char *tmp;
+  void *cl;
+
+  if (trusted_dir_certs) {
+    for (i = digestmap_iter_init(trusted_dir_certs);
+         !(digestmap_iter_done(i));
+         i = digestmap_iter_next(trusted_dir_certs, i)) {
+      /*
+       * We always have at least dl_status_by_id to query, so no need to
+       * probe deeper than the existence of a cert_list_t.
+       */
+      digestmap_iter_get(i, &digest, &cl);
+      tmp = tor_malloc(DIGEST_LEN);
+      memcpy(tmp, digest, DIGEST_LEN);
+      smartlist_add(ids, tmp);
+    }
+  }
+  /* else definitely no downlaods going since nothing even has a cert list */
+
+  return ids;
+}
+
+/** Given an authority ID digest, return a pointer to the default download
+ * status, or NULL if there is no such entry in trusted_dir_certs */
+
+download_status_t *
+id_only_download_status_for_authority_id(const char *digest)
+{
+  download_status_t *dl = NULL;
+  cert_list_t *cl;
+
+  if (trusted_dir_certs) {
+    cl = digestmap_get(trusted_dir_certs, digest);
+    if (cl) {
+      dl = &(cl->dl_status_by_id);
+    }
+  }
+
+  return dl;
+}
+
+/** Given an authority ID digest, return a smartlist of signing key digests
+ * for which download_status_t is potentially queryable, or NULL if no such
+ * authority ID digest is known. */
+
+smartlist_t *
+list_sk_digests_for_authority_id(const char *digest)
+{
+  smartlist_t *sks = NULL;
+  cert_list_t *cl;
+  dsmap_iter_t *i;
+  const char *sk_digest;
+  char *tmp;
+  download_status_t *dl;
+
+  if (trusted_dir_certs) {
+    cl = digestmap_get(trusted_dir_certs, digest);
+    if (cl) {
+      sks = smartlist_new();
+      if (cl->dl_status_map) {
+        for (i = dsmap_iter_init(cl->dl_status_map);
+             !(dsmap_iter_done(i));
+             i = dsmap_iter_next(cl->dl_status_map, i)) {
+          /* Pull the digest out and add it to the list */
+          dsmap_iter_get(i, &sk_digest, &dl);
+          tmp = tor_malloc(DIGEST_LEN);
+          memcpy(tmp, sk_digest, DIGEST_LEN);
+          smartlist_add(sks, tmp);
+        }
+      }
+    }
+  }
+
+  return sks;
+}
+
+/** Given an authority ID digest and a signing key digest, return the
+ * download_status_t or NULL if none exists. */
+
+download_status_t *
+download_status_for_authority_id_and_sk(const char *id_digest,
+                                        const char *sk_digest)
+{
+  download_status_t *dl = NULL;
+  cert_list_t *cl = NULL;
+
+  if (trusted_dir_certs) {
+    cl = digestmap_get(trusted_dir_certs, id_digest);
+    if (cl && cl->dl_status_map) {
+      dl = dsmap_get(cl->dl_status_map, sk_digest);
+    }
+  }
+
+  return dl;
+}
+
 /** Release all space held by a cert_list_t */
 static void
 cert_list_free(cert_list_t *cl)
