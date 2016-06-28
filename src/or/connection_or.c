@@ -1750,7 +1750,7 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
     const int is_fallback_fingerprint = router_digest_is_fallback_dir(
                                                    conn->identity_digest);
     const int is_authority_fingerprint = router_digest_is_trusted_dir(
-                                                                      conn->identity_digest);
+                                                   conn->identity_digest);
     int severity;
     const char *extra_log = "";
 
