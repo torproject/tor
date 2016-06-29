@@ -4,6 +4,7 @@
 #define CONTROL_PRIVATE
 #include "or.h"
 #include "control.h"
+#include "entrynodes.h"
 #include "networkstatus.h"
 #include "rendservice.h"
 #include "routerlist.h"
@@ -333,6 +334,22 @@ static const char *auth_2_sk_digest_expected_list =
     "4299047E00D070AD6703FE00BE7AA756DB061E62\n"
     "9451B8F1B10952384EB58B5F230C0BB701626C9B\n";
 
+/* Simulated router descriptor digests or bridge identity digests */
+static const char *descbr_digest_1_str =
+    "616408544C7345822696074A1A3DFA16AB381CBD";
+static download_status_t descbr_digest_1_dl;
+static const char *descbr_digest_2_str =
+    "06E8067246967265DBCB6641631B530EFEC12DC3";
+static download_status_t descbr_digest_2_dl;
+/* Expected form of digest list returned for GETINFO downloads/desc/descs */
+static const char *descbr_expected_list =
+    "616408544C7345822696074A1A3DFA16AB381CBD\n"
+    "06E8067246967265DBCB6641631B530EFEC12DC3\n";
+/*
+ * Flag to make all descbr queries fail, to simulate not being
+ * configured such that such queries make sense.
+ */
+static int disable_descbr = 0;
 
 static void
 reset_mocked_dl_statuses(void)
@@ -359,6 +376,11 @@ reset_mocked_dl_statuses(void)
   memcpy(&auth_2_sk_1_dls, &dl_status_default,
          sizeof(download_status_t));
   memcpy(&auth_2_sk_2_dls, &dl_status_default,
+         sizeof(download_status_t));
+
+  memcpy(&descbr_digest_1_dl, &dl_status_default,
+         sizeof(download_status_t));
+  memcpy(&descbr_digest_2_dl, &dl_status_default,
          sizeof(download_status_t));
 }
 
@@ -556,6 +578,95 @@ clear_cert_mocks(void)
   UNMOCK(id_only_download_status_for_authority_id);
   UNMOCK(list_sk_digests_for_authority_id);
   UNMOCK(download_status_for_authority_id_and_sk);
+}
+
+static smartlist_t *
+descbr_get_digests_mock(void)
+{
+  char digest[DIGEST_LEN], *tmp;
+  int len;
+  smartlist_t *list = NULL;
+
+  if (!disable_descbr) {
+    /* Just pretend we have only the two hard-coded digests listed above */
+    list = smartlist_new();
+    len = base16_decode(digest, DIGEST_LEN,
+                        descbr_digest_1_str, strlen(descbr_digest_1_str));
+    tt_int_op(len, OP_EQ, DIGEST_LEN);
+    tmp = tor_malloc(DIGEST_LEN);
+    memcpy(tmp, digest, DIGEST_LEN);
+    smartlist_add(list, tmp);
+    len = base16_decode(digest, DIGEST_LEN,
+                        descbr_digest_2_str, strlen(descbr_digest_2_str));
+    tt_int_op(len, OP_EQ, DIGEST_LEN);
+    tmp = tor_malloc(DIGEST_LEN);
+    memcpy(tmp, digest, DIGEST_LEN);
+    smartlist_add(list, tmp);
+  }
+
+ done:
+  return list;
+}
+
+static download_status_t *
+descbr_get_dl_by_digest_mock(const char *digest)
+{
+  download_status_t *dl = NULL;
+  char digest_str[HEX_DIGEST_LEN+1];
+
+  if (!disable_descbr) {
+    tt_assert(digest != NULL);
+    base16_encode(digest_str, HEX_DIGEST_LEN + 1,
+                  digest, DIGEST_LEN);
+    digest_str[HEX_DIGEST_LEN] = '\0';
+
+    if (strcmp(digest_str, descbr_digest_1_str) == 0) {
+      dl = &descbr_digest_1_dl;
+    } else if (strcmp(digest_str, descbr_digest_2_str) == 0) {
+      dl = &descbr_digest_2_dl;
+    }
+  }
+
+ done:
+  return dl;
+}
+
+static void
+setup_desc_mocks(void)
+{
+  MOCK(router_get_descriptor_digests,
+       descbr_get_digests_mock);
+  MOCK(router_get_dl_status_by_descriptor_digest,
+       descbr_get_dl_by_digest_mock);
+  reset_mocked_dl_statuses();
+}
+
+static void
+clear_desc_mocks(void)
+{
+  UNMOCK(router_get_descriptor_digests);
+  UNMOCK(router_get_dl_status_by_descriptor_digest);
+}
+
+static void
+setup_bridge_mocks(void)
+{
+  disable_descbr = 0;
+
+  MOCK(list_bridge_identities,
+       descbr_get_digests_mock);
+  MOCK(get_bridge_dl_status_by_id,
+       descbr_get_dl_by_digest_mock);
+  reset_mocked_dl_statuses();
+}
+
+static void
+clear_bridge_mocks(void)
+{
+  UNMOCK(list_bridge_identities);
+  UNMOCK(get_bridge_dl_status_by_id);
+
+  disable_descbr = 0;
 }
 
 static void
@@ -960,6 +1071,213 @@ test_download_status_cert(void *arg)
   return;
 }
 
+static void
+test_download_status_desc(void *arg)
+{
+  /* We just need one of these to pass, it doesn't matter what's in it */
+  control_connection_t dummy;
+  /* Get results out */
+  char *question = NULL;
+  char *answer = NULL;
+  const char *errmsg = NULL;
+
+  (void)arg;
+
+  setup_desc_mocks();
+
+  /*
+   * Check returning serialized dlstatuses and digest lists, and implicitly
+   * also test download_status_to_string() and digest_list_to_string().
+   */
+
+  /* Case 1 - list of router descriptor digests */
+  getinfo_helper_downloads(&dummy,
+                           "downloads/desc/descs",
+                           &answer, &errmsg);
+  tt_assert(answer != NULL);
+  tt_assert(errmsg == NULL);
+  tt_str_op(answer, OP_EQ, descbr_expected_list);
+  tor_free(answer);
+  errmsg = NULL;
+
+  /* Case 2 - get download status for router descriptor 1 */
+  memcpy(&descbr_digest_1_dl, &dls_sample_1,
+         sizeof(download_status_t));
+  tor_asprintf(&question, "downloads/desc/%s", descbr_digest_1_str);
+  tt_assert(question != NULL);
+  getinfo_helper_downloads(&dummy, question, &answer, &errmsg);
+  tt_assert(answer != NULL);
+  tt_assert(errmsg == NULL);
+  tt_str_op(answer, OP_EQ, dls_sample_1_str);
+  tor_free(question);
+  tor_free(answer);
+  errmsg = NULL;
+
+  /* Case 3 - get download status for router descriptor 1 */
+  memcpy(&descbr_digest_2_dl, &dls_sample_2,
+         sizeof(download_status_t));
+  tor_asprintf(&question, "downloads/desc/%s", descbr_digest_2_str);
+  tt_assert(question != NULL);
+  getinfo_helper_downloads(&dummy, question, &answer, &errmsg);
+  tt_assert(answer != NULL);
+  tt_assert(errmsg == NULL);
+  tt_str_op(answer, OP_EQ, dls_sample_2_str);
+  tor_free(question);
+  tor_free(answer);
+  errmsg = NULL;
+
+  /* Now check the error cases */
+
+  /* Case 1 - non-digest-length garbage after downloads/desc */
+  getinfo_helper_downloads(&dummy, "downloads/desc/blahdeblah",
+                           &answer, &errmsg);
+  tt_assert(answer == NULL);
+  tt_assert(errmsg != NULL);
+  tt_str_op(errmsg, OP_EQ, "Unknown router descriptor download status query");
+  errmsg = NULL;
+
+  /* Case 2 - nonparseable digest-shaped thing */
+  getinfo_helper_downloads(
+    &dummy,
+    "downloads/desc/774EC52FD9A5B80A6FACZE536616E8022E3470AG",
+    &answer, &errmsg);
+  tt_assert(answer == NULL);
+  tt_assert(errmsg != NULL);
+  tt_str_op(errmsg, OP_EQ, "That didn't look like a digest");
+  errmsg = NULL;
+
+  /* Case 3 - digest we have no descriptor for */
+  getinfo_helper_downloads(
+    &dummy,
+    "downloads/desc/B05B46135B0B2C04EBE1DD6A6AE4B12D7CD2226A",
+    &answer, &errmsg);
+  tt_assert(answer == NULL);
+  tt_assert(errmsg != NULL);
+  tt_str_op(errmsg, OP_EQ, "No such descriptor digest found");
+  errmsg = NULL;
+
+  /* Case 4 - microdescs only */
+  disable_descbr = 1;
+  getinfo_helper_downloads(&dummy,
+                           "downloads/desc/descs",
+                           &answer, &errmsg);
+  tt_assert(answer == NULL);
+  tt_assert(errmsg != NULL);
+  tt_str_op(errmsg, OP_EQ,
+            "We don't seem to have a networkstatus-flavored consensus");
+  errmsg = NULL;
+  disable_descbr = 0;
+
+ done:
+  clear_desc_mocks();
+  tor_free(answer);
+
+  return;
+}
+
+static void
+test_download_status_bridge(void *arg)
+{
+  /* We just need one of these to pass, it doesn't matter what's in it */
+  control_connection_t dummy;
+  /* Get results out */
+  char *question = NULL;
+  char *answer = NULL;
+  const char *errmsg = NULL;
+
+  (void)arg;
+
+  setup_bridge_mocks();
+
+  /*
+   * Check returning serialized dlstatuses and digest lists, and implicitly
+   * also test download_status_to_string() and digest_list_to_string().
+   */
+
+  /* Case 1 - list of bridge identity digests */
+  getinfo_helper_downloads(&dummy,
+                           "downloads/bridge/bridges",
+                           &answer, &errmsg);
+  tt_assert(answer != NULL);
+  tt_assert(errmsg == NULL);
+  tt_str_op(answer, OP_EQ, descbr_expected_list);
+  tor_free(answer);
+  errmsg = NULL;
+
+  /* Case 2 - get download status for bridge descriptor 1 */
+  memcpy(&descbr_digest_1_dl, &dls_sample_3,
+         sizeof(download_status_t));
+  tor_asprintf(&question, "downloads/bridge/%s", descbr_digest_1_str);
+  tt_assert(question != NULL);
+  getinfo_helper_downloads(&dummy, question, &answer, &errmsg);
+  tt_assert(answer != NULL);
+  tt_assert(errmsg == NULL);
+  tt_str_op(answer, OP_EQ, dls_sample_3_str);
+  tor_free(question);
+  tor_free(answer);
+  errmsg = NULL;
+
+  /* Case 3 - get download status for router descriptor 1 */
+  memcpy(&descbr_digest_2_dl, &dls_sample_4,
+         sizeof(download_status_t));
+  tor_asprintf(&question, "downloads/bridge/%s", descbr_digest_2_str);
+  tt_assert(question != NULL);
+  getinfo_helper_downloads(&dummy, question, &answer, &errmsg);
+  tt_assert(answer != NULL);
+  tt_assert(errmsg == NULL);
+  tt_str_op(answer, OP_EQ, dls_sample_4_str);
+  tor_free(question);
+  tor_free(answer);
+  errmsg = NULL;
+
+  /* Now check the error cases */
+
+  /* Case 1 - non-digest-length garbage after downloads/bridge */
+  getinfo_helper_downloads(&dummy, "downloads/bridge/blahdeblah",
+                           &answer, &errmsg);
+  tt_assert(answer == NULL);
+  tt_assert(errmsg != NULL);
+  tt_str_op(errmsg, OP_EQ, "Unknown bridge descriptor download status query");
+  errmsg = NULL;
+
+  /* Case 2 - nonparseable digest-shaped thing */
+  getinfo_helper_downloads(
+    &dummy,
+    "downloads/bridge/774EC52FD9A5B80A6FACZE536616E8022E3470AG",
+    &answer, &errmsg);
+  tt_assert(answer == NULL);
+  tt_assert(errmsg != NULL);
+  tt_str_op(errmsg, OP_EQ, "That didn't look like a digest");
+  errmsg = NULL;
+
+  /* Case 3 - digest we have no descriptor for */
+  getinfo_helper_downloads(
+    &dummy,
+    "downloads/bridge/B05B46135B0B2C04EBE1DD6A6AE4B12D7CD2226A",
+    &answer, &errmsg);
+  tt_assert(answer == NULL);
+  tt_assert(errmsg != NULL);
+  tt_str_op(errmsg, OP_EQ, "No such bridge identity digest found");
+  errmsg = NULL;
+
+  /* Case 4 - bridges disabled */
+  disable_descbr = 1;
+  getinfo_helper_downloads(&dummy,
+                           "downloads/bridge/bridges",
+                           &answer, &errmsg);
+  tt_assert(answer == NULL);
+  tt_assert(errmsg != NULL);
+  tt_str_op(errmsg, OP_EQ, "We don't seem to be using bridges");
+  errmsg = NULL;
+  disable_descbr = 0;
+
+ done:
+  clear_bridge_mocks();
+  tor_free(answer);
+
+  return;
+}
+
 struct testcase_t controller_tests[] = {
   { "add_onion_helper_keyarg", test_add_onion_helper_keyarg, 0, NULL, NULL },
   { "rend_service_parse_port_config", test_rend_service_parse_port_config, 0,
@@ -970,6 +1288,8 @@ struct testcase_t controller_tests[] = {
     NULL },
   { "download_status_cert", test_download_status_cert, 0, NULL,
     NULL },
+  { "download_status_desc", test_download_status_desc, 0, NULL, NULL },
+  { "download_status_bridge", test_download_status_bridge, 0, NULL, NULL },
   END_OF_TESTCASES
 };
 
