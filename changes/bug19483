@@ -1,0 +1,3 @@
+  o Minor fixes (time):
+    - Improve overflow checks in tv_udiff and tv_mdiff.
+      Fixes bug 19483, present in all tor versions.
