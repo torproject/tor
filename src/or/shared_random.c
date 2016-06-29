@@ -589,7 +589,7 @@ STATIC int
 should_keep_commit(const sr_commit_t *commit, const char *voter_key,
                    sr_phase_t phase)
 {
-  sr_commit_t *saved_commit;
+  const sr_commit_t *saved_commit;
 
   tor_assert(commit);
   tor_assert(voter_key);

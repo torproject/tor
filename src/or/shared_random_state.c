@@ -793,20 +793,6 @@ reset_state_for_new_protocol_run(time_t valid_after)
   sr_state_delete_commits();
 }
 
-/* Rotate SRV value by freeing the previous value, assigning the current
- * value to the previous one and nullifying the current one. */
-STATIC void
-state_rotate_srv(void)
-{
-  /* Get a pointer to the previous SRV so we can free it after rotation. */
-  sr_srv_t *previous_srv = sr_state_get_previous_srv();
-  /* Set previous SRV with the current one. */
-  sr_state_set_previous_srv(sr_state_get_current_srv());
-  /* Nullify the current srv. */
-  sr_state_set_current_srv(NULL);
-  tor_free(previous_srv);
-}
-
 /* This is the first round of the new protocol run starting at
  * <b>valid_after</b>. Do the necessary housekeeping. */
 STATIC void
@@ -857,6 +843,7 @@ state_query_get_commit(const char *rsa_fpr)
   tor_assert(rsa_fpr);
   return digestmap_get(sr_state->commits, rsa_fpr);
 }
+
 /* Helper function: This handles the GET state action using an
  * <b>obj_type</b> and <b>data</b> needed for the action. */
 static void *
@@ -921,7 +908,7 @@ state_query_put_(sr_state_object_t obj_type, void *data)
   }
 }
 
-/* Helper function: This handles the DEL state action using an
+/* Helper function: This handles the DEL_ALL state action using an
  * <b>obj_type</b> and <b>data</b> needed for the action. */
 static void
 state_query_del_all_(sr_state_object_t obj_type)
@@ -941,6 +928,29 @@ state_query_del_all_(sr_state_object_t obj_type)
   case SR_STATE_OBJ_PREVSRV:
   case SR_STATE_OBJ_PHASE:
   case SR_STATE_OBJ_COMMITS:
+  case SR_STATE_OBJ_VALID_AFTER:
+  default:
+    tor_assert(0);
+  }
+}
+
+/* Helper function: This handles the DEL state action using an
+ * <b>obj_type</b> and <b>data</b> needed for the action. */
+static void
+state_query_del_(sr_state_object_t obj_type, void *data)
+{
+  (void) data;
+
+  switch (obj_type) {
+  case SR_STATE_OBJ_PREVSRV:
+    tor_free(sr_state->previous_srv);
+    break;
+  case SR_STATE_OBJ_CURSRV:
+    tor_free(sr_state->current_srv);
+    break;
+  case SR_STATE_OBJ_COMMIT:
+  case SR_STATE_OBJ_COMMITS:
+  case SR_STATE_OBJ_PHASE:
   case SR_STATE_OBJ_VALID_AFTER:
   default:
     tor_assert(0);
@@ -969,6 +979,9 @@ state_query(sr_state_action_t action, sr_state_object_t obj_type,
   case SR_STATE_ACTION_PUT:
     state_query_put_(obj_type, data);
     break;
+  case SR_STATE_ACTION_DEL:
+    state_query_del_(obj_type, data);
+    break;
   case SR_STATE_ACTION_DEL_ALL:
     state_query_del_all_(obj_type);
     break;
@@ -984,6 +997,35 @@ state_query(sr_state_action_t action, sr_state_object_t obj_type,
   if (action != SR_STATE_ACTION_GET) {
     disk_state_save_to_disk();
   }
+}
+
+/* Delete the current SRV value from the state freeing it and the value is set
+ * to NULL meaning empty. */
+static void
+state_del_current_srv(void)
+{
+  state_query(SR_STATE_ACTION_DEL, SR_STATE_OBJ_CURSRV, NULL, NULL);
+}
+
+/* Delete the previous SRV value from the state freeing it and the value is
+ * set to NULL meaning empty. */
+static void
+state_del_previous_srv(void)
+{
+  state_query(SR_STATE_ACTION_DEL, SR_STATE_OBJ_PREVSRV, NULL, NULL);
+}
+
+/* Rotate SRV value by freeing the previous value, assigning the current
+ * value to the previous one and nullifying the current one. */
+STATIC void
+state_rotate_srv(void)
+{
+  /* First delete previous SRV from the state. Object will be freed. */
+  state_del_previous_srv();
+  /* Set previous SRV with the current one. */
+  sr_state_set_previous_srv(sr_state_get_current_srv());
+  /* Nullify the current srv. */
+  sr_state_set_current_srv(NULL);
 }
 
 /* Set valid after time in the our state. */
@@ -1004,10 +1046,10 @@ sr_state_get_phase(void)
 }
 
 /* Return the previous SRV value from our state. Value CAN be NULL. */
-sr_srv_t *
+const sr_srv_t *
 sr_state_get_previous_srv(void)
 {
-  sr_srv_t *srv;
+  const sr_srv_t *srv;
   state_query(SR_STATE_ACTION_GET, SR_STATE_OBJ_PREVSRV, NULL,
               (void *) &srv);
   return srv;
@@ -1023,10 +1065,10 @@ sr_state_set_previous_srv(const sr_srv_t *srv)
 }
 
 /* Return the current SRV value from our state. Value CAN be NULL. */
-sr_srv_t *
+const sr_srv_t *
 sr_state_get_current_srv(void)
 {
-  sr_srv_t *srv;
+  const sr_srv_t *srv;
   state_query(SR_STATE_ACTION_GET, SR_STATE_OBJ_CURSRV, NULL,
               (void *) &srv);
   return srv;
@@ -1045,14 +1087,9 @@ sr_state_set_current_srv(const sr_srv_t *srv)
 void
 sr_state_clean_srvs(void)
 {
-  sr_srv_t *previous_srv = sr_state_get_previous_srv();
-  sr_srv_t *current_srv = sr_state_get_current_srv();
-
-  tor_free(previous_srv);
-  sr_state_set_previous_srv(NULL);
-
-  tor_free(current_srv);
-  sr_state_set_current_srv(NULL);
+  /* Remove SRVs from state. They will be set to NULL as "empty". */
+  state_del_previous_srv();
+  state_del_current_srv();
 }
 
 /* Return a pointer to the commits map from our state. CANNOT be NULL. */

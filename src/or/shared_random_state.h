@@ -10,8 +10,9 @@
 typedef enum {
   SR_STATE_ACTION_GET     = 1,
   SR_STATE_ACTION_PUT     = 2,
-  SR_STATE_ACTION_DEL_ALL = 3,
-  SR_STATE_ACTION_SAVE    = 4,
+  SR_STATE_ACTION_DEL     = 3,
+  SR_STATE_ACTION_DEL_ALL = 4,
+  SR_STATE_ACTION_SAVE    = 5,
 } sr_state_action_t;
 
 /* Object in the state that can be queried through the state API. */
@@ -101,8 +102,8 @@ void sr_state_update(time_t valid_after);
 
 void sr_state_set_valid_after(time_t valid_after);
 sr_phase_t sr_state_get_phase(void);
-sr_srv_t *sr_state_get_previous_srv(void);
-sr_srv_t *sr_state_get_current_srv(void);
+const sr_srv_t *sr_state_get_previous_srv(void);
+const sr_srv_t *sr_state_get_current_srv(void);
 void sr_state_set_previous_srv(const sr_srv_t *srv);
 void sr_state_set_current_srv(const sr_srv_t *srv);
 void sr_state_clean_srvs(void);

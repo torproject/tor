@@ -780,7 +780,7 @@ static void
 test_sr_compute_srv(void *arg)
 {
   (void) arg;
-  sr_srv_t *current_srv = NULL;
+  const sr_srv_t *current_srv = NULL;
 
 #define SRV_TEST_VECTOR \
   "2A9B1D6237DAB312A40F575DA85C147663E7ED3F80E9555395F15B515C74253D"
@@ -1026,7 +1026,7 @@ test_state_transition(void *arg)
 
   /* Test SRV rotation in our state. */
   {
-    sr_srv_t *cur, *prev;
+    const sr_srv_t *cur, *prev;
     test_sr_setup_srv(1);
     cur = sr_state_get_current_srv();
     tt_assert(cur);
@@ -1039,7 +1039,7 @@ test_state_transition(void *arg)
 
   /* New protocol run. */
   {
-    sr_srv_t *cur;
+    const sr_srv_t *cur;
     /* Setup some new SRVs so we can confirm that a new protocol run
      * actually makes them rotate and compute new ones. */
     test_sr_setup_srv(1);
