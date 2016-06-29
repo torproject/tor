@@ -28,6 +28,7 @@
 #include "routerparse.h"
 #include "entrynodes.h"
 #include "torcert.h"
+#include "sandbox.h"
 
 #undef log
 #include <math.h>
@@ -768,35 +769,49 @@ dump_desc(const char *desc, const char *type)
   tor_asprintf(&debugfile_base, "unparseable-desc.%s", digest_sha256_hex);
   debugfile = get_datadir_fname(debugfile_base);
 
-  if (len <= get_options()->MaxUnparseableDescSizeToLog) {
-    if (!dump_desc_fifo_bump_hash(digest_sha256)) {
-      /* Write it, and tell the main log about it */
-      write_str_to_file(debugfile, desc, 1);
-      log_info(LD_DIR,
-               "Unable to parse descriptor of type %s with hash %s and "
-               "length %lu. See file %s in data directory for details.",
-               type, digest_sha256_hex, (unsigned long)len, debugfile_base);
-
-      dump_desc_fifo_add_and_clean(debugfile, digest_sha256, len);
-      /* Since we handed ownership over, don't free debugfile later */
-      debugfile = NULL;
+  if (!sandbox_is_active()) {
+    if (len <= get_options()->MaxUnparseableDescSizeToLog) {
+      if (!dump_desc_fifo_bump_hash(digest_sha256)) {
+        /* Write it, and tell the main log about it */
+        write_str_to_file(debugfile, desc, 1);
+        log_info(LD_DIR,
+                 "Unable to parse descriptor of type %s with hash %s and "
+                 "length %lu. See file %s in data directory for details.",
+                 type, digest_sha256_hex, (unsigned long)len,
+                 debugfile_base);
+        dump_desc_fifo_add_and_clean(debugfile, digest_sha256, len);
+        /* Since we handed ownership over, don't free debugfile later */
+        debugfile = NULL;
+      } else {
+        /* We already had one with this hash dumped */
+        log_info(LD_DIR,
+                 "Unable to parse descriptor of type %s with hash %s and "
+                 "length %lu. Descriptor not dumped because one with that "
+                 "hash has already been dumped.",
+                 type, digest_sha256_hex, (unsigned long)len);
+        /* We do have to free debugfile in this case */
+      }
     } else {
-      /* We already had one with this hash dumped */
+      /* Just log that it happened without dumping */
       log_info(LD_DIR,
                "Unable to parse descriptor of type %s with hash %s and "
-               "length %lu. Descriptor not dumped because one with that hash "
-               "has already been dumped.",
+               "length %lu. Descriptor not dumped because it exceeds maximum"
+               " log size all by itself.",
                type, digest_sha256_hex, (unsigned long)len);
       /* We do have to free debugfile in this case */
     }
   } else {
-    /* Just log that it happened without dumping */
+    /*
+     * Not logging because the sandbox is active and seccomp2 apparently
+     * doesn't have a sensible way to allow filenames according to a pattern
+     * match.  (If we ever figure out how to say "allow writes to /regex/",
+     * remove this checK).
+     */
     log_info(LD_DIR,
-             "Unable to parse descriptor of type %s with hash %s and length "
-             "%lu. Descriptor not dumped because it exceeds maximum log size "
-             "all by itself.",
+             "Unable to parse descriptor of type %s with hash %s and "
+             "length %lu. Descriptor not dumped because the sandbox is "
+             "active",
              type, digest_sha256_hex, (unsigned long)len);
-    /* We do have to free debugfile in this case */
   }
 
   tor_free(debugfile_base);
