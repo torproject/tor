@@ -1394,6 +1394,7 @@ tv_udiff(const struct timeval *start, const struct timeval *end)
   long udiff;
   long secdiff = end->tv_sec - start->tv_sec;
 
+  /* end->tv_usec - start->tv_usec can be up to 1 second */
   if (labs(secdiff)+1 > LONG_MAX/1000000) {
     log_warn(LD_GENERAL, "comparing times on microsecond detail too far "
              "apart: %ld seconds", secdiff);
@@ -1412,7 +1413,9 @@ tv_mdiff(const struct timeval *start, const struct timeval *end)
   long mdiff;
   long secdiff = end->tv_sec - start->tv_sec;
 
-  if (labs(secdiff)+1 > LONG_MAX/1000) {
+  /* end->tv_usec - start->tv_usec can be up to 1 second,
+   * but the mdiff calculation adds another temporary second */
+  if (labs(secdiff)+2 > LONG_MAX/1000) {
     log_warn(LD_GENERAL, "comparing times on millisecond detail too far "
              "apart: %ld seconds", secdiff);
     return LONG_MAX;
