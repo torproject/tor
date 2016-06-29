@@ -2,4 +2,4 @@
     - Fix the description of the --passphrase-fd option in the tor-gencert
       manpage.  The option is used to pass the number of a file descriptor to
       read the passphrase from, not to read the file descriptor from.  Fixes
-      bug 19505.
+      bug 19505; bugfix on 0.2.0.20-alpha.
