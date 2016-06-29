@@ -590,7 +590,7 @@ static int check_signature_token(const char *digest,
 /** List of dumped descriptors for FIFO cleanup purposes */
 STATIC smartlist_t *descs_dumped = NULL;
 /** Total size of dumped descriptors for FIFO cleanup */
-STATIC size_t len_descs_dumped = 0;
+STATIC uint64_t len_descs_dumped = 0;
 
 /*
  * One entry in the list of dumped descriptors; filename dumped to, length
@@ -614,7 +614,7 @@ dump_desc_fifo_add_and_clean(char *filename, const uint8_t *digest_sha256,
                              size_t len)
 {
   dumped_desc_t *ent = NULL, *tmp;
-  size_t max_len;
+  uint64_t max_len;
 
   tor_assert(filename != NULL);
   tor_assert(digest_sha256 != NULL);
@@ -635,7 +635,7 @@ dump_desc_fifo_add_and_clean(char *filename, const uint8_t *digest_sha256,
   /* Do we need to do some cleanup? */
   max_len = get_options()->MaxUnparseableDescSizeToLog;
   /* Iterate over the list until we've freed enough space */
-  while (len_descs_dumped + len > max_len &&
+  while (len > max_len - len_descs_dumped &&
          smartlist_len(descs_dumped) > 0) {
     /* Get the oldest thing on the list */
     tmp = (dumped_desc_t *)(smartlist_get(descs_dumped, 0));
