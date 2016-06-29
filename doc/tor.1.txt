@@ -118,6 +118,13 @@ COMMAND-LINE OPTIONS
    directory of your Tor daemon, and make sure that they are owned by the
    user actually running the Tor daemon on your system.
 
+**--passphrase-fd** __FILEDES__::
+    Filedescriptor to read the passphrase from.  Note that unlike with the
+    tor-gencert program, the entire file contents are read and used as
+    the passphrase, including any trailing newlines.
+    Default: read from the terminal.
+
+
 Other options can be specified on the command-line in the format "--option
 value", in the format "option value", or in a configuration file.  For
 instance, you can tell Tor to start listening for SOCKS connections on port
