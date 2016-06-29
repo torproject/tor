@@ -1,0 +1,3 @@
+  o Control port:
+    - Implement new GETINFO queries for all downloads using download_status_t
+      to schedule retries.  Closes ticket #19323.
