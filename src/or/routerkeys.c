@@ -115,7 +115,7 @@ read_encrypted_secret_key(ed25519_secret_key_t *out,
 
   while (1) {
     ssize_t pwlen =
-      do_getpass("Enter pasphrase for master key:", pwbuf, sizeof(pwbuf), 0,
+      do_getpass("Enter passphrase for master key:", pwbuf, sizeof(pwbuf), 0,
                  get_options());
     if (pwlen < 0) {
       saved_errno = EINVAL;

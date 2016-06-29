@@ -1,0 +1,3 @@
+  o Minor bugfixes (user interface):
+    - Fix a typo in the getting passphrase prompt for the ed25519
+      identity key.
