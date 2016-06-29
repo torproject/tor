@@ -6,6 +6,7 @@
 #include "control.h"
 #include "networkstatus.h"
 #include "rendservice.h"
+#include "routerlist.h"
 #include "test.h"
 
 static void
@@ -290,6 +291,49 @@ static const char * dls_sample_6_str =
     "last-backoff-position 3\n"
     "last-delay-used 432\n";
 
+/* Simulated auth certs */
+static const char *auth_id_digest_1_str =
+    "63CDD326DFEF0CA020BDD3FEB45A3286FE13A061";
+static download_status_t auth_def_cert_download_status_1;
+static const char *auth_id_digest_2_str =
+    "2C209FCDD8D48DC049777B8DC2C0F94A0408BE99";
+static download_status_t auth_def_cert_download_status_2;
+/* Expected form of digest list returned for GETINFO downloads/cert/fps */
+static const char *auth_id_digest_expected_list =
+    "63CDD326DFEF0CA020BDD3FEB45A3286FE13A061\n"
+    "2C209FCDD8D48DC049777B8DC2C0F94A0408BE99\n";
+
+/* Signing keys for simulated auth 1 */
+static const char *auth_1_sk_1_str =
+    "AA69566029B1F023BA09451B8F1B10952384EB58";
+static download_status_t auth_1_sk_1_dls;
+static const char *auth_1_sk_2_str =
+    "710865C7F06B73C5292695A8C34F1C94F769FF72";
+static download_status_t auth_1_sk_2_dls;
+/*
+ * Expected form of sk digest list for
+ * GETINFO downloads/cert/<auth_id_digest_1_str>/sks
+ */
+static const char *auth_1_sk_digest_expected_list =
+    "AA69566029B1F023BA09451B8F1B10952384EB58\n"
+    "710865C7F06B73C5292695A8C34F1C94F769FF72\n";
+
+/* Signing keys for simulated auth 2 */
+static const char *auth_2_sk_1_str =
+    "4299047E00D070AD6703FE00BE7AA756DB061E62";
+static download_status_t auth_2_sk_1_dls;
+static const char *auth_2_sk_2_str =
+    "9451B8F1B10952384EB58B5F230C0BB701626C9B";
+static download_status_t auth_2_sk_2_dls;
+/*
+ * Expected form of sk digest list for
+ * GETINFO downloads/cert/<auth_id_digest_2_str>/sks
+ */
+static const char *auth_2_sk_digest_expected_list =
+    "4299047E00D070AD6703FE00BE7AA756DB061E62\n"
+    "9451B8F1B10952384EB58B5F230C0BB701626C9B\n";
+
+
 static void
 reset_mocked_dl_statuses(void)
 {
@@ -303,6 +347,19 @@ reset_mocked_dl_statuses(void)
     memcpy(&(ns_dl_status_running[i]), &dl_status_default,
            sizeof(download_status_t));
   }
+
+  memcpy(&auth_def_cert_download_status_1, &dl_status_default,
+         sizeof(download_status_t));
+  memcpy(&auth_def_cert_download_status_2, &dl_status_default,
+         sizeof(download_status_t));
+  memcpy(&auth_1_sk_1_dls, &dl_status_default,
+         sizeof(download_status_t));
+  memcpy(&auth_1_sk_2_dls, &dl_status_default,
+         sizeof(download_status_t));
+  memcpy(&auth_2_sk_1_dls, &dl_status_default,
+         sizeof(download_status_t));
+  memcpy(&auth_2_sk_2_dls, &dl_status_default,
+         sizeof(download_status_t));
 }
 
 static download_status_t *
@@ -340,6 +397,165 @@ clear_ns_mocks(void)
   UNMOCK(networkstatus_get_dl_status_by_flavor);
   UNMOCK(networkstatus_get_dl_status_by_flavor_bootstrap);
   UNMOCK(networkstatus_get_dl_status_by_flavor_running);
+}
+
+static smartlist_t *
+cert_dl_status_auth_ids_mock(void)
+{
+  char digest[DIGEST_LEN], *tmp;
+  int len;
+  smartlist_t *list = NULL;
+
+  /* Just pretend we have only the two hard-coded digests listed above */
+  list = smartlist_new();
+  len = base16_decode(digest, DIGEST_LEN,
+                      auth_id_digest_1_str, strlen(auth_id_digest_1_str));
+  tt_int_op(len, OP_EQ, DIGEST_LEN);
+  tmp = tor_malloc(DIGEST_LEN);
+  memcpy(tmp, digest, DIGEST_LEN);
+  smartlist_add(list, tmp);
+  len = base16_decode(digest, DIGEST_LEN,
+                      auth_id_digest_2_str, strlen(auth_id_digest_2_str));
+  tt_int_op(len, OP_EQ, DIGEST_LEN);
+  tmp = tor_malloc(DIGEST_LEN);
+  memcpy(tmp, digest, DIGEST_LEN);
+  smartlist_add(list, tmp);
+
+ done:
+  return list;
+}
+
+static download_status_t *
+cert_dl_status_def_for_auth_mock(const char *digest)
+{
+  download_status_t *dl = NULL;
+  char digest_str[HEX_DIGEST_LEN+1];
+
+  tt_assert(digest != NULL);
+  base16_encode(digest_str, HEX_DIGEST_LEN + 1,
+                digest, DIGEST_LEN);
+  digest_str[HEX_DIGEST_LEN] = '\0';
+
+  if (strcmp(digest_str, auth_id_digest_1_str) == 0) {
+    dl = &auth_def_cert_download_status_1;
+  } else if (strcmp(digest_str, auth_id_digest_2_str) == 0) {
+    dl = &auth_def_cert_download_status_2;
+  }
+
+ done:
+  return dl;
+}
+
+static smartlist_t *
+cert_dl_status_sks_for_auth_id_mock(const char *digest)
+{
+  smartlist_t *list = NULL;
+  char sk[DIGEST_LEN];
+  char digest_str[HEX_DIGEST_LEN+1];
+  char *tmp;
+  int len;
+
+  tt_assert(digest != NULL);
+  base16_encode(digest_str, HEX_DIGEST_LEN + 1,
+                digest, DIGEST_LEN);
+  digest_str[HEX_DIGEST_LEN] = '\0';
+
+  /*
+   * Build a list of two hard-coded digests, depending on what we
+   * were just passed.
+   */
+  if (strcmp(digest_str, auth_id_digest_1_str) == 0) {
+    list = smartlist_new();
+    len = base16_decode(sk, DIGEST_LEN,
+                        auth_1_sk_1_str, strlen(auth_1_sk_1_str));
+    tt_int_op(len, OP_EQ, DIGEST_LEN);
+    tmp = tor_malloc(DIGEST_LEN);
+    memcpy(tmp, sk, DIGEST_LEN);
+    smartlist_add(list, tmp);
+    len = base16_decode(sk, DIGEST_LEN,
+                        auth_1_sk_2_str, strlen(auth_1_sk_2_str));
+    tt_int_op(len, OP_EQ, DIGEST_LEN);
+    tmp = tor_malloc(DIGEST_LEN);
+    memcpy(tmp, sk, DIGEST_LEN);
+    smartlist_add(list, tmp);
+  } else if (strcmp(digest_str, auth_id_digest_2_str) == 0) {
+    list = smartlist_new();
+    len = base16_decode(sk, DIGEST_LEN,
+                        auth_2_sk_1_str, strlen(auth_2_sk_1_str));
+    tt_int_op(len, OP_EQ, DIGEST_LEN);
+    tmp = tor_malloc(DIGEST_LEN);
+    memcpy(tmp, sk, DIGEST_LEN);
+    smartlist_add(list, tmp);
+    len = base16_decode(sk, DIGEST_LEN,
+                        auth_2_sk_2_str, strlen(auth_2_sk_2_str));
+    tt_int_op(len, OP_EQ, DIGEST_LEN);
+    tmp = tor_malloc(DIGEST_LEN);
+    memcpy(tmp, sk, DIGEST_LEN);
+    smartlist_add(list, tmp);
+  }
+
+ done:
+  return list;
+}
+
+static download_status_t *
+cert_dl_status_fp_sk_mock(const char *fp_digest, const char *sk_digest)
+{
+  download_status_t *dl = NULL;
+  char fp_digest_str[HEX_DIGEST_LEN+1], sk_digest_str[HEX_DIGEST_LEN+1];
+
+  /*
+   * Unpack the digests so we can compare them and figure out which
+   * dl status we want.
+   */
+
+  tt_assert(fp_digest != NULL);
+  base16_encode(fp_digest_str, HEX_DIGEST_LEN + 1,
+                fp_digest, DIGEST_LEN);
+  fp_digest_str[HEX_DIGEST_LEN] = '\0';
+  tt_assert(sk_digest != NULL);
+  base16_encode(sk_digest_str, HEX_DIGEST_LEN + 1,
+                sk_digest, DIGEST_LEN);
+  sk_digest_str[HEX_DIGEST_LEN] = '\0';
+
+  if (strcmp(fp_digest_str, auth_id_digest_1_str) == 0) {
+    if (strcmp(sk_digest_str, auth_1_sk_1_str) == 0) {
+      dl = &auth_1_sk_1_dls;
+    } else if (strcmp(sk_digest_str, auth_1_sk_2_str) == 0) {
+      dl = &auth_1_sk_2_dls;
+    }
+  } else if (strcmp(fp_digest_str, auth_id_digest_2_str) == 0) {
+    if (strcmp(sk_digest_str, auth_2_sk_1_str) == 0) {
+      dl = &auth_2_sk_1_dls;
+    } else if (strcmp(sk_digest_str, auth_2_sk_2_str) == 0) {
+      dl = &auth_2_sk_2_dls;
+    }
+  }
+
+ done:
+  return dl;
+}
+
+static void
+setup_cert_mocks(void)
+{
+  MOCK(list_authority_ids_with_downloads, cert_dl_status_auth_ids_mock);
+  MOCK(id_only_download_status_for_authority_id,
+       cert_dl_status_def_for_auth_mock);
+  MOCK(list_sk_digests_for_authority_id,
+       cert_dl_status_sks_for_auth_id_mock);
+  MOCK(download_status_for_authority_id_and_sk,
+       cert_dl_status_fp_sk_mock);
+  reset_mocked_dl_statuses();
+}
+
+static void
+clear_cert_mocks(void)
+{
+  UNMOCK(list_authority_ids_with_downloads);
+  UNMOCK(id_only_download_status_for_authority_id);
+  UNMOCK(list_sk_digests_for_authority_id);
+  UNMOCK(download_status_for_authority_id_and_sk);
 }
 
 static void
@@ -449,6 +665,301 @@ test_download_status_consensus(void *arg)
   return;
 }
 
+static void
+test_download_status_cert(void *arg)
+{
+  /* We just need one of these to pass, it doesn't matter what's in it */
+  control_connection_t dummy;
+  /* Get results out */
+  char *question = NULL;
+  char *answer = NULL;
+  const char *errmsg = NULL;
+
+  (void)arg;
+
+  setup_cert_mocks();
+
+  /*
+   * Check returning serialized dlstatuses and digest lists, and implicitly
+   * also test download_status_to_string() and digest_list_to_string().
+   */
+
+  /* Case 1 - list of authority identity fingerprints */
+  getinfo_helper_downloads(&dummy,
+                           "downloads/cert/fps",
+                           &answer, &errmsg);
+  tt_assert(answer != NULL);
+  tt_assert(errmsg == NULL);
+  tt_str_op(answer, OP_EQ, auth_id_digest_expected_list);
+  tor_free(answer);
+  errmsg = NULL;
+
+  /* Case 2 - download status for default cert for 1st auth id */
+  memcpy(&auth_def_cert_download_status_1, &dls_sample_1,
+         sizeof(download_status_t));
+  tor_asprintf(&question, "downloads/cert/fp/%s", auth_id_digest_1_str);
+  tt_assert(question != NULL);
+  getinfo_helper_downloads(&dummy, question, &answer, &errmsg);
+  tt_assert(answer != NULL);
+  tt_assert(errmsg == NULL);
+  tt_str_op(answer, OP_EQ, dls_sample_1_str);
+  tor_free(question);
+  tor_free(answer);
+  errmsg = NULL;
+
+  /* Case 3 - download status for default cert for 2nd auth id */
+  memcpy(&auth_def_cert_download_status_2, &dls_sample_2,
+         sizeof(download_status_t));
+  tor_asprintf(&question, "downloads/cert/fp/%s", auth_id_digest_2_str);
+  tt_assert(question != NULL);
+  getinfo_helper_downloads(&dummy, question, &answer, &errmsg);
+  tt_assert(answer != NULL);
+  tt_assert(errmsg == NULL);
+  tt_str_op(answer, OP_EQ, dls_sample_2_str);
+  tor_free(question);
+  tor_free(answer);
+  errmsg = NULL;
+
+  /* Case 4 - list of signing key digests for 1st auth id */
+  tor_asprintf(&question, "downloads/cert/fp/%s/sks", auth_id_digest_1_str);
+  tt_assert(question != NULL);
+  getinfo_helper_downloads(&dummy, question, &answer, &errmsg);
+  tt_assert(answer != NULL);
+  tt_assert(errmsg == NULL);
+  tt_str_op(answer, OP_EQ, auth_1_sk_digest_expected_list);
+  tor_free(question);
+  tor_free(answer);
+  errmsg = NULL;
+
+  /* Case 5 - list of signing key digests for 2nd auth id */
+  tor_asprintf(&question, "downloads/cert/fp/%s/sks", auth_id_digest_2_str);
+  tt_assert(question != NULL);
+  getinfo_helper_downloads(&dummy, question, &answer, &errmsg);
+  tt_assert(answer != NULL);
+  tt_assert(errmsg == NULL);
+  tt_str_op(answer, OP_EQ, auth_2_sk_digest_expected_list);
+  tor_free(question);
+  tor_free(answer);
+  errmsg = NULL;
+
+  /* Case 6 - download status for 1st auth id, 1st sk */
+  memcpy(&auth_1_sk_1_dls, &dls_sample_3,
+         sizeof(download_status_t));
+  tor_asprintf(&question, "downloads/cert/fp/%s/%s",
+               auth_id_digest_1_str, auth_1_sk_1_str);
+  tt_assert(question != NULL);
+  getinfo_helper_downloads(&dummy, question, &answer, &errmsg);
+  tt_assert(answer != NULL);
+  tt_assert(errmsg == NULL);
+  tt_str_op(answer, OP_EQ, dls_sample_3_str);
+  tor_free(question);
+  tor_free(answer);
+  errmsg = NULL;
+
+  /* Case 7 - download status for 1st auth id, 2nd sk */
+  memcpy(&auth_1_sk_2_dls, &dls_sample_4,
+         sizeof(download_status_t));
+  tor_asprintf(&question, "downloads/cert/fp/%s/%s",
+               auth_id_digest_1_str, auth_1_sk_2_str);
+  tt_assert(question != NULL);
+  getinfo_helper_downloads(&dummy, question, &answer, &errmsg);
+  tt_assert(answer != NULL);
+  tt_assert(errmsg == NULL);
+  tt_str_op(answer, OP_EQ, dls_sample_4_str);
+  tor_free(question);
+  tor_free(answer);
+  errmsg = NULL;
+
+  /* Case 8 - download status for 2nd auth id, 1st sk */
+  memcpy(&auth_2_sk_1_dls, &dls_sample_5,
+         sizeof(download_status_t));
+  tor_asprintf(&question, "downloads/cert/fp/%s/%s",
+               auth_id_digest_2_str, auth_2_sk_1_str);
+  tt_assert(question != NULL);
+  getinfo_helper_downloads(&dummy, question, &answer, &errmsg);
+  tt_assert(answer != NULL);
+  tt_assert(errmsg == NULL);
+  tt_str_op(answer, OP_EQ, dls_sample_5_str);
+  tor_free(question);
+  tor_free(answer);
+  errmsg = NULL;
+
+  /* Case 9 - download status for 2nd auth id, 2nd sk */
+  memcpy(&auth_2_sk_2_dls, &dls_sample_6,
+         sizeof(download_status_t));
+  tor_asprintf(&question, "downloads/cert/fp/%s/%s",
+               auth_id_digest_2_str, auth_2_sk_2_str);
+  tt_assert(question != NULL);
+  getinfo_helper_downloads(&dummy, question, &answer, &errmsg);
+  tt_assert(answer != NULL);
+  tt_assert(errmsg == NULL);
+  tt_str_op(answer, OP_EQ, dls_sample_6_str);
+  tor_free(question);
+  tor_free(answer);
+  errmsg = NULL;
+
+  /* Now check the error cases */
+
+  /* Case 1 - query is garbage after downloads/cert/ part */
+  getinfo_helper_downloads(&dummy, "downloads/cert/blahdeblah",
+                           &answer, &errmsg);
+  tt_assert(answer == NULL);
+  tt_assert(errmsg != NULL);
+  tt_str_op(errmsg, OP_EQ, "Unknown certificate download status query");
+  errmsg = NULL;
+
+  /*
+   * Case 2 - looks like downloads/cert/fp/<fp>, but <fp> isn't even
+   * the right length for a digest.
+   */
+  getinfo_helper_downloads(&dummy, "downloads/cert/fp/2B1D36D32B2942406",
+                           &answer, &errmsg);
+  tt_assert(answer == NULL);
+  tt_assert(errmsg != NULL);
+  tt_str_op(errmsg, OP_EQ, "That didn't look like a digest");
+  errmsg = NULL;
+
+  /*
+   * Case 3 - looks like downloads/cert/fp/<fp>, and <fp> is digest-sized,
+   * but not parseable as one.
+   */
+  getinfo_helper_downloads(&dummy,
+      "downloads/cert/fp/82F52AF55D250115FE44D3GC81D49643241D56A1",
+      &answer, &errmsg);
+  tt_assert(answer == NULL);
+  tt_assert(errmsg != NULL);
+  tt_str_op(errmsg, OP_EQ, "That didn't look like a digest");
+  errmsg = NULL;
+
+  /*
+   * Case 4 - downloads/cert/fp/<fp>, and <fp> is not a known authority
+   * identity digest
+   */
+  getinfo_helper_downloads(&dummy,
+      "downloads/cert/fp/AC4F23B5745BDD2A77997B85B1FD85D05C2E0F61",
+      &answer, &errmsg);
+  tt_assert(answer == NULL);
+  tt_assert(errmsg != NULL);
+  tt_str_op(errmsg, OP_EQ,
+      "Failed to get download status for this authority identity digest");
+  errmsg = NULL;
+
+  /*
+   * Case 5 - looks like downloads/cert/fp/<fp>/<anything>, but <fp> doesn't
+   * parse as a sensible digest.
+   */
+  getinfo_helper_downloads(&dummy,
+      "downloads/cert/fp/82F52AF55D250115FE44D3GC81D49643241D56A1/blah",
+      &answer, &errmsg);
+  tt_assert(answer == NULL);
+  tt_assert(errmsg != NULL);
+  tt_str_op(errmsg, OP_EQ, "That didn't look like an identity digest");
+  errmsg = NULL;
+
+  /*
+   * Case 6 - looks like downloads/cert/fp/<fp>/<anything>, but <fp> doesn't
+   * parse as a sensible digest.
+   */
+  getinfo_helper_downloads(&dummy,
+      "downloads/cert/fp/82F52AF55D25/blah",
+      &answer, &errmsg);
+  tt_assert(answer == NULL);
+  tt_assert(errmsg != NULL);
+  tt_str_op(errmsg, OP_EQ, "That didn't look like an identity digest");
+  errmsg = NULL;
+
+  /*
+   * Case 7 - downloads/cert/fp/<fp>/sks, and <fp> is not a known authority
+   * digest.
+   */
+  getinfo_helper_downloads(&dummy,
+      "downloads/cert/fp/AC4F23B5745BDD2A77997B85B1FD85D05C2E0F61/sks",
+      &answer, &errmsg);
+  tt_assert(answer == NULL);
+  tt_assert(errmsg != NULL);
+  tt_str_op(errmsg, OP_EQ,
+      "Failed to get list of signing key digests for this authority "
+      "identity digest");
+  errmsg = NULL;
+
+  /*
+   * Case 8 - looks like downloads/cert/fp/<fp>/<sk>, but <sk> doesn't
+   * parse as a signing key digest.
+   */
+  getinfo_helper_downloads(&dummy,
+      "downloads/cert/fp/AC4F23B5745BDD2A77997B85B1FD85D05C2E0F61/"
+      "82F52AF55D250115FE44D3GC81D49643241D56A1",
+      &answer, &errmsg);
+  tt_assert(answer == NULL);
+  tt_assert(errmsg != NULL);
+  tt_str_op(errmsg, OP_EQ, "That didn't look like a signing key digest");
+  errmsg = NULL;
+
+  /*
+   * Case 9 - looks like downloads/cert/fp/<fp>/<sk>, but <sk> doesn't
+   * parse as a signing key digest.
+   */
+  getinfo_helper_downloads(&dummy,
+      "downloads/cert/fp/AC4F23B5745BDD2A77997B85B1FD85D05C2E0F61/"
+      "82F52AF55D250115FE44D",
+      &answer, &errmsg);
+  tt_assert(answer == NULL);
+  tt_assert(errmsg != NULL);
+  tt_str_op(errmsg, OP_EQ, "That didn't look like a signing key digest");
+  errmsg = NULL;
+
+  /*
+   * Case 10 - downloads/cert/fp/<fp>/<sk>, but <fp> isn't a known
+   * authority identity digest.
+   */
+  getinfo_helper_downloads(&dummy,
+      "downloads/cert/fp/C6B05DF332F74DB9A13498EE3BBC7AA2F69FCB45/"
+      "3A214FC21AE25B012C2ECCB5F4EC8A3602D0545D",
+      &answer, &errmsg);
+  tt_assert(answer == NULL);
+  tt_assert(errmsg != NULL);
+  tt_str_op(errmsg, OP_EQ,
+      "Failed to get download status for this identity/"
+      "signing key digest pair");
+  errmsg = NULL;
+
+  /*
+   * Case 11 - downloads/cert/fp/<fp>/<sk>, but <sk> isn't a known
+   * signing key digest.
+   */
+  getinfo_helper_downloads(&dummy,
+      "downloads/cert/fp/63CDD326DFEF0CA020BDD3FEB45A3286FE13A061/"
+      "3A214FC21AE25B012C2ECCB5F4EC8A3602D0545D",
+      &answer, &errmsg);
+  tt_assert(answer == NULL);
+  tt_assert(errmsg != NULL);
+  tt_str_op(errmsg, OP_EQ,
+      "Failed to get download status for this identity/"
+      "signing key digest pair");
+  errmsg = NULL;
+
+  /*
+   * Case 12 - downloads/cert/fp/<fp>/<sk>, but <sk> is on the list for
+   * a different authority identity digest.
+   */
+  getinfo_helper_downloads(&dummy,
+      "downloads/cert/fp/63CDD326DFEF0CA020BDD3FEB45A3286FE13A061/"
+      "9451B8F1B10952384EB58B5F230C0BB701626C9B",
+      &answer, &errmsg);
+  tt_assert(answer == NULL);
+  tt_assert(errmsg != NULL);
+  tt_str_op(errmsg, OP_EQ,
+      "Failed to get download status for this identity/"
+      "signing key digest pair");
+  errmsg = NULL;
+
+ done:
+  clear_cert_mocks();
+  tor_free(answer);
+
+  return;
+}
+
 struct testcase_t controller_tests[] = {
   { "add_onion_helper_keyarg", test_add_onion_helper_keyarg, 0, NULL, NULL },
   { "rend_service_parse_port_config", test_rend_service_parse_port_config, 0,
@@ -456,6 +967,8 @@ struct testcase_t controller_tests[] = {
   { "add_onion_helper_clientauth", test_add_onion_helper_clientauth, 0, NULL,
     NULL },
   { "download_status_consensus", test_download_status_consensus, 0, NULL,
+    NULL },
+  { "download_status_cert", test_download_status_cert, 0, NULL,
     NULL },
   END_OF_TESTCASES
 };
