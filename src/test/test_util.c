@@ -303,6 +303,23 @@ test_util_time(void *arg)
   tt_int_op(1005000L,OP_EQ, tv_udiff(&end, &start));
   tt_int_op(1005L,OP_EQ, tv_mdiff(&end, &start));
 
+  /* Negative tv_sec values, these will break on platforms where tv_sec is
+   * unsigned */
+
+  end.tv_sec = -10;
+
+  tt_int_op(-15005000L,OP_EQ, tv_udiff(&start, &end));
+  tt_int_op(-15005L,OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(15005000L,OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(15005L,OP_EQ, tv_mdiff(&end, &start));
+
+  start.tv_sec = -100;
+
+  tt_int_op(89995000L,OP_EQ, tv_udiff(&start, &end));
+  tt_int_op(89995L,OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(-89995000L,OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(-89995L,OP_EQ, tv_mdiff(&end, &start));
+
   /* Test that tv_usec values round away from zero when converted to msec */
   start.tv_sec = 0;
   start.tv_usec = 0;
