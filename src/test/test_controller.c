@@ -4,6 +4,7 @@
 #define CONTROL_PRIVATE
 #include "or.h"
 #include "control.h"
+#include "networkstatus.h"
 #include "rendservice.h"
 #include "test.h"
 
@@ -203,11 +204,258 @@ test_add_onion_helper_clientauth(void *arg)
   tor_free(err_msg);
 }
 
+/* Mocks and data/variables used for GETINFO download status tests */
+
+static const download_status_t dl_status_default =
+  { 0, 0, 0, DL_SCHED_CONSENSUS, DL_WANT_ANY_DIRSERVER,
+    DL_SCHED_INCREMENT_FAILURE, DL_SCHED_RANDOM_EXPONENTIAL, 0, 0 };
+static download_status_t ns_dl_status[N_CONSENSUS_FLAVORS];
+static download_status_t ns_dl_status_bootstrap[N_CONSENSUS_FLAVORS];
+static download_status_t ns_dl_status_running[N_CONSENSUS_FLAVORS];
+
+/*
+ * These should explore all the possible cases of download_status_to_string()
+ * in control.c
+ */
+static const download_status_t dls_sample_1 =
+  { 1467163900, 0, 0, DL_SCHED_GENERIC, DL_WANT_ANY_DIRSERVER,
+    DL_SCHED_INCREMENT_FAILURE, DL_SCHED_DETERMINISTIC, 0, 0 };
+static const char * dls_sample_1_str =
+    "next-attempt-at 2016-06-29 01:31:40\n"
+    "n-download-failures 0\n"
+    "n-download-attempts 0\n"
+    "schedule DL_SCHED_GENERIC\n"
+    "want-authority DL_WANT_ANY_DIRSERVER\n"
+    "increment-on DL_SCHED_INCREMENT_FAILURE\n"
+    "backoff DL_SCHED_DETERMINISTIC\n";
+static const download_status_t dls_sample_2 =
+  { 1467164400, 1, 2, DL_SCHED_CONSENSUS, DL_WANT_AUTHORITY,
+    DL_SCHED_INCREMENT_FAILURE, DL_SCHED_DETERMINISTIC, 0, 0 };
+static const char * dls_sample_2_str =
+    "next-attempt-at 2016-06-29 01:40:00\n"
+    "n-download-failures 1\n"
+    "n-download-attempts 2\n"
+    "schedule DL_SCHED_CONSENSUS\n"
+    "want-authority DL_WANT_AUTHORITY\n"
+    "increment-on DL_SCHED_INCREMENT_FAILURE\n"
+    "backoff DL_SCHED_DETERMINISTIC\n";
+static const download_status_t dls_sample_3 =
+  { 1467154400, 12, 25, DL_SCHED_BRIDGE, DL_WANT_ANY_DIRSERVER,
+    DL_SCHED_INCREMENT_ATTEMPT, DL_SCHED_DETERMINISTIC, 0, 0 };
+static const char * dls_sample_3_str =
+    "next-attempt-at 2016-06-28 22:53:20\n"
+    "n-download-failures 12\n"
+    "n-download-attempts 25\n"
+    "schedule DL_SCHED_BRIDGE\n"
+    "want-authority DL_WANT_ANY_DIRSERVER\n"
+    "increment-on DL_SCHED_INCREMENT_ATTEMPT\n"
+    "backoff DL_SCHED_DETERMINISTIC\n";
+static const download_status_t dls_sample_4 =
+  { 1467166600, 3, 0, DL_SCHED_GENERIC, DL_WANT_ANY_DIRSERVER,
+    DL_SCHED_INCREMENT_FAILURE, DL_SCHED_RANDOM_EXPONENTIAL, 0, 0 };
+static const char * dls_sample_4_str =
+    "next-attempt-at 2016-06-29 02:16:40\n"
+    "n-download-failures 3\n"
+    "n-download-attempts 0\n"
+    "schedule DL_SCHED_GENERIC\n"
+    "want-authority DL_WANT_ANY_DIRSERVER\n"
+    "increment-on DL_SCHED_INCREMENT_FAILURE\n"
+    "backoff DL_SCHED_RANDOM_EXPONENTIAL\n"
+    "last-backoff-position 0\n"
+    "last-delay-used 0\n";
+static const download_status_t dls_sample_5 =
+  { 1467164600, 3, 7, DL_SCHED_CONSENSUS, DL_WANT_ANY_DIRSERVER,
+    DL_SCHED_INCREMENT_FAILURE, DL_SCHED_RANDOM_EXPONENTIAL, 1, 2112, };
+static const char * dls_sample_5_str =
+    "next-attempt-at 2016-06-29 01:43:20\n"
+    "n-download-failures 3\n"
+    "n-download-attempts 7\n"
+    "schedule DL_SCHED_CONSENSUS\n"
+    "want-authority DL_WANT_ANY_DIRSERVER\n"
+    "increment-on DL_SCHED_INCREMENT_FAILURE\n"
+    "backoff DL_SCHED_RANDOM_EXPONENTIAL\n"
+    "last-backoff-position 1\n"
+    "last-delay-used 2112\n";
+static const download_status_t dls_sample_6 =
+  { 1467164200, 4, 9, DL_SCHED_CONSENSUS, DL_WANT_AUTHORITY,
+    DL_SCHED_INCREMENT_ATTEMPT, DL_SCHED_RANDOM_EXPONENTIAL, 3, 432 };
+static const char * dls_sample_6_str =
+    "next-attempt-at 2016-06-29 01:36:40\n"
+    "n-download-failures 4\n"
+    "n-download-attempts 9\n"
+    "schedule DL_SCHED_CONSENSUS\n"
+    "want-authority DL_WANT_AUTHORITY\n"
+    "increment-on DL_SCHED_INCREMENT_ATTEMPT\n"
+    "backoff DL_SCHED_RANDOM_EXPONENTIAL\n"
+    "last-backoff-position 3\n"
+    "last-delay-used 432\n";
+
+static void
+reset_mocked_dl_statuses(void)
+{
+  int i;
+
+  for (i = 0; i < N_CONSENSUS_FLAVORS; ++i) {
+    memcpy(&(ns_dl_status[i]), &dl_status_default,
+           sizeof(download_status_t));
+    memcpy(&(ns_dl_status_bootstrap[i]), &dl_status_default,
+           sizeof(download_status_t));
+    memcpy(&(ns_dl_status_running[i]), &dl_status_default,
+           sizeof(download_status_t));
+  }
+}
+
+static download_status_t *
+ns_dl_status_mock(consensus_flavor_t flavor)
+{
+  return &(ns_dl_status[flavor]);
+}
+
+static download_status_t *
+ns_dl_status_bootstrap_mock(consensus_flavor_t flavor)
+{
+  return &(ns_dl_status_bootstrap[flavor]);
+}
+
+static download_status_t *
+ns_dl_status_running_mock(consensus_flavor_t flavor)
+{
+  return &(ns_dl_status_running[flavor]);
+}
+
+static void
+setup_ns_mocks(void)
+{
+  MOCK(networkstatus_get_dl_status_by_flavor, ns_dl_status_mock);
+  MOCK(networkstatus_get_dl_status_by_flavor_bootstrap,
+       ns_dl_status_bootstrap_mock);
+  MOCK(networkstatus_get_dl_status_by_flavor_running,
+       ns_dl_status_running_mock);
+  reset_mocked_dl_statuses();
+}
+
+static void
+clear_ns_mocks(void)
+{
+  UNMOCK(networkstatus_get_dl_status_by_flavor);
+  UNMOCK(networkstatus_get_dl_status_by_flavor_bootstrap);
+  UNMOCK(networkstatus_get_dl_status_by_flavor_running);
+}
+
+static void
+test_download_status_consensus(void *arg)
+{
+  /* We just need one of these to pass, it doesn't matter what's in it */
+  control_connection_t dummy;
+  /* Get results out */
+  char *answer = NULL;
+  const char *errmsg = NULL;
+
+  (void)arg;
+
+  /* Check that the unknown prefix case works; no mocks needed yet */
+  getinfo_helper_downloads(&dummy, "downloads/foo", &answer, &errmsg);
+  tt_assert(answer == NULL);
+  tt_str_op(errmsg, OP_EQ, "Unknown download status query");
+
+  setup_ns_mocks();
+
+  /*
+   * Check returning serialized dlstatuses, and implicitly also test
+   * download_status_to_string().
+   */
+
+  /* Case 1 default/FLAV_NS*/
+  memcpy(&(ns_dl_status[FLAV_NS]), &dls_sample_1,
+         sizeof(download_status_t));
+  getinfo_helper_downloads(&dummy, "downloads/networkstatus/ns",
+                           &answer, &errmsg);
+  tt_assert(answer != NULL);
+  tt_assert(errmsg == NULL);
+  tt_str_op(answer, OP_EQ, dls_sample_1_str);
+  tor_free(answer);
+  errmsg = NULL;
+
+  /* Case 2 default/FLAV_MICRODESC */
+  memcpy(&(ns_dl_status[FLAV_MICRODESC]), &dls_sample_2,
+         sizeof(download_status_t));
+  getinfo_helper_downloads(&dummy, "downloads/networkstatus/microdesc",
+                           &answer, &errmsg);
+  tt_assert(answer != NULL);
+  tt_assert(errmsg == NULL);
+  tt_str_op(answer, OP_EQ, dls_sample_2_str);
+  tor_free(answer);
+  errmsg = NULL;
+
+  /* Case 3 bootstrap/FLAV_NS */
+  memcpy(&(ns_dl_status_bootstrap[FLAV_NS]), &dls_sample_3,
+         sizeof(download_status_t));
+  getinfo_helper_downloads(&dummy, "downloads/networkstatus/ns/bootstrap",
+                           &answer, &errmsg);
+  tt_assert(answer != NULL);
+  tt_assert(errmsg == NULL);
+  tt_str_op(answer, OP_EQ, dls_sample_3_str);
+  tor_free(answer);
+  errmsg = NULL;
+
+  /* Case 4 bootstrap/FLAV_MICRODESC */
+  memcpy(&(ns_dl_status_bootstrap[FLAV_MICRODESC]), &dls_sample_4,
+         sizeof(download_status_t));
+  getinfo_helper_downloads(&dummy,
+                           "downloads/networkstatus/microdesc/bootstrap",
+                           &answer, &errmsg);
+  tt_assert(answer != NULL);
+  tt_assert(errmsg == NULL);
+  tt_str_op(answer, OP_EQ, dls_sample_4_str);
+  tor_free(answer);
+  errmsg = NULL;
+
+  /* Case 5 running/FLAV_NS */
+  memcpy(&(ns_dl_status_running[FLAV_NS]), &dls_sample_5,
+         sizeof(download_status_t));
+  getinfo_helper_downloads(&dummy,
+                           "downloads/networkstatus/ns/running",
+                           &answer, &errmsg);
+  tt_assert(answer != NULL);
+  tt_assert(errmsg == NULL);
+  tt_str_op(answer, OP_EQ, dls_sample_5_str);
+  tor_free(answer);
+  errmsg = NULL;
+
+  /* Case 6 running/FLAV_MICRODESC */
+  memcpy(&(ns_dl_status_running[FLAV_MICRODESC]), &dls_sample_6,
+         sizeof(download_status_t));
+  getinfo_helper_downloads(&dummy,
+                           "downloads/networkstatus/microdesc/running",
+                           &answer, &errmsg);
+  tt_assert(answer != NULL);
+  tt_assert(errmsg == NULL);
+  tt_str_op(answer, OP_EQ, dls_sample_6_str);
+  tor_free(answer);
+  errmsg = NULL;
+
+  /* Now check the error case */
+  getinfo_helper_downloads(&dummy, "downloads/networkstatus/foo",
+                           &answer, &errmsg);
+  tt_assert(answer == NULL);
+  tt_assert(errmsg != NULL);
+  tt_str_op(errmsg, OP_EQ, "Unknown flavor");
+  errmsg = NULL;
+
+ done:
+  clear_ns_mocks();
+  tor_free(answer);
+
+  return;
+}
+
 struct testcase_t controller_tests[] = {
   { "add_onion_helper_keyarg", test_add_onion_helper_keyarg, 0, NULL, NULL },
   { "rend_service_parse_port_config", test_rend_service_parse_port_config, 0,
     NULL, NULL },
   { "add_onion_helper_clientauth", test_add_onion_helper_clientauth, 0, NULL,
+    NULL },
+  { "download_status_consensus", test_download_status_consensus, 0, NULL,
     NULL },
   END_OF_TESTCASES
 };
