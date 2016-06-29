@@ -272,35 +272,294 @@ test_util_time(void *arg)
 
   tt_int_op(0L,OP_EQ, tv_udiff(&start, &end));
   tt_int_op(0L,OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(0L,OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(0L,OP_EQ, tv_mdiff(&end, &start));
 
   end.tv_usec = 7000;
 
   tt_int_op(2000L,OP_EQ, tv_udiff(&start, &end));
   tt_int_op(2L,OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(-2000L,OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(-2L,OP_EQ, tv_mdiff(&end, &start));
 
   end.tv_sec = 6;
 
   tt_int_op(1002000L,OP_EQ, tv_udiff(&start, &end));
   tt_int_op(1002L,OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(-1002000L,OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(-1002L,OP_EQ, tv_mdiff(&end, &start));
 
   end.tv_usec = 0;
 
   tt_int_op(995000L,OP_EQ, tv_udiff(&start, &end));
   tt_int_op(995L,OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(-995000L,OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(-995L,OP_EQ, tv_mdiff(&end, &start));
 
   end.tv_sec = 4;
 
   tt_int_op(-1005000L,OP_EQ, tv_udiff(&start, &end));
   tt_int_op(-1005L,OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(1005000L,OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(1005L,OP_EQ, tv_mdiff(&end, &start));
+
+  /* Test that tv_usec values round away from zero when converted to msec */
+  start.tv_sec = 0;
+  start.tv_usec = 0;
+  end.tv_sec = 10;
+  end.tv_usec = 499;
+
+  tt_int_op(10000499L, OP_EQ, tv_udiff(&start, &end));
+  tt_int_op(10000L, OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(-10000499L, OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(-10000L, OP_EQ, tv_mdiff(&end, &start));
+
+  start.tv_sec = 0;
+  start.tv_usec = 0;
+  end.tv_sec = 10;
+  end.tv_usec = 500;
+
+  tt_int_op(10000500L, OP_EQ, tv_udiff(&start, &end));
+  tt_int_op(10001L, OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(-10000500L, OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(-10000L, OP_EQ, tv_mdiff(&end, &start));
+
+  start.tv_sec = 0;
+  start.tv_usec = 0;
+  end.tv_sec = 10;
+  end.tv_usec = 501;
+
+  tt_int_op(10000501L, OP_EQ, tv_udiff(&start, &end));
+  tt_int_op(10001L, OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(-10000501L, OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(-10001L, OP_EQ, tv_mdiff(&end, &start));
+
+  /* Overflow conditions */
 
 #ifdef _WIN32
   /* Would you believe that tv_sec is a long on windows? Of course you would.*/
-  end.tv_sec = LONG_MAX;
+#define TV_SEC_MAX LONG_MAX
+#define TV_SEC_MIN LONG_MIN
 #else
-  end.tv_sec = TIME_MAX;
+  /* Some BSDs have struct timeval.tv_sec 64-bit, but time_t (and long) 32-bit
+   * Which means TIME_MAX is not actually the maximum value of tv_sec.
+   * But that's ok for the moment, because the code correctly performs 64-bit
+   * calculations internally, then catches the overflow. */
+#define TV_SEC_MAX TIME_MAX
+#define TV_SEC_MIN TIME_MIN
 #endif
+
+/* Assume tv_usec is an unsigned integer until proven otherwise */
+#define TV_USEC_MAX UINT_MAX
+#define TOR_USEC_PER_SEC 1000000
+
+  /* Overflows in the result type */
+
+  /* All comparisons work */
+  start.tv_sec = 0;
+  start.tv_usec = 0;
+  end.tv_sec = LONG_MAX/1000 - 2;
+  end.tv_usec = 0;
+
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&start, &end));
+  tt_int_op(end.tv_sec*1000L, OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(-end.tv_sec*1000L, OP_EQ, tv_mdiff(&end, &start));
+
+  start.tv_sec = 0;
+  start.tv_usec = 0;
+  end.tv_sec = LONG_MAX/1000000 - 1;
+  end.tv_usec = 0;
+
+  tt_int_op(end.tv_sec*1000000L, OP_EQ, tv_udiff(&start, &end));
+  tt_int_op(end.tv_sec*1000L, OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(-end.tv_sec*1000000L, OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(-end.tv_sec*1000L, OP_EQ, tv_mdiff(&end, &start));
+
+  /* No comparisons work */
+  start.tv_sec = 0;
+  start.tv_usec = 0;
+  end.tv_sec = LONG_MAX/1000 + 1;
+  end.tv_usec = 0;
+
   tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&start, &end));
   tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&end, &start));
+
+  start.tv_sec = 0;
+  start.tv_usec = 0;
+  end.tv_sec = LONG_MAX/1000000 + 1;
+  end.tv_usec = 0;
+
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&start, &end));
+  tt_int_op(end.tv_sec*1000L, OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(-end.tv_sec*1000L, OP_EQ, tv_mdiff(&end, &start));
+
+  start.tv_sec = 0;
+  start.tv_usec = 0;
+  end.tv_sec = LONG_MAX/1000;
+  end.tv_usec = TOR_USEC_PER_SEC;
+
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&end, &start));
+
+  start.tv_sec = 0;
+  start.tv_usec = 0;
+  end.tv_sec = LONG_MAX/1000000;
+  end.tv_usec = TOR_USEC_PER_SEC;
+
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&start, &end));
+  tt_int_op((end.tv_sec + 1)*1000L, OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(-(end.tv_sec + 1)*1000L, OP_EQ, tv_mdiff(&end, &start));
+
+  /* Overflows on comparison to zero */
+
+  start.tv_sec = 0;
+  start.tv_usec = 0;
+
+  end.tv_sec = TV_SEC_MAX;
+  end.tv_usec = 0;
+
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&end, &start));
+
+  end.tv_sec = TV_SEC_MAX;
+  end.tv_usec = TOR_USEC_PER_SEC;
+
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&end, &start));
+
+  end.tv_sec = 0;
+  end.tv_usec = TV_USEC_MAX;
+
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&end, &start));
+
+  end.tv_sec = TV_SEC_MAX;
+  end.tv_usec = TV_USEC_MAX;
+
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&end, &start));
+
+  end.tv_sec = 0;
+  end.tv_usec = 0;
+
+  start.tv_sec = TV_SEC_MIN;
+  start.tv_usec = 0;
+
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&end, &start));
+
+  start.tv_sec = TV_SEC_MIN;
+  start.tv_usec = TOR_USEC_PER_SEC;
+
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&end, &start));
+
+  start.tv_sec = TV_SEC_MIN;
+  start.tv_usec = TV_USEC_MAX;
+
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&end, &start));
+
+  /* overflows on comparison to maxima / minima */
+
+  start.tv_sec = TV_SEC_MIN;
+  start.tv_usec = 0;
+
+  end.tv_sec = TV_SEC_MAX;
+  end.tv_usec = 0;
+
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&end, &start));
+
+  end.tv_sec = TV_SEC_MAX;
+  end.tv_usec = TOR_USEC_PER_SEC;
+
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&end, &start));
+
+  end.tv_sec = TV_SEC_MAX;
+  end.tv_usec = 0;
+
+  start.tv_sec = TV_SEC_MIN;
+  start.tv_usec = 0;
+
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&end, &start));
+
+  start.tv_sec = TV_SEC_MIN;
+  start.tv_usec = TOR_USEC_PER_SEC;
+
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&end, &start));
+
+  /* overflows on comparison to maxima / minima with extra usec */
+
+  start.tv_sec = TV_SEC_MIN;
+  start.tv_usec = TOR_USEC_PER_SEC;
+
+  end.tv_sec = TV_SEC_MAX;
+  end.tv_usec = 0;
+
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&end, &start));
+
+  end.tv_sec = TV_SEC_MAX;
+  end.tv_usec = TOR_USEC_PER_SEC;
+
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&end, &start));
+
+  end.tv_sec = TV_SEC_MAX;
+  end.tv_usec = TOR_USEC_PER_SEC;
+
+  start.tv_sec = TV_SEC_MIN;
+  start.tv_usec = 0;
+
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&end, &start));
+
+  start.tv_sec = TV_SEC_MIN;
+  start.tv_usec = TOR_USEC_PER_SEC;
+
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&start, &end));
+  tt_int_op(LONG_MAX, OP_EQ, tv_udiff(&end, &start));
+  tt_int_op(LONG_MAX, OP_EQ, tv_mdiff(&end, &start));
 
   /* Test tor_timegm & tor_gmtime_r */
 
