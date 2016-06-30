@@ -4353,7 +4353,7 @@ test_dir_dump_unparseable_descriptors(void *data)
    * Reset the FIFO and check its state
    */
   dump_desc_fifo_cleanup();
-  tt_int_op(len_descs_dumped, ==, 0);
+  tt_u64_op(len_descs_dumped, ==, 0);
   tt_assert(descs_dumped == NULL || smartlist_len(descs_dumped) == 0);
 
   /*
