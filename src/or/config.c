@@ -2075,7 +2075,7 @@ config_parse_commandline(int argc, char **argv, int ignore_errors,
 
     if (want_arg == ARGUMENT_NECESSARY && is_last) {
       if (ignore_errors) {
-        arg = strdup("");
+        arg = tor_strdup("");
       } else {
         log_warn(LD_CONFIG,"Command-line option '%s' with no value. Failing.",
             argv[i]);
@@ -4125,11 +4125,11 @@ have_enough_mem_for_dircache(const or_options_t *options, size_t total_mem,
   if (options->DirCache) {
     if (total_mem < DIRCACHE_MIN_BANDWIDTH) {
       if (options->BridgeRelay) {
-        *msg = strdup("Running a Bridge with less than "
+        *msg = tor_strdup("Running a Bridge with less than "
                       STRINGIFY(DIRCACHE_MIN_MB_BANDWIDTH) " MB of memory is "
                       "not recommended.");
       } else {
-        *msg = strdup("Being a directory cache (default) with less than "
+        *msg = tor_strdup("Being a directory cache (default) with less than "
                       STRINGIFY(DIRCACHE_MIN_MB_BANDWIDTH) " MB of memory is "
                       "not recommended and may consume most of the available "
                       "resources, consider disabling this functionality by "
@@ -4138,7 +4138,7 @@ have_enough_mem_for_dircache(const or_options_t *options, size_t total_mem,
     }
   } else {
     if (total_mem >= DIRCACHE_MIN_BANDWIDTH) {
-      *msg = strdup("DirCache is disabled and we are configured as a "
+      *msg = tor_strdup("DirCache is disabled and we are configured as a "
                "relay. This may disqualify us from becoming a guard in the "
                "future.");
     }

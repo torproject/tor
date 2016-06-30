@@ -467,7 +467,7 @@ static or_options_t *mock_options = NULL;
 static void
 init_mock_options(void)
 {
-  mock_options = malloc(sizeof(or_options_t));
+  mock_options = tor_malloc(sizeof(or_options_t));
   memset(mock_options, 0, sizeof(or_options_t));
   mock_options->TestingTorNetwork = 1;
 }

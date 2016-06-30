@@ -804,7 +804,7 @@ mock_get_interface_address6_list(int severity,
   tt_assert(template_list);
 
   SMARTLIST_FOREACH_BEGIN(template_list, tor_addr_t *, src_addr) {
-    tor_addr_t *dest_addr = malloc(sizeof(tor_addr_t));
+    tor_addr_t *dest_addr = tor_malloc(sizeof(tor_addr_t));
     memset(dest_addr, 0, sizeof(*dest_addr));
     tor_addr_copy_tight(dest_addr, src_addr);
     smartlist_add(clone_list, dest_addr);

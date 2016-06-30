@@ -2849,7 +2849,7 @@ test_dir_dirserv_set_routerstatus_testing(void *arg)
   (void)arg;
 
   /* Init options */
-  mock_options = malloc(sizeof(or_options_t));
+  mock_options = tor_malloc(sizeof(or_options_t));
   reset_options(mock_options, &mock_get_options_calls);
 
   MOCK(get_options, mock_get_options);
@@ -2867,10 +2867,10 @@ test_dir_dirserv_set_routerstatus_testing(void *arg)
   routerset_parse(routerset_none, ROUTERSET_NONE_STR, "No routers");
 
   /* Init routerstatuses */
-  routerstatus_t *rs_a = malloc(sizeof(routerstatus_t));
+  routerstatus_t *rs_a = tor_malloc(sizeof(routerstatus_t));
   reset_routerstatus(rs_a, ROUTER_A_ID_STR, ROUTER_A_IPV4);
 
-  routerstatus_t *rs_b = malloc(sizeof(routerstatus_t));
+  routerstatus_t *rs_b = tor_malloc(sizeof(routerstatus_t));
   reset_routerstatus(rs_b, ROUTER_B_ID_STR, ROUTER_B_IPV4);
 
   /* Sanity check that routersets correspond to routerstatuses.
@@ -3055,7 +3055,7 @@ test_dir_dirserv_set_routerstatus_testing(void *arg)
   tt_assert(rs_b->is_hs_dir == 1);
 
  done:
-  free(mock_options);
+  tor_free(mock_options);
   mock_options = NULL;
 
   UNMOCK(get_options);
@@ -3064,8 +3064,8 @@ test_dir_dirserv_set_routerstatus_testing(void *arg)
   routerset_free(routerset_a);
   routerset_free(routerset_none);
 
-  free(rs_a);
-  free(rs_b);
+  tor_free(rs_a);
+  tor_free(rs_b);
 }
 
 static void
@@ -4282,7 +4282,7 @@ test_dir_dump_unparseable_descriptors(void *data)
    * Set up options mock so we can force a tiny FIFO size and generate
    * cleanups.
    */
-  mock_options = malloc(sizeof(or_options_t));
+  mock_options = tor_malloc(sizeof(or_options_t));
   reset_options(mock_options, &mock_get_options_calls);
   mock_options->MaxUnparseableDescSizeToLog = 1536;
   MOCK(get_options, mock_get_options);
@@ -4795,7 +4795,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   UNMOCK(options_get_datadir_fname2_suffix);
   UNMOCK(check_private_dir);
   UNMOCK(get_options);
-  free(mock_options);
+  tor_free(mock_options);
   mock_options = NULL;
 
   return;
@@ -5142,7 +5142,7 @@ test_dir_find_dl_schedule(void* data)
   smartlist_t client_boot_auth_only_cons, client_boot_auth_cons;
   smartlist_t client_boot_fallback_cons, bridge;
 
-  mock_options = malloc(sizeof(or_options_t));
+  mock_options = tor_malloc(sizeof(or_options_t));
   reset_options(mock_options, &mock_get_options_calls);
   MOCK(get_options, mock_get_options);
 
@@ -5251,7 +5251,7 @@ test_dir_find_dl_schedule(void* data)
   UNMOCK(networkstatus_consensus_is_bootstrapping);
   UNMOCK(networkstatus_consensus_can_use_extra_fallbacks);
   UNMOCK(get_options);
-  free(mock_options);
+  tor_free(mock_options);
   mock_options = NULL;
 }
 
