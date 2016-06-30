@@ -6001,7 +6001,9 @@ rend_parse_client_keys(strmap_t *parsed_clients, const char *ckstr)
 void
 routerparse_init(void)
 {
-  dump_desc_init();
+  if (!(sandbox_is_active())) {
+    dump_desc_init();
+  }
 }
 
 /** Clean up all data structures used by routerparse.c at exit */
