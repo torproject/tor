@@ -773,7 +773,7 @@ dump_desc_fifo_bump_hash(const uint8_t *digest_sha256)
     /* Find a match if one exists */
     SMARTLIST_FOREACH_BEGIN(descs_dumped, dumped_desc_t *, ent) {
       if (ent &&
-          memcmp(ent->digest_sha256, digest_sha256, DIGEST256_LEN) == 0) {
+          tor_memeq(ent->digest_sha256, digest_sha256, DIGEST256_LEN)) {
         /*
          * Save a pointer to the match and remove it from its current
          * position.
@@ -919,7 +919,7 @@ dump_desc_populate_one_file, (const char *dirname, const char *f))
   }
 
   /* Compare the digests */
-  if (memcmp(digest, content_digest, DIGEST256_LEN) != 0) {
+  if (tor_memneq(digest, content_digest, DIGEST256_LEN)) {
     /* No match */
     log_info(LD_DIR,
              "Hash of %s from unparseable descriptors directory didn't "

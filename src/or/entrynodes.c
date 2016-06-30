@@ -2452,7 +2452,7 @@ get_bridge_dl_status_by_id, (const char *digest))
 
   if (digest && get_options()->UseBridges && bridge_list) {
     SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, b) {
-      if (memcmp(digest, b->identity, DIGEST_LEN) == 0) {
+      if (tor_memeq(digest, b->identity, DIGEST_LEN)) {
         dl = &(b->fetch_status);
         break;
       }

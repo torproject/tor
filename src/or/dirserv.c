@@ -2062,8 +2062,8 @@ routers_make_ed_keys_unique(smartlist_t *routers)
       const time_t ri2_pub = ri2->cache_info.published_on;
       if (ri2_pub < ri_pub ||
           (ri2_pub == ri_pub &&
-           memcmp(ri->cache_info.signed_descriptor_digest,
-                  ri2->cache_info.signed_descriptor_digest,DIGEST_LEN)<0)) {
+           fast_memcmp(ri->cache_info.signed_descriptor_digest,
+                     ri2->cache_info.signed_descriptor_digest,DIGEST_LEN)<0)) {
         digest256map_set(by_ed_key, pk, ri);
         ri2->omit_from_vote = 1;
       } else {
