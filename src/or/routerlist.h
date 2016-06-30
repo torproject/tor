@@ -104,7 +104,7 @@ void routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int make_old,
 void routerlist_free_all(void);
 void routerlist_reset_warnings(void);
 
-MOCK_DECL(smartlist_t *, list_authority_ids_with_downloads, (void);)
+MOCK_DECL(smartlist_t *, list_authority_ids_with_downloads, (void));
 MOCK_DECL(download_status_t *, id_only_download_status_for_authority_id,
           (const char *digest));
 MOCK_DECL(smartlist_t *, list_sk_digests_for_authority_id,
