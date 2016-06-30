@@ -865,12 +865,13 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
   smartlist_t *missing_cert_digests, *missing_id_digests;
   char *resource = NULL;
   cert_list_t *cl;
-  const int cache = directory_caches_unknown_auth_certs(get_options());
+  const or_options_t *options = get_options();
+  const int cache = directory_caches_unknown_auth_certs(options);
   fp_pair_t *fp_tmp = NULL;
   char id_digest_str[2*DIGEST_LEN+1];
   char sk_digest_str[2*DIGEST_LEN+1];
 
-  if (should_delay_dir_fetches(get_options(), NULL))
+  if (should_delay_dir_fetches(options, NULL))
     return;
 
   pending_cert = fp_pair_map_new();
@@ -911,7 +912,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
     } SMARTLIST_FOREACH_END(cert);
     if (!found &&
         download_status_is_ready(&(cl->dl_status_by_id), now,
-                                 get_options()->TestingCertMaxDownloadTries) &&
+                                 options->TestingCertMaxDownloadTries) &&
         !digestmap_get(pending_id, ds->v3_identity_digest)) {
       log_info(LD_DIR,
                "No current certificate known for authority %s "
@@ -973,7 +974,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
         }
         if (download_status_is_ready_by_sk_in_cl(
               cl, sig->signing_key_digest,
-              now, get_options()->TestingCertMaxDownloadTries) &&
+              now, options->TestingCertMaxDownloadTries) &&
             !fp_pair_map_get_by_digests(pending_cert,
                                         voter->identity_digest,
                                         sig->signing_key_digest)) {
@@ -1075,7 +1076,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
        * directory */
       if (rs) {
         /* Certificate fetches are one-hop, unless AllDirActionsPrivate is 1 */
-        int get_via_tor = get_options()->AllDirActionsPrivate;
+        int get_via_tor = options->AllDirActionsPrivate;
         const dir_indirection_t indirection = get_via_tor ? DIRIND_ANONYMOUS
                                                           : DIRIND_ONEHOP;
         directory_initiate_command_routerstatus(rs,
@@ -1136,7 +1137,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
        * directory */
       if (rs) {
         /* Certificate fetches are one-hop, unless AllDirActionsPrivate is 1 */
-        int get_via_tor = get_options()->AllDirActionsPrivate;
+        int get_via_tor = options->AllDirActionsPrivate;
         const dir_indirection_t indirection = get_via_tor ? DIRIND_ANONYMOUS
                                                           : DIRIND_ONEHOP;
         directory_initiate_command_routerstatus(rs,
