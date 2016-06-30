@@ -1090,6 +1090,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
   int start_reading = 0;
   static int global_next_session_group = SESSION_GROUP_FIRST_AUTO;
   tor_addr_t addr;
+  int exhaustion = 0;
 
   if (listensockaddr->sa_family == AF_INET ||
       listensockaddr->sa_family == AF_INET6) {
@@ -1108,6 +1109,11 @@ connection_listener_new(const struct sockaddr *listensockaddr,
       int e = tor_socket_errno(s);
       if (ERRNO_IS_RESOURCE_LIMIT(e)) {
         warn_too_many_conns();
+        /*
+         * We'll call the OOS handler at the error exit, so set the
+         * exhaustion flag for it.
+         */
+        exhaustion = 1;
       } else {
         log_warn(LD_NET, "Socket creation failed: %s",
                  tor_socket_strerror(e));
@@ -1226,6 +1232,11 @@ connection_listener_new(const struct sockaddr *listensockaddr,
       int e = tor_socket_errno(s);
       if (ERRNO_IS_RESOURCE_LIMIT(e)) {
         warn_too_many_conns();
+        /*
+         * We'll call the OOS handler at the error exit, so set the
+         * exhaustion flag for it.
+         */
+        exhaustion = 1;
       } else {
         log_warn(LD_NET,"Socket creation failed: %s.", strerror(e));
       }
@@ -1344,6 +1355,12 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     dnsserv_configure_listener(conn);
   }
 
+  /*
+   * Normal exit; call the OOS handler since connection count just changed;
+   * the exhaustion flag will always be zero here though.
+   */
+  connection_handle_oos(get_n_open_sockets(), 0);
+
   return conn;
 
  err:
@@ -1351,6 +1368,9 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     tor_close_socket(s);
   if (conn)
     connection_free(conn);
+
+  /* Call the OOS handler, indicate if we saw an exhaustion-related error */
+  connection_handle_oos(get_n_open_sockets(), exhaustion);
 
   return NULL;
 }
@@ -1442,20 +1462,33 @@ connection_handle_listener_read(connection_t *conn, int new_type)
   if (!SOCKET_OK(news)) { /* accept() error */
     int e = tor_socket_errno(conn->s);
     if (ERRNO_IS_ACCEPT_EAGAIN(e)) {
-      return 0; /* they hung up before we could accept(). that's fine. */
+      /*
+       * they hung up before we could accept(). that's fine.
+       *
+       * give the OOS handler a chance to run though
+       */
+      connection_handle_oos(get_n_open_sockets(), 0);
+      return 0;
     } else if (ERRNO_IS_RESOURCE_LIMIT(e)) {
       warn_too_many_conns();
+      /* Exhaustion; tell the OOS handler */
+      connection_handle_oos(get_n_open_sockets(), 1);
       return 0;
     }
     /* else there was a real error. */
     log_warn(LD_NET,"accept() failed: %s. Closing listener.",
              tor_socket_strerror(e));
     connection_mark_for_close(conn);
+    /* Tell the OOS handler about this too */
+    connection_handle_oos(get_n_open_sockets(), 0);
     return -1;
   }
   log_debug(LD_NET,
             "Connection accepted on socket %d (child of fd %d).",
             (int)news,(int)conn->s);
+
+  /* We accepted a new conn; run OOS handler */
+  connection_handle_oos(get_n_open_sockets(), 0);
 
   if (make_socket_reuseable(news) < 0) {
     if (tor_socket_errno(news) == EINVAL) {
@@ -1661,12 +1694,18 @@ connection_connect_sockaddr,(connection_t *conn,
 
   s = tor_open_socket_nonblocking(protocol_family, SOCK_STREAM, proto);
   if (! SOCKET_OK(s)) {
+    /*
+     * Early OOS handler calls; it matters if it's an exhaustion-related
+     * error or not.
+     */
     *socket_error = tor_socket_errno(s);
     if (ERRNO_IS_RESOURCE_LIMIT(*socket_error)) {
       warn_too_many_conns();
+      connection_handle_oos(get_n_open_sockets(), 1);
     } else {
       log_warn(LD_NET,"Error creating network socket: %s",
                tor_socket_strerror(*socket_error));
+      connection_handle_oos(get_n_open_sockets(), 0);
     }
     return -1;
   }
@@ -1675,6 +1714,13 @@ connection_connect_sockaddr,(connection_t *conn,
     log_warn(LD_NET, "Error setting SO_REUSEADDR flag on new connection: %s",
              tor_socket_strerror(errno));
   }
+
+  /*
+   * We've got the socket open; give the OOS handler a chance to check
+   * against configuured maximum socket number, but tell it no exhaustion
+   * failure.
+   */
+  connection_handle_oos(get_n_open_sockets(), 0);
 
   if (bindaddr && bind(s, bindaddr, bindaddr_len) < 0) {
     *socket_error = tor_socket_errno(s);
@@ -4451,6 +4497,66 @@ connection_reached_eof(connection_t *conn)
       log_err(LD_BUG,"got unexpected conn type %d.", conn->type);
       tor_fragile_assert();
       return -1;
+  }
+}
+
+/** Out-of-Sockets handler; n_socks is the current number of open
+ * sockets, and failed is non-zero if a socket exhaustion related
+ * error immediately preceded this call.  This is where to do
+ * circuit-killing heuristics as needed.
+ */
+void
+connection_handle_oos(int n_socks, int failed)
+{
+  int target_n_socks = 0;
+
+  /* Sanity-check args */
+  tor_assert(n_socks >= 0);
+
+  /*
+   * Make some log noise; keep it at debug level since this gets a chance
+   * to run on every connection attempt.
+   */
+  log_debug(LD_NET,
+            "Running the OOS handler (%d open sockets, %s)",
+            n_socks, (failed != 0) ? "exhaustion seen" : "no exhaustion");
+
+  /*
+   * Check if we're really handling an OOS condition, and if so decide how
+   * many sockets we want to get down to.
+   */
+  if (n_socks > get_options()->ConnLimit_high_thresh) {
+    /* Try to get down to the low threshold */
+    target_n_socks = get_options()->ConnLimit_low_thresh;
+    log_notice(LD_NET,
+               "Current number of sockets %d is greater than configured "
+               "limit %d; OOS handler trying to get down to %d",
+               n_socks, get_options()->ConnLimit_high_thresh,
+               target_n_socks);
+  } else if (failed) {
+    /*
+     * If we're not at the limit but we hit a socket exhaustion error, try to
+     * drop some (but not as aggressively as ConnLimit_low_threshold, which is
+     * 3/4 of ConnLimit_)
+     */
+    target_n_socks = (n_socks * 9) / 10;
+    log_notice(LD_NET,
+               "We saw socket exhaustion at %d open sockets; OOS handler "
+               "trying to get down to %d",
+               n_socks, target_n_socks);
+  }
+
+  if (target_n_socks > 0) {
+    /*
+     * It's an OOS!
+     *
+     * TODO count moribund sockets; it'll be important that anything we decide
+     * to get rid of here but don't immediately close get counted as moribund
+     * on subsequent invocations so we don't try to kill too many things if
+     * this gets called multiple times.
+     */
+
+    /* TODO pick what to try to close */
   }
 }
 

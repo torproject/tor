@@ -1358,6 +1358,9 @@ options_act_reversible(const or_options_t *old_options, char **msg)
              options->ConnLimit, options->ConnLimit_,
              options->ConnLimit_high_thresh,
              options->ConnLimit_low_thresh);
+
+    /* Give the OOS handler a chance with the new thresholds */
+    connection_handle_oos(get_n_open_sockets(), 0);
   }
 
   goto done;

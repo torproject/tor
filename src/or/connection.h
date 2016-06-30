@@ -247,6 +247,8 @@ void clock_skew_warning(const connection_t *conn, long apparent_skew,
                         int trusted, log_domain_mask_t domain,
                         const char *received, const char *source);
 
+void connection_handle_oos(int n_socks, int failed);
+
 #ifdef CONNECTION_PRIVATE
 STATIC void connection_free_(connection_t *conn);
 
