@@ -1226,7 +1226,7 @@ networkstatus_get_dl_status_by_flavor,(consensus_flavor_t flavor))
   const int we_are_bootstrapping =
     networkstatus_consensus_is_bootstrapping(time(NULL));
 
-  if (flavor <= N_CONSENSUS_FLAVORS) {
+  if ((int)flavor <= N_CONSENSUS_FLAVORS) {
     dl = &((we_are_bootstrapping ?
            consensus_bootstrap_dl_status : consensus_dl_status)[flavor]);
   }
@@ -1241,7 +1241,7 @@ networkstatus_get_dl_status_by_flavor_bootstrap,(consensus_flavor_t flavor))
 {
   download_status_t *dl = NULL;
 
-  if (flavor <= N_CONSENSUS_FLAVORS) {
+  if ((int)flavor <= N_CONSENSUS_FLAVORS) {
     dl = &(consensus_bootstrap_dl_status[flavor]);
   }
 
@@ -1255,7 +1255,7 @@ networkstatus_get_dl_status_by_flavor_running,(consensus_flavor_t flavor))
 {
   download_status_t *dl = NULL;
 
-  if (flavor <= N_CONSENSUS_FLAVORS) {
+  if ((int)flavor <= N_CONSENSUS_FLAVORS) {
     dl = &(consensus_dl_status[flavor]);
   }
 
