@@ -588,6 +588,8 @@ static int check_signature_token(const char *digest,
 
 /* Dump mechanism for unparseable descriptors */
 
+static void dump_desc_populate_fifo_from_directory(const char *dirname);
+
 /** List of dumped descriptors for FIFO cleanup purposes */
 STATIC smartlist_t *descs_dumped = NULL;
 /** Total size of dumped descriptors for FIFO cleanup */
@@ -597,6 +599,7 @@ static int have_dump_desc_dir = 0;
 static int problem_with_dump_desc_dir = 0;
 
 #define DESC_DUMP_DATADIR_SUBDIR "unparseable-descs"
+#define DESC_DUMP_BASE_FILENAME "unparseable-desc"
 
 /*
  * One entry in the list of dumped descriptors; filename dumped to, length
@@ -607,6 +610,7 @@ typedef struct {
   char *filename;
   size_t len;
   uint8_t digest_sha256[DIGEST256_LEN];
+  time_t when;
 } dumped_desc_t;
 
 /** Find the dump directory and check if we'll be able to create it */
@@ -658,6 +662,10 @@ dump_desc_init(void)
                  "directory",
                  dump_desc_dir);
       problem_with_dump_desc_dir = 1;
+  }
+
+  if (have_dump_desc_dir && !problem_with_dump_desc_dir) {
+    dump_desc_populate_fifo_from_directory(dump_desc_dir);
   }
 
   tor_free(dump_desc_dir);
@@ -718,6 +726,7 @@ dump_desc_fifo_add_and_clean(char *filename, const uint8_t *digest_sha256,
   ent = tor_malloc_zero(sizeof(*ent));
   ent->filename = filename;
   ent->len = len;
+  ent->when = time(NULL);
   memcpy(ent->digest_sha256, digest_sha256, DIGEST256_LEN);
 
   /* Do we need to do some cleanup? */
@@ -790,6 +799,8 @@ dump_desc_fifo_bump_hash(const uint8_t *digest_sha256)
     } SMARTLIST_FOREACH_END(ent);
 
     if (match) {
+      /* Update the timestamp */
+      match->when = time(NULL);
       /* Add it back at the end of the list */
       smartlist_add(descs_dumped, match);
 
@@ -818,6 +829,225 @@ dump_desc_fifo_cleanup(void)
     descs_dumped = NULL;
     len_descs_dumped = 0;
   }
+}
+
+/** Handle one file for dump_desc_populate_fifo_from_directory(); make sure
+ * the filename is sensibly formed and matches the file content, and either
+ * return a dumped_desc_t for it or remove the file and return NULL.
+ */
+static dumped_desc_t *
+dump_desc_populate_one_file(const char *dirname, const char *f)
+{
+  dumped_desc_t *ent = NULL;
+  char *path = NULL, *desc = NULL;
+  const char *digest_str;
+  char digest[DIGEST256_LEN], content_digest[DIGEST256_LEN];
+  /* Expected prefix before digest in filenames */
+  const char *f_pfx = DESC_DUMP_BASE_FILENAME ".";
+  /*
+   * Stat while reading; this is important in case the file
+   * contains a NUL character.
+   */
+  struct stat st;
+
+  /* Sanity-check args */
+  tor_assert(dirname != NULL);
+  tor_assert(f != NULL);
+
+  /* Form the full path */
+  tor_asprintf(&path, "%s" PATH_SEPARATOR "%s", dirname, f);
+
+  /* Check that f has the form DESC_DUMP_BASE_FILENAME.<digest256> */
+
+  if (!strcmpstart(f, f_pfx)) {
+    /* It matches the form, but is the digest parseable as such? */
+    digest_str = f + strlen(f_pfx);
+    if (base16_decode(digest, DIGEST256_LEN,
+                      digest_str, strlen(digest_str)) != DIGEST256_LEN) {
+      /* We failed to decode it */
+      digest_str = NULL;
+    }
+  } else {
+    /* No match */
+    digest_str = NULL;
+  }
+
+  if (!digest_str) {
+    /* We couldn't get a sensible digest */
+    log_notice(LD_DIR,
+               "Removing unrecognized filename %s from unparseable "
+               "descriptors directory", f);
+    tor_unlink(path);
+    /* We're done */
+    goto done;
+  }
+
+  /*
+   * The filename has the form DESC_DUMP_BASE_FILENAME "." <digest256> and
+   * we've decoded the digest.  Next, check that we can read it and the
+   * content matches this digest.  We are relying on the fact that if the
+   * file contains a '\0', read_file_to_str() will allocate space for and
+   * read the entire file and return the correct size in st.
+   */
+  desc = read_file_to_str(path, RFTS_IGNORE_MISSING, &st);
+  if (!desc) {
+    /* We couldn't read it */
+    log_notice(LD_DIR,
+               "Failed to read %s from unparseable descriptors directory; "
+               "attempting to remove it.", f);
+    tor_unlink(path);
+    /* We're done */
+    goto done;
+  }
+
+  /*
+   * We got one; now compute its digest and check that it matches the
+   * filename.
+   */
+  if (crypto_digest256((char *)content_digest, desc, st.st_size,
+                       DIGEST_SHA256) != 0) {
+    /* Weird, but okay */
+    log_info(LD_DIR,
+             "Unable to hash content of %s from unparseable descriptors "
+             "directory", f);
+    tor_unlink(path);
+    /* We're done */
+    goto done;
+  }
+
+  /* Compare the digests */
+  if (memcmp(digest, content_digest, DIGEST256_LEN) != 0) {
+    /* No match */
+    log_info(LD_DIR,
+             "Hash of %s from unparseable descriptors directory didn't "
+             "match its filename; removing it", f);
+    tor_unlink(path);
+    /* We're done */
+    goto done;
+  }
+
+  /* Okay, it's a match, we should prepare ent */
+  ent = tor_malloc_zero(sizeof(dumped_desc_t));
+  ent->filename = path;
+  memcpy(ent->digest_sha256, digest, DIGEST256_LEN);
+  ent->len = st.st_size;
+  ent->when = st.st_mtime;
+  /* Null out path so we don't free it out from under ent */
+  path = NULL;
+
+ done:
+  /* Free allocations if we had them */
+  tor_free(desc);
+  tor_free(path);
+
+  return ent;
+}
+
+/** Sort helper for dump_desc_populate_fifo_from_directory(); compares
+ * the when field of dumped_desc_ts in a smartlist to put the FIFO in
+ * the correct order after reconstructing it from the directory.
+ */
+static int
+dump_desc_compare_fifo_entries(const void **a_v, const void **b_v)
+{
+  const dumped_desc_t **a = (const dumped_desc_t **)a_v;
+  const dumped_desc_t **b = (const dumped_desc_t **)b_v;
+
+  if ((a != NULL) && (*a != NULL)) {
+    if ((b != NULL) && (*b != NULL)) {
+      /* We have sensible dumped_desc_ts to compare */
+      if ((*a)->when < (*b)->when) {
+        return -1;
+      } else if ((*a)->when == (*b)->when) {
+        return 0;
+      } else {
+        return 1;
+      }
+    } else {
+      /*
+       * We shouldn't see this, but what the hell, NULLs precede everythin
+       * else
+       */
+      return 1;
+    }
+  } else {
+    return -1;
+  }
+}
+
+/** Scan the contents of the directory, and update FIFO/counters; this will
+ * consistency-check descriptor dump filenames against hashes of descriptor
+ * dump file content, and remove any inconsistent/unreadable dumps, and then
+ * reconstruct the dump FIFO as closely as possible for the last time the
+ * tor process shut down.  If a previous dump was repeated more than once and
+ * moved ahead in the FIFO, the mtime will not have been updated and the
+ * reconstructed order will be wrong, but will always be a permutation of
+ * the original.
+ */
+static void
+dump_desc_populate_fifo_from_directory(const char *dirname)
+{
+  smartlist_t *files = NULL;
+  dumped_desc_t *ent = NULL;
+
+  tor_assert(dirname != NULL);
+
+  /* Get a list of files */
+  files = tor_listdir(dirname);
+  if (!files) {
+    log_notice(LD_DIR,
+               "Unable to get contents of unparseable descriptor dump "
+               "directory %s",
+               dirname);
+    return;
+  }
+
+  /*
+   * Iterate through the list and decide which files should go in the
+   * FIFO and which should be purged.
+   */
+
+  SMARTLIST_FOREACH_BEGIN(files, char *, f) {
+    /* Try to get a FIFO entry */
+    ent = dump_desc_populate_one_file(dirname, f);
+    if (ent) {
+      /*
+       * We got one; add it to the FIFO.  No need for duplicate checking
+       * here since we just verified the name and digest match.
+       */
+
+      /* Make sure we have a list to add it to */
+      if (!descs_dumped) {
+        descs_dumped = smartlist_new();
+        len_descs_dumped = 0;
+      }
+
+      /* Add it and adjust the counter */
+      smartlist_add(descs_dumped, ent);
+      len_descs_dumped += ent->len;
+    }
+    /*
+     * If we didn't, we will have unlinked the file if necessary and
+     * possible, and emitted a log message about it, so just go on to
+     * the next.
+     */
+  } SMARTLIST_FOREACH_END(f);
+
+  /* Did we get anything? */
+  if (descs_dumped != NULL) {
+    /* Sort the FIFO in order of increasing timestamp */
+    smartlist_sort(descs_dumped, dump_desc_compare_fifo_entries);
+
+    /* Log some stats */
+    log_info(LD_DIR,
+             "Reloaded unparseable descriptor dump FIFO with %d dump(s) "
+             "totaling " U64_FORMAT " bytes",
+             smartlist_len(descs_dumped), U64_PRINTF_ARG(len_descs_dumped));
+  }
+
+  /* Free the original list */
+  SMARTLIST_FOREACH(files, char *, f, tor_free(f));
+  smartlist_free(files);
 }
 
 /** For debugging purposes, dump unparseable descriptor *<b>desc</b> of
@@ -853,7 +1083,8 @@ dump_desc(const char *desc, const char *type)
    * We mention type and hash in the main log; don't clutter up the files
    * with anything but the exact dump.
    */
-  tor_asprintf(&debugfile_base, "unparseable-desc.%s", digest_sha256_hex);
+  tor_asprintf(&debugfile_base,
+               DESC_DUMP_BASE_FILENAME ".%s", digest_sha256_hex);
   debugfile = get_datadir_fname2(DESC_DUMP_DATADIR_SUBDIR, debugfile_base);
 
   if (!sandbox_is_active()) {
