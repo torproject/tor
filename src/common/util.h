@@ -367,8 +367,9 @@ int write_bytes_to_new_file(const char *fname, const char *str, size_t len,
 #ifndef _WIN32
 struct stat;
 #endif
-char *read_file_to_str(const char *filename, int flags, struct stat *stat_out)
-  ATTR_MALLOC;
+MOCK_DECL_ATTR(char *, read_file_to_str,
+               (const char *filename, int flags, struct stat *stat_out),
+               ATTR_MALLOC);
 char *read_file_to_str_until_eof(int fd, size_t max_bytes_to_read,
                                  size_t *sz_out)
   ATTR_MALLOC;

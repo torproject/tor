@@ -601,18 +601,6 @@ static int problem_with_dump_desc_dir = 0;
 #define DESC_DUMP_DATADIR_SUBDIR "unparseable-descs"
 #define DESC_DUMP_BASE_FILENAME "unparseable-desc"
 
-/*
- * One entry in the list of dumped descriptors; filename dumped to, length
- * and SHA-256.
- */
-
-typedef struct {
-  char *filename;
-  size_t len;
-  uint8_t digest_sha256[DIGEST256_LEN];
-  time_t when;
-} dumped_desc_t;
-
 /** Find the dump directory and check if we'll be able to create it */
 static void
 dump_desc_init(void)
@@ -835,7 +823,7 @@ dump_desc_fifo_cleanup(void)
  * the filename is sensibly formed and matches the file content, and either
  * return a dumped_desc_t for it or remove the file and return NULL.
  */
-static dumped_desc_t *
+STATIC dumped_desc_t *
 dump_desc_populate_one_file(const char *dirname, const char *f)
 {
   dumped_desc_t *ent = NULL;

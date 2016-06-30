@@ -89,12 +89,26 @@ void routerparse_init(void);
 void routerparse_free_all(void);
 
 #ifdef ROUTERPARSE_PRIVATE
+/*
+ * One entry in the list of dumped descriptors; filename dumped to, length,
+ * SHA-256 and timestamp.
+ */
+
+typedef struct {
+  char *filename;
+  size_t len;
+  uint8_t digest_sha256[DIGEST256_LEN];
+  time_t when;
+} dumped_desc_t;
+
 EXTERN(size_t, len_descs_dumped);
 EXTERN(smartlist_t *, descs_dumped);
 STATIC int routerstatus_parse_guardfraction(const char *guardfraction_str,
                                             networkstatus_t *vote,
                                             vote_routerstatus_t *vote_rs,
                                             routerstatus_t *rs);
+STATIC dumped_desc_t * dump_desc_populate_one_file(const char *dirname,
+                                                   const char *f);
 STATIC void dump_desc(const char *desc, const char *type);
 STATIC void dump_desc_fifo_cleanup(void);
 #endif

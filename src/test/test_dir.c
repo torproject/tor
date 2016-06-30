@@ -4801,6 +4801,201 @@ test_dir_dump_unparseable_descriptors(void *data)
   return;
 }
 
+/* Variables for reset_read_file_to_str_mock() */
+
+static char *expected_filename = NULL;
+static char *file_content = NULL;
+static size_t file_content_len = 0;
+static struct stat file_stat;
+static int read_count = 0, read_call_count = 0;
+
+static void
+reset_read_file_to_str_mock(void)
+{
+  tor_free(expected_filename);
+  tor_free(file_content);
+  file_content_len = 0;
+  memset(&file_stat, 0, sizeof(file_stat));
+  read_count = 0;
+  read_call_count = 0;
+}
+
+static char *
+read_file_to_str_mock(const char *filename, int flags,
+                      struct stat *stat_out) {
+  char *result = NULL;
+
+  /* Insist we got a filename */
+  tt_assert(filename != NULL);
+
+  /* We ignore flags */
+  (void)flags;
+
+  /* Bump the call count */
+  ++read_call_count;
+
+  if (expected_filename != NULL &&
+      file_content != NULL &&
+      strcmp(filename, expected_filename) == 0) {
+    /* You asked for it, you got it */
+
+    /*
+     * This is the same behavior as the real read_file_to_str();
+     * if there's a NUL, the real size ends up in stat_out.
+     */
+    result = tor_malloc(file_content_len + 1);
+    if (file_content_len > 0) {
+      memcpy(result, file_content, file_content_len);
+    }
+    result[file_content_len] = '\0';
+
+    /* Do we need to set up stat_out? */
+    if (stat_out != NULL) {
+      memcpy(stat_out, &file_stat, sizeof(file_stat));
+      /* We always return the correct length here */
+      stat_out->st_size = file_content_len;
+    }
+
+    /* Wooo, we have a return value - bump the counter */
+    ++read_count;
+  }
+  /* else no match, return NULL */
+
+ done:
+  return result;
+}
+
+static void
+test_dir_populate_dump_desc_fifo(void *data)
+{
+  const char *dirname = "foo";
+  const char *fname = NULL;
+  dumped_desc_t *ent;
+
+  (void)data;
+
+  /*
+   * Set up unlink and read_file_to_str mocks
+   */
+  MOCK(tor_unlink, mock_unlink);
+  mock_unlink_reset();
+  MOCK(read_file_to_str, read_file_to_str_mock);
+  reset_read_file_to_str_mock();
+
+  /* Check state of unlink mock */
+  tt_int_op(unlinked_count, ==, 0);
+
+  /* Some cases that should fail before trying to read the file */
+  ent = dump_desc_populate_one_file(dirname, "bar");
+  tt_assert(ent == NULL);
+  tt_int_op(unlinked_count, ==, 1);
+  tt_int_op(read_count, ==, 0);
+  tt_int_op(read_call_count, ==, 0);
+
+  ent = dump_desc_populate_one_file(dirname, "unparseable-desc");
+  tt_assert(ent == NULL);
+  tt_int_op(unlinked_count, ==, 2);
+  tt_int_op(read_count, ==, 0);
+  tt_int_op(read_call_count, ==, 0);
+
+  ent = dump_desc_populate_one_file(dirname, "unparseable-desc.baz");
+  tt_assert(ent == NULL);
+  tt_int_op(unlinked_count, ==, 3);
+  tt_int_op(read_count, ==, 0);
+  tt_int_op(read_call_count, ==, 0);
+
+  ent = dump_desc_populate_one_file(
+      dirname,
+      "unparseable-desc.08AE85E90461F59E");
+  tt_assert(ent == NULL);
+  tt_int_op(unlinked_count, ==, 4);
+  tt_int_op(read_count, ==, 0);
+  tt_int_op(read_call_count, ==, 0);
+
+  ent = dump_desc_populate_one_file(
+      dirname,
+      "unparseable-desc.08AE85E90461F59EDF0981323F3A70D02B55AB54B44B04F"
+      "287D72F7B72F242E85C8CB0EDA8854A99");
+  tt_assert(ent == NULL);
+  tt_int_op(unlinked_count, ==, 5);
+  tt_int_op(read_count, ==, 0);
+  tt_int_op(read_call_count, ==, 0);
+
+  /* This is a correct-length digest but base16_decode() will fail */
+  ent = dump_desc_populate_one_file(
+      dirname,
+      "unparseable-desc.68219B8BGE64B705A6FFC728C069DC596216D60A7D7520C"
+      "D5ECE250D912E686B");
+  tt_assert(ent == NULL);
+  tt_int_op(unlinked_count, ==, 6);
+  tt_int_op(read_count, ==, 0);
+  tt_int_op(read_call_count, ==, 0);
+
+  /* This one has a correctly formed filename and should try reading */
+
+  /* Read fails */
+  ent = dump_desc_populate_one_file(
+      dirname,
+      "unparseable-desc.DF0981323F3A70D02B55AB54B44B04F287D72F7B72F242E"
+      "85C8CB0EDA8854A99");
+  tt_assert(ent == NULL);
+  tt_int_op(unlinked_count, ==, 7);
+  tt_int_op(read_count, ==, 0);
+  tt_int_op(read_call_count, ==, 1);
+
+  /* This read will succeed but the digest won't match the file content */
+  fname =
+    "unparseable-desc."
+    "DF0981323F3A70D02B55AB54B44B04F287D72F7B72F242E85C8CB0EDA8854A99";
+  tor_asprintf(&expected_filename, "%s/%s", dirname, fname);
+  file_content = tor_strdup("hanc culpam maiorem an illam dicam?");
+  file_content_len = strlen(file_content);
+  file_stat.st_mtime = 123456;
+  ent = dump_desc_populate_one_file(dirname, fname);
+  tt_assert(ent == NULL);
+  tt_int_op(unlinked_count, ==, 8);
+  tt_int_op(read_count, ==, 1);
+  tt_int_op(read_call_count, ==, 2);
+  tor_free(expected_filename);
+
+  /* This one will match */
+  fname =
+    "unparseable-desc."
+    "0786C7173447B7FB033FFCA2FC47C3CF71C30DD47CA8236D3FC7FF35853271C6";
+  tor_asprintf(&expected_filename, "%s/%s", dirname, fname);
+  file_content = tor_strdup("hanc culpam maiorem an illam dicam?");
+  file_content_len = strlen(file_content);
+  file_stat.st_mtime = 789012;
+  ent = dump_desc_populate_one_file(dirname, fname);
+  tt_assert(ent != NULL);
+  tt_int_op(unlinked_count, ==, 8);
+  tt_int_op(read_count, ==, 2);
+  tt_int_op(read_call_count, ==, 3);
+  tt_str_op(ent->filename, OP_EQ, expected_filename);
+  tt_int_op(ent->len, ==, file_content_len);
+  tt_int_op(ent->when, ==, file_stat.st_mtime);
+  tor_free(ent->filename);
+  tor_free(ent);
+  tor_free(expected_filename);
+
+  /*
+   * Reset the mocks and check their state
+   */
+  mock_unlink_reset();
+  tt_int_op(unlinked_count, ==, 0);
+  reset_read_file_to_str_mock();
+  tt_int_op(read_count, ==, 0);
+
+ done:
+
+  UNMOCK(tor_unlink);
+  mock_unlink_reset();
+  UNMOCK(read_file_to_str);
+  reset_read_file_to_str_mock();
+
+  return;
+}
+
 static int mock_networkstatus_consensus_is_bootstrapping_value = 0;
 static int
 mock_networkstatus_consensus_is_bootstrapping(time_t now)
@@ -5011,6 +5206,7 @@ struct testcase_t dir_tests[] = {
   DIR(should_init_request_to_dir_auths, 0),
   DIR(choose_compression_level, 0),
   DIR(dump_unparseable_descriptors, 0),
+  DIR(populate_dump_desc_fifo, 0),
   DIR_ARG(find_dl_schedule, TT_FORK, "bf"),
   DIR_ARG(find_dl_schedule, TT_FORK, "ba"),
   DIR_ARG(find_dl_schedule, TT_FORK, "cf"),

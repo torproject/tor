@@ -2676,8 +2676,8 @@ read_file_to_str_until_eof(int fd, size_t max_bytes_to_read, size_t *sz_out)
  * the call to stat and the call to read_all: the resulting string will
  * be truncated.
  */
-char *
-read_file_to_str(const char *filename, int flags, struct stat *stat_out)
+MOCK_IMPL(char *,
+read_file_to_str, (const char *filename, int flags, struct stat *stat_out))
 {
   int fd; /* router file */
   struct stat statbuf;
