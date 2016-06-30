@@ -2169,7 +2169,7 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
       }
     }
     if (!n_matches) {
-      *msg_out = "No regognized digests for given consensus flavor";
+      *msg_out = "No recognized digests for given consensus flavor";
     }
   }
 
