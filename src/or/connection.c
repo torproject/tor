@@ -4523,9 +4523,13 @@ connection_handle_oos(int n_socks, int failed)
 
   /*
    * Check if we're really handling an OOS condition, and if so decide how
-   * many sockets we want to get down to.
+   * many sockets we want to get down to.  Be sure we check if the threshold
+   * is distinct from zero first; it's possible for this to be called a few
+   * times before we've finished reading the config.
    */
-  if (n_socks > get_options()->ConnLimit_high_thresh) {
+  if (n_socks >= get_options()->ConnLimit_high_thresh &&
+      get_options()->ConnLimit_high_thresh != 0 &&
+      get_options()->ConnLimit_ != 0) {
     /* Try to get down to the low threshold */
     target_n_socks = get_options()->ConnLimit_low_thresh;
     log_notice(LD_NET,
