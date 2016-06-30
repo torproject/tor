@@ -4948,7 +4948,7 @@ test_dir_populate_dump_desc_fifo(void *data)
   fname =
     "unparseable-desc."
     "DF0981323F3A70D02B55AB54B44B04F287D72F7B72F242E85C8CB0EDA8854A99";
-  tor_asprintf(&expected_filename, "%s/%s", dirname, fname);
+  tor_asprintf(&expected_filename, "%s%s%s", dirname, PATH_SEPARATOR, fname);
   file_content = tor_strdup("hanc culpam maiorem an illam dicam?");
   file_content_len = strlen(file_content);
   file_stat.st_mtime = 123456;
@@ -4964,7 +4964,7 @@ test_dir_populate_dump_desc_fifo(void *data)
   fname =
     "unparseable-desc."
     "0786C7173447B7FB033FFCA2FC47C3CF71C30DD47CA8236D3FC7FF35853271C6";
-  tor_asprintf(&expected_filename, "%s/%s", dirname, fname);
+  tor_asprintf(&expected_filename, "%s%s%s", dirname, PATH_SEPARATOR, fname);
   file_content = tor_strdup("hanc culpam maiorem an illam dicam?");
   file_content_len = strlen(file_content);
   file_stat.st_mtime = 789012;
