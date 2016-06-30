@@ -1451,11 +1451,14 @@ tv_udiff(const struct timeval *start, const struct timeval *end)
    * between 0 and TV_USEC_PER_SEC. */
   udiff = secdiff*1000000 + ((int64_t)end->tv_usec - (int64_t)start->tv_usec);
 
+  /* Some compilers are smart enough to work out this is a no-op on L64 */
+#if SIZEOF_LONG < 8
   if (udiff > (int64_t)LONG_MAX || udiff < (int64_t)LONG_MIN) {
     return LONG_MAX;
-  } else {
-    return (long)udiff;
   }
+#endif
+
+  return (long)udiff;
 }
 
 /** Return the number of milliseconds elapsed between *start and *end.
@@ -1507,11 +1510,14 @@ tv_mdiff(const struct timeval *start, const struct timeval *end)
       ((int64_t)end->tv_usec - (int64_t)start->tv_usec + 500 + 1000000) / 1000
       - 1000;
 
+  /* Some compilers are smart enough to work out this is a no-op on L64 */
+#if SIZEOF_LONG < 8
   if (mdiff > (int64_t)LONG_MAX || mdiff < (int64_t)LONG_MIN) {
     return LONG_MAX;
-  } else {
-    return (long)mdiff;
   }
+#endif
+
+  return (long)mdiff;
 }
 
 /**
