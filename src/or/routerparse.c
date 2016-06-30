@@ -886,11 +886,28 @@ dump_desc_populate_one_file, (const char *dirname, const char *f))
     goto done;
   }
 
+#if SIZE_MAX > UINT64_MAX
+  if (BUG((uint64_t)st.st_size > (uint64_t)SIZE_MAX)) {
+    /* LCOV_EXCL_START
+     * Should be impossible since RFTS above should have failed to read the
+     * huge file into RAM. */
+    goto done;
+    /* LCOV_EXCL_STOP */
+  }
+#endif
+  if (BUG(st.st_size < 0)) {
+    /* LCOV_EXCL_START
+     * Should be impossible, since the OS isn't supposed to be b0rken. */
+    goto done;
+    /* LCOV_EXCL_STOP */
+  }
+  /* (Now we can be sure that st.st_size is safe to cast to a size_t.) */
+
   /*
    * We got one; now compute its digest and check that it matches the
    * filename.
    */
-  if (crypto_digest256((char *)content_digest, desc, st.st_size,
+  if (crypto_digest256((char *)content_digest, desc, (size_t) st.st_size,
                        DIGEST_SHA256) != 0) {
     /* Weird, but okay */
     log_info(LD_DIR,
@@ -916,7 +933,7 @@ dump_desc_populate_one_file, (const char *dirname, const char *f))
   ent = tor_malloc_zero(sizeof(dumped_desc_t));
   ent->filename = path;
   memcpy(ent->digest_sha256, digest, DIGEST256_LEN);
-  ent->len = st.st_size;
+  ent->len = (size_t) st.st_size;
   ent->when = st.st_mtime;
   /* Null out path so we don't free it out from under ent */
   path = NULL;
