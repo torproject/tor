@@ -101,8 +101,8 @@ typedef struct {
   time_t when;
 } dumped_desc_t;
 
-EXTERN(uint64_t, len_descs_dumped);
-EXTERN(smartlist_t *, descs_dumped);
+EXTERN(uint64_t, len_descs_dumped)
+EXTERN(smartlist_t *, descs_dumped)
 STATIC int routerstatus_parse_guardfraction(const char *guardfraction_str,
                                             networkstatus_t *vote,
                                             vote_routerstatus_t *vote_rs,
