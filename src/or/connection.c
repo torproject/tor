@@ -4508,7 +4508,7 @@ connection_reached_eof(connection_t *conn)
 void
 connection_handle_oos(int n_socks, int failed)
 {
-  int target_n_socks = 0;
+  int target_n_socks = 0, moribund_socks, socks_to_kill;
 
   /* Sanity-check args */
   tor_assert(n_socks >= 0);
@@ -4554,13 +4554,25 @@ connection_handle_oos(int n_socks, int failed)
     /*
      * It's an OOS!
      *
-     * TODO count moribund sockets; it'll be important that anything we decide
+     * Count moribund sockets; it's be important that anything we decide
      * to get rid of here but don't immediately close get counted as moribund
      * on subsequent invocations so we don't try to kill too many things if
-     * this gets called multiple times.
+     * connection_handle_oos() gets called multiple times.
      */
+    moribund_socks = connection_count_moribund();
 
-    /* TODO pick what to try to close */
+    if (moribund_socks < n_socks - target_n_socks) {
+      socks_to_kill = n_socks - target_n_socks - moribund_socks;
+      /* TODO actually kill them */
+      log_notice(LD_NET,
+                 "OOS handler wants to kill %d sockets",
+                 socks_to_kill);
+    } else {
+      log_notice(LD_NET,
+                 "Not killing any sockets for OOS because there are %d "
+                 "already moribund, and we only want to eliminate %d",
+                 moribund_socks, n_socks - target_n_socks);
+    }
   }
 }
 

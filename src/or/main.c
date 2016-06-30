@@ -651,6 +651,28 @@ close_closeable_connections(void)
   }
 }
 
+/** Count moribund connections for the OOS handler */
+int
+connection_count_moribund(void)
+{
+  int i, moribund = 0;
+  connection_t *conn;
+
+  /*
+   * Count things we'll try to kill when close_closeable_connections()
+   * runs next.
+   */
+  for (i = 0; i < smartlist_len(closeable_connection_lst); ++i) {
+    conn = smartlist_get(closeable_connection_lst, i);
+    if (conn->conn_array_index < 0 ||
+        conn->marked_for_close) {
+      ++moribund;
+    }
+  }
+
+  return moribund;
+}
+
 /** Libevent callback: this gets invoked when (connection_t*)<b>conn</b> has
  * some data to read. */
 static void
