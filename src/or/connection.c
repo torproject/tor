@@ -4506,13 +4506,88 @@ connection_reached_eof(connection_t *conn)
 static smartlist_t *
 pick_oos_victims(int n)
 {
-  smartlist_t *conns = NULL;
+  smartlist_t *eligible = NULL, *victims = NULL;
+  smartlist_t *conns;
+  int conn_counts_by_type[CONN_TYPE_MAX_ + 1], i;
 
-  (void)n;
+  /*
+   * Big damn assumption (someone improve this someday!):
+   *
+   * Socket exhaustion normally happens on high-volume relays, and so
+   * most of the connections involved are orconns.  We should pick victims
+   * by assembling a list of all orconns, and sorting them in order of
+   * how much 'damage' by some metric we'd be doing by dropping them.
+   *
+   * If we move on from orconns, we should probably think about incoming
+   * directory connections next, or exit connections.  Things we should
+   * probably never kill are controller connections and listeners.
+   *
+   * This function will count how many connections of different types
+   * exist and log it for purposes of gathering data on typical OOS
+   * situations to guide future improvements.
+   */
 
-  /* TODO */
+  /* First, get the connection array */
+  conns = get_connection_array();
+  /*
+   * Iterate it and pick out eligible connection types, and log some stats
+   * along the way.
+   */
+  eligible = smartlist_new();
+  memset(conn_counts_by_type, 0, sizeof(conn_counts_by_type));
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, c) {
+    /* Bump the counter */
+    tor_assert(c->type <= CONN_TYPE_MAX_);
+    ++(conn_counts_by_type[c->type]);
 
-  return conns;
+    /* Skip anything we would count as moribund */
+    if (c->conn_array_index < 0 ||
+        c->marked_for_close) {
+      continue;
+    }
+
+    switch (c->type) {
+      case CONN_TYPE_OR:
+        /* We've got an orconn, it's eligible to be OOSed */
+        smartlist_add(eligible, c);
+        break;
+      default:
+        /* We don't know what to do with it, ignore it */
+        break;
+    }
+  } SMARTLIST_FOREACH_END(c);
+
+  /* Log some stats */
+  if (smartlist_len(conns) > 0) {
+    /* At least one counter must be non-zero */
+    log_info(LD_NET, "Some stats on conn types seen during OOS follow");
+    for (i = CONN_TYPE_MIN_; i <= CONN_TYPE_MAX_; ++i) {
+      /* Did we see any? */
+      if (conn_counts_by_type[i] > 0) {
+        log_info(LD_NET, "%s: %d conns",
+                 conn_type_to_string(i),
+                 conn_counts_by_type[i]);
+      }
+    }
+    log_info(LD_NET, "Done with OOS conn type stats");
+  }
+
+  /* Did we find more eligible targets than we want to kill? */
+  if (smartlist_len(eligible) > n) {
+    /* TODO sort */
+    /* Pick first n as victims */
+    victims = smartlist_new();
+    for (i = 0; i < n; ++i) {
+      smartlist_add(victims, smartlist_get(eligible, i));
+    }
+    /* Free the original list */
+    smartlist_free(eligible);
+  } else {
+    /* No, we can just call them all victims */
+    victims = eligible;
+  }
+
+  return victims;
 }
 
 /** Kill a list of connections for the OOS handler. */
