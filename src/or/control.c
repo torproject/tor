@@ -2053,10 +2053,11 @@ getinfo_helper_dir(control_connection_t *control_conn,
   return 0;
 }
 
-/** Turn a smartlist of digests into a human-readable list of hex strings */
-
+/** Given a smartlist of 20-byte digests, return a newly allocated string
+ * containing each of those digests in order, formatted in HEX, and terminated
+ * with a newline. */
 static char *
-digest_list_to_string(smartlist_t *sl)
+digest_list_to_string(const smartlist_t *sl)
 {
   int len;
   char *result, *s;
@@ -2066,7 +2067,7 @@ digest_list_to_string(smartlist_t *sl)
   result = tor_malloc_zero(len);
 
   s = result;
-  SMARTLIST_FOREACH_BEGIN(sl, char *, digest) {
+  SMARTLIST_FOREACH_BEGIN(sl, const char *, digest) {
     base16_encode(s, HEX_DIGEST_LEN + 1, digest, DIGEST_LEN);
     s[HEX_DIGEST_LEN] = '\n';
     s += HEX_DIGEST_LEN + 1;
@@ -2077,8 +2078,8 @@ digest_list_to_string(smartlist_t *sl)
 }
 
 /** Turn a download_status_t into a human-readable description in a newly
- * allocated string. */
-
+ * allocated string.  The format is specified in control-spec.txt, under
+ * the documentation for "GETINFO download/..." .  */
 static char *
 download_status_to_string(const download_status_t *dl)
 {
