@@ -875,7 +875,7 @@ dump_desc_populate_one_file, (const char *dirname, const char *f))
    * file contains a '\0', read_file_to_str() will allocate space for and
    * read the entire file and return the correct size in st.
    */
-  desc = read_file_to_str(path, RFTS_IGNORE_MISSING, &st);
+  desc = read_file_to_str(path, RFTS_IGNORE_MISSING|RFTS_BIN, &st);
   if (!desc) {
     /* We couldn't read it */
     log_notice(LD_DIR,
