@@ -4500,6 +4500,30 @@ connection_reached_eof(connection_t *conn)
   }
 }
 
+/** Pick n victim connections for the OOS handler and return them in a
+ * smartlist.
+ */
+static smartlist_t *
+pick_oos_victims(int n)
+{
+  smartlist_t *conns = NULL;
+
+  (void)n;
+
+  /* TODO */
+
+  return conns;
+}
+
+/** Kill a list of connections for the OOS handler. */
+static void
+kill_conn_list_for_oos(smartlist_t *conns)
+{
+  (void)conns;
+
+  /* TODO */
+}
+
 /** Out-of-Sockets handler; n_socks is the current number of open
  * sockets, and failed is non-zero if a socket exhaustion related
  * error immediately preceded this call.  This is where to do
@@ -4509,6 +4533,7 @@ void
 connection_handle_oos(int n_socks, int failed)
 {
   int target_n_socks = 0, moribund_socks, socks_to_kill;
+  smartlist_t *conns;
 
   /* Sanity-check args */
   tor_assert(n_socks >= 0);
@@ -4563,10 +4588,16 @@ connection_handle_oos(int n_socks, int failed)
 
     if (moribund_socks < n_socks - target_n_socks) {
       socks_to_kill = n_socks - target_n_socks - moribund_socks;
-      /* TODO actually kill them */
-      log_notice(LD_NET,
-                 "OOS handler wants to kill %d sockets",
-                 socks_to_kill);
+
+      conns = pick_oos_victims(socks_to_kill);
+      if (conns) {
+        kill_conn_list_for_oos(conns);
+        log_notice(LD_NET,
+                   "OOS handler killed %d conns", smartlist_len(conns));
+        smartlist_free(conns);
+      } else {
+        log_notice(LD_NET, "OOS handler failed to pick any victim conns");
+      }
     } else {
       log_notice(LD_NET,
                  "Not killing any sockets for OOS because there are %d "
