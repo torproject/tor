@@ -4326,7 +4326,7 @@ test_dir_dump_unparseable_descriptors(void *data)
    * Reset the FIFO and check its state
    */
   dump_desc_fifo_cleanup();
-  tt_int_op(len_descs_dumped, ==, 0);
+  tt_u64_op(len_descs_dumped, ==, 0);
   tt_assert(descs_dumped == NULL || smartlist_len(descs_dumped) == 0);
 
   /*
@@ -4339,7 +4339,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_int_op(len_descs_dumped, ==, strlen(test_desc_1));
+  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_1));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 1);
 
   /*
@@ -4374,7 +4374,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_int_op(len_descs_dumped, ==, strlen(test_desc_2));
+  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_2));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 1);
 
   /*
@@ -4390,7 +4390,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_int_op(len_descs_dumped, ==, strlen(test_desc_2) + strlen(test_desc_3));
+  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_2) + strlen(test_desc_3));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -4404,7 +4404,7 @@ test_dir_dump_unparseable_descriptors(void *data)
    * Reset the FIFO and check its state
    */
   dump_desc_fifo_cleanup();
-  tt_int_op(len_descs_dumped, ==, 0);
+  tt_u64_op(len_descs_dumped, ==, 0);
   tt_assert(descs_dumped == NULL || smartlist_len(descs_dumped) == 0);
 
   /*
@@ -4425,7 +4425,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_int_op(len_descs_dumped, ==, strlen(test_desc_4));
+  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_4));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 1);
 
   /*
@@ -4441,7 +4441,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_int_op(len_descs_dumped, ==, strlen(test_desc_4) + strlen(test_desc_1));
+  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_4) + strlen(test_desc_1));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -4457,7 +4457,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_int_op(len_descs_dumped, ==, strlen(test_desc_1) + strlen(test_desc_2));
+  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_1) + strlen(test_desc_2));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -4471,7 +4471,7 @@ test_dir_dump_unparseable_descriptors(void *data)
    * Reset the FIFO and check its state
    */
   dump_desc_fifo_cleanup();
-  tt_int_op(len_descs_dumped, ==, 0);
+  tt_u64_op(len_descs_dumped, ==, 0);
   tt_assert(descs_dumped == NULL || smartlist_len(descs_dumped) == 0);
 
   /*
@@ -4492,7 +4492,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_int_op(len_descs_dumped, ==, strlen(test_desc_3));
+  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_3));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 1);
 
   /*
@@ -4508,7 +4508,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_int_op(len_descs_dumped, ==, strlen(test_desc_3) + strlen(test_desc_4));
+  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_3) + strlen(test_desc_4));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -4524,7 +4524,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_int_op(len_descs_dumped, ==, strlen(test_desc_3) + strlen(test_desc_4));
+  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_3) + strlen(test_desc_4));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -4538,7 +4538,7 @@ test_dir_dump_unparseable_descriptors(void *data)
    * Reset the FIFO and check its state
    */
   dump_desc_fifo_cleanup();
-  tt_int_op(len_descs_dumped, ==, 0);
+  tt_u64_op(len_descs_dumped, ==, 0);
   tt_assert(descs_dumped == NULL || smartlist_len(descs_dumped) == 0);
 
   /*
@@ -4559,7 +4559,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_int_op(len_descs_dumped, ==, strlen(test_desc_1));
+  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_1));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 1);
 
   /*
@@ -4575,7 +4575,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_int_op(len_descs_dumped, ==, strlen(test_desc_1) + strlen(test_desc_2));
+  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_1) + strlen(test_desc_2));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -4591,7 +4591,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_int_op(len_descs_dumped, ==, strlen(test_desc_1) + strlen(test_desc_2));
+  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_1) + strlen(test_desc_2));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -4605,7 +4605,7 @@ test_dir_dump_unparseable_descriptors(void *data)
    * Reset the FIFO and check its state
    */
   dump_desc_fifo_cleanup();
-  tt_int_op(len_descs_dumped, ==, 0);
+  tt_u64_op(len_descs_dumped, ==, 0);
   tt_assert(descs_dumped == NULL || smartlist_len(descs_dumped) == 0);
 
   /*
@@ -4626,7 +4626,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_int_op(len_descs_dumped, ==, strlen(test_desc_3));
+  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_3));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 1);
 
   /*
@@ -4642,7 +4642,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_int_op(len_descs_dumped, ==, strlen(test_desc_3) + strlen(test_desc_4));
+  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_3) + strlen(test_desc_4));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -4658,7 +4658,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_int_op(len_descs_dumped, ==, strlen(test_desc_3) + strlen(test_desc_4));
+  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_3) + strlen(test_desc_4));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -4674,7 +4674,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_int_op(len_descs_dumped, ==, strlen(test_desc_4) + strlen(test_desc_1));
+  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_4) + strlen(test_desc_1));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -4688,7 +4688,7 @@ test_dir_dump_unparseable_descriptors(void *data)
    * Reset the FIFO and check its state
    */
   dump_desc_fifo_cleanup();
-  tt_int_op(len_descs_dumped, ==, 0);
+  tt_u64_op(len_descs_dumped, ==, 0);
   tt_assert(descs_dumped == NULL || smartlist_len(descs_dumped) == 0);
 
   /*
@@ -4709,7 +4709,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_int_op(len_descs_dumped, ==, strlen(test_desc_2));
+  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_2));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 1);
 
   /*
@@ -4725,7 +4725,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_int_op(len_descs_dumped, ==, strlen(test_desc_2) + strlen(test_desc_3));
+  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_2) + strlen(test_desc_3));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -4741,7 +4741,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_int_op(len_descs_dumped, ==, strlen(test_desc_2) + strlen(test_desc_3));
+  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_2) + strlen(test_desc_3));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -4757,7 +4757,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   /*
    * Assert things about the FIFO state
    */
-  tt_int_op(len_descs_dumped, ==, strlen(test_desc_2) + strlen(test_desc_4));
+  tt_u64_op(len_descs_dumped, ==, strlen(test_desc_2) + strlen(test_desc_4));
   tt_assert(descs_dumped != NULL && smartlist_len(descs_dumped) == 2);
 
   /*
@@ -4771,7 +4771,7 @@ test_dir_dump_unparseable_descriptors(void *data)
    * Reset the FIFO and check its state
    */
   dump_desc_fifo_cleanup();
-  tt_int_op(len_descs_dumped, ==, 0);
+  tt_u64_op(len_descs_dumped, ==, 0);
   tt_assert(descs_dumped == NULL || smartlist_len(descs_dumped) == 0);
 
   /*
@@ -5068,7 +5068,7 @@ test_dir_populate_dump_desc_fifo_2(void *data)
   dump_desc_populate_fifo_from_directory("d");
   tt_assert(descs_dumped != NULL);
   tt_int_op(smartlist_len(descs_dumped), OP_EQ, 3);
-  tt_int_op(len_descs_dumped, OP_EQ, 1368);
+  tt_u64_op(len_descs_dumped, OP_EQ, 1368);
   ent = smartlist_get(descs_dumped, 0);
   tt_str_op(ent->filename, OP_EQ, "d/bar");
   tt_int_op(ent->len, OP_EQ, 456);
