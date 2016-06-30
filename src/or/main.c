@@ -3045,6 +3045,9 @@ tor_init(int argc, char *argv[])
     log_warn(LD_NET, "Problem initializing libevent RNG.");
   }
 
+  /* Scan/clean unparseable descroptors; after reading config */
+  routerparse_init();
+
   return 0;
 }
 

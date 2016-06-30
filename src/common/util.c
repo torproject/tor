@@ -2086,9 +2086,9 @@ file_status(const char *fname)
  * When effective_user is not NULL, check permissions against the given user
  * and its primary group.
  */
-int
-check_private_dir(const char *dirname, cpd_check_t check,
-                  const char *effective_user)
+MOCK_IMPL(int,
+check_private_dir,(const char *dirname, cpd_check_t check,
+                   const char *effective_user))
 {
   int r;
   struct stat st;

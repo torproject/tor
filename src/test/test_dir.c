@@ -4103,6 +4103,22 @@ test_dir_choose_compression_level(void* data)
 }
 
 /*
+ * Mock check_private_dir(), and always succeed - no need to actually
+ * look at or create anything on the filesystem.
+ */
+
+static int
+mock_check_private_dir(const char *dirname, cpd_check_t check,
+                       const char *effective_user)
+{
+  (void)dirname;
+  (void)check;
+  (void)effective_user;
+
+  return 0;
+}
+
+/*
  * This really mocks options_get_datadir_fname2_suffix(), but for testing
  * dump_desc(), we only care about get_datadir_fname(sub1), which is defined
  * in config.h as:
@@ -4118,16 +4134,24 @@ mock_get_datadir_fname(const or_options_t *options,
   char *rv = NULL;
 
   /*
-   * Assert we were called like get_datadir_fname(), since it's all
-   * we implement here.
+   * Assert we were called like get_datadir_fname2() or get_datadir_fname(),
+   * since that's all we implement here.
    */
   tt_assert(options != NULL);
   tt_assert(sub1 != NULL);
-  tt_assert(sub2 == NULL);
+  /*
+   * No particular assertions about sub2, since we could be in the
+   * get_datadir_fname() or get_datadir_fname2() case.
+   */
   tt_assert(suffix == NULL);
 
   /* Just duplicate the basename and return it for this mock */
-  rv = strdup(sub1);
+  if (sub2) {
+    /* If we have sub2, it's the basename, otherwise sub1 */
+    rv = strdup(sub2);
+  } else {
+    rv = strdup(sub1);
+  }
 
  done:
   return rv;
@@ -4262,6 +4286,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   reset_options(mock_options, &mock_get_options_calls);
   mock_options->MaxUnparseableDescSizeToLog = 1536;
   MOCK(get_options, mock_get_options);
+  MOCK(check_private_dir, mock_check_private_dir);
   MOCK(options_get_datadir_fname2_suffix,
        mock_get_datadir_fname);
 
@@ -4768,6 +4793,7 @@ test_dir_dump_unparseable_descriptors(void *data)
   UNMOCK(write_str_to_file);
   mock_write_str_to_file_reset();
   UNMOCK(options_get_datadir_fname2_suffix);
+  UNMOCK(check_private_dir);
   UNMOCK(get_options);
   free(mock_options);
   mock_options = NULL;

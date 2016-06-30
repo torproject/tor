@@ -326,8 +326,9 @@ typedef unsigned int cpd_check_t;
 #define CPD_GROUP_READ           (1u << 3)
 #define CPD_CHECK_MODE_ONLY      (1u << 4)
 #define CPD_RELAX_DIRMODE_CHECK  (1u << 5)
-int check_private_dir(const char *dirname, cpd_check_t check,
-                      const char *effective_user);
+MOCK_DECL(int, check_private_dir,
+    (const char *dirname, cpd_check_t check,
+     const char *effective_user));
 
 #define OPEN_FLAGS_REPLACE (O_WRONLY|O_CREAT|O_TRUNC)
 #define OPEN_FLAGS_APPEND (O_WRONLY|O_CREAT|O_APPEND)

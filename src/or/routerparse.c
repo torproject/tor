@@ -592,6 +592,11 @@ static int check_signature_token(const char *digest,
 STATIC smartlist_t *descs_dumped = NULL;
 /** Total size of dumped descriptors for FIFO cleanup */
 STATIC uint64_t len_descs_dumped = 0;
+/** Directory to stash dumps in */
+static int have_dump_desc_dir = 0;
+static int problem_with_dump_desc_dir = 0;
+
+#define DESC_DUMP_DATADIR_SUBDIR "unparseable-descs"
 
 /*
  * One entry in the list of dumped descriptors; filename dumped to, length
@@ -603,6 +608,88 @@ typedef struct {
   size_t len;
   uint8_t digest_sha256[DIGEST256_LEN];
 } dumped_desc_t;
+
+/** Find the dump directory and check if we'll be able to create it */
+static void
+dump_desc_init(void)
+{
+  char *dump_desc_dir;
+
+  dump_desc_dir = get_datadir_fname(DESC_DUMP_DATADIR_SUBDIR);
+
+  /*
+   * We just check for it, don't create it at this point; we'll
+   * create it when we need it if it isn't already there.
+   */
+  if (check_private_dir(dump_desc_dir, CPD_CHECK, get_options()->User) < 0) {
+    /* Error, log and flag it as having a problem */
+    log_notice(LD_DIR,
+               "Doesn't look like we'll be able to create descriptor dump "
+               "directory %s; dumps will be disabled.",
+               dump_desc_dir);
+    problem_with_dump_desc_dir = 1;
+    tor_free(dump_desc_dir);
+    return;
+  }
+
+  /* Check if it exists */
+  switch (file_status(dump_desc_dir)) {
+    case FN_DIR:
+      /* We already have a directory */
+      have_dump_desc_dir = 1;
+      break;
+    case FN_NOENT:
+      /* Nothing, we'll need to create it later */
+      have_dump_desc_dir = 0;
+      break;
+    case FN_ERROR:
+      /* Log and flag having a problem */
+      log_notice(LD_DIR,
+                 "Couldn't check whether descriptor dump directory %s already"
+                 " exists: %s",
+                 dump_desc_dir, strerror(errno));
+      problem_with_dump_desc_dir = 1;
+    case FN_FILE:
+    case FN_EMPTY:
+    default:
+      /* Something else was here! */
+      log_notice(LD_DIR,
+                 "Descriptor dump directory %s already exists and isn't a "
+                 "directory",
+                 dump_desc_dir);
+      problem_with_dump_desc_dir = 1;
+  }
+
+  tor_free(dump_desc_dir);
+}
+
+/** Create the dump directory if needed and possible */
+static void
+dump_desc_create_dir(void)
+{
+  char *dump_desc_dir;
+
+  /* If the problem flag is set, skip it */
+  if (problem_with_dump_desc_dir) return;
+
+  /* Do we need it? */
+  if (!have_dump_desc_dir) {
+    dump_desc_dir = get_datadir_fname(DESC_DUMP_DATADIR_SUBDIR);
+
+    if (check_private_dir(dump_desc_dir, CPD_CREATE,
+                          get_options()->User) < 0) {
+      log_notice(LD_DIR,
+                 "Failed to create descriptor dump directory %s",
+                 dump_desc_dir);
+      problem_with_dump_desc_dir = 1;
+    }
+
+    /* Okay, we created it */
+    have_dump_desc_dir = 1;
+
+    tor_free(dump_desc_dir);
+  }
+}
 
 /** Dump desc FIFO/cleanup; take ownership of the given filename, add it to
  * the FIFO, and clean up the oldest entries to the extent they exceed the
@@ -767,21 +854,35 @@ dump_desc(const char *desc, const char *type)
    * with anything but the exact dump.
    */
   tor_asprintf(&debugfile_base, "unparseable-desc.%s", digest_sha256_hex);
-  debugfile = get_datadir_fname(debugfile_base);
+  debugfile = get_datadir_fname2(DESC_DUMP_DATADIR_SUBDIR, debugfile_base);
 
   if (!sandbox_is_active()) {
     if (len <= get_options()->MaxUnparseableDescSizeToLog) {
       if (!dump_desc_fifo_bump_hash(digest_sha256)) {
-        /* Write it, and tell the main log about it */
-        write_str_to_file(debugfile, desc, 1);
-        log_info(LD_DIR,
-                 "Unable to parse descriptor of type %s with hash %s and "
-                 "length %lu. See file %s in data directory for details.",
-                 type, digest_sha256_hex, (unsigned long)len,
-                 debugfile_base);
-        dump_desc_fifo_add_and_clean(debugfile, digest_sha256, len);
-        /* Since we handed ownership over, don't free debugfile later */
-        debugfile = NULL;
+        /* Create the directory if needed */
+        dump_desc_create_dir();
+        /* Make sure we've got it */
+        if (have_dump_desc_dir && !problem_with_dump_desc_dir) {
+          /* Write it, and tell the main log about it */
+          write_str_to_file(debugfile, desc, 1);
+          log_info(LD_DIR,
+                   "Unable to parse descriptor of type %s with hash %s and "
+                   "length %lu. See file %s in data directory for details.",
+                   type, digest_sha256_hex, (unsigned long)len,
+                   debugfile_base);
+          dump_desc_fifo_add_and_clean(debugfile, digest_sha256, len);
+          /* Since we handed ownership over, don't free debugfile later */
+          debugfile = NULL;
+        } else {
+          /* Problem with the subdirectory */
+          log_info(LD_DIR,
+                   "Unable to parse descriptor of type %s with hash %s and "
+                   "length %lu. Descriptor not dumped because we had a "
+                   "problem creating the " DESC_DUMP_DATADIR_SUBDIR
+                   " subdirectory",
+                   type, digest_sha256_hex, (unsigned long)len);
+          /* We do have to free debugfile in this case */
+        }
       } else {
         /* We already had one with this hash dumped */
         log_info(LD_DIR,
@@ -5674,6 +5775,16 @@ rend_parse_client_keys(strmap_t *parsed_clients, const char *ckstr)
   if (area)
     memarea_drop_all(area);
   return result;
+}
+
+/** Called on startup; right now we just handle scanning the unparseable
+ * descriptor dumps, but hang anything else we might need to do in the
+ * future here as well.
+ */
+void
+routerparse_init(void)
+{
+  dump_desc_init();
 }
 
 /** Clean up all data structures used by routerparse.c at exit */

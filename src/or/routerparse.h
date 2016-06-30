@@ -85,6 +85,7 @@ int rend_parse_introduction_points(rend_service_descriptor_t *parsed,
                                    size_t intro_points_encoded_size);
 int rend_parse_client_keys(strmap_t *parsed_clients, const char *str);
 
+void routerparse_init(void);
 void routerparse_free_all(void);
 
 #ifdef ROUTERPARSE_PRIVATE
