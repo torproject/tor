@@ -4148,9 +4148,9 @@ mock_get_datadir_fname(const or_options_t *options,
   /* Just duplicate the basename and return it for this mock */
   if (sub2) {
     /* If we have sub2, it's the basename, otherwise sub1 */
-    rv = strdup(sub2);
+    rv = tor_strdup(sub2);
   } else {
-    rv = strdup(sub1);
+    rv = tor_strdup(sub1);
   }
 
  done:
@@ -5024,13 +5024,13 @@ pop_one_mock(const char *dirname, const char *f)
   if (dirname != NULL && strcmp(dirname, "d") == 0) {
     if (f != NULL && strcmp(f, "foo") == 0) {
       ent = tor_malloc_zero(sizeof(*ent));
-      ent->filename = strdup("d/foo");
+      ent->filename = tor_strdup("d/foo");
       ent->len = 123;
       ent->digest_sha256[0] = 1;
       ent->when = 1024;
     } else if (f != NULL && strcmp(f, "bar") == 0) {
       ent = tor_malloc_zero(sizeof(*ent));
-      ent->filename = strdup("d/bar");
+      ent->filename = tor_strdup("d/bar");
       ent->len = 456;
       ent->digest_sha256[0] = 2;
       /*
@@ -5040,7 +5040,7 @@ pop_one_mock(const char *dirname, const char *f)
       ent->when = 512;
     } else if (f != NULL && strcmp(f, "baz") == 0) {
       ent = tor_malloc_zero(sizeof(*ent));
-      ent->filename = strdup("d/baz");
+      ent->filename = tor_strdup("d/baz");
       ent->len = 789;
       ent->digest_sha256[0] = 3;
       ent->when = 768;
