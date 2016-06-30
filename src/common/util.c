@@ -3412,8 +3412,8 @@ smartlist_add_vasprintf(struct smartlist_t *sl, const char *pattern,
 /** Return a new list containing the filenames in the directory <b>dirname</b>.
  * Return NULL on error or if <b>dirname</b> is not a directory.
  */
-smartlist_t *
-tor_listdir(const char *dirname)
+MOCK_IMPL(smartlist_t *,
+tor_listdir, (const char *dirname))
 {
   smartlist_t *result;
 #ifdef _WIN32

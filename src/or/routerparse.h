@@ -107,8 +107,8 @@ STATIC int routerstatus_parse_guardfraction(const char *guardfraction_str,
                                             networkstatus_t *vote,
                                             vote_routerstatus_t *vote_rs,
                                             routerstatus_t *rs);
-STATIC dumped_desc_t * dump_desc_populate_one_file(const char *dirname,
-                                                   const char *f);
+MOCK_DECL(STATIC dumped_desc_t *, dump_desc_populate_one_file,
+    (const char *dirname, const char *f));
 STATIC void dump_desc(const char *desc, const char *type);
 STATIC void dump_desc_fifo_cleanup(void);
 #endif

@@ -377,7 +377,7 @@ const char *parse_config_line_from_str_verbose(const char *line,
                                        char **key_out, char **value_out,
                                        const char **err_out);
 char *expand_filename(const char *filename);
-struct smartlist_t *tor_listdir(const char *dirname);
+MOCK_DECL(struct smartlist_t *, tor_listdir, (const char *dirname));
 int path_is_relative(const char *filename);
 
 /* Process helpers */

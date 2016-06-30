@@ -823,8 +823,8 @@ dump_desc_fifo_cleanup(void)
  * the filename is sensibly formed and matches the file content, and either
  * return a dumped_desc_t for it or remove the file and return NULL.
  */
-STATIC dumped_desc_t *
-dump_desc_populate_one_file(const char *dirname, const char *f)
+MOCK_IMPL(STATIC dumped_desc_t *,
+dump_desc_populate_one_file, (const char *dirname, const char *f))
 {
   dumped_desc_t *ent = NULL;
   char *path = NULL, *desc = NULL;
