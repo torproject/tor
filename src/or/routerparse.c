@@ -1073,7 +1073,11 @@ dump_desc(const char *desc, const char *type)
                DESC_DUMP_BASE_FILENAME ".%s", digest_sha256_hex);
   debugfile = get_datadir_fname2(DESC_DUMP_DATADIR_SUBDIR, debugfile_base);
 
-  if (!sandbox_is_active()) {
+  /*
+   * Check if the sandbox is active or will become active; see comment
+   * below at the log message for why.
+   */
+  if (!(sandbox_is_active() || get_options()->Sandbox)) {
     if (len <= get_options()->MaxUnparseableDescSizeToLog) {
       if (!dump_desc_fifo_bump_hash(digest_sha256)) {
         /* Create the directory if needed */
@@ -1128,7 +1132,7 @@ dump_desc(const char *desc, const char *type)
     log_info(LD_DIR,
              "Unable to parse descriptor of type %s with hash %s and "
              "length %lu. Descriptor not dumped because the sandbox is "
-             "active",
+             "configured",
              type, digest_sha256_hex, (unsigned long)len);
   }
 
@@ -6001,7 +6005,12 @@ rend_parse_client_keys(strmap_t *parsed_clients, const char *ckstr)
 void
 routerparse_init(void)
 {
-  if (!(sandbox_is_active())) {
+  /*
+   * Check both if the sandbox is active and whether it's configured; no
+   * point in loading all that if we won't be able to use it after the
+   * sandbox becomes active.
+   */
+  if (!(sandbox_is_active() || get_options()->Sandbox)) {
     dump_desc_init();
   }
 }
