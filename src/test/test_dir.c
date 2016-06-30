@@ -4865,6 +4865,7 @@ read_file_to_str_mock(const char *filename, int flags,
   return result;
 }
 
+/* This one tests dump_desc_populate_one_file() */
 static void
 test_dir_populate_dump_desc_fifo(void *data)
 {
@@ -4992,6 +4993,97 @@ test_dir_populate_dump_desc_fifo(void *data)
   mock_unlink_reset();
   UNMOCK(read_file_to_str);
   reset_read_file_to_str_mock();
+
+  return;
+}
+
+static smartlist_t *
+listdir_mock(const char *dname)
+{
+  smartlist_t *l;
+
+  /* Ignore the name, always return this list */
+  (void)dname;
+
+  l = smartlist_new();
+  smartlist_add(l, tor_strdup("foo"));
+  smartlist_add(l, tor_strdup("bar"));
+  smartlist_add(l, tor_strdup("baz"));
+
+  return l;
+}
+
+static dumped_desc_t *
+pop_one_mock(const char *dirname, const char *f)
+{
+  dumped_desc_t *ent = NULL;
+
+  if (dirname != NULL && strcmp(dirname, "d") == 0) {
+    if (f != NULL && strcmp(f, "foo") == 0) {
+      ent = tor_malloc_zero(sizeof(*ent));
+      ent->filename = strdup("d/foo");
+      ent->len = 123;
+      ent->digest_sha256[0] = 1;
+      ent->when = 1024;
+    } else if (f != NULL && strcmp(f, "bar") == 0) {
+      ent = tor_malloc_zero(sizeof(*ent));
+      ent->filename = strdup("d/bar");
+      ent->len = 456;
+      ent->digest_sha256[0] = 2;
+      /*
+       * Note that the timestamps are in a different order than
+       * listdir_mock() returns; we're testing the sort order.
+       */
+      ent->when = 512;
+    } else if (f != NULL && strcmp(f, "baz") == 0) {
+      ent = tor_malloc_zero(sizeof(*ent));
+      ent->filename = strdup("d/baz");
+      ent->len = 789;
+      ent->digest_sha256[0] = 3;
+      ent->when = 768;
+    }
+  }
+
+  return ent;
+}
+
+/* This one tests dump_desc_populate_fifo_from_directory() */
+static void
+test_dir_populate_dump_desc_fifo_2(void *data)
+{
+  dumped_desc_t *ent = NULL;
+
+  (void)data;
+
+  /* Set up the mocks */
+  MOCK(tor_listdir, listdir_mock);
+  MOCK(dump_desc_populate_one_file, pop_one_mock);
+
+  /* Run dump_desc_populate_fifo_from_directory() */
+  descs_dumped = NULL;
+  len_descs_dumped = 0;
+  dump_desc_populate_fifo_from_directory("d");
+  tt_assert(descs_dumped != NULL);
+  tt_int_op(smartlist_len(descs_dumped), OP_EQ, 3);
+  tt_int_op(len_descs_dumped, OP_EQ, 1368);
+  ent = smartlist_get(descs_dumped, 0);
+  tt_str_op(ent->filename, OP_EQ, "d/bar");
+  tt_int_op(ent->len, OP_EQ, 456);
+  tt_int_op(ent->when, OP_EQ, 512);
+  ent = smartlist_get(descs_dumped, 1);
+  tt_str_op(ent->filename, OP_EQ, "d/baz");
+  tt_int_op(ent->len, OP_EQ, 789);
+  tt_int_op(ent->when, OP_EQ, 768);
+  ent = smartlist_get(descs_dumped, 2);
+  tt_str_op(ent->filename, OP_EQ, "d/foo");
+  tt_int_op(ent->len, OP_EQ, 123);
+  tt_int_op(ent->when, OP_EQ, 1024);
+
+ done:
+  dump_desc_fifo_cleanup();
+
+  UNMOCK(dump_desc_populate_one_file);
+  UNMOCK(tor_listdir);
 
   return;
 }
@@ -5207,6 +5299,7 @@ struct testcase_t dir_tests[] = {
   DIR(choose_compression_level, 0),
   DIR(dump_unparseable_descriptors, 0),
   DIR(populate_dump_desc_fifo, 0),
+  DIR(populate_dump_desc_fifo_2, 0),
   DIR_ARG(find_dl_schedule, TT_FORK, "bf"),
   DIR_ARG(find_dl_schedule, TT_FORK, "ba"),
   DIR_ARG(find_dl_schedule, TT_FORK, "cf"),

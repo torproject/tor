@@ -588,8 +588,6 @@ static int check_signature_token(const char *digest,
 
 /* Dump mechanism for unparseable descriptors */
 
-static void dump_desc_populate_fifo_from_directory(const char *dirname);
-
 /** List of dumped descriptors for FIFO cleanup purposes */
 STATIC smartlist_t *descs_dumped = NULL;
 /** Total size of dumped descriptors for FIFO cleanup */
@@ -972,7 +970,7 @@ dump_desc_compare_fifo_entries(const void **a_v, const void **b_v)
  * reconstructed order will be wrong, but will always be a permutation of
  * the original.
  */
-static void
+STATIC void
 dump_desc_populate_fifo_from_directory(const char *dirname)
 {
   smartlist_t *files = NULL;
