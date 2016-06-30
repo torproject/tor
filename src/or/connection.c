@@ -4519,9 +4519,20 @@ pick_oos_victims(int n)
 static void
 kill_conn_list_for_oos(smartlist_t *conns)
 {
-  (void)conns;
+  if (!conns) return;
 
-  /* TODO */
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, c) {
+    /* Make sure the channel layer gets told about orconns */
+    if (c->type == CONN_TYPE_OR) {
+      connection_or_close_for_error(TO_OR_CONN(c), 1);
+    } else {
+      connection_mark_and_flush(c);
+    }
+  } SMARTLIST_FOREACH_END(c);
+
+  log_notice(LD_NET,
+             "OOS handler marked and flushed %d connections",
+             smartlist_len(conns));
 }
 
 /** Out-of-Sockets handler; n_socks is the current number of open
