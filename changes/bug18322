@@ -1,4 +1,4 @@
-  o Bugfixes:
+  o Minor features (debugging):
     - When dumping unparseable router descriptors, optionally store them in
       separate filenames by hash, up to a configurable limit.
-      Fixes bug 18322; bugfix on ???.
+      Closes ticket 18322.
