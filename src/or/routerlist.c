@@ -1038,7 +1038,8 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
 
     if (!rs) {
       log_warn(LD_BUG, "Directory %s delivered a consensus, but a "
-               "routerstatus could not be found for it.", dir_hint);
+               "routerstatus could not be found for it.",
+               hex_str(dir_hint, DIGEST_LEN));
     }
   }
 
