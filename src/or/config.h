@@ -53,9 +53,11 @@ config_line_t *option_get_assignment(const or_options_t *options,
                                      const char *key);
 int options_save_current(void);
 const char *get_torrc_fname(int defaults_fname);
-char *options_get_datadir_fname2_suffix(const or_options_t *options,
-                                        const char *sub1, const char *sub2,
-                                        const char *suffix);
+MOCK_DECL(char *,
+          options_get_datadir_fname2_suffix,
+          (const or_options_t *options,
+           const char *sub1, const char *sub2,
+           const char *suffix));
 #define get_datadir_fname2_suffix(sub1, sub2, suffix) \
   options_get_datadir_fname2_suffix(get_options(), (sub1), (sub2), (suffix))
 /** Return a newly allocated string containing datadir/sub1.  See

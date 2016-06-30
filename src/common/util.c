@@ -2103,6 +2103,16 @@ clean_name_for_stat(char *name)
 #endif
 }
 
+/** Wrapper for unlink() to make it mockable for the test suite; returns 0
+ * if unlinking the file succeeded, -1 and sets errno if unlinking fails.
+ */
+
+MOCK_IMPL(int,
+tor_unlink,(const char *pathname))
+{
+  return unlink(pathname);
+}
+
 /** Return:
  * FN_ERROR if filename can't be read, is NULL, or is zero-length,
  * FN_NOENT if it doesn't exist,
@@ -2166,9 +2176,9 @@ file_status(const char *fname)
  * When effective_user is not NULL, check permissions against the given user
  * and its primary group.
  */
-int
-check_private_dir(const char *dirname, cpd_check_t check,
-                  const char *effective_user)
+MOCK_IMPL(int,
+check_private_dir,(const char *dirname, cpd_check_t check,
+                   const char *effective_user))
 {
   int r;
   struct stat st;
@@ -2396,8 +2406,8 @@ check_private_dir(const char *dirname, cpd_check_t check,
  * function, and all other functions in util.c that create files, create them
  * with mode 0600.
  */
-int
-write_str_to_file(const char *fname, const char *str, int bin)
+MOCK_IMPL(int,
+write_str_to_file,(const char *fname, const char *str, int bin))
 {
 #ifdef _WIN32
   if (!bin && strchr(str, '\r')) {
@@ -2756,8 +2766,8 @@ read_file_to_str_until_eof(int fd, size_t max_bytes_to_read, size_t *sz_out)
  * the call to stat and the call to read_all: the resulting string will
  * be truncated.
  */
-char *
-read_file_to_str(const char *filename, int flags, struct stat *stat_out)
+MOCK_IMPL(char *,
+read_file_to_str, (const char *filename, int flags, struct stat *stat_out))
 {
   int fd; /* router file */
   struct stat statbuf;
@@ -3492,8 +3502,8 @@ smartlist_add_vasprintf(struct smartlist_t *sl, const char *pattern,
 /** Return a new list containing the filenames in the directory <b>dirname</b>.
  * Return NULL on error or if <b>dirname</b> is not a directory.
  */
-smartlist_t *
-tor_listdir(const char *dirname)
+MOCK_IMPL(smartlist_t *,
+tor_listdir, (const char *dirname))
 {
   smartlist_t *result;
 #ifdef _WIN32

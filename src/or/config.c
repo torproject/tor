@@ -325,6 +325,7 @@ static config_var_t option_vars_[] = {
   VAR("MaxMemInQueues",          MEMUNIT,   MaxMemInQueues_raw, "0"),
   OBSOLETE("MaxOnionsPending"),
   V(MaxOnionQueueDelay,          MSEC_INTERVAL, "1750 msec"),
+  V(MaxUnparseableDescSizeToLog, MEMUNIT, "10 MB"),
   V(MinMeasuredBWsForAuthToIgnoreAdvertised, INT, "500"),
   V(MyFamily,                    STRING,   NULL),
   V(NewCircuitPeriod,            INTERVAL, "30 seconds"),
@@ -7228,10 +7229,10 @@ init_libevent(const or_options_t *options)
  *
  * Note: Consider using the get_datadir_fname* macros in or.h.
  */
-char *
-options_get_datadir_fname2_suffix(const or_options_t *options,
-                                  const char *sub1, const char *sub2,
-                                  const char *suffix)
+MOCK_IMPL(char *,
+options_get_datadir_fname2_suffix,(const or_options_t *options,
+                                   const char *sub1, const char *sub2,
+                                   const char *suffix))
 {
   char *fname = NULL;
   size_t len;

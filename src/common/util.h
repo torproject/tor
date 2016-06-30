@@ -309,6 +309,8 @@ const char *stream_status_to_string(enum stream_status stream_status);
 
 enum stream_status get_string_from_pipe(FILE *stream, char *buf, size_t count);
 
+MOCK_DECL(int,tor_unlink,(const char *pathname));
+
 /** Return values from file_status(); see that function's documentation
  * for details. */
 typedef enum { FN_ERROR, FN_NOENT, FN_FILE, FN_DIR, FN_EMPTY } file_status_t;
@@ -324,8 +326,9 @@ typedef unsigned int cpd_check_t;
 #define CPD_GROUP_READ           (1u << 3)
 #define CPD_CHECK_MODE_ONLY      (1u << 4)
 #define CPD_RELAX_DIRMODE_CHECK  (1u << 5)
-int check_private_dir(const char *dirname, cpd_check_t check,
-                      const char *effective_user);
+MOCK_DECL(int, check_private_dir,
+    (const char *dirname, cpd_check_t check,
+     const char *effective_user));
 
 #define OPEN_FLAGS_REPLACE (O_WRONLY|O_CREAT|O_TRUNC)
 #define OPEN_FLAGS_APPEND (O_WRONLY|O_CREAT|O_APPEND)
@@ -338,7 +341,8 @@ FILE *start_writing_to_stdio_file(const char *fname, int open_flags, int mode,
 FILE *fdopen_file(open_file_t *file_data);
 int finish_writing_to_file(open_file_t *file_data);
 int abort_writing_to_file(open_file_t *file_data);
-int write_str_to_file(const char *fname, const char *str, int bin);
+MOCK_DECL(int,
+write_str_to_file,(const char *fname, const char *str, int bin));
 MOCK_DECL(int,
 write_bytes_to_file,(const char *fname, const char *str, size_t len,
                      int bin));
@@ -363,8 +367,9 @@ int write_bytes_to_new_file(const char *fname, const char *str, size_t len,
 #ifndef _WIN32
 struct stat;
 #endif
-char *read_file_to_str(const char *filename, int flags, struct stat *stat_out)
-  ATTR_MALLOC;
+MOCK_DECL_ATTR(char *, read_file_to_str,
+               (const char *filename, int flags, struct stat *stat_out),
+               ATTR_MALLOC);
 char *read_file_to_str_until_eof(int fd, size_t max_bytes_to_read,
                                  size_t *sz_out)
   ATTR_MALLOC;
@@ -372,7 +377,7 @@ const char *parse_config_line_from_str_verbose(const char *line,
                                        char **key_out, char **value_out,
                                        const char **err_out);
 char *expand_filename(const char *filename);
-struct smartlist_t *tor_listdir(const char *dirname);
+MOCK_DECL(struct smartlist_t *, tor_listdir, (const char *dirname));
 int path_is_relative(const char *filename);
 
 /* Process helpers */
