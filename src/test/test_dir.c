@@ -4958,6 +4958,7 @@ test_dir_populate_dump_desc_fifo(void *data)
   tt_int_op(read_count, ==, 1);
   tt_int_op(read_call_count, ==, 2);
   tor_free(expected_filename);
+  tor_free(file_content);
 
   /* This one will match */
   fname =
@@ -4993,6 +4994,8 @@ test_dir_populate_dump_desc_fifo(void *data)
   mock_unlink_reset();
   UNMOCK(read_file_to_str);
   reset_read_file_to_str_mock();
+
+  tor_free(file_content);
 
   return;
 }
