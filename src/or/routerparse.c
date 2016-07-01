@@ -639,6 +639,7 @@ dump_desc_init(void)
                  " exists: %s",
                  dump_desc_dir, strerror(errno));
       problem_with_dump_desc_dir = 1;
+      break;
     case FN_FILE:
     case FN_EMPTY:
     default:
