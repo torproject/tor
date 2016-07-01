@@ -593,7 +593,7 @@ test_vote(void *arg)
   UNMOCK(trusteddirserver_get_by_v3_auth_digest);
 }
 
-const char *sr_state_str = "Version 1\n"
+static const char *sr_state_str = "Version 1\n"
   "TorVersion 0.2.9.0-alpha-dev\n"
   "ValidAfter 2037-04-19 07:16:00\n"
   "ValidUntil 2037-04-20 07:16:00\n"
