@@ -638,7 +638,11 @@ test_state_load_from_disk(void *arg)
 
   /* Try to load the directory itself. Should fail. */
   ret = disk_state_load_from_disk_impl(dir);
-  tt_assert(ret == -EISDIR);
+#ifdef _WIN32
+  tt_int_op(ret, OP_EQ, -EACCES);
+#else
+  tt_int_op(ret, OP_EQ, -EISDIR);
+#endif
 
   /* State should be non-existent at this point. */
   the_sr_state = get_sr_state();
