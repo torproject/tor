@@ -3025,7 +3025,7 @@ static const getinfo_item_t getinfo_items[] = {
        " ExitPolicyRejectPrivate."),
   ITEM("exit-policy/reject-private/relay", policies,
        "The relay-specific rules appended to the configured exit policy by"
-       " ExitPolicyRejectPrivate."),
+       " ExitPolicyRejectPrivate and/or ExitPolicyRejectLocalInterfaces."),
   ITEM("exit-policy/full", policies, "The entire exit policy of onion router"),
   ITEM("exit-policy/ipv4", policies, "IPv4 parts of exit policy"),
   ITEM("exit-policy/ipv6", policies, "IPv6 parts of exit policy"),

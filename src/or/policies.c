@@ -1843,10 +1843,18 @@ policies_log_first_redundant_entry(const smartlist_t *policy)
  *
  * If <b>ipv6_exit</b> is false, prepend "reject *6:*" to the policy.
  *
+ * If <b>configured_addresses</b> contains addresses:
+ *   - prepend entries that reject the addresses in this list. These may be the
+ *     advertised relay addresses and/or the outbound bind addresses,
+ *     depending on the ExitPolicyRejectPrivate and
+ *     ExitPolicyRejectLocalInterfaces settings.
  * If <b>rejectprivate</b> is true:
  *   - prepend "reject private:*" to the policy.
- *   - prepend entries that reject publicly routable addresses on this exit
- *     relay by calling policies_parse_exit_policy_reject_private
+ * If <b>reject_interface_addresses</b> is true:
+ *   - prepend entries that reject publicly routable interface addresses on
+ *     this exit relay by calling policies_parse_exit_policy_reject_private
+ * If <b>reject_configured_port_addresses</b> is true:
+ *   - prepend entries that reject all configured port addresses
  *
  * If cfg doesn't end in an absolute accept or reject and if
  * <b>add_default_policy</b> is true, add the default exit
@@ -1874,13 +1882,16 @@ policies_parse_exit_policy_internal(config_line_t *cfg,
   if (rejectprivate) {
     /* Reject IPv4 and IPv6 reserved private netblocks */
     append_exit_policy_string(dest, "reject private:*");
-    /* Reject IPv4 and IPv6 publicly routable addresses on this exit relay */
-    policies_parse_exit_policy_reject_private(
-                                            dest, ipv6_exit,
+  }
+
+  /* Consider rejecting IPv4 and IPv6 advertised relay addresses, outbound bind
+   * addresses, publicly routable addresses, and configured port addresses
+   * on this exit relay */
+  policies_parse_exit_policy_reject_private(dest, ipv6_exit,
                                             configured_addresses,
                                             reject_interface_addresses,
                                             reject_configured_port_addresses);
-  }
+
   if (parse_addr_policy(cfg, dest, -1))
     return -1;
 
@@ -1908,8 +1919,14 @@ policies_parse_exit_policy_internal(config_line_t *cfg,
  * If <b>EXIT_POLICY_REJECT_PRIVATE</b> bit is set in <b>options</b>:
  *   - prepend an entry that rejects all destinations in all netblocks
  *     reserved for private use.
+ *   - prepend entries that reject the advertised relay addresses in
+ *     configured_addresses
+ * If <b>EXIT_POLICY_REJECT_LOCAL_INTERFACES</b> bit is set in <b>options</b>:
  *   - prepend entries that reject publicly routable addresses on this exit
  *     relay by calling policies_parse_exit_policy_internal
+ *   - prepend entries that reject the outbound bind addresses in
+ *     configured_addresses
+ *   - prepend entries that reject all configured port addresses
  *
  * If <b>EXIT_POLICY_ADD_DEFAULT</b> bit is set in <b>options</b>, append
  * default exit policy entries to <b>result</b> smartlist.
@@ -1922,12 +1939,14 @@ policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
   int ipv6_enabled = (options & EXIT_POLICY_IPV6_ENABLED) ? 1 : 0;
   int reject_private = (options & EXIT_POLICY_REJECT_PRIVATE) ? 1 : 0;
   int add_default = (options & EXIT_POLICY_ADD_DEFAULT) ? 1 : 0;
+  int reject_local_interfaces = (options &
+                                 EXIT_POLICY_REJECT_LOCAL_INTERFACES) ? 1 : 0;
 
   return policies_parse_exit_policy_internal(cfg,dest,ipv6_enabled,
                                              reject_private,
                                              configured_addresses,
-                                             reject_private,
-                                             reject_private,
+                                             reject_local_interfaces,
+                                             reject_local_interfaces,
                                              add_default);
 }
 
@@ -1993,6 +2012,7 @@ policies_copy_outbound_addresses_to_smartlist(smartlist_t *addr_list,
  *    add it to the list of configured addresses.
  *  - if ipv6_local_address is non-NULL, and not the null tor_addr_t, add it
  *    to the list of configured addresses.
+ * If <b>or_options->ExitPolicyRejectLocalInterfaces</b> is true:
  *  - if or_options->OutboundBindAddressIPv4_ is not the null tor_addr_t, add
  *    it to the list of configured addresses.
  *  - if or_options->OutboundBindAddressIPv6_ is not the null tor_addr_t, add
@@ -2036,11 +2056,20 @@ policies_parse_exit_policy_from_options(const or_options_t *or_options,
     parser_cfg |= EXIT_POLICY_ADD_DEFAULT;
   }
 
+  if (or_options->ExitPolicyRejectLocalInterfaces) {
+    parser_cfg |= EXIT_POLICY_REJECT_LOCAL_INTERFACES;
+  }
+
   /* Copy the configured addresses into the tor_addr_t* list */
-  policies_copy_ipv4h_to_smartlist(configured_addresses, local_address);
-  policies_copy_addr_to_smartlist(configured_addresses, ipv6_local_address);
-  policies_copy_outbound_addresses_to_smartlist(configured_addresses,
-                                                or_options);
+  if (or_options->ExitPolicyRejectPrivate) {
+    policies_copy_ipv4h_to_smartlist(configured_addresses, local_address);
+    policies_copy_addr_to_smartlist(configured_addresses, ipv6_local_address);
+  }
+
+  if (or_options->ExitPolicyRejectLocalInterfaces) {
+    policies_copy_outbound_addresses_to_smartlist(configured_addresses,
+                                                  or_options);
+  }
 
   rv = policies_parse_exit_policy(or_options->ExitPolicy, result, parser_cfg,
                                   configured_addresses);
@@ -2820,7 +2849,8 @@ getinfo_helper_policies(control_connection_t *conn,
       return -1;
     }
 
-    if (!options->ExitPolicyRejectPrivate) {
+    if (!options->ExitPolicyRejectPrivate &&
+        !options->ExitPolicyRejectLocalInterfaces) {
       *answer = tor_strdup("");
       return 0;
     }
@@ -2829,16 +2859,22 @@ getinfo_helper_policies(control_connection_t *conn,
     smartlist_t *configured_addresses = smartlist_new();
 
     /* Copy the configured addresses into the tor_addr_t* list */
-    policies_copy_ipv4h_to_smartlist(configured_addresses, me->addr);
-    policies_copy_addr_to_smartlist(configured_addresses, &me->ipv6_addr);
-    policies_copy_outbound_addresses_to_smartlist(configured_addresses,
-                                                  options);
+    if (options->ExitPolicyRejectPrivate) {
+      policies_copy_ipv4h_to_smartlist(configured_addresses, me->addr);
+      policies_copy_addr_to_smartlist(configured_addresses, &me->ipv6_addr);
+    }
+
+    if (options->ExitPolicyRejectLocalInterfaces) {
+      policies_copy_outbound_addresses_to_smartlist(configured_addresses,
+                                                    options);
+    }
 
     policies_parse_exit_policy_reject_private(
-                                            &private_policy_list,
-                                            options->IPv6Exit,
-                                            configured_addresses,
-                                            1, 1);
+                                      &private_policy_list,
+                                      options->IPv6Exit,
+                                      configured_addresses,
+                                      options->ExitPolicyRejectLocalInterfaces,
+                                      options->ExitPolicyRejectLocalInterfaces);
     *answer = policy_dump_to_string(private_policy_list, 1, 1);
 
     addr_policy_list_free(private_policy_list);

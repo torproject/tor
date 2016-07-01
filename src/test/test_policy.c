@@ -1082,15 +1082,47 @@ test_policies_getinfo_helper_policies(void *arg)
   append_exit_policy_string(&mock_my_routerinfo.exit_policy, "reject *6:*");
 
   mock_options.IPv6Exit = 1;
-  mock_options.ExitPolicyRejectPrivate = 1;
   tor_addr_from_ipv4h(&mock_options.OutboundBindAddressIPv4_, TEST_IPV4_ADDR);
   tor_addr_parse(&mock_options.OutboundBindAddressIPv6_, TEST_IPV6_ADDR);
+
+  mock_options.ExitPolicyRejectPrivate = 1;
+  mock_options.ExitPolicyRejectLocalInterfaces = 1;
 
   rv = getinfo_helper_policies(NULL, "exit-policy/reject-private/relay",
                                &answer, &errmsg);
   tt_assert(rv == 0);
   tt_assert(answer != NULL);
   tt_assert(strlen(answer) > 0);
+  tor_free(answer);
+
+  mock_options.ExitPolicyRejectPrivate = 1;
+  mock_options.ExitPolicyRejectLocalInterfaces = 0;
+
+  rv = getinfo_helper_policies(NULL, "exit-policy/reject-private/relay",
+                               &answer, &errmsg);
+  tt_assert(rv == 0);
+  tt_assert(answer != NULL);
+  tt_assert(strlen(answer) > 0);
+  tor_free(answer);
+
+  mock_options.ExitPolicyRejectPrivate = 0;
+  mock_options.ExitPolicyRejectLocalInterfaces = 1;
+
+  rv = getinfo_helper_policies(NULL, "exit-policy/reject-private/relay",
+                               &answer, &errmsg);
+  tt_assert(rv == 0);
+  tt_assert(answer != NULL);
+  tt_assert(strlen(answer) > 0);
+  tor_free(answer);
+
+  mock_options.ExitPolicyRejectPrivate = 0;
+  mock_options.ExitPolicyRejectLocalInterfaces = 0;
+
+  rv = getinfo_helper_policies(NULL, "exit-policy/reject-private/relay",
+                               &answer, &errmsg);
+  tt_assert(rv == 0);
+  tt_assert(answer != NULL);
+  tt_assert(strlen(answer) == 0);
   tor_free(answer);
 
   rv = getinfo_helper_policies(NULL, "exit-policy/ipv4", &answer,

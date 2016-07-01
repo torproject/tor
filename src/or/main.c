@@ -2220,8 +2220,8 @@ ip_address_changed(int at_interface)
 {
   const or_options_t *options = get_options();
   int server = server_mode(options);
-  int exit_reject_private = (server && options->ExitRelay
-                             && options->ExitPolicyRejectPrivate);
+  int exit_reject_interfaces = (server && options->ExitRelay
+                                && options->ExitPolicyRejectLocalInterfaces);
 
   if (at_interface) {
     if (! server) {
@@ -2239,8 +2239,8 @@ ip_address_changed(int at_interface)
   }
 
   /* Exit relays incorporate interface addresses in their exit policies when
-   * ExitPolicyRejectPrivate is set */
-  if (exit_reject_private || (server && !at_interface)) {
+   * ExitPolicyRejectLocalInterfaces is set */
+  if (exit_reject_interfaces || (server && !at_interface)) {
     mark_my_descriptor_dirty("IP address changed");
   }
 

@@ -18,9 +18,10 @@
  */
 #define POLICY_BUF_LEN 72
 
-#define EXIT_POLICY_IPV6_ENABLED   (1 << 0)
-#define EXIT_POLICY_REJECT_PRIVATE (1 << 1)
-#define EXIT_POLICY_ADD_DEFAULT    (1 << 2)
+#define EXIT_POLICY_IPV6_ENABLED             (1 << 0)
+#define EXIT_POLICY_REJECT_PRIVATE           (1 << 1)
+#define EXIT_POLICY_ADD_DEFAULT              (1 << 2)
+#define EXIT_POLICY_REJECT_LOCAL_INTERFACES  (1 << 3)
 
 typedef enum firewall_connection_t {
   FIREWALL_OR_CONNECTION      = 0,
