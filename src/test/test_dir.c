@@ -1438,7 +1438,8 @@ test_dir_measured_bw_kb_cache(void *arg)
 }
 
 static char *
-my_dirvote_compute_params(smartlist_t *votes, int method, int total_authorities)
+my_dirvote_compute_params(smartlist_t *votes, int method,
+                          int total_authorities)
 {
   smartlist_t *s = dirvote_compute_params(votes, method, total_authorities);
   tor_assert(s);
@@ -1573,7 +1574,8 @@ test_dir_param_voting_lookup(void *arg)
   tt_int_op(1000,
             OP_EQ, dirvote_get_intermediate_param_value(lst, "ab", 1000));
   tt_int_op(9, OP_EQ, dirvote_get_intermediate_param_value(lst, "abc", 1000));
-  tt_int_op(99, OP_EQ, dirvote_get_intermediate_param_value(lst, "abcd", 1000));
+  tt_int_op(99, OP_EQ,
+            dirvote_get_intermediate_param_value(lst, "abcd", 1000));
 
   /* moomin appears twice. */
   tt_int_op(-100, OP_EQ,

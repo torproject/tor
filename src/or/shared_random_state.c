@@ -1351,3 +1351,4 @@ get_sr_state(void)
 }
 
 #endif /* TOR_UNIT_TESTS */
+

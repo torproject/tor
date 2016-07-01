@@ -2648,7 +2648,8 @@ get_voting_schedule(const or_options_t *options, time_t now, int severity)
 
   new_voting_schedule->fetch_missing_signatures = start - (dist_delay/2);
   new_voting_schedule->voting_ends = start - dist_delay;
-  new_voting_schedule->fetch_missing_votes = start - dist_delay - (vote_delay/2);
+  new_voting_schedule->fetch_missing_votes =
+    start - dist_delay - (vote_delay/2);
   new_voting_schedule->voting_starts = start - dist_delay - vote_delay;
 
   {

@@ -164,3 +164,4 @@ void set_num_srv_agreements(int32_t value);
 #endif /* TOR_UNIT_TESTS */
 
 #endif /* TOR_SHARED_RANDOM_H */
+

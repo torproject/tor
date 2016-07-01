@@ -144,3 +144,4 @@ STATIC sr_state_t *get_sr_state(void);
 #endif /* TOR_UNIT_TESTS */
 
 #endif /* TOR_SHARED_RANDOM_STATE_H */
+

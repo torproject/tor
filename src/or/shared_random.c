@@ -327,7 +327,6 @@ reveal_decode(const char *encoded, sr_commit_t *commit)
   return -1;
 }
 
-
 /* Encode a reveal element using a given commit object to dst which is a
  * buffer large enough to put the base64-encoded reveal construction. The
  * format is as follow:
@@ -629,7 +628,8 @@ should_keep_commit(const sr_commit_t *commit, const char *voter_key,
           lasts multiple rounds. However if the commitment value changes
           during commit phase, it might be a bug so log more loudly. */
       if (!commitments_are_the_same(commit, saved_commit)) {
-        log_info(LD_DIR, "SR: Received altered commit from %s in commit phase.",
+        log_info(LD_DIR,
+                 "SR: Received altered commit from %s in commit phase.",
                  sr_commit_get_rsa_fpr(commit));
       } else {
         log_debug(LD_DIR, "SR: Ignoring known commit during commit phase.");
@@ -1348,9 +1348,11 @@ sr_save_and_cleanup(void)
 /* Set the global value of number of SRV agreements so the test can play
  * along by calling specific functions that don't parse the votes prior for
  * the AuthDirNumSRVAgreements value. */
-void set_num_srv_agreements(int32_t value)
+void
+set_num_srv_agreements(int32_t value)
 {
   num_srv_agreements_from_vote = value;
 }
 
 #endif /* TOR_UNIT_TESTS */
+
