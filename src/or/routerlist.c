@@ -1076,8 +1076,8 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
       /* If we've just downloaded a consensus from a directory, re-use that
        * directory */
       if (rs) {
-        /* Certificate fetches are one-hop, unless AllDirActionsPrivate is 1 */
-        int get_via_tor = options->AllDirActionsPrivate;
+        int get_via_tor = purpose_needs_anonymity(
+                                            DIR_PURPOSE_FETCH_CERTIFICATE, 0);
         const dir_indirection_t indirection = get_via_tor ? DIRIND_ANONYMOUS
                                                           : DIRIND_ONEHOP;
         directory_initiate_command_routerstatus(rs,
@@ -1137,8 +1137,8 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
       /* If we've just downloaded a consensus from a directory, re-use that
        * directory */
       if (rs) {
-        /* Certificate fetches are one-hop, unless AllDirActionsPrivate is 1 */
-        int get_via_tor = options->AllDirActionsPrivate;
+        int get_via_tor = purpose_needs_anonymity(
+                                            DIR_PURPOSE_FETCH_CERTIFICATE, 0);
         const dir_indirection_t indirection = get_via_tor ? DIRIND_ANONYMOUS
                                                           : DIRIND_ONEHOP;
         directory_initiate_command_routerstatus(rs,

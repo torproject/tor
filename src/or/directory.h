@@ -132,12 +132,12 @@ int download_status_get_n_failures(const download_status_t *dls);
 int download_status_get_n_attempts(const download_status_t *dls);
 time_t download_status_get_next_attempt_at(const download_status_t *dls);
 
+int purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose);
+
 #ifdef TOR_UNIT_TESTS
 /* Used only by directory.c and test_dir.c */
 
 STATIC int parse_http_url(const char *headers, char **url);
-STATIC int purpose_needs_anonymity(uint8_t dir_purpose,
-                                   uint8_t router_purpose);
 STATIC dirinfo_type_t dir_fetch_type(int dir_purpose, int router_purpose,
                                      const char *resource);
 STATIC int directory_handle_command_get(dir_connection_t *conn,

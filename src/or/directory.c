@@ -122,7 +122,7 @@ static void connection_dir_close_consensus_fetches(
 /** Return true iff the directory purpose <b>dir_purpose</b> (and if it's
  * fetching descriptors, it's fetching them for <b>router_purpose</b>)
  * must use an anonymous connection to a directory. */
-STATIC int
+int
 purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose)
 {
   if (get_options()->AllDirActionsPrivate)
