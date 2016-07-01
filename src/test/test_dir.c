@@ -4803,6 +4803,7 @@ test_dir_dump_unparseable_descriptors(void *data)
 
 /* Variables for reset_read_file_to_str_mock() */
 
+static int enforce_expected_filename = 0;
 static char *expected_filename = NULL;
 static char *file_content = NULL;
 static size_t file_content_len = 0;
@@ -4833,6 +4834,11 @@ read_file_to_str_mock(const char *filename, int flags,
 
   /* Bump the call count */
   ++read_call_count;
+
+  if (enforce_expected_filename) {
+    tt_assert(expected_filename);
+    tt_str_op(filename, OP_EQ, expected_filename);
+  }
 
   if (expected_filename != NULL &&
       file_content != NULL &&
@@ -4948,11 +4954,13 @@ test_dir_populate_dump_desc_fifo(void *data)
   fname =
     "unparseable-desc."
     "DF0981323F3A70D02B55AB54B44B04F287D72F7B72F242E85C8CB0EDA8854A99";
+  enforce_expected_filename = 1;
   tor_asprintf(&expected_filename, "%s%s%s", dirname, PATH_SEPARATOR, fname);
   file_content = tor_strdup("hanc culpam maiorem an illam dicam?");
   file_content_len = strlen(file_content);
   file_stat.st_mtime = 123456;
   ent = dump_desc_populate_one_file(dirname, fname);
+  enforce_expected_filename = 0;
   tt_assert(ent == NULL);
   tt_int_op(unlinked_count, ==, 8);
   tt_int_op(read_count, ==, 1);
