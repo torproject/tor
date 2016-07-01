@@ -1764,20 +1764,18 @@ router_picked_poor_directory_log(const routerstatus_t *rs)
 #endif
 
   /* We couldn't find a node, or the one we have doesn't fit our preferences.
-   * This might be a bug. */
+   * Sometimes this is normal, sometimes it can be a reachability issue. */
   if (!rs) {
-    static int logged_backtrace = 0;
-    log_info(LD_BUG, "Wanted to make an outgoing directory connection, but "
-             "all OR and Dir addresses for all relays were not reachable. "
-             "Check ReachableAddresses, ClientUseIPv4, and similar options.");
-    if (!logged_backtrace) {
-      log_backtrace(LOG_INFO, LD_BUG, "Node search initiated by");
-      logged_backtrace = 1;
-    }
+    /* This happens a lot, so it's at debug level */
+    log_debug(LD_DIR, "Wanted to make an outgoing directory connection, but "
+              "we couldn't find a directory that fit our criteria. "
+              "Perhaps we will succeed next time with less strict criteria.");
   } else if (!fascist_firewall_allows_rs(rs, FIREWALL_OR_CONNECTION, 1)
              && !fascist_firewall_allows_rs(rs, FIREWALL_DIR_CONNECTION, 1)
              ) {
-    log_info(LD_BUG, "Selected a directory %s with non-preferred OR and Dir "
+    /* This is rare, and might be interesting to users trying to diagnose
+     * connection issues on dual-stack machines. */
+    log_info(LD_DIR, "Selected a directory %s with non-preferred OR and Dir "
              "addresses for launching an outgoing connection: "
              "IPv4 %s OR %d Dir %d IPv6 %s OR %d Dir %d",
              routerstatus_describe(rs),
