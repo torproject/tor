@@ -1,0 +1,4 @@
+  o Minor bugfix (logging):
+    - Reduce excessive logging when directories can't be found.
+      Fixes bug 18849; bugfix on 0.2.8.3-alpha and 0.2.8.1-alpha.
+      Patch by teor.
