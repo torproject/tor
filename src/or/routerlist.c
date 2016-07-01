@@ -835,30 +835,65 @@ authority_cert_dl_looks_uncertain(const char *id_digest)
 }
 
 /* Fetch the authority certificates specified in resource.
- * If rs is not NULL, fetch from rs, otherwise, fetch from a random directory
- * mirror. */
+ * If we are a bridge client, and node is a configured bridge, fetch from node
+ * using dir_hint as the fingerprint. Otherwise, if rs is not NULL, fetch from
+ * rs. Otherwise, fetch from a random directory mirror. */
 static void
 authority_certs_fetch_resource_impl(const char *resource,
+                                    const char *dir_hint,
+                                    const node_t *node,
                                     const routerstatus_t *rs)
 {
+  const or_options_t *options = get_options();
+  int get_via_tor = purpose_needs_anonymity(DIR_PURPOSE_FETCH_CERTIFICATE, 0);
+
+  /* Make sure bridge clients never connect to anything but a bridge */
+  if (options->UseBridges) {
+    if (node && !node_is_a_configured_bridge(node)) {
+      /* If we're using bridges, and node is not a bridge, use a 3-hop path. */
+      get_via_tor = 1;
+    } else if (!node) {
+      /* If we're using bridges, and there's no node, use a 3-hop path. */
+      get_via_tor = 1;
+    }
+  }
+
+  const dir_indirection_t indirection = get_via_tor ? DIRIND_ANONYMOUS
+                                                    : DIRIND_ONEHOP;
+
+  /* If we've just downloaded a consensus from a bridge, re-use that
+   * bridge */
+  if (options->UseBridges && node && !get_via_tor) {
+    /* clients always make OR connections to bridges */
+    tor_addr_port_t or_ap;
+    /* we are willing to use a non-preferred address if we need to */
+    fascist_firewall_choose_address_node(node, FIREWALL_OR_CONNECTION, 0,
+                                         &or_ap);
+    directory_initiate_command(&or_ap.addr, or_ap.port,
+                               NULL, 0, /*no dirport*/
+                               dir_hint,
+                               DIR_PURPOSE_FETCH_CERTIFICATE,
+                               0,
+                               indirection,
+                               resource, NULL, 0, 0);
+    return;
+  }
+
   if (rs) {
     /* If we've just downloaded a consensus from a directory, re-use that
      * directory */
-    int get_via_tor = purpose_needs_anonymity(
-                                            DIR_PURPOSE_FETCH_CERTIFICATE, 0);
-    const dir_indirection_t indirection = get_via_tor ? DIRIND_ANONYMOUS
-                                                      : DIRIND_ONEHOP;
     directory_initiate_command_routerstatus(rs,
                                             DIR_PURPOSE_FETCH_CERTIFICATE,
                                             0, indirection, resource, NULL,
                                             0, 0);
-  } else {
-    /* Otherwise, we want certs from a random fallback or directory
-     * mirror, because they will almost always succeed. */
-    directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
-                                 resource, PDS_RETRY_IF_NO_SERVERS,
-                                 DL_WANT_ANY_DIRSERVER);
+    return;
   }
+
+  /* Otherwise, we want certs from a random fallback or directory
+   * mirror, because they will almost always succeed. */
+  directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
+                               resource, PDS_RETRY_IF_NO_SERVERS,
+                               DL_WANT_ANY_DIRSERVER);
 }
 
 /** Try to download any v3 authority certificates that we may be missing.  If
@@ -1038,7 +1073,10 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
     } SMARTLIST_FOREACH_END(voter);
   }
 
-  /* Look up the routerstatus for the dir_hint  */
+  /* Bridge clients look up the node for the dir_hint  */
+  const node_t *node = NULL;
+  /* All clients, including bridge clients, look up the routerstatus for the
+   * dir_hint */
   const routerstatus_t *rs = NULL;
 
   /* If we still need certificates, try the directory that just successfully
@@ -1046,12 +1084,16 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
    * As soon as the directory fails to provide additional certificates, we try
    * another, randomly selected directory. This avoids continual retries.
    * (We only ever have one outstanding request per certificate.)
-   *
-   * Bridge clients won't find their bridges using this hint, so they will
-   * fall back to using directory_get_from_dirserver, which selects a bridge.
    */
   if (dir_hint) {
-    /* First try the consensus routerstatus, then the fallback
+    if (options->UseBridges) {
+      /* Bridge clients try the nodelist. If the dir_hint is from an authority,
+       * or something else fetched over tor, we won't find the node here, but
+       * we will find the rs. */
+      node = node_get_by_id(dir_hint);
+    }
+
+    /* All clients try the consensus routerstatus, then the fallback
      * routerstatus */
     rs = router_get_consensus_status_by_id(dir_hint);
     if (!rs) {
@@ -1063,9 +1105,10 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
       }
     }
 
-    if (!rs) {
-      log_warn(LD_BUG, "Directory %s delivered a consensus, but a "
-               "routerstatus could not be found for it.",
+    if (!node && !rs) {
+      log_warn(LD_BUG, "Directory %s delivered a consensus, but %s"
+               "no routerstatus could be found for it.",
+               options->UseBridges ? "no node and " : "",
                hex_str(dir_hint, DIGEST_LEN));
     }
   }
@@ -1099,8 +1142,9 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
 
     if (smartlist_len(fps) > 1) {
       resource = smartlist_join_strings(fps, "", 0, NULL);
-      /* rs is the directory that just gave us a consensus or certificates */
-      authority_certs_fetch_resource_impl(resource, rs);
+      /* node and rs are directories that just gave us a consensus or
+       * certificates */
+      authority_certs_fetch_resource_impl(resource, dir_hint, node, rs);
       tor_free(resource);
     }
     /* else we didn't add any: they were all pending */
@@ -1143,8 +1187,9 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
 
     if (smartlist_len(fp_pairs) > 1) {
       resource = smartlist_join_strings(fp_pairs, "", 0, NULL);
-      /* rs is the directory that just gave us a consensus or certificates */
-      authority_certs_fetch_resource_impl(resource, rs);
+      /* node and rs are directories that just gave us a consensus or
+       * certificates */
+      authority_certs_fetch_resource_impl(resource, dir_hint, node, rs);
       tor_free(resource);
     }
     /* else they were all pending */
