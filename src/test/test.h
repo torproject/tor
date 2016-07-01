@@ -225,6 +225,7 @@ extern struct testcase_t util_format_tests[];
 extern struct testcase_t util_process_tests[];
 extern struct testcase_t dns_tests[];
 extern struct testcase_t handle_tests[];
+extern struct testcase_t sr_tests[];
 
 extern struct testcase_t slow_crypto_tests[];
 extern struct testcase_t slow_util_tests[];

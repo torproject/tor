@@ -2239,6 +2239,12 @@ on the public Tor network.
     in a journal if it is new, or if it differs from the most recently
     accepted pinning for one of the keys it contains. (Default: 0)
 
+[[AuthDirSharedRandomness]] **AuthDirSharedRandomness** **0**|**1**::
+    Authoritative directories only. Switch for the shared random protocol.
+    If zero, the authority won't participate in the protocol. If non-zero
+    (default), the flag "shared-rand-participate" is added to the authority
+    vote indicating participation in the protocol. (Default: 1)
+
 [[BridgePassword]] **BridgePassword** __Password__::
     If set, contains an HTTP authenticator that tells a bridge authority to
     serve all requested bridge information. Used by the (only partially

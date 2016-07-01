@@ -32,7 +32,9 @@
 #include "router.h"
 #include "routerlist.h"
 #include "routerparse.h"
+#include "shared_random.h"
 #include "transports.h"
+#include "torcert.h"
 
 /** Map from lowercase nickname to identity digest of named server, if any. */
 static strmap_t *named_server_map = NULL;
@@ -319,6 +321,14 @@ networkstatus_vote_free(networkstatus_t *ns)
   }
 
   digestmap_free(ns->desc_digest_map, NULL);
+
+  if (ns->sr_info.commits) {
+    SMARTLIST_FOREACH(ns->sr_info.commits, sr_commit_t *, c,
+                      sr_commit_free(c));
+    smartlist_free(ns->sr_info.commits);
+  }
+  tor_free(ns->sr_info.previous_srv);
+  tor_free(ns->sr_info.current_srv);
 
   memwipe(ns, 11, sizeof(*ns));
   tor_free(ns);
@@ -1264,8 +1274,8 @@ networkstatus_get_dl_status_by_flavor_running,(consensus_flavor_t flavor))
 
 /** Return the most recent consensus that we have downloaded, or NULL if we
  * don't have one. */
-networkstatus_t *
-networkstatus_get_latest_consensus(void)
+MOCK_IMPL(networkstatus_t *,
+networkstatus_get_latest_consensus,(void))
 {
   return current_consensus;
 }
@@ -1287,8 +1297,8 @@ networkstatus_get_latest_consensus_by_flavor,(consensus_flavor_t f))
 
 /** Return the most recent consensus that we have downloaded, or NULL if it is
  * no longer live. */
-networkstatus_t *
-networkstatus_get_live_consensus(time_t now)
+MOCK_IMPL(networkstatus_t *,
+networkstatus_get_live_consensus,(time_t now))
 {
   if (current_consensus &&
       current_consensus->valid_after <= now &&

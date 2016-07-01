@@ -1645,8 +1645,8 @@ router_digest_is_fallback_dir(const char *digest)
  * v3 identity key hashes to <b>digest</b>, or NULL if no such authority
  * is known.
  */
-dir_server_t *
-trusteddirserver_get_by_v3_auth_digest(const char *digest)
+MOCK_IMPL(dir_server_t *,
+trusteddirserver_get_by_v3_auth_digest, (const char *digest))
 {
   if (!trusted_dir_servers)
     return NULL;
