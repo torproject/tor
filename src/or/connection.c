@@ -4500,6 +4500,53 @@ connection_reached_eof(connection_t *conn)
   }
 }
 
+/** Comparator for the two-orconn case in OOS victim sort */
+static int
+oos_victim_comparator_for_orconns(or_connection_t *a, or_connection_t *b)
+{
+  int a_circs, b_circs;
+  /* Fewer circuits == higher priority for OOS kill, sort earlier */
+
+  a_circs = connection_or_get_num_circuits(a);
+  b_circs = connection_or_get_num_circuits(b);
+
+  if (a_circs < b_circs) return -1;
+  else if (b_circs > a_circs) return 1;
+  else return 0;
+}
+
+/** Sort comparator for OOS victims; better targets sort before worse
+ * ones. */
+static int
+oos_victim_comparator(const void **a_v, const void **b_v)
+{
+  connection_t *a = NULL, *b = NULL;
+
+  /* Get connection pointers out */
+
+  a = (connection_t *)(*a_v);
+  b = (connection_t *)(*b_v);
+
+  tor_assert(a != NULL);
+  tor_assert(b != NULL);
+
+  /*
+   * We always prefer orconns as victims currently; we won't even see
+   * these non-orconn cases, but if we do, sort them after orconns.
+   */
+  if (a->type == CONN_TYPE_OR && b->type == CONN_TYPE_OR) {
+    return oos_victim_comparator_for_orconns(TO_OR_CONN(a), TO_OR_CONN(b));
+  } else {
+    /*
+     * One isn't an orconn; if one is, it goes first.  We currently have no
+     * opinions about cases where neither is an orconn.
+     */
+    if (a->type == CONN_TYPE_OR) return -1;
+    else if (b->type == CONN_TYPE_OR) return 1;
+    else return 0;
+  }
+}
+
 /** Pick n victim connections for the OOS handler and return them in a
  * smartlist.
  */
@@ -4574,7 +4621,8 @@ pick_oos_victims(int n)
 
   /* Did we find more eligible targets than we want to kill? */
   if (smartlist_len(eligible) > n) {
-    /* TODO sort */
+    /* Sort the list in order of target preference */
+    smartlist_sort(eligible, oos_victim_comparator);
     /* Pick first n as victims */
     victims = smartlist_new();
     for (i = 0; i < n; ++i) {
