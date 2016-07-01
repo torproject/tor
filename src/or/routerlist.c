@@ -834,6 +834,33 @@ authority_cert_dl_looks_uncertain(const char *id_digest)
   return n_failures >= N_AUTH_CERT_DL_FAILURES_TO_BUG_USER;
 }
 
+/* Fetch the authority certificates specified in resource.
+ * If rs is not NULL, fetch from rs, otherwise, fetch from a random directory
+ * mirror. */
+static void
+authority_certs_fetch_resource_impl(const char *resource,
+                                    const routerstatus_t *rs)
+{
+  if (rs) {
+    /* If we've just downloaded a consensus from a directory, re-use that
+     * directory */
+    int get_via_tor = purpose_needs_anonymity(
+                                            DIR_PURPOSE_FETCH_CERTIFICATE, 0);
+    const dir_indirection_t indirection = get_via_tor ? DIRIND_ANONYMOUS
+                                                      : DIRIND_ONEHOP;
+    directory_initiate_command_routerstatus(rs,
+                                            DIR_PURPOSE_FETCH_CERTIFICATE,
+                                            0, indirection, resource, NULL,
+                                            0, 0);
+  } else {
+    /* Otherwise, we want certs from a random fallback or directory
+     * mirror, because they will almost always succeed. */
+    directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
+                                 resource, PDS_RETRY_IF_NO_SERVERS,
+                                 DL_WANT_ANY_DIRSERVER);
+  }
+}
+
 /** Try to download any v3 authority certificates that we may be missing.  If
  * <b>status</b> is provided, try to get all the ones that were used to sign
  * <b>status</b>.  Additionally, try to have a non-expired certificate for
@@ -1072,25 +1099,8 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
 
     if (smartlist_len(fps) > 1) {
       resource = smartlist_join_strings(fps, "", 0, NULL);
-
-      /* If we've just downloaded a consensus from a directory, re-use that
-       * directory */
-      if (rs) {
-        int get_via_tor = purpose_needs_anonymity(
-                                            DIR_PURPOSE_FETCH_CERTIFICATE, 0);
-        const dir_indirection_t indirection = get_via_tor ? DIRIND_ANONYMOUS
-                                                          : DIRIND_ONEHOP;
-        directory_initiate_command_routerstatus(rs,
-                                                DIR_PURPOSE_FETCH_CERTIFICATE,
-                                                0, indirection, resource, NULL,
-                                                0, 0);
-      } else {
-        /* Otherwise, we want certs from a random fallback or directory
-         * mirror, because they will almost always succeed. */
-        directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
-                                     resource, PDS_RETRY_IF_NO_SERVERS,
-                                     DL_WANT_ANY_DIRSERVER);
-      }
+      /* rs is the directory that just gave us a consensus or certificates */
+      authority_certs_fetch_resource_impl(resource, rs);
       tor_free(resource);
     }
     /* else we didn't add any: they were all pending */
@@ -1133,25 +1143,8 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now,
 
     if (smartlist_len(fp_pairs) > 1) {
       resource = smartlist_join_strings(fp_pairs, "", 0, NULL);
-
-      /* If we've just downloaded a consensus from a directory, re-use that
-       * directory */
-      if (rs) {
-        int get_via_tor = purpose_needs_anonymity(
-                                            DIR_PURPOSE_FETCH_CERTIFICATE, 0);
-        const dir_indirection_t indirection = get_via_tor ? DIRIND_ANONYMOUS
-                                                          : DIRIND_ONEHOP;
-        directory_initiate_command_routerstatus(rs,
-                                                DIR_PURPOSE_FETCH_CERTIFICATE,
-                                                0, indirection, resource, NULL,
-                                                0, 0);
-      } else {
-        /* Otherwise, we want certs from a random fallback or directory
-         * mirror, because they will almost always succeed. */
-        directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
-                                     resource, PDS_RETRY_IF_NO_SERVERS,
-                                     DL_WANT_ANY_DIRSERVER);
-      }
+      /* rs is the directory that just gave us a consensus or certificates */
+      authority_certs_fetch_resource_impl(resource, rs);
       tor_free(resource);
     }
     /* else they were all pending */
