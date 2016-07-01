@@ -254,8 +254,9 @@ commit_decode(const char *encoded, sr_commit_t *commit)
 
   if (decoded_len != SR_COMMIT_LEN) {
     log_warn(LD_BUG, "SR: Commit from authority %s decoded length doesn't "
-                     "match the expected length (%d vs %lu).",
-             sr_commit_get_rsa_fpr(commit), decoded_len, SR_COMMIT_LEN);
+                     "match the expected length (%d vs %u).",
+             sr_commit_get_rsa_fpr(commit), decoded_len,
+             (unsigned)SR_COMMIT_LEN);
     goto error;
   }
 
@@ -307,8 +308,9 @@ reveal_decode(const char *encoded, sr_commit_t *commit)
 
   if (decoded_len != SR_REVEAL_LEN) {
     log_warn(LD_BUG, "SR: Reveal from authority %s decoded length is "
-                     "doesn't match the expected length (%d vs %lu)",
-             sr_commit_get_rsa_fpr(commit), decoded_len, SR_REVEAL_LEN);
+                     "doesn't match the expected length (%d vs %u)",
+             sr_commit_get_rsa_fpr(commit), decoded_len,
+             (unsigned)SR_REVEAL_LEN);
     goto error;
   }
 

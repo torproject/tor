@@ -302,7 +302,7 @@ test_sr_commit(void *arg)
     tt_assert(!tor_mem_is_zero((char *) our_commit->random_number,
                                sizeof(our_commit->random_number)));
     /* Commit and reveal timestamp should be the same. */
-    tt_int_op(our_commit->commit_ts, ==, our_commit->reveal_ts);
+    tt_u64_op(our_commit->commit_ts, ==, our_commit->reveal_ts);
     /* We should have a hashed reveal. */
     tt_assert(!tor_mem_is_zero(our_commit->hashed_reveal,
                                sizeof(our_commit->hashed_reveal)));
@@ -404,14 +404,14 @@ test_encoding(void *arg)
   {
     /* Test the reveal encoded value. */
     tt_int_op(0, ==, reveal_decode(encoded_reveal, &parsed_commit));
-    tt_uint_op(ts, ==, parsed_commit.reveal_ts);
+    tt_u64_op(ts, ==, parsed_commit.reveal_ts);
     tt_mem_op(hashed_rand, OP_EQ, parsed_commit.random_number,
               sizeof(hashed_rand));
 
     /* Test the commit encoded value. */
     memset(&parsed_commit, 0, sizeof(parsed_commit));
     tt_int_op(0, ==, commit_decode(encoded_commit, &parsed_commit));
-    tt_uint_op(ts, ==, parsed_commit.commit_ts);
+    tt_u64_op(ts, ==, parsed_commit.commit_ts);
     tt_mem_op(encoded_commit, OP_EQ, parsed_commit.encoded_commit,
               sizeof(parsed_commit.encoded_commit));
     tt_mem_op(hashed_reveal, OP_EQ, parsed_commit.hashed_reveal,
@@ -803,7 +803,7 @@ test_sr_compute_srv(void *arg)
   /* Check the result against the test vector */
   current_srv = sr_state_get_current_srv();
   tt_assert(current_srv);
-  tt_int_op(current_srv->num_reveals, ==, 3);
+  tt_u64_op(current_srv->num_reveals, ==, 3);
   tt_str_op(hex_str((char*)current_srv->value, 32),
             ==,
             SRV_TEST_VECTOR);
@@ -895,7 +895,7 @@ test_sr_get_majority_srv_from_votes(void *arg)
   set_num_srv_agreements(7);
   chosen_srv = get_majority_srv_from_votes(votes, 1);
   tt_assert(chosen_srv);
-  tt_int_op(chosen_srv->num_reveals, ==, 42);
+  tt_u64_op(chosen_srv->num_reveals, ==, 42);
   tt_mem_op(chosen_srv->value, OP_EQ, SRV_1, sizeof(chosen_srv->value));
 
  done:
@@ -919,7 +919,7 @@ test_utils(void *arg)
     memcpy(srv->value, srv_value, sizeof(srv->value));
     dup_srv = srv_dup(srv);
     tt_assert(dup_srv);
-    tt_int_op(dup_srv->num_reveals, ==, srv->num_reveals);
+    tt_u64_op(dup_srv->num_reveals, ==, srv->num_reveals);
     tt_mem_op(dup_srv->value, OP_EQ, srv->value, sizeof(srv->value));
     tor_free(srv);
     tor_free(dup_srv);
