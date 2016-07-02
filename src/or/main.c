@@ -652,8 +652,8 @@ close_closeable_connections(void)
 }
 
 /** Count moribund connections for the OOS handler */
-int
-connection_count_moribund(void)
+MOCK_IMPL(int,
+connection_count_moribund, (void))
 {
   int i, moribund = 0;
   connection_t *conn;

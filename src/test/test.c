@@ -1210,6 +1210,7 @@ struct testgroup_t testgroups[] = {
   { "link-handshake/", link_handshake_tests },
   { "nodelist/", nodelist_tests },
   { "oom/", oom_tests },
+  { "oos/", oos_tests },
   { "options/", options_tests },
   { "policy/" , policy_tests },
   { "procmon/", procmon_tests },
