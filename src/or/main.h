@@ -25,7 +25,7 @@ int connection_in_array(connection_t *conn);
 void add_connection_to_closeable_list(connection_t *conn);
 int connection_is_on_closeable_list(connection_t *conn);
 
-smartlist_t *get_connection_array(void);
+MOCK_DECL(smartlist_t *, get_connection_array, (void));
 MOCK_DECL(uint64_t,get_bytes_read,(void));
 MOCK_DECL(uint64_t,get_bytes_written,(void));
 

@@ -381,8 +381,8 @@ connection_in_array(connection_t *conn)
 /** Set <b>*array</b> to an array of all connections. <b>*array</b> must not
  * be modified.
  */
-smartlist_t *
-get_connection_array(void)
+MOCK_IMPL(smartlist_t *,
+get_connection_array, (void))
 {
   if (!connection_array)
     connection_array = smartlist_new();

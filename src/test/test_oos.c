@@ -312,7 +312,7 @@ test_oos_kill_conn_list(void *arg)
   tt_int_op(cfe_calls, OP_EQ, 1);
 
  done:
- 
+
   UNMOCK(connection_or_close_for_error);
   UNMOCK(connection_mark_for_close_internal_);
 
@@ -323,10 +323,132 @@ test_oos_kill_conn_list(void *arg)
   return;
 }
 
+static smartlist_t *conns_for_mock = NULL;
+
+static smartlist_t *
+get_conns_mock(void)
+{
+  return conns_for_mock;
+}
+
+/*
+ * For this mock, we pretend all conns have either zero or one circuits,
+ * depending on if this appears on the list of things to say have a circuit.
+ */
+
+static smartlist_t *conns_with_circs = NULL;
+
+static int
+get_num_circuits_mock(or_connection_t *conn)
+{
+  int circs = 0;
+
+  tt_assert(conn != NULL);
+
+  if (conns_with_circs &&
+      smartlist_contains(conns_with_circs, TO_CONN(conn))) {
+    circs = 1;
+  }
+
+ done:
+  return circs;
+}
+
+static void
+test_oos_pick_oos_victims(void *arg)
+{
+  (void)arg;
+  or_connection_t *ortmp;
+  dir_connection_t *dirtmp;
+  smartlist_t *picked;
+
+  /* Set up mocks */
+  conns_for_mock = smartlist_new();
+  MOCK(get_connection_array, get_conns_mock);
+  conns_with_circs = smartlist_new();
+  MOCK(connection_or_get_num_circuits, get_num_circuits_mock);
+
+  /* Make some fake connections */
+  ortmp = tor_malloc_zero(sizeof(*ortmp));
+  ortmp->base_.magic = OR_CONNECTION_MAGIC;
+  ortmp->base_.type = CONN_TYPE_OR;
+  smartlist_add(conns_for_mock, TO_CONN(ortmp));
+  /* We'll pretend this one has a circuit too */
+  smartlist_add(conns_with_circs, TO_CONN(ortmp));
+  /* Next one */
+  ortmp = tor_malloc_zero(sizeof(*ortmp));
+  ortmp->base_.magic = OR_CONNECTION_MAGIC;
+  ortmp->base_.type = CONN_TYPE_OR;
+  smartlist_add(conns_for_mock, TO_CONN(ortmp));
+  /* Next one is moribund */
+  ortmp = tor_malloc_zero(sizeof(*ortmp));
+  ortmp->base_.magic = OR_CONNECTION_MAGIC;
+  ortmp->base_.type = CONN_TYPE_OR;
+  ortmp->base_.marked_for_close = 1;
+  smartlist_add(conns_for_mock, TO_CONN(ortmp));
+  /* Last one isn't an orconn */
+  dirtmp = tor_malloc_zero(sizeof(*dirtmp));
+  dirtmp->base_.magic = DIR_CONNECTION_MAGIC;
+  dirtmp->base_.type = CONN_TYPE_DIR;
+  smartlist_add(conns_for_mock, TO_CONN(dirtmp));
+
+  /* Try picking one */
+  picked = pick_oos_victims(1);
+  /* It should be the one with circuits */
+  tt_assert(picked != NULL);
+  tt_int_op(smartlist_len(picked), OP_EQ, 1);
+  tt_assert(smartlist_contains(picked, smartlist_get(conns_for_mock, 0)));
+  smartlist_free(picked);
+
+  /* Try picking none */
+  picked = pick_oos_victims(0);
+  /* We should get an empty list */
+  tt_assert(picked != NULL);
+  tt_int_op(smartlist_len(picked), OP_EQ, 0);
+  smartlist_free(picked);
+
+  /* Try picking two */
+  picked = pick_oos_victims(2);
+  /* We should get both active orconns */
+  tt_assert(picked != NULL);
+  tt_int_op(smartlist_len(picked), OP_EQ, 2);
+  tt_assert(smartlist_contains(picked, smartlist_get(conns_for_mock, 0)));
+  tt_assert(smartlist_contains(picked, smartlist_get(conns_for_mock, 1)));
+  smartlist_free(picked);
+
+  /* Try picking three - only two are eligible */
+  picked = pick_oos_victims(3);
+  tt_int_op(smartlist_len(picked), OP_EQ, 2);
+  tt_assert(smartlist_contains(picked, smartlist_get(conns_for_mock, 0)));
+  tt_assert(smartlist_contains(picked, smartlist_get(conns_for_mock, 1)));
+  smartlist_free(picked);
+
+ done:
+
+  /* Free leftover stuff */
+  if (conns_with_circs) {
+    smartlist_free(conns_with_circs);
+    conns_with_circs = NULL;
+  }
+
+  UNMOCK(connection_or_get_num_circuits);
+
+  if (conns_for_mock) {
+    SMARTLIST_FOREACH(conns_for_mock, connection_t *, c, tor_free(c));
+    smartlist_free(conns_for_mock);
+    conns_for_mock = NULL;
+  }
+
+  UNMOCK(get_connection_array);
+
+  return;
+}
+
 struct testcase_t oos_tests[] = {
   { "connection_handle_oos", test_oos_connection_handle_oos,
     TT_FORK, NULL, NULL },
   { "kill_conn_list", test_oos_kill_conn_list, TT_FORK, NULL, NULL },
+  { "pick_oos_victims", test_oos_pick_oos_victims, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
 
