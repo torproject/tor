@@ -59,9 +59,6 @@
 # Email sent directly to teor, verified using relay contact info
 91.121.84.137:4951 orport=4051 id=6DE61A6F72C1E5418A66BFED80DFB63E4C77668F
 
-# https://lists.torproject.org/pipermail/tor-relays/2015-December/008380.html
-5.175.233.86:80 orport=443 id=5525D0429BFE5DC4F1B0E9DE47A4CFA169661E33
-
 # https://lists.torproject.org/pipermail/tor-relays/2015-December/008381.html
 # Sent additional email to teor with more relays
 178.254.44.135:9030 orport=9001 id=8FA37B93397015B2BC5A525C908485260BE9F422
@@ -104,12 +101,9 @@
 # Email sent directly to teor, verified using relay contact info
 94.23.204.175:9030 orport=9001 id=5665A3904C89E22E971305EE8C1997BCA4123C69
 
-# https://twitter.com/binarytenshi/status/717952514327453697
-94.126.23.174:9030 orport=9001 id=6FC6F08270D565BE89B7C819DD8E2D487397C073
-
 # Email sent directly to teor, verified using relay contact info
-171.25.193.78:80 orport=443 id=A478E421F83194C114F41E94F95999672AED51FE ipv6=[2001:67c:289c:3::78]:443
 171.25.193.77:80 orport=443 id=A10C4F666D27364036B562823E5830BC448E046A ipv6=[2001:67c:289c:3::77]:443
+171.25.193.78:80 orport=443 id=A478E421F83194C114F41E94F95999672AED51FE ipv6=[2001:67c:289c:3::78]:443
 171.25.193.131:80 orport=443 id=79861CF8522FC637EF046F7688F5289E49D94576
 171.25.193.20:80 orport=443 id=DD8BD7307017407FCC36F8D04A688F74A0774C02 ipv6=[2001:67c:289c::20]:443
 # OK, but same machine as 79861CF8522FC637EF046F7688F5289E49D94576
@@ -154,8 +148,6 @@
 178.16.208.59:80 orport=443 id=136F9299A5009A4E0E96494E723BDB556FB0A26B ipv6=[2a00:1c20:4089:1234:bff6:e1bb:1ce3:8dc6]:443
 
 # Email sent directly to teor, verified using relay contact info
-195.154.8.111:80 orport=443 id=FCB6695F8F2DC240E974510A4B3A0F2B12AB5B64
-51.255.235.246:80 orport=443 id=9B99C72B02AF8E3E5BE3596964F9CACD0090D132
 5.39.76.158:80 orport=443 id=C41F60F8B00E7FEF5CCC5BC6BB514CA1B8AAB651
 
 # Email sent directly to teor, verified using relay contact info
@@ -215,9 +207,6 @@
 
 # Email sent directly to teor, verified using relay contact info
 86.59.119.88:80 orport=443 id=ACD889D86E02EDDAB1AFD81F598C0936238DC6D0
-
-# Email sent directly to teor, verified using relay contact info
-144.76.73.140:9030 orport=9001 id=6A640018EABF3DA9BAD9321AA37C2C87BBE1F907
 
 # Email sent directly to teor, verified using relay contact info
 193.11.164.243:9030 orport=9001 id=FFA72BD683BC2FCF988356E6BEC1E490F313FB07 ipv6=[2001:6b0:7:125::243]:9001
@@ -301,9 +290,6 @@
 212.47.230.49:9030 orport=9001 id=3D6D0771E54056AEFC28BB1DE816951F11826E97
 
 # Email sent directly to teor, verified using relay contact info
-176.31.180.157:143 orport=22 id=E781F4EC69671B3F1864AE2753E0890351506329 ipv6=[2001:41d0:8:eb9d::1]:22
-
-# Email sent directly to teor, verified using relay contact info
 192.99.55.69:80 orport=443 id=0682DE15222A4A4A0D67DBA72A8132161992C023
 192.99.59.140:80 orport=443 id=3C9148DA49F20654730FAC83FFF693A4D49D0244
 51.254.215.13:80 orport=443 id=73C30C8ABDD6D9346C822966DE73B9F82CB6178A
@@ -330,9 +316,6 @@
 # Email sent directly to teor, verified using relay contact info
 37.187.102.108:9090 orport=5550 id=F4263275CF54A6836EE7BD527B1328836A6F06E1
 212.47.241.21:80 orport=443 id=892F941915F6A0C6E0958E52E0A9685C190CF45C
-
-# Email sent directly to teor, verified using relay contact info
-195.191.233.221:80 orport=443 id=DE134FC8E5CC4EC8A5DE66934E70AC9D70267197
 
 # Email sent directly to teor, verified using relay contact info
 62.210.238.33:9030 orport=9001 id=FDF845FC159C0020E2BDDA120C30C5C5038F74B4
@@ -444,9 +427,6 @@
 188.166.133.133:9030 orport=9001 id=774555642FDC1E1D4FDF2E0C31B7CA9501C5C9C7 ipv6=[2a03:b0c0:2:d0::5:f001]:9001
 
 # Email sent directly to teor, verified using relay contact info
-5.196.88.122:9030 orport=9001 id=0C2C599AFCB26F5CFC2C7592435924C1D63D9484
-
-# Email sent directly to teor, verified using relay contact info
 46.8.249.10:80 orport=443 id=31670150090A7C3513CB7914B9610E786391A95D
 
 # Email sent directly to teor, verified using relay contact info
@@ -488,17 +468,16 @@
 167.114.152.100:9030 orport=443 id=0EF5E5FFC5D1EABCBDA1AFF6F6D6325C5756B0B2 ipv6=[2607:5300:100:200::1608]:443
 
 # Email sent directly to teor, verified using relay contact info
-192.99.168.102:80 orport=443 id=230A8B2A8BA861210D9B4BA97745AEC217A94207
-167.114.153.21:80 orport=443 id=0B85617241252517E8ECF2CFC7F4C1A32DCD153F
+# Updated details from atlas based on ticket #20010
+163.172.176.167:80 orport=443 id=230A8B2A8BA861210D9B4BA97745AEC217A94207
+163.172.149.155:80 orport=443 id=0B85617241252517E8ECF2CFC7F4C1A32DCD153F
+163.172.149.122:80 orport=443 id=A9406A006D6E7B5DA30F2C6D4E42A338B5E340B2
 
 # Email sent directly to teor, verified using relay contact info
 204.11.50.131:9030 orport=9001 id=185F2A57B0C4620582602761097D17DB81654F70
 
 # Email sent directly to teor, verified using relay contact info
 151.236.222.217:44607 orport=9001 id=94D58704C2589C130C9C39ED148BD8EA468DBA54
-
-# Email sent directly to teor, verified using relay contact info
-194.150.168.79:11112 orport=11111 id=29F1020B94BE25E6BE1AD13E93CE19D2131B487C
 
 # Email sent directly to teor, verified using relay contact info
 185.35.202.221:9030 orport=9001 id=C13B91384CDD52A871E3ECECE4EF74A7AC7DCB08 ipv6=[2a02:ed06::221]:9001
@@ -603,7 +582,7 @@
 178.62.98.160:9030 orport=9001 id=8B92044763E880996A988831B15B2B0E5AD1544A
 
 # Email sent directly to teor, verified using relay contact info
-195.154.15.227:9030 orport=9001 id=6C3E3AB2F5F03CD71B637D433BAD924A1ECC5796
+163.172.217.50:9030 orport=9001 id=02ECD99ECD596013A8134D46531560816ECC4BE6
 
 # Email sent directly to teor, verified using relay contact info
 185.100.86.100:80 orport=443 id=0E8C0C8315B66DB5F703804B3889A1DD66C67CE0
@@ -768,3 +747,12 @@
 
 # Email sent directly to teor, verified using relay contact info
 62.216.5.120:9030 orport=9001 id=D032D4D617140D6B828FC7C4334860E45E414FBE
+
+# Email sent directly to teor, verified using relay contact info
+51.254.136.195:80 orport=443 id=7BB70F8585DFC27E75D692970C0EEB0F22983A63
+
+# Email sent directly to teor, verified using relay contact info
+163.172.13.165:9030 orport=9001 id=33DA0CAB7C27812EFF2E22C9705630A54D101FEB ipv6=[2001:bc8:38cb:201::8]:9001
+
+# Email sent directly to teor, verified using relay contact info
+5.196.88.122:9030 orport=9001 id=0C2C599AFCB26F5CFC2C7592435924C1D63D9484 ipv6=[2001:41d0:a:fb7a::1]:9001
