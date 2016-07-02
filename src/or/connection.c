@@ -754,9 +754,9 @@ connection_mark_for_close_(connection_t *conn, int line, const char *file)
  * For all other cases, use connection_mark_and_flush() instead, which
  * checks for or_connection_t properly, instead.  See below.
  */
-void
-connection_mark_for_close_internal_(connection_t *conn,
-                                    int line, const char *file)
+MOCK_IMPL(void,
+connection_mark_for_close_internal_, (connection_t *conn,
+                                      int line, const char *file))
 {
   assert_connection_ok(conn,0);
   tor_assert(line);

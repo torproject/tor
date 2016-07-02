@@ -8,6 +8,7 @@
 #include "or.h"
 #include "config.h"
 #include "connection.h"
+#include "connection_or.h"
 #include "main.h"
 #include "test.h"
 
@@ -240,9 +241,92 @@ test_oos_connection_handle_oos(void *arg)
   return;
 }
 
+static int cfe_calls = 0;
+
+static void
+close_for_error_mock(or_connection_t *orconn, int flush)
+{
+  (void)flush;
+
+  tt_assert(orconn != NULL);
+  ++cfe_calls;
+
+ done:
+  return;
+}
+
+static int mark_calls = 0;
+
+static void
+mark_for_close_oos_mock(connection_t *conn,
+                        int line, const char *file)
+{
+  (void)line;
+  (void)file;
+
+  tt_assert(conn != NULL);
+  ++mark_calls;
+
+ done:
+  return;
+}
+
+static void
+test_oos_kill_conn_list(void *arg)
+{
+  connection_t *c1, *c2;
+  or_connection_t *or_c1 = NULL;
+  dir_connection_t *dir_c2 = NULL;
+  smartlist_t *l = NULL;
+  (void)arg;
+
+  /* Set up mocks */
+  mark_calls = 0;
+  MOCK(connection_mark_for_close_internal_, mark_for_close_oos_mock);
+  cfe_calls = 0;
+  MOCK(connection_or_close_for_error, close_for_error_mock);
+
+  /* Make fake conns */
+  or_c1 = tor_malloc_zero(sizeof(*or_c1));
+  or_c1->base_.magic = OR_CONNECTION_MAGIC;
+  or_c1->base_.type = CONN_TYPE_OR;
+  c1 = TO_CONN(or_c1);
+  dir_c2 = tor_malloc_zero(sizeof(*dir_c2));
+  dir_c2->base_.magic = DIR_CONNECTION_MAGIC;
+  dir_c2->base_.type = CONN_TYPE_DIR;
+  c2 = TO_CONN(dir_c2);
+
+  tt_assert(c1 != NULL);
+  tt_assert(c2 != NULL);
+
+  /* Make list */
+  l = smartlist_new();
+  smartlist_add(l, c1);
+  smartlist_add(l, c2);
+
+  /* Run kill_conn_list_for_oos() */
+  kill_conn_list_for_oos(l);
+
+  /* Check call counters */
+  tt_int_op(mark_calls, OP_EQ, 1);
+  tt_int_op(cfe_calls, OP_EQ, 1);
+
+ done:
+ 
+  UNMOCK(connection_or_close_for_error);
+  UNMOCK(connection_mark_for_close_internal_);
+
+  if (l) smartlist_free(l);
+  tor_free(or_c1);
+  tor_free(dir_c2);
+
+  return;
+}
+
 struct testcase_t oos_tests[] = {
   { "connection_handle_oos", test_oos_connection_handle_oos,
     TT_FORK, NULL, NULL },
+  { "kill_conn_list", test_oos_kill_conn_list, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
 };
 

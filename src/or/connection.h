@@ -34,8 +34,8 @@ void connection_about_to_close_connection(connection_t *conn);
 void connection_close_immediate(connection_t *conn);
 void connection_mark_for_close_(connection_t *conn,
                                 int line, const char *file);
-void connection_mark_for_close_internal_(connection_t *conn,
-                                         int line, const char *file);
+MOCK_DECL(void, connection_mark_for_close_internal_,
+          (connection_t *conn, int line, const char *file));
 
 #define connection_mark_for_close(c) \
   connection_mark_for_close_((c), __LINE__, SHORT_FILE__)
