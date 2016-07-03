@@ -69,11 +69,7 @@
 #include "memarea.h"
 #include "sandbox.h"
 
-#ifdef HAVE_EVENT2_EVENT_H
 #include <event2/event.h>
-#else
-#include <event.h>
-#endif
 
 #ifdef USE_BUFFEREVENTS
 #include <event2/bufferevent.h>

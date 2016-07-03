@@ -17,14 +17,10 @@
 #include "control.h"
 #include "main.h"
 #include "policies.h"
-#ifdef HAVE_EVENT2_DNS_H
 #include <event2/dns.h>
 #include <event2/dns_compat.h>
 /* XXXX this implies we want an improved evdns  */
 #include <event2/dns_struct.h>
-#else
-#include "eventdns.h"
-#endif
 
 /** Helper function: called by evdns whenever the client sends a request to our
  * DNSPort.  We need to eventually answer the request <b>req</b>.

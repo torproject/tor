@@ -7,11 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef HAVE_EVENT2_EVENT_H
 #include <event2/event.h>
-#else
-#include <event.h>
-#endif
 
 #include "compat.h"
 #include "compat_libevent.h"

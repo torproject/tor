@@ -5,12 +5,7 @@
 
 #include "orconfig.h"
 
-/* Libevent stuff */
-#ifdef HAVE_EVENT2_EVENT_H
 #include <event2/event.h>
-#else
-#include <event.h>
-#endif
 
 #define TOR_CHANNEL_INTERNAL_
 #define CHANNEL_PRIVATE_
@@ -90,9 +85,7 @@ mock_event_free_all(void)
 static void
 mock_event_init(void)
 {
-#ifdef HAVE_EVENT2_EVENT_H
   struct event_config *cfg = NULL;
-#endif
 
   tt_ptr_op(mock_event_base, ==, NULL);
 
@@ -102,7 +95,6 @@ mock_event_init(void)
    */
 
   if (!mock_event_base) {
-#ifdef HAVE_EVENT2_EVENT_H
     cfg = event_config_new();
 #if LIBEVENT_VERSION_NUMBER >= V(2,0,9)
     /* We can enable changelist support with epoll, since we don't give
@@ -111,9 +103,6 @@ mock_event_init(void)
 #endif
     mock_event_base = event_base_new_with_config(cfg);
     event_config_free(cfg);
-#else
-    mock_event_base = event_init();
-#endif
   }
 
   tt_assert(mock_event_base != NULL);

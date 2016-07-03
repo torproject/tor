@@ -17,12 +17,6 @@ endif
 
 EXTRA_DIST+= src/or/ntmain.c src/or/Makefile.nmake
 
-if USE_EXTERNAL_EVDNS
-evdns_source=
-else
-evdns_source=src/ext/eventdns.c
-endif
-
 LIBTOR_A_SOURCES = \
 	src/or/addressmap.c				\
 	src/or/buffers.c				\
@@ -86,7 +80,6 @@ LIBTOR_A_SOURCES = \
 	src/or/status.c					\
 	src/or/torcert.c				\
 	src/or/onion_ntor.c				\
-	$(evdns_source)					\
 	$(tor_platform_source)
 
 src_or_libtor_a_SOURCES = $(LIBTOR_A_SOURCES)

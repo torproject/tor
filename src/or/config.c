@@ -7204,8 +7204,6 @@ init_libevent(const or_options_t *options)
    */
   suppress_libevent_log_msg("Function not implemented");
 
-  tor_check_libevent_header_compatibility();
-
   memset(&cfg, 0, sizeof(cfg));
   cfg.disable_iocp = options->DisableIOCP;
   cfg.num_cpus = get_num_cpus(options);

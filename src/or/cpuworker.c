@@ -23,11 +23,7 @@
 #include "router.h"
 #include "workqueue.h"
 
-#ifdef HAVE_EVENT2_EVENT_H
 #include <event2/event.h>
-#else
-#include <event.h>
-#endif
 
 static void queue_pending_tasks(void);
 

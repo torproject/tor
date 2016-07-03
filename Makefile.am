@@ -176,7 +176,7 @@ coverage-html-full: all
 	genhtml --branch-coverage -o "$(HTML_COVER_DIR)" "$(HTML_COVER_DIR)/lcov.info"
 
 # Avoid strlcpy.c, strlcat.c, aes.c, OpenBSD_malloc_Linux.c, sha256.c,
-# eventdns.[hc], tinytest*.[ch]
+# tinytest*.[ch]
 check-spaces:
 	$(top_srcdir)/scripts/maint/checkSpace.pl -C \
 		$(top_srcdir)/src/common/*.[ch] \
