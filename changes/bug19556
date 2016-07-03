@@ -1,0 +1,6 @@
+  o Minor bugfixes (sandboxing):
+    - When sandboxing is enabled, we could not write any stats to
+      disk.  check_or_create_data_subdir("stats"), which prepares the
+      private stats directory, calls check_private_dir(), which also
+      opens and not just stats() the directory.  Therefore, we need to
+      also allow open() for the stats dir in our sandboxing setup.

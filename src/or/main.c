@@ -3568,6 +3568,7 @@ sandbox_init_filter(void)
              get_datadir_fname2("keys", "secret_onion_key_ntor.old"));
 
     STAT_DATADIR("keys");
+    OPEN_DATADIR("stats");
     STAT_DATADIR("stats");
     STAT_DATADIR2("stats", "dirreq-stats");
   }
