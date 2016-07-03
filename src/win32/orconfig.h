@@ -214,8 +214,6 @@
 /* Define to 1 iff unaligned int access is allowed */
 #define UNALIGNED_INT_ACCESS_OK
 
-#define HAVE_EVENT_H
-
 /* Define to 1 iff we represent negative integers with two's complement */
 #define USING_TWOS_COMPLEMENT
 
