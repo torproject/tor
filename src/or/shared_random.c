@@ -1291,7 +1291,6 @@ sr_get_string_for_consensus(const smartlist_t *votes,
 void
 sr_act_post_consensus(const networkstatus_t *consensus)
 {
-  time_t interval_starts;
   const or_options_t *options = get_options();
 
   /* Don't act if our state hasn't been initialized. We can be called during
@@ -1321,10 +1320,14 @@ sr_act_post_consensus(const networkstatus_t *consensus)
     sr_state_set_current_srv(srv_dup(consensus->sr_info.current_srv));
   }
 
-  /* Update our internal state with the next voting interval starting time. */
-  interval_starts = get_voting_schedule(options, time(NULL),
-                                        LOG_NOTICE)->interval_starts;
-  sr_state_update(interval_starts);
+  /* Prepare our state so that it's ready for the next voting period. */
+  {
+    voting_schedule_t *voting_schedule =
+      get_voting_schedule(options,time(NULL), LOG_NOTICE);
+    time_t interval_starts = voting_schedule->interval_starts;
+    sr_state_update(interval_starts);
+    tor_free(voting_schedule);
+  }
 }
 
 /* Initialize shared random subsystem. This MUST be called early in the boot
