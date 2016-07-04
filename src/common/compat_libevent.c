@@ -234,8 +234,6 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
     /* LCOV_EXCL_STOP */
   }
 
-  /* Making this a NOTICE for now so we can link bugs to a libevent versions
-   * or methods better. */
   log_info(LD_GENERAL,
       "Initialized libevent version %s using method %s. Good.",
       event_get_version(), tor_libevent_get_method());
@@ -546,7 +544,6 @@ tor_init_libevent_rng(void)
   if (evutil_secure_rng_init() < 0) {
     rv = -1;
   }
-  /* Older libevent -- manually initialize the RNG */
   crypto_rand(buf, 32);
   evutil_secure_rng_add_bytes(buf, 32);
   evutil_secure_rng_get_bytes(buf, sizeof(buf));
