@@ -76,8 +76,10 @@ typedef struct sr_commit_t {
 
   /* Commit owner info */
 
-  /* The RSA identity key of the authority. */
+  /* The RSA identity key of the authority and it's base16 representation
+   * which includes the NUL terminated byte. */
   char rsa_identity[DIGEST_LEN];
+  char rsa_identity_hex[HEX_DIGEST_LEN + 1];
 
   /* Commitment information */
 
@@ -121,8 +123,7 @@ void sr_srv_encode(char *dst, size_t dst_len, const sr_srv_t *srv);
 static inline
 const char *sr_commit_get_rsa_fpr(const sr_commit_t *commit)
 {
-  return hex_str((const char *) commit->rsa_identity,
-                 sizeof(commit->rsa_identity));
+  return commit->rsa_identity_hex;
 }
 
 void sr_compute_srv(void);

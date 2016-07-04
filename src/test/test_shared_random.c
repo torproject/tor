@@ -702,6 +702,9 @@ test_sr_setup_commits(void)
 
     /* Do some surgery on the commit */
     memset(commit_a->rsa_identity, 'A', sizeof(commit_a->rsa_identity));
+    base16_encode(commit_a->rsa_identity_hex,
+                  sizeof(commit_a->rsa_identity_hex), commit_a->rsa_identity,
+                  sizeof(commit_a->rsa_identity));
     strlcpy(commit_a->encoded_reveal,
             "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
             sizeof(commit_a->encoded_reveal));
@@ -716,6 +719,9 @@ test_sr_setup_commits(void)
 
     /* Do some surgery on the commit */
     memset(commit_b->rsa_identity, 'B', sizeof(commit_b->rsa_identity));
+    base16_encode(commit_b->rsa_identity_hex,
+                  sizeof(commit_b->rsa_identity_hex), commit_b->rsa_identity,
+                  sizeof(commit_b->rsa_identity));
     strlcpy(commit_b->encoded_reveal,
             "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
           sizeof(commit_b->encoded_reveal));
@@ -730,6 +736,9 @@ test_sr_setup_commits(void)
 
     /* Do some surgery on the commit */
     memset(commit_c->rsa_identity, 'C', sizeof(commit_c->rsa_identity));
+    base16_encode(commit_c->rsa_identity_hex,
+                  sizeof(commit_c->rsa_identity_hex), commit_c->rsa_identity,
+                  sizeof(commit_c->rsa_identity));
     strlcpy(commit_c->encoded_reveal,
             "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
             sizeof(commit_c->encoded_reveal));
@@ -744,6 +753,9 @@ test_sr_setup_commits(void)
 
     /* Do some surgery on the commit */
     memset(commit_d->rsa_identity, 'D', sizeof(commit_d->rsa_identity));
+    base16_encode(commit_d->rsa_identity_hex,
+                  sizeof(commit_d->rsa_identity_hex), commit_d->rsa_identity,
+                  sizeof(commit_d->rsa_identity));
     strlcpy(commit_d->encoded_reveal,
             "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD",
             sizeof(commit_d->encoded_reveal));

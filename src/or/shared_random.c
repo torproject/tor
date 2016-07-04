@@ -140,6 +140,8 @@ commit_new(const char *rsa_identity)
   commit = tor_malloc_zero(sizeof(*commit));
   commit->alg = SR_DIGEST_ALG;
   memcpy(commit->rsa_identity, rsa_identity, sizeof(commit->rsa_identity));
+  base16_encode(commit->rsa_identity_hex, sizeof(commit->rsa_identity_hex),
+                commit->rsa_identity, sizeof(commit->rsa_identity));
   return commit;
 }
 
