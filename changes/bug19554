@@ -1,0 +1,4 @@
+  o Dependency changes (Libevent)
+    - Tor requires Libevent version 2.0.10-stable or later now.
+      Implements ticket 19554.
+
