@@ -34,11 +34,11 @@
 #define SR_SRV_MSG_LEN \
   (SR_SRV_TOKEN_LEN + sizeof(uint64_t) + sizeof(uint32_t) + DIGEST256_LEN)
 
-/* Length of base64 encoded commit NOT including the NULL terminated byte.
- * Formula is taken from base64_encode_size. */
+/* Length of base64 encoded commit NOT including the NUL terminated byte.
+ * Formula is taken from base64_encode_size. This adds up to 56 bytes. */
 #define SR_COMMIT_BASE64_LEN \
   (((SR_COMMIT_LEN - 1) / 3) * 4 + 4)
-/* Length of base64 encoded reveal NOT including the NULL terminated byte.
+/* Length of base64 encoded reveal NOT including the NUL terminated byte.
  * Formula is taken from base64_encode_size. This adds up to 56 bytes. */
 #define SR_REVEAL_BASE64_LEN \
   (((SR_REVEAL_LEN - 1) / 3) * 4 + 4)
