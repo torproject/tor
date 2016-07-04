@@ -163,11 +163,7 @@ tor_validate_process_specifier(const char *process_spec,
 #define PERIODIC_TIMER_FLAGS EV_PERSIST
 
 /* DOCDOC poll_interval_tv */
-static struct timeval poll_interval_tv = {15, 0};
-/* Note: If you port this file to plain Libevent 2, you can make
- * poll_interval_tv const.  It has to be non-const here because in
- * libevent 1.x, event_add expects a pointer to a non-const struct
- * timeval. */
+static const struct timeval poll_interval_tv = {15, 0};
 
 /** Create a process-termination monitor for the process specifier
  * given in <b>process_spec</b>.  Return a newly allocated

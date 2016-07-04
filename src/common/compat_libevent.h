@@ -7,15 +7,11 @@
 #include "orconfig.h"
 #include "testsupport.h"
 
-struct event;
-struct event_base;
-#ifdef USE_BUFFEREVENTS
-struct bufferevent;
-struct ev_token_bucket_cfg;
-struct bufferevent_rate_limit_group;
-#endif
+#include <event2/event.h>
 
-#include <event2/util.h>
+#ifdef USE_BUFFEREVENTS
+#include <event2/bufferevent.h>
+#endif
 
 void configure_libevent_logging(void);
 void suppress_libevent_log_msg(const char *msg);
@@ -77,22 +73,15 @@ void tor_gettimeofday_cache_set(const struct timeval *tv);
 void tor_gettimeofday_cached_monotonic(struct timeval *tv);
 
 #ifdef COMPAT_LIBEVENT_PRIVATE
-/** A number representing a version of Libevent.
 
-    This is a 4-byte number, with the first three bytes representing the
-    major, minor, and patchlevel respectively of the library.  The fourth
-    byte is unused.
+/** Macro: returns the number of a Libevent version as a 4-byte number,
+    with the first three bytes representing the major, minor, and patchlevel
+    respectively of the library.  The fourth byte is unused.
 
     This is equivalent to the format of LIBEVENT_VERSION_NUMBER on Libevent
-    2.0.1 or later.
-*/
-typedef uint32_t le_version_t;
-
-/** @{ */
-/** Macros: returns the number of a libevent version as a le_version_t */
+    2.0.1 or later. */
 #define V(major, minor, patch) \
   (((major) << 24) | ((minor) << 16) | ((patch) << 8))
-/** @} */
 
 STATIC void
 libevent_logging_callback(int severity, const char *msg);

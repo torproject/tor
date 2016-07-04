@@ -3,11 +3,8 @@
 
 /**
  * \file compat_libevent.c
- * \brief Wrappers to handle porting between different versions of libevent.
- *
- * In an ideal world, we'd just use Libevent 2.0 from now on.  But as of June
- * 2012, Libevent 1.4 is still all over, and some poor souls are stuck on
- * Libevent 1.3e. */
+ * \brief Wrappers and utility functions for Libevent.
+ */
 
 #include "orconfig.h"
 #include "compat.h"
