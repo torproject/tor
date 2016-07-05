@@ -244,6 +244,7 @@ static config_var_t option_vars_[] = {
   V(ExitNodes,                   ROUTERSET, NULL),
   V(ExitPolicy,                  LINELIST, NULL),
   V(ExitPolicyRejectPrivate,     BOOL,     "1"),
+  V(ExitPolicyRejectLocalInterfaces, BOOL, "0"),
   V(ExitPortStatistics,          BOOL,     "0"),
   V(ExtendAllowPrivateAddresses, BOOL,     "0"),
   V(ExitRelay,                   AUTOBOOL, "auto"),
@@ -4316,6 +4317,8 @@ options_transition_affects_descriptor(const or_options_t *old_options,
       old_options->ExitRelay != new_options->ExitRelay ||
       old_options->ExitPolicyRejectPrivate !=
         new_options->ExitPolicyRejectPrivate ||
+      old_options->ExitPolicyRejectLocalInterfaces !=
+        new_options->ExitPolicyRejectLocalInterfaces ||
       old_options->IPv6Exit != new_options->IPv6Exit ||
       !config_lines_eq(old_options->ORPort_lines,
                        new_options->ORPort_lines) ||

@@ -1,0 +1,6 @@
+  o Major bugfixes (exit policies):
+    - Avoid disclosing exit outbound bind addresses, configured port bind
+      addresses, and local interface addresses in relay descriptors by
+      default under ExitPolicyRejectPrivate. Instead, only reject these
+      (otherwise unlisted) addresses if ExitPolicyRejectLocalInterfaces is set.
+      Fixes bug 18456; bugfix on 0.2.7.2-alpha. Patch by teor.
