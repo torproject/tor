@@ -3530,6 +3530,7 @@ sandbox_init_filter(void)
     OPEN_DATADIR2_SUFFIX("stats", "exit-stats", ".tmp");
     OPEN_DATADIR2_SUFFIX("stats", "buffer-stats", ".tmp");
     OPEN_DATADIR2_SUFFIX("stats", "conn-stats", ".tmp");
+    OPEN_DATADIR2_SUFFIX("stats", "hidserv-stats", ".tmp");
 
     OPEN_DATADIR("approved-routers");
     OPEN_DATADIR_SUFFIX("fingerprint", ".tmp");
