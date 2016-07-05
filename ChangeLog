@@ -1,3 +1,65 @@
+Changes in version 0.2.8.5-rc - 2016-07-0?
+  Tor 0.2.8.5-rc is the second release candidate in the Tor 0.2.8 series.
+  If we find no new bugs or regressions here, the first stable 0.2.8
+  release will be identical to it. It has a few small bugfixes against
+  previous versions.
+
+  o Major bugfixes (heartbeat):
+    - Fix regression that crashes Tor when disabling heartbeats. Fixes bug
+      19454; bugfix on tor-0.2.8.1-alpha. Reported by "kubaku".
+
+  o Minor features (build):
+    - Tor now again builds with the recent OpenSSL 1.1 development branch
+      (tested against 1.1.0-pre6-dev). Closes ticket 19499.
+
+  o Fallback directory list:
+    - Add a comment to the generated list that explains how to comment-out
+      unsuitable fallbacks in a way that's compatible with the stem fallback
+      parser.
+    - Update fallback whitelist and blacklist based on relay operator
+      emails. Blacklist unsuitable fallbacks. Resolves ticket 19071.
+      Patch by teor.
+    - Update hard-coded fallback list to remove unsuitable fallbacks.
+      Resolves ticket 19071. Patch by teor.
+
+  o Minor bugfixes (build):
+    - When building manual pages, set the timezone to "UTC", so that the
+      output is reproducible. Fixes bug 19558; bugfix on 0.2.2.9-alpha.
+      Patch from intrigeri.
+
+  o Minor bugfixes (fallback directory selection):
+    - Avoid errors during fallback selection if there are no eligible
+      fallbacks. Fixes bug 19480; bugfix on ba76910 and 78ec782 in
+      0.2.8.3-alpha. Patch by teor.
+
+  o Minor bugfixes (logging):
+    - Reduce excessive logging when directories can't be found.
+      Fixes bug 18849; bugfix on 0.2.8.3-alpha and 0.2.8.1-alpha.
+      Patch by teor.
+    - When a fallback changes its fingerprint from the hard-coded
+      fingerprint, log a less severe, more explanatory log message.
+      Fixes bug 18812; bugfix on 0.2.8.1-alpha. Patch by teor.
+
+  o Minor bugfixes (sandboxing):
+    - When sandboxing is enabled, we could not write any stats to
+      disk.  check_or_create_data_subdir("stats"), which prepares the
+      private stats directory, calls check_private_dir(), which also
+      opens and not just stats() the directory.  Therefore, we need to
+      also allow open() for the stats dir in our sandboxing setup.
+      Fixes bug 19556; bugfix on 0.2.5.1-alpha.
+    - Our sandboxing code would not allow us to write to stats/hidserv-stats,
+      causing tor to abort while trying to write stats.  This was previously
+      masked by bug 19556. Fixes bug 19557; bugfix on 0.2.6.1-alpha.
+
+
+  o Minor bugfixes (user interface):
+    - Remove a warning message "Service [scrubbed] not found after
+      descriptor upload". This message appears when one uses HSPOST control
+      command to upload a service descriptor. Since there is only a descriptor
+      and no service, showing this message is pointless and confusing.
+      Fixes bug 19464; bugfix on 0.2.7.2-alpha.
+
+
 Changes in version 0.2.8.4-rc - 2016-06-15
   Tor 0.2.8.4-rc is the first release candidate in the Tor 0.2.8 series.
   If we find no new bugs or regressions here, the first stable 0.2.8
