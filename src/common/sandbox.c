@@ -1239,7 +1239,7 @@ prot_strings(scmp_filter_ctx ctx, sandbox_cfg_t* cfg)
 
 /**
  * Auxiliary function used in order to allocate a sandbox_cfg_t element and set
- * it's values according the the parameter list. All elements are initialised
+ * its values according the parameter list. All elements are initialised
  * with the 'prot' field set to false, as the pointer is not protected at this
  * point.
  */

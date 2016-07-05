@@ -479,7 +479,7 @@ keypin_clear(void)
   HT_CLEAR(rsamap,&the_rsa_map);
 
   if (bad_entries) {
-    log_warn(LD_BUG, "Found %d discrepencies in the the keypin database.",
+    log_warn(LD_BUG, "Found %d discrepencies in the keypin database.",
              bad_entries);
   }
 }

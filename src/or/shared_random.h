@@ -76,7 +76,7 @@ typedef struct sr_commit_t {
 
   /* Commit owner info */
 
-  /* The RSA identity key of the authority and it's base16 representation
+  /* The RSA identity key of the authority and its base16 representation,
    * which includes the NUL terminated byte. */
   char rsa_identity[DIGEST_LEN];
   char rsa_identity_hex[HEX_DIGEST_LEN + 1];

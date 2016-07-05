@@ -2345,11 +2345,13 @@ policy_summary_reject(smartlist_t *summary,
 }
 
 /** Add a single exit policy item to our summary:
- *  If it is an accept ignore it unless it is for all IP addresses
- *  ("*"), i.e. it's prefixlen/maskbits is 0, else call
+ *
+ *  If it is an accept, ignore it unless it is for all IP addresses
+ *  ("*", i.e. its prefixlen/maskbits is 0). Otherwise call
  *  policy_summary_accept().
- *  If it's a reject ignore it if it is about one of the private
- *  networks, else call policy_summary_reject().
+ *
+ *  If it is a reject, ignore it if it is about one of the private
+ *  networks. Otherwise call policy_summary_reject().
  */
 static void
 policy_summary_add_item(smartlist_t *summary, addr_policy_t *p)

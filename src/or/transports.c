@@ -1270,7 +1270,7 @@ get_transport_options_for_server_proxy(const managed_proxy_t *mp)
 
 /** Return the string that tor should place in TOR_PT_SERVER_BINDADDR
  *  while configuring the server managed proxy in <b>mp</b>. The
- *  string is stored in the heap, and it's the the responsibility of
+ *  string is stored in the heap, and it's the responsibility of
  *  the caller to deallocate it after its use. */
 static char *
 get_bindaddr_for_server_proxy(const managed_proxy_t *mp)
