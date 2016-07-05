@@ -4,4 +4,4 @@
       private stats directory, calls check_private_dir(), which also
       opens and not just stats() the directory.  Therefore, we need to
       also allow open() for the stats dir in our sandboxing setup.
-      Fixes bug 19556.
+      Fixes bug 19556; bugfix on 0.2.5.1-alpha.
