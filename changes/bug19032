@@ -1,0 +1,4 @@
+  o Major bugfixes (security, directory authorities):
+    - Fix a crash and out-of-bounds write during authority voting, when the
+      list of relays includes duplicate ed25519 identity keys. Fixes bug 19032;
+      bugfix on 0.2.8.2-alpha.
