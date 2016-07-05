@@ -597,10 +597,16 @@ disk_state_put_srv_line(const sr_srv_t *srv, config_line_t *line)
 static void
 disk_state_reset(void)
 {
+  /* Free allocated memory */
   config_free_lines(sr_disk_state->Commit);
   config_free_lines(sr_disk_state->SharedRandValues);
   config_free_lines(sr_disk_state->ExtraLines);
+  tor_free(sr_disk_state->TorVersion);
+
+  /* Clean up the struct */
   memset(sr_disk_state, 0, sizeof(*sr_disk_state));
+
+  /* Reset it with useful data */
   sr_disk_state->magic_ = SR_DISK_STATE_MAGIC;
   sr_disk_state->TorVersion = tor_strdup(get_version());
 }
