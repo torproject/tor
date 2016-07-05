@@ -3530,6 +3530,7 @@ sandbox_init_filter(void)
     OPEN_DATADIR2_SUFFIX("stats", "exit-stats", ".tmp");
     OPEN_DATADIR2_SUFFIX("stats", "buffer-stats", ".tmp");
     OPEN_DATADIR2_SUFFIX("stats", "conn-stats", ".tmp");
+    OPEN_DATADIR2_SUFFIX("stats", "hidserv-stats", ".tmp");
 
     OPEN_DATADIR("approved-routers");
     OPEN_DATADIR_SUFFIX("fingerprint", ".tmp");
@@ -3568,6 +3569,7 @@ sandbox_init_filter(void)
              get_datadir_fname2("keys", "secret_onion_key_ntor.old"));
 
     STAT_DATADIR("keys");
+    OPEN_DATADIR("stats");
     STAT_DATADIR("stats");
     STAT_DATADIR2("stats", "dirreq-stats");
   }

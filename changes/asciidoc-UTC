@@ -1,0 +1,4 @@
+  o Minor bugfixes (build):
+    - When building manual pages, set the timezone to "UTC", so that the
+      output is reproducible. Fixes bug 19558; bugfix on 0.2.2.9-alpha.
+      Patch from intrigeri.
