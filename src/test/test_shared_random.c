@@ -1205,6 +1205,7 @@ test_state_update(void *arg)
     state->valid_after = 0;
     state->n_reveal_rounds = 0;
     state->n_commit_rounds = 0;
+    state->n_protocol_runs = 0;
   }
 
   /* We need to mock for the state update function call. */
