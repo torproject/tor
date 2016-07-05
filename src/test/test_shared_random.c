@@ -944,13 +944,14 @@ test_utils(void *arg)
   /* Testing commitments_are_the_same(). Currently, the check is to test the
    * value of the encoded commit so let's make sure that actually works. */
   {
-    /* Payload of 55 bytes that is the length of
-     * sr_commit_t->encoded_commit. */
+    /* Payload of 57 bytes that is the length of sr_commit_t->encoded_commit.
+     * 56 bytes of payload and a NUL terminated byte at the end ('\x00')
+     * which comes down to SR_COMMIT_BASE64_LEN + 1. */
     const char *payload =
       "\x5d\xb9\x60\xb6\xcc\x51\x68\x52\x31\xd9\x88\x88\x71\x71\xe0\x30"
       "\x59\x55\x7f\xcd\x61\xc0\x4b\x05\xb8\xcd\xc1\x48\xe9\xcd\x16\x1f"
       "\x70\x15\x0c\xfc\xd3\x1a\x75\xd0\x93\x6c\xc4\xe0\x5c\xbe\xe2\x18"
-      "\xc7\xaf\x72\xb6\x7c\x9b\x52";
+      "\xc7\xaf\x72\xb6\x7c\x9b\x52\x00";
     sr_commit_t commit1, commit2;
     memcpy(commit1.encoded_commit, payload, sizeof(commit1.encoded_commit));
     memcpy(commit2.encoded_commit, payload, sizeof(commit2.encoded_commit));

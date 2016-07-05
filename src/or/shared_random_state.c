@@ -617,26 +617,24 @@ disk_state_update(void)
   /* Reset current disk state. */
   disk_state_reset();
 
-  /* First, update elements that we don't need to iterate over a list to
-   * construct something. */
+  /* First, update elements that we don't need to do a construction. */
   sr_disk_state->Version = sr_state->version;
   sr_disk_state->ValidUntil = sr_state->valid_until;
   sr_disk_state->ValidAfter = sr_state->valid_after;
 
   /* Shared random values. */
   next = &sr_disk_state->SharedRandValues;
-  *next = NULL;
   if (sr_state->previous_srv != NULL) {
     *next = line = tor_malloc_zero(sizeof(config_line_t));
     line->key = tor_strdup(dstate_prev_srv_key);
     disk_state_put_srv_line(sr_state->previous_srv, line);
+    /* Go to the next shared random value. */
     next = &(line->next);
   }
   if (sr_state->current_srv != NULL) {
     *next = line = tor_malloc_zero(sizeof(*line));
     line->key = tor_strdup(dstate_cur_srv_key);
     disk_state_put_srv_line(sr_state->current_srv, line);
-    next = &(line->next);
   }
 
   /* Parse the commits and construct config line(s). */
