@@ -542,13 +542,15 @@ node_get_by_hex_id(const char *hex_id)
 MOCK_IMPL(const node_t *,
 node_get_by_nickname,(const char *nickname, int warn_if_unnamed))
 {
-  const node_t *node;
   if (!the_nodelist)
     return NULL;
 
   /* Handle these cases: DIGEST, $DIGEST, $DIGEST=name, $DIGEST~name. */
-  if ((node = node_get_by_hex_id(nickname)) != NULL)
+  {
+    const node_t *node;
+    if ((node = node_get_by_hex_id(nickname)) != NULL)
       return node;
+  }
 
   if (!strcasecmp(nickname, UNNAMED_ROUTER_NICKNAME))
     return NULL;

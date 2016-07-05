@@ -3077,17 +3077,17 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   }
 
   if (emit_ed_sigs) {
-    char digest[DIGEST256_LEN];
+    char sha256_digest[DIGEST256_LEN];
     smartlist_add(chunks, tor_strdup("router-sig-ed25519 "));
-    crypto_digest_smartlist_prefix(digest, DIGEST256_LEN,
+    crypto_digest_smartlist_prefix(sha256_digest, DIGEST256_LEN,
                                    ED_DESC_SIGNATURE_PREFIX,
                                    chunks, "", DIGEST_SHA256);
-    ed25519_signature_t sig;
+    ed25519_signature_t ed_sig;
     char buf[ED25519_SIG_BASE64_LEN+1];
-    if (ed25519_sign(&sig, (const uint8_t*)digest, DIGEST256_LEN,
+    if (ed25519_sign(&ed_sig, (const uint8_t*)sha256_digest, DIGEST256_LEN,
                      signing_keypair) < 0)
       goto err;
-    if (ed25519_signature_to_base64(buf, &sig) < 0)
+    if (ed25519_signature_to_base64(buf, &ed_sig) < 0)
       goto err;
 
     smartlist_add_asprintf(chunks, "%s\n", buf);
@@ -3161,7 +3161,7 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
 
  done:
   tor_free(s);
-  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
+  SMARTLIST_FOREACH(chunks, char *, chunk, tor_free(chunk));
   smartlist_free(chunks);
   tor_free(s_dup);
   tor_free(ed_cert_line);

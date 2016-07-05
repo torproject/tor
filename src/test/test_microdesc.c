@@ -716,7 +716,7 @@ test_md_parse(void *arg)
   tt_int_op(md->ipv6_orport, OP_EQ, 9090);
 
  done:
-  SMARTLIST_FOREACH(mds, microdesc_t *, md, microdesc_free(md));
+  SMARTLIST_FOREACH(mds, microdesc_t *, mdsc, microdesc_free(mdsc));
   smartlist_free(mds);
   SMARTLIST_FOREACH(invalid, char *, cp, tor_free(cp));
   smartlist_free(invalid);

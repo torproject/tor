@@ -662,7 +662,6 @@ main(int argc, const char **argv)
 {
   int i;
   int list=0, n_enabled=0;
-  benchmark_t *b;
   char *errmsg;
   or_options_t *options;
 
@@ -672,10 +671,10 @@ main(int argc, const char **argv)
     if (!strcmp(argv[i], "--list")) {
       list = 1;
     } else {
-      benchmark_t *b = find_benchmark(argv[i]);
+      benchmark_t *benchmark = find_benchmark(argv[i]);
       ++n_enabled;
-      if (b) {
-        b->enabled = 1;
+      if (benchmark) {
+        benchmark->enabled = 1;
       } else {
         printf("No such benchmark as %s\n", argv[i]);
       }
@@ -700,7 +699,7 @@ main(int argc, const char **argv)
     return 1;
   }
 
-  for (b = benchmarks; b->name; ++b) {
+  for (benchmark_t *b = benchmarks; b->name; ++b) {
     if (b->enabled || n_enabled == 0) {
       printf("===== %s =====\n", b->name);
       if (!list)

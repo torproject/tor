@@ -2948,22 +2948,22 @@ static hs_stats_t *hs_stats = NULL;
 static hs_stats_t *
 hs_stats_new(void)
 {
-  hs_stats_t * hs_stats = tor_malloc_zero(sizeof(hs_stats_t));
-  hs_stats->onions_seen_this_period = digestmap_new();
+  hs_stats_t *new_hs_stats = tor_malloc_zero(sizeof(hs_stats_t));
+  new_hs_stats->onions_seen_this_period = digestmap_new();
 
-  return hs_stats;
+  return new_hs_stats;
 }
 
 /** Free an hs_stats_t structure. */
 static void
-hs_stats_free(hs_stats_t *hs_stats)
+hs_stats_free(hs_stats_t *victim_hs_stats)
 {
-  if (!hs_stats) {
+  if (!victim_hs_stats) {
     return;
   }
 
-  digestmap_free(hs_stats->onions_seen_this_period, NULL);
-  tor_free(hs_stats);
+  digestmap_free(victim_hs_stats->onions_seen_this_period, NULL);
+  tor_free(victim_hs_stats);
 }
 
 /** Initialize hidden service statistics. */

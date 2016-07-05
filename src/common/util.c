@@ -3812,9 +3812,9 @@ format_win_cmdline_argument(const char *arg)
     formatted_arg[i++] = '"';
 
   /* Add characters */
-  SMARTLIST_FOREACH(arg_chars, char*, c,
+  SMARTLIST_FOREACH(arg_chars, char*, ch,
   {
-    formatted_arg[i++] = *c;
+    formatted_arg[i++] = *ch;
   });
 
   /* Add trailing quote */

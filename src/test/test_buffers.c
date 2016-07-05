@@ -178,10 +178,10 @@ test_buffers_basic(void *arg)
 
   /* Try adding a string too long for any freelist. */
   {
-    char *cp = tor_malloc_zero(65536);
+    char *mem = tor_malloc_zero(65536);
     buf = buf_new();
-    write_to_buf(cp, 65536, buf);
-    tor_free(cp);
+    write_to_buf(mem, 65536, buf);
+    tor_free(mem);
 
     tt_int_op(buf_datalen(buf), OP_EQ, 65536);
     buf_free(buf);

@@ -2422,15 +2422,15 @@ networkstatus_get_detached_signatures(smartlist_t *consensuses)
 
   /* Now get all the sigs for non-FLAV_NS consensuses */
   SMARTLIST_FOREACH_BEGIN(consensuses, networkstatus_t *, ns) {
-    char *sigs;
+    char *sigs_on_this_consensus;
     if (ns->flavor == FLAV_NS)
       continue;
-    sigs = networkstatus_format_signatures(ns, 1);
-    if (!sigs) {
+    sigs_on_this_consensus = networkstatus_format_signatures(ns, 1);
+    if (!sigs_on_this_consensus) {
       log_warn(LD_DIR, "Couldn't format signatures");
       goto err;
     }
-    smartlist_add(elements, sigs);
+    smartlist_add(elements, sigs_on_this_consensus);
   } SMARTLIST_FOREACH_END(ns);
 
   /* Now add the FLAV_NS consensus signatrures. */
@@ -3101,12 +3101,12 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
 
 /* Write the votes in <b>pending_vote_list</b> to disk. */
 static void
-write_v3_votes_to_disk(const smartlist_t *pending_vote_list)
+write_v3_votes_to_disk(const smartlist_t *pending_votes)
 {
   smartlist_t *votestrings = smartlist_new();
   char *votefile = NULL;
 
-  SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, v,
+  SMARTLIST_FOREACH(pending_votes, pending_vote_t *, v,
     {
       sized_chunk_t *c = tor_malloc(sizeof(sized_chunk_t));
       c->bytes = v->vote_body->dir;

@@ -1565,7 +1565,7 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
   int n_best_support=0;
   const or_options_t *options = get_options();
   const smartlist_t *the_nodes;
-  const node_t *node=NULL;
+  const node_t *selected_node=NULL;
 
   connections = get_connection_array();
 
@@ -1692,7 +1692,7 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
         smartlist_add(supporting, (void*)node);
     });
 
-    node = node_sl_choose_by_bandwidth(supporting, WEIGHT_FOR_EXIT);
+    selected_node = node_sl_choose_by_bandwidth(supporting, WEIGHT_FOR_EXIT);
     smartlist_free(supporting);
   } else {
     /* Either there are no pending connections, or no routers even seem to
@@ -1730,8 +1730,8 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
         }
       } SMARTLIST_FOREACH_END(node);
 
-      node = node_sl_choose_by_bandwidth(supporting, WEIGHT_FOR_EXIT);
-      if (node)
+      selected_node = node_sl_choose_by_bandwidth(supporting, WEIGHT_FOR_EXIT);
+      if (selected_node)
         break;
       smartlist_clear(supporting);
       /* If we reach this point, we can't actually support any unhandled
@@ -1745,9 +1745,9 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
   }
 
   tor_free(n_supported);
-  if (node) {
-    log_info(LD_CIRC, "Chose exit server '%s'", node_describe(node));
-    return node;
+  if (selected_node) {
+    log_info(LD_CIRC, "Chose exit server '%s'", node_describe(selected_node));
+    return selected_node;
   }
   if (options->ExitNodes) {
     log_warn(LD_CIRC,

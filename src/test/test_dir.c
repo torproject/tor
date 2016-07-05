@@ -704,8 +704,8 @@ test_dir_parse_router_list(void *arg)
                  "9a651ee03b64325959e8f1b46f2b689b30750b4c");
 
   /* Now tidy up */
-  SMARTLIST_FOREACH(dest, routerinfo_t *, ri, routerinfo_free(ri));
-  SMARTLIST_FOREACH(invalid, uint8_t *, d, tor_free(d));
+  SMARTLIST_FOREACH(dest, routerinfo_t *, rinfo, routerinfo_free(rinfo));
+  SMARTLIST_FOREACH(invalid, uint8_t *, dig, tor_free(dig));
   smartlist_clear(dest);
   smartlist_clear(invalid);
 
@@ -741,9 +741,9 @@ test_dir_parse_router_list(void *arg)
   else
     SMARTLIST_FOREACH(dest, extrainfo_t *, ei, extrainfo_free(ei));
   smartlist_free(dest);
-  SMARTLIST_FOREACH(invalid, uint8_t *, d, tor_free(d));
+  SMARTLIST_FOREACH(invalid, uint8_t *, dig, tor_free(dig));
   smartlist_free(invalid);
-  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
+  SMARTLIST_FOREACH(chunks, char *, chunk, tor_free(chunk));
   smartlist_free(chunks);
   routerinfo_free(ri);
   if (map) {
@@ -1169,7 +1169,7 @@ test_dir_fp_pairs(void *arg)
   tt_mem_op(pair->second,OP_EQ, "Use AES-256 instead.", DIGEST_LEN);
 
  done:
-  SMARTLIST_FOREACH(sl, fp_pair_t *, pair, tor_free(pair));
+  SMARTLIST_FOREACH(sl, fp_pair_t *, pair_to_free, tor_free(pair_to_free));
   smartlist_free(sl);
 }
 

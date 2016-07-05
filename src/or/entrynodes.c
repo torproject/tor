@@ -1455,7 +1455,6 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
        }
      } else {
        if (state_version) {
-         time_t now = time(NULL);
          e->chosen_on_date = crypto_rand_time_range(now - 3600*24*30, now);
          e->chosen_by_version = tor_strdup(state_version);
        }

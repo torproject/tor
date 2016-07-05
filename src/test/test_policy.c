@@ -523,18 +523,17 @@ test_policies_general(void *arg)
 
   /* Test a too-long policy. */
   {
-    int i;
-    char *policy = NULL;
+    char *policy_strng = NULL;
     smartlist_t *chunks = smartlist_new();
     smartlist_add(chunks, tor_strdup("accept "));
     for (i=1; i<10000; ++i)
       smartlist_add_asprintf(chunks, "%d,", i);
     smartlist_add(chunks, tor_strdup("20000"));
-    policy = smartlist_join_strings(chunks, "", 0, NULL);
+    policy_strng = smartlist_join_strings(chunks, "", 0, NULL);
     SMARTLIST_FOREACH(chunks, char *, ch, tor_free(ch));
     smartlist_free(chunks);
-    short_parsed = parse_short_policy(policy);/* shouldn't be accepted */
-    tor_free(policy);
+    short_parsed = parse_short_policy(policy_strng);/* shouldn't be accepted */
+    tor_free(policy_strng);
     tt_ptr_op(NULL, OP_EQ, short_parsed);
   }
 

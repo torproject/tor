@@ -1901,8 +1901,8 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
   }
 
  err:
-  for (unsigned i = 0; i < ARRAY_LENGTH(certs); ++i) {
-    tor_x509_cert_free(certs[i]);
+  for (unsigned u = 0; u < ARRAY_LENGTH(certs); ++u) {
+    tor_x509_cert_free(certs[u]);
   }
   certs_cell_free(cc);
 #undef ERR

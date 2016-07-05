@@ -1779,11 +1779,11 @@ router_parse_entry_from_string(const char *s, const char *end,
   if (cache_copy) {
     size_t len = router->cache_info.signed_descriptor_len +
                  router->cache_info.annotations_len;
-    char *cp =
+    char *signed_body =
       router->cache_info.signed_descriptor_body = tor_malloc(len+1);
     if (prepend_annotations) {
-      memcpy(cp, prepend_annotations, prepend_len);
-      cp += prepend_len;
+      memcpy(signed_body, prepend_annotations, prepend_len);
+      signed_body += prepend_len;
     }
     /* This assertion will always succeed.
      * len == signed_desc_len + annotations_len
@@ -1791,9 +1791,9 @@ router_parse_entry_from_string(const char *s, const char *end,
      *     == end-start_of_annotations + prepend_len
      * We already wrote prepend_len bytes into the buffer; now we're
      * writing end-start_of_annotations -NM. */
-    tor_assert(cp+(end-start_of_annotations) ==
+    tor_assert(signed_body+(end-start_of_annotations) ==
                router->cache_info.signed_descriptor_body+len);
-    memcpy(cp, start_of_annotations, end-start_of_annotations);
+    memcpy(signed_body, start_of_annotations, end-start_of_annotations);
     router->cache_info.signed_descriptor_body[len] = '\0';
     tor_assert(strlen(router->cache_info.signed_descriptor_body) == len);
   }
@@ -3546,7 +3546,6 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   common_digests_t ns_digests;
   const char *cert, *end_of_header, *end_of_footer, *s_dup = s;
   directory_token_t *tok;
-  int ok;
   struct in_addr in;
   int i, inorder, n_signatures = 0;
   memarea_t *area = NULL, *rs_area = NULL;
@@ -3636,9 +3635,10 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   } else {
     tok = find_opt_by_keyword(tokens, K_CONSENSUS_METHOD);
     if (tok) {
+      int num_ok;
       ns->consensus_method = (int)tor_parse_long(tok->args[0], 10, 1, INT_MAX,
-                                                 &ok, NULL);
-      if (!ok)
+                                                 &num_ok, NULL);
+      if (!num_ok)
         goto err;
     } else {
       ns->consensus_method = 1;
@@ -3659,14 +3659,17 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
 
   tok = find_by_keyword(tokens, K_VOTING_DELAY);
   tor_assert(tok->n_args >= 2);
-  ns->vote_seconds =
-    (int) tor_parse_long(tok->args[0], 10, 0, INT_MAX, &ok, NULL);
-  if (!ok)
-    goto err;
-  ns->dist_seconds =
-    (int) tor_parse_long(tok->args[1], 10, 0, INT_MAX, &ok, NULL);
-  if (!ok)
-    goto err;
+  {
+    int ok;
+    ns->vote_seconds =
+      (int) tor_parse_long(tok->args[0], 10, 0, INT_MAX, &ok, NULL);
+    if (!ok)
+      goto err;
+    ns->dist_seconds =
+      (int) tor_parse_long(tok->args[1], 10, 0, INT_MAX, &ok, NULL);
+    if (!ok)
+      goto err;
+  }
   if (ns->valid_after +
       (get_options()->TestingTorNetwork ?
        MIN_VOTE_INTERVAL_TESTING : MIN_VOTE_INTERVAL) > ns->fresh_until) {
@@ -3817,6 +3820,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
         goto err;
       }
       voter->addr = ntohl(in.s_addr);
+      int ok;
       voter->dir_port = (uint16_t)
         tor_parse_long(tok->args[4], 10, 0, 65535, &ok, NULL);
       if (!ok)
@@ -3864,8 +3868,8 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       (tok = find_opt_by_keyword(tokens, K_LEGACY_DIR_KEY))) {
     int bad = 1;
     if (strlen(tok->args[0]) == HEX_DIGEST_LEN) {
-      networkstatus_voter_info_t *voter = smartlist_get(ns->voters, 0);
-      if (base16_decode(voter->legacy_id_digest, DIGEST_LEN,
+      networkstatus_voter_info_t *voter_0 = smartlist_get(ns->voters, 0);
+      if (base16_decode(voter_0->legacy_id_digest, DIGEST_LEN,
                         tok->args[0], HEX_DIGEST_LEN) != DIGEST_LEN)
         bad = 1;
       else
