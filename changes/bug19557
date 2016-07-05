@@ -1,4 +1,4 @@
   o Major bugfixes (sandboxing):
     - Our sandboxing code would not allow us to write to stats/hidserv-stats,
       causing tor to abort while trying to write stats.  This was previously
-      masked by bug 19556.  Fixes bug 19557.
+      masked by bug 19556. Fixes bug 19557; bugfix on 0.2.6.1-alpha.
