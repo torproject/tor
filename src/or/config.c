@@ -918,11 +918,6 @@ static const char *default_authorities[] = {
   "dannenberg orport=443 "
     "v3ident=0232AF901C31A04EE9848595AF9BB7620D4C5B2E "
     "193.23.244.244:80 7BE6 83E6 5D48 1413 21C5 ED92 F075 C553 64AC 7123",
-  "urras orport=80 "
-    "v3ident=80550987E1D626E3EBA5E5E75A458DE0626D088C "
-    "208.83.223.34:443 0AD3 FA88 4D18 F89E EA2D 89C0 1937 9E0E 7FD9 4417"
-    /* XX/teor - urras may have an IPv6 address, but it's not in urras'
-     * descriptor as of 11 Dec 2015. See #17813. */,
   "maatuska orport=80 "
     "v3ident=49015F787433103580E3B66A1707A00E60F2D15B "
     "ipv6=[2001:67c:289c::9]:80 "
