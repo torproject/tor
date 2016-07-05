@@ -8,8 +8,9 @@ Changes in version 0.2.8.5-rc - 2016-07-0?
     - Urras is no longer a directory authority. Closes ticket 19271.
 
   o Major bugfixes (heartbeat):
-    - Fix regression that crashes Tor when disabling heartbeats. Fixes
-      bug 19454; bugfix on tor-0.2.8.1-alpha. Reported by "kubaku".
+    - Fix a regression that would crash Tor when heartbeats are
+      disabled. Fixes bug 19454; bugfix on tor-0.2.8.1-alpha. Reported
+      by "kubaku".
 
   o Minor features (build):
     - Tor now again builds with the recent OpenSSL 1.1 development
@@ -22,28 +23,21 @@ Changes in version 0.2.8.5-rc - 2016-07-0?
 
   o Minor bugfixes (fallback directory selection):
     - Avoid errors during fallback selection if there are no eligible
-      fallbacks. Fixes bug 19480; bugfix on ba76910 and 78ec782 in
-      0.2.8.3-alpha. Patch by teor.
+      fallbacks. Fixes bug 19480; bugfix on 0.2.8.3-alpha. Patch
+      by teor.
 
   o Minor bugfixes (logging):
-    - Reduce excessive logging when directories can't be found. Fixes
-      bug 18849; bugfix on 0.2.8.3-alpha and 0.2.8.1-alpha. Patch
+    - Reduce excessive logging when directory servers can't be found.
+      Fixes bug 18849; bugfix on 0.2.8.3-alpha and 0.2.8.1-alpha. Patch
       by teor.
-    - When a fallback changes its fingerprint from the hard-coded
-      fingerprint, log a less severe, more explanatory log message.
-      Fixes bug 18812; bugfix on 0.2.8.1-alpha. Patch by teor.
+    - When a fallback directory changes its fingerprint from the hard-
+      coded fingerprint, log a less severe, more explanatory log
+      message. Fixes bug 18812; bugfix on 0.2.8.1-alpha. Patch by teor.
 
   o Minor bugfixes (sandboxing):
-    - When sandboxing is enabled, we could not write any stats to disk.
-      check_or_create_data_subdir("stats"), which prepares the private
-      stats directory, calls check_private_dir(), which also opens and
-      not just stats() the directory. Therefore, we need to also allow
-      open() for the stats dir in our sandboxing setup. Fixes bug 19556;
-      bugfix on 0.2.5.1-alpha.
-    - Our sandboxing code would not allow us to write to stats/hidserv-
-      stats, causing tor to abort while trying to write stats. This was
-      previously masked by bug 19556. Fixes bug 19557; bugfix
-      on 0.2.6.1-alpha.
+    - Allow statistics to be written to disk when sandboxing is enabled.
+      Fixes bugs 19556 and 19957; bugfix on 0.2.5.1-alpha and
+      0.2.6.1-alpha respectively.
 
   o Minor bugfixes (user interface):
     - Remove a warning message "Service [scrubbed] not found after
@@ -53,9 +47,9 @@ Changes in version 0.2.8.5-rc - 2016-07-0?
       pointless and confusing. Fixes bug 19464; bugfix on 0.2.7.2-alpha.
 
   o Fallback directory list:
-    - Add a comment to the generated list that explains how to comment-
-      out unsuitable fallbacks in a way that's compatible with the stem
-      fallback parser.
+    - Add a comment to the generated fallback directory list that
+      explains how to comment out unsuitable fallbacks in a way that's
+      compatible with the stem fallback parser.
     - Update fallback whitelist and blacklist based on relay operator
       emails. Blacklist unsuitable fallbacks. Resolves ticket 19071.
       Patch by teor.
