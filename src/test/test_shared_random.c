@@ -868,7 +868,6 @@ test_sr_get_majority_srv_from_votes(void *arg)
   /* The test relies on the dirauth list being initialized. */
   clear_dir_servers();
   add_default_trusted_dir_authorities(V3_DIRINFO);
-  tt_int_op(get_n_authorities(V3_DIRINFO), ==, 9);
 
   { /* Prepare voting environment with just a single vote. */
     networkstatus_t *vote = get_test_vote_with_curr_srv(SRV_1);
