@@ -4,6 +4,9 @@ Changes in version 0.2.8.5-rc - 2016-07-0?
   0.2.8 release will be identical to it. It has a few small bugfixes
   against previous versions.
 
+  o Directory authority changes:
+    - Urras is no longer a directory authority. Closes ticket 19271.
+
   o Major bugfixes (heartbeat):
     - Fix regression that crashes Tor when disabling heartbeats. Fixes
       bug 19454; bugfix on tor-0.2.8.1-alpha. Reported by "kubaku".
