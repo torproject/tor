@@ -5,4 +5,6 @@
     - Relays make sure their own descriptor has an ntor key.
     - Authorites no longer trust the version a relay claims (if any),
       instead, they check specifically for an ntor key.
+    - Clients avoid downloading a descriptor if the relay version is
+      too old to support ntor.
       Fixes bug 19163; bugfix on 0.2.4.18-rc.
