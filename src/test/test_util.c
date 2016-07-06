@@ -13,6 +13,7 @@
 #include "test.h"
 #include "memarea.h"
 #include "util_process.h"
+#include "log_test_helpers.h"
 
 #ifdef HAVE_PWD_H
 #include <pwd.h>
@@ -5187,6 +5188,7 @@ test_util_pwdb(void *arg)
   const struct passwd *me = NULL, *me2, *me3;
   char *name = NULL;
   char *dir = NULL;
+  int prev_level = -100;
 
   /* Uncached case. */
   /* Let's assume that we exist. */
@@ -5225,8 +5227,13 @@ test_util_pwdb(void *arg)
   }
   tt_assert(found);
   tor_free(dir);
+
+  prev_level = setup_capture_of_logs(LOG_ERR); /* We should do a LOG_ERR */
   dir = get_user_homedir(badname);
   tt_assert(dir == NULL);
+  tt_int_op(smartlist_len(mock_saved_logs()), OP_EQ, 1);
+  teardown_capture_of_logs(prev_level);
+  prev_level = -100;
 
   /* Now try to find a user that doesn't exist by ID. */
   found = 0;
@@ -5243,6 +5250,8 @@ test_util_pwdb(void *arg)
  done:
   tor_free(name);
   tor_free(dir);
+  if (prev_level >= 0)
+    teardown_capture_of_logs(prev_level);
 }
 #endif
 

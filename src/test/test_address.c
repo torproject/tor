@@ -26,6 +26,7 @@
 #include "or.h"
 #include "address.h"
 #include "test.h"
+#include "log_test_helpers.h"
 
 /** Return 1 iff <b>sockaddr1</b> and <b>sockaddr2</b> represent
  * the same IP address and port combination. Otherwise, return 0.
@@ -822,7 +823,10 @@ test_address_get_if_addrs6_list_no_internal(void *arg)
 
   (void)arg;
 
+  int prev_level = setup_capture_of_logs(LOG_ERR); /* We might drop a log_err */
   results = get_interface_address6_list(LOG_ERR, AF_INET6, 0);
+  tt_int_op(smartlist_len(mock_saved_logs()), OP_LE, 1);
+  teardown_capture_of_logs(prev_level);
 
   tt_assert(results != NULL);
   /* Work even on systems without IPv6 interfaces */
@@ -1110,7 +1114,7 @@ struct testcase_t address_tests[] = {
   ADDRESS_TEST(get_if_addrs_list_internal, 0),
   ADDRESS_TEST(get_if_addrs_list_no_internal, 0),
   ADDRESS_TEST(get_if_addrs6_list_internal, 0),
-  ADDRESS_TEST(get_if_addrs6_list_no_internal, 0),
+  ADDRESS_TEST(get_if_addrs6_list_no_internal, TT_FORK),
   ADDRESS_TEST(get_if_addrs_internal_fail, 0),
   ADDRESS_TEST(get_if_addrs_no_internal_fail, 0),
   ADDRESS_TEST(get_if_addrs, 0),
