@@ -178,20 +178,26 @@ test_bad_onion_handshake(void *arg)
                                             s_buf, s_keys, 40));
 
   /* Client: Case 1: The server sent back junk. */
+  const char *msg = NULL;
   s_buf[64] ^= 33;
   tt_int_op(-1, OP_EQ,
-            onion_skin_TAP_client_handshake(c_dh, s_buf, c_keys, 40, NULL));
+            onion_skin_TAP_client_handshake(c_dh, s_buf, c_keys, 40, &msg));
   s_buf[64] ^= 33;
+  tt_str_op(msg, OP_EQ, "Digest DOES NOT MATCH on onion handshake. "
+            "Bug or attack.");
 
   /* Let the client finish; make sure it can. */
+  msg = NULL;
   tt_int_op(0, OP_EQ,
-            onion_skin_TAP_client_handshake(c_dh, s_buf, c_keys, 40, NULL));
+            onion_skin_TAP_client_handshake(c_dh, s_buf, c_keys, 40, &msg));
   tt_mem_op(s_keys,OP_EQ, c_keys, 40);
+  tt_ptr_op(msg, OP_EQ, NULL);
 
   /* Client: Case 2: The server sent back a degenerate DH. */
   memset(s_buf, 0, sizeof(s_buf));
   tt_int_op(-1, OP_EQ,
-            onion_skin_TAP_client_handshake(c_dh, s_buf, c_keys, 40, NULL));
+            onion_skin_TAP_client_handshake(c_dh, s_buf, c_keys, 40, &msg));
+  tt_str_op(msg, OP_EQ, "DH computation failed.");
 
  done:
   crypto_dh_free(c_dh);
@@ -245,6 +251,15 @@ test_ntor_handshake(void *arg)
   tt_mem_op(c_keys,OP_EQ, s_keys, 400);
   memset(s_buf, 0, 40);
   tt_mem_op(c_keys,OP_NE, s_buf, 40);
+
+  /* Now try with a bogus server response. Zero input should trigger
+   * All The Problems. */
+  memset(c_keys, 0, 400);
+  memset(s_buf, 0, NTOR_REPLY_LEN);
+  const char *msg = NULL;
+  tt_int_op(-1, OP_EQ, onion_skin_ntor_client_handshake(c_state, s_buf,
+                                                        c_keys, 400, &msg));
+  tt_str_op(msg, OP_EQ, "Zero output from curve25519 handshake");
 
  done:
   ntor_handshake_state_free(c_state);

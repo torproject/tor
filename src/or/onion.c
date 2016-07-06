@@ -130,9 +130,12 @@ onion_pending_add(or_circuit_t *circ, create_cell_t *onionskin)
   time_t now = time(NULL);
 
   if (onionskin->handshake_type > MAX_ONION_HANDSHAKE_TYPE) {
+    /* LCOV_EXCL_START
+     * We should have rejected this far before this point */
     log_warn(LD_BUG, "Handshake %d out of range! Dropping.",
              onionskin->handshake_type);
     return -1;
+    /* LCOV_EXCL_STOP */
   }
 
   tmp = tor_malloc_zero(sizeof(onion_queue_t));
@@ -305,10 +308,13 @@ static void
 onion_queue_entry_remove(onion_queue_t *victim)
 {
   if (victim->handshake_type > MAX_ONION_HANDSHAKE_TYPE) {
+    /* LCOV_EXCL_START
+     * We should have rejected this far before this point */
     log_warn(LD_BUG, "Handshake %d out of range! Dropping.",
              victim->handshake_type);
     /* XXX leaks */
     return;
+    /* LCOV_EXCL_STOP */
   }
 
   TOR_TAILQ_REMOVE(&ol_list[victim->handshake_type], victim, next);
@@ -391,9 +397,12 @@ onion_handshake_state_release(onion_handshake_state_t *state)
     state->u.ntor = NULL;
     break;
   default:
+    /* LCOV_EXCL_START
+     * This state should not even exist. */
     log_warn(LD_BUG, "called with unknown handshake state type %d",
              (int)state->tag);
     tor_fragile_assert();
+    /* LCOV_EXCL_STOP */
   }
 }
 
@@ -441,9 +450,12 @@ onion_skin_create(int type,
     r = NTOR_ONIONSKIN_LEN;
     break;
   default:
+    /* LCOV_EXCL_START
+     * We should never try to create an impossible handshake type. */
     log_warn(LD_BUG, "called with unknown handshake state type %d", type);
     tor_fragile_assert();
     r = -1;
+    /* LCOV_EXCL_STOP */
   }
 
   if (r > 0)
@@ -512,9 +524,12 @@ onion_skin_server_handshake(int type,
     }
     break;
   default:
+    /* LCOV_EXCL_START
+     * We should have rejected this far before this point */
     log_warn(LD_BUG, "called with unknown handshake state type %d", type);
     tor_fragile_assert();
     return -1;
+    /* LCOV_EXCL_STOP */
   }
 
   return r;
