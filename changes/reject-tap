@@ -1,0 +1,4 @@
+  o Major bug fixes (circuit building):
+    - Authorites should not trust the version a relay claims (if any),
+      instead, they should check specifically for an ntor key.
+      Fixes bug 19163; bugfix on 0.2.4.18-rc.

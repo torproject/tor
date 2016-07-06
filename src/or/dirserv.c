@@ -255,6 +255,22 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg,
     return FP_REJECT;
   }
 
+  /* dirserv_get_status_impl already rejects versions older than 0.2.4.18-rc,
+   * and onion_curve25519_pkey was introduced in 0.2.4.8-alpha.
+   * But just in case a relay doesn't provide or lies about its version, or
+   * doesn't include an ntor key in its descriptor, check that it exists,
+   * and is non-zero (clients check that it's non-zero before using it). */
+  if (router->onion_curve25519_pkey == NULL ||
+      tor_mem_is_zero((const char*)router->onion_curve25519_pkey->public_key,
+                      CURVE25519_PUBKEY_LEN)) {
+    log_fn(severity, LD_DIR,
+           "Descriptor from router %s is missing an ntor curve25519 onion "
+           "key.", router_describe(router));
+    if (msg)
+      *msg = "Missing ntor curve25519 onion key. Please upgrade!";
+    return FP_REJECT;
+  }
+
   if (router->cache_info.signing_key_cert) {
     /* This has an ed25519 identity key. */
     if (KEYPIN_MISMATCH ==
