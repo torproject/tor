@@ -59,8 +59,8 @@ fast_server_handshake(const uint8_t *key_in, /* DIGEST_LEN bytes */
   memcpy(tmp+DIGEST_LEN, handshake_reply_out, DIGEST_LEN);
   out_len = key_out_len+DIGEST_LEN;
   out = tor_malloc(out_len);
-  if (crypto_expand_key_material_TAP(tmp, sizeof(tmp), out, out_len)) {
-    goto done;
+  if (BUG(crypto_expand_key_material_TAP(tmp, sizeof(tmp), out, out_len))) {
+    goto done; // LCOV_EXCL_LINE
   }
   memcpy(handshake_reply_out+DIGEST_LEN, out, DIGEST_LEN);
   memcpy(key_out, out+DIGEST_LEN, key_out_len);
@@ -100,10 +100,12 @@ fast_client_handshake(const fast_handshake_state_t *handshake_state,
   memcpy(tmp+DIGEST_LEN, handshake_reply_out, DIGEST_LEN);
   out_len = key_out_len+DIGEST_LEN;
   out = tor_malloc(out_len);
-  if (crypto_expand_key_material_TAP(tmp, sizeof(tmp), out, out_len)) {
+  if (BUG(crypto_expand_key_material_TAP(tmp, sizeof(tmp), out, out_len))) {
+    /* LCOV_EXCL_START */
     if (msg_out)
       *msg_out = "Failed to expand key material";
     goto done;
+    /* LCOV_EXCL_STOP */
   }
   if (tor_memneq(out, handshake_reply_out+DIGEST_LEN, DIGEST_LEN)) {
     /* H(K) does *not* match. Something fishy. */
