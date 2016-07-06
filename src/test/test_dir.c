@@ -116,6 +116,7 @@ test_dir_formats(void *arg)
   const addr_policy_t *p;
   time_t now = time(NULL);
   port_cfg_t orport, dirport;
+  char cert_buf[256];
 
   (void)arg;
   pk1 = pk_generate(0);
@@ -135,6 +136,11 @@ test_dir_formats(void *arg)
   tor_addr_parse(&r1->ipv6_addr, "1:2:3:4::");
   r1->ipv6_orport = 9999;
   r1->onion_pkey = crypto_pk_dup_key(pk1);
+  /* Fake just enough of an ntor key to get by */
+  curve25519_keypair_t r1_onion_keypair;
+  curve25519_keypair_generate(&r1_onion_keypair, 0);
+  r1->onion_curve25519_pkey = tor_memdup(&r1_onion_keypair.pubkey,
+                                         sizeof(curve25519_public_key_t));
   r1->identity_pkey = crypto_pk_dup_key(pk2);
   r1->bandwidthrate = 1000;
   r1->bandwidthburst = 5000;
@@ -167,11 +173,6 @@ test_dir_formats(void *arg)
                                          &kp2.pubkey,
                                          now, 86400,
                                          CERT_FLAG_INCLUDE_SIGNING_KEY);
-  char cert_buf[256];
-  base64_encode(cert_buf, sizeof(cert_buf),
-                (const char*)r2->cache_info.signing_key_cert->encoded,
-                r2->cache_info.signing_key_cert->encoded_len,
-                BASE64_ENCODE_MULTILINE);
   r2->platform = tor_strdup(platform);
   r2->cache_info.published_on = 5;
   r2->or_port = 9005;
@@ -247,6 +248,11 @@ test_dir_formats(void *arg)
   strlcat(buf2, "hidden-service-dir\n", sizeof(buf2));
   strlcat(buf2, "contact Magri White <magri@elsewhere.example.com>\n",
           sizeof(buf2));
+  strlcat(buf2, "ntor-onion-key ", sizeof(buf2));
+  base64_encode(cert_buf, sizeof(cert_buf),
+                (const char*)r1_onion_keypair.pubkey.public_key, 32,
+                BASE64_ENCODE_MULTILINE);
+  strlcat(buf2, cert_buf, sizeof(buf2));
   strlcat(buf2, "reject *:*\n", sizeof(buf2));
   strlcat(buf2, "tunnelled-dir-server\nrouter-signature\n", sizeof(buf2));
   buf[strlen(buf2)] = '\0'; /* Don't compare the sig; it's never the same
@@ -276,6 +282,10 @@ test_dir_formats(void *arg)
           "router Fred 10.3.2.1 9005 0 0\n"
           "identity-ed25519\n"
           "-----BEGIN ED25519 CERT-----\n", sizeof(buf2));
+  base64_encode(cert_buf, sizeof(cert_buf),
+                (const char*)r2->cache_info.signing_key_cert->encoded,
+                r2->cache_info.signing_key_cert->encoded_len,
+                BASE64_ENCODE_MULTILINE);
   strlcat(buf2, cert_buf, sizeof(buf2));
   strlcat(buf2, "-----END ED25519 CERT-----\n", sizeof(buf2));
   strlcat(buf2, "master-key-ed25519 ", sizeof(buf2));

@@ -2753,6 +2753,10 @@ router_dump_router_to_string(routerinfo_t *router,
                   (const char *)router->onion_curve25519_pkey->public_key,
                   CURVE25519_PUBKEY_LEN, BASE64_ENCODE_MULTILINE);
     smartlist_add_asprintf(chunks, "ntor-onion-key %s", kbuf);
+  } else {
+    /* Authorities will start rejecting relays without ntor keys in 0.2.9 */
+    log_err(LD_BUG, "A relay must have an ntor onion key");
+    goto err;
   }
 
   /* Write the exit policy to the end of 's'. */
