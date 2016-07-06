@@ -12,6 +12,7 @@ setup_capture_of_logs(int new_level)
   int previous_log = log_global_min_severity_;
   log_global_min_severity_ = new_level;
   mock_clean_saved_logs();
+  saved_logs = smartlist_new();
   MOCK(logv, mock_saving_logv);
   return previous_log;
 }
