@@ -26,6 +26,13 @@ Changes in version 0.2.8.5-rc - 2016-07-0?
       fallbacks. Fixes bug 19480; bugfix on 0.2.8.3-alpha. Patch
       by teor.
 
+  o Minor bugfixes (IPv6, microdescriptors):
+    - Don't check node addresses when we only have a routerstatus. This
+      allows IPv6-only clients to bootstrap by fetching microdescriptors
+      from fallback directory mirrors. (The microdescriptor consensus
+      has no IPv6 addresses in it.) Fixes bug 19608; bugfix
+      on 0.2.8.2-alpha.
+
   o Minor bugfixes (logging):
     - Reduce excessive logging when directory servers can't be found.
       Fixes bug 18849; bugfix on 0.2.8.3-alpha and 0.2.8.1-alpha. Patch
