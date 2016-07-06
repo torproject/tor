@@ -618,7 +618,7 @@ fascist_firewall_allows_ri_impl(const routerinfo_t *ri,
                                       pref_ipv6);
 }
 
-/** Like fascist_firewall_allows_rs, but doesn't consult the node. */
+/** Like fascist_firewall_allows_rs, but takes pref_ipv6. */
 static int
 fascist_firewall_allows_rs_impl(const routerstatus_t *rs,
                                 firewall_connection_t fw_connection,
@@ -636,10 +636,11 @@ fascist_firewall_allows_rs_impl(const routerstatus_t *rs,
 }
 
 /** Like fascist_firewall_allows_base(), but takes rs.
- * Consults the corresponding node, then falls back to rs if node is NULL.
- * This should only happen when there's no valid consensus, and rs doesn't
- * correspond to a bridge client's bridge.
- */
+ * When rs is a fake_status from a dir_server_t, it can have a reachable
+ * address, even when the corresponding node does not.
+ * nodes can be missing addresses when there's no consensus (IPv4 and IPv6),
+ * or when there is a microdescriptor consensus, but no microdescriptors
+ * (microdescriptors have IPv6, the microdesc consensus does not). */
 int
 fascist_firewall_allows_rs(const routerstatus_t *rs,
                            firewall_connection_t fw_connection, int pref_only)
@@ -648,21 +649,15 @@ fascist_firewall_allows_rs(const routerstatus_t *rs,
     return 0;
   }
 
-  const node_t *node = node_get_by_id(rs->identity_digest);
+  /* We don't have access to the node-specific IPv6 preference, so use the
+   * generic IPv6 preference instead. */
+  const or_options_t *options = get_options();
+  int pref_ipv6 = (fw_connection == FIREWALL_OR_CONNECTION
+                   ? fascist_firewall_prefer_ipv6_orport(options)
+                   : fascist_firewall_prefer_ipv6_dirport(options));
 
-  if (node) {
-    return fascist_firewall_allows_node(node, fw_connection, pref_only);
-  } else {
-    /* There's no node-specific IPv6 preference, so use the generic IPv6
-     * preference instead. */
-    const or_options_t *options = get_options();
-    int pref_ipv6 = (fw_connection == FIREWALL_OR_CONNECTION
-                     ? fascist_firewall_prefer_ipv6_orport(options)
-                     : fascist_firewall_prefer_ipv6_dirport(options));
-
-    return fascist_firewall_allows_rs_impl(rs, fw_connection, pref_only,
-                                           pref_ipv6);
-  }
+  return fascist_firewall_allows_rs_impl(rs, fw_connection, pref_only,
+                                         pref_ipv6);
 }
 
 /** Return true iff we think our firewall will let us make a connection to
@@ -742,8 +737,7 @@ fascist_firewall_allows_dir_server(const dir_server_t *ds,
   /* A dir_server_t always has a fake_status. As long as it has the same
    * addresses/ports in both fake_status and dir_server_t, this works fine.
    * (See #17867.)
-   * This function relies on fascist_firewall_choose_address_rs looking up the
-   * node if it can, because that will get the latest info for the relay. */
+   * fascist_firewall_allows_rs only checks the addresses in fake_status. */
   return fascist_firewall_allows_rs(&ds->fake_status, fw_connection,
                                     pref_only);
 }

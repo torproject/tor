@@ -1,0 +1,6 @@
+  o Minor bugfixes (IPv6, microdescriptors):
+    - Don't check node addresses when we only have a routerstatus.
+      This allows IPv6-only clients to bootstrap by fetching
+      microdescriptors from fallback directory mirrors.
+      (The microdescriptor consensus has no IPv6 addresses in it.)
+      Fixes bug 19608; bugfix on c281c036 in 0.2.8.2-alpha.
