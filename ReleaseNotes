@@ -2,6 +2,8 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+
+
 Changes in version 0.2.8.??? - 2015-0?-??
   o New system requirements:
     - Tor no longer attempts to support platforms where the "time_t"
@@ -17,6 +19,12 @@ Changes in version 0.2.8.??? - 2015-0?-??
       building Tor from the git repository instead of from the source
       distribution, and your tools are older than this, you will need to
       upgrade. Closes ticket 17732.
+
+  o Directory authority changes:
+    - Update the V3 identity key for the dannenberg directory authority:
+      it was changed on 18 November 2015. Closes task 17906. Patch
+      by "teor".
+    - Urras is no longer a directory authority. Closes ticket 19271.
 
   o Major features (directory system):
     - Include a trial list of default fallback directories, based on an
@@ -121,11 +129,6 @@ Changes in version 0.2.8.??? - 2015-0?-??
       keeping its Ed25519 identity. Fixes bug 17668; fixes part of bug
       18318. Bugfix on 0.2.7.2-alpha.
 
-  o Major key updates:
-    - Update the V3 identity key for the dannenberg directory authority:
-      it was changed on 18 November 2015. Closes task 17906. Patch
-      by "teor".
-
   o Minor features (accounting):
     - Added two modes to the AccountingRule option: One for limiting
       only the number of bytes sent ("AccountingRule out"), and one for
@@ -149,6 +152,12 @@ Changes in version 0.2.8.??? - 2015-0?-??
     - Tor now builds successfully with the recent OpenSSL 1.1
       development branch, and with the latest LibreSSL. Closes tickets
       17549, 17921, and 17984.
+    - Tor now again builds with the recent OpenSSL 1.1 development
+      branch (tested against 1.1.0-pre6-dev). Closes ticket 19499.
+    - When building manual pages, set the timezone to "UTC", so that the
+      output is reproducible. Fixes bug 19558; bugfix on 0.2.2.9-alpha.
+      Patch from intrigeri.
+
 
   o Minor features (clients):
     - Make clients, onion services, and bridge relays always use an
@@ -519,6 +528,9 @@ Changes in version 0.2.8.??? - 2015-0?-??
       start up faster. Fixes bug 18548; bugfix on 0.2.5.1-alpha.
     - Fix a crash when using offline master ed25519 keys with the Linux
       seccomp2 sandbox enabled. Fixes bug 17675; bugfix on 0.2.7.3-rc.
+    - Allow statistics to be written to disk when "Sandbox 1" is
+      enabled. Fixes bugs 19556 and 19957; bugfix on 0.2.5.1-alpha and
+      0.2.6.1-alpha respectively.
 
   o Minor bugfixes (logging):
     - In log messages that include a function name, use __FUNCTION__
