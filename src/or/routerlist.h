@@ -205,6 +205,9 @@ int routerinfo_incompatible_with_extrainfo(const crypto_pk_t *ri,
                                            extrainfo_t *ei,
                                            signed_descriptor_t *sd,
                                            const char **msg);
+int routerinfo_has_curve25519_onion_key(const routerinfo_t *ri);
+int routerstatus_version_supports_ntor(const routerstatus_t *rs,
+                                       int allow_unknown_versions);
 
 void routerlist_assert_ok(const routerlist_t *rl);
 const char *esc_router_info(const routerinfo_t *router);

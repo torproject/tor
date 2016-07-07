@@ -2260,6 +2260,11 @@ router_add_running_nodes_to_smartlist(smartlist_t *sl, int allow_invalid,
       continue;
     if (node_is_unreliable(node, need_uptime, need_capacity, need_guard))
       continue;
+    /* Don't choose nodes if we are certain they can't do ntor */
+    if (node->rs && !routerstatus_version_supports_ntor(node->rs, 1))
+      continue;
+    if ((node->ri || node->md) && !node_has_curve25519_onion_key(node))
+      continue;
     /* Choose a node with an OR address that matches the firewall rules */
     if (check_reach && !fascist_firewall_allows_node(node,
                                                      FIREWALL_OR_CONNECTION,
@@ -5486,6 +5491,45 @@ routerinfo_incompatible_with_extrainfo(const crypto_pk_t *identity_pkey,
   }
 
   return r;
+}
+
+/* Does ri have a valid ntor onion key?
+ * Valid ntor onion keys exist and have at least one non-zero byte. */
+int
+routerinfo_has_curve25519_onion_key(const routerinfo_t *ri)
+{
+  if (!ri) {
+    return 0;
+  }
+
+  if (!ri->onion_curve25519_pkey) {
+    return 0;
+  }
+
+  if (tor_mem_is_zero((const char*)ri->onion_curve25519_pkey->public_key,
+                      CURVE25519_PUBKEY_LEN)) {
+    return 0;
+  }
+
+  return 1;
+}
+
+/* Is rs running a tor version known to support ntor?
+ * If allow_unknown_versions is true, return true if the version is unknown.
+ * Otherwise, return false if the version is unknown. */
+int
+routerstatus_version_supports_ntor(const routerstatus_t *rs,
+                                   int allow_unknown_versions)
+{
+  if (!rs) {
+    return allow_unknown_versions;
+  }
+
+  if (!rs->version_known) {
+    return allow_unknown_versions;
+  }
+
+  return rs->version_supports_extend2_cells;
 }
 
 /** Assert that the internal representation of <b>rl</b> is

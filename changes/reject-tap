@@ -7,4 +7,7 @@
       instead, they check specifically for an ntor key.
     - Clients avoid downloading a descriptor if the relay version is
       too old to support ntor.
+    - Client code ignores nodes without ntor keys: they will not be
+      selected during circuit-building, or as guards, or as directory
+      mirrors, or as introduction or rendezvous points.
       Fixes bug 19163; bugfix on 0.2.4.18-rc.
