@@ -365,7 +365,7 @@ circuit_rep_hist_note_result(origin_circuit_t *circ)
   } while (hop!=circ->cpath);
 }
 
-/** Return 1 iff at least one node in circ's cpath supports ntor. */
+/** Return 1 iff every node in circ's cpath definitely supports ntor. */
 static int
 circuit_cpath_supports_ntor(const origin_circuit_t *circ)
 {
@@ -373,16 +373,19 @@ circuit_cpath_supports_ntor(const origin_circuit_t *circ)
 
   cpath = head = circ->cpath;
   do {
-    if (cpath->extend_info &&
-        !tor_mem_is_zero(
-            (const char*)cpath->extend_info->curve25519_onion_key.public_key,
-            CURVE25519_PUBKEY_LEN))
-      return 1;
+    /* if the extend_info is missing, we can't tell if it supports ntor */
+    if (!cpath->extend_info) {
+      return 0;
+    }
 
+    /* if the key is blank, it definitely doesn't support ntor */
+    if (!extend_info_supports_ntor(cpath->extend_info)) {
+      return 0;
+    }
     cpath = cpath->next;
   } while (cpath != head);
 
-  return 0;
+  return 1;
 }
 
 /** Pick all the entries in our cpath. Stop and return 0 when we're
@@ -390,41 +393,61 @@ circuit_cpath_supports_ntor(const origin_circuit_t *circ)
 static int
 onion_populate_cpath(origin_circuit_t *circ)
 {
-  int n_tries = 0;
-  const int using_ntor = circuits_can_use_ntor();
+  int r = 0;
 
-#define MAX_POPULATE_ATTEMPTS 32
+  /* onion_extend_cpath assumes these are non-NULL */
+  tor_assert(circ);
+  tor_assert(circ->build_state);
 
-  while (1) {
-    int r = onion_extend_cpath(circ);
+  while (r == 0) {
+    r = onion_extend_cpath(circ);
     if (r < 0) {
       log_info(LD_CIRC,"Generating cpath hop failed.");
       return -1;
     }
-    if (r == 1) {
-      /* This circuit doesn't need/shouldn't be forced to have an ntor hop */
-      if (circ->build_state->desired_path_len <= 1 || ! using_ntor)
-        return 0;
+  }
 
-      /* This circuit has an ntor hop. great! */
-      if (circuit_cpath_supports_ntor(circ))
-        return 0;
+  /* The path is complete */
+  tor_assert(r == 1);
 
-      /* No node in the circuit supports ntor.  Have we already tried too many
-       * times? */
-      if (++n_tries >= MAX_POPULATE_ATTEMPTS)
-        break;
+  /* Does every node in this path support ntor? */
+  int path_supports_ntor = circuit_cpath_supports_ntor(circ);
 
-      /* Clear the path and retry */
-      circuit_clear_cpath(circ);
+  /* We would like every path to support ntor, but we have to allow for some
+   * edge cases. */
+  tor_assert(circuit_get_cpath_len(circ));
+  if (circuit_can_use_tap(circ)) {
+    /* Circuits from clients to intro points, and hidden services to
+     * rend points do not support ntor, because the hidden service protocol
+     * does not include ntor onion keys. This is also true for Tor2web clients
+     * and Single Onion Services. */
+    return 0;
+  }
+
+  if (circuit_get_cpath_len(circ) == 1) {
+    /* Allow for bootstrapping: when we're fetching directly from a fallback,
+     * authority, or bridge, we have no way of knowing its ntor onion key
+     * before we connect to it. So instead, we try connecting, and end up using
+     * CREATE_FAST. */
+    tor_assert(circ->cpath);
+    tor_assert(circ->cpath->extend_info);
+    const node_t *node = node_get_by_id(
+                                    circ->cpath->extend_info->identity_digest);
+    /* If we don't know the node and its descriptor, we must be bootstrapping.
+     */
+    if (!node || !node_has_descriptor(node)) {
+      return 0;
     }
   }
-  log_warn(LD_CIRC, "I tried for %d times, but I couldn't build a %d-hop "
-           "circuit with at least one node that supports ntor.",
-           MAX_POPULATE_ATTEMPTS,
-           circ->build_state->desired_path_len);
 
-  return -1;
+  if (BUG(!path_supports_ntor)) {
+    /* If we're building a multi-hop path, and it's not one of the HS or
+     * bootstrapping exceptions, and it doesn't support ntor, something has
+     * gone wrong. */
+    return -1;
+  }
+
+  return 0;
 }
 
 /** Create and return a new origin circuit. Initialize its purpose and
@@ -806,9 +829,7 @@ circuit_pick_create_handshake(uint8_t *cell_type_out,
                               const extend_info_t *ei)
 {
   /* XXXX029 Remove support for deciding to use TAP. */
-  if (!tor_mem_is_zero((const char*)ei->curve25519_onion_key.public_key,
-                       CURVE25519_PUBKEY_LEN) &&
-      circuits_can_use_ntor()) {
+  if (extend_info_supports_ntor(ei) && circuits_can_use_ntor()) {
     *cell_type_out = CELL_CREATE2;
     *handshake_type_out = ONION_HANDSHAKE_TYPE_NTOR;
     return;
@@ -2054,15 +2075,18 @@ count_acceptable_nodes(smartlist_t *nodes)
     if (! node->is_running)
 //      log_debug(LD_CIRC,"Nope, the directory says %d is not running.",i);
       continue;
+    /* XXX This clause makes us count incorrectly: if AllowInvalidRouters
+     * allows this node in some places, then we're getting an inaccurate
+     * count. For now, be conservative and don't count it. But later we
+     * should try to be smarter. */
     if (! node->is_valid)
 //      log_debug(LD_CIRC,"Nope, the directory says %d is not valid.",i);
       continue;
     if (! node_has_descriptor(node))
       continue;
-      /* XXX This clause makes us count incorrectly: if AllowInvalidRouters
-       * allows this node in some places, then we're getting an inaccurate
-       * count. For now, be conservative and don't count it. But later we
-       * should try to be smarter. */
+    /* The node has a descriptor, so we can just check the ntor key directly */
+    if (!node_has_curve25519_onion_key(node))
+      continue;
     ++num;
   } SMARTLIST_FOREACH_END(node);
 
@@ -2351,6 +2375,14 @@ extend_info_from_node(const node_t *node, int for_direct_connect)
     log_warn(LD_CIRC, "Could not choose valid address for %s",
               node->ri ? node->ri->nickname : node->rs->nickname);
 
+  /* Every node we connect or extend to must support ntor */
+  if (!node_has_curve25519_onion_key(node)) {
+    log_fn(LOG_PROTOCOL_WARN, LD_CIRC,
+           "Attempted to create extend_info for a node that does not support "
+           "ntor: %s", node_describe(node));
+    return NULL;
+  }
+
   if (valid_addr && node->ri)
     return extend_info_new(node->ri->nickname,
                              node->identity,
@@ -2436,3 +2468,13 @@ extend_info_addr_is_allowed(const tor_addr_t *addr)
   return 0;
 }
 
+/* Does ei have a valid ntor key? */
+int
+extend_info_supports_ntor(const extend_info_t* ei)
+{
+  tor_assert(ei);
+  /* Valid ntor keys have at least one non-zero byte */
+  return !tor_mem_is_zero(
+                          (const char*)ei->curve25519_onion_key.public_key,
+                          CURVE25519_PUBKEY_LEN);
+}
