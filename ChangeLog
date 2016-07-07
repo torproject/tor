@@ -1,6 +1,69 @@
 Changes in version 0.2.9.1-alpha - 2016-??-??
 
 
+Changes in version 0.2.8.5-rc - 2016-07-07
+  Tor 0.2.8.5-rc is the second release candidate in the Tor 0.2.8
+  series. If we find no new bugs or regressions here, the first stable
+  0.2.8 release will be identical to it. It has a few small bugfixes
+  against previous versions.
+
+  o Directory authority changes:
+    - Urras is no longer a directory authority. Closes ticket 19271.
+
+  o Major bugfixes (heartbeat):
+    - Fix a regression that would crash Tor when the periodic
+      "heartbeat" log messages were disabled. Fixes bug 19454; bugfix on
+      tor-0.2.8.1-alpha. Reported by "kubaku".
+
+  o Minor features (build):
+    - Tor now again builds with the recent OpenSSL 1.1 development
+      branch (tested against 1.1.0-pre6-dev). Closes ticket 19499.
+    - When building manual pages, set the timezone to "UTC", so that the
+      output is reproducible. Fixes bug 19558; bugfix on 0.2.2.9-alpha.
+      Patch from intrigeri.
+
+  o Minor bugfixes (fallback directory selection):
+    - Avoid errors during fallback selection if there are no eligible
+      fallbacks. Fixes bug 19480; bugfix on 0.2.8.3-alpha. Patch
+      by teor.
+
+  o Minor bugfixes (IPv6, microdescriptors):
+    - Don't check node addresses when we only have a routerstatus. This
+      allows IPv6-only clients to bootstrap by fetching microdescriptors
+      from fallback directory mirrors. (The microdescriptor consensus
+      has no IPv6 addresses in it.) Fixes bug 19608; bugfix
+      on 0.2.8.2-alpha.
+
+  o Minor bugfixes (logging):
+    - Reduce pointlessly verbose log messages when directory servers
+      can't be found. Fixes bug 18849; bugfix on 0.2.8.3-alpha and
+      0.2.8.1-alpha. Patch by teor.
+    - When a fallback directory changes its fingerprint from the hard-
+      coded fingerprint, log a less severe, more explanatory log
+      message. Fixes bug 18812; bugfix on 0.2.8.1-alpha. Patch by teor.
+
+  o Minor bugfixes (Linux seccomp2 sandboxing):
+    - Allow statistics to be written to disk when "Sandbox 1" is
+      enabled. Fixes bugs 19556 and 19957; bugfix on 0.2.5.1-alpha and
+      0.2.6.1-alpha respectively.
+
+  o Minor bugfixes (user interface):
+    - Remove a warning message "Service [scrubbed] not found after
+      descriptor upload". This message appears when one uses HSPOST
+      control command to upload a service descriptor. Since there is
+      only a descriptor and no service, showing this message is
+      pointless and confusing. Fixes bug 19464; bugfix on 0.2.7.2-alpha.
+
+  o Fallback directory list:
+    - Add a comment to the generated fallback directory list that
+      explains how to comment out unsuitable fallbacks in a way that's
+      compatible with the stem fallback parser.
+    - Update fallback whitelist and blacklist based on relay operator
+      emails. Blacklist unsuitable (non-working, over-volatile)
+      fallbacks. Resolves ticket 19071. Patch by teor.
+    - Update hard-coded fallback list to remove unsuitable fallbacks.
+      Resolves ticket 19071. Patch by teor.
+
 
 Changes in version 0.2.8.4-rc - 2016-06-15
   Tor 0.2.8.4-rc is the first release candidate in the Tor 0.2.8 series.
