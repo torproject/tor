@@ -2015,7 +2015,7 @@ circuit_max_queued_cell_age(const circuit_t *c, uint32_t now)
 
 /** Return the age in milliseconds of the oldest buffer chunk on <b>conn</b>,
  * where age is taken in milliseconds before the time <b>now</b> (in truncated
- * milliseconds since the epoch).  If the connection has no data, treat
+ * absolute monotonic msec).  If the connection has no data, treat
  * it as having age zero.
  **/
 static uint32_t
@@ -2138,7 +2138,6 @@ circuits_handle_oom(size_t current_allocation)
   size_t mem_recovered=0;
   int n_circuits_killed=0;
   int n_dirconns_killed=0;
-  struct timeval now;
   uint32_t now_ms;
   log_notice(LD_GENERAL, "We're low on memory.  Killing circuits with "
              "over-long queues. (This behavior is controlled by "
@@ -2152,8 +2151,7 @@ circuits_handle_oom(size_t current_allocation)
     mem_to_recover = current_allocation - mem_target;
   }
 
-  tor_gettimeofday_cached_monotonic(&now);
-  now_ms = (uint32_t)tv_to_msec(&now);
+  now_ms = (uint32_t)monotime_coarse_absolute_msec();
 
   circlist = circuit_get_global_list();
   SMARTLIST_FOREACH_BEGIN(circlist, circuit_t *, circ) {
