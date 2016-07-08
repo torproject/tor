@@ -1613,7 +1613,8 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
   return best;
 }
 
-/** Return the number of hops in circuit's path. */
+/** Return the number of hops in circuit's path. If circ has no entries,
+ * or is NULL, returns 0. */
 int
 circuit_get_cpath_len(origin_circuit_t *circ)
 {
@@ -1629,7 +1630,8 @@ circuit_get_cpath_len(origin_circuit_t *circ)
 }
 
 /** Return the <b>hopnum</b>th hop in <b>circ</b>->cpath, or NULL if there
- * aren't that many hops in the list. */
+ * aren't that many hops in the list. <b>hopnum</b> starts at 1.
+ * Returns NULL if <b>hopnum</b> is 0 or negative. */
 crypt_path_t *
 circuit_get_cpath_hop(origin_circuit_t *circ, int hopnum)
 {
