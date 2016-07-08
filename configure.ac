@@ -481,7 +481,7 @@ TOR_SEARCH_LIBRARY(libevent, $trylibeventdir, [-levent $STATIC_LIBEVENT_FLAGS $T
 #endif
 #include <sys/time.h>
 #include <sys/types.h>
-#include <event.h>], [
+#include <event2/event.h>], [
 #ifdef _WIN32
 #include <winsock2.h>
 #endif
@@ -500,20 +500,9 @@ save_CPPFLAGS="$CPPFLAGS"
 LIBS="-levent $STATIC_LIBEVENT_FLAGS $TOR_LIB_WS32 $LIBS"
 LDFLAGS="$TOR_LDFLAGS_libevent $LDFLAGS"
 CPPFLAGS="$TOR_CPPFLAGS_libevent $CPPFLAGS"
-AC_CHECK_FUNCS([event_get_version_number \
-                evutil_secure_rng_set_urandom_device_file \
-                evutil_secure_rng_init \
-               ])
-AC_CHECK_MEMBERS([struct event.min_heap_idx], , ,
-[#include <event.h>
-])
-
-AC_CHECK_HEADERS(event2/event.h event2/dns.h event2/bufferevent_ssl.h)
+AC_CHECK_FUNCS([evutil_secure_rng_set_urandom_device_file])
 
 LIBS="$STATIC_LIBEVENT_FLAGS $TOR_LIB_WS32 $save_LIBS"
-
-AM_CONDITIONAL(USE_EXTERNAL_EVDNS,
-  test "x$ac_cv_header_event2_dns_h" = "xyes")
 
 if test "$enable_static_libevent" = "yes"; then
    if test "$tor_cv_library_libevent_dir" = "(system)"; then
@@ -541,32 +530,34 @@ LIBS="$save_LIBS"
 LDFLAGS="$save_LDFLAGS"
 CPPFLAGS="$save_CPPFLAGS"
 
-dnl This isn't the best test for Libevent 2.0.3-alpha.  Once it's released,
-dnl we can do much better.
-if test "$enable_bufferevents" = "yes"; then
-  if test "$ac_cv_header_event2_bufferevent_ssl_h" != "yes"; then
-    AC_MSG_ERROR([You've asked for bufferevent support, but you're using a version of Libevent without SSL support.  This won't work.  We need Libevent 2.0.8-rc or later, and you don't seem to even have Libevent 2.0.3-alpha.])
-  else
-
-    CPPFLAGS="$CPPFLAGS $TOR_CPPFLAGS_libevent"
-
-    # Check for the right version.  First see if version detection works.
-    AC_MSG_CHECKING([whether we can detect the Libevent version])
-    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+dnl Check that libevent is at least at version 2.0.10, the first stable
+dnl release of its series
+CPPFLAGS="$CPPFLAGS $TOR_CPPFLAGS_libevent"
+AC_MSG_CHECKING([whether Libevent is new enough])
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([
 #include <event2/event.h>
-#if !defined(LIBEVENT_VERSION_NUMBER) || LIBEVENT_VERSION_NUMBER < 10
+#if !defined(LIBEVENT_VERSION_NUMBER) || LIBEVENT_VERSION_NUMBER < 0x02000a00
 #error
 int x = y(zz);
 #else
 int x = 1;
 #endif
-  ])], [event_version_number_works=yes; AC_MSG_RESULT([yes]) ],
-     [event_version_number_works=no;  AC_MSG_RESULT([no])])
-    if test "$event_version_number_works" != "yes"; then
-      AC_MSG_WARN([Version detection on Libevent seems broken.  Your Libevent installation is probably screwed up or very old.])
-    else
-      AC_MSG_CHECKING([whether Libevent is new enough for bufferevents])
-      AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+])], [ AC_MSG_RESULT([yes]) ],
+   [ AC_MSG_RESULT([no])
+     AC_MSG_ERROR([Libevent is not new enough.  We require 2.0.10-stable or later]) ] )
+
+LIBS="$save_LIBS"
+LDFLAGS="$save_LDFLAGS"
+CPPFLAGS="$save_CPPFLAGS"
+
+dnl bufferents require version 2.0.13
+if test "$enable_bufferevents" = "yes"; then
+   AC_CHECK_HEADERS(event2/bufferevent_ssl.h)
+
+   CPPFLAGS="$CPPFLAGS $TOR_CPPFLAGS_libevent"
+
+   AC_MSG_CHECKING([whether Libevent is new enough for bufferevents])
+   AC_COMPILE_IFELSE([AC_LANG_SOURCE([
 #include <event2/event.h>
 #if !defined(LIBEVENT_VERSION_NUMBER) || LIBEVENT_VERSION_NUMBER < 0x02000d00
 #error
@@ -577,8 +568,6 @@ int x = 1;
    ])], [ AC_MSG_RESULT([yes]) ],
       [ AC_MSG_RESULT([no])
         AC_MSG_ERROR([Libevent does not seem new enough to support bufferevents.  We require 2.0.13-stable or later]) ] )
-    fi
-  fi
 fi
 
 LIBS="$save_LIBS"

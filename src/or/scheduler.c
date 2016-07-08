@@ -15,11 +15,7 @@
 #define SCHEDULER_PRIVATE_
 #include "scheduler.h"
 
-#ifdef HAVE_EVENT2_EVENT_H
 #include <event2/event.h>
-#else
-#include <event.h>
-#endif
 
 /*
  * Scheduler high/low watermarks

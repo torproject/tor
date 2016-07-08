@@ -17,15 +17,6 @@
 /* Define to 1 if you have the <errno.h> header file. */
 #define HAVE_ERRNO_H
 
-/* Define to 1 if you have the `event_get_method' function. */
-#define HAVE_EVENT_GET_METHOD 1
-
-/* Define to 1 if you have the `event_get_version' function. */
-#define HAVE_EVENT_GET_VERSION 1
-
-/* Define to 1 if you have the `event_set_log_callback' function. */
-#define HAVE_EVENT_SET_LOG_CALLBACK 1
-
 /* Define to 1 if you have the <fcntl.h> header file. */
 #define HAVE_FCNTL_H
 
@@ -223,8 +214,6 @@
 /* Define to 1 iff unaligned int access is allowed */
 #define UNALIGNED_INT_ACCESS_OK
 
-#define HAVE_EVENT_H
-
 /* Define to 1 iff we represent negative integers with two's complement */
 #define USING_TWOS_COMPLEMENT
 
@@ -237,10 +226,7 @@
 #define HAVE_STRUCT_IN6_ADDR
 #define RSHIFT_DOES_SIGN_EXTEND
 #define FLEXIBLE_ARRAY_MEMBER 0
-#define HAVE_EVENT2_EVENT_H
 #define SHARE_DATADIR ""
-#define HAVE_EVENT2_DNS_H
-#define HAVE_EVENT_BASE_LOOPEXIT
 #define USE_CURVE25519_DONNA
 
 #define ENUM_VALS_ARE_SIGNED 1

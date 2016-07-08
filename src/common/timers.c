@@ -38,11 +38,7 @@
 #include "torlog.h"
 #include "util.h"
 
-#ifdef HAVE_EVENT2_EVENT_H
 #include <event2/event.h>
-#else
-#include <event.h>
-#endif
 
 struct timeout_cb {
   timer_cb_fn_t cb;

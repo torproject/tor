@@ -27,61 +27,8 @@
 #include "router.h"
 #include "ht.h"
 #include "sandbox.h"
-#ifdef HAVE_EVENT2_DNS_H
 #include <event2/event.h>
 #include <event2/dns.h>
-#else
-#include <event.h>
-#include "eventdns.h"
-#ifndef HAVE_EVDNS_SET_DEFAULT_OUTGOING_BIND_ADDRESS
-#define HAVE_EVDNS_SET_DEFAULT_OUTGOING_BIND_ADDRESS
-#endif
-#endif
-
-#ifndef HAVE_EVENT2_DNS_H
-struct evdns_base;
-struct evdns_request;
-#define evdns_base_new(x,y) tor_malloc(1)
-#define evdns_base_clear_nameservers_and_suspend(base) \
-  evdns_clear_nameservers_and_suspend()
-#define evdns_base_search_clear(base) evdns_search_clear()
-#define evdns_base_set_default_outgoing_bind_address(base, a, len)  \
-  evdns_set_default_outgoing_bind_address((a),(len))
-#define evdns_base_resolv_conf_parse(base, options, fname) \
-  evdns_resolv_conf_parse((options), (fname))
-#define evdns_base_count_nameservers(base)      \
-  evdns_count_nameservers()
-#define evdns_base_resume(base)                 \
-  evdns_resume()
-#define evdns_base_config_windows_nameservers(base)     \
-  evdns_config_windows_nameservers()
-#define evdns_base_set_option_(base, opt, val) \
-  evdns_set_option((opt),(val),DNS_OPTIONS_ALL)
-/* Note: our internal eventdns.c, plus Libevent 1.4, used a 1 return to
- * signify failure to launch a resolve. Libevent 2.0 uses a -1 return to
- * signify a failure on a resolve, though if we're on Libevent 2.0, we should
- * have event2/dns.h and never hit these macros.  Regardless, 0 is success. */
-#define evdns_base_resolve_ipv4(base, addr, options, cb, ptr) \
-  ((evdns_resolve_ipv4((addr), (options), (cb), (ptr))!=0)    \
-   ? NULL : ((void*)1))
-#define evdns_base_resolve_ipv6(base, addr, options, cb, ptr) \
-  ((evdns_resolve_ipv6((addr), (options), (cb), (ptr))!=0)    \
-   ? NULL : ((void*)1))
-#define evdns_base_resolve_reverse(base, addr, options, cb, ptr)        \
-  ((evdns_resolve_reverse((addr), (options), (cb), (ptr))!=0)           \
-   ? NULL : ((void*)1))
-#define evdns_base_resolve_reverse_ipv6(base, addr, options, cb, ptr)   \
-  ((evdns_resolve_reverse_ipv6((addr), (options), (cb), (ptr))!=0)      \
-   ? NULL : ((void*)1))
-
-#elif defined(LIBEVENT_VERSION_NUMBER) && LIBEVENT_VERSION_NUMBER < 0x02000303
-#define evdns_base_set_option_(base, opt, val) \
-  evdns_base_set_option((base), (opt),(val),DNS_OPTIONS_ALL)
-
-#else
-#define evdns_base_set_option_ evdns_base_set_option
-
-#endif
 
 /** How long will we wait for an answer from the resolver before we decide
  * that the resolver is wedged? */
@@ -1373,23 +1320,6 @@ configure_nameservers(int force)
     }
   }
 
-#ifdef HAVE_EVDNS_SET_DEFAULT_OUTGOING_BIND_ADDRESS
-  if (! tor_addr_is_null(&options->OutboundBindAddressIPv4_)) {
-    int socklen;
-    struct sockaddr_storage ss;
-    socklen = tor_addr_to_sockaddr(&options->OutboundBindAddressIPv4_, 0,
-                                   (struct sockaddr *)&ss, sizeof(ss));
-    if (socklen <= 0) {
-      log_warn(LD_BUG, "Couldn't convert outbound bind address to sockaddr."
-               " Ignoring.");
-    } else {
-      evdns_base_set_default_outgoing_bind_address(the_evdns_base,
-                                                   (struct sockaddr *)&ss,
-                                                   socklen);
-    }
-  }
-#endif
-
   evdns_set_log_fn(evdns_log_cb);
   if (conf_fname) {
     log_debug(LD_FS, "stat()ing %s", conf_fname);
@@ -1454,7 +1384,7 @@ configure_nameservers(int force)
   }
 #endif
 
-#define SET(k,v)  evdns_base_set_option_(the_evdns_base, (k), (v))
+#define SET(k,v)  evdns_base_set_option(the_evdns_base, (k), (v))
 
   if (evdns_base_count_nameservers(the_evdns_base) == 1) {
     SET("max-timeouts:", "16");

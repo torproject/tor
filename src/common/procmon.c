@@ -10,11 +10,7 @@
 
 #include "util.h"
 
-#ifdef HAVE_EVENT2_EVENT_H
 #include <event2/event.h>
-#else
-#include <event.h>
-#endif
 
 #ifdef HAVE_SIGNAL_H
 #include <signal.h>
@@ -164,18 +160,10 @@ tor_validate_process_specifier(const char *process_spec,
 }
 
 /* XXXX we should use periodic_timer_new() for this stuff */
-#ifdef HAVE_EVENT2_EVENT_H
 #define PERIODIC_TIMER_FLAGS EV_PERSIST
-#else
-#define PERIODIC_TIMER_FLAGS (0)
-#endif
 
 /* DOCDOC poll_interval_tv */
-static struct timeval poll_interval_tv = {15, 0};
-/* Note: If you port this file to plain Libevent 2, you can make
- * poll_interval_tv const.  It has to be non-const here because in
- * libevent 1.x, event_add expects a pointer to a non-const struct
- * timeval. */
+static const struct timeval poll_interval_tv = {15, 0};
 
 /** Create a process-termination monitor for the process specifier
  * given in <b>process_spec</b>.  Return a newly allocated
@@ -331,10 +319,6 @@ tor_process_monitor_poll_cb(evutil_socket_t unused1, short unused2,
 
   if (its_dead_jim) {
     procmon->cb(procmon->cb_arg);
-#ifndef HAVE_EVENT2_EVENT_H
-  } else {
-    evtimer_add(procmon->e, &poll_interval_tv);
-#endif
   }
 }
 #endif

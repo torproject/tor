@@ -11,13 +11,6 @@ strlcpy.c
     for strcat and strcpy.  These are nonstandard, and some libc
     implementations refuse to add them for religious reasons.
 
-eventdns.[ch]
-
-    A fork of Libevent's DNS implementation, used by Tor when Libevent
-    2.0 or later is not available.  Once Libevent 2.0 is required, we
-    should throw this away; it has diverged from evdns.[ch], and is
-    no longer easily mergeable.
-
 ht.h
 
     An implementation of a hash table in the style of Niels Provos's

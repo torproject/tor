@@ -51,11 +51,7 @@
 #include <sys/resource.h>
 #endif
 
-#ifdef HAVE_EVENT2_EVENT_H
 #include <event2/event.h>
-#else
-#include <event.h>
-#endif
 
 #include "crypto_s2k.h"
 #include "procmon.h"

@@ -33,8 +33,6 @@
 # files that we've snarfed in from somebody else, whose C we do no intend
 # to document for them.
 SKIP_FILES = [ "OpenBSD_malloc_Linux.c",
-               "eventdns.c",
-               "eventdns.h",
                "strlcat.c",
                "strlcpy.c",
                "sha256.c",
