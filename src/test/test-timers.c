@@ -28,15 +28,26 @@ static tor_timer_t *timers[N_TIMERS] = {NULL};
 static int n_active_timers = 0;
 static int n_fired = 0;
 
+static monotime_t started_at;
+static int64_t delay_usec[N_TIMERS];
+static int64_t diffs_mono_usec[N_TIMERS];
+
 static void
-timer_cb(tor_timer_t *t, void *arg, const struct timeval *now)
+timer_cb(tor_timer_t *t, void *arg, const monotime_t *now_mono)
 {
+  struct timeval now;
+
+  tor_gettimeofday(&now);
   tor_timer_t **t_ptr = arg;
   tor_assert(*t_ptr == t);
   int idx = (int) (t_ptr - timers);
   ++fired[idx];
-  timersub(now, &fire_at[idx], &difference[idx]);
+  timersub(&now, &fire_at[idx], &difference[idx]);
+  diffs_mono_usec[idx] =
+    monotime_diff_usec(&started_at, now_mono) -
+    delay_usec[idx];
   ++n_fired;
+
   // printf("%d / %d\n",n_fired, N_TIMERS);
   if (n_fired == n_active_timers) {
     event_base_loopbreak(tor_libevent_get_base());
@@ -57,10 +68,12 @@ main(int argc, char **argv)
   int ret;
   struct timeval now;
   tor_gettimeofday(&now);
+  monotime_get(&started_at);
   for (i = 0; i < N_TIMERS; ++i) {
     struct timeval delay;
     delay.tv_sec = crypto_rand_int_range(0,MAX_DURATION);
     delay.tv_usec = crypto_rand_int_range(0,1000000);
+    delay_usec[i] = delay.tv_sec * 1000000 + delay.tv_usec;
     timeradd(&now, &delay, &fire_at[i]);
     timers[i] = timer_new(timer_cb, &timers[i]);
     timer_schedule(timers[i], &delay);
@@ -88,7 +101,8 @@ main(int argc, char **argv)
       continue;
     }
     tor_assert(fired[i] == 1);
-    int64_t diff = difference[i].tv_usec + difference[i].tv_sec * 1000000;
+    //int64_t diff = difference[i].tv_usec + difference[i].tv_sec * 1000000;
+    int64_t diff = diffs_mono_usec[i];
     total_difference += diff;
     total_square_difference += diff*diff;
   }

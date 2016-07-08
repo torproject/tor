@@ -19,9 +19,6 @@
 
 /* Notes:
  *
- * The use of tor_gettimeofday_cached_monotonic() is kind of ugly.  It would
- * be neat to fix it.
- *
  * Having a way to free all timers on shutdown would free people from the
  * need to track them.  Not sure if that's clever though.
  *
@@ -72,6 +69,8 @@ struct timeout_cb {
 static struct timeouts *global_timeouts = NULL;
 static struct event *global_timer_event = NULL;
 
+static monotime_t start_of_time;
+
 /** We need to choose this value carefully.  Because we're using timer wheels,
  * it actually costs us to have extra resolution we don't use.  So for now,
  * I'm going to define our resolution as .1 msec, and hope that's good enough.
@@ -95,9 +94,8 @@ static struct event *global_timer_event = NULL;
 /**
  * Convert the timeval in <b>tv</b> to a timeout_t, and return it.
  *
- * The output resolution is set by USEC_PER_TICK, and the time corresponding
- * to 0 is the same as the time corresponding to 0 from
- * tor_gettimeofday_cached_monotonic().
+ * The output resolution is set by USEC_PER_TICK. Only use this to convert
+ * delays to number of ticks; the time represented by 0 is undefined.
  */
 static timeout_t
 tv_to_timeout(const struct timeval *tv)
@@ -108,7 +106,8 @@ tv_to_timeout(const struct timeval *tv)
 }
 
 /**
- * Convert the timeout in <b>t</b> to a timeval in <b>tv_out</b>
+ * Convert the timeout in <b>t</b> to a timeval in <b>tv_out</b>. Only
+ * use this for delays, not absolute times.
  */
 static void
 timeout_to_tv(timeout_t t, struct timeval *tv_out)
@@ -122,12 +121,10 @@ timeout_to_tv(timeout_t t, struct timeval *tv_out)
  * Update the timer <b>tv</b> to the current time in <b>tv</b>.
  */
 static void
-timer_advance_to_cur_time(const struct timeval *tv)
+timer_advance_to_cur_time(const monotime_t *now)
 {
-  timeout_t cur_tick = tv_to_timeout(tv);
-  if (BUG(cur_tick < timeouts_get_curtime(global_timeouts))) {
-    cur_tick = timeouts_get_curtime(global_timeouts); // LCOV_EXCL_LINE
-  }
+  timeout_t cur_tick = CEIL_DIV(monotime_diff_usec(&start_of_time, now),
+                                USEC_PER_TICK);
   timeouts_update(global_timeouts, cur_tick);
 }
 
@@ -138,11 +135,12 @@ timer_advance_to_cur_time(const struct timeval *tv)
 static void
 libevent_timer_reschedule(void)
 {
-  struct timeval now;
-  tor_gettimeofday_cached_monotonic(&now);
+  monotime_t now;
+  monotime_get(&now);
   timer_advance_to_cur_time(&now);
 
   timeout_t delay = timeouts_timeout(global_timeouts);
+
   struct timeval d;
   if (delay > MIN_CHECK_TICKS)
     delay = MIN_CHECK_TICKS;
@@ -161,9 +159,8 @@ libevent_timer_callback(evutil_socket_t fd, short what, void *arg)
   (void)what;
   (void)arg;
 
-  struct timeval now;
-  tor_gettimeofday_cache_clear();
-  tor_gettimeofday_cached_monotonic(&now);
+  monotime_t now;
+  monotime_get(&now);
   timer_advance_to_cur_time(&now);
 
   tor_timer_t *t;
@@ -171,7 +168,6 @@ libevent_timer_callback(evutil_socket_t fd, short what, void *arg)
     t->callback.cb(t, t->callback.arg, &now);
   }
 
-  tor_gettimeofday_cache_clear();
   libevent_timer_reschedule();
 }
 
@@ -193,6 +189,9 @@ timers_initialize(void)
     tor_assert(0);
     // LCOV_EXCL_STOP
   }
+
+  monotime_init();
+  monotime_get(&start_of_time);
 
   struct event *timer_event;
   timer_event = tor_event_new(tor_libevent_get_base(),
@@ -256,24 +255,25 @@ timer_set_cb(tor_timer_t *t, timer_cb_fn_t cb, void *arg)
 }
 
 /**
- * Schedule the timer t to fire at the current time plus a delay of <b>tv</b>.
- * All times are relative to tor_gettimeofday_cached_monotonic.
+ * Schedule the timer t to fire at the current time plus a delay of
+ * <b>delay</b> microseconds.  All times are relative to monotime_get().
  */
 void
 timer_schedule(tor_timer_t *t, const struct timeval *tv)
 {
-  const timeout_t when = tv_to_timeout(tv);
-  struct timeval now;
-  tor_gettimeofday_cached_monotonic(&now);
+  const timeout_t delay = tv_to_timeout(tv);
+
+  monotime_t now;
+  monotime_get(&now);
   timer_advance_to_cur_time(&now);
 
   /* Take the old timeout value. */
   timeout_t to = timeouts_timeout(global_timeouts);
 
-  timeouts_add(global_timeouts, t, when);
+  timeouts_add(global_timeouts, t, delay);
 
   /* Should we update the libevent timer? */
-  if (to <= when) {
+  if (to <= delay) {
     return; /* we're already going to fire before this timer would trigger. */
   }
   libevent_timer_reschedule();
