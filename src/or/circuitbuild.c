@@ -58,7 +58,6 @@ static crypt_path_t *onion_next_hop_in_cpath(crypt_path_t *cpath);
 static int onion_extend_cpath(origin_circuit_t *circ);
 static int count_acceptable_nodes(smartlist_t *routers);
 static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
-static int circuits_can_use_ntor(void);
 
 /** This function tries to get a channel to the specified endpoint,
  * and then calls command_setup_channel() to give it the right
@@ -780,10 +779,13 @@ should_use_create_fast_for_circuit(origin_circuit_t *circ)
   tor_assert(circ->cpath);
   tor_assert(circ->cpath->extend_info);
 
-  if (!circ->cpath->extend_info->onion_key)
-    return 1; /* our hand is forced: only a create_fast will work. */
+  if (!circuit_has_usable_onion_key(circ)) {
+    /* We don't have ntor, and we don't have or can't use TAP,
+     * so our hand is forced: only a create_fast will work. */
+    return 1;
+  }
   if (public_server_mode(options)) {
-    /* We're a server, and we know an onion key. We can choose.
+    /* We're a server, and we have a usable onion key. We can choose.
      * Prefer to blend our circuit into the other circuits we are
      * creating on behalf of others. */
     return 0;
@@ -808,28 +810,20 @@ circuit_timeout_want_to_count_circ(origin_circuit_t *circ)
           && circ->build_state->desired_path_len == DEFAULT_ROUTE_LEN;
 }
 
-/** Return true if the ntor handshake is enabled in the configuration, or if
- * it's been set to "auto" in the configuration and it's enabled in the
- * consensus. */
-static int
-circuits_can_use_ntor(void)
-{
-  const or_options_t *options = get_options();
-  if (options->UseNTorHandshake != -1)
-    return options->UseNTorHandshake;
-  return networkstatus_get_param(NULL, "UseNTorHandshake", 0, 0, 1);
-}
-
 /** Decide whether to use a TAP or ntor handshake for connecting to <b>ei</b>
  * directly, and set *<b>cell_type_out</b> and *<b>handshake_type_out</b>
- * accordingly. */
+ * accordingly.
+ * Note that TAP handshakes are only used for direct connections:
+ *  - from Tor2web to intro points not in the client's consensus, and
+ *  - from Single Onions to rend points not in the service's consensus.
+ * This is checked in onion_populate_cpath. */
 static void
 circuit_pick_create_handshake(uint8_t *cell_type_out,
                               uint16_t *handshake_type_out,
                               const extend_info_t *ei)
 {
-  /* XXXX029 Remove support for deciding to use TAP. */
-  if (extend_info_supports_ntor(ei) && circuits_can_use_ntor()) {
+  /* XXXX030 Remove support for deciding to use TAP. */
+  if (extend_info_supports_ntor(ei)) {
     *cell_type_out = CELL_CREATE2;
     *handshake_type_out = ONION_HANDSHAKE_TYPE_NTOR;
     return;
@@ -841,9 +835,13 @@ circuit_pick_create_handshake(uint8_t *cell_type_out,
 
 /** Decide whether to use a TAP or ntor handshake for connecting to <b>ei</b>
  * directly, and set *<b>handshake_type_out</b> accordingly. Decide whether,
- * in extending through <b>node_prev</b> to do so, we should use an EXTEND2 or
- * an EXTEND cell to do so, and set *<b>cell_type_out</b> and
- * *<b>create_cell_type_out</b> accordingly. */
+ * in extending through <b>node</b> to do so, we should use an EXTEND2 or an
+ * EXTEND cell to do so, and set *<b>cell_type_out</b> and
+ * *<b>create_cell_type_out</b> accordingly.
+ * Note that TAP handshakes are only used for extend handshakes:
+ *  - from clients to intro points, and
+ *  - from hidden services to rend points.
+ * This is checked in onion_populate_cpath. */
 static void
 circuit_pick_extend_handshake(uint8_t *cell_type_out,
                               uint8_t *create_cell_type_out,
@@ -854,18 +852,27 @@ circuit_pick_extend_handshake(uint8_t *cell_type_out,
   uint8_t t;
   circuit_pick_create_handshake(&t, handshake_type_out, ei);
 
-  /* XXXX029 Remove support for deciding to use TAP. */
+  /* XXXX030 Remove support for deciding to use TAP. */
+
+  /* It is an error to extend if there is no previous node. */
+  tor_assert_nonfatal(node_prev);
+  /* It is an error for a node with a known version to be so old it does not
+   * support ntor. */
+  tor_assert_nonfatal(routerstatus_version_supports_ntor(node_prev->rs, 1));
+
+  /* Assume relays without tor versions or routerstatuses support ntor.
+   * The authorities enforce ntor support, and assuming and failing is better
+   * than allowing a malicious node to perform a protocol downgrade to TAP. */
   if (node_prev &&
       *handshake_type_out != ONION_HANDSHAKE_TYPE_TAP &&
       (node_has_curve25519_onion_key(node_prev) ||
-       (node_prev->rs &&
-        routerstatus_version_supports_ntor(node_prev->rs, 0)))) {
-    *cell_type_out = RELAY_COMMAND_EXTEND2;
-    *create_cell_type_out = CELL_CREATE2;
-  } else {
-    *cell_type_out = RELAY_COMMAND_EXTEND;
-    *create_cell_type_out = CELL_CREATE;
-  }
+       (routerstatus_version_supports_ntor(node_prev->rs, 1)))) {
+        *cell_type_out = RELAY_COMMAND_EXTEND2;
+        *create_cell_type_out = CELL_CREATE2;
+      } else {
+        *cell_type_out = RELAY_COMMAND_EXTEND;
+        *create_cell_type_out = CELL_CREATE;
+      }
 }
 
 /** This is the backbone function for building circuits.
@@ -2468,6 +2475,15 @@ extend_info_addr_is_allowed(const tor_addr_t *addr)
   return 0;
 }
 
+/* Does ei have a valid TAP key? */
+int
+extend_info_supports_tap(const extend_info_t* ei)
+{
+  tor_assert(ei);
+  /* Valid TAP keys are not NULL */
+  return ei->onion_key != NULL;
+}
+
 /* Does ei have a valid ntor key? */
 int
 extend_info_supports_ntor(const extend_info_t* ei)
@@ -2477,4 +2493,47 @@ extend_info_supports_ntor(const extend_info_t* ei)
   return !tor_mem_is_zero(
                           (const char*)ei->curve25519_onion_key.public_key,
                           CURVE25519_PUBKEY_LEN);
+}
+
+/* Is circuit purpose allowed to use the deprecated TAP encryption protocol?
+ * The hidden service protocol still uses TAP for some connections, because
+ * ntor onion keys aren't included in HS descriptors or INTRODUCE cells. */
+static int
+circuit_purpose_can_use_tap_impl(uint8_t purpose)
+{
+  return (purpose == CIRCUIT_PURPOSE_S_CONNECT_REND ||
+          purpose == CIRCUIT_PURPOSE_C_INTRODUCING);
+}
+
+/* Is circ allowed to use the deprecated TAP encryption protocol?
+ * The hidden service protocol still uses TAP for some connections, because
+ * ntor onion keys aren't included in HS descriptors or INTRODUCE cells. */
+int
+circuit_can_use_tap(const origin_circuit_t *circ)
+{
+  tor_assert(circ);
+  tor_assert(circ->cpath);
+  tor_assert(circ->cpath->extend_info);
+  return (circuit_purpose_can_use_tap_impl(circ->base_.purpose) &&
+          extend_info_supports_tap(circ->cpath->extend_info));
+}
+
+/* Does circ have an onion key which it's allowed to use? */
+int
+circuit_has_usable_onion_key(const origin_circuit_t *circ)
+{
+  tor_assert(circ);
+  tor_assert(circ->cpath);
+  tor_assert(circ->cpath->extend_info);
+  return (extend_info_supports_ntor(circ->cpath->extend_info) ||
+          circuit_can_use_tap(circ));
+}
+
+/* Does ei have an onion key which it would prefer to use?
+ * Currently, we prefer ntor keys*/
+int
+extend_info_has_preferred_onion_key(const extend_info_t* ei)
+{
+  tor_assert(ei);
+  return extend_info_supports_ntor(ei);
 }

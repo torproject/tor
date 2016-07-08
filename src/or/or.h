@@ -4456,9 +4456,6 @@ typedef struct {
 
   char *TLSECGroup; /**< One of "P256", "P224", or nil for auto */
 
-  /** Autobool: should we use the ntor handshake if we can? */
-  int UseNTorHandshake;
-
   /** Fraction: */
   double PathsNeededToBuildCircuits;
 
