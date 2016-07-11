@@ -6739,14 +6739,17 @@ parse_port_config(smartlist_t *out,
 }
 
 /** Return the number of ports which are actually going to listen with type
- * <b>listenertype</b>.  Do not count no_listen ports.  Do not count unix
- * sockets. */
+ * <b>listenertype</b>.  Do not count no_listen ports.  Only count unix
+ * sockets if count_sockets is true. */
 static int
-count_real_listeners(const smartlist_t *ports, int listenertype)
+count_real_listeners(const smartlist_t *ports, int listenertype,
+                     int count_sockets)
 {
   int n = 0;
   SMARTLIST_FOREACH_BEGIN(ports, port_cfg_t *, port) {
-    if (port->server_cfg.no_listen || port->is_unix_addr)
+    if (port->server_cfg.no_listen)
+      continue;
+    if (!count_sockets && port->is_unix_addr)
       continue;
     if (port->type != listenertype)
       continue;
@@ -6755,9 +6758,8 @@ count_real_listeners(const smartlist_t *ports, int listenertype)
   return n;
 }
 
-/** Parse all client port types (Socks, DNS, Trans, NATD) from
- * <b>options</b>. On success, set *<b>n_ports_out</b> to the number
- * of ports that are listed, update the *Port_set values in
+/** Parse all ports from <b>options</b>. On success, set *<b>n_ports_out</b>
+ * to the number of ports that are listed, update the *Port_set values in
  * <b>options</b>, and return 0.  On failure, set *<b>msg</b> to a
  * description of the problem and return -1.
  *
@@ -6883,21 +6885,22 @@ parse_ports(or_options_t *options, int validate_only,
   /* Update the *Port_set options.  The !! here is to force a boolean out of
      an integer. */
   options->ORPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_OR_LISTENER);
+    !! count_real_listeners(ports, CONN_TYPE_OR_LISTENER, 0);
   options->SocksPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_AP_LISTENER);
+    !! count_real_listeners(ports, CONN_TYPE_AP_LISTENER, 1);
   options->TransPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_AP_TRANS_LISTENER);
+    !! count_real_listeners(ports, CONN_TYPE_AP_TRANS_LISTENER, 1);
   options->NATDPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_AP_NATD_LISTENER);
+    !! count_real_listeners(ports, CONN_TYPE_AP_NATD_LISTENER, 1);
+  /* Use options->ControlSocket to test if a control socket is set */
   options->ControlPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_CONTROL_LISTENER);
+    !! count_real_listeners(ports, CONN_TYPE_CONTROL_LISTENER, 0);
   options->DirPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_DIR_LISTENER);
+    !! count_real_listeners(ports, CONN_TYPE_DIR_LISTENER, 0);
   options->DNSPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_AP_DNS_LISTENER);
+    !! count_real_listeners(ports, CONN_TYPE_AP_DNS_LISTENER, 1);
   options->ExtORPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_EXT_OR_LISTENER);
+    !! count_real_listeners(ports, CONN_TYPE_EXT_OR_LISTENER, 0);
 
   if (world_writable_control_socket) {
     SMARTLIST_FOREACH(ports, port_cfg_t *, p,

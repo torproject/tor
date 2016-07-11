@@ -3604,9 +3604,13 @@ typedef struct {
 
   /** @name port booleans
    *
-   * Derived booleans: True iff there is a non-listener port on an AF_INET or
-   * AF_INET6 address of the given type configured in one of the _lines
-   * options above.
+   * Derived booleans: For server ports and ControlPort, true iff there is a
+   * non-listener port on an AF_INET or AF_INET6 address of the given type
+   * configured in one of the _lines options above.
+   * For client ports, also true if there is a unix socket configured.
+   * If you are checking for client ports, you may want to use:
+   *   SocksPort_set || TransPort_set || NATDPort_set || DNSPort_set
+   * rather than SocksPort_set.
    *
    * @{
    */
