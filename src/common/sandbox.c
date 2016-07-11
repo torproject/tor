@@ -585,7 +585,7 @@ static int
 sb_socket(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 {
   int rc = 0;
-  int i;
+  int i, j;
   (void) filter;
 
 #ifdef __i386__
@@ -602,20 +602,20 @@ sb_socket(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 
   for (i = 0; i < 2; ++i) {
     const int pf = i ? PF_INET : PF_INET6;
-
-    rc = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket),
-      SCMP_CMP(0, SCMP_CMP_EQ, pf),
-      SCMP_CMP_MASKED(1, SOCK_CLOEXEC|SOCK_NONBLOCK, SOCK_STREAM),
-      SCMP_CMP(2, SCMP_CMP_EQ, IPPROTO_TCP));
-    if (rc)
-      return rc;
-
-    rc = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket),
-      SCMP_CMP(0, SCMP_CMP_EQ, pf),
-      SCMP_CMP_MASKED(1, SOCK_CLOEXEC|SOCK_NONBLOCK, SOCK_DGRAM),
-      SCMP_CMP(2, SCMP_CMP_EQ, IPPROTO_IP));
-    if (rc)
-      return rc;
+    for (j=0; j < 3; ++j) {
+      const int type     = (j == 0) ? SOCK_STREAM :
+                           (j == 1) ? SOCK_DGRAM :
+                                      SOCK_DGRAM;
+      const int protocol = (j == 0) ? IPPROTO_TCP :
+                           (j == 1) ? IPPROTO_IP :
+                                      IPPROTO_UDP;
+      rc = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket),
+        SCMP_CMP(0, SCMP_CMP_EQ, pf),
+        SCMP_CMP_MASKED(1, SOCK_CLOEXEC|SOCK_NONBLOCK, type),
+        SCMP_CMP(2, SCMP_CMP_EQ, protocol));
+      if (rc)
+        return rc;
+    }
   }
 
   rc = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(socket),

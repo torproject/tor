@@ -1,0 +1,8 @@
+  o Minor bugfixes (sandboxing):
+    - If we did not find a non-private IPaddress by iterating over
+      interfaces, we would try to get one via
+      get_interface_address6_via_udp_socket_hack().  This opens a
+      datagram socket with IPPROTO_UDP.  Previously all our datagram
+      sockets (via libevent) used IPPROTO_IP, so we did not have that
+      in the sandboxing whitelist.  Add (SOCK_DGRAM, IPPROTO_UDP)
+      sockets to the sandboxing whitelist.  Fixes bug 19660.
