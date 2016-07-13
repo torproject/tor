@@ -70,7 +70,6 @@ void tor_gettimeofday_cache_clear(void);
 #ifdef TOR_UNIT_TESTS
 void tor_gettimeofday_cache_set(const struct timeval *tv);
 #endif
-void tor_gettimeofday_cached_monotonic(struct timeval *tv);
 
 #ifdef COMPAT_LIBEVENT_PRIVATE
 
