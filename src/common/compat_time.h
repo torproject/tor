@@ -133,13 +133,16 @@ void tor_sleep_msec(int msec);
 #endif
 
 #ifdef COMPAT_TIME_PRIVATE
-#ifdef _WIN32
+#if defined(_WIN32) || defined(TOR_UNIT_TESTS)
 STATIC int64_t ratchet_performance_counter(int64_t count_raw);
 STATIC int64_t ratchet_coarse_performance_counter(int64_t count_raw);
 #endif
-#ifdef MONOTIME_USING_GETTIMEOFDAY
+#if defined(MONOTIME_USING_GETTIMEOFDAY) || defined(TOR_UNIT_TESTS)
 STATIC void ratchet_timeval(const struct timeval *timeval_raw,
                             struct timeval *out);
+#endif
+#ifdef TOR_UNIT_TESTS
+void monotime_reset_ratchets_for_testing(void);
 #endif
 #endif
 

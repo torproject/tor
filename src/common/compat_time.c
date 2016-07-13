@@ -118,6 +118,89 @@ tor_gettimeofday(struct timeval *timeval)
 /** True iff monotime_init has been called. */
 static int monotime_initialized = 0;
 
+/* "ratchet" functions for monotonic time. */
+
+#if defined(_WIN32) || defined(TOR_UNIT_TESTS)
+
+/** Protected by lock: last value returned by monotime_get(). */
+static int64_t last_pctr = 0;
+/** Protected by lock: offset we must add to monotonic time values. */
+static int64_t pctr_offset = 0;
+/* If we are using GetTickCount(), how many times has it rolled over? */
+static uint32_t rollover_count = 0;
+/* If we are using GetTickCount(), what's the last value it returned? */
+static int64_t last_tick_count = 0;
+
+/** Helper for windows: Called with a sequence of times that are supposed
+ * to be monotonic; increments them as appropriate so that they actually
+ * _are_ monotonic.
+ *
+ * Caller must hold lock. */
+STATIC int64_t
+ratchet_performance_counter(int64_t count_raw)
+{
+  /* must hold lock */
+  const int64_t count_adjusted = count_raw + pctr_offset;
+
+  if (PREDICT_UNLIKELY(count_adjusted < last_pctr)) {
+    /* Monotonicity failed! Pretend no time elapsed. */
+    pctr_offset = last_pctr - count_raw;
+    return last_pctr;
+  } else {
+    last_pctr = count_adjusted;
+    return count_adjusted;
+  }
+}
+
+STATIC int64_t
+ratchet_coarse_performance_counter(const int64_t count_raw)
+{
+  int64_t count = count_raw + (((int64_t)rollover_count) << 32);
+  while (PREDICT_UNLIKELY(count < last_tick_count)) {
+    ++rollover_count;
+    count = count_raw + (((int64_t)rollover_count) << 32);
+  }
+  last_tick_count = count;
+  return count;
+}
+#endif
+
+#if defined(MONOTIME_USING_GETTIMEOFDAY) || defined(TOR_UNIT_TESTS)
+static struct timeval last_timeofday = { 0, 0 };
+static struct timeval timeofday_offset = { 0, 0 };
+
+/** Helper for gettimeofday(): Called with a sequence of times that are
+ * supposed to be monotonic; increments them as appropriate so that they
+ * actually _are_ monotonic.
+ *
+ * Caller must hold lock. */
+STATIC void
+ratchet_timeval(const struct timeval *timeval_raw, struct timeval *out)
+{
+  /* must hold lock */
+  timeradd(timeval_raw, &timeofday_offset, out);
+  if (PREDICT_UNLIKELY(timercmp(out, &last_timeofday, <))) {
+    /* time ran backwards. Instead, declare that no time occurred. */
+    timersub(&last_timeofday, timeval_raw, &timeofday_offset);
+    memcpy(out, &last_timeofday, sizeof(struct timeval));
+  } else {
+    memcpy(&last_timeofday, out, sizeof(struct timeval));
+  }
+}
+#endif
+
+#ifdef TOR_UNIT_TESTS
+/** For testing: reset all the ratchets */
+void
+monotime_reset_ratchets_for_testing(void)
+{
+  last_pctr = pctr_offset = last_tick_count = 0;
+  rollover_count = 0;
+  memset(&last_timeofday, 0, sizeof(struct timeval));
+  memset(&timeofday_offset, 0, sizeof(struct timeval));
+}
+#endif
+
 #ifdef __APPLE__
 
 /** Initialized on startup: tells is how to convert from ticks to
@@ -201,17 +284,9 @@ monotime_diff_nsec(const monotime_t *start,
 /** Result of QueryPerformanceFrequency, as an int64_t. */
 static int64_t ticks_per_second = 0;
 
-/** Protected by lock: last value returned by monotime_get(). */
-static int64_t last_pctr = 0;
-/** Protected by lock: offset we must add to monotonic time values. */
-static int64_t pctr_offset = 0;
 /** Lock to protect last_pctr and pctr_offset */
 static CRITICAL_SECTION monotime_lock;
-/* If we are using GetTickCount(), how many times has it rolled over? */
-static uint32_t rollover_count = 0;
-/* If we are using GetTickCount(), what's the last value it returned? */
-static int64_t last_tick_count = 0;
-/** Lock to protect rollover_count and */
+/** Lock to protect rollover_count and last_tick_count */
 static CRITICAL_SECTION monotime_coarse_lock;
 
 typedef ULONGLONG (WINAPI *GetTickCount64_fn_t)(void);
@@ -239,39 +314,6 @@ monotime_init_internal(void)
       GetProcAddress(h, "GetTickCount64");
   }
   // FreeLibrary(h) ?
-}
-
-/** Helper for windows: Called with a sequence of times that are supposed
- * to be monotonic; increments them as appropriate so that they actually
- * _are_ monotonic.
- *
- * Caller must hold lock. */
-STATIC int64_t
-ratchet_performance_counter(int64_t count_raw)
-{
-  /* must hold lock */
-  const int64_t count_adjusted = count_raw + pctr_offset;
-
-  if (PREDICT_UNLIKELY(count_adjusted < last_pctr)) {
-    /* Monotonicity failed! Pretend no time elapsed. */
-    pctr_offset = last_pctr - count_raw;
-    return last_pctr;
-  } else {
-    last_pctr = count_adjusted;
-    return count_adjusted;
-  }
-}
-
-STATIC int64_t
-ratchet_coarse_performance_counter(const int64_t count_raw)
-{
-  int64_t count = count_raw + (((int64_t)rollover_count) << 32);
-  while (PREDICT_UNLIKELY(count < last_tick_count)) {
-    ++rollover_count;
-    count = count_raw + (((int64_t)rollover_count) << 32);
-  }
-  last_tick_count = count;
-  return count;
 }
 
 void
@@ -344,9 +386,6 @@ monotime_coarse_diff_nsec(const monotime_coarse_t *start,
 /* end of "_WIN32" */
 #elif defined(MONOTIME_USING_GETTIMEOFDAY)
 
-static int monotime_initialized = 0;
-static struct timeval last_timeofday = { 0, 0 };
-static struct timeval timeofday_offset = { 0, 0 };
 static tor_mutex_t monotime_lock;
 
 /** Initialize the monotonic timer subsystem. */
@@ -355,25 +394,6 @@ monotime_init_internal(void)
 {
   tor_assert(!monotime_initialized);
   tor_mutex_init(&monotime_lock);
-}
-
-/** Helper for gettimeofday(): Called with a sequence of times that are
- * supposed to be monotonic; increments them as appropriate so that they
- * actually _are_ monotonic.
- *
- * Caller must hold lock. */
-STATIC void
-ratchet_timeval(const struct timeval *timeval_raw, struct timeval *out)
-{
-  /* must hold lock */
-  timeradd(timeval_raw, &timeofday_offset, out);
-  if (PREDICT_UNLIKELY(timercmp(out, &last_timeofday, <))) {
-    /* time ran backwards. Instead, declare that no time occurred. */
-    timersub(&last_timeofday, timeval_raw, &timeofday_offset);
-    memcpy(out, &last_timeofday, sizeof(struct timeval));
-  } else {
-    memcpy(&last_timeofday, out, sizeof(struct timeval));
-  }
 }
 
 void
@@ -474,16 +494,12 @@ monotime_coarse_absolute_nsec(void)
 uint64_t
 monotime_coarse_absolute_usec(void)
 {
-  monotime_coarse_t now;
-  monotime_coarse_get(&now);
-  return monotime_coarse_diff_usec(&initialized_at_coarse, &now);
+  return monotime_coarse_absolute_nsec() / 1000;
 }
 
 uint64_t
 monotime_coarse_absolute_msec(void)
 {
-  monotime_coarse_t now;
-  monotime_coarse_get(&now);
-  return monotime_coarse_diff_msec(&initialized_at_coarse, &now);
+  return monotime_coarse_absolute_nsec() / ONE_MILLION;
 }
 #endif
