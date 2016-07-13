@@ -1,0 +1,7 @@
+  o Minor bugfixes (Linux seccomp2 sandbox):
+    - Add a few missing syscalls to the seccomp2 sandbox: sysinfo,
+      getsockopt(SO_SNDBUF), and setsockopt(SO_SNDBUFFORCE). On
+      some systems, these are required for Tor to start with
+      "Sandbox 1" enabled.
+      Fixes bug 18397; bugfix on 0.2.5.1-alpha. Patch from
+      Daniel Pinto.

@@ -210,6 +210,10 @@ static int filter_nopar_gen[] = {
     SCMP_SYS(getrandom),
 #endif
 
+#ifdef __NR_sysinfo
+    // qsort uses this..
+    SCMP_SYS(sysinfo),
+#endif
     /*
      * These socket syscalls are not required on x86_64 and not supported with
      * some libseccomp versions (eg: 1.0.1)
@@ -699,6 +703,14 @@ sb_setsockopt(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   if (rc)
     return rc;
 
+#ifdef HAVE_SYSTEMD
+  rc = seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(setsockopt),
+      SCMP_CMP(1, SCMP_CMP_EQ, SOL_SOCKET),
+      SCMP_CMP(2, SCMP_CMP_EQ, SO_SNDBUFFORCE));
+  if (rc)
+    return rc;
+#endif
+
 #ifdef IP_TRANSPARENT
   rc = seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(setsockopt),
       SCMP_CMP(1, SCMP_CMP_EQ, SOL_IP),
@@ -731,6 +743,14 @@ sb_getsockopt(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
       SCMP_CMP(2, SCMP_CMP_EQ, SO_ERROR));
   if (rc)
     return rc;
+
+#ifdef HAVE_SYSTEMD
+  rc = seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(getsockopt),
+      SCMP_CMP(1, SCMP_CMP_EQ, SOL_SOCKET),
+      SCMP_CMP(2, SCMP_CMP_EQ, SO_SNDBUF));
+  if (rc)
+    return rc;
+#endif
 
 #ifdef HAVE_LINUX_NETFILTER_IPV4_H
   rc = seccomp_rule_add_2(ctx, SCMP_ACT_ALLOW, SCMP_SYS(getsockopt),
