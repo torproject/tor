@@ -5,6 +5,7 @@
 
 #include "orconfig.h"
 #define COMPAT_PRIVATE
+#define COMPAT_TIME_PRIVATE
 #define CONTROL_PRIVATE
 #define UTIL_PRIVATE
 #include "or.h"
@@ -5285,6 +5286,128 @@ test_util_calloc_check(void *arg)
   ;
 }
 
+static void
+test_util_monotonic_time(void *arg)
+{
+  (void)arg;
+
+  monotime_t mt1, mt2;
+  monotime_coarse_t mtc1, mtc2;
+  uint64_t nsec1, nsec2, usec1, msec1;
+  uint64_t nsecc1, nsecc2, usecc1, msecc1;
+
+  monotime_get(&mt1);
+  monotime_coarse_get(&mtc1);
+  nsec1 = monotime_absolute_nsec();
+  usec1 = monotime_absolute_usec();
+  msec1 = monotime_absolute_msec();
+  nsecc1 = monotime_coarse_absolute_nsec();
+  usecc1 = monotime_coarse_absolute_usec();
+  msecc1 = monotime_coarse_absolute_msec();
+
+  tor_sleep_msec(200);
+
+  monotime_get(&mt2);
+  monotime_coarse_get(&mtc2);
+  nsec2 = monotime_absolute_nsec();
+  nsecc2 = monotime_coarse_absolute_nsec();
+
+  /* We need to be a little careful here since we don't know the system load.
+   */
+  tt_i64_op(monotime_diff_msec(&mt1, &mt2), OP_GE, 175);
+  tt_i64_op(monotime_diff_msec(&mt1, &mt2), OP_LT, 1000);
+  tt_i64_op(monotime_coarse_diff_msec(&mtc1, &mtc2), OP_GE, 125);
+  tt_i64_op(monotime_coarse_diff_msec(&mtc1, &mtc2), OP_LT, 1000);
+  tt_u64_op(nsec2-nsec1, OP_GE, 175000000);
+  tt_u64_op(nsec2-nsec1, OP_LT, 1000000000);
+  tt_u64_op(nsecc2-nsecc1, OP_GE, 125000000);
+  tt_u64_op(nsecc2-nsecc1, OP_LT, 1000000000);
+
+  tt_u64_op(msec1, OP_GE, nsec1 / 1000000);
+  tt_u64_op(usec1, OP_GE, nsec1 / 1000);
+  tt_u64_op(msecc1, OP_GE, nsecc1 / 1000000);
+  tt_u64_op(usecc1, OP_GE, nsecc1 / 1000);
+  tt_u64_op(msec1, OP_LE, nsec1 / 1000000 + 1);
+  tt_u64_op(usec1, OP_LE, nsec1 / 1000 +10);
+  tt_u64_op(msecc1, OP_LE, nsecc1 / 1000000 + 1);
+  tt_u64_op(usecc1, OP_LE, nsecc1 / 1000 + 10);
+
+ done:
+  ;
+}
+
+static void
+test_util_monotonic_time_ratchet(void *arg)
+{
+  (void)arg;
+  monotime_reset_ratchets_for_testing();
+
+  /* win32, performance counter ratchet. */
+  tt_i64_op(100, OP_EQ, ratchet_performance_counter(100));
+  tt_i64_op(101, OP_EQ, ratchet_performance_counter(101));
+  tt_i64_op(2000, OP_EQ, ratchet_performance_counter(2000));
+  tt_i64_op(2000, OP_EQ, ratchet_performance_counter(100));
+  tt_i64_op(2005, OP_EQ, ratchet_performance_counter(105));
+  tt_i64_op(3005, OP_EQ, ratchet_performance_counter(1105));
+  tt_i64_op(3005, OP_EQ, ratchet_performance_counter(1000));
+  tt_i64_op(3010, OP_EQ, ratchet_performance_counter(1005));
+
+  /* win32, GetTickCounts32 ratchet-and-rollover-detector. */
+  const int64_t R = ((int64_t)1) << 32;
+  tt_i64_op(5, OP_EQ, ratchet_coarse_performance_counter(5));
+  tt_i64_op(1000, OP_EQ, ratchet_coarse_performance_counter(1000));
+  tt_i64_op(5+R, OP_EQ, ratchet_coarse_performance_counter(5));
+  tt_i64_op(10+R, OP_EQ, ratchet_coarse_performance_counter(10));
+  tt_i64_op(4+R*2, OP_EQ, ratchet_coarse_performance_counter(4));
+
+  /* gettimeofday regular ratchet. */
+  struct timeval tv_in = {0,0}, tv_out;
+  tv_in.tv_usec = 9000;
+
+  ratchet_timeval(&tv_in, &tv_out);
+  tt_int_op(tv_out.tv_usec, OP_EQ, 9000);
+  tt_i64_op(tv_out.tv_sec, OP_EQ, 0);
+
+  tv_in.tv_sec = 1337;
+  tv_in.tv_usec = 0;
+  ratchet_timeval(&tv_in, &tv_out);
+  tt_int_op(tv_out.tv_usec, OP_EQ, 0);
+  tt_i64_op(tv_out.tv_sec, OP_EQ, 1337);
+
+  tv_in.tv_sec = 1336;
+  tv_in.tv_usec = 500000;
+  ratchet_timeval(&tv_in, &tv_out);
+  tt_int_op(tv_out.tv_usec, OP_EQ, 0);
+  tt_i64_op(tv_out.tv_sec, OP_EQ, 1337);
+
+  tv_in.tv_sec = 1337;
+  tv_in.tv_usec = 0;
+  ratchet_timeval(&tv_in, &tv_out);
+  tt_int_op(tv_out.tv_usec, OP_EQ, 500000);
+  tt_i64_op(tv_out.tv_sec, OP_EQ, 1337);
+
+  tv_in.tv_sec = 1337;
+  tv_in.tv_usec = 600000;
+  ratchet_timeval(&tv_in, &tv_out);
+  tt_int_op(tv_out.tv_usec, OP_EQ, 100000);
+  tt_i64_op(tv_out.tv_sec, OP_EQ, 1338);
+
+  tv_in.tv_sec = 1000;
+  tv_in.tv_usec = 1000;
+  ratchet_timeval(&tv_in, &tv_out);
+  tt_int_op(tv_out.tv_usec, OP_EQ, 100000);
+  tt_i64_op(tv_out.tv_sec, OP_EQ, 1338);
+
+  tv_in.tv_sec = 2000;
+  tv_in.tv_usec = 2000;
+  ratchet_timeval(&tv_in, &tv_out);
+  tt_int_op(tv_out.tv_usec, OP_EQ, 101000);
+  tt_i64_op(tv_out.tv_sec, OP_EQ, 2338);
+
+ done:
+  ;
+}
+
 #define UTIL_LEGACY(name)                                               \
   { #name, test_util_ ## name , 0, NULL, NULL }
 
@@ -5373,6 +5496,8 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(touch_file, 0),
   UTIL_TEST_NO_WIN(pwdb, TT_FORK),
   UTIL_TEST(calloc_check, 0),
+  UTIL_TEST(monotonic_time, 0),
+  UTIL_TEST(monotonic_time_ratchet, TT_FORK),
   END_OF_TESTCASES
 };
 
