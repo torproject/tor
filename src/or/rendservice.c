@@ -107,60 +107,6 @@ struct rend_service_port_config_s {
  * rendezvous point before giving up? */
 #define MAX_REND_TIMEOUT 30
 
-/** Represents a single hidden service running at this OP. */
-typedef struct rend_service_t {
-  /* Fields specified in config file */
-  char *directory; /**< where in the filesystem it stores it. Will be NULL if
-                    * this service is ephemeral. */
-  int dir_group_readable; /**< if 1, allow group read
-                             permissions on directory */
-  smartlist_t *ports; /**< List of rend_service_port_config_t */
-  rend_auth_type_t auth_type; /**< Client authorization type or 0 if no client
-                               * authorization is performed. */
-  smartlist_t *clients; /**< List of rend_authorized_client_t's of
-                         * clients that may access our service. Can be NULL
-                         * if no client authorization is performed. */
-  /* Other fields */
-  crypto_pk_t *private_key; /**< Permanent hidden-service key. */
-  char service_id[REND_SERVICE_ID_LEN_BASE32+1]; /**< Onion address without
-                                                  * '.onion' */
-  char pk_digest[DIGEST_LEN]; /**< Hash of permanent hidden-service key. */
-  smartlist_t *intro_nodes; /**< List of rend_intro_point_t's we have,
-                             * or are trying to establish. */
-  /** List of rend_intro_point_t that are expiring. They are removed once
-   * the new descriptor is successfully uploaded. A node in this list CAN
-   * NOT appear in the intro_nodes list. */
-  smartlist_t *expiring_nodes;
-  time_t intro_period_started; /**< Start of the current period to build
-                                * introduction points. */
-  int n_intro_circuits_launched; /**< Count of intro circuits we have
-                                  * established in this period. */
-  unsigned int n_intro_points_wanted; /**< Number of intro points this
-                                       * service wants to have open. */
-  rend_service_descriptor_t *desc; /**< Current hidden service descriptor. */
-  time_t desc_is_dirty; /**< Time at which changes to the hidden service
-                         * descriptor content occurred, or 0 if it's
-                         * up-to-date. */
-  time_t next_upload_time; /**< Scheduled next hidden service descriptor
-                            * upload time. */
-  /** Replay cache for Diffie-Hellman values of INTRODUCE2 cells, to
-   * detect repeats.  Clients may send INTRODUCE1 cells for the same
-   * rendezvous point through two or more different introduction points;
-   * when they do, this keeps us from launching multiple simultaneous attempts
-   * to connect to the same rend point. */
-  replaycache_t *accepted_intro_dh_parts;
-  /** If true, we don't close circuits for making requests to unsupported
-   * ports. */
-  int allow_unknown_ports;
-  /** The maximum number of simultanious streams-per-circuit that are allowed
-   * to be established, or 0 if no limit is set.
-   */
-  int max_streams_per_circuit;
-  /** If true, we close circuits that exceed the max_streams_per_circuit
-   * limit.  */
-  int max_streams_close_circuit;
-} rend_service_t;
-
 /** Returns a escaped string representation of the service, <b>s</b>.
  */
 static const char *
@@ -206,16 +152,18 @@ rend_authorized_client_strmap_item_free(void *authorized_client)
 
 /** Release the storage held by <b>service</b>.
  */
-static void
+STATIC void
 rend_service_free(rend_service_t *service)
 {
   if (!service)
     return;
 
   tor_free(service->directory);
-  SMARTLIST_FOREACH(service->ports, rend_service_port_config_t*, p,
-                    rend_service_port_config_free(p));
-  smartlist_free(service->ports);
+  if (service->ports) {
+    SMARTLIST_FOREACH(service->ports, rend_service_port_config_t*, p,
+                      rend_service_port_config_free(p));
+    smartlist_free(service->ports);
+  }
   if (service->private_key)
     crypto_pk_free(service->private_key);
   if (service->intro_nodes) {
