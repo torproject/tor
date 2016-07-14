@@ -1085,7 +1085,7 @@ directory_initiate_command(const tor_addr_t *or_addr, uint16_t or_port,
  * <b>dir_purpose</b> reveals sensitive information about a Tor
  * instance's client activities.  (Such connections must be performed
  * through normal three-hop Tor circuits.) */
-static int
+int
 is_sensitive_dir_purpose(uint8_t dir_purpose)
 {
   return ((dir_purpose == DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2) ||
@@ -1140,12 +1140,10 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
 
   log_debug(LD_DIR, "Initiating %s", dir_conn_purpose_to_string(dir_purpose));
 
-#ifndef NON_ANONYMOUS_MODE_ENABLED
-  tor_assert(!(is_sensitive_dir_purpose(dir_purpose) &&
-               !anonymized_connection));
-#else
-  (void)is_sensitive_dir_purpose;
-#endif
+  if (is_sensitive_dir_purpose(dir_purpose)) {
+    tor_assert(anonymized_connection ||
+               rend_non_anonymous_mode_enabled(options));
+  }
 
   /* use encrypted begindir connections for everything except relays
    * this provides better protection for directory fetches */

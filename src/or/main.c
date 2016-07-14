@@ -2833,11 +2833,6 @@ tor_init(int argc, char *argv[])
                  "Expect more bugs than usual.");
   }
 
-#ifdef NON_ANONYMOUS_MODE_ENABLED
-  log_warn(LD_GENERAL, "This copy of Tor was compiled to run in a "
-      "non-anonymous mode. It will provide NO ANONYMITY.");
-#endif
-
   if (network_init()<0) {
     log_err(LD_BUG,"Error initializing network; exiting.");
     return -1;
@@ -2847,6 +2842,14 @@ tor_init(int argc, char *argv[])
   if (options_init_from_torrc(argc,argv) < 0) {
     log_err(LD_CONFIG,"Reading config failed--see warnings above.");
     return -1;
+  }
+
+  /* The options are now initialised */
+  const or_options_t *options = get_options();
+
+  if (rend_non_anonymous_mode_enabled(options)) {
+    log_warn(LD_GENERAL, "This copy of Tor was compiled or configured to run "
+             "in a non-anonymous mode. It will provide NO ANONYMITY.");
   }
 
 #ifndef _WIN32

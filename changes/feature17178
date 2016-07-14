@@ -1,0 +1,15 @@
+  o Major features (onion services):
+    - Add experimental OnionServiceSingleHopMode and
+      OnionServiceNonAnonymousMode options. When both are set to 1, every
+      hidden service on a tor instance becomes a non-anonymous Single Onion
+      Service. Single Onions make one-hop (direct) connections to their
+      introduction and renzedvous points. One-hop circuits make Single Onion
+      servers easily locatable, but clients remain location-anonymous.
+      This is compatible with the existing hidden service implementation, and
+      works on the current tor network without any changes to older relays or
+      clients.
+      Implements proposal #260, completes ticket #17178. Patch by teor & asn.
+  o Minor bug fixes (Tor2web):
+    - Prevent Tor2web clients running hidden services, these services are
+      not anonymous due to the one-hop client paths.
+      Fixes bug #19678. Patch by teor.

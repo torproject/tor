@@ -164,6 +164,11 @@ void rend_service_port_config_free(rend_service_port_config_t *p);
 
 void rend_authorized_client_free(rend_authorized_client_t *client);
 
+int rend_service_list_verify_single_onion_poison(
+                                              const smartlist_t *service_list,
+                                              const or_options_t *options);
+int rend_service_poison_new_single_onion_dirs(const smartlist_t *service_list);
+
 /** Return value from rend_service_add_ephemeral. */
 typedef enum {
   RSAE_BADAUTH = -5, /**< Invalid auth_type/auth_clients */
@@ -187,7 +192,9 @@ void directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
                               const char *service_id, int seconds_valid);
 void rend_service_desc_has_uploaded(const rend_data_t *rend_data);
 
-int rend_service_allow_direct_connection(const or_options_t *options);
+int rend_service_allow_non_anonymous_connection(const or_options_t *options);
+int rend_service_reveal_startup_time(const or_options_t *options);
+int rend_service_non_anonymous_mode_enabled(const or_options_t *options);
 
 #endif
 

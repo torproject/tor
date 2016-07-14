@@ -28,6 +28,7 @@
 #include "connection_edge.h"
 #include "connection_or.h"
 #include "control.h"
+#include "crypto.h"
 #include "directory.h"
 #include "entrynodes.h"
 #include "main.h"
@@ -38,14 +39,14 @@
 #include "onion_tap.h"
 #include "onion_fast.h"
 #include "policies.h"
-#include "transports.h"
 #include "relay.h"
+#include "rendcommon.h"
 #include "rephist.h"
 #include "router.h"
 #include "routerlist.h"
 #include "routerparse.h"
 #include "routerset.h"
-#include "crypto.h"
+#include "transports.h"
 
 static channel_t * channel_connect_for_circuit(const tor_addr_t *addr,
                                                uint16_t port,
@@ -1996,7 +1997,9 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit_ei)
   cpath_build_state_t *state = circ->build_state;
 
   if (state->onehop_tunnel) {
-    log_debug(LD_CIRC, "Launching a one-hop circuit for dir tunnel.");
+    log_debug(LD_CIRC, "Launching a one-hop circuit for dir tunnel%s.",
+              (rend_allow_non_anonymous_connection(get_options()) ?
+               ", or intro or rendezvous connection" : ""));
     state->desired_path_len = 1;
   } else {
     int r = new_route_len(circ->base_.purpose, exit_ei, nodelist_get_list());

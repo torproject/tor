@@ -1425,7 +1425,9 @@ The following options are useful only for clients (that is, if
     non-hidden-service hostnames through Tor. It **must only** be used when
     running a tor2web Hidden Service web proxy.
     To enable this option the compile time flag --enable-tor2web-mode must be
-    specified. (Default: 0)
+    specified. Since Tor2webMode is non-anonymous, you can not run an
+    anonymous Hidden Service on a tor version compiled with Tor2webMode.
+    (Default: 0)
 
 [[Tor2webRendezvousPoints]] **Tor2webRendezvousPoints** __node__,__node__,__...__::
     A list of identity fingerprints, nicknames, country codes and
@@ -2374,6 +2376,37 @@ The following options are used to configure a hidden service.
 [[HiddenServiceNumIntroductionPoints]] **HiddenServiceNumIntroductionPoints** __NUM__::
     Number of introduction points the hidden service will have. You can't
     have more than 10. (Default: 3)
+
+[[OnionServiceSingleHopMode]] **OnionServiceSingleHopMode** **0**|**1**::
+    **Experimental - Non Anonymous** Hidden Services on a tor instance in
+    OnionServiceSingleHopMode make one-hop (direct) circuits between the onion
+    service server, and the introduction and rendezvous points. (Onion service
+    descriptors are still posted using 3-hop paths, to avoid onion service
+    directories blocking the service.)
+    This option makes every hidden service instance hosted by a tor instance a
+    Single Onion Service. One-hop circuits make Single Onion servers easily
+    locatable, but clients remain location-anonymous. However, the fact that a
+    client is accessing a Single Onion rather than a Hidden Service may be
+    statistically distinguishable.
+
+    **WARNING:** Once a hidden service directory has been used by a tor
+    instance in OnionServiceSingleHopMode, it can **NEVER** be used again for
+    a hidden service. It is best practice to create a new hidden service
+    directory, key, and address for each new Single Onion Service and Hidden
+    Service. It is not possible to run Single Onion Services and Hidden
+    Services from the same tor instance: they should be run on different
+    servers with different IP addresses.
+
+    OnionServiceSingleHopMode requires OnionServiceNonAnonymousMode to be set
+    to 1. Since a Single Onion is non-anonymous, you can not to run an
+    anonymous SOCKSPort on the same tor instance as a Single Onion service.
+    (Default: 0)
+
+[[OnionServiceNonAnonymousMode]] **OnionServiceNonAnonymousMode** **0**|**1**::
+    Makes hidden services non-anonymous on this tor instance. Allows the
+    non-anonymous OnionServiceSingleHopMode. Enables direct connections in the
+    server-side hidden service protocol.
+    (Default: 0)
 
 TESTING NETWORK OPTIONS
 -----------------------

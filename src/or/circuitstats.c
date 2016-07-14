@@ -21,6 +21,8 @@
 #include "control.h"
 #include "main.h"
 #include "networkstatus.h"
+#include "rendclient.h"
+#include "rendservice.h"
 #include "statefile.h"
 
 #undef log
@@ -81,12 +83,14 @@ get_circuit_build_timeout_ms(void)
 
 /**
  * This function decides if CBT learning should be disabled. It returns
- * true if one or more of the following four conditions are met:
+ * true if one or more of the following conditions are met:
  *
  *  1. If the cbtdisabled consensus parameter is set.
  *  2. If the torrc option LearnCircuitBuildTimeout is false.
  *  3. If we are a directory authority
  *  4. If we fail to write circuit build time history to our state file.
+ *  5. If we are compiled or configured in Tor2web mode
+ *  6. If we are configured in Single Onion mode
  */
 int
 circuit_build_times_disabled(void)
@@ -94,14 +98,30 @@ circuit_build_times_disabled(void)
   if (unit_tests) {
     return 0;
   } else {
+    const or_options_t *options = get_options();
     int consensus_disabled = networkstatus_get_param(NULL, "cbtdisabled",
                                                      0, 0, 1);
-    int config_disabled = !get_options()->LearnCircuitBuildTimeout;
-    int dirauth_disabled = get_options()->AuthoritativeDir;
+    int config_disabled = !options->LearnCircuitBuildTimeout;
+    int dirauth_disabled = options->AuthoritativeDir;
     int state_disabled = did_last_state_file_write_fail() ? 1 : 0;
+    /* LearnCircuitBuildTimeout and Tor2webMode/OnionServiceSingleHopMode are
+     * incompatible in two ways:
+     *
+     * - LearnCircuitBuildTimeout results in a low CBT, which
+     *   Single Onion use of one-hop intro and rendezvous circuits lowers
+     *   much further, producing *far* too many timeouts.
+     *
+     * - The adaptive CBT code does not update its timeout estimate
+     *   using build times for single-hop circuits.
+     *
+     * If we fix both of these issues someday, we should test
+     * these modes with LearnCircuitBuildTimeout on again. */
+    int tor2web_disabled = rend_client_allow_non_anonymous_connection(options);
+    int single_onion_disabled = rend_service_allow_non_anonymous_connection(
+                                                                      options);
 
     if (consensus_disabled || config_disabled || dirauth_disabled ||
-           state_disabled) {
+        state_disabled || tor2web_disabled || single_onion_disabled) {
 #if 0
       log_debug(LD_CIRC,
                "CircuitBuildTime learning is disabled. "
