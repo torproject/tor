@@ -2858,9 +2858,9 @@ tor_init(int argc, char *argv[])
              "and you probably shouldn't.");
 #endif
 
-  if (crypto_global_init(get_options()->HardwareAccel,
-                         get_options()->AccelName,
-                         get_options()->AccelDir)) {
+  if (crypto_global_init(options->HardwareAccel,
+                         options->AccelName,
+                         options->AccelDir)) {
     log_err(LD_BUG, "Unable to initialize OpenSSL. Exiting.");
     return -1;
   }
