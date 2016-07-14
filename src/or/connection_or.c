@@ -42,10 +42,6 @@
 #include "ext_orport.h"
 #include "scheduler.h"
 
-#ifdef USE_BUFFEREVENTS
-#include <event2/bufferevent_ssl.h>
-#endif
-
 static int connection_tls_finish_handshake(or_connection_t *conn);
 static int connection_or_launch_v3_or_handshake(or_connection_t *conn);
 static int connection_or_process_cells_from_inbuf(or_connection_t *conn);
@@ -65,12 +61,6 @@ static void connection_or_mark_bad_for_new_circs(or_connection_t *or_conn);
  */
 
 static void connection_or_change_state(or_connection_t *conn, uint8_t state);
-
-#ifdef USE_BUFFEREVENTS
-static void connection_or_handle_event_cb(struct bufferevent *bufev,
-                                          short event, void *arg);
-#include <event2/buffer.h>/*XXXX REMOVE */
-#endif
 
 /**************************************************************/
 
@@ -565,13 +555,6 @@ connection_or_process_inbuf(or_connection_t *conn)
 
       return ret;
     case OR_CONN_STATE_TLS_SERVER_RENEGOTIATING:
-#ifdef USE_BUFFEREVENTS
-      if (tor_tls_server_got_renegotiate(conn->tls))
-        connection_or_tls_renegotiated_cb(conn->tls, conn);
-      if (conn->base_.marked_for_close)
-        return 0;
-      /* fall through. */
-#endif
     case OR_CONN_STATE_OPEN:
     case OR_CONN_STATE_OR_HANDSHAKING_V2:
     case OR_CONN_STATE_OR_HANDSHAKING_V3:
@@ -807,27 +790,6 @@ connection_or_update_token_buckets_helper(or_connection_t *conn, int reset,
 
   conn->bandwidthrate = rate;
   conn->bandwidthburst = burst;
-#ifdef USE_BUFFEREVENTS
-  {
-    const struct timeval *tick = tor_libevent_get_one_tick_timeout();
-    struct ev_token_bucket_cfg *cfg, *old_cfg;
-    int64_t rate64 = (((int64_t)rate) * options->TokenBucketRefillInterval)
-      / 1000;
-    /* This can't overflow, since TokenBucketRefillInterval <= 1000,
-     * and rate started out less than INT_MAX. */
-    int rate_per_tick = (int) rate64;
-
-    cfg = ev_token_bucket_cfg_new(rate_per_tick, burst, rate_per_tick,
-                                  burst, tick);
-    old_cfg = conn->bucket_cfg;
-    if (conn->base_.bufev)
-      tor_set_bufferevent_rate_limit(conn->base_.bufev, cfg);
-    if (old_cfg)
-      ev_token_bucket_cfg_free(old_cfg);
-    conn->bucket_cfg = cfg;
-    (void) reset; /* No way to do this with libevent yet. */
-  }
-#else
   if (reset) { /* set up the token buckets to be full */
     conn->read_bucket = conn->write_bucket = burst;
     return;
@@ -838,7 +800,6 @@ connection_or_update_token_buckets_helper(or_connection_t *conn, int reset,
     conn->read_bucket = burst;
   if (conn->write_bucket > burst)
     conn->write_bucket = burst;
-#endif
 }
 
 /** Either our set of relays or our per-conn rate limits have changed.
@@ -1395,29 +1356,6 @@ connection_tls_start_handshake,(or_connection_t *conn, int receiving))
   tor_tls_set_logged_address(conn->tls, // XXX client and relay?
       escaped_safe_str(conn->base_.address));
 
-#ifdef USE_BUFFEREVENTS
-  if (connection_type_uses_bufferevent(TO_CONN(conn))) {
-    const int filtering = get_options()->UseFilteringSSLBufferevents;
-    struct bufferevent *b =
-      tor_tls_init_bufferevent(conn->tls, conn->base_.bufev, conn->base_.s,
-                               receiving, filtering);
-    if (!b) {
-      log_warn(LD_BUG,"tor_tls_init_bufferevent failed. Closing.");
-      return -1;
-    }
-    conn->base_.bufev = b;
-    if (conn->bucket_cfg)
-      tor_set_bufferevent_rate_limit(conn->base_.bufev, conn->bucket_cfg);
-    connection_enable_rate_limiting(TO_CONN(conn));
-
-    connection_configure_bufferevent_callbacks(TO_CONN(conn));
-    bufferevent_setcb(b,
-                      connection_handle_read_cb,
-                      connection_handle_write_cb,
-                      connection_or_handle_event_cb,/* overriding this one*/
-                      TO_CONN(conn));
-  }
-#endif
   connection_start_reading(TO_CONN(conn));
   log_debug(LD_HANDSHAKE,"starting TLS handshake on fd "TOR_SOCKET_T_FORMAT,
             conn->base_.s);
@@ -1516,75 +1454,6 @@ connection_tls_continue_handshake(or_connection_t *conn)
   }
   return 0;
 }
-
-#ifdef USE_BUFFEREVENTS
-static void
-connection_or_handle_event_cb(struct bufferevent *bufev, short event,
-                              void *arg)
-{
-  struct or_connection_t *conn = TO_OR_CONN(arg);
-
-  /* XXXX cut-and-paste code; should become a function. */
-  if (event & BEV_EVENT_CONNECTED) {
-    if (conn->base_.state == OR_CONN_STATE_TLS_HANDSHAKING) {
-      if (tor_tls_finish_handshake(conn->tls) < 0) {
-        log_warn(LD_OR, "Problem finishing handshake");
-        connection_or_close_for_error(conn, 0);
-        return;
-      }
-    }
-
-    if (! tor_tls_used_v1_handshake(conn->tls)) {
-      if (!tor_tls_is_server(conn->tls)) {
-        if (conn->base_.state == OR_CONN_STATE_TLS_HANDSHAKING) {
-          if (connection_or_launch_v3_or_handshake(conn) < 0)
-            connection_or_close_for_error(conn, 0);
-        }
-      } else {
-        const int handshakes = tor_tls_get_num_server_handshakes(conn->tls);
-
-        if (handshakes == 1) {
-          /* v2 or v3 handshake, as a server. Only got one handshake, so
-           * wait for the next one. */
-          tor_tls_set_renegotiate_callback(conn->tls,
-                                           connection_or_tls_renegotiated_cb,
-                                           conn);
-          connection_or_change_state(conn,
-              OR_CONN_STATE_TLS_SERVER_RENEGOTIATING);
-        } else if (handshakes == 2) {
-          /* v2 handshake, as a server.  Two handshakes happened already,
-           * so we treat renegotiation as done.
-           */
-          connection_or_tls_renegotiated_cb(conn->tls, conn);
-        } else if (handshakes > 2) {
-          log_warn(LD_OR, "More than two handshakes done on connection. "
-                   "Closing.");
-          connection_or_close_for_error(conn, 0);
-        } else {
-          log_warn(LD_BUG, "We were unexpectedly told that a connection "
-                   "got %d handshakes. Closing.", handshakes);
-          connection_or_close_for_error(conn, 0);
-        }
-        return;
-      }
-    }
-    connection_watch_events(TO_CONN(conn), READ_EVENT|WRITE_EVENT);
-    if (connection_tls_finish_handshake(conn) < 0)
-      connection_or_close_for_error(conn, 0); /* ???? */
-    return;
-  }
-
-  if (event & BEV_EVENT_ERROR) {
-    unsigned long err;
-    while ((err = bufferevent_get_openssl_error(bufev))) {
-      tor_tls_log_one_error(conn->tls, err, LOG_WARN, LD_OR,
-                            "handshaking (with bufferevent)");
-    }
-  }
-
-  connection_handle_event_cb(bufev, event, arg);
-}
-#endif
 
 /** Return 1 if we initiated this connection, or 0 if it started
  * out as an incoming connection.

@@ -66,12 +66,6 @@
 #include <windows.h>
 #endif
 
-#ifdef USE_BUFFEREVENTS
-#include <event2/bufferevent.h>
-#include <event2/buffer.h>
-#include <event2/util.h>
-#endif
-
 #include "crypto.h"
 #include "crypto_format.h"
 #include "tortls.h"
@@ -1137,11 +1131,8 @@ typedef struct {
 
 typedef struct buf_t buf_t;
 typedef struct socks_request_t socks_request_t;
-#ifdef USE_BUFFEREVENTS
-#define generic_buffer_t struct evbuffer
-#else
+
 #define generic_buffer_t buf_t
-#endif
 
 typedef struct entry_port_cfg_t {
   /* Client port types (socks, dns, trans, natd) only: */
@@ -1279,10 +1270,6 @@ typedef struct connection_t {
                               * read? */
   time_t timestamp_lastwritten; /**< When was the last time libevent said we
                                  * could write? */
-
-#ifdef USE_BUFFEREVENTS
-  struct bufferevent *bufev; /**< A Libevent buffered IO structure. */
-#endif
 
   time_t timestamp_created; /**< When was this connection_t created? */
 
@@ -1523,17 +1510,10 @@ typedef struct or_connection_t {
   /* bandwidth* and *_bucket only used by ORs in OPEN state: */
   int bandwidthrate; /**< Bytes/s added to the bucket. (OPEN ORs only.) */
   int bandwidthburst; /**< Max bucket size for this conn. (OPEN ORs only.) */
-#ifndef USE_BUFFEREVENTS
   int read_bucket; /**< When this hits 0, stop receiving. Every second we
                     * add 'bandwidthrate' to this, capping it at
                     * bandwidthburst. (OPEN ORs only) */
   int write_bucket; /**< When this hits 0, stop writing. Like read_bucket. */
-#else
-  /** A rate-limiting configuration object to determine how this connection
-   * set its read- and write- limits. */
-  /* XXXX we could share this among all connections. */
-  struct ev_token_bucket_cfg *bucket_cfg;
-#endif
 
   struct or_connection_t *next_with_same_id; /**< Next connection with same
                                               * identity digest as this one. */
@@ -1874,22 +1854,11 @@ static inline listener_connection_t *TO_LISTENER_CONN(connection_t *c)
    and if we aren't using bufferevents, they expand more or less to:
       { do non-bufferevent stuff; }
 */
-#ifdef USE_BUFFEREVENTS
-#define HAS_BUFFEREVENT(c) (((c)->bufev) != NULL)
-#define IF_HAS_BUFFEREVENT(c, stmt)                \
-  if ((c)->bufev) do {                             \
-      stmt ;                                       \
-  } while (0)
-#define ELSE_IF_NO_BUFFEREVENT ; else
-#define IF_HAS_NO_BUFFEREVENT(c)                   \
-  if (NULL == (c)->bufev)
-#else
 #define HAS_BUFFEREVENT(c) (0)
 #define IF_HAS_BUFFEREVENT(c, stmt) (void)0
 #define ELSE_IF_NO_BUFFEREVENT ;
 #define IF_HAS_NO_BUFFEREVENT(c)                \
   if (1)
-#endif
 
 /** What action type does an address policy indicate: accept or reject? */
 typedef enum {

@@ -257,19 +257,7 @@ void clock_skew_warning(const connection_t *conn, long apparent_skew,
                         int trusted, log_domain_mask_t domain,
                         const char *received, const char *source);
 
-#ifdef USE_BUFFEREVENTS
-int connection_type_uses_bufferevent(connection_t *conn);
-void connection_configure_bufferevent_callbacks(connection_t *conn);
-void connection_handle_read_cb(struct bufferevent *bufev, void *arg);
-void connection_handle_write_cb(struct bufferevent *bufev, void *arg);
-void connection_handle_event_cb(struct bufferevent *bufev, short event,
-                                 void *arg);
-void connection_get_rate_limit_totals(uint64_t *read_out,
-                                      uint64_t *written_out);
-void connection_enable_rate_limiting(connection_t *conn);
-#else
 #define connection_type_uses_bufferevent(c) (0)
-#endif
 
 #ifdef CONNECTION_PRIVATE
 STATIC void connection_free_(connection_t *conn);

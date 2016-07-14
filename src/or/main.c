@@ -71,10 +71,6 @@
 
 #include <event2/event.h>
 
-#ifdef USE_BUFFEREVENTS
-#include <event2/bufferevent.h>
-#endif
-
 #ifdef HAVE_SYSTEMD
 #   if defined(__COVERITY__) && !defined(__INCLUDE_LEVEL__)
 /* Systemd's use of gcc's __INCLUDE_LEVEL__ extension macro appears to confuse
@@ -101,8 +97,6 @@ static int run_main_loop_until_done(void);
 static void process_signal(int sig);
 
 /********* START VARIABLES **********/
-
-#ifndef USE_BUFFEREVENTS
 int global_read_bucket; /**< Max number of bytes I can read this second. */
 int global_write_bucket; /**< Max number of bytes I can write this second. */
 
@@ -116,7 +110,6 @@ static int stats_prev_global_read_bucket;
 /** What was the write bucket before the last second_elapsed_callback() call?
  * (used to determine how many bytes we've written). */
 static int stats_prev_global_write_bucket;
-#endif
 
 /* DOCDOC stats_prev_n_read */
 static uint64_t stats_prev_n_read = 0;
@@ -188,28 +181,6 @@ int quiet_level = 0;
  *
  ****************************************************************************/
 
-#if defined(_WIN32) && defined(USE_BUFFEREVENTS)
-/** Remove the kernel-space send and receive buffers for <b>s</b>. For use
- * with IOCP only. */
-static int
-set_buffer_lengths_to_zero(tor_socket_t s)
-{
-  int zero = 0;
-  int r = 0;
-  if (setsockopt(s, SOL_SOCKET, SO_SNDBUF, (void*)&zero,
-                 (socklen_t)sizeof(zero))) {
-    log_warn(LD_NET, "Unable to clear SO_SNDBUF");
-    r = -1;
-  }
-  if (setsockopt(s, SOL_SOCKET, SO_RCVBUF, (void*)&zero,
-                 (socklen_t)sizeof(zero))) {
-    log_warn(LD_NET, "Unable to clear SO_RCVBUF");
-    r = -1;
-  }
-  return r;
-}
-#endif
-
 /** Return 1 if we have successfully built a circuit, and nothing has changed
  * to make us think that maybe we can't.
  */
@@ -252,64 +223,7 @@ connection_add_impl(connection_t *conn, int is_connecting)
   conn->conn_array_index = smartlist_len(connection_array);
   smartlist_add(connection_array, conn);
 
-#ifdef USE_BUFFEREVENTS
-  if (connection_type_uses_bufferevent(conn)) {
-    if (SOCKET_OK(conn->s) && !conn->linked) {
-
-#ifdef _WIN32
-      if (tor_libevent_using_iocp_bufferevents() &&
-          get_options()->UserspaceIOCPBuffers) {
-        set_buffer_lengths_to_zero(conn->s);
-      }
-#endif
-
-      conn->bufev = bufferevent_socket_new(
-                         tor_libevent_get_base(),
-                         conn->s,
-                         BEV_OPT_DEFER_CALLBACKS);
-      if (!conn->bufev) {
-        log_warn(LD_BUG, "Unable to create socket bufferevent");
-        smartlist_del(connection_array, conn->conn_array_index);
-        conn->conn_array_index = -1;
-        return -1;
-      }
-      if (is_connecting) {
-        /* Put the bufferevent into a "connecting" state so that we'll get
-         * a "connected" event callback on successful write. */
-        bufferevent_socket_connect(conn->bufev, NULL, 0);
-      }
-      connection_configure_bufferevent_callbacks(conn);
-    } else if (conn->linked && conn->linked_conn &&
-               connection_type_uses_bufferevent(conn->linked_conn)) {
-      tor_assert(!(SOCKET_OK(conn->s)));
-      if (!conn->bufev) {
-        struct bufferevent *pair[2] = { NULL, NULL };
-        if (bufferevent_pair_new(tor_libevent_get_base(),
-                                 BEV_OPT_DEFER_CALLBACKS,
-                                 pair) < 0) {
-          log_warn(LD_BUG, "Unable to create bufferevent pair");
-          smartlist_del(connection_array, conn->conn_array_index);
-          conn->conn_array_index = -1;
-          return -1;
-        }
-        tor_assert(pair[0]);
-        conn->bufev = pair[0];
-        conn->linked_conn->bufev = pair[1];
-      } /* else the other side already was added, and got a bufferevent_pair */
-      connection_configure_bufferevent_callbacks(conn);
-    } else {
-      tor_assert(!conn->linked);
-    }
-
-    if (conn->bufev)
-      tor_assert(conn->inbuf == NULL);
-
-    if (conn->linked_conn && conn->linked_conn->bufev)
-      tor_assert(conn->linked_conn->inbuf == NULL);
-  }
-#else
   (void) is_connecting;
-#endif
 
   if (!HAS_BUFFEREVENT(conn) && (SOCKET_OK(conn->s) || conn->linked)) {
     conn->read_event = tor_event_new(tor_libevent_get_base(),
@@ -340,12 +254,6 @@ connection_unregister_events(connection_t *conn)
       log_warn(LD_BUG, "Error removing write event for %d", (int)conn->s);
     tor_free(conn->write_event);
   }
-#ifdef USE_BUFFEREVENTS
-  if (conn->bufev) {
-    bufferevent_free(conn->bufev);
-    conn->bufev = NULL;
-  }
-#endif
   if (conn->type == CONN_TYPE_AP_DNS_LISTENER) {
     dnsserv_close_listener(conn);
   }
@@ -876,21 +784,6 @@ conn_close_if_marked(int i)
   assert_connection_ok(conn, now);
   /* assert_all_pending_dns_resolves_ok(); */
 
-#ifdef USE_BUFFEREVENTS
-  if (conn->bufev) {
-    if (conn->hold_open_until_flushed &&
-        evbuffer_get_length(bufferevent_get_output(conn->bufev))) {
-      /* don't close yet. */
-      return 0;
-    }
-    if (conn->linked_conn && ! conn->linked_conn->marked_for_close) {
-      /* We need to do this explicitly so that the linked connection
-       * notices that there was an EOF. */
-      bufferevent_flush(conn->bufev, EV_WRITE, BEV_FINISHED);
-    }
-  }
-#endif
-
   log_debug(LD_NET,"Cleaning up connection (fd "TOR_SOCKET_T_FORMAT").",
             conn->s);
 
@@ -985,9 +878,6 @@ conn_close_if_marked(int i)
     }
   }
 
-#ifdef USE_BUFFEREVENTS
- unlink:
-#endif
   connection_unlink(conn); /* unlink, remove, free */
   return 1;
 }
@@ -1133,11 +1023,7 @@ run_connection_housekeeping(int i, time_t now)
      the connection or send a keepalive, depending. */
 
   or_conn = TO_OR_CONN(conn);
-#ifdef USE_BUFFEREVENTS
-  tor_assert(conn->bufev);
-#else
   tor_assert(conn->outbuf);
-#endif
 
   chan = TLS_CHAN_TO_BASE(or_conn->chan);
   tor_assert(chan);
@@ -2051,25 +1937,10 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
 
   /* the second has rolled over. check more stuff. */
   seconds_elapsed = current_second ? (int)(now - current_second) : 0;
-#ifdef USE_BUFFEREVENTS
-  {
-    uint64_t cur_read,cur_written;
-    connection_get_rate_limit_totals(&cur_read, &cur_written);
-    bytes_written = (size_t)(cur_written - stats_prev_n_written);
-    bytes_read = (size_t)(cur_read - stats_prev_n_read);
-    stats_n_bytes_read += bytes_read;
-    stats_n_bytes_written += bytes_written;
-    if (accounting_is_enabled(options) && seconds_elapsed >= 0)
-      accounting_add_bytes(bytes_read, bytes_written, seconds_elapsed);
-    stats_prev_n_written = cur_written;
-    stats_prev_n_read = cur_read;
-  }
-#else
   bytes_read = (size_t)(stats_n_bytes_read - stats_prev_n_read);
   bytes_written = (size_t)(stats_n_bytes_written - stats_prev_n_written);
   stats_prev_n_read = stats_n_bytes_read;
   stats_prev_n_written = stats_n_bytes_written;
-#endif
 
   control_event_bandwidth_used((uint32_t)bytes_read,(uint32_t)bytes_written);
   control_event_stream_bandwidth_used();
@@ -2141,7 +2012,6 @@ systemd_watchdog_callback(periodic_timer_t *timer, void *arg)
 }
 #endif
 
-#ifndef USE_BUFFEREVENTS
 /** Timer: used to invoke refill_callback(). */
 static periodic_timer_t *refill_timer = NULL;
 
@@ -2190,7 +2060,6 @@ refill_callback(periodic_timer_t *timer, void *arg)
 
   current_millisecond = now; /* remember what time it is, for next time */
 }
-#endif
 
 #ifndef _WIN32
 /** Called when a possibly ignorable libevent error occurs; ensures that we
@@ -2366,13 +2235,6 @@ do_main_loop(void)
     }
   }
 
-#ifdef USE_BUFFEREVENTS
-  log_warn(LD_GENERAL, "Tor was compiled with the --enable-bufferevents "
-           "option. This is still experimental, and might cause strange "
-           "bugs. If you want a more stable Tor, be sure to build without "
-           "--enable-bufferevents.");
-#endif
-
   handle_signals(1);
 
   /* load the private keys, if we're supposed to have them, and set up the
@@ -2386,10 +2248,8 @@ do_main_loop(void)
 
   /* Set up our buckets */
   connection_bucket_init();
-#ifndef USE_BUFFEREVENTS
   stats_prev_global_read_bucket = global_read_bucket;
   stats_prev_global_write_bucket = global_write_bucket;
-#endif
 
   /* initialize the bootstrap status events to know we're starting up */
   control_event_bootstrap(BOOTSTRAP_STATUS_STARTING, 0);
@@ -2486,7 +2346,6 @@ do_main_loop(void)
   }
 #endif
 
-#ifndef USE_BUFFEREVENTS
   if (!refill_timer) {
     struct timeval refill_interval;
     int msecs = get_options()->TokenBucketRefillInterval;
@@ -2500,7 +2359,6 @@ do_main_loop(void)
                                       NULL);
     tor_assert(refill_timer);
   }
-#endif
 
 #ifdef HAVE_SYSTEMD
   {
@@ -2994,12 +2852,8 @@ tor_init(int argc, char *argv[])
 
   {
     const char *version = get_version();
-    const char *bev_str =
-#ifdef USE_BUFFEREVENTS
-      "(with bufferevents) ";
-#else
-      "";
-#endif
+    const char *bev_str = "";
+
     log_notice(LD_GENERAL, "Tor v%s %srunning on %s with Libevent %s, "
                "OpenSSL %s and Zlib %s.", version, bev_str,
                get_uname(),
@@ -3177,9 +3031,7 @@ tor_free_all(int postfork)
   smartlist_free(active_linked_connection_lst);
   periodic_timer_free(second_timer);
   teardown_periodic_events();
-#ifndef USE_BUFFEREVENTS
   periodic_timer_free(refill_timer);
-#endif
 
   if (!postfork) {
     release_lockfile();

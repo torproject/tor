@@ -1674,17 +1674,6 @@ options_act(const or_options_t *old_options)
   if (accounting_is_enabled(options))
     configure_accounting(time(NULL));
 
-#ifdef USE_BUFFEREVENTS
-  /* If we're using the bufferevents implementation and our rate limits
-   * changed, we need to tell the rate-limiting system about it. */
-  if (!old_options ||
-      old_options->BandwidthRate != options->BandwidthRate ||
-      old_options->BandwidthBurst != options->BandwidthBurst ||
-      old_options->RelayBandwidthRate != options->RelayBandwidthRate ||
-      old_options->RelayBandwidthBurst != options->RelayBandwidthBurst)
-    connection_bucket_init();
-#endif
-
   old_ewma_enabled = cell_ewma_enabled();
   /* Change the cell EWMA settings */
   cell_ewma_set_scale_factor(options, networkstatus_get_latest_consensus());
