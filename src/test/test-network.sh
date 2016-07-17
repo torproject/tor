@@ -1,9 +1,43 @@
 #! /bin/sh
 
+# Please do not modify this script, it has been moved to chutney/tools
+
 ECHO_N="/bin/echo -n"
 
 # Output is prefixed with the name of the script
 myname=$(basename $0)
+
+# We need to find CHUTNEY_PATH, so that we can call the version of this script
+# in chutney/tools. And we want to pass any arguments to that script as well.
+# So we source this script, which processes its arguments to find CHUTNEY_PATH.
+
+# Avoid recursively sourcing this script, and don't call the chutney version
+# while recursing, either
+if [ "$TEST_NETWORK_RECURSING" != true ]; then
+    # Process the arguments into environmental variables with this script
+    # to make sure $CHUTNEY_PATH is set
+    # When we switch to using test-network.sh in chutney/tools, --dry-run
+    # can be removed, because this script will find chutney, then pass all
+    # arguments to chutney's test-network.sh
+    echo "$myname: Parsing command-line arguments to find \$CHUTNEY_PATH"
+    export TEST_NETWORK_RECURSING=true
+    . "$0" --dry-run "$@"
+
+    # Call the chutney version of this script, if it exists, and we can find it
+    if [ -d "$CHUTNEY_PATH" -a -x "$CHUTNEY_PATH/tools/test-network.sh" ]; then
+        unset NETWORK_DRY_RUN
+        echo "$myname: Calling newer chutney script \
+$CHUTNEY_PATH/tools/test-network.sh"
+        "$CHUTNEY_PATH/tools/test-network.sh" "$@"
+        exit $?
+    else
+        echo "$myname: This script has moved to chutney/tools."
+        echo "$myname: Please update your chutney using 'git pull'."
+        # When we switch to using test-network.sh in chutney/tools, we should
+        # exit with a very loud failure here
+        echo "$myname: Falling back to the old tor version of the script."
+    fi
+fi
 
 until [ -z "$1" ]
 do
@@ -16,6 +50,9 @@ do
       export TOR_DIR="$2"
       shift
     ;;
+    # When we switch to using test-network.sh in chutney/tools, only the
+    # --chutney-path and --tor-path arguments need to be processed by this
+    # script, everything else can be handled by chutney's test-network.sh
     --flavor|--flavour|--network-flavor|--network-flavour)
       export NETWORK_FLAVOUR="$2"
       shift
@@ -115,6 +152,9 @@ CHUTNEY_PATH=\`pwd\`/chutney"
     fi
 fi
 
+# When we switch to using test-network.sh in chutney/tools, this comment and
+# everything below it can be removed
+
 # For picking up the right tor binaries.
 # If these varibles aren't set, chutney looks for tor binaries in $PATH
 if [ -d "$TOR_DIR" ]; then
@@ -132,8 +172,9 @@ export NETWORK_FLAVOUR=${NETWORK_FLAVOUR:-"bridges+hs"}
 export CHUTNEY_NETWORK=networks/$NETWORK_FLAVOUR
 
 # And finish up if we're doing a dry run
-if [ "$NETWORK_DRY_RUN" = true]; then
-    exit 0
+if [ "$NETWORK_DRY_RUN" = true ]; then
+    # we can't exit here, it breaks argument processing
+    return
 fi
 
 cd "$CHUTNEY_PATH"
