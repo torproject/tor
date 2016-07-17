@@ -106,10 +106,10 @@ test_util_format_base64_encode(void *ignored)
   for (i = 0;i<50;i++) {
     src[i] = 0;
   }
-  src[50] = 255;
-  src[51] = 255;
-  src[52] = 255;
-  src[53] = 255;
+  src[50] = (char)255;
+  src[51] = (char)255;
+  src[52] = (char)255;
+  src[53] = (char)255;
 
   res = base64_encode(dst, 1000, src, 54, BASE64_ENCODE_MULTILINE);
   tt_int_op(res, OP_EQ, 74);
