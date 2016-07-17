@@ -1,7 +1,9 @@
 #! /bin/sh
 
 ECHO_N="/bin/echo -n"
-use_coverage_binary=false
+
+# Output is prefixed with the name of the script
+myname=$(basename $0)
 
 until [ -z "$1" ]
 do
@@ -44,44 +46,82 @@ do
       shift
       ;;
     --coverage)
-      use_coverage_binary=true
+      export USE_COVERAGE_BINARY=true
       ;;
     *)
-      echo "Sorry, I don't know what to do with '$1'."
+      echo "$myname: Sorry, I don't know what to do with '$1'."
       exit 2
     ;;
   esac
   shift
 done
 
-TOR_DIR="${TOR_DIR:-$PWD}"
-NETWORK_FLAVOUR=${NETWORK_FLAVOUR:-"bridges+hs"}
-CHUTNEY_NETWORK=networks/$NETWORK_FLAVOUR
-myname=$(basename $0)
+# optional: $TOR_DIR is the tor build directory
+# it's used to find the location of tor binaries
+# if it's not set:
+#  - set it ro $BUILDDIR, or
+#  - if $PWD looks like a tor build directory, set it to $PWD, or
+#  - unset $TOR_DIR, and let chutney fall back to finding tor binaries in $PATH
+if [ ! -d "$TOR_DIR" ]; then
+    if [ -d "$BUILDDIR/src/or" -a -d "$BUILDDIR/src/tools" ]; then
+        # Choose the build directory
+        # But only if it looks like one
+        echo "$myname: \$TOR_DIR not set, trying \$BUILDDIR"
+        export TOR_DIR="$BUILDDIR"
+    elif [ -d "$PWD/src/or" -a -d "$PWD/src/tools" ]; then
+        # Guess the tor directory is the current directory
+        # But only if it looks like one
+        echo "$myname: \$TOR_DIR not set, trying \$PWD"
+        export TOR_DIR="$PWD"
+    else
+        echo "$myname: no \$TOR_DIR, chutney will use \$PATH for tor binaries"
+        unset TOR_DIR
+    fi
+fi
 
-[ -n "$CHUTNEY_PATH" ] || {
-    echo "$myname: \$CHUTNEY_PATH not set, trying $TOR_DIR/../chutney"
-    CHUTNEY_PATH="$TOR_DIR/../chutney"
-}
-
-[ -d "$CHUTNEY_PATH" ] && [ -x "$CHUTNEY_PATH/chutney" ] || {
-    echo "$myname: missing 'chutney' in CHUTNEY_PATH ($CHUTNEY_PATH)"
-    echo "$myname: Get chutney: git clone https://git.torproject.org/\
+# mandatory: $CHUTNEY_PATH is the path to the chutney launch script
+# if it's not set:
+#  - if $PWD looks like a chutney directory, set it to $PWD, or
+#  - set it based on $TOR_DIR, expecting chutney to be next to tor, or
+#  - fail and tell the user how to clone the chutney repository
+if [ ! -d "$CHUTNEY_PATH" -o ! -x "$CHUTNEY_PATH/chutney" ]; then
+    if [ -x "$PWD/chutney" ]; then
+        echo "$myname: \$CHUTNEY_PATH not valid, trying \$PWD"
+        export CHUTNEY_PATH="$PWD"
+    elif [ -d "$TOR_DIR" -a -d "$TOR_DIR/../chutney" -a \
+           -x "$TOR_DIR/../chutney/chutney" ]; then
+        echo "$myname: \$CHUTNEY_PATH not valid, trying \$TOR_DIR/../chutney"
+        export CHUTNEY_PATH="$TOR_DIR/../chutney"
+    else
+        # TODO: work out how to package and install chutney,
+        # so users can find it in $PATH
+        echo "$myname: missing 'chutney' in \$CHUTNEY_PATH ($CHUTNEY_PATH)"
+        echo "$myname: Get chutney: git clone https://git.torproject.org/\
 chutney.git"
-    echo "$myname: Set \$CHUTNEY_PATH to a non-standard location: export CHUTNEY_PATH=\`pwd\`/chutney"
-    exit 1
-}
+        echo "$myname: Set \$CHUTNEY_PATH to a non-standard location: export \
+CHUTNEY_PATH=\`pwd\`/chutney"
+        unset CHUTNEY_PATH
+        exit 1
+    fi
+fi
+
+# For picking up the right tor binaries.
+# If these varibles aren't set, chutney looks for tor binaries in $PATH
+if [ -d "$TOR_DIR" ]; then
+    tor_name=tor
+    tor_gencert_name=tor-gencert
+    if [ "$USE_COVERAGE_BINARY" = true ]; then
+        tor_name=tor-cov
+    fi
+    export CHUTNEY_TOR="${TOR_DIR}/src/or/${tor_name}"
+    export CHUTNEY_TOR_GENCERT="${TOR_DIR}/src/tools/${tor_gencert_name}"
+fi
+
+# Set the variables for the chutney network flavour
+export NETWORK_FLAVOUR=${NETWORK_FLAVOUR:-"bridges+hs"}
+export CHUTNEY_NETWORK=networks/$NETWORK_FLAVOUR
 
 cd "$CHUTNEY_PATH"
-# For picking up the right tor binaries.
-tor_name=tor
-tor_gencert_name=tor-gencert
-if test "$use_coverage_binary" = true; then
-  tor_name=tor-cov
-fi
-export CHUTNEY_TOR="${TOR_DIR}/src/or/${tor_name}"
-export CHUTNEY_TOR_GENCERT="${TOR_DIR}/src/tools/${tor_gencert_name}"
-
 ./tools/bootstrap-network.sh $NETWORK_FLAVOUR || exit 2
 
 # Sleep some, waiting for the network to bootstrap.
