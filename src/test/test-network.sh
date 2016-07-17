@@ -48,9 +48,19 @@ do
     --coverage)
       export USE_COVERAGE_BINARY=true
       ;;
+    --dry-run)
+      # process arguments, but don't call any other scripts
+      export NETWORK_DRY_RUN=true
+      ;;
     *)
       echo "$myname: Sorry, I don't know what to do with '$1'."
-      exit 2
+      echo "$myname: Maybe chutney's test-network.sh understands '$1'."
+      echo "$myname: Please update your chutney using 'git pull', and set \
+\$CHUTNEY_PATH"
+      # continue processing arguments during a dry run
+      if [ "$NETWORK_DRY_RUN" != true ]; then
+          exit 2
+      fi
     ;;
   esac
   shift
@@ -120,6 +130,11 @@ fi
 # Set the variables for the chutney network flavour
 export NETWORK_FLAVOUR=${NETWORK_FLAVOUR:-"bridges+hs"}
 export CHUTNEY_NETWORK=networks/$NETWORK_FLAVOUR
+
+# And finish up if we're doing a dry run
+if [ "$NETWORK_DRY_RUN" = true]; then
+    exit 0
+fi
 
 cd "$CHUTNEY_PATH"
 ./tools/bootstrap-network.sh $NETWORK_FLAVOUR || exit 2
