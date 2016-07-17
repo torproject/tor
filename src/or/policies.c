@@ -2866,11 +2866,11 @@ getinfo_helper_policies(control_connection_t *conn,
     }
 
     policies_parse_exit_policy_reject_private(
-                                      &private_policy_list,
-                                      options->IPv6Exit,
-                                      configured_addresses,
-                                      options->ExitPolicyRejectLocalInterfaces,
-                                      options->ExitPolicyRejectLocalInterfaces);
+      &private_policy_list,
+      options->IPv6Exit,
+      configured_addresses,
+      options->ExitPolicyRejectLocalInterfaces,
+      options->ExitPolicyRejectLocalInterfaces);
     *answer = policy_dump_to_string(private_policy_list, 1, 1);
 
     addr_policy_list_free(private_policy_list);
