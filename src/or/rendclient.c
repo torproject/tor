@@ -469,6 +469,23 @@ rend_client_introduction_acked(origin_circuit_t *circ,
 /** The period for which a hidden service directory cannot be queried for
  * the same descriptor ID again. */
 #define REND_HID_SERV_DIR_REQUERY_PERIOD (15 * 60)
+/** Test networks generate a new consensus every 5 or 10 seconds.
+ * So allow them to requery HSDirs much faster. */
+#define REND_HID_SERV_DIR_REQUERY_PERIOD_TESTING (5)
+
+/** Return the period for which a hidden service directory cannot be queried
+ * for the same descriptor ID again, taking TestingTorNetwork into account. */
+static time_t
+hsdir_requery_period(const or_options_t *options)
+{
+  tor_assert(options);
+
+  if (options->TestingTorNetwork) {
+    return REND_HID_SERV_DIR_REQUERY_PERIOD_TESTING;
+  } else {
+    return REND_HID_SERV_DIR_REQUERY_PERIOD;
+  }
+}
 
 /** Contains the last request times to hidden service directories for
  * certain queries; each key is a string consisting of the
@@ -532,7 +549,7 @@ static void
 directory_clean_last_hid_serv_requests(time_t now)
 {
   strmap_iter_t *iter;
-  time_t cutoff = now - REND_HID_SERV_DIR_REQUERY_PERIOD;
+  time_t cutoff = now - hsdir_requery_period(get_options());
   strmap_t *last_hid_serv_requests = get_last_hid_serv_requests();
   for (iter = strmap_iter_init(last_hid_serv_requests);
        !strmap_iter_done(iter); ) {
@@ -635,7 +652,7 @@ pick_hsdir(const char *desc_id, const char *desc_id_base32)
     time_t last = lookup_last_hid_serv_request(dir, desc_id_base32,
                                                0, 0);
     const node_t *node = node_get_by_id(dir->identity_digest);
-    if (last + REND_HID_SERV_DIR_REQUERY_PERIOD >= now ||
+    if (last + hsdir_requery_period(options) >= now ||
         !node || !node_has_descriptor(node)) {
       SMARTLIST_DEL_CURRENT(responsible_dirs, dir);
       continue;
