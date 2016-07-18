@@ -169,9 +169,6 @@ static int can_complete_circuits = 0;
 /** How often do we check for router descriptors that we should download
  * when we have enough directory info? */
 #define LAZY_DESCRIPTOR_RETRY_INTERVAL (60)
-/** How often do we 'forgive' undownloadable router descriptors and attempt
- * to download them again? */
-#define DESCRIPTOR_FAILURE_RESET_INTERVAL (60*60)
 
 /** Decides our behavior when no logs are configured/before any
  * logs have been configured.  For 0, we log notice to stdout as normal.
@@ -1247,7 +1244,6 @@ static int periodic_events_initialized = 0;
 CALLBACK(rotate_onion_key);
 CALLBACK(check_ed_keys);
 CALLBACK(launch_descriptor_fetches);
-CALLBACK(reset_descriptor_failures);
 CALLBACK(rotate_x509_certificate);
 CALLBACK(add_entropy);
 CALLBACK(launch_reachability_tests);
@@ -1279,7 +1275,6 @@ static periodic_event_item_t periodic_events[] = {
   CALLBACK(rotate_onion_key),
   CALLBACK(check_ed_keys),
   CALLBACK(launch_descriptor_fetches),
-  CALLBACK(reset_descriptor_failures),
   CALLBACK(rotate_x509_certificate),
   CALLBACK(add_entropy),
   CALLBACK(launch_reachability_tests),
@@ -1603,15 +1598,6 @@ launch_descriptor_fetches_callback(time_t now, const or_options_t *options)
     return LAZY_DESCRIPTOR_RETRY_INTERVAL;
   else
     return GREEDY_DESCRIPTOR_RETRY_INTERVAL;
-}
-
-static int
-reset_descriptor_failures_callback(time_t now, const or_options_t *options)
-{
-  (void)now;
-  (void)options;
-  router_reset_descriptor_download_failures();
-  return DESCRIPTOR_FAILURE_RESET_INTERVAL;
 }
 
 static int
