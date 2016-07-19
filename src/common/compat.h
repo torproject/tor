@@ -42,6 +42,8 @@
 #include <netinet6/in6.h>
 #endif
 
+#include "compat_time.h"
+
 #if defined(__has_feature)
 #  if __has_feature(address_sanitizer)
 /* Some of the fancy glibc strcmp() macros include references to memory that
@@ -379,15 +381,6 @@ const char *tor_fix_source_file(const char *fname);
 #endif
 
 /* ===== Time compatibility */
-#if !defined(HAVE_GETTIMEOFDAY) && !defined(HAVE_STRUCT_TIMEVAL_TV_SEC)
-/** Implementation of timeval for platforms that don't have it. */
-struct timeval {
-  time_t tv_sec;
-  unsigned int tv_usec;
-};
-#endif
-
-void tor_gettimeofday(struct timeval *timeval);
 
 struct tm *tor_localtime_r(const time_t *timep, struct tm *result);
 struct tm *tor_gmtime_r(const time_t *timep, struct tm *result);
@@ -735,10 +728,6 @@ char *format_win32_error(DWORD err);
 #define VER_SUITE_SINGLEUSERTS 0x00000100
 #endif
 
-#endif
-
-#ifdef TOR_UNIT_TESTS
-void tor_sleep_msec(int msec);
 #endif
 
 #ifdef COMPAT_PRIVATE

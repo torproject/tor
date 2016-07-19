@@ -7,8 +7,9 @@
 #include "orconfig.h"
 #include "testsupport.h"
 
+struct monotime_t;
 typedef struct timeout tor_timer_t;
-typedef void (*timer_cb_fn_t)(tor_timer_t *, void *, const struct timeval *);
+typedef void (*timer_cb_fn_t)(tor_timer_t *, void *, const struct monotime_t *);
 tor_timer_t *timer_new(timer_cb_fn_t cb, void *arg);
 void timer_set_cb(tor_timer_t *t, timer_cb_fn_t cb, void *arg);
 void timer_schedule(tor_timer_t *t, const struct timeval *delay);

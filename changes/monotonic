@@ -1,0 +1,6 @@
+  o Minor features (backend):
+    - Tor now uses the operating system's monotonic timers (where available)
+      for internal fine-grained timing. Previously we would look at the
+      system clock, and then attempt to compensate for the clock running
+      backwards. Closes ticket 18908.
+

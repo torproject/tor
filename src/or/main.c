@@ -3646,6 +3646,8 @@ tor_main(int argc, char *argv[])
 #endif
   }
 
+  monotime_init();
+
   switch (get_options()->command) {
   case CMD_RUN_TOR:
 #ifdef NT_SERVICE

@@ -405,7 +405,7 @@ static chunk_t *
 buf_add_chunk_with_capacity(buf_t *buf, size_t capacity, int capped)
 {
   chunk_t *chunk;
-  struct timeval now;
+
   if (CHUNK_ALLOC_SIZE(capacity) < buf->default_chunk_size) {
     chunk = chunk_new_with_alloc_size(buf->default_chunk_size);
   } else if (capped && CHUNK_ALLOC_SIZE(capacity) > MAX_CHUNK_ALLOC) {
@@ -414,8 +414,7 @@ buf_add_chunk_with_capacity(buf_t *buf, size_t capacity, int capped)
     chunk = chunk_new_with_alloc_size(preferred_chunk_size(capacity));
   }
 
-  tor_gettimeofday_cached_monotonic(&now);
-  chunk->inserted_time = (uint32_t)tv_to_msec(&now);
+  chunk->inserted_time = (uint32_t)monotime_coarse_absolute_msec();
 
   if (buf->tail) {
     tor_assert(buf->head);
@@ -430,8 +429,8 @@ buf_add_chunk_with_capacity(buf_t *buf, size_t capacity, int capped)
 }
 
 /** Return the age of the oldest chunk in the buffer <b>buf</b>, in
- * milliseconds.  Requires the current time, in truncated milliseconds since
- * the epoch, as its input <b>now</b>.
+ * milliseconds.  Requires the current monotonic time, in truncated msec,
+ * as its input <b>now</b>.
  */
 uint32_t
 buf_get_oldest_chunk_timestamp(const buf_t *buf, uint32_t now)
