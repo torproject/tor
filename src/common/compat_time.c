@@ -466,6 +466,10 @@ uint64_t
 monotime_absolute_nsec(void)
 {
   monotime_t now;
+  if (BUG(monotime_initialized == 0)) {
+    monotime_init();
+  }
+
   monotime_get(&now);
   return monotime_diff_nsec(&initialized_at, &now);
 }
@@ -486,6 +490,10 @@ monotime_absolute_msec(void)
 uint64_t
 monotime_coarse_absolute_nsec(void)
 {
+  if (BUG(monotime_initialized == 0)) {
+    monotime_init();
+  }
+
   monotime_coarse_t now;
   monotime_coarse_get(&now);
   return monotime_coarse_diff_nsec(&initialized_at_coarse, &now);
