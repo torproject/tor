@@ -331,8 +331,8 @@ monotime_get(monotime_t *out)
 {
 #ifdef TOR_UNIT_TESTS
   if (monotime_mocking_enabled) {
-    out->ts_.tv_sec = mock_time_nsec / ONE_BILLION;
-    out->ts_.tv_nsec = mock_time_nsec % ONE_BILLION;
+    out->ts_.tv_sec = (time_t) (mock_time_nsec / ONE_BILLION);
+    out->ts_.tv_nsec = (int) (mock_time_nsec % ONE_BILLION);
     return;
   }
 #endif
