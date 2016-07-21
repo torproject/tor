@@ -536,12 +536,12 @@ void
 monotime_init(void)
 {
   if (!monotime_initialized) {
+    monotime_initialized = 1;
     monotime_init_internal();
     monotime_get(&initialized_at);
 #ifdef MONOTIME_COARSE_FN_IS_DIFFERENT
     monotime_coarse_get(&initialized_at_coarse);
 #endif
-    monotime_initialized = 1;
   }
 }
 
