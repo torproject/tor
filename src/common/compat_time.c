@@ -347,8 +347,8 @@ monotime_coarse_get(monotime_coarse_t *out)
 {
 #ifdef TOR_UNIT_TESTS
   if (monotime_mocking_enabled) {
-    out->ts_.tv_sec = mock_time_nsec_coarse / ONE_BILLION;
-    out->ts_.tv_nsec = mock_time_nsec_coarse % ONE_BILLION;
+    out->ts_.tv_sec = (time_t) (mock_time_nsec_coarse / ONE_BILLION);
+    out->ts_.tv_nsec = (int) (mock_time_nsec_coarse % ONE_BILLION);
     return;
   }
 #endif
