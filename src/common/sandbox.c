@@ -606,7 +606,6 @@ sb_socket(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
     const int pf = i ? PF_INET : PF_INET6;
     for (j=0; j < 3; ++j) {
       const int type     = (j == 0) ? SOCK_STREAM :
-                           (j == 1) ? SOCK_DGRAM :
                                       SOCK_DGRAM;
       const int protocol = (j == 0) ? IPPROTO_TCP :
                            (j == 1) ? IPPROTO_IP :
