@@ -72,7 +72,7 @@ void monotime_init(void);
 /**
  * Set <b>out</b> to the current time.
  */
-void monotime_get(monotime_t *out);
+MOCK_DECL(void, monotime_get, (monotime_t *out));
 /**
  * Return the number of nanoseconds between <b>start</b> and <b>end</b>.
  */
@@ -102,7 +102,7 @@ uint64_t monotime_absolute_msec(void);
 /**
  * Set <b>out</b> to the current coarse time.
  */
-void monotime_coarse_get(monotime_coarse_t *out);
+MOCK_DECL(void, monotime_coarse_get, (monotime_coarse_t *out));
 uint64_t monotime_coarse_absolute_nsec(void);
 uint64_t monotime_coarse_absolute_usec(void);
 uint64_t monotime_coarse_absolute_msec(void);
