@@ -220,8 +220,8 @@ monotime_init_internal(void)
 /**
  * Set "out" to the most recent monotonic time value
  */
-MOCK_IMPL(void,
-monotime_get,(monotime_t *out))
+void
+monotime_get(monotime_t *out)
 {
   out->abstime_ = mach_absolute_time();
 }
@@ -251,16 +251,16 @@ monotime_init_internal(void)
   /* no action needed. */
 }
 
-MOCK_IMPL(void,
-monotime_get,(monotime_t *out))
+void
+monotime_get(monotime_t *out)
 {
   int r = clock_gettime(CLOCK_MONOTONIC, &out->ts_);
   tor_assert(r == 0);
 }
 
 #ifdef CLOCK_MONOTONIC_COARSE
-MOCK_IMPL(void,
-monotime_coarse_get,(monotime_coarse_t *out))
+void
+monotime_coarse_get(monotime_coarse_t *out)
 {
   int r = clock_gettime(CLOCK_MONOTONIC_COARSE, &out->ts_);
   tor_assert(r == 0);
@@ -316,8 +316,8 @@ monotime_init_internal(void)
   // FreeLibrary(h) ?
 }
 
-MOCK_IMPL(void,
-monotime_get,(monotime_t *out))
+void
+monotime_get(monotime_t *out)
 {
   if (BUG(monotime_initialized == 0)) {
     monotime_init();
@@ -337,8 +337,8 @@ monotime_get,(monotime_t *out))
   LeaveCriticalSection(&monotime_lock);
 }
 
-MOCK_IMPL(void,
-monotime_coarse_get,(monotime_coarse_t *out))
+void
+monotime_coarse_get(monotime_coarse_t *out)
 {
   if (GetTickCount64_fn) {
     out->tick_count_ = (int64_t)GetTickCount64_fn();
@@ -396,8 +396,8 @@ monotime_init_internal(void)
   tor_mutex_init(&monotime_lock);
 }
 
-MOCK_IMPL(void,
-monotime_get,(monotime_t *out))
+void
+monotime_get(monotime_t *out)
 {
   if (BUG(monotime_initialized == 0)) {
     monotime_init();
