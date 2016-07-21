@@ -2626,9 +2626,8 @@ channel_flush_from_first_active_circuit, (channel_t *chan, int max))
     if (get_options()->CellStatistics ||
         get_options()->TestingEnableCellStatsEvent) {
       uint32_t msec_waiting;
-      struct timeval tvnow;
-      tor_gettimeofday_cached(&tvnow);
-      msec_waiting = ((uint32_t)tv_to_msec(&tvnow)) - cell->inserted_time;
+      uint32_t msec_now = (uint32_t)monotime_coarse_absolute_msec();
+      msec_waiting = msec_now - cell->inserted_time;
 
       if (get_options()->CellStatistics && !CIRCUIT_IS_ORIGIN(circ)) {
         or_circ = TO_OR_CIRCUIT(circ);
