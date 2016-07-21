@@ -511,26 +511,26 @@ static void
 test_buffer_time_tracking(void *arg)
 {
   buf_t *buf=NULL, *buf2=NULL;
-  struct timeval tv0;
   const time_t START = 1389288246;
-  const uint32_t START_MSEC = (uint32_t) ((uint64_t)START * 1000);
+  const uint64_t START_NSEC = ((uint64_t)START) * 1000000000;
   int i;
   char tmp[4096];
   (void)arg;
 
   crypto_rand(tmp, sizeof(tmp));
 
-  tv0.tv_sec = START;
-  tv0.tv_usec = 0;
+  monotime_enable_test_mocking();
 
   buf = buf_new_with_capacity(3000); /* rounds up to next power of 2. */
   tt_assert(buf);
+
+  monotime_coarse_set_mock_time_nsec(START_NSEC);
+  const uint32_t START_MSEC = (uint32_t)monotime_coarse_absolute_msec();
 
   /* Empty buffer means the timestamp is 0. */
   tt_int_op(0, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_MSEC));
   tt_int_op(0, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_MSEC+1000));
 
-  tor_gettimeofday_cache_set(&tv0);
   write_to_buf("ABCDEFG", 7, buf);
   tt_int_op(1000, OP_EQ, buf_get_oldest_chunk_timestamp(buf, START_MSEC+1000));
 
@@ -540,8 +540,7 @@ test_buffer_time_tracking(void *arg)
             buf_get_oldest_chunk_timestamp(buf2, START_MSEC+1234));
 
   /* Now add more bytes; enough to overflow the first chunk. */
-  tv0.tv_usec += 123 * 1000;
-  tor_gettimeofday_cache_set(&tv0);
+  monotime_coarse_set_mock_time_nsec(START_NSEC + 123 * (uint64_t)1000000);
   for (i = 0; i < 600; ++i)
     write_to_buf("ABCDEFG", 7, buf);
   tt_int_op(4207, OP_EQ, buf_datalen(buf));
@@ -562,9 +561,7 @@ test_buffer_time_tracking(void *arg)
 
   /* This time we'll be grabbing a chunk from the freelist, and making sure
      its time gets updated */
-  tv0.tv_sec += 5;
-  tv0.tv_usec = 617*1000;
-  tor_gettimeofday_cache_set(&tv0);
+  monotime_coarse_set_mock_time_nsec(START_NSEC + 5617 * (uint64_t)1000000);
   for (i = 0; i < 600; ++i)
     write_to_buf("ABCDEFG", 7, buf);
   tt_int_op(4307, OP_EQ, buf_datalen(buf));
@@ -578,6 +575,7 @@ test_buffer_time_tracking(void *arg)
  done:
   buf_free(buf);
   buf_free(buf2);
+  monotime_disable_test_mocking();
 }
 
 static void
