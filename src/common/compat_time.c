@@ -13,6 +13,7 @@
 #include "compat.h"
 
 #ifdef _WIN32
+#undef HAVE_CLOCK_GETTIME
 #include <winsock2.h>
 #include <windows.h>
 #endif

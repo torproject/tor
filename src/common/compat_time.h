@@ -19,6 +19,9 @@
 #define TOR_COMPAT_TIME_H
 
 #include "orconfig.h"
+#ifdef _WIN32
+#undef HAVE_CLOCK_GETTIME
+#endif
 
 #if defined(HAVE_CLOCK_GETTIME)
 /* to ensure definition of CLOCK_MONOTONIC_COARSE if it's there */
