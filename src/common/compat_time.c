@@ -118,6 +118,74 @@ tor_gettimeofday(struct timeval *timeval)
 /** True iff monotime_init has been called. */
 static int monotime_initialized = 0;
 
+static monotime_t initialized_at;
+#ifdef MONOTIME_COARSE_FN_IS_DIFFERENT
+static monotime_coarse_t initialized_at_coarse;
+#endif
+
+#ifdef TOR_UNIT_TESTS
+/** True if we are running unit tests and overriding the current monotonic
+ * time.  Note that mocked monotonic time might not be monotonic.
+ */
+static int monotime_mocking_enabled = 0;
+static monotime_t initialized_at_saved;
+
+static int64_t mock_time_nsec = 0;
+#ifdef MONOTIME_COARSE_FN_IS_DIFFERENT
+static int64_t mock_time_nsec_coarse = 0;
+static monotime_coarse_t initialized_at_coarse_saved;
+#endif
+
+void
+monotime_enable_test_mocking(void)
+{
+  if (BUG(monotime_initialized == 0)) {
+    monotime_init();
+  }
+
+  tor_assert_nonfatal(monotime_mocking_enabled == 0);
+  monotime_mocking_enabled = 1;
+  memcpy(&initialized_at_saved,
+         &initialized_at, sizeof(monotime_t));
+  memset(&initialized_at, 0, sizeof(monotime_t));
+#ifdef MONOTIME_COARSE_FN_IS_DIFFERENT
+  memcpy(&initialized_at_coarse_saved,
+         &initialized_at_coarse, sizeof(monotime_coarse_t));
+  memset(&initialized_at_coarse, 0, sizeof(monotime_coarse_t));
+#endif
+}
+
+void
+monotime_disable_test_mocking(void)
+{
+  tor_assert_nonfatal(monotime_mocking_enabled == 1);
+  monotime_mocking_enabled = 0;
+
+  memcpy(&initialized_at,
+         &initialized_at_saved, sizeof(monotime_t));
+#ifdef MONOTIME_COARSE_FN_IS_DIFFERENT
+  memcpy(&initialized_at_coarse,
+         &initialized_at_coarse_saved, sizeof(monotime_coarse_t));
+#endif
+}
+
+void
+monotime_set_mock_time_nsec(int64_t nsec)
+{
+  tor_assert_nonfatal(monotime_mocking_enabled == 1);
+  mock_time_nsec = nsec;
+}
+
+#ifdef MONOTIME_COARSE_FN_IS_DIFFERENT
+void
+monotime_coarse_set_mock_time_nsec(int64_t nsec)
+{
+  tor_assert_nonfatal(monotime_mocking_enabled == 1);
+  mock_time_nsec_coarse = nsec;
+}
+#endif
+#endif
+
 /* "ratchet" functions for monotonic time. */
 
 #if defined(_WIN32) || defined(TOR_UNIT_TESTS)
@@ -223,6 +291,13 @@ monotime_init_internal(void)
 void
 monotime_get(monotime_t *out)
 {
+#ifdef TOR_UNIT_TESTS
+  if (monotime_mocking_enabled) {
+    out->abstime_ = (mock_time_nsec * mach_time_info.denom)
+      / mach_time_info.numer;
+    return;
+  }
+#endif
   out->abstime_ = mach_absolute_time();
 }
 
@@ -254,6 +329,13 @@ monotime_init_internal(void)
 void
 monotime_get(monotime_t *out)
 {
+#ifdef TOR_UNIT_TESTS
+  if (monotime_mocking_enabled) {
+    out->ts_.tv_sec = mock_time_nsec / ONE_BILLION;
+    out->ts_.tv_nsec = mock_time_nsec % ONE_BILLION;
+    return;
+  }
+#endif
   int r = clock_gettime(CLOCK_MONOTONIC, &out->ts_);
   tor_assert(r == 0);
 }
@@ -262,6 +344,13 @@ monotime_get(monotime_t *out)
 void
 monotime_coarse_get(monotime_coarse_t *out)
 {
+#ifdef TOR_UNIT_TESTS
+  if (monotime_mocking_enabled) {
+    out->ts_.tv_sec = mock_time_nsec_coarse / ONE_BILLION;
+    out->ts_.tv_nsec = mock_time_nsec_coarse % ONE_BILLION;
+    return;
+  }
+#endif
   int r = clock_gettime(CLOCK_MONOTONIC_COARSE, &out->ts_);
   tor_assert(r == 0);
 }
@@ -323,6 +412,13 @@ monotime_get(monotime_t *out)
     monotime_init();
   }
 
+#ifdef TOR_UNIT_TESTS
+  if (monotime_mocking_enabled) {
+    out->pcount_ = (mock_time_nsec * ticks_per_second) / ONE_BILLION;
+    return;
+  }
+#endif
+
   /* Alas, QueryPerformanceCounter is not always monotonic: see bug list at
 
     https://www.python.org/dev/peps/pep-0418/#windows-queryperformancecounter
@@ -340,6 +436,13 @@ monotime_get(monotime_t *out)
 void
 monotime_coarse_get(monotime_coarse_t *out)
 {
+#ifdef TOR_UNIT_TESTS
+  if (monotime_mocking_enabled) {
+    out->tick_count_ = mock_time_nsec_coarse / ONE_MILLION;
+    return;
+  }
+#endif
+
   if (GetTickCount64_fn) {
     out->tick_count_ = (int64_t)GetTickCount64_fn();
   } else {
@@ -422,11 +525,6 @@ monotime_diff_nsec(const monotime_t *start,
 /* end of "MONOTIME_USING_GETTIMEOFDAY" */
 #else
 #error "No way to implement monotonic timers."
-#endif
-
-static monotime_t initialized_at;
-#ifdef MONOTIME_COARSE_FN_IS_DIFFERENT
-static monotime_coarse_t initialized_at_coarse;
 #endif
 
 /**

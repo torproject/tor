@@ -130,6 +130,15 @@ void tor_gettimeofday(struct timeval *timeval);
 
 #ifdef TOR_UNIT_TESTS
 void tor_sleep_msec(int msec);
+
+void monotime_enable_test_mocking(void);
+void monotime_disable_test_mocking(void);
+void monotime_set_mock_time_nsec(int64_t);
+#if defined(MONOTIME_COARSE_FN_IS_DIFFERENT)
+void monotime_coarse_set_mock_time_nsec(int64_t);
+#else
+#define monotime_coarse_set_mock_time_nsec monotime_set_mock_time_nsec
+#endif
 #endif
 
 #ifdef COMPAT_TIME_PRIVATE
