@@ -142,6 +142,7 @@ COMMONHEADERS = \
   src/common/compat_libevent.h			\
   src/common/compat_openssl.h			\
   src/common/compat_threads.h			\
+  src/common/compat_time.h			\
   src/common/container.h			\
   src/common/crypto.h				\
   src/common/crypto_curve25519.h		\
