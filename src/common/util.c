@@ -580,6 +580,29 @@ add_laplace_noise(int64_t signal, double random, double delta_f,
     return signal + noise;
 }
 
+/* Helper: return greatest common divisor of a,b */
+static uint64_t
+gcd64(uint64_t a, uint64_t b)
+{
+  while (b) {
+    uint64_t t = b;
+    b = a % b;
+    a = t;
+  }
+  return a;
+}
+
+/* Given a fraction *<b>numer</b> / *<b>denom</b>, simplify it.
+ * Requires that the denominator is greater than 0. */
+void
+simplify_fraction64(uint64_t *numer, uint64_t *denom)
+{
+  tor_assert(denom);
+  uint64_t gcd = gcd64(*numer, *denom);
+  *numer /= gcd;
+  *denom /= gcd;
+}
+
 /** Return the number of bits set in <b>v</b>. */
 int
 n_bits_set_u8(uint8_t v)

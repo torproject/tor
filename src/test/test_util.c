@@ -4657,6 +4657,31 @@ test_util_mathlog(void *arg)
 }
 
 static void
+test_util_fraction(void *arg)
+{
+  uint64_t a,b;
+  (void)arg;
+
+  a = 99; b = 30;
+  simplify_fraction64(&a,&b);
+  tt_u64_op(a, OP_EQ, 33);
+  tt_u64_op(b, OP_EQ, 10);
+
+  a = 3000000; b = 10000000;
+  simplify_fraction64(&a,&b);
+  tt_u64_op(a, OP_EQ, 3);
+  tt_u64_op(b, OP_EQ, 10);
+
+  a = 0; b = 15;
+  simplify_fraction64(&a,&b);
+  tt_u64_op(a, OP_EQ, 0);
+  tt_u64_op(b, OP_EQ, 1);
+
+ done:
+  ;
+}
+
+static void
 test_util_round_to_next_multiple_of(void *arg)
 {
   (void)arg;
@@ -5479,6 +5504,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(read_file_eof_zero_bytes, 0),
   UTIL_TEST(write_chunks_to_file, 0),
   UTIL_TEST(mathlog, 0),
+  UTIL_TEST(fraction, 0),
   UTIL_TEST(weak_random, 0),
   { "socket_ipv4", test_util_socket, TT_FORK, &passthrough_setup,
     (void*)"4" },
