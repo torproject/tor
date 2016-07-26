@@ -471,20 +471,20 @@ int64_t
 monotime_diff_nsec(const monotime_t *start,
                    const monotime_t *end)
 {
-#ifdef _WIN32
-  puts("m_d_n: 1");
-#endif
   if (BUG(monotime_initialized == 0)) {
     monotime_init();
   }
-#ifdef _WIN32
-  puts("m_d_n: 2");
-#endif
   const int64_t diff_ticks = end->pcount_ - start->pcount_;
 #ifdef _WIN32
   puts("m_d_n: 3");
+  printf(I64_FORMAT" diff_ticks\n", I64_PRINTF_ARG(diff_ticks));
+  printf(I64_FORMAT" ticks per second\n", I64_PRINTF_ARG(ticks_per_second));
 #endif
-  return (diff_ticks * ONE_BILLION) / ticks_per_second;
+  const int64_t result = (diff_ticks * ONE_BILLION) / ticks_per_second;
+#ifdef _WIN32
+  printf(I64_FORMAT" res\n", I64_PRINTF_ARG(result));
+#endif
+  return res;
 }
 
 int64_t
