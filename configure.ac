@@ -1900,7 +1900,7 @@ fi
 if test "$enable_coverage" = "yes" && test "$have_clang" = "no"; then
    case "$host_os" in
     darwin*)
-      AC_MSG_WARN([Tried to enable coverage on OSX without using the clang compiler. This might not work! If coverage fails, use CC=clang when configuring with --enable-profiling.])
+      AC_MSG_WARN([Tried to enable coverage on OSX without using the clang compiler. This might not work! If coverage fails, use CC=clang when configuring with --enable-coverage.])
    esac
 fi
 
