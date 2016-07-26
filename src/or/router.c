@@ -1284,14 +1284,16 @@ decide_to_advertise_begindir(const or_options_t *options,
 }
 
 /** Allocate and return a new extend_info_t that can be used to build
- * a circuit to or through the router <b>r</b>. Use the primary
- * address of the router unless <b>for_direct_connect</b> is true, in
- * which case the preferred address is used instead. */
+ * a circuit to or through the router <b>r</b>. Uses the primary
+ * address of the router, so should only be called on a server. */
 static extend_info_t *
 extend_info_from_router(const routerinfo_t *r)
 {
   tor_addr_port_t ap;
   tor_assert(r);
+
+  /* Make sure we don't need to check address reachability */
+  tor_assert_nonfatal(!router_skip_or_reachability(get_options(), 0));
 
   router_get_prim_orport(r, &ap);
   return extend_info_new(r->nickname, r->cache_info.identity_digest,

@@ -1870,7 +1870,7 @@ router_picked_poor_directory_log(const routerstatus_t *rs)
 /* When iterating through the routerlist, can OR address/port preference
  * and reachability checks be skipped?
  */
-static int
+int
 router_skip_or_reachability(const or_options_t *options, int try_ip_pref)
 {
   /* Servers always have and prefer IPv4.
