@@ -1,0 +1,4 @@
+  o Minor features:
+    - Move the test-network.sh script to chutney, and modify tor's
+      test-network.sh to call the (newer) chutney version when available.
+      Resolves ticket 19116. Patch by teor.
