@@ -5296,12 +5296,31 @@ test_util_monotonic_time(void *arg)
   uint64_t nsec1, nsec2, usec1, msec1;
   uint64_t nsecc1, nsecc2, usecc1, msecc1;
 
+#ifdef _WIN32
+  puts("Test-1");
+#endif
+
   monotime_get(&mt1);
+#ifdef _WIN32
+  puts("Test-2");
+#endif
   monotime_coarse_get(&mtc1);
+#ifdef _WIN32
+  puts("Test-3");
+#endif
   nsec1 = monotime_absolute_nsec();
+#ifdef _WIN32
+  puts("Test-4");
+#endif
   usec1 = monotime_absolute_usec();
   msec1 = monotime_absolute_msec();
+#ifdef _WIN32
+  puts("Test-5");
+#endif
   nsecc1 = monotime_coarse_absolute_nsec();
+#ifdef _WIN32
+  puts("Test-6");
+#endif
   usecc1 = monotime_coarse_absolute_usec();
   msecc1 = monotime_coarse_absolute_msec();
 
