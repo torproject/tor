@@ -484,7 +484,7 @@ monotime_diff_nsec(const monotime_t *start,
 #ifdef _WIN32
   printf(I64_FORMAT" res\n", I64_PRINTF_ARG(result));
 #endif
-  return res;
+  return result;
 }
 
 int64_t
