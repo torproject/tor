@@ -13,7 +13,6 @@
 #include "compat.h"
 
 #ifdef _WIN32
-#undef HAVE_CLOCK_GETTIME
 #include <winsock2.h>
 #include <windows.h>
 #endif
@@ -43,6 +42,10 @@
 #ifdef HAVE_FTIME
 #include <sys/timeb.h>
 #endif
+#endif
+
+#ifdef _WIN32
+#undef HAVE_CLOCK_GETTIME
 #endif
 
 #ifdef TOR_UNIT_TESTS
