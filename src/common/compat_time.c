@@ -374,8 +374,10 @@ monotime_diff_nsec(const monotime_t *start,
 /* end of "HAVE_CLOCK_GETTIME" */
 #elif defined (_WIN32)
 
-/** Result of QueryPerformanceFrequency, as an int64_t. */
-static int64_t ticks_per_second = 0;
+/** Result of QueryPerformanceFrequency, in terms needed to
+ * convert ticks to nanoseconds. */
+static int64_t nsec_per_tick_numer = 1;
+static int64_t nsec_per_tick_denom = 1;
 
 /** Lock to protect last_pctr and pctr_offset */
 static CRITICAL_SECTION monotime_lock;
@@ -397,7 +399,17 @@ monotime_init_internal(void)
   ok = QueryPerformanceFrequency(&li);
   tor_assert(ok);
   tor_assert(li.QuadPart);
-  ticks_per_second = li.QuadPart;
+
+  uint64_t n = ONE_BILLION;
+  uint64_t d = li.QuadPart;
+  /* We need to simplify this or we'll probably overflow the int64. */
+  simplify_fraction64(&n, &d);
+  tor_assert(n <= INT64_MAX);
+  tor_assert(d <= INT64_MAX);
+
+  nsec_per_tick_numer = (int64_t) n;
+  nsec_per_tick_denom = (int64_t) d;
+
   last_pctr = 0;
   pctr_offset = 0;
 
@@ -418,7 +430,8 @@ monotime_get(monotime_t *out)
 
 #ifdef TOR_UNIT_TESTS
   if (monotime_mocking_enabled) {
-    out->pcount_ = (mock_time_nsec * ticks_per_second) / ONE_BILLION;
+    out->pcount_ = (mock_time_nsec * nsec_per_tick_denom)
+      / nsec_per_tick_numer;
     return;
   }
 #endif
@@ -465,7 +478,7 @@ monotime_diff_nsec(const monotime_t *start,
     monotime_init();
   }
   const int64_t diff_ticks = end->pcount_ - start->pcount_;
-  return (diff_ticks * ONE_BILLION) / ticks_per_second;
+  return (diff_ticks * nsec_per_tick_numer) / nsec_per_tick_denom;
 }
 
 int64_t
