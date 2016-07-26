@@ -404,6 +404,7 @@ monotime_init_internal(void)
   tor_assert(li.QuadPart);
   puts("win32-mii-6");
   ticks_per_second = li.QuadPart;
+  printf(I64_FORMAT" ticks per second\n", I64_PRINTF_ARG(ticks_per_second));
   last_pctr = 0;
   pctr_offset = 0;
 
