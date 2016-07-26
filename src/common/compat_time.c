@@ -312,7 +312,7 @@ int64_t
 monotime_diff_nsec(const monotime_t *start,
                    const monotime_t *end)
 {
-n  if (BUG(mach_time_info.denom == 0)) {
+  if (BUG(mach_time_info.denom == 0)) {
     monotime_init();
   }
   const int64_t diff_ticks = end->abstime_ - start->abstime_;
@@ -388,34 +388,24 @@ static GetTickCount64_fn_t GetTickCount64_fn = NULL;
 static void
 monotime_init_internal(void)
 {
-  puts("win32-mii-1");
   tor_assert(!monotime_initialized);
   BOOL ok = InitializeCriticalSectionAndSpinCount(&monotime_lock, 200);
   tor_assert(ok);
-  puts("win32-mii-2");
   ok = InitializeCriticalSectionAndSpinCount(&monotime_coarse_lock, 200);
   tor_assert(ok);
-  puts("win32-mii-3");
   LARGE_INTEGER li;
   ok = QueryPerformanceFrequency(&li);
-  puts("win32-mii-4");
   tor_assert(ok);
-  puts("win32-mii-5");
   tor_assert(li.QuadPart);
-  puts("win32-mii-6");
   ticks_per_second = li.QuadPart;
-  printf(I64_FORMAT" ticks per second\n", I64_PRINTF_ARG(ticks_per_second));
   last_pctr = 0;
   pctr_offset = 0;
 
-  puts("win32-mii-7");
   HANDLE h = load_windows_system_library(TEXT("kernel32.dll"));
-  puts("win32-mii-8");
   if (h) {
     GetTickCount64_fn = (GetTickCount64_fn_t)
       GetProcAddress(h, "GetTickCount64");
   }
-  puts("win32-mii-9");
   // FreeLibrary(h) ?
 }
 
@@ -475,16 +465,7 @@ monotime_diff_nsec(const monotime_t *start,
     monotime_init();
   }
   const int64_t diff_ticks = end->pcount_ - start->pcount_;
-#ifdef _WIN32
-  puts("m_d_n: 3");
-  printf(I64_FORMAT" diff_ticks\n", I64_PRINTF_ARG(diff_ticks));
-  printf(I64_FORMAT" ticks per second\n", I64_PRINTF_ARG(ticks_per_second));
-#endif
-  const int64_t result = (diff_ticks * ONE_BILLION) / ticks_per_second;
-#ifdef _WIN32
-  printf(I64_FORMAT" res\n", I64_PRINTF_ARG(result));
-#endif
-  return result;
+  return (diff_ticks * ONE_BILLION) / ticks_per_second;
 }
 
 int64_t
@@ -560,18 +541,9 @@ monotime_init(void)
   if (!monotime_initialized) {
     monotime_init_internal();
     monotime_initialized = 1;
-#ifdef _WIN32
-    puts("mi-0");
-#endif
     monotime_get(&initialized_at);
-#ifdef _WIN32
-    puts("mi-1");
-#endif
 #ifdef MONOTIME_COARSE_FN_IS_DIFFERENT
     monotime_coarse_get(&initialized_at_coarse);
-#endif
-#ifdef _WIN32
-    puts("mi-2");
 #endif
   }
 }
@@ -596,20 +568,11 @@ uint64_t
 monotime_absolute_nsec(void)
 {
   monotime_t now;
-#ifdef _WIN32
-  puts("m_a_n: 1");
-#endif
   if (BUG(monotime_initialized == 0)) {
     monotime_init();
   }
 
-#ifdef _WIN32
-  puts("m_a_n: 2");
-#endif
   monotime_get(&now);
-#ifdef _WIN32
-  puts("m_a_n: 3");
-#endif
   return monotime_diff_nsec(&initialized_at, &now);
 }
 
