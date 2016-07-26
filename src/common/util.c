@@ -1995,12 +1995,7 @@ rate_limit_is_ready(ratelim_t *lim, time_t now)
     lim->n_calls_since_last_time = 0;
     return res;
   } else {
-    if (lim->n_calls_since_last_time < RATELIM_TOOMANY) {
-      ++lim->n_calls_since_last_time;
-    } else if (lim->n_calls_since_last_time == RATELIM_TOOMANY) {
-      log_warn(LD_GENERAL,
-        "Enormously large number of messages (%d). It's probably a bug.",
-        RATELIM_TOOMANY);
+    if (lim->n_calls_since_last_time <= RATELIM_TOOMANY) {
       ++lim->n_calls_since_last_time;
     }
 
@@ -2020,11 +2015,12 @@ rate_limit_log(ratelim_t *lim, time_t now)
       return tor_strdup("");
     } else {
       char *cp=NULL;
+      const char *opt_over = (n >= RATELIM_TOOMANY) ? "over " : "";
       /* XXXX this is not exactly correct: the messages could have occurred
        * any time between the old value of lim->allowed and now. */
       tor_asprintf(&cp,
-                   " [%d similar message(s) suppressed in last %d seconds]",
-                   n-1, lim->rate);
+                   " [%s%d similar message(s) suppressed in last %d seconds]",
+                   opt_over, n-1, lim->rate);
       return cp;
     }
   } else {

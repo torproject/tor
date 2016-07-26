@@ -2,5 +2,5 @@
     - Fix an integer overflow in the rate-limiter that caused displaying of
       wrong number of suppressed messages (if there are too many of them).
       If the number of messages hits the limit of messages per interval the
-      rate-limiter drops a warning and doesn't count any further.
-      Fixes bug 19435.
+      rate-limiter doesn't count any further.
+      Fixes bug 19435; bugfix on 0.2.4.11-alpha.
