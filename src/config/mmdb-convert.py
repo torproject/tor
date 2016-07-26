@@ -20,7 +20,7 @@
 
    When given a simplicity/speed tradeoff, it opts for simplicity.
 
-   You will not understand the code without undestanding the MaxMind-DB
+   You will not understand the code without understanding the MaxMind-DB
    file format.  It is specified at:
    https://github.com/maxmind/MaxMind-DB/blob/master/MaxMind-DB-spec.md.
 
@@ -257,7 +257,7 @@ IGNORE_LEN_TYPES = set([
     TP_ARRAY,  # Length is number of members that follow.
     TP_PTR,    # Length is index to pointed-to data element.
     TP_BOOL,   # Length is 0 or 1.
-    TP_DCACHE, # Length isnumber of members that follow
+    TP_DCACHE, # Length is number of members that follow
 ])
 
 def parse_data_section(s):
@@ -265,7 +265,7 @@ def parse_data_section(s):
        Datum items."""
 
     # Stack of possibly nested containers.  We use the 'nChildren' member of
-    # the last one to tell how many moreitems nest directly inside.
+    # the last one to tell how many more items nest directly inside.
     stack = []
 
     # List of all items, including nested ones.
