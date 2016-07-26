@@ -312,7 +312,7 @@ int64_t
 monotime_diff_nsec(const monotime_t *start,
                    const monotime_t *end)
 {
-  if (BUG(mach_time_info.denom == 0)) {
+n  if (BUG(mach_time_info.denom == 0)) {
     monotime_init();
   }
   const int64_t diff_ticks = end->abstime_ - start->abstime_;
@@ -471,10 +471,19 @@ int64_t
 monotime_diff_nsec(const monotime_t *start,
                    const monotime_t *end)
 {
+#ifdef _WIN32
+  puts("m_d_n: 1");
+#endif
   if (BUG(monotime_initialized == 0)) {
     monotime_init();
   }
+#ifdef _WIN32
+  puts("m_d_n: 2");
+#endif
   const int64_t diff_ticks = end->pcount_ - start->pcount_;
+#ifdef _WIN32
+  puts("m_d_n: 3");
+#endif
   return (diff_ticks * ONE_BILLION) / ticks_per_second;
 }
 
@@ -587,11 +596,20 @@ uint64_t
 monotime_absolute_nsec(void)
 {
   monotime_t now;
+#ifdef _WIN32
+  puts("m_a_n: 1");
+#endif
   if (BUG(monotime_initialized == 0)) {
     monotime_init();
   }
 
+#ifdef _WIN32
+  puts("m_a_n: 2");
+#endif
   monotime_get(&now);
+#ifdef _WIN32
+  puts("m_a_n: 3");
+#endif
   return monotime_diff_nsec(&initialized_at, &now);
 }
 
