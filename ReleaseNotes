@@ -4,7 +4,7 @@ each development snapshot, see the ChangeLog file.
 
 
 
-Changes in version 0.2.8.??? - 2015-0?-??
+Changes in version 0.2.8.6 - 2015-07-2?
   o New system requirements:
     - Tor no longer attempts to support platforms where the "time_t"
       type is unsigned. (To the best of our knowledge, only OpenVMS does
@@ -158,7 +158,6 @@ Changes in version 0.2.8.??? - 2015-0?-??
       output is reproducible. Fixes bug 19558; bugfix on 0.2.2.9-alpha.
       Patch from intrigeri.
 
-
   o Minor features (clients):
     - Make clients, onion services, and bridge relays always use an
       encrypted begindir connection for directory requests. Resolves
@@ -205,15 +204,8 @@ Changes in version 0.2.8.??? - 2015-0?-??
       for directory caches chosen from the consensus.) Closes ticket
       17864; patch by "teor".
 
-
   o Minor features (geoip):
-    - Update geoip and geoip6 to the January 5 2016 Maxmind GeoLite2
-      Country database.
     - Update geoip and geoip6 to the June 7 2016 Maxmind GeoLite2
-      Country database.
-    - Update geoip and geoip6 to the March 3 2016 Maxmind GeoLite2
-      Country database.
-    - Update geoip and geoip6 to the May 4 2016 Maxmind GeoLite2
       Country database.
 
   o Minor features (hidden service directory):
@@ -520,6 +512,13 @@ Changes in version 0.2.8.??? - 2015-0?-??
       Fixes bug 17573; bugfix on 0.2.1.5-alpha.
 
   o Minor bugfixes (linux seccomp2 sandbox):
+    - Allow more syscalls when running with "Sandbox 1" enabled:
+      sysinfo, getsockopt(SO_SNDBUF), and setsockopt(SO_SNDBUFFORCE). On
+      some systems, these are required for Tor to start. Fixes bug
+      18397; bugfix on 0.2.5.1-alpha. Patch from Daniel Pinto.
+    - Allow IPPROTO_UDP datagram sockets when running with "Sandbox 1",
+      so that get_interface_address6_via_udp_socket_hack() can work.
+      Fixes bug 19660; bugfix on 0.2.5.1-alpha
     - Allow the setrlimit syscall, and the prlimit and prlimit64
       syscalls, which some libc implementations use under the hood.
       Fixes bug 15221; bugfix on 0.2.5.1-alpha.
@@ -744,6 +743,7 @@ Changes in version 0.2.8.??? - 2015-0?-??
       solve bug 17808. Closes ticket 18204.
     - Unit tests for directory_handle_command_get. Closes ticket 17004.
       Patch from Reinaldo de Souza Jr.
+
 
 
 Changes in version 0.2.7.6 - 2015-12-10
