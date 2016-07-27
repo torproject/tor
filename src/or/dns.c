@@ -326,7 +326,7 @@ cached_resolve_add_answer(cached_resolve_t *resolve,
       resolve->result_ipv4.err_ipv4 = dns_result;
       resolve->res_status_ipv4 = RES_STATUS_DONE_ERR;
     }
-
+    resolve->ttl_ipv4 = ttl;
   } else if (query_type == DNS_IPv6_AAAA) {
     if (resolve->res_status_ipv6 != RES_STATUS_INFLIGHT)
       return;
@@ -341,6 +341,7 @@ cached_resolve_add_answer(cached_resolve_t *resolve,
       resolve->result_ipv6.err_ipv6 = dns_result;
       resolve->res_status_ipv6 = RES_STATUS_DONE_ERR;
     }
+    resolve->ttl_ipv6 = ttl;
   }
 }
 
