@@ -1,3 +1,18 @@
+Changes in version 0.2.8.6 - 2016-07-2?
+  o Minor bugfixes (compilation):
+    - Fix a compilation warning in the unit tests on systems where char
+      is signed. Fixes bug 19682; bugfix on 0.2.8.1-alpha.
+
+  o Minor bugfixes (Linux seccomp2 sandbox):
+    - Allow more syscalls when running with "Sandbox 1" enabled:
+      sysinfo, getsockopt(SO_SNDBUF), and setsockopt(SO_SNDBUFFORCE). On
+      some systems, these are required for Tor to start. Fixes bug
+      18397; bugfix on 0.2.5.1-alpha. Patch from Daniel Pinto.
+    - Allow IPPROTO_UDP datagram sockets when running with "Sandbox 1",
+      so that get_interface_address6_via_udp_socket_hack() can work.
+      Fixes bug 19660; bugfix on 0.2.5.1-alpha
+
+
 Changes in version 0.2.8.5-rc - 2016-07-07
   Tor 0.2.8.5-rc is the second release candidate in the Tor 0.2.8
   series. If we find no new bugs or regressions here, the first stable
