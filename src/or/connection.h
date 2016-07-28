@@ -52,13 +52,13 @@ void connection_mark_for_close_internal_(connection_t *conn,
  * For all other cases, use connection_mark_and_flush() instead, which
  * checks for or_connection_t properly, instead.  See below.
  */
-#define connection_mark_and_flush_internal_(c,line,file)                  \
-  do {                                                                    \
-    connection_t *tmp_conn_ = (c);                                        \
-    connection_mark_for_close_internal_(tmp_conn_, (line), (file));       \
-    tmp_conn_->hold_open_until_flushed = 1;                               \
-    IF_HAS_BUFFEREVENT(tmp_conn_,                                         \
-                       connection_start_writing(tmp_conn_));              \
+#define connection_mark_and_flush_internal_(c,line,file)                \
+  do {                                                                  \
+    connection_t *tmp_conn__ = (c);                                     \
+    connection_mark_for_close_internal_(tmp_conn__, (line), (file));    \
+    tmp_conn__->hold_open_until_flushed = 1;                            \
+    IF_HAS_BUFFEREVENT(tmp_conn__,                                      \
+                       connection_start_writing(tmp_conn__));           \
   } while (0)
 
 #define connection_mark_and_flush_internal(c)            \

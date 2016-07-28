@@ -139,7 +139,7 @@ channel_flush_some_cells_mock_free_all(void)
 static void
 channel_flush_some_cells_mock_set(channel_t *chan, ssize_t num_cells)
 {
-  flush_mock_channel_t *flush_mock_ch = NULL;
+  int found = 0;
 
   if (!chan) return;
   if (num_cells <= 0) return;
@@ -155,6 +155,7 @@ channel_flush_some_cells_mock_set(channel_t *chan, ssize_t num_cells)
       if (flush_mock_ch->chan == chan) {
         /* Found it */
         flush_mock_ch->cells = num_cells;
+        found = 1;
         break;
       }
     } else {
@@ -164,8 +165,9 @@ channel_flush_some_cells_mock_set(channel_t *chan, ssize_t num_cells)
     }
   } SMARTLIST_FOREACH_END(flush_mock_ch);
 
-  if (!flush_mock_ch) {
+  if (! found) {
     /* The loop didn't find it */
+    flush_mock_channel_t *flush_mock_ch;
     flush_mock_ch = tor_malloc_zero(sizeof(*flush_mock_ch));
     flush_mock_ch->chan = chan;
     flush_mock_ch->cells = num_cells;

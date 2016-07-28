@@ -2881,7 +2881,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   or_circuit_t *or_circ = NULL;
   const or_options_t *options = get_options();
   begin_cell_t bcell;
-  int r;
+  int rv;
   uint8_t end_reason=0;
 
   assert_circuit_ok(circ);
@@ -2906,10 +2906,10 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     return 0;
   }
 
-  r = begin_cell_parse(cell, &bcell, &end_reason);
-  if (r < -1) {
+  rv = begin_cell_parse(cell, &bcell, &end_reason);
+  if (rv < -1) {
     return -END_CIRC_REASON_TORPROTOCOL;
-  } else if (r == -1) {
+  } else if (rv == -1) {
     tor_free(bcell.address);
     relay_send_end_cell_from_edge(rh.stream_id, circ, end_reason, NULL);
     return 0;

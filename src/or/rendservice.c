@@ -2701,7 +2701,6 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   char auth[DIGEST_LEN + 9];
   char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
   int reason = END_CIRC_REASON_TORPROTOCOL;
-  crypto_pk_t *intro_key;
 
   tor_assert(circuit->base_.purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
 #ifndef NON_ANONYMOUS_MODE_ENABLED
@@ -2775,7 +2774,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
            (unsigned)circuit->base_.n_circ_id, serviceid);
 
   /* Use the intro key instead of the service key in ESTABLISH_INTRO. */
-  intro_key = circuit->intro_key;
+  crypto_pk_t *intro_key = circuit->intro_key;
   /* Build the payload for a RELAY_ESTABLISH_INTRO cell. */
   r = crypto_pk_asn1_encode(intro_key, buf+2,
                             RELAY_PAYLOAD_SIZE-2);

@@ -1810,6 +1810,7 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
      -Wselector-type-mismatch
      -Wsentinel
      -Wserialized-diagnostics
+     -Wshadow
      -Wshift-count-negative
      -Wshift-count-overflow
      -Wshift-negative-value

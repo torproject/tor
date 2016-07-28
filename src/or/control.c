@@ -594,7 +594,7 @@ typedef struct queued_event_s {
 
 /** Pointer to int. If this is greater than 0, we don't allow new events to be
  * queued. */
-static tor_threadlocal_t block_event_queue;
+static tor_threadlocal_t block_event_queue_flag;
 
 /** Holds a smartlist of queued_event_t objects that may need to be sent
  * to one or more controllers */
@@ -629,17 +629,17 @@ control_initialize_event_queue(void)
 
   if (queued_control_events_lock == NULL) {
     queued_control_events_lock = tor_mutex_new();
-    tor_threadlocal_init(&block_event_queue);
+    tor_threadlocal_init(&block_event_queue_flag);
   }
 }
 
 static int *
 get_block_event_queue(void)
 {
-  int *val = tor_threadlocal_get(&block_event_queue);
+  int *val = tor_threadlocal_get(&block_event_queue_flag);
   if (PREDICT_UNLIKELY(val == NULL)) {
     val = tor_malloc_zero(sizeof(int));
-    tor_threadlocal_set(&block_event_queue, val);
+    tor_threadlocal_set(&block_event_queue_flag, val);
   }
   return val;
 }
@@ -1370,7 +1370,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
         goto err;
       }
       bad_password = 1;
-      SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+      SMARTLIST_FOREACH(sl, char *, str, tor_free(str));
       smartlist_free(sl);
       sl = NULL;
     } else {
@@ -1382,7 +1382,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
                       received, DIGEST_LEN))
           goto ok;
       });
-      SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+      SMARTLIST_FOREACH(sl, char *, str, tor_free(str));
       smartlist_free(sl);
       sl = NULL;
 
@@ -1410,7 +1410,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
   connection_printf_to_buf(conn, "515 Authentication failed: %s\r\n", errstr);
   connection_mark_for_close(TO_CONN(conn));
   if (sl) { /* clean up */
-    SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+    SMARTLIST_FOREACH(sl, char *, str, tor_free(str));
     smartlist_free(sl);
   }
   return 0;
@@ -1421,7 +1421,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
   conn->base_.state = CONTROL_CONN_STATE_OPEN;
   tor_free(password);
   if (sl) { /* clean up */
-    SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+    SMARTLIST_FOREACH(sl, char *, str, tor_free(str));
     smartlist_free(sl);
   }
   return 0;
@@ -1850,11 +1850,10 @@ getinfo_helper_dir(control_connection_t *control_conn,
                    const char *question, char **answer,
                    const char **errmsg)
 {
-  const node_t *node;
-  const routerinfo_t *ri = NULL;
   (void) control_conn;
   if (!strcmpstart(question, "desc/id/")) {
-    node = node_get_by_hex_id(question+strlen("desc/id/"));
+    const routerinfo_t *ri = NULL;
+    const node_t *node = node_get_by_hex_id(question+strlen("desc/id/"));
     if (node)
       ri = node->ri;
     if (ri) {
@@ -1863,9 +1862,10 @@ getinfo_helper_dir(control_connection_t *control_conn,
         *answer = tor_strndup(body, ri->cache_info.signed_descriptor_len);
     }
   } else if (!strcmpstart(question, "desc/name/")) {
+    const routerinfo_t *ri = NULL;
     /* XXX Setting 'warn_if_unnamed' here is a bit silly -- the
      * warning goes to the user, not to the controller. */
-    node = node_get_by_nickname(question+strlen("desc/name/"), 1);
+    const node_t *node = node_get_by_nickname(question+strlen("desc/name/"), 1);
     if (node)
       ri = node->ri;
     if (ri) {
@@ -1959,7 +1959,9 @@ getinfo_helper_dir(control_connection_t *control_conn,
       *answer = tor_strndup(md->body, md->bodylen);
     }
   } else if (!strcmpstart(question, "desc-annotations/id/")) {
-    node = node_get_by_hex_id(question+strlen("desc-annotations/id/"));
+    const routerinfo_t *ri = NULL;
+    const node_t *node =
+      node_get_by_hex_id(question+strlen("desc-annotations/id/"));
     if (node)
       ri = node->ri;
     if (ri) {
@@ -4637,7 +4639,7 @@ add_onion_helper_clientauth(const char *arg, int *created, char **err_msg)
 
   ok = 1;
  err:
-  SMARTLIST_FOREACH(auth_args, char *, arg, tor_free(arg));
+  SMARTLIST_FOREACH(auth_args, char *, item, tor_free(item));
   smartlist_free(auth_args);
   if (!ok) {
     rend_authorized_client_free(client);

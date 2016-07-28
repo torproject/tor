@@ -1425,7 +1425,7 @@ create_managed_proxy_environment(const managed_proxy_t *mp)
  *
  * Requires that proxy_argv have at least one element. */
 STATIC managed_proxy_t *
-managed_proxy_create(const smartlist_t *transport_list,
+managed_proxy_create(const smartlist_t *with_transport_list,
                      char **proxy_argv, int is_server)
 {
   managed_proxy_t *mp = tor_malloc_zero(sizeof(managed_proxy_t));
@@ -1436,7 +1436,7 @@ managed_proxy_create(const smartlist_t *transport_list,
   mp->proxy_uri = get_pt_proxy_uri();
 
   mp->transports_to_launch = smartlist_new();
-  SMARTLIST_FOREACH(transport_list, const char *, transport,
+  SMARTLIST_FOREACH(with_transport_list, const char *, transport,
                     add_transport_to_proxy(transport, mp));
 
   /* register the managed proxy */
@@ -1460,7 +1460,7 @@ managed_proxy_create(const smartlist_t *transport_list,
  * elements, containing at least one element.
  **/
 MOCK_IMPL(void,
-pt_kickstart_proxy, (const smartlist_t *transport_list,
+pt_kickstart_proxy, (const smartlist_t *with_transport_list,
                      char **proxy_argv, int is_server))
 {
   managed_proxy_t *mp=NULL;
@@ -1473,7 +1473,7 @@ pt_kickstart_proxy, (const smartlist_t *transport_list,
   mp = get_managed_proxy_by_argv_and_type(proxy_argv, is_server);
 
   if (!mp) { /* we haven't seen this proxy before */
-    managed_proxy_create(transport_list, proxy_argv, is_server);
+    managed_proxy_create(with_transport_list, proxy_argv, is_server);
 
   } else { /* known proxy. add its transport to its transport list */
     if (mp->was_around_before_config_read) {
@@ -1490,14 +1490,14 @@ pt_kickstart_proxy, (const smartlist_t *transport_list,
       /* For each new transport, check if the managed proxy used to
          support it before the SIGHUP. If that was the case, make sure
          it doesn't get removed because we might reuse it. */
-      SMARTLIST_FOREACH_BEGIN(transport_list, const char *, transport) {
+      SMARTLIST_FOREACH_BEGIN(with_transport_list, const char *, transport) {
         old_transport = transport_get_by_name(transport);
         if (old_transport)
           old_transport->marked_for_removal = 0;
       } SMARTLIST_FOREACH_END(transport);
     }
 
-    SMARTLIST_FOREACH(transport_list, const char *, transport,
+    SMARTLIST_FOREACH(with_transport_list, const char *, transport,
                       add_transport_to_proxy(transport, mp));
     free_execve_args(proxy_argv);
   }

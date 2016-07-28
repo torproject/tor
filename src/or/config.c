@@ -3489,10 +3489,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (server_mode(options)) {
-    char *msg = NULL;
-    if (have_enough_mem_for_dircache(options, 0, &msg)) {
-      log_warn(LD_CONFIG, "%s", msg);
-      tor_free(msg);
+    char *dircache_msg = NULL;
+    if (have_enough_mem_for_dircache(options, 0, &dircache_msg)) {
+      log_warn(LD_CONFIG, "%s", dircache_msg);
+      tor_free(dircache_msg);
     }
   }
 
@@ -4823,7 +4823,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
 {
   or_options_t *oldoptions, *newoptions, *newdefaultoptions=NULL;
   config_line_t *cl;
-  int retval, i;
+  int retval;
   setopt_err_t err = SETOPT_ERR_MISC;
   tor_assert(msg);
 
@@ -4836,7 +4836,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
   newoptions->command = command;
   newoptions->command_arg = command_arg ? tor_strdup(command_arg) : NULL;
 
-  for (i = 0; i < 2; ++i) {
+  for (int i = 0; i < 2; ++i) {
     const char *body = i==0 ? cf_defaults : cf;
     if (!body)
       continue;
@@ -4880,8 +4880,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
      * let's clean it up.  -NM */
 
     /* Change defaults. */
-    int i;
-    for (i = 0; testing_tor_network_defaults[i].name; ++i) {
+    for (int i = 0; testing_tor_network_defaults[i].name; ++i) {
       const config_var_t *new_var = &testing_tor_network_defaults[i];
       config_var_t *old_var =
           config_find_option_mutable(&options_format, new_var->name);
@@ -4901,7 +4900,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
     newoptions->command_arg = command_arg ? tor_strdup(command_arg) : NULL;
 
     /* Assign all options a second time. */
-    for (i = 0; i < 2; ++i) {
+    for (int i = 0; i < 2; ++i) {
       const char *body = i==0 ? cf_defaults : cf;
       if (!body)
         continue;
@@ -5917,10 +5916,10 @@ parse_dir_fallback_line(const char *line,
         ipv6_addrport_ptr = &ipv6_addrport;
       }
     } else if (!strcmpstart(cp, "weight=")) {
-      int ok;
+      int num_ok;
       const char *wstring = cp + strlen("weight=");
-      weight = tor_parse_double(wstring, 0, (double)UINT64_MAX, &ok, NULL);
-      if (!ok) {
+      weight = tor_parse_double(wstring, 0, (double)UINT64_MAX, &num_ok, NULL);
+      if (!num_ok) {
         log_warn(LD_CONFIG, "Invalid weight '%s' on FallbackDir line.", cp);
         weight=1.0;
       }
@@ -7410,8 +7409,8 @@ getinfo_helper_config(control_connection_t *conn,
     smartlist_free(sl);
   } else if (!strcmp(question, "config/defaults")) {
     smartlist_t *sl = smartlist_new();
-    int i, dirauth_lines_seen = 0, fallback_lines_seen = 0;
-    for (i = 0; option_vars_[i].name; ++i) {
+    int dirauth_lines_seen = 0, fallback_lines_seen = 0;
+    for (int i = 0; option_vars_[i].name; ++i) {
       const config_var_t *var = &option_vars_[i];
       if (var->initvalue != NULL) {
         if (strcmp(option_vars_[i].name, "DirAuthority") == 0) {
@@ -7439,14 +7438,13 @@ getinfo_helper_config(control_connection_t *conn,
        * We didn't see any directory authorities with default values,
        * so add the list of default authorities manually.
        */
-      const char **i;
 
       /*
        * default_authorities is defined earlier in this file and
        * is a const char ** NULL-terminated array of dirauth config
        * lines.
        */
-      for (i = default_authorities; *i != NULL; ++i) {
+      for (const char **i = default_authorities; *i != NULL; ++i) {
         char *val = esc_for_log(*i);
         smartlist_add_asprintf(sl, "DirAuthority %s\n", val);
         tor_free(val);

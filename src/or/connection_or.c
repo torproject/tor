@@ -2275,14 +2275,13 @@ connection_or_send_certs_cell(or_connection_t *conn)
   var_cell_t *cell;
   size_t cell_len;
   ssize_t pos;
-  int server_mode;
 
   tor_assert(conn->base_.state == OR_CONN_STATE_OR_HANDSHAKING_V3);
 
   if (! conn->handshake_state)
     return -1;
-  server_mode = ! conn->handshake_state->started_here;
-  if (tor_tls_get_my_certs(server_mode, &link_cert, &id_cert) < 0)
+  const int conn_in_server_mode = ! conn->handshake_state->started_here;
+  if (tor_tls_get_my_certs(conn_in_server_mode, &link_cert, &id_cert) < 0)
     return -1;
   tor_x509_cert_get_der(link_cert, &link_encoded, &link_len);
   tor_x509_cert_get_der(id_cert, &id_encoded, &id_len);
@@ -2295,7 +2294,7 @@ connection_or_send_certs_cell(or_connection_t *conn)
   cell->payload[0] = 2;
   pos = 1;
 
-  if (server_mode)
+  if (conn_in_server_mode)
     cell->payload[pos] = OR_CERT_TYPE_TLS_LINK; /* Link cert  */
   else
     cell->payload[pos] = OR_CERT_TYPE_AUTH_1024; /* client authentication */

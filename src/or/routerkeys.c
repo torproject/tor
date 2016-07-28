@@ -121,14 +121,14 @@ read_encrypted_secret_key(ed25519_secret_key_t *out,
       saved_errno = EINVAL;
       goto done;
     }
-    const int r = crypto_unpwbox(&secret, &secret_len,
-                                 encrypted_key, encrypted_len,
-                                 pwbuf, pwlen);
-    if (r == UNPWBOX_CORRUPTED) {
+    const int r_unbox = crypto_unpwbox(&secret, &secret_len,
+                                       encrypted_key, encrypted_len,
+                                       pwbuf, pwlen);
+    if (r_unbox == UNPWBOX_CORRUPTED) {
       log_err(LD_OR, "%s is corrupted.", fname);
       saved_errno = EINVAL;
       goto done;
-    } else if (r == UNPWBOX_OKAY) {
+    } else if (r_unbox == UNPWBOX_OKAY) {
       break;
     }
 

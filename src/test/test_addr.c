@@ -83,12 +83,12 @@ test_addr_basic(void *arg)
   tt_assert_test_fmt_type(a,b,e1" "#op" "e2,struct in6_addr*,    \
     (memcmp(val1_->s6_addr, val2_->s6_addr, 16) op 0),           \
     char *, "%s",                                                \
-    { int i; char *cp;                                           \
+    { char *cp;                                                  \
       cp = print_ = tor_malloc(64);                              \
-      for (i=0;i<16;++i) {                                       \
+      for (int ii_=0;i<16;++i) {                                 \
         tor_snprintf(cp, 3,"%02x", (unsigned)value_->s6_addr[i]);\
         cp += 2;                                                 \
-        if (i != 15) *cp++ = ':';                                \
+        if (ii_ != 15) *cp++ = ':';                              \
       }                                                          \
     },                                                           \
     { tor_free(print_); },                                       \
