@@ -279,21 +279,21 @@ tor_reallocarray_(void *ptr, size_t sz1, size_t sz2 DMALLOC_PARAMS)
 char *
 tor_strdup_(const char *s DMALLOC_PARAMS)
 {
-  char *dup;
+  char *duplicate;
   tor_assert(s);
 
 #ifdef USE_DMALLOC
-  dup = dmalloc_strdup(file, line, s, 0);
+  duplicate = dmalloc_strdup(file, line, s, 0);
 #else
-  dup = strdup(s);
+  duplicate = strdup(s);
 #endif
-  if (PREDICT_UNLIKELY(dup == NULL)) {
+  if (PREDICT_UNLIKELY(duplicate == NULL)) {
     /* LCOV_EXCL_START */
     log_err(LD_MM,"Out of memory on strdup(). Dying.");
     exit(1);
     /* LCOV_EXCL_STOP */
   }
-  return dup;
+  return duplicate;
 }
 
 /** Allocate and return a new string containing the first <b>n</b>

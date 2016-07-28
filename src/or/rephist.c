@@ -2374,7 +2374,7 @@ rep_hist_reset_buffer_stats(time_t now)
   if (!circuits_for_buffer_stats)
     circuits_for_buffer_stats = smartlist_new();
   SMARTLIST_FOREACH(circuits_for_buffer_stats, circ_buffer_stats_t *,
-      stat, tor_free(stat));
+      stats, tor_free(stats));
   smartlist_clear(circuits_for_buffer_stats);
   start_of_buffer_stats_interval = now;
 }
@@ -2415,15 +2415,15 @@ rep_hist_format_buffer_stats(time_t now)
                    buffer_stats_compare_entries_);
     i = 0;
     SMARTLIST_FOREACH_BEGIN(circuits_for_buffer_stats,
-                            circ_buffer_stats_t *, stat)
+                            circ_buffer_stats_t *, stats)
     {
       int share = i++ * SHARES / number_of_circuits;
-      processed_cells[share] += stat->processed_cells;
-      queued_cells[share] += stat->mean_num_cells_in_queue;
-      time_in_queue[share] += stat->mean_time_cells_in_queue;
+      processed_cells[share] += stats->processed_cells;
+      queued_cells[share] += stats->mean_num_cells_in_queue;
+      time_in_queue[share] += stats->mean_time_cells_in_queue;
       circs_in_share[share]++;
     }
-    SMARTLIST_FOREACH_END(stat);
+    SMARTLIST_FOREACH_END(stats);
   }
 
   /* Write deciles to strings. */

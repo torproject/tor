@@ -1881,7 +1881,8 @@ choose_good_exit_server(uint8_t purpose,
 /** Log a warning if the user specified an exit for the circuit that
  * has been excluded from use by ExcludeNodes or ExcludeExitNodes. */
 static void
-warn_if_last_router_excluded(origin_circuit_t *circ, const extend_info_t *exit)
+warn_if_last_router_excluded(origin_circuit_t *circ,
+                             const extend_info_t *exit_ei)
 {
   const or_options_t *options = get_options();
   routerset_t *rs = options->ExcludeNodes;
@@ -1928,13 +1929,13 @@ warn_if_last_router_excluded(origin_circuit_t *circ, const extend_info_t *exit)
       break;
     }
 
-  if (routerset_contains_extendinfo(rs, exit)) {
+  if (routerset_contains_extendinfo(rs, exit_ei)) {
     /* We should never get here if StrictNodes is set to 1. */
     if (options->StrictNodes) {
       log_warn(LD_BUG, "Using %s '%s' which is listed in ExcludeNodes%s, "
                "even though StrictNodes is set. Please report. "
                "(Circuit purpose: %s)",
-               description, extend_info_describe(exit),
+               description, extend_info_describe(exit_ei),
                rs==options->ExcludeNodes?"":" or ExcludeExitNodes",
                circuit_purpose_to_string(purpose));
     } else {
@@ -1943,7 +1944,7 @@ warn_if_last_router_excluded(origin_circuit_t *circ, const extend_info_t *exit)
                "prevent this (and possibly break your Tor functionality), "
                "set the StrictNodes configuration option. "
                "(Circuit purpose: %s)",
-               description, extend_info_describe(exit),
+               description, extend_info_describe(exit_ei),
                rs==options->ExcludeNodes?"":" or ExcludeExitNodes",
                circuit_purpose_to_string(purpose));
     }
