@@ -2669,7 +2669,7 @@ compare_tor_addr_to_short_policy(const tor_addr_t *addr, uint16_t port,
 {
   int i;
   int found_match = 0;
-  int accept;
+  int accept_;
 
   tor_assert(port != 0);
 
@@ -2689,9 +2689,9 @@ compare_tor_addr_to_short_policy(const tor_addr_t *addr, uint16_t port,
   }
 
   if (found_match)
-    accept = policy->is_accept;
+    accept_ = policy->is_accept;
   else
-    accept = ! policy->is_accept;
+    accept_ = ! policy->is_accept;
 
   /* ???? are these right? -NM */
   /* We should be sure not to return ADDR_POLICY_ACCEPTED in the accept
@@ -2704,7 +2704,7 @@ compare_tor_addr_to_short_policy(const tor_addr_t *addr, uint16_t port,
    *
    * Once microdescriptors can handle addresses in special cases (e.g. if
    * we ever solve ticket 1774), we can provide certainty here. -RD */
-  if (accept)
+  if (accept_)
     return ADDR_POLICY_PROBABLY_ACCEPTED;
   else
     return ADDR_POLICY_REJECTED;

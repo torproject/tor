@@ -5240,12 +5240,12 @@ test_util_pwdb(void *arg)
   tt_assert(dir != NULL);
 
   /* Try failing cases.  First find a user that doesn't exist by name */
-  char rand[4];
+  char randbytes[4];
   char badname[9];
   int i, found=0;
   for (i = 0; i < 100; ++i) {
-    crypto_rand(rand, sizeof(rand));
-    base16_encode(badname, sizeof(badname), rand, sizeof(rand));
+    crypto_rand(randbytes, sizeof(randbytes));
+    base16_encode(badname, sizeof(badname), randbytes, sizeof(randbytes));
     if (tor_getpwnam(badname) == NULL) {
       found = 1;
       break;

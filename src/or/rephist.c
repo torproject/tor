@@ -743,14 +743,15 @@ rep_history_clean(time_t before)
 
   orhist_it = digestmap_iter_init(history_map);
   while (!digestmap_iter_done(orhist_it)) {
-    int remove;
+    int should_remove;
     digestmap_iter_get(orhist_it, &d1, &or_history_p);
     or_history = or_history_p;
 
-    remove = authority ? (or_history->total_run_weights < STABILITY_EPSILON &&
+    should_remove = authority ?
+                       (or_history->total_run_weights < STABILITY_EPSILON &&
                           !or_history->start_of_run)
                        : (or_history->changed < before);
-    if (remove) {
+    if (should_remove) {
       orhist_it = digestmap_iter_next_rmv(history_map, orhist_it);
       free_or_history(or_history);
       continue;
@@ -2294,16 +2295,16 @@ void
 rep_hist_add_buffer_stats(double mean_num_cells_in_queue,
     double mean_time_cells_in_queue, uint32_t processed_cells)
 {
-  circ_buffer_stats_t *stat;
+  circ_buffer_stats_t *stats;
   if (!start_of_buffer_stats_interval)
     return; /* Not initialized. */
-  stat = tor_malloc_zero(sizeof(circ_buffer_stats_t));
-  stat->mean_num_cells_in_queue = mean_num_cells_in_queue;
-  stat->mean_time_cells_in_queue = mean_time_cells_in_queue;
-  stat->processed_cells = processed_cells;
+  stats = tor_malloc_zero(sizeof(circ_buffer_stats_t));
+  stats->mean_num_cells_in_queue = mean_num_cells_in_queue;
+  stats->mean_time_cells_in_queue = mean_time_cells_in_queue;
+  stats->processed_cells = processed_cells;
   if (!circuits_for_buffer_stats)
     circuits_for_buffer_stats = smartlist_new();
-  smartlist_add(circuits_for_buffer_stats, stat);
+  smartlist_add(circuits_for_buffer_stats, stats);
 }
 
 /** Remember cell statistics for circuit <b>circ</b> at time

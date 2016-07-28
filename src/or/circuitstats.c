@@ -578,18 +578,18 @@ circuit_build_times_rewind_history(circuit_build_times_t *cbt, int n)
  * array is full.
  */
 int
-circuit_build_times_add_time(circuit_build_times_t *cbt, build_time_t time)
+circuit_build_times_add_time(circuit_build_times_t *cbt, build_time_t btime)
 {
-  if (time <= 0 || time > CBT_BUILD_TIME_MAX) {
+  if (btime <= 0 || btime > CBT_BUILD_TIME_MAX) {
     log_warn(LD_BUG, "Circuit build time is too large (%u)."
-                      "This is probably a bug.", time);
+                      "This is probably a bug.", btime);
     tor_fragile_assert();
     return -1;
   }
 
-  log_debug(LD_CIRC, "Adding circuit build time %u", time);
+  log_debug(LD_CIRC, "Adding circuit build time %u", btime);
 
-  cbt->circuit_build_times[cbt->build_times_idx] = time;
+  cbt->circuit_build_times[cbt->build_times_idx] = btime;
   cbt->build_times_idx = (cbt->build_times_idx + 1) % CBT_NCIRCUITS_TO_OBSERVE;
   if (cbt->total_build_times < CBT_NCIRCUITS_TO_OBSERVE)
     cbt->total_build_times++;

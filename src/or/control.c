@@ -6084,14 +6084,14 @@ control_event_buildtimeout_set(buildtimeout_set_event_t type,
 
 /** Called when a signal has been processed from signal_callback */
 int
-control_event_signal(uintptr_t signal)
+control_event_signal(uintptr_t signal_num)
 {
   const char *signal_string = NULL;
 
   if (!control_event_is_interesting(EVENT_GOT_SIGNAL))
     return 0;
 
-  switch (signal) {
+  switch (signal_num) {
     case SIGHUP:
       signal_string = "RELOAD";
       break;
@@ -6112,7 +6112,7 @@ control_event_signal(uintptr_t signal)
       break;
     default:
       log_warn(LD_BUG, "Unrecognized signal %lu in control_event_signal",
-               (unsigned long)signal);
+               (unsigned long)signal_num);
       return -1;
   }
 

@@ -1431,7 +1431,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
   /* Add the actual router entries. */
   {
-    int *index; /* index[j] is the current index into votes[j]. */
     int *size; /* size[j] is the number of routerstatuses in votes[j]. */
     int *flag_counts; /* The number of voters that list flag[j] for the
                        * currently considered router. */
@@ -1466,7 +1465,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
     memset(conflict, 0, sizeof(conflict));
     memset(unknown, 0xff, sizeof(conflict));
 
-    index = tor_calloc(smartlist_len(votes), sizeof(int));
     size = tor_calloc(smartlist_len(votes), sizeof(int));
     n_voter_flags = tor_calloc(smartlist_len(votes), sizeof(int));
     n_flag_voters = tor_calloc(smartlist_len(flags), sizeof(int));
@@ -1932,7 +1930,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
       /* And the loop is over and we move on to the next router */
     }
 
-    tor_free(index);
     tor_free(size);
     tor_free(n_voter_flags);
     tor_free(n_flag_voters);

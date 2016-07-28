@@ -830,9 +830,9 @@ fetch_v2_desc_by_addr(rend_data_t *query, smartlist_t *hsdirs)
 
   tries_left = REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS;
   while (tries_left > 0) {
-    int rand = crypto_rand_int(tries_left);
-    int chosen_replica = replicas_left_to_try[rand];
-    replicas_left_to_try[rand] = replicas_left_to_try[--tries_left];
+    int rand_val = crypto_rand_int(tries_left);
+    int chosen_replica = replicas_left_to_try[rand_val];
+    replicas_left_to_try[rand_val] = replicas_left_to_try[--tries_left];
 
     ret = rend_compute_v2_desc_id(descriptor_id, query->onion_address,
                                   query->auth_type == REND_STEALTH_AUTH ?

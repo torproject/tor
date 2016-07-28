@@ -562,13 +562,13 @@ static int last_connected_socket_fd = 0;
 static int connect_retval = 0;
 
 static tor_socket_t
-pretend_to_connect(tor_socket_t socket, const struct sockaddr *address,
+pretend_to_connect(tor_socket_t sock, const struct sockaddr *address,
                    socklen_t address_len)
 {
   (void)address;
   (void)address_len;
 
-  last_connected_socket_fd = socket;
+  last_connected_socket_fd = sock;
 
   return connect_retval;
 }
@@ -576,11 +576,11 @@ pretend_to_connect(tor_socket_t socket, const struct sockaddr *address,
 static struct sockaddr *mock_addr = NULL;
 
 static int
-fake_getsockname(tor_socket_t socket, struct sockaddr *address,
+fake_getsockname(tor_socket_t sock, struct sockaddr *address,
                  socklen_t *address_len)
 {
   socklen_t bytes_to_copy = 0;
-  (void) socket;
+  (void) sock;
 
   if (!mock_addr)
     return -1;

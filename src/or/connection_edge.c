@@ -3333,19 +3333,20 @@ connection_edge_is_rendezvous_stream(edge_connection_t *conn)
   return 0;
 }
 
-/** Return 1 if router <b>exit</b> is likely to allow stream <b>conn</b>
+/** Return 1 if router <b>exit_node</b> is likely to allow stream <b>conn</b>
  * to exit from it, or 0 if it probably will not allow it.
  * (We might be uncertain if conn's destination address has not yet been
  * resolved.)
  */
 int
-connection_ap_can_use_exit(const entry_connection_t *conn, const node_t *exit)
+connection_ap_can_use_exit(const entry_connection_t *conn,
+                           const node_t *exit_node)
 {
   const or_options_t *options = get_options();
 
   tor_assert(conn);
   tor_assert(conn->socks_request);
-  tor_assert(exit);
+  tor_assert(exit_node);
 
   /* If a particular exit node has been requested for the new connection,
    * make sure the exit node of the existing circuit matches exactly.
@@ -3354,7 +3355,7 @@ connection_ap_can_use_exit(const entry_connection_t *conn, const node_t *exit)
     const node_t *chosen_exit =
       node_get_by_nickname(conn->chosen_exit_name, 1);
     if (!chosen_exit || tor_memneq(chosen_exit->identity,
-                               exit->identity, DIGEST_LEN)) {
+                               exit_node->identity, DIGEST_LEN)) {
       /* doesn't match */
 //      log_debug(LD_APP,"Requested node '%s', considering node '%s'. No.",
 //                conn->chosen_exit_name, exit->nickname);
@@ -3379,7 +3380,8 @@ connection_ap_can_use_exit(const entry_connection_t *conn, const node_t *exit)
       tor_addr_make_null(&addr, AF_INET);
       addrp = &addr;
     }
-    r = compare_tor_addr_to_node_policy(addrp, conn->socks_request->port,exit);
+    r = compare_tor_addr_to_node_policy(addrp, conn->socks_request->port,
+                                        exit_node);
     if (r == ADDR_POLICY_REJECTED)
       return 0; /* We know the address, and the exit policy rejects it. */
     if (r == ADDR_POLICY_PROBABLY_REJECTED && !conn->chosen_exit_name)
@@ -3388,10 +3390,10 @@ connection_ap_can_use_exit(const entry_connection_t *conn, const node_t *exit)
                  * this node, err on the side of caution. */
   } else if (SOCKS_COMMAND_IS_RESOLVE(conn->socks_request->command)) {
     /* Don't send DNS requests to non-exit servers by default. */
-    if (!conn->chosen_exit_name && node_exit_policy_rejects_all(exit))
+    if (!conn->chosen_exit_name && node_exit_policy_rejects_all(exit_node))
       return 0;
   }
-  if (routerset_contains_node(options->ExcludeExitNodesUnion_, exit)) {
+  if (routerset_contains_node(options->ExcludeExitNodesUnion_, exit_node)) {
     /* Not a suitable exit. Refuse it. */
     return 0;
   }

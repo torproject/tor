@@ -1181,10 +1181,10 @@ tor_open_socket,(int domain, int type, int protocol))
 
 /** Mockable wrapper for connect(). */
 MOCK_IMPL(tor_socket_t,
-tor_connect_socket,(tor_socket_t socket,const struct sockaddr *address,
+tor_connect_socket,(tor_socket_t sock, const struct sockaddr *address,
                      socklen_t address_len))
 {
-  return connect(socket,address,address_len);
+  return connect(sock,address,address_len);
 }
 
 /** As socket(), but creates a nonblocking socket and
@@ -1359,31 +1359,31 @@ get_n_open_sockets(void)
 
 /** Mockable wrapper for getsockname(). */
 MOCK_IMPL(int,
-tor_getsockname,(tor_socket_t socket, struct sockaddr *address,
+tor_getsockname,(tor_socket_t sock, struct sockaddr *address,
                  socklen_t *address_len))
 {
-   return getsockname(socket, address, address_len);
+   return getsockname(sock, address, address_len);
 }
 
 /** Turn <b>socket</b> into a nonblocking socket. Return 0 on success, -1
  * on failure.
  */
 int
-set_socket_nonblocking(tor_socket_t socket)
+set_socket_nonblocking(tor_socket_t sock)
 {
 #if defined(_WIN32)
   unsigned long nonblocking = 1;
-  ioctlsocket(socket, FIONBIO, (unsigned long*) &nonblocking);
+  ioctlsocket(sock, FIONBIO, (unsigned long*) &nonblocking);
 #else
   int flags;
 
-  flags = fcntl(socket, F_GETFL, 0);
+  flags = fcntl(sock, F_GETFL, 0);
   if (flags == -1) {
     log_warn(LD_NET, "Couldn't get file status flags: %s", strerror(errno));
     return -1;
   }
   flags |= O_NONBLOCK;
-  if (fcntl(socket, F_SETFL, flags) == -1) {
+  if (fcntl(sock, F_SETFL, flags) == -1) {
     log_warn(LD_NET, "Couldn't set file status flags: %s", strerror(errno));
     return -1;
   }

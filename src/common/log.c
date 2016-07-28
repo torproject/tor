@@ -1071,13 +1071,13 @@ mark_logs_temp(void)
  */
 int
 add_file_log(const log_severity_list_t *severity, const char *filename,
-             const int truncate)
+             const int truncate_log)
 {
   int fd;
   logfile_t *lf;
 
   int open_flags = O_WRONLY|O_CREAT;
-  open_flags |= truncate ? O_TRUNC : O_APPEND;
+  open_flags |= truncate_log ? O_TRUNC : O_APPEND;
 
   fd = tor_open_cloexec(filename, open_flags, 0644);
   if (fd<0)

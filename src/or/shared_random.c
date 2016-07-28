@@ -115,16 +115,16 @@ static int32_t num_srv_agreements_from_vote;
 STATIC sr_srv_t *
 srv_dup(const sr_srv_t *orig)
 {
-  sr_srv_t *dup = NULL;
+  sr_srv_t *duplicate = NULL;
 
   if (!orig) {
     return NULL;
   }
 
-  dup = tor_malloc_zero(sizeof(sr_srv_t));
-  dup->num_reveals = orig->num_reveals;
-  memcpy(dup->value, orig->value, sizeof(dup->value));
-  return dup;
+  duplicate = tor_malloc_zero(sizeof(sr_srv_t));
+  duplicate->num_reveals = orig->num_reveals;
+  memcpy(duplicate->value, orig->value, sizeof(duplicate->value));
+  return duplicate;
 }
 
 /* Allocate a new commit object and initializing it with <b>rsa_identity</b>

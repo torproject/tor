@@ -3099,8 +3099,8 @@ crypto_rand_double(void)
 {
   /* We just use an unsigned int here; we don't really care about getting
    * more than 32 bits of resolution */
-  unsigned int uint;
-  crypto_rand((char*)&uint, sizeof(uint));
+  unsigned int u;
+  crypto_rand((char*)&u, sizeof(u));
 #if SIZEOF_INT == 4
 #define UINT_MAX_AS_DOUBLE 4294967296.0
 #elif SIZEOF_INT == 8
@@ -3108,7 +3108,7 @@ crypto_rand_double(void)
 #else
 #error SIZEOF_INT is neither 4 nor 8
 #endif
-  return ((double)uint) / UINT_MAX_AS_DOUBLE;
+  return ((double)u) / UINT_MAX_AS_DOUBLE;
 }
 
 /** Generate and return a new random hostname starting with <b>prefix</b>,

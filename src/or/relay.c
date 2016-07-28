@@ -255,12 +255,12 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
     if (! CIRCUIT_IS_ORIGIN(circ) &&
         TO_OR_CIRCUIT(circ)->rend_splice &&
         cell_direction == CELL_DIRECTION_OUT) {
-      or_circuit_t *splice = TO_OR_CIRCUIT(circ)->rend_splice;
+      or_circuit_t *splice_ = TO_OR_CIRCUIT(circ)->rend_splice;
       tor_assert(circ->purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED);
-      tor_assert(splice->base_.purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED);
-      cell->circ_id = splice->p_circ_id;
+      tor_assert(splice_->base_.purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED);
+      cell->circ_id = splice_->p_circ_id;
       cell->command = CELL_RELAY; /* can't be relay_early anyway */
-      if ((reason = circuit_receive_relay_cell(cell, TO_CIRCUIT(splice),
+      if ((reason = circuit_receive_relay_cell(cell, TO_CIRCUIT(splice_),
                                                CELL_DIRECTION_IN)) < 0) {
         log_warn(LD_REND, "Error relaying cell across rendezvous; closing "
                  "circuits");

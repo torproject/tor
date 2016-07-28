@@ -5073,7 +5073,7 @@ options_init_logs(const or_options_t *old_options, or_options_t *options,
   config_line_t *opt;
   int ok;
   smartlist_t *elts;
-  int daemon =
+  int run_as_daemon =
 #ifdef _WIN32
                0;
 #else
@@ -5134,7 +5134,7 @@ options_init_logs(const or_options_t *old_options, or_options_t *options,
       int err = smartlist_len(elts) &&
         !strcasecmp(smartlist_get(elts,0), "stderr");
       if (!validate_only) {
-        if (daemon) {
+        if (run_as_daemon) {
           log_warn(LD_CONFIG,
                    "Can't log to %s with RunAsDaemon set; skipping stdout",
                    err?"stderr":"stdout");
@@ -5163,19 +5163,19 @@ options_init_logs(const or_options_t *old_options, or_options_t *options,
         char *fname = expand_filename(smartlist_get(elts, 1));
         /* Truncate if TruncateLogFile is set and we haven't seen this option
            line before. */
-        int truncate = 0;
+        int truncate_log = 0;
         if (options->TruncateLogFile) {
-          truncate = 1;
+          truncate_log = 1;
           if (old_options) {
             config_line_t *opt2;
             for (opt2 = old_options->Logs; opt2; opt2 = opt2->next)
               if (!strcmp(opt->value, opt2->value)) {
-                truncate = 0;
+                truncate_log = 0;
                 break;
               }
           }
         }
-        if (add_file_log(severity, fname, truncate) < 0) {
+        if (add_file_log(severity, fname, truncate_log) < 0) {
           log_warn(LD_CONFIG, "Couldn't open file for 'Log %s': %s",
                    opt->value, strerror(errno));
           ok = 0;

@@ -305,17 +305,17 @@ tor_strdup_(const char *s DMALLOC_PARAMS)
 char *
 tor_strndup_(const char *s, size_t n DMALLOC_PARAMS)
 {
-  char *dup;
+  char *duplicate;
   tor_assert(s);
   tor_assert(n < SIZE_T_CEILING);
-  dup = tor_malloc_((n+1) DMALLOC_FN_ARGS);
+  duplicate = tor_malloc_((n+1) DMALLOC_FN_ARGS);
   /* Performance note: Ordinarily we prefer strlcpy to strncpy.  But
    * this function gets called a whole lot, and platform strncpy is
    * much faster than strlcpy when strlen(s) is much longer than n.
    */
-  strncpy(dup, s, n);
-  dup[n]='\0';
-  return dup;
+  strncpy(duplicate, s, n);
+  duplicate[n]='\0';
+  return duplicate;
 }
 
 /** Allocate a chunk of <b>len</b> bytes, with the same contents as the
@@ -323,12 +323,12 @@ tor_strndup_(const char *s, size_t n DMALLOC_PARAMS)
 void *
 tor_memdup_(const void *mem, size_t len DMALLOC_PARAMS)
 {
-  char *dup;
+  char *duplicate;
   tor_assert(len < SIZE_T_CEILING);
   tor_assert(mem);
-  dup = tor_malloc_(len DMALLOC_FN_ARGS);
-  memcpy(dup, mem, len);
-  return dup;
+  duplicate = tor_malloc_(len DMALLOC_FN_ARGS);
+  memcpy(duplicate, mem, len);
+  return duplicate;
 }
 
 /** As tor_memdup(), but add an extra 0 byte at the end of the resulting
@@ -336,13 +336,13 @@ tor_memdup_(const void *mem, size_t len DMALLOC_PARAMS)
 void *
 tor_memdup_nulterm_(const void *mem, size_t len DMALLOC_PARAMS)
 {
-  char *dup;
+  char *duplicate;
   tor_assert(len < SIZE_T_CEILING+1);
   tor_assert(mem);
-  dup = tor_malloc_(len+1 DMALLOC_FN_ARGS);
-  memcpy(dup, mem, len);
-  dup[len] = '\0';
-  return dup;
+  duplicate = tor_malloc_(len+1 DMALLOC_FN_ARGS);
+  memcpy(duplicate, mem, len);
+  duplicate[len] = '\0';
+  return duplicate;
 }
 
 /** Helper for places that need to take a function pointer to the right
@@ -556,7 +556,7 @@ sample_laplace_distribution(double mu, double b, double p)
  * The epsilon value must be between ]0.0, 1.0]. delta_f must be greater
  * than 0. */
 int64_t
-add_laplace_noise(int64_t signal, double random, double delta_f,
+add_laplace_noise(int64_t signal_, double random_, double delta_f,
                   double epsilon)
 {
   int64_t noise;
@@ -569,15 +569,15 @@ add_laplace_noise(int64_t signal, double random, double delta_f,
   /* Just add noise, no further signal */
   noise = sample_laplace_distribution(0.0,
                                       delta_f / epsilon,
-                                      random);
+                                      random_);
 
   /* Clip (signal + noise) to [INT64_MIN, INT64_MAX] */
-  if (noise > 0 && INT64_MAX - noise < signal)
+  if (noise > 0 && INT64_MAX - noise < signal_)
     return INT64_MAX;
-  else if (noise < 0 && INT64_MIN - noise > signal)
+  else if (noise < 0 && INT64_MIN - noise > signal_)
     return INT64_MIN;
   else
-    return signal + noise;
+    return signal_ + noise;
 }
 
 /* Helper: return greatest common divisor of a,b */
@@ -638,12 +638,12 @@ n_bits_set_u8(uint8_t v)
 void
 tor_strstrip(char *s, const char *strip)
 {
-  char *read = s;
-  while (*read) {
-    if (strchr(strip, *read)) {
-      ++read;
+  char *readp = s;
+  while (*readp) {
+    if (strchr(strip, *readp)) {
+      ++readp;
     } else {
-      *s++ = *read++;
+      *s++ = *readp++;
     }
   }
   *s = '\0';
@@ -1559,11 +1559,12 @@ tv_to_msec(const struct timeval *tv)
 #define IS_LEAPYEAR(y) (!(y % 4) && ((y % 100) || !(y % 400)))
 /** Helper: Return the number of leap-days between Jan 1, y1 and Jan 1, y2. */
 static int
-n_leapdays(int y1, int y2)
+n_leapdays(int year1, int year2)
 {
-  --y1;
-  --y2;
-  return (y2/4 - y1/4) - (y2/100 - y1/100) + (y2/400 - y1/400);
+  --year1;
+  --year2;
+  return (year2/4 - year1/4) - (year2/100 - year1/100)
+    + (year2/400 - year1/400);
 }
 /** Number of days per month in non-leap year; used by tor_timegm and
  * parse_rfc1123_time. */
@@ -5688,7 +5689,7 @@ tor_weak_random_range(tor_weak_rng_t *rng, int32_t top)
 int64_t
 clamp_double_to_int64(double number)
 {
-  int exp;
+  int exponent;
 
   /* NaN is a special case that can't be used with the logic below. */
   if (isnan(number)) {
@@ -5702,14 +5703,14 @@ clamp_double_to_int64(double number)
    * magnitude of number is strictly less than 2^exp.
    *
    * If number is infinite, the call to frexp is legal but the contents of
-   * exp are unspecified. */
-  frexp(number, &exp);
+   * are exponent unspecified. */
+  frexp(number, &exponent);
 
   /* If the magnitude of number is strictly less than 2^63, the truncated
    * version of number is guaranteed to be representable. The only
    * representable integer for which this is not the case is INT64_MIN, but
    * it is covered by the logic below. */
-  if (isfinite(number) && exp <= 63) {
+  if (isfinite(number) && exponent <= 63) {
     return (int64_t)number;
   }
 
