@@ -1595,6 +1595,7 @@ get_interface_addresses_raw,(int severity, sa_family_t family))
     return result;
 #endif
   (void) severity;
+  (void) result;
   return NULL;
 }
 

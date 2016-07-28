@@ -1,9 +1,9 @@
 /* Copyright (c) 2014-2016, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include <math.h>
-
 #include "orconfig.h"
+
+#include <math.h>
 
 /* Libevent stuff */
 #ifdef HAVE_EVENT2_EVENT_H

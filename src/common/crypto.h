@@ -13,6 +13,8 @@
 #ifndef TOR_CRYPTO_H
 #define TOR_CRYPTO_H
 
+#include "orconfig.h"
+
 #include <stdio.h>
 #include "torint.h"
 #include "testsupport.h"
