@@ -335,9 +335,6 @@
 195.191.233.221:80 orport=443 id=DE134FC8E5CC4EC8A5DE66934E70AC9D70267197
 
 # Email sent directly to teor, verified using relay contact info
-37.187.1.149:9030 orport=9001 id=08DC0F3C6E3D9C527C1FC8745D35DD1B0DE1875D ipv6=[2001:41d0:a:195::1]:9001
-
-# Email sent directly to teor, verified using relay contact info
 62.210.238.33:9030 orport=9001 id=FDF845FC159C0020E2BDDA120C30C5C5038F74B4
 
 # Email sent directly to teor, verified using relay contact info
