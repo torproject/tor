@@ -1,0 +1,3 @@
+  o Minor bugfixes (fallback directories):
+    - Remove a fallback that was on the hardcoded list, then opted-out.
+      Fixes bug 19782; update to fallback list from 0.2.8.2-alpha.
