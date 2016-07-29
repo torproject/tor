@@ -154,7 +154,6 @@ int n_bits_set_u8(uint8_t v);
 int64_t clamp_double_to_int64(double number);
 void simplify_fraction64(uint64_t *numer, uint64_t *denom);
 
-
 /* Compute the CEIL of <b>a</b> divided by <b>b</b>, for nonnegative <b>a</b>
  * and positive <b>b</b>.  Works on integer types only. Not defined if a+b can
  * overflow. */

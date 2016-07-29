@@ -1865,7 +1865,8 @@ getinfo_helper_dir(control_connection_t *control_conn,
     const routerinfo_t *ri = NULL;
     /* XXX Setting 'warn_if_unnamed' here is a bit silly -- the
      * warning goes to the user, not to the controller. */
-    const node_t *node = node_get_by_nickname(question+strlen("desc/name/"), 1);
+    const node_t *node =
+      node_get_by_nickname(question+strlen("desc/name/"), 1);
     if (node)
       ri = node->ri;
     if (ri) {

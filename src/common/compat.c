@@ -2824,7 +2824,6 @@ compute_num_cpus(void)
   return num_cpus;
 }
 
-
 #if !defined(_WIN32)
 /** Defined iff we need to add locks when defining fake versions of reentrant
  * versions of time-related functions. */

@@ -626,3 +626,4 @@ monotime_coarse_absolute_msec(void)
   return monotime_coarse_absolute_nsec() / ONE_MILLION;
 }
 #endif
+
