@@ -1,7 +1,27 @@
-Changes in version 0.2.8.6 - 2016-07-2?
+Changes in version 0.2.8.6 - 2016-07-3?
+
+  Tor 0.2.8.6 is the first stable version of the Tor 0.2.8 series.
+
+  The Tor 0.2.8 series improves client bootstrapping performance,
+  completes the authority-side implementation of improved identity
+  keys for relays, and includes small bugfixes and performance
+  improvements throughout the program. This release continues to
+  improve the coverage of Tor's test suite.  For a full list of
+  changes since Tor 0.2.7, see the ReleaseNotes file.
+
+  Changes since 0.2.8.5-rc:
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the July 6 2016 Maxmind GeoLite2
+      Country database.
+
   o Minor bugfixes (compilation):
     - Fix a compilation warning in the unit tests on systems where char
       is signed. Fixes bug 19682; bugfix on 0.2.8.1-alpha.
+
+  o Minor bugfixes (fallback directories):
+    - Remove a fallback that was on the hardcoded list, then opted-out.
+      Fixes bug 19782; update to fallback list from 0.2.8.2-alpha.
 
   o Minor bugfixes (Linux seccomp2 sandbox):
     - Allow more syscalls when running with "Sandbox 1" enabled:

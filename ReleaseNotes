@@ -4,7 +4,19 @@ each development snapshot, see the ChangeLog file.
 
 
 
-Changes in version 0.2.8.6 - 2015-07-2?
+Changes in version 0.2.8.6 - 2015-07-3?
+
+  Tor 0.2.8.6 is the first stable version of the Tor 0.2.8 series.
+
+  The Tor 0.2.8 series improves client bootstrapping performance,
+  completes the authority-side implementation of improved identity
+  keys for relays, and includes small bugfixes and performance
+  improvements throughout the program. This release continues to
+  improve the coverage of Tor's test suite.  For a full list of
+  changes since Tor 0.2.7, see the ReleaseNotes file.
+
+  Below is a list of the changes since Tor 0.2.7.
+
   o New system requirements:
     - Tor no longer attempts to support platforms where the "time_t"
       type is unsigned. (To the best of our knowledge, only OpenVMS does
