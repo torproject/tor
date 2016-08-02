@@ -4791,9 +4791,9 @@ is_valid_initial_command(control_connection_t *conn, const char *cmd)
  * interfaces is broken. */
 #define MAX_COMMAND_LINE_LENGTH (1024*1024)
 
-/** Wrapper around peek_(evbuffer|buf)_has_control0 command: presents the same
- * interface as those underlying functions, but takes a connection_t intead of
- * an evbuffer or a buf_t.
+/** Wrapper around peek_buf_has_control0 command: presents the same
+ * interface as that underlying functions, but takes a connection_t intead of
+ * a buf_t.
  */
 static int
 peek_connection_has_control0_command(connection_t *conn)

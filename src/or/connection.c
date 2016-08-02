@@ -2205,7 +2205,7 @@ connection_send_socks5_connect(connection_t *conn)
   conn->proxy_state = PROXY_SOCKS5_WANT_CONNECT_OK;
 }
 
-/** Wrapper around fetch_from_(buf/evbuffer)_socks_client: see those functions
+/** Wrapper around fetch_from_buf_socks_client: see that functions
  * for documentation of its behavior. */
 static int
 connection_fetch_from_buf_socks_client(connection_t *conn,
@@ -4361,7 +4361,7 @@ connection_flushed_some(connection_t *conn)
 }
 
 /** We just finished flushing bytes to the appropriately low network layer,
- * and there are no more bytes remaining in conn-\>outbuf, conn-\>bev, or
+ * and there are no more bytes remaining in conn-\>outbuf or
  * conn-\>tls to be flushed.
  *
  * This function just passes conn to the connection-specific
