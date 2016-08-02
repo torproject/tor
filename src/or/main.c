@@ -2852,10 +2852,9 @@ tor_init(int argc, char *argv[])
 
   {
     const char *version = get_version();
-    const char *bev_str = "";
 
-    log_notice(LD_GENERAL, "Tor v%s %srunning on %s with Libevent %s, "
-               "OpenSSL %s and Zlib %s.", version, bev_str,
+    log_notice(LD_GENERAL, "Tor v%s running on %s with Libevent %s, "
+               "OpenSSL %s and Zlib %s.", version,
                get_uname(),
                tor_libevent_get_version_str(),
                crypto_openssl_get_version_str(),
