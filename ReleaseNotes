@@ -8,7 +8,7 @@ Changes in version 0.2.8.6 - 2016-08-02
 
   The Tor 0.2.8 series improves client bootstrapping performance,
   completes the authority-side implementation of improved identity
-  keys for relays, and includes small bugfixes and performance
+  keys for relays, and includes numerous bugfixes and performance
   improvements throughout the program. This release continues to
   improve the coverage of Tor's test suite.  For a full list of
   changes since Tor 0.2.7, see the ReleaseNotes file.
