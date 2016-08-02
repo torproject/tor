@@ -1,6 +1,0 @@
-  o Minor bugfixes (directory downloads):
-    - Hex-encode a relay identity fingerprint before printing it.
-    - When downloading authority certificates, re-download from
-      the last successful bridge before retrying a random bridge.
-      Fixes bug 19530; bugfix on #18963, not in any released version
-      of tor.

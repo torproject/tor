@@ -1,3 +1,3 @@
   o Documentation:
     - Fix spelling of "--enable-tor2web-mode" in the manpage. Closes
-      ticket #19153. Patch from "U+039b".
+      ticket 19153. Patch from "U+039b".

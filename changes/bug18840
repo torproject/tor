@@ -1,4 +1,4 @@
-  o Minor bugfixes:
+  o Minor bugfixes (directory authority):
     - Authorities now sort the "package" lines in their votes, for ease
       of debugging. (They are already sorted in the consensus documents.)
       Fixes bug 18840; bugfix on 0.2.6.3-alpha.

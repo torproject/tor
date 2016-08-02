@@ -2,4 +2,4 @@
     - When parsing detached signature, make sure we use the length of the
       digest algorithm instead of an hardcoded DIGEST256_LEN in order to
       avoid comparing bytes out of bound with a smaller digest length such
-      as SHA1. Fixes #19066; bugfix on tor-0.2.2.6-alpha.
+      as SHA1. Fixes bug 19066; bugfix on 0.2.2.6-alpha.

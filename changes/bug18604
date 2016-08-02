@@ -1,4 +1,4 @@
-  o Minor bugfixes (ephemeral hidden service)
+  o Minor bugfixes (ephemeral hidden service):
     - When deleting an ephemeral hidden service, close its intro points even
-      if not in the open state. Resolves ticket #18604; bugfix on
-      tor-0.2.7.1-alpha.
+      if not in the open state. Fixes bug 18604; bugfix on
+      0.2.7.1-alpha.

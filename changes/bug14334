@@ -1,4 +1,4 @@
   o Minor bugfixes (guards):
     - Don't mark guards as unreachable if connection_connect() fails. That
       function fails for local reasons, so it shouldn't reveal anything about
-      the status of the guard. Fixes bug #14334; bugfix on 0.2.3.10-alpha.
+      the status of the guard. Fixes bug 14334; bugfix on 0.2.3.10-alpha.

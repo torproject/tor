@@ -1,4 +1,4 @@
-  o Minor features (bug-finding):
+  o Major features (build, hardening):
     - Tor now builds with -ftrapv by default on compilers that support it.
       This option detects signed integer overflow, and turns it into a
       hard-failure.  We do not apply this option to code that needs to run

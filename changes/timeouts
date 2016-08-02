@@ -3,5 +3,5 @@
       support tens or hundreds of thousands of concurrent timers, as will be
       needed for some of our planned anti-traffic-analysis work. This code
       is based on William Ahern's "timeout.c" project, which implements
-      a "tickless hierarchical timing wheel". Closes ticket #18365.
+      a "tickless hierarchical timing wheel". Closes ticket 18365.
 

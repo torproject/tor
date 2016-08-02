@@ -1,4 +1,4 @@
-  o Minor features:
+  o Minor features (hidden service):
     - Stop being so strict about the payload length of "rendezvous1"
       cells. We used to be locked in to the "tap" handshake length,
       and now we can handle better handshakes like "ntor". Resolves

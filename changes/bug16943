@@ -5,4 +5,4 @@
       global randomness will be used by hidden services to select their
       responsible HSDirs. This release only implements the directory authority
       feature; the hidden service side will be implemented in the future as
-      part of proposal 224 . Resolves ticket #16943 and proposal 250.
+      part of proposal 224 . Resolves ticket 16943; implements proposal 250.
