@@ -1,3 +1,0 @@
-  o Minor bugfixes (compilation):
-    - Fix compilation warning in the unit tests on systems where
-      char is signed. Fixes bug 19682; bugfix on 0.2.8.1-alpha.
