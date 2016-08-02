@@ -1826,40 +1826,6 @@ static inline listener_connection_t *TO_LISTENER_CONN(connection_t *c)
   return DOWNCAST(listener_connection_t, c);
 }
 
-/* Conditional macros to help write code that works whether bufferevents are
-   disabled or not.
-
-   We can't just write:
-      if (conn->bufev) {
-        do bufferevent stuff;
-      } else {
-        do other stuff;
-      }
-   because the bufferevent stuff won't even compile unless we have a fairly
-   new version of Libevent.  Instead, we say:
-      IF_HAS_BUFFEREVENT(conn, { do_bufferevent_stuff } );
-   or:
-      IF_HAS_BUFFEREVENT(conn, {
-        do bufferevent stuff;
-      }) ELSE_IF_NO_BUFFEREVENT {
-        do non-bufferevent stuff;
-      }
-   If we're compiling with bufferevent support, then the macros expand more or
-   less to:
-      if (conn->bufev) {
-        do_bufferevent_stuff;
-      } else {
-        do non-bufferevent stuff;
-      }
-   and if we aren't using bufferevents, they expand more or less to:
-      { do non-bufferevent stuff; }
-*/
-#define HAS_BUFFEREVENT(c) (0)
-#define IF_HAS_BUFFEREVENT(c, stmt) (void)0
-#define ELSE_IF_NO_BUFFEREVENT ;
-#define IF_HAS_NO_BUFFEREVENT(c)                \
-  if (1)
-
 /** What action type does an address policy indicate: accept or reject? */
 typedef enum {
   ADDR_POLICY_ACCEPT=1,

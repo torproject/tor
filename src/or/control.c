@@ -4798,12 +4798,7 @@ is_valid_initial_command(control_connection_t *conn, const char *cmd)
 static int
 peek_connection_has_control0_command(connection_t *conn)
 {
-  IF_HAS_BUFFEREVENT(conn, {
-    struct evbuffer *input = bufferevent_get_input(conn->bufev);
-    return peek_evbuffer_has_control0_command(input);
-  }) ELSE_IF_NO_BUFFEREVENT {
-    return peek_buf_has_control0_command(conn->inbuf);
-  }
+  return peek_buf_has_control0_command(conn->inbuf);
 }
 
 /** Called when data has arrived on a v1 control connection: Try to fetch

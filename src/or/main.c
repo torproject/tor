@@ -225,7 +225,7 @@ connection_add_impl(connection_t *conn, int is_connecting)
 
   (void) is_connecting;
 
-  if (!HAS_BUFFEREVENT(conn) && (SOCKET_OK(conn->s) || conn->linked)) {
+  if (SOCKET_OK(conn->s) || conn->linked) {
     conn->read_event = tor_event_new(tor_libevent_get_base(),
          conn->s, EV_READ|EV_PERSIST, conn_read_callback, conn);
     conn->write_event = tor_event_new(tor_libevent_get_base(),
@@ -413,17 +413,6 @@ get_bytes_written,(void))
 void
 connection_watch_events(connection_t *conn, watchable_events_t events)
 {
-  IF_HAS_BUFFEREVENT(conn, {
-      short ev = ((short)events) & (EV_READ|EV_WRITE);
-      short old_ev = bufferevent_get_enabled(conn->bufev);
-      if ((ev & ~old_ev) != 0) {
-        bufferevent_enable(conn->bufev, ev);
-      }
-      if ((old_ev & ~ev) != 0) {
-        bufferevent_disable(conn->bufev, old_ev & ~ev);
-      }
-      return;
-  });
   if (events & READ_EVENT)
     connection_start_reading(conn);
   else
@@ -441,9 +430,6 @@ connection_is_reading(connection_t *conn)
 {
   tor_assert(conn);
 
-  IF_HAS_BUFFEREVENT(conn,
-    return (bufferevent_get_enabled(conn->bufev) & EV_READ) != 0;
-  );
   return conn->reading_from_linked_conn ||
     (conn->read_event && event_pending(conn->read_event, EV_READ, NULL));
 }
@@ -494,11 +480,6 @@ connection_stop_reading,(connection_t *conn))
 {
   tor_assert(conn);
 
-  IF_HAS_BUFFEREVENT(conn, {
-      bufferevent_disable(conn->bufev, EV_READ);
-      return;
-  });
-
   if (connection_check_event(conn, conn->read_event) < 0) {
     return;
   }
@@ -520,11 +501,6 @@ MOCK_IMPL(void,
 connection_start_reading,(connection_t *conn))
 {
   tor_assert(conn);
-
-  IF_HAS_BUFFEREVENT(conn, {
-      bufferevent_enable(conn->bufev, EV_READ);
-      return;
-  });
 
   if (connection_check_event(conn, conn->read_event) < 0) {
     return;
@@ -549,10 +525,6 @@ connection_is_writing(connection_t *conn)
 {
   tor_assert(conn);
 
-  IF_HAS_BUFFEREVENT(conn,
-    return (bufferevent_get_enabled(conn->bufev) & EV_WRITE) != 0;
-  );
-
   return conn->writing_to_linked_conn ||
     (conn->write_event && event_pending(conn->write_event, EV_WRITE, NULL));
 }
@@ -562,11 +534,6 @@ MOCK_IMPL(void,
 connection_stop_writing,(connection_t *conn))
 {
   tor_assert(conn);
-
-  IF_HAS_BUFFEREVENT(conn, {
-      bufferevent_disable(conn->bufev, EV_WRITE);
-      return;
-  });
 
   if (connection_check_event(conn, conn->write_event) < 0) {
     return;
@@ -590,11 +557,6 @@ MOCK_IMPL(void,
 connection_start_writing,(connection_t *conn))
 {
   tor_assert(conn);
-
-  IF_HAS_BUFFEREVENT(conn, {
-      bufferevent_enable(conn->bufev, EV_WRITE);
-      return;
-  });
 
   if (connection_check_event(conn, conn->write_event) < 0) {
     return;
@@ -793,7 +755,6 @@ conn_close_if_marked(int i)
   if (conn->proxy_state == PROXY_INFANT)
     log_failed_proxy_connection(conn);
 
-  IF_HAS_BUFFEREVENT(conn, goto unlink);
   if ((SOCKET_OK(conn->s) || conn->linked_conn) &&
       connection_wants_to_flush(conn)) {
     /* s == -1 means it's an incomplete edge connection, or that the socket

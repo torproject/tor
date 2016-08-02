@@ -1361,12 +1361,9 @@ connection_tls_start_handshake,(or_connection_t *conn, int receiving))
             conn->base_.s);
   note_crypto_pk_op(receiving ? TLS_HANDSHAKE_S : TLS_HANDSHAKE_C);
 
-  IF_HAS_BUFFEREVENT(TO_CONN(conn), {
-    /* ???? */;
-  }) ELSE_IF_NO_BUFFEREVENT {
-    if (connection_tls_continue_handshake(conn) < 0)
-      return -1;
-  }
+  if (connection_tls_continue_handshake(conn) < 0)
+    return -1;
+
   return 0;
 }
 
@@ -1872,11 +1869,7 @@ connection_or_set_state_open(or_connection_t *conn)
 
   or_handshake_state_free(conn->handshake_state);
   conn->handshake_state = NULL;
-  IF_HAS_BUFFEREVENT(TO_CONN(conn), {
-    connection_watch_events(TO_CONN(conn), READ_EVENT|WRITE_EVENT);
-  }) ELSE_IF_NO_BUFFEREVENT {
-    connection_start_reading(TO_CONN(conn));
-  }
+  connection_start_reading(TO_CONN(conn));
 
   return 0;
 }
@@ -1936,12 +1929,7 @@ static int
 connection_fetch_var_cell_from_buf(or_connection_t *or_conn, var_cell_t **out)
 {
   connection_t *conn = TO_CONN(or_conn);
-  IF_HAS_BUFFEREVENT(conn, {
-    struct evbuffer *input = bufferevent_get_input(conn->bufev);
-    return fetch_var_cell_from_evbuffer(input, out, or_conn->link_proto);
-  }) ELSE_IF_NO_BUFFEREVENT {
-    return fetch_var_cell_from_buf(conn->inbuf, out, or_conn->link_proto);
-  }
+  return fetch_var_cell_from_buf(conn->inbuf, out, or_conn->link_proto);
 }
 
 /** Process cells from <b>conn</b>'s inbuf.

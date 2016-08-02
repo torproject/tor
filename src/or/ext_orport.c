@@ -41,12 +41,7 @@ ext_or_cmd_free(ext_or_cmd_t *cmd)
 static int
 connection_fetch_ext_or_cmd_from_buf(connection_t *conn, ext_or_cmd_t **out)
 {
-  IF_HAS_BUFFEREVENT(conn, {
-    struct evbuffer *input = bufferevent_get_input(conn->bufev);
-    return fetch_ext_or_command_from_evbuffer(input, out);
-  }) ELSE_IF_NO_BUFFEREVENT {
-    return fetch_ext_or_command_from_buf(conn->inbuf, out);
-  }
+  return fetch_ext_or_command_from_buf(conn->inbuf, out);
 }
 
 /** Write an Extended ORPort message to <b>conn</b>. Use

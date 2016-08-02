@@ -57,8 +57,6 @@ void connection_mark_for_close_internal_(connection_t *conn,
     connection_t *tmp_conn_ = (c);                                        \
     connection_mark_for_close_internal_(tmp_conn_, (line), (file));       \
     tmp_conn_->hold_open_until_flushed = 1;                               \
-    IF_HAS_BUFFEREVENT(tmp_conn_,                                         \
-                       connection_start_writing(tmp_conn_));              \
   } while (0)
 
 #define connection_mark_and_flush_internal(c)            \
@@ -166,21 +164,13 @@ static size_t connection_get_outbuf_len(connection_t *conn);
 static inline size_t
 connection_get_inbuf_len(connection_t *conn)
 {
-  IF_HAS_BUFFEREVENT(conn, {
-    return evbuffer_get_length(bufferevent_get_input(conn->bufev));
-  }) ELSE_IF_NO_BUFFEREVENT {
-    return conn->inbuf ? buf_datalen(conn->inbuf) : 0;
-  }
+  return conn->inbuf ? buf_datalen(conn->inbuf) : 0;
 }
 
 static inline size_t
 connection_get_outbuf_len(connection_t *conn)
 {
-  IF_HAS_BUFFEREVENT(conn, {
-    return evbuffer_get_length(bufferevent_get_output(conn->bufev));
-  }) ELSE_IF_NO_BUFFEREVENT {
     return conn->outbuf ? buf_datalen(conn->outbuf) : 0;
-  }
 }
 
 connection_t *connection_get_by_global_id(uint64_t id);

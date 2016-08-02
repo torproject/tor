@@ -575,15 +575,6 @@ connection_free_(connection_t *conn)
   tor_event_free(conn->read_event);
   tor_event_free(conn->write_event);
   conn->read_event = conn->write_event = NULL;
-  IF_HAS_BUFFEREVENT(conn, {
-      /* This was a workaround to handle bugs in some old versions of libevent
-       * where callbacks can occur after calling bufferevent_free().  Setting
-       * the callbacks to NULL prevented this.  It shouldn't be necessary any
-       * more, but let's not tempt fate for now.  */
-      bufferevent_setcb(conn->bufev, NULL, NULL, NULL, NULL);
-      bufferevent_free(conn->bufev);
-      conn->bufev = NULL;
-  });
 
   if (conn->type == CONN_TYPE_DIR) {
     dir_connection_t *dir_conn = TO_DIR_CONN(conn);
@@ -2220,12 +2211,7 @@ static int
 connection_fetch_from_buf_socks_client(connection_t *conn,
                                        int state, char **reason)
 {
-  IF_HAS_BUFFEREVENT(conn, {
-    struct evbuffer *input = bufferevent_get_input(conn->bufev);
-    return fetch_from_evbuffer_socks_client(input, state, reason);
-  }) ELSE_IF_NO_BUFFEREVENT {
-    return fetch_from_buf_socks_client(conn->inbuf, state, reason);
-  }
+  return fetch_from_buf_socks_client(conn->inbuf, state, reason);
 }
 
 /** Call this from connection_*_process_inbuf() to advance the proxy
@@ -3570,12 +3556,7 @@ connection_read_to_buf(connection_t *conn, ssize_t *max_to_read,
 int
 connection_fetch_from_buf(char *string, size_t len, connection_t *conn)
 {
-  IF_HAS_BUFFEREVENT(conn, {
-    /* XXX overflow -seb */
-    return (int)bufferevent_read(conn->bufev, string, len);
-  }) ELSE_IF_NO_BUFFEREVENT {
-    return fetch_from_buf(string, len, conn->inbuf);
-  }
+  return fetch_from_buf(string, len, conn->inbuf);
 }
 
 /** As fetch_from_buf_line(), but read from a connection's input buffer. */
@@ -3583,25 +3564,7 @@ int
 connection_fetch_from_buf_line(connection_t *conn, char *data,
                                size_t *data_len)
 {
-  IF_HAS_BUFFEREVENT(conn, {
-    int r;
-    size_t eol_len=0;
-    struct evbuffer *input = bufferevent_get_input(conn->bufev);
-    struct evbuffer_ptr ptr =
-      evbuffer_search_eol(input, NULL, &eol_len, EVBUFFER_EOL_LF);
-    if (ptr.pos == -1)
-      return 0; /* No EOL found. */
-    if ((size_t)ptr.pos+eol_len >= *data_len) {
-      return -1; /* Too long */
-    }
-    *data_len = ptr.pos+eol_len;
-    r = evbuffer_remove(input, data, ptr.pos+eol_len);
-    tor_assert(r >= 0);
-    data[ptr.pos+eol_len] = '\0';
-    return 1;
-  }) ELSE_IF_NO_BUFFEREVENT {
-    return fetch_from_buf_line(conn->inbuf, data, data_len);
-  }
+  return fetch_from_buf_line(conn->inbuf, data, data_len);
 }
 
 /** As fetch_from_buf_http, but fetches from a connection's input buffer_t or
@@ -3612,14 +3575,8 @@ connection_fetch_from_buf_http(connection_t *conn,
                                char **body_out, size_t *body_used,
                                size_t max_bodylen, int force_complete)
 {
-  IF_HAS_BUFFEREVENT(conn, {
-    struct evbuffer *input = bufferevent_get_input(conn->bufev);
-    return fetch_from_evbuffer_http(input, headers_out, max_headerlen,
-                            body_out, body_used, max_bodylen, force_complete);
-  }) ELSE_IF_NO_BUFFEREVENT {
-    return fetch_from_buf_http(conn->inbuf, headers_out, max_headerlen,
-                            body_out, body_used, max_bodylen, force_complete);
-  }
+  return fetch_from_buf_http(conn->inbuf, headers_out, max_headerlen,
+                             body_out, body_used, max_bodylen, force_complete);
 }
 
 /** Return conn-\>outbuf_flushlen: how many bytes conn wants to flush
@@ -3931,10 +3888,6 @@ connection_handle_write(connection_t *conn, int force)
 int
 connection_flush(connection_t *conn)
 {
-  IF_HAS_BUFFEREVENT(conn, {
-      int r = bufferevent_flush(conn->bufev, EV_WRITE, BEV_FLUSH);
-      return (r < 0) ? -1 : 0;
-  });
   return connection_handle_write(conn, 1);
 }
 
@@ -3962,22 +3915,6 @@ connection_write_to_buf_impl_,(const char *string, size_t len,
   /* if it's marked for close, only allow write if we mean to flush it */
   if (conn->marked_for_close && !conn->hold_open_until_flushed)
     return;
-
-  IF_HAS_BUFFEREVENT(conn, {
-    if (zlib) {
-      int done = zlib < 0;
-      r = write_to_evbuffer_zlib(bufferevent_get_output(conn->bufev),
-                                 TO_DIR_CONN(conn)->zlib_state,
-                                 string, len, done);
-    } else {
-      r = bufferevent_write(conn->bufev, string, len);
-    }
-    if (r < 0) {
-      /* XXXX mark for close? */
-      log_warn(LD_NET, "bufferevent_write failed! That shouldn't happen.");
-    }
-    return;
-  });
 
   old_datalen = buf_datalen(conn->outbuf);
   if (zlib) {
@@ -4441,8 +4378,7 @@ connection_finished_flushing(connection_t *conn)
 
 //  log_fn(LOG_DEBUG,"entered. Socket %u.", conn->s);
 
-  IF_HAS_NO_BUFFEREVENT(conn)
-    connection_stop_writing(conn);
+  connection_stop_writing(conn);
 
   switch (conn->type) {
     case CONN_TYPE_OR:

@@ -478,8 +478,7 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
   rep_hist_note_exit_stream_opened(conn->port);
 
   conn->state = EXIT_CONN_STATE_OPEN;
-  IF_HAS_NO_BUFFEREVENT(conn)
-    connection_watch_events(conn, READ_EVENT); /* stop writing, keep reading */
+  connection_watch_events(conn, READ_EVENT); /* stop writing, keep reading */
   if (connection_get_outbuf_len(conn)) /* in case there are any queued relay
                                         * cells */
     connection_start_writing(conn);
@@ -2008,14 +2007,8 @@ connection_ap_handshake_process_socks(entry_connection_t *conn)
 
   log_debug(LD_APP,"entered.");
 
-  IF_HAS_BUFFEREVENT(base_conn, {
-    struct evbuffer *input = bufferevent_get_input(base_conn->bufev);
-    sockshere = fetch_from_evbuffer_socks(input, socks,
-                                     options->TestSocks, options->SafeSocks);
-  }) ELSE_IF_NO_BUFFEREVENT {
-    sockshere = fetch_from_buf_socks(base_conn->inbuf, socks,
-                                     options->TestSocks, options->SafeSocks);
-  };
+  sockshere = fetch_from_buf_socks(base_conn->inbuf, socks,
+                                   options->TestSocks, options->SafeSocks);
 
   if (socks->replylen) {
     had_reply = 1;
@@ -3225,11 +3218,9 @@ connection_exit_connect(edge_connection_t *edge_conn)
   conn->state = EXIT_CONN_STATE_OPEN;
   if (connection_get_outbuf_len(conn)) {
     /* in case there are any queued data cells, from e.g. optimistic data */
-    IF_HAS_NO_BUFFEREVENT(conn)
-      connection_watch_events(conn, READ_EVENT|WRITE_EVENT);
+    connection_watch_events(conn, READ_EVENT|WRITE_EVENT);
   } else {
-    IF_HAS_NO_BUFFEREVENT(conn)
-      connection_watch_events(conn, READ_EVENT);
+    connection_watch_events(conn, READ_EVENT);
   }
 
   /* also, deliver a 'connected' cell back through the circuit. */

@@ -2525,7 +2525,7 @@ set_streams_blocked_on_circ(circuit_t *circ, channel_t *chan,
       edge->edge_blocked_on_circ = block;
     }
 
-    if (!conn->read_event && !HAS_BUFFEREVENT(conn)) {
+    if (!conn->read_event) {
       /* This connection is a placeholder for something; probably a DNS
        * request.  It can't actually stop or start reading.*/
       continue;

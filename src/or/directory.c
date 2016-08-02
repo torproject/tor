@@ -1272,11 +1272,7 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
                            if_modified_since);
 
     connection_watch_events(TO_CONN(conn), READ_EVENT|WRITE_EVENT);
-    IF_HAS_BUFFEREVENT(ENTRY_TO_CONN(linked_conn), {
-      connection_watch_events(ENTRY_TO_CONN(linked_conn),
-                              READ_EVENT|WRITE_EVENT);
-    }) ELSE_IF_NO_BUFFEREVENT
-      connection_start_reading(ENTRY_TO_CONN(linked_conn));
+    connection_start_reading(ENTRY_TO_CONN(linked_conn));
   }
 }
 
