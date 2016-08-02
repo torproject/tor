@@ -314,7 +314,7 @@ test_buffer_copy(void *arg)
   tt_assert(buf);
 
   /* Copy an empty buffer. */
-  tt_int_op(0, OP_EQ, generic_buffer_set_to_copy(&buf2, buf));
+  tt_int_op(0, OP_EQ, buf_set_to_copy(&buf2, buf));
   tt_assert(buf2);
   tt_int_op(0, OP_EQ, generic_buffer_len(buf2));
 
@@ -325,14 +325,14 @@ test_buffer_copy(void *arg)
   tt_int_op(len, OP_EQ, generic_buffer_len(buf));
   /* Add junk to buf2 so we can test replacing.*/
   generic_buffer_add(buf2, "BLARG", 5);
-  tt_int_op(0, OP_EQ, generic_buffer_set_to_copy(&buf2, buf));
+  tt_int_op(0, OP_EQ, buf_set_to_copy(&buf2, buf));
   tt_int_op(len, OP_EQ, generic_buffer_len(buf2));
   generic_buffer_get(buf2, b, len);
   tt_mem_op(b, OP_EQ, s, len);
   /* Now free buf2 and retry so we can test allocating */
   generic_buffer_free(buf2);
   buf2 = NULL;
-  tt_int_op(0, OP_EQ, generic_buffer_set_to_copy(&buf2, buf));
+  tt_int_op(0, OP_EQ, buf_set_to_copy(&buf2, buf));
   tt_int_op(len, OP_EQ, generic_buffer_len(buf2));
   generic_buffer_get(buf2, b, len);
   tt_mem_op(b, OP_EQ, s, len);
@@ -350,7 +350,7 @@ test_buffer_copy(void *arg)
     generic_buffer_add(buf, b, 1);
     generic_buffer_add(buf, s, len);
   }
-  tt_int_op(0, OP_EQ, generic_buffer_set_to_copy(&buf2, buf));
+  tt_int_op(0, OP_EQ, buf_set_to_copy(&buf2, buf));
   tt_int_op(generic_buffer_len(buf2), OP_EQ, generic_buffer_len(buf));
   for (i = 0; i < 256; ++i) {
     generic_buffer_get(buf2, b, len+1);

@@ -64,8 +64,9 @@ int fetch_ext_or_command_from_buf(buf_t *buf, ext_or_cmd_t **out);
 #define generic_buffer_free(b) buf_free((b))
 #define generic_buffer_fetch_ext_or_cmd(b, out) \
   fetch_ext_or_command_from_buf((b), (out))
-int generic_buffer_set_to_copy(generic_buffer_t **output,
-                               const generic_buffer_t *input);
+
+int buf_set_to_copy(generic_buffer_t **output,
+                    const generic_buffer_t *input);
 
 void assert_buf_ok(buf_t *buf);
 

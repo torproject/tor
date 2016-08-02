@@ -1025,8 +1025,8 @@ connection_ap_detach_retriable(entry_connection_t *conn,
   pathbias_mark_use_rollback(circ);
 
   if (conn->pending_optimistic_data) {
-    generic_buffer_set_to_copy(&conn->sending_optimistic_data,
-                               conn->pending_optimistic_data);
+    buf_set_to_copy(&conn->sending_optimistic_data,
+                    conn->pending_optimistic_data);
   }
 
   if (!get_options()->LeaveStreamsUnattached || conn->use_begindir) {

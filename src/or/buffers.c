@@ -1978,8 +1978,8 @@ write_to_buf_zlib(buf_t *buf, tor_zlib_state_t *state,
 
 /** Set *<b>output</b> to contain a copy of the data in *<b>input</b> */
 int
-generic_buffer_set_to_copy(generic_buffer_t **output,
-                           const generic_buffer_t *input)
+buf_set_to_copy(generic_buffer_t **output,
+                const generic_buffer_t *input)
 {
   if (*output)
     buf_free(*output);
