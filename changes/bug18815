@@ -1,3 +1,0 @@
-  o Minor features (performance):
-    - When fetching a consensus for the first time, use optimistic data.
-      This saves a round-trip during startup. Closes ticket 18815.

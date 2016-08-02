@@ -1,5 +1,0 @@
-  o Minor bugfixes (memory leaks):
-    - Fix a small, uncommon memory leak that could occur when reading a
-      truncated ed25519 key file. Fixes bug 18956; bugfix on 0.2.6.1-alpha.
-
-

@@ -1,4 +1,0 @@
-  o Minor features (debugging):
-    - When dumping unparseable router descriptors, optionally store them in
-      separate filenames by hash, up to a configurable limit.
-      Closes ticket 18322.

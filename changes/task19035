@@ -1,5 +1,0 @@
-  o Removed features:
-    - Remove support for "GET /tor/bytes.txt" DirPort request, and
-      "GETINFO dir-usage" controller request, which were only available
-      via a compile-time option in Tor anyway. Feature was added in
-      0.2.2.1-alpha. Resolves ticket 19035.

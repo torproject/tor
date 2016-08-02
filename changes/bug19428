@@ -1,5 +1,0 @@
-  o Minor bugfixes (timing):
-    - When computing the difference between two times in milliseconds,
-      we now round to the nearest millisecond correctly. Previously,
-      we could sometimes round in the wrong direction. Fixes bug 19428;
-      bugfix on 0.2.2.2-alpha.

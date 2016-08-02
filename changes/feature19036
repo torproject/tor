@@ -1,4 +1,0 @@
-  o Minor features (directory authority):
-    - Make directory authorities write the v3-status-votes file out
-      to disk earlier in the consensus process, so we have the votes
-      even if we abort the consensus process below. Resolves ticket 19036.

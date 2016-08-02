@@ -1,3 +1,0 @@
-  o Minor bugfixes (test networks):
-    - Allow clients to retry HSDirs much faster in test networks.
-      Fixes bug 19702; bugfix on 0.2.7.1-alpha. Patch by teor.

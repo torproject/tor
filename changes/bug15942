@@ -1,3 +1,0 @@
-  o Minor features (downloading):
-    - Use random exponential backoffs when retrying downloads from the dir
-      servers. Closes ticket 15942.

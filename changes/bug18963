@@ -1,5 +1,0 @@
-  o Minor bugfixes (bootstrap):
-    - Remember the directory we fetched the consensus or previous
-      certificates from, and use it to fetch future authority
-      certificates.
-      Fixes bug 18963; bugfix on 0.2.8.1-alpha.

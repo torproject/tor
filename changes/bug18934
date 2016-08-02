@@ -1,3 +1,0 @@
-  o Minor features (testing):
-    - Let backtrace tests work correctly under AddressSanitizer.
-      Fixes part of bug 18934; bugfix on 0.2.5.2-alpha.

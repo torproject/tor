@@ -1,4 +1,0 @@
-  o Minor features (safety, debugging):
-    - Add a set of macros to check nonfatal assertions, for internal
-      use. Migrating more of our checks to these should help us avoid
-      needless crash bugs. Closes ticket 18613.

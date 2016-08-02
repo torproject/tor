@@ -1,4 +1,0 @@
-  o Minor bugfixes (hidden service client):
-    - Increase the minimum number of internal circuits we preemptively build
-      from 2 to 3 so they are available when a client connects to another
-      onion service. Fixes bug 13239; bugfix on 0.1.0.1-rc.

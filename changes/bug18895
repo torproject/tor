@@ -1,6 +1,0 @@
-  o Minor features (build):
-    - When building on a system without runtime support for some of the
-      runtime hardening options, try to log a useful warning at configuration
-      time, rather than an incomprehensible warning at link time.
-      If expensive hardening was requested, this warning becomes an error.
-      Closes ticket 18895.

@@ -1,3 +1,0 @@
-  o Code simplification and refactoring:
-    - Split the 600-line directory_handle_command_get function into
-      separate functions for different URL types. Closes ticket 16698.

@@ -1,4 +1,0 @@
-  o Removed features:
-    - There is no longer a compile-time option to disable support
-      for TransPort. (If you don't want TransPort; just don't use it.)
-      Patch from "U+039b". Closes ticket 19449.

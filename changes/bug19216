@@ -1,4 +1,0 @@
-  o Minor bugfixes (compilation):
-    - When building with Clang, include our full array of GCC warnings.
-      (Previously, we included only a subset, because of the way we
-      detected them.) Fixes bug 19216; bugfix on 0.2.0.1-alpha.

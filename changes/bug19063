@@ -1,4 +1,0 @@
-  o Minor features (code safety):
-    - In our integer-parsing functions, check that the maxiumum
-      value given is no smaller than the minimum value.  Closes ticket
-      19063; patch from U+039b.

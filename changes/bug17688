@@ -1,4 +1,0 @@
-  o Minor bugfixes (guard selection):
-    - Use a single entry guard even if the NumEntryGuards consensus parameter
-      is not provided. Fixes bug 17688; bugfix on 0.2.5.6-alpha.
-

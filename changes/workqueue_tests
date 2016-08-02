@@ -1,4 +1,0 @@
-  o Testing:
-    - Run more workqueue tests as part of "make check". These had previously
-      been implemented, but you needed to know special command-line options
-      to enable them.

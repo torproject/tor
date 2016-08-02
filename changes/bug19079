@@ -1,4 +1,0 @@
-  o Minor features (build):
-    - Detect and work around a libclang_rt problem that prevents clang from
-      finding __mulodi4() on some 32-bit platforms. This clang bug would keep
-      -ftrapv from linking on those systems. Closes ticket 19079.

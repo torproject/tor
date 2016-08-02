@@ -1,7 +1,0 @@
-  o Minor features (testing):
-    - Use the lcov convention for marking lines as unreachable, so that
-      we don't count them when we're generating test coverage data.
-      Update our coverage tools to understand this convention.
-      Closes ticket 16792.
-
-

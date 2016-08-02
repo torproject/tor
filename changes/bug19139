@@ -1,3 +1,0 @@
-  o Minor features (build):
-    - Use the Autoconf macro AC_USE_SYSTEM_EXTENSIONS to automatically
-      turn on C and POSIX extensions. Closes ticket 19139.

@@ -1,3 +1,0 @@
-  o Minor bugfixes (logging):
-    - When logging a directory ownership mismatch, log the owning username
-      correctly. Fixes bug 19578; bugfix on 0.2.2.29-beta.

@@ -1,3 +1,0 @@
-  o Minor features (controller):
-    - Fire a `STATUS_SERVER` event whenever the hibernation status changes
-      between "awake"/"soft"/"hard". Closes ticket 18685.
