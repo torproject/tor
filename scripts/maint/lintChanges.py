@@ -44,7 +44,6 @@ def lintfile(fname):
         warn("bug number {} does not appear".format(bugnum))
 
     lines = contents.split("\n")
-    isBug = ("bug" in lines[0] or "fix" in lines[0])
 
     m = re.match(r'^[ ]{2}o ([^\(:]*)([^:]*):', contents)
     if not m:
@@ -56,6 +55,7 @@ def lintfile(fname):
            '(' not in m.group(2)):
         warn("Missing subcategory on %s"%m.group(1))
 
+    isBug = ("bug" in m.group(1).lower() or "fix" in m.group(1).lower())
 
     contents = " ".join(contents.split())
 
