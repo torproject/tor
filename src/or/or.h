@@ -1132,7 +1132,7 @@ typedef struct {
 typedef struct buf_t buf_t;
 typedef struct socks_request_t socks_request_t;
 
-#define generic_buffer_t buf_t
+#define buf_t buf_t
 
 typedef struct entry_port_cfg_t {
   /* Client port types (socks, dns, trans, natd) only: */
@@ -1619,11 +1619,11 @@ typedef struct entry_connection_t {
   /** For AP connections only: buffer for data that we have sent
    * optimistically, which we might need to re-send if we have to
    * retry this connection. */
-  generic_buffer_t *pending_optimistic_data;
+  buf_t *pending_optimistic_data;
   /* For AP connections only: buffer for data that we previously sent
   * optimistically which we are currently re-sending as we retry this
   * connection. */
-  generic_buffer_t *sending_optimistic_data;
+  buf_t *sending_optimistic_data;
 
   /** If this is a DNSPort connection, this field holds the pending DNS
    * request that we're going to try to answer.  */

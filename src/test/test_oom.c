@@ -77,14 +77,14 @@ dummy_origin_circuit_new(int n_cells)
 }
 
 static void
-add_bytes_to_buf(generic_buffer_t *buf, size_t n_bytes)
+add_bytes_to_buf(buf_t *buf, size_t n_bytes)
 {
   char b[3000];
 
   while (n_bytes) {
     size_t this_add = n_bytes > sizeof(b) ? sizeof(b) : n_bytes;
     crypto_rand(b, this_add);
-    generic_buffer_add(buf, b, this_add);
+    write_to_buf(b, this_add, buf);
     n_bytes -= this_add;
   }
 }
@@ -94,7 +94,7 @@ dummy_edge_conn_new(circuit_t *circ,
                     int type, size_t in_bytes, size_t out_bytes)
 {
   edge_connection_t *conn;
-  generic_buffer_t *inbuf, *outbuf;
+  buf_t *inbuf, *outbuf;
 
   if (type == CONN_TYPE_EXIT)
     conn = edge_connection_new(type, AF_INET);

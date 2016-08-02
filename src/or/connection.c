@@ -549,10 +549,10 @@ connection_free_(connection_t *conn)
     if (entry_conn->socks_request)
       socks_request_free(entry_conn->socks_request);
     if (entry_conn->pending_optimistic_data) {
-      generic_buffer_free(entry_conn->pending_optimistic_data);
+      buf_free(entry_conn->pending_optimistic_data);
     }
     if (entry_conn->sending_optimistic_data) {
-      generic_buffer_free(entry_conn->sending_optimistic_data);
+      buf_free(entry_conn->sending_optimistic_data);
     }
   }
   if (CONN_IS_EDGE(conn)) {

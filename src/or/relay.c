@@ -1374,7 +1374,7 @@ connection_edge_process_relay_cell_not_open(
     /* This is definitely a success, so forget about any pending data we
      * had sent. */
     if (entry_conn->pending_optimistic_data) {
-      generic_buffer_free(entry_conn->pending_optimistic_data);
+      buf_free(entry_conn->pending_optimistic_data);
       entry_conn->pending_optimistic_data = NULL;
     }
 
@@ -1876,7 +1876,7 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
     entry_conn->sending_optimistic_data != NULL;
 
   if (PREDICT_UNLIKELY(sending_from_optimistic)) {
-    bytes_to_process = generic_buffer_len(entry_conn->sending_optimistic_data);
+    bytes_to_process = buf_datalen(entry_conn->sending_optimistic_data);
     if (PREDICT_UNLIKELY(!bytes_to_process)) {
       log_warn(LD_BUG, "sending_optimistic_data was non-NULL but empty");
       bytes_to_process = connection_get_inbuf_len(TO_CONN(conn));
@@ -1904,9 +1904,9 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
     /* XXXX We could be more efficient here by sometimes packing
      * previously-sent optimistic data in the same cell with data
      * from the inbuf. */
-    generic_buffer_get(entry_conn->sending_optimistic_data, payload, length);
-    if (!generic_buffer_len(entry_conn->sending_optimistic_data)) {
-        generic_buffer_free(entry_conn->sending_optimistic_data);
+    fetch_from_buf(payload, length, entry_conn->sending_optimistic_data);
+    if (!buf_datalen(entry_conn->sending_optimistic_data)) {
+        buf_free(entry_conn->sending_optimistic_data);
         entry_conn->sending_optimistic_data = NULL;
     }
   } else {
@@ -1921,8 +1921,8 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
     /* This is new optimistic data; remember it in case we need to detach and
        retry */
     if (!entry_conn->pending_optimistic_data)
-      entry_conn->pending_optimistic_data = generic_buffer_new();
-    generic_buffer_add(entry_conn->pending_optimistic_data, payload, length);
+      entry_conn->pending_optimistic_data = buf_new();
+    write_to_buf(payload, length, entry_conn->pending_optimistic_data);
   }
 
   if (connection_edge_send_command(conn, RELAY_COMMAND_DATA,

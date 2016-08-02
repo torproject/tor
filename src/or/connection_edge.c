@@ -2340,7 +2340,7 @@ connection_ap_handshake_send_begin(entry_connection_t *ap_conn)
     log_info(LD_APP, "Sending up to %ld + %ld bytes of queued-up data",
              (long)connection_get_inbuf_len(base_conn),
              ap_conn->sending_optimistic_data ?
-             (long)generic_buffer_len(ap_conn->sending_optimistic_data) : 0);
+             (long)buf_datalen(ap_conn->sending_optimistic_data) : 0);
     if (connection_edge_package_raw_inbuf(edge_conn, 1, NULL) < 0) {
       connection_mark_for_close(base_conn);
     }
