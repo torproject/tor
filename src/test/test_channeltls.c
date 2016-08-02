@@ -124,8 +124,7 @@ test_channeltls_num_bytes_queued(void *arg)
    * Next, we have to test ch->num_bytes_queued, which is
    * channel_tls_num_bytes_queued_method.  We can't mock
    * connection_get_outbuf_len() directly because it's static inline
-   * in connection.h, but we can mock buf_datalen().  Note that
-   * if bufferevents ever work, this will break with them enabled.
+   * in connection.h, but we can mock buf_datalen().
    */
 
   tt_assert(ch->num_bytes_queued != NULL);

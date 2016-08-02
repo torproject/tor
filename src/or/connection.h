@@ -247,8 +247,6 @@ void clock_skew_warning(const connection_t *conn, long apparent_skew,
                         int trusted, log_domain_mask_t domain,
                         const char *received, const char *source);
 
-#define connection_type_uses_bufferevent(c) (0)
-
 #ifdef CONNECTION_PRIVATE
 STATIC void connection_free_(connection_t *conn);
 

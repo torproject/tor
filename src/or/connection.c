@@ -3567,8 +3567,8 @@ connection_fetch_from_buf_line(connection_t *conn, char *data,
   return fetch_from_buf_line(conn->inbuf, data, data_len);
 }
 
-/** As fetch_from_buf_http, but fetches from a connection's input buffer_t or
- * its bufferevent as appropriate. */
+/** As fetch_from_buf_http, but fetches from a connection's input buffer_t as
+ * appropriate. */
 int
 connection_fetch_from_buf_http(connection_t *conn,
                                char **headers_out, size_t max_headerlen,
@@ -3880,7 +3880,7 @@ connection_handle_write(connection_t *conn, int force)
  * Try to flush data that's waiting for a write on <b>conn</b>.  Return
  * -1 on failure, 0 on success.
  *
- * Don't use this function for regular writing; the buffers/bufferevents
+ * Don't use this function for regular writing; the buffers
  * system should be good enough at scheduling writes there.  Instead, this
  * function is for cases when we're about to exit or something and we want
  * to report it right away.

@@ -161,9 +161,6 @@ AC_ARG_ENABLE(tor2web-mode,
     CFLAGS="$CFLAGS -D ENABLE_TOR2WEB_MODE=1"
 fi])
 
-AC_ARG_ENABLE(bufferevents,
-     AS_HELP_STRING(--enable-bufferevents, [use Libevent's buffered IO]))
-
 AC_ARG_ENABLE(tool-name-check,
      AS_HELP_STRING(--disable-tool-name-check, [check for sanely named toolchain when cross-compiling]))
 
@@ -545,30 +542,6 @@ int x = 1;
 ])], [ AC_MSG_RESULT([yes]) ],
    [ AC_MSG_RESULT([no])
      AC_MSG_ERROR([Libevent is not new enough.  We require 2.0.10-stable or later]) ] )
-
-LIBS="$save_LIBS"
-LDFLAGS="$save_LDFLAGS"
-CPPFLAGS="$save_CPPFLAGS"
-
-dnl bufferents require version 2.0.13
-if test "$enable_bufferevents" = "yes"; then
-   AC_CHECK_HEADERS(event2/bufferevent_ssl.h)
-
-   CPPFLAGS="$CPPFLAGS $TOR_CPPFLAGS_libevent"
-
-   AC_MSG_CHECKING([whether Libevent is new enough for bufferevents])
-   AC_COMPILE_IFELSE([AC_LANG_SOURCE([
-#include <event2/event.h>
-#if !defined(LIBEVENT_VERSION_NUMBER) || LIBEVENT_VERSION_NUMBER < 0x02000d00
-#error
-int x = y(zz);
-#else
-int x = 1;
-#endif
-   ])], [ AC_MSG_RESULT([yes]) ],
-      [ AC_MSG_RESULT([no])
-        AC_MSG_ERROR([Libevent does not seem new enough to support bufferevents.  We require 2.0.13-stable or later]) ] )
-fi
 
 LIBS="$save_LIBS"
 LDFLAGS="$save_LDFLAGS"

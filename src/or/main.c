@@ -1977,7 +1977,7 @@ systemd_watchdog_callback(periodic_timer_t *timer, void *arg)
 static periodic_timer_t *refill_timer = NULL;
 
 /** Libevent callback: invoked periodically to refill token buckets
- * and count r/w bytes. It is only used when bufferevents are disabled. */
+ * and count r/w bytes. */
 static void
 refill_callback(periodic_timer_t *timer, void *arg)
 {

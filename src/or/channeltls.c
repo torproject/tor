@@ -1192,6 +1192,8 @@ channel_tls_handle_var_cell(var_cell_t *var_cell, or_connection_t *conn)
        * notice "hey, data arrived!" before we notice "hey, the handshake
        * finished!" And we need to be accepting both at once to handle both
        * the v2 and v3 handshakes. */
+      /* But that should be happening any longer've disabled bufferevents. */
+      tor_assert_nonfatal_unreached_once();
 
       /* fall through */
     case OR_CONN_STATE_TLS_SERVER_RENEGOTIATING:
