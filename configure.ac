@@ -574,15 +574,6 @@ LIBS="$save_LIBS"
 LDFLAGS="$save_LDFLAGS"
 CPPFLAGS="$save_CPPFLAGS"
 
-AM_CONDITIONAL(USE_BUFFEREVENTS, test "$enable_bufferevents" = "yes")
-if test "$enable_bufferevents" = "yes"; then
-  AC_DEFINE(USE_BUFFEREVENTS, 1, [Defined if we're going to use Libevent's buffered IO API])
-  if test "$enable_static_libevent" = "yes"; then
-    TOR_LIBEVENT_LIBS="$TOR_LIBDIR_libevent/libevent_openssl.a $TOR_LIBEVENT_LIBS"
-  else
-    TOR_LIBEVENT_LIBS="-levent_openssl $TOR_LIBEVENT_LIBS"
-  fi
-fi
 AC_SUBST(TOR_LIBEVENT_LIBS)
 
 dnl ------------------------------------------------------
