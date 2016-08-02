@@ -4292,12 +4292,6 @@ typedef struct {
    */
   double CircuitPriorityHalflife;
 
-  /** If true, do not enable IOCP on windows with bufferevents, even if
-   * we think we could. */
-  int DisableIOCP;
-  /** For testing only: will go away eventually. */
-  int UseFilteringSSLBufferevents;
-
   /** Set to true if the TestingTorNetwork configuration option is set.
    * This is used so that options_validate() has a chance to realize that
    * the defaults have changed. */
@@ -4320,11 +4314,6 @@ typedef struct {
   /** If 1, we always send optimistic data when it's supported.  If 0, we
    * never use it.  If -1, we do what the consensus says. */
   int OptimisticData;
-
-  /** If 1, and we are using IOCP, we set the kernel socket SNDBUF and RCVBUF
-   * to 0 to try to save kernel memory and avoid the dread "Out of buffers"
-   * issue. */
-  int UserspaceIOCPBuffers;
 
   /** If 1, we accept and launch no external network connections, except on
    * control ports. */

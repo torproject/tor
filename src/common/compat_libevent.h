@@ -34,8 +34,6 @@ void periodic_timer_free(periodic_timer_t *);
 /** Defines a configuration for using libevent with Tor: passed as an argument
  * to tor_libevent_initialize() to describe how we want to set up. */
 typedef struct tor_libevent_cfg {
-  /** Flag: if true, disable IOCP (assuming that it could be enabled). */
-  int disable_iocp;
   /** How many CPUs should we use (relevant only with IOCP). */
   int num_cpus;
   /** How many milliseconds should we allow between updating bandwidth limits?
