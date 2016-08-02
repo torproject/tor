@@ -1,4 +1,5 @@
   o Minor bugfixes (testing):
     - Disable ASAN's detection of segmentation faults while running
       test_bt.sh, so that we can make sure that our own backtrace generation
-      code works. Fixes another aspect of bug 18934. Patch from "cypherpunks".
+      code works. Fixes another aspect of bug 18934; bugfix on 0.2.5.2-alpha.
+      Patch from "cypherpunks".
