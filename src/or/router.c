@@ -1293,7 +1293,7 @@ extend_info_from_router(const routerinfo_t *r)
   tor_assert(r);
 
   /* Make sure we don't need to check address reachability */
-  tor_assert_nonfatal(!router_skip_or_reachability(get_options(), 0));
+  tor_assert_nonfatal(router_skip_or_reachability(get_options(), 0));
 
   router_get_prim_orport(r, &ap);
   return extend_info_new(r->nickname, r->cache_info.identity_digest,
