@@ -9,10 +9,6 @@
 
 #include <event2/event.h>
 
-#ifdef USE_BUFFEREVENTS
-#include <event2/bufferevent.h>
-#endif
-
 void configure_libevent_logging(void);
 void suppress_libevent_log_msg(const char *msg);
 
@@ -53,15 +49,6 @@ const char *tor_libevent_get_method(void);
 void tor_check_libevent_header_compatibility(void);
 const char *tor_libevent_get_version_str(void);
 const char *tor_libevent_get_header_version_str(void);
-
-#ifdef USE_BUFFEREVENTS
-const struct timeval *tor_libevent_get_one_tick_timeout(void);
-int tor_libevent_using_iocp_bufferevents(void);
-int tor_set_bufferevent_rate_limit(struct bufferevent *bev,
-                                   struct ev_token_bucket_cfg *cfg);
-int tor_add_bufferevent_to_rate_limit_group(struct bufferevent *bev,
-                                   struct bufferevent_rate_limit_group *g);
-#endif
 
 int tor_init_libevent_rng(void);
 

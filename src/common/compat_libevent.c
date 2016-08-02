@@ -18,9 +18,6 @@
 
 #include <event2/event.h>
 #include <event2/thread.h>
-#ifdef USE_BUFFEREVENTS
-#include <event2/bufferevent.h>
-#endif
 
 /** A string which, if it appears in a libevent log, should be ignored. */
 static const char *suppress_msg = NULL;
@@ -94,17 +91,6 @@ static struct event_base *the_event_base = NULL;
 #endif
 #endif
 
-#ifdef USE_BUFFEREVENTS
-static int using_iocp_bufferevents = 0;
-static void tor_libevent_set_tick_timeout(int msec_per_tick);
-
-int
-tor_libevent_using_iocp_bufferevents(void)
-{
-  return using_iocp_bufferevents;
-}
-#endif
-
 /** Initialize the Libevent library and set up the event base. */
 void
 tor_libevent_initialize(tor_libevent_cfg *torcfg)
@@ -115,34 +101,15 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
 
   {
     int attempts = 0;
-    int using_threads;
     struct event_config *cfg;
 
-  retry:
     ++attempts;
-    using_threads = 0;
     cfg = event_config_new();
     tor_assert(cfg);
 
-#if defined(_WIN32) && defined(USE_BUFFEREVENTS)
-    if (! torcfg->disable_iocp) {
-      evthread_use_windows_threads();
-      event_config_set_flag(cfg, EVENT_BASE_FLAG_STARTUP_IOCP);
-      using_iocp_bufferevents = 1;
-      using_threads = 1;
-    } else {
-      using_iocp_bufferevents = 0;
-    }
-#elif defined(__COVERITY__)
-    /* Avoid a 'dead code' warning below. */
-    using_threads = ! torcfg->disable_iocp;
-#endif
-
-    if (!using_threads) {
-      /* Telling Libevent not to try to turn locking on can avoid a needless
-       * socketpair() attempt. */
-      event_config_set_flag(cfg, EVENT_BASE_FLAG_NOLOCK);
-    }
+    /* Telling Libevent not to try to turn locking on can avoid a needless
+     * socketpair() attempt. */
+    event_config_set_flag(cfg, EVENT_BASE_FLAG_NOLOCK);
 
     if (torcfg->num_cpus > 0)
       event_config_set_num_cpus_hint(cfg, torcfg->num_cpus);
@@ -154,24 +121,6 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
     the_event_base = event_base_new_with_config(cfg);
 
     event_config_free(cfg);
-
-    if (using_threads && the_event_base == NULL && attempts < 2) {
-      /* This could be a socketpair() failure, which can happen sometimes on
-       * windows boxes with obnoxious firewall rules.  Downgrade and try
-       * again. */
-#if defined(_WIN32) && defined(USE_BUFFEREVENTS)
-      if (torcfg->disable_iocp == 0) {
-        log_warn(LD_GENERAL, "Unable to initialize Libevent. Trying again "
-                 "with IOCP disabled.");
-      } else
-#endif
-      {
-          log_warn(LD_GENERAL, "Unable to initialize Libevent. Trying again.");
-      }
-
-      torcfg->disable_iocp = 1;
-      goto retry;
-    }
   }
 
   if (!the_event_base) {
@@ -184,10 +133,6 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
   log_info(LD_GENERAL,
       "Initialized libevent version %s using method %s. Good.",
       event_get_version(), tor_libevent_get_method());
-
-#ifdef USE_BUFFEREVENTS
-  tor_libevent_set_tick_timeout(torcfg->msec_per_tick);
-#endif
 }
 
 /** Return the current Libevent event base that we're set up to use. */
@@ -275,58 +220,6 @@ periodic_timer_free(periodic_timer_t *timer)
   tor_event_free(timer->ev);
   tor_free(timer);
 }
-
-#ifdef USE_BUFFEREVENTS
-static const struct timeval *one_tick = NULL;
-/**
- * Return a special timeout to be passed whenever libevent's O(1) timeout
- * implementation should be used. Only use this when the timer is supposed
- * to fire after msec_per_tick ticks have elapsed.
-*/
-const struct timeval *
-tor_libevent_get_one_tick_timeout(void)
-{
-  tor_assert(one_tick);
-  return one_tick;
-}
-
-/** Initialize the common timeout that we'll use to refill the buckets every
- * time a tick elapses. */
-static void
-tor_libevent_set_tick_timeout(int msec_per_tick)
-{
-  struct event_base *base = tor_libevent_get_base();
-  struct timeval tv;
-
-  tor_assert(! one_tick);
-  tv.tv_sec = msec_per_tick / 1000;
-  tv.tv_usec = (msec_per_tick % 1000) * 1000;
-  one_tick = event_base_init_common_timeout(base, &tv);
-}
-
-static struct bufferevent *
-tor_get_root_bufferevent(struct bufferevent *bev)
-{
-  struct bufferevent *u;
-  while ((u = bufferevent_get_underlying(bev)) != NULL)
-    bev = u;
-  return bev;
-}
-
-int
-tor_set_bufferevent_rate_limit(struct bufferevent *bev,
-                               struct ev_token_bucket_cfg *cfg)
-{
-  return bufferevent_set_rate_limit(tor_get_root_bufferevent(bev), cfg);
-}
-
-int
-tor_add_bufferevent_to_rate_limit_group(struct bufferevent *bev,
-                                        struct bufferevent_rate_limit_group *g)
-{
-  return bufferevent_add_to_rate_limit_group(tor_get_root_bufferevent(bev), g);
-}
-#endif
 
 int
 tor_init_libevent_rng(void)

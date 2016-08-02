@@ -101,13 +101,8 @@ dummy_edge_conn_new(circuit_t *circ,
   else
     conn = ENTRY_TO_EDGE_CONN(entry_connection_new(type, AF_INET));
 
-#ifdef USE_BUFFEREVENTS
-  inbuf = bufferevent_get_input(TO_CONN(conn)->bufev);
-  outbuf = bufferevent_get_output(TO_CONN(conn)->bufev);
-#else
   inbuf = TO_CONN(conn)->inbuf;
   outbuf = TO_CONN(conn)->outbuf;
-#endif
 
   /* We add these bytes directly to the buffers, to avoid all the
    * edge connection read/write machinery. */
