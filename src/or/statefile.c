@@ -121,6 +121,7 @@ static const config_format_t state_format = {
   OR_STATE_MAGIC,
   STRUCT_OFFSET(or_state_t, magic_),
   state_abbrevs_,
+  NULL,
   state_vars_,
   or_state_validate_cb,
   &state_extra_var,

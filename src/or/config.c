@@ -636,6 +636,7 @@ STATIC config_format_t options_format = {
   OR_OPTIONS_MAGIC,
   STRUCT_OFFSET(or_options_t, magic_),
   option_abbrevs_,
+  NULL,
   option_vars_,
   options_validate_cb,
   NULL

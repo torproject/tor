@@ -181,6 +181,26 @@ config_free_lines(config_line_t *front)
   }
 }
 
+/** If <b>key</b> is a deprecated configuration option, return the message
+ * explaining why it is deprecated (which may be an empty string). Return NULL
+ * if it is not deprecated. The <b>key</b> field must be fully expanded. */
+static const char *
+config_find_deprecation(const config_format_t *fmt, const char *key)
+{
+  if (BUG(fmt == NULL) || BUG(key == NULL))
+    return NULL;
+  if (fmt->deprecations == NULL)
+    return NULL;
+
+  config_deprecation_t *d;
+  for (d = fmt->deprecations; d->name; ++d) {
+    if (!strcasecmp(d->name, key)) {
+      return d->why_deprecated ? d->why_deprecated : "";
+    }
+  }
+  return NULL;
+}
+
 /** As config_find_option, but return a non-const pointer. */
 config_var_t *
 config_find_option_mutable(config_format_t *fmt, const char *key)
@@ -463,6 +483,15 @@ config_mark_lists_fragile(const config_format_t *fmt, void *options)
   }
 }
 
+void
+warn_deprecated_option(const char *what, const char *why)
+{
+  log_warn(LD_CONFIG, "The %s option is deprecated, and will most likely "
+           "be removed in a future version of Tor.%s (If you think this is "
+           "a mistake, please let us know!)",
+           what, why);
+}
+
 /** If <b>c</b> is a syntactically valid configuration line, update
  * <b>options</b> with its value and return 0.  Otherwise return -1 for bad
  * key, -2 for bad value.
@@ -500,6 +529,11 @@ config_assign_line(const config_format_t *fmt, void *options,
   if (strcmp(var->name, c->key)) {
     tor_free(c->key);
     c->key = tor_strdup(var->name);
+  }
+
+  const char *deprecation_msg = config_find_deprecation(fmt, var->name);
+  if (deprecation_msg) {
+    warn_deprecated_option(var->name, deprecation_msg);
   }
 
   if (!strlen(c->value)) {

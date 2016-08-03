@@ -86,6 +86,7 @@ static const config_format_t state_format = {
   SR_DISK_STATE_MAGIC,
   STRUCT_OFFSET(sr_disk_state_t, magic_),
   NULL,
+  NULL,
   state_vars,
   disk_state_validate_cb,
   &state_extra_var,
