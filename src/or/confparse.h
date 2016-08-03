@@ -81,7 +81,7 @@ typedef struct config_format_t {
   off_t magic_offset; /**< Offset of the magic value within the struct. */
   config_abbrev_t *abbrevs; /**< List of abbreviations that we expand when
                              * parsing this format. */
-  config_deprecation_t *deprecations; /** List of deprecated options */
+  const config_deprecation_t *deprecations; /** List of deprecated options */
   config_var_t *vars; /**< List of variables we recognize, their default
                        * values, and where we stick them in the structure. */
   validate_fn_t validate_fn; /**< Function to validate config. */
@@ -132,7 +132,6 @@ const char *config_expand_abbrev(const config_format_t *fmt,
                                  const char *option,
                                  int command_line, int warn_obsolete);
 void warn_deprecated_option(const char *what, const char *why);
-
 
 #endif
 

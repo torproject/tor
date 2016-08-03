@@ -588,6 +588,44 @@ static const config_var_t testing_tor_network_defaults[] = {
 #undef V
 #undef OBSOLETE
 
+static const config_deprecation_t option_deprecation_notes_[] = {
+  { "AllowDotExit", "Unrestricted use of the .exit notation can be used for "
+    "a wide variety of application-level attacks." },
+  { "AllowInvalidNodes", "There is no reason to enable this option; at best "
+    "it will make you easier to track." },
+  { "AllowSingleHopCircuits", "Almost no relays actually allow single-hop "
+    "exits, making this option pointless." },
+  { "AllowSingleHopExits", "Turning this on will make your relay easier "
+    "to abuse." },
+  { "ClientDNSRejectInternalAddresses", "Turning this on makes your client "
+    "easier to fingerprint, and may open you to esoteric attacks." },
+  { "ExcludeSingleHopRelays", "Turning it on makes your client easier to "
+    "fingerprint." },
+  { "FastFirstHopPK", "Changing this option does not make your client more "
+    "secure, but does make it easier to fingerprint." },
+  { "CloseHSClientCircutisImmediatelyOnTimeout", "This option makes your "
+    "client easier to fingerprint." },
+  { "CloseHSServiceRendircutisImmediatelyOnTimeout", "This option makes "
+    "your hidden services easier to fingerprint." },
+  { "WarnUnsafeSocks", "Changing this option makes it easier for you "
+    "to accidentally lose your anonymity by leaking DNS information" },
+  { "TLSECGroup", "The default is a nice secure choice; the other option "
+    "is less secure." },
+  { "UseNTorHandshake", "The ntor handshake should always be used." },
+
+  { "ControlListenAddress", "Use ControlPort instead." },
+  { "DirListenAddress", "Use DirPort instead, possibly with the "
+    "NoAdvertise sub-option" },
+  { "DNSListenAddress", "Use DNSPort instead." },
+  { "SocksListenAddress", "Use SocksPort instead." },
+  { "TransListenAddress", "Use TransPort instead." },
+  { "NATDListenAddress", "Use NATDPort instead." },
+  { "ORListenAddress", "Use ORPort instead, possibly with the "
+    "NoAdvertise sub-option" },
+
+  { NULL, NULL }
+};
+
 #ifdef _WIN32
 static char *get_windows_conf_root(void);
 #endif
@@ -636,7 +674,7 @@ STATIC config_format_t options_format = {
   OR_OPTIONS_MAGIC,
   STRUCT_OFFSET(or_options_t, magic_),
   option_abbrevs_,
-  NULL,
+  option_deprecation_notes_,
   option_vars_,
   options_validate_cb,
   NULL

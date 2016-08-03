@@ -192,7 +192,7 @@ config_find_deprecation(const config_format_t *fmt, const char *key)
   if (fmt->deprecations == NULL)
     return NULL;
 
-  config_deprecation_t *d;
+  const config_deprecation_t *d;
   for (d = fmt->deprecations; d->name; ++d) {
     if (!strcasecmp(d->name, key)) {
       return d->why_deprecated ? d->why_deprecated : "";
@@ -486,10 +486,11 @@ config_mark_lists_fragile(const config_format_t *fmt, void *options)
 void
 warn_deprecated_option(const char *what, const char *why)
 {
+  const char *space = (why && strlen(why)) ? " " : "";
   log_warn(LD_CONFIG, "The %s option is deprecated, and will most likely "
-           "be removed in a future version of Tor.%s (If you think this is "
+           "be removed in a future version of Tor.%s%s (If you think this is "
            "a mistake, please let us know!)",
-           what, why);
+           what, space, why);
 }
 
 /** If <b>c</b> is a syntactically valid configuration line, update
