@@ -61,13 +61,6 @@ typedef struct config_var_t {
   const char *initvalue; /**< String (or null) describing initial value. */
 } config_var_t;
 
-/** Represents an English description of a configuration variable; used when
- * generating configuration file comments. */
-typedef struct config_var_description_t {
-  const char *name;
-  const char *description;
-} config_var_description_t;
-
 /** Type of a callback to validate whether a given configuration is
  * well-formed and consistent. See options_trial_assign() for documentation
  * of arguments. */
