@@ -603,9 +603,9 @@ static const config_deprecation_t option_deprecation_notes_[] = {
     "fingerprint." },
   { "FastFirstHopPK", "Changing this option does not make your client more "
     "secure, but does make it easier to fingerprint." },
-  { "CloseHSClientCircutisImmediatelyOnTimeout", "This option makes your "
+  { "CloseHSClientCircuitsImmediatelyOnTimeout", "This option makes your "
     "client easier to fingerprint." },
-  { "CloseHSServiceRendircutisImmediatelyOnTimeout", "This option makes "
+  { "CloseHSServiceRendCircuitsImmediatelyOnTimeout", "This option makes "
     "your hidden services easier to fingerprint." },
   { "WarnUnsafeSocks", "Changing this option makes it easier for you "
     "to accidentally lose your anonymity by leaking DNS information" },
@@ -2049,6 +2049,7 @@ static const struct {
   { "-h",                     TAKES_NO_ARGUMENT },
   { "--help",                 TAKES_NO_ARGUMENT },
   { "--list-torrc-options",   TAKES_NO_ARGUMENT },
+  { "--list-deprecated-options",TAKES_NO_ARGUMENT },
   { "--nt-service",           TAKES_NO_ARGUMENT },
   { "-nt-service",            TAKES_NO_ARGUMENT },
   { NULL, 0 },
@@ -2235,7 +2236,6 @@ static void
 list_torrc_options(void)
 {
   int i;
-  smartlist_t *lines = smartlist_new();
   for (i = 0; option_vars_[i].name; ++i) {
     const config_var_t *var = &option_vars_[i];
     if (var->type == CONFIG_TYPE_OBSOLETE ||
@@ -2243,7 +2243,16 @@ list_torrc_options(void)
       continue;
     printf("%s\n", var->name);
   }
-  smartlist_free(lines);
+}
+
+/** Print all deprecated but non-obsolete torrc options. */
+static void
+list_deprecated_options(void)
+{
+  const config_deprecation_t *d;
+  for (d = option_deprecation_notes_; d->name; ++d) {
+    printf("%s\n", d->name);
+  }
 }
 
 /** Last value actually set by resolve_my_address. */
@@ -4703,8 +4712,13 @@ options_init_from_torrc(int argc, char **argv)
     exit(0);
   }
   if (config_line_find(cmdline_only_options, "--list-torrc-options")) {
-    /* For documenting validating whether we've documented everything. */
+    /* For validating whether we've documented everything. */
     list_torrc_options();
+    exit(0);
+  }
+  if (config_line_find(cmdline_only_options, "--list-deprecated-options")) {
+    /* For validating whether what we have deprecated really exists. */
+    list_deprecated_options();
     exit(0);
   }
 

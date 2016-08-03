@@ -84,6 +84,10 @@ COMMAND-LINE OPTIONS
 [[opt-list-torrc-options]] **--list-torrc-options**::
     List all valid options.
 
+[[opt-list-deprecated-options]] **--list-deprecated-options**::
+    List all valid options that are scheduled to become obsolete in a
+    future version. (This is a warning, not a promise.)
+
 [[opt-version]] **--version**::
     Display Tor version and exit.
 
