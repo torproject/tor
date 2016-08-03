@@ -1,6 +1,11 @@
-Changes in version 0.2.9.1-alpha - 2016-08-??
-  Tor 0.2.9.1-alpha is the first alpha release in the 0.2.9
-  development series.
+Changes in version 0.2.9.1-alpha - 2016-08-0?
+  Tor 0.2.9.1-alpha is the first alpha release in the 0.2.9 development
+  series. It improves our support for hardened builds and compiler
+  warnings, deploys some critical infrastructure for improvements to
+  hidden services, includes a new timing backend that we hope to use for
+  better support for traffic padding, makes it easier for programmers to
+  log unexpected events, and contains other small improvements to
+  security, correctness, and performance.
 
   o New system requirements:
     - Tor requires Libevent version 2.0.10-stable or later now. This
