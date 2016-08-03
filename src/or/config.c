@@ -2186,14 +2186,13 @@ option_get_assignment(const or_options_t *options, const char *key)
  * what went wrong.
  */
 setopt_err_t
-options_trial_assign(config_line_t *list, int use_defaults,
-                     int clear_first, char **msg)
+options_trial_assign(config_line_t *list, unsigned flags, char **msg)
 {
   int r;
   or_options_t *trial_options = config_dup(&options_format, get_options());
 
   if ((r=config_assign(&options_format, trial_options,
-                       list, use_defaults, clear_first, msg)) < 0) {
+                       list, flags, msg)) < 0) {
     config_free(&options_format, trial_options);
     return r;
   }
@@ -4899,7 +4898,8 @@ options_init_from_string(const char *cf_defaults, const char *cf,
       err = SETOPT_ERR_PARSE;
       goto err;
     }
-    retval = config_assign(&options_format, newoptions, cl, 0, 0, msg);
+    retval = config_assign(&options_format, newoptions, cl,
+                           CAL_WARN_DEPRECATIONS, msg);
     config_free_lines(cl);
     if (retval < 0) {
       err = SETOPT_ERR_PARSE;
@@ -4915,7 +4915,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
 
   /* Go through command-line variables too */
   retval = config_assign(&options_format, newoptions,
-                         global_cmdline_options, 0, 0, msg);
+                         global_cmdline_options, CAL_WARN_DEPRECATIONS, msg);
   if (retval < 0) {
     err = SETOPT_ERR_PARSE;
     goto err;
@@ -4963,7 +4963,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
         err = SETOPT_ERR_PARSE;
         goto err;
       }
-      retval = config_assign(&options_format, newoptions, cl, 0, 0, msg);
+      retval = config_assign(&options_format, newoptions, cl, 0, msg);
       config_free_lines(cl);
       if (retval < 0) {
         err = SETOPT_ERR_PARSE;
@@ -4974,7 +4974,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
     }
     /* Assign command-line variables a second time too */
     retval = config_assign(&options_format, newoptions,
-                           global_cmdline_options, 0, 0, msg);
+                           global_cmdline_options, 0, msg);
     if (retval < 0) {
       err = SETOPT_ERR_PARSE;
       goto err;

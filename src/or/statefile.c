@@ -350,7 +350,7 @@ or_state_load(void)
     if (config_get_lines(contents, &lines, 0)<0)
       goto done;
     assign_retval = config_assign(&state_format, new_state,
-                                  lines, 0, 0, &errmsg);
+                                  lines, 0, &errmsg);
     config_free_lines(lines);
     if (assign_retval<0)
       badstate = 1;

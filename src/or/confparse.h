@@ -98,6 +98,10 @@ typedef struct config_format_t {
                *(uint32_t*)STRUCT_VAR_P(cfg,fmt->magic_offset));        \
   STMT_END
 
+#define CAL_USE_DEFAULTS      (1u<<0)
+#define CAL_CLEAR_FIRST       (1u<<1)
+#define CAL_WARN_DEPRECATIONS (1u<<2)
+
 void *config_new(const config_format_t *fmt);
 void config_line_append(config_line_t **lst,
                         const char *key, const char *val);
@@ -120,7 +124,7 @@ char *config_dump(const config_format_t *fmt, const void *default_options,
                   int comment_defaults);
 int config_assign(const config_format_t *fmt, void *options,
                   config_line_t *list,
-                  int use_defaults, int clear_first, char **msg);
+                  unsigned flags, char **msg);
 config_var_t *config_find_option_mutable(config_format_t *fmt,
                                          const char *key);
 const config_var_t *config_find_option(const config_format_t *fmt,

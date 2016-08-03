@@ -504,9 +504,12 @@ warn_deprecated_option(const char *what, const char *why)
  */
 static int
 config_assign_line(const config_format_t *fmt, void *options,
-                   config_line_t *c, int use_defaults,
-                   int clear_first, bitarray_t *options_seen, char **msg)
+                   config_line_t *c, unsigned flags,
+                   bitarray_t *options_seen, char **msg)
 {
+  const unsigned use_defaults = flags & CAL_USE_DEFAULTS;
+  const unsigned clear_first = flags & CAL_CLEAR_FIRST;
+  const unsigned warn_deprecations = flags & CAL_WARN_DEPRECATIONS;
   const config_var_t *var;
 
   CONFIG_CHECK(fmt, options);
@@ -532,8 +535,9 @@ config_assign_line(const config_format_t *fmt, void *options,
     c->key = tor_strdup(var->name);
   }
 
-  const char *deprecation_msg = config_find_deprecation(fmt, var->name);
-  if (deprecation_msg) {
+  const char *deprecation_msg;
+  if (warn_deprecations &&
+      (deprecation_msg = config_find_deprecation(fmt, var->name))) {
     warn_deprecated_option(var->name, deprecation_msg);
   }
 
@@ -639,7 +643,7 @@ config_lines_dup(const config_line_t *inp)
  * escape that value. Return NULL if no such key exists. */
 config_line_t *
 config_get_assigned_option(const config_format_t *fmt, const void *options,
-                             const char *key, int escape_val)
+                           const char *key, int escape_val)
 {
   const config_var_t *var;
   const void *value;
@@ -839,11 +843,13 @@ options_trial_assign() calls config_assign(1, 1)
 */
 int
 config_assign(const config_format_t *fmt, void *options, config_line_t *list,
-              int use_defaults, int clear_first, char **msg)
+              unsigned config_assign_flags, char **msg)
 {
   config_line_t *p;
   bitarray_t *options_seen;
   const int n_options = config_count_options(fmt);
+  const unsigned clear_first = config_assign_flags & CAL_CLEAR_FIRST;
+  const unsigned use_defaults = config_assign_flags & CAL_USE_DEFAULTS;
 
   CONFIG_CHECK(fmt, options);
 
@@ -867,8 +873,8 @@ config_assign(const config_format_t *fmt, void *options, config_line_t *list,
   /* pass 3: assign. */
   while (list) {
     int r;
-    if ((r=config_assign_line(fmt, options, list, use_defaults,
-                              clear_first, options_seen, msg))) {
+    if ((r=config_assign_line(fmt, options, list, config_assign_flags,
+                              options_seen, msg))) {
       bitarray_free(options_seen);
       return r;
     }
@@ -1064,7 +1070,7 @@ config_dup(const config_format_t *fmt, const void *old)
     line = config_get_assigned_option(fmt, old, fmt->vars[i].name, 0);
     if (line) {
       char *msg = NULL;
-      if (config_assign(fmt, newopts, line, 0, 0, &msg) < 0) {
+      if (config_assign(fmt, newopts, line, 0, &msg) < 0) {
         log_err(LD_BUG, "config_get_assigned_option() generated "
                 "something we couldn't config_assign(): %s", msg);
         tor_free(msg);

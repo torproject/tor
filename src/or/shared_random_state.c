@@ -701,7 +701,7 @@ disk_state_load_from_disk_impl(const char *fname)
     }
 
     disk_state = disk_state_new(time(NULL));
-    config_assign(&state_format, disk_state, lines, 0, 0, &errmsg);
+    config_assign(&state_format, disk_state, lines, 0, &errmsg);
     config_free_lines(lines);
     if (errmsg) {
       log_warn(LD_DIR, "SR: Reading state error: %s", errmsg);
