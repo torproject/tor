@@ -6186,6 +6186,20 @@ config_parse_unix_port(const char *addrport, char **path_out)
 }
 #endif /* defined(HAVE_SYS_UN_H) */
 
+static void
+warn_client_dns_cache(const char *option, int disabling)
+{
+  if (disabling)
+    return;
+
+  warn_deprecated_option(option,
+      "Client-side DNS cacheing enables a wide variety of route-"
+      "capture attacks. If a single bad exit node lies to you about "
+      "an IP address, cacheing that address would make you visit "
+      "an address of the attacker's choice every time you connected "
+      "to your destination.");
+}
+
 /**
  * Parse port configuration for a single port type.
  *
@@ -6554,21 +6568,27 @@ parse_port_config(smartlist_t *out,
           }
         }
         if (!strcasecmp(elt, "CacheIPv4DNS")) {
+          warn_client_dns_cache(elt, no);
           cache_ipv4 = ! no;
           continue;
         } else if (!strcasecmp(elt, "CacheIPv6DNS")) {
+          warn_client_dns_cache(elt, no);
           cache_ipv6 = ! no;
           continue;
         } else if (!strcasecmp(elt, "CacheDNS")) {
+          warn_client_dns_cache(elt, no);
           cache_ipv4 = cache_ipv6 = ! no;
           continue;
         } else if (!strcasecmp(elt, "UseIPv4Cache")) {
+          warn_client_dns_cache(elt, no);
           use_cached_ipv4 = ! no;
           continue;
         } else if (!strcasecmp(elt, "UseIPv6Cache")) {
+          warn_client_dns_cache(elt, no);
           use_cached_ipv6 = ! no;
           continue;
         } else if (!strcasecmp(elt, "UseDNSCache")) {
+          warn_client_dns_cache(elt, no);
           use_cached_ipv4 = use_cached_ipv6 = ! no;
           continue;
         } else if (!strcasecmp(elt, "PreferIPv6Automap")) {
