@@ -1,4 +1,4 @@
-Changes in version 0.2.9.1-alpha - 2016-08-0?
+Changes in version 0.2.9.1-alpha - 2016-08-08
   Tor 0.2.9.1-alpha is the first alpha release in the 0.2.9 development
   series. It improves our support for hardened builds and compiler
   warnings, deploys some critical infrastructure for improvements to
@@ -7,24 +7,28 @@ Changes in version 0.2.9.1-alpha - 2016-08-0?
   log unexpected events, and contains other small improvements to
   security, correctness, and performance.
 
+  Below are the changes since 0.2.8.6.
+
   o New system requirements:
-    - Tor requires Libevent version 2.0.10-stable or later now. This
-      implements ticket 19554.
-    - We now require zlib version 1.2 or later. (Back when we started,
+    - Tor now requires Libevent version 2.0.10-stable or later. Older
+      versions of Libevent have less efficient backends for several
+      platforms, and lack the DNS code that we use for our server-side
+      DNS support. This implements ticket 19554.
+    - Tor now requires zlib version 1.2 or later, for security,
+      efficiency, and (eventually) gzip support. (Back when we started,
       zlib 1.1 and zlib 1.0 were still found in the wild. 1.2 was
       released in 2003. We recommend the latest version.)
 
   o Major features (build, hardening):
     - Tor now builds with -ftrapv by default on compilers that support
-      it. This option detects signed integer overflow, and turns it into
-      a hard-failure. We do not apply this option to code that needs to
-      run in constant time to avoid side-channels; instead, we use
-      -fwrapv. Closes ticket 17983.
+      it. This option detects signed integer overflow (which C forbids),
+      and turns it into a hard-failure. We do not apply this option to
+      code that needs to run in constant time to avoid side-channels;
+      instead, we use -fwrapv in that code. Closes ticket 17983.
     - When --enable-expensive-hardening is selected, stop applying the
-      clang/gcc sanitizers to code that needs to run in constant-time to
-      avoid side channels: although we are aware of no introduced side-
-      channels, we are not able to prove that this is safe. Related to
-      ticket 17983.
+      clang/gcc sanitizers to code that needs to run in constant time.
+      Although we are aware of no introduced side-channels, we are not
+      able to prove that there are none. Related to ticket 17983.
 
   o Major features (compilation):
     - Our big list of extra GCC warnings is now enabled by default when
@@ -33,23 +37,25 @@ Changes in version 0.2.9.1-alpha - 2016-08-0?
       errors, pass --enable-fatal-warnings to configure. Closes
       ticket 19044.
     - Use the Autoconf macro AC_USE_SYSTEM_EXTENSIONS to automatically
-      turn on C and POSIX extensions. Closes ticket 19139.
+      turn on C and POSIX extensions. (Previously, we attempted to do
+      this on an ad hoc basis.) Closes ticket 19139.
 
   o Major features (directory authorities, hidden services):
     - Directory authorities can now perform the shared randomness
       protocol specified by proposal 250. Using this protocol, directory
-      authorities can generate a global fresh random number every day.
-      In the future, this global randomness will be used by hidden
-      services to select their responsible HSDirs. This release only
-      implements the directory authority feature; the hidden service
-      side will be implemented in the future as part of proposal 224.
-      Resolves ticket 16943; implements proposal 250.
+      authorities generate a global fresh random value every day. In the
+      future, this value will be used by hidden services to select
+      HSDirs. This release implements the directory authority feature;
+      the hidden service side will be implemented in the future as part
+      of proposal 224. Resolves ticket 16943; implements proposal 250.
 
-  o Major features (downloading):
-    - Use random exponential backoffs when retrying downloads from the
-      dir servers. This prevents a group of Tor instances from becoming
-      too synchronized, or a single Tor instance from becoming too
-      predictable, in its download schedule. Closes ticket 15942.
+  o Major features (downloading, random exponential backoff):
+    - When we fail to download an object from a directory service, wait
+      for an (exponentially increasing) randomized amount of time before
+      retrying, rather than a fixed interval as we did before. This
+      prevents a group of Tor instances from becoming too synchronized,
+      or a single Tor instance from becoming too predictable, in its
+      download schedule. Closes ticket 15942.
 
   o Major bugfixes (exit policies):
     - Avoid disclosing exit outbound bind addresses, configured port
@@ -63,47 +69,47 @@ Changes in version 0.2.9.1-alpha - 2016-08-0?
     - Allow Tor clients with appropriate controllers to work with
       FetchHidServDescriptors set to 0. Previously, this option also
       disabled descriptor cache lookup, thus breaking hidden services
-      entirely when it was set. Fixes bug 18704; bugfix on 0.2.0.20-rc.
-      Patch by "twim".
+      entirely. Fixes bug 18704; bugfix on 0.2.0.20-rc. Patch by "twim".
 
   o Minor features (build, hardening):
-    - Detect and work around a libclang_rt problem that prevents clang
-      from finding __mulodi4() on some 32-bit platforms. This clang bug
-      would keep -ftrapv from linking on those systems. Closes
-      ticket 19079.
-    - When building on a system without runtime support for some of the
-      runtime hardening options, try to log a useful warning at
-      configuration time, rather than an incomprehensible warning at
-      link time. If expensive hardening was requested, this warning
-      becomes an error. Closes ticket 18895.
+    - Detect and work around a libclang_rt problem that would prevent
+      clang from finding __mulodi4() on some 32-bit platforms, and thus
+      keep -ftrapv from linking on those systems. Closes ticket 19079.
+    - When building on a system without runtime support for the runtime
+      hardening options, try to log a useful warning at configuration
+      time, rather than an incomprehensible warning at link time. If
+      expensive hardening was requested, this warning becomes an error.
+      Closes ticket 18895.
 
   o Minor features (code safety):
-    - In our integer-parsing functions, check that the maxiumum value
-      given is no smaller than the minimum value. Closes ticket 19063;
+    - In our integer-parsing functions, ensure that maxiumum value we
+      give is no smaller than the minimum value. Closes ticket 19063;
       patch from U+039b.
 
   o Minor features (controller):
-    - Implement new GETINFO queries for all downloads using
-      download_status_t to schedule retries. Closes ticket 19323.
-    - Add support for configuring basic client authorization on hidden
-      services created with the ADD_ONION control command. Implements
-      ticket 15588. Patch by "special".
-    - Fire a `STATUS_SERVER` event whenever the hibernation status
-      changes between "awake"/"soft"/"hard". Closes ticket 18685.
+    - Implement new GETINFO queries for all downloads that use
+      download_status_t to schedule retries. This allows controllers to
+      examine the schedule for pending downloads. Closes ticket 19323.
+    - Allow controllers to configure basic client authorization on
+      hidden services when they create them with the ADD_ONION control
+      command. Implements ticket 15588. Patch by "special".
+    - Fire a STATUS_SERVER controller event whenever the hibernation
+      status changes between "awake"/"soft"/"hard". Closes ticket 18685.
 
   o Minor features (directory authority):
     - Directory authorities now only give the Guard flag to a relay if
       they are also giving it the Stable flag. This change allows us to
-      simplify path selection for clients, and it should have minimal
-      effect in practice since >99% of Guards already have the Stable
-      flag. Implements ticket 18624.
-    - Make directory authorities write the v3-status-votes file out to
-      disk earlier in the consensus process, so we have the votes even
-      if we abort the consensus process later. Resolves ticket 19036.
+      simplify path selection for clients. It should have minimal effect
+      in practice, since >99% of Guards already have the Stable flag.
+      Implements ticket 18624.
+    - Directory authorities now write their v3-status-votes file out to
+      disk earlier in the consensus process, so we have a record of the
+      votes even if we abort the consensus process. Resolves
+      ticket 19036.
 
   o Minor features (hidden service):
     - Stop being so strict about the payload length of "rendezvous1"
-      cells. We used to be locked in to the "tap" handshake length, and
+      cells. We used to be locked in to the "TAP" handshake length, and
       now we can handle better handshakes like "ntor". Resolves
       ticket 18998.
 
@@ -123,15 +129,22 @@ Changes in version 0.2.9.1-alpha - 2016-08-0?
     - Provide a more useful warning message when configured with an
       invalid Nickname. Closes ticket 18300; patch from "icanhasaccount".
     - When dumping unparseable router descriptors, optionally store them
-      in separate filenames by hash, up to a configurable limit. Closes
-      ticket 18322.
+      in separate files, named by digest, up to a configurable size
+      limit. You can change the size limit by setting the
+      MaxUnparseableDescSizeToLog option, and disable this feature by
+      setting that option to 0. Closes ticket 18322.
     - Add a set of macros to check nonfatal assertions, for internal
       use. Migrating more of our checks to these should help us avoid
       needless crash bugs. Closes ticket 18613.
 
   o Minor features (performance):
-    - When fetching a consensus for the first time, use optimistic data.
-      This saves a round-trip during startup. Closes ticket 18815.
+    - Changer the "optimistic data" extension from "off by default" to
+      "on by default". The default was ordinarily overridden by a
+      consensus option, but when clients were bootstrapping for the
+      first time, they would not have a consensus to get the option
+      from. Changing this default When fetching a consensus for the
+      first time, use optimistic data. This saves a round-trip during
+      startup. Closes ticket 18815.
 
   o Minor features (relay, usability):
     - When the directory authorities refuse a bad relay's descriptor,
@@ -154,30 +167,31 @@ Changes in version 0.2.9.1-alpha - 2016-08-0?
   o Minor bugfixes (bootstrap):
     - Remember the directory we fetched the consensus or previous
       certificates from, and use it to fetch future authority
-      certificates. Fixes bug 18963; bugfix on 0.2.8.1-alpha.
+      certificates. This change improves bootstrapping performance.
+      Fixes bug 18963; bugfix on 0.2.8.1-alpha.
 
   o Minor bugfixes (build):
-    - Make the test-stem and test-network targets depend only on the tor
-      binary that they will be testing. Previously, they depended on
+    - The test-stem and test-network makefile targets now depend only on
+      the tor binary that they are testing. Previously, they depended on
       "make all". Fixes bug 18240; bugfix on 0.2.8.2-alpha. Based on a
       patch from "cypherpunks".
 
   o Minor bugfixes (circuits):
-    - Make sure extend_info_from_router is only called on servers. Fixes
-      bug 19639; bugfix on 0.2.8.1-alpha.
+    - Make sure extend_info_from_router() is only called on servers.
+      Fixes bug 19639; bugfix on 0.2.8.1-alpha.
 
   o Minor bugfixes (compilation):
-    - When building with Clang, include our full array of GCC warnings.
+    - When building with Clang, use a full set of GCC warnings.
       (Previously, we included only a subset, because of the way we
       detected them.) Fixes bug 19216; bugfix on 0.2.0.1-alpha.
 
   o Minor bugfixes (directory authority):
     - Authorities now sort the "package" lines in their votes, for ease
-      of debugging. (They are already sorted in the consensus
-      documents.) Fixes bug 18840; bugfix on 0.2.6.3-alpha.
-    - When parsing detached signature, make sure we use the length of
+      of debugging. (They are already sorted in consensus documents.)
+      Fixes bug 18840; bugfix on 0.2.6.3-alpha.
+    - When parsing a detached signature, make sure we use the length of
       the digest algorithm instead of an hardcoded DIGEST256_LEN in
-      order to avoid comparing bytes out of bound with a smaller digest
+      order to avoid comparing bytes out-of-bounds with a smaller digest
       length such as SHA1. Fixes bug 19066; bugfix on 0.2.2.6-alpha.
 
   o Minor bugfixes (documentation):
@@ -190,7 +204,7 @@ Changes in version 0.2.9.1-alpha - 2016-08-0?
 
   o Minor bugfixes (ephemeral hidden service):
     - When deleting an ephemeral hidden service, close its intro points
-      even if they are not in the open state. Fixes bug 18604; bugfix
+      even if they are not completely open. Fixes bug 18604; bugfix
       on 0.2.7.1-alpha.
 
   o Minor bugfixes (guard selection):
@@ -204,8 +218,9 @@ Changes in version 0.2.9.1-alpha - 2016-08-0?
 
   o Minor bugfixes (hidden service client):
     - Increase the minimum number of internal circuits we preemptively
-      build from 2 to 3 so they are available when a client connects to
-      another onion service. Fixes bug 13239; bugfix on 0.1.0.1-rc.
+      build from 2 to 3, so a circuit is available when a client
+      connects to another onion service. Fixes bug 13239; bugfix
+      on 0.1.0.1-rc.
 
   o Minor bugfixes (logging):
     - When logging a directory ownership mismatch, log the owning
@@ -241,8 +256,8 @@ Changes in version 0.2.9.1-alpha - 2016-08-0?
       in the counter. Now, if the number of messages hits a maximum, the
       rate-limiter doesn't count any further. Fixes bug 19435; bugfix
       on 0.2.4.11-alpha.
-    - Fix a typo in the getting passphrase prompt for the ed25519
-      identity key. Fixes bug 19503; bugfix on 0.2.7.2-alpha.
+    - Fix a typo in the passphrase prompt for the ed25519 identity key.
+      Fixes bug 19503; bugfix on 0.2.7.2-alpha.
 
   o Code simplification and refactoring:
     - Remove redundant declarations of the MIN macro. Closes
