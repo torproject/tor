@@ -1,0 +1,406 @@
+
+#define PROTOVER_PRIVATE
+
+#include "protover.h"
+#include "compat.h"
+#include "torlog.h"
+
+static const smartlist_t *get_supported_protocol_list(void);
+static int protocol_list_contains(const smartlist_t *protos,
+                                  protocol_type_t pr, uint32_t ver);
+
+/** Mapping between protocol type string and protocol type. */
+static const struct {
+  protocol_type_t protover_type;
+  const char *name;
+} PROTOCOL_NAMES[] = {
+  { PRT_LINK, "Link" },
+  { PRT_LINKAUTH, "LinkAuth" },
+  { PRT_RELAY, "Relay" },
+  { PRT_HSMID, "HSMid" },
+  { PRT_DIRCACHE, "DirCache" },
+  { PRT_HSDIR, "HSDir" },
+  { PRT_DESC, "Desc" },
+  { PRT_MICRODESC, "Microdesc"},
+  { PRT_CONS, "Cons" }
+};
+
+#define N_PROTOCOL_NAMES ARRAY_LENGTH(PROTOCOL_NAMES)
+
+/**
+ * Given a protocol_type_t, return the corresponding string used in
+ * descriptors.
+ */
+STATIC const char *
+protocol_type_to_str(protocol_type_t pr)
+{
+  unsigned i;
+  for (i=0; i < N_PROTOCOL_NAMES; ++i) {
+    if (PROTOCOL_NAMES[i].protover_type == pr)
+      return PROTOCOL_NAMES[i].name;
+  }
+  tor_assert_nonfatal_unreached_once();
+  return "UNKNOWN";
+}
+
+/**
+ * Given a string, find the corresponding protocol type and store it in
+ * <b>pr_out</b>. Return 0 on success, -1 on failure.
+ */
+STATIC int
+str_to_protocol_type(const char *s, protocol_type_t *pr_out)
+{
+  if (BUG(!pr_out))
+    return -1;
+
+  unsigned i;
+  for (i=0; i < N_PROTOCOL_NAMES; ++i) {
+    if (0 == strcmp(s, PROTOCOL_NAMES[i].name)) {
+      *pr_out = PROTOCOL_NAMES[i].protover_type;
+      return 0;
+    }
+  }
+
+  return -1;
+}
+
+/**
+ * Release all space held by a single proto_entry_t structure
+ */
+STATIC void
+proto_entry_free(proto_entry_t *entry)
+{
+  if (!entry)
+    return;
+  tor_free(entry->name);
+  SMARTLIST_FOREACH(entry->ranges, proto_range_t *, r, tor_free(r));
+  smartlist_free(entry->ranges);
+  tor_free(entry);
+}
+
+/**
+ * Given a string <b>s</b> and optional end-of-string pointer
+ * <b>end_of_range</b>, parse the protocol range and store it in
+ * <b>low_out</b> and <b>high_out</b>.  A protocol range has the format U, or
+ * U-U, where U is an unsigned 32-bit integer.
+ */
+static int
+parse_version_range(const char *s, const char *end_of_range,
+                    uint32_t *low_out, uint32_t *high_out)
+{
+  uint32_t low, high;
+  char *next = NULL;
+  int ok;
+
+  tor_assert(high_out);
+  tor_assert(low_out);
+
+  if (BUG(!end_of_range))
+    end_of_range = s + strlen(s); // LCOV_EXCL_LINE
+
+  /* Note that this wouldn't be safe if we didn't know that eventually,
+   * we'd hit a NUL */
+  low = (uint32_t) tor_parse_ulong(s, 10, 0, UINT32_MAX, &ok, &next);
+  if (!ok)
+    goto error;
+  if (next > end_of_range)
+    goto error;
+  if (next == end_of_range) {
+    high = low;
+    goto done;
+  }
+
+  if (*next != '-')
+    goto error;
+  s = next+1;
+  /* ibid */
+  high = (uint32_t) tor_parse_ulong(s, 10, 0, UINT32_MAX, &ok, &next);
+  if (!ok)
+    goto error;
+  if (next != end_of_range)
+    goto error;
+
+ done:
+  *high_out = high;
+  *low_out = low;
+  return 0;
+
+ error:
+  return -1;
+}
+
+/** Parse a single protocol entry from <b>s</b> up to an optional
+ * <b>end_of_entry</b> pointer, and return that protocol entry. Return NULL
+ * on error.
+ *
+ * A protocol entry has a keyword, an = sign, and zero or more ranges. */
+static proto_entry_t *
+parse_single_entry(const char *s, const char *end_of_entry)
+{
+  proto_entry_t *out = tor_malloc_zero(sizeof(proto_entry_t));
+  const char *equals;
+
+  out->ranges = smartlist_new();
+
+  if (BUG (!end_of_entry))
+    end_of_entry = s + strlen(s); // LCOV_EXCL_LINE
+
+  /* There must be an =. */
+  equals = memchr(s, '=', end_of_entry - s);
+  if (!equals)
+    goto error;
+
+  out->name = tor_strndup(s, equals-s);
+
+  tor_assert(equals < end_of_entry);
+
+  s = equals + 1;
+  while (s < end_of_entry) {
+    const char *comma = memchr(s, ',', end_of_entry-s);
+    proto_range_t *range = tor_malloc_zero(sizeof(proto_range_t));
+    if (! comma)
+      comma = end_of_entry;
+
+    smartlist_add(out->ranges, range);
+    if (parse_version_range(s, comma, &range->low, &range->high) < 0) {
+      goto error;
+    }
+
+    if (range->low > range->high) {
+      goto error;
+    }
+
+    s = comma;
+    while (*s == ',' && s < end_of_entry)
+      ++s;
+  }
+
+  return out;
+
+ error:
+  proto_entry_free(out);
+  return NULL;
+}
+
+/**
+ * Parse the protocol list from <b>s</b> and return it as a smartlist of
+ * proto_entry_t
+ */
+STATIC smartlist_t *
+parse_protocol_list(const char *s)
+{
+  smartlist_t *entries = smartlist_new();
+
+  while (*s) {
+    /* Find the next space or the NUL. */
+    const char *end_of_entry = strchr(s, ' ');
+    proto_entry_t *entry;
+    if (!end_of_entry)
+      end_of_entry = s + strlen(s);
+
+    entry = parse_single_entry(s, end_of_entry);
+
+    if (! entry)
+      goto error;
+
+    smartlist_add(entries, entry);
+
+    s = end_of_entry;
+    while (*s == ' ')
+      ++s;
+  }
+
+  return entries;
+
+ error:
+  SMARTLIST_FOREACH(entries, proto_entry_t *, ent, proto_entry_free(ent));
+  smartlist_free(entries);
+  return NULL;
+}
+
+/**
+ * Given a protocol type and version number, return true iff we know
+ * how to speak that protocol.
+ */
+int
+protover_is_supported_here(protocol_type_t pr, uint32_t ver)
+{
+  const smartlist_t *ours = get_supported_protocol_list();
+  return protocol_list_contains(ours, pr, ver);
+}
+
+/** Return the canonical string containing the list of protocols
+ * that we support. */
+const char *
+get_supported_protocols(void)
+{
+  return
+    "Cons=1-2 "
+    "Desc=1-2 "
+    "DirCache=1 "
+    "HSDir=1 "
+    "HSMid=1 "
+    "Link=1-4 "
+    "LinkAuth=1 "
+    "Microdesc=1-2 "
+    "Relay=1-2";
+}
+
+/** The protocols from get_supported_protocols(), as parsed into a list of
+ * proto_entry_t values. Access this via get_supported_protocol_list. */
+static smartlist_t *supported_protocol_list = NULL;
+
+/** Return a pointer to a smartlist of proto_entry_t for the protocols
+ * we support. */
+static const smartlist_t *
+get_supported_protocol_list(void)
+{
+  if (PREDICT_UNLIKELY(supported_protocol_list == NULL)) {
+    supported_protocol_list = parse_protocol_list(get_supported_protocols());
+  }
+  return supported_protocol_list;
+}
+
+/**
+ * Given a protocol entry, encode it at the end of the smartlist <b>chunks</b>
+ * as one or more newly allocated strings.
+ */
+static void
+proto_entry_encode_into(smartlist_t *chunks, const proto_entry_t *entry)
+{
+  smartlist_add_asprintf(chunks, "%s=", entry->name);
+
+  SMARTLIST_FOREACH_BEGIN(entry->ranges, proto_range_t *, range) {
+    const char *comma = "";
+    if (range_sl_idx != 0)
+      comma = ",";
+
+    if (range->low == range->high) {
+      smartlist_add_asprintf(chunks, "%s%lu",
+                             comma, (unsigned long)range->low);
+    } else {
+      smartlist_add_asprintf(chunks, "%s%lu-%lu",
+                             comma, (unsigned long)range->low,
+                             (unsigned long)range->high);
+    }
+  } SMARTLIST_FOREACH_END(range);
+}
+
+/** Given a list of space-separated proto_entry_t items,
+ * encode it into a newly allocated space-separated string. */
+STATIC char *
+encode_protocol_list(const smartlist_t *sl)
+{
+  const char *separator = "";
+  smartlist_t *chunks = smartlist_new();
+  SMARTLIST_FOREACH_BEGIN(sl, const proto_entry_t *, ent) {
+    smartlist_add(chunks, tor_strdup(separator));
+
+    proto_entry_encode_into(chunks, ent);
+
+    separator = " ";
+  } SMARTLIST_FOREACH_END(ent);
+
+  char *result = smartlist_join_strings(chunks, "", 0, NULL);
+
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
+  smartlist_free(chunks);
+
+  return result;
+}
+
+/** Return true if every protocol version described in the string <b>s</b> is
+ * one that we support, and false otherwise.  If <b>missing_out</b> is
+ * provided, set it to the list of protocols we do not support.
+ *
+ * NOTE: This is quadratic, but we don't do it much: only a few times per
+ * consensus. Checking signatures should be way more expensive than this
+ * ever would be.
+ **/
+int
+protover_all_supported(const char *s, char **missing_out)
+{
+  int all_supported = 1;
+  smartlist_t *missing;
+
+  if (!s) {
+    return 1;
+  }
+
+  smartlist_t *entries = parse_protocol_list(s);
+
+  missing = smartlist_new();
+
+  SMARTLIST_FOREACH_BEGIN(entries, const proto_entry_t *, ent) {
+    protocol_type_t tp;
+    if (str_to_protocol_type(ent->name, &tp) < 0) {
+      if (smartlist_len(ent->ranges)) {
+        goto unsupported;
+      }
+      continue;
+    }
+
+    SMARTLIST_FOREACH_BEGIN(ent->ranges, const proto_range_t *, range) {
+      uint32_t i;
+      for (i = range->low; i <= range->high; ++i) {
+        if (!protover_is_supported_here(tp, i)) {
+          goto unsupported;
+        }
+      }
+    } SMARTLIST_FOREACH_END(range);
+
+    continue;
+
+  unsupported:
+    all_supported = 0;
+    smartlist_add(missing, (void*) ent);
+  } SMARTLIST_FOREACH_END(ent);
+
+
+  if (missing_out && !all_supported) {
+    tor_assert(0 != smartlist_len(missing));
+    *missing_out = encode_protocol_list(missing);
+  }
+  smartlist_free(missing);
+
+  SMARTLIST_FOREACH(entries, proto_entry_t *, ent, proto_entry_free(ent));
+  smartlist_free(entries);
+
+  return all_supported;
+}
+
+static int
+protocol_list_contains(const smartlist_t *protos,
+                       protocol_type_t pr, uint32_t ver)
+{
+  if (BUG(protos == NULL)) {
+    return 0;
+  }
+  const char *pr_name = protocol_type_to_str(pr);
+  if (BUG(pr_name == NULL)) {
+    return 0;
+  }
+
+  SMARTLIST_FOREACH_BEGIN(protos, const proto_entry_t *, ent) {
+    if (strcasecmp(ent->name, pr_name))
+      continue;
+    /* name matches; check the ranges */
+    SMARTLIST_FOREACH_BEGIN(ent->ranges, const proto_range_t *, range) {
+      if (ver >= range->low && ver <= range->high)
+        return 1;
+    } SMARTLIST_FOREACH_END(range);
+  } SMARTLIST_FOREACH_END(ent);
+
+  return 0;
+}
+
+void
+protover_free_all(void)
+{
+  if (supported_protocol_list) {
+    smartlist_t *entries = supported_protocol_list;
+    SMARTLIST_FOREACH(entries, proto_entry_t *, ent, proto_entry_free(ent));
+    smartlist_free(entries);
+    supported_protocol_list = NULL;
+  }
+}
