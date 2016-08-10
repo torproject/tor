@@ -614,6 +614,67 @@ test_routerkeys_cross_certify_tap(void *args)
   crypto_pk_free(onion_key);
 }
 
+
+static void
+test_routerkeys_rsa_ed_crosscert(void *arg)
+{
+  (void)arg;
+  ed25519_public_key_t ed;
+  crypto_pk_t *rsa = pk_generate(2);
+
+  uint8_t *cc = NULL;
+  ssize_t cc_len;
+  time_t expires_in = 1470846177;
+
+  tt_int_op(0, OP_EQ, ed25519_public_from_base64(&ed,
+                        "ThisStringCanContainAnythingSoNoKeyHereNowX"));
+  cc_len = tor_make_rsa_ed25519_crosscert(&ed, rsa, expires_in, &cc);
+
+  tt_int_op(cc_len, OP_GT, 0);
+  tt_int_op(cc_len, OP_GT, 37); /* key, expires, siglen */
+  tt_mem_op(cc, OP_EQ, ed.pubkey, 32);
+  time_t expires_out = 3600 * ntohl(get_uint32(cc+32));
+  tt_int_op(expires_out, OP_GE, expires_in);
+  tt_int_op(expires_out, OP_LE, expires_in + 3600);
+
+  tt_int_op(cc_len, OP_EQ, 37 + get_uint8(cc+36));
+
+  tt_int_op(0, OP_EQ, rsa_ed25519_crosscert_check(cc, cc_len, rsa, &ed,
+                                                  expires_in - 10));
+
+  /* Now try after it has expired */
+  tt_int_op(-4, OP_EQ, rsa_ed25519_crosscert_check(cc, cc_len, rsa, &ed,
+                                                  expires_out + 1));
+
+  /* Truncated object */
+  tt_int_op(-2, OP_EQ, rsa_ed25519_crosscert_check(cc, cc_len - 2, rsa, &ed,
+                                                  expires_in - 10));
+
+  /* Key not as expected */
+  cc[0] ^= 3;
+  tt_int_op(-3, OP_EQ, rsa_ed25519_crosscert_check(cc, cc_len, rsa, &ed,
+                                                  expires_in - 10));
+  cc[0] ^= 3;
+
+  /* Bad signature */
+  cc[40] ^= 3;
+  tt_int_op(-5, OP_EQ, rsa_ed25519_crosscert_check(cc, cc_len, rsa, &ed,
+                                                   expires_in - 10));
+  cc[40] ^= 3;
+
+  /* Signature of wrong data */
+  cc[0] ^= 3;
+  ed.pubkey[0] ^= 3;
+  tt_int_op(-6, OP_EQ, rsa_ed25519_crosscert_check(cc, cc_len, rsa, &ed,
+                                                  expires_in - 10));
+  cc[0] ^= 3;
+  ed.pubkey[0] ^= 3;
+
+ done:
+  crypto_pk_free(rsa);
+  tor_free(cc);
+}
+
 #define TEST(name, flags)                                       \
   { #name , test_routerkeys_ ## name, (flags), NULL, NULL }
 
@@ -626,6 +687,7 @@ struct testcase_t routerkeys_tests[] = {
   TEST(ed_keys_init_all, TT_FORK),
   TEST(cross_certify_ntor, 0),
   TEST(cross_certify_tap, 0),
+  TEST(rsa_ed_crosscert, 0),
   END_OF_TESTCASES
 };
 

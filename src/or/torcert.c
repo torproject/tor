@@ -257,6 +257,8 @@ tor_cert_opt_eq(const tor_cert_t *cert1, const tor_cert_t *cert2)
   return tor_cert_eq(cert1, cert2);
 }
 
+#define RSA_ED_CROSSCERT_PREFIX "Tor TLS RSA/Ed25519 cross-certificate"
+
 /** Create new cross-certification object to certify <b>ed_key</b> as the
  * master ed25519 identity key for the RSA identity key <b>rsa_key</b>.
  * Allocates and stores the encoded certificate in *<b>cert</b>, and returns
@@ -281,11 +283,21 @@ tor_make_rsa_ed25519_crosscert(const ed25519_public_key_t *ed_key,
   ssize_t sz = rsa_ed_crosscert_encode(res, alloc_sz, cc);
   tor_assert(sz > 0 && sz <= alloc_sz);
 
+  crypto_digest_t *d = crypto_digest256_new(DIGEST_SHA256);
+  crypto_digest_add_bytes(d, RSA_ED_CROSSCERT_PREFIX,
+                          strlen(RSA_ED_CROSSCERT_PREFIX));
+
   const int signed_part_len = 32 + 4;
+  crypto_digest_add_bytes(d, (char*)res, signed_part_len);
+
+  uint8_t digest[DIGEST256_LEN];
+  crypto_digest_get_digest(d, (char*)digest, sizeof(digest));
+  crypto_digest_free(d);
+
   int siglen = crypto_pk_private_sign(rsa_key,
                                       (char*)rsa_ed_crosscert_getarray_sig(cc),
                                       rsa_ed_crosscert_getlen_sig(cc),
-                                      (char*)res, signed_part_len);
+                                      (char*)digest, sizeof(digest));
   tor_assert(siglen > 0 && siglen <= (int)crypto_pk_keysize(rsa_key));
   tor_assert(siglen <= UINT8_MAX);
   cc->sig_len = siglen;
@@ -297,6 +309,96 @@ tor_make_rsa_ed25519_crosscert(const ed25519_public_key_t *ed_key,
   return sz;
 }
 
+/**
+ * Check whether the <b>crosscert_len</b> byte certificate in <b>crosscert</b>
+ * is in fact a correct cross-certification of <b>master_key</b> using
+ * the RSA key <b>rsa_id_key</b>.
+ *
+ * Also reject the certificate if it expired before
+ * <b>reject_if_expired_before</b>.
+ *
+ * Return 0 on success, negative on failure.
+ */
+int
+rsa_ed25519_crosscert_check(const uint8_t *crosscert,
+                            const size_t crosscert_len,
+                            const crypto_pk_t *rsa_id_key,
+                            const ed25519_public_key_t *master_key,
+                            const time_t reject_if_expired_before)
+{
+  rsa_ed_crosscert_t *cc = NULL;
+  int rv;
+
+#define ERR(code, s)                                            \
+  do {                                                          \
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,                      \
+           "Received a bad RSA->Ed25519 crosscert: %s",         \
+           (s));                                                \
+    rv = (code);                                                \
+    goto err;                                                   \
+  } while (0)
+
+  if (BUG(crypto_pk_keysize(rsa_id_key) > PK_BYTES))
+    return -1;
+
+  if (BUG(!crosscert))
+    return -1;
+
+  ssize_t parsed_len = rsa_ed_crosscert_parse(&cc, crosscert, crosscert_len);
+  if (parsed_len < 0 || crosscert_len != (size_t)parsed_len) {
+    ERR(-2, "Unparseable or overlong crosscert");
+  }
+
+  if (tor_memneq(rsa_ed_crosscert_getarray_ed_key(cc),
+                 master_key->pubkey,
+                 ED25519_PUBKEY_LEN)) {
+    ERR(-3, "Crosscert did not match Ed25519 key");
+  }
+
+  const uint32_t expiration_date = rsa_ed_crosscert_get_expiration(cc);
+  const uint64_t expiration_time = expiration_date * 3600;
+
+  if (reject_if_expired_before < 0 ||
+      expiration_time < (uint64_t)reject_if_expired_before) {
+    ERR(-4, "Crosscert is expired");
+  }
+
+  const uint8_t *eos = rsa_ed_crosscert_get_end_of_signed(cc);
+  const uint8_t *sig = rsa_ed_crosscert_getarray_sig(cc);
+  const uint8_t siglen = rsa_ed_crosscert_get_sig_len(cc);
+  tor_assert(eos >= crosscert);
+  tor_assert((size_t)(eos - crosscert) <= crosscert_len);
+  tor_assert(siglen == rsa_ed_crosscert_getlen_sig(cc));
+
+  /* Compute the digest */
+  uint8_t digest[DIGEST256_LEN];
+  crypto_digest_t *d = crypto_digest256_new(DIGEST_SHA256);
+  crypto_digest_add_bytes(d, RSA_ED_CROSSCERT_PREFIX,
+                          strlen(RSA_ED_CROSSCERT_PREFIX));
+  crypto_digest_add_bytes(d, (char*)crosscert, eos-crosscert);
+  crypto_digest_get_digest(d, (char*)digest, sizeof(digest));
+  crypto_digest_free(d);
+
+  /* Now check the signature */
+  uint8_t signed_[PK_BYTES];
+  int signed_len = crypto_pk_public_checksig(rsa_id_key,
+                                          (char*)signed_, sizeof(signed_),
+                                          (char*)sig, siglen);
+  if (signed_len < DIGEST256_LEN) {
+    ERR(-5, "Bad signature, or length of signed data not as expected");
+  }
+
+  if (tor_memneq(digest, signed_, DIGEST256_LEN)) {
+    ERR(-6, "The signature was good, but it didn't match the data");
+  }
+
+  rv = 0;
+ err:
+  rsa_ed_crosscert_free(cc);
+  return rv;
+}
+
+/** Construct and return a new empty or_handshake_certs object */
 or_handshake_certs_t *
 or_handshake_certs_new(void)
 {
@@ -317,6 +419,7 @@ or_handshake_certs_free(or_handshake_certs_t *certs)
   tor_free(certs);
 }
 
+#undef ERR
 #define ERR(s)                                                  \
   do {                                                          \
     log_fn(severity, LD_PROTOCOL,                               \
