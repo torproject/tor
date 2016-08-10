@@ -50,4 +50,10 @@ int hs_cache_store_as_dir(const char *desc);
 int hs_cache_lookup_as_dir(uint32_t version, const char *query,
                            char **desc_out);
 
+#ifdef HS_CACHE_PRIVATE
+
+STATIC size_t cache_clean_v3_as_dir(time_t now, time_t global_cutoff);
+
+#endif /* HS_CACHE_PRIVATE */
+
 #endif /* TOR_HS_CACHE_H */
