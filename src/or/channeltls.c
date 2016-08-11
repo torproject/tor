@@ -1918,7 +1918,8 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
 
   if (! or_handshake_certs_rsa_ok(severity,
                                   chan->conn->handshake_state->certs,
-                                  chan->conn->tls))
+                                  chan->conn->tls,
+                                  time(NULL)))
     ERR("Invalid RSA certificates!");
 
   if (chan->conn->handshake_state->started_here) {

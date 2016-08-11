@@ -431,7 +431,8 @@ or_handshake_certs_free(or_handshake_certs_t *certs)
 int
 or_handshake_certs_rsa_ok(int severity,
                           or_handshake_certs_t *certs,
-                          tor_tls_t *tls)
+                          tor_tls_t *tls,
+                          time_t now)
 {
   tor_x509_cert_t *link_cert = certs->link_cert;
   tor_x509_cert_t *auth_cert = certs->auth_cert;
@@ -442,17 +443,19 @@ or_handshake_certs_rsa_ok(int severity,
       ERR("The certs we wanted were missing");
     if (! tor_tls_cert_matches_key(tls, link_cert))
       ERR("The link certificate didn't match the TLS public key");
-    if (! tor_tls_cert_is_valid(severity, link_cert, id_cert, 0))
+    if (! tor_tls_cert_is_valid(severity, link_cert, id_cert, now, 0))
       ERR("The link certificate was not valid");
-    if (! tor_tls_cert_is_valid(severity, id_cert, id_cert, 1))
+    if (! tor_tls_cert_is_valid(severity, id_cert, id_cert, now, 1))
       ERR("The ID certificate was not valid");
   } else {
     if (! (id_cert && auth_cert))
       ERR("The certs we wanted were missing");
-    /* Remember these certificates so we can check an AUTHENTICATE cell */
-    if (! tor_tls_cert_is_valid(LOG_PROTOCOL_WARN, auth_cert, id_cert, 1))
+    /* Remember these certificates so we can check an AUTHENTICATE cell
+     * XXXX make sure we do that
+     */
+    if (! tor_tls_cert_is_valid(LOG_PROTOCOL_WARN, auth_cert, id_cert, now, 1))
       ERR("The authentication certificate was not valid");
-    if (! tor_tls_cert_is_valid(LOG_PROTOCOL_WARN, id_cert, id_cert, 1))
+    if (! tor_tls_cert_is_valid(LOG_PROTOCOL_WARN, id_cert, id_cert, now, 1))
       ERR("The ID certificate was not valid");
   }
 
