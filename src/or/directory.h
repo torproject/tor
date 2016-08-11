@@ -160,6 +160,9 @@ STATIC void find_dl_min_and_max_delay(download_status_t *dls,
                                       int *min, int *max);
 STATIC int next_random_exponential_delay(int delay, int max_delay);
 
+STATIC int parse_hs_version_from_post(const char *url, const char *prefix,
+                                      const char **end_pos);
+
 #endif
 
 #endif

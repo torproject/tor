@@ -249,7 +249,7 @@ hs_cache_store_as_dir(const char *desc)
    * we are sure that the descriptor's version is supported else the
    * decoding would have failed. */
   switch (dir_desc->plaintext_data->version) {
-  case 3:
+  case HS_VERSION_THREE:
   default:
     if (cache_store_v3_as_dir(dir_desc) < 0) {
       goto err;
@@ -279,7 +279,7 @@ hs_cache_lookup_as_dir(uint32_t version, const char *query,
   tor_assert(hs_desc_is_supported_version(version));
 
   switch (version) {
-  case 3:
+  case HS_VERSION_THREE:
   default:
     found = cache_lookup_v3_as_dir(query, desc_out);
     break;

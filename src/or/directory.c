@@ -16,6 +16,7 @@
 #include "dirvote.h"
 #include "entrynodes.h"
 #include "geoip.h"
+#include "hs_cache.h"
 #include "hs_common.h"
 #include "main.h"
 #include "microdesc.h"
@@ -3443,6 +3444,90 @@ handle_get_robots(dir_connection_t *conn, const get_handler_args_t *args)
   return 0;
 }
 
+/* Given the <b>url</b> from a POST request, try to extract the version number
+ * using the provided <b>prefix</b>. The version should be after the prefix and
+ * ending with the seperator "/". For instance:
+ *      /tor/hs/3/publish
+ *
+ * On success, <b>end_pos</b> points to the position right after the version
+ * was found. On error, it is set to NULL.
+ *
+ * Return version on success else negative value. */
+STATIC int
+parse_hs_version_from_post(const char *url, const char *prefix,
+                           const char **end_pos)
+{
+  int ok;
+  unsigned long version;
+  const char *start;
+  char *end = NULL;
+
+  tor_assert(url);
+  tor_assert(prefix);
+  tor_assert(end_pos);
+
+  /* Check if the prefix does start the url. */
+  if (strcmpstart(url, prefix)) {
+    goto err;
+  }
+  /* Move pointer to the end of the prefix string. */
+  start = url + strlen(prefix);
+  /* Try this to be the HS version and if we are still at the separator, next
+   * will be move to the right value. */
+  version = tor_parse_long(start, 10, 0, INT_MAX, &ok, &end);
+  if (!ok) {
+    goto err;
+  }
+
+  *end_pos = end;
+  return (int) version;
+ err:
+  *end_pos = NULL;
+  return -1;
+}
+
+/* Handle the POST request for a hidden service descripror. The request is in
+ * <b>url</b>, the body of the request is in <b>body</b>. Return 200 on success
+ * else return 400 indicating a bad request. */
+static int
+handle_post_hs_descriptor(const char *url, const char *body)
+{
+  int version;
+  const char *end_pos;
+
+  tor_assert(url);
+  tor_assert(body);
+
+  version = parse_hs_version_from_post(url, "/tor/hs/", &end_pos);
+  if (version < 0) {
+    goto err;
+  }
+
+  /* We have a valid version number, now make sure it's a publish request. Use
+   * the end position just after the version and check for the command. */
+  if (strcmpstart(end_pos, "/publish")) {
+    goto err;
+  }
+
+  switch (version) {
+  case HS_VERSION_THREE:
+    if (hs_cache_store_as_dir(body) < 0) {
+      goto err;
+    }
+    log_info(LD_REND, "Publish request for HS descriptor handled "
+                      "successfully.");
+    break;
+  default:
+    /* Unsupported version, return a bad request. */
+    goto err;
+  }
+
+  return 200;
+ err:
+  /* Bad request. */
+  return 400;
+}
+
 /** Helper function: called when a dirserver gets a complete HTTP POST
  * request.  Look for an uploaded server descriptor or rendezvous
  * service descriptor.  On finding one, process it and write a
@@ -3484,6 +3569,20 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
       write_http_status_line(conn, 200, "Service descriptor (v2) stored");
       log_info(LD_REND, "Handled v2 rendezvous descriptor post: accepted");
     }
+    goto done;
+  }
+
+  /* Handle HS descriptor publish request. */
+  /* XXX: This should be disabled with a consensus param until we want to
+   * the prop224 be deployed and thus use. */
+  if (connection_dir_is_encrypted(conn) && !strcmpstart(url, "/tor/hs/")) {
+    const char *msg = "HS descriptor stored successfully.";
+    /* We most probably have a publish request for an HS descriptor. */
+    int code = handle_post_hs_descriptor(url, body);
+    if (code != 200) {
+      msg = "Invalid HS descriptor. Rejected.";
+    }
+    write_http_status_line(conn, code, msg);
     goto done;
   }
 

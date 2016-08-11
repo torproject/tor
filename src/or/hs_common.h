@@ -14,6 +14,8 @@
 /* Protocol version 2. Use this instead of hardcoding "2" in the code base,
  * this adds a clearer semantic to the value when used. */
 #define HS_VERSION_TWO 2
+/* Version 3 of the protocol (prop224). */
+#define HS_VERSION_THREE 3
 
 void rend_data_free(rend_data_t *data);
 rend_data_t *rend_data_dup(const rend_data_t *data);

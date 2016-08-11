@@ -5345,6 +5345,67 @@ test_dir_find_dl_schedule(void* data)
   mock_options = NULL;
 }
 
+static void
+test_dir_post_parsing(void *arg)
+{
+  (void) arg;
+
+  /* Test the version parsing from an HS descriptor publish request. */
+  {
+    const char *end;
+    const char *prefix = "/tor/hs/";
+    int version = parse_hs_version_from_post("/tor/hs//publish", prefix, &end);
+    tt_int_op(version, OP_EQ, -1);
+    tt_ptr_op(end, OP_EQ, NULL);
+    version = parse_hs_version_from_post("/tor/hs/a/publish", prefix, &end);
+    tt_int_op(version, OP_EQ, -1);
+    tt_ptr_op(end, OP_EQ, NULL);
+    version = parse_hs_version_from_post("/tor/hs/3/publish", prefix, &end);
+    tt_int_op(version, OP_EQ, 3);
+    tt_str_op(end, OP_EQ, "/publish");
+    version = parse_hs_version_from_post("/tor/hs/42/publish", prefix, &end);
+    tt_int_op(version, OP_EQ, 42);
+    tt_str_op(end, OP_EQ, "/publish");
+    version = parse_hs_version_from_post("/tor/hs/18163/publish", prefix, &end);
+    tt_int_op(version, OP_EQ, 18163);
+    tt_str_op(end, OP_EQ, "/publish");
+    version = parse_hs_version_from_post("JUNKJUNKJUNK", prefix, &end);
+    tt_int_op(version, OP_EQ, -1);
+    tt_ptr_op(end, OP_EQ, NULL);
+    version = parse_hs_version_from_post("/tor/hs/3/publish", "blah", &end);
+    tt_int_op(version, OP_EQ, -1);
+    tt_ptr_op(end, OP_EQ, NULL);
+    /* Missing the '/' at the end of the prefix. */
+    version = parse_hs_version_from_post("/tor/hs/3/publish", "/tor/hs", &end);
+    tt_int_op(version, OP_EQ, -1);
+    tt_ptr_op(end, OP_EQ, NULL);
+    version = parse_hs_version_from_post("/random/blah/tor/hs/3/publish",
+                                         prefix, &end);
+    tt_int_op(version, OP_EQ, -1);
+    tt_ptr_op(end, OP_EQ, NULL);
+    version = parse_hs_version_from_post("/tor/hs/3/publish/random/junk",
+                                         prefix, &end);
+    tt_int_op(version, OP_EQ, 3);
+    tt_str_op(end, OP_EQ, "/publish/random/junk");
+    version = parse_hs_version_from_post("/tor/hs/-1/publish", prefix, &end);
+    tt_int_op(version, OP_EQ, -1);
+    tt_ptr_op(end, OP_EQ, NULL);
+    /* INT_MAX */
+    version = parse_hs_version_from_post("/tor/hs/2147483647/publish",
+                                         prefix, &end);
+    tt_int_op(version, OP_EQ, INT_MAX);
+    tt_str_op(end, OP_EQ, "/publish");
+    /* INT_MAX + 1*/
+    version = parse_hs_version_from_post("/tor/hs/2147483648/publish",
+                                         prefix, &end);
+    tt_int_op(version, OP_EQ, -1);
+    tt_ptr_op(end, OP_EQ, NULL);
+  }
+
+ done:
+  ;
+}
+
 #define DIR_LEGACY(name)                             \
   { #name, test_dir_ ## name , TT_FORK, NULL, NULL }
 
@@ -5378,6 +5439,7 @@ struct testcase_t dir_tests[] = {
   DIR(fmt_control_ns, 0),
   DIR(dirserv_set_routerstatus_testing, 0),
   DIR(http_handling, 0),
+  DIR(post_parsing, 0),
   DIR(purpose_needs_anonymity, 0),
   DIR(fetch_type, 0),
   DIR(packages, 0),
