@@ -1,0 +1,5 @@
+  o Minor bugfixes (compilation):
+v   - Fix a compilation warning on GCC versions before 4.6.  Our
+      ENABLE_GCC_WARNING macro used the word "warning" as an
+      argument, when it is also required as an argument to the
+      compiler pragma. Fixes bug 19901; bugfix on 0.2.9.1-alpha.
