@@ -1251,7 +1251,7 @@ The following options are useful only for clients (that is, if
  +
     When providing proxy server service to a network of computers using a tool
     like dns-proxy-tor, change the IPv4 network to "10.192.0.0/10" or
-    "172.16.0.0/12" and change the IPv6 network to "[FC00]/7".
+    "172.16.0.0/12" and change the IPv6 network to "[FC00::]/7".
     The default **VirtualAddrNetwork** address ranges on a
     properly configured machine will route to the loopback or link-local
     interface. For
