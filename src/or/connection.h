@@ -57,8 +57,6 @@ void connection_mark_for_close_internal_(connection_t *conn,
     connection_t *tmp_conn__ = (c);                                     \
     connection_mark_for_close_internal_(tmp_conn__, (line), (file));    \
     tmp_conn__->hold_open_until_flushed = 1;                            \
-    IF_HAS_BUFFEREVENT(tmp_conn__,                                      \
-                       connection_start_writing(tmp_conn__));           \
   } while (0)
 
 #define connection_mark_and_flush_internal(c)            \
@@ -166,21 +164,13 @@ static size_t connection_get_outbuf_len(connection_t *conn);
 static inline size_t
 connection_get_inbuf_len(connection_t *conn)
 {
-  IF_HAS_BUFFEREVENT(conn, {
-    return evbuffer_get_length(bufferevent_get_input(conn->bufev));
-  }) ELSE_IF_NO_BUFFEREVENT {
-    return conn->inbuf ? buf_datalen(conn->inbuf) : 0;
-  }
+  return conn->inbuf ? buf_datalen(conn->inbuf) : 0;
 }
 
 static inline size_t
 connection_get_outbuf_len(connection_t *conn)
 {
-  IF_HAS_BUFFEREVENT(conn, {
-    return evbuffer_get_length(bufferevent_get_output(conn->bufev));
-  }) ELSE_IF_NO_BUFFEREVENT {
     return conn->outbuf ? buf_datalen(conn->outbuf) : 0;
-  }
 }
 
 connection_t *connection_get_by_global_id(uint64_t id);
@@ -256,20 +246,6 @@ void remove_file_if_very_old(const char *fname, time_t now);
 void clock_skew_warning(const connection_t *conn, long apparent_skew,
                         int trusted, log_domain_mask_t domain,
                         const char *received, const char *source);
-
-#ifdef USE_BUFFEREVENTS
-int connection_type_uses_bufferevent(connection_t *conn);
-void connection_configure_bufferevent_callbacks(connection_t *conn);
-void connection_handle_read_cb(struct bufferevent *bufev, void *arg);
-void connection_handle_write_cb(struct bufferevent *bufev, void *arg);
-void connection_handle_event_cb(struct bufferevent *bufev, short event,
-                                 void *arg);
-void connection_get_rate_limit_totals(uint64_t *read_out,
-                                      uint64_t *written_out);
-void connection_enable_rate_limiting(connection_t *conn);
-#else
-#define connection_type_uses_bufferevent(c) (0)
-#endif
 
 #ifdef CONNECTION_PRIVATE
 STATIC void connection_free_(connection_t *conn);

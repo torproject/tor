@@ -11,9 +11,6 @@
 
 #include <event2/event.h>
 #include <event2/thread.h>
-#ifdef USE_BUFFEREVENTS
-#include <event2/bufferevent.h>
-#endif
 
 #include "log_test_helpers.h"
 

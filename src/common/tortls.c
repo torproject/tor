@@ -48,13 +48,6 @@ DISABLE_GCC_WARNING(redundant-decls)
 
 ENABLE_GCC_WARNING(redundant-decls)
 
-#ifdef USE_BUFFEREVENTS
-#include <event2/bufferevent_ssl.h>
-#include <event2/buffer.h>
-#include <event2/event.h>
-#include "compat_libevent.h"
-#endif
-
 #define TORTLS_PRIVATE
 #include "tortls.h"
 #include "util.h"
@@ -2485,78 +2478,6 @@ tor_tls_get_buffer_sizes(tor_tls_t *tls,
   return 0;
 #endif
 }
-
-#ifdef USE_BUFFEREVENTS
-/** Construct and return an TLS-encrypting bufferevent to send data over
- * <b>socket</b>, which must match the socket of the underlying bufferevent
- * <b>bufev_in</b>.  The TLS object <b>tls</b> is used for encryption.
- *
- * This function will either create a filtering bufferevent that wraps around
- * <b>bufev_in</b>, or it will free bufev_in and return a new bufferevent that
- * uses the <b>tls</b> to talk to the network directly.  Do not use
- * <b>bufev_in</b> after calling this function.
- *
- * The connection will start out doing a server handshake if <b>receiving</b>
- * is strue, and a client handshake otherwise.
- *
- * Returns NULL on failure.
- */
-struct bufferevent *
-tor_tls_init_bufferevent(tor_tls_t *tls, struct bufferevent *bufev_in,
-                         evutil_socket_t socket, int receiving,
-                         int filter)
-{
-  struct bufferevent *out;
-  const enum bufferevent_ssl_state state = receiving ?
-    BUFFEREVENT_SSL_ACCEPTING : BUFFEREVENT_SSL_CONNECTING;
-
-  if (filter || tor_libevent_using_iocp_bufferevents()) {
-    /* Grab an extra reference to the SSL, since BEV_OPT_CLOSE_ON_FREE
-       means that the SSL will get freed too.
-
-       This increment makes our SSL usage not-threadsafe, BTW.  We should
-       see if we're allowed to use CRYPTO_add from outside openssl. */
-    tls->ssl->references += 1;
-    out = bufferevent_openssl_filter_new(tor_libevent_get_base(),
-                                         bufev_in,
-                                         tls->ssl,
-                                         state,
-                                         BEV_OPT_DEFER_CALLBACKS|
-                                         BEV_OPT_CLOSE_ON_FREE);
-    /* Tell the underlying bufferevent when to accept more data from the SSL
-       filter (only when it's got less than 32K to write), and when to notify
-       the SSL filter that it could write more (when it drops under 24K). */
-    bufferevent_setwatermark(bufev_in, EV_WRITE, 24*1024, 32*1024);
-  } else {
-    if (bufev_in) {
-      evutil_socket_t s = bufferevent_getfd(bufev_in);
-      tor_assert(s == -1 || s == socket);
-      tor_assert(evbuffer_get_length(bufferevent_get_input(bufev_in)) == 0);
-      tor_assert(evbuffer_get_length(bufferevent_get_output(bufev_in)) == 0);
-      tor_assert(BIO_number_read(SSL_get_rbio(tls->ssl)) == 0);
-      tor_assert(BIO_number_written(SSL_get_rbio(tls->ssl)) == 0);
-      bufferevent_free(bufev_in);
-    }
-
-    /* Current versions (as of 2.0.x) of Libevent need to defer
-     * bufferevent_openssl callbacks, or else our callback functions will
-     * get called reentrantly, which is bad for us.
-     */
-    out = bufferevent_openssl_socket_new(tor_libevent_get_base(),
-                                         socket,
-                                         tls->ssl,
-                                         state,
-                                         BEV_OPT_DEFER_CALLBACKS);
-  }
-  tls->state = TOR_TLS_ST_BUFFEREVENT;
-
-  /* Unblock _after_ creating the bufferevent, since accept/connect tend to
-   * clear flags. */
-  tor_tls_unblock_renegotiation(tls);
-
-  return out;
-}
-#endif
 
 /** Check whether the ECC group requested is supported by the current OpenSSL
  * library instance.  Return 1 if the group is supported, and 0 if not.

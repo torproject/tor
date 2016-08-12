@@ -235,14 +235,6 @@ void check_no_tls_errors_(const char *fname, int line);
 void tor_tls_log_one_error(tor_tls_t *tls, unsigned long err,
                            int severity, int domain, const char *doing);
 
-#ifdef USE_BUFFEREVENTS
-int tor_tls_start_renegotiating(tor_tls_t *tls);
-struct bufferevent *tor_tls_init_bufferevent(tor_tls_t *tls,
-                                     struct bufferevent *bufev_in,
-                                      evutil_socket_t socket, int receiving,
-                                     int filter);
-#endif
-
 void tor_x509_cert_free(tor_x509_cert_t *cert);
 tor_x509_cert_t *tor_x509_cert_decode(const uint8_t *certificate,
                             size_t certificate_len);

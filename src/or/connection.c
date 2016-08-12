@@ -52,10 +52,6 @@
 #include "sandbox.h"
 #include "transports.h"
 
-#ifdef USE_BUFFEREVENTS
-#include <event2/event.h>
-#endif
-
 #ifdef HAVE_PWD_H
 #include <pwd.h>
 #endif
@@ -75,10 +71,8 @@ static void connection_init(time_t now, connection_t *conn, int type,
 static int connection_init_accepted_conn(connection_t *conn,
                           const listener_connection_t *listener);
 static int connection_handle_listener_read(connection_t *conn, int new_type);
-#ifndef USE_BUFFEREVENTS
 static int connection_bucket_should_increase(int bucket,
                                              or_connection_t *conn);
-#endif
 static int connection_finished_flushing(connection_t *conn);
 static int connection_flushed_some(connection_t *conn);
 static int connection_finished_connecting(connection_t *conn);
@@ -235,26 +229,6 @@ conn_state_to_string(int type, int state)
                state, conn_type_to_string(type));
   return buf;
 }
-
-#ifdef USE_BUFFEREVENTS
-/** Return true iff the connection's type is one that can use a
-    bufferevent-based implementation. */
-int
-connection_type_uses_bufferevent(connection_t *conn)
-{
-  switch (conn->type) {
-    case CONN_TYPE_AP:
-    case CONN_TYPE_EXIT:
-    case CONN_TYPE_DIR:
-    case CONN_TYPE_CONTROL:
-    case CONN_TYPE_OR:
-    case CONN_TYPE_EXT_OR:
-      return 1;
-    default:
-      return 0;
-  }
-}
-#endif
 
 /** Allocate and return a new dir_connection_t, initialized as by
  * connection_init(). */
@@ -427,13 +401,11 @@ connection_init(time_t now, connection_t *conn, int type, int socket_family)
 
   conn->type = type;
   conn->socket_family = socket_family;
-#ifndef USE_BUFFEREVENTS
   if (!connection_is_listener(conn)) {
     /* listeners never use their buf */
     conn->inbuf = buf_new();
     conn->outbuf = buf_new();
   }
-#endif
 
   conn->timestamp_created = now;
   conn->timestamp_lastread = now;
@@ -577,10 +549,10 @@ connection_free_(connection_t *conn)
     if (entry_conn->socks_request)
       socks_request_free(entry_conn->socks_request);
     if (entry_conn->pending_optimistic_data) {
-      generic_buffer_free(entry_conn->pending_optimistic_data);
+      buf_free(entry_conn->pending_optimistic_data);
     }
     if (entry_conn->sending_optimistic_data) {
-      generic_buffer_free(entry_conn->sending_optimistic_data);
+      buf_free(entry_conn->sending_optimistic_data);
     }
   }
   if (CONN_IS_EDGE(conn)) {
@@ -603,15 +575,6 @@ connection_free_(connection_t *conn)
   tor_event_free(conn->read_event);
   tor_event_free(conn->write_event);
   conn->read_event = conn->write_event = NULL;
-  IF_HAS_BUFFEREVENT(conn, {
-      /* This was a workaround to handle bugs in some old versions of libevent
-       * where callbacks can occur after calling bufferevent_free().  Setting
-       * the callbacks to NULL prevented this.  It shouldn't be necessary any
-       * more, but let's not tempt fate for now.  */
-      bufferevent_setcb(conn->bufev, NULL, NULL, NULL, NULL);
-      bufferevent_free(conn->bufev);
-      conn->bufev = NULL;
-  });
 
   if (conn->type == CONN_TYPE_DIR) {
     dir_connection_t *dir_conn = TO_DIR_CONN(conn);
@@ -644,13 +607,6 @@ connection_free_(connection_t *conn)
     tor_free(TO_OR_CONN(conn)->ext_or_auth_correct_client_hash);
     tor_free(TO_OR_CONN(conn)->ext_or_transport);
   }
-
-#ifdef USE_BUFFEREVENTS
-  if (conn->type == CONN_TYPE_OR && TO_OR_CONN(conn)->bucket_cfg) {
-    ev_token_bucket_cfg_free(TO_OR_CONN(conn)->bucket_cfg);
-    TO_OR_CONN(conn)->bucket_cfg = NULL;
-  }
-#endif
 
   memwipe(mem, 0xCC, memlen); /* poison memory */
   tor_free(mem);
@@ -2249,18 +2205,13 @@ connection_send_socks5_connect(connection_t *conn)
   conn->proxy_state = PROXY_SOCKS5_WANT_CONNECT_OK;
 }
 
-/** Wrapper around fetch_from_(buf/evbuffer)_socks_client: see those functions
+/** Wrapper around fetch_from_buf_socks_client: see that functions
  * for documentation of its behavior. */
 static int
 connection_fetch_from_buf_socks_client(connection_t *conn,
                                        int state, char **reason)
 {
-  IF_HAS_BUFFEREVENT(conn, {
-    struct evbuffer *input = bufferevent_get_input(conn->bufev);
-    return fetch_from_evbuffer_socks_client(input, state, reason);
-  }) ELSE_IF_NO_BUFFEREVENT {
-    return fetch_from_buf_socks_client(conn->inbuf, state, reason);
-  }
+  return fetch_from_buf_socks_client(conn->inbuf, state, reason);
 }
 
 /** Call this from connection_*_process_inbuf() to advance the proxy
@@ -2694,21 +2645,15 @@ connection_is_rate_limited(connection_t *conn)
     return 1;
 }
 
-#ifdef USE_BUFFEREVENTS
-static struct bufferevent_rate_limit_group *global_rate_limit = NULL;
-#else
-
 /** Did either global write bucket run dry last second? If so,
  * we are likely to run dry again this second, so be stingy with the
  * tokens we just put in. */
 static int write_buckets_empty_last_second = 0;
-#endif
 
 /** How many seconds of no active local circuits will make the
  * connection revert to the "relayed" bandwidth class? */
 #define CLIENT_IDLE_TIME_FOR_PRIORITY 30
 
-#ifndef USE_BUFFEREVENTS
 /** Return 1 if <b>conn</b> should use tokens from the "relayed"
  * bandwidth rates, else 0. Currently, only OR conns with bandwidth
  * class 1, and directory conns that are serving data out, count.
@@ -2820,20 +2765,6 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
   return connection_bucket_round_robin(base, priority,
                                        global_bucket, conn_bucket);
 }
-#else
-static ssize_t
-connection_bucket_read_limit(connection_t *conn, time_t now)
-{
-  (void) now;
-  return bufferevent_get_max_to_read(conn->bufev);
-}
-ssize_t
-connection_bucket_write_limit(connection_t *conn, time_t now)
-{
-  (void) now;
-  return bufferevent_get_max_to_write(conn->bufev);
-}
-#endif
 
 /** Return 1 if the global write buckets are low enough that we
  * shouldn't send <b>attempt</b> bytes of low-priority directory stuff
@@ -2857,12 +2788,8 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
 int
 global_write_bucket_low(connection_t *conn, size_t attempt, int priority)
 {
-#ifdef USE_BUFFEREVENTS
-  ssize_t smaller_bucket = bufferevent_get_max_to_write(conn->bufev);
-#else
   int smaller_bucket = global_write_bucket < global_relayed_write_bucket ?
                        global_write_bucket : global_relayed_write_bucket;
-#endif
   if (authdir_mode(get_options()) && priority>1)
     return 0; /* there's always room to answer v2 if we're an auth dir */
 
@@ -2872,10 +2799,8 @@ global_write_bucket_low(connection_t *conn, size_t attempt, int priority)
   if (smaller_bucket < (int)attempt)
     return 1; /* not enough space no matter the priority */
 
-#ifndef USE_BUFFEREVENTS
   if (write_buckets_empty_last_second)
     return 1; /* we're already hitting our limits, no more please */
-#endif
 
   if (priority == 1) { /* old-style v1 query */
     /* Could we handle *two* of these requests within the next two seconds? */
@@ -2923,29 +2848,6 @@ record_num_bytes_transferred_impl(connection_t *conn,
     rep_hist_note_exit_bytes(conn->port, num_written, num_read);
 }
 
-#ifdef USE_BUFFEREVENTS
-/** Wrapper around fetch_from_(buf/evbuffer)_socks_client: see those functions
- * for documentation of its behavior. */
-static void
-record_num_bytes_transferred(connection_t *conn,
-                             time_t now, size_t num_read, size_t num_written)
-{
-  /* XXXX check if this is necessary */
-  if (num_written >= INT_MAX || num_read >= INT_MAX) {
-    log_err(LD_BUG, "Value out of range. num_read=%lu, num_written=%lu, "
-             "connection type=%s, state=%s",
-             (unsigned long)num_read, (unsigned long)num_written,
-             conn_type_to_string(conn->type),
-             conn_state_to_string(conn->type, conn->state));
-    if (num_written >= INT_MAX) num_written = 1;
-    if (num_read >= INT_MAX) num_read = 1;
-    tor_fragile_assert();
-  }
-
-  record_num_bytes_transferred_impl(conn,now,num_read,num_written);
-}
-#endif
-
 /** Helper: convert given <b>tvnow</b> time value to milliseconds since
  * midnight. */
 static uint32_t
@@ -2990,7 +2892,6 @@ connection_buckets_note_empty_ts(uint32_t *timestamp_var,
     *timestamp_var = msec_since_midnight(tvnow);
 }
 
-#ifndef USE_BUFFEREVENTS
 /** Last time at which the global or relay buckets were emptied in msec
  * since midnight. */
 static uint32_t global_relayed_read_emptied = 0,
@@ -3321,92 +3222,6 @@ connection_bucket_should_increase(int bucket, or_connection_t *conn)
 
   return 1;
 }
-#else
-static void
-connection_buckets_decrement(connection_t *conn, time_t now,
-                             size_t num_read, size_t num_written)
-{
-  (void) conn;
-  (void) now;
-  (void) num_read;
-  (void) num_written;
-  /* Libevent does this for us. */
-}
-
-void
-connection_bucket_refill(int seconds_elapsed, time_t now)
-{
-  (void) seconds_elapsed;
-  (void) now;
-  /* Libevent does this for us. */
-}
-void
-connection_bucket_init(void)
-{
-  const or_options_t *options = get_options();
-  const struct timeval *tick = tor_libevent_get_one_tick_timeout();
-  struct ev_token_bucket_cfg *bucket_cfg;
-
-  uint64_t rate, burst;
-  if (options->RelayBandwidthRate) {
-    rate = options->RelayBandwidthRate;
-    burst = options->RelayBandwidthBurst;
-  } else {
-    rate = options->BandwidthRate;
-    burst = options->BandwidthBurst;
-  }
-
-  /* This can't overflow, since TokenBucketRefillInterval <= 1000,
-   * and rate started out less than INT32_MAX. */
-  rate = (rate * options->TokenBucketRefillInterval) / 1000;
-
-  bucket_cfg = ev_token_bucket_cfg_new((uint32_t)rate, (uint32_t)burst,
-                                       (uint32_t)rate, (uint32_t)burst,
-                                       tick);
-
-  if (!global_rate_limit) {
-    global_rate_limit =
-      bufferevent_rate_limit_group_new(tor_libevent_get_base(), bucket_cfg);
-  } else {
-    bufferevent_rate_limit_group_set_cfg(global_rate_limit, bucket_cfg);
-  }
-  ev_token_bucket_cfg_free(bucket_cfg);
-}
-
-void
-connection_get_rate_limit_totals(uint64_t *read_out, uint64_t *written_out)
-{
-  if (global_rate_limit == NULL) {
-    *read_out = *written_out = 0;
-  } else {
-    bufferevent_rate_limit_group_get_totals(
-      global_rate_limit, read_out, written_out);
-  }
-}
-
-/** Perform whatever operations are needed on <b>conn</b> to enable
- * rate-limiting. */
-void
-connection_enable_rate_limiting(connection_t *conn)
-{
-  if (conn->bufev) {
-    if (!global_rate_limit)
-      connection_bucket_init();
-    tor_add_bufferevent_to_rate_limit_group(conn->bufev, global_rate_limit);
-  }
-}
-
-static void
-connection_consider_empty_write_buckets(connection_t *conn)
-{
-  (void) conn;
-}
-static void
-connection_consider_empty_read_buckets(connection_t *conn)
-{
-  (void) conn;
-}
-#endif
 
 /** Read bytes from conn-\>s and process them.
  *
@@ -3737,171 +3552,11 @@ connection_read_to_buf(connection_t *conn, ssize_t *max_to_read,
   return 0;
 }
 
-#ifdef USE_BUFFEREVENTS
-/* XXXX These generic versions could be simplified by making them
-   type-specific */
-
-/** Callback: Invoked whenever bytes are added to or drained from an input
- * evbuffer.  Used to track the number of bytes read. */
-static void
-evbuffer_inbuf_callback(struct evbuffer *buf,
-                        const struct evbuffer_cb_info *info, void *arg)
-{
-  connection_t *conn = arg;
-  (void) buf;
-  /* XXXX These need to get real counts on the non-nested TLS case. - NM */
-  if (info->n_added) {
-    time_t now = approx_time();
-    conn->timestamp_lastread = now;
-    record_num_bytes_transferred(conn, now, info->n_added, 0);
-    connection_consider_empty_read_buckets(conn);
-    if (conn->type == CONN_TYPE_AP) {
-      edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-      /*XXXX++ check for overflow*/
-      edge_conn->n_read += (int)info->n_added;
-    }
-  }
-}
-
-/** Callback: Invoked whenever bytes are added to or drained from an output
- * evbuffer.  Used to track the number of bytes written. */
-static void
-evbuffer_outbuf_callback(struct evbuffer *buf,
-                         const struct evbuffer_cb_info *info, void *arg)
-{
-  connection_t *conn = arg;
-  (void)buf;
-  if (info->n_deleted) {
-    time_t now = approx_time();
-    conn->timestamp_lastwritten = now;
-    record_num_bytes_transferred(conn, now, 0, info->n_deleted);
-    connection_consider_empty_write_buckets(conn);
-    if (conn->type == CONN_TYPE_AP) {
-      edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-      /*XXXX++ check for overflow*/
-      edge_conn->n_written += (int)info->n_deleted;
-    }
-  }
-}
-
-/** Callback: invoked whenever a bufferevent has read data. */
-void
-connection_handle_read_cb(struct bufferevent *bufev, void *arg)
-{
-  connection_t *conn = arg;
-  (void) bufev;
-  if (!conn->marked_for_close) {
-    if (connection_process_inbuf(conn, 1)<0) /* XXXX Always 1? */
-      if (!conn->marked_for_close)
-        connection_mark_for_close(conn);
-  }
-}
-
-/** Callback: invoked whenever a bufferevent has written data. */
-void
-connection_handle_write_cb(struct bufferevent *bufev, void *arg)
-{
-  connection_t *conn = arg;
-  struct evbuffer *output;
-  if (connection_flushed_some(conn)<0) {
-    if (!conn->marked_for_close)
-      connection_mark_for_close(conn);
-    return;
-  }
-
-  output = bufferevent_get_output(bufev);
-  if (!evbuffer_get_length(output)) {
-    connection_finished_flushing(conn);
-    if (conn->marked_for_close && conn->hold_open_until_flushed) {
-      conn->hold_open_until_flushed = 0;
-      if (conn->linked) {
-        /* send eof */
-        bufferevent_flush(conn->bufev, EV_WRITE, BEV_FINISHED);
-      }
-    }
-  }
-}
-
-/** Callback: invoked whenever a bufferevent has had an event (like a
- * connection, or an eof, or an error) occur. */
-void
-connection_handle_event_cb(struct bufferevent *bufev, short event, void *arg)
-{
-  connection_t *conn = arg;
-  (void) bufev;
-  if (conn->marked_for_close)
-    return;
-
-  if (event & BEV_EVENT_CONNECTED) {
-    tor_assert(connection_state_is_connecting(conn));
-    if (connection_finished_connecting(conn)<0)
-      return;
-  }
-  if (event & BEV_EVENT_EOF) {
-    if (!conn->marked_for_close) {
-      conn->inbuf_reached_eof = 1;
-      if (connection_reached_eof(conn)<0)
-        return;
-    }
-  }
-  if (event & BEV_EVENT_ERROR) {
-    int socket_error = evutil_socket_geterror(conn->s);
-    if (conn->type == CONN_TYPE_OR &&
-        conn->state == OR_CONN_STATE_CONNECTING) {
-      connection_or_connect_failed(TO_OR_CONN(conn),
-                                   errno_to_orconn_end_reason(socket_error),
-                                   tor_socket_strerror(socket_error));
-    } else if (CONN_IS_EDGE(conn)) {
-      edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-      if (!edge_conn->edge_has_sent_end)
-        connection_edge_end_errno(edge_conn);
-      if (conn->type == CONN_TYPE_AP && TO_ENTRY_CONN(conn)->socks_request) {
-        /* broken, don't send a socks reply back */
-        TO_ENTRY_CONN(conn)->socks_request->has_finished = 1;
-      }
-    }
-    connection_close_immediate(conn); /* Connection is dead. */
-    if (!conn->marked_for_close)
-      connection_mark_for_close(conn);
-  }
-}
-
-/** Set up the generic callbacks for the bufferevent on <b>conn</b>. */
-void
-connection_configure_bufferevent_callbacks(connection_t *conn)
-{
-  struct bufferevent *bufev;
-  struct evbuffer *input, *output;
-  tor_assert(conn->bufev);
-  bufev = conn->bufev;
-  bufferevent_setcb(bufev,
-                    connection_handle_read_cb,
-                    connection_handle_write_cb,
-                    connection_handle_event_cb,
-                    conn);
-  /* Set a fairly high write low-watermark so that we get the write callback
-     called whenever data is written to bring us under 128K.  Leave the
-     high-watermark at 0.
-  */
-  bufferevent_setwatermark(bufev, EV_WRITE, 128*1024, 0);
-
-  input = bufferevent_get_input(bufev);
-  output = bufferevent_get_output(bufev);
-  evbuffer_add_cb(input, evbuffer_inbuf_callback, conn);
-  evbuffer_add_cb(output, evbuffer_outbuf_callback, conn);
-}
-#endif
-
 /** A pass-through to fetch_from_buf. */
 int
 connection_fetch_from_buf(char *string, size_t len, connection_t *conn)
 {
-  IF_HAS_BUFFEREVENT(conn, {
-    /* XXX overflow -seb */
-    return (int)bufferevent_read(conn->bufev, string, len);
-  }) ELSE_IF_NO_BUFFEREVENT {
-    return fetch_from_buf(string, len, conn->inbuf);
-  }
+  return fetch_from_buf(string, len, conn->inbuf);
 }
 
 /** As fetch_from_buf_line(), but read from a connection's input buffer. */
@@ -3909,43 +3564,19 @@ int
 connection_fetch_from_buf_line(connection_t *conn, char *data,
                                size_t *data_len)
 {
-  IF_HAS_BUFFEREVENT(conn, {
-    int r;
-    size_t eol_len=0;
-    struct evbuffer *input = bufferevent_get_input(conn->bufev);
-    struct evbuffer_ptr ptr =
-      evbuffer_search_eol(input, NULL, &eol_len, EVBUFFER_EOL_LF);
-    if (ptr.pos == -1)
-      return 0; /* No EOL found. */
-    if ((size_t)ptr.pos+eol_len >= *data_len) {
-      return -1; /* Too long */
-    }
-    *data_len = ptr.pos+eol_len;
-    r = evbuffer_remove(input, data, ptr.pos+eol_len);
-    tor_assert(r >= 0);
-    data[ptr.pos+eol_len] = '\0';
-    return 1;
-  }) ELSE_IF_NO_BUFFEREVENT {
-    return fetch_from_buf_line(conn->inbuf, data, data_len);
-  }
+  return fetch_from_buf_line(conn->inbuf, data, data_len);
 }
 
-/** As fetch_from_buf_http, but fetches from a connection's input buffer_t or
- * its bufferevent as appropriate. */
+/** As fetch_from_buf_http, but fetches from a connection's input buffer_t as
+ * appropriate. */
 int
 connection_fetch_from_buf_http(connection_t *conn,
                                char **headers_out, size_t max_headerlen,
                                char **body_out, size_t *body_used,
                                size_t max_bodylen, int force_complete)
 {
-  IF_HAS_BUFFEREVENT(conn, {
-    struct evbuffer *input = bufferevent_get_input(conn->bufev);
-    return fetch_from_evbuffer_http(input, headers_out, max_headerlen,
-                            body_out, body_used, max_bodylen, force_complete);
-  }) ELSE_IF_NO_BUFFEREVENT {
-    return fetch_from_buf_http(conn->inbuf, headers_out, max_headerlen,
-                            body_out, body_used, max_bodylen, force_complete);
-  }
+  return fetch_from_buf_http(conn->inbuf, headers_out, max_headerlen,
+                             body_out, body_used, max_bodylen, force_complete);
 }
 
 /** Return conn-\>outbuf_flushlen: how many bytes conn wants to flush
@@ -4249,7 +3880,7 @@ connection_handle_write(connection_t *conn, int force)
  * Try to flush data that's waiting for a write on <b>conn</b>.  Return
  * -1 on failure, 0 on success.
  *
- * Don't use this function for regular writing; the buffers/bufferevents
+ * Don't use this function for regular writing; the buffers
  * system should be good enough at scheduling writes there.  Instead, this
  * function is for cases when we're about to exit or something and we want
  * to report it right away.
@@ -4257,10 +3888,6 @@ connection_handle_write(connection_t *conn, int force)
 int
 connection_flush(connection_t *conn)
 {
-  IF_HAS_BUFFEREVENT(conn, {
-      int r = bufferevent_flush(conn->bufev, EV_WRITE, BEV_FLUSH);
-      return (r < 0) ? -1 : 0;
-  });
   return connection_handle_write(conn, 1);
 }
 
@@ -4288,22 +3915,6 @@ connection_write_to_buf_impl_,(const char *string, size_t len,
   /* if it's marked for close, only allow write if we mean to flush it */
   if (conn->marked_for_close && !conn->hold_open_until_flushed)
     return;
-
-  IF_HAS_BUFFEREVENT(conn, {
-    if (zlib) {
-      int done = zlib < 0;
-      r = write_to_evbuffer_zlib(bufferevent_get_output(conn->bufev),
-                                 TO_DIR_CONN(conn)->zlib_state,
-                                 string, len, done);
-    } else {
-      r = bufferevent_write(conn->bufev, string, len);
-    }
-    if (r < 0) {
-      /* XXXX mark for close? */
-      log_warn(LD_NET, "bufferevent_write failed! That shouldn't happen.");
-    }
-    return;
-  });
 
   old_datalen = buf_datalen(conn->outbuf);
   if (zlib) {
@@ -4750,7 +4361,7 @@ connection_flushed_some(connection_t *conn)
 }
 
 /** We just finished flushing bytes to the appropriately low network layer,
- * and there are no more bytes remaining in conn-\>outbuf, conn-\>bev, or
+ * and there are no more bytes remaining in conn-\>outbuf or
  * conn-\>tls to be flushed.
  *
  * This function just passes conn to the connection-specific
@@ -4767,8 +4378,7 @@ connection_finished_flushing(connection_t *conn)
 
 //  log_fn(LOG_DEBUG,"entered. Socket %u.", conn->s);
 
-  IF_HAS_NO_BUFFEREVENT(conn)
-    connection_stop_writing(conn);
+  connection_stop_writing(conn);
 
   switch (conn->type) {
     case CONN_TYPE_OR:
@@ -4901,15 +4511,6 @@ assert_connection_ok(connection_t *conn, time_t now)
   tor_assert(conn);
   tor_assert(conn->type >= CONN_TYPE_MIN_);
   tor_assert(conn->type <= CONN_TYPE_MAX_);
-
-#ifdef USE_BUFFEREVENTS
-  if (conn->bufev) {
-    tor_assert(conn->read_event == NULL);
-    tor_assert(conn->write_event == NULL);
-    tor_assert(conn->inbuf == NULL);
-    tor_assert(conn->outbuf == NULL);
-  }
-#endif
 
   switch (conn->type) {
     case CONN_TYPE_OR:
@@ -5174,11 +4775,6 @@ connection_free_all(void)
 
   tor_free(last_interface_ipv4);
   tor_free(last_interface_ipv6);
-
-#ifdef USE_BUFFEREVENTS
-  if (global_rate_limit)
-    bufferevent_rate_limit_group_free(global_rate_limit);
-#endif
 }
 
 /** Log a warning, and possibly emit a control event, that <b>received</b> came

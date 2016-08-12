@@ -66,12 +66,6 @@
 #include <windows.h>
 #endif
 
-#ifdef USE_BUFFEREVENTS
-#include <event2/bufferevent.h>
-#include <event2/buffer.h>
-#include <event2/util.h>
-#endif
-
 #include "crypto.h"
 #include "crypto_format.h"
 #include "tortls.h"
@@ -1137,11 +1131,8 @@ typedef struct {
 
 typedef struct buf_t buf_t;
 typedef struct socks_request_t socks_request_t;
-#ifdef USE_BUFFEREVENTS
-#define generic_buffer_t struct evbuffer
-#else
-#define generic_buffer_t buf_t
-#endif
+
+#define buf_t buf_t
 
 typedef struct entry_port_cfg_t {
   /* Client port types (socks, dns, trans, natd) only: */
@@ -1279,10 +1270,6 @@ typedef struct connection_t {
                               * read? */
   time_t timestamp_lastwritten; /**< When was the last time libevent said we
                                  * could write? */
-
-#ifdef USE_BUFFEREVENTS
-  struct bufferevent *bufev; /**< A Libevent buffered IO structure. */
-#endif
 
   time_t timestamp_created; /**< When was this connection_t created? */
 
@@ -1523,17 +1510,10 @@ typedef struct or_connection_t {
   /* bandwidth* and *_bucket only used by ORs in OPEN state: */
   int bandwidthrate; /**< Bytes/s added to the bucket. (OPEN ORs only.) */
   int bandwidthburst; /**< Max bucket size for this conn. (OPEN ORs only.) */
-#ifndef USE_BUFFEREVENTS
   int read_bucket; /**< When this hits 0, stop receiving. Every second we
                     * add 'bandwidthrate' to this, capping it at
                     * bandwidthburst. (OPEN ORs only) */
   int write_bucket; /**< When this hits 0, stop writing. Like read_bucket. */
-#else
-  /** A rate-limiting configuration object to determine how this connection
-   * set its read- and write- limits. */
-  /* XXXX we could share this among all connections. */
-  struct ev_token_bucket_cfg *bucket_cfg;
-#endif
 
   struct or_connection_t *next_with_same_id; /**< Next connection with same
                                               * identity digest as this one. */
@@ -1639,11 +1619,11 @@ typedef struct entry_connection_t {
   /** For AP connections only: buffer for data that we have sent
    * optimistically, which we might need to re-send if we have to
    * retry this connection. */
-  generic_buffer_t *pending_optimistic_data;
+  buf_t *pending_optimistic_data;
   /* For AP connections only: buffer for data that we previously sent
   * optimistically which we are currently re-sending as we retry this
   * connection. */
-  generic_buffer_t *sending_optimistic_data;
+  buf_t *sending_optimistic_data;
 
   /** If this is a DNSPort connection, this field holds the pending DNS
    * request that we're going to try to answer.  */
@@ -1845,51 +1825,6 @@ static inline listener_connection_t *TO_LISTENER_CONN(connection_t *c)
   tor_assert(c->magic == LISTENER_CONNECTION_MAGIC);
   return DOWNCAST(listener_connection_t, c);
 }
-
-/* Conditional macros to help write code that works whether bufferevents are
-   disabled or not.
-
-   We can't just write:
-      if (conn->bufev) {
-        do bufferevent stuff;
-      } else {
-        do other stuff;
-      }
-   because the bufferevent stuff won't even compile unless we have a fairly
-   new version of Libevent.  Instead, we say:
-      IF_HAS_BUFFEREVENT(conn, { do_bufferevent_stuff } );
-   or:
-      IF_HAS_BUFFEREVENT(conn, {
-        do bufferevent stuff;
-      }) ELSE_IF_NO_BUFFEREVENT {
-        do non-bufferevent stuff;
-      }
-   If we're compiling with bufferevent support, then the macros expand more or
-   less to:
-      if (conn->bufev) {
-        do_bufferevent_stuff;
-      } else {
-        do non-bufferevent stuff;
-      }
-   and if we aren't using bufferevents, they expand more or less to:
-      { do non-bufferevent stuff; }
-*/
-#ifdef USE_BUFFEREVENTS
-#define HAS_BUFFEREVENT(c) (((c)->bufev) != NULL)
-#define IF_HAS_BUFFEREVENT(c, stmt)                \
-  if ((c)->bufev) do {                             \
-      stmt ;                                       \
-  } while (0)
-#define ELSE_IF_NO_BUFFEREVENT ; else
-#define IF_HAS_NO_BUFFEREVENT(c)                   \
-  if (NULL == (c)->bufev)
-#else
-#define HAS_BUFFEREVENT(c) (0)
-#define IF_HAS_BUFFEREVENT(c, stmt) (void)0
-#define ELSE_IF_NO_BUFFEREVENT ;
-#define IF_HAS_NO_BUFFEREVENT(c)                \
-  if (1)
-#endif
 
 /** What action type does an address policy indicate: accept or reject? */
 typedef enum {
@@ -4357,12 +4292,6 @@ typedef struct {
    */
   double CircuitPriorityHalflife;
 
-  /** If true, do not enable IOCP on windows with bufferevents, even if
-   * we think we could. */
-  int DisableIOCP;
-  /** For testing only: will go away eventually. */
-  int UseFilteringSSLBufferevents;
-
   /** Set to true if the TestingTorNetwork configuration option is set.
    * This is used so that options_validate() has a chance to realize that
    * the defaults have changed. */
@@ -4385,11 +4314,6 @@ typedef struct {
   /** If 1, we always send optimistic data when it's supported.  If 0, we
    * never use it.  If -1, we do what the consensus says. */
   int OptimisticData;
-
-  /** If 1, and we are using IOCP, we set the kernel socket SNDBUF and RCVBUF
-   * to 0 to try to save kernel memory and avoid the dread "Out of buffers"
-   * issue. */
-  int UserspaceIOCPBuffers;
 
   /** If 1, we accept and launch no external network connections, except on
    * control ports. */

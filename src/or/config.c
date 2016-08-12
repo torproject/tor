@@ -113,7 +113,6 @@ static config_abbrev_t option_abbrevs_[] = {
   { "BridgeAuthoritativeDirectory", "BridgeAuthoritativeDir", 0, 0},
   { "HashedControlPassword", "__HashedControlSessionPassword", 1, 0},
   { "VirtualAddrNetwork", "VirtualAddrNetworkIPv4", 0, 0},
-  { "_UseFilteringSSLBufferevents", "UseFilteringSSLBufferevents", 0, 1},
   { NULL, NULL, 0, 0},
 };
 
@@ -225,7 +224,7 @@ static config_var_t option_vars_[] = {
   V(DirAuthorityFallbackRate,    DOUBLE,   "1.0"),
   V(DisableAllSwap,              BOOL,     "0"),
   V(DisableDebuggerAttachment,   BOOL,     "1"),
-  V(DisableIOCP,                 BOOL,     "1"),
+  OBSOLETE("DisableIOCP"),
   OBSOLETE("DisableV2DirectoryInfo_"),
   OBSOLETE("DynamicDHGroups"),
   VPORT(DNSPort,                     LINELIST, NULL),
@@ -440,7 +439,7 @@ static config_var_t option_vars_[] = {
   V(UseMicrodescriptors,         AUTOBOOL, "auto"),
   V(UseNTorHandshake,            AUTOBOOL, "1"),
   V(User,                        STRING,   NULL),
-  V(UserspaceIOCPBuffers,        BOOL,     "0"),
+  OBSOLETE("UserspaceIOCPBuffers"),
   V(AuthDirSharedRandomness,     BOOL,     "1"),
   OBSOLETE("V1AuthoritativeDirectory"),
   OBSOLETE("V2AuthoritativeDirectory"),
@@ -461,7 +460,8 @@ static config_var_t option_vars_[] = {
   V(VirtualAddrNetworkIPv4,      STRING,   "127.192.0.0/10"),
   V(VirtualAddrNetworkIPv6,      STRING,   "[FE80::]/10"),
   V(WarnPlaintextPorts,          CSV,      "23,109,110,143"),
-  V(UseFilteringSSLBufferevents, BOOL,    "0"),
+  OBSOLETE("UseFilteringSSLBufferevents"),
+  OBSOLETE("__UseFilteringSSLBufferevents"),
   VAR("__ReloadTorrcOnSIGHUP",   BOOL,  ReloadTorrcOnSIGHUP,      "1"),
   VAR("__AllDirActionsPrivate",  BOOL,  AllDirActionsPrivate,     "0"),
   VAR("__DisablePredictedCircuits",BOOL,DisablePredictedCircuits, "0"),
@@ -1673,17 +1673,6 @@ options_act(const or_options_t *old_options)
   }
   if (accounting_is_enabled(options))
     configure_accounting(time(NULL));
-
-#ifdef USE_BUFFEREVENTS
-  /* If we're using the bufferevents implementation and our rate limits
-   * changed, we need to tell the rate-limiting system about it. */
-  if (!old_options ||
-      old_options->BandwidthRate != options->BandwidthRate ||
-      old_options->BandwidthBurst != options->BandwidthBurst ||
-      old_options->RelayBandwidthRate != options->RelayBandwidthRate ||
-      old_options->RelayBandwidthBurst != options->RelayBandwidthBurst)
-    connection_bucket_init();
-#endif
 
   old_ewma_enabled = cell_ewma_enabled();
   /* Change the cell EWMA settings */
@@ -4226,12 +4215,6 @@ options_transition_allowed(const or_options_t *old,
   if (old->TokenBucketRefillInterval != new_val->TokenBucketRefillInterval) {
     *msg = tor_strdup("While Tor is running, changing TokenBucketRefill"
                       "Interval is not allowed");
-    return -1;
-  }
-
-  if (old->DisableIOCP != new_val->DisableIOCP) {
-    *msg = tor_strdup("While Tor is running, changing DisableIOCP "
-                      "is not allowed.");
     return -1;
   }
 
@@ -7202,7 +7185,6 @@ init_libevent(const or_options_t *options)
   suppress_libevent_log_msg("Function not implemented");
 
   memset(&cfg, 0, sizeof(cfg));
-  cfg.disable_iocp = options->DisableIOCP;
   cfg.num_cpus = get_num_cpus(options);
   cfg.msec_per_tick = options->TokenBucketRefillInterval;
 
