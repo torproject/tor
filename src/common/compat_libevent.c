@@ -337,7 +337,9 @@ tor_init_libevent_rng(void)
     rv = -1;
   }
   crypto_rand(buf, 32);
+#ifdef HAVE_EVUTIL_SECURE_RNG_ADD_BYTES
   evutil_secure_rng_add_bytes(buf, 32);
+#endif
   evutil_secure_rng_get_bytes(buf, sizeof(buf));
   return rv;
 }

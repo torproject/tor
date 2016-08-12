@@ -500,7 +500,9 @@ save_CPPFLAGS="$CPPFLAGS"
 LIBS="-levent $STATIC_LIBEVENT_FLAGS $TOR_LIB_WS32 $LIBS"
 LDFLAGS="$TOR_LDFLAGS_libevent $LDFLAGS"
 CPPFLAGS="$TOR_CPPFLAGS_libevent $CPPFLAGS"
-AC_CHECK_FUNCS([evutil_secure_rng_set_urandom_device_file])
+AC_CHECK_FUNCS([evutil_secure_rng_set_urandom_device_file \
+                evutil_secure_rng_add_bytes \
+])
 
 LIBS="$STATIC_LIBEVENT_FLAGS $TOR_LIB_WS32 $save_LIBS"
 
