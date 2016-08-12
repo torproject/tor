@@ -4465,6 +4465,10 @@ void
 routerlist_retry_directory_downloads(time_t now)
 {
   (void)now;
+
+  log_debug(LD_GENERAL,
+            "In routerlist_retry_directory_downloads()");
+
   router_reset_status_download_failures();
   router_reset_descriptor_download_failures();
   reschedule_directory_downloads();
@@ -5277,6 +5281,9 @@ update_extrainfo_downloads(time_t now)
 void
 router_reset_descriptor_download_failures(void)
 {
+  log_debug(LD_GENERAL,
+            "In router_reset_descriptor_download_failures()");
+
   networkstatus_reset_download_failures();
   last_descriptor_download_attempted = 0;
   if (!routerlist)

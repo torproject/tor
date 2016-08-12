@@ -147,6 +147,9 @@ networkstatus_reset_download_failures(void)
 {
   int i;
 
+  log_debug(LD_GENERAL,
+            "In networkstatus_reset_download_failures()");
+
   for (i=0; i < N_CONSENSUS_FLAVORS; ++i)
     download_status_reset(&consensus_dl_status[i]);
 

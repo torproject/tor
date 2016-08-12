@@ -1,0 +1,4 @@
+  o Bugfixes:
+    - Avoid resetting download status for consensuses hourly, and add a
+      SimulateDirDownloadFailures config option to test behavior when all
+      downloads from directory servers fail.  Fixes bug 8625.
