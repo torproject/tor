@@ -1,0 +1,4 @@
+  o Minor bugfixes (compilation):
+    - Remove an inappropriate "inline" in tortls.c that was causing warnings
+      on older versions of GCC. Fixes bug 19903; 0.2.8.1-alpha.
+
