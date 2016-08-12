@@ -746,7 +746,7 @@ set_options(or_options_t *new_val, char **msg)
   }
 
   if (old_options != global_options)
-    config_free(&options_format, old_options);
+    or_options_free(old_options);
 
   return 0;
 }
@@ -2143,23 +2143,23 @@ options_trial_assign(config_line_t *list, int use_defaults,
 
   if ((r=config_assign(&options_format, trial_options,
                        list, use_defaults, clear_first, msg)) < 0) {
-    config_free(&options_format, trial_options);
+    or_options_free(trial_options);
     return r;
   }
 
   if (options_validate(get_options_mutable(), trial_options,
                        global_default_options, 1, msg) < 0) {
-    config_free(&options_format, trial_options);
+    or_options_free(trial_options);
     return SETOPT_ERR_PARSE; /*XXX make this a separate return value. */
   }
 
   if (options_transition_allowed(get_options(), trial_options, msg) < 0) {
-    config_free(&options_format, trial_options);
+    or_options_free(trial_options);
     return SETOPT_ERR_TRANSITION;
   }
 
   if (set_options(trial_options, msg)<0) {
-    config_free(&options_format, trial_options);
+    or_options_free(trial_options);
     return SETOPT_ERR_SETTING;
   }
 
@@ -4873,8 +4873,8 @@ options_init_from_string(const char *cf_defaults, const char *cf,
     }
 
     /* Clear newoptions and re-initialize them with new defaults. */
-    config_free(&options_format, newoptions);
-    config_free(&options_format, newdefaultoptions);
+    or_options_free(newoptions);
+    or_options_free(newdefaultoptions);
     newdefaultoptions = NULL;
     newoptions = tor_malloc_zero(sizeof(or_options_t));
     newoptions->magic_ = OR_OPTIONS_MAGIC;
@@ -4927,14 +4927,14 @@ options_init_from_string(const char *cf_defaults, const char *cf,
     err = SETOPT_ERR_SETTING;
     goto err; /* frees and replaces old options */
   }
-  config_free(&options_format, global_default_options);
+  or_options_free(global_default_options);
   global_default_options = newdefaultoptions;
 
   return SETOPT_OK;
 
  err:
-  config_free(&options_format, newoptions);
-  config_free(&options_format, newdefaultoptions);
+  or_options_free(newoptions);
+  or_options_free(newdefaultoptions);
   if (*msg) {
     char *old_msg = *msg;
     tor_asprintf(msg, "Failed to parse/validate config: %s", old_msg);
