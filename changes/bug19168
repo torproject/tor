@@ -1,3 +1,3 @@
-  o Minor bugfixes (code correctness):
-    - Fix integer overflows in the case conversion tables. Fixes bug
-      19168; bugfix on 0.2.1.11-alpha.
+  o Minor bugfixes (code style):
+    - Fix an integer signedness conversion issue in the case conversion
+      tables. Fixes bug 19168; bugfix on 0.2.1.11-alpha.
