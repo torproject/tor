@@ -1947,8 +1947,13 @@ router_check_descriptor_address_consistency(uint32_t ipv4h_desc_addr)
 
       log_warn(LD_CONFIG, "The configured IPv4 ORPort address %s does not "
                "match the address %s in the descriptor. Please configure "
-               "matching IPv4 addresses for the Address and ORPort options. "
-               "Use NoListen on the ORPort if you are behind a NAT.",
+               "the matching IPv4 addresses for this Tor relay as "
+               "Address <IPv4 address> in the torrc configuration file if "
+               "you have multiple public IP addresses. If you are behind a "
+               "NAT and have the right ports forwarded, you can ignore this "
+               "warning or, to remove it, use 2 ORPort lines with options "
+               "NoListen (for the public IPv4 address line) and NoAdvertise "
+               "(for the internal NAT IPv4 address line).",
                port_addr_str, desc_addr_str);
     }
 
@@ -1969,8 +1974,13 @@ router_check_descriptor_address_consistency(uint32_t ipv4h_desc_addr)
 
       log_warn(LD_CONFIG, "The configured IPv4 DirPort address %s does not "
                "match the address %s in the descriptor. Please configure "
-               "matching IPv4 addresses for the Address and DirPort options. "
-               "Use NoListen on the DirPort if you are behind a NAT.",
+               "the matching IPv4 addresses for this Tor relay as "
+               "Address <IPv4 address> in the torrc configuration file if "
+               "you have multiple public IP addresses. If you are behind a "
+               "NAT and have the right ports forwarded, you can ignore this "
+               "warning or, to remove it, use 2 DirPort lines with options "
+               "NoListen (for the public IPv4 address line) and NoAdvertise "
+               "(for the internal NAT IPv4 address line).",
                port_addr_str, desc_addr_str);
     }
 }
