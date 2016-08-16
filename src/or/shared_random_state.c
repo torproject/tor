@@ -150,7 +150,7 @@ get_start_time_of_current_round(time_t now)
                                      voting_interval,
                                      options->TestingV3AuthVotingStartOffset);
 
-  tor_free(new_voting_schedule);
+  free_voting_schedule(new_voting_schedule);
 
   return curr_start;
 }
