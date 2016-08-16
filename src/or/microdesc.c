@@ -108,6 +108,7 @@ dump_microdescriptor(int fd, microdesc_t *md, size_t *annotation_len_out)
   md->off = tor_fd_getpos(fd);
   written = write_all(fd, md->body, md->bodylen, 0);
   if (written != (ssize_t)md->bodylen) {
+    written = written < 0 ? 0 : written;
     log_warn(LD_DIR,
              "Couldn't dump microdescriptor (wrote %ld out of %lu): %s",
              (long)written, (unsigned long)md->bodylen,
