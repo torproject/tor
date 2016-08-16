@@ -1903,7 +1903,10 @@ static void
 router_check_descriptor_address_port_consistency(uint32_t ipv4h_desc_addr,
                                                  int listener_type)
 {
-  /* The first configured Port, which may be the magic constant CFG_AUTO_PORT.
+  assert(listener_type == CONN_TYPE_OR_LISTENER ||
+         listener_type == CONN_TYPE_DIR_LISTENER);
+
+  /* The first advertised Port may be the magic constant CFG_AUTO_PORT.
    */
   int port_v4_cfg = get_first_advertised_port_by_type_af(listener_type,
                                                          AF_INET);
@@ -1913,6 +1916,10 @@ router_check_descriptor_address_port_consistency(uint32_t ipv4h_desc_addr,
         const tor_addr_t *port_addr = get_first_advertised_addr_by_type_af(
                                                                 listener_type,
                                                                 AF_INET);
+        /* If we're building a descriptor with no advertised address,
+         * something is terribly wrong. */
+        assert(port_addr);
+
         tor_addr_t desc_addr;
         char port_addr_str[TOR_ADDR_BUF_LEN];
         char desc_addr_str[TOR_ADDR_BUF_LEN];
