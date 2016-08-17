@@ -3897,3 +3897,11 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
     return -2;
 }
 
+/* Stub that should be replaced with the #17178 version of the function
+ * when merging. */
+int
+rend_service_allow_direct_connection(const or_options_t *options)
+{
+  (void)options;
+  return 0;
+}
