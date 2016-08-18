@@ -2847,11 +2847,6 @@ tor_init(int argc, char *argv[])
   /* The options are now initialised */
   const or_options_t *options = get_options();
 
-  if (rend_non_anonymous_mode_enabled(options)) {
-    log_warn(LD_GENERAL, "This copy of Tor was compiled or configured to run "
-             "in a non-anonymous mode. It will provide NO ANONYMITY.");
-  }
-
 #ifndef _WIN32
   if (geteuid()==0)
     log_warn(LD_GENERAL,"You are running Tor as root. You don't need to, "
