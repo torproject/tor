@@ -5077,7 +5077,8 @@ typedef struct rend_encoded_v2_service_descriptor_t {
  * the service side) and in rend_service_descriptor_t (on both the
  * client and service side). */
 typedef struct rend_intro_point_t {
-  extend_info_t *extend_info; /**< Extend info of this introduction point. */
+  extend_info_t *extend_info; /**< Extend info for connecting to this
+                               * introduction point via a multi-hop path. */
   crypto_pk_t *intro_key; /**< Introduction key that replaces the service
                                * key, if this descriptor is V2. */
 

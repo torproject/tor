@@ -1581,11 +1581,23 @@ static int
 rend_service_use_direct_connection(const or_options_t* options,
                                    const extend_info_t* ei)
 {
-  /* The prefer_ipv6 argument to fascist_firewall_allows_address_addr is
+  /* We'll connect directly all reachable addresses, whether preferred or not.
+   * The prefer_ipv6 argument to fascist_firewall_allows_address_addr is
    * ignored, because pref_only is 0. */
-  return (rend_service_allow_direct_connection(options) &&
+  return (rend_service_allow_non_anonymous_connection(options) &&
           fascist_firewall_allows_address_addr(&ei->addr, ei->port,
                                                FIREWALL_OR_CONNECTION, 0, 0));
+}
+
+/* Like rend_service_use_direct_connection, but to a node. */
+static int
+rend_service_use_direct_connection_node(const or_options_t* options,
+                                        const node_t* node)
+{
+  /* We'll connect directly all reachable addresses, whether preferred or not.
+   */
+  return (rend_service_allow_non_anonymous_connection(options) &&
+          fascist_firewall_allows_node(node, FIREWALL_OR_CONNECTION, 0));
 }
 
 /******
@@ -2797,29 +2809,71 @@ rend_service_launch_establish_intro(rend_service_t *service,
 {
   origin_circuit_t *launched;
   int flags = CIRCLAUNCH_NEED_UPTIME|CIRCLAUNCH_IS_INTERNAL;
+  const or_options_t *options = get_options();
+  extend_info_t *launch_ei = intro->extend_info;
+  extend_info_t *direct_ei = NULL;
 
-  if (rend_service_allow_direct_connection(get_options())) {
-    flags = flags | CIRCLAUNCH_ONEHOP_TUNNEL;
+  /* Are we in single onion mode? */
+  if (rend_service_allow_non_anonymous_connection(options)) {
+    /* Do we have a descriptor for the node?
+     * We've either just chosen it from the consensus, or we've just reviewed
+     * our intro points to see which ones are still valid, and deleted the ones
+     * that aren't in the consensus any more. */
+    const node_t *node = node_get_by_id(launch_ei->identity_digest);
+    if (BUG(!node)) {
+      /* The service has kept an intro point after it went missing from the
+       * consensus. If we did anything else here, it would be a consensus
+       * distinguisher. Which are less of an issue for single onion services,
+       * but still a bug. */
+      return -1;
+    }
+    /* Can we connect to the node directly? If so, replace launch_ei
+     * (a multi-hop extend_info) with one suitable for direct connection. */
+    if (rend_service_use_direct_connection_node(options, node)) {
+      direct_ei = extend_info_from_node(node, 1);
+      if (BUG(!direct_ei)) {
+        /* rend_service_use_direct_connection_node and extend_info_from_node
+         * disagree about which addresses on this node are permitted. This
+         * should never happen. Avoiding the connection is a safe response. */
+        return -1;
+      }
+      flags = flags | CIRCLAUNCH_ONEHOP_TUNNEL;
+      launch_ei = direct_ei;
+    }
   }
+  /* launch_ei is either intro->extend_info, or has been replaced with a valid
+   * extend_info for single onion service direct connection. */
+  tor_assert(launch_ei);
+  /* We must have the same intro when making a direct connection. */
+  tor_assert(tor_memeq(intro->extend_info->identity_digest,
+                       launch_ei->identity_digest,
+                       DIGEST_LEN));
 
   log_info(LD_REND,
-           "Launching circuit to introduction point %s for service %s",
+           "Launching circuit to introduction point %s%s%s for service %s",
            safe_str_client(extend_info_describe(intro->extend_info)),
+           direct_ei ? " via direct address " : "",
+           direct_ei ? safe_str_client(extend_info_describe(direct_ei)) : "",
            service->service_id);
 
   rep_hist_note_used_internal(time(NULL), 1, 0);
 
   ++service->n_intro_circuits_launched;
   launched = circuit_launch_by_extend_info(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO,
-                             intro->extend_info, flags);
+                             launch_ei, flags);
 
   if (!launched) {
     log_info(LD_REND,
-             "Can't launch circuit to establish introduction at %s.",
-             safe_str_client(extend_info_describe(intro->extend_info)));
+             "Can't launch circuit to establish introduction at %s%s%s.",
+             safe_str_client(extend_info_describe(intro->extend_info)),
+             direct_ei ? " via direct address " : "",
+             direct_ei ? safe_str_client(extend_info_describe(direct_ei)) : ""
+             );
+    extend_info_free(direct_ei);
     return -1;
   }
-  /* We must have the same exit node even if cannibalized. */
+  /* We must have the same exit node even if cannibalized or direct connection.
+   */
   tor_assert(tor_memeq(intro->extend_info->identity_digest,
                        launched->build_state->chosen_exit->identity_digest,
                        DIGEST_LEN));
@@ -2830,6 +2884,7 @@ rend_service_launch_establish_intro(rend_service_t *service,
   launched->intro_key = crypto_pk_dup_key(intro->intro_key);
   if (launched->base_.state == CIRCUIT_STATE_OPEN)
     rend_service_intro_has_opened(launched);
+  extend_info_free(direct_ei);
   return 0;
 }
 
@@ -3669,6 +3724,9 @@ rend_consider_services_intro_points(void)
   int i;
   time_t now;
   const or_options_t *options = get_options();
+  /* Are we in single onion mode? */
+  const int allow_direct = rend_service_allow_non_anonymous_connection(
+                                                                get_options());
   /* List of nodes we need to _exclude_ when choosing a new node to
    * establish an intro point to. */
   smartlist_t *exclude_nodes;
@@ -3764,8 +3822,24 @@ rend_consider_services_intro_points(void)
       router_crn_flags_t flags = CRN_NEED_UPTIME|CRN_NEED_DESC;
       if (get_options()->AllowInvalid_ & ALLOW_INVALID_INTRODUCTION)
         flags |= CRN_ALLOW_INVALID;
+      router_crn_flags_t direct_flags = flags;
+      direct_flags |= CRN_PREF_ADDR;
+      direct_flags |= CRN_DIRECT_CONN;
+
       node = router_choose_random_node(exclude_nodes,
-                                       options->ExcludeNodes, flags);
+                                       options->ExcludeNodes,
+                                       allow_direct ? direct_flags : flags);
+      /* If we are in single onion mode, retry node selection for a 3-hop
+       * path */
+      if (allow_direct && !node) {
+        log_info(LD_REND,
+                 "Unable to find an intro point that we can connect to "
+                 "directly for %s, falling back to a 3-hop path.",
+                 safe_str_client(service->service_id));
+        node = router_choose_random_node(exclude_nodes,
+                                         options->ExcludeNodes, flags);
+      }
+
       if (!node) {
         log_warn(LD_REND,
                  "We only have %d introduction points established for %s; "
@@ -3779,8 +3853,10 @@ rend_consider_services_intro_points(void)
        * pick it again in the next iteration. */
       smartlist_add(exclude_nodes, (void*)node);
       intro = tor_malloc_zero(sizeof(rend_intro_point_t));
-      intro->extend_info = extend_info_from_node(node,
-                                rend_service_allow_direct_connection(options));
+      /* extend_info is for clients, so we want the multi-hop primary ORPort,
+       * even if we are a single onion service and intend to connect to it
+       * directly ourselves. */
+      intro->extend_info = extend_info_from_node(node, 0);
       intro->intro_key = crypto_pk_new();
       const int fail = crypto_pk_generate_key(intro->intro_key);
       tor_assert(!fail);
