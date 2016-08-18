@@ -1856,13 +1856,32 @@ pick_rendezvous_node(router_crn_flags_t flags)
     flags |= CRN_ALLOW_INVALID;
 
 #ifdef ENABLE_TOR2WEB_MODE
+  /* We want to connect directly to the node if we can */
+  router_crn_flags_t direct_flags = flags;
+  direct_flags |= CRN_PREF_ADDR;
+  direct_flags |= CRN_DIRECT_CONN;
+
   /* The user wants us to pick specific RPs. */
   if (options->Tor2webRendezvousPoints) {
-    const node_t *tor2web_rp = pick_tor2web_rendezvous_node(flags, options);
+    const node_t *tor2web_rp = pick_tor2web_rendezvous_node(direct_flags,
+                                                            options);
     if (tor2web_rp) {
       return tor2web_rp;
     }
-    /* Else, if no tor2web RP was found, fall back to choosing a random node */
+  }
+
+  /* Else, if no direct, preferred tor2web RP was found, fall back to choosing
+   * a random direct node */
+  const node_t *node = router_choose_random_node(NULL, options->ExcludeNodes,
+                                                 direct_flags);
+  /* Return the direct node (if found), or log a message and fall back to an
+   * indirect connection. */
+  if (node) {
+    return node;
+  } else {
+    log_info(LD_REND,
+             "Unable to find a random rendezvous point that is reachable via "
+             "a direct connection, falling back to a 3-hop path.");
   }
 #endif
 

@@ -9,6 +9,11 @@
       works on the current tor network without any changes to older relays or
       clients.
       Implements proposal #260, completes ticket #17178. Patch by teor & asn.
+  o Minor features (Tor2web):
+    - Make Tor2web clients respect ReachableAddresses.
+      This feature was inadvertently enabled in 0.2.8.6, then removed
+      by bugfix #19973 on 0.2.8.7.
+      Implements feature #20034. Patch by teor.
   o Minor bug fixes (Tor2web):
     - Prevent Tor2web clients running hidden services, these services are
       not anonymous due to the one-hop client paths.
