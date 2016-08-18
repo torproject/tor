@@ -1777,6 +1777,8 @@ pick_tor2web_rendezvous_node(router_crn_flags_t flags,
   const node_t *rp_node = NULL;
   const int allow_invalid = (flags & CRN_ALLOW_INVALID) != 0;
   const int need_desc = (flags & CRN_NEED_DESC) != 0;
+  const int pref_addr = (flags & CRN_PREF_ADDR) != 0;
+  const int direct_conn = (flags & CRN_DIRECT_CONN) != 0;
 
   smartlist_t *whitelisted_live_rps = smartlist_new();
   smartlist_t *all_live_nodes = smartlist_new();
@@ -1787,7 +1789,9 @@ pick_tor2web_rendezvous_node(router_crn_flags_t flags,
   router_add_running_nodes_to_smartlist(all_live_nodes,
                                         allow_invalid,
                                         0, 0, 0,
-                                        need_desc, 0);
+                                        need_desc,
+                                        pref_addr,
+                                        direct_conn);
 
   /* Filter all_live_nodes to only add live *and* whitelisted RPs to
    * the list whitelisted_live_rps. */
@@ -2155,7 +2159,8 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
   const or_options_t *options = get_options();
   /* If possible, choose an entry server with a preferred address,
    * otherwise, choose one with an allowed address */
-  router_crn_flags_t flags = CRN_NEED_GUARD|CRN_NEED_DESC|CRN_PREF_ADDR;
+  router_crn_flags_t flags = (CRN_NEED_GUARD|CRN_NEED_DESC|CRN_PREF_ADDR|
+                              CRN_DIRECT_CONN);
   const node_t *node;
 
   if (state && options->UseEntryGuards &&
