@@ -28,6 +28,7 @@
 #include "microdesc.h"
 #include "networkstatus.h"
 #include "nodelist.h"
+#include "protover.h"
 #include "relay.h"
 #include "router.h"
 #include "routerlist.h"
@@ -275,6 +276,11 @@ networkstatus_vote_free(networkstatus_t *ns)
 
   tor_free(ns->client_versions);
   tor_free(ns->server_versions);
+  tor_free(ns->recommended_client_protocols);
+  tor_free(ns->recommended_relay_protocols);
+  tor_free(ns->required_client_protocols);
+  tor_free(ns->required_relay_protocols);
+
   if (ns->known_flags) {
     SMARTLIST_FOREACH(ns->known_flags, char *, c, tor_free(c));
     smartlist_free(ns->known_flags);
@@ -2361,6 +2367,56 @@ getinfo_helper_networkstatus(control_connection_t *conn,
 
   if (status)
     *answer = networkstatus_getinfo_helper_single(status);
+  return 0;
+}
+
+/** Check whether the networkstatus <b>ns</b> lists any protocol
+ * versions as "required" or "recommended" that we do not support.  If
+ * so, set *<b>warning_out</b> to a newly allocated string describing
+ * the problem.
+ *
+ * Return 1 if we should exit, 0 if we should not. */
+int
+networkstatus_check_required_protocols(const networkstatus_t *ns,
+                                       int client_mode,
+                                       char **warning_out)
+{
+  const char *func = client_mode ? "client" : "relay";
+  const char *required, *recommended;
+  char *missing = NULL;
+
+  tor_assert(warning_out);
+
+  if (client_mode) {
+    required = ns->required_client_protocols;
+    recommended = ns->recommended_client_protocols;
+  } else {
+    required = ns->required_relay_protocols;
+    recommended = ns->recommended_relay_protocols;
+  }
+
+  if (!protover_all_supported(required, &missing)) {
+    tor_asprintf(warning_out, "At least one protocol listed as required in "
+                 "the consensus is not supported by this version of Tor. "
+                 "You should upgrade. This version of Tor will not work as a "
+                 "%s on the Tor network. The missing protocols are: %s",
+                 func, missing);
+    tor_free(missing);
+    return 1;
+  }
+
+  if (! protover_all_supported(recommended, &missing)) {
+    tor_asprintf(warning_out, "At least one protocol listed as recommended in "
+                 "the consensus is not supported by this version of Tor. "
+                 "You should upgrade. This version of Tor will eventually "
+                 "stop working as a %s on the Tor network. The missing "
+                 "protocols are: %s",
+                 func, missing);
+    tor_free(missing);
+  }
+
+  tor_assert_nonfatal(missing == NULL);
+
   return 0;
 }
 

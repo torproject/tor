@@ -2525,6 +2525,16 @@ typedef struct networkstatus_t {
    * voter has no opinion. */
   char *client_versions;
   char *server_versions;
+
+  /** Lists of subprotocol versions which are _recommended_ for relays and
+   * clients, or which are _require_ for relays and clients. Tor shouldn't
+   * make any more network connections if a required protocol is missing.
+   */
+  char *recommended_relay_protocols;
+  char *recommended_client_protocols;
+  char *required_relay_protocols;
+  char *required_client_protocols;
+
   /** List of flags that this vote/consensus applies to routers.  If a flag is
    * not listed here, the voter has no opinion on what its value should be. */
   smartlist_t *known_flags;

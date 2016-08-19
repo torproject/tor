@@ -75,6 +75,10 @@ typedef enum {
   K_DIR_OPTIONS,
   K_CLIENT_VERSIONS,
   K_SERVER_VERSIONS,
+  K_RECOMMENDED_CLIENT_PROTOCOLS,
+  K_RECOMMENDED_RELAY_PROTOCOLS,
+  K_REQUIRED_CLIENT_PROTOCOLS,
+  K_REQUIRED_RELAY_PROTOCOLS,
   K_OR_ADDRESS,
   K_ID,
   K_P,
@@ -461,6 +465,14 @@ static token_rule_t networkstatus_token_table[] = {
   T01("shared-rand-previous-value", K_PREVIOUS_SRV,EQ(2),       NO_OBJ ),
   T01("shared-rand-current-value",  K_CURRENT_SRV, EQ(2),       NO_OBJ ),
   T0N("package",               K_PACKAGE,          CONCAT_ARGS, NO_OBJ ),
+  T01("recommended-client-protocols", K_RECOMMENDED_CLIENT_PROTOCOLS,
+      CONCAT_ARGS, NO_OBJ ),
+  T01("recommended-relay-protocols", K_RECOMMENDED_RELAY_PROTOCOLS,
+      CONCAT_ARGS, NO_OBJ ),
+  T01("required-client-protocols",    K_REQUIRED_CLIENT_PROTOCOLS,
+      CONCAT_ARGS, NO_OBJ ),
+  T01("required-relay-protocols",    K_REQUIRED_RELAY_PROTOCOLS,
+      CONCAT_ARGS, NO_OBJ ),
 
   CERTIFICATE_MEMBERS
 
@@ -501,6 +513,15 @@ static token_rule_t networkstatus_consensus_token_table[] = {
 
   T01("shared-rand-previous-value", K_PREVIOUS_SRV, EQ(2),   NO_OBJ ),
   T01("shared-rand-current-value",  K_CURRENT_SRV,  EQ(2),   NO_OBJ ),
+
+  T01("recommended-client-protocols", K_RECOMMENDED_CLIENT_PROTOCOLS,
+      CONCAT_ARGS, NO_OBJ ),
+  T01("recommended-relay-protocols", K_RECOMMENDED_RELAY_PROTOCOLS,
+      CONCAT_ARGS, NO_OBJ ),
+  T01("required-client-protocols",    K_REQUIRED_CLIENT_PROTOCOLS,
+      CONCAT_ARGS, NO_OBJ ),
+  T01("required-relay-protocols",    K_REQUIRED_RELAY_PROTOCOLS,
+      CONCAT_ARGS, NO_OBJ ),
 
   END_OF_TABLE
 };
@@ -3650,6 +3671,15 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       ns->consensus_method = 1;
     }
   }
+
+  if ((tok = find_opt_by_keyword(tokens, K_RECOMMENDED_CLIENT_PROTOCOLS)))
+    ns->recommended_client_protocols = tor_strdup(tok->args[0]);
+  if ((tok = find_opt_by_keyword(tokens, K_RECOMMENDED_RELAY_PROTOCOLS)))
+    ns->recommended_relay_protocols = tor_strdup(tok->args[0]);
+  if ((tok = find_opt_by_keyword(tokens, K_REQUIRED_CLIENT_PROTOCOLS)))
+    ns->required_client_protocols = tor_strdup(tok->args[0]);
+  if ((tok = find_opt_by_keyword(tokens, K_REQUIRED_RELAY_PROTOCOLS)))
+    ns->required_relay_protocols = tor_strdup(tok->args[0]);
 
   tok = find_by_keyword(tokens, K_VALID_AFTER);
   if (parse_iso_time(tok->args[0], &ns->valid_after))

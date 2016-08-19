@@ -122,6 +122,9 @@ void document_signature_free(document_signature_t *sig);
 document_signature_t *document_signature_dup(const document_signature_t *sig);
 void networkstatus_free_all(void);
 int networkstatus_get_weight_scale_param(networkstatus_t *ns);
+int networkstatus_check_required_protocols(const networkstatus_t *ns,
+                                           int client_mode,
+                                           char **warning_out);
 
 #ifdef NETWORKSTATUS_PRIVATE
 STATIC void vote_routerstatus_free(vote_routerstatus_t *rs);
