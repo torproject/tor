@@ -588,6 +588,44 @@ static const config_var_t testing_tor_network_defaults[] = {
 #undef V
 #undef OBSOLETE
 
+static const config_deprecation_t option_deprecation_notes_[] = {
+  { "AllowDotExit", "Unrestricted use of the .exit notation can be used for "
+    "a wide variety of application-level attacks." },
+  { "AllowInvalidNodes", "There is no reason to enable this option; at best "
+    "it will make you easier to track." },
+  { "AllowSingleHopCircuits", "Almost no relays actually allow single-hop "
+    "exits, making this option pointless." },
+  { "AllowSingleHopExits", "Turning this on will make your relay easier "
+    "to abuse." },
+  { "ClientDNSRejectInternalAddresses", "Turning this on makes your client "
+    "easier to fingerprint, and may open you to esoteric attacks." },
+  { "ExcludeSingleHopRelays", "Turning it on makes your client easier to "
+    "fingerprint." },
+  { "FastFirstHopPK", "Changing this option does not make your client more "
+    "secure, but does make it easier to fingerprint." },
+  { "CloseHSClientCircuitsImmediatelyOnTimeout", "This option makes your "
+    "client easier to fingerprint." },
+  { "CloseHSServiceRendCircuitsImmediatelyOnTimeout", "This option makes "
+    "your hidden services easier to fingerprint." },
+  { "WarnUnsafeSocks", "Changing this option makes it easier for you "
+    "to accidentally lose your anonymity by leaking DNS information" },
+  { "TLSECGroup", "The default is a nice secure choice; the other option "
+    "is less secure." },
+  { "UseNTorHandshake", "The ntor handshake should always be used." },
+
+  { "ControlListenAddress", "Use ControlPort instead." },
+  { "DirListenAddress", "Use DirPort instead, possibly with the "
+    "NoAdvertise sub-option" },
+  { "DNSListenAddress", "Use DNSPort instead." },
+  { "SocksListenAddress", "Use SocksPort instead." },
+  { "TransListenAddress", "Use TransPort instead." },
+  { "NATDListenAddress", "Use NATDPort instead." },
+  { "ORListenAddress", "Use ORPort instead, possibly with the "
+    "NoAdvertise sub-option" },
+
+  { NULL, NULL }
+};
+
 #ifdef _WIN32
 static char *get_windows_conf_root(void);
 #endif
@@ -636,6 +674,7 @@ STATIC config_format_t options_format = {
   OR_OPTIONS_MAGIC,
   STRUCT_OFFSET(or_options_t, magic_),
   option_abbrevs_,
+  option_deprecation_notes_,
   option_vars_,
   options_validate_cb,
   NULL
@@ -1999,6 +2038,7 @@ static const struct {
   { "-h",                     TAKES_NO_ARGUMENT },
   { "--help",                 TAKES_NO_ARGUMENT },
   { "--list-torrc-options",   TAKES_NO_ARGUMENT },
+  { "--list-deprecated-options",TAKES_NO_ARGUMENT },
   { "--nt-service",           TAKES_NO_ARGUMENT },
   { "-nt-service",            TAKES_NO_ARGUMENT },
   { NULL, 0 },
@@ -2135,14 +2175,13 @@ option_get_assignment(const or_options_t *options, const char *key)
  * what went wrong.
  */
 setopt_err_t
-options_trial_assign(config_line_t *list, int use_defaults,
-                     int clear_first, char **msg)
+options_trial_assign(config_line_t *list, unsigned flags, char **msg)
 {
   int r;
   or_options_t *trial_options = config_dup(&options_format, get_options());
 
   if ((r=config_assign(&options_format, trial_options,
-                       list, use_defaults, clear_first, msg)) < 0) {
+                       list, flags, msg)) < 0) {
     or_options_free(trial_options);
     return r;
   }
@@ -2185,7 +2224,6 @@ static void
 list_torrc_options(void)
 {
   int i;
-  smartlist_t *lines = smartlist_new();
   for (i = 0; option_vars_[i].name; ++i) {
     const config_var_t *var = &option_vars_[i];
     if (var->type == CONFIG_TYPE_OBSOLETE ||
@@ -2193,7 +2231,16 @@ list_torrc_options(void)
       continue;
     printf("%s\n", var->name);
   }
-  smartlist_free(lines);
+}
+
+/** Print all deprecated but non-obsolete torrc options. */
+static void
+list_deprecated_options(void)
+{
+  const config_deprecation_t *d;
+  for (d = option_deprecation_notes_; d->name; ++d) {
+    printf("%s\n", d->name);
+  }
 }
 
 /** Last value actually set by resolve_my_address. */
@@ -4647,8 +4694,13 @@ options_init_from_torrc(int argc, char **argv)
     exit(0);
   }
   if (config_line_find(cmdline_only_options, "--list-torrc-options")) {
-    /* For documenting validating whether we've documented everything. */
+    /* For validating whether we've documented everything. */
     list_torrc_options();
+    exit(0);
+  }
+  if (config_line_find(cmdline_only_options, "--list-deprecated-options")) {
+    /* For validating whether what we have deprecated really exists. */
+    list_deprecated_options();
     exit(0);
   }
 
@@ -4829,7 +4881,8 @@ options_init_from_string(const char *cf_defaults, const char *cf,
       err = SETOPT_ERR_PARSE;
       goto err;
     }
-    retval = config_assign(&options_format, newoptions, cl, 0, 0, msg);
+    retval = config_assign(&options_format, newoptions, cl,
+                           CAL_WARN_DEPRECATIONS, msg);
     config_free_lines(cl);
     if (retval < 0) {
       err = SETOPT_ERR_PARSE;
@@ -4845,7 +4898,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
 
   /* Go through command-line variables too */
   retval = config_assign(&options_format, newoptions,
-                         global_cmdline_options, 0, 0, msg);
+                         global_cmdline_options, CAL_WARN_DEPRECATIONS, msg);
   if (retval < 0) {
     err = SETOPT_ERR_PARSE;
     goto err;
@@ -4893,7 +4946,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
         err = SETOPT_ERR_PARSE;
         goto err;
       }
-      retval = config_assign(&options_format, newoptions, cl, 0, 0, msg);
+      retval = config_assign(&options_format, newoptions, cl, 0, msg);
       config_free_lines(cl);
       if (retval < 0) {
         err = SETOPT_ERR_PARSE;
@@ -4904,7 +4957,7 @@ options_init_from_string(const char *cf_defaults, const char *cf,
     }
     /* Assign command-line variables a second time too */
     retval = config_assign(&options_format, newoptions,
-                           global_cmdline_options, 0, 0, msg);
+                           global_cmdline_options, 0, msg);
     if (retval < 0) {
       err = SETOPT_ERR_PARSE;
       goto err;
@@ -6116,6 +6169,20 @@ config_parse_unix_port(const char *addrport, char **path_out)
 }
 #endif /* defined(HAVE_SYS_UN_H) */
 
+static void
+warn_client_dns_cache(const char *option, int disabling)
+{
+  if (disabling)
+    return;
+
+  warn_deprecated_option(option,
+      "Client-side DNS cacheing enables a wide variety of route-"
+      "capture attacks. If a single bad exit node lies to you about "
+      "an IP address, cacheing that address would make you visit "
+      "an address of the attacker's choice every time you connected "
+      "to your destination.");
+}
+
 /**
  * Parse port configuration for a single port type.
  *
@@ -6484,21 +6551,27 @@ parse_port_config(smartlist_t *out,
           }
         }
         if (!strcasecmp(elt, "CacheIPv4DNS")) {
+          warn_client_dns_cache(elt, no);
           cache_ipv4 = ! no;
           continue;
         } else if (!strcasecmp(elt, "CacheIPv6DNS")) {
+          warn_client_dns_cache(elt, no);
           cache_ipv6 = ! no;
           continue;
         } else if (!strcasecmp(elt, "CacheDNS")) {
+          warn_client_dns_cache(elt, no);
           cache_ipv4 = cache_ipv6 = ! no;
           continue;
         } else if (!strcasecmp(elt, "UseIPv4Cache")) {
+          warn_client_dns_cache(elt, no);
           use_cached_ipv4 = ! no;
           continue;
         } else if (!strcasecmp(elt, "UseIPv6Cache")) {
+          warn_client_dns_cache(elt, no);
           use_cached_ipv6 = ! no;
           continue;
         } else if (!strcasecmp(elt, "UseDNSCache")) {
+          warn_client_dns_cache(elt, no);
           use_cached_ipv4 = use_cached_ipv6 = ! no;
           continue;
         } else if (!strcasecmp(elt, "PreferIPv6Automap")) {

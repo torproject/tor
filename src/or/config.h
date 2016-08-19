@@ -29,8 +29,8 @@ const char *escaped_safe_str_client(const char *address);
 const char *escaped_safe_str(const char *address);
 const char *get_version(void);
 const char *get_short_version(void);
-setopt_err_t options_trial_assign(config_line_t *list, int use_defaults,
-                                  int clear_first, char **msg);
+setopt_err_t options_trial_assign(config_line_t *list, unsigned flags,
+                                  char **msg);
 
 uint32_t get_last_resolved_addr(void);
 void reset_last_resolved_addr(void);

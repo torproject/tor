@@ -871,7 +871,8 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
   config_line_t *lines=NULL;
   char *start = body;
   char *errstring = NULL;
-  const int clear_first = 1;
+  const unsigned flags =
+    CAL_CLEAR_FIRST | (use_defaults ? CAL_USE_DEFAULTS : 0);
 
   char *config;
   smartlist_t *entries = smartlist_new();
@@ -931,7 +932,7 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
   }
   tor_free(config);
 
-  opt_err = options_trial_assign(lines, use_defaults, clear_first, &errstring);
+  opt_err = options_trial_assign(lines, flags, &errstring);
   {
     const char *msg;
     switch (opt_err) {

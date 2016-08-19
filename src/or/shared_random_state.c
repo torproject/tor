@@ -86,6 +86,7 @@ static const config_format_t state_format = {
   SR_DISK_STATE_MAGIC,
   STRUCT_OFFSET(sr_disk_state_t, magic_),
   NULL,
+  NULL,
   state_vars,
   disk_state_validate_cb,
   &state_extra_var,
@@ -700,7 +701,7 @@ disk_state_load_from_disk_impl(const char *fname)
     }
 
     disk_state = disk_state_new(time(NULL));
-    config_assign(&state_format, disk_state, lines, 0, 0, &errmsg);
+    config_assign(&state_format, disk_state, lines, 0, &errmsg);
     config_free_lines(lines);
     if (errmsg) {
       log_warn(LD_DIR, "SR: Reading state error: %s", errmsg);

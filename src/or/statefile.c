@@ -121,6 +121,7 @@ static const config_format_t state_format = {
   OR_STATE_MAGIC,
   STRUCT_OFFSET(or_state_t, magic_),
   state_abbrevs_,
+  NULL,
   state_vars_,
   or_state_validate_cb,
   &state_extra_var,
@@ -349,7 +350,7 @@ or_state_load(void)
     if (config_get_lines(contents, &lines, 0)<0)
       goto done;
     assign_retval = config_assign(&state_format, new_state,
-                                  lines, 0, 0, &errmsg);
+                                  lines, 0, &errmsg);
     config_free_lines(lines);
     if (assign_retval<0)
       badstate = 1;
