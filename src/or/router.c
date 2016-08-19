@@ -23,6 +23,7 @@
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "policies.h"
+#include "protover.h"
 #include "relay.h"
 #include "rephist.h"
 #include "router.h"
@@ -2124,6 +2125,8 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
   get_platform_str(platform, sizeof(platform));
   ri->platform = tor_strdup(platform);
 
+  ri->protocol_list = tor_strdup(get_supported_protocols());
+
   /* compute ri->bandwidthrate as the min of various options */
   ri->bandwidthrate = get_effective_bwrate(options);
 
@@ -2616,6 +2619,7 @@ router_dump_router_to_string(routerinfo_t *router,
   char *ed_cert_line = NULL;
   char *rsa_tap_cc_line = NULL;
   char *ntor_cc_line = NULL;
+  char *proto_line = NULL;
 
   /* Make sure the identity key matches the one in the routerinfo. */
   if (!crypto_pk_eq_keys(ident_key, router->identity_pkey)) {
@@ -2780,6 +2784,12 @@ router_dump_router_to_string(routerinfo_t *router,
     }
   }
 
+  if (router->protocol_list) {
+    tor_asprintf(&proto_line, "proto %s\n", router->protocol_list);
+  } else {
+    proto_line = tor_strdup("");
+  }
+
   address = tor_dup_ip(router->addr);
   chunks = smartlist_new();
 
@@ -2789,7 +2799,7 @@ router_dump_router_to_string(routerinfo_t *router,
                     "%s"
                     "%s"
                     "platform %s\n"
-                    "protocols Link 1 2 Circuit 1\n"
+                    "%s"
                     "published %s\n"
                     "fingerprint %s\n"
                     "uptime %ld\n"
@@ -2806,6 +2816,7 @@ router_dump_router_to_string(routerinfo_t *router,
     ed_cert_line ? ed_cert_line : "",
     extra_or_address ? extra_or_address : "",
     router->platform,
+    proto_line,
     published,
     fingerprint,
     stats_n_seconds_working,

@@ -3102,6 +3102,7 @@ routerinfo_free(routerinfo_t *router)
   tor_free(router->cache_info.signed_descriptor_body);
   tor_free(router->nickname);
   tor_free(router->platform);
+  tor_free(router->protocol_list);
   tor_free(router->contact_info);
   if (router->onion_pkey)
     crypto_pk_free(router->onion_pkey);

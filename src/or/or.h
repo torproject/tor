@@ -2073,6 +2073,9 @@ typedef struct {
 
   char *platform; /**< What software/operating system is this OR using? */
 
+  char *protocol_list; /**< Encoded list of subprotocol versions supported
+                        * by this OR */
+
   /* link info */
   uint32_t bandwidthrate; /**< How many bytes does this OR add to its token
                            * bucket per second? */

@@ -58,6 +58,7 @@ typedef enum {
   K_RUNNING_ROUTERS,
   K_ROUTER_STATUS,
   K_PLATFORM,
+  K_PROTO,
   K_OPT,
   K_BANDWIDTH,
   K_CONTACT,
@@ -306,6 +307,7 @@ static token_rule_t routerdesc_token_table[] = {
   T01("fingerprint",         K_FINGERPRINT,     CONCAT_ARGS, NO_OBJ ),
   T01("hibernating",         K_HIBERNATING,         GE(1),   NO_OBJ ),
   T01("platform",            K_PLATFORM,        CONCAT_ARGS, NO_OBJ ),
+  T01("proto",               K_PROTO,           CONCAT_ARGS, NO_OBJ ),
   T01("contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ ),
   T01("read-history",        K_READ_HISTORY,        ARGS,    NO_OBJ ),
   T01("write-history",       K_WRITE_HISTORY,       ARGS,    NO_OBJ ),
@@ -2090,6 +2092,10 @@ router_parse_entry_from_string(const char *s, const char *end,
 
   if ((tok = find_opt_by_keyword(tokens, K_PLATFORM))) {
     router->platform = tor_strdup(tok->args[0]);
+  }
+
+  if ((tok = find_opt_by_keyword(tokens, K_PROTO))) {
+    router->protocol_list = tor_strdup(tok->args[0]);
   }
 
   if ((tok = find_opt_by_keyword(tokens, K_CONTACT))) {
