@@ -80,12 +80,43 @@ test_protover_parse(void *arg)
   tor_free(re_encoded);
 }
 
+static void
+test_protover_vote(void *arg)
+{
+  (void) arg;
+
+  smartlist_t *lst = smartlist_new();
+  char *result = compute_protover_vote(lst, 1);
+
+  tt_str_op(result, OP_EQ, "");
+  tor_free(result);
+
+  smartlist_add(lst, (void*) "Foo=1-10,500 Bar=1,3-7,8");
+  result = compute_protover_vote(lst, 1);
+  tt_str_op(result, OP_EQ, "Bar=1,3-8 Foo=1-10,500");
+  tor_free(result);
+
+  smartlist_add(lst, (void*) "Quux=123-456,78 Bar=2-6,8 Foo=9");
+  result = compute_protover_vote(lst, 1);
+  tt_str_op(result, OP_EQ, "Bar=1-8 Foo=1-10,500 Quux=78,123-456");
+  tor_free(result);
+
+  result = compute_protover_vote(lst, 2);
+  tt_str_op(result, OP_EQ, "Bar=3-6,8 Foo=9");
+  tor_free(result);
+
+ done:
+  tor_free(result);
+  smartlist_free(lst);
+}
+
 
 #define PV_TEST(name, flags)                       \
   { #name, test_protover_ ##name, (flags), NULL, NULL }
 
 struct testcase_t protover_tests[] = {
   PV_TEST(parse, 0),
+  PV_TEST(vote, 0),
   END_OF_TESTCASES
 };
 
