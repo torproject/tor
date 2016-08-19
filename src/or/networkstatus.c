@@ -1552,6 +1552,31 @@ networkstatus_set_current_consensus_from_ns(networkstatus_t *c,
 }
 #endif //TOR_UNIT_TESTS
 
+/** Called when we have received a networkstatus <b>c</b>. If there are
+ * any _required_ protocols we are missing, log an error and exit
+ * immediately. If there are any _recommended_ protocols we are missing,
+ * warn. */
+static void
+handle_missing_protocol_warning(const networkstatus_t *c,
+                                const or_options_t *options)
+{
+  char *protocol_warning = NULL;
+  int should_exit = networkstatus_check_required_protocols(c,
+                                                   !server_mode(options),
+                                                   &protocol_warning);
+  if (protocol_warning) {
+    tor_log(should_exit ? LOG_ERR : LOG_WARN,
+            LD_GENERAL,
+            "%s", protocol_warning);
+  }
+  if (should_exit) {
+    tor_assert_nonfatal(protocol_warning);
+  }
+  tor_free(protocol_warning);
+  if (should_exit)
+    exit(1);
+}
+
 /** Try to replace the current cached v3 networkstatus with the one in
  * <b>consensus</b>.  If we don't have enough certificates to validate it,
  * store it in consensus_waiting_for_certs and launch a certificate fetch.
@@ -1595,6 +1620,7 @@ networkstatus_set_current_consensus(const char *consensus,
   time_t current_valid_after = 0;
   int free_consensus = 1; /* Free 'c' at the end of the function */
   int old_ewma_enabled;
+  int checked_protocols_already = 0;
 
   if (flav < 0) {
     /* XXXX we don't handle unrecognized flavors yet. */
@@ -1608,6 +1634,16 @@ networkstatus_set_current_consensus(const char *consensus,
     log_warn(LD_DIR, "Unable to parse networkstatus consensus");
     result = -2;
     goto done;
+  }
+
+  if (from_cache && !was_waiting_for_certs) {
+    /* We previously stored this; check _now_ to make sure that version-kills
+     * really work.  This happens even before we check signatures: we did so
+     * before when we stored this to disk. This does mean an attacker who can
+     * write to the datadir can make us not start: such an attacker could
+     * already harm us by replacing our guards, which would be worse. */
+    checked_protocols_already = 1;
+    handle_missing_protocol_warning(c, options);
   }
 
   if ((int)c->flavor != flav) {
@@ -1734,6 +1770,10 @@ networkstatus_set_current_consensus(const char *consensus,
 
   if (!from_cache && flav == usable_consensus_flavor())
     control_event_client_status(LOG_NOTICE, "CONSENSUS_ARRIVED");
+
+  if (!checked_protocols_already) {
+    handle_missing_protocol_warning(c, options);
+  }
 
   /* Are we missing any certificates at all? */
   if (r != 1 && dl_certs)
