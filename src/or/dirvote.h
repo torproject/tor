@@ -157,7 +157,7 @@ typedef struct {
 voting_schedule_t *get_voting_schedule(const or_options_t *options,
                                        time_t now, int severity);
 
-void free_voting_schedule(voting_schedule_t *voting_schedule_to_free);
+void voting_schedule_free(voting_schedule_t *voting_schedule_to_free);
 
 void dirvote_get_preferred_voting_intervals(vote_timing_t *timing_out);
 time_t dirvote_get_start_of_next_interval(time_t now,
