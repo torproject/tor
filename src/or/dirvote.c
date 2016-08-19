@@ -2577,7 +2577,7 @@ get_next_valid_after_time(time_t now)
   tor_assert(new_voting_schedule);
 
   next_valid_after_time = new_voting_schedule->interval_starts;
-  tor_free(new_voting_schedule);
+  free_voting_schedule(new_voting_schedule);
 
   return next_valid_after_time;
 }
@@ -2601,7 +2601,7 @@ dirvote_recalculate_timing(const or_options_t *options, time_t now)
 
   /* Fill in the global static struct now */
   memcpy(&voting_schedule, new_voting_schedule, sizeof(voting_schedule));
-  tor_free(new_voting_schedule);
+  free_voting_schedule(new_voting_schedule);
 }
 
 /* Populate and return a new voting_schedule_t that can be used to schedule
@@ -2658,6 +2658,13 @@ get_voting_schedule(const or_options_t *options, time_t now, int severity)
   }
 
   return new_voting_schedule;
+}
+
+/** Frees a voting_schedule_t. This should be used instead of the generic tor_free. */
+void
+free_voting_schedule(voting_schedule_t *voting_schedule_to_free)
+{
+  tor_free(voting_schedule_to_free);
 }
 
 /** Entry point: Take whatever voting actions are pending as of <b>now</b>. */

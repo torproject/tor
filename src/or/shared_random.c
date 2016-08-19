@@ -1328,7 +1328,7 @@ sr_act_post_consensus(const networkstatus_t *consensus)
       get_voting_schedule(options,time(NULL), LOG_NOTICE);
     time_t interval_starts = voting_schedule->interval_starts;
     sr_state_update(interval_starts);
-    tor_free(voting_schedule);
+    free_voting_schedule(voting_schedule);
   }
 }
 
