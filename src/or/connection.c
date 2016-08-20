@@ -4588,8 +4588,7 @@ pick_oos_victims, (int n))
     ++(conn_counts_by_type[c->type]);
 
     /* Skip anything we would count as moribund */
-    if (c->conn_array_index < 0 ||
-        c->marked_for_close) {
+    if (connection_is_moribund(c)) {
       continue;
     }
 

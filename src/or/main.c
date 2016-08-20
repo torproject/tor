@@ -662,10 +662,7 @@ connection_count_moribund, (void))
    * runs next.
    */
   SMARTLIST_FOREACH_BEGIN(closeable_connection_lst, connection_t *, conn) {
-    if (conn->conn_array_index < 0 ||
-        conn->marked_for_close) {
-      ++moribund;
-    }
+    if (connection_is_moribund(conn)) ++moribund;
   } SMARTLIST_FOREACH_END(conn);
 
   return moribund;

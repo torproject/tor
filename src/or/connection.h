@@ -247,6 +247,20 @@ void clock_skew_warning(const connection_t *conn, long apparent_skew,
                         int trusted, log_domain_mask_t domain,
                         const char *received, const char *source);
 
+/** Check if a connection is on the way out so the OOS handler doesn't try
+ * to kill more than it needs. */
+static inline int
+connection_is_moribund(connection_t *conn)
+{
+  if (conn != NULL &&
+      (conn->conn_array_index < 0 ||
+       conn->marked_for_close)) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
 void connection_check_oos(int n_socks, int failed);
 
 #ifdef CONNECTION_PRIVATE
