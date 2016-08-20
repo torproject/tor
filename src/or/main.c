@@ -655,20 +655,18 @@ close_closeable_connections(void)
 MOCK_IMPL(int,
 connection_count_moribund, (void))
 {
-  int i, moribund = 0;
-  connection_t *conn;
+  int moribund = 0;
 
   /*
    * Count things we'll try to kill when close_closeable_connections()
    * runs next.
    */
-  for (i = 0; i < smartlist_len(closeable_connection_lst); ++i) {
-    conn = smartlist_get(closeable_connection_lst, i);
+  SMARTLIST_FOREACH_BEGIN(closeable_connection_lst, connection_t *, conn) {
     if (conn->conn_array_index < 0 ||
         conn->marked_for_close) {
       ++moribund;
     }
-  }
+  } SMARTLIST_FOREACH_END(conn);
 
   return moribund;
 }
