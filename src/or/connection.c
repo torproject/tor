@@ -4653,12 +4653,12 @@ kill_conn_list_for_oos, (smartlist_t *conns))
     if (c->type == CONN_TYPE_OR) {
       connection_or_close_for_error(TO_OR_CONN(c), 1);
     } else {
-      connection_mark_and_flush(c);
+      connection_mark_for_close(c);
     }
   } SMARTLIST_FOREACH_END(c);
 
   log_notice(LD_NET,
-             "OOS handler marked and flushed %d connections",
+             "OOS handler marked %d connections",
              smartlist_len(conns));
 }
 
