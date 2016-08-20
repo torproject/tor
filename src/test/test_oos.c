@@ -76,7 +76,7 @@ pick_oos_victims_mock(int n)
 
   if (!pick_oos_mock_fail) {
     /*
-     * connection_handle_oos() just passes the list onto
+     * connection_check_oos() just passes the list onto
      * kill_conn_list_for_oos(); we don't need to simulate
      * its content for this mock, just its existence, but
      * we do need to check the parameter.
@@ -93,14 +93,14 @@ pick_oos_victims_mock(int n)
   return l;
 }
 
-/** Unit test for the logic in connection_handle_oos(), which is concerned
+/** Unit test for the logic in connection_check_oos(), which is concerned
  * with comparing thresholds and connection counts to decide if an OOS has
  * occurred and if so, how many connections to try to kill, and then using
  * pick_oos_victims() and kill_conn_list_for_oos() to carry out its grim
  * duty.
  */
 static void
-test_oos_connection_handle_oos(void *arg)
+test_oos_connection_check_oos(void *arg)
 {
   (void)arg;
 
@@ -123,13 +123,13 @@ test_oos_connection_handle_oos(void *arg)
   MOCK(pick_oos_victims, pick_oos_victims_mock);
 
   /* No OOS case */
-  connection_handle_oos(50, 0);
+  connection_check_oos(50, 0);
   tt_int_op(moribund_calls, OP_EQ, 0);
   tt_int_op(pick_oos_mock_calls, OP_EQ, 0);
   tt_int_op(kill_conn_list_calls, OP_EQ, 0);
 
   /* OOS from socket count, nothing moribund */
-  connection_handle_oos(62, 0);
+  connection_check_oos(62, 0);
   tt_int_op(moribund_calls, OP_EQ, 1);
   tt_int_op(pick_oos_mock_calls, OP_EQ, 1);
   /* 12 == 62 - ConnLimit_low_thresh */
@@ -140,7 +140,7 @@ test_oos_connection_handle_oos(void *arg)
   /* OOS from socket count, some are moribund */
   kill_conn_list_killed = 0;
   moribund_conns = 5;
-  connection_handle_oos(62, 0);
+  connection_check_oos(62, 0);
   tt_int_op(moribund_calls, OP_EQ, 2);
   tt_int_op(pick_oos_mock_calls, OP_EQ, 2);
   /* 7 == 62 - ConnLimit_low_thresh - moribund_conns */
@@ -152,7 +152,7 @@ test_oos_connection_handle_oos(void *arg)
   kill_conn_list_killed = 0;
   moribund_conns = 0;
   pick_oos_mock_fail = 1;
-  connection_handle_oos(62, 0);
+  connection_check_oos(62, 0);
   tt_int_op(moribund_calls, OP_EQ, 3);
   tt_int_op(pick_oos_mock_calls, OP_EQ, 3);
   tt_int_op(kill_conn_list_calls, OP_EQ, 2);
@@ -165,7 +165,7 @@ test_oos_connection_handle_oos(void *arg)
    */
   kill_conn_list_killed = 0;
   moribund_conns = 15;
-  connection_handle_oos(62, 0);
+  connection_check_oos(62, 0);
   tt_int_op(moribund_calls, OP_EQ, 4);
   tt_int_op(pick_oos_mock_calls, OP_EQ, 3);
   tt_int_op(kill_conn_list_calls, OP_EQ, 2);
@@ -176,7 +176,7 @@ test_oos_connection_handle_oos(void *arg)
    */
   kill_conn_list_killed = 0;
   moribund_conns = 0;
-  connection_handle_oos(50, 1);
+  connection_check_oos(50, 1);
   tt_int_op(moribund_calls, OP_EQ, 5);
   tt_int_op(pick_oos_mock_calls, OP_EQ, 4);
   tt_int_op(kill_conn_list_calls, OP_EQ, 3);
@@ -185,7 +185,7 @@ test_oos_connection_handle_oos(void *arg)
   /* OOS from socket exhaustion with moribund conns */
   kill_conn_list_killed = 0;
   moribund_conns = 2;
-  connection_handle_oos(50, 1);
+  connection_check_oos(50, 1);
   tt_int_op(moribund_calls, OP_EQ, 6);
   tt_int_op(pick_oos_mock_calls, OP_EQ, 5);
   tt_int_op(kill_conn_list_calls, OP_EQ, 4);
@@ -194,7 +194,7 @@ test_oos_connection_handle_oos(void *arg)
   /* OOS from socket exhaustion with many moribund conns */
   kill_conn_list_killed = 0;
   moribund_conns = 7;
-  connection_handle_oos(50, 1);
+  connection_check_oos(50, 1);
   tt_int_op(moribund_calls, OP_EQ, 7);
   tt_int_op(pick_oos_mock_calls, OP_EQ, 5);
   tt_int_op(kill_conn_list_calls, OP_EQ, 4);
@@ -202,7 +202,7 @@ test_oos_connection_handle_oos(void *arg)
   /* OOS with both socket exhaustion and above-threshold */
   kill_conn_list_killed = 0;
   moribund_conns = 0;
-  connection_handle_oos(62, 1);
+  connection_check_oos(62, 1);
   tt_int_op(moribund_calls, OP_EQ, 8);
   tt_int_op(pick_oos_mock_calls, OP_EQ, 6);
   tt_int_op(kill_conn_list_calls, OP_EQ, 5);
@@ -214,7 +214,7 @@ test_oos_connection_handle_oos(void *arg)
    */
   kill_conn_list_killed = 0;
   moribund_conns = 5;
-  connection_handle_oos(62, 1);
+  connection_check_oos(62, 1);
   tt_int_op(moribund_calls, OP_EQ, 9);
   tt_int_op(pick_oos_mock_calls, OP_EQ, 7);
   tt_int_op(kill_conn_list_calls, OP_EQ, 6);
@@ -226,7 +226,7 @@ test_oos_connection_handle_oos(void *arg)
    */
   kill_conn_list_killed = 0;
   moribund_conns = 15;
-  connection_handle_oos(62, 1);
+  connection_check_oos(62, 1);
   tt_int_op(moribund_calls, OP_EQ, 10);
   tt_int_op(pick_oos_mock_calls, OP_EQ, 7);
   tt_int_op(kill_conn_list_calls, OP_EQ, 6);
@@ -445,7 +445,7 @@ test_oos_pick_oos_victims(void *arg)
 }
 
 struct testcase_t oos_tests[] = {
-  { "connection_handle_oos", test_oos_connection_handle_oos,
+  { "connection_check_oos", test_oos_connection_check_oos,
     TT_FORK, NULL, NULL },
   { "kill_conn_list", test_oos_kill_conn_list, TT_FORK, NULL, NULL },
   { "pick_oos_victims", test_oos_pick_oos_victims, TT_FORK, NULL, NULL },
