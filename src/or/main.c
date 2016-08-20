@@ -662,7 +662,7 @@ connection_count_moribund, (void))
    * runs next.
    */
   SMARTLIST_FOREACH_BEGIN(closeable_connection_lst, connection_t *, conn) {
-    if (connection_is_moribund(conn)) ++moribund;
+    if (SOCKET_OK(conn->s) && connection_is_moribund(conn)) ++moribund;
   } SMARTLIST_FOREACH_END(conn);
 
   return moribund;

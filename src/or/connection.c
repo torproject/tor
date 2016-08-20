@@ -4587,6 +4587,11 @@ pick_oos_victims, (int n))
     tor_assert(c->type <= CONN_TYPE_MAX_);
     ++(conn_counts_by_type[c->type]);
 
+    /* Skip anything without a socket we can free */
+    if (!(SOCKET_OK(c->s))) {
+      continue;
+    }
+
     /* Skip anything we would count as moribund */
     if (connection_is_moribund(c)) {
       continue;
