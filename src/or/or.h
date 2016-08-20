@@ -4458,6 +4458,9 @@ typedef struct {
    * participate in the protocol. If on (default), a flag is added to the
    * vote indicating participation. */
   int AuthDirSharedRandomness;
+
+  /** If 1, we skip all OOS checks. */
+  int DisableOOSCheck;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

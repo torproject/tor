@@ -4673,6 +4673,11 @@ connection_check_oos(int n_socks, int failed)
   int target_n_socks = 0, moribund_socks, socks_to_kill;
   smartlist_t *conns;
 
+  /* Early exit: is OOS checking disabled? */
+  if (get_options()->DisableOOSCheck) {
+    return;
+  }
+
   /* Sanity-check args */
   tor_assert(n_socks >= 0);
 
