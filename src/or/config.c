@@ -589,6 +589,7 @@ static const config_var_t testing_tor_network_defaults[] = {
 #undef OBSOLETE
 
 static const config_deprecation_t option_deprecation_notes_[] = {
+  /* Deprecated since 0.2.9.2-alpha... */
   { "AllowDotExit", "Unrestricted use of the .exit notation can be used for "
     "a wide variety of application-level attacks." },
   { "AllowInvalidNodes", "There is no reason to enable this option; at best "
@@ -612,7 +613,6 @@ static const config_deprecation_t option_deprecation_notes_[] = {
   { "TLSECGroup", "The default is a nice secure choice; the other option "
     "is less secure." },
   { "UseNTorHandshake", "The ntor handshake should always be used." },
-
   { "ControlListenAddress", "Use ControlPort instead." },
   { "DirListenAddress", "Use DirPort instead, possibly with the "
     "NoAdvertise sub-option" },
@@ -622,6 +622,7 @@ static const config_deprecation_t option_deprecation_notes_[] = {
   { "NATDListenAddress", "Use NATDPort instead." },
   { "ORListenAddress", "Use ORPort instead, possibly with the "
     "NoAdvertise sub-option" },
+  /* End of options deprecated since 0.2.9.2-alpha. */
 
   { NULL, NULL }
 };
@@ -6551,27 +6552,27 @@ parse_port_config(smartlist_t *out,
           }
         }
         if (!strcasecmp(elt, "CacheIPv4DNS")) {
-          warn_client_dns_cache(elt, no);
+          warn_client_dns_cache(elt, no); // since 0.2.9.2-alpha
           cache_ipv4 = ! no;
           continue;
         } else if (!strcasecmp(elt, "CacheIPv6DNS")) {
-          warn_client_dns_cache(elt, no);
+          warn_client_dns_cache(elt, no); // since 0.2.9.2-alpha
           cache_ipv6 = ! no;
           continue;
         } else if (!strcasecmp(elt, "CacheDNS")) {
-          warn_client_dns_cache(elt, no);
+          warn_client_dns_cache(elt, no); // since 0.2.9.2-alpha
           cache_ipv4 = cache_ipv6 = ! no;
           continue;
         } else if (!strcasecmp(elt, "UseIPv4Cache")) {
-          warn_client_dns_cache(elt, no);
+          warn_client_dns_cache(elt, no); // since 0.2.9.2-alpha
           use_cached_ipv4 = ! no;
           continue;
         } else if (!strcasecmp(elt, "UseIPv6Cache")) {
-          warn_client_dns_cache(elt, no);
+          warn_client_dns_cache(elt, no); // since 0.2.9.2-alpha
           use_cached_ipv6 = ! no;
           continue;
         } else if (!strcasecmp(elt, "UseDNSCache")) {
-          warn_client_dns_cache(elt, no);
+          warn_client_dns_cache(elt, no); // since 0.2.9.2-alpha
           use_cached_ipv4 = use_cached_ipv6 = ! no;
           continue;
         } else if (!strcasecmp(elt, "PreferIPv6Automap")) {
