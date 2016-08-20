@@ -184,7 +184,7 @@ config_free_lines(config_line_t *front)
 /** If <b>key</b> is a deprecated configuration option, return the message
  * explaining why it is deprecated (which may be an empty string). Return NULL
  * if it is not deprecated. The <b>key</b> field must be fully expanded. */
-static const char *
+const char *
 config_find_deprecation(const config_format_t *fmt, const char *key)
 {
   if (BUG(fmt == NULL) || BUG(key == NULL))

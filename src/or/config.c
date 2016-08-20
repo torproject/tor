@@ -545,7 +545,7 @@ static const config_var_t testing_tor_network_defaults[] = {
     "0, 1, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 16, 32, 60"),
   V(ClientBootstrapConsensusMaxDownloadTries, UINT, "80"),
   V(ClientBootstrapConsensusAuthorityOnlyMaxDownloadTries, UINT, "80"),
-  V(ClientDNSRejectInternalAddresses, BOOL,"0"),
+  V(ClientDNSRejectInternalAddresses, BOOL,"0"), // deprecated in 0.2.9.2-alpha
   V(ClientRejectInternalAddresses, BOOL,   "0"),
   V(CountPrivateBandwidth,       BOOL,     "1"),
   V(ExitPolicyRejectPrivate,     BOOL,     "0"),
@@ -4924,6 +4924,12 @@ options_init_from_string(const char *cf_defaults, const char *cf,
       tor_assert(new_var);
       tor_assert(old_var);
       old_var->initvalue = new_var->initvalue;
+
+      if ((config_find_deprecation(&options_format, new_var->name))) {
+        log_warn(LD_GENERAL, "Testing options override the deprecated "
+                 "option %s. Is that intentional?",
+                 new_var->name);
+      }
     }
 
     /* Clear newoptions and re-initialize them with new defaults. */

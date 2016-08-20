@@ -127,6 +127,8 @@ int config_assign(const config_format_t *fmt, void *options,
                   unsigned flags, char **msg);
 config_var_t *config_find_option_mutable(config_format_t *fmt,
                                          const char *key);
+const char *config_find_deprecation(const config_format_t *fmt,
+                                     const char *key);
 const config_var_t *config_find_option(const config_format_t *fmt,
                                        const char *key);
 
