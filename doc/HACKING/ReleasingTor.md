@@ -2,7 +2,8 @@
 Putting out a new release
 -------------------------
 
-Here are the steps Roger takes when putting out a new Tor release:
+Here are the steps that the maintainer should take when putting out a
+new Tor release:
 
 === 0. Preliminaries
 
@@ -149,6 +150,8 @@ Here are the steps Roger takes when putting out a new Tor release:
        - {paul} at invizbox dot io
        - {lfleischer} at archlinux dot org
        - {tails-dev} at boum dot org
+       - {Nathan} at freitas dot net
+       - {mike} at tig dot as
 
 4. Add the version number to Trac.  To do this, go to Trac, log in,
     select "Admin" near the top of the screen, then select "Versions" from
