@@ -4337,10 +4337,10 @@ dir_server_new(int is_authority,
 
   if (nickname)
     tor_asprintf(&ent->description, "directory server \"%s\" at %s:%d",
-                 nickname, hostname, (int)dir_port);
+                 nickname, hostname_, (int)dir_port);
   else
     tor_asprintf(&ent->description, "directory server at %s:%d",
-                 hostname, (int)dir_port);
+                 hostname_, (int)dir_port);
 
   ent->fake_status.addr = ent->addr;
   tor_addr_copy(&ent->fake_status.ipv6_addr, &ent->ipv6_addr);
