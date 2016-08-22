@@ -1,0 +1,4 @@
+ o Minor bugfixes (fallback directories):
+    - Avoid logging a NULL string pointer when loading fallback directory information.
+      Fixes bug 19947; bugfix on 0.2.4.7-alpha and 0.2.8.1-alpha.
+      Report and patch by "rubiate".
