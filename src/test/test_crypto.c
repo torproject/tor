@@ -2242,6 +2242,41 @@ test_crypto_ed25519_simple(void *arg)
     tt_int_op(0, OP_EQ, ed25519_checksig_batch(NULL, ch, 2));
   }
 
+  /* Test the string-prefixed sign/checksig functions */
+  {
+    ed25519_signature_t manual_sig;
+    char *prefixed_msg;
+
+    /* Generate a signature with a prefixed msg. */
+    tt_int_op(0, OP_EQ, ed25519_sign_prefixed(&sig1, msg, msg_len,
+                                              "always in the mood",
+                                              &kp1));
+
+    /* First, check that ed25519_sign_prefixed() returns the exact same sig as
+       if we had manually prefixed the msg ourselves. */
+    tor_asprintf(&prefixed_msg, "%s%s", "always in the mood", msg);
+    tt_int_op(0, OP_EQ, ed25519_sign(&manual_sig, (uint8_t *)prefixed_msg,
+                                     strlen(prefixed_msg), &kp1));
+    tor_free(prefixed_msg);
+    tt_assert(!memcmp(sig1.sig, manual_sig.sig, sizeof(sig1.sig)));
+
+    /* Test that prefixed checksig verifies it properly. */
+    tt_int_op(0, OP_EQ, ed25519_checksig_prefixed(&sig1, msg, msg_len,
+                                                  "always in the mood",
+                                                  &pub1));
+
+    /* Test that checksig with wrong prefix fails. */
+    tt_int_op(-1, OP_EQ, ed25519_checksig_prefixed(&sig1, msg, msg_len,
+                                                   "always in the moo",
+                                                   &pub1));
+    tt_int_op(-1, OP_EQ, ed25519_checksig_prefixed(&sig1, msg, msg_len,
+                                                   "always in the moon",
+                                                   &pub1));
+    tt_int_op(-1, OP_EQ, ed25519_checksig_prefixed(&sig1, msg, msg_len,
+                                                   "always in the mood!",
+                                                   &pub1));
+  }
+
  done:
   ;
 }
