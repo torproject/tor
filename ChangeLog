@@ -1,19 +1,89 @@
 Changes in version 0.2.9.2-alpha - 2016-08-2?
   Tor 0.2.9.2-alpha XXXX BLURB HERE.
 
+  o Major features (user interface):
+    - Tor now supports the ability to declare options deprecated, so
+      that we can recommend that people stop using them. Previously,
+      this was done in an ad-hoc way. Closes ticket 19820.
+
+  o Major bugfixes (directory downloads):
+    - Avoid resetting download status for consensuses hourly, since we
+      already have another, smarter retry mechanism. Fixes bug 8625;
+      bugfix on 0.2.0.9-alpha.
+
+  o Minor features (config):
+    - Warn users when descriptor and port addresses are inconsistent.
+      Mitigates bug 13953; patch by teor.
+
   o Minor features (geoip):
     - Update geoip and geoip6 to the August 2 2016 Maxmind GeoLite2
       Country database.
 
+  o Minor features (user interface):
+    - There is a new --list-deprecated-options command-line option to
+      list all of the deprecated options. Implemented as part of
+      ticket 19820.
+
+  o Minor bugfixes (code style):
+    - Fix an integer signedness conversion issue in the case conversion
+      tables. Fixes bug 19168; bugfix on 0.2.1.11-alpha.
+
+  o Minor bugfixes (compilation):
+    - Build correctly on versions of libevent2 without support for
+      evutil_secure_rng_add_bytes(). Fixes bug 19904; bugfix
+      on 0.2.5.4-alpha.
+    - Fix a compilation warning on GCC versions before 4.6. Our
+      ENABLE_GCC_WARNING macro used the word "warning" as an argument,
+      when it is also required as an argument to the compiler pragma.
+      Fixes bug 19901; bugfix on 0.2.9.1-alpha.
+
   o Minor bugfixes (compilation, also in 0.2.8.7):
     - Remove an inappropriate "inline" in tortls.c that was causing
-      warnings on older versions of GCC. Fixes bug 19903; bugfix on
-      0.2.8.1-alpha.
+      warnings on older versions of GCC. Fixes bug 19903; bugfix
+      on 0.2.8.1-alpha.
 
   o Minor bugfixes (fallback directories, also in 0.2.8.7):
     - Avoid logging a NULL string pointer when loading fallback
       directory information. Fixes bug 19947; bugfix on 0.2.4.7-alpha
       and 0.2.8.1-alpha. Report and patch by "rubiate".
+
+  o Minor bugfixes (logging):
+    - Log a more accurate message when we fail to dump a microdescriptor.
+      Fixes bug 17758; bugfix on 0.2.2.8-alpha. Patch from Daniel Pinto.
+
+  o Minor bugfixes (memory leak):
+    - Fix a series of slow memory leaks related to parsing torrc files
+      and options. Fixes bug 19466; bugfix on 0.2.1.6-alpha.
+
+  o Deprecated features:
+    - A number of DNS-cache-related sub-options for client ports are now
+      deprecated for security reasons, and may be removed in a future
+      version of Tor. (We believe that client-side DNS cacheing is a bad
+      idea for anonymity, and you should not turn it on.) The options
+      are: CacheDNS, CacheIPv4DNS, CacheIPv6DNS, UseDNSCache,
+      UseIPv4Cache, and UseIPv6Cache.
+    - A number of options are deprecated for security reasons, and may
+      be removed in a future version of Tor. The options are:
+      AllowDotExit, AllowInvalidNodes, AllowSingleHopCircuits,
+      AllowSingleHopExits, ClientDNSRejectInternalAddresses,
+      CloseHSClientCircuitsImmediatelyOnTimeout,
+      CloseHSServiceRendCircuitsImmediatelyOnTimeout,
+      ExcludeSingleHopRelays, FastFirstHopPK, TLSECGroup,
+      UseNTorHandshake, and WarnUnsafeSocks.
+    - The *ListenAddress options are now deprecated as unnecessary: the
+      corresponding *Port options should be used instead. These options
+      may someday be removed. The affected options are:
+      ControlListenAddress, DNSListenAddress, DirListenAddress,
+      NATDListenAddress, ORListenAddress, SocksListenAddress,
+      and TransListenAddress.
+
+  o Documentation:
+    - Correct the IPv6 syntax in our documentation for the
+      VirtualAddrNetworkIPv6 torrc option. Closes ticket 19743.
+
+  o Removed code:
+    - We no longer include the (dead, deprecated) bufferevent code in
+      Tor. Closes ticket 19450. Based on a patch from U+039b.
 
 
 Changes in version 0.2.9.1-alpha - 2016-08-08

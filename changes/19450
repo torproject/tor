@@ -1,3 +1,0 @@
-  o Removed code:
-    - We no longer include the (dead, deprecated) bufferevent code in
-      Tor. Closes ticket 19450. Based on a patch from U+039b.

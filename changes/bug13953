@@ -1,3 +1,0 @@
-  o Minor features (config):
-    - Warn users when descriptor and port addresses are inconsistent.
-      Mitigates bug 13953; patch by teor.

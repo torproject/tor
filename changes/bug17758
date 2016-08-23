@@ -1,3 +1,0 @@
-  o Minor bugfixes (logging):
-    - Log a more accurate message when we fail to dump a microdescriptor.
-      Fixes bug 17758; bugfix on 0.2.2.8-alpha. Patch from Daniel Pinto.

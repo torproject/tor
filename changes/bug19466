@@ -1,3 +1,0 @@
-  o Minor bugfixes (memory leak):
-    - Fix a series of slow memory leaks related to parsing torrc files
-      and options. Fixes bug 19466; bugfix on 0.2.1.6-alpha.

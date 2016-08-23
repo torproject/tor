@@ -1,4 +1,0 @@
-  o Minor bugfixes (compilation):
-    - Build correctly on versions of libevent2 without support
-      for evutil_secure_rng_add_bytes(). Fixes bug 19904;
-      bugfix on 0.2.5.4-alpha.
