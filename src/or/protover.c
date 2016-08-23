@@ -39,8 +39,10 @@ protocol_type_to_str(protocol_type_t pr)
     if (PROTOCOL_NAMES[i].protover_type == pr)
       return PROTOCOL_NAMES[i].name;
   }
+  /* LCOV_EXCL_START */
   tor_assert_nonfatal_unreached_once();
   return "UNKNOWN";
+  /* LCOV_EXCL_STOP */
 }
 
 /**
@@ -148,6 +150,10 @@ parse_single_entry(const char *s, const char *end_of_entry)
   /* There must be an =. */
   equals = memchr(s, '=', end_of_entry - s);
   if (!equals)
+    goto error;
+
+  /* The name must be nonempty */
+  if (equals == s)
     goto error;
 
   out->name = tor_strndup(s, equals-s);
@@ -388,7 +394,7 @@ contract_protocol_list(const smartlist_t *proto_strings)
   SMARTLIST_FOREACH_BEGIN(proto_strings, const char *, s) {
     proto_entry_t *ent = parse_single_entry(s, s+strlen(s));
     if (BUG(!ent))
-      continue;
+      continue; // LCOV_EXCL_LINE
     smartlist_t *lst = strmap_get(entry_lists_by_name, ent->name);
     if (!lst) {
       smartlist_add(all_names, ent->name);
@@ -591,11 +597,11 @@ protocol_list_contains(const smartlist_t *protos,
                        protocol_type_t pr, uint32_t ver)
 {
   if (BUG(protos == NULL)) {
-    return 0;
+    return 0; // LCOV_EXCL_LINE
   }
   const char *pr_name = protocol_type_to_str(pr);
   if (BUG(pr_name == NULL)) {
-    return 0;
+    return 0; // LCOV_EXCL_LINE
   }
 
   SMARTLIST_FOREACH_BEGIN(protos, const proto_entry_t *, ent) {

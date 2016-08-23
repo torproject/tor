@@ -81,6 +81,41 @@ test_protover_parse(void *arg)
 }
 
 static void
+test_protover_parse_fail(void *arg)
+{
+  (void)arg;
+  smartlist_t *elts;
+
+  /* random junk */
+  elts = parse_protocol_list("!!3@*");
+  tt_assert(elts == NULL);
+
+  /* Missing equals sign in an entry */
+  elts = parse_protocol_list("Link=4 Haprauxymatyve Desc=9");
+  tt_assert(elts == NULL);
+
+  /* Missing word. */
+  elts = parse_protocol_list("Link=4 =3 Desc=9");
+  tt_assert(elts == NULL);
+
+  /* Broken numbers */
+  elts = parse_protocol_list("Link=fred");
+  tt_assert(elts == NULL);
+  elts = parse_protocol_list("Link=1,fred");
+  tt_assert(elts == NULL);
+  elts = parse_protocol_list("Link=1,fred,3");
+  tt_assert(elts == NULL);
+
+  /* Broken range */
+  elts = parse_protocol_list("Link=1,9-8,3");
+  tt_assert(elts == NULL);
+
+ done:
+  ;
+}
+
+
+static void
 test_protover_vote(void *arg)
 {
   (void) arg;
@@ -154,6 +189,7 @@ test_protover_all_supported(void *arg)
 
 struct testcase_t protover_tests[] = {
   PV_TEST(parse, 0),
+  PV_TEST(parse_fail, 0),
   PV_TEST(vote, 0),
   PV_TEST(all_supported, 0),
   END_OF_TESTCASES
