@@ -1,4 +1,4 @@
   o Documentation:
     - Correct the IPv6 syntax in our documentation for the
-      VirtualAddrNetworkIPv6 torrc option. Fixes bug 19743.
+      VirtualAddrNetworkIPv6 torrc option. Closes ticket 19743.
 

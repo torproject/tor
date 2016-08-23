@@ -1,4 +1,19 @@
-Changes in version 0.2.9.2-alpha - 2016-0?-??
+Changes in version 0.2.9.2-alpha - 2016-08-2?
+  Tor 0.2.9.2-alpha XXXX BLURB HERE.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the August 2 2016 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfixes (compilation, also in 0.2.8.7):
+    - Remove an inappropriate "inline" in tortls.c that was causing
+      warnings on older versions of GCC. Fixes bug 19903; bugfix on
+      0.2.8.1-alpha.
+
+  o Minor bugfixes (fallback directories, also in 0.2.8.7):
+    - Avoid logging a NULL string pointer when loading fallback
+      directory information. Fixes bug 19947; bugfix on 0.2.4.7-alpha
+      and 0.2.8.1-alpha. Report and patch by "rubiate".
 
 
 Changes in version 0.2.9.1-alpha - 2016-08-08
