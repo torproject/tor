@@ -1,3 +1,23 @@
+Changes in version 0.2.8.7 - 2016-08-2?
+  Tor 0.2.8.7 fixes a few bugs still present in 0.2.8.6, and replaces a
+  retiring bridge authority. All bridges and bridge users are strongly
+  encouraged to upgrade.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the August 2 2016 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfixes (compilation):
+    - Remove an inappropriate "inline" in tortls.c that was causing
+      warnings on older versions of GCC. Fixes bug 19903; bugfix
+      on 0.2.8.1-alpha.
+
+  o Minor bugfixes (fallback directories):
+    - Avoid logging a NULL string pointer when loading fallback
+      directory information. Fixes bug 19947; bugfix on 0.2.4.7-alpha
+      and 0.2.8.1-alpha. Report and patch by "rubiate".
+
+
 Changes in version 0.2.8.6 - 2016-08-02
 
   Tor 0.2.8.6 is the first stable version of the Tor 0.2.8 series.
