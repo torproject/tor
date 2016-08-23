@@ -1,6 +1,5 @@
    o Major bugfixes (directory downloads):
-    - Avoid resetting download status for consensuses hourly, and add a
-      SimulateDirDownloadFailures config option to test behavior when all
-      downloads from directory servers fail.  Fixes bug 8625; bugfix on
+    - Avoid resetting download status for consensuses hourly, since we
+      already have another, smarter retry mechanism.  Fixes bug 8625; bugfix on
       0.2.0.9-alpha.
 
