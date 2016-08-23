@@ -838,7 +838,7 @@ sb_epoll_ctl(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 }
 
 /**
- * Function responsible for setting up the fcntl64 syscall for
+ * Function responsible for setting up the prctl syscall for
  * the seccomp filter sandbox.
  *
  * NOTE: if multiple filters need to be added, the PR_SECCOMP parameter needs
@@ -859,7 +859,7 @@ sb_prctl(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
 }
 
 /**
- * Function responsible for setting up the fcntl64 syscall for
+ * Function responsible for setting up the mprotect syscall for
  * the seccomp filter sandbox.
  *
  * NOTE: does not NEED to be here.. currently only occurs before filter; will
