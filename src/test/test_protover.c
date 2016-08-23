@@ -110,6 +110,44 @@ test_protover_vote(void *arg)
   smartlist_free(lst);
 }
 
+static void
+test_protover_all_supported(void *arg)
+{
+  (void)arg;
+  char *msg = NULL;
+
+  tt_assert(protover_all_supported(NULL, &msg));
+  tt_assert(msg == NULL);
+
+  tt_assert(protover_all_supported("", &msg));
+  tt_assert(msg == NULL);
+
+  // Some things that we do support
+  tt_assert(protover_all_supported("Link=3-4", &msg));
+  tt_assert(msg == NULL);
+  tt_assert(protover_all_supported("Link=3-4 Desc=2", &msg));
+  tt_assert(msg == NULL);
+
+  // Some things we don't support
+  tt_assert(! protover_all_supported("Wombat=9", &msg));
+  tt_str_op(msg, OP_EQ, "Wombat=9");
+  tor_free(msg);
+  tt_assert(! protover_all_supported("Link=999", &msg));
+  tt_str_op(msg, OP_EQ, "Link=999");
+  tor_free(msg);
+
+  // Mix of things we support and things we don't
+  tt_assert(! protover_all_supported("Link=3-4 Wombat=9", &msg));
+  tt_str_op(msg, OP_EQ, "Wombat=9");
+  tor_free(msg);
+  tt_assert(! protover_all_supported("Link=3-999", &msg));
+  tt_str_op(msg, OP_EQ, "Link=3-999");
+  tor_free(msg);
+
+ done:
+  tor_free(msg);
+}
+
 
 #define PV_TEST(name, flags)                       \
   { #name, test_protover_ ##name, (flags), NULL, NULL }
@@ -117,6 +155,7 @@ test_protover_vote(void *arg)
 struct testcase_t protover_tests[] = {
   PV_TEST(parse, 0),
   PV_TEST(vote, 0),
+  PV_TEST(all_supported, 0),
   END_OF_TESTCASES
 };
 
