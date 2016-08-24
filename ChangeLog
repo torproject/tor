@@ -1,8 +1,12 @@
-Changes in version 0.2.8.7 - 2016-08-2?
+Changes in version 0.2.8.7 - 2016-08-24
   Tor 0.2.8.7 fixes an important bug related to the ReachableAddresses
   option in 0.2.8.6, and replaces a retiring bridge authority. Everyone
   who sets the ReachableAddresses option, all bridges, and all bridge
   users are strongly encouraged to upgrade.
+
+  o Directory authority changes:
+    - The "Tonga" bridge authority has been retired; the new bridge
+      authority is "Bifroest". Closes tickets 19728 and 19690.
 
   o Major bugfixes (client, security):
     - Only use the ReachableAddresses option to restrict the first hop
