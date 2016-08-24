@@ -2,8 +2,8 @@ Changes in version 0.2.9.2-alpha - 2016-08-24
   Tor 0.2.9.2-alpha continues development of the 0.2.9 series with
   several new features and bugfixes. It also includes an important
   authority update and an important bugfix from 0.2.8.7. Everyone who
-  sets the ReachableAddresses option, all bridges, and all bridge users
-  are strongly encouraged to upgrade to 0.2.8.7, or to 0.2.9.2-alpha.
+  sets the ReachableAddresses option, and all bridges, are strongly
+  encouraged to upgrade to 0.2.8.7, or to 0.2.9.2-alpha.
 
   o Directory authority changes (also in 0.2.8.7):
     - The "Tonga" bridge authority has been retired; the new bridge
