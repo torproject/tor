@@ -6899,7 +6899,8 @@ parse_ports(or_options_t *options, int validate_only,
 }
 
 /* Does port bind to IPv4? */
-static int port_binds_ipv4(const port_cfg_t *port)
+static int
+port_binds_ipv4(const port_cfg_t *port)
 {
   return tor_addr_family(&port->addr) == AF_INET ||
          (tor_addr_family(&port->addr) == AF_UNSPEC
@@ -6907,7 +6908,8 @@ static int port_binds_ipv4(const port_cfg_t *port)
 }
 
 /* Does port bind to IPv6? */
-static int port_binds_ipv6(const port_cfg_t *port)
+static int
+port_binds_ipv6(const port_cfg_t *port)
 {
   return tor_addr_family(&port->addr) == AF_INET6 ||
          (tor_addr_family(&port->addr) == AF_UNSPEC
