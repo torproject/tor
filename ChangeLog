@@ -101,6 +101,38 @@ Changes in version 0.2.9.2-alpha - 2016-08-24
       Tor. Closes ticket 19450. Based on a patch from U+039b.
 
 
+Changes in version 0.2.8.7 - 2016-08-24
+  Tor 0.2.8.7 fixes an important bug related to the ReachableAddresses
+  option in 0.2.8.6, and replaces a retiring bridge authority. Everyone
+  who sets the ReachableAddresses option, and all bridges, are strongly
+  encouraged to upgrade.
+
+  o Directory authority changes:
+    - The "Tonga" bridge authority has been retired; the new bridge
+      authority is "Bifroest". Closes tickets 19728 and 19690.
+
+  o Major bugfixes (client, security):
+    - Only use the ReachableAddresses option to restrict the first hop
+      in a path. In earlier versions of 0.2.8.x, it would apply to
+      every hop in the path, with a possible degradation in anonymity
+      for anyone using an uncommon ReachableAddress setting. Fixes bug
+      19973; bugfix on 0.2.8.2-alpha.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the August 2 2016 Maxmind GeoLite2
+      Country database.
+
+  o Minor bugfixes (compilation):
+    - Remove an inappropriate "inline" in tortls.c that was causing
+      warnings on older versions of GCC. Fixes bug 19903; bugfix
+      on 0.2.8.1-alpha.
+
+  o Minor bugfixes (fallback directories):
+    - Avoid logging a NULL string pointer when loading fallback
+      directory information. Fixes bug 19947; bugfix on 0.2.4.7-alpha
+      and 0.2.8.1-alpha. Report and patch by "rubiate".
+
+
 Changes in version 0.2.9.1-alpha - 2016-08-08
   Tor 0.2.9.1-alpha is the first alpha release in the 0.2.9 development
   series. It improves our support for hardened builds and compiler
