@@ -2245,7 +2245,7 @@ void
 router_add_running_nodes_to_smartlist(smartlist_t *sl, int allow_invalid,
                                       int need_uptime, int need_capacity,
                                       int need_guard, int need_desc,
-                                      int pref_addr)
+                                      int pref_addr, int direct_conn)
 {
   const int check_reach = !router_skip_or_reachability(get_options(),
                                                        pref_addr);
@@ -2260,10 +2260,10 @@ router_add_running_nodes_to_smartlist(smartlist_t *sl, int allow_invalid,
       continue;
     if (node_is_unreliable(node, need_uptime, need_capacity, need_guard))
       continue;
-    /* Choose a node with an OR address that matches the firewall rules */
-    if (check_reach && !fascist_firewall_allows_node(node,
-                                                     FIREWALL_OR_CONNECTION,
-                                                     pref_addr))
+    /* Choose a node with an OR address that matches the firewall rules,
+     * if we are making a direct connection */
+    if (direct_conn && check_reach &&
+        !fascist_firewall_allows_node(node, FIREWALL_OR_CONNECTION, pref_addr))
       continue;
 
     smartlist_add(sl, (void *)node);
@@ -2717,6 +2717,7 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
   const int weight_for_exit = (flags & CRN_WEIGHT_AS_EXIT) != 0;
   const int need_desc = (flags & CRN_NEED_DESC) != 0;
   const int pref_addr = (flags & CRN_PREF_ADDR) != 0;
+  const int direct_conn = (flags & CRN_DIRECT_CONN) != 0;
 
   smartlist_t *sl=smartlist_new(),
     *excludednodes=smartlist_new();
@@ -2742,7 +2743,8 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
 
   router_add_running_nodes_to_smartlist(sl, allow_invalid,
                                         need_uptime, need_capacity,
-                                        need_guard, need_desc, pref_addr);
+                                        need_guard, need_desc, pref_addr,
+                                        direct_conn);
   log_debug(LD_CIRC,
            "We found %d running nodes.",
             smartlist_len(sl));
