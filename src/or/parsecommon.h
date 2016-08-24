@@ -6,7 +6,6 @@
  * \brief Header file for parsecommon.c
  **/
 
-
 #ifndef TOR_PARSECOMMON_H
 #define TOR_PARSECOMMON_H
 
@@ -304,3 +303,4 @@ directory_token_t *find_opt_by_keyword(smartlist_t *s,
 smartlist_t * find_all_by_keyword(smartlist_t *s, directory_keyword k);
 
 #endif /* TOR_PARSECOMMON_H */
+

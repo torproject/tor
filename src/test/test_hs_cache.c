@@ -58,7 +58,7 @@ helper_build_intro_point(const ed25519_keypair_t *blinded_kp,
   tt_int_op(ret, ==, 0);
   ip->enc_key_type = HS_DESC_KEY_TYPE_CURVE25519;
   intro_point = ip;
-done:
+ done:
   return intro_point;
 }
 
@@ -101,7 +101,7 @@ helper_build_hs_desc(uint64_t revision_counter, uint32_t lifetime,
                                          "1.2.3.4"));
 
   descp = desc;
-done:
+ done:
   return descp;
 }
 
@@ -257,8 +257,8 @@ test_clean_as_dir(void *arg)
   tt_assert(desc1);
   ret = hs_desc_encode_descriptor(desc1, &desc1_str);
   tt_int_op(ret, OP_EQ, 0);
-	ret = hs_cache_store_as_dir(desc1_str);
-	tt_int_op(ret, OP_EQ, 0);
+  ret = hs_cache_store_as_dir(desc1_str);
+  tt_int_op(ret, OP_EQ, 0);
 
   /* With the lifetime being 3 hours, a cleanup shouldn't remove it. */
   ret = cache_clean_v3_as_dir(now, 0);

@@ -127,7 +127,7 @@ compute_desc_id(rend_data_t *rend_data)
     tor_assert(0);
   }
 
-end:
+ end:
   return ret;
 }
 
@@ -262,3 +262,4 @@ rend_data_get_pk_digest(const rend_data_t *rend_data, size_t *len_out)
     tor_assert(0);
   }
 }
+

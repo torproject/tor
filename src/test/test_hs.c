@@ -350,7 +350,8 @@ test_hs_rend_data(void *arg)
   tt_str_op(client_dup_v2->onion_address, OP_EQ, client_v2->onion_address);
   tt_mem_op(client_dup_v2->desc_id_fetch, OP_EQ, client_v2->desc_id_fetch,
             sizeof(client_dup_v2->desc_id_fetch));
-  tt_mem_op(client_dup_v2->descriptor_cookie, OP_EQ, client_v2->descriptor_cookie,
+  tt_mem_op(client_dup_v2->descriptor_cookie, OP_EQ,
+            client_v2->descriptor_cookie,
             sizeof(client_dup_v2->descriptor_cookie));
 
   tt_assert(client_dup->hsdirs_fp);

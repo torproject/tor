@@ -81,7 +81,7 @@ cache_dir_desc_new(const char *desc)
   dir_desc->created_ts = time(NULL);
   return dir_desc;
 
-err:
+ err:
   cache_dir_desc_free(dir_desc);
   return NULL;
 }
@@ -173,7 +173,7 @@ cache_lookup_v3_as_dir(const char *query, char **desc_out)
 
   return found;
 
-err:
+ err:
   return -1;
 }
 
@@ -365,3 +365,4 @@ hs_cache_init(void)
   tor_assert(!hs_cache_v3_dir);
   hs_cache_v3_dir = digest256map_new();
 }
+

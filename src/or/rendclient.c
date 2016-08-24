@@ -151,7 +151,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   tor_assert(introcirc->rend_data);
   tor_assert(rendcirc->rend_data);
   tor_assert(!rend_cmp_service_ids(rend_data_get_address(introcirc->rend_data),
-                                   rend_data_get_address(rendcirc->rend_data)));
+                                  rend_data_get_address(rendcirc->rend_data)));
 #ifndef NON_ANONYMOUS_MODE_ENABLED
   tor_assert(!(introcirc->build_state->onehop_tunnel));
   tor_assert(!(rendcirc->build_state->onehop_tunnel));

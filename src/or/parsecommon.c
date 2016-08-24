@@ -146,7 +146,6 @@ tokenize_string(memarea_t *area,
   return 0;
 }
 
-
 /** Helper: parse space-separated arguments from the string <b>s</b> ending at
  * <b>eol</b>, and store them in the args field of <b>tok</b>.  Store the
  * number of parsed elements into the n_args field of <b>tok</b>.  Allocate
@@ -242,8 +241,6 @@ token_check_object(memarea_t *area, const char *kwd,
  done_tokenizing:
   return tok;
 }
-
-
 
 /** Helper function: read the next token from *s, advance *s to the end of the
  * token, and return the parsed token.  Parse *<b>s</b> according to the list
@@ -408,7 +405,6 @@ get_next_token(memarea_t *area,
 #undef STRNDUP
 }
 
-
 /** Find the first token in <b>s</b> whose keyword is <b>keyword</b>; fail
  * with an assert if no such keyword is found.
  */
@@ -451,3 +447,4 @@ find_all_by_keyword(smartlist_t *s, directory_keyword k)
                     });
   return out;
 }
+

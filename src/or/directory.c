@@ -2350,10 +2350,10 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                                          conn->identity_digest, \
                                          reason) )
     #define SEND_HS_DESC_FAILED_CONTENT() ( \
-      control_event_hs_descriptor_content(rend_data_get_address(conn->rend_data), \
-                                          conn->requested_resource, \
-                                          conn->identity_digest, \
-                                          NULL) )
+  control_event_hs_descriptor_content(rend_data_get_address(conn->rend_data), \
+                                      conn->requested_resource,         \
+                                      conn->identity_digest,            \
+                                      NULL) )
     tor_assert(conn->rend_data);
     log_info(LD_REND,"Received rendezvous descriptor (size %d, status %d "
              "(%s))",

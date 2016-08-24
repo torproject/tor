@@ -29,7 +29,8 @@ helper_build_intro_point(const ed25519_keypair_t *blinded_kp, time_t now,
     hs_desc_link_specifier_t *ls = tor_malloc_zero(sizeof(*ls));
     if (legacy) {
       ls->type = LS_LEGACY_ID;
-      memcpy(ls->u.legacy_id, "0299F268FCA9D55CD157976D39AE92B4B455B3A8", DIGEST_LEN);
+      memcpy(ls->u.legacy_id, "0299F268FCA9D55CD157976D39AE92B4B455B3A8",
+             DIGEST_LEN);
     } else {
       ls->u.ap.port = 9001;
       int family = tor_addr_parse(&ls->u.ap.addr, addr);
@@ -106,16 +107,16 @@ helper_build_hs_desc(unsigned int no_ip)
   if (!no_ip) {
     /* Add four intro points. */
     smartlist_add(desc->encrypted_data.intro_points,
-                  helper_build_intro_point(&desc->plaintext_data.blinded_kp, now,
+                helper_build_intro_point(&desc->plaintext_data.blinded_kp, now,
                                            "1.2.3.4", 0));
     smartlist_add(desc->encrypted_data.intro_points,
-                  helper_build_intro_point(&desc->plaintext_data.blinded_kp, now,
+                helper_build_intro_point(&desc->plaintext_data.blinded_kp, now,
                                            "[2600::1]", 0));
     smartlist_add(desc->encrypted_data.intro_points,
-                  helper_build_intro_point(&desc->plaintext_data.blinded_kp, now,
+                helper_build_intro_point(&desc->plaintext_data.blinded_kp, now,
                                            "3.2.1.4", 1));
     smartlist_add(desc->encrypted_data.intro_points,
-                  helper_build_intro_point(&desc->plaintext_data.blinded_kp, now,
+                helper_build_intro_point(&desc->plaintext_data.blinded_kp, now,
                                            "", 1));
   }
 
@@ -171,7 +172,7 @@ helper_compare_hs_desc(const hs_descriptor_t *desc1,
     tt_assert(desc2->encrypted_data.intro_points);
     tt_int_op(smartlist_len(desc1->encrypted_data.intro_points), ==,
               smartlist_len(desc2->encrypted_data.intro_points));
-    for (int i = 0; i < smartlist_len(desc1->encrypted_data.intro_points); i++) {
+    for (int i=0; i < smartlist_len(desc1->encrypted_data.intro_points); i++) {
       hs_desc_intro_point_t *ip1 = smartlist_get(desc1->encrypted_data
                                                  .intro_points, i),
                             *ip2 = smartlist_get(desc2->encrypted_data
@@ -948,7 +949,8 @@ test_decode_plaintext(void *arg)
     "-----BEGIN %s-----\n" \
     "UNICORN\n" \
     "-----END MESSAGE-----\n" \
-    "signature m20WJH5agqvwhq7QeuEZ1mYyPWQDO+eJOZUjLhAiKu8DbL17DsDfJE6kXbWyHimbNj2we0enV3cCOOAsmPOaAw\n"
+    "signature m20WJH5agqvwhq7QeuEZ1mYyPWQDO+eJOZUjLhAiKu8DbL17DsDfJE6kXbWy" \
+    "HimbNj2we0enV3cCOOAsmPOaAw\n"
 
   /* Invalid version. */
   {
@@ -1125,3 +1127,4 @@ struct testcase_t hs_descriptor[] = {
 
   END_OF_TESTCASES
 };
+

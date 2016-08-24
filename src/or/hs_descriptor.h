@@ -235,3 +235,4 @@ STATIC int desc_sig_is_valid(const char *b64_sig,
 #endif /* HS_DESCRIPTOR_PRIVATE */
 
 #endif /* TOR_HS_DESCRIPTOR_H */
+
