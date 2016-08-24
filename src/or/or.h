@@ -5255,7 +5255,10 @@ typedef enum {
   CRN_WEIGHT_AS_EXIT = 1<<5,
   CRN_NEED_DESC = 1<<6,
   /* On clients, only provide nodes that satisfy ClientPreferIPv6OR */
-  CRN_PREF_ADDR = 1<<7
+  CRN_PREF_ADDR = 1<<7,
+  /* On clients, only provide nodes that we can connect to directly, based on
+   * our firewall rules */
+  CRN_DIRECT_CONN = 1<<8
 } router_crn_flags_t;
 
 /** Return value for router_add_to_routerlist() and dirserv_add_descriptor() */

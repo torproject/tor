@@ -1,0 +1,6 @@
+  o Major bugfixes (client, security):
+    - Only use the ReachableAddresses option to restrict the first hop
+      in a path. Previously, it would apply to every hop in the path,
+      with a possible degredation in anonymity for anyone using an
+      uncommon ReachableAddress setting. Fixes bug 19973; bugfix on
+      0.2.8.2-alpha.
