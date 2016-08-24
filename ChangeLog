@@ -1,5 +1,20 @@
-Changes in version 0.2.9.2-alpha - 2016-08-2?
-  Tor 0.2.9.2-alpha XXXX BLURB HERE.
+Changes in version 0.2.9.2-alpha - 2016-08-24
+  Tor 0.2.9.2-alpha continues development of the 0.2.9 series with
+  several new features and bugfixes. It also includes an important
+  authority update and an important bugfix from 0.2.8.7. Everyone who
+  sets the ReachableAddresses option, all bridges, and all bridge users
+  are strongly encouraged to upgrade to 0.2.8.7, or to 0.2.9.2-alpha.
+
+  o Directory authority changes (also in 0.2.8.7):
+    - The "Tonga" bridge authority has been retired; the new bridge
+      authority is "Bifroest". Closes tickets 19728 and 19690.
+
+  o Major bugfixes (client, security, also in 0.2.8.7):
+    - Only use the ReachableAddresses option to restrict the first hop
+      in a path. Previously, it would apply to every hop in the path,
+      with a possible degredation in anonymity for anyone using an
+      uncommon ReachableAddress setting. Fixes bug 19973; bugfix
+      on 0.2.8.2-alpha.
 
   o Major features (user interface):
     - Tor now supports the ability to declare options deprecated, so
