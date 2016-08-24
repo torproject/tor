@@ -29,10 +29,6 @@ Changes in version 0.2.8.7 - 2016-08-24
       directory information. Fixes bug 19947; bugfix on 0.2.4.7-alpha
       and 0.2.8.1-alpha. Report and patch by "rubiate".
 
-  o Directory authority changes:
-    - The "Tonga" bridge authority has been retired; the new bridge
-      authority is "Bifroest". Closes tickets 19728 and 19690.
-
 
 Changes in version 0.2.8.6 - 2016-08-02
 
