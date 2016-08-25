@@ -4,6 +4,9 @@
 
 #include "container.h"
 
+/* This is a guess. */
+#define FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS "0.2.9.3-alpha"
+
 typedef enum protocol_type_t {
   PRT_LINK,
   PRT_LINKAUTH,
@@ -29,6 +32,8 @@ const char *get_supported_protocols(void);
 
 char * compute_protover_vote(const smartlist_t *list_of_proto_strings,
                              int threshold);
+const char *protover_compute_for_old_tor(const char *version);
+
 
 void protover_free_all(void);
 
