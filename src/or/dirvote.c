@@ -13,6 +13,7 @@
 #include "microdesc.h"
 #include "networkstatus.h"
 #include "policies.h"
+#include "protover.h"
 #include "rephist.h"
 #include "router.h"
 #include "routerkeys.h"
@@ -1198,6 +1199,72 @@ update_total_bandwidth_weights(const routerstatus_t *rs,
   }
 }
 
+/** Considering the different recommended/required protocols sets as a
+ * 4-element array, return the element from <b>vote</b> for that protocol
+ * set.
+ */
+static const char *
+get_nth_protocol_set_vote(int n, const networkstatus_t *vote)
+{
+  switch (n) {
+    case 0: return vote->recommended_client_protocols;
+    case 1: return vote->recommended_relay_protocols;
+    case 2: return vote->required_client_protocols;
+    case 3: return vote->required_relay_protocols;
+    default:
+      tor_assert_unreached();
+      return NULL;
+  }
+}
+
+/** Considering the different recommended/required protocols sets as a
+ * 4-element array, return a newly allocated string for the consensus value
+ * for the n'th set.
+ */
+static char *
+compute_nth_protocol_set(int n, int n_voters, const smartlist_t *votes)
+{
+  const char *keyword;
+  smartlist_t *proto_votes = smartlist_new();
+  int threshold;
+  switch (n) {
+    case 0:
+      keyword = "recommended-client-protocols";
+      threshold = CEIL_DIV(n_voters, 2);
+      break;
+    case 1:
+      keyword = "recommended-relay-protocols";
+      threshold = CEIL_DIV(n_voters, 2);
+      break;
+    case 2:
+      keyword = "required-client-protocols";
+      threshold = CEIL_DIV(n_voters * 2, 3);
+      break;
+    case 3:
+      keyword = "required-relay-protocols";
+      threshold = CEIL_DIV(n_voters * 2, 3);
+      break;
+    default:
+      tor_assert_unreached();
+      return NULL;
+  }
+
+  SMARTLIST_FOREACH_BEGIN(votes, const networkstatus_t *, ns) {
+    const char *v = get_nth_protocol_set_vote(n, ns);
+    if (v)
+      smartlist_add(proto_votes, (void*)v);
+  } SMARTLIST_FOREACH_END(ns);
+
+  char *protocols = compute_protover_vote(proto_votes, threshold);
+  smartlist_free(proto_votes);
+
+  char *result = NULL;
+  tor_asprintf(&result, "%s %s\n", keyword, protocols);
+  tor_free(protocols);
+
+  return result;
+}
+
 /** Given a list of vote networkstatus_t in <b>votes</b>, our public
  * authority <b>identity_key</b>, our private authority <b>signing_key</b>,
  * and the number of <b>total_authorities</b> that we believe exist in our
@@ -1375,6 +1442,17 @@ networkstatus_compute_consensus(smartlist_t *votes,
                  flaglist);
 
     tor_free(flaglist);
+  }
+
+  if (consensus_method >= MIN_METHOD_FOR_RECOMMENDED_PROTOCOLS) {
+    int num_dirauth = get_n_authorities(V3_DIRINFO);
+    int idx;
+    for (idx = 0; idx < 4; ++idx) {
+      char *proto_line = compute_nth_protocol_set(idx, num_dirauth, votes);
+      if (BUG(!proto_line))
+        continue;
+      smartlist_add(chunks, proto_line);
+    }
   }
 
   param_list = dirvote_compute_params(votes, consensus_method,
