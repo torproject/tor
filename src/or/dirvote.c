@@ -61,6 +61,20 @@ static int dirvote_publish_consensus(void);
  * Voting
  * =====*/
 
+/* If <b>opt_value</b> is non-NULL, return "keyword opt_value\n" in a new
+ * string. Otherwise return a new empty string. */
+static char *
+format_line_if_present(const char *keyword, const char *opt_value)
+{
+  if (opt_value) {
+    char *result = NULL;
+    tor_asprintf(&result, "%s %s\n", keyword, opt_value);
+    return result;
+  } else {
+    return tor_strdup("");
+  }
+}
+
 /** Return a new string containing the string representation of the vote in
  * <b>v3_ns</b>, signed with our v3 signing key <b>private_signing_key</b>.
  * For v3 authorities. */
@@ -69,7 +83,6 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                           networkstatus_t *v3_ns)
 {
   smartlist_t *chunks = smartlist_new();
-  const char *client_versions = NULL, *server_versions = NULL;
   char *packages = NULL;
   char fingerprint[FINGERPRINT_LEN+1];
   char digest[DIGEST_LEN];
@@ -88,21 +101,11 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
 
   base16_encode(fingerprint, sizeof(fingerprint),
                 v3_ns->cert->cache_info.identity_digest, DIGEST_LEN);
-  client_versions = v3_ns->client_versions;
-  server_versions = v3_ns->server_versions;
 
-  if (client_versions) {
-    tor_asprintf(&client_versions_line, "client-versions %s\n",
-                 client_versions);
-  } else {
-    client_versions_line = tor_strdup("");
-  }
-  if (server_versions) {
-    tor_asprintf(&server_versions_line, "server-versions %s\n",
-                 server_versions);
-  } else {
-    server_versions_line = tor_strdup("");
-  }
+  client_versions_line = format_line_if_present("client-versions",
+                                                v3_ns->client_versions);
+  server_versions_line = format_line_if_present("server-versions",
+                                                v3_ns->server_versions);
 
   if (v3_ns->package_lines) {
     smartlist_t *tmp = smartlist_new();
