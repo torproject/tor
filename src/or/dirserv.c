@@ -24,6 +24,7 @@
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "policies.h"
+#include "protover.h"
 #include "rephist.h"
 #include "router.h"
 #include "routerlist.h"
@@ -1795,6 +1796,7 @@ version_from_platform(const char *platform)
  */
 char *
 routerstatus_format_entry(const routerstatus_t *rs, const char *version,
+                          const char *protocols,
                           routerstatus_format_type_t format,
                           const vote_routerstatus_t *vrs)
 {
@@ -1857,6 +1859,9 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
 #define V_LINE_OVERHEAD 7
   if (version && strlen(version) < MAX_V_LINE_LEN - V_LINE_OVERHEAD) {
     smartlist_add_asprintf(chunks, "v %s\n", version);
+  }
+  if (protocols) {
+    smartlist_add_asprintf(chunks, "proto %s\n", protocols);
   }
 
   if (format != NS_V2) {
@@ -2836,6 +2841,12 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
         rs->is_flagged_running = 0;
 
       vrs->version = version_from_platform(ri->platform);
+      if (ri->protocol_list) {
+        vrs->protocols = tor_strdup(ri->protocol_list);
+      } else {
+        vrs->protocols = tor_strdup(
+                              protover_compute_for_old_tor(vrs->version));
+      }
       vrs->microdesc = dirvote_format_all_microdesc_vote_lines(ri, now,
                                                         microdescriptors);
 

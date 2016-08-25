@@ -230,6 +230,7 @@ vote_routerstatus_free(vote_routerstatus_t *rs)
   if (!rs)
     return;
   tor_free(rs->version);
+  tor_free(rs->protocols);
   tor_free(rs->status.exitsummary);
   for (h = rs->microdesc; h; h = next) {
     tor_free(h->microdesc_hash_line);
@@ -2095,7 +2096,7 @@ signed_descs_update_status_from_consensus_networkstatus(smartlist_t *descs)
 char *
 networkstatus_getinfo_helper_single(const routerstatus_t *rs)
 {
-  return routerstatus_format_entry(rs, NULL, NS_CONTROL_PORT, NULL);
+  return routerstatus_format_entry(rs, NULL, NULL, NS_CONTROL_PORT, NULL);
 }
 
 /** Alloc and return a string describing routerstatuses for the most

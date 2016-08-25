@@ -244,7 +244,8 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     char *rsf;
     vote_microdesc_hash_t *h;
     rsf = routerstatus_format_entry(&vrs->status,
-                                    vrs->version, NS_V3_VOTE, vrs);
+                                    vrs->version, vrs->protocols,
+                                    NS_V3_VOTE, vrs);
     if (rsf)
       smartlist_add(chunks, rsf);
 
@@ -2007,7 +2008,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         char *buf;
         /* Okay!! Now we can write the descriptor... */
         /*     First line goes into "buf". */
-        buf = routerstatus_format_entry(&rs_out, NULL, rs_format, NULL);
+        buf = routerstatus_format_entry(&rs_out, NULL, NULL, rs_format, NULL);
         if (buf)
           smartlist_add(chunks, buf);
       }

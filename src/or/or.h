@@ -2408,6 +2408,8 @@ typedef struct vote_routerstatus_t {
                    * networkstatus_t.known_flags. */
   char *version; /**< The version that the authority says this router is
                   * running. */
+  char *protocols; /**< The protocols that this authority says this router
+                    * provides. */
   unsigned int has_measured_bw:1; /**< The vote had a measured bw */
   /** True iff the vote included an entry for ed25519 ID, or included
    * "id ed25519 none" to indicate that there was no ed25519 ID. */
