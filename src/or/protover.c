@@ -392,6 +392,8 @@ contract_protocol_list(const smartlist_t *proto_strings)
   // Parse each item and stick it entry_lists_by_name. Build
   // 'all_names' at the same time.
   SMARTLIST_FOREACH_BEGIN(proto_strings, const char *, s) {
+    if (BUG(!s))
+      continue;// LCOV_EXCL_LINE
     proto_entry_t *ent = parse_single_entry(s, s+strlen(s));
     if (BUG(!ent))
       continue; // LCOV_EXCL_LINE
@@ -513,14 +515,14 @@ compute_protover_vote(const smartlist_t *list_of_proto_strings,
     if (!strcmp(ent, cur_entry)) {
       n_times++;
     } else {
-      if (n_times >= threshold)
+      if (n_times >= threshold && cur_entry)
         smartlist_add(include_entries, (void*)cur_entry);
       cur_entry = ent;
       n_times = 1 ;
     }
   } SMARTLIST_FOREACH_END(ent);
 
-  if (n_times >= threshold)
+  if (n_times >= threshold && cur_entry)
     smartlist_add(include_entries, (void*)cur_entry);
 
   // Finally, compress that list.
