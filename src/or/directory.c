@@ -3532,7 +3532,7 @@ parse_hs_version_from_post(const char *url, const char *prefix,
 /* Handle the POST request for a hidden service descripror. The request is in
  * <b>url</b>, the body of the request is in <b>body</b>. Return 200 on success
  * else return 400 indicating a bad request. */
-static int
+STATIC int
 handle_post_hs_descriptor(const char *url, const char *body)
 {
   int version;

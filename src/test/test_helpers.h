@@ -11,6 +11,10 @@ const char *get_yesterday_date_str(void);
 
 void helper_setup_fake_routerlist(void);
 
+#define GET(path) "GET " path " HTTP/1.0\r\n\r\n"
+void connection_write_to_buf_mock(const char *string, size_t len,
+                                  connection_t *conn, int zlib);
+
 extern const char TEST_DESCRIPTORS[];
 
 #endif

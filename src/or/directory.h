@@ -157,6 +157,8 @@ STATIC int download_status_schedule_get_delay(download_status_t *dls,
                                               int min_delay, int max_delay,
                                               time_t now);
 
+STATIC int handle_post_hs_descriptor(const char *url, const char *body);
+
 STATIC char* authdir_type_to_string(dirinfo_type_t auth);
 STATIC const char * dir_conn_purpose_to_string(int purpose);
 STATIC int should_use_directory_guards(const or_options_t *options);

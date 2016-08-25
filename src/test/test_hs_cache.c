@@ -11,6 +11,10 @@
 #include "ed25519_cert.h"
 #include "hs_cache.h"
 #include "rendcache.h"
+#include "directory.h"
+#include "connection.h"
+
+#include "test_helpers.h"
 #include "test.h"
 
 /* Build an intro point using a blinded key and an address. */
@@ -282,12 +286,197 @@ test_clean_as_dir(void *arg)
   tor_free(desc1_str);
 }
 
+/* Test helper: Fetch an HS descriptor from an HSDir (for the hidden service
+   with <b>blinded_key</b>. Return the received descriptor string. */
+static char *
+helper_fetch_desc_from_hsdir(const ed25519_public_key_t *blinded_key)
+{
+  int retval;
+
+  char *received_desc = NULL;
+  char *hsdir_query_str = NULL;
+
+  /* The dir conn we are going to simulate */
+  dir_connection_t *conn = NULL;
+  tor_addr_t mock_tor_addr;
+
+  /* First extract the blinded public key that we are going to use in our
+     query, and then build the actual query string. */
+  {
+    char hsdir_cache_key[ED25519_BASE64_LEN+1];
+
+    retval = ed25519_public_to_base64(hsdir_cache_key,
+                                      blinded_key);
+    tt_int_op(retval, ==, 0);
+    tor_asprintf(&hsdir_query_str, GET("/tor/hs/3/%s"), hsdir_cache_key);
+  }
+
+  /* Simulate an HTTP GET request to the HSDir */
+  conn = dir_connection_new(tor_addr_family(&mock_tor_addr));
+  TO_CONN(conn)->linked = 1;/* Pretend the conn is encrypted :) */
+  retval = directory_handle_command_get(conn, hsdir_query_str,
+                                        NULL, 0);
+  tt_int_op(retval, OP_EQ, 0);
+
+  /* Read the descriptor that the HSDir just served us */
+  {
+    char *headers = NULL;
+    size_t body_used = 0;
+
+    fetch_from_buf_http(TO_CONN(conn)->outbuf, &headers, MAX_HEADERS_SIZE,
+                        &received_desc, &body_used, 10000, 0);
+  }
+
+ done:
+  tor_free(hsdir_query_str);
+
+  return received_desc;
+}
+
+/* Publish a descriptor to the HSDir, then fetch it. Check that the received
+   descriptor matches the published one. */
+static void
+test_upload_and_download_hs_desc(void *arg)
+{
+  int retval;
+  hs_descriptor_t *published_desc;
+
+  char *published_desc_str = NULL;
+  char *received_desc_str = NULL;
+
+  (void) arg;
+
+  /* Initialize HSDir cache subsystem */
+  init_test();
+
+  /* Generate a valid descriptor with normal values. */
+  {
+    published_desc = helper_build_hs_desc(42, 3 * 60 * 60, NULL);
+    tt_assert(published_desc);
+    retval = hs_desc_encode_descriptor(published_desc, &published_desc_str);
+    tt_int_op(retval, OP_EQ, 0);
+  }
+
+  /* Publish descriptor to the HSDir */
+  {
+    retval = handle_post_hs_descriptor("/tor/hs/3/publish",published_desc_str);
+    tt_int_op(retval, ==, 200);
+  }
+
+  /* Simulate a fetch of the previously published descriptor */
+  {
+    const ed25519_public_key_t *blinded_key;
+    blinded_key = &published_desc->plaintext_data.blinded_kp.pubkey;
+    received_desc_str = helper_fetch_desc_from_hsdir(blinded_key);
+  }
+
+  /* Verify we received the exact same descriptor we published earlier */
+  tt_str_op(received_desc_str, OP_EQ, published_desc_str);
+
+ done:
+  tor_free(received_desc_str);
+  tor_free(published_desc_str);
+}
+
+/* Test that HSDirs reject outdated descriptors based on their revision
+ * counter. Also test that HSDirs correctly replace old descriptors with newer
+ * descriptors. */
+static void
+test_hsdir_revision_counter_check(void *arg)
+{
+  int retval;
+
+  hs_descriptor_t *published_desc;
+  char *published_desc_str = NULL;
+
+  char *received_desc_str = NULL;
+  hs_descriptor_t *received_desc = NULL;
+
+  (void) arg;
+
+  /* Initialize HSDir cache subsystem */
+  init_test();
+
+  /* Generate a valid descriptor with normal values. */
+  {
+    published_desc = helper_build_hs_desc(1312, 3 * 60 * 60, NULL);
+    tt_assert(published_desc);
+    retval = hs_desc_encode_descriptor(published_desc, &published_desc_str);
+    tt_int_op(retval, OP_EQ, 0);
+  }
+
+  /* Publish descriptor to the HSDir */
+  {
+    retval = handle_post_hs_descriptor("/tor/hs/3/publish",published_desc_str);
+    tt_int_op(retval, ==, 200);
+  }
+
+  /* Try publishing again with the same revision counter: Should fail. */
+  {
+    retval = handle_post_hs_descriptor("/tor/hs/3/publish",published_desc_str);
+    tt_int_op(retval, ==, 400);
+  }
+
+  /* Fetch the published descriptor and validate the revision counter. */
+  {
+    const ed25519_public_key_t *blinded_key;
+
+    blinded_key = &published_desc->plaintext_data.blinded_kp.pubkey;
+    received_desc_str = helper_fetch_desc_from_hsdir(blinded_key);
+
+    retval = hs_desc_decode_descriptor(received_desc_str,NULL, &received_desc);
+    tt_int_op(retval, ==, 0);
+    tt_assert(received_desc);
+
+    /* Check that the revision counter is correct */
+    tt_int_op(received_desc->plaintext_data.revision_counter, ==, 1312);
+  }
+
+  /* Increment the revision counter and try again. Should work. */
+  {
+    published_desc->plaintext_data.revision_counter = 1313;
+    tor_free(published_desc_str);
+    retval = hs_desc_encode_descriptor(published_desc, &published_desc_str);
+    tt_int_op(retval, OP_EQ, 0);
+
+    retval = handle_post_hs_descriptor("/tor/hs/3/publish",published_desc_str);
+    tt_int_op(retval, ==, 200);
+  }
+
+  /* Again, fetch the published descriptor and perform the revision counter
+     validation. The revision counter must have changed. */
+  {
+    const ed25519_public_key_t *blinded_key;
+
+    blinded_key = &published_desc->plaintext_data.blinded_kp.pubkey;
+    received_desc_str = helper_fetch_desc_from_hsdir(blinded_key);
+
+    retval = hs_desc_decode_descriptor(received_desc_str,NULL, &received_desc);
+    tt_int_op(retval, ==, 0);
+    tt_assert(received_desc);
+
+    /* Check that the revision counter is the latest */
+    tt_int_op(received_desc->plaintext_data.revision_counter, ==, 1313);
+  }
+
+ done:
+  hs_descriptor_free(published_desc);
+  hs_descriptor_free(received_desc);
+  tor_free(received_desc_str);
+  tor_free(published_desc_str);
+}
+
 struct testcase_t hs_cache[] = {
   /* Encoding tests. */
   { "directory", test_directory, TT_FORK,
     NULL, NULL },
   { "clean_as_dir", test_clean_as_dir, TT_FORK,
     NULL, NULL },
+  { "hsdir_revision_counter_check", test_hsdir_revision_counter_check, TT_FORK,
+    NULL, NULL },
+  { "upload_and_download_hs_desc", test_upload_and_download_hs_desc, TT_FORK,
+    NULL, NULL },
 
   END_OF_TESTCASES
 };
+
