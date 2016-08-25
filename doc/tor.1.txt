@@ -2041,6 +2041,12 @@ is non-zero):
     this.  If this option is set to 0, Tor will try to pick a reasonable
     default based on your system's physical memory.  (Default: 0)
 
+[[DisableOOSCheck]] **DisableOOSCheck** **0**|**1**::
+    This option disables the code that closes connections when Tor notices
+    that it is running low on sockets. Right now, it is on by default,
+    since the existing out-of-sockets mechanism tends to kill OR connections
+    more than it should. (Default: 1)
+
 [[SigningKeyLifetime]] **SigningKeyLifetime** __N__ **days**|**weeks**|**months**::
     For how long should each Ed25519 signing key be valid?  Tor uses a
     permanent master identity key that can be kept offline, and periodically
