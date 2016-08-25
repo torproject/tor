@@ -3,6 +3,8 @@
  * Copyright (c) 2007-2016, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+#define DIRECTORY_PRIVATE
+
 #include "or.h"
 #include "backtrace.h"
 #include "buffers.h"
@@ -2770,8 +2772,8 @@ static int handle_get_descriptor(dir_connection_t *conn,
                                 const get_handler_args_t *args);
 static int handle_get_keys(dir_connection_t *conn,
                                 const get_handler_args_t *args);
-static int handle_get_rendezvous2(dir_connection_t *conn,
-                                const get_handler_args_t *args);
+static int handle_get_hs_descriptor_v2(dir_connection_t *conn,
+                                       const get_handler_args_t *args);
 static int handle_get_robots(dir_connection_t *conn,
                                 const get_handler_args_t *args);
 static int handle_get_networkstatus_bridges(dir_connection_t *conn,
@@ -2787,7 +2789,8 @@ static const url_table_ent_t url_table[] = {
   { "/tor/server/", 1, handle_get_descriptor },
   { "/tor/extra/", 1, handle_get_descriptor },
   { "/tor/keys/", 1, handle_get_keys },
-  { "/tor/rendezvous2/", 1, handle_get_rendezvous2 },
+  { "/tor/rendezvous2/", 1, handle_get_hs_descriptor_v2 },
+  { "/tor/hs/3/", 1, handle_get_hs_descriptor_v3 },
   { "/tor/robots.txt", 0, handle_get_robots },
   { "/tor/networkstatus-bridges", 0, handle_get_networkstatus_bridges },
   { NULL, 0, NULL },
@@ -3355,7 +3358,8 @@ handle_get_keys(dir_connection_t *conn, const get_handler_args_t *args)
 /** Helper function for GET /tor/rendezvous2/
  */
 static int
-handle_get_rendezvous2(dir_connection_t *conn, const get_handler_args_t *args)
+handle_get_hs_descriptor_v2(dir_connection_t *conn,
+                            const get_handler_args_t *args)
 {
   const char *url = args->url;
   if (connection_dir_is_encrypted(conn)) {
@@ -3386,6 +3390,45 @@ handle_get_rendezvous2(dir_connection_t *conn, const get_handler_args_t *args)
     write_http_status_line(conn, 404, "Not found");
   }
  done:
+  return 0;
+}
+
+/** Helper function for GET /tor/hs/3/<z>. Only for version 3.
+ */
+STATIC int
+handle_get_hs_descriptor_v3(dir_connection_t *conn,
+                            const get_handler_args_t *args)
+{
+  int retval;
+  char *desc_str = NULL;
+  const char *pubkey_str = NULL;
+  const char *url = args->url;
+
+  /* Reject unencrypted dir connections */
+  if (!connection_dir_is_encrypted(conn)) {
+    write_http_status_line(conn, 404, "Not found");
+    goto done;
+  }
+
+  /* After the path prefix follows the base64 encoded blinded pubkey which we
+   * use to get the descriptor from the cache. Skip the prefix and get the
+   * pubkey. */
+  tor_assert(!strcmpstart(url, "/tor/hs/3/"));
+  pubkey_str = url + strlen("/tor/hs/3/");
+  retval = hs_cache_lookup_as_dir(HS_VERSION_THREE,
+                                  pubkey_str, &desc_str);
+  if (retval < 0) {
+    write_http_status_line(conn, 404, "Not found");
+    goto done;
+  }
+
+  /* Found requested descriptor! Pass it to this nice client. */
+  write_http_response_header(conn, strlen(desc_str), 0, 0);
+  connection_write_to_buf(desc_str, strlen(desc_str), TO_CONN(conn));
+
+ done:
+  tor_free(desc_str);
+
   return 0;
 }
 
