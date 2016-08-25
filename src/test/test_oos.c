@@ -67,7 +67,7 @@ static int pick_oos_mock_last_n = 0;
 static smartlist_t *
 pick_oos_victims_mock(int n)
 {
-  smartlist_t *l;
+  smartlist_t *l = NULL;
   int i;
 
   ++pick_oos_mock_calls;
