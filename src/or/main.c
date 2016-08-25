@@ -381,8 +381,8 @@ connection_in_array(connection_t *conn)
 /** Set <b>*array</b> to an array of all connections. <b>*array</b> must not
  * be modified.
  */
-smartlist_t *
-get_connection_array(void)
+MOCK_IMPL(smartlist_t *,
+get_connection_array, (void))
 {
   if (!connection_array)
     connection_array = smartlist_new();
@@ -649,6 +649,23 @@ close_closeable_connections(void)
         ++i;
     }
   }
+}
+
+/** Count moribund connections for the OOS handler */
+MOCK_IMPL(int,
+connection_count_moribund, (void))
+{
+  int moribund = 0;
+
+  /*
+   * Count things we'll try to kill when close_closeable_connections()
+   * runs next.
+   */
+  SMARTLIST_FOREACH_BEGIN(closeable_connection_lst, connection_t *, conn) {
+    if (SOCKET_OK(conn->s) && connection_is_moribund(conn)) ++moribund;
+  } SMARTLIST_FOREACH_END(conn);
+
+  return moribund;
 }
 
 /** Libevent callback: this gets invoked when (connection_t*)<b>conn</b> has

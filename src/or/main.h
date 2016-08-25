@@ -25,7 +25,7 @@ int connection_in_array(connection_t *conn);
 void add_connection_to_closeable_list(connection_t *conn);
 int connection_is_on_closeable_list(connection_t *conn);
 
-smartlist_t *get_connection_array(void);
+MOCK_DECL(smartlist_t *, get_connection_array, (void));
 MOCK_DECL(uint64_t,get_bytes_read,(void));
 MOCK_DECL(uint64_t,get_bytes_written,(void));
 
@@ -46,6 +46,8 @@ MOCK_DECL(void,connection_stop_writing,(connection_t *conn));
 MOCK_DECL(void,connection_start_writing,(connection_t *conn));
 
 void connection_stop_reading_from_linked_conn(connection_t *conn);
+
+MOCK_DECL(int, connection_count_moribund, (void));
 
 void directory_all_unreachable(time_t now);
 void directory_info_has_arrived(time_t now, int from_cache, int suppress_logs);

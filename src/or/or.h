@@ -3699,6 +3699,10 @@ typedef struct {
 
   int ConnLimit; /**< Demanded minimum number of simultaneous connections. */
   int ConnLimit_; /**< Maximum allowed number of simultaneous connections. */
+  int ConnLimit_high_thresh; /**< start trying to lower socket usage if we
+                              *   have this many. */
+  int ConnLimit_low_thresh; /**< try to get down to here after socket
+                             *   exhaustion. */
   int RunAsDaemon; /**< If true, run in the background. (Unix only) */
   int FascistFirewall; /**< Whether to prefer ORs reachable on open ports. */
   smartlist_t *FirewallPorts; /**< Which ports our firewall allows
@@ -4454,6 +4458,9 @@ typedef struct {
    * participate in the protocol. If on (default), a flag is added to the
    * vote indicating participation. */
   int AuthDirSharedRandomness;
+
+  /** If 1, we skip all OOS checks. */
+  int DisableOOSCheck;
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */

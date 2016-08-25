@@ -34,8 +34,8 @@ void connection_about_to_close_connection(connection_t *conn);
 void connection_close_immediate(connection_t *conn);
 void connection_mark_for_close_(connection_t *conn,
                                 int line, const char *file);
-void connection_mark_for_close_internal_(connection_t *conn,
-                                         int line, const char *file);
+MOCK_DECL(void, connection_mark_for_close_internal_,
+          (connection_t *conn, int line, const char *file));
 
 #define connection_mark_for_close(c) \
   connection_mark_for_close_((c), __LINE__, SHORT_FILE__)
@@ -247,6 +247,22 @@ void clock_skew_warning(const connection_t *conn, long apparent_skew,
                         int trusted, log_domain_mask_t domain,
                         const char *received, const char *source);
 
+/** Check if a connection is on the way out so the OOS handler doesn't try
+ * to kill more than it needs. */
+static inline int
+connection_is_moribund(connection_t *conn)
+{
+  if (conn != NULL &&
+      (conn->conn_array_index < 0 ||
+       conn->marked_for_close)) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+void connection_check_oos(int n_socks, int failed);
+
 #ifdef CONNECTION_PRIVATE
 STATIC void connection_free_(connection_t *conn);
 
@@ -265,6 +281,9 @@ MOCK_DECL(STATIC int,connection_connect_sockaddr,
                                              const struct sockaddr *bindaddr,
                                              socklen_t bindaddr_len,
                                              int *socket_error));
+MOCK_DECL(STATIC void, kill_conn_list_for_oos, (smartlist_t *conns));
+MOCK_DECL(STATIC smartlist_t *, pick_oos_victims, (int n));
+
 #endif
 
 #endif

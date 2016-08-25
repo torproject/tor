@@ -394,8 +394,8 @@ connection_or_change_state(or_connection_t *conn, uint8_t state)
  * be an or_connection_t field, but it got moved to channel_t and we
  * shouldn't maintain two copies. */
 
-int
-connection_or_get_num_circuits(or_connection_t *conn)
+MOCK_IMPL(int,
+connection_or_get_num_circuits, (or_connection_t *conn))
 {
   tor_assert(conn);
 

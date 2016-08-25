@@ -211,6 +211,7 @@ static config_var_t option_vars_[] = {
   V(CountPrivateBandwidth,       BOOL,     "0"),
   V(DataDirectory,               FILENAME, NULL),
   V(DataDirectoryGroupReadable,  BOOL,     "0"),
+  V(DisableOOSCheck,             BOOL,     "1"),
   V(DisableNetwork,              BOOL,     "0"),
   V(DirAllowPrivateAddresses,    BOOL,     "0"),
   V(TestingAuthDirTimeToLearnReachability, INTERVAL, "30 minutes"),
@@ -1374,6 +1375,35 @@ options_act_reversible(const or_options_t *old_options, char **msg)
       connection_mark_for_close(conn);
     }
   });
+
+  if (set_conn_limit) {
+    /*
+     * If we adjusted the conn limit, recompute the OOS threshold too
+     *
+     * How many possible sockets to keep in reserve?  If we have lots of
+     * possible sockets, keep this below a limit and set ConnLimit_high_thresh
+     * very close to ConnLimit_, but if ConnLimit_ is low, shrink it in
+     * proportion.
+     *
+     * Somewhat arbitrarily, set socks_in_reserve to 5% of ConnLimit_, but
+     * cap it at 64.
+     */
+    int socks_in_reserve = options->ConnLimit_ / 20;
+    if (socks_in_reserve > 64) socks_in_reserve = 64;
+
+    options->ConnLimit_high_thresh = options->ConnLimit_ - socks_in_reserve;
+    options->ConnLimit_low_thresh = (options->ConnLimit_ / 4) * 3;
+    log_info(LD_GENERAL,
+             "Recomputed OOS thresholds: ConnLimit %d, ConnLimit_ %d, "
+             "ConnLimit_high_thresh %d, ConnLimit_low_thresh %d",
+             options->ConnLimit, options->ConnLimit_,
+             options->ConnLimit_high_thresh,
+             options->ConnLimit_low_thresh);
+
+    /* Give the OOS handler a chance with the new thresholds */
+    connection_check_oos(get_n_open_sockets(), 0);
+  }
+
   goto done;
 
  rollback:

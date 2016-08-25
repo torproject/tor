@@ -754,9 +754,9 @@ connection_mark_for_close_(connection_t *conn, int line, const char *file)
  * For all other cases, use connection_mark_and_flush() instead, which
  * checks for or_connection_t properly, instead.  See below.
  */
-void
-connection_mark_for_close_internal_(connection_t *conn,
-                                    int line, const char *file)
+MOCK_IMPL(void,
+connection_mark_for_close_internal_, (connection_t *conn,
+                                      int line, const char *file))
 {
   assert_connection_ok(conn,0);
   tor_assert(line);
@@ -1090,6 +1090,7 @@ connection_listener_new(const struct sockaddr *listensockaddr,
   int start_reading = 0;
   static int global_next_session_group = SESSION_GROUP_FIRST_AUTO;
   tor_addr_t addr;
+  int exhaustion = 0;
 
   if (listensockaddr->sa_family == AF_INET ||
       listensockaddr->sa_family == AF_INET6) {
@@ -1108,6 +1109,11 @@ connection_listener_new(const struct sockaddr *listensockaddr,
       int e = tor_socket_errno(s);
       if (ERRNO_IS_RESOURCE_LIMIT(e)) {
         warn_too_many_conns();
+        /*
+         * We'll call the OOS handler at the error exit, so set the
+         * exhaustion flag for it.
+         */
+        exhaustion = 1;
       } else {
         log_warn(LD_NET, "Socket creation failed: %s",
                  tor_socket_strerror(e));
@@ -1226,6 +1232,11 @@ connection_listener_new(const struct sockaddr *listensockaddr,
       int e = tor_socket_errno(s);
       if (ERRNO_IS_RESOURCE_LIMIT(e)) {
         warn_too_many_conns();
+        /*
+         * We'll call the OOS handler at the error exit, so set the
+         * exhaustion flag for it.
+         */
+        exhaustion = 1;
       } else {
         log_warn(LD_NET,"Socket creation failed: %s.", strerror(e));
       }
@@ -1344,6 +1355,12 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     dnsserv_configure_listener(conn);
   }
 
+  /*
+   * Normal exit; call the OOS handler since connection count just changed;
+   * the exhaustion flag will always be zero here though.
+   */
+  connection_check_oos(get_n_open_sockets(), 0);
+
   return conn;
 
  err:
@@ -1351,6 +1368,9 @@ connection_listener_new(const struct sockaddr *listensockaddr,
     tor_close_socket(s);
   if (conn)
     connection_free(conn);
+
+  /* Call the OOS handler, indicate if we saw an exhaustion-related error */
+  connection_check_oos(get_n_open_sockets(), exhaustion);
 
   return NULL;
 }
@@ -1442,20 +1462,33 @@ connection_handle_listener_read(connection_t *conn, int new_type)
   if (!SOCKET_OK(news)) { /* accept() error */
     int e = tor_socket_errno(conn->s);
     if (ERRNO_IS_ACCEPT_EAGAIN(e)) {
-      return 0; /* they hung up before we could accept(). that's fine. */
+      /*
+       * they hung up before we could accept(). that's fine.
+       *
+       * give the OOS handler a chance to run though
+       */
+      connection_check_oos(get_n_open_sockets(), 0);
+      return 0;
     } else if (ERRNO_IS_RESOURCE_LIMIT(e)) {
       warn_too_many_conns();
+      /* Exhaustion; tell the OOS handler */
+      connection_check_oos(get_n_open_sockets(), 1);
       return 0;
     }
     /* else there was a real error. */
     log_warn(LD_NET,"accept() failed: %s. Closing listener.",
              tor_socket_strerror(e));
     connection_mark_for_close(conn);
+    /* Tell the OOS handler about this too */
+    connection_check_oos(get_n_open_sockets(), 0);
     return -1;
   }
   log_debug(LD_NET,
             "Connection accepted on socket %d (child of fd %d).",
             (int)news,(int)conn->s);
+
+  /* We accepted a new conn; run OOS handler */
+  connection_check_oos(get_n_open_sockets(), 0);
 
   if (make_socket_reuseable(news) < 0) {
     if (tor_socket_errno(news) == EINVAL) {
@@ -1661,12 +1694,18 @@ connection_connect_sockaddr,(connection_t *conn,
 
   s = tor_open_socket_nonblocking(protocol_family, SOCK_STREAM, proto);
   if (! SOCKET_OK(s)) {
+    /*
+     * Early OOS handler calls; it matters if it's an exhaustion-related
+     * error or not.
+     */
     *socket_error = tor_socket_errno(s);
     if (ERRNO_IS_RESOURCE_LIMIT(*socket_error)) {
       warn_too_many_conns();
+      connection_check_oos(get_n_open_sockets(), 1);
     } else {
       log_warn(LD_NET,"Error creating network socket: %s",
                tor_socket_strerror(*socket_error));
+      connection_check_oos(get_n_open_sockets(), 0);
     }
     return -1;
   }
@@ -1675,6 +1714,13 @@ connection_connect_sockaddr,(connection_t *conn,
     log_warn(LD_NET, "Error setting SO_REUSEADDR flag on new connection: %s",
              tor_socket_strerror(errno));
   }
+
+  /*
+   * We've got the socket open; give the OOS handler a chance to check
+   * against configuured maximum socket number, but tell it no exhaustion
+   * failure.
+   */
+  connection_check_oos(get_n_open_sockets(), 0);
 
   if (bindaddr && bind(s, bindaddr, bindaddr_len) < 0) {
     *socket_error = tor_socket_errno(s);
@@ -4451,6 +4497,256 @@ connection_reached_eof(connection_t *conn)
       log_err(LD_BUG,"got unexpected conn type %d.", conn->type);
       tor_fragile_assert();
       return -1;
+  }
+}
+
+/** Comparator for the two-orconn case in OOS victim sort */
+static int
+oos_victim_comparator_for_orconns(or_connection_t *a, or_connection_t *b)
+{
+  int a_circs, b_circs;
+  /* Fewer circuits == higher priority for OOS kill, sort earlier */
+
+  a_circs = connection_or_get_num_circuits(a);
+  b_circs = connection_or_get_num_circuits(b);
+
+  if (a_circs < b_circs) return -1;
+  else if (b_circs > a_circs) return 1;
+  else return 0;
+}
+
+/** Sort comparator for OOS victims; better targets sort before worse
+ * ones. */
+static int
+oos_victim_comparator(const void **a_v, const void **b_v)
+{
+  connection_t *a = NULL, *b = NULL;
+
+  /* Get connection pointers out */
+
+  a = (connection_t *)(*a_v);
+  b = (connection_t *)(*b_v);
+
+  tor_assert(a != NULL);
+  tor_assert(b != NULL);
+
+  /*
+   * We always prefer orconns as victims currently; we won't even see
+   * these non-orconn cases, but if we do, sort them after orconns.
+   */
+  if (a->type == CONN_TYPE_OR && b->type == CONN_TYPE_OR) {
+    return oos_victim_comparator_for_orconns(TO_OR_CONN(a), TO_OR_CONN(b));
+  } else {
+    /*
+     * One isn't an orconn; if one is, it goes first.  We currently have no
+     * opinions about cases where neither is an orconn.
+     */
+    if (a->type == CONN_TYPE_OR) return -1;
+    else if (b->type == CONN_TYPE_OR) return 1;
+    else return 0;
+  }
+}
+
+/** Pick n victim connections for the OOS handler and return them in a
+ * smartlist.
+ */
+MOCK_IMPL(STATIC smartlist_t *,
+pick_oos_victims, (int n))
+{
+  smartlist_t *eligible = NULL, *victims = NULL;
+  smartlist_t *conns;
+  int conn_counts_by_type[CONN_TYPE_MAX_ + 1], i;
+
+  /*
+   * Big damn assumption (someone improve this someday!):
+   *
+   * Socket exhaustion normally happens on high-volume relays, and so
+   * most of the connections involved are orconns.  We should pick victims
+   * by assembling a list of all orconns, and sorting them in order of
+   * how much 'damage' by some metric we'd be doing by dropping them.
+   *
+   * If we move on from orconns, we should probably think about incoming
+   * directory connections next, or exit connections.  Things we should
+   * probably never kill are controller connections and listeners.
+   *
+   * This function will count how many connections of different types
+   * exist and log it for purposes of gathering data on typical OOS
+   * situations to guide future improvements.
+   */
+
+  /* First, get the connection array */
+  conns = get_connection_array();
+  /*
+   * Iterate it and pick out eligible connection types, and log some stats
+   * along the way.
+   */
+  eligible = smartlist_new();
+  memset(conn_counts_by_type, 0, sizeof(conn_counts_by_type));
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, c) {
+    /* Bump the counter */
+    tor_assert(c->type <= CONN_TYPE_MAX_);
+    ++(conn_counts_by_type[c->type]);
+
+    /* Skip anything without a socket we can free */
+    if (!(SOCKET_OK(c->s))) {
+      continue;
+    }
+
+    /* Skip anything we would count as moribund */
+    if (connection_is_moribund(c)) {
+      continue;
+    }
+
+    switch (c->type) {
+      case CONN_TYPE_OR:
+        /* We've got an orconn, it's eligible to be OOSed */
+        smartlist_add(eligible, c);
+        break;
+      default:
+        /* We don't know what to do with it, ignore it */
+        break;
+    }
+  } SMARTLIST_FOREACH_END(c);
+
+  /* Log some stats */
+  if (smartlist_len(conns) > 0) {
+    /* At least one counter must be non-zero */
+    log_info(LD_NET, "Some stats on conn types seen during OOS follow");
+    for (i = CONN_TYPE_MIN_; i <= CONN_TYPE_MAX_; ++i) {
+      /* Did we see any? */
+      if (conn_counts_by_type[i] > 0) {
+        log_info(LD_NET, "%s: %d conns",
+                 conn_type_to_string(i),
+                 conn_counts_by_type[i]);
+      }
+    }
+    log_info(LD_NET, "Done with OOS conn type stats");
+  }
+
+  /* Did we find more eligible targets than we want to kill? */
+  if (smartlist_len(eligible) > n) {
+    /* Sort the list in order of target preference */
+    smartlist_sort(eligible, oos_victim_comparator);
+    /* Pick first n as victims */
+    victims = smartlist_new();
+    for (i = 0; i < n; ++i) {
+      smartlist_add(victims, smartlist_get(eligible, i));
+    }
+    /* Free the original list */
+    smartlist_free(eligible);
+  } else {
+    /* No, we can just call them all victims */
+    victims = eligible;
+  }
+
+  return victims;
+}
+
+/** Kill a list of connections for the OOS handler. */
+MOCK_IMPL(STATIC void,
+kill_conn_list_for_oos, (smartlist_t *conns))
+{
+  if (!conns) return;
+
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, c) {
+    /* Make sure the channel layer gets told about orconns */
+    if (c->type == CONN_TYPE_OR) {
+      connection_or_close_for_error(TO_OR_CONN(c), 1);
+    } else {
+      connection_mark_for_close(c);
+    }
+  } SMARTLIST_FOREACH_END(c);
+
+  log_notice(LD_NET,
+             "OOS handler marked %d connections",
+             smartlist_len(conns));
+}
+
+/** Out-of-Sockets handler; n_socks is the current number of open
+ * sockets, and failed is non-zero if a socket exhaustion related
+ * error immediately preceded this call.  This is where to do
+ * circuit-killing heuristics as needed.
+ */
+void
+connection_check_oos(int n_socks, int failed)
+{
+  int target_n_socks = 0, moribund_socks, socks_to_kill;
+  smartlist_t *conns;
+
+  /* Early exit: is OOS checking disabled? */
+  if (get_options()->DisableOOSCheck) {
+    return;
+  }
+
+  /* Sanity-check args */
+  tor_assert(n_socks >= 0);
+
+  /*
+   * Make some log noise; keep it at debug level since this gets a chance
+   * to run on every connection attempt.
+   */
+  log_debug(LD_NET,
+            "Running the OOS handler (%d open sockets, %s)",
+            n_socks, (failed != 0) ? "exhaustion seen" : "no exhaustion");
+
+  /*
+   * Check if we're really handling an OOS condition, and if so decide how
+   * many sockets we want to get down to.  Be sure we check if the threshold
+   * is distinct from zero first; it's possible for this to be called a few
+   * times before we've finished reading the config.
+   */
+  if (n_socks >= get_options()->ConnLimit_high_thresh &&
+      get_options()->ConnLimit_high_thresh != 0 &&
+      get_options()->ConnLimit_ != 0) {
+    /* Try to get down to the low threshold */
+    target_n_socks = get_options()->ConnLimit_low_thresh;
+    log_notice(LD_NET,
+               "Current number of sockets %d is greater than configured "
+               "limit %d; OOS handler trying to get down to %d",
+               n_socks, get_options()->ConnLimit_high_thresh,
+               target_n_socks);
+  } else if (failed) {
+    /*
+     * If we're not at the limit but we hit a socket exhaustion error, try to
+     * drop some (but not as aggressively as ConnLimit_low_threshold, which is
+     * 3/4 of ConnLimit_)
+     */
+    target_n_socks = (n_socks * 9) / 10;
+    log_notice(LD_NET,
+               "We saw socket exhaustion at %d open sockets; OOS handler "
+               "trying to get down to %d",
+               n_socks, target_n_socks);
+  }
+
+  if (target_n_socks > 0) {
+    /*
+     * It's an OOS!
+     *
+     * Count moribund sockets; it's be important that anything we decide
+     * to get rid of here but don't immediately close get counted as moribund
+     * on subsequent invocations so we don't try to kill too many things if
+     * connection_check_oos() gets called multiple times.
+     */
+    moribund_socks = connection_count_moribund();
+
+    if (moribund_socks < n_socks - target_n_socks) {
+      socks_to_kill = n_socks - target_n_socks - moribund_socks;
+
+      conns = pick_oos_victims(socks_to_kill);
+      if (conns) {
+        kill_conn_list_for_oos(conns);
+        log_notice(LD_NET,
+                   "OOS handler killed %d conns", smartlist_len(conns));
+        smartlist_free(conns);
+      } else {
+        log_notice(LD_NET, "OOS handler failed to pick any victim conns");
+      }
+    } else {
+      log_notice(LD_NET,
+                 "Not killing any sockets for OOS because there are %d "
+                 "already moribund, and we only want to eliminate %d",
+                 moribund_socks, n_socks - target_n_socks);
+    }
   }
 }
 
