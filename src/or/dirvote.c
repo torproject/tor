@@ -75,6 +75,44 @@ format_line_if_present(const char *keyword, const char *opt_value)
   }
 }
 
+/** Format the recommended/required-relay-client protocols lines for a vote in
+ * a newly allocated string, and return that string. */
+static char *
+format_protocols_lines_for_vote(const networkstatus_t *v3_ns)
+{
+  char *recommended_relay_protocols_line = NULL;
+  char *recommended_client_protocols_line = NULL;
+  char *required_relay_protocols_line = NULL;
+  char *required_client_protocols_line = NULL;
+
+  recommended_relay_protocols_line =
+    format_line_if_present("recommended-relay-protocols",
+                           v3_ns->recommended_relay_protocols);
+  recommended_client_protocols_line =
+    format_line_if_present("recommended-client-protocols",
+                           v3_ns->recommended_client_protocols);
+  required_relay_protocols_line =
+    format_line_if_present("required-relay-protocols",
+                           v3_ns->required_relay_protocols);
+  required_client_protocols_line =
+    format_line_if_present("required-client-protocols",
+                           v3_ns->required_client_protocols);
+
+  char *result = NULL;
+  tor_asprintf(&result, "%s%s%s%s",
+               recommended_relay_protocols_line,
+               recommended_client_protocols_line,
+               required_relay_protocols_line,
+               required_client_protocols_line);
+
+  tor_free(recommended_relay_protocols_line);
+  tor_free(recommended_client_protocols_line);
+  tor_free(required_relay_protocols_line);
+  tor_free(required_client_protocols_line);
+
+  return result;
+}
+
 /** Return a new string containing the string representation of the vote in
  * <b>v3_ns</b>, signed with our v3 signing key <b>private_signing_key</b>.
  * For v3 authorities. */
@@ -87,6 +125,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
   char fingerprint[FINGERPRINT_LEN+1];
   char digest[DIGEST_LEN];
   uint32_t addr;
+  char *protocols_lines = NULL;
   char *client_versions_line = NULL, *server_versions_line = NULL;
   char *shared_random_vote_str = NULL;
   networkstatus_voter_info_t *voter;
@@ -106,6 +145,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                                                 v3_ns->client_versions);
   server_versions_line = format_line_if_present("server-versions",
                                                 v3_ns->server_versions);
+  protocols_lines = format_protocols_lines_for_vote(v3_ns);
 
   if (v3_ns->package_lines) {
     smartlist_t *tmp = smartlist_new();
@@ -157,6 +197,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  "valid-until %s\n"
                  "voting-delay %d %d\n"
                  "%s%s" /* versions */
+                 "%s" /* protocols */
                  "%s" /* packages */
                  "known-flags %s\n"
                  "flag-thresholds %s\n"
@@ -170,6 +211,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  v3_ns->vote_seconds, v3_ns->dist_seconds,
                  client_versions_line,
                  server_versions_line,
+                 protocols_lines,
                  packages,
                  flags,
                  flag_thresholds,
@@ -261,6 +303,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
  done:
   tor_free(client_versions_line);
   tor_free(server_versions_line);
+  tor_free(protocols_lines);
   tor_free(packages);
 
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
