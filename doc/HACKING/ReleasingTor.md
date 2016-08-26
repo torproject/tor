@@ -149,9 +149,13 @@ new Tor release:
        - {blueness} at gentoo dot org
        - {paul} at invizbox dot io
        - {lfleischer} at archlinux dot org
-       - {tails-dev} at boum dot org
        - {Nathan} at freitas dot net
        - {mike} at tig dot as
+       - {tails-rm} at boum dot org (for pre-release announcments)
+
+
+       - {tails-dev} at boum dot org (for at-release announcements)
+
 
 4. Add the version number to Trac.  To do this, go to Trac, log in,
     select "Admin" near the top of the screen, then select "Versions" from
