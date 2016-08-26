@@ -1,0 +1,6 @@
+  o Minor features (client, directory):
+    - Since authorities now omit all routers that lack the Running and Valid
+      flags, we assume that any authority present in the consensus must
+      have those flags. Closes ticket 20001; implements part of proposal
+      272.
+

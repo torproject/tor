@@ -2845,6 +2845,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
       }
     }
   } else if (tok) {
+    /* This is a consensus, not a vote. */
     int i;
     for (i=0; i < tok->n_args; ++i) {
       if (!strcmp(tok->args[i], "Exit"))
@@ -2875,6 +2876,12 @@ routerstatus_parse_entry_from_string(memarea_t *area,
         rs->is_v2_dir = 1;
       }
     }
+    /* These are implied true by having been included in a consensus made
+     * with a given method */
+    rs->is_flagged_running = 1; /* Starting with consensus method 4. */
+    if (consensus_method >= MIN_METHOD_FOR_EXCLUDING_INVALID_NODES)
+      rs->is_valid = 1;
+
   }
   if ((tok = find_opt_by_keyword(tokens, K_V))) {
     tor_assert(tok->n_args == 1);
