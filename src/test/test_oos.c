@@ -294,6 +294,8 @@ test_oos_kill_conn_list(void *arg)
   dir_c2 = tor_malloc_zero(sizeof(*dir_c2));
   dir_c2->base_.magic = DIR_CONNECTION_MAGIC;
   dir_c2->base_.type = CONN_TYPE_DIR;
+  dir_c2->base_.state = DIR_CONN_STATE_MIN_;
+  dir_c2->base_.purpose = DIR_PURPOSE_MIN_;
   c2 = TO_CONN(dir_c2);
 
   tt_assert(c1 != NULL);
