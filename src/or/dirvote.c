@@ -1582,7 +1582,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       const char *chosen_version;
       const char *chosen_name = NULL;
       int exitsummary_disagreement = 0;
-      int is_named = 0, is_unnamed = 0, is_running = 0;
+      int is_named = 0, is_unnamed = 0, is_running = 0, is_valid = 0;
       int is_guard = 0, is_exit = 0, is_bad_exit = 0;
       int naming_conflict = 0;
       int n_listing = 0;
@@ -1733,6 +1733,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
               is_running = 1;
             else if (!strcmp(fl, "BadExit"))
               is_bad_exit = 1;
+            else if (!strcmp(fl, "Valid"))
+              is_valid = 1;
           }
         }
       } SMARTLIST_FOREACH_END(fl);
@@ -1740,6 +1742,12 @@ networkstatus_compute_consensus(smartlist_t *votes,
       /* Starting with consensus method 4 we do not list servers
        * that are not running in a consensus.  See Proposal 138 */
       if (!is_running)
+        continue;
+
+      /* Starting with consensus method 24, we don't list servers
+       * that are not valid in a consensus.  See Proposal 272 */
+      if (!is_valid &&
+          consensus_method >= MIN_METHOD_FOR_EXCLUDING_INVALID_NODES)
         continue;
 
       /* Pick the version. */
