@@ -4510,8 +4510,8 @@ oos_victim_comparator_for_orconns(or_connection_t *a, or_connection_t *b)
   a_circs = connection_or_get_num_circuits(a);
   b_circs = connection_or_get_num_circuits(b);
 
-  if (a_circs < b_circs) return -1;
-  else if (a_circs > b_circs) return 1;
+  if (a_circs < b_circs) return 1;
+  else if (a_circs > b_circs) return -1;
   else return 0;
 }
 
