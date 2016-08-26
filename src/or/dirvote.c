@@ -1563,6 +1563,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_t *matching_descs = smartlist_new();
     smartlist_t *chosen_flags = smartlist_new();
     smartlist_t *versions = smartlist_new();
+    smartlist_t *protocols = smartlist_new();
     smartlist_t *exitsummaries = smartlist_new();
     uint32_t *bandwidths_kb = tor_calloc(smartlist_len(votes),
                                          sizeof(uint32_t));
@@ -1705,6 +1706,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       routerstatus_t rs_out;
       const char *current_rsa_id = NULL;
       const char *chosen_version;
+      const char *chosen_protocol_list;
       const char *chosen_name = NULL;
       int exitsummary_disagreement = 0;
       int is_named = 0, is_unnamed = 0, is_running = 0;
@@ -1718,6 +1720,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       smartlist_clear(matching_descs);
       smartlist_clear(chosen_flags);
       smartlist_clear(versions);
+      smartlist_clear(protocols);
       num_bandwidths = 0;
       num_mbws = 0;
       num_guardfraction_inputs = 0;
@@ -1736,6 +1739,12 @@ networkstatus_compute_consensus(smartlist_t *votes,
         smartlist_add(matching_descs, rs);
         if (rs->version && rs->version[0])
           smartlist_add(versions, rs->version);
+
+        if (rs->protocols) {
+          /* We include this one even if it's empty: voting for an
+           * empty protocol list actually is meaningful. */
+          smartlist_add(protocols, rs->protocols);
+        }
 
         /* Tally up all the flags. */
         for (int flag = 0; flag < n_voter_flags[voter_idx]; ++flag) {
@@ -1873,6 +1882,14 @@ networkstatus_compute_consensus(smartlist_t *votes,
         chosen_version = get_most_frequent_member(versions);
       } else {
         chosen_version = NULL;
+      }
+
+      /* Pick the protocol list */
+      if (smartlist_len(protocols)) {
+        smartlist_sort_strings(protocols);
+        chosen_protocol_list = get_most_frequent_member(protocols);
+      } else {
+        chosen_protocol_list = NULL;
       }
 
       /* If it's a guard and we have enough guardfraction votes,
@@ -2028,6 +2045,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
         smartlist_add(chunks, tor_strdup(chosen_version));
       }
       smartlist_add(chunks, tor_strdup("\n"));
+      if (chosen_protocol_list &&
+          consensus_method >= MIN_METHOD_FOR_RS_PROTOCOLS) {
+        smartlist_add_asprintf(chunks, "proto %s\n", chosen_protocol_list);
+      }
       /*     Now the weight line. */
       if (rs_out.has_bandwidth) {
         char *guardfraction_str = NULL;
@@ -2068,6 +2089,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_free(matching_descs);
     smartlist_free(chosen_flags);
     smartlist_free(versions);
+    smartlist_free(protocols);
     smartlist_free(exitsummaries);
     tor_free(bandwidths_kb);
     tor_free(measured_bws_kb);

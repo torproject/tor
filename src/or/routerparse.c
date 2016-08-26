@@ -388,6 +388,7 @@ static token_rule_t rtrstatus_token_table[] = {
   T01("w",                   K_W,                   ARGS,    NO_OBJ ),
   T0N("m",                   K_M,               CONCAT_ARGS, NO_OBJ ),
   T0N("id",                  K_ID,                  GE(2),   NO_OBJ ),
+  T01("proto",               K_PROTO,           CONCAT_ARGS, NO_OBJ ),
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   END_OF_TABLE
 };
@@ -2991,6 +2992,10 @@ routerstatus_parse_entry_from_string(memarea_t *area,
             goto err;
           }
         }
+      }
+      if (t->tp == K_PROTO) {
+        tor_assert(t->n_args == 1);
+        vote_rs->protocols = tor_strdup(t->args[0]);
       }
     } SMARTLIST_FOREACH_END(t);
   } else if (flav == FLAV_MICRODESC) {

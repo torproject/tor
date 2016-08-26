@@ -103,11 +103,9 @@
  * protocols. */
 #define MIN_METHOD_FOR_RECOMMENDED_PROTOCOLS 24
 
-#if 0
 /** Lowest consensus method where authorities add protocols to routerstatus
  * entries. */
 #define MIN_METHOD_FOR_RS_PROTOCOLS 24
-#endif
 
 /** Default bandwidth to clip unmeasured bandwidths to using method >=
  * MIN_METHOD_TO_CLIP_UNMEASURED_BW.  (This is not a consensus method; do not
