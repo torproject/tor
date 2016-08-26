@@ -1,0 +1,6 @@
+  o Minor bugfixes (unit test)
+    - Fix shared random unit test that was failing on big endian architecture
+      due to internal representation of a integer copied to a buffer. The test
+      is changed to take a full 32 bytes of data and use the output of a
+      python script that make the COMMIT and REVEAL calculation according to
+      the spec.  Fixes #19977; bugfix on tor-0.2.9.1-alpha.
