@@ -337,18 +337,22 @@ encode_protocol_list(const smartlist_t *sl)
   return result;
 }
 
+/* We treat any protocol list with more than this many subprotocols in it
+ * as a DoS attempt. */
+const int MAX_PROTOCOLS_TO_EXPAND = (1<<16);
+
 /** Voting helper: Given a list of proto_entry_t, return a newly allocated
  * smartlist of newly allocated strings, one for each included protocol
  * version. (So 'Foo=3,5-7' expands to a list of 'Foo=3', 'Foo=5', 'Foo=6',
  * 'Foo=7'.)
  *
- * Do not list any protocol version more than once. */
+ * Do not list any protocol version more than once.
+ *
+ * Return NULL if the list would be too big.
+ */
 static smartlist_t *
 expand_protocol_list(const smartlist_t *protos)
 {
-  // XXXX This can make really huge lists from small inputs; that's a DoS
-  // problem.
-
   smartlist_t *expanded = smartlist_new();
   if (!protos)
     return expanded;
@@ -359,6 +363,8 @@ expand_protocol_list(const smartlist_t *protos)
       uint32_t u;
       for (u = range->low; u <= range->high; ++u) {
         smartlist_add_asprintf(expanded, "%s=%lu", name, (unsigned long)u);
+        if (smartlist_len(expanded) > MAX_PROTOCOLS_TO_EXPAND)
+          goto too_many;
       }
     } SMARTLIST_FOREACH_END(range);
   } SMARTLIST_FOREACH_END(ent);
@@ -366,6 +372,11 @@ expand_protocol_list(const smartlist_t *protos)
   smartlist_sort_strings(expanded);
   smartlist_uniq_strings(expanded); // This makes voting work. do not remove
   return expanded;
+
+ too_many:
+  SMARTLIST_FOREACH(expanded, char *, cp, tor_free(cp));
+  smartlist_free(expanded);
+  return NULL;
 }
 
 /** Voting helper: compare two singleton proto_entry_t items by version
@@ -512,16 +523,22 @@ char *
 compute_protover_vote(const smartlist_t *list_of_proto_strings,
                       int threshold)
 {
-  // XXXX This algorithm can be made to use too much RAM.  Fix that.
-
   smartlist_t *all_entries = smartlist_new();
 
   // First, parse the inputs and break them into singleton entries.
   SMARTLIST_FOREACH_BEGIN(list_of_proto_strings, const char *, vote) {
     smartlist_t *unexpanded = parse_protocol_list(vote);
     smartlist_t *this_vote = expand_protocol_list(unexpanded);
-    smartlist_add_all(all_entries, this_vote);
-    smartlist_free(this_vote);
+    if (this_vote == NULL) {
+      log_warn(LD_NET, "When expanding a protocol list from an authority, I "
+               "got too many protocols. This is possibly an attack or a bug, "
+               "unless the Tor network truly has expanded to support over %d "
+               "different subprotocol versions. The offending string was: %s",
+               MAX_PROTOCOLS_TO_EXPAND, escaped(vote));
+    } else {
+      smartlist_add_all(all_entries, this_vote);
+      smartlist_free(this_vote);
+    }
     SMARTLIST_FOREACH(unexpanded, proto_entry_t *, e, proto_entry_free(e));
     smartlist_free(unexpanded);
   } SMARTLIST_FOREACH_END(vote);
