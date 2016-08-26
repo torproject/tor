@@ -620,7 +620,6 @@ protover_all_supported(const char *s, char **missing_out)
     smartlist_add(missing, (void*) ent);
   } SMARTLIST_FOREACH_END(ent);
 
-
   if (missing_out && !all_supported) {
     tor_assert(0 != smartlist_len(missing));
     *missing_out = encode_protocol_list(missing);
@@ -633,6 +632,8 @@ protover_all_supported(const char *s, char **missing_out)
   return all_supported;
 }
 
+/** Helper: Given a list of proto_entry_t, return true iff
+ * <b>pr</b>=<b>ver</b> is included in that list. */
 static int
 protocol_list_contains(const smartlist_t *protos,
                        protocol_type_t pr, uint32_t ver)
@@ -697,3 +698,4 @@ protover_free_all(void)
     supported_protocol_list = NULL;
   }
 }
+

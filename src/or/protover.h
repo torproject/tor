@@ -4,9 +4,13 @@
 
 #include "container.h"
 
+/** The first version of Tor that included "proto" entries in its
+ * descriptors.  Authorities should use this to decide whether to
+ * guess proto lines. */
 /* This is a guess. */
 #define FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS "0.2.9.3-alpha"
 
+/** List of recognized subprotocols. */
 typedef enum protocol_type_t {
   PRT_LINK,
   PRT_LINKAUTH,
@@ -19,19 +23,12 @@ typedef enum protocol_type_t {
   PRT_CONS,
 } protocol_type_t;
 
-/*
-const protover_set_t *protover_get_supported(void);
-protover_set_t *protover_set_parse(const char *s);
-int protover_is_supported_here_str(const char *name, uint32_t ver);
-int protover_is_supported_by(protocol_type_t pr, uint32_t ver);
-*/
-
 int protover_all_supported(const char *s, char **missing);
 int protover_is_supported_here(protocol_type_t pr, uint32_t ver);
 const char *get_supported_protocols(void);
 
-char * compute_protover_vote(const smartlist_t *list_of_proto_strings,
-                             int threshold);
+char *compute_protover_vote(const smartlist_t *list_of_proto_strings,
+                            int threshold);
 const char *protover_compute_for_old_tor(const char *version);
 int protocol_list_supports_protocol(const char *list, protocol_type_t tp,
                                     uint32_t version);
@@ -39,13 +36,22 @@ int protocol_list_supports_protocol(const char *list, protocol_type_t tp,
 void protover_free_all(void);
 
 #ifdef PROTOVER_PRIVATE
+/** Represents a range of subprotocols of a given type. All subprotocols
+ * between <b>low</b> and <b>high</b> inclusive are included. */
 typedef struct proto_range_t {
   uint32_t low;
   uint32_t high;
 } proto_range_t;
 
+/** Represents a set of ranges of subprotocols of a given type. */
 typedef struct proto_entry_t {
+  /** The name of the protocol.
+   *
+   * (This needs to handle voting on protocols which
+   * we don't recognize yet, so it's a char* rather than a protocol_type_t.)
+   */
   char *name;
+  /** Smartlist of proto_range_t */
   smartlist_t *ranges;
 } proto_entry_t;
 
@@ -57,3 +63,4 @@ STATIC int str_to_protocol_type(const char *s, protocol_type_t *pr_out);
 #endif
 
 #endif
+

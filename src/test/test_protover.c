@@ -114,7 +114,6 @@ test_protover_parse_fail(void *arg)
   ;
 }
 
-
 static void
 test_protover_vote(void *arg)
 {
@@ -182,7 +181,6 @@ test_protover_all_supported(void *arg)
  done:
   tor_free(msg);
 }
-
 
 #define PV_TEST(name, flags)                       \
   { #name, test_protover_ ##name, (flags), NULL, NULL }
