@@ -2198,9 +2198,12 @@ typedef struct routerstatus_t {
    * if the number of traits we care about ever becomes incredibly big. */
   unsigned int version_known:1;
 
-  /** True iff this router has a version that allows it to accept EXTEND2
-   * cells */
-  unsigned int version_supports_extend2_cells:1;
+  /** True iff we have a proto line for this router.*/
+  unsigned int protocols_known:1;
+
+  /** True iff this router has a version or protocol list that allows it to
+   * accept EXTEND2 cells */
+  unsigned int supports_extend2_cells:1;
 
   unsigned int has_bandwidth:1; /**< The vote/consensus had bw info */
   unsigned int has_exitsummary:1; /**< The vote/consensus had exit summaries */

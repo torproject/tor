@@ -235,6 +235,28 @@ protover_is_supported_here(protocol_type_t pr, uint32_t ver)
   return protocol_list_contains(ours, pr, ver);
 }
 
+/**
+ * Return true iff "list" encodes a protocol list that includes support for
+ * the indicated protocol and version.
+ */
+int
+protocol_list_supports_protocol(const char *list, protocol_type_t tp,
+                                uint32_t version)
+{
+  /* NOTE: This is a pretty inefficient implementation. If it ever shows
+   * up in profiles, we should memoize it.
+   */
+  smartlist_t *protocols = parse_protocol_list(list);
+  if (!protocols) {
+    return 0;
+  }
+  int contains = protocol_list_contains(protocols, tp, version);
+
+  SMARTLIST_FOREACH(protocols, proto_entry_t *, ent, proto_entry_free(ent));
+  smartlist_free(protocols);
+  return contains;
+}
+
 /** Return the canonical string containing the list of protocols
  * that we support. */
 const char *

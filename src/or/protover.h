@@ -33,7 +33,8 @@ const char *get_supported_protocols(void);
 char * compute_protover_vote(const smartlist_t *list_of_proto_strings,
                              int threshold);
 const char *protover_compute_for_old_tor(const char *version);
-
+int protocol_list_supports_protocol(const char *list, protocol_type_t tp,
+                                    uint32_t version);
 
 void protover_free_all(void);
 
