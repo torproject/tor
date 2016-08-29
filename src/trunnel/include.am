@@ -1,4 +1,3 @@
-
 noinst_LIBRARIES += \
 	src/trunnel/libor-trunnel.a
 
@@ -18,15 +17,19 @@ TRUNNELSOURCES = \
 	src/ext/trunnel/trunnel.c \
 	src/trunnel/ed25519_cert.c \
 	src/trunnel/link_handshake.c \
-	src/trunnel/pwbox.c
+	src/trunnel/pwbox.c			\
+	src/trunnel/hs/cell_common.c            \
+	src/trunnel/hs/cell_establish_intro.c
 
 TRUNNELHEADERS = \
 	src/ext/trunnel/trunnel.h		\
 	src/ext/trunnel/trunnel-impl.h		\
-	src/trunnel/trunnel-local.h 		\
+	src/trunnel/trunnel-local.h		\
 	src/trunnel/ed25519_cert.h		\
-	src/trunnel/link_handshake.h	 	\
-	src/trunnel/pwbox.h
+	src/trunnel/link_handshake.h		\
+	src/trunnel/pwbox.h			\
+	src/trunnel/hs/cell_common.h            \
+	src/trunnel/hs/cell_establish_intro.h
 
 src_trunnel_libor_trunnel_a_SOURCES = $(TRUNNELSOURCES)
 src_trunnel_libor_trunnel_a_CPPFLAGS = -DTRUNNEL_LOCAL_H $(AM_CPPFLAGS)
