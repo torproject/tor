@@ -613,7 +613,6 @@ static const config_deprecation_t option_deprecation_notes_[] = {
     "to accidentally lose your anonymity by leaking DNS information" },
   { "TLSECGroup", "The default is a nice secure choice; the other option "
     "is less secure." },
-  { "UseNTorHandshake", "The ntor handshake should always be used." },
   { "ControlListenAddress", "Use ControlPort instead." },
   { "DirListenAddress", "Use DirPort instead, possibly with the "
     "NoAdvertise sub-option" },
