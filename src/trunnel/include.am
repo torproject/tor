@@ -19,7 +19,8 @@ TRUNNELSOURCES = \
 	src/trunnel/link_handshake.c \
 	src/trunnel/pwbox.c			\
 	src/trunnel/hs/cell_common.c            \
-	src/trunnel/hs/cell_establish_intro.c
+	src/trunnel/hs/cell_establish_intro.c	\
+	src/trunnel/hs/cell_introduce1.c
 
 TRUNNELHEADERS = \
 	src/ext/trunnel/trunnel.h		\
@@ -29,7 +30,8 @@ TRUNNELHEADERS = \
 	src/trunnel/link_handshake.h		\
 	src/trunnel/pwbox.h			\
 	src/trunnel/hs/cell_common.h            \
-	src/trunnel/hs/cell_establish_intro.h
+	src/trunnel/hs/cell_establish_intro.h	\
+	src/trunnel/hs/cell_introduce1.h
 
 src_trunnel_libor_trunnel_a_SOURCES = $(TRUNNELSOURCES)
 src_trunnel_libor_trunnel_a_CPPFLAGS = -DTRUNNEL_LOCAL_H $(AM_CPPFLAGS)
