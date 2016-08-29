@@ -2275,6 +2275,12 @@ client_would_use_router(const routerstatus_t *rs, time_t now,
     /* We'd drop it immediately for being too old. */
     return 0;
   }
+  if (!routerstatus_version_supports_ntor(rs, 1)) {
+    /* We'd ignore it because it doesn't support ntor.
+     * If we don't know the version, download the descriptor so we can
+     * check if it supports ntor. */
+    return 0;
+  }
   return 1;
 }
 

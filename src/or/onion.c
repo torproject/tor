@@ -11,6 +11,7 @@
  **/
 
 #include "or.h"
+#include "circuitbuild.h"
 #include "circuitlist.h"
 #include "config.h"
 #include "cpuworker.h"
@@ -438,8 +439,7 @@ onion_skin_create(int type,
     r = CREATE_FAST_LEN;
     break;
   case ONION_HANDSHAKE_TYPE_NTOR:
-    if (tor_mem_is_zero((const char*)node->curve25519_onion_key.public_key,
-                        CURVE25519_PUBKEY_LEN))
+    if (!extend_info_supports_ntor(node))
       return -1;
     if (onion_skin_ntor_create((const uint8_t*)node->identity_digest,
                                &node->curve25519_onion_key,

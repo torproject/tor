@@ -1368,8 +1368,13 @@ rend_client_get_random_intro_impl(const rend_cache_entry_t *entry,
 
   i = crypto_rand_int(smartlist_len(usable_nodes));
   intro = smartlist_get(usable_nodes, i);
+  if (BUG(!intro->extend_info)) {
+    /* This should never happen, but it isn't fatal, just try another */
+    smartlist_del(usable_nodes, i);
+    goto again;
+  }
   /* Do we need to look up the router or is the extend info complete? */
-  if (!intro->extend_info->onion_key) {
+  if (!extend_info_supports_tap(intro->extend_info)) {
     const node_t *node;
     extend_info_t *new_extend_info;
     if (tor_digest_is_zero(intro->extend_info->identity_digest))

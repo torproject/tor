@@ -131,5 +131,7 @@ void directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
                               const char *service_id, int seconds_valid);
 void rend_service_desc_has_uploaded(const rend_data_t *rend_data);
 
+int rend_service_allow_direct_connection(const or_options_t *options);
+
 #endif
 
