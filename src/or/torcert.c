@@ -139,7 +139,11 @@ tor_cert_parse(const uint8_t *encoded, const size_t len)
   cert->encoded_len = len;
 
   memcpy(cert->signed_key.pubkey, parsed->certified_key, 32);
-  cert->valid_until = parsed->exp_field * 3600;
+  const int64_t valid_until_64 = ((int64_t)parsed->exp_field) * 3600;
+  if (valid_until_64 > TIME_MAX)
+    cert->valid_until = TIME_MAX - 1;
+  else
+    cert->valid_until = (time_t) valid_until_64;
   cert->cert_type = parsed->cert_type;
 
   for (unsigned i = 0; i < ed25519_cert_getlen_ext(parsed); ++i) {
