@@ -484,15 +484,15 @@ test_link_handshake_send_authchallenge(void *arg)
   cell1 = mock_got_var_cell;
   tt_int_op(0, ==, connection_or_send_auth_challenge_cell(c1));
   cell2 = mock_got_var_cell;
-  tt_int_op(36, ==, cell1->payload_len);
-  tt_int_op(36, ==, cell2->payload_len);
+  tt_int_op(40, ==, cell1->payload_len);
+  tt_int_op(40, ==, cell2->payload_len);
   tt_int_op(0, ==, cell1->circ_id);
   tt_int_op(0, ==, cell2->circ_id);
   tt_int_op(CELL_AUTH_CHALLENGE, ==, cell1->command);
   tt_int_op(CELL_AUTH_CHALLENGE, ==, cell2->command);
 
-  tt_mem_op("\x00\x01\x00\x01", ==, cell1->payload + 32, 4);
-  tt_mem_op("\x00\x01\x00\x01", ==, cell2->payload + 32, 4);
+  tt_mem_op("\x00\x03\x00\x01\x00\x02\x00\x03", ==, cell1->payload + 32, 8);
+  tt_mem_op("\x00\x03\x00\x01\x00\x02\x00\x03", ==, cell2->payload + 32, 8);
   tt_mem_op(cell1->payload, !=, cell2->payload, 32);
 
  done:
@@ -909,8 +909,8 @@ AUTHENTICATE_FAIL(noidcert,
                   tor_x509_cert_free(d->c2->handshake_state->certs->id_cert);
                   d->c2->handshake_state->certs->id_cert = NULL)
 AUTHENTICATE_FAIL(noauthcert,
-                  require_failure_message = "We never got an authentication "
-                    "certificate";
+                  require_failure_message = "We never got an RSA "
+                    "authentication certificate";
                   tor_x509_cert_free(d->c2->handshake_state->certs->auth_cert);
                   d->c2->handshake_state->certs->auth_cert = NULL)
 AUTHENTICATE_FAIL(tooshort,
@@ -936,7 +936,7 @@ AUTHENTICATE_FAIL(badcontent,
                     "cell body was not as expected";
                   d->cell->payload[10] ^= 0xff)
 AUTHENTICATE_FAIL(badsig_1,
-                  require_failure_message = "Signature wasn't valid";
+                  require_failure_message = "RSA signature wasn't valid";
                   d->cell->payload[d->cell->payload_len - 5] ^= 0xff)
 
 #define TEST(name, flags)                                       \

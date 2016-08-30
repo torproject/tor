@@ -2271,6 +2271,38 @@ connection_or_send_certs_cell(or_connection_t *conn)
   return 0;
 }
 
+/** Return true iff <b>challenge_type</b> is an AUTHCHALLENGE type that
+ * we can send and receive. */
+int
+authchallenge_type_is_supported(uint16_t challenge_type)
+{
+  switch (challenge_type) {
+     case AUTHTYPE_RSA_SHA256_TLSSECRET:
+     case AUTHTYPE_RSA_SHA256_RFC5705:
+     case AUTHTYPE_ED25519_SHA256_RFC5705:
+       return 1;
+     default:
+       return 0;
+  }
+}
+
+/** Return true iff <b>challenge_type_a</b> is one that we would rather
+ * use than <b>challenge_type_b</b>. */
+int
+authchallenge_type_is_better(uint16_t challenge_type_a,
+                             uint16_t challenge_type_b)
+{
+  /* Any supported type is better than an unsupported one;
+   * all unsupported types are equally bad. */
+  if (!authchallenge_type_is_supported(challenge_type_a))
+    return 0;
+  if (!authchallenge_type_is_supported(challenge_type_b))
+    return 1;
+  /* It happens that types are superior in numerically ascending order.
+   * If that ever changes, this must change too. */
+  return (challenge_type_a > challenge_type_b);
+}
+
 /** Send an AUTH_CHALLENGE cell on the connection <b>conn</b>. Return 0
  * on success, -1 on failure. */
 int
@@ -2285,9 +2317,12 @@ connection_or_send_auth_challenge_cell(or_connection_t *conn)
 
   auth_challenge_cell_t *ac = auth_challenge_cell_new();
 
+  tor_assert(sizeof(ac->challenge) == 32);
   crypto_rand((char*)ac->challenge, sizeof(ac->challenge));
 
   auth_challenge_cell_add_methods(ac, AUTHTYPE_RSA_SHA256_TLSSECRET);
+  auth_challenge_cell_add_methods(ac, AUTHTYPE_RSA_SHA256_RFC5705);
+  auth_challenge_cell_add_methods(ac, AUTHTYPE_ED25519_SHA256_RFC5705);
   auth_challenge_cell_set_n_methods(ac,
                                     auth_challenge_cell_getlen_methods(ac));
 
@@ -2330,8 +2365,8 @@ var_cell_t *
 connection_or_compute_authenticate_cell_body(or_connection_t *conn,
                                              const int authtype,
                                              crypto_pk_t *signing_key,
-                                             ed25519_keypair_t *ed_signing_key,
-                                             int server)
+                                      const ed25519_keypair_t *ed_signing_key,
+                                      int server)
 {
   auth1_t *auth = NULL;
   auth_ctx_t *ctx = auth_ctx_new();
@@ -2559,17 +2594,17 @@ connection_or_send_authenticate_cell,(or_connection_t *conn, int authtype))
     log_warn(LD_BUG, "Can't compute authenticate cell: no client auth key");
     return -1;
   }
-  if (authtype != AUTHTYPE_RSA_SHA256_TLSSECRET) {
+  if (! authchallenge_type_is_supported(authtype)) {
     log_warn(LD_BUG, "Tried to send authenticate cell with unknown "
              "authentication type %d", authtype);
     return -1;
   }
 
   cell = connection_or_compute_authenticate_cell_body(conn,
-                                             AUTHTYPE_RSA_SHA256_TLSSECRET,
-                                                         pk,
-                                                         NULL,
-                                                         0 /* not server */);
+                                                 authtype,
+                                                 pk,
+                                                 get_current_auth_keypair(),
+                                                 0 /* not server */);
   if (! cell) {
     log_warn(LD_BUG, "Unable to compute authenticate cell!");
     return -1;
