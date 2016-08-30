@@ -1139,9 +1139,12 @@ routerkeys_free_all(void)
   tor_cert_free(signing_key_cert);
   tor_cert_free(link_cert_cert);
   tor_cert_free(auth_key_cert);
+  tor_free(rsa_ed_crosscert);
 
   master_identity_key = master_signing_key = NULL;
   current_auth_key = NULL;
   signing_key_cert = link_cert_cert = auth_key_cert = NULL;
+  rsa_ed_crosscert = NULL; // redundant
+  rsa_ed_crosscert_len = 0;
 }
 
