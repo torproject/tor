@@ -57,8 +57,9 @@ tor_cert_t *tor_cert_parse(const uint8_t *cert, size_t certlen);
 void tor_cert_free(tor_cert_t *cert);
 
 int tor_cert_get_checkable_sig(ed25519_checkable_t *checkable_out,
-                                 const tor_cert_t *out,
-                                 const ed25519_public_key_t *pubkey);
+                               const tor_cert_t *out,
+                               const ed25519_public_key_t *pubkey,
+                               time_t *expiration_out);
 
 int tor_cert_checksig(tor_cert_t *cert,
                       const ed25519_public_key_t *pubkey, time_t now);

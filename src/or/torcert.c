@@ -166,11 +166,17 @@ tor_cert_parse(const uint8_t *encoded, const size_t len)
 }
 
 /** Fill in <b>checkable_out</b> with the information needed to check
- * the signature on <b>cert</b> with <b>pubkey</b>. */
+ * the signature on <b>cert</b> with <b>pubkey</b>.
+ *
+ * On success, if <b>expiration_out</b> is provided, and it is some time
+ * _after_ the expiration time of this certificate, set it to the
+ * expiration time of this certificate.
+ */
 int
 tor_cert_get_checkable_sig(ed25519_checkable_t *checkable_out,
                            const tor_cert_t *cert,
-                           const ed25519_public_key_t *pubkey)
+                           const ed25519_public_key_t *pubkey,
+                           time_t *expiration_out)
 {
   if (! pubkey) {
     if (cert->signing_key_included)
@@ -187,6 +193,10 @@ tor_cert_get_checkable_sig(ed25519_checkable_t *checkable_out,
   memcpy(checkable_out->signature.sig,
          cert->encoded + signed_len, ED25519_SIG_LEN);
 
+  if (expiration_out) {
+    *expiration_out = MIN(*expiration_out, cert->valid_until);
+  }
+
   return 0;
 }
 
@@ -201,14 +211,15 @@ tor_cert_checksig(tor_cert_t *cert,
 {
   ed25519_checkable_t checkable;
   int okay;
+  time_t expires = TIME_MAX;
 
-  if (now && now > cert->valid_until) {
+  if (tor_cert_get_checkable_sig(&checkable, cert, pubkey, &expires) < 0)
+    return -1;
+
+  if (now && now > expires) {
     cert->cert_expired = 1;
     return -1;
   }
-
-  if (tor_cert_get_checkable_sig(&checkable, cert, pubkey) < 0)
-    return -1;
 
   if (ed25519_checksig_batch(&okay, &checkable, 1) < 0) {
     cert->sig_bad = 1;

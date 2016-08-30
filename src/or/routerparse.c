@@ -2028,12 +2028,13 @@ router_parse_entry_from_string(const char *s, const char *end,
 
       ed25519_checkable_t check[3];
       int check_ok[3];
-      if (tor_cert_get_checkable_sig(&check[0], cert, NULL) < 0) {
+      time_t expires = TIME_MAX;
+      if (tor_cert_get_checkable_sig(&check[0], cert, NULL, &expires) < 0) {
         log_err(LD_BUG, "Couldn't create 'checkable' for cert.");
         goto err;
       }
       if (tor_cert_get_checkable_sig(&check[1],
-                                     ntor_cc_cert, &ntor_cc_pk) < 0) {
+                               ntor_cc_cert, &ntor_cc_pk, &expires) < 0) {
         log_err(LD_BUG, "Couldn't create 'checkable' for ntor_cc_cert.");
         goto err;
       }
@@ -2063,10 +2064,7 @@ router_parse_entry_from_string(const char *s, const char *end,
       }
 
       /* We check this before adding it to the routerlist. */
-      if (cert->valid_until < ntor_cc_cert->valid_until)
-        router->cert_expiration_time = cert->valid_until;
-      else
-        router->cert_expiration_time = ntor_cc_cert->valid_until;
+      router->cert_expiration_time = expires;
     }
   }
 
@@ -2376,7 +2374,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
 
       ed25519_checkable_t check[2];
       int check_ok[2];
-      if (tor_cert_get_checkable_sig(&check[0], cert, NULL) < 0) {
+      if (tor_cert_get_checkable_sig(&check[0], cert, NULL, NULL) < 0) {
         log_err(LD_BUG, "Couldn't create 'checkable' for cert.");
         goto err;
       }
