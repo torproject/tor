@@ -134,15 +134,18 @@ connection_or_clear_identity_map(void)
 /** Change conn->identity_digest to digest, and add conn into
  * orconn_digest_map. */
 static void
-connection_or_set_identity_digest(or_connection_t *conn, const char *digest)
+connection_or_set_identity_digest(or_connection_t *conn,
+                                  const char *rsa_digest,
+                                  const ed25519_public_key_t *ed_id)
 {
+  (void) ed_id; // DOCDOC // XXXX not implemented yet.
   or_connection_t *tmp;
   tor_assert(conn);
-  tor_assert(digest);
+  tor_assert(rsa_digest);
 
   if (!orconn_identity_map)
     orconn_identity_map = digestmap_new();
-  if (tor_memeq(conn->identity_digest, digest, DIGEST_LEN))
+  if (tor_memeq(conn->identity_digest, rsa_digest, DIGEST_LEN))
     return;
 
   /* If the identity was set previously, remove the old mapping. */
@@ -152,23 +155,23 @@ connection_or_set_identity_digest(or_connection_t *conn, const char *digest)
       channel_clear_identity_digest(TLS_CHAN_TO_BASE(conn->chan));
   }
 
-  memcpy(conn->identity_digest, digest, DIGEST_LEN);
+  memcpy(conn->identity_digest, rsa_digest, DIGEST_LEN);
 
   /* If we're setting the ID to zero, don't add a mapping. */
-  if (tor_digest_is_zero(digest))
+  if (tor_digest_is_zero(rsa_digest))
     return;
 
-  tmp = digestmap_set(orconn_identity_map, digest, conn);
+  tmp = digestmap_set(orconn_identity_map, rsa_digest, conn);
   conn->next_with_same_id = tmp;
 
   /* Deal with channels */
   if (conn->chan)
-    channel_set_identity_digest(TLS_CHAN_TO_BASE(conn->chan), digest);
+    channel_set_identity_digest(TLS_CHAN_TO_BASE(conn->chan), rsa_digest);
 
 #if 1
   /* Testing code to check for bugs in representation. */
   for (; tmp; tmp = tmp->next_with_same_id) {
-    tor_assert(tor_memeq(tmp->identity_digest, digest, DIGEST_LEN));
+    tor_assert(tor_memeq(tmp->identity_digest, rsa_digest, DIGEST_LEN));
     tor_assert(tmp != conn);
   }
 #endif
@@ -866,10 +869,12 @@ void
 connection_or_init_conn_from_address(or_connection_t *conn,
                                      const tor_addr_t *addr, uint16_t port,
                                      const char *id_digest,
+                                     const ed25519_public_key_t *ed_id,
                                      int started_here)
 {
+  (void) ed_id; // not fully used yet.
   const node_t *r = node_get_by_id(id_digest);
-  connection_or_set_identity_digest(conn, id_digest);
+  connection_or_set_identity_digest(conn, id_digest, ed_id);
   connection_or_update_token_buckets_helper(conn, 1, get_options());
 
   conn->base_.port = port;
@@ -1162,8 +1167,11 @@ connection_or_notify_error(or_connection_t *conn,
 
 MOCK_IMPL(or_connection_t *,
 connection_or_connect, (const tor_addr_t *_addr, uint16_t port,
-                        const char *id_digest, channel_tls_t *chan))
+                        const char *id_digest,
+                        const ed25519_public_key_t *ed_id,
+                        channel_tls_t *chan))
 {
+  (void) ed_id; // XXXX not fully used yet.
   or_connection_t *conn;
   const or_options_t *options = get_options();
   int socket_error = 0;
@@ -1194,7 +1202,7 @@ connection_or_connect, (const tor_addr_t *_addr, uint16_t port,
    */
   conn->chan = chan;
   chan->conn = conn;
-  connection_or_init_conn_from_address(conn, &addr, port, id_digest, 1);
+  connection_or_init_conn_from_address(conn, &addr, port, id_digest, ed_id, 1);
   connection_or_change_state(conn, OR_CONN_STATE_CONNECTING);
   control_event_or_conn_status(conn, OR_CONN_EVENT_LAUNCHED, 0);
 
@@ -1553,7 +1561,9 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
 
   if (started_here)
     return connection_or_client_learned_peer_id(conn,
-                                     (const uint8_t*)digest_rcvd_out);
+                                        (const uint8_t*)digest_rcvd_out,
+                                        NULL // Ed25519 ID
+                                        );
 
   return 0;
 }
@@ -1583,12 +1593,16 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
  */
 int
 connection_or_client_learned_peer_id(or_connection_t *conn,
-                                     const uint8_t *peer_id)
+                                     const uint8_t *rsa_peer_id,
+                                     const ed25519_public_key_t *ed_peer_id)
 {
+  (void) ed_peer_id; // not used yet.
+
   const or_options_t *options = get_options();
 
   if (tor_digest_is_zero(conn->identity_digest)) {
-    connection_or_set_identity_digest(conn, (const char*)peer_id);
+    connection_or_set_identity_digest(conn,
+                                      (const char*)rsa_peer_id, ed_peer_id);
     tor_free(conn->nickname);
     conn->nickname = tor_malloc(HEX_DIGEST_LEN+2);
     conn->nickname[0] = '$';
@@ -1600,14 +1614,14 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
     /* if it's a bridge and we didn't know its identity fingerprint, now
      * we do -- remember it for future attempts. */
     learned_router_identity(&conn->base_.addr, conn->base_.port,
-                            (const char*)peer_id);
+                            (const char*)rsa_peer_id /*, ed_peer_id XXXX */);
   }
 
-  if (tor_memneq(peer_id, conn->identity_digest, DIGEST_LEN)) {
+  if (tor_memneq(rsa_peer_id, conn->identity_digest, DIGEST_LEN)) {
     /* I was aiming for a particular digest. I didn't get it! */
     char seen[HEX_DIGEST_LEN+1];
     char expected[HEX_DIGEST_LEN+1];
-    base16_encode(seen, sizeof(seen), (const char*)peer_id, DIGEST_LEN);
+    base16_encode(seen, sizeof(seen), (const char*)rsa_peer_id, DIGEST_LEN);
     base16_encode(expected, sizeof(expected), conn->identity_digest,
                   DIGEST_LEN);
     const int using_hardcoded_fingerprints =
@@ -1660,7 +1674,7 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
   }
   if (authdir_mode_tests_reachability(options)) {
     dirserv_orconn_tls_done(&conn->base_.addr, conn->base_.port,
-                            (const char*)peer_id);
+                            (const char*)rsa_peer_id /*, ed_id XXXX */);
   }
 
   return 0;
@@ -1716,7 +1730,8 @@ connection_tls_finish_handshake(or_connection_t *conn)
   if (tor_tls_used_v1_handshake(conn->tls)) {
     conn->link_proto = 1;
     connection_or_init_conn_from_address(conn, &conn->base_.addr,
-                                         conn->base_.port, digest_rcvd, 0);
+                                         conn->base_.port, digest_rcvd,
+                                         NULL, 0);
     tor_tls_block_renegotiation(conn->tls);
     rep_hist_note_negotiated_link_proto(1, started_here);
     return connection_or_set_state_open(conn);
@@ -1725,7 +1740,8 @@ connection_tls_finish_handshake(or_connection_t *conn)
     if (connection_init_or_handshake_state(conn, started_here) < 0)
       return -1;
     connection_or_init_conn_from_address(conn, &conn->base_.addr,
-                                         conn->base_.port, digest_rcvd, 0);
+                                         conn->base_.port, digest_rcvd,
+                                         NULL, 0);
     return connection_or_send_versions(conn, 0);
   }
 }

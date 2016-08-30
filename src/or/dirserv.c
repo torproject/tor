@@ -3199,7 +3199,9 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
             router->nickname, fmt_addr32(router->addr), router->or_port);
   tor_addr_from_ipv4h(&router_addr, router->addr);
   chan = channel_tls_connect(&router_addr, router->or_port,
-                             router->cache_info.identity_digest);
+                             router->cache_info.identity_digest,
+                             NULL // XXXX Ed25519 ID.
+                             );
   if (chan) command_setup_channel(chan);
 
   /* Possible IPv6. */
@@ -3211,7 +3213,9 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
               tor_addr_to_str(addrstr, &router->ipv6_addr, sizeof(addrstr), 1),
               router->ipv6_orport);
     chan = channel_tls_connect(&router->ipv6_addr, router->ipv6_orport,
-                               router->cache_info.identity_digest);
+                               router->cache_info.identity_digest,
+                               NULL // XXXX Ed25519 ID.
+                               );
     if (chan) command_setup_channel(chan);
   }
 }

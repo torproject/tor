@@ -1419,6 +1419,8 @@ typedef struct or_handshake_state_t {
 
   /* True iff we've received valid authentication to some identity. */
   unsigned int authenticated : 1;
+  unsigned int authenticated_rsa : 1;
+  unsigned int authenticated_ed25519 : 1;
 
   /* True iff we have sent a netinfo cell */
   unsigned int sent_netinfo : 1;
@@ -1436,9 +1438,12 @@ typedef struct or_handshake_state_t {
   unsigned int digest_received_data : 1;
   /**@}*/
 
-  /** Identity digest that we have received and authenticated for our peer
+  /** Identity RSA digest that we have received and authenticated for our peer
    * on this connection. */
-  uint8_t authenticated_peer_id[DIGEST_LEN];
+  uint8_t authenticated_rsa_peer_id[DIGEST_LEN];
+  /** Identity Ed25519 public key that we have received and authenticated for
+   * our peer on this connection. */
+  ed25519_public_key_t authenticated_ed25519_peer_id;
 
   /** Digests of the cells that we have sent or received as part of a V3
    * handshake.  Used for making and checking AUTHENTICATE cells.

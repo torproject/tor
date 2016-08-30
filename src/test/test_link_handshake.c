@@ -150,7 +150,7 @@ test_link_handshake_certs_ok(void *arg)
   tt_assert(c1->handshake_state->certs->auth_cert == NULL);
   tt_assert(c1->handshake_state->certs->id_cert);
   tt_assert(! tor_mem_is_zero(
-                  (char*)c1->handshake_state->authenticated_peer_id, 20));
+                (char*)c1->handshake_state->authenticated_rsa_peer_id, 20));
 
   chan2 = tor_malloc_zero(sizeof(*chan2));
   channel_tls_common_init(chan2);
@@ -168,7 +168,7 @@ test_link_handshake_certs_ok(void *arg)
   tt_assert(c2->handshake_state->certs->auth_cert);
   tt_assert(c2->handshake_state->certs->id_cert);
   tt_assert(tor_mem_is_zero(
-                (char*)c2->handshake_state->authenticated_peer_id, 20));
+              (char*)c2->handshake_state->authenticated_rsa_peer_id, 20));
 
  done:
   UNMOCK(tor_tls_cert_matches_key);

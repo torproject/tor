@@ -149,8 +149,10 @@ channel_tls_common_init(channel_tls_t *tlschan)
 
 channel_t *
 channel_tls_connect(const tor_addr_t *addr, uint16_t port,
-                    const char *id_digest)
+                    const char *id_digest,
+                    const ed25519_public_key_t *ed_id)
 {
+  (void) ed_id; // XXXX not fully used yet
   channel_tls_t *tlschan = tor_malloc_zero(sizeof(*tlschan));
   channel_t *chan = &(tlschan->base_);
 
@@ -177,7 +179,7 @@ channel_tls_connect(const tor_addr_t *addr, uint16_t port,
   channel_mark_outgoing(chan);
 
   /* Set up or_connection stuff */
-  tlschan->conn = connection_or_connect(addr, port, id_digest, tlschan);
+  tlschan->conn = connection_or_connect(addr, port, id_digest, ed_id, tlschan);
   /* connection_or_connect() will fill in tlschan->conn */
   if (!(tlschan->conn)) {
     chan->reason_for_closing = CHANNEL_CLOSE_FOR_ERROR;
@@ -1618,7 +1620,10 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
       if (!(chan->conn->handshake_state->authenticated)) {
         tor_assert(tor_digest_is_zero(
                   (const char*)(chan->conn->handshake_state->
-                      authenticated_peer_id)));
+                      authenticated_rsa_peer_id)));
+        tor_assert(tor_mem_is_zero(
+                  (const char*)(chan->conn->handshake_state->
+                                authenticated_ed25519_peer_id.pubkey), 32));
         channel_set_circid_type(TLS_CHAN_TO_BASE(chan), NULL,
                chan->conn->link_proto < MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS);
 
@@ -1626,7 +1631,8 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
                   &(chan->conn->base_.addr),
                   chan->conn->base_.port,
                   (const char*)(chan->conn->handshake_state->
-                   authenticated_peer_id),
+                                authenticated_rsa_peer_id),
+                  NULL, // XXXX Ed key
                   0);
       }
     }
@@ -1926,6 +1932,7 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
     /* No more information is needed. */
 
     chan->conn->handshake_state->authenticated = 1;
+    chan->conn->handshake_state->authenticated_rsa = 1;
     {
       const common_digests_t *id_digests =
         tor_x509_cert_get_id_digests(id_cert);
@@ -1936,7 +1943,7 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
       identity_rcvd = tor_tls_cert_get_key(id_cert);
       if (!identity_rcvd)
         ERR("Internal error: Couldn't get RSA key from ID cert.");
-      memcpy(chan->conn->handshake_state->authenticated_peer_id,
+      memcpy(chan->conn->handshake_state->authenticated_rsa_peer_id,
              id_digests->d[DIGEST_SHA1], DIGEST_LEN);
       channel_set_circid_type(TLS_CHAN_TO_BASE(chan), identity_rcvd,
                 chan->conn->link_proto < MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS);
@@ -1944,7 +1951,8 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
     }
 
     if (connection_or_client_learned_peer_id(chan->conn,
-            chan->conn->handshake_state->authenticated_peer_id) < 0)
+                  chan->conn->handshake_state->authenticated_rsa_peer_id,
+                  NULL) < 0)
       ERR("Problem setting or checking peer id");
 
     log_info(LD_OR,
@@ -2219,6 +2227,7 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
   /* Okay, we are authenticated. */
   chan->conn->handshake_state->received_authenticate = 1;
   chan->conn->handshake_state->authenticated = 1;
+  chan->conn->handshake_state->authenticated_rsa = 1;
   chan->conn->handshake_state->digest_received_data = 0;
   {
     crypto_pk_t *identity_rcvd =
@@ -2229,7 +2238,7 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
     /* This must exist; we checked key type when reading the cert. */
     tor_assert(id_digests);
 
-    memcpy(chan->conn->handshake_state->authenticated_peer_id,
+    memcpy(chan->conn->handshake_state->authenticated_rsa_peer_id,
            id_digests->d[DIGEST_SHA1], DIGEST_LEN);
 
     channel_set_circid_type(TLS_CHAN_TO_BASE(chan), identity_rcvd,
@@ -2240,7 +2249,8 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
                   &(chan->conn->base_.addr),
                   chan->conn->base_.port,
                   (const char*)(chan->conn->handshake_state->
-                    authenticated_peer_id),
+                    authenticated_rsa_peer_id),
+                  NULL, // XXXX Ed key
                   0);
 
     log_info(LD_OR,
