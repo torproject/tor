@@ -775,8 +775,8 @@ tor_tls_context_decref(tor_tls_context_t *ctx)
 /** Set *<b>link_cert_out</b> and *<b>id_cert_out</b> to the link certificate
  * and ID certificate that we're currently using for our V3 in-protocol
  * handshake's certificate chain.  If <b>server</b> is true, provide the certs
- * that we use in server mode; otherwise, provide the certs that we use in
- * client mode. */
+ * that we use in server mode (auth, ID); otherwise, provide the certs that we
+ * use in client mode. (link, ID) */
 int
 tor_tls_get_my_certs(int server,
                      const tor_x509_cert_t **link_cert_out,
@@ -1026,6 +1026,8 @@ tor_tls_context_init_one(tor_tls_context_t **ppcontext,
 /** The group we should use for ecdhe when none was selected. */
 #define  NID_tor_default_ecdhe_group NID_X9_62_prime256v1
 
+#define RSA_LINK_KEY_BITS 2048
+
 /** Create a new TLS context for use with Tor TLS handshakes.
  * <b>identity</b> should be set to the identity key used to sign the
  * certificate.
@@ -1051,7 +1053,7 @@ tor_tls_context_new(crypto_pk_t *identity, unsigned int key_lifetime,
   /* Generate short-term RSA key for use with TLS. */
   if (!(rsa = crypto_pk_new()))
     goto error;
-  if (crypto_pk_generate_key(rsa)<0)
+  if (crypto_pk_generate_key_with_bits(rsa, RSA_LINK_KEY_BITS)<0)
     goto error;
   if (!is_client) {
     /* Generate short-term RSA key for use in the in-protocol ("v3")

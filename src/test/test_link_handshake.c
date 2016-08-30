@@ -258,7 +258,8 @@ recv_certs_setup(const struct testcase_t *test)
   const tor_x509_cert_t *a,*b;
   const uint8_t *enca, *encb;
   size_t lena, lenb;
-  tor_tls_get_my_certs(1, &a, &b);
+  tor_tls_get_my_certs(0, &a, &b); /* Use '0' here to make sure we get
+                                    * auth cert */
   tor_x509_cert_get_der(a, &enca, &lena);
   tor_x509_cert_get_der(b, &encb, &lenb);
   certs_cell_cert_setlen_body(ccc1, lena);
