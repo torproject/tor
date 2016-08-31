@@ -15,6 +15,7 @@
 #include "scheduler.h"
 
 #include "test.h"
+#include "log_test_helpers.h"
 
 static var_cell_t *mock_got_var_cell = NULL;
 
@@ -335,30 +336,51 @@ test_link_handshake_recv_certs_ok_server(void *arg)
   test_link_handshake_recv_certs_ ## name(void *arg)                    \
   {                                                                     \
     certs_data_t *d = arg;                                              \
+    const char *require_failure_message = NULL;                         \
+    const int prev_level = setup_capture_of_logs(LOG_INFO);             \
     { code ; }                                                          \
     channel_tls_process_certs_cell(d->cell, d->chan);                   \
     tt_int_op(1, ==, mock_close_called);                                \
     tt_int_op(0, ==, mock_send_authenticate_called);                    \
     tt_int_op(0, ==, mock_send_netinfo_called);                         \
+    if (require_failure_message) {                                      \
+      tt_assert(mock_saved_log_has_message_containing(                  \
+                                             require_failure_message)); \
+    }                                                                   \
   done:                                                                 \
-    ;                                                                   \
+    teardown_capture_of_logs(prev_level);                               \
   }
 
-CERTS_FAIL(badstate, d->c->base_.state = OR_CONN_STATE_CONNECTING)
-CERTS_FAIL(badproto, d->c->link_proto = 2)
-CERTS_FAIL(duplicate, d->c->handshake_state->received_certs_cell = 1)
+CERTS_FAIL(badstate,
+           require_failure_message = "We're not doing a v3 handshake!";
+           d->c->base_.state = OR_CONN_STATE_CONNECTING;)
+CERTS_FAIL(badproto,
+           require_failure_message = "not using link protocol >= 3";
+           d->c->link_proto = 2)
+CERTS_FAIL(duplicate,
+           require_failure_message = "We already got one";
+           d->c->handshake_state->received_certs_cell = 1)
 CERTS_FAIL(already_authenticated,
+           require_failure_message = "We're already authenticated!";
            d->c->handshake_state->authenticated = 1)
-CERTS_FAIL(empty, d->cell->payload_len = 0)
-CERTS_FAIL(bad_circid, d->cell->circ_id = 1)
-CERTS_FAIL(truncated_1, d->cell->payload[0] = 5)
+CERTS_FAIL(empty,
+           require_failure_message = "It had no body";
+           d->cell->payload_len = 0)
+CERTS_FAIL(bad_circid,
+           require_failure_message = "It had a nonzero circuit ID";
+           d->cell->circ_id = 1)
+CERTS_FAIL(truncated_1,
+           require_failure_message = "It couldn't be parsed";
+           d->cell->payload[0] = 5)
 CERTS_FAIL(truncated_2,
            {
+             require_failure_message = "It couldn't be parsed";
              d->cell->payload_len = 4;
              memcpy(d->cell->payload, "\x01\x01\x00\x05", 4);
            })
 CERTS_FAIL(truncated_3,
            {
+             require_failure_message = "It couldn't be parsed";
              d->cell->payload_len = 7;
              memcpy(d->cell->payload, "\x01\x01\x00\x05""abc", 7);
            })
@@ -370,30 +392,35 @@ CERTS_FAIL(truncated_3,
 
 CERTS_FAIL(not_x509,
   {
+    require_failure_message = "Received undecodable certificate";
     certs_cell_cert_setlen_body(certs_cell_get_certs(d->ccell, 0), 3);
     certs_cell_get_certs(d->ccell, 0)->cert_len = 3;
     REENCODE();
   })
 CERTS_FAIL(both_link,
   {
+    require_failure_message = "Duplicate x509 certificate";
     certs_cell_get_certs(d->ccell, 0)->cert_type = 1;
     certs_cell_get_certs(d->ccell, 1)->cert_type = 1;
     REENCODE();
   })
 CERTS_FAIL(both_id_rsa,
   {
+    require_failure_message = "Duplicate x509 certificate";
     certs_cell_get_certs(d->ccell, 0)->cert_type = 2;
     certs_cell_get_certs(d->ccell, 1)->cert_type = 2;
     REENCODE();
   })
 CERTS_FAIL(both_auth,
   {
+    require_failure_message = "Duplicate x509 certificate";
     certs_cell_get_certs(d->ccell, 0)->cert_type = 3;
     certs_cell_get_certs(d->ccell, 1)->cert_type = 3;
     REENCODE();
   })
 CERTS_FAIL(wrong_labels_1,
   {
+    require_failure_message = "The link certificate was not valid";
     certs_cell_get_certs(d->ccell, 0)->cert_type = 2;
     certs_cell_get_certs(d->ccell, 1)->cert_type = 1;
     REENCODE();
@@ -404,6 +431,7 @@ CERTS_FAIL(wrong_labels_2,
     const tor_x509_cert_t *b;
     const uint8_t *enca;
     size_t lena;
+    require_failure_message = "The link certificate was not valid";
     tor_tls_get_my_certs(1, &a, &b);
     tor_x509_cert_get_der(a, &enca, &lena);
     certs_cell_cert_setlen_body(certs_cell_get_certs(d->ccell, 1), lena);
@@ -414,16 +442,20 @@ CERTS_FAIL(wrong_labels_2,
   })
 CERTS_FAIL(wrong_labels_3,
            {
+             require_failure_message = "The certs we wanted were missing";
              certs_cell_get_certs(d->ccell, 0)->cert_type = 2;
              certs_cell_get_certs(d->ccell, 1)->cert_type = 3;
              REENCODE();
            })
 CERTS_FAIL(server_missing_certs,
            {
+             require_failure_message = "The certs we wanted were missing";
              d->c->handshake_state->started_here = 0;
            })
 CERTS_FAIL(server_wrong_labels_1,
            {
+             require_failure_message =
+               "The authentication certificate was not valid";
              d->c->handshake_state->started_here = 0;
              certs_cell_get_certs(d->ccell, 0)->cert_type = 2;
              certs_cell_get_certs(d->ccell, 1)->cert_type = 3;
@@ -582,13 +614,19 @@ test_link_handshake_recv_authchallenge_ok_unrecognized(void *arg)
   test_link_handshake_recv_authchallenge_ ## name(void *arg)            \
   {                                                                     \
     authchallenge_data_t *d = arg;                                      \
+    const char *require_failure_message = NULL;                         \
+    const int prev_level = setup_capture_of_logs(LOG_INFO);             \
     { code ; }                                                          \
     channel_tls_process_auth_challenge_cell(d->cell, d->chan);          \
     tt_int_op(1, ==, mock_close_called);                                \
     tt_int_op(0, ==, mock_send_authenticate_called);                    \
     tt_int_op(0, ==, mock_send_netinfo_called);                         \
+    if (require_failure_message) {                                      \
+      tt_assert(mock_saved_log_has_message_containing(                  \
+                                             require_failure_message)); \
+    }                                                                   \
   done:                                                                 \
-    ;                                                                   \
+    teardown_capture_of_logs(prev_level);                               \
   }
 
 AUTHCHALLENGE_FAIL(badstate,
@@ -805,13 +843,19 @@ test_link_handshake_auth_cell(void *arg)
   test_link_handshake_auth_ ## name(void *arg)                  \
   {                                                             \
     authenticate_data_t *d = arg;                               \
+    const char *require_failure_message = NULL;                 \
+    const int prev_level = setup_capture_of_logs(LOG_INFO);     \
     { code ; }                                                  \
     tt_int_op(d->c2->handshake_state->authenticated, ==, 0);    \
     channel_tls_process_authenticate_cell(d->cell, d->chan2);   \
     tt_int_op(mock_close_called, ==, 1);                        \
     tt_int_op(d->c2->handshake_state->authenticated, ==, 0);    \
-   done:                                                        \
-   ;                                                            \
+    if (require_failure_message) {                              \
+      tt_assert(mock_saved_log_has_message_containing(          \
+                                     require_failure_message)); \
+    }                                                           \
+  done:                                                         \
+    teardown_capture_of_logs(prev_level);                       \
   }
 
 AUTHENTICATE_FAIL(badstate,
