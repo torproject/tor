@@ -630,20 +630,31 @@ test_link_handshake_recv_authchallenge_ok_unrecognized(void *arg)
   }
 
 AUTHCHALLENGE_FAIL(badstate,
+                   require_failure_message = "We're not currently doing a "
+                     "v3 handshake";
                    d->c->base_.state = OR_CONN_STATE_CONNECTING)
 AUTHCHALLENGE_FAIL(badproto,
+                   require_failure_message = "not using link protocol >= 3";
                    d->c->link_proto = 2)
 AUTHCHALLENGE_FAIL(as_server,
+                   require_failure_message = "We didn't originate this "
+                     "connection";
                    d->c->handshake_state->started_here = 0;)
 AUTHCHALLENGE_FAIL(duplicate,
+                   require_failure_message = "We already received one";
                    d->c->handshake_state->received_auth_challenge = 1)
 AUTHCHALLENGE_FAIL(nocerts,
+                   require_failure_message = "We haven't gotten a CERTS "
+                     "cell yet";
                    d->c->handshake_state->received_certs_cell = 0)
 AUTHCHALLENGE_FAIL(tooshort,
+                   require_failure_message = "It was not well-formed";
                    d->cell->payload_len = 33)
 AUTHCHALLENGE_FAIL(truncated,
+                   require_failure_message = "It was not well-formed";
                    d->cell->payload_len = 34)
 AUTHCHALLENGE_FAIL(nonzero_circid,
+                   require_failure_message = "It had a nonzero circuit ID";
                    d->cell->circ_id = 1337)
 
 static tor_x509_cert_t *mock_peer_cert = NULL;
@@ -859,47 +870,68 @@ test_link_handshake_auth_cell(void *arg)
   }
 
 AUTHENTICATE_FAIL(badstate,
+                  require_failure_message = "We're not doing a v3 handshake";
                   d->c2->base_.state = OR_CONN_STATE_CONNECTING)
 AUTHENTICATE_FAIL(badproto,
+                  require_failure_message = "not using link protocol >= 3";
                   d->c2->link_proto = 2)
 AUTHENTICATE_FAIL(atclient,
+                  require_failure_message = "We originated this connection";
                   d->c2->handshake_state->started_here = 1)
 AUTHENTICATE_FAIL(duplicate,
+                  require_failure_message = "We already got one";
                   d->c2->handshake_state->received_authenticate = 1)
 static void
 test_link_handshake_auth_already_authenticated(void *arg)
 {
   authenticate_data_t *d = arg;
+  const int prev_level = setup_capture_of_logs(LOG_INFO);
   d->c2->handshake_state->authenticated = 1;
   channel_tls_process_authenticate_cell(d->cell, d->chan2);
   tt_int_op(mock_close_called, ==, 1);
   tt_int_op(d->c2->handshake_state->authenticated, ==, 1);
+  expect_log_msg_containing("The peer is already authenticated");
  done:
-  ;
+  teardown_capture_of_logs(prev_level);
 }
+
 AUTHENTICATE_FAIL(nocerts,
+                  require_failure_message = "We never got a certs cell";
                   d->c2->handshake_state->received_certs_cell = 0)
 AUTHENTICATE_FAIL(noidcert,
+                  require_failure_message = "We never got an identity "
+                    "certificate";
                   tor_x509_cert_free(d->c2->handshake_state->id_cert);
                   d->c2->handshake_state->id_cert = NULL)
 AUTHENTICATE_FAIL(noauthcert,
+                  require_failure_message = "We never got an authentication "
+                    "certificate";
                   tor_x509_cert_free(d->c2->handshake_state->auth_cert);
                   d->c2->handshake_state->auth_cert = NULL)
 AUTHENTICATE_FAIL(tooshort,
+                  require_failure_message = "Cell was way too short";
                   d->cell->payload_len = 3)
 AUTHENTICATE_FAIL(badtype,
+                  require_failure_message = "Authenticator type was not "
+                    "recognized";
                   d->cell->payload[0] = 0xff)
 AUTHENTICATE_FAIL(truncated_1,
+                  require_failure_message = "Authenticator was truncated";
                   d->cell->payload[2]++)
 AUTHENTICATE_FAIL(truncated_2,
+                  require_failure_message = "Authenticator was truncated";
                   d->cell->payload[3]++)
 AUTHENTICATE_FAIL(tooshort_1,
+                  require_failure_message = "Authenticator was too short";
                   tt_int_op(d->cell->payload_len, >=, 260);
                   d->cell->payload[2] -= 1;
                   d->cell->payload_len -= 256;)
 AUTHENTICATE_FAIL(badcontent,
+                  require_failure_message = "Some field in the AUTHENTICATE "
+                    "cell body was not as expected";
                   d->cell->payload[10] ^= 0xff)
 AUTHENTICATE_FAIL(badsig_1,
+                  require_failure_message = "Signature wasn't valid";
                   d->cell->payload[d->cell->payload_len - 5] ^= 0xff)
 
 #define TEST(name, flags)                                       \
