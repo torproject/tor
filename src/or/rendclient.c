@@ -1373,40 +1373,15 @@ rend_client_get_random_intro_impl(const rend_cache_entry_t *entry,
     smartlist_del(usable_nodes, i);
     goto again;
   }
-  /* Do we need to look up the router or is the extend info complete? */
+  /* All version 2 HS descriptors come with a TAP onion key.
+   * Clients used to try to get the TAP onion key from the consensus, but this
+   * meant that hidden services could discover which consensus clients have. */
   if (!extend_info_supports_tap(intro->extend_info)) {
-    const node_t *node;
-    extend_info_t *new_extend_info;
-    if (tor_digest_is_zero(intro->extend_info->identity_digest))
-      node = node_get_by_hex_id(intro->extend_info->nickname);
-    else
-      node = node_get_by_id(intro->extend_info->identity_digest);
-    if (!node) {
-      log_info(LD_REND, "Unknown router with nickname '%s'; trying another.",
-               intro->extend_info->nickname);
-      smartlist_del(usable_nodes, i);
-      goto again;
-    }
-#ifdef ENABLE_TOR2WEB_MODE
-    new_extend_info = extend_info_from_node(node, options->Tor2webMode);
-#else
-    new_extend_info = extend_info_from_node(node, 0);
-#endif
-    if (!new_extend_info) {
-      const char *alternate_reason = "";
-#ifdef ENABLE_TOR2WEB_MODE
-      alternate_reason = ", or we cannot connect directly to it";
-#endif
-      log_info(LD_REND, "We don't have a descriptor for the intro-point relay "
-               "'%s'%s; trying another.",
-               extend_info_describe(intro->extend_info), alternate_reason);
-      smartlist_del(usable_nodes, i);
-      goto again;
-    } else {
-      extend_info_free(intro->extend_info);
-      intro->extend_info = new_extend_info;
-    }
-    tor_assert(intro->extend_info != NULL);
+    log_info(LD_REND, "The HS descriptor is missing a TAP onion key for the "
+             "intro-point relay '%s'; trying another.",
+             safe_str_client(extend_info_describe(intro->extend_info)));
+    smartlist_del(usable_nodes, i);
+    goto again;
   }
   /* Check if we should refuse to talk to this router. */
   if (strict &&
