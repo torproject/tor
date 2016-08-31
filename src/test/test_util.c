@@ -5330,6 +5330,8 @@ test_util_monotonic_time(void *arg)
   uint64_t nsec1, nsec2, usec1, msec1;
   uint64_t nsecc1, nsecc2, usecc1, msecc1;
 
+  monotime_init();
+
   monotime_get(&mt1);
   monotime_coarse_get(&mtc1);
   nsec1 = monotime_absolute_nsec();
@@ -5374,6 +5376,7 @@ static void
 test_util_monotonic_time_ratchet(void *arg)
 {
   (void)arg;
+  monotime_init();
   monotime_reset_ratchets_for_testing();
 
   /* win32, performance counter ratchet. */
