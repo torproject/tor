@@ -321,7 +321,7 @@ GENERAL OPTIONS
     specify one or more of **HashedControlPassword** or
     **CookieAuthentication**, setting this option will cause Tor to allow
     any process on the local host to control it. (Setting both authentication
-    methods means eithermethod is sufficient to authenticate to Tor.) This
+    methods means either method is sufficient to authenticate to Tor.) This
     option is required for many Tor controllers; most use the value of 9051.
     Set it to "auto" to have Tor pick a port for you. (Default: 0) +
  +
