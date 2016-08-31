@@ -173,6 +173,8 @@ test_link_handshake_certs_ok(void *arg)
   UNMOCK(tor_tls_cert_matches_key);
   UNMOCK(connection_or_write_var_cell_to_buf);
   UNMOCK(connection_or_send_netinfo);
+  memset(c1->identity_digest, 0, sizeof(c1->identity_digest));
+  memset(c2->identity_digest, 0, sizeof(c2->identity_digest));
   connection_free_(TO_CONN(c1));
   connection_free_(TO_CONN(c2));
   tor_free(cell1);
@@ -209,6 +211,7 @@ recv_certs_cleanup(const struct testcase_t *test, void *obj)
   if (d) {
     tor_free(d->cell);
     certs_cell_free(d->ccell);
+    connection_or_remove_from_identity_map(d->c);
     connection_free_(TO_CONN(d->c));
     circuitmux_free(d->chan->base_.cmux);
     tor_free(d->chan);
@@ -650,6 +653,8 @@ authenticate_data_cleanup(const struct testcase_t *test, void *arg)
   authenticate_data_t *d = arg;
   if (d) {
     tor_free(d->cell);
+    connection_or_remove_from_identity_map(d->c1);
+    connection_or_remove_from_identity_map(d->c2);
     connection_free_(TO_CONN(d->c1));
     connection_free_(TO_CONN(d->c2));
     circuitmux_free(d->chan2->base_.cmux);
@@ -677,6 +682,8 @@ authenticate_data_setup(const struct testcase_t *test)
   MOCK(channel_set_circid_type, mock_set_circid_type);
   d->c1 = or_connection_new(CONN_TYPE_OR, AF_INET);
   d->c2 = or_connection_new(CONN_TYPE_OR, AF_INET);
+  tor_addr_from_ipv4h(&d->c1->base_.addr, 0x01020304);
+  tor_addr_from_ipv4h(&d->c2->base_.addr, 0x05060708);
 
   d->key1 = pk_generate(2);
   d->key2 = pk_generate(3);
