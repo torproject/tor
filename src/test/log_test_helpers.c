@@ -23,6 +23,9 @@ static smartlist_t *saved_logs = NULL;
 /** Boolean: should we also send messages to the test-runner? */
 static int echo_to_real_logs = 1;
 
+/** Record logs at this level or more severe */
+static int record_logs_at_level = LOG_ERR;
+
 /**
  * As setup_capture_of_logs, but do not relay log messages into the main
  * logging system.
@@ -50,8 +53,15 @@ int
 setup_capture_of_logs(int new_level)
 {
   int previous_log = log_global_min_severity_;
-  /* XXXX This can suppress, if logging is turned up high.  Will fix. -NM*/
-  log_global_min_severity_ = new_level;
+
+  /* Only change the log_global_min_severity_ if we're making things _more_
+   * verbose.  Otherwise we could prevent real log messages that the test-
+   * runner wanted.
+   */
+  if (log_global_min_severity_ < new_level)
+    log_global_min_severity_ = new_level;
+
+  record_logs_at_level = new_level;
   mock_clean_saved_logs();
   saved_logs = smartlist_new();
   MOCK(logv, mock_saving_logv);
@@ -178,6 +188,18 @@ mock_saving_logv(int severity, log_domain_mask_t domain,
   buf[n]='\n';
   buf[n+1]='\0';
 
+  if (echo_to_real_logs) {
+    tor_log(severity, domain|LD_NO_MOCK, "%s", buf);
+  }
+
+  if (severity > record_logs_at_level) {
+    tor_free(buf);
+    return;
+  }
+
+  if (!saved_logs)
+    saved_logs = smartlist_new();
+
   mock_saved_log_entry_t *e = tor_malloc_zero(sizeof(mock_saved_log_entry_t));
   e->severity = severity;
   e->funcname = funcname;
@@ -186,12 +208,5 @@ mock_saving_logv(int severity, log_domain_mask_t domain,
   e->generated_msg = tor_strdup(buf);
   tor_free(buf);
 
-  if (!saved_logs)
-    saved_logs = smartlist_new();
   smartlist_add(saved_logs, e);
-
-  if (echo_to_real_logs) {
-    tor_log(severity, domain|LD_NO_MOCK, "%s", e->generated_msg);
-  }
 }
-
