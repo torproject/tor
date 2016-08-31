@@ -692,7 +692,7 @@ read_bandwidth_usage(void)
     int res;
 
     res = unlink(fname);
-    if (res != 0) {
+    if (res != 0 && errno != ENOENT) {
       log_warn(LD_FS,
                "Failed to unlink %s: %s",
                fname, strerror(errno));
