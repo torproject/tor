@@ -5254,9 +5254,11 @@ test_util_pwdb(void *arg)
   tt_assert(found);
   tor_free(dir);
 
-  prev_level = setup_capture_of_logs(LOG_ERR); /* We should do a LOG_ERR */
+  /* We should do a LOG_ERR */
+  prev_level = setup_full_capture_of_logs(LOG_ERR);
   dir = get_user_homedir(badname);
   tt_assert(dir == NULL);
+  expect_log_msg_containing("not found");
   tt_int_op(smartlist_len(mock_saved_logs()), OP_EQ, 1);
   teardown_capture_of_logs(prev_level);
   prev_level = -100;
