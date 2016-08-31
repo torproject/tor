@@ -109,6 +109,11 @@
  * would. Used as a flag, not a log domain. */
 #define LD_NOFUNCNAME (1u<<30)
 
+#ifdef TOR_UNIT_TESTS
+/** This log message should not be intercepted by mock_saving_logv */
+#define LD_NO_MOCK (1u<<29)
+#endif
+
 /** Mask of zero or more log domains, OR'd together. */
 typedef uint32_t log_domain_mask_t;
 

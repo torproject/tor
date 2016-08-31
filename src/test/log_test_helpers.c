@@ -6,6 +6,16 @@
 
 static smartlist_t *saved_logs = NULL;
 
+static int echo_to_real_logs = 1;
+
+int
+setup_full_capture_of_logs(int new_level)
+{
+  int result = setup_capture_of_logs(new_level);
+  echo_to_real_logs = 0;
+  return result;
+}
+
 int
 setup_capture_of_logs(int new_level)
 {
@@ -14,6 +24,7 @@ setup_capture_of_logs(int new_level)
   mock_clean_saved_logs();
   saved_logs = smartlist_new();
   MOCK(logv, mock_saving_logv);
+  echo_to_real_logs = 1;
   return previous_log;
 }
 
@@ -108,7 +119,6 @@ mock_saving_logv(int severity, log_domain_mask_t domain,
                  const char *funcname, const char *suffix,
                  const char *format, va_list ap)
 {
-  (void)domain;
   char *buf = tor_malloc_zero(10240);
   int n;
   n = tor_vsnprintf(buf,10240,format,ap);
@@ -127,5 +137,9 @@ mock_saving_logv(int severity, log_domain_mask_t domain,
   if (!saved_logs)
     saved_logs = smartlist_new();
   smartlist_add(saved_logs, e);
+
+  if (echo_to_real_logs) {
+    tor_log(severity, domain|LD_NO_MOCK, "%s", e->generated_msg);
+  }
 }
 
