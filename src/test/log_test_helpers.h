@@ -35,6 +35,13 @@ int mock_saved_log_has_entry(void);
   tt_assert_msg(mock_saved_log_has_message_containing(str), \
                 "expected log to contain " # str);
 
+#define expect_single_log_msg_containing(str) \
+  do {                                                        \
+    tt_assert_msg(mock_saved_log_has_message_containing(str), \
+                  "expected log to contain " # str);          \
+    tt_int_op(smartlist_len(mock_saved_logs()), OP_EQ, 1);    \
+  } while (0);
+
 #define expect_no_log_msg(str) \
   tt_assert_msg(!mock_saved_log_has_message(str), \
                 "expected log to not contain " # str);

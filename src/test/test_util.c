@@ -2216,10 +2216,17 @@ test_util_gzip_compression_bomb(void *arg)
   size_t result_len = 0;
   tor_zlib_state_t *state = NULL;
 
+
   /* Make sure we can't produce a compression bomb */
+  const int prev_level = setup_full_capture_of_logs(LOG_WARN);
   tt_int_op(-1, OP_EQ, tor_gzip_compress(&result, &result_len,
                                          one_mb, one_million,
                                          ZLIB_METHOD));
+  expect_single_log_msg_containing(
+         "We compressed something and got an insanely high "
+         "compression factor; other Tors would think this "
+         "was a zlib bomb.");
+  teardown_capture_of_logs(prev_level);
 
   /* Here's a compression bomb that we made manually. */
   const char compression_bomb[1039] =
@@ -5464,7 +5471,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(strmisc),
   UTIL_LEGACY(pow2),
   UTIL_LEGACY(gzip),
-  UTIL_LEGACY(gzip_compression_bomb),
+  UTIL_TEST(gzip_compression_bomb, TT_FORK),
   UTIL_LEGACY(datadir),
   UTIL_LEGACY(memarea),
   UTIL_LEGACY(control_formats),
