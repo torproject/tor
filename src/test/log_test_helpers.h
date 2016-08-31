@@ -25,6 +25,7 @@ int setup_capture_of_logs(int new_level);
 void teardown_capture_of_logs(int prev);
 
 int mock_saved_log_has_message(const char *msg);
+int mock_saved_log_has_message_containing(const char *msg);
 int mock_saved_log_has_severity(int severity);
 int mock_saved_log_has_entry(void);
 

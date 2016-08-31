@@ -59,6 +59,23 @@ mock_saved_log_has_message(const char *msg)
   return has_msg;
 }
 
+int
+mock_saved_log_has_message_containing(const char *msg)
+{
+  if (saved_logs) {
+    SMARTLIST_FOREACH(saved_logs, mock_saved_log_entry_t *, m,
+                      {
+                        if (msg && m->generated_msg &&
+                            strstr(m->generated_msg, msg)) {
+                          return 1;
+                        }
+                      });
+  }
+
+  return 0;
+}
+
+
 /* Do the saved logs have any messages with severity? */
 int
 mock_saved_log_has_severity(int severity)
