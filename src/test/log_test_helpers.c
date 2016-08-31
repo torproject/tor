@@ -4,10 +4,32 @@
 #include "torlog.h"
 #include "log_test_helpers.h"
 
+/**
+ * \file log_test_helpers.c
+ * \brief Code to check for expected log messages during testing.
+ */
+
+static void mock_saving_logv(int severity, log_domain_mask_t domain,
+                             const char *funcname, const char *suffix,
+                             const char *format, va_list ap)
+  CHECK_PRINTF(5, 0);
+
+/**
+ * Smartlist of all the logs we've received since we last set up
+ * log capture.
+ */
 static smartlist_t *saved_logs = NULL;
 
+/** Boolean: should we also send messages to the test-runner? */
 static int echo_to_real_logs = 1;
 
+/**
+ * As setup_capture_of_logs, but do not relay log messages into the main
+ * logging system.
+ *
+ * Avoid using this function; use setup_capture_of_logs() instead if you
+ * can. If you must use this function, then make sure you detect any
+ * unexpected log messages, and treat them as test failures. */
 int
 setup_full_capture_of_logs(int new_level)
 {
@@ -16,10 +38,19 @@ setup_full_capture_of_logs(int new_level)
   return result;
 }
 
+/**
+ * Temporarily capture all the messages logged at severity <b>new_level</b> or
+ * higher. Return the previous log level; you'll need to pass it into
+ * teardown_capture_of_logs().
+ *
+ * This function does not prevent messages from being sent to the main
+ * logging system.
+ */
 int
 setup_capture_of_logs(int new_level)
 {
   int previous_log = log_global_min_severity_;
+  /* XXXX This can suppress, if logging is turned up high.  Will fix. -NM*/
   log_global_min_severity_ = new_level;
   mock_clean_saved_logs();
   saved_logs = smartlist_new();
@@ -28,6 +59,9 @@ setup_capture_of_logs(int new_level)
   return previous_log;
 }
 
+/**
+ * Undo setup_capture_of_logs().
+ */
 void
 teardown_capture_of_logs(int prev)
 {
@@ -36,6 +70,9 @@ teardown_capture_of_logs(int prev)
   mock_clean_saved_logs();
 }
 
+/**
+ * Clear all messages in mock_saved_logs()
+ */
 void
 mock_clean_saved_logs(void)
 {
@@ -47,29 +84,41 @@ mock_clean_saved_logs(void)
   saved_logs = NULL;
 }
 
+/**
+ * Return a list of all the messages captured since the last
+ * setup_[full_]capture_of_logs() call. Each log call is recorded as a
+ * mock_saved_log_entry_t.
+ */
 const smartlist_t *
 mock_saved_logs(void)
 {
   return saved_logs;
 }
 
+/**
+ * Return true iff there is a message recorded by log capture
+ * that is exactly equal to <b>msg</b>
+ */
 int
 mock_saved_log_has_message(const char *msg)
 {
-  int has_msg = 0;
   if (saved_logs) {
     SMARTLIST_FOREACH(saved_logs, mock_saved_log_entry_t *, m,
                       {
                         if (msg && m->generated_msg &&
                             !strcmp(msg, m->generated_msg)) {
-                          has_msg = 1;
+                          return 1;
                         }
                       });
   }
 
-  return has_msg;
+  return 0;
 }
 
+/**
+ * Return true iff there is a message recorded by log capture
+ * that contains <b>msg</b> as a substring.
+ */
 int
 mock_saved_log_has_message_containing(const char *msg)
 {
@@ -87,7 +136,7 @@ mock_saved_log_has_message_containing(const char *msg)
 }
 
 
-/* Do the saved logs have any messages with severity? */
+/** Return true iff the saved logs have any messages with <b>severity</b> */
 int
 mock_saved_log_has_severity(int severity)
 {
@@ -104,7 +153,7 @@ mock_saved_log_has_severity(int severity)
   return has_sev;
 }
 
-/* Do the saved logs have any messages? */
+/** Return true iff the the saved logs have at lease one message */
 int
 mock_saved_log_has_entry(void)
 {
@@ -114,7 +163,10 @@ mock_saved_log_has_entry(void)
   return 0;
 }
 
-void
+/* Replacement for logv: record the log message, and (maybe) send it
+ * into the logging system again.
+ */
+static void
 mock_saving_logv(int severity, log_domain_mask_t domain,
                  const char *funcname, const char *suffix,
                  const char *format, va_list ap)
