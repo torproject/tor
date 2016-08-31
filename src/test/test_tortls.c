@@ -1831,8 +1831,6 @@ test_tortls_server_info_callback(void *ignored)
   tls->magic = TOR_TLS_MAGIC;
   tls->ssl = ssl;
 
-  tor_tls_server_info_callback(NULL, 0, 0);
-
   SSL_set_state(ssl, SSL3_ST_SW_SRVR_HELLO_A);
   mock_clean_saved_logs();
   tor_tls_server_info_callback(ssl, SSL_CB_ACCEPT_LOOP, 0);

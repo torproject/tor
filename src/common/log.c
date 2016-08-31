@@ -534,6 +534,11 @@ tor_log(int severity, log_domain_mask_t domain, const char *format, ...)
   if (severity > log_global_min_severity_)
     return;
   va_start(ap,format);
+#ifdef TOR_UNIT_TESTS
+  if (domain & LD_NO_MOCK)
+    logv__real(severity, domain, NULL, NULL, format, ap);
+  else
+#endif
   logv(severity, domain, NULL, NULL, format, ap);
   va_end(ap);
 }

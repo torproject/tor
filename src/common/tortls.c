@@ -1489,6 +1489,10 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
   tor_tls_t *tls;
   (void) val;
 
+  IF_BUG_ONCE(ssl == NULL) {
+    return; // LCOV_EXCL_LINE
+  }
+
   tor_tls_debug_state_callback(ssl, type, val);
 
   if (type != SSL_CB_ACCEPT_LOOP)

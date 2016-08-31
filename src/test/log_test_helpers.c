@@ -4,19 +4,74 @@
 #include "torlog.h"
 #include "log_test_helpers.h"
 
+/**
+ * \file log_test_helpers.c
+ * \brief Code to check for expected log messages during testing.
+ */
+
+static void mock_saving_logv(int severity, log_domain_mask_t domain,
+                             const char *funcname, const char *suffix,
+                             const char *format, va_list ap)
+  CHECK_PRINTF(5, 0);
+
+/**
+ * Smartlist of all the logs we've received since we last set up
+ * log capture.
+ */
 static smartlist_t *saved_logs = NULL;
 
+/** Boolean: should we also send messages to the test-runner? */
+static int echo_to_real_logs = 1;
+
+/** Record logs at this level or more severe */
+static int record_logs_at_level = LOG_ERR;
+
+/**
+ * As setup_capture_of_logs, but do not relay log messages into the main
+ * logging system.
+ *
+ * Avoid using this function; use setup_capture_of_logs() instead if you
+ * can. If you must use this function, then make sure you detect any
+ * unexpected log messages, and treat them as test failures. */
+int
+setup_full_capture_of_logs(int new_level)
+{
+  int result = setup_capture_of_logs(new_level);
+  echo_to_real_logs = 0;
+  return result;
+}
+
+/**
+ * Temporarily capture all the messages logged at severity <b>new_level</b> or
+ * higher. Return the previous log level; you'll need to pass it into
+ * teardown_capture_of_logs().
+ *
+ * This function does not prevent messages from being sent to the main
+ * logging system.
+ */
 int
 setup_capture_of_logs(int new_level)
 {
   int previous_log = log_global_min_severity_;
-  log_global_min_severity_ = new_level;
+
+  /* Only change the log_global_min_severity_ if we're making things _more_
+   * verbose.  Otherwise we could prevent real log messages that the test-
+   * runner wanted.
+   */
+  if (log_global_min_severity_ < new_level)
+    log_global_min_severity_ = new_level;
+
+  record_logs_at_level = new_level;
   mock_clean_saved_logs();
   saved_logs = smartlist_new();
   MOCK(logv, mock_saving_logv);
+  echo_to_real_logs = 1;
   return previous_log;
 }
 
+/**
+ * Undo setup_capture_of_logs().
+ */
 void
 teardown_capture_of_logs(int prev)
 {
@@ -25,6 +80,9 @@ teardown_capture_of_logs(int prev)
   mock_clean_saved_logs();
 }
 
+/**
+ * Clear all messages in mock_saved_logs()
+ */
 void
 mock_clean_saved_logs(void)
 {
@@ -36,29 +94,41 @@ mock_clean_saved_logs(void)
   saved_logs = NULL;
 }
 
+/**
+ * Return a list of all the messages captured since the last
+ * setup_[full_]capture_of_logs() call. Each log call is recorded as a
+ * mock_saved_log_entry_t.
+ */
 const smartlist_t *
 mock_saved_logs(void)
 {
   return saved_logs;
 }
 
+/**
+ * Return true iff there is a message recorded by log capture
+ * that is exactly equal to <b>msg</b>
+ */
 int
 mock_saved_log_has_message(const char *msg)
 {
-  int has_msg = 0;
   if (saved_logs) {
     SMARTLIST_FOREACH(saved_logs, mock_saved_log_entry_t *, m,
                       {
                         if (msg && m->generated_msg &&
                             !strcmp(msg, m->generated_msg)) {
-                          has_msg = 1;
+                          return 1;
                         }
                       });
   }
 
-  return has_msg;
+  return 0;
 }
 
+/**
+ * Return true iff there is a message recorded by log capture
+ * that contains <b>msg</b> as a substring.
+ */
 int
 mock_saved_log_has_message_containing(const char *msg)
 {
@@ -76,7 +146,7 @@ mock_saved_log_has_message_containing(const char *msg)
 }
 
 
-/* Do the saved logs have any messages with severity? */
+/** Return true iff the saved logs have any messages with <b>severity</b> */
 int
 mock_saved_log_has_severity(int severity)
 {
@@ -93,7 +163,7 @@ mock_saved_log_has_severity(int severity)
   return has_sev;
 }
 
-/* Do the saved logs have any messages? */
+/** Return true iff the the saved logs have at lease one message */
 int
 mock_saved_log_has_entry(void)
 {
@@ -103,18 +173,32 @@ mock_saved_log_has_entry(void)
   return 0;
 }
 
-void
+/* Replacement for logv: record the log message, and (maybe) send it
+ * into the logging system again.
+ */
+static void
 mock_saving_logv(int severity, log_domain_mask_t domain,
                  const char *funcname, const char *suffix,
                  const char *format, va_list ap)
 {
-  (void)domain;
   char *buf = tor_malloc_zero(10240);
   int n;
   n = tor_vsnprintf(buf,10240,format,ap);
   tor_assert(n < 10240-1);
   buf[n]='\n';
   buf[n+1]='\0';
+
+  if (echo_to_real_logs) {
+    tor_log(severity, domain|LD_NO_MOCK, "%s", buf);
+  }
+
+  if (severity > record_logs_at_level) {
+    tor_free(buf);
+    return;
+  }
+
+  if (!saved_logs)
+    saved_logs = smartlist_new();
 
   mock_saved_log_entry_t *e = tor_malloc_zero(sizeof(mock_saved_log_entry_t));
   e->severity = severity;
@@ -124,8 +208,5 @@ mock_saving_logv(int severity, log_domain_mask_t domain,
   e->generated_msg = tor_strdup(buf);
   tor_free(buf);
 
-  if (!saved_logs)
-    saved_logs = smartlist_new();
   smartlist_add(saved_logs, e);
 }
-
