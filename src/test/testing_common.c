@@ -244,6 +244,8 @@ main(int c, const char **v)
 
   network_init();
 
+  monotime_init();
+
   struct tor_libevent_cfg cfg;
   memset(&cfg, 0, sizeof(cfg));
   tor_libevent_initialize(&cfg);
