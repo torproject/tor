@@ -855,7 +855,12 @@ circuit_pick_extend_handshake(uint8_t *cell_type_out,
   /* XXXX030 Remove support for deciding to use TAP. */
 
   /* It is an error to extend if there is no previous node. */
-  tor_assert_nonfatal(node_prev);
+  if (BUG(node_prev == NULL)) {
+    *cell_type_out = RELAY_COMMAND_EXTEND;
+    *create_cell_type_out = CELL_CREATE;
+    return;
+  }
+
   /* It is an error for a node with a known version to be so old it does not
    * support ntor. */
   tor_assert_nonfatal(routerstatus_version_supports_ntor(node_prev->rs, 1));
@@ -863,16 +868,15 @@ circuit_pick_extend_handshake(uint8_t *cell_type_out,
   /* Assume relays without tor versions or routerstatuses support ntor.
    * The authorities enforce ntor support, and assuming and failing is better
    * than allowing a malicious node to perform a protocol downgrade to TAP. */
-  if (node_prev &&
-      *handshake_type_out != ONION_HANDSHAKE_TYPE_TAP &&
+  if (*handshake_type_out != ONION_HANDSHAKE_TYPE_TAP &&
       (node_has_curve25519_onion_key(node_prev) ||
        (routerstatus_version_supports_ntor(node_prev->rs, 1)))) {
-        *cell_type_out = RELAY_COMMAND_EXTEND2;
-        *create_cell_type_out = CELL_CREATE2;
-      } else {
-        *cell_type_out = RELAY_COMMAND_EXTEND;
-        *create_cell_type_out = CELL_CREATE;
-      }
+    *cell_type_out = RELAY_COMMAND_EXTEND2;
+    *create_cell_type_out = CELL_CREATE2;
+  } else {
+    *cell_type_out = RELAY_COMMAND_EXTEND;
+    *create_cell_type_out = CELL_CREATE;
+  }
 }
 
 /** This is the backbone function for building circuits.
