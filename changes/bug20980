@@ -1,0 +1,4 @@
+  o Minor bugfix (OpenBSD):
+    - Use "OpenBSD" pre-defined compiler macro instead of "OPENBSD" or
+      "__OpenBSD__". It is supported by OpenBSD itself and also most OpenBSD
+      variants like Bitrig. Fixes bug 20980.

@@ -53,7 +53,7 @@
 #else
 
 /* See: http://sourceforge.net/p/predef/wiki/Endianness/ */
-#  if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#  if defined(__FreeBSD__) || defined(__NetBSD__) || defined(OpenBSD)
 #    include <sys/endian.h>
 #  else
 #    include <endian.h>
@@ -62,7 +62,7 @@
 	__BYTE_ORDER == __LITTLE_ENDIAN
 #    define _le64toh(x) ((uint64_t)(x))
 #  else
-#    if defined(__OpenBSD__)
+#    if defined(OpenBSD)
 #      define _le64toh(x) letoh64(x)
 #    else
 #      define _le64toh(x) le64toh(x)

@@ -36,7 +36,7 @@ const char *s = NULL;
     sum += (unsigned char)buf[i];                                       \
   }
 
-#ifdef __OpenBSD__
+#ifdef OpenBSD
 /* Disable some of OpenBSD's malloc protections for this test. This helps
  * us do bad things, such as access freed buffers, without crashing. */
 const char *malloc_options="sufjj";
