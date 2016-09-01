@@ -274,6 +274,7 @@ test_sr_commit(void *arg)
   time_t now = time(NULL);
   sr_commit_t *our_commit = NULL;
   smartlist_t *args = smartlist_new();
+  sr_commit_t *parsed_commit = NULL;
 
   (void) arg;
 
@@ -340,13 +341,12 @@ test_sr_commit(void *arg)
   /* We'll build a list of values from our commit that our parsing function
    * takes from a vote line and see if we can parse it correctly. */
   {
-    sr_commit_t *parsed_commit;
     smartlist_add(args, tor_strdup("1"));
     smartlist_add(args,
                tor_strdup(crypto_digest_algorithm_get_name(our_commit->alg)));
     smartlist_add(args, tor_strdup(sr_commit_get_rsa_fpr(our_commit)));
-    smartlist_add(args, our_commit->encoded_commit);
-    smartlist_add(args, our_commit->encoded_reveal);
+    smartlist_add(args, tor_strdup(our_commit->encoded_commit));
+    smartlist_add(args, tor_strdup(our_commit->encoded_reveal));
     parsed_commit = sr_parse_commit(args);
     tt_assert(parsed_commit);
     /* That parsed commit should be _EXACTLY_ like our original commit (we
@@ -354,15 +354,14 @@ test_sr_commit(void *arg)
     parsed_commit->valid = 1;
     tt_mem_op(parsed_commit, OP_EQ, our_commit, sizeof(*parsed_commit));
     /* Cleanup */
-    tor_free(smartlist_get(args, 0)); /* strdup here. */
-    tor_free(smartlist_get(args, 1)); /* strdup here. */
-    smartlist_clear(args);
-    sr_commit_free(parsed_commit);
   }
 
  done:
+  SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
   smartlist_free(args);
   sr_commit_free(our_commit);
+  sr_commit_free(parsed_commit);
+  authority_cert_free(auth_cert);
 }
 
 /* Test the encoding and decoding function for commit and reveal values. */
@@ -583,6 +582,7 @@ test_vote(void *arg)
     smartlist_free(tokens);
     smartlist_clear(args);
     smartlist_free(args);
+    tor_free(lines);
   }
 
  done:
@@ -780,7 +780,7 @@ test_sr_setup_commits(void)
   tt_assert(!commit_has_reveal_value(commit_d));
 
  done:
-  return;
+  authority_cert_free(auth_cert);
 }
 
 /** Verify that the SRV generation procedure is proper by testing it against
@@ -967,6 +967,7 @@ test_utils(void *arg)
     /* Change the pubkey. */
     memset(commit.rsa_identity, 0, sizeof(commit.rsa_identity));
     tt_int_op(commit_is_authoritative(&commit, digest), ==, 0);
+    crypto_pk_free(k);
   }
 
   /* Testing get_phase_str(). */
@@ -1044,6 +1045,7 @@ test_state_transition(void *arg)
     prev = sr_state_get_previous_srv();
     tt_assert(prev == cur);
     tt_assert(!sr_state_get_current_srv());
+    sr_state_clean_srvs();
   }
 
   /* New protocol run. */
@@ -1092,14 +1094,16 @@ test_keep_commit(void *arg)
   sr_commit_t *commit = NULL, *dup_commit = NULL;
   sr_state_t *state;
   time_t now = time(NULL);
+  crypto_pk_t *k = NULL;
 
   (void) arg;
 
   MOCK(trusteddirserver_get_by_v3_auth_digest,
        trusteddirserver_get_by_v3_auth_digest_m);
 
-  {  /* Setup a minimal dirauth environment for this test  */
-    crypto_pk_t *k = crypto_pk_new();
+  {
+    k = crypto_pk_new();
+    /* Setup a minimal dirauth environment for this test  */
     /* Have a key that is not the one from our commit. */
     tt_int_op(0, ==, crypto_pk_generate_key(k));
     tt_int_op(0, ==, crypto_pk_get_fingerprint(k, fp, 0));
@@ -1176,6 +1180,7 @@ test_keep_commit(void *arg)
  done:
   sr_commit_free(commit);
   sr_commit_free(dup_commit);
+  crypto_pk_free(k);
   UNMOCK(trusteddirserver_get_by_v3_auth_digest);
 }
 
