@@ -2986,6 +2986,40 @@ count_intro_point_circuits(const rend_service_t *service)
   return num_ipos;
 }
 
+static size_t
+encode_establish_intro_cell_legacy(char *cell_body_out, crypto_pk_t *intro_key,
+                                   char *rend_circ_nonce)
+{
+/* Use the intro key instead of the service key in ESTABLISH_INTRO. */
+  crypto_pk_t *intro_key = circuit->intro_key;
+  /* Build the payload for a RELAY_ESTABLISH_INTRO cell. */
+  r = crypto_pk_asn1_encode(intro_key, buf+2,
+                            RELAY_PAYLOAD_SIZE-2);
+  if (r < 0) {
+    log_warn(LD_BUG, "Internal error; failed to establish intro point.");
+    reason = END_CIRC_REASON_INTERNAL;
+    goto err;
+  }
+  len = r;
+  set_uint16(buf, htons((uint16_t)len));
+  len += 2;
+  memcpy(auth, circuit->cpath->prev->rend_circ_nonce, DIGEST_LEN);
+  memcpy(auth+DIGEST_LEN, "INTRODUCE", 9);
+  if (crypto_digest(buf+len, auth, DIGEST_LEN+9))
+
+    goto err;
+  len += 20;
+  note_crypto_pk_op(REND_SERVER);
+  r = crypto_pk_private_sign_digest(intro_key, buf+len, sizeof(buf)-len,
+                                    buf, len);
+  if (r<0) {
+    log_warn(LD_BUG, "Internal error: couldn't sign introduction request.");
+    reason = END_CIRC_REASON_INTERNAL;
+    goto err;
+  }
+  len += r;
+}
+
 /** Called when we're done building a circuit to an introduction point:
  *  sends a RELAY_ESTABLISH_INTRO cell.
  */
@@ -2993,9 +3027,7 @@ void
 rend_service_intro_has_opened(origin_circuit_t *circuit)
 {
   rend_service_t *service;
-  size_t len;
   int r;
-  char buf[RELAY_PAYLOAD_SIZE];
   char auth[DIGEST_LEN + 9];
   char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
   int reason = END_CIRC_REASON_TORPROTOCOL;
@@ -3070,34 +3102,6 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
            "Established circuit %u as introduction point for service %s",
            (unsigned)circuit->base_.n_circ_id, serviceid);
   circuit_log_path(LOG_INFO, LD_REND, circuit);
-
-  /* Use the intro key instead of the service key in ESTABLISH_INTRO. */
-  crypto_pk_t *intro_key = circuit->intro_key;
-  /* Build the payload for a RELAY_ESTABLISH_INTRO cell. */
-  r = crypto_pk_asn1_encode(intro_key, buf+2,
-                            RELAY_PAYLOAD_SIZE-2);
-  if (r < 0) {
-    log_warn(LD_BUG, "Internal error; failed to establish intro point.");
-    reason = END_CIRC_REASON_INTERNAL;
-    goto err;
-  }
-  len = r;
-  set_uint16(buf, htons((uint16_t)len));
-  len += 2;
-  memcpy(auth, circuit->cpath->prev->rend_circ_nonce, DIGEST_LEN);
-  memcpy(auth+DIGEST_LEN, "INTRODUCE", 9);
-  if (crypto_digest(buf+len, auth, DIGEST_LEN+9))
-    goto err;
-  len += 20;
-  note_crypto_pk_op(REND_SERVER);
-  r = crypto_pk_private_sign_digest(intro_key, buf+len, sizeof(buf)-len,
-                                    buf, len);
-  if (r<0) {
-    log_warn(LD_BUG, "Internal error: couldn't sign introduction request.");
-    reason = END_CIRC_REASON_INTERNAL;
-    goto err;
-  }
-  len += r;
 
   if (relay_send_command_from_edge(0, TO_CIRCUIT(circuit),
                                    RELAY_COMMAND_ESTABLISH_INTRO,
