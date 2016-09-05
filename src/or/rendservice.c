@@ -3904,3 +3904,4 @@ rend_service_allow_direct_connection(const or_options_t *options)
   (void)options;
   return 0;
 }
+

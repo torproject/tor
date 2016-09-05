@@ -2547,3 +2547,4 @@ extend_info_has_preferred_onion_key(const extend_info_t* ei)
   tor_assert(ei);
   return extend_info_supports_ntor(ei);
 }
+

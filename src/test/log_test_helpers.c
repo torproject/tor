@@ -145,7 +145,6 @@ mock_saved_log_has_message_containing(const char *msg)
   return 0;
 }
 
-
 /** Return true iff the saved logs have any messages with <b>severity</b> */
 int
 mock_saved_log_has_severity(int severity)
@@ -210,3 +209,4 @@ mock_saving_logv(int severity, log_domain_mask_t domain,
 
   smartlist_add(saved_logs, e);
 }
+
