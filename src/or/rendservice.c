@@ -3849,8 +3849,8 @@ rend_consider_services_intro_points(void)
                  n_intro_points_to_open);
         break;
       }
-      /* Add the choosen node to the exclusion list in order to avoid to
-       * pick it again in the next iteration. */
+      /* Add the choosen node to the exclusion list in order to avoid picking
+       * it again in the next iteration. */
       smartlist_add(exclude_nodes, (void*)node);
       intro = tor_malloc_zero(sizeof(rend_intro_point_t));
       /* extend_info is for clients, so we want the multi-hop primary ORPort,
