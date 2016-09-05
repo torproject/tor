@@ -3465,8 +3465,18 @@ options_validate(or_options_t *old_options, or_options_t *options,
         RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT );
   } else if (!options->LearnCircuitBuildTimeout &&
              !options->CircuitBuildTimeout) {
-    log_notice(LD_CONFIG, "You disabled LearnCircuitBuildTimeout, but didn't "
-               "a CircuitBuildTimeout. I'll pick a plausible default.");
+    int severity = LOG_NOTICE;
+    /* Be a little quieter if we've deliberately disabled
+     * LearnCircuitBuildTimeout. */
+    if (options->OnionServiceSingleHopMode) {
+      severity = LOG_INFO;
+#ifdef ENABLE_TOR2WEB_MODE
+    } else if (options->Tor2webMode) {
+      severity = LOG_INFO;
+#endif
+    }
+    log_fn(severity, LD_CONFIG, "You disabled LearnCircuitBuildTimeout, but "
+           "didn't a CircuitBuildTimeout. I'll pick a plausible default.");
   }
 
   if (options->PathBiasNoticeRate > 1.0) {
