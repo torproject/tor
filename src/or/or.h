@@ -80,6 +80,7 @@
 #include "crypto_ed25519.h"
 #include "tor_queue.h"
 #include "util_format.h"
+#include "hs_circuitmap.h"
 
 /* These signals are defined to help handle_control_signal work.
  */
@@ -3352,7 +3353,12 @@ typedef struct or_circuit_t {
    * is not marked for close. */
   struct or_circuit_t *rend_splice;
 
-  struct or_circuit_rendinfo_s *rendinfo;
+  /** If set, points to an HS token that this circuit might be carrying.
+   *  Used by the HS circuitmap.  */
+  hs_token_t *hs_token;
+  /** Hashtable node: used to look up the circuit by its HS token using the HS
+      circuitmap. */
+  HT_ENTRY(or_circuit_t) hs_circuitmap_node;
 
   /** Stores KH for the handshake. */
   char rend_circ_nonce[DIGEST_LEN];/* KH in tor-spec.txt */
