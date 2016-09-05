@@ -2986,38 +2986,55 @@ count_intro_point_circuits(const rend_service_t *service)
   return num_ipos;
 }
 
-static size_t
+/* Given a buffer of at least RELAY_PAYLOAD_SIZE bytes in <b>cell_body_out</b>,
+   write the body of a legacy ESTABLISH_INTRO cell in it. Use <b>intro_key</b>
+   as the intro point auth key, and <b>rend_circ_nonce</b> as the circuit
+   crypto material. On success, fill <b>cell_body_out</b> and return the number
+   of bytes written. On fail, return -1.
+ */
+STATIC ssize_t
 encode_establish_intro_cell_legacy(char *cell_body_out, crypto_pk_t *intro_key,
                                    char *rend_circ_nonce)
 {
-/* Use the intro key instead of the service key in ESTABLISH_INTRO. */
-  crypto_pk_t *intro_key = circuit->intro_key;
+  int retval = -1;
+  int r;
+  int len = 0;
+  char auth[DIGEST_LEN + 9];
+
+  tor_assert(intro_key);
+  tor_assert(rend_circ_nonce);
+
   /* Build the payload for a RELAY_ESTABLISH_INTRO cell. */
-  r = crypto_pk_asn1_encode(intro_key, buf+2,
+  r = crypto_pk_asn1_encode(intro_key, cell_body_out+2,
                             RELAY_PAYLOAD_SIZE-2);
   if (r < 0) {
     log_warn(LD_BUG, "Internal error; failed to establish intro point.");
-    reason = END_CIRC_REASON_INTERNAL;
     goto err;
   }
   len = r;
-  set_uint16(buf, htons((uint16_t)len));
+  set_uint16(cell_body_out, htons((uint16_t)len));
   len += 2;
-  memcpy(auth, circuit->cpath->prev->rend_circ_nonce, DIGEST_LEN);
+  memcpy(auth, rend_circ_nonce, DIGEST_LEN);
   memcpy(auth+DIGEST_LEN, "INTRODUCE", 9);
-  if (crypto_digest(buf+len, auth, DIGEST_LEN+9))
-
+  if (crypto_digest(cell_body_out+len, auth, DIGEST_LEN+9))
     goto err;
   len += 20;
   note_crypto_pk_op(REND_SERVER);
-  r = crypto_pk_private_sign_digest(intro_key, buf+len, sizeof(buf)-len,
-                                    buf, len);
+  r = crypto_pk_private_sign_digest(intro_key, cell_body_out+len,
+                                    sizeof(cell_body_out)-len,
+                                    cell_body_out, len);
   if (r<0) {
     log_warn(LD_BUG, "Internal error: couldn't sign introduction request.");
-    reason = END_CIRC_REASON_INTERNAL;
     goto err;
   }
   len += r;
+
+  retval = len;
+
+ err:
+  memwipe(auth, 0, sizeof(auth));
+
+  return retval;
 }
 
 /** Called when we're done building a circuit to an introduction point:
@@ -3027,8 +3044,7 @@ void
 rend_service_intro_has_opened(origin_circuit_t *circuit)
 {
   rend_service_t *service;
-  int r;
-  char auth[DIGEST_LEN + 9];
+  char buf[RELAY_PAYLOAD_SIZE];
   char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
   int reason = END_CIRC_REASON_TORPROTOCOL;
   const char *rend_pk_digest;
@@ -3103,13 +3119,24 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
            (unsigned)circuit->base_.n_circ_id, serviceid);
   circuit_log_path(LOG_INFO, LD_REND, circuit);
 
-  if (relay_send_command_from_edge(0, TO_CIRCUIT(circuit),
-                                   RELAY_COMMAND_ESTABLISH_INTRO,
-                                   buf, len, circuit->cpath->prev)<0) {
-    log_info(LD_GENERAL,
+  /* Send the ESTABLISH_INTRO cell */
+  {
+    ssize_t len;
+    len = encode_establish_intro_cell_legacy(buf, circuit->intro_key,
+                                        circuit->cpath->prev->rend_circ_nonce);
+    if (len < 0) {
+      reason = END_CIRC_REASON_INTERNAL;
+      goto err;
+    }
+
+    if (relay_send_command_from_edge(0, TO_CIRCUIT(circuit),
+                                     RELAY_COMMAND_ESTABLISH_INTRO,
+                                     buf, len, circuit->cpath->prev)<0) {
+      log_info(LD_GENERAL,
              "Couldn't send introduction request for service %s on circuit %u",
              serviceid, (unsigned)circuit->base_.n_circ_id);
-    goto done;
+      goto done;
+    }
   }
 
   /* We've attempted to use this circuit */
@@ -3121,7 +3148,6 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   circuit_mark_for_close(TO_CIRCUIT(circuit), reason);
  done:
   memwipe(buf, 0, sizeof(buf));
-  memwipe(auth, 0, sizeof(auth));
   memwipe(serviceid, 0, sizeof(serviceid));
 
   return;
@@ -4284,4 +4310,3 @@ rend_service_non_anonymous_mode_enabled(const or_options_t *options)
   tor_assert(rend_service_non_anonymous_mode_consistent(options));
   return options->HiddenServiceNonAnonymousMode ? 1 : 0;
 }
-

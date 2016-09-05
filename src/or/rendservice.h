@@ -119,7 +119,9 @@ typedef struct rend_service_t {
 
 STATIC void rend_service_free(rend_service_t *service);
 STATIC char *rend_service_sos_poison_path(const rend_service_t *service);
-
+STATIC ssize_t encode_establish_intro_cell_legacy(char *cell_body_out,
+                                                  crypto_pk_t *intro_key,
+                                                  char *rend_circ_nonce);
 #endif
 
 int num_rend_services(void);
