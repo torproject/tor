@@ -3832,6 +3832,8 @@ test_config_parse_port_config__listenaddress(void *data)
   tt_int_op(ret, OP_EQ, 0);
 
   // Test warning nonlocal other
+  SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
+  smartlist_clear(slout);
   ret = parse_port_config(slout, config_port2, config_listen_address, "DNS",
                           0, NULL, 0, CL_PORT_WARN_NONLOCAL);
   tt_int_op(ret, OP_EQ, 0);
