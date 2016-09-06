@@ -668,7 +668,7 @@ GENERAL OPTIONS
     relay, all log messages generated when acting as a relay are sanitized, but
     all messages generated when acting as a client are not. (Default: 1)
 
-[[User]] **User** __UID__::
+[[User]] **User** __Username__::
     On startup, setuid to this user and setgid to their primary group.
 
 [[KeepBindCapabilities]] **KeepBindCapabilities** **0**|**1**|**auto**::
