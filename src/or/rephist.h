@@ -119,5 +119,30 @@ extern int onion_handshakes_requested[MAX_ONION_HANDSHAKE_TYPE+1];
 extern int onion_handshakes_assigned[MAX_ONION_HANDSHAKE_TYPE+1];
 #endif
 
+/**
+ * Represents the type of a cell for padding accounting
+ */
+typedef enum padding_type_t {
+    /** A RELAY_DROP cell */
+    PADDING_TYPE_DROP,
+    /** A CELL_PADDING cell */
+    PADDING_TYPE_CELL,
+    /** Total counts of padding and non-padding together */
+    PADDING_TYPE_TOTAL,
+    /** Total cell counts for all padding-enabled channels */
+    PADDING_TYPE_ENABLED_TOTAL,
+    /** CELL_PADDING counts for all padding-enabled channels */
+    PADDING_TYPE_ENABLED_CELL
+} padding_type_t;
+
+/** The amount of time over which the padding cell counts were counted */
+#define REPHIST_CELL_PADDING_COUNTS_INTERVAL (24*60*60)
+void rep_hist_padding_count_read(padding_type_t type);
+void rep_hist_padding_count_write(padding_type_t type);
+char *rep_hist_get_padding_count_lines(void);
+void rep_hist_reset_padding_counts(void);
+void rep_hist_prep_published_padding_counts(time_t now);
+void rep_hist_padding_count_timers(uint64_t num_timers);
+
 #endif
 

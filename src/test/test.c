@@ -1186,6 +1186,7 @@ struct testgroup_t testgroups[] = {
   { "cellfmt/", cell_format_tests },
   { "cellqueue/", cell_queue_tests },
   { "channel/", channel_tests },
+  { "channelpadding/", channelpadding_tests },
   { "channeltls/", channeltls_tests },
   { "checkdir/", checkdir_tests },
   { "circuitlist/", circuitlist_tests },

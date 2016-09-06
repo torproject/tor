@@ -72,11 +72,11 @@ static strmap_t *unnamed_server_map = NULL;
 
 /** Most recently received and validated v3 "ns"-flavored consensus network
  * status. */
-static networkstatus_t *current_ns_consensus = NULL;
+STATIC networkstatus_t *current_ns_consensus = NULL;
 
 /** Most recently received and validated v3 "microdec"-flavored consensus
  * network status. */
-static networkstatus_t *current_md_consensus = NULL;
+STATIC networkstatus_t *current_md_consensus = NULL;
 
 /** A v3 consensus networkstatus that we've received, but which we don't
  * have enough certificates to be happy about. */

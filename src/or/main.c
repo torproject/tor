@@ -54,6 +54,7 @@
 #include "buffers.h"
 #include "channel.h"
 #include "channeltls.h"
+#include "channelpadding.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "circuituse.h"
@@ -176,7 +177,7 @@ static int signewnym_is_pending = 0;
 static unsigned newnym_epoch = 0;
 
 /** Smartlist of all open connections. */
-static smartlist_t *connection_array = NULL;
+STATIC smartlist_t *connection_array = NULL;
 /** List of connections that have been marked for close and need to be freed
  * and removed from connection_array. */
 static smartlist_t *closeable_connection_lst = NULL;
@@ -1119,6 +1120,8 @@ run_connection_housekeeping(int i, time_t now)
     memset(&cell,0,sizeof(cell_t));
     cell.command = CELL_PADDING;
     connection_or_write_cell_to_buf(&cell, or_conn);
+  } else {
+    channelpadding_decide_to_pad_channel(chan);
   }
 }
 
@@ -1184,6 +1187,7 @@ CALLBACK(check_dns_honesty);
 CALLBACK(write_bridge_ns);
 CALLBACK(check_fw_helper_app);
 CALLBACK(heartbeat);
+CALLBACK(reset_padding_counts);
 
 #undef CALLBACK
 
@@ -1215,6 +1219,7 @@ static periodic_event_item_t periodic_events[] = {
   CALLBACK(write_bridge_ns),
   CALLBACK(check_fw_helper_app),
   CALLBACK(heartbeat),
+  CALLBACK(reset_padding_counts),
   END_OF_PERIODIC_EVENTS
 };
 #undef CALLBACK
@@ -1723,6 +1728,17 @@ write_stats_file_callback(time_t now, const or_options_t *options)
 /**
  * Periodic callback: Write bridge statistics to disk if appropriate.
  */
+static int
+reset_padding_counts_callback(time_t now, const or_options_t *options)
+{
+  if (options->PaddingStatistics) {
+    rep_hist_prep_published_padding_counts(now);
+  }
+
+  rep_hist_reset_padding_counts();
+  return REPHIST_CELL_PADDING_COUNTS_INTERVAL;
+}
+
 static int
 record_bridge_stats_callback(time_t now, const or_options_t *options)
 {
@@ -2336,6 +2352,8 @@ do_main_loop(void)
   }
 
   handle_signals(1);
+  monotime_init();
+  timers_initialize();
 
   /* load the private keys, if we're supposed to have them, and set up the
    * TLS context. */
@@ -3196,6 +3214,9 @@ tor_cleanup(void)
       rep_hist_record_mtbf_data(now, 0);
     keypin_close_journal();
   }
+
+  timers_shutdown();
+
 #ifdef USE_DMALLOC
   dmalloc_log_stats();
 #endif

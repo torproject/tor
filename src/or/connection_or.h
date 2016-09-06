@@ -109,6 +109,8 @@ void var_cell_free(var_cell_t *cell);
 
 /* DOCDOC */
 #define MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS 4
+#define MIN_LINK_PROTO_FOR_CHANNEL_PADDING 5
+#define MAX_LINK_PROTO MIN_LINK_PROTO_FOR_CHANNEL_PADDING
 
 void connection_or_group_set_badness_(smartlist_t *group, int force);
 

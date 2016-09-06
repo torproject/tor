@@ -3199,6 +3199,12 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
     }
   }
 
+  if (options->PaddingStatistics) {
+    contents = rep_hist_get_padding_count_lines();
+    if (contents)
+      smartlist_add(chunks, contents);
+  }
+
   /* Add information about the pluggable transports we support. */
   if (options->ServerTransportPlugin) {
     char *pluggable_transports = pt_get_extra_info_descriptor_string();

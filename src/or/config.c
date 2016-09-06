@@ -242,6 +242,7 @@ static config_var_t option_vars_[] = {
   V(BridgeRecordUsageByCountry,  BOOL,     "1"),
   V(BridgeRelay,                 BOOL,     "0"),
   V(CellStatistics,              BOOL,     "0"),
+  V(PaddingStatistics,           BOOL,     "1"),
   V(LearnCircuitBuildTimeout,    BOOL,     "1"),
   V(CircuitBuildTimeout,         INTERVAL, "0"),
   V(CircuitIdleTimeout,          INTERVAL, "1 hour"),
@@ -458,6 +459,8 @@ static config_var_t option_vars_[] = {
   V(RecommendedClientVersions,   LINELIST, NULL),
   V(RecommendedServerVersions,   LINELIST, NULL),
   V(RecommendedPackages,         LINELIST, NULL),
+  V(ReducedConnectionPadding,    BOOL,     "0"),
+  V(ConnectionPadding,           AUTOBOOL, "auto"),
   V(RefuseUnknownExits,          AUTOBOOL, "auto"),
   V(RejectPlaintextPorts,        CSV,      ""),
   V(RelayBandwidthBurst,         MEMUNIT,  "0"),
@@ -3427,6 +3430,14 @@ options_validate(or_options_t *old_options, or_options_t *options,
     config_free_lines(options->DirPort_lines);
     options->DirPort_lines = NULL;
     options->DirPort_set = 0;
+  }
+
+  if (server_mode(options) && options->ConnectionPadding != -1) {
+    REJECT("Relays must use 'auto' for the ConnectionPadding setting.");
+  }
+
+  if (server_mode(options) && options->ReducedConnectionPadding != 0) {
+    REJECT("Relays cannot set ReducedConnectionPadding. ");
   }
 
   if (options->MinUptimeHidServDirectoryV2 < 0) {

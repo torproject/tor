@@ -74,6 +74,7 @@
 #include "routerlist.h"
 #include "routerparse.h"
 #include "scheduler.h"
+#include "rephist.h"
 
 static edge_connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell,
                                             cell_direction_t cell_direction,
@@ -196,6 +197,82 @@ relay_crypt_one_payload(crypto_cipher_t *cipher, uint8_t *in,
   return 0;
 }
 
+/**
+ * Update channel usage state based on the type of relay cell and
+ * circuit properties.
+ *
+ * This is needed to determine if a client channel is being
+ * used for application traffic, and if a relay channel is being
+ * used for multihop circuits and application traffic. The decision
+ * to pad in channelpadding.c depends upon this info (as well as
+ * consensus parameters) to decide what channels to pad.
+ */
+static void
+circuit_update_channel_usage(circuit_t *circ, cell_t *cell)
+{
+  if (CIRCUIT_IS_ORIGIN(circ)) {
+    /*
+     * The client state was first set much earlier in
+     * circuit_send_next_onion_skin(), so we can start padding as early as
+     * possible.
+     *
+     * However, if padding turns out to be expensive, we may want to not do
+     * it until actual application traffic starts flowing (which is controlled
+     * via consensus param nf_pad_before_usage).
+     *
+     * So: If we're an origin circuit and we've created a full length circuit,
+     * then any CELL_RELAY cell means application data. Increase the usage
+     * state of the channel to indicate this.
+     *
+     * We want to wait for CELL_RELAY specifically here, so we know that
+     * the channel was definitely being used for data and not for extends.
+     * By default, we pad as soon as a channel has been used for *any*
+     * circuits, so this state is irrelevant to the padding decision in
+     * the default case. However, if padding turns out to be expensive,
+     * we would like the ability to avoid padding until we're absolutely
+     * sure that a channel is used for enough application data to be worth
+     * padding.
+     *
+     * (So it does not matter that CELL_RELAY_EARLY can actually contain
+     * application data. This is only a load reducing option and that edge
+     * case does not matter if we're desperately trying to reduce overhead
+     * anyway. See also consensus parameter nf_pad_before_usage).
+     */
+    if (BUG(!circ->n_chan))
+      return;
+
+    if (circ->n_chan->channel_usage == CHANNEL_USED_FOR_FULL_CIRCS &&
+        cell->command == CELL_RELAY) {
+      circ->n_chan->channel_usage = CHANNEL_USED_FOR_USER_TRAFFIC;
+    }
+  } else {
+    /* If we're a relay circuit, the question is more complicated. Basically:
+     * we only want to pad connections that carry multihop (anonymous)
+     * circuits.
+     *
+     * We assume we're more than one hop if either the previous hop
+     * is not a client, or if the previous hop is a client and there's
+     * a next hop. Then, circuit traffic starts at RELAY_EARLY, and
+     * user application traffic starts when we see RELAY cells.
+     */
+    or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
+
+    if (BUG(!or_circ->p_chan))
+      return;
+
+    if (!or_circ->p_chan->is_client ||
+        (or_circ->p_chan->is_client && circ->n_chan)) {
+      if (cell->command == CELL_RELAY_EARLY) {
+        if (or_circ->p_chan->channel_usage < CHANNEL_USED_FOR_FULL_CIRCS) {
+          or_circ->p_chan->channel_usage = CHANNEL_USED_FOR_FULL_CIRCS;
+        }
+      } else if (cell->command == CELL_RELAY) {
+        or_circ->p_chan->channel_usage = CHANNEL_USED_FOR_USER_TRAFFIC;
+      }
+    }
+  }
+}
+
 /** Receive a relay cell:
  *  - Crypt it (encrypt if headed toward the origin or if we <b>are</b> the
  *    origin; decrypt if we're headed toward the exit).
@@ -228,6 +305,8 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
     log_warn(LD_BUG,"relay crypt failed. Dropping connection.");
     return -END_CIRC_REASON_INTERNAL;
   }
+
+  circuit_update_channel_usage(circ, cell);
 
   if (recognized) {
     edge_connection_t *conn = NULL;
@@ -631,6 +710,9 @@ relay_send_command_from_edge_,(streamid_t stream_id, circuit_t *circ,
 
   log_debug(LD_OR,"delivering %d cell %s.", relay_command,
             cell_direction == CELL_DIRECTION_OUT ? "forward" : "backward");
+
+  if (relay_command == RELAY_COMMAND_DROP)
+    rep_hist_padding_count_write(PADDING_TYPE_DROP);
 
   /* If we are sending an END cell and this circuit is used for a tunneled
    * directory request, advance its state. */
@@ -1513,6 +1595,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
 
   switch (rh.command) {
     case RELAY_COMMAND_DROP:
+      rep_hist_padding_count_read(PADDING_TYPE_DROP);
 //      log_info(domain,"Got a relay-level padding cell. Dropping.");
       return 0;
     case RELAY_COMMAND_BEGIN:

@@ -919,8 +919,17 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     memset(&cc, 0, sizeof(cc));
     if (circ->build_state->onehop_tunnel)
       control_event_bootstrap(BOOTSTRAP_STATUS_ONEHOP_CREATE, 0);
-    else
+    else {
       control_event_bootstrap(BOOTSTRAP_STATUS_CIRCUIT_CREATE, 0);
+
+      /* If this is not a one-hop tunnel, the channel is being used
+       * for traffic that wants anonymity and protection from traffic
+       * analysis (such as netflow record retention). That means we want
+       * to pad it.
+       */
+      if (circ->base_.n_chan->channel_usage < CHANNEL_USED_FOR_FULL_CIRCS)
+        circ->base_.n_chan->channel_usage = CHANNEL_USED_FOR_FULL_CIRCS;
+    }
 
     node = node_get_by_id(circ->base_.n_chan->identity_digest);
     fast = should_use_create_fast_for_circuit(circ);

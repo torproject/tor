@@ -49,6 +49,7 @@
 #include "or.h"
 #include "channel.h"
 #include "channeltls.h"
+#include "channelpadding.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "circuitstats.h"
@@ -63,6 +64,7 @@
 #include "router.h"
 #include "routerlist.h"
 #include "scheduler.h"
+#include "compat_time.h"
 
 /* Global lists of channels */
 
@@ -104,6 +106,8 @@ HT_PROTOTYPE(channel_gid_map, channel_s, gidmap_node,
 HT_GENERATE2(channel_gid_map, channel_s, gidmap_node,
              channel_id_hash, channel_id_eq,
              0.6, tor_reallocarray_, tor_free_);
+
+HANDLE_IMPL(channel, channel_s,);
 
 /* Counter for ID numbers */
 static uint64_t n_channels_allocated = 0;
@@ -922,6 +926,11 @@ channel_free(channel_t *chan)
     circuitmux_set_policy(chan->cmux, NULL);
   }
 
+  /* Remove all timers and associated handle entries now */
+  timer_free(chan->padding_timer);
+  channel_handle_free(chan->timer_handle);
+  channel_handles_clear(chan);
+
   /* Call a free method if there is one */
   if (chan->free_fn) chan->free_fn(chan);
 
@@ -999,6 +1008,11 @@ channel_force_free(channel_t *chan)
   if (chan->cmux) {
     circuitmux_set_policy(chan->cmux, NULL);
   }
+
+  /* Remove all timers and associated handle entries now */
+  timer_free(chan->padding_timer);
+  channel_handle_free(chan->timer_handle);
+  channel_handles_clear(chan);
 
   /* Call a free method if there is one */
   if (chan->free_fn) chan->free_fn(chan);
@@ -2619,6 +2633,19 @@ channel_do_open_actions(channel_t *chan)
     }
   }
 
+  /* Disable or reduce padding according to user prefs. */
+  if (chan->padding_enabled || get_options()->ConnectionPadding == 1) {
+    if (!get_options()->ConnectionPadding) {
+      channelpadding_disable_padding_on_channel(chan);
+    }
+
+    /* Padding can be forced and/or reduced by clients, regardless of if
+     * the channel supports it */
+    if (get_options()->ReducedConnectionPadding) {
+      channelpadding_reduce_padding_on_channel(chan);
+    }
+  }
+
   circuit_n_chan_done(chan, 1, close_origin_circuits);
 }
 
@@ -4215,8 +4242,12 @@ channel_timestamp_active(channel_t *chan)
   time_t now = time(NULL);
 
   tor_assert(chan);
+  chan->timestamp_xfer_ms = monotime_coarse_absolute_msec();
 
   chan->timestamp_active = now;
+
+  /* Clear any potential netflow padding timer. We're active */
+  chan->next_padding_time_ms = 0;
 }
 
 /**
@@ -4299,11 +4330,14 @@ void
 channel_timestamp_recv(channel_t *chan)
 {
   time_t now = time(NULL);
-
   tor_assert(chan);
+  chan->timestamp_xfer_ms = monotime_coarse_absolute_msec();
 
   chan->timestamp_active = now;
   chan->timestamp_recv = now;
+
+  /* Clear any potential netflow padding timer. We're active */
+  chan->next_padding_time_ms = 0;
 }
 
 /**
@@ -4316,11 +4350,15 @@ void
 channel_timestamp_xmit(channel_t *chan)
 {
   time_t now = time(NULL);
-
   tor_assert(chan);
+
+  chan->timestamp_xfer_ms = monotime_coarse_absolute_msec();
 
   chan->timestamp_active = now;
   chan->timestamp_xmit = now;
+
+  /* Clear any potential netflow padding timer. We're active */
+  chan->next_padding_time_ms = 0;
 }
 
 /***************************************************************

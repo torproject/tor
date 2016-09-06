@@ -57,6 +57,9 @@
 #include "routerlist.h"
 #include "scheduler.h"
 #include "torcert.h"
+#include "networkstatus.h"
+#include "channelpadding_negotiation.h"
+#include "channelpadding.h"
 
 /** How many CELL_PADDING cells have we received, ever? */
 uint64_t stats_n_padding_cells_processed = 0;
@@ -122,6 +125,8 @@ static void channel_tls_process_netinfo_cell(cell_t *cell,
 static int command_allowed_before_handshake(uint8_t command);
 static int enter_v3_handshake_with_cell(var_cell_t *cell,
                                         channel_tls_t *tlschan);
+static void channel_tls_process_padding_negotiate_cell(cell_t *cell,
+                                                       channel_tls_t *chan);
 
 /**
  * Do parts of channel_tls_t initialization common to channel_tls_connect()
@@ -1098,9 +1103,16 @@ channel_tls_handle_cell(cell_t *cell, or_connection_t *conn)
   /* We note that we're on the internet whenever we read a cell. This is
    * a fast operation. */
   entry_guards_note_internet_connectivity(get_guard_selection_info());
+  rep_hist_padding_count_read(PADDING_TYPE_TOTAL);
+
+  if (chan->base_.currently_padding)
+    rep_hist_padding_count_read(PADDING_TYPE_ENABLED_TOTAL);
 
   switch (cell->command) {
     case CELL_PADDING:
+      rep_hist_padding_count_read(PADDING_TYPE_CELL);
+      if (chan->base_.currently_padding)
+        rep_hist_padding_count_read(PADDING_TYPE_ENABLED_CELL);
       ++stats_n_padding_cells_processed;
       /* do nothing */
       break;
@@ -1110,6 +1122,10 @@ channel_tls_handle_cell(cell_t *cell, or_connection_t *conn)
     case CELL_NETINFO:
       ++stats_n_netinfo_cells_processed;
       PROCESS_CELL(netinfo, cell, chan);
+      break;
+    case CELL_PADDING_NEGOTIATE:
+      ++stats_n_netinfo_cells_processed;
+      PROCESS_CELL(padding_negotiate, cell, chan);
       break;
     case CELL_CREATE:
     case CELL_CREATE_FAST:
@@ -1570,6 +1586,9 @@ channel_tls_process_versions_cell(var_cell_t *cell, channel_tls_t *chan)
       chan->conn->link_proto >= MIN_LINK_PROTO_FOR_WIDE_CIRC_IDS;
     chan->conn->wide_circ_ids = chan->base_.wide_circ_ids;
 
+    chan->base_.padding_enabled =
+      chan->conn->link_proto >= MIN_LINK_PROTO_FOR_CHANNEL_PADDING;
+
     if (send_certs) {
       if (connection_or_send_certs_cell(chan->conn) < 0) {
         log_warn(LD_OR, "Couldn't send certs cell");
@@ -1592,6 +1611,43 @@ channel_tls_process_versions_cell(var_cell_t *cell, channel_tls_t *chan)
       }
     }
   }
+}
+
+/**
+ * Process a 'padding_negotiate' cell
+ *
+ * This function is called to handle an incoming PADDING_NEGOTIATE cell;
+ * enable or disable padding accordingly, and read and act on its timeout
+ * value contents.
+ */
+static void
+channel_tls_process_padding_negotiate_cell(cell_t *cell, channel_tls_t *chan)
+{
+  channelpadding_negotiate_t *negotiation;
+  tor_assert(cell);
+  tor_assert(chan);
+  tor_assert(chan->conn);
+
+  if (chan->conn->link_proto < MIN_LINK_PROTO_FOR_CHANNEL_PADDING) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR,
+           "Received a PADDING_NEGOTIATE cell on v%d connection; dropping.",
+           chan->conn->link_proto);
+    return;
+  }
+
+  if (channelpadding_negotiate_parse(&negotiation, cell->payload,
+                                     CELL_PAYLOAD_SIZE) < 0) {
+    log_fn(LOG_PROTOCOL_WARN, LD_OR,
+          "Received malformed PADDING_NEGOTIATE cell on v%d connection; "
+          "dropping.", chan->conn->link_proto);
+
+    return;
+  }
+
+  channelpadding_update_padding_for_channel(TLS_CHAN_TO_BASE(chan),
+                                            negotiation);
+
+  channelpadding_negotiate_free(negotiation);
 }
 
 /**

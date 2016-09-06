@@ -85,6 +85,9 @@
 #include "routerlist.h"
 #include "ht.h"
 
+#include "channelpadding.h"
+#include "connection_or.h"
+
 static void bw_arrays_init(void);
 static void predicted_ports_init(void);
 
@@ -164,6 +167,44 @@ typedef struct or_history_t {
    * from this OR to OR2. */
   digestmap_t *link_history_map;
 } or_history_t;
+
+/**
+ * This structure holds accounting needed to calculate the padding overhead.
+ */
+typedef struct padding_counts_t {
+  /** Total number of cells we have received, including padding */
+  uint64_t read_cell_count;
+  /** Total number of cells we have sent, including padding */
+  uint64_t write_cell_count;
+  /** Total number of CELL_PADDING cells we have received */
+  uint64_t read_pad_cell_count;
+  /** Total number of CELL_PADDING cells we have sent */
+  uint64_t write_pad_cell_count;
+  /** Total number of read cells on padding-enabled conns */
+  uint64_t enabled_read_cell_count;
+  /** Total number of sent cells on padding-enabled conns */
+  uint64_t enabled_write_cell_count;
+  /** Total number of read CELL_PADDING cells on padding-enabled cons */
+  uint64_t enabled_read_pad_cell_count;
+  /** Total number of sent CELL_PADDING cells on padding-enabled cons */
+  uint64_t enabled_write_pad_cell_count;
+  /** Total number of RELAY_DROP cells we have received */
+  uint64_t read_drop_cell_count;
+  /** Total number of RELAY_DROP cells we have sent */
+  uint64_t write_drop_cell_count;
+  /** The maximum number of padding timers we've seen in 24 hours */
+  uint64_t maximum_chanpad_timers;
+  /** When did we first copy padding_current into padding_published? */
+  char first_published_at[ISO_TIME_LEN+1];
+} padding_counts_t;
+
+/** Holds the current values of our padding statistics.
+ * It is not published until it is transferred to padding_published. */
+static padding_counts_t padding_current;
+
+/** Remains fixed for a 24 hour period, and then is replaced
+ * by a redacted copy of padding_current */
+static padding_counts_t padding_published;
 
 /** When did we last multiply all routers' weighted_run_length and
  * total_run_weights by STABILITY_ALPHA? */
@@ -1828,6 +1869,7 @@ rep_hist_get_predicted_ports(time_t now)
   int predicted_circs_relevance_time;
   smartlist_t *out = smartlist_new();
   tor_assert(predicted_ports_list);
+  // XXX: Change this if ReducedConnectionPadding is set.
   predicted_circs_relevance_time = get_options()->PredictedPortsRelevanceTime;
 
   /* clean out obsolete entries */
@@ -3210,8 +3252,7 @@ rep_hist_hs_stats_write(time_t now)
   return start_of_hs_stats_interval + WRITE_STATS_INTERVAL;
 }
 
-#define MAX_LINK_PROTO_TO_LOG 4
-static uint64_t link_proto_count[MAX_LINK_PROTO_TO_LOG+1][2];
+static uint64_t link_proto_count[MAX_LINK_PROTO+1][2];
 
 /** Note that we negotiated link protocol version <b>link_proto</b>, on
  * a connection that started here iff <b>started_here</b> is true.
@@ -3220,12 +3261,171 @@ void
 rep_hist_note_negotiated_link_proto(unsigned link_proto, int started_here)
 {
   started_here = !!started_here; /* force to 0 or 1 */
-  if (link_proto > MAX_LINK_PROTO_TO_LOG) {
+  if (link_proto > MAX_LINK_PROTO) {
     log_warn(LD_BUG, "Can't log link protocol %u", link_proto);
     return;
   }
 
   link_proto_count[link_proto][started_here]++;
+}
+
+/**
+ * Update the maximum count of total pending channel padding timers
+ * in this period.
+ */
+void
+rep_hist_padding_count_timers(uint64_t num_timers)
+{
+  if (num_timers > padding_current.maximum_chanpad_timers) {
+    padding_current.maximum_chanpad_timers = num_timers;
+  }
+}
+
+/**
+ * Count a cell that we sent for padding overhead statistics.
+ *
+ * RELAY_COMMAND_DROP and CELL_PADDING are accounted separately. Both should be
+ * counted for PADDING_TYPE_TOTAL.
+ */
+void
+rep_hist_padding_count_write(padding_type_t type)
+{
+  switch (type) {
+    case PADDING_TYPE_DROP:
+      padding_current.write_drop_cell_count++;
+      break;
+    case PADDING_TYPE_CELL:
+      padding_current.write_pad_cell_count++;
+      break;
+    case PADDING_TYPE_TOTAL:
+      padding_current.write_cell_count++;
+      break;
+    case PADDING_TYPE_ENABLED_TOTAL:
+      padding_current.enabled_write_cell_count++;
+      break;
+    case PADDING_TYPE_ENABLED_CELL:
+      padding_current.enabled_write_pad_cell_count++;
+      break;
+  }
+}
+
+/**
+ * Count a cell that we've received for padding overhead statistics.
+ *
+ * RELAY_COMMAND_DROP and CELL_PADDING are accounted separately. Both should be
+ * counted for PADDING_TYPE_TOTAL.
+ */
+void
+rep_hist_padding_count_read(padding_type_t type)
+{
+  switch (type) {
+    case PADDING_TYPE_DROP:
+      padding_current.read_drop_cell_count++;
+      break;
+    case PADDING_TYPE_CELL:
+      padding_current.read_pad_cell_count++;
+      break;
+    case PADDING_TYPE_TOTAL:
+      padding_current.read_cell_count++;
+      break;
+    case PADDING_TYPE_ENABLED_TOTAL:
+      padding_current.enabled_read_cell_count++;
+      break;
+    case PADDING_TYPE_ENABLED_CELL:
+      padding_current.enabled_read_pad_cell_count++;
+      break;
+  }
+}
+
+/**
+ * Reset our current padding statistics. Called once every 24 hours.
+ */
+void
+rep_hist_reset_padding_counts(void)
+{
+  memset(&padding_current, 0, sizeof(padding_current));
+}
+
+/**
+ * Copy our current cell counts into a structure for listing in our
+ * extra-info descriptor. Also perform appropriate rounding and redaction.
+ *
+ * This function is called once every 24 hours.
+ */
+#define MIN_CELL_COUNTS_TO_PUBLISH 1
+#define ROUND_CELL_COUNTS_TO 10000
+void
+rep_hist_prep_published_padding_counts(time_t now)
+{
+  memcpy(&padding_published, &padding_current, sizeof(padding_published));
+
+  if (padding_published.read_cell_count < MIN_CELL_COUNTS_TO_PUBLISH ||
+      padding_published.write_cell_count < MIN_CELL_COUNTS_TO_PUBLISH) {
+    memset(&padding_published, 0, sizeof(padding_published));
+    return;
+  }
+
+  format_iso_time(padding_published.first_published_at, now);
+#define ROUND_AND_SET_COUNT(x) (x) = round_uint64_to_next_multiple_of((x), \
+                                      ROUND_CELL_COUNTS_TO)
+  ROUND_AND_SET_COUNT(padding_published.read_pad_cell_count);
+  ROUND_AND_SET_COUNT(padding_published.write_pad_cell_count);
+  ROUND_AND_SET_COUNT(padding_published.read_drop_cell_count);
+  ROUND_AND_SET_COUNT(padding_published.write_drop_cell_count);
+  ROUND_AND_SET_COUNT(padding_published.write_cell_count);
+  ROUND_AND_SET_COUNT(padding_published.read_cell_count);
+  ROUND_AND_SET_COUNT(padding_published.enabled_read_cell_count);
+  ROUND_AND_SET_COUNT(padding_published.enabled_read_pad_cell_count);
+  ROUND_AND_SET_COUNT(padding_published.enabled_write_cell_count);
+  ROUND_AND_SET_COUNT(padding_published.enabled_write_pad_cell_count);
+#undef ROUND_AND_SET_COUNT
+}
+
+/**
+ * Returns an allocated string for extra-info documents for publishing
+ * padding statistics from the last 24 hour interval.
+ */
+char *
+rep_hist_get_padding_count_lines(void)
+{
+  char *result = NULL;
+
+  if (!padding_published.read_cell_count ||
+          !padding_published.write_cell_count) {
+    return NULL;
+  }
+
+  tor_asprintf(&result, "padding-counts %s (%d s)"
+                        " bin-size="U64_FORMAT
+                        " write-drop="U64_FORMAT
+                        " write-pad="U64_FORMAT
+                        " write-total="U64_FORMAT
+                        " read-drop="U64_FORMAT
+                        " read-pad="U64_FORMAT
+                        " read-total="U64_FORMAT
+                        " enabled-read-pad="U64_FORMAT
+                        " enabled-read-total="U64_FORMAT
+                        " enabled-write-pad="U64_FORMAT
+                        " enabled-write-total="U64_FORMAT
+                        " max-chanpad-timers="U64_FORMAT
+                        "\n",
+               padding_published.first_published_at,
+               REPHIST_CELL_PADDING_COUNTS_INTERVAL,
+               U64_PRINTF_ARG(ROUND_CELL_COUNTS_TO),
+               U64_PRINTF_ARG(padding_published.write_drop_cell_count),
+               U64_PRINTF_ARG(padding_published.write_pad_cell_count),
+               U64_PRINTF_ARG(padding_published.write_cell_count),
+               U64_PRINTF_ARG(padding_published.read_drop_cell_count),
+               U64_PRINTF_ARG(padding_published.read_pad_cell_count),
+               U64_PRINTF_ARG(padding_published.read_cell_count),
+               U64_PRINTF_ARG(padding_published.enabled_read_pad_cell_count),
+               U64_PRINTF_ARG(padding_published.enabled_read_cell_count),
+               U64_PRINTF_ARG(padding_published.enabled_write_pad_cell_count),
+               U64_PRINTF_ARG(padding_published.enabled_write_cell_count),
+               U64_PRINTF_ARG(padding_published.maximum_chanpad_timers)
+               );
+
+  return result;
 }
 
 /** Log a heartbeat message explaining how many connections of each link

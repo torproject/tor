@@ -875,6 +875,7 @@ typedef enum {
 #define CELL_RELAY_EARLY 9
 #define CELL_CREATE2 10
 #define CELL_CREATED2 11
+#define CELL_PADDING_NEGOTIATE 12
 
 #define CELL_VPADDING 128
 #define CELL_CERTS 129
@@ -3756,6 +3757,15 @@ typedef struct {
   int AvoidDiskWrites; /**< Boolean: should we never cache things to disk?
                         * Not used yet. */
   int ClientOnly; /**< Boolean: should we never evolve into a server role? */
+
+  int ReducedConnectionPadding; /**< Boolean: Should we try to keep connections
+                                  open shorter and pad them less against
+                                  connection-level traffic analysis? */
+  /** Autobool: if auto, then connection padding will be negotiated by client
+   * and server. If 0, it will be fully disabled. If 1, the client will still
+   * pad to the server regardless of server support. */
+  int ConnectionPadding;
+
   /** To what authority types do we publish our descriptor? Choices are
    * "v1", "v2", "v3", "bridge", or "". */
   smartlist_t *PublishServerDescriptor;
@@ -4162,6 +4172,9 @@ typedef struct {
 
   /** If true, the user wants us to collect cell statistics. */
   int CellStatistics;
+
+  /** If true, the user wants us to collect padding statistics. */
+  int PaddingStatistics;
 
   /** If true, the user wants us to collect statistics as entry node. */
   int EntryStatistics;

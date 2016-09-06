@@ -55,6 +55,7 @@
 #include "ext_orport.h"
 #include "scheduler.h"
 #include "torcert.h"
+#include "channelpadding.h"
 
 static int connection_tls_finish_handshake(or_connection_t *conn);
 static int connection_or_launch_v3_or_handshake(or_connection_t *conn);
@@ -1983,11 +1984,22 @@ connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
 
   cell_pack(&networkcell, cell, conn->wide_circ_ids);
 
+  rep_hist_padding_count_write(PADDING_TYPE_TOTAL);
+  if (cell->command == CELL_PADDING)
+    rep_hist_padding_count_write(PADDING_TYPE_CELL);
+
   connection_write_to_buf(networkcell.body, cell_network_size, TO_CONN(conn));
 
   /* Touch the channel's active timestamp if there is one */
-  if (conn->chan)
+  if (conn->chan) {
     channel_timestamp_active(TLS_CHAN_TO_BASE(conn->chan));
+
+    if (conn->chan->base_.currently_padding) {
+      rep_hist_padding_count_write(PADDING_TYPE_ENABLED_TOTAL);
+      if (cell->command == CELL_PADDING)
+        rep_hist_padding_count_write(PADDING_TYPE_ENABLED_CELL);
+    }
+  }
 
   if (conn->base_.state == OR_CONN_STATE_OR_HANDSHAKING_V3)
     or_handshake_state_record_cell(conn, conn->handshake_state, cell, 0);
@@ -2094,7 +2106,7 @@ connection_or_process_cells_from_inbuf(or_connection_t *conn)
 }
 
 /** Array of recognized link protocol versions. */
-static const uint16_t or_protocol_versions[] = { 1, 2, 3, 4 };
+static const uint16_t or_protocol_versions[] = { 1, 2, 3, 4, 5 };
 /** Number of versions in <b>or_protocol_versions</b>. */
 static const int n_or_protocol_versions =
   (int)( sizeof(or_protocol_versions)/sizeof(uint16_t) );

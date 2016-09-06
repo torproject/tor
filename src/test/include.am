@@ -78,6 +78,7 @@ src_test_test_SOURCES = \
 	src/test/test_cell_formats.c \
 	src/test/test_cell_queue.c \
 	src/test/test_channel.c \
+	src/test/test_channelpadding.c \
 	src/test/test_channeltls.c \
 	src/test/test_checkdir.c \
 	src/test/test_circuitlist.c \
