@@ -2111,7 +2111,7 @@ on the public Tor network.
     When this option is set in addition to **AuthoritativeDirectory**, Tor
     generates version 3 network statuses and serves descriptors, etc as
     described in dir-spec.txt file of https://spec.torproject.org/[torspec]
-    (for Tor clients and servers running atleast 0.2.0.x).
+    (for Tor clients and servers running at least 0.2.0.x).
 
 [[VersioningAuthoritativeDirectory]] **VersioningAuthoritativeDirectory** **0**|**1**::
     When this option is set to 1, Tor adds information on which versions of
