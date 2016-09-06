@@ -508,7 +508,7 @@ rend_config_services(const or_options_t *options, int validate_only)
     if (!strcasecmp(line->key, "HiddenServiceDir")) {
       if (service) { /* register the one we just finished parsing */
         if (validate_only)
-           rend_service_free(service);
+          rend_service_free(service);
         else
           rend_add_service(service);
       }
