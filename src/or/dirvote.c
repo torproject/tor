@@ -1367,6 +1367,11 @@ networkstatus_compute_consensus(smartlist_t *votes,
     consensus_method = MAX_SUPPORTED_CONSENSUS_METHOD;
   }
 
+  if (consensus_method >= MIN_METHOD_FOR_INIT_BW_WEIGHTS_ONE) {
+    G = M = E = D = 1;
+    T = 4;
+  }
+
   /* Compute medians of time-related things, and figure out how many
    * routers we might need to talk about. */
   {

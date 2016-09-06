@@ -1,0 +1,4 @@
+  o Minor bugfixes (consensus weight):
+    - Add new consensus method that initializes bw weights to 1 instead of 0. This
+      prevents a zero weight from making it all the way to the end (happens in
+      small testing networks) and causing an error. Fixes bug 14881.
