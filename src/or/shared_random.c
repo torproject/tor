@@ -578,8 +578,8 @@ commit_is_authoritative(const sr_commit_t *commit,
   tor_assert(commit);
   tor_assert(voter_key);
 
-  return !memcmp(commit->rsa_identity, voter_key,
-                 sizeof(commit->rsa_identity));
+  return fast_memeq(commit->rsa_identity, voter_key,
+                    sizeof(commit->rsa_identity));
 }
 
 /* Decide if the newly received <b>commit</b> should be kept depending on

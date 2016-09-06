@@ -117,7 +117,7 @@ log_backtrace(int severity, int domain, const char *msg)
   for (i=0; i < depth; ++i) {
     tor_log(severity, domain, "    %s", symbols[i]);
   }
-  free(symbols);
+  raw_free(symbols);
 
  done:
   tor_mutex_release(&cb_buf_mutex);
@@ -190,7 +190,7 @@ install_bt_handler(void)
     size_t depth = backtrace(cb_buf, MAX_DEPTH);
     symbols = backtrace_symbols(cb_buf, (int) depth);
     if (symbols)
-      free(symbols);
+      raw_free(symbols);
   }
 
   return rv;

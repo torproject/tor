@@ -47,6 +47,8 @@
 #define TRUNCATED_STR_LEN 14
 /** @} */
 
+#define raw_assert(x) assert(x) // assert OK
+
 /** Information for a single logfile; only used in log.c */
 typedef struct logfile_t {
   struct logfile_t *next; /**< Next logfile_t in the linked list. */
@@ -75,7 +77,7 @@ sev_to_string(int severity)
     case LOG_ERR:     return "err";
     default:          /* Call assert, not tor_assert, since tor_assert
                        * calls log on failure. */
-                      assert(0); return "UNKNOWN"; // LCOV_EXCL_LINE
+                      raw_assert(0); return "UNKNOWN"; // LCOV_EXCL_LINE
   }
 }
 
@@ -95,7 +97,7 @@ should_log_function_name(log_domain_mask_t domain, int severity)
       return (domain & (LD_BUG|LD_NOFUNCNAME)) == LD_BUG;
     default:
       /* Call assert, not tor_assert, since tor_assert calls log on failure. */
-      assert(0); return 0; // LCOV_EXCL_LINE
+      raw_assert(0); return 0; // LCOV_EXCL_LINE
   }
 }
 
@@ -293,7 +295,7 @@ format_msg(char *buf, size_t buf_len,
   char *end_of_prefix;
   char *buf_end;
 
-  assert(buf_len >= 16); /* prevent integer underflow and general stupidity */
+  raw_assert(buf_len >= 16); /* prevent integer underflow and stupidity */
   buf_len -= 2; /* subtract 2 characters so we have room for \n\0 */
   buf_end = buf+buf_len; /* point *after* the last char we can write to */
 
@@ -482,12 +484,12 @@ logv,(int severity, log_domain_mask_t domain, const char *funcname,
   int callbacks_deferred = 0;
 
   /* Call assert, not tor_assert, since tor_assert calls log on failure. */
-  assert(format);
+  raw_assert(format);
   /* check that severity is sane.  Overrunning the masks array leads to
    * interesting and hard to diagnose effects */
-  assert(severity >= LOG_ERR && severity <= LOG_DEBUG);
+  raw_assert(severity >= LOG_ERR && severity <= LOG_DEBUG);
   /* check that we've initialised the log mutex before we try to lock it */
-  assert(log_mutex_initialized);
+  raw_assert(log_mutex_initialized);
   LOCK_LOGS();
 
   if ((! (domain & LD_NOCB)) && pending_cb_messages
@@ -658,7 +660,7 @@ tor_log_update_sigsafe_err_fds(void)
   if (!found_real_stderr &&
       int_array_contains(sigsafe_log_fds, n_sigsafe_log_fds, STDOUT_FILENO)) {
     /* Don't use a virtual stderr when we're also logging to stdout. */
-    assert(n_sigsafe_log_fds >= 2); /* Don't use assert inside log functions*/
+    raw_assert(n_sigsafe_log_fds >= 2); /* Don't tor_assert inside log fns */
     sigsafe_log_fds[0] = sigsafe_log_fds[--n_sigsafe_log_fds];
   }
 

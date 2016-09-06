@@ -2052,9 +2052,9 @@ test_a_networkstatus(
 
   tt_int_op(4,OP_EQ, smartlist_len(con->voters)); /*3 voters, 1 legacy key.*/
   /* The voter id digests should be in this order. */
-  tt_assert(memcmp(cert2->cache_info.identity_digest,
+  tt_assert(fast_memcmp(cert2->cache_info.identity_digest,
                      cert1->cache_info.identity_digest,DIGEST_LEN)<0);
-  tt_assert(memcmp(cert1->cache_info.identity_digest,
+  tt_assert(fast_memcmp(cert1->cache_info.identity_digest,
                      cert3->cache_info.identity_digest,DIGEST_LEN)<0);
   test_same_voter(smartlist_get(con->voters, 1),
                   smartlist_get(v2->voters, 0));

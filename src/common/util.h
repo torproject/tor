@@ -82,7 +82,7 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
  */
 #define tor_free(p) STMT_BEGIN                                 \
     if (PREDICT_LIKELY((p)!=NULL)) {                           \
-      free(p);                                                 \
+      raw_free(p);                                             \
       (p)=NULL;                                                \
     }                                                          \
   STMT_END
@@ -98,6 +98,14 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
 #define tor_strndup(s, n)      tor_strndup_(s, n DMALLOC_ARGS)
 #define tor_memdup(s, n)       tor_memdup_(s, n DMALLOC_ARGS)
 #define tor_memdup_nulterm(s, n)       tor_memdup_nulterm_(s, n DMALLOC_ARGS)
+
+/* Aliases for the underlying system malloc/realloc/free. Only use
+ * them to indicate "I really want the underlying system function, I know
+ * what I'm doing." */
+#define raw_malloc  malloc
+#define raw_realloc realloc
+#define raw_free    free
+#define raw_strdup  strdup
 
 void tor_log_mallinfo(int severity);
 

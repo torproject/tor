@@ -2258,7 +2258,7 @@ test_crypto_ed25519_simple(void *arg)
     tt_int_op(0, OP_EQ, ed25519_sign(&manual_sig, (uint8_t *)prefixed_msg,
                                      strlen(prefixed_msg), &kp1));
     tor_free(prefixed_msg);
-    tt_assert(!memcmp(sig1.sig, manual_sig.sig, sizeof(sig1.sig)));
+    tt_assert(fast_memeq(sig1.sig, manual_sig.sig, sizeof(sig1.sig)));
 
     /* Test that prefixed checksig verifies it properly. */
     tt_int_op(0, OP_EQ, ed25519_checksig_prefixed(&sig1, msg, msg_len,

@@ -156,6 +156,25 @@ for $fn (@ARGV) {
                     $in_func_head = 0;
                 }
             }
+
+	    ## Check for forbidden functions except when they are
+	    # explicitly permitted
+	    if (/\bassert\(/ && not /assert OK/) {
+		print "assert :$fn:$.   (use tor_assert)\n";
+	    }
+	    if (/\bmemcmp\(/ && not /memcmp OK/) {
+		print "memcmp :$fn:$.   (use {tor,fast}_mem{eq,neq,cmp}\n";
+	    }
+	    # always forbidden.
+	    if (not / OVERRIDE /) {
+		if (/\bstrcat\(/ or /\bstrcpy\(/ or /\bsprintf\(/) {
+		    print "$& :$fn:$.\n";
+		}
+		if (/\bmalloc\(/ or /\bfree\(/ or /\brealloc\(/ or
+		    /\bstrdup\(/ or /\bstrndup\(/ or /\bcalloc\(/) {
+		    print "$& :$fn:$.    (use tor_malloc, tor_free, etc)\n";
+		}
+	    }
         }
     }
     ## Warn if the file doesn't end with a blank line.

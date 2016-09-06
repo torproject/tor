@@ -557,7 +557,7 @@ bench_dh(void)
                                       dh_b, dh_pubkey_a, sizeof(dh_pubkey_a),
                                       secret_b, sizeof(secret_b));
     tor_assert(slen_a == slen_b);
-    tor_assert(!memcmp(secret_a, secret_b, slen_a));
+    tor_assert(fast_memeq(secret_a, secret_b, slen_a));
     crypto_dh_free(dh_a);
     crypto_dh_free(dh_b);
   }
@@ -595,7 +595,7 @@ bench_ecdh_impl(int nid, const char *name)
                               NULL);
 
     tor_assert(slen_a == slen_b);
-    tor_assert(!memcmp(secret_a, secret_b, slen_a));
+    tor_assert(fast_memeq(secret_a, secret_b, slen_a));
     EC_KEY_free(dh_a);
     EC_KEY_free(dh_b);
   }

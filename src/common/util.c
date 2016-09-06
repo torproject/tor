@@ -147,7 +147,7 @@ tor_malloc_(size_t size DMALLOC_PARAMS)
 #ifdef USE_DMALLOC
   result = dmalloc_malloc(file, line, size, DMALLOC_FUNC_MALLOC, 0, 0);
 #else
-  result = malloc(size);
+  result = raw_malloc(size);
 #endif
 
   if (PREDICT_UNLIKELY(result == NULL)) {
@@ -246,7 +246,7 @@ tor_realloc_(void *ptr, size_t size DMALLOC_PARAMS)
 #ifdef USE_DMALLOC
   result = dmalloc_realloc(file, line, ptr, size, DMALLOC_FUNC_REALLOC, 0);
 #else
-  result = realloc(ptr, size);
+  result = raw_realloc(ptr, size);
 #endif
 
   if (PREDICT_UNLIKELY(result == NULL)) {
@@ -285,7 +285,7 @@ tor_strdup_(const char *s DMALLOC_PARAMS)
 #ifdef USE_DMALLOC
   duplicate = dmalloc_strdup(file, line, s, 0);
 #else
-  duplicate = strdup(s);
+  duplicate = raw_strdup(s);
 #endif
   if (PREDICT_UNLIKELY(duplicate == NULL)) {
     /* LCOV_EXCL_START */

@@ -5,6 +5,7 @@
 
 #include "crypto.h"
 #include "compat.h"
+#include "util.h"
 
 static unsigned fill_a_buffer_memset(void) __attribute__((noinline));
 static unsigned fill_a_buffer_memwipe(void) __attribute__((noinline));
@@ -98,29 +99,29 @@ static char *heap_buf = NULL;
 static unsigned
 fill_heap_buffer_memset(void)
 {
-  char *buf = heap_buf = malloc(BUF_LEN);
+  char *buf = heap_buf = raw_malloc(BUF_LEN);
   FILL_BUFFER_IMPL()
   memset(buf, 0, BUF_LEN);
-  free(buf);
+  raw_free(buf);
   return sum;
 }
 
 static unsigned
 fill_heap_buffer_memwipe(void)
 {
-  char *buf = heap_buf = malloc(BUF_LEN);
+  char *buf = heap_buf = raw_malloc(BUF_LEN);
   FILL_BUFFER_IMPL()
   memwipe(buf, 0, BUF_LEN);
-  free(buf);
+  raw_free(buf);
   return sum;
 }
 
 static unsigned
 fill_heap_buffer_nothing(void)
 {
-  char *buf = heap_buf = malloc(BUF_LEN);
+  char *buf = heap_buf = raw_malloc(BUF_LEN);
   FILL_BUFFER_IMPL()
-  free(buf);
+  raw_free(buf);
   return sum;
 }
 

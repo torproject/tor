@@ -2350,7 +2350,7 @@ make_path_absolute(char *fname)
   /* We don't want to assume that tor_free can free a string allocated
    * with malloc.  On failure, return fname (it's better than nothing). */
   char *absfname = tor_strdup(absfname_malloced ? absfname_malloced : fname);
-  if (absfname_malloced) free(absfname_malloced);
+  if (absfname_malloced) raw_free(absfname_malloced);
 
   return absfname;
 #else

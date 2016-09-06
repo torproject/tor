@@ -117,7 +117,7 @@ channel_tls_common_init(channel_tls_t *tlschan)
   chan->state = CHANNEL_STATE_OPENING;
   chan->close = channel_tls_close_method;
   chan->describe_transport = channel_tls_describe_transport_method;
-  chan->free = channel_tls_free_method;
+  chan->free_fn = channel_tls_free_method;
   chan->get_overhead_estimate = channel_tls_get_overhead_estimate_method;
   chan->get_remote_addr = channel_tls_get_remote_addr_method;
   chan->get_remote_descr = channel_tls_get_remote_descr_method;

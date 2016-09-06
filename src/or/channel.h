@@ -90,7 +90,7 @@ struct channel_s {
   /* Methods implemented by the lower layer */
 
   /** Free a channel */
-  void (*free)(channel_t *);
+  void (*free_fn)(channel_t *);
   /** Close an open channel */
   void (*close)(channel_t *);
   /** Describe the transport subclass for this channel */
@@ -273,7 +273,7 @@ struct channel_listener_s {
   /* Methods implemented by the lower layer */
 
   /** Free a channel */
-  void (*free)(channel_listener_t *);
+  void (*free_fn)(channel_listener_t *);
   /** Close an open channel */
   void (*close)(channel_listener_t *);
   /** Describe the transport subclass for this channel */

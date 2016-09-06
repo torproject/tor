@@ -838,7 +838,7 @@ channel_free(channel_t *chan)
   }
 
   /* Call a free method if there is one */
-  if (chan->free) chan->free(chan);
+  if (chan->free_fn) chan->free_fn(chan);
 
   channel_clear_remote_end(chan);
 
@@ -878,7 +878,7 @@ channel_listener_free(channel_listener_t *chan_l)
   tor_assert(!(chan_l->registered));
 
   /* Call a free method if there is one */
-  if (chan_l->free) chan_l->free(chan_l);
+  if (chan_l->free_fn) chan_l->free_fn(chan_l);
 
   /*
    * We're in CLOSED or ERROR, so the incoming channel queue is already
@@ -916,7 +916,7 @@ channel_force_free(channel_t *chan)
   }
 
   /* Call a free method if there is one */
-  if (chan->free) chan->free(chan);
+  if (chan->free_fn) chan->free_fn(chan);
 
   channel_clear_remote_end(chan);
 
@@ -958,7 +958,7 @@ channel_listener_force_free(channel_listener_t *chan_l)
             chan_l);
 
   /* Call a free method if there is one */
-  if (chan_l->free) chan_l->free(chan_l);
+  if (chan_l->free_fn) chan_l->free_fn(chan_l);
 
   /*
    * The incoming list just gets emptied and freed; we request close on
