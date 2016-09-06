@@ -452,7 +452,8 @@ init_key_from_file(const char *fname, int generate, int severity,
           goto error;
         }
       } else {
-        log_info(LD_GENERAL, "No key found in \"%s\"", fname);
+        tor_log(severity, LD_GENERAL, "No key found in \"%s\"", fname);
+        goto error;
       }
       return prkey;
     case FN_FILE:
@@ -560,7 +561,7 @@ load_authority_keyset(int legacy, crypto_pk_t **key_out,
 
   fname = get_datadir_fname2("keys",
                  legacy ? "legacy_signing_key" : "authority_signing_key");
-  signing_key = init_key_from_file(fname, 0, LOG_INFO, 0);
+  signing_key = init_key_from_file(fname, 0, LOG_ERR, 0);
   if (!signing_key) {
     log_warn(LD_DIR, "No version 3 directory key found in %s", fname);
     goto done;
