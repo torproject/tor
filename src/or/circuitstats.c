@@ -489,7 +489,7 @@ circuit_build_times_get_initial_timeout(void)
    */
   if (!unit_tests && get_options()->CircuitBuildTimeout) {
     timeout = get_options()->CircuitBuildTimeout*1000;
-    if (get_options()->LearnCircuitBuildTimeout &&
+    if (!circuit_build_times_disabled() &&
         timeout < circuit_build_times_min_timeout()) {
       log_warn(LD_CIRC, "Config CircuitBuildTimeout too low. Setting to %ds",
                circuit_build_times_min_timeout()/1000);

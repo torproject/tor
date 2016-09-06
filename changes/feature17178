@@ -18,3 +18,6 @@
     - Prevent Tor2web clients running hidden services, these services are
       not anonymous due to the one-hop client paths.
       Fixes bug #19678. Patch by teor.
+  o Minor bug fixes (circuits):
+    - Use CircuitBuildTimeout whenever LearnCircuitBuildTimeout is disabled.
+      Fixes bug #19678 in commit 5b0b51ca3 in 0.2.4.12-alpha. Patch by teor.
