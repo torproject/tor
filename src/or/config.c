@@ -437,7 +437,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("TunnelDirConns"),
   V(UpdateBridgesFromAuthority,  BOOL,     "0"),
   V(UseBridges,                  BOOL,     "0"),
-  V(UseEntryGuards,              BOOL,     "1"),
+  VAR("UseEntryGuards",          BOOL,     UseEntryGuards_option, "1"),
   V(UseEntryGuardsAsDirGuards,   BOOL,     "1"),
   V(UseGuardFraction,            AUTOBOOL, "auto"),
   V(UseMicrodescriptors,         AUTOBOOL, "auto"),
@@ -2926,6 +2926,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
   tor_assert(msg);
   *msg = NULL;
 
+  /* Set UseEntryGuards from the configured value, before we check it below.
+   * We change UseEntryGuards whenn it's incompatible with other options,
+   * but leave UseEntryGuards_option with the original value.
+   * Always use the value of UseEntryGuards, not UseEntryGuards_option. */
+  options->UseEntryGuards = options->UseEntryGuards_option;
+
   warn_about_relative_paths(options);
 
   if (server_mode(options) &&
@@ -3301,10 +3307,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->UseBridges && options->EntryNodes)
     REJECT("You cannot set both UseBridges and EntryNodes.");
 
-  if (options->EntryNodes && !options->UseEntryGuards) {
-    REJECT("If EntryNodes is set, UseEntryGuards must be enabled.");
-  }
-
   options->MaxMemInQueues =
     compute_real_max_mem_in_queues(options->MaxMemInQueues_raw,
                                    server_mode(options));
@@ -3419,8 +3421,13 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("Tor2webRendezvousPoints cannot be set without Tor2webMode.");
   }
 
+  if (options->EntryNodes && !options->UseEntryGuards) {
+    REJECT("If EntryNodes is set, UseEntryGuards must be enabled.");
+  }
+
   if (!(options->UseEntryGuards) &&
-      (options->RendConfigLines != NULL)) {
+      (options->RendConfigLines != NULL) &&
+      !rend_service_non_anonymous_mode_enabled(options)) {
     log_warn(LD_CONFIG,
              "UseEntryGuards is disabled, but you have configured one or more "
              "hidden services on this Tor instance.  Your hidden services "

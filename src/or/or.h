@@ -3963,8 +3963,16 @@ typedef struct {
   int TokenBucketRefillInterval;
   char *AccelName; /**< Optional hardware acceleration engine name. */
   char *AccelDir; /**< Optional hardware acceleration engine search dir. */
-  int UseEntryGuards; /**< Boolean: Do we try to enter from a smallish number
-                       * of fixed nodes? */
+
+  /** Boolean: Do we try to enter from a smallish number
+   * of fixed nodes? */
+  int UseEntryGuards_option;
+  /** Internal variable to remember whether we're actually acting on
+   * UseEntryGuards_option -- when we're a non-anonymous Tor2web client or
+   * Single Onion Service, it is alwasy false, otherwise we use the value of
+   * UseEntryGuards_option. */
+  int UseEntryGuards;
+
   int NumEntryGuards; /**< How many entry guards do we try to establish? */
   int UseEntryGuardsAsDirGuards; /** Boolean: Do we try to get directory info
                                   * from a smallish number of fixed nodes? */

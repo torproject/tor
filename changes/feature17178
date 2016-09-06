@@ -21,3 +21,10 @@
   o Minor bug fixes (circuits):
     - Use CircuitBuildTimeout whenever LearnCircuitBuildTimeout is disabled.
       Fixes bug #19678 in commit 5b0b51ca3 in 0.2.4.12-alpha. Patch by teor.
+  o Minor bug fixes (options):
+    - Stop changing the configured value of UseEntryGuards on authorities
+      and Tor2web clients.
+      Fixes bug #20074 in commits 51fc6799 in tor-0.1.1.16-rc and
+      acda1735 in tor-0.2.4.3-alpha. Patch by teor.
+    - Check the consistency of UseEntryGuards and EntryNodes more reliably.
+      Fixes bug #20074 in commit 686aaa5c in tor-0.2.4.12-alpha. Patch by teor.
