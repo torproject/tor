@@ -262,6 +262,7 @@ test_util_time(void *arg)
   time_t t_res;
   int i;
   struct timeval tv;
+  int old_log_level = 0;
 
   /* Test tv_udiff and tv_mdiff */
 
@@ -644,31 +645,57 @@ test_util_time(void *arg)
 
   /* Test tor_timegm out of range */
 
+  /* The below tests will all cause a BUG message, so we capture, suppress,
+   * and detect. */
+#define CAPTURE() do {                                          \
+    old_log_level = setup_full_capture_of_logs(LOG_WARN);       \
+  } while (0)
+#define CHECK_TIMEGM_WARNING(msg) do { \
+    tt_assert(mock_saved_log_has_message_containing(msg));              \
+    tt_int_op(1, OP_EQ, smartlist_len(mock_saved_logs()));              \
+    teardown_capture_of_logs(old_log_level);                            \
+  } while (0)
+
+#define CHECK_TIMEGM_ARG_OUT_OF_RANGE(msg) \
+    CHECK_TIMEGM_WARNING("Out-of-range argument to tor_timegm")
+
   /* year */
 
   /* Wrong year < 1970 */
   a_time.tm_year = 1969-1900;
+  CAPTURE();
   tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+  CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 
   a_time.tm_year = -1-1900;
+  CAPTURE();
   tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+  CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 
 #if SIZEOF_INT == 4 || SIZEOF_INT == 8
     a_time.tm_year = -1*(1 << 16);
+    CAPTURE();
     tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+    CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 
     /* one of the smallest tm_year values my 64 bit system supports:
      * t_res = -9223372036854775LL without clamping */
     a_time.tm_year = -292275055-1900;
+    CAPTURE();
     tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+    CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 
     a_time.tm_year = INT32_MIN;
+    CAPTURE();
     tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+    CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 #endif
 
 #if SIZEOF_INT == 8
     a_time.tm_year = -1*(1 << 48);
+    CAPTURE();
     tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+    CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 
     /* while unlikely, the system's gmtime(_r) could return
      * a "correct" retrospective gregorian negative year value,
@@ -676,25 +703,35 @@ test_util_time(void *arg)
      * -1*(2^63)/60/60/24*2000/730485 + 1970 = -292277022657
      * 730485 is the number of days in two millenia, including leap days */
     a_time.tm_year = -292277022657-1900;
+    CAPTURE();
     tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+    CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 
     a_time.tm_year = INT64_MIN;
+    CAPTURE();
     tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+    CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 #endif
 
   /* Wrong year >= INT32_MAX - 1900 */
 #if SIZEOF_INT == 4 || SIZEOF_INT == 8
     a_time.tm_year = INT32_MAX-1900;
+    CAPTURE();
     tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+    CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 
     a_time.tm_year = INT32_MAX;
+    CAPTURE();
     tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+    CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 #endif
 
 #if SIZEOF_INT == 8
     /* one of the largest tm_year values my 64 bit system supports */
     a_time.tm_year = 292278994-1900;
+    CAPTURE();
     tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+    CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 
     /* while unlikely, the system's gmtime(_r) could return
      * a "correct" proleptic gregorian year value,
@@ -702,72 +739,104 @@ test_util_time(void *arg)
      * (2^63-1)/60/60/24*2000/730485 + 1970 = 292277026596
      * 730485 is the number of days in two millenia, including leap days */
     a_time.tm_year = 292277026596-1900;
+    CAPTURE();
     tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+    CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 
     a_time.tm_year = INT64_MAX-1900;
+    CAPTURE();
     tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+    CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 
     a_time.tm_year = INT64_MAX;
+    CAPTURE();
     tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+    CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 #endif
 
   /* month */
   a_time.tm_year = 2007-1900;  /* restore valid year */
 
   a_time.tm_mon = 12;          /* Wrong month, it's 0-based */
+  CAPTURE();
   tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+  CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 
   a_time.tm_mon = -1;          /* Wrong month */
+  CAPTURE();
   tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+  CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 
   /* day */
   a_time.tm_mon = 6;            /* Try July */
   a_time.tm_mday = 32;          /* Wrong day */
+  CAPTURE();
   tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+  CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 
   a_time.tm_mon = 5;            /* Try June */
   a_time.tm_mday = 31;          /* Wrong day */
+  CAPTURE();
   tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+  CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 
   a_time.tm_year = 2008-1900;   /* Try a leap year */
   a_time.tm_mon = 1;            /* in feb. */
   a_time.tm_mday = 30;          /* Wrong day */
+  CAPTURE();
   tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+  CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 
   a_time.tm_year = 2011-1900;   /* Try a non-leap year */
   a_time.tm_mon = 1;            /* in feb. */
   a_time.tm_mday = 29;          /* Wrong day */
+  CAPTURE();
   tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+  CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 
   a_time.tm_mday = 0;           /* Wrong day, it's 1-based (to be different) */
+  CAPTURE();
   tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+  CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 
   /* hour */
   a_time.tm_mday = 3;           /* restore valid month day */
 
   a_time.tm_hour = 24;          /* Wrong hour, it's 0-based */
+  CAPTURE();
   tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+  CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 
   a_time.tm_hour = -1;          /* Wrong hour */
+  CAPTURE();
   tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+  CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 
   /* minute */
   a_time.tm_hour = 22;          /* restore valid hour */
 
   a_time.tm_min = 60;           /* Wrong minute, it's 0-based */
+  CAPTURE();
   tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+  CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 
   a_time.tm_min = -1;           /* Wrong minute */
+  CAPTURE();
   tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+  CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 
   /* second */
   a_time.tm_min = 37;           /* restore valid minute */
 
   a_time.tm_sec = 61;           /* Wrong second: 0-based with leap seconds */
+  CAPTURE();
   tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+  CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 
   a_time.tm_sec = -1;           /* Wrong second */
+  CAPTURE();
   tt_int_op((time_t) -1,OP_EQ, tor_timegm(&a_time));
+  CHECK_TIMEGM_ARG_OUT_OF_RANGE();
 
   /* Test tor_gmtime_r out of range */
 
@@ -807,7 +876,9 @@ test_util_time(void *arg)
      * 730485 is the number of days in two millenia, including leap days
      * (int64_t)b_time.tm_year == (-292277022657LL-1900LL) without clamping */
     t_res = INT64_MIN;
+    CAPTURE();
     tor_gmtime_r(&t_res, &b_time);
+    CHECK_TIMEGM_WARNING("Rounding up to ");
     tt_assert(b_time.tm_year == (1970-1900) ||
               b_time.tm_year == (1-1900));
   }
@@ -845,7 +916,10 @@ test_util_time(void *arg)
      * 730485 is the number of days in two millenia, including leap days
      * (int64_t)b_time.tm_year == (292277026596L-1900L) without clamping */
     t_res = INT64_MAX;
+    CAPTURE();
     tor_gmtime_r(&t_res, &b_time);
+    CHECK_TIMEGM_WARNING("Rounding down to ");
+
     tt_assert(b_time.tm_year == (2037-1900) ||
               b_time.tm_year == (9999-1900));
   }
@@ -1034,8 +1108,12 @@ test_util_time(void *arg)
 #endif
 #endif
 
+#undef CAPTURE
+#undef CHECK_TIMEGM_ARG_OUT_OF_RANGE
+
  done:
-  ;
+  if (old_log_level)
+    teardown_capture_of_logs(old_log_level);
 }
 
 static void
