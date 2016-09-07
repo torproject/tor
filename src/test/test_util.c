@@ -1974,10 +1974,20 @@ test_util_parse_integer(void *arg)
   tt_int_op(1,OP_EQ, i);
   tt_str_op(cp,OP_EQ, " plus garbage");
   /* Illogical min max */
+  tor_capture_bugs_(1);
   tt_int_op(0L,OP_EQ,  tor_parse_long("10",10,50,4,&i,NULL));
   tt_int_op(0,OP_EQ, i);
+  tt_int_op(1, OP_EQ, smartlist_len(tor_get_captured_bug_log_()));
+  tt_str_op("!(max < min)", OP_EQ,
+            smartlist_get(tor_get_captured_bug_log_(), 0));
+  tor_end_capture_bugs_();
+  tor_capture_bugs_(1);
   tt_int_op(0L,OP_EQ,   tor_parse_long("-50",10,100,-100,&i,NULL));
   tt_int_op(0,OP_EQ, i);
+  tt_int_op(1, OP_EQ, smartlist_len(tor_get_captured_bug_log_()));
+  tt_str_op("!(max < min)", OP_EQ,
+            smartlist_get(tor_get_captured_bug_log_(), 0));
+  tor_end_capture_bugs_();
   /* Out of bounds */
   tt_int_op(0L,OP_EQ,  tor_parse_long("10",10,50,100,&i,NULL));
   tt_int_op(0,OP_EQ, i);
@@ -2061,7 +2071,7 @@ test_util_parse_integer(void *arg)
     tt_int_op(i,OP_EQ, 0);
   }
  done:
-  ;
+  tor_end_capture_bugs_();
 }
 
 static void
