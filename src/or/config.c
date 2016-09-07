@@ -6054,6 +6054,8 @@ port_cfg_new(size_t namelen)
   tor_assert(namelen <= SIZE_T_CEILING - sizeof(port_cfg_t) - 1);
   port_cfg_t *cfg = tor_malloc_zero(sizeof(port_cfg_t) + namelen + 1);
   cfg->entry_cfg.ipv4_traffic = 1;
+  cfg->entry_cfg.dns_request = 1;
+  cfg->entry_cfg.onion_traffic = 1;
   cfg->entry_cfg.cache_ipv4_answers = 1;
   cfg->entry_cfg.prefer_ipv6_virtaddr = 1;
   return cfg;
@@ -6324,8 +6326,7 @@ parse_port_config(smartlist_t *out,
       tor_addr_make_unspec(&cfg->addr); /* Server ports default to 0.0.0.0 */
       cfg->server_cfg.no_listen = 1;
       cfg->server_cfg.bind_ipv4_only = 1;
-      cfg->entry_cfg.ipv4_traffic = 1;
-      cfg->entry_cfg.prefer_ipv6_virtaddr = 1;
+      /* cfg->entry_cfg defaults are already set by port_cfg_new */
       smartlist_add(out, cfg);
     }
 
@@ -6396,9 +6397,11 @@ parse_port_config(smartlist_t *out,
     char *addrport;
     uint16_t ptmp=0;
     int ok;
+    /* This must be kept in sync with port_cfg_new's defaults */
     int no_listen = 0, no_advertise = 0, all_addrs = 0,
       bind_ipv4_only = 0, bind_ipv6_only = 0,
-      ipv4_traffic = 1, ipv6_traffic = 0, prefer_ipv6 = 0,
+      ipv4_traffic = 1, ipv6_traffic = 0, prefer_ipv6 = 0, dns_request = 1,
+      onion_traffic = 1,
       cache_ipv4 = 1, use_cached_ipv4 = 0,
       cache_ipv6 = 0, use_cached_ipv6 = 0,
       prefer_ipv6_automap = 1, world_writable = 0, group_writable = 0,
@@ -6584,6 +6587,24 @@ parse_port_config(smartlist_t *out,
           } else if (!strcasecmp(elt, "PreferIPv6")) {
             prefer_ipv6 = ! no;
             continue;
+          } else if (!strcasecmp(elt, "DNSRequest")) {
+            dns_request = ! no;
+            continue;
+          } else if (!strcasecmp(elt, "OnionTraffic")) {
+            onion_traffic = ! no;
+            continue;
+          } else if (!strcasecmp(elt, "OnionTrafficOnly")) {
+            /* Only connect to .onion addresses.  Equivalent to
+             * NoDNSRequest, NoIPv4Traffic, NoIPv6Traffic. The option
+             * NoOnionTrafficOnly is not supported, it's too confusing. */
+            if (no) {
+              log_warn(LD_CONFIG, "Unsupported %sPort option 'No%s'. Use "
+                       "DNSRequest, IPv4Traffic, and/or IPv6Traffic instead.",
+                       portname, escaped(elt));
+            } else {
+              ipv4_traffic = ipv6_traffic = dns_request = 0;
+            }
+            continue;
           }
         }
         if (!strcasecmp(elt, "CacheIPv4DNS")) {
@@ -6652,9 +6673,24 @@ parse_port_config(smartlist_t *out,
     else
       got_zero_port = 1;
 
-    if (ipv4_traffic == 0 && ipv6_traffic == 0) {
-      log_warn(LD_CONFIG, "You have a %sPort entry with both IPv4 and "
-               "IPv6 disabled; that won't work.", portname);
+    if (dns_request == 0 && listener_type == CONN_TYPE_AP_DNS_LISTENER) {
+      log_warn(LD_CONFIG, "You have a %sPort entry with DNS disabled; that "
+               "won't work.", portname);
+      goto err;
+    }
+
+    if (ipv4_traffic == 0 && ipv6_traffic == 0 && onion_traffic == 0
+        && listener_type != CONN_TYPE_AP_DNS_LISTENER) {
+      log_warn(LD_CONFIG, "You have a %sPort entry with all of IPv4 and "
+               "IPv6 and .onion disabled; that won't work.", portname);
+      goto err;
+    }
+
+    if (dns_request == 1 && ipv4_traffic == 0 && ipv6_traffic == 0
+        && listener_type != CONN_TYPE_AP_DNS_LISTENER) {
+      log_warn(LD_CONFIG, "You have a %sPort entry with DNSRequest enabled, "
+               "but IPv4 and IPv6 disabled; DNS-based sites won't work.",
+               portname);
       goto err;
     }
 
@@ -6698,6 +6734,8 @@ parse_port_config(smartlist_t *out,
       cfg->entry_cfg.ipv4_traffic = ipv4_traffic;
       cfg->entry_cfg.ipv6_traffic = ipv6_traffic;
       cfg->entry_cfg.prefer_ipv6 = prefer_ipv6;
+      cfg->entry_cfg.dns_request = dns_request;
+      cfg->entry_cfg.onion_traffic = onion_traffic;
       cfg->entry_cfg.cache_ipv4_answers = cache_ipv4;
       cfg->entry_cfg.cache_ipv6_answers = cache_ipv6;
       cfg->entry_cfg.use_cached_ipv4_answers = use_cached_ipv4;

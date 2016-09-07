@@ -1083,7 +1083,18 @@ The following options are useful only for clients (that is, if
         IPv6.)
     **PreferIPv6**;;
         Tells exits that, if a host has both an IPv4 and an IPv6 address,
-        we would prefer to connect to it via IPv6. (IPv4 is the default.) +
+        we would prefer to connect to it via IPv6. (IPv4 is the default.)
+    **NoDNSRequest**;;
+        Do not ask exits to resolve DNS addresses in SOCKS5 requests. Tor will
+        connect to IPv4 addresses, IPv6 addresses (if IPv6Traffic is set) and
+        .onion addresses.
+    **NoOnionTraffic**;;
+        Do not connect to .onion addresses in SOCKS5 requests.
+    **OnionTrafficOnly**;;
+        Tell the tor client to only connect to .onion addresses in response to
+        SOCKS5 requests on this connection. This is equivalent to NoDNSRequest,
+        NoIPv4Traffic, NoIPv6Traffic. The corresponding NoOnionTrafficOnly
+        flag is not supported.
     **CacheIPv4DNS**;;
         Tells the client to remember IPv4 DNS answers we receive from exit
         nodes via this connection. (On by default.)
@@ -1124,6 +1135,10 @@ The following options are useful only for clients (that is, if
         one. You can disable this behavior, so that Tor will select "No
         authentication" when IsolateSOCKSAuth is disabled, or when this
         option is set.
+
+    Flags are processed left to right. If flags conflict, the last flag on the
+    line is used, and all earlier flags are ignored. No error is issued for
+    conflicting flags.
 
 [[SocksListenAddress]] **SocksListenAddress** __IP__[:__PORT__]::
     Bind to this address to listen for connections from Socks-speaking

@@ -1151,6 +1151,8 @@ typedef struct entry_port_cfg_t {
   unsigned int ipv4_traffic : 1;
   unsigned int ipv6_traffic : 1;
   unsigned int prefer_ipv6 : 1;
+  unsigned int dns_request : 1;
+  unsigned int onion_traffic : 1;
 
   /** For a socks listener: should we cache IPv4/IPv6 DNS information that
    * exit nodes tell us?

@@ -1227,7 +1227,7 @@ connection_ap_handshake_rewrite(entry_connection_t *conn,
     }
 
     /* Hang on, did we find an answer saying that this is a reverse lookup for
-     * an internal address?  If so, we should reject it if we're condigured to
+     * an internal address?  If so, we should reject it if we're configured to
      * do so. */
     if (options->ClientDNSRejectInternalAddresses) {
       /* Don't let people try to do a reverse lookup on 10.0.0.1. */
@@ -1466,13 +1466,60 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     /* If we're running in Tor2webMode, we don't allow anything BUT .onion
      * addresses. */
     if (options->Tor2webMode) {
-      log_warn(LD_APP, "Refusing to connect to non-hidden-service hostname %s "
-               "because tor2web mode is enabled.",
+      log_warn(LD_APP, "Refusing to connect to non-hidden-service hostname "
+               "or IP address %s because tor2web mode is enabled.",
                safe_str_client(socks->address));
       connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
       return -1;
     }
 #endif
+
+    /* socks->address is a non-onion hostname or IP address.
+     * If we can't do any non-onion requests, refuse the connection.
+     * If we have a hostname but can't do DNS, refuse the connection.
+     * If we have an IP address, but we can't use that address family,
+     * refuse the connection.
+     *
+     * If we can do DNS requests, and we can use at least one address family,
+     * then we have to resolve the address first. Then we'll know if it
+     * resolves to a usable address family. */
+
+    /* First, check if all non-onion traffic is disabled */
+    if (!conn->entry_cfg.dns_request && !conn->entry_cfg.ipv4_traffic
+        && !conn->entry_cfg.ipv6_traffic) {
+        log_warn(LD_APP, "Refusing to connect to non-hidden-service hostname "
+                 "or IP address %s because Port has OnionTrafficOnly set (or "
+                 "NoDNSRequest, NoIPv4Traffic, and NoIPv6Traffic).",
+                 safe_str_client(socks->address));
+        connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
+        return -1;
+    }
+
+    /* Then check if we have a hostname or IP address, and whether DNS or
+     * the IP address family are permitted */
+    tor_addr_t dummy_addr;
+    int socks_family = tor_addr_parse(&dummy_addr, socks->address);
+    /* family will be -1 for a non-onion hostname that's not an IP */
+    if (socks_family == -1 && !conn->entry_cfg.dns_request) {
+      log_warn(LD_APP, "Refusing to connect to hostname %s "
+               "because Port has NoDNSRequest set.",
+               safe_str_client(socks->address));
+      connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
+      return -1;
+    } else if (socks_family == AF_INET && !conn->entry_cfg.ipv4_traffic) {
+      log_warn(LD_APP, "Refusing to connect to IPv4 address %s because "
+               "Port has NoIPv4Traffic set.",
+               safe_str_client(socks->address));
+      connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
+      return -1;
+    } else if (socks_family == AF_INET6 && !conn->entry_cfg.ipv6_traffic) {
+      log_warn(LD_APP, "Refusing to connect to IPv6 address %s because "
+               "Port has NoIPv6Traffic set.",
+               safe_str_client(socks->address));
+      connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
+      return -1;
+    }
+    /* No else, we've covered all possible returned value. */
 
     /* See if this is a hostname lookup that we can answer immediately.
      * (For example, an attempt to look up the IP address for an IP address.)
@@ -1660,6 +1707,14 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
   } else {
     /* If we get here, it's a request for a .onion address! */
     tor_assert(!automap);
+
+    /* If .onion address requests are disabled, refuse the request */
+    if (!conn->entry_cfg.onion_traffic) {
+      log_warn(LD_APP, "Onion address %s requested from a port with .onion "
+                       "disabled", safe_str_client(socks->address));
+      connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
+      return -1;
+    }
 
     /* Check whether it's RESOLVE or RESOLVE_PTR.  We don't handle those
      * for hidden service addresses. */
