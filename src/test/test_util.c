@@ -1723,8 +1723,7 @@ static void
 test_util_strmisc(void *arg)
 {
   char buf[1024];
-  int i;
-  char *cp, *cp_tmp = NULL;
+  char *cp_tmp = NULL;
 
   /* Test strl operations */
   (void)arg;
@@ -1748,122 +1747,6 @@ test_util_strmisc(void *arg)
   strlcpy(buf, "!!!Testing 1 2 3??", sizeof(buf));
   tor_strstrip(buf, "!? ");
   tt_str_op(buf,OP_EQ, "Testing123");
-
-  /* Test parse_long */
-  /* Empty/zero input */
-  tt_int_op(0L,OP_EQ, tor_parse_long("",10,0,100,&i,NULL));
-  tt_int_op(0,OP_EQ, i);
-  tt_int_op(0L,OP_EQ, tor_parse_long("0",10,0,100,&i,NULL));
-  tt_int_op(1,OP_EQ, i);
-  /* Normal cases */
-  tt_int_op(10L,OP_EQ, tor_parse_long("10",10,0,100,&i,NULL));
-  tt_int_op(1,OP_EQ, i);
-  tt_int_op(10L,OP_EQ, tor_parse_long("10",10,0,10,&i,NULL));
-  tt_int_op(1,OP_EQ, i);
-  tt_int_op(10L,OP_EQ, tor_parse_long("10",10,10,100,&i,NULL));
-  tt_int_op(1,OP_EQ, i);
-  tt_int_op(-50L,OP_EQ, tor_parse_long("-50",10,-100,100,&i,NULL));
-  tt_int_op(1,OP_EQ, i);
-  tt_int_op(-50L,OP_EQ, tor_parse_long("-50",10,-100,0,&i,NULL));
-  tt_int_op(1,OP_EQ, i);
-  tt_int_op(-50L,OP_EQ, tor_parse_long("-50",10,-50,0,&i,NULL));
-  tt_int_op(1,OP_EQ, i);
-  /* Extra garbage */
-  tt_int_op(0L,OP_EQ, tor_parse_long("10m",10,0,100,&i,NULL));
-  tt_int_op(0,OP_EQ, i);
-  tt_int_op(0L,OP_EQ, tor_parse_long("-50 plus garbage",10,-100,100,&i,NULL));
-  tt_int_op(0,OP_EQ, i);
-  tt_int_op(10L,OP_EQ, tor_parse_long("10m",10,0,100,&i,&cp));
-  tt_int_op(1,OP_EQ, i);
-  tt_str_op(cp,OP_EQ, "m");
-  tt_int_op(-50L,OP_EQ, tor_parse_long("-50 plus garbage",10,-100,100,&i,&cp));
-  tt_int_op(1,OP_EQ, i);
-  tt_str_op(cp,OP_EQ, " plus garbage");
-  /* Illogical min max */
-  tt_int_op(0L,OP_EQ,  tor_parse_long("10",10,50,4,&i,NULL));
-  tt_int_op(0,OP_EQ, i);
-  tt_int_op(0L,OP_EQ,   tor_parse_long("-50",10,100,-100,&i,NULL));
-  tt_int_op(0,OP_EQ, i);
-  /* Out of bounds */
-  tt_int_op(0L,OP_EQ,  tor_parse_long("10",10,50,100,&i,NULL));
-  tt_int_op(0,OP_EQ, i);
-  tt_int_op(0L,OP_EQ,   tor_parse_long("-50",10,0,100,&i,NULL));
-  tt_int_op(0,OP_EQ, i);
-  /* Base different than 10 */
-  tt_int_op(2L,OP_EQ,   tor_parse_long("10",2,0,100,NULL,NULL));
-  tt_int_op(0L,OP_EQ,   tor_parse_long("2",2,0,100,NULL,NULL));
-  tt_int_op(0L,OP_EQ,   tor_parse_long("10",-2,0,100,NULL,NULL));
-  tt_int_op(68284L,OP_EQ, tor_parse_long("10abc",16,0,70000,NULL,NULL));
-  tt_int_op(68284L,OP_EQ, tor_parse_long("10ABC",16,0,70000,NULL,NULL));
-  tt_int_op(0,OP_EQ, tor_parse_long("10ABC",-1,0,70000,&i,NULL));
-  tt_int_op(i,OP_EQ, 0);
-
-  /* Test parse_ulong */
-  tt_int_op(0UL,OP_EQ, tor_parse_ulong("",10,0,100,NULL,NULL));
-  tt_int_op(0UL,OP_EQ, tor_parse_ulong("0",10,0,100,NULL,NULL));
-  tt_int_op(10UL,OP_EQ, tor_parse_ulong("10",10,0,100,NULL,NULL));
-  tt_int_op(0UL,OP_EQ, tor_parse_ulong("10",10,50,100,NULL,NULL));
-  tt_int_op(10UL,OP_EQ, tor_parse_ulong("10",10,0,10,NULL,NULL));
-  tt_int_op(10UL,OP_EQ, tor_parse_ulong("10",10,10,100,NULL,NULL));
-  tt_int_op(0UL,OP_EQ, tor_parse_ulong("8",8,0,100,NULL,NULL));
-  tt_int_op(50UL,OP_EQ, tor_parse_ulong("50",10,50,100,NULL,NULL));
-  tt_int_op(0UL,OP_EQ, tor_parse_ulong("-50",10,-100,100,NULL,NULL));
-  tt_int_op(0UL,OP_EQ, tor_parse_ulong("50",-1,50,100,&i,NULL));
-  tt_int_op(0,OP_EQ, i);
-
-  /* Test parse_uint64 */
-  tt_assert(U64_LITERAL(10) == tor_parse_uint64("10 x",10,0,100, &i, &cp));
-  tt_int_op(1,OP_EQ, i);
-  tt_str_op(cp,OP_EQ, " x");
-  tt_assert(U64_LITERAL(12345678901) ==
-              tor_parse_uint64("12345678901",10,0,UINT64_MAX, &i, &cp));
-  tt_int_op(1,OP_EQ, i);
-  tt_str_op(cp,OP_EQ, "");
-  tt_assert(U64_LITERAL(0) ==
-              tor_parse_uint64("12345678901",10,500,INT32_MAX, &i, &cp));
-  tt_int_op(0,OP_EQ, i);
-  tt_assert(U64_LITERAL(0) ==
-              tor_parse_uint64("123",-1,0,INT32_MAX, &i, &cp));
-  tt_int_op(0,OP_EQ, i);
-
-  {
-  /* Test parse_double */
-  double d = tor_parse_double("10", 0, (double)UINT64_MAX,&i,NULL);
-  tt_int_op(1,OP_EQ, i);
-  tt_assert(DBL_TO_U64(d) == 10);
-  d = tor_parse_double("0", 0, (double)UINT64_MAX,&i,NULL);
-  tt_int_op(1,OP_EQ, i);
-  tt_assert(DBL_TO_U64(d) == 0);
-  d = tor_parse_double(" ", 0, (double)UINT64_MAX,&i,NULL);
-  tt_int_op(0,OP_EQ, i);
-  d = tor_parse_double(".0a", 0, (double)UINT64_MAX,&i,NULL);
-  tt_int_op(0,OP_EQ, i);
-  d = tor_parse_double(".0a", 0, (double)UINT64_MAX,&i,&cp);
-  tt_int_op(1,OP_EQ, i);
-  d = tor_parse_double("-.0", 0, (double)UINT64_MAX,&i,NULL);
-  tt_int_op(1,OP_EQ, i);
-  tt_assert(DBL_TO_U64(d) == 0);
-  d = tor_parse_double("-10", -100.0, 100.0,&i,NULL);
-  tt_int_op(1,OP_EQ, i);
-  tt_double_op(fabs(d - -10.0),OP_LT, 1E-12);
-  }
-
-  {
-    /* Test tor_parse_* where we overflow/underflow the underlying type. */
-    /* This string should overflow 64-bit ints. */
-#define TOOBIG "100000000000000000000000000"
-    tt_int_op(0L, OP_EQ,
-              tor_parse_long(TOOBIG, 10, LONG_MIN, LONG_MAX, &i, NULL));
-    tt_int_op(i,OP_EQ, 0);
-    tt_int_op(0L,OP_EQ,
-              tor_parse_long("-"TOOBIG, 10, LONG_MIN, LONG_MAX, &i, NULL));
-    tt_int_op(i,OP_EQ, 0);
-    tt_int_op(0UL,OP_EQ, tor_parse_ulong(TOOBIG, 10, 0, ULONG_MAX, &i, NULL));
-    tt_int_op(i,OP_EQ, 0);
-    tt_u64_op(U64_LITERAL(0), OP_EQ, tor_parse_uint64(TOOBIG, 10,
-                                             0, UINT64_MAX, &i, NULL));
-    tt_int_op(i,OP_EQ, 0);
-  }
 
   /* Test snprintf */
   /* Returning -1 when there's not enough room in the output buffer */
@@ -2051,6 +1934,132 @@ test_util_strmisc(void *arg)
 
  done:
   tor_free(cp_tmp);
+}
+
+static void
+test_util_parse_integer(void *arg)
+{
+  (void)arg;
+  int i;
+  char *cp;
+
+  /* Test parse_long */
+  /* Empty/zero input */
+  tt_int_op(0L,OP_EQ, tor_parse_long("",10,0,100,&i,NULL));
+  tt_int_op(0,OP_EQ, i);
+  tt_int_op(0L,OP_EQ, tor_parse_long("0",10,0,100,&i,NULL));
+  tt_int_op(1,OP_EQ, i);
+  /* Normal cases */
+  tt_int_op(10L,OP_EQ, tor_parse_long("10",10,0,100,&i,NULL));
+  tt_int_op(1,OP_EQ, i);
+  tt_int_op(10L,OP_EQ, tor_parse_long("10",10,0,10,&i,NULL));
+  tt_int_op(1,OP_EQ, i);
+  tt_int_op(10L,OP_EQ, tor_parse_long("10",10,10,100,&i,NULL));
+  tt_int_op(1,OP_EQ, i);
+  tt_int_op(-50L,OP_EQ, tor_parse_long("-50",10,-100,100,&i,NULL));
+  tt_int_op(1,OP_EQ, i);
+  tt_int_op(-50L,OP_EQ, tor_parse_long("-50",10,-100,0,&i,NULL));
+  tt_int_op(1,OP_EQ, i);
+  tt_int_op(-50L,OP_EQ, tor_parse_long("-50",10,-50,0,&i,NULL));
+  tt_int_op(1,OP_EQ, i);
+  /* Extra garbage */
+  tt_int_op(0L,OP_EQ, tor_parse_long("10m",10,0,100,&i,NULL));
+  tt_int_op(0,OP_EQ, i);
+  tt_int_op(0L,OP_EQ, tor_parse_long("-50 plus garbage",10,-100,100,&i,NULL));
+  tt_int_op(0,OP_EQ, i);
+  tt_int_op(10L,OP_EQ, tor_parse_long("10m",10,0,100,&i,&cp));
+  tt_int_op(1,OP_EQ, i);
+  tt_str_op(cp,OP_EQ, "m");
+  tt_int_op(-50L,OP_EQ, tor_parse_long("-50 plus garbage",10,-100,100,&i,&cp));
+  tt_int_op(1,OP_EQ, i);
+  tt_str_op(cp,OP_EQ, " plus garbage");
+  /* Illogical min max */
+  tt_int_op(0L,OP_EQ,  tor_parse_long("10",10,50,4,&i,NULL));
+  tt_int_op(0,OP_EQ, i);
+  tt_int_op(0L,OP_EQ,   tor_parse_long("-50",10,100,-100,&i,NULL));
+  tt_int_op(0,OP_EQ, i);
+  /* Out of bounds */
+  tt_int_op(0L,OP_EQ,  tor_parse_long("10",10,50,100,&i,NULL));
+  tt_int_op(0,OP_EQ, i);
+  tt_int_op(0L,OP_EQ,   tor_parse_long("-50",10,0,100,&i,NULL));
+  tt_int_op(0,OP_EQ, i);
+  /* Base different than 10 */
+  tt_int_op(2L,OP_EQ,   tor_parse_long("10",2,0,100,NULL,NULL));
+  tt_int_op(0L,OP_EQ,   tor_parse_long("2",2,0,100,NULL,NULL));
+  tt_int_op(0L,OP_EQ,   tor_parse_long("10",-2,0,100,NULL,NULL));
+  tt_int_op(68284L,OP_EQ, tor_parse_long("10abc",16,0,70000,NULL,NULL));
+  tt_int_op(68284L,OP_EQ, tor_parse_long("10ABC",16,0,70000,NULL,NULL));
+  tt_int_op(0,OP_EQ, tor_parse_long("10ABC",-1,0,70000,&i,NULL));
+  tt_int_op(i,OP_EQ, 0);
+
+  /* Test parse_ulong */
+  tt_int_op(0UL,OP_EQ, tor_parse_ulong("",10,0,100,NULL,NULL));
+  tt_int_op(0UL,OP_EQ, tor_parse_ulong("0",10,0,100,NULL,NULL));
+  tt_int_op(10UL,OP_EQ, tor_parse_ulong("10",10,0,100,NULL,NULL));
+  tt_int_op(0UL,OP_EQ, tor_parse_ulong("10",10,50,100,NULL,NULL));
+  tt_int_op(10UL,OP_EQ, tor_parse_ulong("10",10,0,10,NULL,NULL));
+  tt_int_op(10UL,OP_EQ, tor_parse_ulong("10",10,10,100,NULL,NULL));
+  tt_int_op(0UL,OP_EQ, tor_parse_ulong("8",8,0,100,NULL,NULL));
+  tt_int_op(50UL,OP_EQ, tor_parse_ulong("50",10,50,100,NULL,NULL));
+  tt_int_op(0UL,OP_EQ, tor_parse_ulong("-50",10,-100,100,NULL,NULL));
+  tt_int_op(0UL,OP_EQ, tor_parse_ulong("50",-1,50,100,&i,NULL));
+  tt_int_op(0,OP_EQ, i);
+
+  /* Test parse_uint64 */
+  tt_assert(U64_LITERAL(10) == tor_parse_uint64("10 x",10,0,100, &i, &cp));
+  tt_int_op(1,OP_EQ, i);
+  tt_str_op(cp,OP_EQ, " x");
+  tt_assert(U64_LITERAL(12345678901) ==
+              tor_parse_uint64("12345678901",10,0,UINT64_MAX, &i, &cp));
+  tt_int_op(1,OP_EQ, i);
+  tt_str_op(cp,OP_EQ, "");
+  tt_assert(U64_LITERAL(0) ==
+              tor_parse_uint64("12345678901",10,500,INT32_MAX, &i, &cp));
+  tt_int_op(0,OP_EQ, i);
+  tt_assert(U64_LITERAL(0) ==
+              tor_parse_uint64("123",-1,0,INT32_MAX, &i, &cp));
+  tt_int_op(0,OP_EQ, i);
+
+  {
+  /* Test parse_double */
+  double d = tor_parse_double("10", 0, (double)UINT64_MAX,&i,NULL);
+  tt_int_op(1,OP_EQ, i);
+  tt_assert(DBL_TO_U64(d) == 10);
+  d = tor_parse_double("0", 0, (double)UINT64_MAX,&i,NULL);
+  tt_int_op(1,OP_EQ, i);
+  tt_assert(DBL_TO_U64(d) == 0);
+  d = tor_parse_double(" ", 0, (double)UINT64_MAX,&i,NULL);
+  tt_int_op(0,OP_EQ, i);
+  d = tor_parse_double(".0a", 0, (double)UINT64_MAX,&i,NULL);
+  tt_int_op(0,OP_EQ, i);
+  d = tor_parse_double(".0a", 0, (double)UINT64_MAX,&i,&cp);
+  tt_int_op(1,OP_EQ, i);
+  d = tor_parse_double("-.0", 0, (double)UINT64_MAX,&i,NULL);
+  tt_int_op(1,OP_EQ, i);
+  tt_assert(DBL_TO_U64(d) == 0);
+  d = tor_parse_double("-10", -100.0, 100.0,&i,NULL);
+  tt_int_op(1,OP_EQ, i);
+  tt_double_op(fabs(d - -10.0),OP_LT, 1E-12);
+  }
+
+  {
+    /* Test tor_parse_* where we overflow/underflow the underlying type. */
+    /* This string should overflow 64-bit ints. */
+#define TOOBIG "100000000000000000000000000"
+    tt_int_op(0L, OP_EQ,
+              tor_parse_long(TOOBIG, 10, LONG_MIN, LONG_MAX, &i, NULL));
+    tt_int_op(i,OP_EQ, 0);
+    tt_int_op(0L,OP_EQ,
+              tor_parse_long("-"TOOBIG, 10, LONG_MIN, LONG_MAX, &i, NULL));
+    tt_int_op(i,OP_EQ, 0);
+    tt_int_op(0UL,OP_EQ, tor_parse_ulong(TOOBIG, 10, 0, ULONG_MAX, &i, NULL));
+    tt_int_op(i,OP_EQ, 0);
+    tt_u64_op(U64_LITERAL(0), OP_EQ, tor_parse_uint64(TOOBIG, 10,
+                                             0, UINT64_MAX, &i, NULL));
+    tt_int_op(i,OP_EQ, 0);
+  }
+ done:
+  ;
 }
 
 static void
@@ -5471,6 +5480,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(escape_string_socks),
   UTIL_LEGACY(string_is_key_value),
   UTIL_LEGACY(strmisc),
+  UTIL_TEST(parse_integer, 0),
   UTIL_LEGACY(pow2),
   UTIL_LEGACY(gzip),
   UTIL_TEST(gzip_compression_bomb, TT_FORK),
