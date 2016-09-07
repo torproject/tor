@@ -2119,8 +2119,10 @@ exit_policy_is_general_exit_helper(smartlist_t *policy, int port)
       if (subnet_status[i] != 0)
         continue; /* We already reject some part of this /8 */
       tor_addr_from_ipv4h(&addr, i<<24);
-      if (tor_addr_is_internal(&addr, 0))
+      if (tor_addr_is_internal(&addr, 0) &&
+          !get_options()->DirAllowPrivateAddresses) {
         continue; /* Local or non-routable addresses */
+      }
       if (p->policy_type == ADDR_POLICY_ACCEPT) {
         if (p->maskbits > 8)
           continue; /* Narrower than a /8. */

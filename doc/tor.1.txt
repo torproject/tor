@@ -2163,7 +2163,9 @@ on the public Tor network.
 [[DirAllowPrivateAddresses]] **DirAllowPrivateAddresses** **0**|**1**::
     If set to 1, Tor will accept server descriptors with arbitrary "Address"
     elements. Otherwise, if the address is not an IP address or is a private IP
-    address, it will reject the server descriptor. (Default: 0)
+    address, it will reject the server descriptor. Additionally, Tor
+    will allow exit policies for private networks to fulfill Exit flag
+    requirements. (Default: 0)
 
 [[AuthDirBadExit]] **AuthDirBadExit** __AddressPattern...__::
     Authoritative directories only. A set of address patterns for servers that
