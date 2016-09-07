@@ -73,6 +73,7 @@ static dir_connection_t *
 new_dir_conn(void)
 {
   dir_connection_t *conn = dir_connection_new(AF_INET);
+  tor_addr_from_ipv4h(&conn->base_.addr, 0x7f000001);
   return conn;
 }
 
