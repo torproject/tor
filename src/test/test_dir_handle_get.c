@@ -69,7 +69,12 @@ connection_write_to_buf_mock(const char *string, size_t len,
 #define NOT_ENOUGH_CONSENSUS_SIGNATURES "HTTP/1.0 404 " \
   "Consensus not signed by sufficient number of requested authorities\r\n\r\n"
 
-static tor_addr_t MOCK_TOR_ADDR;
+static dir_connection_t *
+new_dir_conn(void)
+{
+  dir_connection_t *conn = dir_connection_new(AF_INET);
+  return conn;
+}
 
 static void
 test_dir_handle_get_bad_request(void *data)
@@ -80,7 +85,7 @@ test_dir_handle_get_bad_request(void *data)
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
   tt_int_op(directory_handle_command_get(conn, "", NULL, 0), OP_EQ, 0);
 
   fetch_from_buf_http(TO_CONN(conn)->outbuf, &header, MAX_HEADERS_SIZE,
@@ -103,7 +108,7 @@ test_dir_handle_get_v1_command_not_found(void *data)
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   // no frontpage configured
   tt_ptr_op(get_dirportfrontpage(), OP_EQ, NULL);
@@ -145,7 +150,7 @@ test_dir_handle_get_v1_command(void *data)
   exp_body = get_dirportfrontpage();
   body_len = strlen(exp_body);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
   tt_int_op(directory_handle_command_get(conn, GET("/tor/"), NULL, 0),
             OP_EQ, 0);
 
@@ -180,7 +185,7 @@ test_dir_handle_get_not_found(void *data)
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   /* Unrecognized path */
   tt_int_op(directory_handle_command_get(conn, GET("/anything"), NULL, 0),
@@ -207,7 +212,7 @@ test_dir_handle_get_robots_txt(void *data)
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   tt_int_op(directory_handle_command_get(conn, GET("/tor/robots.txt"),
                                          NULL, 0), OP_EQ, 0);
@@ -242,7 +247,7 @@ test_dir_handle_get_rendezvous2_not_found_if_not_encrypted(void *data)
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   // connection is not encrypted
   tt_assert(!connection_dir_is_encrypted(conn))
@@ -269,7 +274,7 @@ test_dir_handle_get_rendezvous2_on_encrypted_conn_with_invalid_desc_id(
   (void) data;
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   // connection is encrypted
   TO_CONN(conn)->linked = 1;
@@ -296,7 +301,7 @@ test_dir_handle_get_rendezvous2_on_encrypted_conn_not_well_formed(void *data)
   (void) data;
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   // connection is encrypted
   TO_CONN(conn)->linked = 1;
@@ -329,7 +334,7 @@ test_dir_handle_get_rendezvous2_not_found(void *data)
   (void) data;
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   rend_cache_init();
 
@@ -395,7 +400,7 @@ test_dir_handle_get_rendezvous2_on_encrypted_conn_success(void *data)
   base32_encode(desc_id_base32, sizeof(desc_id_base32), desc_holder->desc_id,
                 DIGEST_LEN);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   // connection is encrypted
   TO_CONN(conn)->linked = 1;
@@ -446,7 +451,7 @@ test_dir_handle_get_micro_d_not_found(void *data)
 
   #define B64_256_1 "8/Pz8/u7vz8/Pz+7vz8/Pz+7u/Pz8/P7u/Pz8/P7u78"
   #define B64_256_2 "zMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMw"
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   const char *req = MICRODESC_GET(B64_256_1 "-" B64_256_2);
   tt_int_op(directory_handle_command_get(conn, req, NULL, 0), OP_EQ, 0);
@@ -526,7 +531,7 @@ test_dir_handle_get_micro_d(void *data)
   tt_int_op(1, OP_EQ, smartlist_len(list));
 
   /* Make the request */
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   tor_snprintf(path, sizeof(path), MICRODESC_GET("%s"), digest_base64);
   tt_int_op(directory_handle_command_get(conn, path, NULL, 0), OP_EQ, 0);
@@ -596,7 +601,7 @@ test_dir_handle_get_micro_d_server_busy(void *data)
   mock_options->CountPrivateBandwidth = 1;
 
   /* Make the request */
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   tor_snprintf(path, sizeof(path), MICRODESC_GET("%s"), digest_base64);
   tt_int_op(directory_handle_command_get(conn, path, NULL, 0), OP_EQ, 0);
@@ -633,7 +638,7 @@ test_dir_handle_get_networkstatus_bridges_not_found_without_auth(void *data)
   mock_options->BridgeAuthoritativeDir = 1;
   mock_options->BridgePassword_AuthDigest_ = tor_strdup("digest");
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
   TO_CONN(conn)->linked = 1;
 
   const char *req = GET(BRIDGES_PATH);
@@ -669,7 +674,7 @@ test_dir_handle_get_networkstatus_bridges(void *data)
   crypto_digest256(mock_options->BridgePassword_AuthDigest_,
                      "abcdefghijklm12345", 18, DIGEST_SHA256);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
   TO_CONN(conn)->linked = 1;
 
   const char *req = "GET " BRIDGES_PATH " HTTP/1.0\r\n"
@@ -709,7 +714,7 @@ test_dir_handle_get_networkstatus_bridges_not_found_wrong_auth(void *data)
   crypto_digest256(mock_options->BridgePassword_AuthDigest_,
                      "abcdefghijklm12345", 18, DIGEST_SHA256);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
   TO_CONN(conn)->linked = 1;
 
   const char *req = "GET " BRIDGES_PATH " HTTP/1.0\r\n"
@@ -739,7 +744,7 @@ test_dir_handle_get_server_descriptors_not_found(void* data)
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   const char *req = SERVER_DESC_GET("invalid");
   tt_int_op(directory_handle_command_get(conn, req, NULL, 0), OP_EQ, 0);
@@ -782,7 +787,7 @@ test_dir_handle_get_server_descriptors_all(void* data)
   /* Treat "all" requests as if they were unencrypted */
   mock_routerinfo->cache_info.send_unencrypted = 1;
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   const char *req = SERVER_DESC_GET("all");
   tt_int_op(directory_handle_command_get(conn, req, NULL, 0), OP_EQ, 0);
@@ -888,7 +893,7 @@ test_dir_handle_get_server_descriptors_authority(void* data)
     strlen(TEST_DESCRIPTOR) - annotation_len;;
   mock_routerinfo->cache_info.annotations_len = annotation_len;
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   const char *req = SERVER_DESC_GET("authority");
   tt_int_op(directory_handle_command_get(conn, req, NULL, 0), OP_EQ, 0);
@@ -952,7 +957,7 @@ test_dir_handle_get_server_descriptors_fp(void* data)
     strlen(TEST_DESCRIPTOR) - annotation_len;
   mock_routerinfo->cache_info.annotations_len = annotation_len;
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   #define HEX1 "Fe0daff89127389bc67558691231234551193EEE"
   #define HEX2 "Deadbeef99999991111119999911111111f00ba4"
@@ -1018,7 +1023,7 @@ test_dir_handle_get_server_descriptors_d(void* data)
   const char *hex_digest = hex_str(router->cache_info.signed_descriptor_digest,
                                    DIGEST_LEN);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   char req_header[155]; /* XXX Why 155? What kind of number is that?? */
   tor_snprintf(req_header, sizeof(req_header),
@@ -1086,7 +1091,7 @@ test_dir_handle_get_server_descriptors_busy(void* data)
   const char *hex_digest = hex_str(router->cache_info.signed_descriptor_digest,
                                    DIGEST_LEN);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   #define HEX1 "Fe0daff89127389bc67558691231234551193EEE"
   #define HEX2 "Deadbeef99999991111119999911111111f00ba4"
@@ -1125,7 +1130,7 @@ test_dir_handle_get_server_keys_bad_req(void* data)
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   const char *req = GET("/tor/keys/");
   tt_int_op(directory_handle_command_get(conn, req, NULL, 0), OP_EQ, 0);
@@ -1151,7 +1156,7 @@ test_dir_handle_get_server_keys_all_not_found(void* data)
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   const char *req = GET("/tor/keys/all");
   tt_int_op(directory_handle_command_get(conn, req, NULL, 0), OP_EQ, 0);
@@ -1203,7 +1208,7 @@ test_dir_handle_get_server_keys_all(void* data)
   tt_int_op(0, OP_EQ, trusted_dirs_load_certs_from_string(TEST_CERTIFICATE,
     TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST, 1, NULL));
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   const char *req = GET("/tor/keys/all");
   tt_int_op(directory_handle_command_get(conn, req, NULL, 0), OP_EQ, 0);
@@ -1240,7 +1245,7 @@ test_dir_handle_get_server_keys_authority_not_found(void* data)
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   const char *req = GET("/tor/keys/authority");
   tt_int_op(directory_handle_command_get(conn, req, NULL, 0), OP_EQ, 0);
@@ -1280,7 +1285,7 @@ test_dir_handle_get_server_keys_authority(void* data)
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   const char *req = GET("/tor/keys/authority");
   tt_int_op(directory_handle_command_get(conn, req, NULL, 0), OP_EQ, 0);
@@ -1316,7 +1321,7 @@ test_dir_handle_get_server_keys_fp_not_found(void* data)
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   const char *req = GET("/tor/keys/fp/somehex");
   tt_int_op(directory_handle_command_get(conn, req, NULL, 0), OP_EQ, 0);
@@ -1362,7 +1367,7 @@ test_dir_handle_get_server_keys_fp(void* data)
   tt_int_op(0, OP_EQ, trusted_dirs_load_certs_from_string(TEST_CERTIFICATE,
     TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST, 1, NULL));
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
   char req[71];
   tor_snprintf(req, sizeof(req),
                      GET("/tor/keys/fp/%s"), TEST_CERT_IDENT_KEY);
@@ -1399,7 +1404,7 @@ test_dir_handle_get_server_keys_sk_not_found(void* data)
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   const char *req = GET("/tor/keys/sk/somehex");
   tt_int_op(directory_handle_command_get(conn, req, NULL, 0), OP_EQ, 0);
@@ -1435,7 +1440,7 @@ test_dir_handle_get_server_keys_sk(void* data)
   tt_int_op(0, OP_EQ, trusted_dirs_load_certs_from_string(TEST_CERTIFICATE,
     TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST, 1, NULL));
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
   char req[71];
   tor_snprintf(req, sizeof(req),
                GET("/tor/keys/sk/%s"), TEST_SIGNING_KEY);
@@ -1472,7 +1477,7 @@ test_dir_handle_get_server_keys_fpsk_not_found(void* data)
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   const char *req = GET("/tor/keys/fp-sk/somehex");
   tt_int_op(directory_handle_command_get(conn, req, NULL, 0), OP_EQ, 0);
@@ -1518,7 +1523,7 @@ test_dir_handle_get_server_keys_fpsk(void* data)
   tt_int_op(0, OP_EQ, trusted_dirs_load_certs_from_string(TEST_CERTIFICATE,
     TRUSTED_DIRS_CERTS_SRC_DL_BY_ID_DIGEST, 1, NULL));
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   char req[115];
   tor_snprintf(req, sizeof(req),
@@ -1582,7 +1587,7 @@ test_dir_handle_get_server_keys_busy(void* data)
   init_mock_options();
   mock_options->CountPrivateBandwidth = 1;
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
   char req[71];
   tor_snprintf(req, sizeof(req), GET("/tor/keys/fp/%s"), TEST_CERT_IDENT_KEY);
   tt_int_op(directory_handle_command_get(conn, req, NULL, 0), OP_EQ, 0);
@@ -1636,7 +1641,7 @@ test_dir_handle_get_status_vote_current_consensus_ns_not_enough_sigs(void* d)
   mock_options->DirReqStatistics = 1;
   geoip_dirreq_stats_init(time(NULL));
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
 
   tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
     GET("/tor/status-vote/current/consensus-ns/" HEX1 "+" HEX2), NULL, 0));
@@ -1681,7 +1686,7 @@ test_dir_handle_get_status_vote_current_consensus_ns_not_found(void* data)
   mock_options->DirReqStatistics = 1;
   geoip_dirreq_stats_init(time(NULL));
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
   tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
     GET("/tor/status-vote/current/consensus-ns"), NULL, 0));
 
@@ -1734,7 +1739,7 @@ status_vote_current_consensus_ns_test(char **header, char **body,
   geoip_parse_entry("10,50,AB", AF_INET);
   tt_str_op("ab", OP_EQ, geoip_get_country_name(1));
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
   TO_CONN(conn)->address = tor_strdup("127.0.0.1");
 
   tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
@@ -1857,7 +1862,7 @@ test_dir_handle_get_status_vote_current_not_found(void* data)
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
   tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
     GET("/tor/status-vote/current/" HEX1), NULL, 0));
 
@@ -1881,7 +1886,7 @@ status_vote_current_d_test(char **header, char **body, size_t *body_l)
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
   tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
     GET("/tor/status-vote/current/d/" VOTE_DIGEST), NULL, 0));
 
@@ -1901,7 +1906,7 @@ status_vote_next_d_test(char **header, char **body, size_t *body_l)
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
   tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
     GET("/tor/status-vote/next/d/" VOTE_DIGEST), NULL, 0));
 
@@ -2025,7 +2030,7 @@ test_dir_handle_get_status_vote_next_not_found(void* data)
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
   tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
     GET("/tor/status-vote/next/" HEX1), NULL, 0));
 
@@ -2047,7 +2052,7 @@ status_vote_next_consensus_test(char **header, char **body, size_t *body_used)
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
   tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
     GET("/tor/status-vote/next/consensus"), NULL, 0));
 
@@ -2084,7 +2089,7 @@ test_dir_handle_get_status_vote_current_authority_not_found(void* data)
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
   tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
     GET("/tor/status-vote/current/authority"), NULL, 0));
 
@@ -2108,7 +2113,7 @@ test_dir_handle_get_status_vote_next_authority_not_found(void* data)
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
   tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
     GET("/tor/status-vote/next/authority"), NULL, 0));
 
@@ -2193,7 +2198,7 @@ status_vote_next_consensus_signatures_test(char **header, char **body,
 
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
   tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
     GET("/tor/status-vote/next/consensus-signatures"), NULL, 0));
 
@@ -2331,7 +2336,7 @@ test_dir_handle_get_status_vote_next_authority(void* data)
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
   tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
     GET("/tor/status-vote/next/authority"), NULL, 0));
 
@@ -2413,7 +2418,7 @@ test_dir_handle_get_status_vote_current_authority(void* data)
   MOCK(get_my_v3_authority_cert, get_my_v3_authority_cert_m);
   MOCK(connection_write_to_buf_impl_, connection_write_to_buf_mock);
 
-  conn = dir_connection_new(tor_addr_family(&MOCK_TOR_ADDR));
+  conn = new_dir_conn();
   tt_int_op(0, OP_EQ, directory_handle_command_get(conn,
     GET("/tor/status-vote/current/authority"), NULL, 0));
 
