@@ -108,6 +108,14 @@ struct rend_service_port_config_s {
  * rendezvous point before giving up? */
 #define MAX_REND_TIMEOUT 30
 
+/* Hidden service directory file names:
+ * new file names should be added to rend_service_add_filenames_to_list()
+ * for sandboxing purposes. */
+static const char *private_key_fname = "private_key";
+static const char *hostname_fname = "hostname";
+static const char *client_keys_fname = "client_keys";
+static const char *sos_poison_fname = "onion_service_non_anonymous";
+
 /** Returns a escaped string representation of the service, <b>s</b>.
  */
 static const char *
@@ -950,23 +958,32 @@ rend_service_update_descriptor(rend_service_t *service)
   }
 }
 
-static const char *sos_poison_fname = "non_anonymous_hidden_service";
-
-/* Allocate and return a string containing the path to the single onion
- * poison file in service.
- * The caller must free this path.
- * Returns NULL if there is no directory for service. */
+/* Allocate and return a string containing the path to file_name in
+ * service->directory. Asserts that service has a directory.
+ * This function will never return NULL.
+ * The caller must free this path. */
 static char *
-sos_poison_path(const rend_service_t *service)
+rend_service_path(const rend_service_t *service, const char *file_name)
 {
-  char *poison_path;
+  char *file_path = NULL;
 
   tor_assert(service->directory);
 
-  tor_asprintf(&poison_path, "%s%s%s",
-               service->directory, PATH_SEPARATOR, sos_poison_fname);
+  /* Can never fail: asserts rather than leaving file_path NULL. */
+  tor_asprintf(&file_path, "%s%s%s",
+               service->directory, PATH_SEPARATOR, file_name);
 
-  return poison_path;
+  return file_path;
+}
+
+/* Allocate and return a string containing the path to the single onion
+ * service poison file in service->directory. Asserts that service has a
+ * directory.
+ * The caller must free this path. */
+STATIC char *
+rend_service_sos_poison_path(const rend_service_t *service)
+{
+  return rend_service_path(service, sos_poison_fname);
 }
 
 /** Return True if hidden services <b>service> has been poisoned by single
@@ -981,8 +998,7 @@ service_is_single_onion_poisoned(const rend_service_t *service)
     return 0;
   }
 
-  poison_fname = sos_poison_path(service);
-  tor_assert(poison_fname);
+  poison_fname = rend_service_sos_poison_path(service);
 
   fstatus = file_status(poison_fname);
   tor_free(poison_fname);
@@ -1076,7 +1092,7 @@ poison_new_single_onion_hidden_service_dir(const rend_service_t *service)
     return -1;
   }
 
-  poison_fname = sos_poison_path(service);
+  poison_fname = rend_service_sos_poison_path(service);
 
   switch (file_status(poison_fname)) {
   case FN_DIR:
@@ -1190,12 +1206,10 @@ rend_service_add_filenames_to_list(smartlist_t *lst, const rend_service_t *s)
   tor_assert(lst);
   tor_assert(s);
   tor_assert(s->directory);
-  smartlist_add_asprintf(lst, "%s"PATH_SEPARATOR"private_key",
-                         s->directory);
-  smartlist_add_asprintf(lst, "%s"PATH_SEPARATOR"hostname",
-                         s->directory);
-  smartlist_add_asprintf(lst, "%s"PATH_SEPARATOR"client_keys",
-                         s->directory);
+  smartlist_add(lst, rend_service_path(s, private_key_fname));
+  smartlist_add(lst, rend_service_path(s, hostname_fname));
+  smartlist_add(lst, rend_service_path(s, client_keys_fname));
+  smartlist_add(lst, rend_service_sos_poison_path(s));
 }
 
 /** Add to <b>open_lst</b> every filename used by a configured hidden service,
@@ -1239,7 +1253,7 @@ rend_service_derive_key_digests(struct rend_service_t *s)
 static int
 rend_service_load_keys(rend_service_t *s)
 {
-  char fname[512];
+  char *fname = NULL;
   char buf[128];
   cpd_check_t  check_opts = CPD_CREATE;
 
@@ -1248,7 +1262,7 @@ rend_service_load_keys(rend_service_t *s)
   }
   /* Check/create directory */
   if (check_private_dir(s->directory, check_opts, get_options()->User) < 0) {
-    return -1;
+    goto err;
   }
 #ifndef _WIN32
   if (s->dir_group_readable) {
@@ -1260,34 +1274,23 @@ rend_service_load_keys(rend_service_t *s)
 #endif
 
   /* Load key */
-  if (strlcpy(fname,s->directory,sizeof(fname)) >= sizeof(fname) ||
-      strlcat(fname,PATH_SEPARATOR"private_key",sizeof(fname))
-         >= sizeof(fname)) {
-    log_warn(LD_CONFIG, "Directory name too long to store key file: \"%s\".",
-             s->directory);
-    return -1;
-  }
+  fname = rend_service_path(s, private_key_fname);
   s->private_key = init_key_from_file(fname, 1, LOG_ERR, 0);
+
   if (!s->private_key)
-    return -1;
+    goto err;
 
   if (rend_service_derive_key_digests(s) < 0)
-    return -1;
+    goto err;
 
+  tor_free(fname);
   /* Create service file */
-  if (strlcpy(fname,s->directory,sizeof(fname)) >= sizeof(fname) ||
-      strlcat(fname,PATH_SEPARATOR"hostname",sizeof(fname))
-      >= sizeof(fname)) {
-    log_warn(LD_CONFIG, "Directory name too long to store hostname file:"
-             " \"%s\".", s->directory);
-    return -1;
-  }
+  fname = rend_service_path(s, hostname_fname);
 
   tor_snprintf(buf, sizeof(buf),"%s.onion\n", s->service_id);
   if (write_str_to_file(fname,buf,0)<0) {
     log_warn(LD_CONFIG, "Could not write onion address to hostname file.");
-    memwipe(buf, 0, sizeof(buf));
-    return -1;
+    goto err;
   }
 #ifndef _WIN32
   if (s->dir_group_readable) {
@@ -1298,15 +1301,21 @@ rend_service_load_keys(rend_service_t *s)
   }
 #endif
 
-  memwipe(buf, 0, sizeof(buf));
-
   /* If client authorization is configured, load or generate keys. */
   if (s->auth_type != REND_NO_AUTH) {
-    if (rend_service_load_auth_keys(s, fname) < 0)
-      return -1;
+    if (rend_service_load_auth_keys(s, fname) < 0) {
+      goto err;
+    }
   }
 
-  return 0;
+  int r = 0;
+  goto done;
+ err:
+  r = -1;
+ done:
+  memwipe(buf, 0, sizeof(buf));
+  tor_free(fname);
+  return r;
 }
 
 /** Load and/or generate client authorization keys for the hidden service
@@ -1316,7 +1325,7 @@ static int
 rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
 {
   int r = 0;
-  char cfname[512];
+  char *cfname = NULL;
   char *client_keys_str = NULL;
   strmap_t *parsed_clients = strmap_new();
   FILE *cfile, *hfile;
@@ -1326,12 +1335,7 @@ rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
   char buf[1500];
 
   /* Load client keys and descriptor cookies, if available. */
-  if (tor_snprintf(cfname, sizeof(cfname), "%s"PATH_SEPARATOR"client_keys",
-                   s->directory)<0) {
-    log_warn(LD_CONFIG, "Directory name too long to store client keys "
-             "file: \"%s\".", s->directory);
-    goto err;
-  }
+  cfname = rend_service_path(s, client_keys_fname);
   client_keys_str = read_file_to_str(cfname, RFTS_IGNORE_MISSING, NULL);
   if (client_keys_str) {
     if (rend_parse_client_keys(parsed_clients, client_keys_str) < 0) {
@@ -1485,7 +1489,10 @@ rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
   }
   strmap_free(parsed_clients, rend_authorized_client_strmap_item_free);
 
-  memwipe(cfname, 0, sizeof(cfname));
+  if (cfname) {
+    memwipe(cfname, 0, sizeof(cfname));
+    tor_free(cfname);
+  }
 
   /* Clear stack buffers that held key-derived material. */
   memwipe(buf, 0, sizeof(buf));

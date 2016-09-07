@@ -118,6 +118,7 @@ typedef struct rend_service_t {
 } rend_service_t;
 
 STATIC void rend_service_free(rend_service_t *service);
+STATIC char *rend_service_sos_poison_path(const rend_service_t *service);
 
 #endif
 
