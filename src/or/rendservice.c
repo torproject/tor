@@ -1153,12 +1153,24 @@ rend_service_poison_new_single_onion_dirs(const smartlist_t *service_list)
 }
 
 /** Load and/or generate private keys for all hidden services, possibly
- * including keys for client authorization.  Return 0 on success, -1 on
- * failure. */
+ * including keys for client authorization.
+ * If a <b>service_list</b> is provided, treat it as the list of hidden
+ * services (used in unittests). Otherwise, require that rend_service_list is
+ * not NULL.
+ * Return 0 on success, -1 on failure. */
 int
-rend_service_load_all_keys(void)
+rend_service_load_all_keys(const smartlist_t *service_list)
 {
-  SMARTLIST_FOREACH_BEGIN(rend_service_list, rend_service_t *, s) {
+  const smartlist_t *s_list;
+  /* If no special service list is provided, then just use the global one. */
+  if (!service_list) {
+    tor_assert(rend_service_list);
+    s_list = rend_service_list;
+  } else {
+    s_list = service_list;
+  }
+
+  SMARTLIST_FOREACH_BEGIN(s_list, rend_service_t *, s) {
     if (s->private_key)
       continue;
     log_info(LD_REND, "Loading hidden-service keys from \"%s\"",
