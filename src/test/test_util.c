@@ -2001,8 +2001,10 @@ test_util_parse_integer(void *arg)
   tt_int_op(10UL,OP_EQ, tor_parse_ulong("10",10,10,100,NULL,NULL));
   tt_int_op(0UL,OP_EQ, tor_parse_ulong("8",8,0,100,NULL,NULL));
   tt_int_op(50UL,OP_EQ, tor_parse_ulong("50",10,50,100,NULL,NULL));
-  tt_int_op(0UL,OP_EQ, tor_parse_ulong("-50",10,-100,100,NULL,NULL));
+  tt_int_op(0UL,OP_EQ, tor_parse_ulong("-50",10,0,100,NULL,NULL));
   tt_int_op(0UL,OP_EQ, tor_parse_ulong("50",-1,50,100,&i,NULL));
+  tt_int_op(0,OP_EQ, i);
+  tt_int_op(0UL,OP_EQ, tor_parse_ulong("-50",10,0,100,&i,NULL));
   tt_int_op(0,OP_EQ, i);
 
   /* Test parse_uint64 */
