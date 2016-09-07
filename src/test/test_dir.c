@@ -1587,23 +1587,46 @@ test_dir_param_voting_lookup(void *arg)
   tt_int_op(99, OP_EQ,
             dirvote_get_intermediate_param_value(lst, "abcd", 1000));
 
-  /* moomin appears twice. */
+  /* moomin appears twice. That's a bug. */
+  tor_capture_bugs_(1);
   tt_int_op(-100, OP_EQ,
             dirvote_get_intermediate_param_value(lst, "moomin", -100));
-  /* fred and jack are truncated */
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
+  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
+            "!(n_found > 1)");
+  tor_end_capture_bugs_();
+  /* There is no 'fred=', so that is treated as not existing. */
   tt_int_op(-100, OP_EQ,
             dirvote_get_intermediate_param_value(lst, "fred", -100));
+  /* jack is truncated */
+  tor_capture_bugs_(1);
   tt_int_op(-100, OP_EQ,
             dirvote_get_intermediate_param_value(lst, "jack", -100));
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
+  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
+            "!(! ok)");
+  tor_end_capture_bugs_();
   /* electricity and opa aren't integers. */
+  tor_capture_bugs_(1);
   tt_int_op(-100, OP_EQ,
             dirvote_get_intermediate_param_value(lst, "electricity", -100));
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
+  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
+            "!(! ok)");
+  tor_end_capture_bugs_();
+
+  tor_capture_bugs_(1);
   tt_int_op(-100, OP_EQ,
             dirvote_get_intermediate_param_value(lst, "opa", -100));
+  tt_int_op(smartlist_len(tor_get_captured_bug_log_()), OP_EQ, 1);
+  tt_str_op(smartlist_get(tor_get_captured_bug_log_(), 0), OP_EQ,
+            "!(! ok)");
+  tor_end_capture_bugs_();
 
  done:
   SMARTLIST_FOREACH(lst, char *, cp, tor_free(cp));
   smartlist_free(lst);
+  tor_end_capture_bugs_();
 }
 
 #undef dirvote_compute_params
