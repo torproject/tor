@@ -149,5 +149,11 @@ void tor_bug_occurred_(const char *fname, unsigned int line,
                        const char *func, const char *expr,
                        int once);
 
+#ifdef TOR_UNIT_TESTS
+void tor_capture_bugs_(int n);
+void tor_end_capture_bugs_(void);
+const struct smartlist_t *tor_get_captured_bug_log_(void);
+#endif
+
 #endif
 
