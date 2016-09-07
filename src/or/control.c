@@ -4249,6 +4249,8 @@ handle_control_add_onion(control_connection_t *conn,
   int max_streams = 0;
   int max_streams_close_circuit = 0;
   rend_auth_type_t auth_type = REND_NO_AUTH;
+  /* Default to anonymous if no flag is given */
+  int non_anonymous = 0;
   for (size_t i = 1; i < arg_len; i++) {
     static const char *port_prefix = "Port=";
     static const char *flags_prefix = "Flags=";
@@ -4285,11 +4287,17 @@ handle_control_add_onion(control_connection_t *conn,
        *   * 'MaxStreamsCloseCircuit' - Close the circuit if MaxStreams is
        *                                exceeded.
        *   * 'BasicAuth' - Client authorization using the 'basic' method.
+       *   * 'NonAnonymous' - Add a non-anonymous Single Onion Service. If this
+       *                      flag is present, OnionServiceSingleHopMode and
+       *                      OnionServiceNonAnonymousMode must both be 1. If
+       *                      this flag is absent, both these options must be
+       *                      0.
        */
       static const char *discard_flag = "DiscardPK";
       static const char *detach_flag = "Detach";
       static const char *max_s_close_flag = "MaxStreamsCloseCircuit";
       static const char *basicauth_flag = "BasicAuth";
+      static const char *non_anonymous_flag = "NonAnonymous";
 
       smartlist_t *flags = smartlist_new();
       int bad = 0;
@@ -4310,6 +4318,8 @@ handle_control_add_onion(control_connection_t *conn,
           max_streams_close_circuit = 1;
         } else if (!strcasecmp(flag, basicauth_flag)) {
           auth_type = REND_BASIC_AUTH;
+        } else if (!strcasecmp(flag, non_anonymous_flag)) {
+          non_anonymous = 1;
         } else {
           connection_printf_to_buf(conn,
                                    "512 Invalid 'Flags' argument: %s\r\n",
@@ -4377,6 +4387,17 @@ handle_control_add_onion(control_connection_t *conn,
              (auth_type == REND_STEALTH_AUTH &&
               smartlist_len(auth_clients) > 16)) {
     connection_printf_to_buf(conn, "512 Too many auth clients\r\n");
+    goto out;
+  } else if (non_anonymous != rend_service_allow_non_anonymous_connection(
+                                                              get_options())) {
+    /* If we failed, and non-anonymous is set, Tor must be in anonymous mode.
+     * The error message changes based on the current Tor config:
+     * 512 Tor is in anonymous onion mode
+     * 512 Tor is in non-anonymous onion mode
+     * (I've deliberately written them out in full here to aid searchability.)
+     */
+    connection_printf_to_buf(conn, "512 Tor is in %sanonymous onion mode\r\n",
+                             non_anonymous ? "" : "non-");
     goto out;
   }
 
