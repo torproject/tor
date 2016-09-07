@@ -1714,8 +1714,8 @@ test_vrs_for_v3ns(vote_routerstatus_t *vrs, int voter, time_t now)
     tt_int_op(rs->addr,OP_EQ, 0x99008801);
     tt_int_op(rs->or_port,OP_EQ, 443);
     tt_int_op(rs->dir_port,OP_EQ, 8000);
-    /* no flags except "running" (16) and "v2dir" (64) */
-    tt_u64_op(vrs->flags, OP_EQ, U64_LITERAL(80));
+    /* no flags except "running" (16) and "v2dir" (64) and "valid" (128) */
+    tt_u64_op(vrs->flags, OP_EQ, U64_LITERAL(0xd0));
   } else if (tor_memeq(rs->identity_digest,
                        "\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5\x5"
                        "\x5\x5\x5\x5",
@@ -1812,7 +1812,7 @@ test_routerstatus_for_v3ns(routerstatus_t *rs, time_t now)
     tt_assert(!rs->is_stable);
     /* (If it wasn't running it wouldn't be here) */
     tt_assert(rs->is_flagged_running);
-    tt_assert(!rs->is_valid);
+    tt_assert(rs->is_valid);
     tt_assert(!rs->is_named);
     tt_assert(rs->is_v2_dir);
     /* XXXX check version */

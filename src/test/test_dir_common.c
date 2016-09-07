@@ -89,6 +89,7 @@ dir_common_gen_routerstatus_for_v3ns(int idx, time_t now)
       /* all flags but running and v2dir cleared */
       rs->is_flagged_running = 1;
       rs->is_v2_dir = 1;
+      rs->is_valid = 1; /* xxxxx */
       break;
     case 1:
       /* Generate the second routerstatus. */
