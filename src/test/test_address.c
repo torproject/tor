@@ -795,7 +795,7 @@ test_address_get_if_addrs6_list_internal(void *arg)
   (void)arg;
 
   /* We might drop a log_err */
-  int prev_level = setup_full_capture_of_logs(LOG_ERR);
+  setup_full_capture_of_logs(LOG_ERR);
   results = get_interface_address6_list(LOG_ERR, AF_INET6, 1);
   tt_int_op(smartlist_len(mock_saved_logs()), OP_LE, 1);
   if (smartlist_len(mock_saved_logs()) == 1) {
@@ -803,7 +803,7 @@ test_address_get_if_addrs6_list_internal(void *arg)
                                      "unable to create socket");
 
   }
-  teardown_capture_of_logs(prev_level);
+  teardown_capture_of_logs();
 
   tt_assert(results != NULL);
   /* Work even on systems without IPv6 interfaces */
@@ -822,6 +822,7 @@ test_address_get_if_addrs6_list_internal(void *arg)
 
  done:
   free_interface_address6_list(results);
+  teardown_capture_of_logs();
   return;
 }
 
@@ -833,7 +834,7 @@ test_address_get_if_addrs6_list_no_internal(void *arg)
   (void)arg;
 
   /* We might drop a log_err */
-  int prev_level = setup_full_capture_of_logs(LOG_ERR);
+  setup_full_capture_of_logs(LOG_ERR);
   results = get_interface_address6_list(LOG_ERR, AF_INET6, 0);
   tt_int_op(smartlist_len(mock_saved_logs()), OP_LE, 1);
   if (smartlist_len(mock_saved_logs()) == 1) {
@@ -841,7 +842,7 @@ test_address_get_if_addrs6_list_no_internal(void *arg)
                                      "unable to create socket");
 
   }
-  teardown_capture_of_logs(prev_level);
+  teardown_capture_of_logs();
 
   tt_assert(results != NULL);
   /* Work even on systems without IPv6 interfaces */
@@ -859,6 +860,7 @@ test_address_get_if_addrs6_list_no_internal(void *arg)
   }
 
  done:
+  teardown_capture_of_logs();
   free_interface_address6_list(results);
   return;
 }

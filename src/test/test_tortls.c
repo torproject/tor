@@ -324,7 +324,7 @@ test_tortls_log_one_error(void *ignored)
 
   ctx = SSL_CTX_new(SSLv23_method());
   tls = tor_malloc_zero(sizeof(tor_tls_t));
-  int previous_log = setup_capture_of_logs(LOG_INFO);
+  setup_capture_of_logs(LOG_INFO);
 
   tor_tls_log_one_error(NULL, 0, LOG_WARN, 0, "something");
   expect_log_msg("TLS error while something: "
@@ -393,7 +393,7 @@ test_tortls_log_one_error(void *ignored)
             " (in (null):(null):" SSL_STATE_STR ")\n");
 
  done:
-  teardown_capture_of_logs(previous_log);
+  teardown_capture_of_logs();
   SSL_free(ssl);
   SSL_CTX_free(ctx);
   if (tls && tls->ssl)
@@ -416,7 +416,7 @@ test_tortls_get_error(void *ignored)
   SSL_load_error_strings();
 
   ctx = SSL_CTX_new(SSLv23_method());
-  int previous_log = setup_capture_of_logs(LOG_INFO);
+  setup_capture_of_logs(LOG_INFO);
   tls = tor_malloc_zero(sizeof(tor_tls_t));
   tls->ssl = SSL_new(ctx);
   SSL_set_bio(tls->ssl, BIO_new(BIO_s_mem()), NULL);
@@ -482,7 +482,7 @@ test_tortls_get_error(void *ignored)
             "connect:before/accept initialization)\n");
 
  done:
-  teardown_capture_of_logs(previous_log);
+  teardown_capture_of_logs();
   SSL_free(tls->ssl);
   tor_free(tls);
   SSL_CTX_free(ctx);
@@ -1790,7 +1790,7 @@ test_tortls_debug_state_callback(void *ignored)
   char *buf = tor_malloc_zero(1000);
   int n;
 
-  int previous_log = setup_capture_of_logs(LOG_DEBUG);
+  setup_capture_of_logs(LOG_DEBUG);
 
   ssl = tor_malloc_zero(sizeof(SSL));
 
@@ -1803,7 +1803,7 @@ test_tortls_debug_state_callback(void *ignored)
   expect_log_msg(buf);
 
  done:
-  teardown_capture_of_logs(previous_log);
+  teardown_capture_of_logs();
   tor_free(buf);
   tor_free(ssl);
 }
@@ -1817,7 +1817,6 @@ test_tortls_server_info_callback(void *ignored)
   tor_tls_t *tls;
   SSL_CTX *ctx;
   SSL *ssl;
-  int previous_log = 0;
 
   SSL_library_init();
   SSL_load_error_strings();
@@ -1831,7 +1830,7 @@ test_tortls_server_info_callback(void *ignored)
   tls->magic = TOR_TLS_MAGIC;
   tls->ssl = ssl;
 
-  previous_log = setup_full_capture_of_logs(LOG_WARN);
+  setup_full_capture_of_logs(LOG_WARN);
   SSL_set_state(ssl, SSL3_ST_SW_SRVR_HELLO_A);
   mock_clean_saved_logs();
   tor_tls_server_info_callback(ssl, SSL_CB_ACCEPT_LOOP, 0);
@@ -1846,8 +1845,7 @@ test_tortls_server_info_callback(void *ignored)
   mock_clean_saved_logs();
   tor_tls_server_info_callback(ssl, SSL_CB_ACCEPT_LOOP, 0);
   expect_no_log_entry();
-  teardown_capture_of_logs(previous_log);
-  previous_log = 0;
+  teardown_capture_of_logs();
 
   SSL_set_ex_data(tls->ssl, tor_tls_object_ex_data_index, tls);
   SSL_set_state(ssl, SSL3_ST_SW_SRVR_HELLO_B);
@@ -1868,8 +1866,7 @@ test_tortls_server_info_callback(void *ignored)
   tt_int_op(tls->wasV2Handshake, OP_EQ, 0);
 
  done:
-  if (previous_log)
-    teardown_capture_of_logs(previous_log);
+  teardown_capture_of_logs();
   SSL_free(ssl);
   SSL_CTX_free(ctx);
   tor_free(tls);
@@ -1931,7 +1928,7 @@ test_tortls_shutdown(void *ignored)
   int ret;
   tor_tls_t *tls;
   SSL_METHOD *method = give_me_a_test_method();
-  int previous_log = setup_capture_of_logs(LOG_WARN);
+  setup_capture_of_logs(LOG_WARN);
 
   tls = tor_malloc_zero(sizeof(tor_tls_t));
   tls->ssl = tor_malloc_zero(sizeof(SSL));
@@ -2014,7 +2011,7 @@ test_tortls_shutdown(void *ignored)
 #endif
 
  done:
-  teardown_capture_of_logs(previous_log);
+  teardown_capture_of_logs();
   tor_free(method);
   tor_free(tls->ssl);
   tor_free(tls);
@@ -2038,7 +2035,7 @@ test_tortls_read(void *ignored)
   tor_tls_t *tls;
   char buf[100];
   SSL_METHOD *method = give_me_a_test_method();
-  int previous_log = setup_capture_of_logs(LOG_WARN);
+  setup_capture_of_logs(LOG_WARN);
 
   tls = tor_malloc_zero(sizeof(tor_tls_t));
   tls->ssl = tor_malloc_zero(sizeof(SSL));
@@ -2086,7 +2083,7 @@ test_tortls_read(void *ignored)
   // TODO: fill up
 
  done:
-  teardown_capture_of_logs(previous_log);
+  teardown_capture_of_logs();
   tor_free(tls->ssl);
   tor_free(tls);
   tor_free(method);
@@ -2111,7 +2108,7 @@ test_tortls_write(void *ignored)
   tor_tls_t *tls;
   SSL_METHOD *method = give_me_a_test_method();
   char buf[100];
-  int previous_log = setup_capture_of_logs(LOG_WARN);
+  setup_capture_of_logs(LOG_WARN);
 
   tls = tor_malloc_zero(sizeof(tor_tls_t));
   tls->ssl = tor_malloc_zero(sizeof(SSL));
@@ -2151,7 +2148,7 @@ test_tortls_write(void *ignored)
   tt_int_op(ret, OP_EQ, TOR_TLS_WANTWRITE);
 
  done:
-  teardown_capture_of_logs(previous_log);
+  teardown_capture_of_logs();
   BIO_free(tls->ssl->rbio);
   tor_free(tls->ssl);
   tor_free(tls);
@@ -2196,7 +2193,7 @@ test_tortls_handshake(void *ignored)
   tor_tls_t *tls;
   SSL_CTX *ctx;
   SSL_METHOD *method = give_me_a_test_method();
-  int previous_log = setup_capture_of_logs(LOG_INFO);
+  setup_capture_of_logs(LOG_INFO);
 
   SSL_library_init();
   SSL_load_error_strings();
@@ -2259,7 +2256,7 @@ test_tortls_handshake(void *ignored)
   expect_log_severity(LOG_WARN);
 
  done:
-  teardown_capture_of_logs(previous_log);
+  teardown_capture_of_logs();
   SSL_free(tls->ssl);
   SSL_CTX_free(ctx);
   tor_free(tls);
@@ -2294,13 +2291,13 @@ test_tortls_finish_handshake(void *ignored)
 
   tls->isServer = 1;
   tls->wasV2Handshake = 0;
-  log_level = setup_full_capture_of_logs(LOG_WARN);
+  setup_full_capture_of_logs(LOG_WARN);
   ret = tor_tls_finish_handshake(tls);
   tt_int_op(ret, OP_EQ, 0);
   tt_int_op(tls->wasV2Handshake, OP_EQ, 1);
   expect_single_log_msg_containing("For some reason, wasV2Handshake didn't "
                                    "get set.");
-  teardown_capture_of_logs(log_level);
+  teardown_capture_of_logs();
   log_level = 0;
 
   tls->wasV2Handshake = 1;
@@ -2341,7 +2338,7 @@ test_tortls_finish_handshake(void *ignored)
   SSL_CTX_free(ctx);
   tor_free(method);
   if (log_level)
-    teardown_capture_of_logs(log_level);
+    teardown_capture_of_logs();
 }
 #endif
 

@@ -20,7 +20,7 @@ static void
 test_compat_libevent_logging_callback(void *ignored)
 {
   (void)ignored;
-  int previous_log = setup_full_capture_of_logs(LOG_DEBUG);
+  setup_full_capture_of_logs(LOG_DEBUG);
 
   libevent_logging_callback(_EVENT_LOG_DEBUG, "hello world");
   expect_log_msg("Message from libevent: hello world\n");
@@ -106,7 +106,7 @@ test_compat_libevent_logging_callback(void *ignored)
 
  done:
   suppress_libevent_log_msg(NULL);
-  teardown_capture_of_logs(previous_log);
+  teardown_capture_of_logs();
 }
 
 static void

@@ -337,7 +337,7 @@ test_link_handshake_recv_certs_ok_server(void *arg)
   {                                                                     \
     certs_data_t *d = arg;                                              \
     const char *require_failure_message = NULL;                         \
-    const int prev_level = setup_capture_of_logs(LOG_INFO);             \
+    setup_capture_of_logs(LOG_INFO);                                    \
     { code ; }                                                          \
     channel_tls_process_certs_cell(d->cell, d->chan);                   \
     tt_int_op(1, ==, mock_close_called);                                \
@@ -347,7 +347,7 @@ test_link_handshake_recv_certs_ok_server(void *arg)
       expect_log_msg_containing(require_failure_message);               \
     }                                                                   \
   done:                                                                 \
-    teardown_capture_of_logs(prev_level);                               \
+    teardown_capture_of_logs();                               \
   }
 
 CERTS_FAIL(badstate,
@@ -614,7 +614,7 @@ test_link_handshake_recv_authchallenge_ok_unrecognized(void *arg)
   {                                                                     \
     authchallenge_data_t *d = arg;                                      \
     const char *require_failure_message = NULL;                         \
-    const int prev_level = setup_capture_of_logs(LOG_INFO);             \
+    setup_capture_of_logs(LOG_INFO);                                    \
     { code ; }                                                          \
     channel_tls_process_auth_challenge_cell(d->cell, d->chan);          \
     tt_int_op(1, ==, mock_close_called);                                \
@@ -624,7 +624,7 @@ test_link_handshake_recv_authchallenge_ok_unrecognized(void *arg)
       expect_log_msg_containing(require_failure_message);               \
     }                                                                   \
   done:                                                                 \
-    teardown_capture_of_logs(prev_level);                               \
+    teardown_capture_of_logs();                               \
   }
 
 AUTHCHALLENGE_FAIL(badstate,
@@ -853,7 +853,7 @@ test_link_handshake_auth_cell(void *arg)
   {                                                             \
     authenticate_data_t *d = arg;                               \
     const char *require_failure_message = NULL;                 \
-    const int prev_level = setup_capture_of_logs(LOG_INFO);     \
+    setup_capture_of_logs(LOG_INFO);                            \
     { code ; }                                                  \
     tt_int_op(d->c2->handshake_state->authenticated, ==, 0);    \
     channel_tls_process_authenticate_cell(d->cell, d->chan2);   \
@@ -863,7 +863,7 @@ test_link_handshake_auth_cell(void *arg)
       expect_log_msg_containing(require_failure_message);       \
     }                                                           \
   done:                                                         \
-    teardown_capture_of_logs(prev_level);                       \
+    teardown_capture_of_logs();                       \
   }
 
 AUTHENTICATE_FAIL(badstate,
@@ -882,14 +882,14 @@ static void
 test_link_handshake_auth_already_authenticated(void *arg)
 {
   authenticate_data_t *d = arg;
-  const int prev_level = setup_capture_of_logs(LOG_INFO);
+  setup_capture_of_logs(LOG_INFO);
   d->c2->handshake_state->authenticated = 1;
   channel_tls_process_authenticate_cell(d->cell, d->chan2);
   tt_int_op(mock_close_called, ==, 1);
   tt_int_op(d->c2->handshake_state->authenticated, ==, 1);
   expect_log_msg_containing("The peer is already authenticated");
  done:
-  teardown_capture_of_logs(prev_level);
+  teardown_capture_of_logs();
 }
 
 AUTHENTICATE_FAIL(nocerts,

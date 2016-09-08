@@ -285,7 +285,6 @@ test_pick_circid(void *arg)
   circid_t circid;
   int i;
   (void) arg;
-  int prev_level = 0;
 
   MOCK(channel_dump_statistics, mock_channel_dump_statistics);
 
@@ -298,12 +297,11 @@ test_pick_circid(void *arg)
 
   /* CIRC_ID_TYPE_NEITHER is supposed to create a warning. */
   chan1->circ_id_type = CIRC_ID_TYPE_NEITHER;
-  prev_level = setup_full_capture_of_logs(LOG_WARN);
+  setup_full_capture_of_logs(LOG_WARN);
   tt_int_op(0, OP_EQ, get_unique_circ_id_by_chan(chan1));
   expect_single_log_msg_containing("Trying to pick a circuit ID for a "
                            "connection from a client with no identity.");
-  teardown_capture_of_logs(prev_level);
-  prev_level = 0;
+  teardown_capture_of_logs();
 
   /* Basic tests, with no collisions */
   chan1->circ_id_type = CIRC_ID_TYPE_LOWER;
@@ -365,8 +363,7 @@ test_pick_circid(void *arg)
   tor_free(chan2);
   bitarray_free(ba);
   circuit_free_all();
-  if (prev_level)
-    teardown_capture_of_logs(prev_level);
+  teardown_capture_of_logs();
   UNMOCK(channel_dump_statistics);
 }
 

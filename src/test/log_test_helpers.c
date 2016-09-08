@@ -26,6 +26,8 @@ static int echo_to_real_logs = 1;
 /** Record logs at this level or more severe */
 static int record_logs_at_level = LOG_ERR;
 
+static int saved_log_level = 0;
+
 /**
  * As setup_capture_of_logs, but do not relay log messages into the main
  * logging system.
@@ -33,26 +35,28 @@ static int record_logs_at_level = LOG_ERR;
  * Avoid using this function; use setup_capture_of_logs() instead if you
  * can. If you must use this function, then make sure you detect any
  * unexpected log messages, and treat them as test failures. */
-int
+void
 setup_full_capture_of_logs(int new_level)
 {
-  int result = setup_capture_of_logs(new_level);
+  setup_capture_of_logs(new_level);
   echo_to_real_logs = 0;
-  return result;
 }
 
 /**
  * Temporarily capture all the messages logged at severity <b>new_level</b> or
- * higher. Return the previous log level; you'll need to pass it into
- * teardown_capture_of_logs().
+ * higher.
  *
  * This function does not prevent messages from being sent to the main
  * logging system.
  */
-int
+void
 setup_capture_of_logs(int new_level)
 {
-  int previous_log = log_global_min_severity_;
+  if (saved_log_level == 0) {
+    saved_log_level = log_global_min_severity_;
+  } else {
+    tor_assert(0);
+  }
 
   /* Only change the log_global_min_severity_ if we're making things _more_
    * verbose.  Otherwise we could prevent real log messages that the test-
@@ -66,17 +70,20 @@ setup_capture_of_logs(int new_level)
   saved_logs = smartlist_new();
   MOCK(logv, mock_saving_logv);
   echo_to_real_logs = 1;
-  return previous_log;
 }
 
 /**
  * Undo setup_capture_of_logs().
+ *
+ * This function is safe to call more than once.
  */
 void
-teardown_capture_of_logs(int prev)
+teardown_capture_of_logs(void)
 {
   UNMOCK(logv);
-  log_global_min_severity_ = prev;
+  if (saved_log_level)
+    log_global_min_severity_ = saved_log_level;
+  saved_log_level = 0;
   mock_clean_saved_logs();
 }
 

@@ -18,9 +18,9 @@ typedef struct mock_saved_log_entry_t {
 
 void mock_clean_saved_logs(void);
 const smartlist_t *mock_saved_logs(void);
-int setup_capture_of_logs(int new_level);
-int setup_full_capture_of_logs(int new_level);
-void teardown_capture_of_logs(int prev);
+void setup_capture_of_logs(int new_level);
+void setup_full_capture_of_logs(int new_level);
+void teardown_capture_of_logs(void);
 
 int mock_saved_log_has_message(const char *msg);
 int mock_saved_log_has_message_containing(const char *msg);

@@ -648,12 +648,12 @@ test_util_time(void *arg)
   /* The below tests will all cause a BUG message, so we capture, suppress,
    * and detect. */
 #define CAPTURE() do {                                          \
-    old_log_level = setup_full_capture_of_logs(LOG_WARN);       \
+    setup_full_capture_of_logs(LOG_WARN);                       \
   } while (0)
 #define CHECK_TIMEGM_WARNING(msg) do { \
     expect_log_msg_containing(msg);                                     \
     tt_int_op(1, OP_EQ, smartlist_len(mock_saved_logs()));              \
-    teardown_capture_of_logs(old_log_level);                            \
+    teardown_capture_of_logs();                                         \
   } while (0)
 
 #define CHECK_TIMEGM_ARG_OUT_OF_RANGE(msg) \
@@ -1113,7 +1113,7 @@ test_util_time(void *arg)
 
  done:
   if (old_log_level)
-    teardown_capture_of_logs(old_log_level);
+    teardown_capture_of_logs();
 }
 
 static void
@@ -2316,7 +2316,7 @@ test_util_gzip_compression_bomb(void *arg)
   tor_zlib_state_t *state = NULL;
 
   /* Make sure we can't produce a compression bomb */
-  const int prev_level = setup_full_capture_of_logs(LOG_WARN);
+  setup_full_capture_of_logs(LOG_WARN);
   tt_int_op(-1, OP_EQ, tor_gzip_compress(&result, &result_len,
                                          one_mb, one_million,
                                          ZLIB_METHOD));
@@ -2324,7 +2324,7 @@ test_util_gzip_compression_bomb(void *arg)
          "We compressed something and got an insanely high "
          "compression factor; other Tors would think this "
          "was a zlib bomb.");
-  teardown_capture_of_logs(prev_level);
+  teardown_capture_of_logs();
 
   /* Here's a compression bomb that we made manually. */
   const char compression_bomb[1039] =
@@ -5319,7 +5319,6 @@ test_util_pwdb(void *arg)
   const struct passwd *me = NULL, *me2, *me3;
   char *name = NULL;
   char *dir = NULL;
-  int prev_level = -100;
 
   /* Uncached case. */
   /* Let's assume that we exist. */
@@ -5360,13 +5359,12 @@ test_util_pwdb(void *arg)
   tor_free(dir);
 
   /* We should do a LOG_ERR */
-  prev_level = setup_full_capture_of_logs(LOG_ERR);
+  setup_full_capture_of_logs(LOG_ERR);
   dir = get_user_homedir(badname);
   tt_assert(dir == NULL);
   expect_log_msg_containing("not found");
   tt_int_op(smartlist_len(mock_saved_logs()), OP_EQ, 1);
-  teardown_capture_of_logs(prev_level);
-  prev_level = -100;
+  teardown_capture_of_logs();
 
   /* Now try to find a user that doesn't exist by ID. */
   found = 0;
@@ -5383,8 +5381,7 @@ test_util_pwdb(void *arg)
  done:
   tor_free(name);
   tor_free(dir);
-  if (prev_level >= 0)
-    teardown_capture_of_logs(prev_level);
+  teardown_capture_of_logs();
 }
 #endif
 

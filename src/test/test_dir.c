@@ -3269,7 +3269,6 @@ static void
 test_dir_fetch_type(void *arg)
 {
   (void)arg;
-  int log_level = 0;
 
   tt_int_op(dir_fetch_type(DIR_PURPOSE_FETCH_EXTRAINFO, ROUTER_PURPOSE_BRIDGE,
                            NULL), OP_EQ, EXTRAINFO_DIRINFO | BRIDGE_DIRINFO);
@@ -3298,13 +3297,12 @@ test_dir_fetch_type(void *arg)
 
   /* This will give a warning, because this function isn't supposed to be
    * used for HS descriptors. */
-  log_level = setup_full_capture_of_logs(LOG_WARN);
+  setup_full_capture_of_logs(LOG_WARN);
   tt_int_op(dir_fetch_type(DIR_PURPOSE_FETCH_RENDDESC_V2,
                            ROUTER_PURPOSE_GENERAL, NULL), OP_EQ, NO_DIRINFO);
   expect_single_log_msg_containing("Unexpected purpose");
  done:
-  if (log_level)
-    teardown_capture_of_logs(log_level);
+  teardown_capture_of_logs();
 }
 
 static void
@@ -3972,7 +3970,6 @@ static void
 test_dir_conn_purpose_to_string(void *data)
 {
   (void)data;
-  int log_level = 0;
 
 #define EXPECT_CONN_PURPOSE(purpose, expected) \
   tt_str_op(dir_conn_purpose_to_string(purpose), OP_EQ, expected);
@@ -3996,13 +3993,12 @@ test_dir_conn_purpose_to_string(void *data)
   EXPECT_CONN_PURPOSE(DIR_PURPOSE_FETCH_MICRODESC, "microdescriptor fetch");
 
   /* This will give a warning, because there is no purpose 1024. */
-  log_level = setup_full_capture_of_logs(LOG_WARN);
+  setup_full_capture_of_logs(LOG_WARN);
   EXPECT_CONN_PURPOSE(1024, "(unknown)");
   expect_single_log_msg_containing("Called with unknown purpose 1024");
 
  done:
-  if (log_level)
-    teardown_capture_of_logs(log_level);
+  teardown_capture_of_logs();
 }
 
 NS_DECL(int,
