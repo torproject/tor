@@ -394,14 +394,6 @@ free_options_test_data(options_test_data_t *td)
   tor_free(td);
 }
 
-#define expect_log_msg(str) \
-  tt_assert_msg(mock_saved_log_has_message(str), \
-                "expected log to contain " # str);
-
-#define expect_no_log_msg(str)                      \
-  tt_assert_msg(!mock_saved_log_has_message(str), \
-                "expected log to not contain " # str);
-
 static void
 test_options_validate__uname_for_server(void *ignored)
 {
