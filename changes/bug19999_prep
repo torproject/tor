@@ -12,6 +12,8 @@
     - Our link-handshake unit tests now check, that when invalid
       handshakes fail, they fail with the error messages we
       expected.
+    - The unit tests now treat any failure of a "tor_assert_nonfatal()"
+      assertion as a test failure.
 
   o Minor bugfixes (unit tests):
     - The tor_tls_server_info_callback unit test no longer crashes when

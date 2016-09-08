@@ -14,6 +14,7 @@
 #include "container.h"
 
 #ifdef TOR_UNIT_TESTS
+static void (*failed_assertion_cb)(void) = NULL;
 static int n_bugs_to_capture = 0;
 static smartlist_t *bug_messages = NULL;
 #define capturing_bugs() (bug_messages != NULL && n_bugs_to_capture)
@@ -44,6 +45,15 @@ add_captured_bug(const char *s)
 {
   --n_bugs_to_capture;
   smartlist_add(bug_messages, tor_strdup(s));
+}
+/** Set a callback to be invoked when we get any tor_bug_occurred_
+ * invocation. We use this in the unit tests so that a nonfatal
+ * assertion failure can also count as a test failure.
+ */
+void
+tor_set_failed_assertion_callback(void (*fn)(void))
+{
+  failed_assertion_cb = fn;
 }
 #else
 #define capturing_bugs() (0)
@@ -95,5 +105,11 @@ tor_bug_occurred_(const char *fname, unsigned int line,
                  expr, func, fname, line);
   }
   log_backtrace(LOG_WARN, LD_BUG, buf);
+
+#ifdef TOR_UNIT_TESTS
+  if (failed_assertion_cb) {
+    failed_assertion_cb();
+  }
+#endif
 }
 

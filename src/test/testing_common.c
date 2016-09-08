@@ -217,6 +217,12 @@ const struct testcase_setup_t passthrough_setup = {
   passthrough_test_setup, passthrough_test_cleanup
 };
 
+static void
+an_assertion_failed(void)
+{
+  tinytest_set_test_failed_();
+}
+
 /** Main entry point for unit test code: parse the command line, and run
  * some unit tests. */
 int
@@ -299,6 +305,7 @@ main(int c, const char **v)
     tor_free(errmsg);
     return 1;
   }
+  tor_set_failed_assertion_callback(an_assertion_failed);
 
   atexit(remove_directory);
 
