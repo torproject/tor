@@ -2278,7 +2278,6 @@ test_tortls_finish_handshake(void *ignored)
 
   X509 *c1 = read_cert_from(validCertString);
   SESS_CERT_local *sess = NULL;
-  int log_level = 0;
 
   ctx = SSL_CTX_new(method);
 
@@ -2298,7 +2297,6 @@ test_tortls_finish_handshake(void *ignored)
   expect_single_log_msg_containing("For some reason, wasV2Handshake didn't "
                                    "get set.");
   teardown_capture_of_logs();
-  log_level = 0;
 
   tls->wasV2Handshake = 1;
   ret = tor_tls_finish_handshake(tls);
@@ -2337,8 +2335,7 @@ test_tortls_finish_handshake(void *ignored)
   tor_free(tls);
   SSL_CTX_free(ctx);
   tor_free(method);
-  if (log_level)
-    teardown_capture_of_logs();
+  teardown_capture_of_logs();
 }
 #endif
 

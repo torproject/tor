@@ -262,7 +262,6 @@ test_util_time(void *arg)
   time_t t_res;
   int i;
   struct timeval tv;
-  int old_log_level = 0;
 
   /* Test tv_udiff and tv_mdiff */
 
@@ -1112,8 +1111,7 @@ test_util_time(void *arg)
 #undef CHECK_TIMEGM_ARG_OUT_OF_RANGE
 
  done:
-  if (old_log_level)
-    teardown_capture_of_logs();
+  teardown_capture_of_logs();
 }
 
 static void
