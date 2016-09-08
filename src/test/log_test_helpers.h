@@ -26,40 +26,50 @@ int mock_saved_log_has_message(const char *msg);
 int mock_saved_log_has_message_containing(const char *msg);
 int mock_saved_log_has_severity(int severity);
 int mock_saved_log_has_entry(void);
+void mock_dump_saved_logs(void);
 
-#define expect_log_msg(str) \
-  tt_assert_msg(mock_saved_log_has_message(str), \
+#define assert_log_predicate(predicate, failure_msg)   \
+  do {                                                 \
+    if (!(predicate)) {                                \
+      tt_fail_msg((failure_msg));                      \
+      mock_dump_saved_logs();                          \
+      TT_EXIT_TEST_FUNCTION;                           \
+    }                                                  \
+  } while (0)
+
+#define expect_log_msg(str)                             \
+  assert_log_predicate(mock_saved_log_has_message(str), \
                 "expected log to contain " # str);
 
 #define expect_log_msg_containing(str) \
-  tt_assert_msg(mock_saved_log_has_message_containing(str), \
+  assert_log_predicate(mock_saved_log_has_message_containing(str), \
                 "expected log to contain " # str);
 
 #define expect_single_log_msg_containing(str) \
   do {                                                        \
-    tt_assert_msg(mock_saved_log_has_message_containing(str), \
+    assert_log_predicate(mock_saved_log_has_message_containing(str), \
                   "expected log to contain " # str);          \
     tt_int_op(smartlist_len(mock_saved_logs()), OP_EQ, 1);    \
   } while (0);
 
 #define expect_no_log_msg(str) \
-  tt_assert_msg(!mock_saved_log_has_message(str), \
+  assert_log_predicate(!mock_saved_log_has_message(str), \
                 "expected log to not contain " # str);
 
 #define expect_log_severity(severity) \
-  tt_assert_msg(mock_saved_log_has_severity(severity), \
+  assert_log_predicate(mock_saved_log_has_severity(severity), \
                 "expected log to contain severity " # severity);
 
 #define expect_no_log_severity(severity) \
-  tt_assert_msg(!mock_saved_log_has_severity(severity), \
+  assert_log_predicate(!mock_saved_log_has_severity(severity), \
                 "expected log to not contain severity " # severity);
 
 #define expect_log_entry() \
-  tt_assert_msg(mock_saved_log_has_entry(), \
+  assert_log_predicate(mock_saved_log_has_entry(), \
                 "expected log to contain entries");
 
 #define expect_no_log_entry() \
-  tt_assert_msg(!mock_saved_log_has_entry(), \
+  assert_log_predicate(!mock_saved_log_has_entry(), \
                 "expected log to not contain entries");
 
 #endif
