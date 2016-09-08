@@ -45,6 +45,11 @@ void mock_dump_saved_logs(void);
   assert_log_predicate(mock_saved_log_has_message_containing(str), \
                 "expected log to contain " # str);
 
+#define expect_log_msg_containing_either(str1, str2)                    \
+  assert_log_predicate(mock_saved_log_has_message_containing(str1) ||   \
+                       mock_saved_log_has_message_containing(str2),     \
+                "expected log to contain " # str1 " or " # str2);
+
 #define expect_single_log_msg_containing(str) \
   do {                                                        \
     assert_log_predicate(mock_saved_log_has_message_containing(str), \
