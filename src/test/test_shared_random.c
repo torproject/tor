@@ -14,6 +14,7 @@
 #include "router.h"
 #include "routerparse.h"
 #include "networkstatus.h"
+#include "log_test_helpers.h"
 
 static authority_cert_t *mock_cert;
 
@@ -326,14 +327,20 @@ test_sr_commit(void *arg)
 
     /* Timestamp MUST match. */
     test_commit.commit_ts = test_commit.reveal_ts - 42;
+    setup_full_capture_of_logs(LOG_WARN);
     tt_int_op(-1, ==, verify_commit_and_reveal(&test_commit));
+    expect_log_msg_containing("doesn't match reveal timestamp");
+    teardown_capture_of_logs();
     memcpy(&test_commit, our_commit, sizeof(test_commit));
     tt_int_op(0, ==, verify_commit_and_reveal(&test_commit));
 
     /* Hashed reveal must match the H(encoded_reveal). */
     memset(test_commit.hashed_reveal, 'X',
            sizeof(test_commit.hashed_reveal));
+    setup_full_capture_of_logs(LOG_WARN);
     tt_int_op(-1, ==, verify_commit_and_reveal(&test_commit));
+    expect_single_log_msg_containing("doesn't match the commit value");
+    teardown_capture_of_logs();
     memcpy(&test_commit, our_commit, sizeof(test_commit));
     tt_int_op(0, ==, verify_commit_and_reveal(&test_commit));
   }
@@ -357,6 +364,7 @@ test_sr_commit(void *arg)
   }
 
  done:
+  teardown_capture_of_logs();
   SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
   smartlist_free(args);
   sr_commit_free(our_commit);
@@ -1164,8 +1172,14 @@ test_keep_commit(void *arg)
     memcpy(place_holder.hashed_reveal, commit->hashed_reveal,
            sizeof(place_holder.hashed_reveal));
     memset(commit->hashed_reveal, 0, sizeof(commit->hashed_reveal));
+    setup_full_capture_of_logs(LOG_WARN);
     tt_int_op(should_keep_commit(commit, commit->rsa_identity,
                                  SR_PHASE_REVEAL), ==, 0);
+    expect_log_msg_containing("doesn't match the commit value.");
+    expect_log_msg_containing("has an invalid reveal value.");
+    assert_log_predicate(mock_saved_log_n_entries() == 2,
+                         "expected 2 log entries");
+    teardown_capture_of_logs();
     memcpy(commit->hashed_reveal, place_holder.hashed_reveal,
            sizeof(commit->hashed_reveal));
   }
@@ -1178,6 +1192,7 @@ test_keep_commit(void *arg)
                                SR_PHASE_REVEAL), ==, 0);
 
  done:
+  teardown_capture_of_logs();
   sr_commit_free(commit);
   sr_commit_free(dup_commit);
   crypto_pk_free(k);
