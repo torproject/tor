@@ -651,7 +651,7 @@ test_util_time(void *arg)
     old_log_level = setup_full_capture_of_logs(LOG_WARN);       \
   } while (0)
 #define CHECK_TIMEGM_WARNING(msg) do { \
-    tt_assert(mock_saved_log_has_message_containing(msg));              \
+    expect_log_msg_containing(msg);                                     \
     tt_int_op(1, OP_EQ, smartlist_len(mock_saved_logs()));              \
     teardown_capture_of_logs(old_log_level);                            \
   } while (0)

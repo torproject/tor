@@ -344,8 +344,7 @@ test_link_handshake_recv_certs_ok_server(void *arg)
     tt_int_op(0, ==, mock_send_authenticate_called);                    \
     tt_int_op(0, ==, mock_send_netinfo_called);                         \
     if (require_failure_message) {                                      \
-      tt_assert(mock_saved_log_has_message_containing(                  \
-                                             require_failure_message)); \
+      expect_log_msg_containing(require_failure_message);               \
     }                                                                   \
   done:                                                                 \
     teardown_capture_of_logs(prev_level);                               \
@@ -622,8 +621,7 @@ test_link_handshake_recv_authchallenge_ok_unrecognized(void *arg)
     tt_int_op(0, ==, mock_send_authenticate_called);                    \
     tt_int_op(0, ==, mock_send_netinfo_called);                         \
     if (require_failure_message) {                                      \
-      tt_assert(mock_saved_log_has_message_containing(                  \
-                                             require_failure_message)); \
+      expect_log_msg_containing(require_failure_message);               \
     }                                                                   \
   done:                                                                 \
     teardown_capture_of_logs(prev_level);                               \
@@ -862,8 +860,7 @@ test_link_handshake_auth_cell(void *arg)
     tt_int_op(mock_close_called, ==, 1);                        \
     tt_int_op(d->c2->handshake_state->authenticated, ==, 0);    \
     if (require_failure_message) {                              \
-      tt_assert(mock_saved_log_has_message_containing(          \
-                                     require_failure_message)); \
+      expect_log_msg_containing(require_failure_message);       \
     }                                                           \
   done:                                                         \
     teardown_capture_of_logs(prev_level);                       \
