@@ -2454,7 +2454,7 @@ update_circuit_on_cmux_(circuit_t *circ, cell_direction_t direction,
 
   /* Cmux sanity check */
   if (! circuitmux_is_circuit_attached(cmux, circ)) {
-    log_warn(LD_BUG, "called on non-attachd circuit from %s:%d",
+    log_warn(LD_BUG, "called on non-attached circuit from %s:%d",
              file, lineno);
     return;
   }
