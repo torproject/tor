@@ -4011,9 +4011,6 @@ test_config_parse_port_config__ports__ports_given(void *data)
   ret = parse_port_config(slout, config_port_valid, NULL, "DNS",
                           CONN_TYPE_AP_DNS_LISTENER, NULL, 0,
                           CL_PORT_TAKES_HOSTNAMES);
-#ifdef _WIN32
-  tt_int_op(ret, OP_EQ, -1);
-#else
   tt_int_op(ret, OP_EQ, 0);
   tt_int_op(smartlist_len(slout), OP_EQ, 1);
   port_cfg = (port_cfg_t *)smartlist_get(slout, 0);
@@ -4021,7 +4018,6 @@ test_config_parse_port_config__ports__ports_given(void *data)
   tt_int_op(port_cfg->entry_cfg.ipv4_traffic, OP_EQ, 0);
   tt_int_op(port_cfg->entry_cfg.ipv6_traffic, OP_EQ, 0);
   tt_int_op(port_cfg->entry_cfg.onion_traffic, OP_EQ, 0);
-#endif
 
   // Test failure if we have DNS but no ipv4 and no ipv6
   config_free_lines(config_port_invalid); config_port_invalid = NULL;
