@@ -1800,11 +1800,6 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
      -Wsync-nand
      -Wtautological-constant-out-of-range-compare
      -Wtentative-definition-incomplete-type
-     -Wthread-safety
-     -Wthread-safety-analysis
-     -Wthread-safety-attributes
-     -Wthread-safety-beta
-     -Wthread-safety-precise
      -Wtrampolines
      -Wtype-safety
      -Wtypedef-redefinition
@@ -1837,6 +1832,14 @@ if test "x$enable_gcc_warnings_advisory" != "xno"; then
      -Wvla-extension
      -Wzero-length-array
   ], [ TOR_CHECK_CFLAGS([warning_flag]) ])
+
+dnl    These seem to require annotations that we don't currently use,
+dnl    and they give false positives in our pthreads wrappers. (Clang 4)
+dnl     -Wthread-safety
+dnl     -Wthread-safety-analysis
+dnl     -Wthread-safety-attributes
+dnl     -Wthread-safety-beta
+dnl     -Wthread-safety-precise
 
   CFLAGS="$CFLAGS -W -Wfloat-equal -Wundef -Wpointer-arith"
   CFLAGS="$CFLAGS -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings"
