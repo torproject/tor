@@ -238,3 +238,4 @@ mock_dump_saved_logs(void)
            escaped(m->generated_msg));
   } SMARTLIST_FOREACH_END(m);
 }
+

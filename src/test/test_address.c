@@ -801,7 +801,6 @@ test_address_get_if_addrs6_list_internal(void *arg)
   if (smartlist_len(mock_saved_logs()) == 1) {
     expect_log_msg_containing_either("connect() failed",
                                      "unable to create socket");
-
   }
   teardown_capture_of_logs();
 
@@ -840,7 +839,6 @@ test_address_get_if_addrs6_list_no_internal(void *arg)
   if (smartlist_len(mock_saved_logs()) == 1) {
     expect_log_msg_containing_either("connect() failed",
                                      "unable to create socket");
-
   }
   teardown_capture_of_logs();
 

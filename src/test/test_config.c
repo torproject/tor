@@ -4238,7 +4238,8 @@ test_config_parse_port_config__ports__ports_given(void *data)
   config_free_lines(config_port_valid); config_port_valid = NULL;
   SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
   smartlist_clear(slout);
-  config_port_valid = mock_config_line("SOCKSPort", "42 IPv6Traffic PreferIPv6");
+  config_port_valid = mock_config_line("SOCKSPort",
+                                       "42 IPv6Traffic PreferIPv6");
   ret = parse_port_config(slout, config_port_valid, NULL, "SOCKS",
                           CONN_TYPE_AP_LISTENER, "127.0.0.42", 0,
                           CL_PORT_TAKES_HOSTNAMES);
