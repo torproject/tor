@@ -501,6 +501,8 @@ AC_CHECK_FUNCS([evutil_secure_rng_set_urandom_device_file \
                 evutil_secure_rng_add_bytes \
 ])
 
+AC_CHECK_HEADERS(event2/event.h event2/dns.h event2/bufferevent_ssl.h)
+
 LIBS="$STATIC_LIBEVENT_FLAGS $TOR_LIB_WS32 $save_LIBS"
 
 if test "$enable_static_libevent" = "yes"; then
@@ -521,7 +523,7 @@ else
          TOR_LIBEVENT_LIBS="$ac_cv_search_evdns_base_new $TOR_LIBEVENT_LIBS"
        fi
      else
-       TOR_LIBEVENT_LIBS="-levent"
+       AC_MSG_ERROR("libevent2 is required but the headers could not be found")
      fi
 fi
 
