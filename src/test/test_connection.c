@@ -192,6 +192,15 @@ test_conn_get_basic_teardown(const struct testcase_t *tc, void *arg)
 
     if (!conn->linked_conn->marked_for_close) {
       connection_close_immediate(conn->linked_conn);
+      if (CONN_IS_EDGE(conn->linked_conn)) {
+        /* Suppress warnings about all the stuff we didn't do */
+        TO_EDGE_CONN(conn->linked_conn)->edge_has_sent_end = 1;
+        TO_EDGE_CONN(conn->linked_conn)->end_reason =
+          END_STREAM_REASON_INTERNAL;
+        if (conn->linked_conn->type == CONN_TYPE_AP) {
+          TO_ENTRY_CONN(conn->linked_conn)->socks_request->has_finished = 1;
+        }
+      }
       connection_mark_for_close(conn->linked_conn);
     }
 
@@ -212,6 +221,14 @@ test_conn_get_basic_teardown(const struct testcase_t *tc, void *arg)
 
   if (!conn->marked_for_close) {
     connection_close_immediate(conn);
+    if (CONN_IS_EDGE(conn)) {
+      /* Suppress warnings about all the stuff we didn't do */
+      TO_EDGE_CONN(conn)->edge_has_sent_end = 1;
+      TO_EDGE_CONN(conn)->end_reason = END_STREAM_REASON_INTERNAL;
+      if (conn->type == CONN_TYPE_AP) {
+        TO_ENTRY_CONN(conn)->socks_request->has_finished = 1;
+      }
+    }
     connection_mark_for_close(conn);
   }
 
