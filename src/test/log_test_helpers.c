@@ -105,6 +105,12 @@ mock_saved_logs(void)
   return saved_logs;
 }
 
+int
+mock_saved_log_n_entries(void)
+{
+  return saved_logs ? smartlist_len(saved_logs) : 0;
+}
+
 /**
  * Return true iff there is a message recorded by log capture
  * that is exactly equal to <b>msg</b>

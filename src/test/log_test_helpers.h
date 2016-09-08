@@ -26,6 +26,7 @@ int mock_saved_log_has_message(const char *msg);
 int mock_saved_log_has_message_containing(const char *msg);
 int mock_saved_log_has_severity(int severity);
 int mock_saved_log_has_entry(void);
+int mock_saved_log_n_entries(void);
 void mock_dump_saved_logs(void);
 
 #define assert_log_predicate(predicate, failure_msg)   \
@@ -50,11 +51,19 @@ void mock_dump_saved_logs(void);
                        mock_saved_log_has_message_containing(str2),     \
                 "expected log to contain " # str1 " or " # str2);
 
+#define expect_single_log_msg(str) \
+  do {                                                                  \
+                                                                        \
+    assert_log_predicate(mock_saved_log_has_message_containing(str) &&  \
+                         mock_saved_log_n_entries() == 1,               \
+                  "expected log to contain exactly 1 message: " # str); \
+  } while (0);
+
 #define expect_single_log_msg_containing(str) \
-  do {                                                        \
-    assert_log_predicate(mock_saved_log_has_message_containing(str), \
-                  "expected log to contain " # str);          \
-    tt_int_op(smartlist_len(mock_saved_logs()), OP_EQ, 1);    \
+  do {                                                                  \
+    assert_log_predicate(mock_saved_log_has_message_containing(str)&&   \
+                         mock_saved_log_n_entries() == 1 ,              \
+            "expected log to contain 1 message, containing" # str);     \
   } while (0);
 
 #define expect_no_log_msg(str) \

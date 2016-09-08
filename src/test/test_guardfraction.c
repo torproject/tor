@@ -17,6 +17,7 @@
 
 #include "test.h"
 #include "test_helpers.h"
+#include "log_test_helpers.h"
 
 /** Generate a vote_routerstatus_t for a router with identity digest
  * <b>digest_in_hex</b>. */
@@ -280,6 +281,7 @@ test_parse_guardfraction_consensus(void *arg)
   const char *guardfraction_str_bad2 = "GuardFraction=166"; /* no percentage */
   routerstatus_t rs_bad2;
 
+  int log_level = 0;
   (void) arg;
 
   /* GuardFraction use is currently disabled by default. So we need to
@@ -304,11 +306,16 @@ test_parse_guardfraction_consensus(void *arg)
     memset(&rs_no_guard, 0, sizeof(routerstatus_t));
     tt_assert(!rs_no_guard.is_possible_guard);
 
+    log_level = setup_full_capture_of_logs(LOG_WARN);
     retval = routerstatus_parse_guardfraction(guardfraction_str_good,
                                               NULL, NULL,
                                               &rs_no_guard);
     tt_int_op(retval, ==, 0);
     tt_assert(!rs_no_guard.has_guardfraction);
+    expect_single_log_msg_containing("Got GuardFraction for non-guard . "
+                                     "This is not supposed to happen.");
+    teardown_capture_of_logs(log_level);
+    log_level = 0;
   }
 
   { /* Bad GuardFraction. Function should fail and not apply. */
@@ -334,7 +341,8 @@ test_parse_guardfraction_consensus(void *arg)
   }
 
  done:
-  ;
+  if (log_level)
+    teardown_capture_of_logs(log_level);
 }
 
 /** Make sure that we use GuardFraction information when we should,

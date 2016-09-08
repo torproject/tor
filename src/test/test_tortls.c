@@ -1817,7 +1817,7 @@ test_tortls_server_info_callback(void *ignored)
   tor_tls_t *tls;
   SSL_CTX *ctx;
   SSL *ssl;
-  int previous_log = setup_capture_of_logs(LOG_WARN);
+  int previous_log = 0;
 
   SSL_library_init();
   SSL_load_error_strings();
@@ -1831,20 +1831,23 @@ test_tortls_server_info_callback(void *ignored)
   tls->magic = TOR_TLS_MAGIC;
   tls->ssl = ssl;
 
+  previous_log = setup_full_capture_of_logs(LOG_WARN);
   SSL_set_state(ssl, SSL3_ST_SW_SRVR_HELLO_A);
   mock_clean_saved_logs();
   tor_tls_server_info_callback(ssl, SSL_CB_ACCEPT_LOOP, 0);
-  expect_log_msg("Couldn't look up the tls for an SSL*. How odd!\n");
+  expect_single_log_msg("Couldn't look up the tls for an SSL*. How odd!\n");
 
   SSL_set_state(ssl, SSL3_ST_SW_SRVR_HELLO_B);
   mock_clean_saved_logs();
   tor_tls_server_info_callback(ssl, SSL_CB_ACCEPT_LOOP, 0);
-  expect_log_msg("Couldn't look up the tls for an SSL*. How odd!\n");
+  expect_single_log_msg("Couldn't look up the tls for an SSL*. How odd!\n");
 
   SSL_set_state(ssl, 99);
   mock_clean_saved_logs();
   tor_tls_server_info_callback(ssl, SSL_CB_ACCEPT_LOOP, 0);
   expect_no_log_entry();
+  teardown_capture_of_logs(previous_log);
+  previous_log = 0;
 
   SSL_set_ex_data(tls->ssl, tor_tls_object_ex_data_index, tls);
   SSL_set_state(ssl, SSL3_ST_SW_SRVR_HELLO_B);
@@ -1865,7 +1868,8 @@ test_tortls_server_info_callback(void *ignored)
   tt_int_op(tls->wasV2Handshake, OP_EQ, 0);
 
  done:
-  teardown_capture_of_logs(previous_log);
+  if (previous_log)
+    teardown_capture_of_logs(previous_log);
   SSL_free(ssl);
   SSL_CTX_free(ctx);
   tor_free(tls);
@@ -2277,6 +2281,7 @@ test_tortls_finish_handshake(void *ignored)
 
   X509 *c1 = read_cert_from(validCertString);
   SESS_CERT_local *sess = NULL;
+  int log_level = 0;
 
   ctx = SSL_CTX_new(method);
 
@@ -2289,9 +2294,14 @@ test_tortls_finish_handshake(void *ignored)
 
   tls->isServer = 1;
   tls->wasV2Handshake = 0;
+  log_level = setup_full_capture_of_logs(LOG_WARN);
   ret = tor_tls_finish_handshake(tls);
   tt_int_op(ret, OP_EQ, 0);
   tt_int_op(tls->wasV2Handshake, OP_EQ, 1);
+  expect_single_log_msg_containing("For some reason, wasV2Handshake didn't "
+                                   "get set.");
+  teardown_capture_of_logs(log_level);
+  log_level = 0;
 
   tls->wasV2Handshake = 1;
   ret = tor_tls_finish_handshake(tls);
@@ -2330,6 +2340,8 @@ test_tortls_finish_handshake(void *ignored)
   tor_free(tls);
   SSL_CTX_free(ctx);
   tor_free(method);
+  if (log_level)
+    teardown_capture_of_logs(log_level);
 }
 #endif
 

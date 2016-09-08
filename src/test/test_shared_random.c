@@ -530,8 +530,8 @@ test_vote(void *arg)
                   HEX_DIGEST_LEN);
     tt_mem_op(digest, ==, our_commit->rsa_identity, sizeof(digest));
     tt_str_op(smartlist_get(tokens, 4), OP_EQ, our_commit->encoded_commit);
-    tt_str_op(smartlist_get(tokens, 5), OP_EQ, our_commit->encoded_reveal);
-
+    tt_str_op(smartlist_get(tokens, 5), OP_EQ, our_commit->encoded_reveal)
+;
     /* Finally, does this vote line creates a valid commit object? */
     smartlist_t *args = smartlist_new();
     smartlist_add(args, smartlist_get(tokens, 1));

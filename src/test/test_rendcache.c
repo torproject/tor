@@ -12,6 +12,7 @@
 #include "config.h"
 #include <openssl/rsa.h>
 #include "rend_test_helpers.h"
+#include "log_test_helpers.h"
 
 #define NS_MODULE rend_cache
 
@@ -646,6 +647,7 @@ test_rend_cache_init(void *data)
 static void
 test_rend_cache_decrement_allocation(void *data)
 {
+  int log_level = 0;
   (void)data;
 
   // Test when the cache has enough allocations
@@ -655,20 +657,27 @@ test_rend_cache_decrement_allocation(void *data)
 
   // Test when there are not enough allocations
   rend_cache_total_allocation = 1;
+  log_level = setup_full_capture_of_logs(LOG_WARN);
   rend_cache_decrement_allocation(2);
   tt_int_op(rend_cache_total_allocation, OP_EQ, 0);
+  expect_single_log_msg_containing(
+                    "Underflow in rend_cache_decrement_allocation");
+  teardown_capture_of_logs(log_level);
+  log_level = 0;
 
   // And again
   rend_cache_decrement_allocation(2);
   tt_int_op(rend_cache_total_allocation, OP_EQ, 0);
 
  done:
-  (void)0;
+  if (log_level)
+    teardown_capture_of_logs(log_level);
 }
 
 static void
 test_rend_cache_increment_allocation(void *data)
 {
+  int log_level = 0;
   (void)data;
 
   // Test when the cache is not overflowing
@@ -678,15 +687,21 @@ test_rend_cache_increment_allocation(void *data)
 
   // Test when there are too many allocations
   rend_cache_total_allocation = SIZE_MAX-1;
+  log_level = setup_full_capture_of_logs(LOG_WARN);
   rend_cache_increment_allocation(2);
   tt_u64_op(rend_cache_total_allocation, OP_EQ, SIZE_MAX);
+  expect_single_log_msg_containing(
+                    "Overflow in rend_cache_increment_allocation");
+  teardown_capture_of_logs(log_level);
+  log_level = 0;
 
   // And again
   rend_cache_increment_allocation(2);
   tt_u64_op(rend_cache_total_allocation, OP_EQ, SIZE_MAX);
 
  done:
-  (void)0;
+  if (log_level)
+    teardown_capture_of_logs(log_level);
 }
 
 static void
