@@ -9,6 +9,7 @@
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "test.h"
+#include "log_test_helpers.h"
 
 static channel_t *
 new_fake_channel(void)
@@ -270,6 +271,13 @@ test_rend_token_maps(void *arg)
 }
 
 static void
+mock_channel_dump_statistics(channel_t *chan, int severity)
+{
+  (void)chan;
+  (void)severity;
+}
+
+static void
 test_pick_circid(void *arg)
 {
   bitarray_t *ba = NULL;
@@ -277,13 +285,25 @@ test_pick_circid(void *arg)
   circid_t circid;
   int i;
   (void) arg;
+  int prev_level = 0;
+
+  MOCK(channel_dump_statistics, mock_channel_dump_statistics);
 
   chan1 = tor_malloc_zero(sizeof(channel_t));
   chan2 = tor_malloc_zero(sizeof(channel_t));
   chan2->wide_circ_ids = 1;
 
+  chan1->cmux = circuitmux_alloc();
+  chan2->cmux = circuitmux_alloc();
+
+  /* CIRC_ID_TYPE_NEITHER is supposed to create a warning. */
   chan1->circ_id_type = CIRC_ID_TYPE_NEITHER;
+  prev_level = setup_full_capture_of_logs(LOG_WARN);
   tt_int_op(0, OP_EQ, get_unique_circ_id_by_chan(chan1));
+  expect_single_log_msg_containing("Trying to pick a circuit ID for a "
+                           "connection from a client with no identity.");
+  teardown_capture_of_logs(prev_level);
+  prev_level = 0;
 
   /* Basic tests, with no collisions */
   chan1->circ_id_type = CIRC_ID_TYPE_LOWER;
@@ -337,10 +357,17 @@ test_pick_circid(void *arg)
   }
 
  done:
+  if (chan1)
+    circuitmux_free(chan1->cmux);
+  if (chan2)
+    circuitmux_free(chan2->cmux);
   tor_free(chan1);
   tor_free(chan2);
   bitarray_free(ba);
   circuit_free_all();
+  if (prev_level)
+    teardown_capture_of_logs(prev_level);
+  UNMOCK(channel_dump_statistics);
 }
 
 struct testcase_t circuitlist_tests[] = {
