@@ -340,10 +340,7 @@ test_conn_get_rsrc_teardown(const struct testcase_t *tc, void *arg)
 static void *
 test_conn_download_status_setup(const struct testcase_t *tc)
 {
-  (void)tc;
-
-  /* Don't return NULL, that causes the test to fail */
-  return (void*)"ok";
+  return (void*)tc;
 }
 
 static int
@@ -655,7 +652,8 @@ test_conn_download_status(void *arg)
   dir_connection_t *conn4 = NULL;
   connection_t *ap_conn = NULL;
 
-  consensus_flavor_t usable_flavor = (consensus_flavor_t)arg;
+  const struct testcase_t *tc = arg;
+  consensus_flavor_t usable_flavor = (consensus_flavor_t)tc->setup_data;
 
   /* The "other flavor" trick only works if there are two flavors */
   tor_assert(N_CONSENSUS_FLAVORS == 2);
