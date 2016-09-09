@@ -12,7 +12,9 @@
 #include "connection_or.h"
 #include "channeltls.h"
 #include "link_handshake.h"
+#include "routerkeys.h"
 #include "scheduler.h"
+#include "torcert.h"
 
 #include "test.h"
 #include "log_test_helpers.h"
@@ -37,6 +39,16 @@ mock_tls_cert_matches_key(const tor_tls_t *tls, const tor_x509_cert_t *cert)
   (void) cert; // XXXX look at this.
   return 1;
 }
+static tor_tls_t *mock_peer_cert_expect_tortls = NULL;
+static tor_x509_cert_t *mock_peer_cert = NULL;
+static tor_x509_cert_t *
+mock_get_peer_cert(tor_tls_t *tls)
+{
+  if (mock_peer_cert_expect_tortls &&
+      mock_peer_cert_expect_tortls != tls)
+    return NULL;
+  return mock_peer_cert;
+}
 
 static int mock_send_netinfo_called = 0;
 static int
@@ -57,12 +69,27 @@ mock_close_for_err(or_connection_t *orconn, int flush)
 }
 
 static int mock_send_authenticate_called = 0;
+static int mock_send_authenticate_called_with_type = 0;
 static int
 mock_send_authenticate(or_connection_t *conn, int type)
 {
   (void) conn;
-  (void) type;
+  mock_send_authenticate_called_with_type = type;
   ++mock_send_authenticate_called;// XXX check_this
+  return 0;
+}
+static int
+mock_export_key_material(tor_tls_t *tls, uint8_t *secrets_out,
+                         const uint8_t *context,
+                         size_t context_len,
+                         const char *label)
+{
+  (void) tls;
+  (void)secrets_out;
+  (void)context;
+  (void)context_len;
+  (void)label;
+  memcpy(secrets_out, "int getRandomNumber(){return 4;}", 32);
   return 0;
 }
 
@@ -70,20 +97,20 @@ mock_send_authenticate(or_connection_t *conn, int type)
 static void
 test_link_handshake_certs_ok(void *arg)
 {
-  (void) arg;
-
   or_connection_t *c1 = or_connection_new(CONN_TYPE_OR, AF_INET);
   or_connection_t *c2 = or_connection_new(CONN_TYPE_OR, AF_INET);
   var_cell_t *cell1 = NULL, *cell2 = NULL;
   certs_cell_t *cc1 = NULL, *cc2 = NULL;
   channel_tls_t *chan1 = NULL, *chan2 = NULL;
   crypto_pk_t *key1 = NULL, *key2 = NULL;
+  const int with_ed = !strcmp((const char *)arg, "Ed25519");
 
   scheduler_init();
 
   MOCK(tor_tls_cert_matches_key, mock_tls_cert_matches_key);
   MOCK(connection_or_write_var_cell_to_buf, mock_write_var_cell);
   MOCK(connection_or_send_netinfo, mock_send_netinfo);
+  MOCK(tor_tls_get_peer_cert, mock_get_peer_cert);
 
   key1 = pk_generate(2);
   key2 = pk_generate(3);
@@ -94,10 +121,18 @@ test_link_handshake_certs_ok(void *arg)
   tt_int_op(tor_tls_context_init(TOR_TLS_CTX_IS_PUBLIC_SERVER,
                                  key1, key2, 86400), ==, 0);
 
+  if (with_ed) {
+    /* If we're making a CERTS cell for an ed handshake, let's make sure we
+     * have some Ed25519 certificates and keys. */
+    init_mock_ed_keys(key2);
+  }
+
+  /* c1 has started_here == 1 */
   c1->base_.state = OR_CONN_STATE_OR_HANDSHAKING_V3;
   c1->link_proto = 3;
   tt_int_op(connection_init_or_handshake_state(c1, 1), ==, 0);
 
+  /* c2 has started_here == 0 */
   c2->base_.state = OR_CONN_STATE_OR_HANDSHAKING_V3;
   c2->link_proto = 3;
   tt_int_op(connection_init_or_handshake_state(c2, 0), ==, 0);
@@ -121,8 +156,13 @@ test_link_handshake_certs_ok(void *arg)
   tt_int_op(cell2->payload_len, ==,
             certs_cell_parse(&cc2, cell2->payload, cell2->payload_len));
 
-  tt_int_op(2, ==, cc1->n_certs);
-  tt_int_op(2, ==, cc2->n_certs);
+  if (with_ed) {
+    tt_int_op(5, ==, cc1->n_certs);
+    tt_int_op(5, ==, cc2->n_certs);
+  } else {
+    tt_int_op(2, ==, cc1->n_certs);
+    tt_int_op(2, ==, cc2->n_certs);
+  }
 
   tt_int_op(certs_cell_get_certs(cc1, 0)->cert_type, ==,
             CERTTYPE_RSA1024_ID_AUTH);
@@ -134,6 +174,22 @@ test_link_handshake_certs_ok(void *arg)
   tt_int_op(certs_cell_get_certs(cc2, 1)->cert_type, ==,
             CERTTYPE_RSA1024_ID_ID);
 
+  if (with_ed) {
+    tt_int_op(certs_cell_get_certs(cc1, 2)->cert_type, ==,
+              CERTTYPE_ED_ID_SIGN);
+    tt_int_op(certs_cell_get_certs(cc1, 3)->cert_type, ==,
+              CERTTYPE_ED_SIGN_AUTH);
+    tt_int_op(certs_cell_get_certs(cc1, 4)->cert_type, ==,
+              CERTTYPE_RSA1024_ID_EDID);
+
+    tt_int_op(certs_cell_get_certs(cc2, 2)->cert_type, ==,
+              CERTTYPE_ED_ID_SIGN);
+    tt_int_op(certs_cell_get_certs(cc2, 3)->cert_type, ==,
+              CERTTYPE_ED_SIGN_LINK);
+    tt_int_op(certs_cell_get_certs(cc2, 4)->cert_type, ==,
+              CERTTYPE_RSA1024_ID_EDID);
+  }
+
   chan1 = tor_malloc_zero(sizeof(*chan1));
   channel_tls_common_init(chan1);
   c1->chan = chan1;
@@ -144,11 +200,36 @@ test_link_handshake_certs_ok(void *arg)
   c1->base_.conn_array_index = -1;
   crypto_pk_get_digest(key2, c1->identity_digest);
 
+  if (with_ed) {
+    const tor_x509_cert_t *linkc, *idc;
+    tor_tls_get_my_certs(1, &linkc, &idc);
+    mock_peer_cert_expect_tortls = c1->tls; /* We should see this tls... */
+    mock_peer_cert = tor_x509_cert_dup(linkc); /* and when we do, the peer's
+                                                *  cert is this... */
+  }
   channel_tls_process_certs_cell(cell2, chan1);
+  mock_peer_cert_expect_tortls = NULL;
+  mock_peer_cert = NULL;
+
+  tor_assert(c1->handshake_state->authenticated);
 
   tt_assert(c1->handshake_state->received_certs_cell);
   tt_assert(c1->handshake_state->certs->auth_cert == NULL);
+  tt_assert(c1->handshake_state->certs->ed_sign_auth == NULL);
   tt_assert(c1->handshake_state->certs->id_cert);
+  if (with_ed) {
+    tt_assert(c1->handshake_state->certs->ed_sign_link);
+    tt_assert(c1->handshake_state->certs->ed_rsa_crosscert);
+    tt_assert(c1->handshake_state->certs->ed_id_sign);
+    tt_assert(c1->handshake_state->authenticated_rsa);
+    tt_assert(c1->handshake_state->authenticated_ed25519);
+  } else {
+    tt_assert(c1->handshake_state->certs->ed_sign_link == NULL);
+    tt_assert(c1->handshake_state->certs->ed_rsa_crosscert == NULL);
+    tt_assert(c1->handshake_state->certs->ed_id_sign == NULL);
+    tt_assert(c1->handshake_state->authenticated_rsa);
+    tt_assert(! c1->handshake_state->authenticated_ed25519);
+  }
   tt_assert(! tor_mem_is_zero(
                 (char*)c1->handshake_state->authenticated_rsa_peer_id, 20));
 
@@ -165,15 +246,30 @@ test_link_handshake_certs_ok(void *arg)
   channel_tls_process_certs_cell(cell1, chan2);
 
   tt_assert(c2->handshake_state->received_certs_cell);
-  tt_assert(c2->handshake_state->certs->auth_cert);
+  if (with_ed) {
+    tt_assert(c2->handshake_state->certs->ed_sign_auth);
+    tt_assert(c2->handshake_state->certs->ed_rsa_crosscert);
+    tt_assert(c2->handshake_state->certs->ed_id_sign);
+  } else {
+    tt_assert(c2->handshake_state->certs->auth_cert);
+    tt_assert(c2->handshake_state->certs->ed_sign_auth == NULL);
+    tt_assert(c2->handshake_state->certs->ed_rsa_crosscert == NULL);
+    tt_assert(c2->handshake_state->certs->ed_id_sign == NULL);
+  }
   tt_assert(c2->handshake_state->certs->id_cert);
   tt_assert(tor_mem_is_zero(
               (char*)c2->handshake_state->authenticated_rsa_peer_id, 20));
+  /* no authentication has happened yet, since we haen't gotten an AUTH cell.
+   */
+  tt_assert(! c2->handshake_state->authenticated);
+  tt_assert(! c2->handshake_state->authenticated_rsa);
+  tt_assert(! c2->handshake_state->authenticated_ed25519);
 
  done:
   UNMOCK(tor_tls_cert_matches_key);
   UNMOCK(connection_or_write_var_cell_to_buf);
   UNMOCK(connection_or_send_netinfo);
+  UNMOCK(tor_tls_get_peer_cert);
   memset(c1->identity_digest, 0, sizeof(c1->identity_digest));
   memset(c2->identity_digest, 0, sizeof(c2->identity_digest));
   connection_free_(TO_CONN(c1));
@@ -193,6 +289,8 @@ test_link_handshake_certs_ok(void *arg)
 }
 
 typedef struct certs_data_s {
+  int is_ed;
+  int is_link_cert;
   or_connection_t *c;
   channel_tls_t *chan;
   certs_cell_t *ccell;
@@ -208,6 +306,7 @@ recv_certs_cleanup(const struct testcase_t *test, void *obj)
   UNMOCK(tor_tls_cert_matches_key);
   UNMOCK(connection_or_send_netinfo);
   UNMOCK(connection_or_close_for_error);
+  UNMOCK(tor_tls_get_peer_cert);
 
   if (d) {
     tor_free(d->cell);
@@ -220,6 +319,7 @@ recv_certs_cleanup(const struct testcase_t *test, void *obj)
     crypto_pk_free(d->key2);
     tor_free(d);
   }
+  routerkeys_free_all();
   return 1;
 }
 
@@ -231,6 +331,13 @@ recv_certs_setup(const struct testcase_t *test)
   certs_cell_cert_t *ccc1 = NULL;
   certs_cell_cert_t *ccc2 = NULL;
   ssize_t n;
+  int is_ed = d->is_ed = !strcmpstart(test->setup_data, "Ed25519");
+  int is_rsa = !strcmpstart(test->setup_data, "RSA");
+  int is_link = d->is_link_cert = !strcmpend(test->setup_data, "-Link");
+  int is_auth = !strcmpend(test->setup_data, "-Auth");
+  tor_assert(is_ed != is_rsa);
+  tor_assert(is_link != is_auth);
+  printf("rsa == %d; is_link == %d\n", is_rsa, is_link);
 
   d->c = or_connection_new(CONN_TYPE_OR, AF_INET);
   d->chan = tor_malloc_zero(sizeof(*d->chan));
@@ -246,20 +353,25 @@ recv_certs_setup(const struct testcase_t *test)
 
   tt_int_op(tor_tls_context_init(TOR_TLS_CTX_IS_PUBLIC_SERVER,
                                  d->key1, d->key2, 86400), ==, 0);
+  if (is_ed) {
+    init_mock_ed_keys(d->key2);
+  } else {
+    routerkeys_free_all();
+  }
+
   d->ccell = certs_cell_new();
   ccc1 = certs_cell_cert_new();
   certs_cell_add_certs(d->ccell, ccc1);
   ccc2 = certs_cell_cert_new();
   certs_cell_add_certs(d->ccell, ccc2);
   d->ccell->n_certs = 2;
-  ccc1->cert_type = 1;
+  ccc1->cert_type = is_link ? 1 : 3;
   ccc2->cert_type = 2;
 
   const tor_x509_cert_t *a,*b;
   const uint8_t *enca, *encb;
   size_t lena, lenb;
-  tor_tls_get_my_certs(0, &a, &b); /* Use '0' here to make sure we get
-                                    * auth cert */
+  tor_tls_get_my_certs(is_link ? 1 : 0, &a, &b);
   tor_x509_cert_get_der(a, &enca, &lena);
   tor_x509_cert_get_der(b, &encb, &lenb);
   certs_cell_cert_setlen_body(ccc1, lena);
@@ -269,6 +381,41 @@ recv_certs_setup(const struct testcase_t *test)
 
   memcpy(certs_cell_cert_getarray_body(ccc1), enca, lena);
   memcpy(certs_cell_cert_getarray_body(ccc2), encb, lenb);
+
+  if (is_ed) {
+    certs_cell_cert_t *ccc3 = NULL; /* Id->Sign */
+    certs_cell_cert_t *ccc4 = NULL; /* Sign->Link or Sign->Auth. */
+    certs_cell_cert_t *ccc5 = NULL; /* RSAId->Ed Id. */
+    const tor_cert_t *id_sign = get_master_signing_key_cert();
+    const tor_cert_t *secondary =
+      is_link ? get_current_link_cert_cert() : get_current_auth_key_cert();
+    const uint8_t *cc = NULL;
+    size_t cc_sz;
+    get_master_rsa_crosscert(&cc, &cc_sz);
+
+    ccc3 = certs_cell_cert_new();
+    ccc4 = certs_cell_cert_new();
+    ccc5 = certs_cell_cert_new();
+    certs_cell_add_certs(d->ccell, ccc3);
+    certs_cell_add_certs(d->ccell, ccc4);
+    certs_cell_add_certs(d->ccell, ccc5);
+    ccc3->cert_len = id_sign->encoded_len;
+    ccc4->cert_len = secondary->encoded_len;
+    ccc5->cert_len = cc_sz;
+    certs_cell_cert_setlen_body(ccc3, ccc3->cert_len);
+    certs_cell_cert_setlen_body(ccc4, ccc4->cert_len);
+    certs_cell_cert_setlen_body(ccc5, ccc5->cert_len);
+    memcpy(certs_cell_cert_getarray_body(ccc3), id_sign->encoded,
+           ccc3->cert_len);
+    memcpy(certs_cell_cert_getarray_body(ccc4), secondary->encoded,
+           ccc4->cert_len);
+    memcpy(certs_cell_cert_getarray_body(ccc5), cc, ccc5->cert_len);
+    ccc3->cert_type = 4;
+    ccc4->cert_type = is_link ? 5 : 6;
+    ccc5->cert_type = 7;
+
+    d->ccell->n_certs = 5;
+  }
 
   d->cell = var_cell_new(4096);
   d->cell->command = CELL_CERTS;
@@ -280,6 +427,12 @@ recv_certs_setup(const struct testcase_t *test)
   MOCK(tor_tls_cert_matches_key, mock_tls_cert_matches_key);
   MOCK(connection_or_send_netinfo, mock_send_netinfo);
   MOCK(connection_or_close_for_error, mock_close_for_err);
+  MOCK(tor_tls_get_peer_cert, mock_get_peer_cert);
+
+  if (is_link) {
+    /* Say that this is the peer's certificate */
+    mock_peer_cert = tor_x509_cert_dup(a);
+  }
 
   tt_int_op(0, ==, d->c->handshake_state->received_certs_cell);
   tt_int_op(0, ==, mock_send_authenticate_called);
@@ -303,9 +456,24 @@ test_link_handshake_recv_certs_ok(void *arg)
   channel_tls_process_certs_cell(d->cell, d->chan);
   tt_int_op(0, ==, mock_close_called);
   tt_int_op(d->c->handshake_state->authenticated, ==, 1);
+  tt_int_op(d->c->handshake_state->authenticated_rsa, ==, 1);
   tt_int_op(d->c->handshake_state->received_certs_cell, ==, 1);
   tt_assert(d->c->handshake_state->certs->id_cert != NULL);
   tt_assert(d->c->handshake_state->certs->auth_cert == NULL);
+
+  if (d->is_ed) {
+    tt_assert(d->c->handshake_state->certs->ed_id_sign != NULL);
+    tt_assert(d->c->handshake_state->certs->ed_sign_link != NULL);
+    tt_assert(d->c->handshake_state->certs->ed_sign_auth == NULL);
+    tt_assert(d->c->handshake_state->certs->ed_rsa_crosscert != NULL);
+    tt_int_op(d->c->handshake_state->authenticated_ed25519, ==, 1);
+  } else {
+    tt_assert(d->c->handshake_state->certs->ed_id_sign == NULL);
+    tt_assert(d->c->handshake_state->certs->ed_sign_link == NULL);
+    tt_assert(d->c->handshake_state->certs->ed_sign_auth == NULL);
+    tt_assert(d->c->handshake_state->certs->ed_rsa_crosscert == NULL);
+    tt_int_op(d->c->handshake_state->authenticated_ed25519, ==, 0);
+  }
 
  done:
   ;
@@ -317,17 +485,18 @@ test_link_handshake_recv_certs_ok_server(void *arg)
   certs_data_t *d = arg;
   d->c->handshake_state->started_here = 0;
   d->c->handshake_state->certs->started_here = 0;
-  certs_cell_get_certs(d->ccell, 0)->cert_type = 3;
-  certs_cell_get_certs(d->ccell, 1)->cert_type = 2;
-  ssize_t n = certs_cell_encode(d->cell->payload, 2048, d->ccell);
-  tt_int_op(n, >, 0);
-  d->cell->payload_len = n;
   channel_tls_process_certs_cell(d->cell, d->chan);
   tt_int_op(0, ==, mock_close_called);
   tt_int_op(d->c->handshake_state->authenticated, ==, 0);
   tt_int_op(d->c->handshake_state->received_certs_cell, ==, 1);
   tt_assert(d->c->handshake_state->certs->id_cert != NULL);
-  tt_assert(d->c->handshake_state->certs->auth_cert != NULL);
+  if (d->is_ed) {
+    tt_assert(d->c->handshake_state->certs->ed_sign_auth != NULL);
+    tt_assert(d->c->handshake_state->certs->auth_cert == NULL);
+  } else {
+    tt_assert(d->c->handshake_state->certs->ed_sign_auth == NULL);
+    tt_assert(d->c->handshake_state->certs->auth_cert != NULL);
+  }
 
  done:
   ;
@@ -544,9 +713,9 @@ recv_authchallenge_setup(const struct testcase_t *test)
   d->c->handshake_state->received_certs_cell = 1;
   d->cell = var_cell_new(128);
   d->cell->payload_len = 38;
-  d->cell->payload[33] = 2;
-  d->cell->payload[35] = 7;
-  d->cell->payload[37] = 1;
+  d->cell->payload[33] = 2; /* 2 methods */
+  d->cell->payload[35] = 7; /* This one isn't real */
+  d->cell->payload[37] = 1; /* This is the old RSA one. */
   d->cell->command = CELL_AUTH_CHALLENGE;
 
   get_options_mutable()->ORPort_set = 1;
@@ -554,7 +723,6 @@ recv_authchallenge_setup(const struct testcase_t *test)
   MOCK(connection_or_close_for_error, mock_close_for_err);
   MOCK(connection_or_send_netinfo, mock_send_netinfo);
   MOCK(connection_or_send_authenticate_cell, mock_send_authenticate);
-
   tt_int_op(0, ==, d->c->handshake_state->received_auth_challenge);
   tt_int_op(0, ==, mock_send_authenticate_called);
   tt_int_op(0, ==, mock_send_netinfo_called);
@@ -580,6 +748,26 @@ test_link_handshake_recv_authchallenge_ok(void *arg)
   tt_int_op(1, ==, d->c->handshake_state->received_auth_challenge);
   tt_int_op(1, ==, mock_send_authenticate_called);
   tt_int_op(1, ==, mock_send_netinfo_called);
+  tt_int_op(1, ==, mock_send_authenticate_called_with_type); /* RSA */
+ done:
+  ;
+}
+
+static void
+test_link_handshake_recv_authchallenge_ok_ed25519(void *arg)
+{
+  authchallenge_data_t *d = arg;
+
+  /* Add the ed25519 authentication mechanism here. */
+  d->cell->payload[33] = 3; /* 3 types are supported now. */
+  d->cell->payload[39] = 3;
+  d->cell->payload_len += 2;
+  channel_tls_process_auth_challenge_cell(d->cell, d->chan);
+  tt_int_op(0, ==, mock_close_called);
+  tt_int_op(1, ==, d->c->handshake_state->received_auth_challenge);
+  tt_int_op(1, ==, mock_send_authenticate_called);
+  tt_int_op(1, ==, mock_send_netinfo_called);
+  tt_int_op(3, ==, mock_send_authenticate_called_with_type); /* Ed25519 */
  done:
   ;
 }
@@ -662,13 +850,6 @@ AUTHCHALLENGE_FAIL(nonzero_circid,
                    require_failure_message = "It had a nonzero circuit ID";
                    d->cell->circ_id = 1337)
 
-static tor_x509_cert_t *mock_peer_cert = NULL;
-static tor_x509_cert_t *
-mock_get_peer_cert(tor_tls_t *tls)
-{
-  (void)tls;
-  return mock_peer_cert;
-}
 
 static int
 mock_get_tlssecrets(tor_tls_t *tls, uint8_t *secrets_out)
@@ -689,6 +870,7 @@ mock_set_circid_type(channel_t *chan,
 }
 
 typedef struct authenticate_data_s {
+  int is_ed;
   or_connection_t *c1, *c2;
   channel_tls_t *chan2;
   var_cell_t *cell;
@@ -704,6 +886,7 @@ authenticate_data_cleanup(const struct testcase_t *test, void *arg)
   UNMOCK(tor_tls_get_tlssecrets);
   UNMOCK(connection_or_close_for_error);
   UNMOCK(channel_set_circid_type);
+  UNMOCK(tor_tls_export_key_material);
   authenticate_data_t *d = arg;
   if (d) {
     tor_free(d->cell);
@@ -718,7 +901,6 @@ authenticate_data_cleanup(const struct testcase_t *test, void *arg)
     tor_free(d);
   }
   mock_peer_cert = NULL;
-
   return 1;
 }
 
@@ -726,6 +908,7 @@ static void *
 authenticate_data_setup(const struct testcase_t *test)
 {
   authenticate_data_t *d = tor_malloc_zero(sizeof(*d));
+  int is_ed = d->is_ed = (test->setup_data == (void*)3);
 
   scheduler_init();
 
@@ -734,6 +917,7 @@ authenticate_data_setup(const struct testcase_t *test)
   MOCK(tor_tls_get_tlssecrets, mock_get_tlssecrets);
   MOCK(connection_or_close_for_error, mock_close_for_err);
   MOCK(channel_set_circid_type, mock_set_circid_type);
+  MOCK(tor_tls_export_key_material, mock_export_key_material);
   d->c1 = or_connection_new(CONN_TYPE_OR, AF_INET);
   d->c2 = or_connection_new(CONN_TYPE_OR, AF_INET);
   tor_addr_from_ipv4h(&d->c1->base_.addr, 0x01020304);
@@ -743,6 +927,8 @@ authenticate_data_setup(const struct testcase_t *test)
   d->key2 = pk_generate(3);
   tt_int_op(tor_tls_context_init(TOR_TLS_CTX_IS_PUBLIC_SERVER,
                                  d->key1, d->key2, 86400), ==, 0);
+
+  init_mock_ed_keys(d->key2);
 
   d->c1->base_.state = OR_CONN_STATE_OR_HANDSHAKING_V3;
   d->c1->link_proto = 3;
@@ -777,16 +963,31 @@ authenticate_data_setup(const struct testcase_t *test)
   d->c1->handshake_state->certs->id_cert = tor_x509_cert_decode(der, sz);
   d->c2->handshake_state->certs->id_cert = tor_x509_cert_decode(der, sz);
 
+  if (is_ed) {
+    d->c1->handshake_state->certs->ed_id_sign =
+      tor_cert_dup(get_master_signing_key_cert());
+    d->c2->handshake_state->certs->ed_id_sign =
+      tor_cert_dup(get_master_signing_key_cert());
+    d->c2->handshake_state->certs->ed_sign_auth =
+      tor_cert_dup(get_current_auth_key_cert());
+  } else {
+    tt_assert(! tor_tls_get_my_certs(0, &auth_cert, &id_cert));
+    tor_x509_cert_get_der(auth_cert, &der, &sz);
+    d->c2->handshake_state->certs->auth_cert = tor_x509_cert_decode(der, sz);
+  }
+
   tor_x509_cert_get_der(link_cert, &der, &sz);
   mock_peer_cert = tor_x509_cert_decode(der, sz);
   tt_assert(mock_peer_cert);
-  tt_assert(! tor_tls_get_my_certs(0, &auth_cert, &id_cert));
-  tor_x509_cert_get_der(auth_cert, &der, &sz);
-  d->c2->handshake_state->certs->auth_cert = tor_x509_cert_decode(der, sz);
 
   /* Make an authenticate cell ... */
-  tt_int_op(0, ==, connection_or_send_authenticate_cell(d->c1,
-                                             AUTHTYPE_RSA_SHA256_TLSSECRET));
+  int authtype;
+  if (is_ed)
+    authtype = AUTHTYPE_ED25519_SHA256_RFC5705;
+  else
+    authtype = AUTHTYPE_RSA_SHA256_TLSSECRET;
+  tt_int_op(0, ==, connection_or_send_authenticate_cell(d->c1, authtype));
+
   tt_assert(mock_got_var_cell);
   d->cell = mock_got_var_cell;
   mock_got_var_cell = NULL;
@@ -812,42 +1013,63 @@ test_link_handshake_auth_cell(void *arg)
   /* Is the cell well-formed on the outer layer? */
   tt_int_op(d->cell->command, ==, CELL_AUTHENTICATE);
   tt_int_op(d->cell->payload[0], ==, 0);
-  tt_int_op(d->cell->payload[1], ==, 1);
+  if (d->is_ed)
+    tt_int_op(d->cell->payload[1], ==, 3);
+  else
+    tt_int_op(d->cell->payload[1], ==, 1);
   tt_int_op(ntohs(get_uint16(d->cell->payload + 2)), ==,
             d->cell->payload_len - 4);
 
   /* Check it out for plausibility... */
   auth_ctx_t ctx;
-  ctx.is_ed = 0;
+  ctx.is_ed = d->is_ed;
   tt_int_op(d->cell->payload_len-4, ==, auth1_parse(&auth1,
                                              d->cell->payload+4,
                                              d->cell->payload_len - 4, &ctx));
   tt_assert(auth1);
 
-  tt_mem_op(auth1->type, ==, "AUTH0001", 8);
+  if (d->is_ed) {
+    tt_mem_op(auth1->type, ==, "AUTH0003", 8);
+  } else {
+    tt_mem_op(auth1->type, ==, "AUTH0001", 8);
+  }
   tt_mem_op(auth1->tlssecrets, ==, "int getRandomNumber(){return 4;}", 32);
-  tt_int_op(auth1_getlen_sig(auth1), >, 120);
 
   /* Is the signature okay? */
-  uint8_t sig[128];
-  uint8_t digest[32];
-
-  auth_pubkey = tor_tls_cert_get_key(d->c2->handshake_state->certs->auth_cert);
-  int n = crypto_pk_public_checksig(
+  const uint8_t *start = d->cell->payload+4, *end = auth1->end_of_signed;
+  if (d->is_ed) {
+    ed25519_signature_t sig;
+    tt_int_op(auth1_getlen_sig(auth1), ==, ED25519_SIG_LEN);
+    memcpy(&sig.sig, auth1_getarray_sig(auth1), ED25519_SIG_LEN);
+    tt_assert(!ed25519_checksig(&sig, start, end-start,
+                                &get_current_auth_keypair()->pubkey));
+  } else {
+    uint8_t sig[128];
+    uint8_t digest[32];
+    tt_int_op(auth1_getlen_sig(auth1), >, 120);
+    auth_pubkey = tor_tls_cert_get_key(d->c2->handshake_state->certs->auth_cert);
+    int n = crypto_pk_public_checksig(
               auth_pubkey,
               (char*)sig, sizeof(sig), (char*)auth1_getarray_sig(auth1),
               auth1_getlen_sig(auth1));
-  tt_int_op(n, ==, 32);
-  const uint8_t *start = d->cell->payload+4, *end = auth1->end_of_signed;
-  crypto_digest256((char*)digest,
-                   (const char*)start, end-start, DIGEST_SHA256);
-  tt_mem_op(sig, ==, digest, 32);
+    tt_int_op(n, ==, 32);
+    crypto_digest256((char*)digest,
+                     (const char*)start, end-start, DIGEST_SHA256);
+    tt_mem_op(sig, ==, digest, 32);
+  }
 
   /* Then feed it to c2. */
   tt_int_op(d->c2->handshake_state->authenticated, ==, 0);
   channel_tls_process_authenticate_cell(d->cell, d->chan2);
   tt_int_op(mock_close_called, ==, 0);
   tt_int_op(d->c2->handshake_state->authenticated, ==, 1);
+  if (d->is_ed) {
+    tt_int_op(d->c2->handshake_state->authenticated_ed25519, ==, 1);
+    tt_int_op(d->c2->handshake_state->authenticated_rsa, ==, 1);
+  } else {
+    tt_int_op(d->c2->handshake_state->authenticated_ed25519, ==, 0);
+    tt_int_op(d->c2->handshake_state->authenticated_rsa, ==, 1);
+  }
 
  done:
   auth1_free(auth1);
@@ -939,8 +1161,13 @@ AUTHENTICATE_FAIL(badsig_1,
                   require_failure_message = "RSA signature wasn't valid";
                   d->cell->payload[d->cell->payload_len - 5] ^= 0xff)
 
-#define TEST(name, flags)                                       \
-  { #name , test_link_handshake_ ## name, (flags), NULL, NULL }
+#define TEST_RSA(name, flags)                                           \
+  { #name , test_link_handshake_ ## name, (flags),                      \
+      &passthrough_setup, (void*)"RSA" }
+
+#define TEST_ED(name, flags)                                            \
+  { #name "_ed25519" , test_link_handshake_ ## name, (flags),           \
+      &passthrough_setup, (void*)"Ed25519" }
 
 #define TEST_RCV_AUTHCHALLENGE(name)                            \
   { "recv_authchallenge/" #name ,                               \
@@ -950,17 +1177,34 @@ AUTHENTICATE_FAIL(badsig_1,
 #define TEST_RCV_CERTS(name)                                    \
   { "recv_certs/" #name ,                                       \
       test_link_handshake_recv_certs_ ## name, TT_FORK,         \
-      &setup_recv_certs, NULL }
+      &setup_recv_certs, (void*)"RSA-Link" }
+
+#define TEST_RCV_CERTS_RSA(name,type)                           \
+  { "recv_certs/" #name ,                                       \
+      test_link_handshake_recv_certs_ ## name, TT_FORK,         \
+      &setup_recv_certs, (void*)type }
+
+#define TEST_RCV_CERTS_ED(name, type)                           \
+  { "recv_certs/" #name "_ed25519",                             \
+      test_link_handshake_recv_certs_ ## name, TT_FORK,         \
+      &setup_recv_certs, (void*)type }
 
 #define TEST_AUTHENTICATE(name)                                         \
   { "authenticate/" #name , test_link_handshake_auth_ ## name, TT_FORK, \
       &setup_authenticate, NULL }
 
+#define TEST_AUTHENTICATE_ED(name)                                      \
+  { "authenticate/" #name "_ed25519" , test_link_handshake_auth_ ## name, \
+      TT_FORK, &setup_authenticate, (void*)3 }
+
 struct testcase_t link_handshake_tests[] = {
-  TEST(certs_ok, TT_FORK),
-  //TEST(certs_bad, TT_FORK),
+  TEST_RSA(certs_ok, TT_FORK),
+  TEST_ED(certs_ok, TT_FORK),
+
   TEST_RCV_CERTS(ok),
-  TEST_RCV_CERTS(ok_server),
+  TEST_RCV_CERTS_ED(ok, "Ed25519-Link"),
+  TEST_RCV_CERTS_RSA(ok_server, "RSA-Auth"),
+  TEST_RCV_CERTS_ED(ok_server, "Ed25519-Auth"),
   TEST_RCV_CERTS(badstate),
   TEST_RCV_CERTS(badproto),
   TEST_RCV_CERTS(duplicate),
@@ -980,8 +1224,9 @@ struct testcase_t link_handshake_tests[] = {
   TEST_RCV_CERTS(server_missing_certs),
   TEST_RCV_CERTS(server_wrong_labels_1),
 
-  TEST(send_authchallenge, TT_FORK),
+  TEST_RSA(send_authchallenge, TT_FORK),
   TEST_RCV_AUTHCHALLENGE(ok),
+  TEST_RCV_AUTHCHALLENGE(ok_ed25519),
   TEST_RCV_AUTHCHALLENGE(ok_noserver),
   TEST_RCV_AUTHCHALLENGE(ok_unrecognized),
   TEST_RCV_AUTHCHALLENGE(badstate),
@@ -994,6 +1239,7 @@ struct testcase_t link_handshake_tests[] = {
   TEST_RCV_AUTHCHALLENGE(nonzero_circid),
 
   TEST_AUTHENTICATE(cell),
+  TEST_AUTHENTICATE_ED(cell),
   TEST_AUTHENTICATE(badstate),
   TEST_AUTHENTICATE(badproto),
   TEST_AUTHENTICATE(atclient),
