@@ -95,6 +95,13 @@ mock_connection_connect_sockaddr(connection_t *conn,
   return 1;
 }
 
+static int
+fake_close_socket(evutil_socket_t sock)
+{
+  (void)sock;
+  return 0;
+}
+
 static void
 test_conn_lookup_addr_helper(const char *address, int family, tor_addr_t *addr)
 {
@@ -124,6 +131,7 @@ test_conn_get_connection(uint8_t state, uint8_t type, uint8_t purpose)
 
   MOCK(connection_connect_sockaddr,
        mock_connection_connect_sockaddr);
+  MOCK(tor_close_socket, fake_close_socket);
 
   init_connection_lists();
 
@@ -148,12 +156,13 @@ test_conn_get_connection(uint8_t state, uint8_t type, uint8_t purpose)
   assert_connection_ok(conn, time(NULL));
 
   UNMOCK(connection_connect_sockaddr);
-
+  UNMOCK(tor_close_socket);
   return conn;
 
   /* On failure */
  done:
   UNMOCK(connection_connect_sockaddr);
+  UNMOCK(tor_close_socket);
   return NULL;
 }
 

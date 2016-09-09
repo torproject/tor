@@ -478,7 +478,7 @@ typedef int socklen_t;
 #endif
 
 int tor_close_socket_simple(tor_socket_t s);
-int tor_close_socket(tor_socket_t s);
+MOCK_DECL(int, tor_close_socket, (tor_socket_t s));
 tor_socket_t tor_open_socket_with_extensions(
                                            int domain, int type, int protocol,
                                            int cloexec, int nonblock);
