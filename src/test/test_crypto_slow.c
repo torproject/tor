@@ -421,12 +421,16 @@ test_crypto_pbkdf2_vectors(void *arg)
             secret_to_key_compute_key(out, 20, spec, 5, "password", 8, 1));
   test_memeq_hex(out, "4b007901b765489abead49d926f721d065a429c1");
 
+  /* This is the very slow one here.  When enabled, it accounts for roughly
+   * half the time spent in test-slow. */
+  /*
   base16_decode((char*)spec, sizeof(spec),
                 "73616c74" "18" , 10);
   memset(out, 0x00, sizeof(out));
   tt_int_op(20, OP_EQ,
             secret_to_key_compute_key(out, 20, spec, 5, "password", 8, 1));
   test_memeq_hex(out, "eefe3d61cd4da4e4e9945b3d6ba2158c2634e984");
+  */
 
   base16_decode((char*)spec, sizeof(spec),
                 "73616c7453414c5473616c7453414c5473616c745"
