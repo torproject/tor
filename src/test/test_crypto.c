@@ -999,11 +999,11 @@ test_crypto_sha3(void *arg)
   crypto_digest_free(d1);
 
   /* Attempt to exercise the incremental hashing code by creating a randomized
-   * 100 KiB buffer, and hashing rand[1, 5 * Rate] bytes at a time.  SHA3-512
+   * 30 KiB buffer, and hashing rand[1, 5 * Rate] bytes at a time.  SHA3-512
    * is used because it has a lowest rate of the family (the code is common,
    * but the slower rate exercises more of it).
    */
-  const size_t bufsz = 100 * 1024;
+  const size_t bufsz = 30 * 1024;
   size_t j = 0;
   large = tor_malloc(bufsz);
   crypto_rand(large, bufsz);
