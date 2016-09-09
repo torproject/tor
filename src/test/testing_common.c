@@ -156,30 +156,30 @@ remove_directory(void)
 }
 
 /** Define this if unit tests spend too much time generating public keys*/
-#undef CACHE_GENERATED_KEYS
+#define CACHE_GENERATED_KEYS
 
-static crypto_pk_t *pregen_keys[5] = {NULL, NULL, NULL, NULL, NULL};
-#define N_PREGEN_KEYS ARRAY_LENGTH(pregen_keys)
+#define N_PREGEN_KEYS 11
+static crypto_pk_t *pregen_keys[N_PREGEN_KEYS];
+static int next_key_idx;
 
 /** Generate and return a new keypair for use in unit tests.  If we're using
- * the key cache optimization, we might reuse keys: we only guarantee that
- * keys made with distinct values for <b>idx</b> are different.  The value of
- * <b>idx</b> must be at least 0, and less than N_PREGEN_KEYS. */
+ * the key cache optimization, we might reuse keys. "idx" is ignored.
+ * Our only guarantee is that we won't reuse a key till this function has been
+ * called several times. The order in which keys are returned is slightly
+ * randomized, so that tests that depend on a particular order will not be
+ * reliable. */
 crypto_pk_t *
 pk_generate(int idx)
 {
-  int res;
+  (void) idx;
 #ifdef CACHE_GENERATED_KEYS
-  tor_assert(idx < N_PREGEN_KEYS);
-  if (! pregen_keys[idx]) {
-    pregen_keys[idx] = crypto_pk_new();
-    res = crypto_pk_generate_key(pregen_keys[idx]);
-    tor_assert(!res);
-  }
-  return crypto_pk_dup_key(pregen_keys[idx]);
+  /* Either skip 1 or 2 keys. */
+  next_key_idx += crypto_rand_int_range(1,3);
+  next_key_idx %= N_PREGEN_KEYS;
+  return crypto_pk_dup_key(pregen_keys[next_key_idx]);
 #else
   crypto_pk_t *result;
-  (void) idx;
+  int res;
   result = crypto_pk_new();
   res = crypto_pk_generate_key(result);
   tor_assert(!res);
@@ -306,6 +306,14 @@ main(int c, const char **v)
     return 1;
   }
   tor_set_failed_assertion_callback(an_assertion_failed);
+
+#ifdef CACHE_GENERATED_KEYS
+  for (i = 0; i < N_PREGEN_KEYS; ++i) {
+    pregen_keys[i] = crypto_pk_new();
+    int r = crypto_pk_generate_key(pregen_keys[i]);
+    tor_assert(r == 0);
+  }
+#endif
 
   atexit(remove_directory);
 
