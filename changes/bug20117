@@ -1,0 +1,6 @@
+  o Minor bugfixes (documentation):
+    - Document the default PathsNeededToBuildCircuits value that's
+      used by clients when the directory authorities don't set
+      min_paths_for_circs_pct.
+      Fixes bug 20117; bugfix on 02c320916e02 in tor-0.2.4.10-alpha.
+      Patch by teor, reported by Jesse V.
