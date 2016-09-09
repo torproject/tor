@@ -355,10 +355,8 @@ test_pick_circid(void *arg)
   }
 
  done:
-  if (chan1)
-    circuitmux_free(chan1->cmux);
-  if (chan2)
-    circuitmux_free(chan2->cmux);
+  circuitmux_free(chan1->cmux);
+  circuitmux_free(chan2->cmux);
   tor_free(chan1);
   tor_free(chan2);
   bitarray_free(ba);

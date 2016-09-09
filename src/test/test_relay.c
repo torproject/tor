@@ -113,11 +113,11 @@ test_relay_append_cell_to_circuit_queue(void *arg)
 
  done:
   tor_free(cell);
-  cell_queue_clear(&orcirc->base_.n_chan_cells);
-  cell_queue_clear(&orcirc->p_chan_cells);
   if (orcirc) {
     circuitmux_detach_circuit(nchan->cmux, TO_CIRCUIT(orcirc));
     circuitmux_detach_circuit(pchan->cmux, TO_CIRCUIT(orcirc));
+    cell_queue_clear(&orcirc->base_.n_chan_cells);
+    cell_queue_clear(&orcirc->p_chan_cells);
   }
   tor_free(orcirc);
   free_fake_channel(nchan);
