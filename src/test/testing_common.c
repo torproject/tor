@@ -227,7 +227,6 @@ passthrough_test_cleanup(const struct testcase_t *testcase, void *ptr)
   return 1;
 }
 
-
 static void *
 ed25519_testcase_setup(const struct testcase_t *testcase)
 {

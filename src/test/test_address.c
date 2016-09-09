@@ -655,7 +655,6 @@ test_address_udp_socket_trick_whitebox(void *arg)
 
   tt_assert(sockaddr_in6_are_equal(mock_addr6,ipv6_to_check));
 
-
  done:
   UNMOCK(tor_open_socket);
   UNMOCK(tor_connect_socket);
