@@ -2329,8 +2329,12 @@ connection_or_send_auth_challenge_cell(or_connection_t *conn)
   cell = var_cell_new(auth_challenge_cell_encoded_len(ac));
   ssize_t len = auth_challenge_cell_encode(cell->payload, cell->payload_len,
                                            ac);
-  if (len != cell->payload_len)
+  if (len != cell->payload_len) {
+    /* LCOV_EXCL_START */
+    log_warn(LD_BUG, "Encoded auth challenge cell length not as expected");
     goto done;
+    /* LCOV_EXCL_STOP */
+  }
   cell->command = CELL_AUTH_CHALLENGE;
 
   connection_or_write_var_cell_to_buf(cell, conn);
@@ -2514,23 +2518,30 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
   set_uint16(result->payload, htons(authtype));
 
   if ((len = auth1_encode(out, outlen, auth, ctx)) < 0) {
-    log_warn(LD_OR, "Unable to encode signed part of AUTH1 data.");
+    /* LCOV_EXCL_START */
+    log_warn(LD_BUG, "Unable to encode signed part of AUTH1 data.");
     goto err;
+    /* LCOV_EXCL_STOP */
   }
 
   if (server) {
     auth1_t *tmp = NULL;
     ssize_t len2 = auth1_parse(&tmp, out, len, ctx);
     if (!tmp) {
-      log_warn(LD_OR, "Unable to parse signed part of AUTH1 data.");
+      /* LCOV_EXCL_START */
+      log_warn(LD_BUG, "Unable to parse signed part of AUTH1 data that we just "
+               "encoded");
       goto err;
+      /* LCOV_EXCL_STOP */
     }
     result->payload_len = (tmp->end_of_signed - result->payload);
-    
+
     auth1_free(tmp);
     if (len2 != len) {
-      log_warn(LD_OR, "Mismatched length when re-parsing AUTH1 data.");
+      /* LCOV_EXCL_START */
+      log_warn(LD_BUG, "Mismatched length when re-parsing AUTH1 data.");
       goto err;
+      /* LCOV_EXCL_STOP */
     }
     goto done;
   }
@@ -2538,8 +2549,10 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
   if (ed_signing_key && is_ed) {
     ed25519_signature_t sig;
     if (ed25519_sign(&sig, out, len, ed_signing_key) < 0) {
-      log_warn(LD_OR, "Unable to sign ed25519 cert");
+      /* LCOV_EXCL_START */
+      log_warn(LD_BUG, "Unable to sign ed25519 authentication data");
       goto err;
+      /* LCOV_EXCL_STOP */
     }
     auth1_setlen_sig(auth, ED25519_SIG_LEN);
     memcpy(auth1_getarray_sig(auth), sig.sig, ED25519_SIG_LEN);
@@ -2563,8 +2576,10 @@ connection_or_compute_authenticate_cell_body(or_connection_t *conn,
 
   len = auth1_encode(out, outlen, auth, ctx);
   if (len < 0) {
-    log_warn(LD_OR, "Unable to encode signed AUTH1 data.");
+    /* LCOV_EXCL_START */
+    log_warn(LD_BUG, "Unable to encode signed AUTH1 data.");
     goto err;
+    /* LCOV_EXCL_STOP */
   }
   tor_assert(len + AUTH_CELL_HEADER_LEN <= result->payload_len);
   result->payload_len = len + AUTH_CELL_HEADER_LEN;
@@ -2606,8 +2621,10 @@ connection_or_send_authenticate_cell,(or_connection_t *conn, int authtype))
                                                  get_current_auth_keypair(),
                                                  0 /* not server */);
   if (! cell) {
+    /* LCOV_EXCL_START */
     log_warn(LD_BUG, "Unable to compute authenticate cell!");
     return -1;
+    /* LCOV_EXCL_STOP */
   }
   connection_or_write_var_cell_to_buf(cell, conn);
   var_cell_free(cell);
