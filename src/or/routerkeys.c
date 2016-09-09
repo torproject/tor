@@ -997,6 +997,60 @@ should_make_new_ed_keys(const or_options_t *options, const time_t now)
 
 #undef EXPIRES_SOON
 
+#ifdef TOR_UNIT_TESTS
+/* Helper for unit tests: populate the ed25519 keys without saving or loading */
+void
+init_mock_ed_keys(const crypto_pk_t *rsa_identity_key)
+{
+  routerkeys_free_all();
+
+#define MAKEKEY(k)                                      \
+  k = tor_malloc_zero(sizeof(*k));                      \
+  if (ed25519_keypair_generate(k, 0) < 0) {             \
+    log_warn(LD_BUG, "Couldn't make a keypair");        \
+    goto err;                                           \
+  }
+  MAKEKEY(master_identity_key);
+  MAKEKEY(master_signing_key);
+  MAKEKEY(current_auth_key);
+#define MAKECERT(cert, signing, signed_, type, flags)            \
+  cert = tor_cert_create(signing,                                \
+                         type,                                   \
+                         &signed_->pubkey,                       \
+                         time(NULL), 86400,                      \
+                         flags);                                 \
+  if (!cert) {                                                   \
+    log_warn(LD_BUG, "Couldn't make a %s certificate!", #cert);  \
+    goto err;                                                    \
+  }
+
+  MAKECERT(signing_key_cert,
+           master_identity_key, master_signing_key, CERT_TYPE_ID_SIGNING,
+           CERT_FLAG_INCLUDE_SIGNING_KEY);
+  MAKECERT(auth_key_cert,
+           master_signing_key, current_auth_key, CERT_TYPE_SIGNING_AUTH, 0);
+
+  if (generate_ed_link_cert(get_options(), time(NULL)) < 0) {
+    log_warn(LD_BUG, "Couldn't make link certificate");
+    goto err;
+  }
+
+  rsa_ed_crosscert_len = tor_make_rsa_ed25519_crosscert(
+                                     &master_identity_key->pubkey,
+                                     rsa_identity_key,
+                                     time(NULL)+86400,
+                                     &rsa_ed_crosscert);
+
+  return;
+
+ err:
+  routerkeys_free_all();
+  tor_assert_nonfatal_unreached();
+}
+#undef MAKEKEY
+#undef MAKECERT
+#endif
+
 const ed25519_public_key_t *
 get_master_identity_key(void)
 {
