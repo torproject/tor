@@ -683,6 +683,13 @@ MOCK_IMPL(STATIC tor_x509_cert_t *,
   return cert;
 }
 
+/** Return a copy of <b>cert</b> */
+tor_x509_cert_t *
+tor_x509_cert_dup(const tor_x509_cert_t *cert)
+{
+  return tor_x509_cert_new(X509_dup(cert->cert));
+}
+
 /** Read a DER-encoded X509 cert, of length exactly <b>certificate_len</b>,
  * from a <b>certificate</b>.  Return a newly allocated tor_x509_cert_t on
  * success and NULL on failure. */

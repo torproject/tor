@@ -176,6 +176,7 @@ extern uint64_t total_bytes_written_by_tls;
 
 #endif /* endif TORTLS_PRIVATE */
 
+tor_x509_cert_t *tor_x509_cert_dup(const tor_x509_cert_t *cert);
 const char *tor_tls_err_to_string(int err);
 void tor_tls_get_state_description(tor_tls_t *tls, char *buf, size_t sz);
 
