@@ -213,6 +213,25 @@ passthrough_test_cleanup(const struct testcase_t *testcase, void *ptr)
   return 1;
 }
 
+
+static void *
+ed25519_testcase_setup(const struct testcase_t *testcase)
+{
+  crypto_ed25519_testing_force_impl(testcase->setup_data);
+  return testcase->setup_data;
+}
+static int
+ed25519_testcase_cleanup(const struct testcase_t *testcase, void *ptr)
+{
+  (void)testcase;
+  (void)ptr;
+  crypto_ed25519_testing_restore_impl();
+  return 1;
+}
+const struct testcase_setup_t ed25519_test_setup = {
+  ed25519_testcase_setup, ed25519_testcase_cleanup
+};
+
 const struct testcase_setup_t passthrough_setup = {
   passthrough_test_setup, passthrough_test_cleanup
 };
