@@ -984,6 +984,20 @@ crypto_pk_dup_key(crypto_pk_t *env)
   return env;
 }
 
+#ifdef TOR_UNIT_TESTS
+/** For testing: replace dest with src.  (Dest must have a refcount
+ * of 1) */
+void
+crypto_pk_assign_(crypto_pk_t *dest, const crypto_pk_t *src)
+{
+  tor_assert(dest);
+  tor_assert(dest->refs == 1);
+  tor_assert(src);
+  RSA_free(dest->key);
+  dest->key = RSAPrivateKey_dup(src->key);
+}
+#endif
+
 /** Make a real honest-to-goodness copy of <b>env</b>, and return it.
  * Returns NULL on failure. */
 crypto_pk_t *

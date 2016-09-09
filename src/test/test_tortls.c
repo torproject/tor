@@ -2422,6 +2422,8 @@ test_tortls_context_new(void *ignored)
   ret = tor_tls_context_new(NULL, 0, 0, 0);
   tt_assert(!ret);
 
+  /* note: we already override this in testing_common.c, so we
+   * run this unit test in a subprocess. */
   MOCK(crypto_pk_generate_key_with_bits,
        fixed_crypto_pk_generate_key_with_bits);
   fixed_crypto_pk_new_result_index = 0;
@@ -2808,7 +2810,7 @@ struct testcase_t tortls_tests[] = {
   INTRUSIVE_TEST_CASE(find_cipher_by_id, 0),
   INTRUSIVE_TEST_CASE(session_secret_cb, 0),
   INTRUSIVE_TEST_CASE(debug_state_callback, 0),
-  INTRUSIVE_TEST_CASE(context_new, 0),
+  INTRUSIVE_TEST_CASE(context_new, TT_FORK /* redundant */),
   LOCAL_TEST_CASE(create_certificate, 0),
   LOCAL_TEST_CASE(cert_new, 0),
   LOCAL_TEST_CASE(cert_is_valid, 0),

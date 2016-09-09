@@ -326,5 +326,9 @@ extern int break_strongest_rng_fallback;
 #endif
 #endif
 
+#ifdef TOR_UNIT_TESTS
+void crypto_pk_assign_(crypto_pk_t *dest, const crypto_pk_t *src);
+#endif
+
 #endif
 

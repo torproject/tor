@@ -1110,11 +1110,9 @@ test_keep_commit(void *arg)
        trusteddirserver_get_by_v3_auth_digest_m);
 
   {
-    k = crypto_pk_new();
+    k = pk_generate(1);
     /* Setup a minimal dirauth environment for this test  */
     /* Have a key that is not the one from our commit. */
-    tt_int_op(0, ==, crypto_pk_generate_key(k));
-    tt_int_op(0, ==, crypto_pk_get_fingerprint(k, fp, 0));
     init_authority_state();
     state = get_sr_state();
   }

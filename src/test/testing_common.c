@@ -181,11 +181,25 @@ pk_generate(int idx)
   crypto_pk_t *result;
   int res;
   result = crypto_pk_new();
-  res = crypto_pk_generate_key(result);
+  res = crypto_pk_generate_key__real(result);
   tor_assert(!res);
   return result;
 #endif
 }
+
+#ifdef CACHE_GENERATED_KEYS
+static int
+crypto_pk_generate_key_with_bits__get_cached(crypto_pk_t *env, int bits)
+{
+  if (bits != 1024)
+    return crypto_pk_generate_key_with_bits__real(env, bits);
+
+  crypto_pk_t *newkey = pk_generate(0);
+  crypto_pk_assign_(env, newkey);
+  crypto_pk_free(newkey);
+  return 0;
+}
+#endif
 
 /** Free all storage used for the cached key optimization. */
 static void
@@ -332,6 +346,8 @@ main(int c, const char **v)
     int r = crypto_pk_generate_key(pregen_keys[i]);
     tor_assert(r == 0);
   }
+  MOCK(crypto_pk_generate_key_with_bits,
+       crypto_pk_generate_key_with_bits__get_cached);
 #endif
 
   atexit(remove_directory);
