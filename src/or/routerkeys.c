@@ -1059,6 +1059,16 @@ get_master_identity_key(void)
   return &master_identity_key->pubkey;
 }
 
+#ifdef TOR_UNIT_TESTS
+/* only exists for the unit tests, since otherwise the identity key
+ * should be used to sign nothing but the signing key. */
+const ed25519_keypair_t *
+get_master_identity_keypair(void)
+{
+  return master_identity_key;
+}
+#endif
+
 const ed25519_keypair_t *
 get_master_signing_keypair(void)
 {

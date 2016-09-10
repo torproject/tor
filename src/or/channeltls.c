@@ -1954,8 +1954,11 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
         ERR("Couldn't compute digests for key in ID cert");
 
       identity_rcvd = tor_tls_cert_get_key(id_cert);
-      if (!identity_rcvd)
+      if (!identity_rcvd) {
+        //LCOV_EXCL_START
         ERR("Internal error: Couldn't get RSA key from ID cert.");
+        //LCOV_EXCL_STOP
+      }
       memcpy(chan->conn->handshake_state->authenticated_rsa_peer_id,
              id_digests->d[DIGEST_SHA1], DIGEST_LEN);
       channel_set_circid_type(TLS_CHAN_TO_BASE(chan), identity_rcvd,

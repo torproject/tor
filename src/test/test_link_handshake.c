@@ -6,12 +6,16 @@
 #define CHANNELTLS_PRIVATE
 #define CONNECTION_PRIVATE
 #define TOR_CHANNEL_INTERNAL_
+#define TORTLS_PRIVATE
+#include <openssl/x509.h>
+#include <openssl/ssl.h>
 #include "or.h"
 #include "config.h"
 #include "connection.h"
 #include "connection_or.h"
 #include "channeltls.h"
 #include "link_handshake.h"
+#include "router.h"
 #include "routerkeys.h"
 #include "scheduler.h"
 #include "torcert.h"
@@ -337,7 +341,6 @@ recv_certs_setup(const struct testcase_t *test)
   int is_auth = !strcmpend(test->setup_data, "-Auth");
   tor_assert(is_ed != is_rsa);
   tor_assert(is_link != is_auth);
-  printf("rsa == %d; is_link == %d\n", is_rsa, is_link);
 
   d->c = or_connection_new(CONN_TYPE_OR, AF_INET);
   d->chan = tor_malloc_zero(sizeof(*d->chan));
@@ -490,6 +493,7 @@ test_link_handshake_recv_certs_ok_server(void *arg)
   tt_int_op(d->c->handshake_state->authenticated, ==, 0);
   tt_int_op(d->c->handshake_state->received_certs_cell, ==, 1);
   tt_assert(d->c->handshake_state->certs->id_cert != NULL);
+  tt_assert(d->c->handshake_state->certs->link_cert == NULL);
   if (d->is_ed) {
     tt_assert(d->c->handshake_state->certs->ed_sign_auth != NULL);
     tt_assert(d->c->handshake_state->certs->auth_cert == NULL);
@@ -514,6 +518,8 @@ test_link_handshake_recv_certs_ok_server(void *arg)
     tt_int_op(1, ==, mock_close_called);                                \
     tt_int_op(0, ==, mock_send_authenticate_called);                    \
     tt_int_op(0, ==, mock_send_netinfo_called);                         \
+    tt_int_op(0, ==, d->c->handshake_state->authenticated_rsa);         \
+    tt_int_op(0, ==, d->c->handshake_state->authenticated_ed25519);     \
     if (require_failure_message) {                                      \
       expect_log_msg_containing(require_failure_message);               \
     }                                                                   \
@@ -554,12 +560,41 @@ CERTS_FAIL(truncated_3,
              d->cell->payload_len = 7;
              memcpy(d->cell->payload, "\x01\x01\x00\x05""abc", 7);
            })
+CERTS_FAIL(truncated_4, /* ed25519 */
+           {
+             require_failure_message = "It couldn't be parsed";
+             d->cell->payload_len -= 10;
+           })
+CERTS_FAIL(truncated_5, /* ed25519 */
+           {
+             require_failure_message = "It couldn't be parsed";
+             d->cell->payload_len -= 100;
+           })
+
 #define REENCODE() do {                                                 \
+    const char *msg = certs_cell_check(d->ccell);                       \
+    if (msg) puts(msg);                                                 \
     ssize_t n = certs_cell_encode(d->cell->payload, 4096, d->ccell);    \
     tt_int_op(n, >, 0);                                                 \
     d->cell->payload_len = n;                                           \
   } while (0)
 
+CERTS_FAIL(truncated_6, /* ed25519 */
+   {
+     /* truncate the link certificate */
+     require_failure_message = "undecodable Ed certificate";
+     certs_cell_cert_setlen_body(certs_cell_get_certs(d->ccell, 3), 7);
+     certs_cell_get_certs(d->ccell, 3)->cert_len = 7;
+     REENCODE();
+   })
+CERTS_FAIL(truncated_7, /* ed25519 */
+   {
+     /* truncate the crosscert */
+     require_failure_message = "Unparseable or overlong crosscert";
+     certs_cell_cert_setlen_body(certs_cell_get_certs(d->ccell, 4), 7);
+     certs_cell_get_certs(d->ccell, 4)->cert_len = 7;
+     REENCODE();
+   })
 CERTS_FAIL(not_x509,
   {
     require_failure_message = "Received undecodable certificate";
@@ -588,6 +623,206 @@ CERTS_FAIL(both_auth,
     certs_cell_get_certs(d->ccell, 1)->cert_type = 3;
     REENCODE();
   })
+CERTS_FAIL(duplicate_id, /* ed25519 */
+  {
+    require_failure_message = "Duplicate Ed25519 certificate";
+    certs_cell_get_certs(d->ccell, 2)->cert_type = 4;
+    certs_cell_get_certs(d->ccell, 3)->cert_type = 4;
+    REENCODE();
+  })
+CERTS_FAIL(duplicate_link, /* ed25519 */
+  {
+    require_failure_message = "Duplicate Ed25519 certificate";
+    certs_cell_get_certs(d->ccell, 2)->cert_type = 5;
+    certs_cell_get_certs(d->ccell, 3)->cert_type = 5;
+    REENCODE();
+  })
+CERTS_FAIL(duplicate_crosscert, /* ed25519 */
+  {
+    require_failure_message = "Duplicate RSA->Ed25519 crosscert";
+    certs_cell_get_certs(d->ccell, 2)->cert_type = 7;
+    certs_cell_get_certs(d->ccell, 3)->cert_type = 7;
+    REENCODE();
+  })
+static void
+test_link_handshake_recv_certs_missing_id(void *arg) /* ed25519 */
+{
+  certs_data_t *d = arg;
+  tt_int_op(certs_cell_getlen_certs(d->ccell), OP_EQ, 5);
+  certs_cell_set_certs(d->ccell, 2, certs_cell_get_certs(d->ccell, 4));
+  certs_cell_set0_certs(d->ccell, 4, NULL); /* prevent free */
+  certs_cell_setlen_certs(d->ccell, 4);
+  d->ccell->n_certs = 4;
+  REENCODE();
+
+  /* This handshake succeeds, but since we have no ID cert, we will
+   * just do the RSA handshake. */
+  channel_tls_process_certs_cell(d->cell, d->chan);
+  tt_int_op(0, ==, mock_close_called);
+  tt_int_op(0, ==, d->c->handshake_state->authenticated_ed25519);
+  tt_int_op(1, ==, d->c->handshake_state->authenticated_rsa);
+ done:
+  ;
+}
+CERTS_FAIL(missing_signing_key, /* ed25519 */
+  {
+    require_failure_message = "No Ed25519 signing key";
+    tt_int_op(certs_cell_getlen_certs(d->ccell), OP_EQ, 5);
+    certs_cell_cert_t *cert = certs_cell_get_certs(d->ccell, 2);
+    tt_int_op(cert->cert_type, ==, CERTTYPE_ED_ID_SIGN);
+    /* replace this with a valid master->signing cert, but with no
+     * signing key. */
+    const ed25519_keypair_t *mk = get_master_identity_keypair();
+    const ed25519_keypair_t *sk = get_master_signing_keypair();
+    tor_cert_t *bad_cert = tor_cert_create(mk, CERT_TYPE_ID_SIGNING,
+                                           &sk->pubkey, time(NULL), 86400,
+                                           0 /* don't include signer */);
+    certs_cell_cert_setlen_body(cert, bad_cert->encoded_len);
+    memcpy(certs_cell_cert_getarray_body(cert),
+           bad_cert->encoded, bad_cert->encoded_len);
+    cert->cert_len = bad_cert->encoded_len;
+    tor_cert_free(bad_cert);
+    REENCODE();
+  })
+CERTS_FAIL(missing_link, /* ed25519 */
+  {
+    require_failure_message = "No Ed25519 link key";
+    tt_int_op(certs_cell_getlen_certs(d->ccell), OP_EQ, 5);
+    certs_cell_set_certs(d->ccell, 3, certs_cell_get_certs(d->ccell, 4));
+    certs_cell_set0_certs(d->ccell, 4, NULL); /* prevent free */
+    certs_cell_setlen_certs(d->ccell, 4);
+    d->ccell->n_certs = 4;
+    REENCODE();
+  })
+CERTS_FAIL(missing_auth, /* ed25519 */
+  {
+    d->c->handshake_state->started_here = 0;
+    d->c->handshake_state->certs->started_here = 0;
+    require_failure_message = "No Ed25519 link authentication key";
+    tt_int_op(certs_cell_getlen_certs(d->ccell), OP_EQ, 5);
+    certs_cell_set_certs(d->ccell, 3, certs_cell_get_certs(d->ccell, 4));
+    certs_cell_set0_certs(d->ccell, 4, NULL); /* prevent free */
+    certs_cell_setlen_certs(d->ccell, 4);
+    d->ccell->n_certs = 4;
+    REENCODE();
+  })
+CERTS_FAIL(missing_crosscert, /* ed25519 */
+  {
+    require_failure_message = "Missing RSA->Ed25519 crosscert";
+    tt_int_op(certs_cell_getlen_certs(d->ccell), OP_EQ, 5);
+    certs_cell_setlen_certs(d->ccell, 4);
+    d->ccell->n_certs = 4;
+    REENCODE();
+  })
+CERTS_FAIL(missing_rsa_id, /* ed25519 */
+  {
+    require_failure_message = "Missing legacy RSA ID cert";
+    tt_int_op(certs_cell_getlen_certs(d->ccell), OP_EQ, 5);
+    certs_cell_set_certs(d->ccell, 1, certs_cell_get_certs(d->ccell, 4));
+    certs_cell_set0_certs(d->ccell, 4, NULL); /* prevent free */
+    certs_cell_setlen_certs(d->ccell, 4);
+    d->ccell->n_certs = 4;
+    REENCODE();
+  })
+CERTS_FAIL(link_mismatch, /* ed25519 */
+  {
+    require_failure_message = "Link certificate does not match "
+      "TLS certificate";
+    const tor_x509_cert_t *idc;
+    tor_tls_get_my_certs(1, NULL, &idc);
+    tor_x509_cert_free(mock_peer_cert);
+    /* Pretend that the peer cert was something else. */
+    mock_peer_cert = tor_x509_cert_dup(idc);
+    /* No reencode needed. */
+  })
+CERTS_FAIL(bad_ed_sig, /* ed25519 */
+  {
+    require_failure_message = "At least one Ed25519 certificate was "
+      "badly signed";
+    certs_cell_cert_t *cert = certs_cell_get_certs(d->ccell, 3);
+    uint8_t *body = certs_cell_cert_getarray_body(cert);
+    ssize_t body_len = certs_cell_cert_getlen_body(cert);
+    /* Frob a byte in the signature */
+    body[body_len - 13] ^= 7;
+    REENCODE();
+  })
+CERTS_FAIL(bad_crosscert, /*ed25519*/
+  {
+    require_failure_message = "Invalid RSA->Ed25519 crosscert";
+    certs_cell_cert_t *cert = certs_cell_get_certs(d->ccell, 4);
+    uint8_t *body = certs_cell_cert_getarray_body(cert);
+    ssize_t body_len = certs_cell_cert_getlen_body(cert);
+    /* Frob a byte in the signature */
+    body[body_len - 13] ^= 7;
+    REENCODE();
+  })
+CERTS_FAIL(bad_rsa_id_cert, /*ed25519*/
+  {
+    require_failure_message = "legacy RSA ID certificate was not valid";
+    certs_cell_cert_t *cert = certs_cell_get_certs(d->ccell, 1);
+    uint8_t *body = certs_cell_cert_getarray_body(cert);
+    ssize_t body_len = certs_cell_cert_getlen_body(cert);
+    /* Frob a byte in the signature */
+    body[body_len - 13] ^= 7;
+    REENCODE();
+  })
+CERTS_FAIL(expired_rsa_id, /* both */
+  {
+    require_failure_message = "Certificate already expired";
+    /* we're going to replace the identity cert with an expired one. */
+    certs_cell_cert_t *cert = certs_cell_get_certs(d->ccell, 1);
+    const tor_x509_cert_t *idc;
+    tor_tls_get_my_certs(1, NULL, &idc);
+    X509 *newc = X509_dup(idc->cert);
+    time_t new_end = time(NULL) - 86400 * 10;
+    X509_time_adj(X509_get_notAfter(newc), 0, &new_end);
+    EVP_PKEY *pk = crypto_pk_get_evp_pkey_(d->key2, 1);
+    tt_assert(X509_sign(newc, pk, EVP_sha1()));
+    int len = i2d_X509(newc, NULL);
+    certs_cell_cert_setlen_body(cert, len);
+    uint8_t *body = certs_cell_cert_getarray_body(cert);
+    int len2 = i2d_X509(newc, &body);
+    tt_int_op(len, ==, len2);
+    REENCODE();
+    X509_free(newc);
+    EVP_PKEY_free(pk);
+  })
+CERTS_FAIL(expired_ed_id, /* ed25519 */
+  {
+    /* we're going to replace the Ed Id->sign cert with an expired one. */
+    require_failure_message = "At least one certificate expired";
+    /* We don't need to re-sign, since we check for expiration first. */
+    certs_cell_cert_t *cert = certs_cell_get_certs(d->ccell, 2);
+    uint8_t *body = certs_cell_cert_getarray_body(cert);
+    /* The expiration field is bytes [2..5].  It is in HOURS since the
+     * epoch. */
+    set_uint32(body+2, htonl(24)); /* Back to jan 2, 1970. */
+    REENCODE();
+  })
+CERTS_FAIL(expired_ed_link, /* ed25519 */
+  {
+    /* we're going to replace the Ed Sign->link cert with an expired one. */
+    require_failure_message = "At least one certificate expired";
+    /* We don't need to re-sign, since we check for expiration first. */
+    certs_cell_cert_t *cert = certs_cell_get_certs(d->ccell, 3);
+    uint8_t *body = certs_cell_cert_getarray_body(cert);
+    /* The expiration field is bytes [2..5].  It is in HOURS since the
+     * epoch. */
+    set_uint32(body+2, htonl(24)); /* Back to jan 2, 1970. */
+    REENCODE();
+  })
+CERTS_FAIL(expired_crosscert, /* ed25519 */
+  {
+    /* we're going to replace the Ed Sign->link cert with an expired one. */
+    require_failure_message = "Crosscert is expired";
+    /* We don't need to re-sign, since we check for expiration first. */
+    certs_cell_cert_t *cert = certs_cell_get_certs(d->ccell, 4);
+    uint8_t *body = certs_cell_cert_getarray_body(cert);
+    /* The expiration field is bytes [32..35]. once again, HOURS. */
+    set_uint32(body+32, htonl(24)); /* Back to jan 2, 1970. */
+    REENCODE();
+  })
+
 CERTS_FAIL(wrong_labels_1,
   {
     require_failure_message = "The link certificate was not valid";
@@ -612,14 +847,16 @@ CERTS_FAIL(wrong_labels_2,
   })
 CERTS_FAIL(wrong_labels_3,
            {
-             require_failure_message = "The certs we wanted were missing";
+             require_failure_message =
+               "The certs we wanted (ID, Link) were missing";
              certs_cell_get_certs(d->ccell, 0)->cert_type = 2;
              certs_cell_get_certs(d->ccell, 1)->cert_type = 3;
              REENCODE();
            })
 CERTS_FAIL(server_missing_certs,
            {
-             require_failure_message = "The certs we wanted were missing";
+             require_failure_message =
+               "The certs we wanted (ID, Auth) were missing";
              d->c->handshake_state->started_here = 0;
              d->c->handshake_state->certs->started_here = 0;
 
@@ -1214,10 +1451,32 @@ struct testcase_t link_handshake_tests[] = {
   TEST_RCV_CERTS(truncated_1),
   TEST_RCV_CERTS(truncated_2),
   TEST_RCV_CERTS(truncated_3),
+  TEST_RCV_CERTS_ED(truncated_4, "Ed25519-Link"),
+  TEST_RCV_CERTS_ED(truncated_5, "Ed25519-Link"),
+  TEST_RCV_CERTS_ED(truncated_6, "Ed25519-Link"),
+  TEST_RCV_CERTS_ED(truncated_7, "Ed25519-Link"),
   TEST_RCV_CERTS(not_x509),
   TEST_RCV_CERTS(both_link),
   TEST_RCV_CERTS(both_id_rsa),
   TEST_RCV_CERTS(both_auth),
+  TEST_RCV_CERTS_ED(duplicate_id, "Ed25519-Link"),
+  TEST_RCV_CERTS_ED(duplicate_link, "Ed25519-Link"),
+  TEST_RCV_CERTS_ED(duplicate_crosscert, "Ed25519-Link"),
+  TEST_RCV_CERTS_ED(missing_crosscert, "Ed25519-Link"),
+  TEST_RCV_CERTS_ED(missing_id, "Ed25519-Link"),
+  TEST_RCV_CERTS_ED(missing_signing_key, "Ed25519-Link"),
+  TEST_RCV_CERTS_ED(missing_link, "Ed25519-Link"),
+  TEST_RCV_CERTS_ED(missing_auth, "Ed25519-Auth"),
+  TEST_RCV_CERTS_ED(missing_rsa_id, "Ed25519-Link"),
+  TEST_RCV_CERTS_ED(link_mismatch, "Ed25519-Link"),
+  TEST_RCV_CERTS_ED(bad_ed_sig, "Ed25519-Link"),
+  TEST_RCV_CERTS_ED(bad_rsa_id_cert, "Ed25519-Link"),
+  TEST_RCV_CERTS_ED(bad_crosscert, "Ed25519-Link"),
+  TEST_RCV_CERTS_RSA(expired_rsa_id, "RSA-Link"),
+  TEST_RCV_CERTS_ED(expired_rsa_id, "Ed25519-Link"),
+  TEST_RCV_CERTS_ED(expired_ed_id, "Ed25519-Link"),
+  TEST_RCV_CERTS_ED(expired_ed_link, "Ed25519-Link"),
+  TEST_RCV_CERTS_ED(expired_crosscert, "Ed25519-Link"),
   TEST_RCV_CERTS(wrong_labels_1),
   TEST_RCV_CERTS(wrong_labels_2),
   TEST_RCV_CERTS(wrong_labels_3),

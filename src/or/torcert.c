@@ -461,7 +461,7 @@ or_handshake_certs_rsa_ok(int severity,
 
   if (certs->started_here) {
     if (! (id_cert && link_cert))
-      ERR("The certs we wanted were missing");
+      ERR("The certs we wanted (ID, Link) were missing");
     if (! tor_tls_cert_matches_key(tls, link_cert))
       ERR("The link certificate didn't match the TLS public key");
     if (! tor_tls_cert_is_valid(severity, link_cert, id_cert, now, 0))
@@ -470,7 +470,7 @@ or_handshake_certs_rsa_ok(int severity,
       ERR("The ID certificate was not valid");
   } else {
     if (! (id_cert && auth_cert))
-      ERR("The certs we wanted were missing");
+      ERR("The certs we wanted (ID, Auth) were missing");
     /* Remember these certificates so we can check an AUTHENTICATE cell
      * XXXX make sure we do that
      */
@@ -505,20 +505,20 @@ or_handshake_certs_ed25519_ok(int severity,
       ERR("Could not get checkable cert.");                             \
   } while (0)
 
-  if (! certs->ed_id_sign || !certs->ed_id_sign->signing_key_included)
-    ERR("No signing key");
+  if (! certs->ed_id_sign || !certs->ed_id_sign->signing_key_included) {
+    ERR("No Ed25519 signing key");
+  }
   ADDCERT(certs->ed_id_sign, NULL);
 
   if (certs->started_here) {
     if (! certs->ed_sign_link)
-      ERR("No link key");
+      ERR("No Ed25519 link key");
     {
       /* check for a match with the TLS cert. */
       tor_x509_cert_t *peer_cert = tor_tls_get_peer_cert(tls);
-      /* XXXX Does 'cert' match spec in this case? I hope so; if not, fix
-       * spec */
-      if (!peer_cert)
-        ERR("No x509 peer cert");
+      if (BUG(!peer_cert)) {
+        ERR("No x509 peer cert"); // LCOV_EXCL_LINE
+      }
       const common_digests_t *peer_cert_digests =
         tor_x509_cert_get_cert_digests(peer_cert);
       int okay = tor_memeq(peer_cert_digests->d[DIGEST_SHA256],
@@ -526,14 +526,14 @@ or_handshake_certs_ed25519_ok(int severity,
                            DIGEST256_LEN);
       tor_x509_cert_free(peer_cert);
       if (!okay)
-        ERR("link certificate does not match TLS certificate");
+        ERR("Link certificate does not match TLS certificate");
     }
 
     ADDCERT(certs->ed_sign_link, &certs->ed_id_sign->signed_key);
 
   } else {
     if (! certs->ed_sign_auth)
-      ERR("No link authentiction key");
+      ERR("No Ed25519 link authentication key");
     ADDCERT(certs->ed_sign_auth, &certs->ed_id_sign->signed_key);
   }
 
@@ -555,6 +555,9 @@ or_handshake_certs_ed25519_ok(int severity,
   if (! tor_tls_cert_is_valid(severity, rsa_id_cert, rsa_id_cert, now, 1)) {
     ERR("The legacy RSA ID certificate was not valid");
   }
+  if (! certs->ed_rsa_crosscert) {
+    ERR("Missing RSA->Ed25519 crosscert");
+  }
   crypto_pk_t *rsa_id_key = tor_tls_cert_get_key(rsa_id_cert);
 
   if (rsa_ed25519_crosscert_check(certs->ed_rsa_crosscert,
@@ -563,7 +566,7 @@ or_handshake_certs_ed25519_ok(int severity,
                                   &certs->ed_id_sign->signing_key,
                                   now) < 0) {
     crypto_pk_free(rsa_id_key);
-    ERR("Invalid/missing RSA crosscert");
+    ERR("Invalid RSA->Ed25519 crosscert");
   }
   crypto_pk_free(rsa_id_key);
   rsa_id_key = NULL;
