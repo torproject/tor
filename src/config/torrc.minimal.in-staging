@@ -98,6 +98,8 @@
 # OutboundBindAddress 10.0.0.5
 
 ## A handle for your relay, so people don't have to refer to it by key.
+## Only alphanumeric characters, A-Z, a-z, 0-1 are allowed. No unicode, 
+## no emoji.
 #Nickname ididnteditheconfig
 
 ## Define these to limit how much relayed traffic you will allow. Your
@@ -128,6 +130,7 @@
 ## descriptors containing these lines and that Google indexes them, so
 ## spammers might also collect them. You may want to obscure the fact that
 ## it's an email address and/or generate a new address for this purpose.
+## Notice that "<" and ">" are necessary.
 #ContactInfo Random Person <nobody AT example dot com>
 ## You might also include your PGP or GPG fingerprint if you have one:
 #ContactInfo 0xFFFFFFFF Random Person <nobody AT example dot com>
@@ -149,8 +152,8 @@
 
 ## Uncomment this if you run more than one Tor relay, and add the identity
 ## key fingerprint of each Tor relay you control, even if they're on
-## different networks. You declare it here so Tor clients can avoid
-## using more than one of your relays in a single circuit. See
+## different networks. Include "$" with each key id. You declare it here so 
+## Tor clients can avoid using more than one of your relays in a single circuit. See
 ## https://www.torproject.org/docs/faq#MultipleRelays
 ## However, you should never include a bridge's fingerprint here, as it would
 ## break its concealability and potentially reveal its IP/TCP address.
