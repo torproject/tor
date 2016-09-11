@@ -5090,6 +5090,44 @@ test_util_socket(void *arg)
     tor_close_socket(fd4);
 }
 
+static int
+is_there_a_localhost(void)
+{
+  tor_socket_t s;
+  s = tor_open_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  tor_assert(SOCKET_OK(s));
+
+  struct sockaddr_in sin;
+  memset(&sin, 0, sizeof(sin));
+  sin.sin_family = AF_INET;
+  sin.sin_addr.s_addr = htonl(0x7f000001);
+  sin.sin_port = 0;
+
+  int result = 0;
+  if (bind(s, (void*)&sin, sizeof(sin)) == 0) {
+    result = 1;
+  }
+  tor_close_socket(s);
+  if (result)
+    return result;
+
+  s = tor_open_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  tor_assert(SOCKET_OK(s));
+
+  struct sockaddr_in6 sin6;
+  memset(&sin6, 0, sizeof(sin6));
+  sin6.sin6_family = AF_INET6;
+  sin6.sin6_addr.s6_addr[15] = 1;
+  sin6.sin6_port = 0;
+
+  if (bind(s, (void*)&sin6, sizeof(sin6)) == 0) {
+    result = 1;
+  }
+  tor_close_socket(s);
+
+  return result;
+}
+
 /* Test for socketpair and ersatz_socketpair().  We test them both, since
  * the latter is a tolerably good way to exersize tor_accept_socket(). */
 static void
@@ -5108,10 +5146,10 @@ test_util_socketpair(void *arg)
    * Otherwise, we risk exposing a socketpair on a routable IP address. (Some
    * BSD jails use a routable address for localhost. Fortunately, they have
    * the real AF_UNIX socketpair.) */
-  if (ersatz && ERRNO_IS_EPROTO(-socketpair_result)) {
+  if (ersatz && socketpair_result < 0 && !is_there_a_localhost()) {
     /* In my testing, an IPv6-only FreeBSD jail without ::1 returned EINVAL.
      * Assume we're on a machine without 127.0.0.1 or ::1 and give up now. */
-    goto done;
+    tt_skip();
   }
   tt_int_op(0, OP_EQ, socketpair_result);
 
