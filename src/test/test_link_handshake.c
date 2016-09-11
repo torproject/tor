@@ -890,15 +890,15 @@ test_link_handshake_send_authchallenge(void *arg)
   cell1 = mock_got_var_cell;
   tt_int_op(0, ==, connection_or_send_auth_challenge_cell(c1));
   cell2 = mock_got_var_cell;
-  tt_int_op(40, ==, cell1->payload_len);
-  tt_int_op(40, ==, cell2->payload_len);
+  tt_int_op(38, ==, cell1->payload_len);
+  tt_int_op(38, ==, cell2->payload_len);
   tt_int_op(0, ==, cell1->circ_id);
   tt_int_op(0, ==, cell2->circ_id);
   tt_int_op(CELL_AUTH_CHALLENGE, ==, cell1->command);
   tt_int_op(CELL_AUTH_CHALLENGE, ==, cell2->command);
 
-  tt_mem_op("\x00\x03\x00\x01\x00\x02\x00\x03", ==, cell1->payload + 32, 8);
-  tt_mem_op("\x00\x03\x00\x01\x00\x02\x00\x03", ==, cell2->payload + 32, 8);
+  tt_mem_op("\x00\x02\x00\x01\x00\x03", ==, cell1->payload + 32, 6);
+  tt_mem_op("\x00\x02\x00\x01\x00\x03", ==, cell2->payload + 32, 6);
   tt_mem_op(cell1->payload, !=, cell2->payload, 32);
 
  done:
