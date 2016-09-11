@@ -877,9 +877,11 @@ test_util_time(void *arg)
     t_res = INT64_MIN;
     CAPTURE();
     tor_gmtime_r(&t_res, &b_time);
+    if (! (b_time.tm_year == (1970-1900) ||
+           b_time.tm_year == (1-1900))) {
+      tt_int_op(b_time.tm_year, OP_EQ, 1970-1900);
+    }
     CHECK_TIMEGM_WARNING("Rounding up to ");
-    tt_assert(b_time.tm_year == (1970-1900) ||
-              b_time.tm_year == (1-1900));
   }
 #endif
 
