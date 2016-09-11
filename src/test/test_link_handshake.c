@@ -1395,8 +1395,25 @@ AUTHENTICATE_FAIL(badcontent,
                     "cell body was not as expected";
                   d->cell->payload[10] ^= 0xff)
 AUTHENTICATE_FAIL(badsig_1,
-                  require_failure_message = "RSA signature wasn't valid";
+                  if (d->is_ed)
+                    require_failure_message = "Ed25519 signature wasn't valid";
+                  else
+                    require_failure_message = "RSA signature wasn't valid";
                   d->cell->payload[d->cell->payload_len - 5] ^= 0xff)
+AUTHENTICATE_FAIL(missing_ed_id,
+                {
+                  tor_cert_free(d->c2->handshake_state->certs->ed_id_sign);
+                  d->c2->handshake_state->certs->ed_id_sign = NULL;
+                  require_failure_message = "Ed authenticate without Ed ID "
+                    "cert from peer";
+                })
+AUTHENTICATE_FAIL(missing_ed_auth,
+                {
+                  tor_cert_free(d->c2->handshake_state->certs->ed_sign_auth);
+                  d->c2->handshake_state->certs->ed_sign_auth = NULL;
+                  require_failure_message = "We never got an Ed25519 "
+                    "authentication certificate";
+                })
 
 #define TEST_RSA(name, flags)                                           \
   { #name , test_link_handshake_ ## name, (flags),                      \
@@ -1514,6 +1531,9 @@ struct testcase_t link_handshake_tests[] = {
   TEST_AUTHENTICATE(tooshort_1),
   TEST_AUTHENTICATE(badcontent),
   TEST_AUTHENTICATE(badsig_1),
+  TEST_AUTHENTICATE_ED(badsig_1),
+  TEST_AUTHENTICATE_ED(missing_ed_id),
+  TEST_AUTHENTICATE_ED(missing_ed_auth),
   //TEST_AUTHENTICATE(),
 
   END_OF_TESTCASES
