@@ -881,7 +881,11 @@ test_util_time(void *arg)
            b_time.tm_year == (1-1900))) {
       tt_int_op(b_time.tm_year, OP_EQ, 1970-1900);
     }
-    CHECK_TIMEGM_WARNING("Rounding up to ");
+    if (b_time.tm_year != 1970-1900) {
+      CHECK_TIMEGM_WARNING("Rounding up to ");
+    } else {
+      teardown_capture_of_logs();
+    }
   }
 #endif
 
