@@ -128,6 +128,7 @@ src_test_test_SOURCES = \
 	src/test/test_helpers.c \
 	src/test/test_dns.c \
 	src/test/testing_common.c \
+	src/test/testing_rsakeys.c \
 	src/ext/tinytest.c
 
 src_test_test_slow_SOURCES = \
@@ -135,6 +136,7 @@ src_test_test_slow_SOURCES = \
 	src/test/test_crypto_slow.c \
 	src/test/test_util_slow.c \
 	src/test/testing_common.c \
+	src/test/testing_rsakeys.c \
 	src/ext/tinytest.c
 
 src_test_test_memwipe_SOURCES = \

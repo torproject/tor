@@ -155,65 +155,6 @@ remove_directory(void)
   rm_rf(temp_dir);
 }
 
-/** Define this if unit tests spend too much time generating public keys*/
-#define CACHE_GENERATED_KEYS
-
-#define N_PREGEN_KEYS 11
-static crypto_pk_t *pregen_keys[N_PREGEN_KEYS];
-static int next_key_idx;
-
-/** Generate and return a new keypair for use in unit tests.  If we're using
- * the key cache optimization, we might reuse keys. "idx" is ignored.
- * Our only guarantee is that we won't reuse a key till this function has been
- * called several times. The order in which keys are returned is slightly
- * randomized, so that tests that depend on a particular order will not be
- * reliable. */
-crypto_pk_t *
-pk_generate(int idx)
-{
-  (void) idx;
-#ifdef CACHE_GENERATED_KEYS
-  /* Either skip 1 or 2 keys. */
-  next_key_idx += crypto_rand_int_range(1,3);
-  next_key_idx %= N_PREGEN_KEYS;
-  return crypto_pk_dup_key(pregen_keys[next_key_idx]);
-#else
-  crypto_pk_t *result;
-  int res;
-  result = crypto_pk_new();
-  res = crypto_pk_generate_key__real(result);
-  tor_assert(!res);
-  return result;
-#endif
-}
-
-#ifdef CACHE_GENERATED_KEYS
-static int
-crypto_pk_generate_key_with_bits__get_cached(crypto_pk_t *env, int bits)
-{
-  if (bits != 1024)
-    return crypto_pk_generate_key_with_bits__real(env, bits);
-
-  crypto_pk_t *newkey = pk_generate(0);
-  crypto_pk_assign_(env, newkey);
-  crypto_pk_free(newkey);
-  return 0;
-}
-#endif
-
-/** Free all storage used for the cached key optimization. */
-static void
-free_pregenerated_keys(void)
-{
-  unsigned idx;
-  for (idx = 0; idx < N_PREGEN_KEYS; ++idx) {
-    if (pregen_keys[idx]) {
-      crypto_pk_free(pregen_keys[idx]);
-      pregen_keys[idx] = NULL;
-    }
-  }
-}
-
 static void *
 passthrough_test_setup(const struct testcase_t *testcase)
 {
@@ -339,15 +280,7 @@ main(int c, const char **v)
   }
   tor_set_failed_assertion_callback(an_assertion_failed);
 
-#ifdef CACHE_GENERATED_KEYS
-  for (i = 0; i < N_PREGEN_KEYS; ++i) {
-    pregen_keys[i] = crypto_pk_new();
-    int r = crypto_pk_generate_key(pregen_keys[i]);
-    tor_assert(r == 0);
-  }
-  MOCK(crypto_pk_generate_key_with_bits,
-       crypto_pk_generate_key_with_bits__get_cached);
-#endif
+  init_pregenerated_keys();
 
   atexit(remove_directory);
 
