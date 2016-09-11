@@ -1,10 +1,9 @@
 /* Copyright (c) 2014-2016, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
-#include <math.h>
-
 #include "orconfig.h"
 
+#include <math.h>
 #include <event2/event.h>
 
 #define TOR_CHANNEL_INTERNAL_

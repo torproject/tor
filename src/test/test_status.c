@@ -3,6 +3,8 @@
 #define LOG_PRIVATE
 #define REPHIST_PRIVATE
 
+#include "orconfig.h"
+
 #include <float.h>
 #include <math.h>
 

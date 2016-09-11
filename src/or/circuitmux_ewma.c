@@ -8,6 +8,8 @@
 
 #define TOR_CIRCUITMUX_EWMA_C_
 
+#include "orconfig.h"
+
 #include <math.h>
 
 #include "or.h"

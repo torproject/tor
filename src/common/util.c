@@ -4702,13 +4702,13 @@ tor_get_exit_code(process_handle_t *process_handle,
     return PROCESS_EXIT_RUNNING;
   } else if (retval != process_handle->pid) {
     log_warn(LD_GENERAL, "waitpid() failed for PID %d: %s",
-             process_handle->pid, strerror(errno));
+             (int)process_handle->pid, strerror(errno));
     return PROCESS_EXIT_ERROR;
   }
 
   if (!WIFEXITED(stat_loc)) {
     log_warn(LD_GENERAL, "Process %d did not exit normally",
-             process_handle->pid);
+             (int)process_handle->pid);
     return PROCESS_EXIT_ERROR;
   }
 
