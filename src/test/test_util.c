@@ -5101,14 +5101,14 @@ is_there_a_localhost(void)
   s = tor_open_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   tor_assert(SOCKET_OK(s));
 
-  struct sockaddr_in sin;
-  memset(&sin, 0, sizeof(sin));
-  sin.sin_family = AF_INET;
-  sin.sin_addr.s_addr = htonl(0x7f000001);
-  sin.sin_port = 0;
+  struct sockaddr_in s_in;
+  memset(&s_in, 0, sizeof(s_in));
+  s_in.sin_family = AF_INET;
+  s_in.sin_addr.s_addr = htonl(0x7f000001);
+  s_in.sin_port = 0;
 
   int result = 0;
-  if (bind(s, (void*)&sin, sizeof(sin)) == 0) {
+  if (bind(s, (void*)&s_in, sizeof(s_in)) == 0) {
     result = 1;
   }
   tor_close_socket(s);
