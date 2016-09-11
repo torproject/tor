@@ -523,7 +523,8 @@ MOCK_IMPL(STATIC X509 *,
     goto error;
   if (!X509_set_pubkey(x509, pkey))
     goto error;
-  if (!X509_sign(x509, sign_pkey, EVP_sha1()))
+
+  if (!X509_sign(x509, sign_pkey, EVP_sha256()))
     goto error;
 
   goto done;
