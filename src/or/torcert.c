@@ -471,9 +471,6 @@ or_handshake_certs_rsa_ok(int severity,
   } else {
     if (! (id_cert && auth_cert))
       ERR("The certs we wanted (ID, Auth) were missing");
-    /* Remember these certificates so we can check an AUTHENTICATE cell
-     * XXXX make sure we do that
-     */
     if (! tor_tls_cert_is_valid(LOG_PROTOCOL_WARN, auth_cert, id_cert, now, 1))
       ERR("The authentication certificate was not valid");
     if (! tor_tls_cert_is_valid(LOG_PROTOCOL_WARN, id_cert, id_cert, now, 1))
@@ -517,6 +514,9 @@ or_handshake_certs_ed25519_ok(int severity,
       /* check for a match with the TLS cert. */
       tor_x509_cert_t *peer_cert = tor_tls_get_peer_cert(tls);
       if (BUG(!peer_cert)) {
+        /* This is a bug, because if we got to this point, we are a connection
+         * that was initiated here, and we completed a TLS handshake. The
+         * other side *must* have given us a certificate! */
         ERR("No x509 peer cert"); // LCOV_EXCL_LINE
       }
       const common_digests_t *peer_cert_digests =

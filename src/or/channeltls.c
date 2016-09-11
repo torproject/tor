@@ -2219,8 +2219,11 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
   }
 
   /* Length of random part. */
-  if (bodylen < 24)
+  if (BUG(bodylen < 24)) {
+    // LCOV_EXCL_START
     ERR("Bodylen is somehow less than 24, which should really be impossible");
+    // LCOV_EXCL_STOP
+  }
 
   if (tor_memneq(expected_cell->payload+4, auth, bodylen-24))
     ERR("Some field in the AUTHENTICATE cell body was not as expected");
@@ -2239,8 +2242,11 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
     size_t keysize;
     int signed_len;
 
-    if (!pk)
+    if (BUG(!pk)) {
+      // LCOV_EXCL_START
       ERR("Internal error: couldn't get RSA key from AUTH cert.");
+      // LCOV_EXCL_STOP
+    }
     crypto_digest256(d, (char*)auth, V3_AUTH_BODY_LEN, DIGEST_SHA256);
 
     keysize = crypto_pk_keysize(pk);
