@@ -1256,7 +1256,7 @@ compute_nth_protocol_set(int n, int n_voters, const smartlist_t *votes)
       smartlist_add(proto_votes, (void*)v);
   } SMARTLIST_FOREACH_END(ns);
 
-  char *protocols = compute_protover_vote(proto_votes, threshold);
+  char *protocols = protover_compute_vote(proto_votes, threshold);
   smartlist_free(proto_votes);
 
   char *result = NULL;

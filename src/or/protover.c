@@ -520,7 +520,7 @@ contract_protocol_list(const smartlist_t *proto_strings)
  * contract_protocol_list above.
  */
 char *
-compute_protover_vote(const smartlist_t *list_of_proto_strings,
+protover_compute_vote(const smartlist_t *list_of_proto_strings,
                       int threshold)
 {
   smartlist_t *all_entries = smartlist_new();
