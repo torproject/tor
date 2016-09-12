@@ -99,7 +99,8 @@
 
 ## A handle for your relay, so people don't have to refer to it by key.
 ## Nicknames must be between 1 and 19 characters inclusive, and must
-## contain only the characters [a-zA-Z0-9].
+## contain only the alphanumeric characters (a-z, A-Z, 0-9). No unicode,
+## no emoji.
 #Nickname ididnteditheconfig
 
 ## Define these to limit how much relayed traffic you will allow. Your
@@ -130,9 +131,12 @@
 ## descriptors containing these lines and that Google indexes them, so
 ## spammers might also collect them. You may want to obscure the fact that
 ## it's an email address and/or generate a new address for this purpose.
+## Notice that "<" and ">" are recommended.
 #ContactInfo Random Person <nobody AT example dot com>
-## You might also include your PGP or GPG fingerprint if you have one:
-#ContactInfo 0xFFFFFFFF Random Person <nobody AT example dot com>
+## You might also include your PGP or GPG fingerprint if you have one.
+## Use the full fingerprint, not just a (short) KeyID: KeyIDs are easy
+## to forge.
+#ContactInfo FFFFFFFFFFFFFFFFFFFF FFFFFFFFFFFFFFFFFFFF Random Person <nobody AT example dot com>
 
 ## Uncomment this to mirror directory information for others. Please do
 ## if you have enough bandwidth.
@@ -149,11 +153,12 @@
 ## distribution for a sample.
 #DirPortFrontPage @CONFDIR@/tor-exit-notice.html
 
-## Uncomment this if you run more than one Tor relay, and add the identity
-## key fingerprint of each Tor relay you control, even if they're on
-## different networks. You declare it here so Tor clients can avoid
-## using more than one of your relays in a single circuit. See
-## https://www.torproject.org/docs/faq#MultipleRelays
+## Uncomment this if you run more than one Tor relay, and add the
+## identity key fingerprint of each Tor relay you control, even if
+## they're on different networks. Include "$" with each key id. You
+## declare it here so Tor clients can avoid using more than one of
+## your relays in a single circuit.
+## See https://www.torproject.org/docs/faq#MultipleRelays
 ## However, you should never include a bridge's fingerprint here, as it would
 ## break its concealability and potentially reveal its IP/TCP address.
 #MyFamily $keyid,$keyid,...
@@ -203,4 +208,3 @@
 ## a private bridge, for example because you'll give out your bridge
 ## address manually to your friends, uncomment this line:
 #PublishServerDescriptor 0
-
