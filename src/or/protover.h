@@ -25,7 +25,7 @@ typedef enum protocol_type_t {
 
 int protover_all_supported(const char *s, char **missing);
 int protover_is_supported_here(protocol_type_t pr, uint32_t ver);
-const char *get_supported_protocols(void);
+const char *protover_get_supported_protocols(void);
 
 char *protover_compute_vote(const smartlist_t *list_of_proto_strings,
                             int threshold);

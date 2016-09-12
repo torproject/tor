@@ -2125,7 +2125,7 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
   get_platform_str(platform, sizeof(platform));
   ri->platform = tor_strdup(platform);
 
-  ri->protocol_list = tor_strdup(get_supported_protocols());
+  ri->protocol_list = tor_strdup(protover_get_supported_protocols());
 
   /* compute ri->bandwidthrate as the min of various options */
   ri->bandwidthrate = get_effective_bwrate(options);

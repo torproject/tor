@@ -260,7 +260,7 @@ protocol_list_supports_protocol(const char *list, protocol_type_t tp,
 /** Return the canonical string containing the list of protocols
  * that we support. */
 const char *
-get_supported_protocols(void)
+protover_get_supported_protocols(void)
 {
   return
     "Cons=1-2 "
@@ -274,8 +274,9 @@ get_supported_protocols(void)
     "Relay=1-2";
 }
 
-/** The protocols from get_supported_protocols(), as parsed into a list of
- * proto_entry_t values. Access this via get_supported_protocol_list. */
+/** The protocols from protover_get_supported_protocols(), as parsed into a
+ * list of proto_entry_t values. Access this via
+ * get_supported_protocol_list. */
 static smartlist_t *supported_protocol_list = NULL;
 
 /** Return a pointer to a smartlist of proto_entry_t for the protocols
@@ -284,7 +285,8 @@ static const smartlist_t *
 get_supported_protocol_list(void)
 {
   if (PREDICT_UNLIKELY(supported_protocol_list == NULL)) {
-    supported_protocol_list = parse_protocol_list(get_supported_protocols());
+    supported_protocol_list =
+      parse_protocol_list(protover_get_supported_protocols());
   }
   return supported_protocol_list;
 }
