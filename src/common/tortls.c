@@ -552,8 +552,7 @@ MOCK_IMPL(STATIC X509 *,
  * claiming extra unsupported ciphers in order to avoid fingerprinting.  */
 #define SERVER_CIPHER_LIST                         \
   (TLS1_TXT_DHE_RSA_WITH_AES_256_SHA ":"           \
-   TLS1_TXT_DHE_RSA_WITH_AES_128_SHA ":"           \
-   SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA)
+   TLS1_TXT_DHE_RSA_WITH_AES_128_SHA)
 
 /** List of ciphers that servers should select from when we actually have
  * our choice of what cipher to use. */
@@ -593,12 +592,8 @@ static const char UNRESTRICTED_SERVER_CIPHER_LIST[] =
        /* Required */
        TLS1_TXT_DHE_RSA_WITH_AES_256_SHA ":"
        /* Required */
-       TLS1_TXT_DHE_RSA_WITH_AES_128_SHA ":"
-#ifdef TLS1_TXT_ECDHE_RSA_WITH_DES_192_CBC3_SHA
-       TLS1_TXT_ECDHE_RSA_WITH_DES_192_CBC3_SHA ":"
-#endif
-       /* Required */
-       SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA;
+       TLS1_TXT_DHE_RSA_WITH_AES_128_SHA
+       ;
 
 /* Note: to set up your own private testing network with link crypto
  * disabled, set your Tors' cipher list to
