@@ -2868,6 +2868,7 @@ test_options_validate__single_onion(void *ignored)
   tt_str_op(msg, OP_EQ, "HiddenServiceNonAnonymousMode does not provide any "
             "server anonymity. It must be used with "
             "HiddenServiceSingleHopMode set to 1.");
+  tor_free(msg);
   free_options_test_data(tdata);
 
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
