@@ -125,6 +125,9 @@ static void routerstatus_list_update_named_server_map(void);
 static void update_consensus_bootstrap_multiple_downloads(
                                                   time_t now,
                                                   const or_options_t *options);
+static int networkstatus_check_required_protocols(const networkstatus_t *ns,
+                                                  int client_mode,
+                                                  char **warning_out);
 
 /** Forget that we've warned about anything networkstatus-related, so we will
  * give fresh warnings if the same behavior happens again. */
@@ -1553,17 +1556,35 @@ networkstatus_set_current_consensus_from_ns(networkstatus_t *c,
 }
 #endif //TOR_UNIT_TESTS
 
-/** Called when we have received a networkstatus <b>c</b>. If there are
- * any _required_ protocols we are missing, log an error and exit
- * immediately. If there are any _recommended_ protocols we are missing,
- * warn. */
+/**
+ * Return true if any option is set in <b>options</b> to make us behave
+ * as a client.
+ *
+ * XXXX If we need this elsewhere at any point, we should make it nonstatic
+ * XXXX and move it into another file.
+ */
+static int
+any_client_port_set(const or_options_t *options)
+{
+  return (options->SocksPort_set ||
+          options->TransPort_set ||
+          options->NATDPort_set ||
+          options->ControlPort_set ||
+          options->DNSPort_set);
+}
+
+/**
+ * Helper for handle_missing_protocol_warning: handles either the
+ * client case (if <b>is_client</b> is set) or the server case otherwise.
+ */
 static void
-handle_missing_protocol_warning(const networkstatus_t *c,
-                                const or_options_t *options)
+handle_missing_protocol_warning_impl(const networkstatus_t *c,
+                                     int is_client)
 {
   char *protocol_warning = NULL;
+
   int should_exit = networkstatus_check_required_protocols(c,
-                                                   !server_mode(options),
+                                                   is_client,
                                                    &protocol_warning);
   if (protocol_warning) {
     tor_log(should_exit ? LOG_ERR : LOG_WARN,
@@ -1576,6 +1597,23 @@ handle_missing_protocol_warning(const networkstatus_t *c,
   tor_free(protocol_warning);
   if (should_exit)
     exit(1);
+}
+
+/** Called when we have received a networkstatus <b>c</b>. If there are
+ * any _required_ protocols we are missing, log an error and exit
+ * immediately. If there are any _recommended_ protocols we are missing,
+ * warn. */
+static void
+handle_missing_protocol_warning(const networkstatus_t *c,
+                                const or_options_t *options)
+{
+  const int is_server = server_mode(options);
+  const int is_client = any_client_port_set(options) || !is_server;
+
+  if (is_server)
+    handle_missing_protocol_warning_impl(c, 0);
+  if (is_client)
+    handle_missing_protocol_warning_impl(c, 1);
 }
 
 /** Try to replace the current cached v3 networkstatus with the one in
