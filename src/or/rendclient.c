@@ -134,6 +134,7 @@ int
 rend_client_send_introduction(origin_circuit_t *introcirc,
                               origin_circuit_t *rendcirc)
 {
+  const or_options_t *options = get_options();
   size_t payload_len;
   int r, v3_shift = 0;
   char payload[RELAY_PAYLOAD_SIZE];
@@ -150,10 +151,8 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   tor_assert(rendcirc->rend_data);
   tor_assert(!rend_cmp_service_ids(introcirc->rend_data->onion_address,
                                    rendcirc->rend_data->onion_address));
-#ifndef NON_ANONYMOUS_MODE_ENABLED
-  tor_assert(!(introcirc->build_state->onehop_tunnel));
-  tor_assert(!(rendcirc->build_state->onehop_tunnel));
-#endif
+  assert_circ_anonymity_ok(introcirc, options);
+  assert_circ_anonymity_ok(rendcirc, options);
 
   r = rend_cache_lookup_entry(introcirc->rend_data->onion_address, -1,
                               &entry);
@@ -387,6 +386,7 @@ int
 rend_client_introduction_acked(origin_circuit_t *circ,
                                const uint8_t *request, size_t request_len)
 {
+  const or_options_t *options = get_options();
   origin_circuit_t *rendcirc;
   (void) request; // XXXX Use this.
 
@@ -398,10 +398,9 @@ rend_client_introduction_acked(origin_circuit_t *circ,
     return -1;
   }
 
+  tor_assert(circ->build_state);
   tor_assert(circ->build_state->chosen_exit);
-#ifndef NON_ANONYMOUS_MODE_ENABLED
-  tor_assert(!(circ->build_state->onehop_tunnel));
-#endif
+  assert_circ_anonymity_ok(circ, options);
   tor_assert(circ->rend_data);
 
   /* For path bias: This circuit was used successfully. Valid
@@ -416,9 +415,7 @@ rend_client_introduction_acked(origin_circuit_t *circ,
     log_info(LD_REND,"Received ack. Telling rend circ...");
     rendcirc = circuit_get_ready_rend_circ_by_rend_data(circ->rend_data);
     if (rendcirc) { /* remember the ack */
-#ifndef NON_ANONYMOUS_MODE_ENABLED
-      tor_assert(!(rendcirc->build_state->onehop_tunnel));
-#endif
+      assert_circ_anonymity_ok(rendcirc, options);
       circuit_change_purpose(TO_CIRCUIT(rendcirc),
                              CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED);
       /* Set timestamp_dirty, because circuit_expire_building expects
@@ -1525,5 +1522,37 @@ rend_parse_service_authorization(const or_options_t *options,
     strmap_free(parsed, rend_service_authorization_strmap_item_free);
   }
   return res;
+}
+
+/* Can Tor client code make direct (non-anonymous) connections to introduction
+ * or rendezvous points?
+ * Returns true if tor was compiled with NON_ANONYMOUS_MODE_ENABLED, and is
+ * configured in Tor2web mode. */
+int
+rend_client_allow_non_anonymous_connection(const or_options_t *options)
+{
+  /* Tor2web support needs to be compiled in to a tor binary. */
+#ifdef NON_ANONYMOUS_MODE_ENABLED
+  /* Tor2web */
+  return options->Tor2webMode ? 1 : 0;
+#else
+  (void)options;
+  return 0;
+#endif
+}
+
+/* At compile-time, was non-anonymous mode enabled via
+ * NON_ANONYMOUS_MODE_ENABLED ? */
+int
+rend_client_non_anonymous_mode_enabled(const or_options_t *options)
+{
+  (void)options;
+  /* Tor2web support needs to be compiled in to a tor binary. */
+#ifdef NON_ANONYMOUS_MODE_ENABLED
+  /* Tor2web */
+  return 1;
+#else
+  return 0;
+#endif
 }
 

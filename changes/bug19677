@@ -1,0 +1,6 @@
+  o Minor bug fixes (option parsing):
+    - Count unix sockets when counting client listeners (SOCKS, Trans,
+      NATD, and DNS). This has no user-visible behaviour changes: these
+      options are set once, and never read.
+      Required for correct behaviour in ticket #17178.
+      Fixes bug #19677, patch by teor.

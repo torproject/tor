@@ -28,6 +28,7 @@
 #include "connection_edge.h"
 #include "connection_or.h"
 #include "control.h"
+#include "crypto.h"
 #include "directory.h"
 #include "entrynodes.h"
 #include "main.h"
@@ -38,14 +39,14 @@
 #include "onion_tap.h"
 #include "onion_fast.h"
 #include "policies.h"
-#include "transports.h"
 #include "relay.h"
+#include "rendcommon.h"
 #include "rephist.h"
 #include "router.h"
 #include "routerlist.h"
 #include "routerparse.h"
 #include "routerset.h"
-#include "crypto.h"
+#include "transports.h"
 
 static channel_t * channel_connect_for_circuit(const tor_addr_t *addr,
                                                uint16_t port,
@@ -1859,13 +1860,32 @@ pick_rendezvous_node(router_crn_flags_t flags)
     flags |= CRN_ALLOW_INVALID;
 
 #ifdef ENABLE_TOR2WEB_MODE
+  /* We want to connect directly to the node if we can */
+  router_crn_flags_t direct_flags = flags;
+  direct_flags |= CRN_PREF_ADDR;
+  direct_flags |= CRN_DIRECT_CONN;
+
   /* The user wants us to pick specific RPs. */
   if (options->Tor2webRendezvousPoints) {
-    const node_t *tor2web_rp = pick_tor2web_rendezvous_node(flags, options);
+    const node_t *tor2web_rp = pick_tor2web_rendezvous_node(direct_flags,
+                                                            options);
     if (tor2web_rp) {
       return tor2web_rp;
     }
-    /* Else, if no tor2web RP was found, fall back to choosing a random node */
+  }
+
+  /* Else, if no direct, preferred tor2web RP was found, fall back to choosing
+   * a random direct node */
+  const node_t *node = router_choose_random_node(NULL, options->ExcludeNodes,
+                                                 direct_flags);
+  /* Return the direct node (if found), or log a message and fall back to an
+   * indirect connection. */
+  if (node) {
+    return node;
+  } else {
+    log_info(LD_REND,
+             "Unable to find a random rendezvous point that is reachable via "
+             "a direct connection, falling back to a 3-hop path.");
   }
 #endif
 
@@ -2000,7 +2020,9 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit_ei)
   cpath_build_state_t *state = circ->build_state;
 
   if (state->onehop_tunnel) {
-    log_debug(LD_CIRC, "Launching a one-hop circuit for dir tunnel.");
+    log_debug(LD_CIRC, "Launching a one-hop circuit for dir tunnel%s.",
+              (rend_allow_non_anonymous_connection(get_options()) ?
+               ", or intro or rendezvous connection" : ""));
     state->desired_path_len = 1;
   } else {
     int r = new_route_len(circ->base_.purpose, exit_ei, nodelist_get_list());

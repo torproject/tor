@@ -132,7 +132,10 @@ int download_status_get_n_failures(const download_status_t *dls);
 int download_status_get_n_attempts(const download_status_t *dls);
 time_t download_status_get_next_attempt_at(const download_status_t *dls);
 
+/* Yes, these two functions are confusingly similar.
+ * Let's sort that out in #20077. */
 int purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose);
+int is_sensitive_dir_purpose(uint8_t dir_purpose);
 
 #ifdef TOR_UNIT_TESTS
 /* Used only by directory.c and test_dir.c */

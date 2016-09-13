@@ -18,6 +18,7 @@
 #include "circuitlist.h"
 #include "circuitmux.h"
 #include "circuitmux_ewma.h"
+#include "circuitstats.h"
 #include "config.h"
 #include "connection.h"
 #include "connection_edge.h"
@@ -297,6 +298,8 @@ static config_var_t option_vars_[] = {
   V(HidServAuth,                 LINELIST, NULL),
   V(CloseHSClientCircuitsImmediatelyOnTimeout, BOOL, "0"),
   V(CloseHSServiceRendCircuitsImmediatelyOnTimeout, BOOL, "0"),
+  V(HiddenServiceSingleHopMode,  BOOL,     "0"),
+  V(HiddenServiceNonAnonymousMode,BOOL,    "0"),
   V(HTTPProxy,                   STRING,   NULL),
   V(HTTPProxyAuthenticator,      STRING,   NULL),
   V(HTTPSProxy,                  STRING,   NULL),
@@ -434,7 +437,7 @@ static config_var_t option_vars_[] = {
   OBSOLETE("TunnelDirConns"),
   V(UpdateBridgesFromAuthority,  BOOL,     "0"),
   V(UseBridges,                  BOOL,     "0"),
-  V(UseEntryGuards,              BOOL,     "1"),
+  VAR("UseEntryGuards",          BOOL,     UseEntryGuards_option, "1"),
   V(UseEntryGuardsAsDirGuards,   BOOL,     "1"),
   V(UseGuardFraction,            AUTOBOOL, "auto"),
   V(UseMicrodescriptors,         AUTOBOOL, "auto"),
@@ -1558,10 +1561,10 @@ options_act(const or_options_t *old_options)
   if (consider_adding_dir_servers(options, old_options) < 0)
     return -1;
 
-#ifdef NON_ANONYMOUS_MODE_ENABLED
-  log_warn(LD_GENERAL, "This copy of Tor was compiled to run in a "
-      "non-anonymous mode. It will provide NO ANONYMITY.");
-#endif
+  if (rend_non_anonymous_mode_enabled(options)) {
+    log_warn(LD_GENERAL, "This copy of Tor was compiled or configured to run "
+             "in a non-anonymous mode. It will provide NO ANONYMITY.");
+  }
 
 #ifdef ENABLE_TOR2WEB_MODE
 /* LCOV_EXCL_START */
@@ -1723,8 +1726,27 @@ options_act(const or_options_t *old_options)
 
   monitor_owning_controller_process(options->OwningControllerProcess);
 
+  /* We must create new keys after we poison the directories, because our
+   * poisoning code checks for existing keys, and refuses to modify their
+   * directories. */
+
+  /* If we use non-anonymous single onion services, make sure we poison any
+     new hidden service directories, so that we never accidentally launch the
+     non-anonymous hidden services thinking they are anonymous. */
+  if (running_tor && rend_service_non_anonymous_mode_enabled(options)) {
+    if (options->RendConfigLines && !num_rend_services()) {
+      log_warn(LD_BUG,"Error: hidden services configured, but not parsed.");
+      return -1;
+    }
+    if (rend_service_poison_new_single_onion_dirs(NULL) < 0) {
+      log_warn(LD_GENERAL,"Failed to mark new hidden services as non-anonymous"
+               ".");
+      return -1;
+    }
+  }
+
   /* reload keys as needed for rendezvous services. */
-  if (rend_service_load_all_keys()<0) {
+  if (rend_service_load_all_keys(NULL)<0) {
     log_warn(LD_GENERAL,"Error loading rendezvous service keys");
     return -1;
   }
@@ -2796,6 +2818,86 @@ warn_about_relative_paths(or_options_t *options)
   }
 }
 
+/* Validate options related to single onion services.
+ * Modifies some options that are incompatible with single onion services.
+ * On failure returns -1, and sets *msg to an error string.
+ * Returns 0 on success. */
+STATIC int
+options_validate_single_onion(or_options_t *options, char **msg)
+{
+  /* The two single onion service options must have matching values. */
+  if (options->HiddenServiceSingleHopMode &&
+      !options->HiddenServiceNonAnonymousMode) {
+    REJECT("HiddenServiceSingleHopMode does not provide any server anonymity. "
+           "It must be used with HiddenServiceNonAnonymousMode set to 1.");
+  }
+  if (options->HiddenServiceNonAnonymousMode &&
+      !options->HiddenServiceSingleHopMode) {
+    REJECT("HiddenServiceNonAnonymousMode does not provide any server "
+           "anonymity. It must be used with HiddenServiceSingleHopMode set to "
+           "1.");
+  }
+
+  /* Now that we've checked that the two options are consistent, we can safely
+   * call the rend_service_* functions that abstract these options. */
+
+  /* If you run an anonymous client with an active Single Onion service, the
+   * client loses anonymity. */
+  const int client_port_set = (options->SocksPort_set ||
+                               options->TransPort_set ||
+                               options->NATDPort_set ||
+                               options->DNSPort_set);
+  if (rend_service_non_anonymous_mode_enabled(options) && client_port_set &&
+      !options->Tor2webMode) {
+    REJECT("HiddenServiceNonAnonymousMode is incompatible with using Tor as "
+           "an anonymous client. Please set Socks/Trans/NATD/DNSPort to 0, or "
+           "HiddenServiceNonAnonymousMode to 0, or use the non-anonymous "
+           "Tor2webMode.");
+  }
+
+  /* If you run a hidden service in non-anonymous mode, the hidden service
+   * loses anonymity, even if SOCKSPort / Tor2web mode isn't used. */
+  if (!rend_service_non_anonymous_mode_enabled(options) &&
+      options->RendConfigLines && options->Tor2webMode) {
+    REJECT("Non-anonymous (Tor2web) mode is incompatible with using Tor as a "
+           "hidden service. Please remove all HiddenServiceDir lines, or use "
+           "a version of tor compiled without --enable-tor2web-mode, or use "
+           " HiddenServiceNonAnonymousMode.");
+  }
+
+  if (rend_service_allow_non_anonymous_connection(options)
+      && options->UseEntryGuards) {
+    /* Single Onion services only use entry guards when uploading descriptors,
+     * all other connections are one-hop. Further, Single Onions causes the
+     * hidden service code to do things which break the path bias
+     * detector, and it's far easier to turn off entry guards (and
+     * thus the path bias detector with it) than to figure out how to
+     * make path bias compatible with single onions.
+     */
+    log_notice(LD_CONFIG,
+               "HiddenServiceSingleHopMode is enabled; disabling "
+               "UseEntryGuards.");
+    options->UseEntryGuards = 0;
+  }
+
+  /* Check if existing hidden service keys were created in a different
+   * single onion service mode, and refuse to launch if they
+   * have. We'll poison new keys in options_act() just before we create them.
+   */
+  if (rend_service_list_verify_single_onion_poison(NULL, options) < 0) {
+    log_warn(LD_GENERAL, "We are configured with "
+             "HiddenServiceNonAnonymousMode %d, but one or more hidden "
+             "service keys were created in %s mode. This is not allowed.",
+             rend_service_non_anonymous_mode_enabled(options) ? 1 : 0,
+             rend_service_non_anonymous_mode_enabled(options) ?
+             "an anonymous" : "a non-anonymous"
+             );
+    return -1;
+  }
+
+  return 0;
+}
+
 /** Return 0 if every setting in <b>options</b> is reasonable, is a
  * permissible transition from <b>old_options</b>, and none of the
  * testing-only settings differ from <b>default_options</b> unless in
@@ -2821,6 +2923,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   tor_assert(msg);
   *msg = NULL;
+
+  /* Set UseEntryGuards from the configured value, before we check it below.
+   * We change UseEntryGuards whenn it's incompatible with other options,
+   * but leave UseEntryGuards_option with the original value.
+   * Always use the value of UseEntryGuards, not UseEntryGuards_option. */
+  options->UseEntryGuards = options->UseEntryGuards_option;
 
   warn_about_relative_paths(options);
 
@@ -3197,10 +3305,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->UseBridges && options->EntryNodes)
     REJECT("You cannot set both UseBridges and EntryNodes.");
 
-  if (options->EntryNodes && !options->UseEntryGuards) {
-    REJECT("If EntryNodes is set, UseEntryGuards must be enabled.");
-  }
-
   options->MaxMemInQueues =
     compute_real_max_mem_in_queues(options->MaxMemInQueues_raw,
                                    server_mode(options));
@@ -3291,25 +3395,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
     options->PredictedPortsRelevanceTime = MAX_PREDICTED_CIRCS_RELEVANCE;
   }
 
-#ifdef ENABLE_TOR2WEB_MODE
-  if (options->Tor2webMode && options->LearnCircuitBuildTimeout) {
-    /* LearnCircuitBuildTimeout and Tor2webMode are incompatible in
-     * two ways:
-     *
-     * - LearnCircuitBuildTimeout results in a low CBT, which
-     *   Tor2webMode's use of one-hop rendezvous circuits lowers
-     *   much further, producing *far* too many timeouts.
-     *
-     * - The adaptive CBT code does not update its timeout estimate
-     *   using build times for single-hop circuits.
-     *
-     * If we fix both of these issues someday, we should test
-     * Tor2webMode with LearnCircuitBuildTimeout on again. */
-    log_notice(LD_CONFIG,"Tor2webMode is enabled; turning "
-               "LearnCircuitBuildTimeout off.");
-    options->LearnCircuitBuildTimeout = 0;
-  }
+  /* Check the Single Onion Service options */
+  if (options_validate_single_onion(options, msg) < 0)
+    return -1;
 
+#ifdef ENABLE_TOR2WEB_MODE
   if (options->Tor2webMode && options->UseEntryGuards) {
     /* tor2web mode clients do not (and should not) use entry guards
      * in any meaningful way.  Further, tor2web mode causes the hidden
@@ -3329,8 +3419,13 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("Tor2webRendezvousPoints cannot be set without Tor2webMode.");
   }
 
+  if (options->EntryNodes && !options->UseEntryGuards) {
+    REJECT("If EntryNodes is set, UseEntryGuards must be enabled.");
+  }
+
   if (!(options->UseEntryGuards) &&
-      (options->RendConfigLines != NULL)) {
+      (options->RendConfigLines != NULL) &&
+      !rend_service_allow_non_anonymous_connection(options)) {
     log_warn(LD_CONFIG,
              "UseEntryGuards is disabled, but you have configured one or more "
              "hidden services on this Tor instance.  Your hidden services "
@@ -3353,6 +3448,17 @@ options_validate(or_options_t *old_options, or_options_t *options,
     return -1;
   }
 
+  /* Single Onion Services: non-anonymous hidden services */
+  if (rend_service_non_anonymous_mode_enabled(options)) {
+    log_warn(LD_CONFIG,
+             "HiddenServiceNonAnonymousMode is set. Every hidden service on "
+             "this tor instance is NON-ANONYMOUS. If "
+             "the HiddenServiceNonAnonymousMode option is changed, Tor will "
+             "refuse to launch hidden services from the same directories, to "
+             "protect your anonymity against config errors. This setting is "
+             "for experimental use only.");
+  }
+
   if (!options->LearnCircuitBuildTimeout && options->CircuitBuildTimeout &&
       options->CircuitBuildTimeout < RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT) {
     log_warn(LD_CONFIG,
@@ -3364,8 +3470,15 @@ options_validate(or_options_t *old_options, or_options_t *options,
         RECOMMENDED_MIN_CIRCUIT_BUILD_TIMEOUT );
   } else if (!options->LearnCircuitBuildTimeout &&
              !options->CircuitBuildTimeout) {
-    log_notice(LD_CONFIG, "You disabled LearnCircuitBuildTimeout, but didn't "
-               "a CircuitBuildTimeout. I'll pick a plausible default.");
+    int severity = LOG_NOTICE;
+    /* Be a little quieter if we've deliberately disabled
+     * LearnCircuitBuildTimeout. */
+    if (circuit_build_times_disabled()) {
+      severity = LOG_INFO;
+    }
+    log_fn(severity, LD_CONFIG, "You disabled LearnCircuitBuildTimeout, but "
+           "didn't specify a CircuitBuildTimeout. I'll pick a plausible "
+           "default.");
   }
 
   if (options->PathBiasNoticeRate > 1.0) {
@@ -4292,6 +4405,19 @@ options_transition_allowed(const or_options_t *old,
   if (old->TokenBucketRefillInterval != new_val->TokenBucketRefillInterval) {
     *msg = tor_strdup("While Tor is running, changing TokenBucketRefill"
                       "Interval is not allowed");
+    return -1;
+  }
+
+  if (old->HiddenServiceSingleHopMode != new_val->HiddenServiceSingleHopMode) {
+    *msg = tor_strdup("While Tor is running, changing "
+                      "HiddenServiceSingleHopMode is not allowed.");
+    return -1;
+  }
+
+  if (old->HiddenServiceNonAnonymousMode !=
+      new_val->HiddenServiceNonAnonymousMode) {
+    *msg = tor_strdup("While Tor is running, changing "
+                      "HiddenServiceNonAnonymousMode is not allowed.");
     return -1;
   }
 
@@ -6777,14 +6903,17 @@ parse_port_config(smartlist_t *out,
 }
 
 /** Return the number of ports which are actually going to listen with type
- * <b>listenertype</b>.  Do not count no_listen ports.  Do not count unix
- * sockets. */
+ * <b>listenertype</b>.  Do not count no_listen ports.  Only count unix
+ * sockets if count_sockets is true. */
 static int
-count_real_listeners(const smartlist_t *ports, int listenertype)
+count_real_listeners(const smartlist_t *ports, int listenertype,
+                     int count_sockets)
 {
   int n = 0;
   SMARTLIST_FOREACH_BEGIN(ports, port_cfg_t *, port) {
-    if (port->server_cfg.no_listen || port->is_unix_addr)
+    if (port->server_cfg.no_listen)
+      continue;
+    if (!count_sockets && port->is_unix_addr)
       continue;
     if (port->type != listenertype)
       continue;
@@ -6793,9 +6922,8 @@ count_real_listeners(const smartlist_t *ports, int listenertype)
   return n;
 }
 
-/** Parse all client port types (Socks, DNS, Trans, NATD) from
- * <b>options</b>. On success, set *<b>n_ports_out</b> to the number
- * of ports that are listed, update the *Port_set values in
+/** Parse all ports from <b>options</b>. On success, set *<b>n_ports_out</b>
+ * to the number of ports that are listed, update the *Port_set values in
  * <b>options</b>, and return 0.  On failure, set *<b>msg</b> to a
  * description of the problem and return -1.
  *
@@ -6921,21 +7049,22 @@ parse_ports(or_options_t *options, int validate_only,
   /* Update the *Port_set options.  The !! here is to force a boolean out of
      an integer. */
   options->ORPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_OR_LISTENER);
+    !! count_real_listeners(ports, CONN_TYPE_OR_LISTENER, 0);
   options->SocksPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_AP_LISTENER);
+    !! count_real_listeners(ports, CONN_TYPE_AP_LISTENER, 1);
   options->TransPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_AP_TRANS_LISTENER);
+    !! count_real_listeners(ports, CONN_TYPE_AP_TRANS_LISTENER, 1);
   options->NATDPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_AP_NATD_LISTENER);
+    !! count_real_listeners(ports, CONN_TYPE_AP_NATD_LISTENER, 1);
+  /* Use options->ControlSocket to test if a control socket is set */
   options->ControlPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_CONTROL_LISTENER);
+    !! count_real_listeners(ports, CONN_TYPE_CONTROL_LISTENER, 0);
   options->DirPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_DIR_LISTENER);
+    !! count_real_listeners(ports, CONN_TYPE_DIR_LISTENER, 0);
   options->DNSPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_AP_DNS_LISTENER);
+    !! count_real_listeners(ports, CONN_TYPE_AP_DNS_LISTENER, 1);
   options->ExtORPort_set =
-    !! count_real_listeners(ports, CONN_TYPE_EXT_OR_LISTENER);
+    !! count_real_listeners(ports, CONN_TYPE_EXT_OR_LISTENER, 0);
 
   if (world_writable_control_socket) {
     SMARTLIST_FOREACH(ports, port_cfg_t *, p,

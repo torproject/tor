@@ -166,6 +166,8 @@ extern struct config_format_t options_format;
 STATIC port_cfg_t *port_cfg_new(size_t namelen);
 STATIC void port_cfg_free(port_cfg_t *port);
 STATIC void or_options_free(or_options_t *options);
+STATIC int options_validate_single_onion(or_options_t *options,
+                                         char **msg);
 STATIC int options_validate(or_options_t *old_options,
                             or_options_t *options,
                             or_options_t *default_options,

@@ -20,6 +20,7 @@
 #include "main.h"
 #include "networkstatus.h"
 #include "nodelist.h"
+#include "policies.h"
 #include "rendclient.h"
 #include "rendcommon.h"
 #include "rendservice.h"
@@ -107,59 +108,13 @@ struct rend_service_port_config_s {
  * rendezvous point before giving up? */
 #define MAX_REND_TIMEOUT 30
 
-/** Represents a single hidden service running at this OP. */
-typedef struct rend_service_t {
-  /* Fields specified in config file */
-  char *directory; /**< where in the filesystem it stores it. Will be NULL if
-                    * this service is ephemeral. */
-  int dir_group_readable; /**< if 1, allow group read
-                             permissions on directory */
-  smartlist_t *ports; /**< List of rend_service_port_config_t */
-  rend_auth_type_t auth_type; /**< Client authorization type or 0 if no client
-                               * authorization is performed. */
-  smartlist_t *clients; /**< List of rend_authorized_client_t's of
-                         * clients that may access our service. Can be NULL
-                         * if no client authorization is performed. */
-  /* Other fields */
-  crypto_pk_t *private_key; /**< Permanent hidden-service key. */
-  char service_id[REND_SERVICE_ID_LEN_BASE32+1]; /**< Onion address without
-                                                  * '.onion' */
-  char pk_digest[DIGEST_LEN]; /**< Hash of permanent hidden-service key. */
-  smartlist_t *intro_nodes; /**< List of rend_intro_point_t's we have,
-                             * or are trying to establish. */
-  /** List of rend_intro_point_t that are expiring. They are removed once
-   * the new descriptor is successfully uploaded. A node in this list CAN
-   * NOT appear in the intro_nodes list. */
-  smartlist_t *expiring_nodes;
-  time_t intro_period_started; /**< Start of the current period to build
-                                * introduction points. */
-  int n_intro_circuits_launched; /**< Count of intro circuits we have
-                                  * established in this period. */
-  unsigned int n_intro_points_wanted; /**< Number of intro points this
-                                       * service wants to have open. */
-  rend_service_descriptor_t *desc; /**< Current hidden service descriptor. */
-  time_t desc_is_dirty; /**< Time at which changes to the hidden service
-                         * descriptor content occurred, or 0 if it's
-                         * up-to-date. */
-  time_t next_upload_time; /**< Scheduled next hidden service descriptor
-                            * upload time. */
-  /** Replay cache for Diffie-Hellman values of INTRODUCE2 cells, to
-   * detect repeats.  Clients may send INTRODUCE1 cells for the same
-   * rendezvous point through two or more different introduction points;
-   * when they do, this keeps us from launching multiple simultaneous attempts
-   * to connect to the same rend point. */
-  replaycache_t *accepted_intro_dh_parts;
-  /** If true, we don't close circuits for making requests to unsupported
-   * ports. */
-  int allow_unknown_ports;
-  /** The maximum number of simultanious streams-per-circuit that are allowed
-   * to be established, or 0 if no limit is set.
-   */
-  int max_streams_per_circuit;
-  /** If true, we close circuits that exceed the max_streams_per_circuit
-   * limit.  */
-  int max_streams_close_circuit;
-} rend_service_t;
+/* Hidden service directory file names:
+ * new file names should be added to rend_service_add_filenames_to_list()
+ * for sandboxing purposes. */
+static const char *private_key_fname = "private_key";
+static const char *hostname_fname = "hostname";
+static const char *client_keys_fname = "client_keys";
+static const char *sos_poison_fname = "onion_service_non_anonymous";
 
 /** Returns a escaped string representation of the service, <b>s</b>.
  */
@@ -206,16 +161,18 @@ rend_authorized_client_strmap_item_free(void *authorized_client)
 
 /** Release the storage held by <b>service</b>.
  */
-static void
+STATIC void
 rend_service_free(rend_service_t *service)
 {
   if (!service)
     return;
 
   tor_free(service->directory);
-  SMARTLIST_FOREACH(service->ports, rend_service_port_config_t*, p,
-                    rend_service_port_config_free(p));
-  smartlist_free(service->ports);
+  if (service->ports) {
+    SMARTLIST_FOREACH(service->ports, rend_service_port_config_t*, p,
+                      rend_service_port_config_free(p));
+    smartlist_free(service->ports);
+  }
   if (service->private_key)
     crypto_pk_free(service->private_key);
   if (service->intro_nodes) {
@@ -1001,13 +958,235 @@ rend_service_update_descriptor(rend_service_t *service)
   }
 }
 
-/** Load and/or generate private keys for all hidden services, possibly
- * including keys for client authorization.  Return 0 on success, -1 on
- * failure. */
-int
-rend_service_load_all_keys(void)
+/* Allocate and return a string containing the path to file_name in
+ * service->directory. Asserts that service has a directory.
+ * This function will never return NULL.
+ * The caller must free this path. */
+static char *
+rend_service_path(const rend_service_t *service, const char *file_name)
 {
-  SMARTLIST_FOREACH_BEGIN(rend_service_list, rend_service_t *, s) {
+  char *file_path = NULL;
+
+  tor_assert(service->directory);
+
+  /* Can never fail: asserts rather than leaving file_path NULL. */
+  tor_asprintf(&file_path, "%s%s%s",
+               service->directory, PATH_SEPARATOR, file_name);
+
+  return file_path;
+}
+
+/* Allocate and return a string containing the path to the single onion
+ * service poison file in service->directory. Asserts that service has a
+ * directory.
+ * The caller must free this path. */
+STATIC char *
+rend_service_sos_poison_path(const rend_service_t *service)
+{
+  return rend_service_path(service, sos_poison_fname);
+}
+
+/** Return True if hidden services <b>service> has been poisoned by single
+ * onion mode. */
+static int
+service_is_single_onion_poisoned(const rend_service_t *service)
+{
+  char *poison_fname = NULL;
+  file_status_t fstatus;
+
+  if (!service->directory) {
+    return 0;
+  }
+
+  poison_fname = rend_service_sos_poison_path(service);
+
+  fstatus = file_status(poison_fname);
+  tor_free(poison_fname);
+
+  /* If this fname is occupied, the hidden service has been poisoned. */
+  if (fstatus == FN_FILE || fstatus == FN_EMPTY) {
+    return 1;
+  }
+
+  return 0;
+}
+
+/* Return 1 if the private key file for service exists and has a non-zero size,
+ * and 0 otherwise. */
+static int
+rend_service_private_key_exists(const rend_service_t *service)
+{
+  char *private_key_path = rend_service_path(service, private_key_fname);
+  const file_status_t private_key_status = file_status(private_key_path);
+  tor_free(private_key_path);
+  /* Only non-empty regular private key files could have been used before. */
+  return private_key_status == FN_FILE;
+}
+
+/** Check the single onion service poison state of all existing hidden service
+ * directories:
+ * - If each service is poisoned, and we are in Single Onion Mode,
+ *   return 0,
+ * - If each service is not poisoned, and we are not in Single Onion Mode,
+ *   return 0,
+ * - Otherwise, the poison state is invalid, and a service that was created in
+ *   one mode is being used in the other, return -1.
+ * Hidden service directories without keys are not checked for consistency.
+ * When their keys are created, they will be poisoned (if needed).
+ * If a <b>service_list</b> is provided, treat it
+ * as the list of hidden services (used in unittests). */
+int
+rend_service_list_verify_single_onion_poison(const smartlist_t *service_list,
+                                             const or_options_t *options)
+{
+  const smartlist_t *s_list;
+  /* If no special service list is provided, then just use the global one. */
+  if (!service_list) {
+    if (!rend_service_list) { /* No global HS list. Nothing to see here. */
+      return 0;
+    }
+
+    s_list = rend_service_list;
+  } else {
+    s_list = service_list;
+  }
+
+  int consistent = 1;
+  SMARTLIST_FOREACH_BEGIN(s_list, const rend_service_t *, s) {
+    if (service_is_single_onion_poisoned(s) !=
+        rend_service_non_anonymous_mode_enabled(options) &&
+        rend_service_private_key_exists(s)) {
+      consistent = 0;
+    }
+  } SMARTLIST_FOREACH_END(s);
+
+  return consistent ? 0 : -1;
+}
+
+/*** Helper for rend_service_poison_new_single_onion_dirs(). Add a file to
+ * this hidden service directory that marks it as a single onion service.
+ * Tor must be in single onion mode before calling this function.
+ * Returns 0 when a directory is successfully poisoned, or if it is already
+ * poisoned. Returns -1 on a failure to read the directory or write the poison
+ * file, or if there is an existing private key file in the directory. (The
+ * service should have been poisoned when the key was created.) */
+static int
+poison_new_single_onion_hidden_service_dir(const rend_service_t *service)
+{
+  /* We must only poison directories if we're in Single Onion mode */
+  tor_assert(rend_service_non_anonymous_mode_enabled(get_options()));
+
+  int fd;
+  int retval = -1;
+  char *poison_fname = NULL;
+
+  if (!service->directory) {
+    log_info(LD_REND, "Ephemeral HS started in non-anonymous mode.");
+    return 0;
+  }
+
+  /* Make sure we're only poisoning new hidden service directories */
+  if (rend_service_private_key_exists(service)) {
+    log_warn(LD_BUG, "Tried to single onion poison a service directory after "
+             "the private key was created.");
+    return -1;
+  }
+
+  poison_fname = rend_service_sos_poison_path(service);
+
+  switch (file_status(poison_fname)) {
+  case FN_DIR:
+  case FN_ERROR:
+    log_warn(LD_FS, "Can't read single onion poison file \"%s\"",
+             poison_fname);
+    goto done;
+  case FN_FILE: /* single onion poison file already exists. NOP. */
+  case FN_EMPTY: /* single onion poison file already exists. NOP. */
+    log_debug(LD_FS, "Tried to re-poison a single onion poisoned file \"%s\"",
+              poison_fname);
+    break;
+  case FN_NOENT:
+    fd = tor_open_cloexec(poison_fname, O_RDWR|O_CREAT|O_TRUNC, 0600);
+    if (fd < 0) {
+      log_warn(LD_FS, "Could not create single onion poison file %s",
+               poison_fname);
+      goto done;
+    }
+    close(fd);
+    break;
+  default:
+    tor_assert(0);
+  }
+
+  retval = 0;
+
+ done:
+  tor_free(poison_fname);
+
+  return retval;
+}
+
+/** We just got launched in Single Onion Mode. That's a non-anoymous
+ * mode for hidden services; hence we should mark all new hidden service
+ * directories appropriately so that they are never launched as
+ * location-private hidden services again. (New directories don't have private
+ * key files.)
+ * If a <b>service_list</b> is provided, treat it as the list of hidden
+ * services (used in unittests).
+ * Return 0 on success, -1 on fail. */
+int
+rend_service_poison_new_single_onion_dirs(const smartlist_t *service_list)
+{
+  /* We must only poison directories if we're in Single Onion mode */
+  tor_assert(rend_service_non_anonymous_mode_enabled(get_options()));
+
+  const smartlist_t *s_list;
+  /* If no special service list is provided, then just use the global one. */
+  if (!service_list) {
+    if (!rend_service_list) { /* No global HS list. Nothing to see here. */
+      return 0;
+    }
+
+    s_list = rend_service_list;
+  } else {
+    s_list = service_list;
+  }
+
+  SMARTLIST_FOREACH_BEGIN(s_list, const rend_service_t *, s) {
+    if (!rend_service_private_key_exists(s)) {
+      if (poison_new_single_onion_hidden_service_dir(s) < 0) {
+        return -1;
+      }
+    }
+  } SMARTLIST_FOREACH_END(s);
+
+  /* The keys for these services are linked to the server IP address */
+  log_notice(LD_REND, "The configured onion service directories have been "
+             "used in single onion mode. They can not be used for anonymous "
+             "hidden services.");
+
+  return 0;
+}
+
+/** Load and/or generate private keys for all hidden services, possibly
+ * including keys for client authorization.
+ * If a <b>service_list</b> is provided, treat it as the list of hidden
+ * services (used in unittests). Otherwise, require that rend_service_list is
+ * not NULL.
+ * Return 0 on success, -1 on failure. */
+int
+rend_service_load_all_keys(const smartlist_t *service_list)
+{
+  const smartlist_t *s_list;
+  /* If no special service list is provided, then just use the global one. */
+  if (!service_list) {
+    tor_assert(rend_service_list);
+    s_list = rend_service_list;
+  } else {
+    s_list = service_list;
+  }
+
+  SMARTLIST_FOREACH_BEGIN(s_list, rend_service_t *, s) {
     if (s->private_key)
       continue;
     log_info(LD_REND, "Loading hidden-service keys from \"%s\"",
@@ -1027,12 +1206,10 @@ rend_service_add_filenames_to_list(smartlist_t *lst, const rend_service_t *s)
   tor_assert(lst);
   tor_assert(s);
   tor_assert(s->directory);
-  smartlist_add_asprintf(lst, "%s"PATH_SEPARATOR"private_key",
-                         s->directory);
-  smartlist_add_asprintf(lst, "%s"PATH_SEPARATOR"hostname",
-                         s->directory);
-  smartlist_add_asprintf(lst, "%s"PATH_SEPARATOR"client_keys",
-                         s->directory);
+  smartlist_add(lst, rend_service_path(s, private_key_fname));
+  smartlist_add(lst, rend_service_path(s, hostname_fname));
+  smartlist_add(lst, rend_service_path(s, client_keys_fname));
+  smartlist_add(lst, rend_service_sos_poison_path(s));
 }
 
 /** Add to <b>open_lst</b> every filename used by a configured hidden service,
@@ -1076,7 +1253,7 @@ rend_service_derive_key_digests(struct rend_service_t *s)
 static int
 rend_service_load_keys(rend_service_t *s)
 {
-  char fname[512];
+  char *fname = NULL;
   char buf[128];
   cpd_check_t  check_opts = CPD_CREATE;
 
@@ -1085,7 +1262,7 @@ rend_service_load_keys(rend_service_t *s)
   }
   /* Check/create directory */
   if (check_private_dir(s->directory, check_opts, get_options()->User) < 0) {
-    return -1;
+    goto err;
   }
 #ifndef _WIN32
   if (s->dir_group_readable) {
@@ -1097,34 +1274,23 @@ rend_service_load_keys(rend_service_t *s)
 #endif
 
   /* Load key */
-  if (strlcpy(fname,s->directory,sizeof(fname)) >= sizeof(fname) ||
-      strlcat(fname,PATH_SEPARATOR"private_key",sizeof(fname))
-         >= sizeof(fname)) {
-    log_warn(LD_CONFIG, "Directory name too long to store key file: \"%s\".",
-             s->directory);
-    return -1;
-  }
+  fname = rend_service_path(s, private_key_fname);
   s->private_key = init_key_from_file(fname, 1, LOG_ERR, 0);
+
   if (!s->private_key)
-    return -1;
+    goto err;
 
   if (rend_service_derive_key_digests(s) < 0)
-    return -1;
+    goto err;
 
+  tor_free(fname);
   /* Create service file */
-  if (strlcpy(fname,s->directory,sizeof(fname)) >= sizeof(fname) ||
-      strlcat(fname,PATH_SEPARATOR"hostname",sizeof(fname))
-      >= sizeof(fname)) {
-    log_warn(LD_CONFIG, "Directory name too long to store hostname file:"
-             " \"%s\".", s->directory);
-    return -1;
-  }
+  fname = rend_service_path(s, hostname_fname);
 
   tor_snprintf(buf, sizeof(buf),"%s.onion\n", s->service_id);
   if (write_str_to_file(fname,buf,0)<0) {
     log_warn(LD_CONFIG, "Could not write onion address to hostname file.");
-    memwipe(buf, 0, sizeof(buf));
-    return -1;
+    goto err;
   }
 #ifndef _WIN32
   if (s->dir_group_readable) {
@@ -1135,15 +1301,21 @@ rend_service_load_keys(rend_service_t *s)
   }
 #endif
 
-  memwipe(buf, 0, sizeof(buf));
-
   /* If client authorization is configured, load or generate keys. */
   if (s->auth_type != REND_NO_AUTH) {
-    if (rend_service_load_auth_keys(s, fname) < 0)
-      return -1;
+    if (rend_service_load_auth_keys(s, fname) < 0) {
+      goto err;
+    }
   }
 
-  return 0;
+  int r = 0;
+  goto done;
+ err:
+  r = -1;
+ done:
+  memwipe(buf, 0, sizeof(buf));
+  tor_free(fname);
+  return r;
 }
 
 /** Load and/or generate client authorization keys for the hidden service
@@ -1153,7 +1325,7 @@ static int
 rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
 {
   int r = 0;
-  char cfname[512];
+  char *cfname = NULL;
   char *client_keys_str = NULL;
   strmap_t *parsed_clients = strmap_new();
   FILE *cfile, *hfile;
@@ -1163,12 +1335,7 @@ rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
   char buf[1500];
 
   /* Load client keys and descriptor cookies, if available. */
-  if (tor_snprintf(cfname, sizeof(cfname), "%s"PATH_SEPARATOR"client_keys",
-                   s->directory)<0) {
-    log_warn(LD_CONFIG, "Directory name too long to store client keys "
-             "file: \"%s\".", s->directory);
-    goto err;
-  }
+  cfname = rend_service_path(s, client_keys_fname);
   client_keys_str = read_file_to_str(cfname, RFTS_IGNORE_MISSING, NULL);
   if (client_keys_str) {
     if (rend_parse_client_keys(parsed_clients, client_keys_str) < 0) {
@@ -1322,7 +1489,10 @@ rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
   }
   strmap_free(parsed_clients, rend_authorized_client_strmap_item_free);
 
-  memwipe(cfname, 0, sizeof(cfname));
+  if (cfname) {
+    memwipe(cfname, 0, sizeof(cfname));
+    tor_free(cfname);
+  }
 
   /* Clear stack buffers that held key-derived material. */
   memwipe(buf, 0, sizeof(buf));
@@ -1424,6 +1594,31 @@ rend_check_authorization(rend_service_t *service,
   return 1;
 }
 
+/* Can this service make a direct connection to ei?
+ * It must be a single onion service, and the firewall rules must allow ei. */
+static int
+rend_service_use_direct_connection(const or_options_t* options,
+                                   const extend_info_t* ei)
+{
+  /* We'll connect directly all reachable addresses, whether preferred or not.
+   * The prefer_ipv6 argument to fascist_firewall_allows_address_addr is
+   * ignored, because pref_only is 0. */
+  return (rend_service_allow_non_anonymous_connection(options) &&
+          fascist_firewall_allows_address_addr(&ei->addr, ei->port,
+                                               FIREWALL_OR_CONNECTION, 0, 0));
+}
+
+/* Like rend_service_use_direct_connection, but to a node. */
+static int
+rend_service_use_direct_connection_node(const or_options_t* options,
+                                        const node_t* node)
+{
+  /* We'll connect directly all reachable addresses, whether preferred or not.
+   */
+  return (rend_service_allow_non_anonymous_connection(options) &&
+          fascist_firewall_allows_node(node, FIREWALL_OR_CONNECTION, 0));
+}
+
 /******
  * Handle cells
  ******/
@@ -1473,9 +1668,7 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
     goto err;
   }
 
-#ifndef NON_ANONYMOUS_MODE_ENABLED
-  tor_assert(!(circuit->build_state->onehop_tunnel));
-#endif
+  assert_circ_anonymity_ok(circuit, options);
   tor_assert(circuit->rend_data);
 
   /* We'll use this in a bazillion log messages */
@@ -1679,6 +1872,11 @@ rend_service_receive_introduction(origin_circuit_t *circuit,
   for (i=0;i<MAX_REND_FAILURES;i++) {
     int flags = CIRCLAUNCH_NEED_CAPACITY | CIRCLAUNCH_IS_INTERNAL;
     if (circ_needs_uptime) flags |= CIRCLAUNCH_NEED_UPTIME;
+    /* A Single Onion Service only uses a direct connection if its
+     * firewall rules permit direct connections to the address. */
+    if (rend_service_use_direct_connection(options, rp)) {
+      flags = flags | CIRCLAUNCH_ONEHOP_TUNNEL;
+    }
     launched = circuit_launch_by_extend_info(
                         CIRCUIT_PURPOSE_S_CONNECT_REND, rp, flags);
 
@@ -1791,7 +1989,10 @@ find_rp_for_intro(const rend_intro_cell_t *intro,
       goto err;
     }
 
-    rp = extend_info_from_node(node, 0);
+    /* Are we in single onion mode? */
+    const int allow_direct = rend_service_allow_non_anonymous_connection(
+                                                                get_options());
+    rp = extend_info_from_node(node, allow_direct);
     if (!rp) {
       if (err_msg_out) {
         tor_asprintf(&err_msg,
@@ -1815,6 +2016,10 @@ find_rp_for_intro(const rend_intro_cell_t *intro,
 
     goto err;
   }
+
+  /* rp is always set here: extend_info_dup guarantees a non-NULL result, and
+   * the other cases goto err. */
+  tor_assert(rp);
 
   /* Make sure the RP we are being asked to connect to is _not_ a private
    * address unless it's allowed. Let's avoid to build a circuit to our
@@ -2590,6 +2795,10 @@ rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc)
   log_info(LD_REND,"Reattempting rendezvous circuit to '%s'",
            safe_str(extend_info_describe(oldstate->chosen_exit)));
 
+  /* You'd think Single Onion Services would want to retry the rendezvous
+   * using a direct connection. But if it's blocked by a firewall, or the
+   * service is IPv6-only, or the rend point avoiding becoming a one-hop
+   * proxy, we need a 3-hop connection. */
   newcirc = circuit_launch_by_extend_info(CIRCUIT_PURPOSE_S_CONNECT_REND,
                             oldstate->chosen_exit,
                             CIRCLAUNCH_NEED_CAPACITY|CIRCLAUNCH_IS_INTERNAL);
@@ -2618,26 +2827,72 @@ rend_service_launch_establish_intro(rend_service_t *service,
                                     rend_intro_point_t *intro)
 {
   origin_circuit_t *launched;
+  int flags = CIRCLAUNCH_NEED_UPTIME|CIRCLAUNCH_IS_INTERNAL;
+  const or_options_t *options = get_options();
+  extend_info_t *launch_ei = intro->extend_info;
+  extend_info_t *direct_ei = NULL;
+
+  /* Are we in single onion mode? */
+  if (rend_service_allow_non_anonymous_connection(options)) {
+    /* Do we have a descriptor for the node?
+     * We've either just chosen it from the consensus, or we've just reviewed
+     * our intro points to see which ones are still valid, and deleted the ones
+     * that aren't in the consensus any more. */
+    const node_t *node = node_get_by_id(launch_ei->identity_digest);
+    if (BUG(!node)) {
+      /* The service has kept an intro point after it went missing from the
+       * consensus. If we did anything else here, it would be a consensus
+       * distinguisher. Which are less of an issue for single onion services,
+       * but still a bug. */
+      return -1;
+    }
+    /* Can we connect to the node directly? If so, replace launch_ei
+     * (a multi-hop extend_info) with one suitable for direct connection. */
+    if (rend_service_use_direct_connection_node(options, node)) {
+      direct_ei = extend_info_from_node(node, 1);
+      if (BUG(!direct_ei)) {
+        /* rend_service_use_direct_connection_node and extend_info_from_node
+         * disagree about which addresses on this node are permitted. This
+         * should never happen. Avoiding the connection is a safe response. */
+        return -1;
+      }
+      flags = flags | CIRCLAUNCH_ONEHOP_TUNNEL;
+      launch_ei = direct_ei;
+    }
+  }
+  /* launch_ei is either intro->extend_info, or has been replaced with a valid
+   * extend_info for single onion service direct connection. */
+  tor_assert(launch_ei);
+  /* We must have the same intro when making a direct connection. */
+  tor_assert(tor_memeq(intro->extend_info->identity_digest,
+                       launch_ei->identity_digest,
+                       DIGEST_LEN));
 
   log_info(LD_REND,
-           "Launching circuit to introduction point %s for service %s",
+           "Launching circuit to introduction point %s%s%s for service %s",
            safe_str_client(extend_info_describe(intro->extend_info)),
+           direct_ei ? " via direct address " : "",
+           direct_ei ? safe_str_client(extend_info_describe(direct_ei)) : "",
            service->service_id);
 
   rep_hist_note_used_internal(time(NULL), 1, 0);
 
   ++service->n_intro_circuits_launched;
   launched = circuit_launch_by_extend_info(CIRCUIT_PURPOSE_S_ESTABLISH_INTRO,
-                             intro->extend_info,
-                             CIRCLAUNCH_NEED_UPTIME|CIRCLAUNCH_IS_INTERNAL);
+                             launch_ei, flags);
 
   if (!launched) {
     log_info(LD_REND,
-             "Can't launch circuit to establish introduction at %s.",
-             safe_str_client(extend_info_describe(intro->extend_info)));
+             "Can't launch circuit to establish introduction at %s%s%s.",
+             safe_str_client(extend_info_describe(intro->extend_info)),
+             direct_ei ? " via direct address " : "",
+             direct_ei ? safe_str_client(extend_info_describe(direct_ei)) : ""
+             );
+    extend_info_free(direct_ei);
     return -1;
   }
-  /* We must have the same exit node even if cannibalized. */
+  /* We must have the same exit node even if cannibalized or direct connection.
+   */
   tor_assert(tor_memeq(intro->extend_info->identity_digest,
                        launched->build_state->chosen_exit->identity_digest,
                        DIGEST_LEN));
@@ -2648,6 +2903,7 @@ rend_service_launch_establish_intro(rend_service_t *service,
   launched->intro_key = crypto_pk_dup_key(intro->intro_key);
   if (launched->base_.state == CIRCUIT_STATE_OPEN)
     rend_service_intro_has_opened(launched);
+  extend_info_free(direct_ei);
   return 0;
 }
 
@@ -2703,9 +2959,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   int reason = END_CIRC_REASON_TORPROTOCOL;
 
   tor_assert(circuit->base_.purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
-#ifndef NON_ANONYMOUS_MODE_ENABLED
-  tor_assert(!(circuit->build_state->onehop_tunnel));
-#endif
+  assert_circ_anonymity_ok(circuit, get_options());
   tor_assert(circuit->cpath);
   tor_assert(circuit->rend_data);
 
@@ -2772,6 +3026,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   log_info(LD_REND,
            "Established circuit %u as introduction point for service %s",
            (unsigned)circuit->base_.n_circ_id, serviceid);
+  circuit_log_path(LOG_INFO, LD_REND, circuit);
 
   /* Use the intro key instead of the service key in ESTABLISH_INTRO. */
   crypto_pk_t *intro_key = circuit->intro_key;
@@ -2901,9 +3156,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   tor_assert(circuit->base_.purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
   tor_assert(circuit->cpath);
   tor_assert(circuit->build_state);
-#ifndef NON_ANONYMOUS_MODE_ENABLED
-  tor_assert(!(circuit->build_state->onehop_tunnel));
-#endif
+  assert_circ_anonymity_ok(circuit, get_options());
   tor_assert(circuit->rend_data);
 
   /* Declare the circuit dirty to avoid reuse, and for path-bias */
@@ -2923,6 +3176,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
            "Done building circuit %u to rendezvous with "
            "cookie %s for service %s",
            (unsigned)circuit->base_.n_circ_id, hexcookie, serviceid);
+  circuit_log_path(LOG_INFO, LD_REND, circuit);
 
   /* Clear the 'in-progress HS circ has timed out' flag for
    * consistency with what happens on the client side; this line has
@@ -3489,6 +3743,9 @@ rend_consider_services_intro_points(void)
   int i;
   time_t now;
   const or_options_t *options = get_options();
+  /* Are we in single onion mode? */
+  const int allow_direct = rend_service_allow_non_anonymous_connection(
+                                                                get_options());
   /* List of nodes we need to _exclude_ when choosing a new node to
    * establish an intro point to. */
   smartlist_t *exclude_nodes;
@@ -3584,8 +3841,24 @@ rend_consider_services_intro_points(void)
       router_crn_flags_t flags = CRN_NEED_UPTIME|CRN_NEED_DESC;
       if (get_options()->AllowInvalid_ & ALLOW_INVALID_INTRODUCTION)
         flags |= CRN_ALLOW_INVALID;
+      router_crn_flags_t direct_flags = flags;
+      direct_flags |= CRN_PREF_ADDR;
+      direct_flags |= CRN_DIRECT_CONN;
+
       node = router_choose_random_node(exclude_nodes,
-                                       options->ExcludeNodes, flags);
+                                       options->ExcludeNodes,
+                                       allow_direct ? direct_flags : flags);
+      /* If we are in single onion mode, retry node selection for a 3-hop
+       * path */
+      if (allow_direct && !node) {
+        log_info(LD_REND,
+                 "Unable to find an intro point that we can connect to "
+                 "directly for %s, falling back to a 3-hop path.",
+                 safe_str_client(service->service_id));
+        node = router_choose_random_node(exclude_nodes,
+                                         options->ExcludeNodes, flags);
+      }
+
       if (!node) {
         log_warn(LD_REND,
                  "We only have %d introduction points established for %s; "
@@ -3595,10 +3868,13 @@ rend_consider_services_intro_points(void)
                  n_intro_points_to_open);
         break;
       }
-      /* Add the choosen node to the exclusion list in order to avoid to
-       * pick it again in the next iteration. */
+      /* Add the choosen node to the exclusion list in order to avoid picking
+       * it again in the next iteration. */
       smartlist_add(exclude_nodes, (void*)node);
       intro = tor_malloc_zero(sizeof(rend_intro_point_t));
+      /* extend_info is for clients, so we want the multi-hop primary ORPort,
+       * even if we are a single onion service and intend to connect to it
+       * directly ourselves. */
       intro->extend_info = extend_info_from_node(node, 0);
       intro->intro_key = crypto_pk_new();
       const int fail = crypto_pk_generate_key(intro->intro_key);
@@ -3644,8 +3920,9 @@ rend_consider_services_upload(time_t now)
 {
   int i;
   rend_service_t *service;
-  int rendpostperiod = get_options()->RendPostPeriod;
-  int rendinitialpostdelay = (get_options()->TestingTorNetwork ?
+  const or_options_t *options = get_options();
+  int rendpostperiod = options->RendPostPeriod;
+  int rendinitialpostdelay = (options->TestingTorNetwork ?
                               MIN_REND_INITIAL_POST_DELAY_TESTING :
                               MIN_REND_INITIAL_POST_DELAY);
 
@@ -3656,6 +3933,12 @@ rend_consider_services_upload(time_t now)
        * the descriptor is stable before being published. See comment below. */
       service->next_upload_time =
         now + rendinitialpostdelay + crypto_rand_int(2*rendpostperiod);
+      /* Single Onion Services prioritise availability over hiding their
+       * startup time, as their IP address is publicly discoverable anyway.
+       */
+      if (rend_service_reveal_startup_time(options)) {
+        service->next_upload_time = now + rendinitialpostdelay;
+      }
     }
     /* Does every introduction points have been established? */
     unsigned int intro_points_ready =
@@ -3896,12 +4179,51 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
     return -2;
 }
 
-/* Stub that should be replaced with the #17178 version of the function
- * when merging. */
-int
-rend_service_allow_direct_connection(const or_options_t *options)
+/* Are HiddenServiceSingleHopMode and HiddenServiceNonAnonymousMode consistent?
+ */
+static int
+rend_service_non_anonymous_mode_consistent(const or_options_t *options)
 {
-  (void)options;
-  return 0;
+  /* !! is used to make these options boolean */
+  return (!! options->HiddenServiceSingleHopMode ==
+          !! options->HiddenServiceNonAnonymousMode);
+}
+
+/* Do the options allow onion services to make direct (non-anonymous)
+ * connections to introduction or rendezvous points?
+ * Must only be called after options_validate_single_onion() has successfully
+ * checked onion service option consistency.
+ * Returns true if tor is in HiddenServiceSingleHopMode. */
+int
+rend_service_allow_non_anonymous_connection(const or_options_t *options)
+{
+  tor_assert(rend_service_non_anonymous_mode_consistent(options));
+  return options->HiddenServiceSingleHopMode ? 1 : 0;
+}
+
+/* Do the options allow us to reveal the exact startup time of the onion
+ * service?
+ * Single Onion Services prioritise availability over hiding their
+ * startup time, as their IP address is publicly discoverable anyway.
+ * Must only be called after options_validate_single_onion() has successfully
+ * checked onion service option consistency.
+ * Returns true if tor is in non-anonymous hidden service mode. */
+int
+rend_service_reveal_startup_time(const or_options_t *options)
+{
+  tor_assert(rend_service_non_anonymous_mode_consistent(options));
+  return rend_service_non_anonymous_mode_enabled(options);
+}
+
+/* Is non-anonymous mode enabled using the HiddenServiceNonAnonymousMode
+ * config option?
+ * Must only be called after options_validate_single_onion() has successfully
+ * checked onion service option consistency.
+ */
+int
+rend_service_non_anonymous_mode_enabled(const or_options_t *options)
+{
+  tor_assert(rend_service_non_anonymous_mode_consistent(options));
+  return options->HiddenServiceNonAnonymousMode ? 1 : 0;
 }
 

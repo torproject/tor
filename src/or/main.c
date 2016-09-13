@@ -2833,11 +2833,6 @@ tor_init(int argc, char *argv[])
                  "Expect more bugs than usual.");
   }
 
-#ifdef NON_ANONYMOUS_MODE_ENABLED
-  log_warn(LD_GENERAL, "This copy of Tor was compiled to run in a "
-      "non-anonymous mode. It will provide NO ANONYMITY.");
-#endif
-
   if (network_init()<0) {
     log_err(LD_BUG,"Error initializing network; exiting.");
     return -1;
@@ -2849,15 +2844,18 @@ tor_init(int argc, char *argv[])
     return -1;
   }
 
+  /* The options are now initialised */
+  const or_options_t *options = get_options();
+
 #ifndef _WIN32
   if (geteuid()==0)
     log_warn(LD_GENERAL,"You are running Tor as root. You don't need to, "
              "and you probably shouldn't.");
 #endif
 
-  if (crypto_global_init(get_options()->HardwareAccel,
-                         get_options()->AccelName,
-                         get_options()->AccelDir)) {
+  if (crypto_global_init(options->HardwareAccel,
+                         options->AccelName,
+                         options->AccelDir)) {
     log_err(LD_BUG, "Unable to initialize OpenSSL. Exiting.");
     return -1;
   }
