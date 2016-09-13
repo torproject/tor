@@ -104,7 +104,7 @@ circuit_build_times_disabled(void)
     int config_disabled = !options->LearnCircuitBuildTimeout;
     int dirauth_disabled = options->AuthoritativeDir;
     int state_disabled = did_last_state_file_write_fail() ? 1 : 0;
-    /* LearnCircuitBuildTimeout and Tor2webMode/OnionServiceSingleHopMode are
+    /* LearnCircuitBuildTimeout and Tor2web/Single Onion Services are
      * incompatible in two ways:
      *
      * - LearnCircuitBuildTimeout results in a low CBT, which

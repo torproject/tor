@@ -3706,8 +3706,7 @@ typedef struct {
    * rendezvous points. (Onion service descriptors are still posted using
    * 3-hop paths, to avoid onion service directories blocking the service.)
    * This option makes every hidden service instance hosted by
-   * this tor instance a Single Onion Service. One-hop circuits make Single
-   * Onion servers easily locatable, but clients remain location-anonymous.
+   * this tor instance a Single Onion Service.
    * OnionServiceSingleHopMode requires OnionServiceNonAnonymousMode to be set
    * to 1.
    * Use rend_service_allow_non_anonymous_connection() or
@@ -3716,8 +3715,8 @@ typedef struct {
   int OnionServiceSingleHopMode;
   /* Makes hidden service clients and servers non-anonymous on this tor
    * instance. Allows the non-anonymous OnionServiceSingleHopMode. Enables
-   * direct connections in the hidden service protocol.
-   * Use rend_service_non_anonymous_mode() instead of using this option
+   * non-anonymous behaviour in the hidden service protocol.
+   * Use rend_service_non_anonymous_mode_enabled() instead of using this option
    * directly.
    */
   int OnionServiceNonAnonymousMode;

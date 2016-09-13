@@ -1097,11 +1097,11 @@ rend_non_anonymous_mode_enabled(const or_options_t *options)
 /* Make sure that tor only builds one-hop circuits when they would not
  * compromise user anonymity.
  *
- * One-hop circuits are permitted in Tor2webMode or OnionServiceSingleHopMode.
+ * One-hop circuits are permitted in Tor2web or Single Onion modes.
  *
- * Tor2webMode and OnionServiceSingleHopMode are also allowed to make
- * multi-hop circuits. For example, single onion HSDir circuits are 3-hop to
- * prevent denial of service.
+ * Tor2web or Single Onion modes are also allowed to make multi-hop circuits.
+ * For example, single onion HSDir circuits are 3-hop to prevent denial of
+ * service.
  */
 void
 assert_circ_anonymity_ok(origin_circuit_t *circ,

@@ -1025,10 +1025,10 @@ rend_service_private_key_exists(const rend_service_t *service)
 
 /** Check the single onion service poison state of all existing hidden service
  * directories:
- * - If each service is poisoned, and we are in OnionServiceSingleHopMode,
+ * - If each service is poisoned, and we are in Single Onion Mode,
  *   return 0,
- * - If each service is not poisoned, and we are not in
- *   OnionServiceSingleHopMode, return 0,
+ * - If each service is not poisoned, and we are not in Single Onion Mode,
+ *   return 0,
  * - Otherwise, the poison state is invalid, and a service that was created in
  *   one mode is being used in the other, return -1.
  * Hidden service directories without keys are not checked for consistency.
@@ -1054,7 +1054,7 @@ rend_service_list_verify_single_onion_poison(const smartlist_t *service_list,
   int consistent = 1;
   SMARTLIST_FOREACH_BEGIN(s_list, const rend_service_t *, s) {
     if (service_is_single_onion_poisoned(s) !=
-        rend_service_allow_non_anonymous_connection(options) &&
+        rend_service_non_anonymous_mode_enabled(options) &&
         rend_service_private_key_exists(s)) {
       consistent = 0;
     }
@@ -1063,25 +1063,25 @@ rend_service_list_verify_single_onion_poison(const smartlist_t *service_list,
   return consistent ? 0 : -1;
 }
 
-/*** Helper for rend_service_poison_new_single_onion_dirs(). When in single
- * onion mode, add a file to this hidden service directory that marks it as a
- * single onion hidden service. Returns 0 when a directory is successfully
- * poisoned, or if it is already poisoned. Returns -1 on a failure to read
- * the directory or write the poison file, or if there is an existing private
- * key file in the directory. (The service should have been poisoned when the
- * key was created.) */
+/*** Helper for rend_service_poison_new_single_onion_dirs(). Add a file to
+ * this hidden service directory that marks it as a single onion service.
+ * Tor must be in single onion mode before calling this function.
+ * Returns 0 when a directory is successfully poisoned, or if it is already
+ * poisoned. Returns -1 on a failure to read the directory or write the poison
+ * file, or if there is an existing private key file in the directory. (The
+ * service should have been poisoned when the key was created.) */
 static int
 poison_new_single_onion_hidden_service_dir(const rend_service_t *service)
 {
   /* We must only poison directories if we're in Single Onion mode */
-  tor_assert(rend_service_allow_non_anonymous_connection(get_options()));
+  tor_assert(rend_service_non_anonymous_mode_enabled(get_options()));
 
   int fd;
   int retval = -1;
   char *poison_fname = NULL;
 
   if (!service->directory) {
-    log_info(LD_REND, "Ephemeral HS started in OnionServiceSingleHopMode.");
+    log_info(LD_REND, "Ephemeral HS started in non-anonymous mode.");
     return 0;
   }
 
@@ -1126,7 +1126,7 @@ poison_new_single_onion_hidden_service_dir(const rend_service_t *service)
   return retval;
 }
 
-/** We just got launched in OnionServiceSingleHopMode. That's a non-anoymous
+/** We just got launched in Single Onion Mode. That's a non-anoymous
  * mode for hidden services; hence we should mark all new hidden service
  * directories appropriately so that they are never launched as
  * location-private hidden services again. (New directories don't have private
@@ -1138,7 +1138,7 @@ int
 rend_service_poison_new_single_onion_dirs(const smartlist_t *service_list)
 {
   /* We must only poison directories if we're in Single Onion mode */
-  tor_assert(rend_service_allow_non_anonymous_connection(get_options()));
+  tor_assert(rend_service_non_anonymous_mode_enabled(get_options()));
 
   const smartlist_t *s_list;
   /* If no special service list is provided, then just use the global one. */
@@ -4179,12 +4179,25 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
     return -2;
 }
 
+/* Are OnionServiceSingleHopMode and OnionServiceNonAnonymousMode consistent?
+ */
+static int
+rend_service_non_anonymous_mode_consistent(const or_options_t *options)
+{
+  /* !! is used to make these options boolean */
+  return (!! options->OnionServiceSingleHopMode ==
+          !! options->OnionServiceNonAnonymousMode);
+}
+
 /* Do the options allow onion services to make direct (non-anonymous)
  * connections to introduction or rendezvous points?
+ * Must only be called after options_validate_single_onion() has successfully
+ * checked onion service option consistency.
  * Returns true if tor is in OnionServiceSingleHopMode. */
 int
 rend_service_allow_non_anonymous_connection(const or_options_t *options)
 {
+  tor_assert(rend_service_non_anonymous_mode_consistent(options));
   return options->OnionServiceSingleHopMode ? 1 : 0;
 }
 
@@ -4192,17 +4205,24 @@ rend_service_allow_non_anonymous_connection(const or_options_t *options)
  * service?
  * Single Onion Services prioritise availability over hiding their
  * startup time, as their IP address is publicly discoverable anyway.
- * Returns true if tor is in OnionServiceSingleHopMode. */
+ * Must only be called after options_validate_single_onion() has successfully
+ * checked onion service option consistency.
+ * Returns true if tor is in non-anonymous hidden service mode. */
 int
 rend_service_reveal_startup_time(const or_options_t *options)
 {
-  return rend_service_allow_non_anonymous_connection(options);
+  tor_assert(rend_service_non_anonymous_mode_consistent(options));
+  return rend_service_non_anonymous_mode_enabled(options);
 }
 
 /* Is non-anonymous mode enabled using the OnionServiceNonAnonymousMode
- * config option? */
+ * config option?
+ * Must only be called after options_validate_single_onion() has successfully
+ * checked onion service option consistency.
+ */
 int
 rend_service_non_anonymous_mode_enabled(const or_options_t *options)
 {
+  tor_assert(rend_service_non_anonymous_mode_consistent(options));
   return options->OnionServiceNonAnonymousMode ? 1 : 0;
 }

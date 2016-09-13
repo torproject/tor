@@ -4249,7 +4249,7 @@ handle_control_add_onion(control_connection_t *conn,
   int max_streams = 0;
   int max_streams_close_circuit = 0;
   rend_auth_type_t auth_type = REND_NO_AUTH;
-  /* Default to anonymous if no flag is given */
+  /* Default to adding an anonymous hidden service if no flag is given */
   int non_anonymous = 0;
   for (size_t i = 1; i < arg_len; i++) {
     static const char *port_prefix = "Port=";
@@ -4288,10 +4288,9 @@ handle_control_add_onion(control_connection_t *conn,
        *                                exceeded.
        *   * 'BasicAuth' - Client authorization using the 'basic' method.
        *   * 'NonAnonymous' - Add a non-anonymous Single Onion Service. If this
-       *                      flag is present, OnionServiceSingleHopMode and
-       *                      OnionServiceNonAnonymousMode must both be 1. If
-       *                      this flag is absent, both these options must be
-       *                      0.
+       *                      flag is present, tor must be in non-anonymous
+       *                      hidden service mode. If this flag is absent,
+       *                      tor must be in anonymous hidden service mode.
        */
       static const char *discard_flag = "DiscardPK";
       static const char *detach_flag = "Detach";
@@ -4388,15 +4387,17 @@ handle_control_add_onion(control_connection_t *conn,
               smartlist_len(auth_clients) > 16)) {
     connection_printf_to_buf(conn, "512 Too many auth clients\r\n");
     goto out;
-  } else if (non_anonymous != rend_service_allow_non_anonymous_connection(
+  } else if (non_anonymous != rend_service_non_anonymous_mode_enabled(
                                                               get_options())) {
-    /* If we failed, and non-anonymous is set, Tor must be in anonymous mode.
+    /* If we failed, and the non-anonymous flag is set, Tor must be in
+     * anonymous hidden service mode.
      * The error message changes based on the current Tor config:
-     * 512 Tor is in anonymous onion mode
-     * 512 Tor is in non-anonymous onion mode
+     * 512 Tor is in anonymous hidden service mode
+     * 512 Tor is in non-anonymous hidden service mode
      * (I've deliberately written them out in full here to aid searchability.)
      */
-    connection_printf_to_buf(conn, "512 Tor is in %sanonymous onion mode\r\n",
+    connection_printf_to_buf(conn, "512 Tor is in %sanonymous hidden service "
+                             "mode\r\n",
                              non_anonymous ? "" : "non-");
     goto out;
   }
