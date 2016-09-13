@@ -2766,37 +2766,37 @@ test_options_validate__single_onion(void *ignored)
   options_test_data_t *tdata = NULL;
   int previous_log = setup_capture_of_logs(LOG_WARN);
 
-  /* Test that OnionServiceSingleHopMode must come with
-   * OnionServiceNonAnonymousMode */
+  /* Test that HiddenServiceSingleHopMode must come with
+   * HiddenServiceNonAnonymousMode */
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
                                 "SOCKSPort 0\n"
-                                "OnionServiceSingleHopMode 1\n"
+                                "HiddenServiceSingleHopMode 1\n"
                                 );
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "OnionServiceSingleHopMode does not provide any "
+  tt_str_op(msg, OP_EQ, "HiddenServiceSingleHopMode does not provide any "
             "server anonymity. It must be used with "
-            "OnionServiceNonAnonymousMode set to 1.");
+            "HiddenServiceNonAnonymousMode set to 1.");
   tor_free(msg);
   free_options_test_data(tdata);
 
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
                                 "SOCKSPort 0\n"
-                                "OnionServiceSingleHopMode 1\n"
-                                "OnionServiceNonAnonymousMode 0\n"
+                                "HiddenServiceSingleHopMode 1\n"
+                                "HiddenServiceNonAnonymousMode 0\n"
                                 );
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "OnionServiceSingleHopMode does not provide any "
+  tt_str_op(msg, OP_EQ, "HiddenServiceSingleHopMode does not provide any "
             "server anonymity. It must be used with "
-            "OnionServiceNonAnonymousMode set to 1.");
+            "HiddenServiceNonAnonymousMode set to 1.");
   tor_free(msg);
   free_options_test_data(tdata);
 
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
                                 "SOCKSPort 0\n"
-                                "OnionServiceSingleHopMode 1\n"
-                                "OnionServiceNonAnonymousMode 1\n"
+                                "HiddenServiceSingleHopMode 1\n"
+                                "HiddenServiceNonAnonymousMode 1\n"
                                 );
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, 0);
@@ -2804,26 +2804,26 @@ test_options_validate__single_onion(void *ignored)
   free_options_test_data(tdata);
 
   /* Test that SOCKSPort must come with Tor2webMode if
-   * OnionServiceSingleHopMode is 1 */
+   * HiddenServiceSingleHopMode is 1 */
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
                                 "SOCKSPort 5000\n"
-                                "OnionServiceSingleHopMode 1\n"
-                                "OnionServiceNonAnonymousMode 1\n"
+                                "HiddenServiceSingleHopMode 1\n"
+                                "HiddenServiceNonAnonymousMode 1\n"
                                 "Tor2webMode 0\n"
                                 );
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "OnionServiceNonAnonymousMode is incompatible with "
+  tt_str_op(msg, OP_EQ, "HiddenServiceNonAnonymousMode is incompatible with "
             "using Tor as an anonymous client. Please set "
-            "Socks/Trans/NATD/DNSPort to 0, or OnionServiceNonAnonymousMode "
+            "Socks/Trans/NATD/DNSPort to 0, or HiddenServiceNonAnonymousMode "
             "to 0, or use the non-anonymous Tor2webMode.");
   tor_free(msg);
   free_options_test_data(tdata);
 
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
                                 "SOCKSPort 0\n"
-                                "OnionServiceSingleHopMode 1\n"
-                                "OnionServiceNonAnonymousMode 1\n"
+                                "HiddenServiceSingleHopMode 1\n"
+                                "HiddenServiceNonAnonymousMode 1\n"
                                 "Tor2webMode 0\n"
                                 );
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
@@ -2833,7 +2833,7 @@ test_options_validate__single_onion(void *ignored)
 
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
                                 "SOCKSPort 5000\n"
-                                "OnionServiceSingleHopMode 0\n"
+                                "HiddenServiceSingleHopMode 0\n"
                                 "Tor2webMode 0\n"
                                 );
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
@@ -2843,8 +2843,8 @@ test_options_validate__single_onion(void *ignored)
 
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
                                 "SOCKSPort 5000\n"
-                                "OnionServiceSingleHopMode 1\n"
-                                "OnionServiceNonAnonymousMode 1\n"
+                                "HiddenServiceSingleHopMode 1\n"
+                                "HiddenServiceNonAnonymousMode 1\n"
                                 "Tor2webMode 1\n"
                                 );
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
@@ -2853,29 +2853,29 @@ test_options_validate__single_onion(void *ignored)
   free_options_test_data(tdata);
 
   /* Test that a hidden service can't be run with Tor2web
-   * Use OnionServiceNonAnonymousMode instead of Tor2webMode, because
+   * Use HiddenServiceNonAnonymousMode instead of Tor2webMode, because
    * Tor2webMode requires a compilation #define */
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
-                  "OnionServiceNonAnonymousMode 1\n"
+                  "HiddenServiceNonAnonymousMode 1\n"
                   "HiddenServiceDir /Library/Tor/var/lib/tor/hidden_service/\n"
                   "HiddenServicePort 80 127.0.0.1:8080\n"
                                 );
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "OnionServiceNonAnonymousMode does not provide any "
-            "server anonymity. It must be used with OnionServiceSingleHopMode "
-            "set to 1.");
+  tt_str_op(msg, OP_EQ, "HiddenServiceNonAnonymousMode does not provide any "
+            "server anonymity. It must be used with "
+            "HiddenServiceSingleHopMode set to 1.");
   tor_free(msg);
   free_options_test_data(tdata);
 
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
-                  "OnionServiceNonAnonymousMode 1\n"
+                  "HiddenServiceNonAnonymousMode 1\n"
                                 );
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "OnionServiceNonAnonymousMode does not provide any "
-            "server anonymity. It must be used with OnionServiceSingleHopMode "
-            "set to 1.");
+  tt_str_op(msg, OP_EQ, "HiddenServiceNonAnonymousMode does not provide any "
+            "server anonymity. It must be used with "
+            "HiddenServiceSingleHopMode set to 1.");
   free_options_test_data(tdata);
 
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
@@ -2888,10 +2888,10 @@ test_options_validate__single_onion(void *ignored)
   free_options_test_data(tdata);
 
   tdata = get_options_test_data(TEST_OPTIONS_DEFAULT_VALUES
-                  "OnionServiceNonAnonymousMode 1\n"
+                  "HiddenServiceNonAnonymousMode 1\n"
                   "HiddenServiceDir /Library/Tor/var/lib/tor/hidden_service/\n"
                   "HiddenServicePort 80 127.0.0.1:8080\n"
-                  "OnionServiceSingleHopMode 1\n"
+                  "HiddenServiceSingleHopMode 1\n"
                   "SOCKSPort 0\n"
                                 );
   ret = options_validate(tdata->old_opt, tdata->opt, tdata->def_opt, 0, &msg);

@@ -298,8 +298,8 @@ static config_var_t option_vars_[] = {
   V(HidServAuth,                 LINELIST, NULL),
   V(CloseHSClientCircuitsImmediatelyOnTimeout, BOOL, "0"),
   V(CloseHSServiceRendCircuitsImmediatelyOnTimeout, BOOL, "0"),
-  V(OnionServiceSingleHopMode,   BOOL,     "0"),
-  V(OnionServiceNonAnonymousMode,BOOL,     "0"),
+  V(HiddenServiceSingleHopMode,  BOOL,     "0"),
+  V(HiddenServiceNonAnonymousMode,BOOL,    "0"),
   V(HTTPProxy,                   STRING,   NULL),
   V(HTTPProxyAuthenticator,      STRING,   NULL),
   V(HTTPSProxy,                  STRING,   NULL),
@@ -2826,15 +2826,15 @@ STATIC int
 options_validate_single_onion(or_options_t *options, char **msg)
 {
   /* The two single onion service options must have matching values. */
-  if (options->OnionServiceSingleHopMode &&
-      !options->OnionServiceNonAnonymousMode) {
-    REJECT("OnionServiceSingleHopMode does not provide any server anonymity. "
-           "It must be used with OnionServiceNonAnonymousMode set to 1.");
+  if (options->HiddenServiceSingleHopMode &&
+      !options->HiddenServiceNonAnonymousMode) {
+    REJECT("HiddenServiceSingleHopMode does not provide any server anonymity. "
+           "It must be used with HiddenServiceNonAnonymousMode set to 1.");
   }
-  if (options->OnionServiceNonAnonymousMode &&
-      !options->OnionServiceSingleHopMode) {
-    REJECT("OnionServiceNonAnonymousMode does not provide any server "
-           "anonymity. It must be used with OnionServiceSingleHopMode set to "
+  if (options->HiddenServiceNonAnonymousMode &&
+      !options->HiddenServiceSingleHopMode) {
+    REJECT("HiddenServiceNonAnonymousMode does not provide any server "
+           "anonymity. It must be used with HiddenServiceSingleHopMode set to "
            "1.");
   }
 
@@ -2849,9 +2849,9 @@ options_validate_single_onion(or_options_t *options, char **msg)
                                options->DNSPort_set);
   if (rend_service_non_anonymous_mode_enabled(options) && client_port_set &&
       !options->Tor2webMode) {
-    REJECT("OnionServiceNonAnonymousMode is incompatible with using Tor as an "
-           "anonymous client. Please set Socks/Trans/NATD/DNSPort to 0, or "
-           "OnionServiceNonAnonymousMode to 0, or use the non-anonymous "
+    REJECT("HiddenServiceNonAnonymousMode is incompatible with using Tor as "
+           "an anonymous client. Please set Socks/Trans/NATD/DNSPort to 0, or "
+           "HiddenServiceNonAnonymousMode to 0, or use the non-anonymous "
            "Tor2webMode.");
   }
 
@@ -2862,7 +2862,7 @@ options_validate_single_onion(or_options_t *options, char **msg)
     REJECT("Non-anonymous (Tor2web) mode is incompatible with using Tor as a "
            "hidden service. Please remove all HiddenServiceDir lines, or use "
            "a version of tor compiled without --enable-tor2web-mode, or use "
-           " OnionServiceNonAnonymousMode.");
+           " HiddenServiceNonAnonymousMode.");
   }
 
   if (rend_service_allow_non_anonymous_connection(options)
@@ -2875,7 +2875,7 @@ options_validate_single_onion(or_options_t *options, char **msg)
      * make path bias compatible with single onions.
      */
     log_notice(LD_CONFIG,
-               "OnionServiceSingleHopMode is enabled; disabling "
+               "HiddenServiceSingleHopMode is enabled; disabling "
                "UseEntryGuards.");
     options->UseEntryGuards = 0;
   }
@@ -2885,9 +2885,9 @@ options_validate_single_onion(or_options_t *options, char **msg)
    * have. We'll poison new keys in options_act() just before we create them.
    */
   if (rend_service_list_verify_single_onion_poison(NULL, options) < 0) {
-    log_warn(LD_GENERAL, "We are configured with OnionServiceNonAnonymousMode "
-             "%d, but one or more hidden service keys were created in %s "
-             "mode. This is not allowed.",
+    log_warn(LD_GENERAL, "We are configured with "
+             "HiddenServiceNonAnonymousMode %d, but one or more hidden "
+             "service keys were created in %s mode. This is not allowed.",
              rend_service_non_anonymous_mode_enabled(options) ? 1 : 0,
              rend_service_non_anonymous_mode_enabled(options) ?
              "an anonymous" : "a non-anonymous"
@@ -3451,9 +3451,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
   /* Single Onion Services: non-anonymous hidden services */
   if (rend_service_non_anonymous_mode_enabled(options)) {
     log_warn(LD_CONFIG,
-             "OnionServiceNonAnonymousNode is set. Every hidden service on "
+             "HiddenServiceNonAnonymousMode is set. Every hidden service on "
              "this tor instance is NON-ANONYMOUS. If "
-             "the OnionServiceNonAnonymousMode option is changed, Tor will "
+             "the HiddenServiceNonAnonymousMode option is changed, Tor will "
              "refuse to launch hidden services from the same directories, to "
              "protect your anonymity against config errors. This setting is "
              "for experimental use only.");
@@ -4408,16 +4408,16 @@ options_transition_allowed(const or_options_t *old,
     return -1;
   }
 
-  if (old->OnionServiceSingleHopMode != new_val->OnionServiceSingleHopMode) {
+  if (old->HiddenServiceSingleHopMode != new_val->HiddenServiceSingleHopMode) {
     *msg = tor_strdup("While Tor is running, changing "
-                      "OnionServiceSingleHopMode is not allowed.");
+                      "HiddenServiceSingleHopMode is not allowed.");
     return -1;
   }
 
-  if (old->OnionServiceNonAnonymousMode !=
-      new_val->OnionServiceNonAnonymousMode) {
+  if (old->HiddenServiceNonAnonymousMode !=
+      new_val->HiddenServiceNonAnonymousMode) {
     *msg = tor_strdup("While Tor is running, changing "
-                      "OnionServiceNonAnonymousMode is not allowed.");
+                      "HiddenServiceNonAnonymousMode is not allowed.");
     return -1;
   }
 

@@ -1,6 +1,6 @@
   o Major features (onion services):
-    - Add experimental OnionServiceSingleHopMode and
-      OnionServiceNonAnonymousMode options. When both are set to 1, every
+    - Add experimental HiddenServiceSingleHopMode and
+      HiddenServiceNonAnonymousMode options. When both are set to 1, every
       hidden service on a tor instance becomes a non-anonymous Single Onion
       Service. Single Onions make one-hop (direct) connections to their
       introduction and renzedvous points. One-hop circuits make Single Onion

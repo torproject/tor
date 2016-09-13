@@ -3701,25 +3701,25 @@ typedef struct {
    * they reach the normal circuit-build timeout. */
   int CloseHSServiceRendCircuitsImmediatelyOnTimeout;
 
-  /** Onion Services in OnionServiceSingleHopMode make one-hop (direct)
+  /** Onion Services in HiddenServiceSingleHopMode make one-hop (direct)
    * circuits between the onion service server, and the introduction and
    * rendezvous points. (Onion service descriptors are still posted using
    * 3-hop paths, to avoid onion service directories blocking the service.)
    * This option makes every hidden service instance hosted by
    * this tor instance a Single Onion Service.
-   * OnionServiceSingleHopMode requires OnionServiceNonAnonymousMode to be set
-   * to 1.
+   * HiddenServiceSingleHopMode requires HiddenServiceNonAnonymousMode to be
+   * set to 1.
    * Use rend_service_allow_non_anonymous_connection() or
    * rend_service_reveal_startup_time() instead of using this option directly.
    */
-  int OnionServiceSingleHopMode;
+  int HiddenServiceSingleHopMode;
   /* Makes hidden service clients and servers non-anonymous on this tor
-   * instance. Allows the non-anonymous OnionServiceSingleHopMode. Enables
+   * instance. Allows the non-anonymous HiddenServiceSingleHopMode. Enables
    * non-anonymous behaviour in the hidden service protocol.
    * Use rend_service_non_anonymous_mode_enabled() instead of using this option
    * directly.
    */
-  int OnionServiceNonAnonymousMode;
+  int HiddenServiceNonAnonymousMode;
 
   int ConnLimit; /**< Demanded minimum number of simultaneous connections. */
   int ConnLimit_; /**< Maximum allowed number of simultaneous connections. */

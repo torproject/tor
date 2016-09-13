@@ -2379,9 +2379,9 @@ The following options are used to configure a hidden service.
     Number of introduction points the hidden service will have. You can't
     have more than 10. (Default: 3)
 
-[[OnionServiceSingleHopMode]] **OnionServiceSingleHopMode** **0**|**1**::
+[[HiddenServiceSingleHopMode]] **HiddenServiceSingleHopMode** **0**|**1**::
     **Experimental - Non Anonymous** Hidden Services on a tor instance in
-    OnionServiceSingleHopMode make one-hop (direct) circuits between the onion
+    HiddenServiceSingleHopMode make one-hop (direct) circuits between the onion
     service server, and the introduction and rendezvous points. (Onion service
     descriptors are still posted using 3-hop paths, to avoid onion service
     directories blocking the service.)
@@ -2392,21 +2392,21 @@ The following options are used to configure a hidden service.
     statistically distinguishable.
 
     **WARNING:** Once a hidden service directory has been used by a tor
-    instance in OnionServiceSingleHopMode, it can **NEVER** be used again for
+    instance in HiddenServiceSingleHopMode, it can **NEVER** be used again for
     a hidden service. It is best practice to create a new hidden service
     directory, key, and address for each new Single Onion Service and Hidden
     Service. It is not possible to run Single Onion Services and Hidden
     Services from the same tor instance: they should be run on different
     servers with different IP addresses.
 
-    OnionServiceSingleHopMode requires OnionServiceNonAnonymousMode to be set
+    HiddenServiceSingleHopMode requires HiddenServiceNonAnonymousMode to be set
     to 1. Since a Single Onion is non-anonymous, you can not to run an
     anonymous SOCKSPort on the same tor instance as a Single Onion service.
     (Default: 0)
 
-[[OnionServiceNonAnonymousMode]] **OnionServiceNonAnonymousMode** **0**|**1**::
+[[HiddenServiceNonAnonymousMode]] **HiddenServiceNonAnonymousMode** **0**|**1**::
     Makes hidden services non-anonymous on this tor instance. Allows the
-    non-anonymous OnionServiceSingleHopMode. Enables direct connections in the
+    non-anonymous HiddenServiceSingleHopMode. Enables direct connections in the
     server-side hidden service protocol.
     (Default: 0)
 

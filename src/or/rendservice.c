@@ -4179,26 +4179,26 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
     return -2;
 }
 
-/* Are OnionServiceSingleHopMode and OnionServiceNonAnonymousMode consistent?
+/* Are HiddenServiceSingleHopMode and HiddenServiceNonAnonymousMode consistent?
  */
 static int
 rend_service_non_anonymous_mode_consistent(const or_options_t *options)
 {
   /* !! is used to make these options boolean */
-  return (!! options->OnionServiceSingleHopMode ==
-          !! options->OnionServiceNonAnonymousMode);
+  return (!! options->HiddenServiceSingleHopMode ==
+          !! options->HiddenServiceNonAnonymousMode);
 }
 
 /* Do the options allow onion services to make direct (non-anonymous)
  * connections to introduction or rendezvous points?
  * Must only be called after options_validate_single_onion() has successfully
  * checked onion service option consistency.
- * Returns true if tor is in OnionServiceSingleHopMode. */
+ * Returns true if tor is in HiddenServiceSingleHopMode. */
 int
 rend_service_allow_non_anonymous_connection(const or_options_t *options)
 {
   tor_assert(rend_service_non_anonymous_mode_consistent(options));
-  return options->OnionServiceSingleHopMode ? 1 : 0;
+  return options->HiddenServiceSingleHopMode ? 1 : 0;
 }
 
 /* Do the options allow us to reveal the exact startup time of the onion
@@ -4215,7 +4215,7 @@ rend_service_reveal_startup_time(const or_options_t *options)
   return rend_service_non_anonymous_mode_enabled(options);
 }
 
-/* Is non-anonymous mode enabled using the OnionServiceNonAnonymousMode
+/* Is non-anonymous mode enabled using the HiddenServiceNonAnonymousMode
  * config option?
  * Must only be called after options_validate_single_onion() has successfully
  * checked onion service option consistency.
@@ -4224,5 +4224,5 @@ int
 rend_service_non_anonymous_mode_enabled(const or_options_t *options)
 {
   tor_assert(rend_service_non_anonymous_mode_consistent(options));
-  return options->OnionServiceNonAnonymousMode ? 1 : 0;
+  return options->HiddenServiceNonAnonymousMode ? 1 : 0;
 }
