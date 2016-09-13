@@ -744,6 +744,27 @@ test_buffers_tls_read_mocked(void *arg)
   buf_free(buf);
 }
 
+static void
+test_buffers_chunk_size(void *arg)
+{
+  (void)arg;
+  const int min = 256;
+  const int max = 65536;
+  tt_uint_op(preferred_chunk_size(3), OP_EQ, min);
+  tt_uint_op(preferred_chunk_size(25), OP_EQ, min);
+  tt_uint_op(preferred_chunk_size(0), OP_EQ, min);
+  tt_uint_op(preferred_chunk_size(256), OP_EQ, 512);
+  tt_uint_op(preferred_chunk_size(65400), OP_EQ, max);
+  /* Here, we're implicitly saying that the chunk header overhead is
+   * between 1 and 100 bytes. 24..48 would probably be more accurate. */
+  tt_uint_op(preferred_chunk_size(65536), OP_GT, 65536);
+  tt_uint_op(preferred_chunk_size(65536), OP_LT, 65536+100);
+  tt_uint_op(preferred_chunk_size(165536), OP_GT, 165536);
+  tt_uint_op(preferred_chunk_size(165536), OP_LT, 165536+100);
+ done:
+  ;
+}
+
 struct testcase_t buffer_tests[] = {
   { "basic", test_buffers_basic, TT_FORK, NULL, NULL },
   { "copy", test_buffer_copy, TT_FORK, NULL, NULL },
@@ -758,6 +779,7 @@ struct testcase_t buffer_tests[] = {
     NULL, NULL},
   { "tls_read_mocked", test_buffers_tls_read_mocked, 0,
     NULL, NULL },
+  { "chunk_size", test_buffers_chunk_size, 0, NULL, NULL },
   END_OF_TESTCASES
 };
 

@@ -65,6 +65,7 @@ void assert_buf_ok(buf_t *buf);
 STATIC int buf_find_string_offset(const buf_t *buf, const char *s, size_t n);
 STATIC void buf_pullup(buf_t *buf, size_t bytes);
 void buf_get_first_chunk_data(const buf_t *buf, const char **cp, size_t *sz);
+STATIC size_t preferred_chunk_size(size_t target);
 
 #define DEBUG_CHUNK_ALLOC
 /** A single chunk on a buffer. */

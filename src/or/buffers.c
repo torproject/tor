@@ -166,9 +166,12 @@ chunk_grow(chunk_t *chunk, size_t sz)
 
 /** Return the allocation size we'd like to use to hold <b>target</b>
  * bytes. */
-static inline size_t
+STATIC size_t
 preferred_chunk_size(size_t target)
 {
+  tor_assert(target <= SIZE_T_CEILING - CHUNK_HEADER_LEN);
+  if (CHUNK_ALLOC_SIZE(target) >= MAX_CHUNK_ALLOC)
+    return CHUNK_ALLOC_SIZE(target);
   size_t sz = MIN_CHUNK_ALLOC;
   while (CHUNK_SIZE_WITH_ALLOC(sz) < target) {
     sz <<= 1;
