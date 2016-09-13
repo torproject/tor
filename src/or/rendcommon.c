@@ -1115,3 +1115,4 @@ assert_circ_anonymity_ok(origin_circuit_t *circ,
     tor_assert(rend_allow_non_anonymous_connection(options));
   }
 }
+
