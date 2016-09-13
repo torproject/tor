@@ -2731,7 +2731,7 @@ routerstatus_parse_guardfraction(const char *guardfraction_str,
  *
  * Parse according to the syntax used by the consensus flavor <b>flav</b>.
  **/
-static routerstatus_t *
+STATIC routerstatus_t *
 routerstatus_parse_entry_from_string(memarea_t *area,
                                      const char **s, smartlist_t *tokens,
                                      networkstatus_t *vote,
