@@ -3777,7 +3777,8 @@ typedef struct {
                      * unattached before we fail it? */
   int LearnCircuitBuildTimeout; /**< If non-zero, we attempt to learn a value
                                  * for CircuitBuildTimeout based on timeout
-                                 * history */
+                                 * history. Use circuit_build_times_disabled()
+                                 * rather than checking this value directly. */
   int CircuitBuildTimeout; /**< Cull non-open circuits that were born at
                             * least this many seconds ago. Used until
                             * adaptive algorithm learns a new value. */
