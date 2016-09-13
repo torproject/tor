@@ -2756,7 +2756,7 @@ test_options_validate__single_onion(void *ignored)
   int ret;
   char *msg;
   options_test_data_t *tdata = NULL;
-  int previous_log = setup_capture_of_logs(LOG_WARN);
+  setup_capture_of_logs(LOG_WARN);
 
   /* Test that HiddenServiceSingleHopMode must come with
    * HiddenServiceNonAnonymousMode */
@@ -2892,7 +2892,7 @@ test_options_validate__single_onion(void *ignored)
 
  done:
   policies_free_all();
-  teardown_capture_of_logs(previous_log);
+  teardown_capture_of_logs();
   free_options_test_data(tdata);
   tor_free(msg);
 }
