@@ -1490,7 +1490,7 @@ rend_service_load_auth_keys(rend_service_t *s, const char *hfname)
   strmap_free(parsed_clients, rend_authorized_client_strmap_item_free);
 
   if (cfname) {
-    memwipe(cfname, 0, sizeof(cfname));
+    memwipe(cfname, 0, strlen(cfname));
     tor_free(cfname);
   }
 
