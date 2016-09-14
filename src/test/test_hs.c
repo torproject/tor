@@ -568,6 +568,7 @@ test_single_onion_poisoning(void *arg)
 
   service_1->directory = dir1;
   service_2->directory = dir2;
+  dir1 = dir2 = NULL;
   smartlist_add(services, service_1);
   /* But don't add the second service yet. */
 
@@ -699,6 +700,8 @@ test_single_onion_poisoning(void *arg)
   smartlist_free(services);
   UNMOCK(get_options);
   tor_free(mock_options->DataDirectory);
+  tor_free(dir1);
+  tor_free(dir2);
 }
 
 struct testcase_t hs_tests[] = {
