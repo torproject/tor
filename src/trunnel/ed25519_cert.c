@@ -28,6 +28,281 @@ int edcert_deadcode_dummy__ = 0;
     }                                                            \
   } while (0)
 
+create2_cell_body_t *
+create2_cell_body_new(void)
+{
+  create2_cell_body_t *val = trunnel_calloc(1, sizeof(create2_cell_body_t));
+  if (NULL == val)
+    return NULL;
+  return val;
+}
+
+/** Release all storage held inside 'obj', but do not free 'obj'.
+ */
+static void
+create2_cell_body_clear(create2_cell_body_t *obj)
+{
+  (void) obj;
+  TRUNNEL_DYNARRAY_WIPE(&obj->handshake_data);
+  TRUNNEL_DYNARRAY_CLEAR(&obj->handshake_data);
+}
+
+void
+create2_cell_body_free(create2_cell_body_t *obj)
+{
+  if (obj == NULL)
+    return;
+  create2_cell_body_clear(obj);
+  trunnel_memwipe(obj, sizeof(create2_cell_body_t));
+  trunnel_free_(obj);
+}
+
+uint16_t
+create2_cell_body_get_handshake_type(create2_cell_body_t *inp)
+{
+  return inp->handshake_type;
+}
+int
+create2_cell_body_set_handshake_type(create2_cell_body_t *inp, uint16_t val)
+{
+  inp->handshake_type = val;
+  return 0;
+}
+uint16_t
+create2_cell_body_get_handshake_len(create2_cell_body_t *inp)
+{
+  return inp->handshake_len;
+}
+int
+create2_cell_body_set_handshake_len(create2_cell_body_t *inp, uint16_t val)
+{
+  inp->handshake_len = val;
+  return 0;
+}
+size_t
+create2_cell_body_getlen_handshake_data(const create2_cell_body_t *inp)
+{
+  return TRUNNEL_DYNARRAY_LEN(&inp->handshake_data);
+}
+
+uint8_t
+create2_cell_body_get_handshake_data(create2_cell_body_t *inp, size_t idx)
+{
+  return TRUNNEL_DYNARRAY_GET(&inp->handshake_data, idx);
+}
+
+uint8_t
+create2_cell_body_getconst_handshake_data(const create2_cell_body_t *inp, size_t idx)
+{
+  return create2_cell_body_get_handshake_data((create2_cell_body_t*)inp, idx);
+}
+int
+create2_cell_body_set_handshake_data(create2_cell_body_t *inp, size_t idx, uint8_t elt)
+{
+  TRUNNEL_DYNARRAY_SET(&inp->handshake_data, idx, elt);
+  return 0;
+}
+int
+create2_cell_body_add_handshake_data(create2_cell_body_t *inp, uint8_t elt)
+{
+#if SIZE_MAX >= UINT16_MAX
+  if (inp->handshake_data.n_ == UINT16_MAX)
+    goto trunnel_alloc_failed;
+#endif
+  TRUNNEL_DYNARRAY_ADD(uint8_t, &inp->handshake_data, elt, {});
+  return 0;
+ trunnel_alloc_failed:
+  TRUNNEL_SET_ERROR_CODE(inp);
+  return -1;
+}
+
+uint8_t *
+create2_cell_body_getarray_handshake_data(create2_cell_body_t *inp)
+{
+  return inp->handshake_data.elts_;
+}
+const uint8_t  *
+create2_cell_body_getconstarray_handshake_data(const create2_cell_body_t *inp)
+{
+  return (const uint8_t  *)create2_cell_body_getarray_handshake_data((create2_cell_body_t*)inp);
+}
+int
+create2_cell_body_setlen_handshake_data(create2_cell_body_t *inp, size_t newlen)
+{
+  uint8_t *newptr;
+#if UINT16_MAX < SIZE_MAX
+  if (newlen > UINT16_MAX)
+    goto trunnel_alloc_failed;
+#endif
+  newptr = trunnel_dynarray_setlen(&inp->handshake_data.allocated_,
+                 &inp->handshake_data.n_, inp->handshake_data.elts_, newlen,
+                 sizeof(inp->handshake_data.elts_[0]), (trunnel_free_fn_t) NULL,
+                 &inp->trunnel_error_code_);
+  if (newlen != 0 && newptr == NULL)
+    goto trunnel_alloc_failed;
+  inp->handshake_data.elts_ = newptr;
+  return 0;
+ trunnel_alloc_failed:
+  TRUNNEL_SET_ERROR_CODE(inp);
+  return -1;
+}
+const char *
+create2_cell_body_check(const create2_cell_body_t *obj)
+{
+  if (obj == NULL)
+    return "Object was NULL";
+  if (obj->trunnel_error_code_)
+    return "A set function failed on this object";
+  if (TRUNNEL_DYNARRAY_LEN(&obj->handshake_data) != obj->handshake_len)
+    return "Length mismatch for handshake_data";
+  return NULL;
+}
+
+ssize_t
+create2_cell_body_encoded_len(const create2_cell_body_t *obj)
+{
+  ssize_t result = 0;
+
+  if (NULL != create2_cell_body_check(obj))
+     return -1;
+
+
+  /* Length of u16 handshake_type */
+  result += 2;
+
+  /* Length of u16 handshake_len */
+  result += 2;
+
+  /* Length of u8 handshake_data[handshake_len] */
+  result += TRUNNEL_DYNARRAY_LEN(&obj->handshake_data);
+  return result;
+}
+int
+create2_cell_body_clear_errors(create2_cell_body_t *obj)
+{
+  int r = obj->trunnel_error_code_;
+  obj->trunnel_error_code_ = 0;
+  return r;
+}
+ssize_t
+create2_cell_body_encode(uint8_t *output, const size_t avail, const create2_cell_body_t *obj)
+{
+  ssize_t result = 0;
+  size_t written = 0;
+  uint8_t *ptr = output;
+  const char *msg;
+#ifdef TRUNNEL_CHECK_ENCODED_LEN
+  const ssize_t encoded_len = create2_cell_body_encoded_len(obj);
+#endif
+
+  if (NULL != (msg = create2_cell_body_check(obj)))
+    goto check_failed;
+
+#ifdef TRUNNEL_CHECK_ENCODED_LEN
+  trunnel_assert(encoded_len >= 0);
+#endif
+
+  /* Encode u16 handshake_type */
+  trunnel_assert(written <= avail);
+  if (avail - written < 2)
+    goto truncated;
+  trunnel_set_uint16(ptr, trunnel_htons(obj->handshake_type));
+  written += 2; ptr += 2;
+
+  /* Encode u16 handshake_len */
+  trunnel_assert(written <= avail);
+  if (avail - written < 2)
+    goto truncated;
+  trunnel_set_uint16(ptr, trunnel_htons(obj->handshake_len));
+  written += 2; ptr += 2;
+
+  /* Encode u8 handshake_data[handshake_len] */
+  {
+    size_t elt_len = TRUNNEL_DYNARRAY_LEN(&obj->handshake_data);
+    trunnel_assert(obj->handshake_len == elt_len);
+    trunnel_assert(written <= avail);
+    if (avail - written < elt_len)
+      goto truncated;
+    if (elt_len)
+      memcpy(ptr, obj->handshake_data.elts_, elt_len);
+    written += elt_len; ptr += elt_len;
+  }
+
+
+  trunnel_assert(ptr == output + written);
+#ifdef TRUNNEL_CHECK_ENCODED_LEN
+  {
+    trunnel_assert(encoded_len >= 0);
+    trunnel_assert((size_t)encoded_len == written);
+  }
+
+#endif
+
+  return written;
+
+ truncated:
+  result = -2;
+  goto fail;
+ check_failed:
+  (void)msg;
+  result = -1;
+  goto fail;
+ fail:
+  trunnel_assert(result < 0);
+  return result;
+}
+
+/** As create2_cell_body_parse(), but do not allocate the output
+ * object.
+ */
+static ssize_t
+create2_cell_body_parse_into(create2_cell_body_t *obj, const uint8_t *input, const size_t len_in)
+{
+  const uint8_t *ptr = input;
+  size_t remaining = len_in;
+  ssize_t result = 0;
+  (void)result;
+
+  /* Parse u16 handshake_type */
+  CHECK_REMAINING(2, truncated);
+  obj->handshake_type = trunnel_ntohs(trunnel_get_uint16(ptr));
+  remaining -= 2; ptr += 2;
+
+  /* Parse u16 handshake_len */
+  CHECK_REMAINING(2, truncated);
+  obj->handshake_len = trunnel_ntohs(trunnel_get_uint16(ptr));
+  remaining -= 2; ptr += 2;
+
+  /* Parse u8 handshake_data[handshake_len] */
+  CHECK_REMAINING(obj->handshake_len, truncated);
+  TRUNNEL_DYNARRAY_EXPAND(uint8_t, &obj->handshake_data, obj->handshake_len, {});
+  obj->handshake_data.n_ = obj->handshake_len;
+  if (obj->handshake_len)
+    memcpy(obj->handshake_data.elts_, ptr, obj->handshake_len);
+  ptr += obj->handshake_len; remaining -= obj->handshake_len;
+  trunnel_assert(ptr + remaining == input + len_in);
+  return len_in - remaining;
+
+ truncated:
+  return -2;
+ trunnel_alloc_failed:
+  return -1;
+}
+
+ssize_t
+create2_cell_body_parse(create2_cell_body_t **output, const uint8_t *input, const size_t len_in)
+{
+  ssize_t result;
+  *output = create2_cell_body_new();
+  if (NULL == *output)
+    return -1;
+  result = create2_cell_body_parse_into(*output, input, len_in);
+  if (result < 0) {
+    create2_cell_body_free(*output);
+    *output = NULL;
+  }
+  return result;
+}
 ed25519_cert_extension_t *
 ed25519_cert_extension_new(void)
 {
@@ -426,6 +701,287 @@ ed25519_cert_extension_parse(ed25519_cert_extension_t **output, const uint8_t *i
   result = ed25519_cert_extension_parse_into(*output, input, len_in);
   if (result < 0) {
     ed25519_cert_extension_free(*output);
+    *output = NULL;
+  }
+  return result;
+}
+extend1_cell_body_t *
+extend1_cell_body_new(void)
+{
+  extend1_cell_body_t *val = trunnel_calloc(1, sizeof(extend1_cell_body_t));
+  if (NULL == val)
+    return NULL;
+  return val;
+}
+
+/** Release all storage held inside 'obj', but do not free 'obj'.
+ */
+static void
+extend1_cell_body_clear(extend1_cell_body_t *obj)
+{
+  (void) obj;
+}
+
+void
+extend1_cell_body_free(extend1_cell_body_t *obj)
+{
+  if (obj == NULL)
+    return;
+  extend1_cell_body_clear(obj);
+  trunnel_memwipe(obj, sizeof(extend1_cell_body_t));
+  trunnel_free_(obj);
+}
+
+uint32_t
+extend1_cell_body_get_ipv4addr(extend1_cell_body_t *inp)
+{
+  return inp->ipv4addr;
+}
+int
+extend1_cell_body_set_ipv4addr(extend1_cell_body_t *inp, uint32_t val)
+{
+  inp->ipv4addr = val;
+  return 0;
+}
+uint16_t
+extend1_cell_body_get_port(extend1_cell_body_t *inp)
+{
+  return inp->port;
+}
+int
+extend1_cell_body_set_port(extend1_cell_body_t *inp, uint16_t val)
+{
+  inp->port = val;
+  return 0;
+}
+size_t
+extend1_cell_body_getlen_onionskin(const extend1_cell_body_t *inp)
+{
+  (void)inp;  return 186;
+}
+
+uint8_t
+extend1_cell_body_get_onionskin(extend1_cell_body_t *inp, size_t idx)
+{
+  trunnel_assert(idx < 186);
+  return inp->onionskin[idx];
+}
+
+uint8_t
+extend1_cell_body_getconst_onionskin(const extend1_cell_body_t *inp, size_t idx)
+{
+  return extend1_cell_body_get_onionskin((extend1_cell_body_t*)inp, idx);
+}
+int
+extend1_cell_body_set_onionskin(extend1_cell_body_t *inp, size_t idx, uint8_t elt)
+{
+  trunnel_assert(idx < 186);
+  inp->onionskin[idx] = elt;
+  return 0;
+}
+
+uint8_t *
+extend1_cell_body_getarray_onionskin(extend1_cell_body_t *inp)
+{
+  return inp->onionskin;
+}
+const uint8_t  *
+extend1_cell_body_getconstarray_onionskin(const extend1_cell_body_t *inp)
+{
+  return (const uint8_t  *)extend1_cell_body_getarray_onionskin((extend1_cell_body_t*)inp);
+}
+size_t
+extend1_cell_body_getlen_identity(const extend1_cell_body_t *inp)
+{
+  (void)inp;  return 20;
+}
+
+uint8_t
+extend1_cell_body_get_identity(extend1_cell_body_t *inp, size_t idx)
+{
+  trunnel_assert(idx < 20);
+  return inp->identity[idx];
+}
+
+uint8_t
+extend1_cell_body_getconst_identity(const extend1_cell_body_t *inp, size_t idx)
+{
+  return extend1_cell_body_get_identity((extend1_cell_body_t*)inp, idx);
+}
+int
+extend1_cell_body_set_identity(extend1_cell_body_t *inp, size_t idx, uint8_t elt)
+{
+  trunnel_assert(idx < 20);
+  inp->identity[idx] = elt;
+  return 0;
+}
+
+uint8_t *
+extend1_cell_body_getarray_identity(extend1_cell_body_t *inp)
+{
+  return inp->identity;
+}
+const uint8_t  *
+extend1_cell_body_getconstarray_identity(const extend1_cell_body_t *inp)
+{
+  return (const uint8_t  *)extend1_cell_body_getarray_identity((extend1_cell_body_t*)inp);
+}
+const char *
+extend1_cell_body_check(const extend1_cell_body_t *obj)
+{
+  if (obj == NULL)
+    return "Object was NULL";
+  if (obj->trunnel_error_code_)
+    return "A set function failed on this object";
+  return NULL;
+}
+
+ssize_t
+extend1_cell_body_encoded_len(const extend1_cell_body_t *obj)
+{
+  ssize_t result = 0;
+
+  if (NULL != extend1_cell_body_check(obj))
+     return -1;
+
+
+  /* Length of u32 ipv4addr */
+  result += 4;
+
+  /* Length of u16 port */
+  result += 2;
+
+  /* Length of u8 onionskin[186] */
+  result += 186;
+
+  /* Length of u8 identity[20] */
+  result += 20;
+  return result;
+}
+int
+extend1_cell_body_clear_errors(extend1_cell_body_t *obj)
+{
+  int r = obj->trunnel_error_code_;
+  obj->trunnel_error_code_ = 0;
+  return r;
+}
+ssize_t
+extend1_cell_body_encode(uint8_t *output, const size_t avail, const extend1_cell_body_t *obj)
+{
+  ssize_t result = 0;
+  size_t written = 0;
+  uint8_t *ptr = output;
+  const char *msg;
+#ifdef TRUNNEL_CHECK_ENCODED_LEN
+  const ssize_t encoded_len = extend1_cell_body_encoded_len(obj);
+#endif
+
+  if (NULL != (msg = extend1_cell_body_check(obj)))
+    goto check_failed;
+
+#ifdef TRUNNEL_CHECK_ENCODED_LEN
+  trunnel_assert(encoded_len >= 0);
+#endif
+
+  /* Encode u32 ipv4addr */
+  trunnel_assert(written <= avail);
+  if (avail - written < 4)
+    goto truncated;
+  trunnel_set_uint32(ptr, trunnel_htonl(obj->ipv4addr));
+  written += 4; ptr += 4;
+
+  /* Encode u16 port */
+  trunnel_assert(written <= avail);
+  if (avail - written < 2)
+    goto truncated;
+  trunnel_set_uint16(ptr, trunnel_htons(obj->port));
+  written += 2; ptr += 2;
+
+  /* Encode u8 onionskin[186] */
+  trunnel_assert(written <= avail);
+  if (avail - written < 186)
+    goto truncated;
+  memcpy(ptr, obj->onionskin, 186);
+  written += 186; ptr += 186;
+
+  /* Encode u8 identity[20] */
+  trunnel_assert(written <= avail);
+  if (avail - written < 20)
+    goto truncated;
+  memcpy(ptr, obj->identity, 20);
+  written += 20; ptr += 20;
+
+
+  trunnel_assert(ptr == output + written);
+#ifdef TRUNNEL_CHECK_ENCODED_LEN
+  {
+    trunnel_assert(encoded_len >= 0);
+    trunnel_assert((size_t)encoded_len == written);
+  }
+
+#endif
+
+  return written;
+
+ truncated:
+  result = -2;
+  goto fail;
+ check_failed:
+  (void)msg;
+  result = -1;
+  goto fail;
+ fail:
+  trunnel_assert(result < 0);
+  return result;
+}
+
+/** As extend1_cell_body_parse(), but do not allocate the output
+ * object.
+ */
+static ssize_t
+extend1_cell_body_parse_into(extend1_cell_body_t *obj, const uint8_t *input, const size_t len_in)
+{
+  const uint8_t *ptr = input;
+  size_t remaining = len_in;
+  ssize_t result = 0;
+  (void)result;
+
+  /* Parse u32 ipv4addr */
+  CHECK_REMAINING(4, truncated);
+  obj->ipv4addr = trunnel_ntohl(trunnel_get_uint32(ptr));
+  remaining -= 4; ptr += 4;
+
+  /* Parse u16 port */
+  CHECK_REMAINING(2, truncated);
+  obj->port = trunnel_ntohs(trunnel_get_uint16(ptr));
+  remaining -= 2; ptr += 2;
+
+  /* Parse u8 onionskin[186] */
+  CHECK_REMAINING(186, truncated);
+  memcpy(obj->onionskin, ptr, 186);
+  remaining -= 186; ptr += 186;
+
+  /* Parse u8 identity[20] */
+  CHECK_REMAINING(20, truncated);
+  memcpy(obj->identity, ptr, 20);
+  remaining -= 20; ptr += 20;
+  trunnel_assert(ptr + remaining == input + len_in);
+  return len_in - remaining;
+
+ truncated:
+  return -2;
+}
+
+ssize_t
+extend1_cell_body_parse(extend1_cell_body_t **output, const uint8_t *input, const size_t len_in)
+{
+  ssize_t result;
+  *output = extend1_cell_body_new();
+  if (NULL == *output)
+    return -1;
+  result = extend1_cell_body_parse_into(*output, input, len_in);
+  if (result < 0) {
+    extend1_cell_body_free(*output);
     *output = NULL;
   }
   return result;
@@ -1524,6 +2080,343 @@ ed25519_cert_parse(ed25519_cert_t **output, const uint8_t *input, const size_t l
   result = ed25519_cert_parse_into(*output, input, len_in);
   if (result < 0) {
     ed25519_cert_free(*output);
+    *output = NULL;
+  }
+  return result;
+}
+extend2_cell_body_t *
+extend2_cell_body_new(void)
+{
+  extend2_cell_body_t *val = trunnel_calloc(1, sizeof(extend2_cell_body_t));
+  if (NULL == val)
+    return NULL;
+  return val;
+}
+
+/** Release all storage held inside 'obj', but do not free 'obj'.
+ */
+static void
+extend2_cell_body_clear(extend2_cell_body_t *obj)
+{
+  (void) obj;
+  {
+
+    unsigned idx;
+    for (idx = 0; idx < TRUNNEL_DYNARRAY_LEN(&obj->ls); ++idx) {
+      link_specifier_free(TRUNNEL_DYNARRAY_GET(&obj->ls, idx));
+    }
+  }
+  TRUNNEL_DYNARRAY_WIPE(&obj->ls);
+  TRUNNEL_DYNARRAY_CLEAR(&obj->ls);
+  create2_cell_body_free(obj->create2);
+  obj->create2 = NULL;
+}
+
+void
+extend2_cell_body_free(extend2_cell_body_t *obj)
+{
+  if (obj == NULL)
+    return;
+  extend2_cell_body_clear(obj);
+  trunnel_memwipe(obj, sizeof(extend2_cell_body_t));
+  trunnel_free_(obj);
+}
+
+uint8_t
+extend2_cell_body_get_n_spec(extend2_cell_body_t *inp)
+{
+  return inp->n_spec;
+}
+int
+extend2_cell_body_set_n_spec(extend2_cell_body_t *inp, uint8_t val)
+{
+  inp->n_spec = val;
+  return 0;
+}
+size_t
+extend2_cell_body_getlen_ls(const extend2_cell_body_t *inp)
+{
+  return TRUNNEL_DYNARRAY_LEN(&inp->ls);
+}
+
+struct link_specifier_st *
+extend2_cell_body_get_ls(extend2_cell_body_t *inp, size_t idx)
+{
+  return TRUNNEL_DYNARRAY_GET(&inp->ls, idx);
+}
+
+ const struct link_specifier_st *
+extend2_cell_body_getconst_ls(const extend2_cell_body_t *inp, size_t idx)
+{
+  return extend2_cell_body_get_ls((extend2_cell_body_t*)inp, idx);
+}
+int
+extend2_cell_body_set_ls(extend2_cell_body_t *inp, size_t idx, struct link_specifier_st * elt)
+{
+  link_specifier_t *oldval = TRUNNEL_DYNARRAY_GET(&inp->ls, idx);
+  if (oldval && oldval != elt)
+    link_specifier_free(oldval);
+  return extend2_cell_body_set0_ls(inp, idx, elt);
+}
+int
+extend2_cell_body_set0_ls(extend2_cell_body_t *inp, size_t idx, struct link_specifier_st * elt)
+{
+  TRUNNEL_DYNARRAY_SET(&inp->ls, idx, elt);
+  return 0;
+}
+int
+extend2_cell_body_add_ls(extend2_cell_body_t *inp, struct link_specifier_st * elt)
+{
+#if SIZE_MAX >= UINT8_MAX
+  if (inp->ls.n_ == UINT8_MAX)
+    goto trunnel_alloc_failed;
+#endif
+  TRUNNEL_DYNARRAY_ADD(struct link_specifier_st *, &inp->ls, elt, {});
+  return 0;
+ trunnel_alloc_failed:
+  TRUNNEL_SET_ERROR_CODE(inp);
+  return -1;
+}
+
+struct link_specifier_st * *
+extend2_cell_body_getarray_ls(extend2_cell_body_t *inp)
+{
+  return inp->ls.elts_;
+}
+const struct link_specifier_st *  const  *
+extend2_cell_body_getconstarray_ls(const extend2_cell_body_t *inp)
+{
+  return (const struct link_specifier_st *  const  *)extend2_cell_body_getarray_ls((extend2_cell_body_t*)inp);
+}
+int
+extend2_cell_body_setlen_ls(extend2_cell_body_t *inp, size_t newlen)
+{
+  struct link_specifier_st * *newptr;
+#if UINT8_MAX < SIZE_MAX
+  if (newlen > UINT8_MAX)
+    goto trunnel_alloc_failed;
+#endif
+  newptr = trunnel_dynarray_setlen(&inp->ls.allocated_,
+                 &inp->ls.n_, inp->ls.elts_, newlen,
+                 sizeof(inp->ls.elts_[0]), (trunnel_free_fn_t) link_specifier_free,
+                 &inp->trunnel_error_code_);
+  if (newlen != 0 && newptr == NULL)
+    goto trunnel_alloc_failed;
+  inp->ls.elts_ = newptr;
+  return 0;
+ trunnel_alloc_failed:
+  TRUNNEL_SET_ERROR_CODE(inp);
+  return -1;
+}
+struct create2_cell_body_st *
+extend2_cell_body_get_create2(extend2_cell_body_t *inp)
+{
+  return inp->create2;
+}
+const struct create2_cell_body_st *
+extend2_cell_body_getconst_create2(const extend2_cell_body_t *inp)
+{
+  return extend2_cell_body_get_create2((extend2_cell_body_t*) inp);
+}
+int
+extend2_cell_body_set_create2(extend2_cell_body_t *inp, struct create2_cell_body_st *val)
+{
+  if (inp->create2 && inp->create2 != val)
+    create2_cell_body_free(inp->create2);
+  return extend2_cell_body_set0_create2(inp, val);
+}
+int
+extend2_cell_body_set0_create2(extend2_cell_body_t *inp, struct create2_cell_body_st *val)
+{
+  inp->create2 = val;
+  return 0;
+}
+const char *
+extend2_cell_body_check(const extend2_cell_body_t *obj)
+{
+  if (obj == NULL)
+    return "Object was NULL";
+  if (obj->trunnel_error_code_)
+    return "A set function failed on this object";
+  {
+    const char *msg;
+
+    unsigned idx;
+    for (idx = 0; idx < TRUNNEL_DYNARRAY_LEN(&obj->ls); ++idx) {
+      if (NULL != (msg = link_specifier_check(TRUNNEL_DYNARRAY_GET(&obj->ls, idx))))
+        return msg;
+    }
+  }
+  if (TRUNNEL_DYNARRAY_LEN(&obj->ls) != obj->n_spec)
+    return "Length mismatch for ls";
+  {
+    const char *msg;
+    if (NULL != (msg = create2_cell_body_check(obj->create2)))
+      return msg;
+  }
+  return NULL;
+}
+
+ssize_t
+extend2_cell_body_encoded_len(const extend2_cell_body_t *obj)
+{
+  ssize_t result = 0;
+
+  if (NULL != extend2_cell_body_check(obj))
+     return -1;
+
+
+  /* Length of u8 n_spec */
+  result += 1;
+
+  /* Length of struct link_specifier ls[n_spec] */
+  {
+
+    unsigned idx;
+    for (idx = 0; idx < TRUNNEL_DYNARRAY_LEN(&obj->ls); ++idx) {
+      result += link_specifier_encoded_len(TRUNNEL_DYNARRAY_GET(&obj->ls, idx));
+    }
+  }
+
+  /* Length of struct create2_cell_body create2 */
+  result += create2_cell_body_encoded_len(obj->create2);
+  return result;
+}
+int
+extend2_cell_body_clear_errors(extend2_cell_body_t *obj)
+{
+  int r = obj->trunnel_error_code_;
+  obj->trunnel_error_code_ = 0;
+  return r;
+}
+ssize_t
+extend2_cell_body_encode(uint8_t *output, const size_t avail, const extend2_cell_body_t *obj)
+{
+  ssize_t result = 0;
+  size_t written = 0;
+  uint8_t *ptr = output;
+  const char *msg;
+#ifdef TRUNNEL_CHECK_ENCODED_LEN
+  const ssize_t encoded_len = extend2_cell_body_encoded_len(obj);
+#endif
+
+  if (NULL != (msg = extend2_cell_body_check(obj)))
+    goto check_failed;
+
+#ifdef TRUNNEL_CHECK_ENCODED_LEN
+  trunnel_assert(encoded_len >= 0);
+#endif
+
+  /* Encode u8 n_spec */
+  trunnel_assert(written <= avail);
+  if (avail - written < 1)
+    goto truncated;
+  trunnel_set_uint8(ptr, (obj->n_spec));
+  written += 1; ptr += 1;
+
+  /* Encode struct link_specifier ls[n_spec] */
+  {
+
+    unsigned idx;
+    for (idx = 0; idx < TRUNNEL_DYNARRAY_LEN(&obj->ls); ++idx) {
+      trunnel_assert(written <= avail);
+      result = link_specifier_encode(ptr, avail - written, TRUNNEL_DYNARRAY_GET(&obj->ls, idx));
+      if (result < 0)
+        goto fail; /* XXXXXXX !*/
+      written += result; ptr += result;
+    }
+  }
+
+  /* Encode struct create2_cell_body create2 */
+  trunnel_assert(written <= avail);
+  result = create2_cell_body_encode(ptr, avail - written, obj->create2);
+  if (result < 0)
+    goto fail; /* XXXXXXX !*/
+  written += result; ptr += result;
+
+
+  trunnel_assert(ptr == output + written);
+#ifdef TRUNNEL_CHECK_ENCODED_LEN
+  {
+    trunnel_assert(encoded_len >= 0);
+    trunnel_assert((size_t)encoded_len == written);
+  }
+
+#endif
+
+  return written;
+
+ truncated:
+  result = -2;
+  goto fail;
+ check_failed:
+  (void)msg;
+  result = -1;
+  goto fail;
+ fail:
+  trunnel_assert(result < 0);
+  return result;
+}
+
+/** As extend2_cell_body_parse(), but do not allocate the output
+ * object.
+ */
+static ssize_t
+extend2_cell_body_parse_into(extend2_cell_body_t *obj, const uint8_t *input, const size_t len_in)
+{
+  const uint8_t *ptr = input;
+  size_t remaining = len_in;
+  ssize_t result = 0;
+  (void)result;
+
+  /* Parse u8 n_spec */
+  CHECK_REMAINING(1, truncated);
+  obj->n_spec = (trunnel_get_uint8(ptr));
+  remaining -= 1; ptr += 1;
+
+  /* Parse struct link_specifier ls[n_spec] */
+  TRUNNEL_DYNARRAY_EXPAND(link_specifier_t *, &obj->ls, obj->n_spec, {});
+  {
+    link_specifier_t * elt;
+    unsigned idx;
+    for (idx = 0; idx < obj->n_spec; ++idx) {
+      result = link_specifier_parse(&elt, ptr, remaining);
+      if (result < 0)
+        goto relay_fail;
+      trunnel_assert((size_t)result <= remaining);
+      remaining -= result; ptr += result;
+      TRUNNEL_DYNARRAY_ADD(link_specifier_t *, &obj->ls, elt, {link_specifier_free(elt);});
+    }
+  }
+
+  /* Parse struct create2_cell_body create2 */
+  result = create2_cell_body_parse(&obj->create2, ptr, remaining);
+  if (result < 0)
+    goto relay_fail;
+  trunnel_assert((size_t)result <= remaining);
+  remaining -= result; ptr += result;
+  trunnel_assert(ptr + remaining == input + len_in);
+  return len_in - remaining;
+
+ truncated:
+  return -2;
+ relay_fail:
+  trunnel_assert(result < 0);
+  return result;
+ trunnel_alloc_failed:
+  return -1;
+}
+
+ssize_t
+extend2_cell_body_parse(extend2_cell_body_t **output, const uint8_t *input, const size_t len_in)
+{
+  ssize_t result;
+  *output = extend2_cell_body_new();
+  if (NULL == *output)
+    return -1;
+  result = extend2_cell_body_parse_into(*output, input, len_in);
+  if (result < 0) {
+    extend2_cell_body_free(*output);
     *output = NULL;
   }
   return result;
