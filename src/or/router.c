@@ -1312,8 +1312,15 @@ extend_info_from_router(const routerinfo_t *r)
   /* Make sure we don't need to check address reachability */
   tor_assert_nonfatal(router_skip_or_reachability(get_options(), 0));
 
+  const ed25519_public_key_t *ed_id_key;
+  if (r->cache_info.signing_key_cert)
+    ed_id_key = &r->cache_info.signing_key_cert->signing_key;
+  else
+    ed_id_key = NULL;
+
   router_get_prim_orport(r, &ap);
   return extend_info_new(r->nickname, r->cache_info.identity_digest,
+                         ed_id_key,
                          r->onion_pkey, r->onion_curve25519_pkey,
                          &ap.addr, ap.port);
 }

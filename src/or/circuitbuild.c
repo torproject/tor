@@ -1181,6 +1181,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   }
 
   n_chan = channel_get_for_extend((const char*)ec.node_id,
+                                  /* ed25519 ID: put it here. 15056 */
                                   &ec.orport_ipv4.addr,
                                   &msg,
                                   &should_launch);
@@ -1192,8 +1193,9 @@ circuit_extend(cell_t *cell, circuit_t *circ)
 
     circ->n_hop = extend_info_new(NULL /*nickname*/,
                                   (const char*)ec.node_id,
-                                  NULL /*onion_key*/,
-                                  NULL /*curve25519_key*/,
+                                  NULL, /*ed25519 ID: get from ec. 15056*/
+                                  NULL, /*onion_key*/
+                                  NULL, /*curve25519_key*/
                                   &ec.orport_ipv4.addr,
                                   ec.orport_ipv4.port);
 
@@ -2356,19 +2358,23 @@ onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice)
 
 /** Allocate a new extend_info object based on the various arguments. */
 extend_info_t *
-extend_info_new(const char *nickname, const char *digest,
+extend_info_new(const char *nickname,
+                const char *rsa_id_digest,
+                const ed25519_public_key_t *ed_id,
                 crypto_pk_t *onion_key,
-                const curve25519_public_key_t *curve25519_key,
+                const curve25519_public_key_t *ntor_key,
                 const tor_addr_t *addr, uint16_t port)
 {
   extend_info_t *info = tor_malloc_zero(sizeof(extend_info_t));
-  memcpy(info->identity_digest, digest, DIGEST_LEN);
+  memcpy(info->identity_digest, rsa_id_digest, DIGEST_LEN);
+  if (ed_id)
+    memcpy(&info->ed_identity, ed_id, sizeof(ed25519_public_key_t));
   if (nickname)
     strlcpy(info->nickname, nickname, sizeof(info->nickname));
   if (onion_key)
     info->onion_key = crypto_pk_dup_key(onion_key);
-  if (curve25519_key)
-    memcpy(&info->curve25519_onion_key, curve25519_key,
+  if (ntor_key)
+    memcpy(&info->curve25519_onion_key, ntor_key,
            sizeof(curve25519_public_key_t));
   tor_addr_copy(&info->addr, addr);
   info->port = port;
@@ -2418,20 +2424,24 @@ extend_info_from_node(const node_t *node, int for_direct_connect)
     return NULL;
   }
 
+  const ed25519_public_key_t *ed_pubkey = node_get_ed25519_id(node);
+
   if (valid_addr && node->ri)
     return extend_info_new(node->ri->nickname,
-                             node->identity,
-                             node->ri->onion_pkey,
-                             node->ri->onion_curve25519_pkey,
-                             &ap.addr,
-                             ap.port);
+                           node->identity,
+                           ed_pubkey,
+                           node->ri->onion_pkey,
+                           node->ri->onion_curve25519_pkey,
+                           &ap.addr,
+                           ap.port);
   else if (valid_addr && node->rs && node->md)
     return extend_info_new(node->rs->nickname,
-                             node->identity,
-                             node->md->onion_pkey,
-                             node->md->onion_curve25519_pkey,
-                             &ap.addr,
-                             ap.port);
+                           node->identity,
+                           ed_pubkey,
+                           node->md->onion_pkey,
+                           node->md->onion_curve25519_pkey,
+                           &ap.addr,
+                           ap.port);
   else
     return NULL;
 }
