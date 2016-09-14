@@ -117,7 +117,7 @@
 #else
 #define IF_BUG_ONCE__(cond,var)                                         \
   static int var = 0;                                                   \
-  if (PREDICT_UNLIKELY(cond)) ?                                         \
+  if (PREDICT_UNLIKELY(cond) ?                                          \
       (var ? 1 :                                                        \
        (var=1,                                                          \
         tor_bug_occurred_(SHORT_FILE__, __LINE__, __func__,             \
