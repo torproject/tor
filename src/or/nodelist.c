@@ -53,6 +53,7 @@
 #include "router.h"
 #include "routerlist.h"
 #include "routerset.h"
+#include "torcert.h"
 
 #include <string.h>
 
@@ -645,6 +646,38 @@ node_get_by_nickname,(const char *nickname, int warn_if_unnamed))
     return choice;
   }
 }
+
+/** Return the Ed25519 identity key for the provided node, or NULL if it
+ * doesn't have one. */
+const ed25519_public_key_t *
+node_get_ed25519_id(const node_t *node)
+{
+  if (node->ri) {
+    if (node->ri->cache_info.signing_key_cert) {
+      const ed25519_public_key_t *pk =
+        &node->ri->cache_info.signing_key_cert->signing_key;
+      if (BUG(ed25519_public_key_is_zero(pk)))
+        goto try_the_md;
+      return pk;
+    }
+  }
+ try_the_md:
+  if (node->md) {
+    if (node->md->ed25519_identity_pkey) {
+      return node->md->ed25519_identity_pkey;
+    }
+  }
+  return NULL;
+}
+
+/** Return the RSA ID key's SHA1 digest for the provided node. */
+const uint8_t *
+node_get_rsa_id_digest(const node_t *node)
+{
+  tor_assert(node);
+  return (const uint8_t*)node->identity;
+}
+
 
 /** Return the nickname of <b>node</b>, or NULL if we can't find one. */
 const char *
