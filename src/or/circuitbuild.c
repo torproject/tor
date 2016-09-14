@@ -1041,6 +1041,10 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     ec.orport_ipv4.port = hop->extend_info->port;
     tor_addr_make_unspec(&ec.orport_ipv6.addr);
     memcpy(ec.node_id, hop->extend_info->identity_digest, DIGEST_LEN);
+    /* 15056 Either here or in the onion.c encoding code, we should make an
+     * option to decide whether we declare the ED identity (if we know one) */
+    memcpy(&ec.ed_pubkey, &hop->extend_info->ed_identity,
+           sizeof(ed25519_public_key_t));
 
     len = onion_skin_create(ec.create_cell.handshake_type,
                             hop->extend_info,
@@ -1181,7 +1185,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   }
 
   n_chan = channel_get_for_extend((const char*)ec.node_id,
-                                  /* ed25519 ID: put it here. 15056 */
+                                  /*&ec.ed25519_id 15056 */
                                   &ec.orport_ipv4.addr,
                                   &msg,
                                   &should_launch);
@@ -1193,7 +1197,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
 
     circ->n_hop = extend_info_new(NULL /*nickname*/,
                                   (const char*)ec.node_id,
-                                  NULL, /*ed25519 ID: get from ec. 15056*/
+                                  &ec.ed_pubkey,
                                   NULL, /*onion_key*/
                                   NULL, /*curve25519_key*/
                                   &ec.orport_ipv4.addr,
@@ -2367,7 +2371,7 @@ extend_info_new(const char *nickname,
 {
   extend_info_t *info = tor_malloc_zero(sizeof(extend_info_t));
   memcpy(info->identity_digest, rsa_id_digest, DIGEST_LEN);
-  if (ed_id)
+  if (ed_id && !ed25519_public_key_is_zero(ed_id))
     memcpy(&info->ed_identity, ed_id, sizeof(ed25519_public_key_t));
   if (nickname)
     strlcpy(info->nickname, nickname, sizeof(info->nickname));

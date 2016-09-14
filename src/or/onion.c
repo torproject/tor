@@ -76,6 +76,9 @@
 #include "rephist.h"
 #include "router.h"
 
+// trunnel
+#include "ed25519_cert.h"
+
 /** Type for a linked list of circuits that are waiting for a free CPU worker
  * to process a waiting onion handshake. */
 typedef struct onion_queue_t {
@@ -871,13 +874,111 @@ check_extend_cell(const extend_cell_t *cell)
   return check_create_cell(&cell->create_cell, 1);
 }
 
-/** Protocol constants for specifier types in EXTEND2
- * @{
- */
-#define SPECTYPE_IPV4 0
-#define SPECTYPE_IPV6 1
-#define SPECTYPE_LEGACY_ID 2
-/** @} */
+static int
+extend_cell_from_extend1_cell_body(extend_cell_t *cell_out,
+                                   const extend1_cell_body_t *cell)
+{
+  tor_assert(cell_out);
+  memset(cell_out, 0, sizeof(*cell_out));
+  tor_addr_make_unspec(&cell_out->orport_ipv4.addr);
+  tor_addr_make_unspec(&cell_out->orport_ipv6.addr);
+
+  cell_out->cell_type = RELAY_COMMAND_EXTEND;
+  tor_addr_from_ipv4h(&cell_out->orport_ipv4.addr, cell->ipv4addr);
+  cell_out->orport_ipv4.port = cell->port;
+  if (tor_memeq(cell->onionskin, NTOR_CREATE_MAGIC, 16)) {
+    cell_out->create_cell.cell_type = CELL_CREATE2;
+    cell_out->create_cell.handshake_type = ONION_HANDSHAKE_TYPE_NTOR;
+    cell_out->create_cell.handshake_len = NTOR_ONIONSKIN_LEN;
+    memcpy(cell_out->create_cell.onionskin, cell->onionskin + 16,
+           NTOR_ONIONSKIN_LEN);
+  } else {
+    cell_out->create_cell.cell_type = CELL_CREATE;
+    cell_out->create_cell.handshake_type = ONION_HANDSHAKE_TYPE_TAP;
+    cell_out->create_cell.handshake_len = TAP_ONIONSKIN_CHALLENGE_LEN;
+    memcpy(cell_out->create_cell.onionskin, cell->onionskin,
+           TAP_ONIONSKIN_CHALLENGE_LEN);
+  }
+  memcpy(cell_out->node_id, cell->identity, DIGEST_LEN);
+  return 0;
+}
+
+static int
+create_cell_from_create2_cell_body(create_cell_t *cell_out,
+                                   const create2_cell_body_t *cell)
+{
+  tor_assert(cell_out);
+  memset(cell_out, 0, sizeof(create_cell_t));
+  if (BUG(cell->handshake_len > sizeof(cell_out->onionskin))) {
+    /* This should be impossible because there just isn't enough room in the
+     * input cell to make the handshake_len this large and provide a
+     * handshake_data to match. */
+    return -1;
+  }
+
+  cell_out->cell_type = CELL_CREATE2;
+  cell_out->handshake_type = cell->handshake_type;
+  cell_out->handshake_len = cell->handshake_len;
+  memcpy(cell_out->onionskin,
+       create2_cell_body_getconstarray_handshake_data(cell),
+       cell->handshake_len);
+  return 0;
+}
+
+static int
+extend_cell_from_extend2_cell_body(extend_cell_t *cell_out,
+                                   const extend2_cell_body_t *cell)
+{
+  tor_assert(cell_out);
+  int found_ipv4 = 0, found_ipv6 = 0, found_rsa_id = 0, found_ed_id = 0;
+  memset(cell_out, 0, sizeof(*cell_out));
+  tor_addr_make_unspec(&cell_out->orport_ipv4.addr);
+  tor_addr_make_unspec(&cell_out->orport_ipv6.addr);
+  cell_out->cell_type = RELAY_COMMAND_EXTEND2;
+
+  unsigned i;
+  for (i = 0; i < cell->n_spec; ++i) {
+    const link_specifier_t *ls = extend2_cell_body_getconst_ls(cell, i);
+    switch (ls->ls_type) {
+      case LS_IPV4:
+        if (found_ipv4)
+          continue;
+        found_ipv4 = 1;
+        tor_addr_from_ipv4h(&cell_out->orport_ipv4.addr, ls->un_ipv4_addr);
+        cell_out->orport_ipv4.port = ls->un_ipv4_port;
+        break;
+      case LS_IPV6:
+        if (found_ipv6)
+          continue;
+        found_ipv6 = 1;
+        tor_addr_from_ipv6_bytes(&cell_out->orport_ipv6.addr,
+                                 (const char *)ls->un_ipv6_addr);
+        cell_out->orport_ipv6.port = ls->un_ipv6_port;
+        break;
+      case LS_LEGACY_ID:
+        if (found_rsa_id)
+          return -1;
+        found_rsa_id = 1;
+        memcpy(cell_out->node_id, ls->un_legacy_id, 20);
+        break;
+      case LS_ED25519_ID:
+        if (found_ed_id)
+          return -1;
+        found_ed_id = 1;
+        memcpy(cell_out->ed_pubkey.pubkey, ls->un_ed25519_id, 32);
+        break;
+      default:
+        /* Ignore this, whatever it is. */
+        break;
+    }
+  }
+
+  if (!found_rsa_id || !found_ipv4) /* These are mandatory */
+    return -1;
+
+  return create_cell_from_create2_cell_body(&cell_out->create_cell,
+                                            cell->create2);
+}
 
 /** Parse an EXTEND or EXTEND2 cell (according to <b>command</b>) from the
  * <b>payload_length</b> bytes of <b>payload</b> into <b>cell_out</b>. Return
@@ -886,101 +987,41 @@ int
 extend_cell_parse(extend_cell_t *cell_out, const uint8_t command,
                   const uint8_t *payload, size_t payload_length)
 {
-  const uint8_t *eop;
 
-  memset(cell_out, 0, sizeof(*cell_out));
   if (payload_length > RELAY_PAYLOAD_SIZE)
     return -1;
-  eop = payload + payload_length;
 
   switch (command) {
   case RELAY_COMMAND_EXTEND:
     {
-      if (payload_length != 6 + TAP_ONIONSKIN_CHALLENGE_LEN + DIGEST_LEN)
+      extend1_cell_body_t *cell = NULL;
+      if (extend1_cell_body_parse(&cell, payload, payload_length)<0 ||
+          cell == NULL) {
+        if (cell)
+          extend1_cell_body_free(cell);
         return -1;
-
-      cell_out->cell_type = RELAY_COMMAND_EXTEND;
-      tor_addr_from_ipv4n(&cell_out->orport_ipv4.addr, get_uint32(payload));
-      cell_out->orport_ipv4.port = ntohs(get_uint16(payload+4));
-      tor_addr_make_unspec(&cell_out->orport_ipv6.addr);
-      if (tor_memeq(payload + 6, NTOR_CREATE_MAGIC, 16)) {
-        cell_out->create_cell.cell_type = CELL_CREATE2;
-        cell_out->create_cell.handshake_type = ONION_HANDSHAKE_TYPE_NTOR;
-        cell_out->create_cell.handshake_len = NTOR_ONIONSKIN_LEN;
-        memcpy(cell_out->create_cell.onionskin, payload + 22,
-               NTOR_ONIONSKIN_LEN);
-      } else {
-        cell_out->create_cell.cell_type = CELL_CREATE;
-        cell_out->create_cell.handshake_type = ONION_HANDSHAKE_TYPE_TAP;
-        cell_out->create_cell.handshake_len = TAP_ONIONSKIN_CHALLENGE_LEN;
-        memcpy(cell_out->create_cell.onionskin, payload + 6,
-               TAP_ONIONSKIN_CHALLENGE_LEN);
       }
-      memcpy(cell_out->node_id, payload + 6 + TAP_ONIONSKIN_CHALLENGE_LEN,
-             DIGEST_LEN);
-      break;
+      int r = extend_cell_from_extend1_cell_body(cell_out, cell);
+      extend1_cell_body_free(cell);
+      if (r < 0)
+        return r;
     }
+    break;
   case RELAY_COMMAND_EXTEND2:
     {
-      uint8_t n_specs, spectype, speclen;
-      int i;
-      int found_ipv4 = 0, found_ipv6 = 0, found_id = 0;
-      tor_addr_make_unspec(&cell_out->orport_ipv4.addr);
-      tor_addr_make_unspec(&cell_out->orport_ipv6.addr);
-
-      if (payload_length == 0)
+      extend2_cell_body_t *cell = NULL;
+      if (extend2_cell_body_parse(&cell, payload, payload_length) < 0 ||
+          cell == NULL) {
+        if (cell)
+          extend2_cell_body_free(cell);
         return -1;
-
-      cell_out->cell_type = RELAY_COMMAND_EXTEND2;
-      n_specs = *payload++;
-      /* Parse the specifiers. We'll only take the first IPv4 and first IPv6
-       * address, and the node ID, and ignore everything else */
-      for (i = 0; i < n_specs; ++i) {
-        if (eop - payload < 2)
-          return -1;
-        spectype = payload[0];
-        speclen = payload[1];
-        payload += 2;
-        if (eop - payload < speclen)
-          return -1;
-        switch (spectype) {
-        case SPECTYPE_IPV4:
-          if (speclen != 6)
-            return -1;
-          if (!found_ipv4) {
-            tor_addr_from_ipv4n(&cell_out->orport_ipv4.addr,
-                                get_uint32(payload));
-            cell_out->orport_ipv4.port = ntohs(get_uint16(payload+4));
-            found_ipv4 = 1;
-          }
-          break;
-        case SPECTYPE_IPV6:
-          if (speclen != 18)
-            return -1;
-          if (!found_ipv6) {
-            tor_addr_from_ipv6_bytes(&cell_out->orport_ipv6.addr,
-                                     (const char*)payload);
-            cell_out->orport_ipv6.port = ntohs(get_uint16(payload+16));
-            found_ipv6 = 1;
-          }
-          break;
-        case SPECTYPE_LEGACY_ID:
-          if (speclen != 20)
-            return -1;
-          if (found_id)
-            return -1;
-          memcpy(cell_out->node_id, payload, 20);
-          found_id = 1;
-          break;
-        }
-        payload += speclen;
       }
-      if (!found_id || !found_ipv4)
-        return -1;
-      if (parse_create2_payload(&cell_out->create_cell,payload,eop-payload)<0)
-        return -1;
-      break;
+      int r = extend_cell_from_extend2_cell_body(cell_out, cell);
+      extend2_cell_body_free(cell);
+      if (r < 0)
+        return r;
     }
+    break;
   default:
     return -1;
   }
@@ -1137,12 +1178,11 @@ int
 extend_cell_format(uint8_t *command_out, uint16_t *len_out,
                    uint8_t *payload_out, const extend_cell_t *cell_in)
 {
-  uint8_t *p, *eop;
+  uint8_t *p;
   if (check_extend_cell(cell_in) < 0)
     return -1;
 
   p = payload_out;
-  eop = payload_out + RELAY_PAYLOAD_SIZE;
 
   memset(p, 0, RELAY_PAYLOAD_SIZE);
 
@@ -1165,33 +1205,56 @@ extend_cell_format(uint8_t *command_out, uint16_t *len_out,
     break;
   case RELAY_COMMAND_EXTEND2:
     {
-      uint8_t n = 2;
+      uint8_t n_specifiers = 2;
       *command_out = RELAY_COMMAND_EXTEND2;
+      extend2_cell_body_t *cell = extend2_cell_body_new();
+      link_specifier_t *ls;
+      {
+        /* IPv4 specifier first. */
+        ls = link_specifier_new();
+        extend2_cell_body_add_ls(cell, ls);
+        ls->ls_type = LS_IPV4;
+        ls->ls_len = 6;
+        ls->un_ipv4_addr = tor_addr_to_ipv4h(&cell_in->orport_ipv4.addr);
+        ls->un_ipv4_port = cell_in->orport_ipv4.port;
+      }
+      {
+        /* Then RSA id */
+        ls = link_specifier_new();
+        extend2_cell_body_add_ls(cell, ls);
+        ls->ls_type = LS_LEGACY_ID;
+        ls->ls_len = DIGEST_LEN;
+        memcpy(ls->un_legacy_id, cell_in->node_id, DIGEST_LEN);
+      }
+      if (should_include_ed25519_id_extend_cells(NULL, get_options()) &&
+          !ed25519_public_key_is_zero(&cell_in->ed_pubkey)) {
+        /* Then, maybe, the ed25519 id! */
+        ++n_specifiers;
+        ls = link_specifier_new();
+        extend2_cell_body_add_ls(cell, ls);
+        ls->ls_type = LS_ED25519_ID;
+        ls->ls_len = 32;
+        memcpy(ls->un_ed25519_id, cell_in->ed_pubkey.pubkey, 32);
+      }
+      cell->n_spec = n_specifiers;
 
-      *p++ = n; /* 2 identifiers */
-      *p++ = SPECTYPE_IPV4; /* First is IPV4. */
-      *p++ = 6; /* It's 6 bytes long. */
-      set_uint32(p, tor_addr_to_ipv4n(&cell_in->orport_ipv4.addr));
-      set_uint16(p+4, htons(cell_in->orport_ipv4.port));
-      p += 6;
-      *p++ = SPECTYPE_LEGACY_ID; /* Next is an identity digest. */
-      *p++ = 20; /* It's 20 bytes long */
-      memcpy(p, cell_in->node_id, DIGEST_LEN);
-      p += 20;
-
-      /* Now we can send the handshake */
-      set_uint16(p, htons(cell_in->create_cell.handshake_type));
-      set_uint16(p+2, htons(cell_in->create_cell.handshake_len));
-      p += 4;
-
-      if (cell_in->create_cell.handshake_len > eop - p)
-        return -1;
-
-      memcpy(p, cell_in->create_cell.onionskin,
+      /* Now, the handshake */
+      cell->create2 = create2_cell_body_new();
+      cell->create2->handshake_type = cell_in->create_cell.handshake_type;
+      cell->create2->handshake_len = cell_in->create_cell.handshake_len;
+      create2_cell_body_setlen_handshake_data(cell->create2,
+                                         cell_in->create_cell.handshake_len);
+      memcpy(create2_cell_body_getarray_handshake_data(cell->create2),
+             cell_in->create_cell.onionskin,
              cell_in->create_cell.handshake_len);
 
-      p += cell_in->create_cell.handshake_len;
-      *len_out = p - payload_out;
+      ssize_t len_encoded = extend2_cell_body_encode(
+                             payload_out, RELAY_PAYLOAD_SIZE,
+                             cell);
+      extend2_cell_body_free(cell);
+      if (len_encoded < 0 || len_encoded > UINT16_MAX)
+        return -1;
+      *len_out = (uint16_t) len_encoded;
     }
     break;
   default:
