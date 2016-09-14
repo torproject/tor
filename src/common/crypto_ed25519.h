@@ -66,6 +66,9 @@ ed25519_checksig_prefixed(const ed25519_signature_t *signature,
                           const char *prefix_str,
                           const ed25519_public_key_t *pubkey);
 
+int ed25519_public_key_is_zero(const ed25519_public_key_t *pubkey);
+
+
 /**
  * A collection of information necessary to check an Ed25519 signature. Used
  * for batch verification.

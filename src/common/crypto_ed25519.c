@@ -211,6 +211,14 @@ ed25519_keypair_generate(ed25519_keypair_t *keypair_out, int extra_strong)
   return 0;
 }
 
+/** Return true iff 'pubkey' is set to zero (eg to indicate that it is not
+ * set). */
+int
+ed25519_public_key_is_zero(const ed25519_public_key_t *pubkey)
+{
+  return tor_mem_is_zero((char*)pubkey->pubkey, ED25519_PUBKEY_LEN);
+}
+
 /* Return a heap-allocated array that contains <b>msg</b> prefixed by the
  * string <b>prefix_str</b>. Set <b>final_msg_len_out</b> to the size of the
  * final array. If an error occured, return NULL. It's the resonsibility of the
