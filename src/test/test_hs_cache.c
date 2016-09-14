@@ -48,7 +48,7 @@ helper_build_intro_point(const ed25519_keypair_t *blinded_kp,
 
   ret = ed25519_keypair_generate(&auth_kp, 0);
   tt_int_op(ret, ==, 0);
-  ip->auth_key_cert = tor_cert_create(blinded_kp, CERT_TYPE_HS_IP_AUTH,
+  ip->auth_key_cert = tor_cert_create(blinded_kp, CERT_TYPE_AUTH_HS_IP_KEY,
                                       &auth_kp.pubkey, time(NULL),
                                       HS_DESC_CERT_LIFETIME,
                                       CERT_FLAG_INCLUDE_SIGNING_KEY);
@@ -83,7 +83,7 @@ helper_build_hs_desc(uint64_t revision_counter, uint32_t lifetime,
 
   desc->plaintext_data.signing_key_cert =
     tor_cert_create(&desc->plaintext_data.blinded_kp,
-                    CERT_TYPE_HS_DESC_SIGN,
+                    CERT_TYPE_SIGNING_HS_DESC,
                     &desc->plaintext_data.signing_kp.pubkey, time(NULL),
                     3600, CERT_FLAG_INCLUDE_SIGNING_KEY);
   tt_assert(desc->plaintext_data.signing_key_cert);

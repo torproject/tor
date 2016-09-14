@@ -51,7 +51,7 @@ helper_build_intro_point(const ed25519_keypair_t *blinded_kp, time_t now,
 
   ret = ed25519_keypair_generate(&auth_kp, 0);
   tt_int_op(ret, ==, 0);
-  ip->auth_key_cert = tor_cert_create(blinded_kp, CERT_TYPE_HS_IP_AUTH,
+  ip->auth_key_cert = tor_cert_create(blinded_kp, CERT_TYPE_AUTH_HS_IP_KEY,
                                       &auth_kp.pubkey, now,
                                       HS_DESC_CERT_LIFETIME,
                                       CERT_FLAG_INCLUDE_SIGNING_KEY);
@@ -91,7 +91,7 @@ helper_build_hs_desc(unsigned int no_ip)
 
   desc->plaintext_data.signing_key_cert =
     tor_cert_create(&desc->plaintext_data.blinded_kp,
-                    CERT_TYPE_HS_DESC_SIGN,
+                    CERT_TYPE_SIGNING_HS_DESC,
                     &desc->plaintext_data.signing_kp.pubkey, now,
                     3600,
                     CERT_FLAG_INCLUDE_SIGNING_KEY);
@@ -1028,31 +1028,31 @@ test_validate_cert(void *arg)
   ret = ed25519_keypair_generate(&kp, 0);
   tt_int_op(ret, ==, 0);
 
-  /* Cert of type CERT_TYPE_HS_IP_AUTH. */
-  tor_cert_t *cert = tor_cert_create(&kp, CERT_TYPE_HS_IP_AUTH,
+  /* Cert of type CERT_TYPE_AUTH_HS_IP_KEY. */
+  tor_cert_t *cert = tor_cert_create(&kp, CERT_TYPE_AUTH_HS_IP_KEY,
                                      &kp.pubkey, now, 3600,
                                      CERT_FLAG_INCLUDE_SIGNING_KEY);
   tt_assert(cert);
   /* Test with empty certificate. */
-  ret = cert_is_valid(NULL, CERT_TYPE_HS_IP_AUTH, "unicorn");
+  ret = cert_is_valid(NULL, CERT_TYPE_AUTH_HS_IP_KEY, "unicorn");
   tt_int_op(ret, OP_EQ, 0);
   /* Test with a bad type. */
-  ret = cert_is_valid(cert, CERT_TYPE_HS_DESC_SIGN, "unicorn");
+  ret = cert_is_valid(cert, CERT_TYPE_SIGNING_HS_DESC, "unicorn");
   tt_int_op(ret, OP_EQ, 0);
   /* Normal validation. */
-  ret = cert_is_valid(cert, CERT_TYPE_HS_IP_AUTH, "unicorn");
+  ret = cert_is_valid(cert, CERT_TYPE_AUTH_HS_IP_KEY, "unicorn");
   tt_int_op(ret, OP_EQ, 1);
   /* Break signing key so signature verification will fails. */
   memset(&cert->signing_key, 0, sizeof(cert->signing_key));
-  ret = cert_is_valid(cert, CERT_TYPE_HS_IP_AUTH, "unicorn");
+  ret = cert_is_valid(cert, CERT_TYPE_AUTH_HS_IP_KEY, "unicorn");
   tt_int_op(ret, OP_EQ, 0);
   tor_cert_free(cert);
 
   /* Try a cert without including the signing key. */
-  cert = tor_cert_create(&kp, CERT_TYPE_HS_IP_AUTH, &kp.pubkey, now, 3600, 0);
+  cert = tor_cert_create(&kp, CERT_TYPE_AUTH_HS_IP_KEY, &kp.pubkey, now, 3600, 0);
   tt_assert(cert);
   /* Test with a bad type. */
-  ret = cert_is_valid(cert, CERT_TYPE_HS_IP_AUTH, "unicorn");
+  ret = cert_is_valid(cert, CERT_TYPE_AUTH_HS_IP_KEY, "unicorn");
   tt_int_op(ret, OP_EQ, 0);
 
  done:

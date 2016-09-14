@@ -314,7 +314,7 @@ encode_enc_key(const ed25519_keypair_t *sig_key,
                                                 &ip->enc_key.curve25519)) {
       goto err;
     }
-    tor_cert_t *cross_cert = tor_cert_create(&curve_kp, CERT_TYPE_HS_IP_ENC,
+    tor_cert_t *cross_cert = tor_cert_create(&curve_kp, CERT_TYPE_CROSS_HS_IP_KEYS,
                                              &sig_key->pubkey, now,
                                              HS_DESC_CERT_LIFETIME,
                                              CERT_FLAG_INCLUDE_SIGNING_KEY);
@@ -748,7 +748,7 @@ desc_encode_v3(const hs_descriptor_t *desc, char **encoded_out)
     char *encoded_cert;
     /* Encode certificate then create the first line of the descriptor. */
     if (desc->plaintext_data.signing_key_cert->cert_type
-        != CERT_TYPE_HS_DESC_SIGN) {
+        != CERT_TYPE_SIGNING_HS_DESC) {
       log_err(LD_BUG, "HS descriptor signing key has an unexpected cert type "
               "(%d)", (int) desc->plaintext_data.signing_key_cert->cert_type);
       goto err;
@@ -1237,7 +1237,7 @@ decode_introduction_point(const hs_descriptor_t *desc, const char *start)
 
   /* Parse cert and do some validation. */
   if (cert_parse_and_validate(&ip->auth_key_cert, tok->object_body,
-                              tok->object_size, CERT_TYPE_HS_IP_AUTH,
+                              tok->object_size, CERT_TYPE_AUTH_HS_IP_KEY,
                               "introduction point auth-key") < 0) {
     goto err;
   }
@@ -1285,7 +1285,7 @@ decode_introduction_point(const hs_descriptor_t *desc, const char *start)
       goto err;
     }
     if (cert_parse_and_validate(&cross_cert, tok->object_body,
-                       tok->object_size, CERT_TYPE_HS_IP_ENC,
+                       tok->object_size, CERT_TYPE_CROSS_HS_IP_KEYS,
                        "introduction point enc-key-certification") < 0) {
       goto err;
     }
@@ -1509,7 +1509,7 @@ desc_decode_plaintext_v3(smartlist_t *tokens,
     goto err;
   }
   if (cert_parse_and_validate(&desc->signing_key_cert, tok->object_body,
-                              tok->object_size, CERT_TYPE_HS_DESC_SIGN,
+                              tok->object_size, CERT_TYPE_SIGNING_HS_DESC,
                               "service descriptor signing key") < 0) {
     goto err;
   }
