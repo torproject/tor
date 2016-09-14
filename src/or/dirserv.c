@@ -2922,17 +2922,17 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
 
   /* These are hardwired, to avoid disaster. */
   v3_out->recommended_relay_protocols =
-    tor_strdup("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSMid=1 Link=4 "
-               "LinkAuth=1 Microdesc=1-2 Relay=2");
+    tor_strdup("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
+               "Link=4 LinkAuth=1 Microdesc=1-2 Relay=2");
   v3_out->recommended_client_protocols =
-    tor_strdup("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSMid=1 Link=4 "
-               "LinkAuth=1 Microdesc=1-2 Relay=2");
+    tor_strdup("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
+               "Link=4 LinkAuth=1 Microdesc=1-2 Relay=2");
   v3_out->required_client_protocols =
-    tor_strdup("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSMid=1 Link=4 "
-               "LinkAuth=1 Microdesc=1-2 Relay=2");
+    tor_strdup("Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
+               "Link=4 LinkAuth=1 Microdesc=1-2 Relay=2");
   v3_out->required_relay_protocols =
-    tor_strdup("Cons=1 Desc=1 DirCache=1 HSDir=1 HSMid=1 Link=3-4 "
-               "LinkAuth=1 Microdesc=1 Relay=1-2");
+    tor_strdup("Cons=1 Desc=1 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
+               "Link=3-4 LinkAuth=1 Microdesc=1 Relay=1-2");
 
   v3_out->package_lines = smartlist_new();
   {

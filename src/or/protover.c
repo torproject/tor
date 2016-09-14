@@ -17,9 +17,10 @@ static const struct {
   { PRT_LINK, "Link" },
   { PRT_LINKAUTH, "LinkAuth" },
   { PRT_RELAY, "Relay" },
-  { PRT_HSMID, "HSMid" },
   { PRT_DIRCACHE, "DirCache" },
   { PRT_HSDIR, "HSDir" },
+  { PRT_HSINTRO, "HSIntro" },
+  { PRT_HSREND, "HSRend" },
   { PRT_DESC, "Desc" },
   { PRT_MICRODESC, "Microdesc"},
   { PRT_CONS, "Cons" }
@@ -267,7 +268,8 @@ protover_get_supported_protocols(void)
     "Desc=1-2 "
     "DirCache=1 "
     "HSDir=1 "
-    "HSMid=1 "
+    "HSIntro=3 "
+    "HSRend=1-2 "
     "Link=1-4 "
     "LinkAuth=1 "
     "Microdesc=1-2 "
@@ -674,15 +676,22 @@ protover_compute_for_old_tor(const char *version)
                             FIRST_TOR_VERSION_TO_ADVERTISE_PROTOCOLS)) {
     return "";
   } else if (tor_version_as_new_as(version, "0.2.7.5")) {
+    /* 0.2.9.1-alpha HSRend=2 */
+    return "Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1-2 "
+      "Link=1-4 LinkAuth=1 "
+      "Microdesc=1-2 Relay=1-2";
+  } else if (tor_version_as_new_as(version, "0.2.7.5")) {
     /* 0.2.7-stable added Desc=2, Microdesc=2, Cons=2, which indicate
      * ed25519 support.  We'll call them present only in "stable" 027,
      * though. */
-    return "Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSMid=1 Link=1-4 LinkAuth=1 "
+    return "Cons=1-2 Desc=1-2 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
+      "Link=1-4 LinkAuth=1 "
       "Microdesc=1-2 Relay=1-2";
   } else if (tor_version_as_new_as(version, "0.2.4.19")) {
     /* No currently supported Tor server versions are older than this, or
      * lack these protocols. */
-    return "Cons=1 Desc=1 DirCache=1 HSDir=1 HSMid=1 Link=1-4 LinkAuth=1 "
+    return "Cons=1 Desc=1 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
+      "Link=1-4 LinkAuth=1 "
       "Microdesc=1 Relay=1-2";
   } else {
     /* Cannot infer protocols. */
