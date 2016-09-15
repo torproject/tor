@@ -131,7 +131,8 @@ test_directory(void *arg)
 {
   int ret;
   size_t oom_size;
-  char *desc_out, *desc1_str;
+  char *desc1_str;
+  const char *desc_out;
   hs_descriptor_t *desc1;
 
   (void) arg;
@@ -158,7 +159,6 @@ test_directory(void *arg)
     ret = hs_cache_lookup_as_dir(3, helper_get_hsdir_query(desc1), &desc_out);
     tt_int_op(ret, OP_EQ, 1);
     tt_str_op(desc_out, OP_EQ, desc1_str);
-    tor_free(desc_out);
     /* Tell our OOM to run and to at least remove a byte which will result in
      * removing the descriptor from our cache. */
     oom_size = hs_cache_handle_oom(time(NULL), 1);
@@ -186,7 +186,6 @@ test_directory(void *arg)
     ret = hs_cache_lookup_as_dir(3, helper_get_hsdir_query(desc1), &desc_out);
     tt_int_op(ret, OP_EQ, 1);
     tt_str_op(desc_out, OP_EQ, desc1_str);
-    tor_free(desc_out);
     /* We should NOT find our zero lifetime desc in our cache. */
     ret = hs_cache_lookup_as_dir(3,
                                  helper_get_hsdir_query(desc_zero_lifetime),
@@ -221,7 +220,6 @@ test_directory(void *arg)
     tt_int_op(ret, OP_EQ, 0);
     ret = hs_cache_lookup_as_dir(3, helper_get_hsdir_query(desc1), &desc_out);
     tt_int_op(ret, OP_EQ, 1);
-    tor_free(desc_out);
     /* Bump revision counter. */
     desc1->plaintext_data.revision_counter++;
     ret = hs_desc_encode_descriptor(desc1, &new_desc_str);
@@ -232,7 +230,6 @@ test_directory(void *arg)
     ret = hs_cache_lookup_as_dir(3, helper_get_hsdir_query(desc1), &desc_out);
     tt_int_op(ret, OP_EQ, 1);
     tt_str_op(desc_out, OP_EQ, new_desc_str);
-    tor_free(desc_out);
     tor_free(new_desc_str);
   }
 

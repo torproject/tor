@@ -142,13 +142,13 @@ cache_store_v3_as_dir(hs_cache_dir_descriptor_t *desc)
   return -1;
 }
 
-/* Using the query which is the blinded key for a descriptor version 3, lookup
- * in our directory cache the entry. If found, 1 is returned and desc_out is
- * populated with a newly allocated string being the encoded descriptor. If
- * not found, 0 is returned and desc_out is untouched. On error, a negative
- * value is returned and desc_out is untouched. */
+/* Using the query which is the base64 encoded blinded key of a version 3
+ * descriptor, lookup in our directory cache the entry. If found, 1 is
+ * returned and desc_out is populated with a newly allocated string being the
+ * encoded descriptor. If not found, 0 is returned and desc_out is untouched.
+ * On error, a negative value is returned and desc_out is untouched. */
 static int
-cache_lookup_v3_as_dir(const char *query, char **desc_out)
+cache_lookup_v3_as_dir(const char *query, const char **desc_out)
 {
   int found = 0;
   ed25519_public_key_t blinded_key;
@@ -167,7 +167,7 @@ cache_lookup_v3_as_dir(const char *query, char **desc_out)
   if (entry != NULL) {
     found = 1;
     if (desc_out) {
-      *desc_out = tor_strdup(entry->encoded_desc);
+      *desc_out = entry->encoded_desc;
     }
   }
 
@@ -270,7 +270,7 @@ hs_cache_store_as_dir(const char *desc)
  * untouched. */
 int
 hs_cache_lookup_as_dir(uint32_t version, const char *query,
-                       char **desc_out)
+                       const char **desc_out)
 {
   int found;
 

@@ -48,7 +48,7 @@ size_t hs_cache_handle_oom(time_t now, size_t min_remove_bytes);
  * right function. */
 int hs_cache_store_as_dir(const char *desc);
 int hs_cache_lookup_as_dir(uint32_t version, const char *query,
-                           char **desc_out);
+                           const char **desc_out);
 
 #ifdef HS_CACHE_PRIVATE
 

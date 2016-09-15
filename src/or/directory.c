@@ -3400,7 +3400,7 @@ handle_get_hs_descriptor_v3(dir_connection_t *conn,
                             const get_handler_args_t *args)
 {
   int retval;
-  char *desc_str = NULL;
+  const char *desc_str = NULL;
   const char *pubkey_str = NULL;
   const char *url = args->url;
 
@@ -3434,8 +3434,6 @@ handle_get_hs_descriptor_v3(dir_connection_t *conn,
   connection_write_to_buf(desc_str, strlen(desc_str), TO_CONN(conn));
 
  done:
-  tor_free(desc_str);
-
   return 0;
 }
 
