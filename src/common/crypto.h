@@ -138,7 +138,11 @@ void crypto_pk_free(crypto_pk_t *env);
 
 void crypto_set_tls_dh_prime(void);
 crypto_cipher_t *crypto_cipher_new(const char *key);
+crypto_cipher_t *crypto_cipher_new_with_bits(const char *key, int bits);
 crypto_cipher_t *crypto_cipher_new_with_iv(const char *key, const char *iv);
+crypto_cipher_t *crypto_cipher_new_with_iv_and_bits(const uint8_t *key,
+                                                    const uint8_t *iv,
+                                                    int bits);
 void crypto_cipher_free(crypto_cipher_t *env);
 
 /* public key crypto */

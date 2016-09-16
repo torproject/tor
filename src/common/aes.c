@@ -48,7 +48,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 
 /* We have five strategies for implementing AES counter mode.
  *
- * Best with x86 and x86_64: Use EVP_aes_ctr128() and EVP_EncryptUpdate().
+ * Best with x86 and x86_64: Use EVP_aes_*_ctr() and EVP_EncryptUpdate().
  * This is possible with OpenSSL 1.0.1, where the counter-mode implementation
  * can use bit-sliced or vectorized AES or AESNI as appropriate.
  *

@@ -542,29 +542,48 @@ crypto_pk_free(crypto_pk_t *env)
 }
 
 /** Allocate and return a new symmetric cipher using the provided key and iv.
+ * The key is <b>bits</b> bits long; the IV is CIPHER_IV_LEN bytes.  Both
+ * must be provided. Key length must be 128, 192, or 256 */
+crypto_cipher_t *
+crypto_cipher_new_with_iv_and_bits(const uint8_t *key,
+                                   const uint8_t *iv,
+                                   int bits)
+{
+  tor_assert(key);
+  tor_assert(iv);
+
+  return aes_new_cipher((const uint8_t*)key, (const uint8_t*)iv, bits);
+}
+
+/** Allocate and return a new symmetric cipher using the provided key and iv.
  * The key is CIPHER_KEY_LEN bytes; the IV is CIPHER_IV_LEN bytes.  Both
  * must be provided.
  */
 crypto_cipher_t *
 crypto_cipher_new_with_iv(const char *key, const char *iv)
 {
-  crypto_cipher_t *env;
-  tor_assert(key);
-  tor_assert(iv);
-
-  env = aes_new_cipher((const uint8_t*)key, (const uint8_t*)iv, 128);
-
-  return env;
+  return crypto_cipher_new_with_iv_and_bits((uint8_t*)key, (uint8_t*)iv,
+                                            128);
 }
 
 /** Return a new crypto_cipher_t with the provided <b>key</b> and an IV of all
- * zero bytes.  */
+ * zero bytes and key length <b>bits</b>.  Key length must be 128, 192, or
+ * 256. */
 crypto_cipher_t *
-crypto_cipher_new(const char *key)
+crypto_cipher_new_with_bits(const char *key, int bits)
 {
   char zeroiv[CIPHER_IV_LEN];
   memset(zeroiv, 0, sizeof(zeroiv));
-  return crypto_cipher_new_with_iv(key, zeroiv);
+  return crypto_cipher_new_with_iv_and_bits((uint8_t*)key, (uint8_t*)zeroiv,
+                                            bits);
+}
+
+/** Return a new crypto_cipher_t with the provided <b>key</b> (of
+ * CIPHER_KEY_LEN bytes) and an IV of all zero bytes.  */
+crypto_cipher_t *
+crypto_cipher_new(const char *key)
+{
+  return crypto_cipher_new_with_bits(key, 128);
 }
 
 /** Free a symmetric cipher.
