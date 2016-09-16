@@ -371,7 +371,7 @@ test_crypto_aes(void *arg)
   crypto_cipher_t *env1 = NULL, *env2 = NULL;
   int i, j;
   char *mem_op_hex_tmp=NULL;
-
+  char key[CIPHER_KEY_LEN];
   int use_evp = !strcmp(arg,"evp");
   evaluate_evp_for_aes(use_evp);
   evaluate_ctr_for_aes();
@@ -387,9 +387,10 @@ test_crypto_aes(void *arg)
 
   memset(data2, 0, 1024);
   memset(data3, 0, 1024);
-  env1 = crypto_cipher_new(NULL);
+  crypto_rand(key, sizeof(key));
+  env1 = crypto_cipher_new(key);
   tt_ptr_op(env1, OP_NE, NULL);
-  env2 = crypto_cipher_new(crypto_cipher_get_key(env1));
+  env2 = crypto_cipher_new(key);
   tt_ptr_op(env2, OP_NE, NULL);
 
   /* Try encrypting 512 chars. */
@@ -420,7 +421,7 @@ test_crypto_aes(void *arg)
   env2 = NULL;
 
   memset(data3, 0, 1024);
-  env2 = crypto_cipher_new(crypto_cipher_get_key(env1));
+  env2 = crypto_cipher_new(key);
   tt_ptr_op(env2, OP_NE, NULL);
   for (j = 0; j < 1024-16; j += 17) {
     crypto_cipher_encrypt(env2, data3+j, data1+j, 17);

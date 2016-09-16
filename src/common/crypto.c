@@ -123,8 +123,6 @@ struct crypto_pk_t
 /** Key and stream information for a stream cipher. */
 struct crypto_cipher_t
 {
-  uint8_t key[CIPHER_KEY_LEN]; /**< The raw key. */
-  uint8_t iv[CIPHER_IV_LEN]; /**< The initial IV. */
   aes_cnt_cipher_t *cipher; /**< The key in format usable for counter-mode AES
                              * encryption */
 };
@@ -551,26 +549,18 @@ crypto_pk_free(crypto_pk_t *env)
 }
 
 /** Allocate and return a new symmetric cipher using the provided key and iv.
- * The key is CIPHER_KEY_LEN bytes; the IV is CIPHER_IV_LEN bytes.  If you
- * provide NULL in place of either one, it is generated at random.
+ * The key is CIPHER_KEY_LEN bytes; the IV is CIPHER_IV_LEN bytes.  Both
+ * must be provided.
  */
 crypto_cipher_t *
 crypto_cipher_new_with_iv(const char *key, const char *iv)
 {
   crypto_cipher_t *env;
+  tor_assert(key);
+  tor_assert(iv);
 
-  env = tor_malloc_zero(sizeof(crypto_cipher_t));
-
-  if (key == NULL)
-    crypto_rand((char*)env->key, CIPHER_KEY_LEN);
-  else
-    memcpy(env->key, key, CIPHER_KEY_LEN);
-  if (iv == NULL)
-    crypto_rand((char*)env->iv, CIPHER_IV_LEN);
-  else
-    memcpy(env->iv, iv, CIPHER_IV_LEN);
-
-  env->cipher = aes_new_cipher(env->key, env->iv, 128);
+  env = tor_malloc(sizeof(crypto_cipher_t));
+  env->cipher = aes_new_cipher((const uint8_t*)key, (const uint8_t*)iv, 128);
 
   return env;
 }
@@ -1267,10 +1257,12 @@ crypto_pk_public_hybrid_encrypt(crypto_pk_t *env,
   tor_assert(tolen >= fromlen + overhead + CIPHER_KEY_LEN);
   tor_assert(tolen >= pkeylen);
 
-  cipher = crypto_cipher_new(NULL); /* generate a new key. */
+  char key[CIPHER_KEY_LEN];
+  crypto_rand(key, sizeof(key)); /* generate a new key. */
+  cipher = crypto_cipher_new(key);
 
   buf = tor_malloc(pkeylen+1);
-  memcpy(buf, cipher->key, CIPHER_KEY_LEN);
+  memcpy(buf, key, CIPHER_KEY_LEN);
   memcpy(buf+CIPHER_KEY_LEN, from, pkeylen-overhead-CIPHER_KEY_LEN);
 
   /* Length of symmetrically encrypted data. */
@@ -1285,6 +1277,7 @@ crypto_pk_public_hybrid_encrypt(crypto_pk_t *env,
 
   if (r<0) goto err;
   memwipe(buf, 0, pkeylen);
+  memwipe(key, 0, sizeof(key));
   tor_free(buf);
   crypto_cipher_free(cipher);
   tor_assert(outlen+symlen < INT_MAX);
@@ -1292,6 +1285,7 @@ crypto_pk_public_hybrid_encrypt(crypto_pk_t *env,
  err:
 
   memwipe(buf, 0, pkeylen);
+  memwipe(key, 0, sizeof(key));
   tor_free(buf);
   crypto_cipher_free(cipher);
   return -1;
@@ -1583,14 +1577,6 @@ crypto_pk_base64_decode(const char *str, size_t len)
 
 /* symmetric crypto */
 
-/** Return a pointer to the key set for the cipher in <b>env</b>.
- */
-const char *
-crypto_cipher_get_key(crypto_cipher_t *env)
-{
-  return (const char *)env->key;
-}
-
 /** Encrypt <b>fromlen</b> bytes from <b>from</b> using the cipher
  * <b>env</b>; on success, store the result to <b>to</b> and return 0.
  * Does not check for failure.
@@ -1660,11 +1646,14 @@ crypto_cipher_encrypt_with_iv(const char *key,
   if (tolen < fromlen + CIPHER_IV_LEN)
     return -1;
 
-  cipher = crypto_cipher_new_with_iv(key, NULL);
+  char iv[CIPHER_IV_LEN];
+  crypto_rand(iv, sizeof(iv));
+  cipher = crypto_cipher_new_with_iv(key, iv);
 
-  memcpy(to, cipher->iv, CIPHER_IV_LEN);
+  memcpy(to, iv, CIPHER_IV_LEN);
   crypto_cipher_encrypt(cipher, to+CIPHER_IV_LEN, from, fromlen);
   crypto_cipher_free(cipher);
+  memwipe(iv, 0, sizeof(iv));
   return (int)(fromlen + CIPHER_IV_LEN);
 }
 
