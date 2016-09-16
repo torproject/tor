@@ -120,13 +120,6 @@ struct crypto_pk_t
   RSA *key; /**< The key itself */
 };
 
-/** Key and stream information for a stream cipher. */
-struct crypto_cipher_t
-{
-  aes_cnt_cipher_t *cipher; /**< The key in format usable for counter-mode AES
-                             * encryption */
-};
-
 /** A structure to hold the first half (x, g^x) of a Diffie-Hellman handshake
  * while we're waiting for the second.*/
 struct crypto_dh_t {
@@ -559,8 +552,7 @@ crypto_cipher_new_with_iv(const char *key, const char *iv)
   tor_assert(key);
   tor_assert(iv);
 
-  env = tor_malloc(sizeof(crypto_cipher_t));
-  env->cipher = aes_new_cipher((const uint8_t*)key, (const uint8_t*)iv, 128);
+  env = aes_new_cipher((const uint8_t*)key, (const uint8_t*)iv, 128);
 
   return env;
 }
@@ -583,10 +575,7 @@ crypto_cipher_free(crypto_cipher_t *env)
   if (!env)
     return;
 
-  tor_assert(env->cipher);
-  aes_cipher_free(env->cipher);
-  memwipe(env, 0, sizeof(crypto_cipher_t));
-  tor_free(env);
+  aes_cipher_free(env);
 }
 
 /* public key crypto */
@@ -1586,14 +1575,14 @@ crypto_cipher_encrypt(crypto_cipher_t *env, char *to,
                       const char *from, size_t fromlen)
 {
   tor_assert(env);
-  tor_assert(env->cipher);
+  tor_assert(env);
   tor_assert(from);
   tor_assert(fromlen);
   tor_assert(to);
   tor_assert(fromlen < SIZE_T_CEILING);
 
   memcpy(to, from, fromlen);
-  aes_crypt_inplace(env->cipher, to, fromlen);
+  aes_crypt_inplace(env, to, fromlen);
   return 0;
 }
 
@@ -1611,7 +1600,7 @@ crypto_cipher_decrypt(crypto_cipher_t *env, char *to,
   tor_assert(fromlen < SIZE_T_CEILING);
 
   memcpy(to, from, fromlen);
-  aes_crypt_inplace(env->cipher, to, fromlen);
+  aes_crypt_inplace(env, to, fromlen);
   return 0;
 }
 
@@ -1622,7 +1611,7 @@ void
 crypto_cipher_crypt_inplace(crypto_cipher_t *env, char *buf, size_t len)
 {
   tor_assert(len < SIZE_T_CEILING);
-  aes_crypt_inplace(env->cipher, buf, len);
+  aes_crypt_inplace(env, buf, len);
 }
 
 /** Encrypt <b>fromlen</b> bytes (at least 1) from <b>from</b> with the key in

@@ -117,7 +117,7 @@ typedef struct {
 } common_digests_t;
 
 typedef struct crypto_pk_t crypto_pk_t;
-typedef struct crypto_cipher_t crypto_cipher_t;
+typedef struct aes_cnt_cipher crypto_cipher_t;
 typedef struct crypto_digest_t crypto_digest_t;
 typedef struct crypto_xof_t crypto_xof_t;
 typedef struct crypto_dh_t crypto_dh_t;
