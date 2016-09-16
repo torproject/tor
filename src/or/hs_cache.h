@@ -40,6 +40,7 @@ typedef struct hs_cache_dir_descriptor_t {
 /* Public API */
 
 void hs_cache_init(void);
+void hs_cache_free_all(void);
 void hs_cache_clean_as_dir(time_t now);
 size_t hs_cache_handle_oom(time_t now, size_t min_remove_bytes);
 

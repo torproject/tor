@@ -56,6 +56,15 @@ cache_dir_desc_free(hs_cache_dir_descriptor_t *desc)
   tor_free(desc);
 }
 
+/* Helper function: Use by the free all function using the digest256map
+ * interface to cache entries. */
+static void
+cache_dir_desc_free_(void *ptr)
+{
+  hs_cache_dir_descriptor_t *desc = ptr;
+  cache_dir_desc_free(desc);
+}
+
 /* Create a new directory cache descriptor object from a encoded descriptor.
  * On success, return the heap-allocated cache object, otherwise return NULL if
  * we can't decode the descriptor. */
@@ -366,3 +375,10 @@ hs_cache_init(void)
   hs_cache_v3_dir = digest256map_new();
 }
 
+/* Cleanup the hidden service cache subsystem. */
+void
+hs_cache_free_all(void)
+{
+  tor_assert(hs_cache_v3_dir);
+  digest256map_free(hs_cache_v3_dir, cache_dir_desc_free_);
+}
