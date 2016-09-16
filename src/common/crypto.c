@@ -69,6 +69,7 @@ ENABLE_GCC_WARNING(redundant-decls)
 #endif
 
 #include "torlog.h"
+#include "torint.h"
 #include "aes.h"
 #include "util.h"
 #include "container.h"
@@ -122,8 +123,8 @@ struct crypto_pk_t
 /** Key and stream information for a stream cipher. */
 struct crypto_cipher_t
 {
-  char key[CIPHER_KEY_LEN]; /**< The raw key. */
-  char iv[CIPHER_IV_LEN]; /**< The initial IV. */
+  uint8_t key[CIPHER_KEY_LEN]; /**< The raw key. */
+  uint8_t iv[CIPHER_IV_LEN]; /**< The initial IV. */
   aes_cnt_cipher_t *cipher; /**< The key in format usable for counter-mode AES
                              * encryption */
 };
@@ -561,15 +562,15 @@ crypto_cipher_new_with_iv(const char *key, const char *iv)
   env = tor_malloc_zero(sizeof(crypto_cipher_t));
 
   if (key == NULL)
-    crypto_rand(env->key, CIPHER_KEY_LEN);
+    crypto_rand((char*)env->key, CIPHER_KEY_LEN);
   else
     memcpy(env->key, key, CIPHER_KEY_LEN);
   if (iv == NULL)
-    crypto_rand(env->iv, CIPHER_IV_LEN);
+    crypto_rand((char*)env->iv, CIPHER_IV_LEN);
   else
     memcpy(env->iv, iv, CIPHER_IV_LEN);
 
-  env->cipher = aes_new_cipher(env->key, env->iv);
+  env->cipher = aes_new_cipher(env->key, env->iv, 128);
 
   return env;
 }
@@ -1587,7 +1588,7 @@ crypto_pk_base64_decode(const char *str, size_t len)
 const char *
 crypto_cipher_get_key(crypto_cipher_t *env)
 {
-  return env->key;
+  return (const char *)env->key;
 }
 
 /** Encrypt <b>fromlen</b> bytes from <b>from</b> using the cipher

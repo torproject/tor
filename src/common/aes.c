@@ -89,11 +89,17 @@ ENABLE_GCC_WARNING(redundant-decls)
 /* We don't actually define the struct here. */
 
 aes_cnt_cipher_t *
-aes_new_cipher(const char *key, const char *iv)
+aes_new_cipher(const uint8_t *key, const uint8_t *iv, int key_bits)
 {
   EVP_CIPHER_CTX *cipher = EVP_CIPHER_CTX_new();
-  EVP_EncryptInit(cipher, EVP_aes_128_ctr(),
-                  (const unsigned char*)key, (const unsigned char *)iv);
+  const EVP_CIPHER *c;
+  switch (key_bits) {
+    case 128: c = EVP_aes_128_ctr(); break;
+    case 192: c = EVP_aes_192_ctr(); break;
+    case 256: c = EVP_aes_256_ctr(); break;
+    default: tor_assert(0); // LCOV_EXCL_LINE
+  }
+  EVP_EncryptInit(cipher, c, key, iv);
   return (aes_cnt_cipher_t *) cipher;
 }
 void
@@ -262,11 +268,11 @@ static void aes_set_iv(aes_cnt_cipher_t *cipher, const char *iv);
  * using the 128-bit key <b>key</b> and the 128-bit IV <b>iv</b>.
  */
 aes_cnt_cipher_t*
-aes_new_cipher(const char *key, const char *iv)
+aes_new_cipher(const uint8_t *key, const uint8_t *iv, int bits)
 {
   aes_cnt_cipher_t* result = tor_malloc_zero(sizeof(aes_cnt_cipher_t));
 
-  aes_set_key(result, key, 128);
+  aes_set_key(result, key, bits);
   aes_set_iv(result, iv);
 
   return result;
@@ -277,7 +283,7 @@ aes_new_cipher(const char *key, const char *iv)
  * the counter to 0.
  */
 static void
-aes_set_key(aes_cnt_cipher_t *cipher, const char *key, int key_bits)
+aes_set_key(aes_cnt_cipher_t *cipher, const uint8_t *key, int key_bits)
 {
   if (should_use_EVP) {
     const EVP_CIPHER *c = 0;
@@ -287,10 +293,10 @@ aes_set_key(aes_cnt_cipher_t *cipher, const char *key, int key_bits)
       case 256: c = EVP_aes_256_ecb(); break;
       default: tor_assert(0); // LCOV_EXCL_LINE
     }
-    EVP_EncryptInit(&cipher->key.evp, c, (const unsigned char*)key, NULL);
+    EVP_EncryptInit(&cipher->key.evp, c, key, NULL);
     cipher->using_evp = 1;
   } else {
-    AES_set_encrypt_key((const unsigned char *)key, key_bits,&cipher->key.aes);
+    AES_set_encrypt_key(key, key_bits,&cipher->key.aes);
     cipher->using_evp = 0;
   }
 
@@ -348,6 +354,8 @@ evp_block128_fn(const uint8_t in[16],
 void
 aes_crypt_inplace(aes_cnt_cipher_t *cipher, char *data, size_t len)
 {
+  /* Note that the "128" below refers to the length of the counter,
+   * not the length of the AES key. */
   if (cipher->using_evp) {
     /* In openssl 1.0.0, there's an if'd out EVP_aes_128_ctr in evp.h.  If
      * it weren't disabled, it might be better just to use that.
@@ -374,7 +382,7 @@ aes_crypt_inplace(aes_cnt_cipher_t *cipher, char *data, size_t len)
 /** Reset the 128-bit counter of <b>cipher</b> to the 16-bit big-endian value
  * in <b>iv</b>. */
 static void
-aes_set_iv(aes_cnt_cipher_t *cipher, const char *iv)
+aes_set_iv(aes_cnt_cipher_t *cipher, const uint8_t *iv)
 {
 #ifdef USING_COUNTER_VARS
   cipher->counter3 = ntohl(get_uint32(iv));
