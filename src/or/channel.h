@@ -153,13 +153,23 @@ struct channel_s {
   int (*write_var_cell)(channel_t *, var_cell_t *);
 
   /**
-   * Hash of the public RSA key for the other side's RSA identity key, or
-   * zeroes if the other side hasn't shown us a valid RSA identity key.
+   * Hash of the public RSA key for the other side's RSA identity key -- or
+   * zeroes if we don't have an RSA identity in mind for the other side, and
+   * it hasn't shown us one.
+   *
+   * Note that this is the RSA identity that we hope the other side has -- not
+   * necessarily its true identity.  Don't believe this identity unless
+   * authentication has happened.
    */
   char identity_digest[DIGEST_LEN];
   /**
-   * The Ed25519 public identity key for the other side, or zeros if the other
-   * size hasn't shown us a valid Ed25519 identity key
+   * Ed25519 key for the other side of this channel -- or zeroes if we don't
+   * have an Ed25519 identity in mind for the other side, and it hasn't shown
+   * us one.
+   *
+   * Note that this is the identity that we hope the other side has -- not
+   * necessarily its true identity.  Don't believe this identity unless
+   * authentication has happened.
    */
   ed25519_public_key_t ed25519_identity;
 
@@ -167,8 +177,8 @@ struct channel_s {
   char *nickname;
 
   /**
-   * Linked list of channels with the same identity digest, for the
-   * digest->channel map
+   * Linked list of channels with the same RSA identity digest, for use with
+   * the digest->channel map
    */
   TOR_LIST_ENTRY(channel_s) next_with_same_id;
 

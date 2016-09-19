@@ -1185,6 +1185,10 @@ circuit_extend(cell_t *cell, circuit_t *circ)
            "Client asked me to extend back to the previous hop.");
     return -1;
   }
+  // XXX 15056 check prev-hop Ed ID too
+
+  // XXX 15056 Fill in ed_pubkey if it was not provided and we can infer
+  // XXX 15056 it from the networkstatus.
 
   n_chan = channel_get_for_extend((const char*)ec.node_id,
                                   &ec.ed_pubkey,

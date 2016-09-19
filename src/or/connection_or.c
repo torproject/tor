@@ -80,7 +80,7 @@ static void connection_or_change_state(or_connection_t *conn, uint8_t state);
 /** Map from identity digest of connected OR or desired OR to a connection_t
  * with that identity digest.  If there is more than one such connection_t,
  * they form a linked list, with next_with_same_id as the next pointer. */
-static digestmap_t *orconn_identity_map = NULL;
+static digestmap_t *orconn_identity_map = NULL; // XXXX 15056 disused.
 
 /** Global map between Extended ORPort identifiers and OR
  *  connections. */
@@ -883,7 +883,7 @@ connection_or_init_conn_from_address(or_connection_t *conn,
                                      const ed25519_public_key_t *ed_id,
                                      int started_here)
 {
-  (void) ed_id; // not fully used yet.
+  (void) ed_id; // not fully used yet. 15056
   const node_t *r = node_get_by_id(id_digest);
   connection_or_set_identity_digest(conn, id_digest, ed_id);
   connection_or_update_token_buckets_helper(conn, 1, get_options());
@@ -981,6 +981,9 @@ connection_or_mark_bad_for_new_circs(or_connection_t *or_conn)
 static void
 connection_or_group_set_badness(or_connection_t *head, int force)
 {
+  // XXXX 15056 we should make this about channels instead, so we
+  //            can finally remove orconn_identity_map.
+
   or_connection_t *or_conn = NULL, *best = NULL;
   int n_old = 0, n_inprogress = 0, n_canonical = 0, n_other = 0;
   time_t now = time(NULL);
@@ -1108,6 +1111,9 @@ connection_or_set_bad_connections(const char *digest, int force)
 {
   if (!orconn_identity_map)
     return;
+
+  // XXXX This is just about the only remaining user of orconn_identity_map!
+  // XXXX If we kill it, we can yoink out the map. 15056.
 
   DIGESTMAP_FOREACH(orconn_identity_map, identity, or_connection_t *, conn) {
     if (!digest || tor_memeq(digest, conn->identity_digest, DIGEST_LEN))
@@ -1573,7 +1579,7 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
   if (started_here)
     return connection_or_client_learned_peer_id(conn,
                                         (const uint8_t*)digest_rcvd_out,
-                                        NULL // Ed25519 ID
+                                        NULL // Ed25519 ID 15056
                                         );
 
   return 0;
@@ -1607,7 +1613,7 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
                                      const uint8_t *rsa_peer_id,
                                      const ed25519_public_key_t *ed_peer_id)
 {
-  (void) ed_peer_id; // not used yet.
+  (void) ed_peer_id; // not used yet. 15056
 
   const or_options_t *options = get_options();
 
@@ -1685,7 +1691,7 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
   }
   if (authdir_mode_tests_reachability(options)) {
     dirserv_orconn_tls_done(&conn->base_.addr, conn->base_.port,
-                            (const char*)rsa_peer_id /*, ed_id XXXX */);
+                            (const char*)rsa_peer_id /*, ed_id XXXX 15056 */);
   }
 
   return 0;

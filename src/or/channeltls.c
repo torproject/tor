@@ -1651,9 +1651,10 @@ channel_tls_process_netinfo_cell(cell_t *cell, channel_tls_t *chan)
         connection_or_init_conn_from_address(chan->conn,
                   &(chan->conn->base_.addr),
                   chan->conn->base_.port,
+                  /* zero, checked above */
                   (const char*)(chan->conn->handshake_state->
                                 authenticated_rsa_peer_id),
-                  NULL, // XXXX Ed key
+                  NULL, /* Ed25519 ID: Also checked as zero */
                   0);
       }
     }
