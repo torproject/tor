@@ -363,15 +363,15 @@ test_crypto_rng_engine(void *arg)
   ;
 }
 
-/** Run unit tests for our AES functionality */
+/** Run unit tests for our AES128 functionality */
 static void
-test_crypto_aes(void *arg)
+test_crypto_aes128(void *arg)
 {
   char *data1 = NULL, *data2 = NULL, *data3 = NULL;
   crypto_cipher_t *env1 = NULL, *env2 = NULL;
   int i, j;
   char *mem_op_hex_tmp=NULL;
-
+  char key[CIPHER_KEY_LEN];
   int use_evp = !strcmp(arg,"evp");
   evaluate_evp_for_aes(use_evp);
   evaluate_ctr_for_aes();
@@ -387,9 +387,10 @@ test_crypto_aes(void *arg)
 
   memset(data2, 0, 1024);
   memset(data3, 0, 1024);
-  env1 = crypto_cipher_new(NULL);
+  crypto_rand(key, sizeof(key));
+  env1 = crypto_cipher_new(key);
   tt_ptr_op(env1, OP_NE, NULL);
-  env2 = crypto_cipher_new(crypto_cipher_get_key(env1));
+  env2 = crypto_cipher_new(key);
   tt_ptr_op(env2, OP_NE, NULL);
 
   /* Try encrypting 512 chars. */
@@ -420,7 +421,7 @@ test_crypto_aes(void *arg)
   env2 = NULL;
 
   memset(data3, 0, 1024);
-  env2 = crypto_cipher_new(crypto_cipher_get_key(env1));
+  env2 = crypto_cipher_new(key);
   tt_ptr_op(env2, OP_NE, NULL);
   for (j = 0; j < 1024-16; j += 17) {
     crypto_cipher_encrypt(env2, data3+j, data1+j, 17);
@@ -513,32 +514,61 @@ test_crypto_aes(void *arg)
 static void
 test_crypto_aes_ctr_testvec(void *arg)
 {
-  (void)arg;
+  const char *bitstr = arg;
   char *mem_op_hex_tmp=NULL;
+  crypto_cipher_t *c=NULL;
 
   /* from NIST SP800-38a, section F.5 */
-  const char key16[] = "2b7e151628aed2a6abf7158809cf4f3c";
   const char ctr16[] = "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff";
   const char plaintext16[] =
     "6bc1bee22e409f96e93d7e117393172a"
     "ae2d8a571e03ac9c9eb76fac45af8e51"
     "30c81c46a35ce411e5fbc1191a0a52ef"
     "f69f2445df4f9b17ad2b417be66c3710";
-  const char ciphertext16[] =
-    "874d6191b620e3261bef6864990db6ce"
-    "9806f66b7970fdff8617187bb9fffdff"
-    "5ae4df3edbd5d35e5b4f09020db03eab"
-    "1e031dda2fbe03d1792170a0f3009cee";
+  const char *ciphertext16;
+  const char *key16;
+  int bits;
 
-  char key[16];
+  if (!strcmp(bitstr, "128")) {
+    ciphertext16 = /* section F.5.1 */
+      "874d6191b620e3261bef6864990db6ce"
+      "9806f66b7970fdff8617187bb9fffdff"
+      "5ae4df3edbd5d35e5b4f09020db03eab"
+      "1e031dda2fbe03d1792170a0f3009cee";
+    key16 = "2b7e151628aed2a6abf7158809cf4f3c";
+    bits = 128;
+  } else if (!strcmp(bitstr, "192")) {
+    ciphertext16 = /* section F.5.3 */
+      "1abc932417521ca24f2b0459fe7e6e0b"
+      "090339ec0aa6faefd5ccc2c6f4ce8e94"
+      "1e36b26bd1ebc670d1bd1d665620abf7"
+      "4f78a7f6d29809585a97daec58c6b050";
+    key16 = "8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b";
+    bits = 192;
+  } else if (!strcmp(bitstr, "256")) {
+    ciphertext16 = /* section F.5.5 */
+      "601ec313775789a5b7a7f504bbf3d228"
+      "f443e3ca4d62b59aca84e990cacaf5c5"
+      "2b0930daa23de94ce87017ba2d84988d"
+      "dfc9c58db67aada613c2dd08457941a6";
+    key16 =
+      "603deb1015ca71be2b73aef0857d7781"
+      "1f352c073b6108d72d9810a30914dff4";
+    bits = 256;
+  } else {
+    tt_abort_msg("AES doesn't support this number of bits.");
+  }
+
+  char key[32];
   char iv[16];
   char plaintext[16*4];
+  memset(key, 0xf9, sizeof(key)); /* poison extra bytes */
   base16_decode(key, sizeof(key), key16, strlen(key16));
   base16_decode(iv, sizeof(iv), ctr16, strlen(ctr16));
   base16_decode(plaintext, sizeof(plaintext),
                 plaintext16, strlen(plaintext16));
 
-  crypto_cipher_t *c = crypto_cipher_new_with_iv(key, iv);
+  c = crypto_cipher_new_with_iv_and_bits((uint8_t*)key, (uint8_t*)iv, bits);
   crypto_cipher_crypt_inplace(c, plaintext, sizeof(plaintext));
   test_memeq_hex(plaintext, ciphertext16);
 
@@ -2872,9 +2902,14 @@ struct testcase_t crypto_tests[] = {
   { "rng_strongest_broken", test_crypto_rng_strongest, TT_FORK,
     &passthrough_setup, (void*)"broken" },
   { "openssl_version", test_crypto_openssl_version, TT_FORK, NULL, NULL },
-  { "aes_AES", test_crypto_aes, TT_FORK, &passthrough_setup, (void*)"aes" },
-  { "aes_EVP", test_crypto_aes, TT_FORK, &passthrough_setup, (void*)"evp" },
-  { "aes_ctr_testvec", test_crypto_aes_ctr_testvec, 0, NULL, NULL },
+  { "aes_AES", test_crypto_aes128, TT_FORK, &passthrough_setup, (void*)"aes" },
+  { "aes_EVP", test_crypto_aes128, TT_FORK, &passthrough_setup, (void*)"evp" },
+  { "aes128_ctr_testvec", test_crypto_aes_ctr_testvec, 0,
+    &passthrough_setup, (void*)"128" },
+  { "aes192_ctr_testvec", test_crypto_aes_ctr_testvec, 0,
+    &passthrough_setup, (void*)"192" },
+  { "aes256_ctr_testvec", test_crypto_aes_ctr_testvec, 0,
+    &passthrough_setup, (void*)"256" },
   CRYPTO_LEGACY(sha),
   CRYPTO_LEGACY(pk),
   { "pk_fingerprints", test_crypto_pk_fingerprints, TT_FORK, NULL, NULL },

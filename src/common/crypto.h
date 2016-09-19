@@ -117,7 +117,7 @@ typedef struct {
 } common_digests_t;
 
 typedef struct crypto_pk_t crypto_pk_t;
-typedef struct crypto_cipher_t crypto_cipher_t;
+typedef struct aes_cnt_cipher crypto_cipher_t;
 typedef struct crypto_digest_t crypto_digest_t;
 typedef struct crypto_xof_t crypto_xof_t;
 typedef struct crypto_dh_t crypto_dh_t;
@@ -138,7 +138,11 @@ void crypto_pk_free(crypto_pk_t *env);
 
 void crypto_set_tls_dh_prime(void);
 crypto_cipher_t *crypto_cipher_new(const char *key);
+crypto_cipher_t *crypto_cipher_new_with_bits(const char *key, int bits);
 crypto_cipher_t *crypto_cipher_new_with_iv(const char *key, const char *iv);
+crypto_cipher_t *crypto_cipher_new_with_iv_and_bits(const uint8_t *key,
+                                                    const uint8_t *iv,
+                                                    int bits);
 void crypto_cipher_free(crypto_cipher_t *env);
 
 /* public key crypto */
