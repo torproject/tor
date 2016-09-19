@@ -15,13 +15,13 @@
 #define ENTRYNODES_PRIVATE
 
 #include "or.h"
+#include "channel.h"
 #include "circpathbias.h"
 #include "circuitbuild.h"
 #include "circuitstats.h"
 #include "config.h"
 #include "confparse.h"
 #include "connection.h"
-#include "connection_or.h"
 #include "control.h"
 #include "directory.h"
 #include "entrynodes.h"
@@ -2749,7 +2749,7 @@ entries_retry_helper(const or_options_t *options, int act)
            * the node down and undermine the retry attempt. We mark even
            * the established conns, since if the network just came back
            * we'll want to attach circuits to fresh conns. */
-          connection_or_set_bad_connections(node->identity, 1);
+          channel_update_bad_for_new_circs(node->identity, 1);
 
           /* mark this entry node for retry */
           router_set_status(node->identity, 1);

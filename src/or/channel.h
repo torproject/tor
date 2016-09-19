@@ -601,6 +601,8 @@ void channel_listener_dump_statistics(channel_listener_t *chan_l,
 void channel_listener_dump_transport_statistics(channel_listener_t *chan_l,
                                                 int severity);
 
+void channel_update_bad_for_new_circs(const char *digest, int force);
+
 /* Flow control queries */
 uint64_t channel_get_global_queue_estimate(void);
 int channel_num_cells_writeable(channel_t *chan);

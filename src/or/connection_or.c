@@ -961,7 +961,7 @@ connection_or_mark_bad_for_new_circs(or_connection_t *or_conn)
  * too old for new circuits? */
 #define TIME_BEFORE_OR_CONN_IS_TOO_OLD (60*60*24*7)
 
-/** Given the head of the linked list for all the or_connections with a given
+/** Given a list of all the or_connections with a given
  * identity, set elements of that list as is_bad_for_new_circs as
  * appropriate. Helper for connection_or_set_bad_connections().
  *
@@ -978,19 +978,19 @@ connection_or_mark_bad_for_new_circs(or_connection_t *or_conn)
  * See channel_is_better() in channel.c for our idea of what makes one OR
  * connection better than another.
  */
-static void
-connection_or_group_set_badness(or_connection_t *head, int force)
+void
+connection_or_group_set_badness_(smartlist_t *group, int force)
 {
-  // XXXX 15056 we should make this about channels instead, so we
-  //            can finally remove orconn_identity_map.
-
-  or_connection_t *or_conn = NULL, *best = NULL;
+  /* XXXX this should be entirely about channels, not OR connections.  15056*/
+  /* XXXX Look at Ed25519 ids too! 15056 */
+  
+  or_connection_t *best = NULL;
   int n_old = 0, n_inprogress = 0, n_canonical = 0, n_other = 0;
   time_t now = time(NULL);
 
   /* Pass 1: expire everything that's old, and see what the status of
    * everything else is. */
-  for (or_conn = head; or_conn; or_conn = or_conn->next_with_same_id) {
+  SMARTLIST_FOREACH_BEGIN(group, or_connection_t *, or_conn) {
     if (or_conn->base_.marked_for_close ||
         connection_or_is_bad_for_new_circs(or_conn))
       continue;
@@ -1014,11 +1014,11 @@ connection_or_group_set_badness(or_connection_t *head, int force)
     } else {
       ++n_other;
     }
-  }
+  } SMARTLIST_FOREACH_END(or_conn);
 
   /* Pass 2: We know how about how good the best connection is.
    * expire everything that's worse, and find the very best if we can. */
-  for (or_conn = head; or_conn; or_conn = or_conn->next_with_same_id) {
+  SMARTLIST_FOREACH_BEGIN(group, or_connection_t *, or_conn) {
     if (or_conn->base_.marked_for_close ||
         connection_or_is_bad_for_new_circs(or_conn))
       continue; /* This one doesn't need to be marked bad. */
@@ -1045,7 +1045,7 @@ connection_or_group_set_badness(or_connection_t *head, int force)
                           0)) {
       best = or_conn;
     }
-  }
+  } SMARTLIST_FOREACH_END(or_conn);
 
   if (!best)
     return;
@@ -1064,7 +1064,7 @@ connection_or_group_set_badness(or_connection_t *head, int force)
    *   0.1.2.x dies out, the first case will go away, and the second one is
    *   "mostly harmless", so a fix can wait until somebody is bored.
    */
-  for (or_conn = head; or_conn; or_conn = or_conn->next_with_same_id) {
+  SMARTLIST_FOREACH_BEGIN(group, or_connection_t *, or_conn) {
     if (or_conn->base_.marked_for_close ||
         connection_or_is_bad_for_new_circs(or_conn) ||
         or_conn->base_.state != OR_CONN_STATE_OPEN)
@@ -1098,27 +1098,7 @@ connection_or_group_set_badness(or_connection_t *head, int force)
         connection_or_mark_bad_for_new_circs(or_conn);
       }
     }
-  }
-}
-
-/** Go through all the OR connections (or if <b>digest</b> is non-NULL, just
- * the OR connections with that digest), and set the is_bad_for_new_circs
- * flag based on the rules in connection_or_group_set_badness() (or just
- * always set it if <b>force</b> is true).
- */
-void
-connection_or_set_bad_connections(const char *digest, int force)
-{
-  if (!orconn_identity_map)
-    return;
-
-  // XXXX This is just about the only remaining user of orconn_identity_map!
-  // XXXX If we kill it, we can yoink out the map. 15056.
-
-  DIGESTMAP_FOREACH(orconn_identity_map, identity, or_connection_t *, conn) {
-    if (!digest || tor_memeq(digest, conn->identity_digest, DIGEST_LEN))
-      connection_or_group_set_badness(conn, force);
-  } DIGESTMAP_FOREACH_END;
+  } SMARTLIST_FOREACH_END(or_conn);
 }
 
 /** <b>conn</b> is in the 'connecting' state, and it failed to complete

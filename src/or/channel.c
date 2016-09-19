@@ -4539,6 +4539,54 @@ channel_set_circid_type,(channel_t *chan,
   }
 }
 
+/** Helper for channel_update_bad_for_new_circs(): Perform the
+ * channel_update_bad_for_new_circs operation on all channels in <b>lst</b>,
+ * all of which MUST have the same RSA ID.  (They MAY have different
+ * Ed25519 IDs.) */
+static void
+channel_rsa_id_group_set_badness(struct channel_list_s *lst, int force)
+{
+  channel_t *chan;
+
+  smartlist_t *or_conns = smartlist_new();
+  TOR_LIST_FOREACH(chan, lst, next_with_same_id) {
+    channel_tls_t *chantls = BASE_CHAN_TO_TLS(chan);
+    or_connection_t *orconn = chantls->conn;
+    if (orconn)
+      smartlist_add(or_conns, orconn);
+  }
+  /*XXXX This function should really be about channels. 15056 */
+  connection_or_group_set_badness_(or_conns, force);
+  smartlist_free(or_conns);
+}
+
+/** Go through all the channels (or if <b>digest</b> is non-NULL, just
+ * the OR connections with that digest), and set the is_bad_for_new_circs
+ * flag based on the rules in connection_or_group_set_badness() (or just
+ * always set it if <b>force</b> is true).
+ */
+void
+channel_update_bad_for_new_circs(const char *digest, int force)
+{
+  if (digest) {
+    channel_idmap_entry_t *ent;
+    channel_idmap_entry_t search;
+    memset(&search, 0, sizeof(search));
+    memcpy(search.digest, digest, DIGEST_LEN);
+    ent = HT_FIND(channel_idmap, &channel_identity_map, &search);
+    if (ent) {
+      channel_rsa_id_group_set_badness(&ent->channel_list, force);
+    }
+    return;
+  }
+
+  /* no digest; just look at everything. */
+  channel_idmap_entry_t **iter;
+  HT_FOREACH(iter, channel_idmap, &channel_identity_map) {
+    channel_rsa_id_group_set_badness(&(*iter)->channel_list, force);
+  }
+}
+
 /**
  * Update the estimated number of bytes queued to transmit for this channel,
  * and notify the scheduler.  The estimate includes both the channel queue and
