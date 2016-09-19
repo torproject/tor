@@ -12,7 +12,7 @@
 #ifndef TOR_CONNECTION_OR_H
 #define TOR_CONNECTION_OR_H
 
-void connection_or_remove_from_identity_map(or_connection_t *conn);
+void connection_or_clear_identity(or_connection_t *conn);
 void connection_or_clear_identity_map(void);
 void clear_broken_connection_map(int disable);
 or_connection_t *connection_or_get_for_extend(const char *digest,

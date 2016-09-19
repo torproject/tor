@@ -84,7 +84,7 @@ static digestmap_t *orconn_ext_or_id_map = NULL;
 /** Clear clear conn->identity_digest and update other data
  * structures as appropriate.*/
 void
-connection_or_remove_from_identity_map(or_connection_t *conn)
+connection_or_clear_identity(or_connection_t *conn)
 {
   tor_assert(conn);
   memset(conn->identity_digest, 0, DIGEST_LEN);
@@ -120,7 +120,7 @@ connection_or_set_identity_digest(or_connection_t *conn,
 
   /* If the identity was set previously, remove the old mapping. */
   if (! tor_digest_is_zero(conn->identity_digest)) {
-    connection_or_remove_from_identity_map(conn);
+    connection_or_clear_identity(conn);
     if (conn->chan)
       channel_clear_identity_digest(TLS_CHAN_TO_BASE(conn->chan));
   }

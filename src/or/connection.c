@@ -644,7 +644,7 @@ connection_free_(connection_t *conn)
   if (conn->type == CONN_TYPE_OR &&
       !tor_digest_is_zero(TO_OR_CONN(conn)->identity_digest)) {
     log_warn(LD_BUG, "called on OR conn with non-zeroed identity_digest");
-    connection_or_remove_from_identity_map(TO_OR_CONN(conn));
+    connection_or_clear_identity(TO_OR_CONN(conn));
   }
   if (conn->type == CONN_TYPE_OR || conn->type == CONN_TYPE_EXT_OR) {
     connection_or_remove_from_ext_or_id_map(TO_OR_CONN(conn));
@@ -675,7 +675,7 @@ connection_free,(connection_t *conn))
   }
   if (connection_speaks_cells(conn)) {
     if (!tor_digest_is_zero(TO_OR_CONN(conn)->identity_digest)) {
-      connection_or_remove_from_identity_map(TO_OR_CONN(conn));
+      connection_or_clear_identity(TO_OR_CONN(conn));
     }
   }
   if (conn->type == CONN_TYPE_CONTROL) {

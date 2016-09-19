@@ -323,7 +323,7 @@ recv_certs_cleanup(const struct testcase_t *test, void *obj)
   if (d) {
     tor_free(d->cell);
     certs_cell_free(d->ccell);
-    connection_or_remove_from_identity_map(d->c);
+    connection_or_clear_identity(d->c);
     connection_free_(TO_CONN(d->c));
     circuitmux_free(d->chan->base_.cmux);
     tor_free(d->chan);
@@ -1133,8 +1133,8 @@ authenticate_data_cleanup(const struct testcase_t *test, void *arg)
   authenticate_data_t *d = arg;
   if (d) {
     tor_free(d->cell);
-    connection_or_remove_from_identity_map(d->c1);
-    connection_or_remove_from_identity_map(d->c2);
+    connection_or_clear_identity(d->c1);
+    connection_or_clear_identity(d->c2);
     connection_free_(TO_CONN(d->c1));
     connection_free_(TO_CONN(d->c2));
     circuitmux_free(d->chan2->base_.cmux);
