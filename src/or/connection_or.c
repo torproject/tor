@@ -77,54 +77,20 @@ static void connection_or_change_state(or_connection_t *conn, uint8_t state);
 
 /**************************************************************/
 
-/** Map from identity digest of connected OR or desired OR to a connection_t
- * with that identity digest.  If there is more than one such connection_t,
- * they form a linked list, with next_with_same_id as the next pointer. */
-static digestmap_t *orconn_identity_map = NULL; // XXXX 15056 disused.
-
 /** Global map between Extended ORPort identifiers and OR
  *  connections. */
 static digestmap_t *orconn_ext_or_id_map = NULL;
 
-/** If conn is listed in orconn_identity_map, remove it, and clear
- * conn->identity_digest.  Otherwise do nothing. */
+/** Clear clear conn->identity_digest and update other data
+ * structures as appropriate.*/
 void
 connection_or_remove_from_identity_map(or_connection_t *conn)
 {
-  or_connection_t *tmp;
   tor_assert(conn);
-  if (!orconn_identity_map)
-    return;
-  tmp = digestmap_get(orconn_identity_map, conn->identity_digest);
-  if (!tmp) {
-    if (!tor_digest_is_zero(conn->identity_digest)) {
-      log_warn(LD_BUG, "Didn't find connection '%s' on identity map when "
-               "trying to remove it.",
-               conn->nickname ? conn->nickname : "NULL");
-    }
-    return;
-  }
-  if (conn == tmp) {
-    if (conn->next_with_same_id)
-      digestmap_set(orconn_identity_map, conn->identity_digest,
-                    conn->next_with_same_id);
-    else
-      digestmap_remove(orconn_identity_map, conn->identity_digest);
-  } else {
-    while (tmp->next_with_same_id) {
-      if (tmp->next_with_same_id == conn) {
-        tmp->next_with_same_id = conn->next_with_same_id;
-        break;
-      }
-      tmp = tmp->next_with_same_id;
-    }
-  }
   memset(conn->identity_digest, 0, DIGEST_LEN);
-  conn->next_with_same_id = NULL;
 }
 
-/** Remove all entries from the identity-to-orconn map, and clear
- * all identities in OR conns.*/
+/** Clear all identities in OR conns.*/
 void
 connection_or_clear_identity_map(void)
 {
@@ -134,12 +100,8 @@ connection_or_clear_identity_map(void)
     if (conn->type == CONN_TYPE_OR) {
       or_connection_t *or_conn = TO_OR_CONN(conn);
       memset(or_conn->identity_digest, 0, DIGEST_LEN);
-      or_conn->next_with_same_id = NULL;
     }
   });
-
-  digestmap_free(orconn_identity_map, NULL);
-  orconn_identity_map = NULL;
 }
 
 /** Change conn->identity_digest to digest, and add conn into
@@ -150,12 +112,9 @@ connection_or_set_identity_digest(or_connection_t *conn,
                                   const ed25519_public_key_t *ed_id)
 {
   (void) ed_id; // DOCDOC // XXXX not implemented yet. 15056
-  or_connection_t *tmp;
   tor_assert(conn);
   tor_assert(rsa_digest);
 
-  if (!orconn_identity_map)
-    orconn_identity_map = digestmap_new();
   if (tor_memeq(conn->identity_digest, rsa_digest, DIGEST_LEN))
     return;
 
@@ -172,20 +131,9 @@ connection_or_set_identity_digest(or_connection_t *conn,
   if (tor_digest_is_zero(rsa_digest))
     return;
 
-  tmp = digestmap_set(orconn_identity_map, rsa_digest, conn);
-  conn->next_with_same_id = tmp;
-
   /* Deal with channels */
   if (conn->chan)
     channel_set_identity_digest(TLS_CHAN_TO_BASE(conn->chan), rsa_digest);
-
-#if 1
-  /* Testing code to check for bugs in representation. */
-  for (; tmp; tmp = tmp->next_with_same_id) {
-    tor_assert(tor_memeq(tmp->identity_digest, rsa_digest, DIGEST_LEN));
-    tor_assert(tmp != conn);
-  }
-#endif
 }
 
 /** Remove the Extended ORPort identifier of <b>conn</b> from the

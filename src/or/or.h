@@ -1581,8 +1581,6 @@ typedef struct or_connection_t {
                     * bandwidthburst. (OPEN ORs only) */
   int write_bucket; /**< When this hits 0, stop writing. Like read_bucket. */
 
-  struct or_connection_t *next_with_same_id; /**< Next connection with same
-                                              * identity digest as this one. */
   /** Last emptied read token bucket in msec since midnight; only used if
    * TB_EMPTY events are enabled. */
   uint32_t read_emptied_time;
