@@ -63,8 +63,9 @@
 #include "transports.h"
 
 static channel_t * channel_connect_for_circuit(const tor_addr_t *addr,
-                                               uint16_t port,
-                                               const char *id_digest);
+                                            uint16_t port,
+                                            const char *id_digest,
+                                            const ed25519_public_key_t *ed_id);
 static int circuit_deliver_create_cell(circuit_t *circ,
                                        const create_cell_t *create_cell,
                                        int relayed);
@@ -80,13 +81,12 @@ static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
  */
 static channel_t *
 channel_connect_for_circuit(const tor_addr_t *addr, uint16_t port,
-                            const char *id_digest)
+                            const char *id_digest,
+                            const ed25519_public_key_t *ed_id)
 {
   channel_t *chan;
 
-  chan = channel_connect(addr, port, id_digest,
-                         NULL // XXXX Ed25519 id.
-                         );
+  chan = channel_connect(addr, port, id_digest, ed_id);
   if (chan) command_setup_channel(chan);
 
   return chan;
@@ -556,6 +556,7 @@ circuit_handle_first_hop(origin_circuit_t *circ)
                          firsthop->extend_info->port));
 
   n_chan = channel_get_for_extend(firsthop->extend_info->identity_digest,
+                                  &firsthop->extend_info->ed_identity,
                                   &firsthop->extend_info->addr,
                                   &msg,
                                   &should_launch);
@@ -573,7 +574,8 @@ circuit_handle_first_hop(origin_circuit_t *circ)
       n_chan = channel_connect_for_circuit(
           &firsthop->extend_info->addr,
           firsthop->extend_info->port,
-          firsthop->extend_info->identity_digest);
+          firsthop->extend_info->identity_digest,
+          &firsthop->extend_info->ed_identity);
       if (!n_chan) { /* connect failed, forget the whole thing */
         log_info(LD_CIRC,"connect to firsthop failed. Closing.");
         return -END_CIRC_REASON_CONNECTFAILED;
@@ -1185,7 +1187,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   }
 
   n_chan = channel_get_for_extend((const char*)ec.node_id,
-                                  /*&ec.ed25519_id 15056 */
+                                  &ec.ed_pubkey,
                                   &ec.orport_ipv4.addr,
                                   &msg,
                                   &should_launch);
@@ -1212,7 +1214,8 @@ circuit_extend(cell_t *cell, circuit_t *circ)
       /* we should try to open a connection */
       n_chan = channel_connect_for_circuit(&ec.orport_ipv4.addr,
                                            ec.orport_ipv4.port,
-                                           (const char*)ec.node_id);
+                                           (const char*)ec.node_id,
+                                           &ec.ed_pubkey);
       if (!n_chan) {
         log_info(LD_CIRC,"Launching n_chan failed. Closing circuit.");
         circuit_mark_for_close(circ, END_CIRC_REASON_CONNECTFAILED);

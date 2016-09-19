@@ -153,10 +153,16 @@ struct channel_s {
   int (*write_var_cell)(channel_t *, var_cell_t *);
 
   /**
-   * Hash of the public RSA key for the other side's identity key, or
-   * zeroes if the other side hasn't shown us a valid identity key.
+   * Hash of the public RSA key for the other side's RSA identity key, or
+   * zeroes if the other side hasn't shown us a valid RSA identity key.
    */
   char identity_digest[DIGEST_LEN];
+  /**
+   * The Ed25519 public identity key for the other side, or zeros if the other
+   * size hasn't shown us a valid Ed25519 identity key
+   */
+  ed25519_public_key_t ed25519_identity;
+
   /** Nickname of the OR on the other side, or NULL if none. */
   char *nickname;
 
@@ -489,10 +495,11 @@ int channel_send_destroy(circid_t circ_id, channel_t *chan,
  */
 
 channel_t * channel_connect(const tor_addr_t *addr, uint16_t port,
-                            const char *id_digest,
+                            const char *rsa_id_digest,
                             const ed25519_public_key_t *ed_id);
 
-channel_t * channel_get_for_extend(const char *digest,
+channel_t * channel_get_for_extend(const char *rsa_id_digest,
+                                   const ed25519_public_key_t *ed_id,
                                    const tor_addr_t *target_addr,
                                    const char **msg_out,
                                    int *launch_out);
@@ -506,11 +513,13 @@ int channel_is_better(time_t now,
  */
 
 channel_t * channel_find_by_global_id(uint64_t global_identifier);
-channel_t * channel_find_by_remote_digest(const char *identity_digest);
+channel_t * channel_find_by_remote_identity(const char *rsa_id_digest,
+                                            const ed25519_public_key_t *ed_id);
 
 /** For things returned by channel_find_by_remote_digest(), walk the list.
+ * The RSA key will match for all returned elements; the Ed25519 key might not.
  */
-channel_t * channel_next_with_digest(channel_t *chan);
+channel_t * channel_next_with_rsa_identity(channel_t *chan);
 
 /*
  * Helper macros to lookup state of given channel.

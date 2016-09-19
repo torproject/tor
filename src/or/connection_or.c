@@ -149,7 +149,7 @@ connection_or_set_identity_digest(or_connection_t *conn,
                                   const char *rsa_digest,
                                   const ed25519_public_key_t *ed_id)
 {
-  (void) ed_id; // DOCDOC // XXXX not implemented yet.
+  (void) ed_id; // DOCDOC // XXXX not implemented yet. 15056
   or_connection_t *tmp;
   tor_assert(conn);
   tor_assert(rsa_digest);
@@ -1182,7 +1182,7 @@ connection_or_connect, (const tor_addr_t *_addr, uint16_t port,
                         const ed25519_public_key_t *ed_id,
                         channel_tls_t *chan))
 {
-  (void) ed_id; // XXXX not fully used yet.
+  (void) ed_id; // XXXX not fully used yet. 15056
   or_connection_t *conn;
   const or_options_t *options = get_options();
   int socket_error = 0;

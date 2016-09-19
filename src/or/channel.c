@@ -733,26 +733,61 @@ channel_find_by_global_id(uint64_t global_identifier)
   return rv;
 }
 
-/**
- * Find channel by digest of the remote endpoint
- *
- * This function looks up a channel by the digest of its remote endpoint in
- * the channel digest map.  It's possible that more than one channel to a
- * given endpoint exists.  Use channel_next_with_digest() to walk the list.
- */
+/** Return true iff <b>chan</b> matches <b>rsa_id_digest</b> and <b>ed_id</b>.
+ * as its identity keys.  If either is NULL, do not check for a match. */
+static int
+channel_remote_identity_matches(const channel_t *chan,
+                                const char *rsa_id_digest,
+                                const ed25519_public_key_t *ed_id)
+{
+  if (BUG(!chan))
+    return 0;
+  if (rsa_id_digest) {
+    if (tor_memneq(rsa_id_digest, chan->identity_digest, DIGEST_LEN))
+      return 0;
+  }
+  if (ed_id) {
+    if (tor_memneq(ed_id->pubkey, chan->ed25519_identity.pubkey,
+                   ED25519_PUBKEY_LEN))
+      return 0;
+  }
+  return 1;
+}
 
+/**
+ * Find channel by RSA/Ed25519 identity of of the remote endpoint
+ *
+ * This function looks up a channel by the digest of its remote endpoint's RSA
+ * identity key.  If <b>ed_id</b> is provided and nonzero, only a channel
+ * matching the <b>ed_id</b> will be returned.
+ *
+ * It's possible that more than one channel to a given endpoint exists.  Use
+ * channel_next_with_rsa_identity() to walk the list of channels; make sure
+ * to test for Ed25519 identity match too (as appropriate)
+ */
 channel_t *
-channel_find_by_remote_digest(const char *identity_digest)
+channel_find_by_remote_identity(const char *rsa_id_digest,
+                                const ed25519_public_key_t *ed_id)
 {
   channel_t *rv = NULL;
   channel_idmap_entry_t *ent, search;
 
-  tor_assert(identity_digest);
+  tor_assert(rsa_id_digest); /* For now, we require that every channel have
+                              * an RSA identity, and that every lookup
+                              * contain an RSA identity */
+  if (ed_id && ed25519_public_key_is_zero(ed_id)) {
+    /* Treat zero as meaning "We don't care about the presence or absence of
+     * an Ed key", not "There must be no Ed key". */
+    ed_id = NULL;
+  }
 
-  memcpy(search.digest, identity_digest, DIGEST_LEN);
+  memcpy(search.digest, rsa_id_digest, DIGEST_LEN);
   ent = HT_FIND(channel_idmap, &channel_identity_map, &search);
   if (ent) {
     rv = TOR_LIST_FIRST(&ent->channel_list);
+  }
+  while (rv && ! channel_remote_identity_matches(rv, rsa_id_digest, ed_id)) {
+    rv = channel_next_with_rsa_identity(rv);
   }
 
   return rv;
@@ -766,7 +801,7 @@ channel_find_by_remote_digest(const char *identity_digest)
  */
 
 channel_t *
-channel_next_with_digest(channel_t *chan)
+channel_next_with_rsa_identity(channel_t *chan)
 {
   tor_assert(chan);
 
@@ -3296,7 +3331,8 @@ channel_is_better(time_t now, channel_t *a, channel_t *b,
  */
 
 channel_t *
-channel_get_for_extend(const char *digest,
+channel_get_for_extend(const char *rsa_id_digest,
+                       const ed25519_public_key_t *ed_id,
                        const tor_addr_t *target_addr,
                        const char **msg_out,
                        int *launch_out)
@@ -3309,14 +3345,14 @@ channel_get_for_extend(const char *digest,
   tor_assert(msg_out);
   tor_assert(launch_out);
 
-  chan = channel_find_by_remote_digest(digest);
+  chan = channel_find_by_remote_identity(rsa_id_digest, ed_id);
 
   /* Walk the list, unrefing the old one and refing the new at each
    * iteration.
    */
-  for (; chan; chan = channel_next_with_digest(chan)) {
+  for (; chan; chan = channel_next_with_rsa_identity(chan)) {
     tor_assert(tor_memeq(chan->identity_digest,
-                         digest, DIGEST_LEN));
+                         rsa_id_digest, DIGEST_LEN));
 
    if (CHANNEL_CONDEMNED(chan))
       continue;
@@ -3324,6 +3360,11 @@ channel_get_for_extend(const char *digest,
     /* Never return a channel on which the other end appears to be
      * a client. */
     if (channel_is_client(chan)) {
+      continue;
+    }
+
+    /* The Ed25519 key has to match too */
+    if (!channel_remote_identity_matches(chan, rsa_id_digest, ed_id)) {
       continue;
     }
 

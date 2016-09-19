@@ -174,7 +174,6 @@ channel_tls_connect(const tor_addr_t *addr, uint16_t port,
                     const char *id_digest,
                     const ed25519_public_key_t *ed_id)
 {
-  (void) ed_id; // XXXX not fully used yet
   channel_tls_t *tlschan = tor_malloc_zero(sizeof(*tlschan));
   channel_t *chan = &(tlschan->base_);
 
