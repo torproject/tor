@@ -174,11 +174,9 @@ URL: https:onionoo.torproject.orguptime?first_seen_days=7-&flag=V2Dir&type=relay
 " weight=10",
 "46.165.230.5:80 orport=443 id=A0F06C2FADF88D3A39AA3072B406F09D7095AC9E"
 " weight=10",
-/* Fallback was on 0.2.8.6 list, but went down before 0.2.9
- * "171.25.193.77:80 orport=443 id=A10C4F666D27364036B562823E5830BC448E046A"
- * " ipv6=[2001:67c:289c:3::77]:443"
- * " weight=10",
- */
+"171.25.193.77:80 orport=443 id=A10C4F666D27364036B562823E5830BC448E046A"
+" ipv6=[2001:67c:289c:3::77]:443"
+" weight=10",
 "176.9.5.116:9030 orport=9001 id=A1EB8D8F1EE28DB98BBB1EAA3B4BEDD303BAB911"
 " weight=10",
 "192.34.63.137:9030 orport=443 id=ABCB4965F1FEE193602B50A365425105C889D3F8"
