@@ -136,6 +136,8 @@ evdns_server_callback(struct evdns_server_request *req, void *data_)
     entry_conn->socks_request->command = SOCKS_COMMAND_RESOLVE_PTR;
   }
 
+  /* This serves our DNS port so enable DNS request by default. */
+  entry_conn->entry_cfg.dns_request = 1;
   if (q->type == EVDNS_TYPE_A || q->type == EVDNS_QTYPE_ALL) {
     entry_conn->entry_cfg.ipv4_traffic = 1;
     entry_conn->entry_cfg.ipv6_traffic = 0;
