@@ -122,10 +122,8 @@ static void update_consensus_bootstrap_multiple_downloads(
 void
 networkstatus_reset_warnings(void)
 {
-  if (networkstatus_get_latest_consensus()) {
-    SMARTLIST_FOREACH(nodelist_get_list(), node_t *, node,
-                      node->name_lookup_warned = 0);
-  }
+  SMARTLIST_FOREACH(nodelist_get_list(), node_t *, node,
+                    node->name_lookup_warned = 0);
 
   have_warned_about_old_version = 0;
   have_warned_about_new_version = 0;
@@ -720,10 +718,10 @@ router_get_dl_status_by_descriptor_digest,(const char *d))
 routerstatus_t *
 router_get_mutable_consensus_status_by_id(const char *digest)
 {
-  if (!networkstatus_get_latest_consensus())
+  const networkstatus_t *ns = networkstatus_get_latest_consensus();
+  if (!ns)
     return NULL;
-  const smartlist_t *rslist;
-  rslist = networkstatus_get_latest_consensus()->routerstatus_list;
+  smartlist_t *rslist = ns->routerstatus_list;
   return smartlist_bsearch(rslist, digest,
                            compare_digest_to_routerstatus_entry);
 }
@@ -1788,7 +1786,7 @@ networkstatus_set_current_consensus(const char *consensus,
     /* Update ewma and adjust policy if needed; first cache the old value */
     old_ewma_enabled = cell_ewma_enabled();
     /* Change the cell EWMA settings */
-    cell_ewma_set_scale_factor(options, networkstatus_get_latest_consensus());
+    cell_ewma_set_scale_factor(options, c);
     /* If we just enabled ewma, set the cmux policy on all active channels */
     if (cell_ewma_enabled() && !old_ewma_enabled) {
       channel_set_cmux_policy_everywhere(&ewma_policy);
@@ -1801,8 +1799,8 @@ networkstatus_set_current_consensus(const char *consensus,
      * current consensus really alter our view of any OR's rate limits? */
     connection_or_update_token_buckets(get_connection_array(), options);
 
-    circuit_build_times_new_consensus_params(get_circuit_build_times_mutable(),
-        networkstatus_get_latest_consensus());
+    circuit_build_times_new_consensus_params(
+                               get_circuit_build_times_mutable(), c);
   }
 
   /* Reset the failure count only if this consensus is actually valid. */
@@ -1952,17 +1950,16 @@ routers_update_all_from_networkstatus(time_t now, int dir_version)
 static void
 routerstatus_list_update_named_server_map(void)
 {
-  if (!networkstatus_get_latest_consensus())
+  networkstatus_t *ns = networkstatus_get_latest_consensus();
+  if (!ns)
     return;
 
   strmap_free(named_server_map, tor_free_);
   named_server_map = strmap_new();
   strmap_free(unnamed_server_map, NULL);
   unnamed_server_map = strmap_new();
-  const smartlist_t *rslist;
-  rslist = networkstatus_get_latest_consensus()->routerstatus_list;
-  SMARTLIST_FOREACH_BEGIN(rslist,
-                          const routerstatus_t *, rs) {
+  smartlist_t *rslist = ns->routerstatus_list;
+  SMARTLIST_FOREACH_BEGIN(rslist, const routerstatus_t *, rs) {
       if (rs->is_named) {
         strmap_set_lc(named_server_map, rs->nickname,
                       tor_memdup(rs->identity_digest, DIGEST_LEN));
