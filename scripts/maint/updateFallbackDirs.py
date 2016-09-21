@@ -80,7 +80,7 @@ PERFORM_IPV4_DIRPORT_CHECKS = False if OUTPUT_CANDIDATES else True
 # Don't check ~1000 candidates when OUTPUT_CANDIDATES is True
 PERFORM_IPV6_DIRPORT_CHECKS = False if OUTPUT_CANDIDATES else False
 
-# Output fallback name, flags, and ContactInfo in a C comment?
+# Output fallback name, flags, bandwidth, and ContactInfo in a C comment?
 OUTPUT_COMMENTS = True if OUTPUT_CANDIDATES else False
 
 # Output matching ContactInfo in fallbacks list or the blacklist?
@@ -173,7 +173,7 @@ EXIT_BANDWIDTH_FRACTION = 1.0
 # If a single fallback's bandwidth is too low, it's pointless adding it
 # We expect fallbacks to handle an extra 30 kilobytes per second of traffic
 # Make sure they can support a hundred times the expected extra load
-# (Use 102.4 to make it come out nicely in MB/s)
+# (Use 102.4 to make it come out nicely in MByte/s)
 # We convert this to a consensus weight before applying the filter,
 # because all the bandwidth amounts are specified by the relay
 MIN_BANDWIDTH = 102.4 * 30.0 * 1024.0
@@ -1151,6 +1151,7 @@ class Candidate(object):
     # /*
     # nickname
     # flags
+    # adjusted bandwidth, consensus weight
     # [contact]
     # [identical contact counts]
     # */
@@ -1161,6 +1162,13 @@ class Candidate(object):
     s += '\n'
     s += 'Flags: '
     s += cleanse_c_multiline_comment(' '.join(sorted(self._data['flags'])))
+    s += '\n'
+    # this is an adjusted bandwidth, see calculate_measured_bandwidth()
+    bandwidth = self._data['measured_bandwidth']
+    weight = self._data['consensus_weight']
+    s += 'Bandwidth: %.1f MByte/s, Consensus Weight: %d'%(
+        bandwidth/(1024.0*1024.0),
+        weight)
     s += '\n'
     if self._data['contact'] is not None:
       s += cleanse_c_multiline_comment(self._data['contact'])
@@ -1430,8 +1438,8 @@ class CandidateList(dict):
         # the bandwidth we log here is limited by the relay's consensus weight
         # as well as its adverttised bandwidth. See set_measured_bandwidth
         # for details
-        logging.info('%s not a candidate: bandwidth %.1fMB/s too low, must ' +
-                     'be at least %.1fMB/s', f._fpr,
+        logging.info('%s not a candidate: bandwidth %.1fMByte/s too low, ' +
+                     'must be at least %.1fMByte/s', f._fpr,
                      f._data['measured_bandwidth']/(1024.0*1024.0),
                      MIN_BANDWIDTH/(1024.0*1024.0))
     self.fallbacks = above_min_bw_fallbacks
@@ -1879,8 +1887,8 @@ class CandidateList(dict):
     min_bw = min_fb._data['measured_bandwidth']
     max_fb = self.fallback_max()
     max_bw = max_fb._data['measured_bandwidth']
-    s += 'Bandwidth Range: %.1f - %.1f MB/s'%(min_bw/(1024.0*1024.0),
-                                              max_bw/(1024.0*1024.0))
+    s += 'Bandwidth Range: %.1f - %.1f MByte/s'%(min_bw/(1024.0*1024.0),
+                                                 max_bw/(1024.0*1024.0))
     s += '\n'
     s += '*/'
     if fallback_count < MIN_FALLBACK_COUNT:
