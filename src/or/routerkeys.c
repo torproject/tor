@@ -927,7 +927,18 @@ load_ed_keys(const or_options_t *options, time_t now)
   return -1;
 }
 
-/* DOCDOC */
+/**
+ * Retrieve our currently-in-use Ed25519 link certificate and id certificate,
+ * and, if they would expire soon (based on the time <b>now</b>, generate new
+ * certificates (without embedding the public part of the signing key inside).
+ *
+ * The signed_key from the expiring certificate will be used to sign the new
+ * key within newly generated X509 certificate.
+ *
+ * Returns -1 upon error.  Otherwise, returns 0 upon success (either when the
+ * current certificate is still valid, or when a new certificate was
+ * successfully generated).
+ */
 int
 generate_ed_link_cert(const or_options_t *options, time_t now)
 {
@@ -967,6 +978,17 @@ generate_ed_link_cert(const or_options_t *options, time_t now)
 #undef SET_KEY
 #undef SET_CERT
 
+/**
+ * Return 1 if any of the following are true:
+ *
+ *   - if one of our Ed25519 signing, auth, or link certificates would expire
+ *     soon w.r.t. the time <b>now</b>,
+ *   - if we do not currently have a link certificate, or
+ *   - if our cached Ed25519 link certificate is not same as the one we're
+ *     currently using.
+ *
+ * Otherwise, returns 0.
+ */
 int
 should_make_new_ed_keys(const or_options_t *options, const time_t now)
 {
