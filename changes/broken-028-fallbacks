@@ -1,0 +1,3 @@
+  o Minor feature (fallback directories):
+    - Remove broken fallbacks from the hard-coded fallback directory list.
+      Closes ticket 20190; patch by teor.
