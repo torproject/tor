@@ -722,7 +722,9 @@ router_get_mutable_consensus_status_by_id(const char *digest)
 {
   if (!networkstatus_get_latest_consensus())
     return NULL;
-  return smartlist_bsearch(networkstatus_get_latest_consensus()->routerstatus_list, digest,
+  const smartlist_t *rslist;
+  rslist = networkstatus_get_latest_consensus()->routerstatus_list;
+  return smartlist_bsearch(rslist, digest,
                            compare_digest_to_routerstatus_entry);
 }
 
@@ -1731,13 +1733,14 @@ networkstatus_set_current_consensus(const char *consensus,
   const int is_usable_flavor = flav == usable_consensus_flavor();
 
   if (is_usable_flavor) {
-    notify_control_networkstatus_changed(networkstatus_get_latest_consensus(), c);
+    notify_control_networkstatus_changed(
+                         networkstatus_get_latest_consensus(), c);
   }
   if (flav == FLAV_NS) {
     if (current_ns_consensus) {
       networkstatus_copy_old_consensus_info(c, current_ns_consensus);
       networkstatus_vote_free(current_ns_consensus);
-      /* Defensive programming : we should set networkstatus_get_latest_consensus() very soon,
+      /* Defensive programming : we should set current_ns_consensus very soon
        * but we're about to call some stuff in the meantime, and leaving this
        * dangling pointer around has proven to be trouble. */
       current_ns_consensus = NULL;
@@ -1956,7 +1959,9 @@ routerstatus_list_update_named_server_map(void)
   named_server_map = strmap_new();
   strmap_free(unnamed_server_map, NULL);
   unnamed_server_map = strmap_new();
-  SMARTLIST_FOREACH_BEGIN(networkstatus_get_latest_consensus()->routerstatus_list,
+  const smartlist_t *rslist;
+  rslist = networkstatus_get_latest_consensus()->routerstatus_list;
+  SMARTLIST_FOREACH_BEGIN(rslist,
                           const routerstatus_t *, rs) {
       if (rs->is_named) {
         strmap_set_lc(named_server_map, rs->nickname,
