@@ -1183,6 +1183,7 @@ class Candidate(object):
       s += '\n'
     s += '*/'
     s += '\n'
+    return s
 
   # output the fallback info C string for this fallback
   # this is the text that would go after FallbackDir in a torrc
