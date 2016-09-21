@@ -19,6 +19,7 @@
 #define ENC_KEY_HEADER "Boxed Ed25519 key"
 #define ENC_KEY_TAG "master"
 
+/* DOCDOC */
 static ssize_t
 do_getpass(const char *prompt, char *buf, size_t buflen,
            int twice, const or_options_t *options)
@@ -85,6 +86,7 @@ do_getpass(const char *prompt, char *buf, size_t buflen,
   return length;
 }
 
+/* DOCDOC */
 int
 read_encrypted_secret_key(ed25519_secret_key_t *out,
                           const char *fname)
@@ -157,6 +159,7 @@ read_encrypted_secret_key(ed25519_secret_key_t *out,
   return r;
 }
 
+/* DOCDOC */
 int
 write_encrypted_secret_key(const ed25519_secret_key_t *key,
                            const char *fname)
@@ -200,6 +203,7 @@ write_encrypted_secret_key(const ed25519_secret_key_t *key,
   return r;
 }
 
+/* DOCDOC */
 static int
 write_secret_key(const ed25519_secret_key_t *key, int encrypted,
                  const char *fname,
