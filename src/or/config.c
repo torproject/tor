@@ -5451,10 +5451,14 @@ bridge_line_free(bridge_line_t *bridge_line)
   tor_free(bridge_line);
 }
 
-/** Read the contents of a Bridge line from <b>line</b>. Return 0
- * if the line is well-formed, and -1 if it isn't. If
- * <b>validate_only</b> is 0, and the line is well-formed, then add
- * the bridge described in the line to our internal bridge list.
+/** Parse the contents of a string, <b>line</b>, containing a Bridge line,
+ * into a bridge_line_t.
+ *
+ * Validates that the IP:PORT, fingerprint, and SOCKS arguments (given to the
+ * Pluggable Transport, if a one was specified) are well-formed.
+ *
+ * Returns NULL If the Bridge line could not be validated, and returns a
+ * bridge_line_t containing the parsed information otherwise.
  *
  * Bridge line format:
  * Bridge [transport] IP:PORT [id-fingerprint] [k=v] [k=v] ...
