@@ -1,0 +1,6 @@
+  o Major bugfixes (relay, OOM handler):
+    - Fix a timing-dependent assertion failure that could occur when we
+      tried to flush from a circuit after having freed its cells because
+      of an out-of-memory condition. Fixes bug 20203; bugfix on
+      0.2.8.1-alpha. Thanks to "cypherpunks" for help diagnosing this
+      one.
