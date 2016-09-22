@@ -155,12 +155,10 @@ ONIONOO_SCALE_ONE = 999.
 _FB_POG = 0.2
 FALLBACK_PROPORTION_OF_GUARDS = None if OUTPUT_CANDIDATES else _FB_POG
 
-# We want exactly 100 fallbacks for the initial release
-# This gives us scope to add extra fallbacks to the list as needed
 # Limit the number of fallbacks (eliminating lowest by advertised bandwidth)
-MAX_FALLBACK_COUNT = None if OUTPUT_CANDIDATES else 100
-# Emit a C #error if the number of fallbacks is below
-MIN_FALLBACK_COUNT = 100
+MAX_FALLBACK_COUNT = None if OUTPUT_CANDIDATES else 200
+# Emit a C #error if the number of fallbacks is more than 10% below MAX
+MIN_FALLBACK_COUNT = 0 if OUTPUT_CANDIDATES else MAX_FALLBACK_COUNT*0.9
 
 ## Fallback Bandwidth Requirements
 
