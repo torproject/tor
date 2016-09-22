@@ -1456,8 +1456,9 @@ routerstatus_has_changed(const routerstatus_t *a, const routerstatus_t *b)
          a->is_valid != b->is_valid ||
          a->is_possible_guard != b->is_possible_guard ||
          a->is_bad_exit != b->is_bad_exit ||
-         a->is_hs_dir != b->is_hs_dir ||
-         a->version_known != b->version_known;
+         a->is_hs_dir != b->is_hs_dir;
+  // XXXX this function needs a huge refactoring; it has gotten out
+  // XXXX of sync with routerstatus_t, and it will do so again.
 }
 
 /** Notify controllers of any router status entries that changed between

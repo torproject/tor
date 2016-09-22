@@ -2914,13 +2914,13 @@ routerstatus_parse_entry_from_string(memarea_t *area,
   }
   if ((tok = find_opt_by_keyword(tokens, K_V))) {
     tor_assert(tok->n_args == 1);
-    rs->version_known = 1;
     if (!strcmpstart(tok->args[0], "Tor ") && !found_protocol_list) {
       /* We only do version checks like this in the case where
        * the version is a "Tor" version, and where there is no
        * list of protocol versions that we should be looking at instead. */
       rs->supports_extend2_cells =
         tor_version_as_new_as(tok->args[0], "0.2.4.8-alpha");
+      rs->protocols_known = 1;
     }
     if (vote_rs) {
       vote_rs->version = tor_strdup(tok->args[0]);

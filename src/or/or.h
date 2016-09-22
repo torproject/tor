@@ -2193,12 +2193,8 @@ typedef struct routerstatus_t {
   unsigned int is_v2_dir:1; /** True iff this router publishes an open DirPort
                              * or it claims to accept tunnelled dir requests.
                              */
-  /** True iff we know version info for this router. (i.e., a "v" entry was
-   * included.)  We'll replace all these with a big tor_version_t or a char[]
-   * if the number of traits we care about ever becomes incredibly big. */
-  unsigned int version_known:1;
-
-  /** True iff we have a proto line for this router.*/
+  /** True iff we have a proto line for this router, or a versions line
+   * from which we could infer the protocols. */
   unsigned int protocols_known:1;
 
   /** True iff this router has a version or protocol list that allows it to

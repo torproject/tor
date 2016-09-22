@@ -5526,7 +5526,8 @@ routerinfo_has_curve25519_onion_key(const routerinfo_t *ri)
 }
 
 /* Is rs running a tor version known to support ntor?
- * If allow_unknown_versions is true, return true if the version is unknown.
+ * If allow_unknown_versions is true, return true if we can't tell
+ * (from a versions line or a protocols line) whether it supports ntor.
  * Otherwise, return false if the version is unknown. */
 int
 routerstatus_version_supports_ntor(const routerstatus_t *rs,
@@ -5536,7 +5537,7 @@ routerstatus_version_supports_ntor(const routerstatus_t *rs,
     return allow_unknown_versions;
   }
 
-  if (!rs->version_known && !rs->protocols_known) {
+  if (!rs->protocols_known) {
     return allow_unknown_versions;
   }
 
