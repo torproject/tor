@@ -1,4 +1,4 @@
-  o Major bug fixes (circuit building):
+  o Major features (circuit building, security):
     - Tor authorities, relays, and clients only use ntor, except for
       rare cases in the hidden service protocol.
     - Authorities, relays and clients specifically check that each
@@ -10,6 +10,8 @@
       mirrors, or as introduction or rendezvous points.
     - Circuit-building code assumes that all hops can use ntor,
       except for rare hidden service protocol cases.
+
+  o Major bugfixes (circuit building):
     - Hidden service client to intro point and service to rendezvous point
       connections use the TAP key supplied by the protocol.
       Fixes bug 19163; bugfix on 0.2.4.18-rc.

@@ -1,3 +1,4 @@
   o Minor bugfixes (documentation):
-    - man page incorrectly states the User option takes a UID when it really
-      takes a username. Fixes bug 19122.
+    - Fix manual for the User option: it takes a username, not a UID.
+      Fixes bug 19122; bugfix on 0.0.2pre16 (the first version to have
+      a manpage!).

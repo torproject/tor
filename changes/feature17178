@@ -8,23 +8,23 @@
       This is compatible with the existing hidden service implementation, and
       works on the current tor network without any changes to older relays or
       clients.
-      Implements proposal #260, completes ticket #17178. Patch by teor & asn.
+      Implements proposal 260, completes ticket 17178. Patch by teor and asn.
   o Minor features (Tor2web):
     - Make Tor2web clients respect ReachableAddresses.
       This feature was inadvertently enabled in 0.2.8.6, then removed
-      by bugfix #19973 on 0.2.8.7.
-      Implements feature #20034. Patch by teor.
+      by bugfix 19973 on 0.2.8.7.
+      Implements feature 20034. Patch by teor.
   o Minor bug fixes (Tor2web):
     - Prevent Tor2web clients running hidden services, these services are
       not anonymous due to the one-hop client paths.
-      Fixes bug #19678. Patch by teor.
+      Fixes bug 19678. Patch by teor.
   o Minor bug fixes (circuits):
     - Use CircuitBuildTimeout whenever LearnCircuitBuildTimeout is disabled.
-      Fixes bug #19678 in commit 5b0b51ca3 in 0.2.4.12-alpha. Patch by teor.
+      Fixes bug 19678; bugfix on commit 5b0b51ca3 in 0.2.4.12-alpha. Patch by teor.
   o Minor bug fixes (options):
     - Stop changing the configured value of UseEntryGuards on authorities
       and Tor2web clients.
-      Fixes bug #20074 in commits 51fc6799 in tor-0.1.1.16-rc and
+      Fixes bug 20074; bugfix on commits 51fc6799 in tor-0.1.1.16-rc and
       acda1735 in tor-0.2.4.3-alpha. Patch by teor.
     - Check the consistency of UseEntryGuards and EntryNodes more reliably.
-      Fixes bug #20074 in commit 686aaa5c in tor-0.2.4.12-alpha. Patch by teor.
+      Fixes bug 20074; bugfix on commit 686aaa5c in tor-0.2.4.12-alpha. Patch by teor.
