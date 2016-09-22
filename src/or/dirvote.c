@@ -2047,7 +2047,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       smartlist_add(chunks, tor_strdup("\n"));
       if (chosen_protocol_list &&
           consensus_method >= MIN_METHOD_FOR_RS_PROTOCOLS) {
-        smartlist_add_asprintf(chunks, "proto %s\n", chosen_protocol_list);
+        smartlist_add_asprintf(chunks, "pr %s\n", chosen_protocol_list);
       }
       /*     Now the weight line. */
       if (rs_out.has_bandwidth) {

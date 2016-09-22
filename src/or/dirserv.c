@@ -1861,7 +1861,7 @@ routerstatus_format_entry(const routerstatus_t *rs, const char *version,
     smartlist_add_asprintf(chunks, "v %s\n", version);
   }
   if (protocols) {
-    smartlist_add_asprintf(chunks, "proto %s\n", protocols);
+    smartlist_add_asprintf(chunks, "pr %s\n", protocols);
   }
 
   if (format != NS_V2) {
