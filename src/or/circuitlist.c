@@ -1918,8 +1918,14 @@ marked_circuit_free_cells(circuit_t *circ)
     return;
   }
   cell_queue_clear(&circ->n_chan_cells);
-  if (! CIRCUIT_IS_ORIGIN(circ))
-    cell_queue_clear(& TO_OR_CIRCUIT(circ)->p_chan_cells);
+  if (circ->n_mux)
+    circuitmux_clear_num_cells(circ->n_mux, circ);
+  if (! CIRCUIT_IS_ORIGIN(circ)) {
+    or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
+    cell_queue_clear(&orcirc->p_chan_cells);
+    if (orcirc->p_mux)
+      circuitmux_clear_num_cells(orcirc->p_mux, circ);
+  }
 }
 
 static size_t

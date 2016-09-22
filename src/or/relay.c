@@ -2615,6 +2615,15 @@ channel_flush_from_first_active_circuit, (channel_t *chan, int max))
     }
 
     /* Circuitmux told us this was active, so it should have cells */
+    if (/*BUG(*/ queue->n == 0 /*)*/) {
+      log_warn(LD_BUG, "Found a supposedly active circuit with no cells "
+               "to send. Trying to recover.");
+      circuitmux_set_num_cells(cmux, circ, 0);
+      if (! circ->marked_for_close)
+        circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
+      continue;
+    }
+
     tor_assert(queue->n > 0);
 
     /*
