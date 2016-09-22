@@ -1,4 +1,4 @@
-  o Major bug fixes (crash):
+  o Major bugfixes (crash):
 
     - Fix a complicated crash bug that could affect Tor clients
       configured to use bridges when replacing a networkstatus consensus
