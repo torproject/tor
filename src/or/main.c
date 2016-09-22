@@ -3033,6 +3033,10 @@ tor_init(int argc, char *argv[])
   /* The options are now initialised */
   const or_options_t *options = get_options();
 
+  /* Initialize channelpadding parameters to defaults until we get
+   * a consensus */
+  channelpadding_new_consensus_params(NULL);
+
   /* Initialize predicted ports list after loading options */
   predicted_ports_init();
 

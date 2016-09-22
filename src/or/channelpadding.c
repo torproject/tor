@@ -29,6 +29,87 @@ STATIC int64_t channelpadding_compute_time_until_pad_for_netflow(channel_t *);
 /** The total number of pending channelpadding timers */
 static uint64_t total_timers_pending;
 
+/** These are cached consensus parameters for netflow */
+/** The timeout lower bound that is allowed before sending padding */
+static int consensus_nf_ito_low;
+/** The timeout upper bound that is allowed before sending padding */
+static int consensus_nf_ito_high;
+/** The timeout lower bound that is allowed before sending reduced padding */
+static int consensus_nf_ito_low_reduced;
+/** The timeout upper bound that is allowed before sending reduced padding */
+static int consensus_nf_ito_high_reduced;
+/** The connection timeout between relays */
+static int consensus_nf_conntimeout_relays;
+/** The connection timeout for client connections */
+static int consensus_nf_conntimeout_clients;
+/** Should we pad before circuits are actually used for client data? */
+static int consensus_nf_pad_before_usage;
+/** Should we pad relay-to-relay connections? */
+static int consensus_nf_pad_relays;
+
+/**
+ * This function is called to update cached consensus parameters every time
+ * there is a consensus update. This allows us to move the consensus param
+ * search off of the critical path, so it does not need to be evaluated
+ * for every single connection, every second.
+ */
+void
+channelpadding_new_consensus_params(networkstatus_t *ns)
+{
+#define DFLT_NETFLOW_INACTIVE_KEEPALIVE_LOW 1500
+#define DFLT_NETFLOW_INACTIVE_KEEPALIVE_HIGH 9500
+#define DFLT_NETFLOW_INACTIVE_KEEPALIVE_MIN 0
+#define DFLT_NETFLOW_INACTIVE_KEEPALIVE_MAX 60000
+  consensus_nf_ito_low = networkstatus_get_param(ns, "nf_ito_low",
+      DFLT_NETFLOW_INACTIVE_KEEPALIVE_LOW,
+      DFLT_NETFLOW_INACTIVE_KEEPALIVE_MIN,
+      DFLT_NETFLOW_INACTIVE_KEEPALIVE_MAX);
+  consensus_nf_ito_high = networkstatus_get_param(NULL, "nf_ito_high",
+      DFLT_NETFLOW_INACTIVE_KEEPALIVE_HIGH,
+      consensus_nf_ito_low,
+      DFLT_NETFLOW_INACTIVE_KEEPALIVE_MAX);
+
+#define DFLT_NETFLOW_REDUCED_KEEPALIVE_LOW 9000
+#define DFLT_NETFLOW_REDUCED_KEEPALIVE_HIGH 14000
+#define DFLT_NETFLOW_REDUCED_KEEPALIVE_MIN 0
+#define DFLT_NETFLOW_REDUCED_KEEPALIVE_MAX 60000
+  consensus_nf_ito_low_reduced =
+    networkstatus_get_param(NULL, "nf_ito_low_reduced",
+        DFLT_NETFLOW_REDUCED_KEEPALIVE_LOW,
+        DFLT_NETFLOW_REDUCED_KEEPALIVE_MIN,
+        DFLT_NETFLOW_REDUCED_KEEPALIVE_MAX);
+
+  consensus_nf_ito_high_reduced =
+    networkstatus_get_param(NULL, "nf_ito_high_reduced",
+        DFLT_NETFLOW_REDUCED_KEEPALIVE_HIGH,
+        consensus_nf_ito_low_reduced,
+        DFLT_NETFLOW_REDUCED_KEEPALIVE_MAX);
+
+#define CONNTIMEOUT_RELAYS_DFLT (60*60) // 1 hour
+#define CONNTIMEOUT_RELAYS_MIN 60
+#define CONNTIMEOUT_RELAYS_MAX (7*24*60*60) // 1 week
+  consensus_nf_conntimeout_relays =
+    networkstatus_get_param(NULL, "nf_conntimeout_relays",
+        CONNTIMEOUT_RELAYS_DFLT,
+        CONNTIMEOUT_RELAYS_MIN,
+        CONNTIMEOUT_RELAYS_MAX);
+
+#define CIRCTIMEOUT_CLIENTS_DFLT (30*60) // 30 minutes
+#define CIRCTIMEOUT_CLIENTS_MIN 60
+#define CIRCTIMEOUT_CLIENTS_MAX (24*60*60) // 24 hours
+  consensus_nf_conntimeout_clients =
+    networkstatus_get_param(NULL, "nf_conntimeout_clients",
+        CIRCTIMEOUT_CLIENTS_DFLT,
+        CIRCTIMEOUT_CLIENTS_MIN,
+        CIRCTIMEOUT_CLIENTS_MAX);
+
+  consensus_nf_pad_before_usage =
+    networkstatus_get_param(NULL, "nf_pad_before_usage", 1, 0, 1);
+
+  consensus_nf_pad_relays =
+    networkstatus_get_param(NULL, "nf_pad_relays", 0, 0, 1);
+}
+
 /**
  * Get a random netflow inactive timeout keepalive period in milliseconds,
  * the range for which is determined by consensus parameters, negotiation,
@@ -47,21 +128,11 @@ static uint64_t total_timers_pending;
  * Returns the next timeout period (in milliseconds) after which we should
  * send a padding packet, or 0 if padding is disabled.
  */
-#define DFLT_NETFLOW_INACTIVE_KEEPALIVE_LOW 1500
-#define DFLT_NETFLOW_INACTIVE_KEEPALIVE_HIGH 9500
-#define DFLT_NETFLOW_INACTIVE_KEEPALIVE_MIN 0
-#define DFLT_NETFLOW_INACTIVE_KEEPALIVE_MAX 60000
 STATIC int
 channelpadding_get_netflow_inactive_timeout_ms(const channel_t *chan)
 {
-  int low_timeout = networkstatus_get_param(NULL, "nf_ito_low",
-      DFLT_NETFLOW_INACTIVE_KEEPALIVE_LOW,
-      DFLT_NETFLOW_INACTIVE_KEEPALIVE_MIN,
-      DFLT_NETFLOW_INACTIVE_KEEPALIVE_MAX);
-  int high_timeout = networkstatus_get_param(NULL, "nf_ito_high",
-      DFLT_NETFLOW_INACTIVE_KEEPALIVE_HIGH,
-      low_timeout,
-      DFLT_NETFLOW_INACTIVE_KEEPALIVE_MAX);
+  int low_timeout = consensus_nf_ito_low;
+  int high_timeout = consensus_nf_ito_high;
   int X1, X2;
 
   if (low_timeout == 0 && low_timeout == high_timeout)
@@ -162,12 +233,8 @@ channelpadding_update_padding_for_channel(channel_t *chan,
 
   /* Min must not be lower than the current consensus parameter
      nf_ito_low. */
-  chan->padding_timeout_low_ms = MAX(networkstatus_get_param(NULL,
-              "nf_ito_low",
-              DFLT_NETFLOW_INACTIVE_KEEPALIVE_LOW,
-              DFLT_NETFLOW_INACTIVE_KEEPALIVE_MIN,
-              DFLT_NETFLOW_INACTIVE_KEEPALIVE_MAX),
-          pad_vars->ito_low_ms);
+  chan->padding_timeout_low_ms = MAX(consensus_nf_ito_low,
+                                     pad_vars->ito_low_ms);
 
   /* Max must not be lower than ito_low_ms */
   chan->padding_timeout_high_ms = MAX(chan->padding_timeout_low_ms,
@@ -399,6 +466,12 @@ channelpadding_compute_time_until_pad_for_netflow(channel_t *chan)
   uint64_t long_now = monotime_coarse_absolute_msec();
 
   if (!chan->next_padding_time_ms) {
+    /* If the below line or crypto_rand_int() shows up on a profile,
+     * we can avoid getting a timeout until we're at least nt_ito_lo
+     * from a timeout window. That will prevent us from setting timers
+     * on connections that were active up to 1.5 seconds ago.
+     * Idle connections should only call this once every 5.5s on average
+     * though, so that might be a micro-optimization for little gain. */
     int64_t padding_timeout =
         channelpadding_get_netflow_inactive_timeout_ms(chan);
 
@@ -475,14 +548,7 @@ channelpadding_get_channel_idle_timeout(const channel_t *chan,
         + crypto_rand_int(CONNTIMEOUT_CLIENTS_BASE/2);
   } else { // Canonical relay-to-relay channels
     // 45..75min or consensus +/- 25%
-#define CONNTIMEOUT_RELAYS_DFLT (60*60) // 1 hour
-#define CONNTIMEOUT_RELAYS_MIN 60
-#define CONNTIMEOUT_RELAYS_MAX (7*24*60*60) // 1 week
-    timeout = networkstatus_get_param(NULL, "nf_conntimeout_relays",
-        CONNTIMEOUT_RELAYS_DFLT,
-        CONNTIMEOUT_RELAYS_MIN,
-        CONNTIMEOUT_RELAYS_MAX);
-
+    timeout = consensus_nf_conntimeout_relays;
     timeout = 3*timeout/4 + crypto_rand_int(timeout/2);
   }
 
@@ -522,13 +588,7 @@ channelpadding_get_circuits_available_timeout(void)
   int timeout = options->CircuitsAvailableTimeout;
 
   if (!timeout) {
-#define CIRCTIMEOUT_CLIENTS_DFLT (30*60) // 30 minutes
-#define CIRCTIMEOUT_CLIENTS_MIN 60
-#define CIRCTIMEOUT_CLIENTS_MAX (24*60*60) // 24 hours
-    timeout = networkstatus_get_param(NULL, "nf_conntimeout_clients",
-        CIRCTIMEOUT_CLIENTS_DFLT,
-        CIRCTIMEOUT_CLIENTS_MIN,
-        CIRCTIMEOUT_CLIENTS_MAX);
+    timeout = consensus_nf_conntimeout_clients;
 
     /* If ReducedConnectionPadding is set, we want to halve the duration of
      * the channel idle timeout, since reducing the additional time that
@@ -579,21 +639,8 @@ channelpadding_reduce_padding_on_channel(channel_t *chan)
     channelpadding_send_disable_command(chan);
   }
 
-#define DFLT_NETFLOW_REDUCED_KEEPALIVE_LOW 9000
-#define DFLT_NETFLOW_REDUCED_KEEPALIVE_HIGH 14000
-#define DFLT_NETFLOW_REDUCED_KEEPALIVE_MIN 0
-#define DFLT_NETFLOW_REDUCED_KEEPALIVE_MAX 60000
-  chan->padding_timeout_low_ms =
-    networkstatus_get_param(NULL, "nf_ito_low_reduced",
-        DFLT_NETFLOW_REDUCED_KEEPALIVE_LOW,
-        DFLT_NETFLOW_REDUCED_KEEPALIVE_MIN,
-        DFLT_NETFLOW_REDUCED_KEEPALIVE_MAX);
-
-  chan->padding_timeout_high_ms =
-    networkstatus_get_param(NULL, "nf_ito_high_reduced",
-        DFLT_NETFLOW_REDUCED_KEEPALIVE_HIGH,
-        chan->padding_timeout_low_ms,
-        DFLT_NETFLOW_REDUCED_KEEPALIVE_MAX);
+  chan->padding_timeout_low_ms = consensus_nf_ito_low_reduced;
+  chan->padding_timeout_high_ms = consensus_nf_ito_high_reduced;
 
   log_fn(LOG_INFO,LD_OR,
          "Reduced padding on channel "U64_FORMAT": lo=%d, hi=%d",
@@ -621,7 +668,7 @@ channelpadding_decide_to_pad_channel(channel_t *chan)
     return CHANNELPADDING_WONTPAD;
 
   if (chan->channel_usage == CHANNEL_USED_FOR_FULL_CIRCS) {
-    if (!networkstatus_get_param(NULL, "nf_pad_before_usage", 1, 0, 1))
+    if (!consensus_nf_pad_before_usage)
       return CHANNELPADDING_WONTPAD;
   } else if (chan->channel_usage != CHANNEL_USED_FOR_USER_TRAFFIC) {
     return CHANNELPADDING_WONTPAD;
@@ -649,8 +696,7 @@ channelpadding_decide_to_pad_channel(channel_t *chan)
     /* If nf_pad_relays=1 is set in the consensus, we pad
      * on *all* idle connections, relay-relay or relay-client.
      * Otherwise pad only for client+bridge cons */
-    if (is_client_channel ||
-        networkstatus_get_param(NULL, "nf_pad_relays", 0, 0, 1)) {
+    if (is_client_channel || consensus_nf_pad_relays) {
       int64_t pad_time_ms =
           channelpadding_compute_time_until_pad_for_netflow(chan);
 

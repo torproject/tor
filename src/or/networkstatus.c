@@ -63,6 +63,7 @@
 #include "shared_random.h"
 #include "transports.h"
 #include "torcert.h"
+#include "channelpadding.h"
 
 /** Map from lowercase nickname to identity digest of named server, if any. */
 static strmap_t *named_server_map = NULL;
@@ -1966,6 +1967,7 @@ networkstatus_set_current_consensus(const char *consensus,
 
     circuit_build_times_new_consensus_params(
                                get_circuit_build_times_mutable(), c);
+    channelpadding_new_consensus_params(c);
   }
 
   /* Reset the failure count only if this consensus is actually valid. */

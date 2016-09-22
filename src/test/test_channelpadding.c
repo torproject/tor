@@ -174,6 +174,7 @@ setup_mock_network(void)
         = tor_malloc_zero(sizeof(networkstatus_t));
   current_md_consensus->net_params = smartlist_new();
   current_md_consensus->routerstatus_list = smartlist_new();
+  channelpadding_new_consensus_params(current_md_consensus);
 
   relay1_relay2 = (channel_t*)new_fake_channeltls(2);
   relay1_relay2->write_cell = mock_channel_write_cell_relay1;
@@ -259,6 +260,7 @@ test_channelpadding_timers(void *arg)
 
   monotime_init();
   timers_initialize();
+  channelpadding_new_consensus_params(NULL);
 
   for (int i = 0; i < CHANNELS_TO_TEST; i++) {
     chans[i] = (channel_t*)new_fake_channeltls(0);
@@ -374,6 +376,7 @@ test_channelpadding_consensus(void *arg)
         = tor_malloc_zero(sizeof(networkstatus_t));
   current_md_consensus->net_params = smartlist_new();
   current_md_consensus->routerstatus_list = smartlist_new();
+  channelpadding_new_consensus_params(current_md_consensus);
 
   get_options_mutable()->ORPort_set = 1;
 
@@ -398,6 +401,7 @@ test_channelpadding_consensus(void *arg)
   smartlist_add(current_md_consensus->net_params,
                 (void*)"nf_ito_high=0");
   get_options_mutable()->ConnectionPadding = 1;
+  channelpadding_new_consensus_params(current_md_consensus);
 
   decision = channelpadding_decide_to_pad_channel(chan);
   tt_int_op(decision, OP_EQ, CHANNELPADDING_WONTPAD);
@@ -427,6 +431,7 @@ test_channelpadding_consensus(void *arg)
                 (void*)"nf_ito_low=100");
   smartlist_add(current_md_consensus->net_params,
                 (void*)"nf_ito_high=200");
+  channelpadding_new_consensus_params(current_md_consensus);
 
   tried_to_write_cell = 0;
   decision = channelpadding_decide_to_pad_channel(chan);
@@ -449,6 +454,7 @@ test_channelpadding_consensus(void *arg)
                 (void*)"nf_ito_low=1500");
   smartlist_add(current_md_consensus->net_params,
                 (void*)"nf_ito_high=4500");
+  channelpadding_new_consensus_params(current_md_consensus);
 
   channelpadding_send_enable_command(chan, 100, 200);
   tried_to_write_cell = 0;
@@ -474,6 +480,7 @@ test_channelpadding_consensus(void *arg)
 
   smartlist_add(current_md_consensus->net_params,
                 (void*)"nf_pad_relays=1");
+  channelpadding_new_consensus_params(current_md_consensus);
 
   decision = channelpadding_decide_to_pad_channel(chan);
   tt_int_op(decision, OP_EQ, CHANNELPADDING_PADLATER);
@@ -487,6 +494,7 @@ test_channelpadding_consensus(void *arg)
   /* Test 5: If we disable padding before channel usage, does that work? */
   smartlist_add(current_md_consensus->net_params,
                 (void*)"nf_pad_before_usage=0");
+  channelpadding_new_consensus_params(current_md_consensus);
   tried_to_write_cell = 0;
   decision = channelpadding_decide_to_pad_channel(chan);
   tt_int_op(decision, OP_EQ, CHANNELPADDING_WONTPAD);
@@ -508,6 +516,7 @@ test_channelpadding_consensus(void *arg)
   options->ORPort_set = 1;
   smartlist_add(current_md_consensus->net_params,
                 (void*)"nf_conntimeout_relays=600");
+  channelpadding_new_consensus_params(current_md_consensus);
   val = channelpadding_get_channel_idle_timeout(chan, 1);
   tt_int_op(val, OP_GE, 450);
   tt_int_op(val, OP_LE, 750);
@@ -519,6 +528,7 @@ test_channelpadding_consensus(void *arg)
   options->ReducedConnectionPadding = 1;
   smartlist_add(current_md_consensus->net_params,
                 (void*)"nf_conntimeout_clients=600");
+  channelpadding_new_consensus_params(current_md_consensus);
   val = channelpadding_get_circuits_available_timeout();
   tt_int_op(val, OP_GE, 600/2);
   tt_int_op(val, OP_LE, 600*2/2);
@@ -714,6 +724,7 @@ test_channelpadding_decide_to_pad_channel(void *arg)
 
   monotime_init();
   timers_initialize();
+  channelpadding_new_consensus_params(NULL);
 
   chan = (channel_t*)new_fake_channeltls(0);
   channel_timestamp_active(chan);
