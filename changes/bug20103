@@ -1,7 +1,0 @@
-  o Major bugfixes (crash):
-
-    - Fix a complicated crash bug that could affect Tor clients
-      configured to use bridges when replacing a networkstatus consensus
-      in which one of their bridges was mentioned. OpenBSD users saw
-      more crashes here, but all platforms were potentially affected.
-      Fixes bug 20103; bugfix on 0.2.8.2-alpha.
