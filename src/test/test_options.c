@@ -354,6 +354,12 @@ get_options_test_data(const char *conf)
   result->opt = options_new();
   result->old_opt = options_new();
   result->def_opt = options_new();
+
+  // XXX: Really, all of these options should be set to defaults
+  // with options_init(), but about a dozen tests break when I do that.
+  // Being kinda lame and just fixing the immedate breakage for now..
+  result->opt->ConnectionPadding = -1; // default must be "auto"
+
   rv = config_get_lines(conf, &cl, 1);
   tt_assert(rv == 0);
   rv = config_assign(&options_format, result->opt, cl, 0, &msg);
