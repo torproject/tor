@@ -2934,6 +2934,16 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_t *private_key,
     tor_strdup("Cons=1 Desc=1 DirCache=1 HSDir=1 HSIntro=3 HSRend=1 "
                "Link=3-4 LinkAuth=1 Microdesc=1 Relay=1-2");
 
+  /* We are not allowed to vote to require anything we don't have. */
+  tor_assert(protover_all_supported(v3_out->required_relay_protocols, NULL));
+  tor_assert(protover_all_supported(v3_out->required_client_protocols, NULL));
+
+  /* We should not recommend anything we don't have. */
+  tor_assert_nonfatal(protover_all_supported(
+                         v3_out->recommended_relay_protocols, NULL));
+  tor_assert_nonfatal(protover_all_supported(
+                         v3_out->recommended_client_protocols, NULL));
+
   v3_out->package_lines = smartlist_new();
   {
     config_line_t *cl;
