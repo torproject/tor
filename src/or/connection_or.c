@@ -2140,6 +2140,23 @@ connection_or_send_netinfo,(or_connection_t *conn))
   return 0;
 }
 
+/** Helper used to add an encoded certs to a cert cell */
+static void
+add_certs_cell_cert_helper(certs_cell_t *certs_cell,
+                           uint8_t cert_type,
+                           const uint8_t *cert_encoded,
+                           size_t cert_len)
+{
+  tor_assert(cert_len <= UINT16_MAX);
+  certs_cell_cert_t *ccc = certs_cell_cert_new();
+  ccc->cert_type = cert_type;
+  ccc->cert_len = cert_len;
+  certs_cell_cert_setlen_body(ccc, cert_len);
+  memcpy(certs_cell_cert_getarray_body(ccc), cert_encoded, cert_len);
+
+  certs_cell_add_certs(certs_cell, ccc);
+}
+
 /** Add an encoded X509 cert (stored as <b>cert_len</b> bytes at
  * <b>cert_encoded</b>) to the trunnel certs_cell_t object that we are
  * building in <b>certs_cell</b>.  Set its type field to <b>cert_type</b>. */
@@ -2148,18 +2165,14 @@ add_x509_cert(certs_cell_t *certs_cell,
               uint8_t cert_type,
               const tor_x509_cert_t *cert)
 {
+  if (NULL == cert)
+    return;
+
   const uint8_t *cert_encoded = NULL;
   size_t cert_len;
   tor_x509_cert_get_der(cert, &cert_encoded, &cert_len);
-  tor_assert(cert_len <= UINT16_MAX);
 
-  certs_cell_cert_t *ccc = certs_cell_cert_new();
-  ccc->cert_type = cert_type;
-  ccc->cert_len = cert_len;
-  certs_cell_cert_setlen_body(ccc, cert_len);
-  memcpy(certs_cell_cert_getarray_body(ccc), cert_encoded, cert_len);
-
-  certs_cell_add_certs(certs_cell, ccc);
+  add_certs_cell_cert_helper(certs_cell, cert_type, cert_encoded, cert_len);
 }
 
 /** Add an Ed25519 cert from <b>cert</b> to the trunnel certs_cell_t object
@@ -2173,15 +2186,8 @@ add_ed25519_cert(certs_cell_t *certs_cell,
   if (NULL == cert)
     return;
 
-  certs_cell_cert_t *ccc = certs_cell_cert_new();
-  ccc->cert_type = cert_type;
-  tor_assert(cert->encoded_len <= UINT16_MAX);
-  ccc->cert_len = cert->encoded_len;
-  certs_cell_cert_setlen_body(ccc, cert->encoded_len);
-  memcpy(certs_cell_cert_getarray_body(ccc), cert->encoded,
-         cert->encoded_len);
-
-  certs_cell_add_certs(certs_cell, ccc);
+  add_certs_cell_cert_helper(certs_cell, cert_type,
+                             cert->encoded, cert->encoded_len);
 }
 
 /** Send a CERTS cell on the connection <b>conn</b>.  Return 0 on success, -1
@@ -2243,13 +2249,9 @@ connection_or_send_certs_cell(or_connection_t *conn)
     size_t crosscert_len;
     get_master_rsa_crosscert(&crosscert, &crosscert_len);
     if (crosscert) {
-      certs_cell_cert_t *ccc = certs_cell_cert_new();
-      ccc->cert_type = CERTTYPE_RSA1024_ID_EDID;
-      ccc->cert_len = crosscert_len;
-      certs_cell_cert_setlen_body(ccc, crosscert_len);
-      memcpy(certs_cell_cert_getarray_body(ccc), crosscert,
-             crosscert_len);
-      certs_cell_add_certs(certs_cell, ccc);
+      add_certs_cell_cert_helper(certs_cell,
+                               CERTTYPE_RSA1024_ID_EDID,
+                               crosscert, crosscert_len);
     }
   }
 
