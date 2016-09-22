@@ -559,6 +559,9 @@ or_handshake_certs_ed25519_ok(int severity,
     ERR("Missing RSA->Ed25519 crosscert");
   }
   crypto_pk_t *rsa_id_key = tor_tls_cert_get_key(rsa_id_cert);
+  if (!rsa_id_key) {
+    ERR("RSA ID cert had no RSA key");
+  }
 
   if (rsa_ed25519_crosscert_check(certs->ed_rsa_crosscert,
                                   certs->ed_rsa_crosscert_len,

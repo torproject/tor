@@ -814,7 +814,7 @@ tor_tls_get_my_client_auth_key(void)
 
 /**
  * Return a newly allocated copy of the public key that a certificate
- * certifies.  Return NULL if the cert's key is not RSA.
+ * certifies. Watch out! This returns NULL if the cert's key is not RSA.
  */
 crypto_pk_t *
 tor_tls_cert_get_key(tor_x509_cert_t *cert)

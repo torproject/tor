@@ -1955,9 +1955,7 @@ channel_tls_process_certs_cell(var_cell_t *cell, channel_tls_t *chan)
 
       identity_rcvd = tor_tls_cert_get_key(id_cert);
       if (!identity_rcvd) {
-        //LCOV_EXCL_START
-        ERR("Internal error: Couldn't get RSA key from ID cert.");
-        //LCOV_EXCL_STOP
+        ERR("Couldn't get RSA key from ID cert.");
       }
       memcpy(chan->conn->handshake_state->authenticated_rsa_peer_id,
              id_digests->d[DIGEST_SHA1], DIGEST_LEN);
@@ -2242,10 +2240,8 @@ channel_tls_process_authenticate_cell(var_cell_t *cell, channel_tls_t *chan)
     size_t keysize;
     int signed_len;
 
-    if (BUG(!pk)) {
-      // LCOV_EXCL_START
-      ERR("Internal error: couldn't get RSA key from AUTH cert.");
-      // LCOV_EXCL_STOP
+    if (! pk) {
+      ERR("Couldn't get RSA key from AUTH cert.");
     }
     crypto_digest256(d, (char*)auth, V3_AUTH_BODY_LEN, DIGEST_SHA256);
 
