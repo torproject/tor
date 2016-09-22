@@ -5074,24 +5074,28 @@ test_util_socket(void *arg)
   tt_int_op(fd_is_nonblocking(fd4), OP_EQ, 1);
 #endif
 
-  tor_close_socket(fd1);
-  tor_close_socket(fd2);
+  tor_assert(tor_close_socket == tor_close_socket__real);
+
+  /* we use close_socket__real here so that coverity can tell that we are
+   * really closing these sockets. */
+  tor_close_socket__real(fd1);
+  tor_close_socket__real(fd2);
   fd1 = fd2 = TOR_INVALID_SOCKET;
   tt_int_op(get_n_open_sockets(), OP_EQ, n + 2);
-  tor_close_socket(fd3);
-  tor_close_socket(fd4);
+  tor_close_socket__real(fd3);
+  tor_close_socket__real(fd4);
   fd3 = fd4 = TOR_INVALID_SOCKET;
   tt_int_op(get_n_open_sockets(), OP_EQ, n);
 
  done:
   if (SOCKET_OK(fd1))
-    tor_close_socket(fd1);
+    tor_close_socket__real(fd1);
   if (SOCKET_OK(fd2))
-    tor_close_socket(fd2);
+    tor_close_socket__real(fd2);
   if (SOCKET_OK(fd3))
-    tor_close_socket(fd3);
+    tor_close_socket__real(fd3);
   if (SOCKET_OK(fd4))
-    tor_close_socket(fd4);
+    tor_close_socket__real(fd4);
 }
 
 static int
