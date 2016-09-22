@@ -259,9 +259,9 @@ evaluate_ctr_for_aes(void)
 #define COUNTER(c, n) ((c)->counter ## n)
 #endif
 
-static void aes_set_key(aes_cnt_cipher_t *cipher, const char *key,
+static void aes_set_key(aes_cnt_cipher_t *cipher, const uint8_t *key,
                         int key_bits);
-static void aes_set_iv(aes_cnt_cipher_t *cipher, const char *iv);
+static void aes_set_iv(aes_cnt_cipher_t *cipher, const uint8_t *iv);
 
 /**
  * Return a newly allocated counter-mode AES128 cipher implementation,
