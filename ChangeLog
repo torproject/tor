@@ -17,6 +17,10 @@ Changes in version 0.2.8.8 - 2016-09-2?
       0.2.8.1-alpha. Thanks to "cypherpunks" for help diagnosing
       this one.
 
+  o Minor feature (fallback directories):
+    - Remove broken fallbacks from the hard-coded fallback directory
+      list. Closes ticket 20190; patch by teor.
+
   o Minor features (geoip):
     - Update geoip and geoip6 to the September 6 2016 Maxmind GeoLite2
       Country database.
