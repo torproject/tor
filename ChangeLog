@@ -1,4 +1,4 @@
-Changes in version 0.2.8.8 - 2016-09-2?
+Changes in version 0.2.8.8 - 2016-09-23
   Tor 0.2.8.8 fixes two crash bugs present in previous versions of the
   0.2.8.x series. Relays running 0.2.8.x should upgrade, as should users
   who select public relays as their bridges.
