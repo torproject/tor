@@ -2,6 +2,34 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+
+Changes in version 0.2.8.8 - 2016-09-23
+  Tor 0.2.8.8 fixes two crash bugs present in previous versions of the
+  0.2.8.x series. Relays running 0.2.8.x should upgrade, as should users
+  who select public relays as their bridges.
+
+  o Major bugfixes (crash):
+    - Fix a complicated crash bug that could affect Tor clients
+      configured to use bridges when replacing a networkstatus consensus
+      in which one of their bridges was mentioned. OpenBSD users saw
+      more crashes here, but all platforms were potentially affected.
+      Fixes bug 20103; bugfix on 0.2.8.2-alpha.
+
+  o Major bugfixes (relay, OOM handler):
+    - Fix a timing-dependent assertion failure that could occur when we
+      tried to flush from a circuit after having freed its cells because
+      of an out-of-memory condition. Fixes bug 20203; bugfix on
+      0.2.8.1-alpha. Thanks to "cypherpunks" for help diagnosing
+      this one.
+
+  o Minor feature (fallback directories):
+    - Remove broken fallbacks from the hard-coded fallback directory
+      list. Closes ticket 20190; patch by teor.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the September 6 2016 Maxmind GeoLite2
+      Country database.
+
 Changes in version 0.2.8.7 - 2016-08-24
   Tor 0.2.8.7 fixes an important bug related to the ReachableAddresses
   option in 0.2.8.6, and replaces a retiring bridge authority. Everyone
