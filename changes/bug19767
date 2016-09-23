@@ -1,6 +1,0 @@
-  o Minor bugfixes (compilation):
-    - Always include orconfig.h before including any other C headers.
-      Sometimes, it includes macros that affect the behavior of the
-      standard headers. Fixes bug 19767; bugfix on 0.2.9.1-alpha (the first
-      version to use AC_USE_SYSTEM_EXTENSIONS).
-

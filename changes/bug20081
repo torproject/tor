@@ -1,5 +1,0 @@
-  o Minor bugfixes (allocation):
-    - Change how we allocate memory for large chunks on buffers, to avoid
-      a (currently impossible) integer overflow, and to waste less space
-      when allocating unusually large chunks. Fixes bug 20081; bugfix on
-      0.2.0.16-alpha. Issue identified by Guido Vranken.

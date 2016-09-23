@@ -1,5 +1,0 @@
-  o Minor feature (testing, hidden services, ipv6):
-    - Add the single-onion and single-onion-ipv6 chutney targets to
-      make test-network-all. This requires a recent chutney version
-      with the single onion network flavours (git c72a652 or later).
-      Closes ticket 20072; patch by teor.

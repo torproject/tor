@@ -1,4 +1,0 @@
-  o Minor bugfixes (compilation):
-    - Fix a syntax error in the IF_BUG_ONCE__() macro in non-
-      GCC-compatible compilers. Fixes bug 20141; bugfix on
-      0.2.9.1-alpha. Patch from Gisle Vanem.

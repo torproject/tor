@@ -1,6 +1,0 @@
-  o Minor bugfixes (Linux seccomp2 sandbox):
-    - Add permission to run the sched_yield() and sigaltstack() system
-      calls, in order to support versions of Tor compiled with
-      asan or ubsan code that use these calls. Now "sandbox 1" and
-      "--enable-expensive-hardening" should be compatible.
-      Fixes bug 20063; bugfix on 0.2.5.1-alpha.

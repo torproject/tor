@@ -1,4 +1,0 @@
-  o Minor bugfixes (documentation):
-    - Fix manual for the User option: it takes a username, not a UID.
-      Fixes bug 19122; bugfix on 0.0.2pre16 (the first version to have
-      a manpage!).

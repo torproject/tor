@@ -1,6 +1,0 @@
-  o Minor bugfixes (compilation):
-
-    - Stop trying to build with Clang 4.0's -Wthread-safety
-      warnings. They apparently require a set of annotations that we
-      aren't currently using, and they create false positives in our
-      pthreads wrappers. Fixes bug 20110; bugfix on 0.2.9.1-alpha.

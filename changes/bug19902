@@ -1,5 +1,0 @@
-  o Major bugfixes (compilation, OpenBSD):
-
-    - Fix a Libevent-detection bug in our autoconf script that would
-      prevent Tor from linking successfully on OpenBSD. Patch from
-      rubiate. Fixes bug 19902; bugfix on 0.2.9.1-alpha.

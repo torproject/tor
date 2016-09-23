@@ -1,5 +1,0 @@
-  o Minor bugfixes (Directory Authority):
-   - When allowing private addresses, mark Exits that only exit to
-     private locations as such. Fixes bug 20064; bugfix on
-     0.2.2.9-alpha.
-

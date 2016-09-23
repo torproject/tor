@@ -1,5 +1,0 @@
-  o Minor bugfixes (directory authorities):
-    - Die with a useful error when the operator forgets to place the
-      authority_signing_key file into the keys directory. This avoids an
-      uninformative assert & traceback about having an invalid key.
-      Fixes bug 20065; bugfix on 0.2.0.1-alpha.

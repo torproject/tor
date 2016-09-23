@@ -1,6 +1,0 @@
-  o Minor features (security, TLS):
-    - Servers no longer support clients that do not provide AES
-      ciphersuites. (3DES is no longer considered an acceptable
-      cipher.) We believe that no such clients currently exist,
-      since we have required OpenSSL 0.9.7 or later since 2009.
-      Closes ticket 19998.

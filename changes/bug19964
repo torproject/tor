@@ -1,6 +1,0 @@
-  o Minor bugfixes (logging):
-    - When we are unable to remove the bw_accounting file, do not warn
-      if the reason we couldn't remove it was that it didn't exist.
-      Fixes bug 19964; bugfix on 0.2.5.4-alpha. Patch
-      from 'pastly'.
-

@@ -1,6 +1,0 @@
-  o Minor feature (testing, ipv6):
-    - Add the hs-ipv6 chutney target to make test-network-all's IPv6
-      tests. Remove bridges+hs, as it's somewhat redundant.
-      This requires a recent chutney version that supports IPv6 clients,
-      relays, and authorities.
-      Closes ticket 20069; patch by teor.

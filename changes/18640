@@ -1,6 +1,0 @@
-  o Major features (resource management):
-    - Tor now includes support for noticing when we are about to run out of
-      sockets, and preemptively closing connections of lower priority.
-      (This feature is off by default for now, since the current prioritizing
-      method is not mature enough yet. You can enable it by setting
-      "DisableOOSCheck 0".) Closes ticket 18640.

@@ -1,4 +1,0 @@
-  o Minor features (directory authority):
-    - After voting, if the authorities decide that a relay is not "Valid",
-      they no longer include it in the consensus at all. Closes ticket
-      20002; implements part of proposal 272.

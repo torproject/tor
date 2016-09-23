@@ -1,3 +1,0 @@
-  o Minor bugfixes (IPv6, testing):
-    - Check for IPv6 correctly on Linux when running test networks.
-      Fixes bug 19905; bugfix on 0.2.7.3-rc; patch by teor.

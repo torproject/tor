@@ -1,5 +1,0 @@
-  o Minor features (testing):
-    - Disable memory protections on OpenBSD when testing memwipe().
-      The test deliberately invokes undefined behaviour which the
-      protections interfere with. Patch from "rubiate". Closes ticket
-      20066.

@@ -1,4 +1,0 @@
-  o Minor bugfixes (logging):
-    - When logging a message from the BUG() macro, be explicit about what
-      we were asserting. Previously we were confusing what we were asserting
-      with what the bug was. Fixes bug 20093; bugfix on 0.2.9.1-alpha.
