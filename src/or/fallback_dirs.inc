@@ -113,8 +113,10 @@ URL: https:onionoo.torproject.orguptime?first_seen_days=7-&flag=V2Dir&type=relay
 " weight=10",
 "89.187.142.208:80 orport=443 id=64186650FFE4469EBBE52B644AE543864D32F43C"
 " weight=10",
-"144.76.73.140:9030 orport=9001 id=6A640018EABF3DA9BAD9321AA37C2C87BBE1F907"
-" weight=10",
+/* Fallback was on 0.2.8.6 list, but operator opted-out before 0.2.9
+ * "144.76.73.140:9030 orport=9001 id=6A640018EABF3DA9BAD9321AA37C2C87BBE1F907"
+ * " weight=10",
+ */
 /* Fallback was on 0.2.8.6 list, but went down before 0.2.9
  * "94.126.23.174:9030 orport=9001 id=6FC6F08270D565BE89B7C819DD8E2D487397C073"
  * " weight=10",
