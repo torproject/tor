@@ -22,22 +22,17 @@ Changes in version 0.2.9.3-alpha - 2016-09-23
       this one.
 
   o Major features (circuit building, security):
-    - Authorities, relays and clients specifically check that each
-      descriptor has an ntor key.
-    - Circuit-building code assumes that all hops can use ntor, except
-      for rare hidden service protocol cases.
-    - Client code never chooses nodes without ntor keys: they will not
-      be selected during circuit-building, or as guards, or as directory
-      mirrors, or as introduction or rendezvous points.
-    - Clients avoid downloading a descriptor if the relay version is too
-      old to support ntor.
+    - Authorities, relays and clients now require ntor keys in all
+      descriptors, for all hops (except for rare hidden service protocol
+      cases), for all circuits, and for all other roles. Part of
+      ticket 19163.
     - Tor authorities, relays, and clients only use ntor, except for
-      rare cases in the hidden service protocol.
+      rare cases in the hidden service protocol. Part of ticket 19163.
 
-  o Major features (onion services):
+  o Major features (single-hop "hidden" services):
     - Add experimental HiddenServiceSingleHopMode and
       HiddenServiceNonAnonymousMode options. When both are set to 1,
-      every hidden service on a tor instance becomes a non-anonymous
+      every hidden service on a Tor instance becomes a non-anonymous
       Single Onion Service. Single Onions make one-hop (direct)
       connections to their introduction and renzedvous points. One-hop
       circuits make Single Onion servers easily locatable, but clients
@@ -47,15 +42,16 @@ Changes in version 0.2.9.3-alpha - 2016-09-23
       proposal 260, completes ticket 17178. Patch by teor and asn.
 
   o Major features (resource management):
-    - Tor now includes support for noticing when we are about to run out
-      of sockets, and preemptively closing connections of lower
+    - Tor can now notice it is about to run out
+      of sockets, and preemptively close connections of lower
       priority. (This feature is off by default for now, since the
-      current prioritizing method is not mature enough yet. You can
-      enable it by setting "DisableOOSCheck 0".) Closes ticket 18640.
+      current prioritizing method is yet not mature enough. You can
+      enable it by setting "DisableOOSCheck 0", but watch out: it might close
+  some sockets you would rather have it keep.) Closes ticket 18640.
 
   o Major bugfixes (circuit building):
     - Hidden service client-to-intro-point and service-to-rendezvous-
-      point cicruitss use the TAP key supplied by the protocol, to avoid
+      point cicruits use the TAP key supplied by the protocol, to avoid
       epistemic attacks. Fixes bug 19163; bugfix on 0.2.4.18-rc.
 
   o Major bugfixes (compilation, OpenBSD):
@@ -64,20 +60,20 @@ Changes in version 0.2.9.3-alpha - 2016-09-23
       rubiate. Fixes bug 19902; bugfix on 0.2.9.1-alpha.
 
   o Major bugfixes (hidden services):
-    - Clients require hidden services to include the TAP keys for their
+    - Clients now require hidden services to include the TAP keys for their
       intro points in the hidden service descriptor. This prevents an
       inadvertent upgrade to ntor, which a malicious hidden service
-      could use to discover which consensus a client has. Fixes bug
+      could use to distinguish clients by consensus version. Fixes bug
       20012; bugfix on 0.2.4.8-alpha. Patch by teor.
 
   o Minor features (security, TLS):
-    - Servers no longer support clients that do not provide AES
+    - Servers no longer support clients that without AES
       ciphersuites. (3DES is no longer considered an acceptable cipher.)
-      We believe that no such clients currently exist, since we have
+      We believe that no such Tor clients currently exist, since Tor has
       required OpenSSL 0.9.7 or later since 2009. Closes ticket 19998.
 
   o Minor feature (fallback directories):
-    - Remove broken fallbacks from the hard-coded fallback directory
+    - Remove broken entries from the hard-coded fallback directory
       list. Closes ticket 20190; patch by teor.
 
   o Minor features (geoip, also in 0.2.8.8):
@@ -85,7 +81,9 @@ Changes in version 0.2.9.3-alpha - 2016-09-23
       Country database.
 
   o Minor feature (port flags):
-    - Add *Port flags NoDNSRequest and NoOnionTraffic, and the synthetic
+    - Add new flags to the *Port options to finer control over which
+      requests are allowed.  The flags are NoDNSRequest, NoOnionTraffic, and
+      the synthetic
       flag OnionTrafficOnly, which is equivalent to NoDNSRequest,
       NoIPv4Traffic, and NoIPv6Traffic. Closes enhancement 18693; patch
       by "teor".
@@ -96,13 +94,15 @@ Changes in version 0.2.9.3-alpha - 2016-09-23
       ticket 20002; implements part of proposal 272.
 
   o Minor features (testing):
-    - Disable memory protections on OpenBSD when testing memwipe(). The
-      test deliberately invokes undefined behaviour which the protections
-      interfere with. Patch from "rubiate". Closes ticket 20066.
+    - Disable memory protections on OpenBSD when performing our unit tests
+      for memwipe(). The
+      test deliberately invokes undefined behavior, and the OpenBSD
+      protections interfere with this.
+      Patch from "rubiate". Closes ticket 20066.
 
   o Minor features (testing, ipv6):
-    - Add the single-onion and single-onion-ipv6 chutney targets to make
-      test-network-all. This requires a recent chutney version with the
+    - Add the single-onion and single-onion-ipv6 chutney targets to "make
+      test-network-all". This requires a recent chutney version with the
       single onion network flavours (git c72a652 or later). Closes
       ticket 20072; patch by teor.
     - Add the hs-ipv6 chutney target to make test-network-all's IPv6
@@ -116,26 +116,28 @@ Changes in version 0.2.9.3-alpha - 2016-09-23
       0.2.8.7. Implements feature 20034. Patch by teor.
 
   o Minor features (unit tests):
-    - Our link-handshake unit tests now check, that when invalid
+    - We've done significant work to make the unit tests run faster.
+    - Our link-handshake unit tests now check that when invalid
       handshakes fail, they fail with the error messages we expected.
     - Our unit testing code that captures log messages no longer
       prevents them from being written out if the user asked for them
       (by passing --debug or --info or or --notice --warn to the "test"
-      binary). This change will prevent us from missing unexpected log
+      binary). This change prevents us from missing unexpected log
       messages simply because we were looking for others. Related to
       ticket 19999.
     - The unit tests now log all warning messages with the "BUG" flag.
       Previously, they only logged errors by default. This change will
       help us make our testing code more correct, and make sure that we
-      only hit this code when we mean to. This is preparatory work for
+      only hit this code when we mean to. In the meantime, however, there
+      will be more warnings in the unit test logs than before. This is preparatory work for
       ticket 19999.
     - The unit tests now treat any failure of a "tor_assert_nonfatal()"
       assertion as a test failure.
-    - We've done significant work to make the unit tests run faster.
 
   o Minor bug fixes (circuits):
-    - Use CircuitBuildTimeout whenever LearnCircuitBuildTimeout is
-      disabled. Fixes bug 19678; bugfix on commit 5b0b51ca3 in
+    - Use the CircuitBuildTimeout option whenever LearnCircuitBuildTimeout is
+      disabled.  Previously, we would respect the option when a user disabled
+  it, but not when it was disabled because some other option was set. Fixes bug 20073; bugfix on
       0.2.4.12-alpha. Patch by teor.
 
   o Minor bugfixes (allocation):
@@ -147,7 +149,7 @@ Changes in version 0.2.9.3-alpha - 2016-09-23
       Sometimes, it includes macros that affect the behavior of the
       standard headers. Fixes bug 19767; bugfix on 0.2.9.1-alpha (the
       first version to use AC_USE_SYSTEM_EXTENSIONS).
-    - Fix a syntax error in the IF_BUG_ONCE__() macro in non- GCC-
+    - Fix a syntax error in the IF_BUG_ONCE__() macro in non-GCC-
       compatible compilers. Fixes bug 20141; bugfix on 0.2.9.1-alpha.
       Patch from Gisle Vanem.
     - Stop trying to build with Clang 4.0's -Wthread-safety warnings.
@@ -156,7 +158,7 @@ Changes in version 0.2.9.3-alpha - 2016-09-23
       wrappers. Fixes bug 20110; bugfix on 0.2.9.1-alpha.
 
   o Minor bugfixes (directory authority):
-    - Die with a useful error when the operator forgets to place the
+    - Die with a more useful error when the operator forgets to place the
       authority_signing_key file into the keys directory. This avoids an
       uninformative assert & traceback about having an invalid key.
       Fixes bug 20065; bugfix on 0.2.0.1-alpha.
@@ -186,7 +188,7 @@ Changes in version 0.2.9.3-alpha - 2016-09-23
     - Add permission to run the sched_yield() and sigaltstack() system
       calls, in order to support versions of Tor compiled with asan or
       ubsan code that use these calls. Now "sandbox 1" and
-      "--enable-expensive-hardening" should be compatible. Fixes bug
+      "--enable-expensive-hardening" should be compatible on more systems. Fixes bug
       20063; bugfix on 0.2.5.1-alpha.
 
   o Minor bugfixes (logging):
@@ -207,7 +209,7 @@ Changes in version 0.2.9.3-alpha - 2016-09-23
 
   o Minor bugfixes (options):
     - Check the consistency of UseEntryGuards and EntryNodes more
-      reliably. Fixes bug 20074; bugfix on commit 686aaa5c in tor-
+      reliably. Fixes bug 20074; bugfix on tor-
       0.2.4.12-alpha. Patch by teor.
     - Stop changing the configured value of UseEntryGuards on
       authorities and Tor2web clients. Fixes bug 20074; bugfix on
@@ -220,12 +222,12 @@ Changes in version 0.2.9.3-alpha - 2016-09-23
       19678. Patch by teor.
 
   o Minor bugfixes (unit tests):
-    - Fix shared random unit test that was failing on big endian
-      architecture due to internal representation of a integer copied to
+    - Fix a shared-random unit test that was failing on big endian
+      architectures due to internal representation of a integer copied to
       a buffer. The test is changed to take a full 32 bytes of data and
       use the output of a python script that make the COMMIT and REVEAL
       calculation according to the spec. Fixes bug 19977; bugfix
-      on tor-0.2.9.1-alpha.
+      on 0.2.9.1-alpha.
     - The tor_tls_server_info_callback unit test no longer crashes when
       debug-level logging is turned on. Fixes bug 20041; bugfix
       on 0.2.8.1-alpha.
