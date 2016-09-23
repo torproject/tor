@@ -1,4 +1,4 @@
-Changes in version 0.2.9.3-alpha - 2016-09-2?
+Changes in version 0.2.9.3-alpha - 2016-09-23
   Tor 0.2.9.3-alpha adds improved support for entities that want to make
   high-performance services available through the Tor .onion mechanism
   without themselves receiving anonymity as they host those services. It
