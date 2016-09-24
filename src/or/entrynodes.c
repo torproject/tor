@@ -2108,18 +2108,34 @@ node_is_a_configured_bridge(const node_t *node)
  */
 void
 learned_router_identity(const tor_addr_t *addr, uint16_t port,
-                        const char *digest)
+                        const char *digest,
+                        const ed25519_public_key_t *ed_id)
 {
+  // XXXX prop220 use ed_id here, once there is some way to specify
+  (void)ed_id;
+  int learned = 0;
   bridge_info_t *bridge =
     get_configured_bridge_by_addr_port_digest(addr, port, digest);
   if (bridge && tor_digest_is_zero(bridge->identity)) {
+    memcpy(bridge->identity, digest, DIGEST_LEN);
+    learned = 1;
+  }
+  /* XXXX prop220 remember bridge ed25519 identities -- add a field */
+#if 0
+  if (bridge && ed_id &&
+      ed25519_public_key_is_zero(&bridge->ed25519_identity) &&
+      !ed25519_public_key_is_zero(ed_id)) {
+    memcpy(&bridge->ed25519_identity, ed_id, sizeof(*ed_id));
+    learned = 1;
+  }
+#endif
+  if (learned) {
     char *transport_info = NULL;
     const char *transport_name =
       find_transport_name_by_bridge_addrport(addr, port);
     if (transport_name)
       tor_asprintf(&transport_info, " (with transport '%s')", transport_name);
-
-    memcpy(bridge->identity, digest, DIGEST_LEN);
+    // XXXX prop220 log both fingerprints.
     log_notice(LD_DIR, "Learned fingerprint %s for bridge %s%s.",
                hex_str(digest, DIGEST_LEN), fmt_addrport(addr, port),
                transport_info ? transport_info : "");
@@ -2215,6 +2231,8 @@ void
 bridge_add_from_config(bridge_line_t *bridge_line)
 {
   bridge_info_t *b;
+
+  // XXXX prop220 add a way to specify ed25519 ID to bridge_line_t.
 
   { /* Log the bridge we are about to register: */
     log_debug(LD_GENERAL, "Registering bridge at %s (transport: %s) (%s)",

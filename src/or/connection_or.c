@@ -111,7 +111,6 @@ connection_or_set_identity_digest(or_connection_t *conn,
                                   const char *rsa_digest,
                                   const ed25519_public_key_t *ed_id)
 {
-  (void) ed_id; // DOCDOC // XXXX not implemented yet. 15056
   tor_assert(conn);
   tor_assert(rsa_digest);
 
@@ -133,7 +132,8 @@ connection_or_set_identity_digest(or_connection_t *conn,
 
   /* Deal with channels */
   if (conn->chan)
-    channel_set_identity_digest(TLS_CHAN_TO_BASE(conn->chan), rsa_digest);
+    channel_set_identity_digest(TLS_CHAN_TO_BASE(conn->chan),
+                                rsa_digest, ed_id);
 }
 
 /** Remove the Extended ORPort identifier of <b>conn</b> from the
@@ -831,7 +831,6 @@ connection_or_init_conn_from_address(or_connection_t *conn,
                                      const ed25519_public_key_t *ed_id,
                                      int started_here)
 {
-  (void) ed_id; // not fully used yet. 15056
   const node_t *r = node_get_by_id(id_digest);
   connection_or_set_identity_digest(conn, id_digest, ed_id);
   connection_or_update_token_buckets_helper(conn, 1, get_options());
@@ -1116,7 +1115,6 @@ connection_or_connect, (const tor_addr_t *_addr, uint16_t port,
                         const ed25519_public_key_t *ed_id,
                         channel_tls_t *chan))
 {
-  (void) ed_id; // XXXX not fully used yet. 15056
   or_connection_t *conn;
   const or_options_t *options = get_options();
   int socket_error = 0;
@@ -1133,6 +1131,11 @@ connection_or_connect, (const tor_addr_t *_addr, uint16_t port,
 
   if (server_mode(options) && router_digest_is_me(id_digest)) {
     log_info(LD_PROTOCOL,"Client asked me to connect to myself. Refusing.");
+    return NULL;
+  }
+  if (server_mode(options) && router_ed25519_id_is_me(ed_id)) {
+    log_info(LD_PROTOCOL,"Client asked me to connect to myself by Ed25519 "
+             "identity. Refusing.");
     return NULL;
   }
 
@@ -1504,11 +1507,13 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
 
   crypto_pk_free(identity_rcvd);
 
-  if (started_here)
+  if (started_here) {
+    /* A TLS handshake can't teach us an Ed25519 ID, so we set it to NULL
+     * here. */
     return connection_or_client_learned_peer_id(conn,
                                         (const uint8_t*)digest_rcvd_out,
-                                        NULL // Ed25519 ID 15056
-                                        );
+                                        NULL);
+  }
 
   return 0;
 }
@@ -1541,8 +1546,6 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
                                      const uint8_t *rsa_peer_id,
                                      const ed25519_public_key_t *ed_peer_id)
 {
-  (void) ed_peer_id; // not used yet. 15056
-
   const or_options_t *options = get_options();
 
   if (tor_digest_is_zero(conn->identity_digest)) {
@@ -1559,7 +1562,7 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
     /* if it's a bridge and we didn't know its identity fingerprint, now
      * we do -- remember it for future attempts. */
     learned_router_identity(&conn->base_.addr, conn->base_.port,
-                            (const char*)rsa_peer_id /*, ed_peer_id XXXX */);
+                            (const char*)rsa_peer_id, ed_peer_id);
   }
 
   if (tor_memneq(rsa_peer_id, conn->identity_digest, DIGEST_LEN)) {
@@ -1617,9 +1620,12 @@ connection_or_client_learned_peer_id(or_connection_t *conn,
                                 conn);
     return -1;
   }
+
+  /* XXXX 15056 -- use the Ed25519 key */
+
   if (authdir_mode_tests_reachability(options)) {
     dirserv_orconn_tls_done(&conn->base_.addr, conn->base_.port,
-                            (const char*)rsa_peer_id /*, ed_id XXXX 15056 */);
+                            (const char*)rsa_peer_id, ed_peer_id);
   }
 
   return 0;

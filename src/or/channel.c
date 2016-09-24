@@ -1471,7 +1471,8 @@ channel_clear_identity_digest(channel_t *chan)
 
 void
 channel_set_identity_digest(channel_t *chan,
-                            const char *identity_digest)
+                            const char *identity_digest,
+                            const ed25519_public_key_t *ed_identity)
 {
   int was_in_digest_map, should_be_in_digest_map, state_not_in_map;
 
@@ -1509,6 +1510,9 @@ channel_set_identity_digest(channel_t *chan,
   } else {
     memset(chan->identity_digest, 0,
            sizeof(chan->identity_digest));
+  }
+  if (ed_identity) {
+    memcpy(&chan->ed25519_identity, ed_identity, sizeof(*ed_identity));
   }
 
   /* Put it in the digest map if we should */

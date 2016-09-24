@@ -3170,8 +3170,10 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
 void
 dirserv_orconn_tls_done(const tor_addr_t *addr,
                         uint16_t or_port,
-                        const char *digest_rcvd)
+                        const char *digest_rcvd,
+                        const ed25519_public_key_t *ed_id_rcvd)
 {
+  (void)ed_id_rcvd; // XXXX 15056 use this.
   node_t *node = NULL;
   tor_addr_port_t orport;
   routerinfo_t *ri = NULL;

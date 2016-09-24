@@ -443,7 +443,8 @@ void channel_mark_incoming(channel_t *chan);
 void channel_mark_outgoing(channel_t *chan);
 void channel_mark_remote(channel_t *chan);
 void channel_set_identity_digest(channel_t *chan,
-                                 const char *identity_digest);
+                                 const char *identity_digest,
+                                 const ed25519_public_key_t *ed_identity);
 void channel_set_remote_end(channel_t *chan,
                             const char *identity_digest,
                             const char *nickname);
