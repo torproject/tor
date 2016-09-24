@@ -999,6 +999,7 @@ AC_CHECK_HEADERS([assert.h \
                   sys/mman.h \
                   sys/param.h \
                   sys/prctl.h \
+		  sys/random.h \
                   sys/resource.h \
                   sys/select.h \
                   sys/socket.h \

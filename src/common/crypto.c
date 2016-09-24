@@ -67,6 +67,9 @@ ENABLE_GCC_WARNING(redundant-decls)
 #ifdef HAVE_SYS_SYSCALL_H
 #include <sys/syscall.h>
 #endif
+#ifdef HAVE_SYS_RANDOM_H
+#include <sys/random.h>
+#endif
 
 #include "torlog.h"
 #include "torint.h"
