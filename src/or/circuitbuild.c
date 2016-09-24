@@ -1175,6 +1175,16 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     return -1;
   }
 
+  /* Fill in ed_pubkey if it was not provided and we can infer it from
+   * our networkstatus */
+  if (ed25519_public_key_is_zero(&ec.ed_pubkey)) {
+    const node_t *node = node_get_by_id((const char*)ec.node_id);
+    const ed25519_public_key_t *node_ed_id = NULL;
+    if (node && (node_ed_id = node_get_ed25519_id(node))) {
+      memcpy(ec.ed_pubkey.pubkey, node_ed_id->pubkey, ED25519_PUBKEY_LEN);
+    }
+  }
+
   /* Next, check if we're being asked to connect to the hop that the
    * extend cell came from. There isn't any reason for that, and it can
    * assist circular-path attacks. */
@@ -1185,10 +1195,15 @@ circuit_extend(cell_t *cell, circuit_t *circ)
            "Client asked me to extend back to the previous hop.");
     return -1;
   }
-  // XXX 15056 check prev-hop Ed ID too
 
-  // XXX 15056 Fill in ed_pubkey if it was not provided and we can infer
-  // XXX 15056 it from the networkstatus.
+  /* Check the previous hop Ed25519 ID too */
+  if (! ed25519_public_key_is_zero(&ec.ed_pubkey) &&
+      ed25519_pubkey_eq(&ec.ed_pubkey,
+                        &TO_OR_CIRCUIT(circ)->p_chan->ed25519_identity)) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Client asked me to extend back to the previous hop "
+           "(by Ed25519 ID).");
+  }
 
   n_chan = channel_get_for_extend((const char*)ec.node_id,
                                   &ec.ed_pubkey,
