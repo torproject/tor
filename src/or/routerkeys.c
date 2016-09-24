@@ -1091,6 +1091,14 @@ get_master_identity_key(void)
   return &master_identity_key->pubkey;
 }
 
+/** Return true iff <b>id</b> is our Ed25519 master identity key. */
+int
+router_ed25519_id_is_me(const ed25519_public_key_t *id)
+{
+  return id && master_identity_key &&
+    ed25519_pubkey_eq(id, &master_identity_key->pubkey);
+}
+
 #ifdef TOR_UNIT_TESTS
 /* only exists for the unit tests, since otherwise the identity key
  * should be used to sign nothing but the signing key. */
