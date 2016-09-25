@@ -1953,9 +1953,9 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags,
         !router_supports_extrainfo(node->identity, is_trusted_extrainfo))
       continue;
     /* Don't make the same node a guard twice */
-    if (for_guard && node->using_as_guard) {
-      continue;
-    }
+     if (for_guard && is_node_used_as_guard(node)) {
+       continue;
+     }
     /* Ensure that a directory guard is actually a guard node. */
     if (for_guard && !node->is_possible_guard) {
       continue;

@@ -16,6 +16,9 @@
 /* XXXX NM I would prefer that all of this stuff be private to
  * entrynodes.c. */
 
+/* Forward declare for guard_selection_t; entrynodes.c has the real struct */
+typedef struct guard_selection_s guard_selection_t;
+
 /** An entry_guard_t represents our information about a chosen long-term
  * first hop, known as a "helper" node in the literature. We can't just
  * use a node_t, since we want to remember these even when we
@@ -70,18 +73,27 @@ typedef struct entry_guard_t {
                                * this guard as first hop. */
 } entry_guard_t;
 
+entry_guard_t *entry_guard_get_by_id_digest_for_guard_selection(
+    guard_selection_t *gs, const char *digest);
 entry_guard_t *entry_guard_get_by_id_digest(const char *digest);
+void entry_guards_changed_for_guard_selection(guard_selection_t *gs);
 void entry_guards_changed(void);
+guard_selection_t * get_guard_selection_info(void);
+const smartlist_t *get_entry_guards_for_guard_selection(
+    guard_selection_t *gs);
 const smartlist_t *get_entry_guards(void);
+int num_live_entry_guards_for_guard_selection(
+    guard_selection_t *gs,
+    int for_directory);
 int num_live_entry_guards(int for_directory);
 
 #endif
 
 #ifdef ENTRYNODES_PRIVATE
-STATIC const node_t *add_an_entry_guard(const node_t *chosen,
+STATIC const node_t *add_an_entry_guard(guard_selection_t *gs,
+                                        const node_t *chosen,
                                         int reset_status, int prepend,
                                         int for_discovery, int for_directory);
-
 STATIC int populate_live_entry_guards(smartlist_t *live_entry_guards,
                                       const smartlist_t *all_entry_guards,
                                       const node_t *chosen_exit,
@@ -90,7 +102,8 @@ STATIC int populate_live_entry_guards(smartlist_t *live_entry_guards,
                                       int need_uptime, int need_capacity);
 STATIC int decide_num_guards(const or_options_t *options, int for_directory);
 
-STATIC void entry_guards_set_from_config(const or_options_t *options);
+STATIC void entry_guards_set_from_config(guard_selection_t *gs,
+                                         const or_options_t *options);
 
 /** Flags to be passed to entry_is_live() to indicate what kind of
  * entry nodes we are looking for. */
@@ -109,20 +122,32 @@ STATIC int entry_is_time_to_retry(const entry_guard_t *e, time_t now);
 
 #endif
 
+void remove_all_entry_guards_for_guard_selection(guard_selection_t *gs);
 void remove_all_entry_guards(void);
 
+void entry_guards_compute_status_for_guard_selection(
+    guard_selection_t *gs, const or_options_t *options, time_t now);
 void entry_guards_compute_status(const or_options_t *options, time_t now);
+int entry_guard_register_connect_status_for_guard_selection(
+    guard_selection_t *gs, const char *digest, int succeeded,
+    int mark_relay_status, time_t now);
 int entry_guard_register_connect_status(const char *digest, int succeeded,
                                         int mark_relay_status, time_t now);
+void entry_nodes_should_be_added_for_guard_selection(guard_selection_t *gs);
 void entry_nodes_should_be_added(void);
 int entry_list_is_constrained(const or_options_t *options);
 const node_t *choose_random_entry(cpath_build_state_t *state);
 const node_t *choose_random_dirguard(dirinfo_type_t t);
+int entry_guards_parse_state_for_guard_selection(
+    guard_selection_t *gs, or_state_t *state, int set, char **msg);
 int entry_guards_parse_state(or_state_t *state, int set, char **msg);
 void entry_guards_update_state(or_state_t *state);
 int getinfo_helper_entry_guards(control_connection_t *conn,
                                 const char *question, char **answer,
                                 const char **errmsg);
+int is_node_used_as_guard_for_guard_selection(guard_selection_t *gs,
+                                              const node_t *node);
+MOCK_DECL(int, is_node_used_as_guard, (const node_t *node));
 
 void mark_bridge_list(void);
 void sweep_bridge_list(void);

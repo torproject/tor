@@ -15,6 +15,7 @@
 #include "container.h"
 #include "directory.h"
 #include "dirvote.h"
+#include "entrynodes.h"
 #include "microdesc.h"
 #include "networkstatus.h"
 #include "nodelist.h"
@@ -203,6 +204,53 @@ mock_usable_consensus_flavor(void)
   return mock_usable_consensus_flavor_value;
 }
 
+static smartlist_t *mock_is_guard_list = NULL;
+
+static int
+mock_is_node_used_as_guard(node_t *n)
+{
+  if (mock_is_guard_list) {
+    SMARTLIST_FOREACH_BEGIN(mock_is_guard_list, node_t *, e) {
+      if (e == n) return 1;
+    } SMARTLIST_FOREACH_END(e);
+  }
+
+  return 0;
+}
+
+static void
+mark_node_used_as_guard(node_t *n)
+{
+  if (!n) return;
+
+  if (!mock_is_guard_list) {
+    mock_is_guard_list = smartlist_new();
+  }
+
+  if (!mock_is_node_used_as_guard(n)) {
+    smartlist_add(mock_is_guard_list, n);
+  }
+}
+
+static void
+mark_node_unused_as_guard(node_t *n)
+{
+  if (!n) return;
+
+  if (!mock_is_guard_list) return;
+
+  smartlist_remove(mock_is_guard_list, n);
+}
+
+static void
+clear_mock_guard_list(void)
+{
+  if (mock_is_guard_list) {
+    smartlist_free(mock_is_guard_list);
+    mock_is_guard_list = NULL;
+  }
+}
+
 static void
 test_router_pick_directory_server_impl(void *arg)
 {
@@ -223,6 +271,7 @@ test_router_pick_directory_server_impl(void *arg)
   (void)arg;
 
   MOCK(usable_consensus_flavor, mock_usable_consensus_flavor);
+  MOCK(is_node_used_as_guard, mock_is_node_used_as_guard);
 
   /* With no consensus, we must be bootstrapping, regardless of time or flavor
    */
@@ -336,28 +385,28 @@ test_router_pick_directory_server_impl(void *arg)
   node_router3->is_valid = 1;
 
   flags |= PDS_FOR_GUARD;
-  node_router1->using_as_guard = 1;
-  node_router2->using_as_guard = 1;
-  node_router3->using_as_guard = 1;
+  mark_node_used_as_guard(node_router1);
+  mark_node_used_as_guard(node_router2);
+  mark_node_used_as_guard(node_router3);
   rs = router_pick_directory_server_impl(V3_DIRINFO, flags, NULL);
   tt_assert(rs == NULL);
-  node_router1->using_as_guard = 0;
+  mark_node_unused_as_guard(node_router1);
   rs = router_pick_directory_server_impl(V3_DIRINFO, flags, NULL);
   tt_assert(rs != NULL);
   tt_assert(tor_memeq(rs->identity_digest, router1_id, DIGEST_LEN));
   rs = NULL;
-  node_router2->using_as_guard = 0;
-  node_router3->using_as_guard = 0;
+  mark_node_unused_as_guard(node_router2);
+  mark_node_unused_as_guard(node_router3);
 
   /* One not valid, one guard. This should leave one remaining */
   node_router1->is_valid = 0;
-  node_router2->using_as_guard = 1;
+  mark_node_used_as_guard(node_router2);
   rs = router_pick_directory_server_impl(V3_DIRINFO, flags, NULL);
   tt_assert(rs != NULL);
   tt_assert(tor_memeq(rs->identity_digest, router3_id, DIGEST_LEN));
   rs = NULL;
   node_router1->is_valid = 1;
-  node_router2->using_as_guard = 0;
+  mark_node_unused_as_guard(node_router2);
 
   /* Manipulate overloaded */
 
@@ -420,6 +469,9 @@ test_router_pick_directory_server_impl(void *arg)
 
  done:
   UNMOCK(usable_consensus_flavor);
+  UNMOCK(is_node_used_as_guard);
+  clear_mock_guard_list();
+
   if (router1_id)
     tor_free(router1_id);
   if (router2_id)
