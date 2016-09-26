@@ -3079,6 +3079,8 @@ parse_config_line_from_str_verbose(const char *line, char **key_out,
     }
     while (*line == ' ' || *line == '\t')
       ++line;
+    if (*line == '\r' && *(++line) == '\n')
+      ++line;
     if (*line && *line != '#' && *line != '\n') {
       if (err_out)
         *err_out = "Excess data after quoted string";

@@ -1642,6 +1642,36 @@ test_util_config_line_escaped_content(void *arg)
   tor_free(v);
 }
 
+static void
+test_util_config_line_crlf(void *arg)
+{
+  char *k=NULL, *v=NULL;
+  const char *err = NULL;
+  (void)arg;
+  const char *str =
+    "Hello world\r\n"
+    "Hello \"nice big world\"\r\n";
+
+  str = parse_config_line_from_str_verbose(str, &k, &v, &err);
+  tt_assert(str);
+  tt_str_op(k,OP_EQ,"Hello");
+  tt_str_op(v,OP_EQ,"world");
+  tt_assert(!err);
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str_verbose(str, &k, &v, &err);
+  tt_assert(str);
+  tt_str_op(k,OP_EQ,"Hello");
+  tt_str_op(v,OP_EQ,"nice big world");
+  tt_assert(!err);
+  tor_free(k); tor_free(v);
+  tt_str_op(str,OP_EQ, "");
+
+ done:
+  tor_free(k); tor_free(v);
+}
+
+
 #ifndef _WIN32
 static void
 test_util_expand_filename(void *arg)
@@ -5609,6 +5639,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(config_line_quotes),
   UTIL_LEGACY(config_line_comment_character),
   UTIL_LEGACY(config_line_escaped_content),
+  UTIL_LEGACY(config_line_crlf),
   UTIL_LEGACY_NO_WIN(expand_filename),
   UTIL_LEGACY(escape_string_socks),
   UTIL_LEGACY(string_is_key_value),
