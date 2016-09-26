@@ -17,6 +17,7 @@
 #include "dirserv.h"
 #include "dirvote.h"
 #include "policies.h"
+#include "protover.h"
 #include "rendcommon.h"
 #include "router.h"
 #include "routerlist.h"
@@ -58,6 +59,7 @@ typedef enum {
   K_RUNNING_ROUTERS,
   K_ROUTER_STATUS,
   K_PLATFORM,
+  K_PROTO,
   K_OPT,
   K_BANDWIDTH,
   K_CONTACT,
@@ -74,6 +76,10 @@ typedef enum {
   K_DIR_OPTIONS,
   K_CLIENT_VERSIONS,
   K_SERVER_VERSIONS,
+  K_RECOMMENDED_CLIENT_PROTOCOLS,
+  K_RECOMMENDED_RELAY_PROTOCOLS,
+  K_REQUIRED_CLIENT_PROTOCOLS,
+  K_REQUIRED_RELAY_PROTOCOLS,
   K_OR_ADDRESS,
   K_ID,
   K_P,
@@ -306,6 +312,7 @@ static token_rule_t routerdesc_token_table[] = {
   T01("fingerprint",         K_FINGERPRINT,     CONCAT_ARGS, NO_OBJ ),
   T01("hibernating",         K_HIBERNATING,         GE(1),   NO_OBJ ),
   T01("platform",            K_PLATFORM,        CONCAT_ARGS, NO_OBJ ),
+  T01("proto",               K_PROTO,           CONCAT_ARGS, NO_OBJ ),
   T01("contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ ),
   T01("read-history",        K_READ_HISTORY,        ARGS,    NO_OBJ ),
   T01("write-history",       K_WRITE_HISTORY,       ARGS,    NO_OBJ ),
@@ -382,6 +389,7 @@ static token_rule_t rtrstatus_token_table[] = {
   T01("w",                   K_W,                   ARGS,    NO_OBJ ),
   T0N("m",                   K_M,               CONCAT_ARGS, NO_OBJ ),
   T0N("id",                  K_ID,                  GE(2),   NO_OBJ ),
+  T01("pr",                  K_PROTO,           CONCAT_ARGS, NO_OBJ ),
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   END_OF_TABLE
 };
@@ -459,6 +467,14 @@ static token_rule_t networkstatus_token_table[] = {
   T01("shared-rand-previous-value", K_PREVIOUS_SRV,EQ(2),       NO_OBJ ),
   T01("shared-rand-current-value",  K_CURRENT_SRV, EQ(2),       NO_OBJ ),
   T0N("package",               K_PACKAGE,          CONCAT_ARGS, NO_OBJ ),
+  T01("recommended-client-protocols", K_RECOMMENDED_CLIENT_PROTOCOLS,
+      CONCAT_ARGS, NO_OBJ ),
+  T01("recommended-relay-protocols", K_RECOMMENDED_RELAY_PROTOCOLS,
+      CONCAT_ARGS, NO_OBJ ),
+  T01("required-client-protocols",    K_REQUIRED_CLIENT_PROTOCOLS,
+      CONCAT_ARGS, NO_OBJ ),
+  T01("required-relay-protocols",    K_REQUIRED_RELAY_PROTOCOLS,
+      CONCAT_ARGS, NO_OBJ ),
 
   CERTIFICATE_MEMBERS
 
@@ -499,6 +515,15 @@ static token_rule_t networkstatus_consensus_token_table[] = {
 
   T01("shared-rand-previous-value", K_PREVIOUS_SRV, EQ(2),   NO_OBJ ),
   T01("shared-rand-current-value",  K_CURRENT_SRV,  EQ(2),   NO_OBJ ),
+
+  T01("recommended-client-protocols", K_RECOMMENDED_CLIENT_PROTOCOLS,
+      CONCAT_ARGS, NO_OBJ ),
+  T01("recommended-relay-protocols", K_RECOMMENDED_RELAY_PROTOCOLS,
+      CONCAT_ARGS, NO_OBJ ),
+  T01("required-client-protocols",    K_REQUIRED_CLIENT_PROTOCOLS,
+      CONCAT_ARGS, NO_OBJ ),
+  T01("required-relay-protocols",    K_REQUIRED_RELAY_PROTOCOLS,
+      CONCAT_ARGS, NO_OBJ ),
 
   END_OF_TABLE
 };
@@ -2092,6 +2117,10 @@ router_parse_entry_from_string(const char *s, const char *end,
     router->platform = tor_strdup(tok->args[0]);
   }
 
+  if ((tok = find_opt_by_keyword(tokens, K_PROTO))) {
+    router->protocol_list = tor_strdup(tok->args[0]);
+  }
+
   if ((tok = find_opt_by_keyword(tokens, K_CONTACT))) {
     router->contact_info = tor_strdup(tok->args[0]);
   }
@@ -2876,13 +2905,22 @@ routerstatus_parse_entry_from_string(memarea_t *area,
       }
     }
   }
+  int found_protocol_list = 0;
+  if ((tok = find_opt_by_keyword(tokens, K_PROTO))) {
+    found_protocol_list = 1;
+    rs->protocols_known = 1;
+    rs->supports_extend2_cells =
+      protocol_list_supports_protocol(tok->args[0], PRT_RELAY, 2);
+  }
   if ((tok = find_opt_by_keyword(tokens, K_V))) {
     tor_assert(tok->n_args == 1);
-    rs->version_known = 1;
-    if (strcmpstart(tok->args[0], "Tor ")) {
-    } else {
-      rs->version_supports_extend2_cells =
+    if (!strcmpstart(tok->args[0], "Tor ") && !found_protocol_list) {
+      /* We only do version checks like this in the case where
+       * the version is a "Tor" version, and where there is no
+       * list of protocol versions that we should be looking at instead. */
+      rs->supports_extend2_cells =
         tor_version_as_new_as(tok->args[0], "0.2.4.8-alpha");
+      rs->protocols_known = 1;
     }
     if (vote_rs) {
       vote_rs->version = tor_strdup(tok->args[0]);
@@ -2964,6 +3002,10 @@ routerstatus_parse_entry_from_string(memarea_t *area,
             goto err;
           }
         }
+      }
+      if (t->tp == K_PROTO) {
+        tor_assert(t->n_args == 1);
+        vote_rs->protocols = tor_strdup(t->args[0]);
       }
     } SMARTLIST_FOREACH_END(t);
   } else if (flav == FLAV_MICRODESC) {
@@ -3644,6 +3686,15 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       ns->consensus_method = 1;
     }
   }
+
+  if ((tok = find_opt_by_keyword(tokens, K_RECOMMENDED_CLIENT_PROTOCOLS)))
+    ns->recommended_client_protocols = tor_strdup(tok->args[0]);
+  if ((tok = find_opt_by_keyword(tokens, K_RECOMMENDED_RELAY_PROTOCOLS)))
+    ns->recommended_relay_protocols = tor_strdup(tok->args[0]);
+  if ((tok = find_opt_by_keyword(tokens, K_REQUIRED_CLIENT_PROTOCOLS)))
+    ns->required_client_protocols = tor_strdup(tok->args[0]);
+  if ((tok = find_opt_by_keyword(tokens, K_REQUIRED_RELAY_PROTOCOLS)))
+    ns->required_relay_protocols = tor_strdup(tok->args[0]);
 
   tok = find_by_keyword(tokens, K_VALID_AFTER);
   if (parse_iso_time(tok->args[0], &ns->valid_after))

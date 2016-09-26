@@ -13,6 +13,7 @@
 #include "microdesc.h"
 #include "networkstatus.h"
 #include "policies.h"
+#include "protover.h"
 #include "rephist.h"
 #include "router.h"
 #include "routerkeys.h"
@@ -61,6 +62,58 @@ static int dirvote_publish_consensus(void);
  * Voting
  * =====*/
 
+/* If <b>opt_value</b> is non-NULL, return "keyword opt_value\n" in a new
+ * string. Otherwise return a new empty string. */
+static char *
+format_line_if_present(const char *keyword, const char *opt_value)
+{
+  if (opt_value) {
+    char *result = NULL;
+    tor_asprintf(&result, "%s %s\n", keyword, opt_value);
+    return result;
+  } else {
+    return tor_strdup("");
+  }
+}
+
+/** Format the recommended/required-relay-client protocols lines for a vote in
+ * a newly allocated string, and return that string. */
+static char *
+format_protocols_lines_for_vote(const networkstatus_t *v3_ns)
+{
+  char *recommended_relay_protocols_line = NULL;
+  char *recommended_client_protocols_line = NULL;
+  char *required_relay_protocols_line = NULL;
+  char *required_client_protocols_line = NULL;
+
+  recommended_relay_protocols_line =
+    format_line_if_present("recommended-relay-protocols",
+                           v3_ns->recommended_relay_protocols);
+  recommended_client_protocols_line =
+    format_line_if_present("recommended-client-protocols",
+                           v3_ns->recommended_client_protocols);
+  required_relay_protocols_line =
+    format_line_if_present("required-relay-protocols",
+                           v3_ns->required_relay_protocols);
+  required_client_protocols_line =
+    format_line_if_present("required-client-protocols",
+                           v3_ns->required_client_protocols);
+
+  char *result = NULL;
+  tor_asprintf(&result, "%s%s%s%s",
+               recommended_relay_protocols_line,
+               recommended_client_protocols_line,
+               required_relay_protocols_line,
+               required_client_protocols_line);
+
+  tor_free(recommended_relay_protocols_line);
+  tor_free(recommended_client_protocols_line);
+  tor_free(required_relay_protocols_line);
+  tor_free(required_client_protocols_line);
+
+  return result;
+}
+
 /** Return a new string containing the string representation of the vote in
  * <b>v3_ns</b>, signed with our v3 signing key <b>private_signing_key</b>.
  * For v3 authorities. */
@@ -69,11 +122,11 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                           networkstatus_t *v3_ns)
 {
   smartlist_t *chunks = smartlist_new();
-  const char *client_versions = NULL, *server_versions = NULL;
   char *packages = NULL;
   char fingerprint[FINGERPRINT_LEN+1];
   char digest[DIGEST_LEN];
   uint32_t addr;
+  char *protocols_lines = NULL;
   char *client_versions_line = NULL, *server_versions_line = NULL;
   char *shared_random_vote_str = NULL;
   networkstatus_voter_info_t *voter;
@@ -88,21 +141,12 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
 
   base16_encode(fingerprint, sizeof(fingerprint),
                 v3_ns->cert->cache_info.identity_digest, DIGEST_LEN);
-  client_versions = v3_ns->client_versions;
-  server_versions = v3_ns->server_versions;
 
-  if (client_versions) {
-    tor_asprintf(&client_versions_line, "client-versions %s\n",
-                 client_versions);
-  } else {
-    client_versions_line = tor_strdup("");
-  }
-  if (server_versions) {
-    tor_asprintf(&server_versions_line, "server-versions %s\n",
-                 server_versions);
-  } else {
-    server_versions_line = tor_strdup("");
-  }
+  client_versions_line = format_line_if_present("client-versions",
+                                                v3_ns->client_versions);
+  server_versions_line = format_line_if_present("server-versions",
+                                                v3_ns->server_versions);
+  protocols_lines = format_protocols_lines_for_vote(v3_ns);
 
   if (v3_ns->package_lines) {
     smartlist_t *tmp = smartlist_new();
@@ -154,6 +198,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  "valid-until %s\n"
                  "voting-delay %d %d\n"
                  "%s%s" /* versions */
+                 "%s" /* protocols */
                  "%s" /* packages */
                  "known-flags %s\n"
                  "flag-thresholds %s\n"
@@ -167,6 +212,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
                  v3_ns->vote_seconds, v3_ns->dist_seconds,
                  client_versions_line,
                  server_versions_line,
+                 protocols_lines,
                  packages,
                  flags,
                  flag_thresholds,
@@ -198,7 +244,8 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
     char *rsf;
     vote_microdesc_hash_t *h;
     rsf = routerstatus_format_entry(&vrs->status,
-                                    vrs->version, NS_V3_VOTE, vrs);
+                                    vrs->version, vrs->protocols,
+                                    NS_V3_VOTE, vrs);
     if (rsf)
       smartlist_add(chunks, rsf);
 
@@ -258,6 +305,7 @@ format_networkstatus_vote(crypto_pk_t *private_signing_key,
  done:
   tor_free(client_versions_line);
   tor_free(server_versions_line);
+  tor_free(protocols_lines);
   tor_free(packages);
 
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
@@ -1152,6 +1200,72 @@ update_total_bandwidth_weights(const routerstatus_t *rs,
   }
 }
 
+/** Considering the different recommended/required protocols sets as a
+ * 4-element array, return the element from <b>vote</b> for that protocol
+ * set.
+ */
+static const char *
+get_nth_protocol_set_vote(int n, const networkstatus_t *vote)
+{
+  switch (n) {
+    case 0: return vote->recommended_client_protocols;
+    case 1: return vote->recommended_relay_protocols;
+    case 2: return vote->required_client_protocols;
+    case 3: return vote->required_relay_protocols;
+    default:
+      tor_assert_unreached();
+      return NULL;
+  }
+}
+
+/** Considering the different recommended/required protocols sets as a
+ * 4-element array, return a newly allocated string for the consensus value
+ * for the n'th set.
+ */
+static char *
+compute_nth_protocol_set(int n, int n_voters, const smartlist_t *votes)
+{
+  const char *keyword;
+  smartlist_t *proto_votes = smartlist_new();
+  int threshold;
+  switch (n) {
+    case 0:
+      keyword = "recommended-client-protocols";
+      threshold = CEIL_DIV(n_voters, 2);
+      break;
+    case 1:
+      keyword = "recommended-relay-protocols";
+      threshold = CEIL_DIV(n_voters, 2);
+      break;
+    case 2:
+      keyword = "required-client-protocols";
+      threshold = CEIL_DIV(n_voters * 2, 3);
+      break;
+    case 3:
+      keyword = "required-relay-protocols";
+      threshold = CEIL_DIV(n_voters * 2, 3);
+      break;
+    default:
+      tor_assert_unreached();
+      return NULL;
+  }
+
+  SMARTLIST_FOREACH_BEGIN(votes, const networkstatus_t *, ns) {
+    const char *v = get_nth_protocol_set_vote(n, ns);
+    if (v)
+      smartlist_add(proto_votes, (void*)v);
+  } SMARTLIST_FOREACH_END(ns);
+
+  char *protocols = protover_compute_vote(proto_votes, threshold);
+  smartlist_free(proto_votes);
+
+  char *result = NULL;
+  tor_asprintf(&result, "%s %s\n", keyword, protocols);
+  tor_free(protocols);
+
+  return result;
+}
+
 /** Given a list of vote networkstatus_t in <b>votes</b>, our public
  * authority <b>identity_key</b>, our private authority <b>signing_key</b>,
  * and the number of <b>total_authorities</b> that we believe exist in our
@@ -1331,6 +1445,17 @@ networkstatus_compute_consensus(smartlist_t *votes,
     tor_free(flaglist);
   }
 
+  if (consensus_method >= MIN_METHOD_FOR_RECOMMENDED_PROTOCOLS) {
+    int num_dirauth = get_n_authorities(V3_DIRINFO);
+    int idx;
+    for (idx = 0; idx < 4; ++idx) {
+      char *proto_line = compute_nth_protocol_set(idx, num_dirauth, votes);
+      if (BUG(!proto_line))
+        continue;
+      smartlist_add(chunks, proto_line);
+    }
+  }
+
   param_list = dirvote_compute_params(votes, consensus_method,
                                       total_authorities);
   if (smartlist_len(param_list)) {
@@ -1438,6 +1563,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_t *matching_descs = smartlist_new();
     smartlist_t *chosen_flags = smartlist_new();
     smartlist_t *versions = smartlist_new();
+    smartlist_t *protocols = smartlist_new();
     smartlist_t *exitsummaries = smartlist_new();
     uint32_t *bandwidths_kb = tor_calloc(smartlist_len(votes),
                                          sizeof(uint32_t));
@@ -1580,6 +1706,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       routerstatus_t rs_out;
       const char *current_rsa_id = NULL;
       const char *chosen_version;
+      const char *chosen_protocol_list;
       const char *chosen_name = NULL;
       int exitsummary_disagreement = 0;
       int is_named = 0, is_unnamed = 0, is_running = 0, is_valid = 0;
@@ -1593,6 +1720,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       smartlist_clear(matching_descs);
       smartlist_clear(chosen_flags);
       smartlist_clear(versions);
+      smartlist_clear(protocols);
       num_bandwidths = 0;
       num_mbws = 0;
       num_guardfraction_inputs = 0;
@@ -1611,6 +1739,12 @@ networkstatus_compute_consensus(smartlist_t *votes,
         smartlist_add(matching_descs, rs);
         if (rs->version && rs->version[0])
           smartlist_add(versions, rs->version);
+
+        if (rs->protocols) {
+          /* We include this one even if it's empty: voting for an
+           * empty protocol list actually is meaningful. */
+          smartlist_add(protocols, rs->protocols);
+        }
 
         /* Tally up all the flags. */
         for (int flag = 0; flag < n_voter_flags[voter_idx]; ++flag) {
@@ -1758,6 +1892,14 @@ networkstatus_compute_consensus(smartlist_t *votes,
         chosen_version = NULL;
       }
 
+      /* Pick the protocol list */
+      if (smartlist_len(protocols)) {
+        smartlist_sort_strings(protocols);
+        chosen_protocol_list = get_most_frequent_member(protocols);
+      } else {
+        chosen_protocol_list = NULL;
+      }
+
       /* If it's a guard and we have enough guardfraction votes,
          calculate its consensus guardfraction value. */
       if (is_guard && num_guardfraction_inputs > 2 &&
@@ -1891,7 +2033,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         char *buf;
         /* Okay!! Now we can write the descriptor... */
         /*     First line goes into "buf". */
-        buf = routerstatus_format_entry(&rs_out, NULL, rs_format, NULL);
+        buf = routerstatus_format_entry(&rs_out, NULL, NULL, rs_format, NULL);
         if (buf)
           smartlist_add(chunks, buf);
       }
@@ -1911,6 +2053,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
         smartlist_add(chunks, tor_strdup(chosen_version));
       }
       smartlist_add(chunks, tor_strdup("\n"));
+      if (chosen_protocol_list &&
+          consensus_method >= MIN_METHOD_FOR_RS_PROTOCOLS) {
+        smartlist_add_asprintf(chunks, "pr %s\n", chosen_protocol_list);
+      }
       /*     Now the weight line. */
       if (rs_out.has_bandwidth) {
         char *guardfraction_str = NULL;
@@ -1951,6 +2097,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_free(matching_descs);
     smartlist_free(chosen_flags);
     smartlist_free(versions);
+    smartlist_free(protocols);
     smartlist_free(exitsummaries);
     tor_free(bandwidths_kb);
     tor_free(measured_bws_kb);

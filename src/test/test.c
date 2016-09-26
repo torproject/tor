@@ -1214,6 +1214,7 @@ struct testgroup_t testgroups[] = {
   { "options/", options_tests },
   { "policy/" , policy_tests },
   { "procmon/", procmon_tests },
+  { "protover/", protover_tests },
   { "pt/", pt_tests },
   { "relay/" , relay_tests },
   { "relaycell/", relaycell_tests },

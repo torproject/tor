@@ -207,6 +207,7 @@ extern struct testcase_t oos_tests[];
 extern struct testcase_t options_tests[];
 extern struct testcase_t policy_tests[];
 extern struct testcase_t procmon_tests[];
+extern struct testcase_t protover_tests[];
 extern struct testcase_t pubsub_tests[];
 extern struct testcase_t pt_tests[];
 extern struct testcase_t relay_tests[];

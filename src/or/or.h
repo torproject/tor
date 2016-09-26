@@ -2075,6 +2075,9 @@ typedef struct {
 
   char *platform; /**< What software/operating system is this OR using? */
 
+  char *protocol_list; /**< Encoded list of subprotocol versions supported
+                        * by this OR */
+
   /* link info */
   uint32_t bandwidthrate; /**< How many bytes does this OR add to its token
                            * bucket per second? */
@@ -2192,14 +2195,13 @@ typedef struct routerstatus_t {
   unsigned int is_v2_dir:1; /** True iff this router publishes an open DirPort
                              * or it claims to accept tunnelled dir requests.
                              */
-  /** True iff we know version info for this router. (i.e., a "v" entry was
-   * included.)  We'll replace all these with a big tor_version_t or a char[]
-   * if the number of traits we care about ever becomes incredibly big. */
-  unsigned int version_known:1;
+  /** True iff we have a proto line for this router, or a versions line
+   * from which we could infer the protocols. */
+  unsigned int protocols_known:1;
 
-  /** True iff this router has a version that allows it to accept EXTEND2
-   * cells */
-  unsigned int version_supports_extend2_cells:1;
+  /** True iff this router has a version or protocol list that allows it to
+   * accept EXTEND2 cells */
+  unsigned int supports_extend2_cells:1;
 
   unsigned int has_bandwidth:1; /**< The vote/consensus had bw info */
   unsigned int has_exitsummary:1; /**< The vote/consensus had exit summaries */
@@ -2407,6 +2409,8 @@ typedef struct vote_routerstatus_t {
                    * networkstatus_t.known_flags. */
   char *version; /**< The version that the authority says this router is
                   * running. */
+  char *protocols; /**< The protocols that this authority says this router
+                    * provides. */
   unsigned int has_measured_bw:1; /**< The vote had a measured bw */
   /** True iff the vote included an entry for ed25519 ID, or included
    * "id ed25519 none" to indicate that there was no ed25519 ID. */
@@ -2524,6 +2528,16 @@ typedef struct networkstatus_t {
    * voter has no opinion. */
   char *client_versions;
   char *server_versions;
+
+  /** Lists of subprotocol versions which are _recommended_ for relays and
+   * clients, or which are _require_ for relays and clients. Tor shouldn't
+   * make any more network connections if a required protocol is missing.
+   */
+  char *recommended_relay_protocols;
+  char *recommended_client_protocols;
+  char *required_relay_protocols;
+  char *required_client_protocols;
+
   /** List of flags that this vote/consensus applies to routers.  If a flag is
    * not listed here, the voter has no opinion on what its value should be. */
   smartlist_t *known_flags;

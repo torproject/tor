@@ -46,6 +46,7 @@
 #include "onion.h"
 #include "periodic.h"
 #include "policies.h"
+#include "protover.h"
 #include "transports.h"
 #include "relay.h"
 #include "rendclient.h"
@@ -2972,6 +2973,7 @@ tor_free_all(int postfork)
   ext_orport_free_all();
   control_free_all();
   sandbox_free_getaddrinfo_cache();
+  protover_free_all();
   if (!postfork) {
     config_free_all();
     or_state_free_all();

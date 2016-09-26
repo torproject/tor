@@ -1,0 +1,18 @@
+  o Major features (subprotocol versions):
+
+    - Tor now uses "subprotocol versions" to indicate
+      compatibility. Previously, versions of Tor looked at the declared Tor
+      version of a relay to tell whether they could use a given feature.
+      Now, they should be able to rely on its declared subprotocol versions.
+      This change allows compatible implementations of the Tor protocol(s) to
+      exist without declaring compatibility with pretending to be particular
+      releases of Tor itself. Closes ticket 19958; implements part of
+      proposal 264.
+
+    - Tor directory authorities now vote on a set of recommended subprotocol
+      versions, and on a set of required subprotocol versions. Clients and
+      relays that lack support for a _required_ suprotocol version will not
+      start; those that lack support for a _recommended_ subprotocol version
+      will warn the user to upgrade. Closes ticket 19958; implements part of
+      proposal 264.
+

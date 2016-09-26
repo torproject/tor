@@ -3102,6 +3102,7 @@ routerinfo_free(routerinfo_t *router)
   tor_free(router->cache_info.signed_descriptor_body);
   tor_free(router->nickname);
   tor_free(router->platform);
+  tor_free(router->protocol_list);
   tor_free(router->contact_info);
   if (router->onion_pkey)
     crypto_pk_free(router->onion_pkey);
@@ -5525,7 +5526,8 @@ routerinfo_has_curve25519_onion_key(const routerinfo_t *ri)
 }
 
 /* Is rs running a tor version known to support ntor?
- * If allow_unknown_versions is true, return true if the version is unknown.
+ * If allow_unknown_versions is true, return true if we can't tell
+ * (from a versions line or a protocols line) whether it supports ntor.
  * Otherwise, return false if the version is unknown. */
 int
 routerstatus_version_supports_ntor(const routerstatus_t *rs,
@@ -5535,11 +5537,11 @@ routerstatus_version_supports_ntor(const routerstatus_t *rs,
     return allow_unknown_versions;
   }
 
-  if (!rs->version_known) {
+  if (!rs->protocols_known) {
     return allow_unknown_versions;
   }
 
-  return rs->version_supports_extend2_cells;
+  return rs->supports_extend2_cells;
 }
 
 /** Assert that the internal representation of <b>rl</b> is

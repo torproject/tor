@@ -28,6 +28,7 @@
 #include "microdesc.h"
 #include "networkstatus.h"
 #include "nodelist.h"
+#include "protover.h"
 #include "relay.h"
 #include "router.h"
 #include "routerlist.h"
@@ -124,6 +125,9 @@ static void routerstatus_list_update_named_server_map(void);
 static void update_consensus_bootstrap_multiple_downloads(
                                                   time_t now,
                                                   const or_options_t *options);
+static int networkstatus_check_required_protocols(const networkstatus_t *ns,
+                                                  int client_mode,
+                                                  char **warning_out);
 
 /** Forget that we've warned about anything networkstatus-related, so we will
  * give fresh warnings if the same behavior happens again. */
@@ -229,6 +233,7 @@ vote_routerstatus_free(vote_routerstatus_t *rs)
   if (!rs)
     return;
   tor_free(rs->version);
+  tor_free(rs->protocols);
   tor_free(rs->status.exitsummary);
   for (h = rs->microdesc; h; h = next) {
     tor_free(h->microdesc_hash_line);
@@ -275,6 +280,11 @@ networkstatus_vote_free(networkstatus_t *ns)
 
   tor_free(ns->client_versions);
   tor_free(ns->server_versions);
+  tor_free(ns->recommended_client_protocols);
+  tor_free(ns->recommended_relay_protocols);
+  tor_free(ns->required_client_protocols);
+  tor_free(ns->required_relay_protocols);
+
   if (ns->known_flags) {
     SMARTLIST_FOREACH(ns->known_flags, char *, c, tor_free(c));
     smartlist_free(ns->known_flags);
@@ -1446,8 +1456,9 @@ routerstatus_has_changed(const routerstatus_t *a, const routerstatus_t *b)
          a->is_valid != b->is_valid ||
          a->is_possible_guard != b->is_possible_guard ||
          a->is_bad_exit != b->is_bad_exit ||
-         a->is_hs_dir != b->is_hs_dir ||
-         a->version_known != b->version_known;
+         a->is_hs_dir != b->is_hs_dir;
+  // XXXX this function needs a huge refactoring; it has gotten out
+  // XXXX of sync with routerstatus_t, and it will do so again.
 }
 
 /** Notify controllers of any router status entries that changed between
@@ -1546,6 +1557,66 @@ networkstatus_set_current_consensus_from_ns(networkstatus_t *c,
 }
 #endif //TOR_UNIT_TESTS
 
+/**
+ * Return true if any option is set in <b>options</b> to make us behave
+ * as a client.
+ *
+ * XXXX If we need this elsewhere at any point, we should make it nonstatic
+ * XXXX and move it into another file.
+ */
+static int
+any_client_port_set(const or_options_t *options)
+{
+  return (options->SocksPort_set ||
+          options->TransPort_set ||
+          options->NATDPort_set ||
+          options->ControlPort_set ||
+          options->DNSPort_set);
+}
+
+/**
+ * Helper for handle_missing_protocol_warning: handles either the
+ * client case (if <b>is_client</b> is set) or the server case otherwise.
+ */
+static void
+handle_missing_protocol_warning_impl(const networkstatus_t *c,
+                                     int is_client)
+{
+  char *protocol_warning = NULL;
+
+  int should_exit = networkstatus_check_required_protocols(c,
+                                                   is_client,
+                                                   &protocol_warning);
+  if (protocol_warning) {
+    tor_log(should_exit ? LOG_ERR : LOG_WARN,
+            LD_GENERAL,
+            "%s", protocol_warning);
+  }
+  if (should_exit) {
+    tor_assert_nonfatal(protocol_warning);
+  }
+  tor_free(protocol_warning);
+  if (should_exit)
+    exit(1);
+}
+
+/** Called when we have received a networkstatus <b>c</b>. If there are
+ * any _required_ protocols we are missing, log an error and exit
+ * immediately. If there are any _recommended_ protocols we are missing,
+ * warn. */
+static void
+handle_missing_protocol_warning(const networkstatus_t *c,
+                                const or_options_t *options)
+{
+  const int is_server = server_mode(options);
+  const int is_client = any_client_port_set(options) || !is_server;
+
+  if (is_server)
+    handle_missing_protocol_warning_impl(c, 0);
+  if (is_client)
+    handle_missing_protocol_warning_impl(c, 1);
+}
+
 /** Try to replace the current cached v3 networkstatus with the one in
  * <b>consensus</b>.  If we don't have enough certificates to validate it,
  * store it in consensus_waiting_for_certs and launch a certificate fetch.
@@ -1589,6 +1660,7 @@ networkstatus_set_current_consensus(const char *consensus,
   time_t current_valid_after = 0;
   int free_consensus = 1; /* Free 'c' at the end of the function */
   int old_ewma_enabled;
+  int checked_protocols_already = 0;
 
   if (flav < 0) {
     /* XXXX we don't handle unrecognized flavors yet. */
@@ -1602,6 +1674,16 @@ networkstatus_set_current_consensus(const char *consensus,
     log_warn(LD_DIR, "Unable to parse networkstatus consensus");
     result = -2;
     goto done;
+  }
+
+  if (from_cache && !was_waiting_for_certs) {
+    /* We previously stored this; check _now_ to make sure that version-kills
+     * really work.  This happens even before we check signatures: we did so
+     * before when we stored this to disk. This does mean an attacker who can
+     * write to the datadir can make us not start: such an attacker could
+     * already harm us by replacing our guards, which would be worse. */
+    checked_protocols_already = 1;
+    handle_missing_protocol_warning(c, options);
   }
 
   if ((int)c->flavor != flav) {
@@ -1728,6 +1810,10 @@ networkstatus_set_current_consensus(const char *consensus,
 
   if (!from_cache && flav == usable_consensus_flavor())
     control_event_client_status(LOG_NOTICE, "CONSENSUS_ARRIVED");
+
+  if (!checked_protocols_already) {
+    handle_missing_protocol_warning(c, options);
+  }
 
   /* Are we missing any certificates at all? */
   if (r != 1 && dl_certs)
@@ -2051,7 +2137,7 @@ signed_descs_update_status_from_consensus_networkstatus(smartlist_t *descs)
 char *
 networkstatus_getinfo_helper_single(const routerstatus_t *rs)
 {
-  return routerstatus_format_entry(rs, NULL, NS_CONTROL_PORT, NULL);
+  return routerstatus_format_entry(rs, NULL, NULL, NS_CONTROL_PORT, NULL);
 }
 
 /** Alloc and return a string describing routerstatuses for the most
@@ -2363,6 +2449,56 @@ getinfo_helper_networkstatus(control_connection_t *conn,
 
   if (status)
     *answer = networkstatus_getinfo_helper_single(status);
+  return 0;
+}
+
+/** Check whether the networkstatus <b>ns</b> lists any protocol
+ * versions as "required" or "recommended" that we do not support.  If
+ * so, set *<b>warning_out</b> to a newly allocated string describing
+ * the problem.
+ *
+ * Return 1 if we should exit, 0 if we should not. */
+int
+networkstatus_check_required_protocols(const networkstatus_t *ns,
+                                       int client_mode,
+                                       char **warning_out)
+{
+  const char *func = client_mode ? "client" : "relay";
+  const char *required, *recommended;
+  char *missing = NULL;
+
+  tor_assert(warning_out);
+
+  if (client_mode) {
+    required = ns->required_client_protocols;
+    recommended = ns->recommended_client_protocols;
+  } else {
+    required = ns->required_relay_protocols;
+    recommended = ns->recommended_relay_protocols;
+  }
+
+  if (!protover_all_supported(required, &missing)) {
+    tor_asprintf(warning_out, "At least one protocol listed as required in "
+                 "the consensus is not supported by this version of Tor. "
+                 "You should upgrade. This version of Tor will not work as a "
+                 "%s on the Tor network. The missing protocols are: %s",
+                 func, missing);
+    tor_free(missing);
+    return 1;
+  }
+
+  if (! protover_all_supported(recommended, &missing)) {
+    tor_asprintf(warning_out, "At least one protocol listed as recommended in "
+                 "the consensus is not supported by this version of Tor. "
+                 "You should upgrade. This version of Tor will eventually "
+                 "stop working as a %s on the Tor network. The missing "
+                 "protocols are: %s",
+                 func, missing);
+    tor_free(missing);
+  }
+
+  tor_assert_nonfatal(missing == NULL);
+
   return 0;
 }
 
