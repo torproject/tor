@@ -112,6 +112,14 @@ MOCK_DECL(STATIC dumped_desc_t *, dump_desc_populate_one_file,
 STATIC void dump_desc_populate_fifo_from_directory(const char *dirname);
 STATIC void dump_desc(const char *desc, const char *type);
 STATIC void dump_desc_fifo_cleanup(void);
+struct memarea_t;
+STATIC routerstatus_t *routerstatus_parse_entry_from_string(
+                                     struct memarea_t *area,
+                                     const char **s, smartlist_t *tokens,
+                                     networkstatus_t *vote,
+                                     vote_routerstatus_t *vote_rs,
+                                     int consensus_method,
+                                     consensus_flavor_t flav);
 #endif
 
 #define ED_DESC_SIGNATURE_PREFIX "Tor router descriptor signature v1"

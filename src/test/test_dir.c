@@ -5388,6 +5388,49 @@ test_dir_find_dl_schedule(void* data)
   mock_options = NULL;
 }
 
+static void
+test_dir_assumed_flags(void *arg)
+{
+  (void)arg;
+  smartlist_t *tokens = smartlist_new();
+  memarea_t *area = memarea_new();
+  routerstatus_t *rs = NULL;
+
+  /* First, we should always assume that the Running flag is set, even
+   * when it isn't listed, since the consensus method is always
+   * higher than 4. */
+  const char *str1 =
+    "r example hereiswhereyouridentitygoes 2015-08-30 12:00:00 "
+       "192.168.0.1 9001 0\n"
+    "m thisoneislongerbecauseitisa256bitmddigest33\n"
+    "s Fast Guard Stable\n";
+
+  const char *cp = str1;
+  rs = routerstatus_parse_entry_from_string(area, &cp, tokens, NULL, NULL,
+                                            23, FLAV_MICRODESC);
+  tt_assert(rs);
+  tt_assert(rs->is_flagged_running);
+  tt_assert(! rs->is_valid);
+  tt_assert(! rs->is_exit);
+  tt_assert(rs->is_fast);
+  routerstatus_free(rs);
+
+  /* With method 24 or later, we can assume "valid" is set. */
+  cp = str1;
+  rs = routerstatus_parse_entry_from_string(area, &cp, tokens, NULL, NULL,
+                                            24, FLAV_MICRODESC);
+  tt_assert(rs);
+  tt_assert(rs->is_flagged_running);
+  tt_assert(rs->is_valid);
+  tt_assert(! rs->is_exit);
+  tt_assert(rs->is_fast);
+
+ done:
+  smartlist_free(tokens);
+  memarea_drop_all(area);
+  routerstatus_free(rs);
+}
+
 #define DIR_LEGACY(name)                             \
   { #name, test_dir_ ## name , TT_FORK, NULL, NULL }
 
@@ -5441,6 +5484,7 @@ struct testcase_t dir_tests[] = {
   DIR_ARG(find_dl_schedule, TT_FORK, "ba"),
   DIR_ARG(find_dl_schedule, TT_FORK, "cf"),
   DIR_ARG(find_dl_schedule, TT_FORK, "ca"),
+  DIR(assumed_flags, 0),
   END_OF_TESTCASES
 };
 
