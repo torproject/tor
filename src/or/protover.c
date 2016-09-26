@@ -343,7 +343,7 @@ encode_protocol_list(const smartlist_t *sl)
 
 /* We treat any protocol list with more than this many subprotocols in it
  * as a DoS attempt. */
-const int MAX_PROTOCOLS_TO_EXPAND = (1<<16);
+static const int MAX_PROTOCOLS_TO_EXPAND = (1<<16);
 
 /** Voting helper: Given a list of proto_entry_t, return a newly allocated
  * smartlist of newly allocated strings, one for each included protocol
