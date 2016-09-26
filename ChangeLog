@@ -319,8 +319,9 @@ Changes in version 0.2.9.3-alpha - 2016-09-23
       OpenSSL 0.9.7 or later since 2009. Closes ticket 19998.
 
   o Minor feature (fallback directories):
-    - Remove broken entries from the hard-coded fallback directory list.
-      Closes ticket 20190; patch by teor.
+    - Remove 8 fallbacks that are no longer suitable, leaving 81 of the
+      100 fallbacks originally introduced in Tor 0.2.8.2-alpha in March
+      2016. Closes ticket 20190; patch by teor.
 
   o Minor features (geoip, also in 0.2.8.8):
     - Update geoip and geoip6 to the September 6 2016 Maxmind GeoLite2
@@ -498,8 +499,9 @@ Changes in version 0.2.8.8 - 2016-09-23
       this one.
 
   o Minor feature (fallback directories):
-    - Remove broken fallbacks from the hard-coded fallback directory
-      list. Closes ticket 20190; patch by teor.
+    - Remove 8 fallbacks that are no longer suitable, leaving 81 of the
+      100 fallbacks originally introduced in Tor 0.2.8.2-alpha in March
+      2016. Closes ticket 20190; patch by teor.
 
   o Minor features (geoip):
     - Update geoip and geoip6 to the September 6 2016 Maxmind GeoLite2
@@ -953,8 +955,9 @@ Changes in version 0.2.8.6 - 2016-08-02
       is signed. Fixes bug 19682; bugfix on 0.2.8.1-alpha.
 
   o Minor bugfixes (fallback directories):
-    - Remove a fallback that was on the hardcoded list, then opted-out.
-      Fixes bug 19782; update to fallback list from 0.2.8.2-alpha.
+    - Remove 1 fallback that was on the hardcoded list, then opted-out,
+      leaving 89 of the 100 fallbacks originally introduced in Tor
+      0.2.8.2-alpha in March 2016. Closes ticket 19782; patch by teor.
 
   o Minor bugfixes (Linux seccomp2 sandbox):
     - Allow more syscalls when running with "Sandbox 1" enabled:
@@ -1026,8 +1029,9 @@ Changes in version 0.2.8.5-rc - 2016-07-07
     - Update fallback whitelist and blacklist based on relay operator
       emails. Blacklist unsuitable (non-working, over-volatile)
       fallbacks. Resolves ticket 19071. Patch by teor.
-    - Update hard-coded fallback list to remove unsuitable fallbacks.
-      Resolves ticket 19071. Patch by teor.
+    - Remove 10 unsuitable fallbacks, leaving 90 of the 100 fallbacks
+      originally introduced in Tor 0.2.8.2-alpha in March 2016. Closes
+      ticket 19071; patch by teor.
 
 
 Changes in version 0.2.8.4-rc - 2016-06-15
@@ -1137,10 +1141,12 @@ Changes in version 0.2.8.3-alpha - 2016-05-26
     - Give each fallback the same weight for client selection; restrict
       fallbacks to one per operator; report fallback directory detail
       changes when rebuilding list; add new fallback directory mirrors
-      to the whitelist; update fallback directories based on the latest
-      OnionOO data; and any other minor simplifications and fixes.
-      Closes tasks 17158, 17905, 18749, bug 18689, and fixes part of bug
-      18812 on 0.2.8.1-alpha; patch by "teor".
+      to the whitelist; and many other minor simplifications and fixes.
+      Closes tasks 17905, 18749, bug 18689, and fixes part of bug 18812 on
+      0.2.8.1-alpha; patch by "teor".
+    - Replace the 21 fallbacks generated in January 2016 and included in
+      Tor 0.2.8.1-alpha, with a list of 100 fallbacks generated in March
+      2016. Closes task 17158; patch by "teor".
 
   o Minor features (geoip):
     - Update geoip and geoip6 to the May 4 2016 Maxmind GeoLite2
@@ -1584,10 +1590,11 @@ Changes in version 0.2.8.1-alpha - 2016-02-04
       should reduces failures due to fallback churn. Implements ticket
       4483. Patch by "teor". Implements IPv4 portions of proposal 210 by
       "mikeperry" and "teor".
-    - Include a trial list of default fallback directories, based on an
-      opt-in survey of suitable relays. Doing this should make clients
-      bootstrap more quickly and reliably, and reduce the load on the
-      directory authorities. Closes ticket 15775. Patch by "teor".
+    - Include a trial list of 21 default fallback directories, generated
+      in January 2016, based on an opt-in survey of suitable relays.
+      Doing this should make clients bootstrap more quickly and reliably,
+      and reduce the load on the directory authorities. Closes ticket
+      15775. Patch by "teor".
       Candidates identified using an OnionOO script by "weasel", "teor",
       "gsathya", and "karsten".
     - Previously only relays that explicitly opened a directory port
