@@ -2954,6 +2954,7 @@ router_dump_router_to_string(routerinfo_t *router,
   tor_free(rsa_tap_cc_line);
   tor_free(ntor_cc_line);
   tor_free(extra_info_line);
+  tor_free(proto_line);
 
   return output;
 }
