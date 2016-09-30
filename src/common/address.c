@@ -1770,13 +1770,13 @@ MOCK_IMPL(smartlist_t *,get_interface_address6_list,(int severity,
     {
       if (tor_addr_is_loopback(a) ||
           tor_addr_is_multicast(a)) {
-        SMARTLIST_DEL_CURRENT(addrs, a);
+        SMARTLIST_DEL_CURRENT_KEEPORDER(addrs, a);
         tor_free(a);
         continue;
       }
 
       if (!include_internal && tor_addr_is_internal(a, 0)) {
-        SMARTLIST_DEL_CURRENT(addrs, a);
+        SMARTLIST_DEL_CURRENT_KEEPORDER(addrs, a);
         tor_free(a);
         continue;
       }

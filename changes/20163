@@ -1,0 +1,6 @@
+  o Minor bugfixes (address discovery):
+    - Stop reordering IP addresses returned by the OS.
+This makes is more likely that Tor will guess the same relay IP address every time.
+Fixes issue 20163; bugfix on 0.2.7.1-alpha, ticket 17027.
+Reported by René Mayrhofer, patch by "cypherpunks".
+
