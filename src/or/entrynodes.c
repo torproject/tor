@@ -2521,27 +2521,6 @@ entries_retry_all(const or_options_t *options)
   entries_retry_helper(options, 1);
 }
 
-/** Return true if at least one of our bridges runs a Tor version that can
- * provide microdescriptors to us. If not, we'll fall back to asking for
- * full descriptors. */
-int
-any_bridge_supports_microdescriptors(void)
-{
-  const node_t *node;
-  if (!get_options()->UseBridges || !entry_guards)
-    return 0;
-  SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, e) {
-    node = node_get_by_id(e->identity);
-    if (node && node->is_running &&
-        node_is_bridge(node) && node_is_a_configured_bridge(node)) {
-      /* This is one of our current bridges, and we know enough about
-       * it to know that it will be able to answer our questions. */
-       return 1;
-    }
-  } SMARTLIST_FOREACH_END(e);
-  return 0;
-}
-
 /** Release all storage held by the list of entry guards and related
  * memory structs. */
 void
