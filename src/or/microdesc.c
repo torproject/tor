@@ -917,12 +917,9 @@ update_microdescs_from_networkstatus(time_t now)
 int
 we_use_microdescriptors_for_circuits(const or_options_t *options)
 {
-  int ret = options->UseMicrodescriptors;
-  if (ret == -1) {
-    /* UseMicrodescriptors is "auto"; choose yes. */
-    return 1;
-  }
-  return ret;
+  if (options->UseMicrodescriptors == 0)
+    return 0; /* the user explicitly picked no */
+  return 1; /* yes and auto both mean yes */
 }
 
 /** Return true iff we should try to download microdescriptors at all. */
