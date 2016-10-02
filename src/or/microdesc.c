@@ -919,12 +919,8 @@ we_use_microdescriptors_for_circuits(const or_options_t *options)
 {
   int ret = options->UseMicrodescriptors;
   if (ret == -1) {
-    /* UseMicrodescriptors is "auto"; we need to decide: */
-    /* We'll use microdescriptors iff we are
-     * not a server, and we're not autofetching everything. */
-    /* XXXX++ what does not being a server have to do with it? also there's
-     * a partitioning issue here where bridges differ from clients. */
-    ret = !server_mode(options) && !options->FetchUselessDescriptors;
+    /* UseMicrodescriptors is "auto"; choose yes. */
+    return 1;
   }
   return ret;
 }
