@@ -36,6 +36,9 @@ EXTRA_DIST+= \
 	README						\
 	ReleaseNotes
 
+## This tells etags how to find mockable function definitions.
+AM_ETAGSFLAGS=--regex='{c}/MOCK_IMPL([^,]+,\W*\([a-zA-Z0-9_]+\)\W*,/\1/s'
+
 if COVERAGE_ENABLED
 TEST_CFLAGS=-fno-inline -fprofile-arcs -ftest-coverage
 if DISABLE_ASSERTS_IN_UNIT_TESTS
