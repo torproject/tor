@@ -774,7 +774,7 @@ parse_virtual_addr_network(const char *val, sa_family_t family,
   const int ipv6 = (family == AF_INET6);
   tor_addr_t addr;
   maskbits_t bits;
-  const int max_bits = ipv6 ? 40 : 16;
+  const int max_prefix_bits = ipv6 ? 104 : 16;
   virtual_addr_conf_t *conf = ipv6 ? &virtaddr_conf_ipv6 : &virtaddr_conf_ipv4;
 
   if (!val || val[0] == '\0') {
@@ -804,10 +804,10 @@ parse_virtual_addr_network(const char *val, sa_family_t family,
   }
 #endif
 
-  if (bits > max_bits) {
+  if (bits > max_prefix_bits) {
     if (msg)
       tor_asprintf(msg, "VirtualAddressNetwork%s expects a /%d "
-                   "network or larger",ipv6?"IPv6":"", max_bits);
+                   "network or larger",ipv6?"IPv6":"", max_prefix_bits);
     return -1;
   }
 

@@ -1,0 +1,7 @@
+ o Minor features:
+   - Increase the maximum number of bits for the IPv6 virtual network prefix
+     from 16 to 104. In this way, the condition for address allocation is less
+     restrictive. Also, the variable max_bits is called max_prefix_bits,
+     making it clearer the meaning of the condition (bits > max_prefix_bits).
+     Closes ticket 20151; feature on 0.2.4.7-alpha.
+
