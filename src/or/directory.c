@@ -495,9 +495,6 @@ MOCK_IMPL(void, directory_get_from_dirserver, (
        * sort of dir fetch we'll be doing, so it won't return a bridge
        * that can't answer our question.
        */
-      /* XXX+++++ Not all bridges handle conditional consensus downloading,
-       * so, for now, never assume the server supports that. -PP
-       * Is that assumption still so in 2016? -NM */
       const node_t *node = choose_random_dirguard(type);
       if (node && node->ri) {
         /* every bridge has a routerinfo. */
@@ -1305,9 +1302,9 @@ compare_strs_(const void **a, const void **b)
 
 /** Return the URL we should use for a consensus download.
  *
- * This url depends on whether or not the server we go to
- * is sufficiently new to support conditional consensus downloading,
- * i.e. GET .../consensus/<b>fpr</b>+<b>fpr</b>+<b>fpr</b>
+ * Use the "conditional consensus downloading" feature described in
+ * dir-spec.txt, i.e.
+ * GET .../consensus/<b>fpr</b>+<b>fpr</b>+<b>fpr</b>
  *
  * If 'resource' is provided, it is the name of a consensus flavor to request.
  */
