@@ -68,6 +68,9 @@
 
 /* Prefix used to indicate a Unix socket in a FooPort configuration. */
 static const char unix_socket_prefix[] = "unix:";
+/* Prefix used to indicate a Unix socket with spaces in it, in a FooPort
+ * configuration. */
+static const char unix_q_socket_prefix[] = "unix:\"";
 
 /** A list of abbreviations and aliases to map command-line options, obsolete
  * option names, or alternative option names, to their current values. */
@@ -6288,54 +6291,61 @@ warn_nonlocal_controller_ports(smartlist_t *ports, unsigned forbid_nonlocal)
   } SMARTLIST_FOREACH_END(port);
 }
 
-#ifdef HAVE_SYS_UN_H
-
-/** Parse the given <b>addrport</b> and set <b>path_out</b> if a Unix socket
- * path is found. Return 0 on success. On error, a negative value is
- * returned, -ENOENT if no Unix statement found, -EINVAL if the socket path
- * is empty and -ENOSYS if AF_UNIX is not supported (see function in the
- * #else statement below). */
-
+/**
+ * Take a string (<b>line</b>) that begins with either an address:port, a
+ * port, or an AF_UNIX address, optionally quoted, prefixed with
+ * "unix:". Parse that line, and on success, set <b>addrport_out</b> to a new
+ * string containing the beginning portion (without prefix).  Iff there was a
+ * unix: prefix, set <b>is_unix_out</b> to true.  On success, also set
+ * <b>rest_out</b> to point to the part of the line after the address portion.
+ *
+ * Return 0 on success, -1 on failure.
+ */
 int
-config_parse_unix_port(const char *addrport, char **path_out)
+port_cfg_line_extract_addrport(const char *line,
+                               char **addrport_out,
+                               int *is_unix_out,
+                               const char **rest_out)
 {
-  tor_assert(path_out);
-  tor_assert(addrport);
+  tor_assert(line);
+  tor_assert(addrport_out);
+  tor_assert(is_unix_out);
+  tor_assert(rest_out);
 
-  if (strcmpstart(addrport, unix_socket_prefix)) {
-    /* Not a Unix socket path. */
-    return -ENOENT;
+  line = eat_whitespace(line);
+
+  if (!strcmpstart(line, unix_q_socket_prefix)) {
+    // It starts with unix:"
+    size_t sz;
+    *is_unix_out = 1;
+    *addrport_out = NULL;
+    line += strlen(unix_socket_prefix); /*No q: Keep the quote */
+    *rest_out = unescape_string(line, addrport_out, &sz);
+    if (!*rest_out || (*addrport_out && sz != strlen(*addrport_out))) {
+      tor_free(*addrport_out);
+      return -1;
+    }
+    *rest_out = eat_whitespace(*rest_out);
+    return 0;
+  } else {
+    // Is there a unix: prefix?
+    if (!strcmpstart(line, unix_socket_prefix)) {
+      line += strlen(unix_socket_prefix);
+      *is_unix_out = 1;
+    } else {
+      *is_unix_out = 0;
+    }
+
+    const char *end = find_whitespace(line);
+    if (BUG(!end)) {
+      end = strchr(line, '\0'); // LCOV_EXCL_LINE -- this can't be NULL
+    }
+    tor_assert(end && end >= line);
+    *addrport_out = tor_strndup(line, end - line);
+    *rest_out = eat_whitespace(end);
+    return 0;
   }
-
-  if (strlen(addrport + strlen(unix_socket_prefix)) == 0) {
-    /* Empty socket path, not very usable. */
-    return -EINVAL;
-  }
-
-  *path_out = tor_strdup(addrport + strlen(unix_socket_prefix));
-  return 0;
 }
-
-#else /* defined(HAVE_SYS_UN_H) */
-
-int
-config_parse_unix_port(const char *addrport, char **path_out)
-{
-  tor_assert(path_out);
-  tor_assert(addrport);
-
-  if (strcmpstart(addrport, unix_socket_prefix)) {
-    /* Not a Unix socket path. */
-    return -ENOENT;
-  }
-
-  log_warn(LD_CONFIG,
-           "Port configuration %s is for an AF_UNIX socket, but we have no"
-           "support available on this platform",
-           escaped(addrport));
-  return -ENOSYS;
-}
-#endif /* defined(HAVE_SYS_UN_H) */
 
 static void
 warn_client_dns_cache(const char *option, int disabling)
@@ -6515,16 +6525,16 @@ parse_port_config(smartlist_t *out,
   /* At last we can actually parse the FooPort lines.  The syntax is:
    * [Addr:](Port|auto) [Options].*/
   elts = smartlist_new();
+  char *addrport = NULL;
 
   for (; ports; ports = ports->next) {
     tor_addr_t addr;
-    int port, ret;
+    int port;
     int sessiongroup = SESSION_GROUP_UNSET;
     unsigned isolation = ISO_DEFAULT;
     int prefer_no_auth = 0;
     int socks_iso_keep_alive = 0;
 
-    char *addrport;
     uint16_t ptmp=0;
     int ok;
     /* This must be kept in sync with port_cfg_new's defaults */
@@ -6538,23 +6548,31 @@ parse_port_config(smartlist_t *out,
       relax_dirmode_check = 0,
       has_used_unix_socket_only_option = 0;
 
-    smartlist_split_string(elts, ports->value, NULL,
-                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-    if (smartlist_len(elts) == 0) {
-      log_warn(LD_CONFIG, "Invalid %sPort line with no value", portname);
+    int is_unix_tagged_addr = 0;
+    const char *rest_of_line = NULL;
+    if (port_cfg_line_extract_addrport(ports->value,
+                          &addrport, &is_unix_tagged_addr, &rest_of_line)<0) {
+      log_warn(LD_CONFIG, "Invalid %sPort line with unparsable address",
+               portname);
+      goto err;
+    }
+    if (strlen(addrport) == 0) {
+      log_warn(LD_CONFIG, "Invalid %sPort line with no address", portname);
       goto err;
     }
 
-    /* Now parse the addr/port value */
-    addrport = smartlist_get(elts, 0);
+    /* Split the remainder... */
+    smartlist_split_string(elts, rest_of_line, NULL,
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
 
     /* Let's start to check if it's a Unix socket path. */
-    ret = config_parse_unix_port(addrport, &unix_socket_path);
-    if (ret < 0 && ret != -ENOENT) {
-      if (ret == -EINVAL) {
-        log_warn(LD_CONFIG, "Empty Unix socket path.");
-      }
+    if (is_unix_tagged_addr) {
+#ifndef HAVE_SYS_UN_H
+      log_warn(LD_CONFIG, "Unix sockets not supported on this system.");
       goto err;
+#endif
+      unix_socket_path = addrport;
+      addrport = NULL;
     }
 
     if (unix_socket_path &&
@@ -6612,9 +6630,6 @@ parse_port_config(smartlist_t *out,
     if (use_server_options) {
       /* This is a server port; parse advertising options */
       SMARTLIST_FOREACH_BEGIN(elts, char *, elt) {
-        if (elt_sl_idx == 0)
-          continue; /* Skip addr:port */
-
         if (!strcasecmp(elt, "NoAdvertise")) {
           no_advertise = 1;
         } else if (!strcasecmp(elt, "NoListen")) {
@@ -6662,8 +6677,6 @@ parse_port_config(smartlist_t *out,
       SMARTLIST_FOREACH_BEGIN(elts, char *, elt) {
         int no = 0, isoflag = 0;
         const char *elt_orig = elt;
-        if (elt_sl_idx == 0)
-          continue; /* Skip addr:port */
 
         if (!strcasecmpstart(elt, "SessionGroup=")) {
           int group = (int)tor_parse_long(elt+strlen("SessionGroup="),
@@ -6880,6 +6893,7 @@ parse_port_config(smartlist_t *out,
     }
     SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
     smartlist_clear(elts);
+    tor_free(addrport);
   }
 
   if (warn_nonlocal && out) {
@@ -6903,6 +6917,7 @@ parse_port_config(smartlist_t *out,
   SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
   smartlist_free(elts);
   tor_free(unix_socket_path);
+  tor_free(addrport);
   return retval;
 }
 

@@ -3710,6 +3710,145 @@ test_config_default_fallback_dirs(void *arg)
   clear_dir_servers();
 }
 
+static void
+test_config_port_cfg_line_extract_addrport(void *arg)
+{
+  (void)arg;
+  int unixy = 0;
+  const char *rest = NULL;
+  char *a = NULL;
+
+  tt_int_op(port_cfg_line_extract_addrport("", &a, &unixy, &rest), OP_EQ, 0);
+  tt_int_op(unixy, OP_EQ, 0);
+  tt_str_op(a, OP_EQ, "");;
+  tt_str_op(rest, OP_EQ, "");
+  tor_free(a);
+
+  tt_int_op(port_cfg_line_extract_addrport("hello", &a, &unixy, &rest),
+            OP_EQ, 0);
+  tt_int_op(unixy, OP_EQ, 0);
+  tt_str_op(a, OP_EQ, "hello");;
+  tt_str_op(rest, OP_EQ, "");
+  tor_free(a);
+
+  tt_int_op(port_cfg_line_extract_addrport(" flipperwalt gersplut",
+                                           &a, &unixy, &rest), OP_EQ, 0);
+  tt_int_op(unixy, OP_EQ, 0);
+  tt_str_op(a, OP_EQ, "flipperwalt");;
+  tt_str_op(rest, OP_EQ, "gersplut");
+  tor_free(a);
+
+  tt_int_op(port_cfg_line_extract_addrport(" flipperwalt \t gersplut",
+                                           &a, &unixy, &rest), OP_EQ, 0);
+  tt_int_op(unixy, OP_EQ, 0);
+  tt_str_op(a, OP_EQ, "flipperwalt");;
+  tt_str_op(rest, OP_EQ, "gersplut");
+  tor_free(a);
+
+  tt_int_op(port_cfg_line_extract_addrport("flipperwalt \t gersplut",
+                                           &a, &unixy, &rest), OP_EQ, 0);
+  tt_int_op(unixy, OP_EQ, 0);
+  tt_str_op(a, OP_EQ, "flipperwalt");;
+  tt_str_op(rest, OP_EQ, "gersplut");
+  tor_free(a);
+
+  tt_int_op(port_cfg_line_extract_addrport("unix:flipperwalt \t gersplut",
+                                           &a, &unixy, &rest), OP_EQ, 0);
+  tt_int_op(unixy, OP_EQ, 1);
+  tt_str_op(a, OP_EQ, "flipperwalt");;
+  tt_str_op(rest, OP_EQ, "gersplut");
+  tor_free(a);
+
+  tt_int_op(port_cfg_line_extract_addrport("lolol",
+                                           &a, &unixy, &rest), OP_EQ, 0);
+  tt_int_op(unixy, OP_EQ, 0);
+  tt_str_op(a, OP_EQ, "lolol");;
+  tt_str_op(rest, OP_EQ, "");
+  tor_free(a);
+
+  tt_int_op(port_cfg_line_extract_addrport("unix:lolol",
+                                           &a, &unixy, &rest), OP_EQ, 0);
+  tt_int_op(unixy, OP_EQ, 1);
+  tt_str_op(a, OP_EQ, "lolol");;
+  tt_str_op(rest, OP_EQ, "");
+  tor_free(a);
+
+  tt_int_op(port_cfg_line_extract_addrport("unix:lolol ",
+                                           &a, &unixy, &rest), OP_EQ, 0);
+  tt_int_op(unixy, OP_EQ, 1);
+  tt_str_op(a, OP_EQ, "lolol");;
+  tt_str_op(rest, OP_EQ, "");
+  tor_free(a);
+
+  tt_int_op(port_cfg_line_extract_addrport(" unix:lolol",
+                                           &a, &unixy, &rest), OP_EQ, 0);
+  tt_int_op(unixy, OP_EQ, 1);
+  tt_str_op(a, OP_EQ, "lolol");;
+  tt_str_op(rest, OP_EQ, "");
+  tor_free(a);
+
+  tt_int_op(port_cfg_line_extract_addrport("foobar:lolol",
+                                           &a, &unixy, &rest), OP_EQ, 0);
+  tt_int_op(unixy, OP_EQ, 0);
+  tt_str_op(a, OP_EQ, "foobar:lolol");;
+  tt_str_op(rest, OP_EQ, "");
+  tor_free(a);
+
+  tt_int_op(port_cfg_line_extract_addrport(":lolol",
+                                           &a, &unixy, &rest), OP_EQ, 0);
+  tt_int_op(unixy, OP_EQ, 0);
+  tt_str_op(a, OP_EQ, ":lolol");;
+  tt_str_op(rest, OP_EQ, "");
+  tor_free(a);
+
+  tt_int_op(port_cfg_line_extract_addrport("unix:\"lolol\"",
+                                           &a, &unixy, &rest), OP_EQ, 0);
+  tt_int_op(unixy, OP_EQ, 1);
+  tt_str_op(a, OP_EQ, "lolol");;
+  tt_str_op(rest, OP_EQ, "");
+  tor_free(a);
+
+  tt_int_op(port_cfg_line_extract_addrport("unix:\"lolol\" ",
+                                           &a, &unixy, &rest), OP_EQ, 0);
+  tt_int_op(unixy, OP_EQ, 1);
+  tt_str_op(a, OP_EQ, "lolol");;
+  tt_str_op(rest, OP_EQ, "");
+  tor_free(a);
+
+  tt_int_op(port_cfg_line_extract_addrport("unix:\"lolol\" foo ",
+                                           &a, &unixy, &rest), OP_EQ, 0);
+  tt_int_op(unixy, OP_EQ, 1);
+  tt_str_op(a, OP_EQ, "lolol");;
+  tt_str_op(rest, OP_EQ, "foo ");
+  tor_free(a);
+
+  tt_int_op(port_cfg_line_extract_addrport("unix:\"lol ol\" foo ",
+                                           &a, &unixy, &rest), OP_EQ, 0);
+  tt_int_op(unixy, OP_EQ, 1);
+  tt_str_op(a, OP_EQ, "lol ol");;
+  tt_str_op(rest, OP_EQ, "foo ");
+  tor_free(a);
+
+  tt_int_op(port_cfg_line_extract_addrport("unix:\"lol\\\" ol\" foo ",
+                                           &a, &unixy, &rest), OP_EQ, 0);
+  tt_int_op(unixy, OP_EQ, 1);
+  tt_str_op(a, OP_EQ, "lol\" ol");;
+  tt_str_op(rest, OP_EQ, "foo ");
+  tor_free(a);
+
+  tt_int_op(port_cfg_line_extract_addrport("unix:\"lol\\\" ol foo ",
+                                           &a, &unixy, &rest), OP_EQ, -1);
+  tor_free(a);
+
+  tt_int_op(port_cfg_line_extract_addrport("unix:\"lol\\0\" ol foo ",
+                                           &a, &unixy, &rest), OP_EQ, -1);
+  tor_free(a);
+
+ done:
+  tor_free(a);
+}
+
+
 static config_line_t *
 mock_config_line(const char *key, const char *val)
 {
@@ -4049,6 +4188,49 @@ test_config_parse_port_config__ports__ports_given(void *data)
   tt_int_op(port_cfg->entry_cfg.ipv6_traffic, OP_EQ, 0);
   tt_int_op(port_cfg->entry_cfg.onion_traffic, OP_EQ, 1);
 #endif
+
+  // Test success with quoted unix: address.
+  config_free_lines(config_port_valid); config_port_valid = NULL;
+  SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
+  smartlist_clear(slout);
+  config_port_valid = mock_config_line("SOCKSPort", "unix:\"/tmp/foo/ bar\" "
+                                       "NoDNSRequest NoIPv4Traffic");
+  ret = parse_port_config(slout, config_port_valid, NULL, "SOCKS",
+                          CONN_TYPE_AP_LISTENER, NULL, 0,
+                          CL_PORT_TAKES_HOSTNAMES);
+#ifdef _WIN32
+  tt_int_op(ret, OP_EQ, -1);
+#else
+  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(smartlist_len(slout), OP_EQ, 1);
+  port_cfg = (port_cfg_t *)smartlist_get(slout, 0);
+  tt_int_op(port_cfg->entry_cfg.dns_request, OP_EQ, 0);
+  tt_int_op(port_cfg->entry_cfg.ipv4_traffic, OP_EQ, 0);
+  tt_int_op(port_cfg->entry_cfg.ipv6_traffic, OP_EQ, 0);
+  tt_int_op(port_cfg->entry_cfg.onion_traffic, OP_EQ, 1);
+#endif
+
+  // Test failure with broken quoted unix: address.
+  config_free_lines(config_port_valid); config_port_valid = NULL;
+  SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
+  smartlist_clear(slout);
+  config_port_valid = mock_config_line("SOCKSPort", "unix:\"/tmp/foo/ bar "
+                                       "NoDNSRequest NoIPv4Traffic");
+  ret = parse_port_config(slout, config_port_valid, NULL, "SOCKS",
+                          CONN_TYPE_AP_LISTENER, NULL, 0,
+                          CL_PORT_TAKES_HOSTNAMES);
+  tt_int_op(ret, OP_EQ, -1);
+
+  // Test failure with empty quoted unix: address.
+  config_free_lines(config_port_valid); config_port_valid = NULL;
+  SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
+  smartlist_clear(slout);
+  config_port_valid = mock_config_line("SOCKSPort", "unix:\"\" "
+                                       "NoDNSRequest NoIPv4Traffic");
+  ret = parse_port_config(slout, config_port_valid, NULL, "SOCKS",
+                          CONN_TYPE_AP_LISTENER, NULL, 0,
+                          CL_PORT_TAKES_HOSTNAMES);
+  tt_int_op(ret, OP_EQ, -1);
 
   // Test success with OnionTrafficOnly (no DNS, no ipv4, no ipv6)
   config_free_lines(config_port_valid); config_port_valid = NULL;
@@ -4690,6 +4872,15 @@ test_config_parse_port_config__ports__server_options(void *data)
                           0, CL_PORT_SERVER_OPTIONS);
   tt_int_op(ret, OP_EQ, -1);
 
+  // Check for failure with empty unix: address.
+  config_free_lines(config_port_invalid); config_port_invalid = NULL;
+  SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
+  smartlist_clear(slout);
+  config_port_invalid = mock_config_line("ORPort", "unix:\"\"");
+  ret = parse_port_config(slout, config_port_invalid, NULL, "ORPort", 0, NULL,
+                          0, CL_PORT_SERVER_OPTIONS);
+  tt_int_op(ret, OP_EQ, -1);
+
  done:
   if (slout)
     SMARTLIST_FOREACH(slout,port_cfg_t *,pf,port_cfg_free(pf));
@@ -4719,6 +4910,7 @@ struct testcase_t config_tests[] = {
   CONFIG_TEST(write_to_data_subdir, TT_FORK),
   CONFIG_TEST(fix_my_family, 0),
   CONFIG_TEST(directory_fetch, 0),
+  CONFIG_TEST(port_cfg_line_extract_addrport, 0),
   CONFIG_TEST(parse_port_config__listenaddress, 0),
   CONFIG_TEST(parse_port_config__ports__no_ports_given, 0),
   CONFIG_TEST(parse_port_config__ports__server_options, 0),
