@@ -914,7 +914,7 @@ networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
         Wgd = weight_scale;
       }
     } else { // Subcase b: R+D >= S
-      casename = "Case 2b1 (Wgg=1, Wmd=Wgd)";
+      casename = "Case 2b1 (Wgg=weight_scale, Wmd=Wgd)";
       Wee = (weight_scale*(E - G + M))/E;
       Wed = (weight_scale*(D - 2*E + 4*G - 2*M))/(3*D);
       Wme = (weight_scale*(G-M))/E;
@@ -927,7 +927,7 @@ networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
                                        weight_scale, G, M, E, D, T, 10, 1);
 
       if (berr) {
-        casename = "Case 2b2 (Wgg=1, Wee=1)";
+        casename = "Case 2b2 (Wgg=weight_scale, Wee=weight_scale)";
         Wgg = weight_scale;
         Wee = weight_scale;
         Wed = (weight_scale*(D - 2*E + G + M))/(3*D);
@@ -996,7 +996,7 @@ networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
     } else { // Subcase b: S+D >= T/3
       // D != 0 because S+D >= T/3
       if (G < E) {
-        casename = "Case 3bg (G scarce, Wgg=1, Wmd == Wed)";
+        casename = "Case 3bg (G scarce, Wgg=weight_scale, Wmd == Wed)";
         Wgg = weight_scale;
         Wgd = (weight_scale*(D - 2*G + E + M))/(3*D);
         Wmg = 0;
@@ -1008,7 +1008,7 @@ networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
         berr = networkstatus_check_weights(Wgg, Wgd, Wmg, Wme, Wmd, Wee,
                     Wed, weight_scale, G, M, E, D, T, 10, 1);
       } else { // G >= E
-        casename = "Case 3be (E scarce, Wee=1, Wmd == Wgd)";
+        casename = "Case 3be (E scarce, Wee=weight_scale, Wmd == Wgd)";
         Wee = weight_scale;
         Wed = (weight_scale*(D - 2*E + G + M))/(3*D);
         Wme = 0;
@@ -1042,7 +1042,7 @@ networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
   tor_assert(0 < weight_scale && weight_scale <= INT32_MAX);
 
   /*
-   * Provide Wgm=Wgg, Wmm=1, Wem=Wee, Weg=Wed. May later determine
+   * Provide Wgm=Wgg, Wmm=weight_scale, Wem=Wee, Weg=Wed. May later determine
    * that middle nodes need different bandwidth weights for dirport traffic,
    * or that weird exit policies need special weight, or that bridges
    * need special weight.
