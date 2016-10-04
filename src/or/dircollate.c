@@ -87,7 +87,7 @@ dircollator_add_routerstatus(dircollator_t *dc,
   (void) vote;
   vote_routerstatus_t **vrs_lst = digestmap_get(dc->by_rsa_sha1, id);
   if (NULL == vrs_lst) {
-    vrs_lst = tor_calloc(sizeof(vote_routerstatus_t *), dc->n_votes);
+    vrs_lst = tor_calloc(dc->n_votes, sizeof(vote_routerstatus_t *));
     digestmap_set(dc->by_rsa_sha1, id, vrs_lst);
   }
   tor_assert(vrs_lst[vote_num] == NULL);
