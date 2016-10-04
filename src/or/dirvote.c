@@ -913,7 +913,7 @@ networkstatus_check_weights(int64_t Wgg, int64_t Wgd, int64_t Wmg,
  *
  * It returns true if weights could be computed, false otherwise.
  */
-static int
+int
 networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
                                      int64_t M, int64_t E, int64_t D,
                                      int64_t T, int64_t weight_scale)

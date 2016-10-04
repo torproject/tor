@@ -2,3 +2,6 @@
     - Add new consensus method that initializes bw weights to 1 instead of 0. This
       prevents a zero weight from making it all the way to the end (happens in
       small testing networks) and causing an error. Fixes bug 14881.
+
+  o Minor features (unit tests):
+    - Add test for networkstatus_compute_bw_weights_v10

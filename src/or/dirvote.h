@@ -238,6 +238,10 @@ STATIC smartlist_t *dirvote_compute_params(smartlist_t *votes, int method,
                              int total_authorities);
 STATIC char *compute_consensus_package_lines(smartlist_t *votes);
 STATIC char *make_consensus_method_list(int low, int high, const char *sep);
+STATIC int
+networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
+                                     int64_t M, int64_t E, int64_t D,
+                                     int64_t T, int64_t weight_scale);
 #endif
 
 #endif

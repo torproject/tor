@@ -1874,6 +1874,163 @@ test_routerstatus_for_v3ns(routerstatus_t *rs, time_t now)
   return;
 }
 
+static void
+test_dir_networkstatus_compute_bw_weights_v10(void *arg)
+{
+  (void) arg;
+  smartlist_t *chunks = smartlist_new();
+  int64_t G, M, E, D, T, weight_scale;
+  int ret;
+  weight_scale = 10000;
+
+  /* no case. one or more of the values is 0 */
+  G = M = E = D = 0;
+  T = G + M + E + D;
+  ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T, weight_scale);
+  tt_int_op(ret, OP_EQ, 0);
+  tt_int_op(smartlist_len(chunks), OP_EQ, 0);
+
+  /* case 1 */
+  /* XXX dir-spec not followed? See #20272. If it isn't closed, then this is
+   * testing current behavior, not spec. */
+  G = E = 10;
+  M = D = 1;
+  T = G + M + E + D;
+  ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T, weight_scale);
+  tt_int_op(ret, OP_EQ, 1);
+  tt_int_op(smartlist_len(chunks), OP_EQ, 1);
+  tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=3333 "
+    "Wbe=3000 Wbg=3000 Wbm=10000 Wdb=10000 Web=10000 Wed=3333 Wee=7000 "
+    "Weg=3333 Wem=7000 Wgb=10000 Wgd=3333 Wgg=7000 Wgm=7000 Wmb=10000 Wmd=3333 "
+    "Wme=3000 Wmg=3000 Wmm=10000\n");
+  smartlist_clear(chunks);
+
+  /* case 2a E scarce */
+  M = 100;
+  G = 20;
+  E = D = 5;
+  T = G + M + E + D;
+  ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T, weight_scale);
+  tt_int_op(ret, OP_EQ, 1);
+  tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=0 Wbe=0 "
+    "Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=10000 Wee=10000 Weg=10000 "
+    "Wem=10000 Wgb=10000 Wgd=0 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=0 Wme=0 Wmg=0 "
+    "Wmm=10000\n");
+  smartlist_clear(chunks);
+
+  /* case 2a G scarce */
+  M = 100;
+  E = 20;
+  G = D = 5;
+  T = G + M + E + D;
+  ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T, weight_scale);
+  tt_int_op(ret, OP_EQ, 1);
+  tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=0 Wbe=0 "
+    "Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=0 Wee=10000 Weg=0 Wem=10000 "
+    "Wgb=10000 Wgd=10000 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=0 Wme=0 Wmg=0 "
+    "Wmm=10000\n");
+  smartlist_clear(chunks);
+
+  /* case 2b1 (Wgg=1, Wmd=Wgd) */
+  M = 10;
+  E = 30;
+  G = 10;
+  D = 100;
+  T = G + M + E + D;
+  ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T, weight_scale);
+  tt_int_op(ret, OP_EQ, 1);
+  tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=4000 Wbe=0 "
+    "Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=2000 Wee=10000 Weg=2000 Wem=10000 "
+    "Wgb=10000 Wgd=4000 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=4000 Wme=0 Wmg=0 "
+    "Wmm=10000\n");
+  smartlist_clear(chunks);
+
+  /* case 2b2 */
+  M = 60;
+  E = 30;
+  G = 10;
+  D = 100;
+  T = G + M + E + D;
+  ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T, weight_scale);
+  tt_int_op(ret, OP_EQ, 1);
+  tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=666 Wbe=0 "
+    "Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=3666 Wee=10000 Weg=3666 Wem=10000 "
+    "Wgb=10000 Wgd=5668 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=666 Wme=0 Wmg=0 "
+    "Wmm=10000\n");
+  smartlist_clear(chunks);
+
+  /* case 2b3 */
+  /* XXX I can't get a combination of values that hits this case without error, so
+   * this just tests that it fails. See #20285 */
+  /* (E < T/3 && G < T/3) && (E+D>=G || G+D>=E) && (M > T/3) */
+  M = 80;
+  E = 30;
+  G = 30;
+  D = 30;
+  T = G + M + E + D;
+  ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T, weight_scale);
+  tt_int_op(ret, OP_EQ, 0);
+  smartlist_clear(chunks);
+
+  /* case 3a G scarce */
+  M = 10;
+  E = 30;
+  G = 10;
+  D = 5;
+  T = G + M + E + D;
+  ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T, weight_scale);
+  tt_int_op(ret, OP_EQ, 1);
+  tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=0 Wbe=3333 "
+    "Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=0 Wee=6667 Weg=0 Wem=6667 "
+    "Wgb=10000 Wgd=10000 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=0 Wme=3333 Wmg=0 "
+    "Wmm=10000\n");
+  smartlist_clear(chunks);
+
+  /* case 3a E scarce */
+  M = 10;
+  E = 10;
+  G = 30;
+  D = 5;
+  T = G + M + E + D;
+  ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T, weight_scale);
+  tt_int_op(ret, OP_EQ, 1);
+  tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=0 Wbe=0 "
+    "Wbg=3333 Wbm=10000 Wdb=10000 Web=10000 Wed=10000 Wee=10000 Weg=10000 "
+    "Wem=10000 Wgb=10000 Wgd=0 Wgg=6667 Wgm=6667 Wmb=10000 Wmd=0 Wme=0 "
+    "Wmg=3333 Wmm=10000\n");
+  smartlist_clear(chunks);
+
+  /* case 3bg */
+  M = 10;
+  E = 30;
+  G = 10;
+  D = 10;
+  T = G + M + E + D;
+  ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T, weight_scale);
+  tt_int_op(ret, OP_EQ, 1);
+  tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=0 Wbe=3334 "
+    "Wbg=0 Wbm=10000 Wdb=10000 Web=10000 Wed=0 Wee=6666 Weg=0 Wem=6666 "
+    "Wgb=10000 Wgd=10000 Wgg=10000 Wgm=10000 Wmb=10000 Wmd=0 Wme=3334 Wmg=0 "
+    "Wmm=10000\n");
+  smartlist_clear(chunks);
+
+  /* case 3be */
+  M = 10;
+  E = 10;
+  G = 30;
+  D = 10;
+  T = G + M + E + D;
+  ret = networkstatus_compute_bw_weights_v10(chunks, G, M, E, D, T, weight_scale);
+  tt_int_op(ret, OP_EQ, 1);
+  tt_str_op(smartlist_get(chunks, 0), OP_EQ, "bandwidth-weights Wbd=0 Wbe=0 "
+    "Wbg=3334 Wbm=10000 Wdb=10000 Web=10000 Wed=10000 Wee=10000 Weg=10000 "
+    "Wem=10000 Wgb=10000 Wgd=0 Wgg=6666 Wgm=6666 Wmb=10000 Wmd=0 Wme=0 "
+    "Wmg=3334 Wmm=10000\n");
+  smartlist_clear(chunks);
+ done:
+  return;
+}
+
 static authority_cert_t *mock_cert;
 
 static authority_cert_t *
@@ -5555,6 +5712,7 @@ struct testcase_t dir_tests[] = {
   DIR_ARG(find_dl_schedule, TT_FORK, "cf"),
   DIR_ARG(find_dl_schedule, TT_FORK, "ca"),
   DIR(assumed_flags, 0),
+  DIR(networkstatus_compute_bw_weights_v10, 0),
   END_OF_TESTCASES
 };
 
