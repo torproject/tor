@@ -3232,14 +3232,22 @@ connection_exit_connect(edge_connection_t *edge_conn)
   uint16_t port;
   connection_t *conn = TO_CONN(edge_conn);
   int socket_error = 0, result;
+  const char *why_failed_exit_policy = NULL;
 
-  if ( (!connection_edge_is_rendezvous_stream(edge_conn) &&
-        router_compare_to_my_exit_policy(&edge_conn->base_.addr,
-                                         edge_conn->base_.port)) ||
-       (tor_addr_family(&conn->addr) == AF_INET6 &&
-        ! get_options()->IPv6Exit)) {
-    log_info(LD_EXIT,"%s:%d failed exit policy. Closing.",
-             escaped_safe_str_client(conn->address), conn->port);
+  if (! connection_edge_is_rendezvous_stream(edge_conn)) {
+    /* only apply exit policy to non-rendezvous connections. */
+    if (router_compare_to_my_exit_policy(&edge_conn->base_.addr,
+                                         edge_conn->base_.port)) {
+      why_failed_exit_policy = "";
+    } else if (tor_addr_family(&conn->addr) == AF_INET6 &&
+             ! get_options()->IPv6Exit) {
+      why_failed_exit_policy = " (IPv6 address without IPv6Exit configured)";
+    }
+  }
+  if (why_failed_exit_policy) {
+    log_info(LD_EXIT,"%s:%d failed exit policy%s. Closing.",
+             escaped_safe_str_client(conn->address), conn->port,
+             why_failed_exit_policy);
     connection_edge_end(edge_conn, END_STREAM_REASON_EXITPOLICY);
     circuit_detach_stream(circuit_get_by_edge_conn(edge_conn), edge_conn);
     connection_free(conn);
