@@ -1,0 +1,4 @@
+  o Required libraries:
+    - When building with OpenSSL, Tor now requires version 1.0.1 or later.
+      OpenSSL 1.0.0 and earlier are no longer supported by the openssl team,
+      and should not be used. Closes ticket 20303.
