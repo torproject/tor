@@ -1,0 +1,4 @@
+  o Minor bugfixes (compilation, OpenBSD):
+    - Detect Libevent2 functions correctly on systems that provide
+      libevent2, but where libevent1 is linked with -levent. Fixes bug
+      19904; bugfix on 0.2.2.24-alpha. Patch from Rubiate.

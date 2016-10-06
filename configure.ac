@@ -490,20 +490,16 @@ void *event_init(void);],
 event_init();
 ], [--with-libevent-dir], [/opt/libevent])
 
-dnl Now check for particular libevent functions.
+dnl Determine the incantation needed to link libevent.
 save_LIBS="$LIBS"
 save_LDFLAGS="$LDFLAGS"
 save_CPPFLAGS="$CPPFLAGS"
-LIBS="-levent $STATIC_LIBEVENT_FLAGS $TOR_LIB_WS32 $LIBS"
-LDFLAGS="$TOR_LDFLAGS_libevent $LDFLAGS"
-CPPFLAGS="$TOR_CPPFLAGS_libevent $CPPFLAGS"
-AC_CHECK_FUNCS([evutil_secure_rng_set_urandom_device_file \
-                evutil_secure_rng_add_bytes \
-])
-
-AC_CHECK_HEADERS(event2/event.h event2/dns.h event2/bufferevent_ssl.h)
 
 LIBS="$STATIC_LIBEVENT_FLAGS $TOR_LIB_WS32 $save_LIBS"
+LDFLAGS="$TOR_LDFLAGS_libevent $LDFLAGS"
+CPPFLAGS="$TOR_CPPFLAGS_libevent $CPPFLAGS"
+
+AC_CHECK_HEADERS(event2/event.h event2/dns.h event2/bufferevent_ssl.h)
 
 if test "$enable_static_libevent" = "yes"; then
    if test "$tor_cv_library_libevent_dir" = "(system)"; then
@@ -526,6 +522,11 @@ else
        AC_MSG_ERROR("libevent2 is required but the headers could not be found")
      fi
 fi
+
+dnl Now check for particular libevent functions.
+AC_CHECK_FUNCS([evutil_secure_rng_set_urandom_device_file \
+                evutil_secure_rng_add_bytes \
+])
 
 LIBS="$save_LIBS"
 LDFLAGS="$save_LDFLAGS"
