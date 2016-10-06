@@ -901,7 +901,7 @@ networkstatus_compute_bw_weights_v10(smartlist_t *chunks, int64_t G,
   }
 
   /*
-   * Computed from cases in 3.4.3 of dir-spec.txt
+   * Computed from cases in 3.8.3 of dir-spec.txt
    *
    * 1. Neither are scarce
    * 2. Both Guard and Exit are scarce
