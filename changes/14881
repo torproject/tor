@@ -4,4 +4,4 @@
       small testing networks) and causing an error. Fixes bug 14881.
 
   o Minor features (unit tests):
-    - Add test for networkstatus_compute_bw_weights_v10
+    - Add tests for networkstatus_compute_bw_weights_v10
