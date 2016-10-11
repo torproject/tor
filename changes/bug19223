@@ -1,0 +1,4 @@
+  o Minor bugfixes (getpass):
+    - Defensively fix a non-triggerable heap corruption at do_getpass() tow
+      protect ourselves from mistakes in the future. Fixes bug #19223; bugfix
+      on 0.2.7.3-rc. Bug found by Guido Vranken, patch by nherring.
