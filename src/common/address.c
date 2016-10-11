@@ -1041,6 +1041,10 @@ tor_addr_copy_tight(tor_addr_t *dest, const tor_addr_t *src)
  * Different address families (IPv4 vs IPv6) are always considered unequal if
  * <b>how</b> is CMP_EXACT; otherwise, IPv6-mapped IPv4 addresses are
  * considered equivalent to their IPv4 equivalents.
+ *
+ * As a special case, all AF_UNIX addresses are always considered equal
+ * since tor_addr_t currently does not contain the information required to
+ * make the comparison.
  */
 int
 tor_addr_compare(const tor_addr_t *addr1, const tor_addr_t *addr2,
@@ -1114,6 +1118,18 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
           return 0;
         }
       }
+      case AF_UNIX:
+        /* HACKHACKHACKHACKHACK:
+         * tor_addr_t doesn't contain a copy of sun_path, so it's not
+         * possible to comapre this at all.
+         *
+         * Since the only time we currently actually should be comparing
+         * 2 AF_UNIX addresses is when dealing with ISO_CLIENTADDR (which
+         * is diesabled for AF_UNIX SocksPorts anyway), this just returns 0.
+         *
+         * See: #20261.
+         */
+        return 0;
       default:
         /* LCOV_EXCL_START */
         tor_fragile_assert();

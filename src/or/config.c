@@ -6838,6 +6838,13 @@ parse_port_config(smartlist_t *out,
       goto err;
     }
 
+    if (unix_socket_path && (isolation & ISO_CLIENTADDR)) {
+      /* `IsolateClientAddr` is nonsensical in the context of AF_LOCAL.
+       * just silently remove the isolation flag.
+       */
+      isolation &= ~ISO_CLIENTADDR;
+    }
+
     if (out && port) {
       size_t namelen = unix_socket_path ? strlen(unix_socket_path) : 0;
       port_cfg_t *cfg = port_cfg_new(namelen);

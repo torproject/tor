@@ -1,0 +1,4 @@
+  o Minor bugfixes (client, unix domain sockets):
+    - Disable IsolateClientAddr when using AF_UNIX backed SocksPorts
+      as the client address is meaningless. Fixes bug 20261; bugfix on
+      0.2.6.3-alpha.
