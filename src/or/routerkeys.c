@@ -49,7 +49,7 @@ do_getpass(const char *prompt, char *buf, size_t buflen,
     if (p2len < sizeof(msg))
       p2len = sizeof(msg);
     prompt2 = tor_malloc(p2len);
-    memset(prompt2, ' ', p2len - sizeof(msg));
+    memset(prompt2, ' ', p2len);
     memcpy(prompt2 + p2len - sizeof(msg), msg, sizeof(msg));
 
     buf2 = tor_malloc_zero(buflen);
