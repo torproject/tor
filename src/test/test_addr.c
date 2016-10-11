@@ -85,8 +85,8 @@ test_addr_basic(void *arg)
     char *, "%s",                                                \
     { char *cp;                                                  \
       cp = print_ = tor_malloc(64);                              \
-      for (int ii_=0;i<16;++i) {                                 \
-        tor_snprintf(cp, 3,"%02x", (unsigned)value_->s6_addr[i]);\
+      for (int ii_=0;ii_<16;++ii_) {                             \
+        tor_snprintf(cp, 3,"%02x", (unsigned)value_->s6_addr[ii_]);     \
         cp += 2;                                                 \
         if (ii_ != 15) *cp++ = ':';                              \
       }                                                          \
