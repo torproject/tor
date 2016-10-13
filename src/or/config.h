@@ -76,6 +76,8 @@ MOCK_DECL(char *,
 #define get_datadir_fname_suffix(sub1, suffix) \
   get_datadir_fname2_suffix((sub1), NULL, (suffix))
 
+inline int is_default_dir_authorities(const or_options_t *options);
+
 int check_or_create_data_subdir(const char *subdir);
 int write_to_data_subdir(const char* subdir, const char* fname,
                          const char* str, const char* descr);
@@ -146,6 +148,14 @@ bridge_line_t *parse_bridge_line(const char *line);
 smartlist_t *get_options_from_transport_options_line(const char *line,
                                                      const char *transport);
 smartlist_t *get_options_for_server_transport(const char *transport);
+
+/* Check if we are using default authorities */
+inline int
+is_default_dir_authorities(const or_options_t *options)
+{
+  return (!options->DirAuthorities &&
+          !options->AlternateDirAuthority) ? 1 : 0;
+}
 
 #ifdef CONFIG_PRIVATE
 

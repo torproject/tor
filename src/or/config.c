@@ -2471,7 +2471,7 @@ resolve_my_address(int warn_severity, const or_options_t *options,
   addr_string = tor_dup_ip(addr);
   if (tor_addr_is_internal(&myaddr, 0)) {
     /* make sure we're ok with publishing an internal IP */
-    if (!options->DirAuthorities && !options->AlternateDirAuthority) {
+    if (is_default_dir_authorities(options)) {
       /* if they are using the default authorities, disallow internal IPs
        * always. */
       log_fn(warn_severity, LD_CONFIG,
