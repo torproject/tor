@@ -5128,43 +5128,37 @@ test_util_socket(void *arg)
     tor_close_socket__real(fd4);
 }
 
+#ifdef __FreeBSD__
 static int
-is_there_a_localhost(void)
+is_there_a_localhost(int family)
 {
   tor_socket_t s;
-  s = tor_open_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  s = tor_open_socket(family, SOCK_STREAM, IPPROTO_TCP);
   tor_assert(SOCKET_OK(s));
-
-  struct sockaddr_in s_in;
-  memset(&s_in, 0, sizeof(s_in));
-  s_in.sin_family = AF_INET;
-  s_in.sin_addr.s_addr = htonl(0x7f000001);
-  s_in.sin_port = 0;
 
   int result = 0;
-  if (bind(s, (void*)&s_in, sizeof(s_in)) == 0) {
-    result = 1;
-  }
-  tor_close_socket(s);
-  if (result)
-    return result;
+  if (family == AF_INET) {
+    struct sockaddr_in s_in;
+    memset(&s_in, 0, sizeof(s_in));
+    s_in.sin_family = AF_INET;
+    s_in.sin_addr.s_addr = htonl(0x7f000001);
+    s_in.sin_port = 0;
 
-  s = tor_open_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  tor_assert(SOCKET_OK(s));
-
-  struct sockaddr_in6 sin6;
-  memset(&sin6, 0, sizeof(sin6));
-  sin6.sin6_family = AF_INET6;
-  sin6.sin6_addr.s6_addr[15] = 1;
-  sin6.sin6_port = 0;
-
-  if (bind(s, (void*)&sin6, sizeof(sin6)) == 0) {
-    result = 1;
+    if (bind(s, (void*)&s_in, sizeof(s_in)) == 0) {
+      result = 1;
+    }
+  } else if (family == AF_INET6) {
+    struct sockaddr_in6 sin6;
+    memset(&sin6, 0, sizeof(sin6));
+    sin6.sin6_family = AF_INET6;
+    sin6.sin6_addr.s6_addr[15] = 1;
+    sin6.sin6_port = 0;
   }
   tor_close_socket(s);
 
   return result;
 }
+#endif
 
 /* Test for socketpair and ersatz_socketpair().  We test them both, since
  * the latter is a tolerably good way to exersize tor_accept_socket(). */
@@ -5180,15 +5174,18 @@ test_util_socketpair(void *arg)
   int socketpair_result = 0;
 
   socketpair_result = tor_socketpair_fn(family, SOCK_STREAM, 0, fds);
-  /* If there is no 127.0.0.1 or ::1, tor_ersatz_socketpair will and must fail.
+
+#ifdef __FreeBSD__
+  /* If there is no 127.0.0.1, tor_ersatz_socketpair will and must fail.
    * Otherwise, we risk exposing a socketpair on a routable IP address. (Some
    * BSD jails use a routable address for localhost. Fortunately, they have
    * the real AF_UNIX socketpair.) */
-  if (ersatz && socketpair_result < 0 && !is_there_a_localhost()) {
+  if (ersatz && socketpair_result < 0 && !is_there_a_localhost(AF_INET)) {
     /* In my testing, an IPv6-only FreeBSD jail without ::1 returned EINVAL.
      * Assume we're on a machine without 127.0.0.1 or ::1 and give up now. */
     tt_skip();
   }
+#endif
   tt_int_op(0, OP_EQ, socketpair_result);
 
   tt_assert(SOCKET_OK(fds[0]));
