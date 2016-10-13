@@ -2269,7 +2269,7 @@ is_node_used_as_guard_for_guard_selection(guard_selection_t *gs,
   tor_assert(node != NULL);
 
   SMARTLIST_FOREACH_BEGIN(gs->chosen_entry_guards, entry_guard_t *, e) {
-    if (tor_memcmp(e->identity, node->identity, DIGEST_LEN) == 0) {
+    if (tor_memeq(e->identity, node->identity, DIGEST_LEN)) {
       res = 1;
       break;
     }
