@@ -77,8 +77,8 @@ struct guard_selection_s {
   int dirty;
 
   /**
-   * A list of our chosen entry guards; this preserves the pre-Prop271
-   * behavior.
+   * A list of our chosen entry guards, as entry_guard_t structures; this
+   * preserves the pre-Prop271 behavior.
    */
   smartlist_t *chosen_entry_guards;
 
