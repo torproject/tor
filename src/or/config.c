@@ -2312,6 +2312,14 @@ reset_last_resolved_addr(void)
   last_resolved_addr = 0;
 }
 
+/* Return true if <b>options</b> is using the default authorities, and false
+ * if any authority-related option has been overridden. */
+int
+using_default_dir_authorities(const or_options_t *options)
+{
+  return (!options->DirAuthorities && !options->AlternateDirAuthority);
+}
+
 /**
  * Attempt getting our non-local (as judged by tor_addr_is_internal()
  * function) IP address using following techniques, listed in
@@ -2471,7 +2479,7 @@ resolve_my_address(int warn_severity, const or_options_t *options,
   addr_string = tor_dup_ip(addr);
   if (tor_addr_is_internal(&myaddr, 0)) {
     /* make sure we're ok with publishing an internal IP */
-    if (is_default_dir_authorities(options)) {
+    if (using_default_dir_authorities(options)) {
       /* if they are using the default authorities, disallow internal IPs
        * always. */
       log_fn(warn_severity, LD_CONFIG,

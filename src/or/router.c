@@ -2093,7 +2093,7 @@ router_build_fresh_descriptor(routerinfo_t **r, extrainfo_t **e)
           tor_addr_family(&p->addr) == AF_INET6) {
         /* Like IPv4, if the relay is configured using the default
          * authorities, disallow internal IPs. Otherwise, allow them. */
-        const int default_auth = is_default_dir_authorities(options);
+        const int default_auth = using_default_dir_authorities(options);
         if (! tor_addr_is_internal(&p->addr, 0) || ! default_auth) {
           ipv6_orport = p;
           break;
