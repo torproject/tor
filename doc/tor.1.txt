@@ -323,6 +323,8 @@ GENERAL OPTIONS
     any process on the local host to control it. (Setting both authentication
     methods means either method is sufficient to authenticate to Tor.) This
     option is required for many Tor controllers; most use the value of 9051.
+    If a unix domain socket is used, you may quote the path using standard
+    C escape sequences.
     Set it to "auto" to have Tor pick a port for you. (Default: 0) +
  +
     Recognized flags are...
@@ -1032,7 +1034,9 @@ The following options are useful only for clients (that is, if
     applications. Set this to 0 if you don't want to allow application
     connections via SOCKS. Set it to "auto" to have Tor pick a port for
     you. This directive can be specified multiple times to bind
-    to multiple addresses/ports. (Default: 9050) +
+    to multiple addresses/ports. If a unix domain socket is used, you may
+    quote the path using standard C escape sequences.
+    (Default: 9050) +
  +
         NOTE: Although this option allows you to specify an IP address
         other than localhost, you should do so only with extreme caution.
@@ -2343,7 +2347,8 @@ The following options are used to configure a hidden service.
     recent HiddenServiceDir. By default, this option maps the virtual port to
     the same port on 127.0.0.1 over TCP. You may override the target port,
     address, or both by specifying a target of addr, port, addr:port, or
-    **unix:**__path__.  (You can specify an IPv6 target as [addr]:port.)
+    **unix:**__path__.  (You can specify an IPv6 target as [addr]:port. Unix
+    paths may be quoted, and may use standard C escapes.)
     You may also have multiple lines with  the same VIRTPORT: when a user
     connects to that VIRTPORT, one of the TARGETs from those lines will be
     chosen at random.

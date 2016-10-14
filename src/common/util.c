@@ -2906,7 +2906,7 @@ read_file_to_str, (const char *filename, int flags, struct stat *stat_out))
  * provided), and return a pointer to the position in <b>s</b> immediately
  * after the string.  On failure, return NULL.
  */
-static const char *
+const char *
 unescape_string(const char *s, char **result, size_t *size_out)
 {
   const char *cp;

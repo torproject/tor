@@ -1,0 +1,6 @@
+  o Minor features (unix domain sockets):
+    - When configuring a unix domain socket for a SocksPort,
+      ControlPort, or Hidden service, you can now wrap the address
+      in quotes, using C-style escapes inside the quotes. This
+      allows unix domain socket paths to contain spaces.
+

@@ -137,6 +137,8 @@ test_rend_service_parse_port_config(void *arg)
   cfg = rend_service_parse_port_config("80,[2001:db8::1]:8080", sep, &err_msg);
   tt_assert(cfg);
   tt_assert(!err_msg);
+  rend_service_port_config_free(cfg);
+  cfg = NULL;
 
   /* XXX: Someone should add tests for AF_UNIX targets if supported. */
 
@@ -151,6 +153,53 @@ test_rend_service_parse_port_config(void *arg)
   cfg = rend_service_parse_port_config("90001", sep, &err_msg);
   tt_assert(!cfg);
   tt_assert(err_msg);
+  tor_free(err_msg);
+
+  /* unix port */
+  cfg = NULL;
+
+  /* quoted unix port */
+  tor_free(err_msg);
+  cfg = rend_service_parse_port_config("100 unix:\"/tmp/foo bar\"",
+                                       " ", &err_msg);
+  tt_assert(cfg);
+  tt_assert(!err_msg);
+  rend_service_port_config_free(cfg);
+  cfg = NULL;
+
+  /* quoted unix port */
+  tor_free(err_msg);
+  cfg = rend_service_parse_port_config("100 unix:\"/tmp/foo bar\"",
+                                       " ", &err_msg);
+  tt_assert(cfg);
+  tt_assert(!err_msg);
+  rend_service_port_config_free(cfg);
+  cfg = NULL;
+
+  /* quoted unix port, missing end quote */
+  cfg = rend_service_parse_port_config("100 unix:\"/tmp/foo bar",
+                                       " ", &err_msg);
+  tt_assert(!cfg);
+  tt_str_op(err_msg, OP_EQ, "Couldn't process address <unix:\"/tmp/foo bar> "
+            "from hidden service configuration");
+  tor_free(err_msg);
+
+  /* bogus IP address */
+  cfg = rend_service_parse_port_config("100 1.2.3.4.5:9000",
+                                       " ", &err_msg);
+  tt_assert(!cfg);
+  tt_str_op(err_msg, OP_EQ, "Unparseable address in hidden service port "
+            "configuration.");
+  tor_free(err_msg);
+
+  /* bogus port port */
+  cfg = rend_service_parse_port_config("100 99999",
+                                       " ", &err_msg);
+  tt_assert(!cfg);
+  tt_str_op(err_msg, OP_EQ, "Unparseable or out-of-range port \"99999\" "
+            "in hidden service port configuration.");
+  tor_free(err_msg);
+
 
  done:
   rend_service_port_config_free(cfg);
