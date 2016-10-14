@@ -1671,7 +1671,6 @@ test_util_config_line_crlf(void *arg)
   tor_free(k); tor_free(v);
 }
 
-
 #ifndef _WIN32
 static void
 test_util_expand_filename(void *arg)

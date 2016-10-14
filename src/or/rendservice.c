@@ -382,8 +382,8 @@ rend_service_parse_port_config(const char *string, const char *sep,
     ret = port_cfg_line_extract_addrport(addrport_element, &addrport,
                                          &is_unix, &rest);
     if (ret < 0) {
-      tor_asprintf(&err_msg, "Couldn't process address <%s> from hidden service "
-                   "configuration", addrport_element);
+      tor_asprintf(&err_msg, "Couldn't process address <%s> from hidden "
+                   "service configuration", addrport_element);
       goto err;
     }
     if (is_unix) {

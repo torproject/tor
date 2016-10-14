@@ -200,7 +200,6 @@ test_rend_service_parse_port_config(void *arg)
             "in hidden service port configuration.");
   tor_free(err_msg);
 
-
  done:
   rend_service_port_config_free(cfg);
   tor_free(err_msg);

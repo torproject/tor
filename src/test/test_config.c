@@ -3848,7 +3848,6 @@ test_config_port_cfg_line_extract_addrport(void *arg)
   tor_free(a);
 }
 
-
 static config_line_t *
 mock_config_line(const char *key, const char *val)
 {

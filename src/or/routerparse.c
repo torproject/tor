@@ -2910,7 +2910,6 @@ routerstatus_parse_entry_from_string(memarea_t *area,
     rs->is_flagged_running = 1; /* Starting with consensus method 4. */
     if (consensus_method >= MIN_METHOD_FOR_EXCLUDING_INVALID_NODES)
       rs->is_valid = 1;
-
   }
   int found_protocol_list = 0;
   if ((tok = find_opt_by_keyword(tokens, K_PROTO))) {
