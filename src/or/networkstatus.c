@@ -43,14 +43,6 @@ static strmap_t *named_server_map = NULL;
  * as unnamed for some server in the consensus. */
 static strmap_t *unnamed_server_map = NULL;
 
-/** Most recently received and validated v3 consensus network status,
- * of whichever type we are using for our own circuits.  This will be the same
- * as one of current_ns_consensus or current_md_consensus.
- */
-#define current_consensus                                       \
-  (we_use_microdescriptors_for_circuits(get_options()) ?        \
-   current_md_consensus : current_ns_consensus)
-
 /** Most recently received and validated v3 "ns"-flavored consensus network
  * status. */
 static networkstatus_t *current_ns_consensus = NULL;
@@ -134,10 +126,8 @@ static int networkstatus_check_required_protocols(const networkstatus_t *ns,
 void
 networkstatus_reset_warnings(void)
 {
-  if (current_consensus) {
-    SMARTLIST_FOREACH(nodelist_get_list(), node_t *, node,
-                      node->name_lookup_warned = 0);
-  }
+  SMARTLIST_FOREACH(nodelist_get_list(), node_t *, node,
+                    node->name_lookup_warned = 0);
 
   have_warned_about_old_version = 0;
   have_warned_about_new_version = 0;
@@ -210,7 +200,7 @@ router_reload_consensus_networkstatus(void)
     tor_free(filename);
   }
 
-  if (!current_consensus) {
+  if (!networkstatus_get_latest_consensus()) {
     if (!named_server_map)
       named_server_map = strmap_new();
     if (!unnamed_server_map)
@@ -657,7 +647,7 @@ router_get_mutable_consensus_status_by_descriptor_digest,(
                                                  const char *digest))
 {
   if (!consensus)
-    consensus = current_consensus;
+    consensus = networkstatus_get_latest_consensus();
   if (!consensus)
     return NULL;
   if (!consensus->desc_digest_map) {
@@ -738,9 +728,11 @@ router_get_dl_status_by_descriptor_digest,(const char *d))
 routerstatus_t *
 router_get_mutable_consensus_status_by_id(const char *digest)
 {
-  if (!current_consensus)
+  const networkstatus_t *ns = networkstatus_get_latest_consensus();
+  if (!ns)
     return NULL;
-  return smartlist_bsearch(current_consensus->routerstatus_list, digest,
+  smartlist_t *rslist = ns->routerstatus_list;
+  return smartlist_bsearch(rslist, digest,
                            compare_digest_to_routerstatus_entry);
 }
 
@@ -1290,7 +1282,10 @@ networkstatus_get_dl_status_by_flavor_running,(consensus_flavor_t flavor))
 MOCK_IMPL(networkstatus_t *,
 networkstatus_get_latest_consensus,(void))
 {
-  return current_consensus;
+  if (we_use_microdescriptors_for_circuits(get_options()))
+    return current_md_consensus;
+  else
+    return current_ns_consensus;
 }
 
 /** Return the latest consensus we have whose flavor matches <b>f</b>, or NULL
@@ -1313,10 +1308,10 @@ networkstatus_get_latest_consensus_by_flavor,(consensus_flavor_t f))
 MOCK_IMPL(networkstatus_t *,
 networkstatus_get_live_consensus,(time_t now))
 {
-  if (current_consensus &&
-      current_consensus->valid_after <= now &&
-      now <= current_consensus->valid_until)
-    return current_consensus;
+  if (networkstatus_get_latest_consensus() &&
+      networkstatus_get_latest_consensus()->valid_after <= now &&
+      now <= networkstatus_get_latest_consensus()->valid_until)
+    return networkstatus_get_latest_consensus();
   else
     return NULL;
 }
@@ -1822,13 +1817,14 @@ networkstatus_set_current_consensus(const char *consensus,
   const int is_usable_flavor = flav == usable_consensus_flavor();
 
   if (is_usable_flavor) {
-    notify_control_networkstatus_changed(current_consensus, c);
+    notify_control_networkstatus_changed(
+                         networkstatus_get_latest_consensus(), c);
   }
   if (flav == FLAV_NS) {
     if (current_ns_consensus) {
       networkstatus_copy_old_consensus_info(c, current_ns_consensus);
       networkstatus_vote_free(current_ns_consensus);
-      /* Defensive programming : we should set current_consensus very soon,
+      /* Defensive programming : we should set current_ns_consensus very soon
        * but we're about to call some stuff in the meantime, and leaving this
        * dangling pointer around has proven to be trouble. */
       current_ns_consensus = NULL;
@@ -1876,7 +1872,7 @@ networkstatus_set_current_consensus(const char *consensus,
     /* Update ewma and adjust policy if needed; first cache the old value */
     old_ewma_enabled = cell_ewma_enabled();
     /* Change the cell EWMA settings */
-    cell_ewma_set_scale_factor(options, networkstatus_get_latest_consensus());
+    cell_ewma_set_scale_factor(options, c);
     /* If we just enabled ewma, set the cmux policy on all active channels */
     if (cell_ewma_enabled() && !old_ewma_enabled) {
       channel_set_cmux_policy_everywhere(&ewma_policy);
@@ -1889,8 +1885,8 @@ networkstatus_set_current_consensus(const char *consensus,
      * current consensus really alter our view of any OR's rate limits? */
     connection_or_update_token_buckets(get_connection_array(), options);
 
-    circuit_build_times_new_consensus_params(get_circuit_build_times_mutable(),
-        current_consensus);
+    circuit_build_times_new_consensus_params(
+                               get_circuit_build_times_mutable(), c);
   }
 
   /* Reset the failure count only if this consensus is actually valid. */
@@ -2040,15 +2036,16 @@ routers_update_all_from_networkstatus(time_t now, int dir_version)
 static void
 routerstatus_list_update_named_server_map(void)
 {
-  if (!current_consensus)
+  networkstatus_t *ns = networkstatus_get_latest_consensus();
+  if (!ns)
     return;
 
   strmap_free(named_server_map, tor_free_);
   named_server_map = strmap_new();
   strmap_free(unnamed_server_map, NULL);
   unnamed_server_map = strmap_new();
-  SMARTLIST_FOREACH_BEGIN(current_consensus->routerstatus_list,
-                          const routerstatus_t *, rs) {
+  smartlist_t *rslist = ns->routerstatus_list;
+  SMARTLIST_FOREACH_BEGIN(rslist, const routerstatus_t *, rs) {
       if (rs->is_named) {
         strmap_set_lc(named_server_map, rs->nickname,
                       tor_memdup(rs->identity_digest, DIGEST_LEN));
@@ -2068,7 +2065,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
 {
   const or_options_t *options = get_options();
   int authdir = authdir_mode_v3(options);
-  networkstatus_t *ns = current_consensus;
+  networkstatus_t *ns = networkstatus_get_latest_consensus();
   if (!ns || !smartlist_len(ns->routerstatus_list))
     return;
 
@@ -2384,14 +2381,14 @@ getinfo_helper_networkstatus(control_connection_t *conn,
   const routerstatus_t *status;
   (void) conn;
 
-  if (!current_consensus) {
+  if (!networkstatus_get_latest_consensus()) {
     *answer = tor_strdup("");
     return 0;
   }
 
   if (!strcmp(question, "ns/all")) {
     smartlist_t *statuses = smartlist_new();
-    SMARTLIST_FOREACH(current_consensus->routerstatus_list,
+    SMARTLIST_FOREACH(networkstatus_get_latest_consensus()->routerstatus_list,
                       const routerstatus_t *, rs,
       {
         smartlist_add(statuses, networkstatus_getinfo_helper_single(rs));
