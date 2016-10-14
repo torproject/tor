@@ -3218,6 +3218,24 @@ connection_exit_begin_resolve(cell_t *cell, or_circuit_t *circ)
   return 0;
 }
 
+/** Helper: Return true and set *<b>why_rejected</b> to an optional clarifying
+ * message message iff we do not allow connections to <b>addr</b>:<b>port</b>.
+ */
+static int
+my_exit_policy_rejects(const tor_addr_t *addr,
+                       uint16_t port,
+                       const char **why_rejected)
+{
+  if (router_compare_to_my_exit_policy(addr, port)) {
+    *why_rejected = "";
+    return 1;
+  } else if (tor_addr_family(addr) == AF_INET6 && !get_options()->IPv6Exit) {
+    *why_rejected = " (IPv6 address without IPv6Exit configured)";
+    return 1;
+  }
+  return 0;
+}
+
 /** Connect to conn's specified addr and port. If it worked, conn
  * has now been added to the connection_array.
  *
@@ -3232,14 +3250,18 @@ connection_exit_connect(edge_connection_t *edge_conn)
   uint16_t port;
   connection_t *conn = TO_CONN(edge_conn);
   int socket_error = 0, result;
+  const char *why_failed_exit_policy = NULL;
 
-  if ( (!connection_edge_is_rendezvous_stream(edge_conn) &&
-        router_compare_to_my_exit_policy(&edge_conn->base_.addr,
-                                         edge_conn->base_.port)) ||
-       (tor_addr_family(&conn->addr) == AF_INET6 &&
-        ! get_options()->IPv6Exit)) {
-    log_info(LD_EXIT,"%s:%d failed exit policy. Closing.",
-             escaped_safe_str_client(conn->address), conn->port);
+  /* Apply exit policy to non-rendezvous connections. */
+  if (! connection_edge_is_rendezvous_stream(edge_conn) &&
+      my_exit_policy_rejects(&edge_conn->base_.addr,
+                             edge_conn->base_.port,
+                             &why_failed_exit_policy)) {
+    if (BUG(!why_failed_exit_policy))
+      why_failed_exit_policy = "";
+    log_info(LD_EXIT,"%s:%d failed exit policy%s. Closing.",
+             escaped_safe_str_client(conn->address), conn->port,
+             why_failed_exit_policy);
     connection_edge_end(edge_conn, END_STREAM_REASON_EXITPOLICY);
     circuit_detach_stream(circuit_get_by_edge_conn(edge_conn), edge_conn);
     connection_free(conn);
