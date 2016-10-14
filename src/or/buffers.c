@@ -75,12 +75,33 @@ typedef struct chunk_t {
 
 #define CHUNK_HEADER_LEN STRUCT_OFFSET(chunk_t, mem[0])
 
+/* We leave this many NUL bytes at the end of the buffer. */
+#define SENTINEL_LEN 4
+
+/* Header size plus NUL bytes at the end */
+#define CHUNK_OVERHEAD (CHUNK_HEADER_LEN + SENTINEL_LEN)
+
 /** Return the number of bytes needed to allocate a chunk to hold
  * <b>memlen</b> bytes. */
-#define CHUNK_ALLOC_SIZE(memlen) (CHUNK_HEADER_LEN + (memlen))
+#define CHUNK_ALLOC_SIZE(memlen) (CHUNK_OVERHEAD + (memlen))
 /** Return the number of usable bytes in a chunk allocated with
  * malloc(<b>memlen</b>). */
-#define CHUNK_SIZE_WITH_ALLOC(memlen) ((memlen) - CHUNK_HEADER_LEN)
+#define CHUNK_SIZE_WITH_ALLOC(memlen) ((memlen) - CHUNK_OVERHEAD)
+
+#define DEBUG_SENTINEL
+
+#ifdef DEBUG_SENTINEL
+#define DBG_S(s) s
+#else
+#define DBG_S(s) (void)0
+#endif
+
+#define CHUNK_SET_SENTINEL(chunk, alloclen) do {                        \
+    uint8_t *a = (uint8_t*) &(chunk)->mem[(chunk)->memlen];             \
+    DBG_S(uint8_t *b = &((uint8_t*)(chunk))[(alloclen)-SENTINEL_LEN]);  \
+    DBG_S(tor_assert(a == b));                                          \
+    memset(a,0,SENTINEL_LEN);                                           \
+  } while (0)
 
 /** Return the next character in <b>chunk</b> onto which data can be appended.
  * If the chunk is full, this might be off the end of chunk->mem. */
@@ -204,6 +225,7 @@ chunk_new_with_alloc_size(size_t alloc)
   ch->datalen = 0;
   ch->memlen = CHUNK_SIZE_WITH_ALLOC(alloc);
   ch->data = &ch->mem[0];
+  CHUNK_SET_SENTINEL(ch, alloc);
   return ch;
 }
 #else
@@ -221,6 +243,7 @@ chunk_new_with_alloc_size(size_t alloc)
   ch->datalen = 0;
   ch->memlen = CHUNK_SIZE_WITH_ALLOC(alloc);
   ch->data = &ch->mem[0];
+  CHUNK_SET_SENTINEL(ch, alloc);
   return ch;
 }
 #endif
@@ -231,11 +254,13 @@ static INLINE chunk_t *
 chunk_grow(chunk_t *chunk, size_t sz)
 {
   off_t offset;
+  const size_t new_alloc = CHUNK_ALLOC_SIZE(sz);
   tor_assert(sz > chunk->memlen);
   offset = chunk->data - chunk->mem;
-  chunk = tor_realloc(chunk, CHUNK_ALLOC_SIZE(sz));
+  chunk = tor_realloc(chunk, new_alloc);
   chunk->memlen = sz;
   chunk->data = chunk->mem + offset;
+  CHUNK_SET_SENTINEL(chunk, new_alloc);
   return chunk;
 }
 
