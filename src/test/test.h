@@ -185,6 +185,7 @@ extern struct testcase_t channeltls_tests[];
 extern struct testcase_t checkdir_tests[];
 extern struct testcase_t circuitlist_tests[];
 extern struct testcase_t circuitmux_tests[];
+extern struct testcase_t circuituse_tests[];
 extern struct testcase_t compat_libevent_tests[];
 extern struct testcase_t config_tests[];
 extern struct testcase_t connection_tests[];

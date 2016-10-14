@@ -1569,8 +1569,8 @@ router_have_minimum_dir_info(void)
  * this can cause router_have_consensus_path() to be set to
  * CONSENSUS_PATH_EXIT, even if there are no nodes with accept exit policies.
  */
-consensus_path_type_t
-router_have_consensus_path(void)
+MOCK_IMPL(consensus_path_type_t,
+router_have_consensus_path, (void))
 {
   return have_consensus_path;
 }

@@ -40,8 +40,9 @@ int onionskin_answer(or_circuit_t *circ,
                      const struct created_cell_t *created_cell,
                      const char *keys,
                      const uint8_t *rend_circ_nonce);
-int circuit_all_predicted_ports_handled(time_t now, int *need_uptime,
-                                        int *need_capacity);
+MOCK_DECL(int, circuit_all_predicted_ports_handled, (time_t now,
+                                                     int *need_uptime,
+                                                     int *need_capacity));
 
 int circuit_append_new_exit(origin_circuit_t *circ, extend_info_t *info);
 int circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *info);

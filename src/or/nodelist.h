@@ -118,7 +118,8 @@ typedef enum {
    * create exit and internal paths, circuits, streams, ... */
   CONSENSUS_PATH_EXIT = 1
 } consensus_path_type_t;
-consensus_path_type_t router_have_consensus_path(void);
+
+MOCK_DECL(consensus_path_type_t, router_have_consensus_path, (void));
 
 void router_dir_info_changed(void);
 const char *get_dir_info_status_string(void);

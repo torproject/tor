@@ -1190,6 +1190,7 @@ struct testgroup_t testgroups[] = {
   { "checkdir/", checkdir_tests },
   { "circuitlist/", circuitlist_tests },
   { "circuitmux/", circuitmux_tests },
+  { "circuituse/", circuituse_tests },
   { "compat/libevent/", compat_libevent_tests },
   { "config/", config_tests },
   { "connection/", connection_tests },
