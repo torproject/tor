@@ -1,0 +1,11 @@
+  o Major features (security fixes):
+
+    - Prevent a class of security bugs caused by treating the contents
+      of a buffer chunk as if they were a NUL-terminated string.  At
+      least one such bug seems to be present in all currently used
+      versions of Tor, and would allow an attacker to remotely crash
+      most Tor instances, especially those compiled with extra compiler
+      hardening. With this defense in place, such bugs can't crash Tor,
+      though we should still fix them as they occur. Closes ticket 20384
+      (TROVE-2016-10-001).
+
