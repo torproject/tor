@@ -98,6 +98,7 @@ static const node_t *choose_random_entry_impl(guard_selection_t *gs,
                                               int for_directory,
                                               dirinfo_type_t dirtype,
                                               int *n_options_out);
+static guard_selection_t * guard_selection_new(void);
 static int num_bridges_usable(void);
 
 /* Default number of entry guards in the case where the NumEntryGuards
@@ -108,6 +109,19 @@ static int num_bridges_usable(void);
 #define MIN_N_GUARDS 1
 #define MAX_N_GUARDS 10
 
+/** Allocate a new guard_selection_t */
+
+static guard_selection_t *
+guard_selection_new(void)
+{
+  guard_selection_t *gs;
+
+  gs = tor_malloc_zero(sizeof(*gs));
+  gs->chosen_entry_guards = smartlist_new();
+
+  return gs;
+}
+
 /** Get current default guard_selection_t, creating it if necessary */
 guard_selection_t *
 get_guard_selection_info(void)
@@ -117,7 +131,7 @@ get_guard_selection_info(void)
   }
 
   if (!curr_guard_context) {
-    curr_guard_context = tor_malloc_zero(sizeof(*curr_guard_context));
+    curr_guard_context = guard_selection_new();
     smartlist_add(guard_contexts, curr_guard_context);
   }
 
@@ -130,10 +144,7 @@ const smartlist_t *
 get_entry_guards_for_guard_selection(guard_selection_t *gs)
 {
   tor_assert(gs != NULL);
-
-  if (!(gs->chosen_entry_guards)) {
-    gs->chosen_entry_guards = smartlist_new();
-  }
+  tor_assert(gs->chosen_entry_guards != NULL);
 
   return gs->chosen_entry_guards;
 }
@@ -492,6 +503,7 @@ add_an_entry_guard(guard_selection_t *gs,
   entry_guard_t *entry;
 
   tor_assert(gs != NULL);
+  tor_assert(gs->chosen_entry_guards != NULL);
 
   if (chosen) {
     node = chosen;
@@ -558,10 +570,6 @@ add_an_entry_guard(guard_selection_t *gs,
   if (!for_discovery)
     entry->made_contact = 1;
 
-  if (gs->chosen_entry_guards == NULL) {
-    gs->chosen_entry_guards = smartlist_new();
-  }
-
   if (prepend)
     smartlist_insert(gs->chosen_entry_guards, 0, entry);
   else
@@ -608,9 +616,7 @@ pick_entry_guards(guard_selection_t *gs,
   const int num_needed = decide_num_guards(options, for_directory);
 
   tor_assert(gs != NULL);
-  if (gs->chosen_entry_guards == NULL) {
-    gs->chosen_entry_guards = smartlist_new();
-  }
+  tor_assert(gs->chosen_entry_guards != NULL);
 
   while (num_live_entry_guards_for_guard_selection(gs, for_directory)
          < num_needed) {
@@ -1297,12 +1303,10 @@ choose_random_entry_impl(guard_selection_t *gs,
   int retval = 0;
 
   tor_assert(gs != NULL);
+  tor_assert(gs->chosen_entry_guards != NULL);
 
   if (n_options_out)
     *n_options_out = 0;
-
-  if (!(gs->chosen_entry_guards))
-    gs->chosen_entry_guards = smartlist_new();
 
   if (gs->should_add_entry_nodes)
     entry_guards_set_from_config(gs, options);
@@ -1726,14 +1730,15 @@ entry_guards_update_state(or_state_t *state)
   config_line_t **next, *line;
   guard_selection_t *gs = get_guard_selection_info();
 
+  tor_assert(gs != NULL);
+  tor_assert(gs->chosen_entry_guards != NULL);
+
   if (!gs->dirty)
     return;
 
   config_free_lines(state->EntryGuards);
   next = &state->EntryGuards;
   *next = NULL;
-  if (!(gs->chosen_entry_guards))
-    gs->chosen_entry_guards = smartlist_new();
   SMARTLIST_FOREACH_BEGIN(gs->chosen_entry_guards, entry_guard_t *, e) {
       char dbuf[HEX_DIGEST_LEN+1];
       if (!e->made_contact)
@@ -1819,6 +1824,9 @@ getinfo_helper_entry_guards(control_connection_t *conn,
 {
   guard_selection_t *gs = get_guard_selection_info();
 
+  tor_assert(gs != NULL);
+  tor_assert(gs->chosen_entry_guards != NULL);
+
   (void) conn;
   (void) errmsg;
 
@@ -1827,8 +1835,7 @@ getinfo_helper_entry_guards(control_connection_t *conn,
     smartlist_t *sl = smartlist_new();
     char tbuf[ISO_TIME_LEN+1];
     char nbuf[MAX_VERBOSE_NICKNAME_LEN+1];
-    if (!(gs->chosen_entry_guards))
-      gs->chosen_entry_guards = smartlist_new();
+
     SMARTLIST_FOREACH_BEGIN(gs->chosen_entry_guards, entry_guard_t *, e) {
         const char *status = NULL;
         time_t when = 0;
@@ -2720,8 +2727,9 @@ entries_retry_helper(const or_options_t *options, int act)
   int need_bridges = options->UseBridges != 0;
   guard_selection_t *gs = get_guard_selection_info();
 
-  if (!(gs->chosen_entry_guards))
-    gs->chosen_entry_guards = smartlist_new();
+  tor_assert(gs != NULL);
+  tor_assert(gs->chosen_entry_guards != NULL);
+
   SMARTLIST_FOREACH_BEGIN(gs->chosen_entry_guards, entry_guard_t *, e) {
       node = node_get_by_id(e->identity);
       if (node && node_has_descriptor(node) &&
