@@ -152,6 +152,11 @@ or create a new C file there.  Each test is a single function that must
 be indexed in the table at the end of the file.  We use the label "done:" as
 a cleanup point for all test functions.
 
+If you have created a new test file, you will need to:
+1. Add the new test file to include.am
+2. In `test.h`, include the new test cases (testcase_t)
+3. In `test.c`, add the new test cases to testgroup_t testgroups
+
 (Make sure you read `tinytest-manual.md` before proceeding.)
 
 I use the term "unit test" and "regression tests" very sloppily here.
