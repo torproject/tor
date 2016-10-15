@@ -8,6 +8,58 @@
  * \file onion.c
  * \brief Functions to queue create cells, wrap the various onionskin types,
  * and parse and create the CREATE cell and its allies.
+ *
+ * This module has a few functions, all related to the CREATE/CREATED
+ * handshake that we use on links in order to create a circuit, and the
+ * related EXTEND/EXTENDED handshake that we use over circuits in order to
+ * extend them an additional hop.
+ *
+ * In this module, we provide a set of abstractions to create a uniform
+ * interface over the three circuit extension handshakes that Tor has used
+ * over the years (TAP, CREATE_FAST, and ntor).  These handshakes are
+ * implemented in onion_tap.c, onion_fast.c, and onion_ntor.c respectively.
+ *
+ * All[*] of these handshakes follow a similar pattern: a client, knowing
+ * some key from the relay it wants to extend through, generates the
+ * first part of a handshake. A relay receives that handshake, and sends
+ * a reply.  Once the client handles the reply, it knows that it is
+ * talking to the right relay, and it shares some freshly negotiated key
+ * material with that relay.
+ *
+ * We sometimes call the client's part of the handshake an "onionskin".
+ * We do this because historically, Onion Routing used a multi-layer
+ * structure called an "onion" to construct circuits. Each layer of the
+ * onion contained key material chosen by the client, the identity of
+ * the next relay in the circuit, and a smaller onion, encrypted with
+ * the key of the next relay.  When we changed Tor to use a telescoping
+ * circuit extension design, it corresponded to sending each layer of the
+ * onion separately -- as a series of onionskins.
+ *
+ * Clients invoke these functions when creating or extending a circuit,
+ * from circuitbuild.c.
+ *
+ * Relays invoke these functions when they receive a CREATE or EXTEND
+ * cell in command.c or relay.c, in order to queue the pending request.
+ * They also invoke them from cpuworker.c, which handles dispatching
+ * onionskin requests to different worker threads.
+ *
+ * <br>
+ *
+ * This module also handles:
+ *  <ul>
+ *  <li> Queueing incoming onionskins on the relay side before passing
+ *      them to worker threads.
+ *   <li>Expiring onionskins on the relay side if they have waited for
+ *     too long.
+ *   <li>Packaging private keys on the server side in order to pass
+ *     them to worker threads.
+ *   <li>Encoding and decoding CREATE, CREATED, CREATE2, and CREATED2 cells.
+ *   <li>Encoding and decodign EXTEND, EXTENDED, EXTEND2, and EXTENDED2
+ *    relay cells.
+ * </ul>
+ *
+ * [*] The CREATE_FAST handshake is weaker than described here; see
+ * onion_fast.c for more information.
  **/
 
 #include "or.h"

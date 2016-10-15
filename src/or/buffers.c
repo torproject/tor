@@ -6,10 +6,22 @@
 
 /**
  * \file buffers.c
- * \brief Implements a generic interface buffer.  Buffers are
- * fairly opaque string holders that can read to or flush from:
- * memory, file descriptors, or TLS connections.  Buffers are implemented
- * as linked lists of memory chunks.
+ * \brief Implements a generic buffer interface.
+ *
+ * A buf_t is a (fairly) opaque byte-oriented FIFO that can read to or flush
+ * from memory, sockets, file descriptors, TLS connections, or another buf_t.
+ * Buffers are implemented as linked lists of memory chunks.
+ *
+ * All socket-backed and TLS-based connection_t objects have a pair of
+ * buffers: one for incoming data, and one for outcoming data.  These are fed
+ * and drained from functions in connection.c, trigged by events that are
+ * monitored in main.c.
+ *
+ * This module has basic support for reading and writing on buf_t objects. It
+ * also contains specialized functions for handling particular protocols
+ * on a buf_t backend, including SOCKS (used in connection_edge.c), Tor cells
+ * (used in connection_or.c and channeltls.c), HTTP (used in directory.c), and
+ * line-oriented communication (used in control.c).
  **/
 #define BUFFERS_PRIVATE
 #include "or.h"

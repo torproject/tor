@@ -9,6 +9,23 @@
  *
  * \brief Handles parsing and encoding the persistent 'state' file that carries
  *  miscellaneous persistent state between Tor invocations.
+ *
+ * This 'state' file is a typed key-value store that allows multiple
+ * entries for the same key.  It follows the same metaformat as described
+ * in confparse.c, and uses the same code to read and write itself.
+ *
+ * The state file is most suitable for small values that don't change too
+ * frequently.  For values that become very large, we typically use a separate
+ * file -- for example, see how we handle microdescriptors, by storing them in
+ * a separate file with a journal.
+ *
+ * The current state is accessed via get_or_state(), which returns a singleton
+ * or_state_t object.  Functions that change it should call
+ * or_state_mark_dirty() to ensure that it will get written to disk.
+ *
+ * The or_state_save() function additionally calls various functioens
+ * throughout Tor that might want to flush more state to the the disk,
+ * including some in rephist.c, entrynodes.c, circuitstats.c, hibernate.c.
  */
 
 #define STATEFILE_PRIVATE

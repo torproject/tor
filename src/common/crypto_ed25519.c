@@ -5,6 +5,14 @@
  * \file crypto_ed25519.c
  *
  * \brief Wrapper code for an ed25519 implementation.
+ *
+ * Ed25519 is a Schnorr signature on a Twisted Edwards curve, defined
+ * by Dan Bernstein. For more information, see https://ed25519.cr.yp.to/
+ *
+ * This module wraps our choice of Ed25519 backend, and provides a few
+ * convenience functions for checking and generating signatures.  It also
+ * provides Tor-specific tools for key blinding and for converting Ed25519
+ * keys to and from the corresponding Curve25519 keys.
  */
 
 #include "orconfig.h"
@@ -28,7 +36,7 @@
 static void pick_ed25519_impl(void);
 static int ed25519_impl_spot_check(void);
 
-/** An Ed25519 implementation */
+/** An Ed25519 implementation, as a set of function pointers. */
 typedef struct {
   int (*selftest)(void);
 
@@ -53,6 +61,8 @@ typedef struct {
                                        int);
 } ed25519_impl_t;
 
+/** The Ref10 Ed25519 implementation. This one is pure C and lightly
+ * optimized. */
 static const ed25519_impl_t impl_ref10 = {
   NULL,
 
@@ -71,6 +81,8 @@ static const ed25519_impl_t impl_ref10 = {
   ed25519_ref10_pubkey_from_curve25519_pubkey,
 };
 
+/** The Ref10 Ed25519 implementation. This one is heavily optimized, but still
+ * mostly C. The C still tends to be heavily platform-specific. */
 static const ed25519_impl_t impl_donna = {
   ed25519_donna_selftest,
 
@@ -89,8 +101,15 @@ static const ed25519_impl_t impl_donna = {
   ed25519_donna_pubkey_from_curve25519_pubkey,
 };
 
+/** Which Ed25519 implementation are we using?  NULL if we haven't decided
+ * yet. */
 static const ed25519_impl_t *ed25519_impl = NULL;
 
+/** Helper: Return our chosen Ed25519 implementation.
+ *
+ * This should only be called after we've picked an implementation, but
+ * it _does_ recover if you forget this.
+ **/
 static inline const ed25519_impl_t *
 get_ed_impl(void)
 {
@@ -101,7 +120,12 @@ get_ed_impl(void)
 }
 
 #ifdef TOR_UNIT_TESTS
+/** For testing: used to remember our actual choice of Ed25519
+ * implementation */
 static const ed25519_impl_t *saved_ed25519_impl = NULL;
+/** For testing: Use the Ed25519 implementation called <b>name</b> until
+ * crypto_ed25519_testing_restore_impl is called.  Recognized names are
+ * "donna" and "ref10". */
 void
 crypto_ed25519_testing_force_impl(const char *name)
 {
@@ -114,6 +138,9 @@ crypto_ed25519_testing_force_impl(const char *name)
     ed25519_impl = &impl_ref10;
   }
 }
+/** For testing: go back to whatever Ed25519 implementation we had picked
+ * before crypto_ed25519_testing_force_impl was called.
+ */
 void
 crypto_ed25519_testing_restore_impl(void)
 {

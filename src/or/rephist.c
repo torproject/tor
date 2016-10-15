@@ -4,10 +4,74 @@
 
 /**
  * \file rephist.c
- * \brief Basic history and "reputation" functionality to remember
+ * \brief Basic history and performance-tracking functionality.
+ *
+ * Basic history and performance-tracking functionality to remember
  *    which servers have worked in the past, how much bandwidth we've
  *    been using, which ports we tend to want, and so on; further,
  *    exit port statistics, cell statistics, and connection statistics.
+ *
+ * The history and information tracked in this module could sensibly be
+ * divided into several categories:
+ *
+ * <ul><li>Statistics used by authorities to remember the uptime and
+ * stability information about various relays, including "uptime",
+ * "weighted fractional uptime" and "mean time between failures".
+ *
+ * <li>Bandwidth usage history, used by relays to self-report how much
+ * bandwidth they've used for different purposes over last day or so,
+ * in order to generate the {dirreq-,}{read,write}-history lines in
+ * that they publish.
+ *
+ * <li>Predicted ports, used by clients to remember how long it's been
+ * since they opened an exit connection to each given target
+ * port. Clients use this information in order to try to keep circuits
+ * open to exit nodes that can connect to the ports that they care
+ * about.  (The predicted ports mechanism also handles predicted circuit
+ * usage that _isn't_ port-specific, such as resolves, internal circuits,
+ * and so on.)
+ *
+ * <li>Public key operation counters, for tracking how many times we've
+ * done each public key operation.  (This is unmaintained and we should
+ * remove it.)
+ *
+ * <li>Exit statistics by port, used by exits to keep track of the
+ * number of streams and bytes they've served at each exit port, so they
+ * can generate their exit-kibibytes-{read,written} and
+ * exit-streams-opened statistics.
+ *
+ * <li>Circuit stats, used by relays instances to tract circuit
+ * queue fullness and delay over time, and generate cell-processed-cells,
+ * cell-queued-cells, cell-time-in-queue, and cell-circuits-per-decile
+ * statistics.
+ *
+ * <li>Descriptor serving statistics, used by directory caches to track
+ * how many descriptors they've served.
+ *
+ * <li>Connection statistics, used by relays to track one-way and
+ * bidirectional connections.
+ *
+ * <li>Onion handshake statistics, used by relays to count how many
+ * TAP and ntor handshakes they've handled.
+ *
+ * <li>Hidden service statistics, used by relays to count rendezvous
+ * traffic and HSDir-stored descriptors.
+ *
+ * <li>Link protocol statistics, used by relays to count how many times
+ * each link protocol has been used.
+ *
+ * </ul>
+ *
+ * The entry points for this module are scattered throughout the
+ * codebase.  Sending data, receiving data, connecting to a relay,
+ * losing a connection to a relay, and so on can all trigger a change in
+ * our current stats.  Relays also invoke this module in order to
+ * extract their statistics when building routerinfo and extrainfo
+ * objects in router.c.
+ *
+ * TODO: This module should be broken up.
+ *
+ * (The "rephist" name originally stood for "reputation and history". )
  **/
 
 #include "or.h"
@@ -2650,7 +2714,9 @@ rep_hist_desc_stats_write(time_t now)
   return start_of_served_descs_stats_interval + WRITE_STATS_INTERVAL;
 }
 
-/* DOCDOC rep_hist_note_desc_served */
+/** Called to note that we've served a given descriptor (by
+ * digest). Incrememnts the count of descriptors served, and the number
+ * of times we've served this descriptor. */
 void
 rep_hist_note_desc_served(const char * desc)
 {

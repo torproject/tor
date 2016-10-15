@@ -17,8 +17,10 @@ const char tor_git_revision[] =
 
 /**
  * \file tor_main.c
- * \brief Stub module containing a main() function. Allows unit
- * test binary to link against main.c.
+ * \brief Stub module containing a main() function.
+ *
+ * We keep the main function in a separate module so that the unit
+ * tests, which have their own main()s, can link against main.c.
  **/
 
 int tor_main(int argc, char *argv[]);

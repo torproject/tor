@@ -9,10 +9,22 @@
  * \brief Functions to implement the original Tor circuit extension handshake
  * (a.k.a TAP).
  *
+ * The "TAP" handshake is the first one that was widely used in Tor: It
+ * combines RSA1024-OAEP and AES128-CTR to perform a hybrid encryption over
+ * the first message DH1024 key exchange.  (The RSA-encrypted part of the
+ * encryption is authenticated; the AES-encrypted part isn't. This was
+ * not a smart choice.)
+ *
  * We didn't call it "TAP" ourselves -- Ian Goldberg named it in "On the
  * Security of the Tor Authentication Protocol".  (Spoiler: it's secure, but
  * its security is kind of fragile and implementation dependent.  Never modify
  * this implementation without reading and understanding that paper at least.)
+ *
+ * We have deprecated TAP since the ntor handshake came into general use.  It
+ * is still used for hidden service IP and RP connections, however.
+ *
+ * This handshake, like the other circuit-extension handshakes, is
+ * invoked from onion.c.
  **/
 
 #include "or.h"

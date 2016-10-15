@@ -1,3 +1,24 @@
+/* Copyright (c) 2016, The Tor Project, Inc. */
+/* See LICENSE for licensing information */
+
+/**
+ * \file protover.c
+ * \brief Versioning information for different pieces of the Tor protocol.
+ *
+ * Starting in version 0.2.9.3-alpha, Tor places separate version numbers on
+ * each of the different components of its protocol. Relays use these numbers
+ * to advertise what versions of the protocols they can support, and clients
+ * use them to find what they can ask a given relay to do.  Authorities vote
+ * on the supported protocol versions for each relay, and also vote on the
+ * which protocols you should have to support in order to be on the Tor
+ * network. All Tor instances use these required/recommended protocol versions
+ * to
+ *
+ * The main advantage of these protocol versions numbers over using Tor
+ * version numbers is that they allow different implementations of the Tor
+ * protocols to develop independently, without having to claim compatibility
+ * with specific versions of Tor.
+ **/
 
 #define PROTOVER_PRIVATE
 
@@ -699,6 +720,9 @@ protover_compute_for_old_tor(const char *version)
   }
 }
 
+/**
+ * Release all storage held by static fields in protover.c
+ */
 void
 protover_free_all(void)
 {

@@ -6,7 +6,51 @@
 
 /**
  * \file routerparse.c
- * \brief Code to parse and validate router descriptors and directories.
+ * \brief Code to parse and validate router descriptors, consenus directories,
+ *   and similar objects.
+ *
+ * The objects parsed by this module use a common text-based metaformat,
+ * documented in dir-spec.txt in torspec.git.  This module is itself divided
+ * into two major kinds of function: code to handle the metaformat, and code
+ * to convert from particular instances of the metaformat into the
+ * objects that Tor uses.
+ *
+ * The generic parsing code works by calling a table-based tokenizer on the
+ * input string.  Each token corresponds to a single line with a token, plus
+ * optional arguments on that line, plus an optional base-64 encoded object
+ * after that line.  Each token has a definition in a table of token_rule_t
+ * entries that describes how many arguments it can take, whether it takes an
+ * object, how many times it may appear, whether it must appear first, and so
+ * on.
+ *
+ * The tokenizer function tokenize_string() converts its string input into a
+ * smartlist full of instances of directory_token_t, according to a provided
+ * table of token_rule_t.
+ *
+ * The generic parts of this module additionally include functions for
+ * finding the start and end of signed information inside a signed object, and
+ * computing the digest that will be signed.
+ *
+ * There are also functions for saving objects to disk that have caused
+ * parsing to fail.
+ *
+ * The specific parts of this module describe conversions between
+ * particular lists of directory_token_t and particular objects.  The
+ * kinds of objects that can be parsed here are:
+ *  <ul>
+ *  <li>router descriptors (managed from routerlist.c)
+ *  <li>extra-info documents (managed from routerlist.c)
+ *  <li>microdescriptors (managed from microdesc.c)
+ *  <li>vote and consensus networkstatus documents, and the routerstatus_t
+ *    objects that they comprise (managed from networkstatus.c)
+ *  <li>detached-signature objects used by authorities for gathering
+ *    signatures on the networkstatus consensus (managed from dirvote.c)
+ *  <li>authority key certificates (managed from routerlist.c)
+ *  <li>hidden service descriptors (managed from rendcommon.c and rendcache.c)
+ * </ul>
+ *
+ * For no terribly good reason, the functions to <i>generate</i> signatures on
+ * the above directory objects are also in this module.
  **/
 
 #define ROUTERPARSE_PRIVATE
@@ -258,12 +302,14 @@ typedef struct token_rule_t {
   int is_annotation;
 } token_rule_t;
 
-/*
+/**
+ * @name macros for defining token rules
+ *
  * Helper macros to define token tables.  's' is a string, 't' is a
  * directory_keyword, 'a' is a trio of argument multiplicities, and 'o' is an
  * object syntax.
- *
  */
+/**@{*/
 
 /** Appears to indicate the end of a table. */
 #define END_OF_TABLE { NULL, NIL_, 0,0,0, NO_OBJ, 0, INT_MAX, 0, 0 }
@@ -284,16 +330,17 @@ typedef struct token_rule_t {
 /** An annotation that must appear no more than once */
 #define A01(s,t,a,o)  { s, t, a, o, 0, 1, 0, 1 }
 
-/* Argument multiplicity: any number of arguments. */
+/** Argument multiplicity: any number of arguments. */
 #define ARGS        0,INT_MAX,0
-/* Argument multiplicity: no arguments. */
+/** Argument multiplicity: no arguments. */
 #define NO_ARGS     0,0,0
-/* Argument multiplicity: concatenate all arguments. */
+/** Argument multiplicity: concatenate all arguments. */
 #define CONCAT_ARGS 1,1,1
-/* Argument multiplicity: at least <b>n</b> arguments. */
+/** Argument multiplicity: at least <b>n</b> arguments. */
 #define GE(n)       n,INT_MAX,0
-/* Argument multiplicity: exactly <b>n</b> arguments. */
+/** Argument multiplicity: exactly <b>n</b> arguments. */
 #define EQ(n)       n,n,0
+/**@}*/
 
 /** List of tokens recognized in router descriptors */
 static token_rule_t routerdesc_token_table[] = {

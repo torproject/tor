@@ -9,6 +9,18 @@
  *
  * \brief Maintains and analyzes statistics about circuit built times, so we
  * can tell how long we may need to wait for a fast circuit to be constructed.
+ *
+ * By keeping these statistics, a client learns when it should time out a slow
+ * circuit for being too slow, and when it should keep a circuit open in order
+ * to wait for it to complete.
+ *
+ * The information here is kept in a circuit_built_times_t structure, which is
+ * currently a singleton, but doesn't need to be.  It's updated by calls to
+ * circuit_build_times_count_timeout() from circuituse.c,
+ * circuit_build_times_count_close() from circuituse.c, and
+ * circuit_build_times_add_time() from circuitbuild.c, and inspected by other
+ * calls into this module, mostly from circuitlist.c.  Observations are
+ * persisted to disk via the or_state_t-related calls.
  */
 
 #define CIRCUITSTATS_PRIVATE
@@ -329,7 +341,6 @@ circuit_build_times_min_timeout(void)
               "circuit_build_times_min_timeout() called, cbtmintimeout is %d",
               num);
   }
-
   return num;
 }
 

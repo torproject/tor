@@ -6,6 +6,20 @@
  *
  * \brief Implements worker threads, queues of work for them, and mechanisms
  * for them to send answers back to the main thread.
+ *
+ * The main structure here is a threadpool_t : it manages a set of worker
+ * threads, a queue of pending work, and a reply queue.  Every piece of work
+ * is a workqueue_entry_t, containing data to process and a function to
+ * process it with.
+ *
+ * The main thread informs the worker threads of pending work by using a
+ * condition variable.  The workers inform the main process of completed work
+ * by using an alert_sockets_t object, as implemented in compat_threads.c.
+ *
+ * The main thread can also queue an "update" that will be handled by all the
+ * workers.  This is useful for updating state that all the workers share.
+ *
+ * In Tor today, there is currently only one thread pool, used in cpuworker.c.
  */
 
 #include "orconfig.h"

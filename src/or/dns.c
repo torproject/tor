@@ -9,6 +9,42 @@
  * This is implemented as a wrapper around Adam Langley's eventdns.c code.
  * (We can't just use gethostbyname() and friends because we really need to
  * be nonblocking.)
+ *
+ * There are three main cases when a Tor relay uses dns.c to launch a DNS
+ * request:
+ *   <ol>
+ *    <li>To check whether the DNS server is working more or less correctly.
+ *      This happens via dns_launch_correctness_checks().  The answer is
+ *      reported in the return value from later calls to
+ *      dns_seems_to_be_broken().
+ *    <li>When a client has asked the relay, in a RELAY_BEGIN cell, to connect
+ *      to a given server by hostname.  This happens via dns_resolve().
+ *    <li>When a client has asked the rela, in a RELAY_RESOLVE cell, to look
+ *      up a given server's IP address(es) by hostname. This also happens via
+ *      dns_resolve().
+ *   </ol>
+ *
+ * Each of these gets handled a little differently.
+ *
+ * To check for correctness, we look up some hostname we expect to exist and
+ * have real entries, some hostnames which we expect to definitely not exist,
+ * and some hostnames that we expect to probably not exist.  If too many of
+ * the hostnames that shouldn't exist do exist, that's a DNS hijacking
+ * attempt.  If too many of the hostnames that should exist have the same
+ * addresses as the ones that shouldn't exist, that's a very bad DNS hijacking
+ * attempt, or a very naughty captive portal.  And if the hostnames that
+ * should exist simply don't exist, we probably have a broken nameserver.
+ *
+ * To handle client requests, we first check our cache for answers. If there
+ * isn't something up-to-date, we've got to launch A or AAAA requests as
+ * appropriate.  How we handle responses to those in particular is a bit
+ * complex; see dns_lookup() and set_exitconn_info_from_resolve().
+ *
+ * When a lookup is finally complete, the inform_pending_connections()
+ * function will tell all of the streams that have been waiting for the
+ * resolve, by calling connection_exit_connect() if the client sent a
+ * RELAY_BEGIN cell, and by calling send_resolved_cell() or
+ * send_hostname_cell() if the client sent a RELAY_RESOLVE cell.
  **/
 
 #define DNS_PRIVATE
@@ -793,8 +829,14 @@ dns_resolve_impl,(edge_connection_t *exitconn, int is_resolve,
 }
 
 /** Given an exit connection <b>exitconn</b>, and a cached_resolve_t
- * <b>resolve</b> whose DNS lookups have all succeeded or failed, update the
- * appropriate fields (address_ttl and addr) of <b>exitconn</b>.
+ * <b>resolve</b> whose DNS lookups have all either succeeded or failed,
+ * update the appropriate fields (address_ttl and addr) of <b>exitconn</b>.
+ *
+ * The logic can be complicated here, since we might have launched both
+ * an A lookup and an AAAA lookup, and since either of those might have
+ * succeeded or failed, and since we want to answer a RESOLVE cell with
+ * a full answer but answer a BEGIN cell with whatever answer the client
+ * would accept <i>and</i> we could still connect to.
  *
  * If this is a reverse lookup, set *<b>hostname_out</b> to a newly allocated
  * copy of the name resulting hostname.
@@ -1137,7 +1179,12 @@ dns_found_answer(const char *address, uint8_t query_type,
 
 /** Given a pending cached_resolve_t that we just finished resolving,
  * inform every connection that was waiting for the outcome of that
- * resolution. */
+ * resolution.
+ *
+ * Do this by sending a RELAY_RESOLVED cell (if the pending stream had sent us
+ * RELAY_RESOLVE cell), or by launching an exit connection (if the pending
+ * stream had send us a RELAY_BEGIN cell).
+ */
 static void
 inform_pending_connections(cached_resolve_t *resolve)
 {
