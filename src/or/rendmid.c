@@ -106,7 +106,7 @@ rend_mid_establish_intro(or_circuit_t *circ, const uint8_t *request,
                                    RELAY_COMMAND_INTRO_ESTABLISHED,
                                    "", 0, NULL)<0) {
     log_info(LD_GENERAL, "Couldn't send INTRO_ESTABLISHED cell.");
-    goto err;
+    return -1;
   }
 
   /* Now, set up this circuit. */
@@ -208,7 +208,6 @@ rend_mid_introduce(or_circuit_t *circ, const uint8_t *request,
                                    RELAY_COMMAND_INTRODUCE_ACK,
                                    NULL,0,NULL)) {
     log_warn(LD_GENERAL, "Unable to send INTRODUCE_ACK cell to Tor client.");
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
     return -1;
   }
 
@@ -220,8 +219,6 @@ rend_mid_introduce(or_circuit_t *circ, const uint8_t *request,
                                    RELAY_COMMAND_INTRODUCE_ACK,
                                    nak_body, 1, NULL)) {
     log_warn(LD_GENERAL, "Unable to send NAK to Tor client.");
-    /* Is this right? */
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
   }
   return -1;
 }
@@ -269,8 +266,7 @@ rend_mid_establish_rendezvous(or_circuit_t *circ, const uint8_t *request,
                                    RELAY_COMMAND_RENDEZVOUS_ESTABLISHED,
                                    "", 0, NULL)<0) {
     log_warn(LD_PROTOCOL, "Couldn't send RENDEZVOUS_ESTABLISHED cell.");
-    reason = END_CIRC_REASON_INTERNAL;
-    goto err;
+    return -1;
   }
 
   circuit_change_purpose(TO_CIRCUIT(circ), CIRCUIT_PURPOSE_REND_POINT_WAITING);
