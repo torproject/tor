@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Extracted dummy_origin_circuit_new so it can be used by other test
+      functions.

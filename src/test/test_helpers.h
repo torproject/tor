@@ -6,6 +6,8 @@
 
 const char *get_yesterday_date_str(void);
 
+circuit_t * dummy_origin_circuit_new(int num_cells);
+
 /* Number of descriptors contained in test_descriptors.txt. */
 #define HELPER_NUMBER_OF_DESCRIPTORS 8
 

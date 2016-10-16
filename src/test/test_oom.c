@@ -15,6 +15,7 @@
 #include "config.h"
 #include "relay.h"
 #include "test.h"
+#include "test_helpers.h"
 
 /* small replacement mock for circuit_mark_for_close_ to avoid doing all
  * the other bookkeeping that comes with marking circuits. */
@@ -55,24 +56,6 @@ dummy_or_circuit_new(int n_p_cells, int n_n_cells)
   }
 
   TO_CIRCUIT(circ)->purpose = CIRCUIT_PURPOSE_OR;
-  return TO_CIRCUIT(circ);
-}
-
-static circuit_t *
-dummy_origin_circuit_new(int n_cells)
-{
-  origin_circuit_t *circ = origin_circuit_new();
-  int i;
-  cell_t cell;
-
-  for (i=0; i < n_cells; ++i) {
-    crypto_rand((void*)&cell, sizeof(cell));
-    cell_queue_append_packed_copy(TO_CIRCUIT(circ),
-                                  &TO_CIRCUIT(circ)->n_chan_cells,
-                                  1, &cell, 1, 0);
-  }
-
-  TO_CIRCUIT(circ)->purpose = CIRCUIT_PURPOSE_C_GENERAL;
   return TO_CIRCUIT(circ);
 }
 
