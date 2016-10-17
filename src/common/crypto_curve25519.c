@@ -182,7 +182,6 @@ curve25519_public_key_generate(curve25519_public_key_t *key_out,
  * Construct a new keypair in *<b>keypair_out</b>. If <b>extra_strong</b>
  * is true, this key is possibly going to get used more than once, so
  * use a better-than-usual RNG. Return 0 on success, -1 on failure. */
- */
 int
 curve25519_keypair_generate(curve25519_keypair_t *keypair_out,
                             int extra_strong)
