@@ -1,3 +1,98 @@
+Changes in version 0.2.9.4-alpha - 2016-10-17
+  Foo bar
+
+  o Major features (subprotocol versions):
+    - Tor directory authorities now vote on a set of recommended subprotocol
+      versions, and on a set of required subprotocol versions. Clients and
+      relays that lack support for a _required_ suprotocol version will not
+      start; those that lack support for a _recommended_ subprotocol version
+      will warn the user to upgrade. Closes ticket 19958; implements part of
+      proposal 264.
+    - Tor now uses "subprotocol versions" to indicate
+      compatibility. Previously, versions of Tor looked at the declared Tor
+      version of a relay to tell whether they could use a given feature.
+      Now, they should be able to rely on its declared subprotocol versions.
+      This change allows compatible implementations of the Tor protocol(s) to
+      exist without declaring compatibility with pretending to be particular
+      releases of Tor itself. Closes ticket 19958; implements part of
+      proposal 264.
+
+  o Minor feature (fallback directories):
+    - Remove broken fallbacks from the hard-coded fallback directory list.
+      Closes ticket 20190; patch by teor.
+
+  o Minor features (client, directory):
+    - Since authorities now omit all routers that lack the Running and Valid
+      flags, we assume that any relay listed in the consensus must
+      have those flags. Closes ticket 20001; implements part of proposal
+      272.
+
+  o Minor features (compilation, portability):
+    - Tor now compiles correctly on MacOS 10.12 (aka "Sierra"). Closes
+      ticket 20241.
+
+  o Minor features (development tools, etags):
+    - Teach the "make tags" Makefile target how to correctly find
+      "MOCK_IMPL" function definitions. Patch from nherring; closes
+      ticket 16869.
+
+  o Minor features (unix domain sockets):
+    - When configuring a unix domain socket for a SocksPort,
+      ControlPort, or Hidden service, you can now wrap the address
+      in quotes, using C-style escapes inside the quotes. This
+      allows unix domain socket paths to contain spaces.
+
+  o Minor features (geoip):
+    - Update geoip and geoip6 to the October 4 2016 Maxmind GeoLite2
+      Country database.
+
+  o Minor features (virtual addresses):
+    - Increase the maximum number of bits for the IPv6 virtual network prefix
+      from 16 to 104. In this way, the condition for address allocation is less
+      restrictive.
+      Closes ticket 20151; feature on 0.2.4.7-alpha.
+
+  o Minor bugfixes (address discovery):
+    - Stop reordering IP addresses returned by the OS.
+      This makes is more likely that Tor will guess the same relay IP address every time.
+      Fixes issue 20163; bugfix on 0.2.7.1-alpha, ticket 17027.
+      Reported by René Mayrhofer, patch by "cypherpunks".
+
+  o Minor bugfixes (client, unix domain sockets):
+    - Disable IsolateClientAddr when using AF_UNIX backed SocksPorts
+      as the client address is meaningless. Fixes bug 20261; bugfix on
+      0.2.6.3-alpha.
+
+  o Minor bugfixes (compilation, OpenBSD):
+    - Detect Libevent2 functions correctly on systems that provide
+      libevent2, but where libevent1 is linked with -levent. Fixes bug
+      19904; bugfix on 0.2.2.24-alpha. Patch from Rubiate.
+
+  o Minor bugfixes (configuration):
+    - When parsing quoted configuration values from the torrc file,
+      handle windows line endings correctly. Fixes bug 19167; bugfix on
+      0.2.0.16-alpha.  Patch from "Pingl".
+
+  o Minor bugfixes (getpass):
+    - Defensively fix a non-triggerable heap corruption at do_getpass() tow
+      protect ourselves from mistakes in the future. Fixes bug #19223; bugfix
+      on 0.2.7.3-rc. Bug found by Guido Vranken, patch by nherring.
+
+  o Minor bugfixes (hidden service):
+    - Allow hidden services to run on IPv6 addresses even when the
+      IPv6Exit option is not set. Fixes bug 18357; bugfix on
+      0.2.4.7-alpha.
+
+  o Documentation:
+    - Added module-level internal documentation for 36 C files that
+      previously didn't have a high-level overview.
+
+  o Required libraries:
+    - When building with OpenSSL, Tor now requires version 1.0.1 or later.
+      OpenSSL 1.0.0 and earlier are no longer supported by the OpenSSL team,
+      and should not be used. Closes ticket 20303.
+
+
 Changes in version 0.2.9.3-alpha - 2016-09-23
   Tor 0.2.9.3-alpha adds improved support for entities that want to make
   high-performance services available through the Tor .onion mechanism

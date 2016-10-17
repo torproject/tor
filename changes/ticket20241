@@ -1,3 +1,0 @@
-  o Minor features (compilation, portability):
-    - Tor now compiles correctly on MacOS 10.12 (aka "Sierra"). Closes
-      ticket 20241.

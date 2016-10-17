@@ -1,4 +1,0 @@
-  o Minor features (development tools, etags):
-    - Teach the "make tags" Makefile target how to correctly find
-      "MOCK_IMPL" function definitions. Patch from nherring; closes
-      ticket 16869.

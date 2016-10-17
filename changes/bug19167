@@ -1,4 +1,0 @@
-  o Minor bugfixes (configuration):
-    - When parsing quoted configuration values from the torrc file,
-      handle windows line endings correctly. Fixes bug 19167; bugfix on
-      0.2.0.16-alpha.  Patch from "Pingl".

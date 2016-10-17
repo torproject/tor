@@ -1,5 +1,0 @@
-  o Minor bugfixes (hidden service):
-    - Allow hidden services to run on IPv6 addresses even when the
-      IPv6Exit option is not set. Fixes bug 18357; bugfix on
-      0.2.4.7-alpha.
-
