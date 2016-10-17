@@ -7,6 +7,51 @@
 /**
  * \file connection_edge.c
  * \brief Handle edge streams.
+ *
+ * An edge_connection_t is a subtype of a connection_t, and represents two
+ * critical concepts in Tor: a stream, and an edge connection.  From the Tor
+ * protocol's point of view, a stream is a bi-directional channel that is
+ * multiplexed on a single circuit.  Each stream on a circuit is identified
+ * with a separate 16-bit stream ID, local to the (circuit,exit) pair.
+ * Streams are created in response to client requests.
+ *
+ * An edge connection is one thing that can implement a stream: it is either a
+ * TCP application socket that has arrived via (e.g.) a SOCKS request, or an
+ * exit connection.
+ *
+ * Not every instance of edge_connection_t truly represents an edge connction,
+ * however. (Sorry!) We also create edge_connection_t objects for streams that
+ * we will not be handling with TCP.  The types of these streams are:
+ *   <ul>
+ *   <li>DNS lookup streams, created on the client side in response to
+ *     a UDP DNS request received on a DNSPort, or a RESOLVE command
+ *     on a controller.
+ *   <li>DNS lookup streams, created on the exit side in response to
+ *     a RELAY_RESOLVE cell from a client.
+ *   <li>Tunneled directory streams, created on the directory cache side
+ *     in response to a RELAY_BEGINDIR cell.  These streams attach directly
+ *     to a dir_connection_t object without ever using TCP.
+ *   </ul>
+ *
+ * This module handles general-purpose functionality having to do with
+ * edge_connection_t.  On the client side, it accepts various types of
+ * application requests on SocksPorts, TransPorts, and NATDPorts, and
+ * creates streams appropriately.
+ *
+ * This module is also responsible for implementing stream isolation:
+ * ensuring that streams that should not be linkable to one another are
+ * kept to different circuits.
+ *
+ * On the exit side, this module handles the various stream-creating
+ * type of RELAY cells by launching appropriate outgoing connections,
+ * DNS requests, or directory connection objects.
+ *
+ * And for all edge connections, this module is responsible for handling
+ * incoming and outdoing data as it arrives or leaves in the relay.c
+ * module.  (Outgoing data will be packaged in
+ * connection_edge_process_inbuf() as it calls
+ * connection_edge_package_raw_inbuf(); incoming data from RELAY_DATA
+ * cells is applied in connection_edge_process_relay_cell().)
  **/
 #define CONNECTION_EDGE_PRIVATE
 

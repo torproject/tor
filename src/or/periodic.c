@@ -5,6 +5,10 @@
  * \file periodic.c
  *
  * \brief Generic backend for handling periodic events.
+ *
+ * The events in this module are used by main.c to track items that need
+ * to fire once every N seconds, possibly picking a new interval each time
+ * that they fire.  See periodic_events[] in main.c for examples.
  */
 
 #include "or.h"

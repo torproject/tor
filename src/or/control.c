@@ -5,7 +5,31 @@
 /**
  * \file control.c
  * \brief Implementation for Tor's control-socket interface.
- *   See doc/spec/control-spec.txt for full details on protocol.
+ *
+ * A "controller" is an external program that monitors and controls a Tor
+ * instance via a text-based protocol. It connects to Tor via a connection
+ * to a local socket.
+ *
+ * The protocol is line-driven.  The controller sends commands terminated by a
+ * CRLF.  Tor sends lines that are either <em>replies</em> to what the
+ * controller has said, or <em>events</em> that Tor sends to the controller
+ * asynchronously based on occurrences in the Tor network model.
+ *
+ * See the control-spec.txt file in the torspec.git repository for full
+ * details on protocol.
+ *
+ * This module generally has two kinds of entry points: those based on having
+ * received a command on a controller socket, which are handled in
+ * connection_control_process_inbuf(), and dispatched to individual functions
+ * with names like control_handle_COMMANDNAME(); and those based on events
+ * that occur elsewhere in Tor, which are handled by functions with names like
+ * control_event_EVENTTYPE().
+ *
+ * Controller events are not sent immediately; rather, they are inserted into
+ * the queued_control_events array, and flushed later from
+ * flush_queued_events_cb().  Doing this simplifies our callgraph greatly,
+ * by limiting the number of places in Tor that can call back into the network
+ * stack.
  **/
 
 #define CONTROL_PRIVATE

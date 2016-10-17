@@ -7,6 +7,24 @@
  * to summarizing client connections by country to entry guards, bridges,
  * and directory servers; and for statistics on answering network status
  * requests.
+ *
+ * There are two main kinds of functions in this module: geoip functions,
+ * which map groups of IPv4 and IPv6 addresses to country codes, and
+ * statistical functions, which collect statistics about different kinds of
+ * per-country usage.
+ *
+ * The geoip lookup tables are implemented as sorted lists of disjoint address
+ * ranges, each mapping to a singleton geoip_country_t.  These country objects
+ * are also indexed by their names in a hashtable.
+ *
+ * The tables are populated from disk at startup by the geoip_load_file()
+ * function.  For more information on the file format they read, see that
+ * function.  See the scripts and the README file in src/config for more
+ * information about how those files are generated.
+ *
+ * Tor uses GeoIP information in order to implement user requests (such as
+ * ExcludeNodes {cc}), and to keep track of how much usage relays are getting
+ * for each country.
  */
 
 #define GEOIP_PRIVATE

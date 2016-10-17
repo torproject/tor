@@ -8,7 +8,11 @@
  * \brief Uses the workqueue/threadpool code to farm CPU-intensive activities
  * out to subprocesses.
  *
- * Right now, we only use this for processing onionskins.
+ * The multithreading backend for this module is in workqueue.c; this module
+ * specializes workqueue.c.
+ *
+ * Right now, we only use this for processing onionskins, and invoke it mostly
+ * from onion.c.
  **/
 #include "or.h"
 #include "channel.h"

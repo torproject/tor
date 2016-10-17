@@ -36,6 +36,24 @@
  * \file dirserv.c
  * \brief Directory server core implementation. Manages directory
  * contents and generates directories.
+ *
+ * This module implements most of directory cache functionality, and some of
+ * the directory authority functionality.  The directory.c module delegates
+ * here in order to handle incoming requests from clients, via
+ * connection_dirserv_flushed_some() and its kin.  In order to save RAM, this
+ * module is reponsible for spooling directory objects (in whole or in part)
+ * onto buf_t instances, and then closing the dir_connection_t once the
+ * objects are totally flushed.
+ *
+ * The directory.c module also delegates here for handling descriptor uploads
+ * via dirserv_add_multiple_descriptors().
+ *
+ * Additionally, this module handles some aspects of voting, including:
+ * deciding how to vote on individual flags (based on decisions reached in
+ * rephist.c), of formatting routerstatus lines, and deciding what relays to
+ * include in an authority's vote.  (TODO: Those functions could profitably be
+ * split off.  They only live in this file because historically they were
+ * shared among the v1, v2, and v3 directory code.)
  */
 
 /** How far in the future do we allow a router to get? (seconds) */

@@ -1,3 +1,10 @@
+/* Copyright (c) 2016, The Tor Project, Inc. */
+/* See LICENSE for licensing information */
+
+/**
+ * \file protover.h
+ * \brief Headers and type declarations for protover.c
+ **/
 
 #ifndef TOR_PROTOVER_H
 #define TOR_PROTOVER_H

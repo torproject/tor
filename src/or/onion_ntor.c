@@ -5,6 +5,17 @@
  * \file onion_ntor.c
  *
  * \brief Implementation for the ntor handshake.
+ *
+ * The ntor circuit-extension handshake was developed as a replacement
+ * for the old TAP handshake.  It uses Elliptic-curve Diffie-Hellman and
+ * a hash function in order to perform a one-way authenticated key
+ * exchange.  The ntor handshake is meant to replace the old "TAP"
+ * handshake.
+ *
+ * We instantiate ntor with curve25519, HMAC-SHA256, and HKDF.
+ *
+ * This handshake, like the other circuit-extension handshakes, is
+ * invoked from onion.c.
  */
 
 #include "orconfig.h"
