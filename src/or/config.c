@@ -6592,6 +6592,8 @@ parse_port_config(smartlist_t *out,
     if (unix_socket_path) {
       port = 1;
     } else if (is_unix_socket) {
+      if (BUG(!addrport))
+        goto err; // LCOV_EXCL_LINE unreachable, but coverity can't tell that
       unix_socket_path = tor_strdup(addrport);
       if (!strcmp(addrport, "0"))
         port = 0;
