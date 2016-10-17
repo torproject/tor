@@ -1,11 +1,27 @@
 Changes in version 0.2.9.4-alpha - 2016-10-17
-  Tor 0.2.9.4-alpha adds numerous small features and fix-ups to previous
-  versions of Tor, including the implementation of a feature to future-
-  proof the Tor ecosystem against protocol changes, some bug fixes
-  necessary for Tor Browser to use unix domain sockets correctly, and
-  several portability improvements. We anticipate that this will be the
-  last alpha in the Tor 0.2.9 series, and that the next release will be
-  a release candidate.
+  Tor 0.2.9.4-alpha fixes a security hole in previous versions of Tor
+  that would allow a remote attacker to crash a Tor client, hidden
+  service, relay, or authority. All Tor users should upgrade to this
+  version, or to 0.2.8.9. Patches will be released for older versions
+  of Tor.
+
+  Tor 0.2.9.4-alpha also adds numerous small features and fix-ups to
+  previous versions of Tor, including the implementation of a feature to
+  future- proof the Tor ecosystem against protocol changes, some bug
+  fixes necessary for Tor Browser to use unix domain sockets correctly,
+  and several portability improvements. We anticipate that this will be
+  the last alpha in the Tor 0.2.9 series, and that the next release will
+  be a release candidate.
+
+  o Major features (security fixes):
+    - Prevent a class of security bugs caused by treating the contents
+      of a buffer chunk as if they were a NUL-terminated string. At
+      least one such bug seems to be present in all currently used
+      versions of Tor, and would allow an attacker to remotely crash
+      most Tor instances, especially those compiled with extra compiler
+      hardening. With this defense in place, such bugs can't crash Tor,
+      though we should still fix them as they occur. Closes ticket
+      20384 (TROVE-2016-10-001).
 
   o Major features (subprotocol versions):
     - Tor directory authorities now vote on a set of recommended
