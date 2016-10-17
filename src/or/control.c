@@ -4081,7 +4081,7 @@ handle_control_hsfetch(control_connection_t *conn, uint32_t len,
      * of the id. */
     desc_id = digest;
   } else {
-    connection_printf_to_buf(conn, "513 Unrecognized \"%s\"\r\n",
+    connection_printf_to_buf(conn, "513 Invalid argument \"%s\"\r\n",
                              arg1);
     goto done;
   }
