@@ -8,6 +8,32 @@
  * transfer cells from Tor instance to Tor instance.
  * Currently, there is only one implementation of the channel abstraction: in
  * channeltls.c.
+ *
+ * Channels are a higher-level abstraction than or_connection_t: In general,
+ * any means that two Tor relays use to exchange cells, or any means that a
+ * relay and a client use to exchange cells, is a channel.
+ *
+ * Channels differ from pluggable transports in that they do not wrap an
+ * underlying protocol over which cells are transmitted: they <em>are</em> the
+ * underlying protocol.
+ *
+ * This module defines the generic parts of the channel_t interface, and
+ * provides the machinery necessary for specialized implementations to be
+ * created.  At present, there is one specialized implementation in
+ * channeltls.c, which uses connection_or.c to send cells over a TLS
+ * connection.
+ *
+ * Every channel implementation is responsible for being able to transmit
+ * cells that are added to it with channel_write_cell() and related functions,
+ * and to receive incoming cells with the channel_queue_cell() and related
+ * functions.  See the channel_t documentation for more information.
+ *
+ * When new cells arrive on a channel, they are passed to cell handler
+ * functions, which can be set by channel_set_cell_handlers()
+ * functions. (Tor's cell handlers are in command.c.)
+ *
+ * Tor flushes cells to channels from relay.c in
+ * channel_flush_from_first_active_circuit().
  **/
 
 /*

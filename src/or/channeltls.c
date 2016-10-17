@@ -6,6 +6,28 @@
  *
  * \brief A concrete subclass of channel_t using or_connection_t to transfer
  * cells between Tor instances.
+ *
+ * This module fills in the various function pointers in channel_t, to
+ * implement the channel_tls_t channels as used in Tor today.  These channels
+ * are created from channel_tls_connect() and
+ * channel_tls_handle_incoming(). Each corresponds 1:1 to or_connection_t
+ * object, as implemented in connection_or.c.  These channels transmit cells
+ * to the underlying or_connection_t by calling
+ * connection_or_write_*_cell_to_buf(), and receive cells from the underlying
+ * or_connection_t when connection_or_process_cells_from_inbuf() calls
+ * channel_tls_handle_*_cell().
+ *
+ * Here we also implement the server (responder) side of the v3+ Tor link
+ * handshake, which uses CERTS and AUTHENTICATE cell to negotiate versions,
+ * exchange expected and observed IP and time information, and bootstrap a
+ * level of authentication higher than we have gotten on the raw TLS
+ * handshake.
+ *
+ * NOTE: Since there is currently only one type of channel, there are probably
+ * more than a few cases where functionality that is currently in
+ * channeltls.c, connection_or.c, and channel.c ought to be divided up
+ * differently.  The right time to do this is probably whenever we introduce
+ * our next channel type.
  **/
 
 /*
