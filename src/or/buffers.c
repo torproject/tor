@@ -205,7 +205,7 @@ chunk_grow(chunk_t *chunk, size_t sz)
 STATIC size_t
 preferred_chunk_size(size_t target)
 {
-  tor_assert(target <= SIZE_T_CEILING - CHUNK_HEADER_LEN);
+  tor_assert(target <= SIZE_T_CEILING - CHUNK_OVERHEAD);
   if (CHUNK_ALLOC_SIZE(target) >= MAX_CHUNK_ALLOC)
     return CHUNK_ALLOC_SIZE(target);
   size_t sz = MIN_CHUNK_ALLOC;
