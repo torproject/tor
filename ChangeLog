@@ -19,9 +19,9 @@ Changes in version 0.2.9.4-alpha - 2016-10-17
       a relay to tell whether they could use a given feature. Now, they
       should be able to rely on its declared subprotocol versions. This
       change allows compatible implementations of the Tor protocol(s) to
-      exist without declaring compatibility with pretending to be
-      particular releases of Tor itself. Closes ticket 19958; implements
-      part of proposal 264.
+      exist without pretending to be 100% bug-compatible with particular
+      releases of Tor itself. Closes ticket 19958; implements part of
+      proposal 264.
 
   o Minor feature (fallback directories):
     - Remove broken fallbacks from the hard-coded fallback directory
@@ -34,7 +34,7 @@ Changes in version 0.2.9.4-alpha - 2016-10-17
       proposal 272.
 
   o Minor features (compilation, portability):
-    - Tor now compiles correctly on MacOS 10.12 (aka "Sierra"). Closes
+    - Compile correctly on MacOS 10.12 (aka "Sierra"). Closes
       ticket 20241.
 
   o Minor features (development tools, etags):
@@ -81,7 +81,7 @@ Changes in version 0.2.9.4-alpha - 2016-10-17
 
   o Minor bugfixes (getpass):
     - Defensively fix a non-triggerable heap corruption at do_getpass()
-      tow protect ourselves from mistakes in the future. Fixes bug
+      to protect ourselves from mistakes in the future. Fixes bug
       #19223; bugfix on 0.2.7.3-rc. Bug found by Guido Vranken, patch
       by nherring.
 
@@ -91,8 +91,8 @@ Changes in version 0.2.9.4-alpha - 2016-10-17
       on 0.2.4.7-alpha.
 
   o Documentation:
-    - Added module-level internal documentation for 36 C files that
-      previously didn't have a high-level overview.
+    - Add module-level internal documentation for 36 C files that
+      previously didn't have a high-level overview. Closes ticket #20385.
 
   o Required libraries:
     - When building with OpenSSL, Tor now requires version 1.0.1 or
