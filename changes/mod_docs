@@ -1,0 +1,3 @@
+  o Documentation:
+    - Added module-level internal documentation for 36 C files that
+      previously didn't have a high-level overview.
