@@ -11,7 +11,7 @@ Changes in version 0.2.9.4-alpha - 2016-10-17
     - Tor directory authorities now vote on a set of recommended
       subprotocol versions, and on a set of required subprotocol
       versions. Clients and relays that lack support for a _required_
-      suprotocol version will not start; those that lack support for a
+      subprotocol version will not start; those that lack support for a
       _recommended_ subprotocol version will warn the user to upgrade.
       Closes ticket 19958; implements part of proposal 264.
     - Tor now uses "subprotocol versions" to indicate compatibility.
@@ -59,7 +59,7 @@ Changes in version 0.2.9.4-alpha - 2016-10-17
       on 0.2.4.7-alpha.
 
   o Minor bugfixes (address discovery):
-    - Stop reordering IP addresses returned by the OS. This makes is
+    - Stop reordering IP addresses returned by the OS. This makes it
       more likely that Tor will guess the same relay IP address every
       time. Fixes issue 20163; bugfix on 0.2.7.1-alpha, ticket 17027.
       Reported by René Mayrhofer, patch by "cypherpunks".
