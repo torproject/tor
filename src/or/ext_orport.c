@@ -4,7 +4,17 @@
 /**
  * \file ext_orport.c
  * \brief Code implementing the Extended ORPort.
-*/
+ *
+ * The Extended ORPort interface is used by pluggable transports to
+ * communicate additional information to a Tor bridge, including
+ * address information. For more information on this interface,
+ * see pt-spec.txt in torspec.git.
+ *
+ * There is no separate structure for extended ORPort connections; they use
+ * or_connection_t objects, and share most of their implementation with
+ * connection_or.c.  Once the handshake is done, an extended ORPort connection
+ * turns into a regular OR connection, using connection_ext_or_transition().
+ */
 
 #define EXT_ORPORT_PRIVATE
 #include "or.h"

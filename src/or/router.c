@@ -37,8 +37,23 @@
 
 /**
  * \file router.c
- * \brief OR functionality, including key maintenance, generating
- * and uploading server descriptors, retrying OR connections.
+ * \brief Miscellaneous relay functionality, including RSA key maintenance,
+ * generating and uploading server descriptors, picking an address to
+ * advertise, and so on.
+ *
+ * This module handles the job of deciding whether we are a Tor relay, and if
+ * so what kind. (Mostly through functions like server_mode() that inspect an
+ * or_options_t, but in some cases based on our own capabilities, such as when
+ * we are deciding whether to be a directory cache in
+ * router_has_bandwidth_to_be_dirserver().)
+ *
+ * Also in this module are the functions to generate our own routerinfo_t and
+ * extrainfo_t, and to encode those to signed strings for upload to the
+ * directory authorities.
+ *
+ * This module also handles key maintenance for RSA and Curve25519-ntor keys,
+ * and for our TLS context. (These functions should eventually move to
+ * routerkeys.c along with the code that handles Ed25519 keys now.)
  **/
 
 /************************************************************/
