@@ -8,6 +8,17 @@
  * \file connection_or.c
  * \brief Functions to handle OR connections, TLS handshaking, and
  * cells on the network.
+ *
+ * An or_connection_t is a subtype of connection_t (as implemented in
+ * connection.c) that uses a TLS connection to send and receive cells on the
+ * Tor network. (By sending and receiving cells connection_or.c, it cooperates
+ * with channeltls.c to implement a the channel interface of channel.c.)
+ *
+ * Every OR connection has an underlying tortls_t object (as implemented in
+ * tortls.c) which it uses as its TLS stream.  It is responsible for
+ * sending and receiving cells over that TLS.
+ *
+ * This module also implements the client side of the v3 Tor link handshake,
  **/
 #include "or.h"
 #include "buffers.h"

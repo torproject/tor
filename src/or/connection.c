@@ -8,6 +8,50 @@
  * \file connection.c
  * \brief General high-level functions to handle reading and writing
  * on connections.
+ *
+ * Each connection (ideally) represents a TLS connection, a TCP socket, a unix
+ * socket, or a UDP socket on which reads and writes can occur.  (But see
+ * connection_edge.c for cases where connections can also represent streams
+ * that do not have a corresponding socket.)
+ *
+ * The module implements the abstract type, connection_t.  The subtypes are:
+ *  <ul>
+ *   <li>listener_connection_t, implemented here in connection.c
+ *   <li>dir_connection_t, implemented in directory.c
+ *   <li>or_connection_t, implemented in connection_or.c
+ *   <li>edge_connection_t, implemented in connection_edge.c, along with
+ *      its subtype(s):
+ *      <ul><li>entry_connection_t, also implemented in connection_edge.c
+ *      </ul>
+ *   <li>control_connection_t, implemented in control.c
+ *  </ul>
+ *
+ * The base type implemented in this module is responsible for basic
+ * rate limiting, flow control, and marshalling bytes onto and off of the
+ * network (either directly or via TLS).
+ *
+ * Connections are registered with the main loop with connection_add(). As
+ * they become able to read or write register the fact with the event main
+ * loop by calling connection_watch_events(), connection_start_reading(), or
+ * connection_start_writing().  When they no longer want to read or write,
+ * they call connection_stop_reading() or connection_start_writing().
+ *
+ * To queue data to be written on a connection, call
+ * connection_write_to_buf().  When data arrives, the
+ * connection_process_inbuf() callback is invoked, which dispatches to a
+ * type-specific function (such as connection_edge_process_inbuf() for
+ * example). Connection types that need notice of when data has been written
+ * receive notification via connection_flushed_some() and
+ * connection_finished_flushing().  These functions all delegate to
+ * type-specific implementations.
+ *
+ * Additionally, beyond the core of connection_t, this module also implements:
+ * <ul>
+ * <li>Listeners, which wait for incoming sockets and launch connections
+ * <li>Outgoing SOCKS proxy support
+ * <li>Outgoing HTTP proxy support
+ * <li>An out-of-sockets handler for dealing with socket exhaustion
+ * </ul>
  **/
 
 #define CONNECTION_PRIVATE
