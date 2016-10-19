@@ -136,17 +136,22 @@ purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose)
     return 1; /* if no circuits yet, this might break bootstrapping, but it's
                * needed to be safe. */
 
-  if (dir_purpose == DIR_PURPOSE_UPLOAD_DIR ||
-      dir_purpose == DIR_PURPOSE_UPLOAD_VOTE ||
-      dir_purpose == DIR_PURPOSE_UPLOAD_SIGNATURES ||
-      dir_purpose == DIR_PURPOSE_FETCH_STATUS_VOTE ||
-      dir_purpose == DIR_PURPOSE_FETCH_DETACHED_SIGNATURES ||
-      dir_purpose == DIR_PURPOSE_FETCH_CONSENSUS ||
-      dir_purpose == DIR_PURPOSE_FETCH_CERTIFICATE ||
-      dir_purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
-      dir_purpose == DIR_PURPOSE_FETCH_EXTRAINFO ||
-      dir_purpose == DIR_PURPOSE_FETCH_MICRODESC)
-    return 0;
+  switch (dir_purpose)
+  {
+    case DIR_PURPOSE_UPLOAD_DIR:
+    case DIR_PURPOSE_UPLOAD_VOTE:
+    case DIR_PURPOSE_UPLOAD_SIGNATURES:
+    case DIR_PURPOSE_FETCH_STATUS_VOTE:
+    case DIR_PURPOSE_FETCH_DETACHED_SIGNATURES:
+    case DIR_PURPOSE_FETCH_CONSENSUS:
+    case DIR_PURPOSE_FETCH_CERTIFICATE:
+    case DIR_PURPOSE_FETCH_SERVERDESC:
+    case DIR_PURPOSE_FETCH_EXTRAINFO:
+    case DIR_PURPOSE_FETCH_MICRODESC:
+      return 0;
+    default:
+      break;
+  }
   return 1;
 }
 

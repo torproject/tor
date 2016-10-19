@@ -3253,6 +3253,15 @@ test_dir_http_handling(void *args)
 }
 
 static void
+test_dir_purpose_needs_anonymity_returns_true_by_default(void *arg)
+{
+  (void)arg;
+
+  tt_int_op(1, ==, purpose_needs_anonymity(0, 0));
+ done: ;
+}
+
+static void
 test_dir_purpose_needs_anonymity_returns_true_for_bridges(void *arg)
 {
   (void)arg;
@@ -5500,6 +5509,7 @@ struct testcase_t dir_tests[] = {
   DIR(dirserv_set_routerstatus_testing, 0),
   DIR(http_handling, 0),
   DIR(purpose_needs_anonymity_returns_true_for_bridges, 0),
+  DIR(purpose_needs_anonymity_returns_true_by_default, 0),
   DIR(purpose_needs_anonymity_returns_true_for_sensitive_purpose, 0),
   DIR(purpose_needs_anonymity_ret_false_for_non_sensitive_conn, 0),
   DIR(fetch_type, 0),
