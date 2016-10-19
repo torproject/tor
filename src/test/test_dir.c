@@ -3257,7 +3257,10 @@ test_dir_purpose_needs_anonymity_returns_true_by_default(void *arg)
 {
   (void)arg;
 
+  tor_capture_bugs_(1);
   tt_int_op(1, ==, purpose_needs_anonymity(0, 0));
+  tt_int_op(1, ==, smartlist_len(tor_get_captured_bug_log_()));
+  tor_end_capture_bugs_();
  done: ;
 }
 

@@ -149,10 +149,17 @@ purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose)
     case DIR_PURPOSE_FETCH_EXTRAINFO:
     case DIR_PURPOSE_FETCH_MICRODESC:
       return 0;
+    case DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2:
+    case DIR_PURPOSE_UPLOAD_RENDDESC_V2:
+    case DIR_PURPOSE_FETCH_RENDDESC_V2:
+      return 1;
+    case DIR_PURPOSE_SERVER:
     default:
-      break;
+      log_warn(LD_BUG, "Called with dir_purpose=%d, router_purpose=%d",
+               dir_purpose, router_purpose);
+      tor_assert_nonfatal_unreached();
+      return 1; /* Assume it needs anonymity; better safe than sorry. */
   }
-  return 1;
 }
 
 /** Return a newly allocated string describing <b>auth</b>. Only describes
