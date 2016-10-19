@@ -917,20 +917,9 @@ update_microdescs_from_networkstatus(time_t now)
 int
 we_use_microdescriptors_for_circuits(const or_options_t *options)
 {
-  int ret = options->UseMicrodescriptors;
-  if (ret == -1) {
-    /* UseMicrodescriptors is "auto"; we need to decide: */
-    /* If we are configured to use bridges and none of our bridges
-     * know what a microdescriptor is, the answer is no. */
-    if (options->UseBridges && !any_bridge_supports_microdescriptors())
-      return 0;
-    /* Otherwise, we decide that we'll use microdescriptors iff we are
-     * not a server, and we're not autofetching everything. */
-    /* XXXX++ what does not being a server have to do with it? also there's
-     * a partitioning issue here where bridges differ from clients. */
-    ret = !server_mode(options) && !options->FetchUselessDescriptors;
-  }
-  return ret;
+  if (options->UseMicrodescriptors == 0)
+    return 0; /* the user explicitly picked no */
+  return 1; /* yes and auto both mean yes */
 }
 
 /** Return true iff we should try to download microdescriptors at all. */
