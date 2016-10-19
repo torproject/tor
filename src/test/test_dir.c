@@ -3253,14 +3253,58 @@ test_dir_http_handling(void *args)
 }
 
 static void
-test_dir_purpose_needs_anonymity(void *arg)
+test_dir_purpose_needs_anonymity_returns_true_by_default(void *arg)
 {
   (void)arg;
-  tt_int_op(1, ==, purpose_needs_anonymity(0, ROUTER_PURPOSE_BRIDGE));
-  tt_int_op(1, ==, purpose_needs_anonymity(0, ROUTER_PURPOSE_GENERAL));
-  tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_FETCH_MICRODESC,
-                                            ROUTER_PURPOSE_GENERAL));
+
+  tt_int_op(1, ==, purpose_needs_anonymity(0, 0));
  done: ;
+}
+
+static void
+test_dir_purpose_needs_anonymity_returns_true_for_bridges(void *arg)
+{
+  (void)arg;
+
+  tt_int_op(1, ==, purpose_needs_anonymity(0, ROUTER_PURPOSE_BRIDGE));
+  tt_int_op(1, ==, purpose_needs_anonymity(DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2,
+                                   ROUTER_PURPOSE_BRIDGE));
+ done: ;
+}
+
+static void
+test_dir_purpose_needs_anonymity_returns_true_for_sensitive_purpose(void *arg)
+{
+  (void)arg;
+
+  tt_int_op(1, ==, purpose_needs_anonymity(
+                    DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2,
+                    ROUTER_PURPOSE_GENERAL));
+  tt_int_op(1, ==, purpose_needs_anonymity(
+                      DIR_PURPOSE_UPLOAD_RENDDESC_V2, 0));
+  tt_int_op(1, ==, purpose_needs_anonymity(
+                      DIR_PURPOSE_FETCH_RENDDESC_V2, 0));
+ done: ;
+}
+
+static void
+test_dir_purpose_needs_anonymity_ret_false_for_non_sensitive_conn(void *arg)
+{
+  (void)arg;
+
+  tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_UPLOAD_DIR,
+                                           ROUTER_PURPOSE_GENERAL));
+  tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_UPLOAD_VOTE, 0));
+  tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_UPLOAD_SIGNATURES, 0));
+  tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_FETCH_STATUS_VOTE, 0));
+  tt_int_op(0, ==, purpose_needs_anonymity(
+                    DIR_PURPOSE_FETCH_DETACHED_SIGNATURES, 0));
+  tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_FETCH_CONSENSUS, 0));
+  tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_FETCH_CERTIFICATE, 0));
+  tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_FETCH_SERVERDESC, 0));
+  tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_FETCH_EXTRAINFO, 0));
+  tt_int_op(0, ==, purpose_needs_anonymity(DIR_PURPOSE_FETCH_MICRODESC, 0));
+  done: ;
 }
 
 static void
@@ -5464,7 +5508,10 @@ struct testcase_t dir_tests[] = {
   DIR(fmt_control_ns, 0),
   DIR(dirserv_set_routerstatus_testing, 0),
   DIR(http_handling, 0),
-  DIR(purpose_needs_anonymity, 0),
+  DIR(purpose_needs_anonymity_returns_true_for_bridges, 0),
+  DIR(purpose_needs_anonymity_returns_true_by_default, 0),
+  DIR(purpose_needs_anonymity_returns_true_for_sensitive_purpose, 0),
+  DIR(purpose_needs_anonymity_ret_false_for_non_sensitive_conn, 0),
   DIR(fetch_type, 0),
   DIR(packages, 0),
   DIR(download_status_schedule, 0),

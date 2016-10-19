@@ -120,28 +120,38 @@ static void connection_dir_close_consensus_fetches(
 
 /********* END VARIABLES ************/
 
-/** Return true iff the directory purpose <b>dir_purpose</b> (and if it's
- * fetching descriptors, it's fetching them for <b>router_purpose</b>)
- * must use an anonymous connection to a directory. */
+/** Return false if the directory purpose <b>dir_purpose</b>
+ * does not require an anonymous (three-hop) connection.
+ *
+ * Return true 1) by default, 2) if all directory actions have
+ * specifically been configured to be over an anonymous connection,
+ * or 3) if the router is a bridge */
 int
 purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose)
 {
   if (get_options()->AllDirActionsPrivate)
     return 1;
+
   if (router_purpose == ROUTER_PURPOSE_BRIDGE)
     return 1; /* if no circuits yet, this might break bootstrapping, but it's
                * needed to be safe. */
-  if (dir_purpose == DIR_PURPOSE_UPLOAD_DIR ||
-      dir_purpose == DIR_PURPOSE_UPLOAD_VOTE ||
-      dir_purpose == DIR_PURPOSE_UPLOAD_SIGNATURES ||
-      dir_purpose == DIR_PURPOSE_FETCH_STATUS_VOTE ||
-      dir_purpose == DIR_PURPOSE_FETCH_DETACHED_SIGNATURES ||
-      dir_purpose == DIR_PURPOSE_FETCH_CONSENSUS ||
-      dir_purpose == DIR_PURPOSE_FETCH_CERTIFICATE ||
-      dir_purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
-      dir_purpose == DIR_PURPOSE_FETCH_EXTRAINFO ||
-      dir_purpose == DIR_PURPOSE_FETCH_MICRODESC)
-    return 0;
+
+  switch (dir_purpose)
+  {
+    case DIR_PURPOSE_UPLOAD_DIR:
+    case DIR_PURPOSE_UPLOAD_VOTE:
+    case DIR_PURPOSE_UPLOAD_SIGNATURES:
+    case DIR_PURPOSE_FETCH_STATUS_VOTE:
+    case DIR_PURPOSE_FETCH_DETACHED_SIGNATURES:
+    case DIR_PURPOSE_FETCH_CONSENSUS:
+    case DIR_PURPOSE_FETCH_CERTIFICATE:
+    case DIR_PURPOSE_FETCH_SERVERDESC:
+    case DIR_PURPOSE_FETCH_EXTRAINFO:
+    case DIR_PURPOSE_FETCH_MICRODESC:
+      return 0;
+    default:
+      break;
+  }
   return 1;
 }
 
@@ -1078,18 +1088,6 @@ directory_initiate_command(const tor_addr_t *or_addr, uint16_t or_port,
                              if_modified_since, NULL);
 }
 
-/** Return non-zero iff a directory connection with purpose
- * <b>dir_purpose</b> reveals sensitive information about a Tor
- * instance's client activities.  (Such connections must be performed
- * through normal three-hop Tor circuits.) */
-int
-is_sensitive_dir_purpose(uint8_t dir_purpose)
-{
-  return ((dir_purpose == DIR_PURPOSE_HAS_FETCHED_RENDDESC_V2) ||
-          (dir_purpose == DIR_PURPOSE_UPLOAD_RENDDESC_V2) ||
-          (dir_purpose == DIR_PURPOSE_FETCH_RENDDESC_V2));
-}
-
 /** Same as directory_initiate_command(), but accepts rendezvous data to
  * fetch a hidden service descriptor, and takes its address & port arguments
  * as tor_addr_port_t. */
@@ -1137,7 +1135,7 @@ directory_initiate_command_rend(const tor_addr_port_t *or_addr_port,
 
   log_debug(LD_DIR, "Initiating %s", dir_conn_purpose_to_string(dir_purpose));
 
-  if (is_sensitive_dir_purpose(dir_purpose)) {
+  if (purpose_needs_anonymity(dir_purpose, router_purpose)) {
     tor_assert(anonymized_connection ||
                rend_non_anonymous_mode_enabled(options));
   }

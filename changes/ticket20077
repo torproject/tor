@@ -1,0 +1,5 @@
+  o Code simplification and refactoring:
+    - Remove redundant behavior of is_sensitive_dir_purpose, refactor to use
+      only purpose_needs_anonymity
+    - Refactor large if statement in purpose_needs_anonymity to use switch
+      statement instead.
