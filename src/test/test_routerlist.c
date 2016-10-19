@@ -207,7 +207,7 @@ mock_usable_consensus_flavor(void)
 static smartlist_t *mock_is_guard_list = NULL;
 
 static int
-mock_is_node_used_as_guard(node_t *n)
+mock_is_node_used_as_guard(const node_t *n)
 {
   if (mock_is_guard_list) {
     SMARTLIST_FOREACH_BEGIN(mock_is_guard_list, node_t *, e) {
