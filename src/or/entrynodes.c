@@ -63,17 +63,42 @@ typedef struct {
   smartlist_t *socks_args;
 } bridge_info_t;
 
-/** A list of our chosen entry guards. */
-static smartlist_t *entry_guards = NULL;
-/** A value of 1 means that the entry_guards list has changed
- * and those changes need to be flushed to disk. */
-static int entry_guards_dirty = 0;
+/** All the context for guard selection on a particular client */
+
+struct guard_selection_s {
+  /**
+   * A value of 1 means that guard_selection_t structures have changed
+   * and those changes need to be flushed to disk.
+   *
+   * XXX we don't know how to flush multiple guard contexts to disk yet;
+   * fix that as soon as any way to change the default exists, or at least
+   * make sure this gets set on change.
+   */
+  int dirty;
+
+  /**
+   * A list of our chosen entry guards, as entry_guard_t structures; this
+   * preserves the pre-Prop271 behavior.
+   */
+  smartlist_t *chosen_entry_guards;
+
+  /**
+   * When we try to choose an entry guard, should we parse and add
+   * config's EntryNodes first?  This was formerly a global.
+   */
+  int should_add_entry_nodes;
+};
+
+static smartlist_t *guard_contexts = NULL;
+static guard_selection_t *curr_guard_context = NULL;
 
 static void bridge_free(bridge_info_t *bridge);
-static const node_t *choose_random_entry_impl(cpath_build_state_t *state,
+static const node_t *choose_random_entry_impl(guard_selection_t *gs,
+                                              cpath_build_state_t *state,
                                               int for_directory,
                                               dirinfo_type_t dirtype,
                                               int *n_options_out);
+static guard_selection_t * guard_selection_new(void);
 static int num_bridges_usable(void);
 
 /* Default number of entry guards in the case where the NumEntryGuards
@@ -84,13 +109,52 @@ static int num_bridges_usable(void);
 #define MIN_N_GUARDS 1
 #define MAX_N_GUARDS 10
 
-/** Return the list of entry guards, creating it if necessary. */
+/** Allocate a new guard_selection_t */
+
+static guard_selection_t *
+guard_selection_new(void)
+{
+  guard_selection_t *gs;
+
+  gs = tor_malloc_zero(sizeof(*gs));
+  gs->chosen_entry_guards = smartlist_new();
+
+  return gs;
+}
+
+/** Get current default guard_selection_t, creating it if necessary */
+guard_selection_t *
+get_guard_selection_info(void)
+{
+  if (!guard_contexts) {
+    guard_contexts = smartlist_new();
+  }
+
+  if (!curr_guard_context) {
+    curr_guard_context = guard_selection_new();
+    smartlist_add(guard_contexts, curr_guard_context);
+  }
+
+  return curr_guard_context;
+}
+
+/** Return the list of entry guards for a guard_selection_t, creating it
+ * if necessary. */
+const smartlist_t *
+get_entry_guards_for_guard_selection(guard_selection_t *gs)
+{
+  tor_assert(gs != NULL);
+  tor_assert(gs->chosen_entry_guards != NULL);
+
+  return gs->chosen_entry_guards;
+}
+
+/** Return the list of entry guards for the default guard_selection_t,
+ * creating it if necessary. */
 const smartlist_t *
 get_entry_guards(void)
 {
-  if (! entry_guards)
-    entry_guards = smartlist_new();
-  return entry_guards;
+  return get_entry_guards_for_guard_selection(get_guard_selection_info());
 }
 
 /** Check whether the entry guard <b>e</b> is usable, given the directory
@@ -286,21 +350,28 @@ entry_is_live(const entry_guard_t *e, entry_is_live_flags_t flags,
   return node;
 }
 
-/** Return the number of entry guards that we think are usable. */
+/** Return the number of entry guards that we think are usable, in the
+ * context of the given guard_selection_t */
 int
-num_live_entry_guards(int for_directory)
+num_live_entry_guards_for_guard_selection(guard_selection_t *gs,
+                                          int for_directory)
 {
   int n = 0;
   const char *msg;
+
+  tor_assert(gs != NULL);
+
   /* Set the entry node attributes we are interested in. */
   entry_is_live_flags_t entry_flags = ENTRY_NEED_CAPACITY;
   if (!for_directory) {
     entry_flags |= ENTRY_NEED_DESCRIPTOR;
   }
 
-  if (! entry_guards)
+  if (!(gs->chosen_entry_guards)) {
     return 0;
-  SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, entry) {
+  }
+
+  SMARTLIST_FOREACH_BEGIN(gs->chosen_entry_guards, entry_guard_t *, entry) {
       if (for_directory && !entry->is_dir_cache)
         continue;
       if (entry_is_live(entry, entry_flags, &msg))
@@ -309,27 +380,57 @@ num_live_entry_guards(int for_directory)
   return n;
 }
 
-/** If <b>digest</b> matches the identity of any node in the
- * entry_guards list, return that node. Else return NULL. */
-entry_guard_t *
-entry_guard_get_by_id_digest(const char *digest)
+/** Return the number of entry guards that we think are usable, for the
+ * default guard selection */
+int
+num_live_entry_guards(int for_directory)
 {
-  SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
+  return num_live_entry_guards_for_guard_selection(
+      get_guard_selection_info(), for_directory);
+}
+
+/** If <b>digest</b> matches the identity of any node in the
+ * entry_guards list for the provided guard selection state,
+ return that node. Else return NULL. */
+entry_guard_t *
+entry_guard_get_by_id_digest_for_guard_selection(guard_selection_t *gs,
+                                                 const char *digest)
+{
+  tor_assert(gs != NULL);
+
+  SMARTLIST_FOREACH(gs->chosen_entry_guards, entry_guard_t *, entry,
                     if (tor_memeq(digest, entry->identity, DIGEST_LEN))
                       return entry;
                    );
   return NULL;
 }
 
-/** Dump a description of our list of entry guards to the log at level
- * <b>severity</b>. */
+/** If <b>digest</b> matches the identity of any node in the
+ * entry_guards list for the default guard selection state,
+ return that node. Else return NULL. */
+entry_guard_t *
+entry_guard_get_by_id_digest(const char *digest)
+{
+  return entry_guard_get_by_id_digest_for_guard_selection(
+      get_guard_selection_info(), digest);
+}
+
+/** Dump a description of our list of entry guards in the given guard
+ * selection context to the log at level <b>severity</b>. */
 static void
-log_entry_guards(int severity)
+log_entry_guards_for_guard_selection(guard_selection_t *gs, int severity)
 {
   smartlist_t *elements = smartlist_new();
   char *s;
 
-  SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, e)
+  /*
+   * TODO this should probably log more info about prop-271 state too
+   * when it's implemented.
+   */
+
+  tor_assert(gs != NULL);
+
+  SMARTLIST_FOREACH_BEGIN(gs->chosen_entry_guards, entry_guard_t *, e)
     {
       const char *msg = NULL;
       if (entry_is_live(e, ENTRY_NEED_CAPACITY, &msg))
@@ -386,23 +487,28 @@ control_event_guard_deferred(void)
 /** Largest amount that we'll backdate chosen_on_date */
 #define CHOSEN_ON_DATE_SLOP (30*86400)
 
-/** Add a new (preferably stable and fast) router to our
- * entry_guards list. Return a pointer to the router if we succeed,
- * or NULL if we can't find any more suitable entries.
+/** Add a new (preferably stable and fast) router to our chosen_entry_guards
+ * list for the supplied guard selection. Return a pointer to the router if
+ * we succeed, or NULL if we can't find any more suitable entries.
  *
  * If <b>chosen</b> is defined, use that one, and if it's not
  * already in our entry_guards list, put it at the *beginning*.
  * Else, put the one we pick at the end of the list. */
 STATIC const node_t *
-add_an_entry_guard(const node_t *chosen, int reset_status, int prepend,
+add_an_entry_guard(guard_selection_t *gs,
+                   const node_t *chosen, int reset_status, int prepend,
                    int for_discovery, int for_directory)
 {
   const node_t *node;
   entry_guard_t *entry;
 
+  tor_assert(gs != NULL);
+  tor_assert(gs->chosen_entry_guards != NULL);
+
   if (chosen) {
     node = chosen;
-    entry = entry_guard_get_by_id_digest(node->identity);
+    entry = entry_guard_get_by_id_digest_for_guard_selection(gs,
+        node->identity);
     if (entry) {
       if (reset_status) {
         entry->bad_since = 0;
@@ -428,13 +534,11 @@ add_an_entry_guard(const node_t *chosen, int reset_status, int prepend,
     if (!node)
       return NULL;
   }
-  if (node->using_as_guard)
-    return NULL;
-  if (entry_guard_get_by_id_digest(node->identity) != NULL) {
+  if (entry_guard_get_by_id_digest_for_guard_selection(gs, node->identity)
+      != NULL) {
     log_info(LD_CIRC, "I was about to add a duplicate entry guard.");
     /* This can happen if we choose a guard, then the node goes away, then
      * comes back. */
-    ((node_t*) node)->using_as_guard = 1;
     return NULL;
   }
   entry = tor_malloc_zero(sizeof(entry_guard_t));
@@ -466,14 +570,15 @@ add_an_entry_guard(const node_t *chosen, int reset_status, int prepend,
   if (!for_discovery)
     entry->made_contact = 1;
 
-  ((node_t*)node)->using_as_guard = 1;
   if (prepend)
-    smartlist_insert(entry_guards, 0, entry);
+    smartlist_insert(gs->chosen_entry_guards, 0, entry);
   else
-    smartlist_add(entry_guards, entry);
+    smartlist_add(gs->chosen_entry_guards, entry);
+
   control_event_guard(entry->nickname, entry->identity, "NEW");
   control_event_guard_deferred();
-  log_entry_guards(LOG_INFO);
+  log_entry_guards_for_guard_selection(gs, LOG_INFO);
+
   return node;
 }
 
@@ -503,20 +608,25 @@ decide_num_guards(const or_options_t *options, int for_directory)
 /** If the use of entry guards is configured, choose more entry guards
  * until we have enough in the list. */
 static void
-pick_entry_guards(const or_options_t *options, int for_directory)
+pick_entry_guards(guard_selection_t *gs,
+                  const or_options_t *options,
+                  int for_directory)
 {
   int changed = 0;
   const int num_needed = decide_num_guards(options, for_directory);
 
-  tor_assert(entry_guards);
+  tor_assert(gs != NULL);
+  tor_assert(gs->chosen_entry_guards != NULL);
 
-  while (num_live_entry_guards(for_directory) < num_needed) {
-    if (!add_an_entry_guard(NULL, 0, 0, 0, for_directory))
+  while (num_live_entry_guards_for_guard_selection(gs, for_directory)
+         < num_needed) {
+    if (!add_an_entry_guard(gs, NULL, 0, 0, 0, for_directory))
       break;
     changed = 1;
   }
+
   if (changed)
-    entry_guards_changed();
+    entry_guards_changed_for_guard_selection(gs);
 }
 
 /** How long (in seconds) do we allow an entry guard to be nonfunctional,
@@ -559,19 +669,23 @@ guards_get_lifetime(void)
                                  MAX_GUARD_LIFETIME) + CHOSEN_ON_DATE_SLOP;
 }
 
-/** Remove any entry guard which was selected by an unknown version of Tor,
- * or which was selected by a version of Tor that's known to select
- * entry guards badly, or which was selected more 2 months ago. */
+/** Remove from a guard selection context any entry guard which was selected
+ * by an unknown version of Tor, or which was selected by a version of Tor
+ * that's known to select entry guards badly, or which was selected more 2
+ * months ago. */
 /* XXXX The "obsolete guards" and "chosen long ago guards" things should
  * probably be different functions. */
 static int
-remove_obsolete_entry_guards(time_t now)
+remove_obsolete_entry_guards(guard_selection_t *gs, time_t now)
 {
   int changed = 0, i;
   int32_t guard_lifetime = guards_get_lifetime();
 
-  for (i = 0; i < smartlist_len(entry_guards); ++i) {
-    entry_guard_t *entry = smartlist_get(entry_guards, i);
+  tor_assert(gs != NULL);
+  if (!(gs->chosen_entry_guards)) goto done;
+
+  for (i = 0; i < smartlist_len(gs->chosen_entry_guards); ++i) {
+    entry_guard_t *entry = smartlist_get(gs->chosen_entry_guards, i);
     const char *ver = entry->chosen_by_version;
     const char *msg = NULL;
     tor_version_t v;
@@ -598,28 +712,32 @@ remove_obsolete_entry_guards(time_t now)
              entry->nickname, dbuf, msg, ver?escaped(ver):"none");
       control_event_guard(entry->nickname, entry->identity, "DROPPED");
       entry_guard_free(entry);
-      smartlist_del_keeporder(entry_guards, i--);
-      log_entry_guards(LOG_INFO);
+      smartlist_del_keeporder(gs->chosen_entry_guards, i--);
+      log_entry_guards_for_guard_selection(gs, LOG_INFO);
       changed = 1;
     }
   }
 
+ done:
   return changed ? 1 : 0;
 }
 
-/** Remove all entry guards that have been down or unlisted for so
- * long that we don't think they'll come up again. Return 1 if we
- * removed any, or 0 if we did nothing. */
+/** Remove all entry guards from this guard selection context that have
+ * been down or unlisted for so long that we don't think they'll come up
+ * again. Return 1 if we removed any, or 0 if we did nothing. */
 static int
-remove_dead_entry_guards(time_t now)
+remove_dead_entry_guards(guard_selection_t *gs, time_t now)
 {
   char dbuf[HEX_DIGEST_LEN+1];
   char tbuf[ISO_TIME_LEN+1];
   int i;
   int changed = 0;
 
-  for (i = 0; i < smartlist_len(entry_guards); ) {
-    entry_guard_t *entry = smartlist_get(entry_guards, i);
+  tor_assert(gs != NULL);
+  if (!(gs->chosen_entry_guards)) goto done;
+
+  for (i = 0; i < smartlist_len(gs->chosen_entry_guards); ) {
+    entry_guard_t *entry = smartlist_get(gs->chosen_entry_guards, i);
     if (entry->bad_since &&
         ! entry->path_bias_disabled &&
         entry->bad_since + ENTRY_GUARD_REMOVE_AFTER < now) {
@@ -631,32 +749,47 @@ remove_dead_entry_guards(time_t now)
                entry->nickname, dbuf, tbuf);
       control_event_guard(entry->nickname, entry->identity, "DROPPED");
       entry_guard_free(entry);
-      smartlist_del_keeporder(entry_guards, i);
-      log_entry_guards(LOG_INFO);
+      smartlist_del_keeporder(gs->chosen_entry_guards, i);
+      log_entry_guards_for_guard_selection(gs, LOG_INFO);
       changed = 1;
     } else
       ++i;
   }
+
+ done:
   return changed ? 1 : 0;
+}
+
+/** Remove all currently listed entry guards for a given guard selection
+ * context */
+void
+remove_all_entry_guards_for_guard_selection(guard_selection_t *gs)
+{
+  char dbuf[HEX_DIGEST_LEN+1];
+
+  tor_assert(gs != NULL);
+
+  if (gs->chosen_entry_guards) {
+    while (smartlist_len(gs->chosen_entry_guards)) {
+      entry_guard_t *entry = smartlist_get(gs->chosen_entry_guards, 0);
+      base16_encode(dbuf, sizeof(dbuf), entry->identity, DIGEST_LEN);
+      log_info(LD_CIRC, "Entry guard '%s' (%s) has been dropped.",
+               entry->nickname, dbuf);
+      control_event_guard(entry->nickname, entry->identity, "DROPPED");
+      entry_guard_free(entry);
+      smartlist_del(gs->chosen_entry_guards, 0);
+    }
+  }
+
+  log_entry_guards_for_guard_selection(gs, LOG_INFO);
+  entry_guards_changed_for_guard_selection(gs);
 }
 
 /** Remove all currently listed entry guards. So new ones will be chosen. */
 void
 remove_all_entry_guards(void)
 {
-  char dbuf[HEX_DIGEST_LEN+1];
-
-  while (smartlist_len(entry_guards)) {
-    entry_guard_t *entry = smartlist_get(entry_guards, 0);
-    base16_encode(dbuf, sizeof(dbuf), entry->identity, DIGEST_LEN);
-    log_info(LD_CIRC, "Entry guard '%s' (%s) has been dropped.",
-             entry->nickname, dbuf);
-    control_event_guard(entry->nickname, entry->identity, "DROPPED");
-    entry_guard_free(entry);
-    smartlist_del(entry_guards, 0);
-  }
-  log_entry_guards(LOG_INFO);
-  entry_guards_changed();
+  remove_all_entry_guards_for_guard_selection(get_guard_selection_info());
 }
 
 /** A new directory or router-status has arrived; update the down/listed
@@ -669,19 +802,21 @@ remove_all_entry_guards(void)
  * think that things are unlisted.
  */
 void
-entry_guards_compute_status(const or_options_t *options, time_t now)
+entry_guards_compute_status_for_guard_selection(guard_selection_t *gs,
+                                                const or_options_t *options,
+                                                time_t now)
 {
   int changed = 0;
   digestmap_t *reasons;
 
-  if (! entry_guards)
+  if ((!gs) || !(gs->chosen_entry_guards))
     return;
 
   if (options->EntryNodes) /* reshuffle the entry guard list if needed */
     entry_nodes_should_be_added();
 
   reasons = digestmap_new();
-  SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, entry)
+  SMARTLIST_FOREACH_BEGIN(gs->chosen_entry_guards, entry_guard_t *, entry)
     {
       const node_t *r = node_get_by_id(entry->identity);
       const char *reason = NULL;
@@ -695,13 +830,14 @@ entry_guards_compute_status(const or_options_t *options, time_t now)
     }
   SMARTLIST_FOREACH_END(entry);
 
-  if (remove_dead_entry_guards(now))
+  if (remove_dead_entry_guards(gs, now))
     changed = 1;
-  if (remove_obsolete_entry_guards(now))
+  if (remove_obsolete_entry_guards(gs, now))
     changed = 1;
 
   if (changed) {
-    SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, entry) {
+    SMARTLIST_FOREACH_BEGIN(gs->chosen_entry_guards, entry_guard_t *,
+                            entry) {
       const char *reason = digestmap_get(reasons, entry->identity);
       const char *live_msg = "";
       const node_t *r = entry_is_live(entry, ENTRY_NEED_CAPACITY, &live_msg);
@@ -716,12 +852,29 @@ entry_guards_compute_status(const or_options_t *options, time_t now)
                r ? "" : live_msg);
     } SMARTLIST_FOREACH_END(entry);
     log_info(LD_CIRC, "    (%d/%d entry guards are usable/new)",
-             num_live_entry_guards(0), smartlist_len(entry_guards));
-    log_entry_guards(LOG_INFO);
-    entry_guards_changed();
+             num_live_entry_guards_for_guard_selection(gs, 0),
+             smartlist_len(gs->chosen_entry_guards));
+    log_entry_guards_for_guard_selection(gs, LOG_INFO);
+    entry_guards_changed_for_guard_selection(gs);
   }
 
   digestmap_free(reasons, NULL);
+}
+
+/** A new directory or router-status has arrived; update the down/listed
+ * status of the entry guards.
+ *
+ * An entry is 'down' if the directory lists it as nonrunning.
+ * An entry is 'unlisted' if the directory doesn't include it.
+ *
+ * Don't call this on startup; only on a fresh download. Otherwise we'll
+ * think that things are unlisted.
+ */
+void
+entry_guards_compute_status(const or_options_t *options, time_t now)
+{
+  entry_guards_compute_status_for_guard_selection(get_guard_selection_info(),
+                                                  options, now);
 }
 
 /** Called when a connection to an OR with the identity digest <b>digest</b>
@@ -736,8 +889,9 @@ entry_guards_compute_status(const or_options_t *options, time_t now)
  * Too many boolean arguments is a recipe for confusion.
  */
 int
-entry_guard_register_connect_status(const char *digest, int succeeded,
-                                    int mark_relay_status, time_t now)
+entry_guard_register_connect_status_for_guard_selection(
+    guard_selection_t *gs, const char *digest, int succeeded,
+    int mark_relay_status, time_t now)
 {
   int changed = 0;
   int refuse_conn = 0;
@@ -746,10 +900,11 @@ entry_guard_register_connect_status(const char *digest, int succeeded,
   int idx = -1;
   char buf[HEX_DIGEST_LEN+1];
 
-  if (! entry_guards)
+  if (!(gs) || !(gs->chosen_entry_guards)) {
     return 0;
+  }
 
-  SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, e) {
+  SMARTLIST_FOREACH_BEGIN(gs->chosen_entry_guards, entry_guard_t *, e) {
     tor_assert(e);
     if (tor_memeq(e->identity, digest, DIGEST_LEN)) {
       entry = e;
@@ -784,11 +939,12 @@ entry_guard_register_connect_status(const char *digest, int succeeded,
                "Connection to never-contacted entry guard '%s' (%s) failed. "
                "Removing from the list. %d/%d entry guards usable/new.",
                entry->nickname, buf,
-               num_live_entry_guards(0)-1, smartlist_len(entry_guards)-1);
+               num_live_entry_guards_for_guard_selection(gs, 0) - 1,
+               smartlist_len(gs->chosen_entry_guards)-1);
       control_event_guard(entry->nickname, entry->identity, "DROPPED");
       entry_guard_free(entry);
-      smartlist_del_keeporder(entry_guards, idx);
-      log_entry_guards(LOG_INFO);
+      smartlist_del_keeporder(gs->chosen_entry_guards, idx);
+      log_entry_guards_for_guard_selection(gs, LOG_INFO);
       changed = 1;
     } else if (!entry->unreachable_since) {
       log_info(LD_CIRC, "Unable to connect to entry guard '%s' (%s). "
@@ -818,7 +974,7 @@ entry_guard_register_connect_status(const char *digest, int succeeded,
      * came back? We should give our earlier entries another try too,
      * and close this connection so we don't use it before we've given
      * the others a shot. */
-    SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, e) {
+    SMARTLIST_FOREACH_BEGIN(gs->chosen_entry_guards, entry_guard_t *, e) {
         if (e == entry)
           break;
         if (e->made_contact) {
@@ -837,56 +993,68 @@ entry_guard_register_connect_status(const char *digest, int succeeded,
                "Connected to new entry guard '%s' (%s). Marking earlier "
                "entry guards up. %d/%d entry guards usable/new.",
                entry->nickname, buf,
-               num_live_entry_guards(0), smartlist_len(entry_guards));
-      log_entry_guards(LOG_INFO);
+               num_live_entry_guards_for_guard_selection(gs, 0),
+               smartlist_len(gs->chosen_entry_guards));
+      log_entry_guards_for_guard_selection(gs, LOG_INFO);
       changed = 1;
     }
   }
 
   if (changed)
-    entry_guards_changed();
+    entry_guards_changed_for_guard_selection(gs);
   return refuse_conn ? -1 : 0;
 }
 
-/** When we try to choose an entry guard, should we parse and add
- * config's EntryNodes first? */
-static int should_add_entry_nodes = 0;
+/** Called when a connection to an OR with the identity digest <b>digest</b>
+ * is established (<b>succeeded</b>==1) or has failed (<b>succeeded</b>==0).
+ * If the OR is an entry, change that entry's up/down status in the default
+ * guard selection context.
+ * Return 0 normally, or -1 if we want to tear down the new connection.
+ *
+ * If <b>mark_relay_status</b>, also call router_set_status() on this
+ * relay.
+ */
+int
+entry_guard_register_connect_status(const char *digest, int succeeded,
+                                    int mark_relay_status, time_t now)
+{
+  return entry_guard_register_connect_status_for_guard_selection(
+      get_guard_selection_info(), digest, succeeded, mark_relay_status, now);
+}
+
+/** Called when the value of EntryNodes changes in our configuration. */
+void
+entry_nodes_should_be_added_for_guard_selection(guard_selection_t *gs)
+{
+  tor_assert(gs != NULL);
+
+  log_info(LD_CIRC, "EntryNodes config option set. Putting configured "
+           "relays at the front of the entry guard list.");
+  gs->should_add_entry_nodes = 1;
+}
 
 /** Called when the value of EntryNodes changes in our configuration. */
 void
 entry_nodes_should_be_added(void)
 {
-  log_info(LD_CIRC, "EntryNodes config option set. Putting configured "
-           "relays at the front of the entry guard list.");
-  should_add_entry_nodes = 1;
-}
-
-/** Update the using_as_guard fields of all the nodes. We do this after we
- * remove entry guards from the list: This is the only function that clears
- * the using_as_guard field. */
-static void
-update_node_guard_status(void)
-{
-  smartlist_t *nodes = nodelist_get_list();
-  SMARTLIST_FOREACH(nodes, node_t *, node, node->using_as_guard = 0);
-  SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, entry) {
-    node_t *node = node_get_mutable_by_id(entry->identity);
-    if (node)
-      node->using_as_guard = 1;
-  } SMARTLIST_FOREACH_END(entry);
+  entry_nodes_should_be_added_for_guard_selection(
+      get_guard_selection_info());
 }
 
 /** Adjust the entry guards list so that it only contains entries from
  * EntryNodes, adding new entries from EntryNodes to the list as needed. */
 STATIC void
-entry_guards_set_from_config(const or_options_t *options)
+entry_guards_set_from_config(guard_selection_t *gs,
+                             const or_options_t *options)
 {
   smartlist_t *entry_nodes, *worse_entry_nodes, *entry_fps;
   smartlist_t *old_entry_guards_on_list, *old_entry_guards_not_on_list;
   const int numentryguards = decide_num_guards(options, 0);
-  tor_assert(entry_guards);
 
-  should_add_entry_nodes = 0;
+  tor_assert(gs != NULL);
+  tor_assert(gs->chosen_entry_guards != NULL);
+
+  gs->should_add_entry_nodes = 0;
 
   if (!options->EntryNodes) {
     /* It's possible that a controller set EntryNodes, thus making
@@ -915,7 +1083,7 @@ entry_guards_set_from_config(const or_options_t *options)
   SMARTLIST_FOREACH(entry_nodes, const node_t *,node,
                     smartlist_add(entry_fps, (void*)node->identity));
 
-  SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e, {
+  SMARTLIST_FOREACH(gs->chosen_entry_guards, entry_guard_t *, e, {
     if (smartlist_contains_digest(entry_fps, e->identity))
       smartlist_add(old_entry_guards_on_list, e);
     else
@@ -925,7 +1093,8 @@ entry_guards_set_from_config(const or_options_t *options)
   /* Remove all currently configured guard nodes, excluded nodes, unreachable
    * nodes, or non-Guard nodes from entry_nodes. */
   SMARTLIST_FOREACH_BEGIN(entry_nodes, const node_t *, node) {
-    if (entry_guard_get_by_id_digest(node->identity)) {
+    if (entry_guard_get_by_id_digest_for_guard_selection(gs,
+          node->identity)) {
       SMARTLIST_DEL_CURRENT(entry_nodes, node);
       continue;
     } else if (routerset_contains_node(options->ExcludeNodes, node)) {
@@ -942,9 +1111,9 @@ entry_guards_set_from_config(const or_options_t *options)
   } SMARTLIST_FOREACH_END(node);
 
   /* Now build the new entry_guards list. */
-  smartlist_clear(entry_guards);
+  smartlist_clear(gs->chosen_entry_guards);
   /* First, the previously configured guards that are in EntryNodes. */
-  smartlist_add_all(entry_guards, old_entry_guards_on_list);
+  smartlist_add_all(gs->chosen_entry_guards, old_entry_guards_on_list);
   /* Next, scramble the rest of EntryNodes, putting the guards first. */
   smartlist_shuffle(entry_nodes);
   smartlist_shuffle(worse_entry_nodes);
@@ -952,24 +1121,23 @@ entry_guards_set_from_config(const or_options_t *options)
 
   /* Next, the rest of EntryNodes */
   SMARTLIST_FOREACH_BEGIN(entry_nodes, const node_t *, node) {
-    add_an_entry_guard(node, 0, 0, 1, 0);
-    if (smartlist_len(entry_guards) > numentryguards * 10)
+    add_an_entry_guard(gs, node, 0, 0, 1, 0);
+    if (smartlist_len(gs->chosen_entry_guards) > numentryguards * 10)
       break;
   } SMARTLIST_FOREACH_END(node);
-  log_notice(LD_GENERAL, "%d entries in guards", smartlist_len(entry_guards));
+  log_notice(LD_GENERAL, "%d entries in guards",
+             smartlist_len(gs->chosen_entry_guards));
   /* Finally, free the remaining previously configured guards that are not in
    * EntryNodes. */
   SMARTLIST_FOREACH(old_entry_guards_not_on_list, entry_guard_t *, e,
                     entry_guard_free(e));
-
-  update_node_guard_status();
 
   smartlist_free(entry_nodes);
   smartlist_free(worse_entry_nodes);
   smartlist_free(entry_fps);
   smartlist_free(old_entry_guards_on_list);
   smartlist_free(old_entry_guards_not_on_list);
-  entry_guards_changed();
+  entry_guards_changed_for_guard_selection(gs);
 }
 
 /** Return 0 if we're fine adding arbitrary routers out of the
@@ -996,7 +1164,8 @@ entry_list_is_constrained(const or_options_t *options)
 const node_t *
 choose_random_entry(cpath_build_state_t *state)
 {
-  return choose_random_entry_impl(state, 0, NO_DIRINFO, NULL);
+  return choose_random_entry_impl(get_guard_selection_info(),
+                                  state, 0, NO_DIRINFO, NULL);
 }
 
 /** Pick a live (up and listed) directory guard from entry_guards for
@@ -1004,7 +1173,8 @@ choose_random_entry(cpath_build_state_t *state)
 const node_t *
 choose_random_dirguard(dirinfo_type_t type)
 {
-  return choose_random_entry_impl(NULL, 1, type, NULL);
+  return choose_random_entry_impl(get_guard_selection_info(),
+                                  NULL, 1, type, NULL);
 }
 
 /** Filter <b>all_entry_guards</b> for usable entry guards and put them
@@ -1095,7 +1265,8 @@ populate_live_entry_guards(smartlist_t *live_entry_guards,
   return retval;
 }
 
-/** Pick a node to be used as the entry guard of a circuit.
+/** Pick a node to be used as the entry guard of a circuit, relative to
+ * a supplied guard selection context.
  *
  * If <b>state</b> is set, it contains the information we know about
  * the upcoming circuit.
@@ -1116,7 +1287,8 @@ populate_live_entry_guards(smartlist_t *live_entry_guards,
  * Helper for choose_random{entry,dirguard}.
 */
 static const node_t *
-choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
+choose_random_entry_impl(guard_selection_t *gs,
+                         cpath_build_state_t *state, int for_directory,
                          dirinfo_type_t dirinfo_type, int *n_options_out)
 {
   const or_options_t *options = get_options();
@@ -1130,18 +1302,18 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
   const int num_needed = decide_num_guards(options, for_directory);
   int retval = 0;
 
+  tor_assert(gs != NULL);
+  tor_assert(gs->chosen_entry_guards != NULL);
+
   if (n_options_out)
     *n_options_out = 0;
 
-  if (!entry_guards)
-    entry_guards = smartlist_new();
-
-  if (should_add_entry_nodes)
-    entry_guards_set_from_config(options);
+  if (gs->should_add_entry_nodes)
+    entry_guards_set_from_config(gs, options);
 
   if (!entry_list_is_constrained(options) &&
-      smartlist_len(entry_guards) < num_needed)
-    pick_entry_guards(options, for_directory);
+      smartlist_len(gs->chosen_entry_guards) < num_needed)
+    pick_entry_guards(gs, options, for_directory);
 
  retry:
   smartlist_clear(live_entry_guards);
@@ -1149,7 +1321,7 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
   /* Populate the list of live entry guards so that we pick one of
      them. */
   retval = populate_live_entry_guards(live_entry_guards,
-                                      entry_guards,
+                                      gs->chosen_entry_guards,
                                       chosen_exit,
                                       dirinfo_type,
                                       for_directory,
@@ -1177,9 +1349,9 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
       /* XXX if guard doesn't imply fast and stable, then we need
        * to tell add_an_entry_guard below what we want, or it might
        * be a long time til we get it. -RD */
-      node = add_an_entry_guard(NULL, 0, 0, 1, for_directory);
+      node = add_an_entry_guard(gs, NULL, 0, 0, 1, for_directory);
       if (node) {
-        entry_guards_changed();
+        entry_guards_changed_for_guard_selection(gs);
         /* XXX we start over here in case the new node we added shares
          * a family with our exit node. There's a chance that we'll just
          * load up on entry guards here, if the network we're using is
@@ -1219,13 +1391,15 @@ choose_random_entry_impl(cpath_build_state_t *state, int for_directory,
 }
 
 /** Parse <b>state</b> and learn about the entry guards it describes.
- * If <b>set</b> is true, and there are no errors, replace the global
- * entry_list with what we find.
+ * If <b>set</b> is true, and there are no errors, replace the guard
+ * list in the provided guard selection context with what we find.
  * On success, return 0. On failure, alloc into *<b>msg</b> a string
  * describing the error, and return -1.
  */
 int
-entry_guards_parse_state(or_state_t *state, int set, char **msg)
+entry_guards_parse_state_for_guard_selection(
+    guard_selection_t *gs,
+    or_state_t *state, int set, char **msg)
 {
   entry_guard_t *node = NULL;
   smartlist_t *new_entry_guards = smartlist_new();
@@ -1233,6 +1407,8 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
   time_t now = time(NULL);
   const char *state_version = state->TorVersion;
   digestmap_t *added_by = digestmap_new();
+
+  tor_assert(gs != NULL);
 
   *msg = NULL;
   for (line = state->EntryGuards; line; line = line->next) {
@@ -1469,22 +1645,34 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
                       entry_guard_free(e));
     smartlist_free(new_entry_guards);
   } else { /* !err && set */
-    if (entry_guards) {
-      SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
+    if (gs->chosen_entry_guards) {
+      SMARTLIST_FOREACH(gs->chosen_entry_guards, entry_guard_t *, e,
                         entry_guard_free(e));
-      smartlist_free(entry_guards);
+      smartlist_free(gs->chosen_entry_guards);
     }
-    entry_guards = new_entry_guards;
-    entry_guards_dirty = 0;
+    gs->chosen_entry_guards = new_entry_guards;
+    gs->dirty = 0;
     /* XXX hand new_entry_guards to this func, and move it up a
      * few lines, so we don't have to re-dirty it */
-    if (remove_obsolete_entry_guards(now))
-      entry_guards_dirty = 1;
-
-    update_node_guard_status();
+    if (remove_obsolete_entry_guards(gs, now))
+      gs->dirty = 1;
   }
   digestmap_free(added_by, tor_free_);
   return *msg ? -1 : 0;
+}
+
+/** Parse <b>state</b> and learn about the entry guards it describes.
+ * If <b>set</b> is true, and there are no errors, replace the guard
+ * list in the default guard selection context with what we find.
+ * On success, return 0. On failure, alloc into *<b>msg</b> a string
+ * describing the error, and return -1.
+ */
+int
+entry_guards_parse_state(or_state_t *state, int set, char **msg)
+{
+  return entry_guards_parse_state_for_guard_selection(
+      get_guard_selection_info(),
+      state, set, msg);
 }
 
 /** How long will we let a change in our guard nodes stay un-saved
@@ -1494,15 +1682,18 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
  * when we are not trying to avoid disk writes? */
 #define FAST_GUARD_STATE_FLUSH_TIME 30
 
-/** Our list of entry guards has changed, or some element of one
- * of our entry guards has changed. Write the changes to disk within
- * the next few minutes.
+/** Our list of entry guards has changed for a particular guard selection
+ * context, or some element of one of our entry guards has changed for one.
+ * Write the changes to disk within the next few minutes.
  */
 void
-entry_guards_changed(void)
+entry_guards_changed_for_guard_selection(guard_selection_t *gs)
 {
   time_t when;
-  entry_guards_dirty = 1;
+
+  tor_assert(gs != NULL);
+
+  gs->dirty = 1;
 
   if (get_options()->AvoidDiskWrites)
     when = time(NULL) + SLOW_GUARD_STATE_FLUSH_TIME;
@@ -1513,24 +1704,42 @@ entry_guards_changed(void)
   or_state_mark_dirty(get_or_state(), when);
 }
 
+/** Our list of entry guards has changed for the default guard selection
+ * context, or some element of one of our entry guards has changed. Write
+ * the changes to disk within the next few minutes.
+ */
+void
+entry_guards_changed(void)
+{
+  entry_guards_changed_for_guard_selection(get_guard_selection_info());
+}
+
 /** If the entry guard info has not changed, do nothing and return.
  * Otherwise, free the EntryGuards piece of <b>state</b> and create
  * a new one out of the global entry_guards list, and then mark
  * <b>state</b> dirty so it will get saved to disk.
+ *
+ * XXX this should get totally redesigned around storing multiple
+ * entry guard contexts.  For the initial refactor we'll just
+ * always use the current default.  Fix it as soon as we actually
+ * have any way that default can change.
  */
 void
 entry_guards_update_state(or_state_t *state)
 {
   config_line_t **next, *line;
-  if (! entry_guards_dirty)
+  guard_selection_t *gs = get_guard_selection_info();
+
+  tor_assert(gs != NULL);
+  tor_assert(gs->chosen_entry_guards != NULL);
+
+  if (!gs->dirty)
     return;
 
   config_free_lines(state->EntryGuards);
   next = &state->EntryGuards;
   *next = NULL;
-  if (!entry_guards)
-    entry_guards = smartlist_new();
-  SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, e) {
+  SMARTLIST_FOREACH_BEGIN(gs->chosen_entry_guards, entry_guard_t *, e) {
       char dbuf[HEX_DIGEST_LEN+1];
       if (!e->made_contact)
         continue; /* don't write this one to disk */
@@ -1596,7 +1805,7 @@ entry_guards_update_state(or_state_t *state)
   } SMARTLIST_FOREACH_END(e);
   if (!get_options()->AvoidDiskWrites)
     or_state_mark_dirty(get_or_state(), 0);
-  entry_guards_dirty = 0;
+  gs->dirty = 0;
 }
 
 /** If <b>question</b> is the string "entry-guards", then dump
@@ -1604,12 +1813,20 @@ entry_guards_update_state(or_state_t *state)
  * the nodes in the global entry_guards list. See control-spec.txt
  * for details.
  * For backward compatibility, we also handle the string "helper-nodes".
+ *
+ * XXX this should be totally redesigned after prop 271 too, and that's
+ * going to take some control spec work.
  * */
 int
 getinfo_helper_entry_guards(control_connection_t *conn,
                             const char *question, char **answer,
                             const char **errmsg)
 {
+  guard_selection_t *gs = get_guard_selection_info();
+
+  tor_assert(gs != NULL);
+  tor_assert(gs->chosen_entry_guards != NULL);
+
   (void) conn;
   (void) errmsg;
 
@@ -1618,9 +1835,8 @@ getinfo_helper_entry_guards(control_connection_t *conn,
     smartlist_t *sl = smartlist_new();
     char tbuf[ISO_TIME_LEN+1];
     char nbuf[MAX_VERBOSE_NICKNAME_LEN+1];
-    if (!entry_guards)
-      entry_guards = smartlist_new();
-    SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, e) {
+
+    SMARTLIST_FOREACH_BEGIN(gs->chosen_entry_guards, entry_guard_t *, e) {
         const char *status = NULL;
         time_t when = 0;
         const node_t *node;
@@ -2042,6 +2258,42 @@ bridge_add_from_config(bridge_line_t *bridge_line)
   smartlist_add(bridge_list, b);
 }
 
+/** Returns true iff the node is used as a guard in the specified guard
+ * context */
+int
+is_node_used_as_guard_for_guard_selection(guard_selection_t *gs,
+                                          const node_t *node)
+{
+  int res = 0;
+
+  /*
+   * We used to have a using_as_guard flag in node_t, but it had to go away
+   * to allow for multiple guard selection contexts.  Instead, search the
+   * guard list for a matching digest.
+   */
+
+  tor_assert(gs != NULL);
+  tor_assert(node != NULL);
+
+  SMARTLIST_FOREACH_BEGIN(gs->chosen_entry_guards, entry_guard_t *, e) {
+    if (tor_memeq(e->identity, node->identity, DIGEST_LEN)) {
+      res = 1;
+      break;
+    }
+  } SMARTLIST_FOREACH_END(e);
+
+  return res;
+}
+
+/** Returns true iff the node is used as a guard in the default guard
+ * context */
+MOCK_IMPL(int,
+is_node_used_as_guard, (const node_t *node))
+{
+  return is_node_used_as_guard_for_guard_selection(
+      get_guard_selection_info(), node);
+}
+
 /** Return true iff <b>routerset</b> contains the bridge <b>bridge</b>. */
 static int
 routerset_contains_bridge(const routerset_t *routerset,
@@ -2383,7 +2635,7 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
                    fmt_and_decorate_addr(&bridge->addr),
                    (int) bridge->port);
       }
-      add_an_entry_guard(node, 1, 1, 0, 0);
+      add_an_entry_guard(get_guard_selection_info(), node, 1, 1, 0, 0);
 
       log_notice(LD_DIR, "new bridge descriptor '%s' (%s): %s", ri->nickname,
                  from_cache ? "cached" : "fresh", router_describe(ri));
@@ -2419,7 +2671,8 @@ num_bridges_usable(void)
 {
   int n_options = 0;
   tor_assert(get_options()->UseBridges);
-  (void) choose_random_entry_impl(NULL, 0, 0, &n_options);
+  (void) choose_random_entry_impl(get_guard_selection_info(),
+                                  NULL, 0, 0, &n_options);
   return n_options;
 }
 
@@ -2472,9 +2725,12 @@ entries_retry_helper(const or_options_t *options, int act)
   int any_known = 0;
   int any_running = 0;
   int need_bridges = options->UseBridges != 0;
-  if (!entry_guards)
-    entry_guards = smartlist_new();
-  SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, e) {
+  guard_selection_t *gs = get_guard_selection_info();
+
+  tor_assert(gs != NULL);
+  tor_assert(gs->chosen_entry_guards != NULL);
+
+  SMARTLIST_FOREACH_BEGIN(gs->chosen_entry_guards, entry_guard_t *, e) {
       node = node_get_by_id(e->identity);
       if (node && node_has_descriptor(node) &&
           node_is_bridge(node) == need_bridges &&
@@ -2521,16 +2777,36 @@ entries_retry_all(const or_options_t *options)
   entries_retry_helper(options, 1);
 }
 
+/** Free one guard selection context */
+static void
+guard_selection_free(guard_selection_t *gs)
+{
+  if (!gs) return;
+
+  if (gs->chosen_entry_guards) {
+    SMARTLIST_FOREACH(gs->chosen_entry_guards, entry_guard_t *, e,
+                      entry_guard_free(e));
+    smartlist_free(gs->chosen_entry_guards);
+    gs->chosen_entry_guards = NULL;
+  }
+
+  tor_free(gs);
+}
+
 /** Release all storage held by the list of entry guards and related
  * memory structs. */
 void
 entry_guards_free_all(void)
 {
-  if (entry_guards) {
-    SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
-                      entry_guard_free(e));
-    smartlist_free(entry_guards);
-    entry_guards = NULL;
+  /* Null out the default */
+  curr_guard_context = NULL;
+  /* Free all the guard contexts */
+  if (guard_contexts != NULL) {
+    SMARTLIST_FOREACH_BEGIN(guard_contexts, guard_selection_t *, gs) {
+      guard_selection_free(gs);
+    } SMARTLIST_FOREACH_END(gs);
+    smartlist_free(guard_contexts);
+    guard_contexts = NULL;
   }
   clear_bridge_list();
   smartlist_free(bridge_list);

@@ -2235,7 +2235,6 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
    * This is an incomplete fix, but is no worse than the previous behaviour,
    * and only applies to minimal, testing tor networks
    * (so it's no less secure) */
-  /*XXXX++ use the using_as_guard flag to accomplish this.*/
   if (options->UseEntryGuards
       && (!options->TestingTorNetwork ||
          smartlist_len(nodelist_get_list()) > smartlist_len(get_entry_guards())

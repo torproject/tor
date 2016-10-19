@@ -254,7 +254,9 @@ populate_live_entry_guards_test_helper(int num_needed)
 {
   smartlist_t *our_nodelist = NULL;
   smartlist_t *live_entry_guards = smartlist_new();
-  const smartlist_t *all_entry_guards = get_entry_guards();
+  guard_selection_t *gs = get_guard_selection_info();
+  const smartlist_t *all_entry_guards =
+    get_entry_guards_for_guard_selection(gs);
   or_options_t *options = get_options_mutable();
   int retval;
 
@@ -271,7 +273,7 @@ populate_live_entry_guards_test_helper(int num_needed)
 
   SMARTLIST_FOREACH_BEGIN(our_nodelist, const node_t *, node) {
     const node_t *node_tmp;
-    node_tmp = add_an_entry_guard(node, 0, 1, 0, 0);
+    node_tmp = add_an_entry_guard(gs, node, 0, 1, 0, 0);
     tt_assert(node_tmp);
   } SMARTLIST_FOREACH_END(node);
 
@@ -582,7 +584,9 @@ static void
 test_entry_guards_set_from_config(void *arg)
 {
   or_options_t *options = get_options_mutable();
-  const smartlist_t *all_entry_guards = get_entry_guards();
+  guard_selection_t *gs = get_guard_selection_info();
+  const smartlist_t *all_entry_guards =
+    get_entry_guards_for_guard_selection(gs);
   const char *entrynodes_str = "test003r";
   const node_t *chosen_entry = NULL;
   int retval;
@@ -597,7 +601,7 @@ test_entry_guards_set_from_config(void *arg)
   tt_int_op(retval, OP_GE, 0);
 
   /* Read nodes from EntryNodes */
-  entry_guards_set_from_config(options);
+  entry_guards_set_from_config(gs, options);
 
   /* Test that only one guard was added. */
   tt_int_op(smartlist_len(all_entry_guards), OP_EQ, 1);
@@ -689,7 +693,9 @@ static void
 test_entry_is_live(void *arg)
 {
   smartlist_t *our_nodelist = NULL;
-  const smartlist_t *all_entry_guards = get_entry_guards();
+  guard_selection_t *gs = get_guard_selection_info();
+  const smartlist_t *all_entry_guards =
+    get_entry_guards_for_guard_selection(gs);
   const node_t *test_node = NULL;
   const entry_guard_t *test_entry = NULL;
   const char *msg;
@@ -706,7 +712,7 @@ test_entry_is_live(void *arg)
 
   SMARTLIST_FOREACH_BEGIN(our_nodelist, const node_t *, node) {
     const node_t *node_tmp;
-    node_tmp = add_an_entry_guard(node, 0, 1, 0, 0);
+    node_tmp = add_an_entry_guard(gs, node, 0, 1, 0, 0);
     tt_assert(node_tmp);
 
     tt_int_op(node->is_stable, OP_EQ, 0);
