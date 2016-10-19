@@ -1,0 +1,3 @@
+  o Code simplification and refactoring:
+    - Remove duplicate code in the channel_write_*cell() functions.
+       Closes ticket 13827; patch from Pingl.

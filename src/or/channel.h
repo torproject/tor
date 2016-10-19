@@ -382,6 +382,9 @@ struct cell_queue_entry_s {
 STATIC int chan_cell_queue_len(const chan_cell_queue_t *queue);
 
 STATIC void cell_queue_entry_free(cell_queue_entry_t *q, int handed_off);
+
+void channel_write_cell_generic_(channel_t *chan, const char *cell_type,
+                                 void *cell, cell_queue_entry_t *q);
 #endif
 
 /* Channel operations for subclasses and internal use only */

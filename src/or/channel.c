@@ -1838,6 +1838,39 @@ channel_write_cell_queue_entry(channel_t *chan, cell_queue_entry_t *q)
   }
 }
 
+/** Write a generic cell type to a channel
+ *
+ * Write a generic cell to a channel. It is called by channel_write_cell(),
+ * channel_write_var_cell() and channel_write_packed_cell() in order to reduce
+ * code duplication. Notice that it takes cell as pointer of type void,
+ * this can be dangerous because no type check is performed.
+ */
+
+void
+channel_write_cell_generic_(channel_t *chan, const char *cell_type,
+                            void *cell, cell_queue_entry_t *q)
+{
+
+  tor_assert(chan);
+  tor_assert(cell);
+
+  if (CHANNEL_IS_CLOSING(chan)) {
+    log_debug(LD_CHANNEL, "Discarding %c %p on closing channel %p with "
+              "global ID "U64_FORMAT, *cell_type, cell, chan,
+              U64_PRINTF_ARG(chan->global_identifier));
+    tor_free(cell);
+    return;
+  }
+  log_debug(LD_CHANNEL,
+            "Writing %c %p to channel %p with global ID "
+            U64_FORMAT, *cell_type,
+            cell, chan, U64_PRINTF_ARG(chan->global_identifier));
+
+  channel_write_cell_queue_entry(chan, q);
+  /* Update the queue size estimate */
+  channel_update_xmit_queue_size(chan);
+}
+
 /**
  * Write a cell to a channel
  *
@@ -1851,29 +1884,9 @@ void
 channel_write_cell(channel_t *chan, cell_t *cell)
 {
   cell_queue_entry_t q;
-
-  tor_assert(chan);
-  tor_assert(cell);
-
-  if (CHANNEL_IS_CLOSING(chan)) {
-    log_debug(LD_CHANNEL, "Discarding cell_t %p on closing channel %p with "
-              "global ID "U64_FORMAT, cell, chan,
-              U64_PRINTF_ARG(chan->global_identifier));
-    tor_free(cell);
-    return;
-  }
-
-  log_debug(LD_CHANNEL,
-            "Writing cell_t %p to channel %p with global ID "
-            U64_FORMAT,
-            cell, chan, U64_PRINTF_ARG(chan->global_identifier));
-
   q.type = CELL_QUEUE_FIXED;
   q.u.fixed.cell = cell;
-  channel_write_cell_queue_entry(chan, &q);
-
-  /* Update the queue size estimate */
-  channel_update_xmit_queue_size(chan);
+  channel_write_cell_generic_(chan, "cell_t", cell, &q);
 }
 
 /**
@@ -1888,30 +1901,9 @@ void
 channel_write_packed_cell(channel_t *chan, packed_cell_t *packed_cell)
 {
   cell_queue_entry_t q;
-
-  tor_assert(chan);
-  tor_assert(packed_cell);
-
-  if (CHANNEL_IS_CLOSING(chan)) {
-    log_debug(LD_CHANNEL, "Discarding packed_cell_t %p on closing channel %p "
-              "with global ID "U64_FORMAT, packed_cell, chan,
-              U64_PRINTF_ARG(chan->global_identifier));
-    packed_cell_free(packed_cell);
-    return;
-  }
-
-  log_debug(LD_CHANNEL,
-            "Writing packed_cell_t %p to channel %p with global ID "
-            U64_FORMAT,
-            packed_cell, chan,
-            U64_PRINTF_ARG(chan->global_identifier));
-
   q.type = CELL_QUEUE_PACKED;
   q.u.packed.packed_cell = packed_cell;
-  channel_write_cell_queue_entry(chan, &q);
-
-  /* Update the queue size estimate */
-  channel_update_xmit_queue_size(chan);
+  channel_write_cell_generic_(chan, "packed_cell_t", packed_cell, &q);
 }
 
 /**
@@ -1927,30 +1919,9 @@ void
 channel_write_var_cell(channel_t *chan, var_cell_t *var_cell)
 {
   cell_queue_entry_t q;
-
-  tor_assert(chan);
-  tor_assert(var_cell);
-
-  if (CHANNEL_IS_CLOSING(chan)) {
-    log_debug(LD_CHANNEL, "Discarding var_cell_t %p on closing channel %p "
-              "with global ID "U64_FORMAT, var_cell, chan,
-              U64_PRINTF_ARG(chan->global_identifier));
-    var_cell_free(var_cell);
-    return;
-  }
-
-  log_debug(LD_CHANNEL,
-            "Writing var_cell_t %p to channel %p with global ID "
-            U64_FORMAT,
-            var_cell, chan,
-            U64_PRINTF_ARG(chan->global_identifier));
-
   q.type = CELL_QUEUE_VAR;
   q.u.var.var_cell = var_cell;
-  channel_write_cell_queue_entry(chan, &q);
-
-  /* Update the queue size estimate */
-  channel_update_xmit_queue_size(chan);
+  channel_write_cell_generic_(chan, "var_cell_t", var_cell, &q);
 }
 
 /**
